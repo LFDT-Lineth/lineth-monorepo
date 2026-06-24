@@ -3,9 +3,9 @@ package polynomials
 import (
 	"math/big"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/utils"
 )
 
 // EvalXnMinusOneOnCoset evaluates xⁿ - 1 for x ranging over a coset of the

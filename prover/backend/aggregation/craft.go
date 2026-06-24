@@ -274,6 +274,7 @@ func CraftResponse(cfg *config.Config, cf *CollectedFields) (resp *Response, err
 		BaseFee:              uint64(cfg.Layer2.BaseFee),
 		CoinBase:             types.EthAddress(cfg.Layer2.CoinBase),
 		L2MessageServiceAddr: types.EthAddress(cfg.Layer2.MsgSvcContract),
+		IsAllowedCircuitID:   uint64(cfg.Aggregation.IsAllowedCircuitID),
 
 		FilteredAddresses: filteredAddrs,
 	}

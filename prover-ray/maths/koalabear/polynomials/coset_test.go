@@ -4,8 +4,8 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 )
 
 func TestEvalXnMinusOneOnCoset(t *testing.T) {

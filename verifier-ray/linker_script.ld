@@ -34,5 +34,5 @@ SECTIONS {
     _stack_start = ORIGIN(STACK) + LENGTH(STACK);
 
     /* symbol marking the start of the input region */
-    _input_start = ORIGIN(IN);
+    _in_start = ORIGIN(IN);
 }

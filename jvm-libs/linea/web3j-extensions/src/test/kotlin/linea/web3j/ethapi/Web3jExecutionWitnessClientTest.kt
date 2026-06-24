@@ -11,8 +11,6 @@ import io.vertx.core.json.JsonObject
 import linea.domain.BlockParameter
 import linea.error.JsonRpcErrorResponseException
 import linea.ethapi.ExecutionWitness
-import linea.ethapi.ExecutionWitnessClientException
-import linea.ethapi.ExecutionWitnessError
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
 import linea.web3j.createWeb3jHttpService
@@ -26,15 +24,6 @@ import org.junit.jupiter.api.Test
 class Web3jExecutionWitnessClientTest {
   private lateinit var wiremock: WireMockServer
   private lateinit var client: Web3jExecutionWitnessClient
-
-  private val sampleWitnessJson = """
-    {
-      "state": ["0xf902"],
-      "keys": ["0xf844"],
-      "codes": ["0x608060"],
-      "headers": ["0xf902"]
-    }
-  """.trimIndent()
 
   @BeforeEach
   fun setup() {
@@ -51,13 +40,20 @@ class Web3jExecutionWitnessClientTest {
 
   @Test
   fun `getExecutionWitness returns parsed witness for block number`() {
+    val witnessJson = """
+      {
+        "state": ["0xf902"],
+        "codes": ["0x608060"],
+        "headers": ["0xf902"]
+      }
+    """.trimIndent()
     wiremock.stubFor(
       post(urlEqualTo("/"))
         .withRequestBody(containing("\"method\":\"debug_executionWitness\""))
         .withRequestBody(containing("\"params\":[\"42\"]"))
         .willReturn(
           ok(
-            JsonObject.of("jsonrpc", "2.0", "id", 1, "result", JsonObject(sampleWitnessJson)).encode(),
+            JsonObject.of("jsonrpc", "2.0", "id", 1, "result", JsonObject(witnessJson)).encode(),
           ),
         ),
     )
@@ -67,7 +63,6 @@ class Web3jExecutionWitnessClientTest {
     assertThat(result).isEqualTo(
       ExecutionWitness(
         state = listOf("f902".decodeHex()),
-        keys = listOf("f844".decodeHex()),
         codes = listOf("608060".decodeHex()),
         headers = listOf("f902".decodeHex()),
       ),
@@ -79,27 +74,126 @@ class Web3jExecutionWitnessClientTest {
   fun `getExecutionWitness returns parsed witness for block hash`() {
     val hash = ByteArray(32) { 0xab.toByte() }
     val hashParam = hash.encodeHex(prefix = true)
+    val witnessJson = """
+      {
+        "state": ["0xf902"],
+        "codes": ["0x608060"],
+        "headers": ["0xf902"]
+      }
+    """.trimIndent()
 
     wiremock.stubFor(
       post(urlEqualTo("/"))
         .withRequestBody(containing("\"params\":[\"$hashParam\"]"))
         .willReturn(
           ok(
-            JsonObject.of("jsonrpc", "2.0", "id", 1, "result", JsonObject(sampleWitnessJson)).encode(),
+            JsonObject.of("jsonrpc", "2.0", "id", 1, "result", JsonObject(witnessJson)).encode(),
           ),
         ),
     )
 
     val result = client.getExecutionWitness(BlockParameter.fromHash(hash)).get()
 
-    assertThat(result.state).isNotEmpty
+    assertThat(result).isNotNull
+    assertThat(result!!.state).isNotEmpty
     wiremock.verify(
       postRequestedFor(urlEqualTo("/")).withRequestBody(containing(hashParam)),
     )
   }
 
   @Test
-  fun `getExecutionWitness throws NULL_RESULT when result is null`() {
+  fun `getExecutionWitness parses multiple items in each list`() {
+    // Real witnesses hold many trie nodes, several contract codes, and (with BLOCKHASH access)
+    // multiple ancestor headers. Each array element must be decoded in order.
+    val witnessJson = """
+      {
+        "state": ["0xf902", "0xf844", "0xa1b2"],
+        "codes": ["0x608060", "0x6080"],
+        "headers": ["0xf902", "0xc3d4"]
+      }
+    """.trimIndent()
+    wiremock.stubFor(
+      post(urlEqualTo("/"))
+        .willReturn(
+          ok(
+            JsonObject.of("jsonrpc", "2.0", "id", 1, "result", JsonObject(witnessJson)).encode(),
+          ),
+        ),
+    )
+
+    val result = client.getExecutionWitness(BlockParameter.Tag.LATEST).get()
+
+    assertThat(result).isEqualTo(
+      ExecutionWitness(
+        state = listOf("f902".decodeHex(), "f844".decodeHex(), "a1b2".decodeHex()),
+        codes = listOf("608060".decodeHex(), "6080".decodeHex()),
+        headers = listOf("f902".decodeHex(), "c3d4".decodeHex()),
+      ),
+    )
+  }
+
+  @Test
+  fun `getExecutionWitness parses empty codes list`() {
+    // Besu omits no fields and has no guard against empty `codes`: a block that touches only EOAs
+    // (no contract/system code accessed) is serialized as "codes": []. It must parse to emptyList.
+    val witnessJson = """
+      {
+        "state": ["0xf902"],
+        "codes": [],
+        "headers": ["0xf902"]
+      }
+    """.trimIndent()
+    wiremock.stubFor(
+      post(urlEqualTo("/"))
+        .willReturn(
+          ok(
+            JsonObject.of("jsonrpc", "2.0", "id", 1, "result", JsonObject(witnessJson)).encode(),
+          ),
+        ),
+    )
+
+    val result = client.getExecutionWitness(BlockParameter.Tag.LATEST).get()
+
+    assertThat(result).isEqualTo(
+      ExecutionWitness(
+        state = listOf("f902".decodeHex()),
+        codes = emptyList(),
+        headers = listOf("f902".decodeHex()),
+      ),
+    )
+  }
+
+  @Test
+  fun `getExecutionWitness fails when a field is missing`() {
+    // A field that is absent (rather than an empty array) is unexpected from besu and must fail
+    // rather than silently default.
+    val witnessJson = """
+      {
+        "state": ["0xf902"],
+        "headers": ["0xf902"]
+      }
+    """.trimIndent()
+    wiremock.stubFor(
+      post(urlEqualTo("/"))
+        .willReturn(
+          ok(
+            JsonObject.of("jsonrpc", "2.0", "id", 1, "result", JsonObject(witnessJson)).encode(),
+          ),
+        ),
+    )
+
+    val thrown = catchThrowable { client.getExecutionWitness(BlockParameter.Tag.LATEST).get() }
+    val parseException = generateSequence(thrown) { it.cause }
+      .filterIsInstance<IllegalArgumentException>()
+      .firstOrNull()
+    assertThat(parseException).isNotNull
+    assertThat(parseException!!.message).contains("codes")
+  }
+
+  @Test
+  fun `getExecutionWitness returns null when result is null`() {
+    // Besu returns a JSON-RPC success with result=null when it has no witness for the block
+    // (e.g. an unknown block hash); this surfaces as a null witness, not an error.
     wiremock.stubFor(
       post(urlEqualTo("/"))
         .willReturn(
@@ -109,16 +203,13 @@ class Web3jExecutionWitnessClientTest {
         ),
     )
 
-    assertThatThrownBy { client.getExecutionWitness(BlockParameter.Tag.LATEST).get() }
-      .rootCause()
-      .isInstanceOfSatisfying(ExecutionWitnessClientException::class.java) { ex ->
-        assertThat(ex.errorType).isEqualTo(ExecutionWitnessError.NULL_RESULT)
-        assertThat(ex.message).contains("returned null")
-      }
+    val result = client.getExecutionWitness(BlockParameter.Tag.LATEST).get()
+
+    assertThat(result).isNull()
   }
 
   @Test
-  fun `getExecutionWitness throws PARSE_ERROR when result is malformed`() {
+  fun `getExecutionWitness fails when result is malformed`() {
     wiremock.stubFor(
       post(urlEqualTo("/"))
         .willReturn(
@@ -133,8 +224,6 @@ class Web3jExecutionWitnessClientTest {
               JsonObject.of(
                 "state",
                 "not-an-array",
-                "keys",
-                JsonObject(),
                 "codes",
                 JsonObject(),
                 "headers",
@@ -146,11 +235,11 @@ class Web3jExecutionWitnessClientTest {
     )
 
     val thrown = catchThrowable { client.getExecutionWitness(BlockParameter.Tag.LATEST).get() }
-    val witnessException = generateSequence(thrown) { it.cause }
-      .filterIsInstance<ExecutionWitnessClientException>()
+    val parseException = generateSequence(thrown) { it.cause }
+      .filterIsInstance<IllegalArgumentException>()
       .firstOrNull()
-    assertThat(witnessException).isNotNull
-    assertThat(witnessException!!.errorType).isEqualTo(ExecutionWitnessError.PARSE_ERROR)
+    assertThat(parseException).isNotNull
+    assertThat(parseException!!.message).contains("state")
   }
 
   @Test

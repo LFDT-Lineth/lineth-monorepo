@@ -3,11 +3,11 @@ package circuit
 import (
 	"math/big"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/gnark-crypto/field/koalabear/extensions"
 	"github.com/consensys/gnark/constraint/solver"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/emulated"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
 )
 
 // Register hints at package initialization

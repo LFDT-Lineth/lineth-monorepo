@@ -3,11 +3,11 @@ package lookuptologderivsum_test
 import (
 	"testing"
 
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/logderivativesum"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop/wioptest"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,10 +21,8 @@ func TestCompile_WioptestCompleteness(t *testing.T) {
 		t.Run(sc.Name, func(t *testing.T) {
 			lookuptologderivsum.Compile(sc.Sys)
 			logderivativesum.Compile(sc.Sys)
-			rt := wiop.NewRuntime(sc.Sys)
-			sc.AssignWitness(&rt)
-			driveProtocol(&rt)
-			require.NoError(t, checkAllVerifierActions(&rt),
+			proof := sc.Sys.Prove(sc.AssignWitness)
+			require.NoError(t, sc.Sys.Verify(proof),
 				"compiled verifier must accept an honest witness")
 		})
 	}
@@ -40,9 +38,7 @@ func TestCompile_WioptestSoundnessPanics(t *testing.T) {
 		t.Run(sc.Name, func(t *testing.T) {
 			lookuptologderivsum.Compile(sc.Sys)
 			logderivativesum.Compile(sc.Sys)
-			rt := wiop.NewRuntime(sc.Sys)
-			sc.AssignWitness(&rt)
-			assert.Panics(t, func() { runRound(&rt) },
+			assert.Panics(t, func() { sc.Sys.Prove(sc.AssignWitness) },
 				"M-assignment prover task must panic on this invalid witness")
 		})
 	}

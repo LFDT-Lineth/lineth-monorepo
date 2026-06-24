@@ -213,10 +213,13 @@ func (v *VerifierInputs) checkColumnInclusion() error {
 
 			} else {
 				// We assume that HashFunc (to be used for Merkle Tree) and NoSisHashFunc()
-				// (to be used for in place of SIS hash) are the same i.e. the MiMC hash function
+				// (to be used for in place of SIS hash) are the same i.e. the MiMC hash function.
+				// Zero-pad to nextPow2 to match noSisTransversalHash which also pads.
+				paddedSubCol := make([]field.Element, utils.NextPowerOfTwo(len(selectedSubCol)))
+				copy(paddedSubCol, selectedSubCol)
 				hasher := mimc.NewFieldHasher()
 				hasher.Reset()
-				s := hasher.SumElements(selectedSubCol)
+				s := hasher.SumElements(paddedSubCol)
 				leaf = s.Bytes()
 			}
 

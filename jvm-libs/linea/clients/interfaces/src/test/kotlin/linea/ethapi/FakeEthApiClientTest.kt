@@ -197,7 +197,6 @@ class FakeEthApiClientTest {
     val blockHash = BlockParameter.fromHash(ByteArray(32) { 3 })
     val witness = ExecutionWitness(
       state = listOf(byteArrayOf(1)),
-      keys = emptyList(),
       codes = emptyList(),
       headers = emptyList(),
     )

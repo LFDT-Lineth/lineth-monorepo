@@ -4,10 +4,10 @@ github.com/blang/semver/v4 v4.0.0 h1:1PFHFE6yCCTv8C1TeyNNarDzntLi7wMI5i/pzqYIsAM
 github.com/blang/semver/v4 v4.0.0/go.mod h1:IbckMUScFkM3pff0VJDNKRiT6TG/YpiHIM2yvyW5YoQ=
 github.com/consensys/gnark v0.14.1-0.20260219004710-bbfb2f70a565 h1:NlOAmbLYsVb/hcuOBxza6CAA+233tB0eFiunGVEMyv4=
 github.com/consensys/gnark v0.14.1-0.20260219004710-bbfb2f70a565/go.mod h1:EoWWbEboQRydCqJDSA7zrFxucIeoy/5R+MDx04oFpF4=
-github.com/consensys/gnark-crypto v0.20.2-0.20260514182922-df0578435b08 h1:EdljQKaHxACX5JMSTXlVM9R8qASU/W1husqDsB2b5tU=
-github.com/consensys/gnark-crypto v0.20.2-0.20260514182922-df0578435b08/go.mod h1:NzeBHSZ49bIM7RtrNTYYR2kymTqwvI/A4eTgQlyQc+Q=
-github.com/consensys/linea-monorepo/prover-ray v0.0.0-20260604100845-588fd53a8c0f h1:1z/yV6WAzsvTXhKrFfSJNvI7kQQYL8N/uPgi651jZzo=
-github.com/consensys/linea-monorepo/prover-ray v0.0.0-20260604100845-588fd53a8c0f/go.mod h1:2cEA44vEDPh8MB1huZtKZv//iXB0ZOghXq7idgt4UPc=
+github.com/consensys/gnark-crypto v0.20.2-0.20260521181528-f8db9b5b907d h1:BvrCCp3hEQ9eXJYDkuP7chEHeBYqHNbmE8Ag/30Hx3c=
+github.com/consensys/gnark-crypto v0.20.2-0.20260521181528-f8db9b5b907d/go.mod h1:NzeBHSZ49bIM7RtrNTYYR2kymTqwvI/A4eTgQlyQc+Q=
+github.com/consensys/linea-monorepo/prover-ray v0.0.0-20260610132712-f735159cffa9 h1:Zq8+Co0bXWMPreAxLdkFUxjkhBP2mtouUuM7wHnU2kU=
+github.com/consensys/linea-monorepo/prover-ray v0.0.0-20260610132712-f735159cffa9/go.mod h1:syPkQgeCxGKflmraYqacgkkDQzmJwqW5V6Ru/QJE3PA=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/fxamacker/cbor/v2 v2.9.1 h1:2rWm8B193Ll4VdjsJY28jxs70IdDsHRWgQYAI80+rMQ=

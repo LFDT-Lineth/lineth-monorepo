@@ -1,0 +1,17 @@
+.{
+    .name = .arithmetization_zig_tests,
+    .version = "0.0.0",
+    .fingerprint = 0x3f08e137ab15ab78,
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{
+        .zesu_zkvm = .{
+            .url = "https://github.com/Consensys/zesu-zkvm/archive/781e8ab5b86e2e08b111c8bee778f6fd777f8172.tar.gz",
+            .hash = "N-V-__8AALcFYQDEKjFlPv80maZPDDtCeu9sPCIH_vmRza1W",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}

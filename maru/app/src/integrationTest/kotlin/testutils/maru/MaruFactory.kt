@@ -424,7 +424,12 @@ class MaruFactory(
       }
     val discovery =
       if (discoveryPort != null) {
-        P2PConfig.Discovery(refreshInterval = 1.seconds, port = discoveryPort, bootnodes = listOfNotNull(bootnode))
+        P2PConfig.Discovery(
+          refreshInterval = 1.seconds,
+          port = discoveryPort,
+          bootnodes = listOfNotNull(bootnode),
+          retryTimeout = 500.milliseconds, // fast recovery on localhost
+        )
       } else {
         null
       }
