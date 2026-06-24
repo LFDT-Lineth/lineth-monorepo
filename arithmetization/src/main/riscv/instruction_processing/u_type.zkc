@@ -1,0 +1,57 @@
+include "../memory.zkc"
+include "../utils/constants.zkc"
+include "../utils/sign_extend.zkc"
+include "../utils/signed_sum.zkc"
+
+// Process a RISC-V U-type instruction, writing an upper-immediate value to a register.
+//
+// U-type instructions carry a 20-bit immediate (imm20) placed in the upper bits of
+// the result.  They never affect the program counter (the caller always advances by 4).
+// The 25-bit encoding (opcode stripped) is simply:
+//
+//   imm20 :: rd
+//
+// The immediate is placed into bits [31:12] of a 32-bit word (lower 12 bits zeroed)
+// and then sign-extended to 64 bits.  The opcode selects one of two variants:
+//
+//   LUI   — load upper immediate:
+//             rd = sign_extend_32_to_64(imm20 << 12)
+//
+//   AUIPC — add upper immediate to PC:
+//             rd = sign_extend_32_to_64(imm20 << 12) + pc
+//
+// LUI is typically paired with an ADDI to materialise a full 32-bit constant in a
+// register.  AUIPC is used to form PC-relative addresses for data or call targets.
+fn process_U_type_instruction<registers>(opcode:Opcode, index:u64, pc:Address) -> () {
+
+    // The U-type field split (imm20 :: rd) is pre-decoded externally (see
+    // decoded_utype in memory.zkc) and looked up by index.
+    var imm20:Imm20
+    var rd:Register
+    imm20, rd = decoded_utype[index]
+
+    var tmp:DoubleWord
+    tmp = sgn_extension_u32_u64(((imm20 as u32) << 12) as u32)
+
+    switch opcode {
+        case AUIPC: {
+            printf "AUIPC "
+            print_u_operands(rd, imm20)
+            tmp = signed_sum_of_double_word(tmp, pc) as DoubleWord
+        }
+        case LUI: {
+            printf "LUI "
+            print_u_operands(rd, imm20)
+        }
+        default: {
+            printf "[ERROR] Unsupported instruction of U-Type\n"
+            printf "\topcode ≡ %x ≡ %b\n", opcode, opcode
+            fail
+        }
+    }
+
+    // Note: the definition of tmp already works for the LUI opcode
+    if (rd != 0) {
+        registers[rd] = tmp as DoubleWord
+    }
+}

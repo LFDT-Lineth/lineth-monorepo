@@ -37,18 +37,36 @@ memory padded_input_block(address:u5) -> (state:lane)
 // an index into the pre-decoded instruction tables below: index = (pc - base) >> 2
 pub input instruction_base(i:u1) -> (base:Address)
 
-// Unified pre-decoded instruction stream, indexed by instruction index (one
-// record per 4-byte word of the executable region). Every RISC-V instruction is
-// reduced at ELF time to a single uniform record driving the interpreter's
-// four-phase pipeline (read -> compute -> write -> advance PC):
-//
-//   operation  — compute op applied to (a, b)            (OPR_* in constants.zkc)
-//   a_src      — operand a source: registers[rs1] or pc  (A_*)
-//   b_src      — operand b source: registers[rs2] or imm (B_*)
-//   read_kind  — memory load width/extension, address = a + b (RK_*)
-//   write_kind — writeback target: register or memory width   (WK_*)
-//   pc_kind    — program-counter update mode                   (PK_*)
-//   rs1, rs2, rd — register indices (rs2 also carries store data for WK_MEM*)
-//   imm        — 64-bit immediate, fully sign-extended at decode time
-//                (shift forms carry the raw shift amount)
-pub input decoded(i:u64) -> (operation:Operation, a_src:ASrc, b_src:BSrc, read_kind:ReadKind, write_kind:WriteKind, pc_kind:PcKind, rs1:Register, rs2:Register, rd:Register, imm:DoubleWord)
+// Pre-decoded instruction stream, indexed by instruction index (one record per
+// 4-byte word of the executable region). Replaces the in-interpreter decode of
+// `instruction_parameters::opcode = instruction` and `instruction_type_from_opcode`.
+pub input decoded_core(i:u64) -> (opcode:Opcode, instruction_type:Type, instruction_parameters:u25)
+
+// Pre-decoded I-type semantic micro-ops, indexed by the same instruction index.
+// Replaces runtime opcode/funct3 disambiguation in i_type.zkc with a flat
+// compute_op switch plus a separate writeback step (WB_STORE_REG / WB_NONE).
+pub input decoded_itype(i:u64) -> (compute_op:ITypeComputeOp, writeback:ITypeWriteback, imm12:Imm12, rs1:Register, rd:Register)
+
+// Pre-decoded R-type semantic micro-ops, indexed by the same instruction index.
+// Replaces runtime opcode/funct3/funct7 disambiguation in r_type.zkc with a flat
+// compute_op switch plus a separate writeback step (WB_STORE_REG / WB_NONE).
+pub input decoded_rtype(i:u64) -> (compute_op:RTypeComputeOp, writeback:ITypeWriteback, rs1:Register, rs2:Register, rd:Register)
+
+// Pre-decoded S-type field split, indexed by the same instruction index.
+// Replaces `imm_sign::uimm6::rs2::rs1::funct3::uimm5 = instruction_parameters` in s_type.zkc.
+// The 12-bit store immediate (imm[11]::imm[10:5]::imm[4:0]) is pre-assembled into imm12.
+pub input decoded_stype(i:u64) -> (imm12:Imm12, rs2:Register, rs1:Register, funct3:Funct3)
+
+// Pre-decoded B-type field split, indexed by the same instruction index.
+// Replaces `imm_sign::imm_10_5::rs2::rs1::funct3::imm_4_1::imm_11 = instruction_parameters` in b_type.zkc.
+pub input decoded_btype(i:u64) -> (imm_sign:SignBit, imm_10_5:u6, rs2:Register, rs1:Register, funct3:Funct3, imm_4_1:u4, imm_11:u1)
+
+// Pre-decoded J-type record, indexed by the same instruction index.
+// Replaces `imm20::imm10_1::imm11::imm19_12::rd = instruction_parameters` in j_type.zkc.
+// The 21-bit signed jump offset is fully sign-extended into a ready-to-use 64-bit
+// `imm` at decode time, so the runtime shift and sign extension are eliminated.
+pub input decoded_jtype(i:u64) -> (imm:DoubleWord, rd:Register)
+
+// Pre-decoded U-type field split, indexed by the same instruction index.
+// Replaces `imm20::rd = instruction_parameters` in u_type.zkc.
+pub input decoded_utype(i:u64) -> (imm20:Imm20, rd:Register)

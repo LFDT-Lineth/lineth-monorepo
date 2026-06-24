@@ -1,10 +1,12 @@
 include "utils/constants.zkc"
+include "utils/register_utils.zkc"
 include "utils/type.zkc"
-include "utils/signed_sum.zkc"
-include "pipeline/read.zkc"
-include "pipeline/effect.zkc"
-include "pipeline/write.zkc"
-include "pipeline/pc.zkc"
+include "instruction_processing/b_type.zkc"
+include "instruction_processing/r_type.zkc"
+include "instruction_processing/i_type.zkc"
+include "instruction_processing/s_type.zkc"
+include "instruction_processing/j_type.zkc"
+include "instruction_processing/u_type.zkc"
 
 // Execute a single pre-decoded RISC-V instruction and return the next program
 // counter. The instruction type no longer drives a dispatch: every instruction
@@ -17,65 +19,42 @@ include "pipeline/pc.zkc"
 //   4. advance — compute the next pc
 fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d, padded_input_block, poseidon2_state>(index:u64, pc:Address) -> (new_pc:Address) {
 
-    var operation:Operation
-    var a_src:ASrc
-    var b_src:BSrc
-    var read_kind:ReadKind
-    var write_kind:WriteKind
-    var pc_kind:PcKind
-    var rs1:Register
-    var rs2:Register
-    var rd:Register
-    var imm:DoubleWord
-    operation, a_src, b_src, read_kind, write_kind, pc_kind, rs1, rs2, rd, imm = decoded[index]
+    // The opcode, instruction type and parameters are pre-decoded externally
+    // (see decoded_core in memory.zkc) and looked up by instruction index.
+    var opcode:Opcode
+    var instruction_type:Type
+    var instruction_parameters:u25
+    opcode, instruction_type, instruction_parameters = decoded_core[index]
 
-    // 1. read: gather operands. The operand selectors are inlined (rather than
-    // factored into select_a/select_b calls) so the hot path costs a single
-    // branch instead of a function call + switch per operand.
-    var a:DoubleWord
-    if a_src == A_RS1 {
-        a = registers[rs1]
-    } else {
-        a = pc as DoubleWord
-    }
-    var b:DoubleWord
-    if b_src == B_RS2 {
-        b = registers[rs2]
-    } else {
-        b = imm
-    }
-
-    // Effective address a + b drives loads, stores and JAL/JALR. The sum is
-    // inlined (rather than a signed_sum call) and masked to 64 bits for the
-    // wrap-around the addressing modes expect. Computing it unconditionally is
-    // cheaper than guarding it: memory/jump instructions are frequent enough
-    // that a multi-term guard costs more branches than it saves. The memory
-    // load, by contrast, is performed only for actual loads.
-    var address:Address = (((a as u65) + (b as u65)) & (MAX_UINT_64 as u65)) as Address
-    var loaded:DoubleWord = 0
-    if read_kind != RK_NONE {
-        loaded = read(read_kind, address)
-    }
-
-    // 2. compute: result = operation(a, b) (branch condition for OPR_CMP_*).
-    var result:DoubleWord = compute(operation, a, b, loaded, pc, rd)
-
-    // 3. write: register or memory writeback. The register-write and no-write
-    // cases (the overwhelming majority) are inlined; only memory stores fall
-    // through to the write() helper. Writes to x0 are folded to WK_NONE at
-    // decode time, so the WK_REG path can write registers[rd] unconditionally.
-    if write_kind == WK_REG {
-        registers[rd] = result
-    } else if write_kind != WK_NONE {
-        write(write_kind, address, rs2)
-    }
-
-    // 4. advance pc (result carries the branch condition for PK_BRANCH). The
-    // pc + 4 fall-through is inlined; everything else (branches, jumps, system)
-    // goes through advance_pc().
-    if pc_kind == PK_NEXT {
-        new_pc = pc + 4
-    } else {
-        new_pc = advance_pc(pc_kind, pc, imm, address, result)
+    switch instruction_type {
+        case R_TYPE: {
+            process_R_type_instruction(index)
+            new_pc = pc + 4 as Address
+        }
+        case I_TYPE: {
+            new_pc = process_I_type_instruction(index, pc)
+        }
+        case S_TYPE: {
+            process_S_type_instruction(index)
+            new_pc = pc + 4 as Address
+        }
+        case B_TYPE: {
+            new_pc = process_B_type_instruction(index, pc)
+        }
+        case U_TYPE: {
+            process_U_type_instruction(opcode, index, pc)
+            new_pc = pc + 4 as Address
+        }
+        case J_TYPE: {
+            new_pc = process_J_type_instruction(index, pc)
+        }
+        case MISC_MEM_TYPE: {
+            // FENCE / FENCE.I, and statically folded rd=x0 no-ops — advance PC only.
+            new_pc = pc + 4 as Address
+        }
+        default: {
+            printf "[ERROR] Unsupported instruction type %d\n", instruction_type
+            fail
+        }
     }
 }

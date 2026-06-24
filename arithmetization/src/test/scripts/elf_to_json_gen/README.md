@@ -38,51 +38,68 @@ in the executable span), not to the number of executed steps.
 In addition to the original keys (`entry_point_and_blobs_count`,
 `blobs_offset_and_size`, `blobs_data`), `printJson` now emits:
 
-| Key                | Record fields                                                                          | Role                                          |
-| ------------------ | ------------------------------------------------------------------------------------- | --------------------------------------------- |
-| `instruction_base` | `base:Address`                                                                        | base address used to map `pc` → table index   |
-| `decoded`          | `operation, a_src, b_src, read_kind, write_kind, pc_kind, rs1, rs2, rd, imm`          | the single unified pre-decoded instruction    |
+| Key                | Record fields                                          | Replaces (in the interpreter)                              |
+| ------------------ | ------------------------------------------------------ | ---------------------------------------------------------- |
+| `instruction_base` | `base:Address`                                         | base address used to map `pc` → table index               |
+| `decoded_core`     | `opcode, instruction_type, instruction_parameters`     | `instruction_parameters::opcode = instruction` + type map  |
+| `decoded_itype`    | `compute_op, writeback, imm12, rs1, rd`                | flat semantic micro-op dispatch in `i_type.zkc`              |
+| `decoded_rtype`    | `compute_op, writeback, rs1, rs2, rd`                  | flat semantic micro-op dispatch in `r_type.zkc`              |
+| `decoded_stype`    | `imm12, rs2, rs1, funct3`                              | `imm_sign::uimm6::rs2::rs1::funct3::uimm5 = instruction_parameters` |
+| `decoded_btype`    | `imm_sign, imm_10_5, rs2, rs1, funct3, imm_4_1, imm_11`| `imm_sign::imm_10_5::rs2::rs1::funct3::imm_4_1::imm_11 = instruction_parameters` |
+| `decoded_jtype`    | `imm, rd`                                              | `imm20::imm10_1::imm11::imm19_12::rd = instruction_parameters` + sign-aware reassembly |
+| `decoded_utype`    | `imm20, rd`                                            | `imm20::rd = instruction_parameters`                       |
 
-Each value is a single `0x…` hex string. The field set and order of the record
-**must** match the `decoded` `pub input` declaration in
+Each value is a single `0x…` hex string. The field set and order of every table
+**must** match the corresponding `pub input` declaration in
 `arithmetization/src/main/riscv/memory.zkc`.
 
-## The unified instruction model (zisk-style pipeline)
+For S-type the 12-bit store immediate is reassembled
+(`imm[11] :: imm[10:5] :: imm[4:0]`) into a single `imm12` field, so the
+interpreter no longer has to recombine the split immediate.
 
-Every RISC-V instruction is reduced at decode time to ONE uniform record driving
-the interpreter's four-phase pipeline (read → compute → write → advance PC), so
-the interpreter no longer switches on the instruction type. `decodeUnified` in
-`main.go` maps each encoding to:
+For J-type the 21-bit signed jump offset is sign-extended into a single 64-bit
+`imm` at decode time, so `j_type.zkc` does no shift or sign extension at runtime.
 
-- **`operation`** — the compute op applied to operands `a` and `b`
-  (`OPR_ADD`, `OPR_SLL`, `OPR_MUL`, `OPR_MOVE_LOADED`, `OPR_LINK`, `OPR_CMP_EQ`,
-  `OPR_KECCAK`, `OPR_NOP`, …). Immediate and register ALU forms share one op
-  (e.g. ADD/ADDI, SLL/SLLI), with operand `b` selected by `b_src`.
-- **`a_src` / `b_src`** — operand sources: `a` is `registers[rs1]` or `pc`
-  (`A_RS1` / `A_PC`); `b` is `registers[rs2]` or the immediate (`B_RS2` / `B_IMM`).
-- **`read_kind`** — memory load width/extension for loads (address = `a + b`):
-  `RK_NONE`, `RK_8S`, …, `RK_32U`.
-- **`write_kind`** — writeback target: `WK_REG` (register `rd`), `WK_MEM8..64`
-  (store `registers[rs2]`), or `WK_NONE`.
-- **`pc_kind`** — pc update: `PK_NEXT`, `PK_BRANCH`, `PK_JUMP_REL` (JAL),
-  `PK_JUMP_ABS` (JALR), `PK_SYSCALL` (ECALL), `PK_HALT` (EBREAK).
-- **`rs1`, `rs2`, `rd`** — register indices (`rs2` also carries store data).
-- **`imm`** — a single 64-bit immediate, fully sign-extended at decode time for
-  I/S/B/J/U; shift forms carry the raw shift amount (no sign extension); U-type
-  carries `sext32(imm20 << 12)`.
+## I-type semantic micro-ops (split compute + writeback)
 
-`decodeUnified` reuses the per-type semantic decoders `decodeITypeSemantic` and
-`decodeRTypeSemantic` (and the I/R-type `compute_op` constants in `constants.zkc`,
-mirrored in `main.go`) to derive `operation` and the selectors. See `main_test.go`
-for `decodeITypeSemantic` / `decodeRTypeSemantic` coverage.
+`decoded_itype` no longer replays raw `funct3` / opcode bits. Instead,
+`decodeITypeSemantic` in `main.go` maps each I-type encoding to:
+
+- **`compute_op`** — what to execute (`READ8_SGN`, `OP_ADDI`, `OP_SLLI`, `JALR`, …)
+- **`writeback`** — whether to store the computed result into `rd` (`WB_STORE_REG` or `WB_NONE`)
+- **`imm12`, `rs1`, `rd`** — operands (shift amounts are normalized into `imm12` at decode time)
+
+At runtime, `process_I_type_instruction` runs a flat `switch compute_op`, then a
+separate `switch writeback` with the usual `if (rd != 0)` guard. This is a
+Zisk-like split (compute, then store-to-register) scoped to I-type for now;
+`STORE_MEM` semantic ops for S-type are deferred.
+
+Constants for `compute_op` / `writeback` live in `constants.zkc` and are mirrored
+in `main.go` (`itypeOpAddi`, `wbStoreReg`, …). See `main_test.go` for
+`decodeITypeSemantic` coverage.
+
+## R-type semantic micro-ops (split compute + writeback)
+
+`decoded_rtype` no longer replays raw `funct3` / `funct7` / opcode bits. Instead,
+`decodeRTypeSemantic` in `main.go` maps each R-type encoding to:
+
+- **`compute_op`** — what to execute (`RTYPE_ADD`, `RTYPE_MUL`, `RTYPE_KECCAK`, …)
+- **`writeback`** — whether to store the computed result into `rd` (`WB_STORE_REG` or `WB_NONE`)
+- **`rs1`, `rs2`, `rd`** — operands
+
+At runtime, `process_R_type_instruction` runs a flat `switch compute_op`, then a
+separate `switch writeback` with the usual `if (rd != 0)` guard. `RTYPE_KECCAK`
+uses `WB_NONE` and returns early after the precompile side effects.
+
+Constants for R-type `compute_op` live in `constants.zkc` and are mirrored in
+`main.go` (`rtypeOpAdd`, …). See `main_test.go` for `decodeRTypeSemantic` coverage.
 
 ## Static rd=x0 no-op folding
 
 Some encodings write their result to `x0`, which RISC-V discards. When an
 instruction has **no other visible effects** (no memory access, no control-flow
-change, no non-`x0` register reads), `buildDecodedProgram` rewrites its type to
-`miscMemType`, which `decodeUnified` emits as `OPR_NOP` (no compute, no writeback,
-`PK_NEXT`).
+change, no non-`x0` register reads), `buildDecodedProgram` rewrites
+`decoded_core[i].instruction_type` to `MISC_MEM_TYPE` (7).
 
 At runtime the interpreter then only advances `pc` by 4 — the same path used for
 `FENCE` / `FENCE.I`.
@@ -119,8 +136,8 @@ All of this happens in `buildDecodedProgram`:
    fields with shifts/masks. `instructionTypeFromOpcode` reproduces the ZkC
    `instruction_type_from_opcode` mapping (and the constants mirror
    `constants.zkc`). `isRdZeroNoop` may rewrite the type to `MISC_MEM_TYPE`.
-5. **Decode to the unified record** (`decodeUnified`) and **bit-pack** it (see below).
-6. **Hex-encode** the bit buffer into the hex string for the `decoded` JSON key.
+5. **Bit-pack each table** (see below).
+6. **Hex-encode** each bit buffer into the hex string for its JSON key.
 
 ## Bit-packing (the subtle part)
 
@@ -133,12 +150,18 @@ most-significant bit first, into a continuous big-endian bit stream. Records are
 concatenated with **no per-record alignment**, and the final byte is zero-padded
 in its low bits. This mirrors ZkC's `EncodeBytes` / `DecodeUnsignedInt`.
 
-The field widths come from the semantic types in `utils/type.zkc`, so the record
+The field widths come from the semantic types in `utils/type.zkc`, so each record
 size is the sum of its field widths:
 
-| Table     | Field widths (bits)                                                                           | Record size |
-| --------- | -------------------------------------------------------------------------------------------- | ----------- |
-| `decoded` | operation 6, a_src 1, b_src 1, read_kind 3, write_kind 3, pc_kind 3, rs1 5, rs2 5, rd 5, imm 64 | 96 bits     |
+| Table           | Field widths (bits)            | Record size |
+| --------------- | ------------------------------ | ----------- |
+| `decoded_core`  | opcode 7, type 3, params 25    | 35 bits     |
+| `decoded_itype` | compute_op 6, writeback 2, imm12 12, rs1 5, rd 5 | 30 bits     |
+| `decoded_rtype` | compute_op 6, writeback 2, rs1 5, rs2 5, rd 5 | 23 bits |
+| `decoded_stype` | imm12 12, rs2 5, rs1 5, funct3 3 | 25 bits   |
+| `decoded_btype` | imm_sign 1, imm_10_5 6, rs2 5, rs1 5, funct3 3, imm_4_1 4, imm_11 1 | 25 bits |
+| `decoded_jtype` | imm 64, rd 5 | 69 bits |
+| `decoded_utype` | imm20 20, rd 5 | 25 bits |
 
 > Important: if you change a field's type/width in `memory.zkc`, update the
 > matching `writeBits` calls here (and vice versa). A width or order mismatch
@@ -146,8 +169,8 @@ size is the sum of its field widths:
 
 ## Related files
 
-- `arithmetization/src/main/riscv/memory.zkc` — the `decoded` `pub input` declaration.
-- `arithmetization/src/main/riscv/interpreter.zkc` — reads `decoded` and runs the
-  four-phase pipeline (no instruction-type dispatch).
-- `arithmetization/src/main/riscv/pipeline/{read,effect,write,pc}.zkc` — the read,
-  compute, write, and advance-PC phases.
+- `arithmetization/src/main/riscv/memory.zkc` — the `pub input` declarations.
+- `arithmetization/src/main/riscv/interpreter.zkc` — reads `decoded_core` and
+  dispatches by `instruction_type`.
+- `arithmetization/src/main/riscv/instruction_processing/{i,r,s,b,j,u}_type.zkc` — read
+  their respective decoded tables by index.
