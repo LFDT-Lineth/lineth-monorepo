@@ -1,6 +1,7 @@
 package linea.staterecovery.plugin
 
 import linea.domain.BlockParameter
+import linea.domain.toBlockParameter
 import linea.domain.RetryConfig
 import org.hyperledger.besu.datatypes.Address
 import picocli.CommandLine
@@ -277,7 +278,7 @@ class PluginCliOptions {
 
   class BlockParameterConverter : CommandLine.ITypeConverter<BlockParameter> {
     override fun convert(value: String): BlockParameter {
-      return BlockParameter.parse(value)
+      return value.toBlockParameter()
     }
   }
 }

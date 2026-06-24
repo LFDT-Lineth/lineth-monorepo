@@ -6,6 +6,7 @@ import io.vertx.junit5.VertxTestContext
 import linea.contract.l1.FakeFinalizedStateDataProvider
 import linea.domain.BlockParameter
 import linea.domain.BlockWithTxHashes
+import linea.domain.toBlockParameter
 import linea.ethapi.EthApiBlockClient
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
@@ -70,7 +71,7 @@ class FinalizationMonitorImplTest {
             verify(
               mockL2Client,
               atLeastOnce(),
-            ).ethGetBlockByNumberTxHashes(eq(BlockParameter.fromNumber(expectedBlockNumber)))
+            ).ethGetBlockByNumberTxHashes(eq(expectedBlockNumber.toBlockParameter()))
           }
       }
       .thenCompose { finalizationMonitorImpl.stop() }
