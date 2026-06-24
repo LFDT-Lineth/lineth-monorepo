@@ -114,8 +114,7 @@ type Query []QueryLayer // len = numRounds
 
 // Level holds one polynomial introduced at the folding round where the running
 // polynomial's degree matches Level.D. Trees are the pre-built paired-leaf Merkle
-// trees backing Evals. Today committed levels carry exactly one tree; virtual
-// PCS levels will later carry one tree per backing table.
+// trees backing Evals.
 type Level struct {
 	D     int
 	Evals []field.Ext
@@ -543,10 +542,13 @@ func mapExtToOctuplet(exts []field.Ext) []field.Octuplet {
 }
 
 // openQueryExt builds the Merkle opening data for query index s across all r
-// extension folding levels.
-func openQueryExt(s int, layers [][]field.Ext, trees []*Tree, numRounds int) Query {
+// extension folding levels. The caller supplies layer0 because it may be backed
+// by several external trees; later running layers are backed by one FRI tree
+// each.
+func openQueryExt(s int, layer0 QueryLayer, layers [][]field.Ext, trees []*Tree, numRounds int) Query {
 	q := make(Query, numRounds)
-	for j := 0; j < numRounds; j++ {
+	q[0] = layer0
+	for j := 1; j < numRounds; j++ {
 
 		var (
 			base = s >> j
@@ -555,7 +557,7 @@ func openQueryExt(s int, layers [][]field.Ext, trees []*Tree, numRounds int) Que
 
 		// Each fold halves the layer, so layer j has half the entries of layer
 		// j-1. base = s>>j is the bit-reversed position of the query in layer j.
-		if j > 0 && len(layers[j])*2 != len(layers[j-1]) {
+		if len(layers[j])*2 != len(layers[j-1]) {
 			panic("fri: openQueryExt: layers must halve at each round")
 		}
 

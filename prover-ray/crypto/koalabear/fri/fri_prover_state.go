@@ -153,8 +153,7 @@ func (st *ProverState) Open(openedPositions []int) Proof {
 
 	for k := 0; k < st.p.NumQueries; k++ {
 		s := openedPositions[k]
-		st.FRIQueries[k] = openQueryExt(s, st.layers, st.trees, st.p.numRounds)
-		st.FRIQueries[k][0] = openTreesAt(st.levels[0].Trees, s)
+		st.FRIQueries[k] = openQueryExt(s, openTreesAt(st.levels[0].Trees, s), st.layers, st.trees, st.p.numRounds)
 		for l := 1; l < st.plan.numLevels; l++ {
 			base := s >> roundOfLevel[l]
 			st.LevelQueries[l-1][k] = openTreesAt(st.levels[l].Trees, base)
