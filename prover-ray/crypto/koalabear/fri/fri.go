@@ -102,29 +102,31 @@ type domainLight struct {
 	generator   field.Element
 }
 
-// QueryLayer holds the two opened values and a single Merkle proof for one
-// folding level. Exactly one rail is populated, selected by Field.
-// LeafP = layer[base], LeafQ = layer[base + Nⱼ/2] where base = s % (Nⱼ/2).
-type QueryLayer Branch // authenticates the pair; depth = log₂(Nⱼ/2)
+// QueryLayer holds one Merkle branch per tree backing one folding level. The
+// running FRI layers use one branch; virtual PCS levels may use several.
+type QueryLayer []Branch
+
+// QueryLayerRoots holds the Merkle roots corresponding to a QueryLayer.
+type QueryLayerRoots []field.Octuplet
 
 // Query holds the opening data for one full query path across all r levels.
 type Query []QueryLayer // len = numRounds
 
 // Level holds one polynomial introduced at the folding round where the running
-// polynomial's degree matches Level.D. Tree is the pre-built paired-leaf Merkle
-// tree for Evals; build it with Params.BuildLevelTree or Params.BuildLevelTreeExt
-// so the leaf/node hashers match.
+// polynomial's degree matches Level.D. Trees are the pre-built paired-leaf Merkle
+// trees backing Evals. Today committed levels carry exactly one tree; virtual
+// PCS levels will later carry one tree per backing table.
 type Level struct {
 	D     int
 	Evals []field.Ext
-	Tree  *Tree
+	Trees []*Tree
 }
 
 // Proof is the complete multi-degree FRI proof. Level polynomial Merkle roots
 // are NOT stored here — they are passed externally to Verify (the caller
 // commits to those polynomials before invoking FRI).
 type Proof struct {
-	// LevelQueries[l-1][k] = opening for levels[l].Evals at outer query k.
+	// LevelQueries[l-1][k] = openings for levels[l].Evals at outer query k.
 	LevelQueries [][]QueryLayer
 
 	// Running-polynomial FRI path
@@ -164,10 +166,11 @@ type provePlan struct {
 
 // buildProvePlan validates levels and computes the provePlan schedule. It
 // enforces that levels[0].D == p.D with a populated single-rail evaluation
-// vector of length N and a non-nil tree, that every extra level is a power-of-two
-// degree on the same rail with the matching evaluation length and tree, and that
-// no two levels are introduced at the same folding round. levels must already be
-// sorted in decreasing order of D (Prove does this).
+// vector of length N and non-empty, non-nil trees, that every extra level is a
+// power-of-two degree on the same rail with the matching evaluation length and
+// non-empty, non-nil trees, and that no two levels are introduced at the same
+// folding round. levels must already be sorted in decreasing order of D (Prove
+// does this).
 func buildProvePlan(p Params, levels []Level) (provePlan, error) {
 	var plan provePlan
 	if len(levels) == 0 {
@@ -179,8 +182,8 @@ func buildProvePlan(p Params, levels []Level) (provePlan, error) {
 	if len(levels[0].Evals) != p.N {
 		return plan, fmt.Errorf("fri: Prove: levels[0].Evals length %d != N=%d", len(levels[0].Evals), p.N)
 	}
-	if levels[0].Tree == nil {
-		return plan, fmt.Errorf("fri: Prove: levels[0].Tree is nil")
+	if err := checkLevelTrees("levels[0]", levels[0].Trees); err != nil {
+		return plan, fmt.Errorf("fri: Prove: %w", err)
 	}
 
 	plan.numLevels = len(levels)
@@ -206,12 +209,24 @@ func buildProvePlan(p Params, levels []Level) (provePlan, error) {
 		if len(levels[l].Evals) != Nl {
 			return plan, fmt.Errorf("fri: Prove: levels[%d].Evals length %d != N_l=%d", l, len(levels[l].Evals), Nl)
 		}
-		if levels[l].Tree == nil {
-			return plan, fmt.Errorf("fri: Prove: levels[%d].Tree is nil", l)
+		if err := checkLevelTrees(fmt.Sprintf("levels[%d]", l), levels[l].Trees); err != nil {
+			return plan, fmt.Errorf("fri: Prove: %w", err)
 		}
 	}
 
 	return plan, nil
+}
+
+func checkLevelTrees(label string, trees []*Tree) error {
+	if len(trees) == 0 {
+		return fmt.Errorf("%s.Trees is empty", label)
+	}
+	for i, tree := range trees {
+		if tree == nil {
+			return fmt.Errorf("%s.Trees[%d] is nil", label, i)
+		}
+	}
+	return nil
 }
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -220,16 +235,16 @@ func buildProvePlan(p Params, levels []Level) (provePlan, error) {
 
 // Verify checks a multi-degree FRI proof.
 //
-// levelRoots[l] is the Merkle root of levels[l].Evals (committed by the caller
-// before invoking FRI). levelRoots[0] plays the role of "root0" in
-// single-degree FRI.
+// levelRoots[l] is the list of Merkle roots backing levels[l].Evals (committed
+// by the caller before invoking FRI). levelRoots[0][0] plays the role of
+// "root0" in single-degree FRI.
 //
 // levelDs[l] is the polynomial-size parameter D for level l; levelDs[0] must
 // equal p.D and the slice must be ordered consistently with how Prove was
 // called (i.e. decreasing D).
 //
 // ts must be in the same state as when Prove was called.
-func Verify(p Params, levelRoots []field.Octuplet, levelDs []int, prf Proof,
+func Verify(p Params, levelRoots []QueryLayerRoots, levelDs []int, prf Proof,
 	alphas []field.Ext, openedPositions []int) error {
 
 	if len(levelDs) == 0 {
@@ -237,6 +252,11 @@ func Verify(p Params, levelRoots []field.Octuplet, levelDs []int, prf Proof,
 	}
 	if len(levelRoots) != len(levelDs) {
 		return fmt.Errorf("fri: Verify: levelRoots has %d entries, levelDs has %d", len(levelRoots), len(levelDs))
+	}
+	for l, roots := range levelRoots {
+		if len(roots) == 0 {
+			return fmt.Errorf("fri: Verify: levelRoots[%d] is empty", l)
+		}
 	}
 	if levelDs[0] != p.D {
 		return fmt.Errorf("fri: Verify: levelDs[0]=%d must equal p.D=%d", levelDs[0], p.D)
@@ -289,6 +309,14 @@ func Verify(p Params, levelRoots []field.Octuplet, levelDs []int, prf Proof,
 		levelAtRound[jl] = l
 	}
 
+	// Assemble FRI running-polynomial roots: roots[0] is the level-0 roots;
+	// roots[1..r-1] come from prf.FRIRoots.
+	roots := make([]QueryLayerRoots, p.numRounds)
+	roots[0] = levelRoots[0]
+	for j := 1; j < p.numRounds; j++ {
+		roots[j] = QueryLayerRoots{prf.FRIRoots[j-1]}
+	}
+
 	// Structural validation: reject a malformed proof here, before any hashing,
 	// so that a missing or extra entry can never cause an out-of-bounds access or
 	// a silently-ignored field later in verification.
@@ -313,26 +341,18 @@ func Verify(p Params, levelRoots []field.Octuplet, levelDs []int, prf Proof,
 			return fmt.Errorf("fri: Verify: query %d has %d layers, want %d", k, len(q), p.numRounds)
 		}
 		for j := 0; j < p.numRounds; j++ {
-			if err := checkBranchShape(Branch(q[j]), p.N>>j); err != nil {
+			if err := checkQueryLayerShape(q[j], roots[j], p.N>>j); err != nil {
 				return fmt.Errorf("fri: Verify: query %d round %d: %w", k, j, err)
 			}
 		}
 		for jl, li := range levelAtRound {
-			if err := checkBranchShape(Branch(prf.LevelQueries[li-1][k]), p.N>>jl); err != nil {
+			if err := checkQueryLayerShape(prf.LevelQueries[li-1][k], levelRoots[li], p.N>>jl); err != nil {
 				return fmt.Errorf("fri: Verify: query %d extra level %d: %w", k, li, err)
 			}
 		}
 	}
 
-	// Assemble FRI running-polynomial roots: roots[0] is the level-0 root;
-	// roots[1..r-1] come from prf.FRIRoots.
-	roots := make([]field.Octuplet, p.numRounds)
-	roots[0] = levelRoots[0]
-	for j := 1; j < p.numRounds; j++ {
-		roots[j] = prf.FRIRoots[j-1]
-	}
-
-	var levelRootsExtra []field.Octuplet
+	var levelRootsExtra []QueryLayerRoots
 	if numExtraLevels > 0 {
 		levelRootsExtra = levelRoots[1:]
 	}
@@ -342,9 +362,9 @@ func Verify(p Params, levelRoots []field.Octuplet, levelDs []int, prf Proof,
 
 func verifyExt(
 	p Params,
-	levelRoots, levelRootsExtra []field.Octuplet,
+	levelRoots, levelRootsExtra []QueryLayerRoots,
 	levelAtRound map[int]int,
-	roots []field.Octuplet,
+	roots []QueryLayerRoots,
 	prf Proof,
 	alphas []field.Ext,
 	queryIndexes []int,
@@ -371,6 +391,18 @@ func verifyExt(
 		}
 	}
 
+	return nil
+}
+
+func checkQueryLayerShape(opening QueryLayer, roots QueryLayerRoots, numLeaves int) error {
+	if len(opening) != len(roots) {
+		return fmt.Errorf("opening has %d branches, want %d", len(opening), len(roots))
+	}
+	for i, branch := range opening {
+		if err := checkBranchShape(branch, numLeaves); err != nil {
+			return fmt.Errorf("branch %d: %w", i, err)
+		}
+	}
 	return nil
 }
 
@@ -527,7 +559,7 @@ func openQueryExt(s int, layers [][]field.Ext, trees []*Tree, numRounds int) Que
 			panic("fri: openQueryExt: layers must halve at each round")
 		}
 
-		q[j] = QueryLayer(path)
+		q[j] = QueryLayer{path}
 	}
 
 	return q
@@ -535,9 +567,9 @@ func openQueryExt(s int, layers [][]field.Ext, trees []*Tree, numRounds int) Que
 
 func checkQueryExt(s int, fq Query,
 	levelQueriesForQuery []QueryLayer,
-	levelRoots []field.Octuplet,
+	levelRoots []QueryLayerRoots,
 	levelAtRound map[int]int,
-	roots []field.Octuplet,
+	roots []QueryLayerRoots,
 	finalPoly []field.Ext,
 	alphas []field.Ext,
 	p Params) error {
@@ -545,21 +577,17 @@ func checkQueryExt(s int, fq Query,
 	for j := 0; j < p.numRounds; j++ {
 
 		var (
-			Nj     = int(p.domainsLight[j].cardinality)
-			kj     = bits.TrailingZeros(uint(Nj)) // log₂(Nⱼ)
-			base   = s >> j                       // bit-reversed position of the query in layer j
-			branch = Branch(fq[j])
+			Nj   = int(p.domainsLight[j].cardinality)
+			kj   = bits.TrailingZeros(uint(Nj)) // log₂(Nⱼ)
+			base = s >> j                       // bit-reversed position of the query in layer j
 		)
 
 		// Authenticate the opened leaf against the round-j root. The hashing now
 		// lives in the tree itself (Branch.RecoverRoot replays hashNode up to the
 		// root), so there is no separate leaf/node hasher to call.
-		root, err := branch.RecoverRoot(base)
+		branch, err := authenticateQueryLayer(fmt.Sprintf("round %d", j), fq[j], roots[j], base)
 		if err != nil {
-			return fmt.Errorf("round %d: recover root: %w", j, err)
-		}
-		if root != roots[j] {
-			return fmt.Errorf("round %d: Merkle proof invalid (base=%d)", j, base)
+			return err
 		}
 
 		// The opened leaf and its deepest sibling are the conjugate pair p(x),
@@ -603,16 +631,11 @@ func checkQueryExt(s int, fq Query,
 		// Mix in the auxiliary half-codeword: the level entering at round j+1,
 		// batched with alpha², exactly as foldLayerInternally does on the prover.
 		if li, ok := levelAtRound[j+1]; ok {
-			var (
-				lv    = Branch(levelQueriesForQuery[li-1])
-				lvIdx = s >> (j + 1) // the level's codeword shares layer j+1's indexing
-			)
-			lvRoot, err := lv.RecoverRoot(lvIdx)
+			lvOpening := levelQueriesForQuery[li-1]
+			lvIdx := s >> (j + 1) // the level's codeword shares layer j+1's indexing
+			lv, err := authenticateQueryLayer(fmt.Sprintf("level %d", li), lvOpening, levelRoots[li-1], lvIdx)
 			if err != nil {
-				return fmt.Errorf("level %d: recover root: %w", li, err)
-			}
-			if lvRoot != levelRoots[li-1] {
-				return fmt.Errorf("level %d: Merkle proof invalid", li)
+				return err
 			}
 			aux, err := octupletToExt(lv.Leaf)
 			if err != nil {
@@ -626,7 +649,11 @@ func checkQueryExt(s int, fq Query,
 		// The fold output must equal the queried leaf of the next layer (whose
 		// position is base>>1 = s>>(j+1)); at the last round, the final polynomial.
 		if j < p.numRounds-1 {
-			next, err := octupletToExt(Branch(fq[j+1]).Leaf)
+			nextBranch, err := firstQueryLayerBranch(fq[j+1])
+			if err != nil {
+				return fmt.Errorf("round %d: next layer: %w", j, err)
+			}
+			next, err := octupletToExt(nextBranch.Leaf)
 			if err != nil {
 				return fmt.Errorf("round %d: decode next leaf: %w", j, err)
 			}
@@ -642,4 +669,36 @@ func checkQueryExt(s int, fq Query,
 	}
 
 	return nil
+}
+
+func authenticateQueryLayer(
+	label string,
+	opening QueryLayer,
+	roots QueryLayerRoots,
+	base int,
+) (Branch, error) {
+	if len(opening) != len(roots) {
+		return Branch{}, fmt.Errorf("%s: has %d tree openings, want %d roots", label, len(opening), len(roots))
+	}
+	first, err := firstQueryLayerBranch(opening)
+	if err != nil {
+		return Branch{}, fmt.Errorf("%s: %w", label, err)
+	}
+	for i, branch := range opening {
+		root, err := branch.RecoverRoot(base)
+		if err != nil {
+			return Branch{}, fmt.Errorf("%s tree %d: recover root: %w", label, i, err)
+		}
+		if root != roots[i] {
+			return Branch{}, fmt.Errorf("%s tree %d: Merkle proof invalid", label, i)
+		}
+	}
+	return first, nil
+}
+
+func firstQueryLayerBranch(opening QueryLayer) (Branch, error) {
+	if len(opening) == 0 {
+		return Branch{}, fmt.Errorf("opening is empty")
+	}
+	return opening[0], nil
 }

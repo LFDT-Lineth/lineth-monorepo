@@ -151,23 +151,89 @@ func TestProveVerify(t *testing.T) {
 			prf := proverForTest(p, levels, alphas, positions)
 
 			// Prove sorts levels by decreasing D; mirror that order for the verifier.
-			levelRoots := make([]field.Octuplet, len(levels))
-			levelDs := make([]int, len(levels))
-			for i := range levels {
-				levelRoots[i] = levels[i].Tree.Root()
-				levelDs[i] = levels[i].D
-			}
+			levelRoots, levelDs := verifierInputsForLevels(levels)
 
 			if err := Verify(p, levelRoots, levelDs, prf, alphas, positions); err != nil {
 				t.Fatalf("Verify (honest) failed: %v", err)
 			}
 
 			// Tampering an opened leaf must make verification fail.
-			prf.FRIQueries[0][0].Leaf = field.PseudoRandOctuplet(prng)
+			prf.FRIQueries[0][0][0].Leaf = field.PseudoRandOctuplet(prng)
 			if err := Verify(p, levelRoots, levelDs, prf, alphas, positions); err == nil {
 				t.Fatalf("Verify accepted a proof with a tampered leaf")
 			}
 		})
+	}
+}
+
+func TestProverStateOpenLoopsOverLevelTrees(t *testing.T) {
+
+	prng := rand.New(utils.NewRandSource(20260624))
+	p, err := NewParams(16, 8, 2)
+	if err != nil {
+		t.Fatalf("NewParams: %v", err)
+	}
+
+	levels := []Level{newRandomLevel(prng, p, 8), newRandomLevel(prng, p, 2)}
+
+	otherTopEvals := make([]field.Ext, len(levels[0].Evals))
+	for i := range otherTopEvals {
+		otherTopEvals[i] = field.PseudoRandExt(prng)
+	}
+	levels[0].Trees = append(levels[0].Trees, buildTreeExt(otherTopEvals))
+
+	otherEvals := make([]field.Ext, len(levels[1].Evals))
+	for i := range otherEvals {
+		otherEvals[i] = field.PseudoRandExt(prng)
+	}
+	levels[1].Trees = append(levels[1].Trees, buildTreeExt(otherEvals))
+
+	alphas := make([]field.Ext, p.numRounds)
+	for i := range alphas {
+		alphas[i] = field.PseudoRandExt(prng)
+	}
+	positions := []int{3, 11}
+
+	prf := proverForTest(p, levels, alphas, positions)
+	levelRoots, levelDs := verifierInputsForLevels(levels)
+	if err := Verify(p, levelRoots, levelDs, prf, alphas, positions); err != nil {
+		t.Fatalf("Verify (multi-tree openings) failed: %v", err)
+	}
+
+	if len(prf.FRIQueries[0][0]) != len(levels[0].Trees) {
+		t.Fatalf("round-0 opening has %d branches, want %d", len(prf.FRIQueries[0][0]), len(levels[0].Trees))
+	}
+	if len(prf.LevelQueries) != 1 {
+		t.Fatalf("proof has %d level query sets, want 1", len(prf.LevelQueries))
+	}
+	if len(prf.LevelQueries[0][0]) != len(levels[1].Trees) {
+		t.Fatalf("level opening has %d branches, want %d", len(prf.LevelQueries[0][0]), len(levels[1].Trees))
+	}
+
+	for i, branch := range prf.FRIQueries[0][0] {
+		root, err := branch.RecoverRoot(positions[0])
+		if err != nil {
+			t.Fatalf("round-0 branch %d root recovery failed: %v", i, err)
+		}
+		if root != levels[0].Trees[i].Root() {
+			t.Fatalf("round-0 branch %d opened the wrong tree", i)
+		}
+	}
+
+	base := positions[0] >> utils.Log2Ceil(p.D/levels[1].D)
+	for i, branch := range prf.LevelQueries[0][0] {
+		root, err := branch.RecoverRoot(base)
+		if err != nil {
+			t.Fatalf("branch %d root recovery failed: %v", i, err)
+		}
+		if root != levels[1].Trees[i].Root() {
+			t.Fatalf("branch %d opened the wrong tree", i)
+		}
+	}
+
+	prf.FRIQueries[0][0][1].Leaf = field.PseudoRandOctuplet(prng)
+	if err := Verify(p, levelRoots, levelDs, prf, alphas, positions); err == nil {
+		t.Fatalf("Verify accepted a proof with a tampered second tree opening")
 	}
 }
 
@@ -179,7 +245,20 @@ func newRandomLevel(prng *rand.Rand, p Params, d int) Level {
 	for i := range evals {
 		evals[i] = field.PseudoRandExt(prng)
 	}
-	return Level{D: d, Evals: evals, Tree: buildTreeExt(evals)}
+	return Level{D: d, Evals: evals, Trees: []*Tree{buildTreeExt(evals)}}
+}
+
+func verifierInputsForLevels(levels []Level) ([]QueryLayerRoots, []int) {
+	levelRoots := make([]QueryLayerRoots, len(levels))
+	levelDs := make([]int, len(levels))
+	for i := range levels {
+		levelRoots[i] = make(QueryLayerRoots, len(levels[i].Trees))
+		for j, tree := range levels[i].Trees {
+			levelRoots[i][j] = tree.Root()
+		}
+		levelDs[i] = levels[i].D
+	}
+	return levelRoots, levelDs
 }
 
 // proverForTest runs multi-degree FRI (commit + query phase) and returns a Proof

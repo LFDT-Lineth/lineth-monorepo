@@ -120,7 +120,7 @@ func applyMutation(root reflect.Value, m proofMutation) {
 }
 
 // nolint -- ignores: error should be the last return parameters
-func safeVerify(p Params, levelRoots []field.Octuplet, levelDs []int,
+func safeVerify(p Params, levelRoots []QueryLayerRoots, levelDs []int,
 	prf Proof, alphas []field.Ext, positions []int) (err error, panicked bool) {
 
 	defer func() {
@@ -158,12 +158,7 @@ func TestVerifyRejectsProofMutations(t *testing.T) {
 
 	// Canonical proof (Prove sorts levels in place, so derive verifier inputs after).
 	base := proverForTest(p, levels, alphas, positions)
-	levelRoots := make([]field.Octuplet, len(levels))
-	levelDs := make([]int, len(levels))
-	for i := range levels {
-		levelRoots[i] = levels[i].Tree.Root()
-		levelDs[i] = levels[i].D
-	}
+	levelRoots, levelDs := verifierInputsForLevels(levels)
 	if err := Verify(p, levelRoots, levelDs, base, alphas, positions); err != nil {
 		t.Fatalf("honest proof was rejected: %v", err)
 	}
