@@ -1,8 +1,8 @@
 package wiop
 
 import (
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/utils/arena"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/arena"
 )
 
 // ProverAction represents a prover-side computation to be performed during protocol

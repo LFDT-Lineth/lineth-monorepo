@@ -21,13 +21,14 @@ ZKC_BIN := $(GOPATH)/bin/zkc
 ##
 ## Run all the unit-tests
 ##
-test:
+test: ci-lint 
 	go test -tags debug ./...
 
 ##
 ## Run the CI linting
 ##
 ci-lint:
+	go fmt ./...	
 	golangci-lint run --timeout 5m
 
 ##

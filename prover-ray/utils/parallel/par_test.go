@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/consensys/linea-monorepo/prover-ray/utils/parallel"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 )
 
 func TestParChunky(t *testing.T) {

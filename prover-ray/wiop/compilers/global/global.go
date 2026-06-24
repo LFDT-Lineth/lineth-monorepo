@@ -3,12 +3,12 @@ package global
 import (
 	"fmt"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 	gnarkutils "github.com/consensys/gnark-crypto/utils"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/polynomials"
-	"github.com/consensys/linea-monorepo/prover-ray/utils"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop"
 )
 
 // Compile adds the global-quotient compilation pass to sys. It groups each

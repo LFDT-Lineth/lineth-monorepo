@@ -22,7 +22,7 @@ runs:
       - name: Install Zig
         uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
         with:
-          version: '0.17.0-dev.251+0db721ec2'
+          version: '0.16.0'
 
       - name: Install Rust nightly
         shell: bash
@@ -54,6 +54,5 @@ runs:
             | tar xz --directory="${XPACK_GCC_DIR}" --strip-components=1
           ln -sf "${XPACK_GCC_DIR}/bin/riscv-none-elf-gcc" "${XPACK_GCC_DIR}/bin/riscv64-unknown-elf-gcc"
           echo "${XPACK_GCC_DIR}/bin" >> "${GITHUB_PATH}"
-
 
 

@@ -755,7 +755,9 @@ func DivEuclidean(api frontend.API, a, b frontend.Variable) (quotient, remainder
 		panic(err)
 	}
 	quotient, remainder = outs[0], outs[1]
+	// remainder <= b-1
 	api.AssertIsLessOrEqual(remainder, api.Sub(b, 1))
+	// quotient <= a
 	api.AssertIsLessOrEqual(quotient, a)
 	api.AssertIsEqual(api.Sub(a, remainder), api.Mul(quotient, b))
 

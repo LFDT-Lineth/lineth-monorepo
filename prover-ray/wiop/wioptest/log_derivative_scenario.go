@@ -1,6 +1,6 @@
 package wioptest
 
-import "github.com/consensys/linea-monorepo/prover-ray/wiop"
+import "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 
 // LogDerivativeSumCompilerScenario is a fixture for testing the
 // logderivativesum compiler pass end-to-end.

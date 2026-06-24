@@ -46,10 +46,9 @@ func dummyCoinName(i int) coin.Name {
 // name of the evaluation query
 const QNAME ifaces.QueryID = "EVAL"
 
-// sis instances
+// sis instances: LogTwoDegree < 3 gives chunkSize < 8 which is not supported
+// (sisTransversalHash requires chunkSize to be a multiple of 8).
 var sisInstances = []ringsis.Params{
-	{LogTwoBound: 8, LogTwoDegree: 1},
-	{LogTwoBound: 8, LogTwoDegree: 2},
 	{LogTwoBound: 8, LogTwoDegree: 3},
 	{LogTwoBound: 8, LogTwoDegree: 6},
 	{LogTwoBound: 8, LogTwoDegree: 5},

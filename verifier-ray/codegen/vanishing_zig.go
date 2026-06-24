@@ -177,6 +177,8 @@ func exprNodeLiteral(expr ExprNode) string {
 		return fmt.Sprintf(".{ .constant = field.Element.init(%d) },", expr.Constant.Uint64())
 	case ExprOp:
 		return fmt.Sprintf(".{ .op = .{ .operator = .%s, .operands = &%s } },", expr.Operator, intSlice(expr.Operands))
+	case ExprLagrangeSelector:
+		return fmt.Sprintf(".{ .lagrange_selector = %d },", expr.SelectorPosition)
 	default:
 		panic(fmt.Sprintf("unknown ExprKind %d", int(expr.Kind)))
 	}
