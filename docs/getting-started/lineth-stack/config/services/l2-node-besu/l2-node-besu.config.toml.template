@@ -1,0 +1,104 @@
+# This besu config file contains configurations from l2-node-besu-config-basic.toml
+# plus those for tracer and shomei features
+
+data-path="/opt/besu/data"
+host-allowlist=["*"]
+sync-mode="FULL"
+p2p-port=30303
+
+min-gas-price=0
+
+# engine
+engine-host-allowlist=["*"]
+engine-rpc-port=8550
+engine-jwt-disabled=true
+
+# rpc
+rpc-http-enabled=true
+rpc-http-host="0.0.0.0"
+rpc-http-port=8545
+rpc-http-cors-origins=["*"]
+rpc-http-api=["ADMIN","DEBUG","NET","ETH","ENGINE","WEB3","PLUGINS","LINEA","MINER","SHOMEI"]
+rpc-http-max-active-connections=200
+
+# ws
+rpc-ws-enabled=true
+rpc-ws-host="0.0.0.0"
+rpc-ws-port=8546
+rpc-ws-api=["ADMIN","TXPOOL","WEB3","ETH","NET","PERM","LINEA"]
+rpc-ws-max-active-connections=200
+
+# graphql
+graphql-http-enabled=false
+
+# metrics
+metrics-enabled=true
+metrics-host="0.0.0.0"
+metrics-port=9545
+
+# database
+data-storage-format="BONSAI"
+
+# plugins
+plugins=[
+  "LineaEstimateGasEndpointPlugin",
+  "LineaExtraDataPlugin",
+  "LineaTransactionPoolValidatorPlugin",
+  "LineaBundleEndpointsPlugin",
+  "ForwardBundlesPlugin",
+  "TracerReadinessPlugin",                  # for tracer feature/role
+  "TracesEndpointServicePlugin",            # for tracer feature/role
+  "LineCountsEndpointServicePlugin",        # for tracer feature/role
+  "CaptureEndpointServicePlugin",           # for tracer feature/role
+  "BesuShomeiRpcPlugin",                    # for shomei feature
+  "ZkTrieLogPlugin"                         # for shomei feature
+]
+plugin-linea-module-limit-file-path="/var/lib/besu/traces-limits.toml"
+plugin-linea-deny-list-path="/var/lib/besu/deny-list.txt"
+plugin-linea-l1l2-bridge-contract="__L2_MESSAGE_SERVICE_ADDRESS__"
+plugin-linea-l1l2-bridge-topic="e856c2b8bd4eb0027ce32eeaf595c21b0b6b4644b326e5b7bd80a1cf8db72e6c"
+plugin-linea-tx-pool-profitability-check-p2p-enabled=true
+plugin-linea-tx-pool-profitability-check-api-enabled=true
+plugin-linea-tx-pool-simulation-check-api-enabled=true
+plugin-linea-tx-pool-simulation-check-p2p-enabled=true
+plugin-linea-extra-data-pricing-enabled=true
+plugin-linea-max-tx-calldata-size=30000 # lower this to 30000 (default 60000) for the transaction data limit e2e test
+plugin-linea-tx-pool-min-margin="0.8"
+plugin-linea-min-margin="1.0"
+plugin-linea-fixed-gas-cost-wei=30000000
+plugin-linea-variable-gas-cost-wei=1000000000
+plugin-linea-extra-data-set-min-gas-price-enabled=true
+plugin-linea-estimate-gas-compatibility-mode-enabled=false
+plugin-linea-estimate-gas-min-margin="1.2"
+plugin-linea-bundles-forward-urls=["http://sequencer:8545"]
+plugin-linea-bundles-forward-retry-delay=1000
+plugin-linea-bundles-forward-timeout=5000
+plugin-linea-limitless-enabled=false
+
+# for shomei feature
+# Hostname (not IP) — internal stack used 11.11.11.114 because it pinned
+# shomei's IP. Our network resolves `shomei` via Docker DNS.
+plugin-shomei-http-host="shomei"
+plugin-shomei-http-port=8888
+plugin-shomei-zktrace-comparison-mode=31
+plugin-shomei-enable-zktracer=true
+
+# for tracer feature/role
+plugin-linea-conflated-trace-generation-traces-output-path="/data/traces/v2/conflated"
+plugin-linea-rpc-concurrent-requests-limit=2
+plugin-linea-tracer-readiness-server-host="0.0.0.0"
+plugin-linea-tracer-readiness-server-port=8548
+plugin-linea-tracer-readiness-max-blocks-behind=5
+
+Xin-process-rpc-enabled=true
+Xin-process-rpc-apis=["ETH", "MINER"]
+
+cache-last-block-headers-preload-enabled=true
+cache-last-block-headers=50
+
+bonsai-limit-trie-logs-enabled=false
+# Coordinator may be delayed on first boot by Sepolia RPC/provider issues while
+# L2 keeps producing blocks. Keep enough historical Bonsai state for coordinator
+# to trace from genesis during recovery/catch-up.
+bonsai-historical-block-limit=100000
+bonsai-parallel-tx-processing-enabled=false

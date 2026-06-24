@@ -1,0 +1,340 @@
+[defaults]
+# __L1_RPC_URL__ is rendered at boot by the config-render init container from
+# the L1_RPC_URL env var (.env). L2 endpoint is internal Docker DNS — stays literal.
+l1-endpoint = "__L1_RPC_URL__"
+l2-endpoint = "http://sequencer:8545"
+
+[protocol]
+[protocol.genesis]
+# Both values below are computed at deploy time. config-render seeds them with
+# zero defaults; deploy-contracts.sh patches them with real values after step 1.
+# genesis-state-root-hash: eth_getBlockByNumber("0x0").stateRoot from the L2 RPC.
+# genesis-shnarf: keccak256(parentShnarf || snarkHash || stateRoot || evalClaim || evalPoint),
+#   each 32 bytes; first/second/fourth/fifth are zero hashes.
+genesis-state-root-hash = "__GENESIS_STATE_ROOT_HASH__"
+genesis-shnarf = "__GENESIS_SHNARF__"
+[protocol.l1]
+# Patched by deploy-contracts.sh after the L1 LineaRollup proxy is deployed.
+contract-address = "__LINEA_ROLLUP_ADDRESS__"
+# Sepolia L1 block time. Phase-4 timing tuning may revisit.
+block-time = "PT12S"
+[protocol.l2]
+# L2_MESSAGE_SERVICE_ADDRESS is deterministic (CREATE from pre-baked L2 deployer
+# at nonce 0); the placeholder still gets patched at deploy time so any future
+# change to the L2 deployer key auto-propagates.
+contract-address = "__L2_MESSAGE_SERVICE_ADDRESS__"
+contract-deployment-block-number = __LINEA_ROLLUP_DEPLOY_BLOCK__
+
+[conflation]
+disabled = false
+blocks-limit = 2
+new-blocks-polling-interval="PT1S"
+conflation-deadline = "PT6S" # =3*l2_block_time
+conflation-deadline-check-interval = "PT3S"
+conflation-deadline-last-block-confirmation-delay = "PT2S" # recommended: at least 2 * blockInterval
+l2-fetch-blocks-limit = 4000
+backtesting-directory = "/data/conflation-backtesting"
+force-stop-conflation-at-block-inclusive=100_000_000
+#force-stop-conflation-at-block-timestamp-inclusive=2000000000
+
+# This is to prevent inflight trasactions that may change Smart contract state while coordinator is restarted.
+# Queries SMC for last finalised block, and keeps polling until this number of blocks observe the same state.
+# If state is updated meanwhile, it resets counter and restarts the polling.
+# Phase-4: bumped from 1 to 5 for Sepolia. Sepolia has occasional shallow reorgs;
+# 5 blocks (~60s) gives enough confidence the L1 head won't reorg under us.
+consistent-number-of-blocks-on-l1-to-wait = 5
+
+[conflation.l2-request-retries]
+backoff-delay = "PT1S"
+failures-warning-threshold = 3
+
+[conflation.blob-compression]
+blob-compressor-version="V3"
+blob-size-limit = 102400 # 100KB
+handler-polling-interval = "PT1S"
+# default batches-limit is proof-aggregation.proofs-limit - 1
+# batches-limit must be less than or equal to proof-aggregation.proofs-limit - 1
+batches-limit = 1
+
+[conflation.proof-aggregation]
+proofs-limit = 3
+deadline = "PT1M"
+coordinator-polling-interval = "PT2S"
+deadline-check-interval = "PT8S"
+target-end-blocks = []
+timestamp-based-hard-forks = []
+
+[prover]
+[prover.execution]
+fs-requests-directory = "/data/prover/v3/execution/requests"
+fs-responses-directory = "/data/prover/v3/execution/responses"
+[prover.blob-compression]
+fs-requests-directory = "/data/prover/v3/compression/requests"
+fs-responses-directory = "/data/prover/v3/compression/responses"
+[prover.invalidity]
+fs-requests-directory = "/data/prover/v3/invalidity/requests"
+fs-responses-directory = "/data/prover/v3/invalidity/responses"
+[prover.proof-aggregation]
+fs-requests-directory = "/data/prover/v3/aggregation/requests"
+fs-responses-directory = "/data/prover/v3/aggregation/responses"
+
+#[prover.new]
+#switch-block-number-inclusive=1000
+# Only one of switch-block-number-inclusive and switch-block-timestamp may be set (Instant, e.g. epoch seconds or ISO-8601).
+#switch-block-timestamp = 1700000000
+#[prover.new.execution]
+#fs-requests-directory = "/data/prover/v3/execution/requests"
+#fs-responses-directory = "/data/prover/v3/execution/responses"
+#[prover.new.blob-compression]
+#fs-requests-directory = "/data/prover/v3/compression/requests"
+#fs-responses-directory = "/data/prover/v3/compression/responses"
+#[prover.new.proof-aggregation]
+#fs-requests-directory = "/data/prover/v3/aggregation/requests"
+#fs-responses-directory = "/data/prover/v3/aggregation/responses"
+
+[traces]
+expected-traces-api-version = "beta-v5.0-rc3"
+[traces.counters]
+endpoints = ["http://l2-node-besu:8545/"]
+request-limit-per-endpoint = 1
+[traces.counters.request-retries]
+backoff-delay = "PT1S"
+failures-warning-threshold = 10
+
+[traces.conflation]
+endpoints = ["http://l2-node-besu:8545/"]
+request-limit-per-endpoint = 1
+request-timeout = "PT60S" # each conflated trace request would be timeout in 60 seconds
+[traces.conflation.request-retries]
+backoff-delay = "PT1S"
+failures-warning-threshold = 10
+
+[state-manager]
+version = "3.2.3"
+endpoints = ["http://shomei:8888/"]
+request-limit-per-endpoint = 3
+[state-manager.request-retries]
+max-retries = 5
+backoff-delay = "PT2S"
+failures-warning-threshold = 2
+
+[type2-state-proof-provider]
+disabled = false
+endpoints = ["http://shomei-frontend:8888/"]
+l1-query-block-tag="LATEST"
+l1-polling-interval="PT1S"
+
+[type2-state-proof-provider.request-retries]
+backoff-delay = "PT1S"
+failures-warning-threshold = 2
+
+[l1-finalization-monitor]
+l1-polling-interval = "PT1S"
+l1-query-block-tag="LATEST"
+
+[l1-submission.dynamic-gas-price-cap]
+disabled = __L1_DYNAMIC_GAS_PRICE_CAP_DISABLED__
+[l1-submission.dynamic-gas-price-cap.gas-price-cap-calculation]
+adjustment-constant = 25
+blob-adjustment-constant = 25
+finalization-target-max-delay = "PT32H"
+base-fee-per-gas-percentile-window = "P7D"
+base-fee-per-gas-percentile-window-leeway = "PT10M"
+base-fee-per-gas-percentile = 10
+gas-price-caps-check-coefficient = 0.9
+# The lower bound of the "historic base fee per blob gas" used in
+# the L1 dynamic gas price cap equation
+historic-base-fee-per-blob-gas-lower-bound=100000000 # 0.1 GWEI
+# An optional config to replace the "historic average reward" used in
+# the L1 dynamic gas price cap equation
+historic-avg-reward-constant=100000000 # 0.1 GWEI
+[l1-submission.dynamic-gas-price-cap.fee-history-fetcher]
+fetch-interval = "PT1S"
+max-block-count = 1000
+reward-percentiles = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+num-of-blocks-before-latest = 2
+storage-period = "P10D"
+
+[l1-submission.fallback-gas-price]
+fee-history-block-count = 10
+fee-history-reward-percentile = 15
+
+[l1-submission.blob]
+disabled = false
+submission-delay = "PT1S"
+submission-tick-interval = "PT1S"
+max-submission-transactions-per-tick = 10
+target-blobs-per-transaction=9
+db-max-blobs-to-return = 100
+[l1-submission.blob.gas]
+gas-limit = 10000000
+max-fee-per-gas-cap = __L1_BLOB_MAX_FEE_PER_GAS_CAP_WEI__
+max-fee-per-blob-gas-cap = __L1_BLOB_MAX_FEE_PER_BLOB_GAS_CAP_WEI__
+max-priority-fee-per-gas-cap=__L1_BLOB_MAX_PRIORITY_FEE_PER_GAS_CAP_WEI__
+# Note: prefixed with "fallback-", used when dynamic gas price is disabled or DB is not populated yet
+[l1-submission.blob.gas.fallback]
+priority-fee-per-gas-upper-bound = 20000000000 # 20 GWEI
+priority-fee-per-gas-lower-bound = 2000000000 # 2 GWEI
+
+
+[l1-submission.blob.signer]
+# Web3j/Web3signer
+type = "Web3signer"
+
+# Unused in this quickstart because signer type is Web3signer.
+[l1-submission.blob.signer.web3j]
+private-key = "0x0000000000000000000000000000000000000000000000000000000000000000"
+
+[l1-submission.blob.signer.web3signer]
+endpoint = "https://web3signer:9000"
+max-pool-size = 10
+keep-alive = true
+public-key = "__L1_BLOB_SUBMITTER_PUBKEY_NO_PREFIX__"
+[l1-submission.blob.signer.web3signer.tls]
+key-store-path = "/tls-files/coordinator-client-keystore.p12"
+key-store-password = "changeit"
+trust-store-path = "/tls-files/web3signer-truststore.p12"
+trust-store-password = "changeit"
+
+[l1-submission.aggregation]
+disabled = false
+submission-delay = "PT1S"
+submission-tick-interval = "PT1S"
+max-submissions-per-tick = 10
+[l1-submission.aggregation.gas]
+gas-limit = 10_000_000
+max-fee-per-gas-cap = __L1_FINALIZATION_MAX_FEE_PER_GAS_CAP_WEI__
+max-priority-fee-per-gas-cap = __L1_FINALIZATION_MAX_PRIORITY_FEE_PER_GAS_CAP_WEI__
+
+[l1-submission.aggregation.gas.fallback]
+# Note: prefixed with "fallback-", used when dynamic gas price is disabled or DB is not populated yet
+priority-fee-per-gas-upper-bound = 20000000000 # 20 GWEI
+priority-fee-per-gas-lower-bound = 2000000000 # 2 GWEI
+
+[l1-submission.aggregation.signer]
+# Web3j/Web3signer
+type = "Web3signer"
+
+# Unused in this quickstart because signer type is Web3signer.
+[l1-submission.aggregation.signer.web3j]
+private-key = "0x0000000000000000000000000000000000000000000000000000000000000000"
+
+[l1-submission.aggregation.signer.web3signer]
+endpoint = "https://web3signer:9000"
+max-pool-size = 10
+keep-alive = true
+public-key = "__L1_FINALIZATION_SUBMITTER_PUBKEY_NO_PREFIX__"
+[l1-submission.aggregation.signer.web3signer.tls]
+key-store-path = "/tls-files/coordinator-client-keystore.p12"
+key-store-password = "changeit"
+trust-store-path = "/tls-files/web3signer-truststore.p12"
+trust-store-password = "changeit"
+
+[message-anchoring]
+disabled = false
+l1-highest-block-tag="LATEST"
+l2-highest-block-tag="LATEST" # optional, default to LATEST it shall not be necessary as Linea has instant finality
+anchoring-tick-interval = "PT2S"
+
+[message-anchoring.l1-event-scraping]
+polling-interval = "PT1S"
+polling-timeout = "PT5S"
+
+[message-anchoring.gas]
+max-fee-per-gas-cap = 100000000000
+gas-limit = 10000000
+fee-history-block-count = 4
+fee-history-reward-percentile = 15
+
+[message-anchoring.signer]
+# Web3j/Web3signer
+type = "Web3signer"
+
+# Unused in this quickstart because signer type is Web3signer.
+[message-anchoring.signer.web3j]
+private-key = "0x0000000000000000000000000000000000000000000000000000000000000000"
+
+[message-anchoring.signer.web3signer]
+endpoint = "https://web3signer:9000"
+max-pool-size = 10
+keep-alive = true
+public-key = "__L2_MESSAGE_ANCHORING_PUBKEY_NO_PREFIX__"
+[message-anchoring.signer.web3signer.tls]
+key-store-path = "/tls-files/coordinator-client-keystore.p12"
+key-store-password = "changeit"
+trust-store-path = "/tls-files/web3signer-truststore.p12"
+trust-store-password = "changeit"
+
+[forced-transactions]
+disabled = true
+l1-highest-block-tag = "LATEST"
+processing-tick-interval = "PT5S"
+processing-delay = "PT0S"
+sequencer-endpoint = "http://sequencer:8545/"
+invalidity-proof-check-interval = "PT10S"
+
+[forced-transactions.l1-event-scraping]
+# Polling interval must be faster than L1 block production so the EthLogsFilterSubscription
+# can reach `CaughtUp` state. Otherwise startUpScanFinished never flips to true and the
+# conflation safe-block lock can only ever advance, never release — see ConflationServiceImpl
+# pause "(likely paused by forced transactions)".
+polling-interval = "PT0.2S"
+polling-timeout = "PT10S"
+eth-logs-search-success-backoff-delay = "PT0.5S"
+eth-logs-search-block-chunk-size = 1000
+
+[l2-network-gas-pricing] # old [dynamic-gas-price-service]
+disabled = false
+price-update-interval = "PT4S"
+fee-history-block-count = 10
+fee-history-reward-percentile = 15
+gas-price-fixed-cost = 3000000
+extra-data-update-endpoint = "http://sequencer:8545/"
+[l2-network-gas-pricing.extra-data-update-request-retries]
+max-retries = 4
+timeout = "PT7S"
+backoff-delay = "PT2S"
+failures-warning-threshold = 3
+
+[l2-network-gas-pricing.flat-rate-gas-pricing]
+# Relate to legacy gas pricing, goes into extradata
+# and is exposed on Bessu eth_gasPrice
+gas-price-upper-bound = 1000000000 # 1 GWEI
+gas-price-lower-bound = 90000000 # 0.09 GWEI
+compressed-tx-size = 125
+expected-gas = 21000
+
+[l2-network-gas-pricing.dynamic-gas-pricing]
+# Propagated to Sequencer and Besude through extraDataPricerService and besu
+# uses it dynaically culcuale the profitability of each transaction on:
+# eth_sendRawTransaction, linea_estimateGas, and block building
+l1-blob-gas = 131072 # 2^17 # expected-l1-blob-gas previous name: expected-blob-gas
+blob-submission-expected-execution-gas = 65250
+variable-cost-upper-bound = 1000000001 # ~1 GWEI
+variable-cost-lower-bound = 90000001  # ~0.09 GWEI
+margin = 1.0
+[l2-network-gas-pricing.dynamic-gas-pricing.calldata-based-pricing]
+calldata-sum-size-block-count = 0 # disabled if zero
+fee-change-denominator = 32
+calldata-sum-size-target = 109000
+block-size-non-calldata-overhead = 540
+
+[database]
+hostname = "coordinator-pg"
+port=5432
+username = "postgres"
+password = "postgres"
+schema = "linea_coordinator"
+schemaVersion = 5
+read-pool-size = 10
+read-pipelining-limit = 10
+transactional-pool-size = 10
+[database.persistence-retries]
+max-retries = 3
+backoff-delay = "PT1S"
+timeout = "PT10S"
+failures-warning-threshold = 2
+
+[api]
+observability-port = 9545
+json-rpc-port = 9546

@@ -77,12 +77,16 @@ The runner walks the `blockchain_tests/` tree from the lazy `execution_spec_test
 
 ## Continuous Integration
 
+Two workflows guard the guests.
+
 [`riscv-guests-host-tests.yml`](../.github/workflows/riscv-guests-host-tests.yml) runs on every PR touching `riscv-guests/**`, with two parallel host-machine jobs:
 
 - **Guest unit tests** — `zig fmt --check` plus the orchestrated `make test` (every guest in `GUESTS`).
 - **l2-execution EF spec tests** — the full fixture suite via `make spec-test` (fail-hard; ~2,900 files / ~23k blocks, minutes on a warm cache).
 
-The shared setup lives in [`.github/actions/setup-riscv-guests`](../.github/actions/setup-riscv-guests/action.yml): it installs the Zig pinned in `.zigversion` (via community mirrors — ziglang.org prunes dev builds), the apt crypto packages, and blst/mcl built from pinned upstream sources into `/usr/local`, with the builds and Zig package fetches cached. Running a guest **inside the ZKC interpreter** in CI is a separate, later stage: the `make -C l2-execution compile` → ELF→JSON → `zkc` path works locally (see below); wiring it into CI (which also needs `zkc` + `go`) is still pending.
+[`riscv-guests-zkc-interpreter-run.yml`](../.github/workflows/riscv-guests-zkc-interpreter-run.yml) runs the complementary guest **under zkc**: it builds the l2-execution guest with the prover-accelerated keccak op (`KECCAK_ACCEL=true`) and executes it on the committed sample input via `make -C l2-execution exec ZKC_EXEC_FLAGS="--quiet --gogen --fast"` (the ELF → JSON → `zkc` path described below). Execution uses zkc's **generated-Go backend in fast mode** (`--gogen --fast`) rather than the tree-walking interpreter, because tracing is not implemented yet — a far lighter path (tens of MB, seconds). It triggers on `riscv-guests/**` **and** the interpreter program + tooling it depends on under `arithmetization/` (the `main.zkc` program, the zkc stdlib, the keccak wrapper, and `elf_to_json_gen`), and tracks the `zkc` `main` branch by default (override with the `zkc-ref` workflow input). This is a *runnability* gate — output-correctness over the full corpus is the host spec-test suite's job above.
+
+The host-tests setup lives in [`.github/actions/setup-riscv-guests`](../.github/actions/setup-riscv-guests/action.yml): it installs the Zig pinned in `.zigversion` (via community mirrors — ziglang.org prunes dev builds), the apt crypto packages, and blst/mcl built from pinned upstream sources into `/usr/local`, with the builds and Zig package fetches cached. The interpreter-run workflow reuses that same action for the guest build (the freestanding ELF links none of the crypto) and adds Go plus a `zkc` install.
 
 ## ZKC Interpreter Integration
 
@@ -93,7 +97,7 @@ make -C l2-execution debug INPUT=path/to/input.ssz
 make -C l2-execution exec INPUT=path/to/input.ssz
 ```
 
-These need `zkc` and `go` on `PATH`. The interpreter loads a finished ELF — `elf_to_json_gen` reads its `PT_LOAD` segments + entry point — so there is no relocatable-`.o` step (a `.o` is not statically linked, and the interpreter does not perform a final link).
+These need `zkc` and `go` on `PATH`. The interpreter loads a finished ELF — `elf_to_json_gen` reads its `PT_LOAD` segments + entry point — so there is no relocatable-`.o` step (a `.o` is not statically linked, and the interpreter does not perform a final link). `exec` forwards `ZKC_EXEC_FLAGS` (default `-q`) to `zkc exec`; pass `ZKC_EXEC_FLAGS="--quiet --gogen --fast"` to execute via zkc's generated-Go backend in fast mode — what CI uses while the interpreter's trace path is unimplemented.
 
 ## Guest Packages
 

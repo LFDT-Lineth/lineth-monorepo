@@ -4,8 +4,8 @@
 #   - spec-tests: `make spec-test` in l2-execution — the FULL EF execution-spec-tests zkevm
 #     stateless suite (~2,880 fixture files / ~16.8k blocks) run through the guest on the host.
 #     This is deliberately NOT orchestrated: the EF suite only exists for the EVM-execution guest.
-# Both run the guest logic natively (no RISC-V, no ZKC); the guest-in-ZKC-interpreter CI is a
-# separate, later concern blocked on the prover link toolchain.
+# Both run the guest logic natively (no RISC-V, no ZKC); running the guest through the ZKC
+# interpreter is covered separately, by its own dedicated workflow.
 name: riscv-guests host tests
 
 on:
