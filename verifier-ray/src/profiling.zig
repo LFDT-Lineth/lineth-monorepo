@@ -34,7 +34,7 @@ pub const Mark = struct {
     pub const transcript_done: u64 = 2;
     pub const vanishing_start: u64 = 3;
     pub const vanishing_done: u64 = 4;
-    pub const verify_done: u64 = 5;
+    pub const logderivativesum_done: u64 = 5;
 };
 
 /// Global counter state. Only ever touched when `enabled` is true.

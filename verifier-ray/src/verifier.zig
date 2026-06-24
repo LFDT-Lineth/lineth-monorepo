@@ -88,7 +88,7 @@ pub fn verify(
     // Step 1 — replay transcript, derive all coins. `replay` comptime-validates
     // `spec` internal consistency and returns the stack-allocated coin array.
     const all_coins = try protocol.replay(spec, proof.rounds);
-    if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.transcript_done, profiling.snapshot().poseidon2_compress);
+    if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.transcript_done, 0);
 
     // Step 2 — assemble the shared context routed to every sub-verifier.
     const ctx = protocol.Context{
@@ -98,16 +98,18 @@ pub fn verify(
 
     // Step 3 — dispatch each sub-verifier with ctx + its own claims.
     // TODO(new-sub-verifier): add dispatch call here — step 4 above.
-    if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.vanishing_start, profiling.snapshot().poseidon2_compress);
+    if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.vanishing_start, 0);
     try vanishing.verify(systems.vanishing, .{
         .ctx = ctx,
         .witness_claims = proof.witness_claims,
         .quotient_claims = proof.quotient_claims,
         .module_sizes = proof.module_sizes,
     });
-    if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.vanishing_done, profiling.snapshot().poseidon2_compress);
-    // For now vanishing_done and verifier_done are the same, but we separate them in case we want to add more phases after vanishing (e.g. FRI)
-    if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.verify_done, profiling.snapshot().poseidon2_compress);
+    if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.vanishing_done, 0);
+
     try logderivativesum.verify(systems.logderivativesum, ctx);
+
+    if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.logderivativesum_done, profiling.snapshot().poseidon2_compress);
     // TODO(new-sub-verifier): dispatch here — step 4 above.
+    // TODO(profiling): add a final verify_done marker once more phases run after logderivativesum.
 }
