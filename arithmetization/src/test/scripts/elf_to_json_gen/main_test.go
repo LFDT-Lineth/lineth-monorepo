@@ -215,3 +215,86 @@ func TestDecodeRTypeSemantic(t *testing.T) {
 		})
 	}
 }
+
+func TestDecodeSTypeSemantic(t *testing.T) {
+	tests := []struct {
+		name   string
+		funct3 uint32
+		wantOp uint32
+	}{
+		{name: "sb", funct3: 0b000, wantOp: stypeStoreSb},
+		{name: "sh", funct3: 0b001, wantOp: stypeStoreSh},
+		{name: "sw", funct3: 0b010, wantOp: stypeStoreSw},
+		{name: "sd", funct3: 0b011, wantOp: stypeStoreSd},
+		{name: "invalid", funct3: 0b111, wantOp: stypeInvalid},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := decodeSTypeSemantic(tt.funct3)
+			if got != tt.wantOp {
+				t.Fatalf("decodeSTypeSemantic(f3=%#x) = %d, want %d", tt.funct3, got, tt.wantOp)
+			}
+		})
+	}
+}
+
+func TestDecodeBTypeSemantic(t *testing.T) {
+	tests := []struct {
+		name   string
+		funct3 uint32
+		wantOp uint32
+	}{
+		{name: "beq", funct3: 0b000, wantOp: btypeBranchBeq},
+		{name: "bne", funct3: 0b001, wantOp: btypeBranchBne},
+		{name: "blt", funct3: 0b100, wantOp: btypeBranchBlt},
+		{name: "invalid", funct3: 0b010, wantOp: btypeInvalid},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := decodeBTypeSemantic(tt.funct3)
+			if got != tt.wantOp {
+				t.Fatalf("decodeBTypeSemantic(f3=%#x) = %d, want %d", tt.funct3, got, tt.wantOp)
+			}
+		})
+	}
+}
+
+func TestWritebackForRd(t *testing.T) {
+	if got := writebackForRd(0, wbStoreReg); got != wbNone {
+		t.Fatalf("writebackForRd(0, wbStoreReg) = %d, want wbNone", got)
+	}
+	if got := writebackForRd(5, wbStoreReg); got != wbStoreReg {
+		t.Fatalf("writebackForRd(5, wbStoreReg) = %d, want wbStoreReg", got)
+	}
+	if got := writebackForRd(0, wbNone); got != wbNone {
+		t.Fatalf("writebackForRd(0, wbNone) = %d, want wbNone", got)
+	}
+}
+
+func TestDecodeJTypeSemantic(t *testing.T) {
+	gotOp, gotWB := decodeJTypeSemantic(opcodeJAL)
+	if gotOp != jtypeJal || gotWB != wbStoreReg {
+		t.Fatalf("decodeJTypeSemantic(jal) = (%d, %d), want (%d, %d)", gotOp, gotWB, jtypeJal, wbStoreReg)
+	}
+}
+
+func TestDecodeUTypeSemantic(t *testing.T) {
+	tests := []struct {
+		name   string
+		opcode uint32
+		wantOp uint32
+		wantWB uint32
+	}{
+		{name: "lui", opcode: opcodeLUI, wantOp: utypeLui, wantWB: wbStoreReg},
+		{name: "auipc", opcode: opcodeAUIPC, wantOp: utypeAuipc, wantWB: wbStoreReg},
+		{name: "invalid", opcode: 0, wantOp: utypeInvalid, wantWB: wbNone},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotOp, gotWB := decodeUTypeSemantic(tt.opcode)
+			if gotOp != tt.wantOp || gotWB != tt.wantWB {
+				t.Fatalf("decodeUTypeSemantic(op=%#x) = (%d, %d), want (%d, %d)", tt.opcode, gotOp, gotWB, tt.wantOp, tt.wantWB)
+			}
+		})
+	}
+}

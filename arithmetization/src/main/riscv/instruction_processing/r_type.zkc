@@ -371,9 +371,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
 
     switch writeback {
         case WB_STORE_REG: {
-            if (rd != 0) {
-                registers[rd] = result
-            }
+            registers[rd] = result
         }
         case WB_NONE: {
             // no register writeback

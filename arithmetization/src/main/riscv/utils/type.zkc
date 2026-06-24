@@ -37,3 +37,15 @@ type ITypeWriteback = u2
 // Semantic R-type micro-op tags (pre-decoded at ELF time).
 type RTypeComputeOp = u6
 
+// Semantic S-type micro-op tags (pre-decoded at ELF time).
+type STypeComputeOp = u6
+
+// Semantic B-type micro-op tags (pre-decoded at ELF time).
+type BTypeComputeOp = u6
+
+// Semantic J-type micro-op tags (pre-decoded at ELF time).
+type JTypeComputeOp = u6
+
+// Semantic U-type micro-op tags (pre-decoded at ELF time).
+type UTypeComputeOp = u6
+

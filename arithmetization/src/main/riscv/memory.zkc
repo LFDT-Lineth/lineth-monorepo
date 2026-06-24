@@ -52,21 +52,24 @@ pub input decoded_itype(i:u64) -> (compute_op:ITypeComputeOp, writeback:ITypeWri
 // compute_op switch plus a separate writeback step (WB_STORE_REG / WB_NONE).
 pub input decoded_rtype(i:u64) -> (compute_op:RTypeComputeOp, writeback:ITypeWriteback, rs1:Register, rs2:Register, rd:Register)
 
-// Pre-decoded S-type field split, indexed by the same instruction index.
-// Replaces `imm_sign::uimm6::rs2::rs1::funct3::uimm5 = instruction_parameters` in s_type.zkc.
+// Pre-decoded S-type semantic micro-ops, indexed by the same instruction index.
+// Replaces runtime funct3 disambiguation in s_type.zkc with a flat compute_op switch.
 // The 12-bit store immediate (imm[11]::imm[10:5]::imm[4:0]) is pre-assembled into imm12.
-pub input decoded_stype(i:u64) -> (imm12:Imm12, rs2:Register, rs1:Register, funct3:Funct3)
+pub input decoded_stype(i:u64) -> (compute_op:STypeComputeOp, imm12:Imm12, rs2:Register, rs1:Register)
 
-// Pre-decoded B-type field split, indexed by the same instruction index.
-// Replaces `imm_sign::imm_10_5::rs2::rs1::funct3::imm_4_1::imm_11 = instruction_parameters` in b_type.zkc.
-pub input decoded_btype(i:u64) -> (imm_sign:SignBit, imm_10_5:u6, rs2:Register, rs1:Register, funct3:Funct3, imm_4_1:u4, imm_11:u1)
+// Pre-decoded B-type semantic micro-ops, indexed by the same instruction index.
+// Replaces runtime funct3 disambiguation in b_type.zkc with a flat compute_op switch.
+// The 13-bit branch offset sub-fields are kept split; sign extension and reassembly
+// happen at runtime in b_type.zkc (same as before semantic predecode).
+pub input decoded_btype(i:u64) -> (compute_op:BTypeComputeOp, imm_sign:SignBit, imm_10_5:u6, rs2:Register, rs1:Register, imm_4_1:u4, imm_11:u1)
 
-// Pre-decoded J-type record, indexed by the same instruction index.
-// Replaces `imm20::imm10_1::imm11::imm19_12::rd = instruction_parameters` in j_type.zkc.
-// The 21-bit signed jump offset is fully sign-extended into a ready-to-use 64-bit
-// `imm` at decode time, so the runtime shift and sign extension are eliminated.
-pub input decoded_jtype(i:u64) -> (imm:DoubleWord, rd:Register)
+// Pre-decoded J-type semantic micro-ops, indexed by the same instruction index.
+// Replaces runtime decode in j_type.zkc with a flat compute_op switch plus a separate
+// writeback step for the link address. The 21-bit signed jump offset is sign-extended
+// into a ready-to-use 64-bit imm at decode time.
+pub input decoded_jtype(i:u64) -> (compute_op:JTypeComputeOp, writeback:ITypeWriteback, imm:DoubleWord, rd:Register)
 
-// Pre-decoded U-type field split, indexed by the same instruction index.
-// Replaces `imm20::rd = instruction_parameters` in u_type.zkc.
-pub input decoded_utype(i:u64) -> (imm20:Imm20, rd:Register)
+// Pre-decoded U-type semantic micro-ops, indexed by the same instruction index.
+// Replaces runtime opcode disambiguation in u_type.zkc with a flat compute_op switch
+// plus a separate writeback step (WB_STORE_REG / WB_NONE).
+pub input decoded_utype(i:u64) -> (compute_op:UTypeComputeOp, writeback:ITypeWriteback, imm20:Imm20, rd:Register)

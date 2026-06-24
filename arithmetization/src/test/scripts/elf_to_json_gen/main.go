@@ -188,6 +188,14 @@ const (
 	wbStoreReg  = 1
 )
 
+// writebackForRd returns WB_NONE when the destination is x0, otherwise writeback unchanged.
+func writebackForRd(rd, writeback uint32) uint32 {
+	if writeback == wbStoreReg && rd == 0 {
+		return wbNone
+	}
+	return writeback
+}
+
 // R-type semantic micro-op constants. These MUST match constants.zkc.
 const (
 	rtypeOpAdd    = 0
@@ -224,6 +232,39 @@ const (
 
 	rtypeOpKeccak  = 28
 	rtypeInvalid   = 63
+)
+
+// S-type semantic micro-op constants. These MUST match constants.zkc.
+const (
+	stypeStoreSb = 0
+	stypeStoreSh = 1
+	stypeStoreSw = 2
+	stypeStoreSd = 3
+	stypeInvalid = 63
+)
+
+// B-type semantic micro-op constants. These MUST match constants.zkc.
+const (
+	btypeBranchBeq  = 0
+	btypeBranchBne  = 1
+	btypeBranchBlt  = 2
+	btypeBranchBge  = 3
+	btypeBranchBltu = 4
+	btypeBranchBgeu = 5
+	btypeInvalid    = 63
+)
+
+// J-type semantic micro-op constants. These MUST match constants.zkc.
+const (
+	jtypeJal     = 0
+	jtypeInvalid = 63
+)
+
+// U-type semantic micro-op constants. These MUST match constants.zkc.
+const (
+	utypeLui     = 0
+	utypeAuipc   = 1
+	utypeInvalid = 63
 )
 
 const (
@@ -433,6 +474,63 @@ func decodeRTypeSemantic(opcode, funct3, funct7 uint32) (computeOp, writeback ui
 		return rtypeInvalid, wbNone
 	default:
 		return rtypeInvalid, wbNone
+	}
+}
+
+// decodeSTypeSemantic maps a raw S-type funct3 to a semantic store op.
+func decodeSTypeSemantic(funct3 uint32) uint32 {
+	switch funct3 {
+	case 0b000:
+		return stypeStoreSb
+	case 0b001:
+		return stypeStoreSh
+	case 0b010:
+		return stypeStoreSw
+	case 0b011:
+		return stypeStoreSd
+	default:
+		return stypeInvalid
+	}
+}
+
+// decodeBTypeSemantic maps a raw B-type funct3 to a semantic branch op.
+func decodeBTypeSemantic(funct3 uint32) uint32 {
+	switch funct3 {
+	case 0b000:
+		return btypeBranchBeq
+	case 0b001:
+		return btypeBranchBne
+	case 0b100:
+		return btypeBranchBlt
+	case 0b101:
+		return btypeBranchBge
+	case 0b110:
+		return btypeBranchBltu
+	case 0b111:
+		return btypeBranchBgeu
+	default:
+		return btypeInvalid
+	}
+}
+
+// decodeJTypeSemantic maps a raw J-type encoding to a semantic compute op and writeback.
+func decodeJTypeSemantic(opcode uint32) (computeOp, writeback uint32) {
+	if opcode == opcodeJAL {
+		return jtypeJal, wbStoreReg
+	}
+	return jtypeInvalid, wbNone
+}
+
+// decodeUTypeSemantic maps a raw U-type opcode to a semantic compute op and writeback.
+func decodeUTypeSemantic(opcode uint32) (computeOp, writeback uint32) {
+	writeback = wbStoreReg
+	switch opcode {
+	case opcodeLUI:
+		return utypeLui, writeback
+	case opcodeAUIPC:
+		return utypeAuipc, writeback
+	default:
+		return utypeInvalid, wbNone
 	}
 }
 
@@ -694,10 +792,10 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 	//   decoded_core : opcode:Opcode(u7), instruction_type:Type(u3), instruction_parameters:u25
 	//   decoded_itype: compute_op:ITypeComputeOp(u6), writeback:ITypeWriteback(u2), imm12:Imm12(u12), rs1:Register(u5), rd:Register(u5)
 	//   decoded_rtype: compute_op:RTypeComputeOp(u6), writeback:ITypeWriteback(u2), rs1:Register(u5), rs2:Register(u5), rd:Register(u5)
-	//   decoded_stype: imm12:Imm12(u12), rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3)
-	//   decoded_btype: imm_sign:u1, imm_10_5:u6, rs2:Register(u5), rs1:Register(u5), funct3:Funct3(u3), imm_4_1:u4, imm_11:u1
-	//   decoded_jtype: imm:DoubleWord(u64), rd:Register(u5)
-	//   decoded_utype: imm20:Imm20(u20), rd:Register(u5)
+	//   decoded_stype: compute_op:STypeComputeOp(u6), imm12:Imm12(u12), rs2:Register(u5), rs1:Register(u5)
+	//   decoded_btype: compute_op:BTypeComputeOp(u6), imm_sign:u1, imm_10_5:u6, rs2:Register(u5), rs1:Register(u5), imm_4_1:u4, imm_11:u1
+	//   decoded_jtype: compute_op:JTypeComputeOp(u6), writeback:ITypeWriteback(u2), imm:DoubleWord(u64), rd:Register(u5)
+	//   decoded_utype: compute_op:UTypeComputeOp(u6), writeback:ITypeWriteback(u2), imm20:Imm20(u20), rd:Register(u5)
 	var (
 		coreBits  bitWriter
 		itypeBits bitWriter
@@ -728,12 +826,11 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		// reassemble it into the 12-bit store immediate.
 		simm12 := (((instr >> 31) & 0x1) << 11) | (((instr >> 25) & 0x3f) << 5) | ((instr >> 7) & 0x1f)
 
-		// B-type immediate sub-fields (kept split to match b_type.zkc's reconstruction).
+		// B-type immediate sub-fields (kept split; reassembled at runtime in b_type.zkc).
 		bImmSign := (instr >> 31) & 0x1  // imm[12]
 		bImm10_5 := (instr >> 25) & 0x3f // imm[10:5]
 		bImm4_1 := (instr >> 8) & 0xf    // imm[4:1]
 		bImm11 := (instr >> 7) & 0x1     // imm[11]
-
 		// J-type: resolve the 21-bit signed jump offset (imm[20|19:12|11|10:1] with
 		// bit 0 = 0) to a ready-to-use 64-bit immediate. imm[20] is known
 		// statically, so the runtime shift and sign extension are collapsed here.
@@ -755,6 +852,7 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		if instrType != iType {
 			computeOp, writeback, normImm12 = itypeInvalid, wbNone, imm12
 		}
+		writeback = writebackForRd(rd, writeback)
 
 		itypeBits.writeBits(uint64(computeOp), 6)
 		itypeBits.writeBits(uint64(writeback), 2)
@@ -766,6 +864,7 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		if instrType != rType {
 			rtypeComputeOp, rtypeWriteback = rtypeInvalid, wbNone
 		}
+		rtypeWriteback = writebackForRd(rd, rtypeWriteback)
 
 		rtypeBits.writeBits(uint64(rtypeComputeOp), 6)
 		rtypeBits.writeBits(uint64(rtypeWriteback), 2)
@@ -773,22 +872,44 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		rtypeBits.writeBits(uint64(rs2), 5)
 		rtypeBits.writeBits(uint64(rd), 5)
 
+		stypeComputeOp := decodeSTypeSemantic(funct3)
+		if instrType != sType {
+			stypeComputeOp = stypeInvalid
+		}
+		stypeBits.writeBits(uint64(stypeComputeOp), 6)
 		stypeBits.writeBits(uint64(simm12), 12)
 		stypeBits.writeBits(uint64(rs2), 5)
 		stypeBits.writeBits(uint64(rs1), 5)
-		stypeBits.writeBits(uint64(funct3), 3)
 
+		btypeComputeOp := decodeBTypeSemantic(funct3)
+		if instrType != bType {
+			btypeComputeOp = btypeInvalid
+		}
+		btypeBits.writeBits(uint64(btypeComputeOp), 6)
 		btypeBits.writeBits(uint64(bImmSign), 1)
 		btypeBits.writeBits(uint64(bImm10_5), 6)
 		btypeBits.writeBits(uint64(rs2), 5)
 		btypeBits.writeBits(uint64(rs1), 5)
-		btypeBits.writeBits(uint64(funct3), 3)
 		btypeBits.writeBits(uint64(bImm4_1), 4)
 		btypeBits.writeBits(uint64(bImm11), 1)
 
+		jtypeComputeOp, jtypeWriteback := decodeJTypeSemantic(opcode)
+		if instrType != jType {
+			jtypeComputeOp, jtypeWriteback = jtypeInvalid, wbNone
+		}
+		jtypeWriteback = writebackForRd(rd, jtypeWriteback)
+		jtypeBits.writeBits(uint64(jtypeComputeOp), 6)
+		jtypeBits.writeBits(uint64(jtypeWriteback), 2)
 		jtypeBits.writeBits(jImm, 64)
 		jtypeBits.writeBits(uint64(rd), 5)
 
+		utypeComputeOp, utypeWriteback := decodeUTypeSemantic(opcode)
+		if instrType != uType {
+			utypeComputeOp, utypeWriteback = utypeInvalid, wbNone
+		}
+		utypeWriteback = writebackForRd(rd, utypeWriteback)
+		utypeBits.writeBits(uint64(utypeComputeOp), 6)
+		utypeBits.writeBits(uint64(utypeWriteback), 2)
 		utypeBits.writeBits(uint64(uImm20), 20)
 		utypeBits.writeBits(uint64(rd), 5)
 	}

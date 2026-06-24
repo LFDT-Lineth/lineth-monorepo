@@ -5,53 +5,51 @@ include "../utils/signed_sum.zkc"
 
 // Process a RISC-V U-type instruction, writing an upper-immediate value to a register.
 //
-// U-type instructions carry a 20-bit immediate (imm20) placed in the upper bits of
-// the result.  They never affect the program counter (the caller always advances by 4).
-// The 25-bit encoding (opcode stripped) is simply:
+// U-type semantics are pre-decoded at ELF time into a semantic compute op,
+// a writeback kind, and operands (see decoded_utype in memory.zkc). Runtime
+// execution is a flat switch on compute_op (UTYPE_LUI, UTYPE_AUIPC) followed by
+// a separate writeback step when applicable.
 //
-//   imm20 :: rd
-//
-// The immediate is placed into bits [31:12] of a 32-bit word (lower 12 bits zeroed)
-// and then sign-extended to 64 bits.  The opcode selects one of two variants:
-//
-//   LUI   — load upper immediate:
-//             rd = sign_extend_32_to_64(imm20 << 12)
-//
-//   AUIPC — add upper immediate to PC:
-//             rd = sign_extend_32_to_64(imm20 << 12) + pc
-//
-// LUI is typically paired with an ADDI to materialise a full 32-bit constant in a
-// register.  AUIPC is used to form PC-relative addresses for data or call targets.
-fn process_U_type_instruction<registers>(opcode:Opcode, index:u64, pc:Address) -> () {
+//   LUI   — rd = sign_extend_32_to_64(imm20 << 12)
+//   AUIPC — rd = sign_extend_32_to_64(imm20 << 12) + pc
+fn process_U_type_instruction<registers>(index:u64, pc:Address) -> () {
 
-    // The U-type field split (imm20 :: rd) is pre-decoded externally (see
-    // decoded_utype in memory.zkc) and looked up by index.
+    var compute_op:UTypeComputeOp
+    var writeback:ITypeWriteback
     var imm20:Imm20
     var rd:Register
-    imm20, rd = decoded_utype[index]
+    compute_op, writeback, imm20, rd = decoded_utype[index]
 
-    var tmp:DoubleWord
-    tmp = sgn_extension_u32_u64(((imm20 as u32) << 12) as u32)
+    var result:DoubleWord
+    result = sgn_extension_u32_u64(((imm20 as u32) << 12) as u32)
 
-    switch opcode {
-        case AUIPC: {
+    switch compute_op {
+        case UTYPE_AUIPC: {
             printf "AUIPC "
             print_u_operands(rd, imm20)
-            tmp = signed_sum_of_double_word(tmp, pc) as DoubleWord
+            result = signed_sum_of_double_word(result, pc) as DoubleWord
         }
-        case LUI: {
+        case UTYPE_LUI: {
             printf "LUI "
             print_u_operands(rd, imm20)
         }
         default: {
-            printf "[ERROR] Unsupported instruction of U-Type\n"
-            printf "\topcode ≡ %x ≡ %b\n", opcode, opcode
+            printf "[ERROR] Unsupported U-type instruction with\n"
+            printf "\tcompute_op ≡ %x\n", compute_op
             fail
         }
     }
 
-    // Note: the definition of tmp already works for the LUI opcode
-    if (rd != 0) {
-        registers[rd] = tmp as DoubleWord
+    switch writeback {
+        case WB_STORE_REG: {
+            registers[rd] = result
+        }
+        case WB_NONE: {
+            // no register writeback
+        }
+        default: {
+            printf "[ERROR] Unsupported U-type writeback %d\n", writeback
+            fail
+        }
     }
 }

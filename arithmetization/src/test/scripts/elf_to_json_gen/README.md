@@ -44,10 +44,10 @@ In addition to the original keys (`entry_point_and_blobs_count`,
 | `decoded_core`     | `opcode, instruction_type, instruction_parameters`     | `instruction_parameters::opcode = instruction` + type map  |
 | `decoded_itype`    | `compute_op, writeback, imm12, rs1, rd`                | flat semantic micro-op dispatch in `i_type.zkc`              |
 | `decoded_rtype`    | `compute_op, writeback, rs1, rs2, rd`                  | flat semantic micro-op dispatch in `r_type.zkc`              |
-| `decoded_stype`    | `imm12, rs2, rs1, funct3`                              | `imm_sign::uimm6::rs2::rs1::funct3::uimm5 = instruction_parameters` |
-| `decoded_btype`    | `imm_sign, imm_10_5, rs2, rs1, funct3, imm_4_1, imm_11`| `imm_sign::imm_10_5::rs2::rs1::funct3::imm_4_1::imm_11 = instruction_parameters` |
-| `decoded_jtype`    | `imm, rd`                                              | `imm20::imm10_1::imm11::imm19_12::rd = instruction_parameters` + sign-aware reassembly |
-| `decoded_utype`    | `imm20, rd`                                            | `imm20::rd = instruction_parameters`                       |
+| `decoded_stype`    | `compute_op, imm12, rs2, rs1`                          | flat semantic micro-op dispatch in `s_type.zkc`              |
+| `decoded_btype`    | `compute_op, imm_sign, imm_10_5, rs2, rs1, imm_4_1, imm_11` | flat `compute_op` dispatch; imm reassembled at runtime |
+| `decoded_jtype`    | `compute_op, writeback, imm, rd`                       | flat semantic micro-op dispatch in `j_type.zkc`              |
+| `decoded_utype`    | `compute_op, writeback, imm20, rd`                     | flat semantic micro-op dispatch in `u_type.zkc`              |
 
 Each value is a single `0x…` hex string. The field set and order of every table
 **must** match the corresponding `pub input` declaration in
@@ -70,13 +70,37 @@ For J-type the 21-bit signed jump offset is sign-extended into a single 64-bit
 - **`imm12`, `rs1`, `rd`** — operands (shift amounts are normalized into `imm12` at decode time)
 
 At runtime, `process_I_type_instruction` runs a flat `switch compute_op`, then a
-separate `switch writeback` with the usual `if (rd != 0)` guard. This is a
-Zisk-like split (compute, then store-to-register) scoped to I-type for now;
-`STORE_MEM` semantic ops for S-type are deferred.
+separate `switch writeback`.
 
 Constants for `compute_op` / `writeback` live in `constants.zkc` and are mirrored
-in `main.go` (`itypeOpAddi`, `wbStoreReg`, …). See `main_test.go` for
+in `main.go` (`itypeOpAddi`, `wbStoreReg`, …). When `rd` is `x0`, `writebackForRd`
+in `main.go` encodes `WB_NONE` at ELF time. See `main_test.go` for
 `decodeITypeSemantic` coverage.
+
+## S-type semantic micro-ops
+
+`decodeSTypeSemantic` maps each S-type `funct3` to `STORE_SB`, `STORE_SH`, …
+At runtime, `process_S_type_instruction` runs a flat `switch compute_op`.
+
+## B-type semantic micro-ops
+
+`decodeBTypeSemantic` maps each B-type `funct3` to `BRANCH_BEQ`, `BRANCH_BNE`, …
+The 13-bit branch offset sub-fields are kept split at decode time and reassembled
+in `b_type.zkc`. At runtime, `process_B_type_instruction` runs a flat
+`switch compute_op`.
+
+## J-type semantic micro-ops (split compute + writeback)
+
+`decodeJTypeSemantic` maps JAL to `JTYPE_JAL` with `WB_STORE_REG`.
+At runtime, `process_J_type_instruction` runs a flat `switch compute_op`, then a
+separate `switch writeback` for the link address.
+
+## U-type semantic micro-ops (split compute + writeback)
+
+`decodeUTypeSemantic` maps LUI/AUIPC to `UTYPE_LUI` / `UTYPE_AUIPC` with
+`WB_STORE_REG`. At runtime, `process_U_type_instruction` runs a flat
+`switch compute_op`, then a separate `switch writeback`. The interpreter no
+longer passes `opcode` into the U-type handler.
 
 ## R-type semantic micro-ops (split compute + writeback)
 
@@ -88,8 +112,9 @@ in `main.go` (`itypeOpAddi`, `wbStoreReg`, …). See `main_test.go` for
 - **`rs1`, `rs2`, `rd`** — operands
 
 At runtime, `process_R_type_instruction` runs a flat `switch compute_op`, then a
-separate `switch writeback` with the usual `if (rd != 0)` guard. `RTYPE_KECCAK`
-uses `WB_NONE` and returns early after the precompile side effects.
+separate `switch writeback`. `RTYPE_KECCAK`
+uses `WB_NONE` and returns early after the precompile side effects. When `rd` is
+`x0`, `writebackForRd` encodes `WB_NONE` at ELF time.
 
 Constants for R-type `compute_op` live in `constants.zkc` and are mirrored in
 `main.go` (`rtypeOpAdd`, …). See `main_test.go` for `decodeRTypeSemantic` coverage.
@@ -158,10 +183,10 @@ size is the sum of its field widths:
 | `decoded_core`  | opcode 7, type 3, params 25    | 35 bits     |
 | `decoded_itype` | compute_op 6, writeback 2, imm12 12, rs1 5, rd 5 | 30 bits     |
 | `decoded_rtype` | compute_op 6, writeback 2, rs1 5, rs2 5, rd 5 | 23 bits |
-| `decoded_stype` | imm12 12, rs2 5, rs1 5, funct3 3 | 25 bits   |
-| `decoded_btype` | imm_sign 1, imm_10_5 6, rs2 5, rs1 5, funct3 3, imm_4_1 4, imm_11 1 | 25 bits |
-| `decoded_jtype` | imm 64, rd 5 | 69 bits |
-| `decoded_utype` | imm20 20, rd 5 | 25 bits |
+| `decoded_stype` | compute_op 6, imm12 12, rs2 5, rs1 5 | 28 bits   |
+| `decoded_btype` | compute_op 6, imm_sign 1, imm_10_5 6, rs2 5, rs1 5, imm_4_1 4, imm_11 1 | 28 bits |
+| `decoded_jtype` | compute_op 6, writeback 2, imm 64, rd 5 | 77 bits |
+| `decoded_utype` | compute_op 6, writeback 2, imm20 20, rd 5 | 33 bits |
 
 > Important: if you change a field's type/width in `memory.zkc`, update the
 > matching `writeBits` calls here (and vice versa). A width or order mismatch
