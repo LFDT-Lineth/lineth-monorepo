@@ -36,8 +36,11 @@ func main() {
 
 	if cfg.singleInputLengths != "" {
 		lengths := parseInputLengthList(cfg.singleInputLengths)
-		fmt.Println("| input bytes | KECCAK_ACCEL=false real (s) | KECCAK_ACCEL=true real (s) | speedup |")
-		fmt.Println("|-------------|-----------------------------|----------------------------|---------|")
+		fmt.Printf(
+			"| %-11s | %-29s | %-28s | %-7s |\n",
+			"input bytes", "KECCAK_ACCEL=false real (s)", "KECCAK_ACCEL=true real (s)", "speedup",
+		)
+		fmt.Println("| ----------- | ----------------------------- | ---------------------------- | ------- |")
 		for _, length := range lengths {
 			falseTime := runTimedSingle(cfg.makefileDir, cfg.timeBin, false, length)
 			trueTime := runTimedSingle(cfg.makefileDir, cfg.timeBin, true, length)
@@ -56,8 +59,12 @@ func main() {
 		fatal("--start must be >= 0")
 	}
 
-	fmt.Printf("| batched range (%d-byte inputs) | KECCAK_ACCEL=false real (s) | KECCAK_ACCEL=true real (s) | speedup |\n", batchedInputBytes)
-	fmt.Println("|--------------------------------|-----------------------------|----------------------------|---------|")
+	fmt.Printf(
+		"| %-31s | %-29s | %-28s | %-7s |\n",
+		fmt.Sprintf("batched range (%d-byte inputs)", batchedInputBytes),
+		"KECCAK_ACCEL=false real (s)", "KECCAK_ACCEL=true real (s)", "speedup",
+	)
+	fmt.Println("| ------------------------------- | ----------------------------- | ---------------------------- | ------- |")
 
 	for index := 0; index < cfg.intervals; index++ {
 		selector := batchedRange(cfg.start, cfg.size, index)
@@ -276,13 +283,19 @@ func parseRealTime(timeOutput string) (float64, bool) {
 func printBatchedRow(selector string, falseTime, trueTime float64) {
 	// Print one batched row
 	speedup := falseTime / trueTime
-	fmt.Printf("| %s | %.2f | %.2f | %.2fx |\n", selector, falseTime, trueTime, speedup)
+	fmt.Printf(
+		"| %-31s | %29.2f | %28.2f | %7s |\n",
+		selector, falseTime, trueTime, fmt.Sprintf("%.2fx", speedup),
+	)
 }
 
 func printSingleRow(inputBytes uint64, falseTime, trueTime float64) {
 	// Print one single-input row
 	speedup := falseTime / trueTime
-	fmt.Printf("| %d | %.2f | %.2f | %.2fx |\n", inputBytes, falseTime, trueTime, speedup)
+	fmt.Printf(
+		"| %11d | %29.2f | %28.2f | %7s |\n",
+		inputBytes, falseTime, trueTime, fmt.Sprintf("%.2fx", speedup),
+	)
 }
 
 func fatal(format string, args ...any) {
