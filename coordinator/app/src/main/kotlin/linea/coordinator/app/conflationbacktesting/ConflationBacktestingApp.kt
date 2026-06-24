@@ -38,7 +38,6 @@ import linea.coordinator.config.v2.TracesConfig.ClientApiConfig
 import linea.domain.Aggregation
 import linea.domain.Block
 import linea.domain.BlockInterval
-import linea.domain.BlockParameter
 import linea.domain.toBlockParameter
 import linea.encoding.BlockRLPEncoder
 import linea.ethapi.EthApiClient

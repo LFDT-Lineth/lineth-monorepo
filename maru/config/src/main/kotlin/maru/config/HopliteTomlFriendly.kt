@@ -8,8 +8,8 @@
  */
 package maru.config
 
-import linea.domain.toBlockParameter
 import linea.domain.RetryConfig
+import linea.domain.toBlockParameter
 import linea.kotlin.assertIs20Bytes
 import java.net.URL
 import kotlin.time.Duration
