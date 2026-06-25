@@ -138,7 +138,7 @@ zkc-build: build-r5
 	go run $(ELF_TO_JSON) $(R5_BIN) "0x00" $(IN_ORIGIN) > $(R5_JSON)
 
 zkc-verify: zkc-build
-	zkc exec -q $(R5_JSON) $(ZKC_MAIN)
+	zkc exec -f -q $(R5_JSON) $(ZKC_MAIN)
 
 zkc-verify-passing:
 	$(MAKE) zkc-verify EMBEDDED_INPUT=valid
