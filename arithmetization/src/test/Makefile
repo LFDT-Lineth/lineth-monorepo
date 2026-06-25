@@ -21,7 +21,7 @@ ELF_TO_JSON_GEN := $(MAKEFILE_DIR)scripts/elf_to_json_gen/main.go
 ZKC_MAIN        := $(MAKEFILE_DIR)../main/riscv/main.zkc
 # zkc binary (override for CI benchmarks, e.g. ZKC=/tmp/zkc-base).
 ZKC             ?= zkc
-LINKER_SCRIPT   := $(MAKEFILE_DIR)../riscv-guests/build_common/linker_script.ld
+LINKER_SCRIPT   := $(ARITHMETIZATION_DIR)/../riscv-guests/build_common/linker_script.ld
 # Assembly, Zig, or Rust test file to execute with exec target (TEST=src_optional_subfolder/your_test(.s|.zig|.rs)
 TEST ?=
 
