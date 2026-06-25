@@ -144,7 +144,7 @@ zkc-debug: require-json
 	$(ZKC) debug $(JSON) $(ZKC_MAIN)
 
 clean: require-test
-	rm -f $(BIN) $(JSON) $(BIN).objdump $(VECTOR_SUBSET_FILE) $(LINKER_SCRIPT)
+	rm -f $(BIN) $(JSON) $(BIN).objdump $(VECTOR_SUBSET_FILE)
 
 clean-all:
 	rm -rf $(MAKEFILE_DIR)asm/bin/
@@ -153,7 +153,6 @@ clean-all:
 	rm -rf $(MAKEFILE_DIR)rust/target/
 	rm -rf $(MAKEFILE_DIR)act4/bin/
 	rm -rf $(MAKEFILE_DIR)bin/
-	rm -f  $(LINKER_SCRIPT)
 	rm -f  $(MAKEFILE_DIR)common_inputs/*.json
 
 #####################################################################
