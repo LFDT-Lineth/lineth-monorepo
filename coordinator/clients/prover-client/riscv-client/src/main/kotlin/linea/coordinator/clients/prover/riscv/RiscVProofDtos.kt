@@ -193,7 +193,6 @@ data class BlobWitnessDto(
 data class L2ExecutionProofDto(
   val proof: String,
   val startBlockNumber: Long,
-  val endBlockNumber: Long,
   val publicInputs: L2ExecutionProofPublicInputsDto,
   val l2L1Messages: List<String>,
   val txFroms: List<String>,
@@ -243,7 +242,6 @@ data class RollupProofResponseDto(
 data class RollupProofDto(
   val proof: String,
   val startBlockNumber: Long,
-  val endBlockNumber: Long,
   val publicInputs: RollupProofPublicInputsDto,
   val l2L1Roots: List<String>,
   val filteredAddresses: List<String>,
@@ -445,7 +443,6 @@ internal fun L2ExecutionProofResponseV1.fromDomainObject(): L2ExecutionProofDto 
   return L2ExecutionProofDto(
     proof = proof.encodeHex(),
     startBlockNumber = startBlockNumber.toLong(),
-    endBlockNumber = endBlockNumber.toLong(),
     publicInputs = publicInputs.fromDomainObject(),
     l2L1Messages = l2L1Messages.map { it.encodeHex() },
     txFroms = txFroms.map { it.encodeHex() },
@@ -457,7 +454,6 @@ internal fun RollupProofResponseV1.fromDomainObject(): RollupProofDto {
   return RollupProofDto(
     proof = proof.encodeHex(),
     startBlockNumber = startBlockNumber.toLong(),
-    endBlockNumber = endBlockNumber.toLong(),
     publicInputs = publicInputs.fromDomainObject(),
     l2L1Roots = l2L1Roots.map { it.encodeHex() },
     filteredAddresses = filteredAddresses.map { it.encodeHex() },

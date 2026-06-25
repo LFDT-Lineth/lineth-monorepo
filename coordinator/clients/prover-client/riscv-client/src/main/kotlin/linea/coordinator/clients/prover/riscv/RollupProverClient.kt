@@ -36,7 +36,6 @@ internal class FileBasedRollupProofRequestDtoMapper(
               L2ExecutionProofDto(
                 proof = it!!.proof,
                 startBlockNumber = it.startBlockNumber,
-                endBlockNumber = it.publicInputs.endBlockNumber,
                 publicInputs = it.publicInputs,
                 l2L1Messages = it.l2L1Messages,
                 txFroms = it.txFroms,

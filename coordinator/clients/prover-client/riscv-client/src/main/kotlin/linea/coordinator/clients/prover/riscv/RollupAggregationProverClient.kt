@@ -34,7 +34,6 @@ internal class FileBasedRollupAggregationProofRequestDtoMapper(
               RollupProofDto(
                 proof = it!!.proof,
                 startBlockNumber = it.startBlockNumber,
-                endBlockNumber = it.publicInputs.endBlockNumber,
                 publicInputs = it.publicInputs,
                 l2L1Roots = it.l2L1Roots,
                 filteredAddresses = it.filteredAddresses,
