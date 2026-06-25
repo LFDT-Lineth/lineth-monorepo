@@ -1,7 +1,6 @@
 package fri
 
 import (
-	"math/big"
 	"math/rand/v2"
 	"reflect"
 	"strings"
@@ -12,6 +11,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
+	gutils "github.com/consensys/gnark-crypto/utils"
 )
 
 func TestCanonicalLayout_Order(t *testing.T) {
@@ -111,8 +111,8 @@ func TestOpeningProofCarriesNoDeepQuotientRoots(t *testing.T) {
 }
 
 func TestReconstructLevelMatchesDirectQuotientPolynomial(t *testing.T) {
-	domain := fft.NewDomain(8)
-	light := domainLight{cardinality: domain.Cardinality, generator: domain.Generator}
+	encoder := NewEncoder(8, 4)
+	light := domainLight{cardinality: encoder.Domain.Cardinality, generator: encoder.Domain.Generator}
 
 	polys := [][]field.Ext{
 		{
@@ -137,16 +137,16 @@ func TestReconstructLevelMatchesDirectQuotientPolynomial(t *testing.T) {
 			field.UintsToExt(11, 1, 0, 0, 0, 0),
 		},
 	}
-	alphaDeep := field.UintsToExt(19, 2, 3, 5, 7, 11)
+	alphaDeepChallenge := field.UintsToExt(19, 2, 3, 5, 7, 11)
 
 	columns := make([]quotientColumn, len(polys))
 	expectedPoly := make([]field.Ext, 0)
-	var alphaPower field.Ext
-	alphaPower.SetOne()
+	var alphaDeepPower field.Ext
+	alphaDeepPower.SetOne()
 
 	for i, poly := range polys {
 		columns[i].AlphaPower = i
-		columns[i].Evals = encodeTestPoly(poly, domain)
+		columns[i].Evals = encodeCanonicalTestPoly(poly, &encoder)
 		columns[i].Claims = make([]quotientClaim, len(claimPoints[i]))
 
 		for j, point := range claimPoints[i] {
@@ -155,10 +155,10 @@ func TestReconstructLevelMatchesDirectQuotientPolynomial(t *testing.T) {
 			columns[i].Claims[j] = claim
 
 			quotient := quotientPolyForClaim(poly, claim)
-			addScaledPoly(&expectedPoly, quotient, alphaPower)
+			addScaledPoly(&expectedPoly, quotient, alphaDeepPower)
 		}
 
-		alphaPower.Mul(&alphaPower, &alphaDeep)
+		alphaDeepPower.Mul(&alphaDeepPower, &alphaDeepChallenge)
 	}
 	columns[0], columns[1] = columns[1], columns[0]
 
@@ -166,20 +166,20 @@ func TestReconstructLevelMatchesDirectQuotientPolynomial(t *testing.T) {
 		D:       4,
 		Domain:  light,
 		Columns: columns,
-	}, alphaDeep)
+	}, alphaDeepChallenge)
 	if err != nil {
 		t.Fatalf("reconstructLevel: %v", err)
 	}
 	if level.D != 4 {
 		t.Fatalf("level.D = %d, want 4", level.D)
 	}
-	if len(level.Evals) != int(domain.Cardinality) {
-		t.Fatalf("level has %d evals, want %d", len(level.Evals), domain.Cardinality)
+	if len(level.Evals) != int(encoder.Domain.Cardinality) {
+		t.Fatalf("level has %d evals, want %d", len(level.Evals), encoder.Domain.Cardinality)
 	}
 
+	expectedCodeword := encodeCanonicalTestPoly(expectedPoly, &encoder)
 	for pos, got := range level.Evals {
-		x := testBitReversedDomainPoint(domain, pos)
-		want := polynomials.EvalCanonicalExt(expectedPoly, x)
+		want := expectedCodeword[pos]
 		if !got.Equal(&want) {
 			t.Fatalf("eval[%d] mismatch\ngot:  %s\nwant: %s", pos, got.String(), want.String())
 		}
@@ -187,16 +187,16 @@ func TestReconstructLevelMatchesDirectQuotientPolynomial(t *testing.T) {
 }
 
 func TestReconstructLevelRejectsDomainClaimPoint(t *testing.T) {
-	domain := fft.NewDomain(8)
-	light := domainLight{cardinality: domain.Cardinality, generator: domain.Generator}
-	claimPoint := testBitReversedDomainPoint(domain, 3)
+	encoder := NewEncoder(8, 4)
+	light := domainLight{cardinality: encoder.Domain.Cardinality, generator: encoder.Domain.Generator}
+	claimPoint := domainPointExt(light, 3)
 
 	_, err := reconstructLevel(quotientLevelInput{
 		D:      4,
 		Domain: light,
 		Columns: []quotientColumn{
 			{
-				Evals: make([]field.Ext, domain.Cardinality),
+				Evals: make([]field.Ext, encoder.Domain.Cardinality),
 				Claims: []quotientClaim{
 					{Point: claimPoint, Value: field.Uint64ToExt(42)},
 				},
@@ -212,12 +212,12 @@ func TestReconstructLevelRejectsDomainClaimPoint(t *testing.T) {
 }
 
 func TestReconstructLevelHandlesNoClaims(t *testing.T) {
-	domain := fft.NewDomain(8)
+	encoder := NewEncoder(8, 4)
 	level, err := reconstructLevel(quotientLevelInput{
 		D:      4,
-		Domain: domainLight{cardinality: domain.Cardinality, generator: domain.Generator},
+		Domain: domainLight{cardinality: encoder.Domain.Cardinality, generator: encoder.Domain.Generator},
 		Columns: []quotientColumn{
-			{Evals: make([]field.Ext, domain.Cardinality)},
+			{Evals: make([]field.Ext, encoder.Domain.Cardinality)},
 		},
 	}, field.Uint64ToExt(7))
 	if err != nil {
@@ -237,8 +237,9 @@ func TestProverStateOpenAlignsMultiSizeLevelLeaf(t *testing.T) {
 		t.Fatalf("NewParams: %v", err)
 	}
 
-	levelDomain := fft.NewDomain(8)
-	fullDomain := fft.NewDomain(16)
+	levelEncoder := NewEncoder(8, 4)
+	fullEncoder := NewEncoder(16, 8)
+	fullDomain := domainLight{cardinality: fullEncoder.Domain.Cardinality, generator: fullEncoder.Domain.Generator}
 	levelCoeffs := []field.Ext{
 		field.UintsToExt(3, 1, 0, 0, 0, 0),
 		field.UintsToExt(5, 0, 1, 0, 0, 0),
@@ -259,12 +260,12 @@ func TestProverStateOpenAlignsMultiSizeLevelLeaf(t *testing.T) {
 		field.UintsToExt(37, 1, 0, 0, 1, 0),
 	}
 
-	levelEvals := encodeTestPoly(levelCoeffs, levelDomain)
-	fullEvals := encodeTestPoly(fullCoeffs, fullDomain)
+	levelEvals := encodeCanonicalTestPoly(levelCoeffs, &levelEncoder)
+	fullEvals := encodeCanonicalTestPoly(fullCoeffs, &fullEncoder)
 	tree, encoded := multiSizeTreeForCodewords(levelEvals, fullEvals)
 
-	otherLevelEvals := encodeTestPoly(otherLevelCoeffs, levelDomain)
-	otherFullEvals := encodeTestPoly(otherFullCoeffs, fullDomain)
+	otherLevelEvals := encodeCanonicalTestPoly(otherLevelCoeffs, &levelEncoder)
+	otherFullEvals := encodeCanonicalTestPoly(otherFullCoeffs, &fullEncoder)
 	otherTree, otherEncoded := multiSizeTreeForCodewords(otherLevelEvals, otherFullEvals)
 
 	const query = 11
@@ -277,7 +278,7 @@ func TestProverStateOpenAlignsMultiSizeLevelLeaf(t *testing.T) {
 	if topBranch.Siblings[len(topBranch.Siblings)-1] != digestSizedRow(encoded[3], query^1) {
 		t.Fatalf("top sibling does not open conjugate row %d", query^1)
 	}
-	x := testBitReversedDomainPoint(fullDomain, query)
+	x := domainPointExt(fullDomain, query)
 	var minusX field.Ext
 	minusX.Neg(&x)
 	wantSelf := polynomials.EvalCanonicalExt(fullCoeffs, x)
@@ -335,21 +336,126 @@ func TestProverStateOpenAlignsMultiSizeLevelLeaf(t *testing.T) {
 	checkLevelBranch("second tree", opening[1], otherTree, otherEncoded)
 }
 
-func encodeTestPoly(poly []field.Ext, domain *fft.Domain) []field.Ext {
-	evals := make([]field.Ext, domain.Cardinality)
-	logSize := utils.Log2Ceil(int(domain.Cardinality))
-	for pos := range evals {
-		var x field.Element
-		x.Exp(domain.Generator, big.NewInt(int64(bitReverseIdx(pos, logSize))))
-		evals[pos] = polynomials.EvalCanonicalExt(poly, field.Lift(x))
+func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
+	params, err := NewParams(16, 8, 2)
+	if err != nil {
+		t.Fatalf("NewParams: %v", err)
 	}
-	return evals
-}
+	encoders := makeEncoders(params.numRounds+1, 2)
+	pcs, err := NewPCS(params, encoders)
+	if err != nil {
+		t.Fatalf("NewPCS: %v", err)
+	}
 
-func testBitReversedDomainPoint(domain *fft.Domain, pos int) field.Ext {
-	var x field.Element
-	x.Exp(domain.Generator, big.NewInt(int64(bitReverseIdx(pos, utils.Log2Ceil(int(domain.Cardinality))))))
-	return field.Lift(x)
+	topCoeffs := []field.Ext{
+		field.UintsToExt(2, 1, 0, 0, 0, 0),
+		field.UintsToExt(3, 0, 1, 0, 0, 0),
+		field.UintsToExt(5, 0, 0, 1, 0, 0),
+		field.UintsToExt(7, 0, 0, 0, 1, 0),
+	}
+	auxCoeffs := []field.Ext{
+		field.UintsToExt(11, 0, 0, 0, 0, 1),
+		field.UintsToExt(13, 1, 1, 0, 0, 0),
+		field.UintsToExt(17, 0, 1, 1, 0, 0),
+	}
+
+	witness := make(Batch, 4)
+	witness[2] = SizedTable{Ext: [][]field.Ext{canonicalToLagrangeTestPoly(auxCoeffs, 4)}}
+	witness[3] = SizedTable{Ext: [][]field.Ext{canonicalToLagrangeTestPoly(topCoeffs, 8)}}
+	witnesses := []Batch{witness}
+	committed := []CommitterState{Commit(encoders, witness)}
+
+	batchShifts := make(BatchShifts, 4)
+	batchShifts[2] = SizedShifts{Ext: [][]int{{1, 3}}}
+	batchShifts[3] = SizedShifts{Ext: [][]int{{0, 2}}}
+	shifts := []BatchShifts{batchShifts}
+
+	zeta := field.UintsToExt(19, 2, 3, 5, 7, 11)
+	alphaDeepChallenge := field.UintsToExt(23, 3, 5, 7, 11, 13)
+	started, err := pcs.NewProverState(ProverStateInputs{
+		Witnesses: witnesses,
+		Committed: committed,
+		Shifts:    shifts,
+		Zeta:      zeta,
+		AlphaDeep: alphaDeepChallenge,
+	})
+	if err != nil {
+		t.Fatalf("pcs.NewProverState: %v", err)
+	}
+	if len(started.Levels) != 2 {
+		t.Fatalf("started with %d virtual levels, want 2", len(started.Levels))
+	}
+	if len(started.LevelRoots) != 2 || len(started.LevelRoots[0]) != 1 || len(started.LevelRoots[1]) != 1 {
+		t.Fatalf("unexpected level root shape: %#v", started.LevelRoots)
+	}
+	if started.LevelRoots[0][0] != committed[0].Tree.Root() || started.LevelRoots[1][0] != committed[0].Tree.Root() {
+		t.Fatalf("virtual levels should be backed by the committed batch tree")
+	}
+
+	claimPoint, err := pcs.shiftedPoint(3, 2, zeta)
+	if err != nil {
+		t.Fatalf("shiftedPoint: %v", err)
+	}
+	wantClaim := polynomials.EvalLagrange(
+		field.VecFromExt(witness[3].Ext[0]),
+		field.ElemFromExt(claimPoint),
+	).AsExt()
+	gotClaim := started.ClaimedValues[0][3].Ext[0][1]
+	if !gotClaim.Equal(&wantClaim) {
+		t.Fatalf("claimed value mismatch\ngot:  %s\nwant: %s", gotClaim.String(), wantClaim.String())
+	}
+
+	referenceLevels := make([]Level, len(started.Levels))
+	for i, level := range started.Levels {
+		referenceLevels[i] = Level{
+			D:     level.D,
+			Evals: append([]field.Ext(nil), level.Evals...),
+			Trees: []*Tree{buildTreeExt(level.Evals)},
+		}
+	}
+
+	foldAlphas := []field.Ext{
+		field.UintsToExt(29, 1, 0, 0, 0, 0),
+		field.UintsToExt(31, 0, 1, 0, 0, 0),
+		field.UintsToExt(37, 0, 0, 1, 0, 0),
+	}
+	positions := []int{3, 11}
+	referenceProof := proverForTest(params, referenceLevels, foldAlphas, positions)
+
+	for round := 0; started.State.HasNext(); round++ {
+		started.State.Fold(foldAlphas[round])
+	}
+	gotProof := started.State.Open(positions)
+	if !reflect.DeepEqual(gotProof.FRIRoots, referenceProof.FRIRoots) {
+		t.Fatalf("FRI roots mismatch\ngot:  %#v\nwant: %#v", gotProof.FRIRoots, referenceProof.FRIRoots)
+	}
+	if !reflect.DeepEqual(gotProof.FinalPolyExt, referenceProof.FinalPolyExt) {
+		t.Fatalf("final polynomial mismatch")
+	}
+
+	oneShot, err := pcs.Open(OpenInputs{
+		Witnesses: witnesses,
+		Committed: committed,
+		Shifts:    shifts,
+		Challenges: Challenges{
+			Zeta:           zeta,
+			AlphaDeep:      alphaDeepChallenge,
+			FoldAlphas:     foldAlphas,
+			QueryPositions: positions,
+		},
+	})
+	if err != nil {
+		t.Fatalf("pcs.Open: %v", err)
+	}
+	if !reflect.DeepEqual(oneShot.ClaimedValues, started.ClaimedValues) {
+		t.Fatalf("one-shot claimed values differ from staged claimed values")
+	}
+	if !reflect.DeepEqual(oneShot.FRIProof.FRIRoots, referenceProof.FRIRoots) {
+		t.Fatalf("one-shot FRI roots mismatch")
+	}
+	if !reflect.DeepEqual(oneShot.FRIProof.FinalPolyExt, referenceProof.FinalPolyExt) {
+		t.Fatalf("one-shot final polynomial mismatch")
+	}
 }
 
 func quotientPolyForClaim(poly []field.Ext, claim quotientClaim) []field.Ext {
@@ -365,6 +471,19 @@ func quotientPolyForClaim(poly []field.Ext, claim quotientClaim) []field.Ext {
 		quotient[i].Add(&adjusted[i+1], &term)
 	}
 	return quotient
+}
+
+func encodeCanonicalTestPoly(poly []field.Ext, encoder *RSEncoder) []field.Ext {
+	return encoder.EncodeExt(canonicalToLagrangeTestPoly(poly, encoder.PlainTextSize))
+}
+
+func canonicalToLagrangeTestPoly(poly []field.Ext, size int) []field.Ext {
+	lagrange := make([]field.Ext, size)
+	copy(lagrange, poly)
+	domain := fft.NewDomain(uint64(size))
+	domain.FFTExt6(lagrange, fft.DIF)
+	gutils.BitReverse(lagrange)
+	return lagrange
 }
 
 func addScaledPoly(accum *[]field.Ext, poly []field.Ext, scale field.Ext) {

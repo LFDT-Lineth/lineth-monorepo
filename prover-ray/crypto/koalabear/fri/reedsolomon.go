@@ -1,10 +1,9 @@
 package fri
 
 import (
-	"math/bits"
-
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
+	gutils "github.com/consensys/gnark-crypto/utils"
 )
 
 // RSEncoder is a Reed-Solomon error correcting-code encoder and decoder.
@@ -65,12 +64,13 @@ func (enc *RSEncoder) Encode(p []field.Element, fftOpt ...fft.Option) []field.El
 	_p := make([]field.Element, N)
 	copy(_p, p)
 
-	// Lagrange normal to canonical bit-reversed (w.r.t. n). We place those
-	// coefficients directly in N-bit-reversed order and use a DIT FFT, avoiding
-	// the two explicit BitReverse passes previously needed for normal order.
+	// IFFT(DIF) consumes natural-order Lagrange input and returns n-bit-reversed
+	// coefficients. The n-to-N size change needs one normalization to natural
+	// coefficient order, after which FFT(DIF) emits the N-bit-reversed codeword
+	// directly.
 	enc.smallDomain.FFTInverse(_p[:n], fft.DIF, fftOpt...)
-	scatterBitReversedCoeffs(_p, n, int(N))
-	enc.Domain.FFT(_p, fft.DIT, fftOpt...)
+	gutils.BitReverse(_p[:n])
+	enc.Domain.FFT(_p, fft.DIF, fftOpt...)
 
 	// return _p
 	return _p
@@ -91,8 +91,8 @@ func (enc *RSEncoder) EncodeExt(p []field.Ext, fftOpt ...fft.Option) []field.Ext
 	copy(_p, p)
 
 	enc.smallDomain.FFTInverseExt6(_p[:n], fft.DIF, fftOpt...)
-	scatterBitReversedCoeffs(_p, n, int(N))
-	enc.Domain.FFTExt6(_p, fft.DIT, fftOpt...)
+	gutils.BitReverse(_p[:n])
+	enc.Domain.FFTExt6(_p, fft.DIF, fftOpt...)
 
 	return _p
 }
@@ -100,26 +100,4 @@ func (enc *RSEncoder) EncodeExt(p []field.Ext, fftOpt ...fft.Option) []field.Ext
 // InverseRate returns the inverse-rate of the code
 func (enc *RSEncoder) InverseRate() int {
 	return int(enc.Domain.Cardinality) / enc.PlainTextSize
-}
-
-// scatterBitReversedCoeffs expands n-bit-reversed coefficients into the
-// matching N-bit-reversed zero-padded slots, in place.
-func scatterBitReversedCoeffs[T any](p []T, n, N int) {
-	if n <= 1 {
-		return
-	}
-	shift := bits.TrailingZeros64(uint64(N)) - bits.TrailingZeros64(uint64(n))
-	stride := 1 << shift
-	for i := n - 1; i >= 0; i-- {
-		p[i<<shift] = p[i]
-	}
-	if stride == 1 {
-		return
-	}
-	var zero T
-	for i := 1; i < n; i++ {
-		if i&(stride-1) != 0 {
-			p[i] = zero
-		}
-	}
 }

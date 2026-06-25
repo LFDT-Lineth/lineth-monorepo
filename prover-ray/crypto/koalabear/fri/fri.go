@@ -102,6 +102,19 @@ type domainLight struct {
 	generator   field.Element
 }
 
+func domainPoint(domain domainLight, position int) field.Element {
+	logSize := bits.TrailingZeros64(domain.cardinality)
+	exponent := bits.Reverse64(uint64(position)) >> (64 - logSize)
+
+	var x field.Element
+	x.Exp(domain.generator, big.NewInt(int64(exponent)))
+	return x
+}
+
+func domainPointExt(domain domainLight, position int) field.Ext {
+	return field.Lift(domainPoint(domain, position))
+}
+
 // QueryLayer holds one Merkle branch per tree backing one folding level. The
 // running FRI layers use one branch; virtual PCS levels may use several.
 type QueryLayer []Branch
@@ -578,11 +591,7 @@ func checkQueryExt(s int, fq Query,
 
 	for j := 0; j < p.numRounds; j++ {
 
-		var (
-			Nj   = int(p.domainsLight[j].cardinality)
-			kj   = bits.TrailingZeros(uint(Nj)) // log₂(Nⱼ)
-			base = s >> j                       // bit-reversed position of the query in layer j
-		)
+		base := s >> j // bit-reversed position of the query in layer j
 
 		// Authenticate the opened leaf against the round-j root. The hashing now
 		// lives in the tree itself (Branch.RecoverRoot replays hashNode up to the
@@ -600,7 +609,7 @@ func checkQueryExt(s int, fq Query,
 		if len(branch.Siblings) == 0 {
 			return fmt.Errorf("round %d: branch carries no sibling", j)
 		}
-		//nolint:godox // TODO(C2): branch is still the first authenticated backing tree; C2.2
+		// TODO(C2): branch is still the first authenticated backing tree; C2.2
 		// reconstructs the folded level value from the full QueryLayer.
 		self, err := octupletToExt(branch.Leaf)
 		if err != nil {
@@ -614,9 +623,8 @@ func checkQueryExt(s int, fq Query,
 		// x is the domain point of the opened leaf. The codeword is bit-reversed,
 		// so the natural-order index of position base is bitReverse(base) and
 		// x = gⱼ^{bitReverse(base)} with gⱼ the size-Nⱼ generator.
-		xExp := int(bits.Reverse64(uint64(base)) >> (64 - kj))
-		var x, xInv field.Element
-		x.Exp(p.domainsLight[j].generator, big.NewInt(int64(xExp)))
+		var xInv field.Element
+		x := domainPoint(p.domainsLight[j], base)
 		xInv.Inverse(&x)
 
 		// fold: (self + sib)/2 + alpha · (self - sib)/(2x)
@@ -697,7 +705,7 @@ func authenticateQueryLayer(
 			return Branch{}, fmt.Errorf("%s tree %d: Merkle proof invalid", label, i)
 		}
 	}
-	//nolint:godox // TODO(C2): C0.1 authenticates every backing tree, but the fold checker still
+	// TODO(C2): C0.1 authenticates every backing tree, but the fold checker still
 	// consumes the first branch's leaf. C2.2 replaces this with level
 	// reconstruction over all authenticated branches.
 	return first, nil

@@ -1,7 +1,6 @@
 package fri
 
 import (
-	"math/rand/v2"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
@@ -20,21 +19,27 @@ func TestEvaluateOnExtendedDomainRootMatchesEncode(t *testing.T) {
 			field.NewElement(9),
 			field.NewElement(13),
 		}
-		codec   = NewEncoder(8, len(p))
-		encoded = codec.Encode(p)
-		prng    = rand.New(utils.NewRandSource(0))
 	)
 
-	for j := range encoded {
+	codec := NewEncoder(8, len(p))
+	encoded := codec.Encode(p)
+	domain := domainLight{cardinality: codec.Domain.Cardinality, generator: codec.Domain.Generator}
+	logN := utils.Log2Ceil(len(encoded))
+	rate := codec.InverseRate()
 
-		var (
-			x    = field.PseudoRandElemExt(prng)
-			got  = polynomials.EvalLagrange(field.VecFromBase(encoded), x)
-			want = polynomials.EvalLagrange(field.VecFromBase(p), x)
-		)
-
-		if !got.Equal(&want.Ext) {
-			t.Fatalf("evaluation[%d] = %s, want %s", j, got.String(), encoded[j].String())
+	for pos := range encoded {
+		naturalIndex := bitReverseIdx(pos, logN)
+		var want field.Element
+		if naturalIndex%rate == 0 {
+			want = p[naturalIndex/rate]
+		} else {
+			want = polynomials.EvalLagrange(
+				field.VecFromBase(p),
+				field.ElemFromBase(domainPoint(domain, pos)),
+			).AsBase()
+		}
+		if !encoded[pos].Equal(&want) {
+			t.Fatalf("encoded[%d] = %s, want %s", pos, encoded[pos].String(), want.String())
 		}
 	}
 }
@@ -51,19 +56,24 @@ func TestExtEvaluateOnExtendedDomainRootMatchesEncodeExt(t *testing.T) {
 
 		codec   = NewEncoder(8, len(p))
 		encoded = codec.EncodeExt(p)
-		prng    = rand.New(utils.NewRandSource(0))
+		domain  = domainLight{cardinality: codec.Domain.Cardinality, generator: codec.Domain.Generator}
+		logN    = utils.Log2Ceil(len(encoded))
+		rate    = codec.InverseRate()
 	)
 
-	for j := range encoded {
-
-		var (
-			x    = field.PseudoRandElemExt(prng)
-			got  = polynomials.EvalLagrange(field.VecFromExt(encoded), x)
-			want = polynomials.EvalLagrange(field.VecFromExt(p), x)
-		)
-
-		if !got.Equal(&want.Ext) {
-			t.Fatalf("evaluation[%d] = %s, want %s", j, got.String(), encoded[j].String())
+	for pos := range encoded {
+		naturalIndex := bitReverseIdx(pos, logN)
+		var want field.Ext
+		if naturalIndex%rate == 0 {
+			want = p[naturalIndex/rate]
+		} else {
+			want = polynomials.EvalLagrange(
+				field.VecFromExt(p),
+				field.ElemFromExt(domainPointExt(domain, pos)),
+			).AsExt()
+		}
+		if !encoded[pos].Equal(&want) {
+			t.Fatalf("encoded[%d] = %s, want %s", pos, encoded[pos].String(), want.String())
 		}
 	}
 }
@@ -88,17 +98,13 @@ func TestEncodeExt(t *testing.T) {
 	var (
 		codec   = NewEncoder(8, len(coeffs))
 		encoded = codec.EncodeExt(p)
-		domainN = fft.NewDomain(uint64(len(encoded)))
-		omega   = domainN.Generator
-		omegaJ  = field.One()
+		domain  = domainLight{cardinality: codec.Domain.Cardinality, generator: codec.Domain.Generator}
 	)
 
 	for j := range encoded {
-		x := field.Lift(omegaJ)
-		want := polynomials.EvalCanonicalExt(coeffs, x)
+		want := polynomials.EvalCanonicalExt(coeffs, domainPointExt(domain, j))
 		if !encoded[j].Equal(&want) {
 			t.Fatalf("encoded[%d] = %s, want %s", j, encoded[j].String(), want.String())
 		}
-		omegaJ.Mul(&omegaJ, &omega)
 	}
 }
