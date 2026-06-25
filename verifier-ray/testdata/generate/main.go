@@ -1241,8 +1241,7 @@ func fieldValueLiteral(value field.Element) string {
 func extValueLiteral(value field.Ext) string {
 	a0, a1, b0, b1, c0, c1 := field.ExtToUint64s(&value)
 	return fmt.Sprintf(
-		"ext.Ext{ .B0 = .{ .a0 = .{ .value = %d }, .a1 = .{ .value = %d } }, .B1 = .{ .a0 = .{ .value = %d }, .a1 = .{ .value = %d } }, .B2 = .{ .a0 = .{ .value = %d }, .a1 = .{ .value = %d } } }",
-		a0, a1, b0, b1, c0, c1,
+		"ext.Ext.fromUints(%d, %d, %d, %d, %d, %d)", a0, a1, b0, b1, c0, c1,
 	)
 }
 
