@@ -305,11 +305,11 @@ keccak-rust-exec: keccak-rust-json
 keccak-zig-build:
 	$(MAKE) -f $(MAKEFILE_DIR)Makefile vector-build \
 		KECCAK_N_VECTORS=$(if $(filter -1,$(KECCAK_N_VECTORS)),$(shell awk 'END { print NR }' $(KECCAK_ALL_FILE)),$(KECCAK_N_VECTORS)) \
-		TEST=keccak/keccak_with_provider_batched_inputs.zig
+		TEST=keccak/keccak_batched_input_native.zig
 
 keccak-zig-json: keccak-zig-build
 	$(MAKE) -f $(MAKEFILE_DIR)Makefile vector-json \
-		TEST=keccak/keccak_with_provider_batched_inputs.zig \
+		TEST=keccak/keccak_batched_input_native.zig \
 		VECTOR_FILE=$(KECCAK_ALL_FILE) \
 		VECTOR_N_VECTORS=$(KECCAK_N_VECTORS) \
 		VECTOR_JSON_MODE=batched \
