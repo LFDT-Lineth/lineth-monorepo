@@ -346,7 +346,7 @@ def test_decode_rollup_request_non_array_blobs_is_rejected() -> None:
 
 def test_decode_rollup_request_malformed_kzg_proof_is_rejected() -> None:
     req = _valid_rollup_request()
-    req["proofRequest"]["blobs"][0]["blobInputs"]["blobKzgProof"] = "0xnothex"
+    req["proofRequest"]["blobs"][0]["blobKzgProof"] = "0xnothex"
     with pytest.raises(ProofIoError, match="blobKzgProof"):
         decode_rollup_request(req)
 

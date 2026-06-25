@@ -166,13 +166,38 @@ def _decode_forced_transaction(obj: dict, ctx: str) -> ForcedTransactionWitness:
     )
 
 
-def _decode_payload(obj: dict, index: int) -> LineaPayloadInput:
+def _decode_payload(obj: dict, index: int, chain_id: int, fork_name: str) -> LineaPayloadInput:
     ctx = f"payloads[{index}]."
     stateless_input = _require(obj, "statelessInput", ctx)
+    new_payload_request = _require(stateless_input, "newPayloadRequest", f"{ctx}statelessInput.")
+    # EIP-7685 execution requests are a flat list on the wire (one entry per typed
+    # request); the rollup rejects any (§2.1), so the list must be empty.
+    execution_requests = _require(
+        new_payload_request, "executionRequests", f"{ctx}statelessInput.newPayloadRequest."
+    )
+    if not isinstance(execution_requests, list):
+        raise ProofIoError(
+            f"'{ctx}statelessInput.newPayloadRequest.executionRequests' must be an array"
+        )
+    if execution_requests:
+        raise ProofIoError(
+            f"'{ctx}statelessInput.newPayloadRequest.executionRequests' must be empty (§2.1)"
+        )
+    # The readable `statelessInput` omits two SSZ fields the encoder needs:
+    #   - `chainConfig`: carried once at `proofRequest.chainConfig`; reinject the
+    #     {chainId, forkName} the SSZ `SszChainConfig` requires (chainId already
+    #     coerced to int so a 0x-hex quantity survives the round-trip);
+    #   - `executionRequests`: present as a flat list, but the encoder expects the
+    #     deposits/withdrawals/consolidations object form — pass the empty object
+    #     (we already rejected any non-empty list above).
+    # The result is then SSZ-encoded into the bytes the guest reads via read_input.
+    encoder_obj = {
+        **stateless_input,
+        "newPayloadRequest": {**new_payload_request, "executionRequests": {}},
+        "chainConfig": {"chainId": chain_id, "forkName": fork_name},
+    }
     try:
-        # The readable `statelessInput` object is SSZ-encoded into the bytes the
-        # guest reads via read_input — the prover's encode step.
-        stateless_input_ssz = encode_stateless_input_ssz(stateless_input)
+        stateless_input_ssz = encode_stateless_input_ssz(encoder_obj)
     except Exception as exc:  # SSZ build/encode rejects a malformed statelessInput
         raise ProofIoError(f"'{ctx}statelessInput' could not be SSZ-encoded: {exc}") from exc
     rollup_extension = _require(obj, "rollupExtension", ctx)
@@ -196,14 +221,21 @@ def decode_request(obj: dict) -> L2ExecutionProofPrivateInput:
     input dataclass.
 
     The request is a `{guestProgramId, proofRequest}` envelope: `guestProgramId`
-    is routing metadata and the block range is implied by the payloads. Each
-    payload's readable `statelessInput` object is SSZ-encoded into the guest's
-    `stateless_input_ssz` (the prover's encode step, in `_decode_payload`).
+    is routing metadata and the block range is implied by the payloads. The single
+    `proofRequest.chainConfig` carries both the Linea range-level config
+    (`l2MessageServiceAddress`, `coinbase`, `chainId`) and the `{chainId, forkName}`
+    the per-payload stateless-input SSZ needs; `_decode_payload` reinjects the
+    latter when SSZ-encoding each payload's readable `statelessInput`.
     """
     proof_request = _require(obj, "proofRequest", "")
     payloads = _require(proof_request, "payloads", "proofRequest.")
     if not isinstance(payloads, list) or not payloads:
         raise ProofIoError("'proofRequest.payloads' must be a non-empty array")
+    chain_config_obj = _require(proof_request, "chainConfig", "proofRequest.")
+    chain_config = _decode_chain_config(chain_config_obj)
+    # `forkName` selects the stateless-input SSZ fork (the only part the guest
+    # validates); it is not part of the Linea range-level `ChainConfig` dataclass.
+    fork_name = _require(chain_config_obj, "forkName", "proofRequest.chainConfig.")
     return L2ExecutionProofPrivateInput(
         parent_ftx_rolling_hash=Hash32(
             _bytes_from_hex(
@@ -215,8 +247,11 @@ def decode_request(obj: dict) -> L2ExecutionProofPrivateInput:
             _require(proof_request, "parentLastProcessedFtxNumber", "proofRequest."),
             "proofRequest.parentLastProcessedFtxNumber",
         ),
-        chain_config=_decode_chain_config(_require(proof_request, "chainConfig", "proofRequest.")),
-        payloads=[_decode_payload(p, i) for i, p in enumerate(payloads)],
+        chain_config=chain_config,
+        payloads=[
+            _decode_payload(p, i, int(chain_config.chain_id), fork_name)
+            for i, p in enumerate(payloads)
+        ],
     )
 
 
@@ -348,10 +383,10 @@ def _decode_l2_execution_proof(obj: dict, ctx: str) -> L2ExecutionProof:
 
 
 def _decode_blob_witness(obj: dict, ctx: str) -> BlobWitness:
-    blob_inputs = _require(obj, "blobInputs", ctx)
-    block_range = _require(obj, "blockRange", ctx)
-    start = _u64(_require(block_range, "startBlockNumber", f"{ctx}blockRange."), f"{ctx}blockRange.startBlockNumber")
-    end = _u64(_require(block_range, "endBlockNumber", f"{ctx}blockRange."), f"{ctx}blockRange.endBlockNumber")
+    # The blob is flat: `startBlockNumber`/`endBlockNumber` give the range and
+    # `blobHash`/`blobKzgProof`/`blockRlps` the DA witness (no nested wrappers).
+    start = _u64(_require(obj, "startBlockNumber", ctx), f"{ctx}startBlockNumber")
+    end = _u64(_require(obj, "endBlockNumber", ctx), f"{ctx}endBlockNumber")
     block_rlps = _require_list(obj, "blockRlps", ctx)
     return BlobWitness(
         block_number_range=(int(start), int(end)),
@@ -359,12 +394,10 @@ def _decode_blob_witness(obj: dict, ctx: str) -> BlobWitness:
             _bytes_from_hex(r, f"{ctx}blockRlps[{i}]") for i, r in enumerate(block_rlps)
         ],
         blob_hash=Hash32(
-            _bytes_from_hex(_require(blob_inputs, "blobHash", f"{ctx}blobInputs."), f"{ctx}blobInputs.blobHash")
+            _bytes_from_hex(_require(obj, "blobHash", ctx), f"{ctx}blobHash")
         ),
         blob_kzg_proof=Bytes48(
-            _bytes_from_hex(
-                _require(blob_inputs, "blobKzgProof", f"{ctx}blobInputs."), f"{ctx}blobInputs.blobKzgProof"
-            )
+            _bytes_from_hex(_require(obj, "blobKzgProof", ctx), f"{ctx}blobKzgProof")
         ),
     )
 
