@@ -48,7 +48,7 @@ pub fn main() noreturn {
 // and exiting in the R5 zkVM environment. The actual verifier logic being tested
 // is still in `verifier.zig`, and this main function just serves as a thin wrapper
 // around it to handle R5-specific details.
-pub export fn r5_main() noreturn {
+fn r5_main() callconv(.c) noreturn {
     if (comptime !is_r5_zkvm) {
         // this entry point should only be called from R5 zkVM build (`make build-r5` or `make build-r5-release`)
         unreachable;
@@ -60,6 +60,13 @@ pub export fn r5_main() noreturn {
     // run the verifier smoke test with the loaded input
     const res = runVerifier(input);
     exitR5(res);
+}
+
+// We have standard entry point convention for R5 zkvm. Export the symbol so that the linker can find it.
+comptime {
+    if (is_r5_zkvm) {
+        @export(&r5_main, .{ .name = "main" });
+    }
 }
 
 fn runVerifier(input: *const verifier.Proof) u8 {
