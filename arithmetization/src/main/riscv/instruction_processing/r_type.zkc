@@ -66,7 +66,6 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
     var product_upper:Word
     var product_lower:Word
     var word_wip:Word
-    var sign_bit:SignBit
 
     funct7::rs2::rs1::funct3::rd = instruction_parameters
 
@@ -223,10 +222,8 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                                 v2_abs = absolute_value_double_word(v2)
                                 registers[rd] = v1_abs / v2_abs
                                 var result_sign:SignBit = v1_sign ^ v2_sign
-                                switch result_sign {
-                                    case 1: {
-                                        registers[rd] = negative_of_double_word(registers[rd])
-                                    }
+                                if result_sign == 1 {
+                                    registers[rd] = negative_of_double_word(registers[rd])
                                 }
                             }
                         }
@@ -303,10 +300,8 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                                 v1_abs = absolute_value_double_word(v1)
                                 v2_abs = absolute_value_double_word(v2)
                                 registers[rd] = v1_abs % v2_abs
-                                switch v1_sign {
-                                    case 1: {
-                                        registers[rd] = negative_of_double_word(registers[rd])
-                                    }
+                                if v1_sign == 1 {
+                                    registers[rd] = negative_of_double_word(registers[rd])
                                 }
                             }
                         }
@@ -330,13 +325,10 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                         case FUNCT7_REMU: {
                             printf "REMU "
                             print_r_operands(rd, rs1, rs2)
-                            switch v2 {
-                                case 0: {
-                                    registers[rd] = v1
-                                }
-                                default: {
-                                    registers[rd] = v1 % v2
-                                }
+                            if v2 == 0 {
+                                registers[rd] = v1
+                            } else {
+                                registers[rd] = v1 % v2
                             }
                         }
                         default: {
@@ -389,14 +381,10 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                             printf "MULW "
                             print_r_operands(rd, rs1, rs2)
                             product_upper::product_lower = (v1_lower as DoubleWord) * (v2_lower as DoubleWord)
-                            sign_bit = sign_bit_of_word(product_lower)
-                            switch sign_bit {
-                                case 1: {
-                                    registers[rd] = MAX_UINT_32::product_lower
-                                }
-                                default: {
-                                    registers[rd] = product_lower as DoubleWord
-                                }
+                            if sign_bit_of_word(product_lower) == 1 {
+                                registers[rd] = MAX_UINT_32::product_lower
+                            } else {
+                                registers[rd] = product_lower as DoubleWord
                             }
                         }
                         default: {
@@ -409,20 +397,17 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                     }
                 }
                 case FUNCT3_SLLW: {
-                    switch funct7 {
-                        case FUNCT7_SLLW: {
-                            printf "SLLW "
-                            print_r_operands(rd, rs1, rs2)
-                            shift_discard_5::shift_amount_5 = v2_lower
-                            registers[rd] = sgn_extension_u32_u64(v1_lower << shift_amount_5)
-                        }
-                        default: {
-                            printf "[ERROR] Unsupported R-type instruction with\n"
-                            printf "\topcode ≡ OP_32 ≡ %x ≡ %b\n", opcode, opcode
-                            printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3
-                            printf "\tfunct7 ≡ %x ≡ %b\n", funct7, funct7
-                            fail
-                        }
+                    if funct7 == FUNCT7_SLLW {
+                        printf "SLLW "
+                        print_r_operands(rd, rs1, rs2)
+                        shift_discard_5::shift_amount_5 = v2_lower
+                        registers[rd] = sgn_extension_u32_u64(v1_lower << shift_amount_5)
+                    } else {
+                        printf "[ERROR] Unsupported R-type instruction with\n"
+                        printf "\topcode ≡ OP_32 ≡ %x ≡ %b\n", opcode, opcode
+                        printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3
+                        printf "\tfunct7 ≡ %x ≡ %b\n", funct7, funct7
+                        fail
                     }
                 }
                 case FUNCT3_DIVW: {
@@ -465,16 +450,13 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                             printf "SRAW "
                             print_r_operands(rd, rs1, rs2)
                             shift_discard_5::shift_amount_5 = v2_lower
-                            switch sign_bit_of_word(v1_lower) {
-                                case 1: {
-                                    word_working_copy = bit_flip_word(v1_lower)
-                                    word_working_copy = word_working_copy >> shift_amount_5
-                                    word_working_copy = bit_flip_word(word_working_copy)
-                                }
-                                default: {
-                                    word_working_copy = v1_lower
-                                    word_working_copy = word_working_copy >> shift_amount_5
-                                }
+                            if sign_bit_of_word(v1_lower) == 1 {
+                                word_working_copy = bit_flip_word(v1_lower)
+                                word_working_copy = word_working_copy >> shift_amount_5
+                                word_working_copy = bit_flip_word(word_working_copy)
+                            } else {
+                                word_working_copy = v1_lower
+                                word_working_copy = word_working_copy >> shift_amount_5
                             }
                             registers[rd] = sgn_extension_u32_u64(word_working_copy)
                         }
@@ -497,54 +479,42 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                     }
                 }
                 case FUNCT3_REMW: {
-                    switch funct7 {
-                        case FUNCT7_REMW: {
-                            printf "REMW "
-                            print_r_operands(rd, rs1, rs2)
-                            switch v2_lower {
-                                case 0: {
-                                    registers[rd] = sgn_extension_u32_u64(v1_lower)
-                                }
-                                default: {
-                                    word_wip = v1_lower_abs % v2_lower_abs
-                                    switch sign_bit_of_word(v1_lower) {
-                                        case 0: {
-                                            registers[rd] = sgn_extension_u32_u64(word_wip)
-                                        }
-                                        default: {
-                                            registers[rd] = sgn_extension_u32_u64(negative_of_word(word_wip))
-                                        }
-                                    }
-                                }
+                    if funct7 == FUNCT7_REMW {
+                        printf "REMW "
+                        print_r_operands(rd, rs1, rs2)
+                        if v2_lower == 0 {
+                            registers[rd] = sgn_extension_u32_u64(v1_lower)
+                        } else {
+                            word_wip = v1_lower_abs % v2_lower_abs
+                            if sign_bit_of_word(v1_lower) == 0 {
+                                registers[rd] = sgn_extension_u32_u64(word_wip)
+                            } else {
+                                registers[rd] = sgn_extension_u32_u64(negative_of_word(word_wip))
                             }
                         }
-                        default: {
-                            printf "[ERROR] Unsupported R-type instruction with\n"
-                            printf "\topcode ≡ OP_32 ≡ %x ≡ %b\n", opcode, opcode
-                            printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3
-                            printf "\tfunct7 ≡ %x ≡ %b\n", funct7, funct7
-                            fail
-                        }
+                    } else {
+                        printf "[ERROR] Unsupported R-type instruction with\n"
+                        printf "\topcode ≡ OP_32 ≡ %x ≡ %b\n", opcode, opcode
+                        printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3
+                        printf "\tfunct7 ≡ %x ≡ %b\n", funct7, funct7
+                        fail
                     }
                 }
                 case FUNCT3_REMUW: {
-                    switch funct7 {
-                        case FUNCT7_REMUW: {
-                            printf "REMUW "
-                            print_r_operands(rd, rs1, rs2)
-                            if v2_lower == 0 {
-                                registers[rd] = sgn_extension_u32_u64(v1_lower)
-                            } else {
-                                registers[rd] = sgn_extension_u32_u64(v1_lower % v2_lower)
-                            }
+                    if funct7 == FUNCT7_REMUW {
+                        printf "REMUW "
+                        print_r_operands(rd, rs1, rs2)
+                        if v2_lower == 0 {
+                            registers[rd] = sgn_extension_u32_u64(v1_lower)
+                        } else {
+                            registers[rd] = sgn_extension_u32_u64(v1_lower % v2_lower)
                         }
-                        default: {
-                            printf "[ERROR] Unsupported R-type instruction with\n"
-                            printf "\topcode ≡ OP_32 ≡ %x ≡ %b\n", opcode, opcode
-                            printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3
-                            printf "\tfunct7 ≡ %x ≡ %b\n", funct7, funct7
-                            fail
-                        }
+                    } else {
+                        printf "[ERROR] Unsupported R-type instruction with\n"
+                        printf "\topcode ≡ OP_32 ≡ %x ≡ %b\n", opcode, opcode
+                        printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3
+                        printf "\tfunct7 ≡ %x ≡ %b\n", funct7, funct7
+                        fail
                     }
                 }
                 default: {
@@ -557,24 +527,14 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
             }
         }
         case CUSTOM_1: {
-            switch funct3 {
-                case FUNCT3_KECCAK: {
-                    if funct7 == FUNCT7_KECCAK {
-                        printf "KECCAK precompile "
-                        keccak(v1 as Address, v2 as u32, registers[rd] as Address)
-                    } else {
-                        printf "[ERROR] Unsupported R-type custom-1 instruction with\n"
-                        printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3
-                        printf "\tfunct7 ≡ %x ≡ %b\n", funct7, funct7
-                        fail
-                    }
-                }
-                default: {
-                    printf "[ERROR] Unsupported R-type custom-1 instruction with\n"
-                    printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3
-                    printf "\tfunct7 ≡ %x ≡ %b\n", funct7, funct7
-                    fail
-                }
+            if funct3 == FUNCT3_KECCAK && funct7 == FUNCT7_KECCAK {
+                printf "KECCAK precompile "
+                keccak(v1 as Address, v2 as u32, registers[rd] as Address)
+            } else {
+                printf "[ERROR] Unsupported R-type custom-1 instruction with\n"
+                printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3
+                printf "\tfunct7 ≡ %x ≡ %b\n", funct7, funct7
+                fail
             }
         }
         default: {
