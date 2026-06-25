@@ -316,9 +316,11 @@ internal class ForcedTransactionsAppImpl(
     val stopFtxSender = if (this::ftxSender.isInitialized) ftxSender.stop() else CompletableFuture.completedFuture(Unit)
     val stopFtxFetcher =
       if (this::ftxFetcher.isInitialized) ftxFetcher.stop() else CompletableFuture.completedFuture(Unit)
+    val stopInvalidityProofService = ftxInvalidityProofService.stop()
     return SafeFuture.allOf(
       stopFtxSender,
       stopFtxFetcher,
+      stopInvalidityProofService,
     ).thenApply { }
   }
 }
