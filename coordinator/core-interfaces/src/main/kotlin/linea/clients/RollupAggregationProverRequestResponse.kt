@@ -1,6 +1,7 @@
 package linea.clients
 
 import linea.domain.BlockInterval
+import linea.domain.CompressionProofIndex
 import linea.domain.StartBlockTimestampProvider
 import linea.kotlin.byteArrayListEquals
 import kotlin.time.Instant
@@ -11,7 +12,7 @@ data class RollupAggregationProofRequestV1(
   override val startBlockNumber: ULong,
   override val endBlockNumber: ULong,
   override val startBlockTimestamp: Instant,
-  val rollupProofs: List<RollupProofResponse>,
+  val rollupProofIndexes: List<CompressionProofIndex>,
 ) : BlockInterval, StartBlockTimestampProvider {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -22,7 +23,7 @@ data class RollupAggregationProofRequestV1(
     if (startBlockNumber != other.startBlockNumber) return false
     if (endBlockNumber != other.endBlockNumber) return false
     if (startBlockTimestamp != other.startBlockTimestamp) return false
-    if (rollupProofs != other.rollupProofs) return false
+    if (rollupProofIndexes != other.rollupProofIndexes) return false
 
     return true
   }
@@ -31,7 +32,7 @@ data class RollupAggregationProofRequestV1(
     var result = startBlockNumber.hashCode()
     result = 31 * result + endBlockNumber.hashCode()
     result = 31 * result + startBlockTimestamp.hashCode()
-    result = 31 * result + rollupProofs.hashCode()
+    result = 31 * result + rollupProofIndexes.hashCode()
     return result
   }
 }
@@ -43,7 +44,7 @@ data class RollupAggregationProofRequestV1(
  * is `ByteArray` here so a proof response — whether read from a JSON file or returned by a REST endpoint —
  * deserializes into the DTO and maps onto this domain type.
  */
-data class RollupAggregationProofResponse(
+data class RollupAggregationProofResponseV1(
   override val startBlockNumber: ULong,
   override val endBlockNumber: ULong,
   val proverVersion: String,
@@ -57,7 +58,7 @@ data class RollupAggregationProofResponse(
     if (this === other) return true
     if (javaClass != other?.javaClass) return false
 
-    other as RollupAggregationProofResponse
+    other as RollupAggregationProofResponseV1
 
     if (startBlockNumber != other.startBlockNumber) return false
     if (endBlockNumber != other.endBlockNumber) return false

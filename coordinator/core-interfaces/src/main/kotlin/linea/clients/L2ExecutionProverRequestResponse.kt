@@ -342,7 +342,7 @@ data class L2ExecutionProofPublicInputs(
  * response — whether read from a JSON file or returned by a REST endpoint — deserializes into the DTO and maps
  * directly onto this domain type.
  */
-data class L2ExecutionProofResponse(
+data class L2ExecutionProofResponseV1(
   override val startBlockNumber: ULong,
   override val endBlockNumber: ULong,
   val proverVersion: String,
@@ -357,7 +357,7 @@ data class L2ExecutionProofResponse(
     if (this === other) return true
     if (javaClass != other?.javaClass) return false
 
-    other as L2ExecutionProofResponse
+    other as L2ExecutionProofResponseV1
 
     if (startBlockNumber != other.startBlockNumber) return false
     if (endBlockNumber != other.endBlockNumber) return false

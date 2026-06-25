@@ -4,10 +4,10 @@ import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.map
 import io.vertx.core.Vertx
+import linea.clients.ProverFileNameProvider
 import linea.clients.ProverProofTransport
 import linea.coordinator.clients.prover.FileBasedProverConfig
 import linea.coordinator.clients.prover.GenericFileBasedProverClient
-import linea.coordinator.clients.prover.ProverFileNameProvider
 import linea.domain.ProofIndex
 import linea.error.ErrorResponse
 import linea.fileio.FileMonitor

@@ -9,39 +9,35 @@ import io.vertx.core.http.HttpVersion
 import io.vertx.core.http.PoolOptions
 import io.vertx.ext.web.client.WebClientOptions
 import io.vertx.junit5.VertxExtension
-import linea.clients.RollupAggregationProofRequestV1
+import linea.clients.RollupProofRequestV1
 import linea.coordinator.clients.prover.serialization.JsonSerialization
-import linea.crypto.Sha256HashFunction
-import linea.domain.AggregationProofIndex
-import linea.kotlin.encodeHex
+import linea.domain.CompressionProofIndex
 import net.consensys.linea.httprest.client.VertxHttpRestClient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 /**
- * Exercises [RollupAggregationProverClient] end-to-end over the [RestfulProverProofTransport]:
+ * Exercises [FileBasedRollupProverClient] end-to-end over the [RestfulProverProofTransport]:
  *  - writing a domain request: request -> request DTO -> POST body (`proof_request`);
  *  - reading a response: GET job body -> response DTO -> domain response.
  */
 @ExtendWith(VertxExtension::class)
-class RollupAggregationProverClientRestfulTest {
+class RestfulRollupProverClientTest {
   private val jsonMapper = JsonSerialization.proofResponseMapperV1
-  private val guestProgramId = "0x8a5fdb137ddae03b9bad034500c0fcee76e1c61d70faca5f32bb7418d73392e1"
+  private val guestProgramId = "0x31139b3eaece046f5675fe237c36246e7bb2a5acc4cf4b358aef65c6d3771f4d"
   private val proverVersion = "4.0.0-riscv"
-  private val proofType = "rollup-aggregation"
-  private val jobsPathPattern = "/v1/jobs/$proofType/.*"
-  private val proofIndexProvider =
-    RollupAggregationProverClient.createProofIndexProviderFn(Sha256HashFunction())
+  private val proofType = "rollup"
+  private val chainId = 59144L
+  private val jobsPathPattern = "/v1/jobs/$chainId/$proofType/.*"
 
   private lateinit var wiremock: WireMockServer
-  private lateinit var client: RollupAggregationProverClient
+  private lateinit var client: RestfulRollupProverClient
 
   @BeforeEach
   fun beforeEach(vertx: Vertx) {
@@ -53,22 +49,24 @@ class RollupAggregationProverClientRestfulTest {
       .setDefaultPort(wiremock.port())
     val restClient = VertxHttpRestClient(webClientOptions, PoolOptions(), vertx)
     val transport = RestfulProverProofTransport<
-      RollupAggregationProofRequestDto,
-      RollupAggregationProofResponseDto,
-      AggregationProofIndex,
+      RestfulRollupProofRequestDto,
+      RollupProofResponseDto,
+      CompressionProofIndex,
       >(
       restClient = restClient,
       vertx = vertx,
+      chainId = chainId,
       proofType = proofType,
       startBlockProvider = { it.startBlockNumber },
       endBlockProvider = { it.endBlockNumber },
-      responseDtoClass = RollupAggregationProofResponseDto::class.java,
+      responseDtoClass = RollupProofResponseDto::class.java,
       pollingInterval = 50.milliseconds,
       pollingTimeout = 2.seconds,
     )
-    client = RollupAggregationProverClient(
+    client = RestfulRollupProverClient(
       transport = transport,
       guestProgramId = guestProgramId,
+      chainId = chainId,
     )
   }
 
@@ -82,34 +80,39 @@ class RollupAggregationProverClientRestfulTest {
     wiremock.stubFor(WireMock.get(WireMock.urlPathMatching(jobsPathPattern)).willReturn(WireMock.notFound()))
     wiremock.stubFor(WireMock.post(WireMock.urlPathMatching(jobsPathPattern)).willReturn(WireMock.ok()))
 
-    val request = aggregationRequest()
+    val request = rollupRequest()
     client.createProofRequest(request).get()
 
     val postedRequests = wiremock.findAll(WireMock.postRequestedFor(WireMock.urlPathMatching(jobsPathPattern)))
     assertThat(postedRequests).hasSize(1)
 
     val body = jsonMapper.readTree(postedRequests.first().bodyAsString)
-    val postedDto = jsonMapper.treeToValue(body.get("proof_request"), RollupAggregationProofRequestDto::class.java)
-    val expectedDto = RollupAggregationProofRequestDtoMapper(guestProgramId).invoke(request).get()
+    val postedDto = jsonMapper.treeToValue(body.get("proof_request"), RestfulRollupProofRequestDto::class.java)
+    val expectedDto = RestfulRollupProofRequestDtoMapper(guestProgramId, chainId).invoke(request).get()
     assertThat(postedDto).isEqualTo(expectedDto)
   }
 
   @Test
   fun `findProofResponse reads the job response and maps it to the domain response`() {
-    val responseDto = aggregationResponseDto()
-    val proofIndex = proofIndexProvider(aggregationRequest())
+    val responseDto = rollupResponseDto()
+    val proofIndex = CompressionProofIndex(
+      startBlockNumber = 1000501UL,
+      endBlockNumber = 1000520UL,
+      hash = ByteArray(32) { 0x1a },
+      startBlockTimestamp = Instant.fromEpochSeconds(1763000457),
+    )
     wiremock.stubFor(
-      WireMock.get(
-        WireMock.urlEqualTo("/v1/jobs/$proofType/${proofIndex.startBlockNumber}/${proofIndex.endBlockNumber}"),
-      ).willReturn(WireMock.okJson(jobResponseBody(status = "proved", proofResponse = responseDto))),
+      WireMock.get(WireMock.urlEqualTo("/v1/jobs/$chainId/$proofType/1000501/1000520")).willReturn(
+        WireMock.okJson(jobResponseBody(status = "proved", proofResponse = responseDto)),
+      ),
     )
 
     val response = client.findProofResponse(proofIndex).get()
 
-    assertThat(response).isEqualTo(RollupAggregationProofResponseDtoMapper(proofIndex, responseDto))
+    assertThat(response).isEqualTo(RollupProofResponseDtoMapper(proofIndex, responseDto))
   }
 
-  private fun jobResponseBody(status: String, proofResponse: RollupAggregationProofResponseDto): String {
+  private fun jobResponseBody(status: String, proofResponse: RollupProofResponseDto): String {
     val job = jsonMapper.createObjectNode().apply {
       put("proof_type", proofType)
       put("start_block", proofResponse.startBlockNumber)
@@ -122,20 +125,23 @@ class RollupAggregationProverClientRestfulTest {
     return jsonMapper.writeValueAsString(job)
   }
 
-  private fun aggregationRequest(): RollupAggregationProofRequestV1 = RollupAggregationProofRequestV1(
+  private fun rollupRequest(): RollupProofRequestV1 = RollupProofRequestV1(
     startBlockNumber = 1000501UL,
-    endBlockNumber = 1000567UL,
+    endBlockNumber = 1000520UL,
     startBlockTimestamp = Instant.fromEpochSeconds(1763000000),
-    rollupProofs = emptyList(),
+    blobs = emptyList(),
+    parentShnarf = ByteArray(32) { 0x19 },
+    endShnarf = ByteArray(32) { 0x20 },
+    l2ExecutionProofIndexes = emptyList(),
   )
 
-  private fun aggregationResponseDto(): RollupAggregationProofResponseDto = RollupAggregationProofResponseDto(
+  private fun rollupResponseDto(): RollupProofResponseDto = RollupProofResponseDto(
     proverVersion = proverVersion,
-    proof = "0xabcd",
     startBlockNumber = 1000501,
+    proof = "0xabcd",
     publicInputs = RollupProofPublicInputsDto(
-      endBlockNumber = 1000567,
-      endBlockTimestamp = 1763002301,
+      endBlockNumber = 1000520,
+      endBlockTimestamp = 1763000457,
       l2L1BridgeTransactionTree = "0x10",
       parentL1L2BridgeRollingHash = "0x11",
       parentL1L2BridgeRollingHashMessageNumber = 12,
@@ -149,8 +155,7 @@ class RollupAggregationProverClientRestfulTest {
       parentShnarf = "0x19",
       endShnarf = "0x1a",
     ),
-    l2L1Roots = listOf(Random.nextBytes(32).encodeHex()),
-    filteredAddresses = listOf(Random.nextBytes(20).encodeHex()),
-    l2MessagingBlocksOffsets = listOf(1, 20, 100),
+    l2L1Roots = listOf("0xaa"),
+    filteredAddresses = emptyList(),
   )
 }

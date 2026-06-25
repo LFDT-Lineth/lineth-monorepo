@@ -2,33 +2,67 @@ package linea.coordinator.clients.prover.riscv
 
 import linea.clients.ProverProofTransport
 import linea.clients.RollupAggregationProofRequestV1
-import linea.clients.RollupAggregationProofResponse
+import linea.clients.RollupAggregationProofResponseV1
 import linea.clients.RollupAggregationProverClientV1
 import linea.crypto.HashFunction
 import linea.crypto.Sha256HashFunction
 import linea.domain.AggregationProofIndex
 import linea.kotlin.decodeHex
+import linea.kotlin.encodeHex
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 /**
  * Maps a [RollupAggregationProofRequestV1] domain request to the RISC-V rollup-aggregation proof request DTO described by
- * `rollup_spec/prover_inputs/getZkRollupAggregationProof.request.json` (underscore-prefixed documentation fields
- * skipped).
- *
- * NOTE: the legacy [RollupAggregationProofRequestV1] references the proofs to aggregate indirectly (by index / file name) rather
- * than inlining the recursive STARK proofs and their public inputs the RISC-V schema expects. The inlined
- * `rollupProofs` and the expected 14-field public-inputs tuple are flagged with `TODO` until that data is available.
+ * `rollup_spec/prover_io/schemas/getZkRollupAggregationProofV1.request.schema.json`.
  */
-internal class RollupAggregationProofRequestDtoMapper(
+internal class FileBasedRollupAggregationProofRequestDtoMapper(
   private val guestProgramId: String,
-) : (RollupAggregationProofRequestV1) -> SafeFuture<RollupAggregationProofRequestDto> {
-  override fun invoke(request: RollupAggregationProofRequestV1): SafeFuture<RollupAggregationProofRequestDto> {
-    val dto = RollupAggregationProofRequestDto(
+  private val rollupProofTransport: FileBasedRollupProofTransport,
+) : (RollupAggregationProofRequestV1) -> SafeFuture<FileBasedRollupAggregationProofRequestDto> {
+  override fun invoke(request: RollupAggregationProofRequestV1): SafeFuture<FileBasedRollupAggregationProofRequestDto> {
+    val rollupProofFutures = request.rollupProofIndexes.map { proofIndex ->
+      rollupProofTransport.findResponse(proofIndex)
+    }
+    return SafeFuture.collectAll(rollupProofFutures.stream())
+      .thenApply { rollupResponseDtos ->
+        FileBasedRollupAggregationProofRequestDto(
+          guestProgramId = guestProgramId,
+          proofRequest = FileBasedRollupAggregationProofRequestParamsDto(
+            rollupProofs = rollupResponseDtos.map { it ->
+              RollupProofDto(
+                proof = it!!.proof,
+                startBlockNumber = it.startBlockNumber,
+                endBlockNumber = it.publicInputs.endBlockNumber,
+                publicInputs = it.publicInputs,
+                l2L1Roots = it.l2L1Roots,
+                filteredAddresses = it.filteredAddresses,
+              )
+            },
+          ),
+          metadata = MetaDataDto(
+            startBlockNumber = request.startBlockNumber.toLong(),
+            endBlockNumber = request.endBlockNumber.toLong(),
+          ),
+        )
+      }
+  }
+}
+
+/**
+ * Maps a [RollupAggregationProofRequestV1] domain request to the RISC-V rollup proof request DTO described by
+ * `rollup_spec/prover_io/schemas/getZkRollupAggregationProofV1.request.schema.json` with proof index to reference
+ * each rollup proof response.
+ */
+internal class RestfulRollupAggregationProofRequestDtoMapper(
+  private val guestProgramId: String,
+) : (RollupAggregationProofRequestV1) -> SafeFuture<RestfulRollupAggregationProofRequestDto> {
+  override fun invoke(request: RollupAggregationProofRequestV1): SafeFuture<RestfulRollupAggregationProofRequestDto> {
+    val dto = RestfulRollupAggregationProofRequestDto(
       guestProgramId = guestProgramId,
-      proofRequest = RollupAggregationProofRequestParamsDto(
-        rollupProofs = request.rollupProofs.map { it.fromDomainObject() },
+      proofRequest = RestfulRollupAggregationProofRequestParamsDto(
+        rollupProofIndexes = request.rollupProofIndexes,
       ),
       metadata = MetaDataDto(
         startBlockNumber = request.startBlockNumber.toLong(),
@@ -41,18 +75,18 @@ internal class RollupAggregationProofRequestDtoMapper(
 }
 
 /**
- * Maps the deserialized rollup-aggregation proof response DTO onto the domain [RollupAggregationProofResponse]. Field
- * names and types are identical between the two, so this is a straight field copy. The transport is responsible for
- * parsing the JSON (read from a file or returned by a REST call) into [RollupAggregationProofResponseDto] before this
- * mapper runs.
+ * Maps the deserialized rollup-aggregation proof response DTO onto the domain [RollupAggregationProofResponseV1]
+ * described by `rollup_spec/prover_io/schemas/getZkRollupAggregationProofV1.response.schema.json`.
+ * The transport is responsible for parsing the JSON (read from a file or returned by a REST call) into
+ * [RollupAggregationProofResponseDto] before this mapper runs.
  */
 internal object RollupAggregationProofResponseDtoMapper :
-  (AggregationProofIndex, RollupAggregationProofResponseDto) -> RollupAggregationProofResponse {
+  (AggregationProofIndex, RollupAggregationProofResponseDto) -> RollupAggregationProofResponseV1 {
   override fun invoke(
     proofIndex: AggregationProofIndex,
     responseDto: RollupAggregationProofResponseDto,
-  ): RollupAggregationProofResponse {
-    return RollupAggregationProofResponse(
+  ): RollupAggregationProofResponseV1 {
+    return RollupAggregationProofResponseV1(
       proverVersion = responseDto.proverVersion,
       startBlockNumber = responseDto.startBlockNumber.toULong(),
       endBlockNumber = responseDto.publicInputs.endBlockNumber.toULong(),
@@ -65,31 +99,68 @@ internal object RollupAggregationProofResponseDtoMapper :
   }
 }
 
-private typealias RollupAggregationProofTransport =
-  ProverProofTransport<RollupAggregationProofRequestDto, RollupAggregationProofResponseDto, AggregationProofIndex>
+/**
+ * Builds the proof-index provider. The aggregation proof index requires a content hash; this draft hashes a
+ * deterministic projection of the request (block range) so that identical requests map to the same index.
+ *
+ * TODO: extend the hashed content to cover the full inlined rollup-proof set once those fields are available, so
+ *  the index is collision-resistant across aggregations sharing a block range.
+ */
+internal class RollupAggregationProofIndexProvider(
+  private val hashFunction: HashFunction,
+) : (RollupAggregationProofRequestV1) -> AggregationProofIndex {
+  override fun invoke(request: RollupAggregationProofRequestV1): AggregationProofIndex {
+    val proofs = request.rollupProofIndexes.joinToString(separator = ",") { it.hash.encodeHex() }
+    val content = "${request.startBlockNumber}-${request.endBlockNumber}-$proofs".toByteArray()
+    return AggregationProofIndex(
+      startBlockNumber = request.startBlockNumber,
+      endBlockNumber = request.endBlockNumber,
+      hash = hashFunction.hash(content),
+      startBlockTimestamp = request.startBlockTimestamp,
+    )
+  }
+}
+
+private typealias FileBasedRollupAggregationProofTransport =
+  ProverProofTransport<
+    FileBasedRollupAggregationProofRequestDto,
+    RollupAggregationProofResponseDto,
+    AggregationProofIndex,
+    >
+
+private typealias RestfulRollupAggregationProofTransport =
+  ProverProofTransport<
+    RestfulRollupAggregationProofRequestDto,
+    RollupAggregationProofResponseDto,
+    AggregationProofIndex,
+    >
 
 /**
- * RISC-V rollup-aggregation prover client. The request/response transport is injected via [transport], so the same
- * client works whether requests are written as JSON files or sent over REST.
+ * RISC-V file-based rollup-aggregation prover client.
+ * The request/response transport is injected via file-based transport.
  */
-class RollupAggregationProverClient(
-  private val transport: RollupAggregationProofTransport,
+class FileBasedRollupAggregationProverClient(
+  transport: FileBasedRollupAggregationProofTransport,
+  rollupProofTransport: FileBasedRollupProofTransport,
   guestProgramId: String,
   hashFunction: HashFunction = Sha256HashFunction(),
-  proofRequestDtoMapper: (RollupAggregationProofRequestV1) -> SafeFuture<RollupAggregationProofRequestDto> =
-    RollupAggregationProofRequestDtoMapper(guestProgramId),
-  proofResponseDtoMapper: (AggregationProofIndex, RollupAggregationProofResponseDto) -> RollupAggregationProofResponse =
-    RollupAggregationProofResponseDtoMapper,
+  proofRequestDtoMapper: (RollupAggregationProofRequestV1)
+  -> SafeFuture<FileBasedRollupAggregationProofRequestDto> = FileBasedRollupAggregationProofRequestDtoMapper(
+    guestProgramId,
+    rollupProofTransport,
+  ),
+  proofResponseDtoMapper: (AggregationProofIndex, RollupAggregationProofResponseDto)
+  -> RollupAggregationProofResponseV1 = RollupAggregationProofResponseDtoMapper,
   log: Logger = LOG,
 ) : GenericRiscVProverClient<
   RollupAggregationProofRequestV1,
-  RollupAggregationProofResponse,
-  RollupAggregationProofRequestDto,
+  RollupAggregationProofResponseV1,
+  FileBasedRollupAggregationProofRequestDto,
   RollupAggregationProofResponseDto,
   AggregationProofIndex,
   >(
   transport = transport,
-  proofIndexProvider = createProofIndexProviderFn(hashFunction),
+  proofIndexProvider = RollupAggregationProofIndexProvider(hashFunction),
   requestMapper = proofRequestDtoMapper,
   responseMapper = proofResponseDtoMapper,
   proofTypeLabel = "rollup-aggregation",
@@ -98,27 +169,40 @@ class RollupAggregationProverClient(
   RollupAggregationProverClientV1 {
 
   companion object {
-    val LOG: Logger = LogManager.getLogger(RollupAggregationProverClient::class.java)
+    val LOG: Logger = LogManager.getLogger(FileBasedRollupAggregationProverClient::class.java)
+  }
+}
 
-    /**
-     * Builds the proof-index provider. The aggregation proof index requires a content hash; this draft hashes a
-     * deterministic projection of the request (block range) so that identical requests map to the same index.
-     *
-     * TODO: extend the hashed content to cover the full inlined rollup-proof set once those fields are available, so
-     *  the index is collision-resistant across aggregations sharing a block range.
-     */
-    fun createProofIndexProviderFn(
-      hashFunction: HashFunction,
-    ): (RollupAggregationProofRequestV1) -> AggregationProofIndex {
-      return { request ->
-        val content = "${request.startBlockNumber}-${request.endBlockNumber}".toByteArray()
-        AggregationProofIndex(
-          startBlockNumber = request.startBlockNumber,
-          endBlockNumber = request.endBlockNumber,
-          hash = hashFunction.hash(content),
-          startBlockTimestamp = request.startBlockTimestamp,
-        )
-      }
-    }
+/**
+ * RISC-V Restful rollup-aggregation prover client.
+ * The request/response transport is injected via Restful transport.
+ */
+class RestfulRollupAggregationProverClient(
+  transport: RestfulRollupAggregationProofTransport,
+  guestProgramId: String,
+  hashFunction: HashFunction = Sha256HashFunction(),
+  proofRequestDtoMapper: (RollupAggregationProofRequestV1) -> SafeFuture<RestfulRollupAggregationProofRequestDto> =
+    RestfulRollupAggregationProofRequestDtoMapper(guestProgramId),
+  proofResponseDtoMapper: (AggregationProofIndex, RollupAggregationProofResponseDto)
+  -> RollupAggregationProofResponseV1 = RollupAggregationProofResponseDtoMapper,
+  log: Logger = LOG,
+) : GenericRiscVProverClient<
+  RollupAggregationProofRequestV1,
+  RollupAggregationProofResponseV1,
+  RestfulRollupAggregationProofRequestDto,
+  RollupAggregationProofResponseDto,
+  AggregationProofIndex,
+  >(
+  transport = transport,
+  proofIndexProvider = RollupAggregationProofIndexProvider(hashFunction),
+  requestMapper = proofRequestDtoMapper,
+  responseMapper = proofResponseDtoMapper,
+  proofTypeLabel = "rollup-aggregation",
+  log = log,
+),
+  RollupAggregationProverClientV1 {
+
+  companion object {
+    val LOG: Logger = LogManager.getLogger(RestfulRollupAggregationProverClient::class.java)
   }
 }

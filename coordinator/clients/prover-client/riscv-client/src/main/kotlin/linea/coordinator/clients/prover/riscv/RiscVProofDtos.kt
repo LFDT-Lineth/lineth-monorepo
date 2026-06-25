@@ -1,6 +1,15 @@
 package linea.coordinator.clients.prover.riscv
 
+import linea.clients.L2ExecutionProofPublicInputs
+import linea.clients.L2ExecutionProofResponseV1
+import linea.clients.RollupProofPublicInputs
+import linea.clients.RollupProofResponseV1
+import linea.domain.CompressionProofIndex
+import linea.domain.ExecutionProofIndex
+import linea.kotlin.decodeHex
+import linea.kotlin.encodeHex
 import java.math.BigInteger
+import kotlin.time.Instant
 
 /**
  * Request/response DTOs for the RISC-V provers.
@@ -9,7 +18,7 @@ import java.math.BigInteger
  * helper fields whose names start with an underscore (`_comment`, `_comment_*`). Field names are kept identical to
  * the JSON keys so they serialize without custom naming.
  *
- * The DTO <-> domain mapping lives in `RiscVProofDtoMappers.kt`.
+ * The DTO <-> domain mapping lives in `RiscVProofDtos.kt`.
  */
 
 /** The 15-field PI tuple emitted by a l2-execution proof (rollup_spec §2.1). */
@@ -186,16 +195,29 @@ data class L2ExecutionProofDto(
   val filteredAddresses: List<String>,
 )
 
-data class RollupProofRequestParamsDto(
+data class FileBasedRollupProofRequestParamsDto(
   val chainId: Long,
   val blobs: List<BlobDto>,
   val parentShnarf: String,
   val l2ExecutionProofs: List<L2ExecutionProofDto>,
 )
 
-data class RollupProofRequestDto(
+data class RestfulRollupProofRequestParamsDto(
+  val chainId: Long,
+  val blobs: List<BlobDto>,
+  val parentShnarf: String,
+  val l2ExecutionProofIndexes: List<ExecutionProofIndex>,
+)
+
+data class FileBasedRollupProofRequestDto(
   val guestProgramId: String,
-  val proofRequest: RollupProofRequestParamsDto,
+  val proofRequest: FileBasedRollupProofRequestParamsDto,
+  val metadata: MetaDataDto,
+)
+
+data class RestfulRollupProofRequestDto(
+  val guestProgramId: String,
+  val proofRequest: RestfulRollupProofRequestParamsDto,
   val metadata: MetaDataDto,
 )
 
@@ -224,13 +246,23 @@ data class RollupProofDto(
 
 typealias RollupAggregationPublicInputsDto = RollupProofPublicInputsDto
 
-data class RollupAggregationProofRequestParamsDto(
+data class FileBasedRollupAggregationProofRequestParamsDto(
   val rollupProofs: List<RollupProofDto>,
 )
 
-data class RollupAggregationProofRequestDto(
+data class RestfulRollupAggregationProofRequestParamsDto(
+  val rollupProofIndexes: List<CompressionProofIndex>,
+)
+
+data class FileBasedRollupAggregationProofRequestDto(
   val guestProgramId: String,
-  val proofRequest: RollupAggregationProofRequestParamsDto,
+  val proofRequest: FileBasedRollupAggregationProofRequestParamsDto,
+  val metadata: MetaDataDto,
+)
+
+data class RestfulRollupAggregationProofRequestDto(
+  val guestProgramId: String,
+  val proofRequest: RestfulRollupAggregationProofRequestParamsDto,
   val metadata: MetaDataDto,
 )
 
@@ -244,3 +276,113 @@ data class RollupAggregationProofResponseDto(
   val filteredAddresses: List<String>,
   val l2MessagingBlocksOffsets: List<Long>,
 )
+
+// ---------------------------------------------------------------------------------------------------------------------
+// to/fromDomainObject helper functions between the RISC-V proof DTOs (RiscVProofDtos.kt) and their domain twins.
+// ---------------------------------------------------------------------------------------------------------------------
+
+internal fun L2ExecutionProofPublicInputsDto.toDomainObject(): L2ExecutionProofPublicInputs {
+  return L2ExecutionProofPublicInputs(
+    parentBlockHash = parentBlockHash.decodeHex(),
+    endBlockHash = endBlockHash.decodeHex(),
+    endBlockNumber = endBlockNumber.toULong(),
+    endBlockTimestamp = endBlockTimestamp.toULong(),
+    l2L1MessagesHash = l2L1MessagesHash.decodeHex(),
+    parentL1L2BridgeRollingHash = parentL1L2BridgeRollingHash.decodeHex(),
+    parentL1L2BridgeRollingHashMessageNumber = parentL1L2BridgeRollingHashMessageNumber.toULong(),
+    endL1L2BridgeRollingHash = endL1L2BridgeRollingHash.decodeHex(),
+    endL1L2BridgeRollingHashMessageNumber = endL1L2BridgeRollingHashMessageNumber.toULong(),
+    dynamicChainConfigHash = dynamicChainConfigHash.decodeHex(),
+    parentFtxRollingHash = parentFtxRollingHash.decodeHex(),
+    endFtxRollingHash = endFtxRollingHash.decodeHex(),
+    lastProcessedFtxNumber = lastProcessedFtxNumber.toULong(),
+    filteredAddressesHash = filteredAddressesHash.decodeHex(),
+    txFromsHash = txFromsHash.decodeHex(),
+  )
+}
+
+internal fun L2ExecutionProofPublicInputs.fromDomainObject(): L2ExecutionProofPublicInputsDto {
+  return L2ExecutionProofPublicInputsDto(
+    parentBlockHash = parentBlockHash.encodeHex(),
+    endBlockHash = endBlockHash.encodeHex(),
+    endBlockNumber = endBlockNumber.toLong(),
+    endBlockTimestamp = endBlockTimestamp.toLong(),
+    l2L1MessagesHash = l2L1MessagesHash.encodeHex(),
+    parentL1L2BridgeRollingHash = parentL1L2BridgeRollingHash.encodeHex(),
+    parentL1L2BridgeRollingHashMessageNumber = parentL1L2BridgeRollingHashMessageNumber.toLong(),
+    endL1L2BridgeRollingHash = endL1L2BridgeRollingHash.encodeHex(),
+    endL1L2BridgeRollingHashMessageNumber = endL1L2BridgeRollingHashMessageNumber.toLong(),
+    dynamicChainConfigHash = dynamicChainConfigHash.encodeHex(),
+    parentFtxRollingHash = parentFtxRollingHash.encodeHex(),
+    endFtxRollingHash = endFtxRollingHash.encodeHex(),
+    lastProcessedFtxNumber = lastProcessedFtxNumber.toLong(),
+    filteredAddressesHash = filteredAddressesHash.encodeHex(),
+    txFromsHash = txFromsHash.encodeHex(),
+  )
+}
+
+/**
+ * Maps the RISC-V 14-field PI tuple DTO onto its domain twin. Shared by the rollup and rollup-aggregation response
+ * mappers since both emit the same tuple (rollup_spec §2.4). Field names and types are identical, so it is a straight
+ * field copy.
+ */
+internal fun RollupProofPublicInputsDto.toDomainObject(): RollupProofPublicInputs {
+  return RollupProofPublicInputs(
+    endBlockNumber = endBlockNumber.toULong(),
+    endBlockTimestamp = Instant.fromEpochSeconds(endBlockTimestamp),
+    l2L1BridgeTransactionTree = l2L1BridgeTransactionTree.decodeHex(),
+    parentL1L2BridgeRollingHash = parentL1L2BridgeRollingHash.decodeHex(),
+    parentL1L2BridgeRollingHashMessageNumber = parentL1L2BridgeRollingHashMessageNumber.toULong(),
+    endL1L2BridgeRollingHash = endL1L2BridgeRollingHash.decodeHex(),
+    endL1L2BridgeRollingHashMessageNumber = endL1L2BridgeRollingHashMessageNumber.toULong(),
+    dynamicChainConfigHash = dynamicChainConfigHash.decodeHex(),
+    parentFtxRollingHash = parentFtxRollingHash.decodeHex(),
+    endFtxRollingHash = endFtxRollingHash.decodeHex(),
+    lastProcessedFtxNumber = lastProcessedFtxNumber.toULong(),
+    filteredAddressesHash = filteredAddressesHash.decodeHex(),
+    parentShnarf = parentShnarf.decodeHex(),
+    endShnarf = endShnarf.decodeHex(),
+  )
+}
+
+internal fun RollupProofPublicInputs.fromDomainObject(): RollupProofPublicInputsDto {
+  return RollupProofPublicInputsDto(
+    endBlockNumber = endBlockNumber.toLong(),
+    endBlockTimestamp = endBlockTimestamp.epochSeconds,
+    l2L1BridgeTransactionTree = l2L1BridgeTransactionTree.encodeHex(),
+    parentL1L2BridgeRollingHash = parentL1L2BridgeRollingHash.encodeHex(),
+    parentL1L2BridgeRollingHashMessageNumber = parentL1L2BridgeRollingHashMessageNumber.toLong(),
+    endL1L2BridgeRollingHash = endL1L2BridgeRollingHash.encodeHex(),
+    endL1L2BridgeRollingHashMessageNumber = endL1L2BridgeRollingHashMessageNumber.toLong(),
+    dynamicChainConfigHash = dynamicChainConfigHash.encodeHex(),
+    parentFtxRollingHash = parentFtxRollingHash.encodeHex(),
+    endFtxRollingHash = endFtxRollingHash.encodeHex(),
+    lastProcessedFtxNumber = lastProcessedFtxNumber.toLong(),
+    filteredAddressesHash = filteredAddressesHash.encodeHex(),
+    parentShnarf = parentShnarf.encodeHex(),
+    endShnarf = endShnarf.encodeHex(),
+  )
+}
+
+internal fun L2ExecutionProofResponseV1.fromDomainObject(): L2ExecutionProofDto {
+  return L2ExecutionProofDto(
+    proof = proof.encodeHex(),
+    startBlockNumber = startBlockNumber.toLong(),
+    endBlockNumber = endBlockNumber.toLong(),
+    publicInputs = publicInputs.fromDomainObject(),
+    l2L1Messages = l2L1Messages.map { it.encodeHex() },
+    txFroms = txFroms.map { it.encodeHex() },
+    filteredAddresses = filteredAddresses.map { it.encodeHex() },
+  )
+}
+
+internal fun RollupProofResponseV1.fromDomainObject(): RollupProofDto {
+  return RollupProofDto(
+    proof = proof.encodeHex(),
+    startBlockNumber = startBlockNumber.toLong(),
+    endBlockNumber = endBlockNumber.toLong(),
+    publicInputs = publicInputs.fromDomainObject(),
+    l2L1Roots = l2L1Roots.map { it.encodeHex() },
+    filteredAddresses = filteredAddresses.map { it.encodeHex() },
+  )
+}

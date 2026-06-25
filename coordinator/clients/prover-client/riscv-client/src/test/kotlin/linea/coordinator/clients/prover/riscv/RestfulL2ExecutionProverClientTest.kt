@@ -34,16 +34,17 @@ import kotlin.time.Instant
  *  - reading a response: GET job body -> response DTO -> domain response.
  */
 @ExtendWith(VertxExtension::class)
-class L2ExecutionProverClientRestfulTest {
+class RestfulL2ExecutionProverClientTest {
   private val jsonMapper = JsonSerialization.proofResponseMapperV1
   private val guestProgramId = "0x17d2e0660946012c80c5fe6bbecc2076a6f6f5aa58606efe66a14426d2ffe46f"
   private val proverVersion = "4.0.0-riscv"
   private val proofType = "l2-execution"
-  private val jobsPathPattern = "/v1/jobs/$proofType/.*"
+  private val chainId = 59144L
+  private val jobsPathPattern = "/v1/jobs/$chainId/$proofType/.*"
   private val chainConfig = ChainConfigDto(
     l2MessageServiceAddress = "0x508ca82df566dcd1b0019d2dedf7e3d6f7ad6dde",
     coinbase = "0x0000000000000000000000000000000000000000",
-    chainId = 59144,
+    chainId = chainId,
     forkName = "Amsterdam",
   )
 
@@ -66,6 +67,7 @@ class L2ExecutionProverClientRestfulTest {
       >(
       restClient = restClient,
       vertx = vertx,
+      chainId = chainId,
       proofType = proofType,
       startBlockProvider = { it.startBlockNumber },
       endBlockProvider = { it.endBlockNumber },
@@ -112,7 +114,7 @@ class L2ExecutionProverClientRestfulTest {
       startBlockTimestamp = Instant.fromEpochSeconds(1763000123),
     )
     wiremock.stubFor(
-      WireMock.get(WireMock.urlEqualTo("/v1/jobs/$proofType/1000501/1000503")).willReturn(
+      WireMock.get(WireMock.urlEqualTo("/v1/jobs/$chainId/$proofType/1000501/1000503")).willReturn(
         WireMock.okJson(jobResponseBody(status = "proved", proofResponse = responseDto)),
       ),
     )

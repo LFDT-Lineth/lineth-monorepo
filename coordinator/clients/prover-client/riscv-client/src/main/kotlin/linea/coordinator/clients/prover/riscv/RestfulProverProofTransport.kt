@@ -34,11 +34,12 @@ import kotlin.time.Duration
 class RestfulProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex : ProofIndex>(
   private val restClient: HttpRestClient,
   private val vertx: Vertx,
+  private val chainId: Long,
   private val proofType: String,
   private val startBlockProvider: (TProofIndex) -> ULong,
   private val endBlockProvider: (TProofIndex) -> ULong,
   private val jobPathProvider: (TProofIndex) -> String = { proofIndex: TProofIndex ->
-    "/v1/jobs/$proofType/${startBlockProvider(proofIndex)}/${endBlockProvider(proofIndex)}"
+    "/v1/jobs/$chainId/$proofType/${startBlockProvider(proofIndex)}/${endBlockProvider(proofIndex)}"
   },
   private val responseDtoClass: Class<ResponseDto>,
   private val pollingInterval: Duration,

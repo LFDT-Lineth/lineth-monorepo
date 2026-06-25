@@ -1,8 +1,7 @@
 package linea.clients
 
-import linea.domain.BlobCompressionProof
-import linea.domain.Block
 import linea.domain.BlockInterval
+import linea.domain.ExecutionProofIndex
 import linea.domain.StartBlockTimestampProvider
 import linea.kotlin.byteArrayListEquals
 import kotlin.time.Instant
@@ -11,11 +10,10 @@ data class RollupProofRequestV1(
   override val startBlockNumber: ULong,
   override val endBlockNumber: ULong,
   override val startBlockTimestamp: Instant,
-  val blobs: List<BlobCompressionProof>,
-  val blocks: List<Block>,
+  val blobs: List<BlobWitness>,
   val parentShnarf: ByteArray,
   val endShnarf: ByteArray,
-  val l2ExecutionProofs: List<L2ExecutionProofResponse>,
+  val l2ExecutionProofIndexes: List<ExecutionProofIndex>,
 ) : BlockInterval, StartBlockTimestampProvider {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -27,10 +25,9 @@ data class RollupProofRequestV1(
     if (endBlockNumber != other.endBlockNumber) return false
     if (startBlockTimestamp != other.startBlockTimestamp) return false
     if (blobs != other.blobs) return false
-    if (blocks != other.blocks) return false
     if (!parentShnarf.contentEquals(other.parentShnarf)) return false
     if (!endShnarf.contentEquals(other.endShnarf)) return false
-    if (l2ExecutionProofs != other.l2ExecutionProofs) return false
+    if (l2ExecutionProofIndexes != other.l2ExecutionProofIndexes) return false
 
     return true
   }
@@ -40,10 +37,41 @@ data class RollupProofRequestV1(
     result = 31 * result + endBlockNumber.hashCode()
     result = 31 * result + startBlockTimestamp.hashCode()
     result = 31 * result + blobs.hashCode()
-    result = 31 * result + blocks.hashCode()
     result = 31 * result + parentShnarf.contentHashCode()
     result = 31 * result + endShnarf.contentHashCode()
-    result = 31 * result + l2ExecutionProofs.hashCode()
+    result = 31 * result + l2ExecutionProofIndexes.hashCode()
+    return result
+  }
+}
+
+data class BlobWitness(
+  val startBlockNumber: ULong,
+  val endBlockNumber: ULong,
+  val blobHash: ByteArray,
+  val blobKzgProof: ByteArray,
+  val blockRlps: List<ByteArray>,
+) {
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as BlobWitness
+
+    if (startBlockNumber != other.startBlockNumber) return false
+    if (endBlockNumber != other.endBlockNumber) return false
+    if (!blobHash.contentEquals(other.blobHash)) return false
+    if (!blobKzgProof.contentEquals(other.blobKzgProof)) return false
+    if (!blockRlps.byteArrayListEquals(other.blockRlps)) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = startBlockNumber.hashCode()
+    result = 31 * result + endBlockNumber.hashCode()
+    result = 31 * result + blobHash.contentHashCode()
+    result = 31 * result + blobKzgProof.contentHashCode()
+    result = 31 * result + blockRlps.hashCode()
     return result
   }
 }
@@ -121,7 +149,7 @@ data class RollupProofPublicInputs(
  * `ByteArray` here so a proof response — whether read from a JSON file or returned by a REST endpoint — deserializes
  * into the DTO and maps onto this domain type.
  */
-data class RollupProofResponse(
+data class RollupProofResponseV1(
   override val startBlockNumber: ULong,
   override val endBlockNumber: ULong,
   val proverVersion: String,
@@ -134,7 +162,7 @@ data class RollupProofResponse(
     if (this === other) return true
     if (javaClass != other?.javaClass) return false
 
-    other as RollupProofResponse
+    other as RollupProofResponseV1
 
     if (startBlockNumber != other.startBlockNumber) return false
     if (endBlockNumber != other.endBlockNumber) return false

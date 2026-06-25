@@ -1,10 +1,10 @@
 package linea.coordinator.clients.prover.riscv
 
 import linea.clients.L2ExecutionProofPublicInputs
-import linea.clients.L2ExecutionProofResponse
-import linea.clients.RollupAggregationProofResponse
+import linea.clients.L2ExecutionProofResponseV1
+import linea.clients.RollupAggregationProofResponseV1
 import linea.clients.RollupProofPublicInputs
-import linea.clients.RollupProofResponse
+import linea.clients.RollupProofResponseV1
 import linea.coordinator.clients.prover.serialization.JsonSerialization
 import linea.domain.AggregationProofIndex
 import linea.domain.CompressionProofIndex
@@ -115,7 +115,7 @@ class RiscVProofResponseDtoMapperTest {
         dto,
       ),
     ).isEqualTo(
-      L2ExecutionProofResponse(
+      L2ExecutionProofResponseV1(
         proverVersion = "4.0.0-riscv",
         startBlockNumber = 1000500UL,
         endBlockNumber = 1000503UL,
@@ -150,7 +150,7 @@ class RiscVProofResponseDtoMapperTest {
         dto,
       ),
     ).isEqualTo(
-      RollupProofResponse(
+      RollupProofResponseV1(
         proverVersion = "4.0.0-riscv",
         startBlockNumber = 1000500UL,
         endBlockNumber = 1000520UL,
@@ -185,7 +185,7 @@ class RiscVProofResponseDtoMapperTest {
         dto,
       ),
     ).isEqualTo(
-      RollupAggregationProofResponse(
+      RollupAggregationProofResponseV1(
         proverVersion = "4.0.0-riscv",
         startBlockNumber = 1000500UL,
         endBlockNumber = 1000520UL,
@@ -240,7 +240,7 @@ class RiscVProofResponseDtoMapperTest {
         dto,
       ),
     ).isEqualTo(
-      L2ExecutionProofResponse(
+      L2ExecutionProofResponseV1(
         proverVersion = "4.0.0-riscv",
         startBlockNumber = 1000500UL,
         endBlockNumber = 1000503UL,
@@ -293,7 +293,7 @@ class RiscVProofResponseDtoMapperTest {
     )
 
     assertThat(mappedDto).isEqualTo(
-      RollupProofResponse(
+      RollupProofResponseV1(
         proverVersion = "4.0.0-riscv",
         startBlockNumber = 1000500UL,
         endBlockNumber = 1000520UL,

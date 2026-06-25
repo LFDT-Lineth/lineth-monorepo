@@ -7,7 +7,6 @@ import linea.clients.ExecutionPayload
 import linea.clients.ExecutionRequests
 import linea.clients.ExecutionWitness
 import linea.clients.L2ExecutionProofRequestV1
-import linea.coordinator.clients.prover.ExecutionProofFileNameProvider
 import linea.coordinator.clients.prover.FileBasedProverConfig
 import linea.coordinator.clients.prover.serialization.JsonSerialization
 import linea.domain.ExecutionProofIndex
@@ -31,7 +30,7 @@ import kotlin.time.Instant
  *  - reading a response: JSON file -> response DTO -> domain response.
  */
 @ExtendWith(VertxExtension::class)
-class L2ExecutionProverClientFileBasedTest {
+class FileBasedL2ExecutionProverClientTest {
   private val jsonMapper = JsonSerialization.proofResponseMapperV1
   private val guestProgramId = "0x17d2e0660946012c80c5fe6bbecc2076a6f6f5aa58606efe66a14426d2ffe46f"
   private val chainConfig = ChainConfigDto(
@@ -63,8 +62,8 @@ class L2ExecutionProverClientFileBasedTest {
       vertx = vertx,
       fileWriter = FileWriter(vertx, jsonMapper),
       fileReader = FileReader(vertx, jsonMapper, L2ExecutionProofResponseDto::class.java),
-      requestFileNameProvider = ExecutionProofFileNameProvider,
-      responseFileNameProvider = ExecutionProofFileNameProvider,
+      requestFileNameProvider = L2ExecutionProofFileNameProvider,
+      responseFileNameProvider = L2ExecutionProofFileNameProvider,
     )
     client = L2ExecutionProverClient(
       transport = transport,
@@ -79,7 +78,7 @@ class L2ExecutionProverClientFileBasedTest {
 
     val proofIndex = client.createProofRequest(request).get()
 
-    val requestFile = config.requestsDirectory.resolve(ExecutionProofFileNameProvider.getFileName(proofIndex))
+    val requestFile = config.requestsDirectory.resolve(L2ExecutionProofFileNameProvider.getFileName(proofIndex))
     assertThat(requestFile).exists()
 
     val writtenDto = jsonMapper.readValue(requestFile.toFile(), L2ExecutionProofRequestDto::class.java)
@@ -95,7 +94,7 @@ class L2ExecutionProverClientFileBasedTest {
       startBlockTimestamp = Instant.fromEpochSeconds(1763000123),
     )
     val responseDto = l2ResponseDto()
-    saveResponseFile(ExecutionProofFileNameProvider.getFileName(proofIndex), responseDto)
+    saveResponseFile(L2ExecutionProofFileNameProvider.getFileName(proofIndex), responseDto)
 
     val response = client.findProofResponse(proofIndex).get()
 
