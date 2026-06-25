@@ -12,10 +12,15 @@ include "../../lib/poseidon2/ram.zkc"
 //
 // R-type instructions operate on two source registers (rs1, rs2) and write the
 // result to a destination register (rd).  They never affect the program counter
-// (no pc parameter — the caller always advances by 4).  The 23-bit semantic
-// record is pre-decoded at ELF time:
+// (no pc parameter — the caller always advances by 4).  
+// 
+// In the predecoding phase, the operands for R-type instructions come from the 25-bit
+// encoding (opcode stripped) that is laid out as:
+// 
+//   funct7 :: rs2 :: rs1 :: funct3 :: rd
 //
-//   compute_op :: writeback :: rs1 :: rs2 :: rd
+// Runtime execution is a flat switch on compute_op followed by a separate writeback
+// step (WB_STORE_REG / WB_NONE).
 //
 // Supported operation groups:
 //
