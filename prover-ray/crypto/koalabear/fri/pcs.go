@@ -1305,6 +1305,9 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	if err != nil {
 		return err
 	}
+	if err := pcs.checkClaimPointsOutOfDomain(layout, in.Challenges.Zeta); err != nil {
+		return err
+	}
 	if len(proof.RowOpenings) < pcs.Params.NumQueries {
 		return fmt.Errorf("fri: pcs.Verify: proof has %d row openings, want at least %d",
 			len(proof.RowOpenings), pcs.Params.NumQueries)
@@ -1343,6 +1346,36 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	)
 }
 
+func (pcs *PCS) checkClaimPointsOutOfDomain(layout layout, zeta field.Ext) error {
+	for _, bundle := range layout {
+		encoder := pcs.Encoders[bundle.SizeLog2]
+		for _, entry := range bundle.Entries {
+			for _, shift := range entry.Shifts {
+				point, err := pcs.shiftedPoint(entry.SizeLog2, shift, zeta)
+				if err != nil {
+					return err
+				}
+				if pointInDomain(point, encoder.Domain.Cardinality) {
+					return fmt.Errorf("fri: pcs.Verify: batch %d size %d row %d claim point on domain",
+						entry.BatchIdx, entry.SizeLog2, entry.RowIdx)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func pointInDomain(point field.Ext, size uint64) bool {
+	base, ok := field.GetBase(&point)
+	if !ok {
+		return false
+	}
+	var powered field.Element
+	powered.Exp(base, new(big.Int).SetUint64(size))
+	one := field.One()
+	return powered.Equal(&one)
+}
+
 type pcsQueryValues struct {
 	pcs       *PCS
 	layout    layout
@@ -1355,13 +1388,13 @@ type pcsQueryValues struct {
 
 func (pcsQueryValues) checkRoundShape(round int, opening QueryLayer, roots QueryLayerRoots, numLeaves int) error {
 	if round == 0 {
-		return checkMultiSizeQueryLayerShape(opening, roots, numLeaves)
+		return checkQueryLayerShape(opening, roots, numLeaves, false)
 	}
-	return checkQueryLayerShape(opening, roots, numLeaves)
+	return checkQueryLayerShape(opening, roots, numLeaves, true)
 }
 
 func (pcsQueryValues) checkLevelShape(_ int, opening QueryLayer, roots QueryLayerRoots, numLeaves int) error {
-	return checkMultiSizeQueryLayerShape(opening, roots, numLeaves)
+	return checkQueryLayerShape(opening, roots, numLeaves, false)
 }
 
 func (v pcsQueryValues) queryPair(

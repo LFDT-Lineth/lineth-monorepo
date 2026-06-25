@@ -412,52 +412,32 @@ func verifyExt(
 	return nil
 }
 
-func checkQueryLayerShape(opening QueryLayer, roots QueryLayerRoots, numLeaves int) error {
+func checkQueryLayerShape(opening QueryLayer, roots QueryLayerRoots, numLeaves int, exactSiblings bool) error {
 	if len(opening) != len(roots) {
 		return fmt.Errorf("opening has %d branches, want %d", len(opening), len(roots))
 	}
 	for i, branch := range opening {
-		if err := checkBranchShape(branch, numLeaves); err != nil {
+		if err := checkBranchShape(branch, numLeaves, exactSiblings); err != nil {
 			return fmt.Errorf("branch %d: %w", i, err)
 		}
 	}
 	return nil
 }
 
-// checkBranchShape verifies that a branch has the shape of an opening into a
-// complete binary tree with numLeaves leaves: exactly log2(numLeaves) siblings,
-// and one auxiliary sibling per sibling. This lets Verify reject branches with a
-// missing or extra node before RecoverRoot walks them.
-func checkBranchShape(b Branch, numLeaves int) error {
+func checkBranchShape(b Branch, numLeaves int, exactSiblings bool) error {
 	want := utils.Log2Ceil(numLeaves)
-	if len(b.Siblings) != want {
+	if exactSiblings && len(b.Siblings) != want {
 		return fmt.Errorf("branch has %d siblings, want %d", len(b.Siblings), want)
 	}
-	if len(b.AuxSiblings) != want {
-		return fmt.Errorf("branch has %d aux siblings, want %d", len(b.AuxSiblings), want)
-	}
-	return nil
-}
-
-func checkMultiSizeQueryLayerShape(opening QueryLayer, roots QueryLayerRoots, numLeaves int) error {
-	if len(opening) != len(roots) {
-		return fmt.Errorf("opening has %d branches, want %d", len(opening), len(roots))
-	}
-	for i, branch := range opening {
-		if err := checkMultiSizeBranchShape(branch, numLeaves); err != nil {
-			return fmt.Errorf("branch %d: %w", i, err)
-		}
-	}
-	return nil
-}
-
-func checkMultiSizeBranchShape(b Branch, numLeaves int) error {
-	want := utils.Log2Ceil(numLeaves)
-	if len(b.Siblings) < want {
+	if !exactSiblings && len(b.Siblings) < want {
 		return fmt.Errorf("branch has %d siblings, want at least %d", len(b.Siblings), want)
 	}
-	if len(b.AuxSiblings) != len(b.Siblings) {
-		return fmt.Errorf("branch has %d aux siblings, want %d", len(b.AuxSiblings), len(b.Siblings))
+	wantAux := want
+	if !exactSiblings {
+		wantAux = len(b.Siblings)
+	}
+	if len(b.AuxSiblings) != wantAux {
+		return fmt.Errorf("branch has %d aux siblings, want %d", len(b.AuxSiblings), wantAux)
 	}
 	return nil
 }
@@ -619,11 +599,11 @@ type queryValueProvider interface {
 type merkleQueryValues struct{}
 
 func (merkleQueryValues) checkRoundShape(_ int, opening QueryLayer, roots QueryLayerRoots, numLeaves int) error {
-	return checkQueryLayerShape(opening, roots, numLeaves)
+	return checkQueryLayerShape(opening, roots, numLeaves, true)
 }
 
 func (merkleQueryValues) checkLevelShape(_ int, opening QueryLayer, roots QueryLayerRoots, numLeaves int) error {
-	return checkQueryLayerShape(opening, roots, numLeaves)
+	return checkQueryLayerShape(opening, roots, numLeaves, true)
 }
 
 func (merkleQueryValues) queryPair(_ int, round, base int, opening QueryLayer, roots QueryLayerRoots) (

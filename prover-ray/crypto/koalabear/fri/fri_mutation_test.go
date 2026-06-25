@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
@@ -181,6 +182,62 @@ func TestVerifyRejectsProofMutations(t *testing.T) {
 			}
 			if err == nil {
 				t.Fatalf("mutation was accepted by Verify (soundness hole)")
+			}
+		})
+	}
+}
+
+func TestPCSVerifyRejectsMutations(t *testing.T) {
+	one := field.One()
+	oneExt := field.Lift(one)
+
+	tests := []struct {
+		name    string
+		mutate  func(*pcsOpenVerifyFixture)
+		wantErr string
+	}{
+		{
+			name: "wrong claim",
+			mutate: func(fx *pcsOpenVerifyFixture) {
+				fx.proof.ClaimedValues[0][2].Ext[0][0].Add(&fx.proof.ClaimedValues[0][2].Ext[0][0], &oneExt)
+			},
+			wantErr: "folded value mismatch",
+		},
+		{
+			name: "tampered branch",
+			mutate: func(fx *pcsOpenVerifyFixture) {
+				leaf := fx.proof.FRIProof.FRIQueries[0][0][0].Leaf
+				leaf[0].Add(&leaf[0], &one)
+				fx.proof.FRIProof.FRIQueries[0][0][0].Leaf = leaf
+			},
+			wantErr: "Merkle proof invalid",
+		},
+		{
+			name: "domain point claim",
+			mutate: func(fx *pcsOpenVerifyFixture) {
+				fx.input.Challenges.Zeta = domainPointExt(fx.pcs.Params.domainsLight[0], 0)
+			},
+			wantErr: "claim point on domain",
+		},
+		{
+			name: "alpha mismatch",
+			mutate: func(fx *pcsOpenVerifyFixture) {
+				fx.input.Challenges.AlphaDeep = field.UintsToExt(41, 0, 0, 0, 0, 0)
+			},
+			wantErr: "folded value mismatch",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			fx := newPCSOpenVerifyFixture(t)
+			tc.mutate(&fx)
+			err := fx.pcs.Verify(fx.input, fx.proof)
+			if err == nil {
+				t.Fatalf("pcs.Verify accepted %s", tc.name)
+			}
+			if !strings.Contains(err.Error(), tc.wantErr) {
+				t.Fatalf("error %q does not contain %q", err.Error(), tc.wantErr)
 			}
 		})
 	}

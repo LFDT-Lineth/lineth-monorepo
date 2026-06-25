@@ -340,6 +340,80 @@ func TestProverStateOpenAlignsMultiSizeLevelLeaf(t *testing.T) {
 	checkLevelBranch("second tree", opening[1], otherTree, otherEncoded)
 }
 
+type pcsOpenVerifyFixture struct {
+	pcs   *PCS
+	input VerifyInputs
+	proof OpeningProof
+}
+
+func newPCSOpenVerifyFixture(t *testing.T) pcsOpenVerifyFixture {
+	t.Helper()
+
+	params, err := NewParams(8, 4, 1)
+	if err != nil {
+		t.Fatalf("NewParams: %v", err)
+	}
+	encoders := makeEncoders(params.numRounds+1, 2)
+	pcs, err := NewPCS(params, encoders)
+	if err != nil {
+		t.Fatalf("NewPCS: %v", err)
+	}
+
+	firstCoeffs := []field.Ext{
+		field.UintsToExt(2, 1, 0, 0, 0, 0),
+		field.UintsToExt(3, 0, 1, 0, 0, 0),
+		field.UintsToExt(5, 0, 0, 1, 0, 0),
+	}
+	secondCoeffs := []field.Ext{
+		field.UintsToExt(7, 0, 0, 0, 1, 0),
+		field.UintsToExt(11, 0, 0, 0, 0, 1),
+	}
+	witness := make(Batch, 3)
+	witness[2] = SizedTable{Ext: [][]field.Ext{
+		canonicalToLagrangeTestPoly(firstCoeffs, 4),
+		canonicalToLagrangeTestPoly(secondCoeffs, 4),
+	}}
+	witnesses := []Batch{witness}
+	committed := []CommitterState{Commit(encoders, witness)}
+
+	batchShifts := make(BatchShifts, 3)
+	batchShifts[2] = SizedShifts{Ext: [][]int{{0}, {1}}}
+	shifts := []BatchShifts{batchShifts}
+	challenges := Challenges{
+		Zeta:           field.UintsToExt(19, 2, 3, 5, 7, 11),
+		AlphaDeep:      field.UintsToExt(23, 3, 5, 7, 11, 13),
+		FoldAlphas:     []field.Ext{field.UintsToExt(29, 1, 0, 0, 0, 0), field.UintsToExt(31, 0, 1, 0, 0, 0)},
+		QueryPositions: []int{3},
+	}
+	proof, err := pcs.Open(OpenInputs{
+		Witnesses:  witnesses,
+		Committed:  committed,
+		Shifts:     shifts,
+		Challenges: challenges,
+	})
+	if err != nil {
+		t.Fatalf("pcs.Open: %v", err)
+	}
+
+	return pcsOpenVerifyFixture{
+		pcs: pcs,
+		input: VerifyInputs{
+			Roots:      []field.Octuplet{committed[0].Tree.Root()},
+			Shapes:     shapesFromBatches(witnesses),
+			Shifts:     shifts,
+			Challenges: challenges,
+		},
+		proof: proof,
+	}
+}
+
+func TestPCSOpenVerifyNormalFlow(t *testing.T) {
+	fx := newPCSOpenVerifyFixture(t)
+	if err := fx.pcs.Verify(fx.input, fx.proof); err != nil {
+		t.Fatalf("pcs.Verify: %v", err)
+	}
+}
+
 func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	params, err := NewParams(16, 8, 2)
 	if err != nil {
