@@ -1,26 +1,43 @@
 include "../memory.zkc"
 include "../utils/constants.zkc"
+include "../utils/sign_extend.zkc"
 include "../utils/signed_sum.zkc"
 
-// Process a RISC-V J-type instruction (JAL) and return the next program counter.
+// Process a RISC-V J-type instruction (JAL Jump and Link) and return the next
+// program counter.
 //
 // J-type semantics are pre-decoded at ELF time into a semantic compute op,
-// a writeback kind, and operands (see decoded_jtype in memory.zkc). Runtime
-// execution is a flat switch on compute_op followed by a separate writeback step
-// for the link address. The 21-bit signed jump offset is sign-extended into a
-// ready-to-use 64-bit imm at decode time.
+// a writeback kind, and operands (see decoded_jtype in memory.zkc). 
+//
+// In the predecoding phase, the operands for J-type instructions come from a
+// common 25-bit encoding (opcode stripped) that is laid out as:
+//
+//   imm[20] :: imm[10:1] :: imm[11] :: imm[19:12] :: rd
+//
+// Runtime execution is a flat switch on compute_op followed by a separate writeback 
+// step for the link address. The 21-bit signed jump offset sub-fields are reassembled
+//
+//   imm21 = imm[20] :: imm[19:12] :: imm[11] :: imm[10:1] :: 0
+// 
+// and sign-extended here.
 //
 // Effect:
 //   rd     = pc + 4           (return address, when writeback applies)
 //   pc_new = pc + imm         (unconditional jump to target)
+//
 fn process_J_type_instruction<registers>(index:u64, pc:Address) -> (pc_new:Address) {
 
     var compute_op:JTypeComputeOp
     var writeback:ITypeWriteback
-    var imm:DoubleWord
+    var imm20:SignBit
+    var imm10_1:u10
+    var imm11:u1
+    var imm19_12:u8
     var rd:Register
-    compute_op, writeback, imm, rd = decoded_jtype[index]
+    compute_op, writeback, imm20, imm10_1, imm11, imm19_12, rd = decoded_jtype[index]
 
+    var imm21:u21 = ((imm20::imm19_12::imm11::imm10_1) as u21) << 1
+    var imm:DoubleWord = sgn_extension_u21_u64(imm21)
     var link:DoubleWord
 
     switch compute_op {

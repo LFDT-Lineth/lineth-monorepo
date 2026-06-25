@@ -246,9 +246,9 @@ func TestDecodeBTypeSemantic(t *testing.T) {
 		funct3 uint32
 		wantOp uint32
 	}{
-		{name: "beq", funct3: 0b000, wantOp: btypeBranchBeq},
-		{name: "bne", funct3: 0b001, wantOp: btypeBranchBne},
-		{name: "blt", funct3: 0b100, wantOp: btypeBranchBlt},
+		{name: "beq", funct3: 0b000, wantOp: 0b000},
+		{name: "bne", funct3: 0b001, wantOp: 0b001},
+		{name: "blt", funct3: 0b100, wantOp: 0b100},
 		{name: "invalid", funct3: 0b010, wantOp: btypeInvalid},
 	}
 	for _, tt := range tests {

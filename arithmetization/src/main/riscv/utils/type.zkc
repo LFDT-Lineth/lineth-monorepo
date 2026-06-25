@@ -40,7 +40,7 @@ type RTypeComputeOp = u6
 // Semantic S-type micro-op tags (pre-decoded at ELF time).
 type STypeComputeOp = u6
 
-// Semantic B-type micro-op tags (pre-decoded at ELF time).
+// Semantic B-type compute ops (pre-decoded at ELF time; values are raw funct3).
 type BTypeComputeOp = u6
 
 // Semantic J-type micro-op tags (pre-decoded at ELF time).
