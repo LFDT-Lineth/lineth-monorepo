@@ -143,15 +143,17 @@ func (run *Runtime) AdvanceRound() {
 		run.fs.Update(field.NewElement(uint64(size)))
 	}
 
-	// Feed the commitment
-	commitment, ok := run.Commitments[run.currentRound.ID]
-	if !ok {
-		panic(fmt.Sprintf(
-			"wiop: AdvanceRound: commitment for round %d not found",
-			run.currentRound.ID,
-		))
+	if run.currentRound.HasCommitment {
+		// Feed the commitment
+		commitment, ok := run.Commitments[run.currentRound.ID]
+		if !ok {
+			panic(fmt.Sprintf(
+				"wiop: AdvanceRound: commitment for round %d not found",
+				run.currentRound.ID,
+			))
+		}
+		run.fs.Update(commitment[:]...)
 	}
-	run.fs.Update(commitment[:]...)
 
 	// Feed oracle and public column assignments into the Fiat-Shamir state.
 	for _, col := range run.currentRound.Columns {

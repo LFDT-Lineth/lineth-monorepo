@@ -56,6 +56,10 @@ type Round struct {
 	// system is the owning System. Set once at registration time, never nil
 	// for a well-formed Round.
 	system *System
+	// HasCommitment is an indicator of whether a coded Merkle commitment is to
+	// be expected in the runtime for the current round. This is scaffoling
+	// code for the future, and should be false for all current protocols.
+	HasCommitment bool
 }
 
 // RegisterAction appends a to the round's action list. Actions are run by the
