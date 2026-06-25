@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: ci ci-checks help fmt fmt-zig fmt-go build build-zig build-release build-r5 run run-passing run-failing run-failing-expected test test-zig test-zig-generated test-generated-zig test-codegen generate-testdata verify-testdata zkc-build zkc-verify zkc-verify-passing zkc-verify-failing zkc-verify-failing-expected profile-zkc-case profile-zkc clean
+.PHONY: ci help fmt fmt-zig fmt-go build build-zig build-release build-r5 run run-passing run-failing run-failing-expected test test-zig test-generated-zig test-codegen generate-testdata verify-testdata zkc-build zkc-verify zkc-verify-passing zkc-verify-failing zkc-verify-failing-expected profile-zkc-case profile-zkc clean
 
 R5_BIN := zig-out/bin/verifier-ray
 R5_JSON := $(R5_BIN).json
@@ -24,10 +24,7 @@ IN_ORIGIN ?= 0x08800000
 NATIVE_INPUT_FILE := zig-out/input.bin
 IN_BYTES_FILE ?= zig-out/input.hex
 
-ci: generate-testdata
-	$(MAKE) ci-checks
-
-ci-checks: fmt build-release run-passing run-failing-expected test-zig-generated test-codegen zkc-verify-passing zkc-verify-failing-expected
+ci: fmt build-release run-passing run-failing-expected test zkc-verify-passing zkc-verify-failing-expected
 
 help:
 	@printf '%s\n' \
@@ -70,9 +67,9 @@ fmt-zig:
 	zig fmt --check build.zig src test testdata/generated
 
 fmt-go:
-	@if [[ -n "$$(gofmt -l codegen testdata/generate bench)" ]]; then \
+	@if [[ -n "$$(gofmt -l .)" ]]; then \
 		echo "please run gofmt"; \
-		gofmt -l codegen testdata/generate bench; \
+		gofmt -l .; \
 		exit 1; \
 	fi
 
@@ -107,9 +104,6 @@ run-failing-expected:
 test: test-zig test-codegen
 
 test-zig: generate-testdata
-	$(MAKE) test-zig-generated
-
-test-zig-generated:
 	zig build test
 	zig build -Dverifier-profiling=true test-profiling
 
@@ -156,7 +150,7 @@ zkc-verify-failing-expected:
 
 profile-zkc-case:
 	@zig build --release=small -Dstrip=true -Dr5=true -Dembedded-input=$(EMBEDDED_INPUT) -Dembedded-spec=$(EMBEDDED_SPEC) -Dverifier-profiling=true -Dr5-marks=true
-	@go run $(ELF_TO_JSON) $(R5_BIN) "0x00" $(IN_ORIGIN) > $(R5_JSON)
+	$(MAKE) zkc-build
 	@zkc exec -f $(R5_JSON) $(ZKC_MAIN)
 
 profile-zkc: generate-testdata
