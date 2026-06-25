@@ -25,12 +25,12 @@ fn process_U_type_instruction<registers>(index:u64, pc:Address) -> () {
 
     switch compute_op {
         case UTYPE_AUIPC: {
-            printf "AUIPC "
+            printf "UTYPE_AUIPC "
             print_u_operands(rd, imm20)
             result = signed_sum_of_double_word(result, pc) as DoubleWord
         }
         case UTYPE_LUI: {
-            printf "LUI "
+            printf "UTYPE_LUI "
             print_u_operands(rd, imm20)
         }
         default: {

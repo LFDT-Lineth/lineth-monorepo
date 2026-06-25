@@ -32,37 +32,37 @@ fn process_I_type_instruction<ram, registers>(index:u64, pc:Address) -> (new_pc:
         // ===============================
 
         case READ8_SGN: {
-            printf "LB "
+            printf "READ8_SGN "
             print_i_memory_operands(rd, rs1, signext_imm12_64)
             result = sgn_extension_u8_u64(read_8(rs1_plus_signext_imm12))
         }
         case READ16_SGN: {
-            printf "LH "
+            printf "READ16_SGN "
             print_i_memory_operands(rd, rs1, signext_imm12_64)
             result = sgn_extension_u16_u64(read_16(rs1_plus_signext_imm12))
         }
         case READ32_SGN: {
-            printf "LW "
+            printf "READ32_SGN "
             print_i_memory_operands(rd, rs1, signext_imm12_64)
             result = sgn_extension_u32_u64(read_32(rs1_plus_signext_imm12))
         }
         case READ64: {
-            printf "LD "
+            printf "READ64 "
             print_i_memory_operands(rd, rs1, signext_imm12_64)
             result = read_64(rs1_plus_signext_imm12) as DoubleWord
         }
         case READ8_ZEXT: {
-            printf "LBU "
+            printf "READ8_ZEXT "
             print_i_memory_operands(rd, rs1, signext_imm12_64)
             result = read_8(rs1_plus_signext_imm12) as DoubleWord
         }
         case READ16_ZEXT: {
-            printf "LHU "
+            printf "READ16_ZEXT "
             print_i_memory_operands(rd, rs1, signext_imm12_64)
             result = read_16(rs1_plus_signext_imm12) as DoubleWord
         }
         case READ32_ZEXT: {
-            printf "LWU "
+            printf "READ32_ZEXT "
             print_i_memory_operands(rd, rs1, signext_imm12_64)
             result = read_32(rs1_plus_signext_imm12) as DoubleWord
         }
@@ -72,18 +72,18 @@ fn process_I_type_instruction<ram, registers>(index:u64, pc:Address) -> (new_pc:
         // ===================================
 
         case OP_ADDI: {
-            printf "ADDI "
+            printf "OP_ADDI "
             print_i_operands(rd, rs1, signext_imm12_64)
             result = rs1_plus_signext_imm12
         }
         case OP_SLLI: {
             var uimm6:UImm6 = imm12 as UImm6
-            printf "SLLI "
+            printf "OP_SLLI "
             print_i_shift6_operands(rd, rs1, uimm6)
             result = registers[rs1] << uimm6
         }
         case OP_SLTI: {
-            printf "SLTI "
+            printf "OP_SLTI "
             print_i_operands(rd, rs1, signext_imm12_64)
             var is_lt:Boolean = signed_LT(registers[rs1], signext_imm12_64)
             if is_lt == 1 {
@@ -93,7 +93,7 @@ fn process_I_type_instruction<ram, registers>(index:u64, pc:Address) -> (new_pc:
             }
         }
         case OP_SLTIU: {
-            printf "SLTIU "
+            printf "OP_SLTIU "
             print_i_operands(rd, rs1, signext_imm12_64)
             if registers[rs1]<signext_imm12_64 {
                 result = 1
@@ -102,29 +102,29 @@ fn process_I_type_instruction<ram, registers>(index:u64, pc:Address) -> (new_pc:
             }
         }
         case OP_XORI: {
-            printf "XORI "
+            printf "OP_XORI "
             print_i_operands(rd, rs1, signext_imm12_64)
             result = registers[rs1] ^ signext_imm12_64
         }
         case OP_SRLI: {
             var uimm6:UImm6 = imm12 as UImm6
-            printf "SRLI "
+            printf "OP_SRLI "
             print_i_shift6_operands(rd, rs1, uimm6)
             result = registers[rs1] >> uimm6
         }
         case OP_SRAI: {
             var uimm6:UImm6 = imm12 as UImm6
-            printf "SRAI "
+            printf "OP_SRAI "
             print_i_shift6_operands(rd, rs1, uimm6)
             result = _ashr_u64(registers[rs1], uimm6)
         }
         case OP_ORI: {
-            printf "ORI "
+            printf "OP_ORI "
             print_i_operands(rd, rs1, signext_imm12_64)
             result = registers[rs1] | signext_imm12_64
         }
         case OP_ANDI: {
-            printf "ANDI "
+            printf "OP_ANDI "
             print_i_operands(rd, rs1, signext_imm12_64)
             result = registers[rs1] & signext_imm12_64
         }
@@ -134,25 +134,25 @@ fn process_I_type_instruction<ram, registers>(index:u64, pc:Address) -> (new_pc:
         // ===================================
 
         case OP_ADDIW: {
-            printf "ADDIW "
+            printf "OP_ADDIW "
             print_i_operands(rd, rs1, signext_imm12_64)
             result = sgn_extension_u32_u64((rs1_plus_signext_imm12 & MAX_UINT_32_AS_U64) as Word)
         }
         case OP_SLLIW: {
             var uimm5:UImm5 = imm12 as UImm5
-            printf "SLLIW "
+            printf "OP_SLLIW "
             print_i_shift5_operands(rd, rs1, uimm5)
             result = sgn_extension_u32_u64(((registers[rs1] & MAX_UINT_32_AS_U64) as Word) << uimm5)
         }
         case OP_SRLIW: {
             var uimm5:UImm5 = imm12 as UImm5
-            printf "SRLIW "
+            printf "OP_SRLIW "
             print_i_shift5_operands(rd, rs1, uimm5)
             result = sgn_extension_u32_u64(((registers[rs1] & MAX_UINT_32_AS_U64) as Word) >> uimm5)
         }
         case OP_SRAIW: {
             var uimm5:UImm5 = imm12 as UImm5
-            printf "SRAIW "
+            printf "OP_SRAIW "
             print_i_shift5_operands(rd, rs1, uimm5)
             result = sgn_extension_u32_u64(_ashr_u32(registers[rs1], uimm5))
         }
@@ -162,7 +162,7 @@ fn process_I_type_instruction<ram, registers>(index:u64, pc:Address) -> (new_pc:
         // =================
 
         case ITYPE_JALR: {
-            printf "JALR "
+            printf "ITYPE_JALR "
             print_i_memory_operands(rd, rs1, signext_imm12_64)
             result = (pc + 4) as DoubleWord
             new_pc = rs1_plus_signext_imm12 & MASK_64_ERASE_LAST_BIT
@@ -173,12 +173,12 @@ fn process_I_type_instruction<ram, registers>(index:u64, pc:Address) -> (new_pc:
         // ===================
 
         case ITYPE_ECALL: {
-            printf "ECALL\n"
+            printf "ITYPE_ECALL\n"
             new_pc = process_syscall(pc)
             return
         }
         case ITYPE_EBREAK: {
-            printf "[ERROR] EBREAK instruction triggered\n"
+            printf "[ERROR] ITYPE_EBREAK instruction triggered\n"
             fail
         }
         case ITYPE_INVALID: {
