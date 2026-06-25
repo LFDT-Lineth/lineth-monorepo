@@ -150,7 +150,7 @@ zkc-verify-failing-expected:
 
 profile-zkc-case:
 	@zig build --release=small -Dstrip=true -Dr5=true -Dembedded-input=$(EMBEDDED_INPUT) -Dembedded-spec=$(EMBEDDED_SPEC) -Dverifier-profiling=true -Dr5-marks=true
-	$(MAKE) zkc-build
+	@go run $(ELF_TO_JSON) $(R5_BIN) "0x00" $(IN_ORIGIN) > $(R5_JSON)
 	@zkc exec -f $(R5_JSON) $(ZKC_MAIN)
 
 profile-zkc: generate-testdata
