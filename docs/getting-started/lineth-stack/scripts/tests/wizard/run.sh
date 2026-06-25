@@ -297,7 +297,7 @@ else
 fi
 
 reset_env
-if printf '1\n1\n\n' \
+if printf '1\n1\n\n\n' \
   | env LINETH_WIZARD_STATE_EXISTS=false LINETH_WIZARD_SKIP_RPC_PREFLIGHT=true LINETH_WIZARD_SKIP_PORT_CHECK=true "$START_SH" --wizard >/tmp/lineth-wizard-numbered-local.$$ 2>&1; then
   assert_file_contains /tmp/lineth-wizard-numbered-local.$$ 'Choose L1 mode [1]:' "L1 prompt uses numbered choice header"
   assert_file_contains /tmp/lineth-wizard-numbered-local.$$ '1. Local L1' "L1 prompt explains local option"
@@ -311,7 +311,7 @@ else
 fi
 
 reset_env
-if printf '2\nhttps://rpc.example.test\n2\n\n' \
+if printf '2\nhttps://rpc.example.test\n2\n\n\n' \
   | env LINETH_WIZARD_STATE_EXISTS=false LINETH_WIZARD_SKIP_RPC_PREFLIGHT=true LINETH_WIZARD_SKIP_PORT_CHECK=true "$START_SH" --wizard >/tmp/lineth-wizard-numbered-sepolia.$$ 2>&1; then
   assert_file_contains "$ENV_FILE" 'L1_MODE=sepolia' "numbered L1 choice 2 maps to sepolia"
   assert_file_contains "$ENV_FILE" 'L1_RPC_URL=https://rpc.example.test' "numbered sepolia flow captures RPC URL"
@@ -322,7 +322,7 @@ else
 fi
 
 reset_env
-if printf '\n\n\n' \
+if printf '\n\n\n\n' \
   | env LINETH_WIZARD_STATE_EXISTS=false LINETH_WIZARD_SKIP_RPC_PREFLIGHT=true LINETH_WIZARD_SKIP_PORT_CHECK=true "$START_SH" --wizard >/tmp/lineth-wizard-numbered-defaults.$$ 2>&1; then
   assert_file_contains "$ENV_FILE" 'L1_MODE=local' "empty L1 answer defaults to local"
   assert_file_contains "$ENV_FILE" 'PROVER_DEV_OVERRIDE=true' "empty prover answer defaults to dev"
@@ -331,7 +331,7 @@ else
 fi
 
 reset_env
-if printf 'sepolia\nhttps://rpc.example.test\npartial\n\n' \
+if printf 'sepolia\nhttps://rpc.example.test\npartial\n\n\n' \
   | env LINETH_WIZARD_STATE_EXISTS=false LINETH_WIZARD_SKIP_RPC_PREFLIGHT=true LINETH_WIZARD_SKIP_PORT_CHECK=true "$START_SH" --wizard >/tmp/lineth-wizard-aliases.$$ 2>&1; then
   assert_file_contains "$ENV_FILE" 'L1_MODE=sepolia' "text alias sepolia still works"
   assert_file_contains "$ENV_FILE" 'PROVER_DEV_OVERRIDE=false' "text alias partial still works"
@@ -362,10 +362,96 @@ else
   fail "existing .env default-No confirmation run exits cleanly"
 fi
 
+reset_env
+rm -f "$TMP_DIR/start-default"
+if printf '1\n1\n\n\n' \
+  | env LINETH_WIZARD_STATE_EXISTS=false \
+    LINETH_WIZARD_SKIP_RPC_PREFLIGHT=true \
+    LINETH_WIZARD_SKIP_PORT_CHECK=true \
+    LINETH_WIZARD_TEST_START_FILE="$TMP_DIR/start-default" \
+    "$START_SH" --wizard >/tmp/lineth-wizard-start-default.$$ 2>&1; then
+  assert_file_contains /tmp/lineth-wizard-start-default.$$ 'Start the stack now? [y/N]' "wizard asks whether to start after setup"
+  [ ! -f "$TMP_DIR/start-default" ] && pass "default start answer does not start stack" || fail "default start answer does not start stack"
+else
+  fail "default-No start prompt run exits cleanly"
+fi
+
+reset_env
+rm -f "$TMP_DIR/start-yes"
+if printf '1\n1\n\ny\n' \
+  | env LINETH_WIZARD_STATE_EXISTS=false \
+    LINETH_WIZARD_SKIP_RPC_PREFLIGHT=true \
+    LINETH_WIZARD_SKIP_PORT_CHECK=true \
+    LINETH_WIZARD_TEST_START_FILE="$TMP_DIR/start-yes" \
+    "$START_SH" --wizard >/tmp/lineth-wizard-start-yes.$$ 2>&1; then
+  [ -f "$TMP_DIR/start-yes" ] && pass "yes start answer requests start handoff" || fail "yes start answer requests start handoff"
+  assert_file_contains "$TMP_DIR/start-yes" '--tail' "start handoff uses --tail"
+else
+  fail "yes start prompt run exits cleanly"
+fi
+
+reset_env
+rm -f "$TMP_DIR/start-state-no-clear" "$TMP_DIR/reset-state-no-clear"
+if printf '1\n1\n\ny\n\n' \
+  | env LINETH_WIZARD_STATE_EXISTS=true \
+    LINETH_WIZARD_SKIP_RPC_PREFLIGHT=true \
+    LINETH_WIZARD_SKIP_PORT_CHECK=true \
+    LINETH_WIZARD_TEST_START_FILE="$TMP_DIR/start-state-no-clear" \
+    LINETH_WIZARD_TEST_RESET_FILE="$TMP_DIR/reset-state-no-clear" \
+    "$START_SH" --wizard >/tmp/lineth-wizard-start-state-no-clear.$$ 2>&1; then
+  assert_file_contains /tmp/lineth-wizard-start-state-no-clear.$$ 'Clear existing quickstart environment before starting? [y/N]' "wizard asks whether to clear existing state before start"
+  [ -f "$TMP_DIR/start-state-no-clear" ] && pass "stateful start still starts when clear defaults to no" || fail "stateful start still starts when clear defaults to no"
+  [ ! -f "$TMP_DIR/reset-state-no-clear" ] && pass "default clear answer does not reset" || fail "default clear answer does not reset"
+else
+  fail "stateful start prompt with default-No clear exits cleanly"
+fi
+
+reset_env
+rm -f "$TMP_DIR/start-state-clear" "$TMP_DIR/reset-state-clear"
+if printf '1\n1\n\ny\ny\n' \
+  | env LINETH_WIZARD_STATE_EXISTS=true \
+    LINETH_WIZARD_SKIP_RPC_PREFLIGHT=true \
+    LINETH_WIZARD_SKIP_PORT_CHECK=true \
+    LINETH_WIZARD_TEST_START_FILE="$TMP_DIR/start-state-clear" \
+    LINETH_WIZARD_TEST_RESET_FILE="$TMP_DIR/reset-state-clear" \
+    "$START_SH" --wizard >/tmp/lineth-wizard-start-state-clear.$$ 2>&1; then
+  [ -f "$TMP_DIR/reset-state-clear" ] && pass "yes clear answer requests reset before start" || fail "yes clear answer requests reset before start"
+  [ -f "$TMP_DIR/start-state-clear" ] && pass "yes clear answer still starts after reset" || fail "yes clear answer still starts after reset"
+else
+  fail "stateful start prompt with clear exits cleanly"
+fi
+
+reset_env
+rm -f "$TMP_DIR/start-then" "$TMP_DIR/reset-then"
+if env LINETH_WIZARD_STATE_EXISTS=true \
+  LINETH_WIZARD_SKIP_PORT_CHECK=true \
+  LINETH_WIZARD_SKIP_RPC_PREFLIGHT=true \
+  LINETH_WIZARD_TEST_START_FILE="$TMP_DIR/start-then" \
+  LINETH_WIZARD_TEST_RESET_FILE="$TMP_DIR/reset-then" \
+  "$START_SH" --wizard --then-start --clear-before-start --non-interactive --l1-mode local --prover dev \
+    >/tmp/lineth-wizard-clear-flag.$$ 2>&1; then
+  [ -f "$TMP_DIR/reset-then" ] && pass "--clear-before-start requests reset before --then-start" || fail "--clear-before-start requests reset before --then-start"
+  [ -f "$TMP_DIR/start-then" ] && pass "--then-start still requests start handoff" || fail "--then-start still requests start handoff"
+else
+  fail "--clear-before-start with --wizard --then-start succeeds"
+fi
+
 if "$START_SH" --then-start >/tmp/lineth-wizard-then-start.$$ 2>&1; then
   fail "--then-start without wizard fails"
 else
   assert_file_contains /tmp/lineth-wizard-then-start.$$ '--then-start requires --wizard' "--then-start guard message"
+fi
+
+if "$START_SH" --clear-before-start >/tmp/lineth-wizard-clear-without-wizard.$$ 2>&1; then
+  fail "--clear-before-start without wizard fails"
+else
+  assert_file_contains /tmp/lineth-wizard-clear-without-wizard.$$ '--clear-before-start requires --wizard' "--clear-before-start without wizard guard message"
+fi
+
+if "$START_SH" --wizard --clear-before-start >/tmp/lineth-wizard-clear-without-start.$$ 2>&1; then
+  fail "--clear-before-start without --then-start fails"
+else
+  assert_file_contains /tmp/lineth-wizard-clear-without-start.$$ '--clear-before-start requires --then-start' "--clear-before-start without --then-start guard message"
 fi
 
 if "$START_SH" --l1-mode local >/tmp/lineth-wizard-flag-without-wizard.$$ 2>&1; then
@@ -383,7 +469,10 @@ rm -f /tmp/lineth-wizard-guard.$$ /tmp/lineth-wizard-ports.$$ /tmp/lineth-wizard
 rm -f /tmp/lineth-wizard-numbered-local.$$ /tmp/lineth-wizard-numbered-sepolia.$$
 rm -f /tmp/lineth-wizard-numbered-defaults.$$ /tmp/lineth-wizard-aliases.$$
 rm -f /tmp/lineth-wizard-numbered-invalid.$$
-rm -f /tmp/lineth-wizard-confirm.$$ /tmp/lineth-wizard-then-start.$$ /tmp/lineth-wizard-flag-without-wizard.$$
+rm -f /tmp/lineth-wizard-confirm.$$ /tmp/lineth-wizard-start-default.$$ /tmp/lineth-wizard-start-yes.$$
+rm -f /tmp/lineth-wizard-start-state-no-clear.$$ /tmp/lineth-wizard-start-state-clear.$$ /tmp/lineth-wizard-clear-flag.$$
+rm -f /tmp/lineth-wizard-then-start.$$ /tmp/lineth-wizard-clear-without-wizard.$$ /tmp/lineth-wizard-clear-without-start.$$
+rm -f /tmp/lineth-wizard-flag-without-wizard.$$
 
 if [ "$FAILURES" -ne 0 ]; then
   printf '[wizard-test] %s failure(s)\n' "$FAILURES" >&2

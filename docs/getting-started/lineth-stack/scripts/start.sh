@@ -16,6 +16,7 @@ PULL=true
 LINETH_VERBOSE="${LINETH_VERBOSE:-false}"
 WIZARD=false
 WIZARD_THEN_START=false
+WIZARD_CLEAR_BEFORE_START=false
 WIZARD_NON_INTERACTIVE=false
 WIZARD_YES=false
 WIZARD_FLAG_L1_MODE=""
@@ -29,13 +30,15 @@ STACK="$ROOT/docs/getting-started/lineth-stack"
 usage() {
   cat <<'EOF'
 Usage: ./scripts/start.sh [--tail] [--no-pull] [--verbose]
-       ./scripts/start.sh --wizard [--then-start] [--non-interactive] [--yes]
+       ./scripts/start.sh --wizard [--then-start] [--clear-before-start] [--non-interactive] [--yes]
 
   --tail              start the stack, then show guided deployment/finality progress
   --no-pull           skip docker compose pull
   --verbose           show raw preparation/pull details in the default terminal output
   --wizard, --init    configure .env with the guided setup wizard
   --then-start        after --wizard succeeds, start with ./scripts/start.sh --tail
+  --clear-before-start
+                      with --wizard --then-start, run ./scripts/reset.sh before starting
   --non-interactive   resolve wizard answers from flags/env/.env defaults; never prompt
   --yes               accept the wizard write without a confirmation prompt
 
@@ -50,6 +53,10 @@ while [ "$#" -gt 0 ]; do
       ;;
     --then-start)
       WIZARD_THEN_START=true
+      ;;
+    --clear-before-start)
+      WIZARD_CLEAR_BEFORE_START=true
+      WIZARD_OPTION_REQUIRES="${WIZARD_OPTION_REQUIRES:---clear-before-start}"
       ;;
     --non-interactive)
       WIZARD_NON_INTERACTIVE=true
@@ -108,6 +115,14 @@ if [ "$WIZARD_THEN_START" = "true" ] && [ "$WIZARD" != "true" ]; then
   lineth_die "--then-start requires --wizard; to just boot, run ./scripts/start.sh --tail"
 fi
 
+if [ "$WIZARD_CLEAR_BEFORE_START" = "true" ] && [ "$WIZARD" != "true" ]; then
+  lineth_die "--clear-before-start requires --wizard; to just boot, run ./scripts/reset.sh && ./scripts/start.sh --tail"
+fi
+
+if [ "$WIZARD_CLEAR_BEFORE_START" = "true" ] && [ "$WIZARD_THEN_START" != "true" ]; then
+  lineth_die "--clear-before-start requires --then-start"
+fi
+
 if [ "$WIZARD" != "true" ] && [ -n "$WIZARD_OPTION_REQUIRES" ]; then
   lineth_die "$WIZARD_OPTION_REQUIRES requires --wizard; to just boot, run ./scripts/start.sh --tail"
 fi
@@ -119,20 +134,60 @@ if [ "$WIZARD" = "true" ]; then
 
   # shellcheck disable=SC1091
   . "$SCRIPT_DIR/lib/wizard.sh"
-  LINETH_WIZARD_FLAG_L1_MODE="$WIZARD_FLAG_L1_MODE" \
+  WIZARD_RESULT_FILE="$(mktemp)"
+  if ! LINETH_WIZARD_FLAG_L1_MODE="$WIZARD_FLAG_L1_MODE" \
     LINETH_WIZARD_FLAG_L1_RPC_URL="$WIZARD_FLAG_L1_RPC_URL" \
     LINETH_WIZARD_FLAG_PROVER="$WIZARD_FLAG_PROVER" \
     LINETH_WIZARD_NON_INTERACTIVE="$WIZARD_NON_INTERACTIVE" \
     LINETH_WIZARD_YES="$WIZARD_YES" \
     LINETH_WIZARD_THEN_START="$WIZARD_THEN_START" \
-    lineth_wizard_main "$STACK" "$SCRIPT_DIR"
+    LINETH_WIZARD_CLEAR_BEFORE_START="$WIZARD_CLEAR_BEFORE_START" \
+    LINETH_WIZARD_RESULT_FILE="$WIZARD_RESULT_FILE" \
+    lineth_wizard_main "$STACK" "$SCRIPT_DIR"; then
+    rm -f "$WIZARD_RESULT_FILE"
+    exit 1
+  fi
 
-  if [ "$WIZARD_THEN_START" != "true" ]; then
+  WIZARD_REQUESTED_START="$WIZARD_THEN_START"
+  WIZARD_REQUESTED_CLEAR_BEFORE_START="$WIZARD_CLEAR_BEFORE_START"
+  if [ -f "$WIZARD_RESULT_FILE" ]; then
+    while IFS='=' read -r wizard_result_key wizard_result_value; do
+      case "$wizard_result_key" in
+        START)
+          WIZARD_REQUESTED_START="$wizard_result_value"
+          ;;
+        CLEAR_BEFORE_START)
+          WIZARD_REQUESTED_CLEAR_BEFORE_START="$wizard_result_value"
+          ;;
+      esac
+    done < "$WIZARD_RESULT_FILE"
+  fi
+  rm -f "$WIZARD_RESULT_FILE"
+
+  if [ "$WIZARD_REQUESTED_START" != "true" ]; then
     exit 0
   fi
 
   if [ ! -f "$STACK/.env" ]; then
     lineth_die "wizard did not write .env; nothing to start. Re-run ./scripts/start.sh --wizard"
+  fi
+
+  if [ "$WIZARD_REQUESTED_CLEAR_BEFORE_START" = "true" ]; then
+    if [ -n "${LINETH_WIZARD_TEST_RESET_FILE:-}" ]; then
+      printf '%s\n' "$SCRIPT_DIR/reset.sh" > "$LINETH_WIZARD_TEST_RESET_FILE"
+    else
+      "$SCRIPT_DIR/reset.sh"
+    fi
+  fi
+
+  if [ -n "${LINETH_WIZARD_TEST_START_FILE:-}" ]; then
+    {
+      printf '%s\n' "$SCRIPT_DIR/start.sh"
+      printf '%s\n' "--tail"
+      [ "$PULL" = "true" ] || printf '%s\n' "--no-pull"
+      [ "$LINETH_VERBOSE" = "true" ] && printf '%s\n' "--verbose"
+    } > "$LINETH_WIZARD_TEST_START_FILE"
+    exit 0
   fi
 
   if [ "$PULL" = "false" ] && [ "$LINETH_VERBOSE" = "true" ]; then

@@ -15,6 +15,7 @@ Usage: ./scripts/start.sh --wizard [options]
 Guided setup:
   --wizard, --init          configure .env
   --then-start              after writing .env, exec ./scripts/start.sh --tail
+  --clear-before-start      with --then-start, run ./scripts/reset.sh before starting
   --yes                    skip the confirmation prompt
 
 Non-interactive setup:
@@ -303,6 +304,36 @@ lineth_wizard_prompt_confirm() {
   esac
 }
 
+lineth_wizard_prompt_yes_no() {
+  wizard_yes_no_prompt="$1"
+  wizard_yes_no_default="$2"
+  if [ "$wizard_yes_no_default" = "yes" ]; then
+    wizard_yes_no_label="[Y/n]"
+  else
+    wizard_yes_no_label="[y/N]"
+  fi
+
+  printf '%s %s ' "$wizard_yes_no_prompt" "$wizard_yes_no_label"
+  if ! IFS= read -r wizard_yes_no_answer; then
+    lineth_die "missing answer"
+  fi
+
+  case "$wizard_yes_no_answer" in
+    '')
+      [ "$wizard_yes_no_default" = "yes" ]
+      ;;
+    y|Y|yes|YES)
+      return 0
+      ;;
+    n|N|no|NO)
+      return 1
+      ;;
+    *)
+      lineth_die "invalid answer"
+      ;;
+  esac
+}
+
 lineth_wizard_collect_interactive() {
   if [ -z "${LINETH_WIZARD_FLAG_L1_MODE:-}" ] && [ -z "${WIZARD_L1_MODE:-}" ]; then
     wizard_l1_prompt_default="$WIZARD_L1_MODE_RESOLVED"
@@ -476,6 +507,9 @@ lineth_wizard_existing_mode_flip() {
 
 lineth_wizard_guard_mode_switch() {
   if lineth_wizard_existing_mode_flip && lineth_wizard_state_exists; then
+    if [ "${LINETH_WIZARD_RESULT_CLEAR_BEFORE_START:-false}" = "true" ]; then
+      return 0
+    fi
     lineth_error "existing stack state was detected and this changes L1/prover mode"
     lineth_info "run ./scripts/reset.sh yourself first, then rerun the wizard"
     return 1
@@ -555,7 +589,7 @@ lineth_wizard_check_rpc_with_retries() {
 }
 
 lineth_wizard_check_ports_after_write() {
-  [ "${LINETH_WIZARD_THEN_START:-false}" = "true" ] && return 0
+  [ "${LINETH_WIZARD_RESULT_START:-false}" = "true" ] && return 0
   [ "${LINETH_WIZARD_SKIP_PORT_CHECK:-false}" = "true" ] && return 0
 
   if [ -n "${LINETH_WIZARD_PORT_CHECK_STATUS:-}" ]; then
@@ -580,6 +614,37 @@ lineth_wizard_cleanup() {
   [ -n "${WIZARD_CANDIDATE_ENV:-}" ] && rm -f "$WIZARD_CANDIDATE_ENV"
 }
 
+lineth_wizard_write_result() {
+  [ -n "${LINETH_WIZARD_RESULT_FILE:-}" ] || return 0
+  {
+    printf 'START=%s\n' "${LINETH_WIZARD_RESULT_START:-false}"
+    printf 'CLEAR_BEFORE_START=%s\n' "${LINETH_WIZARD_RESULT_CLEAR_BEFORE_START:-false}"
+  } > "$LINETH_WIZARD_RESULT_FILE"
+}
+
+lineth_wizard_collect_start_options() {
+  LINETH_WIZARD_RESULT_START="${LINETH_WIZARD_THEN_START:-false}"
+  LINETH_WIZARD_RESULT_CLEAR_BEFORE_START="${LINETH_WIZARD_CLEAR_BEFORE_START:-false}"
+
+  if [ "$LINETH_WIZARD_RESULT_START" != "true" ] \
+    && [ "${LINETH_WIZARD_NON_INTERACTIVE:-false}" != "true" ]; then
+    if lineth_wizard_prompt_yes_no "Start the stack now?" "no"; then
+      LINETH_WIZARD_RESULT_START=true
+    fi
+  fi
+
+  if [ "$LINETH_WIZARD_RESULT_START" = "true" ] \
+    && [ "$LINETH_WIZARD_RESULT_CLEAR_BEFORE_START" != "true" ] \
+    && [ "${LINETH_WIZARD_NON_INTERACTIVE:-false}" != "true" ] \
+    && lineth_wizard_state_exists; then
+    if lineth_wizard_prompt_yes_no "Clear existing quickstart environment before starting?" "no"; then
+      LINETH_WIZARD_RESULT_CLEAR_BEFORE_START=true
+    fi
+  fi
+
+  lineth_wizard_write_result
+}
+
 lineth_wizard_cancelled() {
   lineth_wizard_cleanup
   lineth_info "cancelled"
@@ -590,6 +655,9 @@ lineth_wizard_main() {
   LINETH_WIZARD_STACK="$1"
   LINETH_WIZARD_SCRIPT_DIR="$2"
   WIZARD_CANDIDATE_ENV=""
+  LINETH_WIZARD_RESULT_START=false
+  LINETH_WIZARD_RESULT_CLEAR_BEFORE_START="${LINETH_WIZARD_CLEAR_BEFORE_START:-false}"
+  lineth_wizard_write_result
   trap lineth_wizard_cancelled INT TERM
 
   lineth_wizard_resolve_defaults
@@ -611,6 +679,7 @@ lineth_wizard_main() {
   if [ -f "$WIZARD_ENV_FILE" ] && cmp -s "$WIZARD_ENV_FILE" "$WIZARD_CANDIDATE_ENV"; then
     lineth_info "no changes"
     lineth_wizard_cleanup
+    lineth_wizard_collect_start_options
     return 0
   fi
 
@@ -626,6 +695,8 @@ lineth_wizard_main() {
       return 0
     fi
   fi
+
+  lineth_wizard_collect_start_options
 
   lineth_wizard_guard_mode_switch || {
     lineth_wizard_cleanup
