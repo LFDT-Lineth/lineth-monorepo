@@ -5,47 +5,57 @@ include "../utils/signed_sum.zkc"
 
 // Process a RISC-V S-type instruction, writing a register value to memory.
 //
-// S-type semantics are pre-decoded at ELF time into a semantic store op and
-// operands (see decoded_stype in memory.zkc). Runtime execution is a flat
-// switch on compute_op (STORE_SB, STORE_SH, …).
+// S-type semantics are pre-decoded at ELF time into a memory writeback width
+// and operands (see decoded_stype in memory.zkc). Runtime execution is a
+// switch on writeback (WB_MEM_8, WB_MEM_16, …).
 //
 // Effect:
 //   mem[rs1 + sign_extend(imm12)] ← lower N bits of rs2
 fn process_S_type_instruction<ram, registers>(index:u64) {
 
     var compute_op:STypeComputeOp
+    var writeback:ITypeWriteback
     var imm12:Imm12
     var rs2:Register
     var rs1:Register
-    compute_op, imm12, rs2, rs1 = decoded_stype[index]
+    compute_op, writeback, imm12, rs2, rs1 = decoded_stype[index]
+    
+    if compute_op != STYPE_STORE {
+        printf "[ERROR] Unsupported S-type instruction with\n"
+        printf "\tcompute_op ≡ %x\n", compute_op
+        fail
+    }
 
     var signext_imm12_64:DoubleWord = sgn_extension_u12_u64(imm12)
     var mem_address:Address = signed_sum_of_double_word(registers[rs1], signext_imm12_64) as Address
 
-    switch compute_op {
-        case STORE_SB: {
-            printf "STORE_SB "
+    switch writeback {
+        case WB_MEM_8: {
+            printf "WB_MEM_8 "
             print_s_operands(rs2, rs1, signext_imm12_64)
             write_8(mem_address, (registers[rs2] & (0xFF as u64)) as u8)
         }
-        case STORE_SH: {
-            printf "STORE_SH "
+        case WB_MEM_16: {
+            printf "WB_MEM_16 "
             print_s_operands(rs2, rs1, signext_imm12_64)
             write_16(mem_address, (registers[rs2] & (0xFFFF as u64)) as u16)
         }
-        case STORE_SW: {
-            printf "STORE_SW "
+        case WB_MEM_32: {
+            printf "WB_MEM_32 "
             print_s_operands(rs2, rs1, signext_imm12_64)
             write_32(mem_address, (registers[rs2] & (0xFFFFFFFF as u64)) as u32)
         }
-        case STORE_SD: {
-            printf "STORE_SD "
+        case WB_MEM_64: {
+            printf "WB_MEM_64 "
             print_s_operands(rs2, rs1, signext_imm12_64)
             write_64(mem_address, registers[rs2])
         }
+        case WB_NONE: {
+            printf "[ERROR] Unsupported S-type instruction (no memory writeback)\n"
+            fail
+        }
         default: {
-            printf "[ERROR] Unsupported S-type instruction with\n"
-            printf "\tcompute_op ≡ %x\n", compute_op
+            printf "[ERROR] Unsupported S-type writeback %d\n", writeback
             fail
         }
     }

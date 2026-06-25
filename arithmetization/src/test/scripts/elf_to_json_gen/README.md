@@ -44,7 +44,7 @@ In addition to the original keys (`entry_point_and_blobs_count`,
 | `decoded_core`     | `opcode, instruction_type, instruction_parameters`     | `instruction_parameters::opcode = instruction` + type map  |
 | `decoded_itype`    | `compute_op, writeback, imm12, rs1, rd`                | flat semantic micro-op dispatch in `i_type.zkc`              |
 | `decoded_rtype`    | `compute_op, writeback, rs1, rs2, rd`                  | flat semantic micro-op dispatch in `r_type.zkc`              |
-| `decoded_stype`    | `compute_op, imm12, rs2, rs1`                          | flat semantic micro-op dispatch in `s_type.zkc`              |
+| `decoded_stype`    | `compute_op, writeback, imm12, rs2, rs1`               | flat `compute_op` dispatch + `WB_MEM_*` writeback in `s_type.zkc` |
 | `decoded_btype`    | `compute_op, imm_sign, imm_10_5, rs2, rs1, imm_4_1, imm_11` | flat `compute_op` dispatch; imm reassembled at runtime |
 | `decoded_jtype`    | `compute_op, writeback, imm, rd`                       | flat semantic micro-op dispatch in `j_type.zkc`              |
 | `decoded_utype`    | `compute_op, writeback, imm20, rd`                     | flat semantic micro-op dispatch in `u_type.zkc`              |
@@ -66,7 +66,7 @@ For J-type the 21-bit signed jump offset is sign-extended into a single 64-bit
 `decodeITypeSemantic` in `main.go` maps each I-type encoding to:
 
 - **`compute_op`** — what to execute (`READ8_SGN`, `OP_ADDI`, `OP_SLLI`, `JALR`, …)
-- **`writeback`** — whether to store the computed result into `rd` (`WB_STORE_REG` or `WB_NONE`)
+- **`writeback`** — whether to store the computed result into `rd` (`WB_STORE_REG` or `WB_NONE`), or into RAM (`WB_MEM_8`, `WB_MEM_16`, …)
 - **`imm12`, `rs1`, `rd`** — operands (shift amounts are normalized into `imm12` at decode time)
 
 At runtime, `process_I_type_instruction` runs a flat `switch compute_op`, then a
@@ -77,10 +77,12 @@ in `main.go` (`itypeOpAddi`, `wbStoreReg`, …). When `rd` is `x0`, `writebackFo
 in `main.go` encodes `WB_NONE` at ELF time. See `main_test.go` for
 `decodeITypeSemantic` coverage.
 
-## S-type semantic micro-ops
+## S-type semantic micro-ops (split compute + writeback)
 
-`decodeSTypeSemantic` maps each S-type `funct3` to `STORE_SB`, `STORE_SH`, …
-At runtime, `process_S_type_instruction` runs a flat `switch compute_op`.
+`decodeSTypeSemantic` maps each S-type `funct3` to `STYPE_STORE` with a memory
+writeback width (`WB_MEM_8`, `WB_MEM_16`, …). At runtime,
+`process_S_type_instruction` runs a flat `switch compute_op`, then a separate
+`switch writeback` for the RAM store.
 
 ## B-type semantic micro-ops
 
@@ -108,7 +110,7 @@ longer passes `opcode` into the U-type handler.
 `decodeRTypeSemantic` in `main.go` maps each R-type encoding to:
 
 - **`compute_op`** — what to execute (`RTYPE_ADD`, `RTYPE_MUL`, `RTYPE_KECCAK`, …)
-- **`writeback`** — whether to store the computed result into `rd` (`WB_STORE_REG` or `WB_NONE`)
+- **`writeback`** — whether to store the computed result into `rd` (`WB_STORE_REG` or `WB_NONE`), or into RAM (`WB_MEM_8`, `WB_MEM_16`, …)
 - **`rs1`, `rs2`, `rd`** — operands
 
 At runtime, `process_R_type_instruction` runs a flat `switch compute_op`, then a
@@ -181,12 +183,12 @@ size is the sum of its field widths:
 | Table           | Field widths (bits)            | Record size |
 | --------------- | ------------------------------ | ----------- |
 | `decoded_core`  | opcode 7, type 3, params 25    | 35 bits     |
-| `decoded_itype` | compute_op 6, writeback 2, imm12 12, rs1 5, rd 5 | 30 bits     |
-| `decoded_rtype` | compute_op 6, writeback 2, rs1 5, rs2 5, rd 5 | 23 bits |
-| `decoded_stype` | compute_op 6, imm12 12, rs2 5, rs1 5 | 28 bits   |
+| `decoded_itype` | compute_op 6, writeback 3, imm12 12, rs1 5, rd 5 | 31 bits     |
+| `decoded_rtype` | compute_op 6, writeback 3, rs1 5, rs2 5, rd 5 | 24 bits |
+| `decoded_stype` | compute_op 6, writeback 3, imm12 12, rs2 5, rs1 5 | 31 bits   |
 | `decoded_btype` | compute_op 6, imm_sign 1, imm_10_5 6, rs2 5, rs1 5, imm_4_1 4, imm_11 1 | 28 bits |
-| `decoded_jtype` | compute_op 6, writeback 2, imm 64, rd 5 | 77 bits |
-| `decoded_utype` | compute_op 6, writeback 2, imm20 20, rd 5 | 33 bits |
+| `decoded_jtype` | compute_op 6, writeback 3, imm 64, rd 5 | 78 bits |
+| `decoded_utype` | compute_op 6, writeback 3, imm20 20, rd 5 | 34 bits |
 
 > Important: if you change a field's type/width in `memory.zkc`, update the
 > matching `writeBits` calls here (and vice versa). A width or order mismatch

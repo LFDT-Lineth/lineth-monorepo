@@ -218,21 +218,23 @@ func TestDecodeRTypeSemantic(t *testing.T) {
 
 func TestDecodeSTypeSemantic(t *testing.T) {
 	tests := []struct {
-		name   string
-		funct3 uint32
-		wantOp uint32
+		name      string
+		funct3    uint32
+		wantOp    uint32
+		wantWrite uint32
 	}{
-		{name: "sb", funct3: 0b000, wantOp: stypeStoreSb},
-		{name: "sh", funct3: 0b001, wantOp: stypeStoreSh},
-		{name: "sw", funct3: 0b010, wantOp: stypeStoreSw},
-		{name: "sd", funct3: 0b011, wantOp: stypeStoreSd},
-		{name: "invalid", funct3: 0b111, wantOp: stypeInvalid},
+		{name: "sb", funct3: 0b000, wantOp: stypeStore, wantWrite: wbMem8},
+		{name: "sh", funct3: 0b001, wantOp: stypeStore, wantWrite: wbMem16},
+		{name: "sw", funct3: 0b010, wantOp: stypeStore, wantWrite: wbMem32},
+		{name: "sd", funct3: 0b011, wantOp: stypeStore, wantWrite: wbMem64},
+		{name: "invalid", funct3: 0b111, wantOp: stypeInvalid, wantWrite: wbNone},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := decodeSTypeSemantic(tt.funct3)
-			if got != tt.wantOp {
-				t.Fatalf("decodeSTypeSemantic(f3=%#x) = %d, want %d", tt.funct3, got, tt.wantOp)
+			gotOp, gotWrite := decodeSTypeSemantic(tt.funct3)
+			if gotOp != tt.wantOp || gotWrite != tt.wantWrite {
+				t.Fatalf("decodeSTypeSemantic(f3=%#x) = (%d, %d), want (%d, %d)",
+					tt.funct3, gotOp, gotWrite, tt.wantOp, tt.wantWrite)
 			}
 		})
 	}
