@@ -8,9 +8,16 @@ include "../utils/signed_sum.zkc"
 // Process a RISC-V I-type instruction and return the next program counter.
 //
 // I-type semantics are pre-decoded at ELF time into a semantic compute op,
-// a writeback kind, and operands (see decoded_itype in memory.zkc). Runtime
-// execution is a flat switch on compute_op (READ*, OP*, JALR, ECALL, …)
+// a writeback kind, and operands (see decoded_itype in memory.zkc).
+//
+// In the predecoding phase, the operands for I-type instructions come from a
+// common 25-bit encoding (opcode stripped) that is laid out as:
+//
+//   imm12 :: rs1 :: funct3 :: rd
+//
+// Runtime execution is a flat switch on compute_op (READ*, OP*, JALR, ECALL, …)
 // followed by a separate STORE_REG writeback step when applicable.
+//
 fn process_I_type_instruction<ram, registers>(index:u64, pc:Address) -> (new_pc:Address) {
 
     var compute_op:ITypeComputeOp

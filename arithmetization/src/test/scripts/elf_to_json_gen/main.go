@@ -244,15 +244,10 @@ const (
 	stypeInvalid = 63
 )
 
-// B-type semantic micro-op constants. These MUST match constants.zkc.
+// B-type funct3 constants. Valid branch funct3 values are stored directly in
+// decoded_btype; BTYPE_INVALID (63) marks non-B slots and unrecognised funct3.
 const (
-	btypeBranchBeq  = 0
-	btypeBranchBne  = 1
-	btypeBranchBlt  = 2
-	btypeBranchBge  = 3
-	btypeBranchBltu = 4
-	btypeBranchBgeu = 5
-	btypeInvalid    = 63
+	btypeInvalid = 63
 )
 
 // J-type semantic micro-op constants. These MUST match constants.zkc.
@@ -494,21 +489,11 @@ func decodeSTypeSemantic(funct3 uint32) (computeOp, writeback uint32) {
 	}
 }
 
-// decodeBTypeSemantic maps a raw B-type funct3 to a semantic branch op.
+// decodeBTypeSemantic returns the branch funct3 when valid, otherwise BTYPE_INVALID.
 func decodeBTypeSemantic(funct3 uint32) uint32 {
 	switch funct3 {
-	case 0b000:
-		return btypeBranchBeq
-	case 0b001:
-		return btypeBranchBne
-	case 0b100:
-		return btypeBranchBlt
-	case 0b101:
-		return btypeBranchBge
-	case 0b110:
-		return btypeBranchBltu
-	case 0b111:
-		return btypeBranchBgeu
+	case 0b000, 0b001, 0b100, 0b101, 0b110, 0b111:
+		return funct3
 	default:
 		return btypeInvalid
 	}
@@ -795,7 +780,7 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 	//   decoded_rtype: compute_op:RTypeComputeOp(u6), writeback:ITypeWriteback(u3), rs1:Register(u5), rs2:Register(u5), rd:Register(u5)
 	//   decoded_stype: compute_op:STypeComputeOp(u6), writeback:ITypeWriteback(u3), imm12:Imm12(u12), rs2:Register(u5), rs1:Register(u5)
 	//   decoded_btype: compute_op:BTypeComputeOp(u6), imm_sign:u1, imm_10_5:u6, rs2:Register(u5), rs1:Register(u5), imm_4_1:u4, imm_11:u1
-	//   decoded_jtype: compute_op:JTypeComputeOp(u6), writeback:ITypeWriteback(u3), imm:DoubleWord(u64), rd:Register(u5)
+	//   decoded_jtype: compute_op:JTypeComputeOp(u6), writeback:ITypeWriteback(u3), imm20:SignBit(u1), imm10_1:u10, imm11:u1, imm19_12:u8, rd:Register(u5)
 	//   decoded_utype: compute_op:UTypeComputeOp(u6), writeback:ITypeWriteback(u3), imm20:Imm20(u20), rd:Register(u5)
 	var (
 		coreBits  bitWriter
@@ -832,15 +817,11 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		bImm10_5 := (instr >> 25) & 0x3f // imm[10:5]
 		bImm4_1 := (instr >> 8) & 0xf    // imm[4:1]
 		bImm11 := (instr >> 7) & 0x1     // imm[11]
-		// J-type: resolve the 21-bit signed jump offset (imm[20|19:12|11|10:1] with
-		// bit 0 = 0) to a ready-to-use 64-bit immediate. imm[20] is known
-		// statically, so the runtime shift and sign extension are collapsed here.
-		jImm20 := (instr >> 31) & 0x1                                                                   // imm[20]
-		jPre := (jImm20 << 19) | (((instr >> 12) & 0xff) << 11) | (((instr >> 20) & 0x1) << 10) | ((instr >> 21) & 0x3ff) // imm[20|19:12|11|10:1]
-		jImm := uint64(jPre) << 1
-		if jImm20 == 1 {
-			jImm |= 0xFFFFFFFFFFE00000 // sign-extend: set bits [63:21]
-		}
+		// J-type immediate sub-fields (kept split; reassembled at runtime in j_type.zkc).
+		jImm20 := (instr >> 31) & 0x1    // imm[20]
+		jImm10_1 := (instr >> 21) & 0x3ff // imm[10:1]
+		jImm11 := (instr >> 20) & 0x1    // imm[11]
+		jImm19_12 := (instr >> 12) & 0xff // imm[19:12]
 
 		// U-type immediate: imm[31:12] (20 bits).
 		uImm20 := (instr >> 12) & 0xfffff
@@ -902,7 +883,10 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		jtypeWriteback = writebackForRd(rd, jtypeWriteback)
 		jtypeBits.writeBits(uint64(jtypeComputeOp), 6)
 		jtypeBits.writeBits(uint64(jtypeWriteback), 3)
-		jtypeBits.writeBits(jImm, 64)
+		jtypeBits.writeBits(uint64(jImm20), 1)
+		jtypeBits.writeBits(uint64(jImm10_1), 10)
+		jtypeBits.writeBits(uint64(jImm11), 1)
+		jtypeBits.writeBits(uint64(jImm19_12), 8)
 		jtypeBits.writeBits(uint64(rd), 5)
 
 		utypeComputeOp, utypeWriteback := decodeUTypeSemantic(opcode)

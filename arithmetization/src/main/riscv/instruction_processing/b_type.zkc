@@ -5,13 +5,30 @@ include "../utils/signed_sum.zkc"
 
 // Process a RISC-V B-type (branch) instruction and return the next program counter.
 //
-// B-type semantics are pre-decoded at ELF time into a semantic branch op and
-// operands (see decoded_btype in memory.zkc). Runtime execution is a flat
-// switch on compute_op (BRANCH_BEQ, BRANCH_BNE, …). The 13-bit signed
-// PC-relative offset sub-fields are reassembled and sign-extended here.
+// For B-type instructions branch, compute_op and operands are pre-decoded at ELF time
+// (see decoded_btype in memory.zkc). For the values of compute_op, we kept the raw
+// funct3 value (BRANCH_BEQ = 0b000, BRANCH_BNE = 0b001, …). 
+//
+// In the predecoding phase, the sub-fields for B-type instructions come from a 
+// common 25-bit encoding (opcode stripped) that is laid out as:
+// 
+//   imm[12] :: imm[10:5] :: rs2 :: rs1 :: compute_op(funct3) :: imm[4:1] :: imm[11]
+//
+// Runtime execution is a flat switch on compute_op.
+// The 13-bit signed PC-relative offset sub-fields are reassembled and
+// sign-extended here.
+//
+// The six branch variants and their conditions are:
+//   BEQ  (compute_op = BRANCH_BEQ = funct3 = 0b000) — branch if rs1 == rs2
+//   BNE  (compute_op = BRANCH_BNE = funct3 = 0b001) — branch if rs1 != rs2
+//   BLT  (compute_op = BRANCH_BLT = funct3 = 0b100) — branch if rs1 <  rs2 (signed)
+//   BGE  (compute_op = BRANCH_BGE = funct3 = 0b101) — branch if rs1 >= rs2 (signed)
+//   BLTU (compute_op = BRANCH_BLTU = funct3 = 0b110) — branch if rs1 <  rs2 (unsigned)
+//   BGEU (compute_op = BRANCH_BGEU = funct3 = 0b111) — branch if rs1 >= rs2 (unsigned)
 //
 // When the branch condition is false, pc_new = pc + 4 (fall-through).
 // When the branch condition is true,  pc_new = pc + imm (taken branch).
+//
 fn process_B_type_instruction<registers>(index:u64, pc:Address) -> (pc_new:Address) {
 
     var compute_op:BTypeComputeOp
@@ -30,9 +47,7 @@ fn process_B_type_instruction<registers>(index:u64, pc:Address) -> (pc_new:Addre
         imm = (imm_11::imm_10_5::imm_4_1::(0 as u1)) as DoubleWord
     }
 
-    
-    // "no branching" value of pc_new;
-    // gets overwritten if branching occurs
+    // "no branching" value of pc_new; gets overwritten if branching occurs
     pc_new = pc + 4
 
     switch compute_op {
@@ -40,15 +55,13 @@ fn process_B_type_instruction<registers>(index:u64, pc:Address) -> (pc_new:Addre
             printf "BRANCH_BEQ "
             print_b_operands(rs1, rs2, imm)
             if registers[rs1] == registers[rs2] {
-                // the branch case
                 pc_new = signed_sum_of_double_word(pc, imm)
             }
         }
         case BRANCH_BNE: {
             printf "BRANCH_BNE "
             print_b_operands(rs1, rs2, imm)
-            if registers[rs1] != registers[rs2] {  
-                // the branch case
+            if registers[rs1] != registers[rs2] {
                 pc_new = signed_sum_of_double_word(pc, imm)
             }
         }
@@ -72,15 +85,13 @@ fn process_B_type_instruction<registers>(index:u64, pc:Address) -> (pc_new:Addre
             printf "BRANCH_BLTU "
             print_b_operands(rs1, rs2, imm)
             if registers[rs1]<registers[rs2] {
-                // the branch case
                 pc_new = signed_sum_of_double_word(pc, imm)
             }
         }
         case BRANCH_BGEU: {
             printf "BRANCH_BGEU "
             print_b_operands(rs1, rs2, imm)
-            if registers[rs1] >= registers[rs2] {      
-                // the branch case
+            if registers[rs1] >= registers[rs2] {
                 pc_new = signed_sum_of_double_word(pc, imm)
             }
         }

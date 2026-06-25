@@ -45,8 +45,8 @@ In addition to the original keys (`entry_point_and_blobs_count`,
 | `decoded_itype`    | `compute_op, writeback, imm12, rs1, rd`                | flat semantic micro-op dispatch in `i_type.zkc`              |
 | `decoded_rtype`    | `compute_op, writeback, rs1, rs2, rd`                  | flat semantic micro-op dispatch in `r_type.zkc`              |
 | `decoded_stype`    | `compute_op, writeback, imm12, rs2, rs1`               | flat `compute_op` dispatch + `WB_MEM_*` writeback in `s_type.zkc` |
-| `decoded_btype`    | `compute_op, imm_sign, imm_10_5, rs2, rs1, imm_4_1, imm_11` | flat `compute_op` dispatch; imm reassembled at runtime |
-| `decoded_jtype`    | `compute_op, writeback, imm, rd`                       | flat semantic micro-op dispatch in `j_type.zkc`              |
+| `decoded_btype`    | `compute_op, imm_sign, imm_10_5, rs2, rs1, imm_4_1, imm_11` | flat `compute_op` dispatch (raw funct3); imm reassembled at runtime |
+| `decoded_jtype`    | `compute_op, writeback, imm20, imm10_1, imm11, imm19_12, rd` | flat semantic micro-op dispatch; imm reassembled at runtime |
 | `decoded_utype`    | `compute_op, writeback, imm20, rd`                     | flat semantic micro-op dispatch in `u_type.zkc`              |
 
 Each value is a single `0x…` hex string. The field set and order of every table
@@ -57,8 +57,8 @@ For S-type the 12-bit store immediate is reassembled
 (`imm[11] :: imm[10:5] :: imm[4:0]`) into a single `imm12` field, so the
 interpreter no longer has to recombine the split immediate.
 
-For J-type the 21-bit signed jump offset is sign-extended into a single 64-bit
-`imm` at decode time, so `j_type.zkc` does no shift or sign extension at runtime.
+For J-type the 21-bit jump offset sub-fields (`imm[20]`, `imm[10:1]`, `imm[11]`,
+`imm[19:12]`) are kept split at decode time and reassembled in `j_type.zkc`.
 
 ## I-type semantic micro-ops (split compute + writeback)
 
@@ -81,21 +81,22 @@ in `main.go` encodes `WB_NONE` at ELF time. See `main_test.go` for
 
 `decodeSTypeSemantic` maps each S-type `funct3` to `STYPE_STORE` with a memory
 writeback width (`WB_MEM_8`, `WB_MEM_16`, …). At runtime,
-`process_S_type_instruction` runs a flat `switch compute_op`, then a separate
+`process_S_type_instruction` guards on `STYPE_STORE`, then runs a separate
 `switch writeback` for the RAM store.
 
 ## B-type semantic micro-ops
 
-`decodeBTypeSemantic` maps each B-type `funct3` to `BRANCH_BEQ`, `BRANCH_BNE`, …
-The 13-bit branch offset sub-fields are kept split at decode time and reassembled
-in `b_type.zkc`. At runtime, `process_B_type_instruction` runs a flat
-`switch compute_op`.
+`decodeBTypeSemantic` validates the branch `funct3` and stores it directly as
+`compute_op` in `decoded_btype` (`BRANCH_BEQ`, `BRANCH_BNE`, …). The 13-bit branch offset
+sub-fields are kept split at decode time and reassembled in `b_type.zkc`. At
+runtime, `process_B_type_instruction` runs a flat `switch compute_op`.
 
 ## J-type semantic micro-ops (split compute + writeback)
 
-`decodeJTypeSemantic` maps JAL to `JTYPE_JAL` with `WB_STORE_REG`.
-At runtime, `process_J_type_instruction` runs a flat `switch compute_op`, then a
-separate `switch writeback` for the link address.
+`decodeJTypeSemantic` maps JAL to `JTYPE_JAL` with `WB_STORE_REG`. The jump
+offset sub-fields are kept split at decode time. At runtime,
+`process_J_type_instruction` runs a flat `switch compute_op`, then a separate
+`switch writeback` for the link address.
 
 ## U-type semantic micro-ops (split compute + writeback)
 
@@ -187,7 +188,7 @@ size is the sum of its field widths:
 | `decoded_rtype` | compute_op 6, writeback 3, rs1 5, rs2 5, rd 5 | 24 bits |
 | `decoded_stype` | compute_op 6, writeback 3, imm12 12, rs2 5, rs1 5 | 31 bits   |
 | `decoded_btype` | compute_op 6, imm_sign 1, imm_10_5 6, rs2 5, rs1 5, imm_4_1 4, imm_11 1 | 28 bits |
-| `decoded_jtype` | compute_op 6, writeback 3, imm 64, rd 5 | 78 bits |
+| `decoded_jtype` | compute_op 6, writeback 3, imm20 1, imm10_1 10, imm11 1, imm19_12 8, rd 5 | 34 bits |
 | `decoded_utype` | compute_op 6, writeback 3, imm20 20, rd 5 | 34 bits |
 
 > Important: if you change a field's type/width in `memory.zkc`, update the

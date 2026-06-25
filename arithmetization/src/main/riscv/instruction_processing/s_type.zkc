@@ -1,16 +1,34 @@
 include "../memory.zkc"
 include "../ram/write.zkc"
 include "../utils/constants.zkc"
+include "../utils/sign_extend.zkc"
 include "../utils/signed_sum.zkc"
 
 // Process a RISC-V S-type instruction, writing a register value to memory.
 //
 // S-type semantics are pre-decoded at ELF time into a memory writeback width
-// and operands (see decoded_stype in memory.zkc). Runtime execution is a
-// switch on writeback (WB_MEM_8, WB_MEM_16, …).
+// and operands (see decoded_stype in memory.zkc).
+//
+// In the predecoding phase, the operands for S-type instructions come from the 25-bit
+// encoding (opcode stripped) that splits the 12-bit signed immediate across two fields so
+// that rs1 and rs2 occupy the same bit positions as in other formats:
+//
+//   imm[11] :: imm[10:5] :: rs2 :: rs1 :: funct3 :: imm[4:0]
+//
+// The immediate is reassembled as imm[11] :: imm[10:5] :: imm[4:0] and
+// sign-extended to 64 bits to form the address offset imm12.
+//
+// Runtime execution is a switch on writeback (WB_MEM_8, WB_MEM_16, …).
+//
+// Store variants selected by writeback (from funct3 at ELF time):
+//   WB_MEM_8  (funct3 = 0b000) — store byte       (8 bits)
+//   WB_MEM_16 (funct3 = 0b001) — store halfword   (16 bits)
+//   WB_MEM_32 (funct3 = 0b010) — store word       (32 bits)
+//   WB_MEM_64 (funct3 = 0b011) — store doubleword (64 bits)
 //
 // Effect:
 //   mem[rs1 + sign_extend(imm12)] ← lower N bits of rs2
+//
 fn process_S_type_instruction<ram, registers>(index:u64) {
 
     var compute_op:STypeComputeOp
@@ -19,7 +37,7 @@ fn process_S_type_instruction<ram, registers>(index:u64) {
     var rs2:Register
     var rs1:Register
     compute_op, writeback, imm12, rs2, rs1 = decoded_stype[index]
-    
+
     if compute_op != STYPE_STORE {
         printf "[ERROR] Unsupported S-type instruction with\n"
         printf "\tcompute_op ≡ %x\n", compute_op

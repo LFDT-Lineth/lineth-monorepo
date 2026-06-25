@@ -267,22 +267,6 @@ const FUNCT3_EBREAK:Funct3 = 0b000, FUNCT12_EBREAK:Funct12 = 0b000000000001 // E
 // S-type funct3 values
 // ======================
 
-const FUNCT3_SB:Funct3 = 0b000 // Store Byte
-const FUNCT3_SH:Funct3 = 0b001 // Store Halfword
-const FUNCT3_SW:Funct3 = 0b010 // Store Word
-const FUNCT3_SD:Funct3 = 0b011 // Store Doubleword
-
-// ======================
-// B-type funct3 values
-// ======================
-
-const FUNCT3_BEQ:Funct3 = 0b000
-const FUNCT3_BNE:Funct3 = 0b001
-const FUNCT3_BLT:Funct3 = 0b100
-const FUNCT3_BGE:Funct3 = 0b101
-const FUNCT3_BLTU:Funct3 = 0b110
-const FUNCT3_BGEU:Funct3 = 0b111
-
 // Sign extension constants
 // sign extend to a DOUBLE WORD
 const DWORD_SIGN_EXT_PREFIX_52_ONES:u52 = 0b1111111111111111111111111111111111111111111111111111
@@ -387,14 +371,14 @@ const RTYPE_INVALID:RTypeComputeOp = 63
 const STYPE_STORE:STypeComputeOp = 0
 const STYPE_INVALID:STypeComputeOp = 63
 
-// B-type semantic compute ops (pre-decoded at ELF time).
-const BRANCH_BEQ:BTypeComputeOp = 0
-const BRANCH_BNE:BTypeComputeOp = 1
-const BRANCH_BLT:BTypeComputeOp = 2
-const BRANCH_BGE:BTypeComputeOp = 3
-const BRANCH_BLTU:BTypeComputeOp = 4
-const BRANCH_BGEU:BTypeComputeOp = 5
-const BTYPE_INVALID:BTypeComputeOp = 63
+// B-type semantic compute ops (pre-decoded at ELF time; values are raw funct3).
+const BRANCH_BEQ:BTypeComputeOp = 0b000
+const BRANCH_BNE:BTypeComputeOp = 0b001
+const BRANCH_BLT:BTypeComputeOp = 0b100
+const BRANCH_BGE:BTypeComputeOp = 0b101
+const BRANCH_BLTU:BTypeComputeOp = 0b110
+const BRANCH_BGEU:BTypeComputeOp = 0b111
+const BTYPE_INVALID:BTypeComputeOp = 0b111111
 
 // J-type semantic compute ops (pre-decoded at ELF time).
 const JTYPE_JAL:JTypeComputeOp = 0
