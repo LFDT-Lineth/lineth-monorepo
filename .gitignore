@@ -93,7 +93,7 @@ target/
 tmp/
 typechain/
 typechain-types/
-generated/
+generated/**
 __pycache__/
 
 /besu-plugins/linea-sequencer/**/site
@@ -175,6 +175,9 @@ prover/*.pdf
 prover/*.json
 # Usually helper shell scripts to run the prover
 prover/*.sh
+
+## Verifier-ray generated testdata fixtures
+!verifier-ray/testdata/generated/*.zig
 
 .claude/settings.local.json
 contracts/.claude/settings.local.json

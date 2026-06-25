@@ -6,6 +6,7 @@
 - *(coordinator)* Remove traces version from requests (#3110)
 - *(coordinator)* Export FTX number metrics (#3165)
 - *(coordinator)* Drop insecure FileWriter temp-file fallback (CodeQL 21207) (#3413)
+- *(coordinator)* Fixed a flacky test by closing the ftxInvalidityProofService in the ForcedTransactionsApp (#3438)
 
 ### 🚜 Refactor
 
