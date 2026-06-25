@@ -431,31 +431,25 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                     // a = b∙q + r
                     // 0 ≤ |r| < |b|
                     // r and a have the same sign
-                    switch funct7 {
-                        case FUNCT7_DIVW: {
-                            printf "DIVW "
-                            print_r_operands(rd, rs1, rs2)
-                            switch v2_lower {
-                                case 0: {
-                                    registers[rd] = NEGATIVE_ONE_AS_I64
-                                }
-                                default: {
-                                    word_wip = v1_lower_abs / v2_lower_abs
-                                    if sign_bit_of_word(v1_lower) == sign_bit_of_word(v2_lower) {
-                                        registers[rd] = sgn_extension_u32_u64(word_wip)
-                                    } else {
-                                        registers[rd] = sgn_extension_u32_u64(negative_of_word(word_wip))
-                                    }
-                                }
+                    if funct7 == FUNCT7_DIVW {
+                        printf "DIVW "
+                        print_r_operands(rd, rs1, rs2)
+                        if v2_lower == 0 {
+                            registers[rd] = NEGATIVE_ONE_AS_I64
+                        } else {
+                            word_wip = v1_lower_abs / v2_lower_abs
+                            if sign_bit_of_word(v1_lower) == sign_bit_of_word(v2_lower) {
+                                registers[rd] = sgn_extension_u32_u64(word_wip)
+                            } else {
+                                registers[rd] = sgn_extension_u32_u64(negative_of_word(word_wip))
                             }
                         }
-                        default: {
-                            printf "[ERROR] Unsupported R-type instruction with\n"
-                            printf "\topcode ≡ OP_32 ≡ %x ≡ %b\n", opcode, opcode
-                            printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3
-                            printf "\tfunct7 ≡ %x ≡ %b\n", funct7, funct7
-                            fail
-                        }
+                    } else {
+                        printf "[ERROR] Unsupported R-type instruction with\n"
+                        printf "\topcode ≡ OP_32 ≡ %x ≡ %b\n", opcode, opcode
+                        printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3
+                        printf "\tfunct7 ≡ %x ≡ %b\n", funct7, funct7
+                        fail
                     }
                 }
                 // funct3 = 0b101 — base SRLW/SRAW and M-extension DIVUW
