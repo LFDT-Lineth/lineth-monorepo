@@ -1,11 +1,16 @@
 package linea.coordinator.clients.prover.riscv
 
+import linea.clients.BlobWitness
+import linea.clients.ExecutionPayload
+import linea.clients.ExecutionWitness
+import linea.clients.ForcedTransaction
 import linea.clients.L2ExecutionProofPublicInputs
 import linea.clients.L2ExecutionProofResponseV1
 import linea.clients.RollupProofPublicInputs
 import linea.clients.RollupProofResponseV1
 import linea.domain.CompressionProofIndex
 import linea.domain.ExecutionProofIndex
+import linea.forcedtx.ForcedTransactionInclusionResult
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
 import java.math.BigInteger
@@ -176,7 +181,7 @@ data class L2ExecutionProofResponseDto(
 // getZkRollupProof.request.json (§2.2)
 // ---------------------------------------------------------------------------------------------------------------------
 
-data class BlobDto(
+data class BlobWitnessDto(
   val startBlockNumber: Long,
   val endBlockNumber: Long,
   val blobHash: String,
@@ -197,14 +202,14 @@ data class L2ExecutionProofDto(
 
 data class FileBasedRollupProofRequestParamsDto(
   val chainId: Long,
-  val blobs: List<BlobDto>,
+  val blobs: List<BlobWitnessDto>,
   val parentShnarf: String,
   val l2ExecutionProofs: List<L2ExecutionProofDto>,
 )
 
 data class RestfulRollupProofRequestParamsDto(
   val chainId: Long,
-  val blobs: List<BlobDto>,
+  val blobs: List<BlobWitnessDto>,
   val parentShnarf: String,
   val l2ExecutionProofIndexes: List<ExecutionProofIndex>,
 )
@@ -321,6 +326,66 @@ internal fun L2ExecutionProofPublicInputs.fromDomainObject(): L2ExecutionProofPu
   )
 }
 
+internal fun ExecutionPayload.fromDomainObject(): ExecutionPayloadDto {
+  return ExecutionPayloadDto(
+    parentHash = parentHash.encodeHex(),
+    feeRecipient = feeRecipient.encodeHex(),
+    stateRoot = stateRoot.encodeHex(),
+    receiptsRoot = receiptsRoot.encodeHex(),
+    logsBloom = logsBloom.encodeHex(),
+    prevRandao = prevRandao.encodeHex(),
+    blockNumber = blockNumber.toLong(),
+    gasLimit = gasLimit.toLong(),
+    gasUsed = gasUsed.toLong(),
+    timestamp = timestamp.toLong(),
+    extraData = extraData.encodeHex(),
+    baseFeePerGas = baseFeePerGas,
+    blockHash = blockHash.encodeHex(),
+    transactions = transactions.map { it.encodeHex() },
+    withdrawals = withdrawals.map {
+      WithdrawalDto(
+        index = it.index.toLong(),
+        validatorIndex = it.validatorIndex.toLong(),
+        address = it.address.encodeHex(),
+        amount = it.amount.toLong(),
+      )
+    },
+    blobGasUsed = blobGasUsed.toLong(),
+    excessBlobGas = excessBlobGas.toLong(),
+    blockAccessList = blockAccessList.encodeHex(),
+  )
+}
+
+internal fun ExecutionWitness.fromDomainObject(): ExecutionWitnessDto {
+  return ExecutionWitnessDto(
+    state = state.map { it.encodeHex() },
+    codes = codes.map { it.encodeHex() },
+    headers = headers.map { it.encodeHex() },
+  )
+}
+
+private fun mapFtxInclusionResultToAcceptance(
+  inclusionResult: ForcedTransactionInclusionResult,
+): ForcedTransactionAcceptance {
+  return when (inclusionResult) {
+    ForcedTransactionInclusionResult.Included -> ForcedTransactionAcceptance.INCLUDED
+    ForcedTransactionInclusionResult.BadNonce -> ForcedTransactionAcceptance.BAD_NONCE
+    ForcedTransactionInclusionResult.BadBalance -> ForcedTransactionAcceptance.BAD_BALANCE
+    ForcedTransactionInclusionResult.FilteredAddressFrom -> ForcedTransactionAcceptance.FILTERED_ADDRESS_FROM
+    ForcedTransactionInclusionResult.FilteredAddressTo -> ForcedTransactionAcceptance.FILTERED_ADDRESS_TO
+    else -> throw IllegalArgumentException("Unsupported FTX inclusion result: $inclusionResult")
+  }
+}
+
+internal fun ForcedTransaction.fromDomainObject(): ForcedTransactionDto {
+  return ForcedTransactionDto(
+    number = ftxNumber.toLong(),
+    deadline = deadlineBlockNumber.toLong(),
+    signedTxRlp = signedTxRlp.encodeHex(),
+    acceptance = mapFtxInclusionResultToAcceptance(acceptance),
+  )
+}
+
 /**
  * Maps the RISC-V 14-field PI tuple DTO onto its domain twin. Shared by the rollup and rollup-aggregation response
  * mappers since both emit the same tuple (rollup_spec §2.4). Field names and types are identical, so it is a straight
@@ -361,6 +426,18 @@ internal fun RollupProofPublicInputs.fromDomainObject(): RollupProofPublicInputs
     filteredAddressesHash = filteredAddressesHash.encodeHex(),
     parentShnarf = parentShnarf.encodeHex(),
     endShnarf = endShnarf.encodeHex(),
+  )
+}
+
+internal fun BlobWitness.fromDomainObject(): BlobWitnessDto {
+  return BlobWitnessDto(
+    startBlockNumber = startBlockNumber.toLong(),
+    endBlockNumber = endBlockNumber.toLong(),
+    blobHash = blobHash.encodeHex(),
+    blobKzgProof = blobKzgProof.encodeHex(),
+    blockRlps = blockRlps.map { blockRlp ->
+      blockRlp.encodeHex()
+    },
   )
 }
 

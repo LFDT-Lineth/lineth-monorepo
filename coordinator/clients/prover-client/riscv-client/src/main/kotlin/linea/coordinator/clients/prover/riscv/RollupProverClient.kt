@@ -30,17 +30,7 @@ internal class FileBasedRollupProofRequestDtoMapper(
           guestProgramId = guestProgramId,
           proofRequest = FileBasedRollupProofRequestParamsDto(
             chainId = chainId,
-            blobs = request.blobs.map {
-              BlobDto(
-                startBlockNumber = it.startBlockNumber.toLong(),
-                endBlockNumber = it.endBlockNumber.toLong(),
-                blobHash = it.blobHash.encodeHex(),
-                blobKzgProof = it.blobKzgProof.encodeHex(),
-                blockRlps = it.blockRlps.map { blockRlp ->
-                  blockRlp.encodeHex()
-                },
-              )
-            },
+            blobs = request.blobs.map { it.fromDomainObject() },
             parentShnarf = request.parentShnarf.encodeHex(),
             l2ExecutionProofs = l2ExecutionProofResponseDtos.map { it ->
               L2ExecutionProofDto(
@@ -77,17 +67,7 @@ internal class RestfulRollupProofRequestDtoMapper(
       guestProgramId = guestProgramId,
       proofRequest = RestfulRollupProofRequestParamsDto(
         chainId = chainId,
-        blobs = request.blobs.map {
-          BlobDto(
-            startBlockNumber = it.startBlockNumber.toLong(),
-            endBlockNumber = it.endBlockNumber.toLong(),
-            blobHash = it.blobHash.encodeHex(),
-            blobKzgProof = it.blobKzgProof.encodeHex(),
-            blockRlps = it.blockRlps.map { blockRlp ->
-              blockRlp.encodeHex()
-            },
-          )
-        },
+        blobs = request.blobs.map { it.fromDomainObject() },
         parentShnarf = request.parentShnarf.encodeHex(),
         l2ExecutionProofIndexes = request.l2ExecutionProofIndexes,
       ),

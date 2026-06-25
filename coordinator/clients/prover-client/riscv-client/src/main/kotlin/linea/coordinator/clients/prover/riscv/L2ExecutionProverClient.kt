@@ -5,7 +5,6 @@ import linea.clients.L2ExecutionProofResponseV1
 import linea.clients.L2ExecutionProverClientV1
 import linea.clients.ProverProofTransport
 import linea.domain.ExecutionProofIndex
-import linea.forcedtx.ForcedTransactionInclusionResult
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
 import org.apache.logging.log4j.LogManager
@@ -20,19 +19,6 @@ internal class L2ExecutionProofRequestDtoMapper(
   private val guestProgramId: String,
   private val chainConfig: ChainConfigDto,
 ) : (L2ExecutionProofRequestV1) -> SafeFuture<L2ExecutionProofRequestDto> {
-  private fun mapFtxInclusionResultToAcceptance(
-    inclusionResult: ForcedTransactionInclusionResult,
-  ): ForcedTransactionAcceptance {
-    return when (inclusionResult) {
-      ForcedTransactionInclusionResult.Included -> ForcedTransactionAcceptance.INCLUDED
-      ForcedTransactionInclusionResult.BadNonce -> ForcedTransactionAcceptance.BAD_NONCE
-      ForcedTransactionInclusionResult.BadBalance -> ForcedTransactionAcceptance.BAD_BALANCE
-      ForcedTransactionInclusionResult.FilteredAddressFrom -> ForcedTransactionAcceptance.FILTERED_ADDRESS_FROM
-      ForcedTransactionInclusionResult.FilteredAddressTo -> ForcedTransactionAcceptance.FILTERED_ADDRESS_TO
-      else -> throw IllegalArgumentException("Unsupported FTX inclusion result: $inclusionResult")
-    }
-  }
-
   override fun invoke(request: L2ExecutionProofRequestV1): SafeFuture<L2ExecutionProofRequestDto> {
     val payloads = request.executionPayloads.map { executionPayload ->
       val blockNumber = executionPayload.blockNumber
@@ -41,56 +27,17 @@ internal class L2ExecutionProofRequestDtoMapper(
       val forcedTransactions = request.forcedTransactions.filter { it -> it.blockNumber == blockNumber }
       val statelessInputDto = StatelessInputDto(
         newPayloadRequest = NewPayloadRequestDto(
-          executionPayload = ExecutionPayloadDto(
-            parentHash = executionPayload.parentHash.encodeHex(),
-            feeRecipient = executionPayload.feeRecipient.encodeHex(),
-            stateRoot = executionPayload.stateRoot.encodeHex(),
-            receiptsRoot = executionPayload.receiptsRoot.encodeHex(),
-            logsBloom = executionPayload.logsBloom.encodeHex(),
-            prevRandao = executionPayload.prevRandao.encodeHex(),
-            blockNumber = executionPayload.blockNumber.toLong(),
-            gasLimit = executionPayload.gasLimit.toLong(),
-            gasUsed = executionPayload.gasUsed.toLong(),
-            timestamp = executionPayload.timestamp.toLong(),
-            extraData = executionPayload.extraData.encodeHex(),
-            baseFeePerGas = executionPayload.baseFeePerGas,
-            blockHash = executionPayload.blockHash.encodeHex(),
-            transactions = executionPayload.transactions.map { it.encodeHex() },
-            withdrawals = executionPayload.withdrawals.map {
-              WithdrawalDto(
-                index = it.index.toLong(),
-                validatorIndex = it.validatorIndex.toLong(),
-                address = it.address.encodeHex(),
-                amount = it.amount.toLong(),
-              )
-            },
-            blobGasUsed = executionPayload.blobGasUsed.toLong(),
-            excessBlobGas = executionPayload.excessBlobGas.toLong(),
-            blockAccessList = executionPayload.blockAccessList.encodeHex(),
-          ),
+          executionPayload = executionPayload.fromDomainObject(),
           versionedHashes = emptyList(),
           parentBeaconBlockRoot = ByteArray(32).encodeHex(),
           executionRequests = executionRequests?.executionRequests?.map { it.encodeHex() } ?: emptyList(),
         ),
-        executionWitness = executionWitness!!.let { execWithness ->
-          ExecutionWitnessDto(
-            state = execWithness.state.map { it.encodeHex() },
-            codes = execWithness.codes.map { it.encodeHex() },
-            headers = execWithness.headers.map { it.encodeHex() },
-          )
-        },
+        executionWitness = executionWitness!!.fromDomainObject(),
       )
       PayloadInputDto(
         statelessInput = statelessInputDto,
         rollupExtension = RollupExtensionDto(
-          forcedTransactions = forcedTransactions.map {
-            ForcedTransactionDto(
-              number = it.ftxNumber.toLong(),
-              deadline = it.deadlineBlockNumber.toLong(),
-              signedTxRlp = it.signedTxRlp.encodeHex(),
-              acceptance = mapFtxInclusionResultToAcceptance(it.acceptance),
-            )
-          },
+          forcedTransactions = forcedTransactions.map { it.fromDomainObject() },
         ),
       )
     }
