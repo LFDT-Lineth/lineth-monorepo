@@ -626,16 +626,6 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		if err := add("Lookup", sc.Name, sc.Sys, sc.AssignWitness, nil); err != nil {
 			return nil, nil, err
 		}
-		// Todo: This is just to put bench test just after the Multicolumn scenario. We should remove the conditional case in future.
-		if sc.Name == "MultiColumn" {
-			// Verifier-ray-only benchmark scenario. This is intentionally kept out of
-			// prover-ray's shared wioptest LookupScenarios because it is not extra prover
-			// behavior coverage; it is a larger verifier fixture used to stress profiling.
-			sys, honest := buildLookupMultiColumnBenchSystem()
-			if err := add("Lookup", "MultiColumnBench", sys, honest, nil); err != nil {
-				return nil, nil, err
-			}
-		}
 	}
 	for _, factory := range wioptest.RangeCheckCompilerScenarios() {
 		sc := factory()
@@ -669,6 +659,11 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		if err := add("Vanishing", "DynamicLagrangeSelectorBoundary", sys, honest, invalid); err != nil {
 			return nil, nil, err
 		}
+	}
+	// Larger MultiColumn scenario for stress profiling.
+	sys, honest := buildLookupMultiColumnBenchSystem()
+	if err := add("Lookup", "MultiColumnBench", sys, honest, nil); err != nil {
+		return nil, nil, err
 	}
 
 	return cases, systems, nil
@@ -711,7 +706,7 @@ func buildLookupMultiColumnBenchSystem() (*wiop.System, assignFn) {
 	for i := range tCols {
 		tAssignments[i] = make([]field.Element, bigSize)
 		sAssignments[i] = make([]field.Element, bigSize)
-		for j := 0; j < bigSize; j++ {
+		for j := range bigSize {
 			tAssignments[i][j] = elem(uint64(i + j + 1))
 			sAssignments[i][j] = elem(uint64(i + (j % (bigSize / 2)) + 1))
 		}
