@@ -38,7 +38,8 @@ type Runtime struct {
 	cells map[ObjectID]field.Gen
 	// coins maps each coin's [ObjectID] to its sampled coin value.
 	coins map[ObjectID]field.Gen
-	// state is a free-form key-value store for stateful actions.
+	// state is a free-form key-value store for stateful actions. Including, for
+	// instance a prover state.
 	state map[string]any
 	// dynamicSizes maps the index of each dynamic module to its domain size for
 	// this Runtime. Populated lazily by [Runtime.AssignColumn] on the first
@@ -47,6 +48,10 @@ type Runtime struct {
 	// lock is a concurrency lock to prevent concurrent access to the maps in
 	// the runtime.
 	lock *sync.Mutex
+	// Commitments is used to store the commitment for the current round. The
+	// commitment are for committed columns (and not for FRI commitments). The
+	// precomputed columns commitment is stored in the [System].
+	Commitments map[int]field.Octuplet
 }
 
 // NewRuntime creates a fresh Runtime for sys. currentRound is initialised to
@@ -123,6 +128,31 @@ func (run *Runtime) AdvanceRound() {
 		))
 	}
 
+	// Feed the dynamic-sizes for each dynamic module
+	for k, mod := range run.System.Modules {
+		if !mod.isDynamic {
+			continue
+		}
+		size, ok := run.dynamicSizes[k]
+		if !ok {
+			panic(fmt.Sprintf(
+				"wiop: AdvanceRound: dynamic module %q has no assigned size",
+				mod.Context.Path(),
+			))
+		}
+		run.fs.Update(field.NewElement(uint64(size)))
+	}
+
+	// Feed the commitment
+	commitment, ok := run.Commitments[run.currentRound.ID]
+	if !ok {
+		panic(fmt.Sprintf(
+			"wiop: AdvanceRound: commitment for round %d not found",
+			run.currentRound.ID,
+		))
+	}
+	run.fs.Update(commitment[:]...)
+
 	// Feed oracle and public column assignments into the Fiat-Shamir state.
 	for _, col := range run.currentRound.Columns {
 		if col.Visibility < VisibilityOracle {
@@ -191,9 +221,16 @@ func (run Runtime) AssignColumn(col *Column, v *ConcreteVector) {
 		utils.Panic("wiop: AssignColumn: data length too large for column: %v, size=%v", dataLen, columnSizeMaxSupported)
 	}
 
-	if m.IsDynamic() {
+	if m.IsDynamic() && run.currentRound.ID == 0 {
 		currSize := run.dynamicSizes[m.index]
 		run.dynamicSizes[m.index] = max(currSize, dataLen)
+	} else if m.IsDynamic() && dataLen > run.dynamicSizes[m.index] {
+		// This is needed because we need to include the module sizes in the
+		// fiat-shamir transcript of the first-round.
+		panic(fmt.Sprintf(
+			"wiop: AssignColumn: data length of a dynamic module may not be updated anymore after round 0: %v -> %v",
+			dataLen, run.dynamicSizes[m.index],
+		))
 	} else if m.IsSized() && dataLen > m.Size() {
 		panic(fmt.Sprintf(
 			"wiop: AssignColumn: column %q has data length %d which overflows module %q size %d",
@@ -364,6 +401,13 @@ func (run Runtime) GetCoinValue(coin *CoinField) field.Gen {
 		))
 	}
 	return v
+}
+
+// GetFS returns the Fiat-Shamir transcript of the runtime. This is useful for
+// the FRI compilation which does a bit of uneven things with the FS transcript.
+// Either way, do not use it
+func (run *Runtime) GetFS() *fiatshamir.FiatShamir {
+	return run.fs
 }
 
 // SetFSState replaces the runtime's Fiat–Shamir state with s. It is
