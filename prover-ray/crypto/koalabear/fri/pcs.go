@@ -1348,6 +1348,9 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 
 func (pcs *PCS) checkClaimPointsOutOfDomain(layout layout, zeta field.Ext) error {
 	for _, bundle := range layout {
+		if bundle.SizeLog2 < 0 || bundle.SizeLog2 >= len(pcs.Encoders) {
+			return fmt.Errorf("fri: pcs.Verify: size %d is outside params schedule", bundle.SizeLog2)
+		}
 		encoder := pcs.Encoders[bundle.SizeLog2]
 		for _, entry := range bundle.Entries {
 			for _, shift := range entry.Shifts {
