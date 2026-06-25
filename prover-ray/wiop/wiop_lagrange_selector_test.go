@@ -12,7 +12,7 @@ import (
 // newLagrangeSelector builds a single-round system with one sized, unpadded
 // module of the given size and returns a LagrangeSelector at position pos
 // together with a fresh runtime.
-func newLagrangeSelector(t *testing.T, size, pos int) (*wiop.LagrangeSelector, wiop.Runtime) {
+func newLagrangeSelector(t *testing.T, size, pos int) (*wiop.LagrangeSelector, *wiop.Runtime) {
 	t.Helper()
 	sys := wiop.NewSystemf("ls")
 	sys.NewRound()
@@ -226,7 +226,7 @@ func TestLagrangeSelector_InVanishing(t *testing.T) {
 	const size = 8
 	const pos = 3
 
-	build := func(rowPosVal uint64) (*wiop.Vanishing, wiop.Runtime) {
+	build := func(rowPosVal uint64) (*wiop.Vanishing, *wiop.Runtime) {
 		sys := wiop.NewSystemf("ls-vanish")
 		r0 := sys.NewRound()
 		mod := sys.NewSizedModule(sys.Context.Childf("mod"), size, wiop.PaddingDirectionNone)

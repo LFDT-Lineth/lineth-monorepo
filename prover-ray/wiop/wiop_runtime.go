@@ -59,9 +59,9 @@ type Runtime struct {
 // [System.PrecomputedRound] are pre-loaded.
 //
 // Panics if sys has no interactive rounds (len(sys.Rounds) == 0).
-func NewRuntime(sys *System) Runtime {
+func NewRuntime(sys *System) *Runtime {
 
-	run := Runtime{
+	run := &Runtime{
 		System:       sys,
 		fs:           fiatshamir.NewFiatShamir(),
 		columns:      make(map[ObjectID]*ConcreteVector),
@@ -84,7 +84,7 @@ func NewRuntime(sys *System) Runtime {
 
 // dynamicModuleSize returns the domain size registered for m in this Runtime.
 // Called by [Module.RuntimeSize] for dynamic modules.
-func (run Runtime) dynamicModuleSize(m *Module) int {
+func (run *Runtime) dynamicModuleSize(m *Module) int {
 	run.lock.Lock()
 	defer run.lock.Unlock()
 	size, ok := run.dynamicSizes[m.index]
@@ -99,7 +99,7 @@ func (run Runtime) dynamicModuleSize(m *Module) int {
 
 // CurrentRound returns the round currently being processed, or nil if the
 // system has no interactive rounds.
-func (run Runtime) CurrentRound() *Round { return run.currentRound }
+func (run *Runtime) CurrentRound() *Round { return run.currentRound }
 
 // AdvanceRound closes the current round and opens the next one:
 //  1. Every oracle or public column assigned in the current round is fed into
@@ -182,7 +182,7 @@ func (run *Runtime) AdvanceRound() {
 	// is shared with the hooks; FS-state mutations performed by them affect
 	// the coin loop below.
 	for _, h := range run.currentRound.PreSamplingHooks {
-		h.Run(*run)
+		h.Run(run)
 	}
 
 	// Derive a coin for every CoinField declared in the new round.
@@ -197,7 +197,7 @@ func (run *Runtime) AdvanceRound() {
 //   - Static module: the data length must not exceed the module's declared size.
 //   - Dynamic module: each time we add a column we potentially grow the
 //     module's size. There is no upper bound.
-func (run Runtime) AssignColumn(col *Column, v *ConcreteVector) {
+func (run *Runtime) AssignColumn(col *Column, v *ConcreteVector) {
 	run.lock.Lock()
 	defer run.lock.Unlock()
 	if col.round != run.currentRound {
@@ -248,7 +248,7 @@ func (run Runtime) AssignColumn(col *Column, v *ConcreteVector) {
 // assignment's promise is copied over so size and padding semantics survive.
 //
 // Panics if col has not been assigned yet.
-func (run Runtime) OverrideColumn(col *Column, v *ConcreteVector) {
+func (run *Runtime) OverrideColumn(col *Column, v *ConcreteVector) {
 	run.lock.Lock()
 	defer run.lock.Unlock()
 	id := col.Context.ID
@@ -267,7 +267,7 @@ func (run Runtime) OverrideColumn(col *Column, v *ConcreteVector) {
 
 // GetColumnAssignment returns the concrete assignment of col. Panics if col
 // has not been assigned yet.
-func (run Runtime) GetColumnAssignment(col *Column) *ConcreteVector {
+func (run *Runtime) GetColumnAssignment(col *Column) *ConcreteVector {
 	run.lock.Lock()
 	defer run.lock.Unlock()
 	v, ok := run.columns[col.Context.ID]
@@ -281,7 +281,7 @@ func (run Runtime) GetColumnAssignment(col *Column) *ConcreteVector {
 }
 
 // HasColumnAssignment reports whether col has been assigned in this runtime.
-func (run Runtime) HasColumnAssignment(col *Column) bool {
+func (run *Runtime) HasColumnAssignment(col *Column) bool {
 	run.lock.Lock()
 	defer run.lock.Unlock()
 	_, ok := run.columns[col.Context.ID]
@@ -289,7 +289,7 @@ func (run Runtime) HasColumnAssignment(col *Column) bool {
 }
 
 // HasCellValue reports whether cell has been assigned in this runtime.
-func (run Runtime) HasCellValue(cell *Cell) bool {
+func (run *Runtime) HasCellValue(cell *Cell) bool {
 	run.lock.Lock()
 	defer run.lock.Unlock()
 	_, ok := run.cells[cell.Context.ID]
@@ -298,7 +298,7 @@ func (run Runtime) HasCellValue(cell *Cell) bool {
 
 // AssignCell stores a concrete scalar value for cell. Panics if cell does not
 // belong to the current round or has already been assigned.
-func (run Runtime) AssignCell(cell *Cell, v field.Gen) {
+func (run *Runtime) AssignCell(cell *Cell, v field.Gen) {
 	run.lock.Lock()
 	defer run.lock.Unlock()
 	if cell.round != run.currentRound {
@@ -323,7 +323,7 @@ func (run Runtime) AssignCell(cell *Cell, v field.Gen) {
 // has already opened.
 //
 // Panics if cell has not been assigned yet.
-func (run Runtime) OverrideCell(cell *Cell, v field.Gen) {
+func (run *Runtime) OverrideCell(cell *Cell, v field.Gen) {
 	run.lock.Lock()
 	defer run.lock.Unlock()
 	id := cell.Context.ID
@@ -338,7 +338,7 @@ func (run Runtime) OverrideCell(cell *Cell, v field.Gen) {
 
 // GetCellValue returns the concrete scalar value of cell, resolving a lazily-
 // assigned cell on demand. Panics if cell is neither assigned nor lazy.
-func (run Runtime) GetCellValue(cell *Cell) field.Gen {
+func (run *Runtime) GetCellValue(cell *Cell) field.Gen {
 	if v, ok := run.resolveLazyCell(cell); ok {
 		return v
 	}
@@ -357,7 +357,7 @@ func (run Runtime) GetCellValue(cell *Cell) field.Gen {
 // reads a column assignment (which takes the lock itself). If a concurrent path
 // assigns the cell first, that value wins and the freshly-computed one is
 // discarded.
-func (run Runtime) resolveLazyCell(cell *Cell) (field.Gen, bool) {
+func (run *Runtime) resolveLazyCell(cell *Cell) (field.Gen, bool) {
 	run.lock.Lock()
 	v, ok := run.cells[cell.Context.ID]
 	run.lock.Unlock()
@@ -381,7 +381,7 @@ func (run Runtime) resolveLazyCell(cell *Cell) (field.Gen, bool) {
 }
 
 // HasCellAssignment reports whether cell has been assigned in this runtime.
-func (run Runtime) HasCellAssignment(cell *Cell) bool {
+func (run *Runtime) HasCellAssignment(cell *Cell) bool {
 	run.lock.Lock()
 	defer run.lock.Unlock()
 	_, ok := run.cells[cell.Context.ID]
@@ -390,7 +390,7 @@ func (run Runtime) HasCellAssignment(cell *Cell) bool {
 
 // GetCoinValue returns the value sampled for coin by [Runtime.AdvanceRound].
 // Panics if the round containing coin has not been entered yet.
-func (run Runtime) GetCoinValue(coin *CoinField) field.Gen {
+func (run *Runtime) GetCoinValue(coin *CoinField) field.Gen {
 	run.lock.Lock()
 	defer run.lock.Unlock()
 	v, ok := run.coins[coin.Context.ID]
@@ -418,12 +418,12 @@ func (run *Runtime) GetFS() *fiatshamir.FiatShamir {
 //
 // fiatshamir is a goroutine-unsafe singleton inside the runtime — like the
 // rest of the AdvanceRound pipeline this must not be called concurrently.
-func (run Runtime) SetFSState(s field.Octuplet) {
+func (run *Runtime) SetFSState(s field.Octuplet) {
 	run.fs.SetState(s)
 }
 
 // GetState returns the value stored under key and whether it was present.
-func (run Runtime) GetState(key string) (any, bool) {
+func (run *Runtime) GetState(key string) (any, bool) {
 	run.lock.Lock()
 	defer run.lock.Unlock()
 	v, ok := run.state[key]
@@ -431,7 +431,7 @@ func (run Runtime) GetState(key string) (any, bool) {
 }
 
 // SetState stores value under key in the runtime's state bag.
-func (run Runtime) SetState(key string, value any) {
+func (run *Runtime) SetState(key string, value any) {
 	run.lock.Lock()
 	defer run.lock.Unlock()
 	run.state[key] = value

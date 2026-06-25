@@ -170,7 +170,7 @@ func (r *Round) NewCell(ctx *ContextFrame, isExtension bool) *Cell {
 // [Cell.Assigner]. assigner must only depend on data available in this round.
 //
 // Panics if ctx or assigner is nil.
-func (r *Round) NewLazyCell(ctx *ContextFrame, isExtension bool, assigner func(Runtime) field.Gen) *Cell {
+func (r *Round) NewLazyCell(ctx *ContextFrame, isExtension bool, assigner func(*Runtime) field.Gen) *Cell {
 	if assigner == nil {
 		panic("wiop: Round.NewLazyCell requires a non-nil assigner")
 	}

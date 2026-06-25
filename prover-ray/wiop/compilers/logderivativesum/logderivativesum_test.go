@@ -40,11 +40,11 @@ func TestCompile_WioptestSoundness(t *testing.T) {
 		t.Run(sc.Name, func(t *testing.T) {
 			logderivativesum.Compile(sc.Sys)
 			rt := wiop.NewRuntime(sc.Sys)
-			sc.AssignWitness(&rt)
+			sc.AssignWitness(rt)
 			rt.AdvanceRound()
-			sc.TamperResult(&rt)
-			runRound(&rt)
-			assert.Error(t, checkAllVerifierActions(&rt),
+			sc.TamperResult(rt)
+			runRound(rt)
+			assert.Error(t, checkAllVerifierActions(rt),
 				"compiled verifier must reject an invalid witness")
 		})
 	}
@@ -93,7 +93,7 @@ func TestCompile_WioptestSoundness_TamperZ(t *testing.T) {
 			}
 
 			rt := wiop.NewRuntime(sc.Sys)
-			sc.AssignWitness(&rt)
+			sc.AssignWitness(rt)
 			rt.AdvanceRound()
 
 			// Pre-assign every Z column with a constant non-zero extension value.
@@ -113,7 +113,7 @@ func TestCompile_WioptestSoundness_TamperZ(t *testing.T) {
 				rt.AssignCell(ld.Result, field.ElemFromExt(field.Ext{}))
 			}
 
-			assert.Error(t, checkAllVerifierActions(&rt),
+			assert.Error(t, checkAllVerifierActions(rt),
 				"verifier must reject a corrupted Z column")
 		})
 	}
@@ -150,14 +150,14 @@ func requireGenEqual(t *testing.T, want, got field.Gen, msg string) {
 
 func runRound(rt *wiop.Runtime) {
 	for _, a := range rt.CurrentRound().ProverActions {
-		a.Run(*rt)
+		a.Run(rt)
 	}
 }
 
 func checkAllVerifierActions(rt *wiop.Runtime) error {
 	for _, r := range rt.System.Rounds {
 		for _, va := range r.VerifierActions {
-			if err := va.Check(*rt); err != nil {
+			if err := va.Check(rt); err != nil {
 				return err
 			}
 		}
@@ -329,9 +329,9 @@ func TestCompile_Completeness_NoFilter(t *testing.T) {
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(col, makeVec(2, 2, 2, 2))
 	rt.AdvanceRound()
-	runRound(&rt)
+	runRound(rt)
 
-	require.NoError(t, checkAllVerifierActions(&rt))
+	require.NoError(t, checkAllVerifierActions(rt))
 	require.NoError(t, ld.Check(rt), "the original query must be consistent with the compiled artefacts")
 }
 
@@ -346,9 +346,9 @@ func TestCompile_Completeness_AllOnes(t *testing.T) {
 	rt.AssignColumn(num, makeVec(3, 5, 7, 9))
 	rt.AssignColumn(filter, makeVec(1, 1, 1, 1))
 	rt.AdvanceRound()
-	runRound(&rt)
+	runRound(rt)
 
-	require.NoError(t, checkAllVerifierActions(&rt))
+	require.NoError(t, checkAllVerifierActions(rt))
 	require.NoError(t, ld.Check(rt))
 
 	requireGenEqual(t, genFromUint64(24), rt.GetCellValue(ld.Result),
@@ -365,9 +365,9 @@ func TestCompile_Completeness_AllZeros(t *testing.T) {
 	rt.AssignColumn(num, makeVec(3, 5, 7, 9))
 	rt.AssignColumn(filter, makeVec(0, 0, 0, 0))
 	rt.AdvanceRound()
-	runRound(&rt)
+	runRound(rt)
 
-	require.NoError(t, checkAllVerifierActions(&rt))
+	require.NoError(t, checkAllVerifierActions(rt))
 	require.NoError(t, ld.Check(rt))
 
 	requireGenEqual(t, genFromUint64(0), rt.GetCellValue(ld.Result),
@@ -385,9 +385,9 @@ func TestCompile_Completeness_PartialFilter(t *testing.T) {
 	rt.AssignColumn(num, makeVec(3, 5, 7, 9))
 	rt.AssignColumn(filter, makeVec(1, 0, 1, 0))
 	rt.AdvanceRound()
-	runRound(&rt)
+	runRound(rt)
 
-	require.NoError(t, checkAllVerifierActions(&rt))
+	require.NoError(t, checkAllVerifierActions(rt))
 	require.NoError(t, ld.Check(rt))
 
 	requireGenEqual(t, genFromUint64(10), rt.GetCellValue(ld.Result),
@@ -421,9 +421,9 @@ func TestCompile_Completeness_FilterMasksZeroDenominator(t *testing.T) {
 	rt.AssignColumn(den, makeVec(2, 0, 4, 0))
 	rt.AssignColumn(filter, makeVec(1, 0, 1, 0))
 	rt.AdvanceRound()
-	runRound(&rt)
+	runRound(rt)
 
-	require.NoError(t, checkAllVerifierActions(&rt))
+	require.NoError(t, checkAllVerifierActions(rt))
 	require.NoError(t, ld.Check(rt))
 
 	requireGenEqual(t, genFromUint64(4), rt.GetCellValue(ld.Result),
@@ -460,9 +460,9 @@ func TestCompile_Completeness_PackedMixedFilters(t *testing.T) {
 	rt.AssignColumn(num3, makeVec(6, 6, 8, 8))
 	rt.AssignColumn(den, makeVec(2, 2, 2, 2)) // sum = 3+3+4+4 = 14
 	rt.AdvanceRound()
-	runRound(&rt)
+	runRound(rt)
 
-	require.NoError(t, checkAllVerifierActions(&rt))
+	require.NoError(t, checkAllVerifierActions(rt))
 	require.NoError(t, ld.Check(rt))
 
 	requireGenEqual(t, genFromUint64(64), rt.GetCellValue(ld.Result),
@@ -499,9 +499,9 @@ func TestCompile_Completeness_BucketsByModule(t *testing.T) {
 	rt.AssignColumn(cB, makeVec(5, 6, 7, 8))
 	rt.AssignColumn(fB, makeVec(1, 1, 0, 0)) // sum_B = 5 + 6 = 11
 	rt.AdvanceRound()
-	runRound(&rt)
+	runRound(rt)
 
-	require.NoError(t, checkAllVerifierActions(&rt))
+	require.NoError(t, checkAllVerifierActions(rt))
 	require.NoError(t, ld.Check(rt))
 
 	requireGenEqual(t, genFromUint64(21), rt.GetCellValue(ld.Result),
@@ -521,9 +521,9 @@ func TestCompile_Soundness_WrongResult(t *testing.T) {
 	rt.AssignColumn(filter, makeVec(1, 1, 1, 1))
 	rt.AdvanceRound()
 	rt.AssignCell(ld.Result, field.ElemFromBase(field.NewFromString("99")))
-	runRound(&rt)
+	runRound(rt)
 
-	assert.Error(t, checkAllVerifierActions(&rt),
+	assert.Error(t, checkAllVerifierActions(rt),
 		"a corrupted Result cell must be detected by the verifier action")
 }
 
@@ -595,7 +595,7 @@ func TestCompile_Soundness_WrongInitialZ(t *testing.T) {
 	rec := mod.Vanishings[0]
 	require.True(t, rec.Expression.IsMultiValued(), "Vanishings[0] must be the recurrence")
 	require.NoError(t, rec.Check(rt), "recurrence must accept a constant-step Z")
-	require.NoError(t, checkAllVerifierActions(&rt),
+	require.NoError(t, checkAllVerifierActions(rt),
 		"the final-sum verifier action only checks endpoints against Result")
 
 	// The row-0 local constraint must reject the shifted base.
@@ -674,9 +674,9 @@ func TestCompile_DynamicModule_Completeness(t *testing.T) {
 			rt.AssignColumn(num, makeVec(nums...))
 			rt.AssignColumn(filter, makeVec(fil...))
 			rt.AdvanceRound()
-			runRound(&rt)
+			runRound(rt)
 
-			require.NoError(t, checkAllVerifierActions(&rt),
+			require.NoError(t, checkAllVerifierActions(rt),
 				"honest dynamic-module assignment must verify (RuntimeSize=%d)", tc.n)
 		})
 	}
@@ -736,9 +736,9 @@ func TestCompile_DynamicModule_Soundness_WrongResult(t *testing.T) {
 	// prover-side AssignCell (HasCellAssignment is true), so the bogus value
 	// survives into the verifier action.
 	rt.AssignCell(ld.Result, field.ElemFromBase(field.NewFromString("99")))
-	runRound(&rt)
+	runRound(rt)
 
-	assert.Error(t, checkAllVerifierActions(&rt),
+	assert.Error(t, checkAllVerifierActions(rt),
 		"a corrupted Result cell on a dynamic-module LDS must be detected by the verifier action")
 }
 
@@ -782,7 +782,7 @@ func TestCompile_DynamicModule_Soundness_WrongInitialZ(t *testing.T) {
 	rec := mod.Vanishings[0]
 	require.True(t, rec.Expression.IsMultiValued(), "Vanishings[0] must be the recurrence")
 	require.NoError(t, rec.Check(rt), "recurrence must accept a constant-step Z on a dynamic module")
-	require.NoError(t, checkAllVerifierActions(&rt),
+	require.NoError(t, checkAllVerifierActions(rt),
 		"the final-sum verifier action only checks endpoints against Result")
 
 	// The row-0 local constraint must reject the shifted base.
@@ -820,12 +820,12 @@ func TestCompile_DynamicModule_SizeOne(t *testing.T) {
 	rt.AssignColumn(num, makeVec(7))
 	rt.AssignColumn(filter, makeVec(1))
 	rt.AdvanceRound()
-	runRound(&rt)
+	runRound(rt)
 
 	require.NoError(t, mod.Vanishings[0].Check(rt),
 		"recurrence Vanishing must be vacuous when RuntimeSize == 1 "+
 			"(the only row is cancelled by Z's −1 shift)")
-	require.NoError(t, checkAllVerifierActions(&rt),
+	require.NoError(t, checkAllVerifierActions(rt),
 		"honest single-row dynamic-module assignment must verify end-to-end")
 }
 
@@ -935,9 +935,9 @@ func TestCompile_ConditionalLookupShape(t *testing.T) {
 	rt.AssignColumn(colT, makeVec(10, 20))
 	rt.AssignColumn(colM, makeVec(2, 1))
 	rt.AdvanceRound()
-	runRound(&rt)
+	runRound(rt)
 
-	require.NoError(t, checkAllVerifierActions(&rt))
+	require.NoError(t, checkAllVerifierActions(rt))
 	require.NoError(t, ld.Check(rt),
 		"conditional-lookup style sum must reduce to zero when multiplicities are correct")
 
