@@ -406,7 +406,6 @@ async function findL2MessagingBlockAnchoredEvent<chain extends Chain | undefined
     return event;
   } catch (error) {
     if (!isBlockRangeExceededError(error)) {
-      console.log("error is not block range exceeded error");
       throw error;
     }
   }
