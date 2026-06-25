@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -236,11 +237,10 @@ func writeSingleInputVector(inputBytes uint64) (string, func()) {
 	}
 
 	// Guard conversion from uint64 to int for strings
-	maxInt := uint64(^uint(0) >> 1)
-	if inputBytes > maxInt {
+	if inputBytes > uint64(math.MaxInt) {
 		_ = file.Close()
 		_ = os.Remove(file.Name())
-		fatal("input length %d exceeds maximum supported value %d", inputBytes, maxInt)
+		fatal("input length %d exceeds maximum supported value %d", inputBytes, math.MaxInt)
 	}
 	repeatCount := int(inputBytes)
 
