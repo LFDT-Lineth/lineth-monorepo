@@ -107,6 +107,8 @@ package fri
 
 import (
 	"fmt"
+	"math/big"
+	"math/bits"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 )
@@ -217,7 +219,7 @@ type SizedShifts struct {
 // Mirrors loom's canonicalLayout. Producer of the alpha_DEEP power
 // schedule consumed by both Open and Verify. Made package-internal;
 // callers don't need to look inside.
-type deepEntry struct { //nolint:unused // design stub
+type deepEntry struct {
 	BatchIdx   int
 	SizeLog2   int
 	RowIdx     int
@@ -226,12 +228,12 @@ type deepEntry struct { //nolint:unused // design stub
 	Shifts     []int
 }
 
-type sizeBundle struct { //nolint:unused // design stub
+type sizeBundle struct {
 	SizeLog2 int
 	Entries  []deepEntry
 }
 
-type layout []sizeBundle //nolint:unused // design stub
+type layout []sizeBundle
 
 // canonicalLayout walks shapes + shifts and produces the canonical
 // enumeration. Validates shape alignment, per-row shift invariants
@@ -239,7 +241,7 @@ type layout []sizeBundle //nolint:unused // design stub
 //
 // Used by both Open (with shapes derived from witnesses) and Verify
 // (with shapes passed in directly).
-func canonicalLayout(shapes []Shape, shifts []BatchShifts) (layout, error) { //nolint:revive,unused
+func canonicalLayout(shapes []Shape, shifts []BatchShifts) (layout, error) { //nolint:revive
 	if len(shapes) != len(shifts) {
 		return nil, fmt.Errorf("fri: canonicalLayout: got %d shapes, %d shifts", len(shapes), len(shifts))
 	}
@@ -304,7 +306,7 @@ func canonicalLayout(shapes []Shape, shifts []BatchShifts) (layout, error) { //n
 
 // canonicalLayoutFromBatches is the prover-side entry point: shapes
 // are inferred from witness row counts. Delegates to canonicalLayout.
-func canonicalLayoutFromBatches(batches []Batch, shifts []BatchShifts) (layout, error) { //nolint:revive,unused
+func canonicalLayoutFromBatches(batches []Batch, shifts []BatchShifts) (layout, error) { //nolint:revive
 	shapes := make([]Shape, len(batches))
 	for batchIdx := range batches {
 		shapes[batchIdx] = make(Shape, len(batches[batchIdx]))
@@ -363,6 +365,161 @@ func cloneInts(values []int) []int {
 	cloned := make([]int, len(values))
 	copy(cloned, values)
 	return cloned
+}
+
+// =============================================================================
+// Level reconstruction
+// =============================================================================
+
+type quotientClaim struct {
+	Point field.Ext
+	Value field.Ext
+}
+
+type quotientColumn struct {
+	Evals  []field.Ext
+	Claims []quotientClaim
+}
+
+type quotientLevelInput struct {
+	D       int
+	Domain  domainLight
+	Columns []quotientColumn
+	Trees   []*Tree
+}
+
+// reconstructLevel computes the virtual DEEP quotient level
+//
+//	F(X) = Σ_i alphaDeep^i · Σ_j (f_i(X) - y_ij)/(X - z_ij)
+//
+// over input.Domain's bit-reversed evaluation order and stores it in
+// Level.Evals. It precomputes every distinct denominator inverse 1/(x-z) with
+// one Montgomery batch inversion, then walks the columns in canonical order.
+func reconstructLevel(input quotientLevelInput, alphaDeep field.Ext) (Level, error) {
+	if input.D <= 0 || input.D&(input.D-1) != 0 {
+		return Level{}, fmt.Errorf("fri: reconstructLevel: D=%d is not a positive power of two", input.D)
+	}
+
+	size, err := reconstructDomainSize(input.Domain)
+	if err != nil {
+		return Level{}, err
+	}
+	for columnIdx, column := range input.Columns {
+		if len(column.Evals) != size {
+			return Level{}, fmt.Errorf("fri: reconstructLevel: column %d has %d evals, want %d",
+				columnIdx, len(column.Evals), size)
+		}
+		if err := checkColumnClaimPoints(columnIdx, column.Claims); err != nil {
+			return Level{}, err
+		}
+	}
+
+	domainPoints := make([]field.Ext, size)
+	for pos := range domainPoints {
+		domainPoints[pos] = bitReversedDomainPoint(input.Domain, pos)
+	}
+
+	claimPointIndexes, claimPoints := collectClaimPoints(input.Columns)
+	denominatorInverses, err := denominatorInverses(domainPoints, claimPoints)
+	if err != nil {
+		return Level{}, err
+	}
+
+	evals := make([]field.Ext, size)
+	for pos := range evals {
+		var alphaPower field.Ext
+		alphaPower.SetOne()
+
+		for _, column := range input.Columns {
+			var columnSum field.Ext
+			for _, claim := range column.Claims {
+				pointIdx := claimPointIndexes[claim.Point]
+				inv := denominatorInverses[pos*len(claimPoints)+pointIdx]
+
+				var numerator, term field.Ext
+				numerator.Sub(&column.Evals[pos], &claim.Value)
+				term.Mul(&numerator, &inv)
+				columnSum.Add(&columnSum, &term)
+			}
+
+			var weighted field.Ext
+			weighted.Mul(&columnSum, &alphaPower)
+			evals[pos].Add(&evals[pos], &weighted)
+			alphaPower.Mul(&alphaPower, &alphaDeep)
+		}
+	}
+
+	return Level{
+		D:     input.D,
+		Evals: evals,
+		Trees: input.Trees,
+	}, nil
+}
+
+func reconstructDomainSize(domain domainLight) (int, error) {
+	if domain.cardinality == 0 || domain.cardinality&(domain.cardinality-1) != 0 {
+		return 0, fmt.Errorf("fri: reconstructLevel: domain cardinality %d is not a positive power of two",
+			domain.cardinality)
+	}
+	return int(domain.cardinality), nil
+}
+
+func checkColumnClaimPoints(columnIdx int, claims []quotientClaim) error {
+	seen := make(map[field.Ext]struct{}, len(claims))
+	for claimIdx, claim := range claims {
+		if _, ok := seen[claim.Point]; ok {
+			return fmt.Errorf("fri: reconstructLevel: column %d has duplicate claim point at claim %d",
+				columnIdx, claimIdx)
+		}
+		seen[claim.Point] = struct{}{}
+	}
+	return nil
+}
+
+func collectClaimPoints(columns []quotientColumn) (map[field.Ext]int, []field.Ext) {
+	indexes := make(map[field.Ext]int)
+	for _, column := range columns {
+		for _, claim := range column.Claims {
+			if _, ok := indexes[claim.Point]; ok {
+				continue
+			}
+			indexes[claim.Point] = len(indexes)
+		}
+	}
+
+	points := make([]field.Ext, len(indexes))
+	for point, index := range indexes {
+		points[index] = point
+	}
+	return indexes, points
+}
+
+func denominatorInverses(domainPoints, claimPoints []field.Ext) ([]field.Ext, error) {
+	if len(claimPoints) == 0 {
+		return nil, nil
+	}
+
+	denominators := make([]field.Ext, len(domainPoints)*len(claimPoints))
+	for pos, x := range domainPoints {
+		for pointIdx, point := range claimPoints {
+			denominator := &denominators[pos*len(claimPoints)+pointIdx]
+			denominator.Sub(&x, &point)
+			if denominator.IsZero() {
+				return nil, fmt.Errorf("fri: reconstructLevel: claim point %d lands on domain position %d",
+					pointIdx, pos)
+			}
+		}
+	}
+	return field.BatchInvertExt(denominators), nil
+}
+
+func bitReversedDomainPoint(domain domainLight, position int) field.Ext {
+	logSize := bits.TrailingZeros64(domain.cardinality)
+	exponent := bits.Reverse64(uint64(position)) >> (64 - logSize)
+
+	var x field.Element
+	x.Exp(domain.generator, big.NewInt(int64(exponent)))
+	return field.Lift(x)
 }
 
 // =============================================================================

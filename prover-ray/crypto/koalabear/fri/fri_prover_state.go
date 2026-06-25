@@ -72,6 +72,8 @@ func NewProverState(p Params, levels []Level) (*ProverState, error) {
 	// externally, so it is not stored in FRIRoots).
 	copy(st.running, levels[0].Evals)
 	st.layers[0] = st.running
+	// TODO(C2): the running fold is still backed by Trees[0]. C2.2 replaces
+	// this placeholder with reconstruction from every authenticated backing tree.
 	st.trees[0] = levels[0].Trees[0]
 
 	if p.numRounds > 1 {

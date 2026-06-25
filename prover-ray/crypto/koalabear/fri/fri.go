@@ -600,6 +600,8 @@ func checkQueryExt(s int, fq Query,
 		if len(branch.Siblings) == 0 {
 			return fmt.Errorf("round %d: branch carries no sibling", j)
 		}
+		// TODO(C2): branch is still the first authenticated backing tree; C2.2
+		// reconstructs the folded level value from the full QueryLayer.
 		self, err := octupletToExt(branch.Leaf)
 		if err != nil {
 			return fmt.Errorf("round %d: decode leaf: %w", j, err)
@@ -695,6 +697,9 @@ func authenticateQueryLayer(
 			return Branch{}, fmt.Errorf("%s tree %d: Merkle proof invalid", label, i)
 		}
 	}
+	// TODO(C2): C0.1 authenticates every backing tree, but the fold checker still
+	// consumes the first branch's leaf. C2.2 replaces this with level
+	// reconstruction over all authenticated branches.
 	return first, nil
 }
 
