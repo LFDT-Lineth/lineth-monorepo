@@ -160,7 +160,7 @@ source "$RUNTIME_KEYS_ENV"
 step "Tooling"
 log "Enabling corepack + pnpm"
 corepack enable >/dev/null 2>&1 || true
-corepack prepare pnpm@10.32.1 --activate >/dev/null 2>&1 || true
+corepack prepare pnpm@11.9.0 --activate >/dev/null 2>&1 || true
 
 # Hardhat-foundry plugin calls `forge` at config-load time; foundry isn't in
 # the node image. The foundry-tools init service seeds pinned binaries into
