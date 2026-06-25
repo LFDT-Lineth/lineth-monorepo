@@ -1,4 +1,4 @@
-name: Arithmetization Keccak zkc vs reference benchmark
+name: Arithmetization zkc keccak vs risv keccak benchmark
 
 on:
   pull_request:
