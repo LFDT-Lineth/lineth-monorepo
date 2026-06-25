@@ -306,7 +306,7 @@ func canonicalLayout(shapes []Shape, shifts []BatchShifts) (layout, error) { //n
 
 // canonicalLayoutFromBatches is the prover-side entry point: shapes
 // are inferred from witness row counts. Delegates to canonicalLayout.
-func canonicalLayoutFromBatches(batches []Batch, shifts []BatchShifts) (layout, error) { //nolint:revive
+func canonicalLayoutFromBatches(batches []Batch, shifts []BatchShifts) (layout, error) { //nolint:revive,unused
 	shapes := make([]Shape, len(batches))
 	for batchIdx := range batches {
 		shapes[batchIdx] = make(Shape, len(batches[batchIdx]))
@@ -377,10 +377,17 @@ type quotientClaim struct {
 }
 
 type quotientColumn struct {
-	Evals  []field.Ext
-	Claims []quotientClaim
+	// AlphaPower is copied from the canonical layout's deepEntry.AlphaPower. It
+	// is explicit here so reconstruction does not silently depend on the caller
+	// passing columns in canonical order.
+	AlphaPower int
+	Evals      []field.Ext
+	Claims     []quotientClaim
 }
 
+// quotientLevelInput describes one virtual quotient level. Columns must all
+// belong to the same size bundle; each column carries the AlphaPower assigned by
+// canonicalLayout for that bundle.
 type quotientLevelInput struct {
 	D       int
 	Domain  domainLight
@@ -409,6 +416,10 @@ func reconstructLevel(input quotientLevelInput, alphaDeep field.Ext) (Level, err
 			return Level{}, fmt.Errorf("fri: reconstructLevel: column %d has %d evals, want %d",
 				columnIdx, len(column.Evals), size)
 		}
+		if column.AlphaPower < 0 {
+			return Level{}, fmt.Errorf("fri: reconstructLevel: column %d has negative alpha power %d",
+				columnIdx, column.AlphaPower)
+		}
 		if err := checkColumnClaimPoints(columnIdx, column.Claims); err != nil {
 			return Level{}, err
 		}
@@ -424,12 +435,10 @@ func reconstructLevel(input quotientLevelInput, alphaDeep field.Ext) (Level, err
 	if err != nil {
 		return Level{}, err
 	}
+	alphaPowers := alphaDeepPowers(alphaDeep, maxAlphaPower(input.Columns)+1)
 
 	evals := make([]field.Ext, size)
 	for pos := range evals {
-		var alphaPower field.Ext
-		alphaPower.SetOne()
-
 		for _, column := range input.Columns {
 			var columnSum field.Ext
 			for _, claim := range column.Claims {
@@ -443,9 +452,8 @@ func reconstructLevel(input quotientLevelInput, alphaDeep field.Ext) (Level, err
 			}
 
 			var weighted field.Ext
-			weighted.Mul(&columnSum, &alphaPower)
+			weighted.Mul(&columnSum, &alphaPowers[column.AlphaPower])
 			evals[pos].Add(&evals[pos], &weighted)
-			alphaPower.Mul(&alphaPower, &alphaDeep)
 		}
 	}
 
@@ -520,6 +528,29 @@ func bitReversedDomainPoint(domain domainLight, position int) field.Ext {
 	var x field.Element
 	x.Exp(domain.generator, big.NewInt(int64(exponent)))
 	return field.Lift(x)
+}
+
+func maxAlphaPower(columns []quotientColumn) int {
+	maxPower := -1
+	for _, column := range columns {
+		if column.AlphaPower > maxPower {
+			maxPower = column.AlphaPower
+		}
+	}
+	return maxPower
+}
+
+func alphaDeepPowers(alphaDeep field.Ext, length int) []field.Ext {
+	if length <= 0 {
+		return nil
+	}
+
+	powers := make([]field.Ext, length)
+	powers[0].SetOne()
+	for i := 1; i < len(powers); i++ {
+		powers[i].Mul(&powers[i-1], &alphaDeep)
+	}
+	return powers
 }
 
 // =============================================================================

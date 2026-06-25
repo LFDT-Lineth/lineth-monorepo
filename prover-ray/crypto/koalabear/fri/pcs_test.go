@@ -2,10 +2,12 @@ package fri
 
 import (
 	"math/big"
+	"math/rand/v2"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
@@ -143,6 +145,7 @@ func TestReconstructLevelMatchesDirectQuotientPolynomial(t *testing.T) {
 	alphaPower.SetOne()
 
 	for i, poly := range polys {
+		columns[i].AlphaPower = i
 		columns[i].Evals = encodeTestPoly(poly, domain)
 		columns[i].Claims = make([]quotientClaim, len(claimPoints[i]))
 
@@ -157,6 +160,7 @@ func TestReconstructLevelMatchesDirectQuotientPolynomial(t *testing.T) {
 
 		alphaPower.Mul(&alphaPower, &alphaDeep)
 	}
+	columns[0], columns[1] = columns[1], columns[0]
 
 	level, err := reconstructLevel(quotientLevelInput{
 		D:       4,
@@ -226,6 +230,111 @@ func TestReconstructLevelHandlesNoClaims(t *testing.T) {
 	}
 }
 
+func TestProverStateOpenAlignsMultiSizeLevelLeaf(t *testing.T) {
+	prng := rand.New(utils.NewRandSource(20260625))
+	params, err := NewParams(16, 8, 1)
+	if err != nil {
+		t.Fatalf("NewParams: %v", err)
+	}
+
+	levelDomain := fft.NewDomain(8)
+	fullDomain := fft.NewDomain(16)
+	levelCoeffs := []field.Ext{
+		field.UintsToExt(3, 1, 0, 0, 0, 0),
+		field.UintsToExt(5, 0, 1, 0, 0, 0),
+		field.UintsToExt(7, 0, 0, 1, 0, 0),
+	}
+	fullCoeffs := []field.Ext{
+		field.UintsToExt(11, 0, 0, 0, 1, 0),
+		field.UintsToExt(13, 0, 0, 0, 0, 1),
+		field.UintsToExt(17, 1, 1, 0, 0, 0),
+		field.UintsToExt(19, 0, 1, 1, 0, 0),
+	}
+	otherLevelCoeffs := []field.Ext{
+		field.UintsToExt(23, 1, 0, 1, 0, 0),
+		field.UintsToExt(29, 0, 1, 0, 1, 0),
+	}
+	otherFullCoeffs := []field.Ext{
+		field.UintsToExt(31, 0, 0, 1, 0, 1),
+		field.UintsToExt(37, 1, 0, 0, 1, 0),
+	}
+
+	levelEvals := encodeTestPoly(levelCoeffs, levelDomain)
+	fullEvals := encodeTestPoly(fullCoeffs, fullDomain)
+	tree, encoded := multiSizeTreeForCodewords(levelEvals, fullEvals)
+
+	otherLevelEvals := encodeTestPoly(otherLevelCoeffs, levelDomain)
+	otherFullEvals := encodeTestPoly(otherFullCoeffs, fullDomain)
+	otherTree, otherEncoded := multiSizeTreeForCodewords(otherLevelEvals, otherFullEvals)
+
+	const query = 11
+	base := query >> 1
+
+	topBranch := openLevelTreesAt([]*Tree{tree}, len(fullEvals), query)[0]
+	if topBranch.Leaf != digestSizedRow(encoded[3], query) {
+		t.Fatalf("top leaf opens row %d digest incorrectly", query)
+	}
+	if topBranch.Siblings[len(topBranch.Siblings)-1] != digestSizedRow(encoded[3], query^1) {
+		t.Fatalf("top sibling does not open conjugate row %d", query^1)
+	}
+	x := testBitReversedDomainPoint(fullDomain, query)
+	var minusX field.Ext
+	minusX.Neg(&x)
+	wantSelf := polynomials.EvalCanonicalExt(fullCoeffs, x)
+	wantSibling := polynomials.EvalCanonicalExt(fullCoeffs, minusX)
+	if !fullEvals[query].Equal(&wantSelf) {
+		t.Fatalf("full eval at query does not match f_i(x)")
+	}
+	if !fullEvals[query^1].Equal(&wantSibling) {
+		t.Fatalf("full eval at query^1 does not match f_i(-x)")
+	}
+
+	levels := []Level{
+		newRandomLevel(prng, params, params.D),
+		{D: 4, Evals: levelEvals, Trees: []*Tree{tree, otherTree}},
+	}
+	alphas := []field.Ext{
+		field.UintsToExt(41, 1, 0, 0, 0, 0),
+		field.UintsToExt(43, 0, 1, 0, 0, 0),
+		field.UintsToExt(47, 0, 0, 1, 0, 0),
+	}
+	proof := proverForTest(params, levels, alphas, []int{query})
+
+	if len(proof.LevelQueries) != 1 {
+		t.Fatalf("proof has %d level query sets, want 1", len(proof.LevelQueries))
+	}
+	opening := proof.LevelQueries[0][0]
+	if len(opening) != 2 {
+		t.Fatalf("level opening has %d branches, want 2", len(opening))
+	}
+
+	checkLevelBranch := func(name string, branch Branch, tree *Tree, encoded MultiSizeTable) {
+		t.Helper()
+
+		lifted := levelTreeLeafIndex(tree, len(levelEvals), base)
+		root, err := branch.RecoverRoot(lifted)
+		if err != nil {
+			t.Fatalf("%s: RecoverRoot: %v", name, err)
+		}
+		if root != tree.Root() {
+			t.Fatalf("%s: recovered root != tree root", name)
+		}
+
+		leaf, err := branchLeafAtLevel(branch, len(levelEvals))
+		if err != nil {
+			t.Fatalf("%s: branchLeafAtLevel: %v", name, err)
+		}
+		if leaf != digestSizedRow(encoded[2], base) {
+			t.Fatalf("%s: aux leaf opens the wrong level row digest", name)
+		}
+		if leaf == digestSizedRow(encoded[2], query&7) {
+			t.Fatalf("%s: aux leaf used the unshifted query index", name)
+		}
+	}
+	checkLevelBranch("first tree", opening[0], tree, encoded)
+	checkLevelBranch("second tree", opening[1], otherTree, otherEncoded)
+}
+
 func encodeTestPoly(poly []field.Ext, domain *fft.Domain) []field.Ext {
 	evals := make([]field.Ext, domain.Cardinality)
 	logSize := utils.Log2Ceil(int(domain.Cardinality))
@@ -267,4 +376,27 @@ func addScaledPoly(accum *[]field.Ext, poly []field.Ext, scale field.Ext) {
 		term.Mul(&poly[i], &scale)
 		(*accum)[i].Add(&(*accum)[i], &term)
 	}
+}
+
+func multiSizeTreeForCodewords(levelEvals, fullEvals []field.Ext) (*Tree, MultiSizeTable) {
+	table := make(MultiSizeTable, 4)
+	table[2] = SizedTable{Ext: [][]field.Ext{levelEvals}}
+	table[3] = SizedTable{Ext: [][]field.Ext{fullEvals}}
+	return table.Merkleize(), table
+}
+
+func digestSizedRow(table SizedTable, row int) field.Octuplet {
+	hasher := poseidon2.NewMDHasher()
+	for _, base := range table.Base {
+		hasher.WriteElements(base[row])
+	}
+	for _, ext := range table.Ext {
+		value := ext[row]
+		hasher.WriteElements(
+			value.B0.A0, value.B0.A1,
+			value.B1.A0, value.B1.A1,
+			value.B2.A0, value.B2.A1,
+		)
+	}
+	return hasher.SumDigest()
 }

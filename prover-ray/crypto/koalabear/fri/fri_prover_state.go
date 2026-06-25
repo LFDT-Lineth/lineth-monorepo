@@ -2,6 +2,7 @@ package fri
 
 import (
 	"fmt"
+	"math/bits"
 	"sort"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
@@ -72,7 +73,7 @@ func NewProverState(p Params, levels []Level) (*ProverState, error) {
 	// externally, so it is not stored in FRIRoots).
 	copy(st.running, levels[0].Evals)
 	st.layers[0] = st.running
-	// TODO(C2): the running fold is still backed by Trees[0]. C2.2 replaces
+	//nolint:godox // TODO(C2): the running fold is still backed by Trees[0]. C2.2 replaces
 	// this placeholder with reconstruction from every authenticated backing tree.
 	st.trees[0] = levels[0].Trees[0]
 
@@ -155,20 +156,71 @@ func (st *ProverState) Open(openedPositions []int) Proof {
 
 	for k := 0; k < st.p.NumQueries; k++ {
 		s := openedPositions[k]
-		st.FRIQueries[k] = openQueryExt(s, openTreesAt(st.levels[0].Trees, s), st.layers, st.trees, st.p.numRounds)
+		st.FRIQueries[k] = openQueryExt(
+			s,
+			openLevelTreesAt(st.levels[0].Trees, len(st.levels[0].Evals), s),
+			st.layers,
+			st.trees,
+			st.p.numRounds,
+		)
 		for l := 1; l < st.plan.numLevels; l++ {
 			base := s >> roundOfLevel[l]
-			st.LevelQueries[l-1][k] = openTreesAt(st.levels[l].Trees, base)
+			st.LevelQueries[l-1][k] = openLevelTreesAt(st.levels[l].Trees, len(st.levels[l].Evals), base)
 		}
 	}
 
 	return st.Proof
 }
 
-func openTreesAt(trees []*Tree, base int) QueryLayer {
+func openLevelTreesAt(trees []*Tree, levelSize, base int) QueryLayer {
 	opening := make(QueryLayer, len(trees))
 	for i, tree := range trees {
-		opening[i] = tree.OpenBranch(base)
+		opening[i] = tree.OpenBranch(levelTreeLeafIndex(tree, levelSize, base))
 	}
 	return opening
+}
+
+func levelTreeLeafIndex(tree *Tree, levelSize, base int) int {
+	if tree == nil {
+		panic("fri: levelTreeLeafIndex: nil tree")
+	}
+	if levelSize <= 0 || levelSize&(levelSize-1) != 0 {
+		panic("fri: levelTreeLeafIndex: levelSize must be a positive power of two")
+	}
+	if base < 0 || base >= levelSize {
+		panic("fri: levelTreeLeafIndex: base out of level range")
+	}
+
+	numLeaves := tree.NumLeaves()
+	if numLeaves < levelSize || numLeaves%levelSize != 0 {
+		panic("fri: levelTreeLeafIndex: level is not backed by this tree")
+	}
+	lift := numLeaves / levelSize
+	if lift&(lift-1) != 0 {
+		panic("fri: levelTreeLeafIndex: tree/level ratio is not a power of two")
+	}
+	return base * lift
+}
+
+func branchLeafAtLevel(branch Branch, levelSize int) (field.Octuplet, error) {
+	if levelSize <= 0 || levelSize&(levelSize-1) != 0 {
+		return field.Octuplet{}, fmt.Errorf("levelSize must be a positive power of two")
+	}
+
+	treeLeaves := 1 << len(branch.Siblings)
+	if levelSize > treeLeaves {
+		return field.Octuplet{}, fmt.Errorf("levelSize %d exceeds branch tree size %d", levelSize, treeLeaves)
+	}
+	if levelSize == treeLeaves {
+		return branch.Leaf, nil
+	}
+
+	levelLog := bits.TrailingZeros(uint(levelSize))
+	if levelLog >= len(branch.AuxSiblings) {
+		return field.Octuplet{}, fmt.Errorf("levelSize %d has no aux sibling in branch", levelSize)
+	}
+	if branch.AuxSiblings[levelLog] == nil {
+		return field.Octuplet{}, fmt.Errorf("levelSize %d is absent from branch", levelSize)
+	}
+	return *branch.AuxSiblings[levelLog], nil
 }

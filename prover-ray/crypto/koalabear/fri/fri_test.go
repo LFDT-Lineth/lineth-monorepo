@@ -134,7 +134,8 @@ func TestProveVerify(t *testing.T) {
 				t.Fatalf("NewParams: %v", err)
 			}
 
-			levels := []Level{newRandomLevel(prng, p, c.d)}
+			levels := make([]Level, 0, 1+len(c.extraDs))
+			levels = append(levels, newRandomLevel(prng, p, c.d))
 			for _, d := range c.extraDs {
 				levels = append(levels, newRandomLevel(prng, p, d))
 			}
