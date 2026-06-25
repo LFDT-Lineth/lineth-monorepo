@@ -1,9 +1,9 @@
 ENTRY(_start)
 
 MEMORY {
-    STACK  (rw) : ORIGIN = 0x00000000, LENGTH = 
-    PROGRAM (rx) : ORIGIN = 0x00800000, LENGTH = 
-    IN      (r)  : ORIGIN = 0x08800000, LENGTH = 
+    STACK  (rw) : ORIGIN = 0x00000000, LENGTH = 0x00800000
+    PROGRAM (rx) : ORIGIN = 0x00800000, LENGTH = 0x08000000
+    IN      (r)  : ORIGIN = 0x08800000, LENGTH = 0x40000000
     /* HEAP  (rw) : ORIGIN = 0x48800000, LENGTH = infinite */
 }
 

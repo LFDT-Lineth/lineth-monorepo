@@ -10,6 +10,9 @@ PROGRAM_ORIGIN ?= 0x00800000
 IN_ORIGIN      ?= 0x08800000
 HEAP_ORIGIN    ?= 0x48800000
 
+# Support function to evaluate expressions and format them as hex
+EVAL = $(shell printf "0x%08x" $$(( $(1) )))
+
 # Derived parameters for the linker script
 ENTRY_POINT    := $(PROGRAM_ORIGIN)
 STACK_LENGTH   := $(call EVAL,$(SP) - $(STACK_ORIGIN))

@@ -62,9 +62,6 @@ IN_BYTES        ?= ""
 # If true, Zig tests using keccak_provide use the Linea keccak wrapper instead of Zesu stdlibs_accel
 KECCAK_ACCEL    ?= false
 
-# Support function to evaluate expressions and format them as hex
-EVAL = $(shell printf "0x%08x" $$(( $(1) )))
-
 # If true, generates an objdump of the generated ELF for debugging purposes
 OBJDUMP        ?= false
 
