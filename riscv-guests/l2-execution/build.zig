@@ -7,9 +7,11 @@ pub fn build(b: *std.Build) void {
     // All guests target the same freestanding rv64im ZkC profile (shared helper).
     const target = common.standardGuestTarget(b);
 
-    const optimize = b.standardOptimizeOption(.{
-        .preferred_optimize_mode = .ReleaseSmall,
-    });
+    // Use b.option directly (not standardOptimizeOption) so the `-Doptimize` enum option stays
+    // exposed — consumers of the exposed zkvm_provide module set it through `b.dependency(..., .{ .optimize = ... })`
+    // — while still defaulting to ReleaseSmall. (standardOptimizeOption with preferred_optimize_mode would swap
+    //`-Doptimize` for `-Drelease`, breaking the dependency pass-through.)
+    const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization mode (default: ReleaseSmall)") orelse .ReleaseSmall;
 
     // Keccak provider: standard zig keccak (zesu stdlibs_accel) by default; the
     // arithmetization keccak wrapper (prover-accelerated custom op) when opted in
@@ -44,11 +46,19 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    const linea_accel_mod = b.createModule(.{
-        .root_source_file = b.path("../../arithmetization/src/main/wrappers/root.zig"),
+    const lineth_accel_mod = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize }).module("lineth_accelerators");
+
+    // Expose the precompile providers (zkvm_provide.zig) as a standalone module so other packages
+    // can link the SAME exported zkvm_* symbols this guest uses
+    const provide_mod = b.addModule("zkvm_provide", .{
+        .root_source_file = b.path("src/zkvm_provide.zig"),
         .target = target,
         .optimize = optimize,
     });
+    provide_mod.addImport("zesu_zkvm_accel", zesu_accel_mod);
+    provide_mod.addImport("lineth_zkvm_accel", lineth_accel_mod);
+    provide_mod.addOptions("build_options", guest_options);
+
     const linea_io_mod = b.createModule(.{
         .root_source_file = zesu_zkvm.path("linea/src/zkvm_io.zig"),
         .target = target,
@@ -63,7 +73,7 @@ pub fn build(b: *std.Build) void {
     guest_module.code_model = .medium;
     addExecutionImports(guest_module, zesuImports(zesu_guest));
     guest_module.addImport("zesu_zkvm_accel", zesu_accel_mod);
-    guest_module.addImport("linea_zkvm_accel", linea_accel_mod);
+    guest_module.addImport("lineth_zkvm_accel", lineth_accel_mod);
     guest_module.addImport("linea_zkvm_io", linea_io_mod);
     guest_module.addOptions("build_options", guest_options); // keccak_accel flag, read in zkvm_provide.zig
     common.clearFreestandingNativeLinkage(b, guest_module);
