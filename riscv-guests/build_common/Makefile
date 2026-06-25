@@ -1,4 +1,4 @@
-.PHONY: linker-script verify-elf elf-to-json
+.PHONY: linker-script elf-to-json
 
 BUILD_COMMON_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 LINKER_SCRIPT    := $(BUILD_COMMON_DIR)linker_script.ld
