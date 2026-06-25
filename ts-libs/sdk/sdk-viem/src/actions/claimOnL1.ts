@@ -51,6 +51,10 @@ export type ClaimOnL1Parameters<
         lineaRollupAddress?: Address;
         // Defaults to the message service address for the L2 chain
         l2MessageServiceAddress?: Address;
+        // Block in which the `MessageSent` event was emitted. When provided, the lookup queries only that
+        // block instead of the full `earliest`..`latest` range. This is REQUIRED when the RPC provider does
+        // not support large block ranges; otherwise the default full-range query will be rejected.
+        messageL2BlockNumber?: bigint;
       }
     | {
         messageNonce: bigint;
@@ -196,6 +200,7 @@ export async function claimOnL1<
     messageProof,
     lineaRollupAddress,
     l2MessageServiceAddress,
+    messageL2BlockNumber,
     ...tx
   } = parameters;
 
@@ -232,6 +237,9 @@ export async function claimOnL1<
         nonce: messageNonce,
         calldata,
       }),
+      ...(messageL2BlockNumber
+        ? { l2LogsBlockRange: { fromBlock: messageL2BlockNumber, toBlock: messageL2BlockNumber } }
+        : {}),
     });
   } else {
     proof = messageProof;

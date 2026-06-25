@@ -12,13 +12,12 @@ import {
   ClientChainNotConfiguredError,
   ClientChainNotConfiguredErrorType,
   ContractEventName,
-  GetContractEventsErrorType,
   GetContractEventsParameters,
   Hex,
   ReadContractErrorType,
   Transport,
 } from "viem";
-import { getContractEvents, readContract } from "viem/actions";
+import { readContract } from "viem/actions";
 
 import { getMessageSentEvents, GetMessageSentEventsErrorType } from "./getMessageSentEvents";
 import { MessageNotFoundError, MessageNotFoundErrorType } from "../errors/bridge";
@@ -48,7 +47,6 @@ export type GetL2ToL1MessageStatusReturnType = OnChainMessageStatus;
 
 export type GetL2ToL1MessageStatusErrorType =
   | GetMessageSentEventsErrorType
-  | GetContractEventsErrorType
   | ReadContractErrorType
   | MessageNotFoundErrorType
   | ChainNotFoundErrorType
@@ -117,23 +115,19 @@ export async function getL2ToL1MessageStatus<
   const lineaRollupAddress =
     parameters.lineaRollupAddress ?? getContractsAddressesByChainId(client.chain.id).messageService;
 
-  const [[l2MessagingBlockAnchoredEvent], isMessageClaimed] = await Promise.all([
-    getContractEvents(client, {
+  const [currentL2BlockNumber, isMessageClaimed] = await Promise.all([
+    readContract(client, {
       address: lineaRollupAddress,
       abi: [
         {
-          anonymous: false,
-          inputs: [{ indexed: true, internalType: "uint256", name: "l2Block", type: "uint256" }],
-          name: "L2MessagingBlockAnchored",
-          type: "event",
+          inputs: [],
+          name: "currentL2BlockNumber",
+          outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+          stateMutability: "view",
+          type: "function",
         },
       ] as const,
-      eventName: "L2MessagingBlockAnchored",
-      args: {
-        l2Block: messageSentEvent.blockNumber,
-      },
-      fromBlock: "earliest",
-      toBlock: "latest",
+      functionName: "currentL2BlockNumber",
     }),
     readContract(client, {
       address: lineaRollupAddress,
@@ -145,7 +139,7 @@ export async function getL2ToL1MessageStatus<
           stateMutability: "view",
           type: "function",
         },
-      ],
+      ] as const,
       functionName: "isMessageClaimed",
       args: [messageSentEvent.messageNonce],
     }),
@@ -155,7 +149,7 @@ export async function getL2ToL1MessageStatus<
     return OnChainMessageStatus.CLAIMED;
   }
 
-  if (l2MessagingBlockAnchoredEvent) {
+  if (messageSentEvent.blockNumber !== null && currentL2BlockNumber >= messageSentEvent.blockNumber) {
     return OnChainMessageStatus.CLAIMABLE;
   }
 

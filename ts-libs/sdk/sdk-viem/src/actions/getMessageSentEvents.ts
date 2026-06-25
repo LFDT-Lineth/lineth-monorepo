@@ -100,18 +100,19 @@ export async function getMessageSentEvents<
     args: parameters.args,
     fromBlock: parameters.fromBlock ?? "earliest",
     toBlock: parameters.toBlock ?? "latest",
+    strict: true,
   });
 
   return events
     .filter((event) => event.removed === false)
     .map((event) => ({
-      messageSender: event.args._from!,
-      destination: event.args._to!,
-      fee: event.args._fee!,
-      value: event.args._value!,
-      messageNonce: event.args._nonce!,
-      calldata: event.args._calldata!,
-      messageHash: event.args._messageHash!,
+      messageSender: event.args._from,
+      destination: event.args._to,
+      fee: event.args._fee,
+      value: event.args._value,
+      messageNonce: event.args._nonce,
+      calldata: event.args._calldata,
+      messageHash: event.args._messageHash,
       blockNumber: event.blockNumber,
       logIndex: event.logIndex,
       contractAddress: event.address,

@@ -20,6 +20,10 @@ export type GetTransactionReceiptByMessageHashParameters = {
   messageHash: Hex;
   // Defaults to the message service address for the chain
   messageServiceAddress?: Address;
+  // Block in which the `MessageSent` event was emitted. When provided, the lookup queries only that
+  // block instead of the full `earliest`..`latest` range. This is REQUIRED when the RPC provider does
+  // not support large block ranges; otherwise the default full-range query will be rejected.
+  messageBlockNumber?: bigint;
 };
 
 export type GetTransactionReceiptByMessageHashReturnType<chain extends Chain | undefined> =
@@ -50,6 +54,9 @@ export type GetTransactionReceiptByMessageHashErrorType =
  *
  * const transactionReceipt = await getTransactionReceiptByMessageHash(client, {
  *   transactionHash: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+ *   // Required if the RPC provider does not support large block ranges.
+ *   // It restricts the lookup to a single block.
+ *   messageBlockNumber: 1_234_567n,
  * });
  */
 export async function getTransactionReceiptByMessageHash<
@@ -59,7 +66,7 @@ export async function getTransactionReceiptByMessageHash<
   client: Client<Transport, chain, account>,
   parameters: GetTransactionReceiptByMessageHashParameters,
 ): Promise<GetTransactionReceiptByMessageHashReturnType<chain>> {
-  const { messageHash, messageServiceAddress } = parameters;
+  const { messageHash, messageServiceAddress, messageBlockNumber } = parameters;
 
   if (!client.chain) {
     throw new ChainNotFoundError();
@@ -87,8 +94,8 @@ export async function getTransactionReceiptByMessageHash<
     args: {
       _messageHash: messageHash,
     },
-    fromBlock: "earliest",
-    toBlock: "latest",
+    fromBlock: messageBlockNumber ?? "earliest",
+    toBlock: messageBlockNumber ?? "latest",
   });
 
   if (!event) {

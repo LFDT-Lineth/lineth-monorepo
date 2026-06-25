@@ -1,8 +1,10 @@
 import { getContractsAddressesByChainId, MessageProof, SparseMerkleTree } from "@lfdt-lineth/sdk-core";
 import {
   Abi,
+  AbiDecodingZeroDataError,
   Account,
   Address,
+  BaseError,
   BlockNumber,
   BlockTag,
   Chain,
@@ -12,6 +14,7 @@ import {
   ClientChainNotConfiguredError,
   ClientChainNotConfiguredErrorType,
   ContractEventName,
+  ContractFunctionZeroDataError,
   encodePacked,
   GetContractEventsErrorType,
   GetContractEventsParameters,
@@ -20,12 +23,17 @@ import {
   keccak256,
   parseEventLogs,
   ParseEventLogsErrorType,
+  RpcError,
   Transport,
   zeroHash,
 } from "viem";
-import { getContractEvents, getTransactionReceipt } from "viem/actions";
+import { getBlockNumber, getContractEvents, getTransactionReceipt, readContract } from "viem/actions";
 
-import { getMessageSentEvents, GetMessageSentEventsErrorType } from "./getMessageSentEvents";
+import {
+  getMessageSentEvents,
+  GetMessageSentEventsErrorType,
+  GetMessageSentEventsReturnType,
+} from "./getMessageSentEvents";
 import {
   EventNotFoundInFinalizationDataError,
   EventNotFoundInFinalizationDataErrorType,
@@ -138,22 +146,9 @@ export async function getMessageProof<
   const lineaRollupAddress =
     parameters.lineaRollupAddress ?? getContractsAddressesByChainId(client.chain.id).messageService;
 
-  const [l2MessagingBlockAnchoredEvent] = await getContractEvents(client, {
-    address: lineaRollupAddress,
-    abi: [
-      {
-        anonymous: false,
-        inputs: [{ indexed: true, internalType: "uint256", name: "l2Block", type: "uint256" }],
-        name: "L2MessagingBlockAnchored",
-        type: "event",
-      },
-    ] as const,
-    eventName: "L2MessagingBlockAnchored",
-    args: {
-      l2Block: messageSentEvent.blockNumber,
-    },
-    fromBlock: "earliest",
-    toBlock: "latest",
+  const l2MessagingBlockAnchoredEvent = await findL2MessagingBlockAnchoredEvent(client, {
+    lineaRollupAddress,
+    l2BlockNumber: messageSentEvent.blockNumber!,
   });
 
   if (!l2MessagingBlockAnchoredEvent) {
@@ -166,7 +161,7 @@ export async function getMessageProof<
   });
 
   const l2MessageHashesInBlockRange = (
-    await getMessageSentEvents(l2Client, {
+    await getMessageSentEventsInChunks(l2Client, {
       address: l2MessageServiceAddress,
       fromBlock: finalizationInfo.l2MessagingBlocksRange.startingBlock,
       toBlock: finalizationInfo.l2MessagingBlocksRange.endBlock,
@@ -199,6 +194,265 @@ export async function getMessageProof<
   }
 
   return tree.getProof(l2messages.indexOf(messageHash));
+}
+
+const L2_MESSAGING_BLOCK_ANCHORED_ABI = [
+  {
+    anonymous: false,
+    inputs: [{ indexed: true, internalType: "uint256", name: "l2Block", type: "uint256" }],
+    name: "L2MessagingBlockAnchored",
+    type: "event",
+  },
+] as const;
+
+const CURRENT_L2_BLOCK_NUMBER_ABI = [
+  {
+    inputs: [],
+    name: "currentL2BlockNumber",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+] as const;
+
+// Message fragments emitted by providers when an eth_getLogs block range is too large.
+// Kept lowercase; matched case-insensitively against the error chain.
+const BLOCK_RANGE_ERROR_PATTERNS = [
+  "exceeds limit", // Infura: "range [..] exceeds limit of [..]"
+  "block range", // QuickNode / generic: "limited to a X block range"
+  "range is too large",
+  "up to a", // Alchemy: "...up to a 10,000 block range..."
+  "query returned more than",
+  "logs matched by query exceeds",
+  "response size exceeded",
+];
+
+// JSON-RPC error codes providers reuse for oversized eth_getLogs ranges. viem's `buildRequest`
+// coerces these into typed RpcError subclasses while preserving the numeric `code`.
+const BLOCK_RANGE_ERROR_CODES = new Set<number>([
+  -32600, // Invalid request (Infura range-limit rejection)
+  -32602, // Invalid params (some providers, e.g. Alchemy)
+  -32005, // Limit exceeded (LimitExceededRpcError)
+]);
+
+// Conservative upper bound on the `eth_getLogs` block span accepted by rate-limited providers
+// (e.g. Infura rejects spans > 10,000 blocks). The fallback narrows the finalization to a window
+// no wider than this so it can be swept in a single allowed query.
+const MAX_GET_LOGS_BLOCK_RANGE = 10_000n;
+
+/**
+ * Detects "block range too large" rejections returned by RPC providers that cap the
+ * `eth_getLogs` block span (e.g. Infura's `range [..] exceeds limit of [..]`, code -32600).
+ *
+ * viem routes provider errors through `buildRequest`, wrapping them in `BaseError`/`RpcError`
+ * subclasses that keep the JSON-RPC `code` and surface the provider message via `details`/`cause`.
+ * This walks that chain and matches on either a known range-limit `code` (combined with
+ * range/limit wording, since codes like -32600 are also used generically) or a provider message
+ * fragment, so detection is robust across providers and error-wrapping depth.
+ *
+ * @param {unknown} error - The error thrown by a `getContractEvents`/`eth_getLogs` call.
+ * @returns {boolean} `true` if the error indicates the requested block range was rejected.
+ */
+// Exported for unit testing only; not re-exported from the package entrypoint (`src/index.ts`).
+export function isBlockRangeExceededError(error: unknown): boolean {
+  const chain: unknown[] = [];
+  if (error instanceof BaseError) {
+    // walk() visits this error and each `cause`; returning false collects the whole chain.
+    error.walk((err) => {
+      chain.push(err);
+      return false;
+    });
+  } else {
+    chain.push(error);
+  }
+
+  for (const node of chain) {
+    if (!node || typeof node !== "object") continue;
+    const candidate = node as { code?: unknown; message?: unknown; details?: unknown; shortMessage?: unknown };
+    const text = [candidate.message, candidate.details, candidate.shortMessage]
+      .filter((value): value is string => typeof value === "string")
+      .join(" ")
+      .toLowerCase();
+
+    if (BLOCK_RANGE_ERROR_PATTERNS.some((pattern) => text.includes(pattern))) {
+      return true;
+    }
+
+    const code = node instanceof RpcError ? node.code : typeof candidate.code === "number" ? candidate.code : undefined;
+    if (code !== undefined && BLOCK_RANGE_ERROR_CODES.has(code) && /range|limit|block/.test(text)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Detects the specific viem error raised when a contract `eth_call` returns no data (`0x`),
+ * which is what happens when the address has no code at the queried block (i.e. the contract
+ * was not yet deployed at that height). Deliberately narrow so that transient network/RPC
+ * failures and non-archive state errors are NOT mistaken for "pre-deployment".
+ *
+ * @param {unknown} error - The error thrown by a `readContract` call.
+ * @returns {boolean} `true` if the call returned empty data because no code exists at that block.
+ */
+function isNoContractDataError(error: unknown): boolean {
+  return (
+    error instanceof BaseError &&
+    error.walk((e) => e instanceof ContractFunctionZeroDataError || e instanceof AbiDecodingZeroDataError) !== null
+  );
+}
+
+/**
+ * Locates a `<= MAX_GET_LOGS_BLOCK_RANGE`-wide settlement-chain block window guaranteed to contain
+ * the finalization in which `l2BlockNumber` was anchored, via a binary search over the
+ * monotonically-increasing `currentL2BlockNumber()` view.
+ *
+ * `currentL2BlockNumber()` holds the *endBlock of the latest finalized range*, not every L2 block
+ * number, so its value jumps (e.g. 100 -> 250 -> 400). The search therefore targets the first L1
+ * block where `currentL2BlockNumber() >= l2BlockNumber`, i.e. the finalization range that *covers*
+ * the target block (the target may sit in the middle of a range, with no exact-equal value). That
+ * is exactly the finalization that anchors the target block's `L2MessagingBlockAnchored` event.
+ *
+ * `f(0)` reads as `0` (pre-deployment: no code => `0x`) and `f(head) >= target` (checked up front),
+ * so the boundary lies in `(0, head]` and no deployment block need be supplied. The bisection stops
+ * once the bracket is `<= MAX_GET_LOGS_BLOCK_RANGE` wide rather than pinpointing the exact block:
+ * the residual window can then be swept by a single allowed `getLogs` call, saving the deepest
+ * `~log2(MAX_GET_LOGS_BLOCK_RANGE)` probes. Costs `~log2(head / MAX_GET_LOGS_BLOCK_RANGE)`
+ * `eth_call`s and requires an archive-capable endpoint for the historical reads.
+ *
+ * @param {Client} client - The settlement-chain (L1 or, for Validium, Linea) client.
+ * @param {Object} args - The lookup arguments.
+ * @param {Address} args.lineaRollupAddress - The LineaRollup/Validium contract address.
+ * @param {bigint} args.l2BlockNumber - The L2 block number to locate the finalization for.
+ * @returns {Promise<{ fromBlock: bigint; toBlock: bigint } | null>} The block window containing the
+ * finalization, or `null` if the L2 block is not finalized yet.
+ */
+async function findL1FinalizationRange<chain extends Chain | undefined, account extends Account | undefined>(
+  client: Client<Transport, chain, account>,
+  args: { lineaRollupAddress: Address; l2BlockNumber: bigint },
+): Promise<{ fromBlock: bigint; toBlock: bigint } | null> {
+  const finalizedL2BlockAt = async (blockNumber: bigint): Promise<bigint> => {
+    try {
+      return await readContract(client, {
+        address: args.lineaRollupAddress,
+        abi: CURRENT_L2_BLOCK_NUMBER_ABI,
+        functionName: "currentL2BlockNumber",
+        blockNumber,
+      });
+    } catch (error) {
+      // Only treat "no contract code at this height" (i.e. the call returned `0x`, which is what
+      // happens before the contract is deployed) as "nothing finalized". Transient network/RPC
+      // failures and non-archive state errors MUST propagate: swallowing them would let a failed
+      // probe read as `0`, silently steering the search to a wrong finalization block (or a
+      // spurious "not finalized") instead of failing loudly.
+      if (isNoContractDataError(error)) {
+        return 0n;
+      }
+      throw error;
+    }
+  };
+
+  const head = await getBlockNumber(client);
+  if ((await finalizedL2BlockAt(head)) < args.l2BlockNumber) {
+    return null;
+  }
+
+  // Binary search (0, head] for the first block whose finalized state covers the target L2 block,
+  // keeping the invariant finalizedAt(lo) < target <= finalizedAt(hi). Stop once the bracket fits a
+  // single getLogs window: the boundary block then lies in (lo, hi].
+  let lo = 0n;
+  let hi = head;
+  while (hi - lo > MAX_GET_LOGS_BLOCK_RANGE) {
+    const mid = lo + (hi - lo) / 2n;
+    if ((await finalizedL2BlockAt(mid)) >= args.l2BlockNumber) {
+      hi = mid;
+    } else {
+      lo = mid;
+    }
+  }
+
+  // The boundary is in (lo, hi]; `fromBlock = lo + 1` keeps the span at `hi - lo` (<= the limit).
+  return { fromBlock: lo + 1n, toBlock: hi };
+}
+
+/**
+ * Resolves the `L2MessagingBlockAnchored` event for `l2BlockNumber` on the settlement chain.
+ *
+ * Fast path: a single full-range (`earliest`..`latest`) query, ideal for providers that allow
+ * large block ranges. If the provider rejects the range (see {@link isBlockRangeExceededError}),
+ * it falls back to narrowing the finalization to a `<= MAX_GET_LOGS_BLOCK_RANGE` window via
+ * {@link findL1FinalizationRange} and querying that single window.
+ *
+ * @param {Client} client - The settlement-chain client.
+ * @param {Object} args - The lookup arguments.
+ * @param {Address} args.lineaRollupAddress - The LineaRollup/Validium contract address.
+ * @param {bigint} args.l2BlockNumber - The L2 block number whose anchoring event is sought.
+ * @returns The anchored event, or `undefined` if the L2 block is not finalized yet.
+ */
+async function findL2MessagingBlockAnchoredEvent<chain extends Chain | undefined, account extends Account | undefined>(
+  client: Client<Transport, chain, account>,
+  args: { lineaRollupAddress: Address; l2BlockNumber: bigint },
+) {
+  try {
+    const [event] = await getContractEvents(client, {
+      address: args.lineaRollupAddress,
+      abi: L2_MESSAGING_BLOCK_ANCHORED_ABI,
+      eventName: "L2MessagingBlockAnchored",
+      args: { l2Block: args.l2BlockNumber },
+      fromBlock: "earliest",
+      toBlock: "latest",
+    });
+    return event;
+  } catch (error) {
+    if (!isBlockRangeExceededError(error)) {
+      console.log("error is not block range exceeded error");
+      throw error;
+    }
+  }
+
+  const finalizationRange = await findL1FinalizationRange(client, args);
+  if (finalizationRange === null) {
+    return undefined;
+  }
+
+  const [event] = await getContractEvents(client, {
+    address: args.lineaRollupAddress,
+    abi: L2_MESSAGING_BLOCK_ANCHORED_ABI,
+    eventName: "L2MessagingBlockAnchored",
+    args: { l2Block: args.l2BlockNumber },
+    fromBlock: finalizationRange.fromBlock,
+    toBlock: finalizationRange.toBlock,
+  });
+  return event;
+}
+
+/**
+ * Fetches `MessageSent` events over `[fromBlock, toBlock]`, splitting the span into
+ * `<= MAX_GET_LOGS_BLOCK_RANGE` windows so it never trips a rate-limited provider's `eth_getLogs`
+ * range cap. A finalization's L2 messaging range can exceed that cap, and the results feed an
+ * order-sensitive Merkle tree, so windows are queried in ascending order and concatenated to
+ * preserve the on-chain (block, logIndex) ordering. Disjoint, contiguous windows mean no duplicates.
+ *
+ * @param {Client} client - The L2 client to query `MessageSent` events on.
+ * @param {Object} args - The query arguments.
+ * @param {Address} args.address - The L2 message service address.
+ * @param {bigint} args.fromBlock - The inclusive start of the L2 block range.
+ * @param {bigint} args.toBlock - The inclusive end of the L2 block range.
+ * @returns {Promise<GetMessageSentEventsReturnType>} The ordered `MessageSent` events in the range.
+ */
+async function getMessageSentEventsInChunks<chain extends Chain | undefined, account extends Account | undefined>(
+  client: Client<Transport, chain, account>,
+  args: { address: Address; fromBlock: bigint; toBlock: bigint },
+): Promise<GetMessageSentEventsReturnType> {
+  const events: GetMessageSentEventsReturnType = [];
+  for (let start = args.fromBlock; start <= args.toBlock; start += MAX_GET_LOGS_BLOCK_RANGE) {
+    // Inclusive window of at most MAX_GET_LOGS_BLOCK_RANGE blocks, clamped to the requested end.
+    const windowEnd = start + MAX_GET_LOGS_BLOCK_RANGE - 1n;
+    const end = windowEnd < args.toBlock ? windowEnd : args.toBlock;
+    events.push(...(await getMessageSentEvents(client, { address: args.address, fromBlock: start, toBlock: end })));
+  }
+  return events;
 }
 
 async function getFinalizationMessagingInfo<chain extends Chain | undefined, account extends Account | undefined>(
@@ -244,7 +498,8 @@ async function getFinalizationMessagingInfo<chain extends Chain | undefined, acc
     if (log.eventName === "L2MerkleRootAdded") {
       treeDepth = parseInt(log.args.treeDepth.toString());
       l2MerkleRoots.push(log.args.l2MerkleRoot);
-    } else if (log.eventName === "L2MessagingBlockAnchored") {
+    } else {
+      // parseEventLogs is scoped to the two events above, so any non-merkle log is L2MessagingBlockAnchored.
       blocksNumber.push(parseInt(log.args.l2Block.toString()));
     }
   }
@@ -273,7 +528,8 @@ async function getFinalizationMessagingInfo<chain extends Chain | undefined, acc
   };
 }
 
-function getMessageSiblings(messageHash: Hex, messageHashes: Hex[], treeDepth: number): Hex[] {
+// Exported for unit testing only; not re-exported from the package entrypoint (`src/index.ts`).
+export function getMessageSiblings(messageHash: Hex, messageHashes: Hex[], treeDepth: number): Hex[] {
   const numberOfMessagesInTrees = 2 ** treeDepth;
   const messageHashesLength = messageHashes.length;
 
