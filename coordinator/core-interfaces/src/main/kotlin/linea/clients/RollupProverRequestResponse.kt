@@ -1,20 +1,24 @@
 package linea.clients
 
 import linea.domain.BlockInterval
-import linea.domain.ExecutionProofIndex
+import linea.domain.BlockIntervalProofIndex
 import linea.domain.StartBlockTimestampProvider
 import linea.kotlin.byteArrayListEquals
 import kotlin.time.Instant
 
 data class RollupProofRequestV1(
-  override val startBlockNumber: ULong,
-  override val endBlockNumber: ULong,
-  override val startBlockTimestamp: Instant,
   val blobs: List<BlobWitness>,
   val parentShnarf: ByteArray,
   val endShnarf: ByteArray,
-  val l2ExecutionProofIndexes: List<ExecutionProofIndex>,
+  val l2Executions: List<BlockIntervalProofIndex>,
 ) : BlockInterval, StartBlockTimestampProvider {
+  override val startBlockNumber: ULong
+    get() = blobs[0].startBlockNumber
+  override val endBlockNumber: ULong
+    get() = blobs[blobs.size - 1].endBlockNumber
+  override val startBlockTimestamp: Instant
+    get() = l2Executions[0].startBlockTimestamp
+
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (javaClass != other?.javaClass) return false
@@ -27,7 +31,7 @@ data class RollupProofRequestV1(
     if (blobs != other.blobs) return false
     if (!parentShnarf.contentEquals(other.parentShnarf)) return false
     if (!endShnarf.contentEquals(other.endShnarf)) return false
-    if (l2ExecutionProofIndexes != other.l2ExecutionProofIndexes) return false
+    if (l2Executions != other.l2Executions) return false
 
     return true
   }
@@ -39,18 +43,18 @@ data class RollupProofRequestV1(
     result = 31 * result + blobs.hashCode()
     result = 31 * result + parentShnarf.contentHashCode()
     result = 31 * result + endShnarf.contentHashCode()
-    result = 31 * result + l2ExecutionProofIndexes.hashCode()
+    result = 31 * result + l2Executions.hashCode()
     return result
   }
 }
 
 data class BlobWitness(
-  val startBlockNumber: ULong,
-  val endBlockNumber: ULong,
+  override val startBlockNumber: ULong,
+  override val endBlockNumber: ULong,
   val blobHash: ByteArray,
   val blobKzgProof: ByteArray,
   val blockRlps: List<ByteArray>,
-) {
+): BlockInterval {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (javaClass != other?.javaClass) return false
@@ -87,14 +91,16 @@ data class RollupProofPublicInputs(
   val endBlockNumber: ULong,
   val endBlockTimestamp: Instant,
   val l2L1BridgeTransactionTree: ByteArray,
-  val parentL1L2BridgeRollingHash: ByteArray,
-  val parentL1L2BridgeRollingHashMessageNumber: ULong,
-  val endL1L2BridgeRollingHash: ByteArray,
-  val endL1L2BridgeRollingHashMessageNumber: ULong,
+  val parentL1L2BridgeMessageNumber: ULong,
+  val parentL1L2BridgeMessageRollingHash: ByteArray,
+  val endL1L2BridgeMessageNumber: ULong,
+  val endL1L2BridgeMessageRollingHash: ByteArray,
   val dynamicChainConfigHash: ByteArray,
+  val parentFtxNumber: ULong,
   val parentFtxRollingHash: ByteArray,
+  // TODO: confirm if endFtxNumber is necessary.
+  // val endFtxNumber: ULong,
   val endFtxRollingHash: ByteArray,
-  val lastProcessedFtxNumber: ULong,
   val filteredAddressesHash: ByteArray,
   val parentShnarf: ByteArray,
   val endShnarf: ByteArray,
@@ -108,14 +114,14 @@ data class RollupProofPublicInputs(
     if (endBlockNumber != other.endBlockNumber) return false
     if (endBlockTimestamp != other.endBlockTimestamp) return false
     if (!l2L1BridgeTransactionTree.contentEquals(other.l2L1BridgeTransactionTree)) return false
-    if (!parentL1L2BridgeRollingHash.contentEquals(other.parentL1L2BridgeRollingHash)) return false
-    if (parentL1L2BridgeRollingHashMessageNumber != other.parentL1L2BridgeRollingHashMessageNumber) return false
-    if (!endL1L2BridgeRollingHash.contentEquals(other.endL1L2BridgeRollingHash)) return false
-    if (endL1L2BridgeRollingHashMessageNumber != other.endL1L2BridgeRollingHashMessageNumber) return false
+    if (!parentL1L2BridgeMessageRollingHash.contentEquals(other.parentL1L2BridgeMessageRollingHash)) return false
+    if (parentL1L2BridgeMessageNumber != other.parentL1L2BridgeMessageNumber) return false
+    if (!endL1L2BridgeMessageRollingHash.contentEquals(other.endL1L2BridgeMessageRollingHash)) return false
+    if (endL1L2BridgeMessageNumber != other.endL1L2BridgeMessageNumber) return false
     if (!dynamicChainConfigHash.contentEquals(other.dynamicChainConfigHash)) return false
     if (!parentFtxRollingHash.contentEquals(other.parentFtxRollingHash)) return false
     if (!endFtxRollingHash.contentEquals(other.endFtxRollingHash)) return false
-    if (lastProcessedFtxNumber != other.lastProcessedFtxNumber) return false
+    if (parentFtxNumber != other.parentFtxNumber) return false
     if (!filteredAddressesHash.contentEquals(other.filteredAddressesHash)) return false
     if (!parentShnarf.contentEquals(other.parentShnarf)) return false
     if (!endShnarf.contentEquals(other.endShnarf)) return false
@@ -127,14 +133,14 @@ data class RollupProofPublicInputs(
     var result = endBlockNumber.hashCode()
     result = 31 * result + endBlockTimestamp.hashCode()
     result = 31 * result + l2L1BridgeTransactionTree.contentHashCode()
-    result = 31 * result + parentL1L2BridgeRollingHash.contentHashCode()
-    result = 31 * result + parentL1L2BridgeRollingHashMessageNumber.hashCode()
-    result = 31 * result + endL1L2BridgeRollingHash.contentHashCode()
-    result = 31 * result + endL1L2BridgeRollingHashMessageNumber.hashCode()
+    result = 31 * result + parentL1L2BridgeMessageRollingHash.contentHashCode()
+    result = 31 * result + parentL1L2BridgeMessageNumber.hashCode()
+    result = 31 * result + endL1L2BridgeMessageRollingHash.contentHashCode()
+    result = 31 * result + endL1L2BridgeMessageNumber.hashCode()
     result = 31 * result + dynamicChainConfigHash.contentHashCode()
     result = 31 * result + parentFtxRollingHash.contentHashCode()
     result = 31 * result + endFtxRollingHash.contentHashCode()
-    result = 31 * result + lastProcessedFtxNumber.hashCode()
+    result = 31 * result + parentFtxNumber.hashCode()
     result = 31 * result + filteredAddressesHash.contentHashCode()
     result = 31 * result + parentShnarf.contentHashCode()
     result = 31 * result + endShnarf.contentHashCode()
@@ -152,7 +158,6 @@ data class RollupProofPublicInputs(
 data class RollupProofResponseV1(
   override val startBlockNumber: ULong,
   override val endBlockNumber: ULong,
-  val proverVersion: String,
   val proof: ByteArray,
   val publicInputs: RollupProofPublicInputs,
   val l2L1Roots: List<ByteArray>,
@@ -166,7 +171,6 @@ data class RollupProofResponseV1(
 
     if (startBlockNumber != other.startBlockNumber) return false
     if (endBlockNumber != other.endBlockNumber) return false
-    if (proverVersion != other.proverVersion) return false
     if (!proof.contentEquals(other.proof)) return false
     if (publicInputs != other.publicInputs) return false
     if (!l2L1Roots.byteArrayListEquals(other.l2L1Roots)) return false
@@ -178,7 +182,6 @@ data class RollupProofResponseV1(
   override fun hashCode(): Int {
     var result = startBlockNumber.hashCode()
     result = 31 * result + endBlockNumber.hashCode()
-    result = 31 * result + proverVersion.hashCode()
     result = 31 * result + proof.contentHashCode()
     result = 31 * result + publicInputs.hashCode()
     result = 31 * result + l2L1Roots.hashCode()

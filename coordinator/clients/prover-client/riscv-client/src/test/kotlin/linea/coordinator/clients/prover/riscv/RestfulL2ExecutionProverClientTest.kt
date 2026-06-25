@@ -173,7 +173,7 @@ class RestfulL2ExecutionProverClientTest {
       chainId = 1000UL,
     ),
     parentFtxRollingHash = ByteArray(32) { 1 },
-    parentLastProcessedFtxNumber = 100UL,
+    parentFtxNumber = 100UL,
   )
 
   private fun executionPayload(blockNumber: ULong): ExecutionPayload = ExecutionPayload(

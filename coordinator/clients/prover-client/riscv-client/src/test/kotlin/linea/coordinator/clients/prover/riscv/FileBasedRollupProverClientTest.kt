@@ -126,7 +126,7 @@ class FileBasedRollupProverClientTest {
     ),
     parentShnarf = ByteArray(32) { 0x19 },
     endShnarf = ByteArray(32) { 0x20 },
-    l2ExecutionProofIndexes = listOf(
+    l2Executions = listOf(
       ExecutionProofIndex(
         startBlockNumber = 1000501UL,
         endBlockNumber = 1000503UL,

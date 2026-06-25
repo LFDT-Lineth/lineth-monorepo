@@ -46,7 +46,7 @@ internal class L2ExecutionProofRequestDtoMapper(
       guestProgramId = guestProgramId,
       proofRequest = L2ExecutionProofRequestParamsDto(
         parentFtxRollingHash = request.parentFtxRollingHash.encodeHex(),
-        parentLastProcessedFtxNumber = request.parentLastProcessedFtxNumber.toLong(),
+        parentLastProcessedFtxNumber = request.parentFtxNumber.toLong(),
         chainConfig = chainConfig,
         payloads = payloads,
       ),

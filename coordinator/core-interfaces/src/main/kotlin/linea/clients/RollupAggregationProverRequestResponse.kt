@@ -1,18 +1,16 @@
 package linea.clients
 
 import linea.domain.BlockInterval
-import linea.domain.CompressionProofIndex
+import linea.domain.BlockIntervalProofIndex
 import linea.domain.StartBlockTimestampProvider
 import linea.kotlin.byteArrayListEquals
 import kotlin.time.Instant
-
-typealias RollupAggregationPublicInputs = RollupProofPublicInputs
 
 data class RollupAggregationProofRequestV1(
   override val startBlockNumber: ULong,
   override val endBlockNumber: ULong,
   override val startBlockTimestamp: Instant,
-  val rollupProofIndexes: List<CompressionProofIndex>,
+  val rollupProofs: List<BlockIntervalProofIndex>,
 ) : BlockInterval, StartBlockTimestampProvider {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -23,7 +21,7 @@ data class RollupAggregationProofRequestV1(
     if (startBlockNumber != other.startBlockNumber) return false
     if (endBlockNumber != other.endBlockNumber) return false
     if (startBlockTimestamp != other.startBlockTimestamp) return false
-    if (rollupProofIndexes != other.rollupProofIndexes) return false
+    if (rollupProofs != other.rollupProofs) return false
 
     return true
   }
@@ -32,7 +30,7 @@ data class RollupAggregationProofRequestV1(
     var result = startBlockNumber.hashCode()
     result = 31 * result + endBlockNumber.hashCode()
     result = 31 * result + startBlockTimestamp.hashCode()
-    result = 31 * result + rollupProofIndexes.hashCode()
+    result = 31 * result + rollupProofs.hashCode()
     return result
   }
 }
@@ -47,9 +45,8 @@ data class RollupAggregationProofRequestV1(
 data class RollupAggregationProofResponseV1(
   override val startBlockNumber: ULong,
   override val endBlockNumber: ULong,
-  val proverVersion: String,
   val proof: ByteArray,
-  val publicInputs: RollupAggregationPublicInputs,
+  val publicInputs: RollupProofPublicInputs,
   val l2L1Roots: List<ByteArray>,
   val filteredAddresses: List<ByteArray>,
   val l2MessagingBlocksOffsets: List<ULong>,
@@ -62,7 +59,6 @@ data class RollupAggregationProofResponseV1(
 
     if (startBlockNumber != other.startBlockNumber) return false
     if (endBlockNumber != other.endBlockNumber) return false
-    if (proverVersion != other.proverVersion) return false
     if (!proof.contentEquals(other.proof)) return false
     if (publicInputs != other.publicInputs) return false
     if (!l2L1Roots.byteArrayListEquals(other.l2L1Roots)) return false
@@ -75,7 +71,6 @@ data class RollupAggregationProofResponseV1(
   override fun hashCode(): Int {
     var result = startBlockNumber.hashCode()
     result = 31 * result + endBlockNumber.hashCode()
-    result = 31 * result + proverVersion.hashCode()
     result = 31 * result + proof.contentHashCode()
     result = 31 * result + publicInputs.hashCode()
     result = 31 * result + l2L1Roots.hashCode()

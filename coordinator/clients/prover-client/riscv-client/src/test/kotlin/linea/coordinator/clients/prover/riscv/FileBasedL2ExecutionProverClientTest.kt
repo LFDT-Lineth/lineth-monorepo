@@ -181,7 +181,7 @@ class FileBasedL2ExecutionProverClientTest {
       chainId = 1000UL,
     ),
     parentFtxRollingHash = ByteArray(32) { 1 },
-    parentLastProcessedFtxNumber = 100UL,
+    parentFtxNumber = 100UL,
   )
 
   private fun l2ResponseDto(): L2ExecutionProofResponseDto = L2ExecutionProofResponseDto(

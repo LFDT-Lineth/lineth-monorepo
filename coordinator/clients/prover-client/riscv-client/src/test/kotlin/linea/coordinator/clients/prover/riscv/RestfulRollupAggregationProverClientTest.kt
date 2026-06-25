@@ -133,7 +133,7 @@ class RestfulRollupAggregationProverClientTest {
     startBlockNumber = 1000501UL,
     endBlockNumber = 1000567UL,
     startBlockTimestamp = Instant.fromEpochSeconds(1763000000),
-    rollupProofIndexes = emptyList(),
+    rollupProofs = emptyList(),
   )
 
   private fun aggregationResponseDto(): RollupAggregationProofResponseDto = RollupAggregationProofResponseDto(

@@ -8,14 +8,18 @@ import linea.kotlin.byteArrayListEquals
 import java.math.BigInteger
 import kotlin.time.Instant
 
-data class L2ExecutionProofRequestV1(
-  val executionPayloads: List<ExecutionPayload>,
-  val executionWitnesses: List<ExecutionWitness>,
+data class ExecutionInfo(
+  val executionPayloads: ExecutionPayload,
+  val executionWitnesses: ExecutionWitness,
   val executionRequests: List<ExecutionRequests>,
   val forcedTransactions: List<ForcedTransaction>,
+)
+
+data class L2ExecutionProofRequestV1(
+  val executions: List<ExecutionInfo>,
   val chainConfig: ChainConfig,
   val parentFtxRollingHash: ByteArray,
-  val parentLastProcessedFtxNumber: ULong,
+  val parentFtxNumber: ULong,
 ) : BlockInterval, StartBlockTimestampProvider {
   override val startBlockNumber: ULong
     get() = executionPayloads.first().blockNumber
@@ -36,7 +40,7 @@ data class L2ExecutionProofRequestV1(
     if (forcedTransactions != other.forcedTransactions) return false
     if (chainConfig != other.chainConfig) return false
     if (!parentFtxRollingHash.contentEquals(other.parentFtxRollingHash)) return false
-    if (parentLastProcessedFtxNumber != other.parentLastProcessedFtxNumber) return false
+    if (parentFtxNumber != other.parentFtxNumber) return false
 
     return true
   }
@@ -48,7 +52,7 @@ data class L2ExecutionProofRequestV1(
     result = 31 * result + forcedTransactions.hashCode()
     result = 31 * result + chainConfig.hashCode()
     result = 31 * result + parentFtxRollingHash.contentHashCode()
-    result = 31 * result + parentLastProcessedFtxNumber.hashCode()
+    result = 31 * result + parentFtxNumber.hashCode()
     return result
   }
 }
@@ -277,7 +281,7 @@ data class L2ExecutionProofPublicInputs(
   val parentBlockHash: ByteArray,
   val endBlockHash: ByteArray,
   val endBlockNumber: ULong,
-  val endBlockTimestamp: ULong,
+  val endBlockTimestamp: Instant,
   val l2L1MessagesHash: ByteArray,
   val parentL1L2BridgeRollingHash: ByteArray,
   val parentL1L2BridgeRollingHashMessageNumber: ULong,
@@ -286,7 +290,7 @@ data class L2ExecutionProofPublicInputs(
   val dynamicChainConfigHash: ByteArray,
   val parentFtxRollingHash: ByteArray,
   val endFtxRollingHash: ByteArray,
-  val lastProcessedFtxNumber: ULong,
+  val parentFtxNumber: ULong,
   val filteredAddressesHash: ByteArray,
   val txFromsHash: ByteArray,
 ) {
@@ -308,7 +312,7 @@ data class L2ExecutionProofPublicInputs(
     if (!dynamicChainConfigHash.contentEquals(other.dynamicChainConfigHash)) return false
     if (!parentFtxRollingHash.contentEquals(other.parentFtxRollingHash)) return false
     if (!endFtxRollingHash.contentEquals(other.endFtxRollingHash)) return false
-    if (lastProcessedFtxNumber != other.lastProcessedFtxNumber) return false
+    if (parentFtxNumber != other.parentFtxNumber) return false
     if (!filteredAddressesHash.contentEquals(other.filteredAddressesHash)) return false
     if (!txFromsHash.contentEquals(other.txFromsHash)) return false
 
@@ -328,7 +332,7 @@ data class L2ExecutionProofPublicInputs(
     result = 31 * result + dynamicChainConfigHash.contentHashCode()
     result = 31 * result + parentFtxRollingHash.contentHashCode()
     result = 31 * result + endFtxRollingHash.contentHashCode()
-    result = 31 * result + lastProcessedFtxNumber.hashCode()
+    result = 31 * result + parentFtxNumber.hashCode()
     result = 31 * result + filteredAddressesHash.contentHashCode()
     result = 31 * result + txFromsHash.contentHashCode()
     return result
@@ -345,7 +349,6 @@ data class L2ExecutionProofPublicInputs(
 data class L2ExecutionProofResponseV1(
   override val startBlockNumber: ULong,
   override val endBlockNumber: ULong,
-  val proverVersion: String,
   val proof: ByteArray,
   val publicInputs: L2ExecutionProofPublicInputs,
   val l2L1Messages: List<ByteArray>,

@@ -132,7 +132,7 @@ class RestfulRollupProverClientTest {
     blobs = emptyList(),
     parentShnarf = ByteArray(32) { 0x19 },
     endShnarf = ByteArray(32) { 0x20 },
-    l2ExecutionProofIndexes = emptyList(),
+    l2Executions = emptyList(),
   )
 
   private fun rollupResponseDto(): RollupProofResponseDto = RollupProofResponseDto(

@@ -21,7 +21,7 @@ internal class FileBasedRollupProofRequestDtoMapper(
   private val l2ExecutionProofTransport: L2ExecutionProofTransport,
 ) : (RollupProofRequestV1) -> SafeFuture<FileBasedRollupProofRequestDto> {
   override fun invoke(request: RollupProofRequestV1): SafeFuture<FileBasedRollupProofRequestDto> {
-    val l2ExecutionProofFutures = request.l2ExecutionProofIndexes.map { proofIndex ->
+    val l2ExecutionProofFutures = request.l2Executions.map { proofIndex ->
       l2ExecutionProofTransport.findResponse(proofIndex)
     }
     return SafeFuture.collectAll(l2ExecutionProofFutures.stream())
@@ -68,7 +68,7 @@ internal class RestfulRollupProofRequestDtoMapper(
         chainId = chainId,
         blobs = request.blobs.map { it.fromDomainObject() },
         parentShnarf = request.parentShnarf.encodeHex(),
-        l2ExecutionProofIndexes = request.l2ExecutionProofIndexes,
+        l2ExecutionProofIndexes = request.l2Executions,
       ),
       metadata = MetaDataDto(
         startBlockNumber = request.startBlockNumber.toLong(),

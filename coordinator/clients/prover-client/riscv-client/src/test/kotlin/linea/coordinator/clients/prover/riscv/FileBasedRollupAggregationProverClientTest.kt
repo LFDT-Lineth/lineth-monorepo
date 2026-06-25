@@ -107,7 +107,7 @@ class FileBasedRollupAggregationProverClientTest {
     startBlockNumber = 1000501UL,
     endBlockNumber = 1000567UL,
     startBlockTimestamp = Instant.fromEpochSeconds(1763000000),
-    rollupProofIndexes = listOf(
+    rollupProofs = listOf(
       CompressionProofIndex(
         startBlockNumber = 1000501UL,
         endBlockNumber = 1000567UL,

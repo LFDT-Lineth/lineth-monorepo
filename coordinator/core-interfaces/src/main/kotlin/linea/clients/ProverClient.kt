@@ -3,6 +3,7 @@ package linea.clients
 import linea.domain.AggregationProofIndex
 import linea.domain.BlobCompressionProof
 import linea.domain.BlobCompressionProofRequest
+import linea.domain.BlockIntervalProofIndex
 import linea.domain.CompressionProofIndex
 import linea.domain.ExecutionProofIndex
 import linea.domain.InvalidityProofIndex
@@ -36,8 +37,8 @@ typealias ExecutionProverClientV2 =
 typealias InvalidityProverClientV1 = ProverClient<InvalidityProofRequest, InvalidityProofResponse, InvalidityProofIndex>
 
 typealias L2ExecutionProverClientV1 =
-  ProverClient<L2ExecutionProofRequestV1, L2ExecutionProofResponseV1, ExecutionProofIndex>
+  ProverClient<L2ExecutionProofRequestV1, L2ExecutionProofResponseV1, BlockIntervalProofIndex>
 typealias RollupProverClientV1 =
-  ProverClient<RollupProofRequestV1, RollupProofResponseV1, CompressionProofIndex>
+  ProverClient<RollupProofRequestV1, RollupProofResponseV1, BlockIntervalProofIndex>
 typealias RollupAggregationProverClientV1 =
-  ProverClient<RollupAggregationProofRequestV1, RollupAggregationProofResponseV1, AggregationProofIndex>
+  ProverClient<RollupAggregationProofRequestV1, RollupAggregationProofResponseV1, BlockIntervalProofIndex>

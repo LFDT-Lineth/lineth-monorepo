@@ -22,7 +22,7 @@ internal class FileBasedRollupAggregationProofRequestDtoMapper(
   private val rollupProofTransport: FileBasedRollupProofTransport,
 ) : (RollupAggregationProofRequestV1) -> SafeFuture<FileBasedRollupAggregationProofRequestDto> {
   override fun invoke(request: RollupAggregationProofRequestV1): SafeFuture<FileBasedRollupAggregationProofRequestDto> {
-    val rollupProofFutures = request.rollupProofIndexes.map { proofIndex ->
+    val rollupProofFutures = request.rollupProofs.map { proofIndex ->
       rollupProofTransport.findResponse(proofIndex)
     }
     return SafeFuture.collectAll(rollupProofFutures.stream())
@@ -61,7 +61,7 @@ internal class RestfulRollupAggregationProofRequestDtoMapper(
     val dto = RestfulRollupAggregationProofRequestDto(
       guestProgramId = guestProgramId,
       proofRequest = RestfulRollupAggregationProofRequestParamsDto(
-        rollupProofIndexes = request.rollupProofIndexes,
+        rollupProofIndexes = request.rollupProofs,
       ),
       metadata = MetaDataDto(
         startBlockNumber = request.startBlockNumber.toLong(),
@@ -109,7 +109,7 @@ internal class RollupAggregationProofIndexProvider(
   private val hashFunction: HashFunction,
 ) : (RollupAggregationProofRequestV1) -> AggregationProofIndex {
   override fun invoke(request: RollupAggregationProofRequestV1): AggregationProofIndex {
-    val proofs = request.rollupProofIndexes.joinToString(separator = ",") { it.hash.encodeHex() }
+    val proofs = request.rollupProofs.joinToString(separator = ",") { it.hash.encodeHex() }
     val content = "${request.startBlockNumber}-${request.endBlockNumber}-$proofs".toByteArray()
     return AggregationProofIndex(
       startBlockNumber = request.startBlockNumber,
