@@ -50,7 +50,7 @@ func collectMutations(v reflect.Value, path []int, name string, out *[]proofMuta
 
 	switch v.Kind() {
 	case reflect.Struct:
-		for i := 0; i < v.NumField(); i++ {
+		for i := range v.NumField() {
 			if !v.Type().Field(i).IsExported() {
 				continue
 			}
@@ -62,11 +62,11 @@ func collectMutations(v reflect.Value, path []int, name string, out *[]proofMuta
 			*out = append(*out, proofMutation{name + "[drop]", clonePath(path), mutateDrop})
 			*out = append(*out, proofMutation{name + "[dup]", clonePath(path), mutateDup})
 		}
-		for i := 0; i < v.Len(); i++ {
+		for i := range v.Len() {
 			collectMutations(v.Index(i), append(path, i), fmt.Sprintf("%s[%d]", name, i), out)
 		}
 	case reflect.Array:
-		for i := 0; i < v.Len(); i++ {
+		for i := range v.Len() {
 			collectMutations(v.Index(i), append(path, i), fmt.Sprintf("%s[%d]", name, i), out)
 		}
 	default:

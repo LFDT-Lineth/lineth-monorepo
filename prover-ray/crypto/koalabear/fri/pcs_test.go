@@ -518,7 +518,7 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	positions := []int{3, 11}
 	referenceProof := proverForTest(params, referenceLevels, foldAlphas, positions)
 
-	for round := 0; started.State.HasNext(); round++ {
+	for round := range params.numRounds {
 		started.State.Fold(foldAlphas[round])
 	}
 	gotProof := started.State.Open(positions)

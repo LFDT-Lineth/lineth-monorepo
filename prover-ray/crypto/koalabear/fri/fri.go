@@ -80,12 +80,12 @@ func NewParams(
 
 	if !config.WoFullDomainAllocation {
 		res.domains = make([]*fft.Domain, numRounds+1)
-		for j := 0; j <= numRounds; j++ {
+		for j := range numRounds + 1 {
 			res.domains[j] = fft.NewDomain(uint64(n) >> j)
 		}
 	}
 	res.domainsLight = make([]domainLight, numRounds+1)
-	for j := 0; j <= numRounds; j++ {
+	for j := range numRounds + 1 {
 		g, err := koalabear.Generator(uint64(n) >> j)
 		if err != nil {
 			return Params{}, err
@@ -349,7 +349,7 @@ func verifyWithValues(p Params, levelRoots []QueryLayerRoots, levelDs []int, prf
 		return fmt.Errorf("fri: Verify: FinalPolyExt has %d entries, want %d",
 			len(prf.FinalPolyExt), want)
 	}
-	for k := 0; k < p.NumQueries; k++ {
+	for k := range p.NumQueries {
 		if s := openedPositions[k]; s < 0 || s >= p.N {
 			return fmt.Errorf("fri: Verify: opened position %d out of range [0,%d)", s, p.N)
 		}
@@ -357,7 +357,7 @@ func verifyWithValues(p Params, levelRoots []QueryLayerRoots, levelDs []int, prf
 		if len(q) != p.numRounds {
 			return fmt.Errorf("fri: Verify: query %d has %d layers, want %d", k, len(q), p.numRounds)
 		}
-		for j := 0; j < p.numRounds; j++ {
+		for j := range p.numRounds {
 			if err := values.checkRoundShape(j, q[j], roots[j], p.N>>j); err != nil {
 				return fmt.Errorf("fri: Verify: query %d round %d: %w", k, j, err)
 			}
@@ -391,14 +391,14 @@ func verifyExt(
 	numLevels := len(levelRoots)
 	numExtraLevels := numLevels - 1
 
-	for k := 0; k < p.NumQueries; k++ {
+	for k := range p.NumQueries {
 
 		s := queryIndexes[k]
 
 		var levelQueriesForQuery []QueryLayer
 		if numExtraLevels > 0 {
 			levelQueriesForQuery = make([]QueryLayer, numExtraLevels)
-			for l := 0; l < numExtraLevels; l++ {
+			for l := range numExtraLevels {
 				levelQueriesForQuery[l] = prf.LevelQueries[l][k]
 			}
 		}
@@ -494,13 +494,13 @@ func foldLayerInternally(
 	// halve_inv_powers (reverse_slice_index_bits) for the very same reason.
 	invTwiddles := make([]field.Element, half)
 	genPowI := invTwo
-	for i := 0; i < half; i++ {
+	for i := range half {
 		invTwiddles[i] = genPowI
 		genPowI.Mul(&genPowI, &domain.GeneratorInv)
 	}
 	gutils.BitReverse(invTwiddles)
 
-	for j := 0; j < half; j++ {
+	for j := range half {
 		p, q := layer[2*j], layer[2*j+1]
 
 		var sum, diff field.Ext
@@ -651,7 +651,7 @@ func checkQueryExt(queryIdx, s int, fq Query,
 	p Params,
 	values queryValueProvider) error {
 
-	for j := 0; j < p.numRounds; j++ {
+	for j := range p.numRounds {
 
 		base := s >> j // bit-reversed position of the query in layer j
 

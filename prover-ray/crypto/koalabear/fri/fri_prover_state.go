@@ -148,7 +148,7 @@ func (st *ProverState) Open(openedPositions []int) Proof {
 		roundOfLevel[l] = jl
 	}
 
-	for k := 0; k < st.p.NumQueries; k++ {
+	for k := range st.p.NumQueries {
 		s := openedPositions[k]
 		st.FRIQueries[k] = openQueryExt(
 			s,

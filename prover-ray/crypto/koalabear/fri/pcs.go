@@ -273,7 +273,7 @@ func canonicalLayout(shapes []Shape, shifts []BatchShifts) (layout, error) { //n
 				return nil, err
 			}
 
-			for rowIdx := 0; rowIdx < sizedShape.BaseWidth; rowIdx++ {
+			for rowIdx := range sizedShape.BaseWidth {
 				bundle.Entries = append(bundle.Entries, deepEntry{
 					BatchIdx:   batchIdx,
 					SizeLog2:   sizeLog2,
@@ -283,7 +283,7 @@ func canonicalLayout(shapes []Shape, shifts []BatchShifts) (layout, error) { //n
 				})
 				alphaDeepPower++
 			}
-			for rowIdx := 0; rowIdx < sizedShape.ExtWidth; rowIdx++ {
+			for rowIdx := range sizedShape.ExtWidth {
 				bundle.Entries = append(bundle.Entries, deepEntry{
 					BatchIdx:   batchIdx,
 					SizeLog2:   sizeLog2,
@@ -731,7 +731,7 @@ func (pcs *PCS) Open(in OpenInputs) (OpeningProof, error) { //nolint:revive
 	}
 	queryPositions := in.Challenges.QueryPositions[:pcs.Params.NumQueries]
 
-	for round := 0; started.State.HasNext(); round++ {
+	for round := range pcs.Params.numRounds {
 		started.State.Fold(in.Challenges.FoldAlphas[round])
 	}
 

@@ -103,7 +103,7 @@ func NewTree(leaves [][]field.Octuplet) *Tree {
 			levelStartPos = n - 1
 		)
 
-		for j := 0; j < n; j++ {
+		for j := range n {
 
 			k := levelStartPos + j
 

@@ -53,7 +53,7 @@ func TestFoldLayerInternally(t *testing.T) {
 
 		// bit-reversed codeword: layer[m] = P(g^{bitReverse(m)})
 		layer := make([]field.Ext, n)
-		for m := 0; m < n; m++ {
+		for m := range n {
 			var x field.Element
 			x.Exp(g, big.NewInt(int64(bitReverseIdx(m, kN))))
 			layer[m] = polynomials.EvalCanonicalExt(coeffs, field.Lift(x))
@@ -71,7 +71,7 @@ func TestFoldLayerInternally(t *testing.T) {
 		var g2 field.Element
 		g2.Square(&g)
 		want := make([]field.Ext, half)
-		for tt := 0; tt < half; tt++ {
+		for tt := range half {
 			var y field.Element
 			y.Exp(g2, big.NewInt(int64(bitReverseIdx(tt, kN-1))))
 			want[tt] = polynomials.EvalCanonicalExt(qcoeffs, field.Lift(y))
@@ -81,7 +81,7 @@ func TestFoldLayerInternally(t *testing.T) {
 		if len(got) != half {
 			t.Fatalf("n=%d: fold returned %d values, want %d", n, len(got), half)
 		}
-		for tt := 0; tt < half; tt++ {
+		for tt := range half {
 			if !got[tt].Equal(&want[tt]) {
 				t.Fatalf("n=%d: fold[%d] = %s, want %s", n, tt, got[tt].String(), want[tt].String())
 			}
@@ -96,7 +96,7 @@ func TestFoldLayerInternally(t *testing.T) {
 		alpha2.Square(&alpha)
 
 		gotAux := foldLayerInternally(layer, aux, alpha, domain, invTwo)
-		for tt := 0; tt < half; tt++ {
+		for tt := range half {
 			var wantAux, term field.Ext
 			term.Mul(&aux[tt], &alpha2)
 			wantAux.Add(&want[tt], &term)
@@ -289,7 +289,7 @@ func proverForTest(p Params, levels []Level, alphas []field.Ext, openedPositions
 	}
 
 	// Drive the state machine: feed one folding challenge per round, then open.
-	for j := 0; st.HasNext(); j++ {
+	for j := range p.numRounds {
 		st.Fold(alphas[j])
 	}
 
