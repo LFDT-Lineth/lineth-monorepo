@@ -283,11 +283,6 @@ func canonicalLayoutFromBatches(batches []Batch, shifts []BatchShifts) (layout, 
 // polynomial in every committed Batch evaluates to the listed values
 // at zeta and at the rotation shifts in BatchShifts.
 type OpeningProof struct {
-	// ClaimedValues[b] mirrors shifts[b] exactly. The outer protocol
-	// reads these to evaluate its constraints at zeta and to bind into
-	// the alpha_DEEP transcript challenge.
-	ClaimedValues []BatchClaimedValues
-
 	// DeepQuotientRoots: one Merkle root per distinct native size in
 	// DESCENDING size order. The largest size becomes FRI level 0;
 	// smaller sizes enter as multi-degree FRI levels at the round
@@ -443,6 +438,10 @@ type VerifyInputs struct {
 	Roots  []field.Octuplet
 	Shapes []Shape
 	Shifts []BatchShifts
+	// ClaimedValues[b] mirrors shifts[b] exactly. The outer protocol
+	// reads these to evaluate its constraints at zeta and to bind into
+	// the alpha_DEEP transcript challenge.
+	ClaimedValues []BatchClaimedValues
 
 	Zeta           field.Ext
 	AlphaDeep      field.Ext
@@ -514,23 +513,12 @@ type OpenerState struct {
 //     question 1 may relax this).
 func NewOpenerState(
 	pcs *PCS, //nolint:revive // design stub
-	batches []Batch, //nolint:revive // design stub
-	committed []CommitterState, //nolint:revive // design stub
+	committed []*CommitterState, //nolint:revive // design stub
 	shifts []BatchShifts, //nolint:revive // design stub
+	zeta field.Ext,
+	claims []BatchClaimedValues,
 ) (*OpenerState, error) {
 	panic("TODO(pcs): NewOpenerState")
-}
-
-// ComputeClaimedValues evaluates every (batch, size, row, shift)
-// declared in shifts at zeta * omega_N^shift and returns the per-
-// batch claimed values in the order the caller should bind them to
-// the transcript (canonical layout order).
-//
-// Returns a snapshot the caller can both bind and embed into the
-// final OpeningProof; OpenerState.Open will reuse the same snapshot
-// for the bridge construction.
-func (os *OpenerState) ComputeClaimedValues(zeta field.Ext) []BatchClaimedValues { //nolint:revive // design stub
-	panic("TODO(pcs): OpenerState.ComputeClaimedValues")
 }
 
 // CommitDeepQuotient consumes the DEEP batching challenge and:
