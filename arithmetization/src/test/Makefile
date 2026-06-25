@@ -3,7 +3,10 @@
 # Moreover, ABI being LP64 (soft-float) is relevant only for float numbers, which we do not use, so it can be omitted as well.
 
 # Declare all targets as phony to prevent conflicts with files of the same name
-.PHONY: exec debug compile elf-exec elf-debug elf-to-json install-zkc zkc-exec zkc-debug clean clean-all vector-build vector-json vector-exec keccak-rust-build keccak-rust-json keccak-rust-exec keccak-zig-build keccak-zig-json keccak-zig-exec blake-rust-build blake-rust-json blake-rust-exec act4-build act4-exec require-test require-src require-bin-ext require-vector-file require-n-vectors require-vector-build-artifacts require-vector-json-mode require-json
+.PHONY: exec debug compile elf-exec elf-debug install-zkc zkc-exec zkc-debug clean clean-all vector-build vector-json vector-exec keccak-rust-build keccak-rust-json keccak-rust-exec keccak-zig-build keccak-zig-json keccak-zig-exec blake-rust-build blake-rust-json blake-rust-exec act4-build act4-exec require-test require-src require-vector-file require-n-vectors require-vector-build-artifacts require-vector-json-mode require-json
+
+# set explicitly the default target so the include below (which has linker-script as first target) does not steal the default goal.
+.DEFAULT_GOAL := exec
 
 # Keep validation, build, and execution targets running in order
 .NOTPARALLEL:
@@ -16,12 +19,23 @@
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 ARITHMETIZATION_DIR := $(abspath $(MAKEFILE_DIR)../..)
 
-# Paths to go main (to turn BIN into JSON), zkc main (to execute/debug the json) and linker script
-ELF_TO_JSON_GEN := $(MAKEFILE_DIR)scripts/elf_to_json_gen/main.go
+# Shared guest-build plumbing:
+#  * the rv64im memory layout (single source of truth for IN_ORIGIN)
+#  * the linker script
+#  * the ELF→ZKC-JSON conversion
+#     - ELF_TO_JSON
+#     - ELF_TO_JSON_GEN
+#     - elf-to-json
+#     - LINKER_SCRIPT
+#     - IN_BYTES
+#     - BIN_EXT
+#     - JSON_EXT
+include $(ARITHMETIZATION_DIR)/../riscv-guests/build_common/Makefile
+
+# Path to the zkc main used to execute/debug the JSON.
 ZKC_MAIN        := $(MAKEFILE_DIR)../main/riscv/main.zkc
 # zkc binary (override for CI benchmarks, e.g. ZKC=/tmp/zkc-base).
 ZKC             ?= zkc
-LINKER_SCRIPT   := $(ARITHMETIZATION_DIR)/../riscv-guests/build_common/linker_script.ld
 # Assembly, Zig, or Rust test file to execute with exec target (TEST=src_optional_subfolder/your_test(.s|.zig|.rs)
 TEST ?=
 
@@ -29,10 +43,6 @@ TEST ?=
 # 	-q for quiet mode
 # 	--fast for fast mode (else tracing mode by default)
 ZKC_EXEC_FLAGS ?=--fast -q
-
-# Already compiled binary to execute with elf-exec target (BIN_EXT=path/to/your_bin)
-BIN_EXT  ?=
-JSON_EXT ?= $(BIN_EXT).json
 
 # If TEST=src_optional_subfolder/your_test(.s|.zig|.rs), the variables below are set as follows:
 # src_optional_subfolder/your_test
@@ -56,18 +66,8 @@ BIN  := $(MAKEFILE_DIR)$(if $(filter .s,$(EXT)),asm/bin/,$(if $(filter .zig,$(EX
 JSON := $(BIN).json
 # Note: in the future the JSON file will be removed and main.zkc will receive directly the ELF file
 
-# Hex big-endian input or `@path/to/in_bytes`
-IN_BYTES        ?= ""
-
-
 # If true, generates an objdump of the generated ELF for debugging purposes
 OBJDUMP        ?= false
-
-# Support function to generate JSON from an ELF
-define ELF_TO_JSON
-	@echo "\nGenerating $(2) from $(1)"
-	@go run $(ELF_TO_JSON_GEN) "$(1)" "$(IN_BYTES)" $(IN_ORIGIN) > "$(2)"
-endef
 
 #####################################################################
 # Compilation, execution, debugging and verification targets
@@ -132,11 +132,6 @@ elf-exec: elf-to-json install-zkc
 # Convert and debug an already compiled external ELF
 elf-debug: elf-to-json
 	$(ZKC) debug $(JSON_EXT) $(ZKC_MAIN)
-
-# Convert an already compiled external ELF to a JSON
-elf-to-json: require-bin-ext
-# Generate JSON from ELF
-	$(call ELF_TO_JSON,$(BIN_EXT),$(JSON_EXT))
 
 install-zkc:
 	$(MAKE) -C $(ARITHMETIZATION_DIR) install-zkc
@@ -470,10 +465,6 @@ require-test:
 
 require-src: require-test
 	@[ -f $(SRC) ] || { echo "TEST file not found: $(SRC)"; exit 1; }
-
-require-bin-ext:
-	@[ -n "$(BIN_EXT)" ] || { echo "BIN_EXT is mandatory. Usage: make BIN_EXT=path/to/your_bin"; exit 1; }
-	@[ -f $(BIN_EXT) ] || { echo "BIN_EXT file not found: $(BIN_EXT)"; exit 1; }
 
 require-vector-file:
 	@[ -n "$(VECTOR_FILE)" ] || { echo "VECTOR_FILE is mandatory. Usage: make vector-json TEST=src_optional_subfolder/your_test(.s|.zig|.rs) VECTOR_FILE=path/to/vectors"; exit 1; }
