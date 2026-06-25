@@ -13,6 +13,9 @@
 
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
+# The arithmetization test Makefile defines ZKC run (elf-to-json and zkc exec)
+ARITHMETIZATION_TESTING_MAKEFILE ?= $(MAKEFILE_DIR)../../arithmetization/src/test/Makefile
+
 ZIG ?= zig
 
 BUILD_CACHE_DIR ?= $(MAKEFILE_DIR).zig-cache
