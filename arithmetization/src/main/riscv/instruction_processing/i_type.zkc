@@ -239,22 +239,16 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
 
         case SYSTEM: {
             // note: same funct3 for ECALL and EBREAK
-            switch funct3 {
-                case FUNCT3_ECALL: {
-                    // imm12 is interpreted as funct12 for SYSTEM opcode
-                    switch imm12 {
-                        case FUNCT12_ECALL: {
-                            printf "ECALL\n"
-                            new_pc = process_syscall(pc)
-                        }
-                        case FUNCT12_EBREAK: {
-                            printf "[ERROR] EBREAK instruction triggered\n"
-                        }
-                    }
+            if funct3 == FUNCT3_ECALL {
+                // imm12 is interpreted as funct12 for SYSTEM opcode
+                if imm12 == FUNCT12_ECALL {
+                    printf "ECALL\n"
+                    new_pc = process_syscall(pc)
+                } else if imm12 == FUNCT12_EBREAK {
+                    printf "[ERROR] EBREAK instruction triggered\n"
                 }
-                default: {
-                    printf "[ERROR] SYSTEM instruction with funct3 %b has been triggered, not implemented\n", funct3
-                }
+            } else {
+                printf "[ERROR] SYSTEM instruction with funct3 %b has been triggered, not implemented\n", funct3
             }
         }
 
