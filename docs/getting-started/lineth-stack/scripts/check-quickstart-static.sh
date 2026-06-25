@@ -1562,7 +1562,7 @@ check_wizard_cli() {
 
   if [ -f "$wizard_tests" ] \
     && grep -q 'lineth_wizard_set_env_key preserves comments and URL-like values literally' "$wizard_tests" \
-    && grep -q 'assert_golden local-dev' "$wizard_tests" \
+    && grep -q 'assert_fixture local-dev' "$wizard_tests" \
     && grep -q 'WIZARD_L1_MODE env var configures non-interactive mode' "$wizard_tests" \
     && grep -q 'L1 prompt uses numbered choice header' "$wizard_tests" \
     && grep -q 'backup collision keeps both backups' "$wizard_tests" \
@@ -1570,13 +1570,13 @@ check_wizard_cli() {
     && grep -q 'busy-port simulation writes .env before failing' "$wizard_tests" \
     && grep -q 'RPC preflight failure leaves no .env' "$wizard_tests" \
     && grep -q 'LINETH_WIZARD_STACK_OVERRIDE' "$wizard_tests" \
-    && [ -f "$STACK/scripts/tests/wizard/golden/local-dev.env" ] \
-    && [ -f "$STACK/scripts/tests/wizard/golden/local-partial.env" ] \
-    && [ -f "$STACK/scripts/tests/wizard/golden/sepolia-dev.env" ] \
-    && [ -f "$STACK/scripts/tests/wizard/golden/sepolia-partial.env" ]; then
+    && [ -f "$STACK/scripts/tests/wizard/fixtures/local-dev.env" ] \
+    && [ -f "$STACK/scripts/tests/wizard/fixtures/local-partial.env" ] \
+    && [ -f "$STACK/scripts/tests/wizard/fixtures/sepolia-dev.env" ] \
+    && [ -f "$STACK/scripts/tests/wizard/fixtures/sepolia-partial.env" ]; then
     pass "wizard deterministic test runner covers key safety behaviors"
   else
-    fail "scripts/tests/wizard/run.sh must cover golden outputs, URL-safe env writes, mode guard, and busy-port ordering"
+    fail "scripts/tests/wizard/run.sh must cover fixture outputs, URL-safe env writes, mode guard, and busy-port ordering"
   fi
 
   wizard_test_log="/tmp/lineth-wizard-tests-static.$$"

@@ -70,14 +70,14 @@ write_managed_snapshot() {
   done
 }
 
-assert_golden() {
-  golden_name="$1"
-  snapshot="$TMP_DIR/$golden_name.actual"
+assert_fixture() {
+  fixture_name="$1"
+  snapshot="$TMP_DIR/$fixture_name.actual"
   write_managed_snapshot "$ENV_FILE" "$snapshot"
-  if cmp -s "$snapshot" "$SCRIPT_DIR/golden/$golden_name.env"; then
-    pass "$golden_name managed-key output matches golden file"
+  if cmp -s "$snapshot" "$SCRIPT_DIR/fixtures/$fixture_name.env"; then
+    pass "$fixture_name managed-key output matches fixture file"
   else
-    fail "$golden_name managed-key output matches golden file"
+    fail "$fixture_name managed-key output matches fixture file"
   fi
 }
 
@@ -120,21 +120,21 @@ if run_wizard --wizard --non-interactive --l1-mode local --prover dev >/tmp/line
   assert_file_contains "$ENV_FILE" 'L1_MODE=local' "local dev writes L1_MODE"
   assert_file_contains "$ENV_FILE" 'L1_RPC_URL=' "local dev clears L1_RPC_URL"
   assert_file_contains "$ENV_FILE" 'PROVER_DEV_OVERRIDE=true' "local dev writes dev prover mode"
-  assert_golden local-dev
+  assert_fixture local-dev
 else
   fail "local dev non-interactive wizard succeeds"
 fi
 
 reset_env
 if run_wizard --wizard --non-interactive --l1-mode local --prover partial >/tmp/lineth-wizard-local-partial.$$ 2>&1; then
-  assert_golden local-partial
+  assert_fixture local-partial
 else
   fail "local partial non-interactive wizard succeeds"
 fi
 
 reset_env
 if run_wizard --wizard --non-interactive --l1-mode sepolia --l1-rpc-url 'https://rpc.example.test/key?a=1&b=2' --prover dev >/tmp/lineth-wizard-sepolia-dev.$$ 2>&1; then
-  assert_golden sepolia-dev
+  assert_fixture sepolia-dev
 else
   fail "sepolia dev non-interactive wizard succeeds"
 fi
@@ -145,7 +145,7 @@ if run_wizard --wizard --non-interactive --l1-mode sepolia --l1-rpc-url 'https:/
   assert_file_contains "$ENV_FILE" 'L1_RPC_URL=https://rpc.example.test/key?a=1&b=2' "sepolia partial writes URL literally"
   assert_file_contains "$ENV_FILE" 'PROVER_DEV_OVERRIDE=false' "sepolia partial writes partial prover mode"
   assert_file_contains "$ENV_FILE" 'PROVER_GOMEMLIMIT=24GiB' "sepolia partial pins PROVER_GOMEMLIMIT"
-  assert_golden sepolia-partial
+  assert_fixture sepolia-partial
 else
   fail "sepolia partial non-interactive wizard succeeds"
 fi
