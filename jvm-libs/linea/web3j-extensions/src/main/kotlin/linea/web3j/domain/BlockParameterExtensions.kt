@@ -8,5 +8,9 @@ fun BlockParameter.toWeb3j(): DefaultBlockParameter {
   return when (this) {
     is BlockParameter.Tag -> DefaultBlockParameter.valueOf(this.getTag())
     is BlockParameter.BlockNumber -> DefaultBlockParameter.valueOf(this.getNumber().toBigInteger())
+    is BlockParameter.BlockHash ->
+      throw UnsupportedOperationException(
+        "Web3j DefaultBlockParameter does not support block hash; blockParameter=$this",
+      )
   }
 }
