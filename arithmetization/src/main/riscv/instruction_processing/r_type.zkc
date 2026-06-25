@@ -78,30 +78,30 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
 
     switch compute_op {
         case RTYPE_ADD: {
-            printf "ADD "
+            printf "RTYPE_ADD "
             print_r_operands(rd, rs1, rs2)
             overflow::result = (v1 as u65) + (v2 as u65)
             result = result
         }
         case RTYPE_SUB: {
-            printf "SUB "
+            printf "RTYPE_SUB "
             print_r_operands(rd, rs1, rs2)
             overflow::result = ((1 as u1)::(v1 as u64)) - (v2 as u65)
             result = result
         }
         case RTYPE_SLL: {
-            printf "SLL "
+            printf "RTYPE_SLL "
             print_r_operands(rd, rs1, rs2)
             shift_discard_6::shift_amount_6 = v2
             result = v1 << shift_amount_6
         }
         case RTYPE_SLT: {
-            printf "SLT "
+            printf "RTYPE_SLT "
             print_r_operands(rd, rs1, rs2)
             result = signed_LT(v1, v2) as DoubleWord
         }
         case RTYPE_SLTU: {
-            printf "SLTU "
+            printf "RTYPE_SLTU "
             print_r_operands(rd, rs1, rs2)
             if (v1 < v2) {
                 result = 1
@@ -110,18 +110,18 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
             }
         }
         case RTYPE_XOR: {
-            printf "XOR "
+            printf "RTYPE_XOR "
             print_r_operands(rd, rs1, rs2)
             result = v1 ^ v2
         }
         case RTYPE_SRL: {
-            printf "SRL "
+            printf "RTYPE_SRL "
             print_r_operands(rd, rs1, rs2)
             shift_discard_6::shift_amount_6 = v2
             result = v1 >> shift_amount_6
         }
         case RTYPE_SRA: {
-            printf "SRA "
+            printf "RTYPE_SRA "
             print_r_operands(rd, rs1, rs2)
             v1_sign = sign_bit_of_double_word(v1)
             shift_discard_6::shift_amount_6 = v2
@@ -137,22 +137,22 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
             result = result
         }
         case RTYPE_OR: {
-            printf "OR "
+            printf "RTYPE_OR "
             print_r_operands(rd, rs1, rs2)
             result = v1 | v2
         }
         case RTYPE_AND: {
-            printf "AND "
+            printf "RTYPE_AND "
             print_r_operands(rd, rs1, rs2)
             result = v1 & v2
         }
         case RTYPE_MUL: {
-            printf "MUL "
+            printf "RTYPE_MUL "
             print_r_operands(rd, rs1, rs2)
             result = (((v1 as u128) * (v2 as u128)) & MAX_UINT_64_AS_U128) as u64
         }
         case RTYPE_MULH: {
-            printf "MULH "
+            printf "RTYPE_MULH "
             print_r_operands(rd, rs1, rs2)
             v1_sign = sign_bit_of_double_word(v1)
             v2_sign = sign_bit_of_double_word(v2)
@@ -165,7 +165,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
             result = (v1_times_v2_as_u128 >> 64) as u64
         }
         case RTYPE_MULHSU: {
-            printf "MULHSU "
+            printf "RTYPE_MULHSU "
             print_r_operands(rd, rs1, rs2)
             v1_abs = absolute_value_double_word(v1)
             var v1_times_v2_as_u128:u128 = (v1_abs as u128) * (v2 as u128)
@@ -176,12 +176,12 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
             result = (v1_times_v2_as_u128 >> 64) as u64
         }
         case RTYPE_MULHU: {
-            printf "MULHU "
+            printf "RTYPE_MULHU "
             print_r_operands(rd, rs1, rs2)
             result = (((v1 as u128) * (v2 as u128)) >> 64) as u64
         }
         case RTYPE_DIV: {
-            printf "DIV "
+            printf "RTYPE_DIV "
             print_r_operands(rd, rs1, rs2)
             if v2 == 0 {
                 result = NEGATIVE_ONE_AS_I64
@@ -199,7 +199,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
             }
         }
         case RTYPE_DIVU: {
-            printf "DIVU "
+            printf "RTYPE_DIVU "
             print_r_operands(rd, rs1, rs2)
             if v2 == 0 {
                 result = NEGATIVE_ONE_AS_I64
@@ -208,7 +208,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
             }
         }
         case RTYPE_REM: {
-            printf "REM "
+            printf "RTYPE_REM "
             print_r_operands(rd, rs1, rs2)
             if v2 == 0 {
                 result = v1
@@ -225,7 +225,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
             }
         }
         case RTYPE_REMU: {
-            printf "REMU "
+            printf "RTYPE_REMU "
             print_r_operands(rd, rs1, rs2)
             if v2 == 0 {
                 result = v1
@@ -236,7 +236,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
         case RTYPE_ADDW: {
             v1_upper::v1_lower = v1
             v2_upper::v2_lower = v2
-            printf "ADDW "
+            printf "RTYPE_ADDW "
             print_r_operands(rd, rs1, rs2)
             overflow::word_wip = (v1_lower as u33) + (v2_lower as u33)
             result = sgn_extension_u32_u64(word_wip)
@@ -244,7 +244,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
         case RTYPE_SUBW: {
             v1_upper::v1_lower = v1
             v2_upper::v2_lower = v2
-            printf "SUBW "
+            printf "RTYPE_SUBW "
             print_r_operands(rd, rs1, rs2)
             overflow::word_wip = ((1 as u1)::v1_lower) - (v2_lower as u33)
             result = sgn_extension_u32_u64(word_wip)
@@ -252,7 +252,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
         case RTYPE_SLLW: {
             v1_upper::v1_lower = v1
             v2_upper::v2_lower = v2
-            printf "SLLW "
+            printf "RTYPE_SLLW "
             print_r_operands(rd, rs1, rs2)
             shift_discard_5::shift_amount_5 = v2_lower
             result = sgn_extension_u32_u64(v1_lower << shift_amount_5)
@@ -260,7 +260,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
         case RTYPE_SRLW: {
             v1_upper::v1_lower = v1
             v2_upper::v2_lower = v2
-            printf "SRLW "
+            printf "RTYPE_SRLW "
             print_r_operands(rd, rs1, rs2)
             shift_discard_5::shift_amount_5 = v2_lower
             result = sgn_extension_u32_u64(v1_lower >> shift_amount_5)
@@ -268,7 +268,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
         case RTYPE_SRAW: {
             v1_upper::v1_lower = v1
             v2_upper::v2_lower = v2
-            printf "SRAW "
+            printf "RTYPE_SRAW "
             print_r_operands(rd, rs1, rs2)
             shift_discard_5::shift_amount_5 = v2_lower
             if (sign_bit_of_word(v1_lower) == 1) {
@@ -285,7 +285,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
         case RTYPE_MULW: {
             v1_upper::v1_lower = v1
             v2_upper::v2_lower = v2
-            printf "MULW "
+            printf "RTYPE_MULW "
             print_r_operands(rd, rs1, rs2)
             product_upper::product_lower = (v1_lower as DoubleWord) * (v2_lower as DoubleWord)
             sign_bit = sign_bit_of_word(product_lower)
@@ -300,7 +300,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
             v2_upper::v2_lower = v2
             v1_lower_abs = absolute_value_word(v1_lower)
             v2_lower_abs = absolute_value_word(v2_lower)
-            printf "DIVW "
+            printf "RTYPE_DIVW "
             print_r_operands(rd, rs1, rs2)
             if (v2_lower == 0) {
                 result = NEGATIVE_ONE_AS_I64
@@ -316,7 +316,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
         case RTYPE_DIVUW: {
             v1_upper::v1_lower = v1
             v2_upper::v2_lower = v2
-            printf "DIVUW "
+            printf "RTYPE_DIVUW "
             print_r_operands(rd, rs1, rs2)
             if (v2_lower == 0) {
                 result = NEGATIVE_ONE_AS_I64
@@ -329,7 +329,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
             v2_upper::v2_lower = v2
             v1_lower_abs = absolute_value_word(v1_lower)
             v2_lower_abs = absolute_value_word(v2_lower)
-            printf "REMW "
+            printf "RTYPE_REMW "
             print_r_operands(rd, rs1, rs2)
             if (v2_lower == 0) {
                 result = sgn_extension_u32_u64(v1_lower)
@@ -345,7 +345,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
         case RTYPE_REMUW: {
             v1_upper::v1_lower = v1
             v2_upper::v2_lower = v2
-            printf "REMUW "
+            printf "RTYPE_REMUW "
             print_r_operands(rd, rs1, rs2)
             if (v2_lower == 0) {
                 result = sgn_extension_u32_u64(v1_lower)
@@ -354,7 +354,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
             }
         }
         case RTYPE_KECCAK: {
-            printf "KECCAK precompile "
+            printf "RTYPE_KECCAK "
             keccak(v1 as Address, v2 as u32, registers[rd] as Address)
             return
         }

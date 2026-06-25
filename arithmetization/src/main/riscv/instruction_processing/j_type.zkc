@@ -25,7 +25,7 @@ fn process_J_type_instruction<registers>(index:u64, pc:Address) -> (pc_new:Addre
 
     switch compute_op {
         case JTYPE_JAL: {
-            printf "JAL "
+            printf "JTYPE_JAL "
             print_j_operands(rd, imm)
             link = signed_sum_of_double_word(pc, 4)
             pc_new = signed_sum_of_double_word(pc, imm) as Address

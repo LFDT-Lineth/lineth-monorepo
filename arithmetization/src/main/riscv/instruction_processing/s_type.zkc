@@ -24,22 +24,22 @@ fn process_S_type_instruction<ram, registers>(index:u64) {
 
     switch compute_op {
         case STORE_SB: {
-            printf "SB "
+            printf "STORE_SB "
             print_s_operands(rs2, rs1, signext_imm12_64)
             write_8(mem_address, (registers[rs2] & (0xFF as u64)) as u8)
         }
         case STORE_SH: {
-            printf "SH "
+            printf "STORE_SH "
             print_s_operands(rs2, rs1, signext_imm12_64)
             write_16(mem_address, (registers[rs2] & (0xFFFF as u64)) as u16)
         }
         case STORE_SW: {
-            printf "SW "
+            printf "STORE_SW "
             print_s_operands(rs2, rs1, signext_imm12_64)
             write_32(mem_address, (registers[rs2] & (0xFFFFFFFF as u64)) as u32)
         }
         case STORE_SD: {
-            printf "SD "
+            printf "STORE_SD "
             print_s_operands(rs2, rs1, signext_imm12_64)
             write_64(mem_address, registers[rs2])
         }
