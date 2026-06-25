@@ -661,10 +661,10 @@ func checkQueryExt(s int, fq Query,
 		// The fold output must equal the queried leaf of the next layer (whose
 		// position is base>>1 = s>>(j+1)); at the last round, the final polynomial.
 		if j < p.numRounds-1 {
-			nextBranch, err := firstQueryLayerBranch(fq[j+1])
-			if err != nil {
-				return fmt.Errorf("round %d: next layer: %w", j, err)
+			if len(fq[j+1]) == 0 {
+				return fmt.Errorf("round %d: next layer: opening is empty", j)
 			}
+			nextBranch := fq[j+1][0]
 			next, err := octupletToExt(nextBranch.Leaf)
 			if err != nil {
 				return fmt.Errorf("round %d: decode next leaf: %w", j, err)
@@ -689,21 +689,11 @@ func authenticateQueryLayer(
 	roots QueryLayerRoots,
 	base int,
 ) (Branch, error) {
-	if len(opening) != len(roots) {
-		return Branch{}, fmt.Errorf("%s: has %d tree openings, want %d roots", label, len(opening), len(roots))
-	}
-	first, err := firstQueryLayerBranch(opening)
+	first, err := authenticateQueryLayerRoots(label, opening, roots, func(Branch) (int, error) {
+		return base, nil
+	})
 	if err != nil {
-		return Branch{}, fmt.Errorf("%s: %w", label, err)
-	}
-	for i, branch := range opening {
-		root, err := branch.RecoverRoot(base)
-		if err != nil {
-			return Branch{}, fmt.Errorf("%s tree %d: recover root: %w", label, i, err)
-		}
-		if root != roots[i] {
-			return Branch{}, fmt.Errorf("%s tree %d: Merkle proof invalid", label, i)
-		}
+		return Branch{}, err
 	}
 	// TODO(C2): C0.1 authenticates every backing tree, but the fold checker still
 	// consumes the first branch's leaf. C2.2 replaces this with level
@@ -711,9 +701,30 @@ func authenticateQueryLayer(
 	return first, nil
 }
 
-func firstQueryLayerBranch(opening QueryLayer) (Branch, error) {
+func authenticateQueryLayerRoots(
+	label string,
+	opening QueryLayer,
+	roots QueryLayerRoots,
+	branchIndex func(Branch) (int, error),
+) (Branch, error) {
+	if len(opening) != len(roots) {
+		return Branch{}, fmt.Errorf("%s: has %d tree openings, want %d roots", label, len(opening), len(roots))
+	}
 	if len(opening) == 0 {
-		return Branch{}, fmt.Errorf("opening is empty")
+		return Branch{}, fmt.Errorf("%s: opening is empty", label)
+	}
+	for i, branch := range opening {
+		idx, err := branchIndex(branch)
+		if err != nil {
+			return Branch{}, fmt.Errorf("%s tree %d: leaf index: %w", label, i, err)
+		}
+		root, err := branch.RecoverRoot(idx)
+		if err != nil {
+			return Branch{}, fmt.Errorf("%s tree %d: recover root: %w", label, i, err)
+		}
+		if root != roots[i] {
+			return Branch{}, fmt.Errorf("%s tree %d: Merkle proof invalid", label, i)
+		}
 	}
 	return opening[0], nil
 }

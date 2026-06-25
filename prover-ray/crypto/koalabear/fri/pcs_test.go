@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
@@ -39,7 +38,7 @@ func TestCanonicalLayout_Order(t *testing.T) {
 		{
 			{},
 			{},
-			{Ext: [][]int{{4, 5}}},
+			{Ext: [][]int{{2, 3}}},
 			{Base: [][]int{{3}}},
 		},
 	}
@@ -62,7 +61,7 @@ func TestCanonicalLayout_Order(t *testing.T) {
 			SizeLog2: 2,
 			Entries: []deepEntry{
 				{BatchIdx: 0, SizeLog2: 2, RowIdx: 0, AlphaPower: 0, Shifts: []int{0}},
-				{BatchIdx: 1, SizeLog2: 2, RowIdx: 0, IsExt: true, AlphaPower: 1, Shifts: []int{4, 5}},
+				{BatchIdx: 1, SizeLog2: 2, RowIdx: 0, IsExt: true, AlphaPower: 1, Shifts: []int{2, 3}},
 			},
 		},
 	}
@@ -72,7 +71,7 @@ func TestCanonicalLayout_Order(t *testing.T) {
 }
 
 func TestCanonicalLayout_RejectsShiftInvariants(t *testing.T) {
-	shape := []Shape{{{BaseWidth: 1}}}
+	shape := []Shape{{{}, {}, {BaseWidth: 1}}}
 
 	tests := []struct {
 		name    string
@@ -81,13 +80,18 @@ func TestCanonicalLayout_RejectsShiftInvariants(t *testing.T) {
 	}{
 		{
 			name:    "empty",
-			shifts:  []BatchShifts{{{Base: [][]int{{}}}}},
+			shifts:  []BatchShifts{{{}, {}, {Base: [][]int{{}}}}},
 			wantErr: "empty shift list",
 		},
 		{
 			name:    "duplicate",
-			shifts:  []BatchShifts{{{Base: [][]int{{2, 2}}}}},
+			shifts:  []BatchShifts{{{}, {}, {Base: [][]int{{2, 2}}}}},
 			wantErr: "duplicate shift 2",
+		},
+		{
+			name:    "aliasing",
+			shifts:  []BatchShifts{{{}, {}, {Base: [][]int{{0, 4}}}}},
+			wantErr: "shift 4 outside [0,4)",
 		},
 	}
 
@@ -358,17 +362,32 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 		field.UintsToExt(13, 1, 1, 0, 0, 0),
 		field.UintsToExt(17, 0, 1, 1, 0, 0),
 	}
+	otherTopCoeffs := []field.Ext{
+		field.UintsToExt(19, 1, 0, 1, 0, 0),
+		field.UintsToExt(23, 0, 1, 0, 1, 0),
+		field.UintsToExt(29, 0, 0, 1, 0, 1),
+	}
+	otherAuxCoeffs := []field.Ext{
+		field.UintsToExt(31, 1, 1, 1, 0, 0),
+		field.UintsToExt(37, 0, 1, 1, 1, 0),
+	}
 
 	witness := make(Batch, 4)
 	witness[2] = SizedTable{Ext: [][]field.Ext{canonicalToLagrangeTestPoly(auxCoeffs, 4)}}
 	witness[3] = SizedTable{Ext: [][]field.Ext{canonicalToLagrangeTestPoly(topCoeffs, 8)}}
-	witnesses := []Batch{witness}
-	committed := []CommitterState{Commit(encoders, witness)}
+	otherWitness := make(Batch, 4)
+	otherWitness[2] = SizedTable{Ext: [][]field.Ext{canonicalToLagrangeTestPoly(otherAuxCoeffs, 4)}}
+	otherWitness[3] = SizedTable{Ext: [][]field.Ext{canonicalToLagrangeTestPoly(otherTopCoeffs, 8)}}
+	witnesses := []Batch{witness, otherWitness}
+	committed := []CommitterState{Commit(encoders, witness), Commit(encoders, otherWitness)}
 
 	batchShifts := make(BatchShifts, 4)
 	batchShifts[2] = SizedShifts{Ext: [][]int{{1, 3}}}
 	batchShifts[3] = SizedShifts{Ext: [][]int{{0, 2}}}
-	shifts := []BatchShifts{batchShifts}
+	otherBatchShifts := make(BatchShifts, 4)
+	otherBatchShifts[2] = SizedShifts{Ext: [][]int{{0, 2}}}
+	otherBatchShifts[3] = SizedShifts{Ext: [][]int{{1, 3}}}
+	shifts := []BatchShifts{batchShifts, otherBatchShifts}
 
 	zeta := field.UintsToExt(19, 2, 3, 5, 7, 11)
 	alphaDeepChallenge := field.UintsToExt(23, 3, 5, 7, 11, 13)
@@ -382,13 +401,16 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	if err != nil {
 		t.Fatalf("pcs.NewProverState: %v", err)
 	}
-	if len(started.Levels) != 2 {
-		t.Fatalf("started with %d virtual levels, want 2", len(started.Levels))
+	if len(started.State.levels) != 2 {
+		t.Fatalf("started with %d virtual levels, want 2", len(started.State.levels))
 	}
-	if len(started.LevelRoots) != 2 || len(started.LevelRoots[0]) != 1 || len(started.LevelRoots[1]) != 1 {
+	if len(started.LevelRoots) != 2 || len(started.LevelRoots[0]) != 2 || len(started.LevelRoots[1]) != 2 {
 		t.Fatalf("unexpected level root shape: %#v", started.LevelRoots)
 	}
-	if started.LevelRoots[0][0] != committed[0].Tree.Root() || started.LevelRoots[1][0] != committed[0].Tree.Root() {
+	if started.LevelRoots[0][0] != committed[0].Tree.Root() ||
+		started.LevelRoots[0][1] != committed[1].Tree.Root() ||
+		started.LevelRoots[1][0] != committed[0].Tree.Root() ||
+		started.LevelRoots[1][1] != committed[1].Tree.Root() {
 		t.Fatalf("virtual levels should be backed by the committed batch tree")
 	}
 
@@ -405,8 +427,8 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 		t.Fatalf("claimed value mismatch\ngot:  %s\nwant: %s", gotClaim.String(), wantClaim.String())
 	}
 
-	referenceLevels := make([]Level, len(started.Levels))
-	for i, level := range started.Levels {
+	referenceLevels := make([]Level, len(started.State.levels))
+	for i, level := range started.State.levels {
 		referenceLevels[i] = Level{
 			D:     level.D,
 			Evals: append([]field.Ext(nil), level.Evals...),
@@ -455,6 +477,58 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	}
 	if !reflect.DeepEqual(oneShot.FRIProof.FinalPolyExt, referenceProof.FinalPolyExt) {
 		t.Fatalf("one-shot final polynomial mismatch")
+	}
+	if len(oneShot.RowOpenings) != len(positions) {
+		t.Fatalf("one-shot row openings have %d queries, want %d", len(oneShot.RowOpenings), len(positions))
+	}
+
+	layout, err := canonicalLayoutFromBatches(witnesses, shifts)
+	if err != nil {
+		t.Fatalf("canonicalLayoutFromBatches: %v", err)
+	}
+	queryIdx := 0
+	top, topSibling, err := pcs.reconstructQueryPair(
+		layout[0],
+		oneShot.RowOpenings[queryIdx],
+		oneShot.FRIProof.FRIQueries[queryIdx][0],
+		started.LevelRoots[0],
+		oneShot.ClaimedValues,
+		zeta,
+		alphaDeepChallenge,
+		params.domainsLight[0],
+		positions[queryIdx],
+	)
+	if err != nil {
+		t.Fatalf("reconstruct top query values: %v", err)
+	}
+	if want := started.State.levels[0].Evals[positions[queryIdx]]; !top.Equal(&want) {
+		t.Fatalf("top reconstructed value mismatch\ngot:  %s\nwant: %s", top.String(), want.String())
+	}
+	if want := started.State.levels[0].Evals[positions[queryIdx]^1]; !topSibling.Equal(&want) {
+		t.Fatalf("top reconstructed sibling mismatch\ngot:  %s\nwant: %s", topSibling.String(), want.String())
+	}
+
+	auxRound, err := pcs.roundForSize(layout[1].SizeLog2)
+	if err != nil {
+		t.Fatalf("roundForSize: %v", err)
+	}
+	auxBase := positions[queryIdx] >> auxRound
+	aux, err := pcs.reconstructQueryValue(
+		layout[1],
+		oneShot.RowOpenings[queryIdx],
+		oneShot.FRIProof.LevelQueries[0][queryIdx],
+		started.LevelRoots[1],
+		oneShot.ClaimedValues,
+		zeta,
+		alphaDeepChallenge,
+		params.domainsLight[auxRound],
+		auxBase,
+	)
+	if err != nil {
+		t.Fatalf("reconstruct aux query value: %v", err)
+	}
+	if want := started.State.levels[1].Evals[auxBase]; !aux.Equal(&want) {
+		t.Fatalf("aux reconstructed value mismatch\ngot:  %s\nwant: %s", aux.String(), want.String())
 	}
 }
 
@@ -505,17 +579,5 @@ func multiSizeTreeForCodewords(levelEvals, fullEvals []field.Ext) (*Tree, MultiS
 }
 
 func digestSizedRow(table SizedTable, row int) field.Octuplet {
-	hasher := poseidon2.NewMDHasher()
-	for _, base := range table.Base {
-		hasher.WriteElements(base[row])
-	}
-	for _, ext := range table.Ext {
-		value := ext[row]
-		hasher.WriteElements(
-			value.B0.A0, value.B0.A1,
-			value.B1.A0, value.B1.A1,
-			value.B2.A0, value.B2.A1,
-		)
-	}
-	return hasher.SumDigest()
+	return hashRowOpening(openEncodedRow(table, row))
 }

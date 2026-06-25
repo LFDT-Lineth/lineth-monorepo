@@ -183,20 +183,9 @@ func levelTreeLeafIndex(tree *Tree, levelSize, base int) int {
 	if tree == nil {
 		panic("fri: levelTreeLeafIndex: nil tree")
 	}
-	if levelSize <= 0 || levelSize&(levelSize-1) != 0 {
-		panic("fri: levelTreeLeafIndex: levelSize must be a positive power of two")
+	idx, err := levelLeafIndex(tree.NumLeaves(), levelSize, base)
+	if err != nil {
+		panic("fri: levelTreeLeafIndex: " + err.Error())
 	}
-	if base < 0 || base >= levelSize {
-		panic("fri: levelTreeLeafIndex: base out of level range")
-	}
-
-	numLeaves := tree.NumLeaves()
-	if numLeaves < levelSize || numLeaves%levelSize != 0 {
-		panic("fri: levelTreeLeafIndex: level is not backed by this tree")
-	}
-	lift := numLeaves / levelSize
-	if lift&(lift-1) != 0 {
-		panic("fri: levelTreeLeafIndex: tree/level ratio is not a power of two")
-	}
-	return base * lift
+	return idx
 }

@@ -284,6 +284,19 @@ func branchLeafAtLevel(branch Branch, levelSize int) (field.Octuplet, error) {
 	return *branch.AuxSiblings[levelLog], nil
 }
 
+func levelLeafIndex(numLeaves, levelSize, base int) (int, error) {
+	if levelSize <= 0 || levelSize&(levelSize-1) != 0 {
+		return 0, fmt.Errorf("levelSize must be a positive power of two")
+	}
+	if base < 0 || base >= levelSize {
+		return 0, fmt.Errorf("base %d outside [0,%d)", base, levelSize)
+	}
+	if numLeaves < levelSize || numLeaves%levelSize != 0 {
+		return 0, fmt.Errorf("levelSize %d is not backed by tree size %d", levelSize, numLeaves)
+	}
+	return base * (numLeaves / levelSize), nil
+}
+
 // hashNode hashes two field.Octuplets and an optional field.Octuplet. It works
 // by calling the compression function C directly (not MD hashing).
 // res = C(left, right) or C(aux, C(left, right))

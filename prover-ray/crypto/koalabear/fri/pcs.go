@@ -109,6 +109,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
 )
@@ -332,14 +333,15 @@ func validateSizedLayout(batchIdx, sizeLog2 int, shape SizedShape, shifts SizedS
 		return fmt.Errorf("fri: canonicalLayout: batch %d size %d has %d ext shift rows, want %d",
 			batchIdx, sizeLog2, len(shifts.Ext), shape.ExtWidth)
 	}
+	size := 1 << sizeLog2
 	for rowIdx, rowShifts := range shifts.Base {
-		if err := validateColumnShifts(rowShifts); err != nil {
+		if err := validateColumnShifts(rowShifts, size); err != nil {
 			return fmt.Errorf("fri: canonicalLayout: batch %d size %d base row %d: %w",
 				batchIdx, sizeLog2, rowIdx, err)
 		}
 	}
 	for rowIdx, rowShifts := range shifts.Ext {
-		if err := validateColumnShifts(rowShifts); err != nil {
+		if err := validateColumnShifts(rowShifts, size); err != nil {
 			return fmt.Errorf("fri: canonicalLayout: batch %d size %d ext row %d: %w",
 				batchIdx, sizeLog2, rowIdx, err)
 		}
@@ -347,12 +349,15 @@ func validateSizedLayout(batchIdx, sizeLog2 int, shape SizedShape, shifts SizedS
 	return nil
 }
 
-func validateColumnShifts(shifts []int) error {
+func validateColumnShifts(shifts []int, size int) error {
 	if len(shifts) == 0 {
 		return fmt.Errorf("empty shift list")
 	}
 	seen := make(map[int]struct{}, len(shifts))
 	for _, shift := range shifts {
+		if shift < 0 || shift >= size {
+			return fmt.Errorf("shift %d outside [0,%d)", shift, size)
+		}
 		if _, ok := seen[shift]; ok {
 			return fmt.Errorf("duplicate shift %d", shift)
 		}
@@ -557,10 +562,32 @@ type OpeningProof struct {
 	// alpha_DEEP transcript challenge.
 	ClaimedValues []BatchClaimedValues
 
+	// RowOpenings[k][b][i] contains the opened encoded row for query k, batch b, size 2^i.
+	RowOpenings []QueryRowOpenings
+
 	// FRIProof is the underlying multi-degree FRI proof. Already
 	// verifiable on its own (via [Verify]) under the same fold
 	// challenges and query positions the PCS used.
 	FRIProof Proof
+}
+
+// QueryRowOpenings holds committed-row preimages opened for one FRI query.
+type QueryRowOpenings []BatchRowOpenings
+
+// BatchRowOpenings holds one committed batch's opened rows by size_log2.
+type BatchRowOpenings []SizedRowOpening
+
+// SizedRowOpening holds one row and, for the top level, its conjugate sibling.
+type SizedRowOpening struct {
+	Leaf       RowOpening
+	Sibling    RowOpening
+	HasSibling bool
+}
+
+// RowOpening is one MultiSizeTable.Merkleize row preimage.
+type RowOpening struct {
+	Base []field.Element
+	Ext  []field.Ext
 }
 
 // BatchClaimedValues is one Batch's per-size claimed evaluations,
@@ -621,7 +648,6 @@ type ProverStateOutput struct {
 	ClaimedValues []BatchClaimedValues
 	LevelRoots    []QueryLayerRoots
 	LevelDs       []int
-	Levels        []Level
 }
 
 // NewProverState reconstructs the virtual DEEP quotient levels and returns the
@@ -659,7 +685,6 @@ func (pcs *PCS) NewProverState(in ProverStateInputs) (ProverStateOutput, error) 
 	out.ClaimedValues = claimedValues
 	out.LevelRoots = levelRoots
 	out.LevelDs = levelDs
-	out.Levels = state.levels
 	return out, nil
 }
 
@@ -701,14 +726,23 @@ func (pcs *PCS) Open(in OpenInputs) (OpeningProof, error) { //nolint:revive
 		return OpeningProof{}, fmt.Errorf("fri: pcs.Open: got %d query positions, need %d",
 			len(in.Challenges.QueryPositions), pcs.Params.NumQueries)
 	}
+	queryPositions := in.Challenges.QueryPositions[:pcs.Params.NumQueries]
 
 	for round := 0; started.State.HasNext(); round++ {
 		started.State.Fold(in.Challenges.FoldAlphas[round])
 	}
 
+	layout, err := canonicalLayoutFromBatches(in.Witnesses, in.Shifts)
+	if err != nil {
+		return OpeningProof{}, err
+	}
+	friProof := started.State.Open(queryPositions)
+	rowOpenings := pcs.openedRows(layout, in.Committed, queryPositions)
+
 	return OpeningProof{
 		ClaimedValues: started.ClaimedValues,
-		FRIProof:      started.State.Open(in.Challenges.QueryPositions),
+		RowOpenings:   rowOpenings,
+		FRIProof:      friProof,
 	}, nil
 }
 
@@ -831,13 +865,12 @@ func (pcs *PCS) shiftedPoint(sizeLog2, shift int, zeta field.Ext) (field.Ext, er
 		return field.Ext{}, fmt.Errorf("encoder %d has invalid plaintext size %d", sizeLog2, size)
 	}
 
-	normalizedShift := shift % size
-	if normalizedShift < 0 {
-		normalizedShift += size
+	if shift < 0 || shift >= size {
+		return field.Ext{}, fmt.Errorf("shift %d outside [0,%d)", shift, size)
 	}
 
 	var rotation field.Element
-	rotation.Exp(encoder.smallDomain.Generator, big.NewInt(int64(normalizedShift)))
+	rotation.Exp(encoder.smallDomain.Generator, big.NewInt(int64(shift)))
 
 	var point field.Ext
 	point.MulByElement(&zeta, &rotation)
@@ -990,6 +1023,233 @@ func levelVerifierInputs(levels []Level) ([]QueryLayerRoots, []int) {
 		degrees[i] = levels[i].D
 	}
 	return roots, degrees
+}
+
+func (pcs *PCS) openedRows(
+	layout layout,
+	committed []CommitterState,
+	queryPositions []int,
+) []QueryRowOpenings {
+	res := make([]QueryRowOpenings, len(queryPositions))
+	for queryIdx, queryPosition := range queryPositions {
+		res[queryIdx] = make(QueryRowOpenings, len(committed))
+		for batchIdx := range committed {
+			res[queryIdx][batchIdx] = make(BatchRowOpenings, len(committed[batchIdx].EncodedTable))
+		}
+
+		for bundleIdx, bundle := range layout {
+			round, _ := pcs.roundForSize(bundle.SizeLog2)
+			base := queryPosition >> round
+
+			for _, batchIdx := range batchOrder(bundle) {
+				sized := &res[queryIdx][batchIdx][bundle.SizeLog2]
+				sized.Leaf = openEncodedRow(committed[batchIdx].EncodedTable[bundle.SizeLog2], base)
+				if bundleIdx == 0 {
+					sized.Sibling = openEncodedRow(committed[batchIdx].EncodedTable[bundle.SizeLog2], base^1)
+					sized.HasSibling = true
+				}
+			}
+		}
+	}
+	return res
+}
+
+func batchOrder(bundle sizeBundle) []int {
+	order := make([]int, 0)
+	prev := -1
+	for _, entry := range bundle.Entries {
+		if entry.BatchIdx == prev {
+			continue
+		}
+		order = append(order, entry.BatchIdx)
+		prev = entry.BatchIdx
+	}
+	return order
+}
+
+func openEncodedRow(table SizedTable, row int) RowOpening {
+	opening := RowOpening{
+		Base: make([]field.Element, len(table.Base)),
+		Ext:  make([]field.Ext, len(table.Ext)),
+	}
+	for i := range table.Base {
+		opening.Base[i] = table.Base[i][row]
+	}
+	for i := range table.Ext {
+		opening.Ext[i] = table.Ext[i][row]
+	}
+	return opening
+}
+
+func hashRowOpening(row RowOpening) field.Octuplet {
+	hasher := poseidon2.NewMDHasher()
+	for _, base := range row.Base {
+		hasher.WriteElements(base)
+	}
+	for _, ext := range row.Ext {
+		hasher.WriteElements(ext.B0.A0, ext.B0.A1, ext.B1.A0, ext.B1.A1, ext.B2.A0, ext.B2.A1)
+	}
+	return hasher.SumDigest()
+}
+
+func (pcs *PCS) reconstructQueryPair(
+	bundle sizeBundle,
+	rows QueryRowOpenings,
+	opening QueryLayer,
+	roots QueryLayerRoots,
+	claimed []BatchClaimedValues,
+	zeta field.Ext,
+	alphaDeepChallenge field.Ext,
+	domain domainLight,
+	base int,
+) (field.Ext, field.Ext, error) {
+	order, err := authenticateRowOpenings(bundle, rows, opening, roots, domain, base)
+	if err != nil {
+		return field.Ext{}, field.Ext{}, err
+	}
+	for branchIdx, batchIdx := range order {
+		row := rows[batchIdx][bundle.SizeLog2]
+		if !row.HasSibling {
+			return field.Ext{}, field.Ext{}, fmt.Errorf("fri: reconstructQueryValue: tree %d missing sibling row",
+				branchIdx)
+		}
+		siblings := opening[branchIdx].Siblings
+		if len(siblings) == 0 || siblings[len(siblings)-1] != hashRowOpening(row.Sibling) {
+			return field.Ext{}, field.Ext{}, fmt.Errorf("fri: reconstructQueryValue: tree %d sibling digest mismatch",
+				branchIdx)
+		}
+	}
+
+	value, err := pcs.reconstructQueryValueAt(
+		bundle, rows, claimed, zeta, alphaDeepChallenge, domainPointExt(domain, base), false)
+	if err != nil {
+		return field.Ext{}, field.Ext{}, err
+	}
+	sibling, err := pcs.reconstructQueryValueAt(
+		bundle, rows, claimed, zeta, alphaDeepChallenge, domainPointExt(domain, base^1), true)
+	if err != nil {
+		return field.Ext{}, field.Ext{}, err
+	}
+	return value, sibling, nil
+}
+
+func (pcs *PCS) reconstructQueryValue(
+	bundle sizeBundle,
+	rows QueryRowOpenings,
+	opening QueryLayer,
+	roots QueryLayerRoots,
+	claimed []BatchClaimedValues,
+	zeta field.Ext,
+	alphaDeepChallenge field.Ext,
+	domain domainLight,
+	base int,
+) (field.Ext, error) {
+	if _, err := authenticateRowOpenings(bundle, rows, opening, roots, domain, base); err != nil {
+		return field.Ext{}, err
+	}
+	return pcs.reconstructQueryValueAt(
+		bundle, rows, claimed, zeta, alphaDeepChallenge, domainPointExt(domain, base), false)
+}
+
+func (pcs *PCS) reconstructQueryValueAt(
+	bundle sizeBundle,
+	rows QueryRowOpenings,
+	claimed []BatchClaimedValues,
+	zeta field.Ext,
+	alphaDeepChallenge field.Ext,
+	x field.Ext,
+	sibling bool,
+) (field.Ext, error) {
+	alphaDeepPowers := alphaDeepChallengePowers(alphaDeepChallenge, len(bundle.Entries))
+
+	var value field.Ext
+	for _, entry := range bundle.Entries {
+		claims, err := pcs.claimsForEntry(claimed, entry, zeta)
+		if err != nil {
+			return field.Ext{}, err
+		}
+		sizedRow := rows[entry.BatchIdx][entry.SizeLog2]
+		row := sizedRow.Leaf
+		if sibling {
+			if !sizedRow.HasSibling {
+				return field.Ext{}, fmt.Errorf("fri: reconstructQueryValue: batch %d size %d missing sibling row",
+					entry.BatchIdx, entry.SizeLog2)
+			}
+			row = sizedRow.Sibling
+		}
+		entryValue := rowValue(row, entry)
+		term, err := quotientAtValue(entryValue, x, claims)
+		if err != nil {
+			return field.Ext{}, err
+		}
+		term.Mul(&term, &alphaDeepPowers[entry.AlphaPower])
+		value.Add(&value, &term)
+	}
+	return value, nil
+}
+
+func authenticateRowOpenings(
+	bundle sizeBundle,
+	rows QueryRowOpenings,
+	opening QueryLayer,
+	roots QueryLayerRoots,
+	domain domainLight,
+	base int,
+) ([]int, error) {
+	order := batchOrder(bundle)
+	if len(opening) != len(order) {
+		return nil, fmt.Errorf("fri: reconstructQueryValue: opening has %d branches, want %d", len(opening), len(order))
+	}
+	levelSize, err := reconstructDomainSize(domain)
+	if err != nil {
+		return nil, err
+	}
+	if base < 0 || base >= levelSize {
+		return nil, fmt.Errorf("fri: reconstructQueryValue: base %d outside [0,%d)", base, levelSize)
+	}
+	if _, err := authenticateQueryLayerRoots("reconstructQueryValue", opening, roots, func(branch Branch) (int, error) {
+		return levelLeafIndex(1<<len(branch.Siblings), levelSize, base)
+	}); err != nil {
+		return nil, err
+	}
+
+	for branchIdx, batchIdx := range order {
+		row := rows[batchIdx][bundle.SizeLog2]
+
+		leaf, err := branchLeafAtLevel(opening[branchIdx], levelSize)
+		if err != nil {
+			return nil, fmt.Errorf("fri: reconstructQueryValue: tree %d level leaf: %w", branchIdx, err)
+		}
+		if leaf != hashRowOpening(row.Leaf) {
+			return nil, fmt.Errorf("fri: reconstructQueryValue: tree %d row digest mismatch", branchIdx)
+		}
+	}
+	return order, nil
+}
+
+func rowValue(row RowOpening, entry deepEntry) field.Ext {
+	if entry.IsExt {
+		return row.Ext[entry.RowIdx]
+	}
+	return field.Lift(row.Base[entry.RowIdx])
+}
+
+func quotientAtValue(value, x field.Ext, claims []quotientClaim) (field.Ext, error) {
+	var res field.Ext
+	for _, claim := range claims {
+		var denominator field.Ext
+		denominator.Sub(&x, &claim.Point)
+		if denominator.IsZero() {
+			return field.Ext{}, fmt.Errorf("claim point lands on query point")
+		}
+		denominator.Inverse(&denominator)
+
+		var numerator, term field.Ext
+		numerator.Sub(&value, &claim.Value)
+		term.Mul(&numerator, &denominator)
+		res.Add(&res, &term)
+	}
+	return res, nil
 }
 
 // VerifyInputs bundles every parameter pcs.Verify needs. Mirrors
