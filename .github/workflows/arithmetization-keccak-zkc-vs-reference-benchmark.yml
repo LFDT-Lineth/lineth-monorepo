@@ -67,7 +67,7 @@ jobs:
         run: |
           set -o pipefail
           ZKC_REF= GO111MODULE=off go run ./arithmetization/src/test/scripts/keccak_zkc_vs_reference_speedup \
-            --intervals 10 --size 10 \
+            --intervals 5 --size 5 \
             | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Run increasing-length input benchmark
@@ -75,5 +75,5 @@ jobs:
         run: |
           set -o pipefail
           ZKC_REF= GO111MODULE=off go run ./arithmetization/src/test/scripts/keccak_zkc_vs_reference_speedup \
-            --single-input-lengths 512,1024,2048,4096,8192,16384,32768,65536 \
+            --single-input-lengths 512,1024,2048,4096,8192,16384,32768 \
             | tee -a "$GITHUB_STEP_SUMMARY"
