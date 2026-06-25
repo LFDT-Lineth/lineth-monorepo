@@ -3,7 +3,6 @@ package field
 import (
 	"fmt"
 	"math/rand/v2"
-	"slices"
 	"strings"
 )
 
@@ -572,49 +571,4 @@ func VecEqualExt(a, b []Ext) bool {
 		}
 	}
 	return true
-}
-
-// PadWith pads the vector with the specified constant value. The Vec is left
-// unchanged but the function will avoid allocating a new vector if this can be
-// avoided. The function should not be called twice on the same vector. The
-// function sanity-checks that the padding is not overwriting non-zero values
-// on the vector.
-func PadVecWith(v Vec, pad Gen, size int) Vec {
-
-	if v.IsBase() {
-
-		if !pad.IsBase() {
-			panic("field: cannot append extension element to base vector")
-		}
-
-		padBase := pad.AsBase()
-		plain := slices.Grow(v.base, size)
-		plain = plain[:size]
-
-		for i := len(v.base); i < size; i++ {
-			// Sanity-check that the padding is only overwriting zeroes.
-			if plain[i].IsZero() {
-				panic("overwriting non-zero value. Check that PadWith is only called once on the same vector.")
-			}
-
-			plain[i] = padBase
-		}
-
-		return VecFromBase(plain)
-	}
-
-	padExt := pad.AsExt()
-	ext := slices.Grow(v.ext, size)
-	ext = ext[:size]
-
-	for i := len(v.ext); i < size; i++ {
-		// Sanity-check that the padding is only overwriting zeroes.
-		if !ext[i].IsZero() {
-			panic("overwriting non-zero value. Check that PadWith is only called once on the same vector.")
-		}
-
-		ext[i] = padExt
-	}
-
-	return VecFromExt(ext)
 }
