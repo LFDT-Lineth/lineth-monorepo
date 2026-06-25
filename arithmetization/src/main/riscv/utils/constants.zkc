@@ -342,6 +342,10 @@ const ITYPE_INVALID:ITypeComputeOp = 63
 // Writeback kinds (second micro-step after compute)
 const WB_NONE:ITypeWriteback = 0
 const WB_STORE_REG:ITypeWriteback = 1
+const WB_MEM_8:ITypeWriteback = 2
+const WB_MEM_16:ITypeWriteback = 3
+const WB_MEM_32:ITypeWriteback = 4
+const WB_MEM_64:ITypeWriteback = 5
 
 // R-type semantic compute ops (pre-decoded at ELF time).
 const RTYPE_ADD:RTypeComputeOp = 0
@@ -380,10 +384,7 @@ const RTYPE_KECCAK:RTypeComputeOp = 28
 const RTYPE_INVALID:RTypeComputeOp = 63
 
 // S-type semantic compute ops (pre-decoded at ELF time).
-const STORE_SB:STypeComputeOp = 0
-const STORE_SH:STypeComputeOp = 1
-const STORE_SW:STypeComputeOp = 2
-const STORE_SD:STypeComputeOp = 3
+const STYPE_STORE:STypeComputeOp = 0
 const STYPE_INVALID:STypeComputeOp = 63
 
 // B-type semantic compute ops (pre-decoded at ELF time).

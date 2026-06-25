@@ -186,6 +186,10 @@ const (
 
 	wbNone      = 0
 	wbStoreReg  = 1
+	wbMem8      = 2
+	wbMem16     = 3
+	wbMem32     = 4
+	wbMem64     = 5
 )
 
 // writebackForRd returns WB_NONE when the destination is x0, otherwise writeback unchanged.
@@ -236,10 +240,7 @@ const (
 
 // S-type semantic micro-op constants. These MUST match constants.zkc.
 const (
-	stypeStoreSb = 0
-	stypeStoreSh = 1
-	stypeStoreSw = 2
-	stypeStoreSd = 3
+	stypeStore   = 0
 	stypeInvalid = 63
 )
 
@@ -477,19 +478,19 @@ func decodeRTypeSemantic(opcode, funct3, funct7 uint32) (computeOp, writeback ui
 	}
 }
 
-// decodeSTypeSemantic maps a raw S-type funct3 to a semantic store op.
-func decodeSTypeSemantic(funct3 uint32) uint32 {
+// decodeSTypeSemantic maps a raw S-type funct3 to a semantic store compute op and memory writeback.
+func decodeSTypeSemantic(funct3 uint32) (computeOp, writeback uint32) {
 	switch funct3 {
 	case 0b000:
-		return stypeStoreSb
+		return stypeStore, wbMem8
 	case 0b001:
-		return stypeStoreSh
+		return stypeStore, wbMem16
 	case 0b010:
-		return stypeStoreSw
+		return stypeStore, wbMem32
 	case 0b011:
-		return stypeStoreSd
+		return stypeStore, wbMem64
 	default:
-		return stypeInvalid
+		return stypeInvalid, wbNone
 	}
 }
 
@@ -790,12 +791,12 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 	// types declared for the inputs in memory.zkc, because zkc packs input
 	// records tightly by bit width:
 	//   decoded_core : opcode:Opcode(u7), instruction_type:Type(u3), instruction_parameters:u25
-	//   decoded_itype: compute_op:ITypeComputeOp(u6), writeback:ITypeWriteback(u2), imm12:Imm12(u12), rs1:Register(u5), rd:Register(u5)
-	//   decoded_rtype: compute_op:RTypeComputeOp(u6), writeback:ITypeWriteback(u2), rs1:Register(u5), rs2:Register(u5), rd:Register(u5)
-	//   decoded_stype: compute_op:STypeComputeOp(u6), imm12:Imm12(u12), rs2:Register(u5), rs1:Register(u5)
+	//   decoded_itype: compute_op:ITypeComputeOp(u6), writeback:ITypeWriteback(u3), imm12:Imm12(u12), rs1:Register(u5), rd:Register(u5)
+	//   decoded_rtype: compute_op:RTypeComputeOp(u6), writeback:ITypeWriteback(u3), rs1:Register(u5), rs2:Register(u5), rd:Register(u5)
+	//   decoded_stype: compute_op:STypeComputeOp(u6), writeback:ITypeWriteback(u3), imm12:Imm12(u12), rs2:Register(u5), rs1:Register(u5)
 	//   decoded_btype: compute_op:BTypeComputeOp(u6), imm_sign:u1, imm_10_5:u6, rs2:Register(u5), rs1:Register(u5), imm_4_1:u4, imm_11:u1
-	//   decoded_jtype: compute_op:JTypeComputeOp(u6), writeback:ITypeWriteback(u2), imm:DoubleWord(u64), rd:Register(u5)
-	//   decoded_utype: compute_op:UTypeComputeOp(u6), writeback:ITypeWriteback(u2), imm20:Imm20(u20), rd:Register(u5)
+	//   decoded_jtype: compute_op:JTypeComputeOp(u6), writeback:ITypeWriteback(u3), imm:DoubleWord(u64), rd:Register(u5)
+	//   decoded_utype: compute_op:UTypeComputeOp(u6), writeback:ITypeWriteback(u3), imm20:Imm20(u20), rd:Register(u5)
 	var (
 		coreBits  bitWriter
 		itypeBits bitWriter
@@ -855,7 +856,7 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		writeback = writebackForRd(rd, writeback)
 
 		itypeBits.writeBits(uint64(computeOp), 6)
-		itypeBits.writeBits(uint64(writeback), 2)
+		itypeBits.writeBits(uint64(writeback), 3)
 		itypeBits.writeBits(uint64(normImm12), 12)
 		itypeBits.writeBits(uint64(rs1), 5)
 		itypeBits.writeBits(uint64(rd), 5)
@@ -867,16 +868,17 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		rtypeWriteback = writebackForRd(rd, rtypeWriteback)
 
 		rtypeBits.writeBits(uint64(rtypeComputeOp), 6)
-		rtypeBits.writeBits(uint64(rtypeWriteback), 2)
+		rtypeBits.writeBits(uint64(rtypeWriteback), 3)
 		rtypeBits.writeBits(uint64(rs1), 5)
 		rtypeBits.writeBits(uint64(rs2), 5)
 		rtypeBits.writeBits(uint64(rd), 5)
 
-		stypeComputeOp := decodeSTypeSemantic(funct3)
+		stypeComputeOp, stypeWriteback := decodeSTypeSemantic(funct3)
 		if instrType != sType {
-			stypeComputeOp = stypeInvalid
+			stypeComputeOp, stypeWriteback = stypeInvalid, wbNone
 		}
 		stypeBits.writeBits(uint64(stypeComputeOp), 6)
+		stypeBits.writeBits(uint64(stypeWriteback), 3)
 		stypeBits.writeBits(uint64(simm12), 12)
 		stypeBits.writeBits(uint64(rs2), 5)
 		stypeBits.writeBits(uint64(rs1), 5)
@@ -899,7 +901,7 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		}
 		jtypeWriteback = writebackForRd(rd, jtypeWriteback)
 		jtypeBits.writeBits(uint64(jtypeComputeOp), 6)
-		jtypeBits.writeBits(uint64(jtypeWriteback), 2)
+		jtypeBits.writeBits(uint64(jtypeWriteback), 3)
 		jtypeBits.writeBits(jImm, 64)
 		jtypeBits.writeBits(uint64(rd), 5)
 
@@ -909,7 +911,7 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		}
 		utypeWriteback = writebackForRd(rd, utypeWriteback)
 		utypeBits.writeBits(uint64(utypeComputeOp), 6)
-		utypeBits.writeBits(uint64(utypeWriteback), 2)
+		utypeBits.writeBits(uint64(utypeWriteback), 3)
 		utypeBits.writeBits(uint64(uImm20), 20)
 		utypeBits.writeBits(uint64(rd), 5)
 	}

@@ -53,9 +53,10 @@ pub input decoded_itype(i:u64) -> (compute_op:ITypeComputeOp, writeback:ITypeWri
 pub input decoded_rtype(i:u64) -> (compute_op:RTypeComputeOp, writeback:ITypeWriteback, rs1:Register, rs2:Register, rd:Register)
 
 // Pre-decoded S-type semantic micro-ops, indexed by the same instruction index.
-// Replaces runtime funct3 disambiguation in s_type.zkc with a flat compute_op switch.
+// Replaces runtime funct3 disambiguation in s_type.zkc with a flat compute_op switch
+// plus a separate writeback step (WB_MEM_8 / WB_MEM_16 / …).
 // The 12-bit store immediate (imm[11]::imm[10:5]::imm[4:0]) is pre-assembled into imm12.
-pub input decoded_stype(i:u64) -> (compute_op:STypeComputeOp, imm12:Imm12, rs2:Register, rs1:Register)
+pub input decoded_stype(i:u64) -> (compute_op:STypeComputeOp, writeback:ITypeWriteback, imm12:Imm12, rs2:Register, rs1:Register)
 
 // Pre-decoded B-type semantic micro-ops, indexed by the same instruction index.
 // Replaces runtime funct3 disambiguation in b_type.zkc with a flat compute_op switch.
