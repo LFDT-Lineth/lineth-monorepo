@@ -33,7 +33,7 @@ pub fn build(b: *std.Build) void {
     //   • zesu executor + SSZ modules — the execution logic;
     //   • zesu_zkvm_accel — zesu-zkvm's stdlibs_accel: in-guest software precompiles that
     //     zkvm_provide.zig exports as the zkvm_* symbols zesu references;
-    //   • linea_zkvm_accel — Linea accelerator wrappers (keccak today): zkvm_* the prover accelerates
+    //   • lineth_zkvm_accel — Lineth accelerator wrappers (keccak today): zkvm_* the prover accelerates
     //     at execution rather than at link time, so the ELF stays fully resolved;
     //   • linea_zkvm_io — zesu-zkvm's zkvm_io: satisfies the standards `read_input` by reading the
     //     memory-mapped `_in_start` (the input slot is the proving system's detail, kept out of the
