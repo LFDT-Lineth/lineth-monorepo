@@ -258,6 +258,11 @@ func checkLevelTrees(label string, trees []*Tree) error {
 // ts must be in the same state as when Prove was called.
 func Verify(p Params, levelRoots []QueryLayerRoots, levelDs []int, prf Proof,
 	alphas []field.Ext, openedPositions []int) error {
+	return verifyWithValues(p, levelRoots, levelDs, prf, alphas, openedPositions, merkleQueryValues{})
+}
+
+func verifyWithValues(p Params, levelRoots []QueryLayerRoots, levelDs []int, prf Proof,
+	alphas []field.Ext, openedPositions []int, values queryValueProvider) error {
 
 	if len(levelDs) == 0 {
 		return fmt.Errorf("fri: Verify: at least one level required")
@@ -353,12 +358,12 @@ func Verify(p Params, levelRoots []QueryLayerRoots, levelDs []int, prf Proof,
 			return fmt.Errorf("fri: Verify: query %d has %d layers, want %d", k, len(q), p.numRounds)
 		}
 		for j := 0; j < p.numRounds; j++ {
-			if err := checkQueryLayerShape(q[j], roots[j], p.N>>j); err != nil {
+			if err := values.checkRoundShape(j, q[j], roots[j], p.N>>j); err != nil {
 				return fmt.Errorf("fri: Verify: query %d round %d: %w", k, j, err)
 			}
 		}
 		for jl, li := range levelAtRound {
-			if err := checkQueryLayerShape(prf.LevelQueries[li-1][k], levelRoots[li], p.N>>jl); err != nil {
+			if err := values.checkLevelShape(li, prf.LevelQueries[li-1][k], levelRoots[li], p.N>>jl); err != nil {
 				return fmt.Errorf("fri: Verify: query %d extra level %d: %w", k, li, err)
 			}
 		}
@@ -369,7 +374,7 @@ func Verify(p Params, levelRoots []QueryLayerRoots, levelDs []int, prf Proof,
 		levelRootsExtra = levelRoots[1:]
 	}
 
-	return verifyExt(p, levelRoots, levelRootsExtra, levelAtRound, roots, prf, alphas, openedPositions)
+	return verifyExt(p, levelRoots, levelRootsExtra, levelAtRound, roots, prf, alphas, openedPositions, values)
 }
 
 func verifyExt(
@@ -380,6 +385,7 @@ func verifyExt(
 	prf Proof,
 	alphas []field.Ext,
 	queryIndexes []int,
+	values queryValueProvider,
 ) error {
 
 	numLevels := len(levelRoots)
@@ -397,8 +403,8 @@ func verifyExt(
 			}
 		}
 
-		if err := checkQueryExt(s, prf.FRIQueries[k], levelQueriesForQuery, levelRootsExtra,
-			levelAtRound, roots, prf.FinalPolyExt, alphas, p); err != nil {
+		if err := checkQueryExt(k, s, prf.FRIQueries[k], levelQueriesForQuery, levelRootsExtra,
+			levelAtRound, roots, prf.FinalPolyExt, alphas, p, values); err != nil {
 			return fmt.Errorf("fri: Verify: query %d failed: %w", k, err)
 		}
 	}
@@ -429,6 +435,29 @@ func checkBranchShape(b Branch, numLeaves int) error {
 	}
 	if len(b.AuxSiblings) != want {
 		return fmt.Errorf("branch has %d aux siblings, want %d", len(b.AuxSiblings), want)
+	}
+	return nil
+}
+
+func checkMultiSizeQueryLayerShape(opening QueryLayer, roots QueryLayerRoots, numLeaves int) error {
+	if len(opening) != len(roots) {
+		return fmt.Errorf("opening has %d branches, want %d", len(opening), len(roots))
+	}
+	for i, branch := range opening {
+		if err := checkMultiSizeBranchShape(branch, numLeaves); err != nil {
+			return fmt.Errorf("branch %d: %w", i, err)
+		}
+	}
+	return nil
+}
+
+func checkMultiSizeBranchShape(b Branch, numLeaves int) error {
+	want := utils.Log2Ceil(numLeaves)
+	if len(b.Siblings) < want {
+		return fmt.Errorf("branch has %d siblings, want at least %d", len(b.Siblings), want)
+	}
+	if len(b.AuxSiblings) != len(b.Siblings) {
+		return fmt.Errorf("branch has %d aux siblings, want %d", len(b.AuxSiblings), len(b.Siblings))
 	}
 	return nil
 }
@@ -580,44 +609,76 @@ func openQueryExt(s int, layer0 QueryLayer, layers [][]field.Ext, trees []*Tree,
 	return q
 }
 
-func checkQueryExt(s int, fq Query,
+type queryValueProvider interface {
+	checkRoundShape(round int, opening QueryLayer, roots QueryLayerRoots, numLeaves int) error
+	checkLevelShape(levelIdx int, opening QueryLayer, roots QueryLayerRoots, numLeaves int) error
+	queryPair(queryIdx, round, base int, opening QueryLayer, roots QueryLayerRoots) (field.Ext, field.Ext, error)
+	levelValue(queryIdx, levelIdx, base int, opening QueryLayer, roots QueryLayerRoots) (field.Ext, error)
+}
+
+type merkleQueryValues struct{}
+
+func (merkleQueryValues) checkRoundShape(_ int, opening QueryLayer, roots QueryLayerRoots, numLeaves int) error {
+	return checkQueryLayerShape(opening, roots, numLeaves)
+}
+
+func (merkleQueryValues) checkLevelShape(_ int, opening QueryLayer, roots QueryLayerRoots, numLeaves int) error {
+	return checkQueryLayerShape(opening, roots, numLeaves)
+}
+
+func (merkleQueryValues) queryPair(_ int, round, base int, opening QueryLayer, roots QueryLayerRoots) (
+	field.Ext, field.Ext, error,
+) {
+	branch, err := authenticateQueryLayer(fmt.Sprintf("round %d", round), opening, roots, base)
+	if err != nil {
+		return field.Ext{}, field.Ext{}, err
+	}
+	if len(branch.Siblings) == 0 {
+		return field.Ext{}, field.Ext{}, fmt.Errorf("round %d: branch carries no sibling", round)
+	}
+	self, err := octupletToExt(branch.Leaf)
+	if err != nil {
+		return field.Ext{}, field.Ext{}, fmt.Errorf("round %d: decode leaf: %w", round, err)
+	}
+	sib, err := octupletToExt(branch.Siblings[len(branch.Siblings)-1])
+	if err != nil {
+		return field.Ext{}, field.Ext{}, fmt.Errorf("round %d: decode sibling: %w", round, err)
+	}
+	return self, sib, nil
+}
+
+func (merkleQueryValues) levelValue(_ int, levelIdx, base int, opening QueryLayer, roots QueryLayerRoots) (
+	field.Ext, error,
+) {
+	branch, err := authenticateQueryLayer(fmt.Sprintf("level %d", levelIdx), opening, roots, base)
+	if err != nil {
+		return field.Ext{}, err
+	}
+	value, err := octupletToExt(branch.Leaf)
+	if err != nil {
+		return field.Ext{}, fmt.Errorf("level %d: decode leaf: %w", levelIdx, err)
+	}
+	return value, nil
+}
+
+func checkQueryExt(queryIdx, s int, fq Query,
 	levelQueriesForQuery []QueryLayer,
 	levelRoots []QueryLayerRoots,
 	levelAtRound map[int]int,
 	roots []QueryLayerRoots,
 	finalPoly []field.Ext,
 	alphas []field.Ext,
-	p Params) error {
+	p Params,
+	values queryValueProvider) error {
 
 	for j := 0; j < p.numRounds; j++ {
 
 		base := s >> j // bit-reversed position of the query in layer j
 
-		// Authenticate the opened leaf against the round-j root. The hashing now
-		// lives in the tree itself (Branch.RecoverRoot replays hashNode up to the
-		// root), so there is no separate leaf/node hasher to call.
-		branch, err := authenticateQueryLayer(fmt.Sprintf("round %d", j), fq[j], roots[j], base)
+		// The opened leaf and its deepest sibling are the conjugate pair p(x), p(-x).
+		self, sib, err := values.queryPair(queryIdx, j, base, fq[j], roots[j])
 		if err != nil {
 			return err
-		}
-
-		// The opened leaf and its deepest sibling are the conjugate pair p(x),
-		// p(-x): in bit-reversed order the conjugates sit at adjacent positions
-		// base and base^1, which are sibling leaves. We don't need to know which
-		// side base landed on — the fold is invariant under swapping (x, p(x),
-		// p(-x)) → (-x, p(-x), p(x)).
-		if len(branch.Siblings) == 0 {
-			return fmt.Errorf("round %d: branch carries no sibling", j)
-		}
-		// TODO(C2): branch is still the first authenticated backing tree; C2.2
-		// reconstructs the folded level value from the full QueryLayer.
-		self, err := octupletToExt(branch.Leaf)
-		if err != nil {
-			return fmt.Errorf("round %d: decode leaf: %w", j, err)
-		}
-		sib, err := octupletToExt(branch.Siblings[len(branch.Siblings)-1])
-		if err != nil {
-			return fmt.Errorf("round %d: decode sibling: %w", j, err)
 		}
 
 		// x is the domain point of the opened leaf. The codeword is bit-reversed,
@@ -645,13 +706,9 @@ func checkQueryExt(s int, fq Query,
 		if li, ok := levelAtRound[j+1]; ok {
 			lvOpening := levelQueriesForQuery[li-1]
 			lvIdx := s >> (j + 1) // the level's codeword shares layer j+1's indexing
-			lv, err := authenticateQueryLayer(fmt.Sprintf("level %d", li), lvOpening, levelRoots[li-1], lvIdx)
+			aux, err := values.levelValue(queryIdx, li, lvIdx, lvOpening, levelRoots[li-1])
 			if err != nil {
 				return err
-			}
-			aux, err := octupletToExt(lv.Leaf)
-			if err != nil {
-				return fmt.Errorf("level %d: decode leaf: %w", li, err)
 			}
 
 			term.Mul(&aux, &alpha2)
@@ -695,9 +752,6 @@ func authenticateQueryLayer(
 	if err != nil {
 		return Branch{}, err
 	}
-	// TODO(C2): C0.1 authenticates every backing tree, but the fold checker still
-	// consumes the first branch's leaf. C2.2 replaces this with level
-	// reconstruction over all authenticated branches.
 	return first, nil
 }
 

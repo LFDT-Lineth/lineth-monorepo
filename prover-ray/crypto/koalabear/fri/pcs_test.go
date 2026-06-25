@@ -481,6 +481,20 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	if len(oneShot.RowOpenings) != len(positions) {
 		t.Fatalf("one-shot row openings have %d queries, want %d", len(oneShot.RowOpenings), len(positions))
 	}
+	roots := []field.Octuplet{committed[0].Tree.Root(), committed[1].Tree.Root()}
+	if err := pcs.Verify(VerifyInputs{
+		Roots:  roots,
+		Shapes: shapesFromBatches(witnesses),
+		Shifts: shifts,
+		Challenges: Challenges{
+			Zeta:           zeta,
+			AlphaDeep:      alphaDeepChallenge,
+			FoldAlphas:     foldAlphas,
+			QueryPositions: positions,
+		},
+	}, oneShot); err != nil {
+		t.Fatalf("pcs.Verify: %v", err)
+	}
 
 	layout, err := canonicalLayoutFromBatches(witnesses, shifts)
 	if err != nil {
@@ -489,6 +503,7 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	queryIdx := 0
 	top, topSibling, err := pcs.reconstructQueryPair(
 		layout[0],
+		batchOrder(layout[0]),
 		oneShot.RowOpenings[queryIdx],
 		oneShot.FRIProof.FRIQueries[queryIdx][0],
 		started.LevelRoots[0],
@@ -515,6 +530,7 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	auxBase := positions[queryIdx] >> auxRound
 	aux, err := pcs.reconstructQueryValue(
 		layout[1],
+		batchOrder(layout[1]),
 		oneShot.RowOpenings[queryIdx],
 		oneShot.FRIProof.LevelQueries[0][queryIdx],
 		started.LevelRoots[1],

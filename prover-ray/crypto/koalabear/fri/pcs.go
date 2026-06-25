@@ -2,8 +2,7 @@
 // (Commit / RSEncoder / Tree / ProverState / Proof) into a batch
 // polynomial-commitment scheme with an Open/Verify surface.
 //
-// This file defines the PCS-facing types and the canonical column layout. The
-// Open / Verify bodies are intentionally staged behind later commits.
+// This file defines the PCS-facing types and the canonical column layout.
 //
 // =============================================================================
 // Design overview
@@ -308,6 +307,10 @@ func canonicalLayout(shapes []Shape, shifts []BatchShifts) (layout, error) { //n
 // canonicalLayoutFromBatches is the prover-side entry point: shapes
 // are inferred from witness row counts. Delegates to canonicalLayout.
 func canonicalLayoutFromBatches(batches []Batch, shifts []BatchShifts) (layout, error) { //nolint:revive
+	return canonicalLayout(shapesFromBatches(batches), shifts)
+}
+
+func shapesFromBatches(batches []Batch) []Shape {
 	shapes := make([]Shape, len(batches))
 	for batchIdx := range batches {
 		shapes[batchIdx] = make(Shape, len(batches[batchIdx]))
@@ -318,7 +321,7 @@ func canonicalLayoutFromBatches(batches []Batch, shifts []BatchShifts) (layout, 
 			}
 		}
 	}
-	return canonicalLayout(shapes, shifts)
+	return shapes
 }
 
 func validateSizedLayout(batchIdx, sizeLog2 int, shape SizedShape, shifts SizedShifts) error {
@@ -1030,6 +1033,8 @@ func (pcs *PCS) openedRows(
 	committed []CommitterState,
 	queryPositions []int,
 ) []QueryRowOpenings {
+	orders := batchOrders(layout)
+
 	res := make([]QueryRowOpenings, len(queryPositions))
 	for queryIdx, queryPosition := range queryPositions {
 		res[queryIdx] = make(QueryRowOpenings, len(committed))
@@ -1041,7 +1046,7 @@ func (pcs *PCS) openedRows(
 			round, _ := pcs.roundForSize(bundle.SizeLog2)
 			base := queryPosition >> round
 
-			for _, batchIdx := range batchOrder(bundle) {
+			for _, batchIdx := range orders[bundleIdx] {
 				sized := &res[queryIdx][batchIdx][bundle.SizeLog2]
 				sized.Leaf = openEncodedRow(committed[batchIdx].EncodedTable[bundle.SizeLog2], base)
 				if bundleIdx == 0 {
@@ -1055,7 +1060,7 @@ func (pcs *PCS) openedRows(
 }
 
 func batchOrder(bundle sizeBundle) []int {
-	order := make([]int, 0)
+	order := make([]int, 0, len(bundle.Entries))
 	prev := -1
 	for _, entry := range bundle.Entries {
 		if entry.BatchIdx == prev {
@@ -1065,6 +1070,14 @@ func batchOrder(bundle sizeBundle) []int {
 		prev = entry.BatchIdx
 	}
 	return order
+}
+
+func batchOrders(layout layout) [][]int {
+	orders := make([][]int, len(layout))
+	for i := range layout {
+		orders[i] = batchOrder(layout[i])
+	}
+	return orders
 }
 
 func openEncodedRow(table SizedTable, row int) RowOpening {
@@ -1094,6 +1107,7 @@ func hashRowOpening(row RowOpening) field.Octuplet {
 
 func (pcs *PCS) reconstructQueryPair(
 	bundle sizeBundle,
+	order []int,
 	rows QueryRowOpenings,
 	opening QueryLayer,
 	roots QueryLayerRoots,
@@ -1103,19 +1117,19 @@ func (pcs *PCS) reconstructQueryPair(
 	domain domainLight,
 	base int,
 ) (field.Ext, field.Ext, error) {
-	order, err := authenticateRowOpenings(bundle, rows, opening, roots, domain, base)
+	err := authenticateRowOpenings("reconstructQueryPair", bundle, order, rows, opening, roots, domain, base)
 	if err != nil {
 		return field.Ext{}, field.Ext{}, err
 	}
 	for branchIdx, batchIdx := range order {
 		row := rows[batchIdx][bundle.SizeLog2]
 		if !row.HasSibling {
-			return field.Ext{}, field.Ext{}, fmt.Errorf("fri: reconstructQueryValue: tree %d missing sibling row",
+			return field.Ext{}, field.Ext{}, fmt.Errorf("fri: reconstructQueryPair: tree %d missing sibling row",
 				branchIdx)
 		}
 		siblings := opening[branchIdx].Siblings
 		if len(siblings) == 0 || siblings[len(siblings)-1] != hashRowOpening(row.Sibling) {
-			return field.Ext{}, field.Ext{}, fmt.Errorf("fri: reconstructQueryValue: tree %d sibling digest mismatch",
+			return field.Ext{}, field.Ext{}, fmt.Errorf("fri: reconstructQueryPair: tree %d sibling digest mismatch",
 				branchIdx)
 		}
 	}
@@ -1135,6 +1149,7 @@ func (pcs *PCS) reconstructQueryPair(
 
 func (pcs *PCS) reconstructQueryValue(
 	bundle sizeBundle,
+	order []int,
 	rows QueryRowOpenings,
 	opening QueryLayer,
 	roots QueryLayerRoots,
@@ -1144,7 +1159,9 @@ func (pcs *PCS) reconstructQueryValue(
 	domain domainLight,
 	base int,
 ) (field.Ext, error) {
-	if _, err := authenticateRowOpenings(bundle, rows, opening, roots, domain, base); err != nil {
+	if err := authenticateRowOpenings(
+		"reconstructQueryValue", bundle, order, rows, opening, roots, domain, base,
+	); err != nil {
 		return field.Ext{}, err
 	}
 	return pcs.reconstructQueryValueAt(
@@ -1160,7 +1177,13 @@ func (pcs *PCS) reconstructQueryValueAt(
 	x field.Ext,
 	sibling bool,
 ) (field.Ext, error) {
-	alphaDeepPowers := alphaDeepChallengePowers(alphaDeepChallenge, len(bundle.Entries))
+	numPowers := 0
+	for _, entry := range bundle.Entries {
+		if entry.AlphaPower >= numPowers {
+			numPowers = entry.AlphaPower + 1
+		}
+	}
+	alphaDeepPowers := alphaDeepChallengePowers(alphaDeepChallenge, numPowers)
 
 	var value field.Ext
 	for _, entry := range bundle.Entries {
@@ -1172,7 +1195,7 @@ func (pcs *PCS) reconstructQueryValueAt(
 		row := sizedRow.Leaf
 		if sibling {
 			if !sizedRow.HasSibling {
-				return field.Ext{}, fmt.Errorf("fri: reconstructQueryValue: batch %d size %d missing sibling row",
+				return field.Ext{}, fmt.Errorf("fri: reconstructQueryPair: batch %d size %d missing sibling row",
 					entry.BatchIdx, entry.SizeLog2)
 			}
 			row = sizedRow.Sibling
@@ -1189,28 +1212,29 @@ func (pcs *PCS) reconstructQueryValueAt(
 }
 
 func authenticateRowOpenings(
+	label string,
 	bundle sizeBundle,
+	order []int,
 	rows QueryRowOpenings,
 	opening QueryLayer,
 	roots QueryLayerRoots,
 	domain domainLight,
 	base int,
-) ([]int, error) {
-	order := batchOrder(bundle)
+) error {
 	if len(opening) != len(order) {
-		return nil, fmt.Errorf("fri: reconstructQueryValue: opening has %d branches, want %d", len(opening), len(order))
+		return fmt.Errorf("fri: %s: opening has %d branches, want %d", label, len(opening), len(order))
 	}
 	levelSize, err := reconstructDomainSize(domain)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if base < 0 || base >= levelSize {
-		return nil, fmt.Errorf("fri: reconstructQueryValue: base %d outside [0,%d)", base, levelSize)
+		return fmt.Errorf("fri: %s: base %d outside [0,%d)", label, base, levelSize)
 	}
-	if _, err := authenticateQueryLayerRoots("reconstructQueryValue", opening, roots, func(branch Branch) (int, error) {
+	if _, err := authenticateQueryLayerRoots("fri: "+label, opening, roots, func(branch Branch) (int, error) {
 		return levelLeafIndex(1<<len(branch.Siblings), levelSize, base)
 	}); err != nil {
-		return nil, err
+		return err
 	}
 
 	for branchIdx, batchIdx := range order {
@@ -1218,13 +1242,13 @@ func authenticateRowOpenings(
 
 		leaf, err := branchLeafAtLevel(opening[branchIdx], levelSize)
 		if err != nil {
-			return nil, fmt.Errorf("fri: reconstructQueryValue: tree %d level leaf: %w", branchIdx, err)
+			return fmt.Errorf("fri: %s: tree %d level leaf: %w", label, branchIdx, err)
 		}
 		if leaf != hashRowOpening(row.Leaf) {
-			return nil, fmt.Errorf("fri: reconstructQueryValue: tree %d row digest mismatch", branchIdx)
+			return fmt.Errorf("fri: %s: tree %d row digest mismatch", label, branchIdx)
 		}
 	}
-	return order, nil
+	return nil
 }
 
 func rowValue(row RowOpening, entry deepEntry) field.Ext {
@@ -1269,15 +1293,137 @@ type VerifyInputs struct {
 //
 // Performs in sequence:
 //
-//  1. Shape validation (Roots/Shapes/Shifts/ClaimedValues alignment).
-//  2. Canonical-layout build from Shapes + Shifts (validates the
-//     shift schedule too).
-//  3. fri.Verify over the virtual quotient levels with FoldAlphas + query
-//     positions.
-//  4. Reconstruct the virtual quotient values from authenticated FRI branches
-//     and compare them to the FRI fold checks.
-func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error { //nolint:revive // design stub
-	panic("TODO(pcs): Verify")
+//  1. Shape validation for Roots/Shapes/Shifts and row openings.
+//  2. Canonical-layout build from Shapes + Shifts.
+//  3. FRI verification with a PCS value provider that authenticates backing
+//     Merkle branches and reconstructs the virtual quotient values.
+func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
+	if len(in.Roots) != len(in.Shapes) {
+		return fmt.Errorf("fri: pcs.Verify: got %d roots, %d shapes", len(in.Roots), len(in.Shapes))
+	}
+	layout, err := canonicalLayout(in.Shapes, in.Shifts)
+	if err != nil {
+		return err
+	}
+	if len(proof.RowOpenings) < pcs.Params.NumQueries {
+		return fmt.Errorf("fri: pcs.Verify: proof has %d row openings, want at least %d",
+			len(proof.RowOpenings), pcs.Params.NumQueries)
+	}
+	orders := batchOrders(layout)
+	if err := checkRowOpenings(layout, orders, in.Shapes, proof.RowOpenings[:pcs.Params.NumQueries]); err != nil {
+		return err
+	}
+
+	levelRoots := make([]QueryLayerRoots, len(layout))
+	levelDs := make([]int, len(layout))
+	for i, bundle := range layout {
+		levelRoots[i] = make(QueryLayerRoots, len(orders[i]))
+		for j, batchIdx := range orders[i] {
+			levelRoots[i][j] = in.Roots[batchIdx]
+		}
+		levelDs[i] = 1 << bundle.SizeLog2
+	}
+
+	return verifyWithValues(
+		pcs.Params,
+		levelRoots,
+		levelDs,
+		proof.FRIProof,
+		in.Challenges.FoldAlphas,
+		in.Challenges.QueryPositions,
+		pcsQueryValues{
+			pcs:       pcs,
+			layout:    layout,
+			orders:    orders,
+			rows:      proof.RowOpenings,
+			claimed:   proof.ClaimedValues,
+			zeta:      in.Challenges.Zeta,
+			alphaDeep: in.Challenges.AlphaDeep,
+		},
+	)
+}
+
+type pcsQueryValues struct {
+	pcs       *PCS
+	layout    layout
+	orders    [][]int
+	rows      []QueryRowOpenings
+	claimed   []BatchClaimedValues
+	zeta      field.Ext
+	alphaDeep field.Ext
+}
+
+func (pcsQueryValues) checkRoundShape(round int, opening QueryLayer, roots QueryLayerRoots, numLeaves int) error {
+	if round == 0 {
+		return checkMultiSizeQueryLayerShape(opening, roots, numLeaves)
+	}
+	return checkQueryLayerShape(opening, roots, numLeaves)
+}
+
+func (pcsQueryValues) checkLevelShape(_ int, opening QueryLayer, roots QueryLayerRoots, numLeaves int) error {
+	return checkMultiSizeQueryLayerShape(opening, roots, numLeaves)
+}
+
+func (v pcsQueryValues) queryPair(
+	queryIdx, round, base int,
+	opening QueryLayer,
+	roots QueryLayerRoots,
+) (field.Ext, field.Ext, error) {
+	if round != 0 {
+		return merkleQueryValues{}.queryPair(queryIdx, round, base, opening, roots)
+	}
+	return v.pcs.reconstructQueryPair(
+		v.layout[0], v.orders[0], v.rows[queryIdx], opening, roots, v.claimed, v.zeta, v.alphaDeep,
+		v.pcs.Params.domainsLight[round], base,
+	)
+}
+
+func (v pcsQueryValues) levelValue(
+	queryIdx, levelIdx, base int,
+	opening QueryLayer,
+	roots QueryLayerRoots,
+) (field.Ext, error) {
+	bundle := v.layout[levelIdx]
+	round, err := v.pcs.roundForSize(bundle.SizeLog2)
+	if err != nil {
+		return field.Ext{}, err
+	}
+	return v.pcs.reconstructQueryValue(
+		bundle, v.orders[levelIdx], v.rows[queryIdx], opening, roots, v.claimed, v.zeta, v.alphaDeep,
+		v.pcs.Params.domainsLight[round], base,
+	)
+}
+
+func checkRowOpenings(layout layout, orders [][]int, shapes []Shape, rows []QueryRowOpenings) error {
+	for queryIdx, queryRows := range rows {
+		if len(queryRows) != len(shapes) {
+			return fmt.Errorf("fri: pcs.Verify: query %d has %d row-opening batches, want %d",
+				queryIdx, len(queryRows), len(shapes))
+		}
+		for bundleIdx, bundle := range layout {
+			for _, batchIdx := range orders[bundleIdx] {
+				if bundle.SizeLog2 >= len(queryRows[batchIdx]) {
+					return fmt.Errorf("fri: pcs.Verify: query %d batch %d missing size %d row opening",
+						queryIdx, batchIdx, bundle.SizeLog2)
+				}
+				row := queryRows[batchIdx][bundle.SizeLog2]
+				shape := shapes[batchIdx][bundle.SizeLog2]
+				if !rowOpeningMatchesShape(row.Leaf, shape) {
+					return fmt.Errorf("fri: pcs.Verify: query %d batch %d size %d row shape mismatch",
+						queryIdx, batchIdx, bundle.SizeLog2)
+				}
+				if bundleIdx == 0 && (!row.HasSibling || !rowOpeningMatchesShape(row.Sibling, shape)) {
+					return fmt.Errorf("fri: pcs.Verify: query %d batch %d size %d sibling shape mismatch",
+						queryIdx, batchIdx, bundle.SizeLog2)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func rowOpeningMatchesShape(row RowOpening, shape SizedShape) bool {
+	return len(row.Base) == shape.BaseWidth && len(row.Ext) == shape.ExtWidth
 }
 
 // =============================================================================
