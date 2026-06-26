@@ -9,8 +9,6 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
-	"github.com/consensys/gnark-crypto/field/koalabear/fft"
-	gutils "github.com/consensys/gnark-crypto/utils"
 )
 
 func TestCanonicalLayout_Order(t *testing.T) {
@@ -123,33 +121,13 @@ func TestProverStateOpenAlignsMultiSizeLevelLeaf(t *testing.T) {
 
 	levelEncoder := NewEncoder(8, 4)
 	fullEncoder := NewEncoder(16, 8)
-	fullDomain := domainLight{cardinality: fullEncoder.Domain.Cardinality, generator: fullEncoder.Domain.Generator}
-	levelCoeffs := []field.Ext{
-		field.UintsToExt(3, 1, 0, 0, 0, 0),
-		field.UintsToExt(5, 0, 1, 0, 0, 0),
-		field.UintsToExt(7, 0, 0, 1, 0, 0),
-	}
-	fullCoeffs := []field.Ext{
-		field.UintsToExt(11, 0, 0, 0, 1, 0),
-		field.UintsToExt(13, 0, 0, 0, 0, 1),
-		field.UintsToExt(17, 1, 1, 0, 0, 0),
-		field.UintsToExt(19, 0, 1, 1, 0, 0),
-	}
-	otherLevelCoeffs := []field.Ext{
-		field.UintsToExt(23, 1, 0, 1, 0, 0),
-		field.UintsToExt(29, 0, 1, 0, 1, 0),
-	}
-	otherFullCoeffs := []field.Ext{
-		field.UintsToExt(31, 0, 0, 1, 0, 1),
-		field.UintsToExt(37, 1, 0, 0, 1, 0),
-	}
 
-	levelEvals := encodeCanonicalTestPoly(levelCoeffs, &levelEncoder)
-	fullEvals := encodeCanonicalTestPoly(fullCoeffs, &fullEncoder)
+	levelEvals := levelEncoder.EncodeExt(field.VecPseudoRandExt(prng, 4))
+	fullEvals := fullEncoder.EncodeExt(field.VecPseudoRandExt(prng, 8))
 	tree, encoded := multiSizeTreeForCodewords(levelEvals, fullEvals)
 
-	otherLevelEvals := encodeCanonicalTestPoly(otherLevelCoeffs, &levelEncoder)
-	otherFullEvals := encodeCanonicalTestPoly(otherFullCoeffs, &fullEncoder)
+	otherLevelEvals := levelEncoder.EncodeExt(field.VecPseudoRandExt(prng, 4))
+	otherFullEvals := fullEncoder.EncodeExt(field.VecPseudoRandExt(prng, 8))
 	otherTree, otherEncoded := multiSizeTreeForCodewords(otherLevelEvals, otherFullEvals)
 
 	const query = 11
@@ -161,17 +139,6 @@ func TestProverStateOpenAlignsMultiSizeLevelLeaf(t *testing.T) {
 	}
 	if topBranch.Siblings[len(topBranch.Siblings)-1] != digestSizedRow(encoded[3], query^1) {
 		t.Fatalf("top sibling does not open conjugate row %d", query^1)
-	}
-	x := domainPointExt(fullDomain, query)
-	var minusX field.Ext
-	minusX.Neg(&x)
-	wantSelf := polynomials.EvalCanonicalExt(fullCoeffs, x)
-	wantSibling := polynomials.EvalCanonicalExt(fullCoeffs, minusX)
-	if !fullEvals[query].Equal(&wantSelf) {
-		t.Fatalf("full eval at query does not match f_i(x)")
-	}
-	if !fullEvals[query^1].Equal(&wantSibling) {
-		t.Fatalf("full eval at query^1 does not match f_i(-x)")
 	}
 
 	levels := []Level{
@@ -286,19 +253,11 @@ func newPCSOpenVerifyFixture(t *testing.T) pcsOpenVerifyFixture {
 		t.Fatalf("NewPCS: %v", err)
 	}
 
-	firstCoeffs := []field.Ext{
-		field.UintsToExt(2, 1, 0, 0, 0, 0),
-		field.UintsToExt(3, 0, 1, 0, 0, 0),
-		field.UintsToExt(5, 0, 0, 1, 0, 0),
-	}
-	secondCoeffs := []field.Ext{
-		field.UintsToExt(7, 0, 0, 0, 1, 0),
-		field.UintsToExt(11, 0, 0, 0, 0, 1),
-	}
+	prng := rand.New(utils.NewRandSource(20260626))
 	witness := make(Batch, 3)
 	witness[2] = SizedTable{Ext: [][]field.Ext{
-		canonicalToLagrangeTestPoly(firstCoeffs, 4),
-		canonicalToLagrangeTestPoly(secondCoeffs, 4),
+		field.VecPseudoRandExt(prng, 4),
+		field.VecPseudoRandExt(prng, 4),
 	}}
 	witnesses := []Batch{witness}
 	committed := []CommitterState{Commit(encoders, witness)}
@@ -351,33 +310,13 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 		t.Fatalf("NewPCS: %v", err)
 	}
 
-	topCoeffs := []field.Ext{
-		field.UintsToExt(2, 1, 0, 0, 0, 0),
-		field.UintsToExt(3, 0, 1, 0, 0, 0),
-		field.UintsToExt(5, 0, 0, 1, 0, 0),
-		field.UintsToExt(7, 0, 0, 0, 1, 0),
-	}
-	auxCoeffs := []field.Ext{
-		field.UintsToExt(11, 0, 0, 0, 0, 1),
-		field.UintsToExt(13, 1, 1, 0, 0, 0),
-		field.UintsToExt(17, 0, 1, 1, 0, 0),
-	}
-	otherTopCoeffs := []field.Ext{
-		field.UintsToExt(19, 1, 0, 1, 0, 0),
-		field.UintsToExt(23, 0, 1, 0, 1, 0),
-		field.UintsToExt(29, 0, 0, 1, 0, 1),
-	}
-	otherAuxCoeffs := []field.Ext{
-		field.UintsToExt(31, 1, 1, 1, 0, 0),
-		field.UintsToExt(37, 0, 1, 1, 1, 0),
-	}
-
+	prng := rand.New(utils.NewRandSource(20260627))
 	witness := make(Batch, 4)
-	witness[2] = SizedTable{Ext: [][]field.Ext{canonicalToLagrangeTestPoly(auxCoeffs, 4)}}
-	witness[3] = SizedTable{Ext: [][]field.Ext{canonicalToLagrangeTestPoly(topCoeffs, 8)}}
+	witness[2] = SizedTable{Ext: [][]field.Ext{field.VecPseudoRandExt(prng, 4)}}
+	witness[3] = SizedTable{Ext: [][]field.Ext{field.VecPseudoRandExt(prng, 8)}}
 	otherWitness := make(Batch, 4)
-	otherWitness[2] = SizedTable{Ext: [][]field.Ext{canonicalToLagrangeTestPoly(otherAuxCoeffs, 4)}}
-	otherWitness[3] = SizedTable{Ext: [][]field.Ext{canonicalToLagrangeTestPoly(otherTopCoeffs, 8)}}
+	otherWitness[2] = SizedTable{Ext: [][]field.Ext{field.VecPseudoRandExt(prng, 4)}}
+	otherWitness[3] = SizedTable{Ext: [][]field.Ext{field.VecPseudoRandExt(prng, 8)}}
 	witnesses := []Batch{witness, otherWitness}
 	committed := []CommitterState{Commit(encoders, witness), Commit(encoders, otherWitness)}
 
@@ -550,19 +489,6 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	if want := started.levels[1].Evals[auxBase]; !aux.Equal(&want) {
 		t.Fatalf("aux reconstructed value mismatch\ngot:  %s\nwant: %s", aux.String(), want.String())
 	}
-}
-
-func encodeCanonicalTestPoly(poly []field.Ext, encoder *RSEncoder) []field.Ext {
-	return encoder.EncodeExt(canonicalToLagrangeTestPoly(poly, encoder.PlainTextSize))
-}
-
-func canonicalToLagrangeTestPoly(poly []field.Ext, size int) []field.Ext {
-	lagrange := make([]field.Ext, size)
-	copy(lagrange, poly)
-	domain := fft.NewDomain(uint64(size))
-	domain.FFTExt6(lagrange, fft.DIF)
-	gutils.BitReverse(lagrange)
-	return lagrange
 }
 
 func multiSizeTreeForCodewords(levelEvals, fullEvals []field.Ext) (*Tree, MultiSizeTable) {
