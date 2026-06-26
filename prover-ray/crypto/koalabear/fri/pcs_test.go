@@ -3,12 +3,13 @@ package fri
 import (
 	"math/rand/v2"
 	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCanonicalLayout_Order(t *testing.T) {
@@ -42,9 +43,7 @@ func TestCanonicalLayout_Order(t *testing.T) {
 	}
 
 	got, err := canonicalLayout(shapes, shifts)
-	if err != nil {
-		t.Fatalf("canonicalLayout: %v", err)
-	}
+	require.NoError(t, err)
 
 	want := layout{
 		{
@@ -63,9 +62,7 @@ func TestCanonicalLayout_Order(t *testing.T) {
 			},
 		},
 	}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("layout mismatch\ngot:  %#v\nwant: %#v", got, want)
-	}
+	assert.Equal(t, want, got)
 }
 
 func TestCanonicalLayout_RejectsShiftInvariants(t *testing.T) {
@@ -96,28 +93,20 @@ func TestCanonicalLayout_RejectsShiftInvariants(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := canonicalLayout(shape, tc.shifts)
-			if err == nil {
-				t.Fatalf("canonicalLayout accepted invalid shifts")
-			}
-			if !strings.Contains(err.Error(), tc.wantErr) {
-				t.Fatalf("error %q does not contain %q", err.Error(), tc.wantErr)
-			}
+			require.ErrorContains(t, err, tc.wantErr)
 		})
 	}
 }
 
 func TestOpeningProofCarriesNoDeepQuotientRoots(t *testing.T) {
-	if _, ok := reflect.TypeOf(OpeningProof{}).FieldByName("DeepQuotientRoots"); ok {
-		t.Fatalf("OpeningProof must not carry DeepQuotientRoots")
-	}
+	_, ok := reflect.TypeOf(OpeningProof{}).FieldByName("DeepQuotientRoots")
+	assert.False(t, ok)
 }
 
 func TestProverStateOpenAlignsMultiSizeLevelLeaf(t *testing.T) {
 	prng := rand.New(utils.NewRandSource(20260625))
 	params, err := NewParams(16, 8, 1)
-	if err != nil {
-		t.Fatalf("NewParams: %v", err)
-	}
+	require.NoError(t, err)
 
 	levelEncoder := NewEncoder(8, 4)
 	fullEncoder := NewEncoder(16, 8)
@@ -134,12 +123,8 @@ func TestProverStateOpenAlignsMultiSizeLevelLeaf(t *testing.T) {
 	base := query >> 1
 
 	topBranch := openLevelTreesAt([]*Tree{tree}, len(fullEvals), query)[0]
-	if topBranch.Leaf != digestSizedRow(encoded[3], query) {
-		t.Fatalf("top leaf opens row %d digest incorrectly", query)
-	}
-	if topBranch.Siblings[len(topBranch.Siblings)-1] != digestSizedRow(encoded[3], query^1) {
-		t.Fatalf("top sibling does not open conjugate row %d", query^1)
-	}
+	assert.Equal(t, digestSizedRow(encoded[3], query), topBranch.Leaf)
+	assert.Equal(t, digestSizedRow(encoded[3], query^1), topBranch.Siblings[len(topBranch.Siblings)-1])
 
 	levels := []Level{
 		newRandomLevel(prng, params, params.D),
@@ -152,36 +137,22 @@ func TestProverStateOpenAlignsMultiSizeLevelLeaf(t *testing.T) {
 	}
 	proof := proverForTest(params, levels, alphas, []int{query})
 
-	if len(proof.LevelQueries) != 1 {
-		t.Fatalf("proof has %d level query sets, want 1", len(proof.LevelQueries))
-	}
+	require.Len(t, proof.LevelQueries, 1)
 	opening := proof.LevelQueries[0][0]
-	if len(opening) != 2 {
-		t.Fatalf("level opening has %d branches, want 2", len(opening))
-	}
+	require.Len(t, opening, 2)
 
 	checkLevelBranch := func(name string, branch Branch, tree *Tree, encoded MultiSizeTable) {
 		t.Helper()
 
 		lifted := levelTreeLeafIndex(tree, len(levelEvals), base)
 		root, err := branch.RecoverRoot(lifted)
-		if err != nil {
-			t.Fatalf("%s: RecoverRoot: %v", name, err)
-		}
-		if root != tree.Root() {
-			t.Fatalf("%s: recovered root != tree root", name)
-		}
+		require.NoError(t, err, name)
+		assert.Equal(t, tree.Root(), root, name)
 
 		leaf, err := branchLeafAtLevel(branch, len(levelEvals))
-		if err != nil {
-			t.Fatalf("%s: branchLeafAtLevel: %v", name, err)
-		}
-		if leaf != digestSizedRow(encoded[2], base) {
-			t.Fatalf("%s: aux leaf opens the wrong level row digest", name)
-		}
-		if leaf == digestSizedRow(encoded[2], query&7) {
-			t.Fatalf("%s: aux leaf used the unshifted query index", name)
-		}
+		require.NoError(t, err, name)
+		assert.Equal(t, digestSizedRow(encoded[2], base), leaf, name)
+		assert.NotEqual(t, digestSizedRow(encoded[2], query&7), leaf, name)
 	}
 	checkLevelBranch("first tree", opening[0], tree, encoded)
 	checkLevelBranch("second tree", opening[1], otherTree, otherEncoded)
@@ -210,21 +181,13 @@ func openForTest(t *testing.T, pcs *PCS, in openInputs) OpeningProof {
 	claimed := make([]BatchClaimedValues, 0, len(in.Witnesses))
 	for i := range in.Witnesses {
 		batchClaims, err := pcs.AddOpening(in.Witnesses[i], in.Committed[i], in.Zetas[i], in.Shifts[i])
-		if err != nil {
-			t.Fatalf("pcs.AddOpening: %v", err)
-		}
+		require.NoError(t, err)
 		claimed = append(claimed, batchClaims)
 	}
 	started, err := pcs.NewProverState(in.Challenges.AlphaDeep)
-	if err != nil {
-		t.Fatalf("pcs.NewProverState: %v", err)
-	}
-	if len(in.Challenges.FoldAlphas) < pcs.Params.numRounds {
-		t.Fatalf("got %d FRI fold challenges, need %d", len(in.Challenges.FoldAlphas), pcs.Params.numRounds)
-	}
-	if len(in.Challenges.QueryPositions) < pcs.Params.NumQueries {
-		t.Fatalf("got %d query positions, need %d", len(in.Challenges.QueryPositions), pcs.Params.NumQueries)
-	}
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, len(in.Challenges.FoldAlphas), pcs.Params.numRounds)
+	require.GreaterOrEqual(t, len(in.Challenges.QueryPositions), pcs.Params.NumQueries)
 	queryPositions := in.Challenges.QueryPositions[:pcs.Params.NumQueries]
 
 	for round := range pcs.Params.numRounds {
@@ -244,14 +207,10 @@ func newPCSOpenVerifyFixture(t *testing.T) pcsOpenVerifyFixture {
 	t.Helper()
 
 	params, err := NewParams(8, 4, 1)
-	if err != nil {
-		t.Fatalf("NewParams: %v", err)
-	}
+	require.NoError(t, err)
 	encoders := makeEncoders(params.numRounds+1, 2)
 	pcs, err := NewPCS(params, encoders)
-	if err != nil {
-		t.Fatalf("NewPCS: %v", err)
-	}
+	require.NoError(t, err)
 
 	prng := rand.New(utils.NewRandSource(20260626))
 	witness := make(Batch, 3)
@@ -294,21 +253,15 @@ func newPCSOpenVerifyFixture(t *testing.T) pcsOpenVerifyFixture {
 
 func TestPCSOpenVerifyNormalFlow(t *testing.T) {
 	fx := newPCSOpenVerifyFixture(t)
-	if err := fx.pcs.Verify(fx.input, fx.proof); err != nil {
-		t.Fatalf("pcs.Verify: %v", err)
-	}
+	require.NoError(t, fx.pcs.Verify(fx.input, fx.proof))
 }
 
 func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	params, err := NewParams(16, 8, 2)
-	if err != nil {
-		t.Fatalf("NewParams: %v", err)
-	}
+	require.NoError(t, err)
 	encoders := makeEncoders(params.numRounds+1, 2)
 	pcs, err := NewPCS(params, encoders)
-	if err != nil {
-		t.Fatalf("NewPCS: %v", err)
-	}
+	require.NoError(t, err)
 
 	prng := rand.New(utils.NewRandSource(20260627))
 	witness := make(Batch, 4)
@@ -332,44 +285,30 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	otherZeta := field.UintsToExt(41, 0, 1, 2, 3, 5)
 	alphaDeepChallenge := field.UintsToExt(23, 3, 5, 7, 11, 13)
 	firstClaims, err := pcs.AddOpening(witness, committed[0], zeta, batchShifts)
-	if err != nil {
-		t.Fatalf("pcs.AddOpening: %v", err)
-	}
+	require.NoError(t, err)
 	otherClaims, err := pcs.AddOpening(otherWitness, committed[1], otherZeta, otherBatchShifts)
-	if err != nil {
-		t.Fatalf("pcs.AddOpening: %v", err)
-	}
+	require.NoError(t, err)
 	claimed := []BatchClaimedValues{firstClaims, otherClaims}
 	started, err := pcs.NewProverState(alphaDeepChallenge)
-	if err != nil {
-		t.Fatalf("pcs.NewProverState: %v", err)
-	}
-	if len(started.levels) != 2 {
-		t.Fatalf("started with %d virtual levels, want 2", len(started.levels))
-	}
+	require.NoError(t, err)
+	require.Len(t, started.levels, 2)
 	levelRoots, _ := levelVerifierInputs(started.levels)
-	if len(levelRoots) != 2 || len(levelRoots[0]) != 2 || len(levelRoots[1]) != 2 {
-		t.Fatalf("unexpected level root shape: %#v", levelRoots)
-	}
-	if levelRoots[0][0] != committed[0].Tree.Root() ||
-		levelRoots[0][1] != committed[1].Tree.Root() ||
-		levelRoots[1][0] != committed[0].Tree.Root() ||
-		levelRoots[1][1] != committed[1].Tree.Root() {
-		t.Fatalf("virtual levels should be backed by the committed batch tree")
-	}
+	require.Len(t, levelRoots, 2)
+	require.Len(t, levelRoots[0], 2)
+	require.Len(t, levelRoots[1], 2)
+	assert.Equal(t, committed[0].Tree.Root(), levelRoots[0][0])
+	assert.Equal(t, committed[1].Tree.Root(), levelRoots[0][1])
+	assert.Equal(t, committed[0].Tree.Root(), levelRoots[1][0])
+	assert.Equal(t, committed[1].Tree.Root(), levelRoots[1][1])
 
 	claimPoint, err := pcs.shiftedPoint(3, 2, zeta)
-	if err != nil {
-		t.Fatalf("shiftedPoint: %v", err)
-	}
+	require.NoError(t, err)
 	wantClaim := polynomials.EvalLagrange(
 		field.VecFromExt(witness[3].Ext[0]),
 		field.ElemFromExt(claimPoint),
 	).AsExt()
 	gotClaim := claimed[0][3].Ext[0][1]
-	if !gotClaim.Equal(&wantClaim) {
-		t.Fatalf("claimed value mismatch\ngot:  %s\nwant: %s", gotClaim.String(), wantClaim.String())
-	}
+	assert.Equal(t, wantClaim, gotClaim)
 
 	referenceLevels := make([]Level, len(started.levels))
 	for i, level := range started.levels {
@@ -392,12 +331,8 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 		started.Fold(foldAlphas[round])
 	}
 	gotProof := started.Open(positions)
-	if !reflect.DeepEqual(gotProof.FRIRoots, referenceProof.FRIRoots) {
-		t.Fatalf("FRI roots mismatch\ngot:  %#v\nwant: %#v", gotProof.FRIRoots, referenceProof.FRIRoots)
-	}
-	if !reflect.DeepEqual(gotProof.FinalPolyExt, referenceProof.FinalPolyExt) {
-		t.Fatalf("final polynomial mismatch")
-	}
+	assert.Equal(t, referenceProof.FRIRoots, gotProof.FRIRoots)
+	assert.Equal(t, referenceProof.FinalPolyExt, gotProof.FinalPolyExt)
 
 	zetas := []field.Ext{zeta, otherZeta}
 	oneShot := openForTest(t, pcs, openInputs{
@@ -411,20 +346,12 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 			QueryPositions: positions,
 		},
 	})
-	if !reflect.DeepEqual(oneShot.ClaimedValues, claimed) {
-		t.Fatalf("one-shot claimed values differ from staged claimed values")
-	}
-	if !reflect.DeepEqual(oneShot.FRIProof.FRIRoots, referenceProof.FRIRoots) {
-		t.Fatalf("one-shot FRI roots mismatch")
-	}
-	if !reflect.DeepEqual(oneShot.FRIProof.FinalPolyExt, referenceProof.FinalPolyExt) {
-		t.Fatalf("one-shot final polynomial mismatch")
-	}
-	if len(oneShot.RowOpenings) != len(positions) {
-		t.Fatalf("one-shot row openings have %d queries, want %d", len(oneShot.RowOpenings), len(positions))
-	}
+	assert.Equal(t, claimed, oneShot.ClaimedValues)
+	assert.Equal(t, referenceProof.FRIRoots, oneShot.FRIProof.FRIRoots)
+	assert.Equal(t, referenceProof.FinalPolyExt, oneShot.FRIProof.FinalPolyExt)
+	assert.Len(t, oneShot.RowOpenings, len(positions))
 	roots := []field.Octuplet{committed[0].Tree.Root(), committed[1].Tree.Root()}
-	if err := pcs.Verify(VerifyInputs{
+	require.NoError(t, pcs.Verify(VerifyInputs{
 		Roots:  roots,
 		Shapes: shapesFromBatches(witnesses),
 		Shifts: shifts,
@@ -434,14 +361,10 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 			FoldAlphas:     foldAlphas,
 			QueryPositions: positions,
 		},
-	}, oneShot); err != nil {
-		t.Fatalf("pcs.Verify: %v", err)
-	}
+	}, oneShot))
 
 	layout, err := canonicalLayoutFromBatches(witnesses, shifts)
-	if err != nil {
-		t.Fatalf("canonicalLayoutFromBatches: %v", err)
-	}
+	require.NoError(t, err)
 	orders := batchOrders(layout)
 	queryIdx := 0
 	top, topSibling, err := pcs.reconstructQueryPair(
@@ -456,20 +379,14 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 		params.domainsLight[0],
 		positions[queryIdx],
 	)
-	if err != nil {
-		t.Fatalf("reconstruct top query values: %v", err)
-	}
-	if want := started.levels[0].Evals[positions[queryIdx]]; !top.Equal(&want) {
-		t.Fatalf("top reconstructed value mismatch\ngot:  %s\nwant: %s", top.String(), want.String())
-	}
-	if want := started.levels[0].Evals[positions[queryIdx]^1]; !topSibling.Equal(&want) {
-		t.Fatalf("top reconstructed sibling mismatch\ngot:  %s\nwant: %s", topSibling.String(), want.String())
-	}
+	require.NoError(t, err)
+	wantTop := started.levels[0].Evals[positions[queryIdx]]
+	assert.Equal(t, wantTop, top)
+	wantTopSibling := started.levels[0].Evals[positions[queryIdx]^1]
+	assert.Equal(t, wantTopSibling, topSibling)
 
 	auxRound, err := pcs.roundForSize(layout[1].SizeLog2)
-	if err != nil {
-		t.Fatalf("roundForSize: %v", err)
-	}
+	require.NoError(t, err)
 	auxBase := positions[queryIdx] >> auxRound
 	aux, err := pcs.reconstructQueryValue(
 		layout[1],
@@ -483,12 +400,9 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 		params.domainsLight[auxRound],
 		auxBase,
 	)
-	if err != nil {
-		t.Fatalf("reconstruct aux query value: %v", err)
-	}
-	if want := started.levels[1].Evals[auxBase]; !aux.Equal(&want) {
-		t.Fatalf("aux reconstructed value mismatch\ngot:  %s\nwant: %s", aux.String(), want.String())
-	}
+	require.NoError(t, err)
+	wantAux := started.levels[1].Evals[auxBase]
+	assert.Equal(t, wantAux, aux)
 }
 
 func multiSizeTreeForCodewords(levelEvals, fullEvals []field.Ext) (*Tree, MultiSizeTable) {

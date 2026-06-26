@@ -8,6 +8,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 	gutils "github.com/consensys/gnark-crypto/utils"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestEvaluateOnExtendedDomainRootMatchesEncode(t *testing.T) {
@@ -38,9 +39,7 @@ func TestEvaluateOnExtendedDomainRootMatchesEncode(t *testing.T) {
 				field.ElemFromBase(domainPoint(domain, pos)),
 			).AsBase()
 		}
-		if !encoded[pos].Equal(&want) {
-			t.Fatalf("encoded[%d] = %s, want %s", pos, encoded[pos].String(), want.String())
-		}
+		assert.Equal(t, want, encoded[pos], "encoded[%d]", pos)
 	}
 }
 
@@ -72,9 +71,7 @@ func TestExtEvaluateOnExtendedDomainRootMatchesEncodeExt(t *testing.T) {
 				field.ElemFromExt(domainPointExt(domain, pos)),
 			).AsExt()
 		}
-		if !encoded[pos].Equal(&want) {
-			t.Fatalf("encoded[%d] = %s, want %s", pos, encoded[pos].String(), want.String())
-		}
+		assert.Equal(t, want, encoded[pos], "encoded[%d]", pos)
 	}
 }
 
@@ -103,8 +100,6 @@ func TestEncodeExt(t *testing.T) {
 
 	for j := range encoded {
 		want := polynomials.EvalCanonicalExt(coeffs, domainPointExt(domain, j))
-		if !encoded[j].Equal(&want) {
-			t.Fatalf("encoded[%d] = %s, want %s", j, encoded[j].String(), want.String())
-		}
+		assert.Equal(t, want, encoded[j], "encoded[%d]", j)
 	}
 }

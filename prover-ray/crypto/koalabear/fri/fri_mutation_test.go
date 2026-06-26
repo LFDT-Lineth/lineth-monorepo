@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
+	"github.com/stretchr/testify/require"
 )
 
 // The reflection-based mutation test below treats field.Octuplet and field.Ext
@@ -142,9 +142,7 @@ func TestVerifyRejectsProofMutations(t *testing.T) {
 
 	prng := rand.New(utils.NewRandSource(20240607))
 	p, err := NewParams(16, 8, 4)
-	if err != nil {
-		t.Fatalf("NewParams: %v", err)
-	}
+	require.NoError(t, err)
 
 	// One main level (D=8) plus one extra level (D=2) to also exercise the
 	// LevelQueries path.
@@ -160,15 +158,11 @@ func TestVerifyRejectsProofMutations(t *testing.T) {
 	// Canonical proof (Prove sorts levels in place, so derive verifier inputs after).
 	base := proverForTest(p, levels, alphas, positions)
 	levelRoots, levelDs := verifierInputsForLevels(levels)
-	if err := Verify(p, levelRoots, levelDs, base, alphas, positions); err != nil {
-		t.Fatalf("honest proof was rejected: %v", err)
-	}
+	require.NoError(t, Verify(p, levelRoots, levelDs, base, alphas, positions))
 
 	var muts []proofMutation
 	collectMutations(reflect.ValueOf(&base).Elem(), nil, "Proof", &muts)
-	if len(muts) == 0 {
-		t.Fatal("no mutations were collected")
-	}
+	require.NotEmpty(t, muts)
 
 	for _, m := range muts {
 		t.Run(m.name, func(t *testing.T) {
@@ -177,12 +171,8 @@ func TestVerifyRejectsProofMutations(t *testing.T) {
 			applyMutation(reflect.ValueOf(&prf).Elem(), m)
 
 			err, panicked := safeVerify(p, levelRoots, levelDs, prf, alphas, positions)
-			if panicked {
-				t.Fatalf("mutation made Verify panic (missing structural check): %v", err)
-			}
-			if err == nil {
-				t.Fatalf("mutation was accepted by Verify (soundness hole)")
-			}
+			require.False(t, panicked, "mutation made Verify panic: %v", err)
+			require.Error(t, err)
 		})
 	}
 }
@@ -233,12 +223,7 @@ func TestPCSVerifyRejectsMutations(t *testing.T) {
 			fx := newPCSOpenVerifyFixture(t)
 			tc.mutate(&fx)
 			err := fx.pcs.Verify(fx.input, fx.proof)
-			if err == nil {
-				t.Fatalf("pcs.Verify accepted %s", tc.name)
-			}
-			if !strings.Contains(err.Error(), tc.wantErr) {
-				t.Fatalf("error %q does not contain %q", err.Error(), tc.wantErr)
-			}
+			require.ErrorContains(t, err, tc.wantErr)
 		})
 	}
 }

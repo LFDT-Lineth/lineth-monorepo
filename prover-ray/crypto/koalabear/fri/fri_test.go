@@ -10,6 +10,8 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // bitReverseIdx returns the nbits-wide bit-reversal of i (matching the slice
@@ -171,9 +173,7 @@ func TestProverStateOpenLoopsOverLevelTrees(t *testing.T) {
 
 	prng := rand.New(utils.NewRandSource(20260624))
 	p, err := NewParams(16, 8, 2)
-	if err != nil {
-		t.Fatalf("NewParams: %v", err)
-	}
+	require.NoError(t, err)
 
 	levels := []Level{newRandomLevel(prng, p, 8), newRandomLevel(prng, p, 2)}
 
@@ -197,45 +197,27 @@ func TestProverStateOpenLoopsOverLevelTrees(t *testing.T) {
 
 	prf := proverForTest(p, levels, alphas, positions)
 	levelRoots, levelDs := verifierInputsForLevels(levels)
-	if err := Verify(p, levelRoots, levelDs, prf, alphas, positions); err != nil {
-		t.Fatalf("Verify (multi-tree openings) failed: %v", err)
-	}
+	require.NoError(t, Verify(p, levelRoots, levelDs, prf, alphas, positions))
 
-	if len(prf.FRIQueries[0][0]) != len(levels[0].Trees) {
-		t.Fatalf("round-0 opening has %d branches, want %d", len(prf.FRIQueries[0][0]), len(levels[0].Trees))
-	}
-	if len(prf.LevelQueries) != 1 {
-		t.Fatalf("proof has %d level query sets, want 1", len(prf.LevelQueries))
-	}
-	if len(prf.LevelQueries[0][0]) != len(levels[1].Trees) {
-		t.Fatalf("level opening has %d branches, want %d", len(prf.LevelQueries[0][0]), len(levels[1].Trees))
-	}
+	require.Len(t, prf.FRIQueries[0][0], len(levels[0].Trees))
+	require.Len(t, prf.LevelQueries, 1)
+	require.Len(t, prf.LevelQueries[0][0], len(levels[1].Trees))
 
 	for i, branch := range prf.FRIQueries[0][0] {
 		root, err := branch.RecoverRoot(positions[0])
-		if err != nil {
-			t.Fatalf("round-0 branch %d root recovery failed: %v", i, err)
-		}
-		if root != levels[0].Trees[i].Root() {
-			t.Fatalf("round-0 branch %d opened the wrong tree", i)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, levels[0].Trees[i].Root(), root)
 	}
 
 	base := positions[0] >> utils.Log2Ceil(p.D/levels[1].D)
 	for i, branch := range prf.LevelQueries[0][0] {
 		root, err := branch.RecoverRoot(base)
-		if err != nil {
-			t.Fatalf("branch %d root recovery failed: %v", i, err)
-		}
-		if root != levels[1].Trees[i].Root() {
-			t.Fatalf("branch %d opened the wrong tree", i)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, levels[1].Trees[i].Root(), root)
 	}
 
 	prf.FRIQueries[0][0][1].Leaf = field.PseudoRandOctuplet(prng)
-	if err := Verify(p, levelRoots, levelDs, prf, alphas, positions); err == nil {
-		t.Fatalf("Verify accepted a proof with a tampered second tree opening")
-	}
+	require.Error(t, Verify(p, levelRoots, levelDs, prf, alphas, positions))
 }
 
 // newRandomLevel builds a Level with a random evaluation vector of the size
