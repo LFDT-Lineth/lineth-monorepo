@@ -1,6 +1,6 @@
 // Package fri's PCS layer wraps the existing multi-degree FRI primitives
 // (Commit / RSEncoder / Tree / ProverState / Proof) into a batch
-// polynomial-commitment scheme with an Open/Verify surface.
+// polynomial-commitment scheme.
 //
 // This file defines the PCS-facing types and the canonical column layout.
 //
@@ -42,11 +42,6 @@
 //
 // Verify mirrors steps 2-7: same challenges in, authenticates the opened
 // backing trees, and reconstructs the virtual quotients inside FRI.
-//
-// The one-shot API accepts all Fiat-Shamir challenges up front:
-//
-//	pcs.Open(in OpenInputs) (OpeningProof, error)
-//	pcs.Verify(in VerifyInputs, proof OpeningProof) error
 //
 // The prover-side staged API will return the existing [ProverState] rather than
 // introduce a second PCS-specific opener state machine.
@@ -606,22 +601,8 @@ type SizedClaimedValues struct {
 }
 
 // =============================================================================
-// One-shot API
+// Prover API
 // =============================================================================
-//
-// For callers that have all challenges + query positions ready up-front
-// (tests, externally-precomputed transcripts).
-
-// OpenInputs bundles every parameter pcs.Open needs. Listed in a
-// struct so the call site is self-documenting and so future fields
-// can be added without breaking existing callers.
-type OpenInputs struct {
-	Witnesses []Batch
-	Committed []CommitterState
-	Shifts    []BatchShifts
-
-	Challenges Challenges
-}
 
 // Challenges bundles the Fiat-Shamir values supplied by the caller.
 type Challenges struct {
@@ -689,64 +670,6 @@ func (pcs *PCS) NewProverState(in ProverStateInputs) (ProverStateOutput, error) 
 	out.LevelRoots = levelRoots
 	out.LevelDs = levelDs
 	return out, nil
-}
-
-// Open produces an OpeningProof in one call.
-//
-// The caller is responsible for deriving all challenges via Fiat-
-// Shamir from the appropriate prefix of the transcript. The
-// documented derivation order (which Verify expects mirrored on its
-// side) is:
-//
-//	for each batch b in declaration order:
-//	    fs.absorb(Committed[b].Tree.Root())
-//	fs.sample(Zeta)
-//	for each (b, sizeLog2, rowIdx, isExt) in canonical layout order:
-//	    fs.absorb(claimed values at this entry's shifts)
-//	fs.sample(AlphaDeep)
-//	for j in 0..numRounds-1:
-//	    fs.absorb(running-layer root produced by fold j-1, when present)
-//	    fs.sample(FoldAlphas[j])
-//	fs.absorb(final polynomial)
-//	for k in 0..NumQueries-1:
-//	    fs.sample(QueryPositions[k]) // mod N/2
-func (pcs *PCS) Open(in OpenInputs) (OpeningProof, error) { //nolint:revive
-	started, err := pcs.NewProverState(ProverStateInputs{
-		Witnesses: in.Witnesses,
-		Committed: in.Committed,
-		Shifts:    in.Shifts,
-		Zeta:      in.Challenges.Zeta,
-		AlphaDeep: in.Challenges.AlphaDeep,
-	})
-	if err != nil {
-		return OpeningProof{}, err
-	}
-	if len(in.Challenges.FoldAlphas) < pcs.Params.numRounds {
-		return OpeningProof{}, fmt.Errorf("fri: pcs.Open: got %d FRI fold challenges, need %d",
-			len(in.Challenges.FoldAlphas), pcs.Params.numRounds)
-	}
-	if len(in.Challenges.QueryPositions) < pcs.Params.NumQueries {
-		return OpeningProof{}, fmt.Errorf("fri: pcs.Open: got %d query positions, need %d",
-			len(in.Challenges.QueryPositions), pcs.Params.NumQueries)
-	}
-	queryPositions := in.Challenges.QueryPositions[:pcs.Params.NumQueries]
-
-	for round := range pcs.Params.numRounds {
-		started.State.Fold(in.Challenges.FoldAlphas[round])
-	}
-
-	layout, err := canonicalLayoutFromBatches(in.Witnesses, in.Shifts)
-	if err != nil {
-		return OpeningProof{}, err
-	}
-	friProof := started.State.Open(queryPositions)
-	rowOpenings := pcs.openedRows(layout, in.Committed, queryPositions)
-
-	return OpeningProof{
-		ClaimedValues: started.ClaimedValues,
-		RowOpenings:   rowOpenings,
-		FRIProof:      friProof,
-	}, nil
 }
 
 func (pcs *PCS) checkProverStateInputs(in ProverStateInputs) error {
@@ -1276,9 +1199,7 @@ func quotientAtValue(value, x field.Ext, claims []quotientClaim) (field.Ext, err
 	return res, nil
 }
 
-// VerifyInputs bundles every parameter pcs.Verify needs. Mirrors
-// OpenInputs without the witnesses and with per-batch roots / shapes
-// in their place.
+// VerifyInputs bundles every parameter pcs.Verify needs.
 type VerifyInputs struct {
 	Roots  []field.Octuplet
 	Shapes []Shape
@@ -1287,9 +1208,8 @@ type VerifyInputs struct {
 	Challenges Challenges
 }
 
-// Verify checks an OpeningProof under the same challenges and query
-// positions the prover used (see Open's doc for the derivation
-// order).
+// Verify checks an OpeningProof under the same challenges and query positions
+// the prover used.
 //
 // Performs in sequence:
 //

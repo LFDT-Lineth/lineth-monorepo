@@ -346,6 +346,53 @@ type pcsOpenVerifyFixture struct {
 	proof OpeningProof
 }
 
+type openInputs struct {
+	Witnesses []Batch
+	Committed []CommitterState
+	Shifts    []BatchShifts
+
+	Challenges Challenges
+}
+
+func openForTest(t *testing.T, pcs *PCS, in openInputs) OpeningProof {
+	t.Helper()
+
+	started, err := pcs.NewProverState(ProverStateInputs{
+		Witnesses: in.Witnesses,
+		Committed: in.Committed,
+		Shifts:    in.Shifts,
+		Zeta:      in.Challenges.Zeta,
+		AlphaDeep: in.Challenges.AlphaDeep,
+	})
+	if err != nil {
+		t.Fatalf("pcs.NewProverState: %v", err)
+	}
+	if len(in.Challenges.FoldAlphas) < pcs.Params.numRounds {
+		t.Fatalf("got %d FRI fold challenges, need %d", len(in.Challenges.FoldAlphas), pcs.Params.numRounds)
+	}
+	if len(in.Challenges.QueryPositions) < pcs.Params.NumQueries {
+		t.Fatalf("got %d query positions, need %d", len(in.Challenges.QueryPositions), pcs.Params.NumQueries)
+	}
+	queryPositions := in.Challenges.QueryPositions[:pcs.Params.NumQueries]
+
+	for round := range pcs.Params.numRounds {
+		started.State.Fold(in.Challenges.FoldAlphas[round])
+	}
+
+	layout, err := canonicalLayoutFromBatches(in.Witnesses, in.Shifts)
+	if err != nil {
+		t.Fatalf("canonicalLayoutFromBatches: %v", err)
+	}
+	friProof := started.State.Open(queryPositions)
+	rowOpenings := pcs.openedRows(layout, in.Committed, queryPositions)
+
+	return OpeningProof{
+		ClaimedValues: started.ClaimedValues,
+		RowOpenings:   rowOpenings,
+		FRIProof:      friProof,
+	}
+}
+
 func newPCSOpenVerifyFixture(t *testing.T) pcsOpenVerifyFixture {
 	t.Helper()
 
@@ -385,15 +432,12 @@ func newPCSOpenVerifyFixture(t *testing.T) pcsOpenVerifyFixture {
 		FoldAlphas:     []field.Ext{field.UintsToExt(29, 1, 0, 0, 0, 0), field.UintsToExt(31, 0, 1, 0, 0, 0)},
 		QueryPositions: []int{3},
 	}
-	proof, err := pcs.Open(OpenInputs{
+	proof := openForTest(t, pcs, openInputs{
 		Witnesses:  witnesses,
 		Committed:  committed,
 		Shifts:     shifts,
 		Challenges: challenges,
 	})
-	if err != nil {
-		t.Fatalf("pcs.Open: %v", err)
-	}
 
 	return pcsOpenVerifyFixture{
 		pcs: pcs,
@@ -529,7 +573,7 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 		t.Fatalf("final polynomial mismatch")
 	}
 
-	oneShot, err := pcs.Open(OpenInputs{
+	oneShot := openForTest(t, pcs, openInputs{
 		Witnesses: witnesses,
 		Committed: committed,
 		Shifts:    shifts,
@@ -540,9 +584,6 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 			QueryPositions: positions,
 		},
 	})
-	if err != nil {
-		t.Fatalf("pcs.Open: %v", err)
-	}
 	if !reflect.DeepEqual(oneShot.ClaimedValues, started.ClaimedValues) {
 		t.Fatalf("one-shot claimed values differ from staged claimed values")
 	}
