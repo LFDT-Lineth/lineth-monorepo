@@ -35,7 +35,7 @@ case "${1:-}" in
       cores=$(awk -v a="$du" -v b="$dw" 'BEGIN{printf "%.2f", a/b}')
       util=$(awk -v a="$du" -v b="$dw" -v q="$q" 'BEGIN{ if(q>0) printf "%.0f", 100*a/b/q }')
       thr=$(awk -v a="$dt" -v b="$dw" 'BEGIN{printf "%.0f", 100*a/b}')
-      jw=$(pgrep -fc GradleWorkerMain 2>/dev/null || echo 0)
+      jw=$(pgrep -fc GradleWorkerMain 2>/dev/null || true); jw=${jw:-0}
       echo "$(date +%s),$cores,$q,$util,$thr,$(( ${memc:-0} / 1048576 )),$jw" >> "$out"
       pu=$u; pt=$t; pw=$nw
     done
