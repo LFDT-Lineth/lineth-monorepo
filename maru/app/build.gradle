@@ -123,18 +123,20 @@ task integrationTest(type: Test) {
   classpath = sourceSets.integrationTest.runtimeClasspath
   testClassesDirs = sourceSets.integrationTest.output.classesDirs
 
-  // Each test class spins up several real in-process Besu+Maru nodes, so two knobs matter:
+  // Each test class spins up a small cluster of real in-process Besu+Maru nodes (~4 for most classes).
+  // Both knobs below are sized to that per-fork workload, not to the host:
   //
-  // 1. Fork heap. The default is 25% of the runner's RAM (~4 GB on a 16 GB runner). On a CPU-quota-limited
-  //    CI container a GB-scale stop-the-world GC pause gets CFS-throttled to multiple seconds, freezing Maru's
-  //    1 s slot timer and producing flaky block-time gaps. A small heap keeps pauses short (<~300 ms measured);
-  //    the workload fits comfortably in ~1.5 GB.
-  // 2. Parallelism. One class per JVM (forkEvery = 1) + same_thread: these node-heavy tests aren't safe to
-  //    run concurrently inside one JVM (shared metrics registry), and they're timing-sensitive — each fork
-  //    needs ~2 cores or block production / cluster startup gets starved (measured: 4 forks on 8 cores is
-  //    stable, 6 on 8 flakes). Hence ~nCpu/2, capped at 6 (the makespan knee = total time / longest class).
+  // 1. Fork heap. The JVM default is 25% of the container's RAM (~4 GB on a 16 GB runner) — far more than the
+  //    ~4 nodes need (the suite runs in <1 GB; young-GC pauses are <50 ms on a normal machine). The downside of
+  //    that over-provisioning is pause length: a bigger max heap means a bigger young generation, so each
+  //    (stop-the-world) young collection is longer, and on a CPU-quota-limited CI container CFS throttling can
+  //    stretch a pause's wall-clock enough to make Maru's 1 s slot timer miss a slot (flaky 2 s block-time
+  //    gaps). Capping the heap keeps collections small. 1.5 GB = node working set + headroom, not host-derived.
+  // 2. Parallelism. One class per JVM (forkEvery = 1) + same_thread (these node tests aren't concurrency-safe
+  //    in one JVM: shared metrics registry, etc.). Each ~4-node cluster needs ~2 cores or its 1 s block
+  //    production / cluster startup starves (measured: 4 forks on 8 cores stable, 6 on 8 flakes) — i.e. ~nCpu/2,
+  //    capped at 6 (the makespan knee = total test time / longest class).
   maxHeapSize = "1536m"
-  jvmArgs "-XX:+UseG1GC", "-XX:MaxGCPauseMillis=200"
   maxParallelForks = Math.min(6, Math.max(2, Runtime.runtime.availableProcessors().intdiv(2)))
   forkEvery = 1
   systemProperties["junit.jupiter.execution.parallel.mode.default"] = "same_thread"
