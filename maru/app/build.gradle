@@ -123,13 +123,19 @@ task integrationTest(type: Test) {
   classpath = sourceSets.integrationTest.runtimeClasspath
   testClassesDirs = sourceSets.integrationTest.output.classesDirs
 
-  // Limit concurrency to max(2, nCpu/4) and run one test class per JVM (forkEvery = 1) so each class is
-  // fully isolated (own statics, singletons, ForkJoinPool, log4j2 context). This overrides the root
-  // build.gradle default. The concurrency cap lives at the process
-  // level, so methods within a fork run sequentially (same_thread), overriding the root's concurrent mode.
-  // nCpu/4 (rather than nCpu/2) leaves headroom: each class spins up several Besu+Maru nodes with real
-  // P2P, and over-subscribing the host makes timing-sensitive peer-discovery awaits flake.
-  maxParallelForks = Math.max(2, Runtime.runtime.availableProcessors().intdiv(4))
+  // Each test class spins up several real in-process Besu+Maru nodes, so two knobs matter:
+  //
+  // 1. Fork heap. The default is 25% of the runner's RAM (~4 GB on a 16 GB runner). On a CPU-quota-limited
+  //    CI container a GB-scale stop-the-world GC pause gets CFS-throttled to multiple seconds, freezing Maru's
+  //    1 s slot timer and producing flaky block-time gaps. A small heap keeps pauses short (<~300 ms measured);
+  //    the workload fits comfortably in ~1.5 GB.
+  // 2. Parallelism. One class per JVM (forkEvery = 1) + same_thread, because these node-heavy tests are not
+  //    safe to run concurrently inside one JVM (shared metrics registry, CPU/heap contention). maxParallelForks
+  //    scales at ~2 cores/fork to avoid JVM-cold-start thrash, capped at 8 — beyond that the suite makespan is
+  //    bound by its single longest class, not by added parallelism.
+  maxHeapSize = "1536m"
+  jvmArgs "-XX:+UseG1GC", "-XX:MaxGCPauseMillis=200"
+  maxParallelForks = Math.min(8, Math.max(2, Runtime.runtime.availableProcessors().intdiv(2)))
   forkEvery = 1
   systemProperties["junit.jupiter.execution.parallel.mode.default"] = "same_thread"
   systemProperties["junit.jupiter.execution.parallel.mode.classes.default"] = "same_thread"
