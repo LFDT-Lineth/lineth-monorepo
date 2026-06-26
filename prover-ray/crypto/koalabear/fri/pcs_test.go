@@ -219,7 +219,7 @@ func newPCSOpenVerifyFixture(t *testing.T) pcsOpenVerifyFixture {
 		field.VecPseudoRandExt(prng, 4),
 	}}
 	witnesses := []Batch{witness}
-	committed := []CommitterState{Commit(encoders, witness)}
+	committed := []CommitterState{pcs.Commit(witness)}
 
 	batchShifts := make(BatchShifts, 3)
 	batchShifts[2] = SizedShifts{Ext: [][]int{{0}, {1}}}
@@ -271,7 +271,7 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	otherWitness[2] = SizedTable{Ext: [][]field.Ext{field.VecPseudoRandExt(prng, 4)}}
 	otherWitness[3] = SizedTable{Ext: [][]field.Ext{field.VecPseudoRandExt(prng, 8)}}
 	witnesses := []Batch{witness, otherWitness}
-	committed := []CommitterState{Commit(encoders, witness), Commit(encoders, otherWitness)}
+	committed := []CommitterState{pcs.Commit(witness), pcs.Commit(otherWitness)}
 
 	batchShifts := make(BatchShifts, 4)
 	batchShifts[2] = SizedShifts{Ext: [][]int{{1, 3}}}
