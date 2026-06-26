@@ -20,7 +20,7 @@ CONTRACTS_DIR="${CONTRACTS_DIR:-$WORKSPACE_DIR/contracts}"
 
 log "Preparing Node/ethers account setup runtime"
 corepack enable >/dev/null 2>&1 || true
-corepack prepare pnpm@10.32.1 --activate >/dev/null 2>&1 || true
+corepack prepare pnpm@11.9.0 --activate >/dev/null 2>&1 || true
 
 if [ ! -x "$WORKSPACE_DIR/node_modules/.bin/ts-node" ] \
   || [ ! -d "$WORKSPACE_DIR/node_modules/.pnpm" ] \

@@ -7,6 +7,29 @@ packages:
   - ts-libs/**
   - '!contracts/lib/**'
 
+allowBuilds:
+  '@arbitrum/nitro-contracts': false
+  '@parcel/watcher': false
+  '@prisma/engines': false
+  better-sqlite3: false
+  bigint-buffer: false
+  bufferutil: false
+  c-kzg: true
+  es5-ext: false
+  esbuild: false
+  keccak: false
+  koffi: false
+  prisma: false
+  secp256k1: false
+  sharp: false
+  tiny-secp256k1: false
+  unrs-resolver: false
+  utf-8-validate: false
+  web3: false
+  web3-bzz: false
+  web3-shh: false
+  yarn: false
+
 catalog:
   '@jest/globals': 30.4.1
   '@typechain/ethers-v6': 0.5.1
@@ -148,3 +171,6 @@ trustPolicyExclude:
   - "chokidar@4.0.3"
   # Already present in the lockfile via WalletConnect logging; lacks provenance evidence.
   - "slow-redact@0.3.2"
+  # Already present in the lockfile via OpenZeppelin Defender tooling; pnpm 11 flags these as trust downgrades.
+  - "@openzeppelin/defender-admin-client@1.54.6"
+  - "@openzeppelin/defender-base-client@1.54.6"
