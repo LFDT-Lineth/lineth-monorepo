@@ -2,10 +2,18 @@
 # each guest package (l2-execution/, future rollup/, rollup-aggregation/, …) produces
 # its own zig-out/, zig-pkg/ and .zig-cache/ — these patterns cover them all.
 .zig-cache/
+.cache/
 zig-out/
 zig-pkg/
 *.objdump
 
+# Large l2-execution fixture downloads and generated inputs.
+l2-execution/**/fixtures_zkevm.tar.gz
+l2-execution/**/fixtures/
+l2-execution/**/large-ssz-fixtures/
+l2-execution/**/*.json
+l2-execution/**/*.ssz
+!l2-execution/test/testdata/stateless_input.ssz
+
 # generated linker script
 build_common/linker_script.ld
-

@@ -9,11 +9,12 @@
 # itself (ELF->JSON via elf_to_json_gen, then zkc) is owned by
 # arithmetization/src/test/Makefile; fixture-exec/fixture-debug build that ELF and hand it over.
 
-.PHONY: fetch test spec-test clean linker-script compile exec debug require-input
+.PHONY: fetch test spec-test large-ssz-fixtures clean linker-script compile exec debug require-input
 
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
 ZIG ?= zig
+GO ?= go
 
 BUILD_CACHE_DIR ?= $(MAKEFILE_DIR).zig-cache
 ZIG_BUILD_FLAGS ?= --cache-dir $(BUILD_CACHE_DIR) --summary all
@@ -30,6 +31,22 @@ BIN      := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
 
 # Sample fixture input used by exec/debug
 INPUT    ?= $(MAKEFILE_DIR)test/testdata/stateless_input.ssz
+
+LARGE_SSZ_DIR             ?= $(MAKEFILE_DIR).cache/large-ssz-fixtures
+LARGE_SSZ_GO_CACHE_DIR    ?= $(LARGE_SSZ_DIR)/go-build
+LARGE_SSZ_GO_MOD_DIR      ?= $(LARGE_SSZ_DIR)/go-mod
+STATELESS_EXECUTOR_REPO   ?= https://github.com/Gabriel-Trintinalia/stateless-executor
+STATELESS_EXECUTOR_DIR    ?= $(LARGE_SSZ_DIR)/stateless-executor
+ZKEVM_RUNNER              ?= $(STATELESS_EXECUTOR_DIR)/bin/zkevm-runner
+ZKEVM_FIXTURES_URL        ?= https://github.com/ethereum/execution-specs/releases/download/tests-zkevm@v0.4.1/fixtures_zkevm.tar.gz
+ZKEVM_FIXTURES_ARCHIVE    ?= $(LARGE_SSZ_DIR)/fixtures_zkevm.tar.gz
+ZKEVM_FIXTURES_DIR        ?= $(LARGE_SSZ_DIR)/fixtures
+ZKEVM_FIXTURES_SUITE      ?= blockchain_tests
+ZKEVM_FIXTURES_ROOT_FOLDER      ?= for_amsterdam
+ZKEVM_FIXTURES_TARGET_FOLDER    ?= amsterdam
+ZKEVM_FIXTURES_TARGET_DIR       ?= $(ZKEVM_FIXTURES_DIR)/$(ZKEVM_FIXTURES_SUITE)/$(ZKEVM_FIXTURES_ROOT_FOLDER)/$(ZKEVM_FIXTURES_TARGET_FOLDER)
+LARGE_SSZ_OUT_DIR               ?= $(LARGE_SSZ_DIR)/ssz/$(ZKEVM_FIXTURES_SUITE)/$(ZKEVM_FIXTURES_TARGET_FOLDER)
+LARGE_SSZ_LOG             ?= $(LARGE_SSZ_DIR)/zkevm-runner-dump.log
 
 # Flags forwarded to `zkc exec` by exec. Default -q (quiet: suppress the guest's per-instruction
 # printf). Override to pick the execution backend — e.g. "--quiet --gogen --fast" runs the guest via
@@ -57,6 +74,23 @@ test: linker-script
 SPEC_ARGS ?=
 spec-test: linker-script
 	$(ZIG) build spec-tests $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) $(if $(strip $(SPEC_ARGS)),-- $(SPEC_ARGS))
+
+# Generate zkVM-framed SSZ inputs from the execution-spec zkevm fixture archive.
+# All large/generated data lives under LARGE_SSZ_DIR, which defaults to ignored .cache/.
+# The stateless-executor repo provides zkevm-runner, which understands this fixture JSON shape.
+# The archive stores each test case as JSON with one or more blocks[] entries.
+# zkevm-runner --dump-dir writes one .bin input per block from statelessInputBytes.
+# The final step renames those .bin files to .ssz for clarity.
+large-ssz-fixtures:
+	@mkdir -p "$(LARGE_SSZ_DIR)" "$(LARGE_SSZ_OUT_DIR)"
+	@[ -d "$(STATELESS_EXECUTOR_DIR)/.git" ] || git clone --depth=1 "$(STATELESS_EXECUTOR_REPO)" "$(STATELESS_EXECUTOR_DIR)"
+	@cd "$(STATELESS_EXECUTOR_DIR)" && GOCACHE="$(LARGE_SSZ_GO_CACHE_DIR)" GOMODCACHE="$(LARGE_SSZ_GO_MOD_DIR)" $(GO) build -o bin/zesu-convert ./cmd/zesu-convert
+	@cd "$(STATELESS_EXECUTOR_DIR)" && GOCACHE="$(LARGE_SSZ_GO_CACHE_DIR)" GOMODCACHE="$(LARGE_SSZ_GO_MOD_DIR)" $(GO) build -o bin/zkevm-runner ./cmd/zkevm-runner
+	@[ -f "$(ZKEVM_FIXTURES_ARCHIVE)" ] || curl --fail --location --output "$(ZKEVM_FIXTURES_ARCHIVE)" "$(ZKEVM_FIXTURES_URL)"
+	@[ -d "$(ZKEVM_FIXTURES_DIR)" ] || tar -xzf "$(ZKEVM_FIXTURES_ARCHIVE)" -C "$(LARGE_SSZ_DIR)"
+	@[ -d "$(ZKEVM_FIXTURES_TARGET_DIR)" ] || { echo "missing fixture folder: $(ZKEVM_FIXTURES_TARGET_DIR)"; exit 1; }
+	@"$(ZKEVM_RUNNER)" --fixtures "$(ZKEVM_FIXTURES_TARGET_DIR)" --dump-dir "$(LARGE_SSZ_OUT_DIR)" > "$(LARGE_SSZ_LOG)"
+	@find "$(LARGE_SSZ_OUT_DIR)" -type f -name '*.bin' -exec sh -c 'mv "$$1" "$${1%.bin}.ssz"' sh {} \;
 
 clean:
 	rm -rf $(MAKEFILE_DIR)zig-out/
