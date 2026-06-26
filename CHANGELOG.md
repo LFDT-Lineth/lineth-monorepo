@@ -28,6 +28,7 @@
 - *(coordinator)* Drop insecure FileWriter temp-file fallback (CodeQL 21207) (#3413)
 - *(besu-plugins)* Removed mutual exclusiveness of the txpool and blo… (#3416)
 - *(coordinator)* Fixed a flacky test by closing the ftxInvalidityProofService in the ForcedTransactionsApp (#3438)
+- *(prover)* Resolve data race in limitless prover (#3442)
 
 ### 🚜 Refactor
 
