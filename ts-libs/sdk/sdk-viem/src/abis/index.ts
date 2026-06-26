@@ -44,6 +44,10 @@ export const SEND_MESSAGE_ABI = [
   },
 ] as const;
 
+// ---------------------------------------------------------------------------
+// L2 `L2MessageService` (Linea side)
+// ---------------------------------------------------------------------------
+
 export const CLAIM_MESSAGE_ABI = [
   {
     inputs: [
@@ -71,10 +75,6 @@ export const MINIMUM_FEE_IN_WEI_ABI = [
     type: "function",
   },
 ] as const;
-
-// ---------------------------------------------------------------------------
-// L2 message service (Linea side)
-// ---------------------------------------------------------------------------
 
 export const INBOX_L1_L2_MESSAGE_STATUS_ABI = [
   {
