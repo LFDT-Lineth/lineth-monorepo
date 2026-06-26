@@ -3,7 +3,7 @@ package wiop
 import (
 	"fmt"
 
-	field "github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
+	field "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 )
 
 // opCode identifies a single VM instruction.

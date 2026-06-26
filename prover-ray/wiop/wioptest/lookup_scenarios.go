@@ -1,6 +1,6 @@
 package wioptest
 
-import "github.com/consensys/linea-monorepo/prover-ray/wiop"
+import "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 
 // NewLookupSingleColumnNoFiltersScenario: a single-column inclusion query
 // with no selectors on either side. Every S value appears in T.

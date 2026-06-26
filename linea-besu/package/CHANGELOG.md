@@ -1,3 +1,9 @@
+## [unreleased]
+
+### 🐛 Bug Fixes
+
+- *(e2e)* Trying to fix rare profitability issues, FTX fix (#3388)
+- *(besu-plugins)* Removed mutual exclusiveness of the txpool and blo… (#3416)
 ## [1.1.0] - 2026-06-11
 
 ### 🚀 Features

@@ -5,13 +5,16 @@ import linea.ethapi.EthApiBlockClient
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 fun EthApiBlockClient.getBlockParameterNumber(blockParameter: BlockParameter): SafeFuture<ULong> {
-  return if (blockParameter is BlockParameter.BlockNumber) {
-    SafeFuture.completedFuture(blockParameter.getNumber())
-  } else if (blockParameter == BlockParameter.Tag.EARLIEST) {
-    SafeFuture.completedFuture(0UL)
-  } else {
-    this.ethGetBlockByNumberTxHashes(blockParameter)
-      .thenApply { block -> block.number }
+  return when (blockParameter) {
+    is BlockParameter.BlockNumber -> SafeFuture.completedFuture(blockParameter.getNumber())
+    BlockParameter.Tag.EARLIEST -> SafeFuture.completedFuture(0UL)
+    is BlockParameter.BlockHash ->
+      throw UnsupportedOperationException(
+        "Block hash resolution requires ethGetBlockByHash; blockParameter=$blockParameter",
+      )
+    else ->
+      this.ethGetBlockByNumberTxHashes(blockParameter)
+        .thenApply { block -> block.number }
   }
 }
 

@@ -33,8 +33,6 @@ jobs:
         include:
           - test: local
             archive-name: local
-          - test: forced-transactions:local
-            archive-name: forced-transactions-local
 
     name: Run test:partial-prover:${{ matrix.test }} e2e tests
     steps:

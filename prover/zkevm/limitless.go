@@ -268,18 +268,20 @@ func DiscoveryAdvices(zkevm *ZkEvm) []*distributed.ModuleDiscoveryAdvice {
 
 		// ELLIPTIC CURVES
 		//
-		// Flatten columns (common.NewFlattenColumn) use size
-		// NextPowerOfTwo(origMaskSize * NbLimbs) with NbLimbs=8 for Uint128Le.
-		// Discovery BaseSize for .*FLATTEN must match that flattened size so
-		// Horner/projection counts match (here: 512*8=4096 and 4096*8=32768).
-		// These .*FLATTEN rules must appear BEFORE the generic ^blsdata\. /
-		// ^ecdata\. catch-alls.
-		{BaseSize: 4096, Cluster: BnEcOpsModuleName, Regexp: `^blsdata\..*FLATTEN`},
+		// Flatten columns (common.NewFlattenColumn) have size
+		// NextPowerOfTwo(maskSize * NbLimbs), with NbLimbs=8 for Uint128Le. The mask
+		// is the CIRCUIT_SELECTOR arith column, sized at the module's trace limit, so
+		// the .*FLATTEN BaseSize must equal NextPow2(traceLimit * 8):
+		//   ecdata:  65536  * 8 = 524288
+		//   blsdata: 131072 * 8 = 1048576
+		// These .*FLATTEN rules must appear before the generic ^blsdata\. / ^ecdata\.
+		// catch-alls.
+		{BaseSize: 1048576, Cluster: BnEcOpsModuleName, Regexp: `^blsdata\..*FLATTEN`},
 		{BaseSize: 512, Cluster: BnEcOpsModuleName, Regexp: `^blsdata\.`},
-		{BaseSize: 32768, Cluster: BnEcOpsModuleName, Regexp: `^ecdata\..*FLATTEN`},
+		{BaseSize: 524288, Cluster: BnEcOpsModuleName, Regexp: `^ecdata\..*FLATTEN`},
 		{BaseSize: 4096, Cluster: BnEcOpsModuleName, Regexp: `^ecdata\.`},
 		{BaseSize: 4096, Cluster: BnEcOpsModuleName, Column: zkevm.Ecadd.AlignedGnarkData.IsActive},
-		{BaseSize: 512, Cluster: BnEcOpsModuleName, Column: zkevm.Ecmul.AlignedGnarkData.IsActive},
+		{BaseSize: 4096, Cluster: BnEcOpsModuleName, Column: zkevm.Ecmul.AlignedGnarkData.IsActive},
 		{BaseSize: 1024, Cluster: BnEcOpsModuleName, Regexp: `^g1_discount\.`},
 		{BaseSize: 1024, Cluster: BnEcOpsModuleName, Regexp: `^g2_discount\.`},
 

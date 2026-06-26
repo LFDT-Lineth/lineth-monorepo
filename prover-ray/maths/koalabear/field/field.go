@@ -9,9 +9,9 @@ import (
 	"runtime"
 	"unsafe"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/consensys/gnark-crypto/field/koalabear"
-	"github.com/consensys/linea-monorepo/prover-ray/utils"
-	"github.com/consensys/linea-monorepo/prover-ray/utils/parallel"
 )
 
 // Element is the base field element type alias for the KoalaBear field.

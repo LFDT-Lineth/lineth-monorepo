@@ -53,11 +53,39 @@ Read individual rule files for detailed explanations and code examples (correct 
 
 **Gas efficiency is critical for Linea contracts.** Apply these rules unless there is a documented safety, audit, or readability reason to deviate.
 
+```solidity
+// Correct: external + calldata, cache storage reads
+function submit(bytes32[] calldata _proofs) external {
+  uint256 current = fee;
+  require(current != 0, FeeNotSet());
+  _verify(_proofs, current);
+}
+
+// Incorrect: public + memory, repeated storage reads
+function submit(bytes32[] memory _proofs) public {
+  require(fee != 0, FeeNotSet());
+  _verify(_proofs, fee);
+}
+```
+
 See [rules/gas-optimization.md](rules/gas-optimization.md) for details.
 
 ### 2. NatSpec Docstrings (HIGH)
 
 **ALWAYS use NatSpec docstrings for all public/external items.**
+
+```solidity
+// Correct: complete NatSpec with @notice, @param (in signature order), @return
+/**
+ * @notice Sends a message to L2.
+ * @param _to The recipient address on L2.
+ * @param _fee The fee amount in wei.
+ * @return messageHash The hash of the sent message.
+ */
+function sendMessage(address _to, uint256 _fee) external payable returns (bytes32 messageHash);
+```
+
+Every contract/interface NatSpec block must include `@author Consensys Software Inc.` and `@custom:security-contact security-report@linea.build`.
 
 Consult [rules/natspec.md](rules/natspec.md) for NatSpec docstring rules and examples
 
@@ -77,8 +105,20 @@ See [rules/naming-conventions.md](rules/naming-conventions.md) for symbol naming
 
 ### 5. Imports (MEDIUM)
 
-Always use named imports.
-Always insert a blank line after imports.
+Always use named imports. Always insert a blank line after imports.
+
+```solidity
+// Correct: named imports with blank line before NatSpec/contract declaration
+import { IMessageService } from "../interfaces/IMessageService.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+
+/**
+ * @title Brief description.
+ * @author Consensys Software Inc.
+ * @custom:security-contact security-report@linea.build
+ */
+contract MessageService is IMessageService, Ownable {
+```
 
 See [rules/imports.md](rules/imports.md) for details.
 
@@ -89,6 +129,27 @@ See [rules/visibility.md](rules/visibility.md) for rules on applying visibility 
 ### 7. General Rules (MEDIUM)
 
 See [rules/general-rules.md](rules/general-rules.md) for inheritance and general style rules
+
+## Development Workflow
+
+Follow this sequence when writing or modifying Solidity contracts:
+
+1. **Write/modify contract** applying rules from the priority table above.
+2. **Compile** and fix errors:
+   ```bash
+   pnpm -F contracts run build
+   ```
+3. **Run linter** and fix warnings:
+   ```bash
+   pnpm -F contracts run lint:fix
+   ```
+4. **Run tests** to verify behavior:
+   ```bash
+   pnpm -F contracts run test
+   ```
+5. **Verify NatSpec coverage**: confirm all public/external functions, events, and errors have complete docstrings with `@notice`, `@param` (in signature order), and `@return`.
+6. **Review gas patterns**: check for unnecessary `memory` copies, repeated storage reads, and missing batch limits.
+7. **Commit** after passing the checklist below.
 
 ## Commit Checklist
 

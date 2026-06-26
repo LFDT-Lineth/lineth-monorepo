@@ -67,6 +67,7 @@ data class P2PConfig(
     val refreshInterval: Duration,
     val searchInterval: Duration = 1.seconds,
     val searchTimeout: Duration = 30.seconds,
+    val retryTimeout: Duration = 10.seconds,
     val advertisedIp: String? = null,
   ) {
     init {

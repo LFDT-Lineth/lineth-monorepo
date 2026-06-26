@@ -22,10 +22,22 @@
 - *(prover)* Incorporate `isAllowedCircuitID` into aggregation FPI (#3194)
 - *(prover)* Invalidity prover bug fixes (#3138)
 - *(prover)* Post small-fields constraints (#2845)
+- *(prover)* Populate isAllowedCircuitID in aggregation response (#3381)
+- *(e2e)* Trying to fix rare profitability issues, FTX fix (#3388)
+- *(prover)* Bump BLOCKHASH module limit from 2048 to 4096 (#3426)
+- *(coordinator)* Drop insecure FileWriter temp-file fallback (CodeQL 21207) (#3413)
+- *(besu-plugins)* Removed mutual exclusiveness of the txpool and blo… (#3416)
+- *(coordinator)* Fixed a flacky test by closing the ftxInvalidityProofService in the ForcedTransactionsApp (#3438)
+- *(prover)* Resolve data race in limitless prover (#3442)
 
 ### 🚜 Refactor
 
 - *(misc)* Rename Linea to Lineth across documentation and codebase (#3316)
+- *(prover-ray)* Export logderivativesum internals for verifier-ray codegen (#3354)
+
+### ⚡ Performance
+
+- *(prover)* Limitless prover performance optimization (#3362)
 
 ### ⚙️ Miscellaneous Tasks
 
@@ -52,3 +64,5 @@
 - *(misc)* Point references at in-tree paths for previously-external repos (#3309)
 - *(coordinator)* Favour generic name ChainSecurityRuleViolation over specific implementation Phylax (#3330)
 - *(packages)* Rename npm package scope (#3324)
+- *(deps)* Update eligible patch and minor dependencies (#3366)
+- Update gnark to a3ad59ad083caac7691cba84a497d4d7c1759d2a (#3402)

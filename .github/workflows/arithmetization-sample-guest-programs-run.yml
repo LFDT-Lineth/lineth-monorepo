@@ -36,7 +36,8 @@ jobs:
   sample-guest-programs-run:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     env:
-      ZKC_REF: ${{ inputs.zkc-ref || 'main' }}
+      ZKC_REF: ${{ inputs.zkc-ref || 'v1.2.20' }}
+      ZKC_EXEC_FLAGS: "--fast -q"
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -49,10 +50,10 @@ jobs:
       - name: Install zkc and run simple Zig guest program with zkc interpreter
         # IN_BYTES values not used in the sum test program but is still written in memory
         run: make TEST=test.zig IN_BYTES="0xAABB" IN_ORIGIN=0x08800000
-        working-directory: arithmetization/src/test/examples
+        working-directory: arithmetization/src/test
         timeout-minutes: 6
 
       - name: Run Blake rust against test vectors with zkc interpreter
         run: make blake-rust-exec
-        working-directory: arithmetization/src/test/examples
+        working-directory: arithmetization/src/test
         timeout-minutes: 30
