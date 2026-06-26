@@ -113,7 +113,7 @@ import (
 // =============================================================================
 
 // PCS bundles the FRI configuration and the per-size encoders into one
-// receiver for Commit / Open / Verify. Built once at startup, reused
+// receiver for Commit / AddOpening / Verify. Built once at startup, reused
 // across many proofs.
 //
 // Invariants (enforced by NewPCS):
@@ -226,7 +226,7 @@ type SizedShifts struct {
 // =============================================================================
 //
 // Mirrors loom's canonicalLayout. Producer of the alpha_DEEP power
-// schedule consumed by both Open and Verify. Made package-internal;
+// schedule consumed by both AddOpening and Verify. Made package-internal;
 // callers don't need to look inside.
 type deepEntry struct {
 	BatchIdx   int
@@ -248,7 +248,7 @@ type layout []sizeBundle
 // enumeration. Validates shape alignment, per-row shift invariants
 // (non-empty, no duplicates), and per-batch distinct sizes.
 //
-// Used by both Open (with shapes derived from witnesses) and Verify
+// Used by both AddOpening (with shapes derived from witnesses) and Verify
 // (with shapes passed in directly).
 func canonicalLayout(shapes []Shape, shifts []BatchShifts) (layout, error) {
 	if len(shapes) != len(shifts) {
@@ -536,16 +536,23 @@ type Challenges struct {
 	QueryPositions []int       // length == Params.NumQueries
 }
 
-// Open computes the claimed evaluations at zeta. The caller must absorb the
-// returned values into the transcript before deriving alpha_DEEP.
-func (pcs *PCS) Open(
+// AddOpening registers one committed batch to be opened at zeta with the given
+// shift schedule. It computes and returns the claimed evaluations, and records
+// the commitment, zeta, layout, and claims as pending input to the virtual DEEP
+// quotient later built by NewProverState.
+//
+// The caller must absorb the returned claims into the transcript before
+// deriving alpha_DEEP. The returned value aliases PCS-owned pending-opening
+// state, so callers must treat it as immutable until the opening proof is
+// finished or the PCS is Reset.
+func (pcs *PCS) AddOpening(
 	witness Batch,
 	committed CommitterState,
 	zeta field.Ext,
 	shifts BatchShifts,
 ) (BatchClaimedValues, error) {
 	if committed.Tree == nil {
-		return nil, fmt.Errorf("fri: Open: commitment has nil tree")
+		return nil, fmt.Errorf("fri: AddOpening: commitment has nil tree")
 	}
 	layout, err := canonicalLayoutFromBatches([]Batch{witness}, []BatchShifts{shifts})
 	if err != nil {
@@ -568,7 +575,7 @@ func (pcs *PCS) Open(
 // existing FRI prover state. It does not fold or open.
 func (pcs *PCS) NewProverState(alphaDeep field.Ext) (*ProverState, error) {
 	if len(pcs.openings) == 0 {
-		return nil, fmt.Errorf("fri: NewProverState: Open must be called first")
+		return nil, fmt.Errorf("fri: NewProverState: AddOpening must be called first")
 	}
 
 	levels, err := pcs.reconstructLevels(alphaDeep)

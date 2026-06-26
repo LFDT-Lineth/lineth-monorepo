@@ -209,9 +209,9 @@ func openForTest(t *testing.T, pcs *PCS, in openInputs) OpeningProof {
 	defer pcs.Reset()
 	claimed := make([]BatchClaimedValues, 0, len(in.Witnesses))
 	for i := range in.Witnesses {
-		batchClaims, err := pcs.Open(in.Witnesses[i], in.Committed[i], in.Zetas[i], in.Shifts[i])
+		batchClaims, err := pcs.AddOpening(in.Witnesses[i], in.Committed[i], in.Zetas[i], in.Shifts[i])
 		if err != nil {
-			t.Fatalf("pcs.Open: %v", err)
+			t.Fatalf("pcs.AddOpening: %v", err)
 		}
 		claimed = append(claimed, batchClaims)
 	}
@@ -331,13 +331,13 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	zeta := field.UintsToExt(19, 2, 3, 5, 7, 11)
 	otherZeta := field.UintsToExt(41, 0, 1, 2, 3, 5)
 	alphaDeepChallenge := field.UintsToExt(23, 3, 5, 7, 11, 13)
-	firstClaims, err := pcs.Open(witness, committed[0], zeta, batchShifts)
+	firstClaims, err := pcs.AddOpening(witness, committed[0], zeta, batchShifts)
 	if err != nil {
-		t.Fatalf("pcs.Open: %v", err)
+		t.Fatalf("pcs.AddOpening: %v", err)
 	}
-	otherClaims, err := pcs.Open(otherWitness, committed[1], otherZeta, otherBatchShifts)
+	otherClaims, err := pcs.AddOpening(otherWitness, committed[1], otherZeta, otherBatchShifts)
 	if err != nil {
-		t.Fatalf("pcs.Open: %v", err)
+		t.Fatalf("pcs.AddOpening: %v", err)
 	}
 	claimed := []BatchClaimedValues{firstClaims, otherClaims}
 	started, err := pcs.NewProverState(alphaDeepChallenge)
