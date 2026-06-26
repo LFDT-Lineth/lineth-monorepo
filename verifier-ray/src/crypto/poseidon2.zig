@@ -19,9 +19,12 @@ pub fn zeroDigest() Digest {
 
 pub fn compress(left: Digest, right: Digest) Digest {
     profiling.poseidon2Compress();
-    var state: [16]field.Element = undefined;
-    @memcpy(state[0..block_size], &left);
-    @memcpy(state[block_size..], &right);
+    // `align(8)` matches `zkvm_bytes_64`, letting `permutationAccel16` reinterpret
+    // this buffer in place (see there). The array assignments lower to word stores,
+    // unlike `@memcpy` on byte buffers which `ReleaseSmall` turns into a byte loop.
+    var state: [16]field.Element align(8) = undefined;
+    state[0..block_size].* = left;
+    state[block_size..].* = right;
 
     var out = right;
     permutation(16, &state);
@@ -153,10 +156,13 @@ fn permutationNative(comptime width: usize, state: *[width]field.Element) void {
 // 16 little-endian canonical 32-bit words — the same layout the accelerator
 // expects in `zkvm_bytes_64`. The bit casts are therefore plain reinterpretations.
 fn permutationAccel16(state: *[constants.width]field.Element) void {
-    var in_state: lineth_accel.zkvm_bytes_64 = .{ .data = @bitCast(state.*) };
-    var out_state: lineth_accel.zkvm_bytes_64 = undefined;
-    _ = lineth_accel.lineth_zkvm_poseidon2_permutation(&in_state, &out_state);
-    state.* = @bitCast(out_state.data);
+    // `[16]Element` is bit-identical to `zkvm_bytes_64` (16 LE u32 words = 64 bytes),
+    // and the accelerator permits `input`/`output` to alias, so reinterpret the state
+    // buffer in place. This avoids the two 64-byte copies (in/out staging) that the
+    // previous `@bitCast` round-trip lowered to byte-wise `memcpy` on R5.
+    // Safe because `compress` declares its state `align(8)`.
+    const buf: *lineth_accel.zkvm_bytes_64 = @ptrCast(@alignCast(state));
+    _ = lineth_accel.lineth_zkvm_poseidon2_permutation(buf, buf);
 }
 
 fn addRoundKey(
