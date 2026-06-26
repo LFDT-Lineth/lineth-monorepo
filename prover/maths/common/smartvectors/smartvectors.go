@@ -639,12 +639,12 @@ func CoWindowRange(sv ...SmartVector) (start, stop int) {
 			if !foundAny {
 				start = s.Offset()
 				stop = s.Offset() + len(s.Window())
+				foundAny = true
 				continue
 			}
 
 			start = min(start, s.Offset())
 			stop = max(stop, s.Offset()+len(s.Window()))
-			foundAny = true
 		}
 	}
 
