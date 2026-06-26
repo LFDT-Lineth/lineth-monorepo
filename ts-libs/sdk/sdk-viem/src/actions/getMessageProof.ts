@@ -34,6 +34,11 @@ import {
   GetMessageSentEventsReturnType,
 } from "./getMessageSentEvents";
 import {
+  CURRENT_L2_BLOCK_NUMBER_ABI,
+  L2_MERKLE_ROOT_ADDED_EVENT_ABI,
+  L2_MESSAGING_BLOCK_ANCHORED_EVENT_ABI,
+} from "../abis";
+import {
   EventNotFoundInFinalizationDataError,
   EventNotFoundInFinalizationDataErrorType,
   L2BlockNotFinalizedError,
@@ -195,25 +200,6 @@ export async function getMessageProof<
   return tree.getProof(l2messages.indexOf(messageHash));
 }
 
-const L2_MESSAGING_BLOCK_ANCHORED_ABI = [
-  {
-    anonymous: false,
-    inputs: [{ indexed: true, internalType: "uint256", name: "l2Block", type: "uint256" }],
-    name: "L2MessagingBlockAnchored",
-    type: "event",
-  },
-] as const;
-
-const CURRENT_L2_BLOCK_NUMBER_ABI = [
-  {
-    inputs: [],
-    name: "currentL2BlockNumber",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-] as const;
-
 // Conservative upper bound on the `eth_getLogs` block span accepted by rate-limited providers
 // (e.g. Infura rejects spans > 10,000 blocks). The fallback narrows the finalization to a window
 // no wider than this so it can be swept in a single allowed query.
@@ -332,7 +318,7 @@ async function findL2MessagingBlockAnchoredEvent<chain extends Chain | undefined
   try {
     const [event] = await getContractEvents(client, {
       address: args.lineaRollupAddress,
-      abi: L2_MESSAGING_BLOCK_ANCHORED_ABI,
+      abi: L2_MESSAGING_BLOCK_ANCHORED_EVENT_ABI,
       eventName: "L2MessagingBlockAnchored",
       args: { l2Block: args.l2BlockNumber },
       fromBlock: "earliest",
@@ -352,7 +338,7 @@ async function findL2MessagingBlockAnchoredEvent<chain extends Chain | undefined
 
   const [event] = await getContractEvents(client, {
     address: args.lineaRollupAddress,
-    abi: L2_MESSAGING_BLOCK_ANCHORED_ABI,
+    abi: L2_MESSAGING_BLOCK_ANCHORED_EVENT_ABI,
     eventName: "L2MessagingBlockAnchored",
     args: { l2Block: args.l2BlockNumber },
     fromBlock: finalizationRange.fromBlock,
@@ -407,23 +393,7 @@ async function getFinalizationMessagingInfo<chain extends Chain | undefined, acc
   );
 
   const parsedLogs = parseEventLogs({
-    abi: [
-      {
-        anonymous: false,
-        inputs: [
-          { indexed: true, internalType: "bytes32", name: "l2MerkleRoot", type: "bytes32" },
-          { indexed: true, internalType: "uint256", name: "treeDepth", type: "uint256" },
-        ],
-        name: "L2MerkleRootAdded",
-        type: "event",
-      },
-      {
-        anonymous: false,
-        inputs: [{ indexed: true, internalType: "uint256", name: "l2Block", type: "uint256" }],
-        name: "L2MessagingBlockAnchored",
-        type: "event",
-      },
-    ] as const,
+    abi: [...L2_MERKLE_ROOT_ADDED_EVENT_ABI, ...L2_MESSAGING_BLOCK_ANCHORED_EVENT_ABI],
     eventName: ["L2MerkleRootAdded", "L2MessagingBlockAnchored"],
     logs: filteredLogs,
   });

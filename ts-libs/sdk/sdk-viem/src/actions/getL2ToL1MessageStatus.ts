@@ -20,6 +20,7 @@ import {
 import { readContract } from "viem/actions";
 
 import { getMessageSentEvents, GetMessageSentEventsErrorType } from "./getMessageSentEvents";
+import { CURRENT_L2_BLOCK_NUMBER_ABI, IS_MESSAGE_CLAIMED_ABI } from "../abis";
 import { MessageNotFoundError, MessageNotFoundErrorType } from "../errors/bridge";
 
 export type GetL2ToL1MessageStatusParameters<
@@ -118,28 +119,12 @@ export async function getL2ToL1MessageStatus<
   const [currentL2BlockNumber, isMessageClaimed] = await Promise.all([
     readContract(client, {
       address: lineaRollupAddress,
-      abi: [
-        {
-          inputs: [],
-          name: "currentL2BlockNumber",
-          outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-          stateMutability: "view",
-          type: "function",
-        },
-      ] as const,
+      abi: CURRENT_L2_BLOCK_NUMBER_ABI,
       functionName: "currentL2BlockNumber",
     }),
     readContract(client, {
       address: lineaRollupAddress,
-      abi: [
-        {
-          inputs: [{ internalType: "uint256", name: "_messageNumber", type: "uint256" }],
-          name: "isMessageClaimed",
-          outputs: [{ internalType: "bool", name: "isClaimed", type: "bool" }],
-          stateMutability: "view",
-          type: "function",
-        },
-      ] as const,
+      abi: IS_MESSAGE_CLAIMED_ABI,
       functionName: "isMessageClaimed",
       args: [messageSentEvent.messageNonce],
     }),

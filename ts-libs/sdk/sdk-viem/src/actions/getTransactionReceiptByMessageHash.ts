@@ -14,6 +14,7 @@ import {
 } from "viem";
 import { getContractEvents, getTransactionReceipt } from "viem/actions";
 
+import { MESSAGE_SENT_EVENT_ABI } from "../abis";
 import { MessageNotFoundError, MessageNotFoundErrorType } from "../errors/bridge";
 
 export type GetTransactionReceiptByMessageHashParameters = {
@@ -74,22 +75,7 @@ export async function getTransactionReceiptByMessageHash<
 
   const [event] = await getContractEvents(client, {
     address: messageServiceAddress ?? getContractsAddressesByChainId(client.chain.id).messageService,
-    abi: [
-      {
-        anonymous: false,
-        inputs: [
-          { indexed: true, internalType: "address", name: "_from", type: "address" },
-          { indexed: true, internalType: "address", name: "_to", type: "address" },
-          { indexed: false, internalType: "uint256", name: "_fee", type: "uint256" },
-          { indexed: false, internalType: "uint256", name: "_value", type: "uint256" },
-          { indexed: false, internalType: "uint256", name: "_nonce", type: "uint256" },
-          { indexed: false, internalType: "bytes", name: "_calldata", type: "bytes" },
-          { indexed: true, internalType: "bytes32", name: "_messageHash", type: "bytes32" },
-        ],
-        name: "MessageSent",
-        type: "event",
-      },
-    ] as const,
+    abi: MESSAGE_SENT_EVENT_ABI,
     eventName: "MessageSent",
     args: {
       _messageHash: messageHash,
