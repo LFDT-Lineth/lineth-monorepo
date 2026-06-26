@@ -23,6 +23,7 @@ WORKDIR /usr/src/app
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
 
+COPY patches/ ./patches/
 COPY ./operations/native-yield/automation-service/package.json ./operations/native-yield/automation-service/package.json
 COPY ./ts-libs/linea-shared-utils/package.json ./ts-libs/linea-shared-utils/package.json
 COPY ./ts-libs/eslint-config/package.json ./ts-libs/eslint-config/package.json
@@ -35,7 +36,7 @@ COPY ts-libs/eslint-config ./ts-libs/eslint-config
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm run build
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm deploy --legacy --prefer-offline --filter=./operations/native-yield/automation-service --prod ./prod/operations/native-yield/automation-service
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm --config.allow-unused-patches=true --config.block-exotic-subdeps=false deploy --legacy --prefer-offline --filter=./operations/native-yield/automation-service --prod ./prod/operations/native-yield/automation-service
 
 FROM node:${NODE_VERSION}-slim AS production
 

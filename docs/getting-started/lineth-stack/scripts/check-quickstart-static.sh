@@ -946,7 +946,7 @@ check_reuse_guardrails() {
     fail "deploy-contracts must not reuse host node_modules or throw away the Hardhat cache"
   fi
 
-  if grep -q 'corepack prepare pnpm@10.32.1 --activate' "$ensure_demo_erc20_sh" \
+  if grep -q 'corepack prepare pnpm@11.9.0 --activate' "$ensure_demo_erc20_sh" \
     && grep -q 'LINETH_ACCOUNTS_DIR' "$ensure_demo_erc20_sh" \
     && grep -q 'resolveL1DeployerConfig' "$ensure_demo_erc20" \
     && ! grep -q ': "${L1_DEPLOYER_PRIVATE_KEY' "$ensure_demo_erc20_sh"; then
@@ -955,7 +955,7 @@ check_reuse_guardrails() {
     fail "on-demand ERC20 deploy helper must prepare pnpm and export generated runtime keys before invoking TypeScript"
   fi
 
-  if grep -q 'corepack prepare pnpm@10.32.1 --activate' "$traffic_account_sh"; then
+  if grep -q 'corepack prepare pnpm@11.9.0 --activate' "$traffic_account_sh"; then
     pass "traffic account helper prepares pnpm before invoking TypeScript"
   else
     fail "traffic account helper must prepare pnpm before invoking TypeScript"
@@ -1447,7 +1447,7 @@ check_pinned_utility_images_and_docs() {
     && grep -q '00-prepare-deploy-tools.sh' "$compose" \
     && grep -q 'FOUNDRY_TAG: ${FOUNDRY_TAG:' "$compose" \
     && grep -q 'Foundry binaries missing' "$deploy_contracts" \
-    && grep -q 'corepack prepare pnpm@10.32.1' "$deploy_contracts" \
+    && grep -q 'corepack prepare pnpm@11.9.0' "$deploy_contracts" \
     && ! grep -q 'pnpm@latest' "$deploy_contracts" \
     && ! grep -q 'foundryup\|foundry.paradigm.xyz' "$deploy_contracts"; then
     pass "deploy-contracts uses pinned cached Foundry and pnpm tooling"
