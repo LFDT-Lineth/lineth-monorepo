@@ -244,33 +244,6 @@ data class ExecutionPayload(
   }
 }
 
-// // This class should add a blockNumber field with the ExecutionWitness class declared in PR-3248
-// data class ExecutionWitness(
-//  val state: List<ByteArray>,
-//  val codes: List<ByteArray>,
-//  val headers: List<ByteArray>,
-// ) {
-//  override fun equals(other: Any?): Boolean {
-//    if (this === other) return true
-//    if (javaClass != other?.javaClass) return false
-//
-//    other as ExecutionWitness
-//
-//    if (!state.byteArrayListEquals(other.state)) return false
-//    if (!codes.byteArrayListEquals(other.codes)) return false
-//    if (!headers.byteArrayListEquals(other.headers)) return false
-//
-//    return true
-//  }
-//
-//  override fun hashCode(): Int {
-//    var result = state.hashCode()
-//    result = 31 * result + codes.hashCode()
-//    result = 31 * result + headers.hashCode()
-//    return result
-//  }
-// }
-
 data class ExecutionRequests(
   val blockNumber: ULong,
   val executionRequests: List<ByteArray>,
