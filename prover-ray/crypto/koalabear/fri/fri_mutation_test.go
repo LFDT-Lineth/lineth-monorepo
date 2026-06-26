@@ -215,7 +215,7 @@ func TestPCSVerifyRejectsMutations(t *testing.T) {
 		{
 			name: "domain point claim",
 			mutate: func(fx *pcsOpenVerifyFixture) {
-				fx.input.Challenges.Zeta = domainPointExt(fx.pcs.Params.domainsLight[0], 0)
+				fx.input.Zetas[0] = domainPointExt(fx.pcs.Params.domainsLight[0], 0)
 			},
 			wantErr: "claim point on domain",
 		},

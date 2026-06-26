@@ -24,7 +24,7 @@
 //     base-then-ext, row declaration order). All shifts of one column share the
 //     same alpha_DEEP power.
 //
-// At Open time the prover:
+// During the opening flow the prover:
 //
 //  1. Computes the claimed value of every (batch, size, row, shift) at
 //     zeta * omega_N^shift.
@@ -40,8 +40,8 @@
 //  7. PCS opens every batch at every query position and produces the
 //     final OpeningProof.
 //
-// Verify mirrors steps 2-7: same challenges in, authenticates the opened
-// backing trees, and reconstructs the virtual quotients inside FRI.
+// Verify mirrors steps 2-7: same zetas and challenges in, authenticates the
+// opened backing trees, and reconstructs the virtual quotients inside FRI.
 //
 // The prover-side staged API will return the existing [ProverState] rather than
 // introduce a second PCS-specific opener state machine.
@@ -125,11 +125,25 @@ import (
 type PCS struct {
 	Params   Params
 	Encoders []*RSEncoder
+
+	openings []pcsOpening
+}
+
+type pcsOpening struct {
+	layout    layout
+	committed CommitterState
+	claimed   BatchClaimedValues
+	zeta      field.Ext
+}
+
+// Reset clears pending opening registrations.
+func (pcs *PCS) Reset() {
+	pcs.openings = pcs.openings[:0]
 }
 
 // NewPCS validates the encoder schedule against Params and returns a
 // ready-to-use PCS.
-func NewPCS(params Params, encoders []*RSEncoder) (*PCS, error) { //nolint:revive
+func NewPCS(params Params, encoders []*RSEncoder) (*PCS, error) {
 	if len(encoders) != params.numRounds+1 {
 		return nil, fmt.Errorf("fri: NewPCS: got %d encoders, want %d", len(encoders), params.numRounds+1)
 	}
@@ -236,7 +250,7 @@ type layout []sizeBundle
 //
 // Used by both Open (with shapes derived from witnesses) and Verify
 // (with shapes passed in directly).
-func canonicalLayout(shapes []Shape, shifts []BatchShifts) (layout, error) { //nolint:revive
+func canonicalLayout(shapes []Shape, shifts []BatchShifts) (layout, error) {
 	if len(shapes) != len(shifts) {
 		return nil, fmt.Errorf("fri: canonicalLayout: got %d shapes, %d shifts", len(shapes), len(shifts))
 	}
@@ -301,7 +315,7 @@ func canonicalLayout(shapes []Shape, shifts []BatchShifts) (layout, error) { //n
 
 // canonicalLayoutFromBatches is the prover-side entry point: shapes
 // are inferred from witness row counts. Delegates to canonicalLayout.
-func canonicalLayoutFromBatches(batches []Batch, shifts []BatchShifts) (layout, error) { //nolint:revive
+func canonicalLayoutFromBatches(batches []Batch, shifts []BatchShifts) (layout, error) {
 	return canonicalLayout(shapesFromBatches(batches), shifts)
 }
 
@@ -384,92 +398,13 @@ type quotientColumn struct {
 	// is explicit here so reconstruction does not silently depend on the caller
 	// passing columns in canonical order.
 	AlphaPower int
-	Evals      []field.Ext
+	Evals      []field.Ext // Evals over the codeword domain
 	Claims     []quotientClaim
-}
-
-// quotientLevelInput describes one virtual quotient level. Columns must all
-// belong to the same size bundle; each column carries the AlphaPower assigned by
-// canonicalLayout for that bundle.
-type quotientLevelInput struct {
-	D       int
-	Domain  domainLight
-	Columns []quotientColumn
-	Trees   []*Tree
-}
-
-// reconstructLevel computes the virtual DEEP quotient level
-//
-//	F(X) = Σ_i alpha_DEEP^i · Σ_j (f_i(X) - y_ij)/(X - z_ij)
-//
-// over input.Domain's bit-reversed evaluation order and stores it in
-// Level.Evals. It precomputes every distinct denominator inverse 1/(x-z) with
-// one Montgomery batch inversion, then walks the columns in canonical order.
-func reconstructLevel(input quotientLevelInput, alphaDeepChallenge field.Ext) (Level, error) {
-	if input.D <= 0 || input.D&(input.D-1) != 0 {
-		return Level{}, fmt.Errorf("fri: reconstructLevel: D=%d is not a positive power of two", input.D)
-	}
-
-	size, err := reconstructDomainSize(input.Domain)
-	if err != nil {
-		return Level{}, err
-	}
-	for columnIdx, column := range input.Columns {
-		if len(column.Evals) != size {
-			return Level{}, fmt.Errorf("fri: reconstructLevel: column %d has %d evals, want %d",
-				columnIdx, len(column.Evals), size)
-		}
-		if column.AlphaPower < 0 {
-			return Level{}, fmt.Errorf("fri: reconstructLevel: column %d has negative alpha_DEEP power %d",
-				columnIdx, column.AlphaPower)
-		}
-		if err := checkColumnClaimPoints(columnIdx, column.Claims); err != nil {
-			return Level{}, err
-		}
-	}
-
-	domainPoints := make([]field.Ext, size)
-	for pos := range domainPoints {
-		domainPoints[pos] = domainPointExt(input.Domain, pos)
-	}
-
-	claimPointIndexes, claimPoints := collectClaimPoints(input.Columns)
-	denominatorInverses, err := denominatorInverses(domainPoints, claimPoints)
-	if err != nil {
-		return Level{}, err
-	}
-	alphaDeepPowers := alphaDeepChallengePowers(alphaDeepChallenge, maxAlphaPower(input.Columns)+1)
-
-	evals := make([]field.Ext, size)
-	for pos := range evals {
-		for _, column := range input.Columns {
-			var columnSum field.Ext
-			for _, claim := range column.Claims {
-				pointIdx := claimPointIndexes[claim.Point]
-				inv := denominatorInverses[pos*len(claimPoints)+pointIdx]
-
-				var numerator, term field.Ext
-				numerator.Sub(&column.Evals[pos], &claim.Value)
-				term.Mul(&numerator, &inv)
-				columnSum.Add(&columnSum, &term)
-			}
-
-			var weighted field.Ext
-			weighted.Mul(&columnSum, &alphaDeepPowers[column.AlphaPower])
-			evals[pos].Add(&evals[pos], &weighted)
-		}
-	}
-
-	return Level{
-		D:     input.D,
-		Evals: evals,
-		Trees: input.Trees,
-	}, nil
 }
 
 func reconstructDomainSize(domain domainLight) (int, error) {
 	if domain.cardinality == 0 || domain.cardinality&(domain.cardinality-1) != 0 {
-		return 0, fmt.Errorf("fri: reconstructLevel: domain cardinality %d is not a positive power of two",
+		return 0, fmt.Errorf("fri: reconstructLevels: domain cardinality %d is not a positive power of two",
 			domain.cardinality)
 	}
 	return int(domain.cardinality), nil
@@ -479,7 +414,7 @@ func checkColumnClaimPoints(columnIdx int, claims []quotientClaim) error {
 	seen := make(map[field.Ext]struct{}, len(claims))
 	for claimIdx, claim := range claims {
 		if _, ok := seen[claim.Point]; ok {
-			return fmt.Errorf("fri: reconstructLevel: column %d has duplicate claim point at claim %d",
+			return fmt.Errorf("fri: reconstructLevels: column %d has duplicate claim point at claim %d",
 				columnIdx, claimIdx)
 		}
 		seen[claim.Point] = struct{}{}
@@ -516,7 +451,7 @@ func denominatorInverses(domainPoints, claimPoints []field.Ext) ([]field.Ext, er
 			denominator := &denominators[pos*len(claimPoints)+pointIdx]
 			denominator.Sub(&x, &point)
 			if denominator.IsZero() {
-				return nil, fmt.Errorf("fri: reconstructLevel: claim point %d lands on domain position %d",
+				return nil, fmt.Errorf("fri: reconstructLevels: claim point %d lands on domain position %d",
 					pointIdx, pos)
 			}
 		}
@@ -524,17 +459,7 @@ func denominatorInverses(domainPoints, claimPoints []field.Ext) ([]field.Ext, er
 	return field.BatchInvertExt(denominators), nil
 }
 
-func maxAlphaPower(columns []quotientColumn) int {
-	maxPower := -1
-	for _, column := range columns {
-		if column.AlphaPower > maxPower {
-			maxPower = column.AlphaPower
-		}
-	}
-	return maxPower
-}
-
-func alphaDeepChallengePowers(alphaDeepChallenge field.Ext, length int) []field.Ext {
+func powers(x field.Ext, length int) []field.Ext {
 	if length <= 0 {
 		return nil
 	}
@@ -542,7 +467,7 @@ func alphaDeepChallengePowers(alphaDeepChallenge field.Ext, length int) []field.
 	powers := make([]field.Ext, length)
 	powers[0].SetOne()
 	for i := 1; i < len(powers); i++ {
-		powers[i].Mul(&powers[i-1], &alphaDeepChallenge)
+		powers[i].Mul(&powers[i-1], &x)
 	}
 	return powers
 }
@@ -606,137 +531,91 @@ type SizedClaimedValues struct {
 
 // Challenges bundles the Fiat-Shamir values supplied by the caller.
 type Challenges struct {
-	Zeta           field.Ext
 	AlphaDeep      field.Ext
 	FoldAlphas     []field.Ext // length == Params.numRounds
 	QueryPositions []int       // length == Params.NumQueries
 }
 
-// ProverStateInputs bundles the prover-side data needed to compute claimed
-// evaluations, reconstruct the virtual DEEP quotient levels, and seed the
-// existing FRI [ProverState].
-type ProverStateInputs struct {
-	Witnesses []Batch
-	Committed []CommitterState
-	Shifts    []BatchShifts
-
-	Zeta      field.Ext
-	AlphaDeep field.Ext
-}
-
-// ProverStateOutput is the staged prover hand-off. The caller absorbs
-// ClaimedValues, derives alpha_DEEP, then drives State with FRI fold challenges.
-// LevelRoots and LevelDs are the external verifier inputs matching State.
-type ProverStateOutput struct {
-	State         *ProverState
-	ClaimedValues []BatchClaimedValues
-	LevelRoots    []QueryLayerRoots
-	LevelDs       []int
+// Open computes the claimed evaluations at zeta. The caller must absorb the
+// returned values into the transcript before deriving alpha_DEEP.
+func (pcs *PCS) Open(
+	witness Batch,
+	committed CommitterState,
+	zeta field.Ext,
+	shifts BatchShifts,
+) (BatchClaimedValues, error) {
+	if committed.Tree == nil {
+		return nil, fmt.Errorf("fri: Open: commitment has nil tree")
+	}
+	layout, err := canonicalLayoutFromBatches([]Batch{witness}, []BatchShifts{shifts})
+	if err != nil {
+		return nil, err
+	}
+	claimed, err := pcs.claimedValues(witness, shifts, zeta)
+	if err != nil {
+		return nil, err
+	}
+	pcs.openings = append(pcs.openings, pcsOpening{
+		layout:    layout,
+		committed: committed,
+		claimed:   claimed,
+		zeta:      zeta,
+	})
+	return claimed, nil
 }
 
 // NewProverState reconstructs the virtual DEEP quotient levels and returns the
-// existing FRI prover state. It does not fold or open; callers that need
-// transcript interleaving should call [ProverState.Fold] and [ProverState.Open]
-// themselves.
-func (pcs *PCS) NewProverState(in ProverStateInputs) (ProverStateOutput, error) {
-	var out ProverStateOutput
-	if err := pcs.checkProverStateInputs(in); err != nil {
-		return out, err
+// existing FRI prover state. It does not fold or open.
+func (pcs *PCS) NewProverState(alphaDeep field.Ext) (*ProverState, error) {
+	if len(pcs.openings) == 0 {
+		return nil, fmt.Errorf("fri: NewProverState: Open must be called first")
 	}
 
-	layout, err := canonicalLayoutFromBatches(in.Witnesses, in.Shifts)
+	levels, err := pcs.reconstructLevels(alphaDeep)
 	if err != nil {
-		return out, err
-	}
-
-	claimedValues, err := pcs.claimedValues(in.Witnesses, in.Shifts, in.Zeta)
-	if err != nil {
-		return out, err
-	}
-
-	levels, err := pcs.reconstructLevels(layout, in.Committed, claimedValues, in.Zeta, in.AlphaDeep)
-	if err != nil {
-		return out, err
+		return nil, err
 	}
 
 	state, err := NewProverState(pcs.Params, levels)
 	if err != nil {
-		return out, err
+		return nil, err
 	}
-	levelRoots, levelDs := levelVerifierInputs(state.levels)
-
-	out.State = state
-	out.ClaimedValues = claimedValues
-	out.LevelRoots = levelRoots
-	out.LevelDs = levelDs
-	return out, nil
+	return state, nil
 }
 
-func (pcs *PCS) checkProverStateInputs(in ProverStateInputs) error {
-	if len(in.Witnesses) != len(in.Committed) {
-		return fmt.Errorf("fri: NewProverState: got %d witnesses, %d commitments",
-			len(in.Witnesses), len(in.Committed))
-	}
-	if len(in.Witnesses) != len(in.Shifts) {
-		return fmt.Errorf("fri: NewProverState: got %d witnesses, %d shift schedules",
-			len(in.Witnesses), len(in.Shifts))
-	}
-	for batchIdx, commitment := range in.Committed {
-		if commitment.Tree == nil {
-			return fmt.Errorf("fri: NewProverState: commitment %d has nil tree", batchIdx)
-		}
-	}
-	return nil
-}
-
+// claimedValues evaluates each witness row at zeta times its scheduled domain
+// rotations, returning values shaped like shifts.
 func (pcs *PCS) claimedValues(
-	witnesses []Batch,
-	shifts []BatchShifts,
+	witness Batch,
+	shifts BatchShifts,
 	zeta field.Ext,
-) ([]BatchClaimedValues, error) {
-	claimed := make([]BatchClaimedValues, len(witnesses))
-	for batchIdx := range witnesses {
-		claimed[batchIdx] = make(BatchClaimedValues, len(shifts[batchIdx]))
-		for sizeLog2, sizedShifts := range shifts[batchIdx] {
-			if sizeLog2 >= len(witnesses[batchIdx]) {
-				return nil, fmt.Errorf("fri: claimedValues: batch %d size %d missing witness table",
-					batchIdx, sizeLog2)
-			}
-			if sizeLog2 >= len(pcs.Encoders) {
-				return nil, fmt.Errorf("fri: claimedValues: size %d has no encoder", sizeLog2)
-			}
-
-			sizedWitness := witnesses[batchIdx][sizeLog2]
-			sizedClaimed := SizedClaimedValues{
-				Base: make([][]field.Ext, len(sizedShifts.Base)),
-				Ext:  make([][]field.Ext, len(sizedShifts.Ext)),
-			}
-			for rowIdx, rowShifts := range sizedShifts.Base {
-				if rowIdx >= len(sizedWitness.Base) {
-					return nil, fmt.Errorf("fri: claimedValues: batch %d size %d missing base row %d",
-						batchIdx, sizeLog2, rowIdx)
-				}
-				values, err := pcs.claimBaseRow(sizedWitness.Base[rowIdx], sizeLog2, rowShifts, zeta)
-				if err != nil {
-					return nil, fmt.Errorf("fri: claimedValues: batch %d size %d base row %d: %w",
-						batchIdx, sizeLog2, rowIdx, err)
-				}
-				sizedClaimed.Base[rowIdx] = values
-			}
-			for rowIdx, rowShifts := range sizedShifts.Ext {
-				if rowIdx >= len(sizedWitness.Ext) {
-					return nil, fmt.Errorf("fri: claimedValues: batch %d size %d missing ext row %d",
-						batchIdx, sizeLog2, rowIdx)
-				}
-				values, err := pcs.claimExtRow(sizedWitness.Ext[rowIdx], sizeLog2, rowShifts, zeta)
-				if err != nil {
-					return nil, fmt.Errorf("fri: claimedValues: batch %d size %d ext row %d: %w",
-						batchIdx, sizeLog2, rowIdx, err)
-				}
-				sizedClaimed.Ext[rowIdx] = values
-			}
-			claimed[batchIdx][sizeLog2] = sizedClaimed
+) (BatchClaimedValues, error) {
+	claimed := make(BatchClaimedValues, len(shifts))
+	for sizeLog2, sizedShifts := range shifts {
+		if sizeLog2 >= len(pcs.Encoders) {
+			return nil, fmt.Errorf("fri: claimedValues: size %d has no encoder", sizeLog2)
 		}
+
+		sizedWitness := witness[sizeLog2]
+		sizedClaimed := SizedClaimedValues{
+			Base: make([][]field.Ext, len(sizedShifts.Base)),
+			Ext:  make([][]field.Ext, len(sizedShifts.Ext)),
+		}
+		for rowIdx, rowShifts := range sizedShifts.Base {
+			values, err := pcs.claimBaseRow(sizedWitness.Base[rowIdx], sizeLog2, rowShifts, zeta)
+			if err != nil {
+				return nil, fmt.Errorf("fri: claimedValues: size %d base row %d: %w", sizeLog2, rowIdx, err)
+			}
+			sizedClaimed.Base[rowIdx] = values
+		}
+		for rowIdx, rowShifts := range sizedShifts.Ext {
+			values, err := pcs.claimExtRow(sizedWitness.Ext[rowIdx], sizeLog2, rowShifts, zeta)
+			if err != nil {
+				return nil, fmt.Errorf("fri: claimedValues: size %d ext row %d: %w", sizeLog2, rowIdx, err)
+			}
+			sizedClaimed.Ext[rowIdx] = values
+		}
+		claimed[sizeLog2] = sizedClaimed
 	}
 	return claimed, nil
 }
@@ -803,53 +682,93 @@ func (pcs *PCS) shiftedPoint(sizeLog2, shift int, zeta field.Ext) (field.Ext, er
 	return point, nil
 }
 
-func (pcs *PCS) reconstructLevels(
-	layout layout,
-	committed []CommitterState,
-	claimed []BatchClaimedValues,
-	zeta field.Ext,
-	alphaDeepChallenge field.Ext,
-) ([]Level, error) {
-	levels := make([]Level, 0, len(layout))
-	for _, bundle := range layout {
-		round, err := pcs.roundForSize(bundle.SizeLog2)
+// reconstructLevels computes the virtual DEEP quotient levels
+//
+//	F(X) = Σ_i alpha_DEEP^i · Σ_j (f_i(X) - y_ij)/(X - z_ij)
+//
+// over input.Domain's bit-reversed evaluation order and stores it in
+// Level.Evals. For each level, it precomputes every distinct denominator inverse 1/(x-z) with
+// one Montgomery batch inversion, then walks the columns in canonical order.
+func (pcs *PCS) reconstructLevels(alphaDeepChallenge field.Ext) ([]Level, error) {
+	levels := make([]Level, 0, pcs.Params.numRounds+1)
+	for sizeLog2 := pcs.Params.numRounds; sizeLog2 >= 0; sizeLog2-- {
+		var columns []quotientColumn
+		var trees []*Tree
+		for _, opening := range pcs.openings {
+			for _, bundle := range opening.layout {
+				if bundle.SizeLog2 != sizeLog2 {
+					continue
+				}
+				trees = append(trees, opening.committed.Tree)
+				for _, entry := range bundle.Entries {
+					evals, err := encodedColumnEvals(opening.committed, entry)
+					if err != nil {
+						return nil, err
+					}
+					claims, err := pcs.openingClaimsForEntry(opening, entry)
+					if err != nil {
+						return nil, err
+					}
+					columns = append(columns, quotientColumn{
+						AlphaPower: len(columns),
+						Evals:      evals,
+						Claims:     claims,
+					})
+				}
+			}
+		}
+		if len(columns) == 0 {
+			continue
+		}
+
+		domain := pcs.Params.domainsLight[pcs.Params.numRounds-sizeLog2]
+		size, err := reconstructDomainSize(domain)
 		if err != nil {
 			return nil, err
 		}
-
-		columns := make([]quotientColumn, 0, len(bundle.Entries))
-		trees := make([]*Tree, 0)
-		seenTrees := make(map[int]struct{})
-		for _, entry := range bundle.Entries {
-			evals, err := encodedColumnEvals(committed, entry)
-			if err != nil {
-				return nil, err
+		for columnIdx, column := range columns {
+			if len(column.Evals) != size {
+				return nil, fmt.Errorf("fri: reconstructLevels: column %d has %d evals, want %d",
+					columnIdx, len(column.Evals), size)
 			}
-			claims, err := pcs.claimsForEntry(claimed, entry, zeta)
-			if err != nil {
+			if err = checkColumnClaimPoints(columnIdx, column.Claims); err != nil {
 				return nil, err
-			}
-			columns = append(columns, quotientColumn{
-				AlphaPower: entry.AlphaPower,
-				Evals:      evals,
-				Claims:     claims,
-			})
-			if _, ok := seenTrees[entry.BatchIdx]; !ok {
-				trees = append(trees, committed[entry.BatchIdx].Tree)
-				seenTrees[entry.BatchIdx] = struct{}{}
 			}
 		}
 
-		level, err := reconstructLevel(quotientLevelInput{
-			D:       1 << bundle.SizeLog2,
-			Domain:  pcs.Params.domainsLight[round],
-			Columns: columns,
-			Trees:   trees,
-		}, alphaDeepChallenge)
+		domainPoints := make([]field.Ext, size)
+		for pos := range domainPoints {
+			domainPoints[pos] = domainPointExt(domain, pos)
+		}
+
+		claimPointIndexes, claimPoints := collectClaimPoints(columns)
+		denominatorInverses, err := denominatorInverses(domainPoints, claimPoints)
 		if err != nil {
 			return nil, err
 		}
-		levels = append(levels, level)
+		alphaDeepPowers := powers(alphaDeepChallenge, len(columns))
+
+		evals := make([]field.Ext, size)
+		for pos := range evals {
+			for _, column := range columns {
+				var columnSum field.Ext
+				for _, claim := range column.Claims {
+					pointIdx := claimPointIndexes[claim.Point]
+					inv := denominatorInverses[pos*len(claimPoints)+pointIdx]
+
+					var numerator, term field.Ext
+					numerator.Sub(&column.Evals[pos], &claim.Value)
+					term.Mul(&numerator, &inv)
+					columnSum.Add(&columnSum, &term)
+				}
+
+				var weighted field.Ext
+				weighted.Mul(&columnSum, &alphaDeepPowers[column.AlphaPower])
+				evals[pos].Add(&evals[pos], &weighted)
+			}
+		}
+
+		levels = append(levels, Level{D: 1 << sizeLog2, Evals: evals, Trees: trees})
 	}
 	return levels, nil
 }
@@ -861,20 +780,16 @@ func (pcs *PCS) roundForSize(sizeLog2 int) (int, error) {
 	return pcs.Params.numRounds - sizeLog2, nil
 }
 
-func encodedColumnEvals(committed []CommitterState, entry deepEntry) ([]field.Ext, error) {
-	if entry.BatchIdx >= len(committed) {
-		return nil, fmt.Errorf("fri: reconstructLevels: missing commitment for batch %d", entry.BatchIdx)
-	}
-	table := committed[entry.BatchIdx].EncodedTable
+func encodedColumnEvals(committed CommitterState, entry deepEntry) ([]field.Ext, error) {
+	table := committed.EncodedTable
 	if entry.SizeLog2 >= len(table) {
-		return nil, fmt.Errorf("fri: reconstructLevels: batch %d missing encoded size %d",
-			entry.BatchIdx, entry.SizeLog2)
+		return nil, fmt.Errorf("fri: reconstructLevels: missing encoded size %d", entry.SizeLog2)
 	}
 	sized := table[entry.SizeLog2]
 	if entry.IsExt {
 		if entry.RowIdx >= len(sized.Ext) {
-			return nil, fmt.Errorf("fri: reconstructLevels: batch %d size %d missing ext row %d",
-				entry.BatchIdx, entry.SizeLog2, entry.RowIdx)
+			return nil, fmt.Errorf("fri: reconstructLevels: size %d missing ext row %d",
+				entry.SizeLog2, entry.RowIdx)
 		}
 		evals := make([]field.Ext, len(sized.Ext[entry.RowIdx]))
 		copy(evals, sized.Ext[entry.RowIdx])
@@ -882,8 +797,8 @@ func encodedColumnEvals(committed []CommitterState, entry deepEntry) ([]field.Ex
 	}
 
 	if entry.RowIdx >= len(sized.Base) {
-		return nil, fmt.Errorf("fri: reconstructLevels: batch %d size %d missing base row %d",
-			entry.BatchIdx, entry.SizeLog2, entry.RowIdx)
+		return nil, fmt.Errorf("fri: reconstructLevels: size %d missing base row %d",
+			entry.SizeLog2, entry.RowIdx)
 	}
 	base := sized.Base[entry.RowIdx]
 	evals := make([]field.Ext, len(base))
@@ -901,30 +816,40 @@ func (pcs *PCS) claimsForEntry(
 	if entry.BatchIdx >= len(claimed) {
 		return nil, fmt.Errorf("fri: reconstructLevels: missing claims for batch %d", entry.BatchIdx)
 	}
-	if entry.SizeLog2 >= len(claimed[entry.BatchIdx]) {
-		return nil, fmt.Errorf("fri: reconstructLevels: batch %d missing claims for size %d",
-			entry.BatchIdx, entry.SizeLog2)
-	}
+	return pcs.claimsForBatchEntry(claimed[entry.BatchIdx], entry, zeta)
+}
 
+func (pcs *PCS) openingClaimsForEntry(opening pcsOpening, entry deepEntry) ([]quotientClaim, error) {
+	return pcs.claimsForBatchEntry(opening.claimed, entry, opening.zeta)
+}
+
+func (pcs *PCS) claimsForBatchEntry(
+	claimed BatchClaimedValues,
+	entry deepEntry,
+	zeta field.Ext,
+) ([]quotientClaim, error) {
+	if entry.SizeLog2 >= len(claimed) {
+		return nil, fmt.Errorf("fri: reconstructLevels: missing claims for size %d", entry.SizeLog2)
+	}
 	var values []field.Ext
-	sized := claimed[entry.BatchIdx][entry.SizeLog2]
+	sized := claimed[entry.SizeLog2]
 	if entry.IsExt {
 		if entry.RowIdx >= len(sized.Ext) {
-			return nil, fmt.Errorf("fri: reconstructLevels: batch %d size %d missing ext claims row %d",
-				entry.BatchIdx, entry.SizeLog2, entry.RowIdx)
+			return nil, fmt.Errorf("fri: reconstructLevels: size %d missing ext claims row %d",
+				entry.SizeLog2, entry.RowIdx)
 		}
 		values = sized.Ext[entry.RowIdx]
 	} else {
 		if entry.RowIdx >= len(sized.Base) {
-			return nil, fmt.Errorf("fri: reconstructLevels: batch %d size %d missing base claims row %d",
-				entry.BatchIdx, entry.SizeLog2, entry.RowIdx)
+			return nil, fmt.Errorf("fri: reconstructLevels: size %d missing base claims row %d",
+				entry.SizeLog2, entry.RowIdx)
 		}
 		values = sized.Base[entry.RowIdx]
 	}
 
 	if len(values) != len(entry.Shifts) {
-		return nil, fmt.Errorf("fri: reconstructLevels: batch %d size %d row %d has %d claims, want %d",
-			entry.BatchIdx, entry.SizeLog2, entry.RowIdx, len(values), len(entry.Shifts))
+		return nil, fmt.Errorf("fri: reconstructLevels: size %d row %d has %d claims, want %d",
+			entry.SizeLog2, entry.RowIdx, len(values), len(entry.Shifts))
 	}
 
 	claims := make([]quotientClaim, len(entry.Shifts))
@@ -951,29 +876,27 @@ func levelVerifierInputs(levels []Level) ([]QueryLayerRoots, []int) {
 	return roots, degrees
 }
 
-func (pcs *PCS) openedRows(
-	layout layout,
-	committed []CommitterState,
-	queryPositions []int,
-) []QueryRowOpenings {
-	orders := batchOrders(layout)
+func (pcs *PCS) openedRows(queryPositions []int) []QueryRowOpenings {
+	topSizeLog2 := -1
+	for _, opening := range pcs.openings {
+		if len(opening.layout) > 0 && opening.layout[0].SizeLog2 > topSizeLog2 {
+			topSizeLog2 = opening.layout[0].SizeLog2
+		}
+	}
 
 	res := make([]QueryRowOpenings, len(queryPositions))
 	for queryIdx, queryPosition := range queryPositions {
-		res[queryIdx] = make(QueryRowOpenings, len(committed))
-		for batchIdx := range committed {
-			res[queryIdx][batchIdx] = make(BatchRowOpenings, len(committed[batchIdx].EncodedTable))
-		}
+		res[queryIdx] = make(QueryRowOpenings, len(pcs.openings))
+		for openingIdx, opening := range pcs.openings {
+			res[queryIdx][openingIdx] = make(BatchRowOpenings, len(opening.committed.EncodedTable))
+			for _, bundle := range opening.layout {
+				round, _ := pcs.roundForSize(bundle.SizeLog2)
+				base := queryPosition >> round
 
-		for bundleIdx, bundle := range layout {
-			round, _ := pcs.roundForSize(bundle.SizeLog2)
-			base := queryPosition >> round
-
-			for _, batchIdx := range orders[bundleIdx] {
-				sized := &res[queryIdx][batchIdx][bundle.SizeLog2]
-				sized.Leaf = openEncodedRow(committed[batchIdx].EncodedTable[bundle.SizeLog2], base)
-				if bundleIdx == 0 {
-					sized.Sibling = openEncodedRow(committed[batchIdx].EncodedTable[bundle.SizeLog2], base^1)
+				sized := &res[queryIdx][openingIdx][bundle.SizeLog2]
+				sized.Leaf = openEncodedRow(opening.committed.EncodedTable[bundle.SizeLog2], base)
+				if bundle.SizeLog2 == topSizeLog2 {
+					sized.Sibling = openEncodedRow(opening.committed.EncodedTable[bundle.SizeLog2], base^1)
 					sized.HasSibling = true
 				}
 			}
@@ -982,23 +905,18 @@ func (pcs *PCS) openedRows(
 	return res
 }
 
-func batchOrder(bundle sizeBundle) []int {
-	order := make([]int, 0, len(bundle.Entries))
-	prev := -1
-	for _, entry := range bundle.Entries {
-		if entry.BatchIdx == prev {
-			continue
-		}
-		order = append(order, entry.BatchIdx)
-		prev = entry.BatchIdx
-	}
-	return order
-}
-
 func batchOrders(layout layout) [][]int {
 	orders := make([][]int, len(layout))
 	for i := range layout {
-		orders[i] = batchOrder(layout[i])
+		prev := -1
+		orders[i] = make([]int, 0, len(layout[i].Entries))
+		for _, entry := range layout[i].Entries {
+			if entry.BatchIdx == prev {
+				continue
+			}
+			orders[i] = append(orders[i], entry.BatchIdx)
+			prev = entry.BatchIdx
+		}
 	}
 	return orders
 }
@@ -1035,7 +953,7 @@ func (pcs *PCS) reconstructQueryPair(
 	opening QueryLayer,
 	roots QueryLayerRoots,
 	claimed []BatchClaimedValues,
-	zeta field.Ext,
+	zetas []field.Ext,
 	alphaDeepChallenge field.Ext,
 	domain domainLight,
 	base int,
@@ -1058,12 +976,12 @@ func (pcs *PCS) reconstructQueryPair(
 	}
 
 	value, err := pcs.reconstructQueryValueAt(
-		bundle, rows, claimed, zeta, alphaDeepChallenge, domainPointExt(domain, base), false)
+		bundle, rows, claimed, zetas, alphaDeepChallenge, domainPointExt(domain, base), false)
 	if err != nil {
 		return field.Ext{}, field.Ext{}, err
 	}
 	sibling, err := pcs.reconstructQueryValueAt(
-		bundle, rows, claimed, zeta, alphaDeepChallenge, domainPointExt(domain, base^1), true)
+		bundle, rows, claimed, zetas, alphaDeepChallenge, domainPointExt(domain, base^1), true)
 	if err != nil {
 		return field.Ext{}, field.Ext{}, err
 	}
@@ -1077,7 +995,7 @@ func (pcs *PCS) reconstructQueryValue(
 	opening QueryLayer,
 	roots QueryLayerRoots,
 	claimed []BatchClaimedValues,
-	zeta field.Ext,
+	zetas []field.Ext,
 	alphaDeepChallenge field.Ext,
 	domain domainLight,
 	base int,
@@ -1088,14 +1006,14 @@ func (pcs *PCS) reconstructQueryValue(
 		return field.Ext{}, err
 	}
 	return pcs.reconstructQueryValueAt(
-		bundle, rows, claimed, zeta, alphaDeepChallenge, domainPointExt(domain, base), false)
+		bundle, rows, claimed, zetas, alphaDeepChallenge, domainPointExt(domain, base), false)
 }
 
 func (pcs *PCS) reconstructQueryValueAt(
 	bundle sizeBundle,
 	rows QueryRowOpenings,
 	claimed []BatchClaimedValues,
-	zeta field.Ext,
+	zetas []field.Ext,
 	alphaDeepChallenge field.Ext,
 	x field.Ext,
 	sibling bool,
@@ -1106,11 +1024,11 @@ func (pcs *PCS) reconstructQueryValueAt(
 			numPowers = entry.AlphaPower + 1
 		}
 	}
-	alphaDeepPowers := alphaDeepChallengePowers(alphaDeepChallenge, numPowers)
+	alphaDeepPowers := powers(alphaDeepChallenge, numPowers)
 
 	var value field.Ext
 	for _, entry := range bundle.Entries {
-		claims, err := pcs.claimsForEntry(claimed, entry, zeta)
+		claims, err := pcs.claimsForEntry(claimed, entry, zetas[entry.BatchIdx])
 		if err != nil {
 			return field.Ext{}, err
 		}
@@ -1204,12 +1122,13 @@ type VerifyInputs struct {
 	Roots  []field.Octuplet
 	Shapes []Shape
 	Shifts []BatchShifts
+	Zetas  []field.Ext
 
 	Challenges Challenges
 }
 
-// Verify checks an OpeningProof under the same challenges and query positions
-// the prover used.
+// Verify checks an OpeningProof under the same zetas, challenges, and query
+// positions the prover used.
 //
 // Performs in sequence:
 //
@@ -1221,11 +1140,14 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	if len(in.Roots) != len(in.Shapes) {
 		return fmt.Errorf("fri: pcs.Verify: got %d roots, %d shapes", len(in.Roots), len(in.Shapes))
 	}
+	if len(in.Zetas) != len(in.Shapes) {
+		return fmt.Errorf("fri: pcs.Verify: got %d zetas, %d shapes", len(in.Zetas), len(in.Shapes))
+	}
 	layout, err := canonicalLayout(in.Shapes, in.Shifts)
 	if err != nil {
 		return err
 	}
-	if err := pcs.checkClaimPointsOutOfDomain(layout, in.Challenges.Zeta); err != nil {
+	if err = pcs.checkClaimPointsOutOfDomain(layout, in.Zetas); err != nil {
 		return err
 	}
 	if len(proof.RowOpenings) < pcs.Params.NumQueries {
@@ -1233,7 +1155,7 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 			len(proof.RowOpenings), pcs.Params.NumQueries)
 	}
 	orders := batchOrders(layout)
-	if err := checkRowOpenings(layout, orders, in.Shapes, proof.RowOpenings[:pcs.Params.NumQueries]); err != nil {
+	if err = checkRowOpenings(layout, orders, in.Shapes, proof.RowOpenings[:pcs.Params.NumQueries]); err != nil {
 		return err
 	}
 
@@ -1260,13 +1182,13 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 			orders:    orders,
 			rows:      proof.RowOpenings,
 			claimed:   proof.ClaimedValues,
-			zeta:      in.Challenges.Zeta,
+			zetas:     in.Zetas,
 			alphaDeep: in.Challenges.AlphaDeep,
 		},
 	)
 }
 
-func (pcs *PCS) checkClaimPointsOutOfDomain(layout layout, zeta field.Ext) error {
+func (pcs *PCS) checkClaimPointsOutOfDomain(layout layout, zetas []field.Ext) error {
 	for _, bundle := range layout {
 		if bundle.SizeLog2 < 0 || bundle.SizeLog2 >= len(pcs.Encoders) {
 			return fmt.Errorf("fri: pcs.Verify: size %d is outside params schedule", bundle.SizeLog2)
@@ -1274,7 +1196,7 @@ func (pcs *PCS) checkClaimPointsOutOfDomain(layout layout, zeta field.Ext) error
 		encoder := pcs.Encoders[bundle.SizeLog2]
 		for _, entry := range bundle.Entries {
 			for _, shift := range entry.Shifts {
-				point, err := pcs.shiftedPoint(entry.SizeLog2, shift, zeta)
+				point, err := pcs.shiftedPoint(entry.SizeLog2, shift, zetas[entry.BatchIdx])
 				if err != nil {
 					return err
 				}
@@ -1305,7 +1227,7 @@ type pcsQueryValues struct {
 	orders    [][]int
 	rows      []QueryRowOpenings
 	claimed   []BatchClaimedValues
-	zeta      field.Ext
+	zetas     []field.Ext
 	alphaDeep field.Ext
 }
 
@@ -1329,7 +1251,7 @@ func (v pcsQueryValues) queryPair(
 		return merkleQueryValues{}.queryPair(queryIdx, round, base, opening, roots)
 	}
 	return v.pcs.reconstructQueryPair(
-		v.layout[0], v.orders[0], v.rows[queryIdx], opening, roots, v.claimed, v.zeta, v.alphaDeep,
+		v.layout[0], v.orders[0], v.rows[queryIdx], opening, roots, v.claimed, v.zetas, v.alphaDeep,
 		v.pcs.Params.domainsLight[round], base,
 	)
 }
@@ -1345,7 +1267,7 @@ func (v pcsQueryValues) levelValue(
 		return field.Ext{}, err
 	}
 	return v.pcs.reconstructQueryValue(
-		bundle, v.orders[levelIdx], v.rows[queryIdx], opening, roots, v.claimed, v.zeta, v.alphaDeep,
+		bundle, v.orders[levelIdx], v.rows[queryIdx], opening, roots, v.claimed, v.zetas, v.alphaDeep,
 		v.pcs.Params.domainsLight[round], base,
 	)
 }

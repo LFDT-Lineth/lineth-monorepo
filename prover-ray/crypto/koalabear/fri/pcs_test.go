@@ -114,126 +114,6 @@ func TestOpeningProofCarriesNoDeepQuotientRoots(t *testing.T) {
 	}
 }
 
-func TestReconstructLevelMatchesDirectQuotientPolynomial(t *testing.T) {
-	encoder := NewEncoder(8, 4)
-	light := domainLight{cardinality: encoder.Domain.Cardinality, generator: encoder.Domain.Generator}
-
-	polys := [][]field.Ext{
-		{
-			field.UintsToExt(1, 0, 2, 0, 0, 0),
-			field.UintsToExt(3, 1, 0, 0, 0, 0),
-			field.UintsToExt(5, 0, 0, 1, 0, 0),
-			field.UintsToExt(7, 0, 0, 0, 1, 0),
-		},
-		{
-			field.UintsToExt(2, 0, 0, 0, 0, 1),
-			field.UintsToExt(4, 0, 1, 0, 0, 0),
-			field.UintsToExt(6, 0, 0, 1, 0, 0),
-		},
-	}
-	claimPoints := [][]field.Ext{
-		{
-			field.UintsToExt(11, 1, 0, 0, 0, 0),
-			field.UintsToExt(13, 0, 1, 0, 0, 0),
-		},
-		{
-			field.UintsToExt(17, 0, 0, 1, 0, 0),
-			field.UintsToExt(11, 1, 0, 0, 0, 0),
-		},
-	}
-	alphaDeepChallenge := field.UintsToExt(19, 2, 3, 5, 7, 11)
-
-	columns := make([]quotientColumn, len(polys))
-	expectedPoly := make([]field.Ext, 0)
-	var alphaDeepPower field.Ext
-	alphaDeepPower.SetOne()
-
-	for i, poly := range polys {
-		columns[i].AlphaPower = i
-		columns[i].Evals = encodeCanonicalTestPoly(poly, &encoder)
-		columns[i].Claims = make([]quotientClaim, len(claimPoints[i]))
-
-		for j, point := range claimPoints[i] {
-			value := polynomials.EvalCanonicalExt(poly, point)
-			claim := quotientClaim{Point: point, Value: value}
-			columns[i].Claims[j] = claim
-
-			quotient := quotientPolyForClaim(poly, claim)
-			addScaledPoly(&expectedPoly, quotient, alphaDeepPower)
-		}
-
-		alphaDeepPower.Mul(&alphaDeepPower, &alphaDeepChallenge)
-	}
-	columns[0], columns[1] = columns[1], columns[0]
-
-	level, err := reconstructLevel(quotientLevelInput{
-		D:       4,
-		Domain:  light,
-		Columns: columns,
-	}, alphaDeepChallenge)
-	if err != nil {
-		t.Fatalf("reconstructLevel: %v", err)
-	}
-	if level.D != 4 {
-		t.Fatalf("level.D = %d, want 4", level.D)
-	}
-	if len(level.Evals) != int(encoder.Domain.Cardinality) {
-		t.Fatalf("level has %d evals, want %d", len(level.Evals), encoder.Domain.Cardinality)
-	}
-
-	expectedCodeword := encodeCanonicalTestPoly(expectedPoly, &encoder)
-	for pos, got := range level.Evals {
-		want := expectedCodeword[pos]
-		if !got.Equal(&want) {
-			t.Fatalf("eval[%d] mismatch\ngot:  %s\nwant: %s", pos, got.String(), want.String())
-		}
-	}
-}
-
-func TestReconstructLevelRejectsDomainClaimPoint(t *testing.T) {
-	encoder := NewEncoder(8, 4)
-	light := domainLight{cardinality: encoder.Domain.Cardinality, generator: encoder.Domain.Generator}
-	claimPoint := domainPointExt(light, 3)
-
-	_, err := reconstructLevel(quotientLevelInput{
-		D:      4,
-		Domain: light,
-		Columns: []quotientColumn{
-			{
-				Evals: make([]field.Ext, encoder.Domain.Cardinality),
-				Claims: []quotientClaim{
-					{Point: claimPoint, Value: field.Uint64ToExt(42)},
-				},
-			},
-		},
-	}, field.Uint64ToExt(7))
-	if err == nil {
-		t.Fatalf("reconstructLevel accepted a claim point on the domain")
-	}
-	if !strings.Contains(err.Error(), "lands on domain") {
-		t.Fatalf("error %q does not mention domain collision", err.Error())
-	}
-}
-
-func TestReconstructLevelHandlesNoClaims(t *testing.T) {
-	encoder := NewEncoder(8, 4)
-	level, err := reconstructLevel(quotientLevelInput{
-		D:      4,
-		Domain: domainLight{cardinality: encoder.Domain.Cardinality, generator: encoder.Domain.Generator},
-		Columns: []quotientColumn{
-			{Evals: make([]field.Ext, encoder.Domain.Cardinality)},
-		},
-	}, field.Uint64ToExt(7))
-	if err != nil {
-		t.Fatalf("reconstructLevel: %v", err)
-	}
-	for pos := range level.Evals {
-		if !level.Evals[pos].IsZero() {
-			t.Fatalf("eval[%d] = %s, want zero", pos, level.Evals[pos].String())
-		}
-	}
-}
-
 func TestProverStateOpenAlignsMultiSizeLevelLeaf(t *testing.T) {
 	prng := rand.New(utils.NewRandSource(20260625))
 	params, err := NewParams(16, 8, 1)
@@ -350,6 +230,7 @@ type openInputs struct {
 	Witnesses []Batch
 	Committed []CommitterState
 	Shifts    []BatchShifts
+	Zetas     []field.Ext
 
 	Challenges Challenges
 }
@@ -357,13 +238,17 @@ type openInputs struct {
 func openForTest(t *testing.T, pcs *PCS, in openInputs) OpeningProof {
 	t.Helper()
 
-	started, err := pcs.NewProverState(ProverStateInputs{
-		Witnesses: in.Witnesses,
-		Committed: in.Committed,
-		Shifts:    in.Shifts,
-		Zeta:      in.Challenges.Zeta,
-		AlphaDeep: in.Challenges.AlphaDeep,
-	})
+	pcs.Reset()
+	defer pcs.Reset()
+	claimed := make([]BatchClaimedValues, 0, len(in.Witnesses))
+	for i := range in.Witnesses {
+		batchClaims, err := pcs.Open(in.Witnesses[i], in.Committed[i], in.Zetas[i], in.Shifts[i])
+		if err != nil {
+			t.Fatalf("pcs.Open: %v", err)
+		}
+		claimed = append(claimed, batchClaims)
+	}
+	started, err := pcs.NewProverState(in.Challenges.AlphaDeep)
 	if err != nil {
 		t.Fatalf("pcs.NewProverState: %v", err)
 	}
@@ -376,18 +261,13 @@ func openForTest(t *testing.T, pcs *PCS, in openInputs) OpeningProof {
 	queryPositions := in.Challenges.QueryPositions[:pcs.Params.NumQueries]
 
 	for round := range pcs.Params.numRounds {
-		started.State.Fold(in.Challenges.FoldAlphas[round])
+		started.Fold(in.Challenges.FoldAlphas[round])
 	}
-
-	layout, err := canonicalLayoutFromBatches(in.Witnesses, in.Shifts)
-	if err != nil {
-		t.Fatalf("canonicalLayoutFromBatches: %v", err)
-	}
-	friProof := started.State.Open(queryPositions)
-	rowOpenings := pcs.openedRows(layout, in.Committed, queryPositions)
+	friProof := started.Open(queryPositions)
+	rowOpenings := pcs.openedRows(queryPositions)
 
 	return OpeningProof{
-		ClaimedValues: started.ClaimedValues,
+		ClaimedValues: claimed,
 		RowOpenings:   rowOpenings,
 		FRIProof:      friProof,
 	}
@@ -426,8 +306,8 @@ func newPCSOpenVerifyFixture(t *testing.T) pcsOpenVerifyFixture {
 	batchShifts := make(BatchShifts, 3)
 	batchShifts[2] = SizedShifts{Ext: [][]int{{0}, {1}}}
 	shifts := []BatchShifts{batchShifts}
+	zetas := []field.Ext{field.UintsToExt(19, 2, 3, 5, 7, 11)}
 	challenges := Challenges{
-		Zeta:           field.UintsToExt(19, 2, 3, 5, 7, 11),
 		AlphaDeep:      field.UintsToExt(23, 3, 5, 7, 11, 13),
 		FoldAlphas:     []field.Ext{field.UintsToExt(29, 1, 0, 0, 0, 0), field.UintsToExt(31, 0, 1, 0, 0, 0)},
 		QueryPositions: []int{3},
@@ -436,6 +316,7 @@ func newPCSOpenVerifyFixture(t *testing.T) pcsOpenVerifyFixture {
 		Witnesses:  witnesses,
 		Committed:  committed,
 		Shifts:     shifts,
+		Zetas:      zetas,
 		Challenges: challenges,
 	})
 
@@ -445,6 +326,7 @@ func newPCSOpenVerifyFixture(t *testing.T) pcsOpenVerifyFixture {
 			Roots:      []field.Octuplet{committed[0].Tree.Root()},
 			Shapes:     shapesFromBatches(witnesses),
 			Shifts:     shifts,
+			Zetas:      zetas,
 			Challenges: challenges,
 		},
 		proof: proof,
@@ -508,27 +390,32 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	shifts := []BatchShifts{batchShifts, otherBatchShifts}
 
 	zeta := field.UintsToExt(19, 2, 3, 5, 7, 11)
+	otherZeta := field.UintsToExt(41, 0, 1, 2, 3, 5)
 	alphaDeepChallenge := field.UintsToExt(23, 3, 5, 7, 11, 13)
-	started, err := pcs.NewProverState(ProverStateInputs{
-		Witnesses: witnesses,
-		Committed: committed,
-		Shifts:    shifts,
-		Zeta:      zeta,
-		AlphaDeep: alphaDeepChallenge,
-	})
+	firstClaims, err := pcs.Open(witness, committed[0], zeta, batchShifts)
+	if err != nil {
+		t.Fatalf("pcs.Open: %v", err)
+	}
+	otherClaims, err := pcs.Open(otherWitness, committed[1], otherZeta, otherBatchShifts)
+	if err != nil {
+		t.Fatalf("pcs.Open: %v", err)
+	}
+	claimed := []BatchClaimedValues{firstClaims, otherClaims}
+	started, err := pcs.NewProverState(alphaDeepChallenge)
 	if err != nil {
 		t.Fatalf("pcs.NewProverState: %v", err)
 	}
-	if len(started.State.levels) != 2 {
-		t.Fatalf("started with %d virtual levels, want 2", len(started.State.levels))
+	if len(started.levels) != 2 {
+		t.Fatalf("started with %d virtual levels, want 2", len(started.levels))
 	}
-	if len(started.LevelRoots) != 2 || len(started.LevelRoots[0]) != 2 || len(started.LevelRoots[1]) != 2 {
-		t.Fatalf("unexpected level root shape: %#v", started.LevelRoots)
+	levelRoots, _ := levelVerifierInputs(started.levels)
+	if len(levelRoots) != 2 || len(levelRoots[0]) != 2 || len(levelRoots[1]) != 2 {
+		t.Fatalf("unexpected level root shape: %#v", levelRoots)
 	}
-	if started.LevelRoots[0][0] != committed[0].Tree.Root() ||
-		started.LevelRoots[0][1] != committed[1].Tree.Root() ||
-		started.LevelRoots[1][0] != committed[0].Tree.Root() ||
-		started.LevelRoots[1][1] != committed[1].Tree.Root() {
+	if levelRoots[0][0] != committed[0].Tree.Root() ||
+		levelRoots[0][1] != committed[1].Tree.Root() ||
+		levelRoots[1][0] != committed[0].Tree.Root() ||
+		levelRoots[1][1] != committed[1].Tree.Root() {
 		t.Fatalf("virtual levels should be backed by the committed batch tree")
 	}
 
@@ -540,13 +427,13 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 		field.VecFromExt(witness[3].Ext[0]),
 		field.ElemFromExt(claimPoint),
 	).AsExt()
-	gotClaim := started.ClaimedValues[0][3].Ext[0][1]
+	gotClaim := claimed[0][3].Ext[0][1]
 	if !gotClaim.Equal(&wantClaim) {
 		t.Fatalf("claimed value mismatch\ngot:  %s\nwant: %s", gotClaim.String(), wantClaim.String())
 	}
 
-	referenceLevels := make([]Level, len(started.State.levels))
-	for i, level := range started.State.levels {
+	referenceLevels := make([]Level, len(started.levels))
+	for i, level := range started.levels {
 		referenceLevels[i] = Level{
 			D:     level.D,
 			Evals: append([]field.Ext(nil), level.Evals...),
@@ -563,9 +450,9 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	referenceProof := proverForTest(params, referenceLevels, foldAlphas, positions)
 
 	for round := range params.numRounds {
-		started.State.Fold(foldAlphas[round])
+		started.Fold(foldAlphas[round])
 	}
-	gotProof := started.State.Open(positions)
+	gotProof := started.Open(positions)
 	if !reflect.DeepEqual(gotProof.FRIRoots, referenceProof.FRIRoots) {
 		t.Fatalf("FRI roots mismatch\ngot:  %#v\nwant: %#v", gotProof.FRIRoots, referenceProof.FRIRoots)
 	}
@@ -573,18 +460,19 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 		t.Fatalf("final polynomial mismatch")
 	}
 
+	zetas := []field.Ext{zeta, otherZeta}
 	oneShot := openForTest(t, pcs, openInputs{
 		Witnesses: witnesses,
 		Committed: committed,
 		Shifts:    shifts,
+		Zetas:     zetas,
 		Challenges: Challenges{
-			Zeta:           zeta,
 			AlphaDeep:      alphaDeepChallenge,
 			FoldAlphas:     foldAlphas,
 			QueryPositions: positions,
 		},
 	})
-	if !reflect.DeepEqual(oneShot.ClaimedValues, started.ClaimedValues) {
+	if !reflect.DeepEqual(oneShot.ClaimedValues, claimed) {
 		t.Fatalf("one-shot claimed values differ from staged claimed values")
 	}
 	if !reflect.DeepEqual(oneShot.FRIProof.FRIRoots, referenceProof.FRIRoots) {
@@ -601,8 +489,8 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 		Roots:  roots,
 		Shapes: shapesFromBatches(witnesses),
 		Shifts: shifts,
+		Zetas:  zetas,
 		Challenges: Challenges{
-			Zeta:           zeta,
 			AlphaDeep:      alphaDeepChallenge,
 			FoldAlphas:     foldAlphas,
 			QueryPositions: positions,
@@ -615,15 +503,16 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	if err != nil {
 		t.Fatalf("canonicalLayoutFromBatches: %v", err)
 	}
+	orders := batchOrders(layout)
 	queryIdx := 0
 	top, topSibling, err := pcs.reconstructQueryPair(
 		layout[0],
-		batchOrder(layout[0]),
+		orders[0],
 		oneShot.RowOpenings[queryIdx],
 		oneShot.FRIProof.FRIQueries[queryIdx][0],
-		started.LevelRoots[0],
+		levelRoots[0],
 		oneShot.ClaimedValues,
-		zeta,
+		zetas,
 		alphaDeepChallenge,
 		params.domainsLight[0],
 		positions[queryIdx],
@@ -631,10 +520,10 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reconstruct top query values: %v", err)
 	}
-	if want := started.State.levels[0].Evals[positions[queryIdx]]; !top.Equal(&want) {
+	if want := started.levels[0].Evals[positions[queryIdx]]; !top.Equal(&want) {
 		t.Fatalf("top reconstructed value mismatch\ngot:  %s\nwant: %s", top.String(), want.String())
 	}
-	if want := started.State.levels[0].Evals[positions[queryIdx]^1]; !topSibling.Equal(&want) {
+	if want := started.levels[0].Evals[positions[queryIdx]^1]; !topSibling.Equal(&want) {
 		t.Fatalf("top reconstructed sibling mismatch\ngot:  %s\nwant: %s", topSibling.String(), want.String())
 	}
 
@@ -645,12 +534,12 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	auxBase := positions[queryIdx] >> auxRound
 	aux, err := pcs.reconstructQueryValue(
 		layout[1],
-		batchOrder(layout[1]),
+		orders[1],
 		oneShot.RowOpenings[queryIdx],
 		oneShot.FRIProof.LevelQueries[0][queryIdx],
-		started.LevelRoots[1],
+		levelRoots[1],
 		oneShot.ClaimedValues,
-		zeta,
+		zetas,
 		alphaDeepChallenge,
 		params.domainsLight[auxRound],
 		auxBase,
@@ -658,24 +547,9 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reconstruct aux query value: %v", err)
 	}
-	if want := started.State.levels[1].Evals[auxBase]; !aux.Equal(&want) {
+	if want := started.levels[1].Evals[auxBase]; !aux.Equal(&want) {
 		t.Fatalf("aux reconstructed value mismatch\ngot:  %s\nwant: %s", aux.String(), want.String())
 	}
-}
-
-func quotientPolyForClaim(poly []field.Ext, claim quotientClaim) []field.Ext {
-	adjusted := make([]field.Ext, len(poly))
-	copy(adjusted, poly)
-	adjusted[0].Sub(&adjusted[0], &claim.Value)
-
-	quotient := make([]field.Ext, len(adjusted)-1)
-	quotient[len(quotient)-1] = adjusted[len(adjusted)-1]
-	for i := len(quotient) - 2; i >= 0; i-- {
-		var term field.Ext
-		term.Mul(&claim.Point, &quotient[i+1])
-		quotient[i].Add(&adjusted[i+1], &term)
-	}
-	return quotient
 }
 
 func encodeCanonicalTestPoly(poly []field.Ext, encoder *RSEncoder) []field.Ext {
@@ -689,17 +563,6 @@ func canonicalToLagrangeTestPoly(poly []field.Ext, size int) []field.Ext {
 	domain.FFTExt6(lagrange, fft.DIF)
 	gutils.BitReverse(lagrange)
 	return lagrange
-}
-
-func addScaledPoly(accum *[]field.Ext, poly []field.Ext, scale field.Ext) {
-	for len(*accum) < len(poly) {
-		*accum = append(*accum, field.Ext{})
-	}
-	for i := range poly {
-		var term field.Ext
-		term.Mul(&poly[i], &scale)
-		(*accum)[i].Add(&(*accum)[i], &term)
-	}
 }
 
 func multiSizeTreeForCodewords(levelEvals, fullEvals []field.Ext) (*Tree, MultiSizeTable) {
