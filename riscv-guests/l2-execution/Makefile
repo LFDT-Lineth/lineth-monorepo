@@ -81,6 +81,7 @@ spec-test: linker-script
 # The archive stores each test case as JSON with one or more blocks[] entries.
 # zkevm-runner --dump-dir writes one .bin input per block from statelessInputBytes.
 # The final step renames those .bin files to .ssz for clarity.
+# SSZ are stored specifically undr riscv-guests/l2-execution/.cache/large-ssz-fixtures/ssz.
 gen-large-ssz-fixtures:
 	@mkdir -p "$(LARGE_SSZ_DIR)" "$(LARGE_SSZ_OUT_DIR)"
 	@[ -d "$(STATELESS_EXECUTOR_DIR)/.git" ] || git clone --depth=1 "$(STATELESS_EXECUTOR_REPO)" "$(STATELESS_EXECUTOR_DIR)"
