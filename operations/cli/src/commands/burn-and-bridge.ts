@@ -1,5 +1,5 @@
 import { Command, Flags } from "@oclif/core";
-import { addSeconds } from "date-fns";
+import { addSeconds } from "date-fns/addSeconds";
 import { fromZonedTime } from "date-fns-tz";
 import { Result } from "neverthrow";
 import {

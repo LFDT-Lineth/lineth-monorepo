@@ -1,6 +1,6 @@
 import { GetCostAndUsageCommandInput } from "@aws-sdk/client-cost-explorer";
 import { Command, Flags } from "@oclif/core";
-import { addDays } from "date-fns";
+import { addDays } from "date-fns/addDays";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import { Agent } from "https";
 import { Result } from "neverthrow";
