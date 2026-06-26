@@ -33,7 +33,7 @@ open class GenericRiscVProverClient<Request, Response, RequestDto, ResponseDto, 
   private val transport: ProverProofTransport<RequestDto, ResponseDto, TProofIndex>,
   private val proofIndexProvider: (Request) -> TProofIndex,
   private val requestMapper: (Request) -> SafeFuture<RequestDto>,
-  private val responseMapper: (TProofIndex, ResponseDto) -> Response,
+  private val responseMapper: (ResponseDto) -> Response,
   private val proofTypeLabel: String,
   private val log: Logger = LogManager.getLogger(GenericRiscVProverClient::class.java),
 ) : ProverProofResponseChecker<Response, TProofIndex>,
@@ -47,7 +47,7 @@ open class GenericRiscVProverClient<Request, Response, RequestDto, ResponseDto, 
   override fun findProofResponse(proofIndex: TProofIndex): SafeFuture<Response?> {
     log.trace("Checking if response is available. {}={}", proofTypeLabel, proofIndex)
     return transport.findResponse(proofIndex)
-      .thenApply { responseDto -> responseDto?.let { parseResponse(it, proofIndex) } }
+      .thenApply { responseDto -> responseDto?.let { parseResponse(it) } }
   }
 
   override fun createProofRequest(proofRequest: Request): SafeFuture<TProofIndex> {
@@ -96,7 +96,7 @@ open class GenericRiscVProverClient<Request, Response, RequestDto, ResponseDto, 
             .thenCompose { transport.awaitResponse(proofIndex) }
             .thenApply { responseDto ->
               responsesWaiting.decrementAndGet()
-              parseResponse(responseDto, proofIndex)
+              parseResponse(responseDto)
             }
         }
       }
@@ -112,10 +112,9 @@ open class GenericRiscVProverClient<Request, Response, RequestDto, ResponseDto, 
   }
 
   /**
-   * Parses a response DTO obtained from the transport into the domain response. Overridable for proof types whose
-   * response is derived from the [proofIndex] rather than from the transport payload (e.g. execution).
+   * Parses a response DTO obtained from the transport into the domain response.
    */
-  protected open fun parseResponse(responseDto: ResponseDto, proofIndex: TProofIndex): Response {
-    return responseMapper(proofIndex, responseDto)
+  protected open fun parseResponse(responseDto: ResponseDto): Response {
+    return responseMapper(responseDto)
   }
 }

@@ -3,6 +3,7 @@ package linea.clients
 import linea.domain.BlockInterval
 import linea.domain.BlockIntervalProofIndex
 import linea.domain.StartBlockTimestampProvider
+import linea.domain.assertConsecutiveIntervals
 import linea.kotlin.byteArrayListEquals
 import kotlin.time.Instant
 
@@ -12,12 +13,17 @@ data class RollupProofRequestV1(
   val endShnarf: ByteArray,
   val l2Executions: List<BlockIntervalProofIndex>,
 ) : BlockInterval, StartBlockTimestampProvider {
+  init {
+    assertConsecutiveIntervals(blobs)
+    assertConsecutiveIntervals(l2Executions)
+  }
+
   override val startBlockNumber: ULong
-    get() = blobs[0].startBlockNumber
+    get() = l2Executions.first().startBlockNumber
   override val endBlockNumber: ULong
-    get() = blobs[blobs.size - 1].endBlockNumber
+    get() = l2Executions.last().endBlockNumber
   override val startBlockTimestamp: Instant
-    get() = l2Executions[0].startBlockTimestamp
+    get() = l2Executions.first().startBlockTimestamp
 
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -54,7 +60,7 @@ data class BlobWitness(
   val blobHash: ByteArray,
   val blobKzgProof: ByteArray,
   val blockRlps: List<ByteArray>,
-): BlockInterval {
+) : BlockInterval {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (javaClass != other?.javaClass) return false

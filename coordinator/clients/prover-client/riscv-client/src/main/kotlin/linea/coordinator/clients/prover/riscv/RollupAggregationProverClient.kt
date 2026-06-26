@@ -6,9 +6,8 @@ import linea.clients.RollupAggregationProofResponseV1
 import linea.clients.RollupAggregationProverClientV1
 import linea.crypto.HashFunction
 import linea.crypto.Sha256HashFunction
-import linea.domain.AggregationProofIndex
+import linea.domain.BlockIntervalProofIndex
 import linea.kotlin.decodeHex
-import linea.kotlin.encodeHex
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -80,13 +79,11 @@ internal class RestfulRollupAggregationProofRequestDtoMapper(
  * [RollupAggregationProofResponseDto] before this mapper runs.
  */
 internal object RollupAggregationProofResponseDtoMapper :
-  (AggregationProofIndex, RollupAggregationProofResponseDto) -> RollupAggregationProofResponseV1 {
+  (RollupAggregationProofResponseDto) -> RollupAggregationProofResponseV1 {
   override fun invoke(
-    proofIndex: AggregationProofIndex,
     responseDto: RollupAggregationProofResponseDto,
   ): RollupAggregationProofResponseV1 {
     return RollupAggregationProofResponseV1(
-      proverVersion = responseDto.proverVersion,
       startBlockNumber = responseDto.startBlockNumber.toULong(),
       endBlockNumber = responseDto.publicInputs.endBlockNumber.toULong(),
       proof = responseDto.proof.decodeHex(),
@@ -107,11 +104,10 @@ internal object RollupAggregationProofResponseDtoMapper :
  */
 internal class RollupAggregationProofIndexProvider(
   private val hashFunction: HashFunction,
-) : (RollupAggregationProofRequestV1) -> AggregationProofIndex {
-  override fun invoke(request: RollupAggregationProofRequestV1): AggregationProofIndex {
-    val proofs = request.rollupProofs.joinToString(separator = ",") { it.hash.encodeHex() }
-    val content = "${request.startBlockNumber}-${request.endBlockNumber}-$proofs".toByteArray()
-    return AggregationProofIndex(
+) : (RollupAggregationProofRequestV1) -> BlockIntervalProofIndex {
+  override fun invoke(request: RollupAggregationProofRequestV1): BlockIntervalProofIndex {
+    val content = request.toString().toByteArray()
+    return BlockIntervalProofIndex(
       startBlockNumber = request.startBlockNumber,
       endBlockNumber = request.endBlockNumber,
       hash = hashFunction.hash(content),
@@ -124,14 +120,14 @@ private typealias FileBasedRollupAggregationProofTransport =
   ProverProofTransport<
     FileBasedRollupAggregationProofRequestDto,
     RollupAggregationProofResponseDto,
-    AggregationProofIndex,
+    BlockIntervalProofIndex,
     >
 
 private typealias RestfulRollupAggregationProofTransport =
   ProverProofTransport<
     RestfulRollupAggregationProofRequestDto,
     RollupAggregationProofResponseDto,
-    AggregationProofIndex,
+    BlockIntervalProofIndex,
     >
 
 /**
@@ -142,21 +138,21 @@ class FileBasedRollupAggregationProverClient(
   transport: FileBasedRollupAggregationProofTransport,
   rollupProofTransport: FileBasedRollupProofTransport,
   guestProgramId: String,
-  hashFunction: HashFunction = Sha256HashFunction(),
   proofRequestDtoMapper: (RollupAggregationProofRequestV1)
   -> SafeFuture<FileBasedRollupAggregationProofRequestDto> = FileBasedRollupAggregationProofRequestDtoMapper(
     guestProgramId,
     rollupProofTransport,
   ),
-  proofResponseDtoMapper: (AggregationProofIndex, RollupAggregationProofResponseDto)
+  proofResponseDtoMapper: (RollupAggregationProofResponseDto)
   -> RollupAggregationProofResponseV1 = RollupAggregationProofResponseDtoMapper,
+  hashFunction: HashFunction = Sha256HashFunction(),
   log: Logger = LOG,
 ) : GenericRiscVProverClient<
   RollupAggregationProofRequestV1,
   RollupAggregationProofResponseV1,
   FileBasedRollupAggregationProofRequestDto,
   RollupAggregationProofResponseDto,
-  AggregationProofIndex,
+  BlockIntervalProofIndex,
   >(
   transport = transport,
   proofIndexProvider = RollupAggregationProofIndexProvider(hashFunction),
@@ -179,18 +175,18 @@ class FileBasedRollupAggregationProverClient(
 class RestfulRollupAggregationProverClient(
   transport: RestfulRollupAggregationProofTransport,
   guestProgramId: String,
-  hashFunction: HashFunction = Sha256HashFunction(),
   proofRequestDtoMapper: (RollupAggregationProofRequestV1) -> SafeFuture<RestfulRollupAggregationProofRequestDto> =
     RestfulRollupAggregationProofRequestDtoMapper(guestProgramId),
-  proofResponseDtoMapper: (AggregationProofIndex, RollupAggregationProofResponseDto)
+  proofResponseDtoMapper: (RollupAggregationProofResponseDto)
   -> RollupAggregationProofResponseV1 = RollupAggregationProofResponseDtoMapper,
+  hashFunction: HashFunction = Sha256HashFunction(),
   log: Logger = LOG,
 ) : GenericRiscVProverClient<
   RollupAggregationProofRequestV1,
   RollupAggregationProofResponseV1,
   RestfulRollupAggregationProofRequestDto,
   RollupAggregationProofResponseDto,
-  AggregationProofIndex,
+  BlockIntervalProofIndex,
   >(
   transport = transport,
   proofIndexProvider = RollupAggregationProofIndexProvider(hashFunction),

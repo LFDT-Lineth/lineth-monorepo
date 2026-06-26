@@ -5,8 +5,7 @@ import io.vertx.junit5.VertxExtension
 import linea.clients.RollupAggregationProofRequestV1
 import linea.coordinator.clients.prover.FileBasedProverConfig
 import linea.coordinator.clients.prover.serialization.JsonSerialization
-import linea.domain.AggregationProofIndex
-import linea.domain.CompressionProofIndex
+import linea.domain.BlockIntervalProofIndex
 import linea.fileio.FileReader
 import linea.fileio.FileWriter
 import linea.kotlin.encodeHex
@@ -49,7 +48,7 @@ class FileBasedRollupAggregationProverClientTest {
     val transport = FileBasedProverProofTransport<
       FileBasedRollupAggregationProofRequestDto,
       RollupAggregationProofResponseDto,
-      AggregationProofIndex,
+      BlockIntervalProofIndex,
       >(
       config = config,
       vertx = vertx,
@@ -85,18 +84,18 @@ class FileBasedRollupAggregationProverClientTest {
 
   @Test
   fun `findProofResponse reads the response file and maps it to the domain response`() {
-    val proofIndex = AggregationProofIndex(
+    val proofIndex = BlockIntervalProofIndex(
       startBlockNumber = 1000501UL,
       endBlockNumber = 1000567UL,
       hash = ByteArray(32) { 0x1a },
       startBlockTimestamp = Instant.fromEpochSeconds(1763000000),
-    ) // proofIndexProvider(aggregationRequest())
+    )
     val responseDto = aggregationResponseDto()
     saveResponseFile(RollupAggregationProofFileNameProvider.getFileName(proofIndex), responseDto)
 
     val response = client.findProofResponse(proofIndex).get()
 
-    assertThat(response).isEqualTo(RollupAggregationProofResponseDtoMapper(proofIndex, responseDto))
+    assertThat(response).isEqualTo(RollupAggregationProofResponseDtoMapper(responseDto))
   }
 
   private fun saveResponseFile(fileName: String, responseDto: RollupAggregationProofResponseDto) {
@@ -104,11 +103,8 @@ class FileBasedRollupAggregationProverClientTest {
   }
 
   private fun aggregationRequest(): RollupAggregationProofRequestV1 = RollupAggregationProofRequestV1(
-    startBlockNumber = 1000501UL,
-    endBlockNumber = 1000567UL,
-    startBlockTimestamp = Instant.fromEpochSeconds(1763000000),
     rollupProofs = listOf(
-      CompressionProofIndex(
+      BlockIntervalProofIndex(
         startBlockNumber = 1000501UL,
         endBlockNumber = 1000567UL,
         hash = ByteArray(32) { 0x1a },
@@ -167,24 +163,24 @@ class FileBasedRollupAggregationProverClientTest {
       filteredAddresses = listOf(Random.nextBytes(20).encodeHex()),
     )
 
-    override fun isRequestAlreadySubmitted(proofIndex: CompressionProofIndex): SafeFuture<Boolean> {
+    override fun isRequestAlreadySubmitted(proofIndex: BlockIntervalProofIndex): SafeFuture<Boolean> {
       return SafeFuture.completedFuture(true)
     }
 
     override fun submitRequest(
-      proofIndex: CompressionProofIndex,
+      proofIndex: BlockIntervalProofIndex,
       requestDto: FileBasedRollupProofRequestDto,
     ): SafeFuture<Unit> {
       return SafeFuture.completedFuture(Unit)
     }
 
-    override fun findResponse(proofIndex: CompressionProofIndex): SafeFuture<RollupProofResponseDto?> {
+    override fun findResponse(proofIndex: BlockIntervalProofIndex): SafeFuture<RollupProofResponseDto?> {
       return SafeFuture.completedFuture(
         rollupProofResponseDto,
       )
     }
 
-    override fun awaitResponse(proofIndex: CompressionProofIndex): SafeFuture<RollupProofResponseDto> {
+    override fun awaitResponse(proofIndex: BlockIntervalProofIndex): SafeFuture<RollupProofResponseDto> {
       return SafeFuture.completedFuture(
         rollupProofResponseDto,
       )

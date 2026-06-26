@@ -10,12 +10,12 @@ import io.vertx.core.http.PoolOptions
 import io.vertx.ext.web.client.WebClientOptions
 import io.vertx.junit5.VertxExtension
 import linea.clients.ChainConfig
+import linea.clients.ExecutionInfo
 import linea.clients.ExecutionPayload
-import linea.clients.ExecutionRequests
-import linea.clients.ExecutionWitness
 import linea.clients.L2ExecutionProofRequestV1
 import linea.coordinator.clients.prover.serialization.JsonSerialization
-import linea.domain.ExecutionProofIndex
+import linea.domain.BlockIntervalProofIndex
+import linea.ethapi.ExecutionWitness
 import net.consensys.linea.httprest.client.VertxHttpRestClient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
@@ -63,7 +63,7 @@ class RestfulL2ExecutionProverClientTest {
     val transport = RestfulProverProofTransport<
       L2ExecutionProofRequestDto,
       L2ExecutionProofResponseDto,
-      ExecutionProofIndex,
+      BlockIntervalProofIndex,
       >(
       restClient = restClient,
       vertx = vertx,
@@ -108,9 +108,10 @@ class RestfulL2ExecutionProverClientTest {
   @Test
   fun `findProofResponse reads the job response and maps it to the domain response`() {
     val responseDto = l2ResponseDto()
-    val proofIndex = ExecutionProofIndex(
+    val proofIndex = BlockIntervalProofIndex(
       startBlockNumber = 1000501UL,
       endBlockNumber = 1000503UL,
+      hash = ByteArray(32) { 0x1a },
       startBlockTimestamp = Instant.fromEpochSeconds(1763000123),
     )
     wiremock.stubFor(
@@ -121,7 +122,7 @@ class RestfulL2ExecutionProverClientTest {
 
     val response = client.findProofResponse(proofIndex).get()
 
-    assertThat(response).isEqualTo(L2ExecutionProofResponseDtoMapper(proofIndex, responseDto))
+    assertThat(response).isEqualTo(L2ExecutionProofResponseDtoMapper(responseDto))
   }
 
   private fun jobResponseBody(status: String, proofResponse: L2ExecutionProofResponseDto): String {
@@ -138,35 +139,31 @@ class RestfulL2ExecutionProverClientTest {
   }
 
   private fun l2Request(): L2ExecutionProofRequestV1 = L2ExecutionProofRequestV1(
-    executionPayloads = listOf(
-      executionPayload(blockNumber = 1000501UL),
-      executionPayload(blockNumber = 1000503UL),
-    ),
-    executionWitnesses = listOf(
-      ExecutionWitness(
+    executions = listOf(
+      ExecutionInfo(
         blockNumber = 1000501UL,
-        state = emptyList(),
-        codes = emptyList(),
-        headers = emptyList(),
+        executionPayload = executionPayload(1000501UL),
+        executionRequests = emptyList(),
+        executionWitness = ExecutionWitness(
+          state = emptyList(),
+          codes = emptyList(),
+          headers = emptyList(),
+        ),
+        forcedTransactions = emptyList(),
       ),
-      ExecutionWitness(
-        blockNumber = 1000503UL,
-        state = emptyList(),
-        codes = emptyList(),
-        headers = emptyList(),
+      ExecutionInfo(
+        blockNumber = 1000502UL,
+        executionPayload = executionPayload(1000502UL),
+        executionRequests = emptyList(),
+        executionWitness = ExecutionWitness(
+          state = emptyList(),
+          codes = emptyList(),
+          headers = emptyList(),
+        ),
+        forcedTransactions = emptyList(),
+
       ),
     ),
-    executionRequests = listOf(
-      ExecutionRequests(
-        blockNumber = 1000501UL,
-        executionRequests = emptyList(),
-      ),
-      ExecutionRequests(
-        blockNumber = 1000503UL,
-        executionRequests = emptyList(),
-      ),
-    ),
-    forcedTransactions = emptyList(),
     chainConfig = ChainConfig(
       l2MessageServiceContract = ByteArray(20) { 1 },
       coinbase = ByteArray(20) { 2 },

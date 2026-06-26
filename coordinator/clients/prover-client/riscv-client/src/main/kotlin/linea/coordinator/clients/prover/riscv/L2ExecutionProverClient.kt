@@ -4,7 +4,9 @@ import linea.clients.L2ExecutionProofRequestV1
 import linea.clients.L2ExecutionProofResponseV1
 import linea.clients.L2ExecutionProverClientV1
 import linea.clients.ProverProofTransport
-import linea.domain.ExecutionProofIndex
+import linea.crypto.HashFunction
+import linea.crypto.Sha256HashFunction
+import linea.domain.BlockIntervalProofIndex
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
 import org.apache.logging.log4j.LogManager
@@ -20,24 +22,20 @@ internal class L2ExecutionProofRequestDtoMapper(
   private val chainConfig: ChainConfigDto,
 ) : (L2ExecutionProofRequestV1) -> SafeFuture<L2ExecutionProofRequestDto> {
   override fun invoke(request: L2ExecutionProofRequestV1): SafeFuture<L2ExecutionProofRequestDto> {
-    val payloads = request.executionPayloads.map { executionPayload ->
-      val blockNumber = executionPayload.blockNumber
-      val executionWitness = request.executionWitnesses.find { it.blockNumber == blockNumber }
-      val executionRequests = request.executionRequests.find { it.blockNumber == blockNumber }
-      val forcedTransactions = request.forcedTransactions.filter { it -> it.blockNumber == blockNumber }
+    val payloads = request.executions.map { executionInfo ->
       val statelessInputDto = StatelessInputDto(
         newPayloadRequest = NewPayloadRequestDto(
-          executionPayload = executionPayload.fromDomainObject(),
+          executionPayload = executionInfo.executionPayload.fromDomainObject(),
           versionedHashes = emptyList(),
           parentBeaconBlockRoot = ByteArray(32).encodeHex(),
-          executionRequests = executionRequests?.executionRequests?.map { it.encodeHex() } ?: emptyList(),
+          executionRequests = executionInfo.executionRequests.map { it.encodeHex() },
         ),
-        executionWitness = executionWitness!!.fromDomainObject(),
+        executionWitness = executionInfo.executionWitness.fromDomainObject(),
       )
       PayloadInputDto(
         statelessInput = statelessInputDto,
         rollupExtension = RollupExtensionDto(
-          forcedTransactions = forcedTransactions.map { it.fromDomainObject() },
+          forcedTransactions = executionInfo.forcedTransactions.map { it.fromDomainObject() },
         ),
       )
     }
@@ -67,15 +65,12 @@ internal class L2ExecutionProofRequestDtoMapper(
  * into [L2ExecutionProofResponseDto] before this mapper runs.
  */
 internal object L2ExecutionProofResponseDtoMapper : (
-  ExecutionProofIndex,
   L2ExecutionProofResponseDto,
 ) -> L2ExecutionProofResponseV1 {
   override fun invoke(
-    proofIndex: ExecutionProofIndex,
     responseDto: L2ExecutionProofResponseDto,
   ): L2ExecutionProofResponseV1 {
     return L2ExecutionProofResponseV1(
-      proverVersion = responseDto.proverVersion,
       startBlockNumber = responseDto.startBlockNumber.toULong(),
       endBlockNumber = responseDto.publicInputs.endBlockNumber.toULong(),
       proof = responseDto.proof.decodeHex(),
@@ -88,7 +83,21 @@ internal object L2ExecutionProofResponseDtoMapper : (
 }
 
 typealias L2ExecutionProofTransport =
-  ProverProofTransport<L2ExecutionProofRequestDto, L2ExecutionProofResponseDto, ExecutionProofIndex>
+  ProverProofTransport<L2ExecutionProofRequestDto, L2ExecutionProofResponseDto, BlockIntervalProofIndex>
+
+internal class L2ExecutionProofIndexProvider(
+  private val hashFunction: HashFunction,
+) : (L2ExecutionProofRequestV1) -> BlockIntervalProofIndex {
+  override fun invoke(request: L2ExecutionProofRequestV1): BlockIntervalProofIndex {
+    val content = request.toString().toByteArray()
+    return BlockIntervalProofIndex(
+      startBlockNumber = request.startBlockNumber,
+      endBlockNumber = request.endBlockNumber,
+      hash = hashFunction.hash(content),
+      startBlockTimestamp = request.startBlockTimestamp,
+    )
+  }
+}
 
 /**
  * RISC-V execution prover client. The request/response transport is injected
@@ -100,24 +109,19 @@ class L2ExecutionProverClient(
   chainConfig: ChainConfigDto,
   proofRequestDtoMapper: (L2ExecutionProofRequestV1) -> SafeFuture<L2ExecutionProofRequestDto> =
     L2ExecutionProofRequestDtoMapper(guestProgramId, chainConfig),
-  proofResponseDtoMapper: (ExecutionProofIndex, L2ExecutionProofResponseDto) -> L2ExecutionProofResponseV1 =
+  proofResponseDtoMapper: (L2ExecutionProofResponseDto) -> L2ExecutionProofResponseV1 =
     L2ExecutionProofResponseDtoMapper,
+  hashFunction: HashFunction = Sha256HashFunction(),
   log: Logger = LOG,
 ) : GenericRiscVProverClient<
   L2ExecutionProofRequestV1,
   L2ExecutionProofResponseV1,
   L2ExecutionProofRequestDto,
   L2ExecutionProofResponseDto,
-  ExecutionProofIndex,
+  BlockIntervalProofIndex,
   >(
   transport = transport,
-  proofIndexProvider = { request ->
-    ExecutionProofIndex(
-      startBlockNumber = request.startBlockNumber,
-      endBlockNumber = request.endBlockNumber,
-      startBlockTimestamp = request.startBlockTimestamp,
-    )
-  },
+  proofIndexProvider = L2ExecutionProofIndexProvider(hashFunction),
   requestMapper = proofRequestDtoMapper,
   responseMapper = proofResponseDtoMapper,
   proofTypeLabel = "l2-execution",

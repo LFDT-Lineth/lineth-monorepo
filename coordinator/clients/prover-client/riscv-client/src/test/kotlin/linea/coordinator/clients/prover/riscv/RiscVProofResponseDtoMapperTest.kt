@@ -6,9 +6,6 @@ import linea.clients.RollupAggregationProofResponseV1
 import linea.clients.RollupProofPublicInputs
 import linea.clients.RollupProofResponseV1
 import linea.coordinator.clients.prover.serialization.JsonSerialization
-import linea.domain.AggregationProofIndex
-import linea.domain.CompressionProofIndex
-import linea.domain.ExecutionProofIndex
 import linea.kotlin.decodeHex
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -45,7 +42,7 @@ class RiscVProofResponseDtoMapperTest {
     parentBlockHash = "0x0a".decodeHex(),
     endBlockHash = "0x0b".decodeHex(),
     endBlockNumber = 1000503UL,
-    endBlockTimestamp = 1763000123UL,
+    endBlockTimestamp = Instant.fromEpochSeconds(1763000123L),
     l2L1MessagesHash = "0x01".decodeHex(),
     parentL1L2BridgeRollingHash = "0x02".decodeHex(),
     parentL1L2BridgeRollingHashMessageNumber = 3UL,
@@ -106,17 +103,9 @@ class RiscVProofResponseDtoMapperTest {
     )
 
     assertThat(
-      L2ExecutionProofResponseDtoMapper(
-        ExecutionProofIndex(
-          1000500UL,
-          1000503UL,
-          startBlockTimestamp = Instant.DISTANT_PAST,
-        ),
-        dto,
-      ),
+      L2ExecutionProofResponseDtoMapper(dto),
     ).isEqualTo(
       L2ExecutionProofResponseV1(
-        proverVersion = "4.0.0-riscv",
         startBlockNumber = 1000500UL,
         endBlockNumber = 1000503UL,
         proof = "0xabcd".decodeHex(),
@@ -140,18 +129,9 @@ class RiscVProofResponseDtoMapperTest {
     )
 
     assertThat(
-      RollupProofResponseDtoMapper(
-        CompressionProofIndex(
-          1000500UL,
-          1000520UL,
-          ByteArray(32),
-          Instant.DISTANT_PAST,
-        ),
-        dto,
-      ),
+      RollupProofResponseDtoMapper(dto),
     ).isEqualTo(
       RollupProofResponseV1(
-        proverVersion = "4.0.0-riscv",
         startBlockNumber = 1000500UL,
         endBlockNumber = 1000520UL,
         proof = "0xabcd".decodeHex(),
@@ -175,18 +155,9 @@ class RiscVProofResponseDtoMapperTest {
     )
 
     assertThat(
-      RollupAggregationProofResponseDtoMapper(
-        AggregationProofIndex(
-          1000500UL,
-          1000520UL,
-          ByteArray(32),
-          Instant.DISTANT_PAST,
-        ),
-        dto,
-      ),
+      RollupAggregationProofResponseDtoMapper(dto),
     ).isEqualTo(
       RollupAggregationProofResponseV1(
-        proverVersion = "4.0.0-riscv",
         startBlockNumber = 1000500UL,
         endBlockNumber = 1000520UL,
         proof = "0xabcd".decodeHex(),
@@ -231,17 +202,9 @@ class RiscVProofResponseDtoMapperTest {
     val dto = jsonMapper.readValue(json, L2ExecutionProofResponseDto::class.java)
 
     assertThat(
-      L2ExecutionProofResponseDtoMapper(
-        ExecutionProofIndex(
-          1000500UL,
-          1000503UL,
-          startBlockTimestamp = Instant.DISTANT_PAST,
-        ),
-        dto,
-      ),
+      L2ExecutionProofResponseDtoMapper(dto),
     ).isEqualTo(
       L2ExecutionProofResponseV1(
-        proverVersion = "4.0.0-riscv",
         startBlockNumber = 1000500UL,
         endBlockNumber = 1000503UL,
         proof = "0xabcd".decodeHex(),
@@ -282,19 +245,10 @@ class RiscVProofResponseDtoMapperTest {
     """.trimIndent()
 
     val dto = jsonMapper.readValue(json, RollupProofResponseDto::class.java)
-    val mappedDto = RollupProofResponseDtoMapper(
-      CompressionProofIndex(
-        1000500UL,
-        1000520UL,
-        ByteArray(32),
-        Instant.DISTANT_PAST,
-      ),
-      dto,
-    )
+    val mappedDto = RollupProofResponseDtoMapper(dto)
 
     assertThat(mappedDto).isEqualTo(
       RollupProofResponseV1(
-        proverVersion = "4.0.0-riscv",
         startBlockNumber = 1000500UL,
         endBlockNumber = 1000520UL,
         proof = "0xabcd".decodeHex(),

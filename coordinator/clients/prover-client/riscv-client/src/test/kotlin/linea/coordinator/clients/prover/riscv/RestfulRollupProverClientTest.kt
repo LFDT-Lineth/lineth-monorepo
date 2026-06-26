@@ -11,7 +11,7 @@ import io.vertx.ext.web.client.WebClientOptions
 import io.vertx.junit5.VertxExtension
 import linea.clients.RollupProofRequestV1
 import linea.coordinator.clients.prover.serialization.JsonSerialization
-import linea.domain.CompressionProofIndex
+import linea.domain.BlockIntervalProofIndex
 import net.consensys.linea.httprest.client.VertxHttpRestClient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
@@ -51,7 +51,7 @@ class RestfulRollupProverClientTest {
     val transport = RestfulProverProofTransport<
       RestfulRollupProofRequestDto,
       RollupProofResponseDto,
-      CompressionProofIndex,
+      BlockIntervalProofIndex,
       >(
       restClient = restClient,
       vertx = vertx,
@@ -95,7 +95,7 @@ class RestfulRollupProverClientTest {
   @Test
   fun `findProofResponse reads the job response and maps it to the domain response`() {
     val responseDto = rollupResponseDto()
-    val proofIndex = CompressionProofIndex(
+    val proofIndex = BlockIntervalProofIndex(
       startBlockNumber = 1000501UL,
       endBlockNumber = 1000520UL,
       hash = ByteArray(32) { 0x1a },
@@ -109,7 +109,7 @@ class RestfulRollupProverClientTest {
 
     val response = client.findProofResponse(proofIndex).get()
 
-    assertThat(response).isEqualTo(RollupProofResponseDtoMapper(proofIndex, responseDto))
+    assertThat(response).isEqualTo(RollupProofResponseDtoMapper(responseDto))
   }
 
   private fun jobResponseBody(status: String, proofResponse: RollupProofResponseDto): String {
@@ -126,13 +126,23 @@ class RestfulRollupProverClientTest {
   }
 
   private fun rollupRequest(): RollupProofRequestV1 = RollupProofRequestV1(
-    startBlockNumber = 1000501UL,
-    endBlockNumber = 1000520UL,
-    startBlockTimestamp = Instant.fromEpochSeconds(1763000000),
     blobs = emptyList(),
     parentShnarf = ByteArray(32) { 0x19 },
     endShnarf = ByteArray(32) { 0x20 },
-    l2Executions = emptyList(),
+    l2Executions = listOf(
+      BlockIntervalProofIndex(
+        startBlockNumber = 1000501UL,
+        endBlockNumber = 1000510UL,
+        hash = ByteArray(32) { 0x1a },
+        startBlockTimestamp = Instant.fromEpochSeconds(1763000000),
+      ),
+      BlockIntervalProofIndex(
+        startBlockNumber = 1000511UL,
+        endBlockNumber = 1000520UL,
+        hash = ByteArray(32) { 0x1a },
+        startBlockTimestamp = Instant.fromEpochSeconds(1763002000),
+      ),
+    ),
   )
 
   private fun rollupResponseDto(): RollupProofResponseDto = RollupProofResponseDto(

@@ -6,8 +6,7 @@ import linea.clients.BlobWitness
 import linea.clients.RollupProofRequestV1
 import linea.coordinator.clients.prover.FileBasedProverConfig
 import linea.coordinator.clients.prover.serialization.JsonSerialization
-import linea.domain.CompressionProofIndex
-import linea.domain.ExecutionProofIndex
+import linea.domain.BlockIntervalProofIndex
 import linea.fileio.FileReader
 import linea.fileio.FileWriter
 import linea.kotlin.encodeHex
@@ -51,7 +50,7 @@ class FileBasedRollupProverClientTest {
     val transport = FileBasedProverProofTransport<
       FileBasedRollupProofRequestDto,
       RollupProofResponseDto,
-      CompressionProofIndex,
+      BlockIntervalProofIndex,
       >(
       config = config,
       vertx = vertx,
@@ -89,7 +88,7 @@ class FileBasedRollupProverClientTest {
 
   @Test
   fun `findProofResponse reads the response file and maps it to the domain response`() {
-    val proofIndex = CompressionProofIndex(
+    val proofIndex = BlockIntervalProofIndex(
       startBlockNumber = 1000501UL,
       endBlockNumber = 1000520UL,
       hash = ByteArray(32) { 0x1a },
@@ -101,7 +100,7 @@ class FileBasedRollupProverClientTest {
     val response = client.findProofResponse(proofIndex).get()
 
     assertThat(response).isEqualTo(
-      RollupProofResponseDtoMapper(proofIndex, responseDto),
+      RollupProofResponseDtoMapper(responseDto),
     )
   }
 
@@ -110,9 +109,6 @@ class FileBasedRollupProverClientTest {
   }
 
   private fun rollupRequest(): RollupProofRequestV1 = RollupProofRequestV1(
-    startBlockNumber = 1000501UL,
-    endBlockNumber = 1000503UL,
-    startBlockTimestamp = Instant.fromEpochSeconds(1763000000),
     blobs = listOf(
       BlobWitness(
         startBlockNumber = 1000501UL,
@@ -127,9 +123,10 @@ class FileBasedRollupProverClientTest {
     parentShnarf = ByteArray(32) { 0x19 },
     endShnarf = ByteArray(32) { 0x20 },
     l2Executions = listOf(
-      ExecutionProofIndex(
+      BlockIntervalProofIndex(
         startBlockNumber = 1000501UL,
         endBlockNumber = 1000503UL,
+        hash = ByteArray(32) { 0x1e },
         startBlockTimestamp = Instant.fromEpochSeconds(1763000000),
       ),
     ),
@@ -186,24 +183,24 @@ class FileBasedRollupProverClientTest {
       filteredAddresses = listOf(Random.nextBytes(20).encodeHex()),
     )
 
-    override fun isRequestAlreadySubmitted(proofIndex: ExecutionProofIndex): SafeFuture<Boolean> {
+    override fun isRequestAlreadySubmitted(proofIndex: BlockIntervalProofIndex): SafeFuture<Boolean> {
       return SafeFuture.completedFuture(true)
     }
 
     override fun submitRequest(
-      proofIndex: ExecutionProofIndex,
+      proofIndex: BlockIntervalProofIndex,
       requestDto: L2ExecutionProofRequestDto,
     ): SafeFuture<Unit> {
       return SafeFuture.completedFuture(Unit)
     }
 
-    override fun findResponse(proofIndex: ExecutionProofIndex): SafeFuture<L2ExecutionProofResponseDto?> {
+    override fun findResponse(proofIndex: BlockIntervalProofIndex): SafeFuture<L2ExecutionProofResponseDto?> {
       return SafeFuture.completedFuture(
         l2ExecutionProofResponseDto,
       )
     }
 
-    override fun awaitResponse(proofIndex: ExecutionProofIndex): SafeFuture<L2ExecutionProofResponseDto> {
+    override fun awaitResponse(proofIndex: BlockIntervalProofIndex): SafeFuture<L2ExecutionProofResponseDto> {
       return SafeFuture.completedFuture(
         l2ExecutionProofResponseDto,
       )

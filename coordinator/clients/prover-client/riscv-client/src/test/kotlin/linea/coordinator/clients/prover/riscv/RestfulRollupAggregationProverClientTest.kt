@@ -11,7 +11,7 @@ import io.vertx.ext.web.client.WebClientOptions
 import io.vertx.junit5.VertxExtension
 import linea.clients.RollupAggregationProofRequestV1
 import linea.coordinator.clients.prover.serialization.JsonSerialization
-import linea.domain.AggregationProofIndex
+import linea.domain.BlockIntervalProofIndex
 import linea.kotlin.encodeHex
 import net.consensys.linea.httprest.client.VertxHttpRestClient
 import org.assertj.core.api.Assertions.assertThat
@@ -53,7 +53,7 @@ class RestfulRollupAggregationProverClientTest {
     val transport = RestfulProverProofTransport<
       RestfulRollupAggregationProofRequestDto,
       RollupAggregationProofResponseDto,
-      AggregationProofIndex,
+      BlockIntervalProofIndex,
       >(
       restClient = restClient,
       vertx = vertx,
@@ -99,7 +99,7 @@ class RestfulRollupAggregationProverClientTest {
   @Test
   fun `findProofResponse reads the job response and maps it to the domain response`() {
     val responseDto = aggregationResponseDto()
-    val proofIndex = AggregationProofIndex(
+    val proofIndex = BlockIntervalProofIndex(
       startBlockNumber = 1000501UL,
       endBlockNumber = 1000567UL,
       hash = ByteArray(32) { 0x1a },
@@ -113,7 +113,7 @@ class RestfulRollupAggregationProverClientTest {
 
     val response = client.findProofResponse(proofIndex).get()
 
-    assertThat(response).isEqualTo(RollupAggregationProofResponseDtoMapper(proofIndex, responseDto))
+    assertThat(response).isEqualTo(RollupAggregationProofResponseDtoMapper(responseDto))
   }
 
   private fun jobResponseBody(status: String, proofResponse: RollupAggregationProofResponseDto): String {
@@ -130,10 +130,14 @@ class RestfulRollupAggregationProverClientTest {
   }
 
   private fun aggregationRequest(): RollupAggregationProofRequestV1 = RollupAggregationProofRequestV1(
-    startBlockNumber = 1000501UL,
-    endBlockNumber = 1000567UL,
-    startBlockTimestamp = Instant.fromEpochSeconds(1763000000),
-    rollupProofs = emptyList(),
+    rollupProofs = listOf(
+      BlockIntervalProofIndex(
+        startBlockNumber = 1000501UL,
+        endBlockNumber = 1000567UL,
+        hash = ByteArray(32) { 0x1a },
+        startBlockTimestamp = Instant.fromEpochSeconds(1763000000),
+      ),
+    ),
   )
 
   private fun aggregationResponseDto(): RollupAggregationProofResponseDto = RollupAggregationProofResponseDto(

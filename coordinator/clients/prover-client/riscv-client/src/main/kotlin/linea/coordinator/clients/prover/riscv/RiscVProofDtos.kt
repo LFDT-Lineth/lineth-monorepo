@@ -2,14 +2,13 @@ package linea.coordinator.clients.prover.riscv
 
 import linea.clients.BlobWitness
 import linea.clients.ExecutionPayload
-import linea.clients.ExecutionWitness
 import linea.clients.ForcedTransaction
 import linea.clients.L2ExecutionProofPublicInputs
 import linea.clients.L2ExecutionProofResponseV1
 import linea.clients.RollupProofPublicInputs
 import linea.clients.RollupProofResponseV1
-import linea.domain.CompressionProofIndex
-import linea.domain.ExecutionProofIndex
+import linea.domain.BlockIntervalProofIndex
+import linea.ethapi.ExecutionWitness
 import linea.forcedtx.ForcedTransactionInclusionResult
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
@@ -168,7 +167,7 @@ data class L2ExecutionProofRequestDto(
 )
 
 data class L2ExecutionProofResponseDto(
-  val proverVersion: String,
+  val proverVersion: String? = null,
   val startBlockNumber: Long,
   val proof: String,
   val publicInputs: L2ExecutionProofPublicInputsDto,
@@ -210,7 +209,7 @@ data class RestfulRollupProofRequestParamsDto(
   val chainId: Long,
   val blobs: List<BlobWitnessDto>,
   val parentShnarf: String,
-  val l2ExecutionProofIndexes: List<ExecutionProofIndex>,
+  val l2ExecutionProofIndexes: List<BlockIntervalProofIndex>,
 )
 
 data class FileBasedRollupProofRequestDto(
@@ -226,7 +225,7 @@ data class RestfulRollupProofRequestDto(
 )
 
 data class RollupProofResponseDto(
-  val proverVersion: String,
+  val proverVersion: String? = null,
   val startBlockNumber: Long,
   val proof: String,
   val publicInputs: RollupProofPublicInputsDto,
@@ -254,7 +253,7 @@ data class FileBasedRollupAggregationProofRequestParamsDto(
 )
 
 data class RestfulRollupAggregationProofRequestParamsDto(
-  val rollupProofIndexes: List<CompressionProofIndex>,
+  val rollupProofIndexes: List<BlockIntervalProofIndex>,
 )
 
 data class FileBasedRollupAggregationProofRequestDto(
@@ -271,7 +270,7 @@ data class RestfulRollupAggregationProofRequestDto(
 
 /** Response of a rollup-aggregation proof: the aggregated proof bytes plus the 14-field PI tuple (§2.4). */
 data class RollupAggregationProofResponseDto(
-  val proverVersion: String,
+  val proverVersion: String? = null,
   val startBlockNumber: Long,
   val proof: String,
   val publicInputs: RollupAggregationPublicInputsDto,
@@ -289,7 +288,7 @@ internal fun L2ExecutionProofPublicInputsDto.toDomainObject(): L2ExecutionProofP
     parentBlockHash = parentBlockHash.decodeHex(),
     endBlockHash = endBlockHash.decodeHex(),
     endBlockNumber = endBlockNumber.toULong(),
-    endBlockTimestamp = endBlockTimestamp.toULong(),
+    endBlockTimestamp = Instant.fromEpochSeconds(endBlockTimestamp),
     l2L1MessagesHash = l2L1MessagesHash.decodeHex(),
     parentL1L2BridgeRollingHash = parentL1L2BridgeRollingHash.decodeHex(),
     parentL1L2BridgeRollingHashMessageNumber = parentL1L2BridgeRollingHashMessageNumber.toULong(),
@@ -309,7 +308,7 @@ internal fun L2ExecutionProofPublicInputs.fromDomainObject(): L2ExecutionProofPu
     parentBlockHash = parentBlockHash.encodeHex(),
     endBlockHash = endBlockHash.encodeHex(),
     endBlockNumber = endBlockNumber.toLong(),
-    endBlockTimestamp = endBlockTimestamp.toLong(),
+    endBlockTimestamp = endBlockTimestamp.epochSeconds,
     l2L1MessagesHash = l2L1MessagesHash.encodeHex(),
     parentL1L2BridgeRollingHash = parentL1L2BridgeRollingHash.encodeHex(),
     parentL1L2BridgeRollingHashMessageNumber = parentL1L2BridgeRollingHashMessageNumber.toLong(),

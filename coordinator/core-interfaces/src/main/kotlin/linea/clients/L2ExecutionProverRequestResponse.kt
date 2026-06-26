@@ -1,19 +1,44 @@
 package linea.clients
 
-// import tech.pegasys.teku.ethereum.executionclient.schema.ExecutionPayloadV3
 import linea.domain.BlockInterval
 import linea.domain.StartBlockTimestampProvider
+import linea.ethapi.ExecutionWitness
 import linea.forcedtx.ForcedTransactionInclusionResult
 import linea.kotlin.byteArrayListEquals
 import java.math.BigInteger
 import kotlin.time.Instant
 
 data class ExecutionInfo(
-  val executionPayloads: ExecutionPayload,
-  val executionWitnesses: ExecutionWitness,
-  val executionRequests: List<ExecutionRequests>,
+  val blockNumber: ULong,
+  val executionPayload: ExecutionPayload,
+  val executionWitness: ExecutionWitness,
+  val executionRequests: List<ByteArray>,
   val forcedTransactions: List<ForcedTransaction>,
-)
+) {
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as ExecutionInfo
+
+    if (blockNumber != other.blockNumber) return false
+    if (executionPayload != other.executionPayload) return false
+    if (executionWitness != other.executionWitness) return false
+    if (!executionRequests.byteArrayListEquals(other.executionRequests)) return false
+    if (forcedTransactions != other.forcedTransactions) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = blockNumber.hashCode()
+    result = 31 * result + executionPayload.hashCode()
+    result = 31 * result + executionWitness.hashCode()
+    result = 31 * result + executionRequests.hashCode()
+    result = 31 * result + forcedTransactions.hashCode()
+    return result
+  }
+}
 
 data class L2ExecutionProofRequestV1(
   val executions: List<ExecutionInfo>,
@@ -21,12 +46,23 @@ data class L2ExecutionProofRequestV1(
   val parentFtxRollingHash: ByteArray,
   val parentFtxNumber: ULong,
 ) : BlockInterval, StartBlockTimestampProvider {
+  init {
+    require(executions.isNotEmpty()) { "executions must not be empty" }
+    require(
+      executions.zipWithNext().all { (current, next) ->
+        next.blockNumber == current.blockNumber + 1UL
+      },
+    ) {
+      "executions must be sorted ascending and consecutive"
+    }
+  }
+
   override val startBlockNumber: ULong
-    get() = executionPayloads.first().blockNumber
+    get() = executions.first().blockNumber
   override val endBlockNumber: ULong
-    get() = executionPayloads.last().blockNumber
+    get() = executions.last().blockNumber
   override val startBlockTimestamp: Instant
-    get() = Instant.fromEpochSeconds(executionPayloads.first().timestamp.toLong())
+    get() = Instant.fromEpochSeconds(executions.first().executionPayload.timestamp.toLong())
 
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -34,10 +70,7 @@ data class L2ExecutionProofRequestV1(
 
     other as L2ExecutionProofRequestV1
 
-    if (executionPayloads != other.executionPayloads) return false
-    if (executionWitnesses != other.executionWitnesses) return false
-    if (executionRequests != other.executionRequests) return false
-    if (forcedTransactions != other.forcedTransactions) return false
+    if (executions != other.executions) return false
     if (chainConfig != other.chainConfig) return false
     if (!parentFtxRollingHash.contentEquals(other.parentFtxRollingHash)) return false
     if (parentFtxNumber != other.parentFtxNumber) return false
@@ -46,10 +79,7 @@ data class L2ExecutionProofRequestV1(
   }
 
   override fun hashCode(): Int {
-    var result = executionPayloads.hashCode()
-    result = 31 * result + executionWitnesses.hashCode()
-    result = 31 * result + executionRequests.hashCode()
-    result = 31 * result + forcedTransactions.hashCode()
+    var result = executions.hashCode()
     result = 31 * result + chainConfig.hashCode()
     result = 31 * result + parentFtxRollingHash.contentHashCode()
     result = 31 * result + parentFtxNumber.hashCode()
@@ -59,7 +89,6 @@ data class L2ExecutionProofRequestV1(
 
 data class ForcedTransaction(
   val ftxNumber: ULong,
-  val blockNumber: ULong,
   val deadlineBlockNumber: ULong,
   val signedTxRlp: ByteArray,
   val acceptance: ForcedTransactionInclusionResult,
@@ -71,7 +100,6 @@ data class ForcedTransaction(
     other as ForcedTransaction
 
     if (ftxNumber != other.ftxNumber) return false
-    if (blockNumber != other.blockNumber) return false
     if (deadlineBlockNumber != other.deadlineBlockNumber) return false
     if (!signedTxRlp.contentEquals(other.signedTxRlp)) return false
     if (acceptance != other.acceptance) return false
@@ -81,7 +109,6 @@ data class ForcedTransaction(
 
   override fun hashCode(): Int {
     var result = ftxNumber.hashCode()
-    result = 31 * result + blockNumber.hashCode()
     result = 31 * result + deadlineBlockNumber.hashCode()
     result = 31 * result + signedTxRlp.contentHashCode()
     result = 31 * result + acceptance.hashCode()
@@ -217,35 +244,32 @@ data class ExecutionPayload(
   }
 }
 
-// This class should add a blockNumber field with the ExecutionWitness class declared in PR-3248
-data class ExecutionWitness(
-  val blockNumber: ULong,
-  val state: List<ByteArray>,
-  val codes: List<ByteArray>,
-  val headers: List<ByteArray>,
-) {
-  override fun equals(other: Any?): Boolean {
-    if (this === other) return true
-    if (javaClass != other?.javaClass) return false
-
-    other as ExecutionWitness
-
-    if (blockNumber != other.blockNumber) return false
-    if (!state.byteArrayListEquals(other.state)) return false
-    if (!codes.byteArrayListEquals(other.codes)) return false
-    if (!headers.byteArrayListEquals(other.headers)) return false
-
-    return true
-  }
-
-  override fun hashCode(): Int {
-    var result = blockNumber.hashCode()
-    result = 31 * result + state.hashCode()
-    result = 31 * result + codes.hashCode()
-    result = 31 * result + headers.hashCode()
-    return result
-  }
-}
+// // This class should add a blockNumber field with the ExecutionWitness class declared in PR-3248
+// data class ExecutionWitness(
+//  val state: List<ByteArray>,
+//  val codes: List<ByteArray>,
+//  val headers: List<ByteArray>,
+// ) {
+//  override fun equals(other: Any?): Boolean {
+//    if (this === other) return true
+//    if (javaClass != other?.javaClass) return false
+//
+//    other as ExecutionWitness
+//
+//    if (!state.byteArrayListEquals(other.state)) return false
+//    if (!codes.byteArrayListEquals(other.codes)) return false
+//    if (!headers.byteArrayListEquals(other.headers)) return false
+//
+//    return true
+//  }
+//
+//  override fun hashCode(): Int {
+//    var result = state.hashCode()
+//    result = 31 * result + codes.hashCode()
+//    result = 31 * result + headers.hashCode()
+//    return result
+//  }
+// }
 
 data class ExecutionRequests(
   val blockNumber: ULong,
@@ -340,7 +364,7 @@ data class L2ExecutionProofPublicInputs(
 }
 
 /**
- * Response of an l2-execution proof.
+ * Response of a l2-execution proof.
  *
  * Mirrors `linea.coordinator.clients.prover.riscv.L2ExecutionProofResponseDto` field-for-field so that a proof
  * response — whether read from a JSON file or returned by a REST endpoint — deserializes into the DTO and maps
@@ -364,7 +388,6 @@ data class L2ExecutionProofResponseV1(
 
     if (startBlockNumber != other.startBlockNumber) return false
     if (endBlockNumber != other.endBlockNumber) return false
-    if (proverVersion != other.proverVersion) return false
     if (!proof.contentEquals(other.proof)) return false
     if (publicInputs != other.publicInputs) return false
     if (!l2L1Messages.byteArrayListEquals(other.l2L1Messages)) return false
@@ -377,7 +400,6 @@ data class L2ExecutionProofResponseV1(
   override fun hashCode(): Int {
     var result = startBlockNumber.hashCode()
     result = 31 * result + endBlockNumber.hashCode()
-    result = 31 * result + proverVersion.hashCode()
     result = 31 * result + proof.contentHashCode()
     result = 31 * result + publicInputs.hashCode()
     result = 31 * result + l2L1Messages.hashCode()

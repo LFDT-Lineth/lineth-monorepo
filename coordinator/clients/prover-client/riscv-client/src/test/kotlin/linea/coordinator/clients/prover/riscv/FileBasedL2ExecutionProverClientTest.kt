@@ -3,13 +3,13 @@ package linea.coordinator.clients.prover.riscv
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.clients.ChainConfig
+import linea.clients.ExecutionInfo
 import linea.clients.ExecutionPayload
-import linea.clients.ExecutionRequests
-import linea.clients.ExecutionWitness
 import linea.clients.L2ExecutionProofRequestV1
 import linea.coordinator.clients.prover.FileBasedProverConfig
 import linea.coordinator.clients.prover.serialization.JsonSerialization
-import linea.domain.ExecutionProofIndex
+import linea.domain.BlockIntervalProofIndex
+import linea.ethapi.ExecutionWitness
 import linea.fileio.FileReader
 import linea.fileio.FileWriter
 import org.assertj.core.api.Assertions.assertThat
@@ -56,7 +56,7 @@ class FileBasedL2ExecutionProverClientTest {
     val transport = FileBasedProverProofTransport<
       L2ExecutionProofRequestDto,
       L2ExecutionProofResponseDto,
-      ExecutionProofIndex,
+      BlockIntervalProofIndex,
       >(
       config = config,
       vertx = vertx,
@@ -88,9 +88,10 @@ class FileBasedL2ExecutionProverClientTest {
 
   @Test
   fun `findProofResponse reads the response file and maps it to the domain response`() {
-    val proofIndex = ExecutionProofIndex(
+    val proofIndex = BlockIntervalProofIndex(
       startBlockNumber = 1000501UL,
       endBlockNumber = 1000503UL,
+      hash = ByteArray(32) { 0x1e },
       startBlockTimestamp = Instant.fromEpochSeconds(1763000123),
     )
     val responseDto = l2ResponseDto()
@@ -99,7 +100,7 @@ class FileBasedL2ExecutionProverClientTest {
     val response = client.findProofResponse(proofIndex).get()
 
     assertThat(response).isEqualTo(
-      L2ExecutionProofResponseDtoMapper(proofIndex, responseDto),
+      L2ExecutionProofResponseDtoMapper(responseDto),
     )
   }
 
@@ -108,73 +109,68 @@ class FileBasedL2ExecutionProverClientTest {
   }
 
   private fun l2Request(): L2ExecutionProofRequestV1 = L2ExecutionProofRequestV1(
-    executionPayloads = listOf(
-      ExecutionPayload(
-        parentHash = Random.nextBytes(32),
-        feeRecipient = Random.nextBytes(20),
-        stateRoot = Random.nextBytes(32),
-        receiptsRoot = Random.nextBytes(32),
-        logsBloom = Random.nextBytes(256),
-        prevRandao = Random.nextBytes(32),
+    executions = listOf(
+      ExecutionInfo(
         blockNumber = 1000501UL,
-        gasLimit = Random.nextLong(0, Long.MAX_VALUE).toULong(),
-        gasUsed = Random.nextLong(0, Long.MAX_VALUE).toULong(),
-        timestamp = 1000UL,
-        extraData = Random.nextBytes(32),
-        baseFeePerGas = BigInteger.valueOf(Random.nextLong(0, Long.MAX_VALUE)),
-        blockHash = Random.nextBytes(32),
-        transactions = emptyList(),
-        withdrawals = emptyList(),
-        blobGasUsed = 0UL,
-        excessBlobGas = 0UL,
-        blockAccessList = ByteArray(0),
-      ),
-      ExecutionPayload(
-        parentHash = Random.nextBytes(32),
-        feeRecipient = Random.nextBytes(20),
-        stateRoot = Random.nextBytes(32),
-        receiptsRoot = Random.nextBytes(32),
-        logsBloom = Random.nextBytes(256),
-        prevRandao = Random.nextBytes(32),
-        blockNumber = 1000502UL,
-        gasLimit = Random.nextLong(0, Long.MAX_VALUE).toULong(),
-        gasUsed = Random.nextLong(0, Long.MAX_VALUE).toULong(),
-        timestamp = 1000UL,
-        extraData = Random.nextBytes(32),
-        baseFeePerGas = BigInteger.valueOf(Random.nextLong(0, Long.MAX_VALUE)),
-        blockHash = Random.nextBytes(32),
-        transactions = emptyList(),
-        withdrawals = emptyList(),
-        blobGasUsed = 0UL,
-        excessBlobGas = 0UL,
-        blockAccessList = ByteArray(0),
-      ),
-    ),
-    executionWitnesses = listOf(
-      ExecutionWitness(
-        blockNumber = 1000501UL,
-        state = emptyList(),
-        codes = emptyList(),
-        headers = emptyList(),
-      ),
-      ExecutionWitness(
-        blockNumber = 1000502UL,
-        state = emptyList(),
-        codes = emptyList(),
-        headers = emptyList(),
-      ),
-    ),
-    executionRequests = listOf(
-      ExecutionRequests(
-        blockNumber = 1000501UL,
+        executionPayload = ExecutionPayload(
+          parentHash = Random.nextBytes(32),
+          feeRecipient = Random.nextBytes(20),
+          stateRoot = Random.nextBytes(32),
+          receiptsRoot = Random.nextBytes(32),
+          logsBloom = Random.nextBytes(256),
+          prevRandao = Random.nextBytes(32),
+          blockNumber = 1000501UL,
+          gasLimit = Random.nextLong(0, Long.MAX_VALUE).toULong(),
+          gasUsed = Random.nextLong(0, Long.MAX_VALUE).toULong(),
+          timestamp = 1000UL,
+          extraData = Random.nextBytes(32),
+          baseFeePerGas = BigInteger.valueOf(Random.nextLong(0, Long.MAX_VALUE)),
+          blockHash = Random.nextBytes(32),
+          transactions = emptyList(),
+          withdrawals = emptyList(),
+          blobGasUsed = 0UL,
+          excessBlobGas = 0UL,
+          blockAccessList = ByteArray(0),
+        ),
         executionRequests = emptyList(),
+        executionWitness = ExecutionWitness(
+          state = emptyList(),
+          codes = emptyList(),
+          headers = emptyList(),
+        ),
+        forcedTransactions = emptyList(),
       ),
-      ExecutionRequests(
+      ExecutionInfo(
         blockNumber = 1000502UL,
+        executionPayload = ExecutionPayload(
+          parentHash = Random.nextBytes(32),
+          feeRecipient = Random.nextBytes(20),
+          stateRoot = Random.nextBytes(32),
+          receiptsRoot = Random.nextBytes(32),
+          logsBloom = Random.nextBytes(256),
+          prevRandao = Random.nextBytes(32),
+          blockNumber = 1000502UL,
+          gasLimit = Random.nextLong(0, Long.MAX_VALUE).toULong(),
+          gasUsed = Random.nextLong(0, Long.MAX_VALUE).toULong(),
+          timestamp = 1000UL,
+          extraData = Random.nextBytes(32),
+          baseFeePerGas = BigInteger.valueOf(Random.nextLong(0, Long.MAX_VALUE)),
+          blockHash = Random.nextBytes(32),
+          transactions = emptyList(),
+          withdrawals = emptyList(),
+          blobGasUsed = 0UL,
+          excessBlobGas = 0UL,
+          blockAccessList = ByteArray(0),
+        ),
         executionRequests = emptyList(),
+        executionWitness = ExecutionWitness(
+          state = emptyList(),
+          codes = emptyList(),
+          headers = emptyList(),
+        ),
+        forcedTransactions = emptyList(),
       ),
     ),
-    forcedTransactions = emptyList(),
     chainConfig = ChainConfig(
       l2MessageServiceContract = ByteArray(20) { 1 },
       coinbase = ByteArray(20) { 2 },

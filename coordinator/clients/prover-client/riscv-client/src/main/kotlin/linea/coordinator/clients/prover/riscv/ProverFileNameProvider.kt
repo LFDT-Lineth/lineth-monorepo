@@ -1,9 +1,7 @@
 package linea.coordinator.clients.prover.riscv
 
 import linea.clients.ProverFileNameProvider
-import linea.domain.AggregationProofIndex
-import linea.domain.CompressionProofIndex
-import linea.domain.ExecutionProofIndex
+import linea.domain.BlockIntervalProofIndex
 import linea.kotlin.encodeHex
 
 object FileNameSuffixes {
@@ -14,24 +12,25 @@ object FileNameSuffixes {
 
 private fun encodeHash(hash: ByteArray): String = hash.encodeHex(prefix = false)
 
-object L2ExecutionProofFileNameProvider : ProverFileNameProvider<ExecutionProofIndex> {
-  override fun getFileName(proofIndex: ExecutionProofIndex): String {
-    return "${proofIndex.startBlockNumber}-${proofIndex.endBlockNumber}-${FileNameSuffixes.L2_EXECUTION_PROOF_SUFFIX}"
+object L2ExecutionProofFileNameProvider : ProverFileNameProvider<BlockIntervalProofIndex> {
+  override fun getFileName(proofIndex: BlockIntervalProofIndex): String {
+    val requestHashString = encodeHash(proofIndex.hash)
+    return "${proofIndex.startBlockNumber}-${proofIndex.endBlockNumber}" +
+      "-$requestHashString-${FileNameSuffixes.L2_EXECUTION_PROOF_SUFFIX}"
   }
 }
 
-object RollupProofFileNameProvider : ProverFileNameProvider<CompressionProofIndex> {
-  override fun getFileName(proofIndex: CompressionProofIndex): String {
+object RollupProofFileNameProvider : ProverFileNameProvider<BlockIntervalProofIndex> {
+  override fun getFileName(proofIndex: BlockIntervalProofIndex): String {
     val requestHashString = encodeHash(proofIndex.hash)
     return "${proofIndex.startBlockNumber}-${proofIndex.endBlockNumber}-" +
       "-$requestHashString-${FileNameSuffixes.ROLLUP_PROOF_SUFFIX}"
   }
 }
 
-object RollupAggregationProofFileNameProvider : ProverFileNameProvider<AggregationProofIndex> {
-  override fun getFileName(proofIndex: AggregationProofIndex): String {
+object RollupAggregationProofFileNameProvider : ProverFileNameProvider<BlockIntervalProofIndex> {
+  override fun getFileName(proofIndex: BlockIntervalProofIndex): String {
     val requestHashString = encodeHash(proofIndex.hash)
-
     return "${proofIndex.startBlockNumber}-${proofIndex.endBlockNumber}" +
       "-$requestHashString-${FileNameSuffixes.ROLLUP_AGGREGATION_PROOF_SUFFIX}"
   }

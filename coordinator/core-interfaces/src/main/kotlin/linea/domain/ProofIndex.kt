@@ -34,7 +34,10 @@ data class BlockIntervalProofIndex(
   }
 
   override fun toString(): String {
-    return "BlockIntervalProofIndex(startBlockNumber=$startBlockNumber, endBlockNumber=$endBlockNumber,  startBlockTimestamp=$startBlockTimestamp, hash=${hash.encodeHex()})"
+    return "BlockIntervalProofIndex(startBlockNumber=$startBlockNumber, " +
+      "endBlockNumber=$endBlockNumber,  " +
+      "startBlockTimestamp=$startBlockTimestamp, " +
+      "hash=${hash.encodeHex()})"
   }
 }
 

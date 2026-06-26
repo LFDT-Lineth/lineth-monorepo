@@ -4,7 +4,9 @@ import linea.clients.ProverProofTransport
 import linea.clients.RollupProofRequestV1
 import linea.clients.RollupProofResponseV1
 import linea.clients.RollupProverClientV1
-import linea.domain.CompressionProofIndex
+import linea.crypto.HashFunction
+import linea.crypto.Sha256HashFunction
+import linea.domain.BlockIntervalProofIndex
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
 import org.apache.logging.log4j.LogManager
@@ -86,15 +88,12 @@ internal class RestfulRollupProofRequestDtoMapper(
  * [RollupProofResponseDto] before this mapper runs.
  */
 internal object RollupProofResponseDtoMapper : (
-  CompressionProofIndex,
   RollupProofResponseDto,
 ) -> RollupProofResponseV1 {
   override fun invoke(
-    proofIndex: CompressionProofIndex,
     responseDto: RollupProofResponseDto,
   ): RollupProofResponseV1 {
     return RollupProofResponseV1(
-      proverVersion = responseDto.proverVersion,
       startBlockNumber = responseDto.startBlockNumber.toULong(),
       endBlockNumber = responseDto.publicInputs.endBlockNumber.toULong(),
       proof = responseDto.proof.decodeHex(),
@@ -105,22 +104,25 @@ internal object RollupProofResponseDtoMapper : (
   }
 }
 
-internal object RollupProofIndexProvider : (RollupProofRequestV1) -> CompressionProofIndex {
-  override fun invoke(request: RollupProofRequestV1): CompressionProofIndex {
-    return CompressionProofIndex(
+internal class RollupProofIndexProvider(
+  private val hashFunction: HashFunction,
+) : (RollupProofRequestV1) -> BlockIntervalProofIndex {
+  override fun invoke(request: RollupProofRequestV1): BlockIntervalProofIndex {
+    val content = request.toString().toByteArray()
+    return BlockIntervalProofIndex(
       startBlockNumber = request.startBlockNumber,
       endBlockNumber = request.endBlockNumber,
-      hash = request.endShnarf,
+      hash = hashFunction.hash(content),
       startBlockTimestamp = request.startBlockTimestamp,
     )
   }
 }
 
 typealias FileBasedRollupProofTransport =
-  ProverProofTransport<FileBasedRollupProofRequestDto, RollupProofResponseDto, CompressionProofIndex>
+  ProverProofTransport<FileBasedRollupProofRequestDto, RollupProofResponseDto, BlockIntervalProofIndex>
 
 private typealias RestfulRollupProofTransport =
-  ProverProofTransport<RestfulRollupProofRequestDto, RollupProofResponseDto, CompressionProofIndex>
+  ProverProofTransport<RestfulRollupProofRequestDto, RollupProofResponseDto, BlockIntervalProofIndex>
 
 /**
  * RISC-V file-based rollup prover client.
@@ -133,18 +135,19 @@ class FileBasedRollupProverClient(
   chainId: Long,
   proofRequestDtoMapper: (RollupProofRequestV1) -> SafeFuture<FileBasedRollupProofRequestDto> =
     FileBasedRollupProofRequestDtoMapper(guestProgramId, chainId, l2ExecutionProofTransport),
-  proofResponseDtoMapper: (CompressionProofIndex, RollupProofResponseDto) -> RollupProofResponseV1 =
+  proofResponseDtoMapper: (RollupProofResponseDto) -> RollupProofResponseV1 =
     RollupProofResponseDtoMapper,
+  hashFunction: HashFunction = Sha256HashFunction(),
   log: Logger = LOG,
 ) : GenericRiscVProverClient<
   RollupProofRequestV1,
   RollupProofResponseV1,
   FileBasedRollupProofRequestDto,
   RollupProofResponseDto,
-  CompressionProofIndex,
+  BlockIntervalProofIndex,
   >(
   transport = transport,
-  proofIndexProvider = RollupProofIndexProvider,
+  proofIndexProvider = RollupProofIndexProvider(hashFunction),
   requestMapper = proofRequestDtoMapper,
   responseMapper = proofResponseDtoMapper,
   proofTypeLabel = "rollup",
@@ -167,18 +170,19 @@ class RestfulRollupProverClient(
   chainId: Long,
   proofRequestDtoMapper: (RollupProofRequestV1) -> SafeFuture<RestfulRollupProofRequestDto> =
     RestfulRollupProofRequestDtoMapper(guestProgramId, chainId),
-  proofResponseDtoMapper: (CompressionProofIndex, RollupProofResponseDto) -> RollupProofResponseV1 =
+  proofResponseDtoMapper: (RollupProofResponseDto) -> RollupProofResponseV1 =
     RollupProofResponseDtoMapper,
+  hashFunction: HashFunction = Sha256HashFunction(),
   log: Logger = LOG,
 ) : GenericRiscVProverClient<
   RollupProofRequestV1,
   RollupProofResponseV1,
   RestfulRollupProofRequestDto,
   RollupProofResponseDto,
-  CompressionProofIndex,
+  BlockIntervalProofIndex,
   >(
   transport = transport,
-  proofIndexProvider = RollupProofIndexProvider,
+  proofIndexProvider = RollupProofIndexProvider(hashFunction),
   requestMapper = proofRequestDtoMapper,
   responseMapper = proofResponseDtoMapper,
   proofTypeLabel = "rollup",
