@@ -35,10 +35,10 @@ catalog:
   '@typechain/ethers-v6': 0.5.1
   '@types/jest': 30.0.0
   '@types/yargs': 17.0.35
-  axios: 1.17.0
+  axios: 1.18.1
   dotenv: 17.4.2
   eslint: 9.39.4
-  ethers: 6.16.0
+  ethers: 6.17.0
   express: 5.2.1
   jest: 30.4.2
   jest-environment-node: 30.4.1
@@ -51,7 +51,7 @@ catalog:
   tsx: 4.22.4
   typechain: 8.3.2
   typescript: 5.9.3
-  viem: 2.52.2
+  viem: 2.53.1
   winston: 3.19.0
   yargs: 18.0.0
   zod: 4.4.3
@@ -136,8 +136,8 @@ overrides:
   shell-quote@>=1.1.0 <=1.8.3: '1.8.4'
   tar@<7.5.16: '7.5.16'
   tmp@<0.2.7: '0.2.7'
-  typescript-eslint: "8.61.0"
-  undici: "6.24.1"
+  typescript-eslint: "8.62.0"
+  undici: "6.27.0"
   uuid@<11.1.1: '11.1.1'
   valibot@>=0.31.0 <1.2.0: ">=1.2.0"
   ws@>=6.0.0 <6.2.4: '6.2.4'

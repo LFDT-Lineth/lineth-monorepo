@@ -37,7 +37,7 @@
     "tsx": "catalog:"
   },
   "dependencies": {
-    "@aws-sdk/client-kms": "3.1068.0",
+    "@aws-sdk/client-kms": "3.1075.0",
     "asn1js": "3.0.10",
     "axios": "catalog:",
     "express": "catalog:",
