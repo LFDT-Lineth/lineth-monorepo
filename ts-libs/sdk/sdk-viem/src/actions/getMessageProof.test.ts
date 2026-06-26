@@ -7,14 +7,13 @@ import {
   Hex,
   ClientChainNotConfiguredError,
   ChainNotFoundError,
-  RpcError,
   ContractFunctionZeroDataError,
   AbiDecodingZeroDataError,
   zeroHash,
 } from "viem";
 import { getBlockNumber, getContractEvents, getTransactionReceipt, readContract } from "viem/actions";
 
-import { getMessageProof, isBlockRangeExceededError, getMessageSiblings } from "./getMessageProof";
+import { getMessageProof, getMessageSiblings } from "./getMessageProof";
 import { getMessageSentEvents } from "./getMessageSentEvents";
 import { TEST_MERKLE_ROOT, TEST_MERKLE_ROOT_2, TEST_MESSAGE_HASH, TEST_TRANSACTION_HASH } from "../../tests/constants";
 import {
@@ -339,7 +338,7 @@ describe("getMessageProof", () => {
     expect(readContract).toHaveBeenCalled();
   });
 
-  it("detects a viem RpcError range-limit rejection by code and falls back", async () => {
+  it("falls back to the bounded path on any full-range failure, even without range-limit wording", async () => {
     const client = mockClient(mainnetId);
     const l2Client = mockL2Client(lineaId);
     const messageSentLog = generateMessageSentLog({ blockNumber: l2BlockNumber });
@@ -359,14 +358,10 @@ describe("getMessageProof", () => {
       },
     ]);
 
-    // A genuine viem RpcError with code -32600 and a message that only the code branch should catch
-    // (no literal "exceeds limit"/"block range" wording), proving structural detection works.
-    const rpcError = new RpcError(new Error("rpc failed"), {
-      code: -32600,
-      shortMessage: "query exceeded the requested range window",
-    });
+    // An opaque provider error with no recognizable range/limit wording: the full-range query is a
+    // pure optimization, so ANY failure must still trigger the bounded fallback.
     (getContractEvents as jest.Mock<ReturnType<typeof getContractEvents>>)
-      .mockRejectedValueOnce(rpcError)
+      .mockRejectedValueOnce(new Error("Internal JSON-RPC error"))
       .mockResolvedValueOnce([
         generateL2MessagingBlockAnchoredLog(l2BlockNumber, {
           address: getContractsAddressesByChainId(mainnetId).messageService,
@@ -390,6 +385,7 @@ describe("getMessageProof", () => {
     const result = await getMessageProof(client, { l2Client, messageHash });
     expect(result).toEqual({ proof, root: merkleRoot, leafIndex });
     expect(getBlockNumber).toHaveBeenCalled();
+    expect(readContract).toHaveBeenCalled();
   });
 
   it("binary-searches a large chain and queries a <=10k window containing the finalization", async () => {
@@ -654,7 +650,7 @@ describe("getMessageProof", () => {
     await expect(getMessageProof(client, { l2Client, messageHash })).rejects.toThrow("getMessageSentEvents failed");
   });
 
-  it("propagates errors from getContractEvents", async () => {
+  it("surfaces the fallback error when the full-range query fails and the bounded path also fails", async () => {
     const client = mockClient(mainnetId);
     const l2Client = mockL2Client(lineaId);
     const messageSentLog = generateMessageSentLog({ blockNumber: l2BlockNumber });
@@ -673,8 +669,13 @@ describe("getMessageProof", () => {
         transactionHash: messageSentLog.transactionHash,
       },
     ]);
+    // Full-range query fails (optimization), and the bounded fallback then fails too: the real
+    // error from the fallback must surface rather than being swallowed.
     (getContractEvents as jest.Mock).mockRejectedValueOnce(new Error("getContractEvents failed"));
-    await expect(getMessageProof(client, { l2Client, messageHash })).rejects.toThrow("getContractEvents failed");
+    (getBlockNumber as jest.Mock).mockRejectedValue(new Error("HTTP request failed: 503 Service Unavailable"));
+    await expect(getMessageProof(client, { l2Client, messageHash })).rejects.toThrow(
+      "HTTP request failed: 503 Service Unavailable",
+    );
   });
 
   it("propagates errors from getTransactionReceipt", async () => {
@@ -903,36 +904,6 @@ describe("getMessageProof", () => {
     await expect(getMessageProof(client, { l2Client, messageHash })).rejects.toThrow(
       `Message with hash ${messageHash} not found.`,
     );
-  });
-});
-
-describe("isBlockRangeExceededError", () => {
-  it("matches provider range-limit message fragments", () => {
-    expect(isBlockRangeExceededError(new Error("range 0x0-0x1 exceeds limit of 10000"))).toBe(true);
-  });
-
-  it("matches a known range-limit code combined with range/limit wording", () => {
-    expect(isBlockRangeExceededError({ code: -32600, message: "the requested range is unavailable" })).toBe(true);
-  });
-
-  it("ignores a known code without range/limit wording", () => {
-    expect(isBlockRangeExceededError({ code: -32600, message: "invalid request" })).toBe(false);
-  });
-
-  it("ignores an unrelated numeric code", () => {
-    expect(isBlockRangeExceededError({ code: 999, message: "some failure" })).toBe(false);
-  });
-
-  it("ignores an object error without a code", () => {
-    expect(isBlockRangeExceededError({ message: "some failure" })).toBe(false);
-  });
-
-  it("ignores non-object error values in the chain", () => {
-    expect(isBlockRangeExceededError("just a string")).toBe(false);
-  });
-
-  it("ignores nullish errors", () => {
-    expect(isBlockRangeExceededError(undefined)).toBe(false);
   });
 });
 

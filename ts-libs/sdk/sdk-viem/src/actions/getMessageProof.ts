@@ -23,7 +23,6 @@ import {
   keccak256,
   parseEventLogs,
   ParseEventLogsErrorType,
-  RpcError,
   Transport,
   zeroHash,
 } from "viem";
@@ -215,77 +214,10 @@ const CURRENT_L2_BLOCK_NUMBER_ABI = [
   },
 ] as const;
 
-// Message fragments emitted by providers when an eth_getLogs block range is too large.
-// Kept lowercase; matched case-insensitively against the error chain.
-const BLOCK_RANGE_ERROR_PATTERNS = [
-  "exceeds limit", // Infura: "range [..] exceeds limit of [..]"
-  "block range", // QuickNode / generic: "limited to a X block range"
-  "range is too large",
-  "up to a", // Alchemy: "...up to a 10,000 block range..."
-  "query returned more than",
-  "logs matched by query exceeds",
-  "response size exceeded",
-];
-
-// JSON-RPC error codes providers reuse for oversized eth_getLogs ranges. viem's `buildRequest`
-// coerces these into typed RpcError subclasses while preserving the numeric `code`.
-const BLOCK_RANGE_ERROR_CODES = new Set<number>([
-  -32600, // Invalid request (Infura range-limit rejection)
-  -32602, // Invalid params (some providers, e.g. Alchemy)
-  -32005, // Limit exceeded (LimitExceededRpcError)
-]);
-
 // Conservative upper bound on the `eth_getLogs` block span accepted by rate-limited providers
 // (e.g. Infura rejects spans > 10,000 blocks). The fallback narrows the finalization to a window
 // no wider than this so it can be swept in a single allowed query.
 const MAX_GET_LOGS_BLOCK_RANGE = 10_000n;
-
-/**
- * Detects "block range too large" rejections returned by RPC providers that cap the
- * `eth_getLogs` block span (e.g. Infura's `range [..] exceeds limit of [..]`, code -32600).
- *
- * viem routes provider errors through `buildRequest`, wrapping them in `BaseError`/`RpcError`
- * subclasses that keep the JSON-RPC `code` and surface the provider message via `details`/`cause`.
- * This walks that chain and matches on either a known range-limit `code` (combined with
- * range/limit wording, since codes like -32600 are also used generically) or a provider message
- * fragment, so detection is robust across providers and error-wrapping depth.
- *
- * @param {unknown} error - The error thrown by a `getContractEvents`/`eth_getLogs` call.
- * @returns {boolean} `true` if the error indicates the requested block range was rejected.
- */
-// Exported for unit testing only; not re-exported from the package entrypoint (`src/index.ts`).
-export function isBlockRangeExceededError(error: unknown): boolean {
-  const chain: unknown[] = [];
-  if (error instanceof BaseError) {
-    // walk() visits this error and each `cause`; returning false collects the whole chain.
-    error.walk((err) => {
-      chain.push(err);
-      return false;
-    });
-  } else {
-    chain.push(error);
-  }
-
-  for (const node of chain) {
-    if (!node || typeof node !== "object") continue;
-    const candidate = node as { code?: unknown; message?: unknown; details?: unknown; shortMessage?: unknown };
-    const text = [candidate.message, candidate.details, candidate.shortMessage]
-      .filter((value): value is string => typeof value === "string")
-      .join(" ")
-      .toLowerCase();
-
-    if (BLOCK_RANGE_ERROR_PATTERNS.some((pattern) => text.includes(pattern))) {
-      return true;
-    }
-
-    const code = node instanceof RpcError ? node.code : typeof candidate.code === "number" ? candidate.code : undefined;
-    if (code !== undefined && BLOCK_RANGE_ERROR_CODES.has(code) && /range|limit|block/.test(text)) {
-      return true;
-    }
-  }
-
-  return false;
-}
 
 /**
  * Detects the specific viem error raised when a contract `eth_call` returns no data (`0x`),
@@ -380,9 +312,12 @@ async function findL1FinalizationRange<chain extends Chain | undefined, account 
  * Resolves the `L2MessagingBlockAnchored` event for `l2BlockNumber` on the settlement chain.
  *
  * Fast path: a single full-range (`earliest`..`latest`) query, ideal for providers that allow
- * large block ranges. If the provider rejects the range (see {@link isBlockRangeExceededError}),
- * it falls back to narrowing the finalization to a `<= MAX_GET_LOGS_BLOCK_RANGE` window via
- * {@link findL1FinalizationRange} and querying that single window.
+ * large block ranges. The full-range attempt is treated purely as an optimization: on *any*
+ * failure (a provider's `eth_getLogs` range-cap rejection — whose code/message varies across
+ * providers — or otherwise) it falls back to narrowing the finalization to a
+ * `<= MAX_GET_LOGS_BLOCK_RANGE` window via {@link findL1FinalizationRange} and querying that single
+ * window. The fallback is itself a correct lookup, so if the block is genuinely unreachable it
+ * surfaces the real error rather than relying on fragile error classification.
  *
  * @param {Client} client - The settlement-chain client.
  * @param {Object} args - The lookup arguments.
@@ -404,10 +339,10 @@ async function findL2MessagingBlockAnchoredEvent<chain extends Chain | undefined
       toBlock: "latest",
     });
     return event;
-  } catch (error) {
-    if (!isBlockRangeExceededError(error)) {
-      throw error;
-    }
+  } catch {
+    // The full-range query is an optimization for providers that allow large `eth_getLogs` spans.
+    // Any failure falls back to the bounded path below; provider range-cap rejections differ too
+    // much by code/message to classify reliably, and a genuinely fatal error will resurface there.
   }
 
   const finalizationRange = await findL1FinalizationRange(client, args);
