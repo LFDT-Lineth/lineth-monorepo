@@ -1,3 +1,7 @@
+# temporary CI resource-sampler artifacts (.github/scripts/ci-cgroup-stats.sh)
+resource-samples*.csv
+maru-it-resource-samples.zip
+
 *.bak
 *.swp
 *.tmp
