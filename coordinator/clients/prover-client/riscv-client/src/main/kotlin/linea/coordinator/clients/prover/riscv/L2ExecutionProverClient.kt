@@ -82,9 +82,6 @@ internal object L2ExecutionProofResponseDtoMapper : (
   }
 }
 
-typealias L2ExecutionProofTransport =
-  ProverProofTransport<L2ExecutionProofRequestDto, L2ExecutionProofResponseDto, BlockIntervalProofIndex>
-
 internal class L2ExecutionProofIndexProvider(
   private val hashFunction: HashFunction,
 ) : (L2ExecutionProofRequestV1) -> BlockIntervalProofIndex {
@@ -98,6 +95,9 @@ internal class L2ExecutionProofIndexProvider(
     )
   }
 }
+
+typealias L2ExecutionProofTransport =
+  ProverProofTransport<L2ExecutionProofRequestDto, L2ExecutionProofResponseDto, BlockIntervalProofIndex>
 
 /**
  * RISC-V execution prover client. The request/response transport is injected
