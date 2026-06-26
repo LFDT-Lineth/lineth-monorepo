@@ -32,21 +32,21 @@ BIN      := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
 # Sample fixture input used by exec/debug
 INPUT    ?= $(MAKEFILE_DIR)test/testdata/stateless_input.ssz
 
-LARGE_SSZ_DIR             ?= $(MAKEFILE_DIR).cache/large-ssz-fixtures
-LARGE_SSZ_GO_CACHE_DIR    ?= $(LARGE_SSZ_DIR)/go-build
-LARGE_SSZ_GO_MOD_DIR      ?= $(LARGE_SSZ_DIR)/go-mod
-STATELESS_EXECUTOR_REPO   ?= https://github.com/Gabriel-Trintinalia/stateless-executor
-STATELESS_EXECUTOR_DIR    ?= $(LARGE_SSZ_DIR)/stateless-executor
-ZKEVM_RUNNER              ?= $(STATELESS_EXECUTOR_DIR)/bin/zkevm-runner
-ZKEVM_FIXTURES_URL        ?= https://github.com/ethereum/execution-specs/releases/download/tests-zkevm@v0.4.1/fixtures_zkevm.tar.gz
-ZKEVM_FIXTURES_ARCHIVE    ?= $(LARGE_SSZ_DIR)/fixtures_zkevm.tar.gz
-ZKEVM_FIXTURES_DIR        ?= $(LARGE_SSZ_DIR)/fixtures
-ZKEVM_FIXTURES_SUITE      ?= blockchain_tests
-ZKEVM_FIXTURES_ROOT_FOLDER      ?= for_amsterdam
-ZKEVM_FIXTURES_TARGET_FOLDER    ?= amsterdam
-ZKEVM_FIXTURES_TARGET_DIR       ?= $(ZKEVM_FIXTURES_DIR)/$(ZKEVM_FIXTURES_SUITE)/$(ZKEVM_FIXTURES_ROOT_FOLDER)/$(ZKEVM_FIXTURES_TARGET_FOLDER)
-LARGE_SSZ_OUT_DIR               ?= $(LARGE_SSZ_DIR)/ssz/$(ZKEVM_FIXTURES_SUITE)/$(ZKEVM_FIXTURES_TARGET_FOLDER)
-LARGE_SSZ_LOG             ?= $(LARGE_SSZ_DIR)/zkevm-runner-dump.log
+LARGE_SSZ_DIR                ?= $(MAKEFILE_DIR).cache/large-ssz-fixtures
+LARGE_SSZ_GO_CACHE_DIR       ?= $(LARGE_SSZ_DIR)/go-build
+LARGE_SSZ_GO_MOD_DIR         ?= $(LARGE_SSZ_DIR)/go-mod
+STATELESS_EXECUTOR_REPO      ?= https://github.com/Gabriel-Trintinalia/stateless-executor
+STATELESS_EXECUTOR_DIR       ?= $(LARGE_SSZ_DIR)/stateless-executor
+ZKEVM_RUNNER                 ?= $(STATELESS_EXECUTOR_DIR)/bin/zkevm-runner
+ZKEVM_FIXTURES_URL           ?= https://github.com/ethereum/execution-specs/releases/download/tests-zkevm@v0.4.1/fixtures_zkevm.tar.gz
+ZKEVM_FIXTURES_ARCHIVE       ?= $(LARGE_SSZ_DIR)/fixtures_zkevm.tar.gz
+ZKEVM_FIXTURES_DIR           ?= $(LARGE_SSZ_DIR)/fixtures
+ZKEVM_FIXTURES_SUITE         ?= blockchain_tests
+ZKEVM_FIXTURES_ROOT_FOLDER   ?= for_amsterdam
+ZKEVM_FIXTURES_TARGET_FOLDER ?= amsterdam
+ZKEVM_FIXTURES_TARGET_DIR    ?= $(ZKEVM_FIXTURES_DIR)/$(ZKEVM_FIXTURES_SUITE)/$(ZKEVM_FIXTURES_ROOT_FOLDER)/$(ZKEVM_FIXTURES_TARGET_FOLDER)
+LARGE_SSZ_OUT_DIR            ?= $(LARGE_SSZ_DIR)/ssz/$(ZKEVM_FIXTURES_SUITE)/$(ZKEVM_FIXTURES_TARGET_FOLDER)
+LARGE_SSZ_LOG                ?= $(LARGE_SSZ_DIR)/zkevm-runner-dump.log
 
 # Flags forwarded to `zkc exec` by exec. Default -q (quiet: suppress the guest's per-instruction
 # printf). Override to pick the execution backend — e.g. "--quiet --gogen --fast" runs the guest via
@@ -81,7 +81,7 @@ spec-test: linker-script
 # The archive stores each test case as JSON with one or more blocks[] entries.
 # zkevm-runner --dump-dir writes one .bin input per block from statelessInputBytes.
 # The final step renames those .bin files to .ssz for clarity.
-large-ssz-fixtures:
+gen-large-ssz-fixtures:
 	@mkdir -p "$(LARGE_SSZ_DIR)" "$(LARGE_SSZ_OUT_DIR)"
 	@[ -d "$(STATELESS_EXECUTOR_DIR)/.git" ] || git clone --depth=1 "$(STATELESS_EXECUTOR_REPO)" "$(STATELESS_EXECUTOR_DIR)"
 	@cd "$(STATELESS_EXECUTOR_DIR)" && GOCACHE="$(LARGE_SSZ_GO_CACHE_DIR)" GOMODCACHE="$(LARGE_SSZ_GO_MOD_DIR)" $(GO) build -o bin/zesu-convert ./cmd/zesu-convert
