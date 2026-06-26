@@ -17,20 +17,35 @@ pub fn zeroDigest() Digest {
     return zeroArray(block_size);
 }
 
-pub fn compress(left: Digest, right: Digest) Digest {
+// In-place Merkle–Damgård compression: `state := compress(state, right)`.
+//
+// Both inputs are taken by pointer and the feed-forward result is written back
+// through `state`, so the hot path (`MDHasher`) never copies a digest into or
+// out of `compress` (no by-value arguments and return value). `state`
+// is read into the local permutation buffer before it is overwritten, so it is
+// fine for `state` to be the running hash; `right` must not alias `state`.
+pub fn compressInPlace(state: *Digest, right: *const Digest) void {
     profiling.poseidon2Compress();
     // `align(8)` matches `zkvm_bytes_64`, letting `permutationAccel16` reinterpret
     // this buffer in place (see there). The array assignments lower to word stores,
     // unlike `@memcpy` on byte buffers which `ReleaseSmall` turns into a byte loop.
-    var state: [16]field.Element align(8) = undefined;
-    state[0..block_size].* = left;
-    state[block_size..].* = right;
-
-    var out = right;
-    permutation(16, &state);
-    for (&out, state[block_size..]) |*dst, state_limb| {
-        dst.* = dst.add(state_limb);
+    var buf: [16]field.Element align(8) = undefined;
+    // Element-wise copies lower to word loads/stores; `.* =` on the right half
+    // otherwise regresses to a byte-wise `memcpy` under `ReleaseSmall`.
+    inline for (0..block_size) |i| {
+        buf[i] = state[i];
+        buf[block_size + i] = right[i];
     }
+
+    permutation(16, &buf);
+    for (state, right, buf[block_size..]) |*dst, r, perm| {
+        dst.* = r.add(perm);
+    }
+}
+
+pub fn compress(left: Digest, right: Digest) Digest {
+    var out = left;
+    compressInPlace(&out, &right);
     return out;
 }
 
@@ -65,7 +80,7 @@ pub const MDHasher = struct {
         self.buffer[self.buffer_len] = value;
         self.buffer_len += 1;
         if (self.buffer_len == block_size) {
-            self.state = compress(self.state, self.buffer);
+            compressInPlace(&self.state, &self.buffer);
             self.buffer_len = 0;
         }
     }
@@ -89,7 +104,7 @@ pub const MDHasher = struct {
             var block: Digest = zeroArray(block_size);
             // Match prover-ray MDHasher: partial blocks are zero-left-padded.
             @memcpy(block[block_size - self.buffer_len ..], self.buffer[0..self.buffer_len]);
-            self.state = compress(self.state, block);
+            compressInPlace(&self.state, &block);
             self.buffer_len = 0;
         }
         return self.state;
