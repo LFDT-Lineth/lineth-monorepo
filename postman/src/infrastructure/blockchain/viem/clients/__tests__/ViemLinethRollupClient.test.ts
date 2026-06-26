@@ -161,7 +161,7 @@ describe("ViemLinethRollupClient", () => {
         expect.objectContaining({
           l2Client: l2PublicClient,
           messageHash: TEST_MESSAGE_HASH,
-          linethRollupAddress: TEST_CONTRACT_ADDRESS_1,
+          lineaRollupAddress: TEST_CONTRACT_ADDRESS_1,
           l2MessageServiceAddress: TEST_CONTRACT_ADDRESS_2,
         }),
       );
@@ -206,7 +206,7 @@ describe("ViemLinethRollupClient", () => {
         walletClient,
         expect.objectContaining({
           messageNonce: testMessageSentEvent.messageNonce,
-          linethRollupAddress: TEST_CONTRACT_ADDRESS_1,
+          lineaRollupAddress: TEST_CONTRACT_ADDRESS_1,
         }),
       );
     });
@@ -230,7 +230,7 @@ describe("ViemLinethRollupClient", () => {
       expect(claimOnL1).toHaveBeenCalledWith(
         walletClient,
         expect.objectContaining({
-          linethRollupAddress: TEST_CONTRACT_ADDRESS_1,
+          lineaRollupAddress: TEST_CONTRACT_ADDRESS_1,
           maxFeePerGas: 1000n,
           maxPriorityFeePerGas: 100n,
         }),
@@ -271,7 +271,7 @@ describe("ViemLinethRollupClient", () => {
       expect(claimOnL1).toHaveBeenCalledWith(
         walletClient,
         expect.objectContaining({
-          linethRollupAddress: TEST_CLAIM_VIA_ADDRESS,
+          lineaRollupAddress: TEST_CLAIM_VIA_ADDRESS,
         }),
       );
     });
