@@ -246,8 +246,6 @@ data class RollupProofDto(
   val filteredAddresses: List<String>,
 )
 
-typealias RollupAggregationPublicInputsDto = RollupProofPublicInputsDto
-
 data class FileBasedRollupAggregationProofRequestParamsDto(
   val rollupProofs: List<RollupProofDto>,
 )
@@ -273,7 +271,7 @@ data class RollupAggregationProofResponseDto(
   val proverVersion: String? = null,
   val startBlockNumber: Long,
   val proof: String,
-  val publicInputs: RollupAggregationPublicInputsDto,
+  val publicInputs: RollupProofPublicInputsDto,
   val l2L1Roots: List<String>,
   val filteredAddresses: List<String>,
   val l2MessagingBlocksOffsets: List<Long>,
