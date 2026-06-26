@@ -133,9 +133,11 @@ task integrationTest(type: Test) {
   //    stretch a pause's wall-clock enough to make Maru's 1 s slot timer miss a slot (flaky 2 s block-time
   //    gaps). Capping the heap keeps collections small. 1.5 GB = node working set + headroom, not host-derived.
   // 2. Parallelism. One class per JVM (forkEvery = 1) + same_thread (these node tests aren't concurrency-safe
-  //    in one JVM: shared metrics registry, etc.). Each ~4-node cluster needs ~2 cores or its 1 s block
-  //    production / cluster startup starves (measured: 4 forks on 8 cores stable, 6 on 8 flakes) — i.e. ~nCpu/2,
-  //    capped at 6 (the makespan knee = total test time / longest class).
+  //    in one JVM: shared metrics registry, etc.). In steady state the nodes are wait-bound (~1 block/s, low
+  //    CPU) so cores aren't the steady-state constraint; the pressure is at STARTUP — cold JVM + Besu bring-up
+  //    is CPU-heavy (JIT, class loading, node init) and happens once per class, so when too many forks start
+  //    at once those bursts collide and a cluster can miss its init timeout. Empirically ~nCpu/2 forks is the
+  //    headroom that avoids it (4 forks on 8 cores stable, 6 flakes), capped at 6 (makespan knee = total/longest).
   maxHeapSize = "1536m"
   maxParallelForks = Math.min(6, Math.max(2, Runtime.runtime.availableProcessors().intdiv(2)))
   forkEvery = 1
