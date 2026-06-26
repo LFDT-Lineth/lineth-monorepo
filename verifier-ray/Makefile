@@ -32,6 +32,8 @@ INPUT_FILE ?= $(PASSING_INPUT_FILE)
 NATIVE_INPUT_FILE := zig-out/input.bin
 IN_BYTES_FILE ?= zig-out/input.hex
 
+DISABLE_ACCELERATORS ?= false
+
 ci: fmt build-release run-passing run-failing-expected test zkc-verify-passing zkc-verify-failing-expected
 
 help:
@@ -67,7 +69,10 @@ help:
 		'  EMBEDDED_SPEC         Embedded fixture index, default 0' \
 		'' \
 		'zkc variables:' \
-		'  IN_ORIGIN            Input bytes address, default 0x08800000'
+		'  IN_ORIGIN             Input bytes address, default 0x08800000' \
+		'' \
+		'R5 build variables:' \
+		'  DISABLE_ACCELERATORS  Disable Lineth zkVM accelerator wrappers (for compatibility testing), default false' \
 
 fmt: fmt-zig fmt-go
 
