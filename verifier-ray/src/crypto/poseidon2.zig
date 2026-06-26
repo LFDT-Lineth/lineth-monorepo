@@ -86,7 +86,17 @@ pub const MDHasher = struct {
     }
 
     pub fn writeElements(self: *MDHasher, values: []const field.Element) void {
-        for (values) |value| {
+        var rest = values;
+        // Fast path: when the buffer is empty, compress full blocks straight from
+        // the input. This skips the per-element buffering branch and the
+        // out-of-line `writeElement` call (8 of each per compression otherwise).
+        if (self.buffer_len == 0) {
+            while (rest.len >= block_size) {
+                compressInPlace(&self.state, rest[0..block_size]);
+                rest = rest[block_size..];
+            }
+        }
+        for (rest) |value| {
             self.writeElement(value);
         }
     }
