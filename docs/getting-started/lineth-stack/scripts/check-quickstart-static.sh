@@ -1148,6 +1148,7 @@ check_smoke_and_traffic_scripts() {
   fi
 
   if grep -q 'mode                          ' "$STACK/scripts/internal/quickstart-preflight.ts" \
+    && ! grep -q 'lineth_kv "mode" "Sepolia"' "$STACK/scripts/start.sh" \
     && grep -q 'local dev mode; Sepolia gas/blob gates skipped' "$STACK/scripts/internal/quickstart-preflight.ts" \
     && grep -q 'gas                           execution' "$STACK/scripts/internal/quickstart-preflight.ts" \
     && grep -q 'blob fee                      blob base' "$STACK/scripts/internal/quickstart-preflight.ts" \
@@ -1232,6 +1233,24 @@ check_smoke_and_traffic_scripts() {
     pass "start.sh waits for local L1 EL, CL, and block production before preflight"
   else
     fail "start.sh must wait for local L1 EL, CL, and advancing eth_blockNumber before preflight"
+  fi
+
+  if [ -f "$STACK/scripts/internal/deploy-rpc-error.ts" ] \
+    && grep -q 'formatQuickstartDeployRpcError' "$STACK/scripts/internal/deployBridgedTokenAndTokenBridgeV1_1.ts" \
+    && grep -q 'require("/scripts/internal/deploy-rpc-error")' "$STACK/scripts/internal/deployBridgedTokenAndTokenBridgeV1_1.ts" \
+    && grep -q './scripts/internal:/scripts/internal:ro' "$STACK/docker-compose.yml" \
+    && ! grep -q 'deploy-rpc-error.ts:/workspace/contracts/local-deployments-artifacts' "$STACK/docker-compose.yml" \
+    && grep -q 'free or overloaded Sepolia RPC endpoint' "$STACK/scripts/internal/deploy-rpc-error.ts" \
+    && grep -q 'explain_l1_rpc_submission_error "$logfile"' "$STACK/scripts/phases/04-deploy-contracts.sh" \
+    && grep -q 'L1 contract deployment hit an RPC submission error from L1_RPC_URL' "$STACK/scripts/phases/04-deploy-contracts.sh" \
+    && grep -q 'could not coalesce error' "$STACK/scripts/watch.sh" \
+    && grep -q 'already known' "$STACK/scripts/status.sh" \
+    && grep -q 'L1_RPC_URL' "$STACK/scripts/internal/deploy-rpc-error.ts" \
+    && grep -q './scripts/reset.sh' "$STACK/scripts/internal/deploy-rpc-error.ts" \
+    && grep -q 'assert.doesNotMatch(formatted.message' "$STACK/scripts/internal/deploy-rpc-error.test.ts"; then
+    pass "deploy TokenBridge surfaces actionable Sepolia RPC submission guidance without echoing raw tx payloads"
+  else
+    fail "deploy TokenBridge must turn noisy Sepolia RPC submission errors into actionable L1_RPC_URL guidance"
   fi
 
   if grep -q 'HOST_PORT_L1_RPC' "$STACK/scripts/check-ports.sh" \
