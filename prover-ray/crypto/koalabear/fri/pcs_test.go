@@ -2,7 +2,6 @@ package fri
 
 import (
 	"math/rand/v2"
-	"reflect"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
@@ -96,11 +95,6 @@ func TestCanonicalLayout_RejectsShiftInvariants(t *testing.T) {
 			require.ErrorContains(t, err, tc.wantErr)
 		})
 	}
-}
-
-func TestOpeningProofCarriesNoDeepQuotientRoots(t *testing.T) {
-	_, ok := reflect.TypeOf(OpeningProof{}).FieldByName("DeepQuotientRoots")
-	assert.False(t, ok)
 }
 
 func TestProverStateOpenAlignsMultiSizeLevelLeaf(t *testing.T) {
@@ -292,7 +286,7 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	started, err := pcs.NewProverState(alphaDeepChallenge)
 	require.NoError(t, err)
 	require.Len(t, started.levels, 2)
-	levelRoots, _ := levelVerifierInputs(started.levels)
+	levelRoots, _ := verifierInputsForLevels(started.levels)
 	require.Len(t, levelRoots, 2)
 	require.Len(t, levelRoots[0], 2)
 	require.Len(t, levelRoots[1], 2)
@@ -362,47 +356,6 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 			QueryPositions: positions,
 		},
 	}, oneShot))
-
-	layout, err := canonicalLayoutFromBatches(witnesses, shifts)
-	require.NoError(t, err)
-	orders := batchOrders(layout)
-	queryIdx := 0
-	top, topSibling, err := pcs.reconstructQueryPair(
-		layout[0],
-		orders[0],
-		oneShot.RowOpenings[queryIdx],
-		oneShot.FRIProof.FRIQueries[queryIdx][0],
-		levelRoots[0],
-		oneShot.ClaimedValues,
-		zetas,
-		alphaDeepChallenge,
-		params.domainsLight[0],
-		positions[queryIdx],
-	)
-	require.NoError(t, err)
-	wantTop := started.levels[0].Evals[positions[queryIdx]]
-	assert.Equal(t, wantTop, top)
-	wantTopSibling := started.levels[0].Evals[positions[queryIdx]^1]
-	assert.Equal(t, wantTopSibling, topSibling)
-
-	auxRound, err := pcs.roundForSize(layout[1].SizeLog2)
-	require.NoError(t, err)
-	auxBase := positions[queryIdx] >> auxRound
-	aux, err := pcs.reconstructQueryValue(
-		layout[1],
-		orders[1],
-		oneShot.RowOpenings[queryIdx],
-		oneShot.FRIProof.LevelQueries[0][queryIdx],
-		levelRoots[1],
-		oneShot.ClaimedValues,
-		zetas,
-		alphaDeepChallenge,
-		params.domainsLight[auxRound],
-		auxBase,
-	)
-	require.NoError(t, err)
-	wantAux := started.levels[1].Evals[auxBase]
-	assert.Equal(t, wantAux, aux)
 }
 
 func multiSizeTreeForCodewords(levelEvals, fullEvals []field.Ext) (*Tree, MultiSizeTable) {

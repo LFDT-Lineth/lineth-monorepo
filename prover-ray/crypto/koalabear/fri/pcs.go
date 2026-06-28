@@ -104,37 +104,13 @@
 //   - (i)   per-size reset.
 //   - (ii)  per-column batching, all shifts of a column sharing one alpha_DEEP power.
 //   - (iii) empty shift list is an error (every committed row is
-//     opened at least once). OPEN QUESTION 1 below.
+//     opened at least once).
 //   - (iv)  duplicate shifts inside a row's shift list is an error.
 //   - (v)   no cross-batch dedup; caller is responsible.
 //   - (vi)  caller picks batch order. Convention: setup batches at
 //     the front, AIR-quotient batch at the back, witness rounds
 //     in between -- though the PCS itself doesn't care, only
 //     that prover and verifier agree on the order.
-//
-// =============================================================================
-// Open questions for review
-// =============================================================================
-//
-//  1. Empty shift lists. Loom rejects them; should this PCS too? An
-//     empty shift list means "committed but not opened" -- the row's
-//     value is still authenticated by the Merkle path, but it doesn't
-//     contribute to the virtual quotient. Allowing this is more flexible
-//     but adds a dead-code-detection failure mode (typos in the shift
-//     schedule become silent commitments). Default proposal: REJECT
-//     empty shift lists, matching loom.
-//
-//  2. Where does the canonical-name -> (batchIdx, sizeLog2, rowIdx, isExt)
-//     mapping live? Caller-side, per the precedent set by loom (the PCS
-//     doesn't know column names). Worth documenting an example caller
-//     that builds this mapping at compile time.
-//
-//  3. Encoders + Params relationship. [NewPCS] currently takes both. We
-//     could derive one set of encoders from Params (since Params knows
-//     rate = N / D and the size schedule), but encoders also carry FFT
-//     domains which Params already precomputes. Default proposal: take
-//     both; document that pcs.Encoders[i] must have PlainTextSize =
-//     2^i and inverse rate == pcs.Params.N / pcs.Params.D.
 package fri
 
 import (
@@ -247,8 +223,7 @@ type SizedShape struct {
 //
 // A shift s is the integer such that the row is opened at zeta *
 // omega_N^s, where omega_N is the generator of the size-N = 2^i
-// domain. Shift lists must be non-empty (open question 1) and contain
-// no duplicates.
+// domain. Shift lists must be non-empty and contain no duplicates.
 type BatchShifts []SizedShifts
 
 // SizedShifts is the per-row shift schedule for one SizedTable. The
@@ -432,9 +407,7 @@ type quotientClaim struct {
 }
 
 type quotientColumn struct {
-	// AlphaPower is copied from the canonical layout's deepEntry.AlphaPower. It
-	// is explicit here so reconstruction does not silently depend on the caller
-	// passing columns in canonical order.
+	// AlphaPower is assigned in flattened per-level column order.
 	AlphaPower int
 	Evals      []field.Ext // Evals over the codeword domain
 	Claims     []quotientClaim
@@ -514,21 +487,19 @@ func powers(x field.Ext, length int) []field.Ext {
 // OpeningProof
 // =============================================================================
 
-// OpeningProof bundles everything Verify needs to check that every
-// polynomial in every committed Batch evaluates to the listed values
-// at zeta and at the rotation shifts in BatchShifts.
+// OpeningProof bundles everything PCS verification needs to check the claimed
+// evaluations against the committed batches and the underlying FRI proof.
 type OpeningProof struct {
 	// ClaimedValues[b] mirrors shifts[b] exactly. The outer protocol
-	// reads these to evaluate its constraints at zeta and to bind into the
-	// alpha_DEEP transcript challenge.
+	// reads these to evaluate its constraints at that opening's zeta and to bind
+	// them into the alpha_DEEP transcript challenge.
 	ClaimedValues []BatchClaimedValues
 
 	// RowOpenings[k][b][i] contains the opened encoded row for query k, batch b, size 2^i.
 	RowOpenings []QueryRowOpenings
 
-	// FRIProof is the underlying multi-degree FRI proof. Already
-	// verifiable on its own (via [Verify]) under the same fold
-	// challenges and query positions the PCS used.
+	// FRIProof is checked through PCS verification, which reconstructs virtual
+	// level values from ClaimedValues and RowOpenings.
 	FRIProof Proof
 }
 
@@ -914,19 +885,6 @@ func (pcs *PCS) claimsForBatchEntry(
 		claims[i] = quotientClaim{Point: point, Value: values[i]}
 	}
 	return claims, nil
-}
-
-func levelVerifierInputs(levels []Level) ([]QueryLayerRoots, []int) {
-	roots := make([]QueryLayerRoots, len(levels))
-	degrees := make([]int, len(levels))
-	for i := range levels {
-		roots[i] = make(QueryLayerRoots, len(levels[i].Trees))
-		for j, tree := range levels[i].Trees {
-			roots[i][j] = tree.Root()
-		}
-		degrees[i] = levels[i].D
-	}
-	return roots, degrees
 }
 
 func (pcs *PCS) openedRows(queryPositions []int) []QueryRowOpenings {
@@ -1365,18 +1323,3 @@ func rowOpeningMatchesShape(row RowOpening, shape SizedShape) bool {
 // Reason: verification is more linear than proving, so the one-shot pcs.Verify
 // is sufficient. If a use case emerges for a coin-fed verifier (e.g.
 // incremental verification), add it then.
-
-// =============================================================================
-// What's left untouched
-// =============================================================================
-//
-// - [Commit], [MultiSizeTable], [SizedTable], [CommitterState],
-//   [Tree], [Branch], [Params], [RSEncoder], [Proof], [ProverState]
-//   are all reused as-is. The PCS layer doesn't replace any of them;
-//   it sits on top.
-//
-// - [Verify] (the package-level FRI Verify) remains the multi-degree
-//   FRI verifier and is called from pcs.Verify as one of its steps.
-//
-// - The transcript is the caller's. We never import a Fiat-Shamir
-//   package from this file.
