@@ -374,12 +374,12 @@ func verifyWithValues(p Params, levelRoots []QueryLayerRoots, levelDs []int, prf
 		levelRootsExtra = levelRoots[1:]
 	}
 
-	return verifyExt(p, levelRoots, levelRootsExtra, levelAtRound, roots, prf, alphas, openedPositions, values)
+	return verifyExt(p, levelRootsExtra, levelAtRound, roots, prf, alphas, openedPositions, values)
 }
 
 func verifyExt(
 	p Params,
-	levelRoots, levelRootsExtra []QueryLayerRoots,
+	levelRootsExtra []QueryLayerRoots,
 	levelAtRound map[int]int,
 	roots []QueryLayerRoots,
 	prf Proof,
@@ -388,8 +388,7 @@ func verifyExt(
 	values queryValueProvider,
 ) error {
 
-	numLevels := len(levelRoots)
-	numExtraLevels := numLevels - 1
+	numExtraLevels := len(levelRootsExtra)
 
 	for k := range p.NumQueries {
 
