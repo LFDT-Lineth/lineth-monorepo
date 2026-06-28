@@ -93,10 +93,15 @@ open class GenericRiscVProverClient<Request, Response, RequestDto, ResponseDto, 
         } else {
           responsesWaiting.incrementAndGet()
           createProofRequest(proofRequest)
-            .thenCompose { transport.awaitResponse(proofIndex) }
+            .thenCompose {
+              transport.awaitResponse(proofIndex)
+            }
             .thenApply { responseDto ->
               responsesWaiting.decrementAndGet()
               parseResponse(responseDto)
+            }
+            .whenException {
+              responsesWaiting.decrementAndGet()
             }
         }
       }

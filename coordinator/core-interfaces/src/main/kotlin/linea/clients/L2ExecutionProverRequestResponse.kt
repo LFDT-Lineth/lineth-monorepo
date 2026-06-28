@@ -286,8 +286,9 @@ data class L2ExecutionProofPublicInputs(
   val endL1L2BridgeRollingHashMessageNumber: ULong,
   val dynamicChainConfigHash: ByteArray,
   val parentFtxRollingHash: ByteArray,
-  val endFtxRollingHash: ByteArray,
   val parentFtxNumber: ULong,
+  val endFtxRollingHash: ByteArray,
+  val endFtxNumber: ULong,
   val filteredAddressesHash: ByteArray,
   val txFromsHash: ByteArray,
 ) {
@@ -308,8 +309,9 @@ data class L2ExecutionProofPublicInputs(
     if (endL1L2BridgeRollingHashMessageNumber != other.endL1L2BridgeRollingHashMessageNumber) return false
     if (!dynamicChainConfigHash.contentEquals(other.dynamicChainConfigHash)) return false
     if (!parentFtxRollingHash.contentEquals(other.parentFtxRollingHash)) return false
-    if (!endFtxRollingHash.contentEquals(other.endFtxRollingHash)) return false
     if (parentFtxNumber != other.parentFtxNumber) return false
+    if (!endFtxRollingHash.contentEquals(other.endFtxRollingHash)) return false
+    if (endFtxNumber != other.endFtxNumber) return false
     if (!filteredAddressesHash.contentEquals(other.filteredAddressesHash)) return false
     if (!txFromsHash.contentEquals(other.txFromsHash)) return false
 
@@ -328,8 +330,9 @@ data class L2ExecutionProofPublicInputs(
     result = 31 * result + endL1L2BridgeRollingHashMessageNumber.hashCode()
     result = 31 * result + dynamicChainConfigHash.contentHashCode()
     result = 31 * result + parentFtxRollingHash.contentHashCode()
-    result = 31 * result + endFtxRollingHash.contentHashCode()
     result = 31 * result + parentFtxNumber.hashCode()
+    result = 31 * result + endFtxRollingHash.contentHashCode()
+    result = 31 * result + endFtxNumber.hashCode()
     result = 31 * result + filteredAddressesHash.contentHashCode()
     result = 31 * result + txFromsHash.contentHashCode()
     return result

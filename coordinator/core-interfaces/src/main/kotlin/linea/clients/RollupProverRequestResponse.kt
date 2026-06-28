@@ -104,8 +104,7 @@ data class RollupProofPublicInputs(
   val dynamicChainConfigHash: ByteArray,
   val parentFtxNumber: ULong,
   val parentFtxRollingHash: ByteArray,
-  // TODO: confirm if endFtxNumber is necessary.
-  // val endFtxNumber: ULong,
+  val endFtxNumber: ULong,
   val endFtxRollingHash: ByteArray,
   val filteredAddressesHash: ByteArray,
   val parentShnarf: ByteArray,
@@ -126,8 +125,9 @@ data class RollupProofPublicInputs(
     if (endL1L2BridgeMessageNumber != other.endL1L2BridgeMessageNumber) return false
     if (!dynamicChainConfigHash.contentEquals(other.dynamicChainConfigHash)) return false
     if (!parentFtxRollingHash.contentEquals(other.parentFtxRollingHash)) return false
-    if (!endFtxRollingHash.contentEquals(other.endFtxRollingHash)) return false
     if (parentFtxNumber != other.parentFtxNumber) return false
+    if (!endFtxRollingHash.contentEquals(other.endFtxRollingHash)) return false
+    if (endFtxNumber != other.endFtxNumber) return false
     if (!filteredAddressesHash.contentEquals(other.filteredAddressesHash)) return false
     if (!parentShnarf.contentEquals(other.parentShnarf)) return false
     if (!endShnarf.contentEquals(other.endShnarf)) return false
@@ -145,8 +145,9 @@ data class RollupProofPublicInputs(
     result = 31 * result + endL1L2BridgeMessageNumber.hashCode()
     result = 31 * result + dynamicChainConfigHash.contentHashCode()
     result = 31 * result + parentFtxRollingHash.contentHashCode()
-    result = 31 * result + endFtxRollingHash.contentHashCode()
     result = 31 * result + parentFtxNumber.hashCode()
+    result = 31 * result + endFtxRollingHash.contentHashCode()
+    result = 31 * result + endFtxNumber.hashCode()
     result = 31 * result + filteredAddressesHash.contentHashCode()
     result = 31 * result + parentShnarf.contentHashCode()
     result = 31 * result + endShnarf.contentHashCode()

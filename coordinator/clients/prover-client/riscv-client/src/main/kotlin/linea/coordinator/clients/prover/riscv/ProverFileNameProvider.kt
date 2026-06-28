@@ -23,7 +23,7 @@ object L2ExecutionProofFileNameProvider : ProverFileNameProvider<BlockIntervalPr
 object RollupProofFileNameProvider : ProverFileNameProvider<BlockIntervalProofIndex> {
   override fun getFileName(proofIndex: BlockIntervalProofIndex): String {
     val requestHashString = encodeHash(proofIndex.hash)
-    return "${proofIndex.startBlockNumber}-${proofIndex.endBlockNumber}-" +
+    return "${proofIndex.startBlockNumber}-${proofIndex.endBlockNumber}" +
       "-$requestHashString-${FileNameSuffixes.ROLLUP_PROOF_SUFFIX}"
   }
 }

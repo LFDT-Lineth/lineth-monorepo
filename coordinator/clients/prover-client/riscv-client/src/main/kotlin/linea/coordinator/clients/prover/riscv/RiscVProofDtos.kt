@@ -25,7 +25,7 @@ import kotlin.time.Instant
  * The DTO <-> domain mapping lives in `RiscVProofDtos.kt`.
  */
 
-/** The 15-field PI tuple emitted by a l2-execution proof (rollup_spec §2.1). */
+/** The 16-field PI tuple emitted by a l2-execution proof (rollup_spec §2.1). */
 data class L2ExecutionProofPublicInputsDto(
   val parentBlockHash: String,
   val endBlockHash: String,
@@ -38,13 +38,14 @@ data class L2ExecutionProofPublicInputsDto(
   val endL1L2BridgeRollingHashMessageNumber: Long,
   val dynamicChainConfigHash: String,
   val parentFtxRollingHash: String,
+  val parentProcessedFtxNumber: Long,
   val endFtxRollingHash: String,
-  val lastProcessedFtxNumber: Long,
+  val endProcessedFtxNumber: Long,
   val filteredAddressesHash: String,
   val txFromsHash: String,
 )
 
-/** The 14-field PI tuple emitted by a rollup / rollup-aggregation proof (rollup_spec §2.4). */
+/** The 15-field PI tuple emitted by a rollup / rollup-aggregation proof (rollup_spec §2.4). */
 data class RollupProofPublicInputsDto(
   val endBlockNumber: Long,
   val endBlockTimestamp: Long,
@@ -55,8 +56,9 @@ data class RollupProofPublicInputsDto(
   val endL1L2BridgeRollingHashMessageNumber: Long,
   val dynamicChainConfigHash: String,
   val parentFtxRollingHash: String,
+  val parentProcessedFtxNumber: Long,
   val endFtxRollingHash: String,
-  val lastProcessedFtxNumber: Long,
+  val endProcessedFtxNumber: Long,
   val filteredAddressesHash: String,
   val parentShnarf: String,
   val endShnarf: String,
@@ -294,8 +296,9 @@ internal fun L2ExecutionProofPublicInputsDto.toDomainObject(): L2ExecutionProofP
     endL1L2BridgeRollingHashMessageNumber = endL1L2BridgeRollingHashMessageNumber.toULong(),
     dynamicChainConfigHash = dynamicChainConfigHash.decodeHex(),
     parentFtxRollingHash = parentFtxRollingHash.decodeHex(),
+    parentFtxNumber = parentProcessedFtxNumber.toULong(),
     endFtxRollingHash = endFtxRollingHash.decodeHex(),
-    parentFtxNumber = lastProcessedFtxNumber.toULong(),
+    endFtxNumber = endProcessedFtxNumber.toULong(),
     filteredAddressesHash = filteredAddressesHash.decodeHex(),
     txFromsHash = txFromsHash.decodeHex(),
   )
@@ -314,8 +317,9 @@ internal fun L2ExecutionProofPublicInputs.fromDomainObject(): L2ExecutionProofPu
     endL1L2BridgeRollingHashMessageNumber = endL1L2BridgeRollingHashMessageNumber.toLong(),
     dynamicChainConfigHash = dynamicChainConfigHash.encodeHex(),
     parentFtxRollingHash = parentFtxRollingHash.encodeHex(),
+    parentProcessedFtxNumber = parentFtxNumber.toLong(),
     endFtxRollingHash = endFtxRollingHash.encodeHex(),
-    lastProcessedFtxNumber = parentFtxNumber.toLong(),
+    endProcessedFtxNumber = endFtxNumber.toLong(),
     filteredAddressesHash = filteredAddressesHash.encodeHex(),
     txFromsHash = txFromsHash.encodeHex(),
   )
@@ -382,7 +386,7 @@ internal fun ForcedTransaction.fromDomainObject(): ForcedTransactionDto {
 }
 
 /**
- * Maps the RISC-V 14-field PI tuple DTO onto its domain twin. Shared by the rollup and rollup-aggregation response
+ * Maps the RISC-V 15-field PI tuple DTO onto its domain twin. Shared by the rollup and rollup-aggregation response
  * mappers since both emit the same tuple (rollup_spec §2.4). Field names and types are identical, so it is a straight
  * field copy.
  */
@@ -397,8 +401,9 @@ internal fun RollupProofPublicInputsDto.toDomainObject(): RollupProofPublicInput
     endL1L2BridgeMessageNumber = endL1L2BridgeRollingHashMessageNumber.toULong(),
     dynamicChainConfigHash = dynamicChainConfigHash.decodeHex(),
     parentFtxRollingHash = parentFtxRollingHash.decodeHex(),
+    parentFtxNumber = parentProcessedFtxNumber.toULong(),
     endFtxRollingHash = endFtxRollingHash.decodeHex(),
-    parentFtxNumber = lastProcessedFtxNumber.toULong(),
+    endFtxNumber = endProcessedFtxNumber.toULong(),
     filteredAddressesHash = filteredAddressesHash.decodeHex(),
     parentShnarf = parentShnarf.decodeHex(),
     endShnarf = endShnarf.decodeHex(),
@@ -416,8 +421,9 @@ internal fun RollupProofPublicInputs.fromDomainObject(): RollupProofPublicInputs
     endL1L2BridgeRollingHashMessageNumber = endL1L2BridgeMessageNumber.toLong(),
     dynamicChainConfigHash = dynamicChainConfigHash.encodeHex(),
     parentFtxRollingHash = parentFtxRollingHash.encodeHex(),
+    parentProcessedFtxNumber = parentFtxNumber.toLong(),
     endFtxRollingHash = endFtxRollingHash.encodeHex(),
-    lastProcessedFtxNumber = parentFtxNumber.toLong(),
+    endProcessedFtxNumber = endFtxNumber.toLong(),
     filteredAddressesHash = filteredAddressesHash.encodeHex(),
     parentShnarf = parentShnarf.encodeHex(),
     endShnarf = endShnarf.encodeHex(),
