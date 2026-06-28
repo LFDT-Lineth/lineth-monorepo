@@ -43,8 +43,46 @@
 // Verify mirrors steps 2-7: same zetas and challenges in, authenticates the
 // opened backing trees, and reconstructs the virtual quotients inside FRI.
 //
-// The prover-side staged API will return the existing [ProverState] rather than
+// The prover-side staged API returns the existing [ProverState] rather than
 // introduce a second PCS-specific opener state machine.
+//
+// Canonical prover call sequence:
+//
+//	pcs := NewPCS(params, encoders)
+//
+//	// Commit each batch; absorb each root into the transcript.
+//	state0 := pcs.Commit(witness0)
+//	transcript.Absorb(state0.Root())
+//	state1 := pcs.Commit(witness1)
+//	transcript.Absorb(state1.Root())
+//
+//	// Squeeze one opening point per opening; absorb each opening's claims
+//	// before deriving the next opening point.
+//	zeta0      := transcript.Squeeze()
+//	claims0, _ := pcs.AddOpening(witness0, state0, zeta0, shifts0)
+//	transcript.Absorb(claims0)
+//	zeta1      := transcript.Squeeze()
+//	claims1, _ := pcs.AddOpening(witness1, state1, zeta1, shifts1)
+//	transcript.Absorb(claims1)
+//
+//	// Squeeze alphaDeep; seed the FRI prover.
+//	alphaDeep  := transcript.Squeeze()
+//	friState, _ := pcs.NewProverState(alphaDeep)
+//
+//	// FRI folding rounds: absorb each new root, squeeze the next alpha.
+//	for range numFoldingRounds {
+//	    alpha := transcript.Squeeze()
+//	    friState.Fold(alpha)
+//	    transcript.Absorb(friState.LastRoot())
+//	}
+//
+//	// Absorb the final polynomial; squeeze query positions; open.
+//	transcript.Absorb(friState.FinalPoly())
+//	queries    := transcript.Squeeze()
+//	proof, _   := friState.Open(queries)
+//
+// The verifier calls pcs.Verify with the same zetas, alphaDeep, fold alphas,
+// and query positions it derived from its own transcript replay.
 //
 // =============================================================================
 // Canonical layout (frozen)
