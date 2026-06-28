@@ -964,7 +964,9 @@ func (v pcsQueryValues) reconstructQueryPair(
 	bundle := v.layout[levelIdx]
 	order := v.orders[levelIdx]
 	rows := v.rows[queryIdx]
-	if err := v.authenticateRowOpenings("reconstructQueryPair", queryIdx, levelIdx, opening, roots, domain, base); err != nil {
+	if err := v.authenticateRowOpenings(
+		"reconstructQueryPair", queryIdx, levelIdx, opening, roots, domain, base,
+	); err != nil {
 		return field.Ext{}, field.Ext{}, err
 	}
 	for branchIdx, batchIdx := range order {
@@ -973,7 +975,8 @@ func (v pcsQueryValues) reconstructQueryPair(
 			return field.Ext{}, field.Ext{}, fmt.Errorf("fri: reconstructQueryPair: tree %d missing sibling row",
 				branchIdx)
 		}
-		if siblings := opening[branchIdx].Siblings; len(siblings) == 0 || siblings[len(siblings)-1] != hashRowOpening(row.Sibling) {
+		if siblings := opening[branchIdx].Siblings; len(siblings) == 0 ||
+			siblings[len(siblings)-1] != hashRowOpening(row.Sibling) {
 			return field.Ext{}, field.Ext{}, fmt.Errorf("fri: reconstructQueryPair: tree %d sibling digest mismatch",
 				branchIdx)
 		}
@@ -997,9 +1000,8 @@ func (v pcsQueryValues) reconstructQueryValue(
 	domain domainLight,
 	base int,
 ) (field.Ext, error) {
-	if err := v.authenticateRowOpenings(
-		"reconstructQueryValue", queryIdx, levelIdx, opening, roots, domain, base,
-	); err != nil {
+	err := v.authenticateRowOpenings("reconstructQueryValue", queryIdx, levelIdx, opening, roots, domain, base)
+	if err != nil {
 		return field.Ext{}, err
 	}
 	return v.reconstructQueryValueAt(queryIdx, levelIdx, domainPointExt(domain, base), false)
