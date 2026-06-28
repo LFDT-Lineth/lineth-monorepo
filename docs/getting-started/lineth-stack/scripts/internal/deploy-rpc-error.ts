@@ -5,10 +5,6 @@ const PUBLIC_RPC_SUBMISSION_MARKERS = [
   "transaction underpriced",
 ];
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
 function collectErrorStrings(value: unknown, seen = new Set<unknown>()): string[] {
   if (value === undefined || value === null || seen.has(value)) {
     return [];
@@ -31,12 +27,13 @@ function collectErrorStrings(value: unknown, seen = new Set<unknown>()): string[
     return value.flatMap((item) => collectErrorStrings(item, seen));
   }
 
-  if (!isRecord(value)) {
+  if (typeof value !== "object") {
     return [];
   }
 
+  const record = value as Record<string, unknown>;
   return ["code", "message", "shortMessage", "reason", "method", "error", "payload"].flatMap((key) =>
-    collectErrorStrings(value[key], seen),
+    collectErrorStrings(record[key], seen),
   );
 }
 

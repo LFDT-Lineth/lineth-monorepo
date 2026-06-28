@@ -797,16 +797,21 @@ step3_token_bridge_l1() {
   # (scaffold's deployBridgedTokenAndTokenBridgeV1_1.ts, bind-mounted over the
   # upstream path). Replaces the upstream's stale-offset-based remoteSender
   # derivation with the precomputed L2 TokenBridge from account setup.
-  if ! DEPLOYER_PRIVATE_KEY="$L1_DEPLOYER_PRIVATE_KEY" \
-    REMOTE_DEPLOYER_ADDRESS="$PRECOMPUTED_L2_DEPLOYER" \
-    REMOTE_TOKEN_BRIDGE_ADDRESS="$EXPECTED_L2_TOKEN_BRIDGE" \
-    RPC_URL="$L1_RPC_URL" \
-    REMOTE_CHAIN_ID="$L2_CHAIN_ID" \
-    TOKEN_BRIDGE_L1="true" \
-    L1_SECURITY_COUNCIL="$L1_DEPLOYER_ADDRESS" \
-    L2_MESSAGE_SERVICE_ADDRESS="$L2_MESSAGE_SERVICE_ADDRESS" \
-    LINEA_ROLLUP_ADDRESS="$LINEA_ROLLUP_ADDRESS" \
-    pnpm -s exec ts-node "$ART_DIR/deployBridgedTokenAndTokenBridgeV1_1.ts" 2>&1 | tee "$logfile"; then
+  local deploy_status
+  set +e
+  DEPLOYER_PRIVATE_KEY="$L1_DEPLOYER_PRIVATE_KEY" \
+  REMOTE_DEPLOYER_ADDRESS="$PRECOMPUTED_L2_DEPLOYER" \
+  REMOTE_TOKEN_BRIDGE_ADDRESS="$EXPECTED_L2_TOKEN_BRIDGE" \
+  RPC_URL="$L1_RPC_URL" \
+  REMOTE_CHAIN_ID="$L2_CHAIN_ID" \
+  TOKEN_BRIDGE_L1="true" \
+  L1_SECURITY_COUNCIL="$L1_DEPLOYER_ADDRESS" \
+  L2_MESSAGE_SERVICE_ADDRESS="$L2_MESSAGE_SERVICE_ADDRESS" \
+  LINEA_ROLLUP_ADDRESS="$LINEA_ROLLUP_ADDRESS" \
+    pnpm -s exec ts-node "$ART_DIR/deployBridgedTokenAndTokenBridgeV1_1.ts" 2>&1 | tee "$logfile"
+  deploy_status="${PIPESTATUS[0]}"
+  set -e
+  if [ "$deploy_status" -ne 0 ]; then
     explain_l1_rpc_submission_error "$logfile"
     return 1
   fi
