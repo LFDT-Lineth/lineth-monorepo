@@ -70,8 +70,9 @@ def _sample_proof() -> L2ExecutionProof:
         end_l1_l2_bridge_rolling_hash_message_number=U64(5),
         dynamic_chain_config_hash=Hash32(bytes([0xC0]) * 32),
         parent_ftx_rolling_hash=Hash32(bytes([0x04]) * 32),
+        parent_processed_ftx_number=U64(16),
         end_ftx_rolling_hash=Hash32(bytes([0x05]) * 32),
-        last_processed_ftx_number=U64(18),
+        end_processed_ftx_number=U64(18),
         filtered_addresses_hash=Hash32(bytes([0x06]) * 32),
         tx_froms_hash=Hash32(bytes([0x07]) * 32),
     )
@@ -219,14 +220,15 @@ def test_encode_response_shape_and_values() -> None:
     assert pi["endBlockTimestamp"] == 1763000123
     assert pi["l2L1MessagesHash"] == "0x" + ("01" * 32)
     assert pi["endL1L2BridgeRollingHashMessageNumber"] == 5
-    assert pi["lastProcessedFtxNumber"] == 18
+    assert pi["parentProcessedFtxNumber"] == 16
+    assert pi["endProcessedFtxNumber"] == 18
     assert set(pi.keys()) == {
         "parentBlockHash", "endBlockHash", "endBlockNumber", "endBlockTimestamp",
         "l2L1MessagesHash", "parentL1L2BridgeRollingHash",
         "parentL1L2BridgeRollingHashMessageNumber", "endL1L2BridgeRollingHash",
         "endL1L2BridgeRollingHashMessageNumber", "dynamicChainConfigHash",
-        "parentFtxRollingHash", "endFtxRollingHash", "lastProcessedFtxNumber",
-        "filteredAddressesHash", "txFromsHash",
+        "parentFtxRollingHash", "parentProcessedFtxNumber", "endFtxRollingHash",
+        "endProcessedFtxNumber", "filteredAddressesHash", "txFromsHash",
     }
 
     assert out["l2L1Messages"] == ["0x" + ("08" * 32)]
@@ -265,8 +267,9 @@ def _sample_rollup_public_input() -> RollupPublicInput:
         end_l1_l2_bridge_rolling_hash_message_number=U64(7),
         dynamic_chain_config_hash=Hash32(bytes([0xC0]) * 32),
         parent_ftx_rolling_hash=Hash32(bytes([0x44]) * 32),
+        parent_processed_ftx_number=U64(7),
         end_ftx_rolling_hash=Hash32(bytes([0x55]) * 32),
-        last_processed_ftx_number=U64(9),
+        end_processed_ftx_number=U64(9),
         filtered_addresses_hash=Hash32(bytes([0x66]) * 32),
         parent_shnarf=Hash32(bytes([0x47]) * 32),
         end_shnarf=Hash32(bytes([0x8D]) * 32),
@@ -310,7 +313,8 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     assert int(proof.public_inputs.end_block_number) == 1000510
     assert bytes(proof.public_inputs.parent_block_hash) == bytes([0x0A]) * 32
     assert bytes(proof.public_inputs.l2_l1_messages_hash) == bytes([0x01]) * 32
-    assert int(proof.public_inputs.last_processed_ftx_number) == 12
+    assert int(proof.public_inputs.parent_processed_ftx_number) == 10
+    assert int(proof.public_inputs.end_processed_ftx_number) == 12
     assert proof.l2_l1_messages == [Hash32(bytes([0x08]) * 32)]
     assert proof.tx_froms == [Address(bytes([0x01]) * 20), Address(bytes([0x02]) * 20)]
     assert proof.filtered_addresses == [Address(bytes([0x03]) * 20), Address(bytes([0x04]) * 20)]
@@ -379,13 +383,15 @@ def test_encode_rollup_response_shape_and_values() -> None:
     assert pi["l2L1BridgeTransactionTree"] == "0x" + ("11" * 32)
     assert pi["parentShnarf"] == "0x" + ("47" * 32)
     assert pi["endShnarf"] == "0x" + ("8d" * 32)
-    assert pi["lastProcessedFtxNumber"] == 9
+    assert pi["parentProcessedFtxNumber"] == 7
+    assert pi["endProcessedFtxNumber"] == 9
     assert set(pi.keys()) == {
         "endBlockNumber", "endBlockTimestamp", "l2L1BridgeTransactionTree",
         "parentL1L2BridgeRollingHash", "parentL1L2BridgeRollingHashMessageNumber",
         "endL1L2BridgeRollingHash", "endL1L2BridgeRollingHashMessageNumber",
-        "dynamicChainConfigHash", "parentFtxRollingHash", "endFtxRollingHash",
-        "lastProcessedFtxNumber", "filteredAddressesHash", "parentShnarf", "endShnarf",
+        "dynamicChainConfigHash", "parentFtxRollingHash", "parentProcessedFtxNumber",
+        "endFtxRollingHash", "endProcessedFtxNumber", "filteredAddressesHash",
+        "parentShnarf", "endShnarf",
     }
 
     assert out["l2L1Roots"] == ["0x" + ("77" * 32), "0x" + ("88" * 32)]
@@ -438,7 +444,8 @@ def test_decode_aggregation_request_maps_all_fields() -> None:
     assert int(pi.end_block_timestamp) == 1763000457
     assert bytes(pi.l2_l1_bridge_transaction_tree) == bytes([0x11]) * 32
     assert int(pi.end_l1_l2_bridge_rolling_hash_message_number) == 7
-    assert int(pi.last_processed_ftx_number) == 9
+    assert int(pi.parent_processed_ftx_number) == 7
+    assert int(pi.end_processed_ftx_number) == 9
     assert bytes(pi.parent_shnarf) == bytes([0x47]) * 32
     assert bytes(pi.end_shnarf) == bytes([0x8D]) * 32
 
@@ -514,13 +521,15 @@ def test_encode_aggregation_response_is_l1_sufficient() -> None:
     assert pi["endBlockNumber"] == 1000520
     assert pi["parentShnarf"] == "0x" + ("47" * 32)
     assert pi["endShnarf"] == "0x" + ("8d" * 32)
-    assert pi["lastProcessedFtxNumber"] == 9
+    assert pi["parentProcessedFtxNumber"] == 7
+    assert pi["endProcessedFtxNumber"] == 9
     assert set(pi.keys()) == {
         "endBlockNumber", "endBlockTimestamp", "l2L1BridgeTransactionTree",
         "parentL1L2BridgeRollingHash", "parentL1L2BridgeRollingHashMessageNumber",
         "endL1L2BridgeRollingHash", "endL1L2BridgeRollingHashMessageNumber",
-        "dynamicChainConfigHash", "parentFtxRollingHash", "endFtxRollingHash",
-        "lastProcessedFtxNumber", "filteredAddressesHash", "parentShnarf", "endShnarf",
+        "dynamicChainConfigHash", "parentFtxRollingHash", "parentProcessedFtxNumber",
+        "endFtxRollingHash", "endProcessedFtxNumber", "filteredAddressesHash",
+        "parentShnarf", "endShnarf",
     }
 
 

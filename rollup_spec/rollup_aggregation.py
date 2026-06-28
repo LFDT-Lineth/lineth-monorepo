@@ -62,8 +62,9 @@ def run_rollup_aggregation_guest(
         ),
         dynamic_chain_config_hash=first_proof.public_inputs.dynamic_chain_config_hash,
         parent_ftx_rolling_hash=first_proof.public_inputs.parent_ftx_rolling_hash,
+        parent_processed_ftx_number=first_proof.public_inputs.parent_processed_ftx_number,
         end_ftx_rolling_hash=last_proof.public_inputs.end_ftx_rolling_hash,
-        last_processed_ftx_number=last_proof.public_inputs.last_processed_ftx_number,
+        end_processed_ftx_number=last_proof.public_inputs.end_processed_ftx_number,
         filtered_addresses_hash=hash_address_list(merged_filtered_addresses),
         parent_shnarf=first_proof.public_inputs.parent_shnarf,
         end_shnarf=last_proof.public_inputs.end_shnarf,
@@ -117,3 +118,5 @@ def assert_rollup_proof_continuity(left: RollupProof, right: RollupProof) -> Non
         raise Exception("rollup dynamic chain configuration continuity failed")
     if left.public_inputs.end_ftx_rolling_hash != right.public_inputs.parent_ftx_rolling_hash:
         raise Exception("rollup FTX rolling-hash continuity failed")
+    if left.public_inputs.end_processed_ftx_number != right.public_inputs.parent_processed_ftx_number:
+        raise Exception("rollup processed-FTX-number continuity failed")

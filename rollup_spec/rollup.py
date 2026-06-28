@@ -263,7 +263,7 @@ class BlobWitness:
 @dataclass
 class RollupPublicInput:
     """
-    The 14-field rollup / rollup-aggregation public input tuple from
+    The 15-field rollup / rollup-aggregation public input tuple from
     Readme.md section 2.4.
     """
     end_block_number: U64
@@ -275,8 +275,9 @@ class RollupPublicInput:
     end_l1_l2_bridge_rolling_hash_message_number: U64
     dynamic_chain_config_hash: Hash32
     parent_ftx_rolling_hash: Hash32
+    parent_processed_ftx_number: U64
     end_ftx_rolling_hash: Hash32
-    last_processed_ftx_number: U64
+    end_processed_ftx_number: U64
     filtered_addresses_hash: Hash32
     parent_shnarf: Hash32
     end_shnarf: Hash32
@@ -446,8 +447,9 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
         ),
         dynamic_chain_config_hash=first_proof.public_inputs.dynamic_chain_config_hash,
         parent_ftx_rolling_hash=first_proof.public_inputs.parent_ftx_rolling_hash,
+        parent_processed_ftx_number=first_proof.public_inputs.parent_processed_ftx_number,
         end_ftx_rolling_hash=last_proof.public_inputs.end_ftx_rolling_hash,
-        last_processed_ftx_number=last_proof.public_inputs.last_processed_ftx_number,
+        end_processed_ftx_number=last_proof.public_inputs.end_processed_ftx_number,
         filtered_addresses_hash=hash_address_list(concatenated_filtered_addresses),
         parent_shnarf=rollup_input.parent_shnarf,
         end_shnarf=current_shnarf,
@@ -508,6 +510,8 @@ def assert_l2_execution_continuity(
         raise Exception("l2-execution dynamic chain configuration continuity failed")
     if left.end_ftx_rolling_hash != right.parent_ftx_rolling_hash:
         raise Exception("l2-execution FTX rolling-hash continuity failed")
+    if left.end_processed_ftx_number != right.parent_processed_ftx_number:
+        raise Exception("l2-execution processed-FTX-number continuity failed")
 
 
 def build_l2_messages_tree(msgs: Sequence[Hash32]) -> Tuple[List[Hash32], Hash32]:

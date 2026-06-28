@@ -217,7 +217,7 @@ def validate_forced_transactions(
 @dataclass
 class L2ExecutionProofPublicInput:
     """
-    The 15-field l2-execution public input tuple from Readme.md section 2.1.
+    The 16-field l2-execution public input tuple from Readme.md section 2.1.
     """
     parent_block_hash: Hash32
     end_block_hash: Hash32
@@ -230,8 +230,9 @@ class L2ExecutionProofPublicInput:
     end_l1_l2_bridge_rolling_hash_message_number: U64
     dynamic_chain_config_hash: Hash32
     parent_ftx_rolling_hash: Hash32
+    parent_processed_ftx_number: U64
     end_ftx_rolling_hash: Hash32
-    last_processed_ftx_number: U64
+    end_processed_ftx_number: U64
     filtered_addresses_hash: Hash32
     tx_froms_hash: Hash32
 
@@ -418,8 +419,9 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
         end_l1_l2_bridge_rolling_hash_message_number=end_rolling_hash_number,
         dynamic_chain_config_hash=execution_input.chain_config.hash(base_fee),
         parent_ftx_rolling_hash=execution_input.parent_ftx_rolling_hash,
+        parent_processed_ftx_number=execution_input.parent_last_processed_ftx_number,
         end_ftx_rolling_hash=current_ftx_rolling_hash,
-        last_processed_ftx_number=current_last_processed_ftx_number,
+        end_processed_ftx_number=current_last_processed_ftx_number,
         filtered_addresses_hash=hash_address_list(filtered_addresses),
         tx_froms_hash=hash_address_list(tx_froms),
     )

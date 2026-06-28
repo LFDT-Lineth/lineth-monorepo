@@ -51,7 +51,7 @@ class LineaRollupState:
     current_finalized_l1_l2_bridge_rolling_hash: Hash32
     current_finalized_l1_l2_bridge_rolling_hash_message_number: U64
     current_finalized_ftx_rolling_hash: Hash32
-    current_finalized_last_processed_ftx_number: U64
+    current_finalized_processed_ftx_number: U64
     verifier: PlonkVerifier
     l1_l2_rolling_hashes: Dict[U64, Hash32] = field(default_factory=dict)
     ftx_rolling_hashes: Dict[U64, Hash32] = field(default_factory=dict)
@@ -122,15 +122,17 @@ def finalize_rollup(state: LineaRollupState, submission: FinalizationSubmission)
         raise Exception("dynamic chain config hash mismatch")
     if pi.parent_ftx_rolling_hash != state.current_finalized_ftx_rolling_hash:
         raise Exception("FTX rolling hash continuity mismatch")
-    if pi.last_processed_ftx_number < state.current_finalized_last_processed_ftx_number:
-        raise Exception("lastProcessedFtxNumber cannot decrease")
-    if _ftx_rolling_hash_at(state, pi.last_processed_ftx_number) != pi.end_ftx_rolling_hash:
+    if pi.parent_processed_ftx_number != state.current_finalized_processed_ftx_number:
+        raise Exception("processed FTX number continuity mismatch")
+    if pi.end_processed_ftx_number < state.current_finalized_processed_ftx_number:
+        raise Exception("endProcessedFtxNumber cannot decrease")
+    if _ftx_rolling_hash_at(state, pi.end_processed_ftx_number) != pi.end_ftx_rolling_hash:
         raise Exception("FTX rolling hash does not match L1 storage")
 
     _check_forced_transaction_deadlines(
         state,
         pi.end_block_number,
-        pi.last_processed_ftx_number,
+        pi.end_processed_ftx_number,
     )
 
     if hash_hash_list(submission.l2_l1_roots) != pi.l2_l1_bridge_transaction_tree:
@@ -153,7 +155,7 @@ def finalize_rollup(state: LineaRollupState, submission: FinalizationSubmission)
         pi.end_l1_l2_bridge_rolling_hash_message_number
     )
     state.current_finalized_ftx_rolling_hash = pi.end_ftx_rolling_hash
-    state.current_finalized_last_processed_ftx_number = pi.last_processed_ftx_number
+    state.current_finalized_processed_ftx_number = pi.end_processed_ftx_number
 
 
 def verify_rollup_aggregation_snark(proof: bytes, public_inputs: RollupPublicInput) -> bool:
@@ -172,7 +174,7 @@ def _l1_l2_rolling_hash_at(state: LineaRollupState, message_number: U64) -> Hash
 
 
 def _ftx_rolling_hash_at(state: LineaRollupState, ftx_number: U64) -> Hash32:
-    if ftx_number == state.current_finalized_last_processed_ftx_number:
+    if ftx_number == state.current_finalized_processed_ftx_number:
         return state.current_finalized_ftx_rolling_hash
     if ftx_number not in state.ftx_rolling_hashes:
         raise Exception("missing FTX rolling hash for forced transaction number")
