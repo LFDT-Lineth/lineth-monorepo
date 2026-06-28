@@ -1243,7 +1243,8 @@ check_smoke_and_traffic_scripts() {
     && grep -q 'free or overloaded Sepolia RPC endpoint' "$STACK/scripts/internal/deploy-rpc-error.ts" \
     && grep -q 'explain_l1_rpc_submission_error "$logfile"' "$STACK/scripts/phases/04-deploy-contracts.sh" \
     && grep -q 'L1 contract deployment hit an RPC submission error from L1_RPC_URL' "$STACK/scripts/phases/04-deploy-contracts.sh" \
-    && grep -q 'deploy_status="${PIPESTATUS\[0\]}"' "$STACK/scripts/phases/04-deploy-contracts.sh" \
+    && grep -q 'pipeline_status=("${PIPESTATUS\[@\]}")' "$STACK/scripts/phases/04-deploy-contracts.sh" \
+    && grep -q 'tee_status="${pipeline_status\[1\]}"' "$STACK/scripts/phases/04-deploy-contracts.sh" \
     && grep -q 'could not coalesce error' "$STACK/scripts/watch.sh" \
     && grep -q 'already known' "$STACK/scripts/status.sh" \
     && grep -q 'L1_RPC_URL' "$STACK/scripts/internal/deploy-rpc-error.ts" \

@@ -797,7 +797,7 @@ step3_token_bridge_l1() {
   # (scaffold's deployBridgedTokenAndTokenBridgeV1_1.ts, bind-mounted over the
   # upstream path). Replaces the upstream's stale-offset-based remoteSender
   # derivation with the precomputed L2 TokenBridge from account setup.
-  local deploy_status
+  local deploy_status tee_status
   set +e
   DEPLOYER_PRIVATE_KEY="$L1_DEPLOYER_PRIVATE_KEY" \
   REMOTE_DEPLOYER_ADDRESS="$PRECOMPUTED_L2_DEPLOYER" \
@@ -809,11 +809,16 @@ step3_token_bridge_l1() {
   L2_MESSAGE_SERVICE_ADDRESS="$L2_MESSAGE_SERVICE_ADDRESS" \
   LINEA_ROLLUP_ADDRESS="$LINEA_ROLLUP_ADDRESS" \
     pnpm -s exec ts-node "$ART_DIR/deployBridgedTokenAndTokenBridgeV1_1.ts" 2>&1 | tee "$logfile"
-  deploy_status="${PIPESTATUS[0]}"
+  local pipeline_status=("${PIPESTATUS[@]}")
+  deploy_status="${pipeline_status[0]}"
+  tee_status="${pipeline_status[1]}"
   set -e
   if [ "$deploy_status" -ne 0 ]; then
     explain_l1_rpc_submission_error "$logfile"
     return 1
+  fi
+  if [ "$tee_status" -ne 0 ]; then
+    die "Step 3 deploy succeeded, but writing deploy output to $logfile failed (tee exit $tee_status)"
   fi
 
   L1_TOKEN_BRIDGE_ADDRESS="$(require_address "$logfile" "TokenBridge")"
