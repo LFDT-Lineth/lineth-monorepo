@@ -11,6 +11,8 @@ const is_native_arch = builtin.target.cpu.arch == .x86_64 or builtin.target.cpu.
 const is_supported_native = is_native_os and is_native_arch;
 
 const native_input_path: [:0]const u8 = "zig-out/input.bin";
+const input_size = embedded_data.inputSize(embedded_data_conf.spec_index);
+const RuntimeProofBacking = embedded_data.ProofBacking(embedded_data_conf.spec_index);
 
 extern const _in_start: u8;
 
@@ -39,7 +41,8 @@ pub fn main() noreturn {
         @compileError("native verifier libc path currently supports x86_64/aarch64 Linux and macOS only");
     }
 
-    const input = loadNativeInput();
+    var backing: RuntimeProofBacking = .{};
+    const input = loadNativeInput(&backing);
     exitNative(runVerifier(input));
 }
 
@@ -55,7 +58,8 @@ pub export fn r5_main() noreturn {
     }
 
     // load the input depending on the running mode (embedded by the zkVM or at compile time)
-    const input = loadR5Input();
+    var backing: RuntimeProofBacking = .{};
+    const input = loadR5Input(&backing);
 
     // run the verifier smoke test with the loaded input
     const res = runVerifier(input);
@@ -75,10 +79,11 @@ fn runVerifier(input: *const verifier.Proof) u8 {
     return 0; // success
 }
 
-// Native smoke tests use the same fixed binary input image as the R5 linked-memory path.
+// Native smoke tests use the same serialized binary input image as the R5 linked-memory path.
 // The Makefile places that image at `native_input_path`, so native execution only needs a
-// small libc surface: open the file, mmap exactly `@sizeOf(Input)`, and cast the bytes to
-// `Input`. Avoiding std file/argument handling keeps ReleaseSmall native binaries compact.
+// small libc surface: open the file, mmap exactly the generated fixture size, and decode it
+// into caller-owned backing storage. Avoiding std file/argument handling keeps ReleaseSmall
+// native binaries compact.
 const o_rdonly: c_int = 0;
 const prot_read: c_int = 1;
 const map_private: c_int = 2;
@@ -88,40 +93,43 @@ extern fn open(path: [*:0]const u8, flags: c_int) c_int;
 extern fn mmap(address: ?*anyopaque, length: usize, protection: c_int, flags: c_int, fd: c_int, offset: i64) *anyopaque;
 extern fn _exit(status: c_int) noreturn;
 
-fn loadNativeInput() *const verifier.Proof {
+fn loadNativeInput(backing: *RuntimeProofBacking) *const verifier.Proof {
     if (comptime !is_supported_native) {
         @compileError("native verifier libc path currently supports x86_64/aarch64 Linux and macOS only");
     }
     if (comptime embedded_data_conf.embed_input) {
         return &embedded_input;
     }
-    // TODO: we have kept the compatibility with the old way of loading input, but we don't have serialization
-    // so it will fail if the input is not embedded.
 
     const fd = open(native_input_path.ptr, o_rdonly);
     if (fd < 0) exitNative(1);
 
-    const mapped_addr = mmap(null, @sizeOf(verifier.Proof), prot_read, map_private, fd, 0);
+    const mapped_addr = mmap(null, input_size, prot_read, map_private, fd, 0);
     if (@intFromPtr(mapped_addr) == map_failed) exitNative(1);
 
     const mapped_bytes: [*]const u8 = @ptrCast(mapped_addr);
-    return @ptrCast(@alignCast(mapped_bytes));
+    return decodeInput(backing, mapped_bytes[0..input_size]);
 }
 
-fn loadR5Input() *const verifier.Proof {
+fn loadR5Input(backing: *RuntimeProofBacking) *const verifier.Proof {
     if (comptime !is_r5_zkvm) {
         @compileError("R5 verifier path currently supports only R5 zkVM target");
     }
     if (comptime embedded_data_conf.embed_input) {
         return &embedded_input;
     }
-    // TODO: we have kept the compatibility with the old way of loading input, but we don't have serialization
-    // so it will fail if the input is not embedded.
 
-    // the input is linked into the binary at compile time using the
-    // `_in_start` symbol defined in the linker script, so we can just take its
-    // address and cast it to our structured input type
-    return @ptrCast(@alignCast(&_in_start));
+    // The input bytes are linked into the R5 memory image at `_in_start` by the
+    // zkc JSON generator. The generated fixture metadata tells us exactly how
+    // many bytes belong to the selected proof.
+    const input: [*]const u8 = @ptrCast(&_in_start);
+    return decodeInput(backing, input[0..input_size]);
+}
+
+fn decodeInput(backing: *RuntimeProofBacking, input: []const u8) *const verifier.Proof {
+    return backing.decode(input) catch {
+        exitFailure();
+    };
 }
 
 fn exitNative(code: u8) noreturn {
@@ -139,6 +147,14 @@ fn exitR5(code: u8) noreturn {
     switch (code) {
         0 => exitR5Success(),
         else => exitR5Failure(),
+    }
+}
+
+fn exitFailure() noreturn {
+    if (comptime is_r5_zkvm) {
+        exitR5Failure();
+    } else {
+        exitNative(1);
     }
 }
 

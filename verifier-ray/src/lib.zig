@@ -1,6 +1,7 @@
 pub const protocol = @import("protocol/root.zig");
 pub const verifier = @import("verifier.zig");
 pub const profiling = @import("profiling.zig");
+pub const proof_wire = @import("proof_wire.zig");
 
 pub const field = struct {
     pub const koalabear = @import("field/koalabear.zig");

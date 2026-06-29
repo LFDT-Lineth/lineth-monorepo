@@ -178,6 +178,7 @@ prover/*.sh
 
 ## Verifier-ray generated testdata fixtures
 !verifier-ray/testdata/generated/*.zig
+verifier-ray/testdata/inputs/verify_case_*.bin
 
 .claude/settings.local.json
 contracts/.claude/settings.local.json
