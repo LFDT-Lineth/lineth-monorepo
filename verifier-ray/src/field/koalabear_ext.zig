@@ -74,7 +74,24 @@ pub const Ext = extern struct {
     }
 
     pub fn square(self: Ext) Ext {
-        return self.mul(self);
+        // Karatsuba squaring: 6 E2 muls instead of 9 from mul(self).
+        // s0 = B0^2, s1 = B1^2, s2 = B2^2
+        // c01 = (B0+B1)^2 - s0 - s1 = 2*B0*B1
+        // c12 = (B1+B2)^2 - s1 - s2 = 2*B1*B2
+        // c02 = (B0+B2)^2 - s0 - s2 = 2*B0*B2
+        // D0 = s0 + (c12)*(u+1), D1 = c01 + s2*(u+1), D2 = c02 + s1 + (s0 - s0) = c02 + s1
+        // But D2 = c02 + s1, D1 = c01 + s2*(u+1), D0 = s0 + c12*(u+1)
+        const s0 = self.B0.mul(self.B0);
+        const s1 = self.B1.mul(self.B1);
+        const s2 = self.B2.mul(self.B2);
+        const c01 = self.B0.add(self.B1).mul(self.B0.add(self.B1)).sub(s0).sub(s1);
+        const c12 = self.B1.add(self.B2).mul(self.B1.add(self.B2)).sub(s1).sub(s2);
+        const c02 = self.B0.add(self.B2).mul(self.B0.add(self.B2)).sub(s0).sub(s2);
+        return .{
+            .B0 = s0.add(c12.mulByNonResidue()),
+            .B1 = c01.add(s2.mulByNonResidue()),
+            .B2 = c02.add(s1),
+        };
     }
 
     pub fn inverse(self: Ext) Ext {
@@ -99,7 +116,10 @@ pub const Ext = extern struct {
         return self.mul(rhs.inverse());
     }
 
-    pub fn pow(self: Ext, exponent: u256) Ext {
+    // exponent is u64, not u32: a u32 loop variable adds a per-iteration `srliw`
+    // + `sext.w` on rv64, and u64 matches the usize exponents at the call sites.
+    // See koalabear.Element.pow for the full rationale and measurement.
+    pub fn pow(self: Ext, exponent: u64) Ext {
         var result = Ext.one();
         var b = self;
         var exp = exponent;
@@ -151,9 +171,9 @@ pub const Ext = extern struct {
     /// Flattening order: [B0.a0, B0.a1, B1.a0, B1.a1, B2.a0, B2.a1].
     pub fn fromUints(v: [6]u32) Ext {
         return .{
-            .B0 = .{ .a0 = base.Element.init(v[0]), .a1 = base.Element.init(v[1]) },
-            .B1 = .{ .a0 = base.Element.init(v[2]), .a1 = base.Element.init(v[3]) },
-            .B2 = .{ .a0 = base.Element.init(v[4]), .a1 = base.Element.init(v[5]) },
+            .B0 = .{ .a0 = .{ .value = v[0] }, .a1 = .{ .value = v[1] } },
+            .B1 = .{ .a0 = .{ .value = v[2] }, .a1 = .{ .value = v[3] } },
+            .B2 = .{ .a0 = .{ .value = v[4] }, .a1 = .{ .value = v[5] } },
         };
     }
 
