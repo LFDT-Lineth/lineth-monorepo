@@ -151,10 +151,12 @@ test "lagrange evaluation returns domain value at roots of unity" {
     const omega = try field.rootOfUnityBy(base_values.len);
     var domain_point = field.Element.one();
     for (base_values, ext_values) |base_value, ext_value| {
-        try expectElem(try poly_lagrange.evaluateBaseAtBase(&base_values, domain_point), base_value.value);
-        try expectExt(try poly_lagrange.evaluateBaseAtExt(&base_values, ext.Ext.lift(domain_point)), ext.Ext.lift(base_value));
-        try expectExt(try poly_lagrange.evaluateExtAtBase(&ext_values, domain_point), ext_value);
-        try expectExt(try poly_lagrange.evaluateExtAtExt(&ext_values, ext.Ext.lift(domain_point)), ext_value);
+        // Domain size is comptime-known here (fixed-size arrays), so exercise the
+        // *Comptime overloads, which use powComptime for the vanishing polynomial.
+        try expectElem(try poly_lagrange.evaluateBaseAtBaseComptime(base_values.len, &base_values, domain_point), base_value.value);
+        try expectExt(try poly_lagrange.evaluateBaseAtExtComptime(base_values.len, &base_values, ext.Ext.lift(domain_point)), ext.Ext.lift(base_value));
+        try expectExt(try poly_lagrange.evaluateExtAtBaseComptime(ext_values.len, &ext_values, domain_point), ext_value);
+        try expectExt(try poly_lagrange.evaluateExtAtExtComptime(ext_values.len, &ext_values, ext.Ext.lift(domain_point)), ext_value);
         domain_point = domain_point.mul(omega);
     }
 }
