@@ -123,22 +123,23 @@ task integrationTest(type: Test) {
   classpath = sourceSets.integrationTest.runtimeClasspath
   testClassesDirs = sourceSets.integrationTest.output.classesDirs
 
-  // Each test class spins up a small cluster of real in-process Besu+Maru nodes (~4 for most classes).
-  // Both knobs below are sized to that per-fork workload, not to the host:
+  // Each test class spins up real in-process Besu+Maru nodes. The knobs below are co-designed:
   //
-  // 1. Fork heap. The JVM default is 25% of the container's RAM (~4 GB on a 16 GB runner) — far more than the
-  //    ~4 nodes need (the suite runs in <1 GB; young-GC pauses are <50 ms on a normal machine). The downside of
-  //    that over-provisioning is pause length: a bigger max heap means a bigger young generation, so each
-  //    (stop-the-world) young collection is longer, and on a CPU-quota-limited CI container CFS throttling can
-  //    stretch a pause's wall-clock enough to make Maru's 1 s slot timer miss a slot (flaky 2 s block-time
-  //    gaps). Capping the heap keeps collections small. 1.5 GB = node working set + headroom, not host-derived.
-  // 2. Parallelism. One class per JVM (forkEvery = 1) + same_thread (these node tests aren't concurrency-safe
-  //    in one JVM: shared metrics registry, etc.). In steady state the nodes are wait-bound (~1 block/s, low
-  //    CPU) so cores aren't the steady-state constraint; the pressure is at STARTUP — cold JVM + Besu bring-up
-  //    is CPU-heavy (JIT, class loading, node init) and happens once per class, so when too many forks start
-  //    at once those bursts collide and a cluster can miss its init timeout. Empirically ~nCpu/2 forks is the
-  //    headroom that avoids it (4 forks on 8 cores stable, 6 flakes), capped at 6 (makespan knee = total/longest).
-  maxHeapSize = "1536m"
+  // GC: ZGC (concurrent collector, no stop-the-world pauses) is essential here. On a CPU-quota
+  //   container, a G1 STW pause gets CFS-throttled and its wall-clock can balloon to 1-4 s,
+  //   freezing Maru's 1 s slot timer → flaky 2 s block-time gaps. ZGC has no multi-ms STW pause
+  //   so the slot timer is safe regardless of heap size or concurrent test count.
+  //
+  // Heap: 2 GB per fork. A single cluster (2 Besu + 2 Maru) uses ~1 GB under load.
+  //   2 GB gives the remaining headroom for GC bookkeeping and short-lived allocation bursts.
+  //
+  // Parallelism: methods within each class fork run sequentially (same_thread). Within-fork
+  //   method parallelism would double the per-fork Besu+Maru instance count, creating unequal
+  //   thread-group load across forks (a 5-method class would use 2× threads vs a 1-method class),
+  //   which causes the OS scheduler to starve the lighter fork and hit timing-sensitive P2P awaits.
+  //   Class-level parallelism via nCpu/2 forks gives comparable throughput without that skew.
+  jvmArgs '-XX:+UseZGC'
+  maxHeapSize = "2048m"
   maxParallelForks = Math.min(6, Math.max(2, Runtime.runtime.availableProcessors().intdiv(2)))
   forkEvery = 1
   systemProperties["junit.jupiter.execution.parallel.mode.default"] = "same_thread"
