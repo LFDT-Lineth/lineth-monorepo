@@ -29,8 +29,6 @@ func main() {
 
 	guestDir := filepath.Join(root, "riscv-guests", "l2-execution")
 	cacheDir := filepath.Join(guestDir, ".cache", "large-ssz-fixtures")
-	bin := filepath.Join(guestDir, "zig-out", "bin", "evm_execution_guest")
-	arithMakefile := filepath.Join(root, "arithmetization", "src", "test", "Makefile")
 
 	must(run(os.Stderr, "make", "-C", guestDir, "compile"))
 
@@ -70,7 +68,7 @@ func main() {
 
 			for _, file := range files {
 				total++
-				ok, elapsed := runGuest(arithMakefile, bin, file, *zkcFlags)
+				ok, elapsed := runGuest(guestDir, file, *zkcFlags)
 				if ok {
 					passed++
 				}
@@ -148,12 +146,11 @@ func sszFiles(dir string, limit int) ([]string, error) {
 	return files, nil
 }
 
-func runGuest(arithMakefile, bin, input, zkcFlags string) (bool, time.Duration) {
+func runGuest(guestDir, input, zkcFlags string) (bool, time.Duration) {
 	start := time.Now()
 	err := run(io.Discard,
-		"make", "-f", arithMakefile, "elf-exec",
-		"BIN_EXT="+bin,
-		"IN_BYTES=@"+input,
+		"make", "-C", guestDir, "exec",
+		"INPUT="+input,
 		"ZKC_EXEC_FLAGS="+zkcFlags,
 	)
 	return err == nil, time.Since(start)
