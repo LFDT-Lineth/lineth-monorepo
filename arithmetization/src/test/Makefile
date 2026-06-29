@@ -96,7 +96,7 @@ compile: require-src
 		riscv64-unknown-elf-gcc -march=rv64im -mabi=lp64 -nostdlib -T$(LINKER_SCRIPT) -o $(BIN) $(SRC); \
 	elif [ "$(EXT)" = ".zig" ]; then \
 		echo "\nGenerating $(BIN) from $(SRC)"; \
-		zig build --build-file $(MAKEFILE_DIR)zig/build.zig -Dpath=$(BASENAME); \
+		zig build --build-file $(MAKEFILE_DIR)zig/build.zig -Dpath=$(BASENAME) $(if $(filter true,$(KECCAK_ACCEL)),-Dkeccak-accel=true); \
 	elif [ "$(EXT)" = ".rs" ]; then \
 		echo "\nGenerating $(BIN) from $(SRC)"; \
 		cargo +nightly rustc \
@@ -270,6 +270,9 @@ vector-exec: require-vector-json-mode install-zkc
 #####################################################################
 # Keccak wrapper targets
 #####################################################################
+
+# Passthrough argument to l2-execution pacakge import `keccak-accel` to enable/disable the zkc accelerated keccak precompile.
+KECCAK_ACCEL  ?= false
 
 KECCAK_ALL_FILE       ?= $(MAKEFILE_DIR)common_inputs/keccak.all
 KECCAK_N_VECTORS      ?= 10
