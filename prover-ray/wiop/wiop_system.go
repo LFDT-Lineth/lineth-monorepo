@@ -1,8 +1,12 @@
 package wiop
 
 import (
+	"fmt"
+
+	(
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/arena"
+)
 )
 
 // System is the top-level container for an abstract cryptographic protocol.
@@ -37,6 +41,12 @@ type System struct {
 	// via [System.NewMessageBusSend] and [System.NewMessageBusReceive], in
 	// declaration order.
 	MessageBuses []*MessageBus
+	// PublicInputs maps a public-input name to the [ObjectID] of the [Cell] or
+	// [Column] that stores its value. It is populated via
+	// [System.RegisterPublicInput]. Public inputs form the "statement" of the
+	// protocol: their values are carried separately from the [Proof] (in a
+	// [PublicInput]) and are received by [System.Verify] alongside the proof.
+	PublicInputs map[string]ObjectID
 	// MessageBusSkipInShardCheck controls whether the messagebus compiler
 	// registers its per-handle in-shard verifier action — a
 	// [messagebus.CheckHandleSumInShard] — which asserts the per-segment LDS
@@ -75,8 +85,49 @@ func NewSystemf(msg string, args ...any) *System {
 	// Wire the back-reference after the System pointer is stable.
 	sys.PrecomputedRound.system = sys
 	sys.Annotations = make(Annotations)
+	sys.PublicInputs = make(map[string]ObjectID)
 
 	return sys
+}
+
+// RegisterPublicInput records that the object identified by id stores the
+// public input named name. id must identify a [Column] or a [Cell]: columns
+// must carry [VisibilityPublic] (cells are always public). The named object
+// becomes part of the protocol statement — its value is carried in a
+// [PublicInput] separately from the [Proof].
+//
+// Panics if name is already registered, if id does not identify a column or
+// cell, or if id is a non-public column.
+func (sys *System) RegisterPublicInput(name string, id ObjectID) {
+	if _, ok := sys.PublicInputs[name]; ok {
+		panic(fmt.Sprintf("wiop: RegisterPublicInput: public input %q already registered", name))
+	}
+
+	switch id.Kind() {
+	case KindColumn:
+		col := sys.LookupColumn(id)
+		if col.Visibility != VisibilityPublic {
+			panic(fmt.Sprintf("wiop: RegisterPublicInput: column %q has visibility %s, want Public", col.Context.Path(), col.Visibility))
+		}
+	case KindCell:
+		// Cells are always public; LookupCell validates the id.
+		_ = sys.LookupCell(id)
+	default:
+		panic(fmt.Sprintf("wiop: RegisterPublicInput: id has kind %s, want Column or Cell", id.Kind()))
+	}
+
+	sys.PublicInputs[name] = id
+}
+
+// publicInputIDSet returns the set of [ObjectID]s currently registered as
+// public inputs, for fast membership tests during [System.Prove] and
+// [System.Verify].
+func (sys *System) publicInputIDSet() map[ObjectID]struct{} {
+	set := make(map[ObjectID]struct{}, len(sys.PublicInputs))
+	for _, id := range sys.PublicInputs {
+		set[id] = struct{}{}
+	}
+	return set
 }
 
 // Free releases the scratch memory arena allocated by [Materialize]. Safe to

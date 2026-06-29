@@ -33,6 +33,19 @@ type Proof struct {
 	DynamicSizes map[int]int
 }
 
+// PublicInput carries the values of the system's registered public inputs (the
+// objects listed in [System.PublicInputs]). It is produced by [System.Prove]
+// and consumed by [System.Verify] alongside the [Proof].
+//
+// PublicInput mirrors the shape of [Proof] but shares no entries with it: every
+// ObjectID present here is registered in [System.PublicInputs] and is
+// deliberately excluded from the proof. A public input may be a [Column]
+// (captured in Columns) or a [Cell] (captured in Cells).
+type PublicInput struct {
+	Columns map[ObjectID]*ConcreteVector
+	Cells   map[ObjectID]field.Gen
+}
+
 // Prove runs the prover over every interactive round of sys and returns the
 // resulting [Proof].
 //
@@ -49,7 +62,7 @@ type Proof struct {
 //
 // The caller is responsible for running the compiler passes (and, optionally,
 // [Materialize]) on sys before calling Prove.
-func (sys *System) Prove(assign func(rt *Runtime)) Proof {
+func (sys *System) Prove(assign func(rt *Runtime)) (Proof, PublicInput) {
 	rt := NewRuntime(sys)
 	assign(rt)
 
@@ -72,6 +85,11 @@ func (sys *System) Prove(assign func(rt *Runtime)) Proof {
 		DynamicSizes: make(map[int]int),
 	}
 
+	// piSet identifies the objects registered as public inputs: their values
+	// are captured into the returned PublicInput, not into the proof, so the
+	// two structures never overlap.
+	piSet := sys.publicInputIDSet()
+
 	for _, r := range sys.Rounds {
 		for _, col := range r.Columns {
 			// Capture every committed column (oracle + public). These are
@@ -79,6 +97,11 @@ func (sys *System) Prove(assign func(rt *Runtime)) Proof {
 			// verifier needs them to re-derive the coins.
 			if !rt.HasColumnAssignment(col) {
 				utils.Panic("wiop: missing column in runtime: %v", col.Context.Path())
+			}
+
+			// Public inputs are carried separately in PublicInput.
+			if _, ok := piSet[col.Context.ID]; ok {
+				continue
 			}
 
 			// Skip the internal columns.
@@ -90,6 +113,11 @@ func (sys *System) Prove(assign func(rt *Runtime)) Proof {
 		}
 
 		for _, cell := range r.Cells {
+			// Public inputs are carried separately in PublicInput.
+			if _, ok := piSet[cell.Context.ID]; ok {
+				continue
+			}
+
 			// GetCellValue resolves lazily-assigned openings (e.g. endpoint and
 			// quotient/evaluation claims) so their values are captured.
 			proof.Cells[cell.Context.ID] = rt.GetCellValue(cell)
@@ -100,7 +128,24 @@ func (sys *System) Prove(assign func(rt *Runtime)) Proof {
 		proof.DynamicSizes[k] = v
 	}
 
-	return proof
+	// Capture the registered public inputs into a separate PublicInput. Reading
+	// directly from the runtime handles both interactive-round and precomputed
+	// public inputs uniformly.
+	pub := PublicInput{
+		Columns: make(map[ObjectID]*ConcreteVector),
+		Cells:   make(map[ObjectID]field.Gen),
+	}
+
+	for _, id := range sys.PublicInputs {
+		switch id.Kind() {
+		case KindColumn:
+			pub.Columns[id] = rt.GetColumnAssignment(sys.LookupColumn(id))
+		case KindCell:
+			pub.Cells[id] = rt.GetCellValue(sys.LookupCell(id))
+		}
+	}
+
+	return proof, pub
 }
 
 // Verify reconstructs a [Runtime] from proof and runs every verifier action
@@ -118,15 +163,29 @@ func (sys *System) Prove(assign func(rt *Runtime)) Proof {
 //
 // The function also panics if the proof contains any unexpected columns or
 // cells. For the column it will check that their visibility is correct.
-func (sys *System) Verify(proof Proof) error {
+func (sys *System) Verify(proof Proof, pub PublicInput) error {
 	rt := NewRuntime(sys) // currentRound = r0, preloads precomputed columns
 
-	// assignRound loads the proof's committed columns and cells for r into the
-	// runtime. AssignColumn / AssignCell require r to be the current round, so
-	// this is always called on rt.CurrentRound().
+	// piSet identifies the objects registered as public inputs. Their values
+	// are read from pub rather than proof, enforcing the no-overlap invariant
+	// between the two structures.
+	piSet := sys.publicInputIDSet()
+
+	// assignRound loads the proof's committed columns and cells (and the public
+	// inputs) for r into the runtime. AssignColumn / AssignCell require r to be
+	// the current round, so this is always called on rt.CurrentRound().
 	assignRound := func(r *Round) error {
 
 		for _, col := range r.Columns {
+			if _, isPI := piSet[col.Context.ID]; isPI {
+				v, found := pub.Columns[col.Context.ID]
+				if !found {
+					return fmt.Errorf("public-input column %q not found in public inputs", col.Context.Path())
+				}
+				rt.AssignColumn(col, v)
+				continue
+			}
+
 			if col.Visibility < VisibilityOracle {
 				continue
 			}
@@ -140,6 +199,15 @@ func (sys *System) Verify(proof Proof) error {
 		}
 
 		for _, cell := range r.Cells {
+			if _, isPI := piSet[cell.Context.ID]; isPI {
+				v, ok := pub.Cells[cell.Context.ID]
+				if !ok {
+					return fmt.Errorf("public-input cell %q not found in public inputs", cell.Context.Path())
+				}
+				rt.AssignCell(cell, v)
+				continue
+			}
+
 			v, ok := proof.Cells[cell.Context.ID]
 			if !ok {
 				return fmt.Errorf("cell %q not found in proof", cell.Context.Path())
@@ -172,8 +240,13 @@ func (sys *System) Verify(proof Proof) error {
 	}
 
 	// This checks that all the items of the proof have been used. Meaning all
-	// cells and all columns of the proof are read.
+	// cells and all columns of the proof are read. It also enforces the
+	// no-overlap invariant: a proof item must not be a registered public input.
 	for id := range proof.Columns {
+		if _, isPI := piSet[id]; isPI {
+			return fmt.Errorf("column %q is a public input and must not appear in the proof", id)
+		}
+
 		col := sys.LookupColumn(id)
 		if col == nil {
 			return fmt.Errorf("column %q not found in system", id)
@@ -185,6 +258,10 @@ func (sys *System) Verify(proof Proof) error {
 	}
 
 	for id := range proof.Cells {
+		if _, isPI := piSet[id]; isPI {
+			return fmt.Errorf("cell %q is a public input and must not appear in the proof", id)
+		}
+
 		cell := sys.LookupCell(id)
 		if cell == nil {
 			return fmt.Errorf("cell %q not found in system", id)
@@ -192,6 +269,26 @@ func (sys *System) Verify(proof Proof) error {
 
 		if !rt.HasCellValue(cell) {
 			return fmt.Errorf("cell %q not used in proof", cell.Context.Path())
+		}
+	}
+
+	// Check that the supplied public inputs correspond exactly to the
+	// registered ones and were all consumed during the transcript replay.
+	for id := range pub.Columns {
+		if _, isPI := piSet[id]; !isPI {
+			return fmt.Errorf("column %q in public inputs is not a registered public input", id)
+		}
+		if !rt.HasColumnAssignment(sys.LookupColumn(id)) {
+			return fmt.Errorf("public-input column %q not used", id)
+		}
+	}
+
+	for id := range pub.Cells {
+		if _, isPI := piSet[id]; !isPI {
+			return fmt.Errorf("cell %q in public inputs is not a registered public input", id)
+		}
+		if !rt.HasCellValue(sys.LookupCell(id)) {
+			return fmt.Errorf("public-input cell %q not used", id)
 		}
 	}
 
