@@ -53,7 +53,7 @@ LARGE_SSZ_LOG                ?= $(LARGE_SSZ_DIR)/zkevm-runner-dump.log
 # printf). Override to pick the execution backend — e.g. "--quiet --gogen --fast" runs the guest via
 # zkc's generated-Go backend in fast mode, the runnability path used while the interpreter does not
 # implement tracing yet.
-ZKC_EXEC_FLAGS ?= -q
+ZKC_EXEC_FLAGS ?=--fast -q
 
 # If true, generates an objdump of the generated ELF for debugging purposes
 OBJDUMP     ?= false
