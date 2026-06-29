@@ -62,6 +62,9 @@ func main() {
 	if err := writeVerifyFixtures(fixtureCases, compiledSystems); err != nil {
 		panic(err)
 	}
+	if err := writeSerializedProofInputs(fixtureCases); err != nil {
+		panic(err)
+	}
 }
 
 func writeHeader(out *bytes.Buffer) {
@@ -1001,6 +1004,7 @@ func writeVerifyFixtures(cases []fixtureCase, systems []codegen.CompiledSystem) 
 		writeVerifyCase(&out, i, cases[i])
 	}
 	writeVerifyMetadata(&out, cases, systems)
+	writeVerifyInputLayouts(&out, cases)
 	writeVerifyCaseSwitch(&out, cases)
 	writeVerifyInputSwitch(&out, cases)
 	writeVerifyFailingInputSwitch(&out, cases)
@@ -1011,6 +1015,46 @@ func writeVerifyFixtures(cases []fixtureCase, systems []codegen.CompiledSystem) 
 		data = zigfmt
 	}
 	return os.WriteFile(filepath.Join("..", "generated", "verify.zig"), data, 0o644)
+}
+
+// writeSerializedProofInputs materializes the honest proof for every generated
+// verifier case as a standalone runtime input file. These files are intentionally
+// not checked in: `verify.zig` remains the checked-in source of truth for specs,
+// systems, and layout metadata, while `verify_case_<N>.bin` is regenerated for
+// local/native/R5 runs that use `EMBEDDED_INPUT=none`.
+//
+// Invalid proofs are skipped for now. The failing sanity checks still use the
+// embedded invalid fixtures from `verify.zig`, which keeps this first wire format
+// focused on the benchmark/passing-proof path.
+func writeSerializedProofInputs(cases []fixtureCase) error {
+	inputDir := filepath.Join("..", "inputs")
+	if err := os.MkdirAll(inputDir, 0o755); err != nil {
+		return err
+	}
+
+	// remove any stale `verify_case_*.bin` files from previous runs. This keeps the
+	// input directory clean and avoids confusion about which files are current.
+	stale, err := filepath.Glob(filepath.Join(inputDir, "verify_case_*.bin"))
+	if err != nil {
+		return err
+	}
+	for _, path := range stale {
+		if err := os.Remove(path); err != nil {
+			return err
+		}
+	}
+
+	for i, tc := range cases {
+		encoded, err := serializeProof(tc.honest)
+		if err != nil {
+			return fmt.Errorf("serialize proof %d (%s): %w", i, tc.name, err)
+		}
+		outputPath := filepath.Join(inputDir, fmt.Sprintf("verify_case_%d.bin", i))
+		if err := os.WriteFile(outputPath, encoded, 0o644); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func writeVerifyHeader(out *bytes.Buffer, count int) {
@@ -1024,6 +1068,7 @@ func writeVerifyHeader(out *bytes.Buffer, count int) {
 	fmt.Fprintln(out, "const vanishing = verifier_ray.query.vanishing;")
 	fmt.Fprintln(out, "const logderivativesum = verifier_ray.query.logderivativesum;")
 	fmt.Fprintln(out, "const verifier = verifier_ray.verifier;")
+	fmt.Fprintln(out, "const proof_wire = verifier_ray.proof_wire;")
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "pub const VerifyCase = struct {")
 	fmt.Fprintln(out, "    name: []const u8,")
@@ -1169,6 +1214,47 @@ func writeVerifyMetadata(out *bytes.Buffer, cases []fixtureCase, systems []codeg
 		)
 	}
 	fmt.Fprintln(out, "};")
+	fmt.Fprintln(out)
+}
+
+// writeVerifyInputLayouts emits the per-case shape metadata consumed by the Zig
+// proof-wire decoder. The binary input format is length-prefixed, but the R5
+// verifier should not allocate; these counts let Zig instantiate fixed backing
+// arrays at comptime and then fill them from runtime bytes.
+//
+// `encoded_size` is also emitted so native and R5 loaders know exactly how many
+// bytes to mmap/read from `_in_start` for the selected case.
+func writeVerifyInputLayouts(out *bytes.Buffer, cases []fixtureCase) {
+	fmt.Fprintln(out, "pub const input_layouts = [_]proof_wire.Layout{")
+	for _, tc := range cases {
+		layout := proofLayout(tc.honest)
+		fmt.Fprintf(
+			out,
+			"    .{ .round_count = %d, .column_count = %d, .cell_count = %d, .public_base_value_count = %d, .public_ext_value_count = %d, .witness_claim_count = %d, .quotient_claim_count = %d, .module_size_count = %d, .encoded_size = %d },\n",
+			layout.roundCount,
+			layout.columnCount,
+			layout.cellCount,
+			layout.publicBaseValueCount,
+			layout.publicExtValueCount,
+			layout.witnessClaimCount,
+			layout.quotientClaimCount,
+			layout.moduleSizeCount,
+			layout.encodedSize,
+		)
+	}
+	fmt.Fprintln(out, "};")
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "pub fn getInputLayout(comptime index: usize) proof_wire.Layout {")
+	fmt.Fprintln(out, "    return input_layouts[index];")
+	fmt.Fprintln(out, "}")
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "pub fn inputSize(comptime index: usize) usize {")
+	fmt.Fprintln(out, "    return getInputLayout(index).encoded_size;")
+	fmt.Fprintln(out, "}")
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "pub fn ProofBacking(comptime index: usize) type {")
+	fmt.Fprintln(out, "    return proof_wire.Backing(getInputLayout(index));")
+	fmt.Fprintln(out, "}")
 	fmt.Fprintln(out)
 }
 
