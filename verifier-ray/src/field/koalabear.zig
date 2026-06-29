@@ -92,14 +92,6 @@ pub const Element = extern struct {
         return self.mul(self);
     }
 
-    // The exponent is u64, not u32. On the rv64 target a u32 loop variable makes
-    // LLVM re-narrow `exp` every iteration: `exp >>= 1` lowers to `srliw` (the
-    // 32-bit word shift) and the `exp != 0` test needs a `sext.w` before it, so
-    // the loop carries two extra instructions per bit. A u64 exponent lowers the
-    // shift to a plain `srli` with no per-iteration `sext.w`. u64 is also the
-    // natural width: the exponents are domain sizes / positions (usize at the
-    // call sites), so it avoids a narrowing @intCast. The values, bounded by
-    // max_order_root, fit in u32 too.
     pub fn pow(self: Element, exponent: u64) Element {
         var result = Element.one();
         var base = self;
