@@ -334,8 +334,6 @@ lineth_run_stream env LINETH_EMBEDDED=true LINETH_SKIP_BANNER=true "$SCRIPT_DIR/
 lineth_section "Check L1 network"
 if [ "$L1_MODE" = "local" ]; then
   wait_for_local_l1
-else
-  lineth_kv "mode" "Sepolia"
 fi
 
 run_ts_preflight

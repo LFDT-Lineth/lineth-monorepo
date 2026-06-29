@@ -221,7 +221,7 @@ Choose prover mode [$wizard_prompt_default_number]:
      Recommended. Fast dummy proofs for laptops and demos.
 
   2. Partial prover
-     Real partial proving. Needs much more Docker memory.
+     Real partial proving. Requires at least 32 GB Docker memory; 128 GB recommended.
 
 EOF
     printf 'Select 1/dev or 2/partial: '
@@ -254,7 +254,7 @@ lineth_wizard_prompt_url() {
 
   while [ "$wizard_url_attempt" -le 3 ]; do
     if [ -n "$wizard_url_default" ]; then
-      printf 'Sepolia L1 RPC URL [keep current]: '
+      printf 'Sepolia L1 RPC URL (press Enter to keep current): '
     else
       printf 'Sepolia L1 RPC URL: '
     fi
@@ -275,63 +275,55 @@ lineth_wizard_prompt_url() {
   lineth_die "invalid/missing L1 RPC URL: expected http(s)://..."
 }
 
-lineth_wizard_prompt_confirm() {
-  wizard_confirm_default="$1"
-  if [ "$wizard_confirm_default" = "yes" ]; then
-    wizard_confirm_label="[Y/n]"
-  else
-    wizard_confirm_label="[y/N]"
-  fi
+lineth_wizard_prompt_execution_plan() {
+  wizard_execution_default="$1"
+  wizard_execution_attempt=1
 
-  printf 'Write .env now? %s ' "$wizard_confirm_label"
-  if ! IFS= read -r wizard_confirm_answer; then
-    lineth_die "missing confirmation answer"
-  fi
+  while [ "$wizard_execution_attempt" -le 3 ]; do
+    cat <<EOF
+  1. Save .env only
+     Do not start the stack now.
 
-  case "$wizard_confirm_answer" in
-    '')
-      [ "$wizard_confirm_default" = "yes" ]
-      ;;
-    y|Y|yes|YES)
-      return 0
-      ;;
-    n|N|no|NO)
-      return 1
-      ;;
-    *)
-      lineth_die "invalid confirmation answer"
-      ;;
-  esac
-}
+  2. Save .env and start stack
+     Reuse any existing quickstart containers and volumes.
 
-lineth_wizard_prompt_yes_no() {
-  wizard_yes_no_prompt="$1"
-  wizard_yes_no_default="$2"
-  if [ "$wizard_yes_no_default" = "yes" ]; then
-    wizard_yes_no_label="[Y/n]"
-  else
-    wizard_yes_no_label="[y/N]"
-  fi
+  3. Save .env, clear existing quickstart state, then start stack
+     Run ./scripts/reset.sh before starting.
 
-  printf '%s %s ' "$wizard_yes_no_prompt" "$wizard_yes_no_label"
-  if ! IFS= read -r wizard_yes_no_answer; then
-    lineth_die "missing answer"
-  fi
+  4. Cancel; leave .env unchanged
 
-  case "$wizard_yes_no_answer" in
-    '')
-      [ "$wizard_yes_no_default" = "yes" ]
-      ;;
-    y|Y|yes|YES)
-      return 0
-      ;;
-    n|N|no|NO)
-      return 1
-      ;;
-    *)
-      lineth_die "invalid answer"
-      ;;
-  esac
+EOF
+    printf 'Select 1/save, 2/start, 3/clear-start, or 4/cancel [%s]: ' "$wizard_execution_default"
+    if ! IFS= read -r wizard_execution_answer; then
+      lineth_die "missing execution-plan answer"
+    fi
+    if [ -z "$wizard_execution_answer" ]; then
+      wizard_execution_answer="$wizard_execution_default"
+    fi
+
+    case "$wizard_execution_answer" in
+      1|save|Save|SAVE|save-only|SAVE-ONLY)
+        WIZARD_PROMPT_RESULT="save"
+        return 0
+        ;;
+      2|start|Start|START)
+        WIZARD_PROMPT_RESULT="start"
+        return 0
+        ;;
+      3|clear-start|clean-start|reset-start|clear|clean|reset)
+        WIZARD_PROMPT_RESULT="clear-start"
+        return 0
+        ;;
+      4|cancel|Cancel|CANCEL)
+        WIZARD_PROMPT_RESULT="cancel"
+        return 0
+        ;;
+    esac
+    lineth_warn "invalid execution-plan answer: choose 1/save, 2/start, 3/clear-start, or 4/cancel"
+    wizard_execution_attempt=$((wizard_execution_attempt + 1))
+  done
+
+  lineth_die "invalid execution-plan answer: choose 1/save, 2/start, 3/clear-start, or 4/cancel"
 }
 
 lineth_wizard_collect_interactive() {
@@ -471,12 +463,16 @@ lineth_wizard_diff_value() {
 
 lineth_wizard_print_diff() {
   [ -f "$WIZARD_ENV_FILE" ] || return 0
-  lineth_section "Managed-key changes"
+  wizard_diff_buf=""
   for wizard_diff_key in $LINETH_WIZARD_MANAGED_KEYS; do
     wizard_diff_old="$(lineth_wizard_env_value "$WIZARD_ENV_FILE" "$wizard_diff_key" || true)"
     wizard_diff_new="$(lineth_wizard_env_value "$WIZARD_CANDIDATE_ENV" "$wizard_diff_key" || true)"
-    lineth_wizard_diff_value "$wizard_diff_key" "$wizard_diff_old" "$wizard_diff_new"
+    [ "$wizard_diff_old" = "$wizard_diff_new" ] && continue
+    wizard_diff_buf="${wizard_diff_buf}$(lineth_wizard_diff_value "$wizard_diff_key" "$wizard_diff_old" "$wizard_diff_new")"
   done
+  [ -n "$wizard_diff_buf" ] || return 0
+  lineth_section "Configuration changes"
+  printf '%s' "$wizard_diff_buf"
 }
 
 lineth_wizard_state_exists() {
@@ -506,10 +502,9 @@ lineth_wizard_existing_mode_flip() {
 }
 
 lineth_wizard_guard_mode_switch() {
+  [ "${LINETH_WIZARD_RESULT_START:-false}" = "true" ] || return 0
+  [ "${LINETH_WIZARD_RESULT_CLEAR_BEFORE_START:-false}" = "true" ] && return 0
   if lineth_wizard_existing_mode_flip && lineth_wizard_state_exists; then
-    if [ "${LINETH_WIZARD_RESULT_CLEAR_BEFORE_START:-false}" = "true" ]; then
-      return 0
-    fi
     lineth_error "existing stack state was detected and this changes L1/prover mode"
     lineth_info "run ./scripts/reset.sh yourself first, then rerun the wizard"
     return 1
@@ -570,6 +565,10 @@ lineth_wizard_rpc_was_supplied() {
 
 lineth_wizard_check_rpc_with_retries() {
   wizard_rpc_attempt=1
+  if [ "$WIZARD_L1_MODE_RESOLVED" = "sepolia" ] \
+    && [ "${LINETH_WIZARD_SKIP_RPC_PREFLIGHT:-false}" != "true" ]; then
+    lineth_section "Sepolia RPC check"
+  fi
   while ! lineth_wizard_check_rpc_deep; do
     if [ "${LINETH_WIZARD_NON_INTERACTIVE:-false}" = "true" ] \
       || [ "$WIZARD_L1_MODE_RESOLVED" != "sepolia" ] \
@@ -588,28 +587,6 @@ lineth_wizard_check_rpc_with_retries() {
   return 0
 }
 
-lineth_wizard_check_ports_after_write() {
-  [ "${LINETH_WIZARD_RESULT_START:-false}" = "true" ] && return 0
-  [ "${LINETH_WIZARD_SKIP_PORT_CHECK:-false}" = "true" ] && return 0
-
-  if [ -n "${LINETH_WIZARD_PORT_CHECK_STATUS:-}" ]; then
-    if [ "$LINETH_WIZARD_PORT_CHECK_STATUS" = "0" ]; then
-      lineth_ok "ports are free"
-      return 0
-    fi
-    lineth_error "port check failed"
-    lineth_info "Edit the matching HOST_PORT_* values in .env, then rerun the wizard."
-    return 1
-  fi
-
-  if env LINETH_EMBEDDED=true LINETH_SKIP_BANNER=true "$LINETH_WIZARD_SCRIPT_DIR/check-ports.sh"; then
-    lineth_ok "ports are free"
-    return 0
-  fi
-  lineth_info "Edit the matching HOST_PORT_* values in .env, then rerun the wizard."
-  return 1
-}
-
 lineth_wizard_cleanup() {
   [ -n "${WIZARD_CANDIDATE_ENV:-}" ] && rm -f "$WIZARD_CANDIDATE_ENV"
 }
@@ -625,21 +602,35 @@ lineth_wizard_write_result() {
 lineth_wizard_collect_start_options() {
   LINETH_WIZARD_RESULT_START="${LINETH_WIZARD_THEN_START:-false}"
   LINETH_WIZARD_RESULT_CLEAR_BEFORE_START="${LINETH_WIZARD_CLEAR_BEFORE_START:-false}"
+  LINETH_WIZARD_RESULT_CANCEL=false
 
-  if [ "$LINETH_WIZARD_RESULT_START" != "true" ] \
-    && [ "${LINETH_WIZARD_NON_INTERACTIVE:-false}" != "true" ]; then
-    if lineth_wizard_prompt_yes_no "Start the stack now?" "no"; then
-      LINETH_WIZARD_RESULT_START=true
-    fi
-  fi
-
-  if [ "$LINETH_WIZARD_RESULT_START" = "true" ] \
-    && [ "$LINETH_WIZARD_RESULT_CLEAR_BEFORE_START" != "true" ] \
-    && [ "${LINETH_WIZARD_NON_INTERACTIVE:-false}" != "true" ] \
-    && lineth_wizard_state_exists; then
-    if lineth_wizard_prompt_yes_no "Clear existing quickstart environment before starting?" "no"; then
-      LINETH_WIZARD_RESULT_CLEAR_BEFORE_START=true
-    fi
+  if [ "${LINETH_WIZARD_NON_INTERACTIVE:-false}" != "true" ] \
+    && [ "${LINETH_WIZARD_YES:-false}" != "true" ] \
+    && [ "${LINETH_WIZARD_THEN_START:-false}" != "true" ] \
+    && [ "${LINETH_WIZARD_CLEAR_BEFORE_START:-false}" != "true" ]; then
+    wizard_execution_default=1
+    [ -f "$WIZARD_ENV_FILE" ] && wizard_execution_default=4
+    lineth_section "Next step"
+    lineth_wizard_prompt_execution_plan "$wizard_execution_default"
+    case "$WIZARD_PROMPT_RESULT" in
+      save)
+        LINETH_WIZARD_RESULT_START=false
+        LINETH_WIZARD_RESULT_CLEAR_BEFORE_START=false
+        ;;
+      start)
+        LINETH_WIZARD_RESULT_START=true
+        LINETH_WIZARD_RESULT_CLEAR_BEFORE_START=false
+        ;;
+      clear-start)
+        LINETH_WIZARD_RESULT_START=true
+        LINETH_WIZARD_RESULT_CLEAR_BEFORE_START=true
+        ;;
+      cancel)
+        LINETH_WIZARD_RESULT_START=false
+        LINETH_WIZARD_RESULT_CLEAR_BEFORE_START=false
+        LINETH_WIZARD_RESULT_CANCEL=true
+        ;;
+    esac
   fi
 
   lineth_wizard_write_result
@@ -653,10 +644,13 @@ lineth_wizard_cancelled() {
 
 lineth_wizard_main() {
   LINETH_WIZARD_STACK="$1"
+  # shellcheck disable=SC2034
   LINETH_WIZARD_SCRIPT_DIR="$2"
+  lineth_banner "wizard · guided .env setup"
   WIZARD_CANDIDATE_ENV=""
   LINETH_WIZARD_RESULT_START=false
   LINETH_WIZARD_RESULT_CLEAR_BEFORE_START="${LINETH_WIZARD_CLEAR_BEFORE_START:-false}"
+  LINETH_WIZARD_RESULT_CANCEL=false
   lineth_wizard_write_result
   trap lineth_wizard_cancelled INT TERM
 
@@ -683,20 +677,12 @@ lineth_wizard_main() {
     return 0
   fi
 
-  if [ "${LINETH_WIZARD_NON_INTERACTIVE:-false}" != "true" ] && [ "${LINETH_WIZARD_YES:-false}" != "true" ]; then
-    if [ -f "$WIZARD_ENV_FILE" ]; then
-      wizard_confirm_default="no"
-    else
-      wizard_confirm_default="yes"
-    fi
-    if ! lineth_wizard_prompt_confirm "$wizard_confirm_default"; then
-      lineth_info "no changes written"
-      lineth_wizard_cleanup
-      return 0
-    fi
-  fi
-
   lineth_wizard_collect_start_options
+  if [ "${LINETH_WIZARD_RESULT_CANCEL:-false}" = "true" ]; then
+    lineth_info "no changes written"
+    lineth_wizard_cleanup
+    return 0
+  fi
 
   lineth_wizard_guard_mode_switch || {
     lineth_wizard_cleanup
@@ -707,5 +693,4 @@ lineth_wizard_main() {
   mv "$WIZARD_CANDIDATE_ENV" "$WIZARD_ENV_FILE"
   WIZARD_CANDIDATE_ENV=""
   lineth_ok ".env written"
-  lineth_wizard_check_ports_after_write
 }

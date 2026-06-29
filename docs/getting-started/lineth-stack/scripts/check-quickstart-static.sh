@@ -580,6 +580,8 @@ check_typescript_quickstart_helpers() {
   if grep -q -- '--forget-deployer' "$STACK/scripts/reset.sh" \
     && grep -q 'PRESERVED_DEPLOYER_DIR' "$STACK/scripts/reset.sh" \
     && grep -q 'deployer-keystore' "$STACK/scripts/reset.sh" \
+    && grep -q 'lineth_subtitle "reset · clean quickstart state"' "$STACK/scripts/reset.sh" \
+    && ! grep -q 'lineth_banner' "$STACK/scripts/reset.sh" \
     && ! grep -q '^L1_DEPLOYER_PRIVATE_KEY=' "$STACK/.env.example" \
     && ! grep -q '^# L1_DEPLOYER_PRIVATE_KEY=' "$STACK/.env.example"; then
     pass "reset preserves generated Sepolia deployer by default and .env.example omits raw deployer key"
@@ -1527,6 +1529,7 @@ check_wizard_cli() {
   if [ -f "$wizard_lib" ] \
     && grep -q 'lineth_wizard_main' "$wizard_lib" \
     && grep -q 'lineth_wizard_set_env_key()' "$wizard_lib" \
+    && grep -q 'lineth_banner "wizard · guided .env setup"' "$wizard_lib" \
     && grep -q 'LINETH_WIZARD_MANAGED_KEYS="L1_MODE L1_RPC_URL PROVER_DEV_OVERRIDE PROVER_GOMEMLIMIT"' "$wizard_lib"; then
     pass "wizard shell library owns the managed .env key flow"
   else
@@ -1588,7 +1591,7 @@ check_wizard_cli() {
     && grep -q 'L1 prompt uses numbered choice header' "$wizard_tests" \
     && grep -q 'backup collision keeps both backups' "$wizard_tests" \
     && grep -q 'mode-switch guard points at reset' "$wizard_tests" \
-    && grep -q 'busy-port simulation writes .env before failing' "$wizard_tests" \
+    && grep -q 'save-only writes .env without checking ports' "$wizard_tests" \
     && grep -q 'RPC preflight failure leaves no .env' "$wizard_tests" \
     && grep -q 'LINETH_WIZARD_STACK_OVERRIDE' "$wizard_tests" \
     && [ -f "$STACK/scripts/tests/wizard/fixtures/local-dev.env" ] \
