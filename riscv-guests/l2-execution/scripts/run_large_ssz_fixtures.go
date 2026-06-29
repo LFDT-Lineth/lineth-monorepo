@@ -1,5 +1,9 @@
 package main
 
+// Examples, from the repository root:
+//   GOCACHE=/tmp/go-build go run ./riscv-guests/l2-execution/scripts/run_large_ssz_fixtures.go --root-folders for_amsterdam --target-folders amsterdam --limit 10
+//   GOCACHE=/tmp/go-build go run ./riscv-guests/l2-execution/scripts/run_large_ssz_fixtures.go --root-folders for_amsterdam,for_bpo2toamsterdamattime15k --target-folders prague,osaka,amsterdam --limit 1
+
 import (
 	"flag"
 	"fmt"
@@ -30,8 +34,7 @@ func main() {
 
 	must(run(os.Stderr, "make", "-C", guestDir, "compile"))
 
-	fmt.Println("| root folder | target folder | test | size bytes | time | result |")
-	fmt.Println("|---|---|---|---:|---:|---|")
+	printTableHeader()
 
 	total := 0
 	passed := 0
@@ -73,19 +76,29 @@ func main() {
 				}
 				size := fileSize(file)
 				testName, _ := filepath.Rel(outDir, file)
-				fmt.Printf("| %s | %s | %s | %d | %s | %s |\n",
-					rootFolder,
-					targetFolder,
-					escapeCell(testName),
-					size,
-					elapsed.Round(time.Millisecond),
-					result(ok),
-				)
+				printTableRow(rootFolder, targetFolder, testName, size, elapsed, ok)
 			}
 		}
 	}
 
 	fmt.Fprintf(os.Stderr, "summary: %d/%d passed\n", passed, total)
+}
+
+func printTableHeader() {
+	fmt.Printf("| %-32s | %-16s | %-96s | %10s | %10s | %-6s |\n",
+		"root folder", "target folder", "test", "size bytes", "time", "result")
+	fmt.Println("| -------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------ | ----------: | ----------: | ------ |")
+}
+
+func printTableRow(rootFolder, targetFolder, testName string, size int64, elapsed time.Duration, ok bool) {
+	fmt.Printf("| %-32s | %-16s | %-96s | %10d | %10s | %-6s |\n",
+		rootFolder,
+		targetFolder,
+		escapeCell(testName),
+		size,
+		elapsed.Round(time.Millisecond),
+		result(ok),
+	)
 }
 
 func repoRoot() (string, error) {
