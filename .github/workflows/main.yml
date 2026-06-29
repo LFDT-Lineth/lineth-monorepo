@@ -115,6 +115,7 @@ jobs:
               - 'rollup_spec/tests/**'
               - 'rollup_spec/requirements.txt'
               - 'rollup_spec/pyproject.toml'
+              - '.github/workflows/rollup-spec-testing.yml'
             transaction-exclusion-api:
               - 'transaction-exclusion-api/**'
               - 'jvm-libs/generic/extensions/futures/**'
