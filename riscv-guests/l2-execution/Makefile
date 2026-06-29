@@ -32,29 +32,32 @@ BIN      := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
 
 # Sample fixture input used by exec/debug
 INPUT    ?= $(MAKEFILE_DIR)test/testdata/stateless_input.ssz
-# INPUT ?= $(MAKEFILE_DIR).cache/large-ssz-fixtures/ssz/blockchain_tests/osaka/test_max_blob_per_tx.py__test_valid_max_blobs_per_tx_fork_Amsterdam-blob_count_1_4.ssz
-
-LARGE_SSZ_DIR                ?= $(MAKEFILE_DIR).cache/large-ssz-fixtures
-LARGE_SSZ_GO_CACHE_DIR       ?= $(LARGE_SSZ_DIR)/go-build
-LARGE_SSZ_GO_MOD_DIR         ?= $(LARGE_SSZ_DIR)/go-mod
-STATELESS_EXECUTOR_REPO      ?= https://github.com/Gabriel-Trintinalia/stateless-executor
-STATELESS_EXECUTOR_DIR       ?= $(LARGE_SSZ_DIR)/stateless-executor
-ZKEVM_RUNNER                 ?= $(STATELESS_EXECUTOR_DIR)/bin/zkevm-runner
-ZKEVM_FIXTURES_URL           ?= https://github.com/ethereum/execution-specs/releases/download/tests-zkevm@v0.4.1/fixtures_zkevm.tar.gz
-ZKEVM_FIXTURES_ARCHIVE       ?= $(LARGE_SSZ_DIR)/fixtures_zkevm.tar.gz
-ZKEVM_FIXTURES_DIR           ?= $(LARGE_SSZ_DIR)/fixtures
-ZKEVM_FIXTURES_SUITE         ?= blockchain_tests
-ZKEVM_FIXTURES_ROOT_FOLDER   ?= for_amsterdam
-ZKEVM_FIXTURES_TARGET_FOLDER ?= osaka
-ZKEVM_FIXTURES_TARGET_DIR    ?= $(ZKEVM_FIXTURES_DIR)/$(ZKEVM_FIXTURES_SUITE)/$(ZKEVM_FIXTURES_ROOT_FOLDER)/$(ZKEVM_FIXTURES_TARGET_FOLDER)
-LARGE_SSZ_OUT_DIR            ?= $(LARGE_SSZ_DIR)/ssz/$(ZKEVM_FIXTURES_SUITE)/$(ZKEVM_FIXTURES_TARGET_FOLDER)
-LARGE_SSZ_LOG                ?= $(LARGE_SSZ_DIR)/zkevm-runner-dump.log
+# INPUT ?= $(LARGE_SSZ_OUT_DIR)/test_witness_headers.py__test_witness_headers_blockhash_at_offset_fork_Amsterdam_1811.ssz
 
 # Flags forwarded to `zkc exec` by exec. Default -q (quiet: suppress the guest's per-instruction
 # printf). Override to pick the execution backend — e.g. "--quiet --gogen --fast" runs the guest via
 # zkc's generated-Go backend in fast mode, the runnability path used while the interpreter does not
 # implement tracing yet.
 ZKC_EXEC_FLAGS ?=--gogen --fast
+
+# Paramaeters for generating large SSZ fixtures from the execution-spec zkevm fixture archive
+LARGE_SSZ_DIR                := $(MAKEFILE_DIR).cache/large-ssz-fixtures
+LARGE_SSZ_GO_CACHE_DIR       := $(LARGE_SSZ_DIR)/go-build
+LARGE_SSZ_GO_MOD_DIR         := $(LARGE_SSZ_DIR)/go-mod
+STATELESS_EXECUTOR_REPO      := https://github.com/Gabriel-Trintinalia/stateless-executor
+STATELESS_EXECUTOR_DIR       := $(LARGE_SSZ_DIR)/stateless-executor
+ZKEVM_RUNNER                 := $(STATELESS_EXECUTOR_DIR)/bin/zkevm-runner
+ZKEVM_FIXTURES_URL           := https://github.com/ethereum/execution-specs/releases/download/tests-zkevm@v0.4.1/fixtures_zkevm.tar.gz
+ZKEVM_FIXTURES_ARCHIVE       := $(LARGE_SSZ_DIR)/fixtures_zkevm.tar.gz
+ZKEVM_FIXTURES_DIR           := $(LARGE_SSZ_DIR)/fixtures
+### Edit these to pick a different fixture suite, root folder, or target folder
+ZKEVM_FIXTURES_SUITE         ?= blockchain_tests
+ZKEVM_FIXTURES_ROOT_FOLDER   ?= for_amsterdam
+ZKEVM_FIXTURES_TARGET_FOLDER ?= amsterdam
+###
+ZKEVM_FIXTURES_TARGET_DIR    := $(ZKEVM_FIXTURES_DIR)/$(ZKEVM_FIXTURES_SUITE)/$(ZKEVM_FIXTURES_ROOT_FOLDER)/$(ZKEVM_FIXTURES_TARGET_FOLDER)
+LARGE_SSZ_OUT_DIR            := $(LARGE_SSZ_DIR)/ssz/$(ZKEVM_FIXTURES_SUITE)/$(ZKEVM_FIXTURES_TARGET_FOLDER)
+LARGE_SSZ_LOG                := $(LARGE_SSZ_DIR)/zkevm-runner-dump.log
 
 # If true, generates an objdump of the generated ELF for debugging purposes
 OBJDUMP     ?= false
