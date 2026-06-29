@@ -24,3 +24,4 @@
 - *(coordinator)* Rename packages net.consensys.zkevm.* -> linea.* (#3105)
 - *(coordinator)* Log and message error improvements (#3193)
 - *(coordinator)* Favour generic name ChainSecurityRuleViolation over specific implementation Phylax (#3330)
+- *(coordinator)* Update kotlin to v2.4 (#3454)

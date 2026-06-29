@@ -1,4 +1,10 @@
-## [unreleased]
+## [1.0.4] - 2026-06-29
+
+### 🐛 Bug Fixes
+
+- *(prover)* Bit-decompose limbs by absolute row, not compact position (#3464)
+- *(prover)* Filter accumulator-summary state-summary inclusions (#3465)
+## [1.0.3] - 2026-06-29
 
 ### 🐛 Bug Fixes
 

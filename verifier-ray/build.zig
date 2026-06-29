@@ -1,4 +1,5 @@
 const std = @import("std");
+const common = @import("build_common");
 
 // Build-option enum: the CLI value (`-Dembedded-input=<value>`) is matched
 // against these field names directly, so keep them as the strings users type.
@@ -24,16 +25,10 @@ pub fn build(b: *std.Build) void {
     // input serialization yet. This is only used for execution target, not for any test fixtures or library.
     const embedded_input = b.option(EmbeddedInputType, "embedded-input", "Embed the input file into the binary") orelse EmbeddedInputType.none;
 
-    const default_target: std.Target.Query = if (r5) .{
-        .cpu_arch = .riscv64,
-        .cpu_model = .{ .explicit = &std.Target.riscv.cpu.generic_rv64 },
-        .cpu_features_add = std.Target.riscv.featureSet(&.{.m}),
-        .cpu_features_sub = std.Target.riscv.featureSet(&.{ .a, .c, .d, .f, .zicsr, .zaamo, .zalrsc }),
-        .os_tag = .freestanding,
-        .abi = .none,
-    } else .{};
-
-    const target = b.standardTargetOptions(.{ .default_target = default_target });
+    const target = if (r5)
+        common.standardGuestTarget(b)
+    else
+        b.standardTargetOptions(.{});
     // TODO: consider adding a "release" option that sets optimize to ReleaseFast instead of ReleaseSmall.
     // For R5 the ReleaseFast optimization causes 2x binary size increase but 1/3 reduction in execution time, so it may be worth having if the binary size is not a concern.
     // For native execution we don't really care about the difference between ReleaseSmall and ReleaseFast, so we can just use ReleaseSmall for the optimized native build.
@@ -81,37 +76,27 @@ pub fn build(b: *std.Build) void {
         },
     });
 
-    const exe = b.addExecutable(.{
-        .name = "verifier-ray",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/main.zig"),
-            .target = target,
-            .optimize = optimize,
-            .strip = strip,
-            .imports = &.{
-                .{ .name = "verifier_ray", .module = verifier_mod },
-                .{ .name = "embedded_data", .module = embedded_data_mod },
-                .{ .name = "embedded_data_config", .module = embedded_data_opts.createModule() },
-            },
-        }),
+    const main_mod = b.createModule(.{
+        .root_source_file = b.path("src/main.zig"),
+        .target = target,
+        .optimize = optimize,
+        .strip = strip,
+        .imports = &.{
+            .{ .name = "verifier_ray", .module = verifier_mod },
+            .{ .name = "embedded_data", .module = embedded_data_mod },
+            .{ .name = "embedded_data_config", .module = embedded_data_opts.createModule() },
+        },
     });
 
-    if (!r5) {
-        exe.root_module.link_libc = true;
-    }
-
     if (r5) {
-        // Point to assembly overwriting default SP with the one defined in the linker script.
-        exe.root_module.addAssemblyFile(b.path("src/start.s"));
-        exe.setLinkerScript(b.path("linker_script.ld"));
+        // Link the statically-linked rv64im ELF with the shared entry stub (start.s) + rv64im memory
+        // layout + dead-section GC
+        common.installGuestElf(b, main_mod, "verifier-ray");
+    } else {
+        const exe = b.addExecutable(.{ .name = "verifier-ray", .root_module = main_mod });
+        exe.root_module.link_libc = true;
+        b.installArtifact(exe);
 
-        // Remove unused code sections for the zkVM binary.
-        exe.link_gc_sections = true;
-    }
-
-    b.installArtifact(exe);
-
-    if (!r5) {
         const run_exe = b.addRunArtifact(exe);
         if (b.args) |args| run_exe.addArgs(args);
 
