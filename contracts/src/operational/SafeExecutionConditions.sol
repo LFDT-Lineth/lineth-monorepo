@@ -9,6 +9,8 @@ import { ISafeExecutionConditions } from "./interfaces/ISafeExecutionConditions.
  * @notice Intended to be invoked as the first call of a batched Safe transaction to gate execution on a condition.
  * @dev The contract holds no state. Each function reverts with a dedicated error when its condition is not met,
  * causing the enclosing Safe transaction to revert atomically.
+ * @dev The functions are intentionally non-`view`: multisig UIs exclude `view`/`pure` ABI entries when staging
+ * batched transactions, so non-`view` mutability is required for these guards to be selectable as a batch call.
  * @author Consensys Software Inc.
  * @custom:security-contact security-report@linea.build
  */
@@ -17,7 +19,7 @@ contract SafeExecutionConditions is ISafeExecutionConditions {
    * @notice Reverts when the current block timestamp is earlier than `_timestamp`.
    * @param _timestamp The earliest timestamp at which execution is allowed.
    */
-  function onlyAfterTimestamp(uint256 _timestamp) external view {
+  function onlyAfterTimestamp(uint256 _timestamp) external {
     require(block.timestamp >= _timestamp, OnlyOnOrAfter(_timestamp));
   }
 
@@ -27,7 +29,7 @@ contract SafeExecutionConditions is ISafeExecutionConditions {
    * transaction, rather than the Safe contract itself which would be `msg.sender`.
    * @param _executors The list of addresses allowed to originate the transaction.
    */
-  function onlyExecutedBy(address[] calldata _executors) external view {
+  function onlyExecutedBy(address[] calldata _executors) external {
     // solhint-disable-next-line avoid-tx-origin
     require(_contains(_executors, tx.origin), OnlyAllowedExecutor());
   }
@@ -40,7 +42,7 @@ contract SafeExecutionConditions is ISafeExecutionConditions {
    * transaction, rather than the Safe contract itself which would be `msg.sender`.
    * @param _safe The Safe whose ownership is checked against the transaction origin. Must equal `msg.sender`.
    */
-  function onlyExecutedBySafeOwner(address _safe) external view {
+  function onlyExecutedBySafeOwner(address _safe) external {
     require(_safe == msg.sender, OnlyExecutingSafe());
     // solhint-disable-next-line avoid-tx-origin
     require(ISafe(_safe).isOwner(tx.origin), OnlySafeOwner());
