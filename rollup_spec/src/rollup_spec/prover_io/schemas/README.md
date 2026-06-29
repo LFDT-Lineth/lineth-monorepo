@@ -32,24 +32,20 @@ responses, the rollup request's `chainId`). For l2-execution, the request's
 
 ## Running the conformance test locally
 
-`fixture_schema_conformance_test.py` checks that every golden-vector fixture
-under `../testdata/` validates against its matching `<name>.schema.json`, and
-that each schema is itself a valid Draft 2020-12 schema. Fixtures are discovered
-automatically, so new fixture/schema pairs are covered without editing the test.
+`tests/test_fixture_schema_conformance.py` checks that every golden-vector
+fixture under `testdata/` validates against its matching `<name>.schema.json`,
+and that each schema is itself a valid Draft 2020-12 schema. Fixtures are
+discovered automatically, so new fixture/schema pairs are covered without
+editing the test.
 
-The test has **no native dependencies** — only `pytest` and `jsonschema` — and
-runs on any modern Python (no 3.11/3.12 constraint, no C toolchain). Run it from
-the **repo root** so the `rollup_spec` package resolves:
+It is part of the project test suite — run it (and everything else) from the
+`rollup_spec/` directory:
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install pytest jsonschema
-python -m pytest rollup_spec/prover_io/schemas/fixture_schema_conformance_test.py
+python -m pip install -r requirements.txt
+python -m pytest                                  # whole suite
+python -m pytest tests/test_fixture_schema_conformance.py   # just this test
 ```
 
-If `jsonschema` is missing, the validation cases are skipped (via
-`pytest.importorskip`) rather than failing.
-
-When you are done, `deactivate` the virtualenv.
+This conformance test itself has **no native dependencies** — only `jsonschema`
+(declared in `requirements.txt`) — so it runs on any modern Python.

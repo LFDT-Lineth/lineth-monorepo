@@ -8,7 +8,7 @@ prover, Kotlin coordinator, …) can load them and assert its own serializer
 round-trips them byte-for-byte. The codec here is the wire authority; the guest
 dataclasses are the logical model.
 
-Run from the repo root:  python -m pytest rollup_spec/proof_io_v1_test.py
+Run from the rollup_spec/ directory:  python -m pytest
 """
 
 import json
@@ -16,6 +16,7 @@ from pathlib import Path
 
 import pytest
 
+import rollup_spec
 from ethereum.crypto.hash import Hash32
 from ethereum.state import Address
 from ethereum_types.numeric import U64
@@ -41,7 +42,9 @@ from rollup_spec.proof_io_v1 import (
 )
 from rollup_spec.stateless_input import decode_stateless_input_ssz
 
-_TESTDATA_DIR = Path(__file__).parent / "prover_io" / "testdata"
+# Locate the golden-vector fixtures via the installed package, so the test does
+# not depend on its own location relative to the data.
+_TESTDATA_DIR = Path(rollup_spec.__file__).resolve().parent / "prover_io" / "testdata"
 _PROVER_VERSION = "4.0.0-riscv"
 
 

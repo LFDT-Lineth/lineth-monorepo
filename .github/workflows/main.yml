@@ -111,8 +111,10 @@ jobs:
               - '.github/workflows/prover-ray-testing.yml'
               - '.github/workflows/main.yml'
             rollup-spec:
-              - 'rollup_spec/*.py'
-              - 'rollup_spec/prover_io/**'
+              - 'rollup_spec/src/**'
+              - 'rollup_spec/tests/**'
+              - 'rollup_spec/requirements.txt'
+              - 'rollup_spec/pyproject.toml'
             transaction-exclusion-api:
               - 'transaction-exclusion-api/**'
               - 'jvm-libs/generic/extensions/futures/**'

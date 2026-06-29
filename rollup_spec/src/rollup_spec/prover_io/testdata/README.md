@@ -2,7 +2,7 @@
 
 Fully-valid `getZkL2ExecutionProofV1`, `getZkRollupProofV1`, and
 `getZkRollupAggregationProofV1` request/response payloads (real hex, no ellipses)
-used by `rollup_spec/proof_io_v1_test.py`.
+used by `tests/test_proof_io_v1.py`.
 
 These fixtures are the **language-neutral contract** for the prover wire format:
 each layer's request/response pair is mutually consistent, so the codec
@@ -10,13 +10,13 @@ round-trip (`decode_*` then `encode_*`) holds, and any implementation (Go prover
 Kotlin coordinator, …) can load them as golden vectors and assert its own
 serializer round-trips them byte-for-byte. They also validate against the JSON
 Schemas under `../schemas/` (the versioned contract; see that directory's
-conformance test), and the codec in `rollup_spec/proof_io_v1.py` converts between
+conformance test), and the codec in `proof_io_v1.py` converts between
 schema-valid JSON and the guest dataclasses (the logical model).
 
 ## Fields ↔ guest dataclasses
 
 Each fixture's fields correspond to the input/output class of the entry function
-of the matching guest program (the codec in `rollup_spec/proof_io_v1.py` converts
+of the matching guest program (the codec in `proof_io_v1.py` converts
 between them). A request maps to the entry function's input dataclass; a response
 maps to its output.
 
@@ -52,8 +52,8 @@ returns it in the response PI), and no `chainId` on the aggregation request.
 
 ## Running the tests locally
 
-`rollup_spec/proof_io_v1_test.py` imports the guest dataclasses, which pull in the
-native dependencies in `rollup_spec/requirements.txt` (`ckzg`, `coincurve` via
+`tests/test_proof_io_v1.py` imports the guest dataclasses, which pull in the
+native dependencies in `requirements.txt` (`ckzg`, `coincurve` via
 `ethereum-execution`, `lz4`). Those have no wheels for the newest Python and are
 built from source, so use **Python 3.11 or 3.12** and the Xcode command-line
 tools on macOS.
@@ -63,23 +63,14 @@ Prerequisites:
 - Python 3.11 or 3.12 (the pinned `coincurve`/`ckzg` builds fail on 3.13+).
 - A C toolchain for the native builds. On macOS: `xcode-select --install`.
 
-Set up an isolated environment and install the dependencies (run from the repo
-root):
+From the `rollup_spec/` directory, install the dependencies (all declared in
+`requirements.txt`, including `pytest`/`jsonschema`) and run the whole suite:
 
 ```bash
-cd rollup_spec
-python3.12 -m venv .venv
-source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
-python -m pip install pytest          # the test runner itself is not in requirements.txt
+python -m pytest                      # or: python -m pytest tests/test_proof_io_v1.py
 ```
 
-Run the tests from the **repo root** (so the `rollup_spec` package resolves):
-
-```bash
-cd ..                       # back to the repo root
-python -m pytest rollup_spec/proof_io_v1_test.py
-```
-
-When you are done, `deactivate` the virtualenv.
+`pyproject.toml` puts `src/` on the import path (`[tool.pytest.ini_options]
+pythonpath`), so `import rollup_spec` resolves without an editable install.

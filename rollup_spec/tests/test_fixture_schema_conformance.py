@@ -1,21 +1,21 @@
 """
-Standalone conformance test: every golden-vector fixture under `../testdata/`
-(both requests and responses) must validate against its corresponding JSON
-Schema in this directory.
+Standalone conformance test: every golden-vector fixture under
+`rollup_spec/prover_io/testdata/` (both requests and responses) must validate
+against its corresponding JSON Schema under `rollup_spec/prover_io/schemas/`.
 
-This test does NOT import the guest dataclasses, so it has no native
-dependencies (`ckzg`/`coincurve`/`lz4`) — only `jsonschema`. It runs on any
-Python and is the cheapest way to catch a fixture drifting from its schema.
+This test does NOT import the guest dataclasses (only the lightweight,
+dependency-free `rollup_spec` package root, to locate the data), so it has no
+native dependencies (`ckzg`/`coincurve`/`lz4`) — only `jsonschema`. It runs on
+any Python and is the cheapest way to catch a fixture drifting from its schema.
 
 Fixture <-> schema pairing is by filename convention:
 
-    testdata/<name>.json   <->   schemas/<name>.schema.json
+    prover_io/testdata/<name>.json   <->   prover_io/schemas/<name>.schema.json
 
 Fixtures are discovered automatically, so a new fixture/schema pair is covered
 without editing this file.
 
-Run from the repo root:
-    python -m pytest rollup_spec/prover_io/schemas/fixture_schema_conformance_test.py
+Run from the rollup_spec/ directory:  python -m pytest
 """
 
 import json
@@ -23,12 +23,15 @@ from pathlib import Path
 
 import pytest
 
-_SCHEMA_DIR = Path(__file__).parent
-_FIXTURE_DIR = _SCHEMA_DIR.parent / "testdata"
+import rollup_spec
+
+_PROVER_IO_DIR = Path(rollup_spec.__file__).resolve().parent / "prover_io"
+_SCHEMA_DIR = _PROVER_IO_DIR / "schemas"
+_FIXTURE_DIR = _PROVER_IO_DIR / "testdata"
 
 
 def _schema_path_for(fixture_path: Path) -> Path:
-    """testdata/<name>.json -> <name>.schema.json (sibling of this test)."""
+    """testdata/<name>.json -> schemas/<name>.schema.json."""
     return _SCHEMA_DIR / f"{fixture_path.name[: -len('.json')]}.schema.json"
 
 

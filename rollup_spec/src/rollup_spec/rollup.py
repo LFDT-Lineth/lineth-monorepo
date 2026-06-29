@@ -50,8 +50,9 @@ BLOB_BYTES_LENGTH = 4096 * 32
 # `contracts/scripts/testEIP4844/...`, `tmp/besu-eth/.../resources/...`)
 # produce identical KZG commitments; the byte-level sha256 differences are
 # just file-format ordering variants that ckzg parses transparently.
+# parents: [0]=src/rollup_spec, [1]=src, [2]=rollup_spec (project), [3]=repo root.
 _TRUSTED_SETUP_PATH = (
-    Path(__file__).resolve().parents[1]
+    Path(__file__).resolve().parents[3]
     / "contracts" / "test" / "hardhat" / "_testData" / "trusted_setup.txt"
 )
 

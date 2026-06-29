@@ -3,6 +3,40 @@
 
 ---
 
+## Repository layout & tests
+
+This directory is a self-contained Python project (src/ layout):
+
+```
+rollup_spec/
+├── pyproject.toml            # build + pytest config (pythonpath = src, testpaths = tests)
+├── requirements.txt          # the single source of truth for all dependencies
+├── README.md                 # this spec
+├── src/
+│   └── rollup_spec/          # the package (guest reference model + JSON codec)
+│       ├── l2_execution.py, rollup.py, rollup_aggregation.py, l1_rollup.py, …
+│       ├── proof_io_v1.py    # host-side JSON <-> guest-dataclass codec
+│       └── prover_io/
+│           ├── schemas/      # versioned JSON Schemas (the wire contract)
+│           └── testdata/     # language-neutral golden-vector fixtures
+└── tests/
+    ├── test_proof_io_v1.py
+    └── test_fixture_schema_conformance.py
+```
+
+All dependencies (including `pytest` and `jsonschema`) are declared in
+`requirements.txt`. From this directory:
+
+```bash
+python -m pip install -r requirements.txt
+python -m pytest          # runs both suites (equivalently: python -m tests)
+```
+
+The native deps (`coincurve`/`ckzg` via `ethereum-execution`) build from source,
+so use Python 3.11 or 3.12 with a C toolchain (`xcode-select --install` on macOS).
+
+---
+
 ## 1. Introduction
 
 ### 1.1 Motivation
