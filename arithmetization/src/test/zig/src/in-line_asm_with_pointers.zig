@@ -1,5 +1,3 @@
-const custom_std = @import("custom_std.zig");
-
 export fn main() noreturn {
     const buf_0 = [_]u8{0} ** 0;
     const data_0: [*c]const u8 = &buf_0;

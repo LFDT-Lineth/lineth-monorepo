@@ -2,9 +2,14 @@ SHELL := /bin/bash
 
 .PHONY: ci help fmt fmt-zig fmt-go build build-zig build-release build-r5 run run-passing run-failing run-failing-expected test test-zig test-generated-zig test-codegen generate-testdata verify-testdata zkc-build zkc-verify zkc-verify-passing zkc-verify-failing zkc-verify-failing-expected profile-zkc-case profile-zkc clean
 
+# `make` with no target runs first goal. Set explicitly here to avoid include overriding the default goal.
+.DEFAULT_GOAL := ci
+
+# shared guest build tools (elf-to-json, linker script, IN_ORIGIN)
+include ../riscv-guests/build_common/Makefile
+
 R5_BIN := zig-out/bin/verifier-ray
 R5_JSON := $(R5_BIN).json
-ELF_TO_JSON := ../arithmetization/src/test/scripts/elf_to_json_gen/main.go
 ZKC_MAIN := ../arithmetization/src/main/riscv/main.zkc
 
 # Input is currently embedded into the binary at build time (we don't have input
@@ -16,11 +21,14 @@ EMBEDDED_INPUT ?= valid
 EMBEDDED_SPEC ?= 0
 NATIVE_BIN := zig-out/bin/verifier-ray
 
+# elf-to-json expects a big-endian hex string or `@path/to/in_bytes` for the input bytes. We currently
+# embed the input in the binary so we pass one byte of placeholder. But the guest right now never reads.
+IN_BYTES := 0x00
+
 # Legacy file-based input plumbing (unused for now, kept for reintroduction).
 PASSING_INPUT_FILE := testdata/inputs/passing.bin
 FAILING_INPUT_FILE := testdata/inputs/failing.bin
 INPUT_FILE ?= $(PASSING_INPUT_FILE)
-IN_ORIGIN ?= 0x08800000
 NATIVE_INPUT_FILE := zig-out/input.bin
 IN_BYTES_FILE ?= zig-out/input.hex
 
@@ -126,10 +134,8 @@ prepare-zkc-input:
 	mkdir -p $(dir $(IN_BYTES_FILE))
 	{ printf "0x"; xxd -p -c1 $(INPUT_FILE) | awk 'BEGIN{i=0} {lines[i++]=$$0} END{for(j=i-1;j>=0;j--) print lines[j]}' | tr -d '\n'; } > $(IN_BYTES_FILE)
 
-# The input is embedded in the binary, so the guest never reads the IN region;
-# elf_to_json still requires an input argument, so pass a one-byte placeholder.
 zkc-build: build-r5
-	go run $(ELF_TO_JSON) $(R5_BIN) "0x00" $(IN_ORIGIN) > $(R5_JSON)
+	$(call ELF_TO_JSON,$(R5_BIN),$(R5_JSON))
 
 zkc-verify: zkc-build
 	zkc exec -f -q $(R5_JSON) $(ZKC_MAIN)
@@ -150,7 +156,7 @@ zkc-verify-failing-expected:
 
 profile-zkc-case:
 	@zig build --release=small -Dstrip=true -Dr5=true -Dembedded-input=$(EMBEDDED_INPUT) -Dembedded-spec=$(EMBEDDED_SPEC) -Dverifier-profiling=true -Dr5-marks=true
-	@go run $(ELF_TO_JSON) $(R5_BIN) "0x00" $(IN_ORIGIN) > $(R5_JSON)
+	$(call ELF_TO_JSON,$(R5_BIN),$(R5_JSON))
 	@zkc exec -f $(R5_JSON) $(ZKC_MAIN)
 
 profile-zkc: generate-testdata

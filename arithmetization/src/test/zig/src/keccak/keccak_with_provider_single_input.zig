@@ -1,7 +1,14 @@
-const wrappers = @import("wrappers");
+//! Single call to non-accelerated keccak.
+const lineth_accel = @import("lineth_zkvm_accel"); // hash type + zkvm_exit
+const provide = @import("zkvm_provide"); // defines (exports) the zkvm_* symbols
 
-const custom_std = wrappers.custom_std;
-const keccak = wrappers.keccak_provide;
+// Force zkvm_provide's comptime @export block to emit zkvm_keccak256 into this ELF.
+comptime {
+    _ = provide;
+}
+
+// The exported C-ABI keccak provider; resolved from zkvm_provide above.
+extern fn zkvm_keccak256(data: [*c]const u8, len: usize, output: [*c]lineth_accel.zkvm_keccak256_hash) lineth_accel.zkvm_status;
 
 extern var _in_start: u8;
 
@@ -12,17 +19,17 @@ export fn main() noreturn {
     const msg_len = readU64Little(input[0..LENGTH_FIELD_BYTES]);
     const data: [*c]const u8 = @ptrFromInt(@intFromPtr(input) + LENGTH_FIELD_BYTES);
 
-    var output_hash: keccak.zkvm_keccak256_hash = undefined;
-    const output: [*c]keccak.zkvm_keccak256_hash = &output_hash;
+    var output_hash: lineth_accel.zkvm_keccak256_hash = undefined;
+    const output: [*c]lineth_accel.zkvm_keccak256_hash = &output_hash;
 
-    if (keccak.zkvm_keccak256(data, msg_len, output) != .ZKVM_EOK) {
-        custom_std.exit(1);
+    if (zkvm_keccak256(data, msg_len, output) != .ZKVM_EOK) {
+        lineth_accel.zkvm_exit(1);
     }
 
     const output_byte: *volatile u8 = @ptrCast(&output_hash.data[0]);
     _ = output_byte.*;
 
-    custom_std.exit(0);
+    lineth_accel.zkvm_exit(0);
 }
 
 fn readU64Little(bytes: []const u8) usize {

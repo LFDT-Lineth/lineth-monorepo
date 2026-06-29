@@ -2,7 +2,7 @@ package linea.fileio
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.vertx.core.Vertx
-import net.consensys.linea.async.toSafeFuture
+import net.consensys.linea.async.toSafeFutureNonNull
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.nio.file.Path
 import java.util.concurrent.Callable
@@ -26,7 +26,7 @@ class FileWriter(
           filePath
         },
         false,
-      ).toSafeFuture()
+      ).toSafeFutureNonNull()
   }
 
   fun writingDoneOrInProgress(filePath: Path, inProgressSuffix: String): SafeFuture<Boolean> {
@@ -35,7 +35,7 @@ class FileWriter(
         filePath.exists() || inProgressFilePath(filePath, inProgressSuffix).exists()
       },
       false,
-    ).toSafeFuture()
+    ).toSafeFutureNonNull()
   }
 
   private fun inProgressFilePath(filePath: Path, inProgressSuffix: String): Path {

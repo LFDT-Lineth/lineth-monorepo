@@ -170,7 +170,7 @@ class FileBasedProofAggregationClientV2(
     }
     return fileMonitor
       .awaitForAllFiles(responseNames)
-      .thenApply { null }
+      .thenApply { }
   }
 
   companion object {
