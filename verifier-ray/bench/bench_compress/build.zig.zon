@@ -1,0 +1,15 @@
+.{
+    .name = .bench_compress,
+    .version = "0.1.0",
+    .fingerprint = 0xe44cd272be379fa4,
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{
+        // shared build utilities for Zig build to R5 target
+        .build_common = .{ .path = "../../../riscv-guests/build_common" },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "main.zig",
+    },
+}

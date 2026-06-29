@@ -160,7 +160,7 @@ fn cube(value: field.Element) field.Element {
 }
 
 fn matMulM4InPlace(comptime width: usize, state: *[width]field.Element) void {
-    for (0..width / 4) |chunk| {
+    inline for (0..width / 4) |chunk| {
         const offset = 4 * chunk;
         const t01 = state[offset].add(state[offset + 1]);
         const t23 = state[offset + 2].add(state[offset + 3]);
@@ -179,7 +179,7 @@ fn matMulExternalInPlace(comptime width: usize, state: *[width]field.Element) vo
     matMulM4InPlace(width, state);
 
     var sums: [4]field.Element = zeroArray(4);
-    for (0..width / 4) |chunk| {
+    inline for (0..width / 4) |chunk| {
         const offset = 4 * chunk;
         sums[0] = sums[0].add(state[offset]);
         sums[1] = sums[1].add(state[offset + 1]);
@@ -187,7 +187,7 @@ fn matMulExternalInPlace(comptime width: usize, state: *[width]field.Element) vo
         sums[3] = sums[3].add(state[offset + 3]);
     }
 
-    for (0..width / 4) |chunk| {
+    inline for (0..width / 4) |chunk| {
         const offset = 4 * chunk;
         state[offset] = state[offset].add(sums[0]);
         state[offset + 1] = state[offset + 1].add(sums[1]);
@@ -204,47 +204,59 @@ fn zeroArray(comptime len: usize) [len]field.Element {
     return out;
 }
 
+// Precomputed 2^{-n} mod p for the KoalaBear field (p = 2_130_706_433 = 2^31 - 2^24 + 1).
+const inv2Exp1: field.Element = .{ .value = 1_065_353_217 };
+const inv2Exp2: field.Element = .{ .value = 1_598_029_825 };
+const inv2Exp3: field.Element = .{ .value = 1_864_368_129 };
+const inv2Exp4: field.Element = .{ .value = 1_997_537_281 };
+const inv2Exp5: field.Element = .{ .value = 2_064_121_857 };
+const inv2Exp6: field.Element = .{ .value = 2_097_414_145 };
+const inv2Exp7: field.Element = .{ .value = 2_114_060_289 };
+const inv2Exp8: field.Element = .{ .value = 2_122_383_361 };
+const inv2Exp9: field.Element = .{ .value = 2_126_544_897 };
+const inv2Exp24: field.Element = .{ .value = 2_130_706_306 };
+
 fn matMulInternalInPlace(comptime width: usize, state: *[width]field.Element) void {
     var sum = state[0];
-    for (state[1..]) |limb| {
-        sum = sum.add(limb);
+    inline for (1..width) |i| {
+        sum = sum.add(state[i]);
     }
 
     state[0] = sum.sub(state[0].double());
     state[1] = sum.add(state[1]);
     state[2] = sum.add(state[2].double());
-    state[3] = sum.add(state[3].halve());
-    state[4] = sum.add(state[4].mul(field.Element.init(3)));
+    state[3] = sum.add(state[3].mul(inv2Exp1));
+    state[4] = sum.add(state[4].mul(.{ .value = 3 }));
     state[5] = sum.add(state[5].double().double());
-    state[6] = sum.sub(state[6].halve());
-    state[7] = sum.sub(state[7].mul(field.Element.init(3)));
+    state[6] = sum.sub(state[6].mul(inv2Exp1));
+    state[7] = sum.sub(state[7].mul(.{ .value = 3 }));
     state[8] = sum.sub(state[8].double().double());
-    state[9] = sum.add(state[9].mul2ExpNegN(8));
+    state[9] = sum.add(state[9].mul(inv2Exp8));
 
     switch (width) {
         16 => {
-            state[10] = sum.add(state[10].mul2ExpNegN(3));
-            state[11] = sum.add(state[11].mul2ExpNegN(24));
-            state[12] = sum.sub(state[12].mul2ExpNegN(8));
-            state[13] = sum.sub(state[13].mul2ExpNegN(3));
-            state[14] = sum.sub(state[14].mul2ExpNegN(4));
-            state[15] = sum.sub(state[15].mul2ExpNegN(24));
+            state[10] = sum.add(state[10].mul(inv2Exp3));
+            state[11] = sum.add(state[11].mul(inv2Exp24));
+            state[12] = sum.sub(state[12].mul(inv2Exp8));
+            state[13] = sum.sub(state[13].mul(inv2Exp3));
+            state[14] = sum.sub(state[14].mul(inv2Exp4));
+            state[15] = sum.sub(state[15].mul(inv2Exp24));
         },
         24 => {
-            state[10] = sum.add(state[10].mul2ExpNegN(2));
-            state[11] = sum.add(state[11].mul2ExpNegN(3));
-            state[12] = sum.add(state[12].mul2ExpNegN(4));
-            state[13] = sum.add(state[13].mul2ExpNegN(5));
-            state[14] = sum.add(state[14].mul2ExpNegN(6));
-            state[15] = sum.add(state[15].mul2ExpNegN(24));
-            state[16] = sum.sub(state[16].mul2ExpNegN(8));
-            state[17] = sum.sub(state[17].mul2ExpNegN(3));
-            state[18] = sum.sub(state[18].mul2ExpNegN(4));
-            state[19] = sum.sub(state[19].mul2ExpNegN(5));
-            state[20] = sum.sub(state[20].mul2ExpNegN(6));
-            state[21] = sum.sub(state[21].mul2ExpNegN(7));
-            state[22] = sum.sub(state[22].mul2ExpNegN(9));
-            state[23] = sum.sub(state[23].mul2ExpNegN(24));
+            state[10] = sum.add(state[10].mul(inv2Exp2));
+            state[11] = sum.add(state[11].mul(inv2Exp3));
+            state[12] = sum.add(state[12].mul(inv2Exp4));
+            state[13] = sum.add(state[13].mul(inv2Exp5));
+            state[14] = sum.add(state[14].mul(inv2Exp6));
+            state[15] = sum.add(state[15].mul(inv2Exp24));
+            state[16] = sum.sub(state[16].mul(inv2Exp8));
+            state[17] = sum.sub(state[17].mul(inv2Exp3));
+            state[18] = sum.sub(state[18].mul(inv2Exp4));
+            state[19] = sum.sub(state[19].mul(inv2Exp5));
+            state[20] = sum.sub(state[20].mul(inv2Exp6));
+            state[21] = sum.sub(state[21].mul(inv2Exp7));
+            state[22] = sum.sub(state[22].mul(inv2Exp9));
+            state[23] = sum.sub(state[23].mul(inv2Exp24));
         },
         else => unreachable,
     }
