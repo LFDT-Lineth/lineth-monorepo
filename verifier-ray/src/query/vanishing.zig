@@ -267,7 +267,7 @@ fn evalLagrangeSelector(comptime position: usize, comptime static_n: usize, ctx:
     const r_minus_omega = ctx.coin.sub(ext.Ext.lift(omega_pos));
     if (r_minus_omega.isZero()) return error.LagrangeSelectorInDomain;
     const n = if (static_n != 0) static_n else ctx.dynamic_n;
-    const denominator = r_minus_omega.mulByBase(field.Element.mod(@as(u64, n)));
+    const denominator = r_minus_omega.mulByBase(field.Element.init(@as(u64, n)));
 
     return numerator.div(denominator);
 }

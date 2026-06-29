@@ -16,7 +16,7 @@ pub const Error = error{NonCanonicalEncoding};
 pub const Element = extern struct {
     value: u32,
 
-    pub fn mod(raw: u64) Element {
+    pub fn init(raw: u64) Element {
         return .{ .value = @as(u32, @intCast(raw % modulus)) };
     }
 
@@ -47,7 +47,7 @@ pub const Element = extern struct {
         for (encoded) |byte| {
             acc = ((acc << 8) + byte) % modulus;
         }
-        return mod(acc);
+        return init(acc);
     }
 
     pub fn toBytes(self: Element) [bytes]u8 {
@@ -95,7 +95,7 @@ pub const Element = extern struct {
     }
 
     pub fn mul(self: Element, rhs: Element) Element {
-        return mod(@as(u64, self.value) * @as(u64, rhs.value));
+        return init(@as(u64, self.value) * @as(u64, rhs.value));
     }
 
     pub fn square(self: Element) Element {
@@ -180,7 +180,7 @@ pub fn rootOfUnityBy(cardinality: usize) Error!Element {
     const log_n = log2PowerOfTwo(cardinality);
     if (log_n > max_order_root) return Error.NonCanonicalEncoding;
 
-    var result = Element.mod(root_of_unity);
+    var result = Element.init(root_of_unity);
     var i: usize = log_n;
     while (i < max_order_root) : (i += 1) {
         result = result.square();

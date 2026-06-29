@@ -116,9 +116,10 @@ pub const Ext = extern struct {
         return self.mul(rhs.inverse());
     }
 
-    // exponent is u64, not u32: a u32 loop variable adds a per-iteration `srliw`
-    // + `sext.w` on rv64, and u64 matches the usize exponents at the call sites.
-    // See koalabear.Element.pow for the full rationale and measurement.
+    // exponent is u64: callers only raise to domain sizes / positions, bounded
+    // by the base field (max meaningful exponent p - 1, ~31 bits). x^e depends
+    // only on e mod (p^6 - 1), so u64 covers every exponent that occurs. See
+    // koalabear.Element.pow for the u64-vs-u32 codegen rationale.
     pub fn pow(self: Ext, exponent: u64) Ext {
         var result = Ext.one();
         var b = self;

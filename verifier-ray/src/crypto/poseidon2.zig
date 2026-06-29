@@ -214,10 +214,10 @@ fn matMulInternalInPlace(comptime width: usize, state: *[width]field.Element) vo
     state[1] = sum.add(state[1]);
     state[2] = sum.add(state[2].double());
     state[3] = sum.add(state[3].halve());
-    state[4] = sum.add(state[4].mul(field.Element.mod(3)));
+    state[4] = sum.add(state[4].mul(field.Element.init(3)));
     state[5] = sum.add(state[5].double().double());
     state[6] = sum.sub(state[6].halve());
-    state[7] = sum.sub(state[7].mul(field.Element.mod(3)));
+    state[7] = sum.sub(state[7].mul(field.Element.init(3)));
     state[8] = sum.sub(state[8].double().double());
     state[9] = sum.add(state[9].mul2ExpNegN(8));
 
