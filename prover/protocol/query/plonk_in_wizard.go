@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 
 	"github.com/consensys/gnark-crypto/field/koalabear"
 
@@ -70,10 +71,8 @@ type PlonkInWizard struct {
 	// first time [PlonkInWizard.GetNbPublicInputs] is called and saved there.
 	nbPublicInputs int `serde:"omit"`
 
-	// nbPublicInputs loaded is a flag indicating whether we need to compute the
-	// number of public input. It is not using [sync.Once] that way we don't need
-	// to initialize the value.
-	nbPublicInputsLoaded bool      `serde:"omit"`
+	// nbPublicInputsLoaded is set to 1 atomically once nbPublicInputs is computed.
+	nbPublicInputsLoaded uint32    `serde:"omit"`
 	uuid                 uuid.UUID `serde:"omit"`
 }
 
@@ -238,16 +237,23 @@ func (piw *PlonkInWizard) CheckGnark(api frontend.API, run ifaces.GnarkRuntime) 
 	utils.Panic("UNSUPPORTED : can't check a PlonkInWizard query directly into the circuit, query-name=%v", piw.Name())
 }
 
+// nbPublicInputsMu guards the lazy load below for queries shared across
+// concurrent provers.
+var nbPublicInputsMu sync.Mutex
+
 // GetNbPublicInputs returns the number of public inputs of the circuit provided
 // by the query.
 func (piw *PlonkInWizard) GetNbPublicInputs() int {
-	// The lazy loading does not need to be thread-safe as (1) it is not
-	// meant to be run concurrently and (2) the initialization is idempotent
-	// anyway.
-	if !piw.nbPublicInputsLoaded {
-		piw.nbPublicInputsLoaded = true
-		nbPub, _ := gnarkutil.CountVariables(piw.Circuit)
-		piw.nbPublicInputs = nbPub
+	// Thread-safe lazy load: the query is shared across a module's concurrent
+	// segment provers (limitless), which call this during proving.
+	if atomic.LoadUint32(&piw.nbPublicInputsLoaded) == 0 {
+		nbPublicInputsMu.Lock()
+		if piw.nbPublicInputsLoaded == 0 {
+			nbPub, _ := gnarkutil.CountVariables(piw.Circuit)
+			piw.nbPublicInputs = nbPub
+			atomic.StoreUint32(&piw.nbPublicInputsLoaded, 1)
+		}
+		nbPublicInputsMu.Unlock()
 	}
 	return piw.nbPublicInputs
 }

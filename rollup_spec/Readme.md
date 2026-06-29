@@ -29,11 +29,11 @@ The system is organized around three concurrent, independent streams that conver
 **Stream 2 — Proving (l2-execution & rollup).** Two leaf-level proof types are produced independently and in parallel:
 
 - **l2-execution proofs** — for each contiguous range of L2 blocks (a *conflation*), a prover generates an l2-execution proof attesting to the EVM state transition, L2→L1 message rolling hash checks, and forced-transaction handling. Multiple l2-execution proofs can be produced in parallel across different block ranges.
-- **rollup proofs** — for one or more EIP-4844 blobs, a single rollup proof attests to: (a) for each blob, the guest computes the canonical compressed payload from the witnessed full block RLPs (truncate → RLP-encode → LZ4-compress → zero-pad to 131 072 bytes), computes the KZG commitment from those bytes, checks its versioned hash against the L1-committed `blobHash`, and verifies the KZG proof; (b) the chained shnarf transition across the blobs; and (c) recursive verification of the N l2-execution proofs whose ranges tile the combined block range of those blobs. The rollup proof is the smallest unit of aggregation: it folds multiple l2-execution proofs into one and exposes the unified 14-field public-input tuple. A single rollup proof generalizes across `K ≥ 1` blobs.
+- **rollup proofs** — for one or more EIP-4844 blobs, a single rollup proof attests to: (a) for each blob, the guest computes the canonical compressed payload from the witnessed full block RLPs (truncate → RLP-encode → LZ4-compress → zero-pad to 131 072 bytes), computes the KZG commitment from those bytes, checks its versioned hash against the L1-committed `blobHash`, and verifies the KZG proof; (b) the chained shnarf transition across the blobs; and (c) recursive verification of the N l2-execution proofs whose ranges tile the combined block range of those blobs. The rollup proof is the smallest unit of aggregation: it folds multiple l2-execution proofs into one and exposes the unified 15-field public-input tuple. A single rollup proof generalizes across `K ≥ 1` blobs.
 
 **Stream 3 — rollup-aggregation.** Once all rollup proofs for a target finalization range are available, they are assembled, aggregated, and wrapped for L1 by one rollup-aggregation prover request:
 
-- **rollup-aggregation + emulation** — a single rollup-aggregation prover request runs one guest invocation that recursively verifies all `M` rollup proofs, asserts inter-rollup-proof continuity in software, outputs the same 14-field tuple over the full range, and then performs the STARK-to-SNARK emulation wrap (Groth16/Plonk) for L1 submission. The rollup-aggregation topology is flat across the `M` rollup proofs; hierarchical / k-ary aggregation is a future option. There is no separate emulation prover invocation.
+- **rollup-aggregation + emulation** — a single rollup-aggregation prover request runs one guest invocation that recursively verifies all `M` rollup proofs, asserts inter-rollup-proof continuity in software, outputs the same 15-field tuple over the full range, and then performs the STARK-to-SNARK emulation wrap (Groth16/Plonk) for L1 submission. The rollup-aggregation topology is flat across the `M` rollup proofs; hierarchical / k-ary aggregation is a future option. There is no separate emulation prover invocation.
 
 ```
 l2-exec₁ ┐
@@ -91,8 +91,9 @@ declared outcome is one of the allowed outcomes in §6.5.
 | `endL1L2BridgeRollingHashMessageNumber` | Message number corresponding to `endL1L2BridgeRollingHash` |
 | `dynamicChainConfigHash` | `keccak256(uint256_be(chainID) ‖ coinBase ‖ L2MessageServiceContract ‖ uint256_be(baseFee))`, where integer fields are 32-byte big-endian values and addresses are canonical 20-byte values. `baseFee` is part of the dynamic chain configuration; a base-fee update is therefore a configuration update and a proof-range boundary. |
 | `parentFtxRollingHash` | Forced-transaction rolling hash at the start of this range |
+| `parentProcessedFtxNumber` | Sequence number of the last forced transaction handled before this range; enables L1 continuity verification at finalization (§6.7) |
 | `endFtxRollingHash` | Forced-transaction rolling hash at the end of this range |
-| `lastProcessedFtxNumber` | Sequence number of the last forced transaction handled in this range |
+| `endProcessedFtxNumber` | Sequence number of the last forced transaction handled in this range |
 | `filteredAddressesHash` | keccak256 of the ordered list of addresses whose forced transactions were refused in this range; each entry is either the recovered sender (`fromAddress = recover_sender(signedTxRlp, chainID)`) if refused due to a sanctioned sender, or the recipient (`toAddress`) if refused due to a sanctioned recipient; `keccak256([])` if none |
 | `txFromsHash` | keccak256 of the flat ordered list of sender addresses for all transactions in this range, in block-then-transaction order |
 
@@ -130,11 +131,11 @@ The rollup proof covers `K ≥ 1` consecutive EIP-4844 blobs and proves that, fo
 
 **Public Inputs**
 
-The same 14-field tuple as the rollup-aggregation proof (§2.4). `parentShnarf` is the inbound shnarf before blob 1; `endShnarf` is the outbound shnarf after blob K.
+The same 15-field tuple as the rollup-aggregation proof (§2.4). `parentShnarf` is the inbound shnarf before blob 1; `endShnarf` is the outbound shnarf after blob K.
 
-The **l2-execution proof's 15-field PI** is *input* to this guest (private witness, §2.2 step 4 recursive verification) — it is **not** the output. The 14 fields below derive from those 15 (across all N l2-execution proofs) plus the blob content and shnarf chain:
+The **l2-execution proof's 16-field PI** is *input* to this guest (private witness, §2.2 step 4 recursive verification) — it is **not** the output. The 15 fields below derive from those 16 (across all N l2-execution proofs) plus the blob content and shnarf chain:
 
-| l2-execution PI (§2.1, 15 fields) | Fate at rollup level |
+| l2-execution PI (§2.1, 16 fields) | Fate at rollup level |
 |---|---|
 | `parentBlockHash` | **Dropped** — folded into `parentShnarf` via `Hash(parentShnarf, lastBlockHash, blobHash)` (step 2) |
 | `endBlockHash` | **Dropped** — folded into `endShnarf` (last block of the last blob) |
@@ -148,8 +149,9 @@ The **l2-execution proof's 15-field PI** is *input* to this guest (private witne
 | `endL1L2BridgeRollingHashMessageNumber` | Carried over from `PI_Eₙ` |
 | `dynamicChainConfigHash` | Single shared value (step 7 asserts equality across all N) |
 | `parentFtxRollingHash` | Carried over from `PI_E₁` |
+| `parentProcessedFtxNumber` | Carried over from `PI_E₁` |
 | `endFtxRollingHash` | Carried over from `PI_Eₙ` |
-| `lastProcessedFtxNumber` | Carried over from `PI_Eₙ` |
+| `endProcessedFtxNumber` | Carried over from `PI_Eₙ` |
 | `filteredAddressesHash` | Same name, content rehashed: `keccak256(addrs_E₁ ‖ … ‖ addrs_Eₙ)` (step 8) |
 
 Plus three **new** rollup-level fields: `parentShnarf` (input), `endShnarf` (computed in step 2), `L2L1BridgeTransactionTree` (computed in step 6).
@@ -212,28 +214,29 @@ For each blob `b ∈ [1, K]` in order, perform the per-blob block (steps 1–2);
 
 7. **Chain the l2-execution proofs.** For each consecutive pair `(Eᵢ, Eᵢ₊₁)` assert:
    ```
-   assert_eq!(PI_Eᵢ.endBlockHash,                       PI_Eᵢ₊₁.parentBlockHash)
+   assert_eq!(PI_Eᵢ.endBlockHash,                              PI_Eᵢ₊₁.parentBlockHash)
    assert_eq!(PI_Eᵢ.endL1L2BridgeRollingHash,                  PI_Eᵢ₊₁.parentL1L2BridgeRollingHash)
    assert_eq!(PI_Eᵢ.endL1L2BridgeRollingHashMessageNumber,     PI_Eᵢ₊₁.parentL1L2BridgeRollingHashMessageNumber)
-   assert_eq!(PI_Eᵢ.dynamicChainConfigHash,                 PI_Eᵢ₊₁.dynamicChainConfigHash)
-   assert_eq!(PI_Eᵢ.endFtxRollingHash,                      PI_Eᵢ₊₁.parentFtxRollingHash)
+   assert_eq!(PI_Eᵢ.dynamicChainConfigHash,                    PI_Eᵢ₊₁.dynamicChainConfigHash)
+   assert_eq!(PI_Eᵢ.endFtxRollingHash,                         PI_Eᵢ₊₁.parentFtxRollingHash)
+   assert_eq!(PI_Eᵢ.endProcessedFtxNumber,                     PI_Eᵢ₊₁.parentProcessedFtxNumber)
    ```
    Continuity *between* blobs is implicit — the same `assert_eq!` block applies at the blob boundary because the l2-execution proofs already tile across it.
 
-8. **Collect forced-transaction outputs and emit PI.** For each `e ∈ [1, N]`, receive `addrs_e` as a private witness and assert `keccak256(addrs_e) == PI_E_e.filteredAddressesHash`. Concatenate all N lists in order and output `filteredAddressesHash = keccak256(addrs_1 ‖ … ‖ addrs_N)`. Take `parentFtxRollingHash` from `PI_E₁` and `endFtxRollingHash` / `lastProcessedFtxNumber` / `endBlockTimestamp` from `PI_Eₙ`. Output the 14-field public-input tuple covering the entire `K`-blob, `N`-l2-execution range.
+8. **Collect forced-transaction outputs and emit PI.** For each `e ∈ [1, N]`, receive `addrs_e` as a private witness and assert `keccak256(addrs_e) == PI_E_e.filteredAddressesHash`. Concatenate all N lists in order and output `filteredAddressesHash = keccak256(addrs_1 ‖ … ‖ addrs_N)`. Take `parentFtxRollingHash` and `parentProcessedFtxNumber` from `PI_E₁` and `endFtxRollingHash` / `endProcessedFtxNumber` / `endBlockTimestamp` from `PI_Eₙ`. Output the 15-field public-input tuple covering the entire `K`-blob, `N`-l2-execution range.
 
 ### 2.3 rollup-aggregation Proof
 
-The rollup-aggregation prover request recursively verifies the `M` rollup proofs covering a finalization range, outputs a single 14-field public-input tuple over the full range, and performs the emulation/SNARK wrap needed for L1 submission. The recursive rollup-aggregation topology is **flat**: one guest invocation consumes all `M` rollup proofs at once. Hierarchical / k-ary aggregation is a future option.
+The rollup-aggregation prover request recursively verifies the `M` rollup proofs covering a finalization range, outputs a single 15-field public-input tuple over the full range, and performs the emulation/SNARK wrap needed for L1 submission. The recursive rollup-aggregation topology is **flat**: one guest invocation consumes all `M` rollup proofs at once. Hierarchical / k-ary aggregation is a future option.
 
 **Public Inputs**
 
-The same 14-field tuple as the rollup proof (§2.2) and as the final rollup-aggregation PI (§2.4). The rollup and rollup-aggregation PI shapes match deliberately, so a rollup-aggregation proof can also be re-aggregated by a higher-level rollup-aggregation proof if hierarchy is added later without changing the PI surface.
+The same 15-field tuple as the rollup proof (§2.2) and as the final rollup-aggregation PI (§2.4). The rollup and rollup-aggregation PI shapes match deliberately, so a rollup-aggregation proof can also be re-aggregated by a higher-level rollup-aggregation proof if hierarchy is added later without changing the PI surface.
 
 **Private Inputs (Witness)**
 
 - The `M` rollup proofs `B₁ … Bₘ` (or, in a hierarchical setup, prior rollup-aggregation proofs)
-- Their complete 14-field public-input tuples `PI_B₁ … PI_Bₘ`
+- Their complete 15-field public-input tuples `PI_B₁ … PI_Bₘ`
 - For each `i`, the ordered L2L1 root array whose committed hash is `PI_Bᵢ.L2L1BridgeTransactionTree`
 - For each `i`, the ordered filtered-address list whose committed hash is `PI_Bᵢ.filteredAddressesHash`
 - The environment-dependent `isAllowedCircuitID` bitmask gating which inner circuit/program identities step 1 may accept (bit *i*, LSb→MSb, allows circuit ID *i*). It mirrors the prover's `Aggregation.is_allowed_circuit_id` config and is a proving-policy input only — not one of the 14 public-input fields and not part of `dynamicChainConfigHash`.
@@ -245,10 +248,11 @@ The same 14-field tuple as the rollup proof (§2.2) and as the final rollup-aggr
 2. **Assert continuity** in software, for each consecutive pair `(Bᵢ, Bᵢ₊₁)`:
    ```
    assert_eq!(PI_Bᵢ.endShnarf,                              PI_Bᵢ₊₁.parentShnarf)
-   assert_eq!(PI_Bᵢ.endL1L2BridgeRollingHash,                  PI_Bᵢ₊₁.parentL1L2BridgeRollingHash)
-   assert_eq!(PI_Bᵢ.endL1L2BridgeRollingHashMessageNumber,     PI_Bᵢ₊₁.parentL1L2BridgeRollingHashMessageNumber)
+   assert_eq!(PI_Bᵢ.endL1L2BridgeRollingHash,               PI_Bᵢ₊₁.parentL1L2BridgeRollingHash)
+   assert_eq!(PI_Bᵢ.endL1L2BridgeRollingHashMessageNumber,  PI_Bᵢ₊₁.parentL1L2BridgeRollingHashMessageNumber)
    assert_eq!(PI_Bᵢ.dynamicChainConfigHash,                 PI_Bᵢ₊₁.dynamicChainConfigHash)
    assert_eq!(PI_Bᵢ.endFtxRollingHash,                      PI_Bᵢ₊₁.parentFtxRollingHash)
+   assert_eq!(PI_Bᵢ.endProcessedFtxNumber,                  PI_Bᵢ₊₁.parentProcessedFtxNumber)
    ```
    Block-hash continuity is implicit in the shnarf check: `PI_Bᵢ.endShnarf` encodes rollup proof i's last block hash, so the shnarf assertion subsumes a separate block-hash check.
 
@@ -260,7 +264,7 @@ The same 14-field tuple as the rollup proof (§2.2) and as the final rollup-aggr
 
 4. **Merge filtered address lists.** Receive each rollup proof's address list, verify it against its committed hash, concatenate all `M` lists in order, and output `filteredAddressesHash = keccak256(addrs_B₁ ‖ … ‖ addrs_Bₘ)`.
 
-5. **Output** the combined public inputs covering the full range: take `parentShnarf`, `parentL1L2BridgeRollingHash`, `parentL1L2BridgeRollingHashMessageNumber`, `parentFtxRollingHash`, and `dynamicChainConfigHash` from `PI_B₁`; take `endBlockNumber`, `endBlockTimestamp`, `endL1L2BridgeRollingHash`, `endL1L2BridgeRollingHashMessageNumber`, `endFtxRollingHash`, `lastProcessedFtxNumber`, and `endShnarf` from `PI_Bₘ`; use the merged Merkle commitment from step 3 and merged filtered-address hash from step 4.
+5. **Output** the combined public inputs covering the full range: take `parentShnarf`, `parentL1L2BridgeRollingHash`, `parentL1L2BridgeRollingHashMessageNumber`, `parentFtxRollingHash`, `parentProcessedFtxNumber`, and `dynamicChainConfigHash` from `PI_B₁`; take `endBlockNumber`, `endBlockTimestamp`, `endL1L2BridgeRollingHash`, `endL1L2BridgeRollingHashMessageNumber`, `endFtxRollingHash`, `endProcessedFtxNumber`, and `endShnarf` from `PI_Bₘ`; use the merged Merkle commitment from step 3 and merged filtered-address hash from step 4.
 
 The rollup-aggregation prover request includes the STARK→SNARK emulation wrap after this guest statement, so the response is directly L1-submittable — no separate emulation request file or prover invocation exists.
 
@@ -268,7 +272,7 @@ The rollup-aggregation prover request includes the STARK→SNARK emulation wrap 
 
 ### 2.4 Final Aggregated Public Inputs
 
-The rollup-aggregation proof's root exposes fourteen values to the L1 contract:
+The rollup-aggregation proof's root exposes fifteen values to the L1 contract:
 
 | # | Field |
 |---|---|
@@ -281,11 +285,12 @@ The rollup-aggregation proof's root exposes fourteen values to the L1 contract:
 | 7 | `endL1L2BridgeRollingHashMessageNumber` |
 | 8 | `dynamicChainConfigHash` |
 | 9 | `parentFtxRollingHash` |
-| 10 | `endFtxRollingHash` |
-| 11 | `lastProcessedFtxNumber` |
-| 12 | `filteredAddressesHash` |
-| 13 | `parentShnarf` |
-| 14 | `endShnarf` |
+| 10 | `parentProcessedFtxNumber` |
+| 11 | `endFtxRollingHash` |
+| 12 | `endProcessedFtxNumber` |
+| 13 | `filteredAddressesHash` |
+| 14 | `parentShnarf` |
+| 15 | `endShnarf` |
 
 Note: `parentBlockHash` and `endBlockHash` are not separate public inputs — block-hash continuity is enforced through the shnarf chain. The shnarf formula `Hash(parentShnarf, lastBlockHash, blobHash)` binds each blob's last block hash into the shnarf; the L1 contract's shnarf continuity check (`parentShnarf == currentFinalizedShnarf`) is therefore sufficient.
 
@@ -406,14 +411,15 @@ separate from the l2-execution, rollup, and rollup-aggregation guest programs.
 **What the contract does:**
 
 1. **On blob submission:** compute `endShnarf = keccak256(parentShnarf, lastBlockHash, blobHash)` and anchor it in storage.
-2. **On finalization:** verify the STARK-to-SNARK proof against the fourteen aggregated public inputs, then:
+2. **On finalization:** verify the STARK-to-SNARK proof against the fifteen aggregated public inputs, then:
    - Assert `parentShnarf == currentFinalizedShnarf` (DA and block-hash continuity — the shnarf encodes the last block hash, so this check subsumes a separate `parentBlockHash` check)
    - Assert `parentL1L2BridgeRollingHash == currentFinalizedL1L2BridgeRollingHash` and `parentL1L2BridgeRollingHashMessageNumber == currentFinalizedL1L2BridgeRollingHashMessageNumber` (deposit bridge continuity)
    - Assert `endL1L2BridgeRollingHash == l1RollingHash[endL1L2BridgeRollingHashMessageNumber]` (deposit bridge authenticity — the proof's claimed end-of-range rolling hash must match L1's authoritative chain)
+   - Assert `parentFtxRollingHash == currentFinalizedFtxRollingHash` and `parentProcessedFtxNumber == currentFinalizedProcessedFtxNumber` (FTX transition continuity — these two values together describe the forced-transaction state at the start of this finalization range and must match what was stored at the end of the previous one; this is the FTX analogue of the `_computeLastFinalizedState` check that covers rolling hash, message number, and timestamp)
    - Assert the proof's `dynamicChainConfigHash` matches what the verifier was deployed with: `pi.dynamicChainConfigHash == IPlonkVerifier(verifier).getChainConfiguration()`. The verifier holds this digest as an immutable `bytes32` (`CHAIN_CONFIGURATION`); its preimage — the four named `ChainConfigurationParameter` entries `chainId`, `baseFee`, `coinbase`, `l2MessageServiceAddress` — is bound at verifier deploy time and emitted in the `ChainConfigurationSet` event, so the values are auditable on-chain via the deploy log + the verifier's verified constructor args. Changing any of the four values means deploying a new verifier and re-pointing the rollup at it via `setVerifierAddress`; there is no separate L1 storage slot for the chain-config preimage that could fall out of sync.
    - Verify `keccak256(submittedRoots) == L2L1BridgeTransactionTree`; store each root via `l2MerkleRootsDepths[root] = D`
    - Optionally process `l2MessagingBlocksOffsets` calldata to emit `L2MessagingBlockAnchored` discovery events (unchanged from today)
-   - Update storage: `currentFinalizedLastBlockHash`, `currentFinalizedShnarf`, `currentL2BlockNumber`, `currentL2BlockTimestamp`, `currentFinalizedL1L2BridgeRollingHash`, `currentFinalizedL1L2BridgeRollingHashMessageNumber`
+   - Update storage: `currentFinalizedLastBlockHash`, `currentFinalizedShnarf`, `currentL2BlockNumber`, `currentL2BlockTimestamp`, `currentFinalizedL1L2BridgeRollingHash`, `currentFinalizedL1L2BridgeRollingHashMessageNumber`, `currentFinalizedFtxRollingHash`, `currentFinalizedProcessedFtxNumber`
 
 **What is removed:**
 
@@ -421,7 +427,7 @@ separate from the l2-execution, rollup, and rollup-aggregation guest programs.
 - All Type-2 conflation metadata processing (timestamps, batch indices, dynamic array unpacking)
 - SNARK-friendly hash routing
 
-The result is a contract that takes fourteen standard `bytes32`/`uint256` values plus a roots array, runs a small set of equality checks against stored state, updates storage slots, and delegates to a generated verifier. Hundreds of lines of bespoke parsing logic are permanently deleted.
+The result is a contract that takes fifteen standard `bytes32`/`uint256` values plus a roots array, runs a small set of equality checks against stored state, updates storage slots, and delegates to a generated verifier. Hundreds of lines of bespoke parsing logic are permanently deleted.
 
 ---
 
@@ -452,11 +458,12 @@ Four FTX fields are part of the l2-execution proof public input tuple (see §2.1
 | Field | Description |
 |---|---|
 | `parentFtxRollingHash` | FTX rolling hash at the start of this range |
+| `parentProcessedFtxNumber` | Sequence number of the last FTX handled before this range |
 | `endFtxRollingHash` | FTX rolling hash after all FTXs handled in this range |
-| `lastProcessedFtxNumber` | Sequence number of the last FTX handled in this range |
+| `endProcessedFtxNumber` | Sequence number of the last FTX handled in this range |
 | `filteredAddressesHash` | keccak256 of the ordered list of addresses whose FTX was refused in this range; each entry is the recovered sender (`fromAddress`) for refused-from or the decoded recipient (`toAddress`) for refused-to |
 
-These propagate through the proof tree symmetrically to the L1→L2 bridge fields: the rollup proof chains `endFtxRollingHash == parentFtxRollingHash` across consecutive l2-execution proofs (and implicitly across blob boundaries within a multi-blob rollup proof); the rollup-aggregation proof adds the same assertion across consecutive rollup proofs; the final public inputs expose all four (fields 8–11 in §2.4).
+These propagate through the proof tree symmetrically to the L1→L2 bridge fields: the rollup proof chains `endFtxRollingHash == parentFtxRollingHash` and `endProcessedFtxNumber == parentProcessedFtxNumber` across consecutive l2-execution proofs (and implicitly across blob boundaries within a multi-blob rollup proof); the rollup-aggregation proof adds the same assertions across consecutive rollup proofs; the final public inputs expose all five (fields 9–13 in §2.4).
 
 ### 6.5 l2-execution Statement
 
@@ -490,20 +497,20 @@ After the loop the guest asserts `rollingHash == endFtxRollingHash` and outputs 
 
 ### 6.6 Propagation Through the Proof Tree
 
-- **rollup proof:** asserts `PI_Eᵢ.endFtxRollingHash == PI_Eᵢ₊₁.parentFtxRollingHash` across consecutive l2-execution proofs (§2.2 step 7); collects and concatenates filtered address lists into a single `filteredAddressesHash` (§2.2 step 8).
-- **rollup-aggregation proof:** adds `assert_eq!(PI_Bᵢ.endFtxRollingHash, PI_Bᵢ₊₁.parentFtxRollingHash)` to the continuity block (§2.3 step 2); merges filtered address lists across all `M` rollup proofs by concatenation and rehashing (§2.3 step 4).
-- **Final public inputs:** exposes `parentFtxRollingHash`, `endFtxRollingHash`, `lastProcessedFtxNumber`, `filteredAddressesHash` as fields 8–11 (§2.4).
+- **rollup proof:** asserts `PI_Eᵢ.endFtxRollingHash == PI_Eᵢ₊₁.parentFtxRollingHash` and `PI_Eᵢ.endProcessedFtxNumber == PI_Eᵢ₊₁.parentProcessedFtxNumber` across consecutive l2-execution proofs (§2.2 step 7); collects and concatenates filtered address lists into a single `filteredAddressesHash` (§2.2 step 8).
+- **rollup-aggregation proof:** adds `assert_eq!(PI_Bᵢ.endFtxRollingHash, PI_Bᵢ₊₁.parentFtxRollingHash)` and `assert_eq!(PI_Bᵢ.endProcessedFtxNumber, PI_Bᵢ₊₁.parentProcessedFtxNumber)` to the continuity block (§2.3 step 2); merges filtered address lists across all `M` rollup proofs by concatenation and rehashing (§2.3 step 4).
+- **Final public inputs:** exposes `parentFtxRollingHash`, `parentProcessedFtxNumber`, `endFtxRollingHash`, `endProcessedFtxNumber`, `filteredAddressesHash` as fields 9–13 (§2.4).
 
 ### 6.7 L1 Contract Changes
 
-**New storage slots:** `currentFinalizedFtxRollingHash`, `currentFinalizedLastProcessedFtxNumber`.
+**New storage slots:** `currentFinalizedFtxRollingHash`, `currentFinalizedProcessedFtxNumber`.
 
 **On finalization, add:**
-- Assert `parentFtxRollingHash == currentFinalizedFtxRollingHash` (continuity).
-- Assert `endFtxRollingHash == ftxRollingHash[lastProcessedFtxNumber]` (authenticity against L1-stored per-FTX hash).
+- Assert `parentFtxRollingHash == currentFinalizedFtxRollingHash` and `parentProcessedFtxNumber == currentFinalizedProcessedFtxNumber` (FTX transition continuity — verifies that this proof continues exactly from the forced-transaction state last stored on L1, analogous to `_computeLastFinalizedState` which commits rolling hash, message number, and timestamp into a single hash for the equivalent check on the L1→L2 bridge).
+- Assert `endFtxRollingHash == ftxRollingHash[endProcessedFtxNumber]` (authenticity against L1-stored per-FTX hash).
 - Verify `keccak256(submittedFilteredAddresses) == filteredAddressesHash`; for each entry, assert the address is on the sanction list — revert if any is absent — then emit `ForcedTransactionRefused(address)` per entry.
-- Deadline check: revert if any FTX K with `ftxDeadline[K] <= endBlockNumber` has K > `lastProcessedFtxNumber`.
-- Update `currentFinalizedFtxRollingHash` and `currentFinalizedLastProcessedFtxNumber`.
+- Deadline check: revert if any FTX K with `ftxDeadline[K] <= endBlockNumber` has K > `endProcessedFtxNumber`.
+- Update `currentFinalizedFtxRollingHash` and `currentFinalizedProcessedFtxNumber`.
 
 **Rolling hash migration:** existing FTX submissions used MiMC; at upgrade, any already-submitted FTXs must either be re-hashed or the contract must support both hash functions during a transition window.
 
@@ -517,10 +524,10 @@ After the loop the guest asserts `rollingHash == endFtxRollingHash` and outputs 
 | **KZG verification** | L1 contract calls `0x0A` precompile; `X` and `Y` exposed on-chain                                                     | Commitment computed and proof verified inside zkVM guest; `blobKzgCommitment`, `X`, and `Y` never appear on-chain |
 | **Compression** | Custom SNARK-friendly LZSS; arithmetization-constrained compression ratio                                             | Standard LZ4/zstd compiled into RISC-V guest; unconstrained ratio |
 | **Proof interconnection** | Bespoke pi-interconnection circuit in Go/Gnark; gate-level array mapping                                              | rollup proof: recursively verifies N l2-execution proofs across K ≥ 1 blobs and chains them with `assert_eq!` in the RISC-V guest. rollup-aggregation proof: flat recursion over M rollup proofs, same continuity assertions across rollup-proof boundaries |
-| **l2-execution public inputs** | ~14 Type-2 parameters (timestamps, batch indices, conflation data, dynamic arrays)                                    | 15 fields — see §2.1. Drops state roots (block-hash chain anchors continuity); keeps `endBlockTimestamp`; adds FTX fields (`parent`/`endFtxRollingHash`, `lastProcessedFtxNumber`, `filteredAddressesHash`) and `txFromsHash` |
+| **l2-execution public inputs** | ~14 Type-2 parameters (timestamps, batch indices, conflation data, dynamic arrays)                                    | 16 fields — see §2.1. Drops state roots (block-hash chain anchors continuity); keeps `endBlockTimestamp`; adds FTX fields (`parent`/`endFtxRollingHash`, `parent`/`endProcessedFtxNumber`, `filteredAddressesHash`) and `txFromsHash` |
 | **L2→L1 tree construction** | l2-execution proof outputs flat hash of bounded message list; pi-interconnection organizes into fixed-depth Merkle trees | Same flat hash at l2-execution level; rollup proof partitions messages into fixed-depth zero-padded trees and outputs `keccak256(roots)`; rollup-aggregation proof concatenates the per-rollup-proof root arrays and rehashes |
 | **l2MessagingBlocksOffsets** | Unproven hint; L1 emits `L2MessagingBlockAnchored` events for off-chain indexing                                      | Unchanged — still an unproven hint; leaf position is fully derivable from message number, so no security impact |
 | **DA payload — intermediate roots** | `blockHash`, `timestamp` and transaction RLP without signature + From                                                 | adding `prevRandao` |
 | **L1 contract** | Complex: precompile calls, dynamic Type-2 input formatting, SNARK-friendly hash routing                               | Lightweight: verify proof against 13 values + roots/addresses calldata, equality checks against stored state, update storage slots |
-| **Final aggregated public inputs** | 13 fields (shnarfs, timestamps, block numbers, rolling hashes ×2, Merkle roots…)                                      | 14 fields — see §2.4 |
+| **Final aggregated public inputs** | 13 fields (shnarfs, timestamps, block numbers, rolling hashes ×2, Merkle roots…)                                      | 15 fields — see §2.4 |
 | **rollup-proof granularity** | n/a (no rollup proof existed; compression was a separate proof per blob)                                                | Configurable: one rollup proof can cover `K ≥ 1` blobs (analogous to today's M-block conflation inside an l2-execution proof). `K = 1` is the simplest case; `K > 1` amortizes recursion overhead |

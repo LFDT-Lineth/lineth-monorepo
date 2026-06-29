@@ -19,6 +19,7 @@ import {
 import { sendTransaction } from "viem/actions";
 import { parseAccount } from "viem/utils";
 
+import { CLAIM_MESSAGE_ABI } from "../abis";
 import { AccountNotFoundError, AccountNotFoundErrorType } from "../errors/account";
 import { GetAccountParameter } from "../types/account";
 
@@ -139,51 +140,7 @@ export async function claimOnL2<
     to: l2MessageServiceAddress,
     account,
     data: encodeFunctionData({
-      abi: [
-        {
-          inputs: [
-            {
-              internalType: "address",
-              name: "_from",
-              type: "address",
-            },
-            {
-              internalType: "address",
-              name: "_to",
-              type: "address",
-            },
-            {
-              internalType: "uint256",
-              name: "_fee",
-              type: "uint256",
-            },
-            {
-              internalType: "uint256",
-              name: "_value",
-              type: "uint256",
-            },
-            {
-              internalType: "address payable",
-              name: "_feeRecipient",
-              type: "address",
-            },
-            {
-              internalType: "bytes",
-              name: "_calldata",
-              type: "bytes",
-            },
-            {
-              internalType: "uint256",
-              name: "_nonce",
-              type: "uint256",
-            },
-          ],
-          name: "claimMessage",
-          outputs: [],
-          stateMutability: "nonpayable",
-          type: "function",
-        },
-      ],
+      abi: CLAIM_MESSAGE_ABI,
       functionName: "claimMessage",
       args: [from, to, fee, value, feeRecipient ?? zeroAddress, calldata, messageNonce],
     }),
