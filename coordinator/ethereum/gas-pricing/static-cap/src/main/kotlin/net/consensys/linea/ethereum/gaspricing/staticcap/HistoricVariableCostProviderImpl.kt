@@ -2,6 +2,7 @@ package net.consensys.linea.ethereum.gaspricing.staticcap
 
 import linea.OneKWei
 import linea.domain.BlockParameter
+import linea.domain.toBlockParameter
 import linea.ethapi.EthApiBlockClient
 import linea.kotlin.encodeHex
 import net.consensys.linea.ethereum.gaspricing.HistoricVariableCostProvider
