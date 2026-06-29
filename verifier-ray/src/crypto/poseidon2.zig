@@ -1,5 +1,6 @@
 const field = @import("../field/koalabear.zig");
 const constants = @import("poseidon2_constants.zig");
+const profiling = @import("../profiling.zig");
 
 pub const Error = field.Error || error{InvalidInputLength};
 pub const Digest = [8]field.Element;
@@ -15,6 +16,7 @@ pub fn zeroDigest() Digest {
 }
 
 pub fn compress(left: Digest, right: Digest) Digest {
+    profiling.poseidon2Compress();
     var state: [16]field.Element = undefined;
     @memcpy(state[0..block_size], &left);
     @memcpy(state[block_size..], &right);

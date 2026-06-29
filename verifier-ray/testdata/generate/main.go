@@ -16,17 +16,17 @@ import (
 	"path/filepath"
 	"strings"
 
-	fiatshamir "github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/fiatshamir"
-	poseidon2 "github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/poseidon2"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/polynomials"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/global"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/localvanishing"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/logderivativesum"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/rangecheck"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop/wioptest"
+	fiatshamir "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fiatshamir"
+	poseidon2 "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/localvanishing"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/rangecheck"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/consensys/linea-monorepo/verifier-ray/codegen"
 )
 
@@ -41,7 +41,7 @@ func main() {
 	writePoseidonCases(&out)
 	writeFiatShamirCases(&out)
 	writeRuntimeTraceCases(&out)
-	vanishingCases, vanishingSystems, err := buildVanishingFixtureCases()
+	fixtureCases, compiledSystems, err := buildCompiledFixtureCases()
 	if err != nil {
 		panic(err)
 	}
@@ -56,7 +56,10 @@ func main() {
 	if err := os.WriteFile(outputPath, data, 0o644); err != nil {
 		panic(err)
 	}
-	if err := writeVanishingFixtures(vanishingCases, vanishingSystems); err != nil {
+	if err := writeCompiledFixtures(fixtureCases, compiledSystems); err != nil {
+		panic(err)
+	}
+	if err := writeVerifyFixtures(fixtureCases, compiledSystems); err != nil {
 		panic(err)
 	}
 }
@@ -524,40 +527,16 @@ func writeRuntimeTraceRound(out *bytes.Buffer, round runtimeTraceRound) {
 	fmt.Fprintln(out, "        .{")
 	fmt.Fprintln(out, "            .columns = &.{")
 	for _, column := range round.columns {
-		writeRuntimeTraceColumn(out, column)
+		writeTraceColumn(out, column, "                ")
 	}
 	fmt.Fprintln(out, "            },")
 	fmt.Fprintln(out, "            .cells = &.{")
 	for _, cell := range round.cells {
-		writeRuntimeTraceCell(out, cell)
+		writeTraceCell(out, cell, "                ")
 	}
 	fmt.Fprintln(out, "            },")
 	fmt.Fprintf(out, "            .expected_coins = &%s,\n", extSlice(round.expectedCoins))
 	fmt.Fprintln(out, "        },")
-}
-
-func writeRuntimeTraceColumn(out *bytes.Buffer, column runtimeTraceColumn) {
-	switch {
-	case column.commitments != nil:
-		fmt.Fprintf(out, "                .{ .oracle = &%s },\n", commitmentSlice(column.commitments))
-	case column.publicBaseValues != nil:
-		fmt.Fprintf(out, "                .{ .public_base = &%s },\n", elemSlice(column.publicBaseValues))
-	case column.publicExtValues != nil:
-		fmt.Fprintf(out, "                .{ .public_ext = &%s },\n", extSlice(column.publicExtValues))
-	default:
-		panic("runtime trace column has no data variant")
-	}
-}
-
-func writeRuntimeTraceCell(out *bytes.Buffer, cell runtimeTraceCell) {
-	switch {
-	case cell.baseValue != nil:
-		fmt.Fprintf(out, "                .{ .base = %d },\n", u(*cell.baseValue))
-	case cell.extValue != nil:
-		fmt.Fprintf(out, "                .{ .ext = %s },\n", ext6(*cell.extValue))
-	default:
-		panic("runtime trace cell has no data variant")
-	}
 }
 
 func baseTraceCell(value field.Element) runtimeTraceCell {
@@ -568,7 +547,7 @@ func extTraceCell(value field.Ext) runtimeTraceCell {
 	return runtimeTraceCell{extValue: &value}
 }
 
-type vanishingFixtureCase struct {
+type fixtureCase struct {
 	name    string
 	honest  vanishingProofView
 	invalid *vanishingProofView
@@ -581,7 +560,7 @@ type vanishingProofView struct {
 	moduleSizes    []int
 }
 
-type vanishingAssign func(rt *wiop.Runtime)
+type assignFn func(rt *wiop.Runtime)
 
 func compileFullPipeline(sys *wiop.System) {
 	rangecheck.Compile(sys)
@@ -591,11 +570,11 @@ func compileFullPipeline(sys *wiop.System) {
 	global.Compile(sys)
 }
 
-func buildVanishingFixtureCases() ([]vanishingFixtureCase, []codegen.NamedVanishingSystem, error) {
-	var cases []vanishingFixtureCase
-	var systems []codegen.NamedVanishingSystem
+func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error) {
+	var cases []fixtureCase
+	var systems []codegen.CompiledSystem
 
-	add := func(source, name string, sys *wiop.System, honest vanishingAssign, invalid vanishingAssign) error {
+	add := func(source, name string, sys *wiop.System, honest assignFn, invalid assignFn) error {
 		compileFullPipeline(sys)
 		routing, err := codegen.BuildCoinRouting(sys)
 		if err != nil {
@@ -608,16 +587,19 @@ func buildVanishingFixtureCases() ([]vanishingFixtureCase, []codegen.NamedVanish
 		if len(vanishingSystem.Modules) == 0 {
 			return nil
 		}
-
-		prefixedName := source + "/" + name
-		honestProof := buildVanishingProofView(sys, honest)
+		honestRt := runProver(sys, honest)
+		logDeriv, err := codegen.BuildLogDerivSystem(sys)
+		if err != nil {
+			return fmt.Errorf("build logderiv system %s/%s: %w", source, name, err)
+		}
+		honestProof := extractVanishingProofView(sys, honestRt)
 		var invalidProof *vanishingProofView
 		if invalid != nil {
-			proof := buildVanishingProofView(sys, invalid)
+			proof := extractVanishingProofView(sys, runProver(sys, invalid))
 			invalidProof = &proof
 		}
-		cases = append(cases, vanishingFixtureCase{name: prefixedName, honest: honestProof, invalid: invalidProof})
-		systems = append(systems, codegen.NamedVanishingSystem{Name: prefixedName, System: vanishingSystem, Routing: routing})
+		cases = append(cases, fixtureCase{name: name, honest: honestProof, invalid: invalidProof})
+		systems = append(systems, codegen.CompiledSystem{Routing: routing, Vanishing: vanishingSystem, LogDeriv: logDeriv})
 		return nil
 	}
 
@@ -678,8 +660,65 @@ func buildVanishingFixtureCases() ([]vanishingFixtureCase, []codegen.NamedVanish
 			return nil, nil, err
 		}
 	}
+	// Larger MultiColumn scenario for stress profiling.
+	sys, honest := buildLookupMultiColumnBenchSystem()
+	if err := add("Lookup", "MultiColumnBench", sys, honest, nil); err != nil {
+		return nil, nil, err
+	}
 
 	return cases, systems, nil
+}
+
+// buildLookupMultiColumnBenchSystem is a verifier-ray-local stress fixture for
+// profiling a wider lookup/log-derivative/vanishing pipeline. It stays local to
+// verifier-ray because its purpose is benchmark shape, not reusable prover-ray
+// scenario coverage.
+func buildLookupMultiColumnBenchSystem() (*wiop.System, assignFn) {
+	const (
+		bigSize = 1 << 10
+		numCols = 5
+	)
+	var (
+		tCols        = make([]*wiop.Column, numCols)
+		sCols        = make([]*wiop.Column, numCols)
+		tTableView   = make([]*wiop.ColumnView, numCols)
+		sTableView   = make([]*wiop.ColumnView, numCols)
+		tAssignments = make([][]field.Element, numCols)
+		sAssignments = make([][]field.Element, numCols)
+	)
+
+	sys := wiop.NewSystemf("lk-multi-col-bench")
+	r0 := sys.NewRound()
+	modT := sys.NewSizedModule(sys.Context.Childf("modT"), bigSize, wiop.PaddingDirectionNone)
+	modS := sys.NewSizedModule(sys.Context.Childf("modS"), bigSize, wiop.PaddingDirectionNone)
+	for i := range tCols {
+		tCols[i] = modT.NewColumn(sys.Context.Childf("T%d", i), wiop.VisibilityOracle, r0)
+		sCols[i] = modS.NewColumn(sys.Context.Childf("S%d", i), wiop.VisibilityOracle, r0)
+		tTableView[i] = tCols[i].View()
+		sTableView[i] = sCols[i].View()
+	}
+	sys.NewInclusion(
+		sys.Context.Childf("inc-big-table-bench"),
+		[]wiop.Table{wiop.NewTable(sTableView...)},
+		[]wiop.Table{wiop.NewTable(tTableView...)},
+	)
+
+	for i := range tCols {
+		tAssignments[i] = make([]field.Element, bigSize)
+		sAssignments[i] = make([]field.Element, bigSize)
+		for j := range bigSize {
+			tAssignments[i][j] = elem(uint64(i + j + 1))
+			sAssignments[i][j] = elem(uint64(i + (j % (bigSize / 2)) + 1))
+		}
+	}
+
+	honest := func(rt *wiop.Runtime) {
+		for i := range tCols {
+			rt.AssignColumn(tCols[i], concreteBase(tAssignments[i]))
+			rt.AssignColumn(sCols[i], concreteBase(sAssignments[i]))
+		}
+	}
+	return sys, honest
 }
 
 // buildLagrangeSelectorBoundarySystem builds a size-4 module with the single
@@ -720,11 +759,26 @@ func buildDynamicLagrangeSelectorBoundarySystem() (*wiop.System, *wiop.Column) {
 	return sys, col
 }
 
-func buildVanishingProofView(sys *wiop.System, assign vanishingAssign) vanishingProofView {
+// runProver creates a runtime for sys, applies assign, advances all rounds
+// running every prover action, and returns the completed runtime.
+func runProver(sys *wiop.System, assign assignFn) wiop.Runtime {
 	rt := wiop.NewRuntime(sys)
 	assign(&rt)
-	runVanishingProver(&rt)
+	for _, action := range rt.CurrentRound().ProverActions {
+		action.Run(rt)
+	}
+	for rt.CurrentRound().ID < len(rt.System.Rounds)-1 {
+		rt.AdvanceRound()
+		for _, action := range rt.CurrentRound().ProverActions {
+			action.Run(rt)
+		}
+	}
+	return rt
+}
 
+// extractVanishingProofView reads witness/quotient claims and round trace data
+// from an already-completed runtime.
+func extractVanishingProofView(sys *wiop.System, rt wiop.Runtime) vanishingProofView {
 	verifiers := globalVerifiers(sys)
 
 	var witnessClaims []field.Ext
@@ -750,18 +804,6 @@ func buildVanishingProofView(sys *wiop.System, assign vanishingAssign) vanishing
 		witnessClaims:  witnessClaims,
 		quotientClaims: quotientClaims,
 		moduleSizes:    dynamicModuleSizes(verifiers, rt),
-	}
-}
-
-func runVanishingProver(rt *wiop.Runtime) {
-	for _, action := range rt.CurrentRound().ProverActions {
-		action.Run(*rt)
-	}
-	for rt.CurrentRound().ID < len(rt.System.Rounds)-1 {
-		rt.AdvanceRound()
-		for _, action := range rt.CurrentRound().ProverActions {
-			action.Run(*rt)
-		}
 	}
 }
 
@@ -822,26 +864,23 @@ func runtimeTraceRoundFromRuntime(rt wiop.Runtime, round *wiop.Round) runtimeTra
 	return trace
 }
 
-func writeVanishingFixtures(cases []vanishingFixtureCase, systems []codegen.NamedVanishingSystem) error {
+func writeCompiledFixtures(cases []fixtureCase, systems []codegen.CompiledSystem) error {
 	var out bytes.Buffer
-	writeVanishingHeader(&out)
-	for i := range cases {
-		if err := codegen.WriteSpecZigWithOptions(&out, systems[i].Routing, codegen.SpecZigOptions{
-			ProtocolImport: "verifier_ray.protocol",
-			ConstName:      fmt.Sprintf("system_%d_spec", i),
-			EmitHeader:     false,
-		}); err != nil {
-			return err
-		}
-		if err := codegen.WriteVanishingSystemZigWithOptions(&out, i, systems[i], codegen.VanishingZigOptions{
-			FieldImport:     "verifier_ray.field.koalabear",
-			VanishingImport: "verifier_ray.query.vanishing",
-		}); err != nil {
-			return err
-		}
-		writeVanishingScenario(&out, i, cases[i])
+	writeCompiledHeader(&out)
+	opts := codegen.CompiledSystemZigOptions{
+		EmitHeader:      false,
+		ProtocolImport:  "verifier_ray.protocol",
+		FieldImport:     "verifier_ray.field.koalabear",
+		VanishingImport: "verifier_ray.query.vanishing",
+		LogDerivImport:  "verifier_ray.query.logderivativesum",
 	}
-	writeVanishingScenarioList(&out, len(cases))
+	for i := range cases {
+		if err := codegen.WriteCompiledSystemZig(&out, i, systems[i], opts); err != nil {
+			return err
+		}
+		writeCompiledScenario(&out, i, cases[i])
+	}
+	writeCompiledScenarioList(&out, len(cases))
 
 	data := out.Bytes()
 	zigfmt, err := runZigFmt(data)
@@ -851,27 +890,29 @@ func writeVanishingFixtures(cases []vanishingFixtureCase, systems []codegen.Name
 	return os.WriteFile(filepath.Join("..", "generated", "vanishing.zig"), data, 0o644)
 }
 
-func writeVanishingHeader(out *bytes.Buffer) {
+func writeCompiledHeader(out *bytes.Buffer) {
 	fmt.Fprintln(out, "// Code generated by verifier-ray/testdata/generate; DO NOT EDIT.")
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "const verifier_ray = @import(\"verifier_ray\");")
 	fmt.Fprintln(out, "const field = verifier_ray.field.koalabear;")
 	fmt.Fprintln(out, "const protocol = verifier_ray.protocol;")
 	fmt.Fprintln(out, "const vanishing = verifier_ray.query.vanishing;")
+	fmt.Fprintln(out, "const logderivativesum = verifier_ray.query.logderivativesum;")
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "pub const RuntimeTraceColumn = union(enum) { oracle: []const [8]u32, public_base: []const u32, public_ext: []const [6]u32 };")
 	fmt.Fprintln(out, "pub const RuntimeTraceCell = union(enum) { base: u32, ext: [6]u32 };")
 	fmt.Fprintln(out, "pub const RuntimeTraceRound = struct { columns: []const RuntimeTraceColumn, cells: []const RuntimeTraceCell };")
 	fmt.Fprintln(out, "pub const VanishingProofView = struct { rounds: []const RuntimeTraceRound, witness_claims: []const [6]u32, quotient_claims: []const [6]u32, module_sizes: []const usize };")
-	fmt.Fprintln(out, "pub const VanishingScenario = struct { name: []const u8, spec: protocol.Spec, system: vanishing.System, honest: VanishingProofView, invalid: ?VanishingProofView = null };")
+	fmt.Fprintln(out, "pub const Scenario = struct { name: []const u8, spec: protocol.Spec, system: vanishing.System, logderiv: logderivativesum.System = .{}, honest: VanishingProofView, invalid: ?VanishingProofView = null };")
 	fmt.Fprintln(out)
 }
 
-func writeVanishingScenario(out *bytes.Buffer, idx int, tc vanishingFixtureCase) {
-	fmt.Fprintf(out, "const vanishing_scenario_%d = VanishingScenario{\n", idx)
-	fmt.Fprintf(out, "    .name = \"%s\",\n", zigString(tc.name))
+func writeCompiledScenario(out *bytes.Buffer, idx int, tc fixtureCase) {
+	fmt.Fprintf(out, "const scenario_%d = Scenario{\n", idx)
+	fmt.Fprintf(out, "    .name = \"%s\",\n", codegen.ZigString(tc.name))
 	fmt.Fprintf(out, "    .spec = system_%d_spec,\n", idx)
 	fmt.Fprintf(out, "    .system = system_%d,\n", idx)
+	fmt.Fprintf(out, "    .logderiv = system_%d_logderiv,\n", idx)
 	fmt.Fprintln(out, "    .honest =")
 	writeVanishingProofView(out, tc.honest, "        ")
 	if tc.invalid != nil {
@@ -882,10 +923,10 @@ func writeVanishingScenario(out *bytes.Buffer, idx int, tc vanishingFixtureCase)
 	fmt.Fprintln(out)
 }
 
-func writeVanishingScenarioList(out *bytes.Buffer, count int) {
-	fmt.Fprintln(out, "pub const scenarios = [_]VanishingScenario{")
+func writeCompiledScenarioList(out *bytes.Buffer, count int) {
+	fmt.Fprintln(out, "pub const scenarios = [_]Scenario{")
 	for i := range count {
-		fmt.Fprintf(out, "    vanishing_scenario_%d,\n", i)
+		fmt.Fprintf(out, "    scenario_%d,\n", i)
 	}
 	fmt.Fprintln(out, "};")
 }
@@ -894,31 +935,31 @@ func writeVanishingProofView(out *bytes.Buffer, proof vanishingProofView, indent
 	fmt.Fprintf(out, "%s.{\n", indent)
 	fmt.Fprintf(out, "%s    .rounds = &.{\n", indent)
 	for _, round := range proof.rounds {
-		writeVanishingRuntimeTraceRound(out, round, indent+"        ")
+		writeTraceRound(out, round, indent+"        ")
 	}
 	fmt.Fprintf(out, "%s    },\n", indent)
 	fmt.Fprintf(out, "%s    .witness_claims = &%s,\n", indent, extSlice(proof.witnessClaims))
 	fmt.Fprintf(out, "%s    .quotient_claims = &%s,\n", indent, extSlice(proof.quotientClaims))
-	fmt.Fprintf(out, "%s    .module_sizes = &%s,\n", indent, intSlice(proof.moduleSizes))
+	fmt.Fprintf(out, "%s    .module_sizes = &%s,\n", indent, codegen.IntSlice(proof.moduleSizes))
 	fmt.Fprintf(out, "%s},\n", indent)
 }
 
-func writeVanishingRuntimeTraceRound(out *bytes.Buffer, round runtimeTraceRound, indent string) {
+func writeTraceRound(out *bytes.Buffer, round runtimeTraceRound, indent string) {
 	fmt.Fprintf(out, "%s.{\n", indent)
 	fmt.Fprintf(out, "%s    .columns = &.{\n", indent)
 	for _, column := range round.columns {
-		writeVanishingRuntimeTraceColumn(out, column, indent+"        ")
+		writeTraceColumn(out, column, indent+"        ")
 	}
 	fmt.Fprintf(out, "%s    },\n", indent)
 	fmt.Fprintf(out, "%s    .cells = &.{\n", indent)
 	for _, cell := range round.cells {
-		writeVanishingRuntimeTraceCell(out, cell, indent+"        ")
+		writeTraceCell(out, cell, indent+"        ")
 	}
 	fmt.Fprintf(out, "%s    },\n", indent)
 	fmt.Fprintf(out, "%s},\n", indent)
 }
 
-func writeVanishingRuntimeTraceColumn(out *bytes.Buffer, column runtimeTraceColumn, indent string) {
+func writeTraceColumn(out *bytes.Buffer, column runtimeTraceColumn, indent string) {
 	switch {
 	case column.commitments != nil:
 		fmt.Fprintf(out, "%s.{ .oracle = &%s },\n", indent, commitmentSlice(column.commitments))
@@ -931,7 +972,7 @@ func writeVanishingRuntimeTraceColumn(out *bytes.Buffer, column runtimeTraceColu
 	}
 }
 
-func writeVanishingRuntimeTraceCell(out *bytes.Buffer, cell runtimeTraceCell, indent string) {
+func writeTraceCell(out *bytes.Buffer, cell runtimeTraceCell, indent string) {
 	switch {
 	case cell.baseValue != nil:
 		fmt.Fprintf(out, "%s.{ .base = %d },\n", indent, u(*cell.baseValue))
@@ -940,6 +981,285 @@ func writeVanishingRuntimeTraceCell(out *bytes.Buffer, cell runtimeTraceCell, in
 	default:
 		panic("runtime trace cell has no data variant")
 	}
+}
+
+func writeVerifyFixtures(cases []fixtureCase, systems []codegen.CompiledSystem) error {
+	var out bytes.Buffer
+	writeVerifyHeader(&out, len(cases))
+	opts := codegen.CompiledSystemZigOptions{
+		EmitHeader:      false,
+		ProtocolImport:  "protocol",
+		FieldImport:     "field",
+		VanishingImport: "vanishing",
+		LogDerivImport:  "logderivativesum",
+	}
+
+	for i := range cases {
+		if err := codegen.WriteCompiledSystemZig(&out, i, systems[i], opts); err != nil {
+			return err
+		}
+		writeVerifyCase(&out, i, cases[i])
+	}
+	writeVerifyMetadata(&out, cases, systems)
+	writeVerifyCaseSwitch(&out, cases)
+	writeVerifyInputSwitch(&out, cases)
+	writeVerifyFailingInputSwitch(&out, cases)
+
+	data := out.Bytes()
+	zigfmt, err := runZigFmt(data)
+	if err == nil {
+		data = zigfmt
+	}
+	return os.WriteFile(filepath.Join("..", "generated", "verify.zig"), data, 0o644)
+}
+
+func writeVerifyHeader(out *bytes.Buffer, count int) {
+	fmt.Fprintln(out, "// Code generated by verifier-ray/testdata/generate; DO NOT EDIT.")
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "const verifier_ray = @import(\"verifier_ray\");")
+	fmt.Fprintln(out, "const field = verifier_ray.field.koalabear;")
+	fmt.Fprintln(out, "const ext = verifier_ray.field.koalabear_ext;")
+	fmt.Fprintln(out, "const protocol = verifier_ray.protocol;")
+	fmt.Fprintln(out, "const commitment = verifier_ray.crypto.commitment;")
+	fmt.Fprintln(out, "const vanishing = verifier_ray.query.vanishing;")
+	fmt.Fprintln(out, "const logderivativesum = verifier_ray.query.logderivativesum;")
+	fmt.Fprintln(out, "const verifier = verifier_ray.verifier;")
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "pub const VerifyCase = struct {")
+	fmt.Fprintln(out, "    name: []const u8,")
+	fmt.Fprintln(out, "    spec: protocol.Spec,")
+	fmt.Fprintln(out, "    systems: verifier.Systems,")
+	fmt.Fprintln(out, "};")
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "pub const VerifyCaseMetadata = struct {")
+	fmt.Fprintln(out, "    name: []const u8,")
+	fmt.Fprintln(out, "    module_count: usize,")
+	fmt.Fprintln(out, "    dynamic_module_count: usize,")
+	fmt.Fprintln(out, "    round_count: usize,")
+	fmt.Fprintln(out, "    expression_count: usize,")
+	fmt.Fprintln(out, "    bucket_count: usize,")
+	fmt.Fprintln(out, "    vanishing_count: usize,")
+	fmt.Fprintln(out, "    total_witness_claims: usize,")
+	fmt.Fprintln(out, "    total_quotient_claims: usize,")
+	fmt.Fprintln(out, "};")
+	fmt.Fprintln(out)
+	fmt.Fprintf(out, "pub const case_count: usize = %d;\n", count)
+	fmt.Fprintln(out)
+}
+
+func writeVerifyCase(out *bytes.Buffer, idx int, tc fixtureCase) {
+	writeVerifyProof(out, fmt.Sprintf("verify_case_%d", idx), tc.honest)
+	if tc.invalid != nil {
+		writeVerifyProof(out, fmt.Sprintf("verify_case_%d_failing", idx), *tc.invalid)
+	}
+	fmt.Fprintf(
+		out,
+		"const verify_case_%d_systems = verifier.Systems{ .vanishing = system_%d, .logderivativesum = system_%d_logderiv };\n",
+		idx, idx, idx,
+	)
+	fmt.Fprintln(out)
+}
+
+func writeVerifyProof(out *bytes.Buffer, prefix string, proof vanishingProofView) {
+	fmt.Fprintf(out, "const %s_witness_claims = [_]ext.Ext{\n", prefix)
+	for _, claim := range proof.witnessClaims {
+		fmt.Fprintf(out, "    %s,\n", extValueLiteral(claim))
+	}
+	fmt.Fprintln(out, "};")
+	fmt.Fprintln(out)
+
+	fmt.Fprintf(out, "const %s_quotient_claims = [_]ext.Ext{\n", prefix)
+	for _, claim := range proof.quotientClaims {
+		fmt.Fprintf(out, "    %s,\n", extValueLiteral(claim))
+	}
+	fmt.Fprintln(out, "};")
+	fmt.Fprintln(out)
+
+	fmt.Fprintf(out, "const %s_module_sizes = [_]usize%s;\n", prefix, intArrayLiteral(proof.moduleSizes))
+	fmt.Fprintln(out)
+
+	for roundIdx, round := range proof.rounds {
+		writeVerifyRoundData(out, prefix, roundIdx, round)
+	}
+
+	fmt.Fprintf(out, "const %s_rounds = [_]protocol.RoundMessage{\n", prefix)
+	for roundIdx := range proof.rounds {
+		fmt.Fprintf(out, "    .{ .columns = &%s_round_%d_columns, .cells = &%s_round_%d_cells },\n", prefix, roundIdx, prefix, roundIdx)
+	}
+	fmt.Fprintln(out, "};")
+	fmt.Fprintln(out)
+
+	fmt.Fprintf(out, "const %s_proof = verifier.Proof{\n", prefix)
+	fmt.Fprintf(out, "    .rounds = &%s_rounds,\n", prefix)
+	fmt.Fprintf(out, "    .witness_claims = &%s_witness_claims,\n", prefix)
+	fmt.Fprintf(out, "    .quotient_claims = &%s_quotient_claims,\n", prefix)
+	fmt.Fprintf(out, "    .module_sizes = &%s_module_sizes,\n", prefix)
+	fmt.Fprintln(out, "};")
+	fmt.Fprintln(out)
+}
+
+func writeVerifyRoundData(out *bytes.Buffer, prefix string, roundIdx int, round runtimeTraceRound) {
+	for columnIdx, column := range round.columns {
+		switch {
+		case column.publicBaseValues != nil:
+			fmt.Fprintf(out, "const %s_round_%d_column_%d_base = [_]field.Element{\n", prefix, roundIdx, columnIdx)
+			for _, value := range column.publicBaseValues {
+				fmt.Fprintf(out, "    %s,\n", fieldValueLiteral(value))
+			}
+			fmt.Fprintln(out, "};")
+			fmt.Fprintln(out)
+		case column.publicExtValues != nil:
+			fmt.Fprintf(out, "const %s_round_%d_column_%d_ext = [_]ext.Ext{\n", prefix, roundIdx, columnIdx)
+			for _, value := range column.publicExtValues {
+				fmt.Fprintf(out, "    %s,\n", extValueLiteral(value))
+			}
+			fmt.Fprintln(out, "};")
+			fmt.Fprintln(out)
+		}
+	}
+
+	fmt.Fprintf(out, "const %s_round_%d_columns = [_]protocol.ColumnMessage{\n", prefix, roundIdx)
+	for columnIdx, column := range round.columns {
+		switch {
+		case column.commitments != nil:
+			for _, value := range column.commitments {
+				fmt.Fprintf(out, "    .{ .oracle_commitment = %s },\n", commitmentValueLiteral(value))
+			}
+		case column.publicBaseValues != nil:
+			fmt.Fprintf(out, "    .{ .public_column = .{ .base = &%s_round_%d_column_%d_base } },\n", prefix, roundIdx, columnIdx)
+		case column.publicExtValues != nil:
+			fmt.Fprintf(out, "    .{ .public_column = .{ .ext = &%s_round_%d_column_%d_ext } },\n", prefix, roundIdx, columnIdx)
+		default:
+			panic("runtime trace column has no data variant")
+		}
+	}
+	fmt.Fprintln(out, "};")
+	fmt.Fprintln(out)
+
+	fmt.Fprintf(out, "const %s_round_%d_cells = [_]protocol.Scalar{\n", prefix, roundIdx)
+	for _, cell := range round.cells {
+		switch {
+		case cell.baseValue != nil:
+			fmt.Fprintf(out, "    .{ .base = %s },\n", fieldValueLiteral(*cell.baseValue))
+		case cell.extValue != nil:
+			fmt.Fprintf(out, "    .{ .ext = %s },\n", extValueLiteral(*cell.extValue))
+		default:
+			panic("runtime trace cell has no data variant")
+		}
+	}
+	fmt.Fprintln(out, "};")
+	fmt.Fprintln(out)
+}
+
+func writeVerifyMetadata(out *bytes.Buffer, cases []fixtureCase, systems []codegen.CompiledSystem) {
+	fmt.Fprintln(out, "pub const metadata = [_]VerifyCaseMetadata{")
+	for i, tc := range cases {
+		vanishingSystem := systems[i].Vanishing
+		expressionCount, bucketCount, vanishingCount := vanishingBenchCounts(vanishingSystem)
+		fmt.Fprintf(out, "    .{ .name = \"%s\", .module_count = %d, .dynamic_module_count = %d, .round_count = %d, .expression_count = %d, .bucket_count = %d, .vanishing_count = %d, .total_witness_claims = %d, .total_quotient_claims = %d },\n",
+			codegen.ZigString(tc.name),
+			len(vanishingSystem.Modules),
+			vanishingSystem.DynamicModuleCount,
+			len(systems[i].Routing.RoundCoinCounts),
+			expressionCount,
+			bucketCount,
+			vanishingCount,
+			vanishingSystem.TotalWitnessClaims,
+			vanishingSystem.TotalQuotientClaims,
+		)
+	}
+	fmt.Fprintln(out, "};")
+	fmt.Fprintln(out)
+}
+
+func writeVerifyCaseSwitch(out *bytes.Buffer, cases []fixtureCase) {
+	fmt.Fprintln(out, "pub fn get(comptime index: usize) VerifyCase {")
+	fmt.Fprintln(out, "    return switch (index) {")
+	for i, tc := range cases {
+		fmt.Fprintf(
+			out,
+			"        %d => .{ .name = \"%s\", .spec = system_%d_spec, .systems = verify_case_%d_systems },\n",
+			i,
+			codegen.ZigString(tc.name),
+			i,
+			i,
+		)
+	}
+	fmt.Fprintln(out, "        else => @compileError(\"unknown verifier fixture case index\"),")
+	fmt.Fprintln(out, "    };")
+	fmt.Fprintln(out, "}")
+}
+
+// writeVerifyInputSwitch emits the getInput accessor, which returns the proof
+// data for a fixture case. The proof is kept separate from VerifyCase (see
+// writeVerifyHeader) so callers that only need the spec/systems don't pull in
+// the proof, and so the input can be supplied independently at runtime.
+func writeVerifyInputSwitch(out *bytes.Buffer, cases []fixtureCase) {
+	fmt.Fprintln(out, "pub fn getInput(comptime index: usize) verifier.Proof {")
+	fmt.Fprintln(out, "    return switch (index) {")
+	for i := range cases {
+		fmt.Fprintf(out, "        %d => verify_case_%d_proof,\n", i, i)
+	}
+	fmt.Fprintln(out, "        else => @compileError(\"unknown verifier fixture case index\"),")
+	fmt.Fprintln(out, "    };")
+	fmt.Fprintln(out, "}")
+}
+
+// writeVerifyFailingInputSwitch emits the getInputFailing accessor, returning
+// the failing (invalid) proof data for a fixture case. Not every case defines a
+// failing input, so cases without one produce a comptime error when requested.
+func writeVerifyFailingInputSwitch(out *bytes.Buffer, cases []fixtureCase) {
+	fmt.Fprintln(out, "pub fn getInputFailing(comptime index: usize) verifier.Proof {")
+	fmt.Fprintln(out, "    return switch (index) {")
+	for i, tc := range cases {
+		if tc.invalid != nil {
+			fmt.Fprintf(out, "        %d => verify_case_%d_failing_proof,\n", i, i)
+		} else {
+			fmt.Fprintf(out, "        %d => @compileError(\"verifier fixture case %d (%s) has no failing input\"),\n", i, i, codegen.ZigString(tc.name))
+		}
+	}
+	fmt.Fprintln(out, "        else => @compileError(\"unknown verifier fixture case index\"),")
+	fmt.Fprintln(out, "    };")
+	fmt.Fprintln(out, "}")
+}
+
+func vanishingBenchCounts(system codegen.VanishingSystem) (expressionCount, bucketCount, vanishingCount int) {
+	for _, module := range system.Modules {
+		expressionCount += len(module.Expressions)
+		bucketCount += len(module.Buckets)
+		for _, bucket := range module.Buckets {
+			vanishingCount += len(bucket.Vanishings)
+		}
+	}
+	return expressionCount, bucketCount, vanishingCount
+}
+
+func fieldValueLiteral(value field.Element) string {
+	return fmt.Sprintf(".{ .value = %d }", u(value))
+}
+
+func extValueLiteral(value field.Ext) string {
+	a0, a1, b0, b1, c0, c1 := field.ExtToUint64s(&value)
+	return fmt.Sprintf(
+		"ext.Ext{ .B0 = .{ .a0 = .{ .value = %d }, .a1 = .{ .value = %d } }, .B1 = .{ .a0 = .{ .value = %d }, .a1 = .{ .value = %d } }, .B2 = .{ .a0 = .{ .value = %d }, .a1 = .{ .value = %d } } }",
+		a0, a1, b0, b1, c0, c1,
+	)
+}
+
+func commitmentValueLiteral(value field.Octuplet) string {
+	parts := make([]string, len(value))
+	for i, elem := range value {
+		parts[i] = fieldValueLiteral(elem)
+	}
+	return "commitment.Commitment{ " + strings.Join(parts, ", ") + " }"
+}
+
+func intArrayLiteral(values []int) string {
+	parts := make([]string, len(values))
+	for i, value := range values {
+		parts[i] = fmt.Sprintf("%d", value)
+	}
+	return "{ " + strings.Join(parts, ", ") + " }"
 }
 
 func elem(v uint64) field.Element {
@@ -1033,18 +1353,6 @@ func extSlice(values []field.Ext) string {
 	return ".{ " + strings.Join(parts, ", ") + " }"
 }
 
-func intSlice(values []int) string {
-	parts := make([]string, len(values))
-	for i, value := range values {
-		parts[i] = fmt.Sprintf("%d", value)
-	}
-	return ".{ " + strings.Join(parts, ", ") + " }"
-}
-
-func zigString(value string) string {
-	return strings.NewReplacer("\\", "\\\\", "\"", "\\\"").Replace(value)
-}
-
 func commitmentSlice(values []field.Octuplet) string {
 	parts := make([]string, len(values))
 	for i, value := range values {
@@ -1070,9 +1378,9 @@ func runZigFmt(data []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer os.Remove(tmp.Name())
+	defer func() { _ = os.Remove(tmp.Name()) }()
 	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return nil, err
 	}
 	if err := tmp.Close(); err != nil {

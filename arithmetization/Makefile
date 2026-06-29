@@ -33,12 +33,10 @@ checkout-zkc-repo:
 		echo "zkc already present at $(ZKC)"; \
 	else \
 		echo "Cloning $(ZKC_REPO) -> $(ZKC)"; \
-		git clone "$(ZKC_REPO)" "$(ZKC)"; \
+		git clone --depth=1 "$(ZKC_REPO)" "$(ZKC)"; \
 	fi
 	@if [ -n "$(ZKC_REF)" ]; then \
-		git -C "$(ZKC)" fetch origin "$(ZKC_REF)" || true; \
-		git -C "$(ZKC)" checkout "$(ZKC_REF)"; \
-		git -C "$(ZKC)" pull --ff-only origin "$(ZKC_REF)" 2>/dev/null || true; \
+		git -C "$(ZKC)" fetch --depth=1 origin "$(ZKC_REF)" && git -C "$(ZKC)" checkout FETCH_HEAD || true; \
 	fi
 
 # Install the zkc CLI from the repository.
