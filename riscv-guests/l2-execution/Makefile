@@ -38,7 +38,7 @@ INPUT    ?= $(MAKEFILE_DIR)test/testdata/stateless_input.ssz
 # printf). Override to pick the execution backend — e.g. "--quiet --gogen --fast" runs the guest via
 # zkc's generated-Go backend in fast mode, the runnability path used while the interpreter does not
 # implement tracing yet.
-ZKC_EXEC_FLAGS ?=--gogen --fast
+ZKC_EXEC_FLAGS ?=--gogen --fast -q
 
 # Paramaeters for generating large SSZ fixtures from the execution-spec zkevm fixture archive
 LARGE_SSZ_DIR                := $(MAKEFILE_DIR).cache/large-ssz-fixtures
