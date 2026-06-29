@@ -363,7 +363,7 @@ func verifyWithValues(p Params, levelRoots []QueryLayerRoots, levelDs []int, prf
 			}
 		}
 		for jl, li := range levelAtRound {
-			if err := values.checkLevelShape(li, prf.LevelQueries[li-1][k], levelRoots[li], p.N>>jl); err != nil {
+			if err := values.checkLevelShape(prf.LevelQueries[li-1][k], levelRoots[li], p.N>>jl); err != nil {
 				return fmt.Errorf("fri: Verify: query %d extra level %d: %w", k, li, err)
 			}
 		}
@@ -590,7 +590,7 @@ func openQueryExt(s int, layer0 QueryLayer, layers [][]field.Ext, trees []*Tree,
 
 type queryValueProvider interface {
 	checkRoundShape(round int, opening QueryLayer, roots QueryLayerRoots, numLeaves int) error
-	checkLevelShape(levelIdx int, opening QueryLayer, roots QueryLayerRoots, numLeaves int) error
+	checkLevelShape(opening QueryLayer, roots QueryLayerRoots, numLeaves int) error
 	queryPair(queryIdx, round, base int, opening QueryLayer, roots QueryLayerRoots) (field.Ext, field.Ext, error)
 	levelValue(queryIdx, levelIdx, base int, opening QueryLayer, roots QueryLayerRoots) (field.Ext, error)
 }
@@ -601,7 +601,7 @@ func (merkleQueryValues) checkRoundShape(_ int, opening QueryLayer, roots QueryL
 	return checkQueryLayerShape(opening, roots, numLeaves, true)
 }
 
-func (merkleQueryValues) checkLevelShape(_ int, opening QueryLayer, roots QueryLayerRoots, numLeaves int) error {
+func (merkleQueryValues) checkLevelShape(opening QueryLayer, roots QueryLayerRoots, numLeaves int) error {
 	return checkQueryLayerShape(opening, roots, numLeaves, true)
 }
 

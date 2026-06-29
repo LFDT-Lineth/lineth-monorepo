@@ -1238,7 +1238,7 @@ func (pcsQueryValues) checkRoundShape(round int, opening QueryLayer, roots Query
 	return checkQueryLayerShape(opening, roots, numLeaves, true)
 }
 
-func (pcsQueryValues) checkLevelShape(_ int, opening QueryLayer, roots QueryLayerRoots, numLeaves int) error {
+func (pcsQueryValues) checkLevelShape(opening QueryLayer, roots QueryLayerRoots, numLeaves int) error {
 	return checkQueryLayerShape(opening, roots, numLeaves, false)
 }
 
