@@ -96,7 +96,7 @@ compile: require-src
 		riscv64-unknown-elf-gcc -march=rv64im -mabi=lp64 -nostdlib -T$(LINKER_SCRIPT) -o $(BIN) $(SRC); \
 	elif [ "$(EXT)" = ".zig" ]; then \
 		echo "\nGenerating $(BIN) from $(SRC)"; \
-		zig build --build-file $(MAKEFILE_DIR)zig/build.zig -Dpath=$(BASENAME); \
+		zig build --build-file $(MAKEFILE_DIR)zig/build.zig -Dpath=$(BASENAME) $(if $(filter true,$(KECCAK_ACCEL)),-Dkeccak-accel=true); \
 	elif [ "$(EXT)" = ".rs" ]; then \
 		echo "\nGenerating $(BIN) from $(SRC)"; \
 		cargo +nightly rustc \
