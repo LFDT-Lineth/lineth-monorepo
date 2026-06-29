@@ -118,8 +118,7 @@ pub const Ext = extern struct {
 
     // exponent is u64: callers only raise to domain sizes / positions, bounded
     // by the base field (max meaningful exponent p - 1, ~31 bits). x^e depends
-    // only on e mod (p^6 - 1), so u64 covers every exponent that occurs. See
-    // koalabear.Element.pow for the u64-vs-u32 codegen rationale.
+    // only on e mod (p^6 - 1), so u64 covers every exponent that occurs.
     pub fn pow(self: Ext, exponent: u64) Ext {
         var result = Ext.one();
         var b = self;

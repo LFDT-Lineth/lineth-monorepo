@@ -89,11 +89,14 @@ func main() {
 	cmd.Stdout = out
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		out.Close()
+		_ = out.Close()
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	out.Close()
+	if err := out.Close(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 
 	fmt.Fprintln(os.Stderr, "running zkc...")
 	// --fast: execute for cycle counts only. The default (tracing) mode lowers
@@ -115,9 +118,17 @@ func main() {
 	}
 
 	stats, scanErr := parseTrace(stdout)
-	zkcCmd.Wait()
-	if scanErr != nil {
-		fmt.Fprintln(os.Stderr, scanErr)
+	waitErr := zkcCmd.Wait()
+	if scanErr != nil || waitErr != nil {
+		if scanErr != nil {
+			fmt.Fprintln(os.Stderr, scanErr)
+		}
+		if waitErr != nil {
+			fmt.Fprintf(os.Stderr, "zkc exec failed: %v\n", waitErr)
+		}
+		if len(stats.tail) != 0 {
+			fmt.Fprintf(os.Stderr, "last zkc output:\n%s\n", strings.Join(stats.tail, "\n"))
+		}
 		os.Exit(1)
 	}
 	if stats.totalCycles == 0 {
