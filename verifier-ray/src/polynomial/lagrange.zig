@@ -8,7 +8,7 @@ pub fn evaluateBaseAtBase(values: []const field.Element, point: field.Element) E
     const n = try checkedCardinality(values.len);
 
     const omega = try field.rootOfUnityBy(values.len);
-    const inv_n = field.Element.init(n).inverse();
+    const inv_n = field.Element.mod(n).inverse();
     const vanishing = point.pow(n).sub(field.Element.one());
 
     var omega_i = field.Element.one();
@@ -29,7 +29,7 @@ pub fn evaluateBaseAtExt(values: []const field.Element, point: ext.Ext) Error!ex
     const n = try checkedCardinality(values.len);
 
     const omega = try field.rootOfUnityBy(values.len);
-    const inv_n = field.Element.init(n).inverse();
+    const inv_n = field.Element.mod(n).inverse();
     const vanishing = point.pow(n).sub(ext.Ext.one());
 
     var omega_i = field.Element.one();
@@ -51,7 +51,7 @@ pub fn evaluateExtAtBase(values: []const ext.Ext, point: field.Element) Error!ex
     const n = try checkedCardinality(values.len);
 
     const omega = try field.rootOfUnityBy(values.len);
-    const inv_n = field.Element.init(n).inverse();
+    const inv_n = field.Element.mod(n).inverse();
     const vanishing = point.pow(n).sub(field.Element.one());
 
     var omega_i = field.Element.one();
@@ -72,7 +72,7 @@ pub fn evaluateExtAtExt(values: []const ext.Ext, point: ext.Ext) Error!ext.Ext {
     const n = try checkedCardinality(values.len);
 
     const omega = try field.rootOfUnityBy(values.len);
-    const inv_n = field.Element.init(n).inverse();
+    const inv_n = field.Element.mod(n).inverse();
     const vanishing = point.pow(n).sub(ext.Ext.one());
 
     var omega_i = field.Element.one();
