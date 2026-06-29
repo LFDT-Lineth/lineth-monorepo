@@ -52,7 +52,7 @@ class HistoricVariableCostProviderImpl(
       )
       SafeFuture.completedFuture(cachedVariableCost)
     } else {
-      getHistoricVariableCostInWei(BlockParameter.BlockNumber(blockNumber))
+      getHistoricVariableCostInWei(blockNumber.toBlockParameter())
         .thenPeek { variableCost ->
           log.debug(
             "variableCost={} blockNumber={}",
