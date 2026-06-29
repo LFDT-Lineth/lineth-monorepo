@@ -276,6 +276,43 @@ describe("claimOnL1", () => {
     expect(result).toBe(TEST_TRANSACTION_HASH);
   });
 
+  it("forwards messageL2BlockNumber to getMessageProof as a single-block l2LogsBlockRange", async () => {
+    const client = mockClient(chainId, mockAccount);
+    const l2Client = mockClient(chainId, mockAccount);
+    const messageL2BlockNumber = 1_234_567n;
+
+    (getMessageProof as jest.Mock<ReturnType<typeof getMessageProof>>).mockResolvedValue(messageProof);
+
+    const result = await claimOnL1(client, {
+      from,
+      to,
+      fee,
+      value,
+      calldata,
+      messageNonce,
+      feeRecipient,
+      l2Client,
+      messageL2BlockNumber,
+      account: mockAccount,
+    });
+
+    expect(getMessageProof).toHaveBeenCalledWith(client, {
+      l2Client,
+      lineaRollupAddress: undefined,
+      l2MessageServiceAddress: undefined,
+      messageHash: computeMessageHash({
+        from,
+        to,
+        fee,
+        value,
+        nonce: messageNonce,
+        calldata,
+      }),
+      l2LogsBlockRange: { fromBlock: messageL2BlockNumber, toBlock: messageL2BlockNumber },
+    });
+    expect(result).toBe(TEST_TRANSACTION_HASH);
+  });
+
   it("sends claimMessageWithProof transaction with custom contract addresses", async () => {
     const client = mockClient(chainId, mockAccount);
     const l2Client = mockClient(chainId, mockAccount);

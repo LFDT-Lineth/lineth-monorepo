@@ -31,6 +31,7 @@
 - *(prover)* Resolve data race in limitless prover (#3442)
 - *(Maru)* Fixed a bug when simultaneous mutual connection attempts r… (#3439)
 - *(prover)* Index-out-of-range panic in merkle proof verification (#3453)
+- *(coordinator)* Forced transactions concurrency update (#3444)
 
 ### 🚜 Refactor
 
@@ -69,3 +70,4 @@
 - *(deps)* Update eligible patch and minor dependencies (#3366)
 - Update gnark to a3ad59ad083caac7691cba84a497d4d7c1759d2a (#3402)
 - *(deps)* Bump Node and pnpm (#3449)
+- *(deps)* Safe updates, exact version pinning, and override housekeeping (#3457)
