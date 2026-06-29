@@ -57,7 +57,7 @@ class GasPriceCapFeeHistoryFetcherImpl(
         "than maxBlockCount=${config.maxBlockCount}"
     }
 
-    val newestBlock = endBlockNumberInclusive.toULong().toBlockParameter()
+    val newestBlock = endBlockNumberInclusive.toBlockParameter()
     val blockCount = (endBlockNumberInclusive - startBlockNumberInclusive).inc().toInt()
 
     log.debug(

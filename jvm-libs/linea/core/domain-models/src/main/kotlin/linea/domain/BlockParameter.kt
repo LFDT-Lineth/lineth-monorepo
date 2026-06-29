@@ -43,7 +43,7 @@ sealed interface BlockParameter {
     }
   }
 
-  enum class Tag(val value: String) : BlockParameter {
+  enum class Tag(val tag: String) : BlockParameter {
     PENDING("pending"),
     LATEST("latest"),
     EARLIEST("earliest"),
@@ -94,3 +94,4 @@ fun ULong.toBlockParameter(): BlockParameter.BlockNumber = BlockParameter.BlockN
 fun UInt.toBlockParameter(): BlockParameter.BlockNumber = BlockParameter.BlockNumber(this.toULong())
 fun String.toBlockParameter(): BlockParameter = BlockParameter.parse(this)
 fun java.math.BigInteger.toBlockParameter(): BlockParameter.BlockNumber = BlockParameter.fromNumber(this)
+fun Long.toBlockParameter(): BlockParameter.BlockNumber = this.toULong().toBlockParameter()

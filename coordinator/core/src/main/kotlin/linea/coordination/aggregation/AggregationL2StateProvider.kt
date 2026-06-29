@@ -75,7 +75,7 @@ class AggregationL2StateProviderImpl(
   override fun getAggregationL2State(blockNumber: Long): SafeFuture<AggregationL2State> {
     val anchoredMessageFuture = getLastAnchoredMessage(blockNumber.toULong())
     val aggregationFtxNumbersFuture = getAggregationFtxRollingInfo(blockNumber.toULong())
-    val blockFuture = ethApiClient.ethGetBlockByNumberTxHashes(blockNumber.toULong().toBlockParameter())
+    val blockFuture = ethApiClient.ethGetBlockByNumberTxHashes(blockNumber.toBlockParameter())
 
     return SafeFuture
       .allOf(anchoredMessageFuture, aggregationFtxNumbersFuture, blockFuture)

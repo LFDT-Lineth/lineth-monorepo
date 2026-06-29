@@ -80,7 +80,7 @@ class L2CalldataSizeAccumulatorImplTest {
     // subsequent calls should not invoke ethGetBlockSizeByNumber
     (96..100).forEach { it ->
       verify(mockEthApiBlockClient, times(1))
-        .ethGetBlockByNumberTxHashes(eq(it.toULong().toBlockParameter()))
+        .ethGetBlockByNumberTxHashes(eq(ittoBlockParameter()))
     }
   }
 

@@ -84,7 +84,7 @@ class GasPriceCapProviderImpl(
 
   private fun calculateGasPriceCapsHelper(targetL2BlockNumber: Long): SafeFuture<GasPriceCaps?> {
     return if (isEnoughDataForGasPriceCapCalculation()) {
-      l2EthApiBlockClient.ethGetBlockByNumberTxHashes(targetL2BlockNumber.toULong().toBlockParameter())
+      l2EthApiBlockClient.ethGetBlockByNumberTxHashes(targetL2BlockNumber.toBlockParameter())
         .thenApply { it.timestamp }
         .thenApply {
           val targetL2BlockTimestamp = Instant.fromEpochSeconds(it.toLong())

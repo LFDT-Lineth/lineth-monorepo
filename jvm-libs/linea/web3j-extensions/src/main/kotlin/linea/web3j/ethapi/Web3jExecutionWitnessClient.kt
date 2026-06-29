@@ -36,7 +36,7 @@ class Web3jExecutionWitnessClient(
 
 private fun BlockParameter.toDebugExecutionWitnessRpcParam(): String =
   when (this) {
-    is BlockParameter.Tag -> value
+    is BlockParameter.Tag -> tag
     is BlockParameter.BlockNumber -> number.toString()
     is BlockParameter.BlockHash -> hashHex
   }

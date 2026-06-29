@@ -6,7 +6,7 @@ import org.web3j.protocol.core.DefaultBlockParameter
 
 fun BlockParameter.toWeb3j(): DefaultBlockParameter {
   return when (this) {
-    is BlockParameter.Tag -> DefaultBlockParameter.valueOf(this.value)
+    is BlockParameter.Tag -> DefaultBlockParameter.valueOf(this.tag)
     is BlockParameter.BlockNumber -> DefaultBlockParameter.valueOf(this.number.toBigInteger())
     is BlockParameter.BlockHash ->
       throw UnsupportedOperationException(
