@@ -172,9 +172,9 @@ pub const Ext = extern struct {
     /// Flattening order: [B0.a0, B0.a1, B1.a0, B1.a1, B2.a0, B2.a1].
     pub fn fromUints(v: [6]u32) Ext {
         return .{
-            .B0 = .{ .a0 = .{ .value = v[0] }, .a1 = .{ .value = v[1] } },
-            .B1 = .{ .a0 = .{ .value = v[2] }, .a1 = .{ .value = v[3] } },
-            .B2 = .{ .a0 = .{ .value = v[4] }, .a1 = .{ .value = v[5] } },
+            .B0 = .{ .a0 = base.Element.init(v[0]), .a1 = base.Element.init(v[1]) },
+            .B1 = .{ .a0 = base.Element.init(v[2]), .a1 = base.Element.init(v[3]) },
+            .B2 = .{ .a0 = base.Element.init(v[4]), .a1 = base.Element.init(v[5]) },
         };
     }
 
