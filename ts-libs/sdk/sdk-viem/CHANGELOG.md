@@ -4,12 +4,6 @@
 
 - refactor(sdk-viem): extract inlined contract ABIs into shared module (#3460) (1be49d027)
 - fix(sdk-viem): bound eth_getLogs queries to avoid provider block-range limits issue (#3450) (a47dc30c2)
-- chore(sdk-viem): release v1.0.0 (#3341) (f735159cf)
-- chore(packages): rename npm package scope (#3324) (eed25b490)
-- chore(misc): rename Consensys/linea-monorepo references to LFDT-Lineth/lineth-monorepo (#3297) (df3de7345)
-- chore(deps): update Jest to 30.4 (#3077) (ba16ce60d)
-- chore(2954): move sdk under ts-libs (#3014) (ee9e4e03d)
-
 
 ## 1.0.0 (2026-06-10)
 
