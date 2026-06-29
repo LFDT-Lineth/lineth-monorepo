@@ -84,16 +84,6 @@ pub const Element = extern struct {
         return .{ .value = @as(u32, @intCast((@as(u64, self.value) + modulus) >> 1)) };
     }
 
-    pub fn mul2ExpNegN(self: Element, n: u32) Element {
-        if (n > 32) unreachable;
-        var result = self;
-        var i: u32 = 0;
-        while (i < n) : (i += 1) {
-            result = result.halve();
-        }
-        return result;
-    }
-
     pub fn mul(self: Element, rhs: Element) Element {
         return init(@as(u64, self.value) * @as(u64, rhs.value));
     }
@@ -115,7 +105,9 @@ pub const Element = extern struct {
         var base = self;
         var exp = exponent;
         while (exp != 0) : (exp >>= 1) {
-            if ((exp & 1) == 1) result = result.mul(base);
+            if ((exp & 1) == 1) {
+                result = result.mul(base);
+            }
             base = base.square();
         }
         return result;
@@ -162,6 +154,16 @@ pub const Element = extern struct {
 
     pub fn div(self: Element, rhs: Element) Element {
         return self.mul(rhs.inverse());
+    }
+
+    pub fn mul2ExpNegN(self: Element, n: u32) Element {
+        if (n > 32) unreachable;
+        var result = self;
+        var i: u32 = 0;
+        while (i < n) : (i += 1) {
+            result = result.halve();
+        }
+        return result;
     }
 };
 
