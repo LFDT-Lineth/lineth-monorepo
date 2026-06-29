@@ -43,6 +43,13 @@ func TestSerializeProofLayout(t *testing.T) {
 	if len(got) != 181 {
 		t.Fatalf("serialized proof length = %d, want 181", len(got))
 	}
+	layout := proofLayout(proof)
+	if layout.roundCount != 1 || layout.columnCount != 3 || layout.cellCount != 2 ||
+		layout.publicBaseValueCount != 2 || layout.publicExtValueCount != 1 ||
+		layout.witnessClaimCount != 1 || layout.quotientClaimCount != 1 ||
+		layout.moduleSizeCount != 1 || layout.encodedSize != len(got) {
+		t.Fatalf("proof layout = %+v, serialized length = %d", layout, len(got))
+	}
 
 	// Offsets below are cumulative byte positions in the v0 wire format:
 	//

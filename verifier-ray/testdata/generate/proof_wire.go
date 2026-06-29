@@ -9,8 +9,13 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 )
 
-// All integers are little-endian (for consistency with zkc). Field elements are written as canonical u32
-// limbs. Extension elements use prover/verifier limb order:
+// This is intentionally a small, verifier-ray-local transport format. It is not
+// meant to be the final proof serialization; it only gives native/R5 benchmark
+// runs a way to load proof data at runtime instead of embedding large proof
+// literals into the executable.
+//
+// All integers are little-endian (for consistency with zkc). Field elements are
+// written as canonical u32 limbs. Extension elements use prover/verifier limb order:
 // [B0.a0, B0.a1, B1.a0, B1.a1, B2.a0, B2.a1].
 //
 // Proof:
@@ -60,6 +65,10 @@ const (
 	proofWireScalarExt  = byte(1)
 )
 
+// serializeProof encodes a verifier proof view into proof wire format. The
+// output contains only verifier-visible proof data: round messages, vanishing
+// claims, quotient claims, and dynamic module sizes. It deliberately does not
+// include the compiled spec/system; those stay in generated Zig metadata.
 func serializeProof(proof vanishingProofView) ([]byte, error) {
 	var w proofWireWriter
 	w.writeLen(len(proof.rounds))
@@ -88,6 +97,74 @@ func serializeProof(proof vanishingProofView) ([]byte, error) {
 	return w.Bytes(), nil
 }
 
+// proofWireLayout mirrors the allocation shape required by the Zig decoder for
+// one serialized proof. It counts the flat backing arrays needed to hold all
+// nested slices after decoding, plus the exact byte length expected on the wire.
+type proofWireLayout struct {
+	roundCount           int
+	columnCount          int
+	cellCount            int
+	publicBaseValueCount int
+	publicExtValueCount  int
+	witnessClaimCount    int
+	quotientClaimCount   int
+	moduleSizeCount      int
+	// encodedSize is the total number of bytes that serializeProof will emit for
+	encodedSize          int
+}
+
+// proofLayout computes the Zig decoder layout for proof. It must stay in lock
+// step with serializeProof: every byte accounted for here is emitted there, and
+// every count here becomes a fixed-size backing array in generated verify.zig.
+func proofLayout(proof vanishingProofView) proofWireLayout {
+	layout := proofWireLayout{
+		roundCount:         len(proof.rounds),
+		witnessClaimCount:  len(proof.witnessClaims),
+		quotientClaimCount: len(proof.quotientClaims),
+		moduleSizeCount:    len(proof.moduleSizes),
+		encodedSize:        4,
+	}
+
+	for _, round := range proof.rounds {
+		layout.encodedSize += 4
+		for _, column := range round.columns {
+			switch {
+			case column.commitments != nil:
+				layout.columnCount += len(column.commitments)
+				layout.encodedSize += len(column.commitments) * (1 + 8*4)
+			case column.publicBaseValues != nil:
+				layout.columnCount++
+				layout.publicBaseValueCount += len(column.publicBaseValues)
+				layout.encodedSize += 1 + 4 + len(column.publicBaseValues)*4
+			case column.publicExtValues != nil:
+				layout.columnCount++
+				layout.publicExtValueCount += len(column.publicExtValues)
+				layout.encodedSize += 1 + 4 + len(column.publicExtValues)*6*4
+			}
+		}
+
+		layout.encodedSize += 4
+		layout.cellCount += len(round.cells)
+		for _, cell := range round.cells {
+			switch {
+			case cell.baseValue != nil:
+				layout.encodedSize += 1 + 4
+			case cell.extValue != nil:
+				layout.encodedSize += 1 + 6*4
+			}
+		}
+	}
+
+	layout.encodedSize += 4 + layout.witnessClaimCount*6*4
+	layout.encodedSize += 4 + layout.quotientClaimCount*6*4
+	layout.encodedSize += 4 + layout.moduleSizeCount*4
+
+	return layout
+}
+
+// proofWireWriter accumulates serialized bytes while preserving the first
+// validation error. The write methods can be called linearly without threading
+// errors through every small field write.
 type proofWireWriter struct {
 	bytes.Buffer
 	err error
@@ -105,6 +182,9 @@ func (w *proofWireWriter) writeRound(round runtimeTraceRound) {
 	}
 }
 
+// proofWireColumnCount returns the number of ColumnMessage entries a round will
+// occupy after expansion. Oracle columns can contain multiple commitments, and
+// each commitment is serialized as its own column message.
 func proofWireColumnCount(round runtimeTraceRound) int {
 	count := 0
 	for _, column := range round.columns {
