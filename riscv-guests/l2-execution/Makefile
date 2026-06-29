@@ -31,6 +31,7 @@ BIN      := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
 
 # Sample fixture input used by exec/debug
 INPUT    ?= $(MAKEFILE_DIR)test/testdata/stateless_input.ssz
+# INPUT ?= $(MAKEFILE_DIR).cache/large-ssz-fixtures/ssz/blockchain_tests/osaka/test_max_blob_per_tx.py__test_valid_max_blobs_per_tx_fork_Amsterdam-blob_count_1_4.ssz
 
 LARGE_SSZ_DIR                ?= $(MAKEFILE_DIR).cache/large-ssz-fixtures
 LARGE_SSZ_GO_CACHE_DIR       ?= $(LARGE_SSZ_DIR)/go-build
@@ -43,7 +44,7 @@ ZKEVM_FIXTURES_ARCHIVE       ?= $(LARGE_SSZ_DIR)/fixtures_zkevm.tar.gz
 ZKEVM_FIXTURES_DIR           ?= $(LARGE_SSZ_DIR)/fixtures
 ZKEVM_FIXTURES_SUITE         ?= blockchain_tests
 ZKEVM_FIXTURES_ROOT_FOLDER   ?= for_amsterdam
-ZKEVM_FIXTURES_TARGET_FOLDER ?= amsterdam
+ZKEVM_FIXTURES_TARGET_FOLDER ?= osaka
 ZKEVM_FIXTURES_TARGET_DIR    ?= $(ZKEVM_FIXTURES_DIR)/$(ZKEVM_FIXTURES_SUITE)/$(ZKEVM_FIXTURES_ROOT_FOLDER)/$(ZKEVM_FIXTURES_TARGET_FOLDER)
 LARGE_SSZ_OUT_DIR            ?= $(LARGE_SSZ_DIR)/ssz/$(ZKEVM_FIXTURES_SUITE)/$(ZKEVM_FIXTURES_TARGET_FOLDER)
 LARGE_SSZ_LOG                ?= $(LARGE_SSZ_DIR)/zkevm-runner-dump.log
@@ -81,7 +82,7 @@ spec-test: linker-script
 # The archive stores each test case as JSON with one or more blocks[] entries.
 # zkevm-runner --dump-dir writes one .bin input per block from statelessInputBytes.
 # The final step renames those .bin files to .ssz for clarity.
-# SSZ are stored specifically undr riscv-guests/l2-execution/.cache/large-ssz-fixtures/ssz.
+# SSZ are stored specifically under riscv-guests/l2-execution/.cache/large-ssz-fixtures/ssz.
 gen-large-ssz-fixtures:
 	@mkdir -p "$(LARGE_SSZ_DIR)" "$(LARGE_SSZ_OUT_DIR)"
 	@[ -d "$(STATELESS_EXECUTOR_DIR)/.git" ] || git clone --depth=1 "$(STATELESS_EXECUTOR_REPO)" "$(STATELESS_EXECUTOR_DIR)"
