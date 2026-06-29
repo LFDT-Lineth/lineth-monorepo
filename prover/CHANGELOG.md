@@ -2,7 +2,14 @@
 
 ### 🐛 Bug Fixes
 
+- *(prover)* Bit-decompose limbs by absolute row, not compact position (#3464)
+## [1.0.3] - 2026-06-29
+
+### 🐛 Bug Fixes
+
 - *(prover)* Bump BLOCKHASH module limit from 2048 to 4096 (#3426)
+- *(prover)* Resolve data race in limitless prover (#3442)
+- *(prover)* Index-out-of-range panic in merkle proof verification (#3453)
 ## [1.0.2] - 2026-06-18
 
 ### ⚙️ Miscellaneous Tasks

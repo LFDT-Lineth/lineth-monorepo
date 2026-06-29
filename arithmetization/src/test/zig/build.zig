@@ -2,6 +2,7 @@ const std = @import("std");
 const common = @import("build_common");
 
 pub fn build(b: *std.Build) void {
+    const keccak_accel = b.option(bool, "keccak-accel", "Enable zkc accelerated keccak precompile (argument passthrough to l2-execution)") orelse false;
     // The shared freestanding rv64im ZkC profile every guest builds for (build_common).
     const target = common.standardGuestTarget(b);
 
@@ -29,7 +30,7 @@ pub fn build(b: *std.Build) void {
     root_mod.addImport("lineth_zkvm_accel", lineth_accel_mod);
 
     // non-accelerated precompiles from l2-execution (through zesu implementation). We set keccak-accel=false to force the standard zesu keccak to native implementation of keccak
-    const provide_mod = b.dependency("l2_execution", .{ .target = target, .optimize = optimize, .@"keccak-accel" = false }).module("zkvm_provide");
+    const provide_mod = b.dependency("l2_execution", .{ .target = target, .optimize = optimize, .@"keccak-accel" = keccak_accel }).module("zkvm_provide");
     root_mod.addImport("zkvm_provide", provide_mod);
 
     // Link the statically-linked rv64im ELF with the shared entry stub (start.s, which calls `main`)

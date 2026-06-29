@@ -271,6 +271,9 @@ vector-exec: require-vector-json-mode install-zkc
 # Keccak wrapper targets
 #####################################################################
 
+# Passthrough argument to l2-execution pacakge import `keccak-accel` to enable/disable the zkc accelerated keccak precompile.
+KECCAK_ACCEL  ?= false
+
 KECCAK_ALL_FILE       ?= $(MAKEFILE_DIR)common_inputs/keccak.all
 KECCAK_N_VECTORS      ?= 10
 KECCAK_JSON_FILE      ?= $(MAKEFILE_DIR)common_inputs/keccak.json
