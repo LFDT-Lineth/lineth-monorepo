@@ -5,7 +5,7 @@ pub const Commitment = [8]field.Element;
 /// Flattening order: elements [0..8] in index order.
 pub fn fromUints(v: [8]u32) Commitment {
     var out: Commitment = undefined;
-    for (&out, v) |*dst, value| dst.* = .{ .value = value };
+    for (&out, v) |*dst, value| dst.* = field.Element.init(value);
     return out;
 }
 
