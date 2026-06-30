@@ -18,6 +18,11 @@ import (
 	"time"
 )
 
+const (
+	fixturePathColumnWidth = 48
+	testColumnWidth        = 160
+)
+
 type fixtureSet struct {
 	fixturePath string
 	jsonFile    string
@@ -25,6 +30,7 @@ type fixtureSet struct {
 	files       []string
 }
 
+// Runs selected fixtures.
 func main() {
 	fixturePathsFlag := flag.String("fixture-paths", "blockchain_tests/for_amsterdam/amsterdam", "comma-separated fixture paths under the execution-specs fixture root")
 	jsonLimit := flag.Int("json-limit", 0, "maximum JSON fixture files to convert per fixture path; 0 means all")
@@ -161,22 +167,35 @@ func main() {
 	}
 }
 
+// Prints the table header.
 func printTableHeader() {
-	fmt.Printf("| %-48s | %-96s | %10s | %10s | %-6s |\n",
-		"fixture path", "test", "size bytes", "exec time", "result")
-	fmt.Println("| ------------------------------------------------ | ------------------------------------------------------------------------------------------------ | ---------- | ---------- | ------ |")
+	fmt.Printf("| %-*s | %-*s | %10s | %10s | %-6s |\n",
+		fixturePathColumnWidth, "fixture path",
+		testColumnWidth, "test",
+		"size bytes", "exec time", "result")
+	fmt.Printf("| %s | %s | ---------- | ---------- | ------ |\n",
+		strings.Repeat("-", fixturePathColumnWidth),
+		strings.Repeat("-", testColumnWidth))
 }
 
+// Prints one table row.
 func printTableRow(fixturePath, testName string, size int64, elapsed time.Duration, ok bool) {
-	fmt.Printf("| %-48s | %-96s | %10d | %10s | %-6s |\n",
+	result := "fail"
+	if ok {
+		result = "pass"
+	}
+	fmt.Printf("| %-*s | %-*s | %10d | %10s | %-6s |\n",
+		fixturePathColumnWidth,
 		escapeCell(fixturePath),
+		testColumnWidth,
 		escapeCell(testName),
 		size,
 		elapsed.Round(time.Millisecond),
-		result(ok),
+		result,
 	)
 }
 
+// Finds the repo root.
 func repoRoot() (string, error) {
 	out, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
 	if err != nil {
@@ -185,6 +204,7 @@ func repoRoot() (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
+// Splits a comma list.
 func splitList(s string) []string {
 	var out []string
 	for _, item := range strings.Split(s, ",") {
@@ -196,6 +216,7 @@ func splitList(s string) []string {
 	return out
 }
 
+// Validates a fixture path.
 func resolveFixturePath(rootDir, fixturePath string) (string, string, error) {
 	cleanPath := filepath.Clean(filepath.FromSlash(fixturePath))
 	if cleanPath == "." || cleanPath == ".." || filepath.IsAbs(cleanPath) || strings.HasPrefix(cleanPath, ".."+string(os.PathSeparator)) {
@@ -204,6 +225,7 @@ func resolveFixturePath(rootDir, fixturePath string) (string, string, error) {
 	return filepath.ToSlash(cleanPath), filepath.Join(rootDir, cleanPath), nil
 }
 
+// Lists selected JSON files.
 func jsonFiles(dir string, limit int) ([]string, error) {
 	var files []string
 	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
@@ -225,6 +247,7 @@ func jsonFiles(dir string, limit int) ([]string, error) {
 	return files, nil
 }
 
+// Creates a one-JSON directory.
 func prepareSingleJSONDir(cacheDir, fixturePath, targetDir, jsonPath string) (string, string, error) {
 	jsonRel, err := filepath.Rel(targetDir, jsonPath)
 	if err != nil {
@@ -250,6 +273,7 @@ func prepareSingleJSONDir(cacheDir, fixturePath, targetDir, jsonPath string) (st
 	return jsonRel, singleJSONDir, nil
 }
 
+// Copies one file.
 func copyFile(src, dst string) error {
 	in, err := os.Open(src)
 	if err != nil {
@@ -267,6 +291,7 @@ func copyFile(src, dst string) error {
 	return err
 }
 
+// Runs a command.
 func run(w io.Writer, name string, args ...string) error {
 	cmd := exec.Command(name, args...)
 	cmd.Stdout = w
@@ -274,6 +299,7 @@ func run(w io.Writer, name string, args ...string) error {
 	return cmd.Run()
 }
 
+// Lists selected SSZ files.
 func sszFiles(dir string, limit int) ([]string, error) {
 	var files []string
 	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
@@ -295,6 +321,7 @@ func sszFiles(dir string, limit int) ([]string, error) {
 	return files, nil
 }
 
+// Runs the guest.
 func runGuest(guestDir, input, zkcFlags string) (bool, time.Duration) {
 	start := time.Now()
 	err := run(io.Discard,
@@ -305,6 +332,7 @@ func runGuest(guestDir, input, zkcFlags string) (bool, time.Duration) {
 	return err == nil, time.Since(start)
 }
 
+// Returns file size.
 func fileSize(path string) int64 {
 	info, err := os.Stat(path)
 	if err != nil {
@@ -313,17 +341,12 @@ func fileSize(path string) int64 {
 	return info.Size()
 }
 
-func result(ok bool) string {
-	if ok {
-		return "pass"
-	}
-	return "fail"
-}
-
+// Escapes table cells.
 func escapeCell(s string) string {
 	return strings.ReplaceAll(s, "|", "\\|")
 }
 
+// Exits on error.
 func must(err error) {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
