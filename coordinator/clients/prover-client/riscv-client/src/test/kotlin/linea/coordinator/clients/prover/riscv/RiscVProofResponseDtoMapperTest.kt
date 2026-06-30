@@ -20,7 +20,7 @@ class RiscVProofResponseDtoMapperTest {
 
   private val jsonMapper = JsonSerialization.proofResponseMapperV1
 
-  private fun executionPublicInputsDto(): L2ExecutionProofPublicInputsDto = L2ExecutionProofPublicInputsDto(
+  private val executionPublicInputsDto = L2ExecutionProofPublicInputsDto(
     parentBlockHash = "0x0a",
     endBlockHash = "0x0b",
     endBlockNumber = 1000503,
@@ -39,7 +39,7 @@ class RiscVProofResponseDtoMapperTest {
     txFromsHash = "0x0c",
   )
 
-  private fun expectedExecutionPublicInputs(): L2ExecutionProofPublicInputs = L2ExecutionProofPublicInputs(
+  private val expectedExecutionPublicInputs = L2ExecutionProofPublicInputs(
     parentBlockHash = "0x0a".decodeHex(),
     endBlockHash = "0x0b".decodeHex(),
     endBlockNumber = 1000503UL,
@@ -58,7 +58,7 @@ class RiscVProofResponseDtoMapperTest {
     txFromsHash = "0x0c".decodeHex(),
   )
 
-  private fun rollupPublicInputsDto(): RollupProofPublicInputsDto = RollupProofPublicInputsDto(
+  private val rollupPublicInputsDto = RollupProofPublicInputsDto(
     endBlockNumber = 1000520,
     endBlockTimestamp = 1763000457,
     l2L1BridgeTransactionTree = "0x10",
@@ -76,7 +76,7 @@ class RiscVProofResponseDtoMapperTest {
     endShnarf = "0x1a",
   )
 
-  private fun expectedRollupPublicInputs(): RollupProofPublicInputs = RollupProofPublicInputs(
+  private val expectedRollupPublicInputs = RollupProofPublicInputs(
     endBlockNumber = 1000520UL,
     endBlockTimestamp = Instant.fromEpochSeconds(1763000457L),
     l2L1BridgeTransactionTree = "0x10".decodeHex(),
@@ -100,7 +100,7 @@ class RiscVProofResponseDtoMapperTest {
       proverVersion = "4.0.0-riscv",
       startBlockNumber = 1000500L,
       proof = "0xabcd",
-      publicInputs = executionPublicInputsDto(),
+      publicInputs = executionPublicInputsDto,
       l2L1Messages = listOf("0xaa"),
       txFroms = listOf("0xbb"),
       filteredAddresses = listOf("0xcc"),
@@ -113,7 +113,7 @@ class RiscVProofResponseDtoMapperTest {
         startBlockNumber = 1000500UL,
         endBlockNumber = 1000503UL,
         proof = "0xabcd".decodeHex(),
-        publicInputs = expectedExecutionPublicInputs(),
+        publicInputs = expectedExecutionPublicInputs,
         l2L1Messages = listOf("0xaa".decodeHex()),
         txFroms = listOf("0xbb".decodeHex()),
         filteredAddresses = listOf("0xcc".decodeHex()),
@@ -127,7 +127,7 @@ class RiscVProofResponseDtoMapperTest {
       proverVersion = "4.0.0-riscv",
       startBlockNumber = 1000500L,
       proof = "0xabcd",
-      publicInputs = rollupPublicInputsDto(),
+      publicInputs = rollupPublicInputsDto,
       l2L1Roots = listOf("0xaa"),
       filteredAddresses = listOf("0xbb"),
     )
@@ -139,7 +139,7 @@ class RiscVProofResponseDtoMapperTest {
         startBlockNumber = 1000500UL,
         endBlockNumber = 1000520UL,
         proof = "0xabcd".decodeHex(),
-        publicInputs = expectedRollupPublicInputs(),
+        publicInputs = expectedRollupPublicInputs,
         l2L1Roots = listOf("0xaa".decodeHex()),
         filteredAddresses = listOf("0xbb".decodeHex()),
       ),
@@ -152,7 +152,7 @@ class RiscVProofResponseDtoMapperTest {
       proverVersion = "4.0.0-riscv",
       proof = "0xabcd",
       startBlockNumber = 1000500L,
-      publicInputs = rollupPublicInputsDto(),
+      publicInputs = rollupPublicInputsDto,
       l2L1Roots = listOf("0xaa", "0xcc"),
       filteredAddresses = listOf("0xbb", "0xdd"),
       l2MessagingBlocksOffsets = listOf(1, 20, 100),
@@ -165,7 +165,7 @@ class RiscVProofResponseDtoMapperTest {
         startBlockNumber = 1000500UL,
         endBlockNumber = 1000520UL,
         proof = "0xabcd".decodeHex(),
-        publicInputs = expectedRollupPublicInputs(),
+        publicInputs = expectedRollupPublicInputs,
         l2L1Roots = listOf("0xaa".decodeHex(), "0xcc".decodeHex()),
         filteredAddresses = listOf("0xbb".decodeHex(), "0xdd".decodeHex()),
         l2MessagingBlocksOffsets = listOf(1UL, 20UL, 100UL),
@@ -213,7 +213,7 @@ class RiscVProofResponseDtoMapperTest {
         startBlockNumber = 1000500UL,
         endBlockNumber = 1000503UL,
         proof = "0xabcd".decodeHex(),
-        publicInputs = expectedExecutionPublicInputs(),
+        publicInputs = expectedExecutionPublicInputs,
         l2L1Messages = listOf("0xaa".decodeHex()),
         txFroms = listOf("0xbb".decodeHex()),
         filteredAddresses = emptyList(),
@@ -258,7 +258,7 @@ class RiscVProofResponseDtoMapperTest {
         startBlockNumber = 1000500UL,
         endBlockNumber = 1000520UL,
         proof = "0xabcd".decodeHex(),
-        publicInputs = expectedRollupPublicInputs(),
+        publicInputs = expectedRollupPublicInputs,
         l2L1Roots = listOf("0xaa".decodeHex()),
         filteredAddresses = emptyList(),
       ),

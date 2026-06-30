@@ -2,14 +2,14 @@ package linea.coordinator.clients.prover.riscv
 
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import linea.clients.ChainConfig
-import linea.clients.ExecutionInfo
-import linea.clients.ExecutionPayload
-import linea.clients.L2ExecutionProofRequestV1
 import linea.coordinator.clients.prover.FileBasedProverConfig
-import linea.coordinator.clients.prover.serialization.JsonSerialization
+import linea.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.L2_EXECUTION_GUEST_PROGRAM_ID
+import linea.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.chainConfigDto
+import linea.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.fileBasedProverConfig
+import linea.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.jsonMapper
+import linea.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.l2ExecutionProofRequestV1
+import linea.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.l2ExecutionProofResponseDto
 import linea.domain.BlockIntervalProofIndex
-import linea.ethapi.ExecutionWitness
 import linea.fileio.FileReader
 import linea.fileio.FileWriter
 import org.assertj.core.api.Assertions.assertThat
@@ -17,11 +17,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.io.TempDir
-import java.math.BigInteger
+import java.io.File
 import java.nio.file.Path
-import kotlin.random.Random
-import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 /**
@@ -31,28 +28,12 @@ import kotlin.time.Instant
  */
 @ExtendWith(VertxExtension::class)
 class FileBasedL2ExecutionProverClientTest {
-  private val jsonMapper = JsonSerialization.proofResponseMapperV1
-  private val guestProgramId = "0x17d2e0660946012c80c5fe6bbecc2076a6f6f5aa58606efe66a14426d2ffe46f"
-  private val chainConfig = ChainConfigDto(
-    l2MessageServiceAddress = "0x508ca82df566dcd1b0019d2dedf7e3d6f7ad6dde",
-    coinbase = "0x0000000000000000000000000000000000000000",
-    chainId = 59144,
-    forkName = "Amsterdam",
-  )
-
   private lateinit var config: FileBasedProverConfig
   private lateinit var client: L2ExecutionProverClient
 
   @BeforeEach
   fun beforeEach(vertx: Vertx, @TempDir tempDir: Path) {
-    config = FileBasedProverConfig(
-      requestsDirectory = tempDir.resolve("requests"),
-      responsesDirectory = tempDir.resolve("responses"),
-      inprogressProvingSuffixPattern = ".*\\.inprogress\\.prover.*",
-      inprogressRequestWritingSuffix = "coordinator_writing_inprogress",
-      pollingInterval = 100.milliseconds,
-      pollingTimeout = 2.seconds,
-    )
+    config = fileBasedProverConfig(tempDir)
     val transport = FileBasedProverProofTransport<
       L2ExecutionProofRequestDto,
       L2ExecutionProofResponseDto,
@@ -67,14 +48,14 @@ class FileBasedL2ExecutionProverClientTest {
     )
     client = L2ExecutionProverClient(
       transport = transport,
-      guestProgramId = guestProgramId,
-      chainConfig = chainConfig,
+      guestProgramId = L2_EXECUTION_GUEST_PROGRAM_ID,
+      chainConfig = chainConfigDto,
     )
   }
 
   @Test
   fun `createProofRequest writes the request DTO to a json file`() {
-    val request = l2Request()
+    val request = l2ExecutionProofRequestV1()
 
     val proofIndex = client.createProofRequest(request).get()
 
@@ -82,7 +63,10 @@ class FileBasedL2ExecutionProverClientTest {
     assertThat(requestFile).exists()
 
     val writtenDto = jsonMapper.readValue(requestFile.toFile(), L2ExecutionProofRequestDto::class.java)
-    val expectedDto = L2ExecutionProofRequestDtoMapper(guestProgramId, chainConfig).invoke(request).get()
+    val expectedDto = L2ExecutionProofRequestDtoMapper(
+      L2_EXECUTION_GUEST_PROGRAM_ID,
+      chainConfigDto,
+    ).invoke(request).get()
     assertThat(writtenDto).isEqualTo(expectedDto)
   }
 
@@ -94,116 +78,18 @@ class FileBasedL2ExecutionProverClientTest {
       hash = ByteArray(32) { 0x1e },
       startBlockTimestamp = Instant.fromEpochSeconds(1763000123),
     )
-    val responseDto = l2ResponseDto()
-    saveResponseFile(L2ExecutionProofFileNameProvider.getFileName(proofIndex), responseDto)
+    val responseDto = l2ExecutionProofResponseDto(1000501L, 1000503L)
+    val responseFile = saveResponseFile(L2ExecutionProofFileNameProvider.getFileName(proofIndex), responseDto)
+    assertThat(responseFile).exists()
 
     val response = client.findProofResponse(proofIndex).get()
 
-    assertThat(response).isEqualTo(
-      L2ExecutionProofResponseDtoMapper(responseDto),
-    )
+    assertThat(response).isEqualTo(L2ExecutionProofResponseDtoMapper(responseDto))
   }
 
-  private fun saveResponseFile(fileName: String, responseDto: L2ExecutionProofResponseDto) {
-    jsonMapper.writeValue(config.responsesDirectory.resolve(fileName).toFile(), responseDto)
+  private fun saveResponseFile(fileName: String, responseDto: L2ExecutionProofResponseDto): File {
+    val responseFile = config.responsesDirectory.resolve(fileName).toFile()
+    jsonMapper.writeValue(responseFile, responseDto)
+    return responseFile
   }
-
-  private fun l2Request(): L2ExecutionProofRequestV1 = L2ExecutionProofRequestV1(
-    executions = listOf(
-      ExecutionInfo(
-        blockNumber = 1000501UL,
-        executionPayload = ExecutionPayload(
-          parentHash = Random.nextBytes(32),
-          feeRecipient = Random.nextBytes(20),
-          stateRoot = Random.nextBytes(32),
-          receiptsRoot = Random.nextBytes(32),
-          logsBloom = Random.nextBytes(256),
-          prevRandao = Random.nextBytes(32),
-          blockNumber = 1000501UL,
-          gasLimit = Random.nextLong(0, Long.MAX_VALUE).toULong(),
-          gasUsed = Random.nextLong(0, Long.MAX_VALUE).toULong(),
-          timestamp = 1000UL,
-          extraData = Random.nextBytes(32),
-          baseFeePerGas = BigInteger.valueOf(Random.nextLong(0, Long.MAX_VALUE)),
-          blockHash = Random.nextBytes(32),
-          transactions = emptyList(),
-          withdrawals = emptyList(),
-          blobGasUsed = 0UL,
-          excessBlobGas = 0UL,
-          blockAccessList = ByteArray(0),
-        ),
-        executionRequests = emptyList(),
-        executionWitness = ExecutionWitness(
-          state = emptyList(),
-          codes = emptyList(),
-          headers = emptyList(),
-        ),
-        forcedTransactions = emptyList(),
-      ),
-      ExecutionInfo(
-        blockNumber = 1000502UL,
-        executionPayload = ExecutionPayload(
-          parentHash = Random.nextBytes(32),
-          feeRecipient = Random.nextBytes(20),
-          stateRoot = Random.nextBytes(32),
-          receiptsRoot = Random.nextBytes(32),
-          logsBloom = Random.nextBytes(256),
-          prevRandao = Random.nextBytes(32),
-          blockNumber = 1000502UL,
-          gasLimit = Random.nextLong(0, Long.MAX_VALUE).toULong(),
-          gasUsed = Random.nextLong(0, Long.MAX_VALUE).toULong(),
-          timestamp = 1000UL,
-          extraData = Random.nextBytes(32),
-          baseFeePerGas = BigInteger.valueOf(Random.nextLong(0, Long.MAX_VALUE)),
-          blockHash = Random.nextBytes(32),
-          transactions = emptyList(),
-          withdrawals = emptyList(),
-          blobGasUsed = 0UL,
-          excessBlobGas = 0UL,
-          blockAccessList = ByteArray(0),
-        ),
-        executionRequests = emptyList(),
-        executionWitness = ExecutionWitness(
-          state = emptyList(),
-          codes = emptyList(),
-          headers = emptyList(),
-        ),
-        forcedTransactions = emptyList(),
-      ),
-    ),
-    chainConfig = ChainConfig(
-      l2MessageServiceContract = ByteArray(20) { 1 },
-      coinbase = ByteArray(20) { 2 },
-      chainId = 1000UL,
-    ),
-    parentFtxRollingHash = ByteArray(32) { 1 },
-    parentFtxNumber = 100UL,
-  )
-
-  private fun l2ResponseDto(): L2ExecutionProofResponseDto = L2ExecutionProofResponseDto(
-    proverVersion = "4.0.0-riscv",
-    proof = "0xabcd",
-    startBlockNumber = 1000500,
-    publicInputs = L2ExecutionProofPublicInputsDto(
-      parentBlockHash = "0x0a",
-      endBlockHash = "0x0b",
-      endBlockNumber = 1000503,
-      endBlockTimestamp = 1763000123,
-      l2L1MessagesHash = "0x01",
-      parentL1L2BridgeRollingHash = "0x02",
-      parentL1L2BridgeRollingHashMessageNumber = 3,
-      endL1L2BridgeRollingHash = "0x04",
-      endL1L2BridgeRollingHashMessageNumber = 5,
-      dynamicChainConfigHash = "0xc0ffee",
-      parentFtxRollingHash = "0x06",
-      parentProcessedFtxNumber = 7,
-      endFtxRollingHash = "0x07",
-      endProcessedFtxNumber = 8,
-      filteredAddressesHash = "0x09",
-      txFromsHash = "0x0c",
-    ),
-    l2L1Messages = listOf("0xaa"),
-    txFroms = listOf("0xbb"),
-    filteredAddresses = emptyList(),
-  )
 }

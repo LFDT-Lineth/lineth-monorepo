@@ -60,7 +60,6 @@ class FileBasedProverProofTransport<RequestDto : Any, ResponseDto, TProofIndex :
     return fileWriter.write(requestDto, requestFilePath, config.inprogressRequestWritingSuffix)
       .thenApply {
         log.trace("Created proof request file. file={}", requestFilePath)
-        Unit
       }
   }
 
