@@ -1,7 +1,11 @@
-// Micro-benchmark: measures RISC-V cycle cost of one Poseidon2 permutation
-// (called via compress, which does exactly one permutation(16, &state) call).
+// Micro-benchmark: measures RISC-V cycle cost of Poseidon2 compression.
 //
-// Emits a single COMPRESS-MARK marker after N compress calls.
+// Marker IDs:
+//    0 = start baseline,   1 = end baseline
+//   10 = start compress,  11 = end compress
+//
+// The baseline loop matches the measured loop shape with an empty body so the
+// runner can subtract loop-counter / branch overhead.
 
 const verifier_ray = @import("verifier_ray");
 const poseidon2 = verifier_ray.crypto.poseidon2;
@@ -56,21 +60,38 @@ fn emitMark(phase: u64, checksum: u32) void {
 
 // build_common's start.s entry stub calls `main`, so export under that name.
 pub export fn main() noreturn {
-    // Use a non-trivial initial state so the compiler cannot fold the calls.
+    // Volatile reads make the input digests opaque to the optimizer, preventing
+    // the compression chain from being constant-folded or deleted.
+    var seed0: u32 = 0x12345678;
+    var seed1: u32 = 0x9ABCDEF0;
     var left: poseidon2.Digest = undefined;
     var right: poseidon2.Digest = undefined;
     inline for (0..poseidon2.block_size) |i| {
-        left[i] = .{ .value = @as(u32, @intCast(i + 1)) };
-        right[i] = .{ .value = @as(u32, @intCast(i + poseidon2.block_size + 1)) };
+        const left_seed = (@as(*volatile u32, &seed0)).*;
+        const right_seed = (@as(*volatile u32, &seed1)).*;
+        left[i] = .{ .value = @as(u32, @intCast((@as(u64, left_seed) + i + 1) % field.modulus)) };
+        right[i] = .{ .value = @as(u32, @intCast((@as(u64, right_seed) + i + poseidon2.block_size + 1) % field.modulus)) };
     }
 
     var i: u64 = 0;
+
+    emitMark(0, 0);
     while (i < N) : (i += 1) {
-        // Feed the output back as left input so each call depends on the previous.
+        asm volatile ("" ::: .{ .memory = true });
+    }
+    emitMark(1, 0);
+
+    emitMark(10, 0);
+    i = 0;
+    while (i < N) : (i += 1) {
         left = poseidon2.compress(left, right);
     }
 
-    emitMark(1, @intCast(N));
+    var checksum = left[0];
+    inline for (left[1..]) |limb| {
+        checksum = checksum.add(limb);
+    }
+    emitMark(11, checksum.value);
 
     asm volatile (
         \\li a0, 0

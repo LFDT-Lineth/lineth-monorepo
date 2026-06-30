@@ -1,5 +1,5 @@
 // Runner for the bench_compress micro-benchmark.
-// Builds the R5 ELF, converts to zkc JSON, runs zkc, and prints cycles/permutation.
+// Builds the R5 ELF, converts to zkc JSON, runs zkc, and prints cycles/compress.
 package main
 
 import (
@@ -19,8 +19,19 @@ const (
 	r5Bin          = "zig-out/bin/bench-compress"
 	r5JSON         = "zig-out/bin/bench-compress.json"
 	traceTailLimit = 40
-	markDone       = 1
+	// n must match const N in main.zig — update both together.
+	n = 10
 )
+
+var baseline = struct {
+	start uint64
+	end   uint64
+}{0, 1}
+
+var compressPhase = struct {
+	start uint64
+	end   uint64
+}{10, 11}
 
 var (
 	markRE  = regexp.MustCompile(`COMPRESS-MARK\s+([0-9]+)\s+([0-9]+)`)
@@ -111,17 +122,34 @@ func main() {
 		os.Exit(1)
 	}
 
-	m, ok := stats.markers[markDone]
-	if !ok {
-		fmt.Fprintln(os.Stderr, "marker not found in zkc output")
+	bStart, bStartOK := stats.markers[baseline.start]
+	bEnd, bEndOK := stats.markers[baseline.end]
+	if !bStartOK || !bEndOK {
+		fmt.Fprintln(os.Stderr, "baseline markers not found in zkc output")
+		os.Exit(1)
+	}
+	baselineDelta := bEnd.cycle - bStart.cycle
+
+	start, startOK := stats.markers[compressPhase.start]
+	end, endOK := stats.markers[compressPhase.end]
+	if !startOK || !endOK {
+		fmt.Fprintln(os.Stderr, "compression markers not found in zkc output")
 		os.Exit(1)
 	}
 
-	loopN := float64(m.value)
-	fmt.Printf("\nN = %d\n\n", m.value)
-	fmt.Printf("%-28s  %12s  %12s\n", "operation", "total_cycles", "cycles/call")
-	fmt.Printf("%-28s  %12s  %12s\n", "---", "------------", "-----------")
-	fmt.Printf("%-28s  %12d  %12.2f\n", "poseidon2 permutation (w=16)", m.cycle, float64(m.cycle)/loopN)
+	raw := end.cycle - start.cycle
+	var net uint64
+	if raw > baselineDelta {
+		net = raw - baselineDelta
+	}
+
+	fmt.Printf("\nN = %d\n", n)
+	fmt.Printf("baseline (empty loop) = %d cycles (%.2f/iter), subtracted below\n\n",
+		baselineDelta, float64(baselineDelta)/n)
+	fmt.Printf("%-28s  %12s  %12s  %12s\n", "operation", "raw_cycles", "net_cycles", "cycles/call")
+	fmt.Printf("%-28s  %12s  %12s  %12s\n", "---", "----------", "----------", "-----------")
+	fmt.Printf("%-28s  %12d  %12d  %12.2f\n",
+		"poseidon2 compress", raw, net, float64(net)/n)
 }
 
 func parseTrace(r io.Reader) (traceStats, error) {
