@@ -2,9 +2,9 @@ package main
 
 // Examples, from the repository root:
 // Run 10 ssz files for each selected target folder
-//   GOCACHE=/tmp/go-build go run ./riscv-guests/l2-execution/scripts/run_execution_specs_ssz_fixtures.go --root-folders for_amsterdam --target-folders amsterdam,prague --limit 10
-// Run one ssz file for every root/target folder combination
-//   GOCACHE=/tmp/go-build go run ./riscv-guests/l2-execution/scripts/run_execution_specs_ssz_fixtures.go --root-folders for_amsterdam --target-folders '*' --limit 1
+//   GOCACHE=/tmp/go-build go run ./riscv-guests/l2-execution/scripts/run_execution_specs_ssz_fixtures.go --root-folders for_amsterdam --target-folders amsterdam,prague --ssz-limit 10
+// Convert one JSON fixture and run one generated SSZ file for every root/target folder combination
+//   GOCACHE=/tmp/go-build go run ./riscv-guests/l2-execution/scripts/run_execution_specs_ssz_fixtures.go --root-folders for_amsterdam --target-folders '*' --json-limit 1 --ssz-limit 1
 
 import (
 	"flag"
@@ -29,9 +29,14 @@ func main() {
 	rootsFlag := flag.String("root-folders", "for_amsterdam", "comma-separated ZKEVM_FIXTURES_ROOT_FOLDER values, or '*' for all")
 	targetsFlag := flag.String("target-folders", "amsterdam", "comma-separated ZKEVM_FIXTURES_TARGET_FOLDER values, or '*' for all")
 	suite := flag.String("suite", "blockchain_tests", "ZKEVM_FIXTURES_SUITE value")
-	limit := flag.Int("limit", 0, "maximum SSZ files to run per folder combination; 0 means all")
+	jsonLimit := flag.Int("json-limit", 0, "maximum JSON fixture files to convert per folder combination; 0 means all")
+	sszLimit := flag.Int("ssz-limit", 0, "maximum generated SSZ files to run per folder combination; 0 means all")
 	zkcFlags := flag.String("zkc-flags", "--gogen --fast -q", "flags forwarded to zkc exec")
 	flag.Parse()
+
+	if *jsonLimit < 0 || *sszLimit < 0 {
+		must(fmt.Errorf("limits must be non-negative"))
+	}
 
 	root, err := repoRoot()
 	must(err)
@@ -80,13 +85,14 @@ func main() {
 				"LARGE_SSZ_DIR="+cacheDir,
 				"LARGE_SSZ_OUT_DIR="+outDir,
 				"LARGE_SSZ_LOG="+logPath,
+				fmt.Sprintf("JSON_LIMIT=%d", *jsonLimit),
 			)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "skip %s/%s: %v\n", rootFolder, targetFolder, err)
 				continue
 			}
 
-			files, err := sszFiles(outDir, *limit)
+			files, err := sszFiles(outDir, *sszLimit)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "list %s: %v\n", outDir, err)
 				continue
