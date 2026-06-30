@@ -11,25 +11,23 @@ package maru.p2p.testutils
 import java.net.ServerSocket
 
 object NetworkUtil {
+  // Ports below 32768 are never auto-assigned by the kernel for port-0 binds (the OS ephemeral
+  // range starts at 32768+ on Linux and 49152+ on macOS). Staying in this range means that a
+  // concurrent test fork using port-0 cannot accidentally steal a port we allocated here —
+  // which matters when a port must survive a service stop/restart without a reservation socket.
+  private val PORT_RANGE = 25000..31999
+
   fun findFreePorts(count: Int): List<UInt> {
-    val ports = mutableListOf<UInt>()
-    val sockets = mutableListOf<ServerSocket>()
-    var error: Throwable? = null
-    while (ports.size < count && error == null) {
-      runCatching {
-        ServerSocket(0).also { socket ->
-          sockets.add(socket)
-          ports.add(socket.localPort.toUInt())
-        }
-      }.onFailure {
-        error = it
-      }
+    val found = mutableListOf<UInt>()
+    for (port in PORT_RANGE) {
+      if (found.size == count) break
+      runCatching { ServerSocket(port).also { it.close() } }
+        .onSuccess { found.add(port.toUInt()) }
     }
-    sockets.forEach { runCatching { it.close() } }
-    if (error != null) {
-      throw RuntimeException("Could not find a free port", error)
+    if (found.size < count) {
+      error("Could not find $count free ports in $PORT_RANGE (found ${found.size})")
     }
-    return ports
+    return found
   }
 
   fun findFreePort(): UInt = findFreePorts(1).first()

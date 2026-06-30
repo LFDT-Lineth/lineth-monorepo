@@ -29,9 +29,9 @@ import org.junit.jupiter.params.provider.MethodSource
 import testutils.Checks.checkAllNodesHaveSameBlocks
 import testutils.Checks.getBlockNumber
 import testutils.PeeringNodeNetworkStack
+import maru.p2p.testutils.NetworkUtil.findFreePort
 import testutils.maru.MaruFactory
 import testutils.maru.awaitTillMaruHasPeers
-import java.net.ServerSocket
 import kotlin.collections.map
 import kotlin.time.Duration.Companion.seconds
 
@@ -47,16 +47,6 @@ class MaruFollowerTest {
   private lateinit var transactionsHelper: BesuTransactionsHelper
   private val log = LogManager.getLogger(this.javaClass)
   private val maruFactory = MaruFactory()
-
-  // Ports in this range are below the OS ephemeral range (32768+ on Linux, 49152+ on macOS),
-  // so the kernel never assigns them for port-0 binds. Tests that need a stable port across
-  // a stop/restart can use this to eliminate the OS-assignment race
-  private fun findFreePortBelowEphemeralRange(): UInt {
-    for (port in 25000..31999) {
-      runCatching { ServerSocket(port).also { it.close() } }.onSuccess { return port.toUInt() }
-    }
-    error("No free port found in range 25000..31999")
-  }
 
   private fun setupMaruHelper(
     syncingConfig: SyncingConfig = MaruFactory.defaultSyncingConfig,
@@ -215,7 +205,7 @@ class MaruFollowerTest {
     // Use a port below the OS ephemeral range (32768+ Linux, 49152+ macOS) so the kernel
     // never auto-assigns it to another fork's port-0 bind. This makes the stop→restart
     // gap safe
-    val validatorP2pPort = findFreePortBelowEphemeralRange()
+    val validatorP2pPort = findFreePort()
     setupMaruHelper(validatorP2pPort = validatorP2pPort)
 
     val blocksToProduce = 5
