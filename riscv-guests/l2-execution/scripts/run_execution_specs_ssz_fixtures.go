@@ -2,7 +2,9 @@ package main
 
 // Examples, from the repository root:
 // Run 10 ssz files for each selected target folder
-//   GOCACHE=/tmp/go-build go run ./riscv-guests/l2-execution/scripts/run_large_ssz_fixtures.go --root-folders for_amsterdam --target-folders amsterdam,prague --limit 10
+//   GOCACHE=/tmp/go-build go run ./riscv-guests/l2-execution/scripts/run_execution_specs_ssz_fixtures.go --root-folders for_amsterdam --target-folders amsterdam,prague --limit 10
+// Run one ssz file for every root/target folder combination
+//   GOCACHE=/tmp/go-build go run ./riscv-guests/l2-execution/scripts/run_execution_specs_ssz_fixtures.go --root-folders '*' --target-folders '*' --limit 1
 
 import (
 	"flag"
@@ -17,8 +19,8 @@ import (
 )
 
 func main() {
-	rootsFlag := flag.String("root-folders", "for_amsterdam", "comma-separated ZKEVM_FIXTURES_ROOT_FOLDER values")
-	targetsFlag := flag.String("target-folders", "amsterdam", "comma-separated ZKEVM_FIXTURES_TARGET_FOLDER values")
+	rootsFlag := flag.String("root-folders", "for_amsterdam", "comma-separated ZKEVM_FIXTURES_ROOT_FOLDER values, or '*' for all")
+	targetsFlag := flag.String("target-folders", "amsterdam", "comma-separated ZKEVM_FIXTURES_TARGET_FOLDER values, or '*' for all")
 	suite := flag.String("suite", "blockchain_tests", "ZKEVM_FIXTURES_SUITE value")
 	limit := flag.Int("limit", 0, "maximum SSZ files to run per folder combination; 0 means all")
 	zkcFlags := flag.String("zkc-flags", "--gogen --fast -q", "flags forwarded to zkc exec")
@@ -30,14 +32,34 @@ func main() {
 	guestDir := filepath.Join(root, "riscv-guests", "l2-execution")
 	cacheDir := filepath.Join(guestDir, ".cache", "large-ssz-fixtures")
 
+	roots := splitList(*rootsFlag)
+	targets := splitList(*targetsFlag)
+	fixtureSuiteDir := filepath.Join(cacheDir, "fixtures", *suite)
+	if isWildcard(roots) || isWildcard(targets) {
+		must(run(os.Stderr, "make", "-C", guestDir, "get-execution-specs-json-fixtures", "LARGE_SSZ_DIR="+cacheDir))
+	}
+	if isWildcard(roots) {
+		roots, err = folderNames(fixtureSuiteDir)
+		must(err)
+	}
+
 	must(run(os.Stderr, "make", "-C", guestDir, "compile"))
 
 	printTableHeader()
 
 	total := 0
 	passed := 0
-	for _, rootFolder := range splitList(*rootsFlag) {
-		for _, targetFolder := range splitList(*targetsFlag) {
+	for _, rootFolder := range roots {
+		targetsForRoot := targets
+		if isWildcard(targets) {
+			targetsForRoot, err = folderNames(filepath.Join(fixtureSuiteDir, rootFolder))
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "skip %s: %v\n", rootFolder, err)
+				continue
+			}
+		}
+
+		for _, targetFolder := range targetsForRoot {
 			outDir := filepath.Join(cacheDir, "ssz", *suite, rootFolder, targetFolder)
 			logPath := filepath.Join(cacheDir, fmt.Sprintf("zkevm-runner-%s-%s.log", rootFolder, targetFolder))
 
@@ -47,7 +69,7 @@ func main() {
 			}
 
 			err := run(os.Stderr,
-				"make", "-C", guestDir, "gen-large-ssz-fixtures",
+				"make", "-C", guestDir, "gen-execution-specs-ssz-fixtures",
 				"ZKEVM_FIXTURES_SUITE="+*suite,
 				"ZKEVM_FIXTURES_ROOT_FOLDER="+rootFolder,
 				"ZKEVM_FIXTURES_TARGET_FOLDER="+targetFolder,
@@ -116,6 +138,26 @@ func splitList(s string) []string {
 		}
 	}
 	return out
+}
+
+func isWildcard(items []string) bool {
+	return len(items) == 1 && items[0] == "*"
+}
+
+func folderNames(dir string) ([]string, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	var folders []string
+	for _, entry := range entries {
+		if entry.IsDir() {
+			folders = append(folders, entry.Name())
+		}
+	}
+	sort.Strings(folders)
+	return folders, nil
 }
 
 func run(w io.Writer, name string, args ...string) error {

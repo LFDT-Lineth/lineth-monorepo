@@ -9,7 +9,7 @@
 # itself (ELF->JSON via elf_to_json_gen, then zkc) is owned by
 # arithmetization/src/test/Makefile; fixture-exec/fixture-debug build that ELF and hand it over.
 
-.PHONY: fetch test spec-test gen-large-ssz-fixtures clean compile exec exec-only debug require-input
+.PHONY: fetch test spec-test get-execution-specs-json-fixtures gen-execution-specs-ssz-fixtures clean compile exec exec-only debug require-input
 
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
@@ -80,21 +80,27 @@ SPEC_ARGS ?=
 spec-test:
 	$(ZIG) build spec-tests $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) $(if $(strip $(SPEC_ARGS)),-- $(SPEC_ARGS))
 
-# Generate zkVM-framed SSZ inputs from the execution-spec zkevm fixture archive.
 # All large/generated data lives under LARGE_SSZ_DIR, which defaults to ignored .cache/.
-# The stateless-executor repo provides zkevm-runner, which understands this fixture JSON shape.
 # The archive stores each test case as JSON with one or more blocks[] entries.
+# This target only downloads and extracts the JSON fixtures.
+get-execution-specs-json-fixtures:
+	@mkdir -p "$(LARGE_SSZ_DIR)"
+	@[ -d "$(ZKEVM_FIXTURES_DIR)" ] || { \
+		[ -f "$(ZKEVM_FIXTURES_ARCHIVE)" ] || curl --fail --location --output "$(ZKEVM_FIXTURES_ARCHIVE)" "$(ZKEVM_FIXTURES_URL)"; \
+		tar -xzf "$(ZKEVM_FIXTURES_ARCHIVE)" -C "$(LARGE_SSZ_DIR)"; \
+	}
+
+# Generate zkVM-framed SSZ inputs from the extracted execution-spec zkevm fixtures.
+# The stateless-executor repo provides zkevm-runner, which understands this fixture JSON shape.
 # zkevm-runner --dump-dir writes one .bin input per block from statelessInputBytes.
 # The final step renames those .bin files to .ssz for clarity.
 # SSZ are stored specifically under riscv-guests/l2-execution/.cache/large-ssz-fixtures/ssz.
-gen-large-ssz-fixtures:
-	@mkdir -p "$(LARGE_SSZ_DIR)" "$(LARGE_SSZ_OUT_DIR)"
+gen-execution-specs-ssz-fixtures: get-execution-specs-json-fixtures
+	@mkdir -p "$(LARGE_SSZ_OUT_DIR)"
+	@[ -d "$(ZKEVM_FIXTURES_TARGET_DIR)" ] || { echo "missing fixture folder: $(ZKEVM_FIXTURES_TARGET_DIR)"; exit 1; }
 	@[ -d "$(STATELESS_EXECUTOR_DIR)/.git" ] || git clone --depth=1 "$(STATELESS_EXECUTOR_REPO)" "$(STATELESS_EXECUTOR_DIR)"
 	@cd "$(STATELESS_EXECUTOR_DIR)" && GOCACHE="$(LARGE_SSZ_GO_CACHE_DIR)" GOMODCACHE="$(LARGE_SSZ_GO_MOD_DIR)" $(GO) build -o bin/zesu-convert ./cmd/zesu-convert
 	@cd "$(STATELESS_EXECUTOR_DIR)" && GOCACHE="$(LARGE_SSZ_GO_CACHE_DIR)" GOMODCACHE="$(LARGE_SSZ_GO_MOD_DIR)" $(GO) build -o bin/zkevm-runner ./cmd/zkevm-runner
-	@[ -f "$(ZKEVM_FIXTURES_ARCHIVE)" ] || curl --fail --location --output "$(ZKEVM_FIXTURES_ARCHIVE)" "$(ZKEVM_FIXTURES_URL)"
-	@[ -d "$(ZKEVM_FIXTURES_DIR)" ] || tar -xzf "$(ZKEVM_FIXTURES_ARCHIVE)" -C "$(LARGE_SSZ_DIR)"
-	@[ -d "$(ZKEVM_FIXTURES_TARGET_DIR)" ] || { echo "missing fixture folder: $(ZKEVM_FIXTURES_TARGET_DIR)"; exit 1; }
 	@"$(ZKEVM_RUNNER)" --fixtures "$(ZKEVM_FIXTURES_TARGET_DIR)" --dump-dir "$(LARGE_SSZ_OUT_DIR)" > "$(LARGE_SSZ_LOG)"
 	@find "$(LARGE_SSZ_OUT_DIR)" -type f -name '*.bin' -exec sh -c 'mv "$$1" "$${1%.bin}.ssz"' sh {} \;
 
