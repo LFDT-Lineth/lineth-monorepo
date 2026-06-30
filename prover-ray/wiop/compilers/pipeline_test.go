@@ -5,6 +5,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/grandproduct"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/localvanishing"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
@@ -29,6 +30,7 @@ import (
 func compileFullPipeline(sys *wiop.System) {
 	rangecheck.Compile(sys)
 	lookuptologderivsum.Compile(sys)
+	grandproduct.Compile(sys)
 	logderivativesum.Compile(sys)
 	localvanishing.Compile(sys)
 	global.Compile(sys)
@@ -121,6 +123,32 @@ func TestFullPipeline_LookupScenarios(t *testing.T) {
 			proof := sc.Sys.Prove(sc.AssignWitness)
 			require.NoError(t, sc.Sys.Verify(proof),
 				"full pipeline must accept an honest witness")
+		})
+	}
+}
+
+// TestFullPipeline_PermutationScenarios runs the full pipeline on every
+// [wioptest.PermutationScenarios] fixture. The grandproduct pass reduces each
+// permutation into a grand product and then into running-product Z columns
+// (recurrence + local + endpoint openings) that the local-vanishing and global
+// passes discharge; the honest witness must verify and the invalid witness
+// (A and B not equal as multisets) must be rejected.
+func TestFullPipeline_PermutationScenarios(t *testing.T) {
+	for _, build := range wioptest.PermutationScenarios() {
+		sc := build()
+		t.Run(sc.Name, func(t *testing.T) {
+			compileFullPipeline(sc.Sys)
+			proof := sc.Sys.Prove(sc.AssignHonest)
+			require.NoError(t, sc.Sys.Verify(proof),
+				"full pipeline must accept an honest permutation witness")
+		})
+
+		t.Run(sc.Name+"/Soundness", func(t *testing.T) {
+			sc := build()
+			compileFullPipeline(sc.Sys)
+			proof := sc.Sys.Prove(sc.AssignInvalid)
+			assert.Error(t, sc.Sys.Verify(proof),
+				"full pipeline must reject a non-permutation witness")
 		})
 	}
 }

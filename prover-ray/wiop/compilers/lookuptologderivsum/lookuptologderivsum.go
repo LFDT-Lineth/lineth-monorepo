@@ -182,6 +182,10 @@ func collectGroups(sys *wiop.System) map[string]*lookupGroup {
 		if q.IsReduced() {
 			continue
 		}
+		// Permutation queries are handled by the grandproduct pass.
+		if q.Kind == wiop.KindPermutation {
+			continue
+		}
 		if len(q.B) != 1 {
 			panic(fmt.Sprintf(
 				"wiop/compilers/lookuptologderivsum: query %q has len(B)=%d; "+
