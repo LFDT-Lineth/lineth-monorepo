@@ -20,7 +20,7 @@ import (
 
 const (
 	fixturePathColumnWidth = 48
-	testColumnWidth        = 160
+	testColumnWidth        = 96
 )
 
 type fixtureSet struct {
@@ -186,9 +186,9 @@ func printTableRow(fixturePath, testName string, size int64, elapsed time.Durati
 	}
 	fmt.Printf("| %-*s | %-*s | %10d | %10s | %-6s |\n",
 		fixturePathColumnWidth,
-		escapeCell(fixturePath),
+		tableCell(fixturePath, fixturePathColumnWidth),
 		testColumnWidth,
-		escapeCell(testName),
+		tableCell(testName, testColumnWidth),
 		size,
 		elapsed.Round(time.Millisecond),
 		result,
@@ -341,9 +341,16 @@ func fileSize(path string) int64 {
 	return info.Size()
 }
 
-// Escapes table cells.
-func escapeCell(s string) string {
-	return strings.ReplaceAll(s, "|", "\\|")
+// Formats a table cell.
+func tableCell(s string, width int) string {
+	s = strings.ReplaceAll(s, "|", "\\|")
+	if len(s) <= width {
+		return s
+	}
+	if width <= 3 {
+		return s[len(s)-width:]
+	}
+	return "..." + s[len(s)-(width-3):]
 }
 
 // Exits on error.
