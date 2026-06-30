@@ -18,7 +18,6 @@ const (
 	zkcMain        = "../../../arithmetization/src/main/riscv/main.zkc"
 	r5Bin          = "zig-out/bin/bench-compress"
 	r5JSON         = "zig-out/bin/bench-compress.json"
-	n              = 10
 	traceTailLimit = 40
 	markDone       = 1
 )
@@ -118,10 +117,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("\nN = %d\n\n", n)
+	loopN := float64(m.value)
+	fmt.Printf("\nN = %d\n\n", m.value)
 	fmt.Printf("%-28s  %12s  %12s\n", "operation", "total_cycles", "cycles/call")
 	fmt.Printf("%-28s  %12s  %12s\n", "---", "------------", "-----------")
-	fmt.Printf("%-28s  %12d  %12.2f\n", "poseidon2 permutation (w=16)", m.cycle, float64(m.cycle)/n)
+	fmt.Printf("%-28s  %12d  %12.2f\n", "poseidon2 permutation (w=16)", m.cycle, float64(m.cycle)/loopN)
 }
 
 func parseTrace(r io.Reader) (traceStats, error) {

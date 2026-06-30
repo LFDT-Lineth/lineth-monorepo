@@ -1,8 +1,7 @@
 // Micro-benchmark: measures RISC-V cycle cost of one Poseidon2 permutation
 // (called via compress, which does exactly one permutation(16, &state) call).
 //
-// Emits a single BENCH-MARK marker after N compress calls so the runner can
-// divide the total cycle delta by N to get cycles-per-permutation.
+// Emits a single COMPRESS-MARK marker after N compress calls.
 
 const verifier_ray = @import("verifier_ray");
 const poseidon2 = verifier_ray.crypto.poseidon2;
@@ -71,8 +70,7 @@ pub export fn main() noreturn {
         left = poseidon2.compress(left, right);
     }
 
-    // Emit a checksum to prevent dead-code elimination.
-    emitMark(1, left[0].value);
+    emitMark(1, @intCast(N));
 
     asm volatile (
         \\li a0, 0
