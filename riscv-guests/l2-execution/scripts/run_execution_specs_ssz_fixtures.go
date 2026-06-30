@@ -186,9 +186,9 @@ func printTableRow(fixturePath, testName string, size int64, elapsed time.Durati
 	}
 	fmt.Printf("| %-*s | %-*s | %10d | %10s | %-6s |\n",
 		fixturePathColumnWidth,
-		tableCell(fixturePath, fixturePathColumnWidth),
+		escapeCell(fixturePath),
 		testColumnWidth,
-		tableCell(testName, testColumnWidth),
+		truncateMiddle(escapeCell(testName), testColumnWidth),
 		size,
 		elapsed.Round(time.Millisecond),
 		result,
@@ -341,16 +341,24 @@ func fileSize(path string) int64 {
 	return info.Size()
 }
 
-// Formats a table cell.
-func tableCell(s string, width int) string {
-	s = strings.ReplaceAll(s, "|", "\\|")
+// Escapes table cells.
+func escapeCell(s string) string {
+	return strings.ReplaceAll(s, "|", "\\|")
+}
+
+// Shortens long text.
+func truncateMiddle(s string, width int) string {
 	if len(s) <= width {
 		return s
 	}
-	if width <= 3 {
+	const marker = "[...]"
+	if width <= len(marker) {
 		return s[len(s)-width:]
 	}
-	return "..." + s[len(s)-(width-3):]
+	remaining := width - len(marker)
+	prefix := remaining / 2
+	suffix := remaining - prefix
+	return s[:prefix] + marker + s[len(s)-suffix:]
 }
 
 // Exits on error.
