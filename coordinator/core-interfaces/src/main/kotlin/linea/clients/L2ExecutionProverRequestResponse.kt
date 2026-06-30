@@ -212,7 +212,7 @@ data class ExecutionPayload(
     if (!extraData.contentEquals(other.extraData)) return false
     if (baseFeePerGas != other.baseFeePerGas) return false
     if (!blockHash.contentEquals(other.blockHash)) return false
-    if (!transactions.zip(other.transactions).all { it.first.contentEquals(it.second) }) return false
+    if (!transactions.byteArrayListEquals(other.transactions)) return false
     if (withdrawals != other.withdrawals) return false
     if (blobGasUsed != other.blobGasUsed) return false
     if (excessBlobGas != other.excessBlobGas) return false
