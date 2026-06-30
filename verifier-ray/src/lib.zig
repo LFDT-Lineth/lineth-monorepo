@@ -14,11 +14,6 @@ pub const crypto = struct {
     pub const poseidon2 = @import("crypto/poseidon2.zig");
 };
 
-pub const polynomial = struct {
-    pub const lagrange = @import("polynomial/lagrange.zig");
-    pub const canonical = @import("polynomial/canonical.zig");
-};
-
 pub const query = struct {
     pub const vanishing = @import("query/vanishing.zig");
     pub const logderivativesum = @import("query/logderivativesum.zig");

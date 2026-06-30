@@ -128,7 +128,14 @@ fn verifyModule(
     // annihilator Z_H(r) = r^n - 1.
     const annihilator = powModuleSize(eval_coin, static_n, dynamic_n).sub(ext.Ext.one());
 
-    const ctx = EvalCtx{ .coin = eval_coin, .annihilator = annihilator, .dynamic_n = dynamic_n };
+    // For dynamic modules, compute the n-th root of unity once here and cache
+    // it in EvalCtx. Static modules use comptime roots — no runtime lookup.
+    const omega_n: ?field.Element = if (static_n == 0)
+        field.rootOfUnityBy(dynamic_n) catch return error.InvalidModuleSize
+    else
+        null;
+
+    const ctx = EvalCtx{ .coin = eval_coin, .annihilator = annihilator, .dynamic_n = dynamic_n, .omega_n = omega_n };
     inline for (module.buckets) |bucket| {
         try verifyBucket(module, bucket, static_n, input, merge_coin, ctx);
     }
@@ -137,11 +144,21 @@ fn verifyModule(
 fn powModuleSize(r: ext.Ext, comptime static_n: usize, dynamic_n: usize) ext.Ext {
     // When static_n is non-zero, the exponent n is part of the comptime System
     // and powComptime emits a fixed exponentiation chain. Otherwise n is known
-    // only from the verifier input and we use the runtime exponentiation path.
+    // only from the verifier input, but every valid module size is a power of
+    // two so r^n can be computed with log2(n) squarings and no general muls.
     if (static_n != 0) {
         return r.powComptime(static_n);
     }
-    return r.pow(@as(u64, dynamic_n));
+    return powDynamicModuleSize(r, dynamic_n);
+}
+
+fn powDynamicModuleSize(r: ext.Ext, dynamic_n: usize) ext.Ext {
+    var result = r;
+    var size: usize = 1;
+    while (size < dynamic_n) : (size <<= 1) {
+        result = result.square();
+    }
+    return result;
 }
 
 fn verifyBucket(
@@ -181,16 +198,18 @@ fn verifyBucket(
 
 // EvalCtx carries the per-module evaluation context that is shared, unchanged,
 // by every node of an expression: the eval coin r, the domain annihilator
-// r^n - 1, and dynamic_n (the runtime module size, 0 for static modules). Only
-// lagrange_selector leaves read dynamic_n, and only on the dynamic path: a
-// static module's size is the comptime static_n threaded into the leaf, so its
-// size-derived terms fold at comptime and dynamic_n stays the unused 0
-// sentinel. The other node kinds ignore the context and merely forward it down
-// the recursion. Bundling it keeps evalExpr/evalOp from threading unused scalars.
+// r^n - 1, dynamic_n (the runtime module size, 0 for static modules), and
+// omega_n (the primitive n-th root of unity, null for static modules whose
+// root is a comptime constant). Caching omega_n avoids repeated rootOfUnityBy
+// calls when multiple lagrange_selector or cancellation nodes share the same
+// dynamic domain — each would otherwise recompute the same root from scratch.
 const EvalCtx = struct {
     coin: ext.Ext,
     annihilator: ext.Ext,
     dynamic_n: usize,
+    // null for static modules (their omega is a comptime constant, no runtime
+    // lookup needed). Populated once per dynamic module in verifyModule.
+    omega_n: ?field.Element,
 };
 
 fn evalExpr(
@@ -252,7 +271,8 @@ fn evalLagrangeSelector(comptime position: usize, comptime static_n: usize, ctx:
     const omega_pos = if (static_n != 0)
         comptime staticRootPower(static_n, position)
     else blk: {
-        const omega = field.rootOfUnityBy(ctx.dynamic_n) catch return error.InvalidModuleSize;
+        // omega_n was computed once in verifyModule and cached in ctx.
+        const omega = ctx.omega_n orelse return error.InvalidModuleSize;
         break :blk omega.powComptime(position);
     };
 
@@ -279,7 +299,9 @@ fn cancellationAtPoint(
 ) Error!ext.Ext {
     if (positions.len == 0) return ext.Ext.one();
 
-    const omega = if (static_n == 0) field.rootOfUnityBy(ctx.dynamic_n) catch return error.InvalidModuleSize else field.Element.one();
+    // For static modules omega^k is computed via comptime staticRootPower below
+    // and this local is unused. For dynamic modules omega_n was cached in ctx.
+    const omega = if (static_n == 0) (ctx.omega_n orelse return error.InvalidModuleSize) else field.Element.one();
     var result = ext.Ext.one();
 
     inline for (positions) |position| {
