@@ -9,7 +9,9 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
+	"io/fs"
 	"math/rand/v2"
 	"os"
 	"os/exec"
@@ -1001,13 +1003,15 @@ func writeVerifyFixtures(cases []fixtureCase, systems []codegen.CompiledSystem) 
 		if err := codegen.WriteCompiledSystemZig(&out, i, systems[i], opts); err != nil {
 			return err
 		}
-		writeVerifyCase(&out, i, cases[i])
+		fmt.Fprintf(
+			&out,
+			"const verify_case_%d_systems = verifier.Systems{ .vanishing = system_%d, .logderivativesum = system_%d_logderiv };\n\n",
+			i, i, i,
+		)
 	}
 	writeVerifyMetadata(&out, cases, systems)
 	writeVerifyInputLayouts(&out, cases)
 	writeVerifyCaseSwitch(&out, cases)
-	writeVerifyInputSwitch(&out, cases)
-	writeVerifyFailingInputSwitch(&out, cases)
 
 	data := out.Bytes()
 	zigfmt, err := runZigFmt(data)
@@ -1017,15 +1021,11 @@ func writeVerifyFixtures(cases []fixtureCase, systems []codegen.CompiledSystem) 
 	return os.WriteFile(filepath.Join("..", "generated", "verify.zig"), data, 0o644)
 }
 
-// writeSerializedProofInputs materializes the honest proof for every generated
-// verifier case as a standalone runtime input file. These files are intentionally
-// not checked in: `verify.zig` remains the checked-in source of truth for specs,
-// systems, and layout metadata, while `verify_case_<N>.bin` is regenerated for
-// local/native/R5 runs that use `EMBEDDED_INPUT=none`.
-//
-// Invalid proofs are skipped for now. The failing sanity checks still use the
-// embedded invalid fixtures from `verify.zig`, which keeps this first wire format
-// focused on the benchmark/passing-proof path.
+// writeSerializedProofInputs materializes generated verifier proofs as
+// standalone runtime input files. These files are intentionally not checked in:
+// `verify.zig` remains the checked-in source of truth for specs, systems, and
+// layout metadata, while `verify_case_<N>.bin` and
+// `verify_case_<N>_invalid.bin` are regenerated for local/native/R5 runs.
 func writeSerializedProofInputs(cases []fixtureCase) error {
 	inputDir := filepath.Join("..", "inputs")
 	if err := os.MkdirAll(inputDir, 0o755); err != nil {
@@ -1039,7 +1039,7 @@ func writeSerializedProofInputs(cases []fixtureCase) error {
 		return err
 	}
 	for _, path := range stale {
-		if err := os.Remove(path); err != nil {
+		if err := os.Remove(path); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return err
 		}
 	}
@@ -1053,6 +1053,28 @@ func writeSerializedProofInputs(cases []fixtureCase) error {
 		if err := os.WriteFile(outputPath, encoded, 0o644); err != nil {
 			return err
 		}
+
+		if tc.invalid == nil {
+			continue
+		}
+		if err := ensureSameProofLayout(proofLayout(tc.honest), proofLayout(*tc.invalid)); err != nil {
+			return fmt.Errorf("invalid proof layout %d (%s): %w", i, tc.name, err)
+		}
+		encodedInvalid, err := serializeProof(*tc.invalid)
+		if err != nil {
+			return fmt.Errorf("serialize invalid proof %d (%s): %w", i, tc.name, err)
+		}
+		invalidOutputPath := filepath.Join(inputDir, fmt.Sprintf("verify_case_%d_invalid.bin", i))
+		if err := os.WriteFile(invalidOutputPath, encodedInvalid, 0o644); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func ensureSameProofLayout(valid, invalid proofWireLayout) error {
+	if valid != invalid {
+		return fmt.Errorf("valid layout %+v differs from invalid layout %+v", valid, invalid)
 	}
 	return nil
 }
@@ -1064,7 +1086,6 @@ func writeVerifyHeader(out *bytes.Buffer, count int) {
 	fmt.Fprintln(out, "const field = verifier_ray.field.koalabear;")
 	fmt.Fprintln(out, "const ext = verifier_ray.field.koalabear_ext;")
 	fmt.Fprintln(out, "const protocol = verifier_ray.protocol;")
-	fmt.Fprintln(out, "const commitment = verifier_ray.crypto.commitment;")
 	fmt.Fprintln(out, "const vanishing = verifier_ray.query.vanishing;")
 	fmt.Fprintln(out, "const logderivativesum = verifier_ray.query.logderivativesum;")
 	fmt.Fprintln(out, "const verifier = verifier_ray.verifier;")
@@ -1089,110 +1110,6 @@ func writeVerifyHeader(out *bytes.Buffer, count int) {
 	fmt.Fprintln(out, "};")
 	fmt.Fprintln(out)
 	fmt.Fprintf(out, "pub const case_count: usize = %d;\n", count)
-	fmt.Fprintln(out)
-}
-
-func writeVerifyCase(out *bytes.Buffer, idx int, tc fixtureCase) {
-	writeVerifyProof(out, fmt.Sprintf("verify_case_%d", idx), tc.honest)
-	if tc.invalid != nil {
-		writeVerifyProof(out, fmt.Sprintf("verify_case_%d_failing", idx), *tc.invalid)
-	}
-	fmt.Fprintf(
-		out,
-		"const verify_case_%d_systems = verifier.Systems{ .vanishing = system_%d, .logderivativesum = system_%d_logderiv };\n",
-		idx, idx, idx,
-	)
-	fmt.Fprintln(out)
-}
-
-func writeVerifyProof(out *bytes.Buffer, prefix string, proof vanishingProofView) {
-	fmt.Fprintf(out, "const %s_witness_claims = [_]ext.Ext{\n", prefix)
-	for _, claim := range proof.witnessClaims {
-		fmt.Fprintf(out, "    %s,\n", extValueLiteral(claim))
-	}
-	fmt.Fprintln(out, "};")
-	fmt.Fprintln(out)
-
-	fmt.Fprintf(out, "const %s_quotient_claims = [_]ext.Ext{\n", prefix)
-	for _, claim := range proof.quotientClaims {
-		fmt.Fprintf(out, "    %s,\n", extValueLiteral(claim))
-	}
-	fmt.Fprintln(out, "};")
-	fmt.Fprintln(out)
-
-	fmt.Fprintf(out, "const %s_module_sizes = [_]usize%s;\n", prefix, intArrayLiteral(proof.moduleSizes))
-	fmt.Fprintln(out)
-
-	for roundIdx, round := range proof.rounds {
-		writeVerifyRoundData(out, prefix, roundIdx, round)
-	}
-
-	fmt.Fprintf(out, "const %s_rounds = [_]protocol.RoundMessage{\n", prefix)
-	for roundIdx := range proof.rounds {
-		fmt.Fprintf(out, "    .{ .columns = &%s_round_%d_columns, .cells = &%s_round_%d_cells },\n", prefix, roundIdx, prefix, roundIdx)
-	}
-	fmt.Fprintln(out, "};")
-	fmt.Fprintln(out)
-
-	fmt.Fprintf(out, "const %s_proof = verifier.Proof{\n", prefix)
-	fmt.Fprintf(out, "    .rounds = &%s_rounds,\n", prefix)
-	fmt.Fprintf(out, "    .witness_claims = &%s_witness_claims,\n", prefix)
-	fmt.Fprintf(out, "    .quotient_claims = &%s_quotient_claims,\n", prefix)
-	fmt.Fprintf(out, "    .module_sizes = &%s_module_sizes,\n", prefix)
-	fmt.Fprintln(out, "};")
-	fmt.Fprintln(out)
-}
-
-func writeVerifyRoundData(out *bytes.Buffer, prefix string, roundIdx int, round runtimeTraceRound) {
-	for columnIdx, column := range round.columns {
-		switch {
-		case column.publicBaseValues != nil:
-			fmt.Fprintf(out, "const %s_round_%d_column_%d_base = [_]field.Element{\n", prefix, roundIdx, columnIdx)
-			for _, value := range column.publicBaseValues {
-				fmt.Fprintf(out, "    %s,\n", fieldValueLiteral(value))
-			}
-			fmt.Fprintln(out, "};")
-			fmt.Fprintln(out)
-		case column.publicExtValues != nil:
-			fmt.Fprintf(out, "const %s_round_%d_column_%d_ext = [_]ext.Ext{\n", prefix, roundIdx, columnIdx)
-			for _, value := range column.publicExtValues {
-				fmt.Fprintf(out, "    %s,\n", extValueLiteral(value))
-			}
-			fmt.Fprintln(out, "};")
-			fmt.Fprintln(out)
-		}
-	}
-
-	fmt.Fprintf(out, "const %s_round_%d_columns = [_]protocol.ColumnMessage{\n", prefix, roundIdx)
-	for columnIdx, column := range round.columns {
-		switch {
-		case column.commitments != nil:
-			for _, value := range column.commitments {
-				fmt.Fprintf(out, "    .{ .oracle_commitment = %s },\n", commitmentValueLiteral(value))
-			}
-		case column.publicBaseValues != nil:
-			fmt.Fprintf(out, "    .{ .public_column = .{ .base = &%s_round_%d_column_%d_base } },\n", prefix, roundIdx, columnIdx)
-		case column.publicExtValues != nil:
-			fmt.Fprintf(out, "    .{ .public_column = .{ .ext = &%s_round_%d_column_%d_ext } },\n", prefix, roundIdx, columnIdx)
-		default:
-			panic("runtime trace column has no data variant")
-		}
-	}
-	fmt.Fprintln(out, "};")
-	fmt.Fprintln(out)
-
-	fmt.Fprintf(out, "const %s_round_%d_cells = [_]protocol.Scalar{\n", prefix, roundIdx)
-	for _, cell := range round.cells {
-		switch {
-		case cell.baseValue != nil:
-			fmt.Fprintf(out, "    .{ .base = %s },\n", fieldValueLiteral(*cell.baseValue))
-		case cell.extValue != nil:
-			fmt.Fprintf(out, "    .{ .ext = %s },\n", extValueLiteral(*cell.extValue))
-		default:
-			panic("runtime trace cell has no data variant")
-		}
-	}
-	fmt.Fprintln(out, "};")
 	fmt.Fprintln(out)
 }
 
@@ -1276,39 +1193,6 @@ func writeVerifyCaseSwitch(out *bytes.Buffer, cases []fixtureCase) {
 	fmt.Fprintln(out, "}")
 }
 
-// writeVerifyInputSwitch emits the getInput accessor, which returns the proof
-// data for a fixture case. The proof is kept separate from VerifyCase (see
-// writeVerifyHeader) so callers that only need the spec/systems don't pull in
-// the proof, and so the input can be supplied independently at runtime.
-func writeVerifyInputSwitch(out *bytes.Buffer, cases []fixtureCase) {
-	fmt.Fprintln(out, "pub fn getInput(comptime index: usize) verifier.Proof {")
-	fmt.Fprintln(out, "    return switch (index) {")
-	for i := range cases {
-		fmt.Fprintf(out, "        %d => verify_case_%d_proof,\n", i, i)
-	}
-	fmt.Fprintln(out, "        else => @compileError(\"unknown verifier fixture case index\"),")
-	fmt.Fprintln(out, "    };")
-	fmt.Fprintln(out, "}")
-}
-
-// writeVerifyFailingInputSwitch emits the getInputFailing accessor, returning
-// the failing (invalid) proof data for a fixture case. Not every case defines a
-// failing input, so cases without one produce a comptime error when requested.
-func writeVerifyFailingInputSwitch(out *bytes.Buffer, cases []fixtureCase) {
-	fmt.Fprintln(out, "pub fn getInputFailing(comptime index: usize) verifier.Proof {")
-	fmt.Fprintln(out, "    return switch (index) {")
-	for i, tc := range cases {
-		if tc.invalid != nil {
-			fmt.Fprintf(out, "        %d => verify_case_%d_failing_proof,\n", i, i)
-		} else {
-			fmt.Fprintf(out, "        %d => @compileError(\"verifier fixture case %d (%s) has no failing input\"),\n", i, i, codegen.ZigString(tc.name))
-		}
-	}
-	fmt.Fprintln(out, "        else => @compileError(\"unknown verifier fixture case index\"),")
-	fmt.Fprintln(out, "    };")
-	fmt.Fprintln(out, "}")
-}
-
 func vanishingBenchCounts(system codegen.VanishingSystem) (expressionCount, bucketCount, vanishingCount int) {
 	for _, module := range system.Modules {
 		expressionCount += len(module.Expressions)
@@ -1318,34 +1202,6 @@ func vanishingBenchCounts(system codegen.VanishingSystem) (expressionCount, buck
 		}
 	}
 	return expressionCount, bucketCount, vanishingCount
-}
-
-func fieldValueLiteral(value field.Element) string {
-	return fmt.Sprintf(".{ .value = %d }", u(value))
-}
-
-func extValueLiteral(value field.Ext) string {
-	a0, a1, b0, b1, c0, c1 := field.ExtToUint64s(&value)
-	return fmt.Sprintf(
-		"ext.Ext{ .B0 = .{ .a0 = .{ .value = %d }, .a1 = .{ .value = %d } }, .B1 = .{ .a0 = .{ .value = %d }, .a1 = .{ .value = %d } }, .B2 = .{ .a0 = .{ .value = %d }, .a1 = .{ .value = %d } } }",
-		a0, a1, b0, b1, c0, c1,
-	)
-}
-
-func commitmentValueLiteral(value field.Octuplet) string {
-	parts := make([]string, len(value))
-	for i, elem := range value {
-		parts[i] = fieldValueLiteral(elem)
-	}
-	return "commitment.Commitment{ " + strings.Join(parts, ", ") + " }"
-}
-
-func intArrayLiteral(values []int) string {
-	parts := make([]string, len(values))
-	for i, value := range values {
-		parts[i] = fmt.Sprintf("%d", value)
-	}
-	return "{ " + strings.Join(parts, ", ") + " }"
 }
 
 func elem(v uint64) field.Element {
