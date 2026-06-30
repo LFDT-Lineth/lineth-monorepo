@@ -34,17 +34,13 @@ type Proof struct {
 }
 
 // PublicInput carries the values of the system's registered public inputs (the
-// objects listed in [System.PublicInputs]). It is produced by [System.Prove]
-// and consumed by [System.Verify] alongside the [Proof].
+// cells listed in [System.PublicInputs]). It is produced by [System.Prove] and
+// consumed by [System.Verify] alongside the [Proof].
 //
-// PublicInput mirrors the shape of [Proof] but shares no entries with it: every
-// ObjectID present here is registered in [System.PublicInputs] and is
-// deliberately excluded from the proof. A public input may be a [Column]
-// (captured in Columns) or a [Cell] (captured in Cells).
-type PublicInput struct {
-	Columns map[ObjectID]*ConcreteVector
-	Cells   map[ObjectID]field.Gen
-}
+// Public inputs are always cells. PublicInput shares no entries with the
+// [Proof]: every ObjectID present here is registered in [System.PublicInputs]
+// and is deliberately excluded from the proof's cells.
+type PublicInput map[ObjectID]field.Gen
 
 // Prove runs the prover over every interactive round of sys and returns the
 // resulting [Proof].
@@ -99,11 +95,6 @@ func (sys *System) Prove(assign func(rt *Runtime)) (Proof, PublicInput) {
 				utils.Panic("wiop: missing column in runtime: %v", col.Context.Path())
 			}
 
-			// Public inputs are carried separately in PublicInput.
-			if _, ok := piSet[col.Context.ID]; ok {
-				continue
-			}
-
 			// Skip the internal columns.
 			if col.Visibility < VisibilityOracle {
 				continue
@@ -128,21 +119,12 @@ func (sys *System) Prove(assign func(rt *Runtime)) (Proof, PublicInput) {
 		proof.DynamicSizes[k] = v
 	}
 
-	// Capture the registered public inputs into a separate PublicInput. Reading
-	// directly from the runtime handles both interactive-round and precomputed
-	// public inputs uniformly.
-	pub := PublicInput{
-		Columns: make(map[ObjectID]*ConcreteVector),
-		Cells:   make(map[ObjectID]field.Gen),
-	}
-
+	// Capture the registered public-input cells into a separate PublicInput.
+	// GetCellValue resolves lazily-assigned openings, so a cell opened from a
+	// public column resolves to that column's value at prove time.
+	pub := make(PublicInput, len(sys.PublicInputs))
 	for _, id := range sys.PublicInputs {
-		switch id.Kind() {
-		case KindColumn:
-			pub.Columns[id] = rt.GetColumnAssignment(sys.LookupColumn(id))
-		case KindCell:
-			pub.Cells[id] = rt.GetCellValue(sys.LookupCell(id))
-		}
+		pub[id] = rt.GetCellValue(sys.LookupCell(id))
 	}
 
 	return proof, pub
@@ -177,15 +159,6 @@ func (sys *System) Verify(proof Proof, pub PublicInput) error {
 	assignRound := func(r *Round) error {
 
 		for _, col := range r.Columns {
-			if _, isPI := piSet[col.Context.ID]; isPI {
-				v, found := pub.Columns[col.Context.ID]
-				if !found {
-					return fmt.Errorf("public-input column %q not found in public inputs", col.Context.Path())
-				}
-				rt.AssignColumn(col, v)
-				continue
-			}
-
 			if col.Visibility < VisibilityOracle {
 				continue
 			}
@@ -200,7 +173,7 @@ func (sys *System) Verify(proof Proof, pub PublicInput) error {
 
 		for _, cell := range r.Cells {
 			if _, isPI := piSet[cell.Context.ID]; isPI {
-				v, ok := pub.Cells[cell.Context.ID]
+				v, ok := pub[cell.Context.ID]
 				if !ok {
 					return fmt.Errorf("public-input cell %q not found in public inputs", cell.Context.Path())
 				}
@@ -243,10 +216,6 @@ func (sys *System) Verify(proof Proof, pub PublicInput) error {
 	// cells and all columns of the proof are read. It also enforces the
 	// no-overlap invariant: a proof item must not be a registered public input.
 	for id := range proof.Columns {
-		if _, isPI := piSet[id]; isPI {
-			return fmt.Errorf("column %q is a public input and must not appear in the proof", id)
-		}
-
 		col := sys.LookupColumn(id)
 		if col == nil {
 			return fmt.Errorf("column %q not found in system", id)
@@ -272,18 +241,9 @@ func (sys *System) Verify(proof Proof, pub PublicInput) error {
 		}
 	}
 
-	// Check that the supplied public inputs correspond exactly to the
-	// registered ones and were all consumed during the transcript replay.
-	for id := range pub.Columns {
-		if _, isPI := piSet[id]; !isPI {
-			return fmt.Errorf("column %q in public inputs is not a registered public input", id)
-		}
-		if !rt.HasColumnAssignment(sys.LookupColumn(id)) {
-			return fmt.Errorf("public-input column %q not used", id)
-		}
-	}
-
-	for id := range pub.Cells {
+	// Check that the supplied public inputs correspond exactly to the registered
+	// ones and were all consumed during the transcript replay.
+	for id := range pub {
 		if _, isPI := piSet[id]; !isPI {
 			return fmt.Errorf("cell %q in public inputs is not a registered public input", id)
 		}

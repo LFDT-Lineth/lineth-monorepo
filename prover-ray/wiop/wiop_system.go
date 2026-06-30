@@ -41,9 +41,10 @@ type System struct {
 	// via [System.NewMessageBusSend] and [System.NewMessageBusReceive], in
 	// declaration order.
 	MessageBuses []*MessageBus
-	// PublicInputs maps a public-input name to the [ObjectID] of the [Cell] or
-	// [Column] that stores its value. It is populated via
-	// [System.RegisterPublicInput]. Public inputs form the "statement" of the
+	// PublicInputs maps a public-input name to the [ObjectID] of the [Cell] that
+	// stores its value. It is populated via [System.RegisterPublicInput]. Public
+	// inputs are always cells (a public column is exposed by opening positions
+	// into cells, see [ColumnPosition.Open]); they form the "statement" of the
 	// protocol: their values are carried separately from the [Proof] (in a
 	// [PublicInput]) and are received by [System.Verify] alongside the proof.
 	PublicInputs map[string]ObjectID
@@ -90,33 +91,22 @@ func NewSystemf(msg string, args ...any) *System {
 	return sys
 }
 
-// RegisterPublicInput records that the object identified by id stores the
-// public input named name. id must identify a [Column] or a [Cell]: columns
-// must carry [VisibilityPublic] (cells are always public). The named object
+// RegisterPublicInput records that cell stores the public input named name.
+// Public inputs are always cells: a public column from the arithmetization is
+// exposed by opening the desired position into a cell (see
+// [ColumnPosition.Open]), and that cell is registered here. The named cell
 // becomes part of the protocol statement — its value is carried in a
 // [PublicInput] separately from the [Proof].
 //
-// Panics if name is already registered, if id does not identify a column or
-// cell, or if id is a non-public column.
-func (sys *System) RegisterPublicInput(name string, id ObjectID) {
+// Panics if cell is nil or if name is already registered.
+func (sys *System) RegisterPublicInput(name string, cell *Cell) {
+	if cell == nil {
+		panic("wiop: RegisterPublicInput requires a non-nil Cell")
+	}
 	if _, ok := sys.PublicInputs[name]; ok {
 		panic(fmt.Sprintf("wiop: RegisterPublicInput: public input %q already registered", name))
 	}
-
-	switch id.Kind() {
-	case KindColumn:
-		col := sys.LookupColumn(id)
-		if col.Visibility != VisibilityPublic {
-			panic(fmt.Sprintf("wiop: RegisterPublicInput: column %q has visibility %s, want Public", col.Context.Path(), col.Visibility))
-		}
-	case KindCell:
-		// Cells are always public; LookupCell validates the id.
-		_ = sys.LookupCell(id)
-	default:
-		panic(fmt.Sprintf("wiop: RegisterPublicInput: id has kind %s, want Column or Cell", id.Kind()))
-	}
-
-	sys.PublicInputs[name] = id
+	sys.PublicInputs[name] = cell.Context.ID
 }
 
 // publicInputIDSet returns the set of [ObjectID]s currently registered as
