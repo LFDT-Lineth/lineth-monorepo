@@ -19,8 +19,8 @@ import (
 )
 
 const (
-	fixturePathColumnWidth = 48
-	testColumnWidth        = 96
+	fixturePathColumnWidth = 38
+	testColumnWidth        = 106
 )
 
 type fixtureSet struct {
