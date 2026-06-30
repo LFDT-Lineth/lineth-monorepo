@@ -1,0 +1,37 @@
+name: riscv-guests execution-specs SSZ fixtures
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  run-fixtures:
+    name: l2-execution execution-specs SSZ fixtures
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
+    timeout-minutes: 120
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: false
+
+      - name: Setup RISC-V guests environment
+        uses: ./.github/actions/setup-riscv-guests
+
+      - name: Install Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version: 1.25.7
+          cache-dependency-path: "**/*.sum"
+
+      - name: Install zkc
+        run: make -C arithmetization install-zkc
+
+      - name: Run execution-specs SSZ fixtures
+        env:
+          ZKC_REF: ""
+        run: |
+          GOCACHE=/tmp/go-build go run ./riscv-guests/l2-execution/scripts/run_execution_specs_ssz_fixtures.go --root-folders for_amsterdam --target-folders '*' --json-limit 5 --ssz-limit 5

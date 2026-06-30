@@ -58,12 +58,14 @@ func main() {
 	must(run(os.Stderr, "make", "-C", guestDir, "compile"))
 
 	var fixtureSets []fixtureSet
+	hadError := false
 	for _, rootFolder := range roots {
 		targetsForRoot := targets
 		if isWildcard(targets) {
 			targetsForRoot, err = folderNames(filepath.Join(fixtureSuiteDir, rootFolder))
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "skip %s: %v\n", rootFolder, err)
+				hadError = true
 				continue
 			}
 		}
@@ -74,6 +76,7 @@ func main() {
 
 			if err := os.RemoveAll(outDir); err != nil {
 				fmt.Fprintf(os.Stderr, "clear %s: %v\n", outDir, err)
+				hadError = true
 				continue
 			}
 
@@ -89,12 +92,14 @@ func main() {
 			)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "skip %s/%s: %v\n", rootFolder, targetFolder, err)
+				hadError = true
 				continue
 			}
 
 			files, err := sszFiles(outDir, *sszLimit)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "list %s: %v\n", outDir, err)
+				hadError = true
 				continue
 			}
 
@@ -117,6 +122,8 @@ func main() {
 			ok, elapsed := runGuest(guestDir, file, *zkcFlags)
 			if ok {
 				passed++
+			} else {
+				hadError = true
 			}
 			size := fileSize(file)
 			testName, _ := filepath.Rel(set.outDir, file)
@@ -125,6 +132,13 @@ func main() {
 	}
 
 	fmt.Fprintf(os.Stderr, "summary: %d/%d passed\n", passed, total)
+	if total == 0 {
+		fmt.Fprintln(os.Stderr, "no tests ran")
+		os.Exit(1)
+	}
+	if hadError || passed != total {
+		os.Exit(1)
+	}
 }
 
 func printTableHeader() {
