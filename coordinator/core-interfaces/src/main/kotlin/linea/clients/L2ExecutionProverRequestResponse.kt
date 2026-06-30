@@ -5,6 +5,7 @@ import linea.domain.StartBlockTimestampProvider
 import linea.ethapi.ExecutionWitness
 import linea.forcedtx.ForcedTransactionInclusionResult
 import linea.kotlin.byteArrayListEquals
+import linea.kotlin.byteArrayListHashCode
 import java.math.BigInteger
 import kotlin.time.Instant
 
@@ -34,7 +35,7 @@ data class ExecutionInfo(
     var result = blockNumber.hashCode()
     result = 31 * result + executionPayload.hashCode()
     result = 31 * result + executionWitness.hashCode()
-    result = 31 * result + executionRequests.hashCode()
+    result = 31 * result + executionRequests.byteArrayListHashCode()
     result = 31 * result + forcedTransactions.hashCode()
     return result
   }
@@ -235,34 +236,11 @@ data class ExecutionPayload(
     result = 31 * result + extraData.contentHashCode()
     result = 31 * result + baseFeePerGas.hashCode()
     result = 31 * result + blockHash.contentHashCode()
-    result = 31 * result + transactions.hashCode()
+    result = 31 * result + transactions.byteArrayListHashCode()
     result = 31 * result + withdrawals.hashCode()
     result = 31 * result + blobGasUsed.hashCode()
     result = 31 * result + excessBlobGas.hashCode()
     result = 31 * result + blockAccessList.contentHashCode()
-    return result
-  }
-}
-
-data class ExecutionRequests(
-  val blockNumber: ULong,
-  val executionRequests: List<ByteArray>,
-) {
-  override fun equals(other: Any?): Boolean {
-    if (this === other) return true
-    if (javaClass != other?.javaClass) return false
-
-    other as ExecutionRequests
-
-    if (blockNumber != other.blockNumber) return false
-    if (!executionRequests.zip(other.executionRequests).all { it.first.contentEquals(it.second) }) return false
-
-    return true
-  }
-
-  override fun hashCode(): Int {
-    var result = blockNumber.hashCode()
-    result = 31 * result + executionRequests.hashCode()
     return result
   }
 }
@@ -378,9 +356,9 @@ data class L2ExecutionProofResponseV1(
     result = 31 * result + endBlockNumber.hashCode()
     result = 31 * result + proof.contentHashCode()
     result = 31 * result + publicInputs.hashCode()
-    result = 31 * result + l2L1Messages.hashCode()
-    result = 31 * result + txFroms.hashCode()
-    result = 31 * result + filteredAddresses.hashCode()
+    result = 31 * result + l2L1Messages.byteArrayListHashCode()
+    result = 31 * result + txFroms.byteArrayListHashCode()
+    result = 31 * result + filteredAddresses.byteArrayListHashCode()
     return result
   }
 }

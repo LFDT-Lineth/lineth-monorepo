@@ -5,9 +5,9 @@ plugins {
 
 dependencies {
   implementation project(':coordinator:core-interfaces')
-  api project(':coordinator:clients:prover-client:serialization')
-  // Reused for ProverFileNameProvider, FileNameSuffixes and FileBasedProverConfig used by the file-based transport.
+  // Reused for GenericFileBasedProverClient and FileBasedProverConfig used by the file-based transport.
   implementation project(':coordinator:clients:prover-client:file-based-client')
+  implementation project(':coordinator:clients:prover-client:serialization')
   implementation project(':coordinator:utilities')
   implementation project(':jvm-libs:generic:http-rest')
   implementation project(':jvm-libs:generic:extensions:futures')
@@ -20,11 +20,6 @@ dependencies {
 
   // Block RLP encoding (linea.encoding.BlockRLPEncoder)
   implementation project(':jvm-libs:linea:besu-libs')
-
-  implementation "com.fasterxml.jackson.core:jackson-annotations:${libs.versions.jackson.get()}"
-  implementation "com.fasterxml.jackson.core:jackson-databind:${libs.versions.jackson.get()}"
-  implementation "com.fasterxml.jackson.module:jackson-module-kotlin:${libs.versions.jackson.get()}"
-  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${libs.versions.jackson.get()}")
 
   // Shared test fixtures (builders, fakes, WireMock helpers) reused across the test suites.
   testFixturesImplementation "io.vertx:vertx-web-client"

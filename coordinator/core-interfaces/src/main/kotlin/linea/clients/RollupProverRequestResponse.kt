@@ -5,6 +5,7 @@ import linea.domain.BlockIntervalProofIndex
 import linea.domain.StartBlockTimestampProvider
 import linea.domain.assertConsecutiveIntervals
 import linea.kotlin.byteArrayListEquals
+import linea.kotlin.byteArrayListHashCode
 import kotlin.time.Instant
 
 data class RollupProofRequestV1(
@@ -81,7 +82,7 @@ data class BlobWitness(
     result = 31 * result + endBlockNumber.hashCode()
     result = 31 * result + blobHash.contentHashCode()
     result = 31 * result + blobKzgProof.contentHashCode()
-    result = 31 * result + blockRlps.hashCode()
+    result = 31 * result + blockRlps.byteArrayListHashCode()
     return result
   }
 }
@@ -191,8 +192,8 @@ data class RollupProofResponseV1(
     result = 31 * result + endBlockNumber.hashCode()
     result = 31 * result + proof.contentHashCode()
     result = 31 * result + publicInputs.hashCode()
-    result = 31 * result + l2L1Roots.hashCode()
-    result = 31 * result + filteredAddresses.hashCode()
+    result = 31 * result + l2L1Roots.byteArrayListHashCode()
+    result = 31 * result + filteredAddresses.byteArrayListHashCode()
     return result
   }
 }
