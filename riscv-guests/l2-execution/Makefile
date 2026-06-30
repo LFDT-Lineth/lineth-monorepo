@@ -50,17 +50,10 @@ ZKEVM_RUNNER                 := $(STATELESS_EXECUTOR_DIR)/bin/zkevm-runner
 ZKEVM_FIXTURES_URL           := https://github.com/ethereum/execution-specs/releases/download/tests-zkevm@v0.4.1/fixtures_zkevm.tar.gz
 ZKEVM_FIXTURES_ARCHIVE       := $(LARGE_SSZ_DIR)/fixtures_zkevm.tar.gz
 ZKEVM_FIXTURES_DIR           := $(LARGE_SSZ_DIR)/fixtures
-### Edit these to pick a different fixture suite, root folder, or target folder
-ZKEVM_FIXTURES_SUITE         ?= blockchain_tests
-ZKEVM_FIXTURES_ROOT_FOLDER   ?= for_amsterdam
-ZKEVM_FIXTURES_TARGET_FOLDER ?= amsterdam
-###
-ZKEVM_FIXTURES_TARGET_DIR    := $(ZKEVM_FIXTURES_DIR)/$(ZKEVM_FIXTURES_SUITE)/$(ZKEVM_FIXTURES_ROOT_FOLDER)/$(ZKEVM_FIXTURES_TARGET_FOLDER)
-LARGE_SSZ_OUT_DIR            := $(LARGE_SSZ_DIR)/ssz/$(ZKEVM_FIXTURES_SUITE)/$(ZKEVM_FIXTURES_TARGET_FOLDER)
+ZKEVM_FIXTURES_PATH          ?= blockchain_tests/for_amsterdam/amsterdam
+ZKEVM_FIXTURES_TARGET_DIR    := $(ZKEVM_FIXTURES_DIR)/$(ZKEVM_FIXTURES_PATH)
+LARGE_SSZ_OUT_DIR            := $(LARGE_SSZ_DIR)/ssz/$(ZKEVM_FIXTURES_PATH)
 LARGE_SSZ_LOG                := $(LARGE_SSZ_DIR)/zkevm-runner-dump.log
-LIMITED_ZKEVM_FIXTURES_TARGET_DIR := $(LARGE_SSZ_DIR)/limited-json/$(ZKEVM_FIXTURES_SUITE)/$(ZKEVM_FIXTURES_ROOT_FOLDER)/$(ZKEVM_FIXTURES_TARGET_FOLDER)
-# Maximum JSON fixture files to convert. 0 means all files.
-JSON_LIMIT                  ?= 0
 
 # If true, generates an objdump of the generated ELF for debugging purposes
 OBJDUMP     ?= false
@@ -104,21 +97,7 @@ gen-execution-specs-ssz-fixtures: get-execution-specs-json-fixtures
 	@[ -d "$(STATELESS_EXECUTOR_DIR)/.git" ] || git clone --depth=1 "$(STATELESS_EXECUTOR_REPO)" "$(STATELESS_EXECUTOR_DIR)"
 	@cd "$(STATELESS_EXECUTOR_DIR)" && GOCACHE="$(LARGE_SSZ_GO_CACHE_DIR)" GOMODCACHE="$(LARGE_SSZ_GO_MOD_DIR)" $(GO) build -o bin/zesu-convert ./cmd/zesu-convert
 	@cd "$(STATELESS_EXECUTOR_DIR)" && GOCACHE="$(LARGE_SSZ_GO_CACHE_DIR)" GOMODCACHE="$(LARGE_SSZ_GO_MOD_DIR)" $(GO) build -o bin/zkevm-runner ./cmd/zkevm-runner
-	@case "$(JSON_LIMIT)" in ''|*[!0-9]*) echo "JSON_LIMIT must be a non-negative integer"; exit 1;; esac
-	@if [ "$(JSON_LIMIT)" -eq 0 ]; then \
-		FIXTURES_INPUT_DIR="$(ZKEVM_FIXTURES_TARGET_DIR)"; \
-	else \
-		rm -rf "$(LIMITED_ZKEVM_FIXTURES_TARGET_DIR)"; \
-		mkdir -p "$(LIMITED_ZKEVM_FIXTURES_TARGET_DIR)"; \
-		find "$(ZKEVM_FIXTURES_TARGET_DIR)" -type f -name '*.json' | sort | head -n "$(JSON_LIMIT)" | while IFS= read -r file; do \
-			rel="$${file#$(ZKEVM_FIXTURES_TARGET_DIR)/}"; \
-			dir="$${rel%/*}"; \
-			[ "$$dir" = "$$rel" ] || mkdir -p "$(LIMITED_ZKEVM_FIXTURES_TARGET_DIR)/$$dir"; \
-			cp "$$file" "$(LIMITED_ZKEVM_FIXTURES_TARGET_DIR)/$$rel"; \
-		done; \
-		FIXTURES_INPUT_DIR="$(LIMITED_ZKEVM_FIXTURES_TARGET_DIR)"; \
-	fi; \
-	"$(ZKEVM_RUNNER)" --fixtures "$$FIXTURES_INPUT_DIR" --dump-dir "$(LARGE_SSZ_OUT_DIR)" > "$(LARGE_SSZ_LOG)"
+	@"$(ZKEVM_RUNNER)" --fixtures "$(ZKEVM_FIXTURES_TARGET_DIR)" --dump-dir "$(LARGE_SSZ_OUT_DIR)" > "$(LARGE_SSZ_LOG)"
 	@find "$(LARGE_SSZ_OUT_DIR)" -type f -name '*.bin' -exec sh -c 'mv "$$1" "$${1%.bin}.ssz"' sh {} \;
 
 clean:

@@ -34,4 +34,4 @@ jobs:
         env:
           ZKC_REF: ""
         run: |
-          GOCACHE=/tmp/go-build go run ./riscv-guests/l2-execution/scripts/run_execution_specs_ssz_fixtures.go --root-folders for_amsterdam --target-folders '*' --json-limit 5 --ssz-limit 5
+          GOCACHE=/tmp/go-build go run ./riscv-guests/l2-execution/scripts/run_execution_specs_ssz_fixtures.go --fixture-paths blockchain_tests/for_amsterdam/amsterdam,blockchain_tests/for_amsterdam/osaka --json-limit 5 --ssz-limit 5

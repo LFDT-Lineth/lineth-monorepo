@@ -1,10 +1,8 @@
 package main
 
 // Examples, from the repository root:
-// Run 10 ssz files for each selected target folder
-//   GOCACHE=/tmp/go-build go run ./riscv-guests/l2-execution/scripts/run_execution_specs_ssz_fixtures.go --root-folders for_amsterdam --target-folders amsterdam,prague --ssz-limit 10
-// Convert one JSON fixture and run one generated SSZ file for every root/target folder combination
-//   GOCACHE=/tmp/go-build go run ./riscv-guests/l2-execution/scripts/run_execution_specs_ssz_fixtures.go --root-folders for_amsterdam --target-folders '*' --json-limit 5 --ssz-limit 5
+// Run up to 5 SSZ files from each of 5 JSON fixtures in each selected fixture path
+//   GOCACHE=/tmp/go-build go run ./riscv-guests/l2-execution/scripts/run_execution_specs_ssz_fixtures.go --fixture-paths blockchain_tests/for_amsterdam/amsterdam,blockchain_tests/for_amsterdam/osaka --json-limit 5 --ssz-limit 5
 
 import (
 	"flag"
@@ -19,18 +17,16 @@ import (
 )
 
 type fixtureSet struct {
-	rootFolder   string
-	targetFolder string
-	outDir       string
-	files        []string
+	fixturePath string
+	jsonFile    string
+	outDir      string
+	files       []string
 }
 
 func main() {
-	rootsFlag := flag.String("root-folders", "for_amsterdam", "comma-separated ZKEVM_FIXTURES_ROOT_FOLDER values, or '*' for all")
-	targetsFlag := flag.String("target-folders", "amsterdam", "comma-separated ZKEVM_FIXTURES_TARGET_FOLDER values, or '*' for all")
-	suite := flag.String("suite", "blockchain_tests", "ZKEVM_FIXTURES_SUITE value")
-	jsonLimit := flag.Int("json-limit", 0, "maximum JSON fixture files to convert per folder combination; 0 means all")
-	sszLimit := flag.Int("ssz-limit", 0, "maximum generated SSZ files to run per folder combination; 0 means all")
+	fixturePathsFlag := flag.String("fixture-paths", "blockchain_tests/for_amsterdam/amsterdam", "comma-separated fixture paths under the execution-specs fixture root")
+	jsonLimit := flag.Int("json-limit", 0, "maximum JSON fixture files to convert per fixture path; 0 means all")
+	sszLimit := flag.Int("ssz-limit", 0, "maximum generated SSZ files to run per JSON fixture; 0 means all")
 	zkcFlags := flag.String("zkc-flags", "--gogen --fast -q", "flags forwarded to zkc exec")
 	flag.Parse()
 
@@ -43,55 +39,71 @@ func main() {
 
 	guestDir := filepath.Join(root, "riscv-guests", "l2-execution")
 	cacheDir := filepath.Join(guestDir, ".cache", "large-ssz-fixtures")
+	fixtureRoot := filepath.Join(cacheDir, "fixtures")
 
-	roots := splitList(*rootsFlag)
-	targets := splitList(*targetsFlag)
-	fixtureSuiteDir := filepath.Join(cacheDir, "fixtures", *suite)
-	if isWildcard(roots) || isWildcard(targets) {
-		must(run(os.Stderr, "make", "-C", guestDir, "get-execution-specs-json-fixtures", "LARGE_SSZ_DIR="+cacheDir))
-	}
-	if isWildcard(roots) {
-		roots, err = folderNames(fixtureSuiteDir)
-		must(err)
+	fixturePaths := splitList(*fixturePathsFlag)
+	if len(fixturePaths) == 0 {
+		must(fmt.Errorf("fixture-paths must not be empty"))
 	}
 
+	must(run(os.Stderr, "make", "-C", guestDir, "get-execution-specs-json-fixtures", "LARGE_SSZ_DIR="+cacheDir))
 	must(run(os.Stderr, "make", "-C", guestDir, "compile"))
 
 	var fixtureSets []fixtureSet
 	hadError := false
-	for _, rootFolder := range roots {
-		targetsForRoot := targets
-		if isWildcard(targets) {
-			targetsForRoot, err = folderNames(filepath.Join(fixtureSuiteDir, rootFolder))
+	for _, fixturePath := range fixturePaths {
+		fixturePath, targetDir, err := resolveFixturePath(fixtureRoot, fixturePath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "skip %s: %v\n", fixturePath, err)
+			hadError = true
+			continue
+		}
+
+		jsonPaths, err := jsonFiles(targetDir, *jsonLimit)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "list JSON fixtures %s: %v\n", targetDir, err)
+			hadError = true
+			continue
+		}
+		if len(jsonPaths) == 0 {
+			fmt.Fprintf(os.Stderr, "no JSON fixtures found in %s\n", targetDir)
+			hadError = true
+			continue
+		}
+
+		for _, jsonPath := range jsonPaths {
+			jsonRel, singleJSONDir, err := prepareSingleJSONDir(cacheDir, fixturePath, targetDir, jsonPath)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "skip %s: %v\n", rootFolder, err)
+				fmt.Fprintf(os.Stderr, "prepare %s: %v\n", jsonPath, err)
 				hadError = true
 				continue
 			}
-		}
 
-		for _, targetFolder := range targetsForRoot {
-			outDir := filepath.Join(cacheDir, "ssz", *suite, rootFolder, targetFolder)
-			logPath := filepath.Join(cacheDir, fmt.Sprintf("zkevm-runner-%s-%s.log", rootFolder, targetFolder))
+			jsonName := strings.TrimSuffix(jsonRel, filepath.Ext(jsonRel))
+			outDir := filepath.Join(cacheDir, "ssz", filepath.FromSlash(fixturePath), jsonName)
+			logPath := filepath.Join(cacheDir, "logs", filepath.FromSlash(fixturePath), jsonName+".log")
 
 			if err := os.RemoveAll(outDir); err != nil {
 				fmt.Fprintf(os.Stderr, "clear %s: %v\n", outDir, err)
 				hadError = true
 				continue
 			}
+			if err := os.MkdirAll(filepath.Dir(logPath), 0o755); err != nil {
+				fmt.Fprintf(os.Stderr, "create log dir %s: %v\n", filepath.Dir(logPath), err)
+				hadError = true
+				continue
+			}
 
-			err := run(os.Stderr,
+			err = run(os.Stderr,
 				"make", "-C", guestDir, "gen-execution-specs-ssz-fixtures",
-				"ZKEVM_FIXTURES_SUITE="+*suite,
-				"ZKEVM_FIXTURES_ROOT_FOLDER="+rootFolder,
-				"ZKEVM_FIXTURES_TARGET_FOLDER="+targetFolder,
+				"ZKEVM_FIXTURES_PATH="+fixturePath,
+				"ZKEVM_FIXTURES_TARGET_DIR="+singleJSONDir,
 				"LARGE_SSZ_DIR="+cacheDir,
 				"LARGE_SSZ_OUT_DIR="+outDir,
 				"LARGE_SSZ_LOG="+logPath,
-				fmt.Sprintf("JSON_LIMIT=%d", *jsonLimit),
 			)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "skip %s/%s: %v\n", rootFolder, targetFolder, err)
+				fmt.Fprintf(os.Stderr, "skip %s/%s: %v\n", fixturePath, jsonRel, err)
 				hadError = true
 				continue
 			}
@@ -102,12 +114,17 @@ func main() {
 				hadError = true
 				continue
 			}
+			if len(files) == 0 {
+				fmt.Fprintf(os.Stderr, "no SSZ files generated for %s/%s\n", fixturePath, jsonRel)
+				hadError = true
+				continue
+			}
 
 			fixtureSets = append(fixtureSets, fixtureSet{
-				rootFolder:   rootFolder,
-				targetFolder: targetFolder,
-				outDir:       outDir,
-				files:        files,
+				fixturePath: fixturePath,
+				jsonFile:    jsonRel,
+				outDir:      outDir,
+				files:       files,
 			})
 		}
 	}
@@ -126,8 +143,9 @@ func main() {
 				hadError = true
 			}
 			size := fileSize(file)
-			testName, _ := filepath.Rel(set.outDir, file)
-			printTableRow(set.rootFolder, set.targetFolder, testName, size, elapsed, ok)
+			sszName, _ := filepath.Rel(set.outDir, file)
+			testName := filepath.ToSlash(set.jsonFile) + ":" + filepath.ToSlash(sszName)
+			printTableRow(set.fixturePath, testName, size, elapsed, ok)
 		}
 	}
 
@@ -142,15 +160,14 @@ func main() {
 }
 
 func printTableHeader() {
-	fmt.Printf("| %-32s | %-17s | %-96s | %10s | %10s | %-6s |\n",
-		"root folder", "target folder", "test", "size bytes", "exec time", "result")
-	fmt.Println("| -------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------ | ---------- | ---------- | ------ |")
+	fmt.Printf("| %-48s | %-96s | %10s | %10s | %-6s |\n",
+		"fixture path", "test", "size bytes", "exec time", "result")
+	fmt.Println("| ------------------------------------------------ | ------------------------------------------------------------------------------------------------ | ---------- | ---------- | ------ |")
 }
 
-func printTableRow(rootFolder, targetFolder, testName string, size int64, elapsed time.Duration, ok bool) {
-	fmt.Printf("| %-32s | %-17s | %-96s | %10d | %10s | %-6s |\n",
-		rootFolder,
-		targetFolder,
+func printTableRow(fixturePath, testName string, size int64, elapsed time.Duration, ok bool) {
+	fmt.Printf("| %-48s | %-96s | %10d | %10s | %-6s |\n",
+		escapeCell(fixturePath),
 		escapeCell(testName),
 		size,
 		elapsed.Round(time.Millisecond),
@@ -177,24 +194,75 @@ func splitList(s string) []string {
 	return out
 }
 
-func isWildcard(items []string) bool {
-	return len(items) == 1 && items[0] == "*"
+func resolveFixturePath(rootDir, fixturePath string) (string, string, error) {
+	cleanPath := filepath.Clean(filepath.FromSlash(fixturePath))
+	if cleanPath == "." || cleanPath == ".." || filepath.IsAbs(cleanPath) || strings.HasPrefix(cleanPath, ".."+string(os.PathSeparator)) {
+		return "", "", fmt.Errorf("invalid fixture path")
+	}
+	return filepath.ToSlash(cleanPath), filepath.Join(rootDir, cleanPath), nil
 }
 
-func folderNames(dir string) ([]string, error) {
-	entries, err := os.ReadDir(dir)
+func jsonFiles(dir string, limit int) ([]string, error) {
+	var files []string
+	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() && strings.HasSuffix(path, ".json") {
+			files = append(files, path)
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
-
-	var folders []string
-	for _, entry := range entries {
-		if entry.IsDir() {
-			folders = append(folders, entry.Name())
-		}
+	sort.Strings(files)
+	if limit > 0 && len(files) > limit {
+		files = files[:limit]
 	}
-	sort.Strings(folders)
-	return folders, nil
+	return files, nil
+}
+
+func prepareSingleJSONDir(cacheDir, fixturePath, targetDir, jsonPath string) (string, string, error) {
+	jsonRel, err := filepath.Rel(targetDir, jsonPath)
+	if err != nil {
+		return "", "", err
+	}
+	if jsonRel == ".." || strings.HasPrefix(jsonRel, ".."+string(os.PathSeparator)) {
+		return "", "", fmt.Errorf("JSON path is outside target dir: %s", jsonPath)
+	}
+
+	jsonName := strings.TrimSuffix(jsonRel, filepath.Ext(jsonRel))
+	singleJSONDir := filepath.Join(cacheDir, "single-json", filepath.FromSlash(fixturePath), jsonName)
+	if err := os.RemoveAll(singleJSONDir); err != nil {
+		return "", "", err
+	}
+
+	dst := filepath.Join(singleJSONDir, jsonRel)
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return "", "", err
+	}
+	if err := copyFile(jsonPath, dst); err != nil {
+		return "", "", err
+	}
+	return jsonRel, singleJSONDir, nil
+}
+
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, in)
+	return err
 }
 
 func run(w io.Writer, name string, args ...string) error {
