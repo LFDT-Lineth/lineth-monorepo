@@ -154,6 +154,33 @@ func TestFullPipeline_PermutationScenarios(t *testing.T) {
 	}
 }
 
+// TestFullPipeline_LogDerivativeSumTamperedResult is the running-sum
+// soundness companion to the completeness-only
+// TestFullPipeline_LogDerivativeSumScenarios: an honest proof whose claimed
+// LogDerivativeSum Result cell is then corrupted must be rejected.
+//
+// A bare LogDerivativeSum self-computes its Result from the witness, so no
+// round-0 witness alone is "invalid"; the failure mode is a wrong claimed
+// Result. The Result lives in a round after the witness, so it is corrupted in
+// the produced proof rather than through the round-0 assignment hook. The
+// logderivativesum pass's final-sum verifier action then rejects the proof.
+func TestFullPipeline_LogDerivativeSumTamperedResult(t *testing.T) {
+	sc := wioptest.NewLDSSingleFractionAllOnesScenario()
+	compileFullPipeline(sc.Sys)
+
+	proof := sc.Sys.Prove(sc.AssignWitness)
+	require.NoError(t, sc.Sys.Verify(proof),
+		"sanity: honest log-derivative proof must verify")
+
+	require.NotEmpty(t, sc.Sys.LogDerivativeSums,
+		"scenario must contain a LogDerivativeSum after compilation")
+	result := sc.Sys.LogDerivativeSums[0].Result
+	proof.Cells[result.Context.ID] = field.ElemFromBase(field.NewFromString("123456"))
+
+	assert.Error(t, sc.Sys.Verify(proof),
+		"a tampered LogDerivativeSum Result must be rejected by the full pipeline")
+}
+
 // TestFullPipeline_LogDerivativeSumTamperedZ is the running-sum analogue of
 // TestFullPipeline_PermutationTamperedZ: a Z column corrupted at an interior
 // row — endpoint left intact — is rejected only because the full pipeline
