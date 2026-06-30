@@ -47,9 +47,20 @@ class MaruFollowerTest {
   private val log = LogManager.getLogger(this.javaClass)
   private val maruFactory = MaruFactory()
 
+  // Ports in this range are below the OS ephemeral range (32768+ on Linux, 49152+ on macOS),
+  // so the kernel never assigns them for port-0 binds. Tests that need a stable port across
+  // a stop/restart can use this to eliminate the OS-assignment race.
+  private fun findFreePortBelowEphemeralRange(): UInt {
+    for (port in 25000..31999) {
+      runCatching { java.net.ServerSocket(port).also { it.close() } }.onSuccess { return port.toUInt() }
+    }
+    error("No free port found in range 25000..31999")
+  }
+
   private fun setupMaruHelper(
     syncingConfig: SyncingConfig = MaruFactory.defaultSyncingConfig,
     payloadValidationEnabled: Boolean = true,
+    validatorP2pPort: UInt = 0u,
   ) {
     // Create and start validator Maru app first
     val validatorMaruApp =
@@ -58,6 +69,7 @@ class MaruFollowerTest {
         engineApiRpc = validatorStack.besuNode.engineRpcUrl().get(),
         dataDir = validatorStack.tmpDir,
         syncingConfig = syncingConfig,
+        p2pPort = validatorP2pPort,
       )
     validatorStack.setMaruApp(validatorMaruApp)
     validatorStack.maruApp.start().get()
@@ -199,7 +211,11 @@ class MaruFollowerTest {
 
   @Test
   fun `Maru follower is able to import blocks after Validator stack goes down`() {
-    setupMaruHelper()
+    // Use a port below the OS ephemeral range (32768+ Linux, 49152+ macOS) so the kernel
+    // never auto-assigns it to another fork's port-0 bind. This makes the stop→restart
+    // gap safe without any ServerSocket reservation dance.
+    val validatorP2pPort = findFreePortBelowEphemeralRange()
+    setupMaruHelper(validatorP2pPort = validatorP2pPort)
 
     val blocksToProduce = 5
     repeat(blocksToProduce) {
@@ -212,12 +228,12 @@ class MaruFollowerTest {
       }
     }
 
-    val validatorP2pPort = validatorStack.p2pPort
     // This is here mainly to wait until block propagation is complete
     checkValidatorAndFollowerBlocks(blocksToProduce)
 
     validatorStack.maruApp.stop().get()
     validatorStack.maruApp.close()
+
     validatorStack.setMaruApp(
       maruFactory.buildTestMaruValidatorWithP2pPeering(
         ethereumJsonRpcUrl = validatorStack.besuNode.jsonRpcBaseUrl().get(),
