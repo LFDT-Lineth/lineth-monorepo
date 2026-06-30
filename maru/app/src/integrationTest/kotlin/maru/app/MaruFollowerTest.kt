@@ -13,6 +13,7 @@ import linea.testing.besu.BesuTransactionsHelper
 import linea.testing.besu.ethGetBlockByNumber
 import linea.testing.besu.startWithRetry
 import maru.config.SyncingConfig
+import maru.p2p.testutils.NetworkUtil.findFreePort
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
 import org.hyperledger.besu.tests.acceptance.dsl.blockchain.Amount
@@ -29,7 +30,6 @@ import org.junit.jupiter.params.provider.MethodSource
 import testutils.Checks.checkAllNodesHaveSameBlocks
 import testutils.Checks.getBlockNumber
 import testutils.PeeringNodeNetworkStack
-import maru.p2p.testutils.NetworkUtil.findFreePort
 import testutils.maru.MaruFactory
 import testutils.maru.awaitTillMaruHasPeers
 import kotlin.collections.map
