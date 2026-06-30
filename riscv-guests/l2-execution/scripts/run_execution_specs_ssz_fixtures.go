@@ -188,7 +188,7 @@ func printTableRow(fixturePath, testName string, size int64, elapsed time.Durati
 		fixturePathColumnWidth,
 		escapeCell(fixturePath),
 		testColumnWidth,
-		truncateMiddle(escapeCell(testName), testColumnWidth),
+		omitMiddle(escapeCell(testName), testColumnWidth),
 		size,
 		elapsed.Seconds(),
 		result,
@@ -347,7 +347,7 @@ func escapeCell(s string) string {
 }
 
 // Shortens long text.
-func truncateMiddle(s string, width int) string {
+func omitMiddle(s string, width int) string {
 	if len(s) <= width {
 		return s
 	}
