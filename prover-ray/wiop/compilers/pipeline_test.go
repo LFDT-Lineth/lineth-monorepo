@@ -3,6 +3,7 @@ package compilers_test
 import (
 	"testing"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/grandproduct"
@@ -151,6 +152,65 @@ func TestFullPipeline_PermutationScenarios(t *testing.T) {
 				"full pipeline must reject a non-permutation witness")
 		})
 	}
+}
+
+// TestFullPipeline_PermutationTamperedZ shows that a Z column corrupted at an
+// interior row — but with its endpoint left intact — is rejected only because
+// the full pipeline discharges the running-product recurrence.
+//
+// The grandproduct pass's own verifier actions cannot see this tamper: both
+// CheckResultIsOne (reads the Result cell) and FinalProductCheck (reads the
+// endpoint-opening cells) operate on values that the interior corruption leaves
+// untouched. It is the recurrence Vanishing — lifted by local-vanishing and
+// discharged by the global quotient — that pins every interior row of Z, so
+// only the assembled pipeline catches the corruption.
+func TestFullPipeline_PermutationTamperedZ(t *testing.T) {
+	sc := wioptest.NewPermutationSingleColumnScenario()
+
+	// Snapshot per-module column sets so the Z columns the grandproduct pass
+	// adds can be identified by diffing after compilation.
+	before := make(map[*wiop.Module]map[*wiop.Column]struct{})
+	for _, m := range sc.Sys.Modules {
+		seen := make(map[*wiop.Column]struct{}, len(m.Columns))
+		for _, c := range m.Columns {
+			seen[c] = struct{}{}
+		}
+		before[m] = seen
+	}
+
+	compileFullPipeline(sc.Sys)
+
+	var zCols []*wiop.Column
+	for _, m := range sc.Sys.Modules {
+		for _, c := range m.Columns {
+			if _, existed := before[m][c]; existed {
+				continue
+			}
+			if c.IsExtension {
+				zCols = append(zCols, c)
+			}
+		}
+	}
+	require.NotEmpty(t, zCols, "grandproduct must add Z columns")
+
+	// Sanity: the honest proof verifies.
+	proof := sc.Sys.Prove(sc.AssignHonest)
+	require.NoError(t, sc.Sys.Verify(proof),
+		"honest permutation witness must verify through the full pipeline")
+
+	// Corrupt one interior row of a Z column, leaving its endpoint (last row)
+	// untouched. The endpoint openings and Result cell are unchanged, so the
+	// grandproduct-local verifier actions still pass; the recurrence does not.
+	z := zCols[0]
+	cv := proof.Columns[z.Context.ID]
+	require.NotNil(t, cv, "the Z column must be captured in the proof")
+	ext := cv.Plain.AsExt()
+	require.GreaterOrEqual(t, len(ext), 3, "need at least one interior row to tamper")
+	one := field.OneExt()
+	ext[1].Add(&ext[1], &one) // interior row 1; endpoint (last row) left intact
+
+	assert.Error(t, sc.Sys.Verify(proof),
+		"the full pipeline must reject a Z column whose interior recurrence is violated")
 }
 
 // TestFullPipeline_RangeCheckScenarios runs the full pipeline on every
