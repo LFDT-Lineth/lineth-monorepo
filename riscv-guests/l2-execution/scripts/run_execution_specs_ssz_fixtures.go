@@ -4,7 +4,7 @@ package main
 // Run 10 ssz files for each selected target folder
 //   GOCACHE=/tmp/go-build go run ./riscv-guests/l2-execution/scripts/run_execution_specs_ssz_fixtures.go --root-folders for_amsterdam --target-folders amsterdam,prague --ssz-limit 10
 // Convert one JSON fixture and run one generated SSZ file for every root/target folder combination
-//   GOCACHE=/tmp/go-build go run ./riscv-guests/l2-execution/scripts/run_execution_specs_ssz_fixtures.go --root-folders for_amsterdam --target-folders '*' --json-limit 1 --ssz-limit 1
+//   GOCACHE=/tmp/go-build go run ./riscv-guests/l2-execution/scripts/run_execution_specs_ssz_fixtures.go --root-folders for_amsterdam --target-folders '*' --json-limit 5 --ssz-limit 5
 
 import (
 	"flag"
