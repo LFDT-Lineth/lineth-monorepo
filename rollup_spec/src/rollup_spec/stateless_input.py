@@ -20,6 +20,7 @@ from .block import (
     StatelessChainConfig,
     StatelessInput,
     WithdrawalRequest,
+    decode_signed_transaction_rlp,
 )
 from .state_transition import ExecutionWitness
 
@@ -298,3 +299,130 @@ def decode_stateless_input_ssz(data: bytes) -> StatelessInput:
     """
     payload = _strip_stateless_input_framing(data)
     return _convert_stateless_input(_strict_decode(payload, SszStatelessInput))
+
+
+# ── JSON object → SSZ bytes (the prover's encode step) ───────────────────────
+#
+# Inverse of `decode_stateless_input_ssz`. The coordinator sends the readable
+# `statelessInput` object (the JSON schema form); the prover encodes it into the
+# framed SSZ bytes the guest reads via `read_input`. The readable form is a
+# logical view, so a few SSZ-only fields are reconstructed at canonical defaults:
+#   - `chain_config.active_fork.{activation,blob_schedule}`: empty — the guest
+#     validates only the fork index, taken here from `forkName`;
+#   - `execution_payload.slot_number`: 0 — absent from the readable payload.
+
+
+def _hexbytes(value: str) -> bytes:
+    return bytes.fromhex(value[2:] if value[:2] in ("0x", "0X") else value)
+
+
+def _ssz_withdrawal_from_obj(obj: dict) -> cl.Withdrawal:
+    return cl.Withdrawal(
+        index=int(obj["index"]),
+        validator_index=int(obj["validatorIndex"]),
+        address=_hexbytes(obj["address"]),
+        amount=int(obj["amount"]),
+    )
+
+
+def _ssz_execution_payload_from_obj(obj: dict) -> SszExecutionPayload:
+    return SszExecutionPayload(
+        parent_hash=_hexbytes(obj["parentHash"]),
+        fee_recipient=_hexbytes(obj["feeRecipient"]),
+        state_root=_hexbytes(obj["stateRoot"]),
+        receipts_root=_hexbytes(obj["receiptsRoot"]),
+        logs_bloom=_hexbytes(obj["logsBloom"]),
+        prev_randao=_hexbytes(obj["prevRandao"]),
+        block_number=int(obj["blockNumber"]),
+        gas_limit=int(obj["gasLimit"]),
+        gas_used=int(obj["gasUsed"]),
+        timestamp=int(obj["timestamp"]),
+        extra_data=_hexbytes(obj["extraData"]),
+        base_fee_per_gas=int(obj["baseFeePerGas"], 16),
+        block_hash=_hexbytes(obj["blockHash"]),
+        transactions=[_hexbytes(tx) for tx in obj["transactions"]],
+        withdrawals=[_ssz_withdrawal_from_obj(w) for w in obj["withdrawals"]],
+        blob_gas_used=int(obj["blobGasUsed"]),
+        excess_blob_gas=int(obj["excessBlobGas"]),
+        block_access_list=_hexbytes(obj["blockAccessList"]),
+        slot_number=int(obj.get("slotNumber", 0)),
+    )
+
+
+def _ssz_execution_requests_from_obj(obj: dict) -> cl.ExecutionRequests:
+    # The rollup rejects EIP-7685 requests (§2.1): all three lists must be empty.
+    for key in ("deposits", "withdrawals", "consolidations"):
+        if obj.get(key):
+            raise InvalidSsz(f"executionRequests.{key} must be empty")
+    return cl.ExecutionRequests(deposits=[], withdrawals=[], consolidations=[])
+
+
+def _ssz_new_payload_request_from_obj(obj: dict) -> SszNewPayloadRequest:
+    return SszNewPayloadRequest(
+        execution_payload=_ssz_execution_payload_from_obj(obj["executionPayload"]),
+        versioned_hashes=[_hexbytes(h) for h in obj["versionedHashes"]],
+        parent_beacon_block_root=_hexbytes(obj["parentBeaconBlockRoot"]),
+        execution_requests=_ssz_execution_requests_from_obj(obj["executionRequests"]),
+    )
+
+
+def _ssz_execution_witness_from_obj(obj: dict) -> SszExecutionWitness:
+    return SszExecutionWitness(
+        state=[_hexbytes(n) for n in obj["state"]],
+        codes=[_hexbytes(c) for c in obj["codes"]],
+        headers=[_hexbytes(h) for h in obj["headers"]],
+    )
+
+
+def _ssz_chain_config_from_obj(obj: dict) -> SszChainConfig:
+    # The readable JSON carries only {chainId, forkName}; reconstruct the full
+    # SSZ fork config. `forkName` picks the ProtocolFork (its index is the only
+    # part the guest validates); activation/blob_schedule are SSZ-only, left empty.
+    fork_index = fork.PROTOCOL_FORKS.index(fork.ProtocolFork(obj["forkName"]))
+    fork.require_active_fork(fork_index)
+    return SszChainConfig(
+        chain_id=int(obj["chainId"]),
+        active_fork=SszForkConfig(
+            fork=fork_index,
+            activation=SszForkActivation(block_number=[], timestamp=[]),
+            blob_schedule=[],
+        ),
+    )
+
+
+def _recover_public_keys(transactions: list, chain_id: int) -> list:
+    """
+    Recover each transaction's uncompressed SEC1 public key — the SSZ
+    `public_keys` field — from the signed transactions. The readable request does
+    not carry `publicKeys` (they are derivable from the transactions already in
+    the payload), so the prover middleware recovers them here, mirroring how the
+    guest recovers senders (`recover_sender`). `recover_transaction_public_key`
+    returns the 65-byte `0x04 || x || y` key directly.
+    """
+    keys = []
+    for tx_hex in transactions:
+        tx = decode_signed_transaction_rlp(_hexbytes(tx_hex))
+        keys.append(bytes(fork.recover_transaction_public_key(U64(chain_id), tx)))
+    return keys
+
+
+def _ssz_stateless_input_from_obj(obj: dict) -> SszStatelessInput:
+    return SszStatelessInput(
+        new_payload_request=_ssz_new_payload_request_from_obj(obj["newPayloadRequest"]),
+        witness=_ssz_execution_witness_from_obj(obj["executionWitness"]),
+        chain_config=_ssz_chain_config_from_obj(obj["chainConfig"]),
+        public_keys=_recover_public_keys(
+            obj["newPayloadRequest"]["executionPayload"]["transactions"],
+            int(obj["chainConfig"]["chainId"]),
+        ),
+    )
+
+
+def encode_stateless_input_ssz(obj: dict) -> bytes:
+    """
+    Encode a decoded `statelessInput` JSON object (schema form) into the framed
+    SSZ bytes the guest reads. Inverse of `decode_stateless_input_ssz`; the
+    framing is the 0x0001 schema id followed by the SSZ `SszStatelessInput`.
+    """
+    raw = _ssz_stateless_input_from_obj(obj).encode_bytes()
+    return STATELESS_INPUT_SCHEMA_ID.to_bytes(STATELESS_INPUT_SCHEMA_ID_SIZE, "big") + raw

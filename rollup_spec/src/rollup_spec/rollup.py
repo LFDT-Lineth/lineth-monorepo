@@ -50,8 +50,9 @@ BLOB_BYTES_LENGTH = 4096 * 32
 # `contracts/scripts/testEIP4844/...`, `tmp/besu-eth/.../resources/...`)
 # produce identical KZG commitments; the byte-level sha256 differences are
 # just file-format ordering variants that ckzg parses transparently.
+# parents: [0]=src/rollup_spec, [1]=src, [2]=rollup_spec (project), [3]=repo root.
 _TRUSTED_SETUP_PATH = (
-    Path(__file__).resolve().parents[1]
+    Path(__file__).resolve().parents[3]
     / "contracts" / "test" / "hardhat" / "_testData" / "trusted_setup.txt"
 )
 
@@ -263,7 +264,7 @@ class BlobWitness:
 @dataclass
 class RollupPublicInput:
     """
-    The 14-field rollup / rollup-aggregation public input tuple from
+    The 15-field rollup / rollup-aggregation public input tuple from
     Readme.md section 2.4.
     """
     end_block_number: U64
@@ -275,8 +276,9 @@ class RollupPublicInput:
     end_l1_l2_bridge_rolling_hash_message_number: U64
     dynamic_chain_config_hash: Hash32
     parent_ftx_rolling_hash: Hash32
+    parent_processed_ftx_number: U64
     end_ftx_rolling_hash: Hash32
-    last_processed_ftx_number: U64
+    end_processed_ftx_number: U64
     filtered_addresses_hash: Hash32
     parent_shnarf: Hash32
     end_shnarf: Hash32
@@ -304,13 +306,20 @@ class RollupProofPrivateInput:
 @dataclass
 class RollupProof:
     """
-    Reference wrapper for a rollup proof plus the root/address preimages
-    consumed by the rollup-aggregation proof. `proof` stands in for recursive
-    STARK bytes.
+    A rollup proof as the rollup-aggregation guest consumes it: the guest
+    *output* (the 14-field `public_inputs` tuple + the root/address preimages)
+    plus the `proof` bytes the aggregation guest recursively verifies.
+
+    Guest/prover boundary: the guest emits `public_inputs` and the preimage
+    lists only; `proof` is attached by the zkVM/prover layer above — a guest
+    cannot prove itself — and is a placeholder (`b""`) in this reference.
+
+    `end_block_number` is intentionally absent: it is already
+    `public_inputs.end_block_number`. Only `start_block_number` (not in the PI
+    tuple) is carried, so the aggregation guest can verify proof tiling.
     """
     public_inputs: RollupPublicInput
     start_block_number: U64
-    end_block_number: U64
     proof: bytes = b""
     l2_l1_roots: List[Hash32] = field(default_factory=list)
     filtered_addresses: List[Address] = field(default_factory=list)
@@ -391,7 +400,7 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     first_proof = rollup_input.l2_execution_proofs[0]
     last_proof = rollup_input.l2_execution_proofs[-1]
     for proof in rollup_input.l2_execution_proofs:
-        boundary_index = int(proof.end_block_number) - blob_start_block_number
+        boundary_index = int(proof.public_inputs.end_block_number) - blob_start_block_number
         if boundary_index < 0 or boundary_index >= len(truncated_block_hashes):
             raise Exception("l2-execution proof boundary falls outside the blob block range")
         if proof.public_inputs.end_block_hash != truncated_block_hashes[boundary_index]:
@@ -439,8 +448,9 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
         ),
         dynamic_chain_config_hash=first_proof.public_inputs.dynamic_chain_config_hash,
         parent_ftx_rolling_hash=first_proof.public_inputs.parent_ftx_rolling_hash,
+        parent_processed_ftx_number=first_proof.public_inputs.parent_processed_ftx_number,
         end_ftx_rolling_hash=last_proof.public_inputs.end_ftx_rolling_hash,
-        last_processed_ftx_number=last_proof.public_inputs.last_processed_ftx_number,
+        end_processed_ftx_number=last_proof.public_inputs.end_processed_ftx_number,
         filtered_addresses_hash=hash_address_list(concatenated_filtered_addresses),
         parent_shnarf=rollup_input.parent_shnarf,
         end_shnarf=current_shnarf,
@@ -449,7 +459,6 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     return RollupProof(
         public_inputs=public_inputs,
         start_block_number=blob_start_block_number,
-        end_block_number=blob_end_block_number,
         l2_l1_roots=l2_l1_roots,
         filtered_addresses=concatenated_filtered_addresses,
     )
@@ -461,11 +470,9 @@ def verify_l2_execution_proof(proof: L2ExecutionProof) -> None:
 
     Recursive STARK verification is a zkVM primitive in the guest; here
     `L2ExecutionProof.proof` stands in for those bytes, and the reference only
-    re-checks the hash-preimage bindings (`txFromsHash`, `L2L1MessagesHash`,
+    re-checks the hash-preimage bindings (`txFromsHash`, `l2L1MessagesHash`,
     `filteredAddressesHash`) the rollup proof consumes alongside the PI tuple.
     """
-    if proof.public_inputs.end_block_number != proof.end_block_number:
-        raise Exception("l2-execution proof range metadata does not match public inputs")
     # The three checks below are PRECOMPILE: keccak256 in production (used
     # to verify the preimage bindings that the rollup proof consumes).
     if hash_hash_list(proof.l2_l1_messages) != proof.public_inputs.l2_l1_messages_hash:
@@ -485,7 +492,7 @@ def verify_l2_execution_proof_tiling(
     for proof in l2_execution_proofs:
         if proof.start_block_number != expected_start:
             raise Exception("l2-execution proofs do not tile the blob block range")
-        expected_start = proof.end_block_number + 1
+        expected_start = proof.public_inputs.end_block_number + 1
     if expected_start != end_block_number + 1:
         raise Exception("l2-execution proofs do not cover the full blob block range")
 
@@ -504,6 +511,8 @@ def assert_l2_execution_continuity(
         raise Exception("l2-execution dynamic chain configuration continuity failed")
     if left.end_ftx_rolling_hash != right.parent_ftx_rolling_hash:
         raise Exception("l2-execution FTX rolling-hash continuity failed")
+    if left.end_processed_ftx_number != right.parent_processed_ftx_number:
+        raise Exception("l2-execution processed-FTX-number continuity failed")
 
 
 def build_l2_messages_tree(msgs: Sequence[Hash32]) -> Tuple[List[Hash32], Hash32]:
@@ -516,7 +525,7 @@ def build_l2_messages_tree(msgs: Sequence[Hash32]) -> Tuple[List[Hash32], Hash32
     - Flat-hash the ordered roots with keccak256(root_1 || ... || root_n).
 
     The returned root list is the private preimage used by aggregation and L1
-    calldata; the returned hash is the public `L2L1BridgeTransactionTree`.
+    calldata; the returned hash is the public `l2L1BridgeTransactionTree`.
     """
     roots = build_l2_message_roots(msgs)
     return roots, hash_hash_list(roots)

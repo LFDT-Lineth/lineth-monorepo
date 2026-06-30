@@ -1,3 +1,8 @@
+## [1.0.5] - 2026-06-30
+
+### 🐛 Bug Fixes
+
+- *(prover)* Reserve a padding row in the state-manager modules (#3470)
 ## [1.0.4] - 2026-06-29
 
 ### 🐛 Bug Fixes

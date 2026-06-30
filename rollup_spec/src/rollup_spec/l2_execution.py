@@ -217,7 +217,7 @@ def validate_forced_transactions(
 @dataclass
 class L2ExecutionProofPublicInput:
     """
-    The 15-field l2-execution public input tuple from Readme.md section 2.1.
+    The 16-field l2-execution public input tuple from Readme.md section 2.1.
     """
     parent_block_hash: Hash32
     end_block_hash: Hash32
@@ -230,8 +230,9 @@ class L2ExecutionProofPublicInput:
     end_l1_l2_bridge_rolling_hash_message_number: U64
     dynamic_chain_config_hash: Hash32
     parent_ftx_rolling_hash: Hash32
+    parent_processed_ftx_number: U64
     end_ftx_rolling_hash: Hash32
-    last_processed_ftx_number: U64
+    end_processed_ftx_number: U64
     filtered_addresses_hash: Hash32
     tx_froms_hash: Hash32
 
@@ -267,20 +268,27 @@ def _decode_payload_stateless_inputs(payloads: Sequence[LineaPayloadInput]) -> L
         try:
             decoded.append(decode_stateless_input_ssz(payload.stateless_input_ssz))
         except Exception as exc:
-            raise Exception(f"invalid statelessInputSsz for payload {index}") from exc
+            raise Exception(f"invalid stateless input SSZ for payload {index}") from exc
     return decoded
 
 
 @dataclass
 class L2ExecutionProof:
     """
-    Reference wrapper for an l2-execution proof plus the hash preimages consumed
-    by the rollup guest. `proof` stands in for the STARK bytes that the rollup
-    guest recursively verifies.
+    An l2-execution proof as the rollup guest consumes it: the guest *output*
+    (the 15-field `public_inputs` tuple + the revealed hash preimages) plus the
+    `proof` bytes the rollup guest recursively verifies.
+
+    Guest/prover boundary: the guest emits `public_inputs` and the preimage
+    lists only; `proof` is attached by the zkVM/prover layer above — a guest
+    cannot prove itself — and is a placeholder (`b""`) in this reference.
+
+    `end_block_number` is intentionally absent: it is already
+    `public_inputs.end_block_number`. Only `start_block_number` (not in the PI
+    tuple) is carried, so the rollup guest can verify proof tiling.
     """
     public_inputs: L2ExecutionProofPublicInput
     start_block_number: U64
-    end_block_number: U64
     proof: bytes = b""
     l2_l1_messages: List[Hash32] = field(default_factory=list)
     tx_froms: List[Address] = field(default_factory=list)
@@ -411,8 +419,9 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
         end_l1_l2_bridge_rolling_hash_message_number=end_rolling_hash_number,
         dynamic_chain_config_hash=execution_input.chain_config.hash(base_fee),
         parent_ftx_rolling_hash=execution_input.parent_ftx_rolling_hash,
+        parent_processed_ftx_number=execution_input.parent_last_processed_ftx_number,
         end_ftx_rolling_hash=current_ftx_rolling_hash,
-        last_processed_ftx_number=current_last_processed_ftx_number,
+        end_processed_ftx_number=current_last_processed_ftx_number,
         filtered_addresses_hash=hash_address_list(filtered_addresses),
         tx_froms_hash=hash_address_list(tx_froms),
     )
@@ -420,7 +429,6 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
     return L2ExecutionProof(
         public_inputs=public_inputs,
         start_block_number=start_block_number,
-        end_block_number=last_payload.block_number,
         l2_l1_messages=l2_l1_message_hashes,
         tx_froms=tx_froms,
         filtered_addresses=filtered_addresses,

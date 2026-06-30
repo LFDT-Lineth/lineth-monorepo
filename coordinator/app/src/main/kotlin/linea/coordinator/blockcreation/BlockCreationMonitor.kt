@@ -4,7 +4,7 @@ import io.vertx.core.Vertx
 import linea.coordination.blockcreation.BlockCreated
 import linea.coordination.blockcreation.BlockCreationListener
 import linea.domain.Block
-import linea.domain.BlockParameter.Companion.toBlockParameter
+import linea.domain.BlockParameter
 import linea.ethapi.EthApiBlockClient
 import linea.kotlin.encodeHex
 import linea.timer.TimerSchedule
@@ -93,7 +93,7 @@ class BlockCreationMonitor(
             }
           },
         ) {
-          ethApi.ethGetBlockByNumberFullTxs(startingBlockNumberExclusive.toBlockParameter())
+          ethApi.ethGetBlockByNumberFullTxs(BlockParameter.fromNumber(startingBlockNumberExclusive))
         }
     }
 
@@ -215,7 +215,7 @@ class BlockCreationMonitor(
           _nexBlockNumberToFetch.get() + config.blocksToFinalization
         ) {
           val blockNumber = _nexBlockNumberToFetch.get()
-          ethApi.ethGetBlockByNumberFullTxs(blockNumber.toBlockParameter())
+          ethApi.ethGetBlockByNumberFullTxs(BlockParameter.fromNumber(blockNumber))
             .thenPeek { block ->
               log.trace("requestedBlock={} responseBlock={}", blockNumber, block?.number)
             }

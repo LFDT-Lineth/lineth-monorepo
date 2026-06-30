@@ -303,10 +303,10 @@ class FakeEthApiClient(
       is BlockParameter.Tag -> blockTags[blockParameter]
         ?: throw IllegalArgumentException("Invalid blockParameter=$blockParameter")
 
-      is BlockParameter.BlockNumber -> blockParameter.getNumber()
+      is BlockParameter.BlockNumber -> blockParameter.number
 
       is BlockParameter.BlockHash ->
-        blocksDb.values.firstOrNull { it.hash.contentEquals(blockParameter.getHash().decodeHex()) }?.number
+        blocksDb.values.firstOrNull { it.hash.contentEquals(blockParameter.hashBytes) }?.number
           ?: throw IllegalArgumentException("Block hash not found in fake client: $blockParameter")
     }
   }
