@@ -4,6 +4,7 @@
 
 - *(linea-besu)* Add interfaces module: security and LineaTransactionSelectionResult (#3238)
 - *(linea-besu)* Forced transactions integration with security policy transaction selector (#3295)
+- *(coordinator)* Add config documentation annotations (#3463)
 
 ### 🐛 Bug Fixes
 
@@ -34,6 +35,7 @@
 - *(coordinator)* Forced transactions concurrency update (#3444)
 - *(prover)* Bit-decompose limbs by absolute row, not compact position (#3464)
 - *(prover)* Filter accumulator-summary state-summary inclusions (#3465)
+- *(prover)* Reserve a padding row in the state-manager modules (#3470)
 
 ### 🚜 Refactor
 
