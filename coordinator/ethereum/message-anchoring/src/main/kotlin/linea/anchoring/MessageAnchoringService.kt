@@ -1,13 +1,13 @@
 package linea.anchoring
 
 import io.vertx.core.Vertx
+import linea.EthLogsSearcher
+import linea.SearchDirection
 import linea.contract.events.L1RollingHashUpdatedEvent
 import linea.contract.events.MessageSentEvent
 import linea.contract.l2.L2MessageServiceSmartContractClient
 import linea.domain.BlockParameter
 import linea.domain.CommonDomainFunctions
-import linea.ethapi.EthLogsClient
-import linea.kotlin.toHexStringUInt256
 import linea.timer.TimerSchedule
 import linea.timer.VertxPeriodicPollingService
 import org.apache.logging.log4j.LogManager
@@ -19,11 +19,12 @@ import kotlin.time.Duration
 class MessageAnchoringService(
   vertx: Vertx,
   private val l1ContractAddress: String,
-  private val l1EthLogsClient: EthLogsClient,
+  private val l1EthLogsSearcher: EthLogsSearcher,
   private val l2MessageService: L2MessageServiceSmartContractClient,
   private val eventsQueue: Queue<MessageSentEvent>,
   private val maxMessagesToAnchorPerL2Transaction: UInt,
   private val l2HighestBlockTag: BlockParameter,
+  private val l1EventSearchMaxBlockRange: UInt,
   anchoringTickInterval: Duration,
   private val log: Logger = LogManager.getLogger(MessageAnchoringService::class.java),
 ) : VertxPeriodicPollingService(
@@ -80,25 +81,26 @@ class MessageAnchoringService(
   }
 
   private fun getRollingHash(messageNumber: ULong): SafeFuture<ByteArray> {
-    return l1EthLogsClient
-      .getLogs(
-        // RollingHashUpdated event has message number indexed and unique
-        // so we can query the whole chain
+    return l1EthLogsSearcher
+      .findLog(
         fromBlock = BlockParameter.Tag.EARLIEST,
         toBlock = BlockParameter.Tag.LATEST,
+        chunkSize = l1EventSearchMaxBlockRange.toInt(),
         address = l1ContractAddress,
-        topics = listOf(
-          L1RollingHashUpdatedEvent.topic,
-          messageNumber.toHexStringUInt256(),
-        ),
-      )
-      .thenApply { rawLogs ->
-        val events = rawLogs.map(L1RollingHashUpdatedEvent::fromEthLog)
-        require(events.size == 1) {
-          "Expected exactly 1 event RollingHashUpdated(messageNumber=$messageNumber) " +
-            "but got ${events.size} events. events=$events"
+        topics = listOf(L1RollingHashUpdatedEvent.topic),
+      ) { ethLog ->
+        val foundMessageNumber = L1RollingHashUpdatedEvent.fromEthLog(ethLog).event.messageNumber
+        when {
+          foundMessageNumber < messageNumber -> SearchDirection.FORWARD
+          foundMessageNumber > messageNumber -> SearchDirection.BACKWARD
+          else -> null
         }
-        events.first().event.rollingHash
+      }
+      .thenApply { ethLog ->
+        requireNotNull(ethLog) {
+          "Expected exactly 1 event RollingHashUpdated(messageNumber=$messageNumber) but got none."
+        }
+        L1RollingHashUpdatedEvent.fromEthLog(ethLog).event.rollingHash
       }
   }
 }

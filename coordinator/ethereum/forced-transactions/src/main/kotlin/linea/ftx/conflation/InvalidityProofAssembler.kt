@@ -1,6 +1,8 @@
 package linea.ftx.conflation
 
 import com.github.michaelbull.result.getOrThrow
+import linea.EthLogsSearcher
+import linea.SearchDirection
 import linea.clients.GenerateTracesResponse
 import linea.clients.GetZkEVMStateMerkleProofResponse
 import linea.clients.InvalidityProofRequest
@@ -15,10 +17,7 @@ import linea.contract.events.ForcedTransactionAddedEvent
 import linea.domain.BlockInterval
 import linea.domain.BlockParameter
 import linea.domain.InvalidityProofIndex
-import linea.ethapi.EthLogsClient
-import linea.ethapi.EthLogsFilterOptions
 import linea.forcedtx.ForcedTransactionInclusionResult
-import linea.kotlin.toHexStringUInt256
 import linea.persistence.ForcedTransactionRecord
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -35,9 +34,10 @@ class InvalidityProofAssembler(
   private val invalidityProofClient: InvalidityProverClientV1,
   private val stateManagerClient: StateManagerClientV1,
   private val accountProofClient: StateManagerAccountProofClient,
-  private val ethApiLogsClient: EthLogsClient,
+  private val ethApiLogsSearcher: EthLogsSearcher,
   private val tracesClient: TracesConflationVirtualBlockClientV1,
   private val contractAddress: String,
+  private val l1EventSearchMaxBlockRange: UInt,
   private val log: Logger = LogManager.getLogger(InvalidityProofAssembler::class.java),
 ) {
 
@@ -88,22 +88,25 @@ class InvalidityProofAssembler(
       return SafeFuture.completedFuture(ByteArray(32))
     }
     val prevFtxNumber = ftxNumber - 1uL
-    return ethApiLogsClient
-      .ethGetLogs(
-        filterOptions = EthLogsFilterOptions(
-          fromBlock = BlockParameter.Tag.EARLIEST,
-          toBlock = BlockParameter.Tag.LATEST,
-          address = contractAddress,
-          topics = listOf(
-            ForcedTransactionAddedEvent.topic,
-            prevFtxNumber.toHexStringUInt256(),
-          ),
-        ),
-      ).thenApply { logs ->
-        if (logs.isEmpty()) {
+    return ethApiLogsSearcher
+      .findLog(
+        fromBlock = BlockParameter.Tag.EARLIEST,
+        toBlock = BlockParameter.Tag.LATEST,
+        chunkSize = l1EventSearchMaxBlockRange.toInt(),
+        address = contractAddress,
+        topics = listOf(ForcedTransactionAddedEvent.topic),
+      ) { ethLog ->
+        val foundFtxNumber = ForcedTransactionAddedEvent.fromEthLog(ethLog).event.forcedTransactionNumber
+        when {
+          foundFtxNumber < prevFtxNumber -> SearchDirection.FORWARD
+          foundFtxNumber > prevFtxNumber -> SearchDirection.BACKWARD
+          else -> null
+        }
+      }.thenApply { ethLog ->
+        if (ethLog == null) {
           throw IllegalStateException("No ForcedTransactionAdded event found for ftx=$prevFtxNumber")
         }
-        ForcedTransactionAddedEvent.fromEthLog(logs.first()).event.forcedTransactionRollingHash
+        ForcedTransactionAddedEvent.fromEthLog(ethLog).event.forcedTransactionRollingHash
       }
   }
 

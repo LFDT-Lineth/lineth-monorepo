@@ -1,6 +1,8 @@
 package linea.ftx
 
+import linea.EthLogsSearcher
 import linea.LongRunningService
+import linea.SearchDirection
 import linea.contract.events.ForcedTransactionAddedEvent
 import linea.domain.BlockParameter
 import linea.domain.BlockParameter.Companion.toBlockParameter
@@ -11,7 +13,6 @@ import linea.ethapi.extensions.EthLogsFilterState
 import linea.ethapi.extensions.EthLogsFilterSubscriptionFactory
 import linea.ethapi.extensions.EthLogsFilterSubscriptionManager
 import linea.ftx.conflation.ForcedTransactionsSafeBlockNumberManager
-import linea.kotlin.toHexStringUInt256
 import net.consensys.linea.async.toSafeFuture
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -27,9 +28,11 @@ import kotlin.time.Instant
 internal class ForcedTransactionsL1EventsFetcher(
   private val address: String,
   private val ethLogsClient: EthApiClient,
+  private val ethLogsSearcher: EthLogsSearcher,
   private val resumePointProvider: ForcedTransactionsResumePointProvider,
   private val ethLogsFilterSubscriptionFactory: EthLogsFilterSubscriptionFactory,
   private val safeBlockNumberManager: ForcedTransactionsSafeBlockNumberManager,
+  private val l1EventSearchMaxBlockRange: UInt,
   private val l1EarliestBlock: BlockParameter = BlockParameter.Tag.EARLIEST,
   private val l1HighestBlock: BlockParameter = BlockParameter.Tag.FINALIZED,
   private val ftxQueue: Queue<ForcedTransactionWithTimestamp>,
@@ -51,20 +54,26 @@ internal class ForcedTransactionsL1EventsFetcher(
         } else {
           // get l1 block number of the latest finalized forced transaction,
           // and start listening from there
-          ethLogsClient.getLogs(
+          ethLogsSearcher.findLog(
             fromBlock = l1EarliestBlock,
             toBlock = l1HighestBlock,
+            chunkSize = l1EventSearchMaxBlockRange.toInt(),
             address = address,
-            topics = listOf(
-              ForcedTransactionAddedEvent.topic,
-              finalizedForcedTransactionNumber.toHexStringUInt256(),
-            ),
-          )
-            .thenApply { logs ->
-              val eventLog = logs.firstOrNull()
-                ?: throw IllegalStateException(
+            topics = listOf(ForcedTransactionAddedEvent.topic),
+          ) { ethLog ->
+            val foundFtxNumber = ForcedTransactionAddedEvent.fromEthLog(ethLog).event.forcedTransactionNumber
+            when {
+              foundFtxNumber < finalizedForcedTransactionNumber -> SearchDirection.FORWARD
+              foundFtxNumber > finalizedForcedTransactionNumber -> SearchDirection.BACKWARD
+              else -> null
+            }
+          }
+            .thenApply { eventLog ->
+              if (eventLog == null) {
+                throw IllegalStateException(
                   "No eth log found for finalized forced transaction number $finalizedForcedTransactionNumber",
                 )
+              }
 
               val event = ForcedTransactionAddedEvent.fromEthLog(eventLog)
               log.debug(

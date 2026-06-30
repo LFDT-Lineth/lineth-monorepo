@@ -127,6 +127,7 @@ class ConflationApp(
         l1ContractAddress = configs.protocol.l1.contractAddress,
         l1HighestBlockTag = configs.forcedTransactions.l1HighestBlockTag,
         l1EventSearchBlockChunk = ftxConfig.l1EventScraping.ethLogsSearchBlockChunkSize,
+        l1EventSearchMaxBlockRange = ftxConfig.l1EventScraping.ethLogsSearchMaxBlockRange,
         ftxSequencerSendingInterval = ftxConfig.processingTickInterval,
         maxFtxToSendToSequencer = ftxConfig.processingBatchSize,
         ftxProcessingDelay = ftxConfig.processingDelay,
