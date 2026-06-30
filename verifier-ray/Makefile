@@ -7,16 +7,12 @@ R5_JSON := $(R5_BIN).json
 ELF_TO_JSON := ../arithmetization/src/test/scripts/elf_to_json_gen/main.go
 ZKC_MAIN := ../arithmetization/src/main/riscv/main.zkc
 
-# `EMBEDDED_INPUT=none` loads the generated serialized valid proof at runtime.
-# `valid`/`invalid` keep the older comptime embedded path, which is still useful
-# for invalid-input sanity checks while we only serialize valid proofs.
-EMBEDDED_INPUT ?= valid
 EMBEDDED_SPEC ?= 0
 NATIVE_BIN := zig-out/bin/verifier-ray
 
 SERIALIZED_INPUT_FILE = testdata/inputs/verify_case_$(EMBEDDED_SPEC).bin
+SERIALIZED_INVALID_INPUT_FILE = testdata/inputs/verify_case_$(EMBEDDED_SPEC)_invalid.bin
 PASSING_INPUT_FILE = $(SERIALIZED_INPUT_FILE)
-FAILING_INPUT_FILE := testdata/inputs/failing.bin
 INPUT_FILE ?= $(PASSING_INPUT_FILE)
 IN_ORIGIN ?= 0x08800000
 NATIVE_INPUT_FILE := zig-out/input.bin
@@ -35,9 +31,9 @@ help:
 		'  build                 Build verifier-ray natively' \
 		'  build-release         Build verifier-ray natively with ReleaseSmall and stripped symbols' \
 		'  build-r5              Build verifier-ray for the Linea R5 zkVM target' \
-		'  run                   Run verifier-ray natively with EMBEDDED_INPUT or runtime INPUT_FILE' \
+		'  run                   Run verifier-ray natively with runtime INPUT_FILE' \
 		'  run-passing           Run verifier-ray natively with serialized valid input' \
-		'  run-failing           Run verifier-ray natively with embedded invalid input (exits non-zero)' \
+		'  run-failing           Run verifier-ray natively with serialized invalid input (exits non-zero)' \
 		'  run-failing-expected  Run native invalid input and require it to fail' \
 		'  test                  Run Zig tests and Go codegen tests' \
 		'  test-zig              Generate testdata and run Zig tests' \
@@ -47,14 +43,14 @@ help:
 		'  zkc-build             Build the R5 ELF and generate the zkc JSON input' \
 		'  zkc-verify            Run verifier-ray through the zkc RISC-V interpreter' \
 		'  zkc-verify-passing    Run zkc with serialized valid input' \
-		'  zkc-verify-failing    Run zkc with embedded invalid input (exits non-zero)' \
+		'  zkc-verify-failing    Run zkc with serialized invalid input (exits non-zero)' \
 		'  zkc-verify-failing-expected  Require zkc invalid input to fail' \
 		'  profile-zkc           Profile every generated verifier case and write a compact CSV report' \
 		'  clean                 Remove Zig build artifacts' \
 		'' \
 		'input variables:' \
-		'  EMBEDDED_INPUT        Input fixture kind: none, valid, or invalid; default valid' \
 		'  EMBEDDED_SPEC         Embedded fixture index, default 0' \
+		'  INPUT_FILE            Serialized proof input path, default valid fixture for EMBEDDED_SPEC' \
 		'' \
 		'zkc variables:' \
 		'  IN_ORIGIN            Input bytes address, default 0x08800000'
@@ -77,23 +73,21 @@ build-zig:
 	zig build
 
 build-release:
-	zig build --release=small -Dstrip=true -Dembedded-input=$(EMBEDDED_INPUT) -Dembedded-spec=$(EMBEDDED_SPEC)
+	zig build --release=small -Dstrip=true -Dembedded-spec=$(EMBEDDED_SPEC)
 
 build-r5:
-	zig build --release=small -Dstrip=true -Dr5=true -Dembedded-input=$(EMBEDDED_INPUT) -Dembedded-spec=$(EMBEDDED_SPEC)
+	zig build --release=small -Dstrip=true -Dr5=true -Dembedded-spec=$(EMBEDDED_SPEC)
 
 run:
-	@if [[ "$(EMBEDDED_INPUT)" == "none" ]]; then \
-		$(MAKE) --no-print-directory generate-testdata; \
-		$(MAKE) --no-print-directory prepare-native-input INPUT_FILE=$(INPUT_FILE); \
-	fi
-	zig build run -Dembedded-input=$(EMBEDDED_INPUT) -Dembedded-spec=$(EMBEDDED_SPEC)
+	@$(MAKE) --no-print-directory generate-testdata
+	@$(MAKE) --no-print-directory prepare-native-input INPUT_FILE=$(INPUT_FILE)
+	zig build run -Dembedded-spec=$(EMBEDDED_SPEC)
 
 run-passing:
-	$(MAKE) run EMBEDDED_INPUT=none INPUT_FILE=$(PASSING_INPUT_FILE)
+	$(MAKE) run INPUT_FILE=$(PASSING_INPUT_FILE)
 
 run-failing:
-	$(MAKE) run EMBEDDED_INPUT=invalid
+	$(MAKE) run INPUT_FILE=$(SERIALIZED_INVALID_INPUT_FILE)
 
 run-failing-expected:
 	@if $(MAKE) run-failing; then \
@@ -131,22 +125,18 @@ prepare-zkc-input:
 	{ printf "0x"; xxd -p -c1 $(INPUT_FILE) | awk 'BEGIN{i=0} {lines[i++]=$$0} END{for(j=i-1;j>=0;j--) print lines[j]}' | tr -d '\n'; } > $(IN_BYTES_FILE)
 
 zkc-build: generate-testdata
-	$(MAKE) --no-print-directory build-r5 EMBEDDED_INPUT=$(EMBEDDED_INPUT) EMBEDDED_SPEC=$(EMBEDDED_SPEC)
-	@if [[ "$(EMBEDDED_INPUT)" == "none" ]]; then \
-		$(MAKE) --no-print-directory prepare-zkc-input INPUT_FILE=$(INPUT_FILE) IN_BYTES_FILE=$(IN_BYTES_FILE); \
-		go run $(ELF_TO_JSON) $(R5_BIN) "@$(IN_BYTES_FILE)" $(IN_ORIGIN) > $(R5_JSON); \
-	else \
-		go run $(ELF_TO_JSON) $(R5_BIN) "0x00" $(IN_ORIGIN) > $(R5_JSON); \
-	fi
+	$(MAKE) --no-print-directory build-r5 EMBEDDED_SPEC=$(EMBEDDED_SPEC)
+	$(MAKE) --no-print-directory prepare-zkc-input INPUT_FILE=$(INPUT_FILE) IN_BYTES_FILE=$(IN_BYTES_FILE)
+	go run $(ELF_TO_JSON) $(R5_BIN) "@$(IN_BYTES_FILE)" $(IN_ORIGIN) > $(R5_JSON)
 
 zkc-verify: zkc-build
 	zkc exec -f -q $(R5_JSON) $(ZKC_MAIN)
 
 zkc-verify-passing:
-	$(MAKE) zkc-verify EMBEDDED_INPUT=none INPUT_FILE=$(PASSING_INPUT_FILE)
+	$(MAKE) zkc-verify INPUT_FILE=$(PASSING_INPUT_FILE)
 
 zkc-verify-failing:
-	$(MAKE) zkc-verify EMBEDDED_INPUT=invalid
+	$(MAKE) zkc-verify INPUT_FILE=$(SERIALIZED_INVALID_INPUT_FILE)
 
 zkc-verify-failing-expected:
 	@if $(MAKE) zkc-verify-failing; then \
@@ -158,7 +148,7 @@ zkc-verify-failing-expected:
 
 profile-zkc-case: generate-testdata
 	@$(MAKE) --no-print-directory prepare-zkc-input INPUT_FILE=$(INPUT_FILE) IN_BYTES_FILE=$(IN_BYTES_FILE)
-	@zig build --release=small -Dstrip=true -Dr5=true -Dembedded-input=none -Dembedded-spec=$(EMBEDDED_SPEC) -Dverifier-profiling=true -Dr5-marks=true
+	@zig build --release=small -Dstrip=true -Dr5=true -Dembedded-spec=$(EMBEDDED_SPEC) -Dverifier-profiling=true -Dr5-marks=true
 	@go run $(ELF_TO_JSON) $(R5_BIN) "@$(IN_BYTES_FILE)" $(IN_ORIGIN) > $(R5_JSON)
 	@zkc exec -f $(R5_JSON) $(ZKC_MAIN)
 

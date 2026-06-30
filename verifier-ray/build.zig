@@ -1,13 +1,5 @@
 const std = @import("std");
 
-// Build-option enum: the CLI value (`-Dembedded-input=<value>`) is matched
-// against these field names directly, so keep them as the strings users type.
-const EmbeddedInputType = enum {
-    none,
-    valid,
-    invalid,
-};
-
 pub fn build(b: *std.Build) void {
     const r5 = b.option(bool, "r5", "Build for the Linea R5 zkVM target") orelse false;
     const verifier_profiling = b.option(
@@ -20,9 +12,6 @@ pub fn build(b: *std.Build) void {
     // flexible to also allow specifying a path to a spec file, but for now we just embed the spec from the fixtures. This is only used
     // for execution target, not for any test fixtures or library.
     const embedded_spec = b.option(usize, "embedded-spec", "Embedded specification index") orelse 0;
-    // The `embedded-input` option is used to embed the input file into the binary to avoid needing to pass it in at runtime as we don't have
-    // input serialization yet. This is only used for execution target, not for any test fixtures or library.
-    const embedded_input = b.option(EmbeddedInputType, "embedded-input", "Embed the input file into the binary") orelse EmbeddedInputType.none;
 
     const default_target: std.Target.Query = if (r5) .{
         .cpu_arch = .riscv64,
@@ -70,8 +59,6 @@ pub fn build(b: *std.Build) void {
 
     const embedded_data_opts = b.addOptions();
     embedded_data_opts.addOption(usize, "spec_index", embedded_spec);
-    embedded_data_opts.addOption(bool, "embed_input", embedded_input != EmbeddedInputType.none);
-    embedded_data_opts.addOption(bool, "invalid_input", embedded_input == EmbeddedInputType.invalid);
     const embedded_data_mod = b.addModule("embedded_data", .{
         .root_source_file = b.path("testdata/generated/verify.zig"),
         .target = target,
