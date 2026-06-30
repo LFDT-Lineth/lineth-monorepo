@@ -40,6 +40,7 @@ fn keccak<ram, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b
 }
 
 // print_hash prints the hash in BIG-ENDIAN convention
+#[debug]
 fn print_hash<state_row0, state_row1, state_row2, state_row3>() {
     printf "\nkeccak hash:\t"
     print_big_endian(state_row0[0])
@@ -50,6 +51,7 @@ fn print_hash<state_row0, state_row1, state_row2, state_row3>() {
 
 }
 // print_big_endian prints a u64 in BIG-ENDIAN convention
+#[debug]
 fn print_big_endian(val:u64) {
     var b7:u8, b6:u8, b5:u8, b4:u8, b3:u8, b2:u8, b1:u8, b0:u8
     b7::b6::b5::b4::b3::b2::b1::b0 = val
