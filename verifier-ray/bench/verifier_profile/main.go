@@ -159,7 +159,6 @@ func readMetadata(path string) ([]caseMetadata, error) {
 func runCase(caseIndex int) (traceStats, error) {
 	cmd := exec.Command(
 		"make",
-		"--no-print-directory",
 		"profile-zkc-case",
 		fmt.Sprintf("EMBEDDED_SPEC=%d", caseIndex),
 	)

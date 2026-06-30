@@ -46,7 +46,7 @@ help:
 		'  zkc-verify-failing    Run zkc with serialized invalid input (exits non-zero)' \
 		'  zkc-verify-failing-expected  Require zkc invalid input to fail' \
 		'  profile-zkc           Profile every generated verifier case and write a compact CSV report' \
-		'  clean                 Remove Zig build artifacts' \
+		'  clean                 Remove Zig build artifacts and serialized input files' \
 		'' \
 		'input variables:' \
 		'  EMBEDDED_SPEC         Embedded fixture index, default 0' \
@@ -146,7 +146,7 @@ zkc-verify-failing-expected:
 		echo "zkc-verify-failing failed as expected"; \
 	fi
 
-profile-zkc-case: generate-testdata
+profile-zkc-case:
 	@$(MAKE) --no-print-directory prepare-zkc-input INPUT_FILE=$(INPUT_FILE) IN_BYTES_FILE=$(IN_BYTES_FILE)
 	@zig build --release=small -Dstrip=true -Dr5=true -Dembedded-spec=$(EMBEDDED_SPEC) -Dverifier-profiling=true -Dr5-marks=true
 	@go run $(ELF_TO_JSON) $(R5_BIN) "@$(IN_BYTES_FILE)" $(IN_ORIGIN) > $(R5_JSON)
@@ -158,3 +158,4 @@ profile-zkc: generate-testdata
 
 clean:
 	rm -rf .zig-cache zig-out
+	rm -f testdata/inputs/verify_case_*.bin
