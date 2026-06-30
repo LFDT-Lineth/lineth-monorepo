@@ -152,7 +152,7 @@ func compileModule(
 		shares := make([]*wiop.Column, ratio)
 		for k := range ratio {
 			shareCtx := ctx.Childf("q-r%d-s%d", ratio, k)
-			shares[k] = m.NewExtensionColumn(shareCtx, wiop.VisibilityOracle, quotientRound)
+			shares[k] = m.NewExtensionColumn(shareCtx, quotientRound)
 		}
 		rawBuckets = append(rawBuckets, rawBucket{ratio: ratio, vanishings: vs, shares: shares})
 	}

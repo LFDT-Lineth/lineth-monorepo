@@ -133,9 +133,9 @@ func TestCompile_Balanced(t *testing.T) {
 		t.Helper()
 		modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 		modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-		colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-		colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
-		mulB := modB.NewColumn(sys.Context.Childf("mB"), wiop.VisibilityOracle, r0)
+		colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+		colB := modB.NewColumn(sys.Context.Childf("B"), r0)
+		mulB := modB.NewColumn(sys.Context.Childf("mB"), r0)
 
 		sys.NewMessageBusSend(
 			sys.Context.Childf("send-A"),
@@ -170,9 +170,9 @@ func TestCompile_TamperedMultiplicity(t *testing.T) {
 		t.Helper()
 		modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 		modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-		colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-		colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
-		mulB := modB.NewColumn(sys.Context.Childf("mB"), wiop.VisibilityOracle, r0)
+		colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+		colB := modB.NewColumn(sys.Context.Childf("B"), r0)
+		mulB := modB.NewColumn(sys.Context.Childf("mB"), r0)
 
 		sys.NewMessageBusSend(
 			sys.Context.Childf("send-A"),
@@ -211,9 +211,9 @@ func TestCompile_TamperedValueFailsInShardCheck(t *testing.T) {
 		t.Helper()
 		modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 		modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-		colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-		colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
-		mulB := modB.NewColumn(sys.Context.Childf("mB"), wiop.VisibilityOracle, r0)
+		colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+		colB := modB.NewColumn(sys.Context.Childf("B"), r0)
+		mulB := modB.NewColumn(sys.Context.Childf("mB"), r0)
 
 		sys.NewMessageBusSend(
 			sys.Context.Childf("send-A"),
@@ -250,10 +250,10 @@ func TestCompile_TamperedFilterFailsInShardCheck(t *testing.T) {
 		t.Helper()
 		modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 		modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-		colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-		selA := modA.NewColumn(sys.Context.Childf("selA"), wiop.VisibilityOracle, r0)
-		colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
-		mulB := modB.NewColumn(sys.Context.Childf("mB"), wiop.VisibilityOracle, r0)
+		colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+		selA := modA.NewColumn(sys.Context.Childf("selA"), r0)
+		colB := modB.NewColumn(sys.Context.Childf("B"), r0)
+		mulB := modB.NewColumn(sys.Context.Childf("mB"), r0)
 
 		sys.NewMessageBusSend(
 			sys.Context.Childf("send-A"),
@@ -293,10 +293,10 @@ func TestCompile_MultipleSendersOneReceiver(t *testing.T) {
 		modS1 := sys.NewSizedModule(sys.Context.Childf("modS1"), 2, wiop.PaddingDirectionNone)
 		modS2 := sys.NewSizedModule(sys.Context.Childf("modS2"), 2, wiop.PaddingDirectionNone)
 		modR := sys.NewSizedModule(sys.Context.Childf("modR"), 2, wiop.PaddingDirectionNone)
-		colS1 := modS1.NewColumn(sys.Context.Childf("S1"), wiop.VisibilityOracle, r0)
-		colS2 := modS2.NewColumn(sys.Context.Childf("S2"), wiop.VisibilityOracle, r0)
-		colR := modR.NewColumn(sys.Context.Childf("R"), wiop.VisibilityOracle, r0)
-		mulR := modR.NewColumn(sys.Context.Childf("mR"), wiop.VisibilityOracle, r0)
+		colS1 := modS1.NewColumn(sys.Context.Childf("S1"), r0)
+		colS2 := modS2.NewColumn(sys.Context.Childf("S2"), r0)
+		colR := modR.NewColumn(sys.Context.Childf("R"), r0)
+		mulR := modR.NewColumn(sys.Context.Childf("mR"), r0)
 
 		sys.NewMessageBusSend(
 			sys.Context.Childf("send-S1"),
@@ -338,11 +338,11 @@ func TestCompile_MultiColumnTuples(t *testing.T) {
 		t.Helper()
 		modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 		modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-		keyA := modA.NewColumn(sys.Context.Childf("kA"), wiop.VisibilityOracle, r0)
-		valA := modA.NewColumn(sys.Context.Childf("vA"), wiop.VisibilityOracle, r0)
-		keyB := modB.NewColumn(sys.Context.Childf("kB"), wiop.VisibilityOracle, r0)
-		valB := modB.NewColumn(sys.Context.Childf("vB"), wiop.VisibilityOracle, r0)
-		mulB := modB.NewColumn(sys.Context.Childf("mB"), wiop.VisibilityOracle, r0)
+		keyA := modA.NewColumn(sys.Context.Childf("kA"), r0)
+		valA := modA.NewColumn(sys.Context.Childf("vA"), r0)
+		keyB := modB.NewColumn(sys.Context.Childf("kB"), r0)
+		valB := modB.NewColumn(sys.Context.Childf("vB"), r0)
+		mulB := modB.NewColumn(sys.Context.Childf("mB"), r0)
 
 		sys.NewMessageBusSend(
 			sys.Context.Childf("send-A"),
@@ -379,11 +379,11 @@ func TestCompile_FilteredSelectors(t *testing.T) {
 		t.Helper()
 		modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 		modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-		colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-		selA := modA.NewColumn(sys.Context.Childf("selA"), wiop.VisibilityOracle, r0)
-		colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
-		selB := modB.NewColumn(sys.Context.Childf("selB"), wiop.VisibilityOracle, r0)
-		mulB := modB.NewColumn(sys.Context.Childf("mB"), wiop.VisibilityOracle, r0)
+		colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+		selA := modA.NewColumn(sys.Context.Childf("selA"), r0)
+		colB := modB.NewColumn(sys.Context.Childf("B"), r0)
+		selB := modB.NewColumn(sys.Context.Childf("selB"), r0)
+		mulB := modB.NewColumn(sys.Context.Childf("mB"), r0)
 
 		sys.NewMessageBusSend(
 			sys.Context.Childf("send-A"),
@@ -426,12 +426,12 @@ func TestCompile_TwoHandlesIndependent(t *testing.T) {
 		modB := sys.NewSizedModule(sys.Context.Childf("modB"), 2, wiop.PaddingDirectionNone)
 		modC := sys.NewSizedModule(sys.Context.Childf("modC"), 2, wiop.PaddingDirectionNone)
 		modD := sys.NewSizedModule(sys.Context.Childf("modD"), 2, wiop.PaddingDirectionNone)
-		colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-		colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
-		mulB := modB.NewColumn(sys.Context.Childf("mB"), wiop.VisibilityOracle, r0)
-		colC := modC.NewColumn(sys.Context.Childf("C"), wiop.VisibilityOracle, r0)
-		colD := modD.NewColumn(sys.Context.Childf("D"), wiop.VisibilityOracle, r0)
-		mulD := modD.NewColumn(sys.Context.Childf("mD"), wiop.VisibilityOracle, r0)
+		colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+		colB := modB.NewColumn(sys.Context.Childf("B"), r0)
+		mulB := modB.NewColumn(sys.Context.Childf("mB"), r0)
+		colC := modC.NewColumn(sys.Context.Childf("C"), r0)
+		colD := modD.NewColumn(sys.Context.Childf("D"), r0)
+		mulD := modD.NewColumn(sys.Context.Childf("mD"), r0)
 
 		sys.NewMessageBusSend(
 			sys.Context.Childf("send-A"), "shard", "alpha",
@@ -474,8 +474,8 @@ func TestCompile_ReceiveWithoutMultiplicity(t *testing.T) {
 		t.Helper()
 		modA := sys.NewSizedModule(sys.Context.Childf("modA"), 2, wiop.PaddingDirectionNone)
 		modB := sys.NewSizedModule(sys.Context.Childf("modB"), 2, wiop.PaddingDirectionNone)
-		colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-		colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+		colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+		colB := modB.NewColumn(sys.Context.Childf("B"), r0)
 
 		sys.NewMessageBusSend(
 			sys.Context.Childf("send-A"), "shard", "impl-one",
@@ -525,9 +525,9 @@ func TestCompile_DynamicModule_Balanced(t *testing.T) {
 
 	modA := sys.NewDynamicModule(sys.Context.Childf("modA"), wiop.PaddingDirectionRight)
 	modB := sys.NewDynamicModule(sys.Context.Childf("modB"), wiop.PaddingDirectionRight)
-	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
-	mulB := modB.NewColumn(sys.Context.Childf("mB"), wiop.VisibilityOracle, r0)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
+	mulB := modB.NewColumn(sys.Context.Childf("mB"), r0)
 
 	sys.NewMessageBusSend(
 		sys.Context.Childf("send-A"),
@@ -579,9 +579,9 @@ func TestCompile_DynamicModule_TamperedFails(t *testing.T) {
 
 	modA := sys.NewDynamicModule(sys.Context.Childf("modA"), wiop.PaddingDirectionRight)
 	modB := sys.NewDynamicModule(sys.Context.Childf("modB"), wiop.PaddingDirectionRight)
-	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
-	mulB := modB.NewColumn(sys.Context.Childf("mB"), wiop.VisibilityOracle, r0)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
+	mulB := modB.NewColumn(sys.Context.Childf("mB"), r0)
 
 	sys.NewMessageBusSend(
 		sys.Context.Childf("send-A"),
@@ -621,9 +621,9 @@ func TestCompile_DynamicModule_TamperedValueFailsInShardCheck(t *testing.T) {
 
 	modA := sys.NewDynamicModule(sys.Context.Childf("modA"), wiop.PaddingDirectionRight)
 	modB := sys.NewDynamicModule(sys.Context.Childf("modB"), wiop.PaddingDirectionRight)
-	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
-	mulB := modB.NewColumn(sys.Context.Childf("mB"), wiop.VisibilityOracle, r0)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
+	mulB := modB.NewColumn(sys.Context.Childf("mB"), r0)
 
 	sys.NewMessageBusSend(
 		sys.Context.Childf("send-A"),
@@ -662,10 +662,10 @@ func TestCompile_DynamicModule_TamperedFilterFailsInShardCheck(t *testing.T) {
 
 	modA := sys.NewDynamicModule(sys.Context.Childf("modA"), wiop.PaddingDirectionRight)
 	modB := sys.NewDynamicModule(sys.Context.Childf("modB"), wiop.PaddingDirectionRight)
-	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	selA := modA.NewColumn(sys.Context.Childf("selA"), wiop.VisibilityOracle, r0)
-	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
-	mulB := modB.NewColumn(sys.Context.Childf("mB"), wiop.VisibilityOracle, r0)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	selA := modA.NewColumn(sys.Context.Childf("selA"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
+	mulB := modB.NewColumn(sys.Context.Childf("mB"), r0)
 
 	sys.NewMessageBusSend(
 		sys.Context.Childf("send-A"),
@@ -705,11 +705,11 @@ func TestCompile_DynamicModule_MultiColumnTuples(t *testing.T) {
 
 	modA := sys.NewDynamicModule(sys.Context.Childf("modA"), wiop.PaddingDirectionRight)
 	modB := sys.NewDynamicModule(sys.Context.Childf("modB"), wiop.PaddingDirectionRight)
-	keyA := modA.NewColumn(sys.Context.Childf("kA"), wiop.VisibilityOracle, r0)
-	valA := modA.NewColumn(sys.Context.Childf("vA"), wiop.VisibilityOracle, r0)
-	keyB := modB.NewColumn(sys.Context.Childf("kB"), wiop.VisibilityOracle, r0)
-	valB := modB.NewColumn(sys.Context.Childf("vB"), wiop.VisibilityOracle, r0)
-	mulB := modB.NewColumn(sys.Context.Childf("mB"), wiop.VisibilityOracle, r0)
+	keyA := modA.NewColumn(sys.Context.Childf("kA"), r0)
+	valA := modA.NewColumn(sys.Context.Childf("vA"), r0)
+	keyB := modB.NewColumn(sys.Context.Childf("kB"), r0)
+	valB := modB.NewColumn(sys.Context.Childf("vB"), r0)
+	mulB := modB.NewColumn(sys.Context.Childf("mB"), r0)
 
 	sys.NewMessageBusSend(
 		sys.Context.Childf("send-A"),
@@ -745,9 +745,9 @@ func TestCompile_WidthMismatchPanics(t *testing.T) {
 	r0 := sys.NewRound()
 
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 2, wiop.PaddingDirectionNone)
-	colA := mod.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	colA2 := mod.NewColumn(sys.Context.Childf("A2"), wiop.VisibilityOracle, r0)
-	colB := mod.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+	colA := mod.NewColumn(sys.Context.Childf("A"), r0)
+	colA2 := mod.NewColumn(sys.Context.Childf("A2"), r0)
+	colB := mod.NewColumn(sys.Context.Childf("B"), r0)
 
 	sys.NewMessageBusSend(
 		sys.Context.Childf("send-1col"), "shard", "h",
@@ -772,8 +772,8 @@ func TestCompile_MixedOriginShardPanics(t *testing.T) {
 	r0 := sys.NewRound()
 
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 2, wiop.PaddingDirectionNone)
-	colA := mod.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	colB := mod.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+	colA := mod.NewColumn(sys.Context.Childf("A"), r0)
+	colB := mod.NewColumn(sys.Context.Childf("B"), r0)
 
 	sys.NewMessageBusSend(
 		sys.Context.Childf("send-shardA"), "shardA", "h",
@@ -815,9 +815,9 @@ func TestCheckHandleSumInShard_ExpectedNonZero(t *testing.T) {
 
 		modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 		modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-		colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-		colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
-		mulB := modB.NewColumn(sys.Context.Childf("mB"), wiop.VisibilityOracle, r0)
+		colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+		colB := modB.NewColumn(sys.Context.Childf("B"), r0)
+		mulB := modB.NewColumn(sys.Context.Childf("mB"), r0)
 
 		sys.NewMessageBusSend(
 			sys.Context.Childf("send-A"), "shard", "ping",
@@ -878,7 +878,7 @@ func TestNewMessageBusReceive_WrongMultiplicityModulePanics(t *testing.T) {
 	_ = r0
 	mod := sys.NewSizedModule(sys.Context.Childf("m"), 2, wiop.PaddingDirectionNone)
 	foreign := sys.NewSizedModule(sys.Context.Childf("foreign"), 2, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("c"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("c"), r0)
 
 	assert.Panics(t, func() {
 		sys.NewMessageBusReceive(

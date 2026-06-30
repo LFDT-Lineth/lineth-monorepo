@@ -10,9 +10,7 @@ import (
 // Proof is the transcript produced by [System.Prove] and consumed by
 // [System.Verify]. It carries:
 //
-//   - every committed column (Visibility >= VisibilityOracle, i.e. oracle and
-//     public); internal columns are prover-only and omitted;
-//   - cells (always public — see [Cell.Visibility]);
+//   - cells;
 //   - the per-Runtime size of each dynamic module, so the verifier can
 //     reconstruct module domains.
 //
@@ -20,14 +18,13 @@ import (
 // every Fiat-Shamir challenge itself by replaying the transcript, so a prover
 // cannot influence the challenges by supplying forged coin values.
 //
-// Including the oracle columns is a testing convenience: it lets the verifier
-// reconstruct the exact Fiat-Shamir state without a commitment scheme (the raw
-// oracle values stand in for their commitments). In a production proof an oracle
-// column is sent only as its commitment, never in full; the pipeline should
-// ultimately guarantee that no VisibilityOracle column survives compilation.
+// Columns are not carried in the proof and are not absorbed into the
+// Fiat-Shamir transcript. Binding the columns into the transcript is the job of
+// the commitment scheme (the verifier will absorb each column's commitment, not
+// its raw values); until that lands, the verifier has no column data and cannot
+// detect a tampered witness.
 type Proof struct {
-	Columns map[ObjectID]*ConcreteVector
-	Cells   map[ObjectID]field.Gen
+	Cells map[ObjectID]field.Gen
 	// DynamicSizes maps module ID to their runtime size. The module ID
 	// corresponds to the module's position in [System.Modules].
 	DynamicSizes map[int]int
@@ -37,15 +34,15 @@ type Proof struct {
 // resulting [Proof].
 //
 // assign is the witness hook: it is called once on a fresh [Runtime] before any
-// round is processed and is responsible for assigning the first round's oracle
+// round is processed and is responsible for assigning the first round's
 // columns (and any other prover inputs). This is the seam used by the zkcdriver
 // (driver.AssignWithPreRead) and by the test scenarios (AssignHonest /
 // AssignWitness).
 //
 // Prove drives the same prover loop as [wioptest.RunAndVerify]: it runs each
 // round's [ProverAction]s, advancing the Fiat-Shamir transcript between rounds,
-// then captures the committed columns and cells into the returned Proof. The
-// verifier coins are not captured; [System.Verify] re-derives them.
+// then captures the cells into the returned Proof. The verifier coins are not
+// captured; [System.Verify] re-derives them.
 //
 // The caller is responsible for running the compiler passes (and, optionally,
 // [Materialize]) on sys before calling Prove.
@@ -67,28 +64,11 @@ func (sys *System) Prove(assign func(rt *Runtime)) Proof {
 	}
 
 	proof := Proof{
-		Columns:      make(map[ObjectID]*ConcreteVector),
 		Cells:        make(map[ObjectID]field.Gen),
 		DynamicSizes: make(map[int]int),
 	}
 
 	for _, r := range sys.Rounds {
-		for _, col := range r.Columns {
-			// Capture every committed column (oracle + public). These are
-			// exactly the columns AdvanceRound feeds into Fiat-Shamir, so the
-			// verifier needs them to re-derive the coins.
-			if !rt.HasColumnAssignment(col) {
-				utils.Panic("wiop: missing column in runtime: %v", col.Context.Path())
-			}
-
-			// Skip the internal columns.
-			if col.Visibility < VisibilityOracle {
-				continue
-			}
-
-			proof.Columns[col.Context.ID] = rt.GetColumnAssignment(col)
-		}
-
 		for _, cell := range r.Cells {
 			// GetCellValue resolves lazily-assigned openings (e.g. endpoint and
 			// quotient/evaluation claims) so their values are captured.
@@ -109,35 +89,19 @@ func (sys *System) Prove(assign func(rt *Runtime)) Proof {
 //
 // Crucially, Verify does not trust the coins: it replays the transcript round by
 // round, re-deriving every Fiat-Shamir challenge with [Runtime.AdvanceRound]
-// from the committed columns and cells. The prover therefore cannot forge a
-// challenge. Verifier actions read the re-derived coins, the cells, and the
-// public columns.
+// from the cells. The prover therefore cannot forge a challenge. Verifier
+// actions read the re-derived coins and the cells.
 //
-// Verify also checks that the provided sizes are non-zero powers of two. It
-// also checks that the sizes are compatible with the oracle-visible columns.
+// Verify also checks that the provided sizes are non-zero powers of two.
 //
-// The function also panics if the proof contains any unexpected columns or
-// cells. For the column it will check that their visibility is correct.
+// The function also panics if the proof contains any unexpected cells.
 func (sys *System) Verify(proof Proof) error {
 	rt := NewRuntime(sys) // currentRound = r0, preloads precomputed columns
 
-	// assignRound loads the proof's committed columns and cells for r into the
-	// runtime. AssignColumn / AssignCell require r to be the current round, so
-	// this is always called on rt.CurrentRound().
+	// assignRound loads the proof's cells for r into the runtime. AssignCell
+	// requires r to be the current round, so this is always called on
+	// rt.CurrentRound().
 	assignRound := func(r *Round) error {
-
-		for _, col := range r.Columns {
-			if col.Visibility < VisibilityOracle {
-				continue
-			}
-
-			v, found := proof.Columns[col.Context.ID]
-			if !found {
-				return fmt.Errorf("column %q not found in proof", col.Context.Path())
-			}
-
-			rt.AssignColumn(col, v)
-		}
 
 		for _, cell := range r.Cells {
 			v, ok := proof.Cells[cell.Context.ID]
@@ -171,19 +135,8 @@ func (sys *System) Verify(proof Proof) error {
 		return fmt.Errorf("wiop: proof contains too many rounds: %v", rt.currentRound.ID)
 	}
 
-	// This checks that all the items of the proof have been used. Meaning all
-	// cells and all columns of the proof are read.
-	for id := range proof.Columns {
-		col := sys.LookupColumn(id)
-		if col == nil {
-			return fmt.Errorf("column %q not found in system", id)
-		}
-
-		if !rt.HasColumnAssignment(col) {
-			return fmt.Errorf("column %q not used in proof, its visibility is %s", col.Context.Path(), col.Visibility)
-		}
-	}
-
+	// This checks that all the [Cell]s of the proof have been used. Meaning all
+	// cells of the proof are read.
 	for id := range proof.Cells {
 		cell := sys.LookupCell(id)
 		if cell == nil {

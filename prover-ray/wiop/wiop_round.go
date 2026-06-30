@@ -47,7 +47,7 @@ type Round struct {
 	// round's coins are derived. Hooks run in declaration order.
 	//
 	// The canonical use is shared-randomness seeding in sharded protocols:
-	// a hook reads a precomputed seed from public columns and calls
+	// a hook reads a precomputed seed and calls
 	// [Runtime.SetFSState] so this round's coins derive deterministically
 	// from that seed instead of from this shard's local transcript. For any
 	// non-seeding use case, prefer [ProverActions] — running before coin

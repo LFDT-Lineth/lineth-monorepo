@@ -84,7 +84,3 @@ func (c *Cell) EvaluateVector(_ Runtime) ConcreteVector {
 func (c *Cell) EvaluateSingle(rt Runtime) ConcreteField {
 	return ConcreteField{Value: rt.GetCellValue(c), promise: c}
 }
-
-// Visibility implements [Expression]. Always returns [VisibilityPublic]: cells
-// are prover-supplied scalar openings that the verifier can observe directly.
-func (c *Cell) Visibility() Visibility { return VisibilityPublic }

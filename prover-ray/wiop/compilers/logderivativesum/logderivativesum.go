@@ -158,9 +158,8 @@ func buildZ(
 
 	zCol := m.NewExtensionColumn(
 		ctx.Childf("z-b%d-k%d", bIdx, kIdx),
-		wiop.VisibilityOracle,
-		round,
-	)
+
+		round)
 
 	// The recurrence zNum − (Z − Z<<−1)·zDen carries a −1 shift on Z, so
 	// NewVanishing automatically cancels row 0; the row-0 boundary is pinned

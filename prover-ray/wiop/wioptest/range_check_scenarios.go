@@ -8,7 +8,7 @@ func NewRangeCheckBasicScenario() *RangeCheckCompilerScenario {
 	sys := wiop.NewSystemf("rc-basic")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	mod.NewRangeCheck(sys.Context.Childf("rc"), col, 8)
 
 	return &RangeCheckCompilerScenario{
@@ -26,8 +26,8 @@ func NewRangeCheckSharedBoundScenario() *RangeCheckCompilerScenario {
 	sys := wiop.NewSystemf("rc-shared")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	colA := mod.NewColumn(sys.Context.Childf("colA"), wiop.VisibilityOracle, r0)
-	colB := mod.NewColumn(sys.Context.Childf("colB"), wiop.VisibilityOracle, r0)
+	colA := mod.NewColumn(sys.Context.Childf("colA"), r0)
+	colB := mod.NewColumn(sys.Context.Childf("colB"), r0)
 	mod.NewRangeCheck(sys.Context.Childf("rcA"), colA, 4)
 	mod.NewRangeCheck(sys.Context.Childf("rcB"), colB, 4)
 
@@ -47,8 +47,8 @@ func NewRangeCheckDistinctBoundsScenario() *RangeCheckCompilerScenario {
 	sys := wiop.NewSystemf("rc-distinct")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	colA := mod.NewColumn(sys.Context.Childf("colA"), wiop.VisibilityOracle, r0)
-	colB := mod.NewColumn(sys.Context.Childf("colB"), wiop.VisibilityOracle, r0)
+	colA := mod.NewColumn(sys.Context.Childf("colA"), r0)
+	colB := mod.NewColumn(sys.Context.Childf("colB"), r0)
 	mod.NewRangeCheck(sys.Context.Childf("rcA"), colA, 4)
 	mod.NewRangeCheck(sys.Context.Childf("rcB"), colB, 8)
 
@@ -69,7 +69,7 @@ func NewRangeCheckBoundIsPowerOfTwoScenario() *RangeCheckCompilerScenario {
 	sys := wiop.NewSystemf("rc-pow2")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	mod.NewRangeCheck(sys.Context.Childf("rc"), col, 16)
 
 	return &RangeCheckCompilerScenario{
@@ -87,7 +87,7 @@ func NewRangeCheckBoundIsOneScenario() *RangeCheckCompilerScenario {
 	sys := wiop.NewSystemf("rc-bound1")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	mod.NewRangeCheck(sys.Context.Childf("rc"), col, 1)
 
 	return &RangeCheckCompilerScenario{
@@ -108,8 +108,8 @@ func NewRangeCheckMultiModuleScenario() *RangeCheckCompilerScenario {
 	r0 := sys.NewRound()
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-	colA := modA.NewColumn(sys.Context.Childf("colA"), wiop.VisibilityOracle, r0)
-	colB := modB.NewColumn(sys.Context.Childf("colB"), wiop.VisibilityOracle, r0)
+	colA := modA.NewColumn(sys.Context.Childf("colA"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("colB"), r0)
 	modA.NewRangeCheck(sys.Context.Childf("rcA"), colA, 4)
 	modB.NewRangeCheck(sys.Context.Childf("rcB"), colB, 4)
 
@@ -130,7 +130,7 @@ func NewRangeCheckLargeBoundScenario() *RangeCheckCompilerScenario {
 	sys := wiop.NewSystemf("rc-large")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	mod.NewRangeCheck(sys.Context.Childf("rc"), col, 128)
 
 	return &RangeCheckCompilerScenario{
@@ -151,7 +151,7 @@ func NewRangeCheckNonPowerOfTwoBoundScenario() *RangeCheckCompilerScenario {
 	sys := wiop.NewSystemf("rc-np2")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	mod.NewRangeCheck(sys.Context.Childf("rc"), col, 5)
 
 	return &RangeCheckCompilerScenario{
@@ -170,7 +170,7 @@ func NewRangeCheckAllZerosScenario() *RangeCheckCompilerScenario {
 	sys := wiop.NewSystemf("rc-zeros")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	mod.NewRangeCheck(sys.Context.Childf("rc"), col, 8)
 
 	return &RangeCheckCompilerScenario{
@@ -190,7 +190,7 @@ func NewRangeCheckValueAtBoundScenario() *RangeCheckSoundnessScenario {
 	sys := wiop.NewSystemf("rc-at-bound")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	mod.NewRangeCheck(sys.Context.Childf("rc"), col, 4)
 
 	return &RangeCheckSoundnessScenario{
@@ -209,7 +209,7 @@ func NewRangeCheckValueAboveBoundScenario() *RangeCheckSoundnessScenario {
 	sys := wiop.NewSystemf("rc-above")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 8, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	mod.NewRangeCheck(sys.Context.Childf("rc"), col, 4)
 
 	return &RangeCheckSoundnessScenario{

@@ -69,7 +69,7 @@ func createRangeColumn(sys *wiop.System, ctx *wiop.ContextFrame, b int) *wiop.Co
 	}
 	return mod.NewPrecomputedColumn(
 		ctx.Childf("range-col-b%d", b),
-		wiop.VisibilityOracle,
-		cv,
-	)
+
+		cv)
+
 }

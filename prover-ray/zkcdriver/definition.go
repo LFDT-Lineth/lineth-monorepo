@@ -91,9 +91,8 @@ func (s *schemaScanner) scanColumns() {
 					colQualifiedName = qualifiedCorsetName(moduleName, colName)
 					col              = moduleWIOP.NewPrecomputedColumn(
 						moduleWIOP.Context.Childf("column-%v", colName),
-						wiop.VisibilityOracle,
-						&wiop.ConcreteVector{Plain: field.VecFromBase(vec)},
-					)
+
+						&wiop.ConcreteVector{Plain: field.VecFromBase(vec)})
 				)
 
 				s.ColumnIDs[colQualifiedName] = col.Context.ID
@@ -138,9 +137,8 @@ func (s *schemaScanner) scanColumns() {
 				colQualifiedName = qualifiedCorsetName(moduleName, colName)
 				col              = moduleWIOP.NewColumn(
 					moduleWIOP.Context.Childf("column-%v", colName),
-					wiop.VisibilityOracle,
-					s.Sys.Rounds[0],
-				)
+
+					s.Sys.Rounds[0])
 			)
 
 			s.ColumnIDs[colQualifiedName] = col.Context.ID

@@ -14,7 +14,7 @@ import (
 // cell living in the column's round.
 func TestColumnPosition_Open_RegistersScalarVanishing(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("loCol"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("loCol"), r0)
 
 	vansBefore := len(mod.Vanishings)
 	result := col.At(2).Open(sys.Context.Childf("lo"))
@@ -32,7 +32,7 @@ func TestColumnPosition_Open_RegistersScalarVanishing(t *testing.T) {
 // cell is lazy: it is unassigned until read, then resolves to Column[Position].
 func TestColumnPosition_Open_LazyCellResolvesToColumnValue(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("loCol"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("loCol"), r0)
 	result := col.At(2).Open(sys.Context.Childf("lo"))
 
 	rt := wiop.NewRuntime(sys)
@@ -57,7 +57,7 @@ func TestColumnPosition_Open_LazyCellResolvesToColumnValue(t *testing.T) {
 // prover / mutator scenarios that inject a wrong opening value).
 func TestColumnPosition_Open_ExplicitAssignmentWins(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("loCol"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("loCol"), r0)
 	result := col.At(2).Open(sys.Context.Childf("lo"))
 
 	rt := wiop.NewRuntime(sys)
@@ -80,6 +80,6 @@ func TestColumnPosition_Open_NilReceiverPanic(t *testing.T) {
 
 func TestColumnPosition_Open_NilCtxPanic(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("openNilCtx"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("openNilCtx"), r0)
 	assert.Panics(t, func() { col.At(0).Open(nil) })
 }

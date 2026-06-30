@@ -23,7 +23,7 @@ func indexedBaseVec(n int, f func(i int) uint64) *wiop.ConcreteVector {
 
 func TestLocalConstraint_Position0_PicksFirstRow(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("p0Col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("p0Col"), r0)
 
 	rt := wiop.NewRuntime(sys)
 	// col = [0, 9, 9, 9]; position 0 reads col[0] = 0.
@@ -40,7 +40,7 @@ func TestLocalConstraint_Position0_PicksFirstRow(t *testing.T) {
 
 func TestLocalConstraint_Position1_PicksSecondRow(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("p1Col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("p1Col"), r0)
 
 	rt := wiop.NewRuntime(sys)
 	// col = [9, 0, 9, 9]; position 1 reads col[1] = 0.
@@ -57,7 +57,7 @@ func TestLocalConstraint_Position1_PicksSecondRow(t *testing.T) {
 
 func TestLocalConstraint_PositionMinus1_PicksLastRow(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("pNeg1Col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("pNeg1Col"), r0)
 
 	rt := wiop.NewRuntime(sys)
 	// col = [9, 9, 9, 0] on a size-4 module; position -1 reads col[3] = 0.
@@ -74,7 +74,7 @@ func TestLocalConstraint_PositionMinus1_PicksLastRow(t *testing.T) {
 
 func TestLocalConstraint_Position0_FailsWhenFirstRowNonZero(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("p0FailCol"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("p0FailCol"), r0)
 
 	rt := wiop.NewRuntime(sys)
 	// col[0] = 7 (non-zero) ⇒ Check at position 0 must fail.
@@ -86,7 +86,7 @@ func TestLocalConstraint_Position0_FailsWhenFirstRowNonZero(t *testing.T) {
 
 func TestLocalConstraint_Position1_FailsWhenSecondRowNonZero(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("p1FailCol"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("p1FailCol"), r0)
 
 	rt := wiop.NewRuntime(sys)
 	// col = [0, 7, 0, 0]; position 1 reads col[1] = 7 ⇒ fails.
@@ -103,7 +103,7 @@ func TestLocalConstraint_Position1_FailsWhenSecondRowNonZero(t *testing.T) {
 
 func TestLocalConstraint_PositionMinus1_FailsWhenLastRowNonZero(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("pNeg1FailCol"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("pNeg1FailCol"), r0)
 
 	rt := wiop.NewRuntime(sys)
 	// col = [0, 0, 0, 7]; position -1 reads col[3] = 7 ⇒ fails.
@@ -122,7 +122,7 @@ func TestLocalConstraint_PositionMinus1_FailsWhenLastRowNonZero(t *testing.T) {
 
 func TestLocalConstraint_PositionComposesWithShift(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("shiftComp"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("shiftComp"), r0)
 
 	rt := wiop.NewRuntime(sys)
 	// col = [9, 9, 0, 9]; col.View().Shift(1) at position 1 reads col[2] = 0.
@@ -141,8 +141,8 @@ func TestLocalConstraint_PositionComposesWithShift(t *testing.T) {
 
 func TestLocalConstraint_ArithmeticOverTwoColumns(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	a := mod.NewColumn(sys.Context.Childf("lcA"), wiop.VisibilityOracle, r0)
-	b := mod.NewColumn(sys.Context.Childf("lcB"), wiop.VisibilityOracle, r0)
+	a := mod.NewColumn(sys.Context.Childf("lcA"), r0)
+	b := mod.NewColumn(sys.Context.Childf("lcB"), r0)
 
 	rt := wiop.NewRuntime(sys)
 	// a[0] = b[0] = 5 ⇒ a - b vanishes at row 0.
@@ -179,7 +179,7 @@ func TestLocalConstraint_VectorConstantCollapsedToScalar(t *testing.T) {
 
 func TestLocalConstraint_RegistersOnModuleVanishings(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("lcRegCol"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("lcRegCol"), r0)
 
 	before := len(mod.Vanishings)
 	v := mod.NewLocalConstraint(sys.Context.Childf("lcReg"), col.View(), 0)
@@ -191,7 +191,7 @@ func TestLocalConstraint_RegistersOnModuleVanishings(t *testing.T) {
 
 func TestLocalConstraint_RoundFollowsColumn(t *testing.T) {
 	sys, _, r1, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("lcRoundCol"), wiop.VisibilityOracle, r1)
+	col := mod.NewColumn(sys.Context.Childf("lcRoundCol"), r1)
 	v := mod.NewLocalConstraint(sys.Context.Childf("lcRound"), col.View(), 0)
 	assert.Equal(t, r1, v.Round())
 }
@@ -211,7 +211,7 @@ func TestLocalConstraint_NilExpr_Panics(t *testing.T) {
 
 func TestLocalConstraint_InvalidPosition_Panics(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("badPosCol"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("badPosCol"), r0)
 	for _, bad := range []int{-2, 2, 3, -3, 100} {
 		bad := bad
 		t.Run("", func(t *testing.T) {
@@ -227,7 +227,7 @@ func TestLocalConstraint_PositionMinus1_UnsizedModule_Panics(t *testing.T) {
 	r0 := sys.NewRound()
 	// Unsized static module: SetSize has not been called.
 	mod := sys.NewModule(sys.Context.Childf("unsizedMod"), wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("unsizedCol"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("unsizedCol"), r0)
 	assert.Panics(t, func() {
 		mod.NewLocalConstraint(sys.Context.Childf("lcNegUnsized"), col.View(), -1)
 	})

@@ -294,9 +294,8 @@ func compileGroup(
 	// break log-derivative soundness.
 	mCol := g.including.module.NewColumn(
 		gCtx.Childf("M"),
-		wiop.VisibilityOracle,
-		g.witnessRound,
-	)
+
+		g.witnessRound)
 
 	// The T-side fraction:  −M / (γ + bRLC).
 	negM := wiop.Negate(mCol.View())
