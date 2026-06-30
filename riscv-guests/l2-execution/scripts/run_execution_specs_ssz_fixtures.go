@@ -18,6 +18,13 @@ import (
 	"time"
 )
 
+type fixtureSet struct {
+	rootFolder   string
+	targetFolder string
+	outDir       string
+	files        []string
+}
+
 func main() {
 	rootsFlag := flag.String("root-folders", "for_amsterdam", "comma-separated ZKEVM_FIXTURES_ROOT_FOLDER values, or '*' for all")
 	targetsFlag := flag.String("target-folders", "amsterdam", "comma-separated ZKEVM_FIXTURES_TARGET_FOLDER values, or '*' for all")
@@ -45,10 +52,7 @@ func main() {
 
 	must(run(os.Stderr, "make", "-C", guestDir, "compile"))
 
-	printTableHeader()
-
-	total := 0
-	passed := 0
+	var fixtureSets []fixtureSet
 	for _, rootFolder := range roots {
 		targetsForRoot := targets
 		if isWildcard(targets) {
@@ -88,16 +92,29 @@ func main() {
 				continue
 			}
 
-			for _, file := range files {
-				total++
-				ok, elapsed := runGuest(guestDir, file, *zkcFlags)
-				if ok {
-					passed++
-				}
-				size := fileSize(file)
-				testName, _ := filepath.Rel(outDir, file)
-				printTableRow(rootFolder, targetFolder, testName, size, elapsed, ok)
+			fixtureSets = append(fixtureSets, fixtureSet{
+				rootFolder:   rootFolder,
+				targetFolder: targetFolder,
+				outDir:       outDir,
+				files:        files,
+			})
+		}
+	}
+
+	printTableHeader()
+
+	total := 0
+	passed := 0
+	for _, set := range fixtureSets {
+		for _, file := range set.files {
+			total++
+			ok, elapsed := runGuest(guestDir, file, *zkcFlags)
+			if ok {
+				passed++
 			}
+			size := fileSize(file)
+			testName, _ := filepath.Rel(set.outDir, file)
+			printTableRow(set.rootFolder, set.targetFolder, testName, size, elapsed, ok)
 		}
 	}
 
