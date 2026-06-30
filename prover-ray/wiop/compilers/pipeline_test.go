@@ -154,6 +154,40 @@ func TestFullPipeline_PermutationScenarios(t *testing.T) {
 	}
 }
 
+// TestFullPipeline_LogDerivativeSumTamperedZ is the running-sum analogue of
+// TestFullPipeline_PermutationTamperedZ: a Z column corrupted at an interior
+// row — endpoint left intact — is rejected only because the full pipeline
+// discharges the running-sum recurrence.
+//
+// The logderivativesum pass's own final-sum verifier action reads the
+// endpoint-opening cells and the Result cell, all untouched by an interior
+// corruption, so it still accepts. It is the recurrence Vanishing — lifted by
+// local-vanishing and discharged by the global quotient — that pins every
+// interior row of Z, so only the assembled pipeline catches it.
+func TestFullPipeline_LogDerivativeSumTamperedZ(t *testing.T) {
+	sc := wioptest.NewLDSSingleFractionAllOnesScenario()
+
+	before := snapshotModuleColumns(sc.Sys)
+	compileFullPipeline(sc.Sys)
+	zCols := newExtensionColumns(sc.Sys, before)
+	require.NotEmpty(t, zCols, "logderivativesum must add Z columns")
+
+	proof := sc.Sys.Prove(sc.AssignWitness)
+	require.NoError(t, sc.Sys.Verify(proof),
+		"honest log-derivative witness must verify through the full pipeline")
+
+	z := zCols[0]
+	cv := proof.Columns[z.Context.ID]
+	require.NotNil(t, cv, "the Z column must be captured in the proof")
+	ext := cv.Plain.AsExt()
+	require.GreaterOrEqual(t, len(ext), 3, "need at least one interior row to tamper")
+	one := field.OneExt()
+	ext[1].Add(&ext[1], &one) // interior row 1; endpoint (last row) left intact
+
+	assert.Error(t, sc.Sys.Verify(proof),
+		"the full pipeline must reject a Z column whose interior recurrence is violated")
+}
+
 // TestFullPipeline_PermutationTamperedZ shows that a Z column corrupted at an
 // interior row — but with its endpoint left intact — is rejected only because
 // the full pipeline discharges the running-product recurrence.
@@ -167,30 +201,9 @@ func TestFullPipeline_PermutationScenarios(t *testing.T) {
 func TestFullPipeline_PermutationTamperedZ(t *testing.T) {
 	sc := wioptest.NewPermutationSingleColumnScenario()
 
-	// Snapshot per-module column sets so the Z columns the grandproduct pass
-	// adds can be identified by diffing after compilation.
-	before := make(map[*wiop.Module]map[*wiop.Column]struct{})
-	for _, m := range sc.Sys.Modules {
-		seen := make(map[*wiop.Column]struct{}, len(m.Columns))
-		for _, c := range m.Columns {
-			seen[c] = struct{}{}
-		}
-		before[m] = seen
-	}
-
+	before := snapshotModuleColumns(sc.Sys)
 	compileFullPipeline(sc.Sys)
-
-	var zCols []*wiop.Column
-	for _, m := range sc.Sys.Modules {
-		for _, c := range m.Columns {
-			if _, existed := before[m][c]; existed {
-				continue
-			}
-			if c.IsExtension {
-				zCols = append(zCols, c)
-			}
-		}
-	}
+	zCols := newExtensionColumns(sc.Sys, before)
 	require.NotEmpty(t, zCols, "grandproduct must add Z columns")
 
 	// Sanity: the honest proof verifies.
@@ -227,4 +240,37 @@ func TestFullPipeline_RangeCheckScenarios(t *testing.T) {
 				"full pipeline must accept an honest witness")
 		})
 	}
+}
+
+// snapshotModuleColumns records, per module, the set of columns present before
+// a compiler pass runs. Pair with [newExtensionColumns] to identify the
+// extension (Z) columns a pass adds.
+func snapshotModuleColumns(sys *wiop.System) map[*wiop.Module]map[*wiop.Column]struct{} {
+	before := make(map[*wiop.Module]map[*wiop.Column]struct{}, len(sys.Modules))
+	for _, m := range sys.Modules {
+		seen := make(map[*wiop.Column]struct{}, len(m.Columns))
+		for _, c := range m.Columns {
+			seen[c] = struct{}{}
+		}
+		before[m] = seen
+	}
+	return before
+}
+
+// newExtensionColumns returns the extension columns added to any module since
+// the snapshot. These are the running-sum / running-product Z columns emitted
+// by the logderivativesum and grandproduct passes.
+func newExtensionColumns(sys *wiop.System, before map[*wiop.Module]map[*wiop.Column]struct{}) []*wiop.Column {
+	var zCols []*wiop.Column
+	for _, m := range sys.Modules {
+		for _, c := range m.Columns {
+			if _, existed := before[m][c]; existed {
+				continue
+			}
+			if c.IsExtension {
+				zCols = append(zCols, c)
+			}
+		}
+	}
+	return zCols
 }
