@@ -128,13 +128,13 @@ func main() {
 }
 
 func printTableHeader() {
-	fmt.Printf("| %-32s | %-16s | %-96s | %10s | %10s | %-6s |\n",
+	fmt.Printf("| %-32s | %-17s | %-96s | %10s | %10s | %-6s |\n",
 		"root folder", "target folder", "test", "size bytes", "exec time", "result")
-	fmt.Println("| -------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------ | ---------- | ---------- | ------ |")
+	fmt.Println("| -------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------ | ---------- | ---------- | ------ |")
 }
 
 func printTableRow(rootFolder, targetFolder, testName string, size int64, elapsed time.Duration, ok bool) {
-	fmt.Printf("| %-32s | %-19s | %-96s | %10d | %10s | %-6s |\n",
+	fmt.Printf("| %-32s | %-17s | %-96s | %10d | %10s | %-6s |\n",
 		rootFolder,
 		targetFolder,
 		escapeCell(testName),
