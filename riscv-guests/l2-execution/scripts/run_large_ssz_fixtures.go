@@ -84,7 +84,7 @@ func main() {
 
 func printTableHeader() {
 	fmt.Printf("| %-32s | %-16s | %-96s | %10s | %10s | %-6s |\n",
-		"root folder", "target folder", "test", "size bytes", "time", "result")
+		"root folder", "target folder", "test", "size bytes", "exec time", "result")
 	fmt.Println("| -------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------ | ---------- | ---------- | ------ |")
 }
 
@@ -149,7 +149,7 @@ func sszFiles(dir string, limit int) ([]string, error) {
 func runGuest(guestDir, input, zkcFlags string) (bool, time.Duration) {
 	start := time.Now()
 	err := run(io.Discard,
-		"make", "-C", guestDir, "exec",
+		"make", "--no-print-directory", "-C", guestDir, "exec-only",
 		"INPUT="+input,
 		"ZKC_EXEC_FLAGS="+zkcFlags,
 	)
