@@ -11,14 +11,14 @@ The profiler runs every generated verifier case. For each case it builds the R5
 binary with:
 
 ```bash
--Dembedded-spec=<N> -Dembedded-input=valid
+-Dembedded-spec=<N>
 ```
 
 The selected spec and systems remain comptime inputs to `verifier.verify`, while
-the selected proof is embedded as static read-only data and passed as a runtime
-`Proof` value. This keeps profiling close to the verifier path used by the
-R5 smoke target while avoiding proof serialization/parsing cost, which does not
-exist yet in verifier-ray.
+the selected valid proof is loaded from `testdata/inputs/verify_case_<N>.bin`
+and decoded into a runtime `Proof` value. This keeps profiling close to the
+verifier path used by the R5 smoke target while avoiding embedding large proof
+values into `verify.zig`.
 
 ## What Is Measured
 

@@ -73,16 +73,18 @@ Build the Linea R5 zkVM executable:
 make build-r5
 ```
 
-The native and R5 executable targets currently run the smoke-test entry point in `src/main.zig`. Binary smoke-test inputs live in:
+The native and R5 executable targets currently run the smoke-test entry point in `src/main.zig`. Proofs are loaded from generated proof-wire input files:
 
 ```text
-testdata/inputs/passing.bin
-testdata/inputs/failing.bin
+testdata/inputs/verify_case_<N>.bin
+testdata/inputs/verify_case_<N>_invalid.bin
 ```
+
+Invalid input files are generated only for cases that define a failing proof.
 
 ## Running Example Programs
 
-Run the native executable with `INPUT_FILE`, defaulting to the passing fixture:
+Run the native executable with `INPUT_FILE`, defaulting to the serialized valid fixture for `EMBEDDED_SPEC`:
 
 ```bash
 make run
@@ -98,7 +100,7 @@ make run-failing-expected
 
 `run-failing` is expected to exit non-zero. `run-failing-expected` wraps it and succeeds only when the failure happens.
 
-Run through `zkc` with `INPUT_FILE`, defaulting to the passing fixture:
+Run through `zkc` with `INPUT_FILE`, defaulting to the serialized valid fixture for `EMBEDDED_SPEC`:
 
 ```bash
 make zkc-verify
