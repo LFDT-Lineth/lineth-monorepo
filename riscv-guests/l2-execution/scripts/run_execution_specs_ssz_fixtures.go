@@ -19,8 +19,8 @@ import (
 )
 
 const (
-	fixturePathColumnWidth = 38
-	testColumnWidth        = 106
+	fixturePathColumnWidth = 40
+	testColumnWidth        = 108
 )
 
 type fixtureSet struct {
@@ -169,11 +169,11 @@ func main() {
 
 // Prints the table header.
 func printTableHeader() {
-	fmt.Printf("| %-*s | %-*s | %10s | %10s | %-6s |\n",
+	fmt.Printf("| %-*s | %-*s | %8s | %8s | %-6s |\n",
 		fixturePathColumnWidth, "fixture path",
 		testColumnWidth, "test",
-		"size bytes", "exec time", "result")
-	fmt.Printf("| %s | %s | ---------- | ---------- | ------ |\n",
+		"size (B)", "time (s)", "result")
+	fmt.Printf("| %s | %s | -------- | -------- | ------ |\n",
 		strings.Repeat("-", fixturePathColumnWidth),
 		strings.Repeat("-", testColumnWidth))
 }
@@ -184,13 +184,13 @@ func printTableRow(fixturePath, testName string, size int64, elapsed time.Durati
 	if ok {
 		result = "pass"
 	}
-	fmt.Printf("| %-*s | %-*s | %10d | %10s | %-6s |\n",
+	fmt.Printf("| %-*s | %-*s | %8d | %8.3f | %-6s |\n",
 		fixturePathColumnWidth,
 		escapeCell(fixturePath),
 		testColumnWidth,
 		truncateMiddle(escapeCell(testName), testColumnWidth),
 		size,
-		elapsed.Round(time.Millisecond),
+		elapsed.Seconds(),
 		result,
 	)
 }
