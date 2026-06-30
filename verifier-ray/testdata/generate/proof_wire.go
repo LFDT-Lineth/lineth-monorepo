@@ -109,8 +109,8 @@ type proofWireLayout struct {
 	witnessClaimCount    int
 	quotientClaimCount   int
 	moduleSizeCount      int
-	// encodedSize is the total number of bytes that serializeProof will emit for
-	encodedSize          int
+	// encodedSize is the total number of bytes that serializeProof will emit for one proof.
+	encodedSize int
 }
 
 // proofLayout computes the Zig decoder layout for proof. It must stay in lock
