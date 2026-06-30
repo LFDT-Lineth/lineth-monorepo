@@ -130,38 +130,20 @@ func (s *schemaScanner) scanColumns() {
 		// This works assuming the [System] appends-only to the list of modules.
 		s.ModulesIDsWiop[moduleName] = len(s.Sys.Modules) - 1
 
-		// A column is a public input of the guest program when it lives in an
-		// externally-visible ("pub") module AND its register is an input or
-		// output register. The IsPublic() flag alone is too coarse — it is also
-		// set on the execution-trace module ("main"), whose registers are
-		// computed witness values that must stay oracle/committed, not public.
-		modIsPublic := modDecl.IsPublic()
-
 		// Iterate each register (i.e. column) in that module
 		for _, colDecl := range modDecl.Registers() {
-
-			isPublicInput := modIsPublic && colDecl.IsInputOutput()
-
-			vis := wiop.VisibilityOracle
-			if isPublicInput {
-				vis = wiop.VisibilityPublic
-			}
 
 			var (
 				colName          = colDecl.Name()
 				colQualifiedName = qualifiedCorsetName(moduleName, colName)
 				col              = moduleWIOP.NewColumn(
 					moduleWIOP.Context.Childf("column-%v", colName),
-					vis,
+					wiop.VisibilityOracle,
 					s.Sys.Rounds[0],
 				)
 			)
 
 			s.ColumnIDs[colQualifiedName] = col.Context.ID
-
-			if isPublicInput {
-				s.Sys.RegisterPublicInput(colQualifiedName, col.Context.ID)
-			}
 		}
 	}
 }
