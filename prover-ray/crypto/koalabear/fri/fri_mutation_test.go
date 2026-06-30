@@ -8,6 +8,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
+	"github.com/stretchr/testify/require"
 )
 
 // The reflection-based mutation test below treats field.Octuplet and field.Ext
@@ -49,7 +50,7 @@ func collectMutations(v reflect.Value, path []int, name string, out *[]proofMuta
 
 	switch v.Kind() {
 	case reflect.Struct:
-		for i := 0; i < v.NumField(); i++ {
+		for i := range v.NumField() {
 			if !v.Type().Field(i).IsExported() {
 				continue
 			}
@@ -61,11 +62,11 @@ func collectMutations(v reflect.Value, path []int, name string, out *[]proofMuta
 			*out = append(*out, proofMutation{name + "[drop]", clonePath(path), mutateDrop})
 			*out = append(*out, proofMutation{name + "[dup]", clonePath(path), mutateDup})
 		}
-		for i := 0; i < v.Len(); i++ {
+		for i := range v.Len() {
 			collectMutations(v.Index(i), append(path, i), fmt.Sprintf("%s[%d]", name, i), out)
 		}
 	case reflect.Array:
-		for i := 0; i < v.Len(); i++ {
+		for i := range v.Len() {
 			collectMutations(v.Index(i), append(path, i), fmt.Sprintf("%s[%d]", name, i), out)
 		}
 	default:
@@ -120,7 +121,7 @@ func applyMutation(root reflect.Value, m proofMutation) {
 }
 
 // nolint -- ignores: error should be the last return parameters
-func safeVerify(p Params, levelRoots []field.Octuplet, levelDs []int,
+func safeVerify(p Params, levelRoots []QueryLayerRoots, levelDs []int,
 	prf Proof, alphas []field.Ext, positions []int) (err error, panicked bool) {
 
 	defer func() {
@@ -141,9 +142,7 @@ func TestVerifyRejectsProofMutations(t *testing.T) {
 
 	prng := rand.New(utils.NewRandSource(20240607))
 	p, err := NewParams(16, 8, 4)
-	if err != nil {
-		t.Fatalf("NewParams: %v", err)
-	}
+	require.NoError(t, err)
 
 	// One main level (D=8) plus one extra level (D=2) to also exercise the
 	// LevelQueries path.
@@ -158,21 +157,12 @@ func TestVerifyRejectsProofMutations(t *testing.T) {
 
 	// Canonical proof (Prove sorts levels in place, so derive verifier inputs after).
 	base := proverForTest(p, levels, alphas, positions)
-	levelRoots := make([]field.Octuplet, len(levels))
-	levelDs := make([]int, len(levels))
-	for i := range levels {
-		levelRoots[i] = levels[i].Tree.Root()
-		levelDs[i] = levels[i].D
-	}
-	if err := Verify(p, levelRoots, levelDs, base, alphas, positions); err != nil {
-		t.Fatalf("honest proof was rejected: %v", err)
-	}
+	levelRoots, levelDs := verifierInputsForLevels(levels)
+	require.NoError(t, Verify(p, levelRoots, levelDs, base, alphas, positions))
 
 	var muts []proofMutation
 	collectMutations(reflect.ValueOf(&base).Elem(), nil, "Proof", &muts)
-	if len(muts) == 0 {
-		t.Fatal("no mutations were collected")
-	}
+	require.NotEmpty(t, muts)
 
 	for _, m := range muts {
 		t.Run(m.name, func(t *testing.T) {
@@ -181,12 +171,59 @@ func TestVerifyRejectsProofMutations(t *testing.T) {
 			applyMutation(reflect.ValueOf(&prf).Elem(), m)
 
 			err, panicked := safeVerify(p, levelRoots, levelDs, prf, alphas, positions)
-			if panicked {
-				t.Fatalf("mutation made Verify panic (missing structural check): %v", err)
-			}
-			if err == nil {
-				t.Fatalf("mutation was accepted by Verify (soundness hole)")
-			}
+			require.False(t, panicked, "mutation made Verify panic: %v", err)
+			require.Error(t, err)
+		})
+	}
+}
+
+func TestPCSVerifyRejectsMutations(t *testing.T) {
+	one := field.One()
+	oneExt := field.Lift(one)
+
+	tests := []struct {
+		name    string
+		mutate  func(*pcsOpenVerifyFixture)
+		wantErr string
+	}{
+		{
+			name: "wrong claim",
+			mutate: func(fx *pcsOpenVerifyFixture) {
+				fx.proof.ClaimedValues[0][2].Ext[0][0].Add(&fx.proof.ClaimedValues[0][2].Ext[0][0], &oneExt)
+			},
+			wantErr: "folded value mismatch",
+		},
+		{
+			name: "tampered branch",
+			mutate: func(fx *pcsOpenVerifyFixture) {
+				leaf := fx.proof.FRIProof.FRIQueries[0][0][0].Leaf
+				leaf[0].Add(&leaf[0], &one)
+				fx.proof.FRIProof.FRIQueries[0][0][0].Leaf = leaf
+			},
+			wantErr: "Merkle proof invalid",
+		},
+		{
+			name: "domain point claim",
+			mutate: func(fx *pcsOpenVerifyFixture) {
+				fx.input.Zetas[0] = domainPointExt(fx.pcs.Params.domainsLight[0], 0)
+			},
+			wantErr: "claim point on domain",
+		},
+		{
+			name: "alpha mismatch",
+			mutate: func(fx *pcsOpenVerifyFixture) {
+				fx.input.Challenges.AlphaDeep = field.UintsToExt(41, 0, 0, 0, 0, 0)
+			},
+			wantErr: "folded value mismatch",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			fx := newPCSOpenVerifyFixture(t)
+			tc.mutate(&fx)
+			err := fx.pcs.Verify(fx.input, fx.proof)
+			require.ErrorContains(t, err, tc.wantErr)
 		})
 	}
 }

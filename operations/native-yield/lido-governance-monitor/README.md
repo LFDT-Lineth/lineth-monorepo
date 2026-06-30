@@ -62,7 +62,7 @@ The Discourse fetcher waits 250ms between proposal detail requests by default. O
 
 ### Prerequisites
 
-- Node.js >= 24.14.1 (see repo root `.nvmrc`)
+- Node.js >= 24.18.0 (see repo root `.nvmrc`)
 - PostgreSQL database
 - Anthropic API key
 - Slack incoming webhook

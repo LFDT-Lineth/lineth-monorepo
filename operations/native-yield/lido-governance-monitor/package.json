@@ -21,7 +21,7 @@
     "db:push": "prisma db push"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "0.104.1",
+    "@anthropic-ai/sdk": "0.105.0",
     "@lfdt-lineth/shared-utils": "workspace:*",
     "@prisma/adapter-pg": "7.8.0",
     "@prisma/client": "7.8.0",

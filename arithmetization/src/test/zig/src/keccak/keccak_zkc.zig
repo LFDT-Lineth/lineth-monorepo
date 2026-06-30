@@ -1,7 +1,4 @@
-const wrappers = @import("wrappers");
-
-const custom_std = wrappers.custom_std;
-const keccak = wrappers.keccak;
+const lineth_accel = @import("lineth_zkvm_accel");
 
 export fn main() noreturn {
     // buf_* variables represent all-zeros inputs
@@ -21,15 +18,15 @@ export fn main() noreturn {
     const data_137: [*c]const u8 = &buf_137;
 
     // pointer for writing output
-    var output_hash: keccak.zkvm_keccak256_hash = undefined;
-    const output: [*c]keccak.zkvm_keccak256_hash = &output_hash;
+    var output_hash: lineth_accel.zkvm_keccak256_hash = undefined;
+    const output: [*c]lineth_accel.zkvm_keccak256_hash = &output_hash;
 
-    _ = keccak.zkvm_keccak256(data_0, 0, output); // empty keccak
-    _ = keccak.zkvm_keccak256(data_32, 32, output); // keccak of "00".repeat(32)
-    _ = keccak.zkvm_keccak256(data_64, 64, output); // keccak of "00".repeat(64)
-    _ = keccak.zkvm_keccak256(data_135, 135, output); // keccak of "00".repeat(135)
-    _ = keccak.zkvm_keccak256(data_136, 136, output); // keccak of "00".repeat(136)
-    _ = keccak.zkvm_keccak256(data_137, 137, output); // keccak of "00".repeat(137)
+    _ = lineth_accel.zkvm_keccak256(data_0, 0, output); // empty keccak
+    _ = lineth_accel.zkvm_keccak256(data_32, 32, output); // keccak of "00".repeat(32)
+    _ = lineth_accel.zkvm_keccak256(data_64, 64, output); // keccak of "00".repeat(64)
+    _ = lineth_accel.zkvm_keccak256(data_135, 135, output); // keccak of "00".repeat(135)
+    _ = lineth_accel.zkvm_keccak256(data_136, 136, output); // keccak of "00".repeat(136)
+    _ = lineth_accel.zkvm_keccak256(data_137, 137, output); // keccak of "00".repeat(137)
 
     // inputs:
     // 32: 0000000000000000000000000000000000000000000000000000000000000000
@@ -46,5 +43,5 @@ export fn main() noreturn {
     // keccak( "00".repeat(136) ) = 3a5912a7c5faa06ee4fe906253e339467a9ce87d533c65be3c15cb231cdb25f9
     // keccak( "00".repeat(137) ) = bee7fbb405cb0d91a8775e338c4a5e4b5d6b2d051f687fa942043cffdc73bd28
 
-    custom_std.exit(0);
+    lineth_accel.zkvm_exit(0);
 }

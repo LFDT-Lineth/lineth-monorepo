@@ -8,7 +8,7 @@ import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import io.vertx.core.Vertx
 import linea.error.ErrorResponse
-import net.consensys.linea.async.toSafeFuture
+import net.consensys.linea.async.toSafeFutureNonNull
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.nio.file.Path
 import java.util.concurrent.Callable
@@ -27,7 +27,7 @@ class FileReader<T>(
       .executeBlocking(
         Callable {
           try {
-            val value = mapper.readValue(filePath.toFile(), classOfT)
+            val value = mapper.readValue(filePath.toFile(), classOfT) as T
             Ok(value)
           } catch (e: Exception) {
             when (e) {
@@ -40,6 +40,6 @@ class FileReader<T>(
         },
         false,
       )
-      .toSafeFuture()
+      .toSafeFutureNonNull()
   }
 }

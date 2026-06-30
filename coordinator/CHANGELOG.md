@@ -7,6 +7,7 @@
 - *(coordinator)* Export FTX number metrics (#3165)
 - *(coordinator)* Drop insecure FileWriter temp-file fallback (CodeQL 21207) (#3413)
 - *(coordinator)* Fixed a flacky test by closing the ftxInvalidityProofService in the ForcedTransactionsApp (#3438)
+- *(coordinator)* Forced transactions concurrency update (#3444)
 
 ### 🚜 Refactor
 
@@ -23,3 +24,4 @@
 - *(coordinator)* Rename packages net.consensys.zkevm.* -> linea.* (#3105)
 - *(coordinator)* Log and message error improvements (#3193)
 - *(coordinator)* Favour generic name ChainSecurityRuleViolation over specific implementation Phylax (#3330)
+- *(coordinator)* Update kotlin to v2.4 (#3454)

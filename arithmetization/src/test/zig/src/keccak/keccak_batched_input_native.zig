@@ -1,7 +1,15 @@
-const wrappers = @import("wrappers");
+//! Batched-input variant of NON-accelerated keccak.
+//! Importing `zkvm_provide` forces that export into this ELF; we call it by its C name.
+const lineth_accel = @import("lineth_zkvm_accel"); // hash type + zkvm_exit
+const provide = @import("zkvm_provide"); // defines (exports) the zkvm_* symbols
 
-const custom_std = wrappers.custom_std;
-const keccak = wrappers.keccak_provide;
+// Force zkvm_provide's comptime @export block to emit zkvm_keccak256 into this ELF.
+comptime {
+    _ = provide;
+}
+
+// The exported C-ABI keccak provider; resolved from zkvm_provide above.
+extern fn zkvm_keccak256(data: [*c]const u8, len: usize, output: [*c]lineth_accel.zkvm_keccak256_hash) lineth_accel.zkvm_status;
 
 extern var _in_start: u8;
 
@@ -19,7 +27,7 @@ export fn main() noreturn {
         const base = vector_index * VECTOR_BYTES;
         const vector = input[base .. base + VECTOR_BYTES];
         if (isZero(vector)) {
-            custom_std.exit(0);
+            lineth_accel.zkvm_exit(0);
         }
 
         const padded = input[base .. base + KECCAK256_PADDED_BYTES];
@@ -29,17 +37,17 @@ export fn main() noreturn {
         const expected = input[expected_start .. expected_start + OUTPUT_BYTES];
 
         var msg_buf: [KECCAK256_PADDED_BYTES]u8 = undefined;
-        const msg_len = extractLeftPaddedMessage(padded, msg_len_bits, &msg_buf) orelse custom_std.exit(2);
+        const msg_len = extractLeftPaddedMessage(padded, msg_len_bits, &msg_buf) orelse lineth_accel.zkvm_exit(2);
 
-        var output_hash: keccak.zkvm_keccak256_hash = undefined;
+        var output_hash: lineth_accel.zkvm_keccak256_hash = undefined;
         const data: [*c]const u8 = &msg_buf;
-        const output: [*c]keccak.zkvm_keccak256_hash = &output_hash;
-        if (keccak.zkvm_keccak256(data, msg_len, output) != .ZKVM_EOK) {
-            custom_std.exit(1);
+        const output: [*c]lineth_accel.zkvm_keccak256_hash = &output_hash;
+        if (zkvm_keccak256(data, msg_len, output) != .ZKVM_EOK) {
+            lineth_accel.zkvm_exit(1);
         }
 
         if (!digestEq(&output_hash.data, expected)) {
-            custom_std.exit(1);
+            lineth_accel.zkvm_exit(1);
         }
     }
 }
