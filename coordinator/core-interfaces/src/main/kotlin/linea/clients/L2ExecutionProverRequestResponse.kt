@@ -200,6 +200,7 @@ data class ExecutionPayload(
     other as ExecutionPayload
 
     if (!parentHash.contentEquals(other.parentHash)) return false
+    if (!feeRecipient.contentEquals(other.feeRecipient)) return false
     if (!stateRoot.contentEquals(other.stateRoot)) return false
     if (!receiptsRoot.contentEquals(other.receiptsRoot)) return false
     if (!logsBloom.contentEquals(other.logsBloom)) return false
@@ -215,13 +216,14 @@ data class ExecutionPayload(
     if (withdrawals != other.withdrawals) return false
     if (blobGasUsed != other.blobGasUsed) return false
     if (excessBlobGas != other.excessBlobGas) return false
-    if (!blockAccessList.contentEquals(other.extraData)) return false
+    if (!blockAccessList.contentEquals(other.blockAccessList)) return false
 
     return true
   }
 
   override fun hashCode(): Int {
     var result = parentHash.contentHashCode()
+    result = 31 * result + feeRecipient.contentHashCode()
     result = 31 * result + stateRoot.contentHashCode()
     result = 31 * result + receiptsRoot.contentHashCode()
     result = 31 * result + logsBloom.contentHashCode()
