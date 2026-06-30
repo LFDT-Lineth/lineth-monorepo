@@ -29,19 +29,20 @@ class RiscVProofRequestDtoMapperTest {
 
   private val guestProgramId = "0x31139b3eaece046f5675fe237c36246e7bb2a5acc4cf4b358aef65c6d3771f4d"
   private val chainId = 59144L
-  private val chainConfigDto = ChainConfigDto(
-    l2MessageServiceAddress = "0x508ca82df566dcd1b0019d2dedf7e3d6f7ad6dde",
-    coinbase = "0x0000000000000000000000000000000000000000",
-    chainId = chainId,
-    forkName = "Amsterdam",
-  )
+  private val forkName = "Amsterdam"
+  private val l2MessageServiceAddress = "0x508ca82df566dcd1b0019d2dedf7e3d6f7ad6dde"
+  private val coinbase = "0x0000000000000000000000000000000000000000"
 
   @Test
   fun `L2ExecutionProofRequestDtoMapper encodes every field`() {
     val request = l2Request()
     val execution = request.executions.first()
 
-    val dto = L2ExecutionProofRequestDtoMapper(guestProgramId, chainConfigDto).invoke(request).get()
+    val dto = L2ExecutionProofRequestDtoMapper(
+      guestProgramId,
+      l2MessageServiceAddress,
+      coinbase,
+    ).invoke(request).get()
 
     assertThat(dto).isEqualTo(
       L2ExecutionProofRequestDto(
@@ -76,7 +77,12 @@ class RiscVProofRequestDtoMapperTest {
               ),
             ),
           ),
-          chainConfig = chainConfigDto,
+          chainConfig = ChainConfigDto(
+            l2MessageServiceAddress = l2MessageServiceAddress,
+            coinbase = coinbase,
+            chainId = chainId,
+            forkName = forkName,
+          ),
         ),
         metadata = MetaDataDto(startBlockNumber = 1000501, endBlockNumber = 1000501),
       ),
@@ -88,7 +94,11 @@ class RiscVProofRequestDtoMapperTest {
     val badRequest = l2Request(acceptance = ForcedTransactionInclusionResult.BadPrecompile)
 
     assertThatThrownBy {
-      L2ExecutionProofRequestDtoMapper(guestProgramId, chainConfigDto).invoke(badRequest)
+      L2ExecutionProofRequestDtoMapper(
+        guestProgramId,
+        l2MessageServiceAddress,
+        coinbase,
+      ).invoke(badRequest)
     }
       .isInstanceOf(IllegalArgumentException::class.java)
       .hasMessageContaining("Unsupported FTX inclusion result")
@@ -263,9 +273,8 @@ class RiscVProofRequestDtoMapperTest {
       ),
     ),
     chainConfig = ChainConfig(
-      l2MessageServiceContract = ByteArray(20) { 0x1 },
-      coinbase = ByteArray(20) { 0x2 },
       chainId = chainId.toULong(),
+      forkName = forkName,
     ),
     parentFtxRollingHash = ByteArray(32) { 0x1a },
     parentFtxNumber = 8UL,

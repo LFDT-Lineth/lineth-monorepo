@@ -3,8 +3,9 @@ package linea.coordinator.clients.prover.riscv
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.coordinator.clients.prover.FileBasedProverConfig
+import linea.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.COINBASE
 import linea.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.L2_EXECUTION_GUEST_PROGRAM_ID
-import linea.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.chainConfigDto
+import linea.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.L2_MESSAGE_SERVICE_ADDRESS
 import linea.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.fileBasedProverConfig
 import linea.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.jsonMapper
 import linea.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.l2ExecutionProofRequestV1
@@ -49,7 +50,8 @@ class FileBasedL2ExecutionProverClientTest {
     client = L2ExecutionProverClient(
       transport = transport,
       guestProgramId = L2_EXECUTION_GUEST_PROGRAM_ID,
-      chainConfig = chainConfigDto,
+      l2MessageServiceAddress = L2_MESSAGE_SERVICE_ADDRESS,
+      coinbase = COINBASE,
     )
   }
 
@@ -65,7 +67,8 @@ class FileBasedL2ExecutionProverClientTest {
     val writtenDto = jsonMapper.readValue(requestFile.toFile(), L2ExecutionProofRequestDto::class.java)
     val expectedDto = L2ExecutionProofRequestDtoMapper(
       L2_EXECUTION_GUEST_PROGRAM_ID,
-      chainConfigDto,
+      L2_MESSAGE_SERVICE_ADDRESS,
+      COINBASE,
     ).invoke(request).get()
     assertThat(writtenDto).isEqualTo(expectedDto)
   }

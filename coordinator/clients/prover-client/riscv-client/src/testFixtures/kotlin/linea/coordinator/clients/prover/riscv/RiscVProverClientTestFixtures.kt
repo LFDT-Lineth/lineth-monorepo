@@ -33,18 +33,14 @@ import kotlin.time.Instant
 object RiscVProverClientTestFixtures {
   const val PROVER_VERSION = "4.0.0-riscv"
   const val CHAIN_ID = 59144L
+  const val FORK_NAME = "Amsterdam"
   const val L2_EXECUTION_GUEST_PROGRAM_ID = "0x17d2e0660946012c80c5fe6bbecc2076a6f6f5aa58606efe66a14426d2ffe46f"
   const val ROLLUP_GUEST_PROGRAM_ID = "0x31139b3eaece046f5675fe237c36246e7bb2a5acc4cf4b358aef65c6d3771f4d"
   const val ROLLUP_AGGREGATION_GUEST_PROGRAM_ID = "0x8a5fdb137ddae03b9bad034500c0fcee76e1c61d70faca5f32bb7418d73392e1"
+  const val L2_MESSAGE_SERVICE_ADDRESS = "0x508ca82df566dcd1b0019d2dedf7e3d6f7ad6dde"
+  const val COINBASE = "0x0000000000000000000000000000000000000000"
 
   val jsonMapper = JsonSerialization.proofResponseMapperV1
-
-  val chainConfigDto = ChainConfigDto(
-    l2MessageServiceAddress = "0x508ca82df566dcd1b0019d2dedf7e3d6f7ad6dde",
-    coinbase = "0x0000000000000000000000000000000000000000",
-    chainId = CHAIN_ID,
-    forkName = "Amsterdam",
-  )
 
   // --- file-based transport config ---
 
@@ -155,9 +151,9 @@ object RiscVProverClientTestFixtures {
   ): L2ExecutionProofRequestV1 = L2ExecutionProofRequestV1(
     executions = executions,
     chainConfig = ChainConfig(
-      l2MessageServiceContract = ByteArray(20) { 1 },
-      coinbase = ByteArray(20) { 2 },
-      chainId = 1000UL,
+      chainId = CHAIN_ID.toULong(),
+      forkName = FORK_NAME,
+
     ),
     parentFtxRollingHash = parentFtxRollingHash,
     parentFtxNumber = parentFtxNumber,

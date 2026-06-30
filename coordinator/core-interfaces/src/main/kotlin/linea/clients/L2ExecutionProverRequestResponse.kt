@@ -116,10 +116,10 @@ data class ForcedTransaction(
   }
 }
 
+// References StatelessChainConfig in rollup_spec/src/rollup_spec/block.py
 data class ChainConfig(
-  val l2MessageServiceContract: ByteArray,
-  val coinbase: ByteArray,
   val chainId: ULong,
+  val forkName: String,
 ) {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -127,17 +127,15 @@ data class ChainConfig(
 
     other as ChainConfig
 
-    if (!l2MessageServiceContract.contentEquals(other.l2MessageServiceContract)) return false
-    if (!coinbase.contentEquals(other.coinbase)) return false
     if (chainId != other.chainId) return false
+    if (forkName != other.forkName) return false
 
     return true
   }
 
   override fun hashCode(): Int {
-    var result = l2MessageServiceContract.contentHashCode()
-    result = 31 * result + coinbase.contentHashCode()
-    result = 31 * result + chainId.hashCode()
+    var result = chainId.hashCode()
+    result = 31 * result + forkName.hashCode()
     return result
   }
 }
