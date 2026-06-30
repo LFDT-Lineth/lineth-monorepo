@@ -31,6 +31,7 @@ import testutils.Checks.getBlockNumber
 import testutils.PeeringNodeNetworkStack
 import testutils.maru.MaruFactory
 import testutils.maru.awaitTillMaruHasPeers
+import java.net.ServerSocket
 import kotlin.collections.map
 import kotlin.time.Duration.Companion.seconds
 
@@ -49,10 +50,10 @@ class MaruFollowerTest {
 
   // Ports in this range are below the OS ephemeral range (32768+ on Linux, 49152+ on macOS),
   // so the kernel never assigns them for port-0 binds. Tests that need a stable port across
-  // a stop/restart can use this to eliminate the OS-assignment race.
+  // a stop/restart can use this to eliminate the OS-assignment race
   private fun findFreePortBelowEphemeralRange(): UInt {
     for (port in 25000..31999) {
-      runCatching { java.net.ServerSocket(port).also { it.close() } }.onSuccess { return port.toUInt() }
+      runCatching { ServerSocket(port).also { it.close() } }.onSuccess { return port.toUInt() }
     }
     error("No free port found in range 25000..31999")
   }
@@ -213,7 +214,7 @@ class MaruFollowerTest {
   fun `Maru follower is able to import blocks after Validator stack goes down`() {
     // Use a port below the OS ephemeral range (32768+ Linux, 49152+ macOS) so the kernel
     // never auto-assigns it to another fork's port-0 bind. This makes the stop→restart
-    // gap safe without any ServerSocket reservation dance.
+    // gap safe
     val validatorP2pPort = findFreePortBelowEphemeralRange()
     setupMaruHelper(validatorP2pPort = validatorP2pPort)
 

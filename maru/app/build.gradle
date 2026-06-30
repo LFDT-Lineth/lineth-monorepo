@@ -123,24 +123,15 @@ task integrationTest(type: Test) {
   classpath = sourceSets.integrationTest.runtimeClasspath
   testClassesDirs = sourceSets.integrationTest.output.classesDirs
 
-  // Each test class spins up real in-process Besu+Maru nodes. The knobs below are co-designed:
-  //
-  // GC: ZGC (concurrent collector, no stop-the-world pauses) is essential here. On a CPU-quota
-  //   container, a G1 STW pause gets CFS-throttled and its wall-clock can balloon to 1-4 s,
-  //   freezing Maru's 1 s slot timer → flaky 2 s block-time gaps. ZGC has no multi-ms STW pause
-  //   so the slot timer is safe regardless of heap size or concurrent test count.
-  //
-  // Heap: 2 GB per fork. A single cluster (2 Besu + 2 Maru) uses ~1 GB under load.
-  //   2 GB gives the remaining headroom for GC bookkeeping and short-lived allocation bursts.
-  //
-  // Parallelism: methods within each class fork run sequentially (same_thread). Within-fork
-  //   method parallelism would double the per-fork Besu+Maru instance count, creating unequal
-  //   thread-group load across forks (a 5-method class would use 2× threads vs a 1-method class),
-  //   which causes the OS scheduler to starve the lighter fork and hit timing-sensitive P2P awaits.
-  //   Class-level parallelism via nCpu/2 forks gives comparable throughput without that skew.
   jvmArgs '-XX:+UseZGC'
   maxHeapSize = "2048m"
-  maxParallelForks = Math.min(6, Math.max(2, Runtime.runtime.availableProcessors().intdiv(2)))
+  // Limit concurrency to max(2, nCpu/4) and run one test class per JVM (forkEvery = 1) so each class is
+  // fully isolated (own statics, singletons, ForkJoinPool, log4j2 context). This overrides the root
+  // build.gradle default. The concurrency cap lives at the process
+  // level, so methods within a fork run sequentially (same_thread), overriding the root's concurrent mode.
+  // nCpu/4 (rather than nCpu/2) leaves headroom: each class spins up several Besu+Maru nodes with real
+  // P2P, and over-subscribing the host makes timing-sensitive peer-discovery awaits flake.
+  maxParallelForks = Math.max(2, Runtime.runtime.availableProcessors().intdiv(2))
   forkEvery = 1
   systemProperties["junit.jupiter.execution.parallel.mode.default"] = "same_thread"
   systemProperties["junit.jupiter.execution.parallel.mode.classes.default"] = "same_thread"

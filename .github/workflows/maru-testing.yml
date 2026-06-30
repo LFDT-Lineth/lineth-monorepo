@@ -27,7 +27,7 @@ jobs:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     name: maru tests
     # useful for debugging flaky tests. Comment out Jacoco and Codecov steps because they override the test results.
     #    strategy:
@@ -40,35 +40,19 @@ jobs:
           submodules: false
       - name: Setup Java and Gradle
         uses: ./.github/actions/setup-java-and-gradle
-      - name: Build, unit and integration tests
+      - name: Build maru and Unit tests
         run: |
-          # TEMPORARY resource instrumentation (remove before merge) -----------------
-          bash .github/scripts/ci-cgroup-stats.sh limits
-          bash .github/scripts/ci-cgroup-stats.sh sample resource-samples.csv &
-          SAMPLER=$!
-          # -------------------------------------------------------------------------
-          ./gradlew -V maru:app:buildNeeded maru:app:integrationTest; STATUS=$?
-          # --- stop sampler + print summary ----------------------------------------
-          kill "$SAMPLER" 2>/dev/null || true
-          echo "::group::resource utilization summary"
-          bash .github/scripts/ci-cgroup-stats.sh summary resource-samples.csv || true
-          echo "::endgroup::"
-          exit $STATUS
-      - name: Upload resource samples (temporary)
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: maru-it-resource-samples
-          path: resource-samples.csv
-          if-no-files-found: ignore
+          ./gradlew -V maru:app:buildNeeded
+      - name: Run integration tests
+        run: |
+          ./gradlew maru:app:integrationTest
       - name: Store reports
-        if: always() # TEMPORARY: always (not just on failure) so we get per-class timing (test-results) every run
+        if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: test reports
           path: |
             maru/**/build/reports/tests/
-            maru/**/build/test-results/
             maru/**/build/integrationTest-logs/
           if-no-files-found: ignore
       - name: Upload Jacoco execution data
