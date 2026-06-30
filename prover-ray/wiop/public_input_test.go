@@ -7,7 +7,6 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/localvanishing"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -74,7 +73,7 @@ func TestPublicInput(t *testing.T) {
 
 	// A wrong public value breaks the cell == col[pos] binding and is rejected.
 	wrong := wiop.PublicInput{cell.Context.ID: piGen(99)}
-	assert.Error(t, sys.Verify(proof, wrong), "tampered public input must be rejected")
+	require.Error(t, sys.Verify(proof, wrong), "tampered public input must be rejected")
 
 	// A proof that smuggles the public-input cell back in is rejected.
 	sys2, col2, cell2 := build()
@@ -121,6 +120,6 @@ func TestPublicInputDynamicColumn(t *testing.T) {
 	// Honest statement verifies; a wrong public value breaks the cell == col[0]
 	// binding and is rejected.
 	require.NoError(t, sys.Verify(proof, pub))
-	assert.Error(t, sys.Verify(proof, wiop.PublicInput{cell.Context.ID: piGen(99)}),
+	require.Error(t, sys.Verify(proof, wiop.PublicInput{cell.Context.ID: piGen(99)}),
 		"tampered public input must be rejected")
 }
