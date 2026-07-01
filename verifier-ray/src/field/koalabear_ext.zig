@@ -63,14 +63,24 @@ pub const Ext = extern struct {
     }
 
     pub fn mul(self: Ext, rhs: Ext) Ext {
-        // F_{p^6} = F_{p^2}[v]/(v^3 - (u+1)), so v^3 = u+1
-        // D0 = A0*B0 + (A1*B2 + A2*B1)*(u+1)
-        // D1 = A0*B1 + A1*B0 + A2*B2*(u+1)
-        // D2 = A0*B2 + A2*B0 + A1*B1
-        const d0 = self.B0.mul(rhs.B0).add(self.B1.mul(rhs.B2).add(self.B2.mul(rhs.B1)).mulByNonResidue());
-        const d1 = self.B0.mul(rhs.B1).add(self.B1.mul(rhs.B0)).add(self.B2.mul(rhs.B2).mulByNonResidue());
-        const d2 = self.B0.mul(rhs.B2).add(self.B2.mul(rhs.B0)).add(self.B1.mul(rhs.B1));
-        return .{ .B0 = d0, .B1 = d1, .B2 = d2 };
+        // Karatsuba for cubic extension: 6 E2 muls instead of 9 (schoolbook).
+        // F_{p^6} = F_{p^2}[v]/(v^3 - nr), nr = u+1.
+        // t0 = A0*B0, t1 = A1*B1, t2 = A2*B2
+        // t01 = (A0+A1)*(B0+B1) - t0 - t1  =  A0*B1 + A1*B0
+        // t02 = (A0+A2)*(B0+B2) - t0 - t2  =  A0*B2 + A2*B0
+        // t12 = (A1+A2)*(B1+B2) - t1 - t2  =  A1*B2 + A2*B1
+        // D0 = t0 + t12*nr,  D1 = t01 + t2*nr,  D2 = t02 + t1
+        const t0 = self.B0.mul(rhs.B0);
+        const t1 = self.B1.mul(rhs.B1);
+        const t2 = self.B2.mul(rhs.B2);
+        const t01 = self.B0.add(self.B1).mul(rhs.B0.add(rhs.B1)).sub(t0).sub(t1);
+        const t02 = self.B0.add(self.B2).mul(rhs.B0.add(rhs.B2)).sub(t0).sub(t2);
+        const t12 = self.B1.add(self.B2).mul(rhs.B1.add(rhs.B2)).sub(t1).sub(t2);
+        return .{
+            .B0 = t0.add(t12.mulByNonResidue()),
+            .B1 = t01.add(t2.mulByNonResidue()),
+            .B2 = t02.add(t1),
+        };
     }
 
     pub fn square(self: Ext) Ext {

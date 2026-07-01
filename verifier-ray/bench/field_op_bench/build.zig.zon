@@ -6,6 +6,8 @@
     .dependencies = .{
         // shared build utilities for Zig build to R5 target
         .build_common = .{ .path = "../../../riscv-guests/build_common" },
+        // standard zkVM runtime helpers (zkvm_exit)
+        .lineth_accelerators = .{ .path = "../../../riscv-guests/lineth-accelerators" },
     },
     .paths = .{
         "build.zig",

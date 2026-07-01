@@ -45,10 +45,17 @@ var phases = []struct {
 	{"powComptime(2^20)", 72, 73},
 	{"inverse", 80, 81},
 	{"div", 90, 91},
+	{"ext/add", 100, 101},
+	{"ext/sub", 110, 111},
+	{"ext/mul", 120, 121},
+	{"ext/square", 130, 131},
+	{"ext/inverse", 140, 141},
+	{"ext/div", 150, 151},
+	{"ext/mulByBase", 160, 161},
 }
 
 var (
-	markRE  = regexp.MustCompile(`FIELD-MARK\s+([0-9]+)\s+([0-9]+)`)
+	markRE  = regexp.MustCompile(`VERIFIER-MARK\s+([0-9]+)\s+([0-9]+)`)
 	cycleRE = regexp.MustCompile(`clock cycle: ([0-9]+)`)
 )
 
@@ -149,13 +156,13 @@ func main() {
 	fmt.Printf("\nN = %d\n", n)
 	fmt.Printf("baseline (empty loop) = %d cycles (%.2f/iter), subtracted below\n\n",
 		baselineDelta, float64(baselineDelta)/n)
-	fmt.Printf("%-12s  %12s  %12s  %10s\n", "op", "raw_cycles", "net_cycles", "cycles/op")
-	fmt.Printf("%-12s  %12s  %12s  %10s\n", "---", "----------", "----------", "---------")
+	fmt.Printf("%-20s  %12s  %12s  %10s\n", "op", "raw_cycles", "net_cycles", "cycles/op")
+	fmt.Printf("%-20s  %12s  %12s  %10s\n", "---", "----------", "----------", "---------")
 	for _, p := range phases {
 		start, startOK := stats.markers[p.start]
 		end, endOK := stats.markers[p.end]
 		if !startOK || !endOK {
-			fmt.Printf("%-12s  %12s  %12s  %10s\n", p.name, "-", "-", "-")
+			fmt.Printf("%-20s  %12s  %12s  %10s\n", p.name, "-", "-", "-")
 			continue
 		}
 		raw := end.cycle - start.cycle
@@ -165,7 +172,7 @@ func main() {
 		if raw > baselineDelta {
 			net = raw - baselineDelta
 		}
-		fmt.Printf("%-12s  %12d  %12d  %10.2f\n", p.name, raw, net, float64(net)/n)
+		fmt.Printf("%-20s  %12d  %12d  %10.2f\n", p.name, raw, net, float64(net)/n)
 	}
 }
 

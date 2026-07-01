@@ -34,7 +34,7 @@ var compressPhase = struct {
 }{10, 11}
 
 var (
-	markRE  = regexp.MustCompile(`COMPRESS-MARK\s+([0-9]+)\s+([0-9]+)`)
+	markRE  = regexp.MustCompile(`VERIFIER-MARK\s+([0-9]+)\s+([0-9]+)`)
 	cycleRE = regexp.MustCompile(`clock cycle: ([0-9]+)`)
 )
 

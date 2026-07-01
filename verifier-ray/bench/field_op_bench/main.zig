@@ -2,13 +2,13 @@
 //
 // Each phase chains N operations with the output feeding back as input so the
 // compiler cannot constant-fold the loop. Start/end markers bracket only the
-// loop body; emitMark overhead is excluded via cycleDelta(start, end).
+// loop body; markR5Value overhead is excluded via cycleDelta(start, end).
 //
 // A baseline phase runs the same loop with an empty (but non-elided) body, so
 // the runner can subtract the loop-counter / branch overhead and report the
 // pure per-operation cost (delta_op - delta_baseline) / N.
 //
-// Marker IDs:
+// Marker IDs (base field):
 //    0 = start baseline,  1 = end baseline
 //   10 = start add,      11 = end add
 //   20 = start sub,      21 = end sub
@@ -20,58 +20,25 @@
 //   72 = start powComptime, 73 = end powComptime  (comptime-unrolled x^n, n = 2^20)
 //   80 = start inverse,  81 = end inverse
 //   90 = start div,      91 = end div
+//
+// Marker IDs (extension field Ext = F_{p^6}):
+//  100 = start ext/add,      101 = end ext/add
+//  110 = start ext/sub,      111 = end ext/sub
+//  120 = start ext/mul,      121 = end ext/mul
+//  130 = start ext/square,   131 = end ext/square
+//  140 = start ext/inverse,  141 = end ext/inverse
+//  150 = start ext/div,      151 = end ext/div
+//  160 = start ext/mulByBase,161 = end ext/mulByBase
 
-const kb = @import("koalabear");
+const vr = @import("verifier_ray");
+const accel = @import("lineth_accelerators");
+const kb = vr.field.koalabear;
+const kbext = vr.field.koalabear_ext;
 const Element = kb.Element;
+const Ext = kbext.Ext;
+const profiling = vr.profiling;
 
 const N: u64 = 1000;
-
-// ── write syscall ─────────────────────────────────────────────────────────────
-
-fn writeR5(bytes: []const u8) void {
-    asm volatile (
-        \\li a0, 1
-        \\mv a1, %[ptr]
-        \\mv a2, %[len]
-        \\li a7, 64
-        \\ecall
-        :
-        : [ptr] "r" (@intFromPtr(bytes.ptr)),
-          [len] "r" (bytes.len),
-        : .{ .a0 = true, .a1 = true, .a2 = true, .a7 = true, .memory = true });
-}
-
-fn decimalBuf(buf: []u8, value: u64) []u8 {
-    if (value == 0) {
-        buf[0] = '0';
-        return buf[0..1];
-    }
-    var tmp: [20]u8 = undefined;
-    var n = value;
-    var i: usize = tmp.len;
-    while (n != 0) {
-        i -= 1;
-        tmp[i] = '0' + @as(u8, @intCast(n % 10));
-        n /= 10;
-    }
-    const digits = tmp[i..];
-    @memcpy(buf[0..digits.len], digits);
-    return buf[0..digits.len];
-}
-
-fn emitMark(phase: u64, acc: u32) void {
-    const prefix = "FIELD-MARK\t";
-    var buf: [64]u8 = undefined;
-    @memcpy(buf[0..prefix.len], prefix);
-    var pos: usize = prefix.len;
-    pos += decimalBuf(buf[pos..], phase).len;
-    buf[pos] = '\t';
-    pos += 1;
-    pos += decimalBuf(buf[pos..], acc).len;
-    buf[pos] = '\n';
-    pos += 1;
-    writeR5(buf[0..pos]);
-}
 
 // ── benchmark loops ───────────────────────────────────────────────────────────
 
@@ -91,66 +58,66 @@ pub export fn main() noreturn {
     // loop from being elided while adding no arithmetic, so its delta captures
     // exactly the loop-counter / branch overhead common to every phase below.
     acc = a;
-    emitMark(0, 0);
+    profiling.markR5Value(0, 0);
     i = 0;
     while (i < N) : (i += 1) {
         asm volatile ("" ::: .{ .memory = true });
     }
-    emitMark(1, acc.value);
+    profiling.markR5Value(1, acc.value);
 
     // add
     acc = a;
-    emitMark(10, 0);
+    profiling.markR5Value(10, 0);
     i = 0;
     while (i < N) : (i += 1) {
         acc = acc.add(b);
     }
-    emitMark(11, acc.value);
+    profiling.markR5Value(11, acc.value);
 
     // sub
     acc = a;
-    emitMark(20, 0);
+    profiling.markR5Value(20, 0);
     i = 0;
     while (i < N) : (i += 1) {
         acc = acc.sub(b);
     }
-    emitMark(21, acc.value);
+    profiling.markR5Value(21, acc.value);
 
     // neg
     acc = a;
-    emitMark(30, 0);
+    profiling.markR5Value(30, 0);
     i = 0;
     while (i < N) : (i += 1) {
         acc = acc.neg();
     }
-    emitMark(31, acc.value);
+    profiling.markR5Value(31, acc.value);
 
     // double
     acc = a;
-    emitMark(40, 0);
+    profiling.markR5Value(40, 0);
     i = 0;
     while (i < N) : (i += 1) {
         acc = acc.double();
     }
-    emitMark(41, acc.value);
+    profiling.markR5Value(41, acc.value);
 
     // mul
     acc = a;
-    emitMark(50, 0);
+    profiling.markR5Value(50, 0);
     i = 0;
     while (i < N) : (i += 1) {
         acc = acc.mul(b);
     }
-    emitMark(51, acc.value);
+    profiling.markR5Value(51, acc.value);
 
     // square
     acc = a;
-    emitMark(60, 0);
+    profiling.markR5Value(60, 0);
     i = 0;
     while (i < N) : (i += 1) {
         acc = acc.square();
     }
-    emitMark(61, acc.value);
+    profiling.markR5Value(61, acc.value);
 
     // pow — exponent is the Lagrange vanishing-polynomial domain size x^n
     // (see polynomial/lagrange.zig). Domains are powers of two up to 2^24
@@ -160,49 +127,142 @@ pub export fn main() noreturn {
     var exp_v: u64 = 1 << 20;
     const exp_n: u64 = (@as(*volatile u64, &exp_v)).*;
     acc = a;
-    emitMark(70, 0);
+    profiling.markR5Value(70, 0);
     i = 0;
     while (i < N) : (i += 1) {
         acc = acc.pow(exp_n);
     }
-    emitMark(71, acc.value);
+    profiling.markR5Value(71, acc.value);
 
     // powComptime — same exponent n = 2^20, but comptime-unrolled (inline while).
     // This is the path static-domain call sites can use (cf. vanishing.zig
     // powModuleSize). For n = 2^k the unrolled chain is k squarings with no
     // runtime loop/branch/shift, so it should be markedly cheaper than pow above.
     acc = a;
-    emitMark(72, 0);
+    profiling.markR5Value(72, 0);
     i = 0;
     while (i < N) : (i += 1) {
         acc = acc.powComptime(1 << 20);
     }
-    emitMark(73, acc.value);
+    profiling.markR5Value(73, acc.value);
 
     // inverse — a is nonzero, and inv(inv(x)) == x, so acc alternates between
     // two nonzero values and never hits inverse's zero `unreachable`.
     acc = a;
-    emitMark(80, 0);
+    profiling.markR5Value(80, 0);
     i = 0;
     while (i < N) : (i += 1) {
         acc = acc.inverse();
     }
-    emitMark(81, acc.value);
+    profiling.markR5Value(81, acc.value);
 
     // div — b is nonzero (so div's internal inverse is well defined) and acc
     // stays nonzero, so repeated division never produces or divides by zero.
     acc = a;
-    emitMark(90, 0);
+    profiling.markR5Value(90, 0);
     i = 0;
     while (i < N) : (i += 1) {
         acc = acc.div(b);
     }
-    emitMark(91, acc.value);
+    profiling.markR5Value(91, acc.value);
 
-    asm volatile (
-        \\li a0, 0
-        \\li a7, 93
-        \\ecall
-    );
-    unreachable;
+    // ── Ext (F_{p^6}) benchmarks ─────────────────────────────────────────────
+
+    // Build two nonzero extension elements from volatile seeds so the optimizer
+    // cannot constant-fold any of the Ext operations below.
+    var ve0: u32 = 0x11111111;
+    var ve1: u32 = 0x22222222;
+    var ve2: u32 = 0x33333333;
+    var ve3: u32 = 0x44444444;
+    var ve4: u32 = 0x55555555;
+    var ve5: u32 = 0x66666666;
+    const ea = Ext.fromUints(.{
+        (@as(*volatile u32, &ve0)).* % kb.modulus,
+        (@as(*volatile u32, &ve1)).* % kb.modulus,
+        (@as(*volatile u32, &ve2)).* % kb.modulus,
+        (@as(*volatile u32, &ve3)).* % kb.modulus,
+        (@as(*volatile u32, &ve4)).* % kb.modulus,
+        (@as(*volatile u32, &ve5)).* % kb.modulus,
+    });
+    var ve6: u32 = 0x77777777;
+    var ve7: u32 = 0x88888888;
+    var ve8: u32 = 0x12121212;
+    var ve9: u32 = 0x23232323;
+    var veA: u32 = 0x34343434;
+    var veB: u32 = 0x45454545;
+    const eb = Ext.fromUints(.{
+        (@as(*volatile u32, &ve6)).* % kb.modulus,
+        (@as(*volatile u32, &ve7)).* % kb.modulus,
+        (@as(*volatile u32, &ve8)).* % kb.modulus,
+        (@as(*volatile u32, &ve9)).* % kb.modulus,
+        (@as(*volatile u32, &veA)).* % kb.modulus,
+        (@as(*volatile u32, &veB)).* % kb.modulus,
+    });
+
+    var eacc: Ext = undefined;
+
+    // ext/add
+    eacc = ea;
+    profiling.markR5Value(100, 0);
+    i = 0;
+    while (i < N) : (i += 1) {
+        eacc = eacc.add(eb);
+    }
+    profiling.markR5Value(101, eacc.B0.a0.value);
+
+    // ext/sub
+    eacc = ea;
+    profiling.markR5Value(110, 0);
+    i = 0;
+    while (i < N) : (i += 1) {
+        eacc = eacc.sub(eb);
+    }
+    profiling.markR5Value(111, eacc.B0.a0.value);
+
+    // ext/mul
+    eacc = ea;
+    profiling.markR5Value(120, 0);
+    i = 0;
+    while (i < N) : (i += 1) {
+        eacc = eacc.mul(eb);
+    }
+    profiling.markR5Value(121, eacc.B0.a0.value);
+
+    // ext/square
+    eacc = ea;
+    profiling.markR5Value(130, 0);
+    i = 0;
+    while (i < N) : (i += 1) {
+        eacc = eacc.square();
+    }
+    profiling.markR5Value(131, eacc.B0.a0.value);
+
+    // ext/inverse — ea is nonzero, inv(inv(x))==x, so eacc stays nonzero.
+    eacc = ea;
+    profiling.markR5Value(140, 0);
+    i = 0;
+    while (i < N) : (i += 1) {
+        eacc = eacc.inverse();
+    }
+    profiling.markR5Value(141, eacc.B0.a0.value);
+
+    // ext/div — eb is nonzero.
+    eacc = ea;
+    profiling.markR5Value(150, 0);
+    i = 0;
+    while (i < N) : (i += 1) {
+        eacc = eacc.div(eb);
+    }
+    profiling.markR5Value(151, eacc.B0.a0.value);
+
+    // ext/mulByBase — scale by base element b.
+    eacc = ea;
+    profiling.markR5Value(160, 0);
+    i = 0;
+    while (i < N) : (i += 1) {
+        eacc = eacc.mulByBase(b);
+    }
+    profiling.markR5Value(161, eacc.B0.a0.value);
+
+    accel.zkvm_exit(0);
 }

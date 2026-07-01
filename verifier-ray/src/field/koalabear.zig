@@ -71,8 +71,7 @@ pub const Element = extern struct {
     }
 
     pub fn neg(self: Element) Element {
-        if (self.isZero()) return self;
-        return .{ .value = modulus - self.value };
+        return .{ .value = (modulus - self.value) % modulus };
     }
 
     pub fn double(self: Element) Element {
