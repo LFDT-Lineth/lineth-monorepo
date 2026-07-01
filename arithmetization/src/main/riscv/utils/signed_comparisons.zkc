@@ -6,7 +6,6 @@ fn signed_LT(a:DoubleWord, b:DoubleWord) -> (comparison:Boolean) {
 
     var a_sign:SignBit
     var b_sign:SignBit
-    var raw_comparison:Boolean
 
     a_sign = sign_bit_of_double_word(a)
     b_sign = sign_bit_of_double_word(b)

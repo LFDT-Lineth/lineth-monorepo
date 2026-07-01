@@ -44,13 +44,7 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
     var rs2:Register
     var v1:DoubleWord
     var v2:DoubleWord
-    var funct7:Funct7
-    var rd:Register
     var imm:DoubleWord
-    var reg_val_1:DoubleWord
-    var reg_val_2:DoubleWord
-    var rem_1:u63
-    var rem_2:u63
 
     imm_sign::imm_10_5::rs2::rs1::funct3::imm_4_1::imm_11 = instruction_parameters
 
