@@ -1,8 +1,10 @@
 package main
 
 // Examples, from the repository root:
-// Run up to 5 SSZ files from each of 5 JSON fixtures in each selected fixture path
+// Run up to 5 SSZ files from each of 5 JSON fixtures in each selected fixture path (blockchain_tests/for_amsterdam/amsterdam and blockchain_tests/for_amsterdam/osaka):
 //   GOCACHE=/tmp/go-build go run ./riscv-guests/l2-execution/scripts/run_execution_specs_ssz_fixtures.go --fixture-paths blockchain_tests/for_amsterdam/amsterdam,blockchain_tests/for_amsterdam/osaka --json-limit 5 --ssz-limit 5
+// Run all fixtures in each selected fixture path (blockchain_tests/for_amsterdam/amsterdam and blockchain_tests/for_amsterdam/osaka):
+//   GOCACHE=/tmp/go-build go run ./riscv-guests/l2-execution/scripts/run_execution_specs_ssz_fixtures.go --fixture-paths blockchain_tests/for_amsterdam/amsterdam,blockchain_tests/for_amsterdam/osaka
 
 import (
 	"flag"
