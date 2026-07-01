@@ -42,6 +42,8 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
     var imm_4_1:u4
     var rs1:Register
     var rs2:Register
+    var v1:DoubleWord
+    var v2:DoubleWord
     var funct7:Funct7
     var rd:Register
     var imm:DoubleWord
@@ -58,6 +60,9 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
         imm = (imm_11::imm_10_5::imm_4_1::(0 as u1)) as DoubleWord
     }
 
+    v1 = registers[rs1]
+    v2 = registers[rs2]
+
     // "no branching" value of pc_new;
     // gets overwritten if branching occurs
     pc_new = pc + 4
@@ -66,7 +71,7 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
         case FUNCT3_BEQ: {
             printf "BEQ "
             print_b_operands(rs1, rs2, imm)
-            if registers[rs1] == registers[rs2] {
+            if v1 == v2 {
                 // the branch case
                 pc_new = signed_sum_of_double_word(pc, imm)
             }
@@ -74,7 +79,7 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
         case FUNCT3_BNE: {
             printf "BNE "
             print_b_operands(rs1, rs2, imm)
-            if registers[rs1] != registers[rs2] {
+            if v1 != v2 {
                 // the branch case
                 pc_new = signed_sum_of_double_word(pc, imm)
             }
@@ -82,7 +87,7 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
         case FUNCT3_BLT: {
             printf "BLT "
             print_b_operands(rs1, rs2, imm)
-            if signed_LT(registers[rs1], registers[rs2]) == 1 {
+            if signed_LT(v1, v2) == 1 {
                 // the branch case
                 pc_new = signed_sum_of_double_word(pc, imm)
             }
@@ -90,7 +95,7 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
         case FUNCT3_BGE: {
             printf "BGE "
             print_b_operands(rs1, rs2, imm)
-            if signed_LT(registers[rs1], registers[rs2]) == 0 {
+            if signed_LT(v1, v2) == 0 {
                 // the branch case
                 pc_new = signed_sum_of_double_word(pc, imm)
             }
@@ -98,7 +103,7 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
         case FUNCT3_BLTU: {
             printf "BLTU "
             print_b_operands(rs1, rs2, imm)
-            if registers[rs1]<registers[rs2] {
+            if v1 < v2 {
                 // the branch case
                 pc_new = signed_sum_of_double_word(pc, imm)
             }
@@ -106,7 +111,7 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
         case FUNCT3_BGEU: {
             printf "BGEU "
             print_b_operands(rs1, rs2, imm)
-            if registers[rs1] >= registers[rs2] {
+            if v1 >= v2 {
                 // the branch case
                 pc_new = signed_sum_of_double_word(pc, imm)
             }
