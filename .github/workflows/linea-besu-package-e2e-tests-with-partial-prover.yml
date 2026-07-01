@@ -30,13 +30,13 @@ jobs:
     name: Build docker images from source and upload (if needed) for e2e tests
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Setup Tracer Environment (for linea-besu-package build)
         if: ${{ inputs.linea_besu_package_image_tag == '' }}
         uses: ./.github/actions/setup-tracer-environment
 
-      - name: Build linea-besu-package from source 
+      - name: Build linea-besu-package from source
         if: ${{ inputs.linea_besu_package_image_tag == '' }}
         shell: bash
         run: cd linea-besu/package && make build
@@ -51,7 +51,7 @@ jobs:
           sudo apt update
           sudo apt-get install --no-install-recommends --assume-yes tree
           tree .
-      
+
       - name: Save linea-besu-package docker image as artifact
         if: ${{ inputs.linea_besu_package_image_tag == '' }}
         run: |
@@ -74,7 +74,7 @@ jobs:
           go-version: '1.24.6'
           cache-dependency-path: "**/*.sum"
 
-      - name: Build prover from source 
+      - name: Build prover from source
         if: ${{ inputs.prover_image_tag == '' }}
         shell: bash
         run: cd linea-besu/package && make build-prover
@@ -95,7 +95,7 @@ jobs:
           name: linea-prover
           path: linea-prover-image.tar.gz
           retention-days: 1
-  
+
   run-e2e-tests-with-partial-prover:
     needs: [build-and-upload-images]
     uses: ./.github/workflows/partial-prover-run-e2e-tests-in-parallel.yml
