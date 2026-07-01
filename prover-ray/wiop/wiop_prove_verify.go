@@ -31,6 +31,18 @@ type Proof struct {
 	// DynamicSizes maps module ID to their runtime size. The module ID
 	// corresponds to the module's position in [System.Modules].
 	DynamicSizes map[int]int
+	// Commitments maps each interactive round ID to the coded Merkle commitment
+	// of that round's committed columns, as produced by the PCS compiler. It is
+	// empty for protocols that were not PCS-compiled. The verifier reloads it
+	// into [Runtime.Commitments] so [Runtime.AdvanceRound] can replay the exact
+	// Fiat-Shamir transcript (which absorbs each commitment instead of the raw
+	// oracle columns once they have been made internal).
+	Commitments map[int]field.Octuplet
+	// PCSOpeningProof is the FRI opening proof binding every claimed evaluation
+	// to the committed columns. It is a *fri.OpeningProof, held opaquely so the
+	// core wiop package does not depend on the FRI package. Nil when the protocol
+	// was not PCS-compiled.
+	PCSOpeningProof any
 }
 
 // Prove runs the prover over every interactive round of sys and returns the
@@ -70,7 +82,16 @@ func (sys *System) Prove(assign func(rt *Runtime)) Proof {
 		Columns:      make(map[ObjectID]*ConcreteVector),
 		Cells:        make(map[ObjectID]field.Gen),
 		DynamicSizes: make(map[int]int),
+		Commitments:  make(map[int]field.Octuplet),
 	}
+
+	// Carry the PCS artifacts (per-round commitments and the FRI opening proof)
+	// produced by the PCS compiler's actions. Both are empty/nil for protocols
+	// that were not PCS-compiled.
+	for id, commitment := range rt.Commitments {
+		proof.Commitments[id] = commitment
+	}
+	proof.PCSOpeningProof = rt.PCSOpeningProof
 
 	for _, r := range sys.Rounds {
 		for _, col := range r.Columns {
@@ -120,6 +141,23 @@ func (sys *System) Prove(assign func(rt *Runtime)) Proof {
 // cells. For the column it will check that their visibility is correct.
 func (sys *System) Verify(proof Proof) error {
 	rt := NewRuntime(sys) // currentRound = r0, preloads precomputed columns
+
+	// Restore the PCS artifacts before replaying the transcript: AdvanceRound
+	// absorbs each committed round's commitment (for HasCommitment rounds) from
+	// rt.Commitments, and the PCS verifier action reads the opening proof.
+	for id, commitment := range proof.Commitments {
+		rt.Commitments[id] = commitment
+	}
+	rt.PCSOpeningProof = proof.PCSOpeningProof
+
+	// Dynamic-module sizes must be known before the transcript replay:
+	// AdvanceRound feeds them into Fiat-Shamir, and a PCS-compiled protocol hides
+	// the oracle columns that would otherwise set them as a side effect of
+	// assignment. Seed them up-front; they are re-validated (power of two,
+	// completeness, consistency with any visible column) after the replay.
+	for k, v := range proof.DynamicSizes {
+		rt.dynamicSizes[k] = v
+	}
 
 	// assignRound loads the proof's committed columns and cells for r into the
 	// runtime. AssignColumn / AssignCell require r to be the current round, so

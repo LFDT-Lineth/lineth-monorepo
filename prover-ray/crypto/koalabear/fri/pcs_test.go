@@ -183,11 +183,12 @@ func openForTest(t *testing.T, pcs *PCS, in openInputs) (OpeningProof, []BatchCl
 	}
 	started, err := pcs.NewProverState(in.Challenges.AlphaDeep)
 	require.NoError(t, err)
-	require.GreaterOrEqual(t, len(in.Challenges.FoldAlphas), pcs.Params.numRounds)
 	require.GreaterOrEqual(t, len(in.Challenges.QueryPositions), pcs.Params.NumQueries)
 	queryPositions := in.Challenges.QueryPositions[:pcs.Params.NumQueries]
 
-	for round := range pcs.Params.numRounds {
+	// Fold until the (possibly restricted) prover state is exhausted, so this
+	// works whether or not pcs.Params was larger than the witness.
+	for round := 0; started.HasNext(); round++ {
 		started.Fold(in.Challenges.FoldAlphas[round])
 	}
 	friProof := started.Open(queryPositions)
@@ -290,6 +291,61 @@ func newPCSOpenVerifyFixture(t *testing.T) pcsOpenVerifyFixture {
 func TestPCSOpenVerifyNormalFlow(t *testing.T) {
 	fx := newPCSOpenVerifyFixture(t)
 	require.NoError(t, fx.pcs.Verify(fx.input, fx.proof))
+}
+
+// TestPCSStaticParamsLargerThanWitness exercises a static PCS whose Params are
+// sized well above the witness: D=16 (numRounds=4) with only size-4 columns.
+// The FRI schedule must restrict to the witness (2 folds), not fold 4 times.
+func TestPCSStaticParamsLargerThanWitness(t *testing.T) {
+	// D=16 static capacity, witness columns are size 4 (sizeLog2=2).
+	params, err := NewParams(32, 16, 1)
+	require.NoError(t, err)
+	encoders := makeEncoders(params.numRounds+1, 2) // sizes 2^0..2^4
+	pcs, err := NewPCS(params, encoders)
+	require.NoError(t, err)
+
+	prng := rand.New(utils.NewRandSource(20260701))
+	witness := make(Batch, 3)
+	witness[2] = SizedTable{Ext: [][]field.Ext{
+		field.VecPseudoRandExt(prng, 4),
+		field.VecPseudoRandExt(prng, 4),
+	}}
+	witnesses := []Batch{witness}
+	committed := []CommitterState{pcs.Commit(witness)}
+
+	batchShifts := make(BatchShifts, 3)
+	batchShifts[2] = SizedShifts{Ext: [][]int{{0}, {1}}}
+	shifts := []BatchShifts{batchShifts}
+	zeta := field.UintsToExt(19, 2, 3, 5, 7, 11)
+	challenges := Challenges{
+		AlphaDeep: field.UintsToExt(23, 3, 5, 7, 11, 13),
+		FoldAlphas: []field.Ext{
+			field.UintsToExt(29, 1, 0, 0, 0, 0),
+			field.UintsToExt(31, 0, 1, 0, 0, 0),
+		},
+		QueryPositions: []int{3},
+	}
+
+	proof, claimed := openForTest(t, pcs, openInputs{
+		Witnesses:  witnesses,
+		Committed:  committed,
+		Shifts:     shifts,
+		Zeta:       zeta,
+		Challenges: challenges,
+	})
+
+	// The witness top is size 4 → exactly 2 folds → final poly of the inverse-rate
+	// size (2), not the 4 folds Params.D=16 would dictate.
+	require.Len(t, proof.FRIProof.FinalPolyExt, 2)
+
+	require.NoError(t, pcs.Verify(VerifyInputs{
+		Roots:         []field.Octuplet{committed[0].Tree.Root()},
+		Shapes:        shapesFromBatches(witnesses),
+		Shifts:        shifts,
+		ClaimedValues: claimed,
+		Zeta:          zeta,
+		Challenges:    challenges,
+	}, proof))
 }
 
 func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {

@@ -140,9 +140,6 @@ import (
 type PCS struct {
 	Params   Params
 	Encoders []*RSEncoder
-
-	//TODO: opening should not be part of the static representation of the PCS
-	// as the opening does not have the same lifecycle as the static object.
 	openings []pcsOpening
 	zeta     field.Ext
 }
@@ -627,9 +624,18 @@ func validateBatchClaimShape(claimed BatchClaimedValues, shifts BatchShifts) err
 
 // NewProverState reconstructs the virtual DEEP quotient levels and returns the
 // existing FRI prover state. It does not fold or open.
+//
+// The FRI schedule is restricted to the largest size actually opened, so the
+// fold count follows the witness rather than the (possibly larger, static)
+// Params: a size-2^k top level folds k times regardless of Params.D >= 2^k.
 func (pcs *PCS) NewProverState(alphaDeep field.Ext) (*ProverState, error) {
 	if len(pcs.openings) == 0 {
 		return nil, fmt.Errorf("fri: NewProverState: AddOpening must be called first")
+	}
+
+	pcs, err := pcs.restrictToOpenings()
+	if err != nil {
+		return nil, err
 	}
 
 	levels, err := pcs.reconstructLevels(alphaDeep)
@@ -642,6 +648,54 @@ func (pcs *PCS) NewProverState(alphaDeep field.Ext) (*ProverState, error) {
 		return nil, err
 	}
 	return state, nil
+}
+
+// layoutMaxSizeLog2 returns the largest size (log2) present in a canonical
+// layout, i.e. the top of the FRI schedule the verifier needs.
+func layoutMaxSizeLog2(l layout) int {
+	maxIdx := 0
+	for _, bundle := range l {
+		if bundle.SizeLog2 > maxIdx {
+			maxIdx = bundle.SizeLog2
+		}
+	}
+	return maxIdx
+}
+
+// maxOpeningSizeLog2 returns the largest size (log2) opened across all pending
+// openings, i.e. the top of the FRI schedule this proof actually needs.
+func (pcs *PCS) maxOpeningSizeLog2() int {
+	maxIdx := 0
+	for _, opening := range pcs.openings {
+		for _, bundle := range opening.layout {
+			if bundle.SizeLog2 > maxIdx {
+				maxIdx = bundle.SizeLog2
+			}
+		}
+	}
+	return maxIdx
+}
+
+// restrictToOpenings returns a view of this PCS whose Params are restricted to
+// the largest opened size, sharing the (immutable) encoders and pending
+// openings. Prover-side entry points use it so the fold count tracks the witness.
+func (pcs *PCS) restrictToOpenings() (*PCS, error) {
+	return pcs.restrictTo(pcs.maxOpeningSizeLog2())
+}
+
+// restrictTo returns a view of this PCS with Params restricted to top size
+// 2^topSizeLog2, sharing the encoders, openings, and zeta.
+func (pcs *PCS) restrictTo(topSizeLog2 int) (*PCS, error) {
+	restrictedParams, err := pcs.Params.restrictTo(topSizeLog2)
+	if err != nil {
+		return nil, err
+	}
+	return &PCS{
+		Params:   restrictedParams,
+		Encoders: pcs.Encoders,
+		openings: pcs.openings,
+		zeta:     pcs.zeta,
+	}, nil
 }
 
 func (pcs *PCS) shiftedPoint(sizeLog2, shift int, zeta field.Ext) (field.Ext, error) {
@@ -853,6 +907,12 @@ func (pcs *PCS) claimsForBatchEntry(
 // level, its conjugate sibling) of every registered opening. Callers pair the
 // result with the FRI Proof from [ProverState.Open] to assemble an OpeningProof.
 func (pcs *PCS) OpenedRows(queryPositions []int) []QueryRowOpenings {
+	restricted, err := pcs.restrictToOpenings()
+	if err != nil {
+		panic(err)
+	}
+	pcs = restricted
+
 	topSizeLog2 := -1
 	for _, opening := range pcs.openings {
 		if len(opening.layout) > 0 && opening.layout[0].SizeLog2 > topSizeLog2 {
@@ -1022,6 +1082,12 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 		return err
 	}
 	if err = checkVerifyClaimShapes(in.ClaimedValues, in.Shifts); err != nil {
+		return err
+	}
+	// Restrict the FRI schedule to the largest opened size so the fold count
+	// tracks the witness rather than the (static) Params; mirrors the prover.
+	pcs, err = pcs.restrictTo(layoutMaxSizeLog2(layout))
+	if err != nil {
 		return err
 	}
 	if err = pcs.checkClaimPointsOutOfDomain(layout, in.Zeta); err != nil {
