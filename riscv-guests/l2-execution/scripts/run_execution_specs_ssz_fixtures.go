@@ -1,8 +1,8 @@
 package main
 
 // Examples, from the repository root:
-// Run up to 5 SSZ files from each of 5 JSON fixtures in each selected fixture path (blockchain_tests/for_amsterdam/amsterdam and blockchain_tests/for_amsterdam/osaka):
-//   GOCACHE=/tmp/go-build go run ./riscv-guests/l2-execution/scripts/run_execution_specs_ssz_fixtures.go --fixture-paths blockchain_tests/for_amsterdam/amsterdam,blockchain_tests/for_amsterdam/osaka --json-limit 5 --ssz-limit 5
+// Run up to 100 SSZ files from each selected fixture path:
+//   GOCACHE=/tmp/go-build go run ./riscv-guests/l2-execution/scripts/run_execution_specs_ssz_fixtures.go --fixture-paths blockchain_tests/for_amsterdam/amsterdam,blockchain_tests/for_amsterdam/osaka --ssz-limit 100
 // Run all fixtures in each selected fixture path (blockchain_tests/for_amsterdam/amsterdam and blockchain_tests/for_amsterdam/osaka):
 //   GOCACHE=/tmp/go-build go run ./riscv-guests/l2-execution/scripts/run_execution_specs_ssz_fixtures.go --fixture-paths blockchain_tests/for_amsterdam/amsterdam,blockchain_tests/for_amsterdam/osaka
 
@@ -33,12 +33,11 @@ type fixtureSet struct {
 // Runs selected fixtures.
 func main() {
 	fixturePathsFlag := flag.String("fixture-paths", "blockchain_tests/for_amsterdam/amsterdam", "comma-separated fixture paths under the execution-specs fixture root")
-	jsonLimit := flag.Int("json-limit", 0, "maximum JSON fixture files to convert per fixture path; 0 means all")
-	sszLimit := flag.Int("ssz-limit", 0, "maximum generated SSZ files to run per JSON fixture; 0 means all")
+	sszLimit := flag.Int("ssz-limit", 0, "maximum generated SSZ files to run per fixture path; 0 means all")
 	zkcFlags := flag.String("zkc-flags", "--gogen --fast -q", "flags forwarded to zkc exec")
 	flag.Parse()
 
-	if *jsonLimit < 0 || *sszLimit < 0 {
+	if *sszLimit < 0 {
 		must(fmt.Errorf("limits must be non-negative"))
 	}
 
@@ -67,7 +66,7 @@ func main() {
 			continue
 		}
 
-		jsonPaths, err := jsonFiles(targetDir, *jsonLimit)
+		jsonPaths, err := jsonFiles(targetDir)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "list JSON fixtures %s: %v\n", targetDir, err)
 			hadError = true
@@ -79,6 +78,7 @@ func main() {
 			continue
 		}
 
+		selectedSSZ := 0
 		for _, jsonPath := range jsonPaths {
 			jsonRel, singleJSONDir, err := prepareSingleJSONDir(cacheDir, fixturePath, targetDir, jsonPath)
 			if err != nil {
@@ -127,6 +127,15 @@ func main() {
 				hadError = true
 				continue
 			}
+			if *sszLimit > 0 {
+				remaining := *sszLimit - selectedSSZ
+				if remaining <= 0 {
+					break
+				}
+				if len(files) > remaining {
+					files = files[:remaining]
+				}
+			}
 
 			fixtureSets = append(fixtureSets, fixtureSet{
 				fixturePath: fixturePath,
@@ -134,6 +143,10 @@ func main() {
 				outDir:      outDir,
 				files:       files,
 			})
+			selectedSSZ += len(files)
+			if *sszLimit > 0 && selectedSSZ >= *sszLimit {
+				break
+			}
 		}
 	}
 
@@ -225,8 +238,8 @@ func resolveFixturePath(rootDir, fixturePath string) (string, string, error) {
 	return filepath.ToSlash(cleanPath), filepath.Join(rootDir, cleanPath), nil
 }
 
-// Lists selected JSON files.
-func jsonFiles(dir string, limit int) ([]string, error) {
+// Lists JSON files.
+func jsonFiles(dir string) ([]string, error) {
 	var files []string
 	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -241,9 +254,6 @@ func jsonFiles(dir string, limit int) ([]string, error) {
 		return nil, err
 	}
 	sort.Strings(files)
-	if limit > 0 && len(files) > limit {
-		files = files[:limit]
-	}
 	return files, nil
 }
 
