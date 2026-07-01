@@ -1,6 +1,9 @@
 package wiop
 
-import "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/arena"
+import (
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/arena"
+)
 
 // System is the top-level container for an abstract cryptographic protocol.
 // It owns all rounds, modules, and the single precomputed round. It is also
@@ -52,6 +55,9 @@ type System struct {
 	// Annotation is some user-defined information that can be attached to the
 	// System.
 	Annotations Annotations
+	// PrecomputedCommitment commitment bears the commitment to the precomputed
+	// values.
+	PrecomputedCommitment field.Octuplet
 }
 
 // NewSystemf constructs an empty System. It creates a root [ContextFrame]

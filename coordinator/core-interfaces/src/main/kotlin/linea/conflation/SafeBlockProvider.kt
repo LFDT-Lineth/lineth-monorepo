@@ -3,6 +3,7 @@ package linea.conflation
 import linea.domain.Block
 import linea.domain.BlockHeaderSummary
 import linea.domain.BlockParameter
+import linea.domain.toBlockParameter
 import linea.ethapi.EthApiBlockClient
 import linea.kotlin.minusCoercingUnderflow
 import net.consensys.linea.async.toSafeFuture
@@ -29,7 +30,7 @@ class FixedLaggingHeadSafeBlockProvider(
       .ethGetBlockByNumberTxHashes(BlockParameter.Tag.LATEST)
       .thenCompose { block ->
         val safeBlockNumber = block.number.minusCoercingUnderflow(blocksToFinalization)
-        ethApiBlockClient.ethGetBlockByNumberFullTxs(BlockParameter.fromNumber(safeBlockNumber)).toSafeFuture()
+        ethApiBlockClient.ethGetBlockByNumberFullTxs(safeBlockNumber.toBlockParameter()).toSafeFuture()
       }
   }
 }

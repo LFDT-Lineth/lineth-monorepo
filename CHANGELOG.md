@@ -4,6 +4,7 @@
 
 - *(linea-besu)* Add interfaces module: security and LineaTransactionSelectionResult (#3238)
 - *(linea-besu)* Forced transactions integration with security policy transaction selector (#3295)
+- *(coordinator)* Add config documentation annotations (#3463)
 
 ### 🐛 Bug Fixes
 
@@ -34,11 +35,13 @@
 - *(coordinator)* Forced transactions concurrency update (#3444)
 - *(prover)* Bit-decompose limbs by absolute row, not compact position (#3464)
 - *(prover)* Filter accumulator-summary state-summary inclusions (#3465)
+- *(prover)* Reserve a padding row in the state-manager modules (#3470)
 
 ### 🚜 Refactor
 
 - *(misc)* Rename Linea to Lineth across documentation and codebase (#3316)
 - *(prover-ray)* Export logderivativesum internals for verifier-ray codegen (#3354)
+- *(prover)* Remove redundant and unsafe utility functions (#3273)
 
 ### ⚡ Performance
 
@@ -74,3 +77,4 @@
 - *(deps)* Bump Node and pnpm (#3449)
 - *(deps)* Safe updates, exact version pinning, and override housekeeping (#3457)
 - *(coordinator)* Update kotlin to v2.4 (#3454)
+- *(coordinator)* LSP violation fix (#3386)
