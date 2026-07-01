@@ -1,8 +1,19 @@
 ## [unreleased]
 
+### 🚜 Refactor
+
+- *(prover)* Remove redundant and unsafe utility functions (#3273)
+## [1.0.5] - 2026-06-30
+
+### 🐛 Bug Fixes
+
+- *(prover)* Reserve a padding row in the state-manager modules (#3470)
+## [1.0.4] - 2026-06-29
+
 ### 🐛 Bug Fixes
 
 - *(prover)* Bit-decompose limbs by absolute row, not compact position (#3464)
+- *(prover)* Filter accumulator-summary state-summary inclusions (#3465)
 ## [1.0.3] - 2026-06-29
 
 ### 🐛 Bug Fixes

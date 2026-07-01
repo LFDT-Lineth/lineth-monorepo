@@ -2,7 +2,7 @@ package linea.test
 
 import io.vertx.core.Vertx
 import linea.domain.Block
-import linea.domain.BlockParameter.Companion.toBlockParameter
+import linea.domain.toBlockParameter
 import linea.ethapi.EthApiBlockClient
 import net.consensys.linea.async.AsyncRetryer
 import org.apache.logging.log4j.LogManager

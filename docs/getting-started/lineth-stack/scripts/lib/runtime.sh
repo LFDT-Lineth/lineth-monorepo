@@ -8,7 +8,7 @@ lineth_runtime_init() {
     start="$(dirname "$start")"
   fi
 
-  dir="$(CDPATH= cd "$start" 2>/dev/null && pwd -P)" || return 1
+  dir="$(CDPATH='' cd "$start" 2>/dev/null && pwd -P)" || return 1
   while [ "$dir" != "/" ]; do
     if [ -f "$dir/docker-compose.yml" ] && [ -f "$dir/versions.env" ]; then
       LINETH_STACK_DIR="$dir"
@@ -27,6 +27,21 @@ lineth_runtime_init() {
 
   printf 'lineth_runtime_init: could not find lineth-stack root from %s\n' "$start" >&2
   return 1
+}
+
+lineth_ts_node_available() {
+  [ -n "$1" ] && [ -x "$1/node_modules/.bin/ts-node" ]
+}
+
+lineth_run_ts_node() {
+  ts_root="$1"
+  ts_script="$2"
+  shift 2
+  cd "$ts_root/contracts" || return 1
+  export NODE_PATH="$ts_root/node_modules:$ts_root/contracts/node_modules${NODE_PATH:+:$NODE_PATH}"
+  TS_NODE_TRANSPILE_ONLY=1 \
+  TS_NODE_COMPILER_OPTIONS='{"module":"CommonJS","moduleResolution":"Node"}' \
+    pnpm -s exec ts-node "$ts_script" "$@"
 }
 
 lineth_valid_env_key() {
@@ -112,14 +127,10 @@ lineth_l1_deployer_shell_env() {
   fi
 
   root="$(git -C "$LINETH_STACK_DIR" rev-parse --show-toplevel 2>/dev/null || true)"
-  if [ -n "$root" ] && [ -x "$root/node_modules/.bin/ts-node" ]; then
+  if [ -n "$root" ] && lineth_ts_node_available "$root"; then
     (
-      cd "$root/contracts"
-      export NODE_PATH="$root/node_modules:$root/contracts/node_modules${NODE_PATH:+:$NODE_PATH}"
       export LINETH_STACK_DIR
-      TS_NODE_TRANSPILE_ONLY=1 \
-      TS_NODE_COMPILER_OPTIONS='{"module":"CommonJS","moduleResolution":"Node"}' \
-        pnpm -s exec ts-node "$LINETH_STACK_DIR/scripts/internal/deployer-wallet.ts" emit-shell-env --context host
+      lineth_run_ts_node "$root" "$LINETH_STACK_DIR/scripts/internal/deployer-wallet.ts" emit-shell-env --context host
     )
     return $?
   fi
@@ -319,7 +330,26 @@ lineth_hex_to_dec_small() {
   hex="$1"
   hex="${hex#0x}"
   [ -n "$hex" ] || { echo "0"; return; }
-  printf '%d\n' "$((16#$hex))" 2>/dev/null || printf '0x%s\n' "$hex"
+  awk -v hex="$hex" '
+    BEGIN {
+      value = 0
+      for (i = 1; i <= length(hex); i += 1) {
+        digit = substr(hex, i, 1)
+        if (digit >= "0" && digit <= "9") {
+          nibble = digit + 0
+        } else if (digit >= "a" && digit <= "f") {
+          nibble = index("abcdef", digit) + 9
+        } else if (digit >= "A" && digit <= "F") {
+          nibble = index("ABCDEF", digit) + 9
+        } else {
+          print "0x" hex
+          exit
+        }
+        value = (value * 16) + nibble
+      }
+      printf "%.0f\n", value
+    }
+  '
 }
 
 lineth_rpc_json() {

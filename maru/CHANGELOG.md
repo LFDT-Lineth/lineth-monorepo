@@ -18,3 +18,4 @@
 - *(maru)* Split testing workflow (#3234)
 - *(maru)* Remove unused test (#3279)
 - *(maru)* Per-test log isolation + bounded integration-test concurrency (#3343)
+- *(coordinator)* Update kotlin to v2.4 (#3454)

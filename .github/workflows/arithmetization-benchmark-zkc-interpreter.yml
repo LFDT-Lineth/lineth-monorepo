@@ -2,16 +2,16 @@ name: Arithmetization zkc interpreter benchmark (base vs optim)
 
 # Benchmark of guest programs executed by the zkc interpreter of
 # two branches, the base branch and the optim branch.
-# Guest programs are the Keccak and Blake programs in the arithmetization/src/test 
+# Guest programs are the Keccak and Blake programs in the arithmetization/src/test
 # directory.
 
-# Benchmark methodology : 
+# Benchmark methodology :
 # Designed to give a reliable paired comparison on a
 # single runner: one untimed warmup per branch, then N alternating (opt, base)
 # timed iterations with a per-iteration cache reset + brief cool-down to keep
 # the machine state similar across runs.
 
-# Benchmark data : 
+# Benchmark data :
 # -- For Keccak
 # In arithmetization/src/test/common_inputs/keccak.all
 # There are 20k test vectors you can select from to run the benchmark.
@@ -74,7 +74,7 @@ jobs:
     timeout-minutes: 120
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 0
           submodules: false

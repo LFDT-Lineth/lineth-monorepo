@@ -3,7 +3,8 @@
 # Sepolia/key preflight and account setup.
 set -eu
 
-SCRIPT_DIR="$(CDPATH= cd "$(dirname "$0")" && pwd -P)"
+SCRIPT_DIR="$(CDPATH='' cd "$(dirname "$0")" && pwd -P)"
+# shellcheck disable=SC2034
 LINETH_LOG_CONTEXT="start"
 # shellcheck disable=SC1091
 . "$SCRIPT_DIR/lib/logging.sh"
@@ -13,19 +14,76 @@ LINETH_LOG_CONTEXT="start"
 TAIL=false
 PULL=true
 LINETH_VERBOSE="${LINETH_VERBOSE:-false}"
+WIZARD=false
+WIZARD_THEN_START=false
+WIZARD_CLEAR_BEFORE_START=false
+WIZARD_NON_INTERACTIVE=false
+WIZARD_YES=false
+WIZARD_FLAG_L1_MODE=""
+WIZARD_FLAG_L1_RPC_URL=""
+WIZARD_FLAG_PROVER=""
+WIZARD_OPTION_REQUIRES=""
+
+ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel)"
+STACK="$ROOT/docs/getting-started/lineth-stack"
 
 usage() {
   cat <<'EOF'
 Usage: ./scripts/start.sh [--tail] [--no-pull] [--verbose]
+       ./scripts/start.sh --wizard [--then-start] [--clear-before-start] [--non-interactive] [--yes]
 
-  --tail     start the stack, then show the guided deployment/finality progress
-  --no-pull  skip docker compose pull
-  --verbose  show raw preparation/pull details in the default terminal output
+  --tail              start the stack, then show guided deployment/finality progress
+  --no-pull           skip docker compose pull
+  --verbose           show raw preparation/pull details in the default terminal output
+  --wizard, --init    configure .env with the guided setup wizard
+  --then-start        after --wizard succeeds, start with ./scripts/start.sh --tail
+  --clear-before-start
+                      with --wizard --then-start, run ./scripts/reset.sh before starting
+  --non-interactive   resolve wizard answers from flags/env/.env defaults; never prompt
+  --yes               accept the wizard write without a confirmation prompt
+
+Run ./scripts/start.sh --wizard --help for all wizard options.
 EOF
 }
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
+    --wizard|--init)
+      WIZARD=true
+      ;;
+    --then-start)
+      WIZARD_THEN_START=true
+      ;;
+    --clear-before-start)
+      WIZARD_CLEAR_BEFORE_START=true
+      WIZARD_OPTION_REQUIRES="${WIZARD_OPTION_REQUIRES:---clear-before-start}"
+      ;;
+    --non-interactive)
+      WIZARD_NON_INTERACTIVE=true
+      WIZARD_OPTION_REQUIRES="${WIZARD_OPTION_REQUIRES:---non-interactive}"
+      ;;
+    --yes)
+      WIZARD_YES=true
+      WIZARD_OPTION_REQUIRES="${WIZARD_OPTION_REQUIRES:---yes}"
+      ;;
+    --l1-mode)
+      shift
+      [ "$#" -gt 0 ] || lineth_die "--l1-mode requires local or sepolia"
+      WIZARD_FLAG_L1_MODE="$1"
+      WIZARD_OPTION_REQUIRES="${WIZARD_OPTION_REQUIRES:---l1-mode}"
+      ;;
+    --l1-rpc-url)
+      shift
+      [ "$#" -gt 0 ] || lineth_die "--l1-rpc-url requires a URL"
+      WIZARD_FLAG_L1_RPC_URL="$1"
+      WIZARD_OPTION_REQUIRES="${WIZARD_OPTION_REQUIRES:---l1-rpc-url}"
+      ;;
+    --prover)
+      shift
+      [ "$#" -gt 0 ] || lineth_die "--prover requires dev or partial"
+      WIZARD_FLAG_PROVER="$1"
+      WIZARD_OPTION_REQUIRES="${WIZARD_OPTION_REQUIRES:---prover}"
+      ;;
     --tail)
       TAIL=true
       ;;
@@ -37,7 +95,13 @@ while [ "$#" -gt 0 ]; do
       export LINETH_VERBOSE
       ;;
     -h|--help)
-      usage
+      if [ "$WIZARD" = "true" ]; then
+        # shellcheck disable=SC1091
+        . "$SCRIPT_DIR/lib/wizard.sh"
+        lineth_wizard_usage
+      else
+        usage
+      fi
       exit 0
       ;;
     *)
@@ -47,8 +111,96 @@ while [ "$#" -gt 0 ]; do
   shift
 done
 
-ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel)"
-STACK="$ROOT/docs/getting-started/lineth-stack"
+if [ "$WIZARD_THEN_START" = "true" ] && [ "$WIZARD" != "true" ]; then
+  lineth_die "--then-start requires --wizard; to just boot, run ./scripts/start.sh --tail"
+fi
+
+if [ "$WIZARD_CLEAR_BEFORE_START" = "true" ] && [ "$WIZARD" != "true" ]; then
+  lineth_die "--clear-before-start requires --wizard; to just boot, run ./scripts/reset.sh && ./scripts/start.sh --tail"
+fi
+
+if [ "$WIZARD_CLEAR_BEFORE_START" = "true" ] && [ "$WIZARD_THEN_START" != "true" ]; then
+  lineth_die "--clear-before-start requires --then-start"
+fi
+
+if [ "$WIZARD" != "true" ] && [ -n "$WIZARD_OPTION_REQUIRES" ]; then
+  lineth_die "$WIZARD_OPTION_REQUIRES requires --wizard; to just boot, run ./scripts/start.sh --tail"
+fi
+
+if [ "$WIZARD" = "true" ]; then
+  if [ -n "${LINETH_WIZARD_STACK_OVERRIDE:-}" ]; then
+    STACK="$LINETH_WIZARD_STACK_OVERRIDE"
+  fi
+
+  # shellcheck disable=SC1091
+  . "$SCRIPT_DIR/lib/wizard.sh"
+  WIZARD_RESULT_FILE="$(mktemp)"
+  if ! LINETH_WIZARD_FLAG_L1_MODE="$WIZARD_FLAG_L1_MODE" \
+    LINETH_WIZARD_FLAG_L1_RPC_URL="$WIZARD_FLAG_L1_RPC_URL" \
+    LINETH_WIZARD_FLAG_PROVER="$WIZARD_FLAG_PROVER" \
+    LINETH_WIZARD_NON_INTERACTIVE="$WIZARD_NON_INTERACTIVE" \
+    LINETH_WIZARD_YES="$WIZARD_YES" \
+    LINETH_WIZARD_THEN_START="$WIZARD_THEN_START" \
+    LINETH_WIZARD_CLEAR_BEFORE_START="$WIZARD_CLEAR_BEFORE_START" \
+    LINETH_WIZARD_RESULT_FILE="$WIZARD_RESULT_FILE" \
+    lineth_wizard_main "$STACK" "$SCRIPT_DIR"; then
+    rm -f "$WIZARD_RESULT_FILE"
+    exit 1
+  fi
+
+  WIZARD_REQUESTED_START="$WIZARD_THEN_START"
+  WIZARD_REQUESTED_CLEAR_BEFORE_START="$WIZARD_CLEAR_BEFORE_START"
+  if [ -f "$WIZARD_RESULT_FILE" ]; then
+    while IFS='=' read -r wizard_result_key wizard_result_value; do
+      case "$wizard_result_key" in
+        START)
+          WIZARD_REQUESTED_START="$wizard_result_value"
+          ;;
+        CLEAR_BEFORE_START)
+          WIZARD_REQUESTED_CLEAR_BEFORE_START="$wizard_result_value"
+          ;;
+      esac
+    done < "$WIZARD_RESULT_FILE"
+  fi
+  rm -f "$WIZARD_RESULT_FILE"
+
+  if [ "$WIZARD_REQUESTED_START" != "true" ]; then
+    exit 0
+  fi
+
+  if [ ! -f "$STACK/.env" ]; then
+    lineth_die "wizard did not write .env; nothing to start. Re-run ./scripts/start.sh --wizard"
+  fi
+
+  if [ "$WIZARD_REQUESTED_CLEAR_BEFORE_START" = "true" ]; then
+    if [ -n "${LINETH_WIZARD_TEST_RESET_FILE:-}" ]; then
+      printf '%s\n' "$SCRIPT_DIR/reset.sh" > "$LINETH_WIZARD_TEST_RESET_FILE"
+    else
+      "$SCRIPT_DIR/reset.sh"
+    fi
+  fi
+
+  if [ -n "${LINETH_WIZARD_TEST_START_FILE:-}" ]; then
+    {
+      printf '%s\n' "$SCRIPT_DIR/start.sh"
+      printf '%s\n' "--tail"
+      [ "$PULL" = "true" ] || printf '%s\n' "--no-pull"
+      [ "$LINETH_VERBOSE" = "true" ] && printf '%s\n' "--verbose"
+    } > "$LINETH_WIZARD_TEST_START_FILE"
+    exit 0
+  fi
+
+  if [ "$PULL" = "false" ] && [ "$LINETH_VERBOSE" = "true" ]; then
+    exec "$SCRIPT_DIR/start.sh" --tail --no-pull --verbose
+  elif [ "$PULL" = "false" ]; then
+    exec "$SCRIPT_DIR/start.sh" --tail --no-pull
+  elif [ "$LINETH_VERBOSE" = "true" ]; then
+    exec "$SCRIPT_DIR/start.sh" --tail --verbose
+  else
+    exec "$SCRIPT_DIR/start.sh" --tail
+  fi
+fi
+
 COMPOSE="docker compose --env-file versions.env --env-file .env --profile stack-partial-prover"
 lineth_runtime_init "$STACK"
 L1_MODE="$(lineth_l1_mode)"
@@ -65,8 +217,64 @@ show_compose_failure() {
   fi
 }
 
+first_major_minor_version() {
+  printf '%s\n' "$1" | awk 'match($0, /[0-9]+[.][0-9]+/) {
+    split(substr($0, RSTART, RLENGTH), parts, ".")
+    print parts[1] " " parts[2]
+  }'
+}
+
+version_at_least() {
+  version_parts="$(first_major_minor_version "$1")"
+  [ -n "$version_parts" ] || return 1
+
+  version_major="${version_parts%% *}"
+  version_minor="${version_parts#* }"
+  minimum_major="$2"
+  minimum_minor="$3"
+
+  [ "$version_major" -gt "$minimum_major" ] && return 0
+  [ "$version_major" -eq "$minimum_major" ] && [ "$version_minor" -ge "$minimum_minor" ]
+}
+
+check_docker_preflight() {
+  if ! command -v docker >/dev/null 2>&1; then
+    lineth_die "Docker v24+ is required; install Docker Desktop or Docker Engine and retry"
+  fi
+
+  docker_version="$(docker --version 2>/dev/null || true)"
+  if ! version_at_least "$docker_version" 24 0; then
+    lineth_die "Docker v24+ is required (detected: ${docker_version:-unknown})"
+  fi
+  lineth_kv "docker" "$docker_version"
+
+  compose_version="$(docker compose version 2>/dev/null || true)"
+  if [ -z "$compose_version" ]; then
+    lineth_die "Docker Compose v2.19+ is required; install/enable the Docker Compose plugin and retry"
+  fi
+  if ! version_at_least "$compose_version" 2 19; then
+    lineth_die "Docker Compose v2.19+ is required (detected: $compose_version)"
+  fi
+  lineth_kv "compose" "$compose_version"
+
+  if ! docker ps >/dev/null 2>&1; then
+    lineth_die "Docker engine is not reachable; start Docker Desktop or the Docker daemon and retry"
+  fi
+  lineth_ok "Docker engine is reachable"
+
+  docker_disk_tmp="$(mktemp)"
+  if docker system df > "$docker_disk_tmp" 2>&1; then
+    lineth_info "Docker disk usage:"
+    lineth_child_output < "$docker_disk_tmp"
+  else
+    lineth_warn "Docker disk usage unavailable:"
+    lineth_child_output < "$docker_disk_tmp"
+  fi
+  rm -f "$docker_disk_tmp"
+}
+
 run_ts_preflight() {
-  if [ ! -x "$ROOT/node_modules/.bin/ts-node" ]; then
+  if ! lineth_ts_node_available "$ROOT"; then
     lineth_warn "host L1 check skipped; run pnpm install for earlier balance/gas checks"
     lineth_info "account generation still runs the same checks before runtime containers are created"
     return 0
@@ -74,12 +282,8 @@ run_ts_preflight() {
 
   tmp="$(mktemp)"
   if (
-    cd "$ROOT/contracts"
-    export NODE_PATH="$ROOT/node_modules:$ROOT/contracts/node_modules${NODE_PATH:+:$NODE_PATH}"
-    LINETH_STACK_DIR="$STACK" \
-    TS_NODE_TRANSPILE_ONLY=1 \
-    TS_NODE_COMPILER_OPTIONS='{"module":"CommonJS","moduleResolution":"Node"}' \
-      pnpm -s exec ts-node "$STACK/scripts/internal/quickstart-preflight.ts"
+    export LINETH_STACK_DIR="$STACK"
+    lineth_run_ts_node "$ROOT" "$STACK/scripts/internal/quickstart-preflight.ts"
   ) > "$tmp" 2>&1; then
     status=0
   else
@@ -180,14 +384,15 @@ else
   lineth_banner "start · local services + Sepolia finality"
 fi
 
+lineth_section "Check Docker"
+check_docker_preflight
+
 lineth_section "Check ports"
 lineth_run_stream env LINETH_EMBEDDED=true LINETH_SKIP_BANNER=true "$SCRIPT_DIR/check-ports.sh"
 
 lineth_section "Check L1 network"
 if [ "$L1_MODE" = "local" ]; then
   wait_for_local_l1
-else
-  lineth_kv "mode" "Sepolia"
 fi
 
 run_ts_preflight

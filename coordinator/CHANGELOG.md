@@ -1,5 +1,9 @@
 ## [unreleased]
 
+### 🚀 Features
+
+- *(coordinator)* Add config documentation annotations (#3463)
+
 ### 🐛 Bug Fixes
 
 - *(coordinator, jvm-libs, e2e, state-recovery, prover, docker, misc)* Remove state manager request version (#3099)
@@ -24,3 +28,4 @@
 - *(coordinator)* Rename packages net.consensys.zkevm.* -> linea.* (#3105)
 - *(coordinator)* Log and message error improvements (#3193)
 - *(coordinator)* Favour generic name ChainSecurityRuleViolation over specific implementation Phylax (#3330)
+- *(coordinator)* Update kotlin to v2.4 (#3454)

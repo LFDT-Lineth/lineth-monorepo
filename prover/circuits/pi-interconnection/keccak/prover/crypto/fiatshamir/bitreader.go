@@ -3,7 +3,7 @@ package fiatshamir
 import (
 	"fmt"
 
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
 // BitReader is a utility to read a slice of bytes bit by bit. It should be
