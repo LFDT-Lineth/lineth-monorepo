@@ -2,12 +2,11 @@ import * as path from "node:path";
 
 import { JsonRpcProvider } from "ethers";
 
-import { resolveL1DeployerConfig } from "./deployer-wallet";
+import { LOCAL_L1_CHAIN_ID, resolveL1DeployerConfig } from "./deployer-wallet";
 import { envValue, readDotEnvFile } from "./lib/env";
 import { sanitizeExternalError } from "./lib/errors";
 import {
   buildSepoliaPolicyConfig,
-  LOCAL_L1_CHAIN_ID,
   runL1PolicyCheck,
   SEPOLIA_CHAIN_ID,
 } from "./sepolia-policy";
