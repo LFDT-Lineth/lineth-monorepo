@@ -11,8 +11,8 @@ fn signed_LT(a:DoubleWord, b:DoubleWord) -> (comparison:Boolean) {
     b_sign = sign_bit_of_double_word(b)
 
     if a_sign != b_sign {
-        // different signs case
-        comparison = a_sign == 1 ? 1:0
+        // different signs case: a < b iff a is negative (a_sign == 1)
+        comparison = a_sign
         // same signs case
     } else {
         // this applies both in the signed case as in the unsigned case, e.g.
