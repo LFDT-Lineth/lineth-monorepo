@@ -217,6 +217,62 @@ show_compose_failure() {
   fi
 }
 
+first_major_minor_version() {
+  printf '%s\n' "$1" | awk 'match($0, /[0-9]+[.][0-9]+/) {
+    split(substr($0, RSTART, RLENGTH), parts, ".")
+    print parts[1] " " parts[2]
+  }'
+}
+
+version_at_least() {
+  version_parts="$(first_major_minor_version "$1")"
+  [ -n "$version_parts" ] || return 1
+
+  version_major="${version_parts%% *}"
+  version_minor="${version_parts#* }"
+  minimum_major="$2"
+  minimum_minor="$3"
+
+  [ "$version_major" -gt "$minimum_major" ] && return 0
+  [ "$version_major" -eq "$minimum_major" ] && [ "$version_minor" -ge "$minimum_minor" ]
+}
+
+check_docker_preflight() {
+  if ! command -v docker >/dev/null 2>&1; then
+    lineth_die "Docker v24+ is required; install Docker Desktop or Docker Engine and retry"
+  fi
+
+  docker_version="$(docker --version 2>/dev/null || true)"
+  if ! version_at_least "$docker_version" 24 0; then
+    lineth_die "Docker v24+ is required (detected: ${docker_version:-unknown})"
+  fi
+  lineth_kv "docker" "$docker_version"
+
+  compose_version="$(docker compose version 2>/dev/null || true)"
+  if [ -z "$compose_version" ]; then
+    lineth_die "Docker Compose v2.19+ is required; install/enable the Docker Compose plugin and retry"
+  fi
+  if ! version_at_least "$compose_version" 2 19; then
+    lineth_die "Docker Compose v2.19+ is required (detected: $compose_version)"
+  fi
+  lineth_kv "compose" "$compose_version"
+
+  if ! docker ps >/dev/null 2>&1; then
+    lineth_die "Docker engine is not reachable; start Docker Desktop or the Docker daemon and retry"
+  fi
+  lineth_ok "Docker engine is reachable"
+
+  docker_disk_tmp="$(mktemp)"
+  if docker system df > "$docker_disk_tmp" 2>&1; then
+    lineth_info "Docker disk usage:"
+    lineth_child_output < "$docker_disk_tmp"
+  else
+    lineth_warn "Docker disk usage unavailable:"
+    lineth_child_output < "$docker_disk_tmp"
+  fi
+  rm -f "$docker_disk_tmp"
+}
+
 run_ts_preflight() {
   if ! lineth_ts_node_available "$ROOT"; then
     lineth_warn "host L1 check skipped; run pnpm install for earlier balance/gas checks"
@@ -327,6 +383,9 @@ if [ "$L1_MODE" = "local" ]; then
 else
   lineth_banner "start · local services + Sepolia finality"
 fi
+
+lineth_section "Check Docker"
+check_docker_preflight
 
 lineth_section "Check ports"
 lineth_run_stream env LINETH_EMBEDDED=true LINETH_SKIP_BANNER=true "$SCRIPT_DIR/check-ports.sh"

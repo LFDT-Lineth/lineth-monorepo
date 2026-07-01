@@ -516,6 +516,7 @@ lineth_wizard_backup_env() {
   [ -f "$WIZARD_ENV_FILE" ] || return 0
   wizard_backup_dir="$LINETH_WIZARD_STACK/artifacts/env-backups"
   mkdir -p "$wizard_backup_dir"
+  chmod 700 "$wizard_backup_dir"
   wizard_backup_timestamp="${LINETH_WIZARD_BACKUP_TIMESTAMP:-$(date '+%Y%m%d%H%M%S')}"
   wizard_backup_path="$wizard_backup_dir/.env.$wizard_backup_timestamp"
   wizard_backup_suffix=1
@@ -524,6 +525,7 @@ lineth_wizard_backup_env() {
     wizard_backup_suffix=$((wizard_backup_suffix + 1))
   done
   cp "$WIZARD_ENV_FILE" "$wizard_backup_path"
+  chmod 600 "$wizard_backup_path"
   lineth_info "backup written: artifacts/env-backups/$(basename "$wizard_backup_path")"
 }
 
