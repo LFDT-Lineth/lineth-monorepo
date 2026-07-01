@@ -3,7 +3,7 @@ package collection
 import (
 	"iter"
 
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
 // A set is an unordered collection addressed by keys, which supports

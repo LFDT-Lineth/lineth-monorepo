@@ -47,7 +47,7 @@ print_deploy_progress() {
   esac
 
   docker logs --tail 180 deploy-contracts 2>&1 \
-      | grep -E '\[deploy-contracts\] =====|\[deploy-contracts\] (L1 deployer balance|L1 deployer required minimum|L2_GENESIS|Compiling contracts|L1_NONCE|verify |Forwarding |Captured |Funding |wrote |ERROR:|Done|addresses\.json)|^contract=.* (pending:|deployed:)|insufficient funds|Cannot fund|balance too low' \
+      | grep -E '\[deploy-contracts\] =====|\[deploy-contracts\] (L1 deployer balance|L1 deployer required minimum|L2_GENESIS|Compiling contracts|L1_NONCE|verify |Forwarding |Captured |Funding |wrote |ERROR:|Done|addresses\.json)|^contract=.* (pending:|deployed:)|insufficient funds|Cannot fund|balance too low|could not coalesce error|already known|eth_sendRawTransaction|UNKNOWN_ERROR' \
     | tail -25 \
     | awk 'length($0) > 260 { $0 = substr($0, 1, 260) "..." } { print }' \
     | lineth_indent || true

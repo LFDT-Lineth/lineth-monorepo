@@ -6,6 +6,3 @@ zig-out/
 zig-pkg/
 *.objdump
 
-# generated linker script
-build_common/linker_script.ld
-

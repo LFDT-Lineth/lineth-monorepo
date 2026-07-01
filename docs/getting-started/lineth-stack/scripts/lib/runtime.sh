@@ -29,6 +29,21 @@ lineth_runtime_init() {
   return 1
 }
 
+lineth_ts_node_available() {
+  [ -n "$1" ] && [ -x "$1/node_modules/.bin/ts-node" ]
+}
+
+lineth_run_ts_node() {
+  ts_root="$1"
+  ts_script="$2"
+  shift 2
+  cd "$ts_root/contracts" || return 1
+  export NODE_PATH="$ts_root/node_modules:$ts_root/contracts/node_modules${NODE_PATH:+:$NODE_PATH}"
+  TS_NODE_TRANSPILE_ONLY=1 \
+  TS_NODE_COMPILER_OPTIONS='{"module":"CommonJS","moduleResolution":"Node"}' \
+    pnpm -s exec ts-node "$ts_script" "$@"
+}
+
 lineth_valid_env_key() {
   case "$1" in
     ''|[0-9]*|*[!A-Za-z0-9_]*)
@@ -112,14 +127,10 @@ lineth_l1_deployer_shell_env() {
   fi
 
   root="$(git -C "$LINETH_STACK_DIR" rev-parse --show-toplevel 2>/dev/null || true)"
-  if [ -n "$root" ] && [ -x "$root/node_modules/.bin/ts-node" ]; then
+  if [ -n "$root" ] && lineth_ts_node_available "$root"; then
     (
-      cd "$root/contracts" || return 1
-      export NODE_PATH="$root/node_modules:$root/contracts/node_modules${NODE_PATH:+:$NODE_PATH}"
       export LINETH_STACK_DIR
-      TS_NODE_TRANSPILE_ONLY=1 \
-      TS_NODE_COMPILER_OPTIONS='{"module":"CommonJS","moduleResolution":"Node"}' \
-        pnpm -s exec ts-node "$LINETH_STACK_DIR/scripts/internal/deployer-wallet.ts" emit-shell-env --context host
+      lineth_run_ts_node "$root" "$LINETH_STACK_DIR/scripts/internal/deployer-wallet.ts" emit-shell-env --context host
     )
     return $?
   fi

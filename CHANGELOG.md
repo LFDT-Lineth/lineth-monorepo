@@ -4,6 +4,7 @@
 
 - *(linea-besu)* Add interfaces module: security and LineaTransactionSelectionResult (#3238)
 - *(linea-besu)* Forced transactions integration with security policy transaction selector (#3295)
+- *(coordinator)* Add config documentation annotations (#3463)
 
 ### 🐛 Bug Fixes
 
@@ -25,11 +26,22 @@
 - *(prover)* Populate isAllowedCircuitID in aggregation response (#3381)
 - *(e2e)* Trying to fix rare profitability issues, FTX fix (#3388)
 - *(prover)* Bump BLOCKHASH module limit from 2048 to 4096 (#3426)
+- *(coordinator)* Drop insecure FileWriter temp-file fallback (CodeQL 21207) (#3413)
+- *(besu-plugins)* Removed mutual exclusiveness of the txpool and blo… (#3416)
+- *(coordinator)* Fixed a flacky test by closing the ftxInvalidityProofService in the ForcedTransactionsApp (#3438)
+- *(prover)* Resolve data race in limitless prover (#3442)
+- *(Maru)* Fixed a bug when simultaneous mutual connection attempts r… (#3439)
+- *(prover)* Index-out-of-range panic in merkle proof verification (#3453)
+- *(coordinator)* Forced transactions concurrency update (#3444)
+- *(prover)* Bit-decompose limbs by absolute row, not compact position (#3464)
+- *(prover)* Filter accumulator-summary state-summary inclusions (#3465)
+- *(prover)* Reserve a padding row in the state-manager modules (#3470)
 
 ### 🚜 Refactor
 
 - *(misc)* Rename Linea to Lineth across documentation and codebase (#3316)
 - *(prover-ray)* Export logderivativesum internals for verifier-ray codegen (#3354)
+- *(prover)* Remove redundant and unsafe utility functions (#3273)
 
 ### ⚡ Performance
 
@@ -62,3 +74,7 @@
 - *(packages)* Rename npm package scope (#3324)
 - *(deps)* Update eligible patch and minor dependencies (#3366)
 - Update gnark to a3ad59ad083caac7691cba84a497d4d7c1759d2a (#3402)
+- *(deps)* Bump Node and pnpm (#3449)
+- *(deps)* Safe updates, exact version pinning, and override housekeeping (#3457)
+- *(coordinator)* Update kotlin to v2.4 (#3454)
+- *(coordinator)* LSP violation fix (#3386)

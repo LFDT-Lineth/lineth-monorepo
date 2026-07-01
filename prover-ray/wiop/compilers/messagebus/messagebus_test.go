@@ -24,7 +24,7 @@ func makeVec(vals ...uint64) *wiop.ConcreteVector {
 // round.
 func runRound(rt *wiop.Runtime) {
 	for _, a := range rt.CurrentRound().ProverActions {
-		a.Run(*rt)
+		a.Run(rt)
 	}
 }
 
@@ -33,7 +33,7 @@ func runRound(rt *wiop.Runtime) {
 func checkAllVerifierActions(rt *wiop.Runtime) error {
 	for _, r := range rt.System.Rounds {
 		for _, va := range r.VerifierActions {
-			if err := va.Check(*rt); err != nil {
+			if err := va.Check(rt); err != nil {
 				return err
 			}
 		}
@@ -51,7 +51,7 @@ type fixedSeedHook struct {
 	seed field.Octuplet
 }
 
-func (h *fixedSeedHook) Run(rt wiop.Runtime) {
+func (h *fixedSeedHook) Run(rt *wiop.Runtime) {
 	rt.SetFSState(h.seed)
 }
 
@@ -157,8 +157,8 @@ func TestCompile_Balanced(t *testing.T) {
 		rt.AssignColumn(colB, makeVec(10, 20, 30, 40))
 		rt.AssignColumn(mulB, makeVec(1, 1, 1, 1))
 
-		drive(&rt)
-		require.NoError(t, checkAllVerifierActions(&rt))
+		drive(rt)
+		require.NoError(t, checkAllVerifierActions(rt))
 	})
 }
 
@@ -194,8 +194,8 @@ func TestCompile_TamperedMultiplicity(t *testing.T) {
 		rt.AssignColumn(colB, makeVec(10, 20, 30, 40))
 		rt.AssignColumn(mulB, makeVec(2, 1, 1, 1)) // wrong: row 0 is counted twice
 
-		drive(&rt)
-		assert.Error(t, checkAllVerifierActions(&rt),
+		drive(rt)
+		assert.Error(t, checkAllVerifierActions(rt),
 			"verifier must reject a multiplicity that miscounts the senders")
 	})
 }
@@ -235,8 +235,8 @@ func TestCompile_TamperedValueFailsInShardCheck(t *testing.T) {
 		rt.AssignColumn(colB, makeVec(10, 21, 30, 40)) // wrong: row 1 holds 21, not 20
 		rt.AssignColumn(mulB, makeVec(1, 1, 1, 1))
 
-		drive(&rt)
-		assert.Error(t, checkAllVerifierActions(&rt),
+		drive(rt)
+		assert.Error(t, checkAllVerifierActions(rt),
 			"verifier must reject when a receive row's value does not appear in the send multiset")
 	})
 }
@@ -276,8 +276,8 @@ func TestCompile_TamperedFilterFailsInShardCheck(t *testing.T) {
 		rt.AssignColumn(colB, makeVec(10, 20, 30, 40))
 		rt.AssignColumn(mulB, makeVec(1, 1, 1, 1)) // receiver still claims all four
 
-		drive(&rt)
-		assert.Error(t, checkAllVerifierActions(&rt),
+		drive(rt)
+		assert.Error(t, checkAllVerifierActions(rt),
 			"verifier must reject when the send-side selector drops a row the receive side still claims")
 	})
 }
@@ -324,8 +324,8 @@ func TestCompile_MultipleSendersOneReceiver(t *testing.T) {
 		rt.AssignColumn(colR, makeVec(10, 20))
 		rt.AssignColumn(mulR, makeVec(2, 2))
 
-		drive(&rt)
-		require.NoError(t, checkAllVerifierActions(&rt))
+		drive(rt)
+		require.NoError(t, checkAllVerifierActions(rt))
 	})
 }
 
@@ -366,8 +366,8 @@ func TestCompile_MultiColumnTuples(t *testing.T) {
 		rt.AssignColumn(valB, makeVec(10, 20, 30, 40))
 		rt.AssignColumn(mulB, makeVec(1, 1, 1, 1))
 
-		drive(&rt)
-		require.NoError(t, checkAllVerifierActions(&rt))
+		drive(rt)
+		require.NoError(t, checkAllVerifierActions(rt))
 	})
 }
 
@@ -410,8 +410,8 @@ func TestCompile_FilteredSelectors(t *testing.T) {
 		rt.AssignColumn(selB, makeVec(1, 1, 0, 0))
 		rt.AssignColumn(mulB, makeVec(1, 1, 0, 0))
 
-		drive(&rt)
-		require.NoError(t, checkAllVerifierActions(&rt))
+		drive(rt)
+		require.NoError(t, checkAllVerifierActions(rt))
 	})
 }
 
@@ -461,8 +461,8 @@ func TestCompile_TwoHandlesIndependent(t *testing.T) {
 		rt.AssignColumn(colD, makeVec(100, 200))
 		rt.AssignColumn(mulD, makeVec(1, 1))
 
-		drive(&rt)
-		require.NoError(t, checkAllVerifierActions(&rt))
+		drive(rt)
+		require.NoError(t, checkAllVerifierActions(rt))
 	})
 }
 
@@ -494,8 +494,8 @@ func TestCompile_ReceiveWithoutMultiplicity(t *testing.T) {
 		rt.AssignColumn(colA, makeVec(5, 6))
 		rt.AssignColumn(colB, makeVec(5, 6))
 
-		drive(&rt)
-		require.NoError(t, checkAllVerifierActions(&rt))
+		drive(rt)
+		require.NoError(t, checkAllVerifierActions(rt))
 	})
 }
 
@@ -562,8 +562,8 @@ func TestCompile_DynamicModule_Balanced(t *testing.T) {
 			}
 			rt.AssignColumn(mulB, makeVec(ones...))
 
-			drive(&rt)
-			require.NoError(t, checkAllVerifierActions(&rt))
+			drive(rt)
+			require.NoError(t, checkAllVerifierActions(rt))
 		})
 	}
 }
@@ -603,8 +603,8 @@ func TestCompile_DynamicModule_TamperedFails(t *testing.T) {
 	rt.AssignColumn(colB, makeVec(10, 20, 30, 40))
 	rt.AssignColumn(mulB, makeVec(2, 1, 1, 1)) // wrong: row 0 counted twice
 
-	drive(&rt)
-	assert.Error(t, checkAllVerifierActions(&rt),
+	drive(rt)
+	assert.Error(t, checkAllVerifierActions(rt),
 		"verifier must reject a multiplicity that miscounts senders on a dynamic module")
 }
 
@@ -645,8 +645,8 @@ func TestCompile_DynamicModule_TamperedValueFailsInShardCheck(t *testing.T) {
 	rt.AssignColumn(colB, makeVec(10, 21, 30, 40)) // wrong: row 1 holds 21, not 20
 	rt.AssignColumn(mulB, makeVec(1, 1, 1, 1))
 
-	drive(&rt)
-	assert.Error(t, checkAllVerifierActions(&rt),
+	drive(rt)
+	assert.Error(t, checkAllVerifierActions(rt),
 		"verifier must reject a tampered receive value on a dynamic-module bus")
 }
 
@@ -688,8 +688,8 @@ func TestCompile_DynamicModule_TamperedFilterFailsInShardCheck(t *testing.T) {
 	rt.AssignColumn(colB, makeVec(10, 20, 30, 40))
 	rt.AssignColumn(mulB, makeVec(1, 1, 1, 1)) // receiver still claims all four
 
-	drive(&rt)
-	assert.Error(t, checkAllVerifierActions(&rt),
+	drive(rt)
+	assert.Error(t, checkAllVerifierActions(rt),
 		"verifier must reject an asymmetric send-side selector on a dynamic-module bus")
 }
 
@@ -733,8 +733,8 @@ func TestCompile_DynamicModule_MultiColumnTuples(t *testing.T) {
 	rt.AssignColumn(valB, makeVec(10, 20, 30, 40))
 	rt.AssignColumn(mulB, makeVec(1, 1, 1, 1))
 
-	drive(&rt)
-	require.NoError(t, checkAllVerifierActions(&rt))
+	drive(rt)
+	require.NoError(t, checkAllVerifierActions(rt))
 }
 
 // TestCompile_WidthMismatchPanics asserts that the compiler rejects two
@@ -836,7 +836,7 @@ func TestCheckHandleSumInShard_ExpectedNonZero(t *testing.T) {
 		rt.AssignColumn(colB, makeVec(10, 20, 30, 40))
 		rt.AssignColumn(mulB, makeVec(1, 1, 1, 1))
 
-		drive(&rt)
+		drive(rt)
 
 		// The single LDS query is this shard's residual on the handle.
 		require.Len(t, sys.LogDerivativeSums, 1, "single-shard Compile must emit exactly one LDS per handle")

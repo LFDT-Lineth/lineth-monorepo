@@ -39,6 +39,11 @@ type SentFundingTx = FundingPlan & {
   nonce: number;
 };
 
+type FundingBalanceProvider = {
+  getBlockNumber(): Promise<number>;
+  getBalance(address: string, blockTag?: number): Promise<bigint>;
+};
+
 const PRECOMPUTED = process.env.PRECOMPUTED ?? "/accounts/addresses-precomputed.json";
 const DEPLOY_TIMING_PATH = process.env.DEPLOY_TIMING_PATH ?? "/deployments/deploy-timing.jsonl";
 
@@ -152,6 +157,55 @@ async function waitForReceipt(params: {
   die(`Timed out waiting for funding tx ${params.hash}${suffix}`);
 }
 
+export async function waitForFundedBalance(params: {
+  provider: FundingBalanceProvider;
+  label: string;
+  targetLabel: string;
+  address: string;
+  minBalance: bigint;
+  receiptBlockNumber: number;
+  timeoutMs: number;
+  pollIntervalMs: number;
+  requestTimeoutMs: number;
+}): Promise<bigint> {
+  const deadlineMs = Date.now() + params.timeoutMs;
+  let lastBalance: bigint | undefined;
+
+  while (Date.now() < deadlineMs) {
+    try {
+      const latestBlock = await withTimeout<number>(
+        params.provider.getBlockNumber(),
+        params.requestTimeoutMs,
+        `getBlockNumber for ${params.label} funding ${params.targetLabel}`,
+      );
+
+      if (latestBlock >= params.receiptBlockNumber) {
+        const balance = await withTimeout<bigint>(
+          params.provider.getBalance(params.address, params.receiptBlockNumber),
+          params.requestTimeoutMs,
+          `getBalance ${params.address} at block ${params.receiptBlockNumber}`,
+        );
+        lastBalance = balance;
+        if (balance >= params.minBalance) {
+          return balance;
+        }
+      }
+    } catch {
+      // A lagging load-balanced RPC can fail or read stale state briefly after returning the receipt.
+    }
+
+    const remainingMs = deadlineMs - Date.now();
+    if (remainingMs <= 0) {
+      break;
+    }
+    await sleep(Math.min(params.pollIntervalMs, remainingMs));
+  }
+
+  die(
+    `${params.label} funding ${params.targetLabel} left balance ${lastBalance ?? 0n} below minimum ${params.minBalance}`,
+  );
+}
+
 async function fundBatch(params: {
   label: string;
   timingName: string;
@@ -165,6 +219,8 @@ async function fundBatch(params: {
   const receiptTimeoutMs = envNumber("RUNTIME_FUNDING_RECEIPT_TIMEOUT_MS", process.env, 300_000);
   const receiptPollIntervalMs = envNumber("RUNTIME_FUNDING_RECEIPT_POLL_INTERVAL_MS", process.env, 2_000);
   const rpcRequestTimeoutMs = envNumber("RUNTIME_FUNDING_RPC_REQUEST_TIMEOUT_MS", process.env, 15_000);
+  const balanceTimeoutMs = envNumber("RUNTIME_FUNDING_BALANCE_TIMEOUT_MS", process.env, 60_000);
+  const balancePollIntervalMs = envNumber("RUNTIME_FUNDING_BALANCE_POLL_INTERVAL_MS", process.env, 2_000);
   try {
     const plans = await buildFundingPlans(params.provider, params.targets);
     if (plans.length === 0) {
@@ -227,7 +283,25 @@ async function fundBatch(params: {
       die(`${params.label} funding receipt count mismatch`);
     }
 
-    const finalBalances = await Promise.all(sent.map((tx) => params.provider.getBalance(tx.address)));
+    const finalBalances = await Promise.all(
+      sent.map((tx, index) => {
+        const receipt = receipts[index];
+        if (receipt === undefined) {
+          die(`Missing funding receipt at index ${index}`);
+        }
+        return waitForFundedBalance({
+          provider: params.provider,
+          label: params.label,
+          targetLabel: tx.label,
+          address: tx.address,
+          minBalance: tx.minBalance,
+          receiptBlockNumber: receipt.blockNumber,
+          timeoutMs: balanceTimeoutMs,
+          pollIntervalMs: balancePollIntervalMs,
+          requestTimeoutMs: rpcRequestTimeoutMs,
+        });
+      }),
+    );
     for (let index = 0; index < sent.length; index++) {
       const tx = sent[index];
       const balanceAfter = finalBalances[index];
@@ -325,7 +399,9 @@ async function main() {
   log("Done.");
 }
 
-main().catch((error) => {
-  process.stderr.write(`${sanitizeExternalError(error)}\n`);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((error) => {
+    process.stderr.write(`${sanitizeExternalError(error)}\n`);
+    process.exit(1);
+  });
+}

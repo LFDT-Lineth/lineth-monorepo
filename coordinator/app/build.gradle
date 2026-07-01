@@ -60,6 +60,8 @@ dependencies {
   implementation project(':coordinator:ethereum:gas-pricing:dynamic-cap')
   implementation project(':coordinator:ethereum:gas-pricing')
 
+  // Used by the config documentation generator to walk TOML schema classes via reflection.
+  implementation "org.jetbrains.kotlin:kotlin-reflect:${libs.versions.kotlin.get()}"
   implementation "info.picocli:picocli:${libs.versions.picoli.get()}"
   implementation "io.vertx:vertx-web-client"
   implementation "com.sksamuel.hoplite:hoplite-core:${libs.versions.hoplite.get()}"

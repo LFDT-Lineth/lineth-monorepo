@@ -1,7 +1,7 @@
 package linea.coordination.aggregation
 
 import linea.contract.l2.L2MessageServiceSmartContractClientReadOnly
-import linea.domain.BlockParameter.Companion.toBlockParameter
+import linea.domain.toBlockParameter
 import linea.ethapi.EthApiClient
 import linea.kotlin.zeroHash32
 import linea.persistence.ForcedTransactionsDao

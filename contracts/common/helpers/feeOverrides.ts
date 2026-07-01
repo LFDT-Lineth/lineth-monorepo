@@ -42,6 +42,14 @@ export function assertSingleFeeModel(fees: FeeOverrides): FeeOverrides {
   return fees;
 }
 
+// Fixed local-devnet L2 deploy fees (gwei-scale wei). Centralizes the value copied
+// across local L2 deploy scripts. These are deterministic local-only fees, not a policy
+// for real networks. Validated as a single complete EIP-1559 model.
+export const LOCAL_L2_DEPLOY_FEE_OVERRIDES: FeeOverrides = assertSingleFeeModel({
+  maxFeePerGas: 7_200_000_000_000n,
+  maxPriorityFeePerGas: 7_000_000_000_000n,
+});
+
 // Effective per-gas price used to size a value+gas budget: the legacy gasPrice
 // when legacy fees are selected, otherwise the EIP-1559 ceiling maxFeePerGas.
 export function feeBudgetPricePerGas(fees: FeeOverrides): bigint {
