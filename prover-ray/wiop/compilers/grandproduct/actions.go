@@ -7,6 +7,22 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
+// assignResultAction assigns the grand-product Result cell to the value the
+// prover computes from the committed factor expressions (one for an honest
+// permutation). It is registered by the discharge pass for every GrandProduct,
+// so a directly-constructed query (e.g. from the message-bus pass) is assigned
+// just like a permutation-derived one.
+type assignResultAction struct {
+	gp *wiop.GrandProduct
+}
+
+// Run implements [wiop.ProverAction].
+func (a *assignResultAction) Run(rt wiop.Runtime) {
+	if !a.gp.IsAlreadyAssigned(rt) {
+		a.gp.SelfAssign(rt)
+	}
+}
+
 // proverAction computes each Z column as the running product of its packed
 // numerator/denominator factors and assigns it. The endpoint openings resolve
 // lazily from these column assignments, so no explicit cell assignment is

@@ -28,6 +28,37 @@ func (d BusDirection) String() string {
 	}
 }
 
+// BusReduction selects how the [messagebus] compiler discharges a handle's
+// accumulator. It is declared explicitly per entry (every entry of a handle
+// must agree) rather than inferred, so the reduction is fixed at compile time.
+type BusReduction int
+
+const (
+	// ReduceLogUp discharges the handle via the log-derivative argument: the
+	// per-shard accumulator is the additive residual Σ ±filter·mult/d, asserted
+	// to be zero (in-shard) or summed to zero across shards. This is the only
+	// reduction that supports receiver-side multiplicities.
+	ReduceLogUp BusReduction = iota
+	// ReducePermutation discharges the handle via the grand-product argument:
+	// the per-shard accumulator is the multiplicative product ∏send d / ∏recv d,
+	// asserted to be one (in-shard) or multiplied to one across shards. It
+	// proves the selected-send and selected-receive row multisets are equal and
+	// therefore does not support multiplicities (every row counts once).
+	ReducePermutation
+)
+
+// String returns a human-readable label for r, used in diagnostics.
+func (r BusReduction) String() string {
+	switch r {
+	case ReduceLogUp:
+		return "LogUp"
+	case ReducePermutation:
+		return "Permutation"
+	default:
+		return fmt.Sprintf("BusReduction(%d)", int(r))
+	}
+}
+
 // MessageBus is a [Query] declaring that one [Table] participates in an
 // (OriginShard, Handle)-keyed log-up accumulator. Each instance is the unit of
 // participation: one Send entry adds its rows to the accumulator; one Receive
@@ -78,6 +109,11 @@ type MessageBus struct {
 	Handle string
 	// Direction selects the sign of the contribution. See [BusDirection].
 	Direction BusDirection
+	// Reduction selects how the handle this entry belongs to is discharged
+	// (log-derivative vs grand product). Every entry of a handle must declare
+	// the same Reduction; the [messagebus] compiler panics on a mismatch. See
+	// [BusReduction].
+	Reduction BusReduction
 	// Tab is the column tuple (with an optional selector) being sent or
 	// received. The Selector field of Tab acts as a per-row filter and may be
 	// nil.
@@ -125,7 +161,7 @@ func (mb *MessageBus) Check(_ Runtime) error { return nil }
 //
 // Panics on any invariant violation.
 func (sys *System) NewMessageBusSend(ctx *ContextFrame, originShard, handle string, tab Table) *MessageBus {
-	return sys.newMessageBus(ctx, originShard, handle, BusSend, tab, nil)
+	return sys.newMessageBus(ctx, originShard, handle, ReduceLogUp, BusSend, tab, nil)
 }
 
 // NewMessageBusReceive constructs and registers a Receive entry on
@@ -148,15 +184,42 @@ func (sys *System) NewMessageBusReceive(
 	tab Table,
 	multiplicity Expression,
 ) *MessageBus {
-	return sys.newMessageBus(ctx, originShard, handle, BusReceive, tab, multiplicity)
+	return sys.newMessageBus(ctx, originShard, handle, ReduceLogUp, BusReceive, tab, multiplicity)
 }
 
-// newMessageBus is the shared constructor for [System.NewMessageBusSend] and
-// [System.NewMessageBusReceive]. It validates the invariants and appends the
-// query to [System.MessageBuses].
+// NewMessageBusPermutationSend constructs and registers a grand-product Send
+// entry on (originShard, handle). Like [System.NewMessageBusSend] it adds the
+// entry's rows to the accumulator, but the handle is discharged via the
+// grand-product (permutation) argument rather than log-derivative. A selector
+// on tab restricts participation to the selected rows; there is no
+// multiplicity (every selected row counts exactly once).
+//
+// Every entry of the handle must be created with the permutation constructors;
+// mixing reductions within a handle is rejected by the [messagebus] compiler.
+func (sys *System) NewMessageBusPermutationSend(ctx *ContextFrame, originShard, handle string, tab Table) *MessageBus {
+	return sys.newMessageBus(ctx, originShard, handle, ReducePermutation, BusSend, tab, nil)
+}
+
+// NewMessageBusPermutationReceive constructs and registers a grand-product
+// Receive entry on (originShard, handle). It subtracts the entry's selected
+// rows from the accumulator. The grand-product argument proves multiset
+// equality and so carries no multiplicity — hence the signature has no
+// multiplicity parameter (multiplicity-freeness is structural, not a runtime
+// check).
+func (sys *System) NewMessageBusPermutationReceive(
+	ctx *ContextFrame,
+	originShard, handle string,
+	tab Table,
+) *MessageBus {
+	return sys.newMessageBus(ctx, originShard, handle, ReducePermutation, BusReceive, tab, nil)
+}
+
+// newMessageBus is the shared constructor for the message-bus entry builders.
+// It validates the invariants and appends the query to [System.MessageBuses].
 func (sys *System) newMessageBus(
 	ctx *ContextFrame,
 	originShard, handle string,
+	reduction BusReduction,
 	dir BusDirection,
 	tab Table,
 	multiplicity Expression,
@@ -176,6 +239,10 @@ func (sys *System) newMessageBus(
 	if dir == BusSend && multiplicity != nil {
 		panic("wiop: System.NewMessageBusSend: multiplicity must be nil on the Send side")
 	}
+	if reduction == ReducePermutation && multiplicity != nil {
+		panic("wiop: System.NewMessageBusPermutation*: the grand-product reduction proves multiset " +
+			"equality and does not support multiplicities")
+	}
 	if multiplicity != nil {
 		if m := multiplicity.Module(); m != nil && m != tab.Module() {
 			panic(fmt.Sprintf(
@@ -194,6 +261,7 @@ func (sys *System) newMessageBus(
 		OriginShard:  originShard,
 		Handle:       handle,
 		Direction:    dir,
+		Reduction:    reduction,
 		Tab:          tab,
 		Multiplicity: multiplicity,
 	}

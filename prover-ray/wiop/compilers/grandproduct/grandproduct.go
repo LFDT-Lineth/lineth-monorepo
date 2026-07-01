@@ -96,6 +96,13 @@ func compileGrandProduct(gp *wiop.GrandProduct) {
 		}
 	}
 
+	// Assign the claimed Result (∏num/∏den) from the factor expressions, and
+	// the Z columns from their prefix products. The two run in either order —
+	// they are independent — and FinalProductCheck below ties them together.
+	// Registering the Result assignment here (rather than in the permutation
+	// phase) keeps every GrandProduct self-dischargeable, including those a
+	// caller builds directly via NewGrandProduct (e.g. the message-bus pass).
+	round.RegisterAction(&assignResultAction{gp: gp})
 	round.RegisterAction(&proverAction{entries: entries})
 	round.RegisterVerifierAction(&FinalProductCheck{GrandProduct: gp, Entries: entries})
 }

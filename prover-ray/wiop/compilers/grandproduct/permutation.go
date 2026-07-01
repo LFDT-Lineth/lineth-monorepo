@@ -64,7 +64,9 @@ func compilePermutations(sys *wiop.System) {
 	}
 
 	gp := sys.NewGrandProduct(compCtx.Childf("aggregated"), numerators, denominators)
-	gp.Result.Round().RegisterAction(&assignResultAction{gp: gp})
+	// The Result cell is assigned by the grandproduct discharge pass
+	// (compileGrandProducts), shared by every GrandProduct. Here we only attach
+	// the permutation-specific verifier predicate Result == 1.
 	gp.Result.Round().RegisterVerifierAction(&CheckResultIsOne{GrandProduct: gp})
 
 	for _, q := range perms {
@@ -99,19 +101,6 @@ func rlcOfTable(alpha *wiop.CoinField, tab wiop.Table) wiop.Expression {
 		acc = wiop.Add(wiop.Mul(alphaExpr, acc), cols[i])
 	}
 	return acc
-}
-
-// assignResultAction assigns the grand-product Result cell to the value the
-// prover computes from the committed factors (one for an honest permutation).
-type assignResultAction struct {
-	gp *wiop.GrandProduct
-}
-
-// Run implements [wiop.ProverAction].
-func (a *assignResultAction) Run(rt wiop.Runtime) {
-	if !a.gp.IsAlreadyAssigned(rt) {
-		a.gp.SelfAssign(rt)
-	}
 }
 
 // CheckResultIsOne asserts that the aggregated [wiop.GrandProduct] Result cell

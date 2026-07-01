@@ -141,26 +141,48 @@ func Compile(sys *wiop.System) {
 		}
 	}
 
-	// Per handle: aggregate every entry's contribution into one
-	// LogDerivativeSum holding this shard's residual on that handle.
+	// Per handle: aggregate every entry's contribution into one accumulator
+	// holding this shard's residual on that handle. The reduction is declared
+	// per entry and must be uniform within a handle:
+	//   - ReduceLogUp:      a LogDerivativeSum residual (additive, expected 0).
+	//   - ReducePermutation: a GrandProduct accumulator (multiplicative,
+	//     expected 1), discharged later by grandproduct.Compile.
 	cellByHandle := make(map[string]*wiop.Cell, len(handles))
+	reductionByHandle := make(map[string]wiop.BusReduction, len(handles))
 	for _, h := range handles {
-		fractions := buildFractions(alpha, beta, byHandle[h])
-		ld := sys.NewLogDerivativeSum(compCtx.Childf("handle-%s", h), fractions)
-		cellByHandle[h] = ld.Result
+		entries := byHandle[h]
+		red := handleReduction(h, entries)
+		reductionByHandle[h] = red
+		switch red {
+		case wiop.ReducePermutation:
+			nums, dens := buildPermutationFactors(alpha, beta, entries)
+			gp := sys.NewGrandProduct(compCtx.Childf("handle-%s", h), nums, dens)
+			cellByHandle[h] = gp.Result
+		default:
+			fractions := buildFractions(alpha, beta, entries)
+			ld := sys.NewLogDerivativeSum(compCtx.Childf("handle-%s", h), fractions)
+			cellByHandle[h] = ld.Result
+		}
 	}
 
-	// One in-shard verifier action per handle: this shard's residual on the
-	// handle must equal Expected (zero in the unsharded case). Suppressed
-	// when System.MessageBusSkipInShardCheck is set, so a downstream
-	// cross-shard layer can own the consistency check instead.
+	// One in-shard verifier action per handle: this shard's accumulator on the
+	// handle must equal Expected — zero for a LogUp residual, one for a
+	// permutation product (both in the unsharded case). Suppressed when
+	// System.MessageBusSkipInShardCheck is set, so a downstream cross-shard
+	// layer can own the consistency check instead; it reads the Reduction tag
+	// to decide whether to sum residuals to zero or multiply products to one.
 	if !sys.MessageBusSkipInShardCheck {
 		for _, h := range handles {
+			expected := field.ElemZero()
+			if reductionByHandle[h] == wiop.ReducePermutation {
+				expected = field.ElemOne()
+			}
 			resultRound.RegisterVerifierAction(&CheckHandleSumInShard{
-				Handle:   h,
-				Cell:     cellByHandle[h],
-				Path:     compCtx.Childf("handle-%s", h).Childf("residual").Path(),
-				Expected: field.ElemZero(),
+				Handle:    h,
+				Cell:      cellByHandle[h],
+				Path:      compCtx.Childf("handle-%s", h).Childf("residual").Path(),
+				Expected:  expected,
+				Reduction: reductionByHandle[h],
 			})
 		}
 	}
@@ -260,6 +282,70 @@ func buildFractions(
 	return fractions
 }
 
+// handleReduction returns the reduction shared by every entry of a handle,
+// panicking if the entries disagree. A handle is discharged by exactly one
+// argument, so mixing log-derivative and permutation entries under one handle
+// is a misuse.
+func handleReduction(handle string, entries []*wiop.MessageBus) wiop.BusReduction {
+	red := entries[0].Reduction
+	for _, mb := range entries[1:] {
+		if mb.Reduction != red {
+			panic(fmt.Sprintf(
+				"wiop/compilers/messagebus: handle %q mixes reductions: %v at %q vs %v at %q; "+
+					"all entries of a handle must declare the same reduction",
+				handle, red, entries[0].Context().Path(), mb.Reduction, mb.Context().Path(),
+			))
+		}
+	}
+	return red
+}
+
+// buildPermutationFactors turns the entries of a permutation handle into the
+// grand-product factor lists: each Send contributes one numerator factor and
+// each Receive one denominator factor. The shard's accumulator is then
+// ∏send factor / ∏recv factor, equal to one iff the selected-send and
+// selected-receive row multisets coincide. There are no multiplicities on this
+// path (enforced at construction).
+func buildPermutationFactors(
+	alpha, beta *wiop.CoinField,
+	entries []*wiop.MessageBus,
+) (nums, dens []wiop.Expression) {
+	for _, mb := range entries {
+		factor := permutationFold(alpha, beta, mb.Tab)
+		switch mb.Direction {
+		case wiop.BusSend:
+			nums = append(nums, factor)
+		case wiop.BusReceive:
+			dens = append(dens, factor)
+		default:
+			panic(fmt.Sprintf(
+				"wiop/compilers/messagebus: unknown BusDirection %v at %q",
+				mb.Direction, mb.Context().Path(),
+			))
+		}
+	}
+	return nums, dens
+}
+
+// permutationFold returns the per-row grand-product factor for one entry:
+//
+//	selector·(β + RLC(row)) + (1 − selector)
+//
+// so a selected row contributes β + RLC(row) and an unselected row contributes
+// the neutral factor 1 (dropping out of the product). With no selector the
+// factor is simply β + RLC(row). The selector is assumed {0,1}-valued and zero
+// on padding rows — the same assumption the log-derivative path makes of its
+// filters.
+func permutationFold(alpha, beta *wiop.CoinField, tab wiop.Table) wiop.Expression {
+	fold := foldDenominator(alpha, beta, tab.Columns)
+	if tab.Selector == nil {
+		return fold
+	}
+	sel := wiop.Expression(tab.Selector)
+	one := wiop.NewConstantField(field.NewFromString("1"))
+	return wiop.Add(wiop.Mul(sel, fold), wiop.Sub(one, sel))
+}
+
 // foldDenominator returns the expression β + α^{w-1}·c_0 + … + α·c_{w-2} +
 // c_{w-1}, evaluated as a Horner pass over cols. For width-1 tabs the loop
 // is empty and the result is β + c_0; α is not consulted in that case but
@@ -273,28 +359,35 @@ func foldDenominator(alpha, beta *wiop.CoinField, cols []*wiop.ColumnView) wiop.
 }
 
 // CheckHandleSumInShard is the verifier action that closes the in-shard half
-// of the message-bus reduction: the LogDerivativeSum cell produced for one
-// handle on this shard — the shard's residual on that handle — must equal
-// [CheckHandleSumInShard.Expected]. For a single-shard protocol the expected
-// value is always zero; the field exists so a sharded protocol can
-// instantiate this action with the residual the cross-shard layer expects
-// to see on this shard.
+// of the message-bus reduction: the accumulator cell produced for one handle on
+// this shard must equal [CheckHandleSumInShard.Expected]. The cell is a
+// LogDerivativeSum residual (additive, expected zero) or a GrandProduct product
+// (multiplicative, expected one), per [CheckHandleSumInShard.Reduction]. For a
+// single-shard protocol the expected value is zero / one respectively; the
+// field exists so a sharded protocol can instantiate this action with the value
+// the cross-shard layer expects to see on this shard.
 type CheckHandleSumInShard struct {
 	// Handle names the bus this check belongs to. Diagnostic-only.
 	Handle string
-	// Cell is the LogDerivativeSum result holding this shard's residual on
+	// Cell is the accumulator result holding this shard's residual/product on
 	// Handle. A single Compile call produces exactly one cell per handle —
-	// the action is therefore a single-cell equality check, not a sum.
+	// the action is therefore a single-cell equality check.
 	Cell *wiop.Cell
 	// Path is the qualified ContextFrame path of the check, used in error
 	// messages.
 	Path string
 	// Expected is the value Cell must hold on this shard. Constant — fixed
 	// at action-construction time, not derived from any other runtime
-	// state. [Compile] sets this to [field.ElemZero] for the single-shard
-	// case; sharded callers that bypass [Compile]'s built-in registration
-	// may construct the action directly with a non-zero value.
+	// state. [Compile] sets this to [field.ElemZero] for a LogUp handle and
+	// [field.ElemOne] for a permutation handle; sharded callers that bypass
+	// [Compile]'s built-in registration may construct the action directly with
+	// a different value.
 	Expected field.Gen
+	// Reduction records how this handle's accumulator composes across shards:
+	// [wiop.ReduceLogUp] residuals sum to zero, [wiop.ReducePermutation]
+	// products multiply to one. A cross-shard aggregation layer reads it to
+	// pick the right global identity.
+	Reduction wiop.BusReduction
 }
 
 // Check implements [wiop.VerifierAction]. Reads the residual cell and
