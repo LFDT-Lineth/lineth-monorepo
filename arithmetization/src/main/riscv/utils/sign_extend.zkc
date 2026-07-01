@@ -47,6 +47,7 @@ fn sgn_extension_u8_u64(value:u8) -> (ext_value:u64) {
 }
 
 // 64-bit arithmetic right shift
+#[inline]
 fn _ashr_u64(value:DoubleWord, shamt:u6) -> (out:DoubleWord) {
     var sign:SignBit = sign_bit_of_double_word(value)
     var logical:DoubleWord = value >> shamt
@@ -59,6 +60,7 @@ fn _ashr_u64(value:DoubleWord, shamt:u6) -> (out:DoubleWord) {
 }
 
 // 32-bit arithmetic right shift on low 32 bits of value
+#[inline]
 fn _ashr_u32(value:DoubleWord, shamt:u5) -> (out:Word) {
     var w:u32 = (value & MAX_UINT_32_AS_U64) as Word
     var sign:SignBit = sign_bit_of_word(w)
