@@ -638,6 +638,8 @@ check_typescript_quickstart_helpers() {
   if grep -q -- '--forget-deployer' "$STACK/scripts/reset.sh" \
     && grep -q 'PRESERVED_DEPLOYER_DIR' "$STACK/scripts/reset.sh" \
     && grep -q 'deployer-keystore' "$STACK/scripts/reset.sh" \
+    && grep -q 'lineth_subtitle "reset · clean quickstart state"' "$STACK/scripts/reset.sh" \
+    && ! grep -q 'lineth_banner' "$STACK/scripts/reset.sh" \
     && ! grep -q '^L1_DEPLOYER_PRIVATE_KEY=' "$STACK/.env.example" \
     && ! grep -q '^# L1_DEPLOYER_PRIVATE_KEY=' "$STACK/.env.example"; then
     pass "reset preserves generated Sepolia deployer by default and .env.example omits raw deployer key"
@@ -1004,7 +1006,7 @@ check_reuse_guardrails() {
     fail "deploy-contracts must not reuse host node_modules or throw away the Hardhat cache"
   fi
 
-  if grep -q 'corepack prepare pnpm@10.32.1 --activate' "$ensure_demo_erc20_sh" \
+  if grep -q 'corepack prepare pnpm@11.9.0 --activate' "$ensure_demo_erc20_sh" \
     && grep -q 'LINETH_ACCOUNTS_DIR' "$ensure_demo_erc20_sh" \
     && grep -q 'resolveL1DeployerConfig' "$ensure_demo_erc20" \
     && ! grep -q ': "${L1_DEPLOYER_PRIVATE_KEY' "$ensure_demo_erc20_sh"; then
@@ -1013,7 +1015,7 @@ check_reuse_guardrails() {
     fail "on-demand ERC20 deploy helper must prepare pnpm and export generated runtime keys before invoking TypeScript"
   fi
 
-  if grep -q 'corepack prepare pnpm@10.32.1 --activate' "$traffic_account_sh"; then
+  if grep -q 'corepack prepare pnpm@11.9.0 --activate' "$traffic_account_sh"; then
     pass "traffic account helper prepares pnpm before invoking TypeScript"
   else
     fail "traffic account helper must prepare pnpm before invoking TypeScript"
@@ -1206,6 +1208,7 @@ check_smoke_and_traffic_scripts() {
   fi
 
   if grep -q 'mode                          ' "$STACK/scripts/internal/quickstart-preflight.ts" \
+    && ! grep -q 'lineth_kv "mode" "Sepolia"' "$STACK/scripts/start.sh" \
     && grep -q 'local dev mode; Sepolia gas/blob gates skipped' "$STACK/scripts/internal/quickstart-preflight.ts" \
     && grep -q 'gas                           execution' "$STACK/scripts/internal/quickstart-preflight.ts" \
     && grep -q 'blob fee                      blob base' "$STACK/scripts/internal/quickstart-preflight.ts" \
@@ -1290,6 +1293,26 @@ check_smoke_and_traffic_scripts() {
     pass "start.sh waits for local L1 EL, CL, and block production before preflight"
   else
     fail "start.sh must wait for local L1 EL, CL, and advancing eth_blockNumber before preflight"
+  fi
+
+  if [ -f "$STACK/scripts/internal/deploy-rpc-error.ts" ] \
+    && grep -q 'formatQuickstartDeployRpcError' "$STACK/scripts/internal/deployBridgedTokenAndTokenBridgeV1_1.ts" \
+    && grep -q 'require("/scripts/internal/deploy-rpc-error")' "$STACK/scripts/internal/deployBridgedTokenAndTokenBridgeV1_1.ts" \
+    && grep -q './scripts/internal:/scripts/internal:ro' "$STACK/docker-compose.yml" \
+    && ! grep -q 'deploy-rpc-error.ts:/workspace/contracts/local-deployments-artifacts' "$STACK/docker-compose.yml" \
+    && grep -q 'free or overloaded Sepolia RPC endpoint' "$STACK/scripts/internal/deploy-rpc-error.ts" \
+    && grep -q 'explain_l1_rpc_submission_error "$logfile"' "$STACK/scripts/phases/04-deploy-contracts.sh" \
+    && grep -q 'L1 contract deployment hit an RPC submission error from L1_RPC_URL' "$STACK/scripts/phases/04-deploy-contracts.sh" \
+    && grep -q 'pipeline_status=("${PIPESTATUS\[@\]}")' "$STACK/scripts/phases/04-deploy-contracts.sh" \
+    && grep -q 'tee_status="${pipeline_status\[1\]}"' "$STACK/scripts/phases/04-deploy-contracts.sh" \
+    && grep -q 'could not coalesce error' "$STACK/scripts/watch.sh" \
+    && grep -q 'already known' "$STACK/scripts/status.sh" \
+    && grep -q 'L1_RPC_URL' "$STACK/scripts/internal/deploy-rpc-error.ts" \
+    && grep -q './scripts/reset.sh' "$STACK/scripts/internal/deploy-rpc-error.ts" \
+    && grep -q 'assert.doesNotMatch(formatted.message' "$STACK/scripts/internal/deploy-rpc-error.test.ts"; then
+    pass "deploy TokenBridge surfaces actionable Sepolia RPC submission guidance without echoing raw tx payloads"
+  else
+    fail "deploy TokenBridge must turn noisy Sepolia RPC submission errors into actionable L1_RPC_URL guidance"
   fi
 
   if grep -q 'HOST_PORT_L1_RPC' "$STACK/scripts/check-ports.sh" \
@@ -1515,7 +1538,7 @@ check_pinned_utility_images_and_docs() {
     && grep -q '00-prepare-deploy-tools.sh' "$compose" \
     && grep -q 'FOUNDRY_TAG: ${FOUNDRY_TAG:' "$compose" \
     && grep -q 'Foundry binaries missing' "$deploy_contracts" \
-    && grep -q 'corepack prepare pnpm@10.32.1' "$deploy_contracts" \
+    && grep -q 'corepack prepare pnpm@11.9.0' "$deploy_contracts" \
     && ! grep -q 'pnpm@latest' "$deploy_contracts" \
     && ! grep -q 'foundryup\|foundry.paradigm.xyz' "$deploy_contracts"; then
     pass "deploy-contracts uses pinned cached Foundry and pnpm tooling"
@@ -1559,6 +1582,110 @@ check_pinned_utility_images_and_docs() {
     pass "README documents verified timing, local traffic checks, and CI maintenance path"
   else
     fail "README must document verified timing, local traffic checks, and CI maintenance path"
+  fi
+}
+
+check_wizard_cli() {
+  start_script="$STACK/scripts/start.sh"
+  wizard_lib="$STACK/scripts/lib/wizard.sh"
+  wizard_tests="$STACK/scripts/tests/wizard/run.sh"
+  quickstart_preflight="$STACK/scripts/internal/quickstart-preflight.ts"
+  readme="$STACK/README.md"
+  scripts_readme="$STACK/scripts/README.md"
+  stack_gitignore="$STACK/.gitignore"
+
+  if [ -f "$wizard_lib" ] \
+    && grep -q 'lineth_wizard_main' "$wizard_lib" \
+    && grep -q 'lineth_wizard_set_env_key()' "$wizard_lib" \
+    && grep -q 'lineth_banner "wizard · guided .env setup"' "$wizard_lib" \
+    && grep -q 'LINETH_WIZARD_MANAGED_KEYS="L1_MODE L1_RPC_URL PROVER_DEV_OVERRIDE PROVER_GOMEMLIMIT"' "$wizard_lib"; then
+    pass "wizard shell library owns the managed .env key flow"
+  else
+    fail "scripts/lib/wizard.sh must define the wizard managed-key flow"
+  fi
+
+  set_env_body="$(awk '
+    /^lineth_wizard_set_env_key\(\)/ { in_function = 1 }
+    in_function { print }
+    in_function && /^}/ { exit }
+  ' "$wizard_lib")"
+  if printf '%s\n' "$set_env_body" | grep -q 'sed'; then
+    fail "lineth_wizard_set_env_key must not use sed for value replacement"
+  else
+    pass "lineth_wizard_set_env_key avoids sed-based value replacement"
+  fi
+
+  if grep -q 'lib/wizard.sh' "$start_script" \
+    && grep -q 'LINETH_WIZARD_FLAG_L1_MODE' "$start_script" \
+    && grep -q 'lineth_wizard_main "$STACK" "$SCRIPT_DIR"' "$start_script"; then
+    pass "start.sh sources and invokes the wizard before normal boot"
+  else
+    fail "start.sh must source scripts/lib/wizard.sh and invoke lineth_wizard_main"
+  fi
+
+  if grep -q -- '--then-start requires --wizard; to just boot, run ./scripts/start.sh --tail' "$start_script" \
+    && grep -q 'exec "$SCRIPT_DIR/start.sh" --tail' "$start_script"; then
+    pass "start.sh guards --then-start and hands off with exec"
+  else
+    fail "start.sh must reject --then-start without --wizard and exec start.sh --tail after wizard success"
+  fi
+
+  if grep -q '^run_ts_preflight$' "$start_script" \
+    && ! grep -q 'LINETH_PRECHECKED' "$start_script"; then
+    pass "start.sh still runs full preflight after wizard handoff"
+  else
+    fail "start.sh must not skip full preflight after --wizard --then-start"
+  fi
+
+  if grep -q 'LINETH_PREFLIGHT_RPC_ONLY' "$wizard_lib" \
+    && grep -q 'LINETH_PREFLIGHT_RPC_ONLY' "$quickstart_preflight" \
+    && grep -q 'runRpcOnlyCheck' "$quickstart_preflight"; then
+    pass "wizard uses quickstart-preflight RPC-only mode before .env exists"
+  else
+    fail "wizard Sepolia validation must use quickstart-preflight RPC-only mode"
+  fi
+
+  if [ -f "$stack_gitignore" ] && grep -q '^\.env\.\*\.tmp$' "$stack_gitignore" \
+    && git -C "$ROOT" check-ignore -q "$STACK_REL/.env.123.456.tmp"; then
+    pass "lineth-stack .gitignore ignores wizard .env.*.tmp candidates"
+  else
+    fail "docs/getting-started/lineth-stack/.gitignore must ignore .env.*.tmp"
+  fi
+
+  if [ -f "$wizard_tests" ] \
+    && grep -q 'lineth_wizard_set_env_key preserves comments and URL-like values literally' "$wizard_tests" \
+    && grep -q 'assert_fixture local-dev' "$wizard_tests" \
+    && grep -q 'WIZARD_L1_MODE env var configures non-interactive mode' "$wizard_tests" \
+    && grep -q 'L1 prompt uses numbered choice header' "$wizard_tests" \
+    && grep -q 'backup collision keeps both backups' "$wizard_tests" \
+    && grep -q 'mode-switch guard points at reset' "$wizard_tests" \
+    && grep -q 'save-only writes .env without checking ports' "$wizard_tests" \
+    && grep -q 'RPC preflight failure leaves no .env' "$wizard_tests" \
+    && grep -q 'LINETH_WIZARD_STACK_OVERRIDE' "$wizard_tests" \
+    && [ -f "$STACK/scripts/tests/wizard/fixtures/local-dev.env" ] \
+    && [ -f "$STACK/scripts/tests/wizard/fixtures/local-partial.env" ] \
+    && [ -f "$STACK/scripts/tests/wizard/fixtures/sepolia-dev.env" ] \
+    && [ -f "$STACK/scripts/tests/wizard/fixtures/sepolia-partial.env" ]; then
+    pass "wizard deterministic test runner covers key safety behaviors"
+  else
+    fail "scripts/tests/wizard/run.sh must cover fixture outputs, URL-safe env writes, mode guard, and busy-port ordering"
+  fi
+
+  wizard_test_log="/tmp/lineth-wizard-tests-static.$$"
+  if sh "$wizard_tests" > "$wizard_test_log" 2>&1; then
+    pass "wizard deterministic test runner passes"
+  else
+    fail "wizard deterministic test runner must pass: $(tr '\n' ' ' < "$wizard_test_log")"
+  fi
+  rm -f "$wizard_test_log"
+
+  if grep -q './scripts/start.sh --wizard --then-start' "$readme" \
+    && grep -q 'WIZARD_L1_MODE' "$readme" \
+    && grep -q 'artifacts/env-backups/.env.<timestamp>' "$readme" \
+    && grep -q -- '--wizard' "$scripts_readme"; then
+    pass "README files document wizard usage, non-interactive env vars, and backups"
+  else
+    fail "README files must document the wizard, non-interactive env vars, and backup location"
   fi
 }
 
@@ -1650,6 +1777,7 @@ check_runtime_config_and_validium_guardrails
 check_reuse_guardrails
 check_smoke_and_traffic_scripts
 check_pinned_utility_images_and_docs
+check_wizard_cli
 check_quickstart_review_fixes
 
 if [ "$FAILURES" -ne 0 ]; then

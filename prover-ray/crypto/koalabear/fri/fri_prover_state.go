@@ -67,12 +67,9 @@ func NewProverState(p Params, levels []Level) (*ProverState, error) {
 		trees:   make([]*Tree, p.numRounds),
 	}
 
-	// Layer 0 is committed up front: its evaluations are levels[0].Evals and its
-	// tree is supplied by the caller (its root is absorbed externally, so it is
-	// not stored in FRIRoots).
+	// Layer 0 is committed up front; its root is supplied externally rather than stored in FRIRoots.
 	copy(st.running, levels[0].Evals)
 	st.layers[0] = st.running
-	st.trees[0] = levels[0].Tree
 
 	if p.numRounds > 1 {
 		st.FRIRoots = make([]field.Octuplet, p.numRounds-1)
@@ -138,7 +135,7 @@ func (st *ProverState) Open(openedPositions []int) Proof {
 	if st.plan.numLevels > 1 {
 		st.LevelQueries = make([][]QueryLayer, st.plan.numLevels-1)
 		for l := range st.LevelQueries {
-			st.LevelQueries[l] = make(Query, st.p.NumQueries)
+			st.LevelQueries[l] = make([]QueryLayer, st.p.NumQueries)
 		}
 	}
 
@@ -151,14 +148,39 @@ func (st *ProverState) Open(openedPositions []int) Proof {
 		roundOfLevel[l] = jl
 	}
 
-	for k := 0; k < st.p.NumQueries; k++ {
+	for k := range st.p.NumQueries {
 		s := openedPositions[k]
-		st.FRIQueries[k] = openQueryExt(s, st.layers, st.trees, st.p.numRounds)
+		st.FRIQueries[k] = openQueryExt(
+			s,
+			openLevelTreesAt(st.levels[0].Trees, len(st.levels[0].Evals), s),
+			st.layers,
+			st.trees,
+			st.p.numRounds,
+		)
 		for l := 1; l < st.plan.numLevels; l++ {
 			base := s >> roundOfLevel[l]
-			st.LevelQueries[l-1][k] = QueryLayer(st.levels[l].Tree.OpenBranch(base))
+			st.LevelQueries[l-1][k] = openLevelTreesAt(st.levels[l].Trees, len(st.levels[l].Evals), base)
 		}
 	}
 
 	return st.Proof
+}
+
+func openLevelTreesAt(trees []*Tree, levelSize, base int) QueryLayer {
+	opening := make(QueryLayer, len(trees))
+	for i, tree := range trees {
+		opening[i] = tree.OpenBranch(levelTreeLeafIndex(tree, levelSize, base))
+	}
+	return opening
+}
+
+func levelTreeLeafIndex(tree *Tree, levelSize, base int) int {
+	if tree == nil {
+		panic("fri: levelTreeLeafIndex: nil tree")
+	}
+	idx, err := levelLeafIndex(tree.NumLeaves(), levelSize, base)
+	if err != nil {
+		panic("fri: levelTreeLeafIndex: " + err.Error())
+	}
+	return idx
 }

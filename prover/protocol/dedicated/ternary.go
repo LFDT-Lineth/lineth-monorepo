@@ -77,7 +77,7 @@ func (ctx *TernaryCtx) Run(run *wizard.ProverRuntime) {
 		res         = make([]field.Element, 0, stop-start)
 	)
 
-	for i := start; i <= stop; i++ {
+	for i := start; i < stop; i++ {
 
 		c := condition.Get(i)
 

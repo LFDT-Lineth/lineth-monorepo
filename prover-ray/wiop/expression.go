@@ -50,11 +50,11 @@ type Expression interface {
 	// EvaluateVector evaluates this expression against the given runtime and
 	// returns the resulting vector.
 	// Precondition: IsMultiValued() must be true; panics otherwise.
-	EvaluateVector(Runtime) ConcreteVector
+	EvaluateVector(*Runtime) ConcreteVector
 	// EvaluateSingle evaluates this expression against the given runtime and
 	// returns the resulting scalar.
 	// Precondition: IsMultiValued() must be false; panics otherwise.
-	EvaluateSingle(Runtime) ConcreteField
+	EvaluateSingle(*Runtime) ConcreteField
 	// Module returns the Module whose columns appear in this expression, or
 	// nil if the expression contains no column reference. An expression may
 	// reference columns from at most one module; mixing columns from different
@@ -301,7 +301,7 @@ func (a *ArithmeticOperation) IsSized() bool {
 //
 // On the first call the expression subtree is compiled into a [compiledProgram]
 // and cached. Subsequent calls reuse the compiled program directly.
-func (a *ArithmeticOperation) EvaluateVector(rt Runtime) ConcreteVector {
+func (a *ArithmeticOperation) EvaluateVector(rt *Runtime) ConcreteVector {
 	if !a.IsMultiValued() {
 		panic("wiop: EvaluateVector() called on a scalar ArithmeticOperation; check IsMultiValued() first")
 	}
@@ -312,7 +312,7 @@ func (a *ArithmeticOperation) EvaluateVector(rt Runtime) ConcreteVector {
 
 // EvaluateSingle implements [Expression].
 // Panics if IsMultiValued() is true.
-func (a *ArithmeticOperation) EvaluateSingle(rt Runtime) ConcreteField {
+func (a *ArithmeticOperation) EvaluateSingle(rt *Runtime) ConcreteField {
 	if a.IsMultiValued() {
 		panic("wiop: EvaluateSingle() called on a vector ArithmeticOperation; check IsMultiValued() first")
 	}
@@ -472,7 +472,7 @@ func (c *Constant) Size() int {
 // Plain slice contains a single [field.Vec] with Value repeated
 // Module.Size() times, and whose Padding is Value. Panics if scalar; check
 // [Constant.IsMultiValued] first.
-func (c *Constant) EvaluateVector(rt Runtime) ConcreteVector {
+func (c *Constant) EvaluateVector(rt *Runtime) ConcreteVector {
 	if c.module == nil {
 		panic("wiop: EvaluateVector() cannot be called on a scalar Constant; check IsMultiValued() first")
 	}
@@ -490,7 +490,7 @@ func (c *Constant) EvaluateVector(rt Runtime) ConcreteVector {
 
 // EvaluateSingle implements [Expression]. Returns a [ConcreteField] wrapping
 // Value. Panics if vector; check [Constant.IsMultiValued] first.
-func (c *Constant) EvaluateSingle(_ Runtime) ConcreteField {
+func (c *Constant) EvaluateSingle(_ *Runtime) ConcreteField {
 	if c.module != nil {
 		panic("wiop: EvaluateSingle() cannot be called on a vector Constant; check IsMultiValued() first")
 	}

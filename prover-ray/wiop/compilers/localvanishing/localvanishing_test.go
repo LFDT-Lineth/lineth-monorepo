@@ -361,7 +361,7 @@ func TestCompile_DynamicModule_NegativeAnchor(t *testing.T) {
 		global.Compile(sys)
 		rt := wiop.NewRuntime(sys)
 		rt.AssignColumn(col, lastRowVec(n, 0))
-		require.NoErrorf(t, wioptest.RunAndVerify(&rt), "n=%d: honest witness must be accepted", n)
+		require.NoErrorf(t, wioptest.RunAndVerify(rt), "n=%d: honest witness must be accepted", n)
 	}
 
 	// Soundness: a non-zero last entry must be rejected at every runtime size.
@@ -371,7 +371,7 @@ func TestCompile_DynamicModule_NegativeAnchor(t *testing.T) {
 		global.Compile(sys)
 		rt := wiop.NewRuntime(sys)
 		rt.AssignColumn(col, lastRowVec(n, 7))
-		assert.Errorf(t, wioptest.RunAndVerify(&rt), "n=%d: invalid witness must be rejected", n)
+		assert.Errorf(t, wioptest.RunAndVerify(rt), "n=%d: invalid witness must be rejected", n)
 	}
 }
 

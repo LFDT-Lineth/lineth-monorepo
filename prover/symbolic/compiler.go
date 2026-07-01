@@ -1,6 +1,8 @@
 package symbolic
 
 import (
+	"sync"
+	"sync/atomic"
 	"unsafe"
 
 	"github.com/consensys/gnark-crypto/field/koalabear/extensions"
@@ -10,6 +12,10 @@ import (
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/utils/parallel"
 )
+
+// compileMu guards the lazy Compile, since a compiled board may be shared
+// across concurrent provers. Evaluate's fast path stays lock-free.
+var compileMu sync.Mutex
 
 // Program is a compiled expression board ready for evaluation.
 
@@ -41,7 +47,7 @@ func areAllConstants(inp []smartvectors.SmartVector) bool {
 }
 
 func (b *ExpressionBoard) Evaluate(inputs []smartvectors.SmartVector) smartvectors.SmartVector {
-	if b.ProgramNodesCount != len(b.Nodes) {
+	if atomic.LoadUint32(&b.compiled) == 0 {
 		b.Compile()
 	}
 
@@ -152,11 +158,26 @@ func (b *ExpressionBoard) Evaluate(inputs []smartvectors.SmartVector) smartvecto
 
 // Compile compiles the expression board into a program.
 func (b *ExpressionBoard) Compile() {
+	compileMu.Lock()
+	defer compileMu.Unlock()
+
+	// Double-check: another prover may have compiled while we waited.
+	if atomic.LoadUint32(&b.compiled) == 1 {
+		return
+	}
+
 	if len(b.Nodes) == 0 {
 		b.Bytecode = nil
 		b.Constants = nil
 		b.NumSlots = 0
 		b.ProgramNodesCount = 0
+		atomic.StoreUint32(&b.compiled, 1)
+		return
+	}
+
+	// Already compiled (e.g. deserialized with bytecode intact).
+	if b.ProgramNodesCount == len(b.Nodes) {
+		atomic.StoreUint32(&b.compiled, 1)
 		return
 	}
 
@@ -245,6 +266,7 @@ func (b *ExpressionBoard) Compile() {
 	b.NumSlots = nextSlot
 	b.ResultSlot = slots[len(b.Nodes)-1]
 	b.ProgramNodesCount = len(b.Nodes)
+	atomic.StoreUint32(&b.compiled, 1)
 }
 
 // VM for Base elements

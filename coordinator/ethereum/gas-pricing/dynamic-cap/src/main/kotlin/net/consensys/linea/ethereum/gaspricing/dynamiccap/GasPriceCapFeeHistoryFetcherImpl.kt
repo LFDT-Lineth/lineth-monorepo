@@ -1,8 +1,8 @@
 package net.consensys.linea.ethereum.gaspricing.dynamiccap
 
 import linea.domain.BlockParameter
-import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.FeeHistory
+import linea.domain.toBlockParameter
 import linea.ethapi.EthApiFeeClient
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -65,7 +65,7 @@ class GasPriceCapFeeHistoryFetcherImpl(
         "endBlockNumberInclusive={} newestBlock={} blockCount={}",
       startBlockNumberInclusive,
       endBlockNumberInclusive,
-      newestBlock.getNumber(),
+      endBlockNumberInclusive,
       blockCount,
     )
 
