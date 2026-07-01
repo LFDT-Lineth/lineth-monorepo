@@ -5,6 +5,7 @@
 - *(maru)* Address PR 3126 workflow follow-ups (#3164)
 - *(arithmetization)* Fix alert 514 (#3246)
 - *(maru)* Making discovery retry configurable to increase the convergence speed (#3387)
+- *(Maru)* Fixed a bug when simultaneous mutual connection attempts r… (#3439)
 
 ### 🚜 Refactor
 
@@ -17,3 +18,4 @@
 - *(maru)* Split testing workflow (#3234)
 - *(maru)* Remove unused test (#3279)
 - *(maru)* Per-test log isolation + bounded integration-test concurrency (#3343)
+- *(coordinator)* Update kotlin to v2.4 (#3454)

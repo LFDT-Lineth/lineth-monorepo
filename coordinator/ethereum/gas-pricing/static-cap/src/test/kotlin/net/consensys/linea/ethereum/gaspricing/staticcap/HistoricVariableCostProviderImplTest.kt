@@ -1,9 +1,9 @@
 package net.consensys.linea.ethereum.gaspricing.staticcap
 
 import linea.OneKWei
-import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.BlockWithTxHashes
 import linea.domain.createBlock
+import linea.domain.toBlockParameter
 import linea.domain.toBlockWithRandomTxHashes
 import linea.ethapi.EthApiBlockClient
 import linea.kotlin.decodeHex
@@ -21,7 +21,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 class HistoricVariableCostProviderImplTest {
   val targetBlockNumber = 100UL.toBlockParameter()
   val fakeBlock = createBlock(
-    number = targetBlockNumber.getNumber(),
+    number = targetBlockNumber.number,
     extraData = MinerExtraDataV1(
       fixedCostInKWei = 1000U,
       variableCostInKWei = 10000U,
@@ -38,7 +38,7 @@ class HistoricVariableCostProviderImplTest {
       ethApiBlockClient = mockEthApiBlockClient,
     )
 
-    val latestVariableCost = historicVariableCostProvider.getVariableCost(targetBlockNumber.getNumber()).get()
+    val latestVariableCost = historicVariableCostProvider.getVariableCost(targetBlockNumber.number).get()
 
     val expectedVariableCost = 10000.0 * OneKWei
     assertThat(latestVariableCost).isEqualTo(expectedVariableCost)
@@ -53,13 +53,13 @@ class HistoricVariableCostProviderImplTest {
     // initialize the cache
     val expectedVariableCost = 10000.0 * OneKWei
     assertThat(
-      historicVariableCostProvider.getVariableCost(targetBlockNumber.getNumber()).get(),
+      historicVariableCostProvider.getVariableCost(targetBlockNumber.number).get(),
     ).isEqualTo(expectedVariableCost)
 
     // subsequent calls with the same block #100 should return the same value by the cache
     repeat(5) {
       assertThat(
-        historicVariableCostProvider.getVariableCost(targetBlockNumber.getNumber()).get(),
+        historicVariableCostProvider.getVariableCost(targetBlockNumber.number).get(),
       ).isEqualTo(expectedVariableCost)
     }
 
@@ -79,7 +79,7 @@ class HistoricVariableCostProviderImplTest {
     )
 
     assertThatThrownBy {
-      historicVariableCostProvider.getVariableCost(targetBlockNumber.getNumber()).get()
+      historicVariableCostProvider.getVariableCost(targetBlockNumber.number).get()
     }.hasCause(IllegalStateException("Block $targetBlockNumber not found"))
   }
 
@@ -95,7 +95,7 @@ class HistoricVariableCostProviderImplTest {
     )
 
     assertThatThrownBy {
-      historicVariableCostProvider.getVariableCost(targetBlockNumber.getNumber()).get()
+      historicVariableCostProvider.getVariableCost(targetBlockNumber.number).get()
     }.hasCause(expectedException)
   }
 
@@ -114,7 +114,7 @@ class HistoricVariableCostProviderImplTest {
     )
 
     assertThat(
-      historicVariableCostProvider.getVariableCost(targetBlockNumber.getNumber()).get(),
+      historicVariableCostProvider.getVariableCost(targetBlockNumber.number).get(),
     ).isEqualTo(0.0)
   }
 }

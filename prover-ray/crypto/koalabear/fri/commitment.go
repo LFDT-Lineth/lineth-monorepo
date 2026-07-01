@@ -17,7 +17,7 @@ type CommitterState struct {
 
 // Commit commits to a sorted list of tables. The table must satisfy the format
 // expected by [MultiSizeTable.checkWellFormedness] with a K of 1.
-func Commit(encoder []*RSEncoder, witness MultiSizeTable) CommitterState {
+func Commit(encoders []*RSEncoder, witness MultiSizeTable) CommitterState {
 
 	k, err := witness.checkWellFormedness()
 	if err != nil {
@@ -28,7 +28,7 @@ func Commit(encoder []*RSEncoder, witness MultiSizeTable) CommitterState {
 		panic("k must be one")
 	}
 
-	encoded := witness.Encode(encoder)
+	encoded := witness.Encode(encoders)
 	tree := encoded.Merkleize()
 
 	return CommitterState{

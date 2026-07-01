@@ -1,0 +1,79 @@
+name: Arithmetization zkc keccak vs riscv keccak benchmark
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'arithmetization/src/main/**'
+      - 'arithmetization/Makefile'
+      - 'arithmetization/src/test/scripts/keccak_zkc_vs_reference_speedup/**'
+      - '.github/workflows/arithmetization-keccak-zkc-vs-reference-benchmark.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'arithmetization/src/main/**'
+      - 'arithmetization/Makefile'
+      - 'arithmetization/src/test/scripts/keccak_zkc_vs_reference_speedup/**'
+      - '.github/workflows/arithmetization-keccak-zkc-vs-reference-benchmark.yml'
+  workflow_dispatch:
+    inputs:
+      zkc-ref:
+        description: 'zkc commit/branch/tag (defaults to pinned ref below)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  benchmark:
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
+    timeout-minutes: 120
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: false
+
+      - name: Install Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: '1.24.6'
+          cache-dependency-path: "**/*.sum"
+
+      - name: Install Zig
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        with:
+          version: '0.16.0'
+
+      - name: Install GNU time
+        run: sudo apt-get update && sudo apt-get install -y time
+
+      - name: Install zkc
+        env:
+          ZKC_REF_OVERRIDE: ${{ inputs.zkc-ref }}
+        run: |
+          if [ -n "$ZKC_REF_OVERRIDE" ]; then
+            make -C arithmetization install-zkc ZKC_REF="$ZKC_REF_OVERRIDE"
+          else
+            make -C arithmetization install-zkc
+          fi
+
+      - name: Run batched 512-byte input benchmark
+        shell: bash
+        run: |
+          set -o pipefail
+          ZKC_REF= GO111MODULE=off go run ./arithmetization/src/test/scripts/keccak_zkc_vs_reference_speedup \
+            --intervals 5 --size 5 \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Run increasing-length input benchmark
+        shell: bash
+        run: |
+          set -o pipefail
+          ZKC_REF= GO111MODULE=off go run ./arithmetization/src/test/scripts/keccak_zkc_vs_reference_speedup \
+            --single-input-lengths 512,1024,2048,4096,8192,16384,32768 \
+            | tee -a "$GITHUB_STEP_SUMMARY"

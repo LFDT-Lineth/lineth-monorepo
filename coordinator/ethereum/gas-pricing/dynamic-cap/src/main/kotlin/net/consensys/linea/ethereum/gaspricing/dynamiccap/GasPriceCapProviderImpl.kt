@@ -1,7 +1,7 @@
 package net.consensys.linea.ethereum.gaspricing.dynamiccap
 
-import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.gas.GasPriceCaps
+import linea.domain.toBlockParameter
 import linea.ethapi.EthApiBlockClient
 import linea.gaspricing.GasPriceCapProvider
 import linea.kotlin.toGWei

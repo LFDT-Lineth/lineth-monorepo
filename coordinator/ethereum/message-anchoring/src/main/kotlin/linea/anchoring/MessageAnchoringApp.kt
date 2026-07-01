@@ -89,7 +89,6 @@ class MessageAnchoringApp(
       l1EventsPoller.stop(),
       messageAnchoringService.stop(),
     ).thenApply {
-      Unit
     }
   }
 }

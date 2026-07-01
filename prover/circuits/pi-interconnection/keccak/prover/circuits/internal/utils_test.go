@@ -1,19 +1,17 @@
 package internal_test
 
 import (
-	"crypto/rand"
 	"fmt"
 	"testing"
 
 	fr377 "github.com/consensys/gnark-crypto/ecc/bls12-377/fr"
 	fr381 "github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
-	bn254fr "github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/linea-monorepo/prover/circuits/internal"
-	snarkTestUtils "github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/circuits/internal/test_utils"
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils"
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils/test_utils"
+	snarkTestUtils "github.com/consensys/linea-monorepo/prover/circuits/internal/test_utils"
+	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils/test_utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -22,41 +20,6 @@ func TestConcat(t *testing.T) {
 		res := internal.Concat(api, 3, internal.VarSlice{[]frontend.Variable{2}, 1}, internal.VarSlice{[]frontend.Variable{3}, 0})
 		return append(res.Values, res.Length)
 	}, 2, 0, 0, 1)(t)
-}
-
-func TestReduceBytes(t *testing.T) {
-
-	var cases [100][]byte
-	b, err := utils.HexDecodeString("0x8de61d4d9c4891236da9646d464bd9b5757991e201678679f3f2abec6df666b8")
-	assert.NoError(t, err)
-	cases[0] = b
-
-	for i := 1; i < len(cases); i++ {
-		var b [32]byte
-		_, err = rand.Read(b[:])
-		assert.NoError(t, err)
-		cases[i] = b[:]
-	}
-
-	reduced := make([][]byte, len(cases))
-	var x bn254fr.Element
-	for i := range cases {
-		x.SetBytes(cases[i])
-		reducedI := x.Bytes()
-		reduced[i] = reducedI[:]
-	}
-
-	snarkTestUtils.SnarkFunctionTest(func(api frontend.API) []frontend.Variable {
-		for i := range cases {
-			got := utils.ReduceBytes[emulated.BN254Fr](api, utils.ToVariableSlice(cases[i]))
-			internal.AssertSliceEquals(api,
-				got,
-				utils.ToVariableSlice(reduced[i]),
-			)
-		}
-
-		return nil
-	})(t)
 }
 
 func TestPartitionSliceEmulated(t *testing.T) {
