@@ -180,7 +180,11 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                         case FUNCT7_SLTU: {
                             printf "SLTU "
                             print_r_operands(rd, rs1, rs2)
-                            registers[rd] = v1 < v2 ? 1 : 0
+                            if v1 < v2 {
+                                registers[rd] = 1
+                            } else {
+                                registers[rd] = 0
+                            }
                         }
                         case FUNCT7_MULHU: {
                             printf "MULHU "
