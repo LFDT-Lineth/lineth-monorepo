@@ -125,31 +125,38 @@ func verifyOpenings(
 
 	batchShifts, batchClaims, shapes, evalPoint := recoverBatchClaims(rt)
 
+	fs := rt.GetFS()
+	alphaDeep := fs.RandomFext()
+
+	// Mirror the prover's Fiat-Shamir transcript: one fold challenge per round,
+	// absorbing each intermediate layer root. The final round reveals the final
+	// polynomial and commits no root, so its challenge is squeezed without a
+	// matching absorption.
+	foldAlphas := make([]field.Ext, 0, len(proof.FRIProof.FRIRoots)+1)
+	for _, friRoot := range proof.FRIProof.FRIRoots {
+		foldAlphas = append(foldAlphas, fs.RandomFext())
+		fs.Update(friRoot[:]...)
+	}
+	foldAlphas = append(foldAlphas, fs.RandomFext())
+
+	fs.UpdateExt(proof.FRIProof.FinalPolyExt...)
+	queryPositions := fs.RandomManyIntegers(
+		pcs.Params.NumQueries,
+		pcs.Params.N,
+	)
+
 	inputs := fri.VerifyInputs{
 		Roots:         getCommitmentRootList(rt),
 		ClaimedValues: batchClaims,
 		Shapes:        shapes,
 		Shifts:        batchShifts,
 		Zeta:          evalPoint,
+		Challenges: fri.Challenges{
+			AlphaDeep:      alphaDeep,
+			FoldAlphas:     foldAlphas,
+			QueryPositions: queryPositions,
+		},
 	}
-
-	fs := rt.GetFS()
-	inputs.AlphaDeep = fs.RandomFext()
-
-	for _, deepCommitment := range proof.DeepQuotientRoots {
-		fs.Update(deepCommitment[:]...)
-	}
-
-	for _, friRoot := range proof.FRIProof.FRIRoots {
-		inputs.FoldAlphas = append(inputs.FoldAlphas, fs.RandomFext())
-		fs.Update(friRoot[:]...)
-	}
-
-	fs.UpdateExt(proof.FRIProof.FinalPolyExt[:]...)
-	inputs.QueryPositions = fs.RandomManyIntegers(
-		pcs.Params.NumQueries,
-		pcs.Params.N,
-	)
 
 	return pcs.Verify(inputs, proof)
 }
@@ -162,35 +169,39 @@ func openEvaluations(
 
 	batchShifts, batchClaims, _, evalPoint := recoverBatchClaims(rt)
 
-	opener, err := fri.NewOpenerState(
-		pcs,
-		committedStates,
-		batchShifts,
-		evalPoint,
-		batchClaims,
+	pcs.Reset()
+	for i := range committedStates {
+		err := pcs.AddOpening(*committedStates[i], evalPoint, batchShifts[i], batchClaims[i])
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	var (
+		fs        = rt.GetFS()
+		alphaDeep = fs.RandomFext()
 	)
 
+	// The DEEP quotient is virtual: it is reconstructed by the verifier from the
+	// opened committed rows, so there is no separate quotient commitment to absorb
+	// here. Seeding the FRI prover with alphaDeep is enough.
+	state, err := pcs.NewProverState(alphaDeep)
 	if err != nil {
 		panic(err)
 	}
 
-	var (
-		fs              = rt.GetFS()
-		alphaDeep       = fs.RandomFext()
-		deepCommitments = opener.CommitDeepQuotient(alphaDeep)
-	)
-
-	for _, deepCommitment := range deepCommitments {
-		fs.Update(deepCommitment[:]...)
-	}
-
-	for opener.HasNext() {
+	for state.HasNext() {
 		alphaFold := fs.RandomFext()
-		friCom := opener.Fold(alphaFold)
-		fs.Update(friCom[:]...)
+		friCom := state.Fold(alphaFold)
+		// The last fold reveals the final polynomial and has no committed root
+		// (state.Fold returns the zero octuplet), so only absorb intermediate
+		// layer roots.
+		if state.HasNext() {
+			fs.Update(friCom[:]...)
+		}
 	}
 
-	finalPoly := opener.FinalPoly()
+	finalPoly := state.FinalPolyExt
 	// @alex: there is a small optimization we could do here as the poly is
 	// of constant degree. It should be OK to just hash one of its coordinates.
 	//
@@ -200,7 +211,10 @@ func openEvaluations(
 	fs.UpdateExt(finalPoly...)
 
 	openedPositions := fs.RandomManyIntegers(pcs.Params.NumQueries, pcs.Params.N)
-	return opener.Open(openedPositions)
+	return fri.OpeningProof{
+		RowOpenings: pcs.OpenedRows(openedPositions),
+		FRIProof:    state.Open(openedPositions),
+	}
 }
 
 func recoverBatchClaims(rt *wiop.Runtime) (
