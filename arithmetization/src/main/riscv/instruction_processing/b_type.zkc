@@ -92,7 +92,7 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
         case FUNCT3_BLTU: {
             printf "BLTU "
             print_b_operands(rs1, rs2, imm)
-            if registers[rs1] < registers[rs2] {
+            if registers[rs1]<registers[rs2] {
                 // the branch case
                 pc_new = signed_sum_of_double_word(pc, imm)
             }
