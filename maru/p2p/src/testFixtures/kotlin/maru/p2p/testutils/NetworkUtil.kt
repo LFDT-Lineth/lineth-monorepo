@@ -18,16 +18,21 @@ object NetworkUtil {
   private val PORT_RANGE = 25000..31999
 
   fun findFreePorts(count: Int): List<UInt> {
-    val found = mutableListOf<UInt>()
-    for (port in PORT_RANGE) {
-      if (found.size == count) break
-      runCatching { ServerSocket(port).also { it.close() } }
-        .onSuccess { found.add(port.toUInt()) }
+    // Keep every socket open until the full set is collected. This prevents a concurrent caller
+    // scanning the same range from claiming the same port between our bind and our return.
+    val sockets = mutableListOf<ServerSocket>()
+    try {
+      for (port in PORT_RANGE) {
+        if (sockets.size == count) break
+        runCatching { ServerSocket(port) }.onSuccess { sockets.add(it) }
+      }
+      check(sockets.size == count) {
+        "Could not find $count free ports in $PORT_RANGE (found ${sockets.size})"
+      }
+      return sockets.map { it.localPort.toUInt() }
+    } finally {
+      sockets.forEach { runCatching { it.close() } }
     }
-    if (found.size < count) {
-      error("Could not find $count free ports in $PORT_RANGE (found ${found.size})")
-    }
-    return found
   }
 
   fun findFreePort(): UInt = findFreePorts(1).first()
