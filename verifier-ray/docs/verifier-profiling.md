@@ -20,6 +20,24 @@ and decoded into a runtime `Proof` value. This keeps profiling close to the
 verifier path used by the R5 smoke target while avoiding embedding large proof
 values into `verify.zig`.
 
+## R5 Memory Layout
+
+R5 profiling uses one storage strategy for every case. The serialized proof is
+loaded into the linker `IN` region, and the decoded `ProofBacking` lives in a
+dedicated linker `BACKING` region. This keeps decoded proof storage off the R5
+stack for both light and heavy fixtures.
+
+The relevant regions are defined in `linker_script.ld`:
+
+```text
+STACK   0x08000000 .. 0x08800000
+BACKING 0x08800000 .. 0x18800000
+IN      0x18800000 ..
+```
+
+`Makefile`'s `IN_ORIGIN` must match the linker `IN` origin because the
+ELF-to-JSON step writes serialized input bytes there.
+
 ## What Is Measured
 
 For each case, the profiling runner calls the Makefile's `profile-zkc-case`

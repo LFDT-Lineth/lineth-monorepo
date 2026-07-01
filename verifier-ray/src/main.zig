@@ -12,12 +12,13 @@ const is_supported_native = is_native_os and is_native_arch;
 
 const native_input_path: [:0]const u8 = "zig-out/input.bin";
 const input_size = embedded_data.inputSize(embedded_data_conf.spec_index);
-// The `RuntimeProofBacking` type is a runtime representation of the proof backing data structure, which is generated
-// at compile time based on the selected proof specification. It provides methods for decoding the serialized proof 
-// input into a usable format for the verifier.
+// The `RuntimeProofBacking` type is generated at compile time from the selected
+// proof layout. It owns the arrays that decoded verifier.Proof slices point into.
 const RuntimeProofBacking = embedded_data.ProofBacking(embedded_data_conf.spec_index);
+const r5_proof_backing_region_size = 0x10000000;
 
 extern const _in_start: u8;
+extern var _proof_backing_start: u8;
 
 // The main entry point for the verifier ray smoke test. This is separate from
 // the main verifier entry point in `verifier.zig` because we want to be able to
@@ -50,8 +51,8 @@ pub export fn r5_main() noreturn {
         unreachable;
     }
 
-    var backing: RuntimeProofBacking = .{};
-    const input = loadR5Input(&backing);
+    const backing = r5Backing();
+    const input = loadR5Input(backing);
 
     // run the verifier smoke test with the loaded input
     const res = runVerifier(input);
@@ -110,6 +111,16 @@ fn loadR5Input(backing: *RuntimeProofBacking) *const verifier.Proof {
     // many bytes belong to the selected proof.
     const input: [*]const u8 = @ptrCast(&_in_start);
     return decodeInput(backing, input[0..input_size]);
+}
+
+fn r5Backing() *RuntimeProofBacking {
+    if (comptime !is_r5_zkvm) {
+        @compileError("R5 proof backing is only available on the R5 zkVM target");
+    }
+    if (comptime @sizeOf(RuntimeProofBacking) > r5_proof_backing_region_size) {
+        @compileError("selected proof backing does not fit in linker BACKING region");
+    }
+    return @ptrCast(@alignCast(&_proof_backing_start));
 }
 
 fn decodeInput(backing: *RuntimeProofBacking, input: []const u8) *const verifier.Proof {

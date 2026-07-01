@@ -14,7 +14,7 @@ SERIALIZED_INPUT_FILE = testdata/inputs/verify_case_$(EMBEDDED_SPEC).bin
 SERIALIZED_INVALID_INPUT_FILE = testdata/inputs/verify_case_$(EMBEDDED_SPEC)_invalid.bin
 PASSING_INPUT_FILE = $(SERIALIZED_INPUT_FILE)
 INPUT_FILE ?= $(PASSING_INPUT_FILE)
-IN_ORIGIN ?= 0x08800000
+IN_ORIGIN ?= 0x18800000
 NATIVE_INPUT_FILE := zig-out/input.bin
 IN_BYTES_FILE ?= zig-out/input.hex
 
@@ -53,7 +53,7 @@ help:
 		'  INPUT_FILE            Serialized proof input path, default valid fixture for EMBEDDED_SPEC' \
 		'' \
 		'zkc variables:' \
-		'  IN_ORIGIN            Input bytes address, default 0x08800000'
+		'  IN_ORIGIN            Input bytes address, default 0x18800000'
 
 fmt: fmt-zig fmt-go
 

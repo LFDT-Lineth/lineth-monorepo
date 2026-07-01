@@ -680,7 +680,7 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 // scenario coverage.
 func buildLookupMultiColumnBenchSystem() (*wiop.System, assignFn) {
 	const (
-		bigSize = 1 << 10
+		bigSize = 1 << 19
 		numCols = 5
 	)
 	var (
