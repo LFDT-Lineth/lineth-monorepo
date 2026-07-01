@@ -307,7 +307,7 @@ services:
   coordinator:
     hostname: coordinator
     container_name: coordinator
-    image: consensys/linea-coordinator:${LINEA_COORDINATOR_TAG:-189076b}
+    image: ${LINEA_COORDINATOR_IMAGE_NAME:-consensys/linea-coordinator}:${LINEA_COORDINATOR_TAG:-189076b}
     profiles: [ "l2", "debug" ]
     depends_on:
       l2-genesis-initialization:
@@ -338,6 +338,9 @@ services:
       config__override__l1_submission__data_availability: ${LINEA_COORDINATOR_DATA_AVAILABILITY:-ROLLUP}
       dev_LINEA_COORDINATOR_DISABLED: ${dev_LINEA_COORDINATOR_DISABLED:-false}
       CONFIG_OVERRIDE_OPTS: ''
+      # Which jar to launch from libs/. Defaults to the OSS coordinator jar; enterprise images set
+      # this to their own entrypoint jar (which sits alongside the OSS jar in libs/).
+      COORDINATOR_JAR: ${LINEA_COORDINATOR_JAR:-coordinator.jar}
     command:
       - sh
       - -c
@@ -350,7 +353,7 @@ services:
             -Dvertx.configurationFile=/var/lib/coordinator/vertx-options.json \
             -Dlog4j2.configurationFile=/var/lib/coordinator/log4j2-dev.xml \
             $$CONFIG_OVERRIDE_OPTS \
-            -jar libs/coordinator.jar \
+            -jar libs/$$COORDINATOR_JAR \
             --traces-limits-v5 config/traces-limits-v5.toml \
             --smart-contract-errors config/smart-contract-errors.toml \
             --gas-price-cap-time-of-day-multipliers config/gas-price-cap-time-of-day-multipliers.toml \
