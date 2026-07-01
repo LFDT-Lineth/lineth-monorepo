@@ -161,21 +161,25 @@ type openInputs struct {
 	Witnesses []Batch
 	Committed []CommitterState
 	Shifts    []BatchShifts
-	Zetas     []field.Ext
+	Zeta      field.Ext
 
 	Challenges Challenges
 }
 
-func openForTest(t *testing.T, pcs *PCS, in openInputs) OpeningProof {
+// openForTest runs the full prover-side opening flow and returns the proof
+// together with the per-batch claimed values it computed. The PCS no longer
+// derives the claims itself, so the caller computes them here (mirroring the
+// outer protocol) and feeds them both into AddOpening and into VerifyInputs.
+func openForTest(t *testing.T, pcs *PCS, in openInputs) (OpeningProof, []BatchClaimedValues) {
 	t.Helper()
 
 	pcs.Reset()
 	defer pcs.Reset()
-	claimed := make([]BatchClaimedValues, 0, len(in.Witnesses))
+	batchClaims := make([]BatchClaimedValues, len(in.Witnesses))
 	for i := range in.Witnesses {
-		batchClaims, err := pcs.AddOpening(in.Witnesses[i], in.Committed[i], in.Zetas[i], in.Shifts[i])
+		batchClaims[i] = claimedValuesForTest(t, pcs, in.Witnesses[i], in.Shifts[i], in.Zeta)
+		err := pcs.AddOpening(in.Committed[i], in.Zeta, in.Shifts[i], batchClaims[i])
 		require.NoError(t, err)
-		claimed = append(claimed, batchClaims)
 	}
 	started, err := pcs.NewProverState(in.Challenges.AlphaDeep)
 	require.NoError(t, err)
@@ -187,13 +191,51 @@ func openForTest(t *testing.T, pcs *PCS, in openInputs) OpeningProof {
 		started.Fold(in.Challenges.FoldAlphas[round])
 	}
 	friProof := started.Open(queryPositions)
-	rowOpenings := pcs.openedRows(queryPositions)
+	rowOpenings := pcs.OpenedRows(queryPositions)
 
 	return OpeningProof{
-		ClaimedValues: claimed,
-		RowOpenings:   rowOpenings,
-		FRIProof:      friProof,
+		RowOpenings: rowOpenings,
+		FRIProof:    friProof,
+	}, batchClaims
+}
+
+// claimedValuesForTest evaluates every opened (size, row, shift) of a witness
+// batch at zeta * omega_N^shift, producing the BatchClaimedValues the caller
+// now supplies to AddOpening and echoes into VerifyInputs. In production the
+// outer protocol performs this evaluation; the PCS itself no longer does.
+func claimedValuesForTest(t *testing.T, pcs *PCS, witness Batch, shifts BatchShifts, zeta field.Ext) BatchClaimedValues {
+	t.Helper()
+
+	evalRow := func(poly field.Vec, sizeLog2 int, rowShifts []int) []field.Ext {
+		values := make([]field.Ext, len(rowShifts))
+		for i, shift := range rowShifts {
+			point, err := pcs.shiftedPoint(sizeLog2, shift, zeta)
+			require.NoError(t, err)
+			values[i] = polynomials.EvalLagrange(poly, field.ElemFromExt(point)).AsExt()
+		}
+		return values
 	}
+
+	claimed := make(BatchClaimedValues, len(shifts))
+	for sizeLog2, sizedShifts := range shifts {
+		sizedWitness := witness[sizeLog2]
+		sized := SizedClaimedValues{
+			Base: make([][]field.Ext, len(sizedShifts.Base)),
+			Ext:  make([][]field.Ext, len(sizedShifts.Ext)),
+		}
+		for rowIdx, rowShifts := range sizedShifts.Base {
+			row := sizedWitness.Base[rowIdx]
+			require.Len(t, row, 1<<sizeLog2)
+			sized.Base[rowIdx] = evalRow(field.VecFromBase(row), sizeLog2, rowShifts)
+		}
+		for rowIdx, rowShifts := range sizedShifts.Ext {
+			row := sizedWitness.Ext[rowIdx]
+			require.Len(t, row, 1<<sizeLog2)
+			sized.Ext[rowIdx] = evalRow(field.VecFromExt(row), sizeLog2, rowShifts)
+		}
+		claimed[sizeLog2] = sized
+	}
+	return claimed
 }
 
 func newPCSOpenVerifyFixture(t *testing.T) pcsOpenVerifyFixture {
@@ -217,28 +259,29 @@ func newPCSOpenVerifyFixture(t *testing.T) pcsOpenVerifyFixture {
 	batchShifts := make(BatchShifts, 3)
 	batchShifts[2] = SizedShifts{Ext: [][]int{{0}, {1}}}
 	shifts := []BatchShifts{batchShifts}
-	zetas := []field.Ext{field.UintsToExt(19, 2, 3, 5, 7, 11)}
+	zeta := field.UintsToExt(19, 2, 3, 5, 7, 11)
 	challenges := Challenges{
 		AlphaDeep:      field.UintsToExt(23, 3, 5, 7, 11, 13),
 		FoldAlphas:     []field.Ext{field.UintsToExt(29, 1, 0, 0, 0, 0), field.UintsToExt(31, 0, 1, 0, 0, 0)},
 		QueryPositions: []int{3},
 	}
-	proof := openForTest(t, pcs, openInputs{
+	proof, claimed := openForTest(t, pcs, openInputs{
 		Witnesses:  witnesses,
 		Committed:  committed,
 		Shifts:     shifts,
-		Zetas:      zetas,
+		Zeta:       zeta,
 		Challenges: challenges,
 	})
 
 	return pcsOpenVerifyFixture{
 		pcs: pcs,
 		input: VerifyInputs{
-			Roots:      []field.Octuplet{committed[0].Tree.Root()},
-			Shapes:     shapesFromBatches(witnesses),
-			Shifts:     shifts,
-			Zetas:      zetas,
-			Challenges: challenges,
+			Roots:         []field.Octuplet{committed[0].Tree.Root()},
+			Shapes:        shapesFromBatches(witnesses),
+			Shifts:        shifts,
+			ClaimedValues: claimed,
+			Zeta:          zeta,
+			Challenges:    challenges,
 		},
 		proof: proof,
 	}
@@ -275,11 +318,12 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	shifts := []BatchShifts{batchShifts, otherBatchShifts}
 
 	zeta := field.UintsToExt(19, 2, 3, 5, 7, 11)
-	otherZeta := field.UintsToExt(41, 0, 1, 2, 3, 5)
 	alphaDeepChallenge := field.UintsToExt(23, 3, 5, 7, 11, 13)
-	firstClaims, err := pcs.AddOpening(witness, committed[0], zeta, batchShifts)
+	firstClaims := claimedValuesForTest(t, pcs, witness, batchShifts, zeta)
+	otherClaims := claimedValuesForTest(t, pcs, otherWitness, otherBatchShifts, zeta)
+	err = pcs.AddOpening(committed[0], zeta, batchShifts, firstClaims)
 	require.NoError(t, err)
-	_, err = pcs.AddOpening(otherWitness, committed[1], otherZeta, otherBatchShifts)
+	err = pcs.AddOpening(committed[1], zeta, otherBatchShifts, otherClaims)
 	require.NoError(t, err)
 	started, err := pcs.NewProverState(alphaDeepChallenge)
 	require.NoError(t, err)
@@ -326,12 +370,11 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	assert.Equal(t, referenceProof.FRIRoots, gotProof.FRIRoots)
 	assert.Equal(t, referenceProof.FinalPolyExt, gotProof.FinalPolyExt)
 
-	zetas := []field.Ext{zeta, otherZeta}
-	oneShot := openForTest(t, pcs, openInputs{
+	oneShot, oneShotClaims := openForTest(t, pcs, openInputs{
 		Witnesses: witnesses,
 		Committed: committed,
 		Shifts:    shifts,
-		Zetas:     zetas,
+		Zeta:      zeta,
 		Challenges: Challenges{
 			AlphaDeep:      alphaDeepChallenge,
 			FoldAlphas:     foldAlphas,
@@ -340,10 +383,11 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	})
 	roots := []field.Octuplet{committed[0].Tree.Root(), committed[1].Tree.Root()}
 	require.NoError(t, pcs.Verify(VerifyInputs{
-		Roots:  roots,
-		Shapes: shapesFromBatches(witnesses),
-		Shifts: shifts,
-		Zetas:  zetas,
+		Roots:         roots,
+		Shapes:        shapesFromBatches(witnesses),
+		Shifts:        shifts,
+		ClaimedValues: oneShotClaims,
+		Zeta:          zeta,
 		Challenges: Challenges{
 			AlphaDeep:      alphaDeepChallenge,
 			FoldAlphas:     foldAlphas,

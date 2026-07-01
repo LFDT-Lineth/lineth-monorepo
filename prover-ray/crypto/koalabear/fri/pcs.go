@@ -26,8 +26,9 @@
 //
 // During the opening flow the prover:
 //
-//  1. Computes the claimed value of every (batch, size, row, shift) at
-//     zeta * omega_N^shift.
+//  1. Caller computes the claimed value of every (batch, size, row, shift) at
+//     zeta * omega_N^shift and hands them to AddOpening. zeta is shared by
+//     every batch of a single opening proof.
 //  2. Caller absorbs the claimed values into its transcript, derives
 //     alpha_DEEP, hands it back.
 //  3. PCS builds one virtual DEEP-quotient codeword per distinct native size and
@@ -40,7 +41,7 @@
 //  7. PCS opens every batch at every query position and produces the
 //     final OpeningProof.
 //
-// Verify mirrors steps 2-7: same zetas and challenges in, authenticates the
+// Verify mirrors steps 2-7: same zeta and challenges in, authenticates the
 // opened backing trees, and reconstructs the virtual quotients inside FRI.
 //
 // The prover-side staged API returns the existing [ProverState] rather than
@@ -56,14 +57,15 @@
 //	state1 := pcs.Commit(witness1)
 //	transcript.Absorb(state1.Root())
 //
-//	// Squeeze one opening point per opening; absorb each opening's claims
-//	// before deriving the next opening point.
-//	zeta0      := transcript.Squeeze()
-//	claims0, _ := pcs.AddOpening(witness0, state0, zeta0, shifts0)
+//	// Squeeze the single opening point shared by every batch. For each batch,
+//	// compute its claimed evaluations, absorb them, and register the opening.
+//	zeta       := transcript.Squeeze()
+//	claims0    := computeClaims(witness0, shifts0, zeta) // caller-side evaluation
 //	transcript.Absorb(claims0)
-//	zeta1      := transcript.Squeeze()
-//	claims1, _ := pcs.AddOpening(witness1, state1, zeta1, shifts1)
+//	pcs.AddOpening(state0, zeta, shifts0, claims0)
+//	claims1    := computeClaims(witness1, shifts1, zeta)
 //	transcript.Absorb(claims1)
+//	pcs.AddOpening(state1, zeta, shifts1, claims1)
 //
 //	// Squeeze alphaDeep; seed the FRI prover.
 //	alphaDeep  := transcript.Squeeze()
@@ -81,7 +83,7 @@
 //	queries    := transcript.Squeeze()
 //	proof, _   := friState.Open(queries)
 //
-// The verifier calls pcs.Verify with the same zetas, alphaDeep, fold alphas,
+// The verifier calls pcs.Verify with the same zeta, alphaDeep, fold alphas,
 // and query positions it derived from its own transcript replay.
 //
 // =============================================================================
@@ -119,7 +121,6 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
 )
 
 // =============================================================================
@@ -152,9 +153,10 @@ type pcsOpening struct {
 	claimed   BatchClaimedValues
 }
 
-// Reset clears pending opening registrations.
+// Reset clears pending opening registrations and the shared opening point.
 func (pcs *PCS) Reset() {
 	pcs.openings = pcs.openings[:0]
+	pcs.zeta = field.Ext{}
 }
 
 // NewPCS validates the encoder schedule against Params and returns a
@@ -263,8 +265,8 @@ type layout []sizeBundle
 // enumeration. Validates shape alignment, per-row shift invariants
 // (non-empty, no duplicates), and per-batch distinct sizes.
 //
-// Used by both AddOpening (with shapes derived from witnesses) and Verify
-// (with shapes passed in directly).
+// Used by both AddOpening (with shapes derived from the committed encoded
+// table) and Verify (with shapes passed in directly).
 func canonicalLayout(shapes []Shape, shifts []BatchShifts) (layout, error) {
 	if len(shapes) != len(shifts) {
 		return nil, fmt.Errorf("fri: canonicalLayout: got %d shapes, %d shifts", len(shapes), len(shifts))
@@ -326,12 +328,6 @@ func canonicalLayout(shapes []Shape, shifts []BatchShifts) (layout, error) {
 	}
 
 	return res, nil
-}
-
-// canonicalLayoutFromBatches is the prover-side entry point: shapes
-// are inferred from witness row counts. Delegates to canonicalLayout.
-func canonicalLayoutFromBatches(batches []Batch, shifts []BatchShifts) (layout, error) {
-	return canonicalLayout(shapesFromBatches(batches), shifts)
 }
 
 func shapesFromBatches(batches []Batch) []Shape {
@@ -549,16 +545,19 @@ func (pcs *PCS) Commit(witness MultiSizeTable) CommitterState {
 }
 
 // AddOpening registers one committed batch to be opened at zeta with the given
-// shift schedule. It computes and returns the claimed evaluations, and records
-// the commitment, zeta, layout, and claims as pending input to the virtual DEEP
-// quotient later built by NewProverState.
+// shift schedule and claimed evaluations. It records the commitment, layout,
+// and claims as pending input to the virtual DEEP quotient later built by
+// NewProverState.
 //
-// The caller must absorb the returned claims into the transcript before
-// deriving alpha_DEEP. The returned value aliases PCS-owned pending-opening
-// state, so callers must treat it as immutable until the opening proof is
-// finished or the PCS is Reset.
+// The PCS no longer computes the claimed evaluations: the caller (the outer
+// protocol) evaluates every opened (size, row, shift) at zeta * omega^shift,
+// absorbs the claims into its transcript before deriving alpha_DEEP, and passes
+// them here. zeta is shared across every opening of a single proof; the first
+// AddOpening fixes it and later calls must supply the same value.
+//
+// The plaintext witness is no longer needed: the column layout is derived from
+// the committed encoded table, which carries the same per-size row widths.
 func (pcs *PCS) AddOpening(
-	witness Batch,
 	committed CommitterState,
 	zeta field.Ext,
 	shifts BatchShifts,
@@ -567,15 +566,19 @@ func (pcs *PCS) AddOpening(
 	if zeta.IsZero() {
 		return fmt.Errorf("fri: AddOpening: zero zeta")
 	}
-	if !pcs.zeta.Equal(&zeta) {
+	if !pcs.zeta.IsZero() && !pcs.zeta.Equal(&zeta) {
 		return fmt.Errorf("fri: AddOpening: zeta mismatch")
 	}
 	if committed.Tree == nil {
 		return fmt.Errorf("fri: AddOpening: commitment has nil tree")
 	}
-	layout, err := canonicalLayoutFromBatches([]Batch{witness}, []BatchShifts{shifts})
+	shape := shapesFromBatches([]Batch{committed.EncodedTable})[0]
+	layout, err := canonicalLayout([]Shape{shape}, []BatchShifts{shifts})
 	if err != nil {
 		return err
+	}
+	if err = validateBatchClaimShape(claimed, shifts); err != nil {
+		return fmt.Errorf("fri: AddOpening: %w", err)
 	}
 
 	pcs.zeta = zeta
@@ -584,6 +587,41 @@ func (pcs *PCS) AddOpening(
 		committed: committed,
 		claimed:   claimed,
 	})
+	return nil
+}
+
+// validateBatchClaimShape checks that a caller-supplied BatchClaimedValues
+// aligns exactly with the shift schedule it is meant to answer: one claimed
+// value per (size, row, shift). It guards against empty or misshapen claims
+// slipping through to NewProverState, where the mismatch would otherwise
+// surface as an opaque reconstruction error.
+func validateBatchClaimShape(claimed BatchClaimedValues, shifts BatchShifts) error {
+	if len(claimed) != len(shifts) {
+		return fmt.Errorf("got %d claimed sizes, want %d", len(claimed), len(shifts))
+	}
+	for sizeLog2, sizedShifts := range shifts {
+		sizedClaimed := claimed[sizeLog2]
+		if len(sizedClaimed.Base) != len(sizedShifts.Base) {
+			return fmt.Errorf("size %d has %d base claim rows, want %d",
+				sizeLog2, len(sizedClaimed.Base), len(sizedShifts.Base))
+		}
+		if len(sizedClaimed.Ext) != len(sizedShifts.Ext) {
+			return fmt.Errorf("size %d has %d ext claim rows, want %d",
+				sizeLog2, len(sizedClaimed.Ext), len(sizedShifts.Ext))
+		}
+		for rowIdx, rowShifts := range sizedShifts.Base {
+			if len(sizedClaimed.Base[rowIdx]) != len(rowShifts) {
+				return fmt.Errorf("size %d base row %d has %d claims, want %d",
+					sizeLog2, rowIdx, len(sizedClaimed.Base[rowIdx]), len(rowShifts))
+			}
+		}
+		for rowIdx, rowShifts := range sizedShifts.Ext {
+			if len(sizedClaimed.Ext[rowIdx]) != len(rowShifts) {
+				return fmt.Errorf("size %d ext row %d has %d claims, want %d",
+					sizeLog2, rowIdx, len(sizedClaimed.Ext[rowIdx]), len(rowShifts))
+			}
+		}
+	}
 	return nil
 }
 
@@ -604,43 +642,6 @@ func (pcs *PCS) NewProverState(alphaDeep field.Ext) (*ProverState, error) {
 		return nil, err
 	}
 	return state, nil
-}
-
-func (pcs *PCS) claimBaseRow(
-	row []field.Element,
-	sizeLog2 int,
-	shifts []int,
-	zeta field.Ext,
-) ([]field.Ext, error) {
-	if len(row) != 1<<sizeLog2 {
-		return nil, fmt.Errorf("row has length %d, want %d", len(row), 1<<sizeLog2)
-	}
-
-	values := make([]field.Ext, len(shifts))
-	for i, shift := range shifts {
-		point, err := pcs.shiftedPoint(sizeLog2, shift, zeta)
-		if err != nil {
-			return nil, err
-		}
-		values[i] = polynomials.EvalLagrange(field.VecFromBase(row), field.ElemFromExt(point)).AsExt()
-	}
-	return values, nil
-}
-
-func (pcs *PCS) claimExtRow(row []field.Ext, sizeLog2 int, shifts []int, zeta field.Ext) ([]field.Ext, error) {
-	if len(row) != 1<<sizeLog2 {
-		return nil, fmt.Errorf("row has length %d, want %d", len(row), 1<<sizeLog2)
-	}
-
-	values := make([]field.Ext, len(shifts))
-	for i, shift := range shifts {
-		point, err := pcs.shiftedPoint(sizeLog2, shift, zeta)
-		if err != nil {
-			return nil, err
-		}
-		values[i] = polynomials.EvalLagrange(field.VecFromExt(row), field.ElemFromExt(point)).AsExt()
-	}
-	return values, nil
 }
 
 func (pcs *PCS) shiftedPoint(sizeLog2, shift int, zeta field.Ext) (field.Ext, error) {
@@ -848,7 +849,10 @@ func (pcs *PCS) claimsForBatchEntry(
 	return claims, nil
 }
 
-func (pcs *PCS) openedRows(queryPositions []int) []QueryRowOpenings {
+// OpenedRows opens, at each query position, the committed row (and, at the top
+// level, its conjugate sibling) of every registered opening. Callers pair the
+// result with the FRI Proof from [ProverState.Open] to assemble an OpeningProof.
+func (pcs *PCS) OpenedRows(queryPositions []int) []QueryRowOpenings {
 	topSizeLog2 := -1
 	for _, opening := range pcs.openings {
 		if len(opening.layout) > 0 && opening.layout[0].SizeLog2 > topSizeLog2 {
@@ -1017,6 +1021,9 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	if err != nil {
 		return err
 	}
+	if err = checkVerifyClaimShapes(in.ClaimedValues, in.Shifts); err != nil {
+		return err
+	}
 	if err = pcs.checkClaimPointsOutOfDomain(layout, in.Zeta); err != nil {
 		return err
 	}
@@ -1051,8 +1058,6 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	if _, err = reconstructDomainSize(topDomain); err != nil {
 		return err
 	}
-	// TODO: check the dimensions of the claim values as this is a prover
-	// provided value and I doubt that it will detect an empty value.
 	claimed := in.ClaimedValues
 	zeta := in.Zeta
 	alphaDeep := in.Challenges.AlphaDeep
@@ -1105,24 +1110,35 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 }
 
 func (pcs *PCS) checkClaimPointsOutOfDomain(layout layout, zeta field.Ext) error {
-	// TODO: simplify the zeta checking with the simplification that the point
-	// is unique.
+	// Every claim point of a size-N column is zeta * omega_N^shift, where omega_N
+	// generates the size-N subgroup of that column's codeword domain. Because
+	// omega_N^card == 1, we have (zeta * omega_N^shift)^card == zeta^card for any
+	// shift, so a claim point lands in the codeword domain iff zeta itself does --
+	// independent of the shift. It therefore suffices to test zeta once per
+	// distinct size present in the layout.
 	for _, bundle := range layout {
 		if bundle.SizeLog2 < 0 || bundle.SizeLog2 >= len(pcs.Encoders) {
 			return fmt.Errorf("fri: pcs.Verify: size %d is outside params schedule", bundle.SizeLog2)
 		}
 		encoder := pcs.Encoders[bundle.SizeLog2]
-		for _, entry := range bundle.Entries {
-			for _, shift := range entry.Shifts {
-				point, err := pcs.shiftedPoint(entry.SizeLog2, shift, zeta)
-				if err != nil {
-					return err
-				}
-				if pointInDomain(point, encoder.Domain.Cardinality) {
-					return fmt.Errorf("fri: pcs.Verify: batch %d size %d row %d claim point on domain",
-						entry.BatchIdx, entry.SizeLog2, entry.RowIdx)
-				}
-			}
+		if pointInDomain(zeta, encoder.Domain.Cardinality) {
+			return fmt.Errorf("fri: pcs.Verify: size %d claim point on domain", bundle.SizeLog2)
+		}
+	}
+	return nil
+}
+
+// checkVerifyClaimShapes fails fast when the caller-supplied ClaimedValues do
+// not align with the shift schedule, one claimed value per (batch, size, row,
+// shift). Without it an empty or truncated ClaimedValues would surface only
+// deep inside the per-query reconstruction as an opaque error.
+func checkVerifyClaimShapes(claimed []BatchClaimedValues, shifts []BatchShifts) error {
+	if len(claimed) != len(shifts) {
+		return fmt.Errorf("fri: pcs.Verify: got %d claimed batches, want %d", len(claimed), len(shifts))
+	}
+	for batchIdx := range shifts {
+		if err := validateBatchClaimShape(claimed[batchIdx], shifts[batchIdx]); err != nil {
+			return fmt.Errorf("fri: pcs.Verify: batch %d: %w", batchIdx, err)
 		}
 	}
 	return nil
