@@ -16,6 +16,12 @@ repositories {
   }
 }
 
+java {
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(25)
+  }
+}
+
 group = 'build.linea'
 description = 'Linea chain security interfaces'
 // publishing.gradle uses project.artifactId when set (or else falling back to project.name)

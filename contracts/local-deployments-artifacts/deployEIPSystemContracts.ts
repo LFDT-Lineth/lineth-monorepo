@@ -1,6 +1,8 @@
 import * as dotenv from "dotenv";
 import { ethers } from "ethers";
 
+import { getDeployNonceFromEnv } from "../common/helpers/deployments";
+
 dotenv.config();
 
 interface EIPContractConfig {
@@ -150,12 +152,7 @@ async function main() {
 
   const contractNames = ["EIP2935", "EIP4788"] as const;
 
-  let walletNonce: number;
-  if (!process.env.L2_NONCE) {
-    walletNonce = await wallet.getNonce();
-  } else {
-    walletNonce = parseInt(process.env.L2_NONCE);
-  }
+  const walletNonce = await getDeployNonceFromEnv(wallet, "L2_NONCE");
 
   for (const [index, contractName] of contractNames.entries()) {
     const config = EIP_CONTRACTS[contractName];
