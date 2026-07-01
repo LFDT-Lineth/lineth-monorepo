@@ -41,6 +41,7 @@
 
 - *(misc)* Rename Linea to Lineth across documentation and codebase (#3316)
 - *(prover-ray)* Export logderivativesum internals for verifier-ray codegen (#3354)
+- *(prover)* Remove redundant and unsafe utility functions (#3273)
 
 ### ⚡ Performance
 
@@ -76,3 +77,4 @@
 - *(deps)* Bump Node and pnpm (#3449)
 - *(deps)* Safe updates, exact version pinning, and override housekeeping (#3457)
 - *(coordinator)* Update kotlin to v2.4 (#3454)
+- *(coordinator)* LSP violation fix (#3386)

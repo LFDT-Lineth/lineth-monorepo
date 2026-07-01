@@ -5,9 +5,9 @@ import linea.contract.l1.BlockAndNonce
 import linea.contract.l1.LineaRollupSmartContractClient
 import linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
 import linea.domain.BlobRecord
-import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.ProofToFinalize
 import linea.domain.gas.GasPriceCaps
+import linea.domain.toBlockParameter
 import linea.ethapi.EthLogsClient
 import linea.kotlin.toULong
 import linea.web3j.SmartContractErrors

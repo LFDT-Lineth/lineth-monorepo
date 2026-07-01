@@ -262,7 +262,7 @@ type proverAction struct {
 }
 
 // Run implements [wiop.ProverAction].
-func (a *proverAction) Run(rt wiop.Runtime) {
+func (a *proverAction) Run(rt *wiop.Runtime) {
 	var total field.Ext
 
 	for _, e := range a.entries {
@@ -294,7 +294,7 @@ func (a *proverAction) Run(rt wiop.Runtime) {
 //
 // Panics if a fraction's denominator is zero on a row where its filter is
 // non-zero, since that input is malformed.
-func computeFilteredPrefixSum(rt wiop.Runtime, packed []wiop.Fraction, n int) []field.Ext {
+func computeFilteredPrefixSum(rt *wiop.Runtime, packed []wiop.Fraction, n int) []field.Ext {
 	type evalFrac struct {
 		filter []field.Ext // nil ⇒ filter is the constant 1 on every row
 		num    []field.Ext
@@ -340,7 +340,7 @@ func computeFilteredPrefixSum(rt wiop.Runtime, packed []wiop.Fraction, n int) []
 
 // evaluateAsExtVec evaluates expr against the runtime and returns a length-n
 // extension-field slice. Scalar expressions are broadcast to every position.
-func evaluateAsExtVec(rt wiop.Runtime, expr wiop.Expression, n int) []field.Ext {
+func evaluateAsExtVec(rt *wiop.Runtime, expr wiop.Expression, n int) []field.Ext {
 	out := make([]field.Ext, n)
 
 	if !expr.IsMultiValued() {
@@ -408,7 +408,7 @@ type VerifierAction struct {
 }
 
 // Check implements [wiop.VerifierAction].
-func (a *VerifierAction) Check(rt wiop.Runtime) error {
+func (a *VerifierAction) Check(rt *wiop.Runtime) error {
 	var sum field.Ext
 
 	for _, e := range a.Entries {

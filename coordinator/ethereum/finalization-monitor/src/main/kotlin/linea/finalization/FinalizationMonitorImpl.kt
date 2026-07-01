@@ -3,6 +3,7 @@ package linea.finalization
 import io.vertx.core.Vertx
 import linea.contract.l1.FinalizedStateDataProvider
 import linea.domain.BlockParameter
+import linea.domain.toBlockParameter
 import linea.ethapi.EthApiBlockClient
 import linea.timer.TimerSchedule
 import linea.timer.VertxPeriodicPollingService
@@ -98,7 +99,7 @@ class FinalizationMonitorImpl(
     return finalizedStateDataProvider.getFinalizedStateData(blockParameter)
       .thenCompose { finalizedStateData ->
         l2EthApiClient
-          .ethGetBlockByNumberTxHashes(BlockParameter.fromNumber(finalizedStateData.blockNumber))
+          .ethGetBlockByNumberTxHashes(finalizedStateData.blockNumber.toBlockParameter())
           .thenApply { finalizedBlock ->
             FinalizationMonitor.FinalizationUpdate(
               blockNumber = finalizedStateData.blockNumber,

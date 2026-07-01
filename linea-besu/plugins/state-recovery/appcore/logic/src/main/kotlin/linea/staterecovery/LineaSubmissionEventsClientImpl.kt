@@ -5,8 +5,8 @@ import linea.SearchDirection
 import linea.contract.events.DataFinalizedV3
 import linea.contract.events.DataSubmittedV3
 import linea.domain.BlockParameter
-import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.EthLogEvent
+import linea.domain.toBlockParameter
 import linea.kotlin.encodeHex
 import linea.kotlin.toHexStringUInt256
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -141,7 +141,7 @@ class LineaSubmissionEventsClientImpl(
         dataEvents.addFirst(dataSubmission)
         findDataSubmittedV3EventByShnarf(
           fromL1BlockParameter = BlockParameter.Tag.EARLIEST,
-          tol1BlockParameter = dataSubmission.log.blockNumber.toLong().toBlockParameter(),
+          tol1BlockParameter = dataSubmission.log.blockNumber.toBlockParameter(),
           shnarf = dataSubmission.event.parentShnarf,
         ).thenPeek(::fetchParentDataSubmission)
       }
@@ -149,7 +149,7 @@ class LineaSubmissionEventsClientImpl(
 
     getDataSubmittedV3EventByShnarf(
       fromL1BlockParameter = BlockParameter.Tag.EARLIEST,
-      tol1BlockParameter = finalizationEvent.log.blockNumber.toLong().toBlockParameter(),
+      tol1BlockParameter = finalizationEvent.log.blockNumber.toBlockParameter(),
       shnarf = finalizationEvent.event.shnarf,
     ).thenPeek(::fetchParentDataSubmission)
 

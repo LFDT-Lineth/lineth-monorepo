@@ -51,7 +51,7 @@ type Proof struct {
 // [Materialize]) on sys before calling Prove.
 func (sys *System) Prove(assign func(rt *Runtime)) Proof {
 	rt := NewRuntime(sys)
-	assign(&rt)
+	assign(rt)
 
 	// Runs all the prover action and advances the Fiat-Shamir transcript
 	for rt.currentRound.ID < len(sys.Rounds) {

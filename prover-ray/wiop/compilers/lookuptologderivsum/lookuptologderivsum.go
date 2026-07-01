@@ -425,7 +425,7 @@ type ResultIsZeroVerifierAction struct {
 }
 
 // Check implements [wiop.VerifierAction].
-func (a *ResultIsZeroVerifierAction) Check(rt wiop.Runtime) error {
+func (a *ResultIsZeroVerifierAction) Check(rt *wiop.Runtime) error {
 	v := rt.GetCellValue(a.LogDerivativeSum.Result)
 	if !v.IsZero() {
 		return fmt.Errorf(

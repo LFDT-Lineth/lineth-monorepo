@@ -7,7 +7,7 @@ import (
 	"github.com/consensys/gnark/frontend"
 	sv "github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/maths/field"
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils"
 	"golang.org/x/crypto/blake2b"
 )
 
@@ -79,7 +79,7 @@ func (s StringVar) String() string { return string(s) }
 Validate implements the [Operator] interface.
 */
 func (v Variable) Validate(expr *Expression) error {
-	// This test that the variable is indeed the operator of the expression it is
+	// This tests that the variable is indeed the operator of the expression it is
 	// tested on.
 	if !reflect.DeepEqual(v, expr.Operator) {
 		utils.Panic("expr.operator %#v != v %#v", v, expr.Operator)
