@@ -13,7 +13,7 @@ import linea.testing.besu.BesuTransactionsHelper
 import linea.testing.besu.ethGetBlockByNumber
 import linea.testing.besu.startWithRetry
 import maru.config.SyncingConfig
-import maru.p2p.testutils.NetworkUtil.findFreePort
+import maru.p2p.testutils.NetworkUtil.findStablePort
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
 import org.hyperledger.besu.tests.acceptance.dsl.blockchain.Amount
@@ -205,7 +205,7 @@ class MaruFollowerTest {
     // Use a port below the OS ephemeral range (32768+ Linux, 49152+ macOS) so the kernel
     // never auto-assigns it to another fork's port-0 bind. This makes the stop→restart
     // gap safe
-    val validatorP2pPort = findFreePort()
+    val validatorP2pPort = findStablePort()
     setupMaruHelper(validatorP2pPort = validatorP2pPort)
 
     val blocksToProduce = 5
