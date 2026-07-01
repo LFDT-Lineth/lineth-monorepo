@@ -144,7 +144,7 @@ func main() {
 	for _, set := range fixtureSets {
 		for _, file := range set.files {
 			total++
-			ok, elapsed := runGuest(guestDir, file, *zkcFlags)
+			ok, userTime := runGuest(guestDir, file, *zkcFlags)
 			if ok {
 				passed++
 			} else {
@@ -153,7 +153,7 @@ func main() {
 			size := fileSize(file)
 			sszName, _ := filepath.Rel(set.outDir, file)
 			testName := filepath.ToSlash(set.jsonFile) + ":" + filepath.ToSlash(sszName)
-			printTableRow(set.fixturePath, testName, size, elapsed, ok)
+			printTableRow(set.fixturePath, testName, size, userTime, ok)
 		}
 	}
 
@@ -179,7 +179,7 @@ func printTableHeader() {
 }
 
 // Prints one table row.
-func printTableRow(fixturePath, testName string, size int64, elapsed time.Duration, ok bool) {
+func printTableRow(fixturePath, testName string, size int64, userTime time.Duration, ok bool) {
 	result := "fail"
 	if ok {
 		result = "pass"
@@ -190,7 +190,7 @@ func printTableRow(fixturePath, testName string, size int64, elapsed time.Durati
 		testColumnWidth,
 		omitMiddle(escapeCell(testName), testColumnWidth),
 		size,
-		elapsed.Seconds(),
+		userTime.Seconds(),
 		result,
 	)
 }
@@ -323,13 +323,18 @@ func sszFiles(dir string, limit int) ([]string, error) {
 
 // Runs the guest.
 func runGuest(guestDir, input, zkcFlags string) (bool, time.Duration) {
-	start := time.Now()
-	err := run(io.Discard,
-		"make", "--no-print-directory", "-C", guestDir, "exec-only",
+	cmd := exec.Command(
+		"make", "--no-print-directory", "-C", guestDir, "exec",
 		"INPUT="+input,
 		"ZKC_EXEC_FLAGS="+zkcFlags,
 	)
-	return err == nil, time.Since(start)
+	cmd.Stdout = io.Discard
+	cmd.Stderr = io.Discard
+	err := cmd.Run()
+	if cmd.ProcessState == nil {
+		return err == nil, 0
+	}
+	return err == nil, cmd.ProcessState.UserTime()
 }
 
 // Returns file size.
