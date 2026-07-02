@@ -61,16 +61,16 @@ pub const Ext = extern struct {
         const r = @as(u64, rhs.value);
         return .{
             .B0 = .{
-                .a0 = base.Element.init(@as(u64, self.B0.a0.value) * r),
-                .a1 = base.Element.init(@as(u64, self.B0.a1.value) * r),
+                .a0 = base.Element.init(self.B0.a0.value * r),
+                .a1 = base.Element.init(self.B0.a1.value * r),
             },
             .B1 = .{
-                .a0 = base.Element.init(@as(u64, self.B1.a0.value) * r),
-                .a1 = base.Element.init(@as(u64, self.B1.a1.value) * r),
+                .a0 = base.Element.init(self.B1.a0.value * r),
+                .a1 = base.Element.init(self.B1.a1.value * r),
             },
             .B2 = .{
-                .a0 = base.Element.init(@as(u64, self.B2.a0.value) * r),
-                .a1 = base.Element.init(@as(u64, self.B2.a1.value) * r),
+                .a0 = base.Element.init(self.B2.a0.value * r),
+                .a1 = base.Element.init(self.B2.a1.value * r),
             },
         };
     }
@@ -149,17 +149,12 @@ pub const Ext = extern struct {
         const t02_0 = (w02_0 + 4 * p - rt0_0 - rt2_0) % p;
         const t02_1 = (w02_1 + 4 * p - rt0_1 - rt2_1) % p;
 
-        // mulByNonResidue (u+1) on raw (t12, t2), both already < p above:
-        //   (x0 + 3*x1, x0 + x1)
-        const nr12_0 = t12_0 + 3 * t12_1;
-        const nr12_1 = t12_0 + t12_1;
-        const nr2_0 = rt2_0 + 3 * rt2_1;
-        const nr2_1 = rt2_0 + rt2_1;
-
-        const d0_0 = rt0_0 + nr12_0;
-        const d0_1 = rt0_1 + nr12_1;
-        const d1_0 = t01_0 + nr2_0;
-        const d1_1 = t01_1 + nr2_1;
+        // D0 = t0 + nr(t12),  D1 = t01 + nr(t2),  D2 = t02 + t1
+        // nr(x) = (x0 + 3*x1, x0 + x1)
+        const d0_0 = rt0_0 + t12_0 + 3 * t12_1;
+        const d0_1 = rt0_1 + t12_0 + t12_1;
+        const d1_0 = t01_0 + rt2_0 + 3 * rt2_1;
+        const d1_1 = t01_1 + rt2_0 + rt2_1;
         const d2_0 = t02_0 + rt1_0;
         const d2_1 = t02_1 + rt1_1;
 
@@ -223,16 +218,12 @@ pub const Ext = extern struct {
         const c02_0 = (q02_0 + 4 * p - rs0_0 - rs2_0) % p;
         const c02_1 = (q02_1 + 4 * p - rs0_1 - rs2_1) % p;
 
-        // mulByNonResidue (u+1) on raw (c12, s2), both already < p above.
-        const nr12_0 = c12_0 + 3 * c12_1;
-        const nr12_1 = c12_0 + c12_1;
-        const nrs2_0 = rs2_0 + 3 * rs2_1;
-        const nrs2_1 = rs2_0 + rs2_1;
-
-        const d0_0 = rs0_0 + nr12_0;
-        const d0_1 = rs0_1 + nr12_1;
-        const d1_0 = c01_0 + nrs2_0;
-        const d1_1 = c01_1 + nrs2_1;
+        // D0 = s0 + nr(c12),  D1 = c01 + nr(s2),  D2 = c02 + s1
+        // nr(x) = (x0 + 3*x1, x0 + x1)
+        const d0_0 = rs0_0 + c12_0 + 3 * c12_1;
+        const d0_1 = rs0_1 + c12_0 + c12_1;
+        const d1_0 = c01_0 + rs2_0 + 3 * rs2_1;
+        const d1_1 = c01_1 + rs2_0 + rs2_1;
         const d2_0 = c02_0 + rs1_0;
         const d2_1 = c02_1 + rs1_1;
 
@@ -297,24 +288,13 @@ pub const Ext = extern struct {
         const cap_c_0 = (r_b1sq_0 + 4 * p - r_b0b2_0) % p;
         const cap_c_1 = (r_b1sq_1 + 4 * p - r_b0b2_1) % p;
 
-        const cap_a: E2 = .{ .a0 = base.Element.init(cap_a_0), .a1 = base.Element.init(cap_a_1) };
-        const cap_b: E2 = .{ .a0 = base.Element.init(cap_b_0), .a1 = base.Element.init(cap_b_1) };
-        const cap_c: E2 = .{ .a0 = base.Element.init(cap_c_0), .a1 = base.Element.init(cap_c_1) };
-
         // d = b0*cap_a + nr(b2*cap_b + b1*cap_c), all operands canonical (< p).
-        const ca0 = @as(u64, cap_a.a0.value);
-        const ca1 = @as(u64, cap_a.a1.value);
-        const cb0 = @as(u64, cap_b.a0.value);
-        const cb1 = @as(u64, cap_b.a1.value);
-        const cc0 = @as(u64, cap_c.a0.value);
-        const cc1 = @as(u64, cap_c.a1.value);
-
-        const rb0ca_0 = (x0 * ca0 + 3 * x1 * ca1) % p;
-        const rb0ca_1 = (x0 * ca1 + x1 * ca0) % p;
-        const rb2cb_0 = (x4 * cb0 + 3 * x5 * cb1) % p;
-        const rb2cb_1 = (x4 * cb1 + x5 * cb0) % p;
-        const rb1cc_0 = (x2 * cc0 + 3 * x3 * cc1) % p;
-        const rb1cc_1 = (x2 * cc1 + x3 * cc0) % p;
+        const rb0ca_0 = (x0 * cap_a_0 + 3 * x1 * cap_a_1) % p;
+        const rb0ca_1 = (x0 * cap_a_1 + x1 * cap_a_0) % p;
+        const rb2cb_0 = (x4 * cap_b_0 + 3 * x5 * cap_b_1) % p;
+        const rb2cb_1 = (x4 * cap_b_1 + x5 * cap_b_0) % p;
+        const rb1cc_0 = (x2 * cap_c_0 + 3 * x3 * cap_c_1) % p;
+        const rb1cc_1 = (x2 * cap_c_1 + x3 * cap_c_0) % p;
 
         // b2cb + b1cc, folded mod p before mulByNonResidue.
         const sum_0 = (rb2cb_0 + rb1cc_0) % p;
@@ -332,24 +312,23 @@ pub const Ext = extern struct {
         // squarings + 6 multiplies chain; not reducible by flattening), then
         // d_inv = (d0*norm_inv, -d1*norm_inv). d0,d1 < p so d0^2 < p^2 and
         // 3*d1^2 < 3p^2; offsetting by +3p^2 keeps the subtraction in range.
-        const norm = base.Element.init(@as(u64, d0) * d0 + 3 * @as(u64, p) * p - 3 * @as(u64, d1) * d1);
+        const norm = base.Element.init(d0 * d0 + 3 * p * p - 3 * d1 * d1);
         const norm_inv = norm.inverse();
-        const di0 = (@as(u64, d0) * norm_inv.value) % p;
-        const neg_d1 = (p - d1) % p;
-        const di1 = (neg_d1 * @as(u64, norm_inv.value)) % p;
+        const di0 = (d0 * norm_inv.value) % p;
+        const di1 = ((p - d1) * norm_inv.value) % p;
 
         // Final scale: cap_{a,b,c} * d_inv, reduced immediately.
-        const out_a_0 = (ca0 * di0 + 3 * ca1 * di1) % p;
-        const out_a_1 = (ca0 * di1 + ca1 * di0) % p;
-        const out_b_0 = (cb0 * di0 + 3 * cb1 * di1) % p;
-        const out_b_1 = (cb0 * di1 + cb1 * di0) % p;
-        const out_c_0 = (cc0 * di0 + 3 * cc1 * di1) % p;
-        const out_c_1 = (cc0 * di1 + cc1 * di0) % p;
+        const out_a_0 = (cap_a_0 * di0 + 3 * cap_a_1 * di1) % p;
+        const out_a_1 = (cap_a_0 * di1 + cap_a_1 * di0) % p;
+        const out_b_0 = (cap_b_0 * di0 + 3 * cap_b_1 * di1) % p;
+        const out_b_1 = (cap_b_0 * di1 + cap_b_1 * di0) % p;
+        const out_c_0 = (cap_c_0 * di0 + 3 * cap_c_1 * di1) % p;
+        const out_c_1 = (cap_c_0 * di1 + cap_c_1 * di0) % p;
 
         return .{
-            .B0 = .{ .a0 = .{ .value = @intCast(out_a_0) }, .a1 = .{ .value = @intCast(out_a_1) } },
-            .B1 = .{ .a0 = .{ .value = @intCast(out_b_0) }, .a1 = .{ .value = @intCast(out_b_1) } },
-            .B2 = .{ .a0 = .{ .value = @intCast(out_c_0) }, .a1 = .{ .value = @intCast(out_c_1) } },
+            .B0 = .{ .a0 = base.Element.init(out_a_0), .a1 = base.Element.init(out_a_1) },
+            .B1 = .{ .a0 = base.Element.init(out_b_0), .a1 = base.Element.init(out_b_1) },
+            .B2 = .{ .a0 = base.Element.init(out_c_0), .a1 = base.Element.init(out_c_1) },
         };
     }
 
