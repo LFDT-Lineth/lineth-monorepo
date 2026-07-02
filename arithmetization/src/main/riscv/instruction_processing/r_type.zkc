@@ -6,6 +6,7 @@ include "../utils/sign_bit.zkc"
 include "../utils/sign_extend.zkc"
 include "../utils/signed_comparisons.zkc"
 include "../utils/multiplication.zkc"
+include "../../lib/ecrecover/impl.zkc"
 include "../../lib/keccak/impl.zkc"
 include "../../lib/io/write_output.zkc"
 // TODO: poseidon2 is commented out for now until the "dangling register" issue

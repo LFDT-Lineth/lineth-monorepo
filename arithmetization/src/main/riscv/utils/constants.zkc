@@ -154,6 +154,10 @@ const OP_32:Opcode = 0b0111011 // ADDW, SUBW, SLLW, SRLW, SRAW (RV64 only)
 const CUSTOM_0:Opcode = 0b0001011 // custom-0
 const CUSTOM_1:Opcode = 0b0101011 // custom-1
 
+// EVM precompiles
+const FUNCT3_EVM_ECRECOVER:Funct3 = 0b000
+const FUNCT7_EVM_ECRECOVER:Funct7 = 0b0000001
+
 // Extraneous precompiles
 const FUNCT3_KECCAK:Funct3 = 0b000
 const FUNCT7_KECCAK:Funct7 = 0b0000000
@@ -161,6 +165,8 @@ const FUNCT3_POSEIDON2:Funct3 = 0b001
 const FUNCT7_POSEIDON2:Funct7 = 0b0000000
 const FUNCT3_WRITE_OUTPUT:Funct3 = 0b010
 const FUNCT7_WRITE_OUTPUT:Funct7 = 0b0000000
+const FUNCT3_ECRECOVER:Funct3 = 0b000
+const FUNCT7_ECRECOVER:Funct7 = 0b0000001
 
 // I_type
 const LOAD:Opcode = 0b0000011 // LB, LH, LW, LBU, LHU, LWU, LD
