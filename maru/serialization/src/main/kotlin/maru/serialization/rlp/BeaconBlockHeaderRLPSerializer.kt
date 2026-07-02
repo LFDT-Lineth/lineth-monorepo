@@ -13,10 +13,9 @@ import org.apache.tuweni.bytes.Bytes
 import org.hyperledger.besu.ethereum.rlp.RLPOutput
 
 /**
- * Function-free (write-only) RLP serializer for [BeaconBlockHeader]. This is the single source of truth for
- * the header byte layout. It carries NO `headerHashFunction`, so it can back [HashUtil] without the
- * construction-order cycle that a full [BeaconBlockHeaderSerDe] introduces (a SerDe needs a hash function for
- * its read side, and the default hash function is defined in terms of hashing the header).
+ * Write-only RLP serializer for [BeaconBlockHeader]: the single source of truth for the header byte layout.
+ * Serialization has no dependency on a header hash function, which is what lets [HashUtil] use this
+ * serializer to compute that hash function in the first place.
  */
 class BeaconBlockHeaderRLPSerializer(
   private val validatorSerializer: ValidatorSerDe,

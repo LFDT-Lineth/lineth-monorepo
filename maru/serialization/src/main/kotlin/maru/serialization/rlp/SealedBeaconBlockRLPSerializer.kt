@@ -12,9 +12,9 @@ import maru.core.SealedBeaconBlock
 import org.hyperledger.besu.ethereum.rlp.RLPOutput
 
 /**
- * Function-free (write-only) RLP serializer for [SealedBeaconBlock]. Single source of truth for the sealed
- * block byte layout, matching [SealedBeaconBlockSerDe.writeTo] exactly: the block (delegated to
- * [beaconBlockRLPSerializer]) followed by the commit seals list. Carries no `headerHashFunction`.
+ * Write-only RLP serializer for [SealedBeaconBlock]: the single source of truth for the sealed block byte
+ * layout (the block, delegated to [beaconBlockRLPSerializer], followed by the commit seals list), matching
+ * [SealedBeaconBlockSerDe.writeTo].
  */
 class SealedBeaconBlockRLPSerializer(
   private val beaconBlockRLPSerializer: BeaconBlockRLPSerializer,

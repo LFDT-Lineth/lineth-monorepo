@@ -80,9 +80,15 @@ class MaruFactory(
   /**
    * CL fork applied to the QBFT [ForkSpec]s built by [buildForkSchedule]. Defaults to
    * [ClFork.QBFT_PHASE0]. The pre-TTD [DifficultyAwareQbftConfig]
-   * fork always stays [ClFork.QBFT_PHASE0].
+   * fork always stays [ClFork.QBFT_PHASE0]. Ignored when [qbftPhase1ActivationTimestamp] is set.
    */
   private val clFork: ClFork = ClFork.QBFT_PHASE0,
+  /**
+   * When set (and no EL fork timestamps are configured), [buildForkSchedule] produces a schedule that starts
+   * on [ClFork.QBFT_PHASE0] and switches to [ClFork.QBFT_PHASE1] at this timestamp, letting a running network
+   * live-upgrade mid-test instead of being pinned to a single CL fork for its whole lifetime.
+   */
+  private val qbftPhase1ActivationTimestamp: ULong? = null,
 ) {
   init {
     // If one of pragueTimestamp, cancunTimestamp, shanghaiTimestamp is defined and some other is not, throw
@@ -193,6 +199,28 @@ class MaruFactory(
             configuration = QbftConsensusConfig(
               validatorSet = validatorSet,
               fork = ChainFork(clFork, ElFork.Prague),
+            ),
+          ),
+        ),
+      )
+    } else if (qbftPhase1ActivationTimestamp != null) {
+      ForksSchedule(
+        1337u,
+        setOf(
+          ForkSpec(
+            timestampSeconds = 0UL,
+            blockTimeSeconds = 1u,
+            configuration = QbftConsensusConfig(
+              validatorSet = validatorSet,
+              fork = ChainFork(ClFork.QBFT_PHASE0, ElFork.Prague),
+            ),
+          ),
+          ForkSpec(
+            timestampSeconds = qbftPhase1ActivationTimestamp,
+            blockTimeSeconds = 1u,
+            configuration = QbftConsensusConfig(
+              validatorSet = validatorSet,
+              fork = ChainFork(ClFork.QBFT_PHASE1, ElFork.Prague),
             ),
           ),
         ),

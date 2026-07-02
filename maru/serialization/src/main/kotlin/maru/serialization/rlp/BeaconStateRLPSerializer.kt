@@ -12,10 +12,10 @@ import maru.core.BeaconState
 import org.hyperledger.besu.ethereum.rlp.RLPOutput
 
 /**
- * Function-free (write-only) RLP serializer for [BeaconState]. Single source of truth for the state byte
- * layout, matching [BeaconStateSerDe.writeTo] exactly: the embedded header (delegated to
- * [beaconBlockHeaderRLPSerializer]) followed by the validators list. Carries no `headerHashFunction`, so it
- * can back [HashUtil.stateRoot] without a construction-order cycle.
+ * Write-only RLP serializer for [BeaconState]: the single source of truth for the state byte layout (the
+ * embedded header, delegated to [beaconBlockHeaderRLPSerializer], followed by the validators list), matching
+ * [BeaconStateSerDe.writeTo]. Serialization has no dependency on a header hash function, which is what lets
+ * [HashUtil.stateRoot] use this serializer directly.
  */
 class BeaconStateRLPSerializer(
   private val beaconBlockHeaderRLPSerializer: BeaconBlockHeaderRLPSerializer,
