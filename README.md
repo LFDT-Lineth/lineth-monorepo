@@ -136,7 +136,7 @@ Consider starting with a ["good first issue"](https://github.com/LFDT-Lineth/lin
 
 ### Commit message format
 
-All commits must follow the [Conventional Commits](https://www.conventionalcommits.org) format, enforced locally by a Husky `commit-msg` hook:
+All commits must follow the [Conventional Commits](https://www.conventionalcommits.org) format, enforced locally by a Husky [commit-msg](.husky/commit-msg) hook:
 
 ```
 <type>(<scope>): <short description>
@@ -193,6 +193,11 @@ git commit -m 'feat(coordinator)!: breaking changes'
 To write a multi-line commit from the terminal:
 ```bash
 git commit -m $'feat(coordinator): add retry logic\n\nRetries up to 3 times on transient network errors.\n\nCloses issue# 123'
+```
+
+To bypass the commit-msg hook: (USE WITH CAUTION)
+```bash
+git commit -m 'Just some trivial changes could find proper prefix and irrelevant to version change' --no-verify
 ```
 
 Before contributing, ensure you're familiar with:
