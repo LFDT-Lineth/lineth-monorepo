@@ -2,6 +2,7 @@ package linea.coordinator.clients.prover
 
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
+import linea.clients.ProverFileNameProvider
 import linea.coordinator.clients.prover.serialization.JsonSerialization
 import linea.domain.BlockInterval
 import linea.domain.ProofIndex

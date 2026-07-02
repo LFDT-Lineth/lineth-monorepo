@@ -19,3 +19,5 @@
 - *(maru)* Remove unused test (#3279)
 - *(maru)* Per-test log isolation + bounded integration-test concurrency (#3343)
 - *(coordinator)* Update kotlin to v2.4 (#3454)
+- *(coordinator)* LSP violation fix (#3386)
+- *(misc)* Trying to speed up Maru integration tests and optimize resource consumption (#3462)

@@ -1,3 +1,5 @@
+import { sanitizeSecrets } from "./lib/errors";
+
 const HASH_RE = /^0x[a-fA-F0-9]{64}$/;
 const ADDRESS_RE = /^0x[a-fA-F0-9]{40}$/;
 const PRIVATE_KEY_RE = /^0x[a-fA-F0-9]{64}$/;
@@ -43,19 +45,6 @@ function chain(id, name, rpcUrl) {
     nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
     rpcUrls: { default: { http: [rpcUrl] } },
   };
-}
-
-export function sanitizeError(error, secrets = []) {
-  let message = error instanceof Error ? error.message : String(error);
-  for (const secret of secrets) {
-    if (!secret) {
-      continue;
-    }
-    message = message.split(secret).join("[REDACTED]");
-    message = message.split(secret.toLowerCase()).join("[REDACTED]");
-    message = message.split(secret.toUpperCase()).join("[REDACTED]");
-  }
-  return message;
 }
 
 export async function loadDefaultDeps() {
@@ -155,7 +144,7 @@ export async function claimL2ToL1(env = process.env, deps) {
       claimant: account.address,
     };
   } catch (error) {
-    throw new Error(sanitizeError(error, [signerPrivateKey]));
+    throw new Error(sanitizeSecrets(error, [signerPrivateKey]));
   }
 }
 
@@ -166,7 +155,7 @@ async function main() {
 
 if (process.env.CLAIM_L2_TO_L1_DISABLE_MAIN !== "true") {
   main().catch((error) => {
-    console.error(`[claim-l2-to-l1] ERROR: ${sanitizeError(error, [process.env.L1_SIGNER_PRIVATE_KEY])}`);
+    console.error(`[claim-l2-to-l1] ERROR: ${sanitizeSecrets(error, [process.env.L1_SIGNER_PRIVATE_KEY])}`);
     process.exit(1);
   });
 }

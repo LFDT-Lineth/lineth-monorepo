@@ -5,6 +5,42 @@ import kotlin.time.Instant
 
 interface ProofIndex : StartBlockTimestampProvider
 
+data class BlockIntervalProofIndex(
+  override val startBlockNumber: ULong,
+  override val endBlockNumber: ULong,
+  override val startBlockTimestamp: Instant,
+  val hash: ByteArray,
+) : BlockInterval, ProofIndex {
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as BlockIntervalProofIndex
+
+    if (startBlockNumber != other.startBlockNumber) return false
+    if (endBlockNumber != other.endBlockNumber) return false
+    if (!hash.contentEquals(other.hash)) return false
+    if (startBlockTimestamp != other.startBlockTimestamp) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = startBlockNumber.hashCode()
+    result = 31 * result + endBlockNumber.hashCode()
+    result = 31 * result + hash.contentHashCode()
+    result = 31 * result + startBlockTimestamp.hashCode()
+    return result
+  }
+
+  override fun toString(): String {
+    return "BlockIntervalProofIndex(startBlockNumber=$startBlockNumber, " +
+      "endBlockNumber=$endBlockNumber,  " +
+      "startBlockTimestamp=$startBlockTimestamp, " +
+      "hash=${hash.encodeHex()})"
+  }
+}
+
 data class ExecutionProofIndex(
   val startBlockNumber: ULong,
   val endBlockNumber: ULong,

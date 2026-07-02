@@ -70,7 +70,7 @@ pub inline fn reset() void {
 /// The whole body is behind a comptime `r5_marks` gate, so on native /
 /// test builds (and when profiling is off) it compiles to nothing and the
 /// RISC-V assembly is never analyzed.
-pub fn markR5Value(comptime phase: u64, value: u64) void {
+pub inline fn markR5Value(comptime phase: u64, value: u64) void {
     if (comptime r5_marks) {
         const prefix = "VERIFIER-MARK\t" ++ comptime decimalString(phase) ++ "\t";
         // prefix + up to 20 decimal digits for a u64.
