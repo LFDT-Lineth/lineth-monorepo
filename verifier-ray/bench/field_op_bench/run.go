@@ -1,9 +1,12 @@
 // Runner for the field_op_bench micro-benchmark.
-// Builds the R5 ELF, converts to zkc JSON, runs zkc, and prints a cycle table.
+// Builds the R5 ELF, converts to zkc JSON, runs zkc, prints a cycle table,
+// and writes a CSV report.
 package main
 
 import (
 	"bufio"
+	"encoding/csv"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -20,6 +23,7 @@ const (
 	r5JSON         = "zig-out/bin/field-op-bench.json"
 	n              = 1000
 	traceTailLimit = 40
+	defaultOutput  = "bench/field-op-bench.csv"
 )
 
 // The baseline phase runs the same loop with an empty body; its delta is the
@@ -59,6 +63,11 @@ var (
 	cycleRE = regexp.MustCompile(`clock cycle: ([0-9]+)`)
 )
 
+type row struct {
+	name     string
+	cyclesOp float64
+}
+
 type marker struct {
 	cycle uint64
 	value uint64
@@ -71,9 +80,12 @@ type traceStats struct {
 }
 
 func main() {
+	outFlag := flag.String("out", defaultOutput, "CSV output path")
+	flag.Parse()
+	args := flag.Args()
 	zkcBin := "zkc"
-	if len(os.Args) > 1 {
-		zkcBin = os.Args[1]
+	if len(args) > 0 {
+		zkcBin = args[0]
 	}
 
 	fmt.Fprintln(os.Stderr, "building R5 ELF...")
@@ -158,22 +170,56 @@ func main() {
 		baselineDelta, float64(baselineDelta)/n)
 	fmt.Printf("%-20s  %12s  %12s  %10s\n", "op", "raw_cycles", "net_cycles", "cycles/op")
 	fmt.Printf("%-20s  %12s  %12s  %10s\n", "---", "----------", "----------", "---------")
+
+	var rows []row
 	for _, p := range phases {
 		start, startOK := stats.markers[p.start]
 		end, endOK := stats.markers[p.end]
 		if !startOK || !endOK {
 			fmt.Printf("%-20s  %12s  %12s  %10s\n", p.name, "-", "-", "-")
+			rows = append(rows, row{p.name, -1})
 			continue
 		}
 		raw := end.cycle - start.cycle
-		// Guard against a negative net if an op loop somehow measures below the
-		// baseline (e.g. noise on a near-zero op); clamp to 0.
 		var net uint64
 		if raw > baselineDelta {
 			net = raw - baselineDelta
 		}
 		fmt.Printf("%-20s  %12d  %12d  %10.2f\n", p.name, raw, net, float64(net)/n)
+		rows = append(rows, row{p.name, float64(net) / n})
 	}
+
+	if err := writeCSV(*outFlag, rows); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: could not write CSV: %v\n", err)
+	} else {
+		fmt.Fprintf(os.Stderr, "CSV written to %s\n", *outFlag)
+	}
+}
+
+func writeCSV(path string, rows []row) error {
+	if err := os.MkdirAll("bench", 0o755); err != nil {
+		return err
+	}
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	w := csv.NewWriter(f)
+	if err := w.Write([]string{"op", "cycles_per_op"}); err != nil {
+		return err
+	}
+	for _, r := range rows {
+		val := "-"
+		if r.cyclesOp >= 0 {
+			val = strconv.FormatFloat(r.cyclesOp, 'f', 2, 64)
+		}
+		if err := w.Write([]string{r.name, val}); err != nil {
+			return err
+		}
+	}
+	w.Flush()
+	return w.Error()
 }
 
 func parseTrace(r io.Reader) (traceStats, error) {

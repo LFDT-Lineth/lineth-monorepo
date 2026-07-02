@@ -1,9 +1,12 @@
 // Runner for the bench_compress micro-benchmark.
-// Builds the R5 ELF, converts to zkc JSON, runs zkc, and prints cycles/compress.
+// Builds the R5 ELF, converts to zkc JSON, runs zkc, prints cycles/compress,
+// and writes a CSV report.
 package main
 
 import (
 	"bufio"
+	"encoding/csv"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -19,6 +22,7 @@ const (
 	r5Bin          = "zig-out/bin/bench-compress"
 	r5JSON         = "zig-out/bin/bench-compress.json"
 	traceTailLimit = 40
+	defaultOutput  = "bench/bench-compress.csv"
 	// n must match const N in main.zig — update both together.
 	n = 10
 )
@@ -50,9 +54,12 @@ type traceStats struct {
 }
 
 func main() {
+	outFlag := flag.String("out", defaultOutput, "CSV output path")
+	flag.Parse()
+	args := flag.Args()
 	zkcBin := "zkc"
-	if len(os.Args) > 1 {
-		zkcBin = os.Args[1]
+	if len(args) > 0 {
+		zkcBin = args[0]
 	}
 
 	fmt.Fprintln(os.Stderr, "building R5 ELF...")
@@ -143,13 +150,40 @@ func main() {
 		net = raw - baselineDelta
 	}
 
+	cyclesPerCall := float64(net) / n
+
 	fmt.Printf("\nN = %d\n", n)
 	fmt.Printf("baseline (empty loop) = %d cycles (%.2f/iter), subtracted below\n\n",
 		baselineDelta, float64(baselineDelta)/n)
 	fmt.Printf("%-28s  %12s  %12s  %12s\n", "operation", "raw_cycles", "net_cycles", "cycles/call")
 	fmt.Printf("%-28s  %12s  %12s  %12s\n", "---", "----------", "----------", "-----------")
-	fmt.Printf("%-28s  %12d  %12d  %12.2f\n",
-		"poseidon2 compress", raw, net, float64(net)/n)
+	fmt.Printf("%-28s  %12d  %12d  %12.2f\n", "poseidon2 compress", raw, net, cyclesPerCall)
+
+	if err := writeCSV(*outFlag, cyclesPerCall); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: could not write CSV: %v\n", err)
+	} else {
+		fmt.Fprintf(os.Stderr, "CSV written to %s\n", *outFlag)
+	}
+}
+
+func writeCSV(path string, cyclesPerCall float64) error {
+	if err := os.MkdirAll("bench", 0o755); err != nil {
+		return err
+	}
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	w := csv.NewWriter(f)
+	if err := w.Write([]string{"operation", "cycles_per_call"}); err != nil {
+		return err
+	}
+	if err := w.Write([]string{"poseidon2 compress", strconv.FormatFloat(cyclesPerCall, 'f', 2, 64)}); err != nil {
+		return err
+	}
+	w.Flush()
+	return w.Error()
 }
 
 func parseTrace(r io.Reader) (traceStats, error) {
