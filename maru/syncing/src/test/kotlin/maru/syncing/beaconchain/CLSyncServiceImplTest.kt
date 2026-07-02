@@ -17,8 +17,6 @@ import maru.consensus.ClFork
 import maru.consensus.ConsensusConfig
 import maru.consensus.ElFork
 import maru.consensus.ForkIdManagerFactory
-import maru.consensus.ForkSpec
-import maru.consensus.ForksSchedule
 import maru.consensus.QbftConsensusConfig
 import maru.consensus.StaticValidatorProvider
 import maru.consensus.qbft.DelayedQbftBlockCreator
@@ -39,7 +37,6 @@ import maru.p2p.P2PNetworkImpl
 import maru.p2p.PeerLookup
 import maru.p2p.fork.ForkPeeringManager
 import maru.p2p.messages.StatusManager
-import maru.serialization.rlp.ForkAwareBlockHashing
 import maru.syncing.beaconchain.pipeline.BeaconChainDownloadPipelineFactory.Config
 import net.consensys.linea.metrics.Counter
 import net.consensys.linea.metrics.MetricsFacade
@@ -94,7 +91,7 @@ class CLSyncServiceImplTest {
       )
 
     private val blockHashing =
-      ForkAwareBlockHashing(ForksSchedule(CHAIN_ID, listOf(ForkSpec(0UL, 1u, consensusConfig))))
+      DataGenerators.testForkAwareBlockHashing(chainId = CHAIN_ID, consensusConfig = consensusConfig)
 
     fun createForkIdHashProvider(beaconChain: BeaconChain): ForkPeeringManager =
       ForkIdManagerFactory.createForkIdHashManager(

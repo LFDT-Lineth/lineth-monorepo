@@ -8,12 +8,6 @@
  */
 package maru.consensus.qbft
 
-import maru.consensus.ChainFork
-import maru.consensus.ClFork
-import maru.consensus.ElFork
-import maru.consensus.ForkSpec
-import maru.consensus.ForksSchedule
-import maru.consensus.QbftConsensusConfig
 import maru.consensus.ValidatorProvider
 import maru.consensus.qbft.adapters.QbftBlockAdapter
 import maru.consensus.qbft.adapters.QbftBlockHeaderAdapter
@@ -27,7 +21,6 @@ import maru.core.Validator
 import maru.core.ext.DataGenerators
 import maru.database.BeaconChain
 import maru.executionlayer.manager.ExecutionLayerManager
-import maru.serialization.rlp.ForkAwareBlockHashing
 import maru.serialization.rlp.HashUtil
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -50,20 +43,9 @@ class DelayedQbftBlockCreatorTest {
   private val beaconChain = Mockito.mock(BeaconChain::class.java)
   private val validatorSet = DataGenerators.randomValidators()
   private val blockHashing =
-    ForkAwareBlockHashing(
-      ForksSchedule(
-        1337u,
-        listOf(
-          ForkSpec(
-            0UL,
-            1u,
-            QbftConsensusConfig(
-              validatorSet = setOf(DataGenerators.randomValidator()),
-              fork = ChainFork(ClFork.QBFT_PHASE0, ElFork.Prague),
-            ),
-          ),
-        ),
-      ),
+    DataGenerators.testForkAwareBlockHashing(
+      chainId = 1337u,
+      validatorSet = setOf(DataGenerators.randomValidator()),
     )
 
   @Test

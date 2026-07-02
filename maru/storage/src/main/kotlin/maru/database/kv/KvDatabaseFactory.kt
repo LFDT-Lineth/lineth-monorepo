@@ -26,7 +26,6 @@ object KvDatabaseFactory {
     val kvStoreSerializers =
       KvStoreSerializers(
         beaconStateSerializer = blockHashing.beaconStateSerializer,
-        beaconBlockSerializer = blockHashing.beaconBlockSerializer,
         sealedBeaconBlockSerializer = blockHashing.sealedBeaconBlockSerializer,
       )
     val schema = KvDatabase.Schema(kvStoreSerializers)

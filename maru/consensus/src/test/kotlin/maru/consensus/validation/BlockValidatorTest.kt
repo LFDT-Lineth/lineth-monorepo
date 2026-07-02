@@ -12,12 +12,6 @@ import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.getError
 import linea.kotlin.encodeHex
-import maru.consensus.ChainFork
-import maru.consensus.ClFork
-import maru.consensus.ElFork
-import maru.consensus.ForkSpec
-import maru.consensus.ForksSchedule
-import maru.consensus.QbftConsensusConfig
 import maru.consensus.ValidatorProvider
 import maru.consensus.qbft.ProposerSelector
 import maru.consensus.qbft.toConsensusRoundIdentifier
@@ -35,7 +29,6 @@ import maru.database.InMemoryBeaconChain
 import maru.executionlayer.manager.ExecutionLayerManager
 import maru.executionlayer.manager.ExecutionPayloadStatus
 import maru.executionlayer.manager.PayloadStatus
-import maru.serialization.rlp.ForkAwareBlockHashing
 import maru.serialization.rlp.HashUtil
 import org.assertj.core.api.Assertions.assertThat
 import org.hyperledger.besu.consensus.common.bft.BftHelpers
@@ -122,20 +115,9 @@ class BlockValidatorTest {
   private val stateTransition = StateTransitionImpl(validatorProvider)
 
   private val blockHashing =
-    ForkAwareBlockHashing(
-      ForksSchedule(
-        1337u,
-        listOf(
-          ForkSpec(
-            0UL,
-            1u,
-            QbftConsensusConfig(
-              validatorSet = setOf(DataGenerators.randomValidator()),
-              fork = ChainFork(ClFork.QBFT_PHASE0, ElFork.Prague),
-            ),
-          ),
-        ),
-      ),
+    DataGenerators.testForkAwareBlockHashing(
+      chainId = 1337u,
+      validatorSet = setOf(DataGenerators.randomValidator()),
     )
 
   @Test

@@ -9,12 +9,6 @@
 package maru.consensus.qbft.adapters
 
 import com.github.michaelbull.result.Ok
-import maru.consensus.ChainFork
-import maru.consensus.ClFork
-import maru.consensus.ElFork
-import maru.consensus.ForkSpec
-import maru.consensus.ForksSchedule
-import maru.consensus.QbftConsensusConfig
 import maru.consensus.qbft.toAddress
 import maru.consensus.state.StateTransition
 import maru.consensus.validation.StateRootValidator
@@ -22,7 +16,6 @@ import maru.core.BeaconBlock
 import maru.core.BeaconState
 import maru.core.Validator
 import maru.core.ext.DataGenerators
-import maru.serialization.rlp.ForkAwareBlockHashing
 import maru.serialization.rlp.HashUtil
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -31,22 +24,7 @@ import java.util.SequencedSet
 
 class QbftBlockInterfaceAdapterTest {
   // Round-inclusive (PHASE0) hashing, matching the StateRootValidator(HashUtil::stateRoot) assertions below.
-  private val blockHashing =
-    ForkAwareBlockHashing(
-      ForksSchedule(
-        chainId = 1u,
-        forks = listOf(
-          ForkSpec(
-            timestampSeconds = 0UL,
-            blockTimeSeconds = 1u,
-            configuration = QbftConsensusConfig(
-              validatorSet = emptySet(),
-              fork = ChainFork(ClFork.QBFT_PHASE0, ElFork.Prague),
-            ),
-          ),
-        ),
-      ),
-    )
+  private val blockHashing = DataGenerators.testForkAwareBlockHashing()
 
   private fun createStateTransition(
     validators: SequencedSet<Validator> = DataGenerators.randomValidators().toSortedSet(),

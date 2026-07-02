@@ -8,35 +8,13 @@
  */
 package maru.p2p.messages
 
-import maru.consensus.ChainFork
-import maru.consensus.ClFork
-import maru.consensus.ElFork
-import maru.consensus.ForkSpec
-import maru.consensus.ForksSchedule
-import maru.consensus.QbftConsensusConfig
 import maru.core.ext.DataGenerators
-import maru.serialization.rlp.ForkAwareBlockHashing
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 class BeaconBlocksByRangeResponseSerDeTest {
   // Round-trip (deserialize) → the sealed block SerDe must inject a fork-aware header hash function.
-  private val blockHashing =
-    ForkAwareBlockHashing(
-      ForksSchedule(
-        chainId = 1u,
-        forks = listOf(
-          ForkSpec(
-            timestampSeconds = 0UL,
-            blockTimeSeconds = 1u,
-            configuration = QbftConsensusConfig(
-              validatorSet = emptySet(),
-              fork = ChainFork(ClFork.QBFT_PHASE0, ElFork.Prague),
-            ),
-          ),
-        ),
-      ),
-    )
+  private val blockHashing = DataGenerators.testForkAwareBlockHashing()
 
   @Test
   fun `response serDe serializes and deserializes correctly`() {

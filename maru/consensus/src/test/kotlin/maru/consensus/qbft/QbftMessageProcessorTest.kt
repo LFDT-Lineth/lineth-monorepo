@@ -8,12 +8,6 @@
  */
 package maru.consensus.qbft
 
-import maru.consensus.ChainFork
-import maru.consensus.ClFork
-import maru.consensus.ElFork
-import maru.consensus.ForkSpec
-import maru.consensus.ForksSchedule
-import maru.consensus.QbftConsensusConfig
 import maru.consensus.qbft.adapters.QbftBlockAdapter
 import maru.consensus.qbft.adapters.QbftBlockCodecAdapter
 import maru.consensus.qbft.adapters.QbftBlockchainAdapter
@@ -25,7 +19,6 @@ import maru.crypto.SecpCrypto
 import maru.database.InMemoryBeaconChain
 import maru.p2p.ValidationResult.Companion.Ignore
 import maru.p2p.ValidationResultCode
-import maru.serialization.rlp.ForkAwareBlockHashing
 import org.apache.tuweni.bytes.Bytes
 import org.apache.tuweni.bytes.Bytes.EMPTY
 import org.apache.tuweni.bytes.Bytes32
@@ -57,22 +50,7 @@ class QbftMessageProcessorTest {
   private val messageDecoder = MinimalQbftMessageDecoder(SecpCrypto)
 
   // Decoding proposal blocks must inject a fork-aware header hash function (PHASE0 fork at timestamp 0).
-  private val blockHashing =
-    ForkAwareBlockHashing(
-      ForksSchedule(
-        chainId = 1u,
-        forks = listOf(
-          ForkSpec(
-            timestampSeconds = 0UL,
-            blockTimeSeconds = 1u,
-            configuration = QbftConsensusConfig(
-              validatorSet = emptySet(),
-              fork = ChainFork(ClFork.QBFT_PHASE0, ElFork.Prague),
-            ),
-          ),
-        ),
-      ),
-    )
+  private val blockHashing = DataGenerators.testForkAwareBlockHashing()
 
   init {
     bftEventQueue.start()

@@ -10,12 +10,6 @@ package maru.consensus.qbft
 
 import linea.testing.besu.BesuFactory
 import linea.testing.besu.BesuTransactionsHelper
-import maru.consensus.ChainFork
-import maru.consensus.ClFork
-import maru.consensus.ElFork
-import maru.consensus.ForkSpec
-import maru.consensus.ForksSchedule
-import maru.consensus.QbftConsensusConfig
 import maru.consensus.ValidatorProvider
 import maru.consensus.qbft.adapters.QbftBlockHeaderAdapter
 import maru.consensus.qbft.adapters.toBeaconBlock
@@ -35,7 +29,6 @@ import maru.executionlayer.manager.ExecutionLayerManager
 import maru.executionlayer.manager.JsonRpcExecutionLayerManager
 import maru.executionlayer.manager.LatestBlockMetadata
 import maru.executionlayer.mappers.Mappers.toDomain
-import maru.serialization.rlp.ForkAwareBlockHashing
 import maru.serialization.rlp.HashUtil
 import org.apache.tuweni.bytes.Bytes
 import org.apache.tuweni.bytes.Bytes32
@@ -85,20 +78,9 @@ class EagerQbftBlockCreatorTest {
   private lateinit var executionLayerManager: ExecutionLayerManager
   private val validatorSet = (DataGenerators.randomValidators() + validator).toSortedSet()
   private val blockHashing =
-    ForkAwareBlockHashing(
-      ForksSchedule(
-        1337u,
-        listOf(
-          ForkSpec(
-            0UL,
-            1u,
-            QbftConsensusConfig(
-              validatorSet = setOf(DataGenerators.randomValidator()),
-              fork = ChainFork(ClFork.QBFT_PHASE0, ElFork.Prague),
-            ),
-          ),
-        ),
-      ),
+    DataGenerators.testForkAwareBlockHashing(
+      chainId = 1337u,
+      validatorSet = setOf(DataGenerators.randomValidator()),
     )
 
   @BeforeEach

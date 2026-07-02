@@ -9,7 +9,6 @@
 package maru.database.kv
 
 import maru.serialization.rlp.BeaconStateSerDe
-import maru.serialization.rlp.BeaconBlockSerDe as RlpBeaconBlockSerDe
 import maru.serialization.rlp.SealedBeaconBlockSerDe as RlpSealedBeaconBlockSerDe
 
 /**

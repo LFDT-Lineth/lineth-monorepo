@@ -54,12 +54,12 @@ class MisbehavingP2PNetwork(
       p2PState = p2pState,
       rpcMethodsFactory = { statusMessageFactory, lineaRpcProtocolIdGenerator, peerLookup, beaconChain, _ ->
         RpcMethods(
-          statusMessageFactory,
-          lineaRpcProtocolIdGenerator,
-          peerLookup,
-          beaconChain,
-          blockHashing,
-          blockRetrievalStrategy,
+          statusManager = statusMessageFactory,
+          lineaRpcProtocolIdGenerator = lineaRpcProtocolIdGenerator,
+          peerLookup = peerLookup,
+          beaconChain = beaconChain,
+          blockHashing = blockHashing,
+          blockRetrievalStrategy = blockRetrievalStrategy,
         )
       },
       timerFactory = timerFactory,
