@@ -4,6 +4,7 @@ import com.sksamuel.hoplite.Masked
 import linea.coordinator.config.v2.CoordinatorConfig
 import linea.coordinator.config.v2.SignerConfig
 import linea.kotlin.encodeHex
+import org.apache.logging.log4j.Logger
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.jvm.isAccessible
@@ -11,7 +12,6 @@ import kotlin.reflect.jvm.javaGetter
 import kotlin.time.Duration
 import kotlin.time.Instant
 
-private const val INDENT_WIDTH = 2
 private const val PLACEHOLDER_HINT = "enable TRACE on linea.coordinator.app for full list"
 
 // (declaringClass.simpleName, ctorParamName) of Map-valued fields that the INFO
@@ -22,65 +22,72 @@ private val noisyMapFields: Set<String> = setOf(
   "GasPriceCapCalculationConfig.timeOfTheDayMultipliers",
 )
 
+/**
+ * Flattens the config into one fully-qualified `path: value` line per leaf, e.g.
+ * `p2p.reputation.cooldownPeriod: 30s`. Secrets render as `***`; maps in [noisyMapFields] collapse
+ * to an entry-count summary when [summarizeNoisyFields] is true.
+ */
+internal fun CoordinatorConfig.toPrettyLogLines(summarizeNoisyFields: Boolean = true): List<String> {
+  val lines = mutableListOf<String>()
+  renderObject(this, prefix = "", lines, summarize = summarizeNoisyFields)
+  return lines
+}
+
+/** Joins [toPrettyLogLines] into a single multi-line string (one leaf per line). */
 internal fun CoordinatorConfig.toPrettyLog(summarizeNoisyFields: Boolean = true): String =
-  renderRoot(this, summarize = summarizeNoisyFields)
+  toPrettyLogLines(summarizeNoisyFields).joinToString("\n")
 
-private fun renderRoot(value: Any, summarize: Boolean): String {
-  val sb = StringBuilder()
-  renderObject(value, indent = -INDENT_WIDTH, sb, summarize)
-  return sb.toString().trimStart('\n')
+/** Logs the config one leaf per INFO event, each prefixed with [linePrefix]. */
+internal fun CoordinatorConfig.logPretty(
+  log: Logger,
+  linePrefix: String = "config: ",
+  summarizeNoisyFields: Boolean = true,
+) {
+  toPrettyLogLines(summarizeNoisyFields).forEach { log.info("{}{}", linePrefix, it) }
 }
 
-private fun renderValue(value: Any?, indent: Int, sb: StringBuilder, summarize: Boolean) {
+private fun renderValue(value: Any?, path: String, lines: MutableList<String>, summarize: Boolean) {
   when (value) {
-    null -> sb.append(" null")
-    is Masked -> sb.append(" ***")
-    is Duration -> sb.append(' ').append(value.toString())
-    is Instant -> sb.append(' ').append(value.toString())
-    is ByteArray -> sb.append(' ').append(value.encodeHex())
-    is SignerConfig.Web3jConfig -> {
-      sb.append('\n').append(spaces(indent + INDENT_WIDTH))
-        .append("privateKey: ***").append(value.privateKey.size).append(" bytes***")
-    }
-    is Number, is Boolean, is Enum<*> -> sb.append(' ').append(value.toString())
-    is CharSequence -> sb.append(' ').append(value.toString())
-    is Map<*, *> -> renderMap(value, indent, sb)
-    is List<*> -> renderList(value, indent, sb, summarize)
+    null -> lines.add("$path: null")
+    is Masked -> lines.add("$path: ***")
+    is Duration -> lines.add("$path: $value")
+    is Instant -> lines.add("$path: $value")
+    is ByteArray -> lines.add("$path: ${value.encodeHex()}")
+    is SignerConfig.Web3jConfig ->
+      lines.add("$path.privateKey: ***${value.privateKey.size} bytes***")
+    is Number, is Boolean, is Enum<*> -> lines.add("$path: $value")
+    is CharSequence -> lines.add("$path: $value")
+    is Map<*, *> -> renderMap(value, path, lines)
+    is List<*> -> renderList(value, path, lines, summarize)
     else -> if (value::class.isData) {
-      renderObject(value, indent, sb, summarize)
+      renderObject(value, path, lines, summarize)
     } else {
-      sb.append(' ').append(value.toString())
+      lines.add("$path: $value")
     }
   }
 }
 
-private fun renderMap(m: Map<*, *>, indent: Int, sb: StringBuilder) {
+private fun renderMap(m: Map<*, *>, path: String, lines: MutableList<String>) {
   if (m.isEmpty()) {
-    sb.append(" {}")
+    lines.add("$path: {}")
     return
   }
-  m.forEach { (k, v) ->
-    sb.append('\n').append(spaces(indent + INDENT_WIDTH)).append(k.toString()).append(':')
-    renderValue(v, indent + INDENT_WIDTH, sb, summarize = false)
-  }
+  m.forEach { (k, v) -> renderValue(v, "$path.$k", lines, summarize = false) }
 }
 
-private fun renderList(list: List<*>, indent: Int, sb: StringBuilder, summarize: Boolean) {
+private fun renderList(list: List<*>, path: String, lines: MutableList<String>, summarize: Boolean) {
   if (list.isEmpty()) {
-    sb.append(" []")
+    lines.add("$path: []")
     return
   }
-  list.forEach { item ->
-    sb.append('\n').append(spaces(indent + INDENT_WIDTH)).append('-')
-    renderValue(item, indent + INDENT_WIDTH, sb, summarize)
-  }
+  list.forEachIndexed { index, item -> renderValue(item, "$path[$index]", lines, summarize) }
 }
 
-private fun renderObject(value: Any, indent: Int, sb: StringBuilder, summarize: Boolean) {
+private fun renderObject(value: Any, prefix: String, lines: MutableList<String>, summarize: Boolean) {
   val kClass = value::class
   val ctor = kClass.primaryConstructor
   if (ctor == null) {
-    sb.append(' ').append(value.toString())
+    lines.add(if (prefix.isEmpty()) value.toString() else "$prefix: $value")
     return
   }
   val props = kClass.memberProperties.associateBy { it.name }
@@ -96,13 +103,11 @@ private fun renderObject(value: Any, indent: Int, sb: StringBuilder, summarize: 
       // Java reflection returns the unboxed primitive in those cases; readable enough for a log.
       prop.javaGetter?.also { it.isAccessible = true }?.invoke(value)
     }
-    sb.append('\n').append(spaces(indent + INDENT_WIDTH)).append(name).append(':')
+    val childPath = if (prefix.isEmpty()) name else "$prefix.$name"
     if (summarize && v is Map<*, *> && "${kClass.simpleName}.$name" in noisyMapFields) {
-      sb.append(" <").append(v.size).append(" entries, ").append(PLACEHOLDER_HINT).append('>')
+      lines.add("$childPath: <${v.size} entries, $PLACEHOLDER_HINT>")
     } else {
-      renderValue(v, indent + INDENT_WIDTH, sb, summarize)
+      renderValue(v, childPath, lines, summarize)
     }
   }
 }
-
-private fun spaces(n: Int): String = if (n <= 0) "" else " ".repeat(n)

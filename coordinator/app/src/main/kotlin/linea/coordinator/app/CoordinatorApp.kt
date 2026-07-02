@@ -45,7 +45,11 @@ class CoordinatorApp(
       log.trace("System properties: {}", System.getProperties())
       val vertxConfig = loadVertxConfig()
       log.debug("Vertx full configs: {}", vertxConfig)
-      log.info("App configs:\n{}", configs.toPrettyLog())
+      // Raw single-line dump kept for existing tooling that parses this line.
+      log.info("App configs: {}", configs)
+      // Human-readable form: one fully-qualified `path: value` per INFO event so each config is a
+      // separate line in log aggregators (Grafana/Loki) instead of a collapsed multi-line blob.
+      configs.logPretty(log)
       log.trace(
         "Full smartContractErrors ({} entries): {}",
         configs.smartContractErrors.size,
