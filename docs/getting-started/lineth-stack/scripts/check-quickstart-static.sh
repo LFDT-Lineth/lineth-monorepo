@@ -552,13 +552,13 @@ check_internal_typescript_typecheck() {
   # (repo-root tsconfig.json) does not exist under the /scripts mount.
   internal_tsconfig="$STACK/scripts/internal/tsconfig.typecheck.json"
 
-  if [ ! -f "$internal_tsconfig" ]; then
-    warn "scripts/internal/tsconfig.typecheck.json not found; skipped quickstart TypeScript typecheck"
+  if [ -f "$STACK/scripts/internal/tsconfig.json" ]; then
+    fail "scripts/internal must not contain tsconfig.json; ts-node auto-discovers it inside containers where its extends target is missing"
     return
   fi
 
-  if [ -f "$STACK/scripts/internal/tsconfig.json" ]; then
-    fail "scripts/internal must not contain tsconfig.json; ts-node auto-discovers it inside containers where its extends target is missing"
+  if [ ! -f "$internal_tsconfig" ]; then
+    warn "scripts/internal/tsconfig.typecheck.json not found; skipped quickstart TypeScript typecheck"
     return
   fi
 
