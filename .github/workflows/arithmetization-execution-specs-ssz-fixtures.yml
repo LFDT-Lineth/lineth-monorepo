@@ -1,4 +1,4 @@
-name: riscv-guests execution-specs SSZ fixtures
+name: arithmetization execution-specs SSZ fixtures
 
 on:
   schedule:
