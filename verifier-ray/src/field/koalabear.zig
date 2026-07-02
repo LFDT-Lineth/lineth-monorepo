@@ -143,14 +143,6 @@ pub const Element = extern struct {
     }
 };
 
-pub fn zero() Element {
-    return Element.zero();
-}
-
-pub fn one() Element {
-    return Element.one();
-}
-
 pub fn rootOfUnityBy(cardinality: usize) Error!Element {
     if (!isPowerOfTwo(cardinality)) {
         return Error.NonCanonicalEncoding;
