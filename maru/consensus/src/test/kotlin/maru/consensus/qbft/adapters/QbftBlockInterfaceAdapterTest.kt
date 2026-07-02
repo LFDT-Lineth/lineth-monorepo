@@ -9,6 +9,12 @@
 package maru.consensus.qbft.adapters
 
 import com.github.michaelbull.result.Ok
+import maru.consensus.ChainFork
+import maru.consensus.ClFork
+import maru.consensus.ElFork
+import maru.consensus.ForkSpec
+import maru.consensus.ForksSchedule
+import maru.consensus.QbftConsensusConfig
 import maru.consensus.qbft.toAddress
 import maru.consensus.state.StateTransition
 import maru.consensus.validation.StateRootValidator
@@ -16,12 +22,32 @@ import maru.core.BeaconBlock
 import maru.core.BeaconState
 import maru.core.Validator
 import maru.core.ext.DataGenerators
+import maru.serialization.rlp.ForkAwareBlockHashing
+import maru.serialization.rlp.HashUtil
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.SequencedSet
 
 class QbftBlockInterfaceAdapterTest {
+  // Round-inclusive (PHASE0) hashing, matching the StateRootValidator(HashUtil::stateRoot) assertions below.
+  private val blockHashing =
+    ForkAwareBlockHashing(
+      ForksSchedule(
+        chainId = 1u,
+        forks = listOf(
+          ForkSpec(
+            timestampSeconds = 0UL,
+            blockTimeSeconds = 1u,
+            configuration = QbftConsensusConfig(
+              validatorSet = emptySet(),
+              fork = ChainFork(ClFork.QBFT_PHASE0, ElFork.Prague),
+            ),
+          ),
+        ),
+      ),
+    )
+
   private fun createStateTransition(
     validators: SequencedSet<Validator> = DataGenerators.randomValidators().toSortedSet(),
   ): StateTransition =
@@ -45,7 +71,7 @@ class QbftBlockInterfaceAdapterTest {
       )
     val qbftBlock = QbftBlockAdapter(beaconBlock)
     val stateTransition = createStateTransition()
-    val adapter = QbftBlockInterfaceAdapter(stateTransition)
+    val adapter = QbftBlockInterfaceAdapter(stateTransition, blockHashing)
     val updatedBlock =
       adapter.replaceRoundForCommitBlock(qbftBlock, 20)
     val updatedBeaconBlockHeader = updatedBlock.header.toBeaconBlockHeader()
@@ -70,7 +96,7 @@ class QbftBlockInterfaceAdapterTest {
       )
     val qbftBlock = QbftBlockAdapter(beaconBlock)
     val stateTransition = createStateTransition()
-    val adapter = QbftBlockInterfaceAdapter(stateTransition)
+    val adapter = QbftBlockInterfaceAdapter(stateTransition, blockHashing)
     val updatedBlock = adapter.replaceRoundAndProposerForProposalBlock(qbftBlock, 25, newProposer.toAddress())
     val updatedBeaconBlockHeader = updatedBlock.header.toBeaconBlockHeader()
 
@@ -90,11 +116,12 @@ class QbftBlockInterfaceAdapterTest {
       )
     val qbftBlock = QbftBlockAdapter(beaconBlock)
     val stateTransition = createStateTransition(validators)
-    val adapter = QbftBlockInterfaceAdapter(stateTransition)
+    val adapter = QbftBlockInterfaceAdapter(stateTransition, blockHashing)
     val updatedBlock = adapter.replaceRoundForCommitBlock(qbftBlock, 20)
 
     val updatedBeaconBlock = updatedBlock.toBeaconBlock()
-    val validationResult = StateRootValidator(stateTransition).validateBlock(updatedBeaconBlock).get()
+    val validationResult =
+      StateRootValidator(stateTransition, HashUtil::stateRoot).validateBlock(updatedBeaconBlock).get()
     assertThat(validationResult).isEqualTo(Ok(Unit))
     assertThat(updatedBeaconBlock.beaconBlockHeader.round).isEqualTo(20u)
   }
@@ -116,11 +143,12 @@ class QbftBlockInterfaceAdapterTest {
       )
     val qbftBlock = QbftBlockAdapter(beaconBlock)
     val stateTransition = createStateTransition(validators)
-    val adapter = QbftBlockInterfaceAdapter(stateTransition)
+    val adapter = QbftBlockInterfaceAdapter(stateTransition, blockHashing)
     val updatedBlock = adapter.replaceRoundAndProposerForProposalBlock(qbftBlock, 25, newProposer.toAddress())
 
     val updatedBeaconBlock = updatedBlock.toBeaconBlock()
-    val validationResult = StateRootValidator(stateTransition).validateBlock(updatedBeaconBlock).get()
+    val validationResult =
+      StateRootValidator(stateTransition, HashUtil::stateRoot).validateBlock(updatedBeaconBlock).get()
     assertThat(validationResult).isEqualTo(Ok(Unit))
     assertThat(updatedBeaconBlock.beaconBlockHeader.round).isEqualTo(25u)
     assertThat(updatedBeaconBlock.beaconBlockHeader.proposer).isEqualTo(newProposer)

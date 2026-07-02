@@ -19,15 +19,13 @@ import maru.core.BeaconBlockHeader
 import maru.core.BeaconState
 import maru.core.EMPTY_HASH
 import maru.core.ExecutionPayload
-import maru.core.HashUtil
 import maru.core.Seal
 import maru.core.SealedBeaconBlock
 import maru.core.Validator
 import maru.database.BeaconChain
 import maru.executionlayer.manager.ExecutionLayerManager
-import maru.serialization.rlp.bodyRoot
-import maru.serialization.rlp.headerHash
-import maru.serialization.rlp.stateRoot
+import maru.serialization.rlp.ForkAwareBlockHashing
+import maru.serialization.rlp.HashUtil
 import org.hyperledger.besu.consensus.common.bft.ConsensusRoundIdentifier
 import org.hyperledger.besu.consensus.common.bft.blockcreation.ProposerSelector
 import org.hyperledger.besu.consensus.qbft.core.types.QbftBlock
@@ -47,6 +45,7 @@ class DelayedQbftBlockCreator(
   private val validatorProvider: ValidatorProvider,
   private val beaconChain: BeaconChain,
   private val round: Int,
+  private val blockHashing: ForkAwareBlockHashing,
 ) : QbftBlockCreator {
   companion object {
     fun createSealedBlock(
@@ -75,6 +74,7 @@ class DelayedQbftBlockCreator(
       timestamp: ULong,
       proposer: ByteArray,
       validators: Set<Validator>,
+      blockHashing: ForkAwareBlockHashing,
     ): BeaconBlock {
       val parentBeaconBlockHeader =
         parentSealedBeaconBlock.beaconBlock.beaconBlockHeader
@@ -89,10 +89,10 @@ class DelayedQbftBlockCreator(
           parentRoot = parentBeaconBlockHeader.hash(),
           stateRoot = EMPTY_HASH, // temporary state root to avoid circular dependency
           bodyRoot = HashUtil.bodyRoot(beaconBlockBody),
-          headerHashFunction = HashUtil::headerHash,
+          headerHashFunction = blockHashing.headerHashFunction,
         )
       val stateRoot =
-        HashUtil.stateRoot(
+        blockHashing.stateRoot(
           BeaconState(stateRootBlockHeader, validators.toSortedSet()),
         )
       val finalBlockHeader = stateRootBlockHeader.copy(stateRoot = stateRoot)
@@ -131,6 +131,7 @@ class DelayedQbftBlockCreator(
         timestamp = headerTimeStampSeconds.toULong(),
         proposer = proposer.bytes.toArrayUnsafe(),
         validators = validators,
+        blockHashing = blockHashing,
       )
     return QbftBlockCreator.BlockCreationResult(QbftBlockAdapter(beaconBlock), Optional.empty())
   }

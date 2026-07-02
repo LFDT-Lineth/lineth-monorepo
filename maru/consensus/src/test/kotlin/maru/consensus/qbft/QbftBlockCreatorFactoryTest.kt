@@ -8,12 +8,19 @@
  */
 package maru.consensus.qbft
 
+import maru.consensus.ChainFork
+import maru.consensus.ClFork
+import maru.consensus.ElFork
+import maru.consensus.ForkSpec
+import maru.consensus.ForksSchedule
 import maru.consensus.PrevRandaoProvider
+import maru.consensus.QbftConsensusConfig
 import maru.consensus.ValidatorProvider
 import maru.consensus.state.FinalizationProvider
 import maru.core.ext.DataGenerators
 import maru.database.BeaconChain
 import maru.executionlayer.manager.ExecutionLayerManager
+import maru.serialization.rlp.ForkAwareBlockHashing
 import org.assertj.core.api.Assertions.assertThat
 import org.hyperledger.besu.consensus.common.bft.blockcreation.ProposerSelector
 import org.junit.jupiter.api.Test
@@ -30,6 +37,22 @@ class QbftBlockCreatorFactoryTest {
 
   @Suppress("UNCHECKED_CAST")
   private val prevRandaoProvider = Mockito.mock(PrevRandaoProvider::class.java) as PrevRandaoProvider<ULong>
+  private val blockHashing =
+    ForkAwareBlockHashing(
+      ForksSchedule(
+        1337u,
+        listOf(
+          ForkSpec(
+            0UL,
+            1u,
+            QbftConsensusConfig(
+              validatorSet = setOf(DataGenerators.randomValidator()),
+              fork = ChainFork(ClFork.QBFT_PHASE0, ElFork.Prague),
+            ),
+          ),
+        ),
+      ),
+    )
 
   private fun createFactory(): QbftBlockCreatorFactory {
     whenever(beaconChain.getLatestBeaconState()).thenReturn(
@@ -44,6 +67,7 @@ class QbftBlockCreatorFactoryTest {
       prevRandaoProvider = prevRandaoProvider,
       feeRecipient = ByteArray(20),
       eagerQbftBlockCreatorConfig = EagerQbftBlockCreator.Config(100.milliseconds),
+      blockHashing = blockHashing,
     )
   }
 

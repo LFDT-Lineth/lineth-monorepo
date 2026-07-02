@@ -22,16 +22,38 @@ data class BeaconBlockHeader(
 ) {
   val hash by lazy { headerHashFunction(this) }
 
+  // Object equality is field-based (round-sensitive), deliberately EXCLUDING headerHashFunction: two headers
+  // with the same fields are equal regardless of which hash function was injected. This is distinct from the
+  // chain-identity `hash` above, which is fork-aware and round-independent from QBFT_PHASE1 onward. Making
+  // equals/hashCode hash-based would collapse headers differing only in round/proposer into a single object
+  // under PHASE1, breaking the Besu QBFT engine's round handling.
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (javaClass != other?.javaClass) return false
 
     other as BeaconBlockHeader
 
-    return hash.contentEquals(other.hash)
+    if (number != other.number) return false
+    if (round != other.round) return false
+    if (timestamp != other.timestamp) return false
+    if (proposer != other.proposer) return false
+    if (!parentRoot.contentEquals(other.parentRoot)) return false
+    if (!stateRoot.contentEquals(other.stateRoot)) return false
+    if (!bodyRoot.contentEquals(other.bodyRoot)) return false
+
+    return true
   }
 
-  override fun hashCode(): Int = hash.contentHashCode()
+  override fun hashCode(): Int {
+    var result = number.hashCode()
+    result = 31 * result + round.hashCode()
+    result = 31 * result + timestamp.hashCode()
+    result = 31 * result + proposer.hashCode()
+    result = 31 * result + parentRoot.contentHashCode()
+    result = 31 * result + stateRoot.contentHashCode()
+    result = 31 * result + bodyRoot.contentHashCode()
+    return result
+  }
 
   fun hash(): ByteArray = hash
 

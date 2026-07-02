@@ -10,35 +10,40 @@ package maru.serialization.rlp
 
 import maru.core.BeaconBlock
 import maru.core.BeaconBlockBody
-import maru.core.HashUtil
 import maru.core.Seal
 import maru.core.SealedBeaconBlock
 import maru.core.ext.DataGenerators
 import maru.core.ext.DataGenerators.randomExecutionPayload
-import maru.crypto.Hashing
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
 import kotlin.random.nextULong
 
 class SealedBeaconBlockSerializerTest {
+  private val validatorSerializer = ValidatorSerDe()
+  private val beaconBlockHeaderRLPSerializer = BeaconBlockHeaderRLPSerializer(validatorSerializer)
   private val blockHeaderSerializer =
     BeaconBlockHeaderSerDe(
-      validatorSerializer = ValidatorSerDe(),
-      hasher = Hashing::keccak,
+      beaconBlockHeaderRLPSerializer = beaconBlockHeaderRLPSerializer,
+      validatorSerializer = validatorSerializer,
       headerHashFunction = HashUtil::headerHash,
     )
   private val sealSerializer = SealSerDe()
+  private val blockBodySerializer =
+    BeaconBlockBodySerDe(
+      sealSerializer = sealSerializer,
+      executionPayloadSerializer = ExecutionPayloadSerDe(),
+    )
+  private val beaconBlockRLPSerializer = BeaconBlockRLPSerializer(beaconBlockHeaderRLPSerializer, blockBodySerializer)
   private val blockSerializer =
     BeaconBlockSerDe(
+      beaconBlockRLPSerializer = beaconBlockRLPSerializer,
       beaconBlockHeaderSerializer = blockHeaderSerializer,
-      beaconBlockBodySerializer = BeaconBlockBodySerDe(
-        sealSerializer = sealSerializer,
-        executionPayloadSerializer = ExecutionPayloadSerDe(),
-      ),
+      beaconBlockBodySerializer = blockBodySerializer,
     )
   private val sealedBlockSerializer =
     SealedBeaconBlockSerDe(
+      sealedBeaconBlockRLPSerializer = SealedBeaconBlockRLPSerializer(beaconBlockRLPSerializer, sealSerializer),
       beaconBlockSerializer = blockSerializer,
       sealSerializer = sealSerializer,
     )

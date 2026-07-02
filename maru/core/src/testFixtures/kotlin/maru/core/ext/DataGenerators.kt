@@ -15,13 +15,10 @@ import maru.core.BeaconState
 import maru.core.EMPTY_HASH
 import maru.core.ExecutionPayload
 import maru.core.GENESIS_EXECUTION_PAYLOAD
-import maru.core.HashUtil
 import maru.core.Seal
 import maru.core.SealedBeaconBlock
 import maru.core.Validator
-import maru.serialization.rlp.RLPSerializers
-import maru.serialization.rlp.bodyRoot
-import maru.serialization.rlp.stateRoot
+import maru.serialization.rlp.HashUtil
 import org.apache.tuweni.bytes.Bytes
 import org.hyperledger.besu.crypto.SECP256K1
 import org.hyperledger.besu.datatypes.Address
@@ -61,7 +58,7 @@ object DataGenerators {
         parentRoot = EMPTY_HASH,
         stateRoot = EMPTY_HASH,
         bodyRoot = EMPTY_HASH,
-        headerHashFunction = RLPSerializers.DefaultHeaderHashFunction,
+        headerHashFunction = HashUtil::headerHash,
       )
 
     val tmpGenesisStateRoot =
@@ -93,7 +90,7 @@ object DataGenerators {
         parentRoot = Random.nextBytes(32),
         stateRoot = Random.nextBytes(32),
         bodyRoot = Random.nextBytes(32),
-        headerHashFunction = RLPSerializers.DefaultHeaderHashFunction,
+        headerHashFunction = HashUtil::headerHash,
       )
     return BeaconState(
       beaconBlockHeader = beaconBlockHeader,
@@ -140,7 +137,7 @@ object DataGenerators {
       parentRoot = Random.nextBytes(32),
       stateRoot = Random.nextBytes(32),
       bodyRoot = Random.nextBytes(32),
-      headerHashFunction = RLPSerializers.DefaultHeaderHashFunction,
+      headerHashFunction = HashUtil::headerHash,
     )
 
   fun randomExecutionPayload(numberOfTransactions: Int = 5): ExecutionPayload {

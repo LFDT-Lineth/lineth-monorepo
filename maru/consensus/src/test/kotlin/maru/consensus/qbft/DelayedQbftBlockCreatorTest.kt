@@ -8,6 +8,12 @@
  */
 package maru.consensus.qbft
 
+import maru.consensus.ChainFork
+import maru.consensus.ClFork
+import maru.consensus.ElFork
+import maru.consensus.ForkSpec
+import maru.consensus.ForksSchedule
+import maru.consensus.QbftConsensusConfig
 import maru.consensus.ValidatorProvider
 import maru.consensus.qbft.adapters.QbftBlockAdapter
 import maru.consensus.qbft.adapters.QbftBlockHeaderAdapter
@@ -16,15 +22,13 @@ import maru.consensus.qbft.adapters.toBeaconBlockHeader
 import maru.consensus.qbft.adapters.toSealedBeaconBlock
 import maru.core.BeaconState
 import maru.core.EMPTY_HASH
-import maru.core.HashUtil
 import maru.core.Seal
 import maru.core.Validator
 import maru.core.ext.DataGenerators
 import maru.database.BeaconChain
 import maru.executionlayer.manager.ExecutionLayerManager
-import maru.serialization.rlp.bodyRoot
-import maru.serialization.rlp.headerHash
-import maru.serialization.rlp.stateRoot
+import maru.serialization.rlp.ForkAwareBlockHashing
+import maru.serialization.rlp.HashUtil
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.hyperledger.besu.consensus.common.bft.ConsensusRoundIdentifier
@@ -45,6 +49,22 @@ class DelayedQbftBlockCreatorTest {
   private val validatorProvider = Mockito.mock(ValidatorProvider::class.java)
   private val beaconChain = Mockito.mock(BeaconChain::class.java)
   private val validatorSet = DataGenerators.randomValidators()
+  private val blockHashing =
+    ForkAwareBlockHashing(
+      ForksSchedule(
+        1337u,
+        listOf(
+          ForkSpec(
+            0UL,
+            1u,
+            QbftConsensusConfig(
+              validatorSet = setOf(DataGenerators.randomValidator()),
+              fork = ChainFork(ClFork.QBFT_PHASE0, ElFork.Prague),
+            ),
+          ),
+        ),
+      ),
+    )
 
   @Test
   fun `can create block`() {
@@ -69,6 +89,7 @@ class DelayedQbftBlockCreatorTest {
         validatorProvider = validatorProvider,
         beaconChain = beaconChain,
         round = 0,
+        blockHashing = blockHashing,
       )
     val createdBlock = blockCreator.createBlock(1000L, parentHeader)
     val createBeaconBlock = createdBlock.block().toBeaconBlock()
@@ -127,6 +148,7 @@ class DelayedQbftBlockCreatorTest {
         validatorProvider = validatorProvider,
         beaconChain = beaconChain,
         round = 0,
+        blockHashing = blockHashing,
       )
     assertThatThrownBy {
       blockCreator.createBlock(1000L, parentHeader)
@@ -154,6 +176,7 @@ class DelayedQbftBlockCreatorTest {
         validatorProvider,
         beaconChain,
         0,
+        blockHashing,
       )
     assertThatThrownBy {
       blockCreator.createBlock(1000L, parentHeader)
@@ -181,6 +204,7 @@ class DelayedQbftBlockCreatorTest {
         validatorProvider = validatorProvider,
         beaconChain = beaconChain,
         round = 0,
+        blockHashing = blockHashing,
       )
     val createSealedBlock = blockCreator.createSealedBlock(block, round, seals)
     val createdSealedBeaconBlock = createSealedBlock.toSealedBeaconBlock()

@@ -8,6 +8,12 @@
  */
 package maru.serialization.rlp
 
+import maru.consensus.ChainFork
+import maru.consensus.ClFork
+import maru.consensus.ElFork
+import maru.consensus.ForkSpec
+import maru.consensus.ForksSchedule
+import maru.consensus.QbftConsensusConfig
 import maru.core.BeaconBlock
 import maru.core.BeaconBlockBody
 import maru.core.Seal
@@ -20,9 +26,26 @@ import kotlin.random.Random
 import kotlin.random.nextULong
 
 class MaruCompressorRLPSerDeTest {
+  // Round-trip (deserialize) → the sealed block SerDe must inject a fork-aware header hash function.
+  private val blockHashing =
+    ForkAwareBlockHashing(
+      ForksSchedule(
+        chainId = 1u,
+        forks = listOf(
+          ForkSpec(
+            timestampSeconds = 0UL,
+            blockTimeSeconds = 1u,
+            configuration = QbftConsensusConfig(
+              validatorSet = emptySet(),
+              fork = ChainFork(ClFork.QBFT_PHASE0, ElFork.Prague),
+            ),
+          ),
+        ),
+      ),
+    )
   private val compressorRLPSerDe =
     MaruCompressorRLPSerDe(
-      serDe = RLPSerializers.SealedBeaconBlockSerializer,
+      serDe = blockHashing.sealedBeaconBlockSerializer,
     )
 
   @Test

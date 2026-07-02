@@ -8,11 +8,18 @@
  */
 package maru.database.kv
 
+import maru.consensus.ChainFork
+import maru.consensus.ClFork
+import maru.consensus.ElFork
+import maru.consensus.ForkSpec
+import maru.consensus.ForksSchedule
+import maru.consensus.QbftConsensusConfig
 import maru.core.BeaconState
 import maru.core.ext.DataGenerators
 import maru.core.ext.metrics.TestMetrics
 import maru.metrics.BesuMetricsCategoryAdapter
 import maru.metrics.MaruMetricsCategory
+import maru.serialization.rlp.ForkAwareBlockHashing
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -21,11 +28,29 @@ import java.nio.file.Path
 import kotlin.random.Random
 
 class KvDatabaseTest {
+  private val blockHashing =
+    ForkAwareBlockHashing(
+      ForksSchedule(
+        1337u,
+        listOf(
+          ForkSpec(
+            0UL,
+            1u,
+            QbftConsensusConfig(
+              validatorSet = setOf(DataGenerators.randomValidator()),
+              fork = ChainFork(ClFork.QBFT_PHASE0, ElFork.Prague),
+            ),
+          ),
+        ),
+      ),
+    )
+
   private fun createDatabase(databasePath: Path): KvDatabase =
     KvDatabaseFactory.createRocksDbDatabase(
       databasePath = databasePath,
       metricsSystem = TestMetrics.TestMetricsSystemAdapter,
       metricCategory = BesuMetricsCategoryAdapter.from(MaruMetricsCategory.STORAGE),
+      blockHashing = blockHashing,
     )
 
   @Test

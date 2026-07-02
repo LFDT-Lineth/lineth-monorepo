@@ -12,7 +12,13 @@ import io.libp2p.core.PeerId
 import io.libp2p.etc.types.fromHex
 import linea.timer.JvmTimerFactory
 import maru.config.P2PConfig
+import maru.consensus.ChainFork
+import maru.consensus.ClFork
+import maru.consensus.ElFork
 import maru.consensus.ForkIdManagerFactory.createForkIdHashManager
+import maru.consensus.ForkSpec
+import maru.consensus.ForksSchedule
+import maru.consensus.QbftConsensusConfig
 import maru.core.BeaconBlockHeader
 import maru.core.BeaconState
 import maru.core.SealedBeaconBlock
@@ -27,7 +33,7 @@ import maru.p2p.messages.StatusManager
 import maru.p2p.testutils.NetworkUtil.findFreePort
 import maru.p2p.testutils.NetworkUtil.findFreePorts
 import maru.p2p.topics.BesuMessageDataSerDe
-import maru.serialization.rlp.RLPSerializers
+import maru.serialization.rlp.ForkAwareBlockHashing
 import org.apache.tuweni.bytes.Bytes
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatNoException
@@ -101,6 +107,22 @@ class P2PTest {
         beaconChain = beaconChain,
       )
     private val statusManager: StatusManager = StatusManager(beaconChain, forkIdHashManager)
+    private val blockHashing =
+      ForkAwareBlockHashing(
+        ForksSchedule(
+          chainId,
+          listOf(
+            ForkSpec(
+              0UL,
+              1u,
+              QbftConsensusConfig(
+                validatorSet = setOf(DataGenerators.randomValidator()),
+                fork = ChainFork(ClFork.QBFT_PHASE0, ElFork.Prague),
+              ),
+            ),
+          ),
+        ),
+      )
 
     private fun inMemoryBeaconChainFromGenesis(
       genesisTimestampSeconds: ULong = 0UL,
@@ -135,7 +157,7 @@ class P2PTest {
           reputation = reputationConfig,
         ),
         chainId = chainId,
-        serDe = RLPSerializers.SealedBeaconBlockCompressorSerializer,
+        blockHashing = blockHashing,
         metricsFacade = TestMetrics.TestMetricsFacade,
         statusManager = statusManager,
         beaconChain = beaconChain,

@@ -19,13 +19,12 @@ import maru.consensus.state.StateTransition
 import maru.consensus.validation.BlockValidator.BlockValidationError
 import maru.core.BeaconBlock
 import maru.core.BeaconBlockHeader
+import maru.core.BeaconState
 import maru.core.EMPTY_HASH
 import maru.core.ExecutionPayload
-import maru.core.HashUtil
 import maru.database.BeaconChain
 import maru.executionlayer.manager.ExecutionLayerManager
-import maru.serialization.rlp.bodyRoot
-import maru.serialization.rlp.stateRoot
+import maru.serialization.rlp.HashUtil
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 interface BlockValidator {
@@ -171,6 +170,7 @@ class ParentRootValidator(
 
 class StateRootValidator(
   private val stateTransition: StateTransition,
+  private val stateRootCalculator: (BeaconState) -> ByteArray,
 ) : BlockValidator {
   override fun validateBlock(block: BeaconBlock): SafeFuture<Result<Unit, BlockValidationError>> =
     stateTransition
@@ -180,7 +180,7 @@ class StateRootValidator(
           postState.beaconBlockHeader.copy(
             stateRoot = EMPTY_HASH,
           )
-        val expectedStateRoot = HashUtil.stateRoot(postState.copy(beaconBlockHeader = stateRootHeader))
+        val expectedStateRoot = stateRootCalculator(postState.copy(beaconBlockHeader = stateRootHeader))
         BlockValidator.require(block.beaconBlockHeader.stateRoot.contentEquals(expectedStateRoot)) {
           "State root in header does not match state root stateRoot=${block.beaconBlockHeader.stateRoot.encodeHex()} " +
             "expectedStateRoot=${expectedStateRoot.encodeHex()}"

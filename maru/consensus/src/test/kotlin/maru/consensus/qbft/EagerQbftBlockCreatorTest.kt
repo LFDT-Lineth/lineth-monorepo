@@ -10,6 +10,12 @@ package maru.consensus.qbft
 
 import linea.testing.besu.BesuFactory
 import linea.testing.besu.BesuTransactionsHelper
+import maru.consensus.ChainFork
+import maru.consensus.ClFork
+import maru.consensus.ElFork
+import maru.consensus.ForkSpec
+import maru.consensus.ForksSchedule
+import maru.consensus.QbftConsensusConfig
 import maru.consensus.ValidatorProvider
 import maru.consensus.qbft.adapters.QbftBlockHeaderAdapter
 import maru.consensus.qbft.adapters.toBeaconBlock
@@ -19,7 +25,6 @@ import maru.core.BeaconBlock
 import maru.core.BeaconState
 import maru.core.EMPTY_HASH
 import maru.core.GENESIS_EXECUTION_PAYLOAD
-import maru.core.HashUtil
 import maru.core.SealedBeaconBlock
 import maru.core.Validator
 import maru.core.ext.DataGenerators
@@ -30,9 +35,8 @@ import maru.executionlayer.manager.ExecutionLayerManager
 import maru.executionlayer.manager.JsonRpcExecutionLayerManager
 import maru.executionlayer.manager.LatestBlockMetadata
 import maru.executionlayer.mappers.Mappers.toDomain
-import maru.serialization.rlp.bodyRoot
-import maru.serialization.rlp.headerHash
-import maru.serialization.rlp.stateRoot
+import maru.serialization.rlp.ForkAwareBlockHashing
+import maru.serialization.rlp.HashUtil
 import org.apache.tuweni.bytes.Bytes
 import org.apache.tuweni.bytes.Bytes32
 import org.assertj.core.api.Assertions.assertThat
@@ -80,6 +84,22 @@ class EagerQbftBlockCreatorTest {
   private val prevRandaoProvider = { _: ULong, _: ByteArray -> Bytes32.random().toArray() }
   private lateinit var executionLayerManager: ExecutionLayerManager
   private val validatorSet = (DataGenerators.randomValidators() + validator).toSortedSet()
+  private val blockHashing =
+    ForkAwareBlockHashing(
+      ForksSchedule(
+        1337u,
+        listOf(
+          ForkSpec(
+            0UL,
+            1u,
+            QbftConsensusConfig(
+              validatorSet = setOf(DataGenerators.randomValidator()),
+              fork = ChainFork(ClFork.QBFT_PHASE0, ElFork.Prague),
+            ),
+          ),
+        ),
+      ),
+    )
 
   @BeforeEach
   fun beforeEach() {
@@ -383,6 +403,7 @@ class EagerQbftBlockCreatorTest {
       validatorProvider = validatorProvider,
       beaconChain = beaconChain,
       round = round,
+      blockHashing = blockHashing,
     )
 
   /*

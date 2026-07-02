@@ -12,6 +12,12 @@ import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.getError
 import linea.kotlin.encodeHex
+import maru.consensus.ChainFork
+import maru.consensus.ClFork
+import maru.consensus.ElFork
+import maru.consensus.ForkSpec
+import maru.consensus.ForksSchedule
+import maru.consensus.QbftConsensusConfig
 import maru.consensus.ValidatorProvider
 import maru.consensus.qbft.ProposerSelector
 import maru.consensus.qbft.toConsensusRoundIdentifier
@@ -21,7 +27,6 @@ import maru.core.BeaconBlock
 import maru.core.BeaconBlockHeader
 import maru.core.BeaconState
 import maru.core.EMPTY_HASH
-import maru.core.HashUtil
 import maru.core.Seal
 import maru.core.SealedBeaconBlock
 import maru.core.Validator
@@ -30,8 +35,8 @@ import maru.database.InMemoryBeaconChain
 import maru.executionlayer.manager.ExecutionLayerManager
 import maru.executionlayer.manager.ExecutionPayloadStatus
 import maru.executionlayer.manager.PayloadStatus
-import maru.serialization.rlp.bodyRoot
-import maru.serialization.rlp.stateRoot
+import maru.serialization.rlp.ForkAwareBlockHashing
+import maru.serialization.rlp.HashUtil
 import org.assertj.core.api.Assertions.assertThat
 import org.hyperledger.besu.consensus.common.bft.BftHelpers
 import org.junit.jupiter.api.Test
@@ -116,6 +121,23 @@ class BlockValidatorTest {
 
   private val stateTransition = StateTransitionImpl(validatorProvider)
 
+  private val blockHashing =
+    ForkAwareBlockHashing(
+      ForksSchedule(
+        1337u,
+        listOf(
+          ForkSpec(
+            0UL,
+            1u,
+            QbftConsensusConfig(
+              validatorSet = setOf(DataGenerators.randomValidator()),
+              fork = ChainFork(ClFork.QBFT_PHASE0, ElFork.Prague),
+            ),
+          ),
+        ),
+      ),
+    )
+
   @Test
   fun `test validator's validation on a valid block`() {
     val executionLayerEngineApiClient =
@@ -134,6 +156,7 @@ class BlockValidatorTest {
         stateTransition = stateTransition,
         executionLayerManager = executionLayerEngineApiClient,
         allowEmptyBlocks = false,
+        blockHashing = blockHashing,
       ).createValidatorForBlock(validNewBlock.beaconBlockHeader)
     blockValidator.also {
       assertThat(it.validateBlock(block = validNewBlock).get()).isEqualTo(BlockValidator.ok())
@@ -144,7 +167,7 @@ class BlockValidatorTest {
   fun `test invalid state root`() {
     val invalidNewBlockHeader = validNewBlockHeader.copy(stateRoot = validNewStateRoot.reversedArray())
     val invalidNewBlock = validNewBlock.copy(beaconBlockHeader = invalidNewBlockHeader)
-    val stateRootValidator = StateRootValidator(stateTransition)
+    val stateRootValidator = StateRootValidator(stateTransition, HashUtil::stateRoot)
     val result = stateRootValidator.validateBlock(block = invalidNewBlock).get()
     val expectedResult =
       error(

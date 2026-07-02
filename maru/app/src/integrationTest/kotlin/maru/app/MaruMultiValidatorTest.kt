@@ -11,6 +11,7 @@ package maru.app
 import io.libp2p.etc.types.fromHex
 import linea.kotlin.encodeHex
 import linea.testing.besu.BesuFactory
+import maru.consensus.ClFork
 import maru.consensus.qbft.ProposerSelectorImpl
 import maru.core.SealedBeaconBlock
 import maru.core.Validator
@@ -57,10 +58,18 @@ class MaruMultiValidatorTest {
 
   private val log = LogManager.getLogger(this.javaClass)
 
-  private val maruFactory0 = MaruFactory(validatorPrivateKey = key0)
-  private val maruFactory1 = MaruFactory(validatorPrivateKey = key1)
-  private val maruFactory2 = MaruFactory(validatorPrivateKey = key2)
-  private val maruFactory3 = MaruFactory(validatorPrivateKey = key3)
+  private var maruFactory0 = MaruFactory(validatorPrivateKey = key0)
+  private var maruFactory1 = MaruFactory(validatorPrivateKey = key1)
+  private var maruFactory2 = MaruFactory(validatorPrivateKey = key2)
+  private var maruFactory3 = MaruFactory(validatorPrivateKey = key3)
+
+  /** Recreates the four validator factories pinned to [clFork] (used by the PHASE1 convergence test). */
+  private fun useClForkForAllValidators(clFork: ClFork) {
+    maruFactory0 = MaruFactory(validatorPrivateKey = key0, clFork = clFork)
+    maruFactory1 = MaruFactory(validatorPrivateKey = key1, clFork = clFork)
+    maruFactory2 = MaruFactory(validatorPrivateKey = key2, clFork = clFork)
+    maruFactory3 = MaruFactory(validatorPrivateKey = key3, clFork = clFork)
+  }
 
   private val initialValidators: Set<Validator> by lazy {
     setOf(
@@ -371,6 +380,52 @@ class MaruMultiValidatorTest {
       beaconChain = stack0.maruApp.beaconChain,
       startBlock = verifyStart,
       endBlock = stableHeight + STABLE_BLOCKS.toULong(),
+    )
+  }
+
+  @Test
+  fun `PHASE1 validators converge on the same chain identity`() {
+    // Regression guard for the round-independent chain-identity hash (QBFT_PHASE1). Object equality of
+    // BeaconBlockHeader must stay field-based (round-sensitive); if it were hash-based, headers differing
+    // only in round/proposer would collapse into one object under PHASE1 and the QBFT engine would fail to
+    // converge (this test would time out at waitForConsecutiveRound0Blocks).
+    useClForkForAllValidators(ClFork.QBFT_PHASE1)
+    startAllValidators()
+
+    val stableHeight =
+      waitForConsecutiveRound0Blocks(
+        stack0.maruApp.beaconChain,
+        requiredConsecutive = STABLE_BLOCKS,
+        timeout = 240.seconds,
+      )
+    log.info("PHASE1 QBFT convergence achieved at block $stableHeight")
+
+    // Wait for ALL validators to reach the target so blocks can safely be read from all.
+    waitForBlockHeight(
+      stack0.maruApp.beaconChain,
+      stack1.maruApp.beaconChain,
+      stack2.maruApp.beaconChain,
+      stack3.maruApp.beaconChain,
+      targetHeight = stableHeight + STABLE_BLOCKS.toULong(),
+      timeout = 90.seconds,
+    )
+
+    val verifyStart = stableHeight - (STABLE_BLOCKS - 1).toULong()
+    val verifyCount = (STABLE_BLOCKS * 2).toULong()
+
+    // The "no fork" guarantee under PHASE1 is that all validators agree on the round-independent chain
+    // identity (block root) for each height. They may legitimately store byte-different sealed blocks —
+    // differing only in round/proposer/committed-seals when they commit the same block at different rounds
+    // (this is exactly what QBFT_PHASE1 makes safe, and mirrors Besu's on-chain hash which excludes round +
+    // committed seals). So assert identity-hash equality across validators, not raw serialized bytes.
+    checkAllValidatorBlocksAreTheSame(
+      validatorBlocks = listOf(
+        { stack0.maruApp.beaconChain.getSealedBeaconBlocks(verifyStart, verifyCount) },
+        { stack1.maruApp.beaconChain.getSealedBeaconBlocks(verifyStart, verifyCount) },
+        { stack2.maruApp.beaconChain.getSealedBeaconBlocks(verifyStart, verifyCount) },
+        { stack3.maruApp.beaconChain.getSealedBeaconBlocks(verifyStart, verifyCount) },
+      ),
+      blocksToMetadata = ::clBlocksToMetadata,
     )
   }
 

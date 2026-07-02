@@ -10,6 +10,7 @@ package maru.consensus.qbft.adapters
 
 import maru.consensus.qbft.toAddress
 import maru.core.BeaconBlockHeader
+import maru.serialization.rlp.HashUtil
 import org.apache.tuweni.bytes.Bytes32
 import org.hyperledger.besu.consensus.qbft.core.types.QbftBlockHeader
 import org.hyperledger.besu.datatypes.Address
@@ -27,7 +28,10 @@ class QbftBlockHeaderAdapter(
 
   override fun getCoinbase(): Address = beaconBlockHeader.proposer.toAddress()
 
-  override fun getHash(): Hash = Hash.wrap(Bytes32.wrap(beaconBlockHeader.hash()))
+  // Round-inclusive (Besu parity): used by Besu QBFT for commit-seal signing/verification and for
+  // PREPARE/COMMIT message hashes. The chain identity, which is round-independent from QBFT_PHASE1 onward,
+  // is a separate concept carried by BeaconBlockHeader.hash (see ForkAwareBlockHashing).
+  override fun getHash(): Hash = Hash.wrap(Bytes32.wrap(HashUtil.headerHash(beaconBlockHeader)))
 
   override fun equals(other: Any?): Boolean {
     if (this === other) return true

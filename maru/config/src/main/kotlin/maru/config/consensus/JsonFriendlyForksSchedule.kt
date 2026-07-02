@@ -93,7 +93,7 @@ object ForkConfigDecoder : Decoder<JsonFriendlyForksSchedule> {
               )
             }.toSet(),
           fork = ChainFork(
-            clFork = ClFork.QBFT_PHASE0,
+            clFork = obj["clfork"].valueOrNull()?.let { ClFork.valueOf(it) } ?: ClFork.QBFT_PHASE0,
             elFork = ElFork.valueOf(obj.getString("elfork")),
           ),
         ).valid()

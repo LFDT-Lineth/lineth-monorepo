@@ -8,19 +8,18 @@
  */
 package maru.serialization.rlp
 
-import maru.core.HashUtil
 import maru.core.ext.DataGenerators
-import maru.crypto.Hashing
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
 import kotlin.random.nextULong
 
 class BeaconBlockHeaderSerializerTest {
+  private val validatorSerializer = ValidatorSerDe()
   private val serializer =
     BeaconBlockHeaderSerDe(
-      validatorSerializer = ValidatorSerDe(),
-      hasher = Hashing::keccak,
+      beaconBlockHeaderRLPSerializer = BeaconBlockHeaderRLPSerializer(validatorSerializer),
+      validatorSerializer = validatorSerializer,
       headerHashFunction = HashUtil::headerHash,
     )
 

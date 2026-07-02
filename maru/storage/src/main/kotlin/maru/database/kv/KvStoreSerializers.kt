@@ -8,12 +8,21 @@
  */
 package maru.database.kv
 
-import maru.serialization.rlp.RLPSerializers
+import maru.serialization.rlp.BeaconStateSerDe
+import maru.serialization.rlp.BeaconBlockSerDe as RlpBeaconBlockSerDe
+import maru.serialization.rlp.SealedBeaconBlockSerDe as RlpSealedBeaconBlockSerDe
 
-object KvStoreSerializers {
-  val BytesSerializer = BytesSerializer()
-  val BeaconStateSerializer = KvStoreSerializerAdapter(RLPSerializers.BeaconStateSerializer)
-  val BeaconBlockSerializer = KvStoreSerializerAdapter(RLPSerializers.BeaconBlockSerializer)
-  val SealedBeaconBlockSerializer = KvStoreSerializerAdapter(RLPSerializers.SealedBeaconBlockSerializer)
-  val ULongSerializer = ULongSerializer()
+/**
+ * KvStore (de)serializers for the beacon chain columns/variables. The block/state serializers are built
+ * from the node's [maru.serialization.rlp.ForkAwareBlockHashing] so that deserialized headers carry the
+ * fork-aware chain-identity hash function and their `hash` matches the key they were stored under.
+ */
+class KvStoreSerializers(
+  beaconStateSerializer: BeaconStateSerDe,
+  sealedBeaconBlockSerializer: RlpSealedBeaconBlockSerDe,
+) {
+  val bytesSerializer = BytesSerializer()
+  val beaconStateSerializer = KvStoreSerializerAdapter(beaconStateSerializer)
+  val sealedBeaconBlockSerializer = KvStoreSerializerAdapter(sealedBeaconBlockSerializer)
+  val uLongSerializer = ULongSerializer()
 }

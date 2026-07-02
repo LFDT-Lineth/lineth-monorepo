@@ -8,6 +8,12 @@
  */
 package testutils
 
+import maru.consensus.ChainFork
+import maru.consensus.ClFork
+import maru.consensus.ElFork
+import maru.consensus.ForkSpec
+import maru.consensus.ForksSchedule
+import maru.consensus.QbftConsensusConfig
 import maru.consensus.qbft.adapters.QbftBlockCodecAdapter
 import maru.core.SealedBeaconBlock
 import maru.p2p.GossipMessageType
@@ -15,6 +21,7 @@ import maru.p2p.Message
 import maru.p2p.P2PNetwork
 import maru.p2p.SealedBeaconBlockHandler
 import maru.p2p.ValidationResult
+import maru.serialization.rlp.ForkAwareBlockHashing
 import org.apache.logging.log4j.LogManager
 import org.hyperledger.besu.consensus.common.bft.messagewrappers.BftMessage
 import org.hyperledger.besu.consensus.qbft.core.messagedata.CommitMessageData
@@ -43,6 +50,25 @@ class SpyingP2PNetwork(
   }
 
   private val log = LogManager.getLogger(this.javaClass)
+
+  // Decoding QBFT proposal/round-change blocks must inject a fork-aware header hash function (PHASE0 at ts 0).
+  private val blockHashing =
+    ForkAwareBlockHashing(
+      ForksSchedule(
+        chainId = 1u,
+        forks = listOf(
+          ForkSpec(
+            timestampSeconds = 0UL,
+            blockTimeSeconds = 1u,
+            configuration = QbftConsensusConfig(
+              validatorSet = emptySet(),
+              fork = ChainFork(ClFork.QBFT_PHASE0, ElFork.Prague),
+            ),
+          ),
+        ),
+      ),
+    )
+  private val qbftBlockCodec = QbftBlockCodecAdapter(blockHashing.beaconBlockSerializer)
   val emittedQbftMessages = CopyOnWriteArrayList<BftMessage<*>>()
   val emittedBlockMessages = CopyOnWriteArrayList<SealedBeaconBlock>()
 
@@ -50,8 +76,8 @@ class SpyingP2PNetwork(
     when (message) {
       is CommitMessageData -> message.decode()
       is PrepareMessageData -> message.decode()
-      is ProposalMessageData -> message.decode(QbftBlockCodecAdapter)
-      is RoundChangeMessageData -> message.decode(QbftBlockCodecAdapter)
+      is ProposalMessageData -> message.decode(qbftBlockCodec)
+      is RoundChangeMessageData -> message.decode(qbftBlockCodec)
       else -> throw IllegalArgumentException("Unknown message $message, don't know how to decode!")
     }
 

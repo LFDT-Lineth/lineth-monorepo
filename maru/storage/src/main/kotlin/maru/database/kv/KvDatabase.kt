@@ -21,75 +21,76 @@ import kotlin.jvm.optionals.getOrNull
 
 class KvDatabase(
   private val kvStoreAccessor: KvStoreAccessor,
+  private val schema: Schema,
 ) : BeaconChain,
   P2PState {
-  override fun isInitialized(): Boolean = kvStoreAccessor.get(Schema.LatestBeaconState).getOrNull() != null
+  override fun isInitialized(): Boolean = kvStoreAccessor.get(schema.LatestBeaconState).getOrNull() != null
 
-  companion object {
-    object Schema {
-      val BeaconStateByBlockRoot: KvStoreColumn<ByteArray, BeaconState> =
-        KvStoreColumn.create(
-          1,
-          KvStoreSerializers.BytesSerializer,
-          KvStoreSerializers.BeaconStateSerializer,
-        )
+  class Schema(
+    kvStoreSerializers: KvStoreSerializers,
+  ) {
+    val BeaconStateByBlockRoot: KvStoreColumn<ByteArray, BeaconState> =
+      KvStoreColumn.create(
+        1,
+        kvStoreSerializers.bytesSerializer,
+        kvStoreSerializers.beaconStateSerializer,
+      )
 
-      val SealedBeaconBlockByBlockRoot: KvStoreColumn<ByteArray, SealedBeaconBlock> =
-        KvStoreColumn.create(
-          2,
-          KvStoreSerializers.BytesSerializer,
-          KvStoreSerializers.SealedBeaconBlockSerializer,
-        )
+    val SealedBeaconBlockByBlockRoot: KvStoreColumn<ByteArray, SealedBeaconBlock> =
+      KvStoreColumn.create(
+        2,
+        kvStoreSerializers.bytesSerializer,
+        kvStoreSerializers.sealedBeaconBlockSerializer,
+      )
 
-      val BeaconBlockRootByBlockNumber: KvStoreColumn<ULong, ByteArray> =
-        KvStoreColumn.create(
-          3,
-          KvStoreSerializers.ULongSerializer,
-          KvStoreSerializers.BytesSerializer,
-        )
+    val BeaconBlockRootByBlockNumber: KvStoreColumn<ULong, ByteArray> =
+      KvStoreColumn.create(
+        3,
+        kvStoreSerializers.uLongSerializer,
+        kvStoreSerializers.bytesSerializer,
+      )
 
-      val LatestBeaconState: KvStoreVariable<BeaconState> =
-        KvStoreVariable.create(
-          1,
-          KvStoreSerializers.BeaconStateSerializer,
-        )
+    val LatestBeaconState: KvStoreVariable<BeaconState> =
+      KvStoreVariable.create(
+        1,
+        kvStoreSerializers.beaconStateSerializer,
+      )
 
-      val DiscoverySequenceNumber: KvStoreVariable<ULong> =
-        KvStoreVariable.create(
-          2,
-          KvStoreSerializers.ULongSerializer,
-        )
-    }
+    val DiscoverySequenceNumber: KvStoreVariable<ULong> =
+      KvStoreVariable.create(
+        2,
+        kvStoreSerializers.uLongSerializer,
+      )
   }
 
-  override fun getLatestBeaconState(): BeaconState = kvStoreAccessor.get(Schema.LatestBeaconState).get()
+  override fun getLatestBeaconState(): BeaconState = kvStoreAccessor.get(schema.LatestBeaconState).get()
 
   override fun getBeaconState(beaconBlockRoot: ByteArray): BeaconState? =
-    kvStoreAccessor.get(Schema.BeaconStateByBlockRoot, beaconBlockRoot).getOrNull()
+    kvStoreAccessor.get(schema.BeaconStateByBlockRoot, beaconBlockRoot).getOrNull()
 
   override fun getBeaconState(beaconBlockNumber: ULong): BeaconState? =
     kvStoreAccessor
-      .get(Schema.BeaconBlockRootByBlockNumber, beaconBlockNumber)
-      .flatMap { blockRoot -> kvStoreAccessor.get(Schema.BeaconStateByBlockRoot, blockRoot) }
+      .get(schema.BeaconBlockRootByBlockNumber, beaconBlockNumber)
+      .flatMap { blockRoot -> kvStoreAccessor.get(schema.BeaconStateByBlockRoot, blockRoot) }
       .getOrNull()
 
   override fun getSealedBeaconBlock(beaconBlockRoot: ByteArray): SealedBeaconBlock? =
-    kvStoreAccessor.get(Schema.SealedBeaconBlockByBlockRoot, beaconBlockRoot).getOrNull()
+    kvStoreAccessor.get(schema.SealedBeaconBlockByBlockRoot, beaconBlockRoot).getOrNull()
 
   override fun getSealedBeaconBlock(beaconBlockNumber: ULong): SealedBeaconBlock? =
     kvStoreAccessor
-      .get(Schema.BeaconBlockRootByBlockNumber, beaconBlockNumber)
-      .flatMap { blockRoot -> kvStoreAccessor.get(Schema.SealedBeaconBlockByBlockRoot, blockRoot) }
+      .get(schema.BeaconBlockRootByBlockNumber, beaconBlockNumber)
+      .flatMap { blockRoot -> kvStoreAccessor.get(schema.SealedBeaconBlockByBlockRoot, blockRoot) }
       .getOrNull()
 
-  override fun newBeaconChainUpdater(): BeaconChain.Updater = KvUpdater(this.kvStoreAccessor)
+  override fun newBeaconChainUpdater(): BeaconChain.Updater = KvUpdater(this.kvStoreAccessor, this.schema)
 
   override fun getLocalNodeRecordSequenceNumber(): ULong =
     kvStoreAccessor
-      .get(Schema.DiscoverySequenceNumber)
+      .get(schema.DiscoverySequenceNumber)
       .getOrDefault(0uL)
 
-  override fun newP2PStateUpdater(): P2PState.Updater = KvUpdater(this.kvStoreAccessor)
+  override fun newP2PStateUpdater(): P2PState.Updater = KvUpdater(this.kvStoreAccessor, this.schema)
 
   override fun close() {
     kvStoreAccessor.close()
@@ -97,24 +98,25 @@ class KvDatabase(
 
   class KvUpdater(
     kvStoreAccessor: KvStoreAccessor,
+    private val schema: Schema,
   ) : BeaconChain.Updater,
     P2PState.Updater {
     private val transaction: KvStoreTransaction = kvStoreAccessor.startTransaction()
 
     override fun putBeaconState(beaconState: BeaconState): BeaconChain.Updater {
-      transaction.put(Schema.BeaconStateByBlockRoot, beaconState.beaconBlockHeader.hash, beaconState)
-      transaction.put(Schema.LatestBeaconState, beaconState)
+      transaction.put(schema.BeaconStateByBlockRoot, beaconState.beaconBlockHeader.hash, beaconState)
+      transaction.put(schema.LatestBeaconState, beaconState)
       return this
     }
 
     override fun putSealedBeaconBlock(sealedBeaconBlock: SealedBeaconBlock): BeaconChain.Updater {
       transaction.put(
-        Schema.SealedBeaconBlockByBlockRoot,
+        schema.SealedBeaconBlockByBlockRoot,
         sealedBeaconBlock.beaconBlock.beaconBlockHeader.hash,
         sealedBeaconBlock,
       )
       transaction.put(
-        Schema.BeaconBlockRootByBlockNumber,
+        schema.BeaconBlockRootByBlockNumber,
         sealedBeaconBlock.beaconBlock.beaconBlockHeader.number,
         sealedBeaconBlock.beaconBlock.beaconBlockHeader.hash,
       )
@@ -123,7 +125,7 @@ class KvDatabase(
     }
 
     override fun putDiscoverySequenceNumber(newSequenceNumber: ULong): P2PState.Updater {
-      transaction.put(Schema.DiscoverySequenceNumber, newSequenceNumber)
+      transaction.put(schema.DiscoverySequenceNumber, newSequenceNumber)
       return this
     }
 

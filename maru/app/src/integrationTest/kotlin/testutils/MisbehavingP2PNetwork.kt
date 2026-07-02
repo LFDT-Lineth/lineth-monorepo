@@ -19,7 +19,7 @@ import maru.p2p.fork.ForkPeeringManager
 import maru.p2p.messages.BeaconBlocksByRangeRequest
 import maru.p2p.messages.BlockRetrievalStrategy
 import maru.p2p.messages.StatusManager
-import maru.serialization.SerDe
+import maru.serialization.rlp.ForkAwareBlockHashing
 import net.consensys.linea.metrics.MetricsFacade
 import kotlin.time.Duration
 import org.hyperledger.besu.plugin.services.MetricsSystem as BesuMetricsSystem
@@ -28,7 +28,7 @@ class MisbehavingP2PNetwork(
   privateKeyBytes: ByteArray,
   p2pConfig: P2PConfig,
   chainId: UInt,
-  serDe: SerDe<SealedBeaconBlock>,
+  blockHashing: ForkAwareBlockHashing,
   metricsFacade: MetricsFacade,
   metricsSystem: BesuMetricsSystem,
   statusManager: StatusManager,
@@ -44,7 +44,7 @@ class MisbehavingP2PNetwork(
       privateKeyBytes = privateKeyBytes,
       p2pConfig = p2pConfig,
       chainId = chainId,
-      serDe = serDe,
+      blockHashing = blockHashing,
       metricsFacade = metricsFacade,
       metricsSystem = metricsSystem,
       statusManager = statusManager,
@@ -52,8 +52,15 @@ class MisbehavingP2PNetwork(
       forkIdHashManager = forkIdHashManager,
       isBlockImportEnabledProvider = isBlockImportEnabledProvider,
       p2PState = p2pState,
-      rpcMethodsFactory = { statusMessageFactory, lineaRpcProtocolIdGenerator, peerLookup, beaconChain ->
-        RpcMethods(statusMessageFactory, lineaRpcProtocolIdGenerator, peerLookup, beaconChain, blockRetrievalStrategy)
+      rpcMethodsFactory = { statusMessageFactory, lineaRpcProtocolIdGenerator, peerLookup, beaconChain, _ ->
+        RpcMethods(
+          statusMessageFactory,
+          lineaRpcProtocolIdGenerator,
+          peerLookup,
+          beaconChain,
+          blockHashing,
+          blockRetrievalStrategy,
+        )
       },
       timerFactory = timerFactory,
     )
