@@ -86,10 +86,10 @@ class DelayedQbftBlockCreator(
           round = round.toUInt(),
           timestamp = timestamp,
           proposer = Validator(proposer),
-          parentRoot = parentBeaconBlockHeader.hash(),
+          parentRoot = parentBeaconBlockHeader.beaconBlockIdHash(),
           stateRoot = EMPTY_HASH, // temporary state root to avoid circular dependency
           bodyRoot = HashUtil.bodyRoot(beaconBlockBody),
-          headerHashFunction = blockHashing.headerHashFunction,
+          beaconBlockIdHashFunction = blockHashing.beaconBlockIdHashFunction,
         )
       val stateRoot =
         blockHashing.stateRoot(
@@ -112,7 +112,7 @@ class DelayedQbftBlockCreator(
         throw IllegalStateException("Execution payload unavailable, unable to create block", e)
       }
     val parentSealedBeaconBlock =
-      beaconChain.getSealedBeaconBlock(parentBeaconBlockHeader.hash())
+      beaconChain.getSealedBeaconBlock(parentBeaconBlockHeader.beaconBlockIdHash())
         ?: throw IllegalStateException("Parent beacon block unavailable, unable to create block")
     val proposer =
       proposerSelector.selectProposerForRound(

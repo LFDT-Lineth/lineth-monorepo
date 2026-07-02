@@ -14,7 +14,7 @@ import maru.serialization.rlp.SealedBeaconBlockSerDe as RlpSealedBeaconBlockSerD
 /**
  * KvStore (de)serializers for the beacon chain columns/variables. The block/state serializers are built
  * from the node's [maru.serialization.rlp.ForkAwareBlockHashing] so that deserialized headers carry the
- * fork-aware chain-identity hash function and their `hash` matches the key they were stored under.
+ * fork-aware chain-identity hash function and their `beaconBlockIdHash` matches the key they were stored under.
  */
 class KvStoreSerializers(
   beaconStateSerializer: BeaconStateSerDe,

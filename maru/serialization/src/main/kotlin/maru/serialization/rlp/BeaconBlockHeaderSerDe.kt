@@ -9,13 +9,13 @@
 package maru.serialization.rlp
 
 import maru.core.BeaconBlockHeader
-import maru.core.HeaderHashFunction
+import maru.core.BeaconBlockIdHashFunction
 import org.hyperledger.besu.ethereum.rlp.RLPInput
 
 class BeaconBlockHeaderSerDe(
   beaconBlockHeaderRLPSerializer: BeaconBlockHeaderRLPSerializer,
   private val validatorSerializer: ValidatorSerDe,
-  private val headerHashFunction: HeaderHashFunction,
+  private val beaconBlockIdHashFunction: BeaconBlockIdHashFunction,
 ) : RLPSerDe<BeaconBlockHeader>,
   RLPSerializer<BeaconBlockHeader> by beaconBlockHeaderRLPSerializer {
   override fun readFrom(rlpInput: RLPInput): BeaconBlockHeader {
@@ -39,7 +39,7 @@ class BeaconBlockHeaderSerDe(
       parentRoot = parentRoot,
       stateRoot = stateRoot,
       bodyRoot = bodyRoot,
-      headerHashFunction = headerHashFunction,
+      beaconBlockIdHashFunction = beaconBlockIdHashFunction,
     )
   }
 }

@@ -20,7 +20,7 @@ class BeaconBlockHeaderSerializerTest {
     BeaconBlockHeaderSerDe(
       beaconBlockHeaderRLPSerializer = BeaconBlockHeaderRLPSerializer(validatorSerializer),
       validatorSerializer = validatorSerializer,
-      headerHashFunction = HashUtil::headerHash,
+      beaconBlockIdHashFunction = HashUtil::headerHash,
     )
 
   @Test

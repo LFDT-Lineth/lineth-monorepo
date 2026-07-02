@@ -41,7 +41,7 @@ class SCEP256SealVerifier(
   ): Result<Validator, SealVerifier.SealValidationError> {
     val signature = signatureAlgorithm.decodeSignature(Bytes.wrap(seal.signature))
     // Commit seals are signed over the round-inclusive hash (Besu QBFT parity), never the chain-identity
-    // header.hash, which becomes round-independent from QBFT_PHASE1 onward.
+    // header.beaconBlockIdHash, which becomes round-independent from QBFT_PHASE1 onward.
     val blockHash = HashUtil.headerHash(beaconBlockHeader)
     val publicKey = signatureAlgorithm.recoverPublicKeyFromSignature(Bytes32.wrap(blockHash), signature)
     return if (publicKey.isEmpty) {

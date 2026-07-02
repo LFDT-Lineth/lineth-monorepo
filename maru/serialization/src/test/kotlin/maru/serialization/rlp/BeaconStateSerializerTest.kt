@@ -23,7 +23,7 @@ class BeaconStateSerializerTest {
     BeaconBlockHeaderSerDe(
       beaconBlockHeaderRLPSerializer = beaconBlockHeaderRLPSerializer,
       validatorSerializer = validatorSerializer,
-      headerHashFunction = HashUtil::headerHash,
+      beaconBlockIdHashFunction = HashUtil::headerHash,
     )
   private val serializer =
     BeaconStateSerDe(

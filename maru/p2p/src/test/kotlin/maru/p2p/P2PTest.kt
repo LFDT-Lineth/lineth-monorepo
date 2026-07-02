@@ -413,7 +413,7 @@ class P2PTest {
     val expectedStatus =
       Status(
         forkIdHash = forkIdHashManager.currentForkHash(),
-        latestStateRoot = latestBeaconBlockHeader.hash,
+        latestStateRoot = latestBeaconBlockHeader.beaconBlockIdHash,
         latestBlockNumber = latestBeaconBlockHeader.number,
       )
     val peer1 =
@@ -826,7 +826,7 @@ class P2PTest {
     val beaconBlockHeader = mock<BeaconBlockHeader>()
     whenever(beaconChain.getLatestBeaconState()).thenReturn(beaconState)
     whenever(beaconState.beaconBlockHeader).thenReturn(beaconBlockHeader)
-    whenever(beaconBlockHeader.hash).thenReturn(ByteArray(32))
+    whenever(beaconBlockHeader.beaconBlockIdHash).thenReturn(ByteArray(32))
     whenever(beaconBlockHeader.number).thenReturn(0uL, 1uL, 2uL, 3uL, 4uL, 5uL)
 
     val statusManager = StatusManager(beaconChain, forkIdHashManager)

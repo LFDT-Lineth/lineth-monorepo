@@ -75,7 +75,7 @@ class BlockValidatorTest {
       newBlockNumber,
     ).copy(
       proposer = validators[1],
-      parentRoot = validCurrBlockHeader.hash,
+      parentRoot = validCurrBlockHeader.beaconBlockIdHash,
       timestamp = validCurrBlockHeader.timestamp + 1u,
       bodyRoot = HashUtil.bodyRoot(validNewBlockBody),
       stateRoot = EMPTY_HASH,
@@ -271,7 +271,9 @@ class BlockValidatorTest {
   @Test
   fun `test invalid parent root`() {
     val parentRootValidator = ParentRootValidator(parentBlockHeader = validCurrBlockHeader)
-    val invalidBlockHeader = validNewBlockHeader.copy(parentRoot = validCurrBlockHeader.hash.reversedArray())
+    val invalidBlockHeader = validNewBlockHeader.copy(
+      parentRoot = validCurrBlockHeader.beaconBlockIdHash.reversedArray(),
+    )
     val invalidBlock = validNewBlock.copy(beaconBlockHeader = invalidBlockHeader)
     val result =
       parentRootValidator
@@ -282,7 +284,7 @@ class BlockValidatorTest {
       error(
         "Parent beacon root does not match parent block root " +
           "parentRoot=${invalidBlockHeader.parentRoot.encodeHex()} " +
-          "expectedParentRoot=${validCurrBlockHeader.hash.encodeHex()}",
+          "expectedParentRoot=${validCurrBlockHeader.beaconBlockIdHash.encodeHex()}",
       )
     assertThat(result).isEqualTo(expectedResult)
   }
@@ -440,7 +442,7 @@ class BlockValidatorTest {
       error(
         "Block is empty number=${validNewBlock.beaconBlockHeader.number} " +
           "executionPayloadBlockNumber=${validNewBlock.beaconBlockBody.executionPayload.blockNumber} " +
-          "hash=${validNewBlock.beaconBlockHeader.hash.encodeHex()}",
+          "hash=${validNewBlock.beaconBlockHeader.beaconBlockIdHash.encodeHex()}",
       )
     assertThat(result).isEqualTo(expectedResult)
   }

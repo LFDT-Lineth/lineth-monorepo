@@ -55,14 +55,14 @@ class ForkAwareBlockHashingTest {
     val header =
       DataGenerators.randomBeaconBlockHeader(
         1UL,
-      ).copy(timestamp = 10UL, headerHashFunction = blockHashing.headerHashFunction)
+      ).copy(timestamp = 10UL, beaconBlockIdHashFunction = blockHashing.beaconBlockIdHashFunction)
     val sameContentDifferentRound = header.copy(
       round = header.round + 1u,
-      headerHashFunction = blockHashing.headerHashFunction,
+      beaconBlockIdHashFunction = blockHashing.beaconBlockIdHashFunction,
     )
 
-    assertThat(header.hash).isEqualTo(HashUtil.headerHash(header))
-    assertThat(sameContentDifferentRound.hash).isNotEqualTo(header.hash)
+    assertThat(header.beaconBlockIdHash).isEqualTo(HashUtil.headerHash(header))
+    assertThat(sameContentDifferentRound.beaconBlockIdHash).isNotEqualTo(header.beaconBlockIdHash)
   }
 
   @Test
@@ -73,17 +73,17 @@ class ForkAwareBlockHashingTest {
       DataGenerators.randomBeaconBlockHeader(1UL).copy(
         timestamp = timestamp,
         round = 0u,
-        headerHashFunction = blockHashing.headerHashFunction,
+        beaconBlockIdHashFunction = blockHashing.beaconBlockIdHashFunction,
       )
     val sameContentDifferentRoundAndProposer =
       header.copy(
         round = 7u,
         proposer = Validator(DataGenerators.randomValidator().address),
-        headerHashFunction = blockHashing.headerHashFunction,
+        beaconBlockIdHashFunction = blockHashing.beaconBlockIdHashFunction,
       )
 
-    assertThat(sameContentDifferentRoundAndProposer.hash).isEqualTo(header.hash)
-    assertThat(header.hash).isEqualTo(HashUtil.roundIndependentHeaderHash(header))
+    assertThat(sameContentDifferentRoundAndProposer.beaconBlockIdHash).isEqualTo(header.beaconBlockIdHash)
+    assertThat(header.beaconBlockIdHash).isEqualTo(HashUtil.roundIndependentHeaderHash(header))
   }
 
   /**
@@ -101,19 +101,19 @@ class ForkAwareBlockHashingTest {
       DataGenerators.randomBeaconBlockHeader(1UL).copy(
         timestamp = timestamp,
         round = 0u,
-        headerHashFunction = blockHashing.headerHashFunction,
+        beaconBlockIdHashFunction = blockHashing.beaconBlockIdHashFunction,
       )
     val committedAtRound1 =
       committedAtRound0.copy(
         round = 1u,
         proposer = Validator(DataGenerators.randomValidator().address),
-        headerHashFunction = blockHashing.headerHashFunction,
+        beaconBlockIdHashFunction = blockHashing.beaconBlockIdHashFunction,
       )
 
-    assertThat(committedAtRound1.hash)
+    assertThat(committedAtRound1.beaconBlockIdHash)
       .withFailMessage {
         "validators forked: the same block content committed at round 0 vs round 1 produced different chain identities"
-      }.isEqualTo(committedAtRound0.hash)
+      }.isEqualTo(committedAtRound0.beaconBlockIdHash)
   }
 
   @Test
@@ -139,15 +139,15 @@ class ForkAwareBlockHashingTest {
     val header =
       DataGenerators.randomBeaconBlockHeader(1UL).copy(
         timestamp = timestamp,
-        headerHashFunction = blockHashing.headerHashFunction,
+        beaconBlockIdHashFunction = blockHashing.beaconBlockIdHashFunction,
       )
     val differentBodyRoot =
       header.copy(
         bodyRoot = DataGenerators.randomBeaconBlockHeader(2UL).bodyRoot,
-        headerHashFunction = blockHashing.headerHashFunction,
+        beaconBlockIdHashFunction = blockHashing.beaconBlockIdHashFunction,
       )
 
-    assertThat(differentBodyRoot.hash).isNotEqualTo(header.hash)
+    assertThat(differentBodyRoot.beaconBlockIdHash).isNotEqualTo(header.beaconBlockIdHash)
   }
 
   @Test
@@ -159,18 +159,18 @@ class ForkAwareBlockHashingTest {
       DataGenerators.randomBeaconBlockHeader(1UL).copy(
         timestamp = phase1Timestamp - 1UL,
         round = 3u,
-        headerHashFunction = blockHashing.headerHashFunction,
+        beaconBlockIdHashFunction = blockHashing.beaconBlockIdHashFunction,
       )
     val atActivation =
       justBeforeActivation.copy(
         timestamp = phase1Timestamp,
-        headerHashFunction = blockHashing.headerHashFunction,
+        beaconBlockIdHashFunction = blockHashing.beaconBlockIdHashFunction,
       )
 
     // Before activation: round-inclusive identity.
-    assertThat(justBeforeActivation.hash).isEqualTo(HashUtil.headerHash(justBeforeActivation))
+    assertThat(justBeforeActivation.beaconBlockIdHash).isEqualTo(HashUtil.headerHash(justBeforeActivation))
     // At activation: round-independent identity.
-    assertThat(atActivation.hash).isEqualTo(HashUtil.roundIndependentHeaderHash(atActivation))
+    assertThat(atActivation.beaconBlockIdHash).isEqualTo(HashUtil.roundIndependentHeaderHash(atActivation))
   }
 
   @Test

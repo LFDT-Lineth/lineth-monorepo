@@ -156,14 +156,14 @@ class ParentRootValidator(
       BlockValidator.require(
         block.beaconBlockHeader.parentRoot.contentEquals(
           parentBlockHeader
-            .hash,
+            .beaconBlockIdHash,
         ),
       ) {
         "Parent beacon root does not match parent block root parentRoot=${
           block.beaconBlockHeader.parentRoot
             .encodeHex()
         } " +
-          "expectedParentRoot=${parentBlockHeader.hash.encodeHex()}"
+          "expectedParentRoot=${parentBlockHeader.beaconBlockIdHash.encodeHex()}"
       },
     )
 }
@@ -256,7 +256,7 @@ object EmptyBlockValidator : BlockValidator {
       ) {
         "Block is empty number=${block.beaconBlockHeader.number} " +
           "executionPayloadBlockNumber=${block.beaconBlockBody.executionPayload.blockNumber} " +
-          "hash=${block.beaconBlockHeader.hash.encodeHex()}"
+          "hash=${block.beaconBlockHeader.beaconBlockIdHash.encodeHex()}"
       },
     )
 }

@@ -8,7 +8,7 @@
  */
 package maru.core
 
-typealias HeaderHashFunction = (BeaconBlockHeader) -> ByteArray
+typealias BeaconBlockIdHashFunction = (BeaconBlockHeader) -> ByteArray
 
 fun interface Hasher {
   fun hash(input: ByteArray): ByteArray

@@ -29,7 +29,7 @@ class RollingForwardForkIdDigestCalculator(
       beaconChain
         .getBeaconState(0UL)!!
         .beaconBlockHeader
-        .hash
+        .beaconBlockIdHash
     val genesisForkIdDigest =
       genesisForkIdDigest(
         genesisBeaconBlockHash = genesisBeaconBlockHash,

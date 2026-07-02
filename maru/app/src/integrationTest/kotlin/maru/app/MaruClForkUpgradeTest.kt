@@ -136,9 +136,9 @@ class MaruClForkUpgradeTest {
 
     // The network never forked: validator and follower agree on every block's chain identity, both
     // before and after the live upgrade.
-    assertThat(followerBlocks.map { it.beaconBlock.beaconBlockHeader.hash.encodeHex() })
+    assertThat(followerBlocks.map { it.beaconBlock.beaconBlockHeader.beaconBlockIdHash.encodeHex() })
       .withFailMessage { "Follower diverged from validator across the PHASE0 -> PHASE1 upgrade" }
-      .isEqualTo(validatorBlocks.map { it.beaconBlock.beaconBlockHeader.hash.encodeHex() })
+      .isEqualTo(validatorBlocks.map { it.beaconBlock.beaconBlockHeader.beaconBlockIdHash.encodeHex() })
 
     val allHeaders = validatorBlocks.map { it.beaconBlock.beaconBlockHeader }
     val preSwitchHeaders = allHeaders.filter { it.timestamp < phase1ActivationTimestamp }
@@ -155,12 +155,12 @@ class MaruClForkUpgradeTest {
     // -independent identity from PHASE1 onward. This is the actual live proof of the upgrade, on top of
     // the plain block-agreement check above.
     preSwitchHeaders.forEach { header ->
-      assertThat(header.hash)
+      assertThat(header.beaconBlockIdHash)
         .withFailMessage { "Block ${header.number} before the switch should use the round-inclusive identity hash" }
         .isEqualTo(HashUtil.headerHash(header))
     }
     postSwitchHeaders.forEach { header ->
-      assertThat(header.hash)
+      assertThat(header.beaconBlockIdHash)
         .withFailMessage { "Block ${header.number} after the switch should use the round-independent identity hash" }
         .isEqualTo(HashUtil.roundIndependentHeaderHash(header))
     }

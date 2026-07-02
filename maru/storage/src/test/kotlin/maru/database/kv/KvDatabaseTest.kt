@@ -50,14 +50,14 @@ class KvDatabaseTest {
         db.newBeaconChainUpdater().use {
           it.putBeaconState(testBeaconState).commit()
         }
-        assertThat(db.getBeaconState(testBeaconState.beaconBlockHeader.hash))
+        assertThat(db.getBeaconState(testBeaconState.beaconBlockHeader.beaconBlockIdHash))
           .isEqualTo(testBeaconState)
       }
     }
 
     createDatabase(databasePath).use { db ->
       testBeaconStates.forEach { testBeaconState ->
-        assertThat(db.getBeaconState(testBeaconState.beaconBlockHeader.hash))
+        assertThat(db.getBeaconState(testBeaconState.beaconBlockHeader.beaconBlockIdHash))
           .isEqualTo(testBeaconState)
       }
     }
@@ -116,7 +116,7 @@ class KvDatabaseTest {
         db.newBeaconChainUpdater().use {
           it.putSealedBeaconBlock(testBeaconBlock).commit()
         }
-        assertThat(db.getSealedBeaconBlock(testBeaconBlock.beaconBlock.beaconBlockHeader.hash))
+        assertThat(db.getSealedBeaconBlock(testBeaconBlock.beaconBlock.beaconBlockHeader.beaconBlockIdHash))
           .isEqualTo(testBeaconBlock)
 
         assertThat(db.getSealedBeaconBlock(testBeaconBlock.beaconBlock.beaconBlockHeader.number))
@@ -126,7 +126,7 @@ class KvDatabaseTest {
 
     createDatabase(databasePath).use { db ->
       testBeaconBlocks.forEach { testBeaconBlock ->
-        assertThat(db.getSealedBeaconBlock(testBeaconBlock.beaconBlock.beaconBlockHeader.hash))
+        assertThat(db.getSealedBeaconBlock(testBeaconBlock.beaconBlock.beaconBlockHeader.beaconBlockIdHash))
           .isEqualTo(testBeaconBlock)
 
         assertThat(db.getSealedBeaconBlock(testBeaconBlock.beaconBlock.beaconBlockHeader.number))
@@ -152,7 +152,7 @@ class KvDatabaseTest {
     }
 
     createDatabase(databasePath).use { db ->
-      assertThat(db.getSealedBeaconBlock(testBeaconBlock.beaconBlock.beaconBlockHeader.hash))
+      assertThat(db.getSealedBeaconBlock(testBeaconBlock.beaconBlock.beaconBlockHeader.beaconBlockIdHash))
         .isEqualTo(testBeaconBlock)
 
       assertThat(db.getSealedBeaconBlock(testBeaconBlock.beaconBlock.beaconBlockHeader.number))
@@ -168,12 +168,12 @@ class KvDatabaseTest {
       1uL,
     )
     val testBeaconBlock1Number = testBeaconBlock1.beaconBlock.beaconBlockHeader.number
-    val testBeaconBlock1Root = testBeaconBlock1.beaconBlock.beaconBlockHeader.hash
+    val testBeaconBlock1Root = testBeaconBlock1.beaconBlock.beaconBlockHeader.beaconBlockIdHash
     val testBeaconBlock2 = DataGenerators.randomSealedBeaconBlock(
       2uL,
     )
     val testBeaconBlock2Number = testBeaconBlock2.beaconBlock.beaconBlockHeader.number
-    val testBeaconBlock2Root = testBeaconBlock2.beaconBlock.beaconBlockHeader.hash
+    val testBeaconBlock2Root = testBeaconBlock2.beaconBlock.beaconBlockHeader.beaconBlockIdHash
     createDatabase(databasePath).use { db ->
       db.newBeaconChainUpdater().use {
         it.putSealedBeaconBlock(testBeaconBlock1).commit()

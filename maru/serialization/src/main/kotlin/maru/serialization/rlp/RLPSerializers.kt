@@ -14,7 +14,7 @@ package maru.serialization.rlp
  *  - write-only serializers for header-containing types (serializing never touches the fork-aware hash
  *    function, so it is safe; these are the single source of truth for the byte layout and back [HashUtil]).
  *
- * Deserializing a header-containing type MUST inject the node's fork-aware `headerHashFunction`, so the full
+ * Deserializing a header-containing type MUST inject the node's fork-aware `beaconBlockIdHashFunction`, so the full
  * header-containing SerDes are NOT exposed here — they come only from [ForkAwareBlockHashing]. Exposing a
  * static one with a round-inclusive default would be a latent QBFT_PHASE1 bug.
  */

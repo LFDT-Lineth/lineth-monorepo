@@ -464,7 +464,7 @@ class CLSyncServiceImplTest {
           validators = validators,
           blockHashing = blockHashing,
         )
-      val seal = signatureAlgorithm.sign(Bytes32.wrap(beaconBlock.beaconBlockHeader.hash), keypair)
+      val seal = signatureAlgorithm.sign(Bytes32.wrap(beaconBlock.beaconBlockHeader.beaconBlockIdHash), keypair)
       val sealedBlock =
         SealedBeaconBlock(
           beaconBlock = beaconBlock,

@@ -120,7 +120,7 @@ class EagerQbftBlockCreatorTest {
     round: Int,
   ): EagerQbftBlockCreator {
     whenever(
-      beaconChain.getSealedBeaconBlock(sealedGenesisBeaconBlock.beaconBlock.beaconBlockHeader.hash()),
+      beaconChain.getSealedBeaconBlock(sealedGenesisBeaconBlock.beaconBlock.beaconBlockHeader.beaconBlockIdHash()),
     ).thenReturn(
       sealedGenesisBeaconBlock,
     )
@@ -214,9 +214,9 @@ class EagerQbftBlockCreatorTest {
       HashUtil.bodyRoot(acceptedBeaconBlock.beaconBlockBody),
     )
     assertThat(createdBlockHeader.stateRoot).isEqualTo(stateRoot)
-    assertThat(createdBlockHeader.parentRoot).isEqualTo(parentHeader.toBeaconBlockHeader().hash())
+    assertThat(createdBlockHeader.parentRoot).isEqualTo(parentHeader.toBeaconBlockHeader().beaconBlockIdHash())
     assertThat(
-      acceptedBeaconBlock.beaconBlockHeader.hash(),
+      acceptedBeaconBlock.beaconBlockHeader.beaconBlockIdHash(),
     ).isEqualTo(HashUtil.headerHash(acceptedBeaconBlock.beaconBlockHeader))
 
     // block body fields

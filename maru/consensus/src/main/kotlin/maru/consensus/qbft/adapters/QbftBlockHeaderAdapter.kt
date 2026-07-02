@@ -30,7 +30,7 @@ class QbftBlockHeaderAdapter(
 
   // Round-inclusive (Besu parity): used by Besu QBFT for commit-seal signing/verification and for
   // PREPARE/COMMIT message hashes. The chain identity, which is round-independent from QBFT_PHASE1 onward,
-  // is a separate concept carried by BeaconBlockHeader.hash (see ForkAwareBlockHashing).
+  // is a separate concept carried by BeaconBlockHeader.beaconBlockIdHash (see ForkAwareBlockHashing).
   override fun getHash(): Hash = Hash.wrap(Bytes32.wrap(HashUtil.headerHash(beaconBlockHeader)))
 
   override fun equals(other: Any?): Boolean {

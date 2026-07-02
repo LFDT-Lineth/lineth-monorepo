@@ -66,7 +66,7 @@ object DataGenerators {
         parentRoot = EMPTY_HASH,
         stateRoot = EMPTY_HASH,
         bodyRoot = EMPTY_HASH,
-        headerHashFunction = HashUtil::headerHash,
+        beaconBlockIdHashFunction = HashUtil::headerHash,
       )
 
     val tmpGenesisStateRoot =
@@ -98,7 +98,7 @@ object DataGenerators {
         parentRoot = Random.nextBytes(32),
         stateRoot = Random.nextBytes(32),
         bodyRoot = Random.nextBytes(32),
-        headerHashFunction = HashUtil::headerHash,
+        beaconBlockIdHashFunction = HashUtil::headerHash,
       )
     return BeaconState(
       beaconBlockHeader = beaconBlockHeader,
@@ -145,7 +145,7 @@ object DataGenerators {
       parentRoot = Random.nextBytes(32),
       stateRoot = Random.nextBytes(32),
       bodyRoot = Random.nextBytes(32),
-      headerHashFunction = HashUtil::headerHash,
+      beaconBlockIdHashFunction = HashUtil::headerHash,
     )
 
   fun randomExecutionPayload(numberOfTransactions: Int = 5): ExecutionPayload {

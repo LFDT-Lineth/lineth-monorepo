@@ -10,14 +10,14 @@ package maru.serialization.rlp
 
 import maru.consensus.ClFork
 import maru.consensus.ForksSchedule
+import maru.core.BeaconBlockIdHashFunction
 import maru.core.BeaconState
-import maru.core.HeaderHashFunction
 import maru.core.SealedBeaconBlock
 
 /**
  * Builds the node's chain-identity hashing functions from its [ForksSchedule].
  *
- * The chain-identity hash ([headerHashFunction]) and the state root are round-inclusive (include `round`
+ * The chain-identity hash ([beaconBlockIdHashFunction]) and the state root are round-inclusive (include `round`
  * and `proposer`) up to and including QBFT_PHASE0, and become round-independent from QBFT_PHASE1 onward, so
  * that multiple rounds/proposers for the same block content settle on the same identity. The active fork is
  * resolved from the header's own timestamp.
@@ -36,10 +36,10 @@ class ForkAwareBlockHashing(
 
   /**
    * Fork-aware chain-identity hash. This is the header hash function a node injects into every header it
-   * builds or deserializes, so the header's `hash` carries the fork-appropriate identity (round-inclusive
-   * through QBFT_PHASE0, round-independent from QBFT_PHASE1).
+   * builds or deserializes, so the header's `beaconBlockIdHash` carries the fork-appropriate identity
+   * (round-inclusive through QBFT_PHASE0, round-independent from QBFT_PHASE1).
    */
-  val headerHashFunction: HeaderHashFunction = { header ->
+  val beaconBlockIdHashFunction: BeaconBlockIdHashFunction = { header ->
     if (isRoundIndependent(header.timestamp)) {
       HashUtil.roundIndependentHeaderHash(header)
     } else {
@@ -48,7 +48,7 @@ class ForkAwareBlockHashing(
   }
 
   /**
-   * Fork-aware state root, parallel to [headerHashFunction]: zeroes `round`/`proposer` in the embedded
+   * Fork-aware state root, parallel to [beaconBlockIdHashFunction]: zeroes `round`/`proposer` in the embedded
    * header before hashing the state from QBFT_PHASE1 onward.
    */
   fun stateRoot(beaconState: BeaconState): ByteArray =
@@ -60,7 +60,7 @@ class ForkAwareBlockHashing(
 
   /**
    * Node-scoped serializers that deserialize headers (and anything containing a header) with
-   * [headerHashFunction]. They reuse the shared function-free write-only serializers for the byte layout, so
+   * [beaconBlockIdHashFunction]. They reuse the shared function-free write-only serializers for the byte layout, so
    * serialized bytes are identical to the static [RLPSerializers]; only the read-side injected hash function
    * differs.
    */
@@ -68,7 +68,7 @@ class ForkAwareBlockHashing(
     BeaconBlockHeaderSerDe(
       beaconBlockHeaderRLPSerializer = RLPSerializers.BeaconBlockHeaderRLPSerializer,
       validatorSerializer = RLPSerializers.ValidatorSerializer,
-      headerHashFunction = headerHashFunction,
+      beaconBlockIdHashFunction = beaconBlockIdHashFunction,
     )
 
   val beaconBlockSerializer: BeaconBlockSerDe =

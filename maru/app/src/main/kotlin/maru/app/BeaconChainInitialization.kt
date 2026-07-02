@@ -37,7 +37,7 @@ class BeaconChainInitialization(
         parentRoot = EMPTY_HASH,
         stateRoot = EMPTY_HASH,
         bodyRoot = EMPTY_HASH,
-        headerHashFunction = blockHashing.headerHashFunction,
+        beaconBlockIdHashFunction = blockHashing.beaconBlockIdHashFunction,
       )
 
     val sortedValidators = validatorSet.toSortedSet()

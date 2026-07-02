@@ -55,7 +55,9 @@ class DelayedQbftBlockCreatorTest {
     )
     val parentHeader = QbftBlockHeaderAdapter(parentBlock.beaconBlock.beaconBlockHeader)
     val executionPayload = CoreDataGenerators.randomExecutionPayload()
-    whenever(beaconChain.getSealedBeaconBlock(parentBlock.beaconBlock.beaconBlockHeader.hash())).thenReturn(
+    whenever(
+      beaconChain.getSealedBeaconBlock(parentBlock.beaconBlock.beaconBlockHeader.beaconBlockIdHash()),
+    ).thenReturn(
       parentBlock,
     )
     whenever(executionLayerManager.finishBlockBuilding()).thenReturn(completedFuture(executionPayload))
@@ -97,9 +99,9 @@ class DelayedQbftBlockCreatorTest {
       HashUtil.bodyRoot(createBeaconBlock.beaconBlockBody),
     )
     assertThat(blockHeader.stateRoot).isEqualTo(stateRoot)
-    assertThat(blockHeader.parentRoot).isEqualTo(parentHeader.toBeaconBlockHeader().hash())
+    assertThat(blockHeader.parentRoot).isEqualTo(parentHeader.toBeaconBlockHeader().beaconBlockIdHash())
     assertThat(
-      createBeaconBlock.beaconBlockHeader.hash(),
+      createBeaconBlock.beaconBlockHeader.beaconBlockIdHash(),
     ).isEqualTo(HashUtil.headerHash(createBeaconBlock.beaconBlockHeader))
 
     // block body fields
@@ -148,7 +150,7 @@ class DelayedQbftBlockCreatorTest {
     val executionPayload = CoreDataGenerators.randomExecutionPayload()
 
     whenever(executionLayerManager.finishBlockBuilding()).thenReturn(completedFuture(executionPayload))
-    whenever(beaconChain.getSealedBeaconBlock(parentBlock.beaconBlockHeader.hash())).thenReturn(null)
+    whenever(beaconChain.getSealedBeaconBlock(parentBlock.beaconBlockHeader.beaconBlockIdHash())).thenReturn(null)
     whenever(proposerSelector.selectProposerForRound(ConsensusRoundIdentifier(11L, 0))).thenReturn(Address.ZERO)
 
     val blockCreator =
@@ -206,7 +208,7 @@ class DelayedQbftBlockCreatorTest {
     )
     assertThat(createdSealedBlockHeader.stateRoot).isEqualTo(beaconBlock.beaconBlockHeader.stateRoot)
     assertThat(createdSealedBlockHeader.parentRoot).isEqualTo(beaconBlock.beaconBlockHeader.parentRoot)
-    assertThat(createdSealedBlockHeader.hash()).isEqualTo(HashUtil.headerHash(createdSealedBlockHeader))
+    assertThat(createdSealedBlockHeader.beaconBlockIdHash()).isEqualTo(HashUtil.headerHash(createdSealedBlockHeader))
 
     // block body fields
     val sealedBlockBody = createdSealedBeaconBlock.beaconBlock.beaconBlockBody

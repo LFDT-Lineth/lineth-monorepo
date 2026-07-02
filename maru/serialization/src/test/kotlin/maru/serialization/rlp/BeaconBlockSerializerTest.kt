@@ -25,7 +25,7 @@ class BeaconBlockSerializerTest {
     BeaconBlockHeaderSerDe(
       beaconBlockHeaderRLPSerializer = beaconBlockHeaderRLPSerializer,
       validatorSerializer = validatorSerializer,
-      headerHashFunction = HashUtil::headerHash,
+      beaconBlockIdHashFunction = HashUtil::headerHash,
     )
   private val blockBodySerializer =
     BeaconBlockBodySerDe(

@@ -104,7 +104,7 @@ class KvDatabase(
     private val transaction: KvStoreTransaction = kvStoreAccessor.startTransaction()
 
     override fun putBeaconState(beaconState: BeaconState): BeaconChain.Updater {
-      transaction.put(schema.BeaconStateByBlockRoot, beaconState.beaconBlockHeader.hash, beaconState)
+      transaction.put(schema.BeaconStateByBlockRoot, beaconState.beaconBlockHeader.beaconBlockIdHash, beaconState)
       transaction.put(schema.LatestBeaconState, beaconState)
       return this
     }
@@ -112,13 +112,13 @@ class KvDatabase(
     override fun putSealedBeaconBlock(sealedBeaconBlock: SealedBeaconBlock): BeaconChain.Updater {
       transaction.put(
         schema.SealedBeaconBlockByBlockRoot,
-        sealedBeaconBlock.beaconBlock.beaconBlockHeader.hash,
+        sealedBeaconBlock.beaconBlock.beaconBlockHeader.beaconBlockIdHash,
         sealedBeaconBlock,
       )
       transaction.put(
         schema.BeaconBlockRootByBlockNumber,
         sealedBeaconBlock.beaconBlock.beaconBlockHeader.number,
-        sealedBeaconBlock.beaconBlock.beaconBlockHeader.hash,
+        sealedBeaconBlock.beaconBlock.beaconBlockHeader.beaconBlockIdHash,
       )
 
       return this

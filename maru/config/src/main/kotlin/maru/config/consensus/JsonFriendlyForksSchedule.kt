@@ -93,8 +93,16 @@ object ForkConfigDecoder : Decoder<JsonFriendlyForksSchedule> {
               )
             }.toSet(),
           fork = ChainFork(
-            clFork = obj["clfork"].valueOrNull()?.let { ClFork.valueOf(it) } ?: ClFork.QBFT_PHASE0,
-            elFork = ElFork.valueOf(obj.getString("elfork")),
+            clFork = obj["clfork"].valueOrNull()
+              ?.let { name ->
+                ClFork.entries.find { it.name == name }
+                  ?: return (ConfigFailure.Generic("Unknown clfork value '$name'") as ConfigFailure).invalid()
+              }
+              ?: ClFork.QBFT_PHASE0,
+            elFork = obj.getString("elfork").let { name ->
+              ElFork.entries.find { it.name == name }
+                ?: return (ConfigFailure.Generic("Unknown elfork value '$name'") as ConfigFailure).invalid()
+            },
           ),
         ).valid()
 
