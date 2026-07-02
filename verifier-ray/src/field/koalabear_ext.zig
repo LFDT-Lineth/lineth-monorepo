@@ -110,18 +110,16 @@ pub const Ext = extern struct {
         const y4 = @as(u64, rhs.B2.a0.value);
         const y5 = @as(u64, rhs.B2.a1.value);
 
-        // E2 mul on raw (already-reduced, < p) scalars -> raw (< 3p) scalars:
-        //   c0 = a0*b0 + 3*a1*b1,  c1 = a0*b1 + a1*b0
-        // t0 = B0*rhs.B0, t1 = B1*rhs.B1, t2 = B2*rhs.B2 (operands already < p)
-        const t0_0 = x0 * y0 + 3 * x1 * y1;
-        const t0_1 = x0 * y1 + x1 * y0;
-        const t1_0 = x2 * y2 + 3 * x3 * y3;
-        const t1_1 = x2 * y3 + x3 * y2;
-        const t2_0 = x4 * y4 + 3 * x5 * y5;
-        const t2_1 = x4 * y5 + x5 * y4;
+        // t0 = B0*B0, t1 = B1*B1, t2 = B2*B2 — reduced immediately since each
+        // is reused in both the cross-term subtractions and the final assembly.
+        const rt0_0 = (x0 * y0 + 3 * x1 * y1) % p;
+        const rt0_1 = (x0 * y1 + x1 * y0) % p;
+        const rt1_0 = (x2 * y2 + 3 * x3 * y3) % p;
+        const rt1_1 = (x2 * y3 + x3 * y2) % p;
+        const rt2_0 = (x4 * y4 + 3 * x5 * y5) % p;
+        const rt2_1 = (x4 * y5 + x5 * y4) % p;
 
-        // Cross terms: (Ai+Aj)*(Bi+Bj), operands folded mod p to stay < p
-        // before multiplying (sums of two canonical limbs are < 2p).
+        // Cross terms: (Ai+Aj)*(Bi+Bj), operands folded mod p before multiplying.
         const s12_0 = (x2 + x4) % p;
         const s12_1 = (x3 + x5) % p;
         const r12_0 = (y2 + y4) % p;
@@ -143,18 +141,6 @@ pub const Ext = extern struct {
         const w02_0 = s02_0 * r02_0 + 3 * s02_1 * r02_1;
         const w02_1 = s02_0 * r02_1 + s02_1 * r02_0;
 
-        // Each t{0,1,2} component is reduced mod p exactly once here and
-        // reused below — t0/t1/t2 are each consumed by two of the three
-        // Karatsuba combines plus (t1, t2) by the final D2/D0 assembly, so
-        // computing `% p` at each use site (as before) redundantly repeated
-        // the same reduction 2-3x per value.
-        const rt0_0 = t0_0 % p;
-        const rt0_1 = t0_1 % p;
-        const rt1_0 = t1_0 % p;
-        const rt1_1 = t1_1 % p;
-        const rt2_0 = t2_0 % p;
-        const rt2_1 = t2_1 % p;
-
         // t12 = w12 - t1 - t2 (offset by +4p so intermediate stays non-negative)
         const t12_0 = (w12_0 + 4 * p - rt1_0 - rt2_0) % p;
         const t12_1 = (w12_1 + 4 * p - rt1_1 - rt2_1) % p;
@@ -170,8 +156,8 @@ pub const Ext = extern struct {
         const nr2_0 = rt2_0 + 3 * rt2_1;
         const nr2_1 = rt2_0 + rt2_1;
 
-        const d0_0 = t0_0 + nr12_0;
-        const d0_1 = t0_1 + nr12_1;
+        const d0_0 = rt0_0 + nr12_0;
+        const d0_1 = rt0_1 + nr12_1;
         const d1_0 = t01_0 + nr2_0;
         const d1_1 = t01_1 + nr2_1;
         const d2_0 = t02_0 + rt1_0;
@@ -206,13 +192,13 @@ pub const Ext = extern struct {
         const x4 = @as(u64, self.B2.a0.value);
         const x5 = @as(u64, self.B2.a1.value);
 
-        // s0 = B0^2, s1 = B1^2, s2 = B2^2 (E2 squaring: (a0^2+3a1^2, 2a0a1))
-        const s0_0 = x0 * x0 + 3 * x1 * x1;
-        const s0_1 = 2 * x0 * x1;
-        const s1_0 = x2 * x2 + 3 * x3 * x3;
-        const s1_1 = 2 * x2 * x3;
-        const s2_0 = x4 * x4 + 3 * x5 * x5;
-        const s2_1 = 2 * x4 * x5;
+        // s0 = B0^2, s1 = B1^2, s2 = B2^2 — reduced immediately, reused below.
+        const rs0_0 = (x0 * x0 + 3 * x1 * x1) % p;
+        const rs0_1 = (2 * x0 * x1) % p;
+        const rs1_0 = (x2 * x2 + 3 * x3 * x3) % p;
+        const rs1_1 = (2 * x2 * x3) % p;
+        const rs2_0 = (x4 * x4 + 3 * x5 * x5) % p;
+        const rs2_1 = (2 * x4 * x5) % p;
 
         // c{01,12,02} = (Bi+Bj)^2, operands folded mod p before squaring.
         const a01_0 = (x0 + x2) % p;
@@ -230,15 +216,6 @@ pub const Ext = extern struct {
         const q02_0 = a02_0 * a02_0 + 3 * a02_1 * a02_1;
         const q02_1 = 2 * a02_0 * a02_1;
 
-        // Reduce s0/s1/s2 mod p once, reused across the three combines below.
-        const rs0_0 = s0_0 % p;
-        const rs0_1 = s0_1 % p;
-        const rs1_0 = s1_0 % p;
-        const rs1_1 = s1_1 % p;
-        const rs2_0 = s2_0 % p;
-        const rs2_1 = s2_1 % p;
-
-        // c{01,12,02} = q{01,12,02} - s_i - s_j (offset by +4p, as in mul())
         const c01_0 = (q01_0 + 4 * p - rs0_0 - rs1_0) % p;
         const c01_1 = (q01_1 + 4 * p - rs0_1 - rs1_1) % p;
         const c12_0 = (q12_0 + 4 * p - rs1_0 - rs2_0) % p;
@@ -252,8 +229,8 @@ pub const Ext = extern struct {
         const nrs2_0 = rs2_0 + 3 * rs2_1;
         const nrs2_1 = rs2_0 + rs2_1;
 
-        const d0_0 = s0_0 + nr12_0;
-        const d0_1 = s0_1 + nr12_1;
+        const d0_0 = rs0_0 + nr12_0;
+        const d0_1 = rs0_1 + nr12_1;
         const d1_0 = c01_0 + nrs2_0;
         const d1_1 = c01_1 + nrs2_1;
         const d2_0 = c02_0 + rs1_0;
@@ -290,34 +267,19 @@ pub const Ext = extern struct {
         const x4 = @as(u64, self.B2.a0.value);
         const x5 = @as(u64, self.B2.a1.value);
 
-        // Raw E2 products (< 4p^2), same shape as mul()'s t-terms.
-        const b0sq_0 = x0 * x0 + 3 * x1 * x1;
-        const b0sq_1 = 2 * x0 * x1;
-        const b1sq_0 = x2 * x2 + 3 * x3 * x3;
-        const b1sq_1 = 2 * x2 * x3;
-        const b2sq_0 = x4 * x4 + 3 * x5 * x5;
-        const b2sq_1 = 2 * x4 * x5;
-        const b1b2_0 = x2 * x4 + 3 * x3 * x5;
-        const b1b2_1 = x2 * x5 + x3 * x4;
-        const b0b1_0 = x0 * x2 + 3 * x1 * x3;
-        const b0b1_1 = x0 * x3 + x1 * x2;
-        const b0b2_0 = x0 * x4 + 3 * x1 * x5;
-        const b0b2_1 = x0 * x5 + x1 * x4;
-
-        // Reduce mod p once each (each of these is used exactly once below,
-        // so this is the minimum necessary — no redundant folds).
-        const r_b0sq_0 = b0sq_0 % p;
-        const r_b0sq_1 = b0sq_1 % p;
-        const r_b1sq_0 = b1sq_0 % p;
-        const r_b1sq_1 = b1sq_1 % p;
-        const r_b2sq_0 = b2sq_0 % p;
-        const r_b2sq_1 = b2sq_1 % p;
-        const r_b1b2_0 = b1b2_0 % p;
-        const r_b1b2_1 = b1b2_1 % p;
-        const r_b0b1_0 = b0b1_0 % p;
-        const r_b0b1_1 = b0b1_1 % p;
-        const r_b0b2_0 = b0b2_0 % p;
-        const r_b0b2_1 = b0b2_1 % p;
+        // E2 products reduced immediately — each used exactly once below.
+        const r_b0sq_0 = (x0 * x0 + 3 * x1 * x1) % p;
+        const r_b0sq_1 = (2 * x0 * x1) % p;
+        const r_b1sq_0 = (x2 * x2 + 3 * x3 * x3) % p;
+        const r_b1sq_1 = (2 * x2 * x3) % p;
+        const r_b2sq_0 = (x4 * x4 + 3 * x5 * x5) % p;
+        const r_b2sq_1 = (2 * x4 * x5) % p;
+        const r_b1b2_0 = (x2 * x4 + 3 * x3 * x5) % p;
+        const r_b1b2_1 = (x2 * x5 + x3 * x4) % p;
+        const r_b0b1_0 = (x0 * x2 + 3 * x1 * x3) % p;
+        const r_b0b1_1 = (x0 * x3 + x1 * x2) % p;
+        const r_b0b2_0 = (x0 * x4 + 3 * x1 * x5) % p;
+        const r_b0b2_1 = (x0 * x5 + x1 * x4) % p;
 
         // nr(x) = (x0 + 3*x1, x0 + x1) on canonical inputs above.
         const nr_b1b2_0 = r_b1b2_0 + 3 * r_b1b2_1;
@@ -347,23 +309,23 @@ pub const Ext = extern struct {
         const cc0 = @as(u64, cap_c.a0.value);
         const cc1 = @as(u64, cap_c.a1.value);
 
-        const b0ca_0 = x0 * ca0 + 3 * x1 * ca1;
-        const b0ca_1 = x0 * ca1 + x1 * ca0;
-        const b2cb_0 = x4 * cb0 + 3 * x5 * cb1;
-        const b2cb_1 = x4 * cb1 + x5 * cb0;
-        const b1cc_0 = x2 * cc0 + 3 * x3 * cc1;
-        const b1cc_1 = x2 * cc1 + x3 * cc0;
+        const rb0ca_0 = (x0 * ca0 + 3 * x1 * ca1) % p;
+        const rb0ca_1 = (x0 * ca1 + x1 * ca0) % p;
+        const rb2cb_0 = (x4 * cb0 + 3 * x5 * cb1) % p;
+        const rb2cb_1 = (x4 * cb1 + x5 * cb0) % p;
+        const rb1cc_0 = (x2 * cc0 + 3 * x3 * cc1) % p;
+        const rb1cc_1 = (x2 * cc1 + x3 * cc0) % p;
 
         // b2cb + b1cc, folded mod p before mulByNonResidue.
-        const sum_0 = (b2cb_0 % p + b1cc_0 % p) % p;
-        const sum_1 = (b2cb_1 % p + b1cc_1 % p) % p;
+        const sum_0 = (rb2cb_0 + rb1cc_0) % p;
+        const sum_1 = (rb2cb_1 + rb1cc_1) % p;
         const nr_sum_0 = sum_0 + 3 * sum_1;
         const nr_sum_1 = sum_0 + sum_1;
 
         // d, reduced once (needed twice below: once for the norm, once as
         // the a0/a1 operands of the final E2 inversion formula).
-        const d0 = base.Element.init(b0ca_0 + nr_sum_0).value;
-        const d1 = base.Element.init(b0ca_1 + nr_sum_1).value;
+        const d0 = (rb0ca_0 + nr_sum_0) % p;
+        const d1 = (rb0ca_1 + nr_sum_1) % p;
 
         // E2 inverse of d, flattened: norm = d0^2 - 3*d1^2 (mod p), then
         // Fermat-invert the norm (base.Element.inverse — a fixed-cost 48
@@ -376,18 +338,18 @@ pub const Ext = extern struct {
         const neg_d1 = (p - d1) % p;
         const di1 = (neg_d1 * @as(u64, norm_inv.value)) % p;
 
-        // Final scale: cap_{a,b,c} * d_inv, expanded the same way.
-        const out_a_0 = ca0 * di0 + 3 * ca1 * di1;
-        const out_a_1 = ca0 * di1 + ca1 * di0;
-        const out_b_0 = cb0 * di0 + 3 * cb1 * di1;
-        const out_b_1 = cb0 * di1 + cb1 * di0;
-        const out_c_0 = cc0 * di0 + 3 * cc1 * di1;
-        const out_c_1 = cc0 * di1 + cc1 * di0;
+        // Final scale: cap_{a,b,c} * d_inv, reduced immediately.
+        const out_a_0 = (ca0 * di0 + 3 * ca1 * di1) % p;
+        const out_a_1 = (ca0 * di1 + ca1 * di0) % p;
+        const out_b_0 = (cb0 * di0 + 3 * cb1 * di1) % p;
+        const out_b_1 = (cb0 * di1 + cb1 * di0) % p;
+        const out_c_0 = (cc0 * di0 + 3 * cc1 * di1) % p;
+        const out_c_1 = (cc0 * di1 + cc1 * di0) % p;
 
         return .{
-            .B0 = .{ .a0 = base.Element.init(out_a_0), .a1 = base.Element.init(out_a_1) },
-            .B1 = .{ .a0 = base.Element.init(out_b_0), .a1 = base.Element.init(out_b_1) },
-            .B2 = .{ .a0 = base.Element.init(out_c_0), .a1 = base.Element.init(out_c_1) },
+            .B0 = .{ .a0 = .{ .value = @intCast(out_a_0) }, .a1 = .{ .value = @intCast(out_a_1) } },
+            .B1 = .{ .a0 = .{ .value = @intCast(out_b_0) }, .a1 = .{ .value = @intCast(out_b_1) } },
+            .B2 = .{ .a0 = .{ .value = @intCast(out_c_0) }, .a1 = .{ .value = @intCast(out_c_1) } },
         };
     }
 
