@@ -159,6 +159,7 @@ internal class ForcedTransactionsAppImpl(
       stateManagerClient = stateManagerClient,
       accountProofClient = accountProofClient,
       ethApiLogsSearcher = l1EthLogsSearcher,
+      ftxDao = ftxDao,
       tracesClient = tracesClient,
       contractAddress = config.l1ContractAddress,
       l1EventSearchMaxBlockRange = config.l1EventSearchMaxBlockRange,

@@ -7,13 +7,16 @@ import linea.contract.events.L1RollingHashUpdatedEvent
 import linea.contract.events.MessageSentEvent
 import linea.contract.l2.L2MessageServiceSmartContractClient
 import linea.domain.BlockParameter
+import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.CommonDomainFunctions
+import linea.domain.EthLog
 import linea.timer.TimerSchedule
 import linea.timer.VertxPeriodicPollingService
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.Queue
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration
 
 class MessageAnchoringService(
@@ -80,27 +83,51 @@ class MessageAnchoringService(
       }
   }
 
+  // Message numbers to anchor increase monotonically (already-anchored ones are filtered out), so
+  // each RollingHashUpdated event is at a block >= the previous one. We remember the last found
+  // block and start the next search there, turning subsequent lookups into a small forward search
+  // instead of a full-chain binary search on every anchoring tick.
+  private val rollingHashSearchFromBlock = AtomicReference<BlockParameter>(BlockParameter.Tag.EARLIEST)
+
   private fun getRollingHash(messageNumber: ULong): SafeFuture<ByteArray> {
-    return l1EthLogsSearcher
-      .findLog(
-        fromBlock = BlockParameter.Tag.EARLIEST,
-        toBlock = BlockParameter.Tag.LATEST,
-        chunkSize = l1EventSearchMaxBlockRange.toInt(),
-        address = l1ContractAddress,
-        topics = listOf(L1RollingHashUpdatedEvent.topic),
-      ) { ethLog ->
-        val foundMessageNumber = L1RollingHashUpdatedEvent.fromEthLog(ethLog).event.messageNumber
-        when {
-          foundMessageNumber < messageNumber -> SearchDirection.FORWARD
-          foundMessageNumber > messageNumber -> SearchDirection.BACKWARD
-          else -> null
+    val fromBlock = rollingHashSearchFromBlock.get()
+    return findRollingHashUpdatedEvent(messageNumber, fromBlock)
+      .thenCompose { ethLog ->
+        if (ethLog != null || fromBlock == BlockParameter.Tag.EARLIEST) {
+          SafeFuture.completedFuture(ethLog)
+        } else {
+          // Cached window overshot (unexpected: message numbers to anchor increase monotonically).
+          // Fall back to a full-range search so an existing event is never missed.
+          findRollingHashUpdatedEvent(messageNumber, BlockParameter.Tag.EARLIEST)
         }
       }
       .thenApply { ethLog ->
         requireNotNull(ethLog) {
           "Expected exactly 1 event RollingHashUpdated(messageNumber=$messageNumber) but got none."
         }
-        L1RollingHashUpdatedEvent.fromEthLog(ethLog).event.rollingHash
+        val event = L1RollingHashUpdatedEvent.fromEthLog(ethLog)
+        rollingHashSearchFromBlock.set(event.log.blockNumber.toBlockParameter())
+        event.event.rollingHash
       }
+  }
+
+  private fun findRollingHashUpdatedEvent(
+    messageNumber: ULong,
+    fromBlock: BlockParameter,
+  ): SafeFuture<EthLog?> {
+    return l1EthLogsSearcher.findLog(
+      fromBlock = fromBlock,
+      toBlock = BlockParameter.Tag.LATEST,
+      chunkSize = l1EventSearchMaxBlockRange.toInt(),
+      address = l1ContractAddress,
+      topics = listOf(L1RollingHashUpdatedEvent.topic),
+    ) { ethLog ->
+      val foundMessageNumber = L1RollingHashUpdatedEvent.fromEthLog(ethLog).event.messageNumber
+      when {
+        foundMessageNumber < messageNumber -> SearchDirection.FORWARD
+        foundMessageNumber > messageNumber -> SearchDirection.BACKWARD
+        else -> null
+      }
+    }
   }
 }
