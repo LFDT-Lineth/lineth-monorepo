@@ -25,7 +25,6 @@ fn write_to_state<poseidon2_state>(address:u5, value:𝔽) -> () {
 
 fn read_from_state<poseidon2_state>(address:u5) -> (value:𝔽) {
     value = poseidon2_state[address]
-    return
 }
 
 // permutation applies the full Poseidon2 permutation to σ in place:
@@ -50,9 +49,7 @@ fn permutation<poseidon2_state>() {
 
 // sbox computes the 3rd power of its input
 fn sbox(x:𝔽) -> (res:𝔽) {
-    res = x * x
-    res = res * x
-    return
+    res = (x * x) * x
 }
 
 // full_round adds the round's key to every lane, applies the S-box to every
@@ -168,8 +165,7 @@ fn mat_mul_m4<poseidon2_state>() {
 //
 //     σ'[i] = (Σ_j σ[j]) + internal_diag[i] · σ[i]
 fn mat_mul_internal<poseidon2_state>() {
-    var sum:𝔽
-    sum = 0
+    var sum:𝔽 = 0
     for i:u5 = 0; i<STATE_WIDTH; i = i + 1 {
         sum = sum + poseidon2_state[i]
     }
