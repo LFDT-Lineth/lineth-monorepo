@@ -7,25 +7,27 @@ include "../utils/signed_sum.zkc"
 
 // Process a RISC-V I-type instruction and return the next program counter.
 //
-// I-type semantics are pre-decoded at ELF time into a semantic compute op,
-// a writeback kind, and operands (see decoded_itype in memory.zkc).
+// I-type semantics are pre-decoded at ELF time into a semantic compute op and
+// operands (see decoded_itype in memory.zkc).
 //
 // In the predecoding phase, the operands for I-type instructions come from a
 // common 25-bit encoding (opcode stripped) that is laid out as:
 //
 //   imm12 :: rs1 :: funct3 :: rd
 //
-// Runtime execution is a flat switch on compute_op (READ*, OP*, JALR, ECALL, …)
-// followed by a separate STORE_REG writeback step when applicable.
+// Each operation that may write rd has a pair of opcodes: BASE (compute only)
+// and BASE_WB (compute + registers[rd] = result). When rd is x0, the BASE
+// opcode is encoded at ELF time; otherwise BASE_WB is used.
+//
+// Runtime execution is a flat switch on compute_op.
 //
 fn process_I_type_instruction<ram, registers>(index:u64, pc:Address) -> (new_pc:Address) {
 
     var compute_op:ITypeComputeOp
-    var writeback:ITypeWriteback
     var imm12:Imm12
     var rs1:Register
     var rd:Register
-    compute_op, writeback, imm12, rs1, rd = decoded_itype[index]
+    compute_op, imm12, rs1, rd = decoded_itype[index]
 
     var signext_imm12_64:DoubleWord = sgn_extension_u12_u64(imm12)
     var rs1_plus_signext_imm12:u64 = signed_sum_of_double_word(registers[rs1], signext_imm12_64)
@@ -43,35 +45,70 @@ fn process_I_type_instruction<ram, registers>(index:u64, pc:Address) -> (new_pc:
             print_i_memory_operands(rd, rs1, signext_imm12_64)
             result = sgn_extension_u8_u64(read_8(rs1_plus_signext_imm12))
         }
+        case READ8_SGN_WB: {
+            printf "READ8_SGN "
+            print_i_memory_operands(rd, rs1, signext_imm12_64)
+            registers[rd] = sgn_extension_u8_u64(read_8(rs1_plus_signext_imm12))
+        }
         case READ16_SGN: {
             printf "READ16_SGN "
             print_i_memory_operands(rd, rs1, signext_imm12_64)
             result = sgn_extension_u16_u64(read_16(rs1_plus_signext_imm12))
+        }
+        case READ16_SGN_WB: {
+            printf "READ16_SGN "
+            print_i_memory_operands(rd, rs1, signext_imm12_64)
+            registers[rd] = sgn_extension_u16_u64(read_16(rs1_plus_signext_imm12))
         }
         case READ32_SGN: {
             printf "READ32_SGN "
             print_i_memory_operands(rd, rs1, signext_imm12_64)
             result = sgn_extension_u32_u64(read_32(rs1_plus_signext_imm12))
         }
+        case READ32_SGN_WB: {
+            printf "READ32_SGN "
+            print_i_memory_operands(rd, rs1, signext_imm12_64)
+            registers[rd] = sgn_extension_u32_u64(read_32(rs1_plus_signext_imm12))
+        }
         case READ64: {
             printf "READ64 "
             print_i_memory_operands(rd, rs1, signext_imm12_64)
             result = read_64(rs1_plus_signext_imm12) as DoubleWord
+        }
+        case READ64_WB: {
+            printf "READ64 "
+            print_i_memory_operands(rd, rs1, signext_imm12_64)
+            registers[rd] = read_64(rs1_plus_signext_imm12) as DoubleWord
         }
         case READ8_ZEXT: {
             printf "READ8_ZEXT "
             print_i_memory_operands(rd, rs1, signext_imm12_64)
             result = read_8(rs1_plus_signext_imm12) as DoubleWord
         }
+        case READ8_ZEXT_WB: {
+            printf "READ8_ZEXT "
+            print_i_memory_operands(rd, rs1, signext_imm12_64)
+            registers[rd] = read_8(rs1_plus_signext_imm12) as DoubleWord
+        }
         case READ16_ZEXT: {
             printf "READ16_ZEXT "
             print_i_memory_operands(rd, rs1, signext_imm12_64)
             result = read_16(rs1_plus_signext_imm12) as DoubleWord
         }
+        case READ16_ZEXT_WB: {
+            printf "READ16_ZEXT "
+            print_i_memory_operands(rd, rs1, signext_imm12_64)
+            registers[rd] = read_16(rs1_plus_signext_imm12) as DoubleWord
+        }
         case READ32_ZEXT: {
             printf "READ32_ZEXT "
             print_i_memory_operands(rd, rs1, signext_imm12_64)
             result = read_32(rs1_plus_signext_imm12) as DoubleWord
+        }
+        case READ32_ZEXT_WB: {
+            printf "READ32_ZEXT "
+            print_i_memory_operands(rd, rs1, signext_imm12_64)
+            registers[rd] = read_32(rs1_plus_signext_imm12) as DoubleWord
         }
 
         // ===================================
@@ -83,35 +120,54 @@ fn process_I_type_instruction<ram, registers>(index:u64, pc:Address) -> (new_pc:
             print_i_operands(rd, rs1, signext_imm12_64)
             result = rs1_plus_signext_imm12
         }
+        case OP_ADDI_WB: {
+            printf "OP_ADDI "
+            print_i_operands(rd, rs1, signext_imm12_64)
+            registers[rd] = rs1_plus_signext_imm12
+        }
         case OP_SLLI: {
             var uimm6:UImm6 = imm12 as UImm6
             printf "OP_SLLI "
             print_i_shift6_operands(rd, rs1, uimm6)
             result = registers[rs1] << uimm6
         }
+        case OP_SLLI_WB: {
+            var uimm6:UImm6 = imm12 as UImm6
+            printf "OP_SLLI "
+            print_i_shift6_operands(rd, rs1, uimm6)
+            registers[rd] = registers[rs1] << uimm6
+        }
         case OP_SLTI: {
             printf "OP_SLTI "
             print_i_operands(rd, rs1, signext_imm12_64)
-            var is_lt:Boolean = signed_LT(registers[rs1], signext_imm12_64)
-            if is_lt == 1 {
-                result = 1
-            } else {
-                result = 0
-            }
+            result = signed_LT(registers[rs1], signext_imm12_64) as DoubleWord
+        }
+        case OP_SLTI_WB: {
+            printf "OP_SLTI "
+            print_i_operands(rd, rs1, signext_imm12_64)
+            registers[rd] = signed_LT(registers[rs1], signext_imm12_64) as DoubleWord
         }
         case OP_SLTIU: {
             printf "OP_SLTIU "
             print_i_operands(rd, rs1, signext_imm12_64)
-            if registers[rs1]<signext_imm12_64 {
-                result = 1
-            } else {
-                result = 0
-            }
+            // Warn: this is an unsigned comparison (even if imm12 is SGN_EXT)
+            result = registers[rs1] < signext_imm12_64 ? 1 : 0
+        }
+        case OP_SLTIU_WB: {
+            printf "OP_SLTIU "
+            print_i_operands(rd, rs1, signext_imm12_64)
+            // Warn: this is an unsigned comparison (even if imm12 is SGN_EXT)
+            registers[rd] = registers[rs1] < signext_imm12_64 ? 1 : 0
         }
         case OP_XORI: {
             printf "OP_XORI "
             print_i_operands(rd, rs1, signext_imm12_64)
             result = registers[rs1] ^ signext_imm12_64
+        }
+        case OP_XORI_WB: {
+            printf "OP_XORI "
+            print_i_operands(rd, rs1, signext_imm12_64)
+            registers[rd] = registers[rs1] ^ signext_imm12_64
         }
         case OP_SRLI: {
             var uimm6:UImm6 = imm12 as UImm6
@@ -119,21 +175,43 @@ fn process_I_type_instruction<ram, registers>(index:u64, pc:Address) -> (new_pc:
             print_i_shift6_operands(rd, rs1, uimm6)
             result = registers[rs1] >> uimm6
         }
+        case OP_SRLI_WB: {
+            var uimm6:UImm6 = imm12 as UImm6
+            printf "OP_SRLI "
+            print_i_shift6_operands(rd, rs1, uimm6)
+            registers[rd] = registers[rs1] >> uimm6
+        }
         case OP_SRAI: {
             var uimm6:UImm6 = imm12 as UImm6
             printf "OP_SRAI "
             print_i_shift6_operands(rd, rs1, uimm6)
             result = _ashr_u64(registers[rs1], uimm6)
         }
+        case OP_SRAI_WB: {
+            var uimm6:UImm6 = imm12 as UImm6
+            printf "OP_SRAI "
+            print_i_shift6_operands(rd, rs1, uimm6)
+            registers[rd] = _ashr_u64(registers[rs1], uimm6)
+        }
         case OP_ORI: {
             printf "OP_ORI "
             print_i_operands(rd, rs1, signext_imm12_64)
             result = registers[rs1] | signext_imm12_64
         }
+        case OP_ORI_WB: {
+            printf "OP_ORI "
+            print_i_operands(rd, rs1, signext_imm12_64)
+            registers[rd] = registers[rs1] | signext_imm12_64
+        }
         case OP_ANDI: {
             printf "OP_ANDI "
             print_i_operands(rd, rs1, signext_imm12_64)
             result = registers[rs1] & signext_imm12_64
+        }
+        case OP_ANDI_WB: {
+            printf "OP_ANDI "
+            print_i_operands(rd, rs1, signext_imm12_64)
+            registers[rd] = registers[rs1] & signext_imm12_64
         }
 
         // ===================================
@@ -145,11 +223,22 @@ fn process_I_type_instruction<ram, registers>(index:u64, pc:Address) -> (new_pc:
             print_i_operands(rd, rs1, signext_imm12_64)
             result = sgn_extension_u32_u64((rs1_plus_signext_imm12 & MAX_UINT_32_AS_U64) as Word)
         }
+        case OP_ADDIW_WB: {
+            printf "OP_ADDIW "
+            print_i_operands(rd, rs1, signext_imm12_64)
+            registers[rd] = sgn_extension_u32_u64((rs1_plus_signext_imm12 & MAX_UINT_32_AS_U64) as Word)
+        }
         case OP_SLLIW: {
             var uimm5:UImm5 = imm12 as UImm5
             printf "OP_SLLIW "
             print_i_shift5_operands(rd, rs1, uimm5)
             result = sgn_extension_u32_u64(((registers[rs1] & MAX_UINT_32_AS_U64) as Word) << uimm5)
+        }
+        case OP_SLLIW_WB: {
+            var uimm5:UImm5 = imm12 as UImm5
+            printf "OP_SLLIW "
+            print_i_shift5_operands(rd, rs1, uimm5)
+            registers[rd] = sgn_extension_u32_u64(((registers[rs1] & MAX_UINT_32_AS_U64) as Word) << uimm5)
         }
         case OP_SRLIW: {
             var uimm5:UImm5 = imm12 as UImm5
@@ -157,11 +246,23 @@ fn process_I_type_instruction<ram, registers>(index:u64, pc:Address) -> (new_pc:
             print_i_shift5_operands(rd, rs1, uimm5)
             result = sgn_extension_u32_u64(((registers[rs1] & MAX_UINT_32_AS_U64) as Word) >> uimm5)
         }
+        case OP_SRLIW_WB: {
+            var uimm5:UImm5 = imm12 as UImm5
+            printf "OP_SRLIW "
+            print_i_shift5_operands(rd, rs1, uimm5)
+            registers[rd] = sgn_extension_u32_u64(((registers[rs1] & MAX_UINT_32_AS_U64) as Word) >> uimm5)
+        }
         case OP_SRAIW: {
             var uimm5:UImm5 = imm12 as UImm5
             printf "OP_SRAIW "
             print_i_shift5_operands(rd, rs1, uimm5)
             result = sgn_extension_u32_u64(_ashr_u32(registers[rs1], uimm5))
+        }
+        case OP_SRAIW_WB: {
+            var uimm5:UImm5 = imm12 as UImm5
+            printf "OP_SRAIW "
+            print_i_shift5_operands(rd, rs1, uimm5)
+            registers[rd] = sgn_extension_u32_u64(_ashr_u32(registers[rs1], uimm5))
         }
 
         // =================
@@ -173,6 +274,12 @@ fn process_I_type_instruction<ram, registers>(index:u64, pc:Address) -> (new_pc:
             print_i_memory_operands(rd, rs1, signext_imm12_64)
             result = (pc + 4) as DoubleWord
             new_pc = rs1_plus_signext_imm12 & MASK_64_ERASE_LAST_BIT
+        }
+        case ITYPE_JALR_WB: {
+            printf "ITYPE_JALR "
+            print_i_memory_operands(rd, rs1, signext_imm12_64)
+            new_pc = rs1_plus_signext_imm12 & MASK_64_ERASE_LAST_BIT
+            registers[rd] = (pc + 4) as DoubleWord
         }
 
         // ===================
@@ -195,19 +302,6 @@ fn process_I_type_instruction<ram, registers>(index:u64, pc:Address) -> (new_pc:
         default: {
             printf "[ERROR] Unsupported I-Type instruction with\n"
             printf "\tcompute_op ≡ %x\n", compute_op
-            fail
-        }
-    }
-
-    switch writeback {
-        case WB_STORE_REG: {
-            registers[rd] = result
-        }
-        case WB_NONE: {
-            // no register writeback
-        }
-        default: {
-            printf "[ERROR] Unsupported I-Type writeback %d\n", writeback
             fail
         }
     }

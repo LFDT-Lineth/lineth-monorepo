@@ -5,19 +5,18 @@ include "../utils/signed_sum.zkc"
 
 // Process a RISC-V U-type instruction, writing an upper-immediate value to a register.
 //
-// U-type semantics are pre-decoded at ELF time into a semantic compute op,
-// a writeback kind, and operands (see decoded_utype in memory.zkc).
+// U-type semantics are pre-decoded at ELF time into a semantic compute op and
+// operands (see decoded_utype in memory.zkc).
 //
 // In the predecoding phase, the operands for U-type instructions come from the 25-bit
 // encoding (opcode stripped) is simply:
 //
 //   imm20 :: rd
 //
-// Runtime execution is a flat switch on compute_op (UTYPE_LUI, UTYPE_AUIPC) followed by
-// a separate writeback step when applicable.
-// The immediate imm20 from the pre-decoding phase is placed into bits [31:12] of a 32-bit 
-// word (lower 12 bits zeroed)// and then sign-extended to 64 bits.
-// The compute_op selects one of two variants:
+// Runtime execution is a flat switch on compute_op (UTYPE_LUI, UTYPE_AUIPC, and
+// their *_WB variants). The immediate imm20 from the pre-decoding phase is placed
+// into bits [31:12] of a 32-bit word (lower 12 bits zeroed) and then sign-extended
+// to 64 bits. The compute_op selects one of two variants:
 //
 //   LUI   — load upper immediate:
 //             rd = sign_extend_32_to_64(imm20 << 12)
@@ -31,23 +30,26 @@ include "../utils/signed_sum.zkc"
 fn process_U_type_instruction<registers>(index:u64, pc:Address) -> () {
 
     var compute_op:UTypeComputeOp
-    var writeback:ITypeWriteback
     var imm20:Imm20
     var rd:Register
-    compute_op, writeback, imm20, rd = decoded_utype[index]
+    compute_op, imm20, rd = decoded_utype[index]
 
     var result:DoubleWord
     result = sgn_extension_u32_u64(((imm20 as u32) << 12) as u32)
 
     switch compute_op {
-        case UTYPE_AUIPC: {
+        case UTYPE_LUI, UTYPE_LUI_WB: {
+            printf "UTYPE_LUI "
+            print_u_operands(rd, imm20)
+        }
+        case UTYPE_AUIPC, UTYPE_AUIPC_WB: {
             printf "UTYPE_AUIPC "
             print_u_operands(rd, imm20)
             result = signed_sum_of_double_word(result, pc) as DoubleWord
         }
-        case UTYPE_LUI: {
-            printf "UTYPE_LUI "
-            print_u_operands(rd, imm20)
+        case UTYPE_INVALID: {
+            printf "[ERROR] Unsupported U-type instruction (invalid semantic op)\n"
+            fail
         }
         default: {
             printf "[ERROR] Unsupported U-type instruction with\n"
@@ -56,16 +58,7 @@ fn process_U_type_instruction<registers>(index:u64, pc:Address) -> () {
         }
     }
 
-    switch writeback {
-        case WB_STORE_REG: {
-            registers[rd] = result
-        }
-        case WB_NONE: {
-            // no register writeback
-        }
-        default: {
-            printf "[ERROR] Unsupported U-type writeback %d\n", writeback
-            fail
-        }
+    if (compute_op & 1) != 0 {
+        registers[rd] = result
     }
 }
