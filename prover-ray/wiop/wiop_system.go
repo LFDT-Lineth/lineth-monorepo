@@ -3,10 +3,8 @@ package wiop
 import (
 	"fmt"
 
-	(
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/arena"
-)
 )
 
 // System is the top-level container for an abstract cryptographic protocol.
