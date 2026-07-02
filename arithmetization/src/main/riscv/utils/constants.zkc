@@ -290,37 +290,62 @@ const WRITE_SYSCALL:DoubleWord = 64
 // ======================
 // I-type semantic micro-ops (pre-decoded)
 // ======================
+//
+// Each operation that may write rd has a pair: BASE (compute only) and BASE_WB
+// (compute + registers[rd] = result). At ELF time, rd = x0 selects the BASE
+// opcode; rd != x0 selects BASE_WB. Control/system ops have no _WB variant.
 
 // READ — load from memory at (rs1 + sign_extend(imm12))
 const READ8_SGN:ITypeComputeOp = 0
-const READ16_SGN:ITypeComputeOp = 1
-const READ32_SGN:ITypeComputeOp = 2
-const READ64:ITypeComputeOp = 3
-const READ8_ZEXT:ITypeComputeOp = 4
-const READ16_ZEXT:ITypeComputeOp = 5
-const READ32_ZEXT:ITypeComputeOp = 6
+const READ8_SGN_WB:ITypeComputeOp = 1
+const READ16_SGN:ITypeComputeOp = 2
+const READ16_SGN_WB:ITypeComputeOp = 3
+const READ32_SGN:ITypeComputeOp = 4
+const READ32_SGN_WB:ITypeComputeOp = 5
+const READ64:ITypeComputeOp = 6
+const READ64_WB:ITypeComputeOp = 7
+const READ8_ZEXT:ITypeComputeOp = 8
+const READ8_ZEXT_WB:ITypeComputeOp = 9
+const READ16_ZEXT:ITypeComputeOp = 10
+const READ16_ZEXT_WB:ITypeComputeOp = 11
+const READ32_ZEXT:ITypeComputeOp = 12
+const READ32_ZEXT_WB:ITypeComputeOp = 13
 
 // OP-IMM — immediate arithmetic/logic on rs1
-const OP_ADDI:ITypeComputeOp = 7
-const OP_SLTI:ITypeComputeOp = 8
-const OP_SLTIU:ITypeComputeOp = 9
-const OP_XORI:ITypeComputeOp = 10
-const OP_ORI:ITypeComputeOp = 11
-const OP_ANDI:ITypeComputeOp = 12
-const OP_SLLI:ITypeComputeOp = 13
-const OP_SRLI:ITypeComputeOp = 14
-const OP_SRAI:ITypeComputeOp = 15
+const OP_ADDI:ITypeComputeOp = 14
+const OP_ADDI_WB:ITypeComputeOp = 15
+const OP_SLTI:ITypeComputeOp = 16
+const OP_SLTI_WB:ITypeComputeOp = 17
+const OP_SLTIU:ITypeComputeOp = 18
+const OP_SLTIU_WB:ITypeComputeOp = 19
+const OP_XORI:ITypeComputeOp = 20
+const OP_XORI_WB:ITypeComputeOp = 21
+const OP_ORI:ITypeComputeOp = 22
+const OP_ORI_WB:ITypeComputeOp = 23
+const OP_ANDI:ITypeComputeOp = 24
+const OP_ANDI_WB:ITypeComputeOp = 25
+const OP_SLLI:ITypeComputeOp = 26
+const OP_SLLI_WB:ITypeComputeOp = 27
+const OP_SRLI:ITypeComputeOp = 28
+const OP_SRLI_WB:ITypeComputeOp = 29
+const OP_SRAI:ITypeComputeOp = 30
+const OP_SRAI_WB:ITypeComputeOp = 31
 
 // OP-IMM-32 — RV64 word-width (*W) variants
-const OP_ADDIW:ITypeComputeOp = 16
-const OP_SLLIW:ITypeComputeOp = 17
-const OP_SRLIW:ITypeComputeOp = 18
-const OP_SRAIW:ITypeComputeOp = 19
+const OP_ADDIW:ITypeComputeOp = 32
+const OP_ADDIW_WB:ITypeComputeOp = 33
+const OP_SLLIW:ITypeComputeOp = 34
+const OP_SLLIW_WB:ITypeComputeOp = 35
+const OP_SRLIW:ITypeComputeOp = 36
+const OP_SRLIW_WB:ITypeComputeOp = 37
+const OP_SRAIW:ITypeComputeOp = 38
+const OP_SRAIW_WB:ITypeComputeOp = 39
 
 // Control / system
-const ITYPE_JALR:ITypeComputeOp = 20
-const ITYPE_ECALL:ITypeComputeOp = 21
-const ITYPE_EBREAK:ITypeComputeOp = 22
+const ITYPE_JALR:ITypeComputeOp = 40
+const ITYPE_JALR_WB:ITypeComputeOp = 41
+const ITYPE_ECALL:ITypeComputeOp = 42
+const ITYPE_EBREAK:ITypeComputeOp = 43
 const ITYPE_INVALID:ITypeComputeOp = 63
 
 // Writeback kinds (second micro-step after compute)
@@ -332,43 +357,75 @@ const WB_MEM_32:ITypeWriteback = 4
 const WB_MEM_64:ITypeWriteback = 5
 
 // R-type semantic compute ops (pre-decoded at ELF time).
+// Each register-writing op has a BASE (even) and BASE_WB (odd) pair.
 const RTYPE_ADD:RTypeComputeOp = 0
-const RTYPE_SUB:RTypeComputeOp = 1
-const RTYPE_SLL:RTypeComputeOp = 2
-const RTYPE_SLT:RTypeComputeOp = 3
-const RTYPE_SLTU:RTypeComputeOp = 4
-const RTYPE_XOR:RTypeComputeOp = 5
-const RTYPE_SRL:RTypeComputeOp = 6
-const RTYPE_SRA:RTypeComputeOp = 7
-const RTYPE_OR:RTypeComputeOp = 8
-const RTYPE_AND:RTypeComputeOp = 9
+const RTYPE_ADD_WB:RTypeComputeOp = 1
+const RTYPE_SUB:RTypeComputeOp = 2
+const RTYPE_SUB_WB:RTypeComputeOp = 3
+const RTYPE_SLL:RTypeComputeOp = 4
+const RTYPE_SLL_WB:RTypeComputeOp = 5
+const RTYPE_SLT:RTypeComputeOp = 6
+const RTYPE_SLT_WB:RTypeComputeOp = 7
+const RTYPE_SLTU:RTypeComputeOp = 8
+const RTYPE_SLTU_WB:RTypeComputeOp = 9
+const RTYPE_XOR:RTypeComputeOp = 10
+const RTYPE_XOR_WB:RTypeComputeOp = 11
+const RTYPE_SRL:RTypeComputeOp = 12
+const RTYPE_SRL_WB:RTypeComputeOp = 13
+const RTYPE_SRA:RTypeComputeOp = 14
+const RTYPE_SRA_WB:RTypeComputeOp = 15
+const RTYPE_OR:RTypeComputeOp = 16
+const RTYPE_OR_WB:RTypeComputeOp = 17
+const RTYPE_AND:RTypeComputeOp = 18
+const RTYPE_AND_WB:RTypeComputeOp = 19
 
-const RTYPE_MUL:RTypeComputeOp = 10
-const RTYPE_MULH:RTypeComputeOp = 11
-const RTYPE_MULHSU:RTypeComputeOp = 12
-const RTYPE_MULHU:RTypeComputeOp = 13
-const RTYPE_DIV:RTypeComputeOp = 14
-const RTYPE_DIVU:RTypeComputeOp = 15
-const RTYPE_REM:RTypeComputeOp = 16
-const RTYPE_REMU:RTypeComputeOp = 17
+const RTYPE_MUL:RTypeComputeOp = 20
+const RTYPE_MUL_WB:RTypeComputeOp = 21
+const RTYPE_MULH:RTypeComputeOp = 22
+const RTYPE_MULH_WB:RTypeComputeOp = 23
+const RTYPE_MULHSU:RTypeComputeOp = 24
+const RTYPE_MULHSU_WB:RTypeComputeOp = 25
+const RTYPE_MULHU:RTypeComputeOp = 26
+const RTYPE_MULHU_WB:RTypeComputeOp = 27
+const RTYPE_DIV:RTypeComputeOp = 28
+const RTYPE_DIV_WB:RTypeComputeOp = 29
+const RTYPE_DIVU:RTypeComputeOp = 30
+const RTYPE_DIVU_WB:RTypeComputeOp = 31
+const RTYPE_REM:RTypeComputeOp = 32
+const RTYPE_REM_WB:RTypeComputeOp = 33
+const RTYPE_REMU:RTypeComputeOp = 34
+const RTYPE_REMU_WB:RTypeComputeOp = 35
 
-const RTYPE_ADDW:RTypeComputeOp = 18
-const RTYPE_SUBW:RTypeComputeOp = 19
-const RTYPE_SLLW:RTypeComputeOp = 20
-const RTYPE_SRLW:RTypeComputeOp = 21
-const RTYPE_SRAW:RTypeComputeOp = 22
+const RTYPE_ADDW:RTypeComputeOp = 36
+const RTYPE_ADDW_WB:RTypeComputeOp = 37
+const RTYPE_SUBW:RTypeComputeOp = 38
+const RTYPE_SUBW_WB:RTypeComputeOp = 39
+const RTYPE_SLLW:RTypeComputeOp = 40
+const RTYPE_SLLW_WB:RTypeComputeOp = 41
+const RTYPE_SRLW:RTypeComputeOp = 42
+const RTYPE_SRLW_WB:RTypeComputeOp = 43
+const RTYPE_SRAW:RTypeComputeOp = 44
+const RTYPE_SRAW_WB:RTypeComputeOp = 45
 
-const RTYPE_MULW:RTypeComputeOp = 23
-const RTYPE_DIVW:RTypeComputeOp = 24
-const RTYPE_DIVUW:RTypeComputeOp = 25
-const RTYPE_REMW:RTypeComputeOp = 26
-const RTYPE_REMUW:RTypeComputeOp = 27
+const RTYPE_MULW:RTypeComputeOp = 46
+const RTYPE_MULW_WB:RTypeComputeOp = 47
+const RTYPE_DIVW:RTypeComputeOp = 48
+const RTYPE_DIVW_WB:RTypeComputeOp = 49
+const RTYPE_DIVUW:RTypeComputeOp = 50
+const RTYPE_DIVUW_WB:RTypeComputeOp = 51
+const RTYPE_REMW:RTypeComputeOp = 52
+const RTYPE_REMW_WB:RTypeComputeOp = 53
+const RTYPE_REMUW:RTypeComputeOp = 54
+const RTYPE_REMUW_WB:RTypeComputeOp = 55
 
-const RTYPE_KECCAK:RTypeComputeOp = 28
+const RTYPE_KECCAK:RTypeComputeOp = 56
 const RTYPE_INVALID:RTypeComputeOp = 63
 
 // S-type semantic compute ops (pre-decoded at ELF time).
-const STYPE_STORE:STypeComputeOp = 0
+const STYPE_STORE8:STypeComputeOp = 0
+const STYPE_STORE16:STypeComputeOp = 1
+const STYPE_STORE32:STypeComputeOp = 2
+const STYPE_STORE64:STypeComputeOp = 3
 const STYPE_INVALID:STypeComputeOp = 63
 
 // B-type semantic compute ops (pre-decoded at ELF time; values are raw funct3).
@@ -382,9 +439,12 @@ const BTYPE_INVALID:BTypeComputeOp = 0b111111
 
 // J-type semantic compute ops (pre-decoded at ELF time).
 const JTYPE_JAL:JTypeComputeOp = 0
+const JTYPE_JAL_WB:JTypeComputeOp = 1
 const JTYPE_INVALID:JTypeComputeOp = 63
 
 // U-type semantic compute ops (pre-decoded at ELF time).
 const UTYPE_LUI:UTypeComputeOp = 0
-const UTYPE_AUIPC:UTypeComputeOp = 1
+const UTYPE_LUI_WB:UTypeComputeOp = 1
+const UTYPE_AUIPC:UTypeComputeOp = 2
+const UTYPE_AUIPC_WB:UTypeComputeOp = 3
 const UTYPE_INVALID:UTypeComputeOp = 63

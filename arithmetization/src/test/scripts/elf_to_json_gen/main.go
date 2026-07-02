@@ -155,33 +155,55 @@ func opImm32EncodingSupported(funct3, imm12 uint32) bool {
 }
 
 // I-type semantic micro-op constants. These MUST match constants.zkc.
+// Each writeback-capable op has a pair: BASE (even) and BASE_WB (odd).
 const (
 	itypeRead8Sgn   = 0
-	itypeRead16Sgn  = 1
-	itypeRead32Sgn  = 2
-	itypeRead64     = 3
-	itypeRead8Zext  = 4
-	itypeRead16Zext = 5
-	itypeRead32Zext = 6
+	itypeRead8SgnWB = 1
+	itypeRead16Sgn  = 2
+	itypeRead16SgnWB = 3
+	itypeRead32Sgn  = 4
+	itypeRead32SgnWB = 5
+	itypeRead64     = 6
+	itypeRead64WB   = 7
+	itypeRead8Zext  = 8
+	itypeRead8ZextWB = 9
+	itypeRead16Zext = 10
+	itypeRead16ZextWB = 11
+	itypeRead32Zext = 12
+	itypeRead32ZextWB = 13
 
-	itypeOpAddi  = 7
-	itypeOpSlti  = 8
-	itypeOpSltiu = 9
-	itypeOpXori  = 10
-	itypeOpOri   = 11
-	itypeOpAndi  = 12
-	itypeOpSlli  = 13
-	itypeOpSrli  = 14
-	itypeOpSrai  = 15
+	itypeOpAddi  = 14
+	itypeOpAddiWB = 15
+	itypeOpSlti  = 16
+	itypeOpSltiWB = 17
+	itypeOpSltiu = 18
+	itypeOpSltiuWB = 19
+	itypeOpXori  = 20
+	itypeOpXoriWB = 21
+	itypeOpOri   = 22
+	itypeOpOriWB = 23
+	itypeOpAndi  = 24
+	itypeOpAndiWB = 25
+	itypeOpSlli  = 26
+	itypeOpSlliWB = 27
+	itypeOpSrli  = 28
+	itypeOpSrliWB = 29
+	itypeOpSrai  = 30
+	itypeOpSraiWB = 31
 
-	itypeOpAddiw = 16
-	itypeOpSlliw = 17
-	itypeOpSrliw = 18
-	itypeOpSraiw = 19
+	itypeOpAddiw = 32
+	itypeOpAddiwWB = 33
+	itypeOpSlliw = 34
+	itypeOpSlliwWB = 35
+	itypeOpSrliw = 36
+	itypeOpSrliwWB = 37
+	itypeOpSraiw = 38
+	itypeOpSraiwWB = 39
 
-	itypeJalr    = 20
-	itypeEcall   = 21
-	itypeEbreak  = 22
+	itypeJalr    = 40
+	itypeJalrWB  = 41
+	itypeEcall   = 42
+	itypeEbreak  = 43
 	itypeInvalid = 63
 
 	wbNone      = 0
@@ -192,55 +214,100 @@ const (
 	wbMem64     = 5
 )
 
-// writebackForRd returns WB_NONE when the destination is x0, otherwise writeback unchanged.
-func writebackForRd(rd, writeback uint32) uint32 {
-	if writeback == wbStoreReg && rd == 0 {
-		return wbNone
+// itypeOpForRd selects the *_WB variant when rd != x0 and the base op supports
+// register writeback. Base ops are always even; *_WB variants are odd.
+func itypeOpForRd(baseOp, rd uint32) uint32 {
+	if rd == 0 || baseOp == itypeEcall || baseOp == itypeEbreak || baseOp == itypeInvalid {
+		return baseOp
 	}
-	return writeback
+	if baseOp&1 == 0 && baseOp < itypeEcall {
+		return baseOp + 1
+	}
+	return baseOp
 }
 
 // R-type semantic micro-op constants. These MUST match constants.zkc.
 const (
 	rtypeOpAdd    = 0
-	rtypeOpSub    = 1
-	rtypeOpSll    = 2
-	rtypeOpSlt    = 3
-	rtypeOpSltu   = 4
-	rtypeOpXor    = 5
-	rtypeOpSrl    = 6
-	rtypeOpSra    = 7
-	rtypeOpOr     = 8
-	rtypeOpAnd    = 9
+	rtypeOpAddWB  = 1
+	rtypeOpSub    = 2
+	rtypeOpSubWB  = 3
+	rtypeOpSll    = 4
+	rtypeOpSllWB  = 5
+	rtypeOpSlt    = 6
+	rtypeOpSltWB  = 7
+	rtypeOpSltu   = 8
+	rtypeOpSltuWB = 9
+	rtypeOpXor    = 10
+	rtypeOpXorWB  = 11
+	rtypeOpSrl    = 12
+	rtypeOpSrlWB  = 13
+	rtypeOpSra    = 14
+	rtypeOpSraWB  = 15
+	rtypeOpOr     = 16
+	rtypeOpOrWB   = 17
+	rtypeOpAnd    = 18
+	rtypeOpAndWB  = 19
 
-	rtypeOpMul    = 10
-	rtypeOpMulh   = 11
-	rtypeOpMulhsu = 12
-	rtypeOpMulhu  = 13
-	rtypeOpDiv    = 14
-	rtypeOpDivu   = 15
-	rtypeOpRem    = 16
-	rtypeOpRemu   = 17
+	rtypeOpMul    = 20
+	rtypeOpMulWB  = 21
+	rtypeOpMulh   = 22
+	rtypeOpMulhWB = 23
+	rtypeOpMulhsu = 24
+	rtypeOpMulhsuWB = 25
+	rtypeOpMulhu  = 26
+	rtypeOpMulhuWB = 27
+	rtypeOpDiv    = 28
+	rtypeOpDivWB  = 29
+	rtypeOpDivu   = 30
+	rtypeOpDivuWB = 31
+	rtypeOpRem    = 32
+	rtypeOpRemWB  = 33
+	rtypeOpRemu   = 34
+	rtypeOpRemuWB = 35
 
-	rtypeOpAddw  = 18
-	rtypeOpSubw  = 19
-	rtypeOpSllw  = 20
-	rtypeOpSrlw  = 21
-	rtypeOpSraw  = 22
+	rtypeOpAddw  = 36
+	rtypeOpAddwWB = 37
+	rtypeOpSubw  = 38
+	rtypeOpSubwWB = 39
+	rtypeOpSllw  = 40
+	rtypeOpSllwWB = 41
+	rtypeOpSrlw  = 42
+	rtypeOpSrlwWB = 43
+	rtypeOpSraw  = 44
+	rtypeOpSrawWB = 45
 
-	rtypeOpMulw  = 23
-	rtypeOpDivw  = 24
-	rtypeOpDivuw = 25
-	rtypeOpRemw  = 26
-	rtypeOpRemuw = 27
+	rtypeOpMulw  = 46
+	rtypeOpMulwWB = 47
+	rtypeOpDivw  = 48
+	rtypeOpDivwWB = 49
+	rtypeOpDivuw = 50
+	rtypeOpDivuwWB = 51
+	rtypeOpRemw  = 52
+	rtypeOpRemwWB = 53
+	rtypeOpRemuw = 54
+	rtypeOpRemuwWB = 55
 
-	rtypeOpKeccak  = 28
+	rtypeOpKeccak  = 56
 	rtypeInvalid   = 63
 )
 
+func rtypeOpForRd(baseOp, rd uint32) uint32 {
+	if rd == 0 || baseOp == rtypeOpKeccak || baseOp == rtypeInvalid {
+		return baseOp
+	}
+	if baseOp&1 == 0 && baseOp < rtypeOpKeccak {
+		return baseOp + 1
+	}
+	return baseOp
+}
+
 // S-type semantic micro-op constants. These MUST match constants.zkc.
 const (
-	stypeStore   = 0
+	stypeStore8   = 0
+	stypeStore16  = 1
+	stypeStore32  = 2
+	stypeStore64  = 3
 	stypeInvalid = 63
 )
 
@@ -253,25 +320,49 @@ const (
 // J-type semantic micro-op constants. These MUST match constants.zkc.
 const (
 	jtypeJal     = 0
+	jtypeJalWB   = 1
 	jtypeInvalid = 63
 )
+
+func jtypeOpForRd(baseOp, rd uint32) uint32 {
+	if rd == 0 || baseOp == jtypeInvalid {
+		return baseOp
+	}
+	if baseOp == jtypeJal {
+		return jtypeJalWB
+	}
+	return baseOp
+}
 
 // U-type semantic micro-op constants. These MUST match constants.zkc.
 const (
 	utypeLui     = 0
-	utypeAuipc   = 1
+	utypeLuiWB   = 1
+	utypeAuipc   = 2
+	utypeAuipcWB = 3
 	utypeInvalid = 63
 )
+
+func utypeOpForRd(baseOp, rd uint32) uint32 {
+	if rd == 0 || baseOp == utypeInvalid {
+		return baseOp
+	}
+	if baseOp&1 == 0 && baseOp < utypeInvalid {
+		return baseOp + 1
+	}
+	return baseOp
+}
 
 const (
 	funct12Ecall  = 0b000000000000
 	funct12Ebreak = 0b000000000001
 )
 
-// decodeITypeSemantic maps a raw I-type encoding to a semantic compute op,
-// writeback kind, and normalized immediate. Shift amounts are stripped to
-// their low uimm6/uimm5 bits; funct6/funct7 validation happens here.
-func decodeITypeSemantic(opcode, funct3, imm12 uint32) (computeOp, writeback, normalizedImm12 uint32) {
+// decodeITypeSemantic maps a raw I-type encoding to a semantic base compute op
+// (even; *_WB is selected later by itypeOpForRd) and normalized immediate.
+// Shift amounts are stripped to their low uimm6/uimm5 bits; funct6/funct7
+// validation happens here.
+func decodeITypeSemantic(opcode, funct3, imm12 uint32) (computeOp, normalizedImm12 uint32) {
 	funct6 := (imm12 >> 6) & 0x3f
 	funct7FromImm := (imm12 >> 5) & 0x7f
 	uimm6 := imm12 & 0x3f
@@ -279,213 +370,204 @@ func decodeITypeSemantic(opcode, funct3, imm12 uint32) (computeOp, writeback, no
 
 	switch opcode {
 	case opcodeLOAD:
-		writeback = wbStoreReg
 		switch funct3 {
 		case 0b000:
-			return itypeRead8Sgn, writeback, imm12
+			return itypeRead8Sgn, imm12
 		case 0b001:
-			return itypeRead16Sgn, writeback, imm12
+			return itypeRead16Sgn, imm12
 		case 0b010:
-			return itypeRead32Sgn, writeback, imm12
+			return itypeRead32Sgn, imm12
 		case 0b011:
-			return itypeRead64, writeback, imm12
+			return itypeRead64, imm12
 		case 0b100:
-			return itypeRead8Zext, writeback, imm12
+			return itypeRead8Zext, imm12
 		case 0b101:
-			return itypeRead16Zext, writeback, imm12
+			return itypeRead16Zext, imm12
 		case 0b110:
-			return itypeRead32Zext, writeback, imm12
+			return itypeRead32Zext, imm12
 		default:
-			return itypeInvalid, wbNone, imm12
+			return itypeInvalid, imm12
 		}
 	case opcodeOPIMM:
-		writeback = wbStoreReg
 		switch funct3 {
 		case 0b000:
-			return itypeOpAddi, writeback, imm12
+			return itypeOpAddi, imm12
 		case 0b010:
-			return itypeOpSlti, writeback, imm12
+			return itypeOpSlti, imm12
 		case 0b011:
-			return itypeOpSltiu, writeback, imm12
+			return itypeOpSltiu, imm12
 		case 0b100:
-			return itypeOpXori, writeback, imm12
+			return itypeOpXori, imm12
 		case 0b110:
-			return itypeOpOri, writeback, imm12
+			return itypeOpOri, imm12
 		case 0b111:
-			return itypeOpAndi, writeback, imm12
+			return itypeOpAndi, imm12
 		case 0b001:
 			if funct6 != 0b000000 {
-				return itypeInvalid, wbNone, imm12
+				return itypeInvalid, imm12
 			}
-			return itypeOpSlli, writeback, uimm6
+			return itypeOpSlli, uimm6
 		case 0b101:
 			switch funct6 {
 			case 0b000000:
-				return itypeOpSrli, writeback, uimm6
+				return itypeOpSrli, uimm6
 			case 0b010000:
-				return itypeOpSrai, writeback, uimm6
+				return itypeOpSrai, uimm6
 			default:
-				return itypeInvalid, wbNone, imm12
+				return itypeInvalid, imm12
 			}
 		default:
-			return itypeInvalid, wbNone, imm12
+			return itypeInvalid, imm12
 		}
 	case opcodeOPIMM32:
-		writeback = wbStoreReg
 		switch funct3 {
 		case 0b000:
-			return itypeOpAddiw, writeback, imm12
+			return itypeOpAddiw, imm12
 		case 0b001:
 			if funct7FromImm != 0b0000000 {
-				return itypeInvalid, wbNone, imm12
+				return itypeInvalid, imm12
 			}
-			return itypeOpSlliw, writeback, uimm5
+			return itypeOpSlliw, uimm5
 		case 0b101:
 			switch funct7FromImm {
 			case 0b0000000:
-				return itypeOpSrliw, writeback, uimm5
+				return itypeOpSrliw, uimm5
 			case 0b0100000:
-				return itypeOpSraiw, writeback, uimm5
+				return itypeOpSraiw, uimm5
 			default:
-				return itypeInvalid, wbNone, imm12
+				return itypeInvalid, imm12
 			}
 		default:
-			return itypeInvalid, wbNone, imm12
+			return itypeInvalid, imm12
 		}
 	case opcodeJALR:
-		return itypeJalr, wbStoreReg, imm12
+		return itypeJalr, imm12
 	case opcodeSYSTEM:
 		switch funct3 {
 		case 0b000:
 			switch imm12 {
 			case funct12Ecall:
-				return itypeEcall, wbNone, imm12
+				return itypeEcall, imm12
 			case funct12Ebreak:
-				return itypeEbreak, wbNone, imm12
+				return itypeEbreak, imm12
 			default:
-				return itypeInvalid, wbNone, imm12
+				return itypeInvalid, imm12
 			}
 		default:
-			return itypeInvalid, wbNone, imm12
+			return itypeInvalid, imm12
 		}
 	default:
-		return itypeInvalid, wbNone, imm12
+		return itypeInvalid, imm12
 	}
 }
 
-// decodeRTypeSemantic maps a raw R-type encoding to a semantic compute op and
-// writeback kind. funct3/funct7 validation happens here.
-func decodeRTypeSemantic(opcode, funct3, funct7 uint32) (computeOp, writeback uint32) {
+// decodeRTypeSemantic maps a raw R-type encoding to a semantic base compute op
+// (even; *_WB is selected later by rtypeOpForRd). funct3/funct7 validation happens here.
+func decodeRTypeSemantic(opcode, funct3, funct7 uint32) (computeOp uint32) {
 	switch opcode {
 	case opcodeOP:
 		if funct7 == 0b0000001 {
-			writeback = wbStoreReg
 			switch funct3 {
 			case 0b000:
-				return rtypeOpMul, writeback
+				return rtypeOpMul
 			case 0b001:
-				return rtypeOpMulh, writeback
+				return rtypeOpMulh
 			case 0b010:
-				return rtypeOpMulhsu, writeback
+				return rtypeOpMulhsu
 			case 0b011:
-				return rtypeOpMulhu, writeback
+				return rtypeOpMulhu
 			case 0b100:
-				return rtypeOpDiv, writeback
+				return rtypeOpDiv
 			case 0b101:
-				return rtypeOpDivu, writeback
+				return rtypeOpDivu
 			case 0b110:
-				return rtypeOpRem, writeback
+				return rtypeOpRem
 			case 0b111:
-				return rtypeOpRemu, writeback
+				return rtypeOpRemu
 			}
 		} else if funct7 == 0b0000000 {
-			writeback = wbStoreReg
 			switch funct3 {
 			case 0b000:
-				return rtypeOpAdd, writeback
+				return rtypeOpAdd
 			case 0b001:
-				return rtypeOpSll, writeback
+				return rtypeOpSll
 			case 0b010:
-				return rtypeOpSlt, writeback
+				return rtypeOpSlt
 			case 0b011:
-				return rtypeOpSltu, writeback
+				return rtypeOpSltu
 			case 0b100:
-				return rtypeOpXor, writeback
+				return rtypeOpXor
 			case 0b101:
-				return rtypeOpSrl, writeback
+				return rtypeOpSrl
 			case 0b110:
-				return rtypeOpOr, writeback
+				return rtypeOpOr
 			case 0b111:
-				return rtypeOpAnd, writeback
+				return rtypeOpAnd
 			}
 		} else if funct7 == 0b0100000 {
-			writeback = wbStoreReg
 			switch funct3 {
 			case 0b000:
-				return rtypeOpSub, writeback
+				return rtypeOpSub
 			case 0b101:
-				return rtypeOpSra, writeback
+				return rtypeOpSra
 			}
 		}
-		return rtypeInvalid, wbNone
+		return rtypeInvalid
 	case opcodeOP32:
 		if funct7 == 0b0000001 {
-			writeback = wbStoreReg
 			switch funct3 {
 			case 0b000:
-				return rtypeOpMulw, writeback
+				return rtypeOpMulw
 			case 0b100:
-				return rtypeOpDivw, writeback
+				return rtypeOpDivw
 			case 0b101:
-				return rtypeOpDivuw, writeback
+				return rtypeOpDivuw
 			case 0b110:
-				return rtypeOpRemw, writeback
+				return rtypeOpRemw
 			case 0b111:
-				return rtypeOpRemuw, writeback
+				return rtypeOpRemuw
 			}
 		} else if funct7 == 0b0000000 {
-			writeback = wbStoreReg
 			switch funct3 {
 			case 0b000:
-				return rtypeOpAddw, writeback
+				return rtypeOpAddw
 			case 0b001:
-				return rtypeOpSllw, writeback
+				return rtypeOpSllw
 			case 0b101:
-				return rtypeOpSrlw, writeback
+				return rtypeOpSrlw
 			}
 		} else if funct7 == 0b0100000 {
-			writeback = wbStoreReg
 			switch funct3 {
 			case 0b000:
-				return rtypeOpSubw, writeback
+				return rtypeOpSubw
 			case 0b101:
-				return rtypeOpSraw, writeback
+				return rtypeOpSraw
 			}
 		}
-		return rtypeInvalid, wbNone
+		return rtypeInvalid
 	case opcodeCUSTOM1:
 		if funct3 == 0b000 && funct7 == 0b0000000 {
-			return rtypeOpKeccak, wbNone
+			return rtypeOpKeccak
 		}
-		return rtypeInvalid, wbNone
+		return rtypeInvalid
 	default:
-		return rtypeInvalid, wbNone
+		return rtypeInvalid
 	}
 }
 
-// decodeSTypeSemantic maps a raw S-type funct3 to a semantic store compute op and memory writeback.
-func decodeSTypeSemantic(funct3 uint32) (computeOp, writeback uint32) {
+// decodeSTypeSemantic maps a raw S-type funct3 to a semantic store compute op.
+func decodeSTypeSemantic(funct3 uint32) (computeOp uint32) {
 	switch funct3 {
 	case 0b000:
-		return stypeStore, wbMem8
+		return stypeStore8
 	case 0b001:
-		return stypeStore, wbMem16
+		return stypeStore16
 	case 0b010:
-		return stypeStore, wbMem32
+		return stypeStore32
 	case 0b011:
-		return stypeStore, wbMem64
+		return stypeStore64
 	default:
-		return stypeInvalid, wbNone
+		return stypeInvalid
 	}
 }
 
@@ -499,24 +581,23 @@ func decodeBTypeSemantic(funct3 uint32) uint32 {
 	}
 }
 
-// decodeJTypeSemantic maps a raw J-type encoding to a semantic compute op and writeback.
-func decodeJTypeSemantic(opcode uint32) (computeOp, writeback uint32) {
+// decodeJTypeSemantic maps a raw J-type encoding to a semantic base compute op.
+func decodeJTypeSemantic(opcode uint32) (computeOp uint32) {
 	if opcode == opcodeJAL {
-		return jtypeJal, wbStoreReg
+		return jtypeJal
 	}
-	return jtypeInvalid, wbNone
+	return jtypeInvalid
 }
 
-// decodeUTypeSemantic maps a raw U-type opcode to a semantic compute op and writeback.
-func decodeUTypeSemantic(opcode uint32) (computeOp, writeback uint32) {
-	writeback = wbStoreReg
+// decodeUTypeSemantic maps a raw U-type opcode to a semantic base compute op.
+func decodeUTypeSemantic(opcode uint32) (computeOp uint32) {
 	switch opcode {
 	case opcodeLUI:
-		return utypeLui, writeback
+		return utypeLui
 	case opcodeAUIPC:
-		return utypeAuipc, writeback
+		return utypeAuipc
 	default:
-		return utypeInvalid, wbNone
+		return utypeInvalid
 	}
 }
 
@@ -776,12 +857,12 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 	// types declared for the inputs in memory.zkc, because zkc packs input
 	// records tightly by bit width:
 	//   decoded_core : opcode:Opcode(u7), instruction_type:Type(u3), instruction_parameters:u25
-	//   decoded_itype: compute_op:ITypeComputeOp(u6), writeback:ITypeWriteback(u3), imm12:Imm12(u12), rs1:Register(u5), rd:Register(u5)
-	//   decoded_rtype: compute_op:RTypeComputeOp(u6), writeback:ITypeWriteback(u3), rs1:Register(u5), rs2:Register(u5), rd:Register(u5)
-	//   decoded_stype: compute_op:STypeComputeOp(u6), writeback:ITypeWriteback(u3), imm12:Imm12(u12), rs2:Register(u5), rs1:Register(u5)
+	//   decoded_itype: compute_op:ITypeComputeOp(u6), imm12:Imm12(u12), rs1:Register(u5), rd:Register(u5)
+	//   decoded_rtype: compute_op:RTypeComputeOp(u6), rs1:Register(u5), rs2:Register(u5), rd:Register(u5)
+	//   decoded_stype: compute_op:STypeComputeOp(u6), imm12:Imm12(u12), rs2:Register(u5), rs1:Register(u5)
 	//   decoded_btype: compute_op:BTypeComputeOp(u6), imm_sign:u1, imm_10_5:u6, rs2:Register(u5), rs1:Register(u5), imm_4_1:u4, imm_11:u1
-	//   decoded_jtype: compute_op:JTypeComputeOp(u6), writeback:ITypeWriteback(u3), imm20:SignBit(u1), imm10_1:u10, imm11:u1, imm19_12:u8, rd:Register(u5)
-	//   decoded_utype: compute_op:UTypeComputeOp(u6), writeback:ITypeWriteback(u3), imm20:Imm20(u20), rd:Register(u5)
+	//   decoded_jtype: compute_op:JTypeComputeOp(u6), imm20:SignBit(u1), imm10_1:u10, imm11:u1, imm19_12:u8, rd:Register(u5)
+	//   decoded_utype: compute_op:UTypeComputeOp(u6), imm20:Imm20(u20), rd:Register(u5)
 	var (
 		coreBits  bitWriter
 		itypeBits bitWriter
@@ -830,36 +911,33 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		coreBits.writeBits(uint64(instrType), 3)
 		coreBits.writeBits(uint64(params), 25)
 
-		computeOp, writeback, normImm12 := decodeITypeSemantic(opcode, funct3, imm12)
+		computeOp, normImm12 := decodeITypeSemantic(opcode, funct3, imm12)
 		if instrType != iType {
-			computeOp, writeback, normImm12 = itypeInvalid, wbNone, imm12
+			computeOp, normImm12 = itypeInvalid, imm12
 		}
-		writeback = writebackForRd(rd, writeback)
+		computeOp = itypeOpForRd(computeOp, rd)
 
 		itypeBits.writeBits(uint64(computeOp), 6)
-		itypeBits.writeBits(uint64(writeback), 3)
 		itypeBits.writeBits(uint64(normImm12), 12)
 		itypeBits.writeBits(uint64(rs1), 5)
 		itypeBits.writeBits(uint64(rd), 5)
 
-		rtypeComputeOp, rtypeWriteback := decodeRTypeSemantic(opcode, funct3, funct7)
+		rtypeComputeOp := decodeRTypeSemantic(opcode, funct3, funct7)
 		if instrType != rType {
-			rtypeComputeOp, rtypeWriteback = rtypeInvalid, wbNone
+			rtypeComputeOp = rtypeInvalid
 		}
-		rtypeWriteback = writebackForRd(rd, rtypeWriteback)
+		rtypeComputeOp = rtypeOpForRd(rtypeComputeOp, rd)
 
 		rtypeBits.writeBits(uint64(rtypeComputeOp), 6)
-		rtypeBits.writeBits(uint64(rtypeWriteback), 3)
 		rtypeBits.writeBits(uint64(rs1), 5)
 		rtypeBits.writeBits(uint64(rs2), 5)
 		rtypeBits.writeBits(uint64(rd), 5)
 
-		stypeComputeOp, stypeWriteback := decodeSTypeSemantic(funct3)
+		stypeComputeOp := decodeSTypeSemantic(funct3)
 		if instrType != sType {
-			stypeComputeOp, stypeWriteback = stypeInvalid, wbNone
+			stypeComputeOp = stypeInvalid
 		}
 		stypeBits.writeBits(uint64(stypeComputeOp), 6)
-		stypeBits.writeBits(uint64(stypeWriteback), 3)
 		stypeBits.writeBits(uint64(simm12), 12)
 		stypeBits.writeBits(uint64(rs2), 5)
 		stypeBits.writeBits(uint64(rs1), 5)
@@ -876,26 +954,24 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		btypeBits.writeBits(uint64(bImm4_1), 4)
 		btypeBits.writeBits(uint64(bImm11), 1)
 
-		jtypeComputeOp, jtypeWriteback := decodeJTypeSemantic(opcode)
+		jtypeComputeOp := decodeJTypeSemantic(opcode)
 		if instrType != jType {
-			jtypeComputeOp, jtypeWriteback = jtypeInvalid, wbNone
+			jtypeComputeOp = jtypeInvalid
 		}
-		jtypeWriteback = writebackForRd(rd, jtypeWriteback)
+		jtypeComputeOp = jtypeOpForRd(jtypeComputeOp, rd)
 		jtypeBits.writeBits(uint64(jtypeComputeOp), 6)
-		jtypeBits.writeBits(uint64(jtypeWriteback), 3)
 		jtypeBits.writeBits(uint64(jImm20), 1)
 		jtypeBits.writeBits(uint64(jImm10_1), 10)
 		jtypeBits.writeBits(uint64(jImm11), 1)
 		jtypeBits.writeBits(uint64(jImm19_12), 8)
 		jtypeBits.writeBits(uint64(rd), 5)
 
-		utypeComputeOp, utypeWriteback := decodeUTypeSemantic(opcode)
+		utypeComputeOp := decodeUTypeSemantic(opcode)
 		if instrType != uType {
-			utypeComputeOp, utypeWriteback = utypeInvalid, wbNone
+			utypeComputeOp = utypeInvalid
 		}
-		utypeWriteback = writebackForRd(rd, utypeWriteback)
+		utypeComputeOp = utypeOpForRd(utypeComputeOp, rd)
 		utypeBits.writeBits(uint64(utypeComputeOp), 6)
-		utypeBits.writeBits(uint64(utypeWriteback), 3)
 		utypeBits.writeBits(uint64(uImm20), 20)
 		utypeBits.writeBits(uint64(rd), 5)
 	}

@@ -6,46 +6,50 @@ include "../utils/signed_sum.zkc"
 // Process a RISC-V J-type instruction (JAL Jump and Link) and return the next
 // program counter.
 //
-// J-type semantics are pre-decoded at ELF time into a semantic compute op,
-// a writeback kind, and operands (see decoded_jtype in memory.zkc). 
+// J-type semantics are pre-decoded at ELF time into a semantic compute op and
+// operands (see decoded_jtype in memory.zkc).
 //
 // In the predecoding phase, the operands for J-type instructions come from a
 // common 25-bit encoding (opcode stripped) that is laid out as:
 //
 //   imm[20] :: imm[10:1] :: imm[11] :: imm[19:12] :: rd
 //
-// Runtime execution is a flat switch on compute_op followed by a separate writeback 
-// step for the link address. The 21-bit signed jump offset sub-fields are reassembled
+// Runtime execution is a flat switch on compute_op. Writeback of the link
+// address is folded into JTYPE_JAL_WB. The 21-bit signed jump offset sub-fields
+// are reassembled as:
 //
 //   imm21 = imm[20] :: imm[19:12] :: imm[11] :: imm[10:1] :: 0
-// 
+//
 // and sign-extended here.
 //
 // Effect:
-//   rd     = pc + 4           (return address, when writeback applies)
+//   rd     = pc + 4           (return address, when JTYPE_JAL_WB applies)
 //   pc_new = pc + imm         (unconditional jump to target)
 //
 fn process_J_type_instruction<registers>(index:u64, pc:Address) -> (pc_new:Address) {
 
     var compute_op:JTypeComputeOp
-    var writeback:ITypeWriteback
     var imm20:SignBit
     var imm10_1:u10
     var imm11:u1
     var imm19_12:u8
     var rd:Register
-    compute_op, writeback, imm20, imm10_1, imm11, imm19_12, rd = decoded_jtype[index]
+    compute_op, imm20, imm10_1, imm11, imm19_12, rd = decoded_jtype[index]
 
     var imm21:u21 = ((imm20::imm19_12::imm11::imm10_1) as u21) << 1
     var imm:DoubleWord = sgn_extension_u21_u64(imm21)
     var link:DoubleWord
 
     switch compute_op {
-        case JTYPE_JAL: {
+        case JTYPE_JAL, JTYPE_JAL_WB: {
             printf "JTYPE_JAL "
             print_j_operands(rd, imm)
             link = signed_sum_of_double_word(pc, 4)
             pc_new = signed_sum_of_double_word(pc, imm) as Address
+        }
+        case JTYPE_INVALID: {
+            printf "[ERROR] Unsupported J-type instruction (invalid semantic op)\n"
+            fail
         }
         default: {
             printf "[ERROR] Unsupported J-type instruction with\n"
@@ -54,16 +58,7 @@ fn process_J_type_instruction<registers>(index:u64, pc:Address) -> (pc_new:Addre
         }
     }
 
-    switch writeback {
-        case WB_STORE_REG: {
-            registers[rd] = link
-        }
-        case WB_NONE: {
-            // no register writeback
-        }
-        default: {
-            printf "[ERROR] Unsupported J-type writeback %d\n", writeback
-            fail
-        }
+    if (compute_op & 1) != 0 {
+        registers[rd] = link
     }
 }
