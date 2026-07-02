@@ -14,6 +14,10 @@ include "constants.zkc"
 //
 // ===================================================================================
 
+// Poseidon2 state: where the permutation takes place. An array of 16
+// KOALABEAR field elements (felts): [ σ₀, σ₁, ..., σ₁₅ ].
+memory poseidon2_state(address:u5) -> (felt:𝔽)
+
 fn write_to_state<poseidon2_state>(address:u5, value:𝔽) -> () {
     poseidon2_state[address] = value
 }
@@ -173,7 +177,3 @@ fn mat_mul_internal<poseidon2_state>() {
         poseidon2_state[i] = sum + (internal_diag[i] * poseidon2_state[i])
     }
 }
-
-// Poseidon2 state: where the permutation takes place. An array of 16
-// KOALABEAR field elements (felts): [ σ₀, σ₁, ..., σ₁₅ ].
-memory poseidon2_state(address:u5) -> (felt:𝔽)
