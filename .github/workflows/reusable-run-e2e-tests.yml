@@ -55,6 +55,21 @@ on:
         required: false
         type: string
         default: ""
+      linea_coordinator_image_name:
+        description: 'Coordinator Docker image name (overrides the compose default)'
+        required: false
+        type: string
+        default: consensys/linea-coordinator
+      linea_coordinator_jar:
+        description: 'Coordinator JAR filename to launch'
+        required: false
+        type: string
+        default: coordinator.jar
+      linea_coordinator_artifact_name:
+        description: 'Artifact name prefix for the coordinator Docker image'
+        required: false
+        type: string
+        default: linea-coordinator
       e2e-tests-with-ssh:
         description: Run end to end tests with ability to ssh into environment
         required: false
@@ -88,6 +103,9 @@ jobs:
     if: ${{ inputs.has-changes-requiring-e2e-testing == 'true' }}
     env:
       LINEA_BESU_PACKAGE_TAG: ${{ inputs.linea_besu_package_tag }}
+      LINEA_COORDINATOR_IMAGE_NAME: ${{ inputs.linea_coordinator_image_name }}
+      LINEA_COORDINATOR_JAR: ${{ inputs.linea_coordinator_jar }}
+      LINEA_COORDINATOR_ARTIFACT_NAME: ${{ inputs.linea_coordinator_artifact_name }}
       LINEA_COORDINATOR_TAG: ${{ inputs.coordinator_tag }}
       LINEA_POSTMAN_TAG: ${{ inputs.postman_tag }}
       LINEA_PROVER_TAG: ${{ inputs.prover_tag }}
@@ -160,6 +178,9 @@ jobs:
               if [ "$service" = "maru" ]; then
                 artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/maru-docker-image.tar.gz"
                 image_name="consensys/maru"
+              elif [ "$service" = "coordinator" ]; then
+                artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/${LINEA_COORDINATOR_ARTIFACT_NAME}-docker-image.tar.gz"
+                image_name="$LINEA_COORDINATOR_IMAGE_NAME"
               else
                 artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/linea-${service}-docker-image.tar.gz"
                 image_name="consensys/linea-${service}"
@@ -181,6 +202,9 @@ jobs:
             if [ "$service" = "maru" ]; then
               artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/maru-docker-image.tar.gz"
               env_var="MARU_TAG"
+            elif [ "$service" = "coordinator" ]; then
+              artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/${LINEA_COORDINATOR_ARTIFACT_NAME}-docker-image.tar.gz"
+              env_var="LINEA_COORDINATOR_TAG"
             else
               artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/linea-${service}-docker-image.tar.gz"
               env_var="LINEA_$(echo "${service}" | tr '[:lower:]-' '[:upper:]_')_TAG"
