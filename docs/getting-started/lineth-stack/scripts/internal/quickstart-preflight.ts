@@ -2,14 +2,12 @@ import * as path from "node:path";
 
 import { JsonRpcProvider } from "ethers";
 
-import { resolveL1DeployerConfig } from "./deployer-wallet";
+import { LOCAL_L1_CHAIN_ID, resolveL1DeployerConfig } from "./deployer-wallet";
+import { envValue, readDotEnvFile } from "./lib/env";
+import { sanitizeExternalError } from "./lib/errors";
 import {
   buildSepoliaPolicyConfig,
-  envValue,
-  LOCAL_L1_CHAIN_ID,
-  readDotEnvFile,
   runL1PolicyCheck,
-  sanitizeExternalError,
   SEPOLIA_CHAIN_ID,
 } from "./sepolia-policy";
 
@@ -129,13 +127,17 @@ async function main() {
       });
     } catch (error) {
       if (l1Deployer.mode === "sepolia" && isUnderfundedError(error)) {
-        await printFundingInstructions({
+        const fundingInstructions = {
           provider,
           address: l1Deployer.address,
           minimumBalanceWei: buildSepoliaPolicyConfig(env).l1DeployerMinBalanceWei,
-          keystorePath: l1Deployer.keystorePath,
           source: l1Deployer.source,
-        });
+        };
+        if (l1Deployer.keystorePath !== undefined) {
+          await printFundingInstructions({ ...fundingInstructions, keystorePath: l1Deployer.keystorePath });
+        } else {
+          await printFundingInstructions(fundingInstructions);
+        }
         throw new FundingRequiredError();
       }
       throw error;

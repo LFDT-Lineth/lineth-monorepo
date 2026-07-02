@@ -5,6 +5,7 @@
 - *(linea-besu)* Add interfaces module: security and LineaTransactionSelectionResult (#3238)
 - *(linea-besu)* Forced transactions integration with security policy transaction selector (#3295)
 - *(coordinator)* Add config documentation annotations (#3463)
+- *(coordinator)* First draft of risc-v prover client (#3269)
 
 ### 🐛 Bug Fixes
 

@@ -3,6 +3,7 @@
 ### 🚀 Features
 
 - *(coordinator)* Add config documentation annotations (#3463)
+- *(coordinator)* First draft of risc-v prover client (#3269)
 
 ### 🐛 Bug Fixes
 
@@ -29,3 +30,4 @@
 - *(coordinator)* Log and message error improvements (#3193)
 - *(coordinator)* Favour generic name ChainSecurityRuleViolation over specific implementation Phylax (#3330)
 - *(coordinator)* Update kotlin to v2.4 (#3454)
+- *(coordinator)* LSP violation fix (#3386)

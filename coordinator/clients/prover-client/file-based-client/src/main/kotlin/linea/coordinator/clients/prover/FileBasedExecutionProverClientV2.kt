@@ -6,6 +6,7 @@ import io.vertx.core.Vertx
 import linea.clients.BatchExecutionProofRequestV1
 import linea.clients.BatchExecutionProofResponse
 import linea.clients.ExecutionProverClientV2
+import linea.clients.ProverFileNameProvider
 import linea.coordinator.clients.prover.serialization.JsonSerialization
 import linea.domain.EthLog
 import linea.domain.ExecutionProofIndex

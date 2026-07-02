@@ -1,11 +1,13 @@
 import * as fs from "node:fs";
-import * as path from "node:path";
 
 import { assertSingleFeeModel, FeeOverrides, feeBudgetPricePerGas } from "contracts/common/helpers/feeOverrides";
 import { isAddress, JsonRpcProvider, type TransactionReceipt, Wallet } from "ethers";
 
 import { resolveL1DeployerConfig } from "./deployer-wallet";
-import { buildSepoliaPolicyConfig, sanitizeExternalError } from "./sepolia-policy";
+import { envNumber, requiredProcessEnv } from "./lib/env";
+import { sanitizeExternalError } from "./lib/errors";
+import { appendDeployTimingRecord } from "./lib/timing";
+import { buildSepoliaPolicyConfig } from "./sepolia-policy";
 
 type AddressBook = {
   deployers?: {
@@ -53,22 +55,6 @@ function die(message: string): never {
   throw new Error(`[fund-runtime-accounts] ERROR: ${message}`);
 }
 
-function requiredEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    die(`${name} must be set`);
-  }
-  return value;
-}
-
-function envNumber(name: string, fallback: number): number {
-  const raw = process.env[name] ?? fallback.toString();
-  if (!/^[0-9]+$/.test(raw)) {
-    die(`${name} must be an integer value`);
-  }
-  return Number(raw);
-}
-
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -108,19 +94,7 @@ function loadAddressBook(): AddressBook {
 }
 
 function recordTiming(name: string, startedMs: number, endedMs: number, status: "ok" | "failed") {
-  const durationMs = Math.max(0, endedMs - startedMs);
-  fs.mkdirSync(path.dirname(DEPLOY_TIMING_PATH), { recursive: true });
-  fs.appendFileSync(
-    DEPLOY_TIMING_PATH,
-    `${JSON.stringify({
-      name,
-      status,
-      startedAt: new Date(startedMs).toISOString(),
-      endedAt: new Date(endedMs).toISOString(),
-      durationMs,
-      durationSeconds: Number((durationMs / 1000).toFixed(3)),
-    })}\n`,
-  );
+  appendDeployTimingRecord(DEPLOY_TIMING_PATH, { name, status, startedMs, endedMs });
 }
 
 async function buildFundingPlans(provider: JsonRpcProvider, targets: FundingTarget[]): Promise<FundingPlan[]> {
@@ -242,11 +216,11 @@ async function fundBatch(params: {
   gasLimit: bigint;
 }) {
   const startedMs = Date.now();
-  const receiptTimeoutMs = envNumber("RUNTIME_FUNDING_RECEIPT_TIMEOUT_MS", 300_000);
-  const receiptPollIntervalMs = envNumber("RUNTIME_FUNDING_RECEIPT_POLL_INTERVAL_MS", 2_000);
-  const rpcRequestTimeoutMs = envNumber("RUNTIME_FUNDING_RPC_REQUEST_TIMEOUT_MS", 15_000);
-  const balanceTimeoutMs = envNumber("RUNTIME_FUNDING_BALANCE_TIMEOUT_MS", 60_000);
-  const balancePollIntervalMs = envNumber("RUNTIME_FUNDING_BALANCE_POLL_INTERVAL_MS", 2_000);
+  const receiptTimeoutMs = envNumber("RUNTIME_FUNDING_RECEIPT_TIMEOUT_MS", process.env, 300_000);
+  const receiptPollIntervalMs = envNumber("RUNTIME_FUNDING_RECEIPT_POLL_INTERVAL_MS", process.env, 2_000);
+  const rpcRequestTimeoutMs = envNumber("RUNTIME_FUNDING_RPC_REQUEST_TIMEOUT_MS", process.env, 15_000);
+  const balanceTimeoutMs = envNumber("RUNTIME_FUNDING_BALANCE_TIMEOUT_MS", process.env, 60_000);
+  const balancePollIntervalMs = envNumber("RUNTIME_FUNDING_BALANCE_POLL_INTERVAL_MS", process.env, 2_000);
   try {
     const plans = await buildFundingPlans(params.provider, params.targets);
     if (plans.length === 0) {
@@ -350,9 +324,9 @@ async function fundBatch(params: {
 async function main() {
   const l1Config = await resolveL1DeployerConfig(process.env, "container");
   const l1Provider = new JsonRpcProvider(l1Config.rpcUrl);
-  const l2Provider = new JsonRpcProvider(requiredEnv("L2_RPC_URL"));
+  const l2Provider = new JsonRpcProvider(requiredProcessEnv("L2_RPC_URL"));
   const l1Wallet = new Wallet(l1Config.privateKey, l1Provider);
-  const l2Wallet = new Wallet(requiredEnv("L2_DEPLOYER_PRIVATE_KEY"), l2Provider);
+  const l2Wallet = new Wallet(requiredProcessEnv("L2_DEPLOYER_PRIVATE_KEY"), l2Provider);
   const addressBook = loadAddressBook();
   const signers = addressBook.signers ?? {};
 
