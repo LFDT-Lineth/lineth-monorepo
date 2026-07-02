@@ -201,6 +201,18 @@ pub export fn main() noreturn {
 
     var eacc: Ext = undefined;
 
+    // Sum of all 6 limbs. add/sub/neg/mulByBase keep each B0/B1/B2 component
+    // fully independent across loop iterations (unlike mul/square/inverse,
+    // where Karatsuba mixes every component into every output), so checksumming
+    // only B0.a0 lets the optimizer prove B1/B2's updates are dead and elide
+    // them — silently measuring a fraction of the real op. Sum every limb so
+    // every component has an observable side effect and nothing is elided.
+    const extChecksum = struct {
+        fn f(e: Ext) u32 {
+            return e.B0.a0.value +% e.B0.a1.value +% e.B1.a0.value +% e.B1.a1.value +% e.B2.a0.value +% e.B2.a1.value;
+        }
+    }.f;
+
     // ext/add
     eacc = ea;
     profiling.markR5Value(100, 0);
@@ -208,7 +220,7 @@ pub export fn main() noreturn {
     while (i < N) : (i += 1) {
         eacc = eacc.add(eb);
     }
-    profiling.markR5Value(101, eacc.B0.a0.value);
+    profiling.markR5Value(101, extChecksum(eacc));
 
     // ext/sub
     eacc = ea;
@@ -217,7 +229,7 @@ pub export fn main() noreturn {
     while (i < N) : (i += 1) {
         eacc = eacc.sub(eb);
     }
-    profiling.markR5Value(111, eacc.B0.a0.value);
+    profiling.markR5Value(111, extChecksum(eacc));
 
     // ext/mul
     eacc = ea;
@@ -226,7 +238,7 @@ pub export fn main() noreturn {
     while (i < N) : (i += 1) {
         eacc = eacc.mul(eb);
     }
-    profiling.markR5Value(121, eacc.B0.a0.value);
+    profiling.markR5Value(121, extChecksum(eacc));
 
     // ext/square
     eacc = ea;
@@ -235,7 +247,7 @@ pub export fn main() noreturn {
     while (i < N) : (i += 1) {
         eacc = eacc.square();
     }
-    profiling.markR5Value(131, eacc.B0.a0.value);
+    profiling.markR5Value(131, extChecksum(eacc));
 
     // ext/inverse — ea is nonzero, inv(inv(x))==x, so eacc stays nonzero.
     eacc = ea;
@@ -244,7 +256,7 @@ pub export fn main() noreturn {
     while (i < N) : (i += 1) {
         eacc = eacc.inverse();
     }
-    profiling.markR5Value(141, eacc.B0.a0.value);
+    profiling.markR5Value(141, extChecksum(eacc));
 
     // ext/div — eb is nonzero.
     eacc = ea;
@@ -253,7 +265,7 @@ pub export fn main() noreturn {
     while (i < N) : (i += 1) {
         eacc = eacc.div(eb);
     }
-    profiling.markR5Value(151, eacc.B0.a0.value);
+    profiling.markR5Value(151, extChecksum(eacc));
 
     // ext/mulByBase — scale by base element b.
     eacc = ea;
@@ -262,7 +274,7 @@ pub export fn main() noreturn {
     while (i < N) : (i += 1) {
         eacc = eacc.mulByBase(b);
     }
-    profiling.markR5Value(161, eacc.B0.a0.value);
+    profiling.markR5Value(161, extChecksum(eacc));
 
     accel.zkvm_exit(0);
 }
