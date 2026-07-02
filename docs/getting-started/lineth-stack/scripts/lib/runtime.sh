@@ -39,9 +39,12 @@ lineth_run_ts_node() {
   shift 2
   cd "$ts_root/contracts" || return 1
   export NODE_PATH="$ts_root/node_modules:$ts_root/contracts/node_modules${NODE_PATH:+:$NODE_PATH}"
+  # verify-deps-before-run=false: pnpm 11 otherwise auto-runs `pnpm install` before
+  # exec when node_modules looks outdated, and its interactive purge prompt hangs
+  # forever because quickstart callers redirect this output to a temp file.
   TS_NODE_TRANSPILE_ONLY=1 \
   TS_NODE_COMPILER_OPTIONS='{"module":"CommonJS","moduleResolution":"Node"}' \
-    pnpm -s exec ts-node "$ts_script" "$@"
+    pnpm -s --config.verify-deps-before-run=false exec ts-node "$ts_script" "$@"
 }
 
 lineth_valid_env_key() {
