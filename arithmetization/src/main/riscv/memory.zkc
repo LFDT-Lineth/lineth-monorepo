@@ -33,6 +33,7 @@ memory b4(address:u3) -> (state:lane)
 memory c(address:u3) -> (state:lane)
 memory d(address:u3) -> (state:lane)
 memory padded_input_block(address:u5) -> (state:lane)
+
 // Lowest executable instruction address (4-aligned). Used to convert a pc into
 // an index into the pre-decoded instruction tables below: index = (pc - base) >> 2
 pub input instruction_base(i:u1) -> (base:Address)
