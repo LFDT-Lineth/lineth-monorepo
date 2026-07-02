@@ -38,6 +38,7 @@ fn process_B_type_instruction<registers>(index:u64, pc:Address) -> (pc_new:Addre
     var rs1:Register
     var imm_4_1:u4
     var imm_11:u1
+    var imm:DoubleWord
     
     compute_op, imm_sign, imm_10_5, rs2, rs1, imm_4_1, imm_11 = decoded_btype[index]
 

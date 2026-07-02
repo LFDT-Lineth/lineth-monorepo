@@ -65,6 +65,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
     var product_upper:Word
     var product_lower:Word
     var word_wip:Word
+    var result:DoubleWord
 
     var compute_op:RTypeComputeOp
     var writeback:ITypeWriteback
@@ -293,8 +294,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
             printf "RTYPE_MULW "
             print_r_operands(rd, rs1, rs2)
             product_upper::product_lower = (v1_lower as DoubleWord) * (v2_lower as DoubleWord)
-            sign_bit = sign_bit_of_word(product_lower)
-            if (sign_bit == 1) {
+            if (sign_bit_of_word(product_lower) == 1) {
                 result = MAX_UINT_32::product_lower
             } else {
                 result = product_lower as DoubleWord
