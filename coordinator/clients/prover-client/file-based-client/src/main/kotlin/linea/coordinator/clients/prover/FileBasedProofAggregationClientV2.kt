@@ -3,6 +3,7 @@ package linea.coordinator.clients.prover
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.vertx.core.Vertx
 import linea.clients.ProofAggregationProverClientV2
+import linea.clients.ProverFileNameProvider
 import linea.coordinator.clients.prover.serialization.JsonSerialization
 import linea.coordinator.clients.prover.serialization.ProofToFinalizeJsonResponse
 import linea.crypto.HashFunction

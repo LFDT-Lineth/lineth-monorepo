@@ -1,0 +1,15 @@
+{
+  "extends": "../../../../../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "../../../../../",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "strict": true,
+    "noEmit": true,
+    "paths": {
+      "ethers": ["contracts/node_modules/ethers"]
+    }
+  },
+  "include": ["./**/*.ts"],
+  "exclude": ["**/*.test.ts", "deployBridgedTokenAndTokenBridgeV1_1.ts", "claim-l2-to-l1.ts"]
+}

@@ -92,6 +92,7 @@ timing_now_ms() {
 
 TIMING_STEP_NAME=""
 TIMING_STEP_STARTED_MS="$(timing_now_ms)"
+RESOLVER_ENV_FILE=""
 
 timing_record() {
   local name="$1" started_ms="$2" ended_ms="$3" status="$4"
@@ -122,6 +123,9 @@ step() {
 
 finish_deploy_timing() {
   local status=$?
+  if [[ -n "${RESOLVER_ENV_FILE:-}" ]]; then
+    rm -f "$RESOLVER_ENV_FILE"
+  fi
   if [[ "$status" -eq 0 ]]; then
     timing_finish_current_step "ok"
   else
@@ -180,12 +184,15 @@ cd "$CONTRACTS_DIR"
 step "Resolve L1 deployer"
 export NODE_PATH="/workspace/node_modules:/workspace/contracts/node_modules${NODE_PATH:+:$NODE_PATH}"
 set +x 2>/dev/null || true
-resolver_env="$(
-  TS_NODE_TRANSPILE_ONLY=1 \
-  TS_NODE_COMPILER_OPTIONS='{"module":"CommonJS","moduleResolution":"Node"}' \
-    pnpm -s exec ts-node /scripts/internal/deployer-wallet.ts emit-shell-env --context container
-)"
-eval "$resolver_env"
+RESOLVER_ENV_FILE="$(mktemp)"
+TS_NODE_TRANSPILE_ONLY=1 \
+TS_NODE_COMPILER_OPTIONS='{"module":"CommonJS","moduleResolution":"Node"}' \
+  pnpm -s exec ts-node /scripts/internal/deployer-wallet.ts emit-shell-env --context container \
+    --output-file "$RESOLVER_ENV_FILE"
+# shellcheck disable=SC1090
+. "$RESOLVER_ENV_FILE"
+rm -f "$RESOLVER_ENV_FILE"
+RESOLVER_ENV_FILE=""
 RESOLVED_L1_DEPLOYER_ADDRESS="$L1_DEPLOYER_ADDRESS"
 export L1_MODE L1_RPC_URL L1_DEPLOYER_PRIVATE_KEY L1_DEPLOYER_SOURCE RESOLVED_L1_DEPLOYER_ADDRESS
 log "Resolved L1 deployer source: $L1_DEPLOYER_SOURCE"
@@ -238,13 +245,11 @@ wait_rpc "$L2_RPC_URL" L2
 # 02-generate-l2-genesis.sh writes /initialization/fork-timestamp.txt into
 # artifacts/genesis. deploy-contracts mounts it read-only at /generated-genesis.
 FORK_TIMESTAMP=""
-for f in "/generated-genesis/fork-timestamp.txt"; do
-  if [[ -f "$f" ]]; then
-    FORK_TIMESTAMP="$(cat "$f")"
-    log "Read FORK_TIMESTAMP=$FORK_TIMESTAMP from $f"
-    break
-  fi
-done
+fork_timestamp_file="/generated-genesis/fork-timestamp.txt"
+if [[ -f "$fork_timestamp_file" ]]; then
+  FORK_TIMESTAMP="$(cat "$fork_timestamp_file")"
+  log "Read FORK_TIMESTAMP=$FORK_TIMESTAMP from $fork_timestamp_file"
+fi
 : "${FORK_TIMESTAMP:=1683325137}"
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -539,7 +544,7 @@ extract_address() {
   printf "%s" "$addr"
 }
 
-require_address() {
+extract_required_address() {
   local logfile="$1" contract_name="$2" out
   out="$(extract_address "$logfile" "$contract_name")" || \
     die "failed to extract $contract_name address from $logfile"
@@ -570,14 +575,14 @@ verify_bridge_step_addresses() {
   local expected_bridged_token="$3" expected_token_bridge_impl="$4" expected_proxy_admin="$5"
   local expected_token_beacon="$6" expected_token_bridge="$7"
 
-  verify_address "$(require_address "$logfile" "BridgedToken")" "$expected_bridged_token" "$chain_label BridgedToken"
+  verify_address "$(extract_required_address "$logfile" "BridgedToken")" "$expected_bridged_token" "$chain_label BridgedToken"
   verify_address \
-    "$(require_address "$logfile" "tokenBridgeContractImplementation")" \
+    "$(extract_required_address "$logfile" "tokenBridgeContractImplementation")" \
     "$expected_token_bridge_impl" \
     "$chain_label TokenBridge implementation"
-  verify_address "$(require_address "$logfile" "ProxyAdmin")" "$expected_proxy_admin" "$chain_label ProxyAdmin"
-  verify_address "$(require_address "$logfile" "UpgradeableBeacon")" "$expected_token_beacon" "$chain_label UpgradeableBeacon"
-  verify_address "$(require_address "$logfile" "TokenBridge")" "$expected_token_bridge" "$chain_label TokenBridge"
+  verify_address "$(extract_required_address "$logfile" "ProxyAdmin")" "$expected_proxy_admin" "$chain_label ProxyAdmin"
+  verify_address "$(extract_required_address "$logfile" "UpgradeableBeacon")" "$expected_token_beacon" "$chain_label UpgradeableBeacon"
+  verify_address "$(extract_required_address "$logfile" "TokenBridge")" "$expected_token_bridge" "$chain_label TokenBridge"
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -611,7 +616,7 @@ step_already_done_with_code() {
     return 1
   fi
 
-  address="$(require_address "$logfile" "$contract_name")"
+  address="$(extract_required_address "$logfile" "$contract_name")"
   verify_address "$address" "$expected_address" "$label"
   code="$(cast code "$address" --rpc-url "$rpc_url" 2>/dev/null || true)"
   if [[ "$code" =~ ^0x[0-9a-fA-F]+$ && "$code" != "0x" ]]; then
@@ -646,6 +651,16 @@ guard_redeploy_nonce_window() {
   log "guard $label: OK (current $chain_label nonce $current_nonce <= expected $expected_nonce)"
 }
 
+explain_l1_rpc_submission_error() {
+  local logfile="$1"
+
+  [[ -f "$logfile" ]] || return 0
+  if grep -qi 'eth_sendRawTransaction' "$logfile" \
+    && grep -Eqi 'already known|nonce too low|replacement transaction underpriced|transaction underpriced' "$logfile"; then
+    log "ERROR: L1 contract deployment hit an RPC submission error from L1_RPC_URL. This usually means a free or overloaded Sepolia RPC accepted the raw transaction on one backend, then another backend returned stale/conflicting mempool state. Use a dedicated paid Sepolia RPC endpoint for L1_RPC_URL, then run ./scripts/reset.sh before retrying. This is not fixed by changing gas or funding amounts."
+  fi
+}
+
 verify_step1_gateway_mode() {
   local logfile="$1" logged_gateway_mode
 
@@ -676,7 +691,7 @@ step1_l1_rollup() {
   verify_step1_gateway_mode "$logfile"
   if step_already_done_with_code "$logfile" "$primary_contract" "$L1_RPC_URL" "L1" "$PRECOMPUTED_LINEA_ROLLUP" "LineaRollupV${L1_CONTRACT_VERSION}"; then
     log "Step 1: $logfile present — skipping deploy, re-using prior addresses"
-    LINEA_ROLLUP_ADDRESS="$(require_address "$logfile" "$primary_contract")"
+    LINEA_ROLLUP_ADDRESS="$(extract_required_address "$logfile" "$primary_contract")"
     export LINEA_ROLLUP_ADDRESS
     log "Forwarding LINEA_ROLLUP_ADDRESS=$LINEA_ROLLUP_ADDRESS"
     return 0
@@ -701,7 +716,7 @@ step1_l1_rollup() {
     export LINEA_ROLLUP_OPERATORS="${LINEA_ROLLUP_OPERATORS:-$DEFAULT_L1_OPERATOR_ADDRESSES}"
     export LINEA_ROLLUP_RATE_LIMIT_PERIOD="86400"
     export LINEA_ROLLUP_RATE_LIMIT_AMOUNT="1000000000000000000000"
-    export DEPLOY_FORCED_TRANSACTION_GATEWAY="$DEPLOY_FORCED_TRANSACTION_GATEWAY"
+    export DEPLOY_FORCED_TRANSACTION_GATEWAY
     if [[ "$DEPLOY_FORCED_TRANSACTION_GATEWAY" == "true" ]]; then
       export FORCED_TRANSACTION_GATEWAY_L2_CHAIN_ID="$L2_CHAIN_ID"
       export FORCED_TRANSACTION_GATEWAY_L2_BLOCK_BUFFER="2000"
@@ -716,7 +731,7 @@ step1_l1_rollup() {
   ) 2>&1 | tee "$logfile"
 
   # Forward the rollup address into the global env for steps 3 + 4.
-  LINEA_ROLLUP_ADDRESS="$(require_address "$logfile" "LineaRollupV${L1_CONTRACT_VERSION}")"
+  LINEA_ROLLUP_ADDRESS="$(extract_required_address "$logfile" "LineaRollupV${L1_CONTRACT_VERSION}")"
   verify_address "$LINEA_ROLLUP_ADDRESS" "$PRECOMPUTED_LINEA_ROLLUP" "LineaRollupV${L1_CONTRACT_VERSION}"
   FORCED_TX_GW_ADDRESS="$(extract_address "$logfile" "ForcedTransactionGateway")" || FORCED_TX_GW_ADDRESS=""
   if [[ -n "$FORCED_TX_GW_ADDRESS" ]]; then
@@ -733,7 +748,7 @@ step2_l2_message_service() {
 
   if step_already_done_with_code "$logfile" "L2MessageService" "$L2_RPC_URL" "L2" "$PRECOMPUTED_L2_MS" "L2MessageService"; then
     log "Step 2: $logfile present — skipping deploy"
-    L2_MESSAGE_SERVICE_ADDRESS="$(require_address "$logfile" "L2MessageService")"
+    L2_MESSAGE_SERVICE_ADDRESS="$(extract_required_address "$logfile" "L2MessageService")"
     export L2_MESSAGE_SERVICE_ADDRESS
     log "Forwarding L2_MESSAGE_SERVICE_ADDRESS=$L2_MESSAGE_SERVICE_ADDRESS"
     return 0
@@ -751,7 +766,7 @@ step2_l2_message_service() {
   L2_MESSAGE_SERVICE_RATE_LIMIT_AMOUNT="1000000000000000000000" \
     pnpm -s exec ts-node "$ART_DIR/deployL2MessageServiceV1.ts" 2>&1 | tee "$logfile"
 
-  L2_MESSAGE_SERVICE_ADDRESS="$(require_address "$logfile" "L2MessageService")"
+  L2_MESSAGE_SERVICE_ADDRESS="$(extract_required_address "$logfile" "L2MessageService")"
   verify_address "$L2_MESSAGE_SERVICE_ADDRESS" "$PRECOMPUTED_L2_MS" "L2MessageService"
   export L2_MESSAGE_SERVICE_ADDRESS
   log "Forwarding L2_MESSAGE_SERVICE_ADDRESS=$L2_MESSAGE_SERVICE_ADDRESS"
@@ -764,7 +779,7 @@ step3_token_bridge_l1() {
 
   if step_already_done_with_code "$logfile" "TokenBridge" "$L1_RPC_URL" "L1" "$EXPECTED_L1_TOKEN_BRIDGE" "L1 TokenBridge"; then
     log "Step 3: $logfile present — skipping deploy"
-    L1_TOKEN_BRIDGE_ADDRESS="$(require_address "$logfile" "TokenBridge")"
+    L1_TOKEN_BRIDGE_ADDRESS="$(extract_required_address "$logfile" "TokenBridge")"
     verify_bridge_step_addresses \
       "$logfile" \
       "L1" \
@@ -789,6 +804,8 @@ step3_token_bridge_l1() {
   # (scaffold's deployBridgedTokenAndTokenBridgeV1_1.ts, bind-mounted over the
   # upstream path). Replaces the upstream's stale-offset-based remoteSender
   # derivation with the precomputed L2 TokenBridge from account setup.
+  local deploy_status tee_status
+  set +e
   DEPLOYER_PRIVATE_KEY="$L1_DEPLOYER_PRIVATE_KEY" \
   REMOTE_DEPLOYER_ADDRESS="$PRECOMPUTED_L2_DEPLOYER" \
   REMOTE_TOKEN_BRIDGE_ADDRESS="$EXPECTED_L2_TOKEN_BRIDGE" \
@@ -799,8 +816,19 @@ step3_token_bridge_l1() {
   L2_MESSAGE_SERVICE_ADDRESS="$L2_MESSAGE_SERVICE_ADDRESS" \
   LINEA_ROLLUP_ADDRESS="$LINEA_ROLLUP_ADDRESS" \
     pnpm -s exec ts-node "$ART_DIR/deployBridgedTokenAndTokenBridgeV1_1.ts" 2>&1 | tee "$logfile"
+  local pipeline_status=("${PIPESTATUS[@]}")
+  deploy_status="${pipeline_status[0]}"
+  tee_status="${pipeline_status[1]}"
+  set -e
+  if [ "$deploy_status" -ne 0 ]; then
+    explain_l1_rpc_submission_error "$logfile"
+    return 1
+  fi
+  if [ "$tee_status" -ne 0 ]; then
+    die "Step 3 deploy succeeded, but writing deploy output to $logfile failed (tee exit $tee_status)"
+  fi
 
-  L1_TOKEN_BRIDGE_ADDRESS="$(require_address "$logfile" "TokenBridge")"
+  L1_TOKEN_BRIDGE_ADDRESS="$(extract_required_address "$logfile" "TokenBridge")"
   verify_bridge_step_addresses \
     "$logfile" \
     "L1" \
@@ -820,7 +848,7 @@ step4_token_bridge_l2() {
 
   if step_already_done_with_code "$logfile" "TokenBridge" "$L2_RPC_URL" "L2" "$EXPECTED_L2_TOKEN_BRIDGE" "L2 TokenBridge"; then
     log "Step 4: $logfile present — skipping deploy"
-    L2_TOKEN_BRIDGE_ADDRESS="$(require_address "$logfile" "TokenBridge")"
+    L2_TOKEN_BRIDGE_ADDRESS="$(extract_required_address "$logfile" "TokenBridge")"
     verify_bridge_step_addresses \
       "$logfile" \
       "L2" \
@@ -854,7 +882,7 @@ step4_token_bridge_l2() {
   LINEA_ROLLUP_ADDRESS="$LINEA_ROLLUP_ADDRESS" \
     pnpm -s exec ts-node "$ART_DIR/deployBridgedTokenAndTokenBridgeV1_1.ts" 2>&1 | tee "$logfile"
 
-  L2_TOKEN_BRIDGE_ADDRESS="$(require_address "$logfile" "TokenBridge")"
+  L2_TOKEN_BRIDGE_ADDRESS="$(extract_required_address "$logfile" "TokenBridge")"
   verify_bridge_step_addresses \
     "$logfile" \
     "L2" \

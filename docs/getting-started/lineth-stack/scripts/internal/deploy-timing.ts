@@ -1,5 +1,4 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
+import { appendDeployTimingRecord } from "./lib/timing";
 
 const DEFAULT_PATH = "/deployments/deploy-timing.jsonl";
 
@@ -21,22 +20,12 @@ function main() {
   }
 
   const outPath = maybePath || process.env.DEPLOY_TIMING_PATH || DEFAULT_PATH;
-  const startedMs = parseMillis(startedRaw, "startedMs");
-  const endedMs = parseMillis(endedRaw, "endedMs");
-  const durationMs = Math.max(0, endedMs - startedMs);
-
-  fs.mkdirSync(path.dirname(outPath), { recursive: true });
-  fs.appendFileSync(
-    outPath,
-    `${JSON.stringify({
-      name,
-      status,
-      startedAt: new Date(startedMs).toISOString(),
-      endedAt: new Date(endedMs).toISOString(),
-      durationMs,
-      durationSeconds: Number((durationMs / 1000).toFixed(3)),
-    })}\n`,
-  );
+  appendDeployTimingRecord(outPath, {
+    name,
+    status,
+    startedMs: parseMillis(startedRaw, "startedMs"),
+    endedMs: parseMillis(endedRaw, "endedMs"),
+  });
 }
 
 main();

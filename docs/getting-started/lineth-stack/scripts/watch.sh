@@ -766,7 +766,7 @@ progress_section_for_phase() {
 failure_tail() {
   name="$1"
   docker logs --tail 100 "$name" 2>&1 \
-    | grep -E 'ERROR|Error:|error code|insufficient funds|Failed|FATAL|ADDRESS MISMATCH|balance too low|Cannot fund|max fee per gas less than block base fee' \
+    | grep -E 'ERROR|Error:|error code|insufficient funds|Failed|FATAL|ADDRESS MISMATCH|balance too low|Cannot fund|max fee per gas less than block base fee|could not coalesce error|already known|eth_sendRawTransaction|UNKNOWN_ERROR' \
     | tail -12 \
     | awk 'length($0) > 260 { $0 = substr($0, 1, 260) "..." } { print }' \
     | lineth_indent || true

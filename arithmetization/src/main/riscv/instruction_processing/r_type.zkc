@@ -248,19 +248,13 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                         case FUNCT7_SRA: {
                             printf "SRA "
                             print_r_operands(rd, rs1, rs2)
-                            v1_sign = sign_bit_of_double_word(v1)
                             shift_discard_6::shift_amount_6 = v2
-                            if v1_sign == 1 {
-                                double_word_working_copy = bit_flip_double_word(v1)
+                            if sign_bit_of_double_word(v1) == 1 {
+                                registers[rd] = bit_flip_double_word(bit_flip_double_word(v1) >> shift_amount_6)
                             } else {
                                 // default case is 0
-                                double_word_working_copy = v1
+                                registers[rd] = v1 >> shift_amount_6
                             }
-                            double_word_working_copy = double_word_working_copy >> shift_amount_6
-                            if v1_sign == 1 {
-                                double_word_working_copy = bit_flip_double_word(double_word_working_copy)
-                            }
-                            registers[rd] = double_word_working_copy
                         }
                         case FUNCT7_DIVU: {
                             printf "DIVU "

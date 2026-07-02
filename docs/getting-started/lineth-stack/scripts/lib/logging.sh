@@ -67,6 +67,12 @@ lineth_banner() {
   printf '  %s lineth stack %s  %s%s%s\n' "$LINETH_BADGE" "$LINETH_RESET" "$LINETH_DIM" "$subtitle" "$LINETH_RESET"
 }
 
+lineth_subtitle() {
+  subtitle="${1:-quickstart}"
+  printf '\n'
+  printf '  %s lineth stack %s  %s%s%s\n' "$LINETH_BADGE" "$LINETH_RESET" "$LINETH_DIM" "$subtitle" "$LINETH_RESET"
+}
+
 lineth_section() {
   LINETH_SECTION_INDEX=$((LINETH_SECTION_INDEX + 1))
   printf '\n%s[%s] %s%s\n' "$LINETH_BLUE" "$LINETH_SECTION_INDEX" "$*" "$LINETH_RESET"
