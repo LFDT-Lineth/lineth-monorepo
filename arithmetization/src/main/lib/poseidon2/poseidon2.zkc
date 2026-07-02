@@ -18,6 +18,7 @@ include "constants.zkc"
 // KOALABEAR field elements (felts): [ σ₀, σ₁, ..., σ₁₅ ].
 memory poseidon2_state(address:u5) -> (felt:𝔽)
 
+#[inline]
 fn write_to_state<poseidon2_state>(address:u5, value:𝔽) -> () {
     poseidon2_state[address] = value
 }
