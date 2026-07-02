@@ -5,6 +5,7 @@ include "../utils/negative.zkc"
 include "../utils/sign_bit.zkc"
 include "../utils/sign_extend.zkc"
 include "../utils/signed_comparisons.zkc"
+include "../../lib/ecrecover/impl.zkc"
 include "../../lib/keccak/impl.zkc"
 
 // Process a RISC-V R-type instruction, writing the result into the register file.
@@ -520,10 +521,24 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                 }
             }
         }
+        case CUSTOM_0: {
+            if funct3 == FUNCT3_EVM_ECRECOVER && funct7 == FUNCT7_EVM_ECRECOVER {
+                printf "EVM ECRECOVER precompile "
+                evm_ecrecover(v1 as Address, v2 as Address, registers[rd] as Address)
+            } else {
+                printf "[ERROR] Unsupported R-type custom-0 instruction with\n"
+                printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3
+                printf "\tfunct7 ≡ %x ≡ %b\n", funct7, funct7
+                fail
+            }
+        }
         case CUSTOM_1: {
             if funct3 == FUNCT3_KECCAK && funct7 == FUNCT7_KECCAK {
                 printf "KECCAK precompile "
                 keccak(v1 as Address, v2 as u32, registers[rd] as Address)
+            } else if funct3 == FUNCT3_ECRECOVER && funct7 == FUNCT7_ECRECOVER {
+                printf "ECRECOVER precompile "
+                ecrecover(v1 as Address, v2 as Address, registers[rd] as Address)
             } else {
                 printf "[ERROR] Unsupported R-type custom-1 instruction with\n"
                 printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3

@@ -1,0 +1,15 @@
+include "../../riscv/utils/type.zkc"
+
+fn evm_ecrecover(msg_address:Address, sig_address:Address, output_address:Address) {
+    printf "\nEVM ecrecover skeleton\n"
+    printf "msg_address: %x\n", msg_address
+    printf "sig_address: %x\n", sig_address
+    printf "output_address: %x\n", output_address
+}
+
+fn ecrecover(msg_address:Address, sig_address:Address, output_address:Address) {
+    printf "\nextraneous ecrecover skeleton\n"
+    printf "msg_address: %x\n", msg_address
+    printf "sig_address: %x\n", sig_address
+    printf "output_address: %x\n", output_address
+}
