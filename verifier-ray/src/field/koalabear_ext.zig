@@ -55,7 +55,24 @@ pub const Ext = extern struct {
     }
 
     pub fn mulByBase(self: Ext, rhs: base.Element) Ext {
-        return .{ .B0 = self.B0.mulByBase(rhs), .B1 = self.B1.mulByBase(rhs), .B2 = self.B2.mulByBase(rhs) };
+        // 6 independent base multiplies by the same scalar; no combine/reduce-
+        // twice pattern exists here (unlike mul/square/inverse), so this is a
+        // straight expansion rather than an operation-count reduction.
+        const r = @as(u64, rhs.value);
+        return .{
+            .B0 = .{
+                .a0 = base.Element.init(@as(u64, self.B0.a0.value) * r),
+                .a1 = base.Element.init(@as(u64, self.B0.a1.value) * r),
+            },
+            .B1 = .{
+                .a0 = base.Element.init(@as(u64, self.B1.a0.value) * r),
+                .a1 = base.Element.init(@as(u64, self.B1.a1.value) * r),
+            },
+            .B2 = .{
+                .a0 = base.Element.init(@as(u64, self.B2.a0.value) * r),
+                .a1 = base.Element.init(@as(u64, self.B2.a1.value) * r),
+            },
+        };
     }
 
     pub fn divByBase(self: Ext, rhs: base.Element) Ext {
@@ -64,22 +81,106 @@ pub const Ext = extern struct {
 
     pub fn mul(self: Ext, rhs: Ext) Ext {
         // Karatsuba for cubic extension: 6 E2 muls instead of 9 (schoolbook).
-        // F_{p^6} = F_{p^2}[v]/(v^3 - nr), nr = u+1.
-        // t0 = A0*B0, t1 = A1*B1, t2 = A2*B2
-        // t01 = (A0+A1)*(B0+B1) - t0 - t1  =  A0*B1 + A1*B0
-        // t02 = (A0+A2)*(B0+B2) - t0 - t2  =  A0*B2 + A2*B0
-        // t12 = (A1+A2)*(B1+B2) - t1 - t2  =  A1*B2 + A2*B1
-        // D0 = t0 + t12*nr,  D1 = t01 + t2*nr,  D2 = t02 + t1
-        const t0 = self.B0.mul(rhs.B0);
-        const t1 = self.B1.mul(rhs.B1);
-        const t2 = self.B2.mul(rhs.B2);
-        const t01 = self.B0.add(self.B1).mul(rhs.B0.add(rhs.B1)).sub(t0).sub(t1);
-        const t02 = self.B0.add(self.B2).mul(rhs.B0.add(rhs.B2)).sub(t0).sub(t2);
-        const t12 = self.B1.add(self.B2).mul(rhs.B1.add(rhs.B2)).sub(t1).sub(t2);
+        // F_{p^6} = F_{p^2}[v]/(v^3 - nr), nr = u+1 in F_{p^2}.
+        //
+        // Fully expanded to raw base-field (u64) scalars: no E2/base.Element
+        // helper calls, no intermediate canonical reduction. Every add/sub is
+        // a free u64 op; the only `% p` folds are the ones strictly required
+        // to keep multiply operands and inputs bounded, plus the 6 final
+        // outputs. This removes the E2-call boundary that used to force
+        // canonical results (and a remu) after every cross-term E2 mul.
+        //
+        // Bounds: canonical limbs are < p < 2^31. A raw sum/diff of a small
+        // fixed number of such limbs (offset by +2p to avoid unsigned
+        // underflow on subtraction) stays far below 2^63, and every value fed
+        // into a multiply is folded mod p first, so products are bounded by
+        // 3*(p-1)^2 < 2^64.
+        const p = @as(u64, base.modulus);
+
+        const x0 = @as(u64, self.B0.a0.value);
+        const x1 = @as(u64, self.B0.a1.value);
+        const x2 = @as(u64, self.B1.a0.value);
+        const x3 = @as(u64, self.B1.a1.value);
+        const x4 = @as(u64, self.B2.a0.value);
+        const x5 = @as(u64, self.B2.a1.value);
+        const y0 = @as(u64, rhs.B0.a0.value);
+        const y1 = @as(u64, rhs.B0.a1.value);
+        const y2 = @as(u64, rhs.B1.a0.value);
+        const y3 = @as(u64, rhs.B1.a1.value);
+        const y4 = @as(u64, rhs.B2.a0.value);
+        const y5 = @as(u64, rhs.B2.a1.value);
+
+        // E2 mul on raw (already-reduced, < p) scalars -> raw (< 3p) scalars:
+        //   c0 = a0*b0 + 3*a1*b1,  c1 = a0*b1 + a1*b0
+        // t0 = B0*rhs.B0, t1 = B1*rhs.B1, t2 = B2*rhs.B2 (operands already < p)
+        const t0_0 = x0 * y0 + 3 * x1 * y1;
+        const t0_1 = x0 * y1 + x1 * y0;
+        const t1_0 = x2 * y2 + 3 * x3 * y3;
+        const t1_1 = x2 * y3 + x3 * y2;
+        const t2_0 = x4 * y4 + 3 * x5 * y5;
+        const t2_1 = x4 * y5 + x5 * y4;
+
+        // Cross terms: (Ai+Aj)*(Bi+Bj), operands folded mod p to stay < p
+        // before multiplying (sums of two canonical limbs are < 2p).
+        const s12_0 = (x2 + x4) % p;
+        const s12_1 = (x3 + x5) % p;
+        const r12_0 = (y2 + y4) % p;
+        const r12_1 = (y3 + y5) % p;
+        const w12_0 = s12_0 * r12_0 + 3 * s12_1 * r12_1;
+        const w12_1 = s12_0 * r12_1 + s12_1 * r12_0;
+
+        const s01_0 = (x0 + x2) % p;
+        const s01_1 = (x1 + x3) % p;
+        const r01_0 = (y0 + y2) % p;
+        const r01_1 = (y1 + y3) % p;
+        const w01_0 = s01_0 * r01_0 + 3 * s01_1 * r01_1;
+        const w01_1 = s01_0 * r01_1 + s01_1 * r01_0;
+
+        const s02_0 = (x0 + x4) % p;
+        const s02_1 = (x1 + x5) % p;
+        const r02_0 = (y0 + y4) % p;
+        const r02_1 = (y1 + y5) % p;
+        const w02_0 = s02_0 * r02_0 + 3 * s02_1 * r02_1;
+        const w02_1 = s02_0 * r02_1 + s02_1 * r02_0;
+
+        // Each t{0,1,2} component is reduced mod p exactly once here and
+        // reused below — t0/t1/t2 are each consumed by two of the three
+        // Karatsuba combines plus (t1, t2) by the final D2/D0 assembly, so
+        // computing `% p` at each use site (as before) redundantly repeated
+        // the same reduction 2-3x per value.
+        const rt0_0 = t0_0 % p;
+        const rt0_1 = t0_1 % p;
+        const rt1_0 = t1_0 % p;
+        const rt1_1 = t1_1 % p;
+        const rt2_0 = t2_0 % p;
+        const rt2_1 = t2_1 % p;
+
+        // t12 = w12 - t1 - t2 (offset by +4p so intermediate stays non-negative)
+        const t12_0 = (w12_0 + 4 * p - rt1_0 - rt2_0) % p;
+        const t12_1 = (w12_1 + 4 * p - rt1_1 - rt2_1) % p;
+        const t01_0 = (w01_0 + 4 * p - rt0_0 - rt1_0) % p;
+        const t01_1 = (w01_1 + 4 * p - rt0_1 - rt1_1) % p;
+        const t02_0 = (w02_0 + 4 * p - rt0_0 - rt2_0) % p;
+        const t02_1 = (w02_1 + 4 * p - rt0_1 - rt2_1) % p;
+
+        // mulByNonResidue (u+1) on raw (t12, t2), both already < p above:
+        //   (x0 + 3*x1, x0 + x1)
+        const nr12_0 = t12_0 + 3 * t12_1;
+        const nr12_1 = t12_0 + t12_1;
+        const nr2_0 = rt2_0 + 3 * rt2_1;
+        const nr2_1 = rt2_0 + rt2_1;
+
+        const d0_0 = t0_0 + nr12_0;
+        const d0_1 = t0_1 + nr12_1;
+        const d1_0 = t01_0 + nr2_0;
+        const d1_1 = t01_1 + nr2_1;
+        const d2_0 = t02_0 + rt1_0;
+        const d2_1 = t02_1 + rt1_1;
+
         return .{
-            .B0 = t0.add(t12.mulByNonResidue()),
-            .B1 = t01.add(t2.mulByNonResidue()),
-            .B2 = t02.add(t1),
+            .B0 = .{ .a0 = base.Element.init(d0_0), .a1 = base.Element.init(d0_1) },
+            .B1 = .{ .a0 = base.Element.init(d1_0), .a1 = base.Element.init(d1_1) },
+            .B2 = .{ .a0 = base.Element.init(d2_0), .a1 = base.Element.init(d2_1) },
         };
     }
 
@@ -89,18 +190,79 @@ pub const Ext = extern struct {
         // c01 = (B0+B1)^2 - s0 - s1 = 2*B0*B1
         // c12 = (B1+B2)^2 - s1 - s2 = 2*B1*B2
         // c02 = (B0+B2)^2 - s0 - s2 = 2*B0*B2
-        // D0 = s0 + (c12)*(u+1), D1 = c01 + s2*(u+1), D2 = c02 + s1 + (s0 - s0) = c02 + s1
-        // But D2 = c02 + s1, D1 = c01 + s2*(u+1), D0 = s0 + c12*(u+1)
-        const s0 = self.B0.mul(self.B0);
-        const s1 = self.B1.mul(self.B1);
-        const s2 = self.B2.mul(self.B2);
-        const c01 = self.B0.add(self.B1).mul(self.B0.add(self.B1)).sub(s0).sub(s1);
-        const c12 = self.B1.add(self.B2).mul(self.B1.add(self.B2)).sub(s1).sub(s2);
-        const c02 = self.B0.add(self.B2).mul(self.B0.add(self.B2)).sub(s0).sub(s2);
+        // D0 = s0 + c12*(u+1), D1 = c01 + s2*(u+1), D2 = c02 + s1
+        //
+        // Fully expanded to raw base-field (u64) scalars, same technique as
+        // mul(): no E2/base.Element helper calls, reduction deferred to the
+        // multiply boundaries and the 6 final outputs. See mul()'s comment
+        // for the bound analysis; identical here since the operand shapes
+        // (canonical limbs, sums of two limbs, Karatsuba-style combines) match.
+        const p = @as(u64, base.modulus);
+
+        const x0 = @as(u64, self.B0.a0.value);
+        const x1 = @as(u64, self.B0.a1.value);
+        const x2 = @as(u64, self.B1.a0.value);
+        const x3 = @as(u64, self.B1.a1.value);
+        const x4 = @as(u64, self.B2.a0.value);
+        const x5 = @as(u64, self.B2.a1.value);
+
+        // s0 = B0^2, s1 = B1^2, s2 = B2^2 (E2 squaring: (a0^2+3a1^2, 2a0a1))
+        const s0_0 = x0 * x0 + 3 * x1 * x1;
+        const s0_1 = 2 * x0 * x1;
+        const s1_0 = x2 * x2 + 3 * x3 * x3;
+        const s1_1 = 2 * x2 * x3;
+        const s2_0 = x4 * x4 + 3 * x5 * x5;
+        const s2_1 = 2 * x4 * x5;
+
+        // c{01,12,02} = (Bi+Bj)^2, operands folded mod p before squaring.
+        const a01_0 = (x0 + x2) % p;
+        const a01_1 = (x1 + x3) % p;
+        const q01_0 = a01_0 * a01_0 + 3 * a01_1 * a01_1;
+        const q01_1 = 2 * a01_0 * a01_1;
+
+        const a12_0 = (x2 + x4) % p;
+        const a12_1 = (x3 + x5) % p;
+        const q12_0 = a12_0 * a12_0 + 3 * a12_1 * a12_1;
+        const q12_1 = 2 * a12_0 * a12_1;
+
+        const a02_0 = (x0 + x4) % p;
+        const a02_1 = (x1 + x5) % p;
+        const q02_0 = a02_0 * a02_0 + 3 * a02_1 * a02_1;
+        const q02_1 = 2 * a02_0 * a02_1;
+
+        // Reduce s0/s1/s2 mod p once, reused across the three combines below.
+        const rs0_0 = s0_0 % p;
+        const rs0_1 = s0_1 % p;
+        const rs1_0 = s1_0 % p;
+        const rs1_1 = s1_1 % p;
+        const rs2_0 = s2_0 % p;
+        const rs2_1 = s2_1 % p;
+
+        // c{01,12,02} = q{01,12,02} - s_i - s_j (offset by +4p, as in mul())
+        const c01_0 = (q01_0 + 4 * p - rs0_0 - rs1_0) % p;
+        const c01_1 = (q01_1 + 4 * p - rs0_1 - rs1_1) % p;
+        const c12_0 = (q12_0 + 4 * p - rs1_0 - rs2_0) % p;
+        const c12_1 = (q12_1 + 4 * p - rs1_1 - rs2_1) % p;
+        const c02_0 = (q02_0 + 4 * p - rs0_0 - rs2_0) % p;
+        const c02_1 = (q02_1 + 4 * p - rs0_1 - rs2_1) % p;
+
+        // mulByNonResidue (u+1) on raw (c12, s2), both already < p above.
+        const nr12_0 = c12_0 + 3 * c12_1;
+        const nr12_1 = c12_0 + c12_1;
+        const nrs2_0 = rs2_0 + 3 * rs2_1;
+        const nrs2_1 = rs2_0 + rs2_1;
+
+        const d0_0 = s0_0 + nr12_0;
+        const d0_1 = s0_1 + nr12_1;
+        const d1_0 = c01_0 + nrs2_0;
+        const d1_1 = c01_1 + nrs2_1;
+        const d2_0 = c02_0 + rs1_0;
+        const d2_1 = c02_1 + rs1_1;
+
         return .{
-            .B0 = s0.add(c12.mulByNonResidue()),
-            .B1 = c01.add(s2.mulByNonResidue()),
-            .B2 = c02.add(s1),
+            .B0 = .{ .a0 = base.Element.init(d0_0), .a1 = base.Element.init(d0_1) },
+            .B1 = .{ .a0 = base.Element.init(d1_0), .a1 = base.Element.init(d1_1) },
+            .B2 = .{ .a0 = base.Element.init(d2_0), .a1 = base.Element.init(d2_1) },
         };
     }
 
@@ -111,15 +273,122 @@ pub const Ext = extern struct {
         //   A = b0^2 - (u+1)*b1*b2
         //   B = (u+1)*b2^2 - b0*b1
         //   C = b1^2 - b0*b2
-        const cap_a = self.B0.mul(self.B0).sub(self.B1.mul(self.B2).mulByNonResidue());
-        const cap_b = self.B2.mul(self.B2).mulByNonResidue().sub(self.B0.mul(self.B1));
-        const cap_c = self.B1.mul(self.B1).sub(self.B0.mul(self.B2));
-
         // Norm: d = b0*A + (u+1)*(b2*B + b1*C)
-        const d = self.B0.mul(cap_a).add(self.B2.mul(cap_b).add(self.B1.mul(cap_c)).mulByNonResidue());
-        const d_inv = d.inverse();
+        //
+        // Fully expanded to raw base-field (u64) scalars, same technique as
+        // mul()/square(). Unlike those, cap_a/cap_b/cap_c are each consumed
+        // twice (once to build d, once in the final .mul(d_inv)), so they
+        // are materialized as canonical base.Element pairs rather than kept
+        // as deferred lazy sums — there is no benefit to deferring reduction
+        // across a value that gets reduced anyway before its second use.
+        const p = @as(u64, base.modulus);
 
-        return .{ .B0 = cap_a.mul(d_inv), .B1 = cap_b.mul(d_inv), .B2 = cap_c.mul(d_inv) };
+        const x0 = @as(u64, self.B0.a0.value);
+        const x1 = @as(u64, self.B0.a1.value);
+        const x2 = @as(u64, self.B1.a0.value);
+        const x3 = @as(u64, self.B1.a1.value);
+        const x4 = @as(u64, self.B2.a0.value);
+        const x5 = @as(u64, self.B2.a1.value);
+
+        // Raw E2 products (< 4p^2), same shape as mul()'s t-terms.
+        const b0sq_0 = x0 * x0 + 3 * x1 * x1;
+        const b0sq_1 = 2 * x0 * x1;
+        const b1sq_0 = x2 * x2 + 3 * x3 * x3;
+        const b1sq_1 = 2 * x2 * x3;
+        const b2sq_0 = x4 * x4 + 3 * x5 * x5;
+        const b2sq_1 = 2 * x4 * x5;
+        const b1b2_0 = x2 * x4 + 3 * x3 * x5;
+        const b1b2_1 = x2 * x5 + x3 * x4;
+        const b0b1_0 = x0 * x2 + 3 * x1 * x3;
+        const b0b1_1 = x0 * x3 + x1 * x2;
+        const b0b2_0 = x0 * x4 + 3 * x1 * x5;
+        const b0b2_1 = x0 * x5 + x1 * x4;
+
+        // Reduce mod p once each (each of these is used exactly once below,
+        // so this is the minimum necessary — no redundant folds).
+        const r_b0sq_0 = b0sq_0 % p;
+        const r_b0sq_1 = b0sq_1 % p;
+        const r_b1sq_0 = b1sq_0 % p;
+        const r_b1sq_1 = b1sq_1 % p;
+        const r_b2sq_0 = b2sq_0 % p;
+        const r_b2sq_1 = b2sq_1 % p;
+        const r_b1b2_0 = b1b2_0 % p;
+        const r_b1b2_1 = b1b2_1 % p;
+        const r_b0b1_0 = b0b1_0 % p;
+        const r_b0b1_1 = b0b1_1 % p;
+        const r_b0b2_0 = b0b2_0 % p;
+        const r_b0b2_1 = b0b2_1 % p;
+
+        // nr(x) = (x0 + 3*x1, x0 + x1) on canonical inputs above.
+        const nr_b1b2_0 = r_b1b2_0 + 3 * r_b1b2_1;
+        const nr_b1b2_1 = r_b1b2_0 + r_b1b2_1;
+        const nr_b2sq_0 = r_b2sq_0 + 3 * r_b2sq_1;
+        const nr_b2sq_1 = r_b2sq_0 + r_b2sq_1;
+
+        // cap_a = b0sq - nr(b1b2), cap_b = nr(b2sq) - b0b1, cap_c = b1sq - b0b2
+        // (offset by +4p: r_* < p, nr_* < 4p, so a difference of two such terms
+        // needs at least +4p to stay non-negative before the final % p).
+        const cap_a_0 = (r_b0sq_0 + 4 * p - nr_b1b2_0) % p;
+        const cap_a_1 = (r_b0sq_1 + 4 * p - nr_b1b2_1) % p;
+        const cap_b_0 = (nr_b2sq_0 + 4 * p - r_b0b1_0) % p;
+        const cap_b_1 = (nr_b2sq_1 + 4 * p - r_b0b1_1) % p;
+        const cap_c_0 = (r_b1sq_0 + 4 * p - r_b0b2_0) % p;
+        const cap_c_1 = (r_b1sq_1 + 4 * p - r_b0b2_1) % p;
+
+        const cap_a: E2 = .{ .a0 = base.Element.init(cap_a_0), .a1 = base.Element.init(cap_a_1) };
+        const cap_b: E2 = .{ .a0 = base.Element.init(cap_b_0), .a1 = base.Element.init(cap_b_1) };
+        const cap_c: E2 = .{ .a0 = base.Element.init(cap_c_0), .a1 = base.Element.init(cap_c_1) };
+
+        // d = b0*cap_a + nr(b2*cap_b + b1*cap_c), all operands canonical (< p).
+        const ca0 = @as(u64, cap_a.a0.value);
+        const ca1 = @as(u64, cap_a.a1.value);
+        const cb0 = @as(u64, cap_b.a0.value);
+        const cb1 = @as(u64, cap_b.a1.value);
+        const cc0 = @as(u64, cap_c.a0.value);
+        const cc1 = @as(u64, cap_c.a1.value);
+
+        const b0ca_0 = x0 * ca0 + 3 * x1 * ca1;
+        const b0ca_1 = x0 * ca1 + x1 * ca0;
+        const b2cb_0 = x4 * cb0 + 3 * x5 * cb1;
+        const b2cb_1 = x4 * cb1 + x5 * cb0;
+        const b1cc_0 = x2 * cc0 + 3 * x3 * cc1;
+        const b1cc_1 = x2 * cc1 + x3 * cc0;
+
+        // b2cb + b1cc, folded mod p before mulByNonResidue.
+        const sum_0 = (b2cb_0 % p + b1cc_0 % p) % p;
+        const sum_1 = (b2cb_1 % p + b1cc_1 % p) % p;
+        const nr_sum_0 = sum_0 + 3 * sum_1;
+        const nr_sum_1 = sum_0 + sum_1;
+
+        // d, reduced once (needed twice below: once for the norm, once as
+        // the a0/a1 operands of the final E2 inversion formula).
+        const d0 = base.Element.init(b0ca_0 + nr_sum_0).value;
+        const d1 = base.Element.init(b0ca_1 + nr_sum_1).value;
+
+        // E2 inverse of d, flattened: norm = d0^2 - 3*d1^2 (mod p), then
+        // Fermat-invert the norm (base.Element.inverse — a fixed-cost 48
+        // squarings + 6 multiplies chain; not reducible by flattening), then
+        // d_inv = (d0*norm_inv, -d1*norm_inv). d0,d1 < p so d0^2 < p^2 and
+        // 3*d1^2 < 3p^2; offsetting by +3p^2 keeps the subtraction in range.
+        const norm = base.Element.init(@as(u64, d0) * d0 + 3 * @as(u64, p) * p - 3 * @as(u64, d1) * d1);
+        const norm_inv = norm.inverse();
+        const di0 = (@as(u64, d0) * norm_inv.value) % p;
+        const neg_d1 = (p - d1) % p;
+        const di1 = (neg_d1 * @as(u64, norm_inv.value)) % p;
+
+        // Final scale: cap_{a,b,c} * d_inv, expanded the same way.
+        const out_a_0 = ca0 * di0 + 3 * ca1 * di1;
+        const out_a_1 = ca0 * di1 + ca1 * di0;
+        const out_b_0 = cb0 * di0 + 3 * cb1 * di1;
+        const out_b_1 = cb0 * di1 + cb1 * di0;
+        const out_c_0 = cc0 * di0 + 3 * cc1 * di1;
+        const out_c_1 = cc0 * di1 + cc1 * di0;
+
+        return .{
+            .B0 = .{ .a0 = base.Element.init(out_a_0), .a1 = base.Element.init(out_a_1) },
+            .B1 = .{ .a0 = base.Element.init(out_b_0), .a1 = base.Element.init(out_b_1) },
+            .B2 = .{ .a0 = base.Element.init(out_c_0), .a1 = base.Element.init(out_c_1) },
+        };
     }
 
     pub fn div(self: Ext, rhs: Ext) Ext {
