@@ -46,7 +46,7 @@ jobs:
           exit 1
 
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 0
 
@@ -73,7 +73,7 @@ jobs:
       id-token: write
     steps:
       - name: Checkout release commit
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           ref: ${{ inputs.release_commit_sha }}
 
@@ -81,7 +81,7 @@ jobs:
         uses: ./.github/actions/setup-nodejs
         with:
           pnpm-install-options: "--frozen-lockfile --prefer-offline --ignore-scripts"
-  
+
       - name: Build sdk-core
         run: pnpm -F @lfdt-lineth/sdk-core run build
 
@@ -202,7 +202,7 @@ jobs:
       id-token: write
     steps:
       - name: Checkout release commit
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           ref: ${{ inputs.release_commit_sha }}
 
@@ -229,7 +229,7 @@ jobs:
             echo "::error::@consensys/linea-sdk-core@${CORE_VERSION} is not published on npm. Run this workflow for sdk-core with dual_publish_legacy enabled first."
             exit 1
           fi
-      
+
       - name: Build sdk-viem
         run: pnpm -F "@lfdt-lineth/sdk-viem..." run build
 

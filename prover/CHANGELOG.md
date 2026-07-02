@@ -1,5 +1,10 @@
 ## [unreleased]
 
+### 🚜 Refactor
+
+- *(prover)* Remove redundant and unsafe utility functions (#3273)
+## [1.0.5] - 2026-06-30
+
 ### 🐛 Bug Fixes
 
 - *(prover)* Reserve a padding row in the state-manager modules (#3470)

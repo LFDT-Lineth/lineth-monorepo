@@ -5,9 +5,9 @@ import linea.SearchDirection
 import linea.contract.events.L1RollingHashUpdatedEvent
 import linea.contract.events.MessageSentEvent
 import linea.domain.BlockParameter
-import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.CommonDomainFunctions
 import linea.domain.EthLogEvent
+import linea.domain.toBlockParameter
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

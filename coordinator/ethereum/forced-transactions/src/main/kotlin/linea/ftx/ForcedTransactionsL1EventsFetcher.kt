@@ -5,8 +5,8 @@ import linea.LongRunningService
 import linea.SearchDirection
 import linea.contract.events.ForcedTransactionAddedEvent
 import linea.domain.BlockParameter
-import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.EthLog
+import linea.domain.toBlockParameter
 import linea.ethapi.EthApiClient
 import linea.ethapi.EthLogsFilterOptions
 import linea.ethapi.extensions.EthLogsFilterState
@@ -68,7 +68,7 @@ internal class ForcedTransactionsL1EventsFetcher(
               else -> null
             }
           }
-            .thenApply { eventLog ->
+            .thenApply<BlockParameter> { eventLog ->
               if (eventLog == null) {
                 throw IllegalStateException(
                   "No eth log found for finalized forced transaction number $finalizedForcedTransactionNumber",

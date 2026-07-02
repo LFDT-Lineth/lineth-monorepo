@@ -361,7 +361,7 @@ class ConflationApp(
       ethApiClient = l2EthClient,
       contractAddress = configs.protocol.l2.contractAddress,
       smartContractErrors = configs.smartContractErrors,
-      smartContractDeploymentBlockNumber = configs.protocol.l2.contractDeploymentBlockNumber?.getNumber(),
+      smartContractDeploymentBlockNumber = configs.protocol.l2.contractDeploymentBlockNumber?.number,
     )
 
     ProofAggregationCoordinatorService

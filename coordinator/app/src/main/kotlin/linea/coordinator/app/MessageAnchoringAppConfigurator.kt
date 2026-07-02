@@ -69,7 +69,7 @@ object MessageAnchoringAppConfigurator {
           feeHistoryRewardPercentile = configs.messageAnchoring.gas.feeHistoryRewardPercentile.toDouble(),
           transactionManager = l2TransactionManager,
           smartContractErrors = configs.smartContractErrors,
-          smartContractDeploymentBlockNumber = configs.protocol.l2.contractDeploymentBlockNumber?.getNumber(),
+          smartContractDeploymentBlockNumber = configs.protocol.l2.contractDeploymentBlockNumber?.number,
         ),
       )
     return messageAnchoringApp
