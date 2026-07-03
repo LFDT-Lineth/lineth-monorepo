@@ -1,15 +1,15 @@
 name: Arithmetization native zkc benchmark - Keccak (base vs optim)
 
 # Benchmark of native zkc batched Keccak-f function against two
-# zkc versions: a "base" version and an "optim" version. 
+# zkc versions: a "base" version and an "optim" version.
 #
-# Benchmark methodology : 
+# Benchmark methodology :
 # one untimed warm-up (untimed) + N timed iterations for the base variant
 # one untimed warm-up (untimed) + N timed iterations for the optim variant
 # Per-iteration `cache_thrasher` + sleep attempts to keep CPU cache state comparable across timed runs.
 # Launched with zkc exec --field KOALABEAR_16 <input.json> <program.zkc>
 #
-# Benchmark data : 
+# Benchmark data :
 # In arithmetization/src/test/zkc/keccakf/keccakf_batched.accepts
 # There are 20k test vectors you can select from to run the benchmark.
 # Each test vector has a raw message of 16 * 32 bytes, ie fits in 4 blocks of 1088 bits.
@@ -68,7 +68,7 @@ jobs:
     timeout-minutes: 120
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 0
           submodules: false
