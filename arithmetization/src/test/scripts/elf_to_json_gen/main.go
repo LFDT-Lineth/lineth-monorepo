@@ -2,6 +2,7 @@ package main
 
 import (
 	"debug/elf"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -23,11 +24,16 @@ type memoryBlob struct {
 	name   string
 }
 
+type inputBytes struct {
+	data []byte
+	ssz  bool
+}
+
 // The purpose of this program is simply to generate a suitable ZkC json input
 // file for a given RISC-V binary program.
 func main() {
 	if len(os.Args) != 4 {
-		fmt.Fprintln(os.Stderr, "usage: go run main.go <elfFile> <inBytes|@hexFile> <inBytesOffset>")
+		fmt.Fprintln(os.Stderr, "usage: go run main.go <elfFile> <inBytes|@hexFile|@sszFile> <inBytesOffset>")
 		os.Exit(1)
 	}
 
@@ -53,8 +59,10 @@ func main() {
 	// The entry point, program blob offsets and program blob sizes are taken
 	// directly from the ELF. Only the optional input bytes offset is external.
 	var blobs = extractProgramBlobs(elfFile.Progs, elfFile.Sections)
-	if len(inBytes) > 0 {
-		blobs = append(blobs, memoryBlob{offset: inBytesOffset, data: inBytes, name: "in_bytes"})
+	if inBytes.ssz {
+		blobs = append(blobs, sszInputBlobs(inBytesOffset, inBytes.data)...)
+	} else if len(inBytes.data) > 0 {
+		blobs = append(blobs, memoryBlob{offset: inBytesOffset, data: inBytes.data, name: "in_bytes"})
 	}
 	// Optionally write a .sections file with the indexes, offsets, sizes and names of the blobs for debugging purposes.
 	// This is controlled by the ELF2JSON_WRITE_SECTIONS environment variable, which must be set to "true" to enable this feature.
@@ -78,41 +86,43 @@ func main() {
 	printJson(blobs, elfFile.Entry)
 }
 
-// parseInBytes turns an arg into raw input bytes. Four forms:
-// - `*.ssz` (optional `@` prefix): returned verbatim — already a complete, length-framed input.
+// parseInBytes turns an arg into input bytes. Four forms:
+// - `*.ssz` (optional `@` prefix): raw SSZ payload; framing is added by sszInputBlobs.
 // - `0x...`: expects big-endian hex, byte-reversed before reaching RAM.
 // - `@path`: same as `0x…`, but reads the hex from a file.
 // - anything else: raw bytes, verbatim.
-func parseInBytes(arg string) ([]byte, error) {
+func parseInBytes(arg string) (inputBytes, error) {
 	// input ≡ ssz file
 	if strings.HasSuffix(arg, ".ssz") {
 		ssz, err := os.ReadFile(strings.TrimPrefix(arg, "@"))
 		if err != nil {
-			return nil, fmt.Errorf("reading inBytes .ssz file: %w", err)
+			return inputBytes{}, fmt.Errorf("reading inBytes .ssz file: %w", err)
 		}
-		return ssz, nil
+		return inputBytes{data: ssz, ssz: true}, nil
 	}
 
 	// input ≡ non ssz file
 	if strings.HasPrefix(arg, "@") {
 		data, err := os.ReadFile(strings.TrimPrefix(arg, "@"))
 		if err != nil {
-			return nil, fmt.Errorf("reading inBytes file: %w", err)
+			return inputBytes{}, fmt.Errorf("reading inBytes file: %w", err)
 		}
 		fields := strings.Fields(string(data))
 		if len(fields) != 1 {
-			return nil, fmt.Errorf("expected @path to contain one 0x-prefixed input, got %d", len(fields))
+			return inputBytes{}, fmt.Errorf("expected @path to contain one 0x-prefixed input, got %d", len(fields))
 		}
-		return parseHexInBytes(fields[0])
+		inBytes, err := parseHexInBytes(fields[0])
+		return inputBytes{data: inBytes}, err
 	}
 
 	// input ≡ hex string
 	if strings.HasPrefix(arg, "0x") || strings.HasPrefix(arg, "0X") {
-		return parseHexInBytes(arg)
+		inBytes, err := parseHexInBytes(arg)
+		return inputBytes{data: inBytes}, err
 	}
 
 	// input ≡ raw bytes
-	return []byte(arg), nil
+	return inputBytes{data: []byte(arg)}, nil
 }
 
 func parseHexInBytes(arg string) ([]byte, error) {
@@ -125,6 +135,21 @@ func parseHexInBytes(arg string) ([]byte, error) {
 	}
 	slices.Reverse(inBytes)
 	return inBytes, nil
+}
+
+func sszInputBlobs(inBytesOffset uint64, ssz []byte) []memoryBlob {
+	payloadOffset := inBytesOffset + 8
+	if payloadOffset < inBytesOffset {
+		panic("SSZ input offset overflow")
+	}
+
+	prefix := make([]byte, 8)
+	binary.LittleEndian.PutUint64(prefix, uint64(len(ssz)))
+	blobs := []memoryBlob{{offset: inBytesOffset, data: prefix, name: "ssz_length"}}
+	if len(ssz) > 0 {
+		blobs = append(blobs, memoryBlob{offset: payloadOffset, data: ssz, name: "ssz_payload"})
+	}
+	return blobs
 }
 
 // Extract sparse memory blobs from allocated file-backed sections. Zero-filled
