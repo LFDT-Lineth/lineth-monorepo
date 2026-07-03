@@ -22,6 +22,15 @@ func encodeJType(rd uint32, offset int32) uint32 {
 	return opcodeJAL | (rd << 7) | (imm19_12 << 12) | (imm11 << 20) | (imm10_1 << 21) | (imm20 << 31)
 }
 
+func encodeBType(funct3, rs1, rs2 uint32, offset int32) uint32 {
+	imm13 := uint32(offset) & 0x1fff
+	imm12 := (imm13 >> 12) & 0x1
+	imm11 := (imm13 >> 11) & 0x1
+	imm10_5 := (imm13 >> 5) & 0x3f
+	imm4_1 := (imm13 >> 1) & 0xf
+	return opcodeBRANCH | (imm11 << 7) | (imm4_1 << 8) | (funct3 << 12) | (rs1 << 15) | (rs2 << 20) | (imm10_5 << 25) | (imm12 << 31)
+}
+
 func decodeFields(instr uint32) (opcode, instrType, rd, rs1, rs2, funct3, imm12, funct7 uint32) {
 	opcode = instr & 0x7f
 	instrType = instructionTypeFromOpcode(opcode)
@@ -292,6 +301,27 @@ func TestDecodeBTypeSemantic(t *testing.T) {
 	}
 }
 
+func TestAssembleBTypeImm(t *testing.T) {
+	tests := []struct {
+		name   string
+		offset int32
+		want   uint64
+	}{
+		{name: "zero", offset: 0, want: 0},
+		{name: "forward_8", offset: 8, want: 8},
+		{name: "backward_16", offset: -16, want: 0xfffffffffffffff0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			instr := encodeBType(0b000, 1, 2, tt.offset)
+			got := assembleBTypeImm(instr)
+			if got != tt.want {
+				t.Fatalf("assembleBTypeImm(%s) = %#x, want %#x", tt.name, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestDecodeJTypeSemantic(t *testing.T) {
 	gotOp := decodeJTypeSemantic(opcodeJAL)
 	if gotOp != jtypeJal {
@@ -355,5 +385,26 @@ func TestUtypeOpForRd(t *testing.T) {
 	}
 	if got := utypeOpForRd(utypeAuipc, 5); got != utypeAuipcWB {
 		t.Fatalf("utypeOpForRd(auipc, x5) = %d, want %d", got, utypeAuipcWB)
+	}
+}
+
+func TestAssembleUTypeImm(t *testing.T) {
+	tests := []struct {
+		name  string
+		imm20 uint32
+		want  uint64
+	}{
+		{name: "zero", imm20: 0, want: 0},
+		{name: "positive", imm20: 0x12345, want: 0x12345000},
+		{name: "negative", imm20: 0xfffff, want: 0xfffffffffffff000},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			instr := encodeUType(opcodeLUI, 1, tt.imm20)
+			got := assembleUTypeImm(instr)
+			if got != tt.want {
+				t.Fatalf("assembleUTypeImm(%s) = %#x, want %#x", tt.name, got, tt.want)
+			}
+		})
 	}
 }

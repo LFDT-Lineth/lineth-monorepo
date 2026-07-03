@@ -5,18 +5,27 @@ include "../utils/signed_sum.zkc"
 
 // Process a RISC-V B-type (branch) instruction and return the next program counter.
 //
-// For B-type instructions branch, compute_op and operands are pre-decoded at ELF time
-// (see decoded_btype in memory.zkc). For the values of compute_op, we kept the raw
-// funct3 value (BRANCH_BEQ = 0b000, BRANCH_BNE = 0b001, …). 
+// For B-type instructions, compute_op and operands are pre-decoded at ELF time
+// (see decoded_btype in memory.zkc). compute_op holds the raw funct3 value
+// (BRANCH_BEQ = 0b000, BRANCH_BNE = 0b001, …).
 //
-// In the predecoding phase, the sub-fields for B-type instructions come from a 
+// In the predecoding phase, the operands for B-type instructions come from a
 // common 25-bit encoding (opcode stripped) that is laid out as:
-// 
+//
 //   imm[12] :: imm[10:5] :: rs2 :: rs1 :: compute_op(funct3) :: imm[4:1] :: imm[11]
 //
-// Runtime execution is a flat switch on compute_op.
-// The 13-bit signed PC-relative offset sub-fields are reassembled and
-// sign-extended here.
+// The 13-bit signed PC-relative branch offset is reassembled and sign-extended
+// at ELF time into `imm`:
+//
+//    var imm:DoubleWord
+//    if imm_sign == 1 {
+//      imm = DWORD_SIGN_EXT_PREFIX_52_ONES::imm_11::imm_10_5::imm_4_1::(0 as u1)
+//    } else {
+//      imm = (imm_11::imm_10_5::imm_4_1::(0 as u1)) as DoubleWord
+//    }
+//
+// Runtime execution is a flat switch on compute_op. Invalid opcodes (BTYPE_INVALID)
+// are handled by the default arm.
 //
 // The six branch variants and their conditions are:
 //   BEQ  (compute_op = BRANCH_BEQ = funct3 = 0b000) — branch if rs1 == rs2
@@ -32,21 +41,11 @@ include "../utils/signed_sum.zkc"
 fn process_B_type_instruction<registers>(index:u64, pc:Address) -> (pc_new:Address) {
 
     var compute_op:BTypeComputeOp
-    var imm_sign:SignBit
-    var imm_10_5:u6
+    var imm:DoubleWord
     var rs2:Register
     var rs1:Register
-    var imm_4_1:u4
-    var imm_11:u1
-    var imm:DoubleWord
-    
-    compute_op, imm_sign, imm_10_5, rs2, rs1, imm_4_1, imm_11 = decoded_btype[index]
 
-    if imm_sign == 1 {
-        imm = DWORD_SIGN_EXT_PREFIX_52_ONES::imm_11::imm_10_5::imm_4_1::(0 as u1)
-    } else {
-        imm = (imm_11::imm_10_5::imm_4_1::(0 as u1)) as DoubleWord
-    }
+    compute_op, imm, rs2, rs1 = decoded_btype[index]
 
     // "no branching" value of pc_new; gets overwritten if branching occurs
     pc_new = pc + 4
@@ -56,6 +55,7 @@ fn process_B_type_instruction<registers>(index:u64, pc:Address) -> (pc_new:Addre
             printf "BRANCH_BEQ "
             print_b_operands(rs1, rs2, imm)
             if registers[rs1] == registers[rs2] {
+                // the branch case
                 pc_new = signed_sum_of_double_word(pc, imm)
             }
         }
@@ -63,6 +63,7 @@ fn process_B_type_instruction<registers>(index:u64, pc:Address) -> (pc_new:Addre
             printf "BRANCH_BNE "
             print_b_operands(rs1, rs2, imm)
             if registers[rs1] != registers[rs2] {
+                // the branch case
                 pc_new = signed_sum_of_double_word(pc, imm)
             }
         }
@@ -86,6 +87,7 @@ fn process_B_type_instruction<registers>(index:u64, pc:Address) -> (pc_new:Addre
             printf "BRANCH_BLTU "
             print_b_operands(rs1, rs2, imm)
             if registers[rs1]<registers[rs2] {
+                // the branch case
                 pc_new = signed_sum_of_double_word(pc, imm)
             }
         }
@@ -93,6 +95,7 @@ fn process_B_type_instruction<registers>(index:u64, pc:Address) -> (pc_new:Addre
             printf "BRANCH_BGEU "
             print_b_operands(rs1, rs2, imm)
             if registers[rs1] >= registers[rs2] {
+                // the branch case
                 pc_new = signed_sum_of_double_word(pc, imm)
             }
         }

@@ -605,6 +605,29 @@ func signExtend21(x uint32) int64 {
 	return int64(int32(x<<11) >> 11)
 }
 
+// assembleBTypeImm reassembles the split B-type immediate from a raw instruction
+// word and sign-extends it to 64 bits for decoded_btype.imm.
+func assembleBTypeImm(instr uint32) uint64 {
+	immSign := (instr >> 31) & 0x1
+	imm10_5 := (instr >> 25) & 0x3f
+	imm4_1 := (instr >> 8) & 0xf
+	imm11 := (instr >> 7) & 0x1
+	imm13 := uint32((immSign << 12) | (imm11 << 11) | (imm10_5 << 5) | (imm4_1 << 1))
+	return uint64(signExtend13(imm13))
+}
+
+func signExtend13(x uint32) int64 {
+	x &= 0x1fff
+	return int64(int32(x<<19) >> 19)
+}
+
+// assembleUTypeImm sign-extends the U-type upper immediate (imm[31:12]) to 64 bits.
+func assembleUTypeImm(instr uint32) uint64 {
+	imm20 := (instr >> 12) & 0xfffff
+	word := uint32(imm20 << 12)
+	return uint64(int64(int32(word)))
+}
+
 // decodeUTypeSemantic maps a raw U-type opcode to a semantic base compute op.
 func decodeUTypeSemantic(opcode uint32) (computeOp uint32) {
 	switch opcode {
@@ -876,9 +899,9 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 	//   decoded_itype: compute_op:ITypeComputeOp(u6), imm12:Imm12(u12), rs1:Register(u5), rd:Register(u5)
 	//   decoded_rtype: compute_op:RTypeComputeOp(u6), rs1:Register(u5), rs2:Register(u5), rd:Register(u5)
 	//   decoded_stype: compute_op:STypeComputeOp(u6), imm12:Imm12(u12), rs2:Register(u5), rs1:Register(u5)
-	//   decoded_btype: compute_op:BTypeComputeOp(u6), imm_sign:u1, imm_10_5:u6, rs2:Register(u5), rs1:Register(u5), imm_4_1:u4, imm_11:u1
+	//   decoded_btype: compute_op:BTypeComputeOp(u6), imm:DoubleWord(u64), rs2:Register(u5), rs1:Register(u5)
 	//   decoded_jtype: compute_op:JTypeComputeOp(u6), imm:DoubleWord(u64), rd:Register(u5)
-	//   decoded_utype: compute_op:UTypeComputeOp(u6), imm20:Imm20(u20), rd:Register(u5)
+	//   decoded_utype: compute_op:UTypeComputeOp(u6), imm:DoubleWord(u64), rd:Register(u5)
 	var (
 		coreBits  bitWriter
 		itypeBits bitWriter
@@ -909,16 +932,13 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		// reassemble it into the 12-bit store immediate.
 		simm12 := (((instr >> 31) & 0x1) << 11) | (((instr >> 25) & 0x3f) << 5) | ((instr >> 7) & 0x1f)
 
-		// B-type immediate sub-fields (kept split; reassembled at runtime in b_type.zkc).
-		bImmSign := (instr >> 31) & 0x1  // imm[12]
-		bImm10_5 := (instr >> 25) & 0x3f // imm[10:5]
-		bImm4_1 := (instr >> 8) & 0xf    // imm[4:1]
-		bImm11 := (instr >> 7) & 0x1     // imm[11]
+		// B-type immediate: reassembled and sign-extended at ELF time.
+		bImm := assembleBTypeImm(instr)
 		// J-type immediate: reassembled and sign-extended at ELF time.
 		jImm := assembleJTypeImm(instr)
 
-		// U-type immediate: imm[31:12] (20 bits).
-		uImm20 := (instr >> 12) & 0xfffff
+		// U-type immediate: upper 20 bits sign-extended at ELF time.
+		uImm := assembleUTypeImm(instr)
 
 		coreBits.writeBits(uint64(opcode), 7)
 		coreBits.writeBits(uint64(instrType), 3)
@@ -960,12 +980,9 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 			btypeComputeOp = btypeInvalid
 		}
 		btypeBits.writeBits(uint64(btypeComputeOp), 6)
-		btypeBits.writeBits(uint64(bImmSign), 1)
-		btypeBits.writeBits(uint64(bImm10_5), 6)
+		btypeBits.writeBits(bImm, 64)
 		btypeBits.writeBits(uint64(rs2), 5)
 		btypeBits.writeBits(uint64(rs1), 5)
-		btypeBits.writeBits(uint64(bImm4_1), 4)
-		btypeBits.writeBits(uint64(bImm11), 1)
 
 		jtypeComputeOp := decodeJTypeSemantic(opcode)
 		if instrType != jType {
@@ -982,7 +999,7 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		}
 		utypeComputeOp = utypeOpForRd(utypeComputeOp, rd)
 		utypeBits.writeBits(uint64(utypeComputeOp), 6)
-		utypeBits.writeBits(uint64(uImm20), 20)
+		utypeBits.writeBits(uImm, 64)
 		utypeBits.writeBits(uint64(rd), 5)
 	}
 

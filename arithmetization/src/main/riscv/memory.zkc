@@ -58,10 +58,9 @@ pub input decoded_rtype(i:u64) -> (compute_op:RTypeComputeOp, rs1:Register, rs2:
 pub input decoded_stype(i:u64) -> (compute_op:STypeComputeOp, imm12:Imm12, rs2:Register, rs1:Register)
 
 // Pre-decoded B-type semantic micro-ops, indexed by the same instruction index.
-// compute_op holds the raw branch funct3 (BRANCH_BEQ, …). The 13-bit branch
-// offset sub-fields are kept split; sign extension and reassembly happen at
-// runtime in b_type.zkc.
-pub input decoded_btype(i:u64) -> (compute_op:BTypeComputeOp, imm_sign:SignBit, imm_10_5:u6, rs2:Register, rs1:Register, imm_4_1:u4, imm_11:u1)
+// compute_op holds the raw branch funct3 (BRANCH_BEQ, …). The 13-bit signed
+// branch offset is reassembled and sign-extended at ELF time into imm.
+pub input decoded_btype(i:u64) -> (compute_op:BTypeComputeOp, imm:DoubleWord, rs2:Register, rs1:Register)
 
 // Pre-decoded J-type semantic micro-ops, indexed by the same instruction index.
 // Writeback of the link address is folded into JTYPE_JAL_WB. The 21-bit signed
@@ -69,5 +68,6 @@ pub input decoded_btype(i:u64) -> (compute_op:BTypeComputeOp, imm_sign:SignBit, 
 pub input decoded_jtype(i:u64) -> (compute_op:JTypeComputeOp, imm:DoubleWord, rd:Register)
 
 // Pre-decoded U-type semantic micro-ops, indexed by the same instruction index.
-// Writeback to rd is folded into *_WB opcode variants.
-pub input decoded_utype(i:u64) -> (compute_op:UTypeComputeOp, imm20:Imm20, rd:Register)
+// Writeback to rd is folded into *_WB opcode variants. The upper immediate
+// (imm20 << 12) is sign-extended to 64 bits at ELF time into imm.
+pub input decoded_utype(i:u64) -> (compute_op:UTypeComputeOp, imm:DoubleWord, rd:Register)

@@ -1,6 +1,5 @@
 include "../memory.zkc"
 include "../utils/constants.zkc"
-include "../utils/sign_extend.zkc"
 include "../utils/signed_sum.zkc"
 
 // Process a RISC-V U-type instruction, writing an upper-immediate value to a register.
@@ -13,16 +12,20 @@ include "../utils/signed_sum.zkc"
 //
 //   imm20 :: rd
 //
+// The upper immediate is placed into bits [31:12] of a 32-bit word (lower 12 bits
+// zeroed) and sign-extended to 64 bits at ELF time into `imm`.
+//
+//   var imm:DoubleWord = sgn_extension_u32_u64(((imm20 as u32) << 12) as u32)
+//
 // Runtime execution is a flat switch on compute_op (UTYPE_LUI, UTYPE_AUIPC, and
-// their *_WB variants). The immediate imm20 from the pre-decoding phase is placed
-// into bits [31:12] of a 32-bit word (lower 12 bits zeroed) and then sign-extended
-// to 64 bits. The compute_op selects one of two variants:
+// their *_WB variants). Invalid opcodes (UTYPE_INVALID) are handled by
+// the default arm.
 //
 //   LUI   — load upper immediate:
-//             rd = sign_extend_32_to_64(imm20 << 12)
+//             rd = imm
 //
 //   AUIPC — add upper immediate to PC:
-//             rd = sign_extend_32_to_64(imm20 << 12) + pc
+//             rd = imm + pc
 //
 // LUI is typically paired with an ADDI to materialise a full 32-bit constant in a
 // register.  AUIPC is used to form PC-relative addresses for data or call targets.
@@ -30,35 +33,34 @@ include "../utils/signed_sum.zkc"
 fn process_U_type_instruction<registers>(index:u64, pc:Address) -> () {
 
     var compute_op:UTypeComputeOp
-    var imm20:Imm20
+    var imm:DoubleWord
     var rd:Register
-    compute_op, imm20, rd = decoded_utype[index]
-
-    var result:DoubleWord
-    result = sgn_extension_u32_u64(((imm20 as u32) << 12) as u32)
+    compute_op, imm, rd = decoded_utype[index]
 
     switch compute_op {
-        case UTYPE_LUI, UTYPE_LUI_WB: {
+        case UTYPE_LUI: {
             printf "UTYPE_LUI "
-            print_u_operands(rd, imm20)
+            print_u_operands(rd, (imm >> 12) as Imm20)
         }
-        case UTYPE_AUIPC, UTYPE_AUIPC_WB: {
+        case UTYPE_LUI_WB: {
+            printf "UTYPE_LUI "
+            print_u_operands(rd, (imm >> 12) as Imm20)
+            registers[rd] = imm
+        }
+        case UTYPE_AUIPC: {
             printf "UTYPE_AUIPC "
-            print_u_operands(rd, imm20)
-            result = signed_sum_of_double_word(result, pc) as DoubleWord
+            print_u_operands(rd, (imm >> 12) as Imm20)
+            var result:DoubleWord = signed_sum_of_double_word(imm, pc) as DoubleWord
         }
-        case UTYPE_INVALID: {
-            printf "[ERROR] Unsupported U-type instruction (invalid semantic op)\n"
-            fail
+        case UTYPE_AUIPC_WB: {
+            printf "UTYPE_AUIPC "
+            print_u_operands(rd, (imm >> 12) as Imm20)
+            registers[rd] = signed_sum_of_double_word(imm, pc) as DoubleWord
         }
         default: {
             printf "[ERROR] Unsupported U-type instruction with\n"
             printf "\tcompute_op ≡ %x\n", compute_op
             fail
         }
-    }
-
-    if (compute_op & 1) != 0 {
-        registers[rd] = result
     }
 }
