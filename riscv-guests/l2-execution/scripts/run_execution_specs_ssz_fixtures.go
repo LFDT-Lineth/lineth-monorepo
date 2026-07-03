@@ -45,15 +45,16 @@ func main() {
 	must(err)
 
 	guestDir := filepath.Join(root, "riscv-guests", "l2-execution")
-	cacheDir := filepath.Join(guestDir, ".cache", "large-ssz-fixtures")
-	fixtureRoot := filepath.Join(cacheDir, "fixtures")
+	jsonFixturesDir := filepath.Join(os.TempDir(), "execution-specs-json-fixtures")
+	sszFixturesDir := filepath.Join(os.TempDir(), "execution-specs-ssz-fixtures")
+	fixtureRoot := filepath.Join(jsonFixturesDir, "fixtures")
 
 	fixturePaths := splitList(*fixturePathsFlag)
 	if len(fixturePaths) == 0 {
 		must(fmt.Errorf("fixture-paths must not be empty"))
 	}
 
-	must(run(os.Stderr, "make", "-C", guestDir, "get-execution-specs-json-fixtures", "LARGE_SSZ_DIR="+cacheDir))
+	must(run(os.Stderr, "make", "-C", guestDir, "get-execution-specs-json-fixtures", "EXECUTION_SPECS_JSON_FIXTURES_DIR="+jsonFixturesDir))
 	must(run(os.Stderr, "make", "-C", guestDir, "compile"))
 
 	var fixtureSets []fixtureSet
@@ -80,7 +81,7 @@ func main() {
 
 		selectedSSZ := 0
 		for _, jsonPath := range jsonPaths {
-			jsonRel, singleJSONDir, err := prepareSingleJSONDir(cacheDir, fixturePath, targetDir, jsonPath)
+			jsonRel, singleJSONDir, err := prepareSingleJSONDir(jsonFixturesDir, fixturePath, targetDir, jsonPath)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "prepare %s: %v\n", jsonPath, err)
 				hadError = true
@@ -88,8 +89,8 @@ func main() {
 			}
 
 			jsonName := strings.TrimSuffix(jsonRel, filepath.Ext(jsonRel))
-			outDir := filepath.Join(cacheDir, "ssz", filepath.FromSlash(fixturePath), jsonName)
-			logPath := filepath.Join(cacheDir, "logs", filepath.FromSlash(fixturePath), jsonName+".log")
+			outDir := filepath.Join(sszFixturesDir, filepath.FromSlash(fixturePath), jsonName)
+			logPath := filepath.Join(sszFixturesDir, "logs", filepath.FromSlash(fixturePath), jsonName+".log")
 
 			if err := os.RemoveAll(outDir); err != nil {
 				fmt.Fprintf(os.Stderr, "clear %s: %v\n", outDir, err)
@@ -104,11 +105,12 @@ func main() {
 
 			err = run(os.Stderr,
 				"make", "-C", guestDir, "gen-execution-specs-ssz-fixtures",
-				"ZKEVM_FIXTURES_PATH="+fixturePath,
-				"ZKEVM_FIXTURES_TARGET_DIR="+singleJSONDir,
-				"LARGE_SSZ_DIR="+cacheDir,
-				"LARGE_SSZ_OUT_DIR="+outDir,
-				"LARGE_SSZ_LOG="+logPath,
+				"EXECUTION_SPECS_FIXTURES_PATH="+fixturePath,
+				"EXECUTION_SPECS_FIXTURES_TARGET_DIR="+singleJSONDir,
+				"EXECUTION_SPECS_JSON_FIXTURES_DIR="+jsonFixturesDir,
+				"EXECUTION_SPECS_SSZ_FIXTURES_DIR="+sszFixturesDir,
+				"EXECUTION_SPECS_SSZ_OUT_DIR="+outDir,
+				"EXECUTION_SPECS_SSZ_LOG="+logPath,
 			)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "skip %s/%s: %v\n", fixturePath, jsonRel, err)
@@ -258,7 +260,7 @@ func jsonFiles(dir string) ([]string, error) {
 }
 
 // Creates a one-JSON directory.
-func prepareSingleJSONDir(cacheDir, fixturePath, targetDir, jsonPath string) (string, string, error) {
+func prepareSingleJSONDir(jsonFixturesDir, fixturePath, targetDir, jsonPath string) (string, string, error) {
 	jsonRel, err := filepath.Rel(targetDir, jsonPath)
 	if err != nil {
 		return "", "", err
@@ -268,7 +270,7 @@ func prepareSingleJSONDir(cacheDir, fixturePath, targetDir, jsonPath string) (st
 	}
 
 	jsonName := strings.TrimSuffix(jsonRel, filepath.Ext(jsonRel))
-	singleJSONDir := filepath.Join(cacheDir, "single-json", filepath.FromSlash(fixturePath), jsonName)
+	singleJSONDir := filepath.Join(jsonFixturesDir, "single-json", filepath.FromSlash(fixturePath), jsonName)
 	if err := os.RemoveAll(singleJSONDir); err != nil {
 		return "", "", err
 	}
