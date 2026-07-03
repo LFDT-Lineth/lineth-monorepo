@@ -3,6 +3,7 @@ include "utils/register_utils.zkc"
 include "utils/type.zkc"
 include "instruction_processing/b_type.zkc"
 include "instruction_processing/r_type.zkc"
+include "instruction_processing/r_type_wb.zkc"
 include "instruction_processing/i_type.zkc"
 include "instruction_processing/s_type.zkc"
 include "instruction_processing/j_type.zkc"
@@ -29,6 +30,10 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
     switch instruction_type {
         case R_TYPE: {
             process_R_type_instruction(index)
+            new_pc = pc + 4 as Address
+        }
+        case R_TYPE_WB: {
+            process_R_WB_type_instruction(index)
             new_pc = pc + 4 as Address
         }
         case I_TYPE: {
