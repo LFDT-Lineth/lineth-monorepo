@@ -159,7 +159,7 @@ jobs:
 
           run_zkc_exec() {  # $1=variant  $2=log path  $3=json  $4=zkc_main  optional: --fast
             local exec_flags="-v -q"
-            if [[ "${5:-}" == "--fast" ]]; then exec_flags="--fast -v -q"; fi
+            if [[ "${5:-}" == "--fast --inline=false" ]]; then exec_flags="--fast --inline=false -v -q"; fi
             /usr/bin/time -v env ZKC="/tmp/zkc-${1}" ZKC_EXEC_FLAGS="$exec_flags" \
               make -C "$TEST_MAKE_DIR" --no-print-directory zkc-exec \
               JSON="$3" ZKC_MAIN="$4" \
