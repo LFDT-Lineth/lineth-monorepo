@@ -50,6 +50,7 @@ object MessageAnchoringAppConfigurator {
           l1ContractAddress = configs.protocol.l1.contractAddress,
           l1EventPollingTimeout = configs.messageAnchoring.l1EventScrapping.pollingTimeout,
           l1EventSearchBlockChunk = configs.messageAnchoring.l1EventScrapping.ethLogsSearchBlockChunkSize,
+          l1EventSearchMaxBlockRange = configs.messageAnchoring.l1EventScrapping.ethLogsSearchMaxBlockRange,
           l1HighestBlockTag = configs.messageAnchoring.l1HighestBlockTag,
           l2HighestBlockTag = configs.messageAnchoring.l2HighestBlockTag,
           anchoringTickInterval = configs.messageAnchoring.anchoringTickInterval,

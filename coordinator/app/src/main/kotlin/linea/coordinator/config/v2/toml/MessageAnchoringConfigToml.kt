@@ -48,6 +48,7 @@ data class MessageAnchoringConfigToml(
     val pollingTimeout: Duration = 5.seconds,
     val ethLogsSearchSuccessBackoffDelay: Duration = 1.milliseconds,
     val ethLogsSearchBlockChunkSize: UInt = 1000u,
+    val ethLogsSearchMaxBlockRange: UInt = 10_000u,
   ) {
     init {
 
@@ -62,6 +63,9 @@ data class MessageAnchoringConfigToml(
       }
       require(ethLogsSearchBlockChunkSize >= 1u) {
         "ethLogsSearchBlockChunkSize=$ethLogsSearchBlockChunkSize must be equal or greater than 1"
+      }
+      require(ethLogsSearchMaxBlockRange >= 1u) {
+        "ethLogsSearchMaxBlockRange=$ethLogsSearchMaxBlockRange must be equal or greater than 1"
       }
     }
   }
@@ -87,6 +91,7 @@ data class MessageAnchoringConfigToml(
         pollingTimeout = l1EventScraping.pollingTimeout,
         ethLogsSearchSuccessBackoffDelay = l1EventScraping.ethLogsSearchSuccessBackoffDelay,
         ethLogsSearchBlockChunkSize = l1EventScraping.ethLogsSearchBlockChunkSize,
+        ethLogsSearchMaxBlockRange = l1EventScraping.ethLogsSearchMaxBlockRange,
       ),
       anchoringTickInterval = anchoringTickInterval,
       messageQueueCapacity = messageQueueCapacity,
