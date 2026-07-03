@@ -69,11 +69,11 @@ SPEC_ARGS ?=
 spec-test:
 	$(ZIG) build spec-tests $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) $(if $(strip $(SPEC_ARGS)),-- $(SPEC_ARGS))
 
-## Exposes the downloaded execution-spec JSON fixtures under $(EXECUTION_SPECS_FIXTURES_DIR).
+# Re-uses logic from build.zig to download execution-spec JSON fixtures under $(EXECUTION_SPECS_FIXTURES_DIR).
 prep-execution-specs-json-fixtures:
 	$(ZIG) build prep-execution-specs-json-fixtures $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) -Dexecution-specs-fixtures-link="$(EXECUTION_SPECS_FIXTURES_DIR)"
 
-## Runs selected execution-spec fixtures through zkc; generated SSZ inputs can be inspected in $(EXECUTION_SPECS_SSZ_FIXTURES_DIR).
+# Runs selected execution-spec fixtures through zkc; generated SSZ inputs can be inspected in $(EXECUTION_SPECS_SSZ_FIXTURES_DIR).
 run-execution-specs-ssz-fixtures: prep-execution-specs-json-fixtures
 	GOCACHE=/tmp/go-build $(GO) run $(MAKEFILE_DIR)scripts/run_execution_specs_ssz_fixtures.go --fixtures-dir "$(EXECUTION_SPECS_FIXTURES_DIR)" --ssz-dir "$(EXECUTION_SPECS_SSZ_FIXTURES_DIR)" --fixture-paths "$(EXECUTION_SPECS_RUN_FIXTURE_PATHS)" --ssz-limit "$(EXECUTION_SPECS_RUN_SSZ_LIMIT)"
 
