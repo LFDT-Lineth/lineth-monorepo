@@ -187,11 +187,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
             printf "RTYPE_SRA "
             print_r_operands(rd, rs1, rs2)
             shift_discard_6::shift_amount_6 = v2
-            if (sign_bit_of_double_word(v1) == 1) {
-                result = sgn_extension_u64_u64(bit_flip_double_word((bit_flip_double_word(v1) >> shift_amount_6)))
-            } else {
-                result = v1 >> shift_amount_6
-            }
+            result = _ashr_u64(v1, shift_amount_6)
             
         }
         case RTYPE_SRA_WB: {
@@ -199,11 +195,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
             printf "RTYPE_SRA "
             print_r_operands(rd, rs1, rs2)
             shift_discard_6::shift_amount_6 = v2
-            if (sign_bit_of_double_word(v1) == 1) {
-                registers[rd] = sgn_extension_u64_u64(bit_flip_double_word((bit_flip_double_word(v1) >> shift_amount_6)))
-            } else {
-                registers[rd] = v1 >> shift_amount_6
-            }
+            registers[rd] = _ashr_u64(v1, shift_amount_6)
         }
         case RTYPE_OR: {
 
@@ -308,9 +300,9 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
             } else if (v1 == OVERFLOW_DIVIDEND) && (v2 == NEGATIVE_ONE_AS_I64) {
                 result = OVERFLOW_DIVIDEND
             } else {
-                result = sgn_extension_u64_u64(absolute_value_double_word(v1) / absolute_value_double_word(v2))
+                result = absolute_value_double_word(v1) / absolute_value_double_word(v2)
                 if (sign_bit_of_double_word(v1) ^ sign_bit_of_double_word(v2)) == 1 {
-                    result = sgn_extension_u64_u64(negative_of_double_word(result))
+                    result = negative_of_double_word(result)
                 }
             }
         }
@@ -323,9 +315,9 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
             } else if (v1 == OVERFLOW_DIVIDEND) && (v2 == NEGATIVE_ONE_AS_I64) {
                 result = OVERFLOW_DIVIDEND
             } else {
-                result = sgn_extension_u64_u64(absolute_value_double_word(v1) / absolute_value_double_word(v2))
+                result = absolute_value_double_word(v1) / absolute_value_double_word(v2)
                 if (sign_bit_of_double_word(v1) ^ sign_bit_of_double_word(v2)) == 1 {
-                    result = sgn_extension_u64_u64(negative_of_double_word(result))
+                    result = negative_of_double_word(result)
                 }
             }
 
