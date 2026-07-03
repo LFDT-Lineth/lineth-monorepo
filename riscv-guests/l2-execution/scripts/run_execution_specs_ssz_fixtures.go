@@ -1,12 +1,14 @@
 package main
 
 // Examples, from the repository root:
-// Run up to 100 SSZ files from each selected fixture path:
+// Run up to 100 SSZ inputs from each selected fixture path:
 //   make -C riscv-guests/l2-execution run-execution-specs-ssz-fixtures
-// Run all fixtures in each selected fixture path (blockchain_tests/for_amsterdam/amsterdam and blockchain_tests/for_amsterdam/osaka):
+// Run all inputs in each selected fixture path:
 //   make -C riscv-guests/l2-execution run-execution-specs-ssz-fixtures EXECUTION_SPECS_RUN_SSZ_LIMIT=0
 
 import (
+	"encoding/hex"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -23,44 +25,58 @@ const (
 	testColumnWidth        = 108
 )
 
-type fixtureSet struct {
+type fixtureCase struct {
+	Blocks []fixtureBlock `json:"blocks"`
+}
+
+type fixtureBlock struct {
+	StatelessInputBytes  string `json:"statelessInputBytes"`
+	StatelessOutputBytes string `json:"statelessOutputBytes"`
+}
+
+type statelessInput struct {
+	testName   string
+	blockIndex int
+	input      []byte
+}
+
+type selectedInput struct {
 	fixturePath string
 	jsonFile    string
-	outDir      string
-	files       []string
+	testName    string
+	blockIndex  int
+	file        string
+	size        int
 }
 
 // Runs selected fixtures.
 func main() {
-	fixturePathsFlag := flag.String("fixture-paths", "blockchain_tests/for_amsterdam/amsterdam", "comma-separated fixture paths under the execution-specs fixture root")
-	sszLimit := flag.Int("ssz-limit", 0, "maximum generated SSZ files to run per fixture path; 0 means all")
+	fixturesDir := flag.String("fixtures-dir", filepath.Join(os.TempDir(), "execution-specs-json-fixtures", "fixtures"), "directory containing execution-specs fixtures")
+	sszDir := flag.String("ssz-dir", filepath.Join(os.TempDir(), "execution-specs-ssz-fixtures"), "directory for selected temporary SSZ inputs")
+	fixturePathsFlag := flag.String("fixture-paths", "blockchain_tests/for_amsterdam/amsterdam", "comma-separated fixture paths under fixtures-dir")
+	sszLimit := flag.Int("ssz-limit", 0, "maximum SSZ inputs to run per fixture path; 0 means all")
 	zkcFlags := flag.String("zkc-flags", "--gogen --fast -q", "flags forwarded to zkc exec")
 	flag.Parse()
 
 	if *sszLimit < 0 {
-		must(fmt.Errorf("limits must be non-negative"))
+		must(fmt.Errorf("ssz-limit must be non-negative"))
 	}
 
 	root, err := repoRoot()
 	must(err)
 
 	guestDir := filepath.Join(root, "riscv-guests", "l2-execution")
-	jsonFixturesDir := filepath.Join(os.TempDir(), "execution-specs-json-fixtures")
-	sszFixturesDir := filepath.Join(os.TempDir(), "execution-specs-ssz-fixtures")
-	fixtureRoot := filepath.Join(jsonFixturesDir, "fixtures")
-
 	fixturePaths := splitList(*fixturePathsFlag)
 	if len(fixturePaths) == 0 {
 		must(fmt.Errorf("fixture-paths must not be empty"))
 	}
 
-	must(run(os.Stderr, "make", "-C", guestDir, "get-execution-specs-json-fixtures", "EXECUTION_SPECS_JSON_FIXTURES_DIR="+jsonFixturesDir))
 	must(run(os.Stderr, "make", "-C", guestDir, "compile"))
 
-	var fixtureSets []fixtureSet
+	var inputs []selectedInput
 	hadError := false
 	for _, fixturePath := range fixturePaths {
-		fixturePath, targetDir, err := resolveFixturePath(fixtureRoot, fixturePath)
+		fixturePath, targetDir, err := resolveFixturePath(*fixturesDir, fixturePath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "skip %s: %v\n", fixturePath, err)
 			hadError = true
@@ -79,74 +95,25 @@ func main() {
 			continue
 		}
 
-		selectedSSZ := 0
+		selected := 0
 		for _, jsonPath := range jsonPaths {
-			jsonRel, singleJSONDir, err := prepareSingleJSONDir(jsonFixturesDir, fixturePath, targetDir, jsonPath)
+			remaining := 0
+			if *sszLimit > 0 {
+				remaining = *sszLimit - selected
+				if remaining <= 0 {
+					break
+				}
+			}
+
+			newInputs, err := writeSSZInputs(*sszDir, fixturePath, targetDir, jsonPath, remaining)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "prepare %s: %v\n", jsonPath, err)
 				hadError = true
 				continue
 			}
-
-			jsonName := strings.TrimSuffix(jsonRel, filepath.Ext(jsonRel))
-			outDir := filepath.Join(sszFixturesDir, filepath.FromSlash(fixturePath), jsonName)
-			logPath := filepath.Join(sszFixturesDir, "logs", filepath.FromSlash(fixturePath), jsonName+".log")
-
-			if err := os.RemoveAll(outDir); err != nil {
-				fmt.Fprintf(os.Stderr, "clear %s: %v\n", outDir, err)
-				hadError = true
-				continue
-			}
-			if err := os.MkdirAll(filepath.Dir(logPath), 0o755); err != nil {
-				fmt.Fprintf(os.Stderr, "create log dir %s: %v\n", filepath.Dir(logPath), err)
-				hadError = true
-				continue
-			}
-
-			err = run(os.Stderr,
-				"make", "-C", guestDir, "gen-execution-specs-ssz-fixtures",
-				"EXECUTION_SPECS_FIXTURES_PATH="+fixturePath,
-				"EXECUTION_SPECS_FIXTURES_TARGET_DIR="+singleJSONDir,
-				"EXECUTION_SPECS_JSON_FIXTURES_DIR="+jsonFixturesDir,
-				"EXECUTION_SPECS_SSZ_FIXTURES_DIR="+sszFixturesDir,
-				"EXECUTION_SPECS_SSZ_OUT_DIR="+outDir,
-				"EXECUTION_SPECS_SSZ_LOG="+logPath,
-			)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "skip %s/%s: %v\n", fixturePath, jsonRel, err)
-				hadError = true
-				continue
-			}
-
-			files, err := sszFiles(outDir, *sszLimit)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "list %s: %v\n", outDir, err)
-				hadError = true
-				continue
-			}
-			if len(files) == 0 {
-				fmt.Fprintf(os.Stderr, "no SSZ files generated for %s/%s\n", fixturePath, jsonRel)
-				hadError = true
-				continue
-			}
-			if *sszLimit > 0 {
-				remaining := *sszLimit - selectedSSZ
-				if remaining <= 0 {
-					break
-				}
-				if len(files) > remaining {
-					files = files[:remaining]
-				}
-			}
-
-			fixtureSets = append(fixtureSets, fixtureSet{
-				fixturePath: fixturePath,
-				jsonFile:    jsonRel,
-				outDir:      outDir,
-				files:       files,
-			})
-			selectedSSZ += len(files)
-			if *sszLimit > 0 && selectedSSZ >= *sszLimit {
+			inputs = append(inputs, newInputs...)
+			selected += len(newInputs)
+			if *sszLimit > 0 && selected >= *sszLimit {
 				break
 			}
 		}
@@ -154,30 +121,24 @@ func main() {
 
 	printTableHeader()
 
-	total := 0
 	passed := 0
-	for _, set := range fixtureSets {
-		for _, file := range set.files {
-			total++
-			ok, userTime := runGuest(guestDir, file, *zkcFlags)
-			if ok {
-				passed++
-			} else {
-				hadError = true
-			}
-			size := fileSize(file)
-			sszName, _ := filepath.Rel(set.outDir, file)
-			testName := filepath.ToSlash(set.jsonFile) + ":" + filepath.ToSlash(sszName)
-			printTableRow(set.fixturePath, testName, size, userTime, ok)
+	for _, input := range inputs {
+		ok, userTime := runGuest(guestDir, input.file, *zkcFlags)
+		if ok {
+			passed++
+		} else {
+			hadError = true
 		}
+		testName := fmt.Sprintf("%s:%s[%d]", filepath.ToSlash(input.jsonFile), input.testName, input.blockIndex)
+		printTableRow(input.fixturePath, testName, input.size, userTime, ok)
 	}
 
-	fmt.Fprintf(os.Stderr, "summary: %d/%d passed\n", passed, total)
-	if total == 0 {
+	fmt.Fprintf(os.Stderr, "summary: %d/%d passed\n", passed, len(inputs))
+	if len(inputs) == 0 {
 		fmt.Fprintln(os.Stderr, "no tests ran")
 		os.Exit(1)
 	}
-	if hadError || passed != total {
+	if hadError || passed != len(inputs) {
 		os.Exit(1)
 	}
 }
@@ -194,7 +155,7 @@ func printTableHeader() {
 }
 
 // Prints one table row.
-func printTableRow(fixturePath, testName string, size int64, userTime time.Duration, ok bool) {
+func printTableRow(fixturePath, testName string, size int, userTime time.Duration, ok bool) {
 	result := "fail"
 	if ok {
 		result = "pass"
@@ -259,48 +220,105 @@ func jsonFiles(dir string) ([]string, error) {
 	return files, nil
 }
 
-// Creates a one-JSON directory.
-func prepareSingleJSONDir(jsonFixturesDir, fixturePath, targetDir, jsonPath string) (string, string, error) {
+// Writes selected SSZ inputs from one JSON file.
+func writeSSZInputs(sszDir, fixturePath, targetDir, jsonPath string, limit int) ([]selectedInput, error) {
 	jsonRel, err := filepath.Rel(targetDir, jsonPath)
 	if err != nil {
-		return "", "", err
+		return nil, err
 	}
 	if jsonRel == ".." || strings.HasPrefix(jsonRel, ".."+string(os.PathSeparator)) {
-		return "", "", fmt.Errorf("JSON path is outside target dir: %s", jsonPath)
+		return nil, fmt.Errorf("JSON path is outside target dir: %s", jsonPath)
 	}
 
-	jsonName := strings.TrimSuffix(jsonRel, filepath.Ext(jsonRel))
-	singleJSONDir := filepath.Join(jsonFixturesDir, "single-json", filepath.FromSlash(fixturePath), jsonName)
-	if err := os.RemoveAll(singleJSONDir); err != nil {
-		return "", "", err
+	blocks, err := statelessInputs(jsonPath)
+	if err != nil {
+		return nil, err
+	}
+	if len(blocks) == 0 {
+		return nil, nil
 	}
 
-	dst := filepath.Join(singleJSONDir, jsonRel)
-	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-		return "", "", err
+	jsonStem := strings.TrimSuffix(jsonRel, filepath.Ext(jsonRel))
+	outDir := filepath.Join(sszDir, filepath.FromSlash(fixturePath), jsonStem)
+	if err := os.RemoveAll(outDir); err != nil {
+		return nil, err
 	}
-	if err := copyFile(jsonPath, dst); err != nil {
-		return "", "", err
+	if err := os.MkdirAll(outDir, 0o755); err != nil {
+		return nil, err
 	}
-	return jsonRel, singleJSONDir, nil
+
+	var out []selectedInput
+	for i, block := range blocks {
+		if limit > 0 && len(out) >= limit {
+			break
+		}
+		outPath := filepath.Join(outDir, fmt.Sprintf("%04d.ssz", i))
+		if err := os.WriteFile(outPath, block.input, 0o644); err != nil {
+			return nil, err
+		}
+		out = append(out, selectedInput{
+			fixturePath: fixturePath,
+			jsonFile:    jsonRel,
+			testName:    block.testName,
+			blockIndex:  block.blockIndex,
+			file:        outPath,
+			size:        len(block.input),
+		})
+	}
+	return out, nil
 }
 
-// Copies one file.
-func copyFile(src, dst string) error {
-	in, err := os.Open(src)
+// Extracts stateless inputs from one fixture JSON file.
+func statelessInputs(path string) ([]statelessInput, error) {
+	data, err := os.ReadFile(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	defer in.Close()
 
-	out, err := os.Create(dst)
-	if err != nil {
-		return err
+	var cases map[string]json.RawMessage
+	if err := json.Unmarshal(data, &cases); err != nil {
+		return nil, err
 	}
-	defer out.Close()
 
-	_, err = io.Copy(out, in)
-	return err
+	names := make([]string, 0, len(cases))
+	for name := range cases {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	var out []statelessInput
+	for _, name := range names {
+		var testCase fixtureCase
+		if err := json.Unmarshal(cases[name], &testCase); err != nil {
+			return nil, err
+		}
+		for i, block := range testCase.Blocks {
+			if block.StatelessInputBytes == "" || block.StatelessOutputBytes == "" {
+				continue
+			}
+			input, err := hexBytes(block.StatelessInputBytes)
+			if err != nil {
+				return nil, fmt.Errorf("%s[%d]: %w", name, i, err)
+			}
+			out = append(out, statelessInput{
+				testName:   name,
+				blockIndex: i,
+				input:      input,
+			})
+		}
+	}
+	return out, nil
+}
+
+// Decodes 0x-prefixed hex bytes.
+func hexBytes(s string) ([]byte, error) {
+	if len(s) >= 2 && s[0] == '0' && (s[1] == 'x' || s[1] == 'X') {
+		s = s[2:]
+	}
+	if len(s)%2 != 0 {
+		return nil, fmt.Errorf("odd hex length")
+	}
+	return hex.DecodeString(s)
 }
 
 // Runs a command.
@@ -309,28 +327,6 @@ func run(w io.Writer, name string, args ...string) error {
 	cmd.Stdout = w
 	cmd.Stderr = w
 	return cmd.Run()
-}
-
-// Lists selected SSZ files.
-func sszFiles(dir string, limit int) ([]string, error) {
-	var files []string
-	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if !d.IsDir() && strings.HasSuffix(path, ".ssz") {
-			files = append(files, path)
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	sort.Strings(files)
-	if limit > 0 && len(files) > limit {
-		files = files[:limit]
-	}
-	return files, nil
 }
 
 // Runs the guest.
@@ -347,15 +343,6 @@ func runGuest(guestDir, input, zkcFlags string) (bool, time.Duration) {
 		return err == nil, 0
 	}
 	return err == nil, cmd.ProcessState.UserTime()
-}
-
-// Returns file size.
-func fileSize(path string) int64 {
-	info, err := os.Stat(path)
-	if err != nil {
-		return 0
-	}
-	return info.Size()
 }
 
 // Escapes table cells.

@@ -9,7 +9,7 @@
 # itself (ELF->JSON via elf_to_json_gen, then zkc) is owned by
 # arithmetization/src/test/Makefile; fixture-exec/fixture-debug build that ELF and hand it over.
 
-.PHONY: fetch test spec-test get-execution-specs-json-fixtures gen-execution-specs-ssz-fixtures run-execution-specs-ssz-fixtures clean compile exec debug require-input
+.PHONY: fetch test spec-test run-execution-specs-ssz-fixtures clean compile exec debug require-input
 
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
@@ -32,7 +32,6 @@ BIN      := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
 
 # Sample fixture input used by exec/debug
 INPUT    ?= $(MAKEFILE_DIR)test/testdata/stateless_input.ssz
-# INPUT ?= $(EXECUTION_SPECS_SSZ_OUT_DIR)/test_witness_headers.py__test_witness_headers_blockhash_at_offset_fork_Amsterdam_1811.ssz
 
 # Flags forwarded to `zkc exec` by exec. Default -q (quiet: suppress the guest's per-instruction
 # printf). Override to pick the execution backend — e.g. "--quiet --gogen --fast" runs the guest via
@@ -42,21 +41,12 @@ ZKC_EXEC_FLAGS ?=--gogen --fast -q
 # ZKC_EXEC_FLAGS ?=-q --check
 # TODO: remove unnecessary flags before merging
 
-# Parameters for generating large SSZ fixtures from the execution-spec zkevm fixture archive
+# Parameters for execution-spec zkevm fixtures and selected temporary SSZ inputs.
 EXECUTION_SPECS_JSON_FIXTURES_DIR   := /tmp/execution-specs-json-fixtures
 EXECUTION_SPECS_SSZ_FIXTURES_DIR    := /tmp/execution-specs-ssz-fixtures
-EXECUTION_SPECS_SSZ_GO_CACHE_DIR    := $(EXECUTION_SPECS_SSZ_FIXTURES_DIR)/go-build
-EXECUTION_SPECS_SSZ_GO_MOD_DIR      := $(EXECUTION_SPECS_SSZ_FIXTURES_DIR)/go-mod
-STATELESS_EXECUTOR_REPO             := https://github.com/Gabriel-Trintinalia/stateless-executor
-STATELESS_EXECUTOR_DIR              := $(EXECUTION_SPECS_SSZ_FIXTURES_DIR)/stateless-executor
-EXECUTION_SPECS_RUNNER              := $(STATELESS_EXECUTOR_DIR)/bin/zkevm-runner
 EXECUTION_SPECS_FIXTURES_URL        := https://github.com/ethereum/execution-specs/releases/download/tests-zkevm@v0.4.1/fixtures_zkevm.tar.gz
 EXECUTION_SPECS_FIXTURES_ARCHIVE    := $(EXECUTION_SPECS_JSON_FIXTURES_DIR)/fixtures_zkevm.tar.gz
 EXECUTION_SPECS_FIXTURES_DIR        := $(EXECUTION_SPECS_JSON_FIXTURES_DIR)/fixtures
-EXECUTION_SPECS_FIXTURES_PATH       ?= blockchain_tests/for_amsterdam/amsterdam
-EXECUTION_SPECS_FIXTURES_TARGET_DIR := $(EXECUTION_SPECS_FIXTURES_DIR)/$(EXECUTION_SPECS_FIXTURES_PATH)
-EXECUTION_SPECS_SSZ_OUT_DIR         := $(EXECUTION_SPECS_SSZ_FIXTURES_DIR)/$(EXECUTION_SPECS_FIXTURES_PATH)
-EXECUTION_SPECS_SSZ_LOG             := $(EXECUTION_SPECS_SSZ_FIXTURES_DIR)/zkevm-runner-dump.log
 EXECUTION_SPECS_RUN_FIXTURE_PATHS   ?= blockchain_tests/for_amsterdam/amsterdam,blockchain_tests/for_amsterdam/osaka
 EXECUTION_SPECS_RUN_SSZ_LIMIT       ?= 100
 
@@ -81,32 +71,14 @@ SPEC_ARGS ?=
 spec-test:
 	$(ZIG) build spec-tests $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) $(if $(strip $(SPEC_ARGS)),-- $(SPEC_ARGS))
 
-# JSON fixtures are extracted under EXECUTION_SPECS_JSON_FIXTURES_DIR.
 # The archive stores each test case as JSON with one or more blocks[] entries.
-# This target only downloads and extracts the JSON fixtures.
-get-execution-specs-json-fixtures:
+run-execution-specs-ssz-fixtures:
 	@mkdir -p "$(EXECUTION_SPECS_JSON_FIXTURES_DIR)"
 	@[ -d "$(EXECUTION_SPECS_FIXTURES_DIR)" ] || { \
 		[ -f "$(EXECUTION_SPECS_FIXTURES_ARCHIVE)" ] || curl --fail --location --output "$(EXECUTION_SPECS_FIXTURES_ARCHIVE)" "$(EXECUTION_SPECS_FIXTURES_URL)"; \
 		tar -xzf "$(EXECUTION_SPECS_FIXTURES_ARCHIVE)" -C "$(EXECUTION_SPECS_JSON_FIXTURES_DIR)"; \
 	}
-
-# Generate zkVM-framed SSZ inputs from the extracted execution-spec zkevm fixtures.
-# The stateless-executor repo provides zkevm-runner, which understands this fixture JSON shape.
-# zkevm-runner --dump-dir writes one .bin input per block from statelessInputBytes.
-# The final step renames those .bin files to .ssz for clarity.
-# SSZ are stored under EXECUTION_SPECS_SSZ_FIXTURES_DIR.
-gen-execution-specs-ssz-fixtures: get-execution-specs-json-fixtures
-	@mkdir -p "$(EXECUTION_SPECS_SSZ_OUT_DIR)"
-	@[ -d "$(EXECUTION_SPECS_FIXTURES_TARGET_DIR)" ] || { echo "missing fixture folder: $(EXECUTION_SPECS_FIXTURES_TARGET_DIR)"; exit 1; }
-	@[ -d "$(STATELESS_EXECUTOR_DIR)/.git" ] || git clone --depth=1 "$(STATELESS_EXECUTOR_REPO)" "$(STATELESS_EXECUTOR_DIR)"
-	@cd "$(STATELESS_EXECUTOR_DIR)" && GOCACHE="$(EXECUTION_SPECS_SSZ_GO_CACHE_DIR)" GOMODCACHE="$(EXECUTION_SPECS_SSZ_GO_MOD_DIR)" $(GO) build -o bin/zesu-convert ./cmd/zesu-convert
-	@cd "$(STATELESS_EXECUTOR_DIR)" && GOCACHE="$(EXECUTION_SPECS_SSZ_GO_CACHE_DIR)" GOMODCACHE="$(EXECUTION_SPECS_SSZ_GO_MOD_DIR)" $(GO) build -o bin/zkevm-runner ./cmd/zkevm-runner
-	@"$(EXECUTION_SPECS_RUNNER)" --fixtures "$(EXECUTION_SPECS_FIXTURES_TARGET_DIR)" --dump-dir "$(EXECUTION_SPECS_SSZ_OUT_DIR)" > "$(EXECUTION_SPECS_SSZ_LOG)"
-	@find "$(EXECUTION_SPECS_SSZ_OUT_DIR)" -type f -name '*.bin' -exec sh -c 'mv "$$1" "$${1%.bin}.ssz"' sh {} \;
-
-run-execution-specs-ssz-fixtures:
-	GOCACHE=/tmp/go-build $(GO) run $(MAKEFILE_DIR)scripts/run_execution_specs_ssz_fixtures.go --fixture-paths $(EXECUTION_SPECS_RUN_FIXTURE_PATHS) --ssz-limit $(EXECUTION_SPECS_RUN_SSZ_LIMIT)
+	GOCACHE=/tmp/go-build $(GO) run $(MAKEFILE_DIR)scripts/run_execution_specs_ssz_fixtures.go --fixtures-dir "$(EXECUTION_SPECS_FIXTURES_DIR)" --ssz-dir "$(EXECUTION_SPECS_SSZ_FIXTURES_DIR)" --fixture-paths "$(EXECUTION_SPECS_RUN_FIXTURE_PATHS)" --ssz-limit "$(EXECUTION_SPECS_RUN_SSZ_LIMIT)"
 
 clean:
 	rm -rf $(MAKEFILE_DIR)zig-out/
