@@ -46,7 +46,9 @@ pub input decoded_core(i:u64) -> (opcode:Opcode, instruction_type:Type, instruct
 // Pre-decoded I-type semantic micro-ops, indexed by the same instruction index.
 // Replaces runtime opcode/funct3 disambiguation in i_type.zkc with a flat
 // compute_op switch. Writeback to rd is folded into *_WB opcode variants.
-pub input decoded_itype(i:u64) -> (compute_op:ITypeComputeOp, imm12:Imm12, rs1:Register, rd:Register)
+// The 12-bit immediate (normalized for shifts at ELF time) is sign-extended
+// into imm.
+pub input decoded_itype(i:u64) -> (compute_op:ITypeComputeOp, imm:DoubleWord, rs1:Register, rd:Register)
 
 // Pre-decoded R-type semantic micro-ops, indexed by the same instruction index.
 // Writeback to rd is folded into *_WB opcode variants.

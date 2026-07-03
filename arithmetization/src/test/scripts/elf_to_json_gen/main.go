@@ -638,6 +638,11 @@ func signExtend12(x uint32) int64 {
 	return int64(int32(x<<20) >> 20)
 }
 
+// assembleITypeImm sign-extends the normalized 12-bit I-type immediate to 64 bits.
+func assembleITypeImm(normImm12 uint32) uint64 {
+	return assembleSTypeImm(normImm12)
+}
+
 // decodeUTypeSemantic maps a raw U-type opcode to a semantic base compute op.
 func decodeUTypeSemantic(opcode uint32) (computeOp uint32) {
 	switch opcode {
@@ -906,7 +911,7 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 	// types declared for the inputs in memory.zkc, because zkc packs input
 	// records tightly by bit width:
 	//   decoded_core : opcode:Opcode(u7), instruction_type:Type(u3), instruction_parameters:u25
-	//   decoded_itype: compute_op:ITypeComputeOp(u6), imm12:Imm12(u12), rs1:Register(u5), rd:Register(u5)
+	//   decoded_itype: compute_op:ITypeComputeOp(u6), imm:DoubleWord(u64), rs1:Register(u5), rd:Register(u5)
 	//   decoded_rtype: compute_op:RTypeComputeOp(u6), rs1:Register(u5), rs2:Register(u5), rd:Register(u5)
 	//   decoded_stype: compute_op:STypeComputeOp(u6), imm:DoubleWord(u64), rs2:Register(u5), rs1:Register(u5)
 	//   decoded_btype: compute_op:BTypeComputeOp(u6), imm:DoubleWord(u64), rs2:Register(u5), rs1:Register(u5)
@@ -961,7 +966,7 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		computeOp = itypeOpForRd(computeOp, rd)
 
 		itypeBits.writeBits(uint64(computeOp), 6)
-		itypeBits.writeBits(uint64(normImm12), 12)
+		itypeBits.writeBits(assembleITypeImm(normImm12), 64)
 		itypeBits.writeBits(uint64(rs1), 5)
 		itypeBits.writeBits(uint64(rd), 5)
 

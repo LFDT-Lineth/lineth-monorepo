@@ -42,7 +42,7 @@ In addition to the original keys (`entry_point_and_blobs_count`,
 | ------------------ | ------------------------------------------------------ | ---------------------------------------------------------- |
 | `instruction_base` | `base:Address`                                         | base address used to map `pc` → table index               |
 | `decoded_core`     | `opcode, instruction_type, instruction_parameters`     | `instruction_parameters::opcode = instruction` + type map  |
-| `decoded_itype`    | `compute_op, imm12, rs1, rd`                           | flat semantic micro-op dispatch in `i_type.zkc`              |
+| `decoded_itype`    | `compute_op, imm, rs1, rd`                           | flat semantic micro-op dispatch in `i_type.zkc`              |
 | `decoded_rtype`    | `compute_op, rs1, rs2, rd`                             | flat semantic micro-op dispatch in `r_type.zkc`              |
 | `decoded_stype`    | `compute_op, imm, rs2, rs1`                          | flat store-width dispatch in `s_type.zkc`                    |
 | `decoded_btype`    | `compute_op, imm, rs2, rs1`                            | flat `compute_op` dispatch (raw funct3) in `b_type.zkc`        |
@@ -52,6 +52,9 @@ In addition to the original keys (`entry_point_and_blobs_count`,
 Each value is a single `0x…` hex string. The field set and order of every table
 **must** match the corresponding `pub input` declaration in
 `arithmetization/src/main/riscv/memory.zkc`.
+
+For I-type the 12-bit immediate (normalized for shifts at ELF time) is
+sign-extended to 64 bits at decode time into `imm`.
 
 For S-type the 12-bit store immediate is reassembled
 (`imm[11] :: imm[10:5] :: imm[4:0]`) and sign-extended to 64 bits at decode
@@ -77,7 +80,8 @@ sign-extended to 64 bits at decode time into `imm`.
   `READ8_SGN` (compute only) and `READ8_SGN_WB` (compute + `registers[rd] = result`).
   Base opcodes are even; `*_WB` variants are odd. Control/system ops (`ITYPE_ECALL`,
   `ITYPE_EBREAK`, `ITYPE_INVALID`) have no `_WB` variant.
-- **`imm12`, `rs1`, `rd`** — operands (shift amounts are normalized into `imm12` at decode time)
+- **`imm`, `rs1`, `rd`** — operands (shift amounts are normalized at decode time;
+  `imm` is the sign-extended 12-bit immediate)
 
 When `rd` is `x0`, `itypeOpForRd` in `main.go` keeps the base opcode; otherwise it
 selects the matching `*_WB` variant. This replaces the former separate `writeback`
@@ -200,7 +204,7 @@ size is the sum of its field widths:
 | Table           | Field widths (bits)            | Record size |
 | --------------- | ------------------------------ | ----------- |
 | `decoded_core`  | opcode 7, type 3, params 25    | 35 bits     |
-| `decoded_itype` | compute_op 6, imm12 12, rs1 5, rd 5 | 28 bits     |
+| `decoded_itype` | compute_op 6, imm 64, rs1 5, rd 5 | 80 bits     |
 | `decoded_rtype` | compute_op 6, rs1 5, rs2 5, rd 5 | 21 bits |
 | `decoded_stype` | compute_op 6, imm 64, rs2 5, rs1 5 | 80 bits   |
 | `decoded_btype` | compute_op 6, imm 64, rs2 5, rs1 5 | 80 bits |
