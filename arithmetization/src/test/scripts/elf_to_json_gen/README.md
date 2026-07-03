@@ -135,7 +135,7 @@ into `imm` at ELF time. At runtime, `process_U_type_instruction` runs a flat
 selects the matching `*_WB` variant when `rd != x0`. `RTYPE_KECCAK` has no `_WB`
 variant and returns early after the precompile side effects.
 
-At runtime, `process_R_type_instruction` runs a single flat `switch compute_op`
+At runtime, `process_R_type_instruction` runs a flat `switch compute_op`
 with separate `RTYPE_*` and `RTYPE_*_WB` cases.
 
 Constants for R-type `compute_op` live in `constants.zkc` and are mirrored in
