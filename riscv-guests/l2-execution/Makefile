@@ -43,17 +43,17 @@ ZKC_EXEC_FLAGS ?=--gogen --fast -q
 # TODO: remove unnecessary flags before merging
 
 # Parameters for generating large SSZ fixtures from the execution-spec zkevm fixture archive
-EXECUTION_SPECS_JSON_FIXTURES_DIR := /tmp/execution-specs-json-fixtures
-EXECUTION_SPECS_SSZ_FIXTURES_DIR  := /tmp/execution-specs-ssz-fixtures
-EXECUTION_SPECS_SSZ_GO_CACHE_DIR  := $(EXECUTION_SPECS_SSZ_FIXTURES_DIR)/go-build
-EXECUTION_SPECS_SSZ_GO_MOD_DIR    := $(EXECUTION_SPECS_SSZ_FIXTURES_DIR)/go-mod
-STATELESS_EXECUTOR_REPO           := https://github.com/Gabriel-Trintinalia/stateless-executor
-STATELESS_EXECUTOR_DIR            := $(EXECUTION_SPECS_SSZ_FIXTURES_DIR)/stateless-executor
-EXECUTION_SPECS_RUNNER            := $(STATELESS_EXECUTOR_DIR)/bin/zkevm-runner
-EXECUTION_SPECS_FIXTURES_URL      := https://github.com/ethereum/execution-specs/releases/download/tests-zkevm@v0.4.1/fixtures_zkevm.tar.gz
-EXECUTION_SPECS_FIXTURES_ARCHIVE  := $(EXECUTION_SPECS_JSON_FIXTURES_DIR)/fixtures_zkevm.tar.gz
-EXECUTION_SPECS_FIXTURES_DIR      := $(EXECUTION_SPECS_JSON_FIXTURES_DIR)/fixtures
-EXECUTION_SPECS_FIXTURES_PATH     ?= blockchain_tests/for_amsterdam/amsterdam
+EXECUTION_SPECS_JSON_FIXTURES_DIR   := /tmp/execution-specs-json-fixtures
+EXECUTION_SPECS_SSZ_FIXTURES_DIR    := /tmp/execution-specs-ssz-fixtures
+EXECUTION_SPECS_SSZ_GO_CACHE_DIR    := $(EXECUTION_SPECS_SSZ_FIXTURES_DIR)/go-build
+EXECUTION_SPECS_SSZ_GO_MOD_DIR      := $(EXECUTION_SPECS_SSZ_FIXTURES_DIR)/go-mod
+STATELESS_EXECUTOR_REPO             := https://github.com/Gabriel-Trintinalia/stateless-executor
+STATELESS_EXECUTOR_DIR              := $(EXECUTION_SPECS_SSZ_FIXTURES_DIR)/stateless-executor
+EXECUTION_SPECS_RUNNER              := $(STATELESS_EXECUTOR_DIR)/bin/zkevm-runner
+EXECUTION_SPECS_FIXTURES_URL        := https://github.com/ethereum/execution-specs/releases/download/tests-zkevm@v0.4.1/fixtures_zkevm.tar.gz
+EXECUTION_SPECS_FIXTURES_ARCHIVE    := $(EXECUTION_SPECS_JSON_FIXTURES_DIR)/fixtures_zkevm.tar.gz
+EXECUTION_SPECS_FIXTURES_DIR        := $(EXECUTION_SPECS_JSON_FIXTURES_DIR)/fixtures
+EXECUTION_SPECS_FIXTURES_PATH       ?= blockchain_tests/for_amsterdam/amsterdam
 EXECUTION_SPECS_FIXTURES_TARGET_DIR := $(EXECUTION_SPECS_FIXTURES_DIR)/$(EXECUTION_SPECS_FIXTURES_PATH)
 EXECUTION_SPECS_SSZ_OUT_DIR         := $(EXECUTION_SPECS_SSZ_FIXTURES_DIR)/$(EXECUTION_SPECS_FIXTURES_PATH)
 EXECUTION_SPECS_SSZ_LOG             := $(EXECUTION_SPECS_SSZ_FIXTURES_DIR)/zkevm-runner-dump.log
