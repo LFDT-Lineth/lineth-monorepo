@@ -44,12 +44,17 @@ func Compile(sys *wiop.System) {
 	evalRound := sys.NewRound()
 	compCtx := sys.Context.Childf("global-quotient")
 
+	// The evaluation coin is shared across the entire compilation: every module
+	// is opened at the same random point r. It lives in evalRound (after all
+	// quotient share columns have been committed in quotientRound).
+	evalCoin := evalRound.NewCoinField(compCtx.Childf("eval-coin"))
+
 	for i, m := range sys.Modules {
 		if len(m.Vanishings) == 0 {
 			continue
 		}
 		mCtx := compCtx.Childf("m%d", i)
-		compileModule(sys, m, mCtx, quotientRound, evalRound)
+		compileModule(sys, m, mCtx, quotientRound, evalRound, evalCoin)
 	}
 }
 
@@ -117,6 +122,7 @@ func compileModule(
 	m *wiop.Module,
 	ctx *wiop.ContextFrame,
 	quotientRound, evalRound *wiop.Round,
+	evalCoin *wiop.CoinField,
 ) {
 	// Static modules must be sized before compilation.
 	if !m.IsDynamic() && !m.IsSized() {
@@ -157,8 +163,9 @@ func compileModule(
 		rawBuckets = append(rawBuckets, rawBucket{ratio: ratio, vanishings: vs, shares: shares})
 	}
 
-	// --- Step 4: eval coin in evalRound ---
-	evalCoin := evalRound.NewCoinField(ctx.Childf("eval-coin"))
+	// --- Step 4: eval coin ---
+	// The eval coin is shared across the whole compilation (created in Compile);
+	// every module is opened at the same random evaluation point.
 
 	// --- Step 5: collect all unique column views across all vanishings ---
 	viewKeyToIdx := make(map[colViewKey]int)
