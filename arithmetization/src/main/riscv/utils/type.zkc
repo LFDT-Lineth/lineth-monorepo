@@ -4,7 +4,7 @@ type Register = u5
 
 type Opcode = u7
 
-type Type = u3
+type Type = u4
 
 type Funct3 = u3
 type Funct6 = u6
@@ -32,7 +32,6 @@ type Offset = u64
 
 // Semantic I-type micro-op tags (pre-decoded at ELF time).
 type ITypeComputeOp = u6
-type ITypeWriteback = u3
 
 // Semantic R-type micro-op tags (pre-decoded at ELF time).
 type RTypeComputeOp = u6

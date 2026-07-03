@@ -36,6 +36,7 @@ const (
 	uType         = 5
 	jType         = 6
 	miscMemType   = 7
+	rTypeWB       = 8
 )
 
 // RISC-V opcodes (low 7 bits), mirroring the Opcode constants in constants.zkc.
@@ -66,7 +67,7 @@ const defaultMaxDecodedRecords = 2_000_000
 // constants.zkc.
 func instructionTypeFromOpcode(opcode uint32) uint32 {
 	switch opcode {
-	case opcodeOP, opcodeOP32:
+	case opcodeOP, opcodeOP32, opcodeCUSTOM1:
 		return rType
 	case opcodeLOAD, opcodeOPIMM, opcodeOPIMM32, opcodeJALR, opcodeSYSTEM:
 		return iType
@@ -910,7 +911,7 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 	// Decode each instruction word. Field bit widths MUST match the semantic
 	// types declared for the inputs in memory.zkc, because zkc packs input
 	// records tightly by bit width:
-	//   decoded_core : opcode:Opcode(u7), instruction_type:Type(u3), instruction_parameters:u25
+	//   decoded_core : opcode:Opcode(u7), instruction_type:Type(u4), instruction_parameters:u25
 	//   decoded_itype: compute_op:ITypeComputeOp(u6), imm:DoubleWord(u64), rs1:Register(u5), rd:Register(u5)
 	//   decoded_rtype: compute_op:RTypeComputeOp(u6), rs1:Register(u5), rs2:Register(u5), rd:Register(u5)
 	//   decoded_stype: compute_op:STypeComputeOp(u6), imm:DoubleWord(u64), rs2:Register(u5), rs1:Register(u5)
@@ -941,6 +942,11 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		instrType := instructionTypeFromOpcode(opcode)
 		if isRdZeroNoop(opcode, instrType, rd, rs1, rs2, funct3, imm12, funct7) {
 			instrType = miscMemType
+		} else if instrType == rType && rd != 0 {
+			candidate := decodeRTypeSemantic(opcode, funct3, funct7)
+			if candidate != rtypeOpKeccak && candidate != rtypeInvalid {
+				instrType = rTypeWB
+			}
 		}
 
 		// S-type immediate is split in the encoding (imm[11] :: imm[10:5] :: imm[4:0]);
@@ -956,7 +962,7 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		uImm := assembleUTypeImm(instr)
 
 		coreBits.writeBits(uint64(opcode), 7)
-		coreBits.writeBits(uint64(instrType), 3)
+		coreBits.writeBits(uint64(instrType), 4)
 		coreBits.writeBits(uint64(params), 25)
 
 		computeOp, normImm12 := decodeITypeSemantic(opcode, funct3, imm12)
@@ -971,7 +977,7 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		itypeBits.writeBits(uint64(rd), 5)
 
 		rtypeComputeOp := decodeRTypeSemantic(opcode, funct3, funct7)
-		if instrType != rType {
+		if instrType != rType && instrType != rTypeWB {
 			rtypeComputeOp = rtypeInvalid
 		}
 		rtypeComputeOp = rtypeOpForRd(rtypeComputeOp, rd)

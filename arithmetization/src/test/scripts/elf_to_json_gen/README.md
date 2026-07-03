@@ -135,8 +135,11 @@ into `imm` at ELF time. At runtime, `process_U_type_instruction` runs a flat
 selects the matching `*_WB` variant when `rd != x0`. `RTYPE_KECCAK` has no `_WB`
 variant and returns early after the precompile side effects.
 
-At runtime, `process_R_type_instruction` runs a flat `switch compute_op`
-with separate `RTYPE_*` and `RTYPE_*_WB` cases.
+At runtime, the interpreter dispatches `R_TYPE` to `process_R_type_instruction`
+(base `RTYPE_*` cases in `r_type.zkc`) and `R_TYPE_WB` to
+`process_R_WB_type_instruction` (`RTYPE_*_WB` cases in `r_type_wb.zkc`).
+When `rd != x0`, `buildDecodedProgram` sets `decoded_core.instruction_type` to
+`R_TYPE_WB` (8); `RTYPE_KECCAK` stays on `R_TYPE`.
 
 Constants for R-type `compute_op` live in `constants.zkc` and are mirrored in
 `main.go` (`rtypeOpAdd`, `rtypeOpAddWB`, …). See `main_test.go` for
@@ -182,8 +185,8 @@ All of this happens in `buildDecodedProgram`:
    can be indexed contiguously (gaps read as zero).
 4. **Decode each word.** Read the little-endian 32-bit instruction and extract
    fields with shifts/masks. `instructionTypeFromOpcode` reproduces the ZkC
-   `instruction_type_from_opcode` mapping (and the constants mirror
-   `constants.zkc`). `isRdZeroNoop` may rewrite the type to `MISC_MEM_TYPE`.
+   `instructionTypeFromOpcode` in `main.go` (mirrors the former
+   `instruction_type_from_opcode` table, now ELF-only). `isRdZeroNoop` may rewrite the type to `MISC_MEM_TYPE`; writeback R-types use `R_TYPE_WB`.
 5. **Bit-pack each table** (see below).
 6. **Hex-encode** each bit buffer into the hex string for its JSON key.
 
@@ -203,7 +206,7 @@ size is the sum of its field widths:
 
 | Table           | Field widths (bits)            | Record size |
 | --------------- | ------------------------------ | ----------- |
-| `decoded_core`  | opcode 7, type 3, params 25    | 35 bits     |
+| `decoded_core`  | opcode 7, type 4, params 25    | 36 bits     |
 | `decoded_itype` | compute_op 6, imm 64, rs1 5, rd 5 | 80 bits     |
 | `decoded_rtype` | compute_op 6, rs1 5, rs2 5, rd 5 | 21 bits |
 | `decoded_stype` | compute_op 6, imm 64, rs2 5, rs1 5 | 80 bits   |

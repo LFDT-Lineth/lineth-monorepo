@@ -141,7 +141,7 @@ func TestBuildDecodedProgramRewritesRdZeroNoop(t *testing.T) {
 		instrType = miscMemType
 	}
 	coreBits.writeBits(uint64(opcode), 7)
-	coreBits.writeBits(uint64(instrType), 3)
+	coreBits.writeBits(uint64(instrType), 4)
 	coreBits.writeBits(uint64((instr>>7)&0x1ffffff), 25)
 
 	if instrType != miscMemType {
