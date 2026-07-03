@@ -9,7 +9,7 @@
 # itself (ELF->JSON via elf_to_json_gen, then zkc) is owned by
 # arithmetization/src/test/Makefile; fixture-exec/fixture-debug build that ELF and hand it over.
 
-.PHONY: fetch test spec-test run-execution-specs-ssz-fixtures clean compile exec debug require-input
+.PHONY: fetch test spec-test prep-execution-specs-json-fixtures run-execution-specs-ssz-fixtures clean compile exec debug require-input
 
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
@@ -44,8 +44,6 @@ ZKC_EXEC_FLAGS ?=--gogen --fast -q
 # Parameters for execution-spec zkevm fixtures and selected temporary SSZ inputs.
 EXECUTION_SPECS_JSON_FIXTURES_DIR   := /tmp/execution-specs-json-fixtures
 EXECUTION_SPECS_SSZ_FIXTURES_DIR    := /tmp/execution-specs-ssz-fixtures
-EXECUTION_SPECS_FIXTURES_URL        := https://github.com/ethereum/execution-specs/releases/download/tests-zkevm@v0.4.1/fixtures_zkevm.tar.gz
-EXECUTION_SPECS_FIXTURES_ARCHIVE    := $(EXECUTION_SPECS_JSON_FIXTURES_DIR)/fixtures_zkevm.tar.gz
 EXECUTION_SPECS_FIXTURES_DIR        := $(EXECUTION_SPECS_JSON_FIXTURES_DIR)/fixtures
 EXECUTION_SPECS_RUN_FIXTURE_PATHS   ?= blockchain_tests/for_amsterdam/amsterdam,blockchain_tests/for_amsterdam/osaka
 EXECUTION_SPECS_RUN_SSZ_LIMIT       ?= 100
@@ -71,13 +69,10 @@ SPEC_ARGS ?=
 spec-test:
 	$(ZIG) build spec-tests $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) $(if $(strip $(SPEC_ARGS)),-- $(SPEC_ARGS))
 
-# The archive stores each test case as JSON with one or more blocks[] entries.
-run-execution-specs-ssz-fixtures:
-	@mkdir -p "$(EXECUTION_SPECS_JSON_FIXTURES_DIR)"
-	@[ -d "$(EXECUTION_SPECS_FIXTURES_DIR)" ] || { \
-		[ -f "$(EXECUTION_SPECS_FIXTURES_ARCHIVE)" ] || curl --fail --location --output "$(EXECUTION_SPECS_FIXTURES_ARCHIVE)" "$(EXECUTION_SPECS_FIXTURES_URL)"; \
-		tar -xzf "$(EXECUTION_SPECS_FIXTURES_ARCHIVE)" -C "$(EXECUTION_SPECS_JSON_FIXTURES_DIR)"; \
-	}
+prep-execution-specs-json-fixtures:
+	$(ZIG) build prep-execution-specs-json-fixtures $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) -Dexecution-specs-fixtures-link="$(EXECUTION_SPECS_FIXTURES_DIR)"
+
+run-execution-specs-ssz-fixtures: prep-execution-specs-json-fixtures
 	GOCACHE=/tmp/go-build $(GO) run $(MAKEFILE_DIR)scripts/run_execution_specs_ssz_fixtures.go --fixtures-dir "$(EXECUTION_SPECS_FIXTURES_DIR)" --ssz-dir "$(EXECUTION_SPECS_SSZ_FIXTURES_DIR)" --fixture-paths "$(EXECUTION_SPECS_RUN_FIXTURE_PATHS)" --ssz-limit "$(EXECUTION_SPECS_RUN_SSZ_LIMIT)"
 
 clean:
