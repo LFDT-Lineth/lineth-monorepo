@@ -287,6 +287,27 @@ func TestDecodeSTypeSemantic(t *testing.T) {
 	}
 }
 
+func TestAssembleITypeImm(t *testing.T) {
+	tests := []struct {
+		name      string
+		normImm12 uint32
+		want      uint64
+	}{
+		{name: "zero", normImm12: 0, want: 0},
+		{name: "positive_42", normImm12: 42, want: 42},
+		{name: "shift_3", normImm12: 3, want: 3},
+		{name: "negative_1", normImm12: 0xfff, want: 0xffffffffffffffff},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := assembleITypeImm(tt.normImm12)
+			if got != tt.want {
+				t.Fatalf("assembleITypeImm(%s) = %#x, want %#x", tt.name, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestAssembleSTypeImm(t *testing.T) {
 	tests := []struct {
 		name   string
