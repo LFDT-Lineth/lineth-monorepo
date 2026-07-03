@@ -44,7 +44,7 @@ In addition to the original keys (`entry_point_and_blobs_count`,
 | `decoded_core`     | `opcode, instruction_type, instruction_parameters`     | `instruction_parameters::opcode = instruction` + type map  |
 | `decoded_itype`    | `compute_op, imm12, rs1, rd`                           | flat semantic micro-op dispatch in `i_type.zkc`              |
 | `decoded_rtype`    | `compute_op, rs1, rs2, rd`                             | flat semantic micro-op dispatch in `r_type.zkc`              |
-| `decoded_stype`    | `compute_op, imm12, rs2, rs1`                          | flat store-width dispatch in `s_type.zkc`                    |
+| `decoded_stype`    | `compute_op, imm, rs2, rs1`                          | flat store-width dispatch in `s_type.zkc`                    |
 | `decoded_btype`    | `compute_op, imm, rs2, rs1`                            | flat `compute_op` dispatch (raw funct3) in `b_type.zkc`        |
 | `decoded_jtype`    | `compute_op, imm, rd`                                  | flat semantic micro-op dispatch in `j_type.zkc`              |
 | `decoded_utype`    | `compute_op, imm, rd`                                | flat semantic micro-op dispatch in `u_type.zkc`              |
@@ -54,8 +54,8 @@ Each value is a single `0x…` hex string. The field set and order of every tabl
 `arithmetization/src/main/riscv/memory.zkc`.
 
 For S-type the 12-bit store immediate is reassembled
-(`imm[11] :: imm[10:5] :: imm[4:0]`) into a single `imm12` field, so the
-interpreter no longer has to recombine the split immediate.
+(`imm[11] :: imm[10:5] :: imm[4:0]`) and sign-extended to 64 bits at decode
+time, so the interpreter uses `imm` directly.
 
 For B-type the 13-bit branch offset is reassembled
 (`imm[12] :: imm[11] :: imm[10:5] :: imm[4:1] :: 0`) and sign-extended to 64
@@ -93,9 +93,11 @@ Constants for `compute_op` live in `constants.zkc` and are mirrored in `main.go`
 ## S-type semantic micro-ops (store width folded)
 
 `decodeSTypeSemantic` maps each S-type `funct3` directly to a store-width opcode
-(`STYPE_STORE8`, `STYPE_STORE16`, `STYPE_STORE32`, `STYPE_STORE64`). At runtime,
+(`STYPE_STORE8`, `STYPE_STORE16`, `STYPE_STORE32`, `STYPE_STORE64`). The store
+offset is sign-extended into `imm` at ELF time. At runtime,
 `process_S_type_instruction` runs a single flat `switch compute_op` that performs
-the RAM write.
+the RAM write. Invalid opcodes (including `STYPE_INVALID`) are handled by the
+`default` arm.
 
 ## B-type semantic micro-ops
 
@@ -200,7 +202,7 @@ size is the sum of its field widths:
 | `decoded_core`  | opcode 7, type 3, params 25    | 35 bits     |
 | `decoded_itype` | compute_op 6, imm12 12, rs1 5, rd 5 | 28 bits     |
 | `decoded_rtype` | compute_op 6, rs1 5, rs2 5, rd 5 | 21 bits |
-| `decoded_stype` | compute_op 6, imm12 12, rs2 5, rs1 5 | 28 bits   |
+| `decoded_stype` | compute_op 6, imm 64, rs2 5, rs1 5 | 80 bits   |
 | `decoded_btype` | compute_op 6, imm 64, rs2 5, rs1 5 | 80 bits |
 | `decoded_jtype` | compute_op 6, imm 64, rd 5 | 75 bits |
 | `decoded_utype` | compute_op 6, imm 64, rd 5 | 75 bits |

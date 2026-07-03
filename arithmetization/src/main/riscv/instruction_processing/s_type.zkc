@@ -1,7 +1,6 @@
 include "../memory.zkc"
 include "../ram/write.zkc"
 include "../utils/constants.zkc"
-include "../utils/sign_extend.zkc"
 include "../utils/signed_sum.zkc"
 
 // Process a RISC-V S-type instruction, writing a register value to memory.
@@ -16,9 +15,12 @@ include "../utils/signed_sum.zkc"
 //   imm[11] :: imm[10:5] :: rs2 :: rs1 :: funct3 :: imm[4:0]
 //
 // The immediate is reassembled as imm[11] :: imm[10:5] :: imm[4:0] and
-// sign-extended to 64 bits to form the address offset imm12.
+// sign-extended to 64 bits at ELF time into `imm`.
+// 
+// var imm:DoubleWord = sgn_extension_u12_u64(imm12)
 //
 // Runtime execution is a switch on compute_op (STYPE_STORE8, STYPE_STORE16, …).
+// Invalid opcodes (STYPE_INVALID) are handled by the default arm.
 //
 // Store variants selected by compute_op (from funct3 at ELF time):
 //   STYPE_STORE8  (funct3 = 0b000) — store byte       (8 bits)
@@ -27,43 +29,38 @@ include "../utils/signed_sum.zkc"
 //   STYPE_STORE64 (funct3 = 0b011) — store doubleword (64 bits)
 //
 // Effect:
-//   mem[rs1 + sign_extend(imm12)] ← lower N bits of rs2
+//   mem[rs1 + imm] ← lower N bits of rs2
 //
 fn process_S_type_instruction<ram, registers>(index:u64) {
 
     var compute_op:STypeComputeOp
-    var imm12:Imm12
+    var imm:DoubleWord
     var rs2:Register
     var rs1:Register
-    compute_op, imm12, rs2, rs1 = decoded_stype[index]
+    compute_op, imm, rs2, rs1 = decoded_stype[index]
 
-    var signext_imm12_64:DoubleWord = sgn_extension_u12_u64(imm12)
-    var mem_address:Address = signed_sum_of_double_word(registers[rs1], signext_imm12_64) as Address
+    var mem_address:Address = signed_sum_of_double_word(registers[rs1], imm) as Address
 
     switch compute_op {
         case STYPE_STORE8: {
             printf "STYPE_STORE8 "
-            print_s_operands(rs2, rs1, signext_imm12_64)
+            print_s_operands(rs2, rs1, imm)
             write_8(mem_address, (registers[rs2] & (0xFF as u64)) as u8)
         }
         case STYPE_STORE16: {
             printf "STYPE_STORE16 "
-            print_s_operands(rs2, rs1, signext_imm12_64)
+            print_s_operands(rs2, rs1, imm)
             write_16(mem_address, (registers[rs2] & (0xFFFF as u64)) as u16)
         }
         case STYPE_STORE32: {
             printf "STYPE_STORE32 "
-            print_s_operands(rs2, rs1, signext_imm12_64)
+            print_s_operands(rs2, rs1, imm)
             write_32(mem_address, (registers[rs2] & (0xFFFFFFFF as u64)) as u32)
         }
         case STYPE_STORE64: {
             printf "STYPE_STORE64 "
-            print_s_operands(rs2, rs1, signext_imm12_64)
+            print_s_operands(rs2, rs1, imm)
             write_64(mem_address, registers[rs2])
-        }
-        case STYPE_INVALID: {
-            printf "[ERROR] Unsupported S-type instruction (invalid semantic op)\n"
-            fail
         }
         default: {
             printf "[ERROR] Unsupported S-type instruction with\n"

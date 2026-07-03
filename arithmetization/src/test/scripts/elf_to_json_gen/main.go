@@ -628,6 +628,16 @@ func assembleUTypeImm(instr uint32) uint64 {
 	return uint64(int64(int32(word)))
 }
 
+// assembleSTypeImm sign-extends the reassembled 12-bit S-type store offset to 64 bits.
+func assembleSTypeImm(simm12 uint32) uint64 {
+	return uint64(signExtend12(simm12))
+}
+
+func signExtend12(x uint32) int64 {
+	x &= 0xfff
+	return int64(int32(x<<20) >> 20)
+}
+
 // decodeUTypeSemantic maps a raw U-type opcode to a semantic base compute op.
 func decodeUTypeSemantic(opcode uint32) (computeOp uint32) {
 	switch opcode {
@@ -898,7 +908,7 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 	//   decoded_core : opcode:Opcode(u7), instruction_type:Type(u3), instruction_parameters:u25
 	//   decoded_itype: compute_op:ITypeComputeOp(u6), imm12:Imm12(u12), rs1:Register(u5), rd:Register(u5)
 	//   decoded_rtype: compute_op:RTypeComputeOp(u6), rs1:Register(u5), rs2:Register(u5), rd:Register(u5)
-	//   decoded_stype: compute_op:STypeComputeOp(u6), imm12:Imm12(u12), rs2:Register(u5), rs1:Register(u5)
+	//   decoded_stype: compute_op:STypeComputeOp(u6), imm:DoubleWord(u64), rs2:Register(u5), rs1:Register(u5)
 	//   decoded_btype: compute_op:BTypeComputeOp(u6), imm:DoubleWord(u64), rs2:Register(u5), rs1:Register(u5)
 	//   decoded_jtype: compute_op:JTypeComputeOp(u6), imm:DoubleWord(u64), rd:Register(u5)
 	//   decoded_utype: compute_op:UTypeComputeOp(u6), imm:DoubleWord(u64), rd:Register(u5)
@@ -971,7 +981,7 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 			stypeComputeOp = stypeInvalid
 		}
 		stypeBits.writeBits(uint64(stypeComputeOp), 6)
-		stypeBits.writeBits(uint64(simm12), 12)
+		stypeBits.writeBits(assembleSTypeImm(simm12), 64)
 		stypeBits.writeBits(uint64(rs2), 5)
 		stypeBits.writeBits(uint64(rs1), 5)
 
