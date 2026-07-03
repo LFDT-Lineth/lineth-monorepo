@@ -409,9 +409,15 @@ func (sys *System) NewInclusion(ctx *ContextFrame, included []Table, including [
 // NewPermutation constructs and registers a Permutation [LookupQuery] on sys.
 // The query asserts that A and B, treated as multisets of rows, are equal.
 //
+// Fragments may differ in column width, on either side and between sides: the
+// grandproduct compiler folds every row with an α^w length sentinel (see
+// rlcOfTable), so a width-w row can only match another width-w row with the
+// same entries — a shorter tuple never aliases a zero-padded longer one. A
+// permutation between mixed-width fragments therefore holds iff the multisets
+// of (width, row) pairs coincide.
+//
 // Invariants enforced at construction:
 //   - a and b are non-empty.
-//   - All fragments (in both a and b) have the same column width.
 //   - No fragment carries a selector — permutation has no row filtering.
 //
 // Panics on any of the above invariant violations or if ctx is nil.
@@ -421,9 +427,6 @@ func (sys *System) NewPermutation(ctx *ContextFrame, a []Table, b []Table) *Look
 	}
 	validateNonEmpty("NewPermutation", "a", a)
 	validateNonEmpty("NewPermutation", "b", b)
-	width := a[0].Width()
-	validateUniformWidth("NewPermutation/a-same-width", width, a)
-	validateUniformWidth("NewPermutation/b-same-width", width, b)
 	validateNoSelector("NewPermutation", a)
 	validateNoSelector("NewPermutation", b)
 	return sys.newTableRelation(ctx, KindPermutation, a, b)

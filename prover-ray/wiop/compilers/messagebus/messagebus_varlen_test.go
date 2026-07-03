@@ -169,3 +169,43 @@ func TestCompile_VariableLength_Permutation_Unbalanced(t *testing.T) {
 			"a permutation bus whose selected receiver multiset differs from the sender must be rejected")
 	})
 }
+
+// TestCompile_MixedWidth_LeadingOneDoesNotAlias directly stresses the "leading
+// coordinate is 1" concern. A width-2 receive (1, v) folds to α² + α + v, whose
+// α¹ term coincides with the α¹ *sentinel* of a width-1 send (v) = α + v, and
+// whose constant term also matches. Only the width-2 row's own α² sentinel
+// distinguishes them — so the residual is non-zero and the bus is rejected,
+// confirming a data value of 1 cannot masquerade as a lower-width sentinel.
+func TestCompile_MixedWidth_LeadingOneDoesNotAlias(t *testing.T) {
+	runWithAndWithoutHook(t, func(t *testing.T, sys *wiop.System, r0 *wiop.Round) {
+		t.Helper()
+		modS1 := sys.NewSizedModule(sys.Context.Childf("modS1"), 2, wiop.PaddingDirectionNone)
+		modR2 := sys.NewSizedModule(sys.Context.Childf("modR2"), 2, wiop.PaddingDirectionNone)
+		colS1 := modS1.NewColumn(sys.Context.Childf("S1"), wiop.VisibilityOracle, r0)
+		hiR := modR2.NewColumn(sys.Context.Childf("hiR"), wiop.VisibilityOracle, r0)
+		loR := modR2.NewColumn(sys.Context.Childf("loR"), wiop.VisibilityOracle, r0)
+
+		sys.NewMessageBusSend(
+			sys.Context.Childf("send-w1"), "shard", "one",
+			wiop.NewTable(colS1.View()),
+		)
+		// Width-2 receive with the leading (sentinel-adjacent) column pinned to 1,
+		// trying to consume the width-1 send as (1, v).
+		sys.NewMessageBusReceive(
+			sys.Context.Childf("recv-w2"), "shard", "one",
+			wiop.NewTable(hiR.View(), loR.View()), nil,
+		)
+
+		messagebus.Compile(sys)
+		logderivativesum.Compile(sys)
+
+		rt := wiop.NewRuntime(sys)
+		rt.AssignColumn(colS1, makeVec(5, 6))
+		rt.AssignColumn(hiR, makeVec(1, 1)) // leading coordinate = 1
+		rt.AssignColumn(loR, makeVec(5, 6))
+
+		drive(&rt)
+		assert.Error(t, checkAllVerifierActions(&rt),
+			"a data value of 1 in the sentinel-adjacent column must not alias a lower-width sentinel")
+	})
+}

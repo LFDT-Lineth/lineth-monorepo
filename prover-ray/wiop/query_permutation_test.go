@@ -81,7 +81,10 @@ func TestNewPermutation_EmptySidePanic(t *testing.T) {
 	})
 }
 
-func TestNewPermutation_WidthMismatchPanic(t *testing.T) {
+// TestNewPermutation_MixedWidthAllowed documents that mixed-width fragments are
+// now accepted at construction: the grandproduct compiler's α^w length sentinel
+// keeps a width-2 row from aliasing a width-1 row, so the query is well-defined.
+func TestNewPermutation_MixedWidthAllowed(t *testing.T) {
 	sys := wiop.NewSystemf("permW")
 	r0 := sys.NewRound()
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
@@ -89,7 +92,7 @@ func TestNewPermutation_WidthMismatchPanic(t *testing.T) {
 	a0 := modA.NewColumn(sys.Context.Childf("a0"), wiop.VisibilityOracle, r0)
 	a1 := modA.NewColumn(sys.Context.Childf("a1"), wiop.VisibilityOracle, r0)
 	b0 := modB.NewColumn(sys.Context.Childf("b0"), wiop.VisibilityOracle, r0)
-	assert.Panics(t, func() {
+	assert.NotPanics(t, func() {
 		sys.NewPermutation(sys.Context.Childf("perm"),
 			[]wiop.Table{wiop.NewTable(a0.View(), a1.View())}, // width 2
 			[]wiop.Table{wiop.NewTable(b0.View())})            // width 1

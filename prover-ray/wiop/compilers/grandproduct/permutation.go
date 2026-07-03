@@ -11,11 +11,14 @@ import (
 // prover action that assigns the grand-product Result and a verifier action
 // ([CheckResultIsOne]) asserting that Result == 1.
 //
-// For each permutation query a fresh β coin (and an α coin when the table is
+// For each permutation query a fresh β coin (and an α coin when any fragment is
 // multi-column) is sampled in the round following the latest column round.
 // Each A-fragment contributes a numerator factor β + RLC_α(row); each
-// B-fragment a denominator factor. Distinct coins per query make it sound to
-// pack factors from different queries into the same downstream Z column.
+// B-fragment a denominator factor. The RLC carries an α^w length sentinel (see
+// rlcOfTable) so fragments of a single query may differ in width without a
+// short row aliasing a zero-padded longer one. Distinct coins per query make it
+// sound to pack factors from different queries into the same downstream Z
+// column.
 func compilePermutations(sys *wiop.System) {
 	var (
 		perms    []*wiop.LookupQuery
@@ -47,10 +50,13 @@ func compilePermutations(sys *wiop.System) {
 	var numerators, denominators []wiop.Expression
 	for qi, q := range perms {
 		qCtx := compCtx.Childf("perm-%d", qi)
-		width := q.A[0].Width()
 
+		// α is needed whenever any fragment is multi-column: both to combine a
+		// tuple's columns and to carry the α^w length sentinel. When every
+		// fragment is width-1 the query is single-width, no cross-width
+		// aliasing is possible, and β alone (no sentinel, no α) suffices.
 		var alpha *wiop.CoinField
-		if width > 1 {
+		if maxFragmentWidth(q) > 1 {
 			alpha = coinRound.NewCoinField(qCtx.Childf("alpha"))
 		}
 		beta := coinRound.NewCoinField(qCtx.Childf("beta"))
@@ -83,10 +89,24 @@ func ensureNextRound(sys *wiop.System, r *wiop.Round) *wiop.Round {
 	return sys.NewRound()
 }
 
-// rlcOfTable builds the random linear combination of a permutation table's
-// columns: col[0] + α·col[1] + α²·col[2] + … in Horner form. Permutation
-// tables carry no selector, so the combination has no head term. When the
-// table is single-column, alpha is nil and the single column view is returned.
+// rlcOfTable builds the width-binding random linear combination of a
+// permutation table's row:
+//
+//	α^w + col[0] + α·col[1] + α²·col[2] + … + α^{w-1}·col[w-1]
+//
+// where w = len(cols). The leading α^w is a length sentinel: it makes the fold
+// injective across widths, so fragments of a query may differ in width without
+// a short row aliasing a zero-padded longer one. Permutation tables carry no
+// selector, so there is no head filter term.
+//
+// The sentinel is folded in for free by evaluating the coefficient sequence
+// [1, col[w-1], …, col[0]] at α via Horner; seeding acc = α + col[w-1]
+// collapses the leading 1·α step, so the sentinel costs one extra addition and
+// NO extra multiplication over the plain RLC.
+//
+// When alpha is nil the whole query is single-width (every fragment width-1),
+// no cross-width aliasing is possible, and the lone column view is returned
+// with no sentinel.
 func rlcOfTable(alpha *wiop.CoinField, tab wiop.Table) wiop.Expression {
 	cols := tab.Columns
 	if alpha == nil {
@@ -96,11 +116,32 @@ func rlcOfTable(alpha *wiop.CoinField, tab wiop.Table) wiop.Expression {
 		return cols[0]
 	}
 	alphaExpr := wiop.Expression(alpha)
-	acc := wiop.Expression(cols[len(cols)-1])
+	// acc = α + col[w-1] fuses the leading 1·α + col[w-1] Horner step, seeding
+	// the coefficient sequence [1, col[w-1], …] that carries the α^w sentinel.
+	acc := wiop.Add(alphaExpr, cols[len(cols)-1])
 	for i := len(cols) - 2; i >= 0; i-- {
 		acc = wiop.Add(wiop.Mul(alphaExpr, acc), cols[i])
 	}
 	return acc
+}
+
+// maxFragmentWidth returns the greatest column width across every A and B
+// fragment of a permutation query. It drives α allocation: α is required once
+// any fragment is multi-column, both to combine columns and to carry the α^w
+// length sentinel that disambiguates mixed widths.
+func maxFragmentWidth(q *wiop.LookupQuery) int {
+	w := 0
+	for _, tab := range q.A {
+		if tab.Width() > w {
+			w = tab.Width()
+		}
+	}
+	for _, tab := range q.B {
+		if tab.Width() > w {
+			w = tab.Width()
+		}
+	}
+	return w
 }
 
 // CheckResultIsOne asserts that the aggregated [wiop.GrandProduct] Result cell
