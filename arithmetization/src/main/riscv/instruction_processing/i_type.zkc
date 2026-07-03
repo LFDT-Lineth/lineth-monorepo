@@ -36,6 +36,7 @@ fn process_I_type_instruction<ram, registers>(index:u64, pc:Address) -> (new_pc:
 
     var rs1_plus_imm:u64 = signed_sum_of_double_word(registers[rs1], imm)
     var result:DoubleWord
+
     new_pc = (pc + 4) as Address
 
     switch compute_op {
@@ -157,7 +158,7 @@ fn process_I_type_instruction<ram, registers>(index:u64, pc:Address) -> (new_pc:
             // Warn: this is an unsigned comparison (even if imm12 is SGN_EXT)
             result = registers[rs1] < imm ? 1 : 0
         }
-        case OP_SLTIU_WB: {
+        case OP_SLTIU_WB: {SYSTEM
             printf "OP_SLTIU "
             print_i_operands(rd, rs1, imm)
             // Warn: this is an unsigned comparison (even if imm12 is SGN_EXT)
@@ -299,10 +300,11 @@ fn process_I_type_instruction<ram, registers>(index:u64, pc:Address) -> (new_pc:
             printf "[ERROR] ITYPE_EBREAK instruction triggered\n"
             fail
         }
-        case ITYPE_INVALID: {
-            printf "[ERROR] Unsupported I-Type instruction (invalid semantic op)\n"
-            fail
-        }
+
+        // ===================
+        // ----- DEFAULT -----
+        // ===================
+
         default: {
             printf "[ERROR] Unsupported I-Type instruction with\n"
             printf "\tcompute_op ≡ %x\n", compute_op
