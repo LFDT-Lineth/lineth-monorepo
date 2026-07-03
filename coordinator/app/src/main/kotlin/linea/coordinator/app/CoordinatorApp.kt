@@ -9,6 +9,7 @@ import linea.coordinator.api.Api
 import linea.coordinator.app.conflationbacktesting.ConflationBacktestingService
 import linea.coordinator.config.v2.CoordinatorConfig
 import linea.coordinator.config.v2.DatabaseConfig
+import linea.coordinator.config.v2.logPretty
 import linea.fileio.DirectoryCleaner
 import linea.persistence.DisabledForcedTransactionsDao
 import linea.persistence.conflation.AggregationsRepositoryImpl

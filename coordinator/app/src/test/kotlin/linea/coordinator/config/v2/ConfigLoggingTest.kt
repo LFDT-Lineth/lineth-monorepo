@@ -1,6 +1,5 @@
-package linea.coordinator.app
+package linea.coordinator.config.v2
 
-import linea.coordinator.config.v2.CoordinatorConfig
 import linea.coordinator.config.v2.toml.loadConfigs
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeAll
@@ -39,11 +38,11 @@ class ConfigLoggingTest {
   fun `secrets do not leak in pretty-printed config`() {
     val outputs = listOf(configs.toPrettyLog(), configs.toPrettyLog(summarizeNoisyFields = false))
 
-    // database.password = "postgres" in the fixture; must render as ***, never plaintext.
-    // Anchored on `password:` so it does not false-positive on host/username.
+    // database.password = "postgres" in the fixture; must render as ****, never plaintext.
+    // Anchored on `password=` so it does not false-positive on host/username.
     outputs.forEach { yaml ->
-      assertThat(yaml).doesNotContain("password: postgres")
-      assertThat(yaml).contains("password: ****")
+      assertThat(yaml).doesNotContain("password=postgres")
+      assertThat(yaml).contains("password=****")
     }
 
     // web3j.privateKey hexes from coordinator-config-v2.toml (lines 174, 207, 241). Keep in sync if
@@ -63,17 +62,17 @@ class ConfigLoggingTest {
   }
 
   @Test
-  fun `pretty-printed lines are fully-qualified and one leaf per line`() {
+  fun `pretty-printed lines are fully-qualified logfmt and one leaf per line`() {
     val lines = configs.toPrettyLogLines()
 
-    // Every leaf renders on its own line as `path: value` (no multi-line blob).
+    // Every leaf renders on its own line as logfmt `key=value` (no multi-line blob).
     assertThat(lines).isNotEmpty
-    assertThat(lines).allSatisfy { line -> assertThat(line).contains(":") }
+    assertThat(lines).allSatisfy { line -> assertThat(line).contains("=") }
 
-    // Nested keys carry their category path so each line is meaningful on its own, e.g.
-    // `database.password: ****` rather than a bare `password: ****`. This is what makes the
-    // per-event logging readable in Grafana/Loki.
-    assertThat(lines).anySatisfy { line -> assertThat(line).matches(".+\\..+:.*") }
-    assertThat(lines).contains("database.password: ****")
+    // Keys carry their full category path under the `config` root, so each line is meaningful on
+    // its own, e.g. `config.database.password=****`. This is what makes per-event logging readable
+    // in Grafana/Loki.
+    assertThat(lines).allSatisfy { line -> assertThat(line).startsWith("config.") }
+    assertThat(lines).contains("config.database.password=****")
   }
 }

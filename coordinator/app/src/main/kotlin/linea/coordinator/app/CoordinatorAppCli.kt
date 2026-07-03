@@ -1,6 +1,7 @@
 package linea.coordinator.app
 
 import linea.coordinator.config.v2.CoordinatorConfig
+import linea.coordinator.config.v2.toPrettyLog
 import linea.coordinator.config.v2.toml.loadConfigs
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
