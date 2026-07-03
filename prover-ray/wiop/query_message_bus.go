@@ -69,9 +69,11 @@ func (r BusReduction) String() string {
 // are drawn after every participant column is committed. For an entry with
 // column views (c_0, …, c_{w-1}), define the row-folding
 //
-//	d(row) = β + α^{w-1}·c_0(row) + … + α·c_{w-2}(row) + c_{w-1}(row)
+//	d(row) = β + α^w + α^{w-1}·c_0(row) + … + α·c_{w-2}(row) + c_{w-1}(row)
 //
-// and a per-row filter equal to Tab.Selector when present and 1 otherwise.
+// where the leading α^w is a length sentinel binding the entry's own width w,
+// so participants of a Handle may differ in width. A per-row filter equal to
+// Tab.Selector when present and 1 otherwise gates each row's contribution.
 // The entry contributes
 //
 //	Send:    +Σ_row filter(row) · 1 / d(row)

@@ -737,29 +737,99 @@ func TestCompile_DynamicModule_MultiColumnTuples(t *testing.T) {
 	require.NoError(t, checkAllVerifierActions(&rt))
 }
 
-// TestCompile_WidthMismatchPanics asserts that the compiler rejects two
-// participants on the same handle with different column widths — the
-// alpha-fold is only meaningful when every participant has the same width.
-func TestCompile_WidthMismatchPanics(t *testing.T) {
-	sys := wiop.NewSystemf("mb-width-mismatch")
-	r0 := sys.NewRound()
+// TestCompile_MixedWidth_Balanced covers participants of DIFFERENT widths on a
+// single handle. A width-2 send/receive sub-group and a width-1 send/receive
+// sub-group each balance internally; the α^w length sentinel keeps the two
+// sub-groups from interfering, so the shard residual is zero and the verifier
+// accepts. This is the case the old width-uniformity guard used to reject.
+func TestCompile_MixedWidth_Balanced(t *testing.T) {
+	runWithAndWithoutHook(t, func(t *testing.T, sys *wiop.System, r0 *wiop.Round) {
+		t.Helper()
+		// Width-2 sub-group.
+		modS2 := sys.NewSizedModule(sys.Context.Childf("modS2"), 2, wiop.PaddingDirectionNone)
+		modR2 := sys.NewSizedModule(sys.Context.Childf("modR2"), 2, wiop.PaddingDirectionNone)
+		keyS := modS2.NewColumn(sys.Context.Childf("keyS"), wiop.VisibilityOracle, r0)
+		valS := modS2.NewColumn(sys.Context.Childf("valS"), wiop.VisibilityOracle, r0)
+		keyR := modR2.NewColumn(sys.Context.Childf("keyR"), wiop.VisibilityOracle, r0)
+		valR := modR2.NewColumn(sys.Context.Childf("valR"), wiop.VisibilityOracle, r0)
 
-	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 2, wiop.PaddingDirectionNone)
-	colA := mod.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	colA2 := mod.NewColumn(sys.Context.Childf("A2"), wiop.VisibilityOracle, r0)
-	colB := mod.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+		// Width-1 sub-group.
+		modS1 := sys.NewSizedModule(sys.Context.Childf("modS1"), 2, wiop.PaddingDirectionNone)
+		modR1 := sys.NewSizedModule(sys.Context.Childf("modR1"), 2, wiop.PaddingDirectionNone)
+		colS1 := modS1.NewColumn(sys.Context.Childf("S1"), wiop.VisibilityOracle, r0)
+		colR1 := modR1.NewColumn(sys.Context.Childf("R1"), wiop.VisibilityOracle, r0)
 
-	sys.NewMessageBusSend(
-		sys.Context.Childf("send-1col"), "shard", "h",
-		wiop.NewTable(colA.View()),
-	)
-	sys.NewMessageBusReceive(
-		sys.Context.Childf("recv-2col"), "shard", "h",
-		wiop.NewTable(colB.View(), colA2.View()),
-		nil,
-	)
+		sys.NewMessageBusSend(
+			sys.Context.Childf("send-w2"), "shard", "mixed",
+			wiop.NewTable(keyS.View(), valS.View()),
+		)
+		sys.NewMessageBusReceive(
+			sys.Context.Childf("recv-w2"), "shard", "mixed",
+			wiop.NewTable(keyR.View(), valR.View()), nil,
+		)
+		sys.NewMessageBusSend(
+			sys.Context.Childf("send-w1"), "shard", "mixed",
+			wiop.NewTable(colS1.View()),
+		)
+		sys.NewMessageBusReceive(
+			sys.Context.Childf("recv-w1"), "shard", "mixed",
+			wiop.NewTable(colR1.View()), nil,
+		)
 
-	assert.Panics(t, func() { messagebus.Compile(sys) })
+		messagebus.Compile(sys)
+		logderivativesum.Compile(sys)
+
+		rt := wiop.NewRuntime(sys)
+		rt.AssignColumn(keyS, makeVec(1, 2))
+		rt.AssignColumn(valS, makeVec(10, 20))
+		rt.AssignColumn(keyR, makeVec(1, 2))
+		rt.AssignColumn(valR, makeVec(10, 20))
+		rt.AssignColumn(colS1, makeVec(5, 6))
+		rt.AssignColumn(colR1, makeVec(5, 6))
+
+		drive(&rt)
+		require.NoError(t, checkAllVerifierActions(&rt),
+			"a handle mixing width-1 and width-2 participants that balance internally must be accepted")
+	})
+}
+
+// TestCompile_MixedWidth_SentinelPreventsAliasing is the soundness counterpart:
+// a width-1 send of value v must NOT be cancellable by a width-2 receive of
+// (0, v). Without the α^w length sentinel both fold to β + v and the residual
+// would spuriously vanish; the sentinel gives the width-1 row β + α + v and the
+// width-2 row β + α² + v, so the residual is non-zero and the verifier rejects.
+func TestCompile_MixedWidth_SentinelPreventsAliasing(t *testing.T) {
+	runWithAndWithoutHook(t, func(t *testing.T, sys *wiop.System, r0 *wiop.Round) {
+		t.Helper()
+		modS1 := sys.NewSizedModule(sys.Context.Childf("modS1"), 2, wiop.PaddingDirectionNone)
+		modR2 := sys.NewSizedModule(sys.Context.Childf("modR2"), 2, wiop.PaddingDirectionNone)
+		colS1 := modS1.NewColumn(sys.Context.Childf("S1"), wiop.VisibilityOracle, r0)
+		hiR := modR2.NewColumn(sys.Context.Childf("hiR"), wiop.VisibilityOracle, r0)
+		loR := modR2.NewColumn(sys.Context.Childf("loR"), wiop.VisibilityOracle, r0)
+
+		sys.NewMessageBusSend(
+			sys.Context.Childf("send-w1"), "shard", "alias",
+			wiop.NewTable(colS1.View()),
+		)
+		// A width-2 receive that zero-pads the leading column, trying to consume
+		// the width-1 send as (0, v).
+		sys.NewMessageBusReceive(
+			sys.Context.Childf("recv-w2"), "shard", "alias",
+			wiop.NewTable(hiR.View(), loR.View()), nil,
+		)
+
+		messagebus.Compile(sys)
+		logderivativesum.Compile(sys)
+
+		rt := wiop.NewRuntime(sys)
+		rt.AssignColumn(colS1, makeVec(5, 6))
+		rt.AssignColumn(hiR, makeVec(0, 0))
+		rt.AssignColumn(loR, makeVec(5, 6))
+
+		drive(&rt)
+		assert.Error(t, checkAllVerifierActions(&rt),
+			"the length sentinel must stop a width-2 (0,v) receive from aliasing a width-1 v send")
+	})
 }
 
 // TestCompile_MixedOriginShardPanics asserts that Compile rejects a system

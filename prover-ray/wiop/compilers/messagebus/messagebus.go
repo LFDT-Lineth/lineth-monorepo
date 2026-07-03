@@ -14,13 +14,15 @@
 //	    =
 //	∑_{Recv entries on h}  Σ_row filter(row) ·  Multiplicity(row) / d_h(row)
 //
-// where d_h(row) = β + α^{w_h-1}·c_0(row) + … + c_{w_h-1}(row). Equivalently,
-// the multiset of rows sent into h equals the multiset of rows received from
-// h, weighted by the receiver-side multiplicities. The same α, β are reused
-// across handles (each handle just folds with α raised to powers up to its
-// own width); handles remain independent residuals because each is asserted
-// by its own verifier action. See [wiop.MessageBus] for the per-entry
-// semantics.
+// where d_h(row) = β + α^w + α^{w-1}·c_0(row) + … + c_{w-1}(row) and w is the
+// row's own participant width. The leading α^w is a length sentinel: it makes
+// the fold injective across widths, so participants of a single handle may
+// differ in width (see foldDenominator) without a short tuple aliasing a
+// longer zero-padded one. Equivalently, the multiset of rows sent into h
+// equals the multiset of rows received from h, weighted by the receiver-side
+// multiplicities. The same α, β are reused across handles and across widths;
+// handles remain independent residuals because each is asserted by its own
+// verifier action. See [wiop.MessageBus] for the per-entry semantics.
 //
 // The pass allocates α and β itself, via [Round.NewCoinField] on a fresh
 // (or reused) coin round immediately after the latest participant round.
@@ -124,22 +126,10 @@ func Compile(sys *wiop.System) {
 	// already sampled.
 	resultRound := ensureRoundAfter(sys, coinRound)
 
-	// Per-handle: validate uniform width within a handle. Widths may differ
-	// across handles (each handle just raises the shared α to powers up to
-	// its own width).
-	for _, h := range handles {
-		entries := byHandle[h]
-		width := entries[0].Tab.Width()
-		for _, mb := range entries[1:] {
-			if mb.Tab.Width() != width {
-				panic(fmt.Sprintf(
-					"wiop/compilers/messagebus: handle %q has a participant of width %d at %q "+
-						"but expected %d (set by the first participant at %q); all participants of a handle must share a width",
-					h, mb.Tab.Width(), mb.Context().Path(), width, entries[0].Context().Path(),
-				))
-			}
-		}
-	}
+	// No cross-participant width check: foldDenominator binds each row's width
+	// into its fold via an α^w length sentinel, so participants of one handle
+	// may differ in width without a short tuple aliasing a zero-padded longer
+	// one. (Widths naturally differ across handles too.)
 
 	// Per handle: aggregate every entry's contribution into one accumulator
 	// holding this shard's residual on that handle. The reduction is declared
@@ -236,10 +226,10 @@ func ensureRoundAfter(sys *wiop.System, after *wiop.Round) *wiop.Round {
 //	Send:    Filter = Tab.Selector, Numerator = +1,             Denominator = d_h(row)
 //	Receive: Filter = Tab.Selector, Numerator = -Multiplicity,  Denominator = d_h(row)
 //
-// where d_h(row) = β + α^{w-1}·c_0(row) + … + c_{w-1}(row). For width-1 tabs
-// the Horner loop is empty and the fold reduces to β + c_0(row); α is still
-// passed in but never multiplied. A nil Multiplicity on the Receive side
-// becomes the constant 1 (so the numerator is just -1).
+// where d_h(row) = β + α^w + α^{w-1}·c_0(row) + … + c_{w-1}(row) is the
+// width-binding fold from foldDenominator (the α^w sentinel lets participants
+// of a handle differ in width). A nil Multiplicity on the Receive side becomes
+// the constant 1 (so the numerator is just -1).
 func buildFractions(
 	alpha *wiop.CoinField,
 	beta *wiop.CoinField,
@@ -329,13 +319,15 @@ func buildPermutationFactors(
 
 // permutationFold returns the per-row grand-product factor for one entry:
 //
-//	selector·(β + RLC(row)) + (1 − selector)
+//	selector·(β + fold(row)) + (1 − selector)
 //
-// so a selected row contributes β + RLC(row) and an unselected row contributes
-// the neutral factor 1 (dropping out of the product). With no selector the
-// factor is simply β + RLC(row). The selector is assumed {0,1}-valued and zero
-// on padding rows — the same assumption the log-derivative path makes of its
-// filters.
+// where β + fold(row) is the width-binding fold from foldDenominator
+// (β + α^w + α^{w-1}·c_0 + … + c_{w-1}, the α^w sentinel letting participants
+// of a handle differ in width). A selected row contributes β + fold(row) and
+// an unselected row contributes the neutral factor 1 (dropping out of the
+// product). With no selector the factor is simply β + fold(row). The selector
+// is assumed {0,1}-valued and zero on padding rows — the same assumption the
+// log-derivative path makes of its filters.
 func permutationFold(alpha, beta *wiop.CoinField, tab wiop.Table) wiop.Expression {
 	fold := foldDenominator(alpha, beta, tab.Columns)
 	if tab.Selector == nil {
@@ -346,12 +338,26 @@ func permutationFold(alpha, beta *wiop.CoinField, tab wiop.Table) wiop.Expressio
 	return wiop.Add(wiop.Mul(sel, fold), wiop.Sub(one, sel))
 }
 
-// foldDenominator returns the expression β + α^{w-1}·c_0 + … + α·c_{w-2} +
-// c_{w-1}, evaluated as a Horner pass over cols. For width-1 tabs the loop
-// is empty and the result is β + c_0; α is not consulted in that case but
-// must still be non-nil so callers don't need to special-case it.
+// foldDenominator returns the width-binding row fold
+//
+//	β + α^w + α^{w-1}·c_0 + … + α·c_{w-2} + c_{w-1}
+//
+// where w = len(cols). The α^w "length sentinel" makes the encoding injective
+// across widths: two rows fold to the same polynomial in α only if they have
+// the same width AND the same entries, so participants of a handle may safely
+// differ in width — a shorter tuple can no longer alias a longer one with
+// leading zeros. Same-width participants get the same sentinel, so a balanced
+// bus stays balanced.
+//
+// The sentinel is folded in for free. Evaluating the coefficient sequence
+// [1, c_0, …, c_{w-1}] at α by Horner is exactly α^w + α^{w-1}·c_0 + … +
+// c_{w-1}; seeding acc = α + c_0 collapses the leading 1·α + c_0 step, so the
+// sentinel costs one extra addition and NO extra multiplication over the plain
+// RLC. α is always consulted, including the width-1 case (β + α + c_0).
 func foldDenominator(alpha, beta *wiop.CoinField, cols []*wiop.ColumnView) wiop.Expression {
-	acc := wiop.Expression(cols[0])
+	// acc = α + c_0 fuses the first two Horner steps (1·α + c_0), seeding the
+	// coefficient sequence [1, c_0, …] that carries the α^w length sentinel.
+	acc := wiop.Add(alpha, cols[0])
 	for _, c := range cols[1:] {
 		acc = wiop.Add(wiop.Mul(acc, alpha), c)
 	}
