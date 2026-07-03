@@ -10,6 +10,13 @@ func encodeRType(opcode, funct7, rs2, rs1, funct3, rd uint32) uint32 {
 	return (funct7 << 25) | (rs2 << 20) | (rs1 << 15) | (funct3 << 12) | (rd << 7) | opcode
 }
 
+func encodeSType(funct3, rs1, rs2, simm12 uint32) uint32 {
+	imm11 := (simm12 >> 11) & 0x1
+	imm10_5 := (simm12 >> 5) & 0x3f
+	imm4_0 := simm12 & 0x1f
+	return opcodeSTORE | (imm4_0 << 7) | (funct3 << 12) | (rs1 << 15) | (rs2 << 20) | (imm10_5 << 25) | (imm11 << 31)
+}
+
 func encodeUType(opcode, rd, imm20 uint32) uint32 {
 	return (imm20 << 12) | (rd << 7) | opcode
 }
@@ -275,6 +282,28 @@ func TestDecodeSTypeSemantic(t *testing.T) {
 			gotOp := decodeSTypeSemantic(tt.funct3)
 			if gotOp != tt.wantOp {
 				t.Fatalf("decodeSTypeSemantic(f3=%#x) = %d, want %d", tt.funct3, gotOp, tt.wantOp)
+			}
+		})
+	}
+}
+
+func TestAssembleSTypeImm(t *testing.T) {
+	tests := []struct {
+		name   string
+		simm12 uint32
+		want   uint64
+	}{
+		{name: "zero", simm12: 0, want: 0},
+		{name: "positive_8", simm12: 8, want: 8},
+		{name: "negative_1", simm12: 0xfff, want: 0xffffffffffffffff},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			instr := encodeSType(0b000, 1, 2, tt.simm12)
+			simm12 := (((instr >> 31) & 0x1) << 11) | (((instr >> 25) & 0x3f) << 5) | ((instr >> 7) & 0x1f)
+			got := assembleSTypeImm(simm12)
+			if got != tt.want {
+				t.Fatalf("assembleSTypeImm(%s) = %#x, want %#x", tt.name, got, tt.want)
 			}
 		})
 	}
