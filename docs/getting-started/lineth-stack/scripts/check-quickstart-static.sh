@@ -547,14 +547,22 @@ check_account_setup_key_model() {
 }
 
 check_internal_typescript_typecheck() {
-  internal_tsconfig="$STACK/scripts/internal/tsconfig.json"
+  # Named tsconfig.typecheck.json on purpose: a plain tsconfig.json here would be
+  # auto-discovered by ts-node in the deploy containers, where its extends path
+  # (repo-root tsconfig.json) does not exist under the /scripts mount.
+  internal_tsconfig="$STACK/scripts/internal/tsconfig.typecheck.json"
 
-  if [ ! -f "$internal_tsconfig" ]; then
-    warn "scripts/internal/tsconfig.json not found; skipped quickstart TypeScript typecheck"
+  if [ -f "$STACK/scripts/internal/tsconfig.json" ]; then
+    fail "scripts/internal must not contain tsconfig.json; ts-node auto-discovers it inside containers where its extends target is missing"
     return
   fi
 
-  if (cd "$ROOT/contracts" && pnpm -w exec tsc --noEmit --project "$internal_tsconfig"); then
+  if [ ! -f "$internal_tsconfig" ]; then
+    warn "scripts/internal/tsconfig.typecheck.json not found; skipped quickstart TypeScript typecheck"
+    return
+  fi
+
+  if (cd "$ROOT/contracts" && pnpm -w --config.verify-deps-before-run=false exec tsc --noEmit --project "$internal_tsconfig"); then
     pass "scripts/internal TypeScript files pass tsc --noEmit"
   else
     fail "scripts/internal TypeScript files must pass tsc --noEmit"
