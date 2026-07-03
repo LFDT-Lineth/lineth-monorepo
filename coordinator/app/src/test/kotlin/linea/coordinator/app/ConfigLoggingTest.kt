@@ -43,7 +43,7 @@ class ConfigLoggingTest {
     // Anchored on `password:` so it does not false-positive on host/username.
     outputs.forEach { yaml ->
       assertThat(yaml).doesNotContain("password: postgres")
-      assertThat(yaml).contains("password: ***")
+      assertThat(yaml).contains("password: ****")
     }
 
     // web3j.privateKey hexes from coordinator-config-v2.toml (lines 174, 207, 241). Keep in sync if
@@ -58,7 +58,7 @@ class ConfigLoggingTest {
         assertThat(yaml).doesNotContain(hex)
         assertThat(yaml).doesNotContain(hex.uppercase())
       }
-      assertThat(yaml).contains("***32 bytes***")
+      assertThat(yaml).contains("***32bytes***")
     }
   }
 
@@ -71,9 +71,9 @@ class ConfigLoggingTest {
     assertThat(lines).allSatisfy { line -> assertThat(line).contains(":") }
 
     // Nested keys carry their category path so each line is meaningful on its own, e.g.
-    // `database.password: ***` rather than a bare `password: ***`. This is what makes the
+    // `database.password: ****` rather than a bare `password: ****`. This is what makes the
     // per-event logging readable in Grafana/Loki.
     assertThat(lines).anySatisfy { line -> assertThat(line).matches(".+\\..+:.*") }
-    assertThat(lines).contains("database.password: ***")
+    assertThat(lines).contains("database.password: ****")
   }
 }

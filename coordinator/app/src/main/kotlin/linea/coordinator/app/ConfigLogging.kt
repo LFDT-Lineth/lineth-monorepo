@@ -49,12 +49,14 @@ internal fun CoordinatorConfig.logPretty(
 private fun renderValue(value: Any?, path: String, lines: MutableList<String>, summarize: Boolean) {
   when (value) {
     null -> lines.add("$path: null")
-    is Masked -> lines.add("$path: ***")
+    // Mask strings mirror the config classes' own toString() (Masked -> ****, Web3j -> ***Nbytes***)
+    // so the flattened lines stay consistent with the raw `App configs: {}` dump.
+    is Masked -> lines.add("$path: ****")
     is Duration -> lines.add("$path: $value")
     is Instant -> lines.add("$path: $value")
     is ByteArray -> lines.add("$path: ${value.encodeHex()}")
     is SignerConfig.Web3jConfig ->
-      lines.add("$path.privateKey: ***${value.privateKey.size} bytes***")
+      lines.add("$path.privateKey: ***${value.privateKey.size}bytes***")
     is Number, is Boolean, is Enum<*> -> lines.add("$path: $value")
     is CharSequence -> lines.add("$path: $value")
     is Map<*, *> -> renderMap(value, path, lines)
