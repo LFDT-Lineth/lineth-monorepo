@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fiatshamir"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fri"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 )
@@ -58,7 +59,7 @@ type Runtime struct {
 	// nil until the PCS opening action runs; [System.Prove] copies it into the
 	// [Proof] and [System.Verify] restores it here before running verifier
 	// actions. Mirrors the transport role of [Runtime.Commitments].
-	PCSOpeningProof any
+	PCSOpeningProof *fri.OpeningProof
 }
 
 // NewRuntime creates a fresh Runtime for sys. currentRound is initialised to

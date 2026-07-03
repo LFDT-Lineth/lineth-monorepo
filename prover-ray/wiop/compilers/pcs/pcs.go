@@ -247,11 +247,7 @@ func (a *openingProverAction) Run(rt *wiop.Runtime) {
 type openingVerifierAction struct{ c *compiled }
 
 func (a *openingVerifierAction) Check(rt *wiop.Runtime) error {
-	proof, ok := rt.PCSOpeningProof.(*fri.OpeningProof)
-	if !ok || proof == nil {
-		return fmt.Errorf("pcs: verify: missing opening proof")
-	}
-	return a.c.verify(rt, *proof)
+	return a.c.verify(rt, *rt.PCSOpeningProof)
 }
 
 // =============================================================================

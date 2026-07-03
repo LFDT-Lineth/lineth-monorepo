@@ -3,6 +3,7 @@ package wiop
 import (
 	"fmt"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fri"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 )
@@ -42,7 +43,7 @@ type Proof struct {
 	// to the committed columns. It is a *fri.OpeningProof, held opaquely so the
 	// core wiop package does not depend on the FRI package. Nil when the protocol
 	// was not PCS-compiled.
-	PCSOpeningProof any
+	PCSOpeningProof *fri.OpeningProof
 }
 
 // Prove runs the prover over every interactive round of sys and returns the
