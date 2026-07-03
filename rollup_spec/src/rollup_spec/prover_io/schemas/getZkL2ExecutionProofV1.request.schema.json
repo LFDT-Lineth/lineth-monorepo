@@ -20,12 +20,13 @@
         "chainConfig": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["l2MessageServiceAddress", "coinbase", "chainId"],
+          "required": ["l2MessageServiceAddress", "coinbase", "chainId", "baseFee"],
           "properties": {
             "l2MessageServiceAddress": { "$ref": "#/$defs/address" },
             "coinbase": { "$ref": "#/$defs/address" },
             "chainId": { "$ref": "#/$defs/uint" },
-            "forkName": { "type": "string" }
+            "forkName": { "type": "string" },
+            "baseFee": { "$ref": "#/$defs/uint" }
           }
         },
         "parentFtxRollingHash": { "$ref": "#/$defs/hash32" },
