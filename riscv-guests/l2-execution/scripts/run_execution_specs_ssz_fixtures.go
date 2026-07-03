@@ -7,6 +7,7 @@ package main
 //   make -C riscv-guests/l2-execution run-execution-specs-ssz-fixtures EXECUTION_SPECS_RUN_SSZ_LIMIT=0
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"flag"
@@ -35,18 +36,20 @@ type fixtureBlock struct {
 }
 
 type statelessInput struct {
-	testName   string
-	blockIndex int
-	input      []byte
+	testName      string
+	blockIndex    int
+	input         []byte
+	expectedValid bool
 }
 
 type selectedInput struct {
-	fixturePath string
-	jsonFile    string
-	testName    string
-	blockIndex  int
-	file        string
-	size        int
+	fixturePath   string
+	jsonFile      string
+	testName      string
+	blockIndex    int
+	file          string
+	size          int
+	expectedValid bool
 }
 
 // Runs selected fixtures.
@@ -123,7 +126,8 @@ func main() {
 
 	passed := 0
 	for _, input := range inputs {
-		ok, userTime := runGuest(guestDir, input.file, *zkcFlags)
+		success, userTime := runGuest(guestDir, input.file, *zkcFlags)
+		ok := success == input.expectedValid
 		if ok {
 			passed++
 		} else {
@@ -253,19 +257,28 @@ func writeSSZInputs(sszDir, fixturePath, targetDir, jsonPath string, limit int) 
 			break
 		}
 		outPath := filepath.Join(outDir, fmt.Sprintf("%04d.ssz", i))
-		if err := os.WriteFile(outPath, block.input, 0o644); err != nil {
+		if err := os.WriteFile(outPath, zkvmInput(block.input), 0o644); err != nil {
 			return nil, err
 		}
 		out = append(out, selectedInput{
-			fixturePath: fixturePath,
-			jsonFile:    jsonRel,
-			testName:    block.testName,
-			blockIndex:  block.blockIndex,
-			file:        outPath,
-			size:        len(block.input),
+			fixturePath:   fixturePath,
+			jsonFile:      jsonRel,
+			testName:      block.testName,
+			blockIndex:    block.blockIndex,
+			file:          outPath,
+			size:          len(block.input),
+			expectedValid: block.expectedValid,
 		})
 	}
 	return out, nil
+}
+
+// Adds the zkVM input length prefix expected by read_input.
+func zkvmInput(input []byte) []byte {
+	out := make([]byte, 8+len(input))
+	binary.LittleEndian.PutUint64(out[:8], uint64(len(input)))
+	copy(out[8:], input)
+	return out
 }
 
 // Extracts stateless inputs from one fixture JSON file.
@@ -300,10 +313,18 @@ func statelessInputs(path string) ([]statelessInput, error) {
 			if err != nil {
 				return nil, fmt.Errorf("%s[%d]: %w", name, i, err)
 			}
+			output, err := hexBytes(block.StatelessOutputBytes)
+			if err != nil {
+				return nil, fmt.Errorf("%s[%d]: %w", name, i, err)
+			}
+			if len(output) <= 32 {
+				return nil, fmt.Errorf("%s[%d]: statelessOutputBytes too short", name, i)
+			}
 			out = append(out, statelessInput{
-				testName:   name,
-				blockIndex: i,
-				input:      input,
+				testName:      name,
+				blockIndex:    i,
+				input:         input,
+				expectedValid: output[32] == 0x01,
 			})
 		}
 	}
