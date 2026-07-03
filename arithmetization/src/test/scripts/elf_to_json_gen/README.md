@@ -45,9 +45,9 @@ In addition to the original keys (`entry_point_and_blobs_count`,
 | `decoded_itype`    | `compute_op, imm12, rs1, rd`                           | flat semantic micro-op dispatch in `i_type.zkc`              |
 | `decoded_rtype`    | `compute_op, rs1, rs2, rd`                             | flat semantic micro-op dispatch in `r_type.zkc`              |
 | `decoded_stype`    | `compute_op, imm12, rs2, rs1`                          | flat store-width dispatch in `s_type.zkc`                    |
-| `decoded_btype`    | `compute_op, imm_sign, imm_10_5, rs2, rs1, imm_4_1, imm_11` | flat `compute_op` dispatch (raw funct3); imm reassembled at runtime |
+| `decoded_btype`    | `compute_op, imm, rs2, rs1`                            | flat `compute_op` dispatch (raw funct3) in `b_type.zkc`        |
 | `decoded_jtype`    | `compute_op, imm, rd`                                  | flat semantic micro-op dispatch in `j_type.zkc`              |
-| `decoded_utype`    | `compute_op, imm20, rd`                                | flat semantic micro-op dispatch in `u_type.zkc`              |
+| `decoded_utype`    | `compute_op, imm, rd`                                | flat semantic micro-op dispatch in `u_type.zkc`              |
 
 Each value is a single `0x…` hex string. The field set and order of every table
 **must** match the corresponding `pub input` declaration in
@@ -57,9 +57,16 @@ For S-type the 12-bit store immediate is reassembled
 (`imm[11] :: imm[10:5] :: imm[4:0]`) into a single `imm12` field, so the
 interpreter no longer has to recombine the split immediate.
 
+For B-type the 13-bit branch offset is reassembled
+(`imm[12] :: imm[11] :: imm[10:5] :: imm[4:1] :: 0`) and sign-extended to 64
+bits at decode time, so the interpreter uses `imm` directly.
+
 For J-type the 21-bit jump offset is reassembled
 (`imm[20] :: imm[19:12] :: imm[11] :: imm[10:1] :: 0`) and sign-extended to 64
 bits at decode time, so the interpreter uses `imm` directly.
+
+For U-type the upper immediate (`imm[31:12]`, lower 12 bits zeroed) is
+sign-extended to 64 bits at decode time into `imm`.
 
 ## I-type semantic micro-ops (compute + writeback folded)
 
@@ -93,9 +100,10 @@ the RAM write.
 ## B-type semantic micro-ops
 
 `decodeBTypeSemantic` validates the branch `funct3` and stores it directly as
-`compute_op` in `decoded_btype` (`BRANCH_BEQ`, `BRANCH_BNE`, …). The 13-bit branch offset
-sub-fields are kept split at decode time and reassembled in `b_type.zkc`. At
+`compute_op` in `decoded_btype` (`BRANCH_BEQ`, `BRANCH_BNE`, …). The 13-bit
+branch offset is reassembled and sign-extended into `imm` at ELF time. At
 runtime, `process_B_type_instruction` runs a flat `switch compute_op`.
+Invalid opcodes (including `BTYPE_INVALID`) are handled by the `default` arm.
 
 ## J-type semantic micro-ops (compute + writeback folded)
 
@@ -109,8 +117,10 @@ Invalid opcodes (including `JTYPE_INVALID`) are handled by the `default` arm.
 ## U-type semantic micro-ops (compute + writeback folded)
 
 `decodeUTypeSemantic` maps LUI/AUIPC to base opcodes; `utypeOpForRd` selects the
-matching `*_WB` variant when `rd != x0`. At runtime, `process_U_type_instruction`
-runs a single flat `switch compute_op`.
+matching `*_WB` variant when `rd != x0`. The upper immediate is sign-extended
+into `imm` at ELF time. At runtime, `process_U_type_instruction` runs a flat
+`switch compute_op` with separate base and `_WB` cases. Invalid opcodes
+(including `UTYPE_INVALID`) are handled by the `default` arm.
 
 ## R-type semantic micro-ops (compute + writeback folded)
 
@@ -191,9 +201,9 @@ size is the sum of its field widths:
 | `decoded_itype` | compute_op 6, imm12 12, rs1 5, rd 5 | 28 bits     |
 | `decoded_rtype` | compute_op 6, rs1 5, rs2 5, rd 5 | 21 bits |
 | `decoded_stype` | compute_op 6, imm12 12, rs2 5, rs1 5 | 28 bits   |
-| `decoded_btype` | compute_op 6, imm_sign 1, imm_10_5 6, rs2 5, rs1 5, imm_4_1 4, imm_11 1 | 28 bits |
+| `decoded_btype` | compute_op 6, imm 64, rs2 5, rs1 5 | 80 bits |
 | `decoded_jtype` | compute_op 6, imm 64, rd 5 | 75 bits |
-| `decoded_utype` | compute_op 6, imm20 20, rd 5 | 31 bits |
+| `decoded_utype` | compute_op 6, imm 64, rd 5 | 75 bits |
 
 > Important: if you change a field's type/width in `memory.zkc`, update the
 > matching `writeBits` calls here (and vice versa). A width or order mismatch
