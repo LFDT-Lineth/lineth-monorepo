@@ -87,6 +87,11 @@ on:
         default: true
       has-changes-requiring-e2e-testing:
         type: string
+      runs_on:
+        description: 'Runner label for the e2e job'
+        required: false
+        type: string
+        default: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
     outputs:
       tests_outcome:
         value: ${{ jobs.run-e2e-tests.outputs.tests_outcome }}
@@ -115,8 +120,7 @@ jobs:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     outputs:
       tests_outcome: ${{ steps.run_e2e_tests.outcome }}
-    # xl saves ~0 mins
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
+    runs-on: ${{ inputs.runs_on }}
     steps:
       - name: Setup upterm session
         if: ${{ inputs.e2e-tests-with-ssh }}
