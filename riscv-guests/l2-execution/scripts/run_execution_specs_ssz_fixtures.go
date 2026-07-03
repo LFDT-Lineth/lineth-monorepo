@@ -2,9 +2,9 @@ package main
 
 // Examples, from the repository root:
 // Run up to 100 SSZ files from each selected fixture path:
-//   GOCACHE=/tmp/go-build go run ./riscv-guests/l2-execution/scripts/run_execution_specs_ssz_fixtures.go --fixture-paths blockchain_tests/for_amsterdam/amsterdam,blockchain_tests/for_amsterdam/osaka --ssz-limit 100
+//   make -C riscv-guests/l2-execution run-execution-specs-ssz-fixtures
 // Run all fixtures in each selected fixture path (blockchain_tests/for_amsterdam/amsterdam and blockchain_tests/for_amsterdam/osaka):
-//   GOCACHE=/tmp/go-build go run ./riscv-guests/l2-execution/scripts/run_execution_specs_ssz_fixtures.go --fixture-paths blockchain_tests/for_amsterdam/amsterdam,blockchain_tests/for_amsterdam/osaka
+//   make -C riscv-guests/l2-execution run-execution-specs-ssz-fixtures EXECUTION_SPECS_RUN_SSZ_LIMIT=0
 
 import (
 	"flag"

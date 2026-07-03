@@ -35,5 +35,4 @@ jobs:
       - name: Run execution-specs SSZ fixtures
         env:
           ZKC_REF: ""
-        run: |
-          GOCACHE=/tmp/go-build go run ./riscv-guests/l2-execution/scripts/run_execution_specs_ssz_fixtures.go --fixture-paths blockchain_tests/for_amsterdam/amsterdam,blockchain_tests/for_amsterdam/osaka --ssz-limit 100
+        run: make -C riscv-guests/l2-execution run-execution-specs-ssz-fixtures

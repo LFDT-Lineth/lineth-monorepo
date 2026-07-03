@@ -9,7 +9,7 @@
 # itself (ELF->JSON via elf_to_json_gen, then zkc) is owned by
 # arithmetization/src/test/Makefile; fixture-exec/fixture-debug build that ELF and hand it over.
 
-.PHONY: fetch test spec-test get-execution-specs-json-fixtures gen-execution-specs-ssz-fixtures clean compile exec debug require-input
+.PHONY: fetch test spec-test get-execution-specs-json-fixtures gen-execution-specs-ssz-fixtures run-execution-specs-ssz-fixtures clean compile exec debug require-input
 
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
@@ -57,6 +57,8 @@ EXECUTION_SPECS_FIXTURES_PATH       ?= blockchain_tests/for_amsterdam/amsterdam
 EXECUTION_SPECS_FIXTURES_TARGET_DIR := $(EXECUTION_SPECS_FIXTURES_DIR)/$(EXECUTION_SPECS_FIXTURES_PATH)
 EXECUTION_SPECS_SSZ_OUT_DIR         := $(EXECUTION_SPECS_SSZ_FIXTURES_DIR)/$(EXECUTION_SPECS_FIXTURES_PATH)
 EXECUTION_SPECS_SSZ_LOG             := $(EXECUTION_SPECS_SSZ_FIXTURES_DIR)/zkevm-runner-dump.log
+EXECUTION_SPECS_RUN_FIXTURE_PATHS   ?= blockchain_tests/for_amsterdam/amsterdam,blockchain_tests/for_amsterdam/osaka
+EXECUTION_SPECS_RUN_SSZ_LIMIT       ?= 100
 
 # If true, generates an objdump of the generated ELF for debugging purposes
 OBJDUMP     ?= false
@@ -102,6 +104,9 @@ gen-execution-specs-ssz-fixtures: get-execution-specs-json-fixtures
 	@cd "$(STATELESS_EXECUTOR_DIR)" && GOCACHE="$(EXECUTION_SPECS_SSZ_GO_CACHE_DIR)" GOMODCACHE="$(EXECUTION_SPECS_SSZ_GO_MOD_DIR)" $(GO) build -o bin/zkevm-runner ./cmd/zkevm-runner
 	@"$(EXECUTION_SPECS_RUNNER)" --fixtures "$(EXECUTION_SPECS_FIXTURES_TARGET_DIR)" --dump-dir "$(EXECUTION_SPECS_SSZ_OUT_DIR)" > "$(EXECUTION_SPECS_SSZ_LOG)"
 	@find "$(EXECUTION_SPECS_SSZ_OUT_DIR)" -type f -name '*.bin' -exec sh -c 'mv "$$1" "$${1%.bin}.ssz"' sh {} \;
+
+run-execution-specs-ssz-fixtures:
+	GOCACHE=/tmp/go-build $(GO) run $(MAKEFILE_DIR)scripts/run_execution_specs_ssz_fixtures.go --fixture-paths $(EXECUTION_SPECS_RUN_FIXTURE_PATHS) --ssz-limit $(EXECUTION_SPECS_RUN_SSZ_LIMIT)
 
 clean:
 	rm -rf $(MAKEFILE_DIR)zig-out/
