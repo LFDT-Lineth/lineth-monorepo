@@ -14,6 +14,14 @@ func encodeUType(opcode, rd, imm20 uint32) uint32 {
 	return (imm20 << 12) | (rd << 7) | opcode
 }
 
+func encodeJType(rd uint32, offset int32) uint32 {
+	imm20 := (uint32(offset) >> 20) & 0x1
+	imm10_1 := (uint32(offset) >> 1) & 0x3ff
+	imm11 := (uint32(offset) >> 11) & 0x1
+	imm19_12 := (uint32(offset) >> 12) & 0xff
+	return opcodeJAL | (rd << 7) | (imm19_12 << 12) | (imm11 << 20) | (imm10_1 << 21) | (imm20 << 31)
+}
+
 func decodeFields(instr uint32) (opcode, instrType, rd, rs1, rs2, funct3, imm12, funct7 uint32) {
 	opcode = instr & 0x7f
 	instrType = instructionTypeFromOpcode(opcode)
@@ -297,6 +305,27 @@ func TestJtypeOpForRd(t *testing.T) {
 	}
 	if got := jtypeOpForRd(jtypeJal, 5); got != jtypeJalWB {
 		t.Fatalf("jtypeOpForRd(jal, x5) = %d, want %d", got, jtypeJalWB)
+	}
+}
+
+func TestAssembleJTypeImm(t *testing.T) {
+	tests := []struct {
+		name   string
+		offset int32
+		want   uint64
+	}{
+		{name: "zero", offset: 0, want: 0},
+		{name: "forward_4k", offset: 4096, want: 4096},
+		{name: "backward_2k", offset: -2048, want: 0xfffffffffffff800},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			instr := encodeJType(1, tt.offset)
+			got := assembleJTypeImm(instr)
+			if got != tt.want {
+				t.Fatalf("assembleJTypeImm(%s) = %#x, want %#x", tt.name, got, tt.want)
+			}
+		})
 	}
 }
 

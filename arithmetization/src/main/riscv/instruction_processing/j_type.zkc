@@ -1,6 +1,5 @@
 include "../memory.zkc"
 include "../utils/constants.zkc"
-include "../utils/sign_extend.zkc"
 include "../utils/signed_sum.zkc"
 
 // Process a RISC-V J-type instruction (JAL Jump and Link) and return the next
@@ -14,51 +13,45 @@ include "../utils/signed_sum.zkc"
 //
 //   imm[20] :: imm[10:1] :: imm[11] :: imm[19:12] :: rd
 //
-// Runtime execution is a flat switch on compute_op. Writeback of the link
-// address is folded into JTYPE_JAL_WB. The 21-bit signed jump offset sub-fields
-// are reassembled as:
+// The 21-bit signed jump offset is then reassembled:
 //
-//   imm21 = imm[20] :: imm[19:12] :: imm[11] :: imm[10:1] :: 0
+//  var imm21:u21 = ((imm20::imm19_12::imm11::imm10_1) as u21) << 1
 //
-// and sign-extended here.
+// and sign-extended into `imm`:
+//
+//  var imm:DoubleWord = sgn_extension_u21_u64(imm21)
+//
+// Runtime execution is a flat switch on compute_op with separate cases for
+// JTYPE_JAL (jump only) and JTYPE_JAL_WB (jump + link writeback when rd is
+// not x0). Invalid opcodes (JTYPE_INVALID) fall through to default.
 //
 // Effect:
-//   rd     = pc + 4           (return address, when JTYPE_JAL_WB applies)
-//   pc_new = pc + imm         (unconditional jump to target)
+//   JTYPE_JAL    — pc_new = pc + imm
+//   JTYPE_JAL_WB — pc_new = pc + imm; rd = pc + 4
 //
 fn process_J_type_instruction<registers>(index:u64, pc:Address) -> (pc_new:Address) {
 
     var compute_op:JTypeComputeOp
-    var imm20:SignBit
-    var imm10_1:u10
-    var imm11:u1
-    var imm19_12:u8
+    var imm:DoubleWord
     var rd:Register
-    compute_op, imm20, imm10_1, imm11, imm19_12, rd = decoded_jtype[index]
-
-    var imm21:u21 = ((imm20::imm19_12::imm11::imm10_1) as u21) << 1
-    var imm:DoubleWord = sgn_extension_u21_u64(imm21)
-    var link:DoubleWord
+    compute_op, imm, rd = decoded_jtype[index]
 
     switch compute_op {
-        case JTYPE_JAL, JTYPE_JAL_WB: {
+        case JTYPE_JAL: {
             printf "JTYPE_JAL "
             print_j_operands(rd, imm)
-            link = signed_sum_of_double_word(pc, 4)
             pc_new = signed_sum_of_double_word(pc, imm) as Address
         }
-        case JTYPE_INVALID: {
-            printf "[ERROR] Unsupported J-type instruction (invalid semantic op)\n"
-            fail
+        case JTYPE_JAL_WB: {
+            printf "JTYPE_JAL "
+            print_j_operands(rd, imm)
+            pc_new = signed_sum_of_double_word(pc, imm) as Address
+            registers[rd] = signed_sum_of_double_word(pc, 4)
         }
         default: {
             printf "[ERROR] Unsupported J-type instruction with\n"
             printf "\tcompute_op ≡ %x\n", compute_op
             fail
         }
-    }
-
-    if (compute_op & 1) != 0 {
-        registers[rd] = link
     }
 }

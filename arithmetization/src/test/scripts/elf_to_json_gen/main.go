@@ -589,6 +589,22 @@ func decodeJTypeSemantic(opcode uint32) (computeOp uint32) {
 	return jtypeInvalid
 }
 
+// assembleJTypeImm reassembles the split J-type immediate from a raw instruction
+// word and sign-extends it to 64 bits for decoded_jtype.imm.
+func assembleJTypeImm(instr uint32) uint64 {
+	imm20 := (instr >> 31) & 0x1
+	imm10_1 := (instr >> 21) & 0x3ff
+	imm11 := (instr >> 20) & 0x1
+	imm19_12 := (instr >> 12) & 0xff
+	imm21 := uint32((imm20 << 20) | (imm19_12 << 12) | (imm11 << 11) | (imm10_1 << 1))
+	return uint64(signExtend21(imm21))
+}
+
+func signExtend21(x uint32) int64 {
+	x &= 0x1fffff
+	return int64(int32(x<<11) >> 11)
+}
+
 // decodeUTypeSemantic maps a raw U-type opcode to a semantic base compute op.
 func decodeUTypeSemantic(opcode uint32) (computeOp uint32) {
 	switch opcode {
@@ -861,7 +877,7 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 	//   decoded_rtype: compute_op:RTypeComputeOp(u6), rs1:Register(u5), rs2:Register(u5), rd:Register(u5)
 	//   decoded_stype: compute_op:STypeComputeOp(u6), imm12:Imm12(u12), rs2:Register(u5), rs1:Register(u5)
 	//   decoded_btype: compute_op:BTypeComputeOp(u6), imm_sign:u1, imm_10_5:u6, rs2:Register(u5), rs1:Register(u5), imm_4_1:u4, imm_11:u1
-	//   decoded_jtype: compute_op:JTypeComputeOp(u6), imm20:SignBit(u1), imm10_1:u10, imm11:u1, imm19_12:u8, rd:Register(u5)
+	//   decoded_jtype: compute_op:JTypeComputeOp(u6), imm:DoubleWord(u64), rd:Register(u5)
 	//   decoded_utype: compute_op:UTypeComputeOp(u6), imm20:Imm20(u20), rd:Register(u5)
 	var (
 		coreBits  bitWriter
@@ -898,11 +914,8 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		bImm10_5 := (instr >> 25) & 0x3f // imm[10:5]
 		bImm4_1 := (instr >> 8) & 0xf    // imm[4:1]
 		bImm11 := (instr >> 7) & 0x1     // imm[11]
-		// J-type immediate sub-fields (kept split; reassembled at runtime in j_type.zkc).
-		jImm20 := (instr >> 31) & 0x1    // imm[20]
-		jImm10_1 := (instr >> 21) & 0x3ff // imm[10:1]
-		jImm11 := (instr >> 20) & 0x1    // imm[11]
-		jImm19_12 := (instr >> 12) & 0xff // imm[19:12]
+		// J-type immediate: reassembled and sign-extended at ELF time.
+		jImm := assembleJTypeImm(instr)
 
 		// U-type immediate: imm[31:12] (20 bits).
 		uImm20 := (instr >> 12) & 0xfffff
@@ -960,10 +973,7 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		}
 		jtypeComputeOp = jtypeOpForRd(jtypeComputeOp, rd)
 		jtypeBits.writeBits(uint64(jtypeComputeOp), 6)
-		jtypeBits.writeBits(uint64(jImm20), 1)
-		jtypeBits.writeBits(uint64(jImm10_1), 10)
-		jtypeBits.writeBits(uint64(jImm11), 1)
-		jtypeBits.writeBits(uint64(jImm19_12), 8)
+		jtypeBits.writeBits(jImm, 64)
 		jtypeBits.writeBits(uint64(rd), 5)
 
 		utypeComputeOp := decodeUTypeSemantic(opcode)
