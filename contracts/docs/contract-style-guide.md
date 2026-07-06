@@ -12,7 +12,7 @@ All imports should be in the format of:
 import { ImportType } from "../ImportType.sol";
 ```
 
-## NatSpec
+## NatSpec / Docstring
 Contracts and interfaces will use the [NatSpec](https://docs.soliditylang.org/en/develop/natspec-format.html) formatting.
 
 **Note:** Interfaces and their implementations have duplicated NatSpec because consumers might just use the interface, and block explorers might use either the interface or implementation for the documentation. The documentation should always be available.
