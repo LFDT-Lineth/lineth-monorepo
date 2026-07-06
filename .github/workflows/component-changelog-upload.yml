@@ -121,7 +121,7 @@ jobs:
 
       - name: Install git-cliff
         if: needs.filter-commit-changes.outputs[matrix.component] == 'true'
-        uses: taiki-e/install-action@5f57d6cb7cd20b14a8a27f522884c4bc8a187458 #(v2.75.19)
+        uses: taiki-e/install-action@9bcaee1dcae34154180f412e2fa69355a7cda9f6 #(v2.75.19)
         with:
           tool: git-cliff
 
