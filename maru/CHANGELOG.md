@@ -1,5 +1,9 @@
 ## [unreleased]
 
+### 🚀 Features
+
+- *(maru)* Added a new CL phase in which Beacon block's chain identi… (#3493)
+
 ### 🐛 Bug Fixes
 
 - *(maru)* Address PR 3126 workflow follow-ups (#3164)

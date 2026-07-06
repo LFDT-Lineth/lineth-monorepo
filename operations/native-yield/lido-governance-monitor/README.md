@@ -58,13 +58,20 @@ All environment variables, defaults, and validation rules are defined in the [co
 
 The Discourse fetcher waits 250ms between proposal detail requests by default. Override it with `DISCOURSE_PROPOSAL_DETAILS_DELAY_MS` when you need a different pacing.
 
+### LLM access via LiteLLM
+
+Claude calls are routed through the shared LiteLLM proxy. Two variables control this:
+
+- `ANTHROPIC_API_KEY` — the **LiteLLM virtual key** for this service
+- `ANTHROPIC_BASE_URL` — the LiteLLM proxy base URL
+
 ## Development
 
 ### Prerequisites
 
 - Node.js >= 24.18.0 (see repo root `.nvmrc`)
 - PostgreSQL database
-- Anthropic API key
+- A LiteLLM virtual key (`ANTHROPIC_API_KEY`), or a direct Anthropic key for local dev (see [LLM access via LiteLLM](#llm-access-via-litellm))
 - Slack incoming webhook
 
 ### Setup
@@ -107,7 +114,8 @@ Run the full pipeline locally against the test database and live APIs:
    INITIAL_LDO_VOTING_CONTRACT_VOTEID="150" \
    DISCOURSE_PROPOSALS_URL="https://research.lido.fi/c/proposals/9/l/latest.json" \
    DISCOURSE_PROPOSAL_DETAILS_DELAY_MS="250" \
-   ANTHROPIC_API_KEY="your-key" \
+   ANTHROPIC_API_KEY="your-litellm-or-anthropic-key" \
+   ANTHROPIC_BASE_URL="https://example.com" \
    SLACK_WEBHOOK_URL="https://hooks.slack.com/services/xxx" \
    ETHEREUM_RPC_URL="https://mainnet.infura.io/v3/xxx" \
    LDO_VOTING_CONTRACT_ADDRESS="0x2e59a20f205bb85a89c53f1936454680651e618e" \

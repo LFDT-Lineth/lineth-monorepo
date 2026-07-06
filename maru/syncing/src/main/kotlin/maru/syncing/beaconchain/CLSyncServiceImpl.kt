@@ -13,6 +13,7 @@ import maru.consensus.ValidatorProvider
 import maru.database.BeaconChain
 import maru.metrics.MaruMetricsCategory
 import maru.p2p.PeerLookup
+import maru.serialization.rlp.ForkAwareBlockHashing
 import maru.services.LongRunningService
 import maru.subscription.InOrderFanoutSubscriptionManager
 import maru.subscription.SubscriptionManager
@@ -38,6 +39,7 @@ class CLSyncServiceImpl(
   peerLookup: PeerLookup,
   besuMetrics: MetricsSystem,
   metricsFacade: MetricsFacade,
+  blockHashing: ForkAwareBlockHashing,
 ) : CLSyncService,
   LongRunningService {
   private val log: Logger = LogManager.getLogger(this.javaClass)
@@ -51,6 +53,7 @@ class CLSyncServiceImpl(
         beaconChain = beaconChain,
         validatorProvider = validatorProvider,
         allowEmptyBlocks = allowEmptyBlocks,
+        blockHashing = blockHashing,
       )
   private var pipelineFactory =
     BeaconChainDownloadPipelineFactory(blockImporter, besuMetrics, peerLookup, pipelineConfig) {

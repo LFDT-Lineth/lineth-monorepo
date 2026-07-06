@@ -49,6 +49,9 @@ class QbftMessageProcessorTest {
   private val bftEventQueue = BftEventQueue(10)
   private val messageDecoder = MinimalQbftMessageDecoder(SecpCrypto)
 
+  // Decoding proposal blocks must inject a fork-aware header hash function (PHASE0 fork at timestamp 0).
+  private val blockHashing = DataGenerators.testForkAwareBlockHashing()
+
   init {
     bftEventQueue.start()
   }
@@ -181,7 +184,8 @@ class QbftMessageProcessorTest {
       )
     val qbftBlock = QbftBlockAdapter(beaconBlock)
 
-    val proposalPayload = ProposalPayload(roundIdentifier, qbftBlock, QbftBlockCodecAdapter)
+    val proposalPayload =
+      ProposalPayload(roundIdentifier, qbftBlock, QbftBlockCodecAdapter(blockHashing.beaconBlockSerializer))
     val signature = nodeKey.sign(Bytes32.wrap(proposalPayload.hashForSignature().bytes))
     val signedPayload = SignedData.create(proposalPayload, signature)
     val proposal = Proposal(signedPayload, emptyList(), emptyList())
