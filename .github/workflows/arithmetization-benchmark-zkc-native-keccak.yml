@@ -140,7 +140,7 @@ jobs:
           # Run fast mode with gogen
           run_gogen_native_keccak() {  # $1=variant (base|opt)  $2=label (warmup|iter#)
             local variant="$1" label="$2" zkc_bin="/tmp/zkc-${1}"
-            "$zkc_bin" generate --fast -v -q --field KOALABEAR_16 -o riscv.go "$zkc_prog"
+            "$zkc_bin" generate -v -q --field KOALABEAR_16 -o riscv.go "$zkc_prog"
             go build -o riscv-gogen riscv.go
             /usr/bin/time -v ./riscv-gogen < /tmp/keccakf_input.json \
               > "/tmp/bench/logs/keccak_${variant}_${label}.log" 2>&1
