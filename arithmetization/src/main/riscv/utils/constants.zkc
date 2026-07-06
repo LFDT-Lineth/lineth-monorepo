@@ -13,3 +13,138 @@ const MASK_64_ERASE_LAST_BIT:u64 = 0xfffffffffffffffe
 // Syscalls
 const EXIT_SYSCALL:DoubleWord = 93
 const WRITE_SYSCALL:DoubleWord = 64
+
+// Unified semantic compute ops stored in decoded_core.
+
+const COMPUTE_MISC_MEM:ComputeOp = 0
+
+// I-type ops
+const READ8_SGN:ComputeOp = 1
+const READ8_SGN_WB:ComputeOp = 2
+const READ16_SGN:ComputeOp = 3
+const READ16_SGN_WB:ComputeOp = 4
+const READ32_SGN:ComputeOp = 5
+const READ32_SGN_WB:ComputeOp = 6
+const READ64:ComputeOp = 7
+const READ64_WB:ComputeOp = 8
+const READ8_ZEXT:ComputeOp = 9
+const READ8_ZEXT_WB:ComputeOp = 10
+const READ16_ZEXT:ComputeOp = 11
+const READ16_ZEXT_WB:ComputeOp = 12
+const READ32_ZEXT:ComputeOp = 13
+const READ32_ZEXT_WB:ComputeOp = 14
+const OP_ADDI:ComputeOp = 15
+const OP_ADDI_WB:ComputeOp = 16
+const OP_SLTI:ComputeOp = 17
+const OP_SLTI_WB:ComputeOp = 18
+const OP_SLTIU:ComputeOp = 19
+const OP_SLTIU_WB:ComputeOp = 20
+const OP_XORI:ComputeOp = 21
+const OP_XORI_WB:ComputeOp = 22
+const OP_ORI:ComputeOp = 23
+const OP_ORI_WB:ComputeOp = 24
+const OP_ANDI:ComputeOp = 25
+const OP_ANDI_WB:ComputeOp = 26
+const OP_SLLI:ComputeOp = 27
+const OP_SLLI_WB:ComputeOp = 28
+const OP_SRLI:ComputeOp = 29
+const OP_SRLI_WB:ComputeOp = 30
+const OP_SRAI:ComputeOp = 31
+const OP_SRAI_WB:ComputeOp = 32
+const OP_ADDIW:ComputeOp = 33
+const OP_ADDIW_WB:ComputeOp = 34
+const OP_SLLIW:ComputeOp = 35
+const OP_SLLIW_WB:ComputeOp = 36
+const OP_SRLIW:ComputeOp = 37
+const OP_SRLIW_WB:ComputeOp = 38
+const OP_SRAIW:ComputeOp = 39
+const OP_SRAIW_WB:ComputeOp = 40
+const ITYPE_JALR:ComputeOp = 41
+const ITYPE_JALR_WB:ComputeOp = 42
+const ITYPE_ECALL:ComputeOp = 43
+const ITYPE_EBREAK:ComputeOp = 44
+
+// R-type ops
+const RTYPE_ADD:ComputeOp = 65
+const RTYPE_ADD_WB:ComputeOp = 66
+const RTYPE_SUB:ComputeOp = 67
+const RTYPE_SUB_WB:ComputeOp = 68
+const RTYPE_SLL:ComputeOp = 69
+const RTYPE_SLL_WB:ComputeOp = 70
+const RTYPE_SLT:ComputeOp = 71
+const RTYPE_SLT_WB:ComputeOp = 72
+const RTYPE_SLTU:ComputeOp = 73
+const RTYPE_SLTU_WB:ComputeOp = 74
+const RTYPE_XOR:ComputeOp = 75
+const RTYPE_XOR_WB:ComputeOp = 76
+const RTYPE_SRL:ComputeOp = 77
+const RTYPE_SRL_WB:ComputeOp = 78
+const RTYPE_SRA:ComputeOp = 79
+const RTYPE_SRA_WB:ComputeOp = 80
+const RTYPE_OR:ComputeOp = 81
+const RTYPE_OR_WB:ComputeOp = 82
+const RTYPE_AND:ComputeOp = 83
+const RTYPE_AND_WB:ComputeOp = 84
+const RTYPE_MUL:ComputeOp = 85
+const RTYPE_MUL_WB:ComputeOp = 86
+const RTYPE_MULH:ComputeOp = 87
+const RTYPE_MULH_WB:ComputeOp = 88
+const RTYPE_MULHSU:ComputeOp = 89
+const RTYPE_MULHSU_WB:ComputeOp = 90
+const RTYPE_MULHU:ComputeOp = 91
+const RTYPE_MULHU_WB:ComputeOp = 92
+const RTYPE_DIV:ComputeOp = 93
+const RTYPE_DIV_WB:ComputeOp = 94
+const RTYPE_DIVU:ComputeOp = 95
+const RTYPE_DIVU_WB:ComputeOp = 96
+const RTYPE_REM:ComputeOp = 97
+const RTYPE_REM_WB:ComputeOp = 98
+const RTYPE_REMU:ComputeOp = 99
+const RTYPE_REMU_WB:ComputeOp = 100
+const RTYPE_ADDW:ComputeOp = 101
+const RTYPE_ADDW_WB:ComputeOp = 102
+const RTYPE_SUBW:ComputeOp = 103
+const RTYPE_SUBW_WB:ComputeOp = 104
+const RTYPE_SLLW:ComputeOp = 105
+const RTYPE_SLLW_WB:ComputeOp = 106
+const RTYPE_SRLW:ComputeOp = 107
+const RTYPE_SRLW_WB:ComputeOp = 108
+const RTYPE_SRAW:ComputeOp = 109
+const RTYPE_SRAW_WB:ComputeOp = 110
+const RTYPE_MULW:ComputeOp = 111
+const RTYPE_MULW_WB:ComputeOp = 112
+const RTYPE_DIVW:ComputeOp = 113
+const RTYPE_DIVW_WB:ComputeOp = 114
+const RTYPE_DIVUW:ComputeOp = 115
+const RTYPE_DIVUW_WB:ComputeOp = 116
+const RTYPE_REMW:ComputeOp = 117
+const RTYPE_REMW_WB:ComputeOp = 118
+const RTYPE_REMUW:ComputeOp = 119
+const RTYPE_REMUW_WB:ComputeOp = 120
+const RTYPE_KECCAK:ComputeOp = 121
+
+// S-type ops
+const STYPE_STORE8:ComputeOp = 129
+const STYPE_STORE16:ComputeOp = 130
+const STYPE_STORE32:ComputeOp = 131
+const STYPE_STORE64:ComputeOp = 132
+
+// B-type ops
+const BRANCH_BEQ:ComputeOp = 133
+const BRANCH_BNE:ComputeOp = 134
+const BRANCH_BLT:ComputeOp = 135
+const BRANCH_BGE:ComputeOp = 136
+const BRANCH_BLTU:ComputeOp = 137
+const BRANCH_BGEU:ComputeOp = 138
+
+// J-type ops
+const JTYPE_JAL:ComputeOp = 140
+const JTYPE_JAL_WB:ComputeOp = 141
+
+// U-type ops
+const UTYPE_LUI:ComputeOp = 142
+const UTYPE_LUI_WB:ComputeOp = 143
+const UTYPE_AUIPC:ComputeOp = 144
+const UTYPE_AUIPC_WB:ComputeOp = 145
+
+const COMPUTE_INVALID:ComputeOp = 255
