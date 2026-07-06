@@ -187,34 +187,25 @@ jobs:
           path: ${{ github.workspace }}/tmp/artifacts
 
       - name: Load Docker images from artifacts or pull develop for unchanged services
-        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
-        with:
-          max_attempts: 10
-          retry_on: error
-          retry_wait_seconds: 30
-          timeout_minutes: 10
-          command: |
-            set -euo pipefail
-            for service in coordinator postman transaction-exclusion-api prover maru; do
-              if [ "$service" = "maru" ]; then
-                artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/maru-docker-image.tar.gz"
-                image_name="consensys/maru"
-              elif [ "$service" = "coordinator" ]; then
-                artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/${LINEA_COORDINATOR_ARTIFACT_NAME}-docker-image.tar.gz"
-                image_name="$LINEA_COORDINATOR_IMAGE_NAME"
-              else
-                artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/linea-${service}-docker-image.tar.gz"
-                image_name="consensys/linea-${service}"
-              fi
+        shell: bash
+        run: |
+          set -euo pipefail
+          for service in coordinator postman transaction-exclusion-api prover maru; do
+            if [ "$service" = "maru" ]; then
+              artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/maru-docker-image.tar.gz"
+            elif [ "$service" = "coordinator" ]; then
+              artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/${LINEA_COORDINATOR_ARTIFACT_NAME}-docker-image.tar.gz"
+            else
+              artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/linea-${service}-docker-image.tar.gz"
+            fi
 
-              if [ -f "$artifact_path" ]; then
-                echo "Loading ${service} from build artifact ${artifact_path}..."
-                gunzip -c "$artifact_path" | docker load
-              else
-                echo "No artifact found for ${service}, falling back develop tag from registry..."
-                # docker pull "${image_name}:develop"
-              fi
-            done
+            if [ -f "$artifact_path" ]; then
+              echo "Loading ${service} from build artifact ${artifact_path}..."
+              gunzip -c "$artifact_path" | docker load
+            else
+              echo "No artifact found for ${service}, skipping."
+            fi
+          done
       - name: Set Docker image tags
         shell: bash
         run: |
@@ -238,8 +229,6 @@ jobs:
               echo "${env_var}=develop" >> "$GITHUB_ENV"
             fi
           done
-          # Flush job-level coordinator vars to $GITHUB_ENV so they survive into
-          # nick-fields/retry's subprocess (which may not inherit job-level env directly).
           echo "LINEA_COORDINATOR_IMAGE_NAME=${LINEA_COORDINATOR_IMAGE_NAME}" >> "$GITHUB_ENV"
           echo "LINEA_COORDINATOR_JAR=${LINEA_COORDINATOR_JAR}" >> "$GITHUB_ENV"
       - name: Load linea-besu-package Docker image
