@@ -20,7 +20,15 @@ pub const Transcript = struct {
 
     pub fn updateExt(self: *Transcript, values: field_value.ExtSlice) void {
         for (values) |ext_value| {
-            self.hasher.writeElements(&.{ ext_value.B0.a0, ext_value.B0.a1, ext_value.B1.a0, ext_value.B1.a1, ext_value.B2.a0, ext_value.B2.a1 });
+            // Absorb the six base limbs directly. Routing through writeElements
+            // (even by reinterpreting the slice) de-inlines these stores and
+            // measured slower; building a throwaway 6-element array is also waste.
+            self.hasher.writeElement(ext_value.B0.a0);
+            self.hasher.writeElement(ext_value.B0.a1);
+            self.hasher.writeElement(ext_value.B1.a0);
+            self.hasher.writeElement(ext_value.B1.a1);
+            self.hasher.writeElement(ext_value.B2.a0);
+            self.hasher.writeElement(ext_value.B2.a1);
         }
     }
 
