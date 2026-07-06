@@ -36,7 +36,6 @@ const (
 	uType         = 5
 	jType         = 6
 	miscMemType   = 7
-	rTypeWB       = 8
 )
 
 // RISC-V opcodes (low 7 bits), mirroring the Opcode constants in constants.zkc.
@@ -358,6 +357,67 @@ const (
 	funct12Ecall  = 0b000000000000
 	funct12Ebreak = 0b000000000001
 )
+
+// Unified compute_op bases. These MUST match compute_ops.zkc.
+const (
+	computeMiscMem   = 0
+	computeITypeBase = 1
+	computeRTypeBase = 65
+	computeSTypeBase = 129
+	computeBTypeBase = 133
+	computeJTypeBase = 140
+	computeUTypeBase = 142
+	computeInvalid   = 255
+)
+
+var bTypeUnifiedIndex = map[uint32]uint32{
+	0b000: 0,
+	0b001: 1,
+	0b100: 2,
+	0b101: 3,
+	0b110: 4,
+	0b111: 5,
+}
+
+func unifiedComputeOp(instrType, localOp uint32) uint32 {
+	switch instrType {
+	case miscMemType:
+		return computeMiscMem
+	case iType:
+		if localOp == itypeInvalid {
+			return computeInvalid
+		}
+		return computeITypeBase + localOp
+	case rType:
+		if localOp == rtypeInvalid {
+			return computeInvalid
+		}
+		return computeRTypeBase + localOp
+	case sType:
+		if localOp == stypeInvalid {
+			return computeInvalid
+		}
+		return computeSTypeBase + localOp
+	case bType:
+		idx, ok := bTypeUnifiedIndex[localOp]
+		if !ok {
+			return computeInvalid
+		}
+		return computeBTypeBase + idx
+	case jType:
+		if localOp == jtypeInvalid {
+			return computeInvalid
+		}
+		return computeJTypeBase + localOp
+	case uType:
+		if localOp == utypeInvalid {
+			return computeInvalid
+		}
+		return computeUTypeBase + localOp
+	default:
+		return computeInvalid
+	}
+}
 
 // decodeITypeSemantic maps a raw I-type encoding to a semantic base compute op
 // (even; *_WB is selected later by itypeOpForRd) and normalized immediate.
@@ -911,13 +971,13 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 	// Decode each instruction word. Field bit widths MUST match the semantic
 	// types declared for the inputs in memory.zkc, because zkc packs input
 	// records tightly by bit width:
-	//   decoded_core : opcode:Opcode(u7), instruction_type:Type(u4)
-	//   decoded_itype: compute_op:ITypeComputeOp(u6), imm:DoubleWord(u64), rs1:Register(u5), rd:Register(u5)
-	//   decoded_rtype: compute_op:RTypeComputeOp(u6), rs1:Register(u5), rs2:Register(u5), rd:Register(u5)
-	//   decoded_stype: compute_op:STypeComputeOp(u6), imm:DoubleWord(u64), rs2:Register(u5), rs1:Register(u5)
-	//   decoded_btype: compute_op:BTypeComputeOp(u6), imm:DoubleWord(u64), rs2:Register(u5), rs1:Register(u5)
-	//   decoded_jtype: compute_op:JTypeComputeOp(u6), imm:DoubleWord(u64), rd:Register(u5)
-	//   decoded_utype: compute_op:UTypeComputeOp(u6), imm:DoubleWord(u64), rd:Register(u5)
+	//   decoded_core : compute_op:ComputeOp(u8)
+	//   decoded_itype: imm:DoubleWord(u64), rs1:Register(u5), rd:Register(u5)
+	//   decoded_rtype: rs1:Register(u5), rs2:Register(u5), rd:Register(u5)
+	//   decoded_stype: imm:DoubleWord(u64), rs2:Register(u5), rs1:Register(u5)
+	//   decoded_btype: imm:DoubleWord(u64), rs2:Register(u5), rs1:Register(u5)
+	//   decoded_jtype: imm:DoubleWord(u64), rd:Register(u5)
+	//   decoded_utype: imm:DoubleWord(u64), rd:Register(u5)
 	var (
 		coreBits  bitWriter
 		itypeBits bitWriter
@@ -941,11 +1001,6 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		instrType := instructionTypeFromOpcode(opcode)
 		if isRdZeroNoop(opcode, instrType, rd, rs1, rs2, funct3, imm12, funct7) {
 			instrType = miscMemType
-		} else if instrType == rType && rd != 0 {
-			candidate := decodeRTypeSemantic(opcode, funct3, funct7)
-			if candidate != rtypeOpKeccak && candidate != rtypeInvalid {
-				instrType = rTypeWB
-			}
 		}
 
 		// S-type immediate is split in the encoding (imm[11] :: imm[10:5] :: imm[4:0]);
@@ -960,64 +1015,80 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		// U-type immediate: upper 20 bits sign-extended at ELF time.
 		uImm := assembleUTypeImm(instr)
 
-		coreBits.writeBits(uint64(opcode), 7)
-		coreBits.writeBits(uint64(instrType), 4)
-
-		computeOp, normImm12 := decodeITypeSemantic(opcode, funct3, imm12)
+		itypeLocalOp, normImm12 := decodeITypeSemantic(opcode, funct3, imm12)
 		if instrType != iType {
-			computeOp, normImm12 = itypeInvalid, imm12
+			itypeLocalOp, normImm12 = itypeInvalid, imm12
 		}
-		computeOp = itypeOpForRd(computeOp, rd)
+		itypeLocalOp = itypeOpForRd(itypeLocalOp, rd)
 
-		itypeBits.writeBits(uint64(computeOp), 6)
+		rtypeLocalOp := decodeRTypeSemantic(opcode, funct3, funct7)
+		if instrType != rType {
+			rtypeLocalOp = rtypeInvalid
+		}
+		rtypeLocalOp = rtypeOpForRd(rtypeLocalOp, rd)
+
+		stypeLocalOp := decodeSTypeSemantic(funct3)
+		if instrType != sType {
+			stypeLocalOp = stypeInvalid
+		}
+
+		btypeLocalOp := decodeBTypeSemantic(funct3)
+		if instrType != bType {
+			btypeLocalOp = btypeInvalid
+		}
+
+		jtypeLocalOp := decodeJTypeSemantic(opcode)
+		if instrType != jType {
+			jtypeLocalOp = jtypeInvalid
+		}
+		jtypeLocalOp = jtypeOpForRd(jtypeLocalOp, rd)
+
+		utypeLocalOp := decodeUTypeSemantic(opcode)
+		if instrType != uType {
+			utypeLocalOp = utypeInvalid
+		}
+		utypeLocalOp = utypeOpForRd(utypeLocalOp, rd)
+
+		var localOp uint32
+		switch instrType {
+		case miscMemType:
+			localOp = 0
+		case iType:
+			localOp = itypeLocalOp
+		case rType:
+			localOp = rtypeLocalOp
+		case sType:
+			localOp = stypeLocalOp
+		case bType:
+			localOp = btypeLocalOp
+		case jType:
+			localOp = jtypeLocalOp
+		case uType:
+			localOp = utypeLocalOp
+		default:
+			localOp = itypeInvalid
+		}
+		coreBits.writeBits(uint64(unifiedComputeOp(instrType, localOp)), 8)
+
 		itypeBits.writeBits(assembleITypeImm(normImm12), 64)
 		itypeBits.writeBits(uint64(rs1), 5)
 		itypeBits.writeBits(uint64(rd), 5)
 
-		rtypeComputeOp := decodeRTypeSemantic(opcode, funct3, funct7)
-		if instrType != rType && instrType != rTypeWB {
-			rtypeComputeOp = rtypeInvalid
-		}
-		rtypeComputeOp = rtypeOpForRd(rtypeComputeOp, rd)
-
-		rtypeBits.writeBits(uint64(rtypeComputeOp), 6)
 		rtypeBits.writeBits(uint64(rs1), 5)
 		rtypeBits.writeBits(uint64(rs2), 5)
 		rtypeBits.writeBits(uint64(rd), 5)
 
-		stypeComputeOp := decodeSTypeSemantic(funct3)
-		if instrType != sType {
-			stypeComputeOp = stypeInvalid
-		}
-		stypeBits.writeBits(uint64(stypeComputeOp), 6)
 		stypeBits.writeBits(assembleSTypeImm(simm12), 64)
 		stypeBits.writeBits(uint64(rs2), 5)
 		stypeBits.writeBits(uint64(rs1), 5)
 
-		btypeComputeOp := decodeBTypeSemantic(funct3)
-		if instrType != bType {
-			btypeComputeOp = btypeInvalid
-		}
-		btypeBits.writeBits(uint64(btypeComputeOp), 6)
 		btypeBits.writeBits(bImm, 64)
 		btypeBits.writeBits(uint64(rs2), 5)
 		btypeBits.writeBits(uint64(rs1), 5)
 
-		jtypeComputeOp := decodeJTypeSemantic(opcode)
-		if instrType != jType {
-			jtypeComputeOp = jtypeInvalid
-		}
-		jtypeComputeOp = jtypeOpForRd(jtypeComputeOp, rd)
-		jtypeBits.writeBits(uint64(jtypeComputeOp), 6)
 		jtypeBits.writeBits(jImm, 64)
 		jtypeBits.writeBits(uint64(rd), 5)
 
-		utypeComputeOp := decodeUTypeSemantic(opcode)
-		if instrType != uType {
-			utypeComputeOp = utypeInvalid
-		}
-		utypeComputeOp = utypeOpForRd(utypeComputeOp, rd)
-		utypeBits.writeBits(uint64(utypeComputeOp), 6)
 		utypeBits.writeBits(uImm, 64)
 		utypeBits.writeBits(uint64(rd), 5)
 	}

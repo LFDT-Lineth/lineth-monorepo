@@ -1,4 +1,5 @@
 include "utils/type.zkc"
+include "utils/compute_ops.zkc"
 
 // Represents the available Random Access Memory (RAM) for the guest program.
 // This will act as the program memory space and will contain, amongst other things,
@@ -39,36 +40,24 @@ memory padded_input_block(address:u5) -> (state:lane)
 pub input instruction_base(i:u1) -> (base:Address)
 
 // Pre-decoded instruction stream, indexed by instruction index (one record per
-// 4-byte word of the executable region). Populated at ELF time by elf_to_json_gen.
-pub input decoded_core(i:u64) -> (opcode:Opcode, instruction_type:Type)
+// 4-byte word of the executable region). Holds the unified semantic compute op
+// for direct dispatch in interpreter.zkc.
+pub input decoded_core(i:u64) -> (compute_op:ComputeOp)
 
-// Pre-decoded I-type semantic micro-ops, indexed by the same instruction index.
-// Replaces runtime opcode/funct3 disambiguation in i_type.zkc with a flat
-// compute_op switch. Writeback to rd is folded into *_WB opcode variants.
-// The 12-bit immediate (normalized for shifts at ELF time) is sign-extended
-// into imm.
-pub input decoded_itype(i:u64) -> (compute_op:ITypeComputeOp, imm:DoubleWord, rs1:Register, rd:Register)
+// Pre-decoded I-type operands, indexed by the same instruction index.
+pub input decoded_itype(i:u64) -> (imm:DoubleWord, rs1:Register, rd:Register)
 
-// Pre-decoded R-type semantic micro-ops, indexed by the same instruction index.
-// Writeback to rd is folded into *_WB opcode variants.
-pub input decoded_rtype(i:u64) -> (compute_op:RTypeComputeOp, rs1:Register, rs2:Register, rd:Register)
+// Pre-decoded R-type operands, indexed by the same instruction index.
+pub input decoded_rtype(i:u64) -> (rs1:Register, rs2:Register, rd:Register)
 
-// Pre-decoded S-type semantic micro-ops, indexed by the same instruction index.
-// Store width is encoded directly in compute_op (STYPE_STORE8, …).
-// The 12-bit store immediate is reassembled and sign-extended at ELF time into imm.
-pub input decoded_stype(i:u64) -> (compute_op:STypeComputeOp, imm:DoubleWord, rs2:Register, rs1:Register)
+// Pre-decoded S-type operands, indexed by the same instruction index.
+pub input decoded_stype(i:u64) -> (imm:DoubleWord, rs2:Register, rs1:Register)
 
-// Pre-decoded B-type semantic micro-ops, indexed by the same instruction index.
-// compute_op holds the raw branch funct3 (BRANCH_BEQ, …). The 13-bit signed
-// branch offset is reassembled and sign-extended at ELF time into imm.
-pub input decoded_btype(i:u64) -> (compute_op:BTypeComputeOp, imm:DoubleWord, rs2:Register, rs1:Register)
+// Pre-decoded B-type operands, indexed by the same instruction index.
+pub input decoded_btype(i:u64) -> (imm:DoubleWord, rs2:Register, rs1:Register)
 
-// Pre-decoded J-type semantic micro-ops, indexed by the same instruction index.
-// Writeback of the link address is folded into JTYPE_JAL_WB. The 21-bit signed
-// jump offset is reassembled and sign-extended at ELF time into imm.
-pub input decoded_jtype(i:u64) -> (compute_op:JTypeComputeOp, imm:DoubleWord, rd:Register)
+// Pre-decoded J-type operands, indexed by the same instruction index.
+pub input decoded_jtype(i:u64) -> (imm:DoubleWord, rd:Register)
 
-// Pre-decoded U-type semantic micro-ops, indexed by the same instruction index.
-// Writeback to rd is folded into *_WB opcode variants. The upper immediate
-// (imm20 << 12) is sign-extended to 64 bits at ELF time into imm.
-pub input decoded_utype(i:u64) -> (compute_op:UTypeComputeOp, imm:DoubleWord, rd:Register)
+// Pre-decoded U-type operands, indexed by the same instruction index.
+pub input decoded_utype(i:u64) -> (imm:DoubleWord, rd:Register)
