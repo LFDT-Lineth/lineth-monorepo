@@ -26,11 +26,12 @@ func piGen(v uint64) field.Gen {
 	return field.ElemFromBase(e)
 }
 
-// TestPublicInput exercises the public-input flow: a public
-// value is exposed by opening a column position into a cell (the opening also
-// registers a local constraint binding cell == col[pos]), the cell is the sole
-// registered public input, and the system is compiled so the binding constraint
-// becomes a verifier check.
+// TestPublicInput exercises the public-input flow: a public value is exposed by
+// opening a column position into a cell (the opening also registers a local
+// constraint binding cell == col[pos]), the cell is the sole registered public
+// input, and the system is compiled so the binding constraint becomes a
+// verifier check. The statement is an ordered []field.Gen aligned to
+// registration order.
 func TestPublicInput(t *testing.T) {
 	const (
 		n   = 4
@@ -44,8 +45,8 @@ func TestPublicInput(t *testing.T) {
 		col := m.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
 		// Open col[pos] into a cell; Open registers the local constraint
 		// cell == col[pos], which soundly binds the public input into the proof.
-		cell := col.At(pos).Open(sys.Context.Childf("open"))
-		sys.RegisterPublicInput("out", cell)
+		cell := col.At(pos).Open(sys.Context.Childf("my-public-input")) // we would use Context.Lable as a humand readable Name for the PublicInputs
+		sys.RegisterPublicInputs(cell)
 		localvanishing.Compile(sys)
 		global.Compile(sys)
 		return sys, col, cell
@@ -56,31 +57,28 @@ func TestPublicInput(t *testing.T) {
 		rt.AssignColumn(col, piVec(10, 20, 30, 40))
 	})
 
-	// The public value lives only in the statement, never in the proof.
-	require.Contains(t, pub, cell.Context.ID, "public-input cell must be in PublicInput")
+	// The public value lives only in the statement (in registration order),
+	// never in the proof.
+	require.Len(t, pub, 1)
+	require.Equal(t, piGen(30), pub[0], "opened cell must equal col[pos]")
 	require.NotContains(t, proof.Cells, cell.Context.ID, "public-input cell must not be in the proof")
-	require.Equal(t, piGen(30), pub[cell.Context.ID], "opened cell must equal col[pos]")
 
 	// Honest statement verifies.
 	require.NoError(t, sys.Verify(proof, pub))
 
-	// A statement missing the registered cell is rejected.
+	// A statement of the wrong length (missing / extra) is rejected.
 	require.Error(t, sys.Verify(proof, wiop.PublicInput{}))
-
-	// A statement carrying an unregistered id is rejected.
-	extra := wiop.PublicInput{cell.Context.ID: pub[cell.Context.ID], col.Context.ID: piGen(0)}
-	require.Error(t, sys.Verify(proof, extra))
+	require.Error(t, sys.Verify(proof, wiop.PublicInput{pub[0], piGen(0)}))
 
 	// A wrong public value breaks the cell == col[pos] binding and is rejected.
-	wrong := wiop.PublicInput{cell.Context.ID: piGen(99)}
-	require.Error(t, sys.Verify(proof, wrong), "tampered public input must be rejected")
+	require.Error(t, sys.Verify(proof, wiop.PublicInput{piGen(99)}), "tampered public input must be rejected")
 
 	// A proof that smuggles the public-input cell back in is rejected.
 	sys2, col2, cell2 := build()
 	proof2, pub2 := sys2.Prove(func(rt *wiop.Runtime) {
 		rt.AssignColumn(col2, piVec(10, 20, 30, 40))
 	})
-	proof2.Cells[cell2.Context.ID] = pub2[cell2.Context.ID]
+	proof2.Cells[cell2.Context.ID] = pub2[0]
 	require.Error(t, sys2.Verify(proof2, pub2), "public-input cell must not appear in the proof")
 }
 
@@ -97,7 +95,7 @@ func TestPublicInputDynamicColumn(t *testing.T) {
 		m := sys.NewDynamicModule(sys.Context.Childf("m"), wiop.PaddingDirectionRight)
 		col := m.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
 		cell := col.At(pos).Open(sys.Context.Childf("open"))
-		sys.RegisterPublicInput("out", cell)
+		sys.RegisterPublicInputs(cell)
 		localvanishing.Compile(sys)
 		global.Compile(sys)
 		return sys, col, cell
@@ -113,13 +111,27 @@ func TestPublicInputDynamicColumn(t *testing.T) {
 	require.Equal(t, 4, proof.DynamicSizes[col.Context.ID.Slot()], "dynamic module size must round-trip")
 
 	// The public value lives only in the statement, never in the proof.
-	require.Contains(t, pub, cell.Context.ID)
+	require.Len(t, pub, 1)
+	require.Equal(t, piGen(30), pub[0], "opened cell must equal col[0]")
 	require.NotContains(t, proof.Cells, cell.Context.ID)
-	require.Equal(t, piGen(30), pub[cell.Context.ID], "opened cell must equal col[0]")
 
 	// Honest statement verifies; a wrong public value breaks the cell == col[0]
 	// binding and is rejected.
 	require.NoError(t, sys.Verify(proof, pub))
-	require.Error(t, sys.Verify(proof, wiop.PublicInput{cell.Context.ID: piGen(99)}),
+	require.Error(t, sys.Verify(proof, wiop.PublicInput{piGen(99)}),
 		"tampered public input must be rejected")
+}
+
+// TestRegisterDuplicatedPublicInput checks the registration guards:
+// registering the same cell twice is rejected (dedup).
+func TestRegisterDuplicatedPublicInputs(t *testing.T) {
+	sys := wiop.NewSystemf("pi-guards")
+	r0 := sys.NewRound()
+	m := sys.NewSizedModule(sys.Context.Childf("m"), 4, wiop.PaddingDirectionNone)
+	col := m.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	cell := col.At(0).Open(sys.Context.Childf("open"))
+
+	// Duplicate registration of the same cell is rejected.
+	sys.RegisterPublicInputs(cell)
+	require.Panics(t, func() { sys.RegisterPublicInputs(cell) }, "duplicate cell must be rejected")
 }
