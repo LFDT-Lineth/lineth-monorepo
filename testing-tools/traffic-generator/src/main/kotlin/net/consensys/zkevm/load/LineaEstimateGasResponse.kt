@@ -1,5 +1,7 @@
 package net.consensys.zkevm.load
 
+import com.fasterxml.jackson.annotation.JsonCreator
+import com.fasterxml.jackson.annotation.JsonProperty
 import linea.domain.bigIntFromPrefixedHex
 import org.web3j.protocol.ObjectMapperFactory
 import org.web3j.protocol.core.Response
@@ -31,7 +33,13 @@ class LineaEstimateGasResponse : Response<LineaEstimateGasResponse.GasEstimation
   }
 
   data class GasEstimation(val baseFeePerGas: BigInteger, val gasLimit: BigInteger, val priorityFeePerGas: BigInteger)
-  data class GasEstimationSerialized(val baseFeePerGas: String, val gasLimit: String, val priorityFeePerGas: String) {
+  data class GasEstimationSerialized
+  @JsonCreator
+  constructor(
+    @JsonProperty("baseFeePerGas") val baseFeePerGas: String,
+    @JsonProperty("gasLimit") val gasLimit: String,
+    @JsonProperty("priorityFeePerGas") val priorityFeePerGas: String,
+  ) {
     companion object {
       class ResponseDeserialiser : ValueDeserializer<GasEstimationSerialized?>() {
         private val objectReader: ObjectReader = ObjectMapperFactory.getObjectReader()

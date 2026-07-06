@@ -1,5 +1,7 @@
 package linea.web3j
 
+import com.fasterxml.jackson.annotation.JsonCreator
+import com.fasterxml.jackson.annotation.JsonProperty
 import linea.domain.FeeHistory
 import linea.domain.uLongFromPrefixedHex
 import org.web3j.protocol.ObjectMapperFactory
@@ -25,23 +27,16 @@ class EthFeeHistoryBlobExtended : Response<EthFeeHistoryBlobExtended.FeeHistoryB
   val feeHistory: FeeHistoryBlobExtended
     get() = super.getResult()
 
-  data class FeeHistoryBlobExtended(
-    val oldestBlock: String,
-    val reward: List<List<String>>,
-    val baseFeePerGas: List<String>,
-    val gasUsedRatio: List<Double>,
-    val baseFeePerBlobGas: List<String>,
-    val blobGasUsedRatio: List<Double>,
+  data class FeeHistoryBlobExtended
+  @JsonCreator
+  constructor(
+    @JsonProperty("oldestBlock") val oldestBlock: String,
+    @JsonProperty("reward") val reward: List<List<String>>,
+    @JsonProperty("baseFeePerGas") val baseFeePerGas: List<String>,
+    @JsonProperty("gasUsedRatio") val gasUsedRatio: List<Double>,
+    @JsonProperty("baseFeePerBlobGas") val baseFeePerBlobGas: List<String>,
+    @JsonProperty("blobGasUsedRatio") val blobGasUsedRatio: List<Double>,
   ) {
-    constructor() : this(
-      oldestBlock = "",
-      reward = emptyList(),
-      baseFeePerGas = emptyList(),
-      gasUsedRatio = emptyList(),
-      baseFeePerBlobGas = emptyList(),
-      blobGasUsedRatio = emptyList(),
-    )
-
     override fun equals(other: Any?): Boolean {
       if (this === other) return true
       if (javaClass != other?.javaClass) return false

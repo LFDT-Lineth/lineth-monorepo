@@ -77,7 +77,7 @@ class Eip4844Transaction(
 
 class BlobSerializer : ValueSerializer<Blob>() {
   override fun serialize(value: Blob, gen: JsonGenerator, ctxt: SerializationContext) {
-    gen.writeString(value.data.toHexString().lowercase(Locale.getDefault()))
+    gen.writeString(value.data.toHexString().lowercase(Locale.ROOT))
   }
 }
 
