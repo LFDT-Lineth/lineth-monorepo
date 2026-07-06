@@ -29,7 +29,7 @@ jobs:
       docker_tag_with_suffix: ${{ steps.dockertag.outputs.dockertag_with_suffix }}
     steps:
       - name: Checkout
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ github.ref_name }}
           fetch-depth: 2   # need at least 2 commits so HEAD~1 resolves later would not fail on compute-version-tags
@@ -45,4 +45,5 @@ jobs:
           version_prefix: ${{ inputs.version-prefix }}
           image_tag_suffix: ${{ inputs.image-tag-suffix }}
           commit_tag: ${{ steps.compute_version_tags.outputs.commit_tag }}
+
 
