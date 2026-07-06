@@ -911,7 +911,7 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 	// Decode each instruction word. Field bit widths MUST match the semantic
 	// types declared for the inputs in memory.zkc, because zkc packs input
 	// records tightly by bit width:
-	//   decoded_core : opcode:Opcode(u7), instruction_type:Type(u4), instruction_parameters:u25
+	//   decoded_core : opcode:Opcode(u7), instruction_type:Type(u4)
 	//   decoded_itype: compute_op:ITypeComputeOp(u6), imm:DoubleWord(u64), rs1:Register(u5), rd:Register(u5)
 	//   decoded_rtype: compute_op:RTypeComputeOp(u6), rs1:Register(u5), rs2:Register(u5), rd:Register(u5)
 	//   decoded_stype: compute_op:STypeComputeOp(u6), imm:DoubleWord(u64), rs2:Register(u5), rs1:Register(u5)
@@ -931,7 +931,6 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		instr := uint32(image[off]) | uint32(image[off+1])<<8 | uint32(image[off+2])<<16 | uint32(image[off+3])<<24
 
 		opcode := instr & 0x7f
-		params := (instr >> 7) & 0x1ffffff
 		rd := (instr >> 7) & 0x1f
 		funct3 := (instr >> 12) & 0x7
 		rs1 := (instr >> 15) & 0x1f
@@ -963,7 +962,6 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 
 		coreBits.writeBits(uint64(opcode), 7)
 		coreBits.writeBits(uint64(instrType), 4)
-		coreBits.writeBits(uint64(params), 25)
 
 		computeOp, normImm12 := decodeITypeSemantic(opcode, funct3, imm12)
 		if instrType != iType {
