@@ -23,6 +23,7 @@ import linea.domain.BlockNumberAndHash
 import linea.domain.FinalizationSubmittedEvent
 import linea.domain.RetryConfig
 import linea.ethapi.EthApiClient
+import linea.ethapi.EthLogsSearcherImpl
 import linea.finalization.AggregationFinalizationCoordinator
 import linea.finalization.AggregationSubmitterImpl
 import linea.finalization.FinalizationHandler
@@ -173,10 +174,13 @@ class L1DependentApp(
     Web3JLineaRollupSmartContractClientReadOnly(
       contractAddress = configs.protocol.l1.contractAddress,
       web3j = web3j,
-      ethLogsClient = createEthApiClient(
-        web3jClient = web3j,
-        requestRetryConfig = configs.l1FinalizationMonitor.l1RequestRetries,
+      ethLogsSearcher = EthLogsSearcherImpl(
         vertx = vertx,
+        ethApiClient = createEthApiClient(
+          web3jClient = web3j,
+          requestRetryConfig = configs.l1FinalizationMonitor.l1RequestRetries,
+          vertx = vertx,
+        ),
       ),
     )
   }
@@ -325,6 +329,7 @@ class L1DependentApp(
       client = l1Web3jClient,
     )
     createLineaContractClient(
+      vertx = vertx,
       dataAvailabilityType = configs.l1Submission.dataAvailability,
       contractAddress = configs.protocol.l1.contractAddress,
       transactionManager = transactionManager,
@@ -422,6 +427,7 @@ class L1DependentApp(
         ),
       )
       val lineaSmartContractClientForFinalization = createLineaContractClient(
+        vertx = vertx,
         dataAvailabilityType = configs.l1Submission.dataAvailability,
         contractAddress = configs.protocol.l1.contractAddress,
         transactionManager = finalizationTransactionManager,
