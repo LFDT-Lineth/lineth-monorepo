@@ -24,16 +24,16 @@ jobs:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
       - name: Checkout
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Install Go
-        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version: 1.23.x
+          go-version: 1.25.7
           cache-dependency-path: |
                 prover/go.sum
 
-      - uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: |
             ~/.cache/go-build
@@ -47,7 +47,7 @@ jobs:
         uses: ./.github/actions/setup-nodejs
 
       - name: Cache Hardhat compiler
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: ~/.cache/hardhat-nodejs
           key: ${{ runner.os }}-hardhat-compilers-${{ hashFiles('contracts/hardhat.config.ts', 'contracts/hardhat_overrides.ts') }}
@@ -59,7 +59,7 @@ jobs:
 
       # Required for hardhat commands due to @nomicfoundation/hardhat-foundry package
       - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@8789b3e21e6c11b2697f5eb56eddae542f746c10 #v1.7.0
+        uses: foundry-rs/foundry-toolchain@c7450ba673e133f5ee30098b3b54f444d3a2ca2d #v1.8.0
 
       - name: Compile kzg.node
         run: pnpm -F contracts exec node-gyp --directory=node_modules/c-kzg rebuild # explicitly running rebuild to get the .node file
@@ -95,7 +95,7 @@ jobs:
     name: Solidity format check
     steps:
       - name: Checkout
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Setup nodejs environment
         uses: ./.github/actions/setup-nodejs
@@ -104,3 +104,4 @@ jobs:
         run: |
           pnpm -F contracts run lint:sol
           pnpm -F contracts run prettier:sol
+

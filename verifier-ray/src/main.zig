@@ -2,10 +2,11 @@ const builtin = @import("builtin");
 const verifier_ray = @import("verifier_ray");
 const embedded_data = @import("embedded_data");
 const embedded_data_conf = @import("embedded_data_config");
+const lineth_accel = @import("lineth_accelerators");
 
 const verifier = verifier_ray.verifier;
 
-const is_r5_zkvm = builtin.target.cpu.arch == .riscv64 and builtin.target.os.tag == .freestanding;
+const is_r5_zkvm = verifier_ray.r5_config.is_r5_zkvm;
 const is_native_os = builtin.target.os.tag == .linux or builtin.target.os.tag == .macos;
 const is_native_arch = builtin.target.cpu.arch == .x86_64 or builtin.target.cpu.arch == .aarch64;
 const is_supported_native = is_native_os and is_native_arch;
@@ -143,26 +144,6 @@ fn exitR5(code: u8) noreturn {
     if (comptime !is_r5_zkvm) {
         @compileError("R5 exit currently supports only R5 zkVM target");
     }
-    switch (code) {
-        0 => exitR5Success(),
-        else => exitR5Failure(),
-    }
-}
-
-fn exitR5Success() noreturn {
-    asm volatile (
-        \\li a0, 0
-        \\li a7, 93
-        \\ecall
-    );
-    unreachable;
-}
-
-fn exitR5Failure() noreturn {
-    asm volatile (
-        \\li a0, 1
-        \\li a7, 93
-        \\ecall
-    );
-    unreachable;
+    // Delegate to the Linea accelerator package's standard zkVM exit (zkvm_std.h).
+    lineth_accel.zkvm_exit(@intCast(code));
 }
