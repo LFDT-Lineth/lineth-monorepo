@@ -3,8 +3,8 @@ package wiop_test
 import (
 	"testing"
 
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -285,7 +285,7 @@ func TestArithmeticOperation_VectorEval_Add(t *testing.T) {
 
 	expr := wiop.Add(col.View(), col.View())
 	cv := expr.(interface {
-		EvaluateVector(wiop.Runtime) wiop.ConcreteVector
+		EvaluateVector(*wiop.Runtime) wiop.ConcreteVector
 	}).EvaluateVector(rt)
 	// each element should be 3+3 = 6
 	six := field.NewFromString("6")

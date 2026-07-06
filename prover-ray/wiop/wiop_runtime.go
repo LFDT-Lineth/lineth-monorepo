@@ -4,15 +4,16 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/consensys/linea-monorepo/prover-ray/crypto/koalabear/fiatshamir"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/utils"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fiatshamir"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fri"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 )
 
-// columnSizeMaxSupported is the maximum supported size of a column. The value
+// ColumnSizeMaxSupported is the maximum supported size of a column. The value
 // comes from the 2-adicity of the koalabear field and having an upper-bound
 // is required to permit the construction of the global constraints quotient.
-const columnSizeMaxSupported = 1 << 22
+const ColumnSizeMaxSupported = 1 << 22
 
 // Runtime is the execution context for protocol [ProverAction]s. It holds column
 // assignments, cell values, coin values, and an arbitrary state bag. A single
@@ -38,7 +39,8 @@ type Runtime struct {
 	cells map[ObjectID]field.Gen
 	// coins maps each coin's [ObjectID] to its sampled coin value.
 	coins map[ObjectID]field.Gen
-	// state is a free-form key-value store for stateful actions.
+	// state is a free-form key-value store for stateful actions. Including, for
+	// instance a prover state.
 	state map[string]any
 	// dynamicSizes maps the index of each dynamic module to its domain size for
 	// this Runtime. Populated lazily by [Runtime.AssignColumn] on the first
@@ -47,6 +49,17 @@ type Runtime struct {
 	// lock is a concurrency lock to prevent concurrent access to the maps in
 	// the runtime.
 	lock *sync.Mutex
+	// Commitments is used to store the commitment for the current round. The
+	// commitment are for committed columns (and not for FRI commitments). The
+	// precomputed columns commitment is stored in the [System].
+	Commitments map[int]field.Octuplet
+	// PCSOpeningProof carries the polynomial-commitment opening proof produced by
+	// the PCS compiler's opening action (a *fri.OpeningProof, stored as an opaque
+	// value so the core wiop package need not depend on the FRI package). It is
+	// nil until the PCS opening action runs; [System.Prove] copies it into the
+	// [Proof] and [System.Verify] restores it here before running verifier
+	// actions. Mirrors the transport role of [Runtime.Commitments].
+	PCSOpeningProof *fri.OpeningProof
 }
 
 // NewRuntime creates a fresh Runtime for sys. currentRound is initialised to
@@ -54,8 +67,9 @@ type Runtime struct {
 // [System.PrecomputedRound] are pre-loaded.
 //
 // Panics if sys has no interactive rounds (len(sys.Rounds) == 0).
-func NewRuntime(sys *System) Runtime {
-	run := Runtime{
+func NewRuntime(sys *System) *Runtime {
+
+	run := &Runtime{
 		System:       sys,
 		fs:           fiatshamir.NewFiatShamir(),
 		columns:      make(map[ObjectID]*ConcreteVector),
@@ -64,6 +78,7 @@ func NewRuntime(sys *System) Runtime {
 		state:        make(map[string]any),
 		dynamicSizes: make(map[int]int),
 		lock:         &sync.Mutex{},
+		Commitments:  make(map[int]field.Octuplet),
 	}
 	if len(sys.Rounds) == 0 {
 		panic("wiop: NewRuntime: system has no interactive rounds")
@@ -78,7 +93,7 @@ func NewRuntime(sys *System) Runtime {
 
 // dynamicModuleSize returns the domain size registered for m in this Runtime.
 // Called by [Module.RuntimeSize] for dynamic modules.
-func (run Runtime) dynamicModuleSize(m *Module) int {
+func (run *Runtime) dynamicModuleSize(m *Module) int {
 	run.lock.Lock()
 	defer run.lock.Unlock()
 	size, ok := run.dynamicSizes[m.index]
@@ -93,7 +108,7 @@ func (run Runtime) dynamicModuleSize(m *Module) int {
 
 // CurrentRound returns the round currently being processed, or nil if the
 // system has no interactive rounds.
-func (run Runtime) CurrentRound() *Round { return run.currentRound }
+func (run *Runtime) CurrentRound() *Round { return run.currentRound }
 
 // AdvanceRound closes the current round and opens the next one:
 //  1. Every oracle or public column assigned in the current round is fed into
@@ -101,7 +116,11 @@ func (run Runtime) CurrentRound() *Round { return run.currentRound }
 //  2. Every cell value assigned in the current round is fed into the
 //     Fiat-Shamir state. All cells are always public (see [Cell.Visibility]).
 //  3. The runtime advances to the next round.
-//  4. A fresh extension-field coin is derived via [fiatshamir.FiatShamir.RandomFext]
+//  4. Every [Round.PreSamplingHooks] entry on the new round runs, in
+//     declaration order. Hooks may mutate the Fiat-Shamir state via
+//     [Runtime.SetFSState] for shared-randomness seeding; any subsequent
+//     coin in this round is derived from the post-hook state.
+//  5. A fresh extension-field coin is derived via [fiatshamir.FiatShamir.RandomFext]
 //     for each [CoinField] declared in the new round.
 //
 // Panics if there is no next round, or if any oracle/public column in the
@@ -118,6 +137,33 @@ func (run *Runtime) AdvanceRound() {
 		))
 	}
 
+	// Feed the dynamic-sizes for each dynamic module
+	for k, mod := range run.System.Modules {
+		if !mod.isDynamic {
+			continue
+		}
+		size, ok := run.dynamicSizes[k]
+		if !ok {
+			panic(fmt.Sprintf(
+				"wiop: AdvanceRound: dynamic module %q has no assigned size",
+				mod.Context.Path(),
+			))
+		}
+		run.fs.Update(field.NewElement(uint64(size)))
+	}
+
+	if run.currentRound.HasCommitment {
+		// Feed the commitment
+		commitment, ok := run.Commitments[run.currentRound.ID]
+		if !ok {
+			panic(fmt.Sprintf(
+				"wiop: AdvanceRound: commitment for round %d not found",
+				run.currentRound.ID,
+			))
+		}
+		run.fs.Update(commitment[:]...)
+	}
+
 	// Feed oracle and public column assignments into the Fiat-Shamir state.
 	for _, col := range run.currentRound.Columns {
 		if col.Visibility < VisibilityOracle {
@@ -127,9 +173,10 @@ func (run *Runtime) AdvanceRound() {
 		run.fs.UpdateSV(cv.Plain)
 	}
 
-	// Feed all cell values into the Fiat-Shamir state.
+	// Feed all cell values into the Fiat-Shamir state. Lazily-assigned cells
+	// are resolved here if they have not been read yet.
 	for _, cell := range run.currentRound.Cells {
-		v, ok := run.cells[cell.Context.ID]
+		v, ok := run.resolveLazyCell(cell)
 		if !ok {
 			panic(fmt.Sprintf(
 				"wiop: AdvanceRound: cell %q not assigned before advancing round",
@@ -140,6 +187,14 @@ func (run *Runtime) AdvanceRound() {
 	}
 
 	run.currentRound = next
+
+	// Pre-sampling hooks: run before any coin is derived so they can seed
+	// the FS state (typically via [Runtime.SetFSState]). The Runtime value
+	// is shared with the hooks; FS-state mutations performed by them affect
+	// the coin loop below.
+	for _, h := range run.currentRound.PreSamplingHooks {
+		h.Run(run)
+	}
 
 	// Derive a coin for every CoinField declared in the new round.
 	for _, coin := range run.currentRound.Coins {
@@ -153,7 +208,7 @@ func (run *Runtime) AdvanceRound() {
 //   - Static module: the data length must not exceed the module's declared size.
 //   - Dynamic module: each time we add a column we potentially grow the
 //     module's size. There is no upper bound.
-func (run Runtime) AssignColumn(col *Column, v *ConcreteVector) {
+func (run *Runtime) AssignColumn(col *Column, v *ConcreteVector) {
 	run.lock.Lock()
 	defer run.lock.Unlock()
 	if col.round != run.currentRound {
@@ -173,13 +228,20 @@ func (run Runtime) AssignColumn(col *Column, v *ConcreteVector) {
 
 	m := col.Module
 	dataLen := v.Plain.Len()
-	if dataLen > columnSizeMaxSupported {
-		utils.Panic("wiop: AssignColumn: data length too large for column: %v, size=%v", dataLen, columnSizeMaxSupported)
+	if dataLen > ColumnSizeMaxSupported {
+		utils.Panic("wiop: AssignColumn: data length too large for column: %v, size=%v", dataLen, ColumnSizeMaxSupported)
 	}
 
-	if m.IsDynamic() {
+	if m.IsDynamic() && run.currentRound.ID == 0 {
 		currSize := run.dynamicSizes[m.index]
 		run.dynamicSizes[m.index] = max(currSize, dataLen)
+	} else if m.IsDynamic() && dataLen > run.dynamicSizes[m.index] {
+		// This is needed because we need to include the module sizes in the
+		// fiat-shamir transcript of the first-round.
+		panic(fmt.Sprintf(
+			"wiop: AssignColumn: data length of a dynamic module may not be updated anymore after round 0: %v -> %v",
+			dataLen, run.dynamicSizes[m.index],
+		))
 	} else if m.IsSized() && dataLen > m.Size() {
 		panic(fmt.Sprintf(
 			"wiop: AssignColumn: column %q has data length %d which overflows module %q size %d",
@@ -190,9 +252,33 @@ func (run Runtime) AssignColumn(col *Column, v *ConcreteVector) {
 	run.columns[id] = v
 }
 
+// OverrideColumn replaces an existing assignment for col with v. Unlike
+// [Runtime.AssignColumn] it requires col to be already assigned and does not
+// enforce the current round, so soundness tests can corrupt a value the prover
+// has already committed to. When v carries no promise back-reference, the prior
+// assignment's promise is copied over so size and padding semantics survive.
+//
+// Panics if col has not been assigned yet.
+func (run *Runtime) OverrideColumn(col *Column, v *ConcreteVector) {
+	run.lock.Lock()
+	defer run.lock.Unlock()
+	id := col.Context.ID
+	old, ok := run.columns[id]
+	if !ok {
+		panic(fmt.Sprintf(
+			"wiop: OverrideColumn: column %q is not assigned",
+			col.Context.Path(),
+		))
+	}
+	if v.promise == nil {
+		v.promise = old.promise
+	}
+	run.columns[id] = v
+}
+
 // GetColumnAssignment returns the concrete assignment of col. Panics if col
 // has not been assigned yet.
-func (run Runtime) GetColumnAssignment(col *Column) *ConcreteVector {
+func (run *Runtime) GetColumnAssignment(col *Column) *ConcreteVector {
 	run.lock.Lock()
 	defer run.lock.Unlock()
 	v, ok := run.columns[col.Context.ID]
@@ -206,7 +292,7 @@ func (run Runtime) GetColumnAssignment(col *Column) *ConcreteVector {
 }
 
 // HasColumnAssignment reports whether col has been assigned in this runtime.
-func (run Runtime) HasColumnAssignment(col *Column) bool {
+func (run *Runtime) HasColumnAssignment(col *Column) bool {
 	run.lock.Lock()
 	defer run.lock.Unlock()
 	_, ok := run.columns[col.Context.ID]
@@ -214,7 +300,7 @@ func (run Runtime) HasColumnAssignment(col *Column) bool {
 }
 
 // HasCellValue reports whether cell has been assigned in this runtime.
-func (run Runtime) HasCellValue(cell *Cell) bool {
+func (run *Runtime) HasCellValue(cell *Cell) bool {
 	run.lock.Lock()
 	defer run.lock.Unlock()
 	_, ok := run.cells[cell.Context.ID]
@@ -223,7 +309,7 @@ func (run Runtime) HasCellValue(cell *Cell) bool {
 
 // AssignCell stores a concrete scalar value for cell. Panics if cell does not
 // belong to the current round or has already been assigned.
-func (run Runtime) AssignCell(cell *Cell, v field.Gen) {
+func (run *Runtime) AssignCell(cell *Cell, v field.Gen) {
 	run.lock.Lock()
 	defer run.lock.Unlock()
 	if cell.round != run.currentRound {
@@ -242,23 +328,71 @@ func (run Runtime) AssignCell(cell *Cell, v field.Gen) {
 	run.cells[id] = v
 }
 
-// GetCellValue returns the concrete scalar value of cell. Panics if cell has
-// not been assigned yet.
-func (run Runtime) GetCellValue(cell *Cell) field.Gen {
+// OverrideCell replaces an existing value for cell with v. Unlike
+// [Runtime.AssignCell] it requires cell to be already assigned and does not
+// enforce the current round, so soundness tests can corrupt a value the prover
+// has already opened.
+//
+// Panics if cell has not been assigned yet.
+func (run *Runtime) OverrideCell(cell *Cell, v field.Gen) {
 	run.lock.Lock()
 	defer run.lock.Unlock()
-	v, ok := run.cells[cell.Context.ID]
-	if !ok {
+	id := cell.Context.ID
+	if _, ok := run.cells[id]; !ok {
 		panic(fmt.Sprintf(
-			"wiop: GetCellValue: cell %q is not assigned",
+			"wiop: OverrideCell: cell %q is not assigned",
 			cell.Context.Path(),
 		))
 	}
-	return v
+	run.cells[id] = v
+}
+
+// GetCellValue returns the concrete scalar value of cell, resolving a lazily-
+// assigned cell on demand. Panics if cell is neither assigned nor lazy.
+func (run *Runtime) GetCellValue(cell *Cell) field.Gen {
+	if v, ok := run.resolveLazyCell(cell); ok {
+		return v
+	}
+	panic(fmt.Sprintf(
+		"wiop: GetCellValue: cell %q is not assigned",
+		cell.Context.Path(),
+	))
+}
+
+// resolveLazyCell returns cell's value and whether it has one. An already-
+// assigned cell is returned directly. An unassigned cell with a non-nil
+// [Cell.Assigner] is resolved by invoking the assigner, caching the result,
+// and returning it. An unassigned cell with no assigner yields (_, false).
+//
+// The assigner is invoked without holding the runtime lock because it typically
+// reads a column assignment (which takes the lock itself). If a concurrent path
+// assigns the cell first, that value wins and the freshly-computed one is
+// discarded.
+func (run *Runtime) resolveLazyCell(cell *Cell) (field.Gen, bool) {
+	run.lock.Lock()
+	v, ok := run.cells[cell.Context.ID]
+	run.lock.Unlock()
+	if ok {
+		return v, true
+	}
+	if cell.Assigner == nil {
+		return field.Gen{}, false
+	}
+
+	v = cell.Assigner(run)
+
+	run.lock.Lock()
+	if existing, exists := run.cells[cell.Context.ID]; exists {
+		v = existing
+	} else {
+		run.cells[cell.Context.ID] = v
+	}
+	run.lock.Unlock()
+	return v, true
 }
 
 // HasCellAssignment reports whether cell has been assigned in this runtime.
-func (run Runtime) HasCellAssignment(cell *Cell) bool {
+func (run *Runtime) HasCellAssignment(cell *Cell) bool {
 	run.lock.Lock()
 	defer run.lock.Unlock()
 	_, ok := run.cells[cell.Context.ID]
@@ -267,7 +401,7 @@ func (run Runtime) HasCellAssignment(cell *Cell) bool {
 
 // GetCoinValue returns the value sampled for coin by [Runtime.AdvanceRound].
 // Panics if the round containing coin has not been entered yet.
-func (run Runtime) GetCoinValue(coin *CoinField) field.Gen {
+func (run *Runtime) GetCoinValue(coin *CoinField) field.Gen {
 	run.lock.Lock()
 	defer run.lock.Unlock()
 	v, ok := run.coins[coin.Context.ID]
@@ -280,8 +414,27 @@ func (run Runtime) GetCoinValue(coin *CoinField) field.Gen {
 	return v
 }
 
+// GetFS returns the Fiat-Shamir transcript of the runtime. This is useful for
+// the FRI compilation which does a bit of uneven things with the FS transcript.
+// Either way, do not use it
+func (run *Runtime) GetFS() *fiatshamir.FiatShamir {
+	return run.fs
+}
+
+// SetFSState replaces the runtime's Fiat–Shamir state with s. It is
+// intended for [Round.PreSamplingHooks] entries that seed the FS state
+// from a precomputed shared randomness (e.g. cross-shard handoff). Calling
+// it outside a pre-sampling hook can desynchronize the prover and verifier
+// transcripts and is almost always a bug.
+//
+// fiatshamir is a goroutine-unsafe singleton inside the runtime — like the
+// rest of the AdvanceRound pipeline this must not be called concurrently.
+func (run *Runtime) SetFSState(s field.Octuplet) {
+	run.fs.SetState(s)
+}
+
 // GetState returns the value stored under key and whether it was present.
-func (run Runtime) GetState(key string) (any, bool) {
+func (run *Runtime) GetState(key string) (any, bool) {
 	run.lock.Lock()
 	defer run.lock.Unlock()
 	v, ok := run.state[key]
@@ -289,7 +442,7 @@ func (run Runtime) GetState(key string) (any, bool) {
 }
 
 // SetState stores value under key in the runtime's state bag.
-func (run Runtime) SetState(key string, value any) {
+func (run *Runtime) SetState(key string, value any) {
 	run.lock.Lock()
 	defer run.lock.Unlock()
 	run.state[key] = value

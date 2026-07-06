@@ -6,10 +6,10 @@ import linea.contract.events.L1L2MessageHashesAddedToInboxEvent
 import linea.contract.events.L2RollingHashUpdatedEvent
 import linea.contract.events.MessageSentEvent
 import linea.coordination.conflation.BlocksTracesConflated
-import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.BlocksConflation
 import linea.domain.EthLog
 import linea.domain.ExecutionProofIndex
+import linea.domain.toBlockParameter
 import linea.ethapi.EthApiClient
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger

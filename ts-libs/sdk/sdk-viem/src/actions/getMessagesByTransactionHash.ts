@@ -1,4 +1,4 @@
-import { ExtendedMessage, getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
+import { ExtendedMessage, getContractsAddressesByChainId } from "@lfdt-lineth/sdk-core";
 import {
   Account,
   Address,
@@ -14,6 +14,8 @@ import {
   Transport,
 } from "viem";
 import { getTransactionReceipt } from "viem/actions";
+
+import { MESSAGE_SENT_EVENT_ABI } from "../abis";
 
 export type GetMessagesByTransactionHashParameters = {
   transactionHash: Hex;
@@ -38,7 +40,7 @@ export type GetMessagesByTransactionHashErrorType =
  * @example
  * import { createPublicClient, http } from 'viem'
  * import { linea } from 'viem/chains'
- * import { getMessagesByTransactionHash } from '@consensys/linea-sdk-viem'
+ * import { getMessagesByTransactionHash } from '@lfdt-lineth/sdk-viem'
  *
  * const client = createPublicClient({
  *   chain: linea,
@@ -76,22 +78,7 @@ export async function getMessagesByTransactionHash<
   );
 
   const parsedLogs = parseEventLogs({
-    abi: [
-      {
-        anonymous: false,
-        inputs: [
-          { indexed: true, internalType: "address", name: "_from", type: "address" },
-          { indexed: true, internalType: "address", name: "_to", type: "address" },
-          { indexed: false, internalType: "uint256", name: "_fee", type: "uint256" },
-          { indexed: false, internalType: "uint256", name: "_value", type: "uint256" },
-          { indexed: false, internalType: "uint256", name: "_nonce", type: "uint256" },
-          { indexed: false, internalType: "bytes", name: "_calldata", type: "bytes" },
-          { indexed: true, internalType: "bytes32", name: "_messageHash", type: "bytes32" },
-        ],
-        name: "MessageSent",
-        type: "event",
-      },
-    ] as const,
+    abi: MESSAGE_SENT_EVENT_ABI,
     eventName: "MessageSent",
     logs: logs,
   });

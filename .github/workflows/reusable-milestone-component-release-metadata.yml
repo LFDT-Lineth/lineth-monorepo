@@ -63,7 +63,7 @@ jobs:
       linea-besu-package: ${{ steps.changelog-outputs.outputs.linea-besu-package }}
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ github.head_ref || github.ref_name }}
           fetch-depth: 0
@@ -71,7 +71,7 @@ jobs:
           submodules: false
 
       - name: Install git-cliff
-        uses: taiki-e/install-action@5f57d6cb7cd20b14a8a27f522884c4bc8a187458 #(v2.75.19)
+        uses: taiki-e/install-action@bffeee26d4db9be238a4ea78d8826604ebcb594d #v2.82.5
         with:
           tool: git-cliff
 
@@ -105,3 +105,4 @@ jobs:
             printf '%s\n' "$JSON_OUTPUTS"
             echo "__JSON_EOF__"
           } >> "$GITHUB_OUTPUT"
+

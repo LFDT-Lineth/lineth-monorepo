@@ -4,6 +4,7 @@ import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.map
 import io.vertx.core.Vertx
+import linea.clients.ProverFileNameProvider
 import linea.clients.ProverProofRequestCreator
 import linea.clients.ProverProofResponseChecker
 import linea.domain.ProofIndex

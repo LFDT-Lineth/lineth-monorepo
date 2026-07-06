@@ -22,10 +22,10 @@ import linea.domain.BlobCounters
 import linea.domain.BlockCounters
 import linea.domain.BlockInterval
 import linea.domain.BlockParameter
-import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.ConflationCalculationResult
 import linea.domain.ConflationTrigger
 import linea.domain.EthLog
+import linea.domain.toBlockParameter
 import linea.ethapi.EthApiBlockClient
 import linea.ethapi.FakeEthApiClient
 import linea.forcedtx.ForcedTransactionInclusionResult
@@ -860,7 +860,7 @@ class ForcedTransactionsAppTest {
     this.ftxClient.setFtxInclusionResultAfterReception(
       ftxNumber = 6UL,
       l2BlockNumber = 160UL,
-      inclusionResult = ForcedTransactionInclusionResult.Phylax,
+      inclusionResult = ForcedTransactionInclusionResult.ChainSecurityRuleViolation,
     )
     this.ftxClient.setFtxInclusionResultAfterReception(
       ftxNumber = 7UL,

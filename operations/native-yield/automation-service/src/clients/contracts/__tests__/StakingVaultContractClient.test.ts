@@ -5,7 +5,7 @@ import { getContract } from "viem";
 import { StakingVaultABI } from "../../../core/abis/StakingVault.js";
 import { StakingVaultContractClient } from "../StakingVaultContractClient.js";
 
-import type { IBlockchainClient, ILogger } from "@consensys/linea-shared-utils";
+import type { IBlockchainClient, ILogger } from "@lfdt-lineth/shared-utils";
 import type { PublicClient, TransactionReceipt, Address } from "viem";
 
 jest.mock("viem", () => ({

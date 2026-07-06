@@ -1,5 +1,5 @@
-import { wait } from "@consensys/linea-shared-utils";
 import { jest, describe, it, expect, beforeEach } from "@jest/globals";
+import { wait } from "@lfdt-lineth/shared-utils";
 
 import { IDiscourseClient } from "../../../core/clients/IDiscourseClient.js";
 import { ProposalSource } from "../../../core/entities/ProposalSource.js";

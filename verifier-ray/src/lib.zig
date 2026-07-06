@@ -1,4 +1,7 @@
-pub const runtime = @import("runtime.zig");
+pub const r5_config = @import("r5_config");
+pub const protocol = @import("protocol/root.zig");
+pub const verifier = @import("verifier.zig");
+pub const profiling = @import("profiling.zig");
 
 pub const field = struct {
     pub const koalabear = @import("field/koalabear.zig");
@@ -19,4 +22,5 @@ pub const polynomial = struct {
 
 pub const query = struct {
     pub const vanishing = @import("query/vanishing.zig");
+    pub const logderivativesum = @import("query/logderivativesum.zig");
 };

@@ -1,6 +1,11 @@
 package wiop
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/sirupsen/logrus"
+)
 
 // Round represents a single interaction round between the prover and the
 // verifier. At the start of a round the verifier draws random coin challenges;
@@ -35,9 +40,26 @@ type Round struct {
 	// round, in declaration order. Each check is run by the verifier when the
 	// runtime enters this round, after coins have been derived.
 	VerifierActions []VerifierAction
+	// PreSamplingHooks holds prover-side actions registered to fire BEFORE
+	// any [CoinField] in this round is sampled. They run during
+	// [Runtime.AdvanceRound] *after* the previous round's columns and cells
+	// have been absorbed into the Fiat–Shamir state but *before* this
+	// round's coins are derived. Hooks run in declaration order.
+	//
+	// The canonical use is shared-randomness seeding in sharded protocols:
+	// a hook reads a precomputed seed from public columns and calls
+	// [Runtime.SetFSState] so this round's coins derive deterministically
+	// from that seed instead of from this shard's local transcript. For any
+	// non-seeding use case, prefer [ProverActions] — running before coin
+	// sampling is a sharp tool and easy to misuse.
+	PreSamplingHooks []ProverAction
 	// system is the owning System. Set once at registration time, never nil
 	// for a well-formed Round.
 	system *System
+	// HasCommitment is an indicator of whether a coded Merkle commitment is to
+	// be expected in the runtime for the current round. This is scaffoling
+	// code for the future, and should be false for all current protocols.
+	HasCommitment bool
 }
 
 // RegisterAction appends a to the round's action list. Actions are run by the
@@ -51,6 +73,34 @@ func (r *Round) RegisterAction(a ProverAction) {
 // round.
 func (r *Round) RegisterVerifierAction(a VerifierAction) {
 	r.VerifierActions = append(r.VerifierActions, a)
+}
+
+// RegisterPreSamplingHook appends a to the round's pre-sampling hook list.
+// Hooks fire in declaration order at the start of [Runtime.AdvanceRound]
+// into this round — after the previous round's commitments have been
+// absorbed into Fiat–Shamir but before this round's coins are sampled.
+//
+// Registering more than one hook on the same round is almost always a
+// bug: hooks typically end with [Runtime.SetFSState], so each one's effect
+// is wiped out by the next, and only the last-registered hook actually
+// influences the coins. This method emits a logrus warning when a second
+// (or later) hook is added so the misuse surfaces early; the behaviour
+// itself is still well-defined (last hook wins) for the rare legitimate
+// case where the stacking is intentional.
+//
+// See [Round.PreSamplingHooks] for when to use this versus
+// [Round.RegisterAction].
+func (r *Round) RegisterPreSamplingHook(a ProverAction) {
+	if len(r.PreSamplingHooks) > 0 {
+		logrus.Warnf(
+			"wiop: round %d already has %d PreSamplingHook(s); "+
+				"registering another is almost always a bug — hooks typically "+
+				"call Runtime.SetFSState and overwrite each other so only the "+
+				"last-registered hook affects the coins",
+			r.ID, len(r.PreSamplingHooks),
+		)
+	}
+	r.PreSamplingHooks = append(r.PreSamplingHooks, a)
 }
 
 // System returns the owning System. It is always non-nil for a well-formed
@@ -115,6 +165,21 @@ func (r *Round) NewCell(ctx *ContextFrame, isExtension bool) *Cell {
 		round:             r,
 	}
 	r.Cells = append(r.Cells, c)
+	return c
+}
+
+// NewLazyCell declares a scalar cell whose value is computed on demand by
+// assigner rather than written by the prover. The cell is resolved the first
+// time it is read or, at the latest, when its round is advanced; see
+// [Cell.Assigner]. assigner must only depend on data available in this round.
+//
+// Panics if ctx or assigner is nil.
+func (r *Round) NewLazyCell(ctx *ContextFrame, isExtension bool, assigner func(*Runtime) field.Gen) *Cell {
+	if assigner == nil {
+		panic("wiop: Round.NewLazyCell requires a non-nil assigner")
+	}
+	c := r.NewCell(ctx, isExtension)
+	c.Assigner = assigner
 	return c
 }
 

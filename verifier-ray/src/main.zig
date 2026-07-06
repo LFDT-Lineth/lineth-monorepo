@@ -1,46 +1,29 @@
 const builtin = @import("builtin");
 const verifier_ray = @import("verifier_ray");
+const embedded_data = @import("embedded_data");
+const embedded_data_conf = @import("embedded_data_config");
+const lineth_accel = @import("lineth_accelerators");
 
-const field = verifier_ray.field.koalabear;
-const ext = verifier_ray.field.koalabear_ext;
-const polynomial = verifier_ray.polynomial.canonical;
-const poseidon2 = verifier_ray.crypto.poseidon2;
-const Transcript = verifier_ray.crypto.fiat_shamir.Transcript;
+const verifier = verifier_ray.verifier;
 
-const is_r5_zkvm = builtin.target.cpu.arch == .riscv64 and builtin.target.os.tag == .freestanding;
+const is_r5_zkvm = verifier_ray.r5_config.is_r5_zkvm;
 const is_native_os = builtin.target.os.tag == .linux or builtin.target.os.tag == .macos;
 const is_native_arch = builtin.target.cpu.arch == .x86_64 or builtin.target.cpu.arch == .aarch64;
 const is_supported_native = is_native_os and is_native_arch;
 
-const Commitment = verifier_ray.crypto.commitment.Commitment;
-const Digest = poseidon2.Digest;
-
-// Temporary smoke-test fixture shape. These values are currently hand-picked
-// so the native and R5 paths exercise non-trivial verifier code; they should
-// come from prover-ray metadata once we wire in realistic proofs.
-const commitment_count = 1;
-const commitment_limb_count = 8;
-const public_input_count = 2;
-const proof_byte_count = 3;
-const coefficient_count = 4;
-const digest_limb_count = 8;
-
 const native_input_path: [:0]const u8 = "zig-out/input.bin";
 
-extern const _input_start: u8;
+extern const _in_start: u8;
 
-// Input is cast directly from raw bytes in both native mmap and R5 linked-memory paths.
-// Keep declaration-order layout stable for the binary fixtures.
-const Input = extern struct {
-    commitments: [commitment_count]Commitment,
-    public_inputs: [public_input_count]field.Element,
-    proof_bytes: [proof_byte_count]u8,
-    coefficients: [coefficient_count]field.Element,
-    point: ext.Ext,
-    expected_challenge: ext.Ext,
-};
-
-const raw_input_len = @sizeOf(Input);
+// When the input is embedded at build time, the fixture proof is materialized
+// into static (.rodata) memory here so the loaders can hand out a runtime
+// pointer to it, exactly like the mmap/linker paths do. This keeps `Proof` as
+// a plain runtime value — only `spec`/`systems` are comptime in `verify`. The
+// const is lazily analyzed, so it costs nothing when `embed_input` is false.
+const embedded_input: verifier.Proof = if (embedded_data_conf.invalid_input)
+    embedded_data.getInputFailing(embedded_data_conf.spec_index)
+else
+    embedded_data.getInput(embedded_data_conf.spec_index);
 
 // The main entry point for the verifier ray smoke test. This is separate from
 // the main verifier entry point in `verifier.zig` because we want to be able to
@@ -58,7 +41,7 @@ pub fn main() noreturn {
     }
 
     const input = loadNativeInput();
-    exitNative(runVerifierSmoke(input));
+    exitNative(runVerifier(input));
 }
 
 // The main entry point for the R5 zkVM smoke test. This is separate from the
@@ -66,44 +49,38 @@ pub fn main() noreturn {
 // and exiting in the R5 zkVM environment. The actual verifier logic being tested
 // is still in `verifier.zig`, and this main function just serves as a thin wrapper
 // around it to handle R5-specific details.
-pub export fn r5_main() noreturn {
+fn r5_main() callconv(.c) noreturn {
     if (comptime !is_r5_zkvm) {
         // this entry point should only be called from R5 zkVM build (`make build-r5` or `make build-r5-release`)
         unreachable;
     }
 
-    // the input is linked into the binary at compile time using the
-    // `_input_start` symbol defined in the linker script, so we can just take its
-    // address and cast it to our structured input type
-    const input: *const Input = @ptrCast(@alignCast(&_input_start));
+    // load the input depending on the running mode (embedded by the zkVM or at compile time)
+    const input = loadR5Input();
 
     // run the verifier smoke test with the loaded input
-    const res = runVerifierSmoke(input);
+    const res = runVerifier(input);
     exitR5(res);
 }
 
-fn runVerifierSmoke(input: *const Input) u8 {
-    // some temporary work to exercise the zkVM trace with a realistic
-    // polynomial evaluation and Fiat-Shamir transcript interaction, before we have
-    // a real proof to verify. This will be removed once we have a real proof and
-    // can test the full verifier end-to-end in the smoke test.
-    if (!exerciseTemporaryTraceWork(input)) {
-        return 1;
+// We have standard entry point convention for R5 zkvm. Export the symbol so that the linker can find it.
+comptime {
+    if (is_r5_zkvm) {
+        @export(&r5_main, .{ .name = "main" });
     }
-
-    return 0;
 }
 
-fn exerciseTemporaryTraceWork(input: *const Input) bool {
-    // Temporary zkVM trace exercise. Remove this once main verifies a realistic proof.
-    const evaluation = polynomial.evaluateBaseAtExt(input.coefficients[0..], input.point);
-
-    var transcript = Transcript.init();
-    transcript.updateElements(input.coefficients[0..]);
-    transcript.updateExt(&.{evaluation});
-    const challenge = transcript.randomExt();
-
-    return challenge.eql(input.expected_challenge);
+fn runVerifier(input: *const verifier.Proof) u8 {
+    const verifier_case = comptime embedded_data.get(embedded_data_conf.spec_index);
+    const spec = verifier_case.spec;
+    const systems = verifier_case.systems;
+    // `spec`/`systems` are comptime, but the proof is a runtime value read from
+    // `input` (mmap/linker/embedded memory), so dereference it here.
+    verifier.verify(spec, systems, input.*) catch {
+        // if the verifier fails, return a non-zero exit code
+        return 1;
+    };
+    return 0; // success
 }
 
 // Native smoke tests use the same fixed binary input image as the R5 linked-memory path.
@@ -119,19 +96,40 @@ extern fn open(path: [*:0]const u8, flags: c_int) c_int;
 extern fn mmap(address: ?*anyopaque, length: usize, protection: c_int, flags: c_int, fd: c_int, offset: i64) *anyopaque;
 extern fn _exit(status: c_int) noreturn;
 
-fn loadNativeInput() *const Input {
+fn loadNativeInput() *const verifier.Proof {
     if (comptime !is_supported_native) {
         @compileError("native verifier libc path currently supports x86_64/aarch64 Linux and macOS only");
     }
+    if (comptime embedded_data_conf.embed_input) {
+        return &embedded_input;
+    }
+    // TODO: we have kept the compatibility with the old way of loading input, but we don't have serialization
+    // so it will fail if the input is not embedded.
 
     const fd = open(native_input_path.ptr, o_rdonly);
     if (fd < 0) exitNative(1);
 
-    const mapped_addr = mmap(null, raw_input_len, prot_read, map_private, fd, 0);
+    const mapped_addr = mmap(null, @sizeOf(verifier.Proof), prot_read, map_private, fd, 0);
     if (@intFromPtr(mapped_addr) == map_failed) exitNative(1);
 
     const mapped_bytes: [*]const u8 = @ptrCast(mapped_addr);
     return @ptrCast(@alignCast(mapped_bytes));
+}
+
+fn loadR5Input() *const verifier.Proof {
+    if (comptime !is_r5_zkvm) {
+        @compileError("R5 verifier path currently supports only R5 zkVM target");
+    }
+    if (comptime embedded_data_conf.embed_input) {
+        return &embedded_input;
+    }
+    // TODO: we have kept the compatibility with the old way of loading input, but we don't have serialization
+    // so it will fail if the input is not embedded.
+
+    // the input is linked into the binary at compile time using the
+    // `_in_start` symbol defined in the linker script, so we can just take its
+    // address and cast it to our structured input type
+    return @ptrCast(@alignCast(&_in_start));
 }
 
 fn exitNative(code: u8) noreturn {
@@ -146,26 +144,6 @@ fn exitR5(code: u8) noreturn {
     if (comptime !is_r5_zkvm) {
         @compileError("R5 exit currently supports only R5 zkVM target");
     }
-    switch (code) {
-        0 => exitR5Success(),
-        else => exitR5Failure(),
-    }
-}
-
-fn exitR5Success() noreturn {
-    asm volatile (
-        \\li a0, 0
-        \\li a7, 93
-        \\ecall
-    );
-    unreachable;
-}
-
-fn exitR5Failure() noreturn {
-    asm volatile (
-        \\li a0, 1
-        \\li a7, 93
-        \\ecall
-    );
-    unreachable;
+    // Delegate to the Linea accelerator package's standard zkVM exit (zkvm_std.h).
+    lineth_accel.zkvm_exit(@intCast(code));
 }

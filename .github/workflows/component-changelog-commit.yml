@@ -21,7 +21,7 @@ jobs:
   push-component-changelog:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     steps:
-      # Mint a short-lived token either for the release bot GitHub App to commit the changelog changes 
+      # Mint a short-lived token either for the release bot GitHub App to commit the changelog changes
       # directly bypassin the branch-protection or for PR bot GitHub App to create PR with the changelog changes.
       - name: Generate release or PR bot App token
         id: app-token
@@ -43,7 +43,7 @@ jobs:
           echo "user-id=${user_id}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           # Use the App token so subsequent `git push` is authenticated as the App.
           token: ${{ steps.app-token.outputs.token }}
@@ -102,7 +102,7 @@ jobs:
 
       - name: Create pull request
         if: ${{ inputs.create_pull_request }}
-        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           token: ${{ steps.app-token.outputs.token }}
           commit-message: "chore(misc): update CHANGELOG.md unreleased section of each updated component and milestone [skip ci]"
@@ -112,3 +112,4 @@ jobs:
           add-paths: |
             CHANGELOG.md
             **/CHANGELOG.md
+

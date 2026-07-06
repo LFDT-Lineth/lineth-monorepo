@@ -1,4 +1,4 @@
-import { getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
+import { getContractsAddressesByChainId } from "@lfdt-lineth/sdk-core";
 import { Client, Transport, Chain, Account, Hex, ChainNotFoundError } from "viem";
 import { getContractEvents } from "viem/actions";
 import { linea } from "viem/chains";
@@ -68,6 +68,29 @@ describe("getMessageByMessageHash", () => {
         address: getContractsAddressesByChainId(linea.id).messageService,
         eventName: "MessageSent",
         args: { _messageHash: messageHash },
+        fromBlock: "earliest",
+        toBlock: "latest",
+      }),
+    );
+  });
+
+  it("queries only the given block when messageBlockNumber is provided", async () => {
+    const client = mockClient(linea.id);
+    const messageBlockNumber = 1_234_567n;
+    const messageSentEvent = generateMessageSentLog({
+      address: getContractsAddressesByChainId(linea.id).messageService,
+    });
+
+    (getContractEvents as jest.Mock<ReturnType<typeof getContractEvents>>).mockResolvedValue([messageSentEvent]);
+
+    await getMessageByMessageHash(client, { messageHash, messageBlockNumber });
+
+    expect(getContractEvents).toHaveBeenCalledWith(
+      client,
+      expect.objectContaining({
+        args: { _messageHash: messageHash },
+        fromBlock: messageBlockNumber,
+        toBlock: messageBlockNumber,
       }),
     );
   });

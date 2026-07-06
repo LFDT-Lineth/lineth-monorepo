@@ -1,4 +1,4 @@
-import { ExpressApiApplication, IApplication, ILogger, IMetricsService } from "@consensys/linea-shared-utils";
+import { ExpressApiApplication, IApplication, ILogger, IMetricsService } from "@lfdt-lineth/shared-utils";
 
 import { LineaPostmanMetrics } from "../../core/metrics";
 

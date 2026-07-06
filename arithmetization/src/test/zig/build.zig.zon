@@ -1,0 +1,19 @@
+.{
+    .name = .arithmetization_zig_tests,
+    .version = "0.0.0",
+    .fingerprint = 0x3f08e137ab15ab78,
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{
+        // Shared build helpers (the freestanding rv64im guest target).
+        .build_common = .{ .path = "../../../../riscv-guests/build_common" },
+        // Lineth accelerator wrappers
+        .lineth_accelerators = .{ .path = "../../../../riscv-guests/lineth-accelerators" },
+        // l2-execution guest for non-accelerated providers
+        .l2_execution = .{ .path = "../../../../riscv-guests/l2-execution" },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}

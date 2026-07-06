@@ -5,10 +5,10 @@ import (
 	"io"
 	"time"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/consensys/go-corset/pkg/util/collection/typed"
 	"github.com/consensys/go-corset/pkg/util/field/koalabear"
 	"github.com/consensys/go-corset/pkg/zkc/constraints"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop"
 	"github.com/sirupsen/logrus"
 )
 

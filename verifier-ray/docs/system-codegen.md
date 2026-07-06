@@ -28,6 +28,8 @@ The codegen package is split by responsibility:
 
 - `verifier-ray/codegen/vanishing.go` extracts prover-ray objects into Go structs used by verifier-ray.
 - `verifier-ray/codegen/vanishing_zig.go` renders those structs as Zig source using `text/template`.
+- `verifier-ray/codegen/coin_routing.go` extracts the protocol-level Fiat-Shamir coin layout into `CoinRouting`. Shared across all sub-verifiers; enforces the `round_coin_counts[0] == 0` invariant at generation time.
+- `verifier-ray/codegen/spec_zig.go` renders `CoinRouting` as a standalone `protocol.Spec` Zig constant via `WriteSpecZig`.
 
 The generated Zig describes data, not executable polynomial code. The evaluator in `src/query/vanishing.zig` consumes this data at comptime:
 
@@ -121,8 +123,11 @@ The Zig tests consume `testdata/generated/vanishing.zig` and call `vanishing.ver
 
 The test suite currently generates many systems because it covers many prover-ray scenarios. A real verifier application should normally have one serialized prover-ray compiled system. The expected build flow is:
 
-1. prover-ray compiles and serializes the final system metadata
-2. verifier-ray codegen renders one Zig `vanishing.System` for that metadata
+1. prover-ray compiles the final `wiop.System`
+2. verifier-ray codegen extracts once and renders into one generated file:
+   - `BuildCoinRouting()` → `CoinRouting` → `WriteSpecZig()` → `pub const spec`
+   - `CoinRouting` + `BuildVanishingSystem()` → `VanishingSystem` → `WriteVanishingSystemZig()` → vanishing constants + `pub const systems`
+   - future sub-verifiers (`BuildLogDerivSystem()`, …) receive the same `CoinRouting`
 3. the Zig build includes that generated file
 4. the output binary is dedicated to that concrete system
 

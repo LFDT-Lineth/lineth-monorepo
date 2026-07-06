@@ -1,4 +1,4 @@
-import { IRetryService } from "@consensys/linea-shared-utils";
+import { IRetryService } from "@lfdt-lineth/shared-utils";
 
 import { IDiscourseClient } from "../core/clients/IDiscourseClient.js";
 import {

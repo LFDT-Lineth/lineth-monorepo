@@ -57,8 +57,8 @@ Lineth zkEVM monorepo — the principal repository for [Linea](https://linea.bui
 
 | Tool | Version | Notes |
 |------|---------|-------|
-| Node.js | >= 24.14.1 | See `.nvmrc` |
-| pnpm | >= 10.32.1 | Enforced via `preinstall` |
+| Node.js | >= 24.18.0 | See `.nvmrc` |
+| pnpm | >= 11.9.0 | Enforced via `preinstall` |
 | JDK | 25 | Coordinator, Besu plugins, transaction-exclusion-api — enforced by Gradle; JDK 25+ required |
 | Gradle | 9.4+ | use ./gradlew <task> |
 | Go | 1.25.7 | Prover |
@@ -105,17 +105,17 @@ pnpm -F contracts run build
 | All pnpm packages | `pnpm run test` |
 | Contracts (Hardhat) | `pnpm -F contracts run test` |
 | Contracts (coverage) | `pnpm -F contracts run coverage` |
-| SDK core | `pnpm -F @consensys/linea-sdk-core run test` |
-| SDK ethers | `pnpm -F @consensys/linea-sdk run test` |
-| SDK viem | `pnpm -F @consensys/linea-sdk-viem run test` |
-| Postman | `pnpm -F @consensys/linea-postman run test` |
+| SDK core | `pnpm -F @lfdt-lineth/sdk-core run test` |
+| SDK ethers | `pnpm -F @lfdt-lineth/sdk run test` |
+| SDK viem | `pnpm -F @lfdt-lineth/sdk-viem run test` |
+| Postman | `pnpm -F @lfdt-lineth/postman run test` |
 | E2E (requires local stack) | `pnpm -F e2e run test:local` |
 | Coordinator (Kotlin) | `./gradlew :coordinator:app:test` |
 | Prover (Go) | `cd prover && go test ./... -tags nocorset,fuzzlight -timeout 30m` |
-| Native libs | `pnpm -F @consensys/linea-native-libs run test` |
-| Shared utils | `pnpm -F @consensys/linea-shared-utils run test` |
-| Automation service | `pnpm -F @consensys/linea-native-yield-automation-service run test` |
-| Lido governance monitor | `pnpm -F @consensys/lido-governance-monitor run test` |
+| Native libs | `pnpm -F @lfdt-lineth/native-libs run test` |
+| Shared utils | `pnpm -F @lfdt-lineth/shared-utils run test` |
+| Automation service | `pnpm -F @lfdt-lineth/native-yield-automation-service run test` |
+| Lido governance monitor | `pnpm -F @lfdt-lineth/lido-governance-monitor run test` |
 
 ### Lint and Format
 
@@ -178,7 +178,7 @@ After writing or editing code, check LSP diagnostics and fix any type errors or 
 
 ### Style
 
-- **Formatter:** Prettier 3.8.1 — `prettier.config.mjs`
+- **Formatter:** Prettier 3.8.4 — `prettier.config.mjs`
 - **Linter (TS/JS):** ESLint 9.39.4 flat config — `ts-libs/eslint-config/`
 - **Linter (Solidity):** Solhint 6.2.1 + Prettier plugin
 - **Linter (Kotlin/Java):** Spotless with ktlint + Google Java Format
@@ -196,7 +196,7 @@ After writing or editing code, check LSP diagnostics and fix any type errors or 
 - **Monorepo tool:** pnpm workspaces (`pnpm-workspace.yaml`)
 - **Dual build systems:** pnpm for TypeScript/JavaScript, Gradle for Kotlin/Java, Make+Go for prover
 - **Dependency catalog:** Shared versions in `pnpm-workspace.yaml` catalog section
-- **Shared ESLint config:** `@consensys/eslint-config` with exports for default, `./nextjs`, and `./node`
+- **Shared ESLint config:** `@lfdt-lineth/eslint-config` with exports for default, `./nextjs`, and `./node`
 
 ### Naming
 
@@ -223,7 +223,7 @@ After writing or editing code, check LSP diagnostics and fix any type errors or 
 |------|----------|-------|
 | Contracts (Hardhat) | Hardhat + ethers.js | `pnpm -F contracts run test` |
 | Contracts (Foundry) | Forge | `test/foundry/*` |
-| TypeScript packages | Jest 30.3.0 + ts-jest | `pnpm -F <pkg> run test` |
+| TypeScript packages | Jest 30.4.2 + ts-jest | `pnpm -F <pkg> run test` |
 | Coordinator | JUnit 5 + Mockito + WireMock | `./gradlew :coordinator:app:test` |
 | Prover | Go test | `go test ./... -tags nocorset,fuzzlight` |
 | E2E (protocol) | Jest | `pnpm -F e2e run test:local` |
@@ -346,7 +346,7 @@ These require human approval and follow the release process:
 | Name | Type | Stack | Purpose |
 |------|------|-------|---------|
 | `contracts` | Smart contracts | Solidity 0.8.33, Hardhat, Foundry | Core protocol contracts (rollup, messaging, bridge, tokens) |
-| `coordinator` | Backend service | Kotlin 2.3.0, Gradle, Vertx | Orchestrates proof submission, blob submission, finalization |
+| `coordinator` | Backend service | Kotlin 2.4.0, Gradle, Vertx | Orchestrates proof submission, blob submission, finalization |
 | `prover` | Backend service | Go 1.25.7 | ZK proof generation (gnark, gnark-crypto) |
 | `postman` | Backend service | TypeScript, Express, TypeORM | Bridge message execution service |
 | `ts-libs/sdk/sdk-core` | Library | TypeScript, tsup | Core SDK utilities and types |
@@ -405,11 +405,11 @@ docs/                    Project documentation
 ### Cross-Package Dependencies
 
 ```
-postman -> @consensys/linea-sdk-viem -> @consensys/linea-sdk-core
-postman -> @consensys/linea-native-libs, @consensys/linea-shared-utils
-e2e -> @consensys/linea-shared-utils
+postman -> @lfdt-lineth/sdk-viem -> @lfdt-lineth/sdk-core
+postman -> @lfdt-lineth/native-libs, @lfdt-lineth/shared-utils
+e2e -> @lfdt-lineth/shared-utils
 operations/cli -> (standalone, uses ethers + viem)
-operations/native-yield/* -> @consensys/linea-shared-utils
+operations/native-yield/* -> @lfdt-lineth/shared-utils
 coordinator -> jvm-libs/*
 transaction-exclusion-api -> jvm-libs/*
 linea-besu/plugins -> jvm-libs/*

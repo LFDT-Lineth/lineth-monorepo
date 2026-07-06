@@ -3,13 +3,13 @@ package wiop_test
 import (
 	"testing"
 
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/stretchr/testify/assert"
 )
 
 // vecEval evaluates an expression over two columns assigned to all-2 and all-3.
-func makeVecEvalSystem(t *testing.T) (*wiop.System, *wiop.Column, *wiop.Column, wiop.Runtime) {
+func makeVecEvalSystem(t *testing.T) (*wiop.System, *wiop.Column, *wiop.Column, *wiop.Runtime) {
 	t.Helper()
 	sys, r0, _, mod := newTestSystem(t)
 	c1 := mod.NewColumn(sys.Context.Childf("c1"), wiop.VisibilityOracle, r0)
@@ -28,7 +28,7 @@ func TestCompiler_VecSub(t *testing.T) {
 	_, c1, c2, rt := makeVecEvalSystem(t)
 	expr := wiop.Sub(c1.View(), c2.View())
 	cv := expr.(interface {
-		EvaluateVector(wiop.Runtime) wiop.ConcreteVector
+		EvaluateVector(*wiop.Runtime) wiop.ConcreteVector
 	}).EvaluateVector(rt)
 	// 2 - 3 = -1 in field
 	var want field.Element
@@ -43,7 +43,7 @@ func TestCompiler_VecMul(t *testing.T) {
 	_, c1, c2, rt := makeVecEvalSystem(t)
 	expr := wiop.Mul(c1.View(), c2.View())
 	cv := expr.(interface {
-		EvaluateVector(wiop.Runtime) wiop.ConcreteVector
+		EvaluateVector(*wiop.Runtime) wiop.ConcreteVector
 	}).EvaluateVector(rt)
 	// 2*3 = 6
 	var want field.Element
@@ -55,7 +55,7 @@ func TestCompiler_VecDiv(t *testing.T) {
 	_, c1, c2, rt := makeVecEvalSystem(t)
 	expr := wiop.Div(c1.View(), c2.View())
 	cv := expr.(interface {
-		EvaluateVector(wiop.Runtime) wiop.ConcreteVector
+		EvaluateVector(*wiop.Runtime) wiop.ConcreteVector
 	}).EvaluateVector(rt)
 	assert.Equal(t, 4, cv.Plain.Len())
 }
@@ -64,7 +64,7 @@ func TestCompiler_VecDouble(t *testing.T) {
 	_, c1, _, rt := makeVecEvalSystem(t)
 	expr := wiop.Double(c1.View())
 	cv := expr.(interface {
-		EvaluateVector(wiop.Runtime) wiop.ConcreteVector
+		EvaluateVector(*wiop.Runtime) wiop.ConcreteVector
 	}).EvaluateVector(rt)
 	// 2+2 = 4
 	var want field.Element
@@ -76,7 +76,7 @@ func TestCompiler_VecSquare(t *testing.T) {
 	_, c1, _, rt := makeVecEvalSystem(t)
 	expr := wiop.Square(c1.View())
 	cv := expr.(interface {
-		EvaluateVector(wiop.Runtime) wiop.ConcreteVector
+		EvaluateVector(*wiop.Runtime) wiop.ConcreteVector
 	}).EvaluateVector(rt)
 	// 2*2 = 4
 	var want field.Element
@@ -88,7 +88,7 @@ func TestCompiler_VecNegate(t *testing.T) {
 	_, c1, _, rt := makeVecEvalSystem(t)
 	expr := wiop.Negate(c1.View())
 	cv := expr.(interface {
-		EvaluateVector(wiop.Runtime) wiop.ConcreteVector
+		EvaluateVector(*wiop.Runtime) wiop.ConcreteVector
 	}).EvaluateVector(rt)
 	// -2 in the field
 	var want field.Element
@@ -101,7 +101,7 @@ func TestCompiler_VecInverse(t *testing.T) {
 	_, c1, _, rt := makeVecEvalSystem(t)
 	expr := wiop.Inverse(c1.View())
 	cv := expr.(interface {
-		EvaluateVector(wiop.Runtime) wiop.ConcreteVector
+		EvaluateVector(*wiop.Runtime) wiop.ConcreteVector
 	}).EvaluateVector(rt)
 	assert.Equal(t, 4, cv.Plain.Len())
 }
@@ -114,7 +114,7 @@ func TestCompiler_VecComposite(t *testing.T) {
 	diff := wiop.Sub(c1.View(), c2.View())
 	expr := wiop.Mul(sum, diff)
 	cv := expr.(interface {
-		EvaluateVector(wiop.Runtime) wiop.ConcreteVector
+		EvaluateVector(*wiop.Runtime) wiop.ConcreteVector
 	}).EvaluateVector(rt)
 	// 5 * (-1)
 	var five, neg1, want field.Element

@@ -106,12 +106,12 @@ runs:
 
     - name: Set up QEMU
       if: ${{ inputs.requires_qemu == 'true' }}
-      uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
+      uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
       with:
         platforms: 'arm64,arm'
 
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+      uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
     - name: Configure cache
       id: cache-config
@@ -135,7 +135,7 @@ runs:
 
     # Build for testing (when push_image is false)
     - name: Build for testing
-      uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+      uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
       if: ${{ inputs.push_image == 'false' }}
       with:
         context: ${{ inputs.docker_context }}
@@ -157,14 +157,14 @@ runs:
 
     - name: Upload Docker image artifact
       if: ${{ inputs.save_artifact == 'true' }}
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: ${{ inputs.artifact_name }}
         path: ${{ inputs.artifact_name }}-docker-image.tar.gz
 
     # Build & push
     - name: Build & push
-      uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+      uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
       if: ${{ inputs.push_image == 'true' }}
       with:
         context: ${{ inputs.docker_context }}
@@ -177,3 +177,4 @@ runs:
         build-args: ${{ inputs.build_args }}
         cache-from: ${{ steps.cache-config.outputs.cache_from_push }}
         cache-to: ${{ steps.cache-config.outputs.cache_to_push }}
+

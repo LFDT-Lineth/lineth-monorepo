@@ -15,7 +15,7 @@ import (
 	"github.com/consensys/gnark/std/rangecheck"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/protocol/serialization"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/protocol/wizard"
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
 type slice struct {
@@ -294,6 +294,7 @@ func divByLanesPerBlock(api frontend.API, x frontend.Variable) (q, r frontend.Va
 		q, r = hintOuts[0], hintOuts[1]
 		api.AssertIsLessOrEqual(r, lanesPerBlock-1)
 		api.AssertIsLessOrEqual(q, x)
+		api.AssertIsEqual(x, api.Add(api.Mul(q, lanesPerBlock), r))
 	}
 	return
 }

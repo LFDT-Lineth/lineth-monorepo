@@ -1,15 +1,14 @@
-import { OnChainMessageStatus } from "@consensys/linea-sdk-core";
+import { OnChainMessageStatus } from "@lfdt-lineth/sdk-core";
 import { Client, Transport, Chain, Account } from "viem";
-import { getContractEvents, readContract } from "viem/actions";
+import { readContract } from "viem/actions";
 import { linea, mainnet } from "viem/chains";
 
 import { getL2ToL1MessageStatus } from "./getL2ToL1MessageStatus";
 import { getMessageSentEvents } from "./getMessageSentEvents";
 import { TEST_MESSAGE_HASH } from "../../tests/constants";
-import { generateL2MessagingBlockAnchoredLog, generateMessageSentLog } from "../../tests/utils";
+import { generateMessageSentLog } from "../../tests/utils";
 
 jest.mock("viem/actions", () => ({
-  getContractEvents: jest.fn(),
   readContract: jest.fn(),
 }));
 jest.mock("./getMessageSentEvents", () => ({
@@ -29,9 +28,20 @@ describe("getL2ToL1MessageStatus", () => {
       chain: { id: chainId },
     }) as unknown as MockClient;
 
+  // Routes the two parallel view calls: `currentL2BlockNumber` (anchoring) and `isMessageClaimed`.
+  const mockReadContract = ({
+    currentL2BlockNumber,
+    isMessageClaimed,
+  }: {
+    currentL2BlockNumber: bigint;
+    isMessageClaimed: boolean;
+  }) =>
+    (readContract as jest.Mock).mockImplementation((_client, params: { functionName: string }) =>
+      Promise.resolve(params.functionName === "isMessageClaimed" ? isMessageClaimed : currentL2BlockNumber),
+    );
+
   afterEach(() => {
     jest.clearAllMocks();
-    (getContractEvents as jest.Mock).mockReset();
     (readContract as jest.Mock).mockReset();
     (getMessageSentEvents as jest.Mock).mockReset();
   });
@@ -84,15 +94,12 @@ describe("getL2ToL1MessageStatus", () => {
         transactionHash: messageSentLog.transactionHash,
       },
     ]);
-    (getContractEvents as jest.Mock<ReturnType<typeof getContractEvents>>).mockResolvedValue([
-      generateL2MessagingBlockAnchoredLog(messageSentLog.blockNumber),
-    ]);
-    (readContract as jest.Mock<ReturnType<typeof readContract>>).mockResolvedValue(true);
+    mockReadContract({ currentL2BlockNumber: messageSentLog.blockNumber, isMessageClaimed: true });
     const result = await getL2ToL1MessageStatus(client, { l2Client, messageHash: TEST_MESSAGE_HASH });
     expect(result).toBe(OnChainMessageStatus.CLAIMED);
   });
 
-  it("returns CLAIMABLE if isMessageClaimed is false but event exists", async () => {
+  it("returns CLAIMABLE if isMessageClaimed is false but the L2 block is anchored", async () => {
     const client = mockClient(mainnet.id);
     const l2Client = mockL2Client(linea.id);
     const messageSentLog = generateMessageSentLog();
@@ -112,15 +119,13 @@ describe("getL2ToL1MessageStatus", () => {
         transactionHash: messageSentLog.transactionHash,
       },
     ]);
-    (getContractEvents as jest.Mock<ReturnType<typeof getContractEvents>>).mockResolvedValue([
-      generateL2MessagingBlockAnchoredLog(messageSentLog.blockNumber),
-    ]);
-    (readContract as jest.Mock).mockResolvedValue(false);
+    // currentL2BlockNumber has reached (>=) the message's L2 block => anchored => claimable.
+    mockReadContract({ currentL2BlockNumber: messageSentLog.blockNumber + 1n, isMessageClaimed: false });
     const result = await getL2ToL1MessageStatus(client, { l2Client, messageHash: TEST_MESSAGE_HASH });
     expect(result).toBe(OnChainMessageStatus.CLAIMABLE);
   });
 
-  it("returns UNKNOWN if isMessageClaimed is false and no event exists", async () => {
+  it("returns UNKNOWN if isMessageClaimed is false and the L2 block is not yet anchored", async () => {
     const client = mockClient(mainnet.id);
     const l2Client = mockL2Client(linea.id);
     const messageSentLog = generateMessageSentLog();
@@ -140,8 +145,8 @@ describe("getL2ToL1MessageStatus", () => {
         transactionHash: messageSentLog.transactionHash,
       },
     ]);
-    (getContractEvents as jest.Mock<ReturnType<typeof getContractEvents>>).mockResolvedValue([]);
-    (readContract as jest.Mock).mockResolvedValue(false);
+    // currentL2BlockNumber is still below the message's L2 block => not anchored => unknown.
+    mockReadContract({ currentL2BlockNumber: messageSentLog.blockNumber - 1n, isMessageClaimed: false });
     const result = await getL2ToL1MessageStatus(client, { l2Client, messageHash: TEST_MESSAGE_HASH });
     expect(result).toBe(OnChainMessageStatus.UNKNOWN);
   });

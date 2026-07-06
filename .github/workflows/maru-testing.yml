@@ -35,7 +35,7 @@ jobs:
     #        iterations: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           submodules: false
       - name: Setup Java and Gradle
@@ -53,6 +53,8 @@ jobs:
           name: test reports
           path: |
             maru/**/build/reports/tests/
+            maru/**/build/integrationTest-logs/
+          if-no-files-found: ignore
       - name: Upload Jacoco execution data
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -66,3 +68,4 @@ jobs:
         uses: codecov/test-results-action@0fa95f0e1eeaafde2c782583b36b28ad0d8c77d3 # v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+

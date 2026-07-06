@@ -3,9 +3,9 @@ package wiop_test
 import (
 	"testing"
 
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop/wioptest"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -13,14 +13,14 @@ import (
 func TestRangeCheck_Soundness_Completeness(t *testing.T) {
 	sc := wioptest.NewRangeCheckScenario()
 	rt := wiop.NewRuntime(sc.Sys)
-	sc.RunHonest(&rt)
+	sc.RunHonest(rt)
 	require.NoError(t, sc.Query.Check(rt), "honest witness must pass Check")
 }
 
 func TestRangeCheck_Soundness_InvalidWitness(t *testing.T) {
 	sc := wioptest.NewRangeCheckScenario()
 	rt := wiop.NewRuntime(sc.Sys)
-	sc.RunInvalid(&rt)
+	sc.RunInvalid(rt)
 	assert.Error(t, sc.Query.Check(rt), "invalid witness must be rejected by Check")
 }
 

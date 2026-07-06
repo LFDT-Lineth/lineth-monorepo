@@ -24,10 +24,10 @@ permissions:
 
 jobs:
   act4-reference-tests:
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           submodules: false
 
@@ -39,8 +39,11 @@ jobs:
 
       - name: Build ACT4 ELFs
         run: make act4-build
-        working-directory: arithmetization/src/test/examples
+        working-directory: arithmetization/src/test
 
       - name: Run ACT4 tests
         run: make act4-exec
-        working-directory: arithmetization/src/test/examples
+        working-directory: arithmetization/src/test
+        env:
+          ZKC_REF: ${{ inputs.zkc-ref || 'v1.2.20' }}
+

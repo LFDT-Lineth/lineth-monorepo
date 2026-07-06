@@ -66,7 +66,6 @@ func (sm *StateManager) Assign(run *wizard.ProverRuntime, arith *arithmetization
 
 	addSkipFlags(&shomeiTraces)
 	shomeiTraces = removeSystemTransactions(shomeiTraces)
-	sm.injectSyntheticReadZeroTraces(run, &shomeiTraces)
 	sm.StateSummary.Assign(run, shomeiTraces)
 	sm.Accumulator.Assign(run, utils.Join(shomeiTraces...))
 	sm.AccumulatorSummaryConnector.Assign(run)
@@ -75,9 +74,10 @@ func (sm *StateManager) Assign(run *wizard.ProverRuntime, arith *arithmetization
 }
 
 // stateSummarySize returns the number of rows to give to the state-summary
-// module.
+// module. The +1 matches the accumulator and reserves a trailing padding row so
+// the module is never fully packed (see [accumulator.Settings.NumRows]).
 func (s *Settings) stateSummarySize() int {
-	return utils.NextPowerOfTwo(s.AccSettings.MaxNumProofs)
+	return utils.NextPowerOfTwo(s.AccSettings.MaxNumProofs + 1)
 }
 
 func removeSystemTransactions(shomeiTraces [][]statemanager.DecodedTrace) [][]statemanager.DecodedTrace {

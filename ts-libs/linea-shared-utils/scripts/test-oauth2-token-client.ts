@@ -1,5 +1,5 @@
 // Script to manually test OAuth2TokenClient against a live server
-// pnpm --filter @consensys/linea-shared-utils exec tsx scripts/test-oauth2-token-client.ts
+// pnpm --filter @lfdt-lineth/shared-utils exec tsx scripts/test-oauth2-token-client.ts
 import { ExponentialBackoffRetryService } from "../src";
 import { OAuth2TokenClient } from "../src/clients/OAuth2TokenClient";
 import { WinstonLogger } from "../src/logging/WinstonLogger";

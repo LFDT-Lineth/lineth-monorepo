@@ -1,5 +1,5 @@
 {
-  "name": "@consensys/linea-contract-integrity-verifier",
+  "name": "@lfdt-lineth/contract-integrity-verifier",
   "version": "1.0.0",
   "description": "Core library for verifying smart contract integrity against local artifacts",
   "author": "Consensys Software Inc.",
@@ -50,7 +50,7 @@
     "linea"
   ],
   "devDependencies": {
-    "@consensys/eslint-config": "workspace:*",
+    "@lfdt-lineth/eslint-config": "workspace:*",
     "@types/jest": "catalog:",
     "jest": "catalog:",
     "jest-environment-node": "catalog:",

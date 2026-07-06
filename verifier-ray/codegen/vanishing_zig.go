@@ -28,11 +28,11 @@ func defaultVanishingZigOptions() VanishingZigOptions {
 // WriteVanishingScenariosZig writes generated Zig source that contains the
 // vanishing.System values for the supplied cases. It emits data only; Zig owns
 // the evaluator and quotient identity implementation.
-func WriteVanishingScenariosZig(w io.Writer, cases []NamedVanishingSystem) error {
+func WriteVanishingScenariosZig(w io.Writer, cases []VanishingSystem) error {
 	return WriteVanishingScenariosZigWithOptions(w, cases, defaultVanishingZigOptions())
 }
 
-func WriteVanishingScenariosZigWithOptions(w io.Writer, cases []NamedVanishingSystem, opts VanishingZigOptions) error {
+func WriteVanishingScenariosZigWithOptions(w io.Writer, cases []VanishingSystem, opts VanishingZigOptions) error {
 	data := vanishingTemplateData{
 		Options: opts,
 		Cases:   make([]vanishingTemplateCase, len(cases)),
@@ -43,11 +43,11 @@ func WriteVanishingScenariosZigWithOptions(w io.Writer, cases []NamedVanishingSy
 	return executeVanishingTemplate(w, data)
 }
 
-func WriteVanishingSystemZig(w io.Writer, index int, system NamedVanishingSystem) error {
+func WriteVanishingSystemZig(w io.Writer, index int, system VanishingSystem) error {
 	return WriteVanishingSystemZigWithOptions(w, index, system, defaultVanishingZigOptions())
 }
 
-func WriteVanishingSystemZigWithOptions(w io.Writer, index int, system NamedVanishingSystem, opts VanishingZigOptions) error {
+func WriteVanishingSystemZigWithOptions(w io.Writer, index int, system VanishingSystem, opts VanishingZigOptions) error {
 	data := vanishingTemplateData{
 		Options: opts,
 		Cases:   []vanishingTemplateCase{newVanishingTemplateCase(index, system)},
@@ -58,10 +58,10 @@ func WriteVanishingSystemZigWithOptions(w io.Writer, index int, system NamedVani
 func executeVanishingTemplate(w io.Writer, data vanishingTemplateData) error {
 	tmpl, err := template.New("vanishing_scenarios").Funcs(template.FuncMap{
 		"expr":       exprNodeLiteral,
-		"ints":       intSlice,
+		"ints":       IntSlice,
 		"intArray":   intArray,
 		"moduleSize": moduleSizeLiteral,
-		"zig":        zigString,
+		"zig":        ZigString,
 	}).Parse(vanishingScenariosTemplate)
 	if err != nil {
 		return err
@@ -100,14 +100,14 @@ type vanishingTemplateBucket struct {
 	Bucket      VanishingBucket
 }
 
-func newVanishingTemplateCase(index int, tc NamedVanishingSystem) vanishingTemplateCase {
+func newVanishingTemplateCase(index int, tc VanishingSystem) vanishingTemplateCase {
 	out := vanishingTemplateCase{
 		Index:   index,
-		Name:    tc.Name,
-		System:  tc.System,
-		Modules: make([]vanishingTemplateModule, len(tc.System.Modules)),
+		Name:    tc.SourceName,
+		System:  tc,
+		Modules: make([]vanishingTemplateModule, len(tc.Modules)),
 	}
-	for moduleIndex, module := range tc.System.Modules {
+	for moduleIndex, module := range tc.Modules {
 		moduleView := vanishingTemplateModule{
 			Index:   moduleIndex,
 			Module:  module,
@@ -149,19 +149,12 @@ const vanishing = {{.Options.VanishingImport}};
 
 {{end}}const system_{{$case.Index}}_modules = [_]vanishing.Module{
 {{range $case.Modules}}    // module: "{{zig .Module.SourceName}}"
-    .{ .size = {{moduleSize .Module.Size}}, .expressions = &system_{{$case.Index}}_module_{{.Index}}_expressions, .buckets = &system_{{$case.Index}}_module_{{.Index}}_buckets, .witness_claim_offset = {{.Module.WitnessClaimOffset}} },
+    .{ .size = {{moduleSize .Module.Size}}, .expressions = &system_{{$case.Index}}_module_{{.Index}}_expressions, .buckets = &system_{{$case.Index}}_module_{{.Index}}_buckets, .witness_claim_offset = {{.Module.WitnessClaimOffset}}, .merge_coin_index = {{.Module.MergeCoinIndex}}, .eval_coin_index = {{.Module.EvalCoinIndex}} },
 {{end}}};
-
-const system_{{$case.Index}}_round_coin_counts = [_]usize{{intArray $case.System.RoundCoinCounts}};
-const system_{{$case.Index}}_round_coin_offsets = [_]usize{{intArray $case.System.RoundCoinOffsets}};
 
 // system: "{{zig $case.System.SourceName}}"
 const system_{{$case.Index}} = vanishing.System{
     .modules = &system_{{$case.Index}}_modules,
-    .round_coin_counts = &system_{{$case.Index}}_round_coin_counts,
-    .round_coin_offsets = &system_{{$case.Index}}_round_coin_offsets,
-    .max_round_coins = {{$case.System.MaxRoundCoins}},
-    .total_round_coins = {{$case.System.TotalRoundCoins}},
     .dynamic_module_count = {{$case.System.DynamicModuleCount}},
     .total_witness_claims = {{$case.System.TotalWitnessClaims}},
     .total_quotient_claims = {{$case.System.TotalQuotientClaims}},
@@ -175,15 +168,17 @@ const system_{{$case.Index}} = vanishing.System{
 func exprNodeLiteral(expr ExprNode) string {
 	switch expr.Kind {
 	case ExprColumnClaim:
-		return fmt.Sprintf(".{ .column_claim = %d }, // col: \"%s\"", expr.ColumnClaim, zigString(expr.ColumnSourceName))
+		return fmt.Sprintf(".{ .column_claim = %d }, // col: \"%s\"", expr.ColumnClaim, ZigString(expr.ColumnSourceName))
 	case ExprCellValue:
-		return fmt.Sprintf(".{ .cell_value = .{ .round = %d, .index = %d } }, // cell: \"%s\"", expr.Cell.Round, expr.Cell.Index, zigString(expr.Cell.SourceName))
+		return fmt.Sprintf(".{ .cell_value = .{ .round = %d, .index = %d } }, // cell: \"%s\"", expr.Cell.Round, expr.Cell.Index, ZigString(expr.Cell.SourceName))
 	case ExprCoinValue:
-		return fmt.Sprintf(".{ .coin_value = %d }, // coin: \"%s\"", expr.Coin.FlatIndex, zigString(expr.Coin.SourceName))
+		return fmt.Sprintf(".{ .coin_value = %d }, // coin: \"%s\"", expr.Coin.FlatIndex, ZigString(expr.Coin.SourceName))
 	case ExprConstant:
 		return fmt.Sprintf(".{ .constant = field.Element.init(%d) },", expr.Constant.Uint64())
 	case ExprOp:
-		return fmt.Sprintf(".{ .op = .{ .operator = .%s, .operands = &%s } },", expr.Operator, intSlice(expr.Operands))
+		return fmt.Sprintf(".{ .op = .{ .operator = .%s, .operands = &%s } },", expr.Operator, IntSlice(expr.Operands))
+	case ExprLagrangeSelector:
+		return fmt.Sprintf(".{ .lagrange_selector = %d },", expr.SelectorPosition)
 	default:
 		panic(fmt.Sprintf("unknown ExprKind %d", int(expr.Kind)))
 	}
@@ -196,7 +191,7 @@ func moduleSizeLiteral(size ModuleSize) string {
 	return fmt.Sprintf(".{ .static = %d }", size.StaticSize)
 }
 
-func intSlice(values []int) string {
+func IntSlice(values []int) string {
 	return "." + intArray(values)
 }
 
@@ -208,6 +203,6 @@ func intArray(values []int) string {
 	return "{ " + strings.Join(parts, ", ") + " }"
 }
 
-func zigString(value string) string {
+func ZigString(value string) string {
 	return strings.NewReplacer("\\", "\\\\", "\"", "\\\"").Replace(value)
 }

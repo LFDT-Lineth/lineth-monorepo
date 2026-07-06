@@ -2,8 +2,8 @@ package linea.ethapi
 
 import io.vertx.core.Vertx
 import linea.EthLogsSearcher
-import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.EthLog
+import linea.domain.toBlockParameter
 import linea.ethapi.extensions.EthLogConsumer
 import linea.ethapi.extensions.EthLogsFilterState
 import linea.ethapi.extensions.EthLogsFilterStateListener

@@ -1,5 +1,5 @@
-import { IContractSignerClient } from "@consensys/linea-shared-utils";
 import { describe, it, beforeEach } from "@jest/globals";
+import { IContractSignerClient } from "@lfdt-lineth/shared-utils";
 import { mock } from "jest-mock-extended";
 import { parseTransaction, type PublicClient, serializeSignature, type WalletClient } from "viem";
 import { privateKeyToAccount } from "viem/accounts";

@@ -59,7 +59,7 @@ import {
   SingletonMetricsService,
   ExpressApiApplication,
   ExponentialBackoffRetryService
-} from "@consensys/linea-shared-utils";
+} from "@lfdt-lineth/shared-utils";
 ```
 
 ## Development
@@ -67,13 +67,13 @@ import {
 ### Build
 
 ```bash
-pnpm --filter @consensys/linea-shared-utils build
+pnpm --filter @lfdt-lineth/shared-utils build
 ```
 
 ### Test
 
 ```bash
-pnpm --filter @consensys/linea-shared-utils test
+pnpm --filter @lfdt-lineth/shared-utils test
 ```
 
 ## License
