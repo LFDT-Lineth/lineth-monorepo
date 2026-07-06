@@ -25,8 +25,8 @@ type memoryBlob struct {
 }
 
 type inputBytes struct {
-	data []byte
-	ssz  bool
+	data  []byte
+	isSsz bool
 }
 
 // The purpose of this program is simply to generate a suitable ZkC json input
@@ -59,7 +59,7 @@ func main() {
 	// The entry point, program blob offsets and program blob sizes are taken
 	// directly from the ELF. Only the optional input bytes offset is external.
 	var blobs = extractProgramBlobs(elfFile.Progs, elfFile.Sections)
-	if inBytes.ssz {
+	if inBytes.isSsz {
 		blobs = append(blobs, sszInputBlobs(inBytesOffset, inBytes.data)...)
 	} else if len(inBytes.data) > 0 {
 		blobs = append(blobs, memoryBlob{offset: inBytesOffset, data: inBytes.data, name: "in_bytes"})
@@ -98,7 +98,7 @@ func parseInBytes(arg string) (inputBytes, error) {
 		if err != nil {
 			return inputBytes{}, fmt.Errorf("reading inBytes .ssz file: %w", err)
 		}
-		return inputBytes{data: ssz, ssz: true}, nil
+		return inputBytes{data: ssz, isSsz: true}, nil
 	}
 
 	// input ≡ non ssz file
