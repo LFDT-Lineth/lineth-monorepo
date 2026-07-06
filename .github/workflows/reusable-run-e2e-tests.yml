@@ -238,6 +238,10 @@ jobs:
               echo "${env_var}=develop" >> "$GITHUB_ENV"
             fi
           done
+          # Flush job-level coordinator vars to $GITHUB_ENV so they survive into
+          # nick-fields/retry's subprocess (which may not inherit job-level env directly).
+          echo "LINEA_COORDINATOR_IMAGE_NAME=${LINEA_COORDINATOR_IMAGE_NAME}" >> "$GITHUB_ENV"
+          echo "LINEA_COORDINATOR_JAR=${LINEA_COORDINATOR_JAR}" >> "$GITHUB_ENV"
       - name: Load linea-besu-package Docker image
         if: ${{ inputs.linea_besu_package_tag != '' }}
         shell: bash
