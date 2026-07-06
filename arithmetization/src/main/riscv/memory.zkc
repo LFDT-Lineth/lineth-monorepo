@@ -1,5 +1,4 @@
 include "utils/type.zkc"
-include "utils/compute_ops.zkc"
 
 // Represents the available Random Access Memory (RAM) for the guest program.
 // This will act as the program memory space and will contain, amongst other things,
