@@ -1,11 +1,5 @@
 package linea.web3j
 
-import com.fasterxml.jackson.core.JsonParser
-import com.fasterxml.jackson.core.JsonToken
-import com.fasterxml.jackson.databind.DeserializationContext
-import com.fasterxml.jackson.databind.JsonDeserializer
-import com.fasterxml.jackson.databind.ObjectReader
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import linea.domain.FeeHistory
 import linea.domain.uLongFromPrefixedHex
 import org.web3j.protocol.ObjectMapperFactory
@@ -14,6 +8,12 @@ import org.web3j.protocol.core.DefaultBlockParameter
 import org.web3j.protocol.core.Request
 import org.web3j.protocol.core.Response
 import org.web3j.utils.Numeric
+import tools.jackson.core.JsonParser
+import tools.jackson.core.JsonToken
+import tools.jackson.databind.DeserializationContext
+import tools.jackson.databind.ObjectReader
+import tools.jackson.databind.ValueDeserializer
+import tools.jackson.databind.annotation.JsonDeserialize
 import java.math.BigInteger
 
 class EthFeeHistoryBlobExtended : Response<EthFeeHistoryBlobExtended.FeeHistoryBlobExtended>() {
@@ -78,15 +78,16 @@ class EthFeeHistoryBlobExtended : Response<EthFeeHistoryBlobExtended.FeeHistoryB
     }
   }
 
-  class ResponseDeserializer : JsonDeserializer<FeeHistoryBlobExtended>() {
+  class ResponseDeserializer : ValueDeserializer<FeeHistoryBlobExtended>() {
     private val objectReader: ObjectReader = ObjectMapperFactory.getObjectReader()
+      .forType(FeeHistoryBlobExtended::class.java)
 
     override fun deserialize(
       jsonParser: JsonParser,
       deserializationContext: DeserializationContext,
     ): FeeHistoryBlobExtended? {
-      return if (jsonParser.currentToken != JsonToken.VALUE_NULL) {
-        objectReader.readValue(jsonParser, FeeHistoryBlobExtended::class.java)
+      return if (jsonParser.currentToken() != JsonToken.VALUE_NULL) {
+        objectReader.readValue(jsonParser)
       } else {
         null
       }
