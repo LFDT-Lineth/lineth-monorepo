@@ -29,6 +29,13 @@ class ConfigSchemaWalkerAnnotationTest {
 
     @param:ConfigSection("A documented nested section.")
     val section: NestedToml = NestedToml(),
+
+    @param:ConfigSection(
+      description = "A deprecated nested section.",
+      deprecated = true,
+      replacement = "section",
+    )
+    val deprecatedSection: NestedToml = NestedToml(),
   ) {
     data class NestedToml(
       @param:ConfigDoc("A leaf inside the section.")
@@ -78,10 +85,26 @@ class ConfigSchemaWalkerAnnotationTest {
     assertThat(section.isSection).isTrue()
     assertThat(section.annotated).isTrue()
     assertThat(section.description).isEqualTo("A documented nested section.")
+    assertThat(section.deprecated).isFalse()
+    assertThat(section.replacement).isNull()
 
     val nested = keys.byPath("section.nested-leaf")
     assertThat(nested.isSection).isFalse()
     assertThat(nested.annotated).isTrue()
     assertThat(nested.description).isEqualTo("A leaf inside the section.")
+  }
+
+  @Test
+  fun `reads deprecation metadata on a section without cascading to its leaves`() {
+    val keys = ConfigSchemaWalker.walk(SampleConfigToml::class)
+
+    val section = keys.byPath("deprecated-section")
+    assertThat(section.isSection).isTrue()
+    assertThat(section.deprecated).isTrue()
+    assertThat(section.replacement).isEqualTo("section")
+
+    // deprecation flags the section row only; nested leaves are not implicitly deprecated
+    val nested = keys.byPath("deprecated-section.nested-leaf")
+    assertThat(nested.deprecated).isFalse()
   }
 }

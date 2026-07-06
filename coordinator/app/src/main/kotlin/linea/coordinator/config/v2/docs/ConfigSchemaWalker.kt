@@ -1,8 +1,11 @@
 package linea.coordinator.config.v2.docs
 
+import com.sksamuel.hoplite.KebabCaseParamMapper
 import linea.coordinator.config.v2.toml.ConfigDoc
 import linea.coordinator.config.v2.toml.ConfigSection
 import kotlin.reflect.KClass
+import kotlin.reflect.KFunction
+import kotlin.reflect.KParameter
 import kotlin.reflect.KType
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.primaryConstructor
@@ -18,6 +21,9 @@ import kotlin.reflect.full.primaryConstructor
  * (scalars, enums, durations, URLs, `Masked`, `BlockParameter`, lists, maps, ...) is a leaf.
  *
  * Dynamic maps are documented as a single key rather than enumerating their entries.
+ *
+ * Config keys are rendered with Hoplite's [KebabCaseParamMapper] so the documented path matches
+ * how Hoplite maps property names when parsing the TOML.
  */
 object ConfigSchemaWalker {
   const val CONFIG_PACKAGE = "linea.coordinator.config.v2.toml"
@@ -58,7 +64,7 @@ object ConfigSchemaWalker {
 
     for (parameter in constructor.parameters) {
       val propertyName = parameter.name ?: continue
-      val path = prefix + camelToKebabCase(propertyName)
+      val path = prefix + kebabKey(parameter, constructor, kClass)
       val type = parameter.type
       val required = !parameter.isOptional && !type.isMarkedNullable
 
@@ -72,8 +78,8 @@ object ConfigSchemaWalker {
             default = null,
             description = sectionAnnotation?.description ?: "",
             example = null,
-            deprecated = false,
-            replacement = null,
+            deprecated = sectionAnnotation?.deprecated ?: false,
+            replacement = sectionAnnotation?.replacement.orNull(),
             isSection = true,
             annotated = sectionAnnotation != null,
             declaringClass = declaringClass,
@@ -104,6 +110,18 @@ object ConfigSchemaWalker {
         )
       }
     }
+  }
+
+  /**
+   * Renders the kebab-case config key for a parameter using Hoplite's own
+   * [KebabCaseParamMapper], so the documented key is guaranteed consistent with how Hoplite maps
+   * property names when parsing the TOML. The mapper returns candidate lookup names (it adds a
+   * trailing-digit variant such as `foo-2` alongside `foo2`); the first is the plain kebab form,
+   * which is the natural one to display.
+   */
+  private fun kebabKey(parameter: KParameter, constructor: KFunction<*>, kClass: KClass<*>): String {
+    @Suppress("UNCHECKED_CAST")
+    return KebabCaseParamMapper.map(parameter, constructor as KFunction<Any>, kClass).first()
   }
 
   /** Maps the annotation's `""` "unset" sentinel (and null) to null for the ConfigKey model. */

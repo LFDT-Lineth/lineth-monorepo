@@ -64,10 +64,27 @@ annotation class ConfigDoc(
  * )
  * ```
  *
+ * A whole section can be deprecated (e.g. when an entire feature's config table is being
+ * removed) without annotating each nested leaf:
+ *
+ * ```
+ *   @param:ConfigSection(
+ *     description = "Legacy anchoring settings.",
+ *     deprecated = true,
+ *     replacement = "message-anchoring",
+ *   )
+ *   val anchoring: LegacyAnchoringToml,
+ * ```
+ *
  * @property description Required human-readable explanation of what the section configures.
+ * @property deprecated Marks the whole section as deprecated while keeping it documented.
+ * @property replacement Optional replacement section path shown in the generated docs and
+ *   changelog; set when [deprecated] is true and a replacement exists.
  */
 @Target(AnnotationTarget.VALUE_PARAMETER)
 @Retention(AnnotationRetention.RUNTIME)
 annotation class ConfigSection(
   val description: String,
+  val deprecated: Boolean = false,
+  val replacement: String = "",
 )
