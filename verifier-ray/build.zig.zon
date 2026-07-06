@@ -6,6 +6,8 @@
     .dependencies = .{
         // shared build utilities for Zig build to R5 target
         .build_common = .{ .path = "../riscv-guests/build_common" },
+        // Linea zkVM accelerator wrappers — used by the R5 entry point (main.zig) for zkvm_exit and precompile acceleration. Only used when building for the R5 target.
+        .lineth_accelerators = .{ .path = "../riscv-guests/lineth-accelerators" },
     },
     .paths = .{
         "README.md",

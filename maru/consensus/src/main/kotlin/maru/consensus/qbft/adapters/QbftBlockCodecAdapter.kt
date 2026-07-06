@@ -8,24 +8,30 @@
  */
 package maru.consensus.qbft.adapters
 
-import maru.serialization.rlp.RLPSerializers.BeaconBlockSerializer
+import maru.core.BeaconBlock
+import maru.serialization.rlp.RLPSerDe
 import org.hyperledger.besu.consensus.qbft.core.types.QbftBlock
 import org.hyperledger.besu.consensus.qbft.core.types.QbftBlockCodec
 import org.hyperledger.besu.ethereum.rlp.RLPInput
 import org.hyperledger.besu.ethereum.rlp.RLPOutput
 
 /**
- * Adapter for QBFT block codec, this provides a way to serialize QBFT blocks
+ * Adapter for QBFT block codec, this provides a way to serialize QBFT blocks.
+ *
+ * [beaconBlockSerializer] must be the node's fork-aware serializer (from `ForkAwareBlockHashing`) so that
+ * blocks decoded from QBFT Proposal/RoundChange messages carry the fork-appropriate chain-identity hash
+ * function. Otherwise a non-proposer validator would recover a round-inclusive identity and persist the
+ * block under a different key than the proposer from QBFT_PHASE1 onward.
  */
-object QbftBlockCodecAdapter : QbftBlockCodec {
-  override fun readFrom(rlpInput: RLPInput): QbftBlock = QbftBlockAdapter(BeaconBlockSerializer.readFrom(rlpInput))
+class QbftBlockCodecAdapter(
+  private val beaconBlockSerializer: RLPSerDe<BeaconBlock>,
+) : QbftBlockCodec {
+  override fun readFrom(rlpInput: RLPInput): QbftBlock = QbftBlockAdapter(beaconBlockSerializer.readFrom(rlpInput))
 
   override fun writeTo(
     qbftBlock: QbftBlock,
     rlpOutput: RLPOutput,
   ) {
-    qbftBlock.toBeaconBlock().let {
-      BeaconBlockSerializer.writeTo(it, rlpOutput)
-    }
+    beaconBlockSerializer.writeTo(qbftBlock.toBeaconBlock(), rlpOutput)
   }
 }

@@ -130,7 +130,10 @@ async function main() {
 
     // Create AI client
     console.log("\n=== Initializing AI client ===");
-    const anthropicClient = new Anthropic({ apiKey: anthropicApiKey });
+    const anthropicClient = new Anthropic({
+      apiKey: anthropicApiKey,
+      ...(process.env.ANTHROPIC_BASE_URL ? { baseURL: process.env.ANTHROPIC_BASE_URL } : {}),
+    });
     const aiClient = new ClaudeAIClient(
       logger,
       anthropicClient,

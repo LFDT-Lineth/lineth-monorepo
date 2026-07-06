@@ -25,6 +25,7 @@ import maru.database.BeaconChain
 import maru.executionlayer.ExecutionLayerFactory.buildExecutionLayerManager
 import maru.p2p.P2PNetwork
 import maru.p2p.SealedBeaconBlockBroadcaster
+import maru.serialization.rlp.ForkAwareBlockHashing
 import maru.syncing.SyncStatusProvider
 import net.consensys.linea.metrics.MetricsFacade
 import org.hyperledger.besu.plugin.services.MetricsSystem
@@ -57,6 +58,7 @@ class QbftProtocolValidatorFactory(
   private val onBlockMined: ((SealedBeaconBlock) -> Unit)? = null,
   /** Sync status provider for registering beacon sync completion callbacks. */
   private val syncStatusProvider: SyncStatusProvider,
+  private val blockHashing: ForkAwareBlockHashing,
 ) : ProtocolFactory {
   override fun create(forkSpec: ForkSpec): Protocol {
     require(forkSpec.configuration is QbftConsensusConfig) {
@@ -104,6 +106,7 @@ class QbftProtocolValidatorFactory(
         onMessageReceived = onMessageReceived,
         onBlockMined = onBlockMined,
         syncStatusProvider = syncStatusProvider,
+        blockHashing = blockHashing,
       )
     return qbftValidatorFactory.create(forkSpec)
   }
