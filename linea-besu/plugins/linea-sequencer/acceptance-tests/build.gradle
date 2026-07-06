@@ -55,6 +55,11 @@ web3j {
 }
 
 solidity {
+  // Pinned instead of resolving "latest compatible": org.web3j.solidity fetches the full solc
+  // release list from https://raw.githubusercontent.com/LFDT-web3j/web3j-sokt/main/.../releases.json
+  // on every build (unversioned, live data), so an upstream edit to that file can break compilation
+  // at any time regardless of what's pinned here.
+  version = '0.8.30'
   resolvePackages = false
   optimizeRuns = 1
 }
