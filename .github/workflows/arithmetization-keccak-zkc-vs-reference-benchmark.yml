@@ -1,22 +1,6 @@
 name: Arithmetization zkc keccak vs riscv keccak benchmark
 
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'arithmetization/src/main/**'
-      - 'arithmetization/Makefile'
-      - 'arithmetization/src/test/scripts/keccak_zkc_vs_reference_speedup/**'
-      - '.github/workflows/arithmetization-keccak-zkc-vs-reference-benchmark.yml'
-  push:
-    branches:
-      - main
-    paths:
-      - 'arithmetization/src/main/**'
-      - 'arithmetization/Makefile'
-      - 'arithmetization/src/test/scripts/keccak_zkc_vs_reference_speedup/**'
-      - '.github/workflows/arithmetization-keccak-zkc-vs-reference-benchmark.yml'
   workflow_dispatch:
     inputs:
       zkc-ref:

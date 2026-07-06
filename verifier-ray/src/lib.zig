@@ -1,3 +1,4 @@
+pub const r5_config = @import("r5_config");
 pub const protocol = @import("protocol/root.zig");
 pub const verifier = @import("verifier.zig");
 pub const profiling = @import("profiling.zig");

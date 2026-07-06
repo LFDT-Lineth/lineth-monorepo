@@ -93,7 +93,7 @@ target/
 tmp/
 typechain/
 typechain-types/
-generated/**
+**/generated/**
 __pycache__/
 
 /besu-plugins/linea-sequencer/**/site

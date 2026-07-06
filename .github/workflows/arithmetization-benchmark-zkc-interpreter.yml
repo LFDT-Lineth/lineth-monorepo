@@ -23,20 +23,6 @@ name: Arithmetization zkc interpreter benchmark (base vs optim)
 # h, m, t, f are hard-coded to the standard Blake2b "abc" test vector.
 
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'arithmetization/**'
-      - '.github/actions/setup-arithmetization-riscv/**'
-      - '.github/workflows/arithmetization-*.yml'
-  push:
-    branches:
-     - main
-    paths:
-     - 'arithmetization/**'
-     - '.github/actions/setup-arithmetization-riscv/**'
-     - '.github/workflows/arithmetization-*.yml'
   workflow_dispatch:
     inputs:
       base_ref:

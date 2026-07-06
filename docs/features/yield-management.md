@@ -135,7 +135,7 @@ A standalone TypeScript service (`operations/native-yield/lido-governance-monito
 | ProposalFetcher | `lido-governance-monitor/src/services/` | Aggregates proposals from all sources |
 | ProposalProcessor | `lido-governance-monitor/src/services/` | AI analysis with retry logic |
 | NotificationService | `lido-governance-monitor/src/services/` | Slack alerting |
-| ClaudeAIClient | `lido-governance-monitor/src/clients/` | Anthropic Claude integration |
+| ClaudeAIClient | `lido-governance-monitor/src/clients/` | Claude integration, routed through the LiteLLM proxy (`ANTHROPIC_BASE_URL`) for cost tracking |
 | ProposalRepository | `lido-governance-monitor/src/clients/db/` | Prisma PostgreSQL persistence |
 
 ---
