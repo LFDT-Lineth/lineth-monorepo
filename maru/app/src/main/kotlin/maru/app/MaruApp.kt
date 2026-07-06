@@ -30,6 +30,7 @@ import maru.database.BeaconChain
 import maru.finalization.LineaFinalizationProvider
 import maru.metrics.MaruMetricsCategory
 import maru.p2p.P2PNetwork
+import maru.serialization.rlp.ForkAwareBlockHashing
 import maru.services.LongRunningService
 import maru.subscription.InOrderFanoutSubscriptionManager
 import maru.syncing.SyncController
@@ -65,6 +66,7 @@ class MaruApp(
   private val apiServer: ApiServer,
   private val syncControllerManager: SyncController,
   private val timerFactory: TimerFactory,
+  private val blockHashing: ForkAwareBlockHashing,
 ) : LongRunningCloseable {
   private val log: Logger = LogManager.getLogger(this.javaClass)
 
@@ -264,6 +266,7 @@ class MaruApp(
             onBlockCommitted?.invoke(sealedBlock)
           },
           syncStatusProvider = syncControllerManager,
+          blockHashing = blockHashing,
         )
       } else {
         QbftFollowerFactory(
@@ -275,6 +278,7 @@ class MaruApp(
           allowEmptyBlocks = config.allowEmptyBlocks,
           finalizationStateProvider = finalizationProvider,
           payloadValidationEnabled = config.validatorElNode?.payloadValidationEnabled ?: false,
+          blockHashing = blockHashing,
         )
       }
     val forkTransitionSubscriptionManager = InOrderFanoutSubscriptionManager<ForkSpec>()

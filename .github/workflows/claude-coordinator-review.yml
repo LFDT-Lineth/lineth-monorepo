@@ -44,8 +44,10 @@ jobs:
       - name: Run Claude Coordinator Review
         id: review
         uses: anthropics/claude-code-action@38ec876110f9fbf8b950c79f534430740c3ac009 #v1.0.101
+        env:
+          ANTHROPIC_BASE_URL: ${{ vars.LITELLM_BASE_URL }}
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          anthropic_api_key: ${{ secrets.LITELLM_KEY_CLAUDE_COORDINATOR_REVIEW }}
           claude_args: --model claude-opus-4-7
           prompt: |
             Before starting your analysis, read the file `previous-findings.txt` in the

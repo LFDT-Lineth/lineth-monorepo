@@ -20,7 +20,7 @@ fun MaruSealedBeaconBlock.toBeaconBlock(): BeaconBlock {
     this.commitSeals.map {
       it.toAttestation(
         blockNumber = maruHeader.number,
-        beaconBlockRoot = maruHeader.hash(),
+        beaconBlockRoot = maruHeader.beaconBlockIdHash(),
       )
     }
 

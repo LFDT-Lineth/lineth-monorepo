@@ -3,6 +3,7 @@ package wiop
 import (
 	"fmt"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fri"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 )
@@ -31,6 +32,18 @@ type Proof struct {
 	// DynamicSizes maps module ID to their runtime size. The module ID
 	// corresponds to the module's position in [System.Modules].
 	DynamicSizes map[int]int
+	// Commitments maps each interactive round ID to the coded Merkle commitment
+	// of that round's committed columns, as produced by the PCS compiler. It is
+	// empty for protocols that were not PCS-compiled. The verifier reloads it
+	// into [Runtime.Commitments] so [Runtime.AdvanceRound] can replay the exact
+	// Fiat-Shamir transcript (which absorbs each commitment instead of the raw
+	// oracle columns once they have been made internal).
+	Commitments map[int]field.Octuplet
+	// PCSOpeningProof is the FRI opening proof binding every claimed evaluation
+	// to the committed columns. It is a *fri.OpeningProof, held opaquely so the
+	// core wiop package does not depend on the FRI package. Nil when the protocol
+	// was not PCS-compiled.
+	PCSOpeningProof *fri.OpeningProof
 }
 
 // PublicInput carries the values of the system's registered public inputs, in
@@ -80,7 +93,16 @@ func (sys *System) Prove(assign func(rt *Runtime)) (Proof, PublicInput) {
 		Columns:      make(map[ObjectID]*ConcreteVector),
 		Cells:        make(map[ObjectID]field.Gen),
 		DynamicSizes: make(map[int]int),
+		Commitments:  make(map[int]field.Octuplet),
 	}
+
+	// Carry the PCS artifacts (per-round commitments and the FRI opening proof)
+	// produced by the PCS compiler's actions. Both are empty/nil for protocols
+	// that were not PCS-compiled.
+	for id, commitment := range rt.Commitments {
+		proof.Commitments[id] = commitment
+	}
+	proof.PCSOpeningProof = rt.PCSOpeningProof
 
 	// piIdx maps each registered public-input cell to its position in the
 	// statement. Their values are captured into the returned PublicInput, not
@@ -148,6 +170,23 @@ func (sys *System) Prove(assign func(rt *Runtime)) (Proof, PublicInput) {
 // cells. For the column it will check that their visibility is correct.
 func (sys *System) Verify(proof Proof, pub PublicInput) error {
 	rt := NewRuntime(sys) // currentRound = r0, preloads precomputed columns
+
+	// Restore the PCS artifacts before replaying the transcript: AdvanceRound
+	// absorbs each committed round's commitment (for HasCommitment rounds) from
+	// rt.Commitments, and the PCS verifier action reads the opening proof.
+	for id, commitment := range proof.Commitments {
+		rt.Commitments[id] = commitment
+	}
+	rt.PCSOpeningProof = proof.PCSOpeningProof
+
+	// Dynamic-module sizes must be known before the transcript replay:
+	// AdvanceRound feeds them into Fiat-Shamir, and a PCS-compiled protocol hides
+	// the oracle columns that would otherwise set them as a side effect of
+	// assignment. Seed them up-front; they are re-validated (power of two,
+	// completeness, consistency with any visible column) after the replay.
+	for k, v := range proof.DynamicSizes {
+		rt.dynamicSizes[k] = v
+	}
 
 	// piIdx maps each registered public-input cell to its position in pub. Their
 	// values are read from pub rather than proof, enforcing the no-overlap

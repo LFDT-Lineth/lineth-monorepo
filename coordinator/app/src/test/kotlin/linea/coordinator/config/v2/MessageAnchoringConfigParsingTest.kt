@@ -44,6 +44,7 @@ class MessageAnchoringConfigParsingTest {
       polling-timeout = "PT50S"
       eth-logs-search-success-backoff-delay = "PT0.1S"
       eth-logs-search-block-chunk-size = 123
+      eth-logs-search-max-block-range = 5000
 
       [message-anchoring.gas]
       max-fee-per-gas-cap = 100000000000
@@ -81,6 +82,7 @@ class MessageAnchoringConfigParsingTest {
           pollingTimeout = 50.seconds,
           ethLogsSearchSuccessBackoffDelay = 100.milliseconds,
           ethLogsSearchBlockChunkSize = 123u,
+          ethLogsSearchMaxBlockRange = 5000u,
         ),
         l1RequestRetries =
         RequestRetriesToml(

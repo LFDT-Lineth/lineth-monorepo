@@ -37,6 +37,8 @@
 - *(prover)* Bit-decompose limbs by absolute row, not compact position (#3464)
 - *(prover)* Filter accumulator-summary state-summary inclusions (#3465)
 - *(prover)* Reserve a padding row in the state-manager modules (#3470)
+- *(coordinator)* Bound eth_getLogs queries to provider block-range limits (#3473)
+- *(coordinator)* Pretty-print startup config logs (#3203)
 
 ### 🚜 Refactor
 

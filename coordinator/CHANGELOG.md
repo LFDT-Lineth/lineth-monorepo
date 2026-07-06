@@ -1,5 +1,10 @@
 ## [unreleased]
 
+### 🐛 Bug Fixes
+
+- *(coordinator)* Pretty-print startup config logs (#3203)
+## [0.2.0] - 2026-07-03
+
 ### 🚀 Features
 
 - *(coordinator)* Add config documentation annotations (#3463)
@@ -13,6 +18,7 @@
 - *(coordinator)* Drop insecure FileWriter temp-file fallback (CodeQL 21207) (#3413)
 - *(coordinator)* Fixed a flacky test by closing the ftxInvalidityProofService in the ForcedTransactionsApp (#3438)
 - *(coordinator)* Forced transactions concurrency update (#3444)
+- *(coordinator)* Bound eth_getLogs queries to provider block-range limits (#3473)
 
 ### 🚜 Refactor
 
