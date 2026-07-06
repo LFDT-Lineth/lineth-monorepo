@@ -3,7 +3,7 @@ package wiop
 import (
 	"fmt"
 
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 )
 
 // Table is an ordered group of same-module column views with an optional row
@@ -129,7 +129,7 @@ func (tr *LookupQuery) Round() *Round {
 
 // Check implements [Query]. Dispatches to [checkPermutation] or
 // [checkInclusion] depending on [LookupQuery.Kind].
-func (tr *LookupQuery) Check(rt Runtime) error {
+func (tr *LookupQuery) Check(rt *Runtime) error {
 	return tr.checkInclusion(rt)
 }
 
@@ -148,7 +148,7 @@ func (tr *LookupQuery) Check(rt Runtime) error {
 // rows, the first padding row (the anchor) is probed once: if selected and
 // absent from B, the check fails immediately; if present, every other selected
 // padding row is also satisfied.
-func (tr *LookupQuery) checkInclusion(rt Runtime) error {
+func (tr *LookupQuery) checkInclusion(rt *Runtime) error {
 	alpha := field.RandomElemExt()
 	bSet := make(map[field.Ext]struct{})
 	for _, tab := range tr.B {
@@ -164,7 +164,7 @@ func (tr *LookupQuery) checkInclusion(rt Runtime) error {
 
 // inclusionBuildSet adds the hashes of all selected rows of tab to bSet.
 // Padding rows are handled with a single anchor probe when applicable.
-func inclusionBuildSet(bSet map[field.Ext]struct{}, alpha field.Gen, rt Runtime, tab Table) {
+func inclusionBuildSet(bSet map[field.Ext]struct{}, alpha field.Gen, rt *Runtime, tab Table) {
 	n := tab.Module().RuntimeSize(rt)
 	m := tab.Module()
 
@@ -212,7 +212,7 @@ func inclusionBuildSet(bSet map[field.Ext]struct{}, alpha field.Gen, rt Runtime,
 
 // inclusionCheckSet verifies that all selected rows of tab are present in bSet.
 // Padding rows are checked with a single anchor probe when applicable.
-func inclusionCheckSet(bSet map[field.Ext]struct{}, alpha field.Gen, rt Runtime, tab Table, path string) error {
+func inclusionCheckSet(bSet map[field.Ext]struct{}, alpha field.Gen, rt *Runtime, tab Table, path string) error {
 	n := tab.Module().RuntimeSize(rt)
 	m := tab.Module()
 
@@ -277,7 +277,7 @@ func inclusionCheckSet(bSet map[field.Ext]struct{}, alpha field.Gen, rt Runtime,
 // tableRowHash computes a Horner linear combination of all column values at
 // logical row idx, using alpha as the mixing scalar. Returns the raw [field.Ext]
 // value for use as a map key.
-func tableRowHash(alpha field.Gen, rt Runtime, cols []*ColumnView, idx, n int) field.Ext {
+func tableRowHash(alpha field.Gen, rt *Runtime, cols []*ColumnView, idx, n int) field.Ext {
 	var acc field.Gen
 	for _, cv := range cols {
 		acc = acc.Mul(alpha).Add(tableElemAt(rt, cv, idx, n))
@@ -288,7 +288,7 @@ func tableRowHash(alpha field.Gen, rt Runtime, cols []*ColumnView, idx, n int) f
 // tableElemAt returns the field element at logical row idx in cv's concrete
 // assignment, applying the cyclic shift and the module's padding semantics.
 // n is the module size.
-func tableElemAt(rt Runtime, cv *ColumnView, idx, n int) field.Gen {
+func tableElemAt(rt *Runtime, cv *ColumnView, idx, n int) field.Gen {
 	phys := ((idx+cv.ShiftingOffset)%n + n) % n
 	return rt.GetColumnAssignment(cv.Column).ElementAtN(cv.Column.Module.Padding, n, phys)
 }

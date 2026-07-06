@@ -41,7 +41,6 @@ import maru.consensus.ForkSpec
 import maru.consensus.ForksSchedule
 import maru.consensus.QbftConsensusConfig
 import maru.consensus.state.FinalizationProvider
-import maru.core.SealedBeaconBlock
 import maru.core.Validator
 import maru.crypto.SecpCrypto
 import maru.database.BeaconChain
@@ -51,7 +50,7 @@ import maru.p2p.P2PNetwork
 import maru.p2p.P2PNetworkImpl
 import maru.p2p.fork.ForkPeeringManager
 import maru.p2p.messages.StatusManager
-import maru.serialization.SerDe
+import maru.serialization.rlp.ForkAwareBlockHashing
 import maru.services.NoOpLongRunningService
 import net.consensys.linea.metrics.MetricsFacade
 import java.net.URI
@@ -77,7 +76,19 @@ class MaruFactory(
    * Increase for multi-validator tests where 8+ JVM processes compete for CPU
    * and consensus messaging can exceed the default 1 s window.
    */
-  private val roundExpiry: kotlin.time.Duration? = null,
+  private val roundExpiry: Duration? = null,
+  /**
+   * CL fork applied to the QBFT [ForkSpec]s built by [buildForkSchedule]. Defaults to
+   * [ClFork.QBFT_PHASE0]. The pre-TTD [DifficultyAwareQbftConfig]
+   * fork always stays [ClFork.QBFT_PHASE0]. Ignored when [qbftPhase1ActivationTimestamp] is set.
+   */
+  private val clFork: ClFork = ClFork.QBFT_PHASE0,
+  /**
+   * When set (and no EL fork timestamps are configured), [buildForkSchedule] produces a schedule that starts
+   * on [ClFork.QBFT_PHASE0] and switches to [ClFork.QBFT_PHASE1] at this timestamp, letting a running network
+   * live-upgrade mid-test instead of being pinned to a single CL fork for its whole lifetime.
+   */
+  private val qbftPhase1ActivationTimestamp: ULong? = null,
 ) {
   init {
     // If one of pragueTimestamp, cancunTimestamp, shanghaiTimestamp is defined and some other is not, throw
@@ -171,7 +182,7 @@ class MaruFactory(
             blockTimeSeconds = 1u,
             configuration = QbftConsensusConfig(
               validatorSet = setOf(Validator(validatorAddress.decodeHex())),
-              fork = ChainFork(ClFork.QBFT_PHASE0, ElFork.Shanghai),
+              fork = ChainFork(clFork, ElFork.Shanghai),
             ),
           ),
           ForkSpec(
@@ -179,7 +190,7 @@ class MaruFactory(
             blockTimeSeconds = 1u,
             configuration = QbftConsensusConfig(
               validatorSet = setOf(Validator(validatorAddress.decodeHex())),
-              fork = ChainFork(ClFork.QBFT_PHASE0, ElFork.Cancun),
+              fork = ChainFork(clFork, ElFork.Cancun),
             ),
           ),
           ForkSpec(
@@ -187,7 +198,29 @@ class MaruFactory(
             blockTimeSeconds = 1u,
             configuration = QbftConsensusConfig(
               validatorSet = validatorSet,
+              fork = ChainFork(clFork, ElFork.Prague),
+            ),
+          ),
+        ),
+      )
+    } else if (qbftPhase1ActivationTimestamp != null) {
+      ForksSchedule(
+        1337u,
+        setOf(
+          ForkSpec(
+            timestampSeconds = 0UL,
+            blockTimeSeconds = 1u,
+            configuration = QbftConsensusConfig(
+              validatorSet = validatorSet,
               fork = ChainFork(ClFork.QBFT_PHASE0, ElFork.Prague),
+            ),
+          ),
+          ForkSpec(
+            timestampSeconds = qbftPhase1ActivationTimestamp,
+            blockTimeSeconds = 1u,
+            configuration = QbftConsensusConfig(
+              validatorSet = validatorSet,
+              fork = ChainFork(ClFork.QBFT_PHASE1, ElFork.Prague),
             ),
           ),
         ),
@@ -201,7 +234,7 @@ class MaruFactory(
             blockTimeSeconds = 1u,
             configuration = QbftConsensusConfig(
               validatorSet = validatorSet,
-              fork = ChainFork(ClFork.QBFT_PHASE0, ElFork.Prague),
+              fork = ChainFork(clFork, ElFork.Prague),
             ),
           ),
         ),
@@ -367,7 +400,7 @@ class MaruFactory(
       ByteArray,
       P2PConfig,
       UInt,
-      SerDe<SealedBeaconBlock>,
+      ForkAwareBlockHashing,
       MetricsFacade,
       BesuMetricsSystem,
       StatusManager,
@@ -424,7 +457,12 @@ class MaruFactory(
       }
     val discovery =
       if (discoveryPort != null) {
-        P2PConfig.Discovery(refreshInterval = 1.seconds, port = discoveryPort, bootnodes = listOfNotNull(bootnode))
+        P2PConfig.Discovery(
+          refreshInterval = 1.seconds,
+          port = discoveryPort,
+          bootnodes = listOfNotNull(bootnode),
+          retryTimeout = 500.milliseconds, // fast recovery on localhost
+        )
       } else {
         null
       }
@@ -478,7 +516,7 @@ class MaruFactory(
       ByteArray,
       P2PConfig,
       UInt,
-      SerDe<SealedBeaconBlock>,
+      ForkAwareBlockHashing,
       MetricsFacade,
       BesuMetricsSystem,
       StatusManager,
@@ -551,7 +589,7 @@ class MaruFactory(
       ByteArray,
       P2PConfig,
       UInt,
-      SerDe<SealedBeaconBlock>,
+      ForkAwareBlockHashing,
       MetricsFacade,
       BesuMetricsSystem,
       StatusManager,
@@ -619,7 +657,7 @@ class MaruFactory(
       ByteArray,
       P2PConfig,
       UInt,
-      SerDe<SealedBeaconBlock>,
+      ForkAwareBlockHashing,
       MetricsFacade,
       BesuMetricsSystem,
       StatusManager,

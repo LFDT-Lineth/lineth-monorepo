@@ -5,18 +5,14 @@
  * RPC_URL=https://0xrpc.io/hoodi \
  * PRIVATE_KEY=0xabc123... \
  * YIELD_MANAGER_ADDRESS=0x... \
- * pnpm --filter @consensys/linea-native-yield-automation-service exec tsx scripts/test-yield-manager-contract-client.ts
+ * pnpm --filter @lfdt-lineth/native-yield-automation-service exec tsx scripts/test-yield-manager-contract-client.ts
  *
  * Optional flags:
  * REBALANCE_TOLERANCE_AMOUNT_WEI=1000000000000000000 \
  * MIN_WITHDRAWAL_THRESHOLD_ETH=0 \
  */
 
-import {
-  ViemBlockchainClientAdapter,
-  ViemWalletSignerClientAdapter,
-  WinstonLogger,
-} from "@consensys/linea-shared-utils";
+import { ViemBlockchainClientAdapter, ViemWalletSignerClientAdapter, WinstonLogger } from "@lfdt-lineth/shared-utils";
 import { Address, Hex } from "viem";
 import { hoodi } from "viem/chains";
 

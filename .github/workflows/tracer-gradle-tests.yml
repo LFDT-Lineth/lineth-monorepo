@@ -26,7 +26,7 @@ jobs:
     # if: github.event.pull_request.draft == false && github.base_ref != 'main'
     # if: ${{ github.ref != 'refs/heads/main' }}
     if: ${{ github.event.pull_request.draft == false }}
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     steps:
       - name: Show metadata
         run: |
@@ -35,7 +35,7 @@ jobs:
           echo "github.ref: ${{ github.ref }}"
 
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           submodules: false
 
@@ -77,10 +77,10 @@ jobs:
     # if: ${{ github.ref != 'refs/heads/main' }}
     if: ${{ github.event.pull_request.draft == false }}
     needs: [ build ]
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-xxl
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           submodules: false
 
@@ -116,3 +116,4 @@ jobs:
         with:
           name: jacoco-fast-replay-tests-exec-file
           path: tracer/arithmetization/build/jacoco/fastReplayTests.exec
+

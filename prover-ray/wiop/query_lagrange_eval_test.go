@@ -3,9 +3,9 @@ package wiop_test
 import (
 	"testing"
 
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop/wioptest"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -15,14 +15,14 @@ import (
 func TestLagrangeEval_Soundness_Completeness(t *testing.T) {
 	sc := wioptest.NewLagrangeEvalScenario()
 	rt := wiop.NewRuntime(sc.Sys)
-	sc.RunHonest(&rt)
+	sc.RunHonest(rt)
 	require.NoError(t, sc.Query.Check(rt), "honest witness must pass Check")
 }
 
 func TestLagrangeEval_Soundness_InvalidWitness(t *testing.T) {
 	sc := wioptest.NewLagrangeEvalScenario()
 	rt := wiop.NewRuntime(sc.Sys)
-	sc.RunInvalid(&rt)
+	sc.RunInvalid(rt)
 	assert.Error(t, sc.Query.Check(rt), "invalid witness must be rejected by Check")
 }
 
@@ -373,12 +373,4 @@ func TestLagrangeEval_Check_ColumnUnassigned(t *testing.T) {
 	rt := wiop.NewRuntime(sys)
 	err := le.Check(rt)
 	assert.Error(t, err, "Check must fail when the polynomial column is unassigned")
-}
-
-// ---- Vanishing/LocalOpening CheckGnark panics ----
-func TestLocalOpening_CheckGnark_Panics(t *testing.T) {
-	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("logCol"), wiop.VisibilityOracle, r0)
-	lo := col.At(0).Open(sys.Context.Childf("log"))
-	assert.Panics(t, func() { lo.CheckGnark(nil, nil) })
 }

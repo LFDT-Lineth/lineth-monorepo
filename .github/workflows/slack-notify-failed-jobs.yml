@@ -44,7 +44,7 @@ on:
 jobs:
   ai-analysis:
     if: ${{ inputs.enable_ai_analysis }}
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     timeout-minutes: 15
     permissions:
       contents: read
@@ -56,7 +56,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 1
 
@@ -85,7 +85,7 @@ jobs:
           tail -c 500000 /tmp/failed-job-logs-raw.txt > /tmp/failed-job-logs.txt
 
       - name: Download Docker logs artifact
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         continue-on-error: true
         with:
           name: ${{ inputs.docker_logs_artifact_name }}
@@ -94,6 +94,8 @@ jobs:
       - name: Run Claude AI analysis
         id: claude
         uses: anthropics/claude-code-base-action@3080e38742e9e6aab0ecf8713353dc072acca48c # main@2026-04-28 (sync from claude-code-action base-action@11a9dad)
+        env:
+          ANTHROPIC_BASE_URL: ${{ vars.LITELLM_BASE_URL }}
         with:
           anthropic_api_key: ${{ secrets.anthropic_api_key }}
           settings: '{"permissions":{"allow":["Bash(*)","Read(*)","Edit(./e2e-failure-analysis.md)","Edit(./e2e-failure-summary.txt)"],"deny":[]}}'
@@ -213,7 +215,7 @@ jobs:
       - name: Upload analysis artifact
         id: upload_artifact
         if: ${{ always() }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         continue-on-error: true
         with:
           name: ai-failure-analysis
@@ -222,7 +224,7 @@ jobs:
 
       - name: Upload Claude execution log
         if: ${{ always() && steps.claude.outputs.execution_file != '' }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         continue-on-error: true
         with:
           name: ai-execution-log
@@ -262,7 +264,7 @@ jobs:
     # always() so Slack still runs when ai-analysis is skipped, fails, or succeeds; needs still gates ordering.
     needs: [ai-analysis]
     if: always()
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     steps:
       - name: Compute context values
         id: ctx
@@ -470,7 +472,7 @@ jobs:
 
       - name: Send Slack Notification
         if: ${{ steps.extract_jobs.outputs.has_results == 'true' }}
-        uses: slackapi/slack-github-action@af78098f536edbc4de71162a307590698245be95 #v3.0.1
+        uses: slackapi/slack-github-action@45a88b9581bfab2566dc881e2cd66d334e621e2c #v3.0.3
         with:
           method: chat.postMessage
           token: ${{ secrets.slack_bot_token }}
@@ -483,7 +485,7 @@ jobs:
                   type: plain_text
                   text: ":x: ${{ inputs.title }}"
                   emoji: true
-              
+
               - type: rich_text
                 elements:
                   - type: rich_text_section
@@ -494,7 +496,7 @@ jobs:
                           bold: true
                       - type: text
                         text: "${{ steps.ctx.outputs.repo }}"
-              
+
               - type: rich_text
                 elements:
                   - type: rich_text_section
@@ -524,3 +526,4 @@ jobs:
               ${{ steps.ai_block.outputs.divider_block }}
               ${{ steps.ai_block.outputs.analysis_block }}
               ${{ steps.ai_block.outputs.link_block }}
+

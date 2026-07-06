@@ -1,6 +1,7 @@
-pub const proof = @import("proof.zig");
-pub const runtime = @import("runtime.zig");
+pub const r5_config = @import("r5_config");
+pub const protocol = @import("protocol/root.zig");
 pub const verifier = @import("verifier.zig");
+pub const profiling = @import("profiling.zig");
 
 pub const field = struct {
     pub const koalabear = @import("field/koalabear.zig");
@@ -9,35 +10,17 @@ pub const field = struct {
 };
 
 pub const crypto = struct {
+    pub const commitment = @import("crypto/commitment.zig");
     pub const fiat_shamir = @import("crypto/fiat_shamir.zig");
     pub const poseidon2 = @import("crypto/poseidon2.zig");
 };
 
-pub const pcs = struct {
-    pub const lagrange = @import("pcs/lagrange.zig");
-    pub const polynomial = @import("pcs/polynomial.zig");
+pub const polynomial = struct {
+    pub const lagrange = @import("polynomial/lagrange.zig");
+    pub const canonical = @import("polynomial/canonical.zig");
 };
 
-pub const precompiles = struct {
-    pub const interface = @import("precompiles/interface.zig");
-    pub const native = @import("precompiles/native.zig");
-    pub const riscv = @import("precompiles/riscv.zig");
+pub const query = struct {
+    pub const vanishing = @import("query/vanishing.zig");
+    pub const logderivativesum = @import("query/logderivativesum.zig");
 };
-
-pub const vortex = struct {
-    pub const reed_solomon = @import("vortex/reed_solomon.zig");
-    pub const ringsis = @import("vortex/ringsis.zig");
-    pub const smt = @import("vortex/smt.zig");
-    pub const verifier = @import("vortex/verifier.zig");
-};
-
-pub const generated = struct {
-    pub const stub = @import("generated/stub.zig");
-};
-
-pub const Proof = proof.Proof;
-pub const VerifyError = verifier.VerifyError;
-
-pub fn verify(p: Proof) VerifyError!void {
-    return verifier.verify(p);
-}

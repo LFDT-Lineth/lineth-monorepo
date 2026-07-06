@@ -10,7 +10,7 @@ import { useVerifierStore } from "@/stores/verifier";
 
 import styles from "./results-section.module.scss";
 
-import type { ContractVerificationResult, VerificationStatus } from "@consensys/linea-contract-integrity-verifier";
+import type { ContractVerificationResult, VerificationStatus } from "@lfdt-lineth/contract-integrity-verifier";
 
 // ============================================================================
 // Info Icon with Tooltip

@@ -9,12 +9,12 @@ on:
 
 jobs:
   list-profiles:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     outputs:
       profile-files: ${{ steps.list-profiles.outputs.files }}
     steps:
       - name: checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Split and list profiles
         id: list-profiles
@@ -26,7 +26,7 @@ jobs:
 
   test-profile:
     timeout-minutes: 4
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     continue-on-error: true
     needs: [ list-profiles ]
     strategy:
@@ -38,10 +38,10 @@ jobs:
       DOCKER_IMAGE: ${{ inputs.dockerimage }}
     steps:
       - name: Check repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Download local docker image artifacts
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: linea-besu-package
           path: ${{ github.workspace }}/tmp/artifacts
@@ -67,3 +67,4 @@ jobs:
 
       - name: Stop container
         run: docker stop ${{ env.CONTAINER_NAME }}
+

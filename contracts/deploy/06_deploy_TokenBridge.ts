@@ -9,6 +9,7 @@ import {
 import {
   generateRoleAssignments,
   getAddressesFromRegistryOrEnv,
+  getBooleanEnvVarOrDefault,
   getEnvVarOrDefault,
   requireAddressFromRegistryOrEnv,
   tryVerifyContract,
@@ -32,6 +33,7 @@ const upgrades = await createUpgrades(hre, hardhatConnection);
 const func = withSignerUiSession("06_deploy_TokenBridge.ts", async function () {
   const signer = await getUiSigner();
   const contractName = "TokenBridge";
+  const deployTokenBridgeOnL1 = getBooleanEnvVarOrDefault("DEPLOY_TOKEN_BRIDGE_ON_L1", false);
 
   const l2MessageServiceAddress = requireAddressFromRegistryOrEnv(
     networkName,
@@ -53,7 +55,7 @@ const func = withSignerUiSession("06_deploy_TokenBridge.ts", async function () {
   let deployingChainMessageService = l2MessageServiceAddress;
   let reservedAddresses: string[];
 
-  if (process.env.DEPLOY_TOKEN_BRIDGE_ON_L1 === "true") {
+  if (deployTokenBridgeOnL1) {
     securityCouncilAddress = requireAddressFromRegistryOrEnv(networkName, "L1_SECURITY_COUNCIL", "L1_SECURITY_COUNCIL");
     console.log(
       `DEPLOY_TOKEN_BRIDGE_ON_L1=${process.env.DEPLOY_TOKEN_BRIDGE_ON_L1}. Deploying TokenBridge on L1, using L1_RESERVED_TOKEN_ADDRESSES from registry or env`,
@@ -116,11 +118,12 @@ const func = withSignerUiSession("06_deploy_TokenBridge.ts", async function () {
 
   const tokenBridgeAddress = await tokenBridge.getAddress();
 
-  if (process.env.DEPLOY_TOKEN_BRIDGE_ON_L1 === "true") {
+  if (deployTokenBridgeOnL1) {
     console.log(`L1 TokenBridge deployed on ${networkName}, at address: ${tokenBridgeAddress}`);
   } else {
     console.log(`L2 TokenBridge deployed on ${networkName}, at address: ${tokenBridgeAddress}`);
   }
   await tryVerifyContract(tokenBridgeAddress);
 });
+
 export default deployScript(func, { tags: ["TokenBridge"] });

@@ -19,7 +19,7 @@ commonsIo = { group = "commons-io", name = "commons-io", version.ref = "commonsI
 
 [versions]
 # Build
-kotlin = "2.3.0"
+kotlin = "2.4.0"
 
 # Testing
 assertj = "3.27.3"

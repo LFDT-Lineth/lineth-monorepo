@@ -3,8 +3,8 @@ package lookuptologderivsum
 import (
 	"fmt"
 
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
 // mAssignmentTask is the prover-side task that fills the multiplicity column
@@ -38,7 +38,7 @@ type mAssignmentTask struct {
 }
 
 // Run implements [wiop.ProverAction].
-func (t *mAssignmentTask) Run(rt wiop.Runtime) {
+func (t *mAssignmentTask) Run(rt *wiop.Runtime) {
 	n := t.m.Module.RuntimeSize(rt)
 
 	// Hashing scalar — fresh per run, independent of the symbolic α used in
@@ -164,7 +164,7 @@ func rowHash(alpha field.Ext, head field.Ext, usePrepend bool, cols [][]field.Ex
 
 // evaluateVecsAsExt evaluates each column view as a length-n extension-field
 // vector, lifting base-field columns when necessary.
-func evaluateVecsAsExt(rt wiop.Runtime, cvs []*wiop.ColumnView, n int) [][]field.Ext {
+func evaluateVecsAsExt(rt *wiop.Runtime, cvs []*wiop.ColumnView, n int) [][]field.Ext {
 	out := make([][]field.Ext, len(cvs))
 	for i, cv := range cvs {
 		out[i] = evaluateColumnViewAsExt(rt, cv, n)
@@ -175,7 +175,7 @@ func evaluateVecsAsExt(rt wiop.Runtime, cvs []*wiop.ColumnView, n int) [][]field
 // evaluateColumnViewAsExt is like cv.EvaluateVector but always returns a
 // length-n []field.Ext. Base-field columns are lifted; extension columns
 // are copied as-is.
-func evaluateColumnViewAsExt(rt wiop.Runtime, cv *wiop.ColumnView, n int) []field.Ext {
+func evaluateColumnViewAsExt(rt *wiop.Runtime, cv *wiop.ColumnView, n int) []field.Ext {
 	cvData := cv.EvaluateVector(rt)
 	out := make([]field.Ext, n)
 	plain := cvData.Plain

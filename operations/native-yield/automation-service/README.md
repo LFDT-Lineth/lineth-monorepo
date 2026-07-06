@@ -38,19 +38,19 @@ See the [configuration schema file](./src/application/main/config/config.schema.
 
 1. Create `.env` as per `.env.sample` and the [configuration schema](./src/application/main/config/config.schema.ts)
 
-2. `pnpm --filter @consensys/linea-native-yield-automation-service exec tsx run.ts`
+2. `pnpm --filter @lfdt-lineth/native-yield-automation-service exec tsx run.ts`
 
 ### Build
 
 ```bash
-# Dependency on pnpm --filter @consensys/linea-shared-utils build
-pnpm --filter @consensys/linea-native-yield-automation-service build
+# Dependency on pnpm --filter @lfdt-lineth/shared-utils build
+pnpm --filter @lfdt-lineth/native-yield-automation-service build
 ```
 
 ### Unit tests
 
 ```bash
-pnpm --filter @consensys/linea-native-yield-automation-service test
+pnpm --filter @lfdt-lineth/native-yield-automation-service test
 ```
 
 ### Manual integration scripts
@@ -70,7 +70,7 @@ Example:
 RPC_URL=https://0xrpc.io/hoodi \
 PRIVATE_KEY=0xabc123... \
 YIELD_MANAGER_ADDRESS=0x... \
-pnpm --filter @consensys/linea-native-yield-automation-service exec tsx scripts/test-yield-manager-contract-client.ts
+pnpm --filter @lfdt-lineth/native-yield-automation-service exec tsx scripts/test-yield-manager-contract-client.ts
 ```
 
 ## License

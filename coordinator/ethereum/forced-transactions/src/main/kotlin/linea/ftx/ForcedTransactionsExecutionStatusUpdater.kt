@@ -11,6 +11,7 @@ import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.Queue
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Clock
 import kotlin.time.Duration
 
@@ -38,8 +39,7 @@ internal class ForcedTransactionsStatusUpdater(
   private val log: Logger = LogManager.getLogger(ForcedTransactionsStatusUpdater::class.java),
 ) : ForcedTransactionsProvider {
 
-  @Volatile
-  private var nextExpectedFtxNumber: ULong = lastProcessedFtxNumber + 1UL
+  private val nextExpectedFtxNumber: AtomicReference<ULong> = AtomicReference(lastProcessedFtxNumber + 1UL)
 
   override fun getUnprocessedForcedTransactions(): SafeFuture<List<ForcedTransactionAddedEvent>> {
     return filterOutAlreadyProcessed(ftxQueue.toList())
@@ -88,14 +88,14 @@ internal class ForcedTransactionsStatusUpdater(
       ftxs.map { it.event.forcedTransactionNumber },
     )
 
+    var currentExpected = nextExpectedFtxNumber.get()
     // Sort by ftxNumber and only consider transactions >= expectedNum
     val sortedFtxs = ftxs
-      .filter { it.event.forcedTransactionNumber >= nextExpectedFtxNumber }
+      .filter { it.event.forcedTransactionNumber >= currentExpected }
       .sortedBy { it.event.forcedTransactionNumber }
 
     // Find consecutive transactions starting from expectedNum (no gaps)
     val consecutiveFtxs = mutableListOf<ForcedTransactionWithTimestamp>()
-    var currentExpected = nextExpectedFtxNumber
     for (ftx in sortedFtxs) {
       if (ftx.event.forcedTransactionNumber == currentExpected) {
         consecutiveFtxs.add(ftx)
@@ -150,16 +150,16 @@ internal class ForcedTransactionsStatusUpdater(
         addFtxToConflation(dbRecord)
         // Remove from queue by matching the event's ftx number
         ftxQueue.removeIf { it.event.forcedTransactionNumber == ftx.forcedTransactionNumber }
-        nextExpectedFtxNumber = ftx.forcedTransactionNumber + 1uL
+        nextExpectedFtxNumber.set(ftx.forcedTransactionNumber + 1uL)
         log.debug(
-          "FTX #{} already processed, removed from queue. Next expected: {}",
+          "ftx={} already processed, removed from queue. Next expected: {}",
           ftx.forcedTransactionNumber,
           nextExpectedFtxNumber,
         )
         true
       } else {
         log.debug(
-          "FTX #{} not yet processed, stopping sequential check",
+          "ftx={} not yet processed, stopping sequential check",
           ftx.forcedTransactionNumber,
         )
         false
@@ -205,9 +205,10 @@ internal class ForcedTransactionsStatusUpdater(
         if (ftxStatus == null) {
           SafeFuture.completedFuture(null)
         } else {
-          if (ftxStatus.inclusionResult == ForcedTransactionInclusionResult.Phylax) {
+          if (ftxStatus.inclusionResult == ForcedTransactionInclusionResult.ChainSecurityRuleViolation) {
             log.warn(
-              "FTX rejected by Phylax: potential security incident, please notify Ops/Support immediately." +
+              "FTX rejected due to ChainSecurityRuleViolation: " +
+                "potential security incident, please notify Ops/Support immediately." +
                 " Stopping conflation. sequencerResult={}",
               ftxStatus,
             )

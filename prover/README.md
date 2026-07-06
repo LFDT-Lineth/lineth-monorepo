@@ -1,4 +1,4 @@
-# linea-monorepo/prover
+# lineth-monorepo/prover
 
 This directory contains the implementation of the prover of Linea. As part of it,
 it contains an implementation of the Vortex polynomial commitment, of the

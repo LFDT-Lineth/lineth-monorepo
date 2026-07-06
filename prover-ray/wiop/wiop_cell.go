@@ -1,5 +1,7 @@
 package wiop
 
+import "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+
 // Cell is a scalar-valued symbolic object representing a single field element
 // that the prover assigns at runtime. It is the scalar counterpart to [Column]:
 // where a column is a vector bound to a [Module], a cell stands alone and
@@ -21,6 +23,17 @@ type Cell struct {
 	// round is the owning Round. Set once at construction, never nil for a
 	// well-formed Cell.
 	round *Round
+	// Assigner, when non-nil, makes this a lazily-assigned cell: instead of the
+	// prover writing the value through [Runtime.AssignCell], the value is
+	// computed on demand by calling Assigner with the runtime. The runtime
+	// resolves it the first time the cell is read ([Runtime.GetCellValue]) or,
+	// at the latest, when its round is folded into the transcript
+	// ([Runtime.AdvanceRound]). The closure must only depend on data available
+	// in the cell's own round (e.g. a column assignment of that round).
+	//
+	// An explicit assignment always wins: if the cell is already assigned when
+	// the runtime would resolve it, Assigner is not called.
+	Assigner func(*Runtime) field.Gen
 }
 
 // Round returns the round in which this cell is committed. It is always
@@ -63,12 +76,12 @@ func (c *Cell) IsSized() bool {
 // EvaluateVector implements [Expression]. Panics unconditionally: a cell is
 // scalar and produces no vector. Check IsMultiValued() before calling
 // EvaluateVector.
-func (c *Cell) EvaluateVector(_ Runtime) ConcreteVector {
+func (c *Cell) EvaluateVector(_ *Runtime) ConcreteVector {
 	panic("wiop: EvaluateVector() cannot be called on a FieldPromise")
 }
 
 // EvaluateSingle implements [Expression].
-func (c *Cell) EvaluateSingle(rt Runtime) ConcreteField {
+func (c *Cell) EvaluateSingle(rt *Runtime) ConcreteField {
 	return ConcreteField{Value: rt.GetCellValue(c), promise: c}
 }
 

@@ -63,30 +63,19 @@ pub const Element = extern struct {
     }
 
     pub fn add(self: Element, rhs: Element) Element {
-        const sum = @as(u64, self.value) + @as(u64, rhs.value);
-        if (sum >= modulus) return .{ .value = @as(u32, @intCast(sum - modulus)) };
-        return .{ .value = @as(u32, @intCast(sum)) };
+        return .{ .value = (self.value + rhs.value) % modulus };
     }
 
     pub fn sub(self: Element, rhs: Element) Element {
-        if (self.value >= rhs.value) {
-            return .{ .value = self.value - rhs.value };
-        }
-        return .{ .value = modulus - (rhs.value - self.value) };
+        return .{ .value = (self.value + modulus - rhs.value) % modulus };
     }
 
     pub fn neg(self: Element) Element {
-        if (self.isZero()) return self;
-        return .{ .value = modulus - self.value };
+        return .{ .value = (modulus - self.value) % modulus };
     }
 
     pub fn double(self: Element) Element {
         return self.add(self);
-    }
-
-    pub fn halve(self: Element) Element {
-        if ((self.value & 1) == 0) return .{ .value = self.value >> 1 };
-        return .{ .value = @as(u32, @intCast((@as(u64, self.value) + modulus) >> 1)) };
     }
 
     pub fn mul(self: Element, rhs: Element) Element {
@@ -110,33 +99,49 @@ pub const Element = extern struct {
         return result;
     }
 
+    pub fn powComptime(self: Element, comptime exponent: usize) Element {
+        var result = Element.one();
+        var b = self;
+        comptime var exp = exponent;
+        inline while (exp != 0) : (exp >>= 1) {
+            if ((exp & 1) == 1) result = result.mul(b);
+            b = b.square();
+        }
+        return result;
+    }
+
     pub fn inverse(self: Element) Element {
         if (self.isZero()) unreachable;
-        return self.pow(modulus - 2);
+        // Fermat: x^(p-2) = x^-1. For KoalaBear p = 2^31 - 2^24 + 1, so
+        //   p - 2 = 0x7EFFFFFF = bits 0..23 set, bit 24 clear, bits 25..30 set,
+        // i.e. a run of 24 ones, a gap, then a run of 6 ones:
+        //   p - 2 = (2^24 - 1) + (2^6 - 1) * 2^25.
+        // We build the two all-ones runs from the doubling identity
+        //   x^(2^(j+k) - 1) = (x^(2^j - 1))^(2^k) * x^(2^k - 1)
+        // doubling the run length each step (2 -> 4 -> 6 -> 12 -> 24) so the
+        // 6-ones block is reused to grow the 24-ones block, then combine the two
+        // runs with one final shift+multiply. 48 squarings + 6 multiplications.
+        const b1 = self; // x^(2^1  - 1)
+        const b2 = sqn(b1, 1).mul(b1); // x^(2^2  - 1)
+        const b4 = sqn(b2, 2).mul(b2); // x^(2^4  - 1)
+        const b6 = sqn(b4, 2).mul(b2); // x^(2^6  - 1)  (top run, bits 25..30)
+        const b12 = sqn(b6, 6).mul(b6); // x^(2^12 - 1)
+        const b24 = sqn(b12, 12).mul(b12); // x^(2^24 - 1)  (low run, bits 0..23)
+        // x^(p-2) = (x^(2^6 - 1))^(2^25) * x^(2^24 - 1)
+        return sqn(b6, 25).mul(b24);
+    }
+
+    // Square self n times.
+    fn sqn(self: Element, comptime n: usize) Element {
+        var t = self;
+        inline for (0..n) |_| t = t.square();
+        return t;
     }
 
     pub fn div(self: Element, rhs: Element) Element {
         return self.mul(rhs.inverse());
     }
-
-    pub fn mul2ExpNegN(self: Element, n: u32) Element {
-        if (n > 32) unreachable;
-        var result = self;
-        var i: u32 = 0;
-        while (i < n) : (i += 1) {
-            result = result.halve();
-        }
-        return result;
-    }
 };
-
-pub fn zero() Element {
-    return Element.zero();
-}
-
-pub fn one() Element {
-    return Element.one();
-}
 
 pub fn rootOfUnityBy(cardinality: usize) Error!Element {
     if (!isPowerOfTwo(cardinality)) {

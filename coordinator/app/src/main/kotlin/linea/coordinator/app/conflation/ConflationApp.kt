@@ -127,6 +127,7 @@ class ConflationApp(
         l1ContractAddress = configs.protocol.l1.contractAddress,
         l1HighestBlockTag = configs.forcedTransactions.l1HighestBlockTag,
         l1EventSearchBlockChunk = ftxConfig.l1EventScraping.ethLogsSearchBlockChunkSize,
+        l1EventSearchMaxBlockRange = ftxConfig.l1EventScraping.ethLogsSearchMaxBlockRange,
         ftxSequencerSendingInterval = ftxConfig.processingTickInterval,
         maxFtxToSendToSequencer = ftxConfig.processingBatchSize,
         ftxProcessingDelay = ftxConfig.processingDelay,
@@ -360,7 +361,7 @@ class ConflationApp(
       ethApiClient = l2EthClient,
       contractAddress = configs.protocol.l2.contractAddress,
       smartContractErrors = configs.smartContractErrors,
-      smartContractDeploymentBlockNumber = configs.protocol.l2.contractDeploymentBlockNumber?.getNumber(),
+      smartContractDeploymentBlockNumber = configs.protocol.l2.contractDeploymentBlockNumber?.number,
     )
 
     ProofAggregationCoordinatorService

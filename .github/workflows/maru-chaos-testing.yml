@@ -52,7 +52,7 @@ jobs:
       COMMIT_TAG: ${{ inputs.commit_tag }}
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-    runs-on: [ gha-runner-scale-set-ubuntu-24-amd64-large ]
+    runs-on: [ gha-lfdt-lineth-ss-ubuntu-24-amd64-large ]
     name: chaos tests
     # useful for debugging flaky tests.
     #    strategy:
@@ -60,17 +60,17 @@ jobs:
     #        iterations: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Login to Docker Hub
         if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Setup Java and Gradle
         uses: ./.github/actions/setup-java-and-gradle
       - name: Install helm
-        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
         with:
           version: 'v3.18.3'
         id: install
@@ -136,7 +136,7 @@ jobs:
 
       - name: Store reports and pod logs
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: chaos-test-reports-and-logs
           path: |
@@ -152,3 +152,4 @@ jobs:
         with:
           ## If no one connects shut down ssh server after timeout.
           wait-timeout-minutes: 20
+

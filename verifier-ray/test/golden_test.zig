@@ -11,16 +11,22 @@ const vectors = @import("test_vectors");
 
 const field = verifier_ray.field.koalabear;
 const ext = verifier_ray.field.koalabear_ext;
+const commitment_mod = verifier_ray.crypto.commitment;
 const fiat_shamir = verifier_ray.crypto.fiat_shamir;
 const poseidon2 = verifier_ray.crypto.poseidon2;
-const lagrange = verifier_ray.pcs.lagrange;
-const polynomial = verifier_ray.pcs.polynomial;
-const runtime = verifier_ray.runtime;
+const poly_lagrange = verifier_ray.polynomial.lagrange;
+const poly_canonical = verifier_ray.polynomial.canonical;
+const protocol = verifier_ray.protocol;
+
+test "runtime visibility tags match prover-ray" {
+    try std.testing.expectEqual(vectors.prover_visibility_oracle, @intFromEnum(protocol.Visibility.oracle));
+    try std.testing.expectEqual(vectors.prover_visibility_public, @intFromEnum(protocol.Visibility.public));
+}
 
 test "koalabear base field matches prover-ray golden cases" {
     for (vectors.field_cases) |case| {
-        const a = elem(case.a);
-        const b = elem(case.b);
+        const a = field.Element.init(case.a);
+        const b = field.Element.init(case.b);
 
         try expectElem(a.add(b), case.add);
         try expectElem(a.sub(b), case.sub);
@@ -40,20 +46,20 @@ test "koalabear base field matches prover-ray golden cases" {
 
 test "koalabear extension field matches prover-ray golden cases" {
     for (vectors.ext_cases) |case| {
-        const a = uintsToExt(case.a);
-        const b = uintsToExt(case.b);
-        const scalar = elem(case.scalar);
+        const a = ext.Ext.fromUints(case.a);
+        const b = ext.Ext.fromUints(case.b);
+        const scalar = field.Element.init(case.scalar);
 
-        try expectExt(a.add(b), uintsToExt(case.add));
-        try expectExt(a.sub(b), uintsToExt(case.sub));
-        try expectExt(a.mul(b), uintsToExt(case.mul));
-        try expectExt(a.square(), uintsToExt(case.square_a));
-        try expectExt(a.neg(), uintsToExt(case.neg_a));
-        try expectExt(a.mulByBase(scalar), uintsToExt(case.mul_by_base));
+        try expectExt(a.add(b), ext.Ext.fromUints(case.add));
+        try expectExt(a.sub(b), ext.Ext.fromUints(case.sub));
+        try expectExt(a.mul(b), ext.Ext.fromUints(case.mul));
+        try expectExt(a.square(), ext.Ext.fromUints(case.square_a));
+        try expectExt(a.neg(), ext.Ext.fromUints(case.neg_a));
+        try expectExt(a.mulByBase(scalar), ext.Ext.fromUints(case.mul_by_base));
         try std.testing.expectEqualSlices(u8, &case.bytes_a, &a.toBytes());
 
         if (case.has_inv_a) {
-            try expectExt(a.inverse(), uintsToExt(case.inv_a));
+            try expectExt(a.inverse(), ext.Ext.fromUints(case.inv_a));
         }
     }
 }
@@ -62,15 +68,15 @@ test "canonical polynomial evaluation matches prover-ray golden cases" {
     for (vectors.canonical_base_cases) |case| {
         var coeffs: [16]field.Element = undefined;
         fillElems(&coeffs, case.coeffs);
-        try expectElem(polynomial.evaluateBaseCanonical(coeffs[0..case.coeffs.len], elem(case.point)), case.expected);
+        try expectElem(poly_canonical.evaluateBaseAtBase(coeffs[0..case.coeffs.len], field.Element.init(case.point)), case.expected);
     }
 
     for (vectors.canonical_base_at_ext_cases) |case| {
         var coeffs: [16]field.Element = undefined;
         fillElems(&coeffs, case.coeffs);
         try expectExt(
-            polynomial.evaluateBaseCanonicalAtExt(coeffs[0..case.coeffs.len], uintsToExt(case.point)),
-            uintsToExt(case.expected),
+            poly_canonical.evaluateBaseAtExt(coeffs[0..case.coeffs.len], ext.Ext.fromUints(case.point)),
+            ext.Ext.fromUints(case.expected),
         );
     }
 
@@ -78,8 +84,8 @@ test "canonical polynomial evaluation matches prover-ray golden cases" {
         var coeffs: [16]ext.Ext = undefined;
         fillExts(&coeffs, case.coeffs);
         try expectExt(
-            polynomial.evaluateExtCanonicalAtBase(coeffs[0..case.coeffs.len], elem(case.point)),
-            uintsToExt(case.expected),
+            poly_canonical.evaluateExtAtBase(coeffs[0..case.coeffs.len], field.Element.init(case.point)),
+            ext.Ext.fromUints(case.expected),
         );
     }
 
@@ -87,8 +93,8 @@ test "canonical polynomial evaluation matches prover-ray golden cases" {
         var coeffs: [16]ext.Ext = undefined;
         fillExts(&coeffs, case.coeffs);
         try expectExt(
-            polynomial.evaluateExtCanonical(coeffs[0..case.coeffs.len], uintsToExt(case.point)),
-            uintsToExt(case.expected),
+            poly_canonical.evaluateExtAtExt(coeffs[0..case.coeffs.len], ext.Ext.fromUints(case.point)),
+            ext.Ext.fromUints(case.expected),
         );
     }
 }
@@ -97,15 +103,15 @@ test "lagrange polynomial evaluation matches prover-ray golden cases" {
     for (vectors.lagrange_base_cases) |case| {
         var coeffs: [16]field.Element = undefined;
         fillElems(&coeffs, case.coeffs);
-        try expectElem(try lagrange.evaluateBaseAtBase(coeffs[0..case.coeffs.len], elem(case.point)), case.expected);
+        try expectElem(try poly_lagrange.evaluateBaseAtBase(coeffs[0..case.coeffs.len], field.Element.init(case.point)), case.expected);
     }
 
     for (vectors.lagrange_base_at_ext_cases) |case| {
         var coeffs: [16]field.Element = undefined;
         fillElems(&coeffs, case.coeffs);
         try expectExt(
-            try lagrange.evaluateBaseAtExt(coeffs[0..case.coeffs.len], uintsToExt(case.point)),
-            uintsToExt(case.expected),
+            try poly_lagrange.evaluateBaseAtExt(coeffs[0..case.coeffs.len], ext.Ext.fromUints(case.point)),
+            ext.Ext.fromUints(case.expected),
         );
     }
 
@@ -113,8 +119,8 @@ test "lagrange polynomial evaluation matches prover-ray golden cases" {
         var coeffs: [16]ext.Ext = undefined;
         fillExts(&coeffs, case.coeffs);
         try expectExt(
-            try lagrange.evaluateExtAtBase(coeffs[0..case.coeffs.len], elem(case.point)),
-            uintsToExt(case.expected),
+            try poly_lagrange.evaluateExtAtBase(coeffs[0..case.coeffs.len], field.Element.init(case.point)),
+            ext.Ext.fromUints(case.expected),
         );
     }
 
@@ -122,33 +128,33 @@ test "lagrange polynomial evaluation matches prover-ray golden cases" {
         var coeffs: [16]ext.Ext = undefined;
         fillExts(&coeffs, case.coeffs);
         try expectExt(
-            try lagrange.evaluateExtAtExt(coeffs[0..case.coeffs.len], uintsToExt(case.point)),
-            uintsToExt(case.expected),
+            try poly_lagrange.evaluateExtAtExt(coeffs[0..case.coeffs.len], ext.Ext.fromUints(case.point)),
+            ext.Ext.fromUints(case.expected),
         );
     }
 }
 
 test "lagrange evaluation returns domain value at roots of unity" {
     const base_values = [_]field.Element{
-        elem(3),
-        elem(1),
-        elem(4),
-        elem(1),
+        field.Element.init(3),
+        field.Element.init(1),
+        field.Element.init(4),
+        field.Element.init(1),
     };
     const ext_values = [_]ext.Ext{
-        .{ .B0 = .{ .a0 = elem(3), .a1 = elem(1) }, .B1 = .{ .a0 = elem(4), .a1 = elem(1) }, .B2 = .{ .a0 = elem(5), .a1 = elem(9) } },
-        .{ .B0 = .{ .a0 = elem(5), .a1 = elem(9) }, .B1 = .{ .a0 = elem(2), .a1 = elem(6) }, .B2 = .{ .a0 = elem(5), .a1 = elem(3) } },
-        .{ .B0 = .{ .a0 = elem(5), .a1 = elem(3) }, .B1 = .{ .a0 = elem(5), .a1 = elem(8) }, .B2 = .{ .a0 = elem(9), .a1 = elem(7) } },
-        .{ .B0 = .{ .a0 = elem(9), .a1 = elem(7) }, .B1 = .{ .a0 = elem(9), .a1 = elem(3) }, .B2 = .{ .a0 = elem(2), .a1 = elem(3) } },
+        ext.Ext.fromUints(.{ 3, 1, 4, 1, 5, 9 }),
+        ext.Ext.fromUints(.{ 5, 9, 2, 6, 5, 3 }),
+        ext.Ext.fromUints(.{ 5, 3, 5, 8, 9, 7 }),
+        ext.Ext.fromUints(.{ 9, 7, 9, 3, 2, 3 }),
     };
 
     const omega = try field.rootOfUnityBy(base_values.len);
     var domain_point = field.Element.one();
     for (base_values, ext_values) |base_value, ext_value| {
-        try expectElem(try lagrange.evaluateBaseAtBase(&base_values, domain_point), base_value.value);
-        try expectExt(try lagrange.evaluateBaseAtExt(&base_values, ext.Ext.lift(domain_point)), ext.Ext.lift(base_value));
-        try expectExt(try lagrange.evaluateExtAtBase(&ext_values, domain_point), ext_value);
-        try expectExt(try lagrange.evaluateExtAtExt(&ext_values, ext.Ext.lift(domain_point)), ext_value);
+        try expectElem(try poly_lagrange.evaluateBaseAtBase(&base_values, domain_point), base_value.value);
+        try expectExt(try poly_lagrange.evaluateBaseAtExt(&base_values, ext.Ext.lift(domain_point)), ext.Ext.lift(base_value));
+        try expectExt(try poly_lagrange.evaluateExtAtBase(&ext_values, domain_point), ext_value);
+        try expectExt(try poly_lagrange.evaluateExtAtExt(&ext_values, ext.Ext.lift(domain_point)), ext_value);
         domain_point = domain_point.mul(omega);
     }
 }
@@ -180,57 +186,55 @@ test "fiat-shamir transcript matches prover-ray golden cases" {
         transcript.updateExt(ext_updates[0..case.ext_updates.len]);
 
         try expectDigest(transcript.randomDigest(), case.random_field);
-        try expectExt(transcript.randomExt(), uintsToExt(case.random_ext));
+        try expectExt(transcript.randomExt(), ext.Ext.fromUints(case.random_ext));
     }
 }
 
-test "runtime round coin derivation matches prover-ray scripted protocol" {
+test "transcript derives round coins matching prover-ray golden vectors" {
     for (vectors.runtime_trace_cases) |case| {
-        var rt = runtime.Runtime.initWithRoundCount(case.rounds.len);
-        var coins: [max_trace_coins]runtime.Coin = undefined;
-
-        // The trace was generated by prover-ray's WIOP runtime. Replaying the
-        // same absorbs here proves the Zig runtime derives the same round coins.
-        for (case.rounds[0 .. case.rounds.len - 1], 0..) |round_case, round_index| {
+        // protocol.replay is parametric on a comptime Spec; the golden vectors
+        // carry runtime coin counts, so drive fiat_shamir.Transcript directly
+        // and compare against the prover-ray expected values.
+        var transcript = fiat_shamir.Transcript.init();
+        for (case.rounds) |round_case| {
             var backing = TraceRoundBacking{};
             const message = try backing.fill(round_case, false);
-            // all the random coins generated via zig runtime
-            const got = try rt.advanceRoundWithMessage(round_index, message, &coins);
-            try std.testing.expectEqual(round_case.expected_coins.len, got.len);
-            for (got, round_case.expected_coins) |actual, expected| {
-                try expectExt(actual, uintsToExt(expected));
+            for (message.columns) |entry| {
+                switch (entry) {
+                    .oracle_commitment => |c| transcript.updateElements(&c),
+                    .public_column => |col| transcript.absorbVector(col),
+                }
+            }
+            for (message.cells) |cell| transcript.absorbScalar(cell);
+            for (round_case.expected_coins) |expected| {
+                try expectExt(transcript.randomExt(), ext.Ext.fromUints(expected));
             }
         }
     }
 }
 
-test "runtime downstream coin diverges after tampered absorb" {
+test "tampered round message produces different downstream coins" {
     const case = vectors.runtime_trace_cases[0];
-    var rt = runtime.Runtime.initWithRoundCount(case.rounds.len);
+    var transcript = fiat_shamir.Transcript.init();
     var backing = TraceRoundBacking{};
     const message = try backing.fill(case.rounds[0], true);
-    var coins: [max_trace_coins]runtime.Coin = undefined;
-
-    const got = try rt.advanceRoundWithMessage(0, message, &coins);
-    try std.testing.expect(got.len > 0);
-    try std.testing.expect(!got[0].eql(uintsToExt(case.rounds[0].expected_coins[0])));
-}
-
-/// Convert a generated base-field integer into the concrete field element type.
-fn elem(value: u32) field.Element {
-    return field.Element.init(value);
-}
-
-/// Convert six generated base-field limbs into one KoalaBear extension value.
-fn uintsToExt(limbs: [6]u32) ext.Ext {
-    return ext.Ext.fromUints(limbs[0], limbs[1], limbs[2], limbs[3], limbs[4], limbs[5]);
+    for (message.columns) |entry| {
+        switch (entry) {
+            .oracle_commitment => |c| transcript.updateElements(&c),
+            .public_column => |col| transcript.absorbVector(col),
+        }
+    }
+    for (message.cells) |cell| transcript.absorbScalar(cell);
+    try std.testing.expect(case.rounds[0].expected_coins.len > 0);
+    const got = transcript.randomExt();
+    try std.testing.expect(!got.eql(ext.Ext.fromUints(case.rounds[0].expected_coins[0])));
 }
 
 /// Convert a generated Poseidon digest fixture into field elements.
 fn digest(values: [8]u32) poseidon2.Digest {
     var out: poseidon2.Digest = undefined;
     for (&out, values) |*dst, value| {
-        dst.* = elem(value);
+        dst.* = field.Element.init(value);
     }
     return out;
 }
@@ -238,14 +242,14 @@ fn digest(values: [8]u32) poseidon2.Digest {
 /// Fill an existing buffer with generated base-field values.
 fn fillElems(out: []field.Element, values: []const u32) void {
     for (values, 0..) |value, i| {
-        out[i] = elem(value);
+        out[i] = field.Element.init(value);
     }
 }
 
 /// Fill an existing buffer with generated extension-field values.
 fn fillExts(out: []ext.Ext, values: []const [6]u32) void {
     for (values, 0..) |value, i| {
-        out[i] = uintsToExt(value);
+        out[i] = ext.Ext.fromUints(value);
     }
 }
 
@@ -268,6 +272,7 @@ fn expectDigest(actual: poseidon2.Digest, expected: [8]u32) !void {
 
 const trace_dimensions = traceDimensions(vectors.runtime_trace_cases);
 const max_trace_columns = trace_dimensions.columns;
+const max_trace_commitments = trace_dimensions.commitments;
 const max_trace_values = trace_dimensions.values;
 const max_trace_cells = trace_dimensions.cells;
 const max_trace_coins = trace_dimensions.coins;
@@ -275,6 +280,8 @@ const max_trace_coins = trace_dimensions.coins;
 /// Maximum scratch-buffer sizes needed to replay all generated runtime traces.
 const TraceDimensions = struct {
     columns: usize = 0,
+    commitments: usize = 0,
+    message_columns: usize = 0,
     values: usize = 0,
     cells: usize = 0,
     coins: usize = 0,
@@ -288,10 +295,26 @@ fn traceDimensions(comptime cases: anytype) TraceDimensions {
             dimensions.columns = @max(dimensions.columns, round.columns.len);
             dimensions.cells = @max(dimensions.cells, round.cells.len);
             dimensions.coins = @max(dimensions.coins, round.expected_coins.len);
+            var commitments: usize = 0;
+            var message_columns: usize = 0;
             for (round.columns) |column| {
-                dimensions.values = @max(dimensions.values, column.base_values.len);
-                dimensions.values = @max(dimensions.values, column.ext_values.len);
+                switch (column) {
+                    .oracle => |commitments_for_column| {
+                        commitments += commitments_for_column.len;
+                        message_columns += commitments_for_column.len;
+                    },
+                    .public_base => |values| {
+                        message_columns += 1;
+                        dimensions.values = @max(dimensions.values, values.len);
+                    },
+                    .public_ext => |values| {
+                        message_columns += 1;
+                        dimensions.values = @max(dimensions.values, values.len);
+                    },
+                }
             }
+            dimensions.commitments = @max(dimensions.commitments, commitments);
+            dimensions.message_columns = @max(dimensions.message_columns, message_columns);
         }
     }
     return dimensions;
@@ -302,56 +325,68 @@ fn traceDimensions(comptime cases: anytype) TraceDimensions {
 /// `RoundMessage` stores slices into this backing, so callers must keep the
 /// backing alive until the runtime has absorbed the message.
 const TraceRoundBacking = struct {
-    columns: [max_trace_columns]runtime.ColumnAssignment = undefined,
-    cells: [max_trace_cells]runtime.Scalar = undefined,
+    oracle_commitments: [max_trace_commitments]protocol.Commitment = undefined,
+    columns: [trace_dimensions.message_columns]protocol.ColumnMessage = undefined,
+    cells: [max_trace_cells]protocol.Scalar = undefined,
     base_values: [max_trace_columns][max_trace_values]field.Element = undefined,
     ext_values: [max_trace_columns][max_trace_values]ext.Ext = undefined,
 
     /// Convert one generated trace round into the verifier runtime message shape.
-    fn fill(self: *TraceRoundBacking, round_case: vectors.RuntimeTraceRound, tamper_first_absorb: bool) !runtime.RoundMessage {
+    fn fill(self: *TraceRoundBacking, round_case: vectors.RuntimeTraceRound, tamper_first_absorb: bool) !protocol.RoundMessage {
         try std.testing.expect(round_case.columns.len <= max_trace_columns);
         try std.testing.expect(round_case.cells.len <= max_trace_cells);
 
         var tampered = false;
+        var oracle_commitment_count: usize = 0;
         var column_count: usize = 0;
         for (round_case.columns, 0..) |column_case, i| {
-            if (column_case.visibility == 0) continue;
-            try std.testing.expect(column_case.is_assigned);
-
-            const assignment: runtime.Vector = if (column_case.is_ext) assignment: {
-                try std.testing.expect(column_case.ext_values.len <= max_trace_values);
-                fillExts(&self.ext_values[i], column_case.ext_values);
-                break :assignment .{ .ext = self.ext_values[i][0..column_case.ext_values.len] };
-            } else assignment: {
-                try std.testing.expect(column_case.base_values.len <= max_trace_values);
-                fillElems(&self.base_values[i], column_case.base_values);
-                if (tamper_first_absorb and !tampered and column_case.base_values.len != 0) {
-                    // The lsb of the first value is bit flipped to simulate a tampered absorb, which should cause downstream coins to diverge.
-                    self.base_values[i][0] = elem(self.base_values[i][0].value ^ 1);
-                    tampered = true;
-                }
-                break :assignment .{ .base = self.base_values[i][0..column_case.base_values.len] };
-            };
-
-            self.columns[column_count] = .{
-                .visibility = @enumFromInt(column_case.visibility),
-                .assignment = assignment,
-            };
-            column_count += 1;
+            switch (column_case) {
+                .oracle => |commitments| {
+                    try std.testing.expect(commitments.len <= max_trace_commitments);
+                    for (commitments) |c| {
+                        self.oracle_commitments[oracle_commitment_count] = commitment_mod.fromUints(c);
+                        if (tamper_first_absorb and !tampered) {
+                            self.oracle_commitments[oracle_commitment_count][0] = field.Element.init(self.oracle_commitments[oracle_commitment_count][0].value ^ 1);
+                            tampered = true;
+                        }
+                        self.columns[column_count] = .{ .oracle_commitment = self.oracle_commitments[oracle_commitment_count] };
+                        oracle_commitment_count += 1;
+                        column_count += 1;
+                    }
+                },
+                .public_base => |values| {
+                    try std.testing.expect(values.len <= max_trace_values);
+                    fillElems(&self.base_values[i], values);
+                    if (tamper_first_absorb and !tampered and values.len != 0) {
+                        self.base_values[i][0] = field.Element.init(self.base_values[i][0].value ^ 1);
+                        tampered = true;
+                    }
+                    self.columns[column_count] = .{ .public_column = .{ .base = self.base_values[i][0..values.len] } };
+                    column_count += 1;
+                },
+                .public_ext => |values| {
+                    try std.testing.expect(values.len <= max_trace_values);
+                    fillExts(&self.ext_values[i], values);
+                    if (tamper_first_absorb and !tampered and values.len != 0) {
+                        self.ext_values[i][0].B0.a0 = field.Element.init(self.ext_values[i][0].B0.a0.value ^ 1);
+                        tampered = true;
+                    }
+                    self.columns[column_count] = .{ .public_column = .{ .ext = self.ext_values[i][0..values.len] } };
+                    column_count += 1;
+                },
+            }
         }
 
         for (round_case.cells, 0..) |cell_case, i| {
-            try std.testing.expect(cell_case.is_assigned);
-            self.cells[i] = if (cell_case.is_ext)
-                .{ .ext = uintsToExt(cell_case.ext_value) }
-            else
-                .{ .base = elem(cell_case.base_value) };
+            self.cells[i] = switch (cell_case) {
+                .base => |base_value| .{ .base = field.Element.init(base_value) },
+                .ext => |ext_value| .{ .ext = ext.Ext.fromUints(ext_value) },
+            };
         }
 
         return .{
             .columns = self.columns[0..column_count],
             .cells = self.cells[0..round_case.cells.len],
-            .next_round_coin_count = round_case.expected_coins.len,
         };
     }
 };

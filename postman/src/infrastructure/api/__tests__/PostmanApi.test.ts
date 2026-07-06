@@ -1,11 +1,11 @@
-import { ExpressApiApplication } from "@consensys/linea-shared-utils";
 import { describe, it, expect, beforeEach } from "@jest/globals";
+import { ExpressApiApplication } from "@lfdt-lineth/shared-utils";
 
 import { mockLogger, mockMetricsService } from "../../../utils/testing/mocks";
 import { createPostmanApi } from "../PostmanApi";
 
-jest.mock("@consensys/linea-shared-utils", () => {
-  const actual = jest.requireActual("@consensys/linea-shared-utils");
+jest.mock("@lfdt-lineth/shared-utils", () => {
+  const actual = jest.requireActual("@lfdt-lineth/shared-utils");
   return {
     ...actual,
     ExpressApiApplication: jest.fn(),

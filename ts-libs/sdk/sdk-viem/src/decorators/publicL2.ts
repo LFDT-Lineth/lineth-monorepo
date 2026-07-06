@@ -1,4 +1,4 @@
-import { L2PublicClient } from "@consensys/linea-sdk-core";
+import { L2PublicClient } from "@lfdt-lineth/sdk-core";
 import { Account, Address, BlockTag, Chain, Client, Transport } from "viem";
 
 import {
@@ -41,7 +41,7 @@ export type PublicActionsL2<chain extends Chain | undefined = Chain | undefined>
      * @example
      * import { createPublicClient, http } from 'viem'
      * import { linea } from 'viem/chains'
-     * import { publicActionsL2 } from '@consensys/linea-sdk-viem'
+     * import { publicActionsL2 } from '@lfdt-lineth/sdk-viem'
      *
      * const client = createPublicClient({
      *   chain: linea,
@@ -66,7 +66,7 @@ export type PublicActionsL2<chain extends Chain | undefined = Chain | undefined>
      * @example
      * import { createPublicClient, http } from 'viem'
      * import { linea } from 'viem/chains'
-     * import { publicActionsL2 } from '@consensys/linea-sdk-viem'
+     * import { publicActionsL2 } from '@lfdt-lineth/sdk-viem'
      *
      * const client = createPublicClient({
      *   chain: linea,
@@ -89,7 +89,7 @@ export type PublicActionsL2<chain extends Chain | undefined = Chain | undefined>
      * @example
      * import { createPublicClient, http } from 'viem'
      * import { linea } from 'viem/chains'
-     * import { publicActionsL2 } from '@consensys/linea-sdk-viem'
+     * import { publicActionsL2 } from '@lfdt-lineth/sdk-viem'
      *
      * const client = createPublicClient({
      *   chain: linea,
@@ -112,7 +112,7 @@ export type PublicActionsL2<chain extends Chain | undefined = Chain | undefined>
      * @example
      * import { createPublicClient, http } from 'viem'
      * import { linea } from 'viem/chains'
-     * import { publicActionsL2 } from '@consensys/linea-sdk-viem'
+     * import { publicActionsL2 } from '@lfdt-lineth/sdk-viem'
      *
      * const client = createPublicClient({
      *   chain: linea,
@@ -137,7 +137,7 @@ export type PublicActionsL2<chain extends Chain | undefined = Chain | undefined>
      * @example
      * import { createPublicClient, http } from 'viem'
      * import { linea } from 'viem/chains'
-     * import { publicActionsL2 } from '@consensys/linea-sdk-viem'
+     * import { publicActionsL2 } from '@lfdt-lineth/sdk-viem'
      *
      * const client = createPublicClient({
      *   chain: linea,

@@ -1,9 +1,15 @@
 ## [unreleased]
 
+### 🚀 Features
+
+- *(maru)* Added a new CL phase in which Beacon block's chain identi… (#3493)
+
 ### 🐛 Bug Fixes
 
 - *(maru)* Address PR 3126 workflow follow-ups (#3164)
 - *(arithmetization)* Fix alert 514 (#3246)
+- *(maru)* Making discovery retry configurable to increase the convergence speed (#3387)
+- *(Maru)* Fixed a bug when simultaneous mutual connection attempts r… (#3439)
 
 ### 🚜 Refactor
 
@@ -14,3 +20,8 @@
 
 - *(maru)* Follow up for pr 3236 (#3237)
 - *(maru)* Split testing workflow (#3234)
+- *(maru)* Remove unused test (#3279)
+- *(maru)* Per-test log isolation + bounded integration-test concurrency (#3343)
+- *(coordinator)* Update kotlin to v2.4 (#3454)
+- *(coordinator)* LSP violation fix (#3386)
+- *(misc)* Trying to speed up Maru integration tests and optimize resource consumption (#3462)

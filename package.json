@@ -1,5 +1,5 @@
 {
-  "name": "linea-monorepo",
+  "name": "lineth-monorepo",
   "license": "(MIT OR Apache-2.0)",
   "author": "Consensys Software Inc.",
   "scripts": {
@@ -12,7 +12,7 @@
     "test": "pnpm run -r --if-present test"
   },
   "devDependencies": {
-    "@types/node": "24.12.2",
+    "@types/node": "24.13.2",
     "eslint": "catalog:",
     "husky": "9.1.7",
     "prettier": "catalog:",
@@ -20,9 +20,9 @@
     "ts-node": "10.9.2",
     "typescript": "catalog:"
   },
-  "packageManager": "pnpm@10.32.1",
+  "packageManager": "pnpm@11.9.0",
   "engines": {
-    "node": ">=24.14.1",
-    "pnpm": ">=10.32.1"
+    "node": ">=24.18.0",
+    "pnpm": ">=11.9.0"
   }
 }

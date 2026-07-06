@@ -29,12 +29,14 @@ import maru.consensus.validation.TimestampValidator
 import maru.core.BeaconBlockHeader
 import maru.database.BeaconChain
 import maru.p2p.ValidationResult
+import maru.serialization.rlp.ForkAwareBlockHashing
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 class SyncSealedBlockImporterFactory {
   fun create(
     beaconChain: BeaconChain,
     validatorProvider: ValidatorProvider,
+    blockHashing: ForkAwareBlockHashing,
     allowEmptyBlocks: Boolean = false,
   ): SealedBeaconBlockImporter<ValidationResult> {
     val stateTransition = StateTransitionImpl(validatorProvider)
@@ -42,7 +44,7 @@ class SyncSealedBlockImporterFactory {
 
     // Create a custom BeaconBlockValidatorFactory without ExecutionPayloadValidator
     val beaconBlockValidatorFactory =
-      createBeaconBlockValidatorFactory(beaconChain, validatorProvider, allowEmptyBlocks)
+      createBeaconBlockValidatorFactory(beaconChain, validatorProvider, allowEmptyBlocks, blockHashing)
 
     val transactionalSealedBeaconBlockImporter =
       TransactionalSealedBeaconBlockImporter(
@@ -67,6 +69,7 @@ class SyncSealedBlockImporterFactory {
     beaconChain: BeaconChain,
     validatorProvider: ValidatorProvider,
     allowEmptyBlocks: Boolean,
+    blockHashing: ForkAwareBlockHashing,
   ): BeaconBlockValidatorFactory {
     // Create a custom BeaconBlockValidatorFactory that excludes ExecutionPayloadValidator
     return BeaconBlockValidatorFactory { beaconBlockHeader: BeaconBlockHeader ->
@@ -79,7 +82,7 @@ class SyncSealedBlockImporterFactory {
 
       CompositeBlockValidator(
         blockValidators = listOfNotNull(
-          StateRootValidator(StateTransitionImpl(validatorProvider)),
+          StateRootValidator(StateTransitionImpl(validatorProvider), blockHashing::stateRoot),
           BlockNumberValidator(parentHeader),
           TimestampValidator(parentHeader),
           ProposerValidator(ProposerSelectorImpl, beaconChain),

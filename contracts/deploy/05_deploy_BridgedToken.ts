@@ -1,7 +1,7 @@
 import { upgrades as createUpgrades } from "@openzeppelin/hardhat-upgrades";
 import hre, { network as hardhatNetwork } from "hardhat";
 
-import { tryVerifyContract, setHandoffAddress } from "../common/helpers";
+import { getBooleanEnvVarOrDefault, tryVerifyContract, setHandoffAddress } from "../common/helpers";
 import { deployScript } from "../rocketh/deploy";
 import {
   clearUiWorkflowStatus,
@@ -44,7 +44,7 @@ const func = withSignerUiSession("05_deploy_BridgedToken.ts", async function () 
     throw "Contract deployment transaction receipt not found.";
   }
 
-  if (process.env.DEPLOY_TOKEN_BRIDGE_ON_L1 === "true") {
+  if (getBooleanEnvVarOrDefault("DEPLOY_TOKEN_BRIDGE_ON_L1", false)) {
     console.log(`L1 BridgedToken beacon deployed on ${networkName}, at address:`, bridgedTokenAddress);
   } else {
     console.log(`L2 BridgedToken beacon deployed on ${networkName}, at address:`, bridgedTokenAddress);

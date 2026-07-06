@@ -1,6 +1,9 @@
 package wiop
 
-import "github.com/consensys/linea-monorepo/prover-ray/utils/arena"
+import (
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/arena"
+)
 
 // System is the top-level container for an abstract cryptographic protocol.
 // It owns all rounds, modules, and the single precomputed round. It is also
@@ -30,12 +33,31 @@ type System struct {
 	// LogDerivativeSums holds all [LogDerivativeSum] queries registered with
 	// this system via [System.NewLogDerivativeSum], in declaration order.
 	LogDerivativeSums []*LogDerivativeSum
+	// MessageBuses holds all [MessageBus] queries registered with this system
+	// via [System.NewMessageBusSend] and [System.NewMessageBusReceive], in
+	// declaration order.
+	MessageBuses []*MessageBus
+	// MessageBusSkipInShardCheck controls whether the messagebus compiler
+	// registers its per-handle in-shard verifier action — a
+	// [messagebus.CheckHandleSumInShard] — which asserts the per-segment LDS
+	// Results sum to that action's Expected value on this shard alone. When
+	// false (the default) the pass registers one such action per handle,
+	// preserving the single-shard "sum is zero" guarantee. Set to true in
+	// sharded protocols where a downstream cross-shard layer owns the
+	// consistency check and the in-shard residual must remain unasserted so
+	// it can be carried over to the cross-shard identity (typically the
+	// cross-shard layer registers its own CheckHandleSumInShard instances
+	// with appropriate non-zero Expected values).
+	MessageBusSkipInShardCheck bool
 	// scratchArena backs the [PlanningContext] used by [Materialize]. It is
 	// nil until Materialize is called.
 	scratchArena *arena.VectorArena
 	// Annotation is some user-defined information that can be attached to the
 	// System.
 	Annotations Annotations
+	// PrecomputedCommitment commitment bears the commitment to the precomputed
+	// values.
+	PrecomputedCommitment field.Octuplet
 }
 
 // NewSystemf constructs an empty System. It creates a root [ContextFrame]

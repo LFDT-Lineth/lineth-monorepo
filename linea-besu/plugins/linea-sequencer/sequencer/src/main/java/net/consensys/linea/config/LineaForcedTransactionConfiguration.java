@@ -14,11 +14,15 @@ import net.consensys.linea.sequencer.forced.LineaForcedTransactionPool;
 
 /** Configuration for the forced transaction pool. */
 @Builder
-public record LineaForcedTransactionConfiguration(int statusCacheSize)
+public record LineaForcedTransactionConfiguration(
+    int statusCacheSize, long chainSecurityViolationHoldOffBeforeDeadline)
     implements LineaOptionsConfiguration {
 
   public static final LineaForcedTransactionConfiguration DEFAULT =
       LineaForcedTransactionConfiguration.builder()
           .statusCacheSize(LineaForcedTransactionPool.DEFAULT_STATUS_CACHE_SIZE)
+          .chainSecurityViolationHoldOffBeforeDeadline(
+              LineaForcedTransactionPool
+                  .DEFAULT_CHAIN_SECURITY_VIOLATION_BEFORE_DEADLINE_INCLUSION_ALLOWANCE)
           .build();
 }

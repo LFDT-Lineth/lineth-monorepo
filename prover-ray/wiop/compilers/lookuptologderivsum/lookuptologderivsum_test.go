@@ -3,11 +3,11 @@ package lookuptologderivsum_test
 import (
 	"testing"
 
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/logderivativesum"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
-	"github.com/consensys/linea-monorepo/prover-ray/wiop/wioptest"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,10 +21,8 @@ func TestCompile_WioptestCompleteness(t *testing.T) {
 		t.Run(sc.Name, func(t *testing.T) {
 			lookuptologderivsum.Compile(sc.Sys)
 			logderivativesum.Compile(sc.Sys)
-			rt := wiop.NewRuntime(sc.Sys)
-			sc.AssignWitness(&rt)
-			driveProtocol(&rt)
-			require.NoError(t, checkAllVerifierActions(&rt),
+			proof := sc.Sys.Prove(sc.AssignWitness)
+			require.NoError(t, sc.Sys.Verify(proof),
 				"compiled verifier must accept an honest witness")
 		})
 	}
@@ -40,9 +38,7 @@ func TestCompile_WioptestSoundnessPanics(t *testing.T) {
 		t.Run(sc.Name, func(t *testing.T) {
 			lookuptologderivsum.Compile(sc.Sys)
 			logderivativesum.Compile(sc.Sys)
-			rt := wiop.NewRuntime(sc.Sys)
-			sc.AssignWitness(&rt)
-			assert.Panics(t, func() { runRound(&rt) },
+			assert.Panics(t, func() { sc.Sys.Prove(sc.AssignWitness) },
 				"M-assignment prover task must panic on this invalid witness")
 		})
 	}
@@ -100,7 +96,7 @@ func TestCompile_WioptestSoundness_TamperM(t *testing.T) {
 			logderivativesum.Compile(sc.Sys)
 
 			rt := wiop.NewRuntime(sc.Sys)
-			sc.AssignWitness(&rt)
+			sc.AssignWitness(rt)
 
 			// Pre-assign every M with zeros. The mAssignmentTask doesn't
 			// guard against re-assignment, so we must skip the round-0
@@ -116,9 +112,9 @@ func TestCompile_WioptestSoundness_TamperM(t *testing.T) {
 			}
 			rt.AdvanceRound() // → coin round (samples α/γ)
 			rt.AdvanceRound() // → result round
-			runRound(&rt)     // assigns Z and the LDS result
+			runRound(rt)      // assigns Z and the LDS result
 
-			err := checkAllVerifierActions(&rt)
+			err := checkAllVerifierActions(rt)
 			assert.ErrorContains(t, err, "must be zero",
 				"verifier must reject a tampered M (aggregated sum != 0)")
 		})
@@ -141,7 +137,7 @@ func makeVec(vals ...uint64) *wiop.ConcreteVector {
 // round.
 func runRound(rt *wiop.Runtime) {
 	for _, a := range rt.CurrentRound().ProverActions {
-		a.Run(*rt)
+		a.Run(rt)
 	}
 }
 
@@ -151,7 +147,7 @@ func runRound(rt *wiop.Runtime) {
 func checkAllVerifierActions(rt *wiop.Runtime) error {
 	for _, r := range rt.System.Rounds {
 		for _, va := range r.VerifierActions {
-			if err := va.Check(*rt); err != nil {
+			if err := va.Check(rt); err != nil {
 				return err
 			}
 		}
@@ -203,8 +199,8 @@ func TestCompile_SingleColumn_NoFilters(t *testing.T) {
 	rt.AssignColumn(colT, makeVec(10, 20, 30, 40))
 	rt.AssignColumn(colS, makeVec(10, 20, 10, 30))
 
-	driveProtocol(&rt)
-	require.NoError(t, checkAllVerifierActions(&rt))
+	driveProtocol(rt)
+	require.NoError(t, checkAllVerifierActions(rt))
 }
 
 func TestCompile_SingleColumn_NoMatchPanics(t *testing.T) {
@@ -229,7 +225,7 @@ func TestCompile_SingleColumn_NoMatchPanics(t *testing.T) {
 	rt.AssignColumn(colS, makeVec(10, 99, 10, 30)) // 99 is not in T
 
 	assert.Panics(t, func() {
-		runRound(&rt) // round 0 — M assignment task
+		runRound(rt) // round 0 — M assignment task
 	}, "M assignment must panic when an active A row has no match in B")
 }
 
@@ -260,8 +256,8 @@ func TestCompile_FilterOnIncluded(t *testing.T) {
 	rt.AssignColumn(colS, makeVec(10, 99, 20, 99))
 	rt.AssignColumn(filterS, makeVec(1, 0, 1, 0))
 
-	driveProtocol(&rt)
-	require.NoError(t, checkAllVerifierActions(&rt))
+	driveProtocol(rt)
+	require.NoError(t, checkAllVerifierActions(rt))
 }
 
 // ---- Filter on the including side (B) ----
@@ -292,8 +288,8 @@ func TestCompile_FilterOnIncluding(t *testing.T) {
 	rt.AssignColumn(filterT, makeVec(1, 0, 1, 0))
 	rt.AssignColumn(colS, makeVec(10, 20, 10, 20))
 
-	driveProtocol(&rt)
-	require.NoError(t, checkAllVerifierActions(&rt))
+	driveProtocol(rt)
+	require.NoError(t, checkAllVerifierActions(rt))
 }
 
 // TestCompile_FilterOnIncluding_FilteredTRowCantMatch verifies that an A row
@@ -326,7 +322,7 @@ func TestCompile_FilterOnIncluding_FilteredTRowCantMatch(t *testing.T) {
 	rt.AssignColumn(filterT, makeVec(1, 0, 1, 1))
 	rt.AssignColumn(colS, makeVec(99))
 
-	assert.Panics(t, func() { runRound(&rt) },
+	assert.Panics(t, func() { runRound(rt) },
 		"matching a filtered-out B row must be rejected by M assignment")
 }
 
@@ -357,8 +353,8 @@ func TestCompile_DoubleConditional(t *testing.T) {
 	rt.AssignColumn(colS, makeVec(10, 0, 20, 7))
 	rt.AssignColumn(filterS, makeVec(1, 0, 1, 0))
 
-	driveProtocol(&rt)
-	require.NoError(t, checkAllVerifierActions(&rt))
+	driveProtocol(rt)
+	require.NoError(t, checkAllVerifierActions(rt))
 }
 
 // ---- Multi-column lookup (uses α coin) ----
@@ -391,8 +387,8 @@ func TestCompile_MultiColumn(t *testing.T) {
 	rt.AssignColumn(sx, makeVec(2, 2, 3, 1))
 	rt.AssignColumn(sy, makeVec(20, 20, 30, 10))
 
-	driveProtocol(&rt)
-	require.NoError(t, checkAllVerifierActions(&rt))
+	driveProtocol(rt)
+	require.NoError(t, checkAllVerifierActions(rt))
 }
 
 // TestCompile_MultiColumn_PartialMatchFails sanity-checks the multi-column
@@ -424,7 +420,7 @@ func TestCompile_MultiColumn_PartialMatchFails(t *testing.T) {
 	rt.AssignColumn(sx, makeVec(1))
 	rt.AssignColumn(sy, makeVec(20))
 
-	assert.Panics(t, func() { runRound(&rt) },
+	assert.Panics(t, func() { runRound(rt) },
 		"multi-column lookup must reject a tuple that does not appear in T")
 }
 
@@ -470,8 +466,8 @@ func TestCompile_MultipleQueriesSameTable(t *testing.T) {
 	rt.AssignColumn(colS1, makeVec(10, 20, 10, 30))
 	rt.AssignColumn(colS2, makeVec(40, 30))
 
-	driveProtocol(&rt)
-	require.NoError(t, checkAllVerifierActions(&rt))
+	driveProtocol(rt)
+	require.NoError(t, checkAllVerifierActions(rt))
 }
 
 func TestCompile_MultipleQueriesDistinctTables(t *testing.T) {
@@ -510,8 +506,8 @@ func TestCompile_MultipleQueriesDistinctTables(t *testing.T) {
 	rt.AssignColumn(colS1, makeVec(10, 30))
 	rt.AssignColumn(colS2, makeVec(100, 200))
 
-	driveProtocol(&rt)
-	require.NoError(t, checkAllVerifierActions(&rt))
+	driveProtocol(rt)
+	require.NoError(t, checkAllVerifierActions(rt))
 }
 
 // ---- Idempotence and edge cases ----
@@ -582,9 +578,9 @@ func TestCompile_VerifierFailsOnZeroM(t *testing.T) {
 
 	rt.AdvanceRound() // → coin round, samples α/γ
 	rt.AdvanceRound() // → result round
-	runRound(&rt)     // assigns Z and the LogDerivativeSum result
+	runRound(rt)      // assigns Z and the LogDerivativeSum result
 
-	err := checkAllVerifierActions(&rt)
+	err := checkAllVerifierActions(rt)
 	assert.ErrorContains(t, err, "must be zero",
 		"verifier must reject when M is left at zero despite active A rows")
 }
@@ -623,9 +619,9 @@ func TestCompile_VerifierFailsOnInflatedM(t *testing.T) {
 
 	rt.AdvanceRound()
 	rt.AdvanceRound()
-	runRound(&rt)
+	runRound(rt)
 
-	err := checkAllVerifierActions(&rt)
+	err := checkAllVerifierActions(rt)
 	assert.ErrorContains(t, err, "must be zero",
 		"verifier must reject any deviation from the honest multiplicity, however small")
 }
@@ -661,7 +657,7 @@ func TestCompile_NonBinaryIncludedFilterPanics(t *testing.T) {
 	rt.AssignColumn(colS, makeVec(10, 20, 30, 40))
 	rt.AssignColumn(filterS, makeVec(1, 7, 1, 1))
 
-	assert.Panics(t, func() { runRound(&rt) },
+	assert.Panics(t, func() { runRound(rt) },
 		"non-binary included filter must be rejected by M assignment")
 }
 
@@ -702,8 +698,8 @@ func TestCompile_MultiColumn_FilterOnIncluding(t *testing.T) {
 	rt.AssignColumn(sx, makeVec(1, 2, 3))
 	rt.AssignColumn(sy, makeVec(10, 20, 30))
 
-	driveProtocol(&rt)
-	require.NoError(t, checkAllVerifierActions(&rt))
+	driveProtocol(rt)
+	require.NoError(t, checkAllVerifierActions(rt))
 }
 
 // TestCompile_MultiColumn_FilterOnIncluding_MaskedRowFails pairs the
@@ -740,7 +736,7 @@ func TestCompile_MultiColumn_FilterOnIncluding_MaskedRowFails(t *testing.T) {
 	rt.AssignColumn(sx, makeVec(99))
 	rt.AssignColumn(sy, makeVec(99))
 
-	assert.Panics(t, func() { runRound(&rt) },
+	assert.Panics(t, func() { runRound(rt) },
 		"masked-out multi-column B row must not be reachable from an active A row")
 }
 
@@ -782,6 +778,6 @@ func TestCompile_MultiColumn_FilterOnIncluding_InvalidColumnsFails(t *testing.T)
 	rt.AssignColumn(sx, makeVec(1, 2, 7))
 	rt.AssignColumn(sy, makeVec(10, 20, 70))
 
-	assert.Panics(t, func() { runRound(&rt) },
+	assert.Panics(t, func() { runRound(rt) },
 		"multi-column lookup with B-filter must reject an S tuple absent from T")
 }

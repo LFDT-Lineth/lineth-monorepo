@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"math/bits"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
 	"github.com/consensys/gnark/frontend"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/polynomials"
 )
 
 // LagrangeEval is a [Query] that evaluates a batch of polynomials at a single
@@ -58,7 +58,7 @@ func (le *LagrangeEval) Round() *Round {
 
 // IsAlreadyAssigned implements [AssignableQuery]. Reports whether all
 // EvaluationClaims cells already hold a runtime assignment.
-func (le *LagrangeEval) IsAlreadyAssigned(rt Runtime) bool {
+func (le *LagrangeEval) IsAlreadyAssigned(rt *Runtime) bool {
 	for _, claim := range le.EvaluationClaims {
 		if !rt.HasCellValue(claim) {
 			return false
@@ -70,7 +70,7 @@ func (le *LagrangeEval) IsAlreadyAssigned(rt Runtime) bool {
 // SelfAssign implements [AssignableQuery]. Evaluates each polynomial at the
 // EvaluationPoint and writes the results into the corresponding
 // EvaluationClaims cells.
-func (le *LagrangeEval) SelfAssign(rt Runtime) {
+func (le *LagrangeEval) SelfAssign(rt *Runtime) {
 	evals := le.evalPolynomials(rt)
 	for i, claim := range le.EvaluationClaims {
 		rt.AssignCell(claim, evals[i])
@@ -84,7 +84,7 @@ func (le *LagrangeEval) SelfAssign(rt Runtime) {
 // Precondition: every polynomial column must be assigned in rt. The method
 // returns a descriptive error for the first misassigned column or failing
 // claim rather than panicking, so callers can surface the problem cleanly.
-func (le *LagrangeEval) Check(rt Runtime) error {
+func (le *LagrangeEval) Check(rt *Runtime) error {
 
 	// Verify that all polynomial columns have been assigned in the runtime.
 	for i, pv := range le.Polynomials {
@@ -120,7 +120,7 @@ func (le *LagrangeEval) Check(rt Runtime) error {
 // evalPolynomials evaluates each polynomial in le.Polynomials at the
 // EvaluationPoint, applying the cyclic-shift adjustment for each [ColumnView].
 // It is the shared kernel used by both [Check] and [SelfAssign].
-func (le *LagrangeEval) evalPolynomials(rt Runtime) []field.Gen {
+func (le *LagrangeEval) evalPolynomials(rt *Runtime) []field.Gen {
 	evalPoint := le.EvaluationPoint.EvaluateSingle(rt)
 	results := make([]field.Gen, len(le.Polynomials))
 	for i, pv := range le.Polynomials {
@@ -250,7 +250,7 @@ func (sys *System) newLagrangeEval(ctx *ContextFrame, polys []*ColumnView, x Fie
 // barycentric sum directly from Plain[0], treating padding and data rows
 // separately with a single shared batch of denominator inverses. This avoids
 // materialising the full n-length padded data vector.
-func evalLagrangePadded(cv *ConcreteVector, m *Module, rt Runtime, z field.Gen) field.Gen {
+func evalLagrangePadded(cv *ConcreteVector, m *Module, rt *Runtime, z field.Gen) field.Gen {
 	data := cv.Plain
 	if m.Padding == PaddingDirectionNone {
 		return polynomials.EvalLagrange(data, z)

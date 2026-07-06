@@ -9,18 +9,18 @@ on:
 jobs:
   changes:
     name: Detect Changes
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     outputs:
       languages: ${{ steps.set-matrix.outputs.languages }}
     permissions:
       contents: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
 
-      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 #v3.0.2
+      - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 #v3.0.3
         id: changes
         with:
           filters: |
@@ -81,7 +81,7 @@ jobs:
 
   analyze:
     name: Analyze
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     needs: changes
     if: ${{ needs.changes.outputs.languages != '[]' }}
     permissions:
@@ -96,10 +96,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@c10b8064de6f491fea524254123dbe5e09572f13 #v4.35.1
+        uses: github/codeql-action/init@8aad20d150bbac5944a9f9d289da16a4b0d87c1e #v4.36.2
         with:
           languages: ${{ matrix.language }}
           queries: security-extended
@@ -115,12 +115,12 @@ jobs:
 
       - name: Autobuild
         if: matrix.language != 'actions'
-        uses: github/codeql-action/autobuild@c10b8064de6f491fea524254123dbe5e09572f13 #v4.35.1
+        uses: github/codeql-action/autobuild@8aad20d150bbac5944a9f9d289da16a4b0d87c1e #v4.36.2
         env:
           GITHUB_TOKEN: ${{ secrets._GITHUB_TOKEN_RELEASE_ACCESS }}
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@c10b8064de6f491fea524254123dbe5e09572f13 #v4.35.1
+        uses: github/codeql-action/analyze@8aad20d150bbac5944a9f9d289da16a4b0d87c1e #v4.36.2
         with:
           category: "/language:${{matrix.language}}"
           output: sarif-results
@@ -131,3 +131,4 @@ jobs:
           name: codeql-results-${{ matrix.language }}
           path: sarif-results
           retention-days: 1
+

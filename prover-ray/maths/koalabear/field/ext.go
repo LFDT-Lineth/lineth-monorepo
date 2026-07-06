@@ -9,8 +9,8 @@ import (
 	"reflect"
 	"runtime"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/consensys/gnark-crypto/field/koalabear/extensions"
-	"github.com/consensys/linea-monorepo/prover-ray/utils/parallel"
 )
 
 // ExtensionDegree is the degree of the field extension over the base field.
@@ -107,6 +107,13 @@ func GetBase(z *Ext) (Element, bool) {
 func AddByBase(z *Ext, first *Ext, second *Element) *Ext {
 	z.Set(first)
 	z.B0.A0.Add(&z.B0.A0, second)
+	return z
+}
+
+// SubByBase implements mixed addition of a base field element.
+func SubByBase(z *Ext, first *Ext, second *Element) *Ext {
+	z.Set(first)
+	z.B0.A0.Sub(&z.B0.A0, second)
 	return z
 }
 

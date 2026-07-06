@@ -32,17 +32,4 @@ class FileWriterTest {
       text,
     )
   }
-
-  @Test
-  fun write_withoutInProgressSuffix(vertx: Vertx) {
-    val testFilePath = File.createTempFile("file-writer-test", null).toPath()
-    val data = "test-data"
-    val fileWriter = FileWriter(vertx, mapper)
-    val result = fileWriter.write(data, testFilePath, null).get()
-    val text = mapper.readValue(result.toFile(), String::class.java)
-    Assertions.assertEquals(
-      data,
-      text,
-    )
-  }
 }

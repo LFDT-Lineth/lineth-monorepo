@@ -1,11 +1,4 @@
-import {
-  bigintReplacer,
-  ILogger,
-  attempt,
-  msToSeconds,
-  weiToGweiNumber,
-  ONE_ETHER,
-} from "@consensys/linea-shared-utils";
+import { bigintReplacer, ILogger, attempt, msToSeconds, weiToGweiNumber, ONE_ETHER } from "@lfdt-lineth/shared-utils";
 import { Address, TransactionReceipt } from "viem";
 
 import { submitVaultReportIfNotFresh } from "./vaultReportSubmission.js";

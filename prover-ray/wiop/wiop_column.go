@@ -3,7 +3,7 @@ package wiop
 import (
 	"fmt"
 
-	"github.com/consensys/linea-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 )
 
 // Module is a group of columns sharing the same domain size and padding
@@ -27,9 +27,6 @@ type Module struct {
 	// Vanishings is the ordered list of vanishing constraints registered on
 	// this module via [Module.NewVanishing] and [Module.NewVanishingManual].
 	Vanishings []*Vanishing
-	// LocalOpenings holds all [LocalOpening] queries registered with this
-	// system via [System.NewLocalOpening], in declaration order.
-	LocalOpenings []*LocalOpening
 	// RangeChecks holds all [RangeCheck] queries registered on this module
 	// via [Module.NewRangeCheck], in declaration order.
 	RangeChecks []*RangeCheck
@@ -69,7 +66,7 @@ func (m *Module) IsSized() bool { return m.size > 0 }
 // For static modules it delegates to [Module.Size] (panics if not yet sized).
 // For dynamic modules it reads the size registered via [WithModuleSize]
 // (panics if no size was provided for this Runtime).
-func (m *Module) RuntimeSize(rt Runtime) int {
+func (m *Module) RuntimeSize(rt *Runtime) int {
 	if !m.isDynamic {
 		return m.Size()
 	}
@@ -225,6 +222,9 @@ func (c *Column) Round() *Round { return c.round }
 // Degree returns the polynomial degree of the column over its domain, which
 // is Size() - 1. Panics if the owning module has not been sized yet.
 func (c *Column) Degree() int {
+	if c.Module.IsDynamic() {
+		panic(fmt.Sprintf("wiop: Degree() called on dynamic-sized column %q", c.Context.Path()))
+	}
 	if !c.Module.IsSized() {
 		panic(fmt.Sprintf("wiop: Degree() called on unsized column %q", c.Context.Path()))
 	}
@@ -293,8 +293,20 @@ func (cv *ColumnView) IsMultiValued() bool { return true }
 func (cv *ColumnView) IsSized() bool { return cv.Column.Module.IsSized() }
 
 // Size implements [Expression]. Returns the domain size of the owning module.
-// Returns 0 if the module has not been sized yet.
-func (cv *ColumnView) Size() int { return cv.Column.Module.Size() }
+//
+// Panics if the owning module is dynamic (its size is per-Runtime; use the
+// module's RuntimeSize instead) or has not yet been sized. Check IsSized()
+// first.
+func (cv *ColumnView) Size() int {
+	m := cv.Column.Module
+	if m.IsDynamic() {
+		panic(fmt.Sprintf("wiop: Size() called on dynamic-sized column view of %q", cv.Column.Context.Path()))
+	}
+	if !m.IsSized() {
+		panic(fmt.Sprintf("wiop: Size() called on unsized column view of %q", cv.Column.Context.Path()))
+	}
+	return m.Size()
+}
 
 // Degree implements [Expression]. Returns Size() - 1. Panics if the owning
 // module has not been sized yet.
@@ -312,7 +324,7 @@ func (cv *ColumnView) DegreeFactor() int { return 1 }
 // EvaluateVector implements [Expression]. Returns a full-sized concrete vector
 // (length == module size) where logical row i holds the column value at
 // physical row (i + ShiftingOffset) mod n, accounting for the module's padding.
-func (cv *ColumnView) EvaluateVector(rt Runtime) ConcreteVector {
+func (cv *ColumnView) EvaluateVector(rt *Runtime) ConcreteVector {
 	concrete := rt.GetColumnAssignment(cv.Column)
 	m := cv.Column.Module
 	n := m.RuntimeSize(rt)
@@ -344,7 +356,7 @@ func (cv *ColumnView) EvaluateVector(rt Runtime) ConcreteVector {
 // EvaluateSingle implements [Expression]. Panics unconditionally: a column
 // view is vector-valued and produces no scalar. Check IsMultiValued() before
 // calling EvaluateSingle.
-func (cv *ColumnView) EvaluateSingle(_ Runtime) ConcreteField {
+func (cv *ColumnView) EvaluateSingle(_ *Runtime) ConcreteField {
 	panic("wiop: EvaluateSingle() cannot be called on a VectorPromise")
 }
 
@@ -361,12 +373,38 @@ func (cv *ColumnView) Visibility() Visibility { return cv.Column.Visibility }
 type ColumnPosition struct {
 	// Column is the parent column.
 	Column *Column
-	// Position is the zero-based row index into the column.
+	// Position is the row index into the column. Non-negative values index
+	// from the start of the domain; negative values index from the end, with
+	// −1 being the last row, −2 the second-to-last, etc. The end-indexed
+	// form is the only way to open the endpoint of a dynamic module, where
+	// the absolute row index is only known per-[Runtime]. The same
+	// convention is shared with [Vanishing.CancelledPositions].
 	Position int
 }
 
-// At constructs a [ColumnPosition] for this column at the given zero-based
-// row index. The result is a scalar [FieldPromise] evaluating to Column[pos].
+// resolvedRow returns the absolute row index of this position against a
+// runtime-known domain size n. Negative Position values are interpreted from
+// the end (−1 ⇒ n−1, −2 ⇒ n−2, …). Panics if the resolved index is out of
+// the [0, n) range.
+func (cp *ColumnPosition) resolvedRow(n int) int {
+	row := cp.Position
+	if row < 0 {
+		row += n
+	}
+	if row < 0 || row >= n {
+		panic(fmt.Sprintf(
+			"wiop: ColumnPosition: row %d (Position=%d, runtime size %d) out of bounds",
+			row, cp.Position, n,
+		))
+	}
+	return row
+}
+
+// At constructs a [ColumnPosition] for this column at the given row index.
+// Non-negative pos indexes from the start of the domain. Negative pos
+// indexes from the end and is the canonical way to address a dynamic
+// module's endpoint (pos = −1 ⇒ last row). The result is a scalar
+// [FieldPromise] evaluating to Column[pos].
 //
 // Panics if the receiver is nil.
 func (c *Column) At(pos int) *ColumnPosition {
@@ -417,14 +455,64 @@ func (cp *ColumnPosition) Visibility() Visibility { return cp.Column.Visibility 
 // EvaluateVector implements [Expression]. Panics unconditionally: a column
 // position is scalar and produces no vector. Check IsMultiValued() before
 // calling.
-func (cp *ColumnPosition) EvaluateVector(_ Runtime) ConcreteVector {
+func (cp *ColumnPosition) EvaluateVector(_ *Runtime) ConcreteVector {
 	panic("wiop: EvaluateVector() cannot be called on a FieldPromise")
 }
 
 // EvaluateSingle implements [Expression]. Returns the value of the parent
-// column at Position in the given runtime.
-func (cp *ColumnPosition) EvaluateSingle(rt Runtime) ConcreteField {
+// column at Position in the given runtime. Negative Position values are
+// resolved from the end of the domain (see [ColumnPosition.Position]).
+func (cp *ColumnPosition) EvaluateSingle(rt *Runtime) ConcreteField {
 	m := cp.Column.Module
-	elem := rt.GetColumnAssignment(cp.Column).ElementAtN(m.Padding, m.RuntimeSize(rt), cp.Position)
+	n := m.RuntimeSize(rt)
+	elem := rt.GetColumnAssignment(cp.Column).ElementAtN(m.Padding, n, cp.resolvedRow(n))
 	return ConcreteField{Value: elem, promise: cp}
+}
+
+// Open creates a "local opening" of this column position: a prover-supplied
+// scalar [Cell] (the result) pinned, by a constraint, to equal the column's
+// value at this position — Result == Column[Position].
+//
+// An opening is not a standalone query type. It is realised as:
+//
+//   - a lazily-assigned result [Cell] (see [Round.NewLazyCell]) living in the
+//     same round as the column; at prove time it resolves to Column[Position]
+//     by reading the runtime column assignment. Its extension flag inherits
+//     from the column.
+//   - a scalar [Vanishing] Result − Column[Position], registered on the
+//     column's module. Because the expression is scalar (a single
+//     [ColumnPosition] leaf plus the result [Cell]), it is discharged by the
+//     local-vanishing compiler, which lifts it to a domain-wide identity via a
+//     Lagrange indicator at Position. This is what soundly binds the opening
+//     into the proof (and gives it a gnark path) — the cell value alone is not
+//     trusted.
+//
+// The returned [Cell] is the opening value; read it back with
+// [Runtime.GetCellValue]. The prover does not need to assign it explicitly.
+//
+// Panics if ctx or the receiver is nil.
+func (cp *ColumnPosition) Open(ctx *ContextFrame) *Cell {
+	if cp == nil {
+		panic("wiop: ColumnPosition.Open requires a non-nil ColumnPosition")
+	}
+	if ctx == nil {
+		panic("wiop: ColumnPosition.Open requires a non-nil ContextFrame")
+	}
+
+	col := cp.Column
+	result := col.Round().NewLazyCell(
+		ctx.Childf("result"),
+		col.IsExtension,
+		func(rt *Runtime) field.Gen {
+			m := col.Module
+			n := m.RuntimeSize(rt)
+			// Negative Position values are resolved from the end at runtime;
+			// see [ColumnPosition.Position]. This is what allows callers to
+			// open the endpoint of a dynamic module via At(-1).
+			return rt.GetColumnAssignment(col).ElementAtN(m.Padding, n, cp.resolvedRow(n))
+		},
+	)
+
+	col.Module.NewVanishing(ctx, Sub(result, cp))
+	return result
 }

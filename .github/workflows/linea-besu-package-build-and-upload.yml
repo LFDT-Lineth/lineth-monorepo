@@ -31,13 +31,13 @@ on:
 
 jobs:
   build-and-upload-artifact:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-large
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     outputs:
       linea_besu_package_tag: ${{ steps.build-plugins-and-assemble.outputs.dockertag }}
       dockerimage: ${{ steps.build-plugins-and-assemble.outputs.dockerimage }}
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Build plugins and assemble
         id: build-plugins-and-assemble
@@ -49,7 +49,7 @@ jobs:
           fleet_github_app_private_key: ${{ secrets.FLEET_GITHUB_APP_PRIVATE_KEY }}
 
       - name: set up docker buildx
-        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 #v3.11.1
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f #v3.12.0
 
       - name: set docker build args
         run: |
@@ -76,7 +76,7 @@ jobs:
           NEWLINE: "\n"
 
       - name: build the combined manifest
-        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 #v7.0.0
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
         env:
           DOCKER_BUILD_SUMMARY: false
         with:
@@ -98,8 +98,9 @@ jobs:
         shell: bash
 
       - name: Upload Docker image artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: linea-besu-package
           path: linea-besu-package-images.tar.gz
           retention-days: 1
+

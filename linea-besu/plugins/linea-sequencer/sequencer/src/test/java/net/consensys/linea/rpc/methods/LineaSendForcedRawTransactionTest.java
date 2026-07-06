@@ -42,7 +42,7 @@ class LineaSendForcedRawTransactionTest {
 
   @BeforeEach
   void setUp() {
-    pool = new LineaForcedTransactionPool(100, null);
+    pool = new LineaForcedTransactionPool(100, 0L, null, null);
     method = new LineaSendForcedRawTransaction().init(pool);
     txFactory = new TestTransactionFactory();
   }

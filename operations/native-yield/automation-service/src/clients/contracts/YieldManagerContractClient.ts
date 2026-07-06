@@ -1,5 +1,5 @@
-import { absDiff, IBlockchainClient, ILogger, weiToGweiNumber } from "@consensys/linea-shared-utils";
-import { ONE_ETHER } from "@consensys/linea-shared-utils";
+import { absDiff, IBlockchainClient, ILogger, weiToGweiNumber } from "@lfdt-lineth/shared-utils";
+import { ONE_ETHER } from "@lfdt-lineth/shared-utils";
 import {
   Address,
   concat,

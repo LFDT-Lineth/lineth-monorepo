@@ -1,5 +1,5 @@
-import { IRetryService } from "@consensys/linea-shared-utils";
 import { jest, describe, it, expect, beforeEach } from "@jest/globals";
+import { IRetryService } from "@lfdt-lineth/shared-utils";
 
 import { ILidoGovernanceMonitorLogger } from "../../utils/logging/index.js";
 import { DiscourseClient } from "../DiscourseClient.js";

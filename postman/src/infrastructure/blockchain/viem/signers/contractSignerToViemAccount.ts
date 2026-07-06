@@ -1,4 +1,4 @@
-import { IContractSignerClient } from "@consensys/linea-shared-utils";
+import { IContractSignerClient } from "@lfdt-lineth/shared-utils";
 import { parseSignature, serializeTransaction } from "viem";
 import { toAccount } from "viem/accounts";
 

@@ -2,7 +2,7 @@ import { upgrades as createUpgrades } from "@openzeppelin/hardhat-upgrades";
 import { TokenBridge__factory } from "contracts/typechain-types";
 import hre, { network as hardhatNetwork } from "hardhat";
 
-import { tryVerifyContract, requireAddressFromRegistryOrEnv } from "../common/helpers";
+import { getBooleanEnvVarOrDefault, tryVerifyContract, requireAddressFromRegistryOrEnv } from "../common/helpers";
 import { deployScript } from "../rocketh/deploy";
 import { getUiSigner, withSignerUiSession } from "../scripts/hardhat/signer-ui-bridge";
 
@@ -14,8 +14,10 @@ const upgrades = await createUpgrades(hre, hardhatConnection);
 const func = withSignerUiSession("06_deploy_TokenBridgeWithReinitialization.ts", async function () {
   const signer = await getUiSigner();
   const contractName = "TokenBridge";
+  const tokenBridgeKey = getBooleanEnvVarOrDefault("DEPLOY_TOKEN_BRIDGE_ON_L1", false)
+    ? "TokenBridge_L1"
+    : "TokenBridge_L2";
 
-  const tokenBridgeKey = process.env.DEPLOY_TOKEN_BRIDGE_ON_L1 === "true" ? "TokenBridge_L1" : "TokenBridge_L2";
   const proxyAddress = requireAddressFromRegistryOrEnv(networkName, tokenBridgeKey, "TOKEN_BRIDGE_ADDRESS");
 
   const factory = await ethers.getContractFactory(contractName, signer);

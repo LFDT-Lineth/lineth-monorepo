@@ -4,8 +4,8 @@
 
 | Tool | Version |
 |------|---------|
-| Node.js | >= 24.14.1 (see `.nvmrc`) |
-| pnpm | >= 10.32.1 |
+| Node.js | >= 24.18.0 (see `.nvmrc`) |
+| pnpm | >= 11.9.0 |
 | JDK | 21 (for coordinator, Besu plugins) |
 | Docker | 24+ with 16 GB memory, 4+ CPUs |
 | Docker Compose | 2.19+ |
@@ -14,9 +14,9 @@
 ## Setup
 
 ```bash
-git clone https://github.com/Consensys/linea-monorepo.git
-cd linea-monorepo
-nvm use          # or install Node 24.14.1
+git clone https://github.com/LFDT-Lineth/lineth-monorepo.git
+cd lineth-monorepo
+nvm use          # or install Node 24.18.0
 pnpm install     # installs all workspaces + sets up Husky hooks
 ```
 
@@ -63,7 +63,7 @@ cd prover && gofmt -w . && golangci-lint run && go test ./... -tags nocorset,fuz
 4. Commit: `type(issue#): short description` (e.g., `fix(456): corrected login error`)
 5. Open a PR to `main` using the PR template
 6. Ensure CI passes; respond to review feedback
-7. External PRs follow the standard deployment flow with Consensys engineer support
+7. External PRs follow the standard deployment flow with Lineth contributor support
 
 ## Rules
 

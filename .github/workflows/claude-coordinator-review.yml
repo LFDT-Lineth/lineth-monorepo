@@ -21,7 +21,7 @@ jobs:
 
     steps:
       - name: Checkout branch
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 1
 
@@ -43,9 +43,11 @@ jobs:
 
       - name: Run Claude Coordinator Review
         id: review
-        uses: anthropics/claude-code-action@38ec876110f9fbf8b950c79f534430740c3ac009 #v1.0.101
+        uses: anthropics/claude-code-action@521136812280ae7ef256e06045655b9da02793f0 #v1.0.158
+        env:
+          ANTHROPIC_BASE_URL: ${{ vars.LITELLM_BASE_URL }}
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          anthropic_api_key: ${{ secrets.LITELLM_KEY_CLAUDE_COORDINATOR_REVIEW }}
           claude_args: --model claude-opus-4-7
           prompt: |
             Before starting your analysis, read the file `previous-findings.txt` in the
@@ -189,3 +191,4 @@ jobs:
         with:
           name: claude-execution-output
           path: ${{ steps.review.outputs.execution_file }}
+

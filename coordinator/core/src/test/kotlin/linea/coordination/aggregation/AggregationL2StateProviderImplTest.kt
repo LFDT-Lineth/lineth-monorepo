@@ -1,7 +1,7 @@
 package linea.coordination.aggregation
 
 import linea.contract.l2.FakeL2MessageService
-import linea.domain.BlockParameter.Companion.toBlockParameter
+import linea.domain.toBlockParameter
 import linea.ethapi.FakeEthApiClient
 import linea.persistence.ftx.FakeForcedTransactionsDao
 import linea.persistence.ftx.ForcedTransactionRecordFactory
@@ -133,7 +133,7 @@ class AggregationL2StateProviderImplTest {
     ethApiClient.setLatestBlockTag(blockNumber.toULong())
 
     val state = provider.getAggregationL2State(blockNumber).get()
-    val block = ethApiClient.ethFindBlockByNumberFullTxs(blockNumber.toULong().toBlockParameter()).get()!!
+    val block = ethApiClient.ethFindBlockByNumberFullTxs(blockNumber.toBlockParameter()).get()!!
 
     assertThat(state.parentAggregationLastBlockTimestamp)
       .isEqualTo(Instant.fromEpochSeconds(block.timestamp.toLong()))

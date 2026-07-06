@@ -414,7 +414,7 @@ Forum and on-chain content is treated as untrusted input. Adversaries may craft 
 
 # Operational Considerations
 
-**LLM access** - Service account API key for Anthropic Claude.
+**LLM access** - Claude is reached through the shared LiteLLM proxy
 
 **Observability** - Structured logging via custom logger. Per-run metrics (items fetched, LLM calls, notifications sent).
 

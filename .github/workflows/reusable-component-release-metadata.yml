@@ -31,7 +31,7 @@ on:
 
 jobs:
   compute-release-metadata:
-    runs-on: gha-runner-scale-set-ubuntu-24-amd64-med
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     name: Compute ${{ inputs.component-name }} release metadata (changelog + tag)
     outputs:
       release_tag: ${{ steps.changelog.outputs.next_tag }}
@@ -40,14 +40,14 @@ jobs:
       changelog: ${{ steps.changelog.outputs.changelog_content }}
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
           fetch-tags: true
           submodules: false
 
       - name: Install git-cliff
-        uses: taiki-e/install-action@5f57d6cb7cd20b14a8a27f522884c4bc8a187458 #(v2.75.19)
+        uses: taiki-e/install-action@bffeee26d4db9be238a4ea78d8826604ebcb594d #v2.82.5
         with:
           tool: git-cliff
 
@@ -59,3 +59,4 @@ jobs:
           include-path: ${{ inputs.include-path }}
           release_tag_suffix: ${{ inputs.release_tag_suffix }}
           generate-changelog-with-next-tag-version: 'true'
+
