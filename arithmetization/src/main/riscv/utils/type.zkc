@@ -30,21 +30,14 @@ type UnsignedDoubleWord = u64
 type Length = u64
 type Offset = u64
 
-// Semantic I-type micro-op tags (pre-decoded at ELF time).
+// Unified semantic compute op (see compute_ops.zkc).
+type ComputeOp = u8
+
+// Legacy per-type op tags (used by instruction_processing/*.zkc reference handlers).
 type ITypeComputeOp = u6
-
-// Semantic R-type micro-op tags (pre-decoded at ELF time).
 type RTypeComputeOp = u6
-
-// Semantic S-type micro-op tags (pre-decoded at ELF time).
 type STypeComputeOp = u6
-
-// Semantic B-type compute ops (pre-decoded at ELF time; values are raw funct3).
 type BTypeComputeOp = u6
-
-// Semantic J-type micro-op tags (pre-decoded at ELF time).
 type JTypeComputeOp = u6
-
-// Semantic U-type micro-op tags (pre-decoded at ELF time).
 type UTypeComputeOp = u6
 
