@@ -125,13 +125,25 @@ jobs:
       - name: Setup upterm session
         if: ${{ inputs.e2e-tests-with-ssh }}
         uses: lhotari/action-upterm@b0357f23233f5ea6d58947c0c402e0631bab7334 #v1
+      - name: Resolve monorepo checkout ref
+        id: monorepo-ref
+        shell: bash
+        env:
+          WORKFLOW_REF: ${{ github.workflow_ref }}
+        run: |
+          if [ "${{ github.repository }}" = "LFDT-Lineth/lineth-monorepo" ]; then
+            # Same-repo call: test at the triggering commit.
+            echo "ref=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            # Cross-repo call: WORKFLOW_REF is "owner/repo/.github/workflows/file.yml@ref"
+            # Extract everything after the last '@' to get the branch/tag/SHA.
+            echo "ref=${WORKFLOW_REF##*@}" >> "$GITHUB_OUTPUT"
+          fi
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           repository: LFDT-Lineth/lineth-monorepo
-          # Same-repo calls (monorepo CI): use the event SHA so tests run at the triggering commit.
-          # Cross-repo calls: use workflow_sha, which matches the callee's pinned ref.
-          ref: ${{ github.repository == 'LFDT-Lineth/lineth-monorepo' && github.sha || github.workflow_sha }}
+          ref: ${{ steps.monorepo-ref.outputs.ref }}
       - name: Setup nodejs environment
         uses: ./.github/actions/setup-nodejs
         with:
