@@ -12,5 +12,10 @@ dependencies {
   api project(':jvm-libs:linea:clients:linea-state-manager')
   //api project(':maru:core')
 
+  // used by the versioned-metadata JSON codec (linea.domain.serialization)
+  implementation project(':jvm-libs:generic:extensions:kotlin')
+  implementation "com.fasterxml.jackson.core:jackson-databind:${libs.versions.jackson.get()}"
+  implementation "com.fasterxml.jackson.module:jackson-module-kotlin:${libs.versions.jackson.get()}"
+
   testFixturesImplementation project(':jvm-libs:linea:metrics:micrometer')
 }

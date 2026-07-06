@@ -1,71 +1,53 @@
 package linea.coordinator.clients.prover.serialization
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.core.JsonParser
-import com.fasterxml.jackson.databind.DeserializationContext
-import com.fasterxml.jackson.databind.JsonDeserializer
-import com.fasterxml.jackson.databind.JsonSerializer
-import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import linea.domain.BlobCompressionProof
 import linea.domain.BlobCompressionProofRequest
 import linea.domain.BlockIntervals
-import linea.kotlin.decodeHex
-import linea.kotlin.encodeHex
-
-internal class ByteArrayDeserializer : JsonDeserializer<ByteArray>() {
-  override fun deserialize(p: JsonParser, ctxt: DeserializationContext): ByteArray {
-    return p.valueAsString.decodeHex()
-  }
-}
-
-internal class ByteArraySerializer : JsonSerializer<ByteArray>() {
-  override fun serialize(value: ByteArray, gen: JsonGenerator, serializers: SerializerProvider) {
-    gen.writeString(value.encodeHex())
-  }
-}
+import linea.domain.serialization.ByteArrayHexDeserializer
+import linea.domain.serialization.ByteArrayHexSerializer
 
 data class BlobCompressionProofJsonRequest(
   val compressedData: ByteArray,
   val conflationOrder: BlockIntervals,
   @JsonProperty("prevShnarf")
-  @JsonSerialize(using = ByteArraySerializer::class)
+  @JsonSerialize(using = ByteArrayHexSerializer::class)
   val prevShnarf: ByteArray,
   @JsonProperty("parentStateRootHash")
-  @JsonSerialize(using = ByteArraySerializer::class)
+  @JsonSerialize(using = ByteArrayHexSerializer::class)
   val parentStateRootHash: ByteArray,
   @JsonProperty("finalStateRootHash")
-  @JsonSerialize(using = ByteArraySerializer::class)
+  @JsonSerialize(using = ByteArrayHexSerializer::class)
   val finalStateRootHash: ByteArray,
   @JsonProperty("parentDataHash")
-  @JsonSerialize(using = ByteArraySerializer::class)
+  @JsonSerialize(using = ByteArrayHexSerializer::class)
   val parentDataHash: ByteArray,
   @JsonProperty("dataHash")
-  @JsonSerialize(using = ByteArraySerializer::class)
+  @JsonSerialize(using = ByteArrayHexSerializer::class)
   val dataHash: ByteArray,
   @JsonProperty("snarkHash")
-  @JsonSerialize(using = ByteArraySerializer::class)
+  @JsonSerialize(using = ByteArrayHexSerializer::class)
   val snarkHash: ByteArray,
   @JsonProperty("expectedX")
-  @JsonSerialize(using = ByteArraySerializer::class)
+  @JsonSerialize(using = ByteArrayHexSerializer::class)
   val expectedX: ByteArray,
   @JsonProperty("expectedY")
-  @JsonSerialize(using = ByteArraySerializer::class)
+  @JsonSerialize(using = ByteArrayHexSerializer::class)
   val expectedY: ByteArray,
   @JsonProperty("expectedShnarf")
-  @JsonSerialize(using = ByteArraySerializer::class)
+  @JsonSerialize(using = ByteArrayHexSerializer::class)
   val expectedShnarf: ByteArray,
   val eip4844Enabled: Boolean = true,
   @JsonProperty("commitment")
-  @JsonSerialize(using = ByteArraySerializer::class)
+  @JsonSerialize(using = ByteArrayHexSerializer::class)
   val commitment: ByteArray,
   @JsonProperty("kzgProofContract")
-  @JsonSerialize(using = ByteArraySerializer::class)
+  @JsonSerialize(using = ByteArrayHexSerializer::class)
   val kzgProofContract: ByteArray,
   @JsonProperty("kzgProofSidecar")
-  @JsonSerialize(using = ByteArraySerializer::class)
+  @JsonSerialize(using = ByteArrayHexSerializer::class)
   val kzgProofSidecar: ByteArray,
 ) {
   companion object {
@@ -97,59 +79,59 @@ data class BlobCompressionProofJsonResponse(
   val compressedData: ByteArray, // The data that are explicitly sent in the blob (i.e. after compression)
   val conflationOrder: BlockIntervals,
   @JsonProperty("prevShnarf")
-  @JsonDeserialize(using = ByteArrayDeserializer::class)
-  @JsonSerialize(using = ByteArraySerializer::class)
+  @JsonDeserialize(using = ByteArrayHexDeserializer::class)
+  @JsonSerialize(using = ByteArrayHexSerializer::class)
   val prevShnarf: ByteArray,
   @JsonProperty("parentStateRootHash")
-  @JsonDeserialize(using = ByteArrayDeserializer::class)
-  @JsonSerialize(using = ByteArraySerializer::class)
+  @JsonDeserialize(using = ByteArrayHexDeserializer::class)
+  @JsonSerialize(using = ByteArrayHexSerializer::class)
   val parentStateRootHash: ByteArray, // Parent root hash
   @JsonProperty("finalStateRootHash")
-  @JsonDeserialize(using = ByteArrayDeserializer::class)
-  @JsonSerialize(using = ByteArraySerializer::class)
+  @JsonDeserialize(using = ByteArrayHexDeserializer::class)
+  @JsonSerialize(using = ByteArrayHexSerializer::class)
   val finalStateRootHash: ByteArray, // New state root hash
   @JsonProperty("parentDataHash")
-  @JsonDeserialize(using = ByteArrayDeserializer::class)
-  @JsonSerialize(using = ByteArraySerializer::class)
+  @JsonDeserialize(using = ByteArrayHexDeserializer::class)
+  @JsonSerialize(using = ByteArrayHexSerializer::class)
   val parentDataHash: ByteArray,
   @JsonProperty("dataHash")
-  @JsonDeserialize(using = ByteArrayDeserializer::class)
-  @JsonSerialize(using = ByteArraySerializer::class)
+  @JsonDeserialize(using = ByteArrayHexDeserializer::class)
+  @JsonSerialize(using = ByteArrayHexSerializer::class)
   val dataHash: ByteArray,
   @JsonProperty("snarkHash")
-  @JsonDeserialize(using = ByteArrayDeserializer::class)
-  @JsonSerialize(using = ByteArraySerializer::class)
+  @JsonDeserialize(using = ByteArrayHexDeserializer::class)
+  @JsonSerialize(using = ByteArrayHexSerializer::class)
   val snarkHash: ByteArray, // The snarkHash used for the blob consistency check
   @JsonProperty("expectedX")
-  @JsonDeserialize(using = ByteArrayDeserializer::class)
-  @JsonSerialize(using = ByteArraySerializer::class)
+  @JsonDeserialize(using = ByteArrayHexDeserializer::class)
+  @JsonSerialize(using = ByteArrayHexSerializer::class)
   val expectedX: ByteArray,
   @JsonProperty("expectedY")
-  @JsonDeserialize(using = ByteArrayDeserializer::class)
-  @JsonSerialize(using = ByteArraySerializer::class)
+  @JsonDeserialize(using = ByteArrayHexDeserializer::class)
+  @JsonSerialize(using = ByteArrayHexSerializer::class)
   val expectedY: ByteArray,
   @JsonProperty("expectedShnarf")
-  @JsonDeserialize(using = ByteArrayDeserializer::class)
-  @JsonSerialize(using = ByteArraySerializer::class)
+  @JsonDeserialize(using = ByteArrayHexDeserializer::class)
+  @JsonSerialize(using = ByteArrayHexSerializer::class)
   val expectedShnarf: ByteArray,
   @JsonProperty("decompressionProof")
-  @JsonDeserialize(using = ByteArrayDeserializer::class)
-  @JsonSerialize(using = ByteArraySerializer::class)
+  @JsonDeserialize(using = ByteArrayHexDeserializer::class)
+  @JsonSerialize(using = ByteArrayHexSerializer::class)
   val decompressionProof: ByteArray, // zkProof of compression and consistency
   val proverVersion: String,
   val verifierID: Long,
   val eip4844Enabled: Boolean = true,
   @JsonProperty("commitment")
-  @JsonDeserialize(using = ByteArrayDeserializer::class)
-  @JsonSerialize(using = ByteArraySerializer::class)
+  @JsonDeserialize(using = ByteArrayHexDeserializer::class)
+  @JsonSerialize(using = ByteArrayHexSerializer::class)
   val commitment: ByteArray = ByteArray(0),
   @JsonProperty("kzgProofContract")
-  @JsonDeserialize(using = ByteArrayDeserializer::class)
-  @JsonSerialize(using = ByteArraySerializer::class)
+  @JsonDeserialize(using = ByteArrayHexDeserializer::class)
+  @JsonSerialize(using = ByteArrayHexSerializer::class)
   val kzgProofContract: ByteArray = ByteArray(0),
   @JsonProperty("kzgProofSidecar")
-  @JsonDeserialize(using = ByteArrayDeserializer::class)
-  @JsonSerialize(using = ByteArraySerializer::class)
+  @JsonDeserialize(using = ByteArrayHexDeserializer::class)
+  @JsonSerialize(using = ByteArrayHexSerializer::class)
   val kzgProofSidecar: ByteArray = ByteArray(0),
 ) {
 
