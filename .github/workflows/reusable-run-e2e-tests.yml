@@ -104,7 +104,7 @@ jobs:
         if: ${{ inputs.e2e-tests-with-ssh }}
         uses: lhotari/action-upterm@b0357f23233f5ea6d58947c0c402e0631bab7334 #v1
       - name: Checkout
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Setup nodejs environment
         uses: ./.github/actions/setup-nodejs
         with:
@@ -113,7 +113,7 @@ jobs:
             pnpm run -F "e2e^..." build
       - name: Login to Docker Hub
         if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 #v3.4.0
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 #v3.7.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -122,7 +122,7 @@ jobs:
           mkdir -p tmp/local/traces/v2/conflated
           chmod -R a+rw tmp/local/
       - name: Pull all external-to-monorepo images with retry
-        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 #v3.0.2
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
         if: ${{ inputs.linea_besu_package_tag == '' }}
         with:
           max_attempts: 10
@@ -133,7 +133,7 @@ jobs:
             make docker-pull-images-external-to-monorepo
 
       - name: Download local docker image artifacts
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         continue-on-error: true
         with:
           pattern: linea-*
@@ -141,14 +141,14 @@ jobs:
           merge-multiple: true
 
       - name: Download Maru docker image artifact
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         continue-on-error: true
         with:
           name: maru
           path: ${{ github.workspace }}/tmp/artifacts
 
       - name: Load Docker images from artifacts or pull develop for unchanged services
-        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 #v3.0.2
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
         with:
           max_attempts: 10
           retry_on: error
@@ -205,7 +205,7 @@ jobs:
             echo "No artifact at ${artifact_path}; skipping docker load."
           fi
       - name: Spin up fresh environment with retry
-        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 #v3.0.2
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
         with:
           max_attempts: 10
           retry_on: error
@@ -256,3 +256,4 @@ jobs:
           if-no-files-found: error
           path: |
             docker_logs/**/*
+

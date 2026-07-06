@@ -81,7 +81,7 @@ jobs:
           echo "user-id=${user_id}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           # Use the App token so subsequent `git push` is authenticated as the App.
           token: ${{ steps.app-token.outputs.token }}
@@ -99,7 +99,7 @@ jobs:
           git config user.email "${USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
 
       - name: Install git-cliff
-        uses: taiki-e/install-action@5f57d6cb7cd20b14a8a27f522884c4bc8a187458 #(v2.75.19)
+        uses: taiki-e/install-action@bffeee26d4db9be238a4ea78d8826604ebcb594d #v2.82.5
         with:
           tool: git-cliff
 
@@ -250,7 +250,7 @@ jobs:
 
       - name: Create pull request
         if: ${{ inputs.create_pull_request }}
-        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         env:
           RELEASE_VERSION: ${{ inputs.release_version }}
         with:
@@ -290,3 +290,4 @@ jobs:
           git tag -a "${TAG}" -m "${COMPONENT^} release ${TAG}"
           git push origin "${TAG}"
           echo "Pushed ${TAG} pointing at $(git rev-parse HEAD)"
+
