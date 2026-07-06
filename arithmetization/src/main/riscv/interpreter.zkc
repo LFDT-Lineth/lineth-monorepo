@@ -24,8 +24,7 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
     // (see decoded_core in memory.zkc) and looked up by instruction index.
     var opcode:Opcode
     var instruction_type:Type
-    var instruction_parameters:u25
-    opcode, instruction_type, instruction_parameters = decoded_core[index]
+    opcode, instruction_type = decoded_core[index]
 
     switch instruction_type {
         case R_TYPE: {

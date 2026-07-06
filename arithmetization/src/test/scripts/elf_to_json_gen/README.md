@@ -41,7 +41,7 @@ In addition to the original keys (`entry_point_and_blobs_count`,
 | Key                | Record fields                                          | Replaces (in the interpreter)                              |
 | ------------------ | ------------------------------------------------------ | ---------------------------------------------------------- |
 | `instruction_base` | `base:Address`                                         | base address used to map `pc` → table index               |
-| `decoded_core`     | `opcode, instruction_type, instruction_parameters`     | `instruction_parameters::opcode = instruction` + type map  |
+| `decoded_core`     | `opcode, instruction_type`                             | `opcode = instruction` + type map                          |
 | `decoded_itype`    | `compute_op, imm, rs1, rd`                           | flat semantic micro-op dispatch in `i_type.zkc`              |
 | `decoded_rtype`    | `compute_op, rs1, rs2, rd`                             | flat semantic micro-op dispatch in `r_type.zkc`              |
 | `decoded_stype`    | `compute_op, imm, rs2, rs1`                          | flat store-width dispatch in `s_type.zkc`                    |
@@ -206,7 +206,7 @@ size is the sum of its field widths:
 
 | Table           | Field widths (bits)            | Record size |
 | --------------- | ------------------------------ | ----------- |
-| `decoded_core`  | opcode 7, type 4, params 25    | 36 bits     |
+| `decoded_core`  | opcode 7, type 4               | 11 bits     |
 | `decoded_itype` | compute_op 6, imm 64, rs1 5, rd 5 | 80 bits     |
 | `decoded_rtype` | compute_op 6, rs1 5, rs2 5, rd 5 | 21 bits |
 | `decoded_stype` | compute_op 6, imm 64, rs2 5, rs1 5 | 80 bits   |
