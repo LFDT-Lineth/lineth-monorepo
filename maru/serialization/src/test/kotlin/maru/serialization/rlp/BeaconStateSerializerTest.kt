@@ -9,10 +9,8 @@
 package maru.serialization.rlp
 
 import maru.core.BeaconState
-import maru.core.HashUtil
 import maru.core.Validator
 import maru.core.ext.DataGenerators
-import maru.crypto.Hashing
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
@@ -20,14 +18,16 @@ import kotlin.random.nextULong
 
 class BeaconStateSerializerTest {
   private val validatorSerializer = ValidatorSerDe()
+  private val beaconBlockHeaderRLPSerializer = BeaconBlockHeaderRLPSerializer(validatorSerializer)
   private val beaconBlockHeaderSerializer =
     BeaconBlockHeaderSerDe(
+      beaconBlockHeaderRLPSerializer = beaconBlockHeaderRLPSerializer,
       validatorSerializer = validatorSerializer,
-      hasher = Hashing::keccak,
-      headerHashFunction = HashUtil::headerHash,
+      beaconBlockIdHashFunction = HashUtil::headerHash,
     )
   private val serializer =
     BeaconStateSerDe(
+      beaconStateRLPSerializer = BeaconStateRLPSerializer(beaconBlockHeaderRLPSerializer, validatorSerializer),
       beaconBlockHeaderSerializer = beaconBlockHeaderSerializer,
       validatorSerializer = validatorSerializer,
     )

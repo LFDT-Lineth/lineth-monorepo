@@ -48,6 +48,7 @@ import maru.executionlayer.manager.ExecutionLayerManager
 import maru.p2p.P2PNetwork
 import maru.p2p.SealedBeaconBlockHandler
 import maru.p2p.ValidationResult
+import maru.serialization.rlp.ForkAwareBlockHashing
 import maru.syncing.SyncStatusProvider
 import org.apache.tuweni.bytes.Bytes32
 import org.hyperledger.besu.consensus.common.bft.BftEventQueue
@@ -99,6 +100,7 @@ class QbftValidatorFactory(
   private val onBlockMined: ((SealedBeaconBlock) -> Unit)? = null,
   /** Sync status provider for registering beacon sync completion callbacks. */
   private val syncStatusProvider: SyncStatusProvider,
+  private val blockHashing: ForkAwareBlockHashing,
 ) : ProtocolFactory {
   override fun create(forkSpec: ForkSpec): Protocol {
     val protocolConfig = forkSpec.configuration as QbftConsensusConfig
@@ -144,6 +146,7 @@ class QbftValidatorFactory(
         prevRandaoProvider = prevRandaoProvider,
         feeRecipient = qbftOptions.feeRecipient,
         eagerQbftBlockCreatorConfig = EagerQbftBlockCreator.Config(qbftOptions.minBlockBuildTime),
+        blockHashing = blockHashing,
       )
 
     val besuForksSchedule = ForksScheduleAdapter(forkSpec, qbftOptions)
@@ -192,8 +195,8 @@ class QbftValidatorFactory(
     val blockImporter =
       QbftBlockImporterAdapter(sealedBeaconBlockImporter)
 
-    val blockCodec = QbftBlockCodecAdapter
-    val blockInterface = QbftBlockInterfaceAdapter(stateTransition)
+    val blockCodec = QbftBlockCodecAdapter(blockHashing.beaconBlockSerializer)
+    val blockInterface = QbftBlockInterfaceAdapter(stateTransition, blockHashing)
     val beaconBlockValidatorFactory =
       BeaconBlockValidatorFactoryImpl(
         beaconChain = beaconChain,
@@ -201,6 +204,7 @@ class QbftValidatorFactory(
         stateTransition = stateTransition,
         executionLayerManager = if (payloadValidationEnabled) executionLayerManager else null,
         allowEmptyBlocks = allowEmptyBlocks,
+        blockHashing = blockHashing,
       )
     val protocolSchedule =
       QbftProtocolScheduleAdapter(

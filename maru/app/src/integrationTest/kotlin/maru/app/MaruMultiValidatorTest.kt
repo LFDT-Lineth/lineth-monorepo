@@ -11,6 +11,7 @@ package maru.app
 import io.libp2p.etc.types.fromHex
 import linea.kotlin.encodeHex
 import linea.testing.besu.BesuFactory
+import maru.consensus.ClFork
 import maru.consensus.qbft.ProposerSelectorImpl
 import maru.core.SealedBeaconBlock
 import maru.core.Validator
@@ -101,9 +102,14 @@ class MaruMultiValidatorTest {
 
   // -- Helper methods ---------------------------------------------------------
 
-  private fun startAllValidators() {
+  private fun startAllValidators(
+    factory0: MaruFactory = maruFactory0,
+    factory1: MaruFactory = maruFactory1,
+    factory2: MaruFactory = maruFactory2,
+    factory3: MaruFactory = maruFactory3,
+  ) {
     val app0 =
-      maruFactory0.buildTestMaruValidatorWithP2pPeering(
+      factory0.buildTestMaruValidatorWithP2pPeering(
         ethereumJsonRpcUrl = stack0.besuNode.jsonRpcBaseUrl().get(),
         engineApiRpc = stack0.besuNode.engineRpcUrl().get(),
         dataDir = stack0.tmpDir,
@@ -115,7 +121,7 @@ class MaruMultiValidatorTest {
     app0.start().get()
 
     val app1 =
-      maruFactory1.buildTestMaruValidatorWithP2pPeering(
+      factory1.buildTestMaruValidatorWithP2pPeering(
         ethereumJsonRpcUrl = stack1.besuNode.jsonRpcBaseUrl().get(),
         engineApiRpc = stack1.besuNode.engineRpcUrl().get(),
         dataDir = stack1.tmpDir,
@@ -127,7 +133,7 @@ class MaruMultiValidatorTest {
     app1.start().get()
 
     val app2 =
-      maruFactory2.buildTestMaruValidatorWithP2pPeering(
+      factory2.buildTestMaruValidatorWithP2pPeering(
         ethereumJsonRpcUrl = stack2.besuNode.jsonRpcBaseUrl().get(),
         engineApiRpc = stack2.besuNode.engineRpcUrl().get(),
         dataDir = stack2.tmpDir,
@@ -139,7 +145,7 @@ class MaruMultiValidatorTest {
     app2.start().get()
 
     val app3 =
-      maruFactory3.buildTestMaruValidatorWithP2pPeering(
+      factory3.buildTestMaruValidatorWithP2pPeering(
         ethereumJsonRpcUrl = stack3.besuNode.jsonRpcBaseUrl().get(),
         engineApiRpc = stack3.besuNode.engineRpcUrl().get(),
         dataDir = stack3.tmpDir,
@@ -315,7 +321,7 @@ class MaruMultiValidatorTest {
   private fun clBlocksToMetadata(blocks: List<SealedBeaconBlock>): List<Pair<ULong, String>> =
     blocks.map {
       it.beaconBlock.beaconBlockHeader.number to
-        it.beaconBlock.beaconBlockHeader.hash
+        it.beaconBlock.beaconBlockHeader.beaconBlockIdHash
           .encodeHex()
     }
 
@@ -371,6 +377,58 @@ class MaruMultiValidatorTest {
       beaconChain = stack0.maruApp.beaconChain,
       startBlock = verifyStart,
       endBlock = stableHeight + STABLE_BLOCKS.toULong(),
+    )
+  }
+
+  @Test
+  fun `PHASE1 validators converge on the same chain identity`() {
+    // Regression guard for the round-independent chain-identity hash (QBFT_PHASE1). Object equality of
+    // BeaconBlockHeader must stay field-based (round-sensitive); if it were hash-based, headers differing
+    // only in round/proposer would collapse into one object under PHASE1 and the QBFT engine would fail to
+    // converge (this test would time out at waitForConsecutiveRound0Blocks).
+    // Local factories (rather than mutating the shared maruFactoryN fields) so this test can't leak its
+    // PHASE1 config into other tests if the class is ever switched to PER_CLASS lifecycle.
+    startAllValidators(
+      factory0 = MaruFactory(validatorPrivateKey = key0, clFork = ClFork.QBFT_PHASE1),
+      factory1 = MaruFactory(validatorPrivateKey = key1, clFork = ClFork.QBFT_PHASE1),
+      factory2 = MaruFactory(validatorPrivateKey = key2, clFork = ClFork.QBFT_PHASE1),
+      factory3 = MaruFactory(validatorPrivateKey = key3, clFork = ClFork.QBFT_PHASE1),
+    )
+
+    val stableHeight =
+      waitForConsecutiveRound0Blocks(
+        stack0.maruApp.beaconChain,
+        requiredConsecutive = STABLE_BLOCKS,
+        timeout = 240.seconds,
+      )
+    log.info("PHASE1 QBFT convergence achieved at block $stableHeight")
+
+    // Wait for ALL validators to reach the target so blocks can safely be read from all.
+    waitForBlockHeight(
+      stack0.maruApp.beaconChain,
+      stack1.maruApp.beaconChain,
+      stack2.maruApp.beaconChain,
+      stack3.maruApp.beaconChain,
+      targetHeight = stableHeight + STABLE_BLOCKS.toULong(),
+      timeout = 90.seconds,
+    )
+
+    val verifyStart = stableHeight - (STABLE_BLOCKS - 1).toULong()
+    val verifyCount = (STABLE_BLOCKS * 2).toULong()
+
+    // The "no fork" guarantee under PHASE1 is that all validators agree on the round-independent chain
+    // identity (block root) for each height. They may legitimately store byte-different sealed blocks —
+    // differing only in round/proposer/committed-seals when they commit the same block at different rounds
+    // (this is exactly what QBFT_PHASE1 makes safe, and mirrors Besu's on-chain hash which excludes round +
+    // committed seals). So assert identity-hash equality across validators, not raw serialized bytes.
+    checkAllValidatorBlocksAreTheSame(
+      validatorBlocks = listOf(
+        { stack0.maruApp.beaconChain.getSealedBeaconBlocks(verifyStart, verifyCount) },
+        { stack1.maruApp.beaconChain.getSealedBeaconBlocks(verifyStart, verifyCount) },
+        { stack2.maruApp.beaconChain.getSealedBeaconBlocks(verifyStart, verifyCount) },
+        { stack3.maruApp.beaconChain.getSealedBeaconBlocks(verifyStart, verifyCount) },
+      ),
+      blocksToMetadata = ::clBlocksToMetadata,
     )
   }
 

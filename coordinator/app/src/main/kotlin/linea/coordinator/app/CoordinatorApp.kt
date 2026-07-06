@@ -9,6 +9,7 @@ import linea.coordinator.api.Api
 import linea.coordinator.app.conflationbacktesting.ConflationBacktestingService
 import linea.coordinator.config.v2.CoordinatorConfig
 import linea.coordinator.config.v2.DatabaseConfig
+import linea.coordinator.config.v2.logPretty
 import linea.coordinator.extensions.CoordinatorContext
 import linea.coordinator.extensions.CoordinatorExtensionFactory
 import linea.fileio.DirectoryCleaner
@@ -51,7 +52,23 @@ class CoordinatorApp(
       log.trace("System properties: {}", System.getProperties())
       val vertxConfig = loadVertxConfig()
       log.debug("Vertx full configs: {}", vertxConfig)
+      // Raw single-line dump kept for existing tooling that parses this line.
       log.info("App configs: {}", configs)
+      // Human-readable form: one fully-qualified `path: value` per INFO event so each config is a
+      // separate line in log aggregators (Grafana/Loki) instead of a collapsed multi-line blob.
+      configs.logPretty(log)
+      log.trace(
+        "Full smartContractErrors ({} entries): {}",
+        configs.smartContractErrors.size,
+        configs.smartContractErrors,
+      )
+      configs.l1Submission?.dynamicGasPriceCap?.let { dgc ->
+        log.trace("dynamicGasPriceCap.timeOfDayMultipliers: {}", dgc.timeOfDayMultipliers)
+        log.trace(
+          "dynamicGasPriceCap.gasPriceCapCalculation.timeOfTheDayMultipliers: {}",
+          dgc.gasPriceCapCalculation.timeOfTheDayMultipliers,
+        )
+      }
 
       Vertx.vertx(vertxConfig)
     }
