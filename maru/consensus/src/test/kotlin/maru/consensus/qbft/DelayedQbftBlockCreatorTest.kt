@@ -16,15 +16,12 @@ import maru.consensus.qbft.adapters.toBeaconBlockHeader
 import maru.consensus.qbft.adapters.toSealedBeaconBlock
 import maru.core.BeaconState
 import maru.core.EMPTY_HASH
-import maru.core.HashUtil
 import maru.core.Seal
 import maru.core.Validator
 import maru.core.ext.DataGenerators
 import maru.database.BeaconChain
 import maru.executionlayer.manager.ExecutionLayerManager
-import maru.serialization.rlp.bodyRoot
-import maru.serialization.rlp.headerHash
-import maru.serialization.rlp.stateRoot
+import maru.serialization.rlp.HashUtil
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.hyperledger.besu.consensus.common.bft.ConsensusRoundIdentifier
@@ -45,6 +42,11 @@ class DelayedQbftBlockCreatorTest {
   private val validatorProvider = Mockito.mock(ValidatorProvider::class.java)
   private val beaconChain = Mockito.mock(BeaconChain::class.java)
   private val validatorSet = DataGenerators.randomValidators()
+  private val blockHashing =
+    DataGenerators.testForkAwareBlockHashing(
+      chainId = 1337u,
+      validatorSet = setOf(DataGenerators.randomValidator()),
+    )
 
   @Test
   fun `can create block`() {
@@ -53,7 +55,9 @@ class DelayedQbftBlockCreatorTest {
     )
     val parentHeader = QbftBlockHeaderAdapter(parentBlock.beaconBlock.beaconBlockHeader)
     val executionPayload = CoreDataGenerators.randomExecutionPayload()
-    whenever(beaconChain.getSealedBeaconBlock(parentBlock.beaconBlock.beaconBlockHeader.hash())).thenReturn(
+    whenever(
+      beaconChain.getSealedBeaconBlock(parentBlock.beaconBlock.beaconBlockHeader.beaconBlockIdHash()),
+    ).thenReturn(
       parentBlock,
     )
     whenever(executionLayerManager.finishBlockBuilding()).thenReturn(completedFuture(executionPayload))
@@ -69,6 +73,7 @@ class DelayedQbftBlockCreatorTest {
         validatorProvider = validatorProvider,
         beaconChain = beaconChain,
         round = 0,
+        blockHashing = blockHashing,
       )
     val createdBlock = blockCreator.createBlock(1000L, parentHeader)
     val createBeaconBlock = createdBlock.block().toBeaconBlock()
@@ -94,9 +99,9 @@ class DelayedQbftBlockCreatorTest {
       HashUtil.bodyRoot(createBeaconBlock.beaconBlockBody),
     )
     assertThat(blockHeader.stateRoot).isEqualTo(stateRoot)
-    assertThat(blockHeader.parentRoot).isEqualTo(parentHeader.toBeaconBlockHeader().hash())
+    assertThat(blockHeader.parentRoot).isEqualTo(parentHeader.toBeaconBlockHeader().beaconBlockIdHash())
     assertThat(
-      createBeaconBlock.beaconBlockHeader.hash(),
+      createBeaconBlock.beaconBlockHeader.beaconBlockIdHash(),
     ).isEqualTo(HashUtil.headerHash(createBeaconBlock.beaconBlockHeader))
 
     // block body fields
@@ -127,6 +132,7 @@ class DelayedQbftBlockCreatorTest {
         validatorProvider = validatorProvider,
         beaconChain = beaconChain,
         round = 0,
+        blockHashing = blockHashing,
       )
     assertThatThrownBy {
       blockCreator.createBlock(1000L, parentHeader)
@@ -144,7 +150,7 @@ class DelayedQbftBlockCreatorTest {
     val executionPayload = CoreDataGenerators.randomExecutionPayload()
 
     whenever(executionLayerManager.finishBlockBuilding()).thenReturn(completedFuture(executionPayload))
-    whenever(beaconChain.getSealedBeaconBlock(parentBlock.beaconBlockHeader.hash())).thenReturn(null)
+    whenever(beaconChain.getSealedBeaconBlock(parentBlock.beaconBlockHeader.beaconBlockIdHash())).thenReturn(null)
     whenever(proposerSelector.selectProposerForRound(ConsensusRoundIdentifier(11L, 0))).thenReturn(Address.ZERO)
 
     val blockCreator =
@@ -154,6 +160,7 @@ class DelayedQbftBlockCreatorTest {
         validatorProvider,
         beaconChain,
         0,
+        blockHashing,
       )
     assertThatThrownBy {
       blockCreator.createBlock(1000L, parentHeader)
@@ -181,6 +188,7 @@ class DelayedQbftBlockCreatorTest {
         validatorProvider = validatorProvider,
         beaconChain = beaconChain,
         round = 0,
+        blockHashing = blockHashing,
       )
     val createSealedBlock = blockCreator.createSealedBlock(block, round, seals)
     val createdSealedBeaconBlock = createSealedBlock.toSealedBeaconBlock()
@@ -200,7 +208,7 @@ class DelayedQbftBlockCreatorTest {
     )
     assertThat(createdSealedBlockHeader.stateRoot).isEqualTo(beaconBlock.beaconBlockHeader.stateRoot)
     assertThat(createdSealedBlockHeader.parentRoot).isEqualTo(beaconBlock.beaconBlockHeader.parentRoot)
-    assertThat(createdSealedBlockHeader.hash()).isEqualTo(HashUtil.headerHash(createdSealedBlockHeader))
+    assertThat(createdSealedBlockHeader.beaconBlockIdHash()).isEqualTo(HashUtil.headerHash(createdSealedBlockHeader))
 
     // block body fields
     val sealedBlockBody = createdSealedBeaconBlock.beaconBlock.beaconBlockBody

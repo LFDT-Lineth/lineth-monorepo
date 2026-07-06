@@ -68,7 +68,7 @@ jobs:
     timeout-minutes: 120
     steps:
       - name: Checkout repository
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
           submodules: false
@@ -140,7 +140,7 @@ jobs:
           # Run fast mode with gogen
           run_gogen_native_keccak() {  # $1=variant (base|opt)  $2=label (warmup|iter#)
             local variant="$1" label="$2" zkc_bin="/tmp/zkc-${1}"
-            "$zkc_bin" generate -v -q --field KOALABEAR_16 -o riscv.go "$zkc_prog"
+            "$zkc_bin" generate --fast -v -q --field KOALABEAR_16 -o riscv.go "$zkc_prog"
             go build -o riscv-gogen riscv.go
             /usr/bin/time -v ./riscv-gogen < /tmp/keccakf_input.json \
               > "/tmp/bench/logs/keccak_${variant}_${label}.log" 2>&1
@@ -202,3 +202,4 @@ jobs:
         with:
           name: zkc-native-keccak-bench-logs
           path: /tmp/bench/logs
+

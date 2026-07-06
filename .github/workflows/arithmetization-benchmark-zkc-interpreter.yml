@@ -23,20 +23,6 @@ name: Arithmetization zkc interpreter benchmark (base vs optim)
 # h, m, t, f are hard-coded to the standard Blake2b "abc" test vector.
 
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'arithmetization/**'
-      - '.github/actions/setup-arithmetization-riscv/**'
-      - '.github/workflows/arithmetization-*.yml'
-  push:
-    branches:
-     - main
-    paths:
-     - 'arithmetization/**'
-     - '.github/actions/setup-arithmetization-riscv/**'
-     - '.github/workflows/arithmetization-*.yml'
   workflow_dispatch:
     inputs:
       base_ref:
@@ -88,7 +74,7 @@ jobs:
     timeout-minutes: 120
     steps:
       - name: Checkout repository
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
           submodules: false
@@ -197,7 +183,7 @@ jobs:
           run_gogen_keccak() {  # $1=variant (opt|base)  $2=label (warmup|iter#)
             local zkc_bin="/tmp/zkc-${1}"
             local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
-            "$zkc_bin" generate -v -q --field KOALABEAR_16 -o riscv.go "$zkc_main"
+            "$zkc_bin" generate --fast -v -q --field KOALABEAR_16 -o riscv.go "$zkc_main"
             go build -o riscv-gogen riscv.go
             /usr/bin/time -v ./riscv-gogen < "/tmp/keccak-${1}.json" \
               > "/tmp/bench/logs/keccak_${1}_${2}.log" 2>&1
@@ -206,7 +192,7 @@ jobs:
           run_gogen_blake() {   # $1=variant  $2=label. Runs all N vectors, one log file per vector.
             local zkc_bin="/tmp/zkc-${1}"
             local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
-            "$zkc_bin" generate -v -q --field KOALABEAR_16 -o riscv.go "$zkc_main"
+            "$zkc_bin" generate --fast -v -q --field KOALABEAR_16 -o riscv.go "$zkc_main"
             go build -o riscv-gogen riscv.go
             for json in /tmp/bench/json/blake-"${1}"/*.json; do
               local n
@@ -268,3 +254,4 @@ jobs:
         with:
           name: zkc-bench-logs
           path: /tmp/bench/logs
+
