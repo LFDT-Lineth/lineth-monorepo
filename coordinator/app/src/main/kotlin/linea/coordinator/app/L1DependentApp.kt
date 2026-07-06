@@ -142,7 +142,7 @@ class L1DependentApp(
   private val l1FinalizationPriorityFeeCalculator: FeesCalculator = BoundableFeeCalculator(
     BoundableFeeCalculator.Config(
       feeUpperBound = configs.l1Submission!!.aggregation.gas.fallback.priorityFeePerGasUpperBound.toDouble(),
-      feeLowerBound = configs.l1Submission.aggregation.gas.fallback.priorityFeePerGasUpperBound.toDouble(),
+      feeLowerBound = configs.l1Submission.aggregation.gas.fallback.priorityFeePerGasLowerBound.toDouble(),
       feeMargin = 0.0,
     ),
     l1MinPriorityFeeCalculator,
