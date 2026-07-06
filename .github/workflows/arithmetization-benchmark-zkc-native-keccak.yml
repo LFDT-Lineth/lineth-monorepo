@@ -83,8 +83,8 @@ jobs:
           # so they coexist on disk.
           for variant in base opt; do
             case "$variant" in
-              base) ref="${{ inputs.zkc_base_ref || 'main' }}" ;;
-              opt)  ref="${{ inputs.zkc_optim_ref || 'main' }}" ;;
+              base) ref="${{ inputs.zkc_base_ref || 'v1.2.20' }}" ;;
+              opt)  ref="${{ inputs.zkc_optim_ref || 'v1.2.20' }}" ;;
             esac
             tmpbin=$(mktemp -d)
             # go-corset was renamed/moved to github.com/LFDT-Lineth/zkc. The module
@@ -190,8 +190,8 @@ jobs:
             "${fast_mode_arg[@]}" \
             -base-ref "${{ inputs.zkc_base_ref || 'main' }}" \
             -optim-ref "${{ inputs.zkc_optim_ref || 'main' }}" \
-            -zkc-ref-base "${{ inputs.zkc_base_ref || 'main' }}" \
-            -zkc-ref-optim "${{ inputs.zkc_optim_ref || 'main' }}" \
+            -zkc-ref-base "${{ inputs.zkc_base_ref || 'v1.2.20' }}" \
+            -zkc-ref-optim "${{ inputs.zkc_optim_ref || 'v1.2.20' }}" \
             -keccak-n-vectors ${{ inputs.n_vectors_keccak || 100 }} \
             | tee -a "$GITHUB_STEP_SUMMARY" \
             | tee /tmp/bench/logs/summary.md
