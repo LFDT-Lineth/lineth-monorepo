@@ -1,5 +1,10 @@
 ## [unreleased]
 
+### 🐛 Bug Fixes
+
+- *(coordinator)* Pretty-print startup config logs (#3203)
+## [0.2.0] - 2026-07-03
+
 ### 🚀 Features
 
 - *(coordinator)* Add config documentation annotations (#3463)

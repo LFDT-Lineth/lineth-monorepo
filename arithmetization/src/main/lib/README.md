@@ -31,6 +31,7 @@ Note. We use '.' to represent '0'.
 |-------------------|:------:|----------|--------|-----------|
 | keccak            |   🟢   | custom-1 | 0b000  | 0b0000000 |
 | poseidon1         |   🟡   | custom-1 | 0b111  | 0b1111111 |
+| poseidon2         |   🟢   | custom-1 | 0b001  | 0b0000000 |
 | ecrecover         |   🔴   | custom-1 | 0b000  | 0b0000001 |
 | poly_eval         |   🔴   | custom-1 |        |           |
 | ...               |   🔴   | custom-1 |        |           |

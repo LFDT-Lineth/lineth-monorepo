@@ -1,6 +1,8 @@
 const field = @import("../field/koalabear.zig");
 const constants = @import("poseidon2_constants.zig");
 const profiling = @import("../profiling.zig");
+const r5_config = @import("r5_config");
+const lineth_accel = if (r5_config.disable_accelerators) struct {} else @import("lineth_accelerators");
 
 pub const Error = field.Error || error{InvalidInputLength};
 pub const Digest = [8]field.Element;
@@ -15,17 +17,35 @@ pub fn zeroDigest() Digest {
     return zeroArray(block_size);
 }
 
-pub fn compress(left: Digest, right: Digest) Digest {
+// In-place Merkle–Damgård compression: `state := compress(state, right)`.
+//
+// Both inputs are taken by pointer and the feed-forward result is written back
+// through `state`, so the hot path (`MDHasher`) never copies a digest into or
+// out of `compress` (no by-value arguments and return value). `state`
+// is read into the local permutation buffer before it is overwritten, so it is
+// fine for `state` to be the running hash; `right` must not alias `state`.
+pub fn compressInPlace(state: *Digest, right: *const Digest) void {
     profiling.poseidon2Compress();
-    var state: [16]field.Element = undefined;
-    @memcpy(state[0..block_size], &left);
-    @memcpy(state[block_size..], &right);
-
-    var out = right;
-    permutation(16, &state);
-    for (&out, state[block_size..]) |*dst, state_limb| {
-        dst.* = dst.add(state_limb);
+    // `align(8)` matches `zkvm_bytes_64`, letting `permutationAccel16` reinterpret
+    // this buffer in place (see there). The array assignments lower to word stores,
+    // unlike `@memcpy` on byte buffers which `ReleaseSmall` turns into a byte loop.
+    var buf: [16]field.Element align(8) = undefined;
+    // Element-wise copies lower to word loads/stores; `.* =` on the right half
+    // otherwise regresses to a byte-wise `memcpy` under `ReleaseSmall`.
+    inline for (0..block_size) |i| {
+        buf[i] = state[i];
+        buf[block_size + i] = right[i];
     }
+
+    permutation(16, &buf);
+    for (state, right, buf[block_size..]) |*dst, r, perm| {
+        dst.* = r.add(perm);
+    }
+}
+
+pub fn compress(left: Digest, right: Digest) Digest {
+    var out = left;
+    compressInPlace(&out, &right);
     return out;
 }
 
@@ -60,13 +80,23 @@ pub const MDHasher = struct {
         self.buffer[self.buffer_len] = value;
         self.buffer_len += 1;
         if (self.buffer_len == block_size) {
-            self.state = compress(self.state, self.buffer);
+            compressInPlace(&self.state, &self.buffer);
             self.buffer_len = 0;
         }
     }
 
     pub fn writeElements(self: *MDHasher, values: []const field.Element) void {
-        for (values) |value| {
+        var rest = values;
+        // Fast path: when the buffer is empty, compress full blocks straight from
+        // the input. This skips the per-element buffering branch and the
+        // out-of-line `writeElement` call (8 of each per compression otherwise).
+        if (self.buffer_len == 0) {
+            while (rest.len >= block_size) {
+                compressInPlace(&self.state, rest[0..block_size]);
+                rest = rest[block_size..];
+            }
+        }
+        for (rest) |value| {
             self.writeElement(value);
         }
     }
@@ -84,7 +114,7 @@ pub const MDHasher = struct {
             var block: Digest = zeroArray(block_size);
             // Match prover-ray MDHasher: partial blocks are zero-left-padded.
             @memcpy(block[block_size - self.buffer_len ..], self.buffer[0..self.buffer_len]);
-            self.state = compress(self.state, block);
+            compressInPlace(&self.state, &block);
             self.buffer_len = 0;
         }
         return self.state;
@@ -111,7 +141,15 @@ pub fn hashElements(values: []const field.Element) Digest {
     return h.sumDigest();
 }
 
-fn permutation(comptime width: usize, state: *[width]field.Element) void {
+pub fn permutation(comptime width: usize, state: *[width]field.Element) void {
+    if (comptime !r5_config.disable_accelerators) {
+        permutationAccel16(state);
+    } else {
+        permutationNative(width, state);
+    }
+}
+
+fn permutationNative(comptime width: usize, state: *[width]field.Element) void {
     if (width != constants.width) @compileError("Poseidon2 Koalabear verifier constants support width 16");
     const round_keys = &constants.round_keys;
 
@@ -135,6 +173,21 @@ fn permutation(comptime width: usize, state: *[width]field.Element) void {
         sBoxAll(width, state);
         matMulExternalInPlace(width, state);
     }
+}
+
+// Delegate the width-16 permutation to the Linea Poseidon2 accelerator opcode.
+//
+// `field.Element` is `extern struct { value: u32 }`, so `[16]Element` is exactly
+// 16 little-endian canonical 32-bit words — the same layout the accelerator
+// expects in `zkvm_bytes_64`. The bit casts are therefore plain reinterpretations.
+fn permutationAccel16(state: *[constants.width]field.Element) void {
+    // `[16]Element` is bit-identical to `zkvm_bytes_64` (16 LE u32 words = 64 bytes),
+    // and the accelerator permits `input`/`output` to alias, so reinterpret the state
+    // buffer in place. This avoids the two 64-byte copies (in/out staging) that the
+    // previous `@bitCast` round-trip lowered to byte-wise `memcpy` on R5.
+    // Safe because `compress` declares its state `align(8)`.
+    const buf: *lineth_accel.zkvm_bytes_64 = @ptrCast(@alignCast(state));
+    _ = lineth_accel.lineth_zkvm_poseidon2_permutation(buf, buf);
 }
 
 fn addRoundKey(

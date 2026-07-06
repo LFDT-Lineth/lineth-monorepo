@@ -59,8 +59,14 @@ jobs:
       - name: Run Claude Code Review
         id: claude-review
         uses: anthropics/claude-code-action@38ec876110f9fbf8b950c79f534430740c3ac009 #v1.0.101
+        env:
+          ANTHROPIC_BASE_URL: ${{ vars.LITELLM_BASE_URL }}
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          anthropic_api_key: ${{ secrets.LITELLM_KEY_CLAUDE_PR_REVIEW }}
+          # The pinned action's inline-comment classifier calls api.anthropic.com
+          # directly, ignoring ANTHROPIC_BASE_URL. Disable it so review traffic
+          # stays on the LiteLLM-routed Claude Code path.
+          classify_inline_comments: "false"
           # use_sticky_comment: false
           direct_prompt: |
             You are a senior software engineer performing a thorough code review on PR #${{ github.event.pull_request.number }} in ${{ github.repository }}.

@@ -5,14 +5,15 @@ import (
 	"sync"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fiatshamir"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fri"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 )
 
-// columnSizeMaxSupported is the maximum supported size of a column. The value
+// ColumnSizeMaxSupported is the maximum supported size of a column. The value
 // comes from the 2-adicity of the koalabear field and having an upper-bound
 // is required to permit the construction of the global constraints quotient.
-const columnSizeMaxSupported = 1 << 22
+const ColumnSizeMaxSupported = 1 << 22
 
 // Runtime is the execution context for protocol [ProverAction]s. It holds column
 // assignments, cell values, coin values, and an arbitrary state bag. A single
@@ -52,6 +53,13 @@ type Runtime struct {
 	// commitment are for committed columns (and not for FRI commitments). The
 	// precomputed columns commitment is stored in the [System].
 	Commitments map[int]field.Octuplet
+	// PCSOpeningProof carries the polynomial-commitment opening proof produced by
+	// the PCS compiler's opening action (a *fri.OpeningProof, stored as an opaque
+	// value so the core wiop package need not depend on the FRI package). It is
+	// nil until the PCS opening action runs; [System.Prove] copies it into the
+	// [Proof] and [System.Verify] restores it here before running verifier
+	// actions. Mirrors the transport role of [Runtime.Commitments].
+	PCSOpeningProof *fri.OpeningProof
 }
 
 // NewRuntime creates a fresh Runtime for sys. currentRound is initialised to
@@ -70,6 +78,7 @@ func NewRuntime(sys *System) *Runtime {
 		state:        make(map[string]any),
 		dynamicSizes: make(map[int]int),
 		lock:         &sync.Mutex{},
+		Commitments:  make(map[int]field.Octuplet),
 	}
 	if len(sys.Rounds) == 0 {
 		panic("wiop: NewRuntime: system has no interactive rounds")
@@ -219,8 +228,8 @@ func (run *Runtime) AssignColumn(col *Column, v *ConcreteVector) {
 
 	m := col.Module
 	dataLen := v.Plain.Len()
-	if dataLen > columnSizeMaxSupported {
-		utils.Panic("wiop: AssignColumn: data length too large for column: %v, size=%v", dataLen, columnSizeMaxSupported)
+	if dataLen > ColumnSizeMaxSupported {
+		utils.Panic("wiop: AssignColumn: data length too large for column: %v, size=%v", dataLen, ColumnSizeMaxSupported)
 	}
 
 	if m.IsDynamic() && run.currentRound.ID == 0 {

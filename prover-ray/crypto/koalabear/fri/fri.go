@@ -97,6 +97,32 @@ func NewParams(
 	return res, nil
 }
 
+// restrictTo returns a Params that runs FRI over the top sub-domain of plaintext
+// size 2^topSizeLog2 (which must be <= D), reusing this Params' precomputed
+// domains via a slice offset. It lets a single statically-sized Params — built
+// once at the maximum supported size — drive proofs whose witness is smaller:
+// the number of fold rounds becomes topSizeLog2 (witness-dependent) rather than
+// p.numRounds, and the final polynomial still has size N/D = the inverse rate.
+// No domains are rebuilt and no zero rounds are folded.
+func (p Params) restrictTo(topSizeLog2 int) (Params, error) {
+	if topSizeLog2 < 0 || topSizeLog2 > p.numRounds {
+		return Params{}, fmt.Errorf("fri: restrictTo: top size 2^%d outside [1, D=2^%d]", topSizeLog2, p.numRounds)
+	}
+	offset := p.numRounds - topSizeLog2
+	res := Params{
+		N:          p.N >> offset,
+		D:          1 << topSizeLog2,
+		NumQueries: p.NumQueries,
+		numRounds:  topSizeLog2,
+		invTwo:     p.invTwo,
+	}
+	if p.domains != nil {
+		res.domains = p.domains[offset:]
+	}
+	res.domainsLight = p.domainsLight[offset:]
+	return res, nil
+}
+
 type domainLight struct {
 	cardinality uint64
 	generator   field.Element
