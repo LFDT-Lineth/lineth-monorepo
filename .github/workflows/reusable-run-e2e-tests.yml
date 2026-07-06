@@ -254,16 +254,22 @@ jobs:
             echo "No artifact at ${artifact_path}; skipping docker load."
           fi
       - name: Spin up fresh environment with retry
-        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 #v3.0.2
-        with:
-          max_attempts: 10
-          retry_on: error
-          retry_wait_seconds: 30
-          timeout_minutes: 10
-          command: |
-            make start-env-with-tracing-v2-ci CLEAN_PREVIOUS_ENV=false
-          on_retry_command: |
-            make clean-environment
+        shell: bash
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          max=10
+          attempt=0
+          until make start-env-with-tracing-v2-ci CLEAN_PREVIOUS_ENV=false; do
+            attempt=$((attempt + 1))
+            if [ "$attempt" -ge "$max" ]; then
+              echo "All $max attempts failed"
+              exit 1
+            fi
+            echo "Attempt $attempt failed — cleaning up and retrying in 30 s..."
+            make clean-environment || true
+            sleep 30
+          done
       - name: List docker containers/images
         if: ${{ always() && inputs.e2e-tests-containers-list }}
         continue-on-error: true
