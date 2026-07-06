@@ -90,11 +90,13 @@ func NewSystemf(msg string, args ...any) *System {
 	return sys
 }
 
-// RegisterPublicInputs appends cells to the ordered public-input registry. Public inputs are always cells: a column from the
-// arithmetization is exposed by opening the desired position into a cell (see
-// [ColumnPosition.Open]), and that cell is registered here. A human-readable
-// label, if desired, is stored in the cell's own [Context.Lable]. Their values form the protocol statement, carried in
-// a [PublicInput] separately from the [Proof] and in this registration order.
+// RegisterPublicInputs appends cells to the ordered public-input registry.
+// Public inputs are always cells: a column from the arithmetization is exposed
+// by opening the desired position into a cell (see [ColumnPosition.Open]), and
+// that cell is registered here. A human-readable label, if desired, is stored
+// in the cell's own [Context.Lable]. Their values form the protocol statement,
+// carried in a [PublicInput] separately from the [Proof] and in this
+// registration order.
 //
 // Panics if a cell is nil, or is already
 // registered.
