@@ -1,3 +1,8 @@
+## [0.4.0-fast_log_search] - 2026-07-07
+
+### 🚀 Features
+
+- *(coordinator)* Add inital block number config for finalized state search
 ## [0.3.0] - 2026-07-07
 
 ### 🚀 Features
