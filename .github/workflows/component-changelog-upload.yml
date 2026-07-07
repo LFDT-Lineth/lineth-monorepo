@@ -23,7 +23,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Filter commit changes
-        uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 #v3.0.3
+        uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
         id: filter
         with:
           base: ${{ github.ref }}
@@ -114,7 +114,8 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           # git-cliff needs full history + tags to compute changelog/version
-          ref: ${{ github.head_ref || github.ref_name }}
+          # Pin to the immutable triggering commit rather than a mutable ref name (CodeQL actions/untrusted-checkout).
+          ref: ${{ github.sha }}
           fetch-depth: 0
           fetch-tags: true
           submodules: false
