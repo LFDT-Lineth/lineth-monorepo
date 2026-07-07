@@ -303,7 +303,7 @@ func writeZkevmSSZInput(sszDir, fixturePath, jsonRel, jsonPath, zesuConvert stri
 	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
 		return nil, err
 	}
-	if err := run(os.Stderr, zesuConvert, "--zkvm-input", jsonPath, outPath); err != nil {
+	if err := run(os.Stderr, zesuConvert, jsonPath, outPath); err != nil {
 		return nil, err
 	}
 
