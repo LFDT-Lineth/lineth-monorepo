@@ -14,7 +14,7 @@ services:
       retries: 120
     environment:
       LOG4J_CONFIGURATION_FILE: /var/lib/besu/log4j.xml
-      JAVA_OPTS: -Xmx1536m
+      JAVA_OPTS: -Xmx1g
     entrypoint:
       - /bin/bash
       - -c
@@ -33,6 +33,12 @@ services:
       - "8551:8551/tcp"
       - "30303:30303"
       - "9001:9001/tcp"
+    deploy:
+      resources:
+        limits:
+          memory: 1500M
+        reservations:
+          memory: 768M
     networks:
       l1network:
         ipv4_address: 10.10.10.201
@@ -54,6 +60,7 @@ services:
       retries: 120
     environment:
       LOG4J_CONFIGURATION_FILE: /config/log4j.xml
+      JAVA_OPTS: -Xmx1280m
     command: [ "--config-file=/config/config-file.yaml" ]
     volumes:
       - ./config/l1-node/cl/teku.key:/config/keys/teku.key:ro
@@ -67,6 +74,12 @@ services:
       - "9002:9000"
       - "8008:8008/tcp"
       - "4003:4000/tcp"
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1024M
     networks:
       l1network:
         ipv4_address: 10.10.10.202
