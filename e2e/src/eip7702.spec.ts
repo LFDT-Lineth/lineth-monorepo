@@ -47,6 +47,7 @@ describe("EIP-7702 test suite", () => {
     const authorization = await authorityWalletClient.signAuthorization({
       contractAddress,
       // Self-sponsored tx if target address is denylisted
+      // TODO: Test
       executor: isDenylistedAuthorityCase ? undefined : "self",
     });
     const { maxFeePerGas, maxPriorityFeePerGas } = await estimateLineaGas(l2PublicClient, {
