@@ -47,7 +47,7 @@ func TestCompileEndToEnd(t *testing.T) {
 	sys, col, _ := newPCSTestSystem()
 	Compile(sys)
 
-	proof := sys.Prove(func(rt *wiop.Runtime) {
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
 		rt.AssignColumn(col, baseVec(4, 3))
 	})
 
@@ -56,7 +56,7 @@ func TestCompileEndToEnd(t *testing.T) {
 	require.NotNil(t, proof.PCSOpeningProof, "proof must carry the FRI opening proof")
 	require.NotEmpty(t, proof.Commitments, "proof must carry the round commitments")
 
-	require.NoError(t, sys.Verify(proof), "honest witness must verify")
+	require.NoError(t, sys.Verify(proof, pub), "honest witness must verify")
 }
 
 // TestCompileRejectsWrongClaim checks that tampering with a claimed evaluation
@@ -65,14 +65,14 @@ func TestCompileRejectsWrongClaim(t *testing.T) {
 	sys, col, le := newPCSTestSystem()
 	Compile(sys)
 
-	proof := sys.Prove(func(rt *wiop.Runtime) {
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
 		rt.AssignColumn(col, baseVec(4, 3))
 	})
 
 	// The true evaluation of the constant-3 column is 3; claim 0 instead.
 	proof.Cells[le.EvaluationClaims[0].Context.ID] = field.ElemZero()
 
-	require.Error(t, sys.Verify(proof), "a tampered evaluation claim must be rejected")
+	require.Error(t, sys.Verify(proof, pub), "a tampered evaluation claim must be rejected")
 }
 
 // TestCompileDynamicModule checks the full flow when the committed column lives
@@ -90,11 +90,11 @@ func TestCompileDynamicModule(t *testing.T) {
 
 	Compile(sys)
 
-	proof := sys.Prove(func(rt *wiop.Runtime) {
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
 		rt.AssignColumn(col, baseVec(8, 5)) // size fixed to 8 at prove time
 	})
 	require.Equal(t, 8, proof.DynamicSizes[0], "dynamic size must travel in the proof")
-	require.NoError(t, sys.Verify(proof), "honest dynamic-module witness must verify")
+	require.NoError(t, sys.Verify(proof, pub), "honest dynamic-module witness must verify")
 }
 
 // TestCompileRejectsPublicColumn checks that a verifier-visible column in a
@@ -114,7 +114,7 @@ func TestCompileRejectsTamperedCommitment(t *testing.T) {
 	sys, col, _ := newPCSTestSystem()
 	Compile(sys)
 
-	proof := sys.Prove(func(rt *wiop.Runtime) {
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
 		rt.AssignColumn(col, baseVec(4, 3))
 	})
 
@@ -124,5 +124,5 @@ func TestCompileRejectsTamperedCommitment(t *testing.T) {
 	root[0].Add(&root[0], &one)
 	proof.Commitments[0] = root
 
-	require.Error(t, sys.Verify(proof), "a tampered commitment must be rejected")
+	require.Error(t, sys.Verify(proof, pub), "a tampered commitment must be rejected")
 }

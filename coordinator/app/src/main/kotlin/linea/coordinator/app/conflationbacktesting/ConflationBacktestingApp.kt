@@ -41,6 +41,7 @@ import linea.domain.BlockInterval
 import linea.domain.toBlockParameter
 import linea.encoding.BlockRLPEncoder
 import linea.ethapi.EthApiClient
+import linea.ethapi.EthLogsSearcherImpl
 import linea.kotlin.decodeHex
 import linea.persistence.DisabledForcedTransactionsDao
 import linea.timer.VertxTimerFactory
@@ -328,6 +329,7 @@ class ConflationBacktestingApp(
       log = log,
     ),
     ethApiClient = l2EthClient,
+    ethLogsSearcher = EthLogsSearcherImpl(vertx = vertx, ethApiClient = l2EthClient),
     contractAddress = backtestingCoordinatorConfig.protocol.l2.contractAddress,
     smartContractErrors = backtestingCoordinatorConfig.smartContractErrors,
     smartContractDeploymentBlockNumber = backtestingCoordinatorConfig.protocol.l2.contractDeploymentBlockNumber

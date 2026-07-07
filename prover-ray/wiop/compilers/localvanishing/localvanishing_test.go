@@ -16,8 +16,8 @@ import (
 // system: it assigns the witness via assign, produces a strict public-only
 // Proof, and verifies it — returning the first failing check, or nil.
 func proveVerify(sys *wiop.System, assign func(rt *wiop.Runtime)) error {
-	proof := sys.Prove(assign)
-	return sys.Verify(proof)
+	proof, pub := sys.Prove(assign)
+	return sys.Verify(proof, pub)
 }
 
 func makeVec(vals ...uint64) *wiop.ConcreteVector {

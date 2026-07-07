@@ -6,6 +6,7 @@ import linea.anchoring.MessageAnchoringApp
 import linea.contract.l2.Web3JL2MessageServiceSmartContractClient
 import linea.coordinator.config.v2.CoordinatorConfig
 import linea.coordinator.config.v2.isDisabled
+import linea.ethapi.EthLogsSearcherImpl
 import linea.web3j.createWeb3jHttpClient
 import linea.web3j.ethapi.createEthApiClient
 import org.apache.logging.log4j.LogManager
@@ -62,6 +63,7 @@ object MessageAnchoringAppConfigurator {
         Web3JL2MessageServiceSmartContractClient.create(
           web3jClient = l2Web3jClient,
           ethApiClient = l2EthApiClient,
+          ethLogsSearcher = EthLogsSearcherImpl(vertx = vertx, ethApiClient = l2EthApiClient),
           contractAddress = configs.protocol.l2.contractAddress,
           gasLimit = configs.messageAnchoring.gas.gasLimit,
           maxFeePerGasCap = configs.messageAnchoring.gas.maxFeePerGasCap,
