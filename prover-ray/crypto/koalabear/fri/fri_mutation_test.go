@@ -207,6 +207,20 @@ func TestPCSVerifyRejectsMutations(t *testing.T) {
 			wantErr: "Merkle proof invalid",
 		},
 		{
+			name: "garbage unused row slot",
+			mutate: func(fx *pcsOpenVerifyFixture) {
+				fx.proof.RowOpenings[0][0][0].Leaf.Ext = []field.Ext{oneExt}
+			},
+			wantErr: "row shape mismatch",
+		},
+		{
+			name: "sibling on non-top row slot",
+			mutate: func(fx *pcsOpenVerifyFixture) {
+				fx.proof.RowOpenings[0][0][1].Sibling.Ext = []field.Ext{oneExt}
+			},
+			wantErr: "sibling shape mismatch",
+		},
+		{
 			name: "domain point claim",
 			mutate: func(fx *pcsOpenVerifyFixture) {
 				fx.input.Zeta = domainPointExt(fx.pcs.Params.domainsLight[0], 0)

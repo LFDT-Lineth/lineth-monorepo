@@ -273,6 +273,7 @@ func newPCSOpenVerifyFixture(t *testing.T) pcsOpenVerifyFixture {
 
 	prng := rand.New(utils.NewRandSource(20260626))
 	witness := make(Batch, 3)
+	witness[1] = SizedTable{Ext: [][]field.Ext{field.VecPseudoRandExt(prng, 2)}}
 	witness[2] = SizedTable{Ext: [][]field.Ext{
 		field.VecPseudoRandExt(prng, 4),
 		field.VecPseudoRandExt(prng, 4),
@@ -281,6 +282,7 @@ func newPCSOpenVerifyFixture(t *testing.T) pcsOpenVerifyFixture {
 	committed := []CommitterState{pcs.Commit(witness)}
 
 	batchShifts := make(BatchShifts, 3)
+	batchShifts[1] = SizedShifts{Ext: [][]int{{0}}}
 	batchShifts[2] = SizedShifts{Ext: [][]int{{0}, {1}}}
 	shifts := []BatchShifts{batchShifts}
 	zeta := field.UintsToExt(19, 2, 3, 5, 7, 11)

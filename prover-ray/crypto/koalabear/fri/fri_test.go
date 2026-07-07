@@ -109,10 +109,88 @@ func TestFoldLayerInternally(t *testing.T) {
 	}
 }
 
+// TestCheckFolds is a direct unit test of the pure fold-check: a
+// self-consistent set of resolved values (built by hand, no PCS or proof
+// involved) must verify, and breaking any single link in the recurrence --
+// an intermediate round, the aux mix-in, or the final target -- must be
+// rejected.
+func TestCheckFolds(t *testing.T) {
+	p, err := NewParams(8, 4, 1)
+	require.NoError(t, err)
+
+	prng := rand.New(utils.NewRandSource(1))
+
+	fold := func(self, sib, alpha field.Ext, domain domainLight, base int, aux *field.Ext) field.Ext {
+		var xInv field.Element
+		x := domainPoint(domain, base)
+		xInv.Inverse(&x)
+
+		var sum, diff, out field.Ext
+		sum.Add(&self, &sib)
+		sum.MulByElement(&sum, &p.invTwo)
+		diff.Sub(&self, &sib)
+		diff.MulByElement(&diff, &p.invTwo)
+		diff.MulByElement(&diff, &xInv)
+		diff.Mul(&diff, &alpha)
+		out.Add(&sum, &diff)
+		if aux != nil {
+			var alpha2, term field.Ext
+			alpha2.Square(&alpha)
+			term.Mul(aux, &alpha2)
+			out.Add(&out, &term)
+		}
+		return out
+	}
+
+	const s = 3
+	self0, sib0 := field.PseudoRandExt(prng), field.PseudoRandExt(prng)
+	sib1 := field.PseudoRandExt(prng)
+	alpha0, alpha1 := field.PseudoRandExt(prng), field.PseudoRandExt(prng)
+	aux1 := field.PseudoRandExt(prng)
+
+	// self1 is round 0's fold output (with aux1 mixed in); final is round 1's.
+	self1 := fold(self0, sib0, alpha0, p.domainsLight[0], s, &aux1)
+	final := fold(self1, sib1, alpha1, p.domainsLight[1], s>>1, nil)
+
+	newResolved := func() []resolvedQuery {
+		return []resolvedQuery{{
+			Rounds: []inputPair{{Self: self0, Sibling: sib0}, {Self: self1, Sibling: sib1}},
+			Aux:    map[int]field.Ext{1: aux1},
+			Final:  final,
+		}}
+	}
+	foldAlphas := []field.Ext{alpha0, alpha1}
+	positions := []int{s}
+
+	require.NoError(t, checkFolds(p, newResolved(), foldAlphas, positions))
+
+	one := field.Lift(field.One())
+
+	t.Run("broken intermediate round", func(t *testing.T) {
+		resolved := newResolved()
+		resolved[0].Rounds[1].Self.Add(&resolved[0].Rounds[1].Self, &one)
+		require.ErrorContains(t, checkFolds(p, resolved, foldAlphas, positions), "folded value mismatch")
+	})
+
+	t.Run("broken aux", func(t *testing.T) {
+		resolved := newResolved()
+		aux := resolved[0].Aux[1]
+		aux.Add(&aux, &one)
+		resolved[0].Aux[1] = aux
+		require.ErrorContains(t, checkFolds(p, resolved, foldAlphas, positions), "folded value mismatch")
+	})
+
+	t.Run("broken final", func(t *testing.T) {
+		resolved := newResolved()
+		resolved[0].Final.Add(&resolved[0].Final, &one)
+		require.ErrorContains(t, checkFolds(p, resolved, foldAlphas, positions), "does not match FinalPoly")
+	})
+}
+
 // TestProveVerify is the end-to-end check: an honest proof verifies across a few
 // (N, D, levels) configurations, and tampering with an opened leaf is rejected.
 // It exercises the full ProverState (Fold/Open), the query opening, and
-// checkQueryExt including the alpha²-batched extra levels, going through
+// checkFolds including the alpha²-batched extra levels, going through
 // pcs.Verify (the sole FRI entry point) via the ldtFixture compiler: each
 // level is a PCS column whose reconstructed DEEP quotient is an arbitrary
 // target codeword, independent of degree.
