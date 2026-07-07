@@ -204,9 +204,6 @@ jobs:
           else
             echo "No artifact at ${artifact_path}; skipping docker load."
           fi
-      - name: Start Docker memory telemetry
-        continue-on-error: true
-        run: bash .github/scripts/docker-memory-telemetry.sh start
       - name: Spin up fresh environment with retry
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
         with:
@@ -218,6 +215,9 @@ jobs:
             make start-env-with-tracing-v2-ci CLEAN_PREVIOUS_ENV=false
           on_retry_command: |
             make clean-environment
+      - name: Start Docker memory telemetry
+        continue-on-error: true
+        run: bash .github/scripts/docker-memory-telemetry.sh start
       - name: List docker containers/images
         if: ${{ always() && inputs.e2e-tests-containers-list }}
         continue-on-error: true

@@ -5,7 +5,7 @@ set -u
 TELEMETRY_DIR="${DOCKER_MEMORY_TELEMETRY_DIR:-docker_memory}"
 COMPOSE_FILE="${DOCKER_MEMORY_COMPOSE_FILE:-docker/compose-tracing-v2-ci-extension.yml}"
 COMPOSE_PROFILES_VALUE="${COMPOSE_PROFILES:-l1,l2}"
-SAMPLE_INTERVAL_SECONDS="${DOCKER_MEMORY_SAMPLE_INTERVAL_SECONDS:-2}"
+SAMPLE_INTERVAL_SECONDS="${DOCKER_MEMORY_SAMPLE_INTERVAL_SECONDS:-10}"
 PROJECT_NAME="${DOCKER_MEMORY_COMPOSE_PROJECT:-docker}"
 KNOWN_CONTAINER_NAMES=(
   coordinator
@@ -81,6 +81,47 @@ cgroup_peak_for_container() {
     "/sys/fs/cgroup/docker/${container_id}/memory.peak"; do
     if [ -r "$file" ]; then
       printf "%s\t%s" "$(cat "$file")" "cgroup-v2-fallback"
+      return
+    fi
+  done
+
+  printf "\t"
+}
+
+container_cgroup_peak_for_container() {
+  local container_id="$1"
+  local status="$2"
+  local value=""
+
+  if [ "$status" != "running" ]; then
+    printf "\t"
+    return
+  fi
+
+  value="$(docker exec "$container_id" sh -c 'cat /sys/fs/cgroup/memory.peak 2>/dev/null' 2>/dev/null || true)"
+  if [[ "$value" =~ ^[0-9]+$ ]]; then
+    printf "%s\t%s" "$value" "container-cgroup-v2"
+    return
+  fi
+
+  value="$(docker exec "$container_id" cat /sys/fs/cgroup/memory.peak 2>/dev/null || true)"
+  if [[ "$value" =~ ^[0-9]+$ ]]; then
+    printf "%s\t%s" "$value" "container-cgroup-v2"
+    return
+  fi
+
+  for memory_peak_file in \
+    /sys/fs/cgroup/memory.max_usage_in_bytes \
+    /sys/fs/cgroup/memory/memory.max_usage_in_bytes; do
+    value="$(docker exec "$container_id" sh -c "cat ${memory_peak_file} 2>/dev/null" 2>/dev/null || true)"
+    if [[ "$value" =~ ^[0-9]+$ ]]; then
+      printf "%s\t%s" "$value" "container-cgroup-v1"
+      return
+    fi
+
+    value="$(docker exec "$container_id" cat "$memory_peak_file" 2>/dev/null || true)"
+    if [[ "$value" =~ ^[0-9]+$ ]]; then
+      printf "%s\t%s" "$value" "container-cgroup-v1"
       return
     fi
   done
@@ -191,7 +232,10 @@ capture() {
     pid="$(inspect_value "$container_id" '{{.State.Pid}}')"
     limit_bytes="$(inspect_value "$container_id" '{{.HostConfig.Memory}}')"
     reservation_bytes="$(inspect_value "$container_id" '{{.HostConfig.MemoryReservation}}')"
-    peak_info="$(cgroup_peak_for_container "$container_id" "$pid")"
+    peak_info="$(container_cgroup_peak_for_container "$container_id" "$status")"
+    if [ -z "${peak_info%%$'\t'*}" ]; then
+      peak_info="$(cgroup_peak_for_container "$container_id" "$pid")"
+    fi
     peak_bytes="${peak_info%%$'\t'*}"
     peak_source="${peak_info#*$'\t'}"
 
