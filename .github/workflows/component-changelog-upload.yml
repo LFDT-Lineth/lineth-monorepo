@@ -114,7 +114,8 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           # git-cliff needs full history + tags to compute changelog/version
-          ref: ${{ github.head_ref || github.ref_name }}
+          # Pin to the immutable triggering commit rather than a mutable ref name (CodeQL actions/untrusted-checkout).
+          ref: ${{ github.sha }}
           fetch-depth: 0
           fetch-tags: true
           submodules: false
