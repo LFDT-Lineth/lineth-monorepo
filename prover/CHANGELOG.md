@@ -3,6 +3,10 @@
 ### 🚜 Refactor
 
 - *(prover)* Remove redundant and unsafe utility functions (#3273)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(deps)* Bump golang.org/x/net (#3500)
 ## [1.0.5] - 2026-06-30
 
 ### 🐛 Bug Fixes
