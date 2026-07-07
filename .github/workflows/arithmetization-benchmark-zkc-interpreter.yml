@@ -158,8 +158,8 @@ jobs:
           TEST_MAKE_DIR="$PWD/arithmetization/src/test"
 
           run_zkc_exec() {  # $1=variant  $2=log path  $3=json  $4=zkc_main  optional: --fast
-            local exec_flags="-v -q --inline=false"
-            if [[ "${5:-}" == "--fast" ]]; then exec_flags="--fast -v -q --inline=false"; fi
+            local exec_flags="--fast --inline=false -v -q"
+            if [[ "${5:-}" == "--fast" ]]; then exec_flags="--fast -v -q"; fi
             /usr/bin/time -v env ZKC="/tmp/zkc-${1}" ZKC_EXEC_FLAGS="$exec_flags" \
               make -C "$TEST_MAKE_DIR" --no-print-directory zkc-exec \
               JSON="$3" ZKC_MAIN="$4" \
@@ -216,7 +216,7 @@ jobs:
                reset_state; log "${wl}: iter ${i}/${ITERS} base"; run_gogen_${wl} base "$i"
               else
                 # RESTORE to tracing (without --fast) when gogen is supporting native fields
-                reset_state; log "${wl}: iter ${i}/${ITERS} opt"; run_${wl} opt "$i" --fast
+                reset_state; log "${wl}: iter ${i}/${ITERS} opt"; run_${wl} opt "$i"
                 reset_state; log "${wl}: iter ${i}/${ITERS} base"; run_${wl} base "$i" --fast
               fi
             done
