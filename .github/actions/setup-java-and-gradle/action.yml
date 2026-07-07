@@ -20,7 +20,7 @@ runs:
           distribution: ${{ inputs.distribution }}
 
       - name: Setup Gradle
-        # Configure Gradle for optimal use in GiHub Actions, including caching of downloaded dependencies.
+        # Configure Gradle for optimal use in GitHub Actions, including caching of downloaded dependencies.
         # See: https://github.com/gradle/actions/blob/main/setup-gradle/README.md
         uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
 
