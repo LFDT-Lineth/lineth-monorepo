@@ -204,6 +204,9 @@ jobs:
           else
             echo "No artifact at ${artifact_path}; skipping docker load."
           fi
+      - name: Start Docker memory telemetry
+        continue-on-error: true
+        run: bash .github/scripts/docker-memory-telemetry.sh start
       - name: Spin up fresh environment with retry
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
         with:
@@ -230,6 +233,18 @@ jobs:
         if: always()
         run: |
           echo "E2E_TESTS_RESULT: ${{ steps.run_e2e_tests.outcome }}"
+      - name: Capture Docker memory telemetry
+        if: always()
+        continue-on-error: true
+        run: bash .github/scripts/docker-memory-telemetry.sh capture
+      - name: Upload Docker memory telemetry
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        continue-on-error: true
+        with:
+          name: docker-memory-telemetry
+          if-no-files-found: warn
+          path: docker_memory/
       - name: Dump logs
         if: ${{ failure() && inputs.e2e-tests-logs-dump }}
         run: |
@@ -256,4 +271,3 @@ jobs:
           if-no-files-found: error
           path: |
             docker_logs/**/*
-
