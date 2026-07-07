@@ -1,5 +1,9 @@
 ## [unreleased]
 
+### 🐛 Bug Fixes
+
+- *(misc)* Web3j-solc solidity resolution workaround (#3516)
+
 ### ⚙️ Miscellaneous Tasks
 
 - *(coordinator)* Update kotlin to v2.4 (#3454)

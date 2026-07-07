@@ -43,6 +43,7 @@
 - *(coordinator)* Bound eth_getLogs in finalized-state lookup (#3519)
 - *(coordinator)* Bound eth_getLogs in deployment-block lookup (#3520)
 - *(coordinator)* L1FinalizationPriorityFeeCalculator feeLowerBound config (#3517)
+- *(misc)* Web3j-solc solidity resolution workaround (#3516)
 
 ### 🚜 Refactor
 
@@ -85,3 +86,4 @@
 - *(deps)* Safe updates, exact version pinning, and override housekeeping (#3457)
 - *(coordinator)* Update kotlin to v2.4 (#3454)
 - *(coordinator)* LSP violation fix (#3386)
+- *(deps)* Bump golang.org/x/net (#3500)
