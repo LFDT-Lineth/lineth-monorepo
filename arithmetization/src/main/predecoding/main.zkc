@@ -1,5 +1,33 @@
 include "predecoding.zkc"
 
 fn main() {
-    predecoding_check()
+    var entry_point:Address
+    var blobs_count:u64
+    entry_point, blobs_count = entry_point_and_blobs_count[0]
+    var pc:Address = entry_point
+
+    // Base address of the pre-decoded instruction tables (lowest executable
+    // instruction address). Used to map pc -> instruction index.
+    var base:Address = instruction_base[0]
+
+    var internal_offset:Length = 0 // internal offset to blobs_data
+    for i:u64 = 0; i<blobs_count; i = i + 1 {
+        var blob_offset:Address
+        var blob_size:Length
+        blob_offset, blob_size = blobs_offset_and_size[i]
+        // printf "blobs_offset_and_size[%d] == %x :: %x\n", i, blob_offset, blob_size
+        for j:Address = 0; j<blob_size; j = j + 1 {
+            // printf "blobs_data[%d + %d] = %x\n", internal_offset, j, blobs_data[internal_offset + j]
+            write_8(blob_offset + j, blobs_data[internal_offset + j])
+        }
+        internal_offset = internal_offset + blob_size
+    }
+
+    // We interpret pc == MAX_UINT_64 as the stop signal, which is set by the ecall instruction
+    while pc != MAX_UINT_64 {
+        var index:u64 = (pc - base) >> 2
+        var instruction:Instruction = read_32(pc)
+        pc = predecoding_check(index, instruction, pc)
+    }
+
 }

@@ -1,2 +1,336 @@
-fn predecoding_check() {
+include "../utils/sign_extend.zkc"
+include "../riscv/interpreter.zkc"
+
+fn predecoding_check(index:u64, instruction:Instruction, pc:Address) -> (new_pc:Address) {
+
+    var compute_op:ComputeOp
+    var imm_decoded:DoubleWord
+    var rs1_decoded:Register
+    var rs2_decoded:Register
+    var rd_decoded:Register
+
+    compute_op, imm_decoded, rs1_decoded, rs2_decoded, rd_decoded = decoded[index]
+
+    var instruction_parameters:u25
+    var opcode:Opcode
+    instruction_parameters::opcode = Instruction
+
+    new_pc = pc + 4
+
+    switch compute_op {
+
+        // ---------------------------- B-type instructions ----------------------------
+        case BRANCH_BEQ: {   
+            check_b_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Advance PC
+            if registers[rs1_decoded] == registers[rs2_decoded] {
+                new_pc = signed_sum_of_double_word(pc, imm_decoded) as Address
+            }
+        }
+        case BRANCH_BEQ_WB: {
+            check_b_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Advance PC
+            if registers[rs1_decoded] == registers[rs2_decoded] {
+                new_pc = signed_sum_of_double_word(pc, imm_decoded) as Address
+                registers[rd_decoded] = signed_sum_of_double_word(pc, 4)
+            }
+        }
+        case BRANCH_BNE: {
+            check_b_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Advance PC
+            if registers[rs1_decoded] != registers[rs2_decoded] {
+                new_pc = signed_sum_of_double_word(pc, imm_decoded) as Address
+            }
+        }
+        case BRANCH_BNE_WB: {
+            check_b_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Advance PC
+            if registers[rs1_decoded] != registers[rs2_decoded] {
+                new_pc = signed_sum_of_double_word(pc, imm_decoded) as Address
+                registers[rd_decoded] = signed_sum_of_double_word(pc, 4)
+            }
+        }
+        case BRANCH_BLT: {
+            check_b_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Advance PC
+            if registers[rs1_decoded] < registers[rs2_decoded] {
+                new_pc = signed_sum_of_double_word(pc, imm_decoded) as Address
+            }
+        }
+        case BRANCH_BLT_WB: {
+            check_b_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Advance PC
+            if registers[rs1_decoded] < registers[rs2_decoded] {
+                new_pc = signed_sum_of_double_word(pc, imm_decoded) as Address
+                registers[rd_decoded] = signed_sum_of_double_word(pc, 4)
+            }
+        }
+        case BRANCH_BGE: {
+            check_b_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Advance PC
+            if registers[rs1_decoded] >= registers[rs2_decoded] {
+                new_pc = signed_sum_of_double_word(pc, imm_decoded) as Address
+            }
+        }
+        case BRANCH_BGE_WB: {
+            check_b_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Advance PC
+            if registers[rs1_decoded] >= registers[rs2_decoded] {
+                new_pc = signed_sum_of_double_word(pc, imm_decoded) as Address
+                registers[rd_decoded] = signed_sum_of_double_word(pc, 4)
+            }
+        }
+
+        // ---------------------------- I-type instructions ----------------------------
+        case READ8_SGN, READ16_SGN, READ32_SGN, READ64, READ8_ZEXT, READ16_ZEXT, READ32_ZEXT, OP_ADDI, OP_SLLI, OP_SLTI, OP_SLTIU, OP_XORI, OP_ORI, OP_ANDI, OP_SRLI, OP_SRAI, OP_ADDIW, OP_SLLIW, OP_SRLIW, OP_SRAIW: {
+            check_i_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+         }
+        case READ8_SGN_WB: {
+            check_i_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Write into register
+            registers[rd_decoded] = read_8(signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) as Address) as DoubleWord
+        }
+        case READ16_SGN_WB: {
+            check_i_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Write into register
+            registers[rd_decoded] = read_16(signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) as Address) as DoubleWord
+        }
+        case READ32_SGN_WB: {
+            check_i_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Write into register
+            registers[rd_decoded] = read_32(signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) as Address) as DoubleWord
+        }
+        case READ64_WB: {
+            check_i_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Write into register
+            registers[rd_decoded] = read_64(signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) as Address) as DoubleWord
+        }
+        case READ8_ZEXT_WB: {
+            check_i_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Write into register
+            registers[rd_decoded] = read_8(signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) as Address) as DoubleWord
+        }
+        case READ16_ZEXT_WB: {
+            check_i_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Write into register
+            registers[rd_decoded] = read_16(signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) as Address) as DoubleWord
+        }
+        case READ32_ZEXT_WB: {
+            check_i_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Write into register
+            registers[rd_decoded] = read_32(signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) as Address) as DoubleWord
+        }
+        case READ64_ZEXT_WB: {
+            check_i_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Write into register
+            registers[rd_decoded] = read_64(signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) as Address) as DoubleWord
+        }
+        case OP_ADDI_WB: {
+            check_i_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Write into register
+            registers[rd_decoded] = signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) as DoubleWord
+        }
+        case OP_SLLI_WB: {
+            check_i_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Write into register
+            registers[rd_decoded] = _shl_u64(registers[rs1_decoded], imm_decoded) as DoubleWord
+        }
+        case OP_SLTI_WB: {
+            check_i_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Write into register
+            registers[rd_decoded] = (registers[rs1_decoded] < imm_decoded) as DoubleWord
+        }   
+        case OP_SLTIU_WB: {
+            check_i_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Write into register
+            registers[rd_decoded] = (registers[rs1_decoded] < imm_decoded) as DoubleWord
+        }
+        case OP_XORI_WB: {
+            check_i_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Write into register
+            registers[rd_decoded] = (registers[rs1_decoded] ^ imm_decoded) as DoubleWord
+        }
+        case OP_ORI_WB: {
+            check_i_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Write into register
+            registers[rd_decoded] = (registers[rs1_decoded] | imm_decoded) as DoubleWord
+        }
+        case OP_ANDI_WB: {
+            check_i_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Write into register
+            registers[rd_decoded] = (registers[rs1_decoded] & imm_decoded) as DoubleWord
+        }
+        case OP_SRLI_WB: {
+            check_i_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Write into register
+            registers[rd_decoded] = _shr_u64(registers[rs1_decoded], imm_decoded) as DoubleWord
+        }
+        case OP_SRAI_WB: {
+            check_i_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Write into register
+            registers[rd_decoded] = _ashr_u64(registers[rs1_decoded], imm_decoded) as DoubleWord
+        }
+        case OP_ADDIW_WB: {
+            check_i_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Write into register
+            registers[rd_decoded] = signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) as DoubleWord
+        }
+        case OP_SLLIW_WB: {
+            check_i_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Write into register
+            registers[rd_decoded] = _shl_u32(registers[rs1_decoded], imm_decoded) as DoubleWord
+        }
+        case OP_SRLIW_WB: {
+            check_i_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Write into register
+            registers[rd_decoded] = _shr_u32(registers[rs1_decoded], imm_decoded) as DoubleWord
+        }
+        case OP_SRAIW_WB: {
+            check_i_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Write into register
+            registers[rd_decoded] = _ashr_u32(registers[rs1_decoded], imm_decoded) as DoubleWord
+        }
+        case ITYPE_JALR: {
+            check_i_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Advance PC
+            new_pc = signed_sum_of_double_word(pc, imm_decoded) as Address
+        }
+        case ITYPE_JALR_WB: {
+            check_i_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Write into register
+            registers[rd_decoded] = (pc + 4) as DoubleWord
+            // Advance PC
+            new_pc = signed_sum_of_double_word(pc, imm_decoded) as Address
+        }
+        case ITYPE_ECALL: {
+            check_i_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Advance PC
+            new_pc = process_syscall(pc)
+            return
+        }
+        case ITYPE_EBREAK: {
+            printf "[ERROR] ITYPE_EBREAK instruction triggered\n"
+            fail
+        }
+        // ---------------------------- R-type instructions ----------------------------
+        case RTYPE_ADD, RTYPE_SUB, RTYPE_SLL, RTYPE_SLT, RTYPE_SLTU, RTYPE_XOR, RTYPE_OR, RTYPE_AND, RTYPE_SRL, RTYPE_SRA: {
+            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+        }
+        case RTYPE_ADD_WB: {
+            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            // Write into register
+            var overflow:SignBit
+            var result:DoubleWord
+            overflow::result = (registers[rs1_decoded] as u65) + (registers[rs2_decoded] as u65)
+            registers[rd_decoded] = result
+        }
+        case RTYPE_SUB_WB: {
+            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            // Write into register
+            var overflow:SignBit
+            var result:DoubleWord
+            overflow::result = ((1 as u1)::(registers[rs1_decoded] as u64)) - (registers[rs2_decoded] as u65)
+            registers[rd_decoded] = result
+        }
+        case RTYPE_SLL_WB: {
+            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            // Write into register
+            registers[rd_decoded] = _shl_u64(registers[rs1_decoded], registers[rs2_decoded]) as DoubleWord
+        }
+        case RTYPE_SLT_WB: {
+            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            // Write into register
+            registers[rd_decoded] = (registers[rs1_decoded] < registers[rs2_decoded]) as DoubleWord
+        }
+        case RTYPE_SLTU_WB: {
+            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            // Write into register
+            registers[rd_decoded] = (registers[rs1_decoded] < registers[rs2_decoded]) as DoubleWord
+        }
+        case RTYPE_XOR_WB: {
+            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            // Write into register
+            registers[rd_decoded] = (registers[rs1_decoded] ^ registers[rs2_decoded]) as DoubleWord
+        }
+        case RTYPE_OR_WB: {
+            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            // Write into register
+            registers[rd_decoded] = (registers[rs1_decoded] | registers[rs2_decoded]) as DoubleWord
+        }
+        case RTYPE_AND_WB: {
+            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            // Write into register
+            registers[rd_decoded] = (registers[rs1_decoded] & registers[rs2_decoded]) as DoubleWord
+        }
+        case RTYPE_SRL_WB: {
+            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            // Write into register
+            registers[rd_decoded] = _shr_u64(registers[rs1_decoded], registers[rs2_decoded]) as DoubleWord
+        }
+        case RTYPE_SRA_WB: {
+            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            // Write into register
+            registers[rd_decoded] = _ashr_u64(registers[rs1_decoded], registers[rs2_decoded]) as DoubleWord
+        }
+        // ---------------------------- J-type instructions ----------------------------
+        case JTYPE_JAL: {
+            check_j_type_operands(instruction_parameters, rs1_decoded, rd_decoded, imm_decoded)
+            // Advance PC
+            new_pc = signed_sum_of_double_word(pc, imm_decoded) as Address
+        }
+        case JTYPE_JAL_WB: {
+            check_j_type_operands(instruction_parameters, rs1_decoded, rd_decoded, imm_decoded)
+            // Write into register
+            registers[rd_decoded] = signed_sum_of_double_word(pc, 4)
+            // Advance PC
+            new_pc = signed_sum_of_double_word(pc, imm_decoded) as Address
+        }
+
+        // ---------------------------- S-type instructions ----------------------------
+        case STYPE_STORE8: {
+            check_s_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Write to memory
+            write_8(signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) as Address, (registers[rs2_decoded] & (0xFF as u64)) as u8)
+        }
+        case STYPE_STORE16: {
+            check_s_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Write to memory
+            write_16(signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) as Address, (registers[rs2_decoded] & (0xFFFF as u64)) as u16)
+        }
+        case STYPE_STORE32: {
+            check_s_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Write to memory
+            write_32(signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) as Address, (registers[rs2_decoded] & (0xFFFFFFFF as u64)) as u32)
+        }
+        case STYPE_STORE64: {
+            check_s_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            // Write to memory
+            write_64(signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) as Address, registers[rs2_decoded])
+        }
+
+        // ---------------------------- U-type instructions ----------------------------
+        case UTYPE_LUI, UTYPE_AUIPC: {
+            check_u_type_operands(instruction_parameters, rs1_decoded, imm_decoded)
+        }
+        case UTYPE_LUI_WB: {
+            check_u_type_operands(instruction_parameters, rs1_decoded, imm_decoded)
+            // Write into register
+            registers[rd_decoded] = imm_decoded
+        }
+        case UTYPE_AUIPC_WB: {
+            check_u_type_operands(instruction_parameters, rs1_decoded, imm_decoded)
+            // Write into register
+            registers[rd_decoded] = signed_sum_of_double_word(imm_decoded, pc) as DoubleWord
+        }
+        default: {
+            printf "[ERROR] Invalid compute_op in predecoding_check for index %d\n", index
+            printf "\tcompute_op ≡ %x\n", compute_op
+            fail
+        }
+    }
+
+
+
+
+
 }
