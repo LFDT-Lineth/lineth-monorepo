@@ -363,6 +363,7 @@ class ConflationApp(
         log = LogManager.getLogger("clients.l2.eth.conflation"),
       ),
       ethApiClient = l2EthClient,
+      ethLogsSearcher = EthLogsSearcherImpl(vertx = vertx, ethApiClient = l2EthClient),
       contractAddress = configs.protocol.l2.contractAddress,
       smartContractErrors = configs.smartContractErrors,
       smartContractDeploymentBlockNumber = configs.protocol.l2.contractDeploymentBlockNumber?.number,

@@ -1,14 +1,13 @@
 package linea.contract
 
+import linea.EthLogsSearcher
 import linea.contract.events.Upgraded
 import linea.domain.BlockParameter
-import linea.domain.toBlockParameter
-import linea.ethapi.EthApiClient
-import linea.ethapi.extensions.getAbsoluteBlockNumbers
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.time.Duration
 
 typealias ContractDeploymentBlockNumberProvider = () -> SafeFuture<ULong>
 
@@ -21,7 +20,7 @@ class StaticContractDeploymentBlockNumberProvider(
 }
 
 class EventBasedContractDeploymentBlockNumberProvider(
-  private val ethApiClient: EthApiClient,
+  private val ethLogsSearcher: EthLogsSearcher,
   private val contractAddress: String,
   private val ethLogsSearchMaxBlockRange: UInt = 10_000u,
   private val log: Logger = LogManager.getLogger(EventBasedContractDeploymentBlockNumberProvider::class.java),
@@ -32,44 +31,33 @@ class EventBasedContractDeploymentBlockNumberProvider(
     if (deploymentBlockNumberCache.get() != 0UL) {
       return SafeFuture.completedFuture(deploymentBlockNumberCache.get())
     }
-    // The deployment block is the first block that emitted an Upgraded event. Scan forward in bounded
-    // chunks instead of a single getLogs(EARLIEST..LATEST), which rate-limited providers (e.g. Infura)
-    // reject for spans > 10_000 blocks. The result is cached, so this runs at most once.
-    return ethApiClient
-      .getAbsoluteBlockNumbers(BlockParameter.Tag.EARLIEST, BlockParameter.Tag.LATEST)
-      .thenCompose { (start, end) -> findFirstUpgradedBlock(fromBlock = start, toBlock = end) }
-      .thenApply { blockNumber ->
-        blockNumber ?: throw IllegalStateException("Upgraded event not found: contractAddress=$contractAddress")
+    // The deployment block is the first block that emitted an Upgraded event. Roll forward in bounded
+    // chunks (stopping at the first match) instead of a single getLogs(EARLIEST..LATEST), which
+    // rate-limited providers (e.g. Infura) reject for spans > 10_000 blocks. INFINITE timeout so the
+    // scan terminates on the first match or on chunk exhaustion, never on the clock. Cached, so this
+    // runs at most once.
+    return ethLogsSearcher
+      .getLogsRollingForward(
+        fromBlock = BlockParameter.Tag.EARLIEST,
+        toBlock = BlockParameter.Tag.LATEST,
+        address = contractAddress,
+        topics = listOf(Upgraded.topic),
+        chunkSize = ethLogsSearchMaxBlockRange,
+        searchTimeout = Duration.INFINITE,
+        stopAfterTargetLogsCount = 1u,
+      )
+      .thenApply { result ->
+        val blockNumber = result.logs.minByOrNull { it.blockNumber }?.blockNumber
+          ?: throw IllegalStateException("Upgraded event not found: contractAddress=$contractAddress")
+        deploymentBlockNumberCache.set(blockNumber)
+        blockNumber
       }
-      .thenPeek { deploymentBlockNumberCache.set(it) }
       .whenException {
         log.error(
           "Failed to get deployment block number for contract={} errorMessage={}",
           contractAddress,
           it.message,
         )
-      }
-  }
-
-  private fun findFirstUpgradedBlock(fromBlock: ULong, toBlock: ULong): SafeFuture<ULong?> {
-    if (fromBlock > toBlock) {
-      return SafeFuture.completedFuture(null)
-    }
-    val chunkEnd = minOf(fromBlock + ethLogsSearchMaxBlockRange.toULong() - 1UL, toBlock)
-    return ethApiClient
-      .getLogs(
-        fromBlock = fromBlock.toBlockParameter(),
-        toBlock = chunkEnd.toBlockParameter(),
-        address = contractAddress,
-        topics = listOf(Upgraded.topic),
-      ).thenCompose { logs ->
-        // Scanning forward, so the first chunk with any Upgraded event holds the earliest one.
-        val earliestInChunk = logs.minByOrNull { it.blockNumber }
-        if (earliestInChunk != null) {
-          SafeFuture.completedFuture(earliestInChunk.blockNumber)
-        } else {
-          findFirstUpgradedBlock(fromBlock = chunkEnd + 1UL, toBlock = toBlock)
-        }
       }
   }
 

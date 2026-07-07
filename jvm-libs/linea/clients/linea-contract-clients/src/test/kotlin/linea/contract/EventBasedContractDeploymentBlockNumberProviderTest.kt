@@ -1,30 +1,40 @@
 package linea.contract
 
+import io.vertx.core.Vertx
 import linea.contract.events.Upgraded
 import linea.domain.EthLog
+import linea.ethapi.EthLogsSearcherImpl
 import linea.ethapi.FakeEthApiClient
 import linea.kotlin.decodeHex
 import linea.kotlin.toHexStringUInt256
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
 
 class EventBasedContractDeploymentBlockNumberProviderTest {
   private val contractAddress = "0x" + "aa".repeat(20)
+  private lateinit var vertx: Vertx
   private lateinit var ethApiClient: FakeEthApiClient
   private lateinit var provider: EventBasedContractDeploymentBlockNumberProvider
 
   @BeforeEach
   fun setUp() {
+    vertx = Vertx.vertx()
     ethApiClient = FakeEthApiClient()
     provider = EventBasedContractDeploymentBlockNumberProvider(
-      ethApiClient = ethApiClient,
+      ethLogsSearcher = EthLogsSearcherImpl(vertx = vertx, ethApiClient = ethApiClient),
       contractAddress = contractAddress,
       // small so the forward scan spans multiple bounded chunks instead of one query
       ethLogsSearchMaxBlockRange = 1_000u,
     )
+  }
+
+  @AfterEach
+  fun tearDown() {
+    vertx.close()
   }
 
   @Test
