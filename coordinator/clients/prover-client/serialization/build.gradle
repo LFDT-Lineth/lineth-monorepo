@@ -9,4 +9,6 @@ dependencies {
   api("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${libs.versions.jackson.get()}")
   api(project(":jvm-libs:generic:extensions:kotlin"))
   api(project(":coordinator:core-interfaces"))
+  // ByteArrayToHex(De)Serializer live in linea.s11n.jackson
+  implementation(project(":jvm-libs:generic:serialization:jackson"))
 }

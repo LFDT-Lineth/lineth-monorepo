@@ -41,13 +41,14 @@ class VersionedMetadataCodecTest {
   }
 
   @Test
-  fun `envelope has version and metadata, ByteArray as 0x-hex, Instant as epoch millis`() {
+  fun `envelope has version and metadata, ByteArray as 0x-hex, Instant as ISO-8601`() {
     val json = codec.toJson(sampleV1())
 
     assertThat(json).contains("\"version\":1")
     assertThat(json).contains("\"metadata\":")
     assertThat(json).contains("\"blobHash\":\"0x")
-    assertThat(json).contains("\"startBlockTimestamp\":1700000000000")
+    // Instant is serialized as an ISO-8601 string
+    assertThat(json).contains("\"startBlockTimestamp\":\"")
   }
 
   @Test

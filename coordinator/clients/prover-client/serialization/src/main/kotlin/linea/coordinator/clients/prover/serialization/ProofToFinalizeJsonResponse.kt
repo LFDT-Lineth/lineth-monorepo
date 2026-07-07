@@ -3,54 +3,54 @@ package linea.coordinator.clients.prover.serialization
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import linea.domain.ProofToFinalize
-import linea.domain.serialization.ByteArrayHexDeserializer
-import linea.domain.serialization.ByteArrayHexSerializer
 import linea.kotlin.byteArrayListEquals
 import linea.kotlin.byteArrayListHashCode
+import linea.s11n.jackson.ByteArrayToHexDeserializer
+import linea.s11n.jackson.ByteArrayToHexSerializer
 import kotlin.time.Instant
 
 data class ProofToFinalizeJsonResponse(
-  @JsonSerialize(using = ByteArrayHexSerializer::class)
-  @JsonDeserialize(using = ByteArrayHexDeserializer::class)
+  @JsonSerialize(using = ByteArrayToHexSerializer::class)
+  @JsonDeserialize(using = ByteArrayToHexDeserializer::class)
   val aggregatedProof: ByteArray,
-  @JsonSerialize(using = ByteArrayHexSerializer::class)
-  @JsonDeserialize(using = ByteArrayHexDeserializer::class)
+  @JsonSerialize(using = ByteArrayToHexSerializer::class)
+  @JsonDeserialize(using = ByteArrayToHexDeserializer::class)
   val parentStateRootHash: ByteArray,
   val aggregatedVerifierIndex: Int,
-  @JsonSerialize(using = ByteArrayHexSerializer::class)
-  @JsonDeserialize(using = ByteArrayHexDeserializer::class)
+  @JsonSerialize(using = ByteArrayToHexSerializer::class)
+  @JsonDeserialize(using = ByteArrayToHexDeserializer::class)
   val aggregatedProofPublicInput: ByteArray,
-  @JsonSerialize(contentUsing = ByteArrayHexSerializer::class)
-  @JsonDeserialize(contentUsing = ByteArrayHexDeserializer::class)
+  @JsonSerialize(contentUsing = ByteArrayToHexSerializer::class)
+  @JsonDeserialize(contentUsing = ByteArrayToHexDeserializer::class)
   val dataHashes: List<ByteArray>,
-  @JsonSerialize(using = ByteArrayHexSerializer::class)
-  @JsonDeserialize(using = ByteArrayHexDeserializer::class)
+  @JsonSerialize(using = ByteArrayToHexSerializer::class)
+  @JsonDeserialize(using = ByteArrayToHexDeserializer::class)
   val dataParentHash: ByteArray,
   val lastFinalizedBlockNumber: Long,
   val finalBlockNumber: Long,
   val parentAggregationLastBlockTimestamp: Long,
   val finalTimestamp: Long,
-  @JsonSerialize(using = ByteArrayHexSerializer::class)
-  @JsonDeserialize(using = ByteArrayHexDeserializer::class)
+  @JsonSerialize(using = ByteArrayToHexSerializer::class)
+  @JsonDeserialize(using = ByteArrayToHexDeserializer::class)
   val l1RollingHash: ByteArray,
   val l1RollingHashMessageNumber: Long,
-  @JsonSerialize(contentUsing = ByteArrayHexSerializer::class)
-  @JsonDeserialize(contentUsing = ByteArrayHexDeserializer::class)
+  @JsonSerialize(contentUsing = ByteArrayToHexSerializer::class)
+  @JsonDeserialize(contentUsing = ByteArrayToHexDeserializer::class)
   val l2MerkleRoots: List<ByteArray>,
   val l2MerkleTreesDepth: Int,
-  @JsonSerialize(using = ByteArrayHexSerializer::class)
-  @JsonDeserialize(using = ByteArrayHexDeserializer::class)
+  @JsonSerialize(using = ByteArrayToHexSerializer::class)
+  @JsonDeserialize(using = ByteArrayToHexDeserializer::class)
   val l2MessagingBlocksOffsets: ByteArray,
   val parentAggregationFtxNumber: Long = 0,
-  @JsonSerialize(using = ByteArrayHexSerializer::class)
-  @JsonDeserialize(using = ByteArrayHexDeserializer::class)
+  @JsonSerialize(using = ByteArrayToHexSerializer::class)
+  @JsonDeserialize(using = ByteArrayToHexDeserializer::class)
   val parentAggregationFtxRollingHash: ByteArray = ByteArray(32),
   val finalFtxNumber: Long = 0,
-  @JsonSerialize(using = ByteArrayHexSerializer::class)
-  @JsonDeserialize(using = ByteArrayHexDeserializer::class)
+  @JsonSerialize(using = ByteArrayToHexSerializer::class)
+  @JsonDeserialize(using = ByteArrayToHexDeserializer::class)
   val finalFtxRollingHash: ByteArray = ByteArray(32),
-  @JsonSerialize(contentUsing = ByteArrayHexSerializer::class)
-  @JsonDeserialize(contentUsing = ByteArrayHexDeserializer::class)
+  @JsonSerialize(contentUsing = ByteArrayToHexSerializer::class)
+  @JsonDeserialize(contentUsing = ByteArrayToHexDeserializer::class)
   val filteredAddresses: List<ByteArray> = emptyList(),
 ) {
 

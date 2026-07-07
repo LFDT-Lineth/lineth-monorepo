@@ -10,6 +10,10 @@ import linea.domain.BlobMetadataV1
 import linea.domain.BlobMetadataVersion
 import linea.domain.VersionedMetadata
 import linea.domain.VersionedMetadataPayload
+import linea.s11n.jackson.InstantISO8601Deserializer
+import linea.s11n.jackson.InstantISO8601Serializer
+import linea.s11n.jackson.ethByteAsHexDeserialisersModule
+import linea.s11n.jackson.ethByteAsHexSerialisersModule
 import kotlin.time.Instant
 
 /**
@@ -39,17 +43,18 @@ class VersionedMetadataCodec<T : VersionedMetadataPayload>(
   companion object {
     /**
      * An [ObjectMapper] that (de)serializes `ByteArray` as `0x`-hex and `kotlin.time.Instant`
-     * as epoch millis, so the annotation-free domain payloads serialize correctly.
+     * as ISO-8601, reusing the shared serializers in `jvm-libs:generic:serialization:jackson`,
+     * so the annotation-free domain payloads serialize correctly.
      */
     fun versionedMetadataMapper(): ObjectMapper =
       jacksonMapperBuilder()
         .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        .addModule(ethByteAsHexSerialisersModule)
+        .addModule(ethByteAsHexDeserialisersModule)
         .addModule(
           SimpleModule().apply {
-            addSerializer(ByteArray::class.java, ByteArrayHexSerializer())
-            addDeserializer(ByteArray::class.java, ByteArrayHexDeserializer())
-            addSerializer(Instant::class.java, InstantEpochMilliSerializer())
-            addDeserializer(Instant::class.java, InstantEpochMilliDeserializer())
+            addSerializer(Instant::class.java, InstantISO8601Serializer)
+            addDeserializer(Instant::class.java, InstantISO8601Deserializer)
           },
         )
         .build()
