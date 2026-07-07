@@ -20,8 +20,8 @@ func TestCompile_WioptestCompleteness(t *testing.T) {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
 			logderivativesum.Compile(sc.Sys)
-			proof := sc.Sys.Prove(sc.AssignWitness)
-			require.NoError(t, sc.Sys.Verify(proof),
+			proof, pub := sc.Sys.Prove(sc.AssignWitness)
+			require.NoError(t, sc.Sys.Verify(proof, pub),
 				"compiled verifier must accept an honest witness")
 		})
 	}

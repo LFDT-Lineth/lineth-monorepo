@@ -46,6 +46,16 @@ type Proof struct {
 	PCSOpeningProof *fri.OpeningProof
 }
 
+// PublicInput carries the values of the system's registered public inputs, in
+// the same order as [System.PublicInputs] (registration order): PublicInput[i]
+// is the value of the cell PublicInputs[i]. It is produced by [System.Prove]
+// and consumed by [System.Verify] alongside the [Proof].
+//
+// Public inputs are always cells and are deliberately excluded from the proof's
+// cells (they are carried here instead). The deterministic order lets the
+// statement be hashed/serialised and compared identically on both sides.
+type PublicInput []field.Gen
+
 // Prove runs the prover over every interactive round of sys and returns the
 // resulting [Proof].
 //
@@ -62,7 +72,7 @@ type Proof struct {
 //
 // The caller is responsible for running the compiler passes (and, optionally,
 // [Materialize]) on sys before calling Prove.
-func (sys *System) Prove(assign func(rt *Runtime)) Proof {
+func (sys *System) Prove(assign func(rt *Runtime)) (Proof, PublicInput) {
 	rt := NewRuntime(sys)
 	assign(rt)
 
@@ -94,6 +104,11 @@ func (sys *System) Prove(assign func(rt *Runtime)) Proof {
 	}
 	proof.PCSOpeningProof = rt.PCSOpeningProof
 
+	// piIdx maps each registered public-input cell to its position in the
+	// statement. Their values are captured into the returned PublicInput, not
+	// into the proof, so the two structures never overlap.
+	piIdx := sys.publicInputIndex()
+
 	for _, r := range sys.Rounds {
 		for _, col := range r.Columns {
 			// Capture every committed column (oracle + public). These are
@@ -112,6 +127,11 @@ func (sys *System) Prove(assign func(rt *Runtime)) Proof {
 		}
 
 		for _, cell := range r.Cells {
+			// Public inputs are carried separately in PublicInput.
+			if _, ok := piIdx[cell.Context.ID]; ok {
+				continue
+			}
+
 			// GetCellValue resolves lazily-assigned openings (e.g. endpoint and
 			// quotient/evaluation claims) so their values are captured.
 			proof.Cells[cell.Context.ID] = rt.GetCellValue(cell)
@@ -122,7 +142,15 @@ func (sys *System) Prove(assign func(rt *Runtime)) Proof {
 		proof.DynamicSizes[k] = v
 	}
 
-	return proof
+	// Capture the registered public-input cells into a separate PublicInput, in
+	// registration order. GetCellValue resolves lazily-assigned openings, so a
+	// cell opened from a  column resolves to that column's value.
+	pub := make(PublicInput, len(sys.PublicInputs))
+	for i, cell := range sys.PublicInputs {
+		pub[i] = rt.GetCellValue(cell)
+	}
+
+	return proof, pub
 }
 
 // Verify reconstructs a [Runtime] from proof and runs every verifier action
@@ -140,7 +168,7 @@ func (sys *System) Prove(assign func(rt *Runtime)) Proof {
 //
 // The function also panics if the proof contains any unexpected columns or
 // cells. For the column it will check that their visibility is correct.
-func (sys *System) Verify(proof Proof) error {
+func (sys *System) Verify(proof Proof, pub PublicInput) error {
 	rt := NewRuntime(sys) // currentRound = r0, preloads precomputed columns
 
 	// Restore the PCS artifacts before replaying the transcript: AdvanceRound
@@ -160,9 +188,17 @@ func (sys *System) Verify(proof Proof) error {
 		rt.dynamicSizes[k] = v
 	}
 
-	// assignRound loads the proof's committed columns and cells for r into the
-	// runtime. AssignColumn / AssignCell require r to be the current round, so
-	// this is always called on rt.CurrentRound().
+	// piIdx maps each registered public-input cell to its position in pub. Their
+	// values are read from pub rather than proof, enforcing the no-overlap
+	// invariant between the two structures.
+	piIdx := sys.publicInputIndex()
+	if len(pub) != len(sys.PublicInputs) {
+		return fmt.Errorf("wiop: public inputs length mismatch: got %d, want %d", len(pub), len(sys.PublicInputs))
+	}
+
+	// assignRound loads the proof's committed columns and cells (and the public
+	// inputs) for r into the runtime. AssignColumn / AssignCell require r to be
+	// the current round, so this is always called on rt.CurrentRound().
 	assignRound := func(r *Round) error {
 
 		for _, col := range r.Columns {
@@ -179,6 +215,11 @@ func (sys *System) Verify(proof Proof) error {
 		}
 
 		for _, cell := range r.Cells {
+			if i, isPI := piIdx[cell.Context.ID]; isPI {
+				rt.AssignCell(cell, pub[i])
+				continue
+			}
+
 			v, ok := proof.Cells[cell.Context.ID]
 			if !ok {
 				return fmt.Errorf("cell %q not found in proof", cell.Context.Path())
@@ -211,7 +252,8 @@ func (sys *System) Verify(proof Proof) error {
 	}
 
 	// This checks that all the items of the proof have been used. Meaning all
-	// cells and all columns of the proof are read.
+	// cells and all columns of the proof are read. It also enforces the
+	// no-overlap invariant: a proof item must not be a registered public input.
 	for id := range proof.Columns {
 		col := sys.LookupColumn(id)
 		if col == nil {
@@ -224,6 +266,10 @@ func (sys *System) Verify(proof Proof) error {
 	}
 
 	for id := range proof.Cells {
+		if _, isPI := piIdx[id]; isPI {
+			return fmt.Errorf("cell %q is a public input and must not appear in the proof", id)
+		}
+
 		cell := sys.LookupCell(id)
 		if cell == nil {
 			return fmt.Errorf("cell %q not found in system", id)
@@ -231,6 +277,14 @@ func (sys *System) Verify(proof Proof) error {
 
 		if !rt.HasCellValue(cell) {
 			return fmt.Errorf("cell %q not used in proof", cell.Context.Path())
+		}
+	}
+
+	// Every registered public-input cell must have been consumed during the
+	// transcript replay (the length of pub was checked above).
+	for _, cell := range sys.PublicInputs {
+		if !rt.HasCellValue(cell) {
+			return fmt.Errorf("public-input cell %q not used", cell.Context.Path())
 		}
 	}
 
