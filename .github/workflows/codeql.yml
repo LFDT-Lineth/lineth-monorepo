@@ -113,19 +113,25 @@ jobs:
         if: matrix.language == 'java-kotlin'
         uses: ./.github/actions/setup-tracer-environment
 
+      # Kotlin 2.4.0 (bumped in #3454) isn't supported yet by CodeQL's Kotlin
+      # extractor: github/codeql#21938. Non-blocking until upstream adds support;
+      # remove continue-on-error from this and the next two steps once it does.
       - name: Autobuild
         if: matrix.language != 'actions'
+        continue-on-error: ${{ matrix.language == 'java-kotlin' }}
         uses: github/codeql-action/autobuild@8aad20d150bbac5944a9f9d289da16a4b0d87c1e #v4.36.2
         env:
           GITHUB_TOKEN: ${{ secrets._GITHUB_TOKEN_RELEASE_ACCESS }}
 
       - name: Perform CodeQL Analysis
+        continue-on-error: ${{ matrix.language == 'java-kotlin' }}
         uses: github/codeql-action/analyze@8aad20d150bbac5944a9f9d289da16a4b0d87c1e #v4.36.2
         with:
           category: "/language:${{matrix.language}}"
           output: sarif-results
 
       - name: Upload CodeQL Results
+        continue-on-error: ${{ matrix.language == 'java-kotlin' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: codeql-results-${{ matrix.language }}

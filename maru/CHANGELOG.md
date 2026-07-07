@@ -10,6 +10,7 @@
 - *(arithmetization)* Fix alert 514 (#3246)
 - *(maru)* Making discovery retry configurable to increase the convergence speed (#3387)
 - *(Maru)* Fixed a bug when simultaneous mutual connection attempts r… (#3439)
+- *(coordinator)* Bound eth_getLogs in finalized-state lookup (#3519)
 
 ### 🚜 Refactor
 

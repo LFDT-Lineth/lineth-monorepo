@@ -90,19 +90,20 @@ class GasPriceCapProviderImpl(
           val targetL2BlockTimestamp = Instant.fromEpochSeconds(it.toLong())
           val elapsedTimeSinceBlockTimestamp = getElapsedTimeSinceBlockTimestamp(targetL2BlockTimestamp)
           val percentileGasFees = feeHistoriesRepository.getCachedPercentileGasFees()
+          val timeOfDayMultiplier = getTimeOfDayMultiplierForNow(config.timeOfDayMultipliers)
           val maxPriorityFeePerGasCap = gasPriceCapCalculator.calculateGasPriceCap(
             adjustmentConstant = config.adjustmentConstant,
             finalizationTargetMaxDelay = config.finalizationTargetMaxDelay,
             historicGasPriceCap = percentileGasFees.percentileAvgReward,
             elapsedTimeSinceBlockTimestamp = elapsedTimeSinceBlockTimestamp,
-            timeOfDayMultiplier = getTimeOfDayMultiplierForNow(config.timeOfDayMultipliers),
+            timeOfDayMultiplier = timeOfDayMultiplier,
           )
           val maxBaseFeePerGasCap = gasPriceCapCalculator.calculateGasPriceCap(
             adjustmentConstant = config.adjustmentConstant,
             finalizationTargetMaxDelay = config.finalizationTargetMaxDelay,
             historicGasPriceCap = percentileGasFees.percentileBaseFeePerGas,
             elapsedTimeSinceBlockTimestamp = elapsedTimeSinceBlockTimestamp,
-            timeOfDayMultiplier = getTimeOfDayMultiplierForNow(config.timeOfDayMultipliers),
+            timeOfDayMultiplier = timeOfDayMultiplier,
           )
           val maxFeePerBlobGasCap = gasPriceCapCalculator.calculateGasPriceCap(
             adjustmentConstant = config.blobAdjustmentConstant,
