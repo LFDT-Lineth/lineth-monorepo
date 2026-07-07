@@ -5,6 +5,8 @@ package main
 //   make -C riscv-guests/l2-execution run-execution-specs-ssz-fixtures
 // Run all inputs in each selected fixture path:
 //   make -C riscv-guests/l2-execution run-execution-specs-ssz-fixtures EXECUTION_SPECS_RUN_SSZ_LIMIT=0
+// Run Lineth zkevm-fixtures release inputs:
+//   make -C riscv-guests/l2-execution run-zkevm-fixtures-ssz-fixtures
 
 import (
 	"encoding/hex"
@@ -53,9 +55,9 @@ type selectedInput struct {
 
 // Runs selected fixtures.
 func main() {
-	fixturesDir := flag.String("fixtures-dir", filepath.Join(os.TempDir(), "execution-specs-json-fixtures", "fixtures"), "directory containing execution-specs fixtures")
-	sszDir := flag.String("ssz-dir", filepath.Join(os.TempDir(), "execution-specs-ssz-fixtures"), "directory for selected temporary SSZ inputs")
-	fixturePathsFlag := flag.String("fixture-paths", "blockchain_tests/for_amsterdam/amsterdam,blockchain_tests/for_amsterdam/osaka", "comma-separated fixture paths under fixtures-dir")
+	fixturesDir := flag.String("fixtures-dir", filepath.Join(os.TempDir(), "execution-specs-json-fixtures", "fixtures"), "directory containing zkevm fixture JSON files")
+	sszDir := flag.String("ssz-dir", filepath.Join(os.TempDir(), "execution-specs-ssz-fixtures"), "directory for selected temporary raw SSZ inputs")
+	fixturePathsFlag := flag.String("fixture-paths", "blockchain_tests/for_amsterdam/amsterdam,blockchain_tests/for_amsterdam/osaka", "comma-separated fixture paths under fixtures-dir; . means all")
 	sszLimit := flag.Int("ssz-limit", 0, "maximum SSZ inputs to run per fixture path; 0 means all")
 	zkcFlags := flag.String("zkc-flags", "--gogen --fast -q", "flags forwarded to zkc exec")
 	flag.Parse()
@@ -198,7 +200,10 @@ func splitList(s string) []string {
 // Validates a fixture path.
 func resolveFixturePath(rootDir, fixturePath string) (string, string, error) {
 	cleanPath := filepath.Clean(filepath.FromSlash(fixturePath))
-	if cleanPath == "." || cleanPath == ".." || filepath.IsAbs(cleanPath) || strings.HasPrefix(cleanPath, ".."+string(os.PathSeparator)) {
+	if cleanPath == "." {
+		return ".", rootDir, nil
+	}
+	if cleanPath == ".." || filepath.IsAbs(cleanPath) || strings.HasPrefix(cleanPath, ".."+string(os.PathSeparator)) {
 		return "", "", fmt.Errorf("invalid fixture path")
 	}
 	return filepath.ToSlash(cleanPath), filepath.Join(rootDir, cleanPath), nil

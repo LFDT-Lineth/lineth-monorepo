@@ -21,6 +21,15 @@ make -C l2-execution exec
 
 `make -C l2-execution compile` writes the guest as a **statically-linked rv64im ELF** to `riscv-guests/l2-execution/zig-out/bin/evm_execution_guest` — the [zkvm-standards](https://github.com/eth-act/zkvm-standards/blob/main/standards/riscv-target/target.md) artifact ("Object Format: ELF, statically linked"), linked via `build_common`'s shared `installGuestElf`. The ZKC interpreter loads it (via ELF→JSON); `make -C l2-execution exec` builds it and runs it there — see the [parent README](../README.md#zkc-interpreter-integration). `make test` runs the native Zig test, which requires the native crypto libraries documented in the [parent README](../README.md#native-test-dependencies).
 
+Large zkevm fixture archives are downloaded and extracted under `/tmp`, never stored in the repo:
+
+```bash
+make -C l2-execution run-zkevm-fixtures-ssz-fixtures
+```
+
+The downloaded archives are cached under `/tmp/zkevm-fixtures/archives`, extracted JSON fixtures under
+`/tmp/zkevm-fixtures/json`, and generated raw SSZ inputs under `/tmp/zkevm-fixtures/ssz`.
+
 ## Compilation
 
 `make -C l2-execution compile` (and `exec`/`debug`) build the guest with
