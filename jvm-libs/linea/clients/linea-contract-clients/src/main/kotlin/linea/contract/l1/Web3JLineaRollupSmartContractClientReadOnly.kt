@@ -27,6 +27,7 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
   val contractAddress: String,
   private val ethLogsSearcher: EthLogsSearcher,
   private val l1EventSearchMaxBlockRange: UInt = 10_000u,
+  private val finalizedStateSearchInitialBlockParameter: BlockParameter? = null,
   private val log: Logger = LogManager.getLogger(Web3JLineaRollupSmartContractClientReadOnly::class.java),
 ) : LineaRollupSmartContractClientReadOnly,
   LineaRollupSmartContractClientReadOnlyFinalizedStateProvider,
@@ -219,7 +220,9 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
   // forward search instead of a full-chain binary search. A full-range fallback covers the rare case
   // where the cached window overshoots (e.g. an L1 reorg moved the event earlier, or a caller queries
   // a historical block).
-  private val finalizedStateSearchFromBlock = AtomicReference<BlockParameter>(BlockParameter.Tag.EARLIEST)
+  private val finalizedStateSearchFromBlock = AtomicReference<BlockParameter>(
+    finalizedStateSearchInitialBlockParameter ?: BlockParameter.Tag.EARLIEST,
+  )
 
   internal fun findFinalizedStateEvent(
     upToBlock: BlockParameter,
