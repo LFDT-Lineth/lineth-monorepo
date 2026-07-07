@@ -81,6 +81,13 @@ RUN mkdir -p /home/node/.cache/prisma \
 
 WORKDIR /usr/src/app/operations/native-yield/lido-governance-monitor
 
+# The prisma engines dir must be node-writable: the production init container runs
+# `prisma migrate deploy` before app start (see docs/db-migration.md), which extracts
+# the schema-engine binary into node_modules on first run. The rest of node_modules
+# stays root-owned; only this subdir is delegated to node. KICS "Chown Flag Exists"
+# targets the COPY --chown flag, not RUN chown, so this does not re-trigger that rule.
+RUN chown -R node:node node_modules/.pnpm/@prisma+engines@*/node_modules/@prisma/engines
+
 USER node
 
 CMD [ "node", "./dist/run.js" ]
