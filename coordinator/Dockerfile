@@ -34,8 +34,8 @@ RUN rm -rf unpacked-blob-compressor unpacked-blob-shnarf-calculator
 # FINAL image
 FROM eclipse-temurin:25-jre-noble
 
-RUN groupadd coordinator && \
-    useradd -g coordinator -d /opt/consensys/linea/coordinator -s /usr/sbin/nologin coordinator
+RUN groupmod -n coordinator ubuntu && \
+    usermod -l coordinator -d /opt/consensys/linea/coordinator -s /usr/sbin/nologin -G "" ubuntu
 
 WORKDIR /opt/consensys/linea/coordinator
 
