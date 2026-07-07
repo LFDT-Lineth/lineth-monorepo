@@ -182,6 +182,7 @@ class L1DependentApp(
           vertx = vertx,
         ),
       ),
+      finalizedStateSearchInitialBlockParameter = configs.protocol.l1.contractDeploymentBlockNumber,
     )
   }
 
