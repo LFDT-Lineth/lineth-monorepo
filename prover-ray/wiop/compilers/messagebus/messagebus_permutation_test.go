@@ -30,9 +30,9 @@ func TestCompile_Permutation_Balanced(t *testing.T) {
 		colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
 		colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
 
-		sys.NewMessageBusPermutationSend(
+		sys.NewMessageBusSend(
 			sys.Context.Childf("send-A"), "shard", "route", wiop.NewTable(colA.View()))
-		sys.NewMessageBusPermutationReceive(
+		sys.NewMessageBusReceive(
 			sys.Context.Childf("recv-B"), "shard", "route", wiop.NewTable(colB.View()))
 
 		compilePermutationBus(sys)
@@ -58,9 +58,9 @@ func TestCompile_Permutation_Unbalanced(t *testing.T) {
 		colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
 		colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
 
-		sys.NewMessageBusPermutationSend(
+		sys.NewMessageBusSend(
 			sys.Context.Childf("send-A"), "shard", "route", wiop.NewTable(colA.View()))
-		sys.NewMessageBusPermutationReceive(
+		sys.NewMessageBusReceive(
 			sys.Context.Childf("recv-B"), "shard", "route", wiop.NewTable(colB.View()))
 
 		compilePermutationBus(sys)
@@ -88,10 +88,10 @@ func TestCompile_Permutation_WithSelectorBalanced(t *testing.T) {
 	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
 	selB := modB.NewColumn(sys.Context.Childf("selB"), wiop.VisibilityOracle, r0)
 
-	sys.NewMessageBusPermutationSend(
+	sys.NewMessageBusSend(
 		sys.Context.Childf("send-A"), "shard", "route",
 		wiop.NewFilteredTable(selA.View(), colA.View()))
-	sys.NewMessageBusPermutationReceive(
+	sys.NewMessageBusReceive(
 		sys.Context.Childf("recv-B"), "shard", "route",
 		wiop.NewFilteredTable(selB.View(), colB.View()))
 
@@ -123,10 +123,10 @@ func TestCompile_Permutation_WithSelectorUnbalanced(t *testing.T) {
 	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
 	selB := modB.NewColumn(sys.Context.Childf("selB"), wiop.VisibilityOracle, r0)
 
-	sys.NewMessageBusPermutationSend(
+	sys.NewMessageBusSend(
 		sys.Context.Childf("send-A"), "shard", "route",
 		wiop.NewFilteredTable(selA.View(), colA.View()))
-	sys.NewMessageBusPermutationReceive(
+	sys.NewMessageBusReceive(
 		sys.Context.Childf("recv-B"), "shard", "route",
 		wiop.NewFilteredTable(selB.View(), colB.View()))
 
@@ -143,44 +143,23 @@ func TestCompile_Permutation_WithSelectorUnbalanced(t *testing.T) {
 		"a filtered permutation with mismatched selected multisets must be rejected")
 }
 
-// TestCompile_Permutation_MixedReductionSameHandlePanics: a handle cannot mix a
-// log-derivative entry and a permutation entry — the compiler rejects it.
-func TestCompile_Permutation_MixedReductionSameHandlePanics(t *testing.T) {
-	sys := wiop.NewSystemf("mb-mixed")
-	r0 := sys.NewRound()
-	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
-	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
-
-	sys.NewMessageBusSend( // LogUp
-		sys.Context.Childf("send-A"), "shard", "route", wiop.NewTable(colA.View()))
-	sys.NewMessageBusPermutationReceive( // Permutation — same handle
-		sys.Context.Childf("recv-B"), "shard", "route", wiop.NewTable(colB.View()))
-
-	assert.Panics(t, func() { messagebus.Compile(sys) },
-		"mixing reductions within a handle must panic")
-}
-
-// TestNewMessageBusPermutation_SetsReductionAndAllowsSelector checks the
-// constructors set ReducePermutation and permit a selector (a permutation may
-// have only some rows active).
-func TestNewMessageBusPermutation_SetsReductionAndAllowsSelector(t *testing.T) {
+// TestNewMessageBus_SetsDirectionAndAllowsSelector checks the constructors set
+// the right direction and permit a selector (a permutation may have only some
+// rows active).
+func TestNewMessageBus_SetsDirectionAndAllowsSelector(t *testing.T) {
 	sys := wiop.NewSystemf("mb-perm-ctor")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
 	col := mod.NewColumn(sys.Context.Childf("c"), wiop.VisibilityOracle, r0)
 	sel := mod.NewColumn(sys.Context.Childf("sel"), wiop.VisibilityOracle, r0)
 
-	send := sys.NewMessageBusPermutationSend(
+	send := sys.NewMessageBusSend(
 		sys.Context.Childf("send"), "shard", "route", wiop.NewTable(col.View()))
-	assert.Equal(t, wiop.ReducePermutation, send.Reduction)
 	assert.Equal(t, wiop.BusSend, send.Direction)
 
-	recv := sys.NewMessageBusPermutationReceive(
+	recv := sys.NewMessageBusReceive(
 		sys.Context.Childf("recv"), "shard", "route",
 		wiop.NewFilteredTable(sel.View(), col.View()))
-	assert.Equal(t, wiop.ReducePermutation, recv.Reduction)
-	assert.Nil(t, recv.Multiplicity, "permutation receive carries no multiplicity")
+	assert.Equal(t, wiop.BusReceive, recv.Direction)
 	assert.NotNil(t, recv.Tab.Selector, "a selector is allowed on a permutation entry")
 }

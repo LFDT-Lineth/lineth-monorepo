@@ -41,15 +41,15 @@ type System struct {
 	MessageBuses []*MessageBus
 	// MessageBusSkipInShardCheck controls whether the messagebus compiler
 	// registers its per-handle in-shard verifier action — a
-	// [messagebus.CheckHandleSumInShard] — which asserts the per-segment LDS
-	// Results sum to that action's Expected value on this shard alone. When
-	// false (the default) the pass registers one such action per handle,
-	// preserving the single-shard "sum is zero" guarantee. Set to true in
+	// [messagebus.CheckHandleSumInShard] — which asserts the per-handle
+	// GrandProduct equals that action's Expected value on this shard alone.
+	// When false (the default) the pass registers one such action per handle,
+	// preserving the single-shard "product is one" guarantee. Set to true in
 	// sharded protocols where a downstream cross-shard layer owns the
-	// consistency check and the in-shard residual must remain unasserted so
+	// consistency check and the in-shard product must remain unasserted so
 	// it can be carried over to the cross-shard identity (typically the
 	// cross-shard layer registers its own CheckHandleSumInShard instances
-	// with appropriate non-zero Expected values).
+	// with appropriate Expected values).
 	MessageBusSkipInShardCheck bool
 	// scratchArena backs the [PlanningContext] used by [Materialize]. It is
 	// nil until Materialize is called.
