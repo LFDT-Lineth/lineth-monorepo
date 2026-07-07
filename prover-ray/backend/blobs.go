@@ -3,6 +3,7 @@ package backend
 import (
 	"bytes"
 	"debug/elf"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"sort"
@@ -80,20 +81,12 @@ func elfBlobs(ef *elf.File) []blob {
 	return result
 }
 
-// sszBlobs wraps ssz with the [u64 LE length][SSZ bytes] frame that
-// linea_zkvm_io (the guest's read_input ABI) expects at _in_start.
+// sszBlobs splits ssz into the two blobs that linea_zkvm_io expects at
+// _in_start: an 8-byte LE length prefix followed by the raw SSZ payload.
+// The split matches elf_to_json_gen's sszInputBlobs (commit 09fcdb42).
 func sszBlobs(inOrigin uint64, ssz []byte) []blob {
 	prefix := make([]byte, 8)
-	// Little-endian length prefix, matching linea_zkvm_io.zig.
-	prefix[0] = byte(len(ssz))
-	prefix[1] = byte(len(ssz) >> 8)
-	prefix[2] = byte(len(ssz) >> 16)
-	prefix[3] = byte(len(ssz) >> 24)
-	prefix[4] = byte(len(ssz) >> 32)
-	prefix[5] = byte(len(ssz) >> 40)
-	prefix[6] = byte(len(ssz) >> 48)
-	prefix[7] = byte(len(ssz) >> 56)
-
+	binary.LittleEndian.PutUint64(prefix, uint64(len(ssz)))
 	blobs := []blob{{offset: inOrigin, data: prefix}}
 	if len(ssz) > 0 {
 		blobs = append(blobs, blob{offset: inOrigin + 8, data: ssz})

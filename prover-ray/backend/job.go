@@ -43,7 +43,12 @@ const (
 // PublicInputs carries the public output fields from the guest's
 // 105-byte SszStatelessValidationResult.
 //
-// Extraction from wiop.Proof is not yet implemented (backend-overview.md §7).
+// The wiop mechanism is in place (wiop.RegisterPublicInputs, commit e48fd92f):
+// col.At(pos).Open(ctx) exposes a column position as a cell, RegisterPublicInputs
+// registers it, and sys.Prove returns its value in wiop.PublicInput. What
+// remains is establishing which columns/positions in RISCV-ZKC.bin carry each
+// of these 15 fields (backend-overview.md §7, open question #5).
+//
 // Field names follow the coordinator response schema
 // (rollup_spec/src/rollup_spec/prover_io/getZkL2ExecutionProofV1.response.json).
 type PublicInputs struct {
@@ -51,8 +56,7 @@ type PublicInputs struct {
 	EndBlockHash         [32]byte
 	L2L1MessagesHash     [32]byte
 	ParentFtxRollingHash [32]byte
-	// TODO(open): remaining 11 fields from SszStatelessValidationResult once
-	// the column-to-field mapping is established (backend-overview.md §7).
+	// Remaining 11 fields: pending column-to-field mapping.
 }
 
 // Result is the backend's response for a completed [Job].
