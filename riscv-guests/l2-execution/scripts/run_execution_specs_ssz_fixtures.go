@@ -7,7 +7,6 @@ package main
 //   make -C riscv-guests/l2-execution run-execution-specs-ssz-fixtures EXECUTION_SPECS_RUN_SSZ_LIMIT=0
 
 import (
-	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"flag"
@@ -257,7 +256,7 @@ func writeSSZInputs(sszDir, fixturePath, targetDir, jsonPath string, limit int) 
 			break
 		}
 		outPath := filepath.Join(outDir, fmt.Sprintf("%04d.ssz", i))
-		if err := os.WriteFile(outPath, zkvmInput(block.input), 0o644); err != nil {
+		if err := os.WriteFile(outPath, block.input, 0o644); err != nil {
 			return nil, err
 		}
 		out = append(out, selectedInput{
@@ -271,14 +270,6 @@ func writeSSZInputs(sszDir, fixturePath, targetDir, jsonPath string, limit int) 
 		})
 	}
 	return out, nil
-}
-
-// Adds the zkVM input length prefix expected by read_input.
-func zkvmInput(input []byte) []byte {
-	out := make([]byte, 8+len(input))
-	binary.LittleEndian.PutUint64(out[:8], uint64(len(input)))
-	copy(out[8:], input)
-	return out
 }
 
 // Extracts stateless inputs from one fixture JSON file.
