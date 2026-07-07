@@ -1,6 +1,8 @@
 package wiop
 
 import (
+	"fmt"
+
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/arena"
 )
@@ -37,6 +39,15 @@ type System struct {
 	// via [System.NewMessageBusSend] and [System.NewMessageBusReceive], in
 	// declaration order.
 	MessageBuses []*MessageBus
+	// PublicInputs is the ordered list of cells whose values form the protocol
+	// "statement". It is populated, in registration order, via
+	// [System.RegisterPublicInputs]. Public inputs are always cells (a
+	// column is exposed by opening positions into cells, see
+	// [ColumnPosition.Open]); a human-readable label, if desired, lives in the
+	// cell's own Context.Lable. Their values are carried separately from the
+	// [Proof] (in a [PublicInput], aligned to this order) and are received by
+	// [System.Verify] alongside the proof.
+	PublicInputs []*Cell
 	// MessageBusSkipInShardCheck controls whether the messagebus compiler
 	// registers its per-handle in-shard verifier action — a
 	// [messagebus.CheckHandleSumInShard] — which asserts the per-segment LDS
@@ -77,6 +88,45 @@ func NewSystemf(msg string, args ...any) *System {
 	sys.Annotations = make(Annotations)
 
 	return sys
+}
+
+// RegisterPublicInputs appends cells to the ordered public-input registry.
+// Public inputs are always cells: a column from the arithmetization is exposed
+// by opening the desired position into a cell (see [ColumnPosition.Open]), and
+// that cell is registered here. A human-readable label, if desired, is stored
+// in the cell's own [Context.Lable]. Their values form the protocol statement,
+// carried in a [PublicInput] separately from the [Proof] and in this
+// registration order.
+//
+// Panics if a cell is nil, or is already
+// registered.
+func (sys *System) RegisterPublicInputs(cells ...*Cell) {
+	// Seed the seen-set from the cells already registered so a duplicate is
+	// caught across calls as well as within this one.
+	seen := sys.publicInputIndex()
+	for _, cell := range cells {
+		if cell == nil {
+			panic("wiop: RegisterPublicInputs requires non-nil cells")
+		}
+		id := cell.Context.ID
+		if _, dup := seen[id]; dup {
+			panic(fmt.Sprintf("wiop: RegisterPublicInputs: cell %q already registered as a public input", cell.Context.Path()))
+		}
+		seen[id] = len(sys.PublicInputs) // prevents duplication on the same call
+		sys.PublicInputs = append(sys.PublicInputs, cell)
+	}
+}
+
+// publicInputIndex maps each registered public-input cell's [ObjectID] to its
+// position in [System.PublicInputs], for fast membership tests and for aligning
+// a [PublicInput] to the registration order during [System.Prove] and
+// [System.Verify].
+func (sys *System) publicInputIndex() map[ObjectID]int {
+	idx := make(map[ObjectID]int, len(sys.PublicInputs))
+	for i, cell := range sys.PublicInputs {
+		idx[cell.Context.ID] = i
+	}
+	return idx
 }
 
 // Free releases the scratch memory arena allocated by [Materialize]. Safe to

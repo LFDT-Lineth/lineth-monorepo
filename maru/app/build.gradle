@@ -35,6 +35,7 @@ dependencies {
   implementation(project(':jvm-libs:linea:web3j-extensions')) {
     exclude group: "build.linea", module: "besu-libs"
   }
+  implementation project(':jvm-libs:linea:clients:eth-logs-searcher')
   implementation project(':jvm-libs:generic:extensions:kotlin')
   implementation project(':jvm-libs:generic:extensions:futures')
   implementation project(':jvm-libs:linea:core:long-running-service')
