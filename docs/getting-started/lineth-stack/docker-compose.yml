@@ -691,6 +691,20 @@ services:
       - ./artifacts/config/coordinator:/rendered:rw
     networks: [linea]
 
+  # The coordinator runs as a non-root user (uid 1000) and creates the prover
+  # request/response subdirectories under the shared lineth-local-dev volume.
+  # A fresh named volume is created root-owned, so fix ownership before the
+  # coordinator starts. The prover shares this volume but runs as root, so it
+  # is unaffected.
+  data-permissions-init:
+    image: busybox:${BUSYBOX_TAG}
+    container_name: data-permissions-init
+    profiles: *default-profiles
+    entrypoint: ["sh", "-c", "chown -R 1000:1000 /data"]
+    volumes:
+      - lineth-local-dev:/data
+    networks: [linea]
+
   # ============================================================================
   # L2 services that consume rendered runtime config
   # ============================================================================
@@ -702,6 +716,8 @@ services:
     profiles: *default-profiles
     depends_on:
       runtime-config-finalize:
+        condition: service_completed_successfully
+      data-permissions-init:
         condition: service_completed_successfully
       coordinator-pg:
         condition: service_healthy
@@ -772,6 +788,8 @@ services:
     depends_on:
       coordinator:
         condition: service_started
+      data-permissions-init:
+        condition: service_completed_successfully
       config-render:
         condition: service_completed_successfully
     environment:
