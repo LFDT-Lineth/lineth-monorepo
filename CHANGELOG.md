@@ -86,3 +86,4 @@
 - *(deps)* Safe updates, exact version pinning, and override housekeeping (#3457)
 - *(coordinator)* Update kotlin to v2.4 (#3454)
 - *(coordinator)* LSP violation fix (#3386)
+- *(deps)* Bump golang.org/x/net (#3500)
