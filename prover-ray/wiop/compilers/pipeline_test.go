@@ -37,7 +37,7 @@ func compileFullPipeline(sys *wiop.System) {
 // These tests drive every scenario through the full
 // range → lookup → logderivative → local → global pipeline using the explicit
 // prover/verifier split: sys.Prove(assign) produces a strict, public-only
-// [wiop.Proof], and sys.Verify(proof) re-checks it without access to the oracle
+// [wiop.Proof], and sys.Verify(proof, pub) re-checks it without access to the oracle
 // witness columns. Because the Proof carries only public columns, cells, and
 // coins, these tests fail loudly if any verifier action reads an oracle or
 // internal column.
@@ -51,8 +51,8 @@ func TestFullPipeline_VanishingScenarios(t *testing.T) {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
 			compileFullPipeline(sc.Sys)
-			proof := sc.Sys.Prove(sc.AssignHonest)
-			require.NoError(t, sc.Sys.Verify(proof),
+			proof, pub := sc.Sys.Prove(sc.AssignHonest)
+			require.NoError(t, sc.Sys.Verify(proof, pub),
 				"full pipeline must accept an honest witness")
 		})
 
@@ -61,8 +61,8 @@ func TestFullPipeline_VanishingScenarios(t *testing.T) {
 		t.Run(sc.Name+"/Soundness", func(t *testing.T) {
 			sc := build()
 			compileFullPipeline(sc.Sys)
-			proof := sc.Sys.Prove(sc.AssignInvalid)
-			assert.Error(t, sc.Sys.Verify(proof),
+			proof, pub := sc.Sys.Prove(sc.AssignInvalid)
+			assert.Error(t, sc.Sys.Verify(proof, pub),
 				"full pipeline must reject an invalid witness")
 		})
 	}
@@ -77,16 +77,16 @@ func TestFullPipeline_LocalVanishingScenarios(t *testing.T) {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
 			compileFullPipeline(sc.Sys)
-			proof := sc.Sys.Prove(sc.AssignHonest)
-			require.NoError(t, sc.Sys.Verify(proof),
+			proof, pub := sc.Sys.Prove(sc.AssignHonest)
+			require.NoError(t, sc.Sys.Verify(proof, pub),
 				"full pipeline must accept an honest witness")
 		})
 
 		t.Run(sc.Name+"/Soundness", func(t *testing.T) {
 			sc := build()
 			compileFullPipeline(sc.Sys)
-			proof := sc.Sys.Prove(sc.AssignInvalid)
-			assert.Error(t, sc.Sys.Verify(proof),
+			proof, pub := sc.Sys.Prove(sc.AssignInvalid)
+			assert.Error(t, sc.Sys.Verify(proof, pub),
 				"full pipeline must reject an invalid witness")
 		})
 	}
@@ -102,8 +102,8 @@ func TestFullPipeline_LogDerivativeSumScenarios(t *testing.T) {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
 			compileFullPipeline(sc.Sys)
-			proof := sc.Sys.Prove(sc.AssignWitness)
-			require.NoError(t, sc.Sys.Verify(proof),
+			proof, pub := sc.Sys.Prove(sc.AssignWitness)
+			require.NoError(t, sc.Sys.Verify(proof, pub),
 				"full pipeline must accept an honest witness")
 		})
 	}
@@ -118,8 +118,8 @@ func TestFullPipeline_LookupScenarios(t *testing.T) {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
 			compileFullPipeline(sc.Sys)
-			proof := sc.Sys.Prove(sc.AssignWitness)
-			require.NoError(t, sc.Sys.Verify(proof),
+			proof, pub := sc.Sys.Prove(sc.AssignWitness)
+			require.NoError(t, sc.Sys.Verify(proof, pub),
 				"full pipeline must accept an honest witness")
 		})
 	}
@@ -134,8 +134,8 @@ func TestFullPipeline_RangeCheckScenarios(t *testing.T) {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
 			compileFullPipeline(sc.Sys)
-			proof := sc.Sys.Prove(sc.AssignWitness)
-			require.NoError(t, sc.Sys.Verify(proof),
+			proof, pub := sc.Sys.Prove(sc.AssignWitness)
+			require.NoError(t, sc.Sys.Verify(proof, pub),
 				"full pipeline must accept an honest witness")
 		})
 	}
