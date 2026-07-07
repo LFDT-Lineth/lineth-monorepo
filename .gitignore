@@ -78,7 +78,7 @@ proving_key.bin
 **/.direnv
 
 # Prisma generated clients
-/native-yield-operations/lido-governance-monitor/prisma/client/
+operations/native-yield/lido-governance-monitor/prisma/client/
 
 bin/
 build/
