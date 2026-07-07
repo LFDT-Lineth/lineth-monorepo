@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonProperty
 import linea.domain.FeeHistory
 import linea.domain.uLongFromPrefixedHex
-import org.web3j.protocol.ObjectMapperFactory
 import org.web3j.protocol.Web3jService
 import org.web3j.protocol.core.DefaultBlockParameter
 import org.web3j.protocol.core.Request
@@ -13,7 +12,6 @@ import org.web3j.utils.Numeric
 import tools.jackson.core.JsonParser
 import tools.jackson.core.JsonToken
 import tools.jackson.databind.DeserializationContext
-import tools.jackson.databind.ObjectReader
 import tools.jackson.databind.ValueDeserializer
 import tools.jackson.databind.annotation.JsonDeserialize
 import java.math.BigInteger
@@ -74,15 +72,16 @@ class EthFeeHistoryBlobExtended : Response<EthFeeHistoryBlobExtended.FeeHistoryB
   }
 
   class ResponseDeserializer : ValueDeserializer<FeeHistoryBlobExtended>() {
-    private val objectReader: ObjectReader = ObjectMapperFactory.getObjectReader()
-      .forType(FeeHistoryBlobExtended::class.java)
-
     override fun deserialize(
       jsonParser: JsonParser,
       deserializationContext: DeserializationContext,
     ): FeeHistoryBlobExtended? {
       return if (jsonParser.currentToken() != JsonToken.VALUE_NULL) {
-        objectReader.readValue(jsonParser)
+        // delegate through the context (not a standalone ObjectReader) because jsonParser is
+        // positioned mid-stream inside the enclosing Response object: an ObjectReader.readValue(parser)
+        // treats the read as a whole document and trips FAIL_ON_TRAILING_TOKENS (default true in
+        // Jackson 3) on the outer object's closing token.
+        deserializationContext.readValue(jsonParser, FeeHistoryBlobExtended::class.java)
       } else {
         null
       }
