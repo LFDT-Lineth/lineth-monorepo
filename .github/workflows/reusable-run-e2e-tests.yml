@@ -55,6 +55,21 @@ on:
         required: false
         type: string
         default: ""
+      linea_coordinator_image_name:
+        description: 'Coordinator Docker image name (overrides the compose default)'
+        required: false
+        type: string
+        default: consensys/linea-coordinator
+      linea_coordinator_jar:
+        description: 'Coordinator JAR filename to launch'
+        required: false
+        type: string
+        default: coordinator.jar
+      linea_coordinator_artifact_name:
+        description: 'Artifact name prefix for the coordinator Docker image'
+        required: false
+        type: string
+        default: linea-coordinator
       e2e-tests-with-ssh:
         description: Run end to end tests with ability to ssh into environment
         required: false
@@ -72,6 +87,11 @@ on:
         default: true
       has-changes-requiring-e2e-testing:
         type: string
+      runs_on:
+        description: 'Runner label for the e2e job'
+        required: false
+        type: string
+        default: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
     outputs:
       tests_outcome:
         value: ${{ jobs.run-e2e-tests.outputs.tests_outcome }}
@@ -88,6 +108,9 @@ jobs:
     if: ${{ inputs.has-changes-requiring-e2e-testing == 'true' }}
     env:
       LINEA_BESU_PACKAGE_TAG: ${{ inputs.linea_besu_package_tag }}
+      LINEA_COORDINATOR_IMAGE_NAME: ${{ inputs.linea_coordinator_image_name }}
+      LINEA_COORDINATOR_JAR: ${{ inputs.linea_coordinator_jar }}
+      LINEA_COORDINATOR_ARTIFACT_NAME: ${{ inputs.linea_coordinator_artifact_name }}
       LINEA_COORDINATOR_TAG: ${{ inputs.coordinator_tag }}
       LINEA_POSTMAN_TAG: ${{ inputs.postman_tag }}
       LINEA_PROVER_TAG: ${{ inputs.prover_tag }}
@@ -97,14 +120,30 @@ jobs:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     outputs:
       tests_outcome: ${{ steps.run_e2e_tests.outcome }}
-    # xl saves ~0 mins
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
+    runs-on: ${{ inputs.runs_on }}
     steps:
       - name: Setup upterm session
         if: ${{ inputs.e2e-tests-with-ssh }}
         uses: lhotari/action-upterm@b0357f23233f5ea6d58947c0c402e0631bab7334 #v1
+      - name: Resolve monorepo checkout ref
+        id: monorepo-ref
+        shell: bash
+        env:
+          WORKFLOW_REF: ${{ github.workflow_ref }}
+        run: |
+          if [ "${{ github.repository }}" = "LFDT-Lineth/lineth-monorepo" ]; then
+            # Same-repo call: test at the triggering commit.
+            echo "ref=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            # Cross-repo call: WORKFLOW_REF is "owner/repo/.github/workflows/file.yml@ref"
+            # Extract everything after the last '@' to get the branch/tag/SHA.
+            echo "ref=${WORKFLOW_REF##*@}" >> "$GITHUB_OUTPUT"
+          fi
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: LFDT-Lineth/lineth-monorepo
+          ref: ${{ steps.monorepo-ref.outputs.ref }}
       - name: Setup nodejs environment
         uses: ./.github/actions/setup-nodejs
         with:
@@ -141,31 +180,25 @@ jobs:
           merge-multiple: true
 
       - name: Load Docker images from artifacts or pull develop for unchanged services
-        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
-        with:
-          max_attempts: 10
-          retry_on: error
-          retry_wait_seconds: 30
-          timeout_minutes: 10
-          command: |
-            set -euo pipefail
-            for service in coordinator postman transaction-exclusion-api prover maru; do
-              if [ "$service" = "maru" ]; then
-                artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/linea-maru-docker-image.tar.gz"
-                image_name="consensys/maru"
-              else
-                artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/linea-${service}-docker-image.tar.gz"
-                image_name="consensys/linea-${service}"
-              fi
+        shell: bash
+        run: |
+          set -euo pipefail
+          for service in coordinator postman transaction-exclusion-api prover maru; do
+            if [ "$service" = "maru" ]; then
+              artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/linea-maru-docker-image.tar.gz"
+            elif [ "$service" = "coordinator" ]; then
+              artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/${LINEA_COORDINATOR_ARTIFACT_NAME}-docker-image.tar.gz"
+            else
+              artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/linea-${service}-docker-image.tar.gz"
+            fi
 
-              if [ -f "$artifact_path" ]; then
-                echo "Loading ${service} from build artifact ${artifact_path}..."
-                gunzip -c "$artifact_path" | docker load
-              else
-                echo "No artifact found for ${service}, falling back develop tag from registry..."
-                # docker pull "${image_name}:develop"
-              fi
-            done
+            if [ -f "$artifact_path" ]; then
+              echo "Loading ${service} from build artifact ${artifact_path}..."
+              gunzip -c "$artifact_path" | docker load
+            else
+              echo "No artifact found for ${service}, skipping."
+            fi
+          done
       - name: Set Docker image tags
         shell: bash
         run: |
@@ -174,6 +207,9 @@ jobs:
             if [ "$service" = "maru" ]; then
               artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/linea-maru-docker-image.tar.gz"
               env_var="MARU_TAG"
+            elif [ "$service" = "coordinator" ]; then
+              artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/${LINEA_COORDINATOR_ARTIFACT_NAME}-docker-image.tar.gz"
+              env_var="LINEA_COORDINATOR_TAG"
             else
               artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/linea-${service}-docker-image.tar.gz"
               env_var="LINEA_$(echo "${service}" | tr '[:lower:]-' '[:upper:]_')_TAG"
@@ -186,6 +222,8 @@ jobs:
               echo "${env_var}=develop" >> "$GITHUB_ENV"
             fi
           done
+          echo "LINEA_COORDINATOR_IMAGE_NAME=${LINEA_COORDINATOR_IMAGE_NAME}" >> "$GITHUB_ENV"
+          echo "LINEA_COORDINATOR_JAR=${LINEA_COORDINATOR_JAR}" >> "$GITHUB_ENV"
       - name: Load linea-besu-package Docker image
         if: ${{ inputs.linea_besu_package_tag != '' }}
         shell: bash
@@ -198,16 +236,22 @@ jobs:
             echo "No artifact at ${artifact_path}; skipping docker load."
           fi
       - name: Spin up fresh environment with retry
-        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
-        with:
-          max_attempts: 10
-          retry_on: error
-          retry_wait_seconds: 30
-          timeout_minutes: 10
-          command: |
-            make start-env-with-tracing-v2-ci CLEAN_PREVIOUS_ENV=false
-          on_retry_command: |
-            make clean-environment
+        shell: bash
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          max=10
+          attempt=0
+          until make start-env-with-tracing-v2-ci CLEAN_PREVIOUS_ENV=false; do
+            attempt=$((attempt + 1))
+            if [ "$attempt" -ge "$max" ]; then
+              echo "All $max attempts failed"
+              exit 1
+            fi
+            echo "Attempt $attempt failed — cleaning up and retrying in 30 s..."
+            make clean-environment || true
+            sleep 30
+          done
       - name: List docker containers/images
         if: ${{ always() && inputs.e2e-tests-containers-list }}
         continue-on-error: true
