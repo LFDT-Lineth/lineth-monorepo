@@ -51,9 +51,12 @@ ZKEVM_FIXTURES_DIR                  := /tmp/zkevm-fixtures
 ZKEVM_FIXTURES_ARCHIVE_DIR          := $(ZKEVM_FIXTURES_DIR)/archives
 ZKEVM_FIXTURES_JSON_DIR             := $(ZKEVM_FIXTURES_DIR)/json
 ZKEVM_FIXTURES_SSZ_DIR              := $(ZKEVM_FIXTURES_DIR)/ssz
+ZKEVM_FIXTURES_CONVERTER_DIR        := $(ZKEVM_FIXTURES_DIR)/stateless-executor
+ZKEVM_FIXTURES_CONVERTER_BIN        := $(ZKEVM_FIXTURES_CONVERTER_DIR)/bin/zesu-convert
 ZKEVM_FIXTURES_EXTRACTED            := $(ZKEVM_FIXTURES_JSON_DIR)/.extracted
 ZKEVM_FIXTURES_RUN_FIXTURE_PATHS    ?= .
 ZKEVM_FIXTURES_RUN_SSZ_LIMIT        ?= 100
+ZKEVM_FIXTURES_CONVERTER_REPO       := https://github.com/Gabriel-Trintinalia/stateless-executor
 ZKEVM_FIXTURES_ARCHIVE_URLS         := \
 	https://github.com/LFDT-Lineth/lineth-monorepo/releases/download/zkevm-fixtures/zkevm-fixtures-input-mainnet-500-Q12026-part-1.tar.zst \
 	https://github.com/LFDT-Lineth/lineth-monorepo/releases/download/zkevm-fixtures/zkevm-fixtures-input-mainnet-500-Q12026-part-2.tar.zst
@@ -97,10 +100,16 @@ run-json-ssz-fixtures:
 	@[ -n "$(JSON_FIXTURES_DIR)" ] || { echo "JSON_FIXTURES_DIR is mandatory"; exit 1; }
 	@[ -n "$(SSZ_FIXTURES_DIR)" ] || { echo "SSZ_FIXTURES_DIR is mandatory"; exit 1; }
 	@[ -n "$(FIXTURE_FORMAT)" ] || { echo "FIXTURE_FORMAT is mandatory"; exit 1; }
-	GOCACHE=/tmp/go-build $(GO) run $(MAKEFILE_DIR)scripts/run_ssz_fixtures.go --fixtures-dir "$(JSON_FIXTURES_DIR)" --ssz-dir "$(SSZ_FIXTURES_DIR)" --fixture-paths "$(RUN_FIXTURE_PATHS)" --ssz-limit "$(RUN_SSZ_LIMIT)" --fixture-format "$(FIXTURE_FORMAT)"
+	GOCACHE=/tmp/go-build $(GO) run $(MAKEFILE_DIR)scripts/run_ssz_fixtures.go --fixtures-dir "$(JSON_FIXTURES_DIR)" --ssz-dir "$(SSZ_FIXTURES_DIR)" --fixture-paths "$(RUN_FIXTURE_PATHS)" --ssz-limit "$(RUN_SSZ_LIMIT)" --fixture-format "$(FIXTURE_FORMAT)" $(if $(strip $(ZESU_CONVERT_BIN)),--zesu-convert "$(ZESU_CONVERT_BIN)")
 
 # Downloads and extracts Lineth zkevm-fixtures release JSON fixtures under $(ZKEVM_FIXTURES_JSON_DIR).
 get-zkevm-fixtures-json-fixtures: $(ZKEVM_FIXTURES_EXTRACTED)
+	@set -eu; \
+	if [ ! -d "$(ZKEVM_FIXTURES_CONVERTER_DIR)/.git" ]; then \
+		rm -rf "$(ZKEVM_FIXTURES_CONVERTER_DIR)"; \
+		git clone "$(ZKEVM_FIXTURES_CONVERTER_REPO)" "$(ZKEVM_FIXTURES_CONVERTER_DIR)"; \
+	fi; \
+	cd "$(ZKEVM_FIXTURES_CONVERTER_DIR)" && $(GO) build -o bin/zesu-convert ./cmd/zesu-convert
 
 $(ZKEVM_FIXTURES_EXTRACTED):
 	@set -eu; \
@@ -127,7 +136,8 @@ run-zkevm-fixtures-ssz-fixtures: get-zkevm-fixtures-json-fixtures
 		SSZ_FIXTURES_DIR="$(ZKEVM_FIXTURES_SSZ_DIR)" \
 		RUN_FIXTURE_PATHS="$(ZKEVM_FIXTURES_RUN_FIXTURE_PATHS)" \
 		RUN_SSZ_LIMIT="$(ZKEVM_FIXTURES_RUN_SSZ_LIMIT)" \
-		FIXTURE_FORMAT="zkevm-fixtures"
+		FIXTURE_FORMAT="zkevm-fixtures" \
+		ZESU_CONVERT_BIN="$(ZKEVM_FIXTURES_CONVERTER_BIN)"
 
 clean:
 	rm -rf $(MAKEFILE_DIR)zig-out/

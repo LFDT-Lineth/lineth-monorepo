@@ -38,6 +38,10 @@ type fixtureBlock struct {
 	StatelessOutputBytes string `json:"statelessOutputBytes"`
 }
 
+type zkevmFixture struct {
+	Name string `json:"name"`
+}
+
 type statelessInput struct {
 	testName      string
 	blockIndex    int
@@ -62,6 +66,7 @@ func main() {
 	fixturePathsFlag := flag.String("fixture-paths", "blockchain_tests/for_amsterdam/amsterdam,blockchain_tests/for_amsterdam/osaka", "comma-separated fixture paths under fixtures-dir; . means all")
 	sszLimit := flag.Int("ssz-limit", 0, "maximum SSZ inputs to run per fixture path; 0 means all")
 	fixtureFormat := flag.String("fixture-format", formatExecutionSpecs, "fixture JSON format: execution-specs or zkevm-fixtures")
+	zesuConvert := flag.String("zesu-convert", "", "path to zesu-convert; required for zkevm-fixtures")
 	zkcFlags := flag.String("zkc-flags", "--gogen --fast -q", "flags forwarded to zkc exec")
 	flag.Parse()
 
@@ -115,7 +120,7 @@ func main() {
 				}
 			}
 
-			newInputs, err := writeSSZInputs(*sszDir, fixturePath, targetDir, jsonPath, remaining, *fixtureFormat)
+			newInputs, err := writeSSZInputs(*sszDir, fixturePath, targetDir, jsonPath, remaining, *fixtureFormat, *zesuConvert)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "prepare %s: %v\n", jsonPath, err)
 				hadError = true
@@ -222,7 +227,7 @@ func jsonFiles(dir string) ([]string, error) {
 		if err != nil {
 			return err
 		}
-		if !d.IsDir() && strings.HasSuffix(path, ".json") {
+		if !d.IsDir() && strings.HasSuffix(path, ".json") && !strings.HasPrefix(filepath.Base(path), "._") {
 			files = append(files, path)
 		}
 		return nil
@@ -235,13 +240,17 @@ func jsonFiles(dir string) ([]string, error) {
 }
 
 // Writes selected SSZ inputs from one JSON file.
-func writeSSZInputs(sszDir, fixturePath, targetDir, jsonPath string, limit int, fixtureFormat string) ([]selectedInput, error) {
+func writeSSZInputs(sszDir, fixturePath, targetDir, jsonPath string, limit int, fixtureFormat, zesuConvert string) ([]selectedInput, error) {
 	jsonRel, err := filepath.Rel(targetDir, jsonPath)
 	if err != nil {
 		return nil, err
 	}
 	if jsonRel == ".." || strings.HasPrefix(jsonRel, ".."+string(os.PathSeparator)) {
 		return nil, fmt.Errorf("JSON path is outside target dir: %s", jsonPath)
+	}
+
+	if fixtureFormat == formatZkevmFixtures {
+		return writeZkevmSSZInput(sszDir, fixturePath, jsonRel, jsonPath, zesuConvert)
 	}
 
 	blocks, err := statelessInputs(jsonPath, fixtureFormat)
@@ -283,6 +292,37 @@ func writeSSZInputs(sszDir, fixturePath, targetDir, jsonPath string, limit int, 
 	return out, nil
 }
 
+// Converts one zkevm-fixtures JSON file to one SSZ input.
+func writeZkevmSSZInput(sszDir, fixturePath, jsonRel, jsonPath, zesuConvert string) ([]selectedInput, error) {
+	if zesuConvert == "" {
+		return nil, fmt.Errorf("zesu-convert is required for %s", formatZkevmFixtures)
+	}
+
+	jsonStem := strings.TrimSuffix(jsonRel, filepath.Ext(jsonRel))
+	outPath := filepath.Join(sszDir, filepath.FromSlash(fixturePath), jsonStem+".ssz")
+	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
+		return nil, err
+	}
+	if err := run(os.Stderr, zesuConvert, "--zkvm-input", jsonPath, outPath); err != nil {
+		return nil, err
+	}
+
+	info, err := os.Stat(outPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return []selectedInput{{
+		fixturePath:   fixturePath,
+		jsonFile:      jsonRel,
+		testName:      zkevmFixtureName(jsonPath),
+		blockIndex:    0,
+		file:          outPath,
+		size:          int(info.Size()),
+		expectedValid: true,
+	}}, nil
+}
+
 // Extracts stateless inputs from one fixture JSON file.
 func statelessInputs(path, fixtureFormat string) ([]statelessInput, error) {
 	data, err := os.ReadFile(path)
@@ -291,8 +331,6 @@ func statelessInputs(path, fixtureFormat string) ([]statelessInput, error) {
 	}
 
 	switch fixtureFormat {
-	case formatZkevmFixtures:
-		return statelessInputsFromCase(jsonTestName(path), data)
 	case formatExecutionSpecs:
 		return statelessInputsFromMap(data)
 	default:
@@ -357,8 +395,15 @@ func statelessInputsFromCase(name string, data []byte) ([]statelessInput, error)
 	return out, nil
 }
 
-// Names direct-case fixture files.
-func jsonTestName(path string) string {
+// Names zkevm-fixtures JSON files.
+func zkevmFixtureName(path string) string {
+	data, err := os.ReadFile(path)
+	if err == nil {
+		var fixture zkevmFixture
+		if json.Unmarshal(data, &fixture) == nil && fixture.Name != "" {
+			return fixture.Name
+		}
+	}
 	name := filepath.Base(path)
 	return strings.TrimSuffix(name, filepath.Ext(name))
 }
