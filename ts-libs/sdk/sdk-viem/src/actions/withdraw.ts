@@ -22,6 +22,7 @@ import {
 import { readContract, sendTransaction } from "viem/actions";
 import { parseAccount } from "viem/utils";
 
+import { BRIDGE_TOKEN_ABI, MINIMUM_FEE_IN_WEI_ABI, SEND_MESSAGE_ABI } from "../abis";
 import { AccountNotFoundError, AccountNotFoundErrorType } from "../errors/account";
 import { GetAccountParameter } from "../types/account";
 
@@ -127,15 +128,7 @@ export async function withdraw<
 
   const minimumFeeInWei = await readContract(client, {
     address: l2MessageServiceAddress,
-    abi: [
-      {
-        inputs: [],
-        name: "minimumFeeInWei",
-        outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-        stateMutability: "view",
-        type: "function",
-      },
-    ],
+    abi: MINIMUM_FEE_IN_WEI_ABI,
     functionName: "minimumFeeInWei",
   });
 
@@ -145,19 +138,7 @@ export async function withdraw<
       value: amount + minimumFeeInWei,
       account,
       data: encodeFunctionData({
-        abi: [
-          {
-            inputs: [
-              { internalType: "address", name: "_to", type: "address" },
-              { internalType: "uint256", name: "_fee", type: "uint256" },
-              { internalType: "bytes", name: "_calldata", type: "bytes" },
-            ],
-            name: "sendMessage",
-            outputs: [],
-            stateMutability: "payable",
-            type: "function",
-          },
-        ],
+        abi: SEND_MESSAGE_ABI,
         functionName: "sendMessage",
         args: [to, minimumFeeInWei, data ?? "0x"],
       }),
@@ -172,31 +153,7 @@ export async function withdraw<
     value: minimumFeeInWei,
     account,
     data: encodeFunctionData({
-      abi: [
-        {
-          inputs: [
-            {
-              internalType: "address",
-              name: "_token",
-              type: "address",
-            },
-            {
-              internalType: "uint256",
-              name: "_amount",
-              type: "uint256",
-            },
-            {
-              internalType: "address",
-              name: "_recipient",
-              type: "address",
-            },
-          ],
-          name: "bridgeToken",
-          outputs: [],
-          stateMutability: "payable",
-          type: "function",
-        },
-      ],
+      abi: BRIDGE_TOKEN_ABI,
       functionName: "bridgeToken",
       args: [token, amount, to],
     }),

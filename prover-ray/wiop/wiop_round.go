@@ -56,6 +56,10 @@ type Round struct {
 	// system is the owning System. Set once at registration time, never nil
 	// for a well-formed Round.
 	system *System
+	// HasCommitment is an indicator of whether a coded Merkle commitment is to
+	// be expected in the runtime for the current round. This is scaffoling
+	// code for the future, and should be false for all current protocols.
+	HasCommitment bool
 }
 
 // RegisterAction appends a to the round's action list. Actions are run by the
@@ -170,7 +174,7 @@ func (r *Round) NewCell(ctx *ContextFrame, isExtension bool) *Cell {
 // [Cell.Assigner]. assigner must only depend on data available in this round.
 //
 // Panics if ctx or assigner is nil.
-func (r *Round) NewLazyCell(ctx *ContextFrame, isExtension bool, assigner func(Runtime) field.Gen) *Cell {
+func (r *Round) NewLazyCell(ctx *ContextFrame, isExtension bool, assigner func(*Runtime) field.Gen) *Cell {
 	if assigner == nil {
 		panic("wiop: Round.NewLazyCell requires a non-nil assigner")
 	}

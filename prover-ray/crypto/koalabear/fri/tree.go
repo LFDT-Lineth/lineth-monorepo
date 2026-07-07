@@ -2,6 +2,8 @@ package fri
 
 import (
 	"errors"
+	"fmt"
+	"math/bits"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
@@ -101,7 +103,7 @@ func NewTree(leaves [][]field.Octuplet) *Tree {
 			levelStartPos = n - 1
 		)
 
-		for j := 0; j < n; j++ {
+		for j := range n {
 
 			k := levelStartPos + j
 
@@ -257,6 +259,42 @@ func (branch *Branch) RecoverRoot(idx int) (field.Octuplet, error) {
 	}
 
 	return ancestor, nil
+}
+
+func branchLeafAtLevel(branch Branch, levelSize int) (field.Octuplet, error) {
+	if levelSize <= 0 || levelSize&(levelSize-1) != 0 {
+		return field.Octuplet{}, fmt.Errorf("levelSize must be a positive power of two")
+	}
+
+	treeLeaves := 1 << len(branch.Siblings)
+	if levelSize > treeLeaves {
+		return field.Octuplet{}, fmt.Errorf("levelSize %d exceeds branch tree size %d", levelSize, treeLeaves)
+	}
+	if levelSize == treeLeaves {
+		return branch.Leaf, nil
+	}
+
+	levelLog := bits.TrailingZeros(uint(levelSize))
+	if levelLog >= len(branch.AuxSiblings) {
+		return field.Octuplet{}, fmt.Errorf("levelSize %d has no aux sibling in branch", levelSize)
+	}
+	if branch.AuxSiblings[levelLog] == nil {
+		return field.Octuplet{}, fmt.Errorf("levelSize %d is absent from branch", levelSize)
+	}
+	return *branch.AuxSiblings[levelLog], nil
+}
+
+func levelLeafIndex(numLeaves, levelSize, base int) (int, error) {
+	if levelSize <= 0 || levelSize&(levelSize-1) != 0 {
+		return 0, fmt.Errorf("levelSize must be a positive power of two")
+	}
+	if base < 0 || base >= levelSize {
+		return 0, fmt.Errorf("base %d outside [0,%d)", base, levelSize)
+	}
+	if numLeaves < levelSize || numLeaves%levelSize != 0 {
+		return 0, fmt.Errorf("levelSize %d is not backed by tree size %d", levelSize, numLeaves)
+	}
+	return base * (numLeaves / levelSize), nil
 }
 
 // hashNode hashes two field.Octuplets and an optional field.Octuplet. It works

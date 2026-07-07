@@ -1,0 +1,28 @@
+include "poseidon2.zkc"
+include "../../riscv/memory.zkc"
+include "../../riscv/ram/read.zkc"
+include "../../riscv/ram/write.zkc"
+
+// ===================================================================================
+// RAM-facing entry point for the Poseidon2 permutation precompile.
+//
+// Each Poseidon2 state element is a KoalaBear field element, which fits in a
+// 32-bit word. The guest passes/receives the STATE_WIDTH elements as a
+// contiguous array of native (little-endian) 32-bit words, so we marshal them
+// with the standard word-addressed RAM helpers (read_32 / write_32).
+// ===================================================================================
+
+// poseidon2 reads STATE_WIDTH field elements (one 32-bit word each) starting at
+// input_offset, applies the permutation, and writes the STATE_WIDTH results
+// starting at output_offset. input_offset and output_offset may alias.
+fn poseidon2<ram, poseidon2_state>(input_offset:Address, output_offset:Address) {
+    for i:u5 = 0; i<STATE_WIDTH; i = i + 1 {
+        write_to_state(i, read_32(input_offset + ((4 * i) as Address)) as 𝔽)
+    }
+
+    permutation()
+
+    for i:u5 = 0; i<STATE_WIDTH; i = i + 1 {
+        write_32(output_offset + ((4 * i) as Address), read_from_state(i) as u32)
+    }
+}

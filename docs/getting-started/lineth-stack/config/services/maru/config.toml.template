@@ -1,0 +1,66 @@
+allow-empty-blocks = false
+
+[linea]
+# __LINEA_ROLLUP_ADDRESS__ is patched in by deploy-contracts.sh after the L1
+# LineaRollup proxy is deployed (Phase 2). __L1_RPC_URL__ is rendered at boot
+# by the config-render init container from L1_RPC_URL (.env).
+contract-address = "__LINEA_ROLLUP_ADDRESS__"
+l1-eth-api = { endpoint = "__L1_RPC_URL__" }
+l1-polling-interval = "1 seconds"
+l2-eth-api-endpoint = { endpoint = "http://sequencer:8545" }
+
+[persistence]
+data-path="/tmp/maru-db"
+private-key-path="/tmp/maru-db/private-key"
+
+[qbft]
+fee-recipient = "0x0000000000000000000000000000000000000000"
+
+[p2p]
+port = 9000
+ip-address = "0.0.0.0"
+static-peers = []
+reconnect-delay = "500 ms"
+
+[p2p.discovery]
+port = 9000
+refresh-interval = "2 seconds"
+
+[p2p.reputation]
+cooldown-period = "2 seconds"
+ban-period = "30 seconds"
+
+[payload-validator]
+engine-api-endpoint = { endpoint = "http://sequencer:8550" }
+eth-api-endpoint = { endpoint = "http://sequencer:8545" }
+payload-validation-enabled = true
+
+[follower-engine-apis]
+follower-besu = { endpoint = "http://l2-node-besu:8550" }
+
+[fork-transition]
+l2-eth-api-endpoint = { endpoint = "http://sequencer:8545" }
+
+[observability]
+port = 9090
+jvm-metrics-enabled = true
+prometheus-metrics-enabled = true
+
+[api]
+port = 8080
+
+[syncing]
+peer-chain-height-polling-interval = "1 seconds"
+el-sync-status-refresh-interval = "1 seconds"
+use-unconditional-random-download-peer = false
+sync-target-selection = "Highest"
+# sync-target-selection = { _type = "MostFrequent", peer-chain-height-granularity = 10 }
+# desync-tolerance = 10
+
+#[syncing.download]
+#block-range-request-timeout = "10 seconds"
+#blocks-batch-size = 10
+#blocks-parallelism = 10
+#max-retries = 5
+#backoff-delay = "1 seconds"
+#use-unconditional-random-download-peer = false

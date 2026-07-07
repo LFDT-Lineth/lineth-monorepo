@@ -7,7 +7,7 @@ import (
 	"reflect"
 
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/maths/field"
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
 // Bytes32 represents an arbtrary bytes string of 32 bytes. It is used to

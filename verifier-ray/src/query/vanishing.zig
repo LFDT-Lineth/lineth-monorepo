@@ -141,7 +141,7 @@ fn powModuleSize(r: ext.Ext, comptime static_n: usize, dynamic_n: usize) ext.Ext
     if (static_n != 0) {
         return r.powComptime(static_n);
     }
-    return r.pow(@as(u256, dynamic_n));
+    return r.pow(@as(u64, dynamic_n));
 }
 
 fn verifyBucket(

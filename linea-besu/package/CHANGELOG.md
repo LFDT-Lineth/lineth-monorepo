@@ -1,8 +1,15 @@
 ## [unreleased]
 
+### ⚙️ Miscellaneous Tasks
+
+- *(coordinator)* Update kotlin to v2.4 (#3454)
+## [1.1.1] - 2026-06-26
+
 ### 🐛 Bug Fixes
 
 - *(e2e)* Trying to fix rare profitability issues, FTX fix (#3388)
+- *(besu-plugins)* Removed mutual exclusiveness of the txpool and blo… (#3416)
+- *(Maru)* Fixed a bug when simultaneous mutual connection attempts r… (#3439)
 ## [1.1.0] - 2026-06-11
 
 ### 🚀 Features

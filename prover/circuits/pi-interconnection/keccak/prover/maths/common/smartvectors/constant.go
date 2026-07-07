@@ -5,10 +5,8 @@ import (
 	"iter"
 	"slices"
 
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/maths/field/fext"
-
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/maths/field"
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
 // A constant vector is a vector obtained by repeated "length" time the same value
@@ -30,8 +28,6 @@ func (c *Constant) Len() int { return c.Length }
 
 // Returns an entry of the constant
 func (c *Constant) GetBase(int) (field.Element, error) { return c.Value, nil }
-
-func (c *Constant) GetExt(int) fext.Element { return *new(fext.Element).SetFromBase(&c.Value) }
 
 func (r *Constant) Get(n int) field.Element {
 	res, err := r.GetBase(n)
@@ -72,12 +68,6 @@ func (c *Constant) WriteInSlice(s []field.Element) {
 	}
 }
 
-func (c *Constant) WriteInSliceExt(s []fext.Element) {
-	for i := 0; i < len(s); i++ {
-		s[i].SetFromBase(&c.Value)
-	}
-}
-
 func (c *Constant) Val() field.Element {
 	return c.Value
 }
@@ -93,7 +83,7 @@ func (c *Constant) DeepCopy() SmartVector {
 func (c *Constant) IntoRegVecSaveAlloc() []field.Element {
 	res, err := c.IntoRegVecSaveAllocBase()
 	if err != nil {
-		panic(conversionError)
+		panic(err)
 	}
 	return res
 }
@@ -101,16 +91,6 @@ func (c *Constant) IntoRegVecSaveAlloc() []field.Element {
 // Temporary function for code transition
 func (c *Constant) IntoRegVecSaveAllocBase() ([]field.Element, error) {
 	return IntoRegVec(c), nil
-}
-
-func (c *Constant) IntoRegVecSaveAllocExt() []fext.Element {
-	temp := IntoRegVec(c)
-	res := make([]fext.Element, len(temp))
-	for i := 0; i < len(temp); i++ {
-		elem := temp[i]
-		res[i].SetFromBase(&elem)
-	}
-	return res
 }
 
 // IterateCompact returns an iterator returning a single time the constant

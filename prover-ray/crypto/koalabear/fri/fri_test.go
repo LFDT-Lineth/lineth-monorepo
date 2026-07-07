@@ -10,6 +10,8 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // bitReverseIdx returns the nbits-wide bit-reversal of i (matching the slice
@@ -53,7 +55,7 @@ func TestFoldLayerInternally(t *testing.T) {
 
 		// bit-reversed codeword: layer[m] = P(g^{bitReverse(m)})
 		layer := make([]field.Ext, n)
-		for m := 0; m < n; m++ {
+		for m := range n {
 			var x field.Element
 			x.Exp(g, big.NewInt(int64(bitReverseIdx(m, kN))))
 			layer[m] = polynomials.EvalCanonicalExt(coeffs, field.Lift(x))
@@ -71,7 +73,7 @@ func TestFoldLayerInternally(t *testing.T) {
 		var g2 field.Element
 		g2.Square(&g)
 		want := make([]field.Ext, half)
-		for tt := 0; tt < half; tt++ {
+		for tt := range half {
 			var y field.Element
 			y.Exp(g2, big.NewInt(int64(bitReverseIdx(tt, kN-1))))
 			want[tt] = polynomials.EvalCanonicalExt(qcoeffs, field.Lift(y))
@@ -81,7 +83,7 @@ func TestFoldLayerInternally(t *testing.T) {
 		if len(got) != half {
 			t.Fatalf("n=%d: fold returned %d values, want %d", n, len(got), half)
 		}
-		for tt := 0; tt < half; tt++ {
+		for tt := range half {
 			if !got[tt].Equal(&want[tt]) {
 				t.Fatalf("n=%d: fold[%d] = %s, want %s", n, tt, got[tt].String(), want[tt].String())
 			}
@@ -96,7 +98,7 @@ func TestFoldLayerInternally(t *testing.T) {
 		alpha2.Square(&alpha)
 
 		gotAux := foldLayerInternally(layer, aux, alpha, domain, invTwo)
-		for tt := 0; tt < half; tt++ {
+		for tt := range half {
 			var wantAux, term field.Ext
 			term.Mul(&aux[tt], &alpha2)
 			wantAux.Add(&want[tt], &term)
@@ -134,7 +136,8 @@ func TestProveVerify(t *testing.T) {
 				t.Fatalf("NewParams: %v", err)
 			}
 
-			levels := []Level{newRandomLevel(prng, p, c.d)}
+			levels := make([]Level, 0, 1+len(c.extraDs))
+			levels = append(levels, newRandomLevel(prng, p, c.d))
 			for _, d := range c.extraDs {
 				levels = append(levels, newRandomLevel(prng, p, d))
 			}
@@ -151,24 +154,70 @@ func TestProveVerify(t *testing.T) {
 			prf := proverForTest(p, levels, alphas, positions)
 
 			// Prove sorts levels by decreasing D; mirror that order for the verifier.
-			levelRoots := make([]field.Octuplet, len(levels))
-			levelDs := make([]int, len(levels))
-			for i := range levels {
-				levelRoots[i] = levels[i].Tree.Root()
-				levelDs[i] = levels[i].D
-			}
+			levelRoots, levelDs := verifierInputsForLevels(levels)
 
 			if err := Verify(p, levelRoots, levelDs, prf, alphas, positions); err != nil {
 				t.Fatalf("Verify (honest) failed: %v", err)
 			}
 
 			// Tampering an opened leaf must make verification fail.
-			prf.FRIQueries[0][0].Leaf = field.PseudoRandOctuplet(prng)
+			prf.FRIQueries[0][0][0].Leaf = field.PseudoRandOctuplet(prng)
 			if err := Verify(p, levelRoots, levelDs, prf, alphas, positions); err == nil {
 				t.Fatalf("Verify accepted a proof with a tampered leaf")
 			}
 		})
 	}
+}
+
+func TestProverStateOpenLoopsOverLevelTrees(t *testing.T) {
+
+	prng := rand.New(utils.NewRandSource(20260624))
+	p, err := NewParams(16, 8, 2)
+	require.NoError(t, err)
+
+	levels := []Level{newRandomLevel(prng, p, 8), newRandomLevel(prng, p, 2)}
+
+	otherTopEvals := make([]field.Ext, len(levels[0].Evals))
+	for i := range otherTopEvals {
+		otherTopEvals[i] = field.PseudoRandExt(prng)
+	}
+	levels[0].Trees = append(levels[0].Trees, buildTreeExt(otherTopEvals))
+
+	otherEvals := make([]field.Ext, len(levels[1].Evals))
+	for i := range otherEvals {
+		otherEvals[i] = field.PseudoRandExt(prng)
+	}
+	levels[1].Trees = append(levels[1].Trees, buildTreeExt(otherEvals))
+
+	alphas := make([]field.Ext, p.numRounds)
+	for i := range alphas {
+		alphas[i] = field.PseudoRandExt(prng)
+	}
+	positions := []int{3, 11}
+
+	prf := proverForTest(p, levels, alphas, positions)
+	levelRoots, levelDs := verifierInputsForLevels(levels)
+	require.NoError(t, Verify(p, levelRoots, levelDs, prf, alphas, positions))
+
+	require.Len(t, prf.FRIQueries[0][0], len(levels[0].Trees))
+	require.Len(t, prf.LevelQueries, 1)
+	require.Len(t, prf.LevelQueries[0][0], len(levels[1].Trees))
+
+	for i, branch := range prf.FRIQueries[0][0] {
+		root, err := branch.RecoverRoot(positions[0])
+		require.NoError(t, err)
+		assert.Equal(t, levels[0].Trees[i].Root(), root)
+	}
+
+	base := positions[0] >> utils.Log2Ceil(p.D/levels[1].D)
+	for i, branch := range prf.LevelQueries[0][0] {
+		root, err := branch.RecoverRoot(base)
+		require.NoError(t, err)
+		assert.Equal(t, levels[1].Trees[i].Root(), root)
+	}
+
+	prf.FRIQueries[0][0][1].Leaf = field.PseudoRandOctuplet(prng)
+	require.Error(t, Verify(p, levelRoots, levelDs, prf, alphas, positions))
 }
 
 // newRandomLevel builds a Level with a random evaluation vector of the size
@@ -179,7 +228,20 @@ func newRandomLevel(prng *rand.Rand, p Params, d int) Level {
 	for i := range evals {
 		evals[i] = field.PseudoRandExt(prng)
 	}
-	return Level{D: d, Evals: evals, Tree: buildTreeExt(evals)}
+	return Level{D: d, Evals: evals, Trees: []*Tree{buildTreeExt(evals)}}
+}
+
+func verifierInputsForLevels(levels []Level) ([]QueryLayerRoots, []int) {
+	levelRoots := make([]QueryLayerRoots, len(levels))
+	levelDs := make([]int, len(levels))
+	for i := range levels {
+		levelRoots[i] = make(QueryLayerRoots, len(levels[i].Trees))
+		for j, tree := range levels[i].Trees {
+			levelRoots[i][j] = tree.Root()
+		}
+		levelDs[i] = levels[i].D
+	}
+	return levelRoots, levelDs
 }
 
 // proverForTest runs multi-degree FRI (commit + query phase) and returns a Proof
@@ -209,7 +271,7 @@ func proverForTest(p Params, levels []Level, alphas []field.Ext, openedPositions
 	}
 
 	// Drive the state machine: feed one folding challenge per round, then open.
-	for j := 0; st.HasNext(); j++ {
+	for j := range p.numRounds {
 		st.Fold(alphas[j])
 	}
 

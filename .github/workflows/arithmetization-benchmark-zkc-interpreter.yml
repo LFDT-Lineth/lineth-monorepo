@@ -2,16 +2,16 @@ name: Arithmetization zkc interpreter benchmark (base vs optim)
 
 # Benchmark of guest programs executed by the zkc interpreter of
 # two branches, the base branch and the optim branch.
-# Guest programs are the Keccak and Blake programs in the arithmetization/src/test 
+# Guest programs are the Keccak and Blake programs in the arithmetization/src/test
 # directory.
 
-# Benchmark methodology : 
+# Benchmark methodology :
 # Designed to give a reliable paired comparison on a
 # single runner: one untimed warmup per branch, then N alternating (opt, base)
 # timed iterations with a per-iteration cache reset + brief cool-down to keep
 # the machine state similar across runs.
 
-# Benchmark data : 
+# Benchmark data :
 # -- For Keccak
 # In arithmetization/src/test/common_inputs/keccak.all
 # There are 20k test vectors you can select from to run the benchmark.
@@ -23,20 +23,6 @@ name: Arithmetization zkc interpreter benchmark (base vs optim)
 # h, m, t, f are hard-coded to the standard Blake2b "abc" test vector.
 
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'arithmetization/**'
-      - '.github/actions/setup-arithmetization-riscv/**'
-      - '.github/workflows/arithmetization-*.yml'
-  push:
-    branches:
-     - main
-    paths:
-     - 'arithmetization/**'
-     - '.github/actions/setup-arithmetization-riscv/**'
-     - '.github/workflows/arithmetization-*.yml'
   workflow_dispatch:
     inputs:
       base_ref:
@@ -56,7 +42,7 @@ on:
         description: 'Run gogen for timed iterations when enabled'
         required: false
         type: boolean
-        default: true
+        default: false
       zkc_ref_base:
         description: 'zkc commit/branch/tag for BASE branch runs'
         required: false
@@ -88,7 +74,7 @@ jobs:
     timeout-minutes: 120
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
           submodules: false
@@ -101,8 +87,8 @@ jobs:
           set -eux
           for variant in base opt; do
             case "$variant" in
-              base) ref="${{ inputs.zkc_ref_base || 'main' }}" ;;
-              opt)  ref="${{ inputs.zkc_ref_optim || 'main' }}" ;;
+              base) ref="${{ inputs.zkc_ref_base || 'v1.2.20' }}" ;;
+              opt)  ref="${{ inputs.zkc_ref_optim || 'v1.2.20' }}" ;;
             esac
             tmpbin=$(mktemp -d)
             GOBIN="$tmpbin" go install "github.com/LFDT-Lineth/zkc/cmd/zkc@${ref}" \
@@ -197,7 +183,7 @@ jobs:
           run_gogen_keccak() {  # $1=variant (opt|base)  $2=label (warmup|iter#)
             local zkc_bin="/tmp/zkc-${1}"
             local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
-            "$zkc_bin" generate -v -q --field KOALABEAR_16 -o riscv.go "$zkc_main"
+            "$zkc_bin" generate --fast -v -q --field KOALABEAR_16 -o riscv.go "$zkc_main"
             go build -o riscv-gogen riscv.go
             /usr/bin/time -v ./riscv-gogen < "/tmp/keccak-${1}.json" \
               > "/tmp/bench/logs/keccak_${1}_${2}.log" 2>&1
@@ -206,7 +192,7 @@ jobs:
           run_gogen_blake() {   # $1=variant  $2=label. Runs all N vectors, one log file per vector.
             local zkc_bin="/tmp/zkc-${1}"
             local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
-            "$zkc_bin" generate -v -q --field KOALABEAR_16 -o riscv.go "$zkc_main"
+            "$zkc_bin" generate --fast -v -q --field KOALABEAR_16 -o riscv.go "$zkc_main"
             go build -o riscv-gogen riscv.go
             for json in /tmp/bench/json/blake-"${1}"/*.json; do
               local n
@@ -226,14 +212,12 @@ jobs:
             # Run in fast (with gogen) or tracing mode
             for i in $(seq 1 "$ITERS"); do
               if [[ "$FAST_MODE" == "true" ]]; then
-               # RESTORE when gogen is supporting native fields
-               #  reset_state; log "${wl}: iter ${i}/${ITERS} opt";  run_gogen_${wl} opt  "$i"
-               # reset_state; log "${wl}: iter ${i}/${ITERS} base"; run_gogen_${wl} base "$i"
-              reset_state; log "${wl}: warmup opt  (untimed)"; run_${wl} opt  warmup --fast
-              reset_state; log "${wl}: warmup base (untimed)"; run_${wl} base warmup --fast
+               reset_state; log "${wl}: iter ${i}/${ITERS} opt";  run_gogen_${wl} opt  "$i"
+               reset_state; log "${wl}: iter ${i}/${ITERS} base"; run_gogen_${wl} base "$i"
               else
-                reset_state; log "${wl}: iter ${i}/${ITERS} opt"; run_${wl} opt "$i"
-                reset_state; log "${wl}: iter ${i}/${ITERS} base"; run_${wl} base "$i"
+                # RESTORE to tracing (without --fast) when gogen is supporting native fields
+                reset_state; log "${wl}: iter ${i}/${ITERS} opt"; run_${wl} opt "$i" --fast
+                reset_state; log "${wl}: iter ${i}/${ITERS} base"; run_${wl} base "$i" --fast
               fi
             done
           done
@@ -257,16 +241,17 @@ jobs:
             "${fast_mode_arg[@]}" \
             -base-ref "${{ inputs.base_ref || 'main' }}" \
             -optim-ref "${{ inputs.optim_ref || github.event.pull_request.head.sha || github.sha }}" \
-            -zkc-ref-base "${{ inputs.zkc_ref_base || 'main' }}" \
-            -zkc-ref-optim "${{ inputs.zkc_ref_optim || 'main' }}" \
+            -zkc-ref-base "${{ inputs.zkc_ref_base || 'v1.2.20' }}" \
+            -zkc-ref-optim "${{ inputs.zkc_ref_optim || 'v1.2.20' }}" \
             -keccak-n-vectors ${{ inputs.n_vectors_keccak || 10 }} \
             -blake-rounds ${{ inputs.n_rounds_blake || 12 }} \
             | tee -a "$GITHUB_STEP_SUMMARY" \
             | tee /tmp/bench/logs/summary.md
 
       - name: Upload benchmark logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: zkc-bench-logs
           path: /tmp/bench/logs
+

@@ -1,0 +1,89 @@
+genesis-file="/initialization/genesis-besu.json"
+#logging="DEBUG" log is managed via log4j config file
+data-path="/opt/besu/data"
+data-storage-format="FOREST"
+sync-mode="FULL"
+host-allowlist=["*"]
+revert-reason-enabled=true
+
+target-gas-limit=2000000000
+min-gas-price=1000000
+tx-pool-min-gas-price=0
+max-peers=10
+
+# engine
+engine-host-allowlist=["*"]
+engine-rpc-port=8550
+engine-jwt-disabled=true
+
+# rpc
+rpc-http-enabled=true
+rpc-http-host="0.0.0.0"
+rpc-http-port=8545
+rpc-http-api=["ADMIN","DEBUG","NET","ETH","ENGINE","MINER","WEB3","TRACE","LINEA"]
+rpc-http-cors-origins=["*"]
+rpc-http-max-active-connections=20000
+
+# ws
+rpc-ws-enabled=true
+rpc-ws-host="0.0.0.0"
+rpc-ws-port=8546
+rpc-ws-api=["ADMIN","DEBUG","NET","ETH","MINER","WEB3","TRACE","LINEA"]
+rpc-ws-max-active-connections=200
+
+# graphql
+graphql-http-enabled=false
+
+# metrics
+metrics-enabled=true
+metrics-host="0.0.0.0"
+metrics-port=9545
+
+tx-pool-no-local-priority=false
+# tx-pool-enable-balance-check=true # this would make e2e test fail to deploy L2 contracts
+# poa-block-txs-selection-max-time=80   # removed: PoA-only flag, invalid since L2 genesis no longer declares clique consensus
+block-txs-selection-max-time=800
+# plugin-block-txs-selection-max-time=50 #default as 50 which means 400ms
+
+cache-last-block-headers-preload-enabled=true
+cache-last-block-headers=50
+
+# plugins
+plugins=["LineaEstimateGasEndpointPlugin","LineaExtraDataPlugin","LineaTransactionPoolValidatorPlugin","LineaBundleEndpointsPlugin","LineaSetExtraDataEndpointPlugin","LineaTransactionSelectorPlugin","LineaForcedTransactionEndpointsPlugin"]
+plugin-linea-module-limit-file-path="/var/lib/besu/traces-limits.toml"
+plugin-linea-deny-list-path="/var/lib/besu/deny-list.txt"
+plugin-linea-estimate-gas-compatibility-mode-enabled=false
+plugin-linea-extra-data-pricing-enabled=true
+plugin-linea-l1l2-bridge-contract="__L2_MESSAGE_SERVICE_ADDRESS__"
+plugin-linea-l1l2-bridge-topic="e856c2b8bd4eb0027ce32eeaf595c21b0b6b4644b326e5b7bd80a1cf8db72e6c"
+plugin-linea-tx-pool-profitability-check-api-enabled=true
+plugin-linea-tx-pool-profitability-check-p2p-enabled=true
+plugin-linea-tx-pool-simulation-check-api-enabled=false
+plugin-linea-tx-pool-simulation-check-p2p-enabled=false
+plugin-linea-blob-size-limit=131072
+plugin-linea-compressed-block-header-overhead=1024
+plugin-linea-max-tx-calldata-size=60000
+plugin-linea-max-block-gas=55000000
+plugin-linea-tx-pool-min-margin="0.8"
+plugin-linea-min-margin="1.0"
+plugin-linea-fixed-gas-cost-wei=30000000
+plugin-linea-variable-gas-cost-wei=1000000000
+plugin-linea-extra-data-set-min-gas-price-enabled=false
+plugin-linea-estimate-gas-min-margin="1.2"
+plugin-linea-limitless-enabled=false
+plugin-linea-forced-tx-status-cache-size=100
+strict-tx-replay-protection-enabled=false
+
+# Liveness is intentionally disabled for the public quickstart.
+plugin-linea-liveness-enabled=false
+
+Xplugin-rocksdb-high-spec-enabled=true
+tx-pool-priority-senders=["0xfe3b557e8fb62b89f4916b721be55ceb828dbd73",
+  "0xd42e308fc964b71e18126df469c21b0d7bcb86cc",
+  "0x1b9abeec3215d8ade8a33607f2cf0f4f60e5f0d0",
+  "0xc8c92fe825d8930b9357c006e0af160dfa727a62"]
+
+Xin-process-rpc-enabled=true
+Xin-process-rpc-apis=["ETH", "MINER"]
+
+bonsai-parallel-tx-processing-enabled=false
