@@ -43,6 +43,7 @@
 - *(coordinator)* Bound eth_getLogs in finalized-state lookup (#3519)
 - *(coordinator)* Bound eth_getLogs in deployment-block lookup (#3520)
 - *(coordinator)* L1FinalizationPriorityFeeCalculator feeLowerBound config (#3517)
+- *(misc)* Web3j-solc solidity resolution workaround (#3516)
 
 ### 🚜 Refactor
 
