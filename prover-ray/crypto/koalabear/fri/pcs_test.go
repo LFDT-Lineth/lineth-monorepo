@@ -97,6 +97,29 @@ func TestCanonicalLayout_RejectsShiftInvariants(t *testing.T) {
 	}
 }
 
+// TestAddOpeningZeta covers the shared-zeta invariant: zeta=0 is a valid
+// out-of-domain point and is accepted (its zero value is not a sentinel), but
+// a later opening carrying a different zeta is rejected.
+func TestAddOpeningZeta(t *testing.T) {
+	params, err := NewParams(8, 4, 1)
+	require.NoError(t, err)
+	pcs, err := NewPCS(params, makeEncoders(params.numRounds+1, 2))
+	require.NoError(t, err)
+
+	witness := make(Batch, 3)
+	witness[2] = SizedTable{Ext: [][]field.Ext{field.VecPseudoRandExt(rand.New(utils.NewRandSource(1)), 4)}}
+	committed := pcs.Commit(witness)
+	shifts := make(BatchShifts, 3)
+	shifts[2] = SizedShifts{Ext: [][]int{{0}}}
+	claimed := make(BatchClaimedValues, 3)
+	claimed[2] = SizedClaimedValues{Ext: [][]field.Ext{{{}}}}
+
+	require.NoError(t, pcs.AddOpening(committed, field.Ext{}, shifts, claimed))
+	require.ErrorContains(t,
+		pcs.AddOpening(committed, field.UintsToExt(1, 0, 0, 0, 0, 0), shifts, claimed),
+		"zeta mismatch")
+}
+
 func TestProverStateOpenAlignsMultiSizeLevelLeaf(t *testing.T) {
 	prng := rand.New(utils.NewRandSource(20260625))
 	params, err := NewParams(16, 8, 1)

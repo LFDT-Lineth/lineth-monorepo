@@ -112,7 +112,10 @@ func TestFoldLayerInternally(t *testing.T) {
 // TestProveVerify is the end-to-end check: an honest proof verifies across a few
 // (N, D, levels) configurations, and tampering with an opened leaf is rejected.
 // It exercises the full ProverState (Fold/Open), the query opening, and
-// checkQueryExt including the alpha²-batched extra levels.
+// checkQueryExt including the alpha²-batched extra levels, going through
+// pcs.Verify (the sole FRI entry point) via the ldtFixture compiler: each
+// level is a PCS column whose reconstructed DEEP quotient is an arbitrary
+// target codeword, independent of degree.
 func TestProveVerify(t *testing.T) {
 
 	type cfg struct {
@@ -131,93 +134,79 @@ func TestProveVerify(t *testing.T) {
 	for _, c := range cfgs {
 		t.Run(c.name, func(t *testing.T) {
 
-			p, err := NewParams(c.n, c.d, c.nq)
-			if err != nil {
-				t.Fatalf("NewParams: %v", err)
-			}
-
-			levels := make([]Level, 0, 1+len(c.extraDs))
-			levels = append(levels, newRandomLevel(prng, p, c.d))
+			fx := newLDTFixture(t, c.n, c.d, c.nq)
+			fx.addLevel(t, utils.Log2Ceil(c.d), field.VecPseudoRandExt(prng, c.n))
 			for _, d := range c.extraDs {
-				levels = append(levels, newRandomLevel(prng, p, d))
+				fx.addLevel(t, utils.Log2Ceil(d), field.VecPseudoRandExt(prng, c.n*d/c.d))
 			}
 
-			alphas := make([]field.Ext, p.numRounds)
-			for i := range alphas {
-				alphas[i] = field.PseudoRandExt(prng)
+			alphaDeep := field.PseudoRandExt(prng)
+			foldAlphas := make([]field.Ext, fx.pcs.Params.numRounds)
+			for i := range foldAlphas {
+				foldAlphas[i] = field.PseudoRandExt(prng)
 			}
-			positions := make([]int, p.NumQueries)
+			positions := make([]int, fx.pcs.Params.NumQueries)
 			for i := range positions {
-				positions[i] = int(prng.Uint64() % uint64(p.N))
+				positions[i] = int(prng.Uint64() % uint64(c.n))
 			}
 
-			prf := proverForTest(p, levels, alphas, positions)
+			proof := fx.open(t, alphaDeep, foldAlphas, positions)
 
-			// Prove sorts levels by decreasing D; mirror that order for the verifier.
-			levelRoots, levelDs := verifierInputsForLevels(levels)
-
-			if err := Verify(p, levelRoots, levelDs, prf, alphas, positions); err != nil {
+			if err := fx.verify(alphaDeep, foldAlphas, positions, proof); err != nil {
 				t.Fatalf("Verify (honest) failed: %v", err)
 			}
 
 			// Tampering an opened leaf must make verification fail.
-			prf.FRIQueries[0][0][0].Leaf = field.PseudoRandOctuplet(prng)
-			if err := Verify(p, levelRoots, levelDs, prf, alphas, positions); err == nil {
+			proof.FRIProof.FRIQueries[0][0][0].Leaf = field.PseudoRandOctuplet(prng)
+			if err := fx.verify(alphaDeep, foldAlphas, positions, proof); err == nil {
 				t.Fatalf("Verify accepted a proof with a tampered leaf")
 			}
 		})
 	}
 }
 
+// TestProverStateOpenLoopsOverLevelTrees checks that a level backed by
+// multiple trees (here, two PCS batches sharing a size) is opened and
+// authenticated independently per tree.
 func TestProverStateOpenLoopsOverLevelTrees(t *testing.T) {
 
 	prng := rand.New(utils.NewRandSource(20260624))
-	p, err := NewParams(16, 8, 2)
-	require.NoError(t, err)
 
-	levels := []Level{newRandomLevel(prng, p, 8), newRandomLevel(prng, p, 2)}
+	fx := newLDTFixture(t, 16, 8, 2)
+	fx.addLevel(t, 3, field.VecPseudoRandExt(prng, 16)) // top level, D=8: two trees
+	fx.addLevel(t, 3, field.VecPseudoRandExt(prng, 16))
+	fx.addLevel(t, 1, field.VecPseudoRandExt(prng, 4)) // extra level, D=2: two trees
+	fx.addLevel(t, 1, field.VecPseudoRandExt(prng, 4))
 
-	otherTopEvals := make([]field.Ext, len(levels[0].Evals))
-	for i := range otherTopEvals {
-		otherTopEvals[i] = field.PseudoRandExt(prng)
-	}
-	levels[0].Trees = append(levels[0].Trees, buildTreeExt(otherTopEvals))
-
-	otherEvals := make([]field.Ext, len(levels[1].Evals))
-	for i := range otherEvals {
-		otherEvals[i] = field.PseudoRandExt(prng)
-	}
-	levels[1].Trees = append(levels[1].Trees, buildTreeExt(otherEvals))
-
-	alphas := make([]field.Ext, p.numRounds)
-	for i := range alphas {
-		alphas[i] = field.PseudoRandExt(prng)
+	alphaDeep := field.PseudoRandExt(prng)
+	foldAlphas := make([]field.Ext, fx.pcs.Params.numRounds)
+	for i := range foldAlphas {
+		foldAlphas[i] = field.PseudoRandExt(prng)
 	}
 	positions := []int{3, 11}
 
-	prf := proverForTest(p, levels, alphas, positions)
-	levelRoots, levelDs := verifierInputsForLevels(levels)
-	require.NoError(t, Verify(p, levelRoots, levelDs, prf, alphas, positions))
+	proof := fx.open(t, alphaDeep, foldAlphas, positions)
+	require.NoError(t, fx.verify(alphaDeep, foldAlphas, positions, proof))
 
-	require.Len(t, prf.FRIQueries[0][0], len(levels[0].Trees))
-	require.Len(t, prf.LevelQueries, 1)
-	require.Len(t, prf.LevelQueries[0][0], len(levels[1].Trees))
+	require.Len(t, proof.FRIProof.FRIQueries[0][0], 2)
+	require.Len(t, proof.FRIProof.LevelQueries, 1)
+	require.Len(t, proof.FRIProof.LevelQueries[0][0], 2)
 
-	for i, branch := range prf.FRIQueries[0][0] {
+	for i, branch := range proof.FRIProof.FRIQueries[0][0] {
 		root, err := branch.RecoverRoot(positions[0])
 		require.NoError(t, err)
-		assert.Equal(t, levels[0].Trees[i].Root(), root)
+		assert.Equal(t, fx.roots[i], root)
 	}
 
-	base := positions[0] >> utils.Log2Ceil(p.D/levels[1].D)
-	for i, branch := range prf.LevelQueries[0][0] {
+	base := positions[0] >> utils.Log2Ceil(8/2) // p.D/extraD = 8/2
+	for i, branch := range proof.FRIProof.LevelQueries[0][0] {
 		root, err := branch.RecoverRoot(base)
 		require.NoError(t, err)
-		assert.Equal(t, levels[1].Trees[i].Root(), root)
+		assert.Equal(t, fx.roots[2+i], root)
 	}
 
-	prf.FRIQueries[0][0][1].Leaf = field.PseudoRandOctuplet(prng)
-	require.Error(t, Verify(p, levelRoots, levelDs, prf, alphas, positions))
+	proof.FRIProof.FRIQueries[0][0][1].Leaf = field.PseudoRandOctuplet(prng)
+	require.Error(t, fx.verify(alphaDeep, foldAlphas, positions, proof))
 }
 
 // newRandomLevel builds a Level with a random evaluation vector of the size

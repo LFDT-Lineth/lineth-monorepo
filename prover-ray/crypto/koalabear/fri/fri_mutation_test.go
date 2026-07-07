@@ -11,18 +11,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// The reflection-based mutation test below treats field.Octuplet and field.Ext
-// as atomic leaves (they hold unexported field storage, so we mutate the whole
-// value rather than descend into them).
+// The reflection-based mutation test below treats field.Octuplet, field.Ext,
+// and field.Element as atomic leaves.
 var (
 	octupletType = reflect.TypeOf(field.Octuplet{})
 	extType      = reflect.TypeOf(field.Ext{})
+	elementType  = reflect.TypeOf(field.Element{})
 )
 
 type mutationKind int
 
 const (
-	mutateValue mutationKind = iota // change an atomic leaf (Octuplet/Ext)
+	mutateValue mutationKind = iota // change an atomic leaf (Octuplet/Ext/Element)
 	mutateDrop                      // drop the last element of a slice
 	mutateDup                       // duplicate the last element of a slice
 )
@@ -36,7 +36,7 @@ type proofMutation struct {
 }
 
 func isAtomicLeaf(t reflect.Type) bool {
-	return t == octupletType || t == extType
+	return t == octupletType || t == extType || t == elementType
 }
 
 // collectMutations walks v (a Proof) and records every value mutation (one per
@@ -110,6 +110,10 @@ func applyMutation(root reflect.Value, m proofMutation) {
 			one := field.Lift(field.One())
 			x.Add(&x, &one)
 			v.Set(reflect.ValueOf(x))
+		case field.Element:
+			one := field.One()
+			x.Add(&x, &one)
+			v.Set(reflect.ValueOf(x))
 		default:
 			panic(fmt.Sprintf("applyMutation: unexpected atomic type %T", x))
 		}
@@ -121,8 +125,8 @@ func applyMutation(root reflect.Value, m proofMutation) {
 }
 
 // nolint -- ignores: error should be the last return parameters
-func safeVerify(p Params, levelRoots []QueryLayerRoots, levelDs []int,
-	prf Proof, alphas []field.Ext, positions []int) (err error, panicked bool) {
+func safeVerify(fx *ldtFixture, alphaDeep field.Ext, foldAlphas []field.Ext,
+	positions []int, proof OpeningProof) (err error, panicked bool) {
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -130,47 +134,47 @@ func safeVerify(p Params, levelRoots []QueryLayerRoots, levelDs []int,
 			err = fmt.Errorf("panic: %v", r)
 		}
 	}()
-	err = Verify(p, levelRoots, levelDs, prf, alphas, positions)
+	err = fx.verify(alphaDeep, foldAlphas, positions, proof)
 	return
 }
 
-// TestVerifyRejectsProofMutations is mutation testing over the Proof object: any
-// single-field change — a tweaked leaf/root/final value, or a dropped/duplicated
-// entry in any vector — must be rejected by Verify, and never panic. A panic
-// signals a missing structural check; an acceptance signals a soundness hole.
+// TestVerifyRejectsProofMutations mutates the PCS OpeningProof: every single
+// field or length change must be rejected by pcs.Verify without panicking.
 func TestVerifyRejectsProofMutations(t *testing.T) {
 
 	prng := rand.New(utils.NewRandSource(20240607))
-	p, err := NewParams(16, 8, 4)
-	require.NoError(t, err)
 
 	// One main level (D=8) plus one extra level (D=2) to also exercise the
 	// LevelQueries path.
-	levels := []Level{newRandomLevel(prng, p, 8), newRandomLevel(prng, p, 2)}
-	alphas := make([]field.Ext, p.numRounds)
-	for i := range alphas {
-		alphas[i] = field.PseudoRandExt(prng)
+	fx := newLDTFixture(t, 16, 8, 4)
+	fx.addLevel(t, 3, field.VecPseudoRandExt(prng, 16))
+	fx.addLevel(t, 1, field.VecPseudoRandExt(prng, 4))
+
+	alphaDeep := field.PseudoRandExt(prng)
+	foldAlphas := make([]field.Ext, fx.pcs.Params.numRounds)
+	for i := range foldAlphas {
+		foldAlphas[i] = field.PseudoRandExt(prng)
 	}
 	// Positions chosen to probe every final-layer index (size N>>numRounds = 2),
 	// so that mutating any FinalPolyExt entry is detected by some query.
 	positions := []int{1, 5, 9, 13}
 
-	// Canonical proof (Prove sorts levels in place, so derive verifier inputs after).
-	base := proverForTest(p, levels, alphas, positions)
-	levelRoots, levelDs := verifierInputsForLevels(levels)
-	require.NoError(t, Verify(p, levelRoots, levelDs, base, alphas, positions))
+	// Canonical proof: fx.open is deterministic given the same challenges, so
+	// it can be re-derived per mutation below without re-registering openings.
+	base := fx.open(t, alphaDeep, foldAlphas, positions)
+	require.NoError(t, fx.verify(alphaDeep, foldAlphas, positions, base))
 
 	var muts []proofMutation
-	collectMutations(reflect.ValueOf(&base).Elem(), nil, "Proof", &muts)
+	collectMutations(reflect.ValueOf(&base).Elem(), nil, "OpeningProof", &muts)
 	require.NotEmpty(t, muts)
 
 	for _, m := range muts {
 		t.Run(m.name, func(t *testing.T) {
 			// Re-derive the canonical proof deterministically, then mutate it.
-			prf := proverForTest(p, levels, alphas, positions)
-			applyMutation(reflect.ValueOf(&prf).Elem(), m)
+			proof := fx.open(t, alphaDeep, foldAlphas, positions)
+			applyMutation(reflect.ValueOf(&proof).Elem(), m)
 
-			err, panicked := safeVerify(p, levelRoots, levelDs, prf, alphas, positions)
+			err, panicked := safeVerify(fx, alphaDeep, foldAlphas, positions, proof)
 			require.False(t, panicked, "mutation made Verify panic: %v", err)
 			require.Error(t, err)
 		})
@@ -208,6 +212,14 @@ func TestPCSVerifyRejectsMutations(t *testing.T) {
 				fx.input.Zeta = domainPointExt(fx.pcs.Params.domainsLight[0], 0)
 			},
 			wantErr: "claim point on domain",
+		},
+		{
+			name: "zero zeta with multiple shifts",
+			mutate: func(fx *pcsOpenVerifyFixture) {
+				fx.input.Zeta = field.Ext{}
+				fx.input.Shifts[0][2].Ext[0] = []int{0, 1}
+			},
+			wantErr: "shifts with zero zeta",
 		},
 		{
 			name: "alpha mismatch",

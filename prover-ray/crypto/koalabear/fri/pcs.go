@@ -9,9 +9,9 @@
 // =============================================================================
 //
 // Fiat-Shamir is the caller's responsibility, matching the convention
-// already established by [fri.ProverState] and [Verify]: every PCS
-// method that "needs a challenge" takes that challenge as an explicit
-// parameter. The PCS never reaches into a transcript.
+// already established by [fri.ProverState]: every PCS method that "needs a
+// challenge" takes that challenge as an explicit parameter. The PCS never
+// reaches into a transcript.
 //
 // The PCS speaks the same data shapes as the underlying FRI primitives:
 //   - One Batch == one MultiSizeTable. A batch's polynomials are
@@ -560,10 +560,7 @@ func (pcs *PCS) AddOpening(
 	shifts BatchShifts,
 	claimed BatchClaimedValues,
 ) error {
-	if zeta.IsZero() {
-		return fmt.Errorf("fri: AddOpening: zero zeta")
-	}
-	if !pcs.zeta.IsZero() && !pcs.zeta.Equal(&zeta) {
+	if len(pcs.openings) > 0 && !pcs.zeta.Equal(&zeta) {
 		return fmt.Errorf("fri: AddOpening: zeta mismatch")
 	}
 	if committed.Tree == nil {
@@ -574,7 +571,7 @@ func (pcs *PCS) AddOpening(
 	if err != nil {
 		return err
 	}
-	if err = validateBatchClaimShape(claimed, shifts); err != nil {
+	if err = validateBatchClaimShape(claimed, shifts, zeta); err != nil {
 		return fmt.Errorf("fri: AddOpening: %w", err)
 	}
 
@@ -592,7 +589,7 @@ func (pcs *PCS) AddOpening(
 // value per (size, row, shift). It guards against empty or misshapen claims
 // slipping through to NewProverState, where the mismatch would otherwise
 // surface as an opaque reconstruction error.
-func validateBatchClaimShape(claimed BatchClaimedValues, shifts BatchShifts) error {
+func validateBatchClaimShape(claimed BatchClaimedValues, shifts BatchShifts, zeta field.Ext) error {
 	if len(claimed) != len(shifts) {
 		return fmt.Errorf("got %d claimed sizes, want %d", len(claimed), len(shifts))
 	}
@@ -607,12 +604,18 @@ func validateBatchClaimShape(claimed BatchClaimedValues, shifts BatchShifts) err
 				sizeLog2, len(sizedClaimed.Ext), len(sizedShifts.Ext))
 		}
 		for rowIdx, rowShifts := range sizedShifts.Base {
+			if zeta.IsZero() && len(rowShifts) > 1 {
+				return fmt.Errorf("size %d base row %d has %d shifts with zero zeta", sizeLog2, rowIdx, len(rowShifts))
+			}
 			if len(sizedClaimed.Base[rowIdx]) != len(rowShifts) {
 				return fmt.Errorf("size %d base row %d has %d claims, want %d",
 					sizeLog2, rowIdx, len(sizedClaimed.Base[rowIdx]), len(rowShifts))
 			}
 		}
 		for rowIdx, rowShifts := range sizedShifts.Ext {
+			if zeta.IsZero() && len(rowShifts) > 1 {
+				return fmt.Errorf("size %d ext row %d has %d shifts with zero zeta", sizeLog2, rowIdx, len(rowShifts))
+			}
 			if len(sizedClaimed.Ext[rowIdx]) != len(rowShifts) {
 				return fmt.Errorf("size %d ext row %d has %d claims, want %d",
 					sizeLog2, rowIdx, len(sizedClaimed.Ext[rowIdx]), len(rowShifts))
@@ -1081,7 +1084,7 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	if err != nil {
 		return err
 	}
-	if err = checkVerifyClaimShapes(in.ClaimedValues, in.Shifts); err != nil {
+	if err = checkVerifyClaimShapes(in.ClaimedValues, in.Shifts, in.Zeta); err != nil {
 		return err
 	}
 	// Restrict the FRI schedule to the largest opened size so the fold count
@@ -1093,8 +1096,8 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	if err = pcs.checkClaimPointsOutOfDomain(layout, in.Zeta); err != nil {
 		return err
 	}
-	if len(proof.RowOpenings) < pcs.Params.NumQueries {
-		return fmt.Errorf("fri: pcs.Verify: proof has %d row openings, want at least %d",
+	if len(proof.RowOpenings) != pcs.Params.NumQueries {
+		return fmt.Errorf("fri: pcs.Verify: proof has %d row openings, want %d",
 			len(proof.RowOpenings), pcs.Params.NumQueries)
 	}
 	if len(in.Challenges.QueryPositions) < pcs.Params.NumQueries {
@@ -1102,7 +1105,7 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 			len(in.Challenges.QueryPositions), pcs.Params.NumQueries)
 	}
 	orders := batchOrders(layout)
-	rows := proof.RowOpenings[:pcs.Params.NumQueries]
+	rows := proof.RowOpenings
 	if err = checkRowOpenings(rows, in.Shapes, layout, orders); err != nil {
 		return err
 	}
@@ -1171,7 +1174,6 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 		in.Challenges.FoldAlphas,
 		in.Challenges.QueryPositions,
 		inputs,
-		false,
 	)
 }
 
@@ -1198,12 +1200,12 @@ func (pcs *PCS) checkClaimPointsOutOfDomain(layout layout, zeta field.Ext) error
 // not align with the shift schedule, one claimed value per (batch, size, row,
 // shift). Without it an empty or truncated ClaimedValues would surface only
 // deep inside the per-query reconstruction as an opaque error.
-func checkVerifyClaimShapes(claimed []BatchClaimedValues, shifts []BatchShifts) error {
+func checkVerifyClaimShapes(claimed []BatchClaimedValues, shifts []BatchShifts, zeta field.Ext) error {
 	if len(claimed) != len(shifts) {
 		return fmt.Errorf("fri: pcs.Verify: got %d claimed batches, want %d", len(claimed), len(shifts))
 	}
 	for batchIdx := range shifts {
-		if err := validateBatchClaimShape(claimed[batchIdx], shifts[batchIdx]); err != nil {
+		if err := validateBatchClaimShape(claimed[batchIdx], shifts[batchIdx], zeta); err != nil {
 			return fmt.Errorf("fri: pcs.Verify: batch %d: %w", batchIdx, err)
 		}
 	}
@@ -1239,12 +1241,14 @@ func checkRowOpenings(rows []QueryRowOpenings, shapes []Shape, layout layout, or
 			return fmt.Errorf("fri: pcs.Verify: query %d has %d row-opening batches, want %d",
 				queryIdx, len(queryRows), len(shapes))
 		}
+		for batchIdx, batchRows := range queryRows {
+			if len(batchRows) != len(shapes[batchIdx]) {
+				return fmt.Errorf("fri: pcs.Verify: query %d batch %d has %d row-opening size slots, want %d",
+					queryIdx, batchIdx, len(batchRows), len(shapes[batchIdx]))
+			}
+		}
 		for bundleIdx, bundle := range layout {
 			for _, batchIdx := range orders[bundleIdx] {
-				if bundle.SizeLog2 >= len(queryRows[batchIdx]) {
-					return fmt.Errorf("fri: pcs.Verify: query %d batch %d missing size %d row opening",
-						queryIdx, batchIdx, bundle.SizeLog2)
-				}
 				row := queryRows[batchIdx][bundle.SizeLog2]
 				shape := shapes[batchIdx][bundle.SizeLog2]
 				if !rowOpeningMatchesShape(row.Leaf, shape) {
