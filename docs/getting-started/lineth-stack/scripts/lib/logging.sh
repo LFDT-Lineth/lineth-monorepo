@@ -105,7 +105,9 @@ lineth_clean_prefixes() {
 }
 
 lineth_child_output() {
-  lineth_clean_prefixes | lineth_indent
+  # Single sed (strip [context] prefixes, then indent) so live-streamed child
+  # output stays line-buffered; chaining seds adds a pipe with block buffering.
+  sed -E 's/^\[[^]]+\][[:space:]]*(ERROR:[[:space:]]*)?//; s/^/  /'
 }
 
 lineth_run_stream() {
