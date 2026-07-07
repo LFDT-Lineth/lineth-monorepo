@@ -6,7 +6,7 @@ include "../utils/signed_sum.zkc"
 // Process a RISC-V B-type (branch) instruction and return the next program counter.
 //
 // For B-type instructions, compute_op and operands are pre-decoded at ELF time
-// (see decoded_btype in memory.zkc). compute_op holds the raw funct3 value
+// (see decoded in memory.zkc). compute_op holds the unified branch op
 // (BRANCH_BEQ = 0b000, BRANCH_BNE = 0b001, …).
 //
 // In the predecoding phase, the operands for B-type instructions come from a
@@ -40,12 +40,12 @@ include "../utils/signed_sum.zkc"
 //
 fn process_B_type_instruction<registers>(index:u64, pc:Address) -> (pc_new:Address) {
 
-    var compute_op:BTypeComputeOp
+    var compute_op:ComputeOp
     var imm:DoubleWord
-    var rs2:Register
     var rs1:Register
-
-    compute_op, imm, rs2, rs1 = decoded_btype[index]
+    var rs2:Register
+    var rd:Register
+    compute_op, imm, rs1, rs2, rd = decoded[index]
 
     // "no branching" value of pc_new; gets overwritten if branching occurs
     pc_new = pc + 4

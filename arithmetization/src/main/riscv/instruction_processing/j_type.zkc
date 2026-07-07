@@ -6,7 +6,7 @@ include "../utils/signed_sum.zkc"
 // program counter.
 //
 // J-type semantics are pre-decoded at ELF time into a semantic compute op and
-// operands (see decoded_jtype in memory.zkc).
+// operands (see decoded in memory.zkc).
 //
 // In the predecoding phase, the operands for J-type instructions come from a
 // common 25-bit encoding (opcode stripped) that is laid out as:
@@ -31,10 +31,12 @@ include "../utils/signed_sum.zkc"
 //
 fn process_J_type_instruction<registers>(index:u64, pc:Address) -> (pc_new:Address) {
 
-    var compute_op:JTypeComputeOp
+    var compute_op:ComputeOp
     var imm:DoubleWord
+    var rs1:Register
+    var rs2:Register
     var rd:Register
-    compute_op, imm, rd = decoded_jtype[index]
+    compute_op, imm, rs1, rs2, rd = decoded[index]
 
     switch compute_op {
         case JTYPE_JAL: {

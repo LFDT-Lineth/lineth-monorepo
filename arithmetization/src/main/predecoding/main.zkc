@@ -1,0 +1,5 @@
+include "predecoding.zkc"
+
+fn main() {
+    predecoding_check()
+}

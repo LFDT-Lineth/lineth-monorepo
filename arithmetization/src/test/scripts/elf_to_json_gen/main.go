@@ -16,13 +16,7 @@ const (
 	BLOBS_OFFSET_AND_SIZE       = "blobs_offset_and_size"
 	BLOBS_DATA                  = "blobs_data"
 	INSTRUCTION_BASE            = "instruction_base"
-	DECODED_CORE                = "decoded_core"
-	DECODED_ITYPE               = "decoded_itype"
-	DECODED_RTYPE               = "decoded_rtype"
-	DECODED_STYPE               = "decoded_stype"
-	DECODED_BTYPE               = "decoded_btype"
-	DECODED_JTYPE               = "decoded_jtype"
-	DECODED_UTYPE               = "decoded_utype"
+	DECODED                     = "decoded"
 )
 
 // Instruction type identifiers. These MUST match the Type constants in
@@ -716,6 +710,27 @@ func decodeUTypeSemantic(opcode uint32) (computeOp uint32) {
 	}
 }
 
+// unifiedOperands packs pre-decoded operands into the decoded record layout:
+// record layout: imm, rs1, rs2, rd.
+func unifiedOperands(instrType uint32, normImm12, simm12 uint32, bImm, jImm, uImm uint64, rs1, rs2, rd uint32) (imm, opRs1, opRs2, opRd uint64) {
+	switch instrType {
+	case iType:
+		return assembleITypeImm(normImm12), uint64(rs1), 0, uint64(rd)
+	case rType:
+		return 0, uint64(rs1), uint64(rs2), uint64(rd)
+	case sType:
+		return assembleSTypeImm(simm12), uint64(rs1), uint64(rs2), 0
+	case bType:
+		return bImm, uint64(rs1), uint64(rs2), 0
+	case jType:
+		return jImm, 0, 0, uint64(rd)
+	case uType:
+		return uImm, 0, 0, uint64(rd)
+	default:
+		return assembleITypeImm(normImm12), uint64(rs1), uint64(rs2), uint64(rd)
+	}
+}
+
 type memoryBlob struct {
 	offset uint64
 	data   []byte
@@ -799,8 +814,8 @@ func main() {
 	}
 	// Statically decode the executable region into the pre-decoded instruction
 	// input tables consumed by the interpreter.
-	base, coreHex, itypeHex, rtypeHex, stypeHex, btypeHex, jtypeHex, utypeHex := buildDecodedProgram(elfFile.Sections)
-	printJson(blobs, elfFile.Entry, base, coreHex, itypeHex, rtypeHex, stypeHex, btypeHex, jtypeHex, utypeHex)
+	base, decodedHex := buildDecodedProgram(elfFile.Sections)
+	printJson(blobs, elfFile.Entry, base, decodedHex)
 }
 
 // parseInBytes turns an arg into raw input bytes. Four forms:
@@ -917,11 +932,10 @@ func readSectionBytes(s *elf.Section) []byte {
 
 // buildDecodedProgram statically decodes every 4-byte instruction word across
 // the executable region of the ELF, producing the base address plus the
-// hex-encoded decoded_core / decoded_itype / decoded_rtype / decoded_stype /
-// decoded_btype / decoded_jtype / decoded_utype input arrays. The arrays are
+// hex-encoded decoded input array. The array is
 // dense (one record per word in [base, end)), indexed at runtime by
 // index = (pc - base) >> 2.
-func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHex, rtypeHex, stypeHex, btypeHex, jtypeHex, utypeHex string) {
+func buildDecodedProgram(sections []*elf.Section) (base uint64, decodedHex string) {
 	var (
 		execSections []*elf.Section
 		minAddr      = ^uint64(0)
@@ -971,22 +985,8 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 	// Decode each instruction word. Field bit widths MUST match the semantic
 	// types declared for the inputs in memory.zkc, because zkc packs input
 	// records tightly by bit width:
-	//   decoded_core : compute_op:ComputeOp(u8)
-	//   decoded_itype: imm:DoubleWord(u64), rs1:Register(u5), rd:Register(u5)
-	//   decoded_rtype: rs1:Register(u5), rs2:Register(u5), rd:Register(u5)
-	//   decoded_stype: imm:DoubleWord(u64), rs2:Register(u5), rs1:Register(u5)
-	//   decoded_btype: imm:DoubleWord(u64), rs2:Register(u5), rs1:Register(u5)
-	//   decoded_jtype: imm:DoubleWord(u64), rd:Register(u5)
-	//   decoded_utype: imm:DoubleWord(u64), rd:Register(u5)
-	var (
-		coreBits  bitWriter
-		itypeBits bitWriter
-		rtypeBits bitWriter
-		stypeBits bitWriter
-		btypeBits bitWriter
-		jtypeBits bitWriter
-		utypeBits bitWriter
-	)
+	//   decoded: compute_op:ComputeOp(u8), imm:DoubleWord(u64), rs1:Register(u5), rs2:Register(u5), rd:Register(u5)
+	var decodedBits bitWriter
 	for off := uint64(0); off+4 <= uint64(len(image)); off += 4 {
 		instr := uint32(image[off]) | uint32(image[off+1])<<8 | uint32(image[off+2])<<16 | uint32(image[off+3])<<24
 
@@ -1068,39 +1068,16 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, coreHex, itypeHe
 		default:
 			localOp = itypeInvalid
 		}
-		coreBits.writeBits(uint64(unifiedComputeOp(instrType, localOp)), 8)
+		decodedBits.writeBits(uint64(unifiedComputeOp(instrType, localOp)), 8)
 
-		itypeBits.writeBits(assembleITypeImm(normImm12), 64)
-		itypeBits.writeBits(uint64(rs1), 5)
-		itypeBits.writeBits(uint64(rd), 5)
-
-		rtypeBits.writeBits(uint64(rs1), 5)
-		rtypeBits.writeBits(uint64(rs2), 5)
-		rtypeBits.writeBits(uint64(rd), 5)
-
-		stypeBits.writeBits(assembleSTypeImm(simm12), 64)
-		stypeBits.writeBits(uint64(rs2), 5)
-		stypeBits.writeBits(uint64(rs1), 5)
-
-		btypeBits.writeBits(bImm, 64)
-		btypeBits.writeBits(uint64(rs2), 5)
-		btypeBits.writeBits(uint64(rs1), 5)
-
-		jtypeBits.writeBits(jImm, 64)
-		jtypeBits.writeBits(uint64(rd), 5)
-
-		utypeBits.writeBits(uImm, 64)
-		utypeBits.writeBits(uint64(rd), 5)
+		opImm, opRs1, opRs2, opRd := unifiedOperands(instrType, normImm12, simm12, bImm, jImm, uImm, rs1, rs2, rd)
+		decodedBits.writeBits(opImm, 64)
+		decodedBits.writeBits(opRs1, 5)
+		decodedBits.writeBits(opRs2, 5)
+		decodedBits.writeBits(opRd, 5)
 	}
 
-	return base,
-		hex.EncodeToString(coreBits.buf),
-		hex.EncodeToString(itypeBits.buf),
-		hex.EncodeToString(rtypeBits.buf),
-		hex.EncodeToString(stypeBits.buf),
-		hex.EncodeToString(btypeBits.buf),
-		hex.EncodeToString(jtypeBits.buf),
-		hex.EncodeToString(utypeBits.buf)
+	return base, hex.EncodeToString(decodedBits.buf)
 }
 
 // maxDecodedRecordsFromEnv returns the configured cap on decoded records.
@@ -1123,7 +1100,7 @@ func writeSectionsFile(file *os.File, blobs []memoryBlob) {
 	}
 }
 
-func printJson(blobs []memoryBlob, entryPoint, instructionBase uint64, coreHex, itypeHex, rtypeHex, stypeHex, btypeHex, jtypeHex, utypeHex string) {
+func printJson(blobs []memoryBlob, entryPoint, instructionBase uint64, decodedHex string) {
 	var (
 		entryPointString   = fmt.Sprintf("%016x", entryPoint)
 		blobsCountString   = fmt.Sprintf("%016x", len(blobs))
@@ -1144,12 +1121,6 @@ func printJson(blobs []memoryBlob, entryPoint, instructionBase uint64, coreHex, 
 	fmt.Printf("\t\"%s\": \"0x%s\",\n", BLOBS_OFFSET_AND_SIZE, strings.Join(blobMetadata, "____"))
 	fmt.Printf("\t\"%s\": \"0x%s\",\n", BLOBS_DATA, strings.Join(blobData, "____"))
 	fmt.Printf("\t\"%s\": \"0x%016x\",\n", INSTRUCTION_BASE, instructionBase)
-	fmt.Printf("\t\"%s\": \"0x%s\",\n", DECODED_CORE, coreHex)
-	fmt.Printf("\t\"%s\": \"0x%s\",\n", DECODED_ITYPE, itypeHex)
-	fmt.Printf("\t\"%s\": \"0x%s\",\n", DECODED_RTYPE, rtypeHex)
-	fmt.Printf("\t\"%s\": \"0x%s\",\n", DECODED_STYPE, stypeHex)
-	fmt.Printf("\t\"%s\": \"0x%s\",\n", DECODED_BTYPE, btypeHex)
-	fmt.Printf("\t\"%s\": \"0x%s\",\n", DECODED_JTYPE, jtypeHex)
-	fmt.Printf("\t\"%s\": \"0x%s\"\n", DECODED_UTYPE, utypeHex)
+	fmt.Printf("\t\"%s\": \"0x%s\"\n", DECODED, decodedHex)
 	fmt.Println("}")
 }

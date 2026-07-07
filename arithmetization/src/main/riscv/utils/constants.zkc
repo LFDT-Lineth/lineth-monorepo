@@ -14,7 +14,7 @@ const MASK_64_ERASE_LAST_BIT:u64 = 0xfffffffffffffffe
 const EXIT_SYSCALL:DoubleWord = 93
 const WRITE_SYSCALL:DoubleWord = 64
 
-// Unified semantic compute ops stored in decoded_core.
+// Unified semantic compute ops stored in decoded.
 
 const COMPUTE_MISC_MEM:ComputeOp = 0
 
