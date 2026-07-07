@@ -35,7 +35,8 @@ RUN rm -rf unpacked-blob-compressor unpacked-blob-shnarf-calculator
 FROM eclipse-temurin:25-jre-noble
 
 RUN groupmod -n coordinator ubuntu && \
-    usermod -l coordinator -d /opt/consensys/linea/coordinator -s /usr/sbin/nologin -G "" ubuntu
+    usermod -l coordinator -d /opt/consensys/linea/coordinator -s /usr/sbin/nologin -G "" ubuntu && \
+    rm -rf /home/ubuntu
 
 WORKDIR /opt/consensys/linea/coordinator
 
