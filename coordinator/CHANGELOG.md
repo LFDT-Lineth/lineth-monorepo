@@ -1,8 +1,15 @@
-## [unreleased]
+## [0.3.0] - 2026-07-07
+
+### 🚀 Features
+
+- *(coordinator)* Add config schema walker for docs generation (#3488)
 
 ### 🐛 Bug Fixes
 
 - *(coordinator)* Pretty-print startup config logs (#3203)
+- *(coordinator)* Bound eth_getLogs in finalized-state lookup (#3519)
+- *(coordinator)* Bound eth_getLogs in deployment-block lookup (#3520)
+- *(coordinator)* L1FinalizationPriorityFeeCalculator feeLowerBound config (#3517)
 ## [0.2.0] - 2026-07-03
 
 ### 🚀 Features

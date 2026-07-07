@@ -16,6 +16,7 @@ import io.vertx.micrometer.MicrometerMetricsOptions
 import io.vertx.micrometer.backends.BackendRegistries
 import linea.contract.l1.LineaRollupSmartContractClientReadOnly
 import linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
+import linea.ethapi.EthLogsSearcherImpl
 import linea.kotlin.encodeHex
 import linea.timer.JvmTimerFactory
 import linea.timer.TimerFactory
@@ -375,9 +376,12 @@ class MaruAppFactory : MaruAppFactoryCreator {
               ?: Web3JLineaRollupSmartContractClientReadOnly(
                 web3j = web3jClient,
                 contractAddress = lineaConfig.contractAddress.encodeHex(),
-                ethLogsClient = createEthApiClient(
-                  web3jClient = web3jClient,
+                ethLogsSearcher = EthLogsSearcherImpl(
                   vertx = vertx,
+                  ethApiClient = createEthApiClient(
+                    web3jClient = web3jClient,
+                    vertx = vertx,
+                  ),
                 ),
                 log = LogManager.getLogger("maru.clients.l1.linea"),
               )

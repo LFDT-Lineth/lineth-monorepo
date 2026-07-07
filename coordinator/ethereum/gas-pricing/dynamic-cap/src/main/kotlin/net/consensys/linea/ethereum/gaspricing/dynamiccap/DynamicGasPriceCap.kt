@@ -24,13 +24,6 @@ fun getTimeOfDayKey(dayOfWeek: DayOfWeek, hour: Int): String {
   return "${dayOfWeek}_$hour"
 }
 
-fun getAllTimeOfDayKeys(): Set<String> {
-  return DayOfWeek.values()
-    .flatMap { dayOfWeek ->
-      (0..23).map { hour -> getTimeOfDayKey(dayOfWeek, hour) }
-    }.toSet()
-}
-
 interface GasPriceCapFeeHistoryFetcher {
   fun getEthFeeHistoryData(startBlockNumberInclusive: Long, endBlockNumberInclusive: Long): SafeFuture<FeeHistory>
 }

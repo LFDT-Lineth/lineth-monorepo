@@ -47,7 +47,8 @@ jobs:
         with:
           # Use the App token so subsequent `git push` is authenticated as the App.
           token: ${{ steps.app-token.outputs.token }}
-          ref: ${{ github.head_ref || github.ref_name }}
+          # Pin to the immutable triggering commit rather than a mutable ref name (CodeQL actions/untrusted-checkout).
+          ref: ${{ github.sha }}
           fetch-depth: 0
           fetch-tags: true
           submodules: false

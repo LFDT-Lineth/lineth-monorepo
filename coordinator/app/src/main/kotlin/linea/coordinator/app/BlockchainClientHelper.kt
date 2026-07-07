@@ -9,10 +9,12 @@ import linea.contract.l1.LineaSmartContractClient
 import linea.coordinator.config.v2.L1SubmissionConfig
 import linea.coordinator.config.v2.SignerConfig
 import linea.crypto.Web3SignerRestClient
+import linea.ethapi.EthLogsSearcherImpl
 import linea.kotlin.encodeHex
 import linea.web3j.ECKeypairSignerAdapter
 import linea.web3j.SmartContractErrors
 import linea.web3j.Web3SignerTxSignService
+import linea.web3j.ethapi.createEthApiClient
 import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
 import net.consensys.linea.contract.l1.Web3JLineaRollupSmartContractClient
 import net.consensys.linea.contract.l1.Web3JLineaValidiumSmartContractClient
@@ -121,6 +123,7 @@ fun createTransactionManager(
 }
 
 fun createLineaContractClient(
+  vertx: Vertx,
   dataAvailabilityType: L1SubmissionConfig.DataAvailability,
   contractAddress: String,
   transactionManager: AsyncFriendlyTransactionManager,
@@ -137,6 +140,7 @@ fun createLineaContractClient(
         transactionManager = transactionManager,
         contractGasProvider = contractGasProvider,
         smartContractErrors = smartContractErrors,
+        ethLogsSearcher = EthLogsSearcherImpl(vertx = vertx, ethApiClient = createEthApiClient(web3jClient)),
         useEthEstimateGas = useEthEstimateGas,
       )
 
