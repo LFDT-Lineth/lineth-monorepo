@@ -357,12 +357,14 @@ Latest verified dev-proof fresh boot (2026-05-31, clean local state):
 | Rollup finalized L2 block | 8 |
 
 Largest remaining bottleneck in simple terms: after `./scripts/reset.sh`, the
-Docker-side Node dependency cache is gone. The next boot must download and
-rebuild the npm packages used by the TypeScript account/deploy tooling before
-it can generate artifacts or deploy contracts. That is the cold Docker-side
-`pnpm install` cost. A prebuilt tooling image would ship those dependencies
-already installed; a better cache strategy would avoid deleting or rebuilding
-them unnecessarily.
+Docker-side `node_modules` volumes are gone and the next boot must reinstall
+the npm packages used by the TypeScript account/deploy tooling before it can
+generate artifacts or deploy contracts. The pnpm download cache
+(`lineth-stack-contracts-pnpm-store`) survives resets, so that reinstall
+resolves package tarballs locally (`pnpm install --prefer-offline`) instead of
+re-downloading them from the npm registry; use `./scripts/reset.sh
+--purge-deps` if you intentionally want a cold cache. A prebuilt tooling image
+would remove even the reinstall cost.
 
 Runtime funding is already batched in TypeScript. The previous serial funding
 path measured about 77s; the batched path measured about 22s in the verified

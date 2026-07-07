@@ -13,6 +13,7 @@ LINETH_LOG_CONTEXT="start"
 
 TAIL=false
 PULL=true
+FORCE_PULL=false
 LINETH_VERBOSE="${LINETH_VERBOSE:-false}"
 WIZARD=false
 WIZARD_THEN_START=false
@@ -34,6 +35,7 @@ Usage: ./scripts/start.sh [--tail] [--no-pull] [--verbose]
 
   --tail              start the stack, then show guided deployment/finality progress
   --no-pull           skip docker compose pull
+  --pull              force docker compose pull even when all pinned images are local
   --verbose           show raw preparation/pull details in the default terminal output
   --wizard, --init    configure .env with the guided setup wizard
   --then-start        after --wizard succeeds, start with ./scripts/start.sh --tail
@@ -89,6 +91,9 @@ while [ "$#" -gt 0 ]; do
       ;;
     --no-pull)
       PULL=false
+      ;;
+    --pull)
+      FORCE_PULL=true
       ;;
     --verbose)
       LINETH_VERBOSE=true
@@ -190,15 +195,18 @@ if [ "$WIZARD" = "true" ]; then
     exit 0
   fi
 
-  if [ "$PULL" = "false" ] && [ "$LINETH_VERBOSE" = "true" ]; then
-    exec "$SCRIPT_DIR/start.sh" --tail --no-pull --verbose
-  elif [ "$PULL" = "false" ]; then
-    exec "$SCRIPT_DIR/start.sh" --tail --no-pull
-  elif [ "$LINETH_VERBOSE" = "true" ]; then
-    exec "$SCRIPT_DIR/start.sh" --tail --verbose
-  else
-    exec "$SCRIPT_DIR/start.sh" --tail
+  wizard_start_args=""
+  if [ "$PULL" = "false" ]; then
+    wizard_start_args="$wizard_start_args --no-pull"
   fi
+  if [ "$FORCE_PULL" = "true" ]; then
+    wizard_start_args="$wizard_start_args --pull"
+  fi
+  if [ "$LINETH_VERBOSE" = "true" ]; then
+    wizard_start_args="$wizard_start_args --verbose"
+  fi
+  # shellcheck disable=SC2086
+  exec "$SCRIPT_DIR/start.sh" --tail $wizard_start_args
 fi
 
 COMPOSE="docker compose --env-file versions.env --env-file .env --profile stack-partial-prover"
@@ -399,45 +407,82 @@ run_ts_preflight
 
 lineth_section "Generate accounts and configs"
 bootstrap_log="/tmp/lineth-bootstrap.$$.$(date '+%Y%m%d%H%M%S').log"
-if [ "${LINETH_VERBOSE:-false}" = "true" ]; then
-  lineth_run_stream env LINETH_EMBEDDED=true LINETH_SKIP_BANNER=true "$SCRIPT_DIR/bootstrap-artifacts.sh"
-else
-  if env LINETH_EMBEDDED=true LINETH_SKIP_BANNER=true "$SCRIPT_DIR/bootstrap-artifacts.sh" > "$bootstrap_log" 2>&1; then
-    lineth_kv "accounts" "runtime wallets and encrypted keystores ready"
-    lineth_kv "web3signer" "runtime key files ready"
-    lineth_kv "configs" "Postman Web3Signer config ready"
-    lineth_info "raw generation output: $bootstrap_log"
-  else
-    lineth_error "account/config generation failed; raw output: $bootstrap_log"
-    tail -80 "$bootstrap_log" | lineth_indent
-    exit 1
-  fi
+# Stream bootstrap progress live instead of buffering it into a temp file; the
+# noisy dependency install is already reduced to single progress lines inside
+# phases/01-generate-accounts.sh. A status file carries the child exit code
+# across the pipe because POSIX sh has no pipefail.
+bootstrap_status_file="$bootstrap_log.status"
+{
+  env LINETH_EMBEDDED=true LINETH_SKIP_BANNER=true "$SCRIPT_DIR/bootstrap-artifacts.sh" 2>&1 \
+    || printf '%s\n' "$?" > "$bootstrap_status_file"
+} | tee "$bootstrap_log" | lineth_child_output
+if [ -s "$bootstrap_status_file" ]; then
+  rm -f "$bootstrap_status_file"
+  lineth_error "account/config generation failed; raw output: $bootstrap_log"
+  exit 1
 fi
+rm -f "$bootstrap_status_file"
+lineth_info "raw generation output: $bootstrap_log"
+
+# Print image references required by the compose profile that are not in the
+# local Docker image store. Prints a sentinel line when the list itself cannot
+# be resolved, so callers treat "unknown" as "missing".
+missing_required_images() {
+  required_images="$($COMPOSE config --images 2>/dev/null | sort -u)"
+  if [ -z "$required_images" ]; then
+    printf '%s' "(could not list required images via docker compose config --images)"
+    return
+  fi
+  missing=""
+  for required_image in $required_images; do
+    docker image inspect "$required_image" >/dev/null 2>&1 \
+      || missing="$missing $required_image"
+  done
+  printf '%s' "$missing"
+}
 
 if [ "$PULL" = "true" ]; then
   lineth_section "Pull Docker images"
-  lineth_info "checking/pulling Docker images; this can take a while on a slow connection"
-  pull_log="/tmp/lineth-docker-pull.$$.$(date '+%Y%m%d%H%M%S').log"
-  # shellcheck disable=SC2086
-  if [ "${LINETH_VERBOSE:-false}" = "true" ]; then
-    set +e
-    COMPOSE_PROGRESS=plain $COMPOSE pull
-    pull_status=$?
-    set -e
-  elif COMPOSE_PROGRESS=plain $COMPOSE pull > "$pull_log" 2>&1; then
-    pull_status=0
+  missing_images="$(missing_required_images)"
+  if [ -z "$missing_images" ] && [ "${FORCE_PULL:-false}" != "true" ]; then
+    # All images in versions.env are pinned, so a registry round-trip adds
+    # nothing when every required image is already local — and it makes boot
+    # time hostage to registry latency/outages.
+    lineth_ok "all pinned images already local; skipping registry pull"
+    lineth_info "force a registry refresh with ./scripts/start.sh --pull"
   else
-    pull_status=$?
-  fi
-  if [ "$pull_status" -ne 0 ]; then
-    lineth_error "Docker image pull failed. This is usually a Docker Hub/network issue."
-    [ "${LINETH_VERBOSE:-false}" = "true" ] || tail -60 "$pull_log" | lineth_indent
-    lineth_info "retry the same command, or use ./scripts/start.sh --tail --no-pull if the images are already local"
-    exit 1
-  fi
-  if [ "${LINETH_VERBOSE:-false}" != "true" ]; then
-    lineth_ok "Docker images are available"
-    lineth_info "raw Docker pull output: $pull_log"
+    lineth_info "checking/pulling Docker images; this can take a while on a slow connection"
+    pull_log="/tmp/lineth-docker-pull.$$.$(date '+%Y%m%d%H%M%S').log"
+    # shellcheck disable=SC2086
+    if [ "${LINETH_VERBOSE:-false}" = "true" ]; then
+      set +e
+      COMPOSE_PROGRESS=plain $COMPOSE pull
+      pull_status=$?
+      set -e
+    elif COMPOSE_PROGRESS=plain $COMPOSE pull > "$pull_log" 2>&1; then
+      pull_status=0
+    else
+      pull_status=$?
+    fi
+    if [ "$pull_status" -ne 0 ]; then
+      # Registry hiccups (e.g. transient Docker Hub 5xx on the auth token
+      # endpoint) must not abort a boot that can run entirely from local
+      # images. Only fail hard when a required image is actually missing.
+      missing_images="$(missing_required_images)"
+      if [ -z "$missing_images" ]; then
+        lineth_warn "image pull/refresh failed (likely a transient registry issue), but all required images are already local; continuing"
+        lineth_info "raw Docker pull output: $pull_log"
+      else
+        lineth_error "Docker image pull failed. This is usually a Docker Hub/network issue."
+        [ "${LINETH_VERBOSE:-false}" = "true" ] || tail -60 "$pull_log" | lineth_indent
+        lineth_info "missing images:$missing_images"
+        lineth_info "retry the same command, or use ./scripts/start.sh --tail --no-pull if the images are already local"
+        exit 1
+      fi
+    elif [ "${LINETH_VERBOSE:-false}" != "true" ]; then
+      lineth_ok "Docker images are available"
+      lineth_info "raw Docker pull output: $pull_log"
+    fi
   fi
 fi
 
