@@ -89,13 +89,15 @@ run-execution-specs-ssz-fixtures: prep-execution-specs-json-fixtures
 		JSON_FIXTURES_DIR="$(EXECUTION_SPECS_FIXTURES_DIR)" \
 		SSZ_FIXTURES_DIR="$(EXECUTION_SPECS_SSZ_FIXTURES_DIR)" \
 		RUN_FIXTURE_PATHS="$(EXECUTION_SPECS_RUN_FIXTURE_PATHS)" \
-		RUN_SSZ_LIMIT="$(EXECUTION_SPECS_RUN_SSZ_LIMIT)"
+		RUN_SSZ_LIMIT="$(EXECUTION_SPECS_RUN_SSZ_LIMIT)" \
+		FIXTURE_FORMAT="execution-specs"
 
 # Runs JSON fixtures already present on disk. Source-specific targets prepare the JSON first.
 run-json-ssz-fixtures:
 	@[ -n "$(JSON_FIXTURES_DIR)" ] || { echo "JSON_FIXTURES_DIR is mandatory"; exit 1; }
 	@[ -n "$(SSZ_FIXTURES_DIR)" ] || { echo "SSZ_FIXTURES_DIR is mandatory"; exit 1; }
-	GOCACHE=/tmp/go-build $(GO) run $(MAKEFILE_DIR)scripts/run_ssz_fixtures.go --fixtures-dir "$(JSON_FIXTURES_DIR)" --ssz-dir "$(SSZ_FIXTURES_DIR)" --fixture-paths "$(RUN_FIXTURE_PATHS)" --ssz-limit "$(RUN_SSZ_LIMIT)"
+	@[ -n "$(FIXTURE_FORMAT)" ] || { echo "FIXTURE_FORMAT is mandatory"; exit 1; }
+	GOCACHE=/tmp/go-build $(GO) run $(MAKEFILE_DIR)scripts/run_ssz_fixtures.go --fixtures-dir "$(JSON_FIXTURES_DIR)" --ssz-dir "$(SSZ_FIXTURES_DIR)" --fixture-paths "$(RUN_FIXTURE_PATHS)" --ssz-limit "$(RUN_SSZ_LIMIT)" --fixture-format "$(FIXTURE_FORMAT)"
 
 # Downloads and extracts Lineth zkevm-fixtures release JSON fixtures under $(ZKEVM_FIXTURES_JSON_DIR).
 get-zkevm-fixtures-json-fixtures: $(ZKEVM_FIXTURES_EXTRACTED)
@@ -124,7 +126,8 @@ run-zkevm-fixtures-ssz-fixtures: get-zkevm-fixtures-json-fixtures
 		JSON_FIXTURES_DIR="$(ZKEVM_FIXTURES_JSON_DIR)" \
 		SSZ_FIXTURES_DIR="$(ZKEVM_FIXTURES_SSZ_DIR)" \
 		RUN_FIXTURE_PATHS="$(ZKEVM_FIXTURES_RUN_FIXTURE_PATHS)" \
-		RUN_SSZ_LIMIT="$(ZKEVM_FIXTURES_RUN_SSZ_LIMIT)"
+		RUN_SSZ_LIMIT="$(ZKEVM_FIXTURES_RUN_SSZ_LIMIT)" \
+		FIXTURE_FORMAT="zkevm-fixtures"
 
 clean:
 	rm -rf $(MAKEFILE_DIR)zig-out/

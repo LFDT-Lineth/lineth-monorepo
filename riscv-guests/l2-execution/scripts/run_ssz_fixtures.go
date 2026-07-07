@@ -25,6 +25,8 @@ import (
 const (
 	fixturePathColumnWidth = 40
 	testColumnWidth        = 108
+	formatExecutionSpecs   = "execution-specs"
+	formatZkevmFixtures    = "zkevm-fixtures"
 )
 
 type fixtureCase struct {
@@ -59,11 +61,15 @@ func main() {
 	sszDir := flag.String("ssz-dir", filepath.Join(os.TempDir(), "execution-specs-ssz-fixtures"), "directory for selected temporary raw SSZ inputs")
 	fixturePathsFlag := flag.String("fixture-paths", "blockchain_tests/for_amsterdam/amsterdam,blockchain_tests/for_amsterdam/osaka", "comma-separated fixture paths under fixtures-dir; . means all")
 	sszLimit := flag.Int("ssz-limit", 0, "maximum SSZ inputs to run per fixture path; 0 means all")
+	fixtureFormat := flag.String("fixture-format", formatExecutionSpecs, "fixture JSON format: execution-specs or zkevm-fixtures")
 	zkcFlags := flag.String("zkc-flags", "--gogen --fast -q", "flags forwarded to zkc exec")
 	flag.Parse()
 
 	if *sszLimit < 0 {
 		must(fmt.Errorf("ssz-limit must be non-negative"))
+	}
+	if *fixtureFormat != formatExecutionSpecs && *fixtureFormat != formatZkevmFixtures {
+		must(fmt.Errorf("fixture-format must be %q or %q", formatExecutionSpecs, formatZkevmFixtures))
 	}
 
 	root, err := repoRoot()
@@ -109,7 +115,7 @@ func main() {
 				}
 			}
 
-			newInputs, err := writeSSZInputs(*sszDir, fixturePath, targetDir, jsonPath, remaining)
+			newInputs, err := writeSSZInputs(*sszDir, fixturePath, targetDir, jsonPath, remaining, *fixtureFormat)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "prepare %s: %v\n", jsonPath, err)
 				hadError = true
@@ -229,7 +235,7 @@ func jsonFiles(dir string) ([]string, error) {
 }
 
 // Writes selected SSZ inputs from one JSON file.
-func writeSSZInputs(sszDir, fixturePath, targetDir, jsonPath string, limit int) ([]selectedInput, error) {
+func writeSSZInputs(sszDir, fixturePath, targetDir, jsonPath string, limit int, fixtureFormat string) ([]selectedInput, error) {
 	jsonRel, err := filepath.Rel(targetDir, jsonPath)
 	if err != nil {
 		return nil, err
@@ -238,7 +244,7 @@ func writeSSZInputs(sszDir, fixturePath, targetDir, jsonPath string, limit int) 
 		return nil, fmt.Errorf("JSON path is outside target dir: %s", jsonPath)
 	}
 
-	blocks, err := statelessInputs(jsonPath)
+	blocks, err := statelessInputs(jsonPath, fixtureFormat)
 	if err != nil {
 		return nil, err
 	}
@@ -278,12 +284,24 @@ func writeSSZInputs(sszDir, fixturePath, targetDir, jsonPath string, limit int) 
 }
 
 // Extracts stateless inputs from one fixture JSON file.
-func statelessInputs(path string) ([]statelessInput, error) {
+func statelessInputs(path, fixtureFormat string) ([]statelessInput, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
+	switch fixtureFormat {
+	case formatZkevmFixtures:
+		return statelessInputsFromCase(jsonTestName(path), data)
+	case formatExecutionSpecs:
+		return statelessInputsFromMap(data)
+	default:
+		return nil, fmt.Errorf("unsupported fixture format %q", fixtureFormat)
+	}
+}
+
+// Extracts inputs from an execution-specs map of named test cases.
+func statelessInputsFromMap(data []byte) ([]statelessInput, error) {
 	var cases map[string]json.RawMessage
 	if err := json.Unmarshal(data, &cases); err != nil {
 		return nil, err
@@ -297,34 +315,52 @@ func statelessInputs(path string) ([]statelessInput, error) {
 
 	var out []statelessInput
 	for _, name := range names {
-		var testCase fixtureCase
-		if err := json.Unmarshal(cases[name], &testCase); err != nil {
-			return nil, err
+		inputs, err := statelessInputsFromCase(name, cases[name])
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", name, err)
 		}
-		for i, block := range testCase.Blocks {
-			if block.StatelessInputBytes == "" || block.StatelessOutputBytes == "" {
-				continue
-			}
-			input, err := hexBytes(block.StatelessInputBytes)
-			if err != nil {
-				return nil, fmt.Errorf("%s[%d]: %w", name, i, err)
-			}
-			output, err := hexBytes(block.StatelessOutputBytes)
-			if err != nil {
-				return nil, fmt.Errorf("%s[%d]: %w", name, i, err)
-			}
-			if len(output) <= 32 {
-				return nil, fmt.Errorf("%s[%d]: statelessOutputBytes too short", name, i)
-			}
-			out = append(out, statelessInput{
-				testName:      name,
-				blockIndex:    i,
-				input:         input,
-				expectedValid: output[32] == 0x01,
-			})
-		}
+		out = append(out, inputs...)
 	}
 	return out, nil
+}
+
+// Extracts inputs from one test-case object.
+func statelessInputsFromCase(name string, data []byte) ([]statelessInput, error) {
+	var testCase fixtureCase
+	if err := json.Unmarshal(data, &testCase); err != nil {
+		return nil, err
+	}
+
+	var out []statelessInput
+	for i, block := range testCase.Blocks {
+		if block.StatelessInputBytes == "" || block.StatelessOutputBytes == "" {
+			continue
+		}
+		input, err := hexBytes(block.StatelessInputBytes)
+		if err != nil {
+			return nil, fmt.Errorf("%s[%d]: %w", name, i, err)
+		}
+		output, err := hexBytes(block.StatelessOutputBytes)
+		if err != nil {
+			return nil, fmt.Errorf("%s[%d]: %w", name, i, err)
+		}
+		if len(output) <= 32 {
+			return nil, fmt.Errorf("%s[%d]: statelessOutputBytes too short", name, i)
+		}
+		out = append(out, statelessInput{
+			testName:      name,
+			blockIndex:    i,
+			input:         input,
+			expectedValid: output[32] == 0x01,
+		})
+	}
+	return out, nil
+}
+
+// Names direct-case fixture files.
+func jsonTestName(path string) string {
+	name := filepath.Base(path)
+	return strings.TrimSuffix(name, filepath.Ext(name))
 }
 
 // Decodes 0x-prefixed hex bytes.
