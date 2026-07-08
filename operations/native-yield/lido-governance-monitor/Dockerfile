@@ -1,3 +1,7 @@
+# kics-scan disable=965a08d7-ef86-4f14-8792-4a3b2098937e
+# Apt Get Install Pin Version Not Defined: apt packages are intentionally unpinned.
+# They track the node:slim base image; pinning would break the build on base refresh
+# for negligible security gain on top of --no-install-recommends.
 ARG NODE_VERSION=lts
 
 FROM node:${NODE_VERSION}-slim AS base
@@ -6,15 +10,12 @@ ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
 # Temp fix for the corepack issue described in https://github.com/pnpm/pnpm/issues/9029
-# Version pinned (KICS: NPM Install Command Without Pinned Version). Bump deliberately.
-RUN npm i -g corepack@0.35.0
+# Use `npm install` (not the `i` alias): KICS only whitelists the literal word `install`.
+# Version pinned to 0.35.0; bump deliberately.
+RUN npm install -g corepack@0.35.0
 
 RUN corepack enable
 
-# kics-scan ignore-line
-# Not version-pinned: these packages track the node:slim base image, and pinning
-# would break the build on every base refresh for negligible security gain here.
-# KICS: Apt Get Install Pin Version Not Defined (ca-certificates, bash, curl).
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates bash curl \
     && apt-get clean \
@@ -46,18 +47,12 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store DATABASE_URL=postgresql://loca
     && pnpm run build \
     && pnpm --config.allow-unused-patches=true --config.block-exotic-subdeps=false deploy --legacy --filter=./operations/native-yield/lido-governance-monitor --prod ./prod/operations/native-yield/lido-governance-monitor
 
-# kics-scan ignore-line
-# HEALTHCHECK does not apply: this image runs a one-shot batch job (run.ts exits
-# after a single execution), not a long-running server. KICS: Healthcheck Instruction Missing.
 FROM node:${NODE_VERSION}-slim AS production
 
 ENV NODE_ENV=production
 
 WORKDIR /usr/src/app
 
-# kics-scan ignore-line
-# Not version-pinned: openssl tracks the node:slim base image; pinning would break
-# the build on base refresh for negligible gain. KICS: Apt Get Install Pin Version Not Defined.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends openssl \
     && apt-get clean \
@@ -87,6 +82,9 @@ WORKDIR /usr/src/app/operations/native-yield/lido-governance-monitor
 # stays root-owned; only this subdir is delegated to node. KICS "Chown Flag Exists"
 # targets the COPY --chown flag, not RUN chown, so this does not re-trigger that rule.
 RUN chown -R node:node node_modules/.pnpm/@prisma+engines@*/node_modules/@prisma/engines
+
+# One-shot batch job (run.ts exits after a single run); nothing long-running to probe.
+HEALTHCHECK NONE
 
 USER node
 
