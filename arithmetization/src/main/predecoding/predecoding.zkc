@@ -556,15 +556,15 @@ fn predecoding_check<registers, ram, state_row0, state_row1, state_row2, state_r
 
         // ---------------------------- U-type instructions ----------------------------
         case UTYPE_LUI, UTYPE_AUIPC: {
-            check_u_type_operands(instruction_parameters, rd_decoded, imm_decoded)
+            check_u_type(instruction_parameters, opcode, compute_op, rd_decoded, imm_decoded)
         }
         case UTYPE_LUI_WB: {
-            check_u_type_operands(instruction_parameters, rd_decoded, imm_decoded)
+            check_u_type(instruction_parameters, opcode, compute_op, rd_decoded, imm_decoded)
             // Write into register
             registers[rd_decoded] = imm_decoded
         }
         case UTYPE_AUIPC_WB: {
-            check_u_type_operands(instruction_parameters, rd_decoded, imm_decoded)
+            check_u_type(instruction_parameters, opcode, compute_op, rd_decoded, imm_decoded)
             // Write into register
             registers[rd_decoded] = signed_sum_of_double_word(imm_decoded, pc) as DoubleWord
         }
