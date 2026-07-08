@@ -1,3 +1,7 @@
+# kics-scan disable=965a08d7-ef86-4f14-8792-4a3b2098937e
+# Apt Get Install Pin Version Not Defined: apt packages are intentionally unpinned.
+# They track the node:slim base image; pinning would break the build on base refresh
+# for negligible security gain on top of --no-install-recommends.
 ARG NODE_VERSION=lts
 
 FROM node:${NODE_VERSION}-slim AS base
@@ -6,7 +10,9 @@ ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
 # Temp fix for the corepack issue described in https://github.com/pnpm/pnpm/issues/9029
-RUN npm i -g corepack@latest
+# Use `npm install` (not the `i` alias): KICS only whitelists the literal word `install`.
+# Version pinned to 0.35.0; bump deliberately.
+RUN npm install -g corepack@0.35.0
 
 RUN corepack enable
 
@@ -26,6 +32,9 @@ COPY ./operations/native-yield/lido-governance-monitor/package.json ./operations
 COPY ./ts-libs/linea-shared-utils/package.json ./ts-libs/linea-shared-utils/package.json
 COPY ./ts-libs/eslint-config/package.json ./ts-libs/eslint-config/package.json
 
+# kics-scan ignore-line
+# Versions are pinned by pnpm-lock.yaml (--frozen-lockfile); this is a workspace
+# install from the lockfile, not a single-package add. KICS: NPM Install Without Pinned Version.
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --prefer-offline --ignore-scripts
 
 COPY ./operations/native-yield/lido-governance-monitor ./operations/native-yield/lido-governance-monitor
@@ -49,19 +58,33 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder --chown=node:node /usr/src/app/prod/operations/native-yield/lido-governance-monitor ./operations/native-yield/lido-governance-monitor
+# Runtime files are intentionally root-owned (no --chown=node:node): the node user
+# only needs read/execute, and root ownership prevents tampering with code and
+# migrations. The writable Prisma cache is chown'd separately below.
+# KICS: Chown Flag Exists.
+COPY --from=builder /usr/src/app/prod/operations/native-yield/lido-governance-monitor ./operations/native-yield/lido-governance-monitor
 
 # Copy prompts directory (not included in dist)
-COPY --from=builder --chown=node:node /usr/src/app/operations/native-yield/lido-governance-monitor/src/prompts ./operations/native-yield/lido-governance-monitor/src/prompts
+COPY --from=builder /usr/src/app/operations/native-yield/lido-governance-monitor/src/prompts ./operations/native-yield/lido-governance-monitor/src/prompts
 
 # Copy prisma migrations for runtime migrate deploy
-COPY --from=builder --chown=node:node /usr/src/app/operations/native-yield/lido-governance-monitor/prisma ./operations/native-yield/lido-governance-monitor/prisma
-COPY --from=builder --chown=node:node /usr/src/app/operations/native-yield/lido-governance-monitor/prisma.config.ts ./operations/native-yield/lido-governance-monitor/prisma.config.ts
+COPY --from=builder /usr/src/app/operations/native-yield/lido-governance-monitor/prisma ./operations/native-yield/lido-governance-monitor/prisma
+COPY --from=builder /usr/src/app/operations/native-yield/lido-governance-monitor/prisma.config.ts ./operations/native-yield/lido-governance-monitor/prisma.config.ts
 
 RUN mkdir -p /home/node/.cache/prisma \
     && chown -R node:node /home/node/.cache
 
 WORKDIR /usr/src/app/operations/native-yield/lido-governance-monitor
+
+# The prisma engines dir must be node-writable: the production init container runs
+# `prisma migrate deploy` before app start (see docs/db-migration.md), which extracts
+# the schema-engine binary into node_modules on first run. The rest of node_modules
+# stays root-owned; only this subdir is delegated to node. KICS "Chown Flag Exists"
+# targets the COPY --chown flag, not RUN chown, so this does not re-trigger that rule.
+RUN chown -R node:node node_modules/.pnpm/@prisma+engines@*/node_modules/@prisma/engines
+
+# One-shot batch job (run.ts exits after a single run); nothing long-running to probe.
+HEALTHCHECK NONE
 
 USER node
 
