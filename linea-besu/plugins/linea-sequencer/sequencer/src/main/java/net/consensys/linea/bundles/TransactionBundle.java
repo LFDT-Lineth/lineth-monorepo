@@ -20,6 +20,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.KeyDeserializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
@@ -178,6 +179,17 @@ public class TransactionBundle {
 
     public HashDeserializer(final Class<Hash> t) {
       super(t);
+    }
+  }
+
+  // Besu's Hash no longer carries @JsonCreator on fromHexString(String) (it moved to
+  // wrap(Bytes32) instead), so Jackson can no longer auto-derive a Map-key deserializer for it.
+  // Needed wherever Hash appears as a JSON object key, e.g. the V1 on-disk bundle format
+  // ({"<hash>": {...}}).
+  public static class HashKeyDeserializer extends KeyDeserializer {
+    @Override
+    public Hash deserializeKey(final String key, final DeserializationContext ctxt) {
+      return Hash.fromHexString(key);
     }
   }
 
