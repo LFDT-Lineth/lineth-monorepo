@@ -1,6 +1,11 @@
 include "constants.zkc"
 
-fn check_b_type(instruction_parameters:u25, compute_op:ComputeOp, rs1_decoded:Register, rs2_decoded:Register, imm_decoded:DoubleWord) {
+fn check_b_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rs1_decoded:Register, rs2_decoded:Register, imm_decoded:DoubleWord) {
+    if opcode != OPCODE_BRANCH {
+        printf "[ERROR] invalid B-type opcode\n"
+        fail
+    }
+
     var funct3:Funct3
     var imm_sign:SignBit
     var imm_11:u1
@@ -118,13 +123,28 @@ fn check_r_type_operands(instruction_parameters:u25, rs1_decoded:Register, rs2_d
     }
 }
 
-fn check_j_type_operands(instruction_parameters:u25, rs1_decoded:Register, rd_decoded:Register, imm_decoded:DoubleWord) {
+fn check_j_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rs1_decoded:Register, rd_decoded:Register, imm_decoded:DoubleWord) {
     var rd:Register
     var imm20:u1
     var imm10_1:u10
     var imm11:u1
     var imm19_12:u8
     var imm:DoubleWord
+
+
+    // J-type has no funct3; verify the raw opcode encodes the claimed compute_op.
+    // Mapping (see elf_to_json_gen decodeJTypeSemantic): JAL -> JTYPE_JAL / JTYPE_JAL_WB
+    if opcode != OPCODE_JAL {
+        printf "[ERROR] invalid J-type opcode\n"
+        fail
+    }
+
+    if compute_op != JTYPE_JAL && compute_op != JTYPE_JAL_WB {
+            printf "[ERROR] compute_op mismatch\n"
+            fail
+        }
+    }
+
 
     imm20::imm10_1::imm11::imm19_12::rd = instruction_parameters
     var imm21:u21 = ((imm20::imm19_12::imm11::imm10_1) as u21) << 1
@@ -187,7 +207,12 @@ fn check_u_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
     }
 }
 
-fn check_s_type(instruction_parameters:u25, compute_op:ComputeOp, rs1_decoded:Register, rs2_decoded:Register, imm_decoded:DoubleWord) {
+fn check_s_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rs1_decoded:Register, rs2_decoded:Register, imm_decoded:DoubleWord) {
+    if opcode != OPCODE_STORE {
+        printf "[ERROR] invalid S-type opcode\n"
+        fail
+    }
+
     var imm_sign:u1
     var funct3:Funct3
     var rs1:Register

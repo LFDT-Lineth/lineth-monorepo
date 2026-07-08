@@ -25,42 +25,42 @@ fn predecoding_check<registers, ram, state_row0, state_row1, state_row2, state_r
 
         // ---------------------------- B-type instructions ----------------------------
         case BRANCH_BEQ: {
-            check_b_type(instruction_parameters, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
+            check_b_type(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
             // Advance PC
             if registers[rs1_decoded] == registers[rs2_decoded] {
                 new_pc = signed_sum_of_double_word(pc, imm_decoded) as Address
             }
         }
         case BRANCH_BNE: {
-            check_b_type(instruction_parameters, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
+            check_b_type(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
             // Advance PC
             if registers[rs1_decoded] != registers[rs2_decoded] {
                 new_pc = signed_sum_of_double_word(pc, imm_decoded) as Address
             }
         }
         case BRANCH_BLT: {
-            check_b_type(instruction_parameters, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
+            check_b_type(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
             // Advance PC
             if signed_LT(registers[rs1_decoded], registers[rs2_decoded]) == 1 {
                 new_pc = signed_sum_of_double_word(pc, imm_decoded) as Address
             }
         }
         case BRANCH_BGE: {
-            check_b_type(instruction_parameters, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
+            check_b_type(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
             // Advance PC
             if signed_LT(registers[rs1_decoded], registers[rs2_decoded]) == 0 {
                 new_pc = signed_sum_of_double_word(pc, imm_decoded) as Address
             }
         }
         case BRANCH_BLTU: {
-            check_b_type(instruction_parameters, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
+            check_b_type(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
             // Advance PC
             if registers[rs1_decoded] < registers[rs2_decoded] {
                 new_pc = signed_sum_of_double_word(pc, imm_decoded) as Address
             }
         }
         case BRANCH_BGEU: {
-            check_b_type(instruction_parameters, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
+            check_b_type(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
             // Advance PC
             if registers[rs1_decoded] >= registers[rs2_decoded] {
                 new_pc = signed_sum_of_double_word(pc, imm_decoded) as Address
@@ -520,12 +520,12 @@ fn predecoding_check<registers, ram, state_row0, state_row1, state_row2, state_r
         }
         // ---------------------------- J-type instructions ----------------------------
         case JTYPE_JAL: {
-            check_j_type_operands(instruction_parameters, rs1_decoded, rd_decoded, imm_decoded)
+            check_j_type(instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
             // Advance PC
             new_pc = signed_sum_of_double_word(pc, imm_decoded) as Address
         }
         case JTYPE_JAL_WB: {
-            check_j_type_operands(instruction_parameters, rs1_decoded, rd_decoded, imm_decoded)
+            check_j_type(instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
             // Write into register
             registers[rd_decoded] = signed_sum_of_double_word(pc, 4)
             // Advance PC
@@ -534,22 +534,22 @@ fn predecoding_check<registers, ram, state_row0, state_row1, state_row2, state_r
 
         // ---------------------------- S-type instructions ----------------------------
         case STYPE_STORE8: {
-            check_s_type(instruction_parameters, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
+            check_s_type(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
             // Write to memory
             write_8(signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) as Address, (registers[rs2_decoded] & (0xFF as u64)) as u8)
         }
         case STYPE_STORE16: {
-            check_s_type(instruction_parameters, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
+            check_s_type(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
             // Write to memory
             write_16(signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) as Address, (registers[rs2_decoded] & (0xFFFF as u64)) as u16)
         }
         case STYPE_STORE32: {
-            check_s_type(instruction_parameters, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
+            check_s_type(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
             // Write to memory
             write_32(signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) as Address, (registers[rs2_decoded] & (0xFFFFFFFF as u64)) as u32)
         }
         case STYPE_STORE64: {
-            check_s_type(instruction_parameters, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
+            check_s_type(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
             // Write to memory
             write_64(signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) as Address, registers[rs2_decoded])
         }
