@@ -8,6 +8,7 @@
 - *(coordinator)* First draft of risc-v prover client (#3269)
 - *(coordinator)* Add config schema walker for docs generation (#3488)
 - *(coordinator)* [**breaking**] Web3j upgrade to onboard 7594 support (#3514)
+- *(coordinator)* Add inital block number config for finalized state search (#3534)
 
 ### 🐛 Bug Fixes
 
