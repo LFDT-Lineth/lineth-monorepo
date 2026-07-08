@@ -1,6 +1,6 @@
 include "predecoding.zkc"
 
-fn main() {
+fn main<registers, ram, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d, padded_input_block>() {
     var entry_point:Address
     var blobs_count:u64
     entry_point, blobs_count = entry_point_and_blobs_count[0]

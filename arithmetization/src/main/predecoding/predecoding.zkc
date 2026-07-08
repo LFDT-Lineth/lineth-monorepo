@@ -1,8 +1,7 @@
-include "../utils/sign_extend.zkc"
 include "../riscv/interpreter.zkc"
 include "check.zkc"
 
-fn predecoding_check(index:u64, instruction:Instruction, pc:Address) -> (new_pc:Address) {
+fn predecoding_check<registers, ram, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d, padded_input_block>(index:u64, instruction:Instruction, pc:Address) -> (new_pc:Address) {
 
     var compute_op:ComputeOp
     var imm_decoded:DoubleWord
@@ -126,7 +125,7 @@ fn predecoding_check(index:u64, instruction:Instruction, pc:Address) -> (new_pc:
         case OP_SLTIU_WB: {
             check_i_type_operands(instruction_parameters, rs1_decoded, rd_decoded, imm_decoded)
             // Write into register
-            registers[rd_decoded] = (registers[rs1_decoded] < imm_decoded) as DoubleWord
+            registers[rd_decoded] = registers[rs1_decoded] < imm_decoded ? 1:0
         }
         case OP_XORI_WB: {
             check_i_type_operands(instruction_parameters, rs1_decoded, rd_decoded, imm_decoded)
@@ -236,7 +235,7 @@ fn predecoding_check(index:u64, instruction:Instruction, pc:Address) -> (new_pc:
         case RTYPE_SLTU_WB: {
             check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
             // Write into register
-            registers[rd_decoded] = (registers[rs1_decoded] < registers[rs2_decoded]) as DoubleWord
+            registers[rd_decoded] = registers[rs1_decoded] < registers[rs2_decoded] ? 1:0
         }
         case RTYPE_XOR_WB: {
             check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
