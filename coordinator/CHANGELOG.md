@@ -1,8 +1,13 @@
-## [unreleased]
+## [1.0.0-fast_log_search_2] - 2026-07-08
 
 ### 🚀 Features
 
 - *(coordinator)* [**breaking**] Web3j upgrade to onboard 7594 support (#3514)
+- *(coordinator)* Add inital block number config for finalized state search
+
+### 🐛 Bug Fixes
+
+- *(coordinator)* Optimize fallback of log search
 ## [0.3.0] - 2026-07-07
 
 ### 🚀 Features
