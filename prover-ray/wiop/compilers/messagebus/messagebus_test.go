@@ -20,7 +20,7 @@ func makeVec(vals ...uint64) *wiop.ConcreteVector {
 // round.
 func runRound(rt *wiop.Runtime) {
 	for _, a := range rt.CurrentRound().ProverActions {
-		a.Run(*rt)
+		a.Run(rt)
 	}
 }
 
@@ -29,7 +29,7 @@ func runRound(rt *wiop.Runtime) {
 func checkAllVerifierActions(rt *wiop.Runtime) error {
 	for _, r := range rt.System.Rounds {
 		for _, va := range r.VerifierActions {
-			if err := va.Check(*rt); err != nil {
+			if err := va.Check(rt); err != nil {
 				return err
 			}
 		}
@@ -47,7 +47,7 @@ type fixedSeedHook struct {
 	seed field.Octuplet
 }
 
-func (h *fixedSeedHook) Run(rt wiop.Runtime) {
+func (h *fixedSeedHook) Run(rt *wiop.Runtime) {
 	rt.SetFSState(h.seed)
 }
 

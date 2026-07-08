@@ -155,7 +155,7 @@ type CheckResultIsOne struct {
 }
 
 // Check implements [wiop.VerifierAction].
-func (c *CheckResultIsOne) Check(rt wiop.Runtime) error {
+func (c *CheckResultIsOne) Check(rt *wiop.Runtime) error {
 	v := rt.GetCellValue(c.GrandProduct.Result)
 	if !v.IsOne() {
 		return fmt.Errorf(

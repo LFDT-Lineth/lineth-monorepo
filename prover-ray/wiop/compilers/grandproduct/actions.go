@@ -17,7 +17,7 @@ type assignResultAction struct {
 }
 
 // Run implements [wiop.ProverAction].
-func (a *assignResultAction) Run(rt wiop.Runtime) {
+func (a *assignResultAction) Run(rt *wiop.Runtime) {
 	if !a.gp.IsAlreadyAssigned(rt) {
 		a.gp.SelfAssign(rt)
 	}
@@ -32,7 +32,7 @@ type proverAction struct {
 }
 
 // Run implements [wiop.ProverAction].
-func (a *proverAction) Run(rt wiop.Runtime) {
+func (a *proverAction) Run(rt *wiop.Runtime) {
 	for _, e := range a.entries {
 		n := e.zCol.Module.RuntimeSize(rt)
 		z := computePrefixProduct(rt, e.zNum, e.zDen, n)
@@ -47,7 +47,7 @@ func (a *proverAction) Run(rt wiop.Runtime) {
 // over the n rows of a packed factor group. The denominator is batch-inverted
 // once. Panics on a zero denominator, since the β-randomisation is supposed to
 // make every denominator non-zero.
-func computePrefixProduct(rt wiop.Runtime, zNum, zDen wiop.Expression, n int) []field.Ext {
+func computePrefixProduct(rt *wiop.Runtime, zNum, zDen wiop.Expression, n int) []field.Ext {
 	num := evaluateAsExtVec(rt, zNum, n)
 	den := evaluateAsExtVec(rt, zDen, n)
 	invDen := field.BatchInvertExt(den)
@@ -69,7 +69,7 @@ func computePrefixProduct(rt wiop.Runtime, zNum, zDen wiop.Expression, n int) []
 
 // evaluateAsExtVec evaluates expr against the runtime and returns a length-n
 // extension-field slice. Scalar expressions are broadcast to every position.
-func evaluateAsExtVec(rt wiop.Runtime, expr wiop.Expression, n int) []field.Ext {
+func evaluateAsExtVec(rt *wiop.Runtime, expr wiop.Expression, n int) []field.Ext {
 	out := make([]field.Ext, n)
 
 	if !expr.IsMultiValued() {
@@ -127,7 +127,7 @@ type FinalProductCheck struct {
 }
 
 // Check implements [wiop.VerifierAction].
-func (f *FinalProductCheck) Check(rt wiop.Runtime) error {
+func (f *FinalProductCheck) Check(rt *wiop.Runtime) error {
 	var prod field.Ext
 	prod.SetOne()
 	for _, e := range f.Entries {

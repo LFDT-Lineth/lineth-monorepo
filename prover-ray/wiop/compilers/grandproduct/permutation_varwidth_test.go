@@ -45,7 +45,7 @@ func TestCompile_Permutation_MixedWidth_Balanced(t *testing.T) {
 
 	grandproduct.Compile(sys)
 
-	proof := sys.Prove(func(rt *wiop.Runtime) {
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
 		rt.AssignColumn(keyA, makeVecU64(1, 2))
 		rt.AssignColumn(valA, makeVecU64(10, 20))
 		rt.AssignColumn(keyB, makeVecU64(2, 1)) // reordering of the width-2 rows
@@ -53,7 +53,7 @@ func TestCompile_Permutation_MixedWidth_Balanced(t *testing.T) {
 		rt.AssignColumn(colA1, makeVecU64(5, 6))
 		rt.AssignColumn(colB1, makeVecU64(6, 5)) // reordering of the width-1 rows
 	})
-	require.NoError(t, sys.Verify(proof),
+	require.NoError(t, sys.Verify(proof, pub),
 		"a mixed-width permutation whose per-width sub-groups match must be accepted")
 }
 
@@ -81,11 +81,11 @@ func TestCompile_Permutation_MixedWidth_SentinelPreventsAliasing(t *testing.T) {
 
 	grandproduct.Compile(sys)
 
-	proof := sys.Prove(func(rt *wiop.Runtime) {
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
 		rt.AssignColumn(colA1, makeVecU64(5, 6))
 		rt.AssignColumn(hiB, makeVecU64(0, 0))
 		rt.AssignColumn(loB, makeVecU64(5, 6))
 	})
-	assert.Error(t, sys.Verify(proof),
+	assert.Error(t, sys.Verify(proof, pub),
 		"the length sentinel must stop a width-2 (0,v) row from aliasing a width-1 v row")
 }

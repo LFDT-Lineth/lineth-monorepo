@@ -41,8 +41,8 @@ func TestCompile_Permutation_Balanced(t *testing.T) {
 		rt.AssignColumn(colA, makeVec(10, 20, 30, 40))
 		rt.AssignColumn(colB, makeVec(40, 10, 30, 20)) // a reordering of A
 
-		drive(&rt)
-		require.NoError(t, checkAllVerifierActions(&rt),
+		drive(rt)
+		require.NoError(t, checkAllVerifierActions(rt),
 			"a balanced permutation must be accepted")
 	})
 }
@@ -69,8 +69,8 @@ func TestCompile_Permutation_Unbalanced(t *testing.T) {
 		rt.AssignColumn(colA, makeVec(10, 20, 30, 40))
 		rt.AssignColumn(colB, makeVec(40, 10, 30, 99)) // 20 replaced by 99
 
-		drive(&rt)
-		assert.Error(t, checkAllVerifierActions(&rt),
+		drive(rt)
+		assert.Error(t, checkAllVerifierActions(rt),
 			"a non-permutation must be rejected")
 	})
 }
@@ -105,8 +105,8 @@ func TestCompile_Permutation_WithSelectorBalanced(t *testing.T) {
 	rt.AssignColumn(colB, makeVec(66, 20, 10, 55))
 	rt.AssignColumn(selB, makeVec(0, 1, 1, 0))
 
-	drive(&rt)
-	require.NoError(t, checkAllVerifierActions(&rt),
+	drive(rt)
+	require.NoError(t, checkAllVerifierActions(rt),
 		"a filtered permutation with matching selected multisets must be accepted")
 }
 
@@ -138,8 +138,8 @@ func TestCompile_Permutation_WithSelectorUnbalanced(t *testing.T) {
 	rt.AssignColumn(colB, makeVec(10, 30, 20, 40))
 	rt.AssignColumn(selB, makeVec(1, 1, 0, 0)) // selected {10, 30} ≠ {10, 20}
 
-	drive(&rt)
-	assert.Error(t, checkAllVerifierActions(&rt),
+	drive(rt)
+	assert.Error(t, checkAllVerifierActions(rt),
 		"a filtered permutation with mismatched selected multisets must be rejected")
 }
 

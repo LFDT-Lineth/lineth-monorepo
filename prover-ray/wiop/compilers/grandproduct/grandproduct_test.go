@@ -48,8 +48,8 @@ func TestCompile_WioptestCompleteness(t *testing.T) {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
 			grandproduct.Compile(sc.Sys)
-			proof := sc.Sys.Prove(sc.AssignHonest)
-			require.NoError(t, sc.Sys.Verify(proof),
+			proof, pub := sc.Sys.Prove(sc.AssignHonest)
+			require.NoError(t, sc.Sys.Verify(proof, pub),
 				"compiled verifier must accept an honest permutation witness")
 		})
 	}
@@ -63,8 +63,8 @@ func TestCompile_WioptestSoundness(t *testing.T) {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
 			grandproduct.Compile(sc.Sys)
-			proof := sc.Sys.Prove(sc.AssignInvalid)
-			assert.Error(t, sc.Sys.Verify(proof),
+			proof, pub := sc.Sys.Prove(sc.AssignInvalid)
+			assert.Error(t, sc.Sys.Verify(proof, pub),
 				"compiled verifier must reject a non-permutation witness")
 		})
 	}
@@ -166,26 +166,26 @@ func TestCompile_TamperResult(t *testing.T) {
 	require.Len(t, sys.GrandProducts, 1)
 	result := sys.GrandProducts[0].Result
 	for rt.CurrentRound().ID < result.Round().ID {
-		runRound(&rt)
+		runRound(rt)
 		rt.AdvanceRound()
 	}
 	rt.AssignCell(result, field.ElemFromBase(field.NewFromString("12345")))
-	runRound(&rt)
+	runRound(rt)
 
-	assert.Error(t, checkAllVerifierActions(&rt),
+	assert.Error(t, checkAllVerifierActions(rt),
 		"a tampered grand-product Result must be rejected")
 }
 
 func runRound(rt *wiop.Runtime) {
 	for _, a := range rt.CurrentRound().ProverActions {
-		a.Run(*rt)
+		a.Run(rt)
 	}
 }
 
 func checkAllVerifierActions(rt *wiop.Runtime) error {
 	for _, r := range rt.System.Rounds {
 		for _, va := range r.VerifierActions {
-			if err := va.Check(*rt); err != nil {
+			if err := va.Check(rt); err != nil {
 				return err
 			}
 		}

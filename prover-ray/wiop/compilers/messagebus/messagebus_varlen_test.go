@@ -49,8 +49,8 @@ func TestCompile_VariableLength_Permutation_Balanced(t *testing.T) {
 		rt.AssignColumn(colR, makeVec(40, 10, 77, 30, 66, 20, 55, 44))
 		rt.AssignColumn(selR, makeVec(1, 1, 0, 1, 0, 1, 0, 0))
 
-		drive(&rt)
-		require.NoError(t, checkAllVerifierActions(&rt),
+		drive(rt)
+		require.NoError(t, checkAllVerifierActions(rt),
 			"a balanced permutation bus with different-length participants must be accepted")
 	})
 }
@@ -86,8 +86,8 @@ func TestCompile_VariableLength_Permutation_Unbalanced(t *testing.T) {
 		rt.AssignColumn(colR, makeVec(40, 10, 77, 30, 66, 88, 55, 44))
 		rt.AssignColumn(selR, makeVec(1, 1, 0, 1, 0, 1, 0, 0))
 
-		drive(&rt)
-		assert.Error(t, checkAllVerifierActions(&rt),
+		drive(rt)
+		assert.Error(t, checkAllVerifierActions(rt),
 			"a permutation bus whose selected receiver multiset differs from the sender must be rejected")
 	})
 }
@@ -126,8 +126,8 @@ func TestCompile_MixedWidth_LeadingOneDoesNotAlias(t *testing.T) {
 		rt.AssignColumn(hiR, makeVec(1, 1)) // leading coordinate = 1
 		rt.AssignColumn(loR, makeVec(5, 6))
 
-		drive(&rt)
-		assert.Error(t, checkAllVerifierActions(&rt),
+		drive(rt)
+		assert.Error(t, checkAllVerifierActions(rt),
 			"a data value of 1 in the sentinel-adjacent column must not alias a lower-width sentinel")
 	})
 }

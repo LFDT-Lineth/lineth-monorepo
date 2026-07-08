@@ -48,19 +48,19 @@ func (gp *GrandProduct) Round() *Round { return gp.Result.Round() }
 
 // IsAlreadyAssigned implements [AssignableQuery]. Reports whether the Result
 // cell already holds a runtime assignment.
-func (gp *GrandProduct) IsAlreadyAssigned(rt Runtime) bool {
+func (gp *GrandProduct) IsAlreadyAssigned(rt *Runtime) bool {
 	return rt.HasCellAssignment(gp.Result)
 }
 
 // SelfAssign implements [AssignableQuery]. Computes the grand product from the
 // runtime column assignments and writes it into Result.
-func (gp *GrandProduct) SelfAssign(rt Runtime) {
+func (gp *GrandProduct) SelfAssign(rt *Runtime) {
 	rt.AssignCell(gp.Result, gp.compute(rt))
 }
 
 // Check implements [Query]. Verifies that the Result cell holds the correct
 // grand-product value. Returns an error if the claimed Result does not match.
-func (gp *GrandProduct) Check(rt Runtime) error {
+func (gp *GrandProduct) Check(rt *Runtime) error {
 	got := rt.GetCellValue(gp.Result)
 	want := gp.compute(rt)
 	diff := want.Sub(got)
@@ -76,7 +76,7 @@ func (gp *GrandProduct) Check(rt Runtime) error {
 // compute evaluates ( ∏ numerator entries ) / ( ∏ denominator entries ) over
 // every row of every factor, padding rows included. It is the shared core of
 // [SelfAssign] and [Check]. Panics if the denominator product is zero.
-func (gp *GrandProduct) compute(rt Runtime) field.Gen {
+func (gp *GrandProduct) compute(rt *Runtime) field.Gen {
 	num := field.ElemOne()
 	for _, e := range gp.Numerators {
 		cv := e.EvaluateVector(rt)

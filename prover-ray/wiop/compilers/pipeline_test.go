@@ -139,16 +139,16 @@ func TestFullPipeline_PermutationScenarios(t *testing.T) {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
 			compileFullPipeline(sc.Sys)
-			proof := sc.Sys.Prove(sc.AssignHonest)
-			require.NoError(t, sc.Sys.Verify(proof),
+			proof, pub := sc.Sys.Prove(sc.AssignHonest)
+			require.NoError(t, sc.Sys.Verify(proof, pub),
 				"full pipeline must accept an honest permutation witness")
 		})
 
 		t.Run(sc.Name+"/Soundness", func(t *testing.T) {
 			sc := build()
 			compileFullPipeline(sc.Sys)
-			proof := sc.Sys.Prove(sc.AssignInvalid)
-			assert.Error(t, sc.Sys.Verify(proof),
+			proof, pub := sc.Sys.Prove(sc.AssignInvalid)
+			assert.Error(t, sc.Sys.Verify(proof, pub),
 				"full pipeline must reject a non-permutation witness")
 		})
 	}
@@ -168,8 +168,8 @@ func TestFullPipeline_LogDerivativeSumTamperedResult(t *testing.T) {
 	sc := wioptest.NewLDSSingleFractionAllOnesScenario()
 	compileFullPipeline(sc.Sys)
 
-	proof := sc.Sys.Prove(sc.AssignWitness)
-	require.NoError(t, sc.Sys.Verify(proof),
+	proof, pub := sc.Sys.Prove(sc.AssignWitness)
+	require.NoError(t, sc.Sys.Verify(proof, pub),
 		"sanity: honest log-derivative proof must verify")
 
 	require.NotEmpty(t, sc.Sys.LogDerivativeSums,
@@ -177,7 +177,7 @@ func TestFullPipeline_LogDerivativeSumTamperedResult(t *testing.T) {
 	result := sc.Sys.LogDerivativeSums[0].Result
 	proof.Cells[result.Context.ID] = field.ElemFromBase(field.NewFromString("123456"))
 
-	assert.Error(t, sc.Sys.Verify(proof),
+	assert.Error(t, sc.Sys.Verify(proof, pub),
 		"a tampered LogDerivativeSum Result must be rejected by the full pipeline")
 }
 
@@ -199,8 +199,8 @@ func TestFullPipeline_LogDerivativeSumTamperedZ(t *testing.T) {
 	zCols := newExtensionColumns(sc.Sys, before)
 	require.NotEmpty(t, zCols, "logderivativesum must add Z columns")
 
-	proof := sc.Sys.Prove(sc.AssignWitness)
-	require.NoError(t, sc.Sys.Verify(proof),
+	proof, pub := sc.Sys.Prove(sc.AssignWitness)
+	require.NoError(t, sc.Sys.Verify(proof, pub),
 		"honest log-derivative witness must verify through the full pipeline")
 
 	z := zCols[0]
@@ -211,7 +211,7 @@ func TestFullPipeline_LogDerivativeSumTamperedZ(t *testing.T) {
 	one := field.OneExt()
 	ext[1].Add(&ext[1], &one) // interior row 1; endpoint (last row) left intact
 
-	assert.Error(t, sc.Sys.Verify(proof),
+	assert.Error(t, sc.Sys.Verify(proof, pub),
 		"the full pipeline must reject a Z column whose interior recurrence is violated")
 }
 
@@ -234,8 +234,8 @@ func TestFullPipeline_PermutationTamperedZ(t *testing.T) {
 	require.NotEmpty(t, zCols, "grandproduct must add Z columns")
 
 	// Sanity: the honest proof verifies.
-	proof := sc.Sys.Prove(sc.AssignHonest)
-	require.NoError(t, sc.Sys.Verify(proof),
+	proof, pub := sc.Sys.Prove(sc.AssignHonest)
+	require.NoError(t, sc.Sys.Verify(proof, pub),
 		"honest permutation witness must verify through the full pipeline")
 
 	// Corrupt one interior row of a Z column, leaving its endpoint (last row)
@@ -249,7 +249,7 @@ func TestFullPipeline_PermutationTamperedZ(t *testing.T) {
 	one := field.OneExt()
 	ext[1].Add(&ext[1], &one) // interior row 1; endpoint (last row) left intact
 
-	assert.Error(t, sc.Sys.Verify(proof),
+	assert.Error(t, sc.Sys.Verify(proof, pub),
 		"the full pipeline must reject a Z column whose interior recurrence is violated")
 }
 

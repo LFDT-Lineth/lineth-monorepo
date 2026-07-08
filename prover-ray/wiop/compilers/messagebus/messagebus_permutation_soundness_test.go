@@ -79,8 +79,8 @@ func TestCompile_Permutation_MultiColumnTuples(t *testing.T) {
 		rt.AssignColumn(keyB, makeVec(3, 1, 4, 2))
 		rt.AssignColumn(valB, makeVec(30, 10, 40, 20))
 
-		drive(&rt)
-		require.NoError(t, checkAllVerifierActions(&rt),
+		drive(rt)
+		require.NoError(t, checkAllVerifierActions(rt),
 			"a balanced width-2 permutation must be accepted")
 	})
 }
@@ -113,8 +113,8 @@ func TestCompile_Permutation_MultiColumnTuples_Unbalanced(t *testing.T) {
 		rt.AssignColumn(keyB, makeVec(1, 2, 3, 4))
 		rt.AssignColumn(valB, makeVec(10, 21, 30, 40)) // (2,21) is not a sent tuple
 
-		drive(&rt)
-		assert.Error(t, checkAllVerifierActions(&rt),
+		drive(rt)
+		assert.Error(t, checkAllVerifierActions(rt),
 			"a width-2 permutation with a mismatched tuple must be rejected")
 	})
 }
@@ -142,8 +142,8 @@ func TestCompile_Permutation_TamperedValueFailsInShardCheck(t *testing.T) {
 		rt.AssignColumn(colA, makeVec(10, 20, 30, 40))
 		rt.AssignColumn(colB, makeVec(10, 21, 30, 40)) // wrong: row 1 holds 21, not 20
 
-		drive(&rt)
-		assert.Error(t, checkAllVerifierActions(&rt),
+		drive(rt)
+		assert.Error(t, checkAllVerifierActions(rt),
 			"verifier must reject when a receive row's value does not appear in the send multiset")
 	})
 }
@@ -175,8 +175,8 @@ func TestCompile_Permutation_TamperedFilterFailsInShardCheck(t *testing.T) {
 		rt.AssignColumn(selA, makeVec(1, 0, 1, 1)) // sender filters out row 1 (value 20)
 		rt.AssignColumn(colB, makeVec(10, 20, 30, 40))
 
-		drive(&rt)
-		assert.Error(t, checkAllVerifierActions(&rt),
+		drive(rt)
+		assert.Error(t, checkAllVerifierActions(rt),
 			"verifier must reject when the send-side selector drops a row the receive side still claims")
 	})
 }
@@ -209,8 +209,8 @@ func TestCompile_Permutation_MultipleSendersOneReceiver(t *testing.T) {
 		rt.AssignColumn(colS2, makeVec(30, 40))
 		rt.AssignColumn(colR, makeVec(40, 10, 30, 20)) // union of both senders, reordered
 
-		drive(&rt)
-		require.NoError(t, checkAllVerifierActions(&rt),
+		drive(rt)
+		require.NoError(t, checkAllVerifierActions(rt),
 			"two senders balancing one receiver on the union multiset must be accepted")
 	})
 }
@@ -248,8 +248,8 @@ func TestCompile_Permutation_TwoHandlesIndependent(t *testing.T) {
 		rt.AssignColumn(colC, makeVec(100, 200))
 		rt.AssignColumn(colD, makeVec(200, 100)) // reordering of beta
 
-		drive(&rt)
-		require.NoError(t, checkAllVerifierActions(&rt),
+		drive(rt)
+		require.NoError(t, checkAllVerifierActions(rt),
 			"two independent balanced handles sharing (α, β) must both be accepted")
 	})
 }
@@ -299,8 +299,8 @@ func TestCompile_Permutation_MixedWidth_Balanced(t *testing.T) {
 		rt.AssignColumn(colS1, makeVec(5, 6))
 		rt.AssignColumn(colR1, makeVec(6, 5)) // reordering of the width-1 rows
 
-		drive(&rt)
-		require.NoError(t, checkAllVerifierActions(&rt),
+		drive(rt)
+		require.NoError(t, checkAllVerifierActions(rt),
 			"a handle mixing width-1 and width-2 participants that balance internally must be accepted")
 	})
 }
@@ -335,8 +335,8 @@ func TestCompile_Permutation_MixedWidth_SentinelPreventsAliasing(t *testing.T) {
 		rt.AssignColumn(hiR, makeVec(0, 0))
 		rt.AssignColumn(loR, makeVec(5, 6))
 
-		drive(&rt)
-		assert.Error(t, checkAllVerifierActions(&rt),
+		drive(rt)
+		assert.Error(t, checkAllVerifierActions(rt),
 			"the length sentinel must stop a width-2 (0,v) receive from aliasing a width-1 v send")
 	})
 }
@@ -376,8 +376,8 @@ func TestCompile_Permutation_DynamicModule_Balanced(t *testing.T) {
 			rt.AssignColumn(colA, makeVec(tc.send...))
 			rt.AssignColumn(colB, makeVec(tc.recvPerm...))
 
-			drive(&rt)
-			require.NoError(t, checkAllVerifierActions(&rt),
+			drive(rt)
+			require.NoError(t, checkAllVerifierActions(rt),
 				"a balanced permutation on a dynamic module must be accepted at any runtime size")
 		})
 	}
@@ -407,8 +407,8 @@ func TestCompile_Permutation_DynamicModule_TamperedValueFails(t *testing.T) {
 	rt.AssignColumn(colA, makeVec(10, 20, 30, 40))
 	rt.AssignColumn(colB, makeVec(10, 21, 30, 40)) // 21 is not a sent value
 
-	drive(&rt)
-	assert.Error(t, checkAllVerifierActions(&rt),
+	drive(rt)
+	assert.Error(t, checkAllVerifierActions(rt),
 		"verifier must reject a tampered receive value on a dynamic-module permutation bus")
 }
 
@@ -440,8 +440,8 @@ func TestCompile_Permutation_DynamicModule_TamperedFilterFails(t *testing.T) {
 	rt.AssignColumn(selA, makeVec(1, 0, 1, 1)) // sender filters out row 1 (value 20)
 	rt.AssignColumn(colB, makeVec(10, 20, 30, 40))
 
-	drive(&rt)
-	assert.Error(t, checkAllVerifierActions(&rt),
+	drive(rt)
+	assert.Error(t, checkAllVerifierActions(rt),
 		"verifier must reject an asymmetric send-side selector on a dynamic-module permutation bus")
 }
 
@@ -480,7 +480,7 @@ func TestCheckHandleSumInShard_Permutation_Expected(t *testing.T) {
 		rt.AssignColumn(colA, makeVec(10, 20, 30, 40))
 		rt.AssignColumn(colB, makeVec(40, 10, 30, 20)) // reordering → product one
 
-		drive(&rt)
+		drive(rt)
 
 		// The single GrandProduct query is this shard's product on the handle.
 		require.Len(t, sys.GrandProducts, 1, "single-shard Compile must emit exactly one GrandProduct per handle")
