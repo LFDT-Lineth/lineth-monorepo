@@ -143,11 +143,25 @@ func Compile(sys *wiop.System) {
 	}
 
 	// One in-shard verifier action per handle: this shard's product on the
-	// handle must equal one (in the unsharded case). Suppressed when
-	// System.MessageBusSkipInShardCheck is set, so a downstream cross-shard
-	// layer can own the consistency check instead.
-	if !sys.MessageBusSkipInShardCheck {
-		for _, h := range handles {
+	// handle must equal one (in the unsharded case). Suppressed when every
+	// entry for the handle has SkipInShardCheck set, so a downstream
+	// cross-shard layer can own the consistency check instead. All entries for
+	// a handle must agree on SkipInShardCheck — the compiler panics on a mismatch.
+	for _, h := range handles {
+		entries := byHandle[h]
+		skip := entries[0].SkipInShardCheck
+		for _, e := range entries[1:] {
+			if e.SkipInShardCheck != skip {
+				panic(fmt.Sprintf(
+					"wiop/compilers/messagebus: entries for handle %q disagree on SkipInShardCheck: "+
+						"%q has %v but %q has %v",
+					h,
+					entries[0].Context().Path(), skip,
+					e.Context().Path(), e.SkipInShardCheck,
+				))
+			}
+		}
+		if !skip {
 			resultRound.RegisterVerifierAction(&CheckHandleSumInShard{
 				Handle:   h,
 				Cell:     cellByHandle[h],

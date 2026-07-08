@@ -88,6 +88,17 @@ type MessageBus struct {
 	// received. The Selector field of Tab acts as a per-row filter and may be
 	// nil.
 	Tab Table
+	// SkipInShardCheck controls whether the messagebus compiler registers a
+	// per-handle in-shard verifier action ([messagebus.CheckHandleSumInShard])
+	// for the handle this entry belongs to. When false (the default) the
+	// compiler registers the action, asserting the per-handle GrandProduct
+	// equals one on this shard. Set to true when a downstream cross-shard layer
+	// owns the consistency check and the in-shard product must remain unasserted
+	// so it can be carried over to the cross-shard identity.
+	//
+	// All entries that share the same Handle must agree on this field — the
+	// compiler panics on a mismatch.
+	SkipInShardCheck bool
 }
 
 // Round implements [Query]. Returns the latest [Round] across every column in

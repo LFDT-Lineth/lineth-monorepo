@@ -454,25 +454,25 @@ func TestCompile_Permutation_DynamicModule_TamperedFilterFails(t *testing.T) {
 //  1. Builds a balanced single-handle pipeline so the GrandProduct Result cell
 //     — this shard's product on the handle — is guaranteed to be one.
 //  2. Suppresses Compile's auto-registered action via
-//     [wiop.System.MessageBusSkipInShardCheck].
+//     [wiop.MessageBus.SkipInShardCheck] on each entry.
 //  3. Constructs CheckHandleSumInShard directly with two Expected values:
 //     one (matches the actual product) and zero (does not), and asserts Check
 //     accepts/rejects accordingly.
 func TestCheckHandleSumInShard_Permutation_Expected(t *testing.T) {
 	runWithAndWithoutHook(t, func(t *testing.T, sys *wiop.System, r0 *wiop.Round) {
 		t.Helper()
-		// Own the in-shard check ourselves so Compile doesn't pre-register one.
-		sys.MessageBusSkipInShardCheck = true
-
 		modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 		modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
 		colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
 		colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
 
-		sys.NewMessageBusSend(
+		// Own the in-shard check ourselves so Compile doesn't pre-register one.
+		send := sys.NewMessageBusSend(
 			sys.Context.Childf("send-A"), "shard", "ping", wiop.NewTable(colA.View()))
-		sys.NewMessageBusReceive(
+		recv := sys.NewMessageBusReceive(
 			sys.Context.Childf("recv-B"), "shard", "ping", wiop.NewTable(colB.View()))
+		send.SkipInShardCheck = true
+		recv.SkipInShardCheck = true
 
 		compilePermutationBus(sys)
 
@@ -510,5 +510,105 @@ func TestCheckHandleSumInShard_Permutation_Expected(t *testing.T) {
 			"error must name the handle for diagnostics")
 		assert.Contains(t, err.Error(), "expected",
 			"error must include the expected-value context for diagnostics")
+	})
+}
+
+// TestCompile_Permutation_SkipInShardCheck_SuppressesVerifierAction verifies
+// that setting SkipInShardCheck on every entry for a handle prevents the
+// compiler from registering a CheckHandleSumInShard action. As a result, an
+// unbalanced assignment is not caught in-shard — the product is computed but
+// left unasserted, mimicking the cross-shard deferral use-case.
+func TestCompile_Permutation_SkipInShardCheck_SuppressesVerifierAction(t *testing.T) {
+	runWithAndWithoutHook(t, func(t *testing.T, sys *wiop.System, r0 *wiop.Round) {
+		t.Helper()
+		modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
+		modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
+		colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
+		colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+
+		send := sys.NewMessageBusSend(
+			sys.Context.Childf("send-A"), "shard", "ping", wiop.NewTable(colA.View()))
+		recv := sys.NewMessageBusReceive(
+			sys.Context.Childf("recv-B"), "shard", "ping", wiop.NewTable(colB.View()))
+		send.SkipInShardCheck = true
+		recv.SkipInShardCheck = true
+
+		compilePermutationBus(sys)
+
+		rt := wiop.NewRuntime(sys)
+		rt.AssignColumn(colA, makeVec(10, 20, 30, 40))
+		rt.AssignColumn(colB, makeVec(10, 21, 30, 40)) // unbalanced — 21 not in send
+
+		drive(rt)
+		// No CheckHandleSumInShard was registered, so the unbalanced product is not
+		// asserted in-shard and the verifier must not report an error.
+		require.NoError(t, checkAllVerifierActions(rt),
+			"an unbalanced bus whose in-shard check is suppressed must not fail the verifier")
+	})
+}
+
+// TestCompile_Permutation_SkipInShardCheck_MismatchPanics asserts that the
+// compiler panics when entries for the same handle disagree on SkipInShardCheck.
+// The invariant is: all entries sharing a handle must agree on the flag.
+func TestCompile_Permutation_SkipInShardCheck_MismatchPanics(t *testing.T) {
+	sys := wiop.NewSystemf("mb-perm-skip-mismatch")
+	r0 := sys.NewRound()
+	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 2, wiop.PaddingDirectionNone)
+	colA := mod.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
+	colB := mod.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+
+	send := sys.NewMessageBusSend(
+		sys.Context.Childf("send-A"), "shard", "ping", wiop.NewTable(colA.View()))
+	sys.NewMessageBusReceive(
+		sys.Context.Childf("recv-B"), "shard", "ping", wiop.NewTable(colB.View()))
+	// Only the send entry opts out; the receive entry keeps the default (false).
+	send.SkipInShardCheck = true
+
+	assert.Panics(t, func() { messagebus.Compile(sys) },
+		"Compile must panic when entries for the same handle disagree on SkipInShardCheck")
+}
+
+// TestCompile_Permutation_TwoHandles_MixedSkip verifies that two handles in the
+// same system can independently control SkipInShardCheck: one handle defers its
+// in-shard check while the other asserts it. The deferred handle's unbalanced
+// assignment goes undetected in-shard; the asserted handle's balanced assignment
+// is accepted.
+func TestCompile_Permutation_TwoHandles_MixedSkip(t *testing.T) {
+	runWithAndWithoutHook(t, func(t *testing.T, sys *wiop.System, r0 *wiop.Round) {
+		t.Helper()
+		modA := sys.NewSizedModule(sys.Context.Childf("modA"), 2, wiop.PaddingDirectionNone)
+		modB := sys.NewSizedModule(sys.Context.Childf("modB"), 2, wiop.PaddingDirectionNone)
+		modC := sys.NewSizedModule(sys.Context.Childf("modC"), 2, wiop.PaddingDirectionNone)
+		modD := sys.NewSizedModule(sys.Context.Childf("modD"), 2, wiop.PaddingDirectionNone)
+		colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
+		colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+		colC := modC.NewColumn(sys.Context.Childf("C"), wiop.VisibilityOracle, r0)
+		colD := modD.NewColumn(sys.Context.Childf("D"), wiop.VisibilityOracle, r0)
+
+		// "deferred" handle: both entries skip the in-shard check.
+		dSend := sys.NewMessageBusSend(
+			sys.Context.Childf("send-A"), "shard", "deferred", wiop.NewTable(colA.View()))
+		dRecv := sys.NewMessageBusReceive(
+			sys.Context.Childf("recv-B"), "shard", "deferred", wiop.NewTable(colB.View()))
+		dSend.SkipInShardCheck = true
+		dRecv.SkipInShardCheck = true
+
+		// "asserted" handle: default SkipInShardCheck=false, check registered.
+		sys.NewMessageBusSend(
+			sys.Context.Childf("send-C"), "shard", "asserted", wiop.NewTable(colC.View()))
+		sys.NewMessageBusReceive(
+			sys.Context.Childf("recv-D"), "shard", "asserted", wiop.NewTable(colD.View()))
+
+		compilePermutationBus(sys)
+
+		rt := wiop.NewRuntime(sys)
+		rt.AssignColumn(colA, makeVec(1, 2))
+		rt.AssignColumn(colB, makeVec(1, 99)) // unbalanced — but no in-shard check for this handle
+		rt.AssignColumn(colC, makeVec(7, 8))
+		rt.AssignColumn(colD, makeVec(8, 7)) // balanced reordering
+
+		drive(rt)
+		require.NoError(t, checkAllVerifierActions(rt),
+			"the asserted handle must pass and the deferred handle must not be checked in-shard")
 	})
 }
