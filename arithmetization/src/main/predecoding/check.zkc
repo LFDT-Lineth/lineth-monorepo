@@ -158,7 +158,7 @@ fn check_u_type_operands(instruction_parameters:u25, rd_decoded:Register, imm_de
     }
 }
 
-fn check_s_type_operands(instruction_parameters:u25, rs1_decoded:Register, rs2_decoded:Register, imm_decoded:DoubleWord) {
+fn check_s_type(instruction_parameters:u25, compute_op:ComputeOp, rs1_decoded:Register, rs2_decoded:Register, imm_decoded:DoubleWord) {
     var imm_sign:u1
     var funct3:Funct3
     var rs1:Register
@@ -166,8 +166,43 @@ fn check_s_type_operands(instruction_parameters:u25, rs1_decoded:Register, rs2_d
     var uimm5:UImm5
     var uimm6:UImm6
     imm_sign::uimm6::rs2::rs1::funct3::uimm5 = instruction_parameters
-    var imm:DoubleWord = sgn_extension_u12_u64(imm_sign::uimm6::uimm5)
 
+    // Verify the raw funct3 field actually encodes the claimed store compute_op.
+    // Mapping (see elf_to_json_gen decodeSTypeSemantic):
+    //   STORE8=0b000, STORE16=0b001, STORE32=0b010, STORE64=0b011
+    switch funct3 {
+        case 0: {
+            if compute_op != STYPE_STORE8 {
+                printf "[ERROR] compute_op mismatch\n"
+                fail
+            }
+        }
+        case 1: {
+            if compute_op != STYPE_STORE16 {
+                printf "[ERROR] compute_op mismatch\n"
+                fail
+            }
+        }
+        case 2: {
+            if compute_op != STYPE_STORE32 {
+                printf "[ERROR] compute_op mismatch\n"
+                fail
+            }
+        }
+        case 3: {
+            if compute_op != STYPE_STORE64 {
+                printf "[ERROR] compute_op mismatch\n"
+                fail
+            }
+        }
+        default: {
+            printf "[ERROR] invalid S-type funct3\n"
+            fail
+        }
+    }
+
+    var imm:DoubleWord = sgn_extension_u12_u64(imm_sign::uimm6::uimm5)
+    
     if rs1_decoded != rs1 {
         printf "[ERROR] rs1 mismatch\n"
         fail

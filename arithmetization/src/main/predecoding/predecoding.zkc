@@ -534,22 +534,22 @@ fn predecoding_check<registers, ram, state_row0, state_row1, state_row2, state_r
 
         // ---------------------------- S-type instructions ----------------------------
         case STYPE_STORE8: {
-            check_s_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            check_s_type(instruction_parameters, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
             // Write to memory
             write_8(signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) as Address, (registers[rs2_decoded] & (0xFF as u64)) as u8)
         }
         case STYPE_STORE16: {
-            check_s_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            check_s_type(instruction_parameters, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
             // Write to memory
             write_16(signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) as Address, (registers[rs2_decoded] & (0xFFFF as u64)) as u16)
         }
         case STYPE_STORE32: {
-            check_s_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            check_s_type(instruction_parameters, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
             // Write to memory
             write_32(signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) as Address, (registers[rs2_decoded] & (0xFFFFFFFF as u64)) as u32)
         }
         case STYPE_STORE64: {
-            check_s_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            check_s_type(instruction_parameters, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
             // Write to memory
             write_64(signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) as Address, registers[rs2_decoded])
         }
