@@ -297,7 +297,7 @@ type CheckHandleSumInShard struct {
 
 // Check implements [wiop.VerifierAction]. Reads the product cell and
 // returns an error if it differs from [CheckHandleSumInShard.Expected].
-func (h *CheckHandleSumInShard) Check(rt wiop.Runtime) error {
+func (h *CheckHandleSumInShard) Check(rt *wiop.Runtime) error {
 	got := rt.GetCellValue(h.Cell)
 	diff := got.Sub(h.Expected)
 	if !diff.IsZero() {

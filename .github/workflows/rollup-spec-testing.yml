@@ -16,7 +16,7 @@ jobs:
     name: Run rollup spec tests
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
@@ -35,3 +35,4 @@ jobs:
         working-directory: rollup_spec
         run: |
           python -m pytest
+

@@ -10,26 +10,13 @@ package maru.serialization.rlp
 
 import maru.core.BeaconState
 import org.hyperledger.besu.ethereum.rlp.RLPInput
-import org.hyperledger.besu.ethereum.rlp.RLPOutput
 
 class BeaconStateSerDe(
+  beaconStateRLPSerializer: BeaconStateRLPSerializer,
   private val beaconBlockHeaderSerializer: BeaconBlockHeaderSerDe,
   private val validatorSerializer: ValidatorSerDe,
-) : RLPSerDe<BeaconState> {
-  override fun writeTo(
-    value: BeaconState,
-    rlpOutput: RLPOutput,
-  ) {
-    rlpOutput.startList()
-
-    beaconBlockHeaderSerializer.writeTo(value.beaconBlockHeader, rlpOutput)
-    rlpOutput.writeList(value.validators) { validator, output ->
-      validatorSerializer.writeTo(validator, output)
-    }
-
-    rlpOutput.endList()
-  }
-
+) : RLPSerDe<BeaconState>,
+  RLPSerializer<BeaconState> by beaconStateRLPSerializer {
   override fun readFrom(rlpInput: RLPInput): BeaconState {
     rlpInput.enterList()
 

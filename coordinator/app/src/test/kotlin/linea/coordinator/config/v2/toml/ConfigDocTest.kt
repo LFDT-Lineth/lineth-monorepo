@@ -23,6 +23,13 @@ class ConfigDocTest {
     @param:ConfigSection("A documented nested section.")
     val section: SampleToml? = null,
 
+    @param:ConfigSection(
+      description = "A deprecated nested section.",
+      deprecated = true,
+      replacement = "sample.new-section",
+    )
+    val deprecatedSection: SampleToml? = null,
+
     val undocumented: String = "",
   )
 
@@ -51,6 +58,16 @@ class ConfigDocTest {
     val section = params.getValue("section").findAnnotation<ConfigSection>()
     assertThat(section).isNotNull
     assertThat(section!!.description).isEqualTo("A documented nested section.")
+    assertThat(section.deprecated).isFalse()
+    assertThat(section.replacement).isEmpty()
+  }
+
+  @Test
+  fun `ConfigSection carries deprecation metadata`() {
+    val section = params.getValue("deprecatedSection").findAnnotation<ConfigSection>()
+    assertThat(section).isNotNull
+    assertThat(section!!.deprecated).isTrue()
+    assertThat(section.replacement).isEqualTo("sample.new-section")
   }
 
   @Test

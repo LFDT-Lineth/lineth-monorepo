@@ -67,7 +67,7 @@ jobs:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           submodules: false
 
@@ -79,11 +79,11 @@ jobs:
         uses: ./.github/actions/setup-riscv-guests
 
       # exec needs Go twice: zkc's `go install` and elf_to_json_gen's `go run`. The Zig setup above
-      # installs no Go. Pin chosen to match the repo's other Go pins (keep in sync). setup-go@v5 puts
+      # installs no Go. Pin chosen to match the repo's other Go pins (keep in sync). setup-go@v6 sets
       # $(go env GOPATH)/bin on PATH, so `zkc` is found in later steps without adding ~/go/bin
       # manually — the same precedent the repo's existing zkc workflows rely on.
       - name: Install Go
-        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version: '1.24.6'
           cache-dependency-path: "**/*.sum"
@@ -103,5 +103,8 @@ jobs:
       # non-zero under these flags.
       # ZKC_REF= (empty) ensures the install-zkc prereq inside elf-exec is a guaranteed no-op
       # (zkc is already on PATH from the step above; an empty ZKC_REF triggers the skip path).
+      #
+      # TODO: gogen is disabled until it start supporting native arithmetic
       - name: Run l2-execution guest under zkc (gogen, fast, accel keccak)
-        run: make -C riscv-guests/l2-execution exec KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--quiet --gogen --fast"
+        run: make -C riscv-guests/l2-execution exec KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--quiet --fast"
+

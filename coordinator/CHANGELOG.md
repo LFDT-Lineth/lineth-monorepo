@@ -1,8 +1,21 @@
-## [unreleased]
+## [0.3.0] - 2026-07-07
+
+### 🚀 Features
+
+- *(coordinator)* Add config schema walker for docs generation (#3488)
+
+### 🐛 Bug Fixes
+
+- *(coordinator)* Pretty-print startup config logs (#3203)
+- *(coordinator)* Bound eth_getLogs in finalized-state lookup (#3519)
+- *(coordinator)* Bound eth_getLogs in deployment-block lookup (#3520)
+- *(coordinator)* L1FinalizationPriorityFeeCalculator feeLowerBound config (#3517)
+## [0.2.0] - 2026-07-03
 
 ### 🚀 Features
 
 - *(coordinator)* Add config documentation annotations (#3463)
+- *(coordinator)* First draft of risc-v prover client (#3269)
 
 ### 🐛 Bug Fixes
 
@@ -12,6 +25,7 @@
 - *(coordinator)* Drop insecure FileWriter temp-file fallback (CodeQL 21207) (#3413)
 - *(coordinator)* Fixed a flacky test by closing the ftxInvalidityProofService in the ForcedTransactionsApp (#3438)
 - *(coordinator)* Forced transactions concurrency update (#3444)
+- *(coordinator)* Bound eth_getLogs queries to provider block-range limits (#3473)
 
 ### 🚜 Refactor
 
@@ -29,3 +43,4 @@
 - *(coordinator)* Log and message error improvements (#3193)
 - *(coordinator)* Favour generic name ChainSecurityRuleViolation over specific implementation Phylax (#3330)
 - *(coordinator)* Update kotlin to v2.4 (#3454)
+- *(coordinator)* LSP violation fix (#3386)

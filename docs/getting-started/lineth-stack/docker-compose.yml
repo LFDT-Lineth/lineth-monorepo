@@ -50,6 +50,13 @@ volumes:
   blockscout-l2-pg-data:
   lineth-contracts-pnpm-store:
     name: "lineth-stack-contracts-pnpm-store"
+    # External so `docker compose down -v` (used by reset.sh) never deletes the
+    # content-addressed pnpm download cache: fresh boots reinstall node_modules
+    # from the lockfile but resolve tarballs locally (`pnpm install
+    # --prefer-offline`), instead of re-downloading ~1,500 packages from the
+    # npm registry on every reset. Created idempotently by
+    # scripts/bootstrap-artifacts.sh; purge with ./scripts/reset.sh --purge-deps.
+    external: true
   lineth-contracts-root-node-modules:
     name: "lineth-stack-contracts-root-node-modules"
   lineth-contracts-package-node-modules:

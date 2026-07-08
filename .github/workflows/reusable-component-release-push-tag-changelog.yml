@@ -53,12 +53,12 @@ jobs:
       release_version: ${{ steps.prepend-changelog.outputs.next_version }}
       changelog: ${{ steps.prepend-changelog.outputs.changelog_content }}
     steps:
-      # Mint a short-lived token either for the release bot GitHub App to commit the changelog changes 
+      # Mint a short-lived token either for the release bot GitHub App to commit the changelog changes
       # directly bypassin the branch-protection or for PR bot GitHub App to create PR with the changelog changes.
       - name: Generate release or PR bot App token
         id: app-token
         if: ${{ !inputs.upload_changelog }}
-        uses: actions/create-github-app-token@v2
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           app-id: ${{ !inputs.create_pull_request && secrets.RELEASE_BOT_APP_ID || secrets.CREATE_GITHUB_PR_APP_ID }}
           private-key: ${{ !inputs.create_pull_request && secrets.RELEASE_BOT_PRIVATE_KEY || secrets.CREATE_GITHUB_PR_PRIVATE_KEY }}
@@ -77,7 +77,7 @@ jobs:
           echo "user-id=${user_id}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           # Use the App token so subsequent `git push` is authenticated as the App.
           token: ${{ (!inputs.upload_changelog && steps.app-token.outputs.token) ||  github.token }}
@@ -102,7 +102,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Install git-cliff
-        uses: taiki-e/install-action@5f57d6cb7cd20b14a8a27f522884c4bc8a187458 #(v2.75.19)
+        uses: taiki-e/install-action@bffeee26d4db9be238a4ea78d8826604ebcb594d #v2.82.5
         with:
           tool: git-cliff
 
@@ -152,7 +152,7 @@ jobs:
           exit 1
 
       - name: Create pull request
-        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         if: ${{ !inputs.upload_changelog && inputs.create_pull_request }}
         id: create-pull-request
         with:
@@ -164,7 +164,7 @@ jobs:
           add-paths: ${{ inputs.folder-name }}/CHANGELOG.md
 
       - name: Upload CHANGELOG.md artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ inputs.upload_changelog }}
         with:
           name: prepended-changelog-${{ inputs.component-name }}
@@ -187,3 +187,4 @@ jobs:
           git tag -a "${TAG}" -m "${COMPONENT^} release ${TAG}"
           git push origin "${TAG}"
           echo "Pushed ${TAG} pointing at $(git rev-parse HEAD)"
+

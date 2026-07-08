@@ -163,7 +163,7 @@ jobs:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           submodules: false
 
@@ -172,31 +172,31 @@ jobs:
 
       - name: Download Jacoco execution data from coordinator
         if: needs.coordinator.result != 'skipped'
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: jacoco-coordinator-exec
           path: .
       - name: Download Jacoco execution data from linea-sequencer unit tests
         if: needs.linea-sequencer.result != 'skipped'
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: jacoco-linea-sequencer-unit-exec
           path: .
       - name: Download Jacoco execution data from linea-sequencer acceptance tests
         if: needs.linea-sequencer.result != 'skipped'
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: jacoco-linea-sequencer-acceptance-exec
           path: .
       - name: Download Jacoco execution data from staterecovery
         if: needs.staterecovery.result != 'skipped'
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: jacoco-staterecovery-exec
           path: .
       - name: Download Jacoco execution data from transaction-exclusion-api
         if: needs.transaction-exclusion-api.result != 'skipped'
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: jacoco-transaction-exclusion-api-exec
           path: .
@@ -244,3 +244,4 @@ jobs:
     steps:
       - name: Ensure Workflow Success
         run: echo "All jobs were skipped, but workflow succeeds."
+

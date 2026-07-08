@@ -101,7 +101,7 @@ func (mb *MessageBus) Round() *Round {
 // Check implements [Query]. Always returns nil. The per-Handle product
 // identity is inherently cross-query and is discharged by the [messagebus]
 // compiler pass together with the [grandproduct] compiler that follows.
-func (mb *MessageBus) Check(_ Runtime) error { return nil }
+func (mb *MessageBus) Check(_ *Runtime) error { return nil }
 
 // NewMessageBusSend constructs and registers a grand-product Send entry on
 // (originShard, handle). It multiplies the entry's selected rows into the

@@ -17,6 +17,7 @@ pub fn build(b: *std.Build) void {
     // arithmetization keccak wrapper (prover-accelerated custom op) when opted in
     // with -Dkeccak-accel=true. Read by zkvm_provide.zig at comptime.
     const keccak_accel = b.option(bool, "keccak-accel", "Use the arithmetization keccak wrapper instead of standard zig keccak (default: standard)") orelse false;
+    const execution_specs_fixtures_link = b.option([]const u8, "execution-specs-fixtures-link", "Path where execution-specs zkevm fixtures are exposed") orelse "/tmp/execution-specs-json-fixtures/fixtures";
     const guest_options = b.addOptions();
     guest_options.addOption(bool, "keccak_accel", keccak_accel);
 
@@ -110,6 +111,7 @@ pub fn build(b: *std.Build) void {
 
     const test_step = b.step("test", "Run native Zig unit tests for the EVM execution guest");
     const spec_step = b.step("spec-tests", "Run the guest against all EF zkevm stateless fixtures (host)");
+    const prep_fixtures_step = b.step("prep-execution-specs-json-fixtures", "Expose EF zkevm stateless fixtures for external runners");
 
     // Integration smoke test for the delegated precompiles: verifies zesu-zkvm's stdlibs_accel
     // imports and that its ecrecover round-trips (the in-guest precompiles delegate to it). std +
@@ -178,6 +180,17 @@ pub fn build(b: *std.Build) void {
         run_spec.addDirectoryArg(fixtures_dep.path("blockchain_tests"));
         if (b.args) |extra| run_spec.addArgs(extra);
         spec_step.dependOn(&run_spec.step);
+
+        const fixtures_parent = std.fs.path.dirname(execution_specs_fixtures_link) orelse ".";
+        const mkdir_fixtures_parent = b.addSystemCommand(&.{ "mkdir", "-p", fixtures_parent });
+        const remove_old_fixtures_link = b.addSystemCommand(&.{ "rm", "-rf", execution_specs_fixtures_link });
+        remove_old_fixtures_link.step.dependOn(&mkdir_fixtures_parent.step);
+
+        const link_fixtures = b.addSystemCommand(&.{ "ln", "-s" });
+        link_fixtures.addDirectoryArg(fixtures_dep.path("."));
+        link_fixtures.addArg(execution_specs_fixtures_link);
+        link_fixtures.step.dependOn(&remove_old_fixtures_link.step);
+        prep_fixtures_step.dependOn(&link_fixtures.step);
     }
 }
 

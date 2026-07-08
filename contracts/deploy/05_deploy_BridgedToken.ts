@@ -2,7 +2,7 @@ import { ethers, upgrades } from "hardhat";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 
-import { tryVerifyContract, setHandoffAddress } from "../common/helpers";
+import { getBooleanEnvVarOrDefault, tryVerifyContract, setHandoffAddress } from "../common/helpers";
 import {
   clearUiWorkflowStatus,
   getUiSigner,
@@ -44,7 +44,7 @@ const func: DeployFunction = withSignerUiSession(
       throw "Contract deployment transaction receipt not found.";
     }
 
-    if (process.env.DEPLOY_TOKEN_BRIDGE_ON_L1 === "true") {
+    if (getBooleanEnvVarOrDefault("DEPLOY_TOKEN_BRIDGE_ON_L1", false)) {
       console.log(`L1 BridgedToken beacon deployed on ${hre.network.name}, at address:`, bridgedTokenAddress);
     } else {
       console.log(`L2 BridgedToken beacon deployed on ${hre.network.name}, at address:`, bridgedTokenAddress);

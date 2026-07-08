@@ -17,14 +17,13 @@ import maru.config.MaruConfigLoader.parseConfig
 import maru.config.P2PConfig
 import maru.consensus.ForksSchedule
 import maru.consensus.state.FinalizationProvider
-import maru.core.SealedBeaconBlock
 import maru.database.BeaconChain
 import maru.database.P2PState
 import maru.p2p.P2PNetwork
 import maru.p2p.P2PNetworkImpl
 import maru.p2p.fork.ForkPeeringManager
 import maru.p2p.messages.StatusManager
-import maru.serialization.SerDe
+import maru.serialization.rlp.ForkAwareBlockHashing
 import maru.services.LongRunningService
 import maru.services.NoOpLongRunningService
 import net.consensys.linea.metrics.MetricsFacade
@@ -159,7 +158,7 @@ class MaruAppCliTest {
           ByteArray,
           P2PConfig,
           UInt,
-          SerDe<SealedBeaconBlock>,
+          ForkAwareBlockHashing,
           MetricsFacade,
           BesuMetricsSystem,
           StatusManager,

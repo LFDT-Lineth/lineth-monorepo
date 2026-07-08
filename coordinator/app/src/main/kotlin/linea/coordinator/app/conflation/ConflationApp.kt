@@ -46,6 +46,7 @@ import linea.domain.BlobRecord
 import linea.domain.BlocksConflation
 import linea.encoding.BlockRLPEncoder
 import linea.ethapi.EthApiClient
+import linea.ethapi.EthLogsSearcherImpl
 import linea.ftx.ForcedTransactionsApp
 import linea.metrics.LineaMetricsCategory
 import linea.persistence.AggregationsRepository
@@ -127,6 +128,7 @@ class ConflationApp(
         l1ContractAddress = configs.protocol.l1.contractAddress,
         l1HighestBlockTag = configs.forcedTransactions.l1HighestBlockTag,
         l1EventSearchBlockChunk = ftxConfig.l1EventScraping.ethLogsSearchBlockChunkSize,
+        l1EventSearchMaxBlockRange = ftxConfig.l1EventScraping.ethLogsSearchMaxBlockRange,
         ftxSequencerSendingInterval = ftxConfig.processingTickInterval,
         maxFtxToSendToSequencer = ftxConfig.processingBatchSize,
         ftxProcessingDelay = ftxConfig.processingDelay,
@@ -148,10 +150,13 @@ class ConflationApp(
       val contractClient = Web3JLineaRollupSmartContractClientReadOnly(
         contractAddress = configs.protocol.l1.contractAddress,
         web3j = l1Web3jClient,
-        ethLogsClient = createEthApiClient(
-          web3jClient = l1Web3jClient,
-          requestRetryConfig = ftxConfig.l1RequestRetries,
+        ethLogsSearcher = EthLogsSearcherImpl(
           vertx = vertx,
+          ethApiClient = createEthApiClient(
+            web3jClient = l1Web3jClient,
+            requestRetryConfig = ftxConfig.l1RequestRetries,
+            vertx = vertx,
+          ),
         ),
       )
       ForcedTransactionsApp.create(
@@ -358,6 +363,7 @@ class ConflationApp(
         log = LogManager.getLogger("clients.l2.eth.conflation"),
       ),
       ethApiClient = l2EthClient,
+      ethLogsSearcher = EthLogsSearcherImpl(vertx = vertx, ethApiClient = l2EthClient),
       contractAddress = configs.protocol.l2.contractAddress,
       smartContractErrors = configs.smartContractErrors,
       smartContractDeploymentBlockNumber = configs.protocol.l2.contractDeploymentBlockNumber?.number,

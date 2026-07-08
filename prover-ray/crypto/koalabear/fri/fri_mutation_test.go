@@ -189,7 +189,7 @@ func TestPCSVerifyRejectsMutations(t *testing.T) {
 		{
 			name: "wrong claim",
 			mutate: func(fx *pcsOpenVerifyFixture) {
-				fx.proof.ClaimedValues[0][2].Ext[0][0].Add(&fx.proof.ClaimedValues[0][2].Ext[0][0], &oneExt)
+				fx.input.ClaimedValues[0][2].Ext[0][0].Add(&fx.input.ClaimedValues[0][2].Ext[0][0], &oneExt)
 			},
 			wantErr: "folded value mismatch",
 		},
@@ -205,7 +205,7 @@ func TestPCSVerifyRejectsMutations(t *testing.T) {
 		{
 			name: "domain point claim",
 			mutate: func(fx *pcsOpenVerifyFixture) {
-				fx.input.Zetas[0] = domainPointExt(fx.pcs.Params.domainsLight[0], 0)
+				fx.input.Zeta = domainPointExt(fx.pcs.Params.domainsLight[0], 0)
 			},
 			wantErr: "claim point on domain",
 		},
