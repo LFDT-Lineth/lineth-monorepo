@@ -39,6 +39,7 @@ data class ProtocolConfig(
   data class Layer1Config(
     val contractAddress: String,
     val blockTime: Duration,
+    val contractDeploymentBlockNumber: BlockParameter.BlockNumber?,
   )
 
   data class Layer2Config(

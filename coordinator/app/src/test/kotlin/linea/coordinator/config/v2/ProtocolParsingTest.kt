@@ -33,6 +33,7 @@ class ProtocolParsingTest {
         ProtocolToml.Layer1Config(
           contractAddress = "0x0000000000000000000000000000000000000001",
           blockTime = 2.seconds,
+          contractDeploymentBlockNumber = null,
         ),
         l2 =
         ProtocolToml.Layer2Config(
@@ -63,6 +64,7 @@ class ProtocolParsingTest {
         ProtocolToml.Layer1Config(
           contractAddress = "0x0000000000000000000000000000000000000001",
           blockTime = 12.seconds,
+          contractDeploymentBlockNumber = null,
         ),
         l2 =
         ProtocolToml.Layer2Config(
