@@ -234,8 +234,8 @@ func TestProveVerify(t *testing.T) {
 				t.Fatalf("Verify (honest) failed: %v", err)
 			}
 
-			// Tampering an opened leaf must make verification fail.
-			proof.FRIProof.FRIQueries[0][0][0].Leaf = field.PseudoRandOctuplet(prng)
+			// Tampering an opened input leaf must make verification fail.
+			proof.FRIProof.InputQueries[0][0].Leaf = field.PseudoRandOctuplet(prng)
 			if err := fx.verify(alphaDeep, foldAlphas, positions, proof); err == nil {
 				t.Fatalf("Verify accepted a proof with a tampered leaf")
 			}
@@ -266,36 +266,24 @@ func TestProverStateOpenLoopsOverLevelTrees(t *testing.T) {
 	proof := fx.open(t, alphaDeep, foldAlphas, positions)
 	require.NoError(t, fx.verify(alphaDeep, foldAlphas, positions, proof))
 
-	require.Len(t, proof.FRIProof.FRIQueries[0][0], 2)
-	require.Len(t, proof.FRIProof.LevelQueries, 1)
-	require.Len(t, proof.FRIProof.LevelQueries[0][0], 2)
+	inputQuery := proof.FRIProof.InputQueries[0]
+	require.Len(t, inputQuery, 4)
 
-	for i, branch := range proof.FRIProof.FRIQueries[0][0] {
+	for i, branch := range inputQuery[:2] {
 		root, err := branch.RecoverRoot(positions[0])
 		require.NoError(t, err)
 		assert.Equal(t, fx.roots[i], root)
 	}
 
 	base := positions[0] >> utils.Log2Ceil(8/2) // p.D/extraD = 8/2
-	for i, branch := range proof.FRIProof.LevelQueries[0][0] {
+	for i, branch := range inputQuery[2:] {
 		root, err := branch.RecoverRoot(base)
 		require.NoError(t, err)
 		assert.Equal(t, fx.roots[2+i], root)
 	}
 
-	proof.FRIProof.FRIQueries[0][0][1].Leaf = field.PseudoRandOctuplet(prng)
+	proof.FRIProof.InputQueries[0][1].Leaf = field.PseudoRandOctuplet(prng)
 	require.Error(t, fx.verify(alphaDeep, foldAlphas, positions, proof))
-}
-
-// newRandomLevel builds a Level with a random evaluation vector of the size
-// dictated by its degree d (N·d/D = N>>jl) and the matching binary Merkle tree.
-func newRandomLevel(prng *rand.Rand, p Params, d int) Level {
-	size := p.N * d / p.D
-	evals := make([]field.Ext, size)
-	for i := range evals {
-		evals[i] = field.PseudoRandExt(prng)
-	}
-	return Level{D: d, Evals: evals, Trees: []*Tree{buildTreeExt(evals)}}
 }
 
 func verifierInputsForLevels(levels []Level) ([]QueryLayerRoots, []int) {

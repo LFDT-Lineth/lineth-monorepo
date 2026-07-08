@@ -1075,9 +1075,9 @@ type VerifyInputs struct {
 //
 //  1. Shape validation for Roots/Shapes/Shifts and row openings.
 //  2. Canonical-layout build from Shapes + Shifts.
-//  3. Per query: authenticate every opening -- the top level and each
-//     auxiliary level against the caller-supplied rows, and every running
-//     FRI layer against its committed root -- and resolve its fold values.
+//  3. Per query: authenticate each deduped input opening once, bind top and
+//     auxiliary rows from those branches, authenticate each running FRI layer
+//     against its committed root, and resolve all fold values.
 //  4. checkFolds: pure fold-recurrence arithmetic over the resolved values.
 func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	if len(in.Roots) != len(in.Shapes) {
@@ -1113,17 +1113,11 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 		return err
 	}
 	positions := in.Challenges.QueryPositions[:pcs.Params.NumQueries]
-	if err = checkOpeningProofShape(pcs.Params, len(layout)-1, proof.FRIProof, in.Challenges.FoldAlphas, positions); err != nil {
+	inputRoots, inputIndexByBatch := inputOpeningRoots(layout, orders, in.Roots)
+	if err = checkOpeningProofShape(pcs.Params, len(inputRoots), proof.FRIProof, in.Challenges.FoldAlphas, positions); err != nil {
 		return err
 	}
 
-	levelRoots := make([]QueryLayerRoots, len(layout))
-	for i := range layout {
-		levelRoots[i] = make(QueryLayerRoots, len(orders[i]))
-		for j, batchIdx := range orders[i] {
-			levelRoots[i][j] = in.Roots[batchIdx]
-		}
-	}
 	runningRoots := make([]QueryLayerRoots, pcs.Params.numRounds)
 	for j := 1; j < pcs.Params.numRounds; j++ {
 		runningRoots[j] = QueryLayerRoots{proof.FRIProof.FRIRoots[j-1]}
@@ -1146,11 +1140,15 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 			Final:  proof.FRIProof.FinalPolyExt[queryPosition>>pcs.Params.numRounds],
 		}
 
-		// Round 0: the top level's input opening, authenticated against the
-		// caller-supplied rows and reconstructed into the conjugate pair.
-		topOpening := proof.FRIProof.FRIQueries[queryIdx][0]
-		if err = authenticateInputBranches("round 0", topOpening, levelRoots[0],
-			pcs.Params.N, queryPosition, orders[0], layout[0], queryRows, true); err != nil {
+		inputOpening := proof.FRIProof.InputQueries[queryIdx]
+		if err = authenticateInputQuery(pcs.Params, inputOpening, inputRoots, queryPosition); err != nil {
+			return fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
+		}
+
+		// Round 0: bind the authenticated top-level leaves to the caller-supplied
+		// rows and reconstruct the conjugate pair.
+		if err = bindInputBranches("round 0", inputOpening, inputIndexByBatch,
+			pcs.Params.N, orders[0], layout[0], queryRows, true); err != nil {
 			return fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
 		}
 		self, err := reconstructQueryValueAt(pcs, layout[0], queryRows, claimed, zeta, alphaDeep,
@@ -1182,9 +1180,8 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 			if err != nil {
 				return err
 			}
-			opening := proof.FRIProof.LevelQueries[levelIdx-1][queryIdx]
-			if err = authenticateInputBranches(fmt.Sprintf("level %d", levelIdx), opening, levelRoots[levelIdx],
-				levelSize, queryPosition>>round, orders[levelIdx], bundle, queryRows, false); err != nil {
+			if err = bindInputBranches(fmt.Sprintf("level %d", levelIdx), inputOpening, inputIndexByBatch,
+				levelSize, orders[levelIdx], bundle, queryRows, false); err != nil {
 				return fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
 			}
 			value, err := reconstructQueryValueAt(pcs, bundle, queryRows, claimed, zeta, alphaDeep,
@@ -1198,7 +1195,7 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 		// Running layers: authenticate and decode directly from the
 		// committed codeword -- no PCS reconstruction involved.
 		for j := 1; j < pcs.Params.numRounds; j++ {
-			opening := proof.FRIProof.FRIQueries[queryIdx][j]
+			opening := proof.FRIProof.RunningQueries[queryIdx][j-1]
 			if err = checkQueryLayerShape(opening, runningRoots[j], pcs.Params.N>>j, true); err != nil {
 				return fmt.Errorf("fri: pcs.Verify: query %d round %d: %w", queryIdx, j, err)
 			}
@@ -1226,24 +1223,63 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	return checkFolds(pcs.Params, resolved, in.Challenges.FoldAlphas, positions)
 }
 
-// authenticateInputBranches authenticates opening (one branch per tree
-// backing this bundle) against roots, then binds each branch's leaf -- and,
-// for the top level, its deepest sibling -- to the hash of the row the
-// caller opened for that tree. The row is the branch's authenticated
-// preimage: this is what ties a caller-supplied row to the committed column.
-func authenticateInputBranches(
-	label string, opening QueryLayer, roots QueryLayerRoots,
-	levelSize, base int, order []int, bundle sizeBundle, rows QueryRowOpenings, top bool,
+func inputOpeningRoots(layout layout, orders [][]int, roots []field.Octuplet) (QueryLayerRoots, []int) {
+	indexByBatch := make([]int, len(roots))
+	for i := range indexByBatch {
+		indexByBatch[i] = -1
+	}
+	indexByRoot := make(map[field.Octuplet]int)
+	inputRoots := make(QueryLayerRoots, 0)
+	for levelIdx := range layout {
+		for _, batchIdx := range orders[levelIdx] {
+			root := roots[batchIdx]
+			if idx, ok := indexByRoot[root]; ok {
+				indexByBatch[batchIdx] = idx
+				continue
+			}
+			indexByBatch[batchIdx] = len(inputRoots)
+			indexByRoot[root] = len(inputRoots)
+			inputRoots = append(inputRoots, root)
+		}
+	}
+	return inputRoots, indexByBatch
+}
+
+func authenticateInputQuery(p Params, opening QueryLayer, roots QueryLayerRoots, queryPosition int) error {
+	if len(opening) != len(roots) {
+		return fmt.Errorf("input query has %d tree openings, want %d", len(opening), len(roots))
+	}
+	for i, branch := range opening {
+		numLeaves := 1 << len(branch.Siblings)
+		if numLeaves > p.N || p.N%numLeaves != 0 {
+			return fmt.Errorf("input tree %d: tree size %d incompatible with domain size %d", i, numLeaves, p.N)
+		}
+		root, err := branch.RecoverRoot(queryPosition / (p.N / numLeaves))
+		if err != nil {
+			return fmt.Errorf("input tree %d: recover root: %w", i, err)
+		}
+		if root != roots[i] {
+			return fmt.Errorf("input tree %d: Merkle proof invalid", i)
+		}
+	}
+	return nil
+}
+
+// bindInputBranches binds authenticated input branches to the row preimages
+// supplied by the caller. The same branch also authenticates smaller level rows
+// on its path via AuxSiblings.
+func bindInputBranches(
+	label string, opening QueryLayer, inputIndexByBatch []int,
+	levelSize int, order []int, bundle sizeBundle, rows QueryRowOpenings, top bool,
 ) error {
-	if err := checkQueryLayerShape(opening, roots, levelSize, false); err != nil {
-		return fmt.Errorf("%s: %w", label, err)
-	}
-	if err := authenticateInputOpening(label, opening, roots, levelSize, base); err != nil {
-		return err
-	}
-	for branchIdx, batchIdx := range order {
+	for _, batchIdx := range order {
+		branchIdx := inputIndexByBatch[batchIdx]
+		if branchIdx < 0 || branchIdx >= len(opening) {
+			return fmt.Errorf("%s: batch %d has no input opening", label, batchIdx)
+		}
 		row := rows[batchIdx][bundle.SizeLog2]
-		leaf, err := branchLeafAtLevel(opening[branchIdx], levelSize)
+		branch := opening[branchIdx]
+		leaf, err := branchLeafAtLevel(branch, levelSize)
 		if err != nil {
 			return fmt.Errorf("%s: tree %d level leaf: %w", label, branchIdx, err)
 		}
@@ -1253,7 +1289,7 @@ func authenticateInputBranches(
 		if !top {
 			continue
 		}
-		siblings := opening[branchIdx].Siblings
+		siblings := branch.Siblings
 		if len(siblings) == 0 || siblings[len(siblings)-1] != hashRowOpening(row.Sibling) {
 			return fmt.Errorf("%s: tree %d sibling digest mismatch", label, branchIdx)
 		}

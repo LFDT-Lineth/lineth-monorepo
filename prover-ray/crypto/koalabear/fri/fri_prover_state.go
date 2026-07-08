@@ -131,56 +131,43 @@ func (st *ProverState) Open(openedPositions []int) Proof {
 		panic("fri: ProverState.Open: called before all folding rounds were consumed")
 	}
 
-	st.FRIQueries = make([]Query, st.p.NumQueries)
-	if st.plan.numLevels > 1 {
-		st.LevelQueries = make([][]QueryLayer, st.plan.numLevels-1)
-		for l := range st.LevelQueries {
-			st.LevelQueries[l] = make([]QueryLayer, st.p.NumQueries)
-		}
-	}
-
-	// Invert the schedule into level index → intro round jl. A level's codeword
-	// lives in the indexing of its intro round, so an outer query position s
-	// opens leaf s>>jl in it (matching the verifier, which reads it at s>>(j+1)
-	// with j+1 == jl).
-	roundOfLevel := make([]int, st.plan.numLevels)
-	for jl, l := range st.plan.levelAtRound {
-		roundOfLevel[l] = jl
-	}
+	inputs := st.inputTrees()
+	st.InputQueries = make([]QueryLayer, st.p.NumQueries)
+	st.RunningQueries = make([]RunningQuery, st.p.NumQueries)
 
 	for k := range st.p.NumQueries {
 		s := openedPositions[k]
-		st.FRIQueries[k] = openQueryExt(
-			s,
-			openLevelTreesAt(st.levels[0].Trees, len(st.levels[0].Evals), s),
-			st.layers,
-			st.trees,
-			st.p.numRounds,
-		)
-		for l := 1; l < st.plan.numLevels; l++ {
-			base := s >> roundOfLevel[l]
-			st.LevelQueries[l-1][k] = openLevelTreesAt(st.levels[l].Trees, len(st.levels[l].Evals), base)
-		}
+		st.InputQueries[k] = openInputTreesAt(st.p, inputs, s)
+		st.RunningQueries[k] = openRunningQueryExt(s, st.layers, st.trees, st.p.numRounds)
 	}
 
 	return st.Proof
 }
 
-func openLevelTreesAt(trees []*Tree, levelSize, base int) QueryLayer {
-	opening := make(QueryLayer, len(trees))
-	for i, tree := range trees {
-		opening[i] = tree.OpenBranch(levelTreeLeafIndex(tree, levelSize, base))
+func (st *ProverState) inputTrees() []*Tree {
+	seen := make(map[field.Octuplet]bool)
+	inputs := make([]*Tree, 0)
+	for _, level := range st.levels {
+		for _, tree := range level.Trees {
+			root := tree.Root()
+			if seen[root] {
+				continue
+			}
+			seen[root] = true
+			inputs = append(inputs, tree)
+		}
 	}
-	return opening
+	return inputs
 }
 
-func levelTreeLeafIndex(tree *Tree, levelSize, base int) int {
-	if tree == nil {
-		panic("fri: levelTreeLeafIndex: nil tree")
+func openInputTreesAt(p Params, inputs []*Tree, queryPosition int) QueryLayer {
+	opening := make(QueryLayer, len(inputs))
+	for i, tree := range inputs {
+		numLeaves := tree.NumLeaves()
+		if numLeaves > p.N || p.N%numLeaves != 0 {
+			panic("fri: openInputTreesAt: tree size incompatible with domain size")
+		}
+		opening[i] = tree.OpenBranch(queryPosition / (p.N / numLeaves))
 	}
-	idx, err := levelLeafIndex(tree.NumLeaves(), levelSize, base)
-	if err != nil {
-		panic("fri: levelTreeLeafIndex: " + err.Error())
-	}
-	return idx
+	return opening
 }

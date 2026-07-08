@@ -139,12 +139,12 @@ func TestProverStateOpenAlignsMultiSizeLevelLeaf(t *testing.T) {
 	const query = 11
 	base := query >> 1
 
-	topBranch := openLevelTreesAt([]*Tree{tree}, len(fullEvals), query)[0]
+	topBranch := tree.OpenBranch(query)
 	assert.Equal(t, digestSizedRow(encoded[3], query), topBranch.Leaf)
 	assert.Equal(t, digestSizedRow(encoded[3], query^1), topBranch.Siblings[len(topBranch.Siblings)-1])
 
 	levels := []Level{
-		newRandomLevel(prng, params, params.D),
+		{D: params.D, Evals: fullEvals, Trees: []*Tree{tree, otherTree}},
 		{D: 4, Evals: levelEvals, Trees: []*Tree{tree, otherTree}},
 	}
 	alphas := []field.Ext{
@@ -154,15 +154,13 @@ func TestProverStateOpenAlignsMultiSizeLevelLeaf(t *testing.T) {
 	}
 	proof := proverForTest(params, levels, alphas, []int{query})
 
-	require.Len(t, proof.LevelQueries, 1)
-	opening := proof.LevelQueries[0][0]
+	opening := proof.InputQueries[0]
 	require.Len(t, opening, 2)
 
 	checkLevelBranch := func(name string, branch Branch, tree *Tree, encoded MultiSizeTable) {
 		t.Helper()
 
-		lifted := levelTreeLeafIndex(tree, len(levelEvals), base)
-		root, err := branch.RecoverRoot(lifted)
+		root, err := branch.RecoverRoot(query)
 		require.NoError(t, err, name)
 		assert.Equal(t, tree.Root(), root, name)
 
@@ -175,9 +173,10 @@ func TestProverStateOpenAlignsMultiSizeLevelLeaf(t *testing.T) {
 }
 
 type pcsOpenVerifyFixture struct {
-	pcs   *PCS
-	input VerifyInputs
-	proof OpeningProof
+	pcs       *PCS
+	input     VerifyInputs
+	proof     OpeningProof
+	committed []CommitterState
 }
 
 type openInputs struct {
@@ -300,7 +299,8 @@ func newPCSOpenVerifyFixture(t *testing.T) pcsOpenVerifyFixture {
 	})
 
 	return pcsOpenVerifyFixture{
-		pcs: pcs,
+		pcs:       pcs,
+		committed: committed,
 		input: VerifyInputs{
 			Roots:         []field.Octuplet{committed[0].Tree.Root()},
 			Shapes:        shapesFromBatches(witnesses),

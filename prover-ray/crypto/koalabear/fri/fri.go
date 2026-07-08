@@ -148,8 +148,10 @@ type QueryLayer []Branch
 // QueryLayerRoots holds the Merkle roots corresponding to a QueryLayer.
 type QueryLayerRoots []field.Octuplet
 
-// Query holds the opening data for one full query path across all r levels.
-type Query []QueryLayer // len = numRounds
+// RunningQuery holds the running-layer openings for one query.
+// RunningQuery[j-1] opens folding round j, so len(RunningQuery) =
+// numRounds-1.
+type RunningQuery []QueryLayer
 
 // Level holds one polynomial introduced at the folding round where the running
 // polynomial's degree matches Level.D. Trees are the pre-built paired-leaf Merkle
@@ -164,13 +166,14 @@ type Level struct {
 // are NOT stored here — they are passed externally to Verify (the caller
 // commits to those polynomials before invoking FRI).
 type Proof struct {
-	// LevelQueries[l-1][k] = openings for levels[l].Evals at outer query k.
-	LevelQueries [][]QueryLayer
+	// InputQueries[k] contains one opening per input tree for query k. Each
+	// branch also carries smaller same-path level leaves in AuxSiblings.
+	InputQueries []QueryLayer
 
 	// Running-polynomial FRI path
-	FRIRoots     []field.Octuplet // Merkle roots for running poly T_1..T_{r-1}
-	FinalPolyExt []field.Ext
-	FRIQueries   []Query // len = NumQueries
+	FRIRoots       []field.Octuplet // Merkle roots for running poly T_1..T_{r-1}
+	FinalPolyExt   []field.Ext
+	RunningQueries []RunningQuery
 }
 
 // FullDomainGenerator returns the generator of the full evaluation domain (layer 0, size N).
@@ -273,26 +276,21 @@ func checkLevelTrees(label string, trees []*Tree) error {
 
 // checkOpeningProofShape validates prf's structure against p and the
 // challenge lengths before any authentication or reconstruction runs, so a
-// malformed proof can never cause an out-of-bounds access later. numExtraLevels
-// is the number of auxiliary (non-top) levels the caller's layout carries.
-func checkOpeningProofShape(p Params, numExtraLevels int, prf Proof, foldAlphas []field.Ext, positions []int) error {
+// malformed proof can never cause an out-of-bounds access later.
+func checkOpeningProofShape(p Params, numInputOpenings int, prf Proof, foldAlphas []field.Ext, positions []int) error {
 	wantFRIRoots := p.numRounds - 1
 	if p.numRounds <= 1 {
 		wantFRIRoots = 0
 	}
+	wantRunningQueries := wantFRIRoots
 	if len(prf.FRIRoots) != wantFRIRoots {
 		return fmt.Errorf("fri: pcs.Verify: proof has %d FRI roots, want %d", len(prf.FRIRoots), wantFRIRoots)
 	}
-	if len(prf.FRIQueries) != p.NumQueries {
-		return fmt.Errorf("fri: pcs.Verify: proof has %d FRI queries, want %d", len(prf.FRIQueries), p.NumQueries)
+	if len(prf.InputQueries) != p.NumQueries {
+		return fmt.Errorf("fri: pcs.Verify: proof has %d input queries, want %d", len(prf.InputQueries), p.NumQueries)
 	}
-	if len(prf.LevelQueries) != numExtraLevels {
-		return fmt.Errorf("fri: pcs.Verify: proof has %d level query sets, want %d", len(prf.LevelQueries), numExtraLevels)
-	}
-	for l, qs := range prf.LevelQueries {
-		if len(qs) != p.NumQueries {
-			return fmt.Errorf("fri: pcs.Verify: proof has %d queries for extra level %d, want %d", len(qs), l+1, p.NumQueries)
-		}
+	if len(prf.RunningQueries) != p.NumQueries {
+		return fmt.Errorf("fri: pcs.Verify: proof has %d running queries, want %d", len(prf.RunningQueries), p.NumQueries)
 	}
 	if want := p.N >> p.numRounds; len(prf.FinalPolyExt) != want {
 		return fmt.Errorf("fri: pcs.Verify: FinalPolyExt has %d entries, want %d", len(prf.FinalPolyExt), want)
@@ -300,9 +298,13 @@ func checkOpeningProofShape(p Params, numExtraLevels int, prf Proof, foldAlphas 
 	if len(foldAlphas) < p.numRounds {
 		return fmt.Errorf("fri: pcs.Verify: %d folding challenges, need at least %d", len(foldAlphas), p.numRounds)
 	}
-	for k, q := range prf.FRIQueries {
-		if len(q) != p.numRounds {
-			return fmt.Errorf("fri: pcs.Verify: query %d has %d layers, want %d", k, len(q), p.numRounds)
+	for k, q := range prf.RunningQueries {
+		if len(prf.InputQueries[k]) != numInputOpenings {
+			return fmt.Errorf("fri: pcs.Verify: query %d has %d input openings, want %d",
+				k, len(prf.InputQueries[k]), numInputOpenings)
+		}
+		if len(q) != wantRunningQueries {
+			return fmt.Errorf("fri: pcs.Verify: query %d has %d running layers, want %d", k, len(q), wantRunningQueries)
 		}
 		if s := positions[k]; s < 0 || s >= p.N {
 			return fmt.Errorf("fri: pcs.Verify: opened position %d out of range [0,%d)", s, p.N)
@@ -401,13 +403,6 @@ func checkBranchShape(b Branch, numLeaves int, exactSiblings bool) error {
 		return fmt.Errorf("branch has %d aux siblings, want %d", len(b.AuxSiblings), wantAux)
 	}
 	return nil
-}
-
-func authenticateInputOpening(label string, opening QueryLayer, roots QueryLayerRoots, levelSize, base int) error {
-	_, err := authenticateQueryLayerRoots(label, opening, roots, func(branch Branch) (int, error) {
-		return levelLeafIndex(1<<len(branch.Siblings), levelSize, base)
-	})
-	return err
 }
 
 // buildTreeExt builds the FRI Merkle tree over one folding layer: a complete
@@ -531,13 +526,13 @@ func mapExtToOctuplet(exts []field.Ext) []field.Octuplet {
 	return res
 }
 
-// openQueryExt builds the Merkle opening data for query index s across all r
-// extension folding levels. The caller supplies layer0 because it may be backed
-// by several external trees; later running layers are backed by one FRI tree
-// each.
-func openQueryExt(s int, layer0 QueryLayer, layers [][]field.Ext, trees []*Tree, numRounds int) Query {
-	q := make(Query, numRounds)
-	q[0] = layer0
+// openRunningQueryExt builds the Merkle opening data for query index s across
+// running extension folding levels. Input-tree openings are carried separately.
+func openRunningQueryExt(s int, layers [][]field.Ext, trees []*Tree, numRounds int) RunningQuery {
+	if numRounds <= 1 {
+		return nil
+	}
+	q := make(RunningQuery, numRounds-1)
 	for j := 1; j < numRounds; j++ {
 
 		var (
@@ -548,10 +543,10 @@ func openQueryExt(s int, layer0 QueryLayer, layers [][]field.Ext, trees []*Tree,
 		// Each fold halves the layer, so layer j has half the entries of layer
 		// j-1. base = s>>j is the bit-reversed position of the query in layer j.
 		if len(layers[j])*2 != len(layers[j-1]) {
-			panic("fri: openQueryExt: layers must halve at each round")
+			panic("fri: openRunningQueryExt: layers must halve at each round")
 		}
 
-		q[j] = QueryLayer{path}
+		q[j-1] = QueryLayer{path}
 	}
 
 	return q

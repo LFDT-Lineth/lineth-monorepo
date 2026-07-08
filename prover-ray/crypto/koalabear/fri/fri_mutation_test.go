@@ -145,7 +145,7 @@ func TestVerifyRejectsProofMutations(t *testing.T) {
 	prng := rand.New(utils.NewRandSource(20240607))
 
 	// One main level (D=8) plus one extra level (D=2) to also exercise the
-	// LevelQueries path.
+	// same input branch carrying a smaller aligned level leaf.
 	fx := newLDTFixture(t, 16, 8, 4)
 	fx.addLevel(t, 3, field.VecPseudoRandExt(prng, 16))
 	fx.addLevel(t, 1, field.VecPseudoRandExt(prng, 4))
@@ -200,9 +200,9 @@ func TestPCSVerifyRejectsMutations(t *testing.T) {
 		{
 			name: "tampered branch",
 			mutate: func(fx *pcsOpenVerifyFixture) {
-				leaf := fx.proof.FRIProof.FRIQueries[0][0][0].Leaf
+				leaf := fx.proof.FRIProof.InputQueries[0][0].Leaf
 				leaf[0].Add(&leaf[0], &one)
-				fx.proof.FRIProof.FRIQueries[0][0][0].Leaf = leaf
+				fx.proof.FRIProof.InputQueries[0][0].Leaf = leaf
 			},
 			wantErr: "Merkle proof invalid",
 		},
@@ -212,6 +212,13 @@ func TestPCSVerifyRejectsMutations(t *testing.T) {
 				fx.proof.RowOpenings[0][0][0].Leaf.Ext = []field.Ext{oneExt}
 			},
 			wantErr: "row shape mismatch",
+		},
+		{
+			name: "misaligned auxiliary row",
+			mutate: func(fx *pcsOpenVerifyFixture) {
+				fx.proof.RowOpenings[0][0][1].Leaf = openEncodedRow(fx.committed[0].EncodedTable[1], 0)
+			},
+			wantErr: "row digest mismatch",
 		},
 		{
 			name: "sibling on non-top row slot",
