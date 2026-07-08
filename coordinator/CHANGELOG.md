@@ -1,3 +1,8 @@
+## [unreleased]
+
+### 🚀 Features
+
+- *(coordinator)* [**breaking**] Web3j upgrade to onboard 7594 support (#3514)
 ## [0.3.0] - 2026-07-07
 
 ### 🚀 Features

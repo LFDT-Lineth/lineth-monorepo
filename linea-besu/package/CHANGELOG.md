@@ -1,5 +1,9 @@
 ## [unreleased]
 
+### 🚀 Features
+
+- *(coordinator)* [**breaking**] Web3j upgrade to onboard 7594 support (#3514)
+
 ### 🐛 Bug Fixes
 
 - *(misc)* Web3j-solc solidity resolution workaround (#3516)
