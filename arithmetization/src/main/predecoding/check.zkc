@@ -6,25 +6,22 @@ fn check_b_type_operands(instruction_parameters:u25, rs1_decoded:Register, rs2_d
     var imm_4_1:u4
     var rs1:Register
     var rs2:Register
-    var imm:DoubleWord        
+    var imm:DoubleWord
     imm_sign::imm_10_5::rs2::rs1::funct3::imm_4_1::imm_11 = instruction_parameters
 
-    if imm_sign == 1 {
-        imm = DWORD_SIGN_EXT_PREFIX_52_ONES::imm_11::imm_10_5::imm_4_1::(0 as u1)
-    } else {
-        imm = (imm_11::imm_10_5::imm_4_1::(0 as u1)) as DoubleWord
-    }
+    // Reassemble imm[12:1] (sign = imm[12]) and sign-extend, then << 1 (imm[0] = 0).
+    imm = sgn_extension_u12_u64(imm_sign::imm_11::imm_10_5::imm_4_1) << 1
 
     if rs1_decoded != rs1 {
-        printf "[ERROR] rs1 mismatch for compute_op %d\n", compute_op
+        printf "[ERROR] rs1 mismatch\n"
         fail
     }
     if rs2_decoded != rs2 {
-        printf "[ERROR] rs2 mismatch for compute_op %d\n", compute_op
+        printf "[ERROR] rs2 mismatch\n"
         fail
     }
     if imm_decoded != imm {
-        printf "[ERROR] imm mismatch for compute_op %d\n", compute_op
+        printf "[ERROR] imm mismatch\n"
         fail
     }
 }
@@ -39,35 +36,36 @@ fn check_i_type_operands(instruction_parameters:u25, rs1_decoded:Register, rd_de
     var imm:DoubleWord = sgn_extension_u12_u64(imm12)
 
     if rs1_decoded != rs1 {
-        printf "[ERROR] rs1 mismatch for compute_op %d\n", compute_op
+        printf "[ERROR] rs1 mismatch\n"
         fail
     }
     if rd_decoded != rd {
-        printf "[ERROR] rd mismatch for compute_op %d\n", compute_op
+        printf "[ERROR] rd mismatch\n"
         fail
     }
     if imm_decoded != imm {
-        printf "[ERROR] imm mismatch for compute_op %d\n", compute_op
+        printf "[ERROR] imm mismatch\n"
         fail
     }
 }
 
 fn check_r_type_operands(instruction_parameters:u25, rs1_decoded:Register, rs2_decoded:Register, rd_decoded:Register) {
     var funct7:Funct7
+    var funct3:Funct3
     var rs1:Register
     var rs2:Register
     var rd:Register
     funct7::rs2::rs1::funct3::rd = instruction_parameters
     if rs1_decoded != rs1 {
-        printf "[ERROR] rs1 mismatch for compute_op %d\n", compute_op
+        printf "[ERROR] rs1 mismatch\n"
         fail
     }
     if rs2_decoded != rs2 {
-        printf "[ERROR] rs2 mismatch for compute_op %d\n", compute_op
+        printf "[ERROR] rs2 mismatch\n"
         fail
     }
     if rd_decoded != rd {
-        printf "[ERROR] rd mismatch for compute_op %d\n", compute_op
+        printf "[ERROR] rd mismatch\n"
         fail
     }
 }
@@ -84,32 +82,32 @@ fn check_j_type_operands(instruction_parameters:u25, rs1_decoded:Register, rd_de
     var imm21:u21 = ((imm20::imm19_12::imm11::imm10_1) as u21) << 1
     imm = sgn_extension_u21_u64(imm21)
 
-    if rs1_decoded != rs1 {
-        printf "[ERROR] rs1 mismatch for compute_op %d\n", compute_op
+    if rs1_decoded != 0 {
+        printf "[ERROR] rs1 mismatch\n"
         fail
     }
     if rd_decoded != rd {
-        printf "[ERROR] rd mismatch for compute_op %d\n", compute_op
+        printf "[ERROR] rd mismatch\n"
         fail
     }
     if imm_decoded != imm {
-        printf "[ERROR] imm mismatch for compute_op %d\n", compute_op
+        printf "[ERROR] imm mismatch\n"
         fail
     }
 }
 
-fn check_u_type_operands(instruction_parameters:u25, rs1_decoded:Register, imm_decoded:DoubleWord) {
-    var imm20:DoubleWord
-    var imm:DoubleWord
-    imm20::rs1 = instruction_parameters
-    imm = sgn_extension_u32_u64(((imm20 as u32) << 12) as u32)
+fn check_u_type_operands(instruction_parameters:u25, rd_decoded:Register, imm_decoded:DoubleWord) {
+    var imm20:u20
+    var rd:Register
+    imm20::rd = instruction_parameters
+    var imm:DoubleWord = sgn_extension_u32_u64((imm20 as u32) << 12)
 
-    if rs1_decoded != rs1 {
-        printf "[ERROR] rs1 mismatch for compute_op %d\n", compute_op
+    if rd_decoded != rd {
+        printf "[ERROR] rd mismatch\n"
         fail
     }
     if imm_decoded != imm {
-        printf "[ERROR] imm mismatch for compute_op %d\n", compute_op
+        printf "[ERROR] imm mismatch\n"
         fail
     }
 }
@@ -125,15 +123,15 @@ fn check_s_type_operands(instruction_parameters:u25, rs1_decoded:Register, rs2_d
     var imm:DoubleWord = sgn_extension_u12_u64(imm_sign::uimm6::uimm5)
 
     if rs1_decoded != rs1 {
-        printf "[ERROR] rs1 mismatch for compute_op %d\n", compute_op
+        printf "[ERROR] rs1 mismatch\n"
         fail
     }
     if rs2_decoded != rs2 {
-        printf "[ERROR] rs2 mismatch for compute_op %d\n", compute_op
+        printf "[ERROR] rs2 mismatch\n"
         fail
     }
     if imm_decoded != imm {
-        printf "[ERROR] imm mismatch for compute_op %d\n", compute_op
+        printf "[ERROR] imm mismatch\n"
         fail
     }
 }
