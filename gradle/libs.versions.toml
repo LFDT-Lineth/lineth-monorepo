@@ -33,7 +33,7 @@ restassured = "5.3.0"
 wiremock = "3.13.2"
 logcaptor = "2.11.0"
 shomei = "3.2.3"
-besuShomeiPluginVersion = "v1.0.6"
+besuShomeiPluginVersion = "v1.0.7-rc2"
 undercouchDownload = "5.6.0"
 
 # Runtime
