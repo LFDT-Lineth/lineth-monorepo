@@ -25,42 +25,42 @@ fn predecoding_check<registers, ram, state_row0, state_row1, state_row2, state_r
 
         // ---------------------------- B-type instructions ----------------------------
         case BRANCH_BEQ: {
-            check_b_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            check_b_type(instruction_parameters, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
             // Advance PC
             if registers[rs1_decoded] == registers[rs2_decoded] {
                 new_pc = signed_sum_of_double_word(pc, imm_decoded) as Address
             }
         }
         case BRANCH_BNE: {
-            check_b_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            check_b_type(instruction_parameters, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
             // Advance PC
             if registers[rs1_decoded] != registers[rs2_decoded] {
                 new_pc = signed_sum_of_double_word(pc, imm_decoded) as Address
             }
         }
         case BRANCH_BLT: {
-            check_b_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            check_b_type(instruction_parameters, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
             // Advance PC
             if signed_LT(registers[rs1_decoded], registers[rs2_decoded]) == 1 {
                 new_pc = signed_sum_of_double_word(pc, imm_decoded) as Address
             }
         }
         case BRANCH_BGE: {
-            check_b_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            check_b_type(instruction_parameters, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
             // Advance PC
             if signed_LT(registers[rs1_decoded], registers[rs2_decoded]) == 0 {
                 new_pc = signed_sum_of_double_word(pc, imm_decoded) as Address
             }
         }
         case BRANCH_BLTU: {
-            check_b_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            check_b_type(instruction_parameters, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
             // Advance PC
             if registers[rs1_decoded] < registers[rs2_decoded] {
                 new_pc = signed_sum_of_double_word(pc, imm_decoded) as Address
             }
         }
         case BRANCH_BGEU: {
-            check_b_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, imm_decoded)
+            check_b_type(instruction_parameters, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
             // Advance PC
             if registers[rs1_decoded] >= registers[rs2_decoded] {
                 new_pc = signed_sum_of_double_word(pc, imm_decoded) as Address

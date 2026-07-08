@@ -1,4 +1,4 @@
-fn check_b_type_operands(instruction_parameters:u25, rs1_decoded:Register, rs2_decoded:Register, imm_decoded:DoubleWord) {
+fn check_b_type(instruction_parameters:u25, compute_op:ComputeOp, rs1_decoded:Register, rs2_decoded:Register, imm_decoded:DoubleWord) {
     var funct3:Funct3
     var imm_sign:SignBit
     var imm_11:u1
@@ -8,6 +8,52 @@ fn check_b_type_operands(instruction_parameters:u25, rs1_decoded:Register, rs2_d
     var rs2:Register
     var imm:DoubleWord
     imm_sign::imm_10_5::rs2::rs1::funct3::imm_4_1::imm_11 = instruction_parameters
+
+    // Verify the raw funct3 field actually encodes the claimed branch compute_op.
+    // Mapping (see elf_to_json_gen unifiedComputeOp / bTypeUnifiedIndex):
+    //   BEQ=0b000, BNE=0b001, BLT=0b100, BGE=0b101, BLTU=0b110, BGEU=0b111
+    switch funct3 {
+        case 0: {
+            if compute_op != BRANCH_BEQ {
+                printf "[ERROR] compute_op mismatch\n"
+                fail
+            }
+        }
+        case 1: {
+            if compute_op != BRANCH_BNE {
+                printf "[ERROR] compute_op mismatch\n"
+                fail
+            }
+        }
+        case 4: {
+            if compute_op != BRANCH_BLT {
+                printf "[ERROR] compute_op mismatch\n"
+                fail
+            }
+        }
+        case 5: {
+            if compute_op != BRANCH_BGE {
+                printf "[ERROR] compute_op mismatch\n"
+                fail
+            }
+        }
+        case 6: {
+            if compute_op != BRANCH_BLTU {
+                printf "[ERROR] compute_op mismatch\n"
+                fail
+            }
+        }
+        case 7: {
+            if compute_op != BRANCH_BGEU {
+                printf "[ERROR] compute_op mismatch\n"
+                fail
+            }
+        }
+        default: {
+            printf "[ERROR] invalid B-type funct3\n"
+            fail
+        }
+    }
 
     // Reassemble imm[12:1] (sign = imm[12]) and sign-extend, then << 1 (imm[0] = 0).
     imm = sgn_extension_u12_u64(imm_sign::imm_11::imm_10_5::imm_4_1) << 1
