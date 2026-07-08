@@ -116,7 +116,7 @@ class BesuCluster(
     node: RunnableNode,
     isBootNode: Boolean = false,
   ) {
-    node.configuration.bootnodes = if (isBootNode) emptyList() else bootnodes
+    node.configuration.bootnodes = if (isBootNode) emptyList() else bootnodes.map { it.toString() }
 
     if (node.configuration.genesisConfig.isEmpty) {
       val genesisJson =
