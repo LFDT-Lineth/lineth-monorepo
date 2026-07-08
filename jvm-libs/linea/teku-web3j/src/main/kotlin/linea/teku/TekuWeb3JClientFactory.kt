@@ -13,7 +13,6 @@ import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.web3j.protocol.Web3jService
-import org.web3j.protocol.http.HttpService
 import tech.pegasys.teku.ethereum.executionclient.auth.JwtAuthHttpInterceptor
 import tech.pegasys.teku.ethereum.executionclient.auth.JwtConfig
 import tech.pegasys.teku.ethereum.executionclient.web3j.Web3JClient
@@ -44,7 +43,7 @@ object JwtHelper {
 object TekuWeb3JClientFactory {
   val defaultRequestResponseLogLevel: Level = Level.TRACE
   val defaultFailedRequestResponseLogLevel: Level = Level.DEBUG
-  val eventLogger = EventLogger.EVENT_LOG // "teku-event-log"
+  val eventLogger: EventLogger = EventLogger.EVENT_LOG // "teku-event-log"
 
   fun create(
     endpoint: URL,
@@ -75,7 +74,7 @@ object TekuWeb3JClientFactory {
           }
         }.build()
 
-    val httpService: Web3jService = HttpService(endpoint.toString(), okHttpClient)
+    val httpService: Web3jService = Jackson2HttpService(endpoint.toString(), okHttpClient)
     val web3jClient =
       Web3jClient(
         eventLogger,

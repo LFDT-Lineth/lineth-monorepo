@@ -129,9 +129,11 @@ data class L1SubmissionConfigToml(
     val submissionDelay: Duration = 0.seconds,
     val submissionTickInterval: Duration = 12.seconds,
     val maxSubmissionTransactionsPerTick: UInt = 2u,
-    // eip-7691 on Prague fork allows up to 9 blobs per transaction.
-    // however, Geth nodes fail with "transaction too large" error. only 7 blobs are accepted
-    val targetBlobsPerTransaction: UInt = 7u,
+    // 6 is the current EIP-7594 (Fusaka/PeerDAS) network wrapper cap on blobs per transaction
+    // (org.web3j.crypto.transaction.type.Transaction4844.MAX_BLOBS_PER_TRANSACTION). Not enforced
+    // here so a future EIP raising the cap doesn't require a config-validation change; a value
+    // above the library's cap fails fast when the blob transaction is built.
+    val targetBlobsPerTransaction: UInt = 6u,
     val dbMaxBlobsToReturn: UInt = 100u,
     val gas: GasConfigToml,
     val signer: SignerConfigToml,

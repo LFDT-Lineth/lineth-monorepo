@@ -51,7 +51,7 @@ class L1SubmissionConfigParsingTest {
       submission-delay = "PT1S"
       submission-tick-interval = "PT10S"
       max-submission-transactions-per-tick = 10
-      target-blobs-per-transaction=9
+      target-blobs-per-transaction=5
       db-max-blobs-to-return = 100
       [l1-submission.blob.gas]
       gas-limit = 10_000_000
@@ -158,7 +158,7 @@ class L1SubmissionConfigParsingTest {
           submissionDelay = 1.seconds,
           submissionTickInterval = 10.seconds,
           maxSubmissionTransactionsPerTick = 10u,
-          targetBlobsPerTransaction = 9u,
+          targetBlobsPerTransaction = 5u,
           dbMaxBlobsToReturn = 100u,
           gas =
           L1SubmissionConfigToml.GasConfigToml(
@@ -339,7 +339,7 @@ class L1SubmissionConfigParsingTest {
           submissionDelay = 0.seconds,
           submissionTickInterval = 12.seconds,
           maxSubmissionTransactionsPerTick = 2u,
-          targetBlobsPerTransaction = 7u,
+          targetBlobsPerTransaction = 6u,
           dbMaxBlobsToReturn = 100u,
           gas =
           L1SubmissionConfigToml.GasConfigToml(

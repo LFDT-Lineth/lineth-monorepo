@@ -152,7 +152,7 @@ disabled = false
 submission-delay = "PT1S"
 submission-tick-interval = "PT1S"
 max-submission-transactions-per-tick = 10
-target-blobs-per-transaction=9
+target-blobs-per-transaction=6
 db-max-blobs-to-return = 100
 [l1-submission.blob.gas]
 gas-limit = 10000000

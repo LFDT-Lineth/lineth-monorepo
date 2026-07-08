@@ -32,6 +32,7 @@ import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.web3j.crypto.transaction.type.Transaction4844
 import java.net.URI
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicBoolean
@@ -135,7 +136,7 @@ class SubmissionsFetchingTaskIntTest {
 
   private fun submitDataToL1ContactAndWaitExecution(
     aggregationsAndBlobs: List<AggregationAndBlobs> = this.aggregationsAndBlobs,
-    blobChunksSize: Int = 9,
+    blobChunksSize: Int = Transaction4844.MAX_BLOBS_PER_TRANSACTION,
     waitTimeout: Duration = 4.minutes,
   ) {
     submitBlobsAndAggregationsAndWaitExecution(

@@ -1,8 +1,8 @@
 package linea.web3j.ethapi
 
-import com.fasterxml.jackson.databind.JsonNode
 import linea.ethapi.ExecutionWitness
 import linea.kotlin.decodeHex
+import tools.jackson.databind.JsonNode
 
 object ExecutionWitnessResponseParser {
 
@@ -20,8 +20,8 @@ object ExecutionWitnessResponseParser {
     if (!array.isArray) {
       throw IllegalArgumentException("missing or invalid field: $field")
     }
-    return array.map { element ->
-      element.asText().decodeHex()
+    return (array as Iterable<JsonNode>).map { element ->
+      element.asString().decodeHex()
     }
   }
 }
