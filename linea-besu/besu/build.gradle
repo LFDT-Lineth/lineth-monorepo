@@ -200,20 +200,42 @@ static void writeCachedBesuVersion(File cachedResolvedFile, String besuCommit, S
 }
 
 /**
+ * providers.exec never streams a child process's stdout/stderr to the Gradle console -- it
+ * only buffers them for the caller to read. Left unhandled, a failing script prints nothing
+ * but Gradle's generic "non-zero exit value N" message. This wrapper captures both streams
+ * and, on failure, throws with their full content so the actual error is visible in CI logs.
+ */
+static String execCapturing(providers, File workingDir, Map<String, Object> env, List<String> commandLine) {
+  def output = providers.exec { spec ->
+    spec.workingDir(workingDir)
+    env.each { k, v -> spec.environment(k, v) }
+    spec.commandLine(commandLine)
+    spec.setIgnoreExitValue(true)
+  }
+  def stdout = output.standardOutput.asText.get()
+  def exitValue = output.result.get().exitValue
+  if (exitValue != 0) {
+    def stderr = output.standardError.asText.get()
+    throw new GradleException(
+        "Command '${commandLine.join(' ')}' failed with exit code ${exitValue}\n" +
+            "--- stdout ---\n${stdout}\n--- stderr ---\n${stderr}")
+  }
+  return stdout
+}
+
+/**
  * Single provider.exec entry point for linea-besu/besu/scripts/checkout-and-resolve-version.sh.
  * Returns the script's full stdout (last line is the resolved besuVersion). Side effect:
  * tmp/besu-eth is created or updated to a git checkout at besuCommit. Configuration-cache
  * safe — Gradle tracks the exec inputs and captured output.
  */
 static String runCheckoutAndResolveScript(providers, String besuCommit, File rootDir, Boolean skipCheckoutAfterClone = false) {
-  return providers.exec { spec ->
-    spec.workingDir(rootDir)
-    spec.environment('BESU_DIR', rootDir.absolutePath + '/tmp/besu-eth')
-    spec.environment('BESU_COMMIT', besuCommit)
-    spec.environment('VERSION_LABEL', '')
-    spec.environment('SKIP_CHECKOUT_AFTER_CLONE', skipCheckoutAfterClone)
-    spec.commandLine('bash', rootDir.absolutePath + '/linea-besu/besu/scripts/checkout-and-resolve-version.sh')
-  }.standardOutput.asText.get()
+  return execCapturing(providers, rootDir, [
+      BESU_DIR: rootDir.absolutePath + '/tmp/besu-eth',
+      BESU_COMMIT: besuCommit,
+      VERSION_LABEL: '',
+      SKIP_CHECKOUT_AFTER_CLONE: skipCheckoutAfterClone,
+  ], ['bash', rootDir.absolutePath + '/linea-besu/besu/scripts/checkout-and-resolve-version.sh'])
 }
 
 /**
@@ -292,16 +314,12 @@ static void buildAndPublishBesuAction(
  */
 static void runBuildDistAndPublishScript(providers, File rootDir, String resolvedBesuVer, String publishTask, String cloudsmithUser, String cloudsmithApiKey) {
   def rootPath = rootDir.absolutePath
-  providers.exec { spec ->
-    spec.workingDir(rootDir)
-    spec.environment('BESU_DIR', "${rootPath}/tmp/besu-eth")
-    spec.environment('RESOLVED_BESU_VERSION', resolvedBesuVer)
-    if (publishTask == 'publish') {
-      spec.environment('CLOUDSMITH_USER', cloudsmithUser)
-      spec.environment('CLOUDSMITH_API_KEY', cloudsmithApiKey)
-    }
-    spec.commandLine('bash', "${rootPath}/linea-besu/besu/scripts/build-dist-and-publish.sh", publishTask)
-  }.result.get()
+  def env = [BESU_DIR: "${rootPath}/tmp/besu-eth", RESOLVED_BESU_VERSION: resolvedBesuVer]
+  if (publishTask == 'publish') {
+    env.CLOUDSMITH_USER = cloudsmithUser
+    env.CLOUDSMITH_API_KEY = cloudsmithApiKey
+  }
+  execCapturing(providers, rootDir, env, ['bash', "${rootPath}/linea-besu/besu/scripts/build-dist-and-publish.sh", publishTask])
 }
 
 static boolean isBesuAvailableInMavenLocal(logger, String version, String mavenLocalBase) {
