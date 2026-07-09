@@ -5,11 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.module.kotlin.jacksonMapperBuilder
-import linea.domain.BlobMetadataPayload
-import linea.domain.BlobMetadataV1
-import linea.domain.BlobMetadataVersion
-import linea.domain.VersionedMetadata
-import linea.domain.VersionedMetadataPayload
+import linea.domain.BlobMetadata
 import linea.s11n.jackson.InstantISO8601Deserializer
 import linea.s11n.jackson.InstantISO8601Serializer
 import linea.s11n.jackson.ethByteAsHexDeserialisersModule
@@ -19,7 +15,7 @@ import kotlin.time.Instant
 /**
  * Serializes a [VersionedMetadata] envelope as `{ "version": <int>, "metadata": { ... } }`.
  * On read, `version` selects the concrete payload class; the payload itself carries no version
- * field. Reusable for any versioned-JSON column (blob submission metadata today).
+ * field. Reusable for any versioned-JSON column.
  */
 class VersionedMetadataCodec<T : VersionedMetadataPayload>(
   private val mapper: ObjectMapper,
@@ -43,8 +39,7 @@ class VersionedMetadataCodec<T : VersionedMetadataPayload>(
   companion object {
     /**
      * An [ObjectMapper] that (de)serializes `ByteArray` as `0x`-hex and `kotlin.time.Instant`
-     * as ISO-8601, reusing the shared serializers in `jvm-libs:generic:serialization:jackson`,
-     * so the annotation-free domain payloads serialize correctly.
+     * as ISO-8601, reusing the shared serializers in `jvm-libs:generic:serialization:jackson`.
      */
     fun versionedMetadataMapper(): ObjectMapper =
       jacksonMapperBuilder()
@@ -61,9 +56,13 @@ class VersionedMetadataCodec<T : VersionedMetadataPayload>(
   }
 }
 
-/** Codec for [linea.domain.BlobMetadata]. */
+/**
+ * (De)serialization facade for the domain [BlobMetadata]. Callers pass/receive the plain
+ * domain type; the versioned envelope and the per-version payloads are hidden here — writes
+ * map the domain to the current version, reads upcast any version back to the domain.
+ */
 object BlobMetadataSerialization {
-  val codec: VersionedMetadataCodec<BlobMetadataPayload> =
+  private val codec: VersionedMetadataCodec<BlobMetadataPayload> =
     VersionedMetadataCodec(
       mapper = VersionedMetadataCodec.versionedMetadataMapper(),
       versionToClass = { BlobMetadataVersion.fromValue(it).payloadClass },
@@ -73,4 +72,8 @@ object BlobMetadataSerialization {
         }
       },
     )
+
+  fun serialize(metadata: BlobMetadata): String = codec.toJson(BlobMetadataV1.fromDomain(metadata))
+
+  fun deserialize(json: String): BlobMetadata = codec.fromJson(json).metadata.toDomain()
 }
