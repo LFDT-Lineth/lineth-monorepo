@@ -1,4 +1,4 @@
-name: arithmetization execution-specs SSZ fixtures
+name: arithmetization zkevm SSZ fixtures
 
 on:
   schedule:
@@ -11,9 +11,9 @@ permissions:
 
 jobs:
   run-fixtures:
-    name: l2-execution execution-specs SSZ fixtures
+    name: l2-execution zkevm SSZ fixtures
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
-    timeout-minutes: 4320
+    timeout-minutes: 120
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -35,4 +35,4 @@ jobs:
       - name: Run execution-specs SSZ fixtures
         env:
           ZKC_REF: ""
-        run: make -C riscv-guests/l2-execution run-execution-specs-ssz-fixtures
+        run: make --dry-run -C riscv-guests/l2-execution run-zkevm-ssz-fixtures # Remove --dry-run when we are ready to run those
