@@ -9,7 +9,7 @@
 # itself (ELF->JSON via elf_to_json_gen, then zkc) is owned by
 # arithmetization/src/test/Makefile; fixture-exec/fixture-debug build that ELF and hand it over.
 
-.PHONY: fetch test spec-test prep-execution-specs-json-fixtures run-json-ssz-fixtures run-execution-specs-ssz-fixtures get-zkevm-fixtures-json-fixtures run-zkevm-fixtures-ssz-fixtures clean compile exec debug require-input
+.PHONY: fetch test spec-test get-execution-specs-json-fixtures run-fixtures run-execution-specs-ssz-fixtures get-zkevm-json-fixtures run-zkevm-ssz-fixtures clean compile exec debug require-input
 
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
@@ -83,27 +83,20 @@ spec-test:
 	$(ZIG) build spec-tests $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) $(if $(strip $(SPEC_ARGS)),-- $(SPEC_ARGS))
 
 # Re-uses logic from build.zig to download execution-spec JSON fixtures under $(EXECUTION_SPECS_FIXTURES_DIR).
-prep-execution-specs-json-fixtures:
-	$(ZIG) build prep-execution-specs-json-fixtures $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) -Dexecution-specs-fixtures-link="$(EXECUTION_SPECS_FIXTURES_DIR)"
+get-execution-specs-json-fixtures:
+	$(ZIG) build get-execution-specs-json-fixtures $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) -Dexecution-specs-fixtures-link="$(EXECUTION_SPECS_FIXTURES_DIR)"
 
 # Runs selected execution-spec fixtures through zkc; generated SSZ inputs can be inspected in $(EXECUTION_SPECS_SSZ_FIXTURES_DIR).
-run-execution-specs-ssz-fixtures: prep-execution-specs-json-fixtures
-	$(MAKE) --no-print-directory -C $(MAKEFILE_DIR) run-json-ssz-fixtures \
+run-execution-specs-ssz-fixtures: get-execution-specs-json-fixtures
+	$(MAKE) --no-print-directory -C $(MAKEFILE_DIR) run-fixtures \
 		JSON_FIXTURES_DIR="$(EXECUTION_SPECS_FIXTURES_DIR)" \
 		SSZ_FIXTURES_DIR="$(EXECUTION_SPECS_SSZ_FIXTURES_DIR)" \
 		RUN_FIXTURE_PATHS="$(EXECUTION_SPECS_RUN_FIXTURE_PATHS)" \
 		RUN_SSZ_LIMIT="$(EXECUTION_SPECS_RUN_SSZ_LIMIT)" \
 		FIXTURE_FORMAT="execution-specs"
 
-# Runs JSON fixtures already present on disk. Source-specific targets prepare the JSON first.
-run-json-ssz-fixtures:
-	@[ -n "$(JSON_FIXTURES_DIR)" ] || { echo "JSON_FIXTURES_DIR is mandatory"; exit 1; }
-	@[ -n "$(SSZ_FIXTURES_DIR)" ] || { echo "SSZ_FIXTURES_DIR is mandatory"; exit 1; }
-	@[ -n "$(FIXTURE_FORMAT)" ] || { echo "FIXTURE_FORMAT is mandatory"; exit 1; }
-	GOCACHE=/tmp/go-build $(GO) run $(MAKEFILE_DIR)scripts/run_ssz_fixtures.go --fixtures-dir "$(JSON_FIXTURES_DIR)" --ssz-dir "$(SSZ_FIXTURES_DIR)" --fixture-paths "$(RUN_FIXTURE_PATHS)" --ssz-limit "$(RUN_SSZ_LIMIT)" --fixture-format "$(FIXTURE_FORMAT)" $(if $(strip $(ZESU_CONVERT_BIN)),--zesu-convert "$(ZESU_CONVERT_BIN)")
-
 # Downloads and extracts Lineth zkevm-fixtures release JSON fixtures under $(ZKEVM_FIXTURES_JSON_DIR).
-get-zkevm-fixtures-json-fixtures: $(ZKEVM_FIXTURES_EXTRACTED)
+get-zkevm-json-fixtures: $(ZKEVM_FIXTURES_EXTRACTED)
 	@set -eu; \
 	if [ ! -d "$(ZKEVM_FIXTURES_CONVERTER_DIR)/.git" ]; then \
 		rm -rf "$(ZKEVM_FIXTURES_CONVERTER_DIR)"; \
@@ -130,8 +123,8 @@ $(ZKEVM_FIXTURES_EXTRACTED):
 	touch "$@"
 
 # Runs selected Lineth zkevm-fixtures release JSON fixtures through zkc; SSZ inputs are in $(ZKEVM_FIXTURES_SSZ_DIR).
-run-zkevm-fixtures-ssz-fixtures: get-zkevm-fixtures-json-fixtures
-	$(MAKE) --no-print-directory -C $(MAKEFILE_DIR) run-json-ssz-fixtures \
+run-zkevm-ssz-fixtures: get-zkevm-json-fixtures
+	$(MAKE) --no-print-directory -C $(MAKEFILE_DIR) run-fixtures \
 		JSON_FIXTURES_DIR="$(ZKEVM_FIXTURES_JSON_DIR)" \
 		SSZ_FIXTURES_DIR="$(ZKEVM_FIXTURES_SSZ_DIR)" \
 		RUN_FIXTURE_PATHS="$(ZKEVM_FIXTURES_RUN_FIXTURE_PATHS)" \
@@ -139,6 +132,13 @@ run-zkevm-fixtures-ssz-fixtures: get-zkevm-fixtures-json-fixtures
 		FIXTURE_FORMAT="zkevm-fixtures" \
 		ZESU_CONVERT_BIN="$(ZKEVM_FIXTURES_CONVERTER_BIN)"
 
+# Runs fixtures already present on disk. It is used for both execution-specs and zkevm-fixtures and is the main entrypoint for fixture execution.
+run-fixtures:
+	@[ -n "$(JSON_FIXTURES_DIR)" ] || { echo "JSON_FIXTURES_DIR is mandatory"; exit 1; }
+	@[ -n "$(SSZ_FIXTURES_DIR)" ] || { echo "SSZ_FIXTURES_DIR is mandatory"; exit 1; }
+	@[ -n "$(FIXTURE_FORMAT)" ] || { echo "FIXTURE_FORMAT is mandatory"; exit 1; }
+	GOCACHE=/tmp/go-build $(GO) run $(MAKEFILE_DIR)scripts/run_ssz_fixtures.go --fixtures-dir "$(JSON_FIXTURES_DIR)" --ssz-dir "$(SSZ_FIXTURES_DIR)" --fixture-paths "$(RUN_FIXTURE_PATHS)" --ssz-limit "$(RUN_SSZ_LIMIT)" --fixture-format "$(FIXTURE_FORMAT)" $(if $(strip $(ZESU_CONVERT_BIN)),--zesu-convert "$(ZESU_CONVERT_BIN)")
+	
 clean:
 	rm -rf $(MAKEFILE_DIR)zig-out/
 	rm -rf $(BUILD_CACHE_DIR)

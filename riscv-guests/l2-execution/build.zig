@@ -111,7 +111,7 @@ pub fn build(b: *std.Build) void {
 
     const test_step = b.step("test", "Run native Zig unit tests for the EVM execution guest");
     const spec_step = b.step("spec-tests", "Run the guest against all EF zkevm stateless fixtures (host)");
-    const prep_fixtures_step = b.step("prep-execution-specs-json-fixtures", "Expose EF zkevm stateless fixtures for external runners");
+    const prep_fixtures_step = b.step("get-execution-specs-json-fixtures", "Expose EF zkevm stateless fixtures for external runners");
 
     // Integration smoke test for the delegated precompiles: verifies zesu-zkvm's stdlibs_accel
     // imports and that its ecrecover round-trips (the in-guest precompiles delegate to it). std +

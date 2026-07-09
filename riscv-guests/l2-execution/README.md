@@ -24,7 +24,7 @@ make -C l2-execution exec
 Large zkevm fixture archives are downloaded and extracted under `/tmp`, never stored in the repo:
 
 ```bash
-make -C l2-execution run-zkevm-fixtures-ssz-fixtures
+make -C l2-execution run-zkevm-ssz-fixtures
 ```
 
 The downloaded archives are cached under `/tmp/zkevm-fixtures/archives`, extracted JSON fixtures under

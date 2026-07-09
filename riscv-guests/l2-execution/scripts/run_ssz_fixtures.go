@@ -4,7 +4,7 @@ package main
 // Run all execution-specs ssz inputs:
 //   make -C riscv-guests/l2-execution run-execution-specs-ssz-fixtures EXECUTION_SPECS_RUN_SSZ_LIMIT=0
 // Run all zkevm-fixtures ssz inputs:
-//   make -C riscv-guests/l2-execution run-zkevm-fixtures-ssz-fixtures ZKEVM_FIXTURES_RUN_SSZ_LIMIT=0
+//   make -C riscv-guests/l2-execution run-zkevm-ssz-fixtures ZKEVM_FIXTURES_RUN_SSZ_LIMIT=0
 
 import (
 	"encoding/hex"
