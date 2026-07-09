@@ -247,15 +247,16 @@ static void buildAndPublishBesuAction(
     logger.lifecycle('Skipping buildAndPublishBesu: no resolved Besu version (run a non-clean-only build first)')
     return
   }
+  def bomAvailableInMaven = isBesuAvailableInMavenLocal(logger, resolvedBesuVer, mavenLocalBase) ||
+      isBesuAvailableInMaven(logger, resolvedBesuVer)
   def publishGradleTaskName = publishToMaven ? "publish" : "publishToMavenLocal"
   def shouldSkip = false
   if (publishToMaven) {
-    shouldSkip = isBesuAvailableInMaven(logger, resolvedBesuVer) &&
-        canDownloadBesuDistributionFromMaven(logger, resolvedBesuVer)
+    shouldSkip = bomAvailableInMaven && canDownloadBesuDistributionFromMaven(logger, resolvedBesuVer)
   } else {
     if (isBesuAndDistributionAvailableInMavenLocal(logger, resolvedBesuVer, rootDir, mavenLocalBase)) {
       shouldSkip = true
-    } else if (isBesuAvailableInMaven(logger, resolvedBesuVer) &&
+    } else if (bomAvailableInMaven &&
         (skipDownloadBesuDist || downloadBesuDistributionFromMaven(logger, rootDir, resolvedBesuVer))) {
       if (skipDownloadBesuDist) {
         logger.debug("Skipping download besu distribution from maven as skipDownloadBesuDist=${skipDownloadBesuDist}")
@@ -267,19 +268,39 @@ static void buildAndPublishBesuAction(
     logger.debug("Skipping buildAndPublishBesu as Besu ${resolvedBesuVer} already available")
     return
   }
-  logger.lifecycle("Running buildAndPublishBesu as Besu ${resolvedBesuVer} was not found in remote/local maven")
 
   // ensure the tmp besu folder has been checkout at besuCommit
   runCheckoutAndResolveScript(providers, besuCommit, rootDir)
 
+  // The jars/BOM are already published but the distribution tarball isn't (e.g. it never got
+  // uploaded, or the raw asset host is missing it) -- only the tarball needs materializing, so
+  // build distTar alone instead of re-running the full checkout+build+publish pipeline.
+  if (bomAvailableInMaven) {
+    logger.lifecycle("Besu ${resolvedBesuVer} jars/BOM already published; building distTar only to materialize the missing distribution")
+    runBuildDistAndPublishScript(providers, rootDir, resolvedBesuVer, 'none', cloudsmithUser, cloudsmithApiKey)
+    return
+  }
+
+  logger.lifecycle("Running buildAndPublishBesu as Besu ${resolvedBesuVer} was not found in remote/local maven")
+  runBuildDistAndPublishScript(providers, rootDir, resolvedBesuVer, publishGradleTaskName, cloudsmithUser, cloudsmithApiKey)
+}
+
+/**
+ * Runs linea-besu/besu/scripts/build-dist-and-publish.sh with the given publish task
+ * ('publish', 'publishToMavenLocal', or 'none' to build distTar only). Cloudsmith
+ * credentials are only wired in when an actual remote publish is requested.
+ */
+static void runBuildDistAndPublishScript(providers, File rootDir, String resolvedBesuVer, String publishTask, String cloudsmithUser, String cloudsmithApiKey) {
   def rootPath = rootDir.absolutePath
   providers.exec { spec ->
     spec.workingDir(rootDir)
     spec.environment('BESU_DIR', "${rootPath}/tmp/besu-eth")
     spec.environment('RESOLVED_BESU_VERSION', resolvedBesuVer)
-    spec.environment('CLOUDSMITH_USER', cloudsmithUser)
-    spec.environment('CLOUDSMITH_API_KEY', cloudsmithApiKey)
-    spec.commandLine('bash', "${rootPath}/linea-besu/besu/scripts/build-dist-and-publish.sh", publishGradleTaskName)
+    if (publishTask == 'publish') {
+      spec.environment('CLOUDSMITH_USER', cloudsmithUser)
+      spec.environment('CLOUDSMITH_API_KEY', cloudsmithApiKey)
+    }
+    spec.commandLine('bash', "${rootPath}/linea-besu/besu/scripts/build-dist-and-publish.sh", publishTask)
   }.result.get()
 }
 
