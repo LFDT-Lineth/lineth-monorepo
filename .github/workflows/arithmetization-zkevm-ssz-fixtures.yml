@@ -1,38 +1,39 @@
-name: arithmetization zkevm SSZ fixtures
+# TODO: uncomment when we are ready to run this
+# name: arithmetization zkevm SSZ fixtures
 
-on:
-  schedule:
-    - cron: '0 3 * * 1'
-  workflow_dispatch:
+# on:
+#   schedule:
+#     - cron: '0 3 * * 1'
+#   workflow_dispatch:
 
-permissions:
-  contents: read
-  actions: read
+# permissions:
+#   contents: read
+#   actions: read
 
-jobs:
-  run-fixtures:
-    name: l2-execution zkevm SSZ fixtures
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
-    timeout-minutes: 120
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          submodules: false
+# jobs:
+#   run-fixtures:
+#     name: l2-execution zkevm SSZ fixtures
+#     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
+#     timeout-minutes: 120
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+#         with:
+#           submodules: false
 
-      - name: Setup RISC-V guests environment
-        uses: ./.github/actions/setup-riscv-guests
+#       - name: Setup RISC-V guests environment
+#         uses: ./.github/actions/setup-riscv-guests
 
-      - name: Install Go
-        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
-        with:
-          go-version: 1.25.7
-          cache-dependency-path: "**/*.sum"
+#       - name: Install Go
+#         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+#         with:
+#           go-version: 1.25.7
+#           cache-dependency-path: "**/*.sum"
 
-      - name: Install zkc
-        run: make -C arithmetization install-zkc
+#       - name: Install zkc
+#         run: make -C arithmetization install-zkc
 
-      - name: Run zkevm SSZ fixtures
-        env:
-          ZKC_REF: ""
-        run: make --dry-run -C riscv-guests/l2-execution run-zkevm-ssz-fixtures # Remove --dry-run when we are ready to run those
+#       - name: Run zkevm SSZ fixtures
+#         env:
+#           ZKC_REF: ""
+#         run: make -C riscv-guests/l2-execution run-zkevm-ssz-fixtures
