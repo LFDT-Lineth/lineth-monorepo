@@ -9,7 +9,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/consensys/gnark-crypto/ecc"
-	"github.com/consensys/gnark-crypto/field/koalabear"
 	"github.com/consensys/gnark/constraint"
 	"github.com/consensys/gnark/frontend/cs/scs"
 	"github.com/consensys/linea-monorepo/prover/circuits"
@@ -49,11 +48,11 @@ type Circuit struct {
 
 	// IsAllowedCircuitID is a public input parroting up the value of
 	// [AggregationFPIQSnark.IsAllowedCircuitID]. It is needed so that the
-	// aggregation can "see" this value while it cannot access directly the
+	// aggregation can "see" this value while it cannot directly access the
 	// content of the dynamic chain configuration.
 	//
-	// Its bits encodes which circuit is being allowed in the dynamic chain
-	// configuration. For instance, the bits of weight "3" indicates whether the
+	// Its bits encode which circuit is being allowed in the dynamic chain
+	// configuration. For instance, the bits of weight "3" indicate whether the
 	// circuit ID "3" is allowed and so on.  The packing order of the bits is
 	// LSb to MSb. For instance if
 	//
@@ -66,12 +65,8 @@ type Circuit struct {
 	// Then the IsAllowedCircuitID public input must be encoded as 0b10110
 	IsAllowedCircuitID frontend.Variable `gnark:",public"`
 
-	// FirstExecutionInitialStateRootHash is the executionPublicInput of the
-	// first execution circuit. This value is useful because during the
-	// koalabear migration, on the first block. The aggregation.InitialStateRootHash
-	// will be set to a different value. Otherwise, the value won't be used
-	// in the circuit.
-	FirstExecutionInitialStateRootHash [2]frontend.Variable
+	ParentShnarfPreimage ShnarfIteration
+	GrandparentShnarf    [32]frontend.Variable
 
 	MaxNbCircuits int // possibly useless TODO consider removing
 }
@@ -88,6 +83,12 @@ func (c *Circuit) Define(api frontend.API) error {
 	// implicit: CHECK_DECOMP_LIMIT
 	rDA := internal.NewRange(api, c.NbDataAvailability, len(c.DataAvailabilityPublicInput))
 	hshK := c.Keccak.NewHasher(api)
+	twoPow8 := big.NewInt(256)
+
+	initialStateRootHash := [2]frontend.Variable{
+		compress.ReadNum(api, c.ParentShnarfPreimage.NewStateRootHash[:16], twoPow8),
+		compress.ReadNum(api, c.ParentShnarfPreimage.NewStateRootHash[16:], twoPow8),
+	}
 
 	// nbBatchesSums[i] is the index of the first execution circuit associated with the i+1-st data availability circuit.
 	// Past the last DA circuit, this value remains constant.
@@ -111,8 +112,8 @@ func (c *Circuit) Define(api frontend.API) error {
 
 	finalStateRootHashesLo := logderivlookup.New(api)
 	finalStateRootHashesHi := logderivlookup.New(api)
-	finalStateRootHashesLo.Insert(c.InitialStateRootHash[1])
-	finalStateRootHashesHi.Insert(c.InitialStateRootHash[0])
+	finalStateRootHashesLo.Insert(initialStateRootHash[1])
+	finalStateRootHashesHi.Insert(initialStateRootHash[0])
 
 	for _, pi := range c.ExecutionFPIQ {
 		finalStateRootHashesLo.Insert(pi.FinalStateRootHash[1])
@@ -132,7 +133,8 @@ func (c *Circuit) Define(api frontend.API) error {
 		return err
 	}
 
-	shnarfParams := make([]ShnarfIteration, len(c.DataAvailabilityPublicInput))
+	shnarfParams := make([]ShnarfIteration, len(c.DataAvailabilityPublicInput)+1)
+	shnarfParams[0] = c.ParentShnarfPreimage
 	for i, piq := range c.DataAvailabilityFPIQ {
 		piq.RangeCheck(api)
 
@@ -142,7 +144,7 @@ func (c *Circuit) Define(api frontend.API) error {
 			newStateRoot   = [32]frontend.Variable(append(newStateRootHi[:], newStateRootLo[:]...))
 		)
 
-		shnarfParams[i] = ShnarfIteration{ // prepare shnarf verification data
+		shnarfParams[i+1] = ShnarfIteration{ // prepare shnarf verification data
 			BlobDataSnarkHash:    gnarkutil.ToBytes32(api, piq.SnarkHash),
 			NewStateRootHash:     newStateRoot,
 			EvaluationPointBytes: piq.X,
@@ -153,11 +155,22 @@ func (c *Circuit) Define(api frontend.API) error {
 		api.AssertIsEqual(c.DataAvailabilityPublicInput[i], api.Mul(rDA.InRange[i], piq.Sum(api)))
 	}
 
+	// CHECK_PARENT_SHNARF: open the parent shnarf as one more link, prepended,
+	// to the same shnarf chain. ParentShnarfPreimage.NewStateRootHash is the
+	// same bytes initialStateRootHash was derived from above, so this simply
+	// verifies that the previous aggregation's committed shnarf, opened
+	// against the preimage supplied here, reconstructs to ParentShnarf. Since
+	// ParentShnarf is bound into the aggregation public input (which the
+	// contract pins to its stored lastFinalizedShnarf), this forces
+	// initialStateRootHash to equal the genuine finalized state root.
+	shnarfs := ComputeShnarfs(&hshK, c.GrandparentShnarf, shnarfParams)
+	internal.AssertSliceEquals(api, shnarfs[0][:], c.ParentShnarf[:])
+	shnarfs = shnarfs[1:]
+
 	var (
 		// The circuit only has the last shnarf as input, therefore we do not
 		// perform CHECK_SHNARF. However, since they are chained, the passing of
 		// CHECK_FINAL_SHNARF implies that all shnarfs are correct.
-		shnarfs = ComputeShnarfs(&hshK, c.ParentShnarf, shnarfParams)
 		// implicit: CHECK_EXEC_LIMIT
 		rExecution             = internal.NewRange(api, nbExecution, maxNbExecution)
 		finalBlockNum          = c.LastFinalizedBlockNumber
@@ -167,15 +180,7 @@ func (c *Circuit) Define(api frontend.API) error {
 		l2MessagesByByte       [32][]internal.VarSlice
 		execMaxNbL2Msg         = len(c.ExecutionFPIQ[0].L2MessageHashes.Values)
 		merkleNbLeaves         = 1 << c.L2MessageMerkleDepth
-		// This checks that the initial state-root hash represents a
-		// koalabear octuplet. The only situation where this clause may apply
-		// is when the value passed by the smart-contract can be on BLS12-377
-		// (on the first proof after the migration to koalabear).
-		isKoalaStateRootHash = isActuallyKoalaHash(api, c.InitialStateRootHash)
-		finalStateRootHash   = [2]frontend.Variable{
-			api.Select(isKoalaStateRootHash, c.InitialStateRootHash[0], c.FirstExecutionInitialStateRootHash[0]),
-			api.Select(isKoalaStateRootHash, c.InitialStateRootHash[1], c.FirstExecutionInitialStateRootHash[1]),
-		}
+		finalStateRootHash     = initialStateRootHash
 	)
 
 	for j := range l2MessagesByByte {
@@ -278,9 +283,8 @@ func (c *Circuit) Define(api frontend.API) error {
 	}
 
 	// check invalidity proofs against the finalStateRootHash and FinalBlockNumber in the aggregation.
-	pi.FinalFtxNumber, pi.FinalFtxRollingHash = c.checkInvalidityProofs(api, c.InitialStateRootHash, c.LastFinalizedBlockNumber, c.LastFinalizedBlockTimestamp)
+	pi.FinalFtxNumber, pi.FinalFtxRollingHash = c.checkInvalidityProofs(api, initialStateRootHash, c.LastFinalizedBlockNumber, c.LastFinalizedBlockTimestamp)
 
-	twoPow8 := big.NewInt(256)
 	// "open" aggregation public input
 	aggregationPIBytes := pi.Sum(api, &hshK)
 	api.AssertIsEqual(c.AggregationPublicInput[0], compress.ReadNum(api, aggregationPIBytes[:16], twoPow8))
@@ -484,7 +488,7 @@ func allocateCircuit(cfg config.PublicInput) Circuit {
 }
 
 func newKeccakCompiler(c config.PublicInput) keccak.StrictHasherCompiler {
-	nbShnarf := c.MaxNbDataAvailability
+	nbShnarf := c.MaxNbDataAvailability + 1
 	nbMerkle := c.L2MsgMaxNbMerkle * ((1 << c.L2MsgMerkleDepth) - 1)
 	res := keccak.NewStrictHasherCompiler(0)
 	for range nbShnarf {
@@ -547,31 +551,4 @@ func InnerCircuitTypesToIndexes(cfg *config.PublicInput, types []InnerCircuitTyp
 	),
 		utils.RightPad(indexes[Invalidity], cfg.MaxNbInvalidity)...) // Pad Invalidity indexes
 
-}
-
-// isActuallyKoalaHash checks if the given pair of frontend.Variable represents
-// an octuplet of field elements. This is done by splitting the variables in
-// 4 limbs (of each 32 bits) and checking that these are smaller than the
-// koalabear modulus.
-func isActuallyKoalaHash(api frontend.API, hash [2]frontend.Variable) frontend.Variable {
-
-	// The cmpRes is computed by adding the result of Cmp for each (alleged)
-	// koalabear element. If the limbs are koalabear, the result of cmp will
-	// be -1. Thus, at the end of the function cmpRes would be equal to 0 and
-	// to some positive value if any of the cmpRes is NOT -1. Thus, it is
-	// an equivalent test.
-	cmpRes := frontend.Variable(8)
-
-	for i := range hash {
-		// The decomposition is done by splitting into bits, and then recombining
-		// them in 4 uint32s.
-		bitsOfHalf := api.ToBinary(hash[i], 128)
-		for k := range 4 {
-			limbs := api.FromBinary(bitsOfHalf[k*32 : (k+1)*32]...)
-			shouldBeNeg := api.Cmp(limbs, koalabear.Modulus())
-			cmpRes = api.Add(cmpRes, shouldBeNeg)
-		}
-	}
-
-	return api.IsZero(cmpRes)
 }

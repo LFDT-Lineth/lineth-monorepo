@@ -21,12 +21,29 @@ const (
 	NbAggregationFPI = 18 // hardcoded constant, the number of functional public inputs used in the keccak hash.
 )
 
+type ShnarfPreimage struct {
+	SnarkHash string `json:"snarkHash"`
+	X         string `json:"x"`
+	Y         string `json:"y"`
+}
+
 // Aggregation collects all the fields that are used to construct the public
 // input of the finalization proof.
 type Aggregation struct {
-	FinalShnarf                             string
-	ParentAggregationFinalShnarf            string
-	ParentStateRootHash                     string
+	FinalShnarf                  string
+	ParentAggregationFinalShnarf string
+	ParentStateRootHash          string
+
+	// The remaining four components of the keccak preimage of
+	// ParentAggregationFinalShnarf (its fifth component is
+	// ParentStateRootHash itself): the previous aggregation's last blob
+	// submission's parent shnarf (grandparent shnarf), snark hash, data
+	// evaluation point and data evaluation claim, all in 0x prefixed
+	// hexstring. These let the circuit open ParentAggregationFinalShnarf and
+	// bind ParentStateRootHash to the state root it actually commits to.
+	GrandparentShnarf string
+	ParentShnarf      ShnarfPreimage
+
 	ParentAggregationLastBlockTimestamp     uint
 	FinalTimestamp                          uint
 	LastFinalizedBlockNumber                uint
@@ -173,12 +190,8 @@ func (pi *AggregationFPI) ToSnarkType(maxNbFilteredAddresses int) AggregationFPI
 			LastFinalizedRollingHashNumber: pi.LastFinalizedRollingHashMsgNumber,
 			LastFinalizedFtxRollingHash:    pi.LastFinalizedFtxRollingHash[:],
 			LastFinalizedFtxNumber:         pi.LastFinalizedFtxNumber,
-			InitialStateRootHash: [2]frontend.Variable{
-				pi.InitialStateRootHash[:16],
-				pi.InitialStateRootHash[16:],
-			},
-			NbDataAvailability: pi.NbDecompression,
-			NbInvalidity:       pi.NbInvalidity,
+			NbDataAvailability:             pi.NbDecompression,
+			NbInvalidity:                   pi.NbInvalidity,
 			ChainConfigurationFPISnark: ChainConfigurationFPISnark{
 				ChainID:                 pi.ChainID,
 				BaseFee:                 pi.BaseFee,
@@ -186,6 +199,10 @@ func (pi *AggregationFPI) ToSnarkType(maxNbFilteredAddresses int) AggregationFPI
 				L2MessageServiceAddress: new(big.Int).SetBytes(pi.L2MessageServiceAddr[:]),
 				IsAllowedCircuitID:      pi.IsAllowedCircuitID,
 			},
+		},
+		InitialStateRootHash: [2]frontend.Variable{
+			pi.InitialStateRootHash[:16],
+			pi.InitialStateRootHash[16:],
 		},
 		L2MsgMerkleTreeRoots:   make([][32]frontend.Variable, len(pi.L2MsgMerkleTreeRoots)),
 		FinalBlockNumber:       pi.FinalBlockNumber,
@@ -224,7 +241,6 @@ type AggregationFPIQSnark struct {
 	ParentShnarf                   [32]frontend.Variable
 	NbDataAvailability             frontend.Variable
 	NbInvalidity                   frontend.Variable
-	InitialStateRootHash           [2]frontend.Variable
 	LastFinalizedBlockNumber       frontend.Variable
 	LastFinalizedBlockTimestamp    frontend.Variable
 	LastFinalizedRollingHash       [32]frontend.Variable
@@ -266,6 +282,7 @@ type FilteredAddressesFPISnark struct {
 
 type AggregationFPISnark struct {
 	AggregationFPIQSnark
+	InitialStateRootHash   [2]frontend.Variable
 	NbL2Messages           frontend.Variable // TODO not used in hash. delete if not necessary
 	L2MsgMerkleTreeRoots   [][32]frontend.Variable
 	NbL2MsgMerkleTreeRoots frontend.Variable

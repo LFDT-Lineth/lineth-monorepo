@@ -157,12 +157,14 @@ func TestTinyTwoBatchBlob(t *testing.T) {
 		SimulatedBlockNumber:    5,
 	}}
 
+	prevShnarf, grandparentShnarf, parentShnarfPreimg := pitesting.ParentShnarfPreimage(t, blob, utils.FmtIntHex32Bytes(lastFinStateRootHash))
+
 	blobReq := blobsubmission.Request{
 		Eip4844Enabled:      true,
 		CompressedData:      base64.StdEncoding.EncodeToString(blob),
 		ParentStateRootHash: utils.FmtIntHex32Bytes(lastFinStateRootHash),
 		FinalStateRootHash:  utils.HexEncodeToString(execReq[1].FinalStateRootHash[:]),
-		PrevShnarf:          utils.FmtIntHex32Bytes(2),
+		PrevShnarf:          prevShnarf,
 	}
 
 	blobResp, err := blobsubmission.CraftResponse(&blobReq)
@@ -178,6 +180,8 @@ func TestTinyTwoBatchBlob(t *testing.T) {
 			FinalShnarf:                             blobResp.ExpectedShnarf,
 			ParentAggregationFinalShnarf:            blobReq.PrevShnarf,
 			ParentStateRootHash:                     blobReq.ParentStateRootHash,
+			GrandparentShnarf:                       grandparentShnarf,
+			ParentShnarf:                            parentShnarfPreimg,
 			ParentAggregationLastBlockTimestamp:     5,
 			FinalTimestamp:                          uint(execReq[1].FinalBlockTimestamp),
 			LastFinalizedBlockNumber:                4,
@@ -291,12 +295,14 @@ func TestTwoTwoBatchBlobs(t *testing.T) {
 		SimulatedBlockNumber:    5,
 	}}
 
+	prevShnarf0, grandparentShnarf0, parentShnarfPreimg0 := pitesting.ParentShnarfPreimage(t, blobs[0], utils.FmtIntHex32Bytes(1))
+
 	blobReq0 := blobsubmission.Request{
 		Eip4844Enabled:      true,
 		CompressedData:      base64.StdEncoding.EncodeToString(blobs[0]),
 		ParentStateRootHash: utils.FmtIntHex32Bytes(1),
 		FinalStateRootHash:  utils.HexEncodeToString(execReq[1].FinalStateRootHash[:]),
-		PrevShnarf:          utils.FmtIntHex32Bytes(2),
+		PrevShnarf:          prevShnarf0,
 	}
 
 	blobResp0, err := blobsubmission.CraftResponse(&blobReq0)
@@ -323,6 +329,8 @@ func TestTwoTwoBatchBlobs(t *testing.T) {
 			FinalShnarf:                             blobResp1.ExpectedShnarf,
 			ParentAggregationFinalShnarf:            blobReq0.PrevShnarf,
 			ParentStateRootHash:                     blobReq0.ParentStateRootHash,
+			GrandparentShnarf:                       grandparentShnarf0,
+			ParentShnarf:                            parentShnarfPreimg0,
 			ParentAggregationLastBlockTimestamp:     5,
 			FinalTimestamp:                          uint(execReq[3].FinalBlockTimestamp),
 			LastFinalizedBlockNumber:                4,

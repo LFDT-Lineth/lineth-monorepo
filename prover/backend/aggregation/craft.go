@@ -48,6 +48,8 @@ func collectFields(cfg *config.Config, req *Request) (*CollectedFields, error) {
 			LastFinalizedL1RollingHash:              req.ParentAggregationLastL1RollingHash,
 			LastFinalizedL1RollingHashMessageNumber: uint(req.ParentAggregationLastL1RollingHashMessageNumber),
 			ParentStateRootHashContract:             req.ParentAggregationStateRootHashContract,
+			GrandparentShnarf:                       req.GrandparentShnarf,
+			ParentShnarf:                            req.ParentShnarf,
 			LastFinalizedFtxRollingHash:             req.ParentAggregationLastFtxRollingHash,
 			LastFinalizedFtxNumber:                  uint(req.ParentAggregationLastFtxNumber),
 		}
@@ -289,6 +291,8 @@ func CraftResponse(cfg *config.Config, cf *CollectedFields) (resp *Response, err
 		FinalShnarf:                             cf.FinalShnarf,
 		ParentAggregationFinalShnarf:            cf.ParentAggregationFinalShnarf,
 		ParentStateRootHash:                     cf.ParentStateRootHashContract.Hex(),
+		GrandparentShnarf:                       cf.GrandparentShnarf,
+		ParentShnarf:                            cf.ParentShnarf,
 		ParentAggregationLastBlockTimestamp:     cf.ParentAggregationLastBlockTimestamp,
 		FinalTimestamp:                          cf.FinalTimestamp,
 		LastFinalizedBlockNumber:                cf.LastFinalizedBlockNumber,
@@ -310,8 +314,7 @@ func CraftResponse(cfg *config.Config, cf *CollectedFields) (resp *Response, err
 		CoinBase:             types.EthAddress(cfg.Layer2.CoinBase),
 		L2MessageServiceAddr: types.EthAddress(cfg.Layer2.MsgSvcContract),
 		IsAllowedCircuitID:   uint64(cfg.Aggregation.IsAllowedCircuitID),
-
-		FilteredAddresses: filteredAddrs,
+		FilteredAddresses:    filteredAddrs,
 	}
 
 	resp.AggregatedProofPublicInput = pubInputParts.GetPublicInputHex()

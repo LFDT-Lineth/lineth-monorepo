@@ -48,6 +48,17 @@ type Request struct {
 	// migration, afterward it will be simplifiable to only Koalabear.
 	ParentAggregationStateRootHashContract types.FullBytes32 `json:"parentAggregationStateRootHashContract"`
 
+	// The remaining four components of the keccak preimage of the previous
+	// aggregation's final shnarf (its fifth component is
+	// ParentAggregationStateRootHashContract itself): the previous
+	// aggregation's last blob submission's parent shnarf (grandparent
+	// shnarf), snark hash, data evaluation point and data evaluation claim,
+	// all in 0x prefixed hexstring. These let the circuit open the previous
+	// aggregation's final shnarf and bind the parent state root to the state
+	// root it actually commits to.
+	GrandparentShnarf string                      `json:"parentAggregationFinalShnarfGrandparent"`
+	ParentShnarf      public_input.ShnarfPreimage `json:"parentShnarf"`
+
 	// last finalized stream hash
 	ParentAggregationLastFtxRollingHash string `json:"parentAggregationLastFtxRollingHash"`
 	// last finalized forced transaction number
@@ -63,6 +74,11 @@ type CollectedFields struct {
 	// format.
 	FinalShnarf                  string
 	ParentAggregationFinalShnarf string
+
+	// The remaining four components of the keccak preimage of
+	// ParentAggregationFinalShnarf; see Request for details.
+	GrandparentShnarf string
+	ParentShnarf      public_input.ShnarfPreimage
 
 	// Parent data hash and the list of data hashes to be finalized
 	DataHashes     []string
