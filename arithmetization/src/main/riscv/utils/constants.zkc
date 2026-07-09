@@ -18,6 +18,12 @@ const WRITE_SYSCALL:DoubleWord = 64
 
 const COMPUTE_MISC_MEM:ComputeOp = 0
 
+// Marker emitted by elf_to_json_gen (computeInvalid) for words in the executable
+// span that are not instructions the interpreter models (e.g. CSR ops such as
+// `csrrw x0, cycle, x0`, embedded data, or padding). Never executed as a real
+// op; the pre-decoding pass treats it as a no-op-equivalent record.
+const COMPUTE_INVALID:ComputeOp = 255
+
 // I-type ops
 const READ8_SGN:ComputeOp = 1
 const READ8_SGN_WB:ComputeOp = 2

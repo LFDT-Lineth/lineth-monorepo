@@ -26,6 +26,14 @@ fn verify_instruction(index:u64, instruction:Instruction) {
         // Folded rd=x0 no-ops and FENCE: no operands to verify.
         case COMPUTE_MISC_MEM: {
         }
+        // Words the interpreter does not model (e.g. CSR ops like
+        // `csrrw x0, cycle, x0`, embedded data, or padding) inside the
+        // executable span. elf_to_json_gen is the trusted decoder that marks
+        // these; there are no meaningful operands to re-verify, so we accept the
+        // record as-is (no-op-equivalent). Tightening this into a full
+        // "raw word really is unsupported" check is possible but not done here.
+        case COMPUTE_INVALID: {
+        }
         // Unrecognised encodings and executable-span padding slots.
         case COMPUTE_INVALID: {
         }
