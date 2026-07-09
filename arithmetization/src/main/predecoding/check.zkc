@@ -328,13 +328,263 @@ fn check_i_type_operands(instruction_parameters:u25, opcode:Opcode, compute_op:C
     }
 }
 
-fn check_r_type_operands(instruction_parameters:u25, rs1_decoded:Register, rs2_decoded:Register, rd_decoded:Register) {
+fn check_r_type_operands(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rs1_decoded:Register, rs2_decoded:Register, rd_decoded:Register) {
     var funct7:Funct7
     var funct3:Funct3
     var rs1:Register
     var rs2:Register
     var rd:Register
     funct7::rs2::rs1::funct3::rd = instruction_parameters
+
+    // Verify the raw (opcode, funct7, funct3) fields encode the claimed compute_op.
+    // Only OP is handled for now; other opcodes are not yet verified.
+    switch opcode {
+        case OPCODE_OP: {
+            switch funct7 {
+                case 0b0000001: {
+                    switch funct3 {
+                        case 0: {
+                            if compute_op != RTYPE_MUL && compute_op != RTYPE_MUL_WB {
+                                printf "[ERROR] compute_op mismatch\n"
+                                fail
+                            }
+                        }
+                        case 1: {
+                            if compute_op != RTYPE_MULH && compute_op != RTYPE_MULH_WB {
+                                printf "[ERROR] compute_op mismatch\n"
+                                fail
+                            }
+                        }
+                        case 2: {
+                            if compute_op != RTYPE_MULHSU && compute_op != RTYPE_MULHSU_WB {
+                                printf "[ERROR] compute_op mismatch\n"
+                                fail
+                            }
+                        }
+                        case 3: {
+                            if compute_op != RTYPE_MULHU && compute_op != RTYPE_MULHU_WB {
+                                printf "[ERROR] compute_op mismatch\n"
+                                fail
+                            }
+                        }
+                        case 4: {
+                            if compute_op != RTYPE_DIV && compute_op != RTYPE_DIV_WB {
+                                printf "[ERROR] compute_op mismatch\n"
+                                fail
+                            }
+                        }
+                        case 5: {
+                            if compute_op != RTYPE_DIVU && compute_op != RTYPE_DIVU_WB {
+                                printf "[ERROR] compute_op mismatch\n"
+                                fail
+                            }
+                        }
+                        case 6: {
+                            if compute_op != RTYPE_REM && compute_op != RTYPE_REM_WB {
+                                printf "[ERROR] compute_op mismatch\n"
+                                fail
+                            }
+                        }
+                        case 7: {
+                            if compute_op != RTYPE_REMU && compute_op != RTYPE_REMU_WB {
+                                printf "[ERROR] compute_op mismatch\n"
+                                fail
+                            }
+                        }
+                        default: {
+                            printf "[ERROR] invalid OP funct3\n"
+                            fail
+                        }
+                    }
+                }
+                case 0b0000000: {
+                    switch funct3 {
+                        case 0: {
+                            if compute_op != RTYPE_ADD && compute_op != RTYPE_ADD_WB {
+                                printf "[ERROR] compute_op mismatch\n"
+                                fail
+                            }
+                        }
+                        case 1: {
+                            if compute_op != RTYPE_SLL && compute_op != RTYPE_SLL_WB {
+                                printf "[ERROR] compute_op mismatch\n"
+                                fail
+                            }
+                        }
+                        case 2: {
+                            if compute_op != RTYPE_SLT && compute_op != RTYPE_SLT_WB {
+                                printf "[ERROR] compute_op mismatch\n"
+                                fail
+                            }
+                        }
+                        case 3: {
+                            if compute_op != RTYPE_SLTU && compute_op != RTYPE_SLTU_WB {
+                                printf "[ERROR] compute_op mismatch\n"
+                                fail
+                            }
+                        }
+                        case 4: {
+                            if compute_op != RTYPE_XOR && compute_op != RTYPE_XOR_WB {
+                                printf "[ERROR] compute_op mismatch\n"
+                                fail
+                            }
+                        }
+                        case 5: {
+                            if compute_op != RTYPE_SRL && compute_op != RTYPE_SRL_WB {
+                                printf "[ERROR] compute_op mismatch\n"
+                                fail
+                            }
+                        }
+                        case 6: {
+                            if compute_op != RTYPE_OR && compute_op != RTYPE_OR_WB {
+                                printf "[ERROR] compute_op mismatch\n"
+                                fail
+                            }
+                        }
+                        case 7: {
+                            if compute_op != RTYPE_AND && compute_op != RTYPE_AND_WB {
+                                printf "[ERROR] compute_op mismatch\n"
+                                fail
+                            }
+                        }
+                        default: {
+                            printf "[ERROR] invalid OP funct3\n"
+                            fail
+                        }
+                    }
+                }
+                case 0b0100000: {
+                    switch funct3 {
+                        case 0: {
+                            if compute_op != RTYPE_SUB && compute_op != RTYPE_SUB_WB {
+                                printf "[ERROR] compute_op mismatch\n"
+                                fail
+                            }
+                        }
+                        case 5: {
+                            if compute_op != RTYPE_SRA && compute_op != RTYPE_SRA_WB {
+                                printf "[ERROR] compute_op mismatch\n"
+                                fail
+                            }
+                        }
+                        default: {
+                            printf "[ERROR] invalid OP funct3\n"
+                            fail
+                        }
+                    }
+                }
+                default: {
+                    printf "[ERROR] invalid OP funct7\n"
+                    fail
+                }
+            }
+        }
+        case OPCODE_OP32: {
+            switch funct7 {
+                case 0b0000001: {
+                    switch funct3 {
+                        case 0: {
+                            if compute_op != RTYPE_MULW && compute_op != RTYPE_MULW_WB {
+                                printf "[ERROR] compute_op mismatch\n"
+                                fail
+                            }
+                        }
+                        case 4: {
+                            if compute_op != RTYPE_DIVW && compute_op != RTYPE_DIVW_WB {
+                                printf "[ERROR] compute_op mismatch\n"
+                                fail
+                            }
+                        }
+                        case 5: {
+                            if compute_op != RTYPE_DIVUW && compute_op != RTYPE_DIVUW_WB {
+                                printf "[ERROR] compute_op mismatch\n"
+                                fail
+                            }
+                        }
+                        case 6: {
+                            if compute_op != RTYPE_REMW && compute_op != RTYPE_REMW_WB {
+                                printf "[ERROR] compute_op mismatch\n"
+                                fail
+                            }
+                        }
+                        case 7: {
+                            if compute_op != RTYPE_REMUW && compute_op != RTYPE_REMUW_WB {
+                                printf "[ERROR] compute_op mismatch\n"
+                                fail
+                            }
+                        }
+                        default: {
+                            printf "[ERROR] invalid OP32 funct3\n"
+                            fail
+                        }
+                    }
+                }
+                case 0b0000000: {
+                    switch funct3 {
+                        case 0: {
+                            if compute_op != RTYPE_ADDW && compute_op != RTYPE_ADDW_WB {
+                                printf "[ERROR] compute_op mismatch\n"
+                                fail
+                            }
+                        }
+                        case 1: {
+                            if compute_op != RTYPE_SLLW && compute_op != RTYPE_SLLW_WB {
+                                printf "[ERROR] compute_op mismatch\n"
+                                fail
+                            }
+                        }
+                        case 5: {
+                            if compute_op != RTYPE_SRLW && compute_op != RTYPE_SRLW_WB {
+                                printf "[ERROR] compute_op mismatch\n"
+                                fail
+                            }
+                        }
+                        default: {
+                            printf "[ERROR] invalid OP32 funct3\n"
+                            fail
+                        }
+                    }
+                }
+                case 0b0100000: {
+                    switch funct3 {
+                        case 0: {
+                            if compute_op != RTYPE_SUBW && compute_op != RTYPE_SUBW_WB {
+                                printf "[ERROR] compute_op mismatch\n"
+                                fail
+                            }
+                        }
+                        case 5: {
+                            if compute_op != RTYPE_SRAW && compute_op != RTYPE_SRAW_WB {
+                                printf "[ERROR] compute_op mismatch\n"
+                                fail
+                            }
+                        }
+                        default: {
+                            printf "[ERROR] invalid OP32 funct3\n"
+                            fail
+                        }
+                    }
+                }
+                default: {
+                    printf "[ERROR] invalid OP32 funct7\n"
+                    fail
+                }
+            }
+        }
+        case OPCODE_CUSTOM1: {
+            // KECCAK precompile: funct3 == 0, funct7 == 0, no write-back variant.
+            if funct3 != 0 || funct7 != 0 {
+                printf "[ERROR] invalid CUSTOM1 funct3/funct7\n"
+                fail
+            }
+            if compute_op != RTYPE_KECCAK {
+                printf "[ERROR] compute_op mismatch\n"
+                fail
+            }
+        }
+        default: {}
+    }
+
     if rs1_decoded != rs1 {
         printf "[ERROR] rs1 mismatch\n"
         fail

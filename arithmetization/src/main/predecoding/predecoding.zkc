@@ -201,10 +201,10 @@ fn predecoding_check<registers, ram, state_row0, state_row1, state_row2, state_r
         }
         // ---------------------------- R-type instructions ----------------------------
         case RTYPE_ADD, RTYPE_SUB, RTYPE_SLL, RTYPE_SLT, RTYPE_SLTU, RTYPE_XOR, RTYPE_OR, RTYPE_AND, RTYPE_SRL, RTYPE_SRA, RTYPE_MUL, RTYPE_MULH, RTYPE_MULHSU, RTYPE_MULHU, RTYPE_DIV, RTYPE_DIVU, RTYPE_REM, RTYPE_REMU, RTYPE_ADDW, RTYPE_SUBW, RTYPE_SLLW, RTYPE_SRLW, RTYPE_SRAW, RTYPE_MULW, RTYPE_DIVW, RTYPE_DIVUW, RTYPE_REMW, RTYPE_REMUW: {
-            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
         }
         case RTYPE_ADD_WB: {
-            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
             // Write into register
             var overflow:SignBit
             var result:DoubleWord
@@ -212,7 +212,7 @@ fn predecoding_check<registers, ram, state_row0, state_row1, state_row2, state_r
             registers[rd_decoded] = result
         }
         case RTYPE_SUB_WB: {
-            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
             // Write into register
             var overflow:SignBit
             var result:DoubleWord
@@ -220,7 +220,7 @@ fn predecoding_check<registers, ram, state_row0, state_row1, state_row2, state_r
             registers[rd_decoded] = result
         }
         case RTYPE_SLL_WB: {
-            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
             // Write into register
             var shift_discard_6:u58
             var shift_amount_6:u6
@@ -228,32 +228,32 @@ fn predecoding_check<registers, ram, state_row0, state_row1, state_row2, state_r
             registers[rd_decoded] = registers[rs1_decoded] << shift_amount_6
         }
         case RTYPE_SLT_WB: {
-            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
             // Write into register
             registers[rd_decoded] = signed_LT(registers[rs1_decoded], registers[rs2_decoded]) as DoubleWord
         }
         case RTYPE_SLTU_WB: {
-            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
             // Write into register
             registers[rd_decoded] = registers[rs1_decoded] < registers[rs2_decoded] ? 1:0
         }
         case RTYPE_XOR_WB: {
-            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
             // Write into register
             registers[rd_decoded] = (registers[rs1_decoded] ^ registers[rs2_decoded]) as DoubleWord
         }
         case RTYPE_OR_WB: {
-            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
             // Write into register
             registers[rd_decoded] = (registers[rs1_decoded] | registers[rs2_decoded]) as DoubleWord
         }
         case RTYPE_AND_WB: {
-            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
             // Write into register
             registers[rd_decoded] = (registers[rs1_decoded] & registers[rs2_decoded]) as DoubleWord
         }
         case RTYPE_SRL_WB: {
-            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
             // Write into register
             var shift_discard_6:u58
             var shift_amount_6:u6
@@ -261,7 +261,7 @@ fn predecoding_check<registers, ram, state_row0, state_row1, state_row2, state_r
             registers[rd_decoded] = registers[rs1_decoded] >> shift_amount_6
         }
         case RTYPE_SRA_WB: {
-            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
             // Write into register
             var shift_discard_6:u58
             var shift_amount_6:u6
@@ -269,12 +269,12 @@ fn predecoding_check<registers, ram, state_row0, state_row1, state_row2, state_r
             registers[rd_decoded] = _ashr_u64(registers[rs1_decoded], shift_amount_6)
         }
         case RTYPE_MUL_WB: {
-            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
             // Write into register
             registers[rd_decoded] = (((registers[rs1_decoded] as u128) * (registers[rs2_decoded] as u128)) & MAX_UINT_64_AS_U128) as u64
         }
         case RTYPE_MULH_WB: {
-            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
             // Write into register
             var v1:DoubleWord = registers[rs1_decoded]
             var v2:DoubleWord = registers[rs2_decoded]
@@ -285,7 +285,7 @@ fn predecoding_check<registers, ram, state_row0, state_row1, state_row2, state_r
             registers[rd_decoded] = (v1_times_v2_as_u128 >> 64) as u64
         }
         case RTYPE_MULHSU_WB: {
-            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
             // Write into register
             var v1:DoubleWord = registers[rs1_decoded]
             var v2:DoubleWord = registers[rs2_decoded]
@@ -296,12 +296,12 @@ fn predecoding_check<registers, ram, state_row0, state_row1, state_row2, state_r
             registers[rd_decoded] = (v1_times_v2_as_u128 >> 64) as u64
         }
         case RTYPE_MULHU_WB: {
-            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
             // Write into register
             registers[rd_decoded] = (((registers[rs1_decoded] as u128) * (registers[rs2_decoded] as u128)) >> 64) as u64
         }
         case RTYPE_DIV_WB: {
-            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
             // Write into register
             var v1:DoubleWord = registers[rs1_decoded]
             var v2:DoubleWord = registers[rs2_decoded]
@@ -319,7 +319,7 @@ fn predecoding_check<registers, ram, state_row0, state_row1, state_row2, state_r
             registers[rd_decoded] = result
         }
         case RTYPE_DIVU_WB: {
-            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
             // Write into register
             if registers[rs2_decoded] == 0 {
                 registers[rd_decoded] = NEGATIVE_ONE_AS_I64
@@ -328,7 +328,7 @@ fn predecoding_check<registers, ram, state_row0, state_row1, state_row2, state_r
             }
         }
         case RTYPE_REM_WB: {
-            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
             // Write into register
             var v1:DoubleWord = registers[rs1_decoded]
             var v2:DoubleWord = registers[rs2_decoded]
@@ -346,7 +346,7 @@ fn predecoding_check<registers, ram, state_row0, state_row1, state_row2, state_r
             registers[rd_decoded] = result
         }
         case RTYPE_REMU_WB: {
-            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
             // Write into register
             if registers[rs2_decoded] == 0 {
                 registers[rd_decoded] = registers[rs1_decoded]
@@ -355,7 +355,7 @@ fn predecoding_check<registers, ram, state_row0, state_row1, state_row2, state_r
             }
         }
         case RTYPE_ADDW_WB: {
-            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
             // Write into register
             var v1_upper:Word
             var v1_lower:Word
@@ -369,7 +369,7 @@ fn predecoding_check<registers, ram, state_row0, state_row1, state_row2, state_r
             registers[rd_decoded] = sgn_extension_u32_u64(word_wip)
         }
         case RTYPE_SUBW_WB: {
-            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
             // Write into register
             var v1_upper:Word
             var v1_lower:Word
@@ -383,7 +383,7 @@ fn predecoding_check<registers, ram, state_row0, state_row1, state_row2, state_r
             registers[rd_decoded] = sgn_extension_u32_u64(word_wip)
         }
         case RTYPE_SLLW_WB: {
-            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
             // Write into register
             var v1_upper:Word
             var v1_lower:Word
@@ -397,7 +397,7 @@ fn predecoding_check<registers, ram, state_row0, state_row1, state_row2, state_r
             registers[rd_decoded] = sgn_extension_u32_u64(v1_lower << shift_amount_5)
         }
         case RTYPE_SRLW_WB: {
-            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
             // Write into register
             var v1_upper:Word
             var v1_lower:Word
@@ -411,7 +411,7 @@ fn predecoding_check<registers, ram, state_row0, state_row1, state_row2, state_r
             registers[rd_decoded] = sgn_extension_u32_u64(v1_lower >> shift_amount_5)
         }
         case RTYPE_SRAW_WB: {
-            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
             // Write into register
             var v1_upper:Word
             var v1_lower:Word
@@ -429,7 +429,7 @@ fn predecoding_check<registers, ram, state_row0, state_row1, state_row2, state_r
             }
         }
         case RTYPE_MULW_WB: {
-            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
             // Write into register
             var v1_upper:Word
             var v1_lower:Word
@@ -447,7 +447,7 @@ fn predecoding_check<registers, ram, state_row0, state_row1, state_row2, state_r
             }
         }
         case RTYPE_DIVW_WB: {
-            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
             // Write into register
             var v1_upper:Word
             var v1_lower:Word
@@ -466,7 +466,7 @@ fn predecoding_check<registers, ram, state_row0, state_row1, state_row2, state_r
             }
         }
         case RTYPE_DIVUW_WB: {
-            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
             // Write into register
             var v1_upper:Word
             var v1_lower:Word
@@ -481,7 +481,7 @@ fn predecoding_check<registers, ram, state_row0, state_row1, state_row2, state_r
             }
         }
         case RTYPE_REMW_WB: {
-            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
             // Write into register
             var v1_upper:Word
             var v1_lower:Word
@@ -500,7 +500,7 @@ fn predecoding_check<registers, ram, state_row0, state_row1, state_row2, state_r
             }
         }
         case RTYPE_REMUW_WB: {
-            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
             // Write into register
             var v1_upper:Word
             var v1_lower:Word
@@ -515,7 +515,7 @@ fn predecoding_check<registers, ram, state_row0, state_row1, state_row2, state_r
             }
         }
         case RTYPE_KECCAK: {
-            check_r_type_operands(instruction_parameters, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
             keccak(registers[rs1_decoded] as Address, registers[rs2_decoded] as u32, registers[rd_decoded] as Address)
         }
         // ---------------------------- J-type instructions ----------------------------
