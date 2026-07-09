@@ -69,128 +69,128 @@ fn predecoding_check<registers, ram, state_row0, state_row1, state_row2, state_r
 
         // ---------------------------- I-type instructions ----------------------------
         case READ8_SGN, READ16_SGN, READ32_SGN, READ64, READ8_ZEXT, READ16_ZEXT, READ32_ZEXT, OP_ADDI, OP_SLLI, OP_SLTI, OP_SLTIU, OP_XORI, OP_ORI, OP_ANDI, OP_SRLI, OP_SRAI, OP_ADDIW, OP_SLLIW, OP_SRLIW, OP_SRAIW: {
-            check_i_type_operands(instruction_parameters, rs1_decoded, rd_decoded, imm_decoded)
+            check_i_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
          }
         case READ8_SGN_WB: {
-            check_i_type_operands(instruction_parameters, rs1_decoded, rd_decoded, imm_decoded)
+            check_i_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
             // Write into register
             registers[rd_decoded] = sgn_extension_u8_u64(read_8(signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) as Address))
         }
         case READ16_SGN_WB: {
-            check_i_type_operands(instruction_parameters, rs1_decoded, rd_decoded, imm_decoded)
+            check_i_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
             // Write into register
             registers[rd_decoded] = sgn_extension_u16_u64(read_16(signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) as Address))
         }
         case READ32_SGN_WB: {
-            check_i_type_operands(instruction_parameters, rs1_decoded, rd_decoded, imm_decoded)
+            check_i_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
             // Write into register
             registers[rd_decoded] = sgn_extension_u32_u64(read_32(signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) as Address))
         }
         case READ64_WB: {
-            check_i_type_operands(instruction_parameters, rs1_decoded, rd_decoded, imm_decoded)
+            check_i_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
             // Write into register
             registers[rd_decoded] = read_64(signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) as Address) as DoubleWord
         }
         case READ8_ZEXT_WB: {
-            check_i_type_operands(instruction_parameters, rs1_decoded, rd_decoded, imm_decoded)
+            check_i_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
             // Write into register
             registers[rd_decoded] = read_8(signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) as Address) as DoubleWord
         }
         case READ16_ZEXT_WB: {
-            check_i_type_operands(instruction_parameters, rs1_decoded, rd_decoded, imm_decoded)
+            check_i_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
             // Write into register
             registers[rd_decoded] = read_16(signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) as Address) as DoubleWord
         }
         case READ32_ZEXT_WB: {
-            check_i_type_operands(instruction_parameters, rs1_decoded, rd_decoded, imm_decoded)
+            check_i_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
             // Write into register
             registers[rd_decoded] = read_32(signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) as Address) as DoubleWord
         }
         case OP_ADDI_WB: {
-            check_i_type_operands(instruction_parameters, rs1_decoded, rd_decoded, imm_decoded)
+            check_i_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
             // Write into register
             registers[rd_decoded] = signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) as DoubleWord
         }
         case OP_SLLI_WB: {
-            check_i_type_operands(instruction_parameters, rs1_decoded, rd_decoded, imm_decoded)
+            check_i_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
             // Write into register
             var uimm6:UImm6 = imm_decoded as UImm6
             registers[rd_decoded] = registers[rs1_decoded] << uimm6
         }
         case OP_SLTI_WB: {
-            check_i_type_operands(instruction_parameters, rs1_decoded, rd_decoded, imm_decoded)
+            check_i_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
             // Write into register
             registers[rd_decoded] = signed_LT(registers[rs1_decoded], imm_decoded) as DoubleWord
         }   
         case OP_SLTIU_WB: {
-            check_i_type_operands(instruction_parameters, rs1_decoded, rd_decoded, imm_decoded)
+            check_i_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
             // Write into register
             registers[rd_decoded] = registers[rs1_decoded] < imm_decoded ? 1:0
         }
         case OP_XORI_WB: {
-            check_i_type_operands(instruction_parameters, rs1_decoded, rd_decoded, imm_decoded)
+            check_i_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
             // Write into register
             registers[rd_decoded] = (registers[rs1_decoded] ^ imm_decoded) as DoubleWord
         }
         case OP_ORI_WB: {
-            check_i_type_operands(instruction_parameters, rs1_decoded, rd_decoded, imm_decoded)
+            check_i_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
             // Write into register
             registers[rd_decoded] = (registers[rs1_decoded] | imm_decoded) as DoubleWord
         }
         case OP_ANDI_WB: {
-            check_i_type_operands(instruction_parameters, rs1_decoded, rd_decoded, imm_decoded)
+            check_i_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
             // Write into register
             registers[rd_decoded] = (registers[rs1_decoded] & imm_decoded) as DoubleWord
         }
         case OP_SRLI_WB: {
-            check_i_type_operands(instruction_parameters, rs1_decoded, rd_decoded, imm_decoded)
+            check_i_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
             // Write into register
             var uimm6:UImm6 = imm_decoded as UImm6
             registers[rd_decoded] = registers[rs1_decoded] >> uimm6
         }
         case OP_SRAI_WB: {
-            check_i_type_operands(instruction_parameters, rs1_decoded, rd_decoded, imm_decoded)
+            check_i_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
             // Write into register
             var uimm6:UImm6 = imm_decoded as UImm6
             registers[rd_decoded] = _ashr_u64(registers[rs1_decoded], uimm6)
         }
         case OP_ADDIW_WB: {
-            check_i_type_operands(instruction_parameters, rs1_decoded, rd_decoded, imm_decoded)
+            check_i_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
             // Write into register
             registers[rd_decoded] = sgn_extension_u32_u64((signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) & MAX_UINT_32_AS_U64) as Word)
         }
         case OP_SLLIW_WB: {
-            check_i_type_operands(instruction_parameters, rs1_decoded, rd_decoded, imm_decoded)
+            check_i_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
             // Write into register
             var uimm5:UImm5 = imm_decoded as UImm5
             registers[rd_decoded] = sgn_extension_u32_u64(((registers[rs1_decoded] & MAX_UINT_32_AS_U64) as Word) << uimm5)
         }
         case OP_SRLIW_WB: {
-            check_i_type_operands(instruction_parameters, rs1_decoded, rd_decoded, imm_decoded)
+            check_i_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
             // Write into register
             var uimm5:UImm5 = imm_decoded as UImm5
             registers[rd_decoded] = sgn_extension_u32_u64(((registers[rs1_decoded] & MAX_UINT_32_AS_U64) as Word) >> uimm5)
         }
         case OP_SRAIW_WB: {
-            check_i_type_operands(instruction_parameters, rs1_decoded, rd_decoded, imm_decoded)
+            check_i_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
             // Write into register
             var uimm5:UImm5 = imm_decoded as UImm5
             registers[rd_decoded] = sgn_extension_u32_u64(_ashr_u32(registers[rs1_decoded], uimm5))
         }
         case ITYPE_JALR: {
-            check_i_type_operands(instruction_parameters, rs1_decoded, rd_decoded, imm_decoded)
+            check_i_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
             // Advance PC
             new_pc = signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) & MASK_64_ERASE_LAST_BIT
         }
         case ITYPE_JALR_WB: {
-            check_i_type_operands(instruction_parameters, rs1_decoded, rd_decoded, imm_decoded)
+            check_i_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
             // Write into register
             registers[rd_decoded] = (pc + 4) as DoubleWord
             // Advance PC
             new_pc = signed_sum_of_double_word(registers[rs1_decoded], imm_decoded) & MASK_64_ERASE_LAST_BIT
         }
         case ITYPE_ECALL: {
-            check_i_type_operands(instruction_parameters, rs1_decoded, rd_decoded, imm_decoded)
+            check_i_type_operands(instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
             // Advance PC
             new_pc = process_syscall(pc)
             return
