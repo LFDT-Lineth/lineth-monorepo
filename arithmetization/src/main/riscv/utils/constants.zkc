@@ -14,16 +14,6 @@ const MASK_64_ERASE_LAST_BIT:u64 = 0xfffffffffffffffe
 const EXIT_SYSCALL:DoubleWord = 93
 const WRITE_SYSCALL:DoubleWord = 64
 
-// Unified semantic compute ops stored in decoded.
-
-const COMPUTE_MISC_MEM:ComputeOp = 0
-
-// Marker emitted by elf_to_json_gen (computeInvalid) for words in the executable
-// span that are not instructions the interpreter models (e.g. CSR ops such as
-// `csrrw x0, cycle, x0`, embedded data, or padding). Never executed as a real
-// op; the pre-decoding pass treats it as a no-op-equivalent record.
-const COMPUTE_INVALID:ComputeOp = 255
-
 // I-type ops
 const READ8_SGN:ComputeOp = 1
 const READ8_SGN_WB:ComputeOp = 2
@@ -152,5 +142,14 @@ const UTYPE_LUI:ComputeOp = 142
 const UTYPE_LUI_WB:ComputeOp = 143
 const UTYPE_AUIPC:ComputeOp = 144
 const UTYPE_AUIPC_WB:ComputeOp = 145
+
+// Unified semantic compute ops stored in decoded.
+
+const COMPUTE_MISC_MEM:ComputeOp = 0
+
+// Marker emitted by elf_to_json_gen (computeInvalid) for words in the executable
+// span that are not instructions the interpreter models (e.g. CSR ops such as
+// `csrrw x0, cycle, x0`, embedded data, or padding). Never executed as a real
+// op; the pre-decoding pass treats it as a no-op-equivalent record.
 
 const COMPUTE_INVALID:ComputeOp = 255
