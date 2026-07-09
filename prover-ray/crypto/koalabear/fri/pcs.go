@@ -1065,7 +1065,8 @@ func (branch InputBranch) RecoverRoot(idx int) (field.Octuplet, error) {
 	currPos := idx
 
 	if branch.ConjugateLeaf != nil {
-		ancestor, currPos = foldOneLevel(ancestor, hashRowOpening(*branch.ConjugateLeaf), branch.AuxSiblings[numLevels-1], currPos)
+		opening := hashRowOpening(*branch.ConjugateLeaf)
+		ancestor, currPos = foldOneLevel(ancestor, opening, branch.AuxSiblings[numLevels-1], currPos)
 		numLevels--
 	}
 
