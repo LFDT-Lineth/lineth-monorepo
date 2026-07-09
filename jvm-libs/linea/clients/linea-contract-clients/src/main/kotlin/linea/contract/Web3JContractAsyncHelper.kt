@@ -23,6 +23,7 @@ import org.web3j.abi.FunctionEncoder
 import org.web3j.abi.datatypes.Function
 import org.web3j.crypto.Blob
 import org.web3j.crypto.BlobUtils
+import org.web3j.crypto.transaction.type.Transaction4844
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.RemoteFunctionCall
 import org.web3j.protocol.core.methods.request.Transaction
@@ -139,7 +140,10 @@ class Web3JContractAsyncHelper(
     blobs: List<Blob>,
     gasPriceCaps: GasPriceCaps? = null,
   ): SafeFuture<Eip4844Transaction> {
-    require(blobs.size in 1..9) { "Blobs size=${blobs.size} must be between 1 and 9." }
+    require(blobs.size in 1..Transaction4844.MAX_BLOBS_PER_TRANSACTION) {
+      "Blobs size=${blobs.size} must be between 1 and " +
+        "${Transaction4844.MAX_BLOBS_PER_TRANSACTION} (EIP-7594 per-tx cap)."
+    }
 
     val blobVersionedHashes = blobs
       .map(BlobUtils::getCommitment)
@@ -301,7 +305,10 @@ class Web3JContractAsyncHelper(
     blobs: List<ByteArray>,
     gasPriceCaps: GasPriceCaps?,
   ): SafeFuture<String> {
-    require(blobs.size in 1..9) { "Blobs size=${blobs.size} must be between 1 and 9." }
+    require(blobs.size in 1..Transaction4844.MAX_BLOBS_PER_TRANSACTION) {
+      "Blobs size=${blobs.size} must be between 1 and " +
+        "${Transaction4844.MAX_BLOBS_PER_TRANSACTION} (EIP-7594 per-tx cap)."
+    }
     return sendBlobCarryingTransaction(function, BigInteger.ZERO, blobs.toWeb3jTxBlob(), gasPriceCaps)
       .thenApply { it.transactionHash }
   }
