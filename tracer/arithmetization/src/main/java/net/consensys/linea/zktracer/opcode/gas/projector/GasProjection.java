@@ -112,21 +112,22 @@ public abstract class GasProjection {
    * @return
    */
   public final long upfrontGasCost() {
-    return gasCostExcludingDeploymentCost() + deploymentCost();
+    return clampedAdd(gasCostExcludingDeploymentCost(), deploymentCost());
   }
 
   public final long gasCostExcludingDeploymentCost() {
-    return staticGas()
-        + expGas()
-        + memoryExpansion()
-        + accountAccess()
-        + accountCreation()
-        + transferValue()
-        + linearPerWord()
-        + linearPerByte()
-        + storageWarmth()
-        + sStoreValue()
-        + initCode();
+    long cost = staticGas();
+    cost = clampedAdd(cost, expGas());
+    cost = clampedAdd(cost, memoryExpansion());
+    cost = clampedAdd(cost, accountAccess());
+    cost = clampedAdd(cost, accountCreation());
+    cost = clampedAdd(cost, transferValue());
+    cost = clampedAdd(cost, linearPerWord());
+    cost = clampedAdd(cost, linearPerByte());
+    cost = clampedAdd(cost, storageWarmth());
+    cost = clampedAdd(cost, sStoreValue());
+    cost = clampedAdd(cost, initCode());
+    return cost;
   }
 
   public final boolean isMemoryExpansionFault(Fork fork) {
