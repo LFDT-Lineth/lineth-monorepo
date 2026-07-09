@@ -52,7 +52,7 @@ class Web3JLineaRollupSmartContractClientReadOnlyTest {
 
     val result = client.findFinalizedStateEvent(
       upToBlock = BlockParameter.Tag.LATEST,
-      finalisedBlockNumber = 200UL,
+      finalizedBlockNumber = 200UL,
     ).get()
 
     assertThat(result).isNotNull
@@ -71,7 +71,7 @@ class Web3JLineaRollupSmartContractClientReadOnlyTest {
 
     val result = client.findFinalizedStateEvent(
       upToBlock = BlockParameter.Tag.LATEST,
-      finalisedBlockNumber = 999UL,
+      finalizedBlockNumber = 999UL,
     ).get()
 
     assertThat(result).isNull()
@@ -89,12 +89,12 @@ class Web3JLineaRollupSmartContractClientReadOnlyTest {
     l1Client.setLatestBlockTag(6_000UL)
 
     // Advance the high-water-mark to the latest finalization (L1 block 5_000).
-    assertThat(client.findFinalizedStateEvent(BlockParameter.Tag.LATEST, finalisedBlockNumber = 300UL).get())
+    assertThat(client.findFinalizedStateEvent(BlockParameter.Tag.LATEST, finalizedBlockNumber = 300UL).get())
       .isNotNull
 
     // A subsequent query for an earlier finalization sits before the cached window, so the bounded
     // search misses and the full-range fallback must still resolve it.
-    val result = client.findFinalizedStateEvent(BlockParameter.Tag.LATEST, finalisedBlockNumber = 200UL).get()
+    val result = client.findFinalizedStateEvent(BlockParameter.Tag.LATEST, finalizedBlockNumber = 200UL).get()
 
     assertThat(result).isNotNull
     assertThat(result!!.blockNumber).isEqualTo(200UL)
@@ -113,14 +113,14 @@ class Web3JLineaRollupSmartContractClientReadOnlyTest {
     l1Client.setLatestBlockTag(6_000UL)
 
     // Advance the high-water-mark to L1 block 5_000.
-    assertThat(client.findFinalizedStateEvent(BlockParameter.Tag.LATEST, finalisedBlockNumber = 300UL).get())
+    assertThat(client.findFinalizedStateEvent(BlockParameter.Tag.LATEST, finalizedBlockNumber = 300UL).get())
       .isNotNull
 
     // Query a historical upToBlock (2_000) that is before the cached window, so the bounded search
     // would be an invalid range; it must recover via the full-range fallback.
     val result = client.findFinalizedStateEvent(
       upToBlock = 2_000UL.toBlockParameter(),
-      finalisedBlockNumber = 100UL,
+      finalizedBlockNumber = 100UL,
     ).get()
 
     assertThat(result).isNotNull

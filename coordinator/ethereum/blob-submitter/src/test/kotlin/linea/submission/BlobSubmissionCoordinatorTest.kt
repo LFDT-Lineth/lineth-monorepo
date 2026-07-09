@@ -83,7 +83,7 @@ class BlobSubmissionCoordinatorTest {
           pollingInterval = 100.milliseconds,
           proofSubmissionDelay = 0.seconds,
           maxBlobsToSubmitPerTick = 200u,
-          targetBlobsToSubmitPerTx = 9u,
+          targetBlobsToSubmitPerTx = 6u,
         ),
         blobsRepository = blobsRepository,
         aggregationsRepository = aggregationsRepository,

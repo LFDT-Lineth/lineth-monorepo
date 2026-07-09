@@ -13,13 +13,16 @@ LINETH_LOG_CONTEXT="reset"
 COMPOSE="docker compose --env-file versions.env --env-file .env --profile stack-partial-prover"
 RESET_LOCAL_L1=false
 FORGET_DEPLOYER=false
+PURGE_DEPS=false
 
 usage() {
   cat <<'EOF'
-Usage: ./scripts/reset.sh [--local-l1] [--forget-deployer]
+Usage: ./scripts/reset.sh [--local-l1] [--forget-deployer] [--purge-deps]
 
   --local-l1          also remove the quickstart local L1 data volume
   --forget-deployer  remove the generated Sepolia deployer keystore
+  --purge-deps        also remove the preserved pnpm download-cache volume, so
+                      the next boot re-downloads all Node dependencies
 EOF
 }
 
@@ -30,6 +33,9 @@ while [ "$#" -gt 0 ]; do
       ;;
     --forget-deployer)
       FORGET_DEPLOYER=true
+      ;;
+    --purge-deps)
+      PURGE_DEPS=true
       ;;
     -h|--help)
       usage
@@ -63,6 +69,14 @@ docker volume rm \
   lineth-stack-postman-runtime-config >/dev/null 2>&1 || true
 if [ "$RESET_LOCAL_L1" = "true" ]; then
   docker volume rm lineth-stack-local-l1-data >/dev/null 2>&1 || true
+fi
+# lineth-stack-contracts-pnpm-store is external in docker-compose.yml, so the
+# `down -v` above leaves it alone: fresh boots reinstall node_modules from the
+# lockfile but resolve package tarballs from this local cache instead of the
+# npm registry. Only --purge-deps removes it.
+if [ "$PURGE_DEPS" = "true" ]; then
+  docker volume rm lineth-stack-contracts-pnpm-store >/dev/null 2>&1 || true
+  lineth_info "removed pnpm download-cache volume; next boot re-downloads Node dependencies"
 fi
 if docker network inspect lineth-stack_linea >/dev/null 2>&1; then
   lineth_warn "lineth-stack_linea network still in use by an external container"
