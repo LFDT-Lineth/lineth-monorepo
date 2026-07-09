@@ -1,4 +1,5 @@
-include "../riscv/interpreter.zkc"
+include "inputs.zkc"
+include "../riscv/utils/constants.zkc"
 include "check.zkc"
 
 // Verify that the raw instruction word `instruction` decodes to the pre-decoded
@@ -24,6 +25,9 @@ fn verify_instruction(index:u64, instruction:Instruction) {
     switch compute_op {
         // Folded rd=x0 no-ops and FENCE: no operands to verify.
         case COMPUTE_MISC_MEM: {
+        }
+        // Unrecognised encodings and executable-span padding slots.
+        case COMPUTE_INVALID: {
         }
         case BRANCH_BEQ, BRANCH_BNE, BRANCH_BLT, BRANCH_BGE, BRANCH_BLTU, BRANCH_BGEU: {
             check_b_type(index, instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, imm_decoded)

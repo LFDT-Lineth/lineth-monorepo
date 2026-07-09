@@ -1,4 +1,7 @@
 include "constants.zkc"
+include "../riscv/utils/constants.zkc"
+include "../riscv/utils/sign_extend.zkc"
+include "../riscv/utils/type.zkc"
 
 fn check_b_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rs1_decoded:Register, rs2_decoded:Register, imm_decoded:DoubleWord) {
     if opcode != OPCODE_BRANCH {
