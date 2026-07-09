@@ -128,19 +128,6 @@ jobs:
       - name: Setup Tracer Environment
         uses: ./.github/actions/setup-tracer-environment
 
-      # Besu's own resolveBesuVersion on-demand fallback (triggered implicitly whenever a
-      # module resolves its Besu dependency, e.g. during the tracer publish below) always
-      # publishes to mavenLocal only, never to the remote Maven/Cloudsmith repo, regardless
-      # of -PpublishToMaven. Explicitly build+publish Besu here so downstream consumers of
-      # this tracer release (e.g. besu-shomei-plugin) can resolve the matching
-      # org.hyperledger.besu:bom remotely.
-      - name: Build and publish Besu to remote Maven
-        run: ./gradlew :linea-besu:besu:build -PpublishToMaven=true
-        env:
-          JAVA_OPTS: -Xmx2g -Dorg.gradle.daemon=false
-          ORG_GRADLE_PROJECT_cloudsmithUser: ${{ secrets.CLOUDSMITH_USER }}
-          ORG_GRADLE_PROJECT_cloudsmithApiKey: ${{ secrets.CLOUDSMITH_API_KEY }}
-
       - name: Publish Java artifacts
         run: ./gradlew :tracer:publish -PreleaseVersion=${{needs.build.outputs.versionTag}}
         env:
