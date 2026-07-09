@@ -21,7 +21,6 @@ import static org.hyperledger.besu.evm.internal.Words.clampedAdd;
 
 import lombok.RequiredArgsConstructor;
 import net.consensys.linea.zktracer.Fork;
-import net.consensys.linea.zktracer.module.mxp.MxpUtils;
 import net.consensys.linea.zktracer.types.Bytecode;
 import net.consensys.linea.zktracer.types.Range;
 import org.hyperledger.besu.datatypes.Address;
@@ -55,28 +54,9 @@ public class Call extends GasProjection {
     if (this.isInvalid()) {
       return 0;
     }
-    return Math.max(memoryExpansionGasCost(callDataRange), memoryExpansionGasCost(returnAtRange));
-  }
-
-  /**
-   * Besu's {@code GasCalculator#memoryExpansionGasCost} is backed by a memory model limited to
-   * {@code Integer.MAX_VALUE} bytes (its backing store is a Java array), so for a {@link Range}
-   * beyond that bound it short-circuits to a sentinel cost of {@code Long.MAX_VALUE} rather than
-   * the actual (still finite, still <i>much smaller than {@code Long.MAX_VALUE}</i>) EVM memory
-   * cost. The hub's own STP/MXP modules have no such limitation and compute the real cost, so
-   * relying on Besu's sentinel here would desynchronize {@code GAS_COST} from {@code
-   * misc/STP_GAS_UPFRONT_GAS_COST} in the trace. Recompute directly in that case.
-   */
-  private long memoryExpansionGasCost(Range range) {
-    if (range.besuOverflow()) {
-      final long preWords = frame.memoryWordSize();
-      final long postWords =
-          range.isEmpty()
-              ? preWords
-              : Math.max(clampedAdd(clampedAdd(range.offset(), range.size()), 31) / 32, preWords);
-      return MxpUtils.memoryCost(postWords) - MxpUtils.memoryCost(preWords);
-    }
-    return gc.memoryExpansionGasCost(frame, range.offset(), range.size());
+    return Math.max(
+        memoryExpansionGasCost(gc, frame, callDataRange.offset(), callDataRange.size()),
+        memoryExpansionGasCost(gc, frame, returnAtRange.offset(), returnAtRange.size()));
   }
 
   @Override
@@ -165,7 +145,9 @@ public class Call extends GasProjection {
     }
 
     final long upfrontGasCost =
-        memoryExpansion() + accountAccess() + accountCreation() + transferValue();
+        clampedAdd(
+            clampedAdd(clampedAdd(memoryExpansion(), accountAccess()), accountCreation()),
+            transferValue());
     if (upfrontGasCost > frame.getRemainingGas()) {
       return 0L;
     }
