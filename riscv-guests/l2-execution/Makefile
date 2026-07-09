@@ -138,7 +138,7 @@ run-fixtures:
 	@[ -n "$(SSZ_FIXTURES_DIR)" ] || { echo "SSZ_FIXTURES_DIR is mandatory"; exit 1; }
 	@[ -n "$(FIXTURE_FORMAT)" ] || { echo "FIXTURE_FORMAT is mandatory"; exit 1; }
 	GOCACHE=/tmp/go-build $(GO) run $(MAKEFILE_DIR)scripts/run_ssz_fixtures.go --fixtures-dir "$(JSON_FIXTURES_DIR)" --ssz-dir "$(SSZ_FIXTURES_DIR)" --fixture-paths "$(RUN_FIXTURE_PATHS)" --ssz-limit "$(RUN_SSZ_LIMIT)" --fixture-format "$(FIXTURE_FORMAT)" $(if $(strip $(ZESU_CONVERT_BIN)),--zesu-convert "$(ZESU_CONVERT_BIN)")
-	
+
 clean:
 	rm -rf $(MAKEFILE_DIR)zig-out/
 	rm -rf $(BUILD_CACHE_DIR)
