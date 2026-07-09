@@ -131,43 +131,12 @@ func (st *ProverState) Open(openedPositions []int) Proof {
 		panic("fri: ProverState.Open: called before all folding rounds were consumed")
 	}
 
-	inputs := st.inputTrees()
-	st.InputQueries = make([]QueryLayer, st.p.NumQueries)
 	st.RunningQueries = make([]RunningQuery, st.p.NumQueries)
 
 	for k := range st.p.NumQueries {
 		s := openedPositions[k]
-		st.InputQueries[k] = openInputTreesAt(st.p, inputs, s)
 		st.RunningQueries[k] = openRunningQueryExt(s, st.layers, st.trees, st.p.numRounds)
 	}
 
 	return st.Proof
-}
-
-func (st *ProverState) inputTrees() []*Tree {
-	seen := make(map[field.Octuplet]bool)
-	inputs := make([]*Tree, 0)
-	for _, level := range st.levels {
-		for _, tree := range level.Trees {
-			root := tree.Root()
-			if seen[root] {
-				continue
-			}
-			seen[root] = true
-			inputs = append(inputs, tree)
-		}
-	}
-	return inputs
-}
-
-func openInputTreesAt(p Params, inputs []*Tree, queryPosition int) QueryLayer {
-	opening := make(QueryLayer, len(inputs))
-	for i, tree := range inputs {
-		numLeaves := tree.NumLeaves()
-		if numLeaves > p.N || p.N%numLeaves != 0 {
-			panic("fri: openInputTreesAt: tree size incompatible with domain size")
-		}
-		opening[i] = tree.OpenBranch(queryPosition / (p.N / numLeaves))
-	}
-	return opening
 }

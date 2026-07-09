@@ -292,10 +292,7 @@ func (c *compiled) open(rt *wiop.Runtime) fri.OpeningProof {
 
 	fs.UpdateExt(state.FinalPolyExt...)
 	positions := fs.RandomManyIntegers(pcs.Params.NumQueries, effectiveN(rt, batches))
-	return fri.OpeningProof{
-		RowOpenings: pcs.OpenedRows(positions),
-		FRIProof:    state.Open(positions),
-	}
+	return pcs.Open(state, positions)
 }
 
 // verify replays the opening transcript exactly as the prover produced it and

@@ -81,7 +81,7 @@
 //	// Absorb the final polynomial; squeeze query positions; open.
 //	transcript.Absorb(friState.FinalPoly())
 //	queries    := transcript.Squeeze()
-//	proof, _   := friState.Open(queries)
+//	proof      := pcs.Open(friState, queries)
 //
 // The verifier calls pcs.Verify with the same zeta, alphaDeep, fold alphas,
 // and query positions it derived from its own transcript replay.
@@ -118,6 +118,7 @@ package fri
 import (
 	"fmt"
 	"math/big"
+	"math/bits"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
@@ -483,25 +484,28 @@ func powers(x field.Ext, length int) []field.Ext {
 // OpeningProof bundles everything PCS verification needs to check the claimed
 // evaluations against the committed batches and the underlying FRI proof.
 type OpeningProof struct {
-	// RowOpenings[k][b][i] contains the opened encoded row for query k, batch b, size 2^i.
-	RowOpenings []QueryRowOpenings
+	// InputQueries[k] contains one row-carrying opening per input tree for query k.
+	InputQueries []InputQuery
 
 	// FRIProof is checked through PCS verification, which reconstructs virtual
-	// level values from ClaimedValues and RowOpenings.
+	// level values from ClaimedValues and InputQueries.
 	FRIProof Proof
 }
 
-// QueryRowOpenings holds committed-row preimages opened for one FRI query.
-type QueryRowOpenings []BatchRowOpenings
+// InputQuery holds the PCS input-tree openings for one FRI query.
+type InputQuery []InputBranch
 
-// BatchRowOpenings holds one committed batch's opened rows by size_log2.
-type BatchRowOpenings []SizedRowOpening
-
-// SizedRowOpening holds one row and, for the top level, its conjugate sibling.
-type SizedRowOpening struct {
-	Leaf       RowOpening
-	Sibling    RowOpening
-	HasSibling bool
+// InputBranch is a Merkle branch whose path leaves are opened as row preimages.
+// ConjugateLeaf is the row at the round-0 fold-conjugate position s^1; it is
+// non-nil iff this branch backs the top level (the only level folded as a
+// conjugate pair straight out of an input tree). Its Merkle digest is derived
+// from it rather than transmitted, so for a top branch Siblings holds one
+// fewer entry than AuxSiblings.
+type InputBranch struct {
+	Leaf          RowOpening
+	ConjugateLeaf *RowOpening
+	Siblings      []field.Octuplet
+	AuxSiblings   []*RowOpening
 }
 
 // RowOpening is one MultiSizeTable.Merkleize row preimage.
@@ -906,42 +910,100 @@ func (pcs *PCS) claimsForBatchEntry(
 	return claims, nil
 }
 
-// OpenedRows opens, at each query position, the committed row (and, at the top
-// level, its conjugate sibling) of every registered opening. Callers pair the
-// result with the FRI Proof from [ProverState.Open] to assemble an OpeningProof.
-func (pcs *PCS) OpenedRows(queryPositions []int) []QueryRowOpenings {
+// Open runs the PCS query phase for the already-folded FRI state.
+func (pcs *PCS) Open(state *ProverState, queryPositions []int) OpeningProof {
+	return OpeningProof{
+		InputQueries: pcs.openInputQueries(queryPositions),
+		FRIProof:     state.Open(queryPositions),
+	}
+}
+
+func (pcs *PCS) openInputQueries(queryPositions []int) []InputQuery {
 	restricted, err := pcs.restrictToOpenings()
 	if err != nil {
 		panic(err)
 	}
 	pcs = restricted
 
-	topSizeLog2 := -1
-	for _, opening := range pcs.openings {
-		if len(opening.layout) > 0 && opening.layout[0].SizeLog2 > topSizeLog2 {
-			topSizeLog2 = opening.layout[0].SizeLog2
-		}
-	}
-
-	res := make([]QueryRowOpenings, len(queryPositions))
+	inputs := pcs.inputOpeningCommitments()
+	res := make([]InputQuery, len(queryPositions))
 	for queryIdx, queryPosition := range queryPositions {
-		res[queryIdx] = make(QueryRowOpenings, len(pcs.openings))
-		for openingIdx, opening := range pcs.openings {
-			res[queryIdx][openingIdx] = make(BatchRowOpenings, len(opening.committed.EncodedTable))
-			for _, bundle := range opening.layout {
-				round, _ := pcs.roundForSize(bundle.SizeLog2)
-				base := queryPosition >> round
-
-				sized := &res[queryIdx][openingIdx][bundle.SizeLog2]
-				sized.Leaf = openEncodedRow(opening.committed.EncodedTable[bundle.SizeLog2], base)
-				if bundle.SizeLog2 == topSizeLog2 {
-					sized.Sibling = openEncodedRow(opening.committed.EncodedTable[bundle.SizeLog2], base^1)
-					sized.HasSibling = true
-				}
-			}
+		res[queryIdx] = make(InputQuery, len(inputs))
+		for inputIdx, committed := range inputs {
+			res[queryIdx][inputIdx] = openInputBranch(pcs.Params, committed, queryPosition)
 		}
 	}
 	return res
+}
+
+func (pcs *PCS) inputOpeningCommitments() []CommitterState {
+	seen := make(map[field.Octuplet]bool)
+	var inputs []CommitterState
+	for sizeLog2 := pcs.Params.numRounds; sizeLog2 >= 0; sizeLog2-- {
+		for _, opening := range pcs.openings {
+			for _, bundle := range opening.layout {
+				if bundle.SizeLog2 != sizeLog2 {
+					continue
+				}
+				root := opening.committed.Tree.Root()
+				if !seen[root] {
+					seen[root] = true
+					inputs = append(inputs, opening.committed)
+				}
+				break
+			}
+		}
+	}
+	return inputs
+}
+
+func openInputBranch(p Params, committed CommitterState, queryPosition int) InputBranch {
+	tree := committed.Tree
+	numLeaves := tree.NumLeaves()
+	if numLeaves > p.N || p.N%numLeaves != 0 {
+		panic("fri: openInputBranch: tree size incompatible with domain size")
+	}
+	leafIndex := queryPosition / (p.N / numLeaves)
+	branch := tree.OpenBranch(leafIndex)
+	siblings := branch.Siblings
+	input := InputBranch{
+		Leaf:        openEncodedRowAtSize(committed.EncodedTable, numLeaves, leafIndex),
+		AuxSiblings: make([]*RowOpening, len(branch.AuxSiblings)),
+	}
+	if numLeaves == p.N {
+		conjugate := openEncodedRowAtSize(committed.EncodedTable, numLeaves, leafIndex^1)
+		input.ConjugateLeaf = &conjugate
+		// The conjugate's own deepest Merkle digest is derived from it in
+		// RecoverRoot rather than transmitted.
+		siblings = siblings[:len(siblings)-1]
+	}
+	input.Siblings = siblings
+	for sizeLog2 := range committed.EncodedTable {
+		table := committed.EncodedTable[sizeLog2]
+		if table.NumRows() == 0 || table.Size() == numLeaves {
+			continue
+		}
+		levelSize := table.Size()
+		if levelSize > numLeaves || numLeaves%levelSize != 0 {
+			panic("fri: openInputBranch: level size incompatible with tree size")
+		}
+		levelLog := bits.TrailingZeros(uint(levelSize))
+		if levelLog >= len(input.AuxSiblings) {
+			panic("fri: openInputBranch: level size absent from branch")
+		}
+		row := openEncodedRow(table, leafIndex/(numLeaves/levelSize))
+		input.AuxSiblings[levelLog] = &row
+	}
+	return input
+}
+
+func openEncodedRowAtSize(table MultiSizeTable, size, row int) RowOpening {
+	for sizeLog2 := range table {
+		if table[sizeLog2].NumRows() != 0 && table[sizeLog2].Size() == size {
+			return openEncodedRow(table[sizeLog2], row)
+		}
+	}
+	panic("fri: openEncodedRowAtSize: size absent from table")
 }
 
 func batchOrders(layout layout) [][]int {
@@ -985,10 +1047,79 @@ func hashRowOpening(row RowOpening) field.Octuplet {
 	return hasher.SumDigest()
 }
 
+// RecoverRoot folds this branch's rows up to the tree root. If ConjugateLeaf
+// is set, the deepest step combines Leaf and ConjugateLeaf directly instead of
+// reading a transmitted digest for that level, so Siblings must then hold one
+// fewer entry than AuxSiblings.
+func (branch InputBranch) RecoverRoot(idx int) (field.Octuplet, error) {
+	numLevels := len(branch.AuxSiblings)
+	wantSiblings := numLevels
+	if branch.ConjugateLeaf != nil {
+		wantSiblings--
+	}
+	if len(branch.Siblings) != wantSiblings {
+		return field.Octuplet{}, fmt.Errorf("malformed proof")
+	}
+
+	ancestor := hashRowOpening(branch.Leaf)
+	currPos := idx
+
+	if branch.ConjugateLeaf != nil {
+		ancestor, currPos = foldOneLevel(ancestor, hashRowOpening(*branch.ConjugateLeaf), branch.AuxSiblings[numLevels-1], currPos)
+		numLevels--
+	}
+
+	for i := numLevels - 1; i >= 0; i-- {
+		ancestor, currPos = foldOneLevel(ancestor, branch.Siblings[i], branch.AuxSiblings[i], currPos)
+	}
+	if currPos > 0 {
+		return field.Octuplet{}, fmt.Errorf("all bits of currPos should have been bitshifted beyond LSb")
+	}
+	return ancestor, nil
+}
+
+func foldOneLevel(ancestor, sibling field.Octuplet, aux *RowOpening, currPos int) (field.Octuplet, int) {
+	left, right := ancestor, sibling
+	if currPos&1 > 0 {
+		left, right = right, left
+	}
+	var auxDigest *field.Octuplet
+	if aux != nil {
+		hashed := hashRowOpening(*aux)
+		auxDigest = &hashed
+	}
+	return hashNode(left, right, auxDigest), currPos >> 1
+}
+
+func (branch InputBranch) rowAtLevel(levelSize int) (RowOpening, error) {
+	if levelSize <= 0 || levelSize&(levelSize-1) != 0 {
+		return RowOpening{}, fmt.Errorf("levelSize must be a positive power of two")
+	}
+
+	treeLeaves := 1 << len(branch.AuxSiblings)
+	if levelSize > treeLeaves {
+		return RowOpening{}, fmt.Errorf("levelSize %d exceeds branch tree size %d", levelSize, treeLeaves)
+	}
+	if levelSize == treeLeaves {
+		return branch.Leaf, nil
+	}
+
+	levelLog := bits.TrailingZeros(uint(levelSize))
+	if levelLog >= len(branch.AuxSiblings) {
+		return RowOpening{}, fmt.Errorf("levelSize %d has no aux sibling in branch", levelSize)
+	}
+	if branch.AuxSiblings[levelLog] == nil {
+		return RowOpening{}, fmt.Errorf("levelSize %d is absent from branch", levelSize)
+	}
+	return *branch.AuxSiblings[levelLog], nil
+}
+
 func reconstructQueryValueAt(
 	pcs *PCS,
 	bundle sizeBundle,
-	rows QueryRowOpenings,
+	opening InputQuery,
+	inputIndexByBatch []int,
+	levelSize int,
 	claimed []BatchClaimedValues,
 	zeta field.Ext,
 	alphaDeep field.Ext,
@@ -1009,14 +1140,15 @@ func reconstructQueryValueAt(
 		if err != nil {
 			return field.Ext{}, err
 		}
-		sizedRow := rows[entry.BatchIdx][entry.SizeLog2]
-		row := sizedRow.Leaf
+		branch := opening[inputIndexByBatch[entry.BatchIdx]]
+		var row RowOpening
 		if sibling {
-			if !sizedRow.HasSibling {
-				return field.Ext{}, fmt.Errorf("fri: reconstructQueryValueAt: batch %d size %d missing sibling row",
-					entry.BatchIdx, entry.SizeLog2)
+			row = *branch.ConjugateLeaf
+		} else {
+			row, err = branch.rowAtLevel(levelSize)
+			if err != nil {
+				return field.Ext{}, err
 			}
-			row = sizedRow.Sibling
 		}
 		entryValue := rowValue(row, entry)
 		term, err := quotientAtValue(entryValue, x, claims)
@@ -1068,12 +1200,12 @@ type VerifyInputs struct {
 	Challenges Challenges
 }
 
-// Verify checks an OpeningProof under the same zetas, challenges, and query
+// Verify checks an OpeningProof under the same zeta, challenges, and query
 // positions the prover used.
 //
 // Performs in sequence:
 //
-//  1. Shape validation for Roots/Shapes/Shifts and row openings.
+//  1. Shape validation for Roots/Shapes/Shifts and claimed values.
 //  2. Canonical-layout build from Shapes + Shifts.
 //  3. Per query: authenticate each deduped input opening once, bind top and
 //     auxiliary rows from those branches, authenticate each running FRI layer
@@ -1099,22 +1231,18 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	if err = pcs.checkClaimPointsOutOfDomain(layout, in.Zeta); err != nil {
 		return err
 	}
-	if len(proof.RowOpenings) != pcs.Params.NumQueries {
-		return fmt.Errorf("fri: pcs.Verify: proof has %d row openings, want %d",
-			len(proof.RowOpenings), pcs.Params.NumQueries)
+	if len(proof.InputQueries) != pcs.Params.NumQueries {
+		return fmt.Errorf("fri: pcs.Verify: proof has %d input queries, want %d",
+			len(proof.InputQueries), pcs.Params.NumQueries)
 	}
 	if len(in.Challenges.QueryPositions) < pcs.Params.NumQueries {
 		return fmt.Errorf("fri: pcs.Verify: %d query positions, need at least %d",
 			len(in.Challenges.QueryPositions), pcs.Params.NumQueries)
 	}
 	orders := batchOrders(layout)
-	rows := proof.RowOpenings
-	if err = checkRowOpenings(rows, in.Shapes, layout); err != nil {
-		return err
-	}
 	positions := in.Challenges.QueryPositions[:pcs.Params.NumQueries]
 	inputRoots, inputIndexByBatch := inputOpeningRoots(layout, orders, in.Roots)
-	if err = checkOpeningProofShape(pcs.Params, len(inputRoots), proof.FRIProof, in.Challenges.FoldAlphas, positions); err != nil {
+	if err = checkOpeningProofShape(pcs.Params, proof.FRIProof, in.Challenges.FoldAlphas, positions); err != nil {
 		return err
 	}
 
@@ -1133,14 +1261,13 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 
 	resolved := make([]resolvedQuery, pcs.Params.NumQueries)
 	for queryIdx, queryPosition := range positions {
-		queryRows := rows[queryIdx]
 		rq := resolvedQuery{
 			Rounds: make([]inputPair, pcs.Params.numRounds),
 			Aux:    make(map[int]field.Ext, len(layout)-1),
 			Final:  proof.FRIProof.FinalPolyExt[queryPosition>>pcs.Params.numRounds],
 		}
 
-		inputOpening := proof.FRIProof.InputQueries[queryIdx]
+		inputOpening := proof.InputQueries[queryIdx]
 		if err = authenticateInputQuery(pcs.Params, inputOpening, inputRoots, queryPosition); err != nil {
 			return fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
 		}
@@ -1148,16 +1275,16 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 		// Round 0: bind the authenticated top-level leaves to the caller-supplied
 		// rows and reconstruct the conjugate pair.
 		if err = bindInputBranches("round 0", inputOpening, inputIndexByBatch,
-			pcs.Params.N, orders[0], layout[0], queryRows, true); err != nil {
+			pcs.Params.N, orders[0], layout[0], true, in.Shapes); err != nil {
 			return fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
 		}
-		self, err := reconstructQueryValueAt(pcs, layout[0], queryRows, claimed, zeta, alphaDeep,
-			domainPointExt(topDomain, queryPosition), false)
+		self, err := reconstructQueryValueAt(pcs, layout[0], inputOpening, inputIndexByBatch, pcs.Params.N,
+			claimed, zeta, alphaDeep, domainPointExt(topDomain, queryPosition), false)
 		if err != nil {
 			return err
 		}
-		sib, err := reconstructQueryValueAt(pcs, layout[0], queryRows, claimed, zeta, alphaDeep,
-			domainPointExt(topDomain, queryPosition^1), true)
+		sib, err := reconstructQueryValueAt(pcs, layout[0], inputOpening, inputIndexByBatch, pcs.Params.N,
+			claimed, zeta, alphaDeep, domainPointExt(topDomain, queryPosition^1), true)
 		if err != nil {
 			return err
 		}
@@ -1181,11 +1308,11 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 				return err
 			}
 			if err = bindInputBranches(fmt.Sprintf("level %d", levelIdx), inputOpening, inputIndexByBatch,
-				levelSize, orders[levelIdx], bundle, queryRows, false); err != nil {
+				levelSize, orders[levelIdx], bundle, false, in.Shapes); err != nil {
 				return fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
 			}
-			value, err := reconstructQueryValueAt(pcs, bundle, queryRows, claimed, zeta, alphaDeep,
-				domainPointExt(domain, queryPosition>>round), false)
+			value, err := reconstructQueryValueAt(pcs, bundle, inputOpening, inputIndexByBatch, levelSize,
+				claimed, zeta, alphaDeep, domainPointExt(domain, queryPosition>>round), false)
 			if err != nil {
 				return err
 			}
@@ -1245,14 +1372,17 @@ func inputOpeningRoots(layout layout, orders [][]int, roots []field.Octuplet) (Q
 	return inputRoots, indexByBatch
 }
 
-func authenticateInputQuery(p Params, opening QueryLayer, roots QueryLayerRoots, queryPosition int) error {
+func authenticateInputQuery(p Params, opening InputQuery, roots QueryLayerRoots, queryPosition int) error {
 	if len(opening) != len(roots) {
 		return fmt.Errorf("input query has %d tree openings, want %d", len(opening), len(roots))
 	}
 	for i, branch := range opening {
-		numLeaves := 1 << len(branch.Siblings)
+		numLeaves := 1 << len(branch.AuxSiblings)
 		if numLeaves > p.N || p.N%numLeaves != 0 {
 			return fmt.Errorf("input tree %d: tree size %d incompatible with domain size %d", i, numLeaves, p.N)
+		}
+		if (branch.ConjugateLeaf != nil) != (numLeaves == p.N) {
+			return fmt.Errorf("input tree %d: conjugate leaf presence inconsistent with tree size", i)
 		}
 		root, err := branch.RecoverRoot(queryPosition / (p.N / numLeaves))
 		if err != nil {
@@ -1265,33 +1395,34 @@ func authenticateInputQuery(p Params, opening QueryLayer, roots QueryLayerRoots,
 	return nil
 }
 
-// bindInputBranches binds authenticated input branches to the row preimages
-// supplied by the caller. The same branch also authenticates smaller level rows
-// on its path via AuxSiblings.
+// bindInputBranches validates that each batch's authenticated branch carries a
+// row (and, at the top level, a conjugate sibling) matching its declared shape,
+// before reconstructQueryValueAt reads those same branches directly.
 func bindInputBranches(
-	label string, opening QueryLayer, inputIndexByBatch []int,
-	levelSize int, order []int, bundle sizeBundle, rows QueryRowOpenings, top bool,
+	label string, opening InputQuery, inputIndexByBatch []int,
+	levelSize int, order []int, bundle sizeBundle, top bool, shapes []Shape,
 ) error {
 	for _, batchIdx := range order {
 		branchIdx := inputIndexByBatch[batchIdx]
 		if branchIdx < 0 || branchIdx >= len(opening) {
 			return fmt.Errorf("%s: batch %d has no input opening", label, batchIdx)
 		}
-		row := rows[batchIdx][bundle.SizeLog2]
 		branch := opening[branchIdx]
-		leaf, err := branchLeafAtLevel(branch, levelSize)
+		row, err := branch.rowAtLevel(levelSize)
 		if err != nil {
-			return fmt.Errorf("%s: tree %d level leaf: %w", label, branchIdx, err)
+			return fmt.Errorf("%s: tree %d level row: %w", label, branchIdx, err)
 		}
-		if leaf != hashRowOpening(row.Leaf) {
-			return fmt.Errorf("%s: tree %d row digest mismatch", label, branchIdx)
+		shape := shapes[batchIdx][bundle.SizeLog2]
+		if !rowOpeningMatchesShape(row, shape) {
+			return fmt.Errorf("%s: tree %d row shape mismatch", label, branchIdx)
 		}
 		if !top {
 			continue
 		}
-		siblings := branch.Siblings
-		if len(siblings) == 0 || siblings[len(siblings)-1] != hashRowOpening(row.Sibling) {
-			return fmt.Errorf("%s: tree %d sibling digest mismatch", label, branchIdx)
+		// authenticateInputQuery already established that a branch reachable
+		// from a top-level batch order carries a non-nil ConjugateLeaf.
+		if !rowOpeningMatchesShape(*branch.ConjugateLeaf, shape) {
+			return fmt.Errorf("%s: tree %d conjugate leaf shape mismatch", label, branchIdx)
 		}
 	}
 	return nil
@@ -1341,44 +1472,6 @@ func pointInDomain(point field.Ext, size uint64) bool {
 	powered.Exp(base, new(big.Int).SetUint64(size))
 	one := field.One()
 	return powered.Equal(&one)
-}
-
-func checkRowOpenings(rows []QueryRowOpenings, shapes []Shape, layout layout) error {
-	topSizeLog2 := -1
-	if len(layout) > 0 {
-		topSizeLog2 = layout[0].SizeLog2
-	}
-
-	for queryIdx, queryRows := range rows {
-		if len(queryRows) != len(shapes) {
-			return fmt.Errorf("fri: pcs.Verify: query %d has %d row-opening batches, want %d",
-				queryIdx, len(queryRows), len(shapes))
-		}
-		for batchIdx, batchRows := range queryRows {
-			if len(batchRows) != len(shapes[batchIdx]) {
-				return fmt.Errorf("fri: pcs.Verify: query %d batch %d has %d row-opening size slots, want %d",
-					queryIdx, batchIdx, len(batchRows), len(shapes[batchIdx]))
-			}
-
-			for sizeLog2, row := range batchRows {
-				shape := shapes[batchIdx][sizeLog2]
-				if !rowOpeningMatchesShape(row.Leaf, shape) {
-					return fmt.Errorf("fri: pcs.Verify: query %d batch %d size %d row shape mismatch",
-						queryIdx, batchIdx, sizeLog2)
-				}
-				if sizeLog2 == topSizeLog2 && (shape.BaseWidth != 0 || shape.ExtWidth != 0) {
-					if !row.HasSibling || !rowOpeningMatchesShape(row.Sibling, shape) {
-						return fmt.Errorf("fri: pcs.Verify: query %d batch %d size %d sibling shape mismatch",
-							queryIdx, batchIdx, sizeLog2)
-					}
-				} else if row.HasSibling || !rowOpeningMatchesShape(row.Sibling, SizedShape{}) {
-					return fmt.Errorf("fri: pcs.Verify: query %d batch %d size %d sibling shape mismatch",
-						queryIdx, batchIdx, sizeLog2)
-				}
-			}
-		}
-	}
-	return nil
 }
 
 func rowOpeningMatchesShape(row RowOpening, shape SizedShape) bool {

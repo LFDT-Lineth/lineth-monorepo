@@ -166,10 +166,6 @@ type Level struct {
 // are NOT stored here — they are passed externally to Verify (the caller
 // commits to those polynomials before invoking FRI).
 type Proof struct {
-	// InputQueries[k] contains one opening per input tree for query k. Each
-	// branch also carries smaller same-path level leaves in AuxSiblings.
-	InputQueries []QueryLayer
-
 	// Running-polynomial FRI path
 	FRIRoots       []field.Octuplet // Merkle roots for running poly T_1..T_{r-1}
 	FinalPolyExt   []field.Ext
@@ -277,7 +273,7 @@ func checkLevelTrees(label string, trees []*Tree) error {
 // checkOpeningProofShape validates prf's structure against p and the
 // challenge lengths before any authentication or reconstruction runs, so a
 // malformed proof can never cause an out-of-bounds access later.
-func checkOpeningProofShape(p Params, numInputOpenings int, prf Proof, foldAlphas []field.Ext, positions []int) error {
+func checkOpeningProofShape(p Params, prf Proof, foldAlphas []field.Ext, positions []int) error {
 	wantFRIRoots := p.numRounds - 1
 	if p.numRounds <= 1 {
 		wantFRIRoots = 0
@@ -285,9 +281,6 @@ func checkOpeningProofShape(p Params, numInputOpenings int, prf Proof, foldAlpha
 	wantRunningQueries := wantFRIRoots
 	if len(prf.FRIRoots) != wantFRIRoots {
 		return fmt.Errorf("fri: pcs.Verify: proof has %d FRI roots, want %d", len(prf.FRIRoots), wantFRIRoots)
-	}
-	if len(prf.InputQueries) != p.NumQueries {
-		return fmt.Errorf("fri: pcs.Verify: proof has %d input queries, want %d", len(prf.InputQueries), p.NumQueries)
 	}
 	if len(prf.RunningQueries) != p.NumQueries {
 		return fmt.Errorf("fri: pcs.Verify: proof has %d running queries, want %d", len(prf.RunningQueries), p.NumQueries)
@@ -299,10 +292,6 @@ func checkOpeningProofShape(p Params, numInputOpenings int, prf Proof, foldAlpha
 		return fmt.Errorf("fri: pcs.Verify: %d folding challenges, need at least %d", len(foldAlphas), p.numRounds)
 	}
 	for k, q := range prf.RunningQueries {
-		if len(prf.InputQueries[k]) != numInputOpenings {
-			return fmt.Errorf("fri: pcs.Verify: query %d has %d input openings, want %d",
-				k, len(prf.InputQueries[k]), numInputOpenings)
-		}
 		if len(q) != wantRunningQueries {
 			return fmt.Errorf("fri: pcs.Verify: query %d has %d running layers, want %d", k, len(q), wantRunningQueries)
 		}

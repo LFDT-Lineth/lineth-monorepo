@@ -74,10 +74,7 @@ func (fx *ldtFixture) open(t *testing.T, alphaDeep field.Ext, foldAlphas []field
 	for round := 0; started.HasNext(); round++ {
 		started.Fold(foldAlphas[round])
 	}
-	friProof := started.Open(positions)
-	rowOpenings := fx.pcs.OpenedRows(positions)
-
-	return OpeningProof{RowOpenings: rowOpenings, FRIProof: friProof}
+	return fx.pcs.Open(started, positions)
 }
 
 func (fx *ldtFixture) verify(alphaDeep field.Ext, foldAlphas []field.Ext, positions []int, proof OpeningProof) error {

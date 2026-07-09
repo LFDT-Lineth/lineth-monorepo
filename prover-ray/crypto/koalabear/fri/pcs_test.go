@@ -120,7 +120,7 @@ func TestAddOpeningZeta(t *testing.T) {
 		"zeta mismatch")
 }
 
-func TestProverStateOpenAlignsMultiSizeLevelLeaf(t *testing.T) {
+func TestOpenInputBranchAlignsMultiSizeRows(t *testing.T) {
 	prng := rand.New(utils.NewRandSource(20260625))
 	params, err := NewParams(16, 8, 1)
 	require.NoError(t, err)
@@ -143,33 +143,19 @@ func TestProverStateOpenAlignsMultiSizeLevelLeaf(t *testing.T) {
 	assert.Equal(t, digestSizedRow(encoded[3], query), topBranch.Leaf)
 	assert.Equal(t, digestSizedRow(encoded[3], query^1), topBranch.Siblings[len(topBranch.Siblings)-1])
 
-	levels := []Level{
-		{D: params.D, Evals: fullEvals, Trees: []*Tree{tree, otherTree}},
-		{D: 4, Evals: levelEvals, Trees: []*Tree{tree, otherTree}},
-	}
-	alphas := []field.Ext{
-		field.UintsToExt(41, 1, 0, 0, 0, 0),
-		field.UintsToExt(43, 0, 1, 0, 0, 0),
-		field.UintsToExt(47, 0, 0, 1, 0, 0),
-	}
-	proof := proverForTest(params, levels, alphas, []int{query})
-
-	opening := proof.InputQueries[0]
-	require.Len(t, opening, 2)
-
-	checkLevelBranch := func(name string, branch Branch, tree *Tree, encoded MultiSizeTable) {
+	checkInputBranch := func(name string, branch InputBranch, tree *Tree, encoded MultiSizeTable) {
 		t.Helper()
 
 		root, err := branch.RecoverRoot(query)
 		require.NoError(t, err, name)
 		assert.Equal(t, tree.Root(), root, name)
 
-		leaf, err := branchLeafAtLevel(branch, len(levelEvals))
+		leaf, err := branch.rowAtLevel(len(levelEvals))
 		require.NoError(t, err, name)
-		assert.Equal(t, digestSizedRow(encoded[2], base), leaf, name)
+		assert.Equal(t, digestSizedRow(encoded[2], base), hashRowOpening(leaf), name)
 	}
-	checkLevelBranch("first tree", opening[0], tree, encoded)
-	checkLevelBranch("second tree", opening[1], otherTree, otherEncoded)
+	checkInputBranch("first tree", openInputBranch(params, CommitterState{Tree: tree, EncodedTable: encoded}, query), tree, encoded)
+	checkInputBranch("second tree", openInputBranch(params, CommitterState{Tree: otherTree, EncodedTable: otherEncoded}, query), otherTree, otherEncoded)
 }
 
 type pcsOpenVerifyFixture struct {
@@ -213,13 +199,7 @@ func openForTest(t *testing.T, pcs *PCS, in openInputs) (OpeningProof, []BatchCl
 	for round := 0; started.HasNext(); round++ {
 		started.Fold(in.Challenges.FoldAlphas[round])
 	}
-	friProof := started.Open(queryPositions)
-	rowOpenings := pcs.OpenedRows(queryPositions)
-
-	return OpeningProof{
-		RowOpenings: rowOpenings,
-		FRIProof:    friProof,
-	}, batchClaims
+	return pcs.Open(started, queryPositions), batchClaims
 }
 
 // claimedValuesForTest evaluates every opened (size, row, shift) of a witness

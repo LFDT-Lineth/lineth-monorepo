@@ -27,8 +27,11 @@ const (
 	mutateDup                       // duplicate the last element of a slice
 )
 
+const pointerStep = -1
+
 // proofMutation describes a single mutation by the path (sequence of struct-field
-// / slice indices) to the target inside a Proof and the kind of change.
+// / slice indices / pointer dereferences) to the target inside an OpeningProof
+// and the kind of change.
 type proofMutation struct {
 	name string
 	path []int
@@ -69,8 +72,12 @@ func collectMutations(v reflect.Value, path []int, name string, out *[]proofMuta
 		for i := range v.Len() {
 			collectMutations(v.Index(i), append(path, i), fmt.Sprintf("%s[%d]", name, i), out)
 		}
+	case reflect.Pointer:
+		if !v.IsNil() {
+			collectMutations(v.Elem(), append(path, pointerStep), name+"*", out)
+		}
 	default:
-		// pointers (e.g. nil AuxSiblings entries) and scalars carry no mutation.
+		// nil pointers and scalars carry no mutation.
 	}
 }
 
@@ -85,6 +92,10 @@ func clonePath(p []int) []int {
 func navigate(root reflect.Value, path []int) reflect.Value {
 	v := root
 	for _, step := range path {
+		if step == pointerStep {
+			v = v.Elem()
+			continue
+		}
 		switch v.Kind() {
 		case reflect.Struct:
 			v = v.Field(step)
@@ -181,6 +192,34 @@ func TestVerifyRejectsProofMutations(t *testing.T) {
 	}
 }
 
+// TestVerifyRejectsSpuriousConjugateLeaf targets the non-malleability invariant
+// in authenticateInputQuery: a branch may carry a ConjugateLeaf iff it backs
+// the top level. The reflection-based mutation test above only mutates
+// existing values, so it can never flip a nil ConjugateLeaf to non-nil; this
+// test exercises that case directly.
+func TestVerifyRejectsSpuriousConjugateLeaf(t *testing.T) {
+	prng := rand.New(utils.NewRandSource(20240607))
+
+	fx := newLDTFixture(t, 8, 4, 1)
+	fx.addLevel(t, 2, field.VecPseudoRandExt(prng, 8))
+	fx.addLevel(t, 1, field.VecPseudoRandExt(prng, 4))
+
+	alphaDeep := field.PseudoRandExt(prng)
+	foldAlphas := []field.Ext{field.PseudoRandExt(prng), field.PseudoRandExt(prng)}
+	positions := []int{1}
+
+	proof := fx.open(t, alphaDeep, foldAlphas, positions)
+	require.NoError(t, fx.verify(alphaDeep, foldAlphas, positions, proof))
+
+	nonTop := &proof.InputQueries[0][1]
+	require.Nil(t, nonTop.ConjugateLeaf)
+	spurious := nonTop.Leaf
+	nonTop.ConjugateLeaf = &spurious
+
+	err := fx.verify(alphaDeep, foldAlphas, positions, proof)
+	require.ErrorContains(t, err, "conjugate leaf presence inconsistent")
+}
+
 func TestPCSVerifyRejectsMutations(t *testing.T) {
 	one := field.One()
 	oneExt := field.Lift(one)
@@ -200,32 +239,25 @@ func TestPCSVerifyRejectsMutations(t *testing.T) {
 		{
 			name: "tampered branch",
 			mutate: func(fx *pcsOpenVerifyFixture) {
-				leaf := fx.proof.FRIProof.InputQueries[0][0].Leaf
-				leaf[0].Add(&leaf[0], &one)
-				fx.proof.FRIProof.InputQueries[0][0].Leaf = leaf
+				fx.proof.InputQueries[0][0].Leaf.Ext[0].Add(&fx.proof.InputQueries[0][0].Leaf.Ext[0], &oneExt)
 			},
 			wantErr: "Merkle proof invalid",
 		},
 		{
-			name: "garbage unused row slot",
-			mutate: func(fx *pcsOpenVerifyFixture) {
-				fx.proof.RowOpenings[0][0][0].Leaf.Ext = []field.Ext{oneExt}
-			},
-			wantErr: "row shape mismatch",
-		},
-		{
 			name: "misaligned auxiliary row",
 			mutate: func(fx *pcsOpenVerifyFixture) {
-				fx.proof.RowOpenings[0][0][1].Leaf = openEncodedRow(fx.committed[0].EncodedTable[1], 0)
+				row := openEncodedRow(fx.committed[0].EncodedTable[1], 0)
+				fx.proof.InputQueries[0][0].AuxSiblings[2] = &row
 			},
-			wantErr: "row digest mismatch",
+			wantErr: "Merkle proof invalid",
 		},
 		{
-			name: "sibling on non-top row slot",
+			name: "tampered top sibling row",
 			mutate: func(fx *pcsOpenVerifyFixture) {
-				fx.proof.RowOpenings[0][0][1].Sibling.Ext = []field.Ext{oneExt}
+				conjugate := fx.proof.InputQueries[0][0].ConjugateLeaf
+				conjugate.Ext[0].Add(&conjugate.Ext[0], &oneExt)
 			},
-			wantErr: "sibling shape mismatch",
+			wantErr: "Merkle proof invalid",
 		},
 		{
 			name: "domain point claim",
