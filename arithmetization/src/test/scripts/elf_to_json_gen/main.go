@@ -16,6 +16,7 @@ const (
 	BLOBS_OFFSET_AND_SIZE       = "blobs_offset_and_size"
 	BLOBS_DATA                  = "blobs_data"
 	INSTRUCTION_BASE            = "instruction_base"
+	INSTRUCTION_COUNT           = "instruction_count"
 	DECODED                     = "decoded"
 )
 
@@ -151,47 +152,47 @@ func opImm32EncodingSupported(funct3, imm12 uint32) bool {
 // I-type semantic micro-op constants. These MUST match constants.zkc.
 // Each writeback-capable op has a pair: BASE (even) and BASE_WB (odd).
 const (
-	itypeRead8Sgn   = 0
-	itypeRead8SgnWB = 1
-	itypeRead16Sgn  = 2
-	itypeRead16SgnWB = 3
-	itypeRead32Sgn  = 4
-	itypeRead32SgnWB = 5
-	itypeRead64     = 6
-	itypeRead64WB   = 7
-	itypeRead8Zext  = 8
-	itypeRead8ZextWB = 9
-	itypeRead16Zext = 10
+	itypeRead8Sgn     = 0
+	itypeRead8SgnWB   = 1
+	itypeRead16Sgn    = 2
+	itypeRead16SgnWB  = 3
+	itypeRead32Sgn    = 4
+	itypeRead32SgnWB  = 5
+	itypeRead64       = 6
+	itypeRead64WB     = 7
+	itypeRead8Zext    = 8
+	itypeRead8ZextWB  = 9
+	itypeRead16Zext   = 10
 	itypeRead16ZextWB = 11
-	itypeRead32Zext = 12
+	itypeRead32Zext   = 12
 	itypeRead32ZextWB = 13
 
-	itypeOpAddi  = 14
-	itypeOpAddiWB = 15
-	itypeOpSlti  = 16
-	itypeOpSltiWB = 17
-	itypeOpSltiu = 18
+	itypeOpAddi    = 14
+	itypeOpAddiWB  = 15
+	itypeOpSlti    = 16
+	itypeOpSltiWB  = 17
+	itypeOpSltiu   = 18
 	itypeOpSltiuWB = 19
-	itypeOpXori  = 20
-	itypeOpXoriWB = 21
-	itypeOpOri   = 22
-	itypeOpOriWB = 23
-	itypeOpAndi  = 24
-	itypeOpAndiWB = 25
-	itypeOpSlli  = 26
-	itypeOpSlliWB = 27
-	itypeOpSrli  = 28
-	itypeOpSrliWB = 29
-	itypeOpSrai  = 30
-	itypeOpSraiWB = 31
+	itypeOpXori    = 20
+	itypeOpXoriWB  = 21
+	itypeOpOri     = 22
+	itypeOpOriWB   = 23
+	itypeOpAndi    = 24
+	itypeOpAndiWB  = 25
+	itypeOpSlli    = 26
+	itypeOpSlliWB  = 27
+	itypeOpSrli    = 28
+	itypeOpSrliWB  = 29
+	itypeOpSrai    = 30
+	itypeOpSraiWB  = 31
 
-	itypeOpAddiw = 32
+	itypeOpAddiw   = 32
 	itypeOpAddiwWB = 33
-	itypeOpSlliw = 34
+	itypeOpSlliw   = 34
 	itypeOpSlliwWB = 35
-	itypeOpSrliw = 36
+	itypeOpSrliw   = 36
 	itypeOpSrliwWB = 37
-	itypeOpSraiw = 38
+	itypeOpSraiw   = 38
 	itypeOpSraiwWB = 39
 
 	itypeJalr    = 40
@@ -200,12 +201,12 @@ const (
 	itypeEbreak  = 43
 	itypeInvalid = 63
 
-	wbNone      = 0
-	wbStoreReg  = 1
-	wbMem8      = 2
-	wbMem16     = 3
-	wbMem32     = 4
-	wbMem64     = 5
+	wbNone     = 0
+	wbStoreReg = 1
+	wbMem8     = 2
+	wbMem16    = 3
+	wbMem32    = 4
+	wbMem64    = 5
 )
 
 // itypeOpForRd selects the *_WB variant when rd != x0 and the base op supports
@@ -243,47 +244,47 @@ const (
 	rtypeOpAnd    = 18
 	rtypeOpAndWB  = 19
 
-	rtypeOpMul    = 20
-	rtypeOpMulWB  = 21
-	rtypeOpMulh   = 22
-	rtypeOpMulhWB = 23
-	rtypeOpMulhsu = 24
+	rtypeOpMul      = 20
+	rtypeOpMulWB    = 21
+	rtypeOpMulh     = 22
+	rtypeOpMulhWB   = 23
+	rtypeOpMulhsu   = 24
 	rtypeOpMulhsuWB = 25
-	rtypeOpMulhu  = 26
-	rtypeOpMulhuWB = 27
-	rtypeOpDiv    = 28
-	rtypeOpDivWB  = 29
-	rtypeOpDivu   = 30
-	rtypeOpDivuWB = 31
-	rtypeOpRem    = 32
-	rtypeOpRemWB  = 33
-	rtypeOpRemu   = 34
-	rtypeOpRemuWB = 35
+	rtypeOpMulhu    = 26
+	rtypeOpMulhuWB  = 27
+	rtypeOpDiv      = 28
+	rtypeOpDivWB    = 29
+	rtypeOpDivu     = 30
+	rtypeOpDivuWB   = 31
+	rtypeOpRem      = 32
+	rtypeOpRemWB    = 33
+	rtypeOpRemu     = 34
+	rtypeOpRemuWB   = 35
 
-	rtypeOpAddw  = 36
+	rtypeOpAddw   = 36
 	rtypeOpAddwWB = 37
-	rtypeOpSubw  = 38
+	rtypeOpSubw   = 38
 	rtypeOpSubwWB = 39
-	rtypeOpSllw  = 40
+	rtypeOpSllw   = 40
 	rtypeOpSllwWB = 41
-	rtypeOpSrlw  = 42
+	rtypeOpSrlw   = 42
 	rtypeOpSrlwWB = 43
-	rtypeOpSraw  = 44
+	rtypeOpSraw   = 44
 	rtypeOpSrawWB = 45
 
-	rtypeOpMulw  = 46
-	rtypeOpMulwWB = 47
-	rtypeOpDivw  = 48
-	rtypeOpDivwWB = 49
-	rtypeOpDivuw = 50
+	rtypeOpMulw    = 46
+	rtypeOpMulwWB  = 47
+	rtypeOpDivw    = 48
+	rtypeOpDivwWB  = 49
+	rtypeOpDivuw   = 50
 	rtypeOpDivuwWB = 51
-	rtypeOpRemw  = 52
-	rtypeOpRemwWB = 53
-	rtypeOpRemuw = 54
+	rtypeOpRemw    = 52
+	rtypeOpRemwWB  = 53
+	rtypeOpRemuw   = 54
 	rtypeOpRemuwWB = 55
 
-	rtypeOpKeccak  = 56
-	rtypeInvalid   = 63
+	rtypeOpKeccak = 56
+	rtypeInvalid  = 63
 )
 
 func rtypeOpForRd(baseOp, rd uint32) uint32 {
@@ -298,10 +299,10 @@ func rtypeOpForRd(baseOp, rd uint32) uint32 {
 
 // S-type semantic micro-op constants. These MUST match constants.zkc.
 const (
-	stypeStore8   = 0
-	stypeStore16  = 1
-	stypeStore32  = 2
-	stypeStore64  = 3
+	stypeStore8  = 0
+	stypeStore16 = 1
+	stypeStore32 = 2
+	stypeStore64 = 3
 	stypeInvalid = 63
 )
 
@@ -814,8 +815,8 @@ func main() {
 	}
 	// Statically decode the executable region into the pre-decoded instruction
 	// input tables consumed by the interpreter.
-	base, decodedHex := buildDecodedProgram(elfFile.Sections)
-	printJson(blobs, elfFile.Entry, base, decodedHex)
+	base, nRecords, decodedHex := buildDecodedProgram(elfFile.Sections)
+	printJson(blobs, elfFile.Entry, base, nRecords, decodedHex)
 }
 
 // parseInBytes turns an arg into raw input bytes. Four forms:
@@ -935,7 +936,7 @@ func readSectionBytes(s *elf.Section) []byte {
 // hex-encoded decoded input array. The array is
 // dense (one record per word in [base, end)), indexed at runtime by
 // index = (pc - base) >> 2.
-func buildDecodedProgram(sections []*elf.Section) (base uint64, decodedHex string) {
+func buildDecodedProgram(sections []*elf.Section) (base uint64, nRecords uint64, decodedHex string) {
 	var (
 		execSections []*elf.Section
 		minAddr      = ^uint64(0)
@@ -966,7 +967,7 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, decodedHex strin
 	// Align base down and end up to a 4-byte instruction boundary.
 	base = minAddr &^ 0x3
 	end := (maxEnd + 3) &^ uint64(0x3)
-	nRecords := (end - base) / 4
+	nRecords = (end - base) / 4
 	// OOM safeguard: reject an implausibly large span (e.g. far-apart
 	// executable sections that would otherwise be densely filled).
 	maxRecords := maxDecodedRecordsFromEnv()
@@ -1077,7 +1078,7 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, decodedHex strin
 		decodedBits.writeBits(opRd, 5)
 	}
 
-	return base, hex.EncodeToString(decodedBits.buf)
+	return base, nRecords, hex.EncodeToString(decodedBits.buf)
 }
 
 // maxDecodedRecordsFromEnv returns the configured cap on decoded records.
@@ -1100,7 +1101,7 @@ func writeSectionsFile(file *os.File, blobs []memoryBlob) {
 	}
 }
 
-func printJson(blobs []memoryBlob, entryPoint, instructionBase uint64, decodedHex string) {
+func printJson(blobs []memoryBlob, entryPoint, instructionBase, instructionCount uint64, decodedHex string) {
 	var (
 		entryPointString   = fmt.Sprintf("%016x", entryPoint)
 		blobsCountString   = fmt.Sprintf("%016x", len(blobs))
@@ -1121,6 +1122,7 @@ func printJson(blobs []memoryBlob, entryPoint, instructionBase uint64, decodedHe
 	fmt.Printf("\t\"%s\": \"0x%s\",\n", BLOBS_OFFSET_AND_SIZE, strings.Join(blobMetadata, "____"))
 	fmt.Printf("\t\"%s\": \"0x%s\",\n", BLOBS_DATA, strings.Join(blobData, "____"))
 	fmt.Printf("\t\"%s\": \"0x%016x\",\n", INSTRUCTION_BASE, instructionBase)
+	fmt.Printf("\t\"%s\": \"0x%016x\",\n", INSTRUCTION_COUNT, instructionCount)
 	fmt.Printf("\t\"%s\": \"0x%s\"\n", DECODED, decodedHex)
 	fmt.Println("}")
 }

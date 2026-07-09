@@ -2,34 +2,38 @@ include "predecoding.zkc"
 include "../riscv/memory.zkc"
 
 
+// Justify (in a one-time proof) that the raw RISC-V program in the input JSON
+// corresponds to its pre-decoded instruction table. Rather than re-executing the
+// guest, we do a single static linear pass over the instruction table: for each
+// record we read the raw instruction word from the pristine program image and
+// verify it decodes to decoded[index]. The image is read before any guest store
+// could mutate it, which is why we do NOT follow control flow here.
 fn main<registers, ram, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d, padded_input_block>() {
     var entry_point:Address
     var blobs_count:u64
     entry_point, blobs_count = entry_point_and_blobs_count[0]
-    var pc:Address = entry_point
 
-    // Base address of the pre-decoded instruction tables (lowest executable
-    // instruction address). Used to map pc -> instruction index.
+    // Base address of the pre-decoded instruction table and its record count.
     var base:Address = instruction_base[0]
+    var count:u64 = instruction_count[0]
 
+    // Load the pristine program image (all blobs) into RAM.
     var internal_offset:Length = 0 // internal offset to blobs_data
     for i:u64 = 0; i<blobs_count; i = i + 1 {
         var blob_offset:Address
         var blob_size:Length
         blob_offset, blob_size = blobs_offset_and_size[i]
-        // printf "blobs_offset_and_size[%d] == %x :: %x\n", i, blob_offset, blob_size
         for j:Address = 0; j<blob_size; j = j + 1 {
-            // printf "blobs_data[%d + %d] = %x\n", internal_offset, j, blobs_data[internal_offset + j]
             write_8(blob_offset + j, blobs_data[internal_offset + j])
         }
         internal_offset = internal_offset + blob_size
     }
 
-    // We interpret pc == MAX_UINT_64 as the stop signal, which is set by the ecall instruction
-    while pc != MAX_UINT_64 {
-        var index:u64 = (pc - base) >> 2
+    // Single static linear pass over the pre-decoded instruction table.
+    var pc:Address = base
+    for index:u64 = 0; index < count; index = index + 1 {
         var instruction:Instruction = read_32(pc)
-        pc = predecoding_check(index, instruction, pc)
+        verify_instruction(index, instruction)
+        pc = (pc + 4) as Address
     }
-
 }

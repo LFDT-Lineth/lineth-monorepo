@@ -1,8 +1,8 @@
 include "constants.zkc"
 
-fn check_b_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rs1_decoded:Register, rs2_decoded:Register, imm_decoded:DoubleWord) {
+fn check_b_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rs1_decoded:Register, rs2_decoded:Register, imm_decoded:DoubleWord) {
     if opcode != OPCODE_BRANCH {
-        printf "[ERROR] invalid B-type opcode\n"
+        printf "[ERROR] invalid B-type opcode (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
         fail
     }
 
@@ -22,42 +22,42 @@ fn check_b_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
     switch funct3 {
         case 0: {
             if compute_op != BRANCH_BEQ {
-                printf "[ERROR] compute_op mismatch\n"
+                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                 fail
             }
         }
         case 1: {
             if compute_op != BRANCH_BNE {
-                printf "[ERROR] compute_op mismatch\n"
+                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                 fail
             }
         }
         case 4: {
             if compute_op != BRANCH_BLT {
-                printf "[ERROR] compute_op mismatch\n"
+                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                 fail
             }
         }
         case 5: {
             if compute_op != BRANCH_BGE {
-                printf "[ERROR] compute_op mismatch\n"
+                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                 fail
             }
         }
         case 6: {
             if compute_op != BRANCH_BLTU {
-                printf "[ERROR] compute_op mismatch\n"
+                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                 fail
             }
         }
         case 7: {
             if compute_op != BRANCH_BGEU {
-                printf "[ERROR] compute_op mismatch\n"
+                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                 fail
             }
         }
         default: {
-            printf "[ERROR] invalid B-type funct3\n"
+            printf "[ERROR] invalid B-type funct3 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
             fail
         }
     }
@@ -66,20 +66,20 @@ fn check_b_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
     imm = sgn_extension_u12_u64(imm_sign::imm_11::imm_10_5::imm_4_1) << 1
 
     if rs1_decoded != rs1 {
-        printf "[ERROR] rs1 mismatch\n"
+        printf "[ERROR] rs1 mismatch (index=%d compute_op=%x opcode=%x rs1_decoded=%d)\n", index, compute_op, opcode, rs1_decoded
         fail
     }
     if rs2_decoded != rs2 {
-        printf "[ERROR] rs2 mismatch\n"
+        printf "[ERROR] rs2 mismatch (index=%d compute_op=%x opcode=%x rs2_decoded=%d)\n", index, compute_op, opcode, rs2_decoded
         fail
     }
     if imm_decoded != imm {
-        printf "[ERROR] imm mismatch\n"
+        printf "[ERROR] imm mismatch (index=%d compute_op=%x opcode=%x imm_decoded=%x)\n", index, compute_op, opcode, imm_decoded
         fail
     }
 }
 
-fn check_i_type_operands(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rs1_decoded:Register, rd_decoded:Register, imm_decoded:DoubleWord) {
+fn check_i_type_operands(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rs1_decoded:Register, rd_decoded:Register, imm_decoded:DoubleWord) {
     var funct3:Funct3
     var imm12:Imm12
     var rs1:Register
@@ -95,48 +95,48 @@ fn check_i_type_operands(instruction_parameters:u25, opcode:Opcode, compute_op:C
             switch funct3 {
                 case 0: {
                     if compute_op != READ8_SGN && compute_op != READ8_SGN_WB  {
-                        printf "[ERROR] compute_op mismatch\n"
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                         fail
                     }
                 }
                 case 1: {
                     if compute_op != READ16_SGN && compute_op != READ16_SGN_WB {
-                        printf "[ERROR] compute_op mismatch\n"
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                         fail
                     }
                 }
                 case 2: {
                     if compute_op != READ32_SGN && compute_op != READ32_SGN_WB {
-                        printf "[ERROR] compute_op mismatch\n"
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                         fail
                     }
                 }
                 case 3: {
                     if compute_op != READ64 && compute_op != READ64_WB {
-                        printf "[ERROR] compute_op mismatch\n"
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                         fail
                     }
                 }
                 case 4: {
                     if compute_op != READ8_ZEXT && compute_op != READ8_ZEXT_WB {
-                        printf "[ERROR] compute_op mismatch\n"
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                         fail
                     }
                 }
                 case 5: {
                     if compute_op != READ16_ZEXT && compute_op != READ16_ZEXT_WB {
-                        printf "[ERROR] compute_op mismatch\n"
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                         fail
                     }
                 }
                 case 6: {
                     if compute_op != READ32_ZEXT && compute_op != READ32_ZEXT_WB {
-                        printf "[ERROR] compute_op mismatch\n"
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                         fail
                     }
                 }
                 default: {
-                    printf "[ERROR] invalid LOAD funct3\n"
+                    printf "[ERROR] invalid LOAD funct3 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
                     fail
                 }
             }
@@ -145,37 +145,37 @@ fn check_i_type_operands(instruction_parameters:u25, opcode:Opcode, compute_op:C
             switch funct3 {
                 case 0: {
                     if compute_op != OP_ADDI && compute_op != OP_ADDI_WB {
-                        printf "[ERROR] compute_op mismatch\n"
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                         fail
                     }
                 }
                 case 2: {
                     if compute_op != OP_SLTI && compute_op != OP_SLTI_WB {
-                        printf "[ERROR] compute_op mismatch\n"
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                         fail
                     }
                 }
                 case 3: {
                     if compute_op != OP_SLTIU && compute_op != OP_SLTIU_WB {
-                        printf "[ERROR] compute_op mismatch\n"
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                         fail
                     }
                 }
                 case 4: {
                     if compute_op != OP_XORI && compute_op != OP_XORI_WB {
-                        printf "[ERROR] compute_op mismatch\n"
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                         fail
                     }
                 }
                 case 6: {
                     if compute_op != OP_ORI && compute_op != OP_ORI_WB {
-                        printf "[ERROR] compute_op mismatch\n"
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                         fail
                     }
                 }
                 case 7: {
                     if compute_op != OP_ANDI && compute_op != OP_ANDI_WB {
-                        printf "[ERROR] compute_op mismatch\n"
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                         fail
                     }
                 }
@@ -185,12 +185,12 @@ fn check_i_type_operands(instruction_parameters:u25, opcode:Opcode, compute_op:C
                     var shamt6:UImm6
                     funct6::shamt6 = imm12
                     if funct6 != 0 {
-                        printf "[ERROR] invalid SLLI funct6\n"
+                        printf "[ERROR] invalid SLLI funct6 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
                         fail
                     }
                     imm = shamt6 as DoubleWord
                     if compute_op != OP_SLLI && compute_op != OP_SLLI_WB {
-                        printf "[ERROR] compute_op mismatch\n"
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                         fail
                     }
                 }
@@ -203,24 +203,24 @@ fn check_i_type_operands(instruction_parameters:u25, opcode:Opcode, compute_op:C
                     switch funct6 {
                         case 0b000000: {
                             if compute_op != OP_SRLI && compute_op != OP_SRLI_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         case 0b010000: {
                             if compute_op != OP_SRAI && compute_op != OP_SRAI_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         default: {
-                            printf "[ERROR] invalid SRLI/SRAI funct6\n"
+                            printf "[ERROR] invalid SRLI/SRAI funct6 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
                             fail
                         }
                     }
                 }
                 default: {
-                    printf "[ERROR] invalid OPIMM funct3\n"
+                    printf "[ERROR] invalid OPIMM funct3 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
                     fail
                 }
             }
@@ -229,7 +229,7 @@ fn check_i_type_operands(instruction_parameters:u25, opcode:Opcode, compute_op:C
             switch funct3 {
                 case 0: {
                     if compute_op != OP_ADDIW && compute_op != OP_ADDIW_WB {
-                        printf "[ERROR] compute_op mismatch\n"
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                         fail
                     }
                 }
@@ -239,12 +239,12 @@ fn check_i_type_operands(instruction_parameters:u25, opcode:Opcode, compute_op:C
                     var shamt5:UImm5
                     funct7::shamt5 = imm12
                     if funct7 != 0 {
-                        printf "[ERROR] invalid SLLIW funct7\n"
+                        printf "[ERROR] invalid SLLIW funct7 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
                         fail
                     }
                     imm = shamt5 as DoubleWord
                     if compute_op != OP_SLLIW && compute_op != OP_SLLIW_WB {
-                        printf "[ERROR] compute_op mismatch\n"
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                         fail
                     }
                 }
@@ -257,24 +257,24 @@ fn check_i_type_operands(instruction_parameters:u25, opcode:Opcode, compute_op:C
                     switch funct7 {
                         case 0b0000000: {
                             if compute_op != OP_SRLIW && compute_op != OP_SRLIW_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         case 0b0100000: {
                             if compute_op != OP_SRAIW && compute_op != OP_SRAIW_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         default: {
-                            printf "[ERROR] invalid SRLIW/SRAIW funct7\n"
+                            printf "[ERROR] invalid SRLIW/SRAIW funct7 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
                             fail
                         }
                     }
                 }
                 default: {
-                    printf "[ERROR] invalid OPIMM32 funct3\n"
+                    printf "[ERROR] invalid OPIMM32 funct3 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
                     fail
                 }
             }
@@ -282,31 +282,31 @@ fn check_i_type_operands(instruction_parameters:u25, opcode:Opcode, compute_op:C
         case OPCODE_JALR: {
             // JALR has no funct3 discrimination (see decodeITypeSemantic).
             if compute_op != ITYPE_JALR && compute_op != ITYPE_JALR_WB {
-                printf "[ERROR] compute_op mismatch\n"
+                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                 fail
             }
         }
         case OPCODE_SYSTEM: {
             if funct3 != 0 {
-                printf "[ERROR] invalid SYSTEM funct3\n"
+                printf "[ERROR] invalid SYSTEM funct3 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
                 fail
             }
             // ECALL/EBREAK are selected by the full imm12 field; neither writes back.
             switch imm12 {
                 case 0: {
                     if compute_op != ITYPE_ECALL {
-                        printf "[ERROR] compute_op mismatch\n"
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                         fail
                     }
                 }
                 case 1: {
                     if compute_op != ITYPE_EBREAK {
-                        printf "[ERROR] compute_op mismatch\n"
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                         fail
                     }
                 }
                 default: {
-                    printf "[ERROR] invalid SYSTEM imm12\n"
+                    printf "[ERROR] invalid SYSTEM imm12 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
                     fail
                 }
             }
@@ -315,20 +315,20 @@ fn check_i_type_operands(instruction_parameters:u25, opcode:Opcode, compute_op:C
     }
 
     if rs1_decoded != rs1 {
-        printf "[ERROR] rs1 mismatch\n"
+        printf "[ERROR] rs1 mismatch (index=%d compute_op=%x opcode=%x rs1_decoded=%d)\n", index, compute_op, opcode, rs1_decoded
         fail
     }
     if rd_decoded != rd {
-        printf "[ERROR] rd mismatch\n"
+        printf "[ERROR] rd mismatch (index=%d compute_op=%x opcode=%x rd_decoded=%d)\n", index, compute_op, opcode, rd_decoded
         fail
     }
     if imm_decoded != imm {
-        printf "[ERROR] imm mismatch\n"
+        printf "[ERROR] imm mismatch (index=%d compute_op=%x opcode=%x imm_decoded=%x)\n", index, compute_op, opcode, imm_decoded
         fail
     }
 }
 
-fn check_r_type_operands(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rs1_decoded:Register, rs2_decoded:Register, rd_decoded:Register) {
+fn check_r_type_operands(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rs1_decoded:Register, rs2_decoded:Register, rd_decoded:Register) {
     var funct7:Funct7
     var funct3:Funct3
     var rs1:Register
@@ -345,54 +345,54 @@ fn check_r_type_operands(instruction_parameters:u25, opcode:Opcode, compute_op:C
                     switch funct3 {
                         case 0: {
                             if compute_op != RTYPE_MUL && compute_op != RTYPE_MUL_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         case 1: {
                             if compute_op != RTYPE_MULH && compute_op != RTYPE_MULH_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         case 2: {
                             if compute_op != RTYPE_MULHSU && compute_op != RTYPE_MULHSU_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         case 3: {
                             if compute_op != RTYPE_MULHU && compute_op != RTYPE_MULHU_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         case 4: {
                             if compute_op != RTYPE_DIV && compute_op != RTYPE_DIV_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         case 5: {
                             if compute_op != RTYPE_DIVU && compute_op != RTYPE_DIVU_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         case 6: {
                             if compute_op != RTYPE_REM && compute_op != RTYPE_REM_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         case 7: {
                             if compute_op != RTYPE_REMU && compute_op != RTYPE_REMU_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         default: {
-                            printf "[ERROR] invalid OP funct3\n"
+                            printf "[ERROR] invalid OP funct3 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
                             fail
                         }
                     }
@@ -401,54 +401,54 @@ fn check_r_type_operands(instruction_parameters:u25, opcode:Opcode, compute_op:C
                     switch funct3 {
                         case 0: {
                             if compute_op != RTYPE_ADD && compute_op != RTYPE_ADD_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         case 1: {
                             if compute_op != RTYPE_SLL && compute_op != RTYPE_SLL_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         case 2: {
                             if compute_op != RTYPE_SLT && compute_op != RTYPE_SLT_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         case 3: {
                             if compute_op != RTYPE_SLTU && compute_op != RTYPE_SLTU_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         case 4: {
                             if compute_op != RTYPE_XOR && compute_op != RTYPE_XOR_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         case 5: {
                             if compute_op != RTYPE_SRL && compute_op != RTYPE_SRL_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         case 6: {
                             if compute_op != RTYPE_OR && compute_op != RTYPE_OR_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         case 7: {
                             if compute_op != RTYPE_AND && compute_op != RTYPE_AND_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         default: {
-                            printf "[ERROR] invalid OP funct3\n"
+                            printf "[ERROR] invalid OP funct3 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
                             fail
                         }
                     }
@@ -457,24 +457,24 @@ fn check_r_type_operands(instruction_parameters:u25, opcode:Opcode, compute_op:C
                     switch funct3 {
                         case 0: {
                             if compute_op != RTYPE_SUB && compute_op != RTYPE_SUB_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         case 5: {
                             if compute_op != RTYPE_SRA && compute_op != RTYPE_SRA_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         default: {
-                            printf "[ERROR] invalid OP funct3\n"
+                            printf "[ERROR] invalid OP funct3 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
                             fail
                         }
                     }
                 }
                 default: {
-                    printf "[ERROR] invalid OP funct7\n"
+                    printf "[ERROR] invalid OP funct7 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
                     fail
                 }
             }
@@ -485,36 +485,36 @@ fn check_r_type_operands(instruction_parameters:u25, opcode:Opcode, compute_op:C
                     switch funct3 {
                         case 0: {
                             if compute_op != RTYPE_MULW && compute_op != RTYPE_MULW_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         case 4: {
                             if compute_op != RTYPE_DIVW && compute_op != RTYPE_DIVW_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         case 5: {
                             if compute_op != RTYPE_DIVUW && compute_op != RTYPE_DIVUW_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         case 6: {
                             if compute_op != RTYPE_REMW && compute_op != RTYPE_REMW_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         case 7: {
                             if compute_op != RTYPE_REMUW && compute_op != RTYPE_REMUW_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         default: {
-                            printf "[ERROR] invalid OP32 funct3\n"
+                            printf "[ERROR] invalid OP32 funct3 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
                             fail
                         }
                     }
@@ -523,24 +523,24 @@ fn check_r_type_operands(instruction_parameters:u25, opcode:Opcode, compute_op:C
                     switch funct3 {
                         case 0: {
                             if compute_op != RTYPE_ADDW && compute_op != RTYPE_ADDW_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         case 1: {
                             if compute_op != RTYPE_SLLW && compute_op != RTYPE_SLLW_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         case 5: {
                             if compute_op != RTYPE_SRLW && compute_op != RTYPE_SRLW_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         default: {
-                            printf "[ERROR] invalid OP32 funct3\n"
+                            printf "[ERROR] invalid OP32 funct3 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
                             fail
                         }
                     }
@@ -549,24 +549,24 @@ fn check_r_type_operands(instruction_parameters:u25, opcode:Opcode, compute_op:C
                     switch funct3 {
                         case 0: {
                             if compute_op != RTYPE_SUBW && compute_op != RTYPE_SUBW_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         case 5: {
                             if compute_op != RTYPE_SRAW && compute_op != RTYPE_SRAW_WB {
-                                printf "[ERROR] compute_op mismatch\n"
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                                 fail
                             }
                         }
                         default: {
-                            printf "[ERROR] invalid OP32 funct3\n"
+                            printf "[ERROR] invalid OP32 funct3 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
                             fail
                         }
                     }
                 }
                 default: {
-                    printf "[ERROR] invalid OP32 funct7\n"
+                    printf "[ERROR] invalid OP32 funct7 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
                     fail
                 }
             }
@@ -574,11 +574,11 @@ fn check_r_type_operands(instruction_parameters:u25, opcode:Opcode, compute_op:C
         case OPCODE_CUSTOM1: {
             // KECCAK precompile: funct3 == 0, funct7 == 0, no write-back variant.
             if funct3 != 0 || funct7 != 0 {
-                printf "[ERROR] invalid CUSTOM1 funct3/funct7\n"
+                printf "[ERROR] invalid CUSTOM1 funct3/funct7 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
                 fail
             }
             if compute_op != RTYPE_KECCAK {
-                printf "[ERROR] compute_op mismatch\n"
+                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                 fail
             }
         }
@@ -586,20 +586,20 @@ fn check_r_type_operands(instruction_parameters:u25, opcode:Opcode, compute_op:C
     }
 
     if rs1_decoded != rs1 {
-        printf "[ERROR] rs1 mismatch\n"
+        printf "[ERROR] rs1 mismatch (index=%d compute_op=%x opcode=%x rs1_decoded=%d)\n", index, compute_op, opcode, rs1_decoded
         fail
     }
     if rs2_decoded != rs2 {
-        printf "[ERROR] rs2 mismatch\n"
+        printf "[ERROR] rs2 mismatch (index=%d compute_op=%x opcode=%x rs2_decoded=%d)\n", index, compute_op, opcode, rs2_decoded
         fail
     }
     if rd_decoded != rd {
-        printf "[ERROR] rd mismatch\n"
+        printf "[ERROR] rd mismatch (index=%d compute_op=%x opcode=%x rd_decoded=%d)\n", index, compute_op, opcode, rd_decoded
         fail
     }
 }
 
-fn check_j_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rs1_decoded:Register, rd_decoded:Register, imm_decoded:DoubleWord) {
+fn check_j_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rs1_decoded:Register, rd_decoded:Register, imm_decoded:DoubleWord) {
     var rd:Register
     var imm20:u1
     var imm10_1:u10
@@ -611,12 +611,12 @@ fn check_j_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
     // J-type has no funct3; verify the raw opcode encodes the claimed compute_op.
     // Mapping (see elf_to_json_gen decodeJTypeSemantic): JAL -> JTYPE_JAL / JTYPE_JAL_WB
     if opcode != OPCODE_JAL {
-        printf "[ERROR] invalid J-type opcode\n"
+        printf "[ERROR] invalid J-type opcode (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
         fail
     }
 
     if compute_op != JTYPE_JAL && compute_op != JTYPE_JAL_WB {
-        printf "[ERROR] compute_op mismatch\n"
+        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
         fail
     }
 
@@ -625,20 +625,20 @@ fn check_j_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
     imm = sgn_extension_u21_u64(imm21)
 
     if rs1_decoded != 0 {
-        printf "[ERROR] rs1 mismatch\n"
+        printf "[ERROR] rs1 mismatch (index=%d compute_op=%x opcode=%x rs1_decoded=%d)\n", index, compute_op, opcode, rs1_decoded
         fail
     }
     if rd_decoded != rd {
-        printf "[ERROR] rd mismatch\n"
+        printf "[ERROR] rd mismatch (index=%d compute_op=%x opcode=%x rd_decoded=%d)\n", index, compute_op, opcode, rd_decoded
         fail
     }
     if imm_decoded != imm {
-        printf "[ERROR] imm mismatch\n"
+        printf "[ERROR] imm mismatch (index=%d compute_op=%x opcode=%x imm_decoded=%x)\n", index, compute_op, opcode, imm_decoded
         fail
     }
 }
 
-fn check_u_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rd_decoded:Register, imm_decoded:DoubleWord) {
+fn check_u_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rd_decoded:Register, imm_decoded:DoubleWord) {
     var imm20:u20
     var rd:Register
     imm20::rd = instruction_parameters
@@ -650,7 +650,7 @@ fn check_u_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
         case OPCODE_LUI: {
             if compute_op != UTYPE_LUI {
                 if compute_op != UTYPE_LUI_WB {
-                    printf "[ERROR] compute_op mismatch\n"
+                    printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                     fail
                 }
             }
@@ -658,13 +658,13 @@ fn check_u_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
         case OPCODE_AUIPC: {
             if compute_op != UTYPE_AUIPC {
                 if compute_op != UTYPE_AUIPC_WB {
-                    printf "[ERROR] compute_op mismatch\n"
+                    printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                     fail
                 }
             }
         }
         default: {
-            printf "[ERROR] invalid U-type opcode\n"
+            printf "[ERROR] invalid U-type opcode (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
             fail
         }
     }
@@ -672,18 +672,18 @@ fn check_u_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
     var imm:DoubleWord = sgn_extension_u32_u64((imm20 as u32) << 12)
 
     if rd_decoded != rd {
-        printf "[ERROR] rd mismatch\n"
+        printf "[ERROR] rd mismatch (index=%d compute_op=%x opcode=%x rd_decoded=%d)\n", index, compute_op, opcode, rd_decoded
         fail
     }
     if imm_decoded != imm {
-        printf "[ERROR] imm mismatch\n"
+        printf "[ERROR] imm mismatch (index=%d compute_op=%x opcode=%x imm_decoded=%x)\n", index, compute_op, opcode, imm_decoded
         fail
     }
 }
 
-fn check_s_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rs1_decoded:Register, rs2_decoded:Register, imm_decoded:DoubleWord) {
+fn check_s_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rs1_decoded:Register, rs2_decoded:Register, imm_decoded:DoubleWord) {
     if opcode != OPCODE_STORE {
-        printf "[ERROR] invalid S-type opcode\n"
+        printf "[ERROR] invalid S-type opcode (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
         fail
     }
 
@@ -701,30 +701,30 @@ fn check_s_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
     switch funct3 {
         case 0: {
             if compute_op != STYPE_STORE8 {
-                printf "[ERROR] compute_op mismatch\n"
+                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                 fail
             }
         }
         case 1: {
             if compute_op != STYPE_STORE16 {
-                printf "[ERROR] compute_op mismatch\n"
+                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                 fail
             }
         }
         case 2: {
             if compute_op != STYPE_STORE32 {
-                printf "[ERROR] compute_op mismatch\n"
+                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                 fail
             }
         }
         case 3: {
             if compute_op != STYPE_STORE64 {
-                printf "[ERROR] compute_op mismatch\n"
+                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
                 fail
             }
         }
         default: {
-            printf "[ERROR] invalid S-type funct3\n"
+            printf "[ERROR] invalid S-type funct3 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
             fail
         }
     }
@@ -732,15 +732,15 @@ fn check_s_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp,
     var imm:DoubleWord = sgn_extension_u12_u64(imm_sign::uimm6::uimm5)
 
     if rs1_decoded != rs1 {
-        printf "[ERROR] rs1 mismatch\n"
+        printf "[ERROR] rs1 mismatch (index=%d compute_op=%x opcode=%x rs1_decoded=%d)\n", index, compute_op, opcode, rs1_decoded
         fail
     }
     if rs2_decoded != rs2 {
-        printf "[ERROR] rs2 mismatch\n"
+        printf "[ERROR] rs2 mismatch (index=%d compute_op=%x opcode=%x rs2_decoded=%d)\n", index, compute_op, opcode, rs2_decoded
         fail
     }
     if imm_decoded != imm {
-        printf "[ERROR] imm mismatch\n"
+        printf "[ERROR] imm mismatch (index=%d compute_op=%x opcode=%x imm_decoded=%x)\n", index, compute_op, opcode, imm_decoded
         fail
     }
 }
