@@ -20,6 +20,7 @@ import linea.coordinator.config.v2.isDisabled
 import linea.coordinator.config.v2.isEnabled
 import linea.domain.BlobSubmittedEvent
 import linea.domain.BlockNumberAndHash
+import linea.domain.BlockParameter
 import linea.domain.FinalizationSubmittedEvent
 import linea.domain.RetryConfig
 import linea.ethapi.EthApiClient
@@ -182,6 +183,8 @@ class L1DependentApp(
           vertx = vertx,
         ),
       ),
+      finalizedStateSearchInitialBlockParameter = configs.protocol.l1.contractDeploymentBlockNumber
+        ?: BlockParameter.Tag.EARLIEST,
     )
   }
 
