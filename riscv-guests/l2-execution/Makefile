@@ -44,7 +44,7 @@ EXECUTION_SPECS_JSON_FIXTURES_DIR   := /tmp/execution-specs-json-fixtures
 EXECUTION_SPECS_SSZ_FIXTURES_DIR    := /tmp/execution-specs-ssz-fixtures
 EXECUTION_SPECS_FIXTURES_DIR        := $(EXECUTION_SPECS_JSON_FIXTURES_DIR)/fixtures
 EXECUTION_SPECS_RUN_FIXTURE_PATHS   ?= blockchain_tests/for_amsterdam/amsterdam,blockchain_tests/for_amsterdam/osaka
-EXECUTION_SPECS_RUN_SSZ_LIMIT       ?= 100
+EXECUTION_SPECS_RUN_SSZ_LIMIT       ?= 0
 
 # Parameters for Lineth zkevm-fixtures release archives and selected temporary SSZ inputs.
 ZKEVM_FIXTURES_DIR                  := /tmp/zkevm-fixtures
