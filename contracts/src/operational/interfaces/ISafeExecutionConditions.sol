@@ -36,7 +36,7 @@ interface ISafeExecutionConditions {
    * @notice Reverts when the current block timestamp is earlier than `_timestamp`.
    * @param _timestamp The earliest timestamp at which execution is allowed.
    */
-  function onlyAfterTimestamp(uint256 _timestamp) external;
+  function onlyOnOrAfterTimestamp(uint256 _timestamp) external;
 
   /**
    * @notice Reverts when the transaction origin is not contained in `_executors`.
@@ -48,6 +48,9 @@ interface ISafeExecutionConditions {
    * @notice Reverts when the transaction origin is not an owner of `_safe`.
    * @dev `_safe` must be the Safe executing the call (`msg.sender`); supplying any other address reverts. This
    * prevents a submitter from satisfying the check against a Safe they control instead of the executing Safe.
+   * @dev Ownership is checked against `tx.origin`, which is always an EOA. If `_safe` has another contract (e.g. a
+   * sub-Safe) registered as an owner, that owner can never satisfy this check, since it cannot originate a
+   * transaction itself.
    * @param _safe The Safe whose ownership is checked against the transaction origin. Must equal `msg.sender`.
    */
   function onlyExecutedBySafeOwner(address _safe) external;

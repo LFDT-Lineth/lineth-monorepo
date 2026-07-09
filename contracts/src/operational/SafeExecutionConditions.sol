@@ -16,18 +16,16 @@ import { ISafeExecutionConditions } from "./interfaces/ISafeExecutionConditions.
  */
 contract SafeExecutionConditions is ISafeExecutionConditions {
   /**
-   * @notice Reverts when the current block timestamp is earlier than `_timestamp`.
-   * @param _timestamp The earliest timestamp at which execution is allowed.
+   * @inheritdoc ISafeExecutionConditions
    */
-  function onlyAfterTimestamp(uint256 _timestamp) external {
+  function onlyOnOrAfterTimestamp(uint256 _timestamp) external {
     require(block.timestamp >= _timestamp, OnlyOnOrAfter(_timestamp));
   }
 
   /**
-   * @notice Reverts when the transaction origin is not contained in `_executors`.
+   * @inheritdoc ISafeExecutionConditions
    * @dev `tx.origin` is used deliberately to authorise the externally owned account that submitted the Safe
    * transaction, rather than the Safe contract itself which would be `msg.sender`.
-   * @param _executors The list of addresses allowed to originate the transaction.
    */
   function onlyExecutedBy(address[] calldata _executors) external {
     // solhint-disable-next-line avoid-tx-origin
@@ -35,12 +33,12 @@ contract SafeExecutionConditions is ISafeExecutionConditions {
   }
 
   /**
-   * @notice Reverts when the transaction origin is not an owner of `_safe`.
+   * @inheritdoc ISafeExecutionConditions
    * @dev `_safe` must equal `msg.sender`, i.e. the Safe executing the call. Binding to the caller prevents a
    * submitter from passing the check against a Safe they control rather than the executing Safe.
    * @dev `tx.origin` is used deliberately to authorise the externally owned account that submitted the Safe
-   * transaction, rather than the Safe contract itself which would be `msg.sender`.
-   * @param _safe The Safe whose ownership is checked against the transaction origin. Must equal `msg.sender`.
+   * transaction, rather than the Safe contract itself which would be `msg.sender`. Consequently, if `_safe` has
+   * another contract (e.g. a sub-Safe) registered as an owner, that owner can never satisfy this check.
    */
   function onlyExecutedBySafeOwner(address _safe) external {
     require(_safe == msg.sender, OnlyExecutingSafe());

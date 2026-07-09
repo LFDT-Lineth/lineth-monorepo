@@ -31,22 +31,25 @@ describe("SafeExecutionConditions", () => {
     ({ conditions, safe, executor, owner, stranger } = await loadFixture(deploySafeExecutionConditionsFixture));
   });
 
-  describe("onlyAfterTimestamp", () => {
+  describe("onlyOnOrAfterTimestamp", () => {
     it("Should not revert when the current timestamp equals the threshold", async () => {
       const currentTimestamp = await time.latest();
-      await expect(conditions.onlyAfterTimestamp(currentTimestamp)).to.not.be.reverted;
+      await expect(conditions.onlyOnOrAfterTimestamp(currentTimestamp)).to.not.be.reverted;
     });
 
     it("Should not revert when the current timestamp is after the threshold", async () => {
       const pastTimestamp = (await time.latest()) - 1;
-      await expect(conditions.onlyAfterTimestamp(pastTimestamp)).to.not.be.reverted;
+      await expect(conditions.onlyOnOrAfterTimestamp(pastTimestamp)).to.not.be.reverted;
     });
 
     it("Should revert with OnlyOnOrAfter when the current timestamp is before the threshold", async () => {
       const futureTimestamp = (await time.latest()) + 3600;
-      await expectRevertWithCustomError(conditions, conditions.onlyAfterTimestamp(futureTimestamp), "OnlyOnOrAfter", [
-        futureTimestamp,
-      ]);
+      await expectRevertWithCustomError(
+        conditions,
+        conditions.onlyOnOrAfterTimestamp(futureTimestamp),
+        "OnlyOnOrAfter",
+        [futureTimestamp],
+      );
     });
   });
 
