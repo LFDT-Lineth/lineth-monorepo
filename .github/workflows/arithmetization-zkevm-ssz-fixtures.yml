@@ -32,7 +32,7 @@ jobs:
       - name: Install zkc
         run: make -C arithmetization install-zkc
 
-      - name: Run execution-specs SSZ fixtures
+      - name: Run zkevm SSZ fixtures
         env:
           ZKC_REF: ""
         run: make --dry-run -C riscv-guests/l2-execution run-zkevm-ssz-fixtures # Remove --dry-run when we are ready to run those
