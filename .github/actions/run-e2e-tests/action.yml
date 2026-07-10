@@ -114,7 +114,7 @@ runs:
         path: ${{ github.workspace }}/${{ inputs.working-directory }}/tmp/artifacts
         merge-multiple: true
 
-    - name: Load Docker images from artifacts or pull develop for unchanged services
+    - name: Load Docker images from artifacts
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       env:
@@ -192,20 +192,12 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       run: |
         set -euo pipefail
-        timeout 10m bash -c '
-          max=10
-          attempt=0
-          until make start-env-with-tracing-v2-ci CLEAN_PREVIOUS_ENV=false; do
-            attempt=$((attempt + 1))
-            if [ "$attempt" -ge "$max" ]; then
-              echo "All $max attempts failed"
-              exit 1
-            fi
-            echo "Attempt $attempt failed — cleaning up and retrying in 30 s..."
-            make clean-environment || true
-            sleep 30
-          done
-        '
+        make retry \
+          TARGET="start-env-with-tracing-v2-ci CLEAN_PREVIOUS_ENV=false" \
+          RETRY_LIMIT=10 \
+          RETRY_TIMEOUT=10m \
+          RETRY_BACKOFF=30s \
+          RETRY_CLEANUP_TARGET=clean-environment
 
     - name: List docker containers/images
       if: ${{ always() && inputs.e2e-tests-containers-list == 'true' }}
