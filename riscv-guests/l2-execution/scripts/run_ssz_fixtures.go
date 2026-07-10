@@ -132,49 +132,76 @@ func main() {
 		}
 	}
 
-	printTableHeader()
+	total := len(inputs)
+	fmt.Fprintf(os.Stderr, "planned: %d tests\n", total)
+
+	digits := len(fmt.Sprintf("%d", total))
+	if digits < 1 {
+		digits = 1
+	}
+	runPlannedW := 2*digits + 3
+	if runPlannedW < len("run/planned") {
+		runPlannedW = len("run/planned")
+	}
+	passRunW := 2*digits + 3
+	if passRunW < len("pass/run") {
+		passRunW = len("pass/run")
+	}
+
+	printTableHeader(runPlannedW, passRunW)
 
 	passed := 0
-	for _, input := range inputs {
+	failed := 0
+	for i, input := range inputs {
 		success, userTime := runGuest(guestDir, input.file, *zkcFlags)
 		ok := success == input.expectedValid
 		if ok {
 			passed++
 		} else {
+			failed++
 			hadError = true
 		}
 		testName := fmt.Sprintf("%s:%s[%d]", filepath.ToSlash(input.jsonFile), input.testName, input.blockIndex)
-		printTableRow(input.fixturePath, testName, input.size, userTime, ok)
+		printTableRow(input.fixturePath, testName, input.size, userTime, ok,
+			i+1, total, passed, digits, runPlannedW, passRunW)
 	}
 
-	fmt.Fprintf(os.Stderr, "summary: %d/%d passed\n", passed, len(inputs))
-	if len(inputs) == 0 {
+	fmt.Fprintf(os.Stderr, "summary: %d planned, %d run, %d passed, %d failed\n",
+		total, passed+failed, passed, failed)
+	if total == 0 {
 		fmt.Fprintln(os.Stderr, "no tests ran")
 		os.Exit(1)
 	}
-	if hadError || passed != len(inputs) {
+	if hadError || passed != total {
 		os.Exit(1)
 	}
 }
 
 // Prints the table header.
-func printTableHeader() {
-	fmt.Printf("| %-*s | %-*s | %8s | %8s | %-6s |\n",
+func printTableHeader(runPlannedW, passRunW int) {
+	fmt.Printf("| %-*s | %-*s | %8s | %8s | %-6s | %-*s | %-*s |\n",
 		fixturePathColumnWidth, "fixture path",
 		testColumnWidth, "test",
-		"size (B)", "time (s)", "result")
-	fmt.Printf("| %s | %s | -------- | -------- | ------ |\n",
+		"size (B)", "time (s)", "result",
+		runPlannedW, "run/planned",
+		passRunW, "pass/run")
+	fmt.Printf("| %s | %s | -------- | -------- | ------ | %s | %s |\n",
 		strings.Repeat("-", fixturePathColumnWidth),
-		strings.Repeat("-", testColumnWidth))
+		strings.Repeat("-", testColumnWidth),
+		strings.Repeat("-", runPlannedW),
+		strings.Repeat("-", passRunW))
 }
 
 // Prints one table row.
-func printTableRow(fixturePath, testName string, size int, userTime time.Duration, ok bool) {
+func printTableRow(fixturePath, testName string, size int, userTime time.Duration, ok bool,
+	runIdx, planned, passed, digits, runPlannedW, passRunW int) {
 	result := "fail"
 	if ok {
 		result = "pass"
 	}
-	fmt.Printf("| %-*s | %-*s | %8d | %8.3f | %-6s |\n",
+	runPlanned := fmt.Sprintf("%*d / %*d", digits, runIdx, digits, planned)
+	passRun := fmt.Sprintf("%*d / %*d", digits, passed, digits, runIdx)
+	fmt.Printf("| %-*s | %-*s | %8d | %8.3f | %-6s | %*s | %*s |\n",
 		fixturePathColumnWidth,
 		escapeCell(fixturePath),
 		testColumnWidth,
@@ -182,6 +209,8 @@ func printTableRow(fixturePath, testName string, size int, userTime time.Duratio
 		size,
 		userTime.Seconds(),
 		result,
+		runPlannedW, runPlanned,
+		passRunW, passRun,
 	)
 }
 
