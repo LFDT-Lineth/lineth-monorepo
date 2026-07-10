@@ -65,6 +65,7 @@ func main() {
 	sszLimit := flag.Int("ssz-limit", 0, "maximum SSZ inputs to run per fixture path; 0 means all")
 	fixtureFormat := flag.String("fixture-format", formatExecutionSpecs, "fixture JSON format: execution-specs or zkevm-fixtures")
 	zesuConvert := flag.String("zesu-convert", "", "path to zesu-convert; required for zkevm-fixtures")
+	// TODO: add --gogen when possible
 	zkcFlags := flag.String("zkc-flags", "--fast -q", "flags forwarded to zkc exec")
 	flag.Parse()
 
