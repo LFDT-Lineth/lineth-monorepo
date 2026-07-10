@@ -74,7 +74,7 @@ runs:
       uses: lhotari/action-upterm@b0357f23233f5ea6d58947c0c402e0631bab7334 #v1
 
     - name: Setup nodejs environment
-      uses: ${{ github.action_path }}/../setup-nodejs
+      uses: ./.github/actions/setup-nodejs
       with:
         working-directory: ${{ inputs.working-directory }}
         pnpm-install-options: '-F contracts -F "e2e..." --frozen-lockfile --prefer-offline'
@@ -190,21 +190,22 @@ runs:
     - name: Spin up fresh environment with retry
       shell: bash
       working-directory: ${{ inputs.working-directory }}
-      timeout-minutes: 10
       run: |
         set -euo pipefail
-        max=10
-        attempt=0
-        until make start-env-with-tracing-v2-ci CLEAN_PREVIOUS_ENV=false; do
-          attempt=$((attempt + 1))
-          if [ "$attempt" -ge "$max" ]; then
-            echo "All $max attempts failed"
-            exit 1
-          fi
-          echo "Attempt $attempt failed — cleaning up and retrying in 30 s..."
-          make clean-environment || true
-          sleep 30
-        done
+        timeout 10m bash -c '
+          max=10
+          attempt=0
+          until make start-env-with-tracing-v2-ci CLEAN_PREVIOUS_ENV=false; do
+            attempt=$((attempt + 1))
+            if [ "$attempt" -ge "$max" ]; then
+              echo "All $max attempts failed"
+              exit 1
+            fi
+            echo "Attempt $attempt failed — cleaning up and retrying in 30 s..."
+            make clean-environment || true
+            sleep 30
+          done
+        '
 
     - name: List docker containers/images
       if: ${{ always() && inputs.e2e-tests-containers-list == 'true' }}
@@ -218,9 +219,8 @@ runs:
       id: run_e2e_tests
       shell: bash
       working-directory: ${{ inputs.working-directory }}
-      timeout-minutes: 6
       run: |
-        pnpm run -F e2e test:local
+        timeout 6m pnpm run -F e2e test:local
 
     - name: Show e2e tests result
       if: always()
