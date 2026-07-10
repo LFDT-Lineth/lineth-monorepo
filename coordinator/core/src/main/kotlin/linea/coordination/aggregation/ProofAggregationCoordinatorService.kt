@@ -13,7 +13,9 @@ import linea.domain.BlockIntervals
 import linea.domain.CompressionProofIndex
 import linea.domain.ProofsToAggregate
 import linea.domain.toBlockIntervalsString
+import linea.kotlin.zeroHash32
 import linea.metrics.LineaMetricsCategory
+import linea.persistence.BlobsRepository
 import linea.timer.TimerSchedule
 import linea.timer.VertxPeriodicPollingService
 import net.consensys.linea.async.AsyncRetryer
@@ -25,6 +27,45 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
+
+/**
+ * The remaining four components of the keccak preimage of a shnarf (its
+ * fifth component, the state root, is carried separately). Used here to
+ * describe the previous aggregation's final shnarf, so the prover circuit can
+ * open it and bind the parent state root to the state root it commits to.
+ */
+private data class ShnarfPreimage(
+  val parentShnarf: ByteArray,
+  val snarkHash: ByteArray,
+  val x: ByteArray,
+  val y: ByteArray,
+) {
+  companion object {
+    val GENESIS = ShnarfPreimage(zeroHash32(), zeroHash32(), zeroHash32(), zeroHash32())
+  }
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as ShnarfPreimage
+
+    if (!parentShnarf.contentEquals(other.parentShnarf)) return false
+    if (!snarkHash.contentEquals(other.snarkHash)) return false
+    if (!x.contentEquals(other.x)) return false
+    if (!y.contentEquals(other.y)) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = parentShnarf.contentHashCode()
+    result = 31 * result + snarkHash.contentHashCode()
+    result = 31 * result + x.contentHashCode()
+    result = 31 * result + y.contentHashCode()
+    return result
+  }
+}
 
 class ProofAggregationCoordinatorService(
   private val vertx: Vertx,
@@ -38,6 +79,7 @@ class ProofAggregationCoordinatorService(
   private val consecutiveProvenBlobsProvider: ConsecutiveProvenBlobsProvider,
   private val proofAggregationClient: ProofAggregationProverClientV2,
   private val aggregationL2StateProvider: AggregationL2StateProvider,
+  private val blobsRepository: BlobsRepository,
   private val log: Logger = LogManager.getLogger(ProofAggregationCoordinatorService::class.java),
 ) : AggregationHandler, VertxPeriodicPollingService(
   vertx = vertx,
@@ -239,23 +281,33 @@ class ProofAggregationCoordinatorService(
         )
       }
       .thenCompose { rollingInfo ->
-        invalidityProofProvider.getInvalidityProofs(
+        val invalidityProofsFuture = invalidityProofProvider.getInvalidityProofs(
           ftxStartingNumber = rollingInfo.parentAggregationLastFtxNumber.inc(),
           aggregationStartingBlockNumber = blobsToAggregate.startBlockNumber,
-        ).thenApply { invalidityProofIndexes ->
-          ProofsToAggregate(
-            compressionProofIndexes = compressionProofIndexes,
-            executionProofs = executionProofsIndexes,
-            invalidityProofs = invalidityProofIndexes,
-            parentAggregationLastBlockTimestamp = rollingInfo.parentAggregationLastBlockTimestamp,
-            parentAggregationLastL1RollingHashMessageNumber =
-            rollingInfo.parentAggregationLastL1RollingHashMessageNumber,
-            parentAggregationLastL1RollingHash = rollingInfo.parentAggregationLastL1RollingHash,
-            parentAggregationLastFtxNumber = rollingInfo.parentAggregationLastFtxNumber,
-            parentAggregationLastFtxRollingHash = rollingInfo.parentAggregationLastFtxRollingHash,
-            startBlockTimestamp = aggregationStartBlockTimestamp,
-          )
-        }
+        )
+        val parentShnarfPreimageFuture = getParentShnarfPreimage(blobsToAggregate.startBlockNumber)
+
+        SafeFuture.allOf(invalidityProofsFuture, parentShnarfPreimageFuture)
+          .thenApply {
+            val invalidityProofIndexes = invalidityProofsFuture.get()
+            val parentShnarfPreimage = parentShnarfPreimageFuture.get()
+            ProofsToAggregate(
+              compressionProofIndexes = compressionProofIndexes,
+              executionProofs = executionProofsIndexes,
+              invalidityProofs = invalidityProofIndexes,
+              parentAggregationLastBlockTimestamp = rollingInfo.parentAggregationLastBlockTimestamp,
+              parentAggregationLastL1RollingHashMessageNumber =
+              rollingInfo.parentAggregationLastL1RollingHashMessageNumber,
+              parentAggregationLastL1RollingHash = rollingInfo.parentAggregationLastL1RollingHash,
+              parentAggregationLastFtxNumber = rollingInfo.parentAggregationLastFtxNumber,
+              parentAggregationLastFtxRollingHash = rollingInfo.parentAggregationLastFtxRollingHash,
+              grandparentShnarf = parentShnarfPreimage.parentShnarf,
+              parentShnarfSnarkHash = parentShnarfPreimage.snarkHash,
+              parentShnarfX = parentShnarfPreimage.x,
+              parentShnarfY = parentShnarfPreimage.y,
+              startBlockTimestamp = aggregationStartBlockTimestamp,
+            )
+          }
           .thenCompose(proofAggregationClient::createProofRequest)
           .whenException {
             log.debug(
@@ -265,6 +317,34 @@ class ProofAggregationCoordinatorService(
               it,
             )
           }
+      }
+  }
+
+  /**
+   * Fetches the previous aggregation's final shnarf preimage — the remaining
+   * four components (grandparent shnarf, snark hash, data evaluation point
+   * and claim) needed by the prover circuit to open that shnarf and bind its
+   * committed state root to this aggregation's starting state root.
+   */
+  private fun getParentShnarfPreimage(aggregationStartBlockNumber: ULong): SafeFuture<ShnarfPreimage> {
+    val parentBlobEndBlockNumber = aggregationStartBlockNumber.dec()
+    if (parentBlobEndBlockNumber == 0UL) {
+      return SafeFuture.completedFuture(ShnarfPreimage.GENESIS)
+    }
+
+    return blobsRepository
+      .findBlobByEndBlockNumber(parentBlobEndBlockNumber.toLong())
+      .thenApply { blobRecord ->
+        val proof = blobRecord?.blobCompressionProof
+          ?: throw IllegalStateException(
+            "Failed to find the parent blob compression proof in db with end block=$parentBlobEndBlockNumber",
+          )
+        ShnarfPreimage(
+          parentShnarf = proof.prevShnarf,
+          snarkHash = proof.snarkHash,
+          x = proof.expectedX,
+          y = proof.expectedY,
+        )
       }
   }
 
@@ -281,6 +361,7 @@ class ProofAggregationCoordinatorService(
       consecutiveProvenBlobsProvider: ConsecutiveProvenBlobsProvider,
       proofAggregationClient: ProofAggregationProverClientV2,
       metricsFacade: MetricsFacade,
+      blobsRepository: BlobsRepository,
     ): LongRunningService {
       val proofAggregationService =
         ProofAggregationCoordinatorService(
@@ -299,6 +380,7 @@ class ProofAggregationCoordinatorService(
           consecutiveProvenBlobsProvider = consecutiveProvenBlobsProvider,
           proofAggregationClient = proofAggregationClient,
           aggregationL2StateProvider = aggregationL2StateProvider,
+          blobsRepository = blobsRepository,
         )
 
       return proofAggregationService

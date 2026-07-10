@@ -4,6 +4,10 @@
 
 - *(coordinator)* [**breaking**] Web3j upgrade to onboard 7594 support (#3514)
 - *(coordinator)* Add inital block number config for finalized state search (#3534)
+
+### 🐛 Bug Fixes
+
+- *(coordinator)* Supply parent shnarf preimage for aggregation requests
 ## [0.3.0] - 2026-07-07
 
 ### 🚀 Features

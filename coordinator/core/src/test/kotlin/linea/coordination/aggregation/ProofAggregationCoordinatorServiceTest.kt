@@ -14,8 +14,10 @@ import linea.domain.BlockIntervals
 import linea.domain.CompressionProofIndex
 import linea.domain.InvalidityProofIndex
 import linea.domain.ProofsToAggregate
+import linea.domain.createBlobRecord
 import linea.domain.createProofToFinalize
 import linea.persistence.AggregationsRepository
+import linea.persistence.BlobsRepository
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import org.assertj.core.api.Assertions.assertThat
@@ -72,6 +74,7 @@ class ProofAggregationCoordinatorServiceTest {
     val mockProofAggregationClient = mock<ProofAggregationProverClientV2>()
     val mockAggregationL2StateProvider = mock<AggregationL2StateProvider>()
     val mockInvalidityProofProvider = mock<InvalidityProofProvider>()
+    val mockBlobsRepository = mock<BlobsRepository>()
     val meterRegistry = SimpleMeterRegistry()
     val metricsFacade: MetricsFacade = MicrometerMetricsFacade(registry = meterRegistry)
 
@@ -102,6 +105,7 @@ class ProofAggregationCoordinatorServiceTest {
         aggregationL2StateProvider = mockAggregationL2StateProvider,
         metricsFacade = metricsFacade,
         invalidityProofProvider = mockInvalidityProofProvider,
+        blobsRepository = mockBlobsRepository,
       )
     proofAggregationCoordinatorService.aggregationProofPoller.start()
 
@@ -165,6 +169,13 @@ class ProofAggregationCoordinatorServiceTest {
         parentAggregationLastFtxRollingHash = ByteArray(32),
       )
 
+    val parentBlob1 = createBlobRecord(startBlockNumber = 1uL, endBlockNumber = 10uL)
+    val parentBlob2 = createBlobRecord(startBlockNumber = 11uL, endBlockNumber = 33uL)
+    whenever(mockBlobsRepository.findBlobByEndBlockNumber(10L))
+      .thenReturn(SafeFuture.completedFuture(parentBlob1))
+    whenever(mockBlobsRepository.findBlobByEndBlockNumber(33L))
+      .thenReturn(SafeFuture.completedFuture(parentBlob2))
+
     val exception1Count = AtomicInteger(100)
     val exception2Count = AtomicInteger(100)
     whenever(mockAggregationL2StateProvider.getAggregationL2State(anyLong()))
@@ -220,6 +231,10 @@ class ProofAggregationCoordinatorServiceTest {
         parentAggregationLastL1RollingHash = rollingInfo1.parentAggregationLastL1RollingHash,
         parentAggregationLastFtxNumber = rollingInfo1.parentAggregationLastFtxNumber,
         parentAggregationLastFtxRollingHash = rollingInfo1.parentAggregationLastFtxRollingHash,
+        grandparentShnarf = parentBlob1.blobCompressionProof!!.prevShnarf,
+        parentShnarfSnarkHash = parentBlob1.blobCompressionProof!!.snarkHash,
+        parentShnarfX = parentBlob1.blobCompressionProof!!.expectedX,
+        parentShnarfY = parentBlob1.blobCompressionProof!!.expectedY,
         startBlockTimestamp = compressionBlobs1.first().blobCounters.startBlockTimestamp,
       )
 
@@ -241,6 +256,10 @@ class ProofAggregationCoordinatorServiceTest {
         parentAggregationLastL1RollingHash = rollingInfo2.parentAggregationLastL1RollingHash,
         parentAggregationLastFtxNumber = rollingInfo2.parentAggregationLastFtxNumber,
         parentAggregationLastFtxRollingHash = rollingInfo2.parentAggregationLastFtxRollingHash,
+        grandparentShnarf = parentBlob2.blobCompressionProof!!.prevShnarf,
+        parentShnarfSnarkHash = parentBlob2.blobCompressionProof!!.snarkHash,
+        parentShnarfX = parentBlob2.blobCompressionProof!!.expectedX,
+        parentShnarfY = parentBlob2.blobCompressionProof!!.expectedY,
         startBlockTimestamp = compressionBlobs2.first().blobCounters.startBlockTimestamp,
       )
 

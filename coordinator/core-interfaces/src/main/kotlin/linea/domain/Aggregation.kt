@@ -21,6 +21,10 @@ data class ProofsToAggregate(
   val parentAggregationLastL1RollingHash: ByteArray,
   val parentAggregationLastFtxNumber: ULong,
   val parentAggregationLastFtxRollingHash: ByteArray,
+  val grandparentShnarf: ByteArray,
+  val parentShnarfSnarkHash: ByteArray,
+  val parentShnarfX: ByteArray,
+  val parentShnarfY: ByteArray,
   override val startBlockTimestamp: Instant,
 ) : BlockInterval, StartBlockTimestampProvider {
   override val startBlockNumber = compressionProofIndexes.first().startBlockNumber
@@ -41,6 +45,10 @@ data class ProofsToAggregate(
     if (!parentAggregationLastL1RollingHash.contentEquals(other.parentAggregationLastL1RollingHash)) return false
     if (parentAggregationLastFtxNumber != other.parentAggregationLastFtxNumber) return false
     if (!parentAggregationLastFtxRollingHash.contentEquals(other.parentAggregationLastFtxRollingHash)) return false
+    if (!grandparentShnarf.contentEquals(other.grandparentShnarf)) return false
+    if (!parentShnarfSnarkHash.contentEquals(other.parentShnarfSnarkHash)) return false
+    if (!parentShnarfX.contentEquals(other.parentShnarfX)) return false
+    if (!parentShnarfY.contentEquals(other.parentShnarfY)) return false
     if (startBlockNumber != other.startBlockNumber) return false
     if (endBlockNumber != other.endBlockNumber) return false
     if (startBlockTimestamp != other.startBlockTimestamp) return false
@@ -57,6 +65,10 @@ data class ProofsToAggregate(
     result = 31 * result + parentAggregationLastL1RollingHash.contentHashCode()
     result = 31 * result + parentAggregationLastFtxNumber.hashCode()
     result = 31 * result + parentAggregationLastFtxRollingHash.contentHashCode()
+    result = 31 * result + grandparentShnarf.contentHashCode()
+    result = 31 * result + parentShnarfSnarkHash.contentHashCode()
+    result = 31 * result + parentShnarfX.contentHashCode()
+    result = 31 * result + parentShnarfY.contentHashCode()
     result = 31 * result + startBlockNumber.hashCode()
     result = 31 * result + endBlockNumber.hashCode()
     result = 31 * result + startBlockTimestamp.hashCode()
@@ -75,7 +87,11 @@ data class ProofsToAggregate(
       "parentAggregationLastL1RollingHashMessageNumber=$parentAggregationLastL1RollingHashMessageNumber, " +
       "parentAggregationLastL1RollingHash=${parentAggregationLastL1RollingHash.encodeHex()}, " +
       "parentAggregationLastFtxNumber=$parentAggregationLastFtxNumber, " +
-      "parentAggregationLastFtxRollingHash=${parentAggregationLastFtxRollingHash.encodeHex()})"
+      "parentAggregationLastFtxRollingHash=${parentAggregationLastFtxRollingHash.encodeHex()}, " +
+      "grandparentShnarf=${grandparentShnarf.encodeHex()}, " +
+      "parentShnarfSnarkHash=${parentShnarfSnarkHash.encodeHex()}, " +
+      "parentShnarfX=${parentShnarfX.encodeHex()}, " +
+      "parentShnarfY=${parentShnarfY.encodeHex()})"
   }
 }
 

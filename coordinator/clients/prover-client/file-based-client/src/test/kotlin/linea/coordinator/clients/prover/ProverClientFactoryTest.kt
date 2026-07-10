@@ -102,6 +102,10 @@ class ProverClientFactoryTest {
     parentAggregationLastL1RollingHash = ByteArrayExt.random32(),
     parentAggregationLastFtxNumber = 0uL,
     parentAggregationLastFtxRollingHash = ByteArrayExt.random32(),
+    grandparentShnarf = ByteArrayExt.random32(),
+    parentShnarfSnarkHash = ByteArrayExt.random32(),
+    parentShnarfX = ByteArrayExt.random32(),
+    parentShnarfY = ByteArrayExt.random32(),
     startBlockTimestamp = Instant.fromEpochSeconds(1),
   )
   private val request2 = ProofsToAggregate(
@@ -120,6 +124,10 @@ class ProverClientFactoryTest {
     parentAggregationLastL1RollingHash = ByteArrayExt.random32(),
     parentAggregationLastFtxNumber = 0uL,
     parentAggregationLastFtxRollingHash = ByteArrayExt.random32(),
+    grandparentShnarf = ByteArrayExt.random32(),
+    parentShnarfSnarkHash = ByteArrayExt.random32(),
+    parentShnarfX = ByteArrayExt.random32(),
+    parentShnarfY = ByteArrayExt.random32(),
     startBlockTimestamp = Instant.fromEpochSeconds(10),
   )
   private val request3 = ProofsToAggregate(
@@ -138,6 +146,10 @@ class ProverClientFactoryTest {
     parentAggregationLastL1RollingHash = ByteArrayExt.random32(),
     parentAggregationLastFtxNumber = 0uL,
     parentAggregationLastFtxRollingHash = ByteArrayExt.random32(),
+    grandparentShnarf = ByteArrayExt.random32(),
+    parentShnarfSnarkHash = ByteArrayExt.random32(),
+    parentShnarfX = ByteArrayExt.random32(),
+    parentShnarfY = ByteArrayExt.random32(),
     startBlockTimestamp = Instant.fromEpochSeconds(300),
   )
 

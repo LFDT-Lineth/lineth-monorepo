@@ -1,5 +1,9 @@
 ## [unreleased]
 
+### 🐛 Bug Fixes
+
+- *(prover)* Bind aggregation's initial state root to the parent shnarf via in-circuit opening
+
 ### 🚜 Refactor
 
 - *(prover)* Remove redundant and unsafe utility functions (#3273)
