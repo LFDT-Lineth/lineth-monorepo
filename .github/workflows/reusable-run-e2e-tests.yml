@@ -87,11 +87,6 @@ on:
         default: true
       has-changes-requiring-e2e-testing:
         type: string
-      runs_on:
-        description: 'Runner label for the e2e job'
-        required: false
-        type: string
-        default: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
     outputs:
       tests_outcome:
         value: ${{ jobs.run-e2e-tests.outputs.tests_outcome }}
@@ -108,27 +103,10 @@ jobs:
     if: ${{ inputs.has-changes-requiring-e2e-testing == 'true' }}
     outputs:
       tests_outcome: ${{ steps.run-e2e-tests.outputs.tests_outcome }}
-    runs-on: ${{ inputs.runs_on }}
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
     steps:
-      - name: Resolve monorepo checkout ref
-        id: monorepo-ref
-        shell: bash
-        env:
-          WORKFLOW_REF: ${{ github.workflow_ref }}
-        run: |
-          if [ "${{ github.repository }}" = "LFDT-Lineth/lineth-monorepo" ]; then
-            # Same-repo call: test at the triggering commit.
-            echo "ref=${{ github.sha }}" >> "$GITHUB_OUTPUT"
-          else
-            # Cross-repo call: WORKFLOW_REF is "owner/repo/.github/workflows/file.yml@ref"
-            # Extract everything after the last '@' to get the branch/tag/SHA.
-            echo "ref=${WORKFLOW_REF##*@}" >> "$GITHUB_OUTPUT"
-          fi
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          repository: LFDT-Lineth/lineth-monorepo
-          ref: ${{ steps.monorepo-ref.outputs.ref }}
 
       - name: Run e2e tests
         id: run-e2e-tests
