@@ -74,7 +74,7 @@ runs:
       uses: lhotari/action-upterm@b0357f23233f5ea6d58947c0c402e0631bab7334 #v1
 
     - name: Setup nodejs environment
-      uses: ./.github/actions/setup-nodejs
+      uses: ${{ github.action_path }}/../setup-nodejs
       with:
         working-directory: ${{ inputs.working-directory }}
         pnpm-install-options: '-F contracts -F "e2e..." --frozen-lockfile --prefer-offline'
