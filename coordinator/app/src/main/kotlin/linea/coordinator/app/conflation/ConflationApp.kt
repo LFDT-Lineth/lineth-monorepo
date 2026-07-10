@@ -43,6 +43,7 @@ import linea.coordinator.clients.prover.ProverClientFactory
 import linea.coordinator.config.toJsonRpcRetry
 import linea.coordinator.config.v2.CoordinatorConfig
 import linea.domain.BlobRecord
+import linea.domain.BlockParameter
 import linea.domain.BlocksConflation
 import linea.encoding.BlockRLPEncoder
 import linea.ethapi.EthApiClient
@@ -158,6 +159,8 @@ class ConflationApp(
             vertx = vertx,
           ),
         ),
+        finalizedStateSearchInitialBlockParameter = configs.protocol.l1.contractDeploymentBlockNumber
+          ?: BlockParameter.Tag.EARLIEST,
       )
       ForcedTransactionsApp.create(
         config = config,
