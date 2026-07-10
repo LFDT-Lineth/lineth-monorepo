@@ -7,7 +7,7 @@
 
 ### 🐛 Bug Fixes
 
-- *(coordinator)* Supply parent shnarf preimage for aggregation requests
+- *(coordinator)* Supply parent shnarf preimage for aggregation requests (#3542)
 ## [0.3.0] - 2026-07-07
 
 ### 🚀 Features

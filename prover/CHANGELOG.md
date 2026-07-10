@@ -2,7 +2,7 @@
 
 ### 🐛 Bug Fixes
 
-- *(prover)* Bind aggregation's initial state root to the parent shnarf via in-circuit opening
+- *(prover)* Bind aggregation's initial state root to the parent shnarf via in-circuit opening (#3542)
 
 ### 🚜 Refactor
 
