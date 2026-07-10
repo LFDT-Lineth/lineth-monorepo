@@ -15,6 +15,7 @@ import { clearHandoffStore } from "./common/helpers/deploymentHandoff";
 import { SupportedChainIds } from "./common/supportedNetworks";
 import { overrides } from "./hardhat_overrides";
 import { resolveDeployerAccounts } from "./scripts/hardhat/deployer-accounts";
+import "./scripts/hardhat/solcWarningFilter";
 import "./scripts/operational/tasks/getCurrentFinalizedBlockNumberTask";
 import "./scripts/operational/tasks/grantContractRolesTask";
 import "./scripts/operational/tasks/renounceContractRolesTask";
