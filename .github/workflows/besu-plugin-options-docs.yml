@@ -1,0 +1,149 @@
+name: "Besu plugin options docs"
+
+# Generates Linea-Besu plugin option MDX partials and (optionally) opens a PR
+# into Consensys/doc.linea writing ONLY docs/stack/reference/_generated/.
+#
+# Live PR path requires the CREATE_GITHUB_PR GitHub App installed on
+# Consensys/doc.linea (TechOps). Until then, use dry_run=true (default).
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Generate + check only; do not open a doc.linea PR"
+        required: false
+        type: boolean
+        default: true
+  # Enable once the CREATE_GITHUB_PR app is installed on Consensys/doc.linea:
+  # push:
+  #   tags:
+  #     - 'linea-besu-*'
+
+concurrency:
+  group: besu-plugin-options-docs-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    steps:
+      - name: Checkout monorepo
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+          cache-dependency-path: scripts/besu-plugin-options/pnpm-lock.yaml
+
+      - name: Install generator dependencies
+        working-directory: scripts/besu-plugin-options
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate partials
+        working-directory: scripts/besu-plugin-options
+        run: pnpm run generate
+
+      - name: Drift + completeness check
+        working-directory: scripts/besu-plugin-options
+        run: pnpm run check
+
+      - name: Dry-run summary
+        if: ${{ inputs.dry_run }}
+        working-directory: scripts/besu-plugin-options
+        run: |
+          set -euo pipefail
+          echo "Dry-run: generated partials (no doc.linea PR)."
+          echo "Partials:"
+          find output/_generated -type f -name '*.mdx' | sort
+          echo ""
+          echo "git status (should be clean if committed output is up to date):"
+          git status --short scripts/besu-plugin-options/output || true
+
+  publish-doc-linea:
+    if: ${{ !inputs.dry_run }}
+    needs: generate
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout monorepo
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+          cache-dependency-path: scripts/besu-plugin-options/pnpm-lock.yaml
+
+      - name: Install generator dependencies
+        working-directory: scripts/besu-plugin-options
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate partials
+        working-directory: scripts/besu-plugin-options
+        run: pnpm run generate
+
+      - name: Generate App token for Consensys/doc.linea
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.CREATE_GITHUB_PR_APP_ID }}
+          private-key: ${{ secrets.CREATE_GITHUB_PR_PRIVATE_KEY }}
+          owner: Consensys
+          repositories: |
+            doc.linea
+
+      - name: Checkout doc.linea
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: Consensys/doc.linea
+          token: ${{ steps.app-token.outputs.token }}
+          path: doc.linea
+
+      - name: Copy only _generated partials
+        run: |
+          set -euo pipefail
+          DEST="doc.linea/docs/stack/reference/_generated"
+          SRC="scripts/besu-plugin-options/output/_generated"
+          rm -rf "$DEST"
+          mkdir -p "$DEST"
+          cp -R "$SRC/." "$DEST/"
+          # Hard invariant: never touch the human-owned wrapper.
+          if git -C doc.linea status --porcelain -- "docs/stack/reference/linea-besu-plugin-options.mdx" | grep -q .; then
+            echo "Refusing to proceed: wrapper page would be modified." >&2
+            exit 1
+          fi
+          echo "Staged doc.linea changes (should be under _generated only):"
+          git -C doc.linea status --short
+
+      - name: Set timestamp
+        id: timestamp
+        shell: bash
+        run: echo "TIMESTAMP=$(date -u +%Y%m%d%H%M%S)" >> "$GITHUB_OUTPUT"
+
+      - name: Create pull request on doc.linea
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          path: doc.linea
+          commit-message: "docs: update Linea-Besu plugin options partials"
+          branch: ci/besu-plugin-options-${{ steps.timestamp.outputs.TIMESTAMP }}
+          base: main
+          title: "docs: update Linea-Besu plugin options partials"
+          body: |
+            Auto-generated Linea-Besu plugin option MDX partials from `LFDT-Lineth/lineth-monorepo`.
+
+            This PR updates **only** `docs/stack/reference/_generated/`.
+            The human-owned wrapper `linea-besu-plugin-options.mdx` is intentionally untouched.
+          add-paths: |
+            docs/stack/reference/_generated/**

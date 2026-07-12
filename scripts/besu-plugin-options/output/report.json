@@ -1,0 +1,71 @@
+{
+  "hiddenTreatment": "Hidden options are included and marked Advanced (real operator flags not surfaced in CLI help).",
+  "excludedGroups": [
+    {
+      "plugin": "sequencer",
+      "className": "LineaForcedTransactionCliOptions",
+      "optionCount": 2,
+      "reason": "Unreleased feature (forced transactions)."
+    }
+  ],
+  "pluginsWithoutOptions": [
+    {
+      "plugin": "state-recovery",
+      "note": "No plugin-specific CLI options found."
+    }
+  ],
+  "advancedOptionCount": 56,
+  "missingDescriptions": [],
+  "unresolvedDefaults": [
+    {
+      "plugin": "sequencer",
+      "option": "--plugin-linea-blob-compressor-version-timestamps",
+      "sourceFile": "LineaTransactionSelectorCliOptions.java",
+      "expression": "BLOB_COMPRESSOR_VERSION_TIMESTAMPS_DEFAULT"
+    },
+    {
+      "plugin": "tracer",
+      "option": "--plugin-linea-l1l2-bridge-contract",
+      "sourceFile": "LineaL1L2BridgeSharedCliOptions.java",
+      "expression": "Address.ZERO"
+    },
+    {
+      "plugin": "tracer",
+      "option": "--plugin-linea-l1l2-bridge-topic",
+      "sourceFile": "LineaL1L2BridgeSharedCliOptions.java",
+      "expression": "Bytes32.ZERO"
+    }
+  ],
+  "unresolvedTokens": [
+    {
+      "plugin": "sequencer",
+      "option": "--plugin-linea-liveness-contract-address",
+      "token": "${DEFAULT-VALUE}"
+    },
+    {
+      "plugin": "sequencer",
+      "option": "--plugin-linea-node-type",
+      "token": "${COMPLETION-CANDIDATES}"
+    },
+    {
+      "plugin": "sequencer",
+      "option": "--plugin-linea-blob-compressor-version-timestamps",
+      "token": "${DEFAULT-VALUE}"
+    },
+    {
+      "plugin": "sequencer",
+      "option": "--plugin-linea-blob-compressor-version-timestamps",
+      "token": "${COMPLETION-CANDIDATES}"
+    },
+    {
+      "plugin": "tracer",
+      "option": "--plugin-linea-l1l2-bridge-contract",
+      "token": "${DEFAULT-VALUE}"
+    },
+    {
+      "plugin": "tracer",
+      "option": "--plugin-linea-l1l2-bridge-topic",
+      "token": "${DEFAULT-VALUE}"
+    }
+  ]
+}
