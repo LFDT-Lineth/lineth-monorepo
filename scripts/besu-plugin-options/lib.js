@@ -205,6 +205,86 @@ function collectConstants(src) {
   return constants;
 }
 
+/**
+ * Evaluate a restricted arithmetic expression (digits, `.`, `+ - * / ()`, spaces).
+ * No code eval — recursive descent over an allowlisted character set only.
+ */
+function evalArithmetic(expr) {
+  let i = 0;
+
+  function skipWs() {
+    while (i < expr.length && /\s/.test(expr[i])) i++;
+  }
+
+  function parseNumber() {
+    skipWs();
+    const start = i;
+    while (i < expr.length && /[\d.]/.test(expr[i])) i++;
+    if (start === i) return null;
+    const n = Number(expr.slice(start, i));
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function parseFactor() {
+    skipWs();
+    if (expr[i] === "+") {
+      i++;
+      return parseFactor();
+    }
+    if (expr[i] === "-") {
+      i++;
+      const v = parseFactor();
+      return v == null ? null : -v;
+    }
+    if (expr[i] === "(") {
+      i++;
+      const v = parseExpr();
+      skipWs();
+      if (expr[i] !== ")") return null;
+      i++;
+      return v;
+    }
+    return parseNumber();
+  }
+
+  function parseTerm() {
+    let left = parseFactor();
+    if (left == null) return null;
+    for (;;) {
+      skipWs();
+      const op = expr[i];
+      if (op !== "*" && op !== "/") break;
+      i++;
+      const right = parseFactor();
+      if (right == null) return null;
+      left = op === "*" ? left * right : left / right;
+      if (!Number.isFinite(left)) return null;
+    }
+    return left;
+  }
+
+  function parseExpr() {
+    let left = parseTerm();
+    if (left == null) return null;
+    for (;;) {
+      skipWs();
+      const op = expr[i];
+      if (op !== "+" && op !== "-") break;
+      i++;
+      const right = parseTerm();
+      if (right == null) return null;
+      left = op === "+" ? left + right : left - right;
+      if (!Number.isFinite(left)) return null;
+    }
+    return left;
+  }
+
+  const value = parseExpr();
+  skipWs();
+  if (value == null || i !== expr.length) return null;
+  return value;
+}
+
 /** Resolve a Java numeric literal/arithmetic expression to a display string. */
 function resolveNumeric(raw) {
   const cleaned = raw.replace(/_/g, "").trim();
@@ -217,15 +297,9 @@ function resolveNumeric(raw) {
   // Otherwise only evaluate genuine arithmetic (digits and operators only).
   const arithmetic = cleaned.replace(/([0-9])[lLfFdD]\b/g, "$1");
   if (!/^[\d.\s*+\-/()]+$/.test(arithmetic)) return { resolved: false };
-  try {
-    const value = Function('"use strict";return (' + arithmetic + ")")();
-    if (typeof value !== "number" || !Number.isFinite(value)) {
-      return { resolved: false };
-    }
-    return { resolved: true, display: String(value) };
-  } catch {
-    return { resolved: false };
-  }
+  const value = evalArithmetic(arithmetic);
+  if (value == null || !Number.isFinite(value)) return { resolved: false };
+  return { resolved: true, display: String(value) };
 }
 
 /**
@@ -742,15 +816,18 @@ function buildReport({ plugins, excluded }) {
 // Markdown / MDX rendering (partials + starter wrapper)
 // ---------------------------------------------------------------------------
 
-/** Escape a value for safe inclusion in a Markdown/MDX table cell. */
+/**
+ * Escape a value for safe inclusion in a Markdown/MDX table cell or inline code.
+ * Escapes `\`, backticks, `{`, `}`, `<`, `>`, and `|` so merged Java @Option text
+ * cannot become MDX expressions or break table markup.
+ */
 function escapeCell(text) {
   if (text == null) return "";
   let out = String(text).replace(/\r?\n/g, " ").replace(/\s+/g, " ").trim();
-  // Protect MDX from `{...}` expressions and `<...>` JSX by wrapping leftover
-  // template tokens in inline code, then escape backslashes and table pipes.
-  out = out.replace(/\$\{[^}]+\}/g, (t) => "`" + t + "`");
-  out = out.replace(/</g, "&lt;").replace(/>/g, "&gt;");
   out = out.replace(/\\/g, "\\\\");
+  out = out.replace(/`/g, "&#96;");
+  out = out.replace(/\{/g, "\\{").replace(/\}/g, "\\}");
+  out = out.replace(/</g, "&lt;").replace(/>/g, "&gt;");
   out = out.replace(/\|/g, "\\|");
   return out;
 }
@@ -758,7 +835,7 @@ function escapeCell(text) {
 /** Render the option name(s) as inline code. */
 function renderNames(names) {
   if (!names.length) return "";
-  return names.map((n) => "`" + n + "`").join("<br/>");
+  return names.map((n) => "`" + escapeCell(n) + "`").join("<br/>");
 }
 
 /** Render the default value cell. */
@@ -804,7 +881,7 @@ function renderGroupSection(lines, pluginTitle, cls) {
   lines.push(`### ${sectionHeading(pluginTitle, cls.title)}`);
   lines.push("");
   if (cls.configKey) {
-    lines.push(`Config-file key: \`${cls.configKey}\``);
+    lines.push(`Config-file key: \`${escapeCell(cls.configKey)}\``);
     lines.push("");
   }
   lines.push("| Option | Description | Default | Type | Visibility |");
@@ -1072,12 +1149,14 @@ module.exports = {
   splitTopLevel,
   parseJavaString,
   collectConstants,
+  evalArithmetic,
   resolveValueExpr,
   parseClassSource,
   discoverPlugins,
   pluginBreakdown,
   buildManifest,
   buildReport,
+  escapeCell,
   groupSlug,
   partialRelPath,
   partialComponentName,

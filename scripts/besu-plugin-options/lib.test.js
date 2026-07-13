@@ -15,12 +15,32 @@ const {
   isNeutralPartial,
   resolveMonorepoRoot,
   build,
+  escapeCell,
+  evalArithmetic,
+  renderPluginPartial,
   PLUGIN_FLAG_PREFIX,
 } = require("./lib");
 const { MONOREPO_ROOT, TOOL_ROOT, MANIFEST_PATH, GENERATED_DIR, WRAPPER_TEMPLATE_PATH } = require("./paths");
 
 const HAVE_SOURCE = fs.existsSync(path.join(MONOREPO_ROOT, "linea-besu/plugins"));
 const skip = !HAVE_SOURCE && "linea-monorepo plugins not found";
+
+test("escapeCell escapes MDX-sensitive characters", () => {
+  assert.equal(escapeCell("a {b} c"), "a \\{b\\} c");
+  assert.equal(escapeCell("use `code`"), "use &#96;code&#96;");
+  assert.equal(escapeCell("a|b"), "a\\|b");
+  assert.equal(escapeCell("a <b> c"), "a &lt;b&gt; c");
+  assert.equal(escapeCell("path\\to"), "path\\\\to");
+  assert.equal(escapeCell("${DEFAULT-VALUE}"), "$\\{DEFAULT-VALUE\\}");
+});
+
+test("evalArithmetic evaluates allowlisted expressions without Function()", () => {
+  assert.equal(evalArithmetic("1024 * 1024 * 16"), 16777216);
+  assert.equal(evalArithmetic("(1 + 2) * 3"), 9);
+  assert.equal(evalArithmetic("10 / 2 - 1"), 4);
+  assert.equal(evalArithmetic("alert(1)"), null);
+  assert.equal(evalArithmetic("1; process.exit(1)"), null);
+});
 
 test("resolveValueExpr handles literals, constants, BigDecimal, arrays, Set.of", () => {
   const constants = collectConstants(`
@@ -264,4 +284,37 @@ test("renderPartials produces one file per plugin with unique group headings", {
   const wrapper = renderStarterWrapper(manifest, discovery.plugins, partials);
   assert.match(wrapper, /import\s+Sequencer\s+from\s+'\.\/_generated\/sequencer\.mdx'/);
   assert.match(wrapper, /import\s+Tracer\s+from\s+'\.\/_generated\/tracer\.mdx'/);
+});
+
+test("generated partials sanitize MDX-sensitive chars from @Option text", () => {
+  const source = `
+    package net.consensys.linea.config;
+    public class LineaEvilCliOptions {
+      public static final String CONFIG_KEY = "evil{key}";
+      @CommandLine.Option(
+          names = {"--plugin-linea-evil"},
+          paramLabel = "<STRING>",
+          description = "Uses {expr} and \`ticks\` and | pipes")
+      private String evil = "default{x}";
+    }
+  `;
+  const parsed = parseClassSource(source, "LineaEvilCliOptions.java");
+  const plugin = {
+    key: "evil",
+    title: "Evil",
+    hasOptions: true,
+    classes: [parsed],
+  };
+  const { markdown } = renderPluginPartial(plugin);
+
+  // No raw braces outside escaped form, and no raw backticks in cells.
+  assert.match(markdown, /\\\{expr\\\}/);
+  assert.match(markdown, /&#96;ticks&#96;/);
+  assert.match(markdown, /\\\|/);
+  assert.match(markdown, /evil\\\{key\\\}/);
+  assert.match(markdown, /default\\\{x\\\}/);
+  assert.doesNotMatch(markdown, /(?<!\\)\{expr\}/);
+  assert.doesNotMatch(markdown, /(?<!\\)\{key\}/);
+  // Inline-code backticks around escaped names/defaults are fine; raw option text backticks are not.
+  assert.doesNotMatch(markdown, /Uses .*`ticks`/);
 });

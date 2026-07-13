@@ -19,7 +19,7 @@ Config-file key: `liveness-config`
 | `--plugin-linea-liveness-enabled`                              | Enable the Linea liveness service (default: false)                                                                      | `false`  | BOOLEAN        | Advanced   |
 | `--plugin-linea-liveness-max-block-age-seconds`                | Maximum age of the last block in seconds before reporting (default: 60)                                                 | `60`     | LONG           | Advanced   |
 | `--plugin-linea-liveness-bundle-max-timestamp-surplus-seconds` | Additional seconds for the max timestamp of bundle (default: 12)                                                        | `12`     | LONG           | Advanced   |
-| `--plugin-linea-liveness-contract-address`                     | Address of the LineaSequencerUptimeFeed contract (default: `${DEFAULT-VALUE}`)                                          |          | SMC_ADDRESS    | Advanced   |
+| `--plugin-linea-liveness-contract-address`                     | Address of the LineaSequencerUptimeFeed contract (default: $\{DEFAULT-VALUE\})                                          |          | SMC_ADDRESS    | Advanced   |
 | `--plugin-linea-liveness-signer-url`                           | URL of the Web3Signer service, in charge of signing transactions                                                        |          | URL            | Advanced   |
 | `--plugin-linea-liveness-signer-key-id`                        | Key ID to use with Web3Signer, the public key in hex corresponding to the private key in charge of signing transactions |          | PUBLIC_KEY_HEX | Advanced   |
 | `--plugin-linea-liveness-signer-address`                       | Ethereum address corresponding to the Web3Signer key ID                                                                 |          | EOA_ADDRESS    | Advanced   |
@@ -56,7 +56,7 @@ Config-file key: `rejected-tx-reporting-config`
 | Option                                | Description                                                                                             | Default | Type      | Visibility |
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------- | --------- | ---------- |
 | `--plugin-linea-rejected-tx-endpoint` | Endpoint URI for reporting rejected transactions. Specify a valid URI to enable reporting.              |         | URL       | Advanced   |
-| `--plugin-linea-node-type`            | Linea Node type to use when reporting rejected transactions. (Valid values: `${COMPLETION-CANDIDATES}`) |         | NODE_TYPE | Advanced   |
+| `--plugin-linea-node-type`            | Linea Node type to use when reporting rejected transactions. (Valid values: $\{COMPLETION-CANDIDATES\}) |         | NODE_TYPE | Advanced   |
 
 ### Sequencer — RPC
 
@@ -103,7 +103,7 @@ Config-file key: `transaction-selector-config`
 | `--plugin-linea-max-bundle-block-gas`               | Sets max amount of block gas bundle transactions can use (default: 15000000)                                                                                                                                                    | `15000000` | LONG    | Advanced   |
 | `--plugin-linea-events-deny-list-path`              | Path to the file containing the events deny list                                                                                                                                                                                |            | STRING  | Advanced   |
 | `--plugin-linea-events-bundle-deny-list-path`       | Path to the file containing the events deny list for bundles                                                                                                                                                                    |            | STRING  | Advanced   |
-| `--plugin-linea-blob-compressor-version-timestamps` | Comma-separated map of BlobCompressorVersion to Instant, e.g. V2=2025-01-01T00:00:00Z,V3=2026-01-01T00:00:00Z .Available versions: `${COMPLETION-CANDIDATES}` . (default: `${DEFAULT-VALUE}`)                                   |            | MAP     | Advanced   |
+| `--plugin-linea-blob-compressor-version-timestamps` | Comma-separated map of BlobCompressorVersion to Instant, e.g. V2=2025-01-01T00:00:00Z,V3=2026-01-01T00:00:00Z .Available versions: $\{COMPLETION-CANDIDATES\} . (default: $\{DEFAULT-VALUE\})                                   |            | MAP     | Advanced   |
 
 ### Sequencer — Transaction validator
 
