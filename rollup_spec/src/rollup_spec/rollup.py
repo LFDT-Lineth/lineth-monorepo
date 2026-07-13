@@ -264,8 +264,20 @@ class BlobWitness:
 @dataclass
 class RollupPublicInput:
     """
-    The 15-field rollup / rollup-aggregation public input tuple from
-    Readme.md section 2.4.
+    The rollup / rollup-aggregation public input tuple from Readme.md section 2.4.
+
+    `program_vks` is the set of ALL guest program VKs verified beneath this proof
+    (§ProgramVK anchoring), checked against L1's single combined `approvedVks`
+    set. It is semantically a SET, encoded as a CANONICAL sorted, distinct list
+    (ascending by byte value): order carries no meaning, and sorting makes the
+    commitment a pure function of the set's contents, so the guest and L1 agree
+    by both canonicalizing rather than relying on incidental order. It is a plain
+    public-input list field — no hash field — folded into L1's aggregate
+    public-input hash like every other finalization field. L1 does not
+    distinguish exec vs rollup VKs (a VK is a 32-byte commitment and the
+    guarantee comes from recursive verification against `program_vk`, not from
+    which output list it lands in), so the PI carries ONE list; the
+    exec-vs-rollup distinction is internal guest bookkeeping only.
     """
     end_block_number: U64
     end_block_timestamp: U64
@@ -282,6 +294,7 @@ class RollupPublicInput:
     filtered_addresses_hash: Hash32
     parent_shnarf: Hash32
     end_shnarf: Hash32
+    program_vks: List[Hash32] = field(default_factory=list)
 
 
 @dataclass
@@ -317,12 +330,21 @@ class RollupProof:
     `end_block_number` is intentionally absent: it is already
     `public_inputs.end_block_number`. Only `start_block_number` (not in the PI
     tuple) is carried, so the aggregation guest can verify proof tiling.
+
+    `program_vk` is the rollup guest's own verifying-key commitment. Like
+    `L2ExecutionProof.program_vk`, it is a *runtime input* the coordinator
+    supplies for the rollup-aggregation guest's recursive verification of this
+    proof (bubbled up into the aggregation's `rollup_vks`); it is NOT part of the
+    rollup PI, and `run_rollup_guest` never sets it (a guest cannot attest its
+    own VK). It is populated by the aggregation request codec; the zero-hash
+    default is only a placeholder for reference-model construction.
     """
     public_inputs: RollupPublicInput
     start_block_number: U64
     proof: bytes = b""
     l2_l1_roots: List[Hash32] = field(default_factory=list)
     filtered_addresses: List[Address] = field(default_factory=list)
+    program_vk: Hash32 = ZERO_HASH32  # runtime input supplied by the coordinator
 
 
 def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
@@ -386,10 +408,16 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     truncated_block_hashes = [block.block_hash for block in truncated_blocks]
 
     for proof in rollup_input.l2_execution_proofs:
-        verify_l2_execution_proof(proof)
+        verify_l2_execution_proof(proof.program_vk, proof)
         concatenated_froms.extend(proof.tx_froms)
         concatenated_l2_l1_messages.extend(proof.l2_l1_messages)
         concatenated_filtered_addresses.extend(proof.filtered_addresses)
+
+    # The exec program VKs verified beneath this rollup proof, emitted as a
+    # CANONICAL sorted, distinct list (§ProgramVK anchoring): semantically a set,
+    # sorted so the commitment is a pure function of its contents. `Hash32` is a
+    # bytes subclass, so `sorted` orders ascending by byte value.
+    program_vks = sorted({proof.program_vk for proof in rollup_input.l2_execution_proofs})
 
     for block in truncated_blocks:
         truncated_froms.extend(block.froms)
@@ -454,6 +482,7 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
         filtered_addresses_hash=hash_address_list(concatenated_filtered_addresses),
         parent_shnarf=rollup_input.parent_shnarf,
         end_shnarf=current_shnarf,
+        program_vks=program_vks,
     )
 
     return RollupProof(
@@ -464,15 +493,30 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     )
 
 
-def verify_l2_execution_proof(proof: L2ExecutionProof) -> None:
+def recursive_stark_verify(program_vk: Hash32, proof: bytes) -> None:
+    """PRECOMPILE (production guest): the zkVM in-circuit recursive STARK
+    verifier. Accepts iff `proof` verifies under `program_vk`. Stubbed in this
+    reference; the point is that the SAME `program_vk` passed here is the value
+    the caller emits into `program_vks`, so the anchored VK is provably the
+    verification key (no divergence between what is verified and what L1 checks)."""
+    return None
+
+
+def verify_l2_execution_proof(program_vk: Hash32, proof: L2ExecutionProof) -> None:
     """
     Verify an inner l2-execution proof against its claimed public inputs.
 
-    Recursive STARK verification is a zkVM primitive in the guest; here
-    `L2ExecutionProof.proof` stands in for those bytes, and the reference only
+    Recursive STARK verification is a zkVM primitive in the guest; `program_vk`
+    is the explicit verify-key parameter it checks against (§ProgramVK
+    anchoring). The rollup guest passes the same `program_vk` it bubbles up into
+    `exec_vks` / `program_vks`, so the anchored VK is provably the key the
+    verification ran against. `L2ExecutionProof.proof` stands in for those
+    recursive-STARK bytes; beyond the recursive verify, the reference only
     re-checks the hash-preimage bindings (`txFromsHash`, `l2L1MessagesHash`,
     `filteredAddressesHash`) the rollup proof consumes alongside the PI tuple.
     """
+    # First: the recursive STARK verify against the explicit verify key.
+    recursive_stark_verify(program_vk, proof.proof)
     # The three checks below are PRECOMPILE: keccak256 in production (used
     # to verify the preimage bindings that the rollup proof consumes).
     if hash_hash_list(proof.l2_l1_messages) != proof.public_inputs.l2_l1_messages_hash:

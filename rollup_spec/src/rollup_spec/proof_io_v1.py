@@ -378,6 +378,9 @@ def _decode_l2_execution_proof(obj: dict, ctx: str) -> L2ExecutionProof:
             Address(_bytes_from_hex(a, f"{ctx}filteredAddresses[{i}]"))
             for i, a in enumerate(filtered_addresses)
         ],
+        # §ProgramVK anchoring: the l2-execution proof's VK, supplied by the
+        # coordinator as a runtime input for the rollup guest's recursive verify.
+        program_vk=Hash32(_bytes_from_hex(_require(obj, "programVk", ctx), f"{ctx}programVk")),
     )
 
 
@@ -467,6 +470,10 @@ def _encode_rollup_public_inputs(pi: RollupPublicInput) -> dict:
         "filteredAddressesHash": _hx(pi.filtered_addresses_hash),
         "parentShnarf": _hx(pi.parent_shnarf),
         "endShnarf": _hx(pi.end_shnarf),
+        # §ProgramVK anchoring: single order-preserving distinct list of ALL
+        # guest program VKs verified beneath this proof, checked against L1's
+        # single combined approved-VK set (exec vs rollup not distinguished).
+        "programVks": [_hx(v) for v in pi.program_vks],
     }
 
 
@@ -521,6 +528,7 @@ def _decode_rollup_public_input(obj: dict, ctx: str) -> RollupPublicInput:
     def n(key: str) -> U64:
         return _u64(_require(obj, key, ctx), f"{ctx}{key}")
 
+    program_vks = _require_list(obj, "programVks", ctx)
     return RollupPublicInput(
         end_block_number=n("endBlockNumber"),
         end_block_timestamp=n("endBlockTimestamp"),
@@ -537,6 +545,10 @@ def _decode_rollup_public_input(obj: dict, ctx: str) -> RollupPublicInput:
         filtered_addresses_hash=h("filteredAddressesHash"),
         parent_shnarf=h("parentShnarf"),
         end_shnarf=h("endShnarf"),
+        program_vks=[
+            Hash32(_bytes_from_hex(v, f"{ctx}programVks[{i}]"))
+            for i, v in enumerate(program_vks)
+        ],
     )
 
 
@@ -556,6 +568,9 @@ def _decode_rollup_proof(obj: dict, ctx: str) -> RollupProof:
             Address(_bytes_from_hex(a, f"{ctx}filteredAddresses[{i}]"))
             for i, a in enumerate(filtered_addresses)
         ],
+        # §ProgramVK anchoring: the rollup proof's own VK, supplied by the
+        # coordinator for the aggregation guest's recursive verify.
+        program_vk=Hash32(_bytes_from_hex(_require(obj, "programVk", ctx), f"{ctx}programVk")),
     )
 
 

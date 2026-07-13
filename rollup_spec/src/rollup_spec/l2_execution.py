@@ -36,6 +36,12 @@ BRIDGE_L2L1_MESSAGE_SENT_TOPIC_0 = Hash32(
     bytes.fromhex("e856c2b8bd4eb0027ce32eeaf595c21b0b6b4644b326e5b7bd80a1cf8db72e6c"),
 )
 
+# Sentinel default for the program-VK runtime input on `L2ExecutionProof`. A guest
+# cannot attest its own VK, so the real value is attached by the *next* layer's
+# request codec, never by `run_l2_execution_guest`; this zero hash is only a
+# placeholder and must not be mistaken for a meaningful VK.
+ZERO_PROGRAM_VK = Hash32(b"\x00" * 32)
+
 # Storage layout of the L2MessageService contract.
 #
 # The L1->L2 rolling hash lives in the `l1RollingHashes` mapping keyed by message
@@ -286,6 +292,14 @@ class L2ExecutionProof:
     `end_block_number` is intentionally absent: it is already
     `public_inputs.end_block_number`. Only `start_block_number` (not in the PI
     tuple) is carried, so the rollup guest can verify proof tiling.
+
+    `program_vk` is the l2-execution guest's verifying-key commitment. It is a
+    *runtime input* the coordinator supplies for the rollup guest's recursive
+    verification of this proof (and which the rollup guest bubbles up into its
+    `exec_vks` public output) — it is NOT part of this proof's own 15-field PI,
+    and `run_l2_execution_guest` never sets it (a guest cannot attest its own
+    VK). It is populated by the rollup request codec; the zero-hash default is
+    only a placeholder for reference-model construction.
     """
     public_inputs: L2ExecutionProofPublicInput
     start_block_number: U64
@@ -293,6 +307,7 @@ class L2ExecutionProof:
     l2_l1_messages: List[Hash32] = field(default_factory=list)
     tx_froms: List[Address] = field(default_factory=list)
     filtered_addresses: List[Address] = field(default_factory=list)
+    program_vk: Hash32 = ZERO_PROGRAM_VK  # runtime input supplied by the coordinator
 
 
 def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2ExecutionProof:
