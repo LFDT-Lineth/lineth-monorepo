@@ -16,6 +16,7 @@ import linea.domain.InvalidityProofIndex
 import linea.domain.ProofsToAggregate
 import linea.domain.createBlobRecord
 import linea.domain.createProofToFinalize
+import linea.kotlin.zeroHash32
 import linea.persistence.AggregationsRepository
 import linea.persistence.BlobsRepository
 import net.consensys.linea.metrics.MetricsFacade
@@ -28,6 +29,7 @@ import org.mockito.Mockito.anyLong
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argThat
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -397,6 +399,216 @@ class ProofAggregationCoordinatorServiceTest {
             aggregationProof = null,
           ),
         )
+      }
+  }
+
+  @Test
+  fun `genesis aggregation uses zero-hash parent shnarf preimage without querying blobsRepository`(vertx: Vertx) {
+    val mockAggregationCalculator = mock<AggregationCalculator>()
+    val mockAggregationsRepository = mock<AggregationsRepository>()
+    val mockProofAggregationClient = mock<ProofAggregationProverClientV2>()
+    val mockAggregationL2StateProvider = mock<AggregationL2StateProvider>()
+    val mockInvalidityProofProvider = mock<InvalidityProofProvider>()
+    val mockBlobsRepository = mock<BlobsRepository>()
+    val metricsFacade: MetricsFacade = MicrometerMetricsFacade(registry = SimpleMeterRegistry())
+
+    val proofAggregationCoordinatorService =
+      ProofAggregationCoordinatorService(
+        vertx = vertx,
+        config = ProofAggregationCoordinatorService.Config(
+          pollingInterval = 10.milliseconds,
+          proofGenerationRetryBackoffDelay = 5.milliseconds,
+        ),
+        nextBlockNumberToPoll = 1L,
+        aggregationCalculator = mockAggregationCalculator,
+        aggregationProofHandler = { SafeFuture.completedFuture(Unit) },
+        consecutiveProvenBlobsProvider = mockAggregationsRepository::findConsecutiveProvenBlobs,
+        proofAggregationClient = mockProofAggregationClient,
+        aggregationL2StateProvider = mockAggregationL2StateProvider,
+        metricsFacade = metricsFacade,
+        invalidityProofProvider = mockInvalidityProofProvider,
+        blobsRepository = mockBlobsRepository,
+      )
+
+    val blob = createBlob(1u, 10u)
+    val blobsToAggregate = BlobsToAggregate(1u, 10u)
+
+    whenever(mockAggregationsRepository.findConsecutiveProvenBlobs(1L))
+      .thenReturn(SafeFuture.completedFuture(listOf(blob)))
+    whenever(mockAggregationCalculator.newBlob(any<BlobCounters>())).thenAnswer {
+      proofAggregationCoordinatorService.onAggregation(blobsToAggregate)
+    }
+
+    // aggregation starts at block 1, so its parent (block 0) is the genesis block
+    val rollingInfo =
+      AggregationL2State(
+        parentAggregationLastBlockTimestamp = Instant.fromEpochSeconds(1),
+        parentAggregationLastL1RollingHashMessageNumber = 0UL,
+        parentAggregationLastL1RollingHash = ByteArray(32),
+        parentAggregationLastFtxNumber = 0UL,
+        parentAggregationLastFtxRollingHash = ByteArray(32),
+      )
+    whenever(mockAggregationL2StateProvider.getAggregationL2State(0L))
+      .thenReturn(SafeFuture.completedFuture(rollingInfo))
+    whenever(mockInvalidityProofProvider.getInvalidityProofs(any(), any()))
+      .thenReturn(SafeFuture.completedFuture(emptyList()))
+
+    val expectedProofsToAggregate =
+      ProofsToAggregate(
+        compressionProofIndexes = listOf(
+          CompressionProofIndex(
+            startBlockNumber = blob.blobCounters.startBlockNumber,
+            endBlockNumber = blob.blobCounters.endBlockNumber,
+            hash = blob.blobCounters.expectedShnarf,
+            startBlockTimestamp = blob.blobCounters.startBlockTimestamp,
+          ),
+        ),
+        executionProofs = blob.executionProofs,
+        invalidityProofs = emptyList(),
+        parentAggregationLastBlockTimestamp = rollingInfo.parentAggregationLastBlockTimestamp,
+        parentAggregationLastL1RollingHashMessageNumber = rollingInfo.parentAggregationLastL1RollingHashMessageNumber,
+        parentAggregationLastL1RollingHash = rollingInfo.parentAggregationLastL1RollingHash,
+        parentAggregationLastFtxNumber = rollingInfo.parentAggregationLastFtxNumber,
+        parentAggregationLastFtxRollingHash = rollingInfo.parentAggregationLastFtxRollingHash,
+        grandparentShnarf = zeroHash32(),
+        parentShnarfSnarkHash = zeroHash32(),
+        parentShnarfX = zeroHash32(),
+        parentShnarfY = zeroHash32(),
+        startBlockTimestamp = blob.blobCounters.startBlockTimestamp,
+      )
+
+    whenever(mockProofAggregationClient.createProofRequest(any()))
+      .thenReturn(
+        SafeFuture.completedFuture(
+          AggregationProofIndex(
+            startBlockNumber = 1u,
+            endBlockNumber = 10u,
+            hash = Random.nextBytes(32),
+            startBlockTimestamp = Instant.fromEpochSeconds(0),
+          ),
+        ),
+      )
+    whenever(mockProofAggregationClient.findProofResponse(any())).thenReturn(SafeFuture.completedFuture(null))
+
+    proofAggregationCoordinatorService.action().get()
+
+    await()
+      .pollInterval(100.milliseconds.toJavaDuration())
+      .atMost(5.seconds.toJavaDuration())
+      .untilAsserted {
+        verify(mockProofAggregationClient).createProofRequest(expectedProofsToAggregate)
+      }
+    verify(mockBlobsRepository, never()).findBlobByEndBlockNumber(any())
+  }
+
+  @Test
+  fun `aggregation retries and succeeds once the parent blob compression proof becomes available`(vertx: Vertx) {
+    val mockAggregationCalculator = mock<AggregationCalculator>()
+    val mockAggregationsRepository = mock<AggregationsRepository>()
+    val mockProofAggregationClient = mock<ProofAggregationProverClientV2>()
+    val mockAggregationL2StateProvider = mock<AggregationL2StateProvider>()
+    val mockInvalidityProofProvider = mock<InvalidityProofProvider>()
+    val mockBlobsRepository = mock<BlobsRepository>()
+    val metricsFacade: MetricsFacade = MicrometerMetricsFacade(registry = SimpleMeterRegistry())
+
+    val proofAggregationCoordinatorService =
+      ProofAggregationCoordinatorService(
+        vertx = vertx,
+        config = ProofAggregationCoordinatorService.Config(
+          pollingInterval = 10.milliseconds,
+          proofGenerationRetryBackoffDelay = 5.milliseconds,
+        ),
+        nextBlockNumberToPoll = 101L,
+        aggregationCalculator = mockAggregationCalculator,
+        aggregationProofHandler = { SafeFuture.completedFuture(Unit) },
+        consecutiveProvenBlobsProvider = mockAggregationsRepository::findConsecutiveProvenBlobs,
+        proofAggregationClient = mockProofAggregationClient,
+        aggregationL2StateProvider = mockAggregationL2StateProvider,
+        metricsFacade = metricsFacade,
+        invalidityProofProvider = mockInvalidityProofProvider,
+        blobsRepository = mockBlobsRepository,
+      )
+
+    val blob = createBlob(101u, 110u)
+    val blobsToAggregate = BlobsToAggregate(101u, 110u)
+
+    whenever(mockAggregationsRepository.findConsecutiveProvenBlobs(101L))
+      .thenReturn(SafeFuture.completedFuture(listOf(blob)))
+    whenever(mockAggregationCalculator.newBlob(any<BlobCounters>())).thenAnswer {
+      proofAggregationCoordinatorService.onAggregation(blobsToAggregate)
+    }
+
+    val rollingInfo =
+      AggregationL2State(
+        parentAggregationLastBlockTimestamp = Instant.fromEpochSeconds(1),
+        parentAggregationLastL1RollingHashMessageNumber = 0UL,
+        parentAggregationLastL1RollingHash = ByteArray(32),
+        parentAggregationLastFtxNumber = 0UL,
+        parentAggregationLastFtxRollingHash = ByteArray(32),
+      )
+    whenever(mockAggregationL2StateProvider.getAggregationL2State(100L))
+      .thenReturn(SafeFuture.completedFuture(rollingInfo))
+    whenever(mockInvalidityProofProvider.getInvalidityProofs(any(), any()))
+      .thenReturn(SafeFuture.completedFuture(emptyList()))
+
+    // The parent blob (ending at block 100) is missing at first — this must make
+    // getParentShnarfPreimage throw, which AsyncRetryer retries. Only after a few
+    // attempts does the parent blob's compression proof become available.
+    val parentBlob = createBlobRecord(startBlockNumber = 91uL, endBlockNumber = 100uL)
+    val missingBlobCount = AtomicInteger(3)
+    whenever(mockBlobsRepository.findBlobByEndBlockNumber(100L))
+      .thenAnswer {
+        if (missingBlobCount.getAndDecrement() > 0) {
+          SafeFuture.completedFuture(null)
+        } else {
+          SafeFuture.completedFuture(parentBlob)
+        }
+      }
+
+    val expectedProofsToAggregate =
+      ProofsToAggregate(
+        compressionProofIndexes = listOf(
+          CompressionProofIndex(
+            startBlockNumber = blob.blobCounters.startBlockNumber,
+            endBlockNumber = blob.blobCounters.endBlockNumber,
+            hash = blob.blobCounters.expectedShnarf,
+            startBlockTimestamp = blob.blobCounters.startBlockTimestamp,
+          ),
+        ),
+        executionProofs = blob.executionProofs,
+        invalidityProofs = emptyList(),
+        parentAggregationLastBlockTimestamp = rollingInfo.parentAggregationLastBlockTimestamp,
+        parentAggregationLastL1RollingHashMessageNumber = rollingInfo.parentAggregationLastL1RollingHashMessageNumber,
+        parentAggregationLastL1RollingHash = rollingInfo.parentAggregationLastL1RollingHash,
+        parentAggregationLastFtxNumber = rollingInfo.parentAggregationLastFtxNumber,
+        parentAggregationLastFtxRollingHash = rollingInfo.parentAggregationLastFtxRollingHash,
+        grandparentShnarf = parentBlob.blobCompressionProof!!.prevShnarf,
+        parentShnarfSnarkHash = parentBlob.blobCompressionProof!!.snarkHash,
+        parentShnarfX = parentBlob.blobCompressionProof!!.expectedX,
+        parentShnarfY = parentBlob.blobCompressionProof!!.expectedY,
+        startBlockTimestamp = blob.blobCounters.startBlockTimestamp,
+      )
+
+    whenever(mockProofAggregationClient.createProofRequest(any()))
+      .thenReturn(
+        SafeFuture.completedFuture(
+          AggregationProofIndex(
+            startBlockNumber = 101u,
+            endBlockNumber = 110u,
+            hash = Random.nextBytes(32),
+            startBlockTimestamp = Instant.fromEpochSeconds(0),
+          ),
+        ),
+      )
+    whenever(mockProofAggregationClient.findProofResponse(any())).thenReturn(SafeFuture.completedFuture(null))
+
+    proofAggregationCoordinatorService.action().get()
+
+    await()
+      .pollInterval(100.milliseconds.toJavaDuration())
+      .atMost(5.seconds.toJavaDuration())
+      .untilAsserted {
+        verify(mockProofAggregationClient).createProofRequest(expectedProofsToAggregate)
       }
   }
 }
