@@ -6,7 +6,9 @@ import io.vertx.core.http.HttpVersion
 import io.vertx.core.http.PoolOptions
 import io.vertx.ext.web.client.WebClientOptions
 import io.vertx.junit5.VertxExtension
+import linea.crypto.Secp256k1Signature
 import linea.crypto.Web3SignerRestClient
+import linea.kotlin.encodeHex
 import net.consensys.linea.httprest.client.VertxHttpRestClient
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.util.encoders.Hex
@@ -20,6 +22,7 @@ import org.web3j.crypto.ECKeyPair
 import org.web3j.crypto.Hash
 import org.web3j.crypto.Keys
 import org.web3j.crypto.Sign
+import org.web3j.utils.Numeric
 import java.math.BigInteger
 
 @ExtendWith(VertxExtension::class)
@@ -29,6 +32,7 @@ class Web3SignerRestClientTest {
   private val path = Web3SignerRestClient.WEB3SIGNER_SIGN_ENDPOINT
   private val privateKey = Keys.createEcKeyPair().privateKey
   private val publicKey: BigInteger = Sign.publicKeyFromPrivate(privateKey)
+  private val publicKeyBytes: ByteArray = Numeric.toBytesPadded(publicKey, 64)
 
   @BeforeEach
   fun setup(vertx: Vertx) {
@@ -44,7 +48,7 @@ class Web3SignerRestClientTest {
 
     val vertxHttpRestClient = VertxHttpRestClient(webClientOptions, PoolOptions().setHttp1MaxSize(10), vertx)
 
-    web3SignerClient = Web3SignerRestClient(vertxHttpRestClient, publicKey.toString())
+    web3SignerClient = Web3SignerRestClient(vertxHttpRestClient, publicKeyBytes)
   }
 
   @AfterEach
@@ -62,7 +66,7 @@ class Web3SignerRestClientTest {
 
     val returnSignature = Hex.toHexString(signature.r + signature.s + signature.v)
     wiremock.stubFor(
-      WireMock.post("$path${this.publicKey}")
+      WireMock.post("$path${publicKeyBytes.encodeHex()}")
         .withHeader("Content-Type", WireMock.containing("application/json"))
         .willReturn(
           WireMock.ok()
@@ -71,7 +75,12 @@ class Web3SignerRestClientTest {
         ),
     )
 
-    val (r, s) = web3SignerClient.sign(msg.toByteArray())
+    assertThat(web3SignerClient.publicKey()).isEqualTo(publicKeyBytes)
+
+    val signedBytes = web3SignerClient.sign(msg.toByteArray()).get()
+    assertThat(signedBytes).isEqualTo(signature.r + signature.s)
+
+    val (r, s) = Secp256k1Signature.fromBytes(signedBytes)
     assertThat(r).isEqualTo(BigInteger(Hex.toHexString(signature.r), 16))
     assertThat(s).isEqualTo(BigInteger(Hex.toHexString(signature.s), 16))
 
@@ -83,7 +92,7 @@ class Web3SignerRestClientTest {
   @Test
   fun errorSign() {
     wiremock.stubFor(
-      WireMock.post("$path${this.publicKey}")
+      WireMock.post("$path${publicKeyBytes.encodeHex()}")
         .withHeader("Content-Type", WireMock.containing("application/json"))
         .willReturn(
           WireMock.notFound()
@@ -91,6 +100,6 @@ class Web3SignerRestClientTest {
             .withStatusMessage("Public Key not found"),
         ),
     )
-    assertThrows<Exception> { web3SignerClient.sign("Message".toByteArray()) }
+    assertThrows<Exception> { web3SignerClient.sign("Message".toByteArray()).get() }
   }
 }

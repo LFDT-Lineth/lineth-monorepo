@@ -1,14 +1,15 @@
 package linea.web3j
 
+import linea.crypto.Secp256k1Signature
+import linea.crypto.Signer
 import org.web3j.crypto.ECDSASignature
 import org.web3j.crypto.ECKeyPair
 import java.math.BigInteger
 
 class ECKeypairSignerAdapter(
-  private val signerDelegate: (ByteArray) -> Pair<BigInteger, BigInteger>,
-  publicKey: BigInteger,
+  private val signerDelegate: Signer,
 ) :
-  ECKeyPair(BigInteger.ZERO, publicKey) {
+  ECKeyPair(BigInteger.ZERO, BigInteger(1, signerDelegate.publicKey())) {
   override fun equals(other: Any?): Boolean {
     if (this === other) {
       return true
@@ -33,7 +34,8 @@ class ECKeypairSignerAdapter(
   }
 
   override fun sign(transaction: ByteArray): ECDSASignature {
-    val (r, s) = signerDelegate(transaction)
-    return ECDSASignature(r, s)
+    // web3j's TxSignService seam is synchronous, so this is where the async signer is awaited.
+    val signature = Secp256k1Signature.fromBytes(signerDelegate.sign(transaction).get())
+    return ECDSASignature(signature.r, signature.s)
   }
 }

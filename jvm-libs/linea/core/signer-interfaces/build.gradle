@@ -5,7 +5,7 @@ plugins {
 description = "Backend-neutral remote signing contracts (KMS/HSM backends implement them out of tree)"
 
 dependencies {
-  // SafeFuture appears in the EcdsaSignerService signatures, so consumers need it exported
+  // SafeFuture appears in the Signer signatures, so consumers need it exported
   // (the conventions plugin only adds it at implementation scope).
   api("tech.pegasys.teku.internal:async:${libs.versions.teku.get()}") {
     exclude group: 'org.slf4j'
