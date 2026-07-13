@@ -179,6 +179,13 @@ public final class CliOptionsManifestGenerator {
             missing.put("sourceFile", simpleName + ".java");
             missingDescriptions.add(missing);
           }
+          if (!option.defaultResolved()) {
+            final Map<String, Object> unresolved = new LinkedHashMap<>();
+            unresolved.put("plugin", source.key());
+            unresolved.put("option", option.names().getFirst());
+            unresolved.put("sourceFile", simpleName + ".java");
+            unresolvedDefaults.add(unresolved);
+          }
           if (option.description().contains("${DEFAULT-VALUE}")) {
             final Map<String, Object> token = new LinkedHashMap<>();
             token.put("plugin", source.key());

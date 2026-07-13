@@ -57,10 +57,8 @@ jobs:
         working-directory: scripts/besu-plugin-options
         run: pnpm install --frozen-lockfile
 
-      - name: Generate partials
-        working-directory: scripts/besu-plugin-options
-        run: pnpm run generate
-
+      # check alone is the drift gate: re-extracts to temp and compares to committed output/
+      # (do not run generate first — that would rewrite output/ and make drift tautological)
       - name: Drift + completeness check
         working-directory: scripts/besu-plugin-options
         run: pnpm run check
@@ -70,12 +68,9 @@ jobs:
         working-directory: scripts/besu-plugin-options
         run: |
           set -euo pipefail
-          echo "Dry-run: generated partials (no doc.linea PR)."
-          echo "Partials:"
+          echo "Dry-run: check passed against committed output (no doc.linea PR)."
+          echo "Committed partials:"
           find output/_generated -type f -name '*.mdx' | sort
-          echo ""
-          echo "git status (should be clean if committed output is up to date):"
-          git status --short scripts/besu-plugin-options/output || true
 
   publish-doc-linea:
     if: ${{ !inputs.dry_run }}
@@ -143,6 +138,10 @@ jobs:
           set -euo pipefail
           DEST="doc.linea/docs/stack/reference/_generated"
           SRC="scripts/besu-plugin-options/output/_generated"
+          if [[ -z "$(find "$SRC" -type f -name '*.mdx' | head -1)" ]]; then
+            echo "Refusing to publish: no MDX partials under $SRC" >&2
+            exit 1
+          fi
           rm -rf "$DEST"
           mkdir -p "$DEST"
           cp -R "$SRC/." "$DEST/"
