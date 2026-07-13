@@ -44,7 +44,7 @@ public final class Sha3 extends GasProjection {
 
   @Override
   public long memoryExpansion() {
-    return gc.memoryExpansionGasCost(frame, offset, length);
+    return memoryExpansionGasCost(gc, frame, offset, length);
   }
 
   @Override

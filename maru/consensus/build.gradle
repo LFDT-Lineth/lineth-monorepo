@@ -56,6 +56,7 @@ dependencies {
   testImplementation(testFixtures(project(':maru:observability')))
   testImplementation(testFixtures(project(':maru:crypto')))
   testImplementation(project(':jvm-libs:linea:testing:besu'))
+  testImplementation(project(':jvm-libs:linea:teku-web3j'))
   testImplementation(testFixtures(project(':jvm-libs:linea:core:long-running-service')))
   testImplementation "org.jetbrains.kotlin:kotlin-test:2.1.0"
   testImplementation project(':jvm-libs:linea:core:metrics')

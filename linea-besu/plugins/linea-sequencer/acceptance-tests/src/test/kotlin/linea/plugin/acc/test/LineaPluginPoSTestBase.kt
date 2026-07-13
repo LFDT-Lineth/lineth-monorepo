@@ -27,6 +27,7 @@ import org.hyperledger.besu.datatypes.Hash
 import org.hyperledger.besu.datatypes.RequestType
 import org.hyperledger.besu.datatypes.TransactionType
 import org.hyperledger.besu.datatypes.Wei
+import org.hyperledger.besu.ethereum.api.jsonrpc.JsonRpcObjectMapperFactory
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.parameters.EnginePayloadParameter
 import org.hyperledger.besu.ethereum.core.BlockHeader
 import org.hyperledger.besu.ethereum.core.BlockHeaderBuilder
@@ -117,7 +118,10 @@ abstract class LineaPluginPoSTestBase : LineaPluginTestBase() {
       .noLocalPriority(true)
       .build()
     cluster.start(minerNode)
-    mapper = ObjectMapper()
+    // Besu's Hash/Bytes32 types are only deserializable via the BesuJsonModule-backed mapper
+    // (their @JsonCreator now takes a Bytes32, not a raw hex String); a bare ObjectMapper()
+    // can't construct them. Reuse the same mapper Besu's own JSON-RPC dispatch uses internally.
+    mapper = JsonRpcObjectMapperFactory.getBaseMapper()
     engineApiService = EngineAPIService(minerNode, ethTransactions, mapper)
     blockTimeSeconds = getDefaultSlotTimeSeconds()
     buildNewBlocksInBackground()

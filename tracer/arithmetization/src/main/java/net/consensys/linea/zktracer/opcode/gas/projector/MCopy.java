@@ -46,7 +46,7 @@ public final class MCopy extends GasProjection {
 
   @Override
   public long memoryExpansion() {
-    return gc.memoryExpansionGasCost(frame, Math.max(sourceOffset, targetOffset), size);
+    return memoryExpansionGasCost(gc, frame, Math.max(sourceOffset, targetOffset), size);
   }
 
   @Override

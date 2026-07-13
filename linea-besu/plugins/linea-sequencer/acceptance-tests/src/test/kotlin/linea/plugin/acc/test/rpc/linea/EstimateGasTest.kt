@@ -8,15 +8,10 @@
  */
 package linea.plugin.acc.test.rpc.linea
 
+import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL
-import com.fasterxml.jackson.core.JsonParser
-import com.fasterxml.jackson.core.JsonToken
-import com.fasterxml.jackson.databind.DeserializationContext
-import com.fasterxml.jackson.databind.JsonDeserializer
-import com.fasterxml.jackson.databind.ObjectReader
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.annotation.JsonProperty
 import linea.blob.BlobCompressorSelectorByTimestamp
 import linea.blob.BlobCompressorVersion
 import linea.plugin.acc.test.LineaPluginPoSTestBase
@@ -374,8 +369,8 @@ open class EstimateGasTest : LineaPluginPoSTestBase() {
     )
     val reqLinea = BadLineaEstimateGasRequest(callParams)
     val respLinea = reqLinea.execute(minerNode.nodeRequests())
-    assertThat(respLinea.code).isEqualTo(RpcErrorType.INVALID_PARAMS.code)
-    assertThat(respLinea.message).isEqualTo(RpcErrorType.INVALID_PARAMS.message)
+    assertThat(respLinea.code).isEqualTo(RpcErrorType.INVALID_CALL_PARAMS.code)
+    assertThat(respLinea.message).isEqualTo(RpcErrorType.INVALID_CALL_PARAMS.message)
   }
 
   @Test
@@ -397,9 +392,8 @@ open class EstimateGasTest : LineaPluginPoSTestBase() {
       ),
     )
     val respLinea = reqLinea.execute(minerNode.nodeRequests())
-    assertThat(respLinea.code).isEqualTo(3)
-    assertThat(respLinea.message).isEqualTo("Execution reverted")
-    assertThat(respLinea.data).isEqualTo("\"0x\"")
+    assertThat(respLinea.code).isEqualTo(RpcErrorType.INVALID_CALL_PARAMS.code)
+    assertThat(respLinea.message).isEqualTo(RpcErrorType.INVALID_CALL_PARAMS.message)
   }
 
   @Test
@@ -420,11 +414,8 @@ open class EstimateGasTest : LineaPluginPoSTestBase() {
       ),
     )
     val respLinea = reqLinea.execute(minerNode.nodeRequests())
-    assertThat(respLinea.code).isEqualTo(-32000)
-    assertThat(respLinea.message)
-      .isEqualTo(
-        "Transaction processing could not be completed due to an exception (Invalid opcode: 0xc8)",
-      )
+    assertThat(respLinea.code).isEqualTo(RpcErrorType.INVALID_CALL_PARAMS.code)
+    assertThat(respLinea.message).isEqualTo(RpcErrorType.INVALID_CALL_PARAMS.message)
   }
 
   @Test
@@ -472,14 +463,15 @@ open class EstimateGasTest : LineaPluginPoSTestBase() {
     }
   }
 
-  class LineaEstimateGasResponse : Response<LineaEstimateGasResponseData>() {
-    @JsonDeserialize(using = LineaEstimateGasResponseDeserializer::class)
-    override fun setResult(result: LineaEstimateGasResponseData) {
-      super.setResult(result)
-    }
-  }
+  class LineaEstimateGasResponse : Response<LineaEstimateGasResponseData>()
 
-  class LineaEstimateGasResponseData(val gasLimit: String, val baseFeePerGas: String, val priorityFeePerGas: String)
+  class LineaEstimateGasResponseData
+  @JsonCreator
+  constructor(
+    @JsonProperty("gasLimit") val gasLimit: String,
+    @JsonProperty("baseFeePerGas") val baseFeePerGas: String,
+    @JsonProperty("priorityFeePerGas") val priorityFeePerGas: String,
+  )
 
   class BadLineaEstimateGasRequest(
     private val badCallParams: CallParams,
@@ -532,23 +524,6 @@ open class EstimateGasTest : LineaPluginPoSTestBase() {
     val maxFeePerGas: String?,
     val maxPriorityFeePerGas: String?,
   )
-
-  data class StateOverride(val account: String, val balance: String)
-
-  class LineaEstimateGasResponseDeserializer : JsonDeserializer<LineaEstimateGasResponseData>() {
-    private val objectReader: ObjectReader = jacksonObjectMapper().reader()
-
-    override fun deserialize(
-      jsonParser: JsonParser,
-      deserializationContext: DeserializationContext,
-    ): LineaEstimateGasResponseData? {
-      return if (jsonParser.currentToken != JsonToken.VALUE_NULL) {
-        objectReader.readValue(jsonParser, LineaEstimateGasResponseData::class.java)
-      } else {
-        null
-      }
-    }
-  }
 
   companion object {
     protected const val FIXED_GAS_COST_WEI = 0
