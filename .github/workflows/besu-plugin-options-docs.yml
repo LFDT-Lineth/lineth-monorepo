@@ -3,6 +3,8 @@ name: "Besu plugin options docs"
 # Generates Linea-Besu plugin option MDX partials and (optionally) opens a PR
 # into Consensys/doc.linea writing ONLY docs/stack/reference/_generated/.
 #
+# Extraction uses Java reflection via
+# :linea-besu:plugins:besu-plugin-options-docgen (requires JDK 25 + go-corset).
 # Live PR path requires the CREATE_GITHUB_PR GitHub App installed on
 # Consensys/doc.linea (TechOps). Until then, use dry_run=true (default).
 
@@ -28,10 +30,19 @@ concurrency:
 
 jobs:
   generate:
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     steps:
       - name: Checkout monorepo
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup Java and Gradle
+        uses: ./.github/actions/setup-java-and-gradle
+
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version: "1.25.7"
+          cache: false
 
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
 
@@ -69,7 +80,7 @@ jobs:
   publish-doc-linea:
     if: ${{ !inputs.dry_run }}
     needs: generate
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     permissions:
       contents: read
     steps:
@@ -83,6 +94,15 @@ jobs:
 
       - name: Checkout monorepo
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup Java and Gradle
+        uses: ./.github/actions/setup-java-and-gradle
+
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version: "1.25.7"
+          cache: false
 
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
 

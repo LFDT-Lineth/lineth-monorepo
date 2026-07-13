@@ -1,5 +1,6 @@
 const fs = require("node:fs");
 const path = require("node:path");
+const { spawnSync } = require("node:child_process");
 
 const { build } = require("./lib");
 const {
@@ -23,12 +24,35 @@ function emptyDir(dir) {
   }
 }
 
+function runJavaExtractor(monorepoPath) {
+  if (hasFlag("--skip-extract")) return;
+  const gradlew = path.join(monorepoPath, "gradlew");
+  if (!fs.existsSync(gradlew)) {
+    throw new Error(`gradlew not found at ${gradlew}`);
+  }
+  const result = spawnSync(
+    gradlew,
+    [":linea-besu:plugins:besu-plugin-options-docgen:generateBesuPluginOptionsManifest", "--quiet"],
+    {
+      cwd: monorepoPath,
+      stdio: "inherit",
+      env: process.env,
+    },
+  );
+  if (result.status !== 0) {
+    throw new Error(
+      `Java extractor failed (exit ${result.status}). Ensure JDK 25+ and go-corset are available.`,
+    );
+  }
+}
+
 async function main() {
   const monorepoPath = parseMonorepoArg() || MONOREPO_ROOT;
   const seedWrapper = hasFlag("--seed-wrapper");
+
+  runJavaExtractor(monorepoPath);
+
   const result = await build({
-    monorepoPath,
-    monorepoRoot: monorepoPath,
     toolRoot: TOOL_ROOT,
   });
 
@@ -36,6 +60,7 @@ async function main() {
   emptyDir(GENERATED_DIR);
   fs.mkdirSync(GENERATED_DIR, { recursive: true });
 
+  // Manifest/report are written by the Java extractor; re-canonicalize via Prettier.
   fs.writeFileSync(MANIFEST_PATH, result.manifestJson);
   fs.writeFileSync(REPORT_PATH, result.reportJson);
 
@@ -47,20 +72,16 @@ async function main() {
 
   let seeded = false;
   if (seedWrapper) {
-    fs.mkdirSync(path.dirname(WRAPPER_TEMPLATE_PATH), { recursive: true });
-    try {
-      // Exclusive create avoids a TOCTOU race with existsSync + writeFileSync.
+    if (fs.existsSync(WRAPPER_TEMPLATE_PATH)) {
+      console.warn(
+        `Refusing to overwrite existing wrapper at ${path.relative(MONOREPO_ROOT, WRAPPER_TEMPLATE_PATH)}. ` +
+          "Delete it first if you intentionally want to re-seed.",
+      );
+    } else {
+      fs.mkdirSync(path.dirname(WRAPPER_TEMPLATE_PATH), { recursive: true });
+      // Exclusive create avoids TOCTOU with a parallel writer.
       fs.writeFileSync(WRAPPER_TEMPLATE_PATH, result.wrapperMarkdown, { flag: "wx" });
       seeded = true;
-    } catch (err) {
-      if (err && err.code === "EEXIST") {
-        console.warn(
-          `Refusing to overwrite existing wrapper at ${path.relative(MONOREPO_ROOT, WRAPPER_TEMPLATE_PATH)}. ` +
-            "Delete it first if you intentionally want to re-seed.",
-        );
-      } else {
-        throw err;
-      }
     }
   }
 
@@ -72,29 +93,27 @@ async function main() {
   );
   console.log("Per-plugin breakdown:");
   for (const p of result.manifest.perPlugin) {
-    const detail = p.hasOptions
-      ? `${p.total} total (${p.standard} standard, ${p.advanced} advanced), ${p.classes} group(s)`
-      : "no plugin-specific CLI options";
-    console.log(`  - ${p.title}: ${detail}`);
+    if (!p.hasOptions) {
+      console.log(`  - ${p.title}: no plugin-specific CLI options`);
+      continue;
+    }
+    console.log(
+      `  - ${p.title}: ${p.total} total (${p.standard} standard, ${p.advanced} advanced), ${p.classes} group(s)`,
+    );
   }
   console.log(`  manifest: ${path.relative(MONOREPO_ROOT, MANIFEST_PATH)}`);
   console.log(`  report:   ${path.relative(MONOREPO_ROOT, REPORT_PATH)}`);
   console.log(`  partials: ${result.partials.length} under ${path.relative(MONOREPO_ROOT, GENERATED_DIR)}`);
-  for (const part of result.partials) {
-    console.log(`    - _generated/${part.relPath}`);
+  for (const p of result.partials) {
+    console.log(`    - _generated/${p.relPath}`);
   }
   if (seeded) {
-    console.log(`  seeded wrapper: ${path.relative(MONOREPO_ROOT, WRAPPER_TEMPLATE_PATH)}`);
-  } else if (!fs.existsSync(WRAPPER_TEMPLATE_PATH)) {
-    console.warn("  wrapper template missing — run with --seed-wrapper once to create it.");
+    console.log(`  wrapper:  seeded ${path.relative(MONOREPO_ROOT, WRAPPER_TEMPLATE_PATH)}`);
   }
-
-  const r = result.report;
-  if (r.missingDescriptions.length) {
-    console.warn(`  flagged: ${r.missingDescriptions.length} option(s) missing a description.`);
-  }
-  if (r.unresolvedDefaults.length) {
-    console.warn(`  flagged: ${r.unresolvedDefaults.length} option(s) with an unresolved default (left blank).`);
+  if (result.report.unresolvedDefaults?.length) {
+    console.log(
+      `  flagged: ${result.report.unresolvedDefaults.length} option(s) with an unresolved default (left blank).`,
+    );
   }
 }
 

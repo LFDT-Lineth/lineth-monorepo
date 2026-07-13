@@ -1,7 +1,9 @@
 const fs = require("node:fs");
+const os = require("node:os");
 const path = require("node:path");
+const { spawnSync } = require("node:child_process");
 
-const { build, checkCompleteness } = require("./lib");
+const { buildFromManifest, checkCompleteness } = require("./lib");
 const {
   TOOL_ROOT,
   MONOREPO_ROOT,
@@ -12,7 +14,6 @@ const {
   parseMonorepoArg,
 } = require("./paths");
 
-/** List all .mdx files under _generated as posix-relative paths. */
 function listGeneratedPartials() {
   const out = [];
   if (!fs.existsSync(GENERATED_DIR)) return out;
@@ -28,16 +29,36 @@ function listGeneratedPartials() {
   return out.sort();
 }
 
+function runJavaExtractorTo(monorepoPath, manifestOut, reportOut) {
+  const gradlew = path.join(monorepoPath, "gradlew");
+  const result = spawnSync(
+    gradlew,
+    [
+      ":linea-besu:plugins:besu-plugin-options-docgen:generateBesuPluginOptionsManifest",
+      `-PbesuPluginOptionsManifest=${manifestOut}`,
+      `-PbesuPluginOptionsReport=${reportOut}`,
+      "--quiet",
+    ],
+    { cwd: monorepoPath, stdio: "inherit", env: process.env },
+  );
+  if (result.status !== 0) {
+    throw new Error(`Java extractor failed (exit ${result.status}).`);
+  }
+}
+
 async function check() {
   const monorepoPath = parseMonorepoArg() || MONOREPO_ROOT;
-  const result = await build({
-    monorepoPath,
-    monorepoRoot: monorepoPath,
-    toolRoot: TOOL_ROOT,
-  });
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "besu-plugin-options-"));
+  const freshManifest = path.join(tmp, "linea-besu-plugin-options.json");
+  const freshReport = path.join(tmp, "report.json");
+
+  runJavaExtractorTo(monorepoPath, freshManifest, freshReport);
+
+  const manifest = JSON.parse(fs.readFileSync(freshManifest, "utf8"));
+  const report = JSON.parse(fs.readFileSync(freshReport, "utf8"));
+  const result = await buildFromManifest({ manifest, report, toolRoot: TOOL_ROOT });
 
   const failures = [];
-
   const targets = [
     { label: "manifest", file: MANIFEST_PATH, expected: result.manifestJson },
     { label: "report", file: REPORT_PATH, expected: result.reportJson },
@@ -57,9 +78,7 @@ async function check() {
   const onDisk = listGeneratedPartials();
 
   for (const rel of expectedPartials.keys()) {
-    if (!onDisk.includes(rel)) {
-      failures.push(`partial: missing _generated/${rel}`);
-    }
+    if (!onDisk.includes(rel)) failures.push(`partial: missing _generated/${rel}`);
   }
   for (const rel of onDisk) {
     if (!expectedPartials.has(rel)) {
@@ -69,8 +88,7 @@ async function check() {
   for (const [rel, expected] of expectedPartials) {
     const file = path.join(GENERATED_DIR, rel);
     if (!fs.existsSync(file)) continue;
-    const actual = fs.readFileSync(file, "utf8");
-    if (actual !== expected) {
+    if (fs.readFileSync(file, "utf8") !== expected) {
       failures.push(`partial: _generated/${rel} is out of date (run pnpm run generate).`);
     }
   }

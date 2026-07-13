@@ -16,26 +16,7 @@
   ],
   "advancedOptionCount": 56,
   "missingDescriptions": [],
-  "unresolvedDefaults": [
-    {
-      "plugin": "sequencer",
-      "option": "--plugin-linea-blob-compressor-version-timestamps",
-      "sourceFile": "LineaTransactionSelectorCliOptions.java",
-      "expression": "BLOB_COMPRESSOR_VERSION_TIMESTAMPS_DEFAULT"
-    },
-    {
-      "plugin": "tracer",
-      "option": "--plugin-linea-l1l2-bridge-contract",
-      "sourceFile": "LineaL1L2BridgeSharedCliOptions.java",
-      "expression": "Address.ZERO"
-    },
-    {
-      "plugin": "tracer",
-      "option": "--plugin-linea-l1l2-bridge-topic",
-      "sourceFile": "LineaL1L2BridgeSharedCliOptions.java",
-      "expression": "Bytes32.ZERO"
-    }
-  ],
+  "unresolvedDefaults": [],
   "unresolvedTokens": [
     {
       "plugin": "sequencer",
@@ -50,22 +31,7 @@
     {
       "plugin": "sequencer",
       "option": "--plugin-linea-blob-compressor-version-timestamps",
-      "token": "${DEFAULT-VALUE}"
-    },
-    {
-      "plugin": "sequencer",
-      "option": "--plugin-linea-blob-compressor-version-timestamps",
       "token": "${COMPLETION-CANDIDATES}"
-    },
-    {
-      "plugin": "tracer",
-      "option": "--plugin-linea-l1l2-bridge-contract",
-      "token": "${DEFAULT-VALUE}"
-    },
-    {
-      "plugin": "tracer",
-      "option": "--plugin-linea-l1l2-bridge-topic",
-      "token": "${DEFAULT-VALUE}"
     }
   ]
 }
