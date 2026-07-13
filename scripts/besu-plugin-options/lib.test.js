@@ -6,7 +6,6 @@ const path = require("node:path");
 const {
   escapeCell,
   build,
-  buildFromManifest,
   pluginsForRender,
   renderPartials,
   renderStarterWrapper,

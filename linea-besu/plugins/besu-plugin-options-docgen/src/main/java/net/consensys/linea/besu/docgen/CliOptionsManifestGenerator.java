@@ -31,11 +31,12 @@ import java.util.regex.Pattern;
 import picocli.CommandLine;
 
 /**
- * Reflects Linea-Besu plugin {@code *CliOptions} classes and writes the JSON manifest consumed by
+ * Reflects Linea-Besu plugin {@code *CliOptions} classes via picocli's
+ * {@link CommandLine.Model.CommandSpec} and writes the JSON manifest consumed by
  * {@code scripts/besu-plugin-options} MDX rendering.
  *
- * <p>Defaults come from the JVM (field initializers / static finals via {@link Field#get}), not from
- * a hand-rolled Java expression evaluator.
+ * <p>Defaults come from the JVM / picocli model ({@code OptionSpec.getValue()} after
+ * {@code create()}), not from a hand-rolled Java expression evaluator.
  */
 public final class CliOptionsManifestGenerator {
   private static final String PLUGIN_FLAG_PREFIX = "--plugin-";
@@ -333,37 +334,40 @@ public final class CliOptionsManifestGenerator {
     }
   }
 
-  private static List<OptionRecord> readOptions(final Class<?> clazz, final Object instance)
-      throws Exception {
+  private static List<OptionRecord> readOptions(final Class<?> clazz, final Object instance) {
+    final CommandLine commandLine = new CommandLine(instance);
     final List<OptionRecord> out = new ArrayList<>();
-    for (final Field field : clazz.getDeclaredFields()) {
-      final CommandLine.Option annotation = field.getAnnotation(CommandLine.Option.class);
-      if (annotation == null) {
+
+    for (final CommandLine.Model.OptionSpec option : commandLine.getCommandSpec().options()) {
+      final List<String> names =
+          Arrays.stream(option.names()).map(String::trim).filter(s -> !s.isEmpty()).toList();
+      if (names.isEmpty()) {
         continue;
       }
-      field.setAccessible(true);
 
-      final List<String> names = Arrays.stream(annotation.names()).map(String::trim).filter(s -> !s.isEmpty()).toList();
-      final String paramLabel = blankToNull(annotation.paramLabel());
-      final String javaType = field.getType().getTypeName().replace('$', '.');
+      final String paramLabel = blankToNull(option.paramLabel());
+      final Class<?> javaClass = option.type();
+      final String javaType = javaClass.getTypeName().replace('$', '.');
       final String type =
-          paramLabel != null ? paramLabel.replaceAll("^<|>$", "") : simpleTypeName(field.getType());
+          paramLabel != null ? paramLabel.replaceAll("^<|>$", "") : simpleTypeName(javaClass);
 
-      final String descriptionRaw = joinDescriptions(annotation.description());
+      final String descriptionRaw = joinDescriptions(option.description());
       Object rawDefault = null;
       boolean defaultResolved = false;
       try {
-        rawDefault = field.get(instance);
+        rawDefault = option.getValue();
         defaultResolved = rawDefault != null;
       } catch (final Exception ignored) {
         defaultResolved = false;
       }
-      if (!defaultResolved && !annotation.defaultValue().isEmpty()) {
-        final String annotatedDefault = annotation.defaultValue();
-        if (!"__no_default_value__".equals(annotatedDefault)) {
-          rawDefault = annotatedDefault;
-          defaultResolved = true;
-        }
+
+      final String annotatedDefault = option.defaultValue();
+      if (!defaultResolved
+          && annotatedDefault != null
+          && !annotatedDefault.isEmpty()
+          && !"__no_default_value__".equals(annotatedDefault)) {
+        rawDefault = annotatedDefault;
+        defaultResolved = true;
       }
 
       String defaultDisplay = defaultResolved ? formatDefault(rawDefault) : null;
@@ -371,6 +375,7 @@ public final class CliOptionsManifestGenerator {
         defaultDisplay = null;
         defaultResolved = false;
       }
+
       String description = descriptionRaw;
       if (description.contains("${DEFAULT-VALUE}") && defaultDisplay != null) {
         description = description.replace("${DEFAULT-VALUE}", defaultDisplay);
@@ -386,7 +391,7 @@ public final class CliOptionsManifestGenerator {
               type,
               paramLabel,
               javaType,
-              annotation.hidden(),
+              option.hidden(),
               -1));
     }
     return out;

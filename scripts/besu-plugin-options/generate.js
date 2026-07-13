@@ -72,16 +72,20 @@ async function main() {
 
   let seeded = false;
   if (seedWrapper) {
-    if (fs.existsSync(WRAPPER_TEMPLATE_PATH)) {
-      console.warn(
-        `Refusing to overwrite existing wrapper at ${path.relative(MONOREPO_ROOT, WRAPPER_TEMPLATE_PATH)}. ` +
-          "Delete it first if you intentionally want to re-seed.",
-      );
-    } else {
-      fs.mkdirSync(path.dirname(WRAPPER_TEMPLATE_PATH), { recursive: true });
+    fs.mkdirSync(path.dirname(WRAPPER_TEMPLATE_PATH), { recursive: true });
+    try {
       // Exclusive create avoids TOCTOU with a parallel writer.
       fs.writeFileSync(WRAPPER_TEMPLATE_PATH, result.wrapperMarkdown, { flag: "wx" });
       seeded = true;
+    } catch (err) {
+      if (err && err.code === "EEXIST") {
+        console.warn(
+          `Refusing to overwrite existing wrapper at ${path.relative(MONOREPO_ROOT, WRAPPER_TEMPLATE_PATH)}. ` +
+            "Delete it first if you intentionally want to re-seed.",
+        );
+      } else {
+        throw err;
+      }
     }
   }
 

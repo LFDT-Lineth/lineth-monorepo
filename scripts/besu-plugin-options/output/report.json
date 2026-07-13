@@ -17,21 +17,5 @@
   "advancedOptionCount": 56,
   "missingDescriptions": [],
   "unresolvedDefaults": [],
-  "unresolvedTokens": [
-    {
-      "plugin": "sequencer",
-      "option": "--plugin-linea-liveness-contract-address",
-      "token": "${DEFAULT-VALUE}"
-    },
-    {
-      "plugin": "sequencer",
-      "option": "--plugin-linea-node-type",
-      "token": "${COMPLETION-CANDIDATES}"
-    },
-    {
-      "plugin": "sequencer",
-      "option": "--plugin-linea-blob-compressor-version-timestamps",
-      "token": "${COMPLETION-CANDIDATES}"
-    }
-  ]
+  "unresolvedTokens": []
 }
