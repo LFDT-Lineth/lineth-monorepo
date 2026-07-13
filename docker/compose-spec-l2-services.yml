@@ -13,7 +13,7 @@ services:
       - ./config/coordinator/coordinator-config-v2.toml:/coordinator/coordinator-config-v2.toml:ro
 
   maru:
-    image: consensys/maru:${MARU_TAG:-9737a45}
+    image: consensys/maru:${MARU_TAG:-v1.2.1-20260410142843-d326b73}
     hostname: maru
     container_name: maru
     profiles: [ "l2", "l2-bc", "debug" ]
@@ -57,7 +57,7 @@ services:
   sequencer:
     hostname: sequencer
     container_name: sequencer
-    image: consensys/linea-besu-package:${LINEA_BESU_PACKAGE_TAG:-dev-20260501155747-32a0f80}
+    image: consensys/linea-besu-package:${LINEA_BESU_PACKAGE_TAG:-1.1.1-20260626-d9f04f0}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       l2-genesis-initialization:
@@ -145,7 +145,7 @@ services:
   l2-node-besu:
     hostname: l2-node-besu
     container_name: l2-node-besu
-    image: consensys/linea-besu-package:${LINEA_BESU_PACKAGE_TAG:-dev-20260501155747-32a0f80}
+    image: consensys/linea-besu-package:${LINEA_BESU_PACKAGE_TAG:-1.1.1-20260626-d9f04f0}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
@@ -195,7 +195,7 @@ services:
   l2-node-besu-leader:
     hostname: l2-node-besu-leader
     container_name: l2-node-besu-leader
-    image: consensys/linea-besu-package-with-fleet:${LINEA_BESU_PACKAGE_TAG:-dev-20260501155747-32a0f80}
+    image: consensys/linea-besu-package-with-fleet:${LINEA_BESU_PACKAGE_TAG:-1.1.1-20260626-d9f04f0}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
@@ -246,7 +246,7 @@ services:
   l2-node-besu-follower:
     hostname: l2-node-besu-follower
     container_name: l2-node-besu-follower
-    image: consensys/linea-besu-package-with-fleet:${LINEA_BESU_PACKAGE_TAG:-dev-20260501155747-32a0f80}
+    image: consensys/linea-besu-package-with-fleet:${LINEA_BESU_PACKAGE_TAG:-1.1.1-20260626-d9f04f0}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
@@ -305,7 +305,7 @@ services:
   prover-v3: # prover compatible with the traces from zkbesu
     container_name: prover-v3
     hostname: prover-v3
-    image: consensys/linea-prover:${LINEA_PROVER_TAG:-4ddbeba}
+    image: consensys/linea-prover:${LINEA_PROVER_TAG:-1.0.5-20260630-477b0a4}
     platform: linux/amd64
     # to avoid spinning up on CI for now
     profiles: [ "l2" ]
@@ -326,7 +326,7 @@ services:
   postman:
     container_name: postman
     hostname: postman
-    image: consensys/linea-postman:${LINEA_POSTMAN_TAG:-4ddbeba}
+    image: consensys/linea-postman:${LINEA_POSTMAN_TAG:-1.0.1-20260629-7358b2f}
     profiles: [ "l2", "debug" ]
     restart: on-failure
     ports:
@@ -352,7 +352,7 @@ services:
   coordinator:
     hostname: coordinator
     container_name: coordinator
-    image: ${LINEA_COORDINATOR_IMAGE_NAME:-consensys/linea-coordinator}:${LINEA_COORDINATOR_TAG:-189076b}
+    image: ${LINEA_COORDINATOR_IMAGE_NAME:-consensys/linea-coordinator}:${LINEA_COORDINATOR_TAG:-0.3.0-20260707-2fc1581}
     profiles: [ "l2", "debug" ]
     depends_on:
       l2-genesis-initialization:
@@ -686,7 +686,7 @@ services:
         ipv4_address: 10.10.10.205
 
   zkbesu-shomei-sr:
-    image: consensys/linea-besu-package:${LINEA_BESU_PACKAGE_TAG:-dev-20260501155747-32a0f80}
+    image: consensys/linea-besu-package:${LINEA_BESU_PACKAGE_TAG:-1.1.1-20260626-d9f04f0}
     hostname: zkbesu-shomei-sr
     container_name: zkbesu-shomei-sr
     profiles: [ "staterecovery", "external-to-monorepo" ]
