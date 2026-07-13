@@ -28,6 +28,17 @@ function escapeCell(text) {
   return out;
 }
 
+/**
+ * Drop picocli-help "(default: …)" from descriptions — the table already has a Default column.
+ */
+function stripEmbeddedDefault(description) {
+  if (description == null) return "";
+  return String(description)
+    .replace(/\s*\(default:\s*[^)]*\)/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 function renderNames(names) {
   if (!names.length) return "";
   return names.map((n) => "`" + escapeCell(n) + "`").join("<br/>");
@@ -67,7 +78,7 @@ function renderGroupSection(lines, pluginTitle, cls) {
   for (const o of cls.options) {
     const row = [
       renderNames(o.names),
-      escapeCell(o.description),
+      escapeCell(stripEmbeddedDefault(o.description)),
       renderDefault(o),
       escapeCell(o.type),
       o.hidden ? "Advanced" : "Standard",
@@ -274,18 +285,27 @@ function loadReport(reportPath) {
  */
 async function buildFromManifest({ manifest, report, toolRoot } = {}) {
   const root = toolRoot || __dirname;
-  const plugins = pluginsForRender(manifest);
+  // Canonicalize descriptions so the Default column is the only place defaults appear
+  // (picocli help text embeds "(default: …)" in @Option descriptions).
+  const canonicalManifest = {
+    ...manifest,
+    options: (manifest.options || []).map((o) => ({
+      ...o,
+      description: stripEmbeddedDefault(o.description),
+    })),
+  };
+  const plugins = pluginsForRender(canonicalManifest);
   const { partials, rowCount } = renderPartials(plugins);
 
-  if (rowCount !== manifest.counts.rendered) {
+  if (rowCount !== canonicalManifest.counts.rendered) {
     throw new Error(
-      `Count mismatch: rendered ${rowCount} rows but manifest counts ${manifest.counts.rendered} in-scope options.`,
+      `Count mismatch: rendered ${rowCount} rows but manifest counts ${canonicalManifest.counts.rendered} in-scope options.`,
     );
   }
 
-  const wrapperMarkdown = renderStarterWrapper(manifest, plugins, partials);
+  const wrapperMarkdown = renderStarterWrapper(canonicalManifest, plugins, partials);
   const [manifestJson, reportJson, formattedWrapper, ...formattedPartials] = await Promise.all([
-    formatWith(JSON.stringify(manifest, null, 2), "json", root),
+    formatWith(JSON.stringify(canonicalManifest, null, 2), "json", root),
     formatWith(JSON.stringify(report, null, 2), "json", root),
     formatWith(wrapperMarkdown, "mdx", root),
     ...partials.map((p) => formatWith(p.markdown, "mdx", root)),
@@ -307,7 +327,7 @@ async function buildFromManifest({ manifest, report, toolRoot } = {}) {
     reportJson,
     wrapperMarkdown: formattedWrapper,
     partials: formattedPartialsList,
-    manifest,
+    manifest: canonicalManifest,
     report,
     rowCount,
     plugins,
@@ -325,6 +345,7 @@ async function build({ manifestPath, reportPath, toolRoot } = {}) {
 module.exports = {
   PLUGIN_FLAG_PREFIX,
   escapeCell,
+  stripEmbeddedDefault,
   partialRelPath,
   partialComponentName,
   sectionHeading,

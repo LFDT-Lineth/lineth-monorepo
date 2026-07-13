@@ -5,6 +5,7 @@ const path = require("node:path");
 
 const {
   escapeCell,
+  stripEmbeddedDefault,
   build,
   pluginsForRender,
   renderPartials,
@@ -26,6 +27,15 @@ test("escapeCell escapes MDX-sensitive characters", () => {
   assert.equal(escapeCell("a <b> c"), "a &lt;b&gt; c");
   assert.equal(escapeCell("path\\to"), "path\\\\to");
   assert.equal(escapeCell("${DEFAULT-VALUE}"), "$\\{DEFAULT-VALUE\\}");
+});
+
+test("stripEmbeddedDefault removes picocli help default parentheticals", () => {
+  assert.equal(
+    stripEmbeddedDefault("Path to the toml file (default: moduleLimitFile.toml)"),
+    "Path to the toml file",
+  );
+  assert.equal(stripEmbeddedDefault("Forward endpoints (default: [])"), "Forward endpoints");
+  assert.equal(stripEmbeddedDefault("No default here"), "No default here");
 });
 
 test("rendered row count equals in-scope option count (63 = 51 + 12)", { skip }, async () => {
@@ -54,6 +64,11 @@ test("partials are neutral with unique plugin-prefixed headings", { skip }, asyn
     assert.ok(p.markdown.includes("### "), `${p.relPath} has a group heading`);
     assert.ok(p.markdown.includes("| Option"), `${p.relPath} has a table`);
     assert.ok(p.markdown.includes(" — "), `${p.relPath} uses unique plugin-prefixed group headings`);
+    assert.equal(
+      /\(default:/i.test(p.markdown),
+      false,
+      `${p.relPath} must not embed (default: …) when a Default column exists`,
+    );
   }
   assert.equal(result.partials.length, 2);
   assert.ok(result.partials.some((p) => p.relPath === "sequencer.mdx"));

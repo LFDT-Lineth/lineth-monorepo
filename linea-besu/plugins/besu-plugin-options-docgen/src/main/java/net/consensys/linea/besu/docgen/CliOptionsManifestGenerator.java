@@ -387,6 +387,8 @@ public final class CliOptionsManifestGenerator {
       if (description.contains("${DEFAULT-VALUE}") && defaultDisplay != null) {
         description = description.replace("${DEFAULT-VALUE}", defaultDisplay);
       }
+      // Docs have a Default column; drop picocli-help "(default: …)" from the description text.
+      description = stripEmbeddedDefault(description);
 
       out.add(
           new OptionRecord(
@@ -409,6 +411,20 @@ public final class CliOptionsManifestGenerator {
       return "";
     }
     return String.join(" ", parts).trim();
+  }
+
+  /**
+   * Remove {@code (default: …)} parentheticals that picocli embeds for {@code --help}. Docs already
+   * expose defaults in a dedicated column.
+   */
+  private static String stripEmbeddedDefault(final String description) {
+    if (description == null || description.isBlank()) {
+      return description == null ? "" : description;
+    }
+    return description
+        .replaceAll("(?i)\\s*\\(default:\\s*[^)]*\\)", "")
+        .replaceAll("\\s{2,}", " ")
+        .trim();
   }
 
   private static String formatDefault(final Object value) {
