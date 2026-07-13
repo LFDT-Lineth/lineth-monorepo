@@ -3,7 +3,7 @@ package statemanager
 import (
 	"encoding/binary"
 	"log"
-	"slices"
+	"sort"
 	"strings"
 
 	execstatemanager "github.com/consensys/linea-monorepo/prover/backend/execution/statemanager"
@@ -51,10 +51,25 @@ func (sm *StateManager) injectSyntheticReadZeroTraces(run *wizard.ProverRuntime,
 			continue
 		}
 
+		blockTraces := (*shomeiTraces)[blockIdx]
+		insertStart := findStorageInsertionPoint(blockTraces, ab.address)
+		if insertStart < 0 {
+			continue
+		}
+
+		// Collect HKeys already present for this account's storage section so we
+		// don't inject a duplicate that would violate STATE_SUMMARY_STORAGE_KEY_INCREASES.
+		existingHKeys := collectAccountStorageHKeys(blockTraces, insertStart, ab.address)
+
 		emptyTrie := execstatemanager.NewStorageTrie(ab.address)
 		var syntheticTraces []execstatemanager.DecodedTrace
 		for _, storageKey := range keys {
 			readZeroTrace := emptyTrie.ReadZeroAndProve(storageKey)
+			hkey := readZeroTrace.HKey()
+			if _, dup := existingHKeys[hkey]; dup {
+				log.Printf("synthetic_readzero: skipping key=%s for address=%s block=%d (HKey already in shomei traces)", storageKey.Hex(), ab.address.Hex(), ab.block)
+				continue
+			}
 			syntheticTraces = append(syntheticTraces, execstatemanager.DecodedTrace{
 				Location:   ab.address.Hex(),
 				Type:       execstatemanager.READ_ZERO_TRACE_CODE,
@@ -62,16 +77,19 @@ func (sm *StateManager) injectSyntheticReadZeroTraces(run *wizard.ProverRuntime,
 			})
 		}
 
-		blockTraces := (*shomeiTraces)[blockIdx]
-		insertIdx := findStorageInsertionPoint(blockTraces, ab.address)
-		if insertIdx < 0 {
+		if len(syntheticTraces) == 0 {
 			continue
 		}
 
-		log.Printf("synthetic_readzero: injecting %d synthetic ReadZero traces for address=%s block=%d at trace index %d",
-			len(syntheticTraces), ab.address.Hex(), ab.block, insertIdx)
+		// Sort by HKey to match the state summary ordering (reads sorted by HKey).
+		sort.Slice(syntheticTraces, func(i, j int) bool {
+			return syntheticTraces[i].Underlying.HKey().Cmp(syntheticTraces[j].Underlying.HKey()) < 0
+		})
 
-		(*shomeiTraces)[blockIdx] = slices.Insert(blockTraces, insertIdx, syntheticTraces...)
+		log.Printf("synthetic_readzero: injecting %d synthetic ReadZero traces for address=%s block=%d",
+			len(syntheticTraces), ab.address.Hex(), ab.block)
+
+		(*shomeiTraces)[blockIdx] = mergeSortedStorageReads(blockTraces, insertStart, ab.address, syntheticTraces)
 	}
 }
 
@@ -236,4 +254,78 @@ func extractBlockNumberFromScp(run *wizard.ProverRuntime, scp *statesummary.HubC
 		blockBytes[i*2+1] = b[3]
 	}
 	return utils.ToInt(binary.BigEndian.Uint64(blockBytes[:]))
+}
+
+// collectAccountStorageHKeys returns the set of HKeys already present in the
+// storage traces for the given account, starting at insertStart. It stops at
+// the first trace that belongs to a different account or is a world-state trace.
+func collectAccountStorageHKeys(blockTraces []execstatemanager.DecodedTrace, insertStart int, addr types.EthAddress) map[types.KoalaOctuplet]struct{} {
+	result := make(map[types.KoalaOctuplet]struct{})
+	targetHex := addr.Hex()
+	for i := insertStart; i < len(blockTraces); i++ {
+		t := blockTraces[i]
+		if t.Location == execstatemanager.WS_LOCATION || !strings.EqualFold(t.Location, targetHex) {
+			break
+		}
+		result[t.Underlying.HKey()] = struct{}{}
+	}
+	return result
+}
+
+// isWriteTrace reports whether a decoded trace is a write (insert/update/delete).
+func isWriteTrace(t execstatemanager.DecodedTrace) bool {
+	return t.Type == execstatemanager.INSERTION_TRACE_CODE ||
+		t.Type == execstatemanager.UPDATE_TRACE_CODE ||
+		t.Type == execstatemanager.DELETION_TRACE_CODE
+}
+
+// mergeSortedStorageReads inserts sorted synthetic ReadZero traces (sorted by
+// HKey) into the reads sub-section of the account's storage traces so that:
+//   - They do not appear after any write trace (preserving reads-before-writes order).
+//   - Their HKey order is maintained relative to existing read traces.
+func mergeSortedStorageReads(blockTraces []execstatemanager.DecodedTrace, insertStart int, addr types.EthAddress, synthetic []execstatemanager.DecodedTrace) []execstatemanager.DecodedTrace {
+	targetHex := addr.Hex()
+
+	// Locate the end of this account's storage section.
+	storageEnd := insertStart
+	for storageEnd < len(blockTraces) {
+		t := blockTraces[storageEnd]
+		if t.Location == execstatemanager.WS_LOCATION || !strings.EqualFold(t.Location, targetHex) {
+			break
+		}
+		storageEnd++
+	}
+
+	existing := blockTraces[insertStart:storageEnd]
+
+	// Split existing storage traces into reads and writes.
+	readsEnd := 0
+	for readsEnd < len(existing) && !isWriteTrace(existing[readsEnd]) {
+		readsEnd++
+	}
+	reads := existing[:readsEnd]
+	writes := existing[readsEnd:]
+
+	// Merge-sort synthetic reads into the existing reads section by HKey.
+	merged := make([]execstatemanager.DecodedTrace, 0, len(reads)+len(synthetic))
+	ei, si := 0, 0
+	for ei < len(reads) && si < len(synthetic) {
+		if synthetic[si].Underlying.HKey().Cmp(reads[ei].Underlying.HKey()) < 0 {
+			merged = append(merged, synthetic[si])
+			si++
+		} else {
+			merged = append(merged, reads[ei])
+			ei++
+		}
+	}
+	merged = append(merged, reads[ei:]...)
+	merged = append(merged, synthetic[si:]...)
+
+	// Reconstruct the full block trace list.
+	result := make([]execstatemanager.DecodedTrace, 0, len(blockTraces)+len(synthetic))
+	result = append(result, blockTraces[:insertStart]...)
+	result = append(result, merged...)
+	result = append(result, writes...)
+	result = append(result, blockTraces[storageEnd:]...)
+	return result
 }
