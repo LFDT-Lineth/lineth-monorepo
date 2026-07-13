@@ -182,7 +182,7 @@ jobs:
 
       - name: Create GitHub Release
         if: ${{ !inputs.dry_run }}
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 #v2.6.2
+        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b #v3.0.1
         with:
           tag_name: "@lfdt-lineth/sdk-core@${{ steps.release_notes.outputs.version }}"
           name: "@lfdt-lineth/sdk-core@${{ steps.release_notes.outputs.version }}"
@@ -335,7 +335,7 @@ jobs:
 
       - name: Create GitHub Release
         if: ${{ !inputs.dry_run }}
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 #v2.6.2
+        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b #v3.0.1
         with:
           tag_name: "@lfdt-lineth/sdk-viem@${{ steps.release_notes.outputs.version }}"
           name: "@lfdt-lineth/sdk-viem@${{ steps.release_notes.outputs.version }}"
