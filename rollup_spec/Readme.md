@@ -130,7 +130,7 @@ declared outcome is one of the allowed outcomes in §6.5.
 | `parentBlockHash` | Block hash at the start of this range |
 | `endBlockHash` | Block hash at the end of this range |
 | `endBlockNumber` | Block number at the end of this range; required for the L1 contract to update `currentL2BlockNumber` and support liveness checks |
-| `endBlockTimestamp` | UNIX timestamp of the last block in this range. Bubbled up unchanged through the rollup and rollup-aggregation proofs (§2.2, §2.3) and stored on L1 as `currentL2BlockTimestamp` at finalization, so L1 consumers can read the finalized L2 "wall clock". |
+| `endBlockTimestamp` | UNIX timestamp of the last block in this range. Bubbled up unchanged through the rollup and rollup-aggregation proofs (§2.2, §2.3) and stored on L1 in `currentFinalizedState` at finalization, so L1 consumers can read the finalized L2 "wall clock". |
 | `l2L1MessagesHash` | keccak256 of the ordered list of L2→L1 withdrawal message hashes emitted in this range; the number of messages is bounded per l2-execution proof |
 | `parentL1L2BridgeRollingHash` | Accumulated L1→L2 deposit rolling hash at the start of this range; enables chaining across l2-execution proofs and L1 continuity verification |
 | `parentL1L2BridgeRollingHashMessageNumber` | Message number corresponding to `parentL1L2BridgeRollingHash` |
@@ -468,7 +468,7 @@ separate from the l2-execution, rollup, and rollup-aggregation guest programs.
    - Assert the proof's `dynamicChainConfigHash` matches what the verifier was deployed with: `pi.dynamicChainConfigHash == IPlonkVerifier(verifier).getChainConfiguration()`. The verifier holds this digest as an immutable `bytes32` (`CHAIN_CONFIGURATION`); its preimage — the four named `ChainConfigurationParameter` entries `chainId`, `baseFee`, `coinbase`, `l2MessageServiceAddress` — is bound at verifier deploy time and emitted in the `ChainConfigurationSet` event, so the values are auditable on-chain via the deploy log + the verifier's verified constructor args. Changing any of the four values means deploying a new verifier and re-pointing the rollup at it via `setVerifierAddress`; there is no separate L1 storage slot for the chain-config preimage that could fall out of sync.
    - Verify `keccak256(submittedRoots) == l2L1BridgeTransactionTree`; store each root via `l2MerkleRootsDepths[root] = D`
    - Optionally process `l2MessagingBlocksOffsets` calldata to emit `L2MessagingBlockAnchored` discovery events (unchanged from today)
-   - Update storage: `currentFinalizedLastBlockHash`, `currentFinalizedShnarf`, `currentL2BlockNumber`, `currentL2BlockTimestamp`, `currentFinalizedL1L2BridgeRollingHash`, `currentFinalizedL1L2BridgeRollingHashMessageNumber`, `currentFinalizedFtxRollingHash`, `currentFinalizedProcessedFtxNumber`
+   - Update storage: `blockhashes[currentFinalizedBlockNumber]=currentFinalizedLastBlockHash`, `currentFinalizedShnarf`, `currentL2BlockNumber`, `currentFinalizedState = keccak256(l1RollingHashMessageNumber,l1RollingHash,finalForcedTransactionNumber,finalForcedTransactionRollingHash,finalTimestamp)`
 
 **What is removed:**
 
