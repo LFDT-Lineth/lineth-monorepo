@@ -10,7 +10,6 @@ const {
   GENERATED_DIR,
   MANIFEST_PATH,
   REPORT_PATH,
-  WRAPPER_TEMPLATE_PATH,
   parseMonorepoArg,
   hasFlag,
 } = require("./paths");
@@ -48,7 +47,11 @@ function runJavaExtractor(monorepoPath) {
 
 async function main() {
   const monorepoPath = parseMonorepoArg() || MONOREPO_ROOT;
-  const seedWrapper = hasFlag("--seed-wrapper");
+  if (hasFlag("--seed-wrapper")) {
+    console.warn(
+      `--seed-wrapper is handled by seed-wrapper.js (pnpm run generate:seed-wrapper), not generate.js.`,
+    );
+  }
 
   runJavaExtractor(monorepoPath);
 
@@ -68,25 +71,6 @@ async function main() {
     const abs = path.join(GENERATED_DIR, part.relPath);
     fs.mkdirSync(path.dirname(abs), { recursive: true });
     fs.writeFileSync(abs, part.markdown);
-  }
-
-  let seeded = false;
-  if (seedWrapper) {
-    fs.mkdirSync(path.dirname(WRAPPER_TEMPLATE_PATH), { recursive: true });
-    try {
-      // Exclusive create avoids TOCTOU with a parallel writer.
-      fs.writeFileSync(WRAPPER_TEMPLATE_PATH, result.wrapperMarkdown, { flag: "wx" });
-      seeded = true;
-    } catch (err) {
-      if (err && err.code === "EEXIST") {
-        console.warn(
-          `Refusing to overwrite existing wrapper at ${path.relative(MONOREPO_ROOT, WRAPPER_TEMPLATE_PATH)}. ` +
-            "Delete it first if you intentionally want to re-seed.",
-        );
-      } else {
-        throw err;
-      }
-    }
   }
 
   const c = result.manifest.counts;
@@ -110,9 +94,6 @@ async function main() {
   console.log(`  partials: ${result.partials.length} under ${path.relative(MONOREPO_ROOT, GENERATED_DIR)}`);
   for (const p of result.partials) {
     console.log(`    - _generated/${p.relPath}`);
-  }
-  if (seeded) {
-    console.log(`  wrapper:  seeded ${path.relative(MONOREPO_ROOT, WRAPPER_TEMPLATE_PATH)}`);
   }
   if (result.report.unresolvedDefaults?.length) {
     console.log(
