@@ -55,7 +55,7 @@ fn predecoding(index:u64, instruction:Instruction) {
              RTYPE_ADD_WB, RTYPE_SUB_WB, RTYPE_SLL_WB, RTYPE_SLT_WB, RTYPE_SLTU_WB, RTYPE_XOR_WB, RTYPE_OR_WB, RTYPE_AND_WB, RTYPE_SRL_WB, RTYPE_SRA_WB,
              RTYPE_MUL_WB, RTYPE_MULH_WB, RTYPE_MULHSU_WB, RTYPE_MULHU_WB, RTYPE_DIV_WB, RTYPE_DIVU_WB, RTYPE_REM_WB, RTYPE_REMU_WB,
              RTYPE_ADDW_WB, RTYPE_SUBW_WB, RTYPE_SLLW_WB, RTYPE_SRLW_WB, RTYPE_SRAW_WB, RTYPE_MULW_WB, RTYPE_DIVW_WB, RTYPE_DIVUW_WB, RTYPE_REMW_WB, RTYPE_REMUW_WB,
-             RTYPE_KECCAK: {
+             RTYPE_KECCAK, RTYPE_POSEIDON2: {
             check_r_type(index, instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
         }
         case JTYPE_JAL, JTYPE_JAL_WB: {

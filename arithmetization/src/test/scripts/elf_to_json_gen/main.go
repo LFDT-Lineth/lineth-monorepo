@@ -90,7 +90,7 @@ func isRdZeroNoop(opcode, instrType, rd, rs1, rs2, funct3, imm12, funct7 uint32)
 	}
 	switch instrType {
 	case rType:
-		// Custom-1 includes the Keccak precompile, which has memory side effects.
+		// Custom-1 includes Keccak and Poseidon2 precompiles, which have memory side effects.
 		if opcode == opcodeCUSTOM1 {
 			return false
 		}
@@ -283,12 +283,13 @@ const (
 	rtypeOpRemuw   = 54
 	rtypeOpRemuwWB = 55
 
-	rtypeOpKeccak = 56
-	rtypeInvalid  = 63
+	rtypeOpKeccak    = 56
+	rtypeOpPoseidon2 = 57
+	rtypeInvalid     = 63
 )
 
 func rtypeOpForRd(baseOp, rd uint32) uint32 {
-	if rd == 0 || baseOp == rtypeOpKeccak || baseOp == rtypeInvalid {
+	if rd == 0 || baseOp == rtypeOpKeccak || baseOp == rtypeOpPoseidon2 || baseOp == rtypeInvalid {
 		return baseOp
 	}
 	if baseOp&1 == 0 && baseOp < rtypeOpKeccak {
@@ -602,10 +603,17 @@ func decodeRTypeSemantic(opcode, funct3, funct7 uint32) (computeOp uint32) {
 		}
 		return rtypeInvalid
 	case opcodeCUSTOM1:
-		if funct3 == 0b000 && funct7 == 0b0000000 {
-			return rtypeOpKeccak
+		if funct7 != 0b0000000 {
+			return rtypeInvalid
 		}
-		return rtypeInvalid
+		switch funct3 {
+		case 0b000:
+			return rtypeOpKeccak
+		case 0b001:
+			return rtypeOpPoseidon2
+		default:
+			return rtypeInvalid
+		}
 	default:
 		return rtypeInvalid
 	}

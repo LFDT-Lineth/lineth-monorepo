@@ -122,6 +122,7 @@ const RTYPE_REMW_WB:ComputeOp = 118
 const RTYPE_REMUW:ComputeOp = 119
 const RTYPE_REMUW_WB:ComputeOp = 120
 const RTYPE_KECCAK:ComputeOp = 121
+const RTYPE_POSEIDON2:ComputeOp = 122
 
 // S-type ops
 const STYPE_STORE8:ComputeOp = 129
@@ -283,3 +284,5 @@ const FUNCT3_BGEU:Funct3 = 0b111
 // Extraneous precompiles
 const FUNCT3_KECCAK:Funct3 = 0b000
 const FUNCT7_KECCAK:Funct7 = 0b0000000
+const FUNCT3_POSEIDON2:Funct3 = 0b001
+const FUNCT7_POSEIDON2:Funct7 = 0b0000000

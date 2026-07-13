@@ -241,14 +241,27 @@ fn check_r_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op
             }
         }
         case OPCODE_CUSTOM1: {
-            // KECCAK precompile: funct3 == 0, funct7 == 0
-            if funct3 != FUNCT3_KECCAK || funct7 != FUNCT7_KECCAK {
-                printf "[ERROR] invalid CUSTOM1 funct3/funct7 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
+            if funct7 != FUNCT7_KECCAK {
+                printf "[ERROR] invalid CUSTOM1 funct7 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
                 fail
             }
-            if compute_op != RTYPE_KECCAK {
-                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
-                fail
+            switch funct3 {
+                case FUNCT3_KECCAK: {
+                    if compute_op != RTYPE_KECCAK {
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                        fail
+                    }
+                }
+                case FUNCT3_POSEIDON2: {
+                    if compute_op != RTYPE_POSEIDON2 {
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                        fail
+                    }
+                }
+                default: {
+                    printf "[ERROR] invalid CUSTOM1 funct3 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
+                    fail
+                }
             }
         }
         default: {}

@@ -238,8 +238,10 @@ func TestDecodeRTypeSemantic(t *testing.T) {
 		{name: "mulw", opcode: opcodeOP32, funct3: 0b000, funct7: 0b0000001, wantOp: rtypeOpMulw},
 		{name: "divw", opcode: opcodeOP32, funct3: 0b100, funct7: 0b0000001, wantOp: rtypeOpDivw},
 		{name: "keccak", opcode: opcodeCUSTOM1, funct3: 0b000, funct7: 0b0000000, wantOp: rtypeOpKeccak},
+		{name: "poseidon2", opcode: opcodeCUSTOM1, funct3: 0b001, funct7: 0b0000000, wantOp: rtypeOpPoseidon2},
 		{name: "invalid op funct3", opcode: opcodeOP, funct3: 0b010, funct7: 0b0100000, wantOp: rtypeInvalid},
-		{name: "invalid custom-1", opcode: opcodeCUSTOM1, funct3: 0b001, funct7: 0b0000000, wantOp: rtypeInvalid},
+		{name: "invalid custom-1 funct3", opcode: opcodeCUSTOM1, funct3: 0b010, funct7: 0b0000000, wantOp: rtypeInvalid},
+		{name: "invalid custom-1 funct7", opcode: opcodeCUSTOM1, funct3: 0b001, funct7: 0b0000001, wantOp: rtypeInvalid},
 	}
 
 	for _, tt := range tests {
@@ -262,6 +264,9 @@ func TestRtypeOpForRd(t *testing.T) {
 	}
 	if got := rtypeOpForRd(rtypeOpKeccak, 5); got != rtypeOpKeccak {
 		t.Fatalf("rtypeOpForRd(keccak, x5) = %d, want %d", got, rtypeOpKeccak)
+	}
+	if got := rtypeOpForRd(rtypeOpPoseidon2, 5); got != rtypeOpPoseidon2 {
+		t.Fatalf("rtypeOpForRd(poseidon2, x5) = %d, want %d", got, rtypeOpPoseidon2)
 	}
 }
 
