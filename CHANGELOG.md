@@ -46,6 +46,7 @@
 - *(coordinator)* Bound eth_getLogs in deployment-block lookup (#3520)
 - *(coordinator)* L1FinalizationPriorityFeeCalculator feeLowerBound config (#3517)
 - *(misc)* Web3j-solc solidity resolution workaround (#3516)
+- *(linea-besu)* Updating Besu version (#3535)
 
 ### 🚜 Refactor
 

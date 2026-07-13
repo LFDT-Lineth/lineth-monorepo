@@ -7,6 +7,7 @@
 ### 🐛 Bug Fixes
 
 - *(misc)* Web3j-solc solidity resolution workaround (#3516)
+- *(linea-besu)* Updating Besu version (#3535)
 
 ### ⚙️ Miscellaneous Tasks
 
