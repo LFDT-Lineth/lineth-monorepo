@@ -4,7 +4,7 @@
  * Statically parses the Linea-Besu plugin `*CliOptions.java` classes from this
  * monorepo and produces:
  *   - a JSON manifest of every in-scope plugin option (tagged by plugin), and
- *   - one neutral MDX partial per feature group under `_generated/`, plus an
+ *   - one neutral MDX partial per plugin under `_generated/`, plus an
  *     optional starter wrapper template that imports those partials.
  *
  * Only plugin-specific options (flags starting with `--plugin-`) are documented.
@@ -777,28 +777,31 @@ function groupSlug(cls) {
     .toLowerCase();
 }
 
-/** Relative path of a partial under `_generated/` (posix). */
-function partialRelPath(pluginKey, cls) {
-  return `${pluginKey}/${groupSlug(cls)}.mdx`;
+/** Relative path of a plugin partial under `_generated/` (posix). */
+function partialRelPath(pluginKey) {
+  return `${pluginKey}.mdx`;
 }
 
 /** Capitalized React component name for a default MDX import. */
-function partialComponentName(pluginKey, cls) {
-  const raw = `${pluginKey}-${groupSlug(cls)}`;
-  return raw
+function partialComponentName(pluginKey) {
+  return pluginKey
     .split(/[^A-Za-z0-9]+/)
     .filter(Boolean)
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join("");
 }
 
+/** Unique section heading so Docusaurus TOC anchors do not collide across plugins. */
+function sectionHeading(pluginTitle, groupTitle) {
+  return `${pluginTitle} — ${groupTitle}`;
+}
+
 /**
- * Render one neutral MDX partial for a feature group.
- * No front matter, no imports, no custom React components.
+ * Render one option-group section (heading + config key + table) into `lines`.
+ * Returns the number of option rows written.
  */
-function renderPartial(cls) {
-  const lines = [];
-  lines.push(`### ${cls.title}`);
+function renderGroupSection(lines, pluginTitle, cls) {
+  lines.push(`### ${sectionHeading(pluginTitle, cls.title)}`);
   lines.push("");
   if (cls.configKey) {
     lines.push(`Config-file key: \`${cls.configKey}\``);
@@ -819,6 +822,21 @@ function renderPartial(cls) {
     rowCount++;
   }
   lines.push("");
+  return rowCount;
+}
+
+/**
+ * Render one neutral MDX partial for a whole plugin (all option groups).
+ * No front matter, no imports, no custom React components.
+ */
+function renderPluginPartial(plugin) {
+  const lines = [];
+  lines.push(`## ${plugin.title}`);
+  lines.push("");
+  let rowCount = 0;
+  for (const cls of plugin.classes) {
+    rowCount += renderGroupSection(lines, plugin.title, cls);
+  }
   return {
     markdown: lines.join("\n").replace(/\s+$/, "") + "\n",
     rowCount,
@@ -827,25 +845,24 @@ function renderPartial(cls) {
 
 /**
  * Render all generated partials. Returns { partials, rowCount } where partials
- * is an array of { plugin, relPath, componentName, markdown, rowCount }.
+ * is one entry per plugin that has options:
+ * { plugin, relPath, componentName, title, markdown, rowCount }.
  */
 function renderPartials(plugins) {
   const partials = [];
   let rowCount = 0;
   for (const p of plugins) {
-    for (const cls of p.classes) {
-      const { markdown, rowCount: n } = renderPartial(cls);
-      rowCount += n;
-      partials.push({
-        plugin: p.key,
-        relPath: partialRelPath(p.key, cls),
-        componentName: partialComponentName(p.key, cls),
-        title: cls.title,
-        configKey: cls.configKey,
-        markdown,
-        rowCount: n,
-      });
-    }
+    if (!p.hasOptions) continue;
+    const { markdown, rowCount: n } = renderPluginPartial(p);
+    rowCount += n;
+    partials.push({
+      plugin: p.key,
+      relPath: partialRelPath(p.key),
+      componentName: partialComponentName(p.key),
+      title: p.title,
+      markdown,
+      rowCount: n,
+    });
   }
   return { partials, rowCount };
 }
@@ -855,11 +872,7 @@ function renderPartials(plugins) {
  * overwritten by normal generate runs.
  */
 function renderStarterWrapper(manifest, plugins, partials) {
-  const byPlugin = new Map();
-  for (const part of partials) {
-    if (!byPlugin.has(part.plugin)) byPlugin.set(part.plugin, []);
-    byPlugin.get(part.plugin).push(part);
-  }
+  const partByPlugin = new Map(partials.map((p) => [p.plugin, p]));
 
   const lines = [];
   lines.push("---");
@@ -871,7 +884,7 @@ function renderStarterWrapper(manifest, plugins, partials) {
   lines.push("");
   lines.push(
     "{/* Human-owned wrapper. Automation only updates `_generated/` partials. " +
-      "Seeded once by scripts/besu-plugin-options; place new partial imports when groups appear. */}",
+      "Seeded once by scripts/besu-plugin-options; place new partial imports when plugins appear. */}",
   );
   lines.push("");
 
@@ -908,18 +921,16 @@ function renderStarterWrapper(manifest, plugins, partials) {
   lines.push("");
 
   for (const p of plugins) {
-    lines.push(`## ${p.title}`);
-    lines.push("");
-    if (!p.hasOptions) {
-      lines.push("_No plugin-specific CLI options were found in this plugin._");
+    const part = partByPlugin.get(p.key);
+    if (part) {
+      lines.push(`<${part.componentName} />`);
       lines.push("");
       continue;
     }
-    const parts = byPlugin.get(p.key) || [];
-    for (const part of parts) {
-      lines.push(`<${part.componentName} />`);
-      lines.push("");
-    }
+    lines.push(`## ${p.title}`);
+    lines.push("");
+    lines.push("_No plugin-specific CLI options were found in this plugin._");
+    lines.push("");
   }
 
   return lines.join("\n").replace(/\s+$/, "") + "\n";
@@ -1070,7 +1081,9 @@ module.exports = {
   groupSlug,
   partialRelPath,
   partialComponentName,
-  renderPartial,
+  sectionHeading,
+  renderGroupSection,
+  renderPluginPartial,
   renderPartials,
   renderStarterWrapper,
   checkCompleteness,

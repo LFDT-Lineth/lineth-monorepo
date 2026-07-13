@@ -152,9 +152,14 @@ test("partials are neutral; wrapper marks Advanced / forced-tx / state-recovery"
   });
   for (const p of result.partials) {
     assert.ok(isNeutralPartial(p.markdown), `${p.relPath} must be neutral`);
-    assert.ok(p.markdown.includes("### "), `${p.relPath} has a heading`);
+    assert.ok(p.markdown.includes("## "), `${p.relPath} has a plugin heading`);
+    assert.ok(p.markdown.includes("### "), `${p.relPath} has a group heading`);
     assert.ok(p.markdown.includes("| Option"), `${p.relPath} has a table`);
+    assert.ok(p.markdown.includes(" — "), `${p.relPath} uses unique plugin-prefixed group headings`);
   }
+  assert.equal(result.partials.length, 2, "one partial per plugin with options");
+  assert.ok(result.partials.some((p) => p.relPath === "sequencer.mdx"));
+  assert.ok(result.partials.some((p) => p.relPath === "tracer.mdx"));
   assert.ok(result.wrapperMarkdown.includes(":::note Advanced options"));
   assert.ok(result.wrapperMarkdown.includes(":::note Forced transactions excluded"));
   assert.ok(result.wrapperMarkdown.includes("No plugin-specific CLI options"));
@@ -163,6 +168,9 @@ test("partials are neutral; wrapper marks Advanced / forced-tx / state-recovery"
   assert.ok(hidden);
   assert.ok(result.partials.some((p) => p.markdown.includes(hidden.names[0])));
   assert.ok(result.partials.some((p) => p.markdown.includes("Advanced")));
+  // Duplicate bare ### RPC headings must not appear (breaks Docusaurus TOC).
+  const allHeadings = result.partials.flatMap((p) => [...p.markdown.matchAll(/^### (.+)$/gm)].map((m) => m[1]));
+  assert.equal(new Set(allHeadings).size, allHeadings.length, `duplicate headings: ${allHeadings.join(", ")}`);
 });
 
 test("spot-check known defaults across plugins", { skip }, async () => {
@@ -188,11 +196,11 @@ test("completeness check passes for starter wrapper", { skip }, async () => {
 });
 
 test("completeness fails when a partial is missing from the wrapper", () => {
-  const failures = checkCompleteness(`import Foo from './_generated/sequencer/only-one.mdx';\n\n<Foo />\n`, [
-    "sequencer/only-one.mdx",
-    "sequencer/missing.mdx",
+  const failures = checkCompleteness(`import Sequencer from './_generated/sequencer.mdx';\n\n<Sequencer />\n`, [
+    "sequencer.mdx",
+    "tracer.mdx",
   ]);
-  assert.ok(failures.some((f) => f.includes("missing.mdx")));
+  assert.ok(failures.some((f) => f.includes("tracer.mdx")));
 });
 
 test("generator is idempotent", { skip }, async () => {
@@ -243,12 +251,17 @@ test("committed output matches freshly generated output (drift)", { skip }, asyn
   }
 });
 
-test("renderPartials produces one file per group with configKey slug", { skip }, () => {
+test("renderPartials produces one file per plugin with unique group headings", { skip }, () => {
   const discovery = discoverPlugins(MONOREPO_ROOT);
   const manifest = buildManifest(discovery);
   const { partials, rowCount } = renderPartials(discovery.plugins);
   assert.equal(rowCount, manifest.counts.rendered);
-  assert.ok(partials.some((p) => p.relPath === "sequencer/bundle-sequencer.mdx"));
+  assert.equal(partials.length, 2);
+  assert.ok(partials.some((p) => p.relPath === "sequencer.mdx"));
+  assert.ok(partials.some((p) => p.relPath === "tracer.mdx"));
+  assert.ok(partials.some((p) => p.markdown.includes("### Sequencer — RPC")));
+  assert.ok(partials.some((p) => p.markdown.includes("### Tracer — RPC")));
   const wrapper = renderStarterWrapper(manifest, discovery.plugins, partials);
-  assert.match(wrapper, /import\s+\w+\s+from\s+'\.\/_generated\/sequencer\/bundle-sequencer\.mdx'/);
+  assert.match(wrapper, /import\s+Sequencer\s+from\s+'\.\/_generated\/sequencer\.mdx'/);
+  assert.match(wrapper, /import\s+Tracer\s+from\s+'\.\/_generated\/tracer\.mdx'/);
 });

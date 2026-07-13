@@ -26,7 +26,7 @@ Do **not** add this directory to the workspace — doing so can break root
 
 | Artifact | Owner | Path |
 | --- | --- | --- |
-| MDX partials (one per feature group) | Automation | `output/_generated/<plugin>/<configKey>.mdx` |
+| MDX partials (one per plugin) | Automation | `output/_generated/<plugin>.mdx` |
 | JSON manifest + report | Automation (monorepo drift anchor; not shipped) | `output/*.json` |
 | Wrapper page | Human (seeded once) | `templates/linea-besu-plugin-options.mdx` |
 
@@ -34,15 +34,17 @@ Do **not** add this directory to the workspace — doing so can break root
 `_generated/`). It never overwrites the wrapper. Use
 `pnpm run generate:seed-wrapper` once to create the template when missing.
 
-Each partial is plain markdown (`###` heading + config key + table) — no front
-matter, no imports, no custom React. doc.linea’s theme styles it.
+Each partial is plain markdown (`##` plugin heading + unique `### Plugin — Group`
+sections + tables) — no front matter, no imports, no custom React. doc.linea’s
+theme styles it. Headings are prefixed with the plugin name so the right-side
+TOC anchors stay unique.
 
 The starter wrapper imports partials with the Docusaurus 3.10 pattern:
 
 ```mdx
-import SequencerBundleSequencer from './_generated/sequencer/bundle-sequencer.mdx';
+import Sequencer from './_generated/sequencer.mdx';
 
-<SequencerBundleSequencer />
+<Sequencer />
 ```
 
 `_generated/` matches doc.linea’s `**/_*/**` docs exclude (not routed; still
@@ -50,7 +52,7 @@ importable).
 
 ### Fallback ladder (if doc.linea build rejects imports)
 
-1. Preferred: `_generated/<plugin>/<configKey>.mdx` + import/`<X/>` (this tool).
+1. Preferred: `_generated/<plugin>.mdx` + import/`<X/>` (this tool).
 2. Flatten to sibling `_*.mdx` files next to the wrapper.
 3. Single `_generated-body.mdx` imported once.
 4. One consolidated generated page (pilot model).
@@ -79,9 +81,10 @@ Optional: `--monorepo /path/to/linea-monorepo` or `LINEA_MONOREPO_PATH`
 
 ## How a new group is picked up
 
-1. New `*CliOptions.java` / `@Option` under a known plugin root → generate emits
-   a new partial under `_generated/`.
-2. `pnpm run check` fails completeness until a human adds the import + `<X />` to
+1. New `*CliOptions.java` / `@Option` under an **existing** plugin root → regenerate
+   updates that plugin’s `_generated/<plugin>.mdx` (no wrapper change).
+2. A **brand-new plugin** with options → generate emits a new `_generated/<plugin>.mdx`;
+   `pnpm run check` fails completeness until a human adds the import + `<X />` to
    the wrapper (in this template and eventually in doc.linea).
 3. Content (table rows) updates are fully automatic on regenerate.
 
