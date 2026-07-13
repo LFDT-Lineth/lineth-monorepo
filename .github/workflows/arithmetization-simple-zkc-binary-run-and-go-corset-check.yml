@@ -62,3 +62,11 @@ jobs:
           KECCAK_N_VECTORS: 1
           KECCAK_JSON_FILE: common_inputs/keccak_check.json
           ZKC_EXEC_FLAGS: "--check"
+          
+      - name: Run a single Keccak custom1 opcode program and check it
+        working-directory: arithmetization/src/test
+        run: make zkc-exec
+        env:
+          ZKC_EXEC_FLAGS: "--check"
+          JSON: json/keccak_single.json
+
