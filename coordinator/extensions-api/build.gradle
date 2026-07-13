@@ -1,0 +1,12 @@
+plugins {
+  id 'net.consensys.zkevm.kotlin-library-conventions'
+}
+
+dependencies {
+  // Stable contracts an extension is allowed to depend on.
+  api project(':jvm-libs:linea:core:long-running-service')
+  api project(':jvm-libs:generic:json-rpc')
+  api project(':jvm-libs:linea:core:metrics')
+  api "io.vertx:vertx-core"
+  api "io.vertx:vertx-sql-client"
+}

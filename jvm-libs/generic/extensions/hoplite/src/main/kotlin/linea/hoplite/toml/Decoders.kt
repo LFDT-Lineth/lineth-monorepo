@@ -1,4 +1,4 @@
-package linea.coordinator.config.v2.toml.decoders
+package linea.hoplite.toml
 
 import com.sksamuel.hoplite.ConfigFailure
 import com.sksamuel.hoplite.ConfigResult
@@ -9,7 +9,6 @@ import com.sksamuel.hoplite.StringNode
 import com.sksamuel.hoplite.decoder.Decoder
 import com.sksamuel.hoplite.fp.invalid
 import com.sksamuel.hoplite.fp.valid
-import linea.coordinator.config.v2.toml.SignerConfigToml
 import linea.kotlin.decodeHex
 import kotlin.reflect.KType
 import kotlin.time.Duration
@@ -88,12 +87,15 @@ class TomlKotlinInstantDecoder : Decoder<Instant> {
   }
 }
 
-class TomlSignerTypeDecoder : Decoder<SignerConfigToml.SignerType> {
-  override fun decode(node: Node, type: KType, context: DecoderContext): ConfigResult<SignerConfigToml.SignerType> {
+open class TomlEnumDecoder<T : Enum<T>>(
+  private val clazz: Class<T>,
+  private val ignoreCase: Boolean = true,
+) : Decoder<T> {
+  override fun decode(node: Node, type: KType, context: DecoderContext): ConfigResult<T> {
     return when (node) {
       is StringNode ->
         runCatching {
-          SignerConfigToml.SignerType.valueOfIgnoreCase(node.value.lowercase())
+          clazz.enumConstants.first { it.name.equals(node.value, ignoreCase = ignoreCase) }
         }.fold(
           { it.valid() },
           { ConfigFailure.DecodeError(node, type).invalid() },
@@ -106,6 +108,6 @@ class TomlSignerTypeDecoder : Decoder<SignerConfigToml.SignerType> {
   }
 
   override fun supports(type: KType): Boolean {
-    return type.classifier == SignerConfigToml.SignerType::class
+    return type.classifier == clazz.kotlin
   }
 }
