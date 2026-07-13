@@ -6,6 +6,8 @@ const path = require("node:path");
 const {
   escapeCell,
   stripEmbeddedDefault,
+  renderDefault,
+  renderType,
   build,
   pluginsForRender,
   renderPartials,
@@ -36,6 +38,17 @@ test("stripEmbeddedDefault removes picocli help default parentheticals", () => {
   );
   assert.equal(stripEmbeddedDefault("Forward endpoints (default: [])"), "Forward endpoints");
   assert.equal(stripEmbeddedDefault("No default here"), "No default here");
+});
+
+test("renderType keeps angle brackets inside backticks", () => {
+  assert.equal(renderType("SET<URL>"), "`SET<URL>`");
+  assert.equal(renderType("BYTES_32"), "`BYTES_32`");
+});
+
+test("renderDefault uses em dash when unset", () => {
+  assert.equal(renderDefault({ default: null }), "—");
+  assert.equal(renderDefault({ default: "" }), "—");
+  assert.equal(renderDefault({ default: "1000" }), "`1000`");
 });
 
 test("rendered row count equals in-scope option count (63 = 51 + 12)", { skip }, async () => {
@@ -69,6 +82,8 @@ test("partials are neutral with unique plugin-prefixed headings", { skip }, asyn
       false,
       `${p.relPath} must not embed (default: …) when a Default column exists`,
     );
+    assert.equal(/\|[^|\n]*&lt;[^|\n]*\|/.test(p.markdown), false, `${p.relPath} must not HTML-escape types`);
+    assert.match(p.markdown, /\| —\s*\|/, `${p.relPath} uses em dash for unset defaults`);
   }
   assert.equal(result.partials.length, 2);
   assert.ok(result.partials.some((p) => p.relPath === "sequencer.mdx"));
@@ -83,6 +98,9 @@ test("spot-check known defaults across plugins", { skip }, async () => {
   assert.equal(byName["--plugin-linea-variable-gas-cost-wei"].default, "10000000000");
   assert.equal(byName["--plugin-linea-tracer-readiness-server-port"].default, "8548");
   assert.equal(byName["--plugin-linea-l1l2-bridge-contract"].default, "0x0000000000000000000000000000000000000000");
+  assert.equal(byName["--plugin-linea-l1l2-bridge-topic"].type, "BYTES_32");
+  assert.match(byName["--plugin-linea-compressed-tx-cache-size"].description, /compressed transaction cache/i);
+  assert.doesNotMatch(byName["--plugin-linea-compressed-tx-cache-size"].description, /Variable gas cost/i);
 });
 
 test("completeness check passes for starter wrapper", { skip }, async () => {

@@ -44,9 +44,28 @@ function renderNames(names) {
   return names.map((n) => "`" + escapeCell(n) + "`").join("<br/>");
 }
 
+/**
+ * Escape for inclusion inside inline code (backticks). Unlike escapeCell, does not
+ * turn <> into HTML entities so types like SET<URL> stay readable.
+ */
+function escapeInlineCode(text) {
+  if (text == null) return "";
+  let out = String(text).replace(/\r?\n/g, " ").replace(/\s+/g, " ").trim();
+  out = out.replace(/\\/g, "\\\\");
+  out = out.replace(/`/g, "&#96;");
+  out = out.replace(/\{/g, "\\{").replace(/\}/g, "\\}");
+  out = out.replace(/\|/g, "\\|");
+  return out;
+}
+
 function renderDefault(option) {
-  if (option.default == null || option.default === "") return "";
-  return "`" + escapeCell(option.default) + "`";
+  if (option.default == null || option.default === "") return "—";
+  return "`" + escapeInlineCode(option.default) + "`";
+}
+
+function renderType(type) {
+  if (type == null || type === "") return "";
+  return "`" + escapeInlineCode(type) + "`";
 }
 
 function partialRelPath(pluginKey) {
@@ -80,7 +99,7 @@ function renderGroupSection(lines, pluginTitle, cls) {
       renderNames(o.names),
       escapeCell(stripEmbeddedDefault(o.description)),
       renderDefault(o),
-      escapeCell(o.type),
+      renderType(o.type),
       o.hidden ? "Advanced" : "Standard",
     ];
     lines.push("| " + row.join(" | ") + " |");
@@ -188,11 +207,10 @@ function renderStarterWrapper(manifest, plugins, partials) {
   lines.push(":::");
   lines.push("");
 
-  const c = manifest.counts;
   lines.push(
-    `This reference documents **${c.total} plugin options** across **${c.plugins} plugins** and **${c.groups} option groups** ` +
-      `(${c.standard} standard, ${c.advanced} advanced). Only plugin-specific options (flags starting with \`--plugin-\`) are listed. ` +
-      "Defaults and descriptions are taken verbatim from the source.",
+    "This reference lists plugin-specific options (flags starting with `--plugin-`), grouped by plugin and feature. " +
+      "Descriptions come from the Java `@Option` sources; defaults are shown in the Default column " +
+      "(picocli help text `(default: …)` is omitted there to avoid duplication).",
   );
   lines.push("");
 
@@ -246,7 +264,9 @@ function checkCompleteness(wrapperMarkdown, partialRelPaths) {
 function isNeutralPartial(markdown) {
   if (markdown.trimStart().startsWith("---")) return false;
   if (/^import\s+/m.test(markdown)) return false;
-  if (/<[A-Z][A-Za-z0-9]*/.test(markdown)) return false;
+  // Types like SET<URL> live in inline code; ignore those when scanning for JSX.
+  const withoutInlineCode = markdown.replace(/`[^`]*`/g, "");
+  if (/<[A-Z][A-Za-z0-9]*/.test(withoutInlineCode)) return false;
   return true;
 }
 
@@ -345,7 +365,10 @@ async function build({ manifestPath, reportPath, toolRoot } = {}) {
 module.exports = {
   PLUGIN_FLAG_PREFIX,
   escapeCell,
+  escapeInlineCode,
   stripEmbeddedDefault,
+  renderDefault,
+  renderType,
   partialRelPath,
   partialComponentName,
   sectionHeading,
