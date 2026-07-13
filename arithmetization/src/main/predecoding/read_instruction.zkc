@@ -22,6 +22,7 @@ fn read_instruction_from_blobs(pc:Address) -> (instruction:Instruction) {
         internal_offset = internal_offset + blob_size
     }
 
-    // Dense-table padding slot with no backing bytes in any loadable blob.
+    // predecoded table is dense and has no gaps, but blob image is sparse
+    // so we return a 0 instruction for out-of-bounds PC
     instruction = 0
 }

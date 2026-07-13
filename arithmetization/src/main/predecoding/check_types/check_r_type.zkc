@@ -242,6 +242,7 @@ fn check_r_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op
         }
         case OPCODE_CUSTOM1: {
             if funct7 != FUNCT7_KECCAK {
+                // FUNCT7_KECCAK == FUNCT7_POSEIDON2 and they are the only valid funct7 values for CUSTOM1 for now.
                 printf "[ERROR] invalid CUSTOM1 funct7 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
                 fail
             }

@@ -41,6 +41,7 @@ In addition to the original keys (`entry_point_and_blobs_count`,
 | Key                | Record fields                                          | Replaces (in the interpreter)                              |
 | ------------------ | ------------------------------------------------------ | ---------------------------------------------------------- |
 | `instruction_base` | `base:Address`                                         | base address used to map `pc` → table index               |
+| `instruction_count`| `count:u64`                                            | number of 4-byte instruction slots in the executable span |
 | `decoded_core`     | `opcode, instruction_type`                             | `opcode = instruction` + type map                          |
 | `decoded_itype`    | `compute_op, imm, rs1, rd`                           | flat semantic micro-op dispatch in `i_type.zkc`              |
 | `decoded_rtype`    | `compute_op, rs1, rs2, rd`                             | flat semantic micro-op dispatch in `r_type.zkc`              |
@@ -90,9 +91,9 @@ field and second runtime switch.
 At runtime, `process_I_type_instruction` runs a single flat `switch compute_op`.
 Paired cases share compute logic; `*_WB` arms additionally write `registers[rd]`.
 
-Constants for `compute_op` live in `constants.zkc` and are mirrored in `main.go`
-(`itypeOpAddi`, `itypeOpAddiWB`, …). See `main_test.go` for
-`decodeITypeSemantic` and `itypeOpForRd` coverage.
+Constants for `compute_op` live in `arithmetization/src/main/common/constants.zkc`
+and are mirrored in `main.go` (`itypeOpAddi`, `itypeOpAddiWB`, …). See
+`main_test.go` for `decodeITypeSemantic` and `itypeOpForRd` coverage.
 
 ## S-type semantic micro-ops (store width folded)
 
@@ -132,18 +133,35 @@ into `imm` at ELF time. At runtime, `process_U_type_instruction` runs a flat
 
 `decoded_rtype` no longer replays raw `funct3` / `funct7` / opcode bits. Instead,
 `decodeRTypeSemantic` maps each R-type encoding to a base `compute_op`; `rtypeOpForRd`
-selects the matching `*_WB` variant when `rd != x0`. `RTYPE_KECCAK` has no `_WB`
-variant and returns early after the precompile side effects.
+selects the matching `*_WB` variant when `rd != x0`. Custom-1 precompiles (`RTYPE_KECCAK`,
+`RTYPE_POSEIDON2`) have no `_WB` variant and return early after the precompile side
+effects.
+
+### Custom-1 precompiles (`opcode` = `0b0101011`)
+
+Both use `funct7 = 0b0000000`. `decodeRTypeSemantic` discriminates on `funct3`:
+
+| `funct3` | Local op (`main.go`) | Unified `compute_op` (`constants.zkc`) | Runtime handler |
+| -------- | -------------------- | --------------------------------------- | --------------- |
+| `0b000`  | `rtypeOpKeccak` (56) | `RTYPE_KECCAK` (121)                    | `keccak(...)` in `r_type.zkc` |
+| `0b001`  | `rtypeOpPoseidon2` (57) | `RTYPE_POSEIDON2` (122)              | `poseidon2(...)` in `r_type.zkc` |
+
+Any other `(funct3, funct7)` pair on Custom-1 maps to `rtypeInvalid` → `COMPUTE_INVALID`
+(255) in the JSON tables.
 
 At runtime, the interpreter dispatches `R_TYPE` to `process_R_type_instruction`
 (base `RTYPE_*` cases in `r_type.zkc`) and `R_TYPE_WB` to
 `process_R_WB_type_instruction` (`RTYPE_*_WB` cases in `r_type_wb.zkc`).
 When `rd != x0`, `buildDecodedProgram` sets `decoded_core.instruction_type` to
-`R_TYPE_WB` (8); `RTYPE_KECCAK` stays on `R_TYPE`.
+`R_TYPE_WB` (8); Custom-1 precompiles stay on `R_TYPE`.
 
-Constants for R-type `compute_op` live in `constants.zkc` and are mirrored in
-`main.go` (`rtypeOpAdd`, `rtypeOpAddWB`, …). See `main_test.go` for
-`decodeRTypeSemantic` and `rtypeOpForRd` coverage.
+Constants for R-type `compute_op` and Custom-1 `funct3`/`funct7` live in
+`arithmetization/src/main/common/constants.zkc` and are mirrored in `main.go`
+(`rtypeOpAdd`, `rtypeOpAddWB`, `rtypeOpKeccak`, `rtypeOpPoseidon2`, …). Named
+`FUNCT3_*` / `FUNCT7_*` constants are used by the pre-decoding verifier (see
+below); redundant per-instruction `FUNCT7_*` aliases that duplicated
+`FUNCT7_ADD` or `FUNCT7_MUL` have been removed from `constants.zkc`. See
+`main_test.go` for `decodeRTypeSemantic` and `rtypeOpForRd` coverage.
 
 ## Static rd=x0 no-op folding
 
@@ -167,6 +185,7 @@ Not folded (still have side effects):
 - `jal/jalr x0, …` — control flow
 - `addi x0, t0, imm` — reads `t0`
 - `auipc x0, imm` — uses PC in the computation
+- **any Custom-1 precompile** (`KECCAK`, `POSEIDON2`) — memory side effects
 
 The predicate lives in `isRdZeroNoop` in `main.go` (see `main_test.go`).
 
@@ -201,8 +220,9 @@ most-significant bit first, into a continuous big-endian bit stream. Records are
 concatenated with **no per-record alignment**, and the final byte is zero-padded
 in its low bits. This mirrors ZkC's `EncodeBytes` / `DecodeUnsignedInt`.
 
-The field widths come from the semantic types in `utils/type.zkc`, so each record
-size is the sum of its field widths:
+The field widths come from the semantic types in
+`arithmetization/src/main/common/type.zkc`, so each record size is the sum of
+its field widths:
 
 | Table           | Field widths (bits)            | Record size |
 | --------------- | ------------------------------ | ----------- |
@@ -218,10 +238,41 @@ size is the sum of its field widths:
 > matching `writeBits` calls here (and vice versa). A width or order mismatch
 > silently misaligns the whole stream and the interpreter reads garbage.
 
+## Pre-decoding verification (separate ZkC program)
+
+This tool is the **trusted decoder** for the pre-decoded tables. A one-time ZkC
+proof program re-reads each raw instruction word from the blob image and checks
+that `decoded[index]` is consistent with the raw `(opcode, funct3, funct7, …)`
+fields and operands.
+
+| File | Role |
+| ---- | ---- |
+| `arithmetization/src/main/predecoding/main.zkc` | Entry point: linear scan over `instruction_count` indices |
+| `arithmetization/src/main/predecoding/predecoding.zkc` | Dispatches on `compute_op` to the per-type checkers |
+| `arithmetization/src/main/predecoding/check_types/check_{b,i,r,j,u,s}_type.zkc` | Per instruction-format verification (`check_b_type`, `check_i_type`, …) |
+| `arithmetization/src/main/predecoding/read_instruction.zkc` | Fetches the raw 32-bit word at `pc` from blobs |
+| `arithmetization/src/main/common/constants.zkc` | Canonical `OPCODE_*`, `FUNCT3_*`, `FUNCT7_*`, `RTYPE_*`, … constants |
+
+The checkers compare the pre-decoded record against what the raw instruction
+**must** encode for the claimed `compute_op` — e.g. `check_r_type.zkc` switches
+on `opcode` / `funct7` / `funct3` using named constants (`FUNCT3_MUL`,
+`FUNCT7_MUL`, `FUNCT3_KECCAK`, `FUNCT3_POSEIDON2`, …) and then verifies
+`rs1`/`rs2`/`rd`/`imm` operands match. `COMPUTE_MISC_MEM` and `COMPUTE_INVALID`
+slots are accepted without operand checks.
+
+When adding a new instruction encoding to `decodeRTypeSemantic` (or any other
+`decode*Semantic` function), update the matching checker under `check_types/`
+and extend `main_test.go` so the Go decoder and ZkC verifier stay in sync.
+
 ## Related files
 
 - `arithmetization/src/main/riscv/memory.zkc` — the `pub input` declarations.
+- `arithmetization/src/main/common/constants.zkc` — `compute_op`, opcode, and
+  funct3/funct7 constants (must match `main.go`).
+- `arithmetization/src/main/common/type.zkc` — field types and bit widths.
 - `arithmetization/src/main/riscv/interpreter.zkc` — reads `decoded_core` and
   dispatches by `instruction_type`.
-- `arithmetization/src/main/riscv/instruction_processing/{i,r,s,b,j,u}_type.zkc` — read
-  their respective decoded tables by index.
+- `arithmetization/src/main/riscv/instruction_processing/{i,r,s,b,j,u}_type.zkc` —
+  read their respective decoded tables by index.
+- `arithmetization/src/main/predecoding/` — one-time proof that this tool's
+  tables match the raw program image.
