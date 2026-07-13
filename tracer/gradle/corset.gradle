@@ -14,13 +14,12 @@
  */
 tasks.register('corsetExists') {
   dependsOn('installGoCorset')
-  def capturedGoCorsetPath = project.ext.goCorsetPath
   doLast {
-    def process = [capturedGoCorsetPath, "--version"].execute()
+    def process = ["go-corset", "--version"].execute()
     process.consumeProcessOutput()
     def exitCode = process.waitFor()
     if (exitCode != 0) {
-      throw new GradleException("go-corset not found at $capturedGoCorsetPath!")
+      throw new GradleException('go-corset not found!')
     }
   }
 }
@@ -29,19 +28,6 @@ ext {
   corsetVersion = project.hasProperty('corsetVersion')
     ? project.property('corsetVersion')
     : System.getenv().getOrDefault('LINEA_CORSET_VERSION', "v1.2.10")
-
-  // Resolve the absolute path to the go-corset binary so Exec tasks don't
-  // depend on the Gradle daemon's PATH (which may not include ~/go/bin).
-  def goBin = System.getenv('GOBIN')
-  if (goBin == null || goBin.isEmpty()) {
-    def goPath = System.getenv('GOPATH')
-    if (goPath == null || goPath.isEmpty()) {
-      goPath = "${System.getProperty('user.home')}/go"
-    }
-    goBin = "$goPath/bin"
-  }
-  def isWindows = System.getProperty('os.name').toLowerCase().contains('win')
-  goCorsetPath = "$goBin/go-corset" + (isWindows ? ".exe" : "")
 }
 
 tasks.register('installGoCorset') {
@@ -50,7 +36,6 @@ tasks.register('installGoCorset') {
 
   // For configuration cache
   def capturedCorsetVersion = project.ext.corsetVersion
-  def capturedGoCorsetPath = project.ext.goCorsetPath
 
   doLast {
     def corsetVersion = capturedCorsetVersion
@@ -78,17 +63,22 @@ tasks.register('installGoCorset') {
       return [exitCode, out.toString(), err.toString()]
     }
 
-    // Check if go-corset exists at the resolved absolute path. Avoid relying on
-    // `which`, since /usr/bin/which on macOS may resolve binaries that aren't on
-    // the Gradle daemon's PATH, masking a real "binary not visible to Exec"
-    // problem until the next task tries to run it.
-    def goCorsetExists = new File(capturedGoCorsetPath).canExecute()
+    // Check if go-corset exists
+    def goCorsetExists = false
+    try {
+      def checkCmd = isWindows ? "where go-corset" : "which go-corset"
+      def (exitCode, out, err) = runCommand(checkCmd, false)
+      goCorsetExists = (exitCode == 0)
+    } catch (Exception e) {
+      logger.warn("Check command failed: ${e.message}")
+      goCorsetExists = false
+    }
 
     def installRequired = true
 
     if (goCorsetExists) {
-      logger.lifecycle("go-corset found at $capturedGoCorsetPath. Checking version...")
-      def (exitCode, out, err) = runCommand("$capturedGoCorsetPath --version")
+      logger.lifecycle("go-corset found. Checking version...")
+      def (exitCode, out, err) = runCommand("go-corset --version")
       def versionOutput = out.replace("go-corset", "").trim()
       if (versionOutput == corsetVersion) {
         logger.lifecycle("✓ go-corset $corsetVersion already installed")
@@ -140,7 +130,6 @@ def lineaTracerProject = project(lineaTracerProjectPath)
 tasks.register('buildAllTracers', Exec) {
   group "Trace file(s) generation"
   dependsOn 'buildZkevmBins'
-  def capturedGoCorsetPath = project.ext.goCorsetPath
   // Specify where the trace files should be generated.
   def GENERATED_SRC_DIR = "${project.buildDir}/generated/gocorset/main/java/net/consensys/linea/zktracer"
   def TRACE_FILE = "$GENERATED_SRC_DIR/Trace.java"
@@ -155,5 +144,5 @@ tasks.register('buildAllTracers', Exec) {
   doFirst {
     traceJava.parentFile.mkdirs()
   }
-  commandLine capturedGoCorsetPath, 'generate', '-p', TRACE_PKG, '-i', traceJava,
+  commandLine 'go-corset', 'generate', '-p', TRACE_PKG, '-i', traceJava,
     '-o', traceOsakaJava, zkevmOsakaBin }
