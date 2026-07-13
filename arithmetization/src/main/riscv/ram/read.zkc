@@ -1,5 +1,5 @@
 include "../memory.zkc"
-include "../utils/constants.zkc"
+include "../../common/constants.zkc"
 
 // We use ram with word size of 32 bits.
 // To read a single byte from RAM at a byte address (address), we need to:

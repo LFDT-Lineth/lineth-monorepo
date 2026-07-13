@@ -1,5 +1,5 @@
 include "memory.zkc"
-include "utils/constants.zkc"
+include "../common/constants.zkc"
 include "utils/register_utils.zkc"
 include "utils/absolute_value.zkc"
 include "utils/bit_flip.zkc"

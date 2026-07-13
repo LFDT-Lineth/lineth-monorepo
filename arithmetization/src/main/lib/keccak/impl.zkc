@@ -2,7 +2,7 @@ include "constants.zkc"
 include "utils.zkc"
 include "../../riscv/memory.zkc"
 include "../../riscv/ram/write.zkc"
-include "../../riscv/utils/type.zkc"
+include "../../common/type.zkc"
 
 // Implementation of the keccak hash function
 // - state size = 1600 bits

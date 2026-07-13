@@ -1,4 +1,4 @@
-include "constants.zkc"
+include "../../common/constants.zkc"
 include "sign_bit.zkc"
 
 const SGNEXTMASK_U32:u64 = 0xFFFFFFFF_00000000

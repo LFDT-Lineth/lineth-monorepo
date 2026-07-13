@@ -1,0 +1,272 @@
+fn check_r_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rs1_decoded:Register, rs2_decoded:Register, rd_decoded:Register) {
+    var funct7:Funct7
+    var funct3:Funct3
+    var rs1:Register
+    var rs2:Register
+    var rd:Register
+    funct7::rs2::rs1::funct3::rd = instruction_parameters
+
+    // Verify the raw (opcode, funct7, funct3) fields encode the claimed compute_op.
+    switch opcode {
+        case OPCODE_OP: {
+            switch funct7 {
+                case FUNCT7_MUL: {
+                    switch funct3 {
+                        case FUNCT3_MUL: {
+                            if compute_op != RTYPE_MUL && compute_op != RTYPE_MUL_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        case FUNCT3_MULH: {
+                            if compute_op != RTYPE_MULH && compute_op != RTYPE_MULH_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        case FUNCT3_MULHSU: {
+                            if compute_op != RTYPE_MULHSU && compute_op != RTYPE_MULHSU_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        case FUNCT3_MULHU: {
+                            if compute_op != RTYPE_MULHU && compute_op != RTYPE_MULHU_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        case FUNCT3_DIV: {
+                            if compute_op != RTYPE_DIV && compute_op != RTYPE_DIV_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        case FUNCT3_DIVU: {
+                            if compute_op != RTYPE_DIVU && compute_op != RTYPE_DIVU_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        case FUNCT3_REM: {
+                            if compute_op != RTYPE_REM && compute_op != RTYPE_REM_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        case FUNCT3_REMU: {
+                            if compute_op != RTYPE_REMU && compute_op != RTYPE_REMU_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        default: {
+                            printf "[ERROR] invalid OP funct3 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
+                            fail
+                        }
+                    }
+                }
+                case FUNCT7_ADD: {
+                    switch funct3 {
+                        case FUNCT3_ADD: {
+                            if compute_op != RTYPE_ADD && compute_op != RTYPE_ADD_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        case FUNCT3_SLL: {
+                            if compute_op != RTYPE_SLL && compute_op != RTYPE_SLL_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        case FUNCT3_SLT: {
+                            if compute_op != RTYPE_SLT && compute_op != RTYPE_SLT_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        case FUNCT3_SLTU: {
+                            if compute_op != RTYPE_SLTU && compute_op != RTYPE_SLTU_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        case FUNCT3_XOR: {
+                            if compute_op != RTYPE_XOR && compute_op != RTYPE_XOR_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        case FUNCT3_SRL: {
+                            if compute_op != RTYPE_SRL && compute_op != RTYPE_SRL_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        case FUNCT3_OR: {
+                            if compute_op != RTYPE_OR && compute_op != RTYPE_OR_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        case FUNCT3_AND: {
+                            if compute_op != RTYPE_AND && compute_op != RTYPE_AND_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        default: {
+                            printf "[ERROR] invalid OP funct3 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
+                            fail
+                        }
+                    }
+                }
+                case FUNCT7_SUB: {
+                    switch funct3 {
+                        case FUNCT3_SUB: {
+                            if compute_op != RTYPE_SUB && compute_op != RTYPE_SUB_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        case FUNCT3_SRA: {
+                            if compute_op != RTYPE_SRA && compute_op != RTYPE_SRA_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        default: {
+                            printf "[ERROR] invalid OP funct3 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
+                            fail
+                        }
+                    }
+                }
+                default: {
+                    printf "[ERROR] invalid OP funct7 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
+                    fail
+                }
+            }
+        }
+        case OPCODE_OP32: {
+            switch funct7 {
+                case FUNCT7_MULW: {
+                    switch funct3 {
+                        case FUNCT3_MULW: {
+                            if compute_op != RTYPE_MULW && compute_op != RTYPE_MULW_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        case FUNCT3_DIVW: {
+                            if compute_op != RTYPE_DIVW && compute_op != RTYPE_DIVW_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        case FUNCT3_DIVUW: {
+                            if compute_op != RTYPE_DIVUW && compute_op != RTYPE_DIVUW_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        case FUNCT3_REMW: {
+                            if compute_op != RTYPE_REMW && compute_op != RTYPE_REMW_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        case FUNCT3_REMUW: {
+                            if compute_op != RTYPE_REMUW && compute_op != RTYPE_REMUW_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        default: {
+                            printf "[ERROR] invalid OP32 funct3 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
+                            fail
+                        }
+                    }
+                }
+                case FUNCT7_ADDW: {
+                    switch funct3 {
+                        case FUNCT3_ADDW: {
+                            if compute_op != RTYPE_ADDW && compute_op != RTYPE_ADDW_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        case FUNCT3_SLLW: {
+                            if compute_op != RTYPE_SLLW && compute_op != RTYPE_SLLW_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        case FUNCT3_SRLW: {
+                            if compute_op != RTYPE_SRLW && compute_op != RTYPE_SRLW_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        default: {
+                            printf "[ERROR] invalid OP32 funct3 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
+                            fail
+                        }
+                    }
+                }
+                case FUNCT7_SUBW: {
+                    switch funct3 {
+                        case FUNCT3_SUBW: {
+                            if compute_op != RTYPE_SUBW && compute_op != RTYPE_SUBW_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        case FUNCT3_SRAW: {
+                            if compute_op != RTYPE_SRAW && compute_op != RTYPE_SRAW_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        default: {
+                            printf "[ERROR] invalid OP32 funct3 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
+                            fail
+                        }
+                    }
+                }
+                default: {
+                    printf "[ERROR] invalid OP32 funct7 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
+                    fail
+                }
+            }
+        }
+        case OPCODE_CUSTOM1: {
+            // KECCAK precompile: funct3 == 0, funct7 == 0
+            if funct3 != FUNCT3_KECCAK || funct7 != FUNCT7_KECCAK {
+                printf "[ERROR] invalid CUSTOM1 funct3/funct7 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
+                fail
+            }
+            if compute_op != RTYPE_KECCAK {
+                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                fail
+            }
+        }
+        default: {}
+    }
+
+
+    // Check that the decoded operands match the raw instruction parameters.
+    if rs1_decoded != rs1 {
+        printf "[ERROR] rs1 mismatch (index=%d compute_op=%x opcode=%x rs1_decoded=%d)\n", index, compute_op, opcode, rs1_decoded
+        fail
+    }
+    if rs2_decoded != rs2 {
+        printf "[ERROR] rs2 mismatch (index=%d compute_op=%x opcode=%x rs2_decoded=%d)\n", index, compute_op, opcode, rs2_decoded
+        fail
+    }
+    if rd_decoded != rd {
+        printf "[ERROR] rd mismatch (index=%d compute_op=%x opcode=%x rd_decoded=%d)\n", index, compute_op, opcode, rd_decoded
+        fail
+    }
+}
+

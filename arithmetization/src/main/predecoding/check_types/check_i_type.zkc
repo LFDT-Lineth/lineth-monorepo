@@ -1,0 +1,249 @@
+fn check_i_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rs1_decoded:Register, rd_decoded:Register, imm_decoded:DoubleWord) {
+    var funct3:Funct3
+    var imm12:Imm12
+    var rs1:Register
+    var rd:Register
+
+    imm12::rs1::funct3::rd = instruction_parameters
+    var imm:DoubleWord = sgn_extension_u12_u64(imm12)
+
+    // Verify the raw (opcode, funct3) fields encode the claimed compute_op
+    switch opcode {
+        case OPCODE_LOAD: {
+            switch funct3 {
+                case FUNCT3_LB: {
+                    if compute_op != READ8_SGN && compute_op != READ8_SGN_WB  {
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                        fail
+                    }
+                }
+                case FUNCT3_LH: {
+                    if compute_op != READ16_SGN && compute_op != READ16_SGN_WB {
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                        fail
+                    }
+                }
+                case FUNCT3_LW: {
+                    if compute_op != READ32_SGN && compute_op != READ32_SGN_WB {
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                        fail
+                    }
+                }
+                case FUNCT3_LD: {
+                    if compute_op != READ64 && compute_op != READ64_WB {
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                        fail
+                    }
+                }
+                case FUNCT3_LBU: {
+                    if compute_op != READ8_ZEXT && compute_op != READ8_ZEXT_WB {
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                        fail
+                    }
+                }
+                case FUNCT3_LHU: {
+                    if compute_op != READ16_ZEXT && compute_op != READ16_ZEXT_WB {
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                        fail
+                    }
+                }
+                case FUNCT3_LWU: {
+                    if compute_op != READ32_ZEXT && compute_op != READ32_ZEXT_WB {
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                        fail
+                    }
+                }
+                default: {
+                    printf "[ERROR] invalid LOAD funct3 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
+                    fail
+                }
+            }
+        }
+        case OPCODE_OPIMM: {
+            switch funct3 {
+                case FUNCT3_ADDI: {
+                    if compute_op != OP_ADDI && compute_op != OP_ADDI_WB {
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                        fail
+                    }
+                }
+                case FUNCT3_SLTI: {
+                    if compute_op != OP_SLTI && compute_op != OP_SLTI_WB {
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                        fail
+                    }
+                }
+                case FUNCT3_SLTIU: {
+                    if compute_op != OP_SLTIU && compute_op != OP_SLTIU_WB {
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                        fail
+                    }
+                }
+                case FUNCT3_XORI: {
+                    if compute_op != OP_XORI && compute_op != OP_XORI_WB {
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                        fail
+                    }
+                }
+                case FUNCT3_ORI: {
+                    if compute_op != OP_ORI && compute_op != OP_ORI_WB {
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                        fail
+                    }
+                }
+                case FUNCT3_ANDI: {
+                    if compute_op != OP_ANDI && compute_op != OP_ANDI_WB {
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                        fail
+                    }
+                }
+                case FUNCT3_SLLI: {
+                    // SLLI: funct6 must be 0; imm is the low 6-bit shift amount.
+                    var funct6:Funct6
+                    var shamt6:UImm6
+                    funct6::shamt6 = imm12
+                    if funct6 != FUNCT6_SLLI {
+                        printf "[ERROR] invalid SLLI funct6 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
+                        fail
+                    }
+                    imm = shamt6 as DoubleWord
+                    if compute_op != OP_SLLI && compute_op != OP_SLLI_WB {
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                        fail
+                    }
+                }
+                case FUNCT3_SRLI: {
+                    // SRLI/SRAI: funct6 selects the op; imm is the low 6-bit shift amount.
+                    var funct6:Funct6
+                    var shamt6:UImm6
+                    funct6::shamt6 = imm12
+                    imm = shamt6 as DoubleWord
+                    switch funct6 {
+                        case FUNCT6_SRLI: {
+                            if compute_op != OP_SRLI && compute_op != OP_SRLI_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        case FUNCT6_SRAI: {
+                            if compute_op != OP_SRAI && compute_op != OP_SRAI_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        default: {
+                            printf "[ERROR] invalid SRLI/SRAI funct6 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
+                            fail
+                        }
+                    }
+                }
+                default: {
+                    printf "[ERROR] invalid OPIMM funct3 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
+                    fail
+                }
+            }
+        }
+        case OPCODE_OPIMM32: {
+            switch funct3 {
+                case FUNCT3_ADDIW: {
+                    if compute_op != OP_ADDIW && compute_op != OP_ADDIW_WB {
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                        fail
+                    }
+                }
+                case FUNCT3_SLLIW: {
+                    // SLLIW: funct7 must be 0; imm is the low 5-bit shift amount.
+                    var funct7:Funct7
+                    var shamt5:UImm5
+                    funct7::shamt5 = imm12
+                    if funct7 != FUNCT7_SLLIW {
+                        printf "[ERROR] invalid SLLIW funct7 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
+                        fail
+                    }
+                    imm = shamt5 as DoubleWord
+                    if compute_op != OP_SLLIW && compute_op != OP_SLLIW_WB {
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                        fail
+                    }
+                }
+                case FUNCT3_SRLIW: {
+                    // SRLIW/SRAIW: funct7 selects the op; imm is the low 5-bit shift amount.
+                    var funct7:Funct7
+                    var shamt5:UImm5
+                    funct7::shamt5 = imm12
+                    imm = shamt5 as DoubleWord
+                    switch funct7 {
+                        case FUNCT7_SRLIW: {
+                            if compute_op != OP_SRLIW && compute_op != OP_SRLIW_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        case FUNCT7_SRAIW: {
+                            if compute_op != OP_SRAIW && compute_op != OP_SRAIW_WB {
+                                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                                fail
+                            }
+                        }
+                        default: {
+                            printf "[ERROR] invalid SRLIW/SRAIW funct7 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
+                            fail
+                        }
+                    }
+                }
+                default: {
+                    printf "[ERROR] invalid OPIMM32 funct3 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
+                    fail
+                }
+            }
+        }
+        case OPCODE_JALR: {
+            // JALR has no funct3 discrimination (see decodeITypeSemantic).
+            if compute_op != ITYPE_JALR && compute_op != ITYPE_JALR_WB {
+                printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                fail
+            }
+        }
+        case OPCODE_SYSTEM: {
+            if funct3 != FUNCT3_ECALL {
+                printf "[ERROR] invalid SYSTEM funct3 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
+                fail
+            }
+            // ECALL/EBREAK are selected by the full imm12 field; neither writes back.
+            switch imm12 {
+                case FUNCT12_ECALL: {
+                    if compute_op != ITYPE_ECALL {
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                        fail
+                    }
+                }
+                case FUNCT12_EBREAK: {
+                    if compute_op != ITYPE_EBREAK {
+                        printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                        fail
+                    }
+                }
+                default: {
+                    printf "[ERROR] invalid SYSTEM imm12 (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
+                    fail
+                }
+            }
+        }
+        default: {}
+    }
+
+    // Check that the decoded operands match the raw instruction parameters.
+    if rs1_decoded != rs1 {
+        printf "[ERROR] rs1 mismatch (index=%d compute_op=%x opcode=%x rs1_decoded=%d)\n", index, compute_op, opcode, rs1_decoded
+        fail
+    }
+    if rd_decoded != rd {
+        printf "[ERROR] rd mismatch (index=%d compute_op=%x opcode=%x rd_decoded=%d)\n", index, compute_op, opcode, rd_decoded
+        fail
+    }
+    if imm_decoded != imm {
+        printf "[ERROR] imm mismatch (index=%d compute_op=%x opcode=%x imm_decoded=%x)\n", index, compute_op, opcode, imm_decoded
+        fail
+    }
+}
+

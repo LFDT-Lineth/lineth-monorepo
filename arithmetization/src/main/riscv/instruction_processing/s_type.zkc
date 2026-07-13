@@ -1,6 +1,6 @@
 include "../memory.zkc"
 include "../ram/write.zkc"
-include "../utils/constants.zkc"
+include "../../common/constants.zkc"
 include "../utils/signed_sum.zkc"
 
 // Process a RISC-V S-type instruction, writing a register value to memory.

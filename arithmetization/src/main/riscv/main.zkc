@@ -2,7 +2,7 @@ include "interpreter.zkc"
 include "ram/read.zkc"
 include "ram/write.zkc"
 include "utils/sign_extend.zkc"
-include "utils/constants.zkc"
+include "../common/constants.zkc"
 include "utils/signed_comparisons.zkc"
 include "utils/absolute_value.zkc"
 include "utils/bit_flip.zkc"
@@ -11,6 +11,8 @@ include "utils/sign_bit.zkc"
 include "utils/negative.zkc"
 include "utils/register_utils.zkc"
 include "memory.zkc"
+include "../predecoding/predecoding.zkc"
+include "../predecoding/read_instruction.zkc"
 
 // TODO @Ghost
 fn main<registers, ram, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d, padded_input_block>() {
@@ -24,6 +26,25 @@ fn main<registers, ram, state_row0, state_row1, state_row2, state_row3, state_ro
     // instruction address). Used to map pc -> instruction index.
     var base:Address = instruction_base[0]
 
+    // ==========================
+    // Predecoding justification
+    // ==========================
+
+    // Note: this is a static linear pass over instruction indices. Will be done only at
+    // each guest program upgrade.
+    // Count of pre-decoded instructions
+    var count:u64 = instruction_count[0]
+    var pc_predecoding:Address = base
+    for index:u64 = 0; index<count; index = index + 1 {
+        var instruction:Instruction = read_instruction_from_blobs(pc_predecoding)
+        predecoding(index, instruction)
+        pc_predecoding = (pc_predecoding + 4) as Address
+    }
+
+    // =============================
+    // Loading blobs data into RAM
+    // =============================
+
     var internal_offset:Length = 0 // internal offset to blobs_data
     for i:u64 = 0; i<blobs_count; i = i + 1 {
         var blob_offset:Address
@@ -36,6 +57,10 @@ fn main<registers, ram, state_row0, state_row1, state_row2, state_row3, state_ro
         }
         internal_offset = internal_offset + blob_size
     }
+
+    // ==========================
+    // Execution of the program
+    // ==========================
 
     // We interpret pc == MAX_UINT_64 as the stop signal, which is set by the ecall instruction
     while pc != MAX_UINT_64 {

@@ -1,26 +1,29 @@
-include "inputs.zkc"
-include "../riscv/utils/constants.zkc"
-include "check.zkc"
+include "../riscv/utils/sign_extend.zkc"
+include "../common/constants.zkc"
+include "../common/type.zkc"
+include "check_types/check_b_type.zkc"
+include "check_types/check_i_type.zkc"
+include "check_types/check_r_type.zkc"
+include "check_types/check_j_type.zkc"
+include "check_types/check_u_type.zkc"
+include "check_types/check_s_type.zkc"
 
 // Verify that the raw instruction word `instruction` decodes to the pre-decoded
-// record `decoded[index]`. This is a pure decode-correspondence check: it reads
-// no register/memory state and follows no control flow, so it is sound to run as
-// a single static linear pass over the instruction table (before/without
-// executing the guest program). The instruction bytes MUST be read from the
-// pristine program image; once the guest runs, its stores can overwrite code
-// words in RAM (see riscv/main.zkc, which fetches instructions from `decoded`
-// rather than RAM for exactly this reason).
-fn verify_instruction(index:u64, instruction:Instruction) {
+// record `decoded[index]`.
+fn predecoding(index:u64, instruction:Instruction) {
+
+    // Variables from raw RISCV program
+    var instruction_parameters:u25
+    var opcode:Opcode
+    instruction_parameters::opcode = instruction
+
+    // Variables from pre-decoded instruction table
     var compute_op:ComputeOp
     var imm_decoded:DoubleWord
     var rs1_decoded:Register
     var rs2_decoded:Register
     var rd_decoded:Register
     compute_op, imm_decoded, rs1_decoded, rs2_decoded, rd_decoded = decoded[index]
-
-    var instruction_parameters:u25
-    var opcode:Opcode
-    instruction_parameters::opcode = instruction
 
     switch compute_op {
         // Folded rd=x0 no-ops and FENCE: no operands to verify.
@@ -44,7 +47,7 @@ fn verify_instruction(index:u64, instruction:Instruction) {
              OP_ADDI_WB, OP_SLLI_WB, OP_SLTI_WB, OP_SLTIU_WB, OP_XORI_WB, OP_ORI_WB, OP_ANDI_WB, OP_SRLI_WB, OP_SRAI_WB,
              OP_ADDIW_WB, OP_SLLIW_WB, OP_SRLIW_WB, OP_SRAIW_WB,
              ITYPE_JALR, ITYPE_JALR_WB, ITYPE_ECALL, ITYPE_EBREAK: {
-            check_i_type_operands(index, instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
+            check_i_type(index, instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
         }
         case RTYPE_ADD, RTYPE_SUB, RTYPE_SLL, RTYPE_SLT, RTYPE_SLTU, RTYPE_XOR, RTYPE_OR, RTYPE_AND, RTYPE_SRL, RTYPE_SRA,
              RTYPE_MUL, RTYPE_MULH, RTYPE_MULHSU, RTYPE_MULHU, RTYPE_DIV, RTYPE_DIVU, RTYPE_REM, RTYPE_REMU,
@@ -53,7 +56,7 @@ fn verify_instruction(index:u64, instruction:Instruction) {
              RTYPE_MUL_WB, RTYPE_MULH_WB, RTYPE_MULHSU_WB, RTYPE_MULHU_WB, RTYPE_DIV_WB, RTYPE_DIVU_WB, RTYPE_REM_WB, RTYPE_REMU_WB,
              RTYPE_ADDW_WB, RTYPE_SUBW_WB, RTYPE_SLLW_WB, RTYPE_SRLW_WB, RTYPE_SRAW_WB, RTYPE_MULW_WB, RTYPE_DIVW_WB, RTYPE_DIVUW_WB, RTYPE_REMW_WB, RTYPE_REMUW_WB,
              RTYPE_KECCAK: {
-            check_r_type_operands(index, instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type(index, instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
         }
         case JTYPE_JAL, JTYPE_JAL_WB: {
             check_j_type(index, instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)

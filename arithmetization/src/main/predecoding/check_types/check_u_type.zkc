@@ -1,0 +1,44 @@
+fn check_u_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rd_decoded:Register, imm_decoded:DoubleWord) {
+    var imm20:u20
+    var rd:Register
+    imm20::rd = instruction_parameters
+
+    // U-type has no funct3; verify the raw opcode encodes the claimed compute_op.
+    // Mapping (see elf_to_json_gen decodeUTypeSemantic):
+    //   LUI -> UTYPE_LUI / UTYPE_LUI_WB, AUIPC -> UTYPE_AUIPC / UTYPE_AUIPC_WB
+    switch opcode {
+        case OPCODE_LUI: {
+            if compute_op != UTYPE_LUI {
+                if compute_op != UTYPE_LUI_WB {
+                    printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                    fail
+                }
+            }
+        }
+        case OPCODE_AUIPC: {
+            if compute_op != UTYPE_AUIPC {
+                if compute_op != UTYPE_AUIPC_WB {
+                    printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                    fail
+                }
+            }
+        }
+        default: {
+            printf "[ERROR] invalid U-type opcode (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
+            fail
+        }
+    }
+
+    var imm:DoubleWord = sgn_extension_u32_u64((imm20 as u32) << 12)
+
+    // Check that the decoded operands match the raw instruction parameters.
+    if rd_decoded != rd {
+        printf "[ERROR] rd mismatch (index=%d compute_op=%x opcode=%x rd_decoded=%d)\n", index, compute_op, opcode, rd_decoded
+        fail
+    }
+    if imm_decoded != imm {
+        printf "[ERROR] imm mismatch (index=%d compute_op=%x opcode=%x imm_decoded=%x)\n", index, compute_op, opcode, imm_decoded
+        fail
+    }
+}
+

@@ -1,11 +1,13 @@
 include "predecoding.zkc"
-include "image.zkc"
+include "read_instruction.zkc"
+include "../common/type.zkc"
+include "inputs.zkc"
+
 
 // Justify (in a one-time proof) that the raw RISC-V program in the input JSON
-// corresponds to its pre-decoded instruction table. A single static linear pass
-// over instruction indices: read each raw word from the pristine blob image
-// (never guest RAM) and verify it matches decoded[index]. No control-flow
-// following, no guest execution, no RAM stores.
+// corresponds to its pre-decoded instruction table - a static linear pass
+// over instruction indices: read each raw word from the blob image and
+// verify it matches decoded[index]
 fn main() {
     var base:Address = instruction_base[0]
     var count:u64 = instruction_count[0]
@@ -13,7 +15,7 @@ fn main() {
     var pc:Address = base
     for index:u64 = 0; index<count; index = index + 1 {
         var instruction:Instruction = read_instruction_from_blobs(pc)
-        verify_instruction(index, instruction)
+        predecoding(index, instruction)
         pc = (pc + 4) as Address
     }
 }

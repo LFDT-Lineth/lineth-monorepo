@@ -1,5 +1,5 @@
 include "../memory.zkc"
-include "../utils/constants.zkc"
+include "../../common/constants.zkc"
 include "../utils/signed_comparisons.zkc"
 include "../utils/signed_sum.zkc"
 

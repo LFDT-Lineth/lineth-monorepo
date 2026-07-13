@@ -1,5 +1,5 @@
 include "../memory.zkc"
-include "../utils/constants.zkc"
+include "../../common/constants.zkc"
 include "../utils/signed_sum.zkc"
 
 // Process a RISC-V U-type instruction, writing an upper-immediate value to a register.
