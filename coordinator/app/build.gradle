@@ -44,6 +44,7 @@ dependencies {
   implementation project(':jvm-libs:linea:clients:linea-state-manager')
   implementation project(':coordinator:utilities')
   implementation project(':coordinator:core')
+  implementation project(':coordinator:extensions-api')
   implementation project(':coordinator:clients:shomei-client')
   implementation project(':coordinator:clients:traces-generator-api-client')
   implementation project(':coordinator:clients:prover-client:file-based-client')
