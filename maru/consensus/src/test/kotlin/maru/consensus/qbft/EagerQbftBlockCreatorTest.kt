@@ -8,6 +8,7 @@
  */
 package maru.consensus.qbft
 
+import linea.teku.TekuWeb3JClientFactory
 import linea.testing.besu.BesuFactory
 import linea.testing.besu.BesuTransactionsHelper
 import maru.consensus.ValidatorProvider
@@ -54,15 +55,14 @@ import org.mockito.kotlin.reset
 import org.mockito.kotlin.whenever
 import org.web3j.protocol.core.DefaultBlockParameter
 import tech.pegasys.teku.ethereum.executionclient.web3j.Web3JClient
-import tech.pegasys.teku.ethereum.executionclient.web3j.Web3jClientBuilder
 import tech.pegasys.teku.infrastructure.async.SafeFuture.completedFuture
-import tech.pegasys.teku.infrastructure.time.SystemTimeProvider
+import java.net.URI
 import java.time.Clock
-import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 
 class EagerQbftBlockCreatorTest {
   private lateinit var cluster: Cluster
@@ -93,12 +93,10 @@ class EagerQbftBlockCreatorTest {
     besuInstance = BesuFactory.buildTestBesu().also {
       cluster.start(it)
     }
-    ethApiClient = Web3jClientBuilder()
-      .endpoint(besuInstance.engineRpcUrl().get())
-      .timeout(Duration.ofMinutes(1))
-      .timeProvider(SystemTimeProvider.SYSTEM_TIME_PROVIDER)
-      .executionClientEventsPublisher { }
-      .build()
+    ethApiClient = TekuWeb3JClientFactory.create(
+      endpoint = URI(besuInstance.engineRpcUrl().get()).toURL(),
+      timeout = 1.minutes,
+    )
     reset(
       proposerSelector,
       validatorProvider,
@@ -361,12 +359,10 @@ class EagerQbftBlockCreatorTest {
 
   private fun createExecutionLayerManager(): ExecutionLayerManager {
     val engineApiClient =
-      Web3jClientBuilder()
-        .endpoint(besuInstance.engineRpcUrl().get())
-        .timeout(Duration.ofMinutes(1))
-        .timeProvider(SystemTimeProvider.SYSTEM_TIME_PROVIDER)
-        .executionClientEventsPublisher { }
-        .build()
+      TekuWeb3JClientFactory.create(
+        endpoint = URI(besuInstance.engineRpcUrl().get()).toURL(),
+        timeout = 1.minutes,
+      )
     return JsonRpcExecutionLayerManager(
       PragueWeb3JJsonRpcExecutionLayerEngineApiClient(
         web3jClient = engineApiClient,

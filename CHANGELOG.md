@@ -9,6 +9,7 @@
 - *(coordinator)* Add config schema walker for docs generation (#3488)
 - *(coordinator)* [**breaking**] Web3j upgrade to onboard 7594 support (#3514)
 - *(coordinator)* Add inital block number config for finalized state search (#3534)
+- *(coordinator)* Add extension seam (#3532)
 
 ### 🐛 Bug Fixes
 
@@ -46,6 +47,7 @@
 - *(coordinator)* Bound eth_getLogs in deployment-block lookup (#3520)
 - *(coordinator)* L1FinalizationPriorityFeeCalculator feeLowerBound config (#3517)
 - *(misc)* Web3j-solc solidity resolution workaround (#3516)
+- *(linea-besu)* Updating Besu version (#3535)
 
 ### 🚜 Refactor
 
@@ -89,3 +91,5 @@
 - *(coordinator)* Update kotlin to v2.4 (#3454)
 - *(coordinator)* LSP violation fix (#3386)
 - *(deps)* Bump golang.org/x/net (#3500)
+- *(misc)* Refactor hoplite decoders to it's own module (#3557)
+- *(ci)* Update image tags (#3553)

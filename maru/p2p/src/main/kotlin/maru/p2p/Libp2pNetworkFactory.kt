@@ -162,6 +162,8 @@ class Libp2pNetworkFactory(
         gossipNetwork,
         /* listenPorts = */
         listOf(port.toInt()),
+        /* quicEnabled = */
+        false,
       )
     return TekuLibP2PNetwork(p2pNetwork, host, maruPeerManager)
   }

@@ -7,10 +7,12 @@
 ### 🐛 Bug Fixes
 
 - *(misc)* Web3j-solc solidity resolution workaround (#3516)
+- *(linea-besu)* Updating Besu version (#3535)
 
 ### ⚙️ Miscellaneous Tasks
 
 - *(coordinator)* Update kotlin to v2.4 (#3454)
+- *(ci)* Update image tags (#3553)
 ## [1.1.1] - 2026-06-26
 
 ### 🐛 Bug Fixes

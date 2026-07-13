@@ -1,12 +1,7 @@
 package linea.plugin.acc.test.rpc
 
-import com.fasterxml.jackson.core.JsonParser
-import com.fasterxml.jackson.core.JsonToken
-import com.fasterxml.jackson.databind.DeserializationContext
-import com.fasterxml.jackson.databind.JsonDeserializer
-import com.fasterxml.jackson.databind.ObjectReader
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.annotation.JsonCreator
+import com.fasterxml.jackson.annotation.JsonProperty
 import linea.plugin.acc.test.rpc.linea.AbstractSendBundleTest.BundleParams
 import linea.plugin.acc.test.utils.toLogString
 import org.assertj.core.api.Assertions.assertThat
@@ -34,28 +29,16 @@ class SendBundleRequest(private val bundleParams: BundleParams) :
 
 class SendBundleResponse : org.web3j.protocol.core.Response<SendBundleResponse.SendBundleResponseData>() {
 
-  @Override
-  @JsonDeserialize(using = SendBundleResponseDeserializer::class)
-  override fun setResult(result: SendBundleResponseData) {
-    super.setResult(result)
-  }
-
-  data class SendBundleResponseData(val bundleHash: String)
-}
-
-class SendBundleResponseDeserializer : JsonDeserializer<SendBundleResponse.SendBundleResponseData>() {
-  private val objectReader: ObjectReader = jacksonObjectMapper().reader()
-
-  override fun deserialize(
-    jsonParser: JsonParser,
-    deserializationContext: DeserializationContext,
-  ): SendBundleResponse.SendBundleResponseData? {
-    return if (jsonParser.currentToken != JsonToken.VALUE_NULL) {
-      objectReader.readValue(jsonParser, SendBundleResponse.SendBundleResponseData::class.java)
-    } else {
-      null
-    }
-  }
+  // web3j's Service deserializes responses with its own internal Jackson databind engine (as of
+  // web3j 5.0.3, that's Jackson 3's tools.jackson.databind, not com.fasterxml.jackson.databind),
+  // which has no knowledge of Kotlin data class constructors. jackson-annotations (JsonCreator/
+  // JsonProperty) is the one Jackson module shared unchanged across the 2.x/3.x split, so
+  // annotating the constructor directly (rather than registering a custom JsonDeserializer via
+  // @JsonDeserialize, whose com.fasterxml annotation type Jackson 3's engine doesn't recognize)
+  // works regardless of which databind engine ends up parsing the response.
+  data class SendBundleResponseData
+  @JsonCreator
+  constructor(@JsonProperty("bundleHash") val bundleHash: String)
 }
 
 fun SendBundleResponse.assertSuccessResponse() {
