@@ -470,9 +470,9 @@ def _encode_rollup_public_inputs(pi: RollupPublicInput) -> dict:
         "filteredAddressesHash": _hx(pi.filtered_addresses_hash),
         "parentShnarf": _hx(pi.parent_shnarf),
         "endShnarf": _hx(pi.end_shnarf),
-        # §ProgramVK anchoring: single order-preserving distinct list of ALL
-        # guest program VKs verified beneath this proof, checked against L1's
-        # single combined approved-VK set (exec vs rollup not distinguished).
+        # §ProgramVK anchoring: canonical sorted, distinct list of ALL guest
+        # program VKs verified beneath this proof, checked against L1's single
+        # combined approved-VK set (exec vs rollup not distinguished).
         "programVks": [_hx(v) for v in pi.program_vks],
     }
 
