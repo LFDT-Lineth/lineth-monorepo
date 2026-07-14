@@ -1,5 +1,3 @@
-include "fold_noop.zkc"
-
 fn check_u_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rd_decoded:Register, imm_decoded:DoubleWord) {
     var imm20:u20
     var rd:Register

@@ -1,14 +1,12 @@
 include "../riscv/utils/sign_extend.zkc"
 include "../common/constants.zkc"
 include "../common/type.zkc"
-include "check/check_b_type_classification.zkc"
-include "check/check_b_type_operands.zkc"
+include "check/check_b_type.zkc"
 include "check/check_i_type.zkc"
 include "check/check_r_type.zkc"
 include "check/check_j_type.zkc"
 include "check/check_u_type.zkc"
-include "check/check_s_type_classification.zkc"
-include "check/check_s_type_operands.zkc"
+include "check/check_s_type.zkc"
 
 // Verify that the raw instruction word `instruction` decodes to the pre-decoded
 // record `decoded[index]`.
@@ -30,18 +28,22 @@ fn predecoding(index:u64, instruction:Instruction) {
     var instruction_type:Type = instruction_type_from_opcode(opcode)
     switch instruction_type {
         case B_TYPE: {
-            check_b_type_classification(instruction_parameters, compute_op)
-            check_b_type_operands(index, instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
+            check_b_type(index, instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
         }
         case S_TYPE: {
-            check_s_type_classification(instruction_parameters, compute_op)
-            check_s_type_operands(index, instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
+            check_s_type(index, instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
         }
         case J_TYPE: {
             check_j_type(index, instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
         }
         case U_TYPE: {
             check_u_type(index, instruction_parameters, opcode, compute_op, rd_decoded, imm_decoded)
+        }
+        case I_TYPE: {
+            check_i_type(index, instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
+        }
+        case R_TYPE: {
+            check_r_type(index, instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
         }
         case MISC_MEM_TYPE: {
         }
