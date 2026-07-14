@@ -6,7 +6,12 @@ from ethereum.state import Address
 
 from .l1_rollup import FinalizationSubmission
 from .l2_execution import hash_address_list, hash_hash_list
-from .rollup import RollupProof, RollupPublicInput, recursive_stark_verify
+from .rollup import (
+    RollupProof,
+    RollupPublicInput,
+    VerifiableRollupProof,
+    recursive_stark_verify,
+)
 
 
 @dataclass
@@ -15,7 +20,7 @@ class RollupAggregationProofPrivateInput:
     Logical rollup-aggregation request. The topology is flat across M rollup
     proofs, as specified in Readme.md section 2.3.
     """
-    rollup_proofs: List[RollupProof]
+    rollup_proofs: List[VerifiableRollupProof]
 
 
 def run_rollup_aggregation_guest(
@@ -33,14 +38,17 @@ def run_rollup_aggregation_guest(
     if len(aggregation_input.rollup_proofs) == 0:
         raise Exception("rollup-aggregation proof must consume at least one rollup proof")
 
-    for proof in aggregation_input.rollup_proofs:
-        verify_rollup_proof(proof.program_vk, proof)
+    for vp in aggregation_input.rollup_proofs:
+        verify_rollup_proof(vp.program_vk, vp.proof)
 
-    for left, right in zip(aggregation_input.rollup_proofs, aggregation_input.rollup_proofs[1:]):
+    # Unwrap once: continuity and boundary aggregation only need the
+    # guest-emitted `RollupProof`, not the coordinator-attached VK.
+    rollup_proofs = [vp.proof for vp in aggregation_input.rollup_proofs]
+    for left, right in zip(rollup_proofs, rollup_proofs[1:]):
         assert_rollup_proof_continuity(left, right)
 
-    first_proof = aggregation_input.rollup_proofs[0]
-    last_proof = aggregation_input.rollup_proofs[-1]
+    first_proof = rollup_proofs[0]
+    last_proof = rollup_proofs[-1]
     merged_l2_l1_roots: List[Hash32] = []
     merged_filtered_addresses: List[Address] = []
 
@@ -55,16 +63,16 @@ def run_rollup_aggregation_guest(
     seen_rollup_vks: Set[Hash32] = set()
     program_vk_set: Set[Hash32] = set()
 
-    for proof in aggregation_input.rollup_proofs:
-        merged_l2_l1_roots.extend(proof.l2_l1_roots)
-        merged_filtered_addresses.extend(proof.filtered_addresses)
-        if proof.program_vk not in seen_rollup_vks:
-            seen_rollup_vks.add(proof.program_vk)
-            rollup_vks.append(proof.program_vk)
+    for vp in aggregation_input.rollup_proofs:
+        merged_l2_l1_roots.extend(vp.proof.l2_l1_roots)
+        merged_filtered_addresses.extend(vp.proof.filtered_addresses)
+        if vp.program_vk not in seen_rollup_vks:
+            seen_rollup_vks.add(vp.program_vk)
+            rollup_vks.append(vp.program_vk)
         # Union in the bubbled exec VKs verified beneath this rollup proof, plus
         # the rollup proof's own VK.
-        program_vk_set.update(proof.public_inputs.program_vks)
-        program_vk_set.add(proof.program_vk)
+        program_vk_set.update(vp.proof.public_inputs.program_vks)
+        program_vk_set.add(vp.program_vk)
 
     # Canonical set encoding: sorted ascending by byte value (Hash32 is bytes).
     program_vks = sorted(program_vk_set)

@@ -317,7 +317,8 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     assert blob.block_rlps == [bytes.fromhex("f90215a0"), bytes.fromhex("f90216b1")]
 
     assert len(req.l2_execution_proofs) == 1
-    proof = req.l2_execution_proofs[0]
+    verifiable = req.l2_execution_proofs[0]
+    proof = verifiable.proof
     assert bytes(proof.proof) == bytes.fromhex("abcdef")
     assert int(proof.start_block_number) == 1000501
     # endBlockNumber is read from the public inputs, not a wrapper field.
@@ -329,8 +330,9 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     assert proof.l2_l1_messages == [Hash32(bytes([0x08]) * 32)]
     assert proof.tx_froms == [Address(bytes([0x01]) * 20), Address(bytes([0x02]) * 20)]
     assert proof.filtered_addresses == [Address(bytes([0x03]) * 20), Address(bytes([0x04]) * 20)]
-    # §ProgramVK anchoring: the exec proof's VK is read from the request.
-    assert proof.program_vk == _EXEC_VK
+    # §ProgramVK anchoring: the exec proof's VK is read from the request, onto
+    # the coordinator-populated wrapper, not the guest-emitted proof itself.
+    assert verifiable.program_vk == _EXEC_VK
 
 
 def test_decode_rollup_request_missing_field_is_rejected() -> None:
@@ -454,16 +456,18 @@ def test_decode_aggregation_request_maps_all_fields() -> None:
     req = decode_aggregation_request(_valid_aggregation_request())
 
     assert len(req.rollup_proofs) == 1
-    proof = req.rollup_proofs[0]
+    verifiable = req.rollup_proofs[0]
+    proof = verifiable.proof
     assert bytes(proof.proof) == bytes.fromhex("abcdef")
     assert int(proof.start_block_number) == 1000501
     # endBlockNumber is read from the public inputs, not a wrapper field.
     assert int(proof.public_inputs.end_block_number) == 1000520
     assert proof.l2_l1_roots == [Hash32(bytes([0x77]) * 32), Hash32(bytes([0x88]) * 32)]
     assert proof.filtered_addresses == [Address(bytes([0x01]) * 20)]
-    # §ProgramVK anchoring: the rollup proof's own VK, plus its single combined
-    # program_vks list (here the exec VK it verified).
-    assert proof.program_vk == _ROLLUP_VK
+    # §ProgramVK anchoring: the rollup proof's own VK, on the coordinator-
+    # populated wrapper, plus its single combined program_vks list (here the
+    # exec VK it verified).
+    assert verifiable.program_vk == _ROLLUP_VK
     assert proof.public_inputs.program_vks == [_EXEC_VK]
 
     pi = proof.public_inputs

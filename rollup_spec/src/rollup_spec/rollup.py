@@ -30,6 +30,7 @@ from .block import block_hash, decode_block_rlp
 from .l2_execution import (
     L2ExecutionProof,
     L2ExecutionProofPublicInput,
+    VerifiableL2ExecutionProof,
     hash_address_list,
     hash_hash_list,
 )
@@ -313,15 +314,15 @@ class RollupProofPrivateInput:
     parent_shnarf: Hash32
     chain_id: U64
     blobs: List[BlobWitness]
-    l2_execution_proofs: List[L2ExecutionProof]
+    l2_execution_proofs: List[VerifiableL2ExecutionProof]
 
 
 @dataclass
 class RollupProof:
     """
-    A rollup proof as the rollup-aggregation guest consumes it: the guest
-    *output* (the 14-field `public_inputs` tuple + the root/address preimages)
-    plus the `proof` bytes the aggregation guest recursively verifies.
+    A rollup proof as the rollup guest emits it: the guest *output* (the
+    14-field `public_inputs` tuple + the root/address preimages) plus the
+    `proof` bytes the aggregation guest recursively verifies.
 
     Guest/prover boundary: the guest emits `public_inputs` and the preimage
     lists only; `proof` is attached by the zkVM/prover layer above — a guest
@@ -331,20 +332,33 @@ class RollupProof:
     `public_inputs.end_block_number`. Only `start_block_number` (not in the PI
     tuple) is carried, so the aggregation guest can verify proof tiling.
 
-    `program_vk` is the rollup guest's own verifying-key commitment. Like
-    `L2ExecutionProof.program_vk`, it is a *runtime input* the coordinator
-    supplies for the rollup-aggregation guest's recursive verification of this
-    proof (bubbled up into the aggregation's `rollup_vks`); it is NOT part of the
-    rollup PI, and `run_rollup_guest` never sets it (a guest cannot attest its
-    own VK). It is populated by the aggregation request codec; the zero-hash
-    default is only a placeholder for reference-model construction.
+    This type has no verifying-key field: a guest cannot attest its own VK, so
+    `run_rollup_guest` never produces one. See `VerifiableRollupProof` for the
+    coordinator-populated wrapper the rollup-aggregation guest actually
+    consumes.
     """
     public_inputs: RollupPublicInput
     start_block_number: U64
     proof: bytes = b""
     l2_l1_roots: List[Hash32] = field(default_factory=list)
     filtered_addresses: List[Address] = field(default_factory=list)
-    program_vk: Hash32 = ZERO_HASH32  # runtime input supplied by the coordinator
+
+
+@dataclass
+class VerifiableRollupProof:
+    """
+    A `RollupProof` paired with the `program_vk` the rollup-aggregation guest
+    recursively verifies it against (§ProgramVK anchoring).
+
+    `program_vk` is a *runtime input* the coordinator supplies — the same
+    value it verifies `proof` against here is the value merged into the
+    aggregation guest's `program_vks` public output, so the anchored VK is
+    provably the key the verification ran against. Never produced by
+    `run_rollup_guest` (a guest cannot attest its own VK); only the
+    rollup-aggregation request codec constructs this wrapper.
+    """
+    proof: RollupProof
+    program_vk: Hash32
 
 
 def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
@@ -395,8 +409,11 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
 
     blob_start_block_number = rollup_input.blobs[0].block_number_range[0]
     blob_end_block_number = rollup_input.blobs[-1].block_number_range[1]
+    # Unwrap once: everything below except the recursive-verify loop only needs
+    # the guest-emitted `L2ExecutionProof`, not the coordinator-attached VK.
+    l2_execution_proofs = [vp.proof for vp in rollup_input.l2_execution_proofs]
     verify_l2_execution_proof_tiling(
-        rollup_input.l2_execution_proofs,
+        l2_execution_proofs,
         blob_start_block_number,
         blob_end_block_number,
     )
@@ -407,17 +424,17 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     truncated_froms: List[Address] = []
     truncated_block_hashes = [block.block_hash for block in truncated_blocks]
 
-    for proof in rollup_input.l2_execution_proofs:
-        verify_l2_execution_proof(proof.program_vk, proof)
-        concatenated_froms.extend(proof.tx_froms)
-        concatenated_l2_l1_messages.extend(proof.l2_l1_messages)
-        concatenated_filtered_addresses.extend(proof.filtered_addresses)
+    for verifiable_proof in rollup_input.l2_execution_proofs:
+        verify_l2_execution_proof(verifiable_proof.program_vk, verifiable_proof.proof)
+        concatenated_froms.extend(verifiable_proof.proof.tx_froms)
+        concatenated_l2_l1_messages.extend(verifiable_proof.proof.l2_l1_messages)
+        concatenated_filtered_addresses.extend(verifiable_proof.proof.filtered_addresses)
 
     # The exec program VKs verified beneath this rollup proof, emitted as a
     # CANONICAL sorted, distinct list (§ProgramVK anchoring): semantically a set,
     # sorted so the commitment is a pure function of its contents. `Hash32` is a
     # bytes subclass, so `sorted` orders ascending by byte value.
-    program_vks = sorted({proof.program_vk for proof in rollup_input.l2_execution_proofs})
+    program_vks = sorted({vp.program_vk for vp in rollup_input.l2_execution_proofs})
 
     for block in truncated_blocks:
         truncated_froms.extend(block.froms)
@@ -425,9 +442,9 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     if concatenated_froms != truncated_froms:
         raise Exception("l2-execution proof txFroms do not match blob blockData.froms")
 
-    first_proof = rollup_input.l2_execution_proofs[0]
-    last_proof = rollup_input.l2_execution_proofs[-1]
-    for proof in rollup_input.l2_execution_proofs:
+    first_proof = l2_execution_proofs[0]
+    last_proof = l2_execution_proofs[-1]
+    for proof in l2_execution_proofs:
         boundary_index = int(proof.public_inputs.end_block_number) - blob_start_block_number
         if boundary_index < 0 or boundary_index >= len(truncated_block_hashes):
             raise Exception("l2-execution proof boundary falls outside the blob block range")
@@ -456,7 +473,7 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
                 f"parent_hash != previous block's hash"
             )
 
-    for left, right in zip(rollup_input.l2_execution_proofs, rollup_input.l2_execution_proofs[1:]):
+    for left, right in zip(l2_execution_proofs, l2_execution_proofs[1:]):
         assert_l2_execution_continuity(left.public_inputs, right.public_inputs)
 
     l2_l1_roots, l2_l1_bridge_transaction_tree = build_l2_messages_tree(
