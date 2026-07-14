@@ -63,38 +63,38 @@ func (table MultiSizeTable) Encode(encoders []*RSEncoder) MultiSizeTable {
 	return encoded
 }
 
-// Merkleize merkleizes the table using Poseidon2. The encoded table is hashed
-// line-by-line to form the leaves and auxiliary leaves of a [Tree]. The tree
-// is then built from these leaves.
+// Merkleize merkleizes the table using Poseidon2. Every table but the bottom
+// (largest) one is digested as conjugate pairs, one tree depth shallower than
+// its own size, so it folds the same way the bottom table's leaf pairs do.
 func (table MultiSizeTable) Merkleize() *Tree {
 
-	// leaves stores the Merkle leaves of the tree
-	leaves := make([][]field.Octuplet, len(table))
+	bottom := len(table) - 1
+
+	// One slot wider than table: shallowest slot (index 0's shifted pair)
+	// would otherwise be a negative index.
+	leaves := make([][]field.Octuplet, len(table)+1)
 	hasher := poseidon2.NewMDHasher()
 
-	for i := range table {
+	if table[bottom].NumRows() > 0 {
+		size := table[bottom].Size()
+		leaves[len(leaves)-1] = make([]field.Octuplet, size)
+		for j := range size {
+			hasher.Reset()
+			writeRowElements(hasher, table[bottom], j)
+			leaves[len(leaves)-1][j] = hasher.SumDigest()
+		}
+	}
+
+	for i := range bottom {
 		if table[i].NumRows() == 0 {
 			continue
 		}
-
 		size := table[i].Size()
-		leaves[i] = make([]field.Octuplet, size)
-
-		for j := range size {
+		leaves[i] = make([]field.Octuplet, size/2)
+		for j := range size / 2 {
 			hasher.Reset()
-
-			for k := range table[i].Base {
-				hasher.WriteElements(table[i].Base[k][j])
-			}
-
-			for k := range table[i].Ext {
-				ext := table[i].Ext[k][j]
-				hasher.WriteElements(
-					ext.B0.A0, ext.B0.A1,
-					ext.B1.A0, ext.B1.A1,
-					ext.B2.A0, ext.B2.A1)
-			}
-
+			writeRowElements(hasher, table[i], 2*j)
+			writeRowElements(hasher, table[i], 2*j+1)
 			leaves[i][j] = hasher.SumDigest()
 		}
 	}
@@ -113,6 +113,21 @@ func (table MultiSizeTable) Merkleize() *Tree {
 	}
 
 	return NewTree(leaves)
+}
+
+// writeRowElements absorbs one row into hasher without resetting or summing,
+// so a caller can digest several rows into one combined value.
+func writeRowElements(hasher *poseidon2.MDHasher, t SizedTable, row int) {
+	for k := range t.Base {
+		hasher.WriteElements(t.Base[k][row])
+	}
+	for k := range t.Ext {
+		ext := t.Ext[k][row]
+		hasher.WriteElements(
+			ext.B0.A0, ext.B0.A1,
+			ext.B1.A0, ext.B1.A1,
+			ext.B2.A0, ext.B2.A1)
+	}
 }
 
 // Shape returns the per-size row counts of the batch, discarding the

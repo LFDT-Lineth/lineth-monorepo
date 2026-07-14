@@ -481,18 +481,15 @@ type OpeningProof struct {
 // InputQuery holds the PCS input-tree openings for one FRI query.
 type InputQuery []InputTreeOpening
 
-// InputTreeOpening is a Merkle branch whose path leaves are opened as row preimages.
-// ConjugateLeaf is the row at the round-0 fold-conjugate position s^1; it is
-// non-nil iff this branch backs the top level (the only level folded as a
-// conjugate pair straight out of an input tree). Its Merkle digest is derived
-// from it rather than transmitted, so for a top branch Siblings holds one
-// fewer entry than AuxSiblings.
+// InputTreeOpening is a Merkle branch whose path leaves are opened as row
+// preimages.
 type InputTreeOpening struct {
-	Leaf          RowOpening
-	ConjugateLeaf *RowOpening
-	Siblings      []field.Octuplet
-	AuxSiblings   []*RowOpening
+	Siblings []field.Octuplet
+	Leaves   []*RowPair // Leaves along the way, when they exist, starting from the root down
 }
+
+// RowPair holds one level's conjugate row pair (see MultiSizeTable.Merkleize):
+type RowPair [2]RowOpening
 
 // RowOpening is one MultiSizeTable.Merkleize row preimage.
 type RowOpening struct {
@@ -951,19 +948,19 @@ func openInputTreeOpening(p Params, committed CommitterState, queryPosition int)
 	}
 	leafIndex := queryPosition / (p.N / numLeaves)
 	branch := tree.OpenBranch(leafIndex)
-	siblings := branch.Siblings
 	input := InputTreeOpening{
-		Leaf:        openEncodedRowAtSize(committed.EncodedTable, numLeaves, leafIndex),
-		AuxSiblings: make([]*RowOpening, len(branch.AuxSiblings)),
+		// The bottom level's own sibling digest is derived from its pair
+		// (below) rather than transmitted.
+		Siblings: branch.Siblings[:len(branch.Siblings)-1],
+		// The last slot is otherwise always vacant (see Merkleize: nothing
+		// shifts to the depth just above the bottom level), so it is
+		// repurposed for the bottom level's own mandatory pair.
+		Leaves: make([]*RowPair, len(branch.AuxSiblings)),
 	}
-	if numLeaves == p.N {
-		conjugate := openEncodedRowAtSize(committed.EncodedTable, numLeaves, leafIndex^1)
-		input.ConjugateLeaf = &conjugate
-		// The conjugate's own deepest Merkle digest is derived from it in
-		// RecoverRoot rather than transmitted.
-		siblings = siblings[:len(siblings)-1]
+	input.Leaves[len(input.Leaves)-1] = &RowPair{
+		openEncodedRowAtSize(committed.EncodedTable, numLeaves, leafIndex),
+		openEncodedRowAtSize(committed.EncodedTable, numLeaves, leafIndex^1),
 	}
-	input.Siblings = siblings
 	for sizeLog2 := range committed.EncodedTable {
 		table := committed.EncodedTable[sizeLog2]
 		if table.NumRows() == 0 || table.Size() == numLeaves {
@@ -973,12 +970,15 @@ func openInputTreeOpening(p Params, committed CommitterState, queryPosition int)
 		if levelSize > numLeaves || numLeaves%levelSize != 0 {
 			panic("fri: openInputTreeOpening: level size incompatible with tree size")
 		}
-		levelLog := bits.TrailingZeros(uint(levelSize))
-		if levelLog >= len(input.AuxSiblings) {
+		levelLog := bits.TrailingZeros(uint(levelSize)) - 1 // one depth shallower than levelSize (see Merkleize)
+		if levelLog < 0 || levelLog >= len(input.Leaves)-1 {
 			panic("fri: openInputTreeOpening: level size absent from branch")
 		}
-		row := openEncodedRow(table, leafIndex/(numLeaves/levelSize))
-		input.AuxSiblings[levelLog] = &row
+		base := leafIndex / (numLeaves / levelSize)
+		input.Leaves[levelLog] = &RowPair{
+			openEncodedRow(table, base),
+			openEncodedRow(table, base^1),
+		}
 	}
 	return input
 }
@@ -1024,40 +1024,53 @@ func openEncodedRow(table SizedTable, row int) RowOpening {
 
 func hashRowOpening(row RowOpening) field.Octuplet {
 	hasher := poseidon2.NewMDHasher()
+	writeRowOpeningElements(hasher, row)
+	return hasher.SumDigest()
+}
+
+// hashAuxPair must match Merkleize's even-before-odd hash order regardless of
+// which one is Self, hence selfIsEven.
+func hashAuxPair(pair RowPair, selfIsEven bool) field.Octuplet {
+	hasher := poseidon2.NewMDHasher()
+	if selfIsEven {
+		writeRowOpeningElements(hasher, pair[0])
+		writeRowOpeningElements(hasher, pair[1])
+	} else {
+		writeRowOpeningElements(hasher, pair[1])
+		writeRowOpeningElements(hasher, pair[0])
+	}
+	return hasher.SumDigest()
+}
+
+func writeRowOpeningElements(hasher *poseidon2.MDHasher, row RowOpening) {
 	for _, base := range row.Base {
 		hasher.WriteElements(base)
 	}
 	for _, ext := range row.Ext {
 		hasher.WriteElements(ext.B0.A0, ext.B0.A1, ext.B1.A0, ext.B1.A1, ext.B2.A0, ext.B2.A1)
 	}
-	return hasher.SumDigest()
 }
 
-// RecoverRoot folds this branch's rows up to the tree root. If ConjugateLeaf
-// is set, the deepest step combines Leaf and ConjugateLeaf directly instead of
-// reading a transmitted digest for that level, so Siblings must then hold one
-// fewer entry than AuxSiblings.
+// RecoverRoot folds this branch's rows up to the tree root. The bottom
+// (deepest) level's own step combines its pair directly instead of reading a
+// transmitted sibling digest, so Siblings holds one fewer entry than
+// Leaves.
 func (branch InputTreeOpening) RecoverRoot(idx int) (field.Octuplet, error) {
-	numLevels := len(branch.AuxSiblings)
-	wantSiblings := numLevels
-	if branch.ConjugateLeaf != nil {
-		wantSiblings--
+	numLevels := len(branch.Leaves)
+	if numLevels == 0 || branch.Leaves[numLevels-1] == nil {
+		return field.Octuplet{}, fmt.Errorf("malformed proof: missing bottom level")
 	}
-	if len(branch.Siblings) != wantSiblings {
+	if len(branch.Siblings) != numLevels-1 {
 		return field.Octuplet{}, fmt.Errorf("malformed proof")
 	}
 
-	ancestor := hashRowOpening(branch.Leaf)
-	currPos := idx
+	bottom := branch.Leaves[numLevels-1]
+	ancestor := hashRowOpening(bottom[0])
+	sibling := hashRowOpening(bottom[1])
+	ancestor, currPos := foldOneLevel(ancestor, sibling, nil, idx)
 
-	if branch.ConjugateLeaf != nil {
-		opening := hashRowOpening(*branch.ConjugateLeaf)
-		ancestor, currPos = foldOneLevel(ancestor, opening, branch.AuxSiblings[numLevels-1], currPos)
-		numLevels--
-	}
-
-	for i := numLevels - 1; i >= 0; i-- {
-		ancestor, currPos = foldOneLevel(ancestor, branch.Siblings[i], branch.AuxSiblings[i], currPos)
+	for i := numLevels - 2; i >= 0; i-- {
+		ancestor, currPos = foldOneLevel(ancestor, branch.Siblings[i], branch.Leaves[i], currPos)
 	}
 	if currPos > 0 {
 		return field.Octuplet{}, fmt.Errorf("all bits of currPos should have been bitshifted beyond LSb")
@@ -1065,40 +1078,63 @@ func (branch InputTreeOpening) RecoverRoot(idx int) (field.Octuplet, error) {
 	return ancestor, nil
 }
 
-func foldOneLevel(ancestor, sibling field.Octuplet, aux *RowOpening, currPos int) (field.Octuplet, int) {
+func foldOneLevel(ancestor, sibling field.Octuplet, aux *RowPair, currPos int) (field.Octuplet, int) {
+	selfIsEven := currPos&1 == 0
 	left, right := ancestor, sibling
-	if currPos&1 > 0 {
+	if !selfIsEven {
 		left, right = right, left
 	}
 	var auxDigest *field.Octuplet
 	if aux != nil {
-		hashed := hashRowOpening(*aux)
+		hashed := hashAuxPair(*aux, selfIsEven)
 		auxDigest = &hashed
 	}
 	return hashNode(left, right, auxDigest), currPos >> 1
 }
 
-func (branch InputTreeOpening) rowAtLevel(levelSize int) (RowOpening, error) {
+// levelIndex resolves levelSize to its index into branch.Leaves. The bottom
+// level keeps its own (unshifted) depth; every other level's pair attaches
+// one depth shallower than its size (see Merkleize).
+func (branch InputTreeOpening) levelIndex(levelSize int) (int, error) {
 	if levelSize <= 0 || levelSize&(levelSize-1) != 0 {
-		return RowOpening{}, fmt.Errorf("levelSize must be a positive power of two")
+		return 0, fmt.Errorf("levelSize must be a positive power of two")
 	}
 
-	treeLeaves := 1 << len(branch.AuxSiblings)
+	treeLeaves := 1 << len(branch.Leaves)
 	if levelSize > treeLeaves {
-		return RowOpening{}, fmt.Errorf("levelSize %d exceeds branch tree size %d", levelSize, treeLeaves)
-	}
-	if levelSize == treeLeaves {
-		return branch.Leaf, nil
+		return 0, fmt.Errorf("levelSize %d exceeds branch tree size %d", levelSize, treeLeaves)
 	}
 
-	levelLog := bits.TrailingZeros(uint(levelSize))
-	if levelLog >= len(branch.AuxSiblings) {
-		return RowOpening{}, fmt.Errorf("levelSize %d has no aux sibling in branch", levelSize)
+	if levelSize == treeLeaves {
+		return len(branch.Leaves) - 1, nil
 	}
-	if branch.AuxSiblings[levelLog] == nil {
-		return RowOpening{}, fmt.Errorf("levelSize %d is absent from branch", levelSize)
+	levelLog := bits.TrailingZeros(uint(levelSize)) - 1
+	if levelLog < 0 {
+		return 0, fmt.Errorf("levelSize %d has no aux sibling in branch", levelSize)
 	}
-	return *branch.AuxSiblings[levelLog], nil
+	return levelLog, nil
+}
+
+func (branch InputTreeOpening) rowAtLevel(levelSize int) (RowOpening, error) {
+	pair, err := branch.pairAtLevel(levelSize)
+	if err != nil {
+		return RowOpening{}, err
+	}
+	return pair[0], nil
+}
+
+// pairAtLevel returns the full conjugate pair at levelSize, so callers can
+// validate (or read) both the on-path row and its conjugate uniformly,
+// regardless of whether this level is the top one.
+func (branch InputTreeOpening) pairAtLevel(levelSize int) (*RowPair, error) {
+	levelLog, err := branch.levelIndex(levelSize)
+	if err != nil {
+		return nil, err
+	}
+	if branch.Leaves[levelLog] == nil {
+		return nil, fmt.Errorf("levelSize %d is absent from branch", levelSize)
+	}
+	return branch.Leaves[levelLog], nil
 }
 
 func reconstructQueryValueAt(
@@ -1130,10 +1166,11 @@ func reconstructQueryValueAt(
 		branch := opening[inputIndexByBatch[entry.BatchIdx]]
 		var row RowOpening
 		if sibling {
-			if branch.ConjugateLeaf == nil {
+			bottom := branch.Leaves[len(branch.Leaves)-1]
+			if bottom == nil {
 				return field.Ext{}, fmt.Errorf("fri: pcs.Verify: missing conjugate leaf for batch %d", entry.BatchIdx)
 			}
-			row = *branch.ConjugateLeaf
+			row = bottom[1]
 		} else {
 			row, err = branch.rowAtLevel(levelSize)
 			if err != nil {
@@ -1265,7 +1302,7 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 		// Round 0: bind the authenticated top-level leaves to the caller-supplied
 		// rows and reconstruct the conjugate pair.
 		if err = bindInputTreeOpenings("round 0", inputOpening, inputIndexByBatch,
-			pcs.Params.N, orders[0], layout[0], true, in.Shapes); err != nil {
+			pcs.Params.N, orders[0], layout[0], in.Shapes); err != nil {
 			return fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
 		}
 		self, err := reconstructQueryValueAt(pcs, layout[0], inputOpening, inputIndexByBatch, pcs.Params.N,
@@ -1298,7 +1335,7 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 				return err
 			}
 			if err = bindInputTreeOpenings(fmt.Sprintf("level %d", levelIdx), inputOpening, inputIndexByBatch,
-				levelSize, orders[levelIdx], bundle, false, in.Shapes); err != nil {
+				levelSize, orders[levelIdx], bundle, in.Shapes); err != nil {
 				return fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
 			}
 			value, err := reconstructQueryValueAt(pcs, bundle, inputOpening, inputIndexByBatch, levelSize,
@@ -1367,12 +1404,12 @@ func authenticateInputQuery(p Params, opening InputQuery, roots QueryLayerRoots,
 		return fmt.Errorf("input query has %d tree openings, want %d", len(opening), len(roots))
 	}
 	for i, branch := range opening {
-		numLeaves := 1 << len(branch.AuxSiblings)
+		if len(branch.Leaves) == 0 || branch.Leaves[len(branch.Leaves)-1] == nil {
+			return fmt.Errorf("input tree %d: missing bottom level", i)
+		}
+		numLeaves := 1 << len(branch.Leaves)
 		if numLeaves > p.N || p.N%numLeaves != 0 {
 			return fmt.Errorf("input tree %d: tree size %d incompatible with domain size %d", i, numLeaves, p.N)
-		}
-		if (branch.ConjugateLeaf != nil) != (numLeaves == p.N) {
-			return fmt.Errorf("input tree %d: conjugate leaf presence inconsistent with tree size", i)
 		}
 		root, err := branch.RecoverRoot(queryPosition / (p.N / numLeaves))
 		if err != nil {
@@ -1385,12 +1422,14 @@ func authenticateInputQuery(p Params, opening InputQuery, roots QueryLayerRoots,
 	return nil
 }
 
-// bindInputTreeOpenings validates that each batch's authenticated branch carries a
-// row (and, at the top level, a conjugate sibling) matching its declared shape,
-// before reconstructQueryValueAt reads those same branches directly.
+// bindInputTreeOpenings validates that each batch's authenticated branch carries
+// a conjugate pair matching its declared shape, before reconstructQueryValueAt
+// reads those same branches directly. Both rows of the pair are checked, not
+// just the on-path one: the conjugate is unread by the fold today but is still
+// transmitted, so an unvalidated conjugate would be a malleable proof.
 func bindInputTreeOpenings(
 	label string, opening InputQuery, inputIndexByBatch []int,
-	levelSize int, order []int, bundle sizeBundle, top bool, shapes []Shape,
+	levelSize int, order []int, bundle sizeBundle, shapes []Shape,
 ) error {
 	for _, batchIdx := range order {
 		branchIdx := inputIndexByBatch[batchIdx]
@@ -1398,21 +1437,16 @@ func bindInputTreeOpenings(
 			return fmt.Errorf("%s: batch %d has no input opening", label, batchIdx)
 		}
 		branch := opening[branchIdx]
-		row, err := branch.rowAtLevel(levelSize)
+		pair, err := branch.pairAtLevel(levelSize)
 		if err != nil {
 			return fmt.Errorf("%s: tree %d level row: %w", label, branchIdx, err)
 		}
 		shape := shapes[batchIdx][bundle.SizeLog2]
-		if !rowOpeningMatchesShape(row, shape) {
+		if !rowOpeningMatchesShape(pair[0], shape) {
 			return fmt.Errorf("%s: tree %d row shape mismatch", label, branchIdx)
 		}
-		if !top {
-			continue
-		}
-		// authenticateInputQuery already established that a branch reachable
-		// from a top-level batch order carries a non-nil ConjugateLeaf.
-		if !rowOpeningMatchesShape(*branch.ConjugateLeaf, shape) {
-			return fmt.Errorf("%s: tree %d conjugate leaf shape mismatch", label, branchIdx)
+		if !rowOpeningMatchesShape(pair[1], shape) {
+			return fmt.Errorf("%s: tree %d conjugate row shape mismatch", label, branchIdx)
 		}
 	}
 	return nil

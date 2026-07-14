@@ -192,12 +192,9 @@ func TestVerifyRejectsProofMutations(t *testing.T) {
 	}
 }
 
-// TestVerifyRejectsSpuriousConjugateLeaf targets the non-malleability invariant
-// in authenticateInputQuery: a branch may carry a ConjugateLeaf iff it backs
-// the top level. The reflection-based mutation test above only mutates
-// existing values, so it can never flip a nil ConjugateLeaf to non-nil; this
-// test exercises that case directly.
-func TestVerifyRejectsSpuriousConjugateLeaf(t *testing.T) {
+// TestVerifyRejectsMissingBottomLevel targets authenticateInputQuery's
+// invariant that every branch's bottom (deepest) level pair is mandatory.
+func TestVerifyRejectsMissingBottomLevel(t *testing.T) {
 	prng := rand.New(utils.NewRandSource(20240607))
 
 	fx := newLDTFixture(t, 8, 4, 1)
@@ -211,13 +208,11 @@ func TestVerifyRejectsSpuriousConjugateLeaf(t *testing.T) {
 	proof := fx.open(t, alphaDeep, foldAlphas, positions)
 	require.NoError(t, fx.verify(alphaDeep, foldAlphas, positions, proof))
 
-	nonTop := &proof.InputQueries[0][1]
-	require.Nil(t, nonTop.ConjugateLeaf)
-	spurious := nonTop.Leaf
-	nonTop.ConjugateLeaf = &spurious
+	branch := &proof.InputQueries[0][1]
+	branch.Leaves[len(branch.Leaves)-1] = nil
 
 	err := fx.verify(alphaDeep, foldAlphas, positions, proof)
-	require.ErrorContains(t, err, "conjugate leaf presence inconsistent")
+	require.ErrorContains(t, err, "missing bottom level")
 }
 
 func TestPCSVerifyRejectsMutations(t *testing.T) {
@@ -239,22 +234,25 @@ func TestPCSVerifyRejectsMutations(t *testing.T) {
 		{
 			name: "tampered branch",
 			mutate: func(fx *pcsOpenVerifyFixture) {
-				fx.proof.InputQueries[0][0].Leaf.Ext[0].Add(&fx.proof.InputQueries[0][0].Leaf.Ext[0], &oneExt)
+				branch := fx.proof.InputQueries[0][0]
+				self := &branch.Leaves[len(branch.Leaves)-1][0]
+				self.Ext[0].Add(&self.Ext[0], &oneExt)
 			},
 			wantErr: "Merkle proof invalid",
 		},
 		{
 			name: "misaligned auxiliary row",
 			mutate: func(fx *pcsOpenVerifyFixture) {
-				row := openEncodedRow(fx.committed[0].EncodedTable[1], 0)
-				fx.proof.InputQueries[0][0].AuxSiblings[2] = &row
+				pair := fx.proof.InputQueries[0][0].Leaves[1]
+				pair[0].Ext[0].Add(&pair[0].Ext[0], &oneExt)
 			},
 			wantErr: "Merkle proof invalid",
 		},
 		{
 			name: "tampered top sibling row",
 			mutate: func(fx *pcsOpenVerifyFixture) {
-				conjugate := fx.proof.InputQueries[0][0].ConjugateLeaf
+				branch := fx.proof.InputQueries[0][0]
+				conjugate := &branch.Leaves[len(branch.Leaves)-1][1]
 				conjugate.Ext[0].Add(&conjugate.Ext[0], &oneExt)
 			},
 			wantErr: "Merkle proof invalid",

@@ -235,7 +235,8 @@ func TestProveVerify(t *testing.T) {
 			}
 
 			// Tampering an opened input leaf must make verification fail.
-			proof.InputQueries[0][0].Leaf.Ext[0] = field.PseudoRandExt(prng)
+			branch := proof.InputQueries[0][0]
+			branch.Leaves[len(branch.Leaves)-1][0].Ext[0] = field.PseudoRandExt(prng)
 			if err := fx.verify(alphaDeep, foldAlphas, positions, proof); err == nil {
 				t.Fatalf("Verify accepted a proof with a tampered leaf")
 			}
@@ -282,7 +283,8 @@ func TestProverStateOpenLoopsOverLevelTrees(t *testing.T) {
 		assert.Equal(t, fx.roots[2+i], root)
 	}
 
-	proof.InputQueries[0][1].Leaf.Ext[0] = field.PseudoRandExt(prng)
+	branch := proof.InputQueries[0][1]
+	branch.Leaves[len(branch.Leaves)-1][0].Ext[0] = field.PseudoRandExt(prng)
 	require.Error(t, fx.verify(alphaDeep, foldAlphas, positions, proof))
 }
 

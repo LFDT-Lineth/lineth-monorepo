@@ -153,6 +153,13 @@ func TestOpenInputTreeOpeningAlignsMultiSizeRows(t *testing.T) {
 		leaf, err := branch.rowAtLevel(len(levelEvals))
 		require.NoError(t, err, name)
 		assert.Equal(t, digestSizedRow(encoded[2], base), hashRowOpening(leaf), name)
+
+		// The aux level's conjugate row (base^1) is carried alongside the
+		// on-path row, one tree depth shallower than the level's own size.
+		pair := branch.Leaves[2]
+		require.NotNil(t, pair, name)
+		assert.Equal(t, digestSizedRow(encoded[2], base), hashRowOpening(pair[0]), name)
+		assert.Equal(t, digestSizedRow(encoded[2], base^1), hashRowOpening(pair[1]), name)
 	}
 	checkInputTreeOpening("first tree", openInputTreeOpening(params, CommitterState{Tree: tree, EncodedTable: encoded}, query), tree, encoded)
 	checkInputTreeOpening("second tree", openInputTreeOpening(params, CommitterState{Tree: otherTree, EncodedTable: otherEncoded}, query), otherTree, otherEncoded)
