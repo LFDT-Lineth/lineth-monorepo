@@ -45,7 +45,23 @@ fn predecoding(index:u64, instruction:Instruction) {
         case R_TYPE: {
             check_r_type(index, instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
         }
+        case UNDEFINED_TYPE: {
+            // Unknown opcode (padding, embedded data, CSR, etc.) → COMPUTE_INVALID.
+            if compute_op != COMPUTE_INVALID {
+                printf "[ERROR] undefined opcode requires COMPUTE_INVALID (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                fail
+            }
+        }
         case MISC_MEM_TYPE: {
+            // FENCE / FENCE.I — no-op on this implementation.
+            if opcode != OPCODE_MISCMEM {
+                printf "[ERROR] invalid MISC_MEM opcode (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
+                fail
+            }
+            if compute_op != COMPUTE_MISC_MEM {
+                printf "[ERROR] MISC_MEM requires COMPUTE_MISC_MEM (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                fail
+            }
         }
         default: {
             printf "[ERROR] invalid instruction type (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
