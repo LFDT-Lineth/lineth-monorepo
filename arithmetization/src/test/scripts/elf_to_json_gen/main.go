@@ -964,25 +964,91 @@ func readSectionBytes(s *elf.Section) []byte {
 	return data
 }
 
-// buildDecodedProgram statically decodes every 4-byte instruction word across
-// the executable region of the ELF, producing the base address plus the
-// hex-encoded decoded input array. The array is
-// dense (one record per word in [base, end)), indexed at runtime by
-// index = (pc - base) >> 2.
-func buildDecodedProgram(sections []*elf.Section) (base uint64, nRecords uint64, decodedHex string) {
+// classifyInstruction mirrors buildDecodedProgram classification and
+// predecoding/classify/classify.zkc.
+func classifyInstruction(instr uint32) uint32 {
+	opcode := instr & 0x7f
+	rd := (instr >> 7) & 0x1f
+	funct3 := (instr >> 12) & 0x7
+	rs1 := (instr >> 15) & 0x1f
+	rs2 := (instr >> 20) & 0x1f
+	imm12 := (instr >> 20) & 0xfff
+	funct7 := (instr >> 25) & 0x7f
+
+	instrType := instructionTypeFromOpcode(opcode)
+	if isRdZeroNoop(opcode, instrType, rd, rs1, rs2, funct3, imm12, funct7) {
+		instrType = miscMemType
+	}
+
+	itypeLocalOp, _ := decodeITypeSemantic(opcode, funct3, imm12)
+	if instrType != iType {
+		itypeLocalOp = itypeInvalid
+	}
+	itypeLocalOp = itypeOpForRd(itypeLocalOp, rd)
+
+	rtypeLocalOp := decodeRTypeSemantic(opcode, funct3, funct7)
+	if instrType != rType {
+		rtypeLocalOp = rtypeInvalid
+	}
+	rtypeLocalOp = rtypeOpForRd(rtypeLocalOp, rd)
+
+	stypeLocalOp := decodeSTypeSemantic(funct3)
+	if instrType != sType {
+		stypeLocalOp = stypeInvalid
+	}
+
+	btypeLocalOp := decodeBTypeSemantic(funct3)
+	if instrType != bType {
+		btypeLocalOp = btypeInvalid
+	}
+
+	jtypeLocalOp := decodeJTypeSemantic(opcode)
+	if instrType != jType {
+		jtypeLocalOp = jtypeInvalid
+	}
+	jtypeLocalOp = jtypeOpForRd(jtypeLocalOp, rd)
+
+	utypeLocalOp := decodeUTypeSemantic(opcode)
+	if instrType != uType {
+		utypeLocalOp = utypeInvalid
+	}
+	utypeLocalOp = utypeOpForRd(utypeLocalOp, rd)
+
+	var localOp uint32
+	switch instrType {
+	case miscMemType:
+		localOp = 0
+	case iType:
+		localOp = itypeLocalOp
+	case rType:
+		localOp = rtypeLocalOp
+	case sType:
+		localOp = stypeLocalOp
+	case bType:
+		localOp = btypeLocalOp
+	case jType:
+		localOp = jtypeLocalOp
+	case uType:
+		localOp = utypeLocalOp
+	default:
+		localOp = itypeInvalid
+	}
+	return unifiedComputeOp(instrType, localOp)
+}
+
+// collectExecutableImage builds the dense zero-filled executable span used by
+// buildDecodedProgram.
+func collectExecutableImage(sections []*elf.Section) (base uint64, image []byte, nRecords uint64) {
 	var (
 		execSections []*elf.Section
 		minAddr      = ^uint64(0)
 		maxEnd       uint64
-		coveredBytes uint64
 	)
-	// Collect executable, file-backed sections.
 	for _, s := range sections {
 		if s.Size == 0 || s.Type == elf.SHT_NOBITS || s.Flags&elf.SHF_EXECINSTR == 0 {
 			continue
 		}
 		execSections = append(execSections, s)
-		coveredBytes += s.Size
 		if s.Addr < minAddr {
 			minAddr = s.Addr
 		}
@@ -993,28 +1059,30 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, nRecords uint64,
 	if len(execSections) == 0 {
 		panic("no executable sections found for instruction decoding")
 	}
-	if len(execSections) > 1 {
-		fmt.Fprintf(os.Stderr, "warning: %d executable sections found; the decoded tables densely cover the whole span\n",
-			len(execSections))
-	}
-	// Align base down and end up to a 4-byte instruction boundary.
 	base = minAddr &^ 0x3
 	end := (maxEnd + 3) &^ uint64(0x3)
 	nRecords = (end - base) / 4
-	// OOM safeguard: reject an implausibly large span (e.g. far-apart
-	// executable sections that would otherwise be densely filled).
+	image = make([]byte, end-base)
+	for _, s := range execSections {
+		data := readSectionBytes(s)
+		copy(image[s.Addr-base:], data)
+	}
+	return base, image, nRecords
+}
+
+// buildDecodedProgram statically decodes every 4-byte instruction word across
+// the executable region of the ELF, producing the base address plus the
+// hex-encoded decoded input array. The array is
+// dense (one record per word in [base, end)), indexed at runtime by
+// index = (pc - base) >> 2.
+func buildDecodedProgram(sections []*elf.Section) (base uint64, nRecords uint64, decodedHex string) {
+	base, image, nRecords := collectExecutableImage(sections)
 	maxRecords := maxDecodedRecordsFromEnv()
 	if nRecords > maxRecords {
 		fmt.Fprintf(os.Stderr,
 			"error: decoded program would have %d records (cap %d); executable span [%#x, %#x) is likely non-contiguous\n",
-			nRecords, maxRecords, base, end)
+			nRecords, maxRecords, base, base+nRecords*4)
 		os.Exit(1)
-	}
-	// Build a flat byte image of the executable span (zero-filled gaps).
-	image := make([]byte, end-base)
-	for _, s := range execSections {
-		data := readSectionBytes(s)
-		copy(image[s.Addr-base:], data)
 	}
 	// Decode each instruction word. Field bit widths MUST match the semantic
 	// types declared for the inputs in memory.zkc, because zkc packs input
@@ -1055,54 +1123,8 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, nRecords uint64,
 		}
 		itypeLocalOp = itypeOpForRd(itypeLocalOp, rd)
 
-		rtypeLocalOp := decodeRTypeSemantic(opcode, funct3, funct7)
-		if instrType != rType {
-			rtypeLocalOp = rtypeInvalid
-		}
-		rtypeLocalOp = rtypeOpForRd(rtypeLocalOp, rd)
-
-		stypeLocalOp := decodeSTypeSemantic(funct3)
-		if instrType != sType {
-			stypeLocalOp = stypeInvalid
-		}
-
-		btypeLocalOp := decodeBTypeSemantic(funct3)
-		if instrType != bType {
-			btypeLocalOp = btypeInvalid
-		}
-
-		jtypeLocalOp := decodeJTypeSemantic(opcode)
-		if instrType != jType {
-			jtypeLocalOp = jtypeInvalid
-		}
-		jtypeLocalOp = jtypeOpForRd(jtypeLocalOp, rd)
-
-		utypeLocalOp := decodeUTypeSemantic(opcode)
-		if instrType != uType {
-			utypeLocalOp = utypeInvalid
-		}
-		utypeLocalOp = utypeOpForRd(utypeLocalOp, rd)
-
-		var localOp uint32
-		switch instrType {
-		case miscMemType:
-			localOp = 0
-		case iType:
-			localOp = itypeLocalOp
-		case rType:
-			localOp = rtypeLocalOp
-		case sType:
-			localOp = stypeLocalOp
-		case bType:
-			localOp = btypeLocalOp
-		case jType:
-			localOp = jtypeLocalOp
-		case uType:
-			localOp = utypeLocalOp
-		default:
-			localOp = itypeInvalid
-		}
-		decodedBits.writeBits(uint64(unifiedComputeOp(instrType, localOp)), 8)
+		computeOp := classifyInstruction(instr)
+		decodedBits.writeBits(uint64(computeOp), 8)
 
 		opImm, opRs1, opRs2, opRd := unifiedOperands(instrType, normImm12, simm12, bImm, jImm, uImm, rs1, rs2, rd)
 		decodedBits.writeBits(opImm, 64)

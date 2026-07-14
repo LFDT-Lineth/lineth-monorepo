@@ -1,0 +1,18 @@
+// Mirrors isRdZeroNoop in elf_to_json_gen/main.go.
+// TYPE_B is defined in instruction_type.zkc (included by check_classification).
+
+fn is_rd_zero_noop(opcode:Opcode, instruction_type:Type, rd:Register, rs1:Register, rs2:Register, funct3:Funct3, imm12:Imm12, funct7:Funct7) -> (folded:Boolean) {
+    if rd != 0 {
+        folded = 0 as Boolean
+        return
+    }
+    switch instruction_type {
+        case TYPE_B: {
+            // Branches change control flow; isRdZeroNoop has no bType arm → always false.
+            folded = 0 as Boolean
+        }
+        default: {
+            folded = 0 as Boolean
+        }
+    }
+}

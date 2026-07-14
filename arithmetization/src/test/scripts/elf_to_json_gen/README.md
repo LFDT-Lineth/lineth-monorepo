@@ -248,21 +248,21 @@ fields and operands.
 | File | Role |
 | ---- | ---- |
 | `arithmetization/src/main/predecoding/main.zkc` | Entry point: linear scan over `instruction_count` indices |
-| `arithmetization/src/main/predecoding/predecoding.zkc` | Dispatches on `compute_op` to the per-type checkers |
-| `arithmetization/src/main/predecoding/check_types/check_{b,i,r,j,u,s}_type.zkc` | Per instruction-format verification (`check_b_type`, `check_i_type`, …) |
+| `arithmetization/src/main/predecoding/predecoding.zkc` | `classify_instruction` + per-type operand checkers |
+| `arithmetization/src/main/predecoding/classify/classify.zkc` | Mirrors `elf_to_json_gen` classification (`classify_instruction`) |
+| `arithmetization/src/main/predecoding/check_types/check_{b,i,r,j,u,s}_type.zkc` | Per instruction-format operand verification |
 | `arithmetization/src/main/predecoding/read_instruction.zkc` | Fetches the raw 32-bit word at `pc` from blobs |
 | `arithmetization/src/main/common/constants.zkc` | Canonical `OPCODE_*`, `FUNCT3_*`, `FUNCT7_*`, `RTYPE_*`, … constants |
 
-The checkers compare the pre-decoded record against what the raw instruction
-**must** encode for the claimed `compute_op` — e.g. `check_r_type.zkc` switches
-on `opcode` / `funct7` / `funct3` using named constants (`FUNCT3_MUL`,
-`FUNCT7_MUL`, `FUNCT3_KECCAK`, `FUNCT3_POSEIDON2`, …) and then verifies
-`rs1`/`rs2`/`rd`/`imm` operands match. `COMPUTE_MISC_MEM` and `COMPUTE_INVALID`
-slots are accepted without operand checks.
+`predecoding` first proves `classify_instruction(raw) == decoded[index].compute_op`
+(mirroring `classifyInstruction` in `main.go`), then the per-type checkers verify
+operands for supported ops. `COMPUTE_MISC_MEM` and `COMPUTE_INVALID` need no
+operand checks once classification matches.
 
 When adding a new instruction encoding to `decodeRTypeSemantic` (or any other
-`decode*Semantic` function), update the matching checker under `check_types/`
-and extend `main_test.go` so the Go decoder and ZkC verifier stay in sync.
+`decode*Semantic` function), update `predecoding/classify/`, the matching checker
+under `check_types/`, and extend `main_test.go` (`TestClassify*`) so the Go
+decoder and ZkC verifier stay in sync.
 
 ## Related files
 

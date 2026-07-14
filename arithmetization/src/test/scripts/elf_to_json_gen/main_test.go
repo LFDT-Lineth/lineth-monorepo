@@ -1,6 +1,14 @@
 package main
 
-import "testing"
+import (
+	"debug/elf"
+	"encoding/binary"
+	"encoding/hex"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
 
 func encodeIType(opcode, funct3, rd, rs1, imm12 uint32) uint32 {
 	return (imm12 << 20) | (rs1 << 15) | (funct3 << 12) | (rd << 7) | opcode
@@ -460,6 +468,144 @@ func TestAssembleUTypeImm(t *testing.T) {
 			if got != tt.want {
 				t.Fatalf("assembleUTypeImm(%s) = %#x, want %#x", tt.name, got, tt.want)
 			}
+		})
+	}
+}
+
+type bitReader struct {
+	buf []byte
+	pos int
+}
+
+func (r *bitReader) readBits(width int) uint64 {
+	var val uint64
+	for i := 0; i < width; i++ {
+		bit := (r.buf[r.pos/8] >> uint(7-(r.pos%8))) & 1
+		val = (val << 1) | uint64(bit)
+		r.pos++
+	}
+	return val
+}
+
+func decodeComputeOpsFromHex(hexStr string, nRecords uint64) []uint32 {
+	data, err := hex.DecodeString(hexStr)
+	if err != nil {
+		panic(err)
+	}
+	r := &bitReader{buf: data}
+	ops := make([]uint32, nRecords)
+	for i := uint64(0); i < nRecords; i++ {
+		ops[i] = uint32(r.readBits(8))
+		r.readBits(64)
+		r.readBits(5)
+		r.readBits(5)
+		r.readBits(5)
+	}
+	return ops
+}
+
+func assertClassifyRoundTrip(t *testing.T, image []byte, decodedHex string) {
+	t.Helper()
+	nRecords := uint64(len(image) / 4)
+	ops := decodeComputeOpsFromHex(decodedHex, nRecords)
+	for i := uint64(0); i < nRecords; i++ {
+		instr := binary.LittleEndian.Uint32(image[i*4:])
+		got := classifyInstruction(instr)
+		want := ops[i]
+		if got != want {
+			t.Fatalf("index %d instr=%#x: classify=%d decoded=%d", i, instr, got, want)
+		}
+	}
+}
+
+func TestClassifyInstructionExamples(t *testing.T) {
+	tests := []struct {
+		name  string
+		instr uint32
+		want  uint32
+	}{
+		{name: "undefined opcode", instr: 0, want: computeInvalid},
+		{name: "csr csrrw", instr: encodeIType(opcodeSYSTEM, 0b001, 0, 5, 0xc02), want: computeInvalid},
+		{name: "rd-zero noop", instr: encodeIType(opcodeOPIMM, 0b000, 0, 0, 0), want: computeMiscMem},
+		{name: "fence", instr: opcodeMISCMEM | (0b000 << 12) | (0b001 << 7), want: computeMiscMem},
+		{name: "addi", instr: encodeIType(opcodeOPIMM, 0b000, 5, 5, 1), want: computeITypeBase + itypeOpAddiWB},
+		{name: "keccak", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b000, 1), want: computeRTypeBase + rtypeOpKeccak},
+		{name: "poseidon2", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b001, 1), want: computeRTypeBase + rtypeOpPoseidon2},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := classifyInstruction(tt.instr); got != tt.want {
+				t.Fatalf("classifyInstruction(%#x) = %d, want %d", tt.instr, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestClassifyRoundTripSyntheticImage(t *testing.T) {
+	words := []uint32{
+		0,
+		encodeIType(opcodeOPIMM, 0b000, 0, 0, 0),
+		encodeIType(opcodeSYSTEM, 0b001, 0, 5, 0xc02),
+		encodeIType(opcodeOPIMM, 0b000, 5, 5, 1),
+		encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b001, 2),
+		encodeBType(0b010, 1, 2, 8),
+		opcodeMISCMEM | (0b000 << 12) | (0b001 << 7),
+	}
+	image := make([]byte, len(words)*4)
+	var decodedBits bitWriter
+	for i, instr := range words {
+		binary.LittleEndian.PutUint32(image[i*4:], instr)
+		opcode := instr & 0x7f
+		rd := (instr >> 7) & 0x1f
+		funct3 := (instr >> 12) & 0x7
+		rs1 := (instr >> 15) & 0x1f
+		imm12 := (instr >> 20) & 0xfff
+		instrType := instructionTypeFromOpcode(opcode)
+		if isRdZeroNoop(opcode, instrType, rd, rs1, 0, funct3, imm12, (instr>>25)&0x7f) {
+			instrType = miscMemType
+		}
+		_, normImm12 := decodeITypeSemantic(opcode, funct3, imm12)
+		if instrType != iType {
+			_, normImm12 = itypeInvalid, imm12
+		}
+		decodedBits.writeBits(uint64(classifyInstruction(instr)), 8)
+		decodedBits.writeBits(assembleITypeImm(normImm12), 64)
+		decodedBits.writeBits(uint64(rs1), 5)
+		decodedBits.writeBits(0, 5)
+		decodedBits.writeBits(uint64(rd), 5)
+	}
+	assertClassifyRoundTrip(t, image, hex.EncodeToString(decodedBits.buf))
+}
+
+func TestClassifyRoundTripELF(t *testing.T) {
+	var elfPaths []string
+	if path := strings.TrimSpace(os.Getenv("ELF2JSON_ROUNDTRIP_ELF")); path != "" {
+		elfPaths = append(elfPaths, path)
+	}
+	for _, root := range []string{
+		"../../bin",
+		"../../../riscv-guests/l2-execution/zig-out/bin",
+	} {
+		matches, _ := filepath.Glob(filepath.Join(root, "*.elf"))
+		elfPaths = append(elfPaths, matches...)
+	}
+	if len(elfPaths) == 0 {
+		t.Skip("no ELF fixtures found; set ELF2JSON_ROUNDTRIP_ELF or build a guest ELF")
+	}
+	for _, elfPath := range elfPaths {
+		elfPath := elfPath
+		t.Run(filepath.Base(elfPath), func(t *testing.T) {
+			f, err := elf.Open(elfPath)
+			if err != nil {
+				t.Fatalf("elf.Open(%q): %v", elfPath, err)
+			}
+			defer f.Close()
+			_, image, nRecords := collectExecutableImage(f.Sections)
+			_, _, decodedHex := buildDecodedProgram(f.Sections)
+			if uint64(len(image)/4) != nRecords {
+				t.Fatalf("image records %d != nRecords %d", len(image)/4, nRecords)
+			}
+			assertClassifyRoundTrip(t, image, decodedHex)
 		})
 	}
 }
