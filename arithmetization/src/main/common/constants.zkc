@@ -177,6 +177,7 @@ const OPCODE_LUI:Opcode = 0b0110111
 const OPCODE_AUIPC:Opcode = 0b0010111
 const OPCODE_JAL:Opcode = 0b1101111
 const OPCODE_CUSTOM1:Opcode = 0b0101011
+const OPCODE_MISCMEM:Opcode = 0b0001111
 
 // ===============
 // decoding funct3
