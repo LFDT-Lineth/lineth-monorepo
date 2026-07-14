@@ -14,22 +14,13 @@ import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.recoverIf
 import com.sksamuel.hoplite.ConfigLoader
-import com.sksamuel.hoplite.ConfigLoaderBuilder
 import com.sksamuel.hoplite.ConfigResult
 import com.sksamuel.hoplite.ExperimentalHoplite
 import com.sksamuel.hoplite.fp.Validated
-import maru.config.consensus.ForkConfigDecoder
-import maru.config.decoders.TomlByteArrayHexDecoder
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import java.nio.file.Path
-
-fun ConfigLoaderBuilder.addTomlDecoders(strict: Boolean): ConfigLoaderBuilder =
-  this
-    .addDecoder(TomlByteArrayHexDecoder())
-    .addDecoder(ForkConfigDecoder)
-    .apply { if (strict) this.strict() }
 
 @OptIn(ExperimentalHoplite::class)
 inline fun <reified T : Any> loadConfigsOrError(
