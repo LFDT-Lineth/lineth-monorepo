@@ -1,4 +1,4 @@
-## [unreleased]
+## [1.3.0] - 2026-07-14
 
 ### 🚀 Features
 
@@ -27,3 +27,4 @@
 - *(coordinator)* Update kotlin to v2.4 (#3454)
 - *(coordinator)* LSP violation fix (#3386)
 - *(misc)* Trying to speed up Maru integration tests and optimize resource consumption (#3462)
+- *(maru)* Reuse hoplite decoders (#3559)
