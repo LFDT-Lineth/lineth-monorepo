@@ -26,13 +26,13 @@ func TestEvaluateOnExtendedDomainRootMatchesEncode(t *testing.T) {
 	encoded := codec.Encode(p)
 	domain := domainLight{cardinality: codec.Domain.Cardinality, generator: codec.Domain.Generator}
 	logN := utils.Log2Ceil(len(encoded))
-	rate := codec.InverseRate()
+	invRate := codec.InverseRate()
 
 	for pos := range encoded {
 		naturalIndex := bitReverseIdx(pos, logN)
 		var want field.Element
-		if naturalIndex%rate == 0 {
-			want = p[naturalIndex/rate]
+		if naturalIndex%invRate == 0 {
+			want = p[naturalIndex/invRate]
 		} else {
 			want = polynomials.EvalLagrange(
 				field.VecFromBase(p),
@@ -57,14 +57,15 @@ func TestExtEvaluateOnExtendedDomainRootMatchesEncodeExt(t *testing.T) {
 		encoded = codec.EncodeExt(p)
 		domain  = domainLight{cardinality: codec.Domain.Cardinality, generator: codec.Domain.Generator}
 		logN    = utils.Log2Ceil(len(encoded))
-		rate    = codec.InverseRate()
+		invRate = codec.InverseRate()
 	)
 
 	for pos := range encoded {
 		naturalIndex := bitReverseIdx(pos, logN)
 		var want field.Ext
-		if naturalIndex%rate == 0 {
-			want = p[naturalIndex/rate]
+		// no need to compute the Lagrange evaluation if the point is in the original domain, we can just copy the value from p
+		if naturalIndex%invRate == 0 {
+			want = p[naturalIndex/invRate]
 		} else {
 			want = polynomials.EvalLagrange(
 				field.VecFromExt(p),

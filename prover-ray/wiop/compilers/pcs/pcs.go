@@ -143,7 +143,7 @@ type batchRef struct {
 
 // Compile wires the polynomial-commitment scheme onto sys. It must run last, after
 // every arithmetization pass has registered its columns and [wiop.LagrangeEval]
-// queries. It is a no-op when no columns are committed.
+// queries. It is a no-op when there is no columns to commit to.
 func Compile(sys *wiop.System) {
 	batches := committedBatches(sys)
 	if len(batches) == 0 {

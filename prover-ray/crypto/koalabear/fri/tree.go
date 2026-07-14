@@ -54,7 +54,7 @@ type Branch struct {
 	Leaf field.Octuplet
 	// Siblings stores the siblings of the opened branch. The first sibling
 	// corresponds to the greatest uncle of the opened leaf, just below of the
-	// root. The last entry corresponds to the
+	// root. The last entry corresponds to the sibling of the opened leaf.
 	Siblings []field.Octuplet
 	// AuxSiblings are the auxiliary siblings. We have
 	// `len(Siblings) == len(AuxSiblings)``
@@ -185,7 +185,7 @@ func (t *Tree) NumLeaves() int {
 	return (len(t.Nodes) + 1) / 2
 }
 
-// OpenProof returns the Merkle opening proof for the leaf at 0-based index idx.
+// OpenBranch returns the Merkle opening proof for the leaf at 0-based index idx.
 // The function panics if the requested position is not openable.
 func (t *Tree) OpenBranch(idx int) Branch {
 

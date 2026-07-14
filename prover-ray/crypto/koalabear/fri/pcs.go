@@ -10,12 +10,12 @@
 //
 // Fiat-Shamir is the caller's responsibility, matching the convention
 // already established by [fri.ProverState] and [Verify]: every PCS
-// method that "needs a challenge" takes that challenge as an explicit
+// method that "needs a challenge", takes that challenge as an explicit
 // parameter. The PCS never reaches into a transcript.
 //
 // The PCS speaks the same data shapes as the underlying FRI primitives:
 //   - One Batch == one MultiSizeTable. A batch's polynomials are
-//     committed via [Commit] into a single CommitterState (Merkle tree
+//     committed via [Commit] into a single [CommitterState] (Merkle tree
 //     over the multi-size aux-leaf structure).
 //   - The verifier sees only Shape (per-size row counts) for each
 //     batch, since it doesn't hold the witness data.
