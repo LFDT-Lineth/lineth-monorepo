@@ -55,6 +55,21 @@ on:
         required: false
         type: string
         default: ""
+      linea_coordinator_image_name:
+        description: 'Coordinator Docker image name (overrides the compose default)'
+        required: false
+        type: string
+        default: consensys/linea-coordinator
+      linea_coordinator_jar:
+        description: 'Coordinator JAR filename to launch'
+        required: false
+        type: string
+        default: coordinator.jar
+      linea_coordinator_artifact_name:
+        description: 'Artifact name prefix for the coordinator Docker image'
+        required: false
+        type: string
+        default: linea-coordinator
       e2e-tests-with-ssh:
         description: Run end to end tests with ability to ssh into environment
         required: false
@@ -86,167 +101,29 @@ jobs:
   run-e2e-tests:
     # We can only use conditionals, and not path filters to 'successfully' skip a required job - https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/collaborating-on-repositories-with-code-quality-features/troubleshooting-required-status-checks#handling-skipped-but-required-checks
     if: ${{ inputs.has-changes-requiring-e2e-testing == 'true' }}
-    env:
-      LINEA_BESU_PACKAGE_TAG: ${{ inputs.linea_besu_package_tag }}
-      LINEA_COORDINATOR_TAG: ${{ inputs.coordinator_tag }}
-      LINEA_POSTMAN_TAG: ${{ inputs.postman_tag }}
-      LINEA_PROVER_TAG: ${{ inputs.prover_tag }}
-      LINEA_TRANSACTION_EXCLUSION_API_TAG: ${{ inputs.tx_exclusion_api_tag }}
-      MARU_TAG: ${{ inputs.maru_tag }}
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     outputs:
-      tests_outcome: ${{ steps.run_e2e_tests.outcome }}
-    # xl saves ~0 mins
+      tests_outcome: ${{ steps.run-e2e-tests.outputs.tests_outcome }}
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xl
     steps:
-      - name: Setup upterm session
-        if: ${{ inputs.e2e-tests-with-ssh }}
-        uses: lhotari/action-upterm@b0357f23233f5ea6d58947c0c402e0631bab7334 #v1
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      - name: Setup nodejs environment
-        uses: ./.github/actions/setup-nodejs
-        with:
-          pnpm-install-options: '-F contracts -F "e2e..." --frozen-lockfile --prefer-offline'
-          commands: |
-            pnpm run -F "e2e^..." build
-      - name: Login to Docker Hub
-        if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 #v3.7.0
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Create directory for conflated traces
-        run: |
-          mkdir -p tmp/local/traces/v2/conflated
-          chmod -R a+rw tmp/local/
-      - name: Pull all external-to-monorepo images with retry
-        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
-        if: ${{ inputs.linea_besu_package_tag == '' }}
-        with:
-          max_attempts: 10
-          retry_on: error
-          retry_wait_seconds: 30
-          timeout_minutes: 10
-          command: |
-            make docker-pull-images-external-to-monorepo
 
-      - name: Download local docker image artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        continue-on-error: true
-        with:
-          pattern: linea-*
-          path: ${{ github.workspace }}/tmp/artifacts
-          merge-multiple: true
-
-      - name: Load Docker images from artifacts or pull develop for unchanged services
-        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
-        with:
-          max_attempts: 10
-          retry_on: error
-          retry_wait_seconds: 30
-          timeout_minutes: 10
-          command: |
-            set -euo pipefail
-            for service in coordinator postman transaction-exclusion-api prover maru; do
-              if [ "$service" = "maru" ]; then
-                artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/linea-maru-docker-image.tar.gz"
-                image_name="consensys/maru"
-              else
-                artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/linea-${service}-docker-image.tar.gz"
-                image_name="consensys/linea-${service}"
-              fi
-
-              if [ -f "$artifact_path" ]; then
-                echo "Loading ${service} from build artifact ${artifact_path}..."
-                gunzip -c "$artifact_path" | docker load
-              else
-                echo "No artifact found for ${service}, falling back develop tag from registry..."
-                # docker pull "${image_name}:develop"
-              fi
-            done
-      - name: Set Docker image tags
-        shell: bash
-        run: |
-          set -euo pipefail
-          for service in coordinator postman transaction-exclusion-api prover maru; do
-            if [ "$service" = "maru" ]; then
-              artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/linea-maru-docker-image.tar.gz"
-              env_var="MARU_TAG"
-            else
-              artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/linea-${service}-docker-image.tar.gz"
-              env_var="LINEA_$(echo "${service}" | tr '[:lower:]-' '[:upper:]_')_TAG"
-            fi
-
-            if [ -f "$artifact_path" ]; then
-              echo "${env_var}=${{ inputs.image_tag }}" >> "$GITHUB_ENV"
-            elif [ -z "${!env_var:-}" ]; then
-              # Fall back to "develop" only when the job-level env var is unset or empty.
-              echo "${env_var}=develop" >> "$GITHUB_ENV"
-            fi
-          done
-      - name: Load linea-besu-package Docker image
-        if: ${{ inputs.linea_besu_package_tag != '' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          artifact_path="$GITHUB_WORKSPACE/tmp/artifacts/linea-besu-package-images.tar.gz"
-          if [ -f "$artifact_path" ]; then
-            gunzip -c "$artifact_path" | docker load
-          else
-            echo "No artifact at ${artifact_path}; skipping docker load."
-          fi
-      - name: Spin up fresh environment with retry
-        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
-        with:
-          max_attempts: 10
-          retry_on: error
-          retry_wait_seconds: 30
-          timeout_minutes: 10
-          command: |
-            make start-env-with-tracing-v2-ci CLEAN_PREVIOUS_ENV=false
-          on_retry_command: |
-            make clean-environment
-      - name: List docker containers/images
-        if: ${{ always() && inputs.e2e-tests-containers-list }}
-        continue-on-error: true
-        run: |
-          docker ps -la && docker images
-          docker container ls -a
       - name: Run e2e tests
-        id: run_e2e_tests
-        timeout-minutes: 6
-        run: |
-          pnpm run -F e2e test:local
-      - name: Show e2e tests result
-        if: always()
-        run: |
-          echo "E2E_TESTS_RESULT: ${{ steps.run_e2e_tests.outcome }}"
-      - name: Dump logs
-        if: ${{ failure() && inputs.e2e-tests-logs-dump }}
-        run: |
-          mkdir -p docker_logs
-          find tmp/local/ >> docker_logs/files_in_shared_dir.txt || true
-          docker ps -a >> docker_logs/docker_ps.txt || true
-          docker logs coordinator --since 1h &>> docker_logs/coordinator.txt || true
-          docker logs prover-v3 --since 1h &>> docker_logs/prover-v3.txt || true
-          docker logs shomei --since 1h &>> docker_logs/shomei.txt || true
-          docker logs shomei-frontend --since 1h &>> docker_logs/shomei-frontend.txt || true
-          docker logs postman --since 1h &>> docker_logs/postman.txt || true
-          docker logs l2-node-besu --since 1h &>> docker_logs/l2-node-besu.txt || true
-          docker logs transaction-exclusion-api --since 1h &>> docker_logs/transaction-exclusion-api.txt || true
-          docker logs sequencer --since 1h &>> docker_logs/sequencer.txt || true
-          docker logs l1-el-node --since 1h &>> docker_logs/l1-el-node.txt || true
-          docker logs l1-cl-node --since 1h &>> docker_logs/l1-cl-node.txt || true
-          docker logs maru --since 1h &>> docker_logs/maru.txt || true
-          docker exec -i -e PGPASSWORD=${POSTGRES_PASSWORD:-postgres} postgres pg_dumpall -U ${POSTGRES_USER:-postgres} > docker_logs/db_dump.sql || true
-      - name: Archive debug logs
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: ${{ failure() && inputs.e2e-tests-logs-dump }}
+        id: run-e2e-tests
+        uses: ./.github/actions/run-e2e-tests
         with:
-          name: end-2-end-debug-logs
-          if-no-files-found: error
-          path: |
-            docker_logs/**/*
-
+          image_tag: ${{ inputs.image_tag }}
+          linea_besu_package_tag: ${{ inputs.linea_besu_package_tag }}
+          coordinator_tag: ${{ inputs.coordinator_tag }}
+          postman_tag: ${{ inputs.postman_tag }}
+          prover_tag: ${{ inputs.prover_tag }}
+          tx_exclusion_api_tag: ${{ inputs.tx_exclusion_api_tag }}
+          maru_tag: ${{ inputs.maru_tag }}
+          linea_coordinator_image_name: ${{ inputs.linea_coordinator_image_name }}
+          linea_coordinator_jar: ${{ inputs.linea_coordinator_jar }}
+          linea_coordinator_artifact_name: ${{ inputs.linea_coordinator_artifact_name }}
+          e2e-tests-with-ssh: ${{ inputs.e2e-tests-with-ssh }}
+          e2e-tests-logs-dump: ${{ inputs.e2e-tests-logs-dump }}
+          e2e-tests-containers-list: ${{ inputs.e2e-tests-containers-list }}
+          dockerhub_username: ${{ secrets.DOCKERHUB_USERNAME }}
+          dockerhub_token: ${{ secrets.DOCKERHUB_TOKEN }}
