@@ -328,21 +328,6 @@ func canonicalLayout(shapes []Shape, shifts []BatchShifts) (layout, error) {
 	return res, nil
 }
 
-// Shape returns the per-size row counts of the batch, discarding the
-// polynomial values. It is the verifier-side view of a committed batch: a
-// caller that holds the committed table builds VerifyInputs.Shapes from it,
-// without needing the witness data.
-func (t MultiSizeTable) Shape() Shape {
-	shape := make(Shape, len(t))
-	for sizeLog2 := range t {
-		shape[sizeLog2] = SizedShape{
-			BaseWidth: len(t[sizeLog2].Base),
-			ExtWidth:  len(t[sizeLog2].Ext),
-		}
-	}
-	return shape
-}
-
 func validateSizedLayout(batchIdx, sizeLog2 int, shape SizedShape, shifts SizedShifts) error {
 	if shape.BaseWidth < 0 || shape.ExtWidth < 0 {
 		return fmt.Errorf("fri: canonicalLayout: batch %d size %d has negative width", batchIdx, sizeLog2)
