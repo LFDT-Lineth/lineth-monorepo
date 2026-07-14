@@ -61,7 +61,7 @@ func (fx *ldtFixture) addLevel(t *testing.T, sizeLog2 int, target []field.Ext) {
 	require.NoError(t, fx.pcs.AddOpening(committed, field.Ext{}, shifts, claimed))
 
 	fx.roots = append(fx.roots, committed.Tree.Root())
-	fx.shapes = append(fx.shapes, shapesFromBatches([]Batch{committed.EncodedTable})[0])
+	fx.shapes = append(fx.shapes, committed.EncodedTable.Shape())
 	fx.shifts = append(fx.shifts, shifts)
 	fx.claims = append(fx.claims, claimed)
 }

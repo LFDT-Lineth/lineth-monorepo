@@ -71,15 +71,15 @@
 //	alphaDeep  := transcript.Squeeze()
 //	friState, _ := pcs.NewProverState(alphaDeep)
 //
-//	// FRI folding rounds: absorb each new root, squeeze the next alpha.
+//	// FRI folding rounds: fold, absorb the new layer root, squeeze the next alpha.
 //	for range numFoldingRounds {
 //	    alpha := transcript.Squeeze()
-//	    friState.Fold(alpha)
-//	    transcript.Absorb(friState.LastRoot())
+//	    root  := friState.Fold(alpha) // zero octuplet on the final round
+//	    transcript.Absorb(root)
 //	}
 //
 //	// Absorb the final polynomial; squeeze query positions; open.
-//	transcript.Absorb(friState.FinalPoly())
+//	transcript.Absorb(friState.FinalPolyExt)
 //	queries    := transcript.Squeeze()
 //	proof      := pcs.Open(friState, queries)
 //
@@ -328,18 +328,19 @@ func canonicalLayout(shapes []Shape, shifts []BatchShifts) (layout, error) {
 	return res, nil
 }
 
-func shapesFromBatches(batches []Batch) []Shape {
-	shapes := make([]Shape, len(batches))
-	for batchIdx := range batches {
-		shapes[batchIdx] = make(Shape, len(batches[batchIdx]))
-		for sizeLog2 := range batches[batchIdx] {
-			shapes[batchIdx][sizeLog2] = SizedShape{
-				BaseWidth: len(batches[batchIdx][sizeLog2].Base),
-				ExtWidth:  len(batches[batchIdx][sizeLog2].Ext),
-			}
+// Shape returns the per-size row counts of the batch, discarding the
+// polynomial values. It is the verifier-side view of a committed batch: a
+// caller that holds the committed table builds VerifyInputs.Shapes from it,
+// without needing the witness data.
+func (t MultiSizeTable) Shape() Shape {
+	shape := make(Shape, len(t))
+	for sizeLog2 := range t {
+		shape[sizeLog2] = SizedShape{
+			BaseWidth: len(t[sizeLog2].Base),
+			ExtWidth:  len(t[sizeLog2].Ext),
 		}
 	}
-	return shapes
+	return shape
 }
 
 func validateSizedLayout(batchIdx, sizeLog2 int, shape SizedShape, shifts SizedShifts) error {
@@ -493,15 +494,15 @@ type OpeningProof struct {
 }
 
 // InputQuery holds the PCS input-tree openings for one FRI query.
-type InputQuery []InputBranch
+type InputQuery []InputTreeOpening
 
-// InputBranch is a Merkle branch whose path leaves are opened as row preimages.
+// InputTreeOpening is a Merkle branch whose path leaves are opened as row preimages.
 // ConjugateLeaf is the row at the round-0 fold-conjugate position s^1; it is
 // non-nil iff this branch backs the top level (the only level folded as a
 // conjugate pair straight out of an input tree). Its Merkle digest is derived
 // from it rather than transmitted, so for a top branch Siblings holds one
 // fewer entry than AuxSiblings.
-type InputBranch struct {
+type InputTreeOpening struct {
 	Leaf          RowOpening
 	ConjugateLeaf *RowOpening
 	Siblings      []field.Octuplet
@@ -570,7 +571,7 @@ func (pcs *PCS) AddOpening(
 	if committed.Tree == nil {
 		return fmt.Errorf("fri: AddOpening: commitment has nil tree")
 	}
-	shape := shapesFromBatches([]Batch{committed.EncodedTable})[0]
+	shape := committed.EncodedTable.Shape()
 	layout, err := canonicalLayout([]Shape{shape}, []BatchShifts{shifts})
 	if err != nil {
 		return err
@@ -930,7 +931,7 @@ func (pcs *PCS) openInputQueries(queryPositions []int) []InputQuery {
 	for queryIdx, queryPosition := range queryPositions {
 		res[queryIdx] = make(InputQuery, len(inputs))
 		for inputIdx, committed := range inputs {
-			res[queryIdx][inputIdx] = openInputBranch(pcs.Params, committed, queryPosition)
+			res[queryIdx][inputIdx] = openInputTreeOpening(pcs.Params, committed, queryPosition)
 		}
 	}
 	return res
@@ -957,16 +958,16 @@ func (pcs *PCS) inputOpeningCommitments() []CommitterState {
 	return inputs
 }
 
-func openInputBranch(p Params, committed CommitterState, queryPosition int) InputBranch {
+func openInputTreeOpening(p Params, committed CommitterState, queryPosition int) InputTreeOpening {
 	tree := committed.Tree
 	numLeaves := tree.NumLeaves()
 	if numLeaves > p.N || p.N%numLeaves != 0 {
-		panic("fri: openInputBranch: tree size incompatible with domain size")
+		panic("fri: openInputTreeOpening: tree size incompatible with domain size")
 	}
 	leafIndex := queryPosition / (p.N / numLeaves)
 	branch := tree.OpenBranch(leafIndex)
 	siblings := branch.Siblings
-	input := InputBranch{
+	input := InputTreeOpening{
 		Leaf:        openEncodedRowAtSize(committed.EncodedTable, numLeaves, leafIndex),
 		AuxSiblings: make([]*RowOpening, len(branch.AuxSiblings)),
 	}
@@ -985,11 +986,11 @@ func openInputBranch(p Params, committed CommitterState, queryPosition int) Inpu
 		}
 		levelSize := table.Size()
 		if levelSize > numLeaves || numLeaves%levelSize != 0 {
-			panic("fri: openInputBranch: level size incompatible with tree size")
+			panic("fri: openInputTreeOpening: level size incompatible with tree size")
 		}
 		levelLog := bits.TrailingZeros(uint(levelSize))
 		if levelLog >= len(input.AuxSiblings) {
-			panic("fri: openInputBranch: level size absent from branch")
+			panic("fri: openInputTreeOpening: level size absent from branch")
 		}
 		row := openEncodedRow(table, leafIndex/(numLeaves/levelSize))
 		input.AuxSiblings[levelLog] = &row
@@ -1051,7 +1052,7 @@ func hashRowOpening(row RowOpening) field.Octuplet {
 // is set, the deepest step combines Leaf and ConjugateLeaf directly instead of
 // reading a transmitted digest for that level, so Siblings must then hold one
 // fewer entry than AuxSiblings.
-func (branch InputBranch) RecoverRoot(idx int) (field.Octuplet, error) {
+func (branch InputTreeOpening) RecoverRoot(idx int) (field.Octuplet, error) {
 	numLevels := len(branch.AuxSiblings)
 	wantSiblings := numLevels
 	if branch.ConjugateLeaf != nil {
@@ -1092,7 +1093,7 @@ func foldOneLevel(ancestor, sibling field.Octuplet, aux *RowOpening, currPos int
 	return hashNode(left, right, auxDigest), currPos >> 1
 }
 
-func (branch InputBranch) rowAtLevel(levelSize int) (RowOpening, error) {
+func (branch InputTreeOpening) rowAtLevel(levelSize int) (RowOpening, error) {
 	if levelSize <= 0 || levelSize&(levelSize-1) != 0 {
 		return RowOpening{}, fmt.Errorf("levelSize must be a positive power of two")
 	}
@@ -1144,6 +1145,9 @@ func reconstructQueryValueAt(
 		branch := opening[inputIndexByBatch[entry.BatchIdx]]
 		var row RowOpening
 		if sibling {
+			if branch.ConjugateLeaf == nil {
+				return field.Ext{}, fmt.Errorf("fri: pcs.Verify: missing conjugate leaf for batch %d", entry.BatchIdx)
+			}
 			row = *branch.ConjugateLeaf
 		} else {
 			row, err = branch.rowAtLevel(levelSize)
@@ -1249,7 +1253,7 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 
 	runningRoots := make([]QueryLayerRoots, pcs.Params.numRounds)
 	for j := 1; j < pcs.Params.numRounds; j++ {
-		runningRoots[j] = QueryLayerRoots{proof.FRIProof.FRIRoots[j-1]}
+		runningRoots[j] = QueryLayerRoots{proof.FRIProof.RoundRoots[j-1]}
 	}
 
 	topDomain := pcs.Params.domainsLight[0]
@@ -1275,7 +1279,7 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 
 		// Round 0: bind the authenticated top-level leaves to the caller-supplied
 		// rows and reconstruct the conjugate pair.
-		if err = bindInputBranches("round 0", inputOpening, inputIndexByBatch,
+		if err = bindInputTreeOpenings("round 0", inputOpening, inputIndexByBatch,
 			pcs.Params.N, orders[0], layout[0], true, in.Shapes); err != nil {
 			return fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
 		}
@@ -1308,7 +1312,7 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 			if err != nil {
 				return err
 			}
-			if err = bindInputBranches(fmt.Sprintf("level %d", levelIdx), inputOpening, inputIndexByBatch,
+			if err = bindInputTreeOpenings(fmt.Sprintf("level %d", levelIdx), inputOpening, inputIndexByBatch,
 				levelSize, orders[levelIdx], bundle, false, in.Shapes); err != nil {
 				return fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
 			}
@@ -1396,10 +1400,10 @@ func authenticateInputQuery(p Params, opening InputQuery, roots QueryLayerRoots,
 	return nil
 }
 
-// bindInputBranches validates that each batch's authenticated branch carries a
+// bindInputTreeOpenings validates that each batch's authenticated branch carries a
 // row (and, at the top level, a conjugate sibling) matching its declared shape,
 // before reconstructQueryValueAt reads those same branches directly.
-func bindInputBranches(
+func bindInputTreeOpenings(
 	label string, opening InputQuery, inputIndexByBatch []int,
 	levelSize int, order []int, bundle sizeBundle, top bool, shapes []Shape,
 ) error {

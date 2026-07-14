@@ -67,12 +67,12 @@ func NewProverState(p Params, levels []Level) (*ProverState, error) {
 		trees:   make([]*Tree, p.numRounds),
 	}
 
-	// Layer 0 is committed up front; its root is supplied externally rather than stored in FRIRoots.
+	// Layer 0 is committed up front; its root is supplied externally rather than stored in RoundRoots.
 	copy(st.running, levels[0].Evals)
 	st.layers[0] = st.running
 
 	if p.numRounds > 1 {
-		st.FRIRoots = make([]field.Octuplet, p.numRounds-1)
+		st.RoundRoots = make([]field.Octuplet, p.numRounds-1)
 	}
 
 	return st, nil
@@ -119,7 +119,7 @@ func (st *ProverState) Fold(alpha field.Ext) field.Octuplet {
 	tree := buildTreeExt(st.running)
 	st.trees[j+1] = tree
 	root := tree.Root()
-	st.FRIRoots[j] = root // root of layer j+1 → FRIRoots[(j+1)-1]
+	st.RoundRoots[j] = root // root of layer j+1 → RoundRoots[(j+1)-1]
 	return root
 }
 

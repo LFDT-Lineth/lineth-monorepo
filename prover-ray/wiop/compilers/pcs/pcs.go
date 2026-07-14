@@ -310,8 +310,8 @@ func (c *compiled) verify(rt *wiop.Runtime, proof fri.OpeningProof) error {
 	// absorbing each intermediate layer root. The final round reveals the final
 	// polynomial and commits no root, so its challenge is squeezed without a
 	// matching absorption.
-	foldAlphas := make([]field.Ext, 0, len(proof.FRIProof.FRIRoots)+1)
-	for _, friRoot := range proof.FRIProof.FRIRoots {
+	foldAlphas := make([]field.Ext, 0, len(proof.FRIProof.RoundRoots)+1)
+	for _, friRoot := range proof.FRIProof.RoundRoots {
 		foldAlphas = append(foldAlphas, fs.RandomFext())
 		fs.Update(friRoot[:]...)
 	}

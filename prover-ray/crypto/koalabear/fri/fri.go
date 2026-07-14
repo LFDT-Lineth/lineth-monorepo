@@ -167,7 +167,7 @@ type Level struct {
 // commits to those polynomials before invoking FRI).
 type Proof struct {
 	// Running-polynomial FRI path
-	FRIRoots       []field.Octuplet // Merkle roots for running poly T_1..T_{r-1}
+	RoundRoots     []field.Octuplet // Merkle roots for running poly T_1..T_{r-1}
 	FinalPolyExt   []field.Ext
 	RunningQueries []RunningQuery
 }
@@ -274,13 +274,13 @@ func checkLevelTrees(label string, trees []*Tree) error {
 // challenge lengths before any authentication or reconstruction runs, so a
 // malformed proof can never cause an out-of-bounds access later.
 func checkOpeningProofShape(p Params, prf Proof, foldAlphas []field.Ext, positions []int) error {
-	wantFRIRoots := p.numRounds - 1
+	wantRoundRoots := p.numRounds - 1
 	if p.numRounds <= 1 {
-		wantFRIRoots = 0
+		wantRoundRoots = 0
 	}
-	wantRunningQueries := wantFRIRoots
-	if len(prf.FRIRoots) != wantFRIRoots {
-		return fmt.Errorf("fri: pcs.Verify: proof has %d FRI roots, want %d", len(prf.FRIRoots), wantFRIRoots)
+	wantLayersPerRunningQuery := wantRoundRoots
+	if len(prf.RoundRoots) != wantRoundRoots {
+		return fmt.Errorf("fri: pcs.Verify: proof has %d round roots, want %d", len(prf.RoundRoots), wantRoundRoots)
 	}
 	if len(prf.RunningQueries) != p.NumQueries {
 		return fmt.Errorf("fri: pcs.Verify: proof has %d running queries, want %d", len(prf.RunningQueries), p.NumQueries)
@@ -292,8 +292,8 @@ func checkOpeningProofShape(p Params, prf Proof, foldAlphas []field.Ext, positio
 		return fmt.Errorf("fri: pcs.Verify: %d folding challenges, need at least %d", len(foldAlphas), p.numRounds)
 	}
 	for k, q := range prf.RunningQueries {
-		if len(q) != wantRunningQueries {
-			return fmt.Errorf("fri: pcs.Verify: query %d has %d running layers, want %d", k, len(q), wantRunningQueries)
+		if len(q) != wantLayersPerRunningQuery {
+			return fmt.Errorf("fri: pcs.Verify: query %d has %d running layers, want %d", k, len(q), wantLayersPerRunningQuery)
 		}
 		if s := positions[k]; s < 0 || s >= p.N {
 			return fmt.Errorf("fri: pcs.Verify: opened position %d out of range [0,%d)", s, p.N)

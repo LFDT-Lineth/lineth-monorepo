@@ -120,7 +120,7 @@ func TestAddOpeningZeta(t *testing.T) {
 		"zeta mismatch")
 }
 
-func TestOpenInputBranchAlignsMultiSizeRows(t *testing.T) {
+func TestOpenInputTreeOpeningAlignsMultiSizeRows(t *testing.T) {
 	prng := rand.New(utils.NewRandSource(20260625))
 	params, err := NewParams(16, 8, 1)
 	require.NoError(t, err)
@@ -143,7 +143,7 @@ func TestOpenInputBranchAlignsMultiSizeRows(t *testing.T) {
 	assert.Equal(t, digestSizedRow(encoded[3], query), topBranch.Leaf)
 	assert.Equal(t, digestSizedRow(encoded[3], query^1), topBranch.Siblings[len(topBranch.Siblings)-1])
 
-	checkInputBranch := func(name string, branch InputBranch, tree *Tree, encoded MultiSizeTable) {
+	checkInputTreeOpening := func(name string, branch InputTreeOpening, tree *Tree, encoded MultiSizeTable) {
 		t.Helper()
 
 		root, err := branch.RecoverRoot(query)
@@ -154,8 +154,8 @@ func TestOpenInputBranchAlignsMultiSizeRows(t *testing.T) {
 		require.NoError(t, err, name)
 		assert.Equal(t, digestSizedRow(encoded[2], base), hashRowOpening(leaf), name)
 	}
-	checkInputBranch("first tree", openInputBranch(params, CommitterState{Tree: tree, EncodedTable: encoded}, query), tree, encoded)
-	checkInputBranch("second tree", openInputBranch(params, CommitterState{Tree: otherTree, EncodedTable: otherEncoded}, query), otherTree, otherEncoded)
+	checkInputTreeOpening("first tree", openInputTreeOpening(params, CommitterState{Tree: tree, EncodedTable: encoded}, query), tree, encoded)
+	checkInputTreeOpening("second tree", openInputTreeOpening(params, CommitterState{Tree: otherTree, EncodedTable: otherEncoded}, query), otherTree, otherEncoded)
 }
 
 type pcsOpenVerifyFixture struct {
@@ -283,7 +283,7 @@ func newPCSOpenVerifyFixture(t *testing.T) pcsOpenVerifyFixture {
 		committed: committed,
 		input: VerifyInputs{
 			Roots:         []field.Octuplet{committed[0].Tree.Root()},
-			Shapes:        shapesFromBatches(witnesses),
+			Shapes:        utils.Map(Batch.Shape, witnesses),
 			Shifts:        shifts,
 			ClaimedValues: claimed,
 			Zeta:          zeta,
@@ -345,7 +345,7 @@ func TestPCSStaticParamsLargerThanWitness(t *testing.T) {
 
 	require.NoError(t, pcs.Verify(VerifyInputs{
 		Roots:         []field.Octuplet{committed[0].Tree.Root()},
-		Shapes:        shapesFromBatches(witnesses),
+		Shapes:        utils.Map(Batch.Shape, witnesses),
 		Shifts:        shifts,
 		ClaimedValues: claimed,
 		Zeta:          zeta,
@@ -428,7 +428,7 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 		started.Fold(foldAlphas[round])
 	}
 	gotProof := started.Open(positions)
-	assert.Equal(t, referenceProof.FRIRoots, gotProof.FRIRoots)
+	assert.Equal(t, referenceProof.RoundRoots, gotProof.RoundRoots)
 	assert.Equal(t, referenceProof.FinalPolyExt, gotProof.FinalPolyExt)
 
 	oneShot, oneShotClaims := openForTest(t, pcs, openInputs{
@@ -445,7 +445,7 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	roots := []field.Octuplet{committed[0].Tree.Root(), committed[1].Tree.Root()}
 	require.NoError(t, pcs.Verify(VerifyInputs{
 		Roots:         roots,
-		Shapes:        shapesFromBatches(witnesses),
+		Shapes:        utils.Map(Batch.Shape, witnesses),
 		Shifts:        shifts,
 		ClaimedValues: oneShotClaims,
 		Zeta:          zeta,
