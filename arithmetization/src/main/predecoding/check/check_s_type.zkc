@@ -46,6 +46,7 @@ fn check_s_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op
                 printf "[ERROR] invalid S-type funct3 requires COMPUTE_INVALID (compute_op=%x params=%x funct3=%x)\n", compute_op, instruction_parameters, funct3
                 fail
             }
+            return
         }
     }
 
