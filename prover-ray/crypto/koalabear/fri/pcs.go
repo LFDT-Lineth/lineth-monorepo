@@ -1164,18 +1164,13 @@ func reconstructQueryValueAt(
 			return field.Ext{}, err
 		}
 		branch := opening[inputIndexByBatch[entry.BatchIdx]]
-		var row RowOpening
+		pair, err := branch.pairAtLevel(levelSize)
+		if err != nil {
+			return field.Ext{}, err
+		}
+		row := pair[0]
 		if sibling {
-			bottom := branch.Leaves[len(branch.Leaves)-1]
-			if bottom == nil {
-				return field.Ext{}, fmt.Errorf("fri: pcs.Verify: missing conjugate leaf for batch %d", entry.BatchIdx)
-			}
-			row = bottom[1]
-		} else {
-			row, err = branch.rowAtLevel(levelSize)
-			if err != nil {
-				return field.Ext{}, err
-			}
+			row = pair[1]
 		}
 		entryValue := rowValue(row, entry)
 		term, err := quotientAtValue(entryValue, x, claims)
@@ -1290,7 +1285,7 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	for queryIdx, queryPosition := range positions {
 		rq := resolvedQuery{
 			Rounds: make([]inputPair, pcs.Params.numRounds),
-			Aux:    make(map[int]field.Ext, len(layout)-1),
+			Aux:    make(map[int]inputPair, len(layout)-1),
 			Final:  proof.FRIProof.FinalPolyExt[queryPosition>>pcs.Params.numRounds],
 		}
 
@@ -1317,8 +1312,8 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 		}
 		rq.Rounds[0] = inputPair{Self: self, Sibling: sib}
 
-		// Auxiliary levels: one authenticated value per level, mixed into the
-		// fold at that level's introduction round.
+		// Auxiliary levels: each level's own conjugate pair, folded in at that
+		// level's introduction round.
 		for levelIdx := 1; levelIdx < len(layout); levelIdx++ {
 			bundle := layout[levelIdx]
 			round, err := pcs.roundForSize(bundle.SizeLog2)
@@ -1338,12 +1333,17 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 				levelSize, orders[levelIdx], bundle, in.Shapes); err != nil {
 				return fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
 			}
-			value, err := reconstructQueryValueAt(pcs, bundle, inputOpening, inputIndexByBatch, levelSize,
+			levelSelf, err := reconstructQueryValueAt(pcs, bundle, inputOpening, inputIndexByBatch, levelSize,
 				claimed, zeta, alphaDeep, domainPointExt(domain, queryPosition>>round), false)
 			if err != nil {
 				return err
 			}
-			rq.Aux[round] = value
+			levelSib, err := reconstructQueryValueAt(pcs, bundle, inputOpening, inputIndexByBatch, levelSize,
+				claimed, zeta, alphaDeep, domainPointExt(domain, (queryPosition>>round)^1), true)
+			if err != nil {
+				return err
+			}
+			rq.Aux[round] = inputPair{Self: levelSelf, Sibling: levelSib}
 		}
 
 		// Running layers: authenticate and decode directly from the

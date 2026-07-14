@@ -79,7 +79,7 @@ func TestFoldLayerInternally(t *testing.T) {
 			want[tt] = polynomials.EvalCanonicalExt(qcoeffs, field.Lift(y))
 		}
 
-		got := foldLayerInternally(layer, nil, alpha, domain, invTwo)
+		got := foldLayerInternally(layer, nil, field.Ext{}, alpha, domain, invTwo)
 		if len(got) != half {
 			t.Fatalf("n=%d: fold returned %d values, want %d", n, len(got), half)
 		}
@@ -89,20 +89,39 @@ func TestFoldLayerInternally(t *testing.T) {
 			}
 		}
 
-		// aux: the fold mixes alpha²·aux[t] into output position t
-		aux := make([]field.Ext, half)
-		for i := range aux {
-			aux[i] = field.PseudoRandExt(prng)
+		// aux: a second same-size codeword on the same domain (a level
+		// introduced at this round), folded by the same formula (same alpha)
+		// and weighted by auxWeight in the output.
+		auxCoeffs := make([]field.Ext, n)
+		for i := range auxCoeffs {
+			auxCoeffs[i] = field.PseudoRandExt(prng)
 		}
-		var alpha2 field.Ext
-		alpha2.Square(&alpha)
-
-		gotAux := foldLayerInternally(layer, aux, alpha, domain, invTwo)
+		aux := make([]field.Ext, n)
+		for m := range n {
+			var x field.Element
+			x.Exp(g, big.NewInt(int64(bitReverseIdx(m, kN))))
+			aux[m] = polynomials.EvalCanonicalExt(auxCoeffs, field.Lift(x))
+		}
+		auxQCoeffs := make([]field.Ext, half)
+		for i := range auxQCoeffs {
+			var odd field.Ext
+			odd.Mul(&auxCoeffs[2*i+1], &alpha)
+			auxQCoeffs[i].Add(&auxCoeffs[2*i], &odd)
+		}
+		wantAuxFold := make([]field.Ext, half)
 		for tt := range half {
-			var wantAux, term field.Ext
-			term.Mul(&aux[tt], &alpha2)
-			wantAux.Add(&want[tt], &term)
-			if !gotAux[tt].Equal(&wantAux) {
+			var y field.Element
+			y.Exp(g2, big.NewInt(int64(bitReverseIdx(tt, kN-1))))
+			wantAuxFold[tt] = polynomials.EvalCanonicalExt(auxQCoeffs, field.Lift(y))
+		}
+
+		auxWeight := field.PseudoRandExt(prng)
+		gotAux := foldLayerInternally(layer, aux, auxWeight, alpha, domain, invTwo)
+		for tt := range half {
+			var wantCombined, term field.Ext
+			term.Mul(&wantAuxFold[tt], &auxWeight)
+			wantCombined.Add(&want[tt], &term)
+			if !gotAux[tt].Equal(&wantCombined) {
 				t.Fatalf("n=%d: fold+aux[%d] mismatch", n, tt)
 			}
 		}
@@ -120,7 +139,7 @@ func TestCheckFolds(t *testing.T) {
 
 	prng := rand.New(utils.NewRandSource(1))
 
-	fold := func(self, sib, alpha field.Ext, domain domainLight, base int, aux *field.Ext) field.Ext {
+	fold := func(self, sib, alpha field.Ext, domain domainLight, base int) field.Ext {
 		var xInv field.Element
 		x := domainPoint(domain, base)
 		xInv.Inverse(&x)
@@ -133,12 +152,6 @@ func TestCheckFolds(t *testing.T) {
 		diff.MulByElement(&diff, &xInv)
 		diff.Mul(&diff, &alpha)
 		out.Add(&sum, &diff)
-		if aux != nil {
-			var alpha2, term field.Ext
-			alpha2.Square(&alpha)
-			term.Mul(aux, &alpha2)
-			out.Add(&out, &term)
-		}
 		return out
 	}
 
@@ -146,16 +159,25 @@ func TestCheckFolds(t *testing.T) {
 	self0, sib0 := field.PseudoRandExt(prng), field.PseudoRandExt(prng)
 	sib1 := field.PseudoRandExt(prng)
 	alpha0, alpha1 := field.PseudoRandExt(prng), field.PseudoRandExt(prng)
-	aux1 := field.PseudoRandExt(prng)
+	aux1Self, aux1Sib := field.PseudoRandExt(prng), field.PseudoRandExt(prng)
 
-	// self1 is round 0's fold output (with aux1 mixed in); final is round 1's.
-	self1 := fold(self0, sib0, alpha0, p.domainsLight[0], s, &aux1)
-	final := fold(self1, sib1, alpha1, p.domainsLight[1], s>>1, nil)
+	// self1 is round 0's fold output (no level introduces at round 0).
+	self1 := fold(self0, sib0, alpha0, p.domainsLight[0], s)
+
+	// A level introduced at round 1 combines with (self1, sib1) before the
+	// round-1 fold, weighted by alpha0² (the challenge from the preceding round).
+	var weight, wSelf, wSib, combinedSelf, combinedSib field.Ext
+	weight.Square(&alpha0)
+	wSelf.Mul(&aux1Self, &weight)
+	wSib.Mul(&aux1Sib, &weight)
+	combinedSelf.Add(&self1, &wSelf)
+	combinedSib.Add(&sib1, &wSib)
+	final := fold(combinedSelf, combinedSib, alpha1, p.domainsLight[1], s>>1)
 
 	newResolved := func() []resolvedQuery {
 		return []resolvedQuery{{
 			Rounds: []inputPair{{Self: self0, Sibling: sib0}, {Self: self1, Sibling: sib1}},
-			Aux:    map[int]field.Ext{1: aux1},
+			Aux:    map[int]inputPair{1: {Self: aux1Self, Sibling: aux1Sib}},
 			Final:  final,
 		}}
 	}
@@ -174,10 +196,10 @@ func TestCheckFolds(t *testing.T) {
 
 	t.Run("broken aux", func(t *testing.T) {
 		resolved := newResolved()
-		aux := resolved[0].Aux[1]
-		aux.Add(&aux, &one)
-		resolved[0].Aux[1] = aux
-		require.ErrorContains(t, checkFolds(p, resolved, foldAlphas, positions), "folded value mismatch")
+		auxPair := resolved[0].Aux[1]
+		auxPair.Self.Add(&auxPair.Self, &one)
+		resolved[0].Aux[1] = auxPair
+		require.ErrorContains(t, checkFolds(p, resolved, foldAlphas, positions), "does not match FinalPoly")
 	})
 
 	t.Run("broken final", func(t *testing.T) {

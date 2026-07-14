@@ -42,6 +42,12 @@ type ProverState struct {
 	running []field.Ext   // evaluations of layer[round]
 	layers  [][]field.Ext // layers[0..round]; layers[numRounds] is the final polynomial
 	trees   []*Tree       // trees[0..min(round, numRounds-1)]; the final layer has no tree
+
+	// prevAlpha is the challenge that folded layer[round-1] into layer[round]
+	// (zero before round 0, and unused then since no level ever introduces at
+	// round 0). A level introduced at round j is weighted by prevAlpha² --
+	// the challenge from the round that produced the codeword it folds into.
+	prevAlpha field.Ext
 }
 
 // NewProverState validates the levels, builds the folding schedule, and seeds
@@ -84,10 +90,11 @@ func (st *ProverState) HasNext() bool {
 }
 
 // Fold consumes one folding challenge. It folds the current layer into the next
-// one (mixing in the auxiliary half-codeword scheduled at the next round, batched
-// with alpha²), commits the new layer, and returns its Merkle root. On the final
-// fold the running polynomial becomes the final polynomial — revealed in the
-// clear rather than committed — and the returned root is the zero octuplet.
+// one (folding in, alongside it, any level introduced at this round -- weighted
+// by the square of the challenge that produced the current layer), commits the
+// new layer, and returns its Merkle root. On the final fold the running
+// polynomial becomes the final polynomial — revealed in the clear rather than
+// committed — and the returned root is the zero octuplet.
 func (st *ProverState) Fold(alpha field.Ext) field.Octuplet {
 
 	if !st.HasNext() {
@@ -96,18 +103,21 @@ func (st *ProverState) Fold(alpha field.Ext) field.Octuplet {
 
 	j := st.round
 
-	// The level scheduled to come online at round j+1 is mixed into the fold
-	// output as the auxiliary half-codeword, batched with alpha². Its evaluation
-	// vector has length N>>(j+1) = N_{j+1}, exactly the size of the fold output,
-	// so it lands directly in committed layer j+1. aux stays nil when no level is
-	// introduced at round j+1 (including the last round).
+	// A level introduced at this round is folded alongside the running
+	// codeword, weighted by prevAlpha² (the challenge that produced
+	// st.running). Its evaluation vector has length N>>j, exactly the size
+	// of st.running, so it folds in directly. aux stays nil when no level is
+	// introduced at round j (including round 0, which no level ever is).
 	var aux []field.Ext
-	if l, ok := st.plan.levelAtRound[j+1]; ok {
+	var auxWeight field.Ext
+	if l, ok := st.plan.levelAtRound[j]; ok {
 		aux = st.levels[l].Evals
+		auxWeight.Square(&st.prevAlpha)
 	}
 
-	st.running = foldLayerInternally(st.running, aux, alpha, st.p.domains[j], st.p.invTwo)
+	st.running = foldLayerInternally(st.running, aux, auxWeight, alpha, st.p.domains[j], st.p.invTwo)
 	st.layers[j+1] = st.running
+	st.prevAlpha = alpha
 	st.round = j + 1
 
 	if j+1 == st.p.numRounds {

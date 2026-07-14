@@ -191,11 +191,12 @@ func (p Params) FullDomainGenerator() field.Element {
 //
 //   - levelAtRound: the multi-degree FRI schedule, mapping a folding round j to
 //     the level index l (1-based) introduced at that round. A level of size
-//     levels[l].D is mixed into the fold output (batched with α²) at round
+//     levels[l].D is folded alongside the running codeword (weighted by the
+//     square of the challenge from the preceding round) at round
 //     jl = log2(p.D / levels[l].D) — precisely when the running polynomial has
 //     folded down to that level's degree. ProverState.Fold consults this map to
-//     know when to batch each extra level, and the verifier rebuilds the same
-//     map to replay the batching.
+//     know when to fold in each extra level, and the verifier rebuilds the same
+//     map to replay the combination.
 type provePlan struct {
 	numLevels    int
 	levelAtRound map[int]int
@@ -308,7 +309,7 @@ func checkOpeningProofShape(p Params, prf Proof, foldAlphas []field.Ext, positio
 // touches a row, a root, a branch, or alpha_DEEP.
 type resolvedQuery struct {
 	Rounds []inputPair       // Rounds[j] = (self, sibling) at fold round j
-	Aux    map[int]field.Ext // Aux[j] = the level value batched in at round j, if any
+	Aux    map[int]inputPair // Aux[j] = the level's own pair folded in at round j, if any
 	Final  field.Ext         // the final-polynomial target for this query
 }
 
@@ -321,6 +322,20 @@ func checkFolds(p Params, resolved []resolvedQuery, foldAlphas []field.Ext, posi
 		for j := range p.numRounds {
 			base := s >> j
 			self, sib := rq.Rounds[j].Self, rq.Rounds[j].Sibling
+
+			// A level folded in at this round combines with the running pair
+			// before the single fold below (Fold is linear), weighted by the
+			// square of the challenge from the preceding round -- exactly as
+			// foldLayerInternally does on the prover. j >= 1 always here: a
+			// level's own introduction round is never round 0.
+			if auxPair, ok := rq.Aux[j]; ok {
+				var weight, wSelf, wSib field.Ext
+				weight.Square(&foldAlphas[j-1])
+				wSelf.Mul(&auxPair.Self, &weight)
+				wSib.Mul(&auxPair.Sibling, &weight)
+				self.Add(&self, &wSelf)
+				sib.Add(&sib, &wSib)
+			}
 
 			// x is the domain point of the opened leaf. The codeword is bit-reversed,
 			// so the natural-order index of position base is bitReverse(base) and
@@ -338,15 +353,6 @@ func checkFolds(p Params, resolved []resolvedQuery, foldAlphas []field.Ext, posi
 			diff.MulByElement(&diff, &xInv)
 			diff.Mul(&diff, &foldAlphas[j])
 			expected.Add(&sum, &diff)
-
-			// Mix in the auxiliary half-codeword: the level entering at round j+1,
-			// batched with alpha², exactly as foldLayerInternally does on the prover.
-			if aux, ok := rq.Aux[j+1]; ok {
-				var alpha2, term field.Ext
-				alpha2.Square(&foldAlphas[j])
-				term.Mul(&aux, &alpha2)
-				expected.Add(&expected, &term)
-			}
 
 			// The fold output must equal the queried leaf of the next layer (whose
 			// position is base>>1 = s>>(j+1)); at the last round, the final polynomial.
@@ -408,19 +414,23 @@ func buildTreeExt(layer []field.Ext) *Tree {
 // evaluations of a fold, p(x) and p(-x), sit at the adjacent positions 2j and
 // 2j+1, so the fold combines layer[2j] and layer[2j+1] into next[j]. The output
 // is itself in bit-reversed order over the half-size domain, ready to be fed
-// back into the next round. It can optionally mix in a second auxiliary fold;
-// when aux is non-empty we expect len(aux) == len(layer)/2 and aux to be in the
-// same bit-reversed half-domain order as the output.
+// back into the next round.
+//
+// aux, when non-empty, is a second codeword on the same domain as layer (a
+// level whose own introduction round is this one): since Fold is linear, its
+// weighted contribution auxWeight·Fold(aux) is computed by folding
+// layer+auxWeight·aux once, rather than folding layer and aux separately and
+// adding the results.
 //
 // The folding formula, writing x = g^i for the natural-order domain point of
 // pair j (i.e. i = bitReverse(j) over the half-domain):
 //
-//	next[j] = (layer[2j] + layer[2j+1]) / 2
-//	        + alpha   * (layer[2j] - layer[2j+1]) / (2x)
-//	        + alpha^2 * aux[j]                            // only when aux given
+//	next[j] = (layer[2j] + auxWeight·aux[2j] + layer[2j+1] + auxWeight·aux[2j+1]) / 2
+//	        + alpha * (layer[2j] + auxWeight·aux[2j] - layer[2j+1] - auxWeight·aux[2j+1]) / (2x)
 func foldLayerInternally(
 	layer []field.Ext,
 	aux []field.Ext,
+	auxWeight field.Ext,
 	alpha field.Ext,
 	domain *fft.Domain,
 	invTwo field.Element,
@@ -432,11 +442,13 @@ func foldLayerInternally(
 	if int(domain.Cardinality) != len(layer) {
 		panic("fri: foldLayerInternally: len(layer) != domain.Cardinality")
 	}
+	if len(aux) > 0 && len(aux) != len(layer) {
+		panic("fri: foldLayerInternally: len(aux) != len(layer)")
+	}
 
 	var (
-		half   = len(layer) / 2
-		next   = make([]field.Ext, half)
-		alpha2 = new(field.Ext).Square(&alpha)
+		half = len(layer) / 2
+		next = make([]field.Ext, half)
 	)
 
 	// invTwiddles[j] holds (1/2)·x⁻¹ for pair j, where x = g^i is its
@@ -455,6 +467,14 @@ func foldLayerInternally(
 	for j := range half {
 		p, q := layer[2*j], layer[2*j+1]
 
+		if len(aux) > 0 {
+			var wp, wq field.Ext
+			wp.Mul(&aux[2*j], &auxWeight)
+			wq.Mul(&aux[2*j+1], &auxWeight)
+			p.Add(&p, &wp)
+			q.Add(&q, &wq)
+		}
+
 		var sum, diff field.Ext
 		sum.Add(&p, &q)
 		sum.MulByElement(&sum, &invTwo)
@@ -464,16 +484,6 @@ func foldLayerInternally(
 		diff.Mul(&diff, &alpha)
 
 		next[j].Add(&sum, &diff)
-
-		var auxTerm field.Ext
-
-		// if there is an aux, add it.
-		// @alex: this could be expanded in 2 loops to avoid rechecking len(aux)
-		// at every step.
-		if len(aux) > 0 {
-			auxTerm.Mul(&aux[j], alpha2)
-			next[j].Add(&next[j], &auxTerm)
-		}
 	}
 
 	return next
