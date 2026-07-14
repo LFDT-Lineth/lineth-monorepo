@@ -36,6 +36,14 @@ class Secp256k1SignatureTest {
   }
 
   @Test
+  fun `toBytes drops the sign byte of 33-byte magnitudes`() {
+    val signature = Secp256k1Signature(Secp256k1.N - BigInteger.ONE, Secp256k1.HALF_N)
+    val bytes = signature.toBytes()
+    assertThat(bytes).hasSize(Secp256k1Signature.SIZE_BYTES)
+    assertThat(Secp256k1Signature.fromBytes(bytes)).isEqualTo(signature)
+  }
+
+  @Test
   fun `fromBytes rejects wrong lengths and non-canonical encodings`() {
     assertThatThrownBy { Secp256k1Signature.fromBytes(ByteArray(65)) }
       .isInstanceOf(IllegalArgumentException::class.java)
