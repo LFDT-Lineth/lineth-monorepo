@@ -122,6 +122,16 @@ distributions {
   }
 }
 
+// Fails if any Coordinator TOML config key is missing @ConfigDoc / @ConfigSection docs.
+// NOTE: not yet wired into `check` — the real config classes are annotated in a later phase;
+// wiring into `check`/CI happens once every key is documented.
+tasks.register('checkCoordinatorConfigDocs', JavaExec) {
+  group = 'verification'
+  description = 'Verifies that every Coordinator TOML config key is documented.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'linea.coordinator.config.v2.docs.ConfigDocCheckMain'
+}
+
 run {
   workingDir = rootProject.projectDir
   jvmArgs = [
