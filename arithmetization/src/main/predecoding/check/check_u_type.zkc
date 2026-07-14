@@ -1,31 +1,41 @@
+include "fold_noop.zkc"
+
 fn check_u_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rd_decoded:Register, imm_decoded:DoubleWord) {
     var imm20:u20
     var rd:Register
     imm20::rd = instruction_parameters
 
     // U-type has no funct3; verify the raw opcode encodes the claimed compute_op.
-    // Mapping (see elf_to_json_gen decodeUTypeSemantic):
+    // Mapping (see elf_to_json_gen decodeUTypeSemantic / utypeOpForRd):
     //   LUI -> UTYPE_LUI / UTYPE_LUI_WB, AUIPC -> UTYPE_AUIPC / UTYPE_AUIPC_WB
     switch opcode {
         case OPCODE_LUI: {
-            if compute_op != UTYPE_LUI {
-                if compute_op != UTYPE_LUI_WB {
-                    printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+            // Check for folded rd=x0 no-op.
+            if rd == 0 {
+                if compute_op != COMPUTE_MISC_MEM {
+                    printf "[ERROR] U-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
                     fail
                 }
+            } else if compute_op != UTYPE_LUI && compute_op != UTYPE_LUI_WB {
+                    printf "[ERROR] U-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
+                    fail
             }
         }
         case OPCODE_AUIPC: {
             if compute_op != UTYPE_AUIPC {
                 if compute_op != UTYPE_AUIPC_WB {
-                    printf "[ERROR] compute_op mismatch (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                    printf "[ERROR] U-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
                     fail
                 }
             }
         }
         default: {
-            printf "[ERROR] invalid U-type opcode (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
-            fail
+            // Unrecognised U-type opcode → elf_to_json_gen maps to COMPUTE_INVALID.
+            if compute_op != COMPUTE_INVALID {
+                printf "[ERROR] invalid U-type opcode requires COMPUTE_INVALID (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
+                fail
+            }
+            return
         }
     }
 
@@ -41,4 +51,3 @@ fn check_u_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op
         fail
     }
 }
-

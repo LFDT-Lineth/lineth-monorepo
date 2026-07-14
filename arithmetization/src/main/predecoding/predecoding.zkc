@@ -40,6 +40,9 @@ fn predecoding(index:u64, instruction:Instruction) {
         case J_TYPE: {
             check_j_type(index, instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
         }
+        case U_TYPE: {
+            check_u_type(index, instruction_parameters, opcode, compute_op, rd_decoded, imm_decoded)
+        }
         case MISC_MEM_TYPE: {
         }
         default: {
@@ -48,49 +51,4 @@ fn predecoding(index:u64, instruction:Instruction) {
         }
     }
 
-    switch compute_op {
-        // Folded rd=x0 no-ops and FENCE: no operands to verify.
-        case COMPUTE_MISC_MEM: {
-        }
-        // Slots elf_to_json_gen could not map to a modeled instruction (padding
-        // between sections, CSR ops, constants in .text, bad encodings, etc.).
-        // The verifier trusts that classification and does not re-check operands.
-        // A stricter version could also prove the raw word is genuinely unmodeled.
-        case COMPUTE_INVALID: {
-        }
-        case BRANCH_BEQ, BRANCH_BNE, BRANCH_BLT, BRANCH_BGE, BRANCH_BLTU, BRANCH_BGEU: {
-            check_b_type_operands(index, instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
-        }
-        case READ8_SGN, READ16_SGN, READ32_SGN, READ64, READ8_ZEXT, READ16_ZEXT, READ32_ZEXT,
-             OP_ADDI, OP_SLLI, OP_SLTI, OP_SLTIU, OP_XORI, OP_ORI, OP_ANDI, OP_SRLI, OP_SRAI,
-             OP_ADDIW, OP_SLLIW, OP_SRLIW, OP_SRAIW,
-             READ8_SGN_WB, READ16_SGN_WB, READ32_SGN_WB, READ64_WB, READ8_ZEXT_WB, READ16_ZEXT_WB, READ32_ZEXT_WB,
-             OP_ADDI_WB, OP_SLLI_WB, OP_SLTI_WB, OP_SLTIU_WB, OP_XORI_WB, OP_ORI_WB, OP_ANDI_WB, OP_SRLI_WB, OP_SRAI_WB,
-             OP_ADDIW_WB, OP_SLLIW_WB, OP_SRLIW_WB, OP_SRAIW_WB,
-             ITYPE_JALR, ITYPE_JALR_WB, ITYPE_ECALL, ITYPE_EBREAK: {
-            check_i_type(index, instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
-        }
-        case RTYPE_ADD, RTYPE_SUB, RTYPE_SLL, RTYPE_SLT, RTYPE_SLTU, RTYPE_XOR, RTYPE_OR, RTYPE_AND, RTYPE_SRL, RTYPE_SRA,
-             RTYPE_MUL, RTYPE_MULH, RTYPE_MULHSU, RTYPE_MULHU, RTYPE_DIV, RTYPE_DIVU, RTYPE_REM, RTYPE_REMU,
-             RTYPE_ADDW, RTYPE_SUBW, RTYPE_SLLW, RTYPE_SRLW, RTYPE_SRAW, RTYPE_MULW, RTYPE_DIVW, RTYPE_DIVUW, RTYPE_REMW, RTYPE_REMUW,
-             RTYPE_ADD_WB, RTYPE_SUB_WB, RTYPE_SLL_WB, RTYPE_SLT_WB, RTYPE_SLTU_WB, RTYPE_XOR_WB, RTYPE_OR_WB, RTYPE_AND_WB, RTYPE_SRL_WB, RTYPE_SRA_WB,
-             RTYPE_MUL_WB, RTYPE_MULH_WB, RTYPE_MULHSU_WB, RTYPE_MULHU_WB, RTYPE_DIV_WB, RTYPE_DIVU_WB, RTYPE_REM_WB, RTYPE_REMU_WB,
-             RTYPE_ADDW_WB, RTYPE_SUBW_WB, RTYPE_SLLW_WB, RTYPE_SRLW_WB, RTYPE_SRAW_WB, RTYPE_MULW_WB, RTYPE_DIVW_WB, RTYPE_DIVUW_WB, RTYPE_REMW_WB, RTYPE_REMUW_WB,
-             RTYPE_KECCAK, RTYPE_POSEIDON2: {
-            check_r_type(index, instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
-        }
-        case JTYPE_JAL, JTYPE_JAL_WB: {
-            check_j_type(index, instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
-        }
-        case STYPE_STORE8, STYPE_STORE16, STYPE_STORE32, STYPE_STORE64: {
-            check_s_type_operands(index, instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
-        }
-        case UTYPE_LUI, UTYPE_AUIPC, UTYPE_LUI_WB, UTYPE_AUIPC_WB: {
-            check_u_type(index, instruction_parameters, opcode, compute_op, rd_decoded, imm_decoded)
-        }
-        default: {
-            printf "[ERROR] index %d: unknown/unhandled compute_op %x (instruction %x)\n", index, compute_op, instruction
-            fail
-        }
-    }
 }
