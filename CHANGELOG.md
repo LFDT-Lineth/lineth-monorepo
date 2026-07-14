@@ -93,3 +93,4 @@
 - *(deps)* Bump golang.org/x/net (#3500)
 - *(misc)* Refactor hoplite decoders to it's own module (#3557)
 - *(ci)* Update image tags (#3553)
+- *(deps)* Align bouncycastle catalog pin to 1.84 (#3562)
