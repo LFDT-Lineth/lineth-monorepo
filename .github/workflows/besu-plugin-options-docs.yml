@@ -29,7 +29,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  generate:
+  generate-drift-check:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     steps:
       - name: Checkout monorepo
@@ -74,7 +74,7 @@ jobs:
 
   publish-doc-linea:
     if: ${{ !inputs.dry_run }}
-    needs: generate
+    needs: generate-drift-check
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     permissions:
       contents: read
