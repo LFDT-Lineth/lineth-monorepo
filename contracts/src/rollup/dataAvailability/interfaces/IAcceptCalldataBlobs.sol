@@ -14,7 +14,7 @@ interface IAcceptCalldataBlobs is IShnarfDataAcceptorBase {
    * @param blockHash The L2 final block hash for this submission, used in shnarf computation.
    * @param compressedData is the compressed transaction data. It contains ordered data for each L2 block - l2Timestamps, the encoded transaction data.
    */
-  struct CompressedCalldataSubmission {
+  struct CompressedCalldataSubmissionV2 {
     bytes32 blockHash;
     bytes compressedData;
   }
@@ -32,7 +32,7 @@ interface IAcceptCalldataBlobs is IShnarfDataAcceptorBase {
    * @param _expectedShnarf The expected shnarf post computation of all the submission.
    */
   function submitDataAsCalldata(
-    CompressedCalldataSubmission calldata _submission,
+    CompressedCalldataSubmissionV2 calldata _submission,
     bytes32 _parentShnarf,
     bytes32 _expectedShnarf
   ) external;

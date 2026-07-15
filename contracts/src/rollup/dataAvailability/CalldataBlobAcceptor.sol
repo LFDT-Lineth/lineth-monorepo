@@ -19,7 +19,7 @@ abstract contract CalldataBlobAcceptor is LocalShnarfProvider, ShnarfDataAccepto
    * @param _expectedShnarf The expected shnarf post computation of the submission.
    */
   function submitDataAsCalldata(
-    CompressedCalldataSubmission calldata _submission,
+    CompressedCalldataSubmissionV2 calldata _submission,
     bytes32 _parentShnarf,
     bytes32 _expectedShnarf
   ) public virtual whenTypeAndGeneralNotPaused(PauseType.STATE_DATA_SUBMISSION) onlyRole(OPERATOR_ROLE) {
@@ -33,7 +33,7 @@ abstract contract CalldataBlobAcceptor is LocalShnarfProvider, ShnarfDataAccepto
    * @param _expectedShnarf The expected shnarf post computation of the submission.
    */
   function _submitDataAsCalldata(
-    CompressedCalldataSubmission calldata _submission,
+    CompressedCalldataSubmissionV2 calldata _submission,
     bytes32 _parentShnarf,
     bytes32 _expectedShnarf
   ) internal virtual {
