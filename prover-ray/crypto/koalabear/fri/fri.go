@@ -148,8 +148,10 @@ type QueryLayer []Branch
 // QueryLayerRoots holds the Merkle roots corresponding to a QueryLayer.
 type QueryLayerRoots []field.Octuplet
 
-// Query holds the opening data for one full query path across all r levels.
-type Query []QueryLayer // len = numRounds
+// RunningQuery holds the running-layer openings for one query.
+// RunningQuery[j-1] opens folding round j, so len(RunningQuery) =
+// numRounds-1.
+type RunningQuery []QueryLayer
 
 // Level holds one polynomial introduced at the folding round where the running
 // polynomial's degree matches Level.D. Trees are the pre-built paired-leaf Merkle
@@ -164,13 +166,10 @@ type Level struct {
 // are NOT stored here — they are passed externally to Verify (the caller
 // commits to those polynomials before invoking FRI).
 type Proof struct {
-	// LevelQueries[l-1][k] = openings for levels[l].Evals at outer query k.
-	LevelQueries [][]QueryLayer
-
 	// Running-polynomial FRI path
-	FRIRoots     []field.Octuplet // Merkle roots for running poly T_1..T_{r-1}
-	FinalPolyExt []field.Ext
-	FRIQueries   []Query // len = NumQueries
+	RoundRoots     []field.Octuplet // Merkle roots for running poly T_1..T_{r-1}
+	FinalPolyExt   []field.Ext
+	RunningQueries []RunningQuery
 }
 
 // FullDomainGenerator returns the generator of the full evaluation domain (layer 0, size N).
@@ -268,174 +267,98 @@ func checkLevelTrees(label string, trees []*Tree) error {
 }
 
 // ────────────────────────────────────────────────────────────────────────────────
-// Verify — multi-degree FRI verifier
+// Proof checks — shape validation, authentication helpers, and fold arithmetic
 // ────────────────────────────────────────────────────────────────────────────────
 
-// Verify checks a multi-degree FRI proof.
-//
-// levelRoots[l] is the list of Merkle roots backing levels[l].Evals (committed
-// by the caller before invoking FRI). levelRoots[0][0] plays the role of
-// "root0" in single-degree FRI.
-//
-// levelDs[l] is the polynomial-size parameter D for level l; levelDs[0] must
-// equal p.D and the slice must be ordered consistently with how Prove was
-// called (i.e. decreasing D).
-//
-// ts must be in the same state as when Prove was called.
-func Verify(p Params, levelRoots []QueryLayerRoots, levelDs []int, prf Proof,
-	alphas []field.Ext, openedPositions []int) error {
-	return verifyWithInputs(p, levelRoots, levelDs, prf, alphas, openedPositions, inputValues{}, true)
-}
-
-func verifyWithInputs(p Params, levelRoots []QueryLayerRoots, levelDs []int, prf Proof,
-	alphas []field.Ext, openedPositions []int, inputs inputValues, exactInputBranches bool) error {
-
-	if len(levelDs) == 0 {
-		return fmt.Errorf("fri: Verify: at least one level required")
-	}
-	if len(levelRoots) != len(levelDs) {
-		return fmt.Errorf("fri: Verify: levelRoots has %d entries, levelDs has %d", len(levelRoots), len(levelDs))
-	}
-	for l, roots := range levelRoots {
-		if len(roots) == 0 {
-			return fmt.Errorf("fri: Verify: levelRoots[%d] is empty", l)
-		}
-	}
-	if levelDs[0] != p.D {
-		return fmt.Errorf("fri: Verify: levelDs[0]=%d must equal p.D=%d", levelDs[0], p.D)
-	}
-
-	numLevels := len(levelDs)
-	numExtraLevels := numLevels - 1
-
-	wantFRIRoots := p.numRounds - 1
+// checkOpeningProofShape validates prf's structure against p and the
+// challenge lengths before any authentication or reconstruction runs, so a
+// malformed proof can never cause an out-of-bounds access later.
+func checkOpeningProofShape(p Params, prf Proof, foldAlphas []field.Ext, positions []int) error {
+	wantRoundRoots := p.numRounds - 1
 	if p.numRounds <= 1 {
-		wantFRIRoots = 0
+		wantRoundRoots = 0
 	}
-	if len(prf.FRIRoots) != wantFRIRoots {
-		return fmt.Errorf("fri: Verify: proof has %d FRI roots, want %d", len(prf.FRIRoots), wantFRIRoots)
+	wantLayersPerRunningQuery := wantRoundRoots
+	if len(prf.RoundRoots) != wantRoundRoots {
+		return fmt.Errorf("fri: pcs.Verify: proof has %d round roots, want %d", len(prf.RoundRoots), wantRoundRoots)
 	}
-	if len(prf.FRIQueries) != p.NumQueries {
-		return fmt.Errorf("fri: Verify: proof has %d FRI queries, want %d", len(prf.FRIQueries), p.NumQueries)
-	}
-	if len(prf.LevelQueries) != numExtraLevels {
-		return fmt.Errorf("fri: Verify: proof has %d level query sets, want %d", len(prf.LevelQueries), numExtraLevels)
-	}
-	for l, qs := range prf.LevelQueries {
-		if len(qs) != p.NumQueries {
-			return fmt.Errorf("fri: Verify: proof has %d queries for extra level %d, want %d", len(qs), l+1, p.NumQueries)
-		}
-	}
-	if len(prf.FinalPolyExt) == 0 {
-		return fmt.Errorf("fri: Verify: ext final field with empty FinalPolyExt")
-	}
-
-	// levelAtRound: folding round j → level index l (1-based).
-	levelAtRound := make(map[int]int, numExtraLevels)
-	for l := 1; l < numLevels; l++ {
-		if levelDs[l] <= 0 || levelDs[l]&(levelDs[l]-1) != 0 {
-			return fmt.Errorf("fri: Verify: levelDs[%d]=%d is not a positive power of two", l, levelDs[l])
-		}
-		ratio := p.D / levelDs[l]
-		if ratio <= 0 || ratio*levelDs[l] != p.D || ratio&(ratio-1) != 0 {
-			return fmt.Errorf("fri: Verify: levelDs[%d]=%d does not divide p.D=%d by a power-of-two ratio", l, levelDs[l], p.D)
-		}
-		jl := utils.Log2Ceil(ratio)
-		if jl < 1 || jl >= p.numRounds {
-			return fmt.Errorf(
-				"fri: Verify: levelDs[%d]=%d gives intro round %d, must be in 1..%d",
-				l, levelDs[l], jl, p.numRounds-1)
-		}
-		if _, dup := levelAtRound[jl]; dup {
-			return fmt.Errorf("fri: Verify: two levels share intro round %d", jl)
-		}
-		levelAtRound[jl] = l
-	}
-
-	// Assemble FRI running-polynomial roots: roots[0] is the level-0 roots;
-	// roots[1..r-1] come from prf.FRIRoots.
-	roots := make([]QueryLayerRoots, p.numRounds)
-	roots[0] = levelRoots[0]
-	for j := 1; j < p.numRounds; j++ {
-		roots[j] = QueryLayerRoots{prf.FRIRoots[j-1]}
-	}
-
-	if inputs.Top == nil {
-		var err error
-		inputs, err = merkleInputValues(prf, levelAtRound)
-		if err != nil {
-			return err
-		}
-	}
-	if len(inputs.Top) < p.NumQueries || len(inputs.Levels) < p.NumQueries {
-		return fmt.Errorf("fri: Verify: missing input evaluations")
-	}
-
-	// Structural validation: reject a malformed proof here, before any hashing,
-	// so that a missing or extra entry can never cause an out-of-bounds access or
-	// a silently-ignored field later in verification.
-	if len(openedPositions) < p.NumQueries {
-		return fmt.Errorf("fri: Verify: %d opened positions, need at least %d",
-			len(openedPositions), p.NumQueries)
-	}
-	if len(alphas) < p.numRounds {
-		return fmt.Errorf("fri: Verify: %d folding challenges, need at least %d",
-			len(alphas), p.numRounds)
+	if len(prf.RunningQueries) != p.NumQueries {
+		return fmt.Errorf("fri: pcs.Verify: proof has %d running queries, want %d", len(prf.RunningQueries), p.NumQueries)
 	}
 	if want := p.N >> p.numRounds; len(prf.FinalPolyExt) != want {
-		return fmt.Errorf("fri: Verify: FinalPolyExt has %d entries, want %d",
-			len(prf.FinalPolyExt), want)
+		return fmt.Errorf("fri: pcs.Verify: FinalPolyExt has %d entries, want %d", len(prf.FinalPolyExt), want)
 	}
-	for k := range p.NumQueries {
-		s := openedPositions[k]
-		if s < 0 || s >= p.N {
-			return fmt.Errorf("fri: Verify: opened position %d out of range [0,%d)", s, p.N)
+	if len(foldAlphas) < p.numRounds {
+		return fmt.Errorf("fri: pcs.Verify: %d folding challenges, need at least %d", len(foldAlphas), p.numRounds)
+	}
+	for k, q := range prf.RunningQueries {
+		if len(q) != wantLayersPerRunningQuery {
+			return fmt.Errorf("fri: pcs.Verify: query %d has %d running layers, want %d", k, len(q), wantLayersPerRunningQuery)
 		}
-		q := prf.FRIQueries[k]
-		if len(q) != p.numRounds {
-			return fmt.Errorf("fri: Verify: query %d has %d layers, want %d", k, len(q), p.numRounds)
-		}
-		if len(inputs.Levels[k]) < numExtraLevels {
-			return fmt.Errorf("fri: Verify: query %d has %d level evaluations, want %d",
-				k, len(inputs.Levels[k]), numExtraLevels)
-		}
-		for j := range p.numRounds {
-			exact := true
-			if j == 0 {
-				exact = exactInputBranches
-			}
-			if err := checkQueryLayerShape(q[j], roots[j], p.N>>j, exact); err != nil {
-				return fmt.Errorf("fri: Verify: query %d round %d: %w", k, j, err)
-			}
-			if j == 0 {
-				if err := authenticateInputOpening("round 0", q[j], roots[j], p.N, s); err != nil {
-					return fmt.Errorf("fri: Verify: query %d round %d: %w", k, j, err)
-				}
-				if err := checkInputDigests(inputs, k, 0, q[j], p.N, true); err != nil {
-					return fmt.Errorf("fri: Verify: query %d round %d: %w", k, j, err)
-				}
-			}
-		}
-		for jl, li := range levelAtRound {
-			opening := prf.LevelQueries[li-1][k]
-			if err := checkQueryLayerShape(opening, levelRoots[li], p.N>>jl, exactInputBranches); err != nil {
-				return fmt.Errorf("fri: Verify: query %d extra level %d: %w", k, li, err)
-			}
-			if err := authenticateInputOpening(
-				fmt.Sprintf("level %d", li), opening, levelRoots[li], p.N>>jl, s>>jl,
-			); err != nil {
-				return fmt.Errorf("fri: Verify: query %d extra level %d: %w", k, li, err)
-			}
-			if err := checkInputDigests(inputs, k, li, opening, p.N>>jl, false); err != nil {
-				return fmt.Errorf("fri: Verify: query %d extra level %d: %w", k, li, err)
-			}
+		if s := positions[k]; s < 0 || s >= p.N {
+			return fmt.Errorf("fri: pcs.Verify: opened position %d out of range [0,%d)", s, p.N)
 		}
 	}
+	return nil
+}
 
-	for k := range p.NumQueries {
-		if err := checkQueryExt(k, openedPositions[k], prf.FRIQueries[k], levelAtRound,
-			roots, prf.FinalPolyExt, alphas, p, inputs); err != nil {
-			return fmt.Errorf("fri: Verify: query %d failed: %w", k, err)
+// resolvedQuery holds every fold input for one query, already authenticated
+// against the committed trees and (for round 0 and any auxiliary levels)
+// reconstructed by the caller. checkFolds consumes only this: it never
+// touches a row, a root, a branch, or alpha_DEEP.
+type resolvedQuery struct {
+	Rounds []inputPair       // Rounds[j] = (self, sibling) at fold round j
+	Aux    map[int]field.Ext // Aux[j] = the level value batched in at round j, if any
+	Final  field.Ext         // the final-polynomial target for this query
+}
+
+// checkFolds verifies the FRI fold recurrence for every query against values
+// the caller has already authenticated and reconstructed: pure arithmetic,
+// no Merkle proof or row ever passes through it.
+func checkFolds(p Params, resolved []resolvedQuery, foldAlphas []field.Ext, positions []int) error {
+	for queryIdx, rq := range resolved {
+		s := positions[queryIdx]
+		for j := range p.numRounds {
+			base := s >> j
+			self, sib := rq.Rounds[j].Self, rq.Rounds[j].Sibling
+
+			// x is the domain point of the opened leaf. The codeword is bit-reversed,
+			// so the natural-order index of position base is bitReverse(base) and
+			// x = gⱼ^{bitReverse(base)} with gⱼ the size-Nⱼ generator.
+			var xInv field.Element
+			x := domainPoint(p.domainsLight[j], base)
+			xInv.Inverse(&x)
+
+			// fold: (self + sib)/2 + alpha · (self - sib)/(2x)
+			var sum, diff, expected field.Ext
+			sum.Add(&self, &sib)
+			sum.MulByElement(&sum, &p.invTwo)
+			diff.Sub(&self, &sib)
+			diff.MulByElement(&diff, &p.invTwo)
+			diff.MulByElement(&diff, &xInv)
+			diff.Mul(&diff, &foldAlphas[j])
+			expected.Add(&sum, &diff)
+
+			// Mix in the auxiliary half-codeword: the level entering at round j+1,
+			// batched with alpha², exactly as foldLayerInternally does on the prover.
+			if aux, ok := rq.Aux[j+1]; ok {
+				var alpha2, term field.Ext
+				alpha2.Square(&foldAlphas[j])
+				term.Mul(&aux, &alpha2)
+				expected.Add(&expected, &term)
+			}
+
+			// The fold output must equal the queried leaf of the next layer (whose
+			// position is base>>1 = s>>(j+1)); at the last round, the final polynomial.
+			if j < p.numRounds-1 {
+				if !expected.Equal(&rq.Rounds[j+1].Self) {
+					return fmt.Errorf("fri: pcs.Verify: query %d round %d: folded value mismatch with round %d leaf",
+						queryIdx, j, j+1)
+				}
+			} else if !expected.Equal(&rq.Final) {
+				return fmt.Errorf("fri: pcs.Verify: query %d round %d (final): folded value does not match FinalPoly",
+					queryIdx, j)
+			}
 		}
 	}
 	return nil
@@ -467,37 +390,6 @@ func checkBranchShape(b Branch, numLeaves int, exactSiblings bool) error {
 	}
 	if len(b.AuxSiblings) != wantAux {
 		return fmt.Errorf("branch has %d aux siblings, want %d", len(b.AuxSiblings), wantAux)
-	}
-	return nil
-}
-
-func authenticateInputOpening(label string, opening QueryLayer, roots QueryLayerRoots, levelSize, base int) error {
-	_, err := authenticateQueryLayerRoots(label, opening, roots, func(branch Branch) (int, error) {
-		return levelLeafIndex(1<<len(branch.Siblings), levelSize, base)
-	})
-	return err
-}
-
-func checkInputDigests(inputs inputValues, queryIdx, levelIdx int, opening QueryLayer, levelSize int, top bool) error {
-	if len(inputs.Leaves) == 0 {
-		return nil
-	}
-	for i, want := range inputs.Leaves[queryIdx][levelIdx] {
-		got, err := branchLeafAtLevel(opening[i], levelSize)
-		if err != nil {
-			return fmt.Errorf("tree %d level leaf: %w", i, err)
-		}
-		if got != want {
-			return fmt.Errorf("tree %d row digest mismatch", i)
-		}
-	}
-	if !top || len(inputs.TopSiblings) == 0 {
-		return nil
-	}
-	for i, want := range inputs.TopSiblings[queryIdx] {
-		if len(opening[i].Siblings) == 0 || opening[i].Siblings[len(opening[i].Siblings)-1] != want {
-			return fmt.Errorf("tree %d sibling digest mismatch", i)
-		}
 	}
 	return nil
 }
@@ -623,13 +515,13 @@ func mapExtToOctuplet(exts []field.Ext) []field.Octuplet {
 	return res
 }
 
-// openQueryExt builds the Merkle opening data for query index s across all r
-// extension folding levels. The caller supplies layer0 because it may be backed
-// by several external trees; later running layers are backed by one FRI tree
-// each.
-func openQueryExt(s int, layer0 QueryLayer, layers [][]field.Ext, trees []*Tree, numRounds int) Query {
-	q := make(Query, numRounds)
-	q[0] = layer0
+// openRunningQueryExt builds the Merkle opening data for query index s across
+// running extension folding levels. Input-tree openings are carried separately.
+func openRunningQueryExt(s int, layers [][]field.Ext, trees []*Tree, numRounds int) RunningQuery {
+	if numRounds <= 1 {
+		return nil
+	}
+	q := make(RunningQuery, numRounds-1)
 	for j := 1; j < numRounds; j++ {
 
 		var (
@@ -640,184 +532,21 @@ func openQueryExt(s int, layer0 QueryLayer, layers [][]field.Ext, trees []*Tree,
 		// Each fold halves the layer, so layer j has half the entries of layer
 		// j-1. base = s>>j is the bit-reversed position of the query in layer j.
 		if len(layers[j])*2 != len(layers[j-1]) {
-			panic("fri: openQueryExt: layers must halve at each round")
+			panic("fri: openRunningQueryExt: layers must halve at each round")
 		}
 
-		q[j] = QueryLayer{path}
+		q[j-1] = QueryLayer{path}
 	}
 
 	return q
 }
 
+// inputPair is one fold round's conjugate values (self, sibling), whether
+// resolved by PCS reconstruction (round 0, auxiliary levels) or decoded
+// directly from a running FRI tree's leaf (every other round).
 type inputPair struct {
 	Self    field.Ext
 	Sibling field.Ext
-}
-
-type inputValues struct {
-	Top         []inputPair
-	Levels      [][]field.Ext
-	Leaves      [][][]field.Octuplet
-	TopSiblings [][]field.Octuplet
-}
-
-func newInputValues(numQueries, numExtraLevels int) inputValues {
-	res := inputValues{
-		Top:    make([]inputPair, numQueries),
-		Levels: make([][]field.Ext, numQueries),
-	}
-	for i := range numQueries {
-		res.Levels[i] = make([]field.Ext, numExtraLevels)
-	}
-	return res
-}
-
-func merkleInputValues(prf Proof, levelAtRound map[int]int) (inputValues, error) {
-	res := newInputValues(len(prf.FRIQueries), len(prf.LevelQueries))
-	for queryIdx, query := range prf.FRIQueries {
-		if len(query) > 0 {
-			top, err := decodeInputPair("round 0", query[0])
-			if err != nil {
-				return inputValues{}, fmt.Errorf("fri: Verify: query %d round 0: %w", queryIdx, err)
-			}
-			res.Top[queryIdx] = top
-		}
-		for _, levelIdx := range levelAtRound {
-			value, err := decodeInputValue(fmt.Sprintf("level %d", levelIdx), prf.LevelQueries[levelIdx-1][queryIdx])
-			if err != nil {
-				return inputValues{}, fmt.Errorf("fri: Verify: query %d extra level %d: %w",
-					queryIdx, levelIdx, err)
-			}
-			res.Levels[queryIdx][levelIdx-1] = value
-		}
-	}
-	return res, nil
-}
-
-func decodeInputPair(label string, opening QueryLayer) (inputPair, error) {
-	if len(opening) == 0 {
-		return inputPair{}, fmt.Errorf("%s: opening is empty", label)
-	}
-	branch := opening[0]
-	if len(branch.Siblings) == 0 {
-		return inputPair{}, fmt.Errorf("%s: branch carries no sibling", label)
-	}
-	self, err := octupletToExt(branch.Leaf)
-	if err != nil {
-		return inputPair{}, fmt.Errorf("%s: decode leaf: %w", label, err)
-	}
-	sibling, err := octupletToExt(branch.Siblings[len(branch.Siblings)-1])
-	if err != nil {
-		return inputPair{}, fmt.Errorf("%s: decode sibling: %w", label, err)
-	}
-	return inputPair{Self: self, Sibling: sibling}, nil
-}
-
-func decodeInputValue(label string, opening QueryLayer) (field.Ext, error) {
-	if len(opening) == 0 {
-		return field.Ext{}, fmt.Errorf("%s: opening is empty", label)
-	}
-	value, err := octupletToExt(opening[0].Leaf)
-	if err != nil {
-		return field.Ext{}, fmt.Errorf("%s: decode leaf: %w", label, err)
-	}
-	return value, nil
-}
-
-func merkleQueryPair(round, base int, opening QueryLayer, roots QueryLayerRoots) (
-	field.Ext, field.Ext, error,
-) {
-	branch, err := authenticateQueryLayer(fmt.Sprintf("round %d", round), opening, roots, base)
-	if err != nil {
-		return field.Ext{}, field.Ext{}, err
-	}
-	if len(branch.Siblings) == 0 {
-		return field.Ext{}, field.Ext{}, fmt.Errorf("round %d: branch carries no sibling", round)
-	}
-	self, err := octupletToExt(branch.Leaf)
-	if err != nil {
-		return field.Ext{}, field.Ext{}, fmt.Errorf("round %d: decode leaf: %w", round, err)
-	}
-	sib, err := octupletToExt(branch.Siblings[len(branch.Siblings)-1])
-	if err != nil {
-		return field.Ext{}, field.Ext{}, fmt.Errorf("round %d: decode sibling: %w", round, err)
-	}
-	return self, sib, nil
-}
-
-func checkQueryExt(queryIdx, s int, fq Query,
-	levelAtRound map[int]int,
-	roots []QueryLayerRoots,
-	finalPoly []field.Ext,
-	alphas []field.Ext,
-	p Params,
-	inputs inputValues) error {
-
-	for j := range p.numRounds {
-
-		base := s >> j // bit-reversed position of the query in layer j
-
-		// The opened leaf and its deepest sibling are the conjugate pair p(x), p(-x).
-		self, sib := inputs.Top[queryIdx].Self, inputs.Top[queryIdx].Sibling
-		if j > 0 {
-			var err error
-			self, sib, err = merkleQueryPair(j, base, fq[j], roots[j])
-			if err != nil {
-				return err
-			}
-		}
-
-		// x is the domain point of the opened leaf. The codeword is bit-reversed,
-		// so the natural-order index of position base is bitReverse(base) and
-		// x = gⱼ^{bitReverse(base)} with gⱼ the size-Nⱼ generator.
-		var xInv field.Element
-		x := domainPoint(p.domainsLight[j], base)
-		xInv.Inverse(&x)
-
-		// fold: (self + sib)/2 + alpha · (self - sib)/(2x)
-		var sum, diff, expected field.Ext
-		sum.Add(&self, &sib)
-		sum.MulByElement(&sum, &p.invTwo)
-		diff.Sub(&self, &sib)
-		diff.MulByElement(&diff, &p.invTwo)
-		diff.MulByElement(&diff, &xInv)
-		diff.Mul(&diff, &alphas[j])
-		expected.Add(&sum, &diff)
-
-		var alpha2, term field.Ext
-		alpha2.Square(&alphas[j])
-
-		// Mix in the auxiliary half-codeword: the level entering at round j+1,
-		// batched with alpha², exactly as foldLayerInternally does on the prover.
-		if li, ok := levelAtRound[j+1]; ok {
-			aux := inputs.Levels[queryIdx][li-1]
-			term.Mul(&aux, &alpha2)
-			expected.Add(&expected, &term)
-		}
-
-		// The fold output must equal the queried leaf of the next layer (whose
-		// position is base>>1 = s>>(j+1)); at the last round, the final polynomial.
-		if j < p.numRounds-1 {
-			if len(fq[j+1]) == 0 {
-				return fmt.Errorf("round %d: next layer: opening is empty", j)
-			}
-			nextBranch := fq[j+1][0]
-			next, err := octupletToExt(nextBranch.Leaf)
-			if err != nil {
-				return fmt.Errorf("round %d: decode next leaf: %w", j, err)
-			}
-			if !expected.Equal(&next) {
-				return fmt.Errorf("round %d: folded value mismatch with round %d leaf", j, j+1)
-			}
-		} else {
-			finalVal := finalPoly[s>>p.numRounds]
-			if !expected.Equal(&finalVal) {
-				return fmt.Errorf("round %d (final): folded value does not match FinalPoly", j)
-			}
-		}
-	}
-
-	return nil
 }
 
 func authenticateQueryLayer(

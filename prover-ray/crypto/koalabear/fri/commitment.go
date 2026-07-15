@@ -115,6 +115,21 @@ func (table MultiSizeTable) Merkleize() *Tree {
 	return NewTree(leaves)
 }
 
+// Shape returns the per-size row counts of the batch, discarding the
+// polynomial values. It is the verifier-side view of a committed batch: a
+// caller that holds the committed table builds VerifyInputs.Shapes from it,
+// without needing the witness data.
+func (table MultiSizeTable) Shape() Shape {
+	shape := make(Shape, len(table))
+	for sizeLog2 := range table {
+		shape[sizeLog2] = SizedShape{
+			BaseWidth: len(table[sizeLog2].Base),
+			ExtWidth:  len(table[sizeLog2].Ext),
+		}
+	}
+	return shape
+}
+
 // assertValidMultiEncoder checks that the provided list of encoder:
 //   - share the same inverse rate
 //   - coder[i].PlainTextSize == 2**i

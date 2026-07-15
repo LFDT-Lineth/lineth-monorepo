@@ -97,7 +97,30 @@ func TestCanonicalLayout_RejectsShiftInvariants(t *testing.T) {
 	}
 }
 
-func TestProverStateOpenAlignsMultiSizeLevelLeaf(t *testing.T) {
+// TestAddOpeningZeta covers the shared-zeta invariant: zeta=0 is a valid
+// out-of-domain point and is accepted (its zero value is not a sentinel), but
+// a later opening carrying a different zeta is rejected.
+func TestAddOpeningZeta(t *testing.T) {
+	params, err := NewParams(8, 4, 1)
+	require.NoError(t, err)
+	pcs, err := NewPCS(params, makeEncoders(params.numRounds+1, 2))
+	require.NoError(t, err)
+
+	witness := make(Batch, 3)
+	witness[2] = SizedTable{Ext: [][]field.Ext{field.VecPseudoRandExt(rand.New(utils.NewRandSource(1)), 4)}}
+	committed := pcs.Commit(witness)
+	shifts := make(BatchShifts, 3)
+	shifts[2] = SizedShifts{Ext: [][]int{{0}}}
+	claimed := make(BatchClaimedValues, 3)
+	claimed[2] = SizedClaimedValues{Ext: [][]field.Ext{{{}}}}
+
+	require.NoError(t, pcs.AddOpening(committed, field.Ext{}, shifts, claimed))
+	require.ErrorContains(t,
+		pcs.AddOpening(committed, field.UintsToExt(1, 0, 0, 0, 0, 0), shifts, claimed),
+		"zeta mismatch")
+}
+
+func TestOpenInputTreeOpeningAlignsMultiSizeRows(t *testing.T) {
 	prng := rand.New(utils.NewRandSource(20260625))
 	params, err := NewParams(16, 8, 1)
 	require.NoError(t, err)
@@ -116,45 +139,30 @@ func TestProverStateOpenAlignsMultiSizeLevelLeaf(t *testing.T) {
 	const query = 11
 	base := query >> 1
 
-	topBranch := openLevelTreesAt([]*Tree{tree}, len(fullEvals), query)[0]
+	topBranch := tree.OpenBranch(query)
 	assert.Equal(t, digestSizedRow(encoded[3], query), topBranch.Leaf)
 	assert.Equal(t, digestSizedRow(encoded[3], query^1), topBranch.Siblings[len(topBranch.Siblings)-1])
 
-	levels := []Level{
-		newRandomLevel(prng, params, params.D),
-		{D: 4, Evals: levelEvals, Trees: []*Tree{tree, otherTree}},
-	}
-	alphas := []field.Ext{
-		field.UintsToExt(41, 1, 0, 0, 0, 0),
-		field.UintsToExt(43, 0, 1, 0, 0, 0),
-		field.UintsToExt(47, 0, 0, 1, 0, 0),
-	}
-	proof := proverForTest(params, levels, alphas, []int{query})
-
-	require.Len(t, proof.LevelQueries, 1)
-	opening := proof.LevelQueries[0][0]
-	require.Len(t, opening, 2)
-
-	checkLevelBranch := func(name string, branch Branch, tree *Tree, encoded MultiSizeTable) {
+	checkInputTreeOpening := func(name string, branch InputTreeOpening, tree *Tree, encoded MultiSizeTable) {
 		t.Helper()
 
-		lifted := levelTreeLeafIndex(tree, len(levelEvals), base)
-		root, err := branch.RecoverRoot(lifted)
+		root, err := branch.RecoverRoot(query)
 		require.NoError(t, err, name)
 		assert.Equal(t, tree.Root(), root, name)
 
-		leaf, err := branchLeafAtLevel(branch, len(levelEvals))
+		leaf, err := branch.rowAtLevel(len(levelEvals))
 		require.NoError(t, err, name)
-		assert.Equal(t, digestSizedRow(encoded[2], base), leaf, name)
+		assert.Equal(t, digestSizedRow(encoded[2], base), hashRowOpening(leaf), name)
 	}
-	checkLevelBranch("first tree", opening[0], tree, encoded)
-	checkLevelBranch("second tree", opening[1], otherTree, otherEncoded)
+	checkInputTreeOpening("first tree", openInputTreeOpening(params, CommitterState{Tree: tree, EncodedTable: encoded}, query), tree, encoded)
+	checkInputTreeOpening("second tree", openInputTreeOpening(params, CommitterState{Tree: otherTree, EncodedTable: otherEncoded}, query), otherTree, otherEncoded)
 }
 
 type pcsOpenVerifyFixture struct {
-	pcs   *PCS
-	input VerifyInputs
-	proof OpeningProof
+	pcs       *PCS
+	input     VerifyInputs
+	proof     OpeningProof
+	committed []CommitterState
 }
 
 type openInputs struct {
@@ -191,13 +199,7 @@ func openForTest(t *testing.T, pcs *PCS, in openInputs) (OpeningProof, []BatchCl
 	for round := 0; started.HasNext(); round++ {
 		started.Fold(in.Challenges.FoldAlphas[round])
 	}
-	friProof := started.Open(queryPositions)
-	rowOpenings := pcs.OpenedRows(queryPositions)
-
-	return OpeningProof{
-		RowOpenings: rowOpenings,
-		FRIProof:    friProof,
-	}, batchClaims
+	return pcs.Open(started, queryPositions), batchClaims
 }
 
 // claimedValuesForTest evaluates every opened (size, row, shift) of a witness
@@ -250,6 +252,7 @@ func newPCSOpenVerifyFixture(t *testing.T) pcsOpenVerifyFixture {
 
 	prng := rand.New(utils.NewRandSource(20260626))
 	witness := make(Batch, 3)
+	witness[1] = SizedTable{Ext: [][]field.Ext{field.VecPseudoRandExt(prng, 2)}}
 	witness[2] = SizedTable{Ext: [][]field.Ext{
 		field.VecPseudoRandExt(prng, 4),
 		field.VecPseudoRandExt(prng, 4),
@@ -258,6 +261,7 @@ func newPCSOpenVerifyFixture(t *testing.T) pcsOpenVerifyFixture {
 	committed := []CommitterState{pcs.Commit(witness)}
 
 	batchShifts := make(BatchShifts, 3)
+	batchShifts[1] = SizedShifts{Ext: [][]int{{0}}}
 	batchShifts[2] = SizedShifts{Ext: [][]int{{0}, {1}}}
 	shifts := []BatchShifts{batchShifts}
 	zeta := field.UintsToExt(19, 2, 3, 5, 7, 11)
@@ -275,10 +279,11 @@ func newPCSOpenVerifyFixture(t *testing.T) pcsOpenVerifyFixture {
 	})
 
 	return pcsOpenVerifyFixture{
-		pcs: pcs,
+		pcs:       pcs,
+		committed: committed,
 		input: VerifyInputs{
 			Roots:         []field.Octuplet{committed[0].Tree.Root()},
-			Shapes:        shapesFromBatches(witnesses),
+			Shapes:        utils.Map(Batch.Shape, witnesses),
 			Shifts:        shifts,
 			ClaimedValues: claimed,
 			Zeta:          zeta,
@@ -340,7 +345,7 @@ func TestPCSStaticParamsLargerThanWitness(t *testing.T) {
 
 	require.NoError(t, pcs.Verify(VerifyInputs{
 		Roots:         []field.Octuplet{committed[0].Tree.Root()},
-		Shapes:        shapesFromBatches(witnesses),
+		Shapes:        utils.Map(Batch.Shape, witnesses),
 		Shifts:        shifts,
 		ClaimedValues: claimed,
 		Zeta:          zeta,
@@ -423,7 +428,7 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 		started.Fold(foldAlphas[round])
 	}
 	gotProof := started.Open(positions)
-	assert.Equal(t, referenceProof.FRIRoots, gotProof.FRIRoots)
+	assert.Equal(t, referenceProof.RoundRoots, gotProof.RoundRoots)
 	assert.Equal(t, referenceProof.FinalPolyExt, gotProof.FinalPolyExt)
 
 	oneShot, oneShotClaims := openForTest(t, pcs, openInputs{
@@ -440,7 +445,7 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	roots := []field.Octuplet{committed[0].Tree.Root(), committed[1].Tree.Root()}
 	require.NoError(t, pcs.Verify(VerifyInputs{
 		Roots:         roots,
-		Shapes:        shapesFromBatches(witnesses),
+		Shapes:        utils.Map(Batch.Shape, witnesses),
 		Shifts:        shifts,
 		ClaimedValues: oneShotClaims,
 		Zeta:          zeta,
