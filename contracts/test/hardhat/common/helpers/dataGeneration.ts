@@ -69,6 +69,7 @@ export async function generateFinalizationData(overrides?: Partial<FinalizationD
     endBlockNumber: 99n,
     shnarfData: generateParentShnarfData(1),
     parentStateRootHash: generateRandomBytes(32),
+    parentBlockHash: HASH_ZERO,
     lastFinalizedTimestamp: BigInt((await networkTime.latest()) - 2),
     finalTimestamp: BigInt(await networkTime.latest()),
     l1RollingHash: generateRandomBytes(32),
@@ -82,6 +83,9 @@ export async function generateFinalizationData(overrides?: Partial<FinalizationD
     lastFinalizedForcedTransactionNumber: 0n,
     finalForcedTransactionNumber: 0n,
     lastFinalizedForcedTransactionRollingHash: HASH_ZERO,
+    finalBlockHash: generateRandomBytes(32),
+    finalBlobHash: generateRandomBytes(32),
+    verifierKeys: [],
     ...overrides,
   };
 }

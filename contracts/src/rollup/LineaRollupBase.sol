@@ -158,6 +158,7 @@ abstract contract LineaRollupBase is
 
     verifiers[0] = _initializationData.defaultVerifier;
 
+    require(_initializationData.initialBlockHash != EMPTY_HASH, IGenericErrors.ZeroHashNotAllowed());
     currentL2BlockNumber = _initializationData.initialL2BlockNumber;
     blockHashes[_initializationData.initialL2BlockNumber] = _initializationData.initialBlockHash;
 
@@ -379,8 +380,8 @@ abstract contract LineaRollupBase is
   }
 
   /**
-   * @notice Internal function to compute the shnarf using the legacy (pre-V5) formula.
-   * @dev Retained for the migration finalization path only. Using assembly this way is cheaper gas wise.
+   * @notice Computes a legacy shnarf for compatibility with pre-block-hash data utilities.
+   * @dev Block-hash-based finalization never calls this overload.
    * @param _parentShnarf The shnarf of the parent data item.
    * @param _snarkHash The SNARK-friendly hash for compressed data used in public input.
    * @param _finalStateRootHash The final state root hash of the data being submitted.
@@ -458,8 +459,8 @@ abstract contract LineaRollupBase is
 
   /**
    * @notice Internal function to finalize compressed blocks.
-   * @dev Implements migration logic: if blockHashes[lastFinalizedBlock] is EMPTY_HASH the legacy
-   *   shnarf formula (5-arg) is used; otherwise the new 3-arg formula is used.
+   * @dev If blockHashes[lastFinalizedBlock] is EMPTY_HASH, validates the legacy parent state root.
+   *   All finalized data uses the new block-hash-centric shnarf formula, making migration one-way.
    * @param _finalizationData The full finalization data.
    * @param _lastFinalizedBlock The last finalized block number.
    * @param _finalForcedTransactionRollingHash The rolling hash for the final forced transaction.
@@ -475,7 +476,6 @@ abstract contract LineaRollupBase is
     _validateFilteredAddresses(_finalizationData.filteredAddresses);
 
     bytes32 lastFinalizedState = currentFinalizedState;
-
     if (
       FinalizedStateHashing._computeLastFinalizedState(
         _finalizationData.lastFinalizedL1RollingHashMessageNumber,
@@ -497,9 +497,10 @@ abstract contract LineaRollupBase is
       );
     }
 
-    if (_finalizationData.finalTimestamp >= block.timestamp) {
-      revert FinalizationInTheFuture(_finalizationData.finalTimestamp, block.timestamp);
-    }
+    require(
+      _finalizationData.finalTimestamp < block.timestamp,
+      FinalizationInTheFuture(_finalizationData.finalTimestamp, block.timestamp)
+    );
 
     /// @dev Check the next forced transaction is outside the scope of our finalization for censorship resistance checking.
     unchecked {
@@ -507,12 +508,11 @@ abstract contract LineaRollupBase is
         _finalizationData.finalForcedTransactionNumber + 1
       ];
 
-      if (
-        nextFinalizationStartingForcedTxNumber > 0 &&
-        nextFinalizationStartingForcedTxNumber <= _finalizationData.endBlockNumber
-      ) {
-        revert FinalizationDataMissingForcedTransaction(_finalizationData.finalForcedTransactionNumber + 1);
-      }
+      require(
+        nextFinalizationStartingForcedTxNumber == 0 ||
+          nextFinalizationStartingForcedTxNumber > _finalizationData.endBlockNumber,
+        FinalizationDataMissingForcedTransaction(_finalizationData.finalForcedTransactionNumber + 1)
+      );
     }
 
     // Look up parent block hash BEFORE any state update.
@@ -521,46 +521,29 @@ abstract contract LineaRollupBase is
 
     if (parentBlockHash == EMPTY_HASH) {
       // MIGRATION PATH: parent was committed under the old state-root-hash model.
-      if (stateRootHashes[_lastFinalizedBlock] != _finalizationData.parentStateRootHash) {
-        revert StartingRootHashDoesNotMatch();
-      }
-      if (_finalizationData.shnarfData.finalStateRootHash == EMPTY_HASH) {
-        revert FinalBlockStateEqualsZeroHash();
-      }
-
-      finalShnarf = _computeShnarf(
-        _finalizationData.shnarfData.parentShnarf,
-        _finalizationData.shnarfData.snarkHash,
-        _finalizationData.shnarfData.finalStateRootHash,
-        _finalizationData.shnarfData.dataEvaluationPoint,
-        _finalizationData.shnarfData.dataEvaluationClaim
+      require(_finalizationData.parentBlockHash == EMPTY_HASH, StartingBlockHashDoesNotMatch());
+      bytes32 parentStateRootHash = stateRootHashes[_lastFinalizedBlock];
+      require(
+        parentStateRootHash != EMPTY_HASH && parentStateRootHash == _finalizationData.parentStateRootHash,
+        StartingRootHashDoesNotMatch()
       );
-
-      if (shnarfProvider.blobShnarfExists(finalShnarf) == 0) {
-        revert FinalShnarfNotSubmitted(finalShnarf);
-      }
-
-      // Retain stateRootHashes so a subsequent same-round migration check still resolves.
-      stateRootHashes[_finalizationData.endBlockNumber] = _finalizationData.shnarfData.finalStateRootHash;
     } else {
       // NEW PATH: parent committed under block-hash model.
       // Soft continuity check: caller must declare the parent block hash they are building from.
       // The on-chain blockHashes mapping is authoritative; this guards against callers accidentally
       // submitting finalization data that starts from a different parent than they intended.
-      if (parentBlockHash != _finalizationData.parentBlockHash) {
-        revert StartingBlockHashDoesNotMatch();
-      }
-
-      finalShnarf = _computeShnarf(
-        _finalizationData.shnarfData.parentShnarf,
-        _finalizationData.finalBlockHash,
-        _finalizationData.finalBlobHash
-      );
-
-      if (shnarfProvider.blobShnarfExists(finalShnarf) == 0) {
-        revert FinalShnarfNotSubmitted(finalShnarf);
-      }
+      require(parentBlockHash == _finalizationData.parentBlockHash, StartingBlockHashDoesNotMatch());
     }
+
+    require(_finalizationData.finalBlockHash != EMPTY_HASH, FinalizationBlockHashIsZeroHash());
+
+    finalShnarf = _computeShnarf(
+      _finalizationData.shnarfData.parentShnarf,
+      _finalizationData.finalBlockHash,
+      _finalizationData.finalBlobHash
+    );
+
+    require(shnarfProvider.blobShnarfExists(finalShnarf) != 0, FinalShnarfNotSubmitted(finalShnarf));
 
     _addL2MerkleRoots(_finalizationData.l2MerkleRoots, _finalizationData.l2MerkleTreesDepth);
     _anchorL2MessagingBlocks(_finalizationData.l2MessagingBlocksOffsets, _lastFinalizedBlock);

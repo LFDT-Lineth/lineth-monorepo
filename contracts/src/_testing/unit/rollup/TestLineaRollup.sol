@@ -3,7 +3,6 @@ pragma solidity 0.8.33;
 
 import { LineaRollup } from "../../../rollup/LineaRollup.sol";
 import { FinalizedStateHashing } from "../../../libraries/FinalizedStateHashing.sol";
-import { LineaRollupBase } from "../../../rollup/LineaRollupBase.sol";
 import { CalldataBlobAcceptor } from "../../../rollup/dataAvailability/CalldataBlobAcceptor.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { EfficientLeftRightKeccak } from "../../../libraries/EfficientLeftRightKeccak.sol";
@@ -31,6 +30,14 @@ contract TestLineaRollup is LineaRollup, CalldataBlobAcceptor {
 
   function setLastFinalizedBlock(uint256 _blockNumber) external {
     currentL2BlockNumber = _blockNumber;
+  }
+
+  function setStateRootHash(uint256 _blockNumber, bytes32 _stateRootHash) external {
+    stateRootHashes[_blockNumber] = _stateRootHash;
+  }
+
+  function setBlockHash(uint256 _blockNumber, bytes32 _blockHash) external {
+    blockHashes[_blockNumber] = _blockHash;
   }
 
   function setLastFinalizedShnarf(bytes32 _lastFinalizedShnarf) external {

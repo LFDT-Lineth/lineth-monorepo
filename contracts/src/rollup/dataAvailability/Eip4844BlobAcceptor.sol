@@ -40,13 +40,8 @@ abstract contract Eip4844BlobAcceptor is LocalShnarfProvider, ShnarfDataAcceptor
   ) internal virtual {
     uint256 blobCount = _blobFinalBlockHashes.length;
 
-    if (blobCount == 0) {
-      revert BlobSubmissionDataIsMissing();
-    }
-
-    if (blobhash(blobCount) != EMPTY_HASH) {
-      revert BlobSubmissionDataEmpty(blobCount);
-    }
+    require(blobCount != 0, BlobSubmissionDataIsMissing());
+    require(blobhash(blobCount) == EMPTY_HASH, BlobSubmissionDataEmpty(blobCount));
 
     bytes32 currentBlobHash;
     bytes32 computedShnarf = _parentShnarf;
@@ -54,16 +49,12 @@ abstract contract Eip4844BlobAcceptor is LocalShnarfProvider, ShnarfDataAcceptor
     for (uint256 i; i < blobCount; i++) {
       currentBlobHash = blobhash(i);
 
-      if (currentBlobHash == EMPTY_HASH) {
-        revert EmptyBlobDataAtIndex(i);
-      }
+      require(currentBlobHash != EMPTY_HASH, EmptyBlobDataAtIndex(i));
 
       computedShnarf = _computeShnarf(computedShnarf, _blobFinalBlockHashes[i], currentBlobHash);
     }
 
-    if (_finalBlobShnarf != computedShnarf) {
-      revert FinalShnarfWrong(_finalBlobShnarf, computedShnarf);
-    }
+    require(_finalBlobShnarf == computedShnarf, FinalShnarfWrong(_finalBlobShnarf, computedShnarf));
 
     _acceptShnarfData(_parentShnarf, _finalBlobShnarf, _blobFinalBlockHashes[blobCount - 1]);
   }

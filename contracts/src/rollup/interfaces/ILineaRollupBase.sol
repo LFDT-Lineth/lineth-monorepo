@@ -43,8 +43,8 @@ interface ILineaRollupBase {
   }
 
   /**
-   * @notice Shnarf data for validating a shnarf using the legacy (pre-V5) computation.
-   * @dev Retained for the migration path in finalization. After migration, only parentShnarf is used.
+   * @notice Shnarf data supplied during finalization.
+   * @dev Only parentShnarf is used by V5 finalization. The remaining fields preserve the transition ABI layout.
    * @param parentShnarf is the parent computed shnarf.
    * @param snarkHash is the computed hash for compressed data (using a SNARK-friendly hash function) that aggregates per data submission to be used in public input.
    * @param finalStateRootHash is the final state root hash.
@@ -65,7 +65,7 @@ interface ILineaRollupBase {
    * @param parentStateRootHash is the expected last state root hash finalized. Used only in the migration path.
    * @param parentBlockHash The expected L2 parent block hash at the start of this finalization. Used as a soft continuity check on the new (post-migration) path only — the on-chain blockHashes mapping is the authoritative source of truth.
    * @param endBlockNumber is the end block finalizing until.
-   * @param shnarfData contains data about the last data submission's shnarf. Used in migration path (all 5 fields) and new path (parentShnarf only).
+   * @param shnarfData contains data about the last data submission's shnarf. V5 finalization uses parentShnarf only.
    * @param lastFinalizedTimestamp is the expected last finalized block's timestamp.
    * @param finalTimestamp is the timestamp of the last block being finalized.
    * @param lastFinalizedL1RollingHash is the last stored L2 computed rolling hash used in finalization.
@@ -201,7 +201,7 @@ interface ILineaRollupBase {
   /**
    * @dev Thrown when the final block hash equals the zero hash during finalization.
    */
-  error FinalBlockStateEqualsZeroHash();
+  error FinalizationBlockHashIsZeroHash();
 
   /**
    * @dev Thrown when the starting block hash does not match the stored block hash on the new finalization path.
