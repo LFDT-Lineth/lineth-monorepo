@@ -13,12 +13,14 @@ fn check_j_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op
     //   JAL -> JTYPE_JAL / JTYPE_JAL_WB
     switch opcode {
         case OPCODE_JAL: {
+            // JAL is never folded
             if rd == 0 {
+                // rd=x0: base compute_op.
                 if compute_op != JTYPE_JAL {
                     printf "[ERROR] J-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
                     fail
                 }
-            } else if compute_op != JTYPE_JAL_WB {
+            } else if compute_op != JTYPE_JAL_WB { // rd≠x0: writeback variant.
                 printf "[ERROR] J-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
                 fail
             }

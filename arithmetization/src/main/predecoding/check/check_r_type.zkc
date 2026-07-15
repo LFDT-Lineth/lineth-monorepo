@@ -27,88 +27,96 @@ fn check_r_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op
                     switch funct3 {
                         case FUNCT3_MUL: {
                             if rd == 0 {
+                                // rd=x0: base compute_op.
                                 if compute_op != RTYPE_MUL {
                                     printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                     fail
                                 }
-                            } else if compute_op != RTYPE_MUL_WB {
+                            } else if compute_op != RTYPE_MUL_WB { // rd≠x0: writeback variant.
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_MULH: {
                             if rd == 0 {
+                                // rd=x0: base compute_op.
                                 if compute_op != RTYPE_MULH {
                                     printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                     fail
                                 }
-                            } else if compute_op != RTYPE_MULH_WB {
+                            } else if compute_op != RTYPE_MULH_WB { // rd≠x0: writeback variant.
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_MULHSU: {
                             if rd == 0 {
+                                // rd=x0: base compute_op.
                                 if compute_op != RTYPE_MULHSU {
                                     printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                     fail
                                 }
-                            } else if compute_op != RTYPE_MULHSU_WB {
+                            } else if compute_op != RTYPE_MULHSU_WB { // rd≠x0: writeback variant.
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_MULHU: {
                             if rd == 0 {
+                                // rd=x0: base compute_op.
                                 if compute_op != RTYPE_MULHU {
                                     printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                     fail
                                 }
-                            } else if compute_op != RTYPE_MULHU_WB {
+                            } else if compute_op != RTYPE_MULHU_WB { // rd≠x0: writeback variant.
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_DIV: {
                             if rd == 0 {
+                                // rd=x0: base compute_op.
                                 if compute_op != RTYPE_DIV {
                                     printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                     fail
                                 }
-                            } else if compute_op != RTYPE_DIV_WB {
+                            } else if compute_op != RTYPE_DIV_WB { // rd≠x0: writeback variant.
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_DIVU: {
                             if rd == 0 {
+                                // rd=x0: base compute_op.
                                 if compute_op != RTYPE_DIVU {
                                     printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                     fail
                                 }
-                            } else if compute_op != RTYPE_DIVU_WB {
+                            } else if compute_op != RTYPE_DIVU_WB { // rd≠x0: writeback variant.
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_REM: {
                             if rd == 0 {
+                                // rd=x0: base compute_op.
                                 if compute_op != RTYPE_REM {
                                     printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                     fail
                                 }
-                            } else if compute_op != RTYPE_REM_WB {
+                            } else if compute_op != RTYPE_REM_WB { // rd≠x0: writeback variant.
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_REMU: {
                             if rd == 0 {
+                                // rd=x0: base compute_op.
                                 if compute_op != RTYPE_REMU {
                                     printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                     fail
                                 }
-                            } else if compute_op != RTYPE_REMU_WB {
+                            } else if compute_op != RTYPE_REMU_WB { // rd≠x0: writeback variant.
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
@@ -126,88 +134,96 @@ fn check_r_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op
                     switch funct3 {
                         case FUNCT3_ADD: {
                             if rd == 0 {
+                                // rd=x0: base compute_op.
                                 if compute_op != RTYPE_ADD {
                                     printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                     fail
                                 }
-                            } else if compute_op != RTYPE_ADD_WB {
+                            } else if compute_op != RTYPE_ADD_WB { // rd≠x0: writeback variant.
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_SLL: {
                             if rd == 0 {
+                                // rd=x0: base compute_op.
                                 if compute_op != RTYPE_SLL {
                                     printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                     fail
                                 }
-                            } else if compute_op != RTYPE_SLL_WB {
+                            } else if compute_op != RTYPE_SLL_WB { // rd≠x0: writeback variant.
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_SLT: {
                             if rd == 0 {
+                                // rd=x0: base compute_op.
                                 if compute_op != RTYPE_SLT {
                                     printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                     fail
                                 }
-                            } else if compute_op != RTYPE_SLT_WB {
+                            } else if compute_op != RTYPE_SLT_WB { // rd≠x0: writeback variant.
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_SLTU: {
                             if rd == 0 {
+                                // rd=x0: base compute_op.
                                 if compute_op != RTYPE_SLTU {
                                     printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                     fail
                                 }
-                            } else if compute_op != RTYPE_SLTU_WB {
+                            } else if compute_op != RTYPE_SLTU_WB { // rd≠x0: writeback variant.
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_XOR: {
                             if rd == 0 {
+                                // rd=x0: base compute_op.
                                 if compute_op != RTYPE_XOR {
                                     printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                     fail
                                 }
-                            } else if compute_op != RTYPE_XOR_WB {
+                            } else if compute_op != RTYPE_XOR_WB { // rd≠x0: writeback variant.
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_SRL: {
                             if rd == 0 {
+                                // rd=x0: base compute_op.
                                 if compute_op != RTYPE_SRL {
                                     printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                     fail
                                 }
-                            } else if compute_op != RTYPE_SRL_WB {
+                            } else if compute_op != RTYPE_SRL_WB { // rd≠x0: writeback variant.
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_OR: {
                             if rd == 0 {
+                                // rd=x0: base compute_op.
                                 if compute_op != RTYPE_OR {
                                     printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                     fail
                                 }
-                            } else if compute_op != RTYPE_OR_WB {
+                            } else if compute_op != RTYPE_OR_WB { // rd≠x0: writeback variant.
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_AND: {
                             if rd == 0 {
+                                // rd=x0: base compute_op.
                                 if compute_op != RTYPE_AND {
                                     printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                     fail
                                 }
-                            } else if compute_op != RTYPE_AND_WB {
+                            } else if compute_op != RTYPE_AND_WB { // rd≠x0: writeback variant.
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
@@ -225,22 +241,24 @@ fn check_r_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op
                     switch funct3 {
                         case FUNCT3_SUB: {
                             if rd == 0 {
+                                // rd=x0: base compute_op.
                                 if compute_op != RTYPE_SUB {
                                     printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                     fail
                                 }
-                            } else if compute_op != RTYPE_SUB_WB {
+                            } else if compute_op != RTYPE_SUB_WB { // rd≠x0: writeback variant.
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_SRA: {
                             if rd == 0 {
+                                // rd=x0: base compute_op.
                                 if compute_op != RTYPE_SRA {
                                     printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                     fail
                                 }
-                            } else if compute_op != RTYPE_SRA_WB {
+                            } else if compute_op != RTYPE_SRA_WB { // rd≠x0: writeback variant.
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
@@ -269,55 +287,60 @@ fn check_r_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op
                     switch funct3 {
                         case FUNCT3_MULW: {
                             if rd == 0 {
+                                // rd=x0: base compute_op.
                                 if compute_op != RTYPE_MULW {
                                     printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                     fail
                                 }
-                            } else if compute_op != RTYPE_MULW_WB {
+                            } else if compute_op != RTYPE_MULW_WB { // rd≠x0: writeback variant.
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_DIVW: {
                             if rd == 0 {
+                                // rd=x0: base compute_op.
                                 if compute_op != RTYPE_DIVW {
                                     printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                     fail
                                 }
-                            } else if compute_op != RTYPE_DIVW_WB {
+                            } else if compute_op != RTYPE_DIVW_WB { // rd≠x0: writeback variant.
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_DIVUW: {
                             if rd == 0 {
+                                // rd=x0: base compute_op.
                                 if compute_op != RTYPE_DIVUW {
                                     printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                     fail
                                 }
-                            } else if compute_op != RTYPE_DIVUW_WB {
+                            } else if compute_op != RTYPE_DIVUW_WB { // rd≠x0: writeback variant.
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_REMW: {
                             if rd == 0 {
+                                // rd=x0: base compute_op.
                                 if compute_op != RTYPE_REMW {
                                     printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                     fail
                                 }
-                            } else if compute_op != RTYPE_REMW_WB {
+                            } else if compute_op != RTYPE_REMW_WB { // rd≠x0: writeback variant.
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_REMUW: {
                             if rd == 0 {
+                                // rd=x0: base compute_op.
                                 if compute_op != RTYPE_REMUW {
                                     printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                     fail
                                 }
-                            } else if compute_op != RTYPE_REMUW_WB {
+                            } else if compute_op != RTYPE_REMUW_WB { // rd≠x0: writeback variant.
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
@@ -335,33 +358,36 @@ fn check_r_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op
                     switch funct3 {
                         case FUNCT3_ADDW: {
                             if rd == 0 {
+                                // rd=x0: base compute_op.
                                 if compute_op != RTYPE_ADDW {
                                     printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                     fail
                                 }
-                            } else if compute_op != RTYPE_ADDW_WB {
+                            } else if compute_op != RTYPE_ADDW_WB { // rd≠x0: writeback variant.
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_SLLW: {
                             if rd == 0 {
+                                // rd=x0: base compute_op.
                                 if compute_op != RTYPE_SLLW {
                                     printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                     fail
                                 }
-                            } else if compute_op != RTYPE_SLLW_WB {
+                            } else if compute_op != RTYPE_SLLW_WB { // rd≠x0: writeback variant.
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_SRLW: {
                             if rd == 0 {
+                                // rd=x0: base compute_op.
                                 if compute_op != RTYPE_SRLW {
                                     printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                     fail
                                 }
-                            } else if compute_op != RTYPE_SRLW_WB {
+                            } else if compute_op != RTYPE_SRLW_WB { // rd≠x0: writeback variant.
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
@@ -379,22 +405,24 @@ fn check_r_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op
                     switch funct3 {
                         case FUNCT3_SUBW: {
                             if rd == 0 {
+                                // rd=x0: base compute_op.
                                 if compute_op != RTYPE_SUBW {
                                     printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                     fail
                                 }
-                            } else if compute_op != RTYPE_SUBW_WB {
+                            } else if compute_op != RTYPE_SUBW_WB { // rd≠x0: writeback variant.
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_SRAW: {
                             if rd == 0 {
+                                // rd=x0: base compute_op.
                                 if compute_op != RTYPE_SRAW {
                                     printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                     fail
                                 }
-                            } else if compute_op != RTYPE_SRAW_WB {
+                            } else if compute_op != RTYPE_SRAW_WB { // rd≠x0: writeback variant.
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }

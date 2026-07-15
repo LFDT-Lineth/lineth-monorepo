@@ -12,15 +12,156 @@ include "ram/read.zkc"
 include "ram/write.zkc"
 include "../lib/keccak/impl.zkc"
 
-// Execute a single pre-decoded RISC-V instruction and return the next program
-// counter. The instruction type no longer drives a dispatch: every instruction
-// is pre-decoded (see `decoded` in memory.zkc) into a uniform record processed
-// by the same four-phase pipeline (zisk-style):
+// Execute one instruction slot and return the next program counter.
 //
-//   1. read    — gather operands a, b and perform any memory load
-//   2. compute — result = operation(a, b)   (factorized across all formats)
-//   3. write   — register or memory writeback
-//   4. advance — compute the next pc
+// The raw RISC-V instruction type semantics are pre-decoded at ELF time
+// into a compute op and operands : compute_op + imm + rs1 + rs2 + rd
+// (see decoded in memory.zkc).
+//
+// Runtime dispatch is on the pre-decoded semantic compute op (`compute_op`).
+// Invalid opcodes (*TYPE_INVALID) are handled by the default arm.
+// 
+// Each slot is justified with the predecoding justification loop in `main.zkc`
+// (it will be done offline by `predecoding/main.zkc` in the future) :
+// raw blob words must match `decoded[index]` in memory.zkc
+// (compute_op + imm + rs1 + rs2 + rd).
+//
+// The switch below is grouped by former format (I/J/U/B/S/R, MISC_MEM) for
+// readability only. 
+// Each operation that may write rd has a pair of compute op: BASE (compute only)
+// and BASE_WB, WB for writeback, that computes and writes the result to registers[rd]
+// (compute + registers[rd] = result). When rd is x0, the BASE opcode is encoded at
+// ELF time; otherwise BASE_WB is used. Except for the foldable no-ops : they are 
+// rewritten to COMPUTE_MISC_MEM at ELF time and only advance pc.
+//
+// =======
+// I-type  
+// =======
+//
+// In the predecoding phase, the operands for I-type instructions come from a
+// common 25-bit encoding (opcode stripped) that is laid out as:
+//
+//   imm12 :: rs1 :: funct3 :: rd
+//
+// Shift amounts are normalized at ELF time; the immediate is sign-extended into `imm`:
+//
+// var signext_imm12_64:DoubleWord = sgn_extension_u12_u64(imm12)
+// var imm:u64 = signed_sum_of_double_word(registers[rs1], signext_imm12_64)
+//
+// ========
+// R-type
+// ========
+// 
+// In the predecoding phase, the operands for R-type instructions come from the 25-bit
+// encoding (opcode stripped) that is laid out as:
+// 
+//   funct7 :: rs2 :: rs1 :: funct3 :: rd
+//
+// Supported operation groups:
+//
+//   Base RV64I — register arithmetic/logic (64-bit):
+//     ADD, SUB, SLL, SLT, SLTU, XOR, SRL, SRA, OR, AND
+//
+//   RV64I *W — word-width (32-bit) variants, result sign-extended to 64 bits:
+//     ADDW, SUBW, SLLW, SRLW, SRAW
+//
+//   M-extension — integer multiply/divide/remainder (64-bit):
+//     MUL, MULH, MULHSU, MULHU, DIV, DIVU, REM, REMU
+//
+//   M-extension *W — word-width multiply/divide/remainder, sign-extended to 64 bits:
+//     MULW, DIVW, DIVUW, REMW, REMUW
+//
+//   Custom-1 — Keccak precompile (no register writeback)
+//
+// =======
+// S-type  
+// =======
+//
+// In the predecoding phase, the operands for S-type instructions come from the 25-bit
+// encoding (opcode stripped) that splits the 12-bit signed immediate across two fields so
+// that rs1 and rs2 occupy the same bit positions as in other formats:
+//
+//   imm[11] :: imm[10:5] :: rs2 :: rs1 :: funct3 :: imm[4:0]
+//
+// The immediate is reassembled as imm[11] :: imm[10:5] :: imm[4:0] and
+// sign-extended to 64 bits at ELF time into `imm`.
+// 
+// var imm:DoubleWord = sgn_extension_u12_u64(imm12)
+//
+// Store variants selected by compute_op (from funct3 at ELF time):
+//   STYPE_STORE8  (funct3 = 0b000) — store byte       (8 bits)
+//   STYPE_STORE16 (funct3 = 0b001) — store halfword   (16 bits)
+//   STYPE_STORE32 (funct3 = 0b010) — store word       (32 bits)
+//   STYPE_STORE64 (funct3 = 0b011) — store doubleword (64 bits)
+//
+// Effect:
+//   mem[rs1 + imm] ← lower N bits of rs2 
+//
+// =======
+// B-type  
+// =======
+// 
+// In the predecoding phase, the operands for B-type instructions come from a
+// common 25-bit encoding (opcode stripped) that is laid out as:
+//
+//   imm[12] :: imm[10:5] :: rs2 :: rs1 :: compute_op(funct3) :: imm[4:1] :: imm[11]
+//
+// The 13-bit signed PC-relative branch offset is reassembled and sign-extended
+// at ELF time into `imm`:
+//
+//    var imm:DoubleWord
+//    if imm_sign == 1 {
+//      imm = DWORD_SIGN_EXT_PREFIX_52_ONES::imm_11::imm_10_5::imm_4_1::(0 as u1)
+//    } else {
+//      imm = (imm_11::imm_10_5::imm_4_1::(0 as u1)) as DoubleWord
+//    }
+//
+// The six branch variants and their conditions are:
+//   BEQ  (compute_op = BRANCH_BEQ = funct3 = 0b000) — branch if rs1 == rs2
+//   BNE  (compute_op = BRANCH_BNE = funct3 = 0b001) — branch if rs1 != rs2
+//   BLT  (compute_op = BRANCH_BLT = funct3 = 0b100) — branch if rs1 <  rs2 (signed)
+//   BGE  (compute_op = BRANCH_BGE = funct3 = 0b101) — branch if rs1 >= rs2 (signed)
+//   BLTU (compute_op = BRANCH_BLTU = funct3 = 0b110) — branch if rs1 <  rs2 (unsigned)
+//   BGEU (compute_op = BRANCH_BGEU = funct3 = 0b111) — branch if rs1 >= rs2 (unsigned)
+//
+// When the branch condition is false, pc_new = pc + 4 (fall-through).
+// When the branch condition is true,  pc_new = pc + imm (taken branch).
+//
+// =======
+// J-type  
+// =======
+// 
+// In the predecoding phase, the operands for J-type instructions come from a
+// common 25-bit encoding (opcode stripped) that is laid out as:
+//
+//   imm[20] :: imm[10:1] :: imm[11] :: imm[19:12] :: rd
+//
+// The 21-bit signed jump offset is then reassembled:
+//
+//  var imm21:u21 = ((imm20::imm19_12::imm11::imm10_1) as u21) << 1
+//
+// and sign-extended into `imm`:
+//
+//  var imm:DoubleWord = sgn_extension_u21_u64(imm21)
+//
+// Effect:
+//   JTYPE_JAL    — pc_new = pc + imm
+//   JTYPE_JAL_WB — pc_new = pc + imm; rd = pc + 4
+// 
+// =======
+// U-type  
+// =======
+// 
+// In the predecoding phase, the operands for U-type instructions come from the 25-bit
+// encoding (opcode stripped) is simply:
+//
+//   imm20 :: rd
+//
+// The upper immediate is placed into bits [31:12] of a 32-bit word (lower 12 bits
+// zeroed) and sign-extended to 64 bits at ELF time into `imm`.
+//
+//   var imm:DoubleWord = sgn_extension_u32_u64(((imm20 as u32) << 12) as u32)
+
 fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d, padded_input_block, poseidon2_state>(index:u64, pc:Address) -> (new_pc:Address) {
 
     var compute_op:ComputeOp
@@ -52,8 +193,14 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
     new_pc = (pc + 4) as Address
 
     switch compute_op {
+        // ==========================
+        // MISC_MEM (former MISC_MEM_TYPE)
+        // ==========================
         case COMPUTE_MISC_MEM: {
         }
+        // ==========================
+        // I-type — LOAD (former I_TYPE)
+        // ==========================
         case READ8_SGN: {
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "READ8_SGN "
@@ -138,6 +285,9 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
             print_i_memory_operands(rd, rs1, imm)
             registers[rd] = read_32(rs1_plus_imm) as DoubleWord
         }
+        // ==========================
+        // I-type — OP-IMM (former I_TYPE)
+        // ==========================
         case OP_ADDI: {
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "OP_ADDI "
@@ -254,6 +404,9 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
             print_i_operands(rd, rs1, imm)
             registers[rd] = registers[rs1] & imm
         }
+        // ==========================
+        // I-type — OP-IMM-32 (former I_TYPE)
+        // ==========================
         case OP_ADDIW: {
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "OP_ADDIW "
@@ -308,6 +461,9 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
             print_i_shift5_operands(rd, rs1, uimm5)
             registers[rd] = sgn_extension_u32_u64(_ashr_u32(registers[rs1], uimm5))
         }
+        // ==========================
+        // I-type — JALR / SYSTEM (former I_TYPE)
+        // ==========================
         case ITYPE_JALR: {
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "ITYPE_JALR "
@@ -331,6 +487,9 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
             printf "[ERROR] ITYPE_EBREAK instruction triggered\n"
             fail
         }
+        // ==========================
+        // R-type — base ops (former R_TYPE)
+        // ==========================
         case RTYPE_ADD: {
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -632,6 +791,9 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
             keccak(v1 as Address, v2 as u32, registers[rd] as Address)
             // fall through
         }
+        // ==========================
+        // R-type — writeback variants (former R_TYPE)
+        // ==========================
         case RTYPE_ADD_WB: {
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -930,6 +1092,9 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
                 registers[rd] = sgn_extension_u32_u64(v1_lower % v2_lower)
             }
         }
+        // ==========================
+        // S-type (former S_TYPE)
+        // ==========================
         case STYPE_STORE8: {
             mem_address = signed_sum_of_double_word(registers[rs1], imm) as Address
             printf "STYPE_STORE8 "
@@ -954,6 +1119,9 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
             print_s_operands(rs2, rs1, imm)
             write_64(mem_address, registers[rs2])
         }
+        // ==========================
+        // B-type (former B_TYPE)
+        // ==========================
         case BRANCH_BEQ: {
             printf "BRANCH_BEQ "
             print_b_operands(rs1, rs2, imm)
@@ -1002,6 +1170,9 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
                 new_pc = signed_sum_of_double_word(pc, imm)
             }
         }
+        // ==========================
+        // J-type (former J_TYPE)
+        // ==========================
         case JTYPE_JAL: {
             printf "JTYPE_JAL "
             print_j_operands(rd, imm)
@@ -1013,6 +1184,9 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
             new_pc = signed_sum_of_double_word(pc, imm) as Address
             registers[rd] = signed_sum_of_double_word(pc, 4)
         }
+        // ==========================
+        // U-type (former U_TYPE)
+        // ==========================
         case UTYPE_LUI: {
             printf "UTYPE_LUI "
             print_u_operands(rd, (imm >> 12) as Imm20)

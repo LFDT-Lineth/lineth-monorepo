@@ -8,24 +8,27 @@ fn check_u_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op
     //   LUI -> UTYPE_LUI / UTYPE_LUI_WB, AUIPC -> UTYPE_AUIPC / UTYPE_AUIPC_WB
     switch opcode {
         case OPCODE_LUI: {
-            // Check for folded rd=x0 no-op.
+            // LUI x0 is always folded
             if rd == 0 {
+                // rd=x0: every lui x0 slot is COMPUTE_MISC_MEM
                 if compute_op != COMPUTE_MISC_MEM {
                     printf "[ERROR] U-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
                     fail
                 }
-            } else if compute_op != UTYPE_LUI_WB {
+            } else if compute_op != UTYPE_LUI_WB { // rd≠x0: writeback variant.
                 printf "[ERROR] U-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
                 fail
             }
         }
         case OPCODE_AUIPC: {
+            // AUIPC is never folded.
             if rd == 0 {
+                // rd=x0: base compute_op
                 if compute_op != UTYPE_AUIPC {
                     printf "[ERROR] U-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
                     fail
                 }
-            } else if compute_op != UTYPE_AUIPC_WB {
+            } else if compute_op != UTYPE_AUIPC_WB { // rd≠x0: writeback variant.
                 printf "[ERROR] U-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
                 fail
             }
