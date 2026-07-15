@@ -183,13 +183,12 @@ abstract contract LineaRollupBase is
     addressFilter = IAddressFilter(_initializationData.addressFilter);
 
     // Seed the initial allowed verifier keys.
-    bytes32[] calldata initVerifierKeys = _initializationData.verifierKeys;
     for (uint256 i; i < _initializationData.verifierKeys.length; i++) {
       require(_initializationData.verifierKeys[i] != EMPTY_HASH, IGenericErrors.ZeroHashNotAllowed());
       verifierKeys[_initializationData.verifierKeys[i]] = true;
     }
     if (_initializationData.verifierKeys.length > 0) {
-      emit VerifierKeysSet(initVerifierKeys);
+      emit VerifierKeysSet(_initializationData.verifierKeys);
     }
 
     emit LineaRollupBaseInitialized(bytes8(bytes(CONTRACT_VERSION())), _initializationData, _genesisShnarf);
