@@ -164,14 +164,15 @@ func TestCheckFolds(t *testing.T) {
 	// self1 is round 0's fold output (no level introduces at round 0).
 	self1 := fold(self0, sib0, alpha0, p.domainsLight[0], s)
 
-	// A level introduced at round 1 combines with (self1, sib1) before the
-	// round-1 fold, weighted by alpha0² (the challenge from the preceding round).
+	// The level introduced at round 1 is the primary pair; (self1, sib1) --
+	// the running codeword from round 0 -- combines in alongside it, weighted
+	// by alpha1² (THIS SAME round's own challenge, never an earlier round's).
 	var weight, wSelf, wSib, combinedSelf, combinedSib field.Ext
-	weight.Square(&alpha0)
-	wSelf.Mul(&aux1Self, &weight)
-	wSib.Mul(&aux1Sib, &weight)
-	combinedSelf.Add(&self1, &wSelf)
-	combinedSib.Add(&sib1, &wSib)
+	weight.Square(&alpha1)
+	wSelf.Mul(&self1, &weight)
+	wSib.Mul(&sib1, &weight)
+	combinedSelf.Add(&aux1Self, &wSelf)
+	combinedSib.Add(&aux1Sib, &wSib)
 	final := fold(combinedSelf, combinedSib, alpha1, p.domainsLight[1], s>>1)
 
 	newResolved := func() []resolvedQuery {
@@ -240,7 +241,6 @@ func TestProveVerify(t *testing.T) {
 				fx.addLevel(t, utils.Log2Ceil(d), field.VecPseudoRandExt(prng, c.n*d/c.d))
 			}
 
-			alphaDeep := field.PseudoRandExt(prng)
 			foldAlphas := make([]field.Ext, fx.pcs.Params.numRounds)
 			for i := range foldAlphas {
 				foldAlphas[i] = field.PseudoRandExt(prng)
@@ -250,16 +250,16 @@ func TestProveVerify(t *testing.T) {
 				positions[i] = int(prng.Uint64() % uint64(c.n))
 			}
 
-			proof := fx.open(t, alphaDeep, foldAlphas, positions)
+			proof := fx.open(t, foldAlphas, positions)
 
-			if err := fx.verify(alphaDeep, foldAlphas, positions, proof); err != nil {
+			if err := fx.verify(foldAlphas, positions, proof); err != nil {
 				t.Fatalf("Verify (honest) failed: %v", err)
 			}
 
 			// Tampering an opened input leaf must make verification fail.
 			branch := proof.InputQueries[0][0]
 			branch.Leaves[len(branch.Leaves)-1][0].Ext[0] = field.PseudoRandExt(prng)
-			if err := fx.verify(alphaDeep, foldAlphas, positions, proof); err == nil {
+			if err := fx.verify(foldAlphas, positions, proof); err == nil {
 				t.Fatalf("Verify accepted a proof with a tampered leaf")
 			}
 		})
@@ -279,15 +279,14 @@ func TestProverStateOpenLoopsOverLevelTrees(t *testing.T) {
 	fx.addLevel(t, 1, field.VecPseudoRandExt(prng, 4)) // extra level, D=2: two trees
 	fx.addLevel(t, 1, field.VecPseudoRandExt(prng, 4))
 
-	alphaDeep := field.PseudoRandExt(prng)
 	foldAlphas := make([]field.Ext, fx.pcs.Params.numRounds)
 	for i := range foldAlphas {
 		foldAlphas[i] = field.PseudoRandExt(prng)
 	}
 	positions := []int{3, 11}
 
-	proof := fx.open(t, alphaDeep, foldAlphas, positions)
-	require.NoError(t, fx.verify(alphaDeep, foldAlphas, positions, proof))
+	proof := fx.open(t, foldAlphas, positions)
+	require.NoError(t, fx.verify(foldAlphas, positions, proof))
 
 	inputQuery := proof.InputQueries[0]
 	require.Len(t, inputQuery, 4)
@@ -307,7 +306,7 @@ func TestProverStateOpenLoopsOverLevelTrees(t *testing.T) {
 
 	branch := proof.InputQueries[0][1]
 	branch.Leaves[len(branch.Leaves)-1][0].Ext[0] = field.PseudoRandExt(prng)
-	require.Error(t, fx.verify(alphaDeep, foldAlphas, positions, proof))
+	require.Error(t, fx.verify(foldAlphas, positions, proof))
 }
 
 func verifierInputsForLevels(levels []Level) ([]QueryLayerRoots, []int) {

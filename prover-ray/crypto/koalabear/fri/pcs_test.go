@@ -196,7 +196,7 @@ func openForTest(t *testing.T, pcs *PCS, in openInputs) (OpeningProof, []BatchCl
 		err := pcs.AddOpening(in.Committed[i], in.Zeta, in.Shifts[i], batchClaims[i])
 		require.NoError(t, err)
 	}
-	started, err := pcs.NewProverState(in.Challenges.AlphaDeep)
+	started, err := pcs.NewProverState()
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, len(in.Challenges.QueryPositions), pcs.Params.NumQueries)
 	queryPositions := in.Challenges.QueryPositions[:pcs.Params.NumQueries]
@@ -273,7 +273,6 @@ func newPCSOpenVerifyFixture(t *testing.T) pcsOpenVerifyFixture {
 	shifts := []BatchShifts{batchShifts}
 	zeta := field.UintsToExt(19, 2, 3, 5, 7, 11)
 	challenges := Challenges{
-		AlphaDeep:      field.UintsToExt(23, 3, 5, 7, 11, 13),
 		FoldAlphas:     []field.Ext{field.UintsToExt(29, 1, 0, 0, 0, 0), field.UintsToExt(31, 0, 1, 0, 0, 0)},
 		QueryPositions: []int{3},
 	}
@@ -330,7 +329,6 @@ func TestPCSStaticParamsLargerThanWitness(t *testing.T) {
 	shifts := []BatchShifts{batchShifts}
 	zeta := field.UintsToExt(19, 2, 3, 5, 7, 11)
 	challenges := Challenges{
-		AlphaDeep: field.UintsToExt(23, 3, 5, 7, 11, 13),
 		FoldAlphas: []field.Ext{
 			field.UintsToExt(29, 1, 0, 0, 0, 0),
 			field.UintsToExt(31, 0, 1, 0, 0, 0),
@@ -386,14 +384,13 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	shifts := []BatchShifts{batchShifts, otherBatchShifts}
 
 	zeta := field.UintsToExt(19, 2, 3, 5, 7, 11)
-	alphaDeepChallenge := field.UintsToExt(23, 3, 5, 7, 11, 13)
 	firstClaims := claimedValuesForTest(t, pcs, witness, batchShifts, zeta)
 	otherClaims := claimedValuesForTest(t, pcs, otherWitness, otherBatchShifts, zeta)
 	err = pcs.AddOpening(committed[0], zeta, batchShifts, firstClaims)
 	require.NoError(t, err)
 	err = pcs.AddOpening(committed[1], zeta, otherBatchShifts, otherClaims)
 	require.NoError(t, err)
-	started, err := pcs.NewProverState(alphaDeepChallenge)
+	started, err := pcs.NewProverState()
 	require.NoError(t, err)
 	require.Len(t, started.levels, 2)
 	levelRoots, _ := verifierInputsForLevels(started.levels)
@@ -414,14 +411,12 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	gotClaim := firstClaims[3].Ext[0][1]
 	assert.Equal(t, wantClaim, gotClaim)
 
-	referenceLevels := make([]Level, len(started.levels))
-	for i, level := range started.levels {
-		referenceLevels[i] = Level{
-			D:     level.D,
-			Evals: append([]field.Ext(nil), level.Evals...),
-			Trees: []*Tree{buildTreeExt(level.Evals)},
-		}
-	}
+	// referenceLevels reuses started's own level data directly: Level is
+	// immutable (per-column DEEP-quotient data plus EvalsAt), so an
+	// independent prover state built from the same levels and fed the same
+	// fold challenges must derive the identical alphaDeep at each level's own
+	// round and so produce the identical roots.
+	referenceLevels := started.levels
 
 	foldAlphas := []field.Ext{
 		field.UintsToExt(29, 1, 0, 0, 0, 0),
@@ -444,7 +439,6 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 		Shifts:    shifts,
 		Zeta:      zeta,
 		Challenges: Challenges{
-			AlphaDeep:      alphaDeepChallenge,
 			FoldAlphas:     foldAlphas,
 			QueryPositions: positions,
 		},
@@ -457,7 +451,6 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 		ClaimedValues: oneShotClaims,
 		Zeta:          zeta,
 		Challenges: Challenges{
-			AlphaDeep:      alphaDeepChallenge,
 			FoldAlphas:     foldAlphas,
 			QueryPositions: positions,
 		},

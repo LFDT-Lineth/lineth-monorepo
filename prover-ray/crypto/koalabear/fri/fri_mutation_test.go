@@ -136,7 +136,7 @@ func applyMutation(root reflect.Value, m proofMutation) {
 }
 
 // nolint -- ignores: error should be the last return parameters
-func safeVerify(fx *ldtFixture, alphaDeep field.Ext, foldAlphas []field.Ext,
+func safeVerify(fx *ldtFixture, foldAlphas []field.Ext,
 	positions []int, proof OpeningProof) (err error, panicked bool) {
 
 	defer func() {
@@ -145,7 +145,7 @@ func safeVerify(fx *ldtFixture, alphaDeep field.Ext, foldAlphas []field.Ext,
 			err = fmt.Errorf("panic: %v", r)
 		}
 	}()
-	err = fx.verify(alphaDeep, foldAlphas, positions, proof)
+	err = fx.verify(foldAlphas, positions, proof)
 	return
 }
 
@@ -161,7 +161,6 @@ func TestVerifyRejectsProofMutations(t *testing.T) {
 	fx.addLevel(t, 3, field.VecPseudoRandExt(prng, 16))
 	fx.addLevel(t, 1, field.VecPseudoRandExt(prng, 4))
 
-	alphaDeep := field.PseudoRandExt(prng)
 	foldAlphas := make([]field.Ext, fx.pcs.Params.numRounds)
 	for i := range foldAlphas {
 		foldAlphas[i] = field.PseudoRandExt(prng)
@@ -172,8 +171,8 @@ func TestVerifyRejectsProofMutations(t *testing.T) {
 
 	// Canonical proof: fx.open is deterministic given the same challenges, so
 	// it can be re-derived per mutation below without re-registering openings.
-	base := fx.open(t, alphaDeep, foldAlphas, positions)
-	require.NoError(t, fx.verify(alphaDeep, foldAlphas, positions, base))
+	base := fx.open(t, foldAlphas, positions)
+	require.NoError(t, fx.verify(foldAlphas, positions, base))
 
 	var muts []proofMutation
 	collectMutations(reflect.ValueOf(&base).Elem(), nil, "OpeningProof", &muts)
@@ -182,10 +181,10 @@ func TestVerifyRejectsProofMutations(t *testing.T) {
 	for _, m := range muts {
 		t.Run(m.name, func(t *testing.T) {
 			// Re-derive the canonical proof deterministically, then mutate it.
-			proof := fx.open(t, alphaDeep, foldAlphas, positions)
+			proof := fx.open(t, foldAlphas, positions)
 			applyMutation(reflect.ValueOf(&proof).Elem(), m)
 
-			err, panicked := safeVerify(fx, alphaDeep, foldAlphas, positions, proof)
+			err, panicked := safeVerify(fx, foldAlphas, positions, proof)
 			require.False(t, panicked, "mutation made Verify panic: %v", err)
 			require.Error(t, err)
 		})
@@ -201,17 +200,16 @@ func TestVerifyRejectsMissingBottomLevel(t *testing.T) {
 	fx.addLevel(t, 2, field.VecPseudoRandExt(prng, 8))
 	fx.addLevel(t, 1, field.VecPseudoRandExt(prng, 4))
 
-	alphaDeep := field.PseudoRandExt(prng)
 	foldAlphas := []field.Ext{field.PseudoRandExt(prng), field.PseudoRandExt(prng)}
 	positions := []int{1}
 
-	proof := fx.open(t, alphaDeep, foldAlphas, positions)
-	require.NoError(t, fx.verify(alphaDeep, foldAlphas, positions, proof))
+	proof := fx.open(t, foldAlphas, positions)
+	require.NoError(t, fx.verify(foldAlphas, positions, proof))
 
 	branch := &proof.InputQueries[0][1]
 	branch.Leaves[len(branch.Leaves)-1] = nil
 
-	err := fx.verify(alphaDeep, foldAlphas, positions, proof)
+	err := fx.verify(foldAlphas, positions, proof)
 	require.ErrorContains(t, err, "missing bottom level")
 }
 
@@ -275,7 +273,10 @@ func TestPCSVerifyRejectsMutations(t *testing.T) {
 		{
 			name: "alpha mismatch",
 			mutate: func(fx *pcsOpenVerifyFixture) {
-				fx.input.Challenges.AlphaDeep = field.UintsToExt(41, 0, 0, 0, 0, 0)
+				// FoldAlphas[0] governs both round 0's fold and (squared) the
+				// main level's own alphaDeep -- there is no separate
+				// alpha_DEEP challenge to mismatch anymore.
+				fx.input.Challenges.FoldAlphas[0] = field.UintsToExt(41, 0, 0, 0, 0, 0)
 			},
 			wantErr: "folded value mismatch",
 		},

@@ -154,12 +154,50 @@ type QueryLayerRoots []field.Octuplet
 type RunningQuery []QueryLayer
 
 // Level holds one polynomial introduced at the folding round where the running
-// polynomial's degree matches Level.D. Trees are the pre-built paired-leaf Merkle
-// trees backing Evals.
+// polynomial's degree matches Level.D. Trees are the pre-built paired-leaf
+// Merkle trees backing it.
+//
+// The polynomial's evaluations are not stored directly: Size, Columns, and
+// the ClaimPoints/ClaimPointIndexes/DenominatorInverses data batch the
+// per-column DEEP quotients into it, but only once alphaDeep is known -- see
+// EvalsAt. That challenge is the square of this level's own introduction
+// round's fold challenge, sampled at fold time, so the batched evaluations
+// cannot be precomputed any earlier.
 type Level struct {
 	D     int
-	Evals []field.Ext
 	Trees []*Tree
+
+	Size                int
+	Columns             []quotientColumn
+	ClaimPointIndexes   map[field.Ext]int
+	ClaimPoints         []field.Ext
+	DenominatorInverses []field.Ext
+}
+
+// EvalsAt returns this level's evaluations, column-batched using alphaDeep as
+// the power-ladder base.
+func (l Level) EvalsAt(alphaDeep field.Ext) []field.Ext {
+	alphaDeepPowers := powers(alphaDeep, len(l.Columns))
+	evals := make([]field.Ext, l.Size)
+	for pos := range evals {
+		for columnIdx, column := range l.Columns {
+			var columnSum field.Ext
+			for _, claim := range column.Claims {
+				pointIdx := l.ClaimPointIndexes[claim.Point]
+				inv := l.DenominatorInverses[pos*len(l.ClaimPoints)+pointIdx]
+
+				var numerator, term field.Ext
+				numerator.Sub(&column.Evals[pos], &claim.Value)
+				term.Mul(&numerator, &inv)
+				columnSum.Add(&columnSum, &term)
+			}
+
+			var weighted field.Ext
+			weighted.Mul(&columnSum, &alphaDeepPowers[columnIdx])
+			evals[pos].Add(&evals[pos], &weighted)
+		}
+	}
+	return evals
 }
 
 // Proof is the complete multi-degree FRI proof. Level polynomial Merkle roots
@@ -182,74 +220,59 @@ func (p Params) FullDomainGenerator() field.Element {
 // ────────────────────────────────────────────────────────────────────────────────
 
 // provePlan is the validated, precomputed schedule that NewProverState derives
-// from the caller-supplied levels. It answers two questions the commit/query
-// phases need:
-//
-//   - numLevels: how many committed polynomials are in play. levels[0] is the
-//     main degree-D polynomial; levels[1..numLevels-1] are the lower-degree
-//     polynomials batched in mid-fold. numLevels-1 is the count of extra levels.
-//
-//   - levelAtRound: the multi-degree FRI schedule, mapping a folding round j to
-//     the level index l (1-based) introduced at that round. A level of size
-//     levels[l].D is folded alongside the running codeword (weighted by the
-//     square of the challenge from the preceding round) at round
-//     jl = log2(p.D / levels[l].D) — precisely when the running polynomial has
-//     folded down to that level's degree. ProverState.Fold consults this map to
-//     know when to fold in each extra level, and the verifier rebuilds the same
-//     map to replay the combination.
+// from the caller-supplied levels: levelAtRound maps a folding round j to the
+// level index l introduced there. A level of size levels[l].D is introduced
+// at round jl = log2(p.D / levels[l].D) — precisely when the running
+// polynomial has folded down to that level's degree. This includes the main
+// degree-D polynomial itself, always introduced at round 0 (jl=0, since
+// D=p.D): it is folded exactly like any other level, against the running
+// codeword from the preceding round -- except at round 0, where there is no
+// preceding round, so nothing to fold against (see ProverState.Fold).
+// ProverState.Fold consults this map to know when to fold in each level, and
+// the verifier rebuilds the same map to replay the combination.
 type provePlan struct {
 	numLevels    int
 	levelAtRound map[int]int
 }
 
 // buildProvePlan validates levels and computes the provePlan schedule. It
-// enforces that levels[0].D == p.D with a populated single-rail evaluation
-// vector of length N and non-empty, non-nil trees, that every extra level is a
-// power-of-two degree on the same rail with the matching evaluation length and
-// non-empty, non-nil trees, and that no two levels are introduced at the same
-// folding round. levels must already be sorted in decreasing order of D (Prove
-// does this).
+// enforces that every level is a power-of-two degree at most p.D with
+// non-empty, non-nil trees, that no two levels are introduced at the same
+// folding round, and that exactly one level is introduced at round 0 (i.e.
+// has D == p.D). levels must already be sorted in decreasing order of D
+// (Prove does this).
 func buildProvePlan(p Params, levels []Level) (provePlan, error) {
 	var plan provePlan
 	if len(levels) == 0 {
 		return plan, fmt.Errorf("fri: Prove: at least one level required")
 	}
-	if levels[0].D != p.D {
-		return plan, fmt.Errorf("fri: Prove: levels[0].D=%d must equal p.D=%d", levels[0].D, p.D)
-	}
-	if len(levels[0].Evals) != p.N {
-		return plan, fmt.Errorf("fri: Prove: levels[0].Evals length %d != N=%d", len(levels[0].Evals), p.N)
-	}
-	if err := checkLevelTrees("levels[0]", levels[0].Trees); err != nil {
-		return plan, fmt.Errorf("fri: Prove: %w", err)
-	}
 
 	plan.numLevels = len(levels)
-
-	// Build levelAtRound: folding round j → level index l (1-based).
-	plan.levelAtRound = make(map[int]int, plan.numLevels-1)
-	for l := 1; l < plan.numLevels; l++ {
+	plan.levelAtRound = make(map[int]int, plan.numLevels)
+	for l := range levels {
 		if levels[l].D <= 0 || levels[l].D&(levels[l].D-1) != 0 {
 			return plan, fmt.Errorf("fri: Prove: levels[%d].D=%d is not a positive power of two", l, levels[l].D)
 		}
+		if levels[l].D > p.D {
+			return plan, fmt.Errorf("fri: Prove: levels[%d].D=%d exceeds p.D=%d", l, levels[l].D, p.D)
+		}
 
 		jl := utils.Log2Ceil(p.D / levels[l].D)
-		if jl < 1 || jl >= p.numRounds {
+		if jl >= p.numRounds {
 			return plan, fmt.Errorf(
-				"fri: Prove: levels[%d].D=%d gives intro round %d, must be in 1..%d",
+				"fri: Prove: levels[%d].D=%d gives intro round %d, must be in 0..%d",
 				l, levels[l].D, jl, p.numRounds-1)
 		}
 		if _, dup := plan.levelAtRound[jl]; dup {
 			return plan, fmt.Errorf("fri: Prove: two levels share intro round %d", jl)
 		}
 		plan.levelAtRound[jl] = l
-		Nl := p.N >> jl
-		if len(levels[l].Evals) != Nl {
-			return plan, fmt.Errorf("fri: Prove: levels[%d].Evals length %d != N_l=%d", l, len(levels[l].Evals), Nl)
-		}
 		if err := checkLevelTrees(fmt.Sprintf("levels[%d]", l), levels[l].Trees); err != nil {
 			return plan, fmt.Errorf("fri: Prove: %w", err)
 		}
+	}
+	if _, ok := plan.levelAtRound[0]; !ok {
+		return plan, fmt.Errorf("fri: Prove: no level introduced at round 0 (need one with D=p.D)")
 	}
 
 	return plan, nil
@@ -304,12 +327,12 @@ func checkOpeningProofShape(p Params, prf Proof, foldAlphas []field.Ext, positio
 }
 
 // resolvedQuery holds every fold input for one query, already authenticated
-// against the committed trees and (for round 0 and any auxiliary levels)
-// reconstructed by the caller. checkFolds consumes only this: it never
-// touches a row, a root, a branch, or alpha_DEEP.
+// against the committed trees and (for every level) reconstructed by the
+// caller. checkFolds consumes only this: it never touches a row, a root, a
+// branch, or alpha_DEEP.
 type resolvedQuery struct {
-	Rounds []inputPair       // Rounds[j] = (self, sibling) at fold round j
-	Aux    map[int]inputPair // Aux[j] = the level's own pair folded in at round j, if any
+	Rounds []inputPair       // Rounds[j] = (self, sibling) of the running codeword at round j (unused at j=0)
+	Aux    map[int]inputPair // Aux[j] = the pair of the level introduced at round j, if any (always present at j=0)
 	Final  field.Ext         // the final-polynomial target for this query
 }
 
@@ -323,18 +346,24 @@ func checkFolds(p Params, resolved []resolvedQuery, foldAlphas []field.Ext, posi
 			base := s >> j
 			self, sib := rq.Rounds[j].Self, rq.Rounds[j].Sibling
 
-			// A level folded in at this round combines with the running pair
-			// before the single fold below (Fold is linear), weighted by the
-			// square of the challenge from the preceding round -- exactly as
-			// foldLayerInternally does on the prover. j >= 1 always here: a
-			// level's own introduction round is never round 0.
-			if auxPair, ok := rq.Aux[j]; ok {
-				var weight, wSelf, wSib field.Ext
-				weight.Square(&foldAlphas[j-1])
-				wSelf.Mul(&auxPair.Self, &weight)
-				wSib.Mul(&auxPair.Sibling, &weight)
-				self.Add(&self, &wSelf)
-				sib.Add(&sib, &wSib)
+			// A level introduced at this round is the primary pair being
+			// folded; the running codeword from the preceding round --
+			// absent at round 0, since there is no round -1 -- combines with
+			// it before the single fold below (Fold is linear), weighted by
+			// the square of THIS SAME round's challenge. Reusing an earlier
+			// round's challenge here would let the prover pick the running
+			// codeword only after already knowing the weight, which is
+			// unsound: the weight must always be the one just sampled.
+			if levelPair, ok := rq.Aux[j]; ok {
+				self, sib = levelPair.Self, levelPair.Sibling
+				if j > 0 {
+					var weight, wRunning, wSib field.Ext
+					weight.Square(&foldAlphas[j])
+					wRunning.Mul(&rq.Rounds[j].Self, &weight)
+					wSib.Mul(&rq.Rounds[j].Sibling, &weight)
+					self.Add(&self, &wRunning)
+					sib.Add(&sib, &wSib)
+				}
 			}
 
 			// x is the domain point of the opened leaf. The codeword is bit-reversed,
@@ -416,11 +445,11 @@ func buildTreeExt(layer []field.Ext) *Tree {
 // is itself in bit-reversed order over the half-size domain, ready to be fed
 // back into the next round.
 //
-// aux, when non-empty, is a second codeword on the same domain as layer (a
-// level whose own introduction round is this one): since Fold is linear, its
-// weighted contribution auxWeight·Fold(aux) is computed by folding
-// layer+auxWeight·aux once, rather than folding layer and aux separately and
-// adding the results.
+// aux, when non-empty, is a second codeword on the same domain as layer (the
+// running codeword, weighted in alongside a level introduced this round):
+// since Fold is linear, its weighted contribution auxWeight·Fold(aux) is
+// computed by folding layer+auxWeight·aux once, rather than folding layer and
+// aux separately and adding the results.
 //
 // The folding formula, writing x = g^i for the natural-order domain point of
 // pair j (i.e. i = bitReverse(j) over the half-domain):

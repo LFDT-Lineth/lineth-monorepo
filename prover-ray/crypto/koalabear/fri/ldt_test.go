@@ -66,10 +66,10 @@ func (fx *ldtFixture) addLevel(t *testing.T, sizeLog2 int, target []field.Ext) {
 	fx.claims = append(fx.claims, claimed)
 }
 
-func (fx *ldtFixture) open(t *testing.T, alphaDeep field.Ext, foldAlphas []field.Ext, positions []int) OpeningProof {
+func (fx *ldtFixture) open(t *testing.T, foldAlphas []field.Ext, positions []int) OpeningProof {
 	t.Helper()
 
-	started, err := fx.pcs.NewProverState(alphaDeep)
+	started, err := fx.pcs.NewProverState()
 	require.NoError(t, err)
 	for round := 0; started.HasNext(); round++ {
 		started.Fold(foldAlphas[round])
@@ -77,14 +77,13 @@ func (fx *ldtFixture) open(t *testing.T, alphaDeep field.Ext, foldAlphas []field
 	return fx.pcs.Open(started, positions)
 }
 
-func (fx *ldtFixture) verify(alphaDeep field.Ext, foldAlphas []field.Ext, positions []int, proof OpeningProof) error {
+func (fx *ldtFixture) verify(foldAlphas []field.Ext, positions []int, proof OpeningProof) error {
 	return fx.pcs.Verify(VerifyInputs{
 		Roots:         fx.roots,
 		Shapes:        fx.shapes,
 		Shifts:        fx.shifts,
 		ClaimedValues: fx.claims,
 		Challenges: Challenges{
-			AlphaDeep:      alphaDeep,
 			FoldAlphas:     foldAlphas,
 			QueryPositions: positions,
 		},

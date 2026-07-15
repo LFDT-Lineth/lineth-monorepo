@@ -42,17 +42,14 @@ type ProverState struct {
 	running []field.Ext   // evaluations of layer[round]
 	layers  [][]field.Ext // layers[0..round]; layers[numRounds] is the final polynomial
 	trees   []*Tree       // trees[0..min(round, numRounds-1)]; the final layer has no tree
-
-	// prevAlpha is the challenge that folded layer[round-1] into layer[round]
-	// (zero before round 0, and unused then since no level ever introduces at
-	// round 0). A level introduced at round j is weighted by prevAlpha² --
-	// the challenge from the round that produced the codeword it folds into.
-	prevAlpha field.Ext
 }
 
 // NewProverState validates the levels, builds the folding schedule, and seeds
-// the machine with the committed layer 0. levels is sorted in-place by
-// decreasing degree (as buildProvePlan requires).
+// the machine with the zero codeword: round 0 always introduces a level (the
+// main degree-D polynomial), which folds in as described in [ProverState.Fold]
+// against this zero seed -- there being no round -1 to fold a real codeword
+// from. levels is sorted in-place by decreasing degree (as buildProvePlan
+// requires).
 func NewProverState(p Params, levels []Level) (*ProverState, error) {
 
 	sort.Slice(levels, func(i, j int) bool {
@@ -72,9 +69,6 @@ func NewProverState(p Params, levels []Level) (*ProverState, error) {
 		layers:  make([][]field.Ext, p.numRounds+1),
 		trees:   make([]*Tree, p.numRounds),
 	}
-
-	// Layer 0 is committed up front; its root is supplied externally rather than stored in RoundRoots.
-	copy(st.running, levels[0].Evals)
 	st.layers[0] = st.running
 
 	if p.numRounds > 1 {
@@ -89,12 +83,18 @@ func (st *ProverState) HasNext() bool {
 	return st.round < st.p.numRounds
 }
 
-// Fold consumes one folding challenge. It folds the current layer into the next
-// one (folding in, alongside it, any level introduced at this round -- weighted
-// by the square of the challenge that produced the current layer), commits the
-// new layer, and returns its Merkle root. On the final fold the running
-// polynomial becomes the final polynomial — revealed in the clear rather than
-// committed — and the returned root is the zero octuplet.
+// Fold consumes one folding challenge. If a level is introduced at this round,
+// it is column-batched using alpha² (alphaDeep = alpha², the square of THIS
+// SAME just-sampled challenge -- never an earlier round's, or the batching
+// weight could be chosen after the running codeword is already known, which
+// is unsound) and becomes the primary codeword being folded; the running
+// codeword from the preceding round, if any, folds in alongside it, weighted
+// by that same alpha². At round 0 there is no preceding round, so the running
+// codeword (the zero seed) contributes nothing and is skipped rather than
+// folded as a no-op. Fold commits the new layer and returns its Merkle root;
+// on the final fold the running polynomial becomes the final polynomial —
+// revealed in the clear rather than committed — and the returned root is the
+// zero octuplet.
 func (st *ProverState) Fold(alpha field.Ext) field.Octuplet {
 
 	if !st.HasNext() {
@@ -103,21 +103,24 @@ func (st *ProverState) Fold(alpha field.Ext) field.Octuplet {
 
 	j := st.round
 
-	// A level introduced at this round is folded alongside the running
-	// codeword, weighted by prevAlpha² (the challenge that produced
-	// st.running). Its evaluation vector has length N>>j, exactly the size
-	// of st.running, so it folds in directly. aux stays nil when no level is
-	// introduced at round j (including round 0, which no level ever is).
-	var aux []field.Ext
-	var auxWeight field.Ext
+	primary := st.running
+	var running []field.Ext
+	var weight field.Ext
 	if l, ok := st.plan.levelAtRound[j]; ok {
-		aux = st.levels[l].Evals
-		auxWeight.Square(&st.prevAlpha)
+		var alphaDeep field.Ext
+		alphaDeep.Square(&alpha)
+		primary = st.levels[l].EvalsAt(alphaDeep)
+		if want := st.p.N >> j; len(primary) != want {
+			panic(fmt.Sprintf("fri: ProverState.Fold: levels[%d].EvalsAt returned %d values, want %d", l, len(primary), want))
+		}
+		if j > 0 {
+			running = st.running
+			weight.Square(&alpha)
+		}
 	}
 
-	st.running = foldLayerInternally(st.running, aux, auxWeight, alpha, st.p.domains[j], st.p.invTwo)
+	st.running = foldLayerInternally(primary, running, weight, alpha, st.p.domains[j], st.p.invTwo)
 	st.layers[j+1] = st.running
-	st.prevAlpha = alpha
 	st.round = j + 1
 
 	if j+1 == st.p.numRounds {

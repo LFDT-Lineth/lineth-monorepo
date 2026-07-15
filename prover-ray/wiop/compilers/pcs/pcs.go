@@ -269,12 +269,13 @@ func (c *compiled) open(rt *wiop.Runtime) fri.OpeningProof {
 	}
 
 	fs := rt.GetFS()
-	alphaDeep := fs.RandomFext()
 
-	// The DEEP quotient is virtual: it is reconstructed by the verifier from the
-	// opened committed rows, so there is no separate quotient commitment to
-	// absorb. Seeding the FRI prover with alpha_DEEP is enough.
-	state, err := pcs.NewProverState(alphaDeep)
+	// The DEEP quotient is virtual: it is reconstructed by the verifier from
+	// the opened committed rows, so there is no separate quotient commitment
+	// to absorb, and no separate alpha_DEEP challenge either -- each level's
+	// own alpha_DEEP is the square of its own introduction round's fold
+	// challenge (see fri.Level.EvalsAt).
+	state, err := pcs.NewProverState()
 	if err != nil {
 		panic(fmt.Errorf("pcs: open: %w", err))
 	}
@@ -304,7 +305,6 @@ func (c *compiled) verify(rt *wiop.Runtime, proof fri.OpeningProof) error {
 	pcs := newStaticPCS()
 
 	fs := rt.GetFS()
-	alphaDeep := fs.RandomFext()
 
 	// Mirror the prover's Fiat-Shamir transcript: one fold challenge per round,
 	// absorbing each intermediate layer root. The final round reveals the final
@@ -327,7 +327,6 @@ func (c *compiled) verify(rt *wiop.Runtime, proof fri.OpeningProof) error {
 		Shifts:        batchShifts,
 		Zeta:          evalPoint,
 		Challenges: fri.Challenges{
-			AlphaDeep:      alphaDeep,
 			FoldAlphas:     foldAlphas,
 			QueryPositions: queryPositions,
 		},

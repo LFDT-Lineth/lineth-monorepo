@@ -29,10 +29,13 @@
 //  1. Caller computes the claimed value of every (batch, size, row, shift) at
 //     zeta * omega_N^shift and hands them to AddOpening. zeta is shared by
 //     every batch of a single opening proof.
-//  2. Caller absorbs the claimed values into its transcript, derives
-//     alpha_DEEP, hands it back.
-//  3. PCS builds one virtual DEEP-quotient codeword per distinct native size and
-//     seeds the existing FRI ProverState with those levels.
+//  2. Caller absorbs the claimed values into its transcript.
+//  3. PCS gathers, per distinct native size, the per-column DEEP-quotient data
+//     and seeds the existing FRI ProverState with those levels. There is no
+//     separate alpha_DEEP squeeze: each level's own alpha_DEEP is the square
+//     of that level's own introduction-round fold challenge (round 0 for the
+//     main degree-D polynomial), derived inside ProverState.Fold once that
+//     challenge is sampled -- see [fri.Level.EvalsAt].
 //  4. Caller derives the first FRI fold challenge alpha_0.
 //  5. The FRI prover folds, returns the new layer's root; caller derives
 //     alpha_{j+1} from it; repeat.
@@ -67,9 +70,9 @@
 //	transcript.Absorb(claims1)
 //	pcs.AddOpening(state1, zeta, shifts1, claims1)
 //
-//	// Squeeze alphaDeep; seed the FRI prover.
-//	alphaDeep  := transcript.Squeeze()
-//	friState, _ := pcs.NewProverState(alphaDeep)
+//	// Seed the FRI prover: no alpha_DEEP squeeze, each level derives its own
+//	// from its own introduction round's fold challenge.
+//	friState, _ := pcs.NewProverState()
 //
 //	// FRI folding rounds: fold, absorb the new layer root, squeeze the next alpha.
 //	for range numFoldingRounds {
@@ -83,8 +86,8 @@
 //	queries    := transcript.Squeeze()
 //	proof      := pcs.Open(friState, queries)
 //
-// The verifier calls pcs.Verify with the same zeta, alphaDeep, fold alphas,
-// and query positions it derived from its own transcript replay.
+// The verifier calls pcs.Verify with the same zeta, fold alphas, and query
+// positions it derived from its own transcript replay.
 //
 // =============================================================================
 // Canonical layout (frozen)
@@ -101,8 +104,7 @@
 // The alpha_DEEP power counter resets to 0 at each new size. All shifts on a
 // column are carried by its one deepEntry and share that alpha_DEEP power.
 //
-// Identical convention to the loom PCS at github.com/consensys/loom/
-// internal/fri/. Decision matrix already pinned there:
+// Decision matrix:
 //   - (i)   per-size reset.
 //   - (ii)  per-column batching, all shifts of a column sharing one alpha_DEEP power.
 //   - (iii) empty shift list is an error (every committed row is
@@ -240,9 +242,8 @@ type SizedShifts struct {
 // Layout -- internal canonical enumeration
 // =============================================================================
 //
-// Mirrors loom's canonicalLayout. Producer of the alpha_DEEP power
-// schedule consumed by both AddOpening and Verify. Made package-internal;
-// callers don't need to look inside.
+// Producer of the alpha_DEEP power schedule consumed by both AddOpening and
+// Verify. Made package-internal; callers don't need to look inside.
 type deepEntry struct {
 	BatchIdx   int
 	SizeLog2   int
@@ -513,9 +514,11 @@ type SizedClaimedValues struct {
 // Prover API
 // =============================================================================
 
-// Challenges bundles the Fiat-Shamir values supplied by the caller.
+// Challenges bundles the Fiat-Shamir values supplied by the caller. There is
+// no separate DEEP-batching challenge: each level's own alphaDeep is the
+// square of FoldAlphas[jl], the fold challenge for that level's own
+// introduction round (round 0 for the main degree-D polynomial).
 type Challenges struct {
-	AlphaDeep      field.Ext
 	FoldAlphas     []field.Ext // length == Params.numRounds
 	QueryPositions []int       // length == Params.NumQueries
 }
@@ -612,13 +615,15 @@ func validateBatchClaimShape(claimed BatchClaimedValues, shifts BatchShifts, zet
 	return nil
 }
 
-// NewProverState reconstructs the virtual DEEP quotient levels and returns the
-// existing FRI prover state. It does not fold or open.
+// NewProverState gathers the virtual DEEP quotient levels' per-column data and
+// returns the existing FRI prover state. It does not fold or open: each
+// level's batched evaluations are computed later, at fold time (see
+// Level.EvalsAt), once that level's own alphaDeep is known.
 //
 // The FRI schedule is restricted to the largest size actually opened, so the
 // fold count follows the witness rather than the (possibly larger, static)
 // Params: a size-2^k top level folds k times regardless of Params.D >= 2^k.
-func (pcs *PCS) NewProverState(alphaDeep field.Ext) (*ProverState, error) {
+func (pcs *PCS) NewProverState() (*ProverState, error) {
 	if len(pcs.openings) == 0 {
 		return nil, fmt.Errorf("fri: NewProverState: AddOpening must be called first")
 	}
@@ -628,7 +633,7 @@ func (pcs *PCS) NewProverState(alphaDeep field.Ext) (*ProverState, error) {
 		return nil, err
 	}
 
-	levels, err := pcs.reconstructLevels(alphaDeep)
+	levels, err := pcs.reconstructLevels()
 	if err != nil {
 		return nil, err
 	}
@@ -713,14 +718,17 @@ func (pcs *PCS) shiftedPoint(sizeLog2, shift int, zeta field.Ext) (field.Ext, er
 	return point, nil
 }
 
-// reconstructLevels computes the virtual DEEP quotient levels
+// reconstructLevels gathers, for each distinct committed size, the per-column
+// DEEP-quotient data (columns and every distinct denominator inverse 1/(x-z),
+// precomputed via one Montgomery batch inversion) that batches into
 //
 //	F(X) = Σ_i alpha_DEEP^i · Σ_j (f_i(X) - y_ij)/(X - z_ij)
 //
-// over input.Domain's bit-reversed evaluation order and stores it in
-// Level.Evals. For each level, it precomputes every distinct denominator inverse 1/(x-z) with
-// one Montgomery batch inversion, then walks the columns in canonical order.
-func (pcs *PCS) reconstructLevels(alphaDeepChallenge field.Ext) ([]Level, error) {
+// over input.Domain's bit-reversed evaluation order. alpha_DEEP is not known
+// yet (it is the square of this level's own introduction round's fold
+// challenge), so the batched evaluations themselves are computed later, by
+// Level.EvalsAt.
+func (pcs *PCS) reconstructLevels() ([]Level, error) {
 	levels := make([]Level, 0, pcs.Params.numRounds+1)
 	for sizeLog2 := pcs.Params.numRounds; sizeLog2 >= 0; sizeLog2-- {
 		var columns []quotientColumn
@@ -776,29 +784,16 @@ func (pcs *PCS) reconstructLevels(alphaDeepChallenge field.Ext) ([]Level, error)
 		if err != nil {
 			return nil, err
 		}
-		alphaDeepPowers := powers(alphaDeepChallenge, len(columns))
 
-		evals := make([]field.Ext, size)
-		for pos := range evals {
-			for columnIdx, column := range columns {
-				var columnSum field.Ext
-				for _, claim := range column.Claims {
-					pointIdx := claimPointIndexes[claim.Point]
-					inv := denominatorInverses[pos*len(claimPoints)+pointIdx]
-
-					var numerator, term field.Ext
-					numerator.Sub(&column.Evals[pos], &claim.Value)
-					term.Mul(&numerator, &inv)
-					columnSum.Add(&columnSum, &term)
-				}
-
-				var weighted field.Ext
-				weighted.Mul(&columnSum, &alphaDeepPowers[columnIdx])
-				evals[pos].Add(&evals[pos], &weighted)
-			}
-		}
-
-		levels = append(levels, Level{D: 1 << sizeLog2, Evals: evals, Trees: trees})
+		levels = append(levels, Level{
+			D:                   1 << sizeLog2,
+			Trees:               trees,
+			Size:                size,
+			Columns:             columns,
+			ClaimPointIndexes:   claimPointIndexes,
+			ClaimPoints:         claimPoints,
+			DenominatorInverses: denominatorInverses,
+		})
 	}
 	return levels, nil
 }
@@ -1273,19 +1268,15 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 		runningRoots[j] = QueryLayerRoots{proof.FRIProof.RoundRoots[j-1]}
 	}
 
-	topDomain := pcs.Params.domainsLight[0]
-	if _, err = reconstructDomainSize(topDomain); err != nil {
-		return err
-	}
 	claimed := in.ClaimedValues
 	zeta := in.Zeta
-	alphaDeep := in.Challenges.AlphaDeep
+	foldAlphas := in.Challenges.FoldAlphas
 
 	resolved := make([]resolvedQuery, pcs.Params.NumQueries)
 	for queryIdx, queryPosition := range positions {
 		rq := resolvedQuery{
 			Rounds: make([]inputPair, pcs.Params.numRounds),
-			Aux:    make(map[int]inputPair, len(layout)-1),
+			Aux:    make(map[int]inputPair, len(layout)),
 			Final:  proof.FRIProof.FinalPolyExt[queryPosition>>pcs.Params.numRounds],
 		}
 
@@ -1294,28 +1285,13 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 			return fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
 		}
 
-		// Round 0: bind the authenticated top-level leaves to the caller-supplied
-		// rows and reconstruct the conjugate pair.
-		if err = bindInputTreeOpenings("round 0", inputOpening, inputIndexByBatch,
-			pcs.Params.N, orders[0], layout[0], in.Shapes); err != nil {
-			return fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
-		}
-		self, err := reconstructQueryValueAt(pcs, layout[0], inputOpening, inputIndexByBatch, pcs.Params.N,
-			claimed, zeta, alphaDeep, domainPointExt(topDomain, queryPosition), false)
-		if err != nil {
-			return err
-		}
-		sib, err := reconstructQueryValueAt(pcs, layout[0], inputOpening, inputIndexByBatch, pcs.Params.N,
-			claimed, zeta, alphaDeep, domainPointExt(topDomain, queryPosition^1), true)
-		if err != nil {
-			return err
-		}
-		rq.Rounds[0] = inputPair{Self: self, Sibling: sib}
-
-		// Auxiliary levels: each level's own conjugate pair, folded in at that
-		// level's introduction round.
-		for levelIdx := 1; levelIdx < len(layout); levelIdx++ {
-			bundle := layout[levelIdx]
+		// Every level -- including the main degree-D polynomial, introduced
+		// at round 0 -- binds the same way: authenticate its rows against
+		// their declared shape, then reconstruct its conjugate pair at
+		// (position, position^1), using alphaDeep = FoldAlphas[round]²: the
+		// square of that SAME round's own fold challenge, never an earlier
+		// round's (see checkFolds).
+		for levelIdx, bundle := range layout {
 			round, err := pcs.roundForSize(bundle.SizeLog2)
 			if err != nil {
 				return err
@@ -1329,21 +1305,28 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 			if err != nil {
 				return err
 			}
-			if err = bindInputTreeOpenings(fmt.Sprintf("level %d", levelIdx), inputOpening, inputIndexByBatch,
+			label := fmt.Sprintf("level %d", levelIdx)
+			if round == 0 {
+				label = "round 0"
+			}
+			if err = bindInputTreeOpenings(label, inputOpening, inputIndexByBatch,
 				levelSize, orders[levelIdx], bundle, in.Shapes); err != nil {
 				return fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
 			}
-			levelSelf, err := reconstructQueryValueAt(pcs, bundle, inputOpening, inputIndexByBatch, levelSize,
-				claimed, zeta, alphaDeep, domainPointExt(domain, queryPosition>>round), false)
+			var alphaDeep field.Ext
+			alphaDeep.Square(&foldAlphas[round])
+			levelPos := queryPosition >> round
+			self, err := reconstructQueryValueAt(pcs, bundle, inputOpening, inputIndexByBatch, levelSize,
+				claimed, zeta, alphaDeep, domainPointExt(domain, levelPos), false)
 			if err != nil {
 				return err
 			}
-			levelSib, err := reconstructQueryValueAt(pcs, bundle, inputOpening, inputIndexByBatch, levelSize,
-				claimed, zeta, alphaDeep, domainPointExt(domain, (queryPosition>>round)^1), true)
+			sib, err := reconstructQueryValueAt(pcs, bundle, inputOpening, inputIndexByBatch, levelSize,
+				claimed, zeta, alphaDeep, domainPointExt(domain, levelPos^1), true)
 			if err != nil {
 				return err
 			}
-			rq.Aux[round] = inputPair{Self: levelSelf, Sibling: levelSib}
+			rq.Aux[round] = inputPair{Self: self, Sibling: sib}
 		}
 
 		// Running layers: authenticate and decode directly from the
