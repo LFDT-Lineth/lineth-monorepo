@@ -9,8 +9,8 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/files"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
-	"github.com/consensys/go-corset/pkg/zkc/constraints"
-	zkc_util "github.com/consensys/go-corset/pkg/zkc/util"
+	"github.com/LFDT-Lineth/zkc/pkg/zkc/constraints"
+	zkc_util "github.com/LFDT-Lineth/zkc/pkg/zkc/util"
 )
 
 // zkcTestCase represents a zkc testcase. The user only needs to populate
@@ -124,7 +124,7 @@ func checkZKCConstraints(
 	}
 
 	// trace program with given input
-	tr, errs := binFile.Trace(input, tracingCfg)
+	_, tr, errs := binFile.Trace(input, tracingCfg)
 	if len(errs) > 0 {
 		return fmt.Errorf("tracing failed: %w", errors.Join(errs...))
 	}

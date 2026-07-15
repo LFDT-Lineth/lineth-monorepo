@@ -3,9 +3,9 @@ module github.com/LFDT-Lineth/lineth-monorepo/prover-ray
 go 1.25.7
 
 require (
+	github.com/LFDT-Lineth/zkc v1.2.21-0.20260713194944-3fddcd3234a8
 	github.com/consensys/gnark v0.14.1-0.20260219004710-bbfb2f70a565
 	github.com/consensys/gnark-crypto v0.20.2-0.20260521181528-f8db9b5b907d
-	github.com/consensys/go-corset v1.2.17
 	github.com/go-playground/assert/v2 v2.2.0
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
