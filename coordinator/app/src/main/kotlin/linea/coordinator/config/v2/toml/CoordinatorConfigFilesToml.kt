@@ -9,35 +9,67 @@ import net.consensys.linea.traces.TracingModuleV4
 import net.consensys.linea.traces.TracingModuleV5
 
 data class CoordinatorConfigFileToml(
+  @param:ConfigSection("Shared defaults (L1/L2 endpoints and retry policies) reused by coordinator services.")
   val defaults: DefaultsToml = DefaultsToml(),
+  @param:ConfigSection("Linea protocol contract addresses and genesis settings.")
   val protocol: ProtocolToml,
+  @param:ConfigSection("Block conflation, blob compression, and proof aggregation settings.")
   val conflation: ConflationToml = ConflationToml(),
+  @param:ConfigSection("File-based prover request/response directories and switch-over settings.")
   val prover: ProverToml,
+  @param:ConfigSection("Trace generation (traces API / conflation counters) client settings.")
   val traces: TracesToml,
+  @param:ConfigSection("Shomei state manager client settings.")
   val stateManager: StateManagerToml,
+  @param:ConfigSection("Type-2 state proof provider (shnarf/state proof) settings.")
   val type2StateProofProvider: Type2StateProofManagerToml,
+  @param:ConfigSection("L1 finalization monitor polling settings.")
   val l1FinalizationMonitor: L1FinalizationMonitorConfigToml,
+  @param:ConfigSection("L1 blob/aggregation submission (data availability and finalization) settings.")
   val l1Submission: L1SubmissionConfigToml,
+  @param:ConfigSection("Forced transactions handling settings; omit the section to disable the feature.")
   val forcedTransactions: ForcedTransactionsConfigToml? = null,
+  @param:ConfigSection("L1 to L2 message anchoring settings.")
   val messageAnchoring: MessageAnchoringConfigToml,
+  @param:ConfigSection("L2 network gas pricing (dynamic gas price publishing) settings.")
   val l2NetworkGasPricing: L2NetworkGasPricingConfigToml,
+  @param:ConfigSection("Coordinator PostgreSQL persistence settings.")
   val database: DatabaseToml,
+  @param:ConfigSection("Coordinator JSON-RPC and observability API settings.")
   val api: ApiConfigToml = ApiConfigToml(),
 )
 
 data class TracesLimitsConfigFileV4Toml(
+  @param:ConfigDoc(
+    description = "Per-module trace counter limits (v4 tracing modules). Each entry maps a " +
+      "tracing module name to its maximum trace count.",
+  )
   val tracesLimits: Map<TracingModuleV4, UInt>,
 )
 
 data class TracesLimitsConfigFileV5Toml(
+  @param:ConfigDoc(
+    description = "Per-module trace counter limits (v5 tracing modules). Each entry maps a " +
+      "tracing module name to its maximum trace count.",
+  )
   val tracesLimits: Map<TracingModuleV5, UInt>,
 )
 
 data class GasPriceCapTimeOfDayMultipliersConfigFileToml(
+  @param:ConfigDoc(
+    description = "L1 dynamic gas price cap multipliers keyed by time-of-day/day-of-week slot; " +
+      "each entry scales the base gas price cap for that slot.",
+  )
   val gasPriceCapTimeOfDayMultipliers: TimeOfDayMultipliers,
 )
 
-data class SmartContractErrorCodesConfigFileToml(val smartContractErrors: SmartContractErrors)
+data class SmartContractErrorCodesConfigFileToml(
+  @param:ConfigDoc(
+    description = "Mapping of Linea smart-contract revert error codes to human-readable messages, " +
+      "used to decode on-chain rejection reasons.",
+  )
+  val smartContractErrors: SmartContractErrors,
+)
 
 data class CoordinatorConfigToml(
   val configs: CoordinatorConfigFileToml,

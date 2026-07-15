@@ -101,12 +101,10 @@ class ConfigSchemaWalkerTest {
   }
 
   @Test
-  fun `real classes are not annotated yet so annotated is false and doc fields are null`() {
+  fun `real classes are annotated with non-blank descriptions`() {
     val keys = ConfigSchemaWalker.walk(DatabaseToml::class)
-    assertThat(keys).allMatch { !it.annotated }
-    assertThat(keys).allMatch { it.description.isEmpty() }
-    assertThat(keys).allMatch { it.default == null }
-    assertThat(keys).allMatch { it.example == null }
-    assertThat(keys).allMatch { it.replacement == null }
+    assertThat(keys).isNotEmpty
+    assertThat(keys).allMatch { it.annotated }
+    assertThat(keys).allMatch { it.description.isNotBlank() }
   }
 }
