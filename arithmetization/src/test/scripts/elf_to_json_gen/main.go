@@ -1117,11 +1117,10 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, nRecords uint64,
 		// U-type immediate: upper 20 bits sign-extended at ELF time.
 		uImm := assembleUTypeImm(instr)
 
-		itypeLocalOp, normImm12 := decodeITypeSemantic(opcode, funct3, imm12)
+		_, normImm12 := decodeITypeSemantic(opcode, funct3, imm12)
 		if instrType != iType {
-			itypeLocalOp, normImm12 = itypeInvalid, imm12
+			normImm12 = imm12
 		}
-		itypeLocalOp = itypeOpForRd(itypeLocalOp, rd)
 
 		computeOp := classifyInstruction(instr)
 		decodedBits.writeBits(uint64(computeOp), 8)

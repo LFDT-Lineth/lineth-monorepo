@@ -566,7 +566,7 @@ func TestClassifyRoundTripSyntheticImage(t *testing.T) {
 		}
 		_, normImm12 := decodeITypeSemantic(opcode, funct3, imm12)
 		if instrType != iType {
-			_, normImm12 = itypeInvalid, imm12
+			normImm12 = imm12
 		}
 		decodedBits.writeBits(uint64(classifyInstruction(instr)), 8)
 		decodedBits.writeBits(assembleITypeImm(normImm12), 64)
