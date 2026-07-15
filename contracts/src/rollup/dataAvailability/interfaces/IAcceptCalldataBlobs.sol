@@ -11,21 +11,13 @@ import { IShnarfDataAcceptorBase } from "./IShnarfDataAcceptorBase.sol";
 interface IAcceptCalldataBlobs is IShnarfDataAcceptorBase {
   /**
    * @notice Supporting data for compressed calldata submission including compressed data.
-   * @param finalStateRootHash is used to set state root at the end of the data.
-   * @param snarkHash is the computed hash for compressed data (using a SNARK-friendly hash function) that aggregates per data submission to be used in public input.
+   * @param blockHash The L2 final block hash for this submission, used in shnarf computation.
    * @param compressedData is the compressed transaction data. It contains ordered data for each L2 block - l2Timestamps, the encoded transaction data.
    */
   struct CompressedCalldataSubmission {
-    bytes32 finalStateRootHash;
-    bytes32 snarkHash;
+    bytes32 blockHash;
     bytes compressedData;
   }
-
-  /**
-   * @dev Thrown when the first byte is not zero.
-   * @dev This is used explicitly with the four bytes in assembly 0x729eebce.
-   */
-  error FirstByteIsNotZero();
 
   /**
    * @dev Thrown when submissionData is empty.
@@ -33,15 +25,10 @@ interface IAcceptCalldataBlobs is IShnarfDataAcceptorBase {
   error EmptySubmissionData();
 
   /**
-   * @dev Thrown when bytes length is not a multiple of 32.
-   */
-  error BytesLengthNotMultipleOf32();
-
-  /**
    * @notice Submit blobs using compressed data via calldata.
    * @dev OPERATOR_ROLE is required to execute.
    * @param _submission The supporting data for compressed data submission including compressed data.
-   * @param _parentShnarf The parent shnarf used in continuity checks as it includes the parentStateRootHash in its computation.
+   * @param _parentShnarf The parent shnarf used in continuity checks.
    * @param _expectedShnarf The expected shnarf post computation of all the submission.
    */
   function submitDataAsCalldata(

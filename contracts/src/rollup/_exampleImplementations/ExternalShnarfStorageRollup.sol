@@ -24,7 +24,7 @@ contract ExternalShnarfStorageRollup is LineaRollupBase {
   function initialize(BaseInitializationData calldata _initializationData) external initializer {
     __LineaRollup_init(
       _initializationData,
-      _computeShnarf(EMPTY_HASH, EMPTY_HASH, _initializationData.initialStateRootHash, EMPTY_HASH, EMPTY_HASH)
+      _computeShnarf(EMPTY_HASH, _initializationData.initialBlockHash, EMPTY_HASH)
     );
   }
 
