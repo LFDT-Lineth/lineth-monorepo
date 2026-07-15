@@ -331,9 +331,10 @@ func checkOpeningProofShape(p Params, prf Proof, foldAlphas []field.Ext, positio
 // caller. checkFolds consumes only this: it never touches a row, a root, a
 // branch, or alpha_DEEP.
 type resolvedQuery struct {
-	Rounds []inputPair       // Rounds[j] = (self, sibling) of the running codeword at round j (unused at j=0)
-	Aux    map[int]inputPair // Aux[j] = the pair of the level introduced at round j, if any (always present at j=0)
-	Final  field.Ext         // the final-polynomial target for this query
+	Rounds     []inputPair       // Rounds[j] = (self, sibling) of the running codeword at round j (unused at j=0)
+	Aux        map[int]inputPair // Aux[j] = the pair of the level introduced at round j, if any (always present at j=0)
+	AuxColumns map[int]int       // AuxColumns[j] = number of columns batched into Aux[j] (sets the running codeword's weight in checkFolds)
+	Final      field.Ext         // the final-polynomial target for this query
 }
 
 // checkFolds verifies the FRI fold recurrence for every query against values
@@ -350,15 +351,15 @@ func checkFolds(p Params, resolved []resolvedQuery, foldAlphas []field.Ext, posi
 			// folded; the running codeword from the preceding round --
 			// absent at round 0, since there is no round -1 -- combines with
 			// it before the single fold below (Fold is linear), weighted by
-			// the square of THIS SAME round's challenge. Reusing an earlier
-			// round's challenge here would let the prover pick the running
-			// codeword only after already knowing the weight, which is
-			// unsound: the weight must always be the one just sampled.
+			// alphaDeep^n: alphaDeep the square of THIS SAME round's challenge.
+
 			if levelPair, ok := rq.Aux[j]; ok {
 				self, sib = levelPair.Self, levelPair.Sibling
 				if j > 0 {
-					var weight, wRunning, wSib field.Ext
-					weight.Square(&foldAlphas[j])
+					var alphaDeep, wRunning, wSib field.Ext
+					alphaDeep.Square(&foldAlphas[j])
+					n := rq.AuxColumns[j]
+					weight := powers(alphaDeep, n+1)[n]
 					wRunning.Mul(&rq.Rounds[j].Self, &weight)
 					wSib.Mul(&rq.Rounds[j].Sibling, &weight)
 					self.Add(&self, &wRunning)

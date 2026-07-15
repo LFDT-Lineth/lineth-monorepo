@@ -1275,9 +1275,10 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	resolved := make([]resolvedQuery, pcs.Params.NumQueries)
 	for queryIdx, queryPosition := range positions {
 		rq := resolvedQuery{
-			Rounds: make([]inputPair, pcs.Params.numRounds),
-			Aux:    make(map[int]inputPair, len(layout)),
-			Final:  proof.FRIProof.FinalPolyExt[queryPosition>>pcs.Params.numRounds],
+			Rounds:     make([]inputPair, pcs.Params.numRounds),
+			Aux:        make(map[int]inputPair, len(layout)),
+			AuxColumns: make(map[int]int, len(layout)),
+			Final:      proof.FRIProof.FinalPolyExt[queryPosition>>pcs.Params.numRounds],
 		}
 
 		inputOpening := proof.InputQueries[queryIdx]
@@ -1327,6 +1328,7 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 				return err
 			}
 			rq.Aux[round] = inputPair{Self: self, Sibling: sib}
+			rq.AuxColumns[round] = len(bundle.Entries)
 		}
 
 		// Running layers: authenticate and decode directly from the

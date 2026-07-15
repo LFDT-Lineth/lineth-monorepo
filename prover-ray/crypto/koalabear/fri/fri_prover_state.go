@@ -89,12 +89,10 @@ func (st *ProverState) HasNext() bool {
 // weight could be chosen after the running codeword is already known, which
 // is unsound) and becomes the primary codeword being folded; the running
 // codeword from the preceding round, if any, folds in alongside it, weighted
-// by that same alpha². At round 0 there is no preceding round, so the running
-// codeword (the zero seed) contributes nothing and is skipped rather than
-// folded as a no-op. Fold commits the new layer and returns its Merkle root;
-// on the final fold the running polynomial becomes the final polynomial —
-// revealed in the clear rather than committed — and the returned root is the
-// zero octuplet.
+// by alphaDeep^n (n = the level's own column count). Fold commits the new
+// layer and returns its Merkle root; on the final fold the running polynomial
+// becomes the final polynomial — revealed in the clear rather than committed
+// — and the returned root is the zero octuplet.
 func (st *ProverState) Fold(alpha field.Ext) field.Octuplet {
 
 	if !st.HasNext() {
@@ -115,7 +113,8 @@ func (st *ProverState) Fold(alpha field.Ext) field.Octuplet {
 		}
 		if j > 0 {
 			running = st.running
-			weight.Square(&alpha)
+			n := len(st.levels[l].Columns)
+			weight = powers(alphaDeep, n+1)[n]
 		}
 	}
 
