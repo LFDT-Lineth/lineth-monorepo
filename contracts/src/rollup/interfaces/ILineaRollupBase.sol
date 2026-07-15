@@ -63,6 +63,7 @@ interface ILineaRollupBase {
    * @notice Supporting data for finalization with proof.
    * @dev NB: the dynamic sized fields are placed last on purpose for efficient keccaking on public input.
    * @param parentStateRootHash is the expected last state root hash finalized. Used only in the migration path.
+   * @param parentBlockHash The expected L2 parent block hash at the start of this finalization. Used as a soft continuity check on the new (post-migration) path only — the on-chain blockHashes mapping is the authoritative source of truth.
    * @param endBlockNumber is the end block finalizing until.
    * @param shnarfData contains data about the last data submission's shnarf. Used in migration path (all 5 fields) and new path (parentShnarf only).
    * @param lastFinalizedTimestamp is the expected last finalized block's timestamp.
@@ -84,6 +85,7 @@ interface ILineaRollupBase {
    */
   struct FinalizationDataV5 {
     bytes32 parentStateRootHash;
+    bytes32 parentBlockHash;
     uint256 endBlockNumber;
     ShnarfData shnarfData;
     uint256 lastFinalizedTimestamp;
@@ -200,6 +202,11 @@ interface ILineaRollupBase {
    * @dev Thrown when the final block hash equals the zero hash during finalization.
    */
   error FinalBlockStateEqualsZeroHash();
+
+  /**
+   * @dev Thrown when the starting block hash does not match the stored block hash on the new finalization path.
+   */
+  error StartingBlockHashDoesNotMatch();
 
   /**
    * @dev Thrown when final l2 block timestamp higher than current block.timestamp during finalization.

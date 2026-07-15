@@ -545,6 +545,13 @@ abstract contract LineaRollupBase is
       stateRootHashes[_finalizationData.endBlockNumber] = _finalizationData.shnarfData.finalStateRootHash;
     } else {
       // NEW PATH: parent committed under block-hash model.
+      // Soft continuity check: caller must declare the parent block hash they are building from.
+      // The on-chain blockHashes mapping is authoritative; this guards against callers accidentally
+      // submitting finalization data that starts from a different parent than they intended.
+      if (parentBlockHash != _finalizationData.parentBlockHash) {
+        revert StartingBlockHashDoesNotMatch();
+      }
+
       finalShnarf = _computeShnarf(
         _finalizationData.shnarfData.parentShnarf,
         _finalizationData.finalBlockHash,
@@ -666,28 +673,29 @@ abstract contract LineaRollupBase is
    * )
    * FinalizationDataV5 fixed-field calldata offsets (relative to _finalizationData):
    * 0x000   parentStateRootHash
-   * 0x020   endBlockNumber
-   * 0x040   shnarfData.parentShnarf
-   * 0x060   shnarfData.snarkHash
-   * 0x080   shnarfData.finalStateRootHash
-   * 0x0a0   shnarfData.dataEvaluationPoint
-   * 0x0c0   shnarfData.dataEvaluationClaim
-   * 0x0e0   lastFinalizedTimestamp
-   * 0x100   finalTimestamp
-   * 0x120   lastFinalizedL1RollingHash
-   * 0x140   l1RollingHash
-   * 0x160   lastFinalizedL1RollingHashMessageNumber
-   * 0x180   l1RollingHashMessageNumber
-   * 0x1a0   l2MerkleTreesDepth
-   * 0x1c0   lastFinalizedForcedTransactionNumber
-   * 0x1e0   finalForcedTransactionNumber
-   * 0x200   lastFinalizedForcedTransactionRollingHash
-   * 0x220   finalBlockHash
-   * 0x240   finalBlobHash
-   * 0x260   offset → l2MerkleRoots
-   * 0x280   offset → filteredAddresses
-   * 0x2a0   offset → verifierKeys
-   * 0x2c0   offset → l2MessagingBlocksOffsets
+   * 0x020   parentBlockHash
+   * 0x040   endBlockNumber
+   * 0x060   shnarfData.parentShnarf
+   * 0x080   shnarfData.snarkHash
+   * 0x0a0   shnarfData.finalStateRootHash
+   * 0x0c0   shnarfData.dataEvaluationPoint
+   * 0x0e0   shnarfData.dataEvaluationClaim
+   * 0x100   lastFinalizedTimestamp
+   * 0x120   finalTimestamp
+   * 0x140   lastFinalizedL1RollingHash
+   * 0x160   l1RollingHash
+   * 0x180   lastFinalizedL1RollingHashMessageNumber
+   * 0x1a0   l1RollingHashMessageNumber
+   * 0x1c0   l2MerkleTreesDepth
+   * 0x1e0   lastFinalizedForcedTransactionNumber
+   * 0x200   finalForcedTransactionNumber
+   * 0x220   lastFinalizedForcedTransactionRollingHash
+   * 0x240   finalBlockHash
+   * 0x260   finalBlobHash
+   * 0x280   offset → l2MerkleRoots
+   * 0x2a0   offset → filteredAddresses
+   * 0x2c0   offset → verifierKeys
+   * 0x2e0   offset → l2MessagingBlocksOffsets
    * @param _finalizationData The full finalization data.
    * @param _lastFinalizedShnarf The last finalized shnarf.
    * @param _finalShnarf The final shnarf in the finalization.
@@ -716,31 +724,31 @@ abstract contract LineaRollupBase is
       mstore(add(mPtr, 0x20), _finalShnarf)
 
       /**
-       * _finalizationData.finalTimestamp (offset 0x100 in V5)
+       * _finalizationData.finalTimestamp (offset 0x120 in V5)
        */
-      calldatacopy(add(mPtr, 0x40), add(_finalizationData, 0x100), 0x20)
+      calldatacopy(add(mPtr, 0x40), add(_finalizationData, 0x120), 0x20)
 
       /**
-       * _finalizationData.endBlockNumber (offset 0x20 in V5)
+       * _finalizationData.endBlockNumber (offset 0x40 in V5)
        */
-      calldatacopy(add(mPtr, 0x60), add(_finalizationData, 0x20), 0x20)
+      calldatacopy(add(mPtr, 0x60), add(_finalizationData, 0x40), 0x20)
 
       /**
-       * _finalizationData.lastFinalizedL1RollingHash (0x120)
-       * _finalizationData.l1RollingHash (0x140)
+       * _finalizationData.lastFinalizedL1RollingHash (0x140)
+       * _finalizationData.l1RollingHash (0x160)
        */
-      calldatacopy(add(mPtr, 0x80), add(_finalizationData, 0x120), 0x40)
+      calldatacopy(add(mPtr, 0x80), add(_finalizationData, 0x140), 0x40)
 
       /**
-       * _finalizationData.lastFinalizedL1RollingHashMessageNumber (0x160)
-       * _finalizationData.l1RollingHashMessageNumber (0x180)
+       * _finalizationData.lastFinalizedL1RollingHashMessageNumber (0x180)
+       * _finalizationData.l1RollingHashMessageNumber (0x1a0)
        */
-      calldatacopy(add(mPtr, 0xC0), add(_finalizationData, 0x160), 0x40)
+      calldatacopy(add(mPtr, 0xC0), add(_finalizationData, 0x180), 0x40)
 
       /**
-       * _finalizationData.lastFinalizedForcedTransactionRollingHash (0x200)
+       * _finalizationData.lastFinalizedForcedTransactionRollingHash (0x220)
        */
-      calldatacopy(add(mPtr, 0x100), add(_finalizationData, 0x200), 0x20)
+      calldatacopy(add(mPtr, 0x100), add(_finalizationData, 0x220), 0x20)
 
       /**
        * _finalForcedTransactionRollingHash (parameter)
@@ -748,22 +756,22 @@ abstract contract LineaRollupBase is
       mstore(add(mPtr, 0x120), _finalForcedTransactionRollingHash)
 
       /**
-       * _finalizationData.lastFinalizedForcedTransactionNumber (0x1c0)
-       * _finalizationData.finalForcedTransactionNumber (0x1e0)
+       * _finalizationData.lastFinalizedForcedTransactionNumber (0x1e0)
+       * _finalizationData.finalForcedTransactionNumber (0x200)
        */
-      calldatacopy(add(mPtr, 0x140), add(_finalizationData, 0x1c0), 0x40)
+      calldatacopy(add(mPtr, 0x140), add(_finalizationData, 0x1e0), 0x40)
 
       /**
-       * _finalizationData.l2MerkleTreesDepth (0x1a0)
+       * _finalizationData.l2MerkleTreesDepth (0x1c0)
        */
-      calldatacopy(add(mPtr, 0x180), add(_finalizationData, 0x1a0), 0x20)
+      calldatacopy(add(mPtr, 0x180), add(_finalizationData, 0x1c0), 0x20)
 
       /**
        * @dev Hash l2MerkleRoots. Temp space starts at mPtr+0x240 (past the 17-field 0x220-byte hash input).
-       * The dynamic array offset pointer is at _finalizationData+0x260.
+       * The dynamic array offset pointer is at _finalizationData+0x280.
        */
       let mPtrMerkleRoot := add(mPtr, 0x240)
-      let merkleRootsLengthLocation := add(_finalizationData, calldataload(add(_finalizationData, 0x260)))
+      let merkleRootsLengthLocation := add(_finalizationData, calldataload(add(_finalizationData, 0x280)))
       let merkleRootsLen := calldataload(merkleRootsLengthLocation)
       calldatacopy(mPtrMerkleRoot, add(merkleRootsLengthLocation, 0x20), mul(merkleRootsLen, 0x20))
       let l2MerkleRootsHash := keccak256(mPtrMerkleRoot, mul(merkleRootsLen, 0x20))
