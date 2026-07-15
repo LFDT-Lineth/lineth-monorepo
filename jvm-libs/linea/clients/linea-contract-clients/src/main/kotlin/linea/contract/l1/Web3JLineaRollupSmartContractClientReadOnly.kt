@@ -27,6 +27,7 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
   val contractAddress: String,
   private val ethLogsSearcher: EthLogsSearcher,
   private val l1EventSearchMaxBlockRange: UInt = 10_000u,
+  private val finalizedStateSearchInitialBlockParameter: BlockParameter = BlockParameter.Tag.EARLIEST,
   private val log: Logger = LogManager.getLogger(Web3JLineaRollupSmartContractClientReadOnly::class.java),
 ) : LineaRollupSmartContractClientReadOnly,
   LineaRollupSmartContractClientReadOnlyFinalizedStateProvider,
@@ -219,18 +220,20 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
   // forward search instead of a full-chain binary search. A full-range fallback covers the rare case
   // where the cached window overshoots (e.g. an L1 reorg moved the event earlier, or a caller queries
   // a historical block).
-  private val finalizedStateSearchFromBlock = AtomicReference<BlockParameter>(BlockParameter.Tag.EARLIEST)
+  private val finalizedStateSearchFromBlock = AtomicReference<BlockParameter>(
+    finalizedStateSearchInitialBlockParameter,
+  )
 
   internal fun findFinalizedStateEvent(
     upToBlock: BlockParameter,
-    finalisedBlockNumber: ULong,
+    finalizedBlockNumber: ULong,
   ): SafeFuture<FinalizedStateUpdatedEvent?> {
     val fromBlock = finalizedStateSearchFromBlock.get()
     val search =
       if (fromBlock == BlockParameter.Tag.EARLIEST) {
-        searchFinalizedStateEvent(BlockParameter.Tag.EARLIEST, upToBlock, finalisedBlockNumber)
+        searchFinalizedStateEvent(BlockParameter.Tag.EARLIEST, upToBlock, finalizedBlockNumber)
       } else {
-        searchFinalizedStateEvent(fromBlock, upToBlock, finalisedBlockNumber)
+        searchFinalizedStateEvent(fromBlock, upToBlock, finalizedBlockNumber)
           // The cached forward window is only an optimization: on a miss OR any failure (e.g. it sits
           // after a historical upToBlock, which EthLogsSearcher rejects as an invalid range) fall back
           // to the authoritative full-range search, which re-surfaces any genuine (e.g. RPC) error.
@@ -239,7 +242,7 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
             if (event != null) {
               SafeFuture.completedFuture(event)
             } else {
-              searchFinalizedStateEvent(BlockParameter.Tag.EARLIEST, upToBlock, finalisedBlockNumber)
+              searchFinalizedStateEvent(finalizedStateSearchInitialBlockParameter, upToBlock, finalizedBlockNumber)
             }
           }
       }
@@ -252,7 +255,7 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
   private fun searchFinalizedStateEvent(
     fromBlock: BlockParameter,
     upToBlock: BlockParameter,
-    finalisedBlockNumber: ULong,
+    finalizedBlockNumber: ULong,
   ): SafeFuture<EthLogEvent<FinalizedStateUpdatedEvent>?> {
     // FinalizedStateUpdated has a unique, monotonically-increasing indexed blockNumber, so we binary
     // search for it in bounded chunks instead of an unbounded getLogs(EARLIEST..upToBlock) query,
@@ -266,8 +269,8 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
     ) { ethLog ->
       val foundBlockNumber = FinalizedStateUpdatedEvent.fromEthLog(ethLog).event.blockNumber
       when {
-        foundBlockNumber < finalisedBlockNumber -> SearchDirection.FORWARD
-        foundBlockNumber > finalisedBlockNumber -> SearchDirection.BACKWARD
+        foundBlockNumber < finalizedBlockNumber -> SearchDirection.FORWARD
+        foundBlockNumber > finalizedBlockNumber -> SearchDirection.BACKWARD
         else -> null
       }
     }.thenApply { ethLog ->
@@ -279,7 +282,7 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
     upToBlock: BlockParameter,
     finalisedBlockNumber: ULong,
   ): SafeFuture<FinalizedStateUpdatedEvent> {
-    return findFinalizedStateEvent(upToBlock = upToBlock, finalisedBlockNumber = finalisedBlockNumber)
+    return findFinalizedStateEvent(upToBlock = upToBlock, finalizedBlockNumber = finalisedBlockNumber)
       .thenApply { event ->
         // it means contract was just upgraded but no event published yet,
         // we cannot deterministically get the finalized fields

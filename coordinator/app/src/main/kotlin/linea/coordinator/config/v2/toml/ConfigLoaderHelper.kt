@@ -15,10 +15,10 @@ import linea.coordinator.config.v2.CoordinatorConfig
 import linea.coordinator.config.v2.toml.decoders.BlockParameterDecoder
 import linea.coordinator.config.v2.toml.decoders.BlockParameterNumberDecoder
 import linea.coordinator.config.v2.toml.decoders.BlockParameterTagDecoder
-import linea.coordinator.config.v2.toml.decoders.TomlByteArrayHexDecoder
-import linea.coordinator.config.v2.toml.decoders.TomlKotlinDurationDecoder
-import linea.coordinator.config.v2.toml.decoders.TomlKotlinInstantDecoder
 import linea.coordinator.config.v2.toml.decoders.TomlSignerTypeDecoder
+import linea.hoplite.toml.TomlByteArrayHexDecoder
+import linea.hoplite.toml.TomlKotlinDurationDecoder
+import linea.hoplite.toml.TomlKotlinInstantDecoder
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger

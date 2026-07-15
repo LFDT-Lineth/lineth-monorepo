@@ -41,7 +41,7 @@ public final class MLoadStore extends GasProjection {
 
   @Override
   public long memoryExpansion() {
-    return gc.memoryExpansionGasCost(frame, offset, WORD_SIZE);
+    return memoryExpansionGasCost(gc, frame, offset, WORD_SIZE);
   }
 
   @Override

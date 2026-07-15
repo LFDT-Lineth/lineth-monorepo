@@ -45,29 +45,35 @@ class ApiServerImpl(
     } else {
       // To support apiserver restarts after stop, we need to create a new Javalin instance
       // https://github.com/javalin/javalin/issues/941
+      // Javalin 7 moved route/exception registration into the config block; they can no longer
+      // be added by chaining off the app instance after create()/start().
+      // https://javalin.io/migration-guide-javalin-6-to-7
       app = Javalin
-        .create()
-        .exception(HandlerException::class.java) { e, ctx ->
-          ctx.status(e.code).json(ApiExceptionResponse(e.code, e.message))
-        }.exception(Exception::class.java) { e, ctx ->
-          ctx.status(500).json(ApiExceptionResponse(500, "Internal Server Error"))
-        }.get(GetNetworkIdentity.ROUTE, GetNetworkIdentity(networkDataProvider))
-        .get(GetPeers.ROUTE, GetPeers(networkDataProvider))
-        .get(GetPeer.ROUTE, GetPeer(networkDataProvider))
-        .get(GetPeerCount.ROUTE, GetPeerCount(networkDataProvider))
-        .get(GetVersion.ROUTE, GetVersion(versionProvider))
-        .get(
-          GetSyncingStatus.ROUTE,
-          GetSyncingStatus(
-            syncStatusProvider = syncStatusProvider,
-            isElOnlineProvider = isElOnlineProvider,
-          ),
-        ).get(GetHealth.ROUTE, GetHealth())
-        .get(GetBlockHeader.ROUTE, GetBlockHeader(chainDataProvider))
-        .get(GetBlock.ROUTE, GetBlock(chainDataProvider))
-        .get(GetStateValidator.ROUTE, GetStateValidator(chainDataProvider))
-        .get(GetStateValidators.ROUTE, GetStateValidators(chainDataProvider))
-        .start(config.port.toInt())
+        .create { javalinConfig ->
+          javalinConfig.routes.exception(HandlerException::class.java) { e, ctx ->
+            ctx.status(e.code).json(ApiExceptionResponse(e.code, e.message))
+          }
+          javalinConfig.routes.exception(Exception::class.java) { _, ctx ->
+            ctx.status(500).json(ApiExceptionResponse(500, "Internal Server Error"))
+          }
+          javalinConfig.routes.get(GetNetworkIdentity.ROUTE, GetNetworkIdentity(networkDataProvider))
+          javalinConfig.routes.get(GetPeers.ROUTE, GetPeers(networkDataProvider))
+          javalinConfig.routes.get(GetPeer.ROUTE, GetPeer(networkDataProvider))
+          javalinConfig.routes.get(GetPeerCount.ROUTE, GetPeerCount(networkDataProvider))
+          javalinConfig.routes.get(GetVersion.ROUTE, GetVersion(versionProvider))
+          javalinConfig.routes.get(
+            GetSyncingStatus.ROUTE,
+            GetSyncingStatus(
+              syncStatusProvider = syncStatusProvider,
+              isElOnlineProvider = isElOnlineProvider,
+            ),
+          )
+          javalinConfig.routes.get(GetHealth.ROUTE, GetHealth())
+          javalinConfig.routes.get(GetBlockHeader.ROUTE, GetBlockHeader(chainDataProvider))
+          javalinConfig.routes.get(GetBlock.ROUTE, GetBlock(chainDataProvider))
+          javalinConfig.routes.get(GetStateValidator.ROUTE, GetStateValidator(chainDataProvider))
+          javalinConfig.routes.get(GetStateValidators.ROUTE, GetStateValidators(chainDataProvider))
+        }.start(config.port.toInt())
     }
     return CompletableFuture.completedFuture(Unit)
   }

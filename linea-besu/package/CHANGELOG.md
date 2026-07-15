@@ -1,12 +1,19 @@
-## [unreleased]
+## [2.0.0] - 2026-07-14
+
+### 🚀 Features
+
+- *(coordinator)* [**breaking**] Web3j upgrade to onboard 7594 support (#3514)
 
 ### 🐛 Bug Fixes
 
 - *(misc)* Web3j-solc solidity resolution workaround (#3516)
+- *(linea-besu)* Updating Besu version (#3535)
 
 ### ⚙️ Miscellaneous Tasks
 
 - *(coordinator)* Update kotlin to v2.4 (#3454)
+- *(ci)* Update image tags (#3553)
+- *(deps)* Align bouncycastle catalog pin to 1.84 (#3562)
 ## [1.1.1] - 2026-06-26
 
 ### 🐛 Bug Fixes
