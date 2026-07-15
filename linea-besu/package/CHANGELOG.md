@@ -12,8 +12,6 @@
 
 ### ⚙️ Miscellaneous Tasks
 
-- *(coordinator)* Update kotlin to v2.4 (#3454)
-- *(ci)* Update image tags (#3553)
 - *(deps)* Align bouncycastle catalog pin to 1.84 (#3562)
 ## [1.1.1] - 2026-06-26
 
