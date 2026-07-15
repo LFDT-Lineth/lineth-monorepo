@@ -6,17 +6,21 @@ fn check_j_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op
     var imm19_12:u8
     var imm:DoubleWord
 
+    imm20::imm10_1::imm11::imm19_12::rd = instruction_parameters
 
     // J-type has no funct3; verify the raw opcode encodes the claimed compute_op.
     // Mapping (see elf_to_json_gen decodeJTypeSemantic / jtypeOpForRd):
     //   JAL -> JTYPE_JAL / JTYPE_JAL_WB
     switch opcode {
         case OPCODE_JAL: {
-            if compute_op != JTYPE_JAL {
-                if compute_op != JTYPE_JAL_WB {
+            if rd == 0 {
+                if compute_op != JTYPE_JAL {
                     printf "[ERROR] J-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
                     fail
                 }
+            } else if compute_op != JTYPE_JAL_WB {
+                printf "[ERROR] J-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
+                fail
             }
         }
         default: {
@@ -29,7 +33,6 @@ fn check_j_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op
         }
     }
 
-    imm20::imm10_1::imm11::imm19_12::rd = instruction_parameters
     var imm21:u21 = ((imm20::imm19_12::imm11::imm10_1) as u21) << 1
     imm = sgn_extension_u21_u64(imm21)
 

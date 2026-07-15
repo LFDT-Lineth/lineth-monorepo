@@ -14,17 +14,20 @@ fn check_u_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op
                     printf "[ERROR] U-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
                     fail
                 }
-            } else if compute_op != UTYPE_LUI && compute_op != UTYPE_LUI_WB {
-                    printf "[ERROR] U-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
-                    fail
+            } else if compute_op != UTYPE_LUI_WB {
+                printf "[ERROR] U-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
+                fail
             }
         }
         case OPCODE_AUIPC: {
-            if compute_op != UTYPE_AUIPC {
-                if compute_op != UTYPE_AUIPC_WB {
+            if rd == 0 {
+                if compute_op != UTYPE_AUIPC {
                     printf "[ERROR] U-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
                     fail
                 }
+            } else if compute_op != UTYPE_AUIPC_WB {
+                printf "[ERROR] U-type compute_op mismatch (compute_op=%x opcode=%x params=%x)\n", compute_op, opcode, instruction_parameters
+                fail
             }
         }
         default: {

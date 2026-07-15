@@ -26,49 +26,89 @@ fn check_r_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op
                 case FUNCT7_MUL: {
                     switch funct3 {
                         case FUNCT3_MUL: {
-                            if compute_op != RTYPE_MUL && compute_op != RTYPE_MUL_WB {
+                            if rd == 0 {
+                                if compute_op != RTYPE_MUL {
+                                    printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
+                                    fail
+                                }
+                            } else if compute_op != RTYPE_MUL_WB {
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_MULH: {
-                            if compute_op != RTYPE_MULH && compute_op != RTYPE_MULH_WB {
+                            if rd == 0 {
+                                if compute_op != RTYPE_MULH {
+                                    printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
+                                    fail
+                                }
+                            } else if compute_op != RTYPE_MULH_WB {
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_MULHSU: {
-                            if compute_op != RTYPE_MULHSU && compute_op != RTYPE_MULHSU_WB {
+                            if rd == 0 {
+                                if compute_op != RTYPE_MULHSU {
+                                    printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
+                                    fail
+                                }
+                            } else if compute_op != RTYPE_MULHSU_WB {
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_MULHU: {
-                            if compute_op != RTYPE_MULHU && compute_op != RTYPE_MULHU_WB {
+                            if rd == 0 {
+                                if compute_op != RTYPE_MULHU {
+                                    printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
+                                    fail
+                                }
+                            } else if compute_op != RTYPE_MULHU_WB {
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_DIV: {
-                            if compute_op != RTYPE_DIV && compute_op != RTYPE_DIV_WB {
+                            if rd == 0 {
+                                if compute_op != RTYPE_DIV {
+                                    printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
+                                    fail
+                                }
+                            } else if compute_op != RTYPE_DIV_WB {
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_DIVU: {
-                            if compute_op != RTYPE_DIVU && compute_op != RTYPE_DIVU_WB {
+                            if rd == 0 {
+                                if compute_op != RTYPE_DIVU {
+                                    printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
+                                    fail
+                                }
+                            } else if compute_op != RTYPE_DIVU_WB {
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_REM: {
-                            if compute_op != RTYPE_REM && compute_op != RTYPE_REM_WB {
+                            if rd == 0 {
+                                if compute_op != RTYPE_REM {
+                                    printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
+                                    fail
+                                }
+                            } else if compute_op != RTYPE_REM_WB {
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_REMU: {
-                            if compute_op != RTYPE_REMU && compute_op != RTYPE_REMU_WB {
+                            if rd == 0 {
+                                if compute_op != RTYPE_REMU {
+                                    printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
+                                    fail
+                                }
+                            } else if compute_op != RTYPE_REMU_WB {
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
@@ -85,49 +125,89 @@ fn check_r_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op
                 case FUNCT7_ADD: {
                     switch funct3 {
                         case FUNCT3_ADD: {
-                            if compute_op != RTYPE_ADD && compute_op != RTYPE_ADD_WB {
+                            if rd == 0 {
+                                if compute_op != RTYPE_ADD {
+                                    printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
+                                    fail
+                                }
+                            } else if compute_op != RTYPE_ADD_WB {
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_SLL: {
-                            if compute_op != RTYPE_SLL && compute_op != RTYPE_SLL_WB {
+                            if rd == 0 {
+                                if compute_op != RTYPE_SLL {
+                                    printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
+                                    fail
+                                }
+                            } else if compute_op != RTYPE_SLL_WB {
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_SLT: {
-                            if compute_op != RTYPE_SLT && compute_op != RTYPE_SLT_WB {
+                            if rd == 0 {
+                                if compute_op != RTYPE_SLT {
+                                    printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
+                                    fail
+                                }
+                            } else if compute_op != RTYPE_SLT_WB {
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_SLTU: {
-                            if compute_op != RTYPE_SLTU && compute_op != RTYPE_SLTU_WB {
+                            if rd == 0 {
+                                if compute_op != RTYPE_SLTU {
+                                    printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
+                                    fail
+                                }
+                            } else if compute_op != RTYPE_SLTU_WB {
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_XOR: {
-                            if compute_op != RTYPE_XOR && compute_op != RTYPE_XOR_WB {
+                            if rd == 0 {
+                                if compute_op != RTYPE_XOR {
+                                    printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
+                                    fail
+                                }
+                            } else if compute_op != RTYPE_XOR_WB {
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_SRL: {
-                            if compute_op != RTYPE_SRL && compute_op != RTYPE_SRL_WB {
+                            if rd == 0 {
+                                if compute_op != RTYPE_SRL {
+                                    printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
+                                    fail
+                                }
+                            } else if compute_op != RTYPE_SRL_WB {
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_OR: {
-                            if compute_op != RTYPE_OR && compute_op != RTYPE_OR_WB {
+                            if rd == 0 {
+                                if compute_op != RTYPE_OR {
+                                    printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
+                                    fail
+                                }
+                            } else if compute_op != RTYPE_OR_WB {
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_AND: {
-                            if compute_op != RTYPE_AND && compute_op != RTYPE_AND_WB {
+                            if rd == 0 {
+                                if compute_op != RTYPE_AND {
+                                    printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
+                                    fail
+                                }
+                            } else if compute_op != RTYPE_AND_WB {
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
@@ -144,13 +224,23 @@ fn check_r_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op
                 case FUNCT7_SUB: {
                     switch funct3 {
                         case FUNCT3_SUB: {
-                            if compute_op != RTYPE_SUB && compute_op != RTYPE_SUB_WB {
+                            if rd == 0 {
+                                if compute_op != RTYPE_SUB {
+                                    printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
+                                    fail
+                                }
+                            } else if compute_op != RTYPE_SUB_WB {
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_SRA: {
-                            if compute_op != RTYPE_SRA && compute_op != RTYPE_SRA_WB {
+                            if rd == 0 {
+                                if compute_op != RTYPE_SRA {
+                                    printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
+                                    fail
+                                }
+                            } else if compute_op != RTYPE_SRA_WB {
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
@@ -178,31 +268,56 @@ fn check_r_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op
                 case FUNCT7_MULW: {
                     switch funct3 {
                         case FUNCT3_MULW: {
-                            if compute_op != RTYPE_MULW && compute_op != RTYPE_MULW_WB {
+                            if rd == 0 {
+                                if compute_op != RTYPE_MULW {
+                                    printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
+                                    fail
+                                }
+                            } else if compute_op != RTYPE_MULW_WB {
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_DIVW: {
-                            if compute_op != RTYPE_DIVW && compute_op != RTYPE_DIVW_WB {
+                            if rd == 0 {
+                                if compute_op != RTYPE_DIVW {
+                                    printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
+                                    fail
+                                }
+                            } else if compute_op != RTYPE_DIVW_WB {
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_DIVUW: {
-                            if compute_op != RTYPE_DIVUW && compute_op != RTYPE_DIVUW_WB {
+                            if rd == 0 {
+                                if compute_op != RTYPE_DIVUW {
+                                    printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
+                                    fail
+                                }
+                            } else if compute_op != RTYPE_DIVUW_WB {
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_REMW: {
-                            if compute_op != RTYPE_REMW && compute_op != RTYPE_REMW_WB {
+                            if rd == 0 {
+                                if compute_op != RTYPE_REMW {
+                                    printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
+                                    fail
+                                }
+                            } else if compute_op != RTYPE_REMW_WB {
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_REMUW: {
-                            if compute_op != RTYPE_REMUW && compute_op != RTYPE_REMUW_WB {
+                            if rd == 0 {
+                                if compute_op != RTYPE_REMUW {
+                                    printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
+                                    fail
+                                }
+                            } else if compute_op != RTYPE_REMUW_WB {
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
@@ -219,19 +334,34 @@ fn check_r_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op
                 case FUNCT7_ADDW: {
                     switch funct3 {
                         case FUNCT3_ADDW: {
-                            if compute_op != RTYPE_ADDW && compute_op != RTYPE_ADDW_WB {
+                            if rd == 0 {
+                                if compute_op != RTYPE_ADDW {
+                                    printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
+                                    fail
+                                }
+                            } else if compute_op != RTYPE_ADDW_WB {
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_SLLW: {
-                            if compute_op != RTYPE_SLLW && compute_op != RTYPE_SLLW_WB {
+                            if rd == 0 {
+                                if compute_op != RTYPE_SLLW {
+                                    printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
+                                    fail
+                                }
+                            } else if compute_op != RTYPE_SLLW_WB {
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_SRLW: {
-                            if compute_op != RTYPE_SRLW && compute_op != RTYPE_SRLW_WB {
+                            if rd == 0 {
+                                if compute_op != RTYPE_SRLW {
+                                    printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
+                                    fail
+                                }
+                            } else if compute_op != RTYPE_SRLW_WB {
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
@@ -248,13 +378,23 @@ fn check_r_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op
                 case FUNCT7_SUBW: {
                     switch funct3 {
                         case FUNCT3_SUBW: {
-                            if compute_op != RTYPE_SUBW && compute_op != RTYPE_SUBW_WB {
+                            if rd == 0 {
+                                if compute_op != RTYPE_SUBW {
+                                    printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
+                                    fail
+                                }
+                            } else if compute_op != RTYPE_SUBW_WB {
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
                         }
                         case FUNCT3_SRAW: {
-                            if compute_op != RTYPE_SRAW && compute_op != RTYPE_SRAW_WB {
+                            if rd == 0 {
+                                if compute_op != RTYPE_SRAW {
+                                    printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
+                                    fail
+                                }
+                            } else if compute_op != RTYPE_SRAW_WB {
                                 printf "[ERROR] R-type compute_op mismatch (compute_op=%x opcode=%x params=%x funct3=%x funct7=%x)\n", compute_op, opcode, instruction_parameters, funct3, funct7
                                 fail
                             }
