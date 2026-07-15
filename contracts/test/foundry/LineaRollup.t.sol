@@ -88,7 +88,7 @@ contract LineaRollupTest is Test {
   }
 
   function testSubmitDataAsCalldata() public {
-    ILineaRollup.CompressedCalldataSubmission memory submission;
+    ILineaRollup.CompressedCalldataSubmissionV2 memory submission;
     submission.finalStateRootHash = keccak256(abi.encodePacked("finalStateRootHash"));
     submission.snarkHash = keccak256(abi.encodePacked("snarkHash"));
 
