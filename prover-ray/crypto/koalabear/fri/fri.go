@@ -312,6 +312,15 @@ func checkOpeningProofShape(p Params, prf Proof, foldAlphas []field.Ext, positio
 	if want := p.N >> p.numRounds; len(prf.FinalPolyExt) != want {
 		return fmt.Errorf("fri: pcs.Verify: FinalPolyExt has %d entries, want %d", len(prf.FinalPolyExt), want)
 	}
+	// numRounds = log2(D) folds force the running polynomial's degree below 1,
+	// so FinalPolyExt must be a single constant; checked unconditionally here
+	// rather than left to checkFolds, whose per-query rq.Final only samples
+	// one entry and so could miss a non-constant final poly by chance.
+	for i := 1; i < len(prf.FinalPolyExt); i++ {
+		if !prf.FinalPolyExt[i].Equal(&prf.FinalPolyExt[0]) {
+			return fmt.Errorf("fri: pcs.Verify: FinalPolyExt is not constant: entry %d differs from entry 0", i)
+		}
+	}
 	if len(foldAlphas) < p.numRounds {
 		return fmt.Errorf("fri: pcs.Verify: %d folding challenges, need at least %d", len(foldAlphas), p.numRounds)
 	}

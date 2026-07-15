@@ -7,7 +7,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// ldtFixture commits R(X)=X*target(X) at zeta=0, so the DEEP quotient is target.
+// ldtFixture commits R(X)=X*target(X) at zeta=0, so the DEEP quotient is
+// target. target is genuinely low-degree: addLevel RS-encodes the given
+// plaintext-sized coefficients up to the level's full codeword domain, so
+// FinalPolyExt legitimately comes out constant after an honest fold.
 type ldtFixture struct {
 	pcs *PCS
 
@@ -29,8 +32,11 @@ func newLDTFixture(t *testing.T, n, d, numQueries int) *ldtFixture {
 	return &ldtFixture{pcs: pcs}
 }
 
-func (fx *ldtFixture) addLevel(t *testing.T, sizeLog2 int, target []field.Ext) {
+func (fx *ldtFixture) addLevel(t *testing.T, sizeLog2 int, coeffs []field.Ext) {
 	t.Helper()
+
+	require.Len(t, coeffs, 1<<sizeLog2)
+	target := fx.pcs.Encoders[sizeLog2].EncodeExt(coeffs)
 
 	domain := fx.pcs.Params.domainsLight[fx.pcs.Params.numRounds-sizeLog2]
 	size, err := reconstructDomainSize(domain)

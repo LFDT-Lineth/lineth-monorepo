@@ -515,9 +515,7 @@ type SizedClaimedValues struct {
 // =============================================================================
 
 // Challenges bundles the Fiat-Shamir values supplied by the caller. There is
-// no separate DEEP-batching challenge: each level's own alphaDeep is the
-// square of FoldAlphas[jl], the fold challenge for that level's own
-// introduction round (round 0 for the main degree-D polynomial).
+// no separate DEEP-batching challenge (see the package doc's step 3).
 type Challenges struct {
 	FoldAlphas     []field.Ext // length == Params.numRounds
 	QueryPositions []int       // length == Params.NumQueries
@@ -1133,10 +1131,10 @@ func (branch InputTreeOpening) pairAtLevel(levelSize int) (*RowPair, error) {
 }
 
 // reconstructQueryValueAt combines bundle's columns with running (this
-// level's own round's running-codeword value) at x. running seeds the ladder, so it
-// is weighted by alphaDeep^len(bundle.Entries).
-// bundle.Entries is walked highest AlphaPower first (canonicalLayout assigns
-// them 0..len(Entries)-1 in order, so that's simply the reverse index order).
+// level's own round's running-codeword value) at x, the same way EvalsAt
+// combines a level's columns with the prover's running codeword. Entries are
+// walked highest AlphaPower first (canonicalLayout assigns them
+// 0..len(Entries)-1 in order, so that's simply the reverse index order).
 func reconstructQueryValueAt(
 	pcs *PCS,
 	bundle sizeBundle,

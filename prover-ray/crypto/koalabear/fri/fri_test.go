@@ -90,6 +90,30 @@ func TestFoldLayerInternally(t *testing.T) {
 	}
 }
 
+// TestCheckOpeningProofShapeRejectsNonConstantFinalPoly targets the low-degree
+// bound checkFolds itself cannot enforce: after numRounds folds the running
+// polynomial's degree is forced below 1, i.e. it must be a single constant,
+// so every entry of FinalPolyExt must agree. This must be caught unconditionally
+// (not by chance query coverage of the differing entry), which is why it
+// belongs in checkOpeningProofShape rather than the per-query checkFolds.
+func TestCheckOpeningProofShapeRejectsNonConstantFinalPoly(t *testing.T) {
+	p, err := NewParams(8, 4, 1)
+	require.NoError(t, err)
+
+	prf := Proof{
+		RoundRoots:     make([]field.Octuplet, p.numRounds-1),
+		RunningQueries: make([]RunningQuery, p.NumQueries),
+		FinalPolyExt:   []field.Ext{{}, field.Lift(field.One())},
+	}
+	for k := range prf.RunningQueries {
+		prf.RunningQueries[k] = make(RunningQuery, p.numRounds-1)
+	}
+	foldAlphas := make([]field.Ext, p.numRounds)
+	positions := []int{0}
+
+	require.ErrorContains(t, checkOpeningProofShape(p, prf, foldAlphas, positions), "FinalPolyExt is not constant")
+}
+
 // TestCheckFolds is a direct unit test of the pure fold-check: a
 // self-consistent set of resolved values (built by hand, no PCS or proof
 // involved) must verify, and breaking any single link in the recurrence --
@@ -170,8 +194,8 @@ func TestCheckFolds(t *testing.T) {
 // It exercises the full ProverState (Fold/Open), the query opening, and
 // checkFolds including the alpha²-batched extra levels, going through
 // pcs.Verify (the sole FRI entry point) via the ldtFixture compiler: each
-// level is a PCS column whose reconstructed DEEP quotient is an arbitrary
-// target codeword, independent of degree.
+// level is a PCS column whose reconstructed DEEP quotient is a genuinely
+// low-degree target codeword.
 func TestProveVerify(t *testing.T) {
 
 	type cfg struct {
@@ -191,9 +215,9 @@ func TestProveVerify(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 
 			fx := newLDTFixture(t, c.n, c.d, c.nq)
-			fx.addLevel(t, utils.Log2Ceil(c.d), field.VecPseudoRandExt(prng, c.n))
+			fx.addLevel(t, utils.Log2Ceil(c.d), field.VecPseudoRandExt(prng, c.d))
 			for _, d := range c.extraDs {
-				fx.addLevel(t, utils.Log2Ceil(d), field.VecPseudoRandExt(prng, c.n*d/c.d))
+				fx.addLevel(t, utils.Log2Ceil(d), field.VecPseudoRandExt(prng, d))
 			}
 
 			foldAlphas := make([]field.Ext, fx.pcs.Params.numRounds)
@@ -229,10 +253,10 @@ func TestProverStateOpenLoopsOverLevelTrees(t *testing.T) {
 	prng := rand.New(utils.NewRandSource(20260624))
 
 	fx := newLDTFixture(t, 16, 8, 2)
-	fx.addLevel(t, 3, field.VecPseudoRandExt(prng, 16)) // top level, D=8: two trees
-	fx.addLevel(t, 3, field.VecPseudoRandExt(prng, 16))
-	fx.addLevel(t, 1, field.VecPseudoRandExt(prng, 4)) // extra level, D=2: two trees
-	fx.addLevel(t, 1, field.VecPseudoRandExt(prng, 4))
+	fx.addLevel(t, 3, field.VecPseudoRandExt(prng, 8)) // top level, D=8: two trees
+	fx.addLevel(t, 3, field.VecPseudoRandExt(prng, 8))
+	fx.addLevel(t, 1, field.VecPseudoRandExt(prng, 2)) // extra level, D=2: two trees
+	fx.addLevel(t, 1, field.VecPseudoRandExt(prng, 2))
 
 	foldAlphas := make([]field.Ext, fx.pcs.Params.numRounds)
 	for i := range foldAlphas {
