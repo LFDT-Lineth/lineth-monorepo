@@ -30,6 +30,7 @@ export type FinalizationData = {
   endBlockNumber: bigint;
   shnarfData: ShnarfData;
   parentStateRootHash: string;
+  parentBlockHash: string;
   lastFinalizedTimestamp: bigint;
   finalTimestamp: bigint;
   l1RollingHash: string;
@@ -43,6 +44,9 @@ export type FinalizationData = {
   lastFinalizedForcedTransactionNumber: bigint;
   finalForcedTransactionNumber: bigint;
   lastFinalizedForcedTransactionRollingHash: string;
+  finalBlockHash: string;
+  finalBlobHash: string;
+  verifierKeys: string[];
 };
 
 export type ShnarfDataGenerator = (blobParentShnarfIndex: number, isMultiple?: boolean) => ShnarfData;

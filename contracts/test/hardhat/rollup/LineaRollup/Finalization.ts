@@ -271,7 +271,7 @@ describe("Linea Rollup contract: Finalization", () => {
     });
 
     describe("Without submission data", () => {
-      it("Should revert if the final block state equals the zero hash", async () => {
+      it("Should revert if the final block hash equals the zero hash", async () => {
         const { finalIndex } = await submitCalldataBeforeFinalization(lineaRollup.connect(operator), {
           startIndex: 0,
           finalIndex: 4,
@@ -296,14 +296,13 @@ describe("Linea Rollup contract: Finalization", () => {
           calldataAggregatedProof1To155.l1RollingHash,
         );
 
-        // Set the final state root hash to zero
-        finalizationData.shnarfData.finalStateRootHash = HASH_ZERO;
+        finalizationData.finalBlockHash = HASH_ZERO;
 
         const finalizeCall = lineaRollup
           .connect(operator)
           .finalizeBlocks(calldataAggregatedProof1To155.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
 
-        await expectRevertWithCustomError(lineaRollup, finalizeCall, "FinalBlockStateEqualsZeroHash");
+        await expectRevertWithCustomError(lineaRollup, finalizeCall, "FinalizationBlockHashIsZeroHash");
       });
     });
   });

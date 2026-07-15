@@ -37,16 +37,12 @@ abstract contract CalldataBlobAcceptor is LocalShnarfProvider, ShnarfDataAccepto
     bytes32 _parentShnarf,
     bytes32 _expectedShnarf
   ) internal virtual {
-    if (_submission.compressedData.length == 0) {
-      revert EmptySubmissionData();
-    }
+    require(_submission.compressedData.length != 0, EmptySubmissionData());
 
     bytes32 dataHash = keccak256(_submission.compressedData);
     bytes32 computedShnarf = _computeShnarf(_parentShnarf, _submission.blockHash, dataHash);
 
-    if (_expectedShnarf != computedShnarf) {
-      revert FinalShnarfWrong(_expectedShnarf, computedShnarf);
-    }
+    require(_expectedShnarf == computedShnarf, FinalShnarfWrong(_expectedShnarf, computedShnarf));
 
     _acceptShnarfData(_parentShnarf, _expectedShnarf, _submission.blockHash);
   }
