@@ -1,8 +1,4 @@
 fn check_b_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rs1_decoded:Register, rs2_decoded:Register, imm_decoded:DoubleWord) {
-    if opcode != OPCODE_BRANCH {
-        printf "[ERROR] invalid B-type opcode (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
-        fail
-    }
 
     var funct3:Funct3
     var imm_sign:SignBit
