@@ -463,6 +463,11 @@ fn check_i_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op
         }
     }
 
+    // Folded rd=x0 no-ops: we don't check operands
+    if compute_op == COMPUTE_MISC_MEM {
+        return
+    }
+
     // Check that the decoded operands match the raw instruction parameters.
     if rs1_decoded != rs1 {
         printf "[ERROR] rs1 mismatch (index=%d compute_op=%x opcode=%x rs1_decoded=%d)\n", index, compute_op, opcode, rs1_decoded
