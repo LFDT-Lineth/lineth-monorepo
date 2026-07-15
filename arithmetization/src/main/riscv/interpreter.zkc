@@ -165,6 +165,7 @@ include "../lib/keccak/impl.zkc"
 // ================
 // COMPUTE_MISC_MEM
 // ================
+//
 // Two sources at ELF time:
 //
 //   1. FENCE / FENCE.I (opcode MISCMEM) — architecturally a no-op on this VM.
