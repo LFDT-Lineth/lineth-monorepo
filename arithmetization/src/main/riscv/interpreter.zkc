@@ -19,7 +19,7 @@ include "../lib/keccak/impl.zkc"
 // (see decoded in memory.zkc).
 //
 // Runtime dispatch is on the pre-decoded semantic compute op (`compute_op`).
-// Invalid opcodes (*TYPE_INVALID) are handled by the default arm.
+// Invalid opcodes (COMPUTE_INVALID) are handled by the default arm.
 // 
 // Each slot is justified with the predecoding justification loop in `main.zkc`
 // (it will be done offline by `predecoding/main.zkc` in the future) :
@@ -161,7 +161,10 @@ include "../lib/keccak/impl.zkc"
 // zeroed) and sign-extended to 64 bits at ELF time into `imm`.
 //
 //   var imm:DoubleWord = sgn_extension_u32_u64(((imm20 as u32) << 12) as u32)
-
+// 
+// ================
+// COMPUTE_MISC_MEM 
+// ================
 fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d, padded_input_block, poseidon2_state>(index:u64, pc:Address) -> (new_pc:Address) {
 
     var compute_op:ComputeOp
@@ -193,14 +196,14 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
     new_pc = (pc + 4) as Address
 
     switch compute_op {
-        // ==========================
-        // MISC_MEM (former MISC_MEM_TYPE)
-        // ==========================
+        // =========
+        // MISC_MEM 
+        // =========
         case COMPUTE_MISC_MEM: {
         }
-        // ==========================
-        // I-type — LOAD (former I_TYPE)
-        // ==========================
+        // ==============
+        // I-type — LOAD 
+        // ==============
         case READ8_SGN: {
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "READ8_SGN "
@@ -285,9 +288,9 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
             print_i_memory_operands(rd, rs1, imm)
             registers[rd] = read_32(rs1_plus_imm) as DoubleWord
         }
-        // ==========================
-        // I-type — OP-IMM (former I_TYPE)
-        // ==========================
+        // ================
+        // I-type — OP-IMM 
+        // ================
         case OP_ADDI: {
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "OP_ADDI "
@@ -461,9 +464,9 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
             print_i_shift5_operands(rd, rs1, uimm5)
             registers[rd] = sgn_extension_u32_u64(_ashr_u32(registers[rs1], uimm5))
         }
-        // ==========================
-        // I-type — JALR / SYSTEM (former I_TYPE)
-        // ==========================
+        // =======================
+        // I-type — JALR / SYSTEM
+        // =======================
         case ITYPE_JALR: {
             rs1_plus_imm = signed_sum_of_double_word(registers[rs1], imm)
             printf "ITYPE_JALR "
@@ -791,9 +794,9 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
             keccak(v1 as Address, v2 as u32, registers[rd] as Address)
             // fall through
         }
-        // ==========================
-        // R-type — writeback variants (former R_TYPE)
-        // ==========================
+        // ============================
+        // R-type — writeback variants 
+        // ============================
         case RTYPE_ADD_WB: {
             v1 = registers[rs1]
             v2 = registers[rs2]
@@ -1092,9 +1095,9 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
                 registers[rd] = sgn_extension_u32_u64(v1_lower % v2_lower)
             }
         }
-        // ==========================
-        // S-type (former S_TYPE)
-        // ==========================
+        // =======
+        // S-type 
+        // =======
         case STYPE_STORE8: {
             mem_address = signed_sum_of_double_word(registers[rs1], imm) as Address
             printf "STYPE_STORE8 "
@@ -1119,9 +1122,9 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
             print_s_operands(rs2, rs1, imm)
             write_64(mem_address, registers[rs2])
         }
-        // ==========================
-        // B-type (former B_TYPE)
-        // ==========================
+        // =======
+        // B-type 
+        // =======
         case BRANCH_BEQ: {
             printf "BRANCH_BEQ "
             print_b_operands(rs1, rs2, imm)
@@ -1170,9 +1173,9 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
                 new_pc = signed_sum_of_double_word(pc, imm)
             }
         }
-        // ==========================
-        // J-type (former J_TYPE)
-        // ==========================
+        // =======
+        // J-type 
+        // =======
         case JTYPE_JAL: {
             printf "JTYPE_JAL "
             print_j_operands(rd, imm)
@@ -1184,9 +1187,9 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
             new_pc = signed_sum_of_double_word(pc, imm) as Address
             registers[rd] = signed_sum_of_double_word(pc, 4)
         }
-        // ==========================
-        // U-type (former U_TYPE)
-        // ==========================
+        // =======
+        // U-type 
+        // =======
         case UTYPE_LUI: {
             printf "UTYPE_LUI "
             print_u_operands(rd, (imm >> 12) as Imm20)

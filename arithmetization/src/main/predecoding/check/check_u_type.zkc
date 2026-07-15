@@ -5,7 +5,7 @@ fn check_u_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op
 
     // U-type has no funct3; verify the raw opcode encodes the claimed compute_op.
     // Mapping (see elf_to_json_gen decodeUTypeSemantic / utypeOpForRd):
-    //   LUI -> UTYPE_LUI / UTYPE_LUI_WB, AUIPC -> UTYPE_AUIPC / UTYPE_AUIPC_WB
+    //   LUI -> COMPUTE_MISC_MEM / UTYPE_LUI_WB, AUIPC -> UTYPE_AUIPC / UTYPE_AUIPC_WB
     switch opcode {
         case OPCODE_LUI: {
             // LUI x0 is always folded
