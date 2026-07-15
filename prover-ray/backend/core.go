@@ -87,11 +87,7 @@ func (c *Core) Prove(ctx context.Context, job Job) Result {
 
 // buildInputs converts a Job's Payload into the three ZkC pub-input blobs.
 func (c *Core) buildInputs(job Job) (map[string][]byte, error) {
-	sszInput, err := decodePayload(job)
-	if err != nil {
-		return nil, fmt.Errorf("decoding job payload: %w", err)
-	}
-	return BuildZkcInputs(c.elf, sszInput, c.cfg.inOrigin())
+	return BuildZkcInputs(c.elf, decodePayload(job), c.cfg.inOrigin())
 }
 
 // runProve calls AssignWithPreRead, sys.Prove, and sys.Verify.
@@ -132,8 +128,8 @@ func SerializeProof(_ wiop.Proof, _ wiop.PublicInput) ([]byte, error) {
 // decodePayload extracts the raw SSZ bytes from a Job's Payload.
 // Today it is a pass-through; once the coordinator API encoding is finalized
 // this will handle any wrapping (JSON envelope, multi-block conflation, etc.).
-func decodePayload(job Job) ([]byte, error) {
-	return job.Payload, nil
+func decodePayload(job Job) []byte {
+	return job.Payload
 }
 
 func failResult(jobID string, err error) Result {
