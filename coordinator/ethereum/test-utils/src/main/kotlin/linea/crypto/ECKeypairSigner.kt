@@ -9,7 +9,6 @@ class ECKeypairSigner(private val keyPair: ECKeyPair) : Signer {
   override fun publicKey(): ByteArray = Numeric.toBytesPadded(keyPair.publicKey, 64)
 
   override fun sign(bytes: ByteArray): SafeFuture<ByteArray> {
-    // web3j's ECKeyPair.sign signs its input directly, so hash here to honor the Signer contract.
     val signature = keyPair.sign(Hash.sha3(bytes))
     return SafeFuture.completedFuture(Secp256k1Signature(signature.r, signature.s).toBytes())
   }

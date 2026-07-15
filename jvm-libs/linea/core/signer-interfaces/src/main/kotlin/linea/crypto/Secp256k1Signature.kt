@@ -17,19 +17,20 @@ data class Secp256k1Signature(val r: BigInteger, val s: BigInteger) {
   fun toBytes(): ByteArray = padTo32(r) + padTo32(s)
 
   companion object {
-    const val SIZE_BYTES = 64
+    const val COMPONENT_SIZE_BYTES = 32
+    const val SIZE_BYTES = 2 * COMPONENT_SIZE_BYTES
 
     fun fromBytes(bytes: ByteArray): Secp256k1Signature {
       require(bytes.size == SIZE_BYTES) { "signature must be $SIZE_BYTES bytes (r || s), got ${bytes.size}" }
       return Secp256k1Signature(
-        r = BigInteger(1, bytes.copyOfRange(0, 32)),
-        s = BigInteger(1, bytes.copyOfRange(32, 64)),
+        r = BigInteger(1, bytes.copyOfRange(0, COMPONENT_SIZE_BYTES)),
+        s = BigInteger(1, bytes.copyOfRange(COMPONENT_SIZE_BYTES, SIZE_BYTES)),
       )
     }
 
     private fun padTo32(value: BigInteger): ByteArray {
       val raw = value.toByteArray().dropWhile { it == 0.toByte() }.toByteArray()
-      return ByteArray(32 - raw.size) + raw
+      return ByteArray(COMPONENT_SIZE_BYTES - raw.size) + raw
     }
   }
 }

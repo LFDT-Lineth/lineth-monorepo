@@ -9,7 +9,6 @@ import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
 import net.consensys.linea.httprest.client.HttpRestClient
 import tech.pegasys.teku.infrastructure.async.SafeFuture
-import java.math.BigInteger
 
 class Web3SignerRestClient(
   private val client: HttpRestClient,
@@ -31,11 +30,7 @@ class Web3SignerRestClient(
       when (val body = response.map { (it as HttpResponseImpl<*>).body().toString() }) {
         is Ok -> {
           val signature = body.value.decodeHex()
-          val rSize = 32
-          val sSize = 32
-          val r = BigInteger(1, signature.sliceArray(0 until rSize))
-          val s = BigInteger(1, signature.sliceArray(rSize until rSize + sSize))
-          Secp256k1Signature(r, s).toBytes()
+          Secp256k1Signature.fromBytes(signature.sliceArray(0 until Secp256k1Signature.SIZE_BYTES)).toBytes()
         }
 
         is Err -> throw body.error.asException()
