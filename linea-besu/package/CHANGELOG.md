@@ -1,3 +1,8 @@
+## [unreleased]
+
+### ⚙️ Miscellaneous Tasks
+
+- *(linea-besu)* Tidy v2.0.0 changelog entries (#3574)
 ## [2.0.0] - 2026-07-14
 
 ### 🐛 Bug Fixes
