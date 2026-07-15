@@ -36,7 +36,10 @@ func BuildZkcInputs(elfBytes, sszInput []byte, inOrigin uint64) (map[string][]by
 		return nil, fmt.Errorf("parsing guest ELF: %w", err)
 	}
 
-	blobs := elfBlobs(ef)
+	blobs, err := elfBlobs(ef)
+	if err != nil {
+		return nil, err
+	}
 	blobs = append(blobs, sszBlobs(inOrigin, sszInput)...)
 	return encodeInputs(blobs, ef.Entry)
 }
@@ -44,7 +47,7 @@ func BuildZkcInputs(elfBytes, sszInput []byte, inOrigin uint64) (map[string][]by
 // elfBlobs extracts allocated, file-backed ELF sections as RAM blobs.
 // SHT_NOBITS sections (.bss, padding) are omitted: guest RAM is zero-
 // initialized before blob loading, so explicit zeros waste space.
-func elfBlobs(ef *elf.File) []blob {
+func elfBlobs(ef *elf.File) ([]blob, error) {
 	var result []blob
 
 	for _, p := range ef.Progs {
@@ -64,7 +67,7 @@ func elfBlobs(ef *elf.File) []blob {
 			}
 			data, err := s.Data()
 			if err != nil {
-				panic(fmt.Sprintf("reading ELF section %s: %v", s.Name, err))
+				return nil, fmt.Errorf("reading ELF section %s: %w", s.Name, err)
 			}
 			segBlobs = append(segBlobs, blob{offset: s.Addr, data: data})
 		}
@@ -76,9 +79,9 @@ func elfBlobs(ef *elf.File) []blob {
 	}
 
 	if len(result) == 0 {
-		panic("guest ELF has no loadable sections")
+		return nil, fmt.Errorf("guest ELF has no loadable sections")
 	}
-	return result
+	return result, nil
 }
 
 // sszBlobs splits ssz into the two blobs that linea_zkvm_io expects at
