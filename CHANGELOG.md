@@ -94,3 +94,4 @@
 - *(misc)* Refactor hoplite decoders to it's own module (#3557)
 - *(ci)* Update image tags (#3553)
 - *(deps)* Align bouncycastle catalog pin to 1.84 (#3562)
+- *(linea-besu)* Tidy v2.0.0 changelog entries (#3574)
