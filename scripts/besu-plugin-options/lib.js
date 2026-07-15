@@ -183,10 +183,11 @@ function renderStarterWrapper(manifest, plugins, partials) {
   );
   lines.push("");
 
+  lines.push("import Provenance from './_generated/provenance.mdx';");
   for (const part of partials) {
     lines.push(`import ${part.componentName} from './_generated/${part.relPath}';`);
   }
-  if (partials.length) lines.push("");
+  lines.push("");
 
   lines.push(":::note Advanced options");
   lines.push("");
@@ -214,6 +215,9 @@ function renderStarterWrapper(manifest, plugins, partials) {
   );
   lines.push("");
 
+  lines.push("<Provenance />");
+  lines.push("");
+
   for (const p of plugins) {
     const part = partByPlugin.get(p.key);
     if (part) {
@@ -239,6 +243,9 @@ function checkCompleteness(wrapperMarkdown, partialRelPaths) {
     imported.set(m[2].replace(/\\/g, "/"), m[1]);
   }
 
+  // Publish workflow stamps this; not produced by local/CI `pnpm run generate`.
+  const publishOnlyPartials = new Set(["provenance.mdx"]);
+
   const expected = new Set(partialRelPaths.map((p) => p.replace(/\\/g, "/")));
   for (const rel of expected) {
     if (!imported.has(rel)) {
@@ -254,9 +261,17 @@ function checkCompleteness(wrapperMarkdown, partialRelPaths) {
     }
   }
   for (const rel of imported.keys()) {
-    if (!expected.has(rel)) {
-      failures.push(`wrapper imports _generated/${rel} but that partial was not generated`);
+    if (expected.has(rel) || publishOnlyPartials.has(rel)) {
+      if (publishOnlyPartials.has(rel) && !expected.has(rel)) {
+        const name = imported.get(rel);
+        const usage = new RegExp(`<${name}\\s*/>`);
+        if (!usage.test(wrapperMarkdown)) {
+          failures.push(`wrapper imports ${name} from _generated/${rel} but never renders <${name} />`);
+        }
+      }
+      continue;
     }
+    failures.push(`wrapper imports _generated/${rel} but that partial was not generated`);
   }
   return failures;
 }

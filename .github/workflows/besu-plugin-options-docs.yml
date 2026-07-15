@@ -116,6 +116,35 @@ jobs:
         working-directory: scripts/besu-plugin-options
         run: pnpm run generate
 
+      # Publish-only stamp: not part of monorepo generate/check (avoids SHA drift on every commit).
+      - name: Write provenance partial
+        working-directory: scripts/besu-plugin-options
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          SOURCE_REF_NAME: ${{ github.ref_name }}
+          SOURCE_REF_TYPE: ${{ github.ref_type }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${SOURCE_SHA}" ]]; then
+            echo "Refusing to publish: GITHUB_SHA / SOURCE_SHA is empty" >&2
+            exit 1
+          fi
+          SHORT="${SOURCE_SHA:0:7}"
+          OUT="output/_generated/provenance.mdx"
+          mkdir -p "$(dirname "$OUT")"
+          LINE="Generated from [\`LFDT-Lineth/lineth-monorepo@${SHORT}\`](https://github.com/LFDT-Lineth/lineth-monorepo/commit/${SOURCE_SHA})."
+          if [[ "${SOURCE_REF_TYPE}" == "tag" && "${SOURCE_REF_NAME}" == linea-besu-* ]]; then
+            LINE="${LINE} (release \`${SOURCE_REF_NAME}\`)."
+          fi
+          {
+            echo "${LINE}"
+            echo ""
+            echo "Options may differ in other Linea Besu releases."
+            echo ""
+          } > "$OUT"
+          echo "Wrote $OUT"
+          cat "$OUT"
+
       - name: Generate App token for Consensys/doc.linea
         id: app-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0

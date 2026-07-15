@@ -7,6 +7,7 @@ draft: false
 
 {/* Human-owned wrapper. Automation only updates `_generated/` partials. Seeded once by scripts/besu-plugin-options; place new partial imports when plugins appear. */}
 
+import Provenance from "./_generated/provenance.mdx";
 import Sequencer from "./_generated/sequencer.mdx";
 import Tracer from "./_generated/tracer.mdx";
 
@@ -23,6 +24,8 @@ The `LineaForcedTransactionCliOptions` group is intentionally excluded because t
 :::
 
 This reference lists plugin-specific options (flags starting with `--plugin-`), grouped by plugin and feature. Descriptions come from the Java `@Option` sources; defaults are shown in the Default column (picocli help text `(default: …)` is omitted there to avoid duplication).
+
+<Provenance />
 
 <Sequencer />
 

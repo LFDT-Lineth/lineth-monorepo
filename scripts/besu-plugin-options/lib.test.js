@@ -120,6 +120,21 @@ test("completeness fails when a partial is missing from the wrapper", () => {
   assert.ok(failures.some((f) => f.includes("tracer.mdx")));
 });
 
+test("completeness allows publish-only provenance import", () => {
+  const failures = checkCompleteness(
+    [
+      "import Provenance from './_generated/provenance.mdx';",
+      "import Sequencer from './_generated/sequencer.mdx';",
+      "",
+      "<Provenance />",
+      "<Sequencer />",
+      "",
+    ].join("\n"),
+    ["sequencer.mdx"],
+  );
+  assert.deepEqual(failures, []);
+});
+
 test("generator is idempotent", { skip }, async () => {
   const a = await build({});
   const b = await build({});
