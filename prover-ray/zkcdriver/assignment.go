@@ -69,6 +69,17 @@ func AssignFromTrace(run *wiop.Runtime, traces trace.Trace[koalabear.Element], s
 						plain[i] = *(*field.Element)(unsafe.Pointer(&v))
 					}
 
+					// An unused memory (e.g. a `memory` declaration never
+					// written by the traced program) yields an empty column.
+					// Its module would then get a runtime size of 0, which the
+					// verifier rejects (domain sizes must be non-zero powers of
+					// two). Give such columns a single zero row so the module
+					// gets a valid size-1 domain; an empty memory carries no
+					// data and no meaningful constraints.
+					if len(plain) == 0 {
+						plain = []field.Element{{}}
+					}
+
 					// Configure padding value
 					pad := col.Padding()
 					padding = *(*field.Element)(unsafe.Pointer(&pad))
