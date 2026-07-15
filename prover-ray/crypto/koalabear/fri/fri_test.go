@@ -93,7 +93,7 @@ func TestFoldLayerInternally(t *testing.T) {
 // TestCheckOpeningProofShapeRejectsNonConstantFinalPoly targets the low-degree
 // bound checkFolds itself cannot enforce: after numRounds folds the running
 // polynomial's degree is forced below 1, i.e. it must be a single constant,
-// so every entry of FinalPolyExt must agree. This must be caught unconditionally
+// so every entry of FinalPoly must agree. This must be caught unconditionally
 // (not by chance query coverage of the differing entry), which is why it
 // belongs in checkOpeningProofShape rather than the per-query checkFolds.
 func TestCheckOpeningProofShapeRejectsNonConstantFinalPoly(t *testing.T) {
@@ -103,7 +103,7 @@ func TestCheckOpeningProofShapeRejectsNonConstantFinalPoly(t *testing.T) {
 	prf := Proof{
 		RoundRoots:     make([]field.Octuplet, p.numRounds-1),
 		RunningQueries: make([]RunningQuery, p.NumQueries),
-		FinalPolyExt:   []field.Ext{{}, field.Lift(field.One())},
+		FinalPoly:      []field.Ext{{}, field.Lift(field.One())},
 	}
 	for k := range prf.RunningQueries {
 		prf.RunningQueries[k] = make(RunningQuery, p.numRounds-1)
@@ -111,7 +111,7 @@ func TestCheckOpeningProofShapeRejectsNonConstantFinalPoly(t *testing.T) {
 	foldAlphas := make([]field.Ext, p.numRounds)
 	positions := []int{0}
 
-	require.ErrorContains(t, checkOpeningProofShape(p, prf, foldAlphas, positions), "FinalPolyExt is not constant")
+	require.ErrorContains(t, checkOpeningProofShape(p, prf, foldAlphas, positions), "FinalPoly is not constant")
 }
 
 // TestCheckFolds is a direct unit test of the pure fold-check: a

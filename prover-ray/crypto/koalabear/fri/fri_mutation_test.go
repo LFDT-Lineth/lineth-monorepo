@@ -166,7 +166,7 @@ func TestVerifyRejectsProofMutations(t *testing.T) {
 		foldAlphas[i] = field.PseudoRandExt(prng)
 	}
 	// Positions chosen to probe every final-layer index (size N>>numRounds = 2),
-	// so that mutating any FinalPolyExt entry is detected by some query.
+	// so that mutating any FinalPoly entry is detected by some query.
 	positions := []int{1, 5, 9, 13}
 
 	// Canonical proof: fx.open is deterministic given the same challenges, so

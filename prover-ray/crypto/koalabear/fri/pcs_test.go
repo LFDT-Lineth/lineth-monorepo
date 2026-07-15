@@ -346,7 +346,7 @@ func TestPCSStaticParamsLargerThanWitness(t *testing.T) {
 
 	// The witness top is size 4 → exactly 2 folds → final poly of the inverse-rate
 	// size (2), not the 4 folds Params.D=16 would dictate.
-	require.Len(t, proof.FRIProof.FinalPolyExt, 2)
+	require.Len(t, proof.FRIProof.FinalPoly, 2)
 
 	require.NoError(t, pcs.Verify(VerifyInputs{
 		Roots:         []field.Octuplet{committed[0].Tree.Root()},
@@ -431,7 +431,7 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	}
 	gotProof := started.Open(positions)
 	assert.Equal(t, referenceProof.RoundRoots, gotProof.RoundRoots)
-	assert.Equal(t, referenceProof.FinalPolyExt, gotProof.FinalPolyExt)
+	assert.Equal(t, referenceProof.FinalPoly, gotProof.FinalPoly)
 
 	oneShot, oneShotClaims := openForTest(t, pcs, openInputs{
 		Witnesses: witnesses,

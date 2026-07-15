@@ -113,7 +113,7 @@ func (st *ProverState) Fold(alpha field.Ext) field.Octuplet {
 
 	if j+1 == st.p.numRounds {
 		// Final layer: revealed directly, no Merkle commitment.
-		st.FinalPolyExt = st.running
+		st.FinalPoly = st.running
 		return field.Octuplet{}
 	}
 

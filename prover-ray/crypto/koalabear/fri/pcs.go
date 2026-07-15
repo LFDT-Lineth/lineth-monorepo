@@ -82,7 +82,7 @@
 //	}
 //
 //	// Absorb the final polynomial; squeeze query positions; open.
-//	transcript.Absorb(friState.FinalPolyExt)
+//	transcript.Absorb(friState.FinalPoly)
 //	queries    := transcript.Squeeze()
 //	proof      := pcs.Open(friState, queries)
 //
@@ -1274,7 +1274,7 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 		rq := resolvedQuery{
 			Rounds: make([]inputPair, pcs.Params.numRounds),
 			Aux:    make(map[int]inputPair, len(layout)),
-			Final:  proof.FRIProof.FinalPolyExt[queryPosition>>pcs.Params.numRounds],
+			Final:  proof.FRIProof.FinalPoly[queryPosition>>pcs.Params.numRounds],
 		}
 
 		inputOpening := proof.InputQueries[queryIdx]

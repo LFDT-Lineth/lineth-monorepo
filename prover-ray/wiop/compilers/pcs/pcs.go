@@ -291,7 +291,7 @@ func (c *compiled) open(rt *wiop.Runtime) fri.OpeningProof {
 		}
 	}
 
-	fs.UpdateExt(state.FinalPolyExt...)
+	fs.UpdateExt(state.FinalPoly...)
 	positions := fs.RandomManyIntegers(pcs.Params.NumQueries, effectiveN(rt, batches))
 	return pcs.Open(state, positions)
 }
@@ -317,7 +317,7 @@ func (c *compiled) verify(rt *wiop.Runtime, proof fri.OpeningProof) error {
 	}
 	foldAlphas = append(foldAlphas, fs.RandomFext())
 
-	fs.UpdateExt(proof.FRIProof.FinalPolyExt...)
+	fs.UpdateExt(proof.FRIProof.FinalPoly...)
 	queryPositions := fs.RandomManyIntegers(pcs.Params.NumQueries, effectiveN(rt, batches))
 
 	return pcs.Verify(fri.VerifyInputs{

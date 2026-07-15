@@ -206,7 +206,7 @@ func (l Level) EvalsAt(alphaDeep field.Ext, running []field.Ext) []field.Ext {
 type Proof struct {
 	// Running-polynomial FRI path
 	RoundRoots     []field.Octuplet // Merkle roots for running poly T_1..T_{r-1}
-	FinalPolyExt   []field.Ext
+	FinalPoly      []field.Ext
 	RunningQueries []RunningQuery
 }
 
@@ -309,16 +309,16 @@ func checkOpeningProofShape(p Params, prf Proof, foldAlphas []field.Ext, positio
 	if len(prf.RunningQueries) != p.NumQueries {
 		return fmt.Errorf("fri: pcs.Verify: proof has %d running queries, want %d", len(prf.RunningQueries), p.NumQueries)
 	}
-	if want := p.N >> p.numRounds; len(prf.FinalPolyExt) != want {
-		return fmt.Errorf("fri: pcs.Verify: FinalPolyExt has %d entries, want %d", len(prf.FinalPolyExt), want)
+	if want := p.N >> p.numRounds; len(prf.FinalPoly) != want {
+		return fmt.Errorf("fri: pcs.Verify: FinalPoly has %d entries, want %d", len(prf.FinalPoly), want)
 	}
 	// numRounds = log2(D) folds force the running polynomial's degree below 1,
-	// so FinalPolyExt must be a single constant; checked unconditionally here
+	// so FinalPoly must be a single constant; checked unconditionally here
 	// rather than left to checkFolds, whose per-query rq.Final only samples
 	// one entry and so could miss a non-constant final poly by chance.
-	for i := 1; i < len(prf.FinalPolyExt); i++ {
-		if !prf.FinalPolyExt[i].Equal(&prf.FinalPolyExt[0]) {
-			return fmt.Errorf("fri: pcs.Verify: FinalPolyExt is not constant: entry %d differs from entry 0", i)
+	for i := 1; i < len(prf.FinalPoly); i++ {
+		if !prf.FinalPoly[i].Equal(&prf.FinalPoly[0]) {
+			return fmt.Errorf("fri: pcs.Verify: FinalPoly is not constant: entry %d differs from entry 0", i)
 		}
 	}
 	if len(foldAlphas) < p.numRounds {

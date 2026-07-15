@@ -10,7 +10,7 @@ import (
 // ldtFixture commits R(X)=X*target(X) at zeta=0, so the DEEP quotient is
 // target. target is genuinely low-degree: addLevel RS-encodes the given
 // plaintext-sized coefficients up to the level's full codeword domain, so
-// FinalPolyExt legitimately comes out constant after an honest fold.
+// FinalPoly legitimately comes out constant after an honest fold.
 type ldtFixture struct {
 	pcs *PCS
 
