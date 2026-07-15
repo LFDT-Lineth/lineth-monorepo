@@ -25,10 +25,6 @@ contract TestLineaRollup is LineaRollup, CalldataBlobAcceptor {
     _validateL2ComputedRollingHash(_rollingHashMessageNumber, _rollingHash);
   }
 
-  function calculateY(bytes calldata _data, bytes32 _x) external pure returns (bytes32 y) {
-    return _calculateY(_data, _x);
-  }
-
   function setupParentShnarf(bytes32 _shnarf) external {
     _blobShnarfExists[_shnarf] = 1;
   }

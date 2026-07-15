@@ -33,13 +33,7 @@ contract Eip4844OnlyDaRollup is LineaRollupBase, Eip4844BlobAcceptor {
   }
 
   function initialize(BaseInitializationData calldata _initializationData) external initializer {
-    bytes32 genesisShnarf = _computeShnarf(
-      EMPTY_HASH,
-      EMPTY_HASH,
-      _initializationData.initialStateRootHash,
-      EMPTY_HASH,
-      EMPTY_HASH
-    );
+    bytes32 genesisShnarf = _computeShnarf(EMPTY_HASH, _initializationData.initialBlockHash, EMPTY_HASH);
 
     _blobShnarfExists[genesisShnarf] = SHNARF_EXISTS_DEFAULT_VALUE;
     __LineaRollup_init(_initializationData, genesisShnarf);

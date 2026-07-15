@@ -13,9 +13,9 @@ interface IShnarfDataAcceptorBase {
   error ShnarfSubmissionIsZeroHash();
 
   /**
-   * @dev Thrown when the final state root hash being submitted is the zero hash.
+   * @dev Thrown when the final block hash being submitted is the zero hash.
    */
-  error FinalStateRootHashIsZeroHash();
+  error FinalBlockHashIsZeroHash();
 
   /**
    * @dev Thrown when the current shnarf was already submitted.
@@ -33,11 +33,11 @@ interface IShnarfDataAcceptorBase {
   error FinalShnarfWrong(bytes32 expected, bytes32 value);
 
   /**
-   * @notice Emitted when compressed data is being submitted and verified succesfully on L1.
-   * @dev The block range is indexed and parent shnarf included for state reconstruction simplicity.
+   * @notice Emitted when compressed data is being submitted and verified successfully on L1.
+   * @dev The parent shnarf is included for state reconstruction simplicity.
    * @param parentShnarf The parent shnarf for the data being submitted.
    * @param shnarf The indexed shnarf for the data being submitted.
-   * @param finalStateRootHash The L2 state root hash that the current blob submission ends on. NB: The last blob in the collection.
+   * @param finalBlockHash The L2 final block hash that the current blob submission ends on. NB: The last blob in the collection.
    */
-  event DataSubmittedV3(bytes32 parentShnarf, bytes32 indexed shnarf, bytes32 finalStateRootHash);
+  event DataSubmittedV4(bytes32 parentShnarf, bytes32 indexed shnarf, bytes32 finalBlockHash);
 }

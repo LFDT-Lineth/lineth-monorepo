@@ -15,17 +15,16 @@ abstract contract ShnarfDataAcceptorBase is LineaRollupBase, IShnarfDataAcceptor
 
   /**
    * @notice Accepts and stores that a shnarf exists.
-   * @dev OPERATOR_ROLE is required to execute.
    * @param _parentShnarf The parent shnarf.
    * @param _shnarf The shnarf to indicate exists.
-   * @param _finalStateRootHash The final state root hash in the data.
+   * @param _finalBlockHash The final L2 block hash in the data.
    */
-  function _acceptShnarfData(bytes32 _parentShnarf, bytes32 _shnarf, bytes32 _finalStateRootHash) internal virtual {
+  function _acceptShnarfData(bytes32 _parentShnarf, bytes32 _shnarf, bytes32 _finalBlockHash) internal virtual {
     require(_blobShnarfExists[_parentShnarf] != 0, ParentShnarfNotSubmitted(_parentShnarf));
     require(_blobShnarfExists[_shnarf] == 0, ShnarfAlreadySubmitted(_shnarf));
 
     _blobShnarfExists[_shnarf] = SHNARF_EXISTS_DEFAULT_VALUE;
 
-    emit DataSubmittedV3(_parentShnarf, _shnarf, _finalStateRootHash);
+    emit DataSubmittedV4(_parentShnarf, _shnarf, _finalBlockHash);
   }
 }

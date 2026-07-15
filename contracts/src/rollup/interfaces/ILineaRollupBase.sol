@@ -12,7 +12,7 @@ import { IPermissionsManager } from "../../security/access/interfaces/IPermissio
 interface ILineaRollupBase {
   /**
    * @notice Initialization data structure for the LineaRollup contract.
-   * @param initialStateRootHash The initial state root hash at initialization used for proof verification.
+   * @param initialBlockHash The initial L2 block hash at initialization used for proof verification.
    * @param initialL2BlockNumber The initial block number at initialization.
    * @param genesisTimestamp The L2 genesis timestamp for first initialization.
    * @param defaultVerifier The default verifier for rollup proofs.
@@ -21,12 +21,13 @@ interface ILineaRollupBase {
    * @param roleAddresses The list of role address and roles to assign permissions to.
    * @param pauseTypeRoles The list of pause types to associate with roles.
    * @param unpauseTypeRoles The list of unpause types to associate with roles.
+   * @param verifierKeys The initial set of allowed guest-program verifier keys.
    * @param defaultAdmin The account to be given DEFAULT_ADMIN_ROLE on initialization.
    * @param shnarfProvider The address of the shnarf providing contract. Default is address(this).
    * @param addressFilter The address of the address filter.
    */
   struct BaseInitializationData {
-    bytes32 initialStateRootHash;
+    bytes32 initialBlockHash;
     uint256 initialL2BlockNumber;
     uint256 genesisTimestamp;
     address defaultVerifier;
@@ -35,13 +36,15 @@ interface ILineaRollupBase {
     IPermissionsManager.RoleAddress[] roleAddresses;
     IPauseManager.PauseTypeRole[] pauseTypeRoles;
     IPauseManager.PauseTypeRole[] unpauseTypeRoles;
+    bytes32[] verifierKeys;
     address defaultAdmin;
     address shnarfProvider;
     address addressFilter;
   }
 
   /**
-   * @notice Shnarf data for validating a shnarf.
+   * @notice Shnarf data for validating a shnarf using the legacy (pre-V5) computation.
+   * @dev Retained for the migration path in finalization. After migration, only parentShnarf is used.
    * @param parentShnarf is the parent computed shnarf.
    * @param snarkHash is the computed hash for compressed data (using a SNARK-friendly hash function) that aggregates per data submission to be used in public input.
    * @param finalStateRootHash is the final state root hash.
@@ -58,27 +61,28 @@ interface ILineaRollupBase {
 
   /**
    * @notice Supporting data for finalization with proof.
-   * @param NB: the dynamic sized fields are placed last on purpose for efficient keccaking on public input.
-   * @param parentStateRootHash is the expected last state root hash finalized.
+   * @dev NB: the dynamic sized fields are placed last on purpose for efficient keccaking on public input.
+   * @param parentStateRootHash is the expected last state root hash finalized. Used only in the migration path.
    * @param endBlockNumber is the end block finalizing until.
-   * @param shnarfData contains data about the last data submission's shnarf used in finalization.
+   * @param shnarfData contains data about the last data submission's shnarf. Used in migration path (all 5 fields) and new path (parentShnarf only).
    * @param lastFinalizedTimestamp is the expected last finalized block's timestamp.
    * @param finalTimestamp is the timestamp of the last block being finalized.
    * @param lastFinalizedL1RollingHash is the last stored L2 computed rolling hash used in finalization.
    * @param l1RollingHash is the calculated rolling hash on L2 that is expected to match L1 at l1RollingHashMessageNumber.
-   * This value will be used along with the stored last finalized L2 calculated rolling hash in the public input.
    * @param lastFinalizedL1RollingHashMessageNumber is the last stored L2 computed message number used in finalization.
    * @param l1RollingHashMessageNumber is the calculated message number on L2 that is expected to match the existing L1 rolling hash.
-   * This value will be used along with the stored last finalized L2 calculated message number in the public input.
    * @param l2MerkleTreesDepth is the depth of all l2MerkleRoots.
    * @param lastFinalizedForcedTransactionNumber is the last proven forced transaction number processed on L2.
    * @param finalForcedTransactionNumber is the final forced transaction being finalized.
    * @param lastFinalizedForcedTransactionRollingHash is the last proven forced transaction rolling hash.
+   * @param finalBlockHash The L2 final block hash that the current finalization ends on.
+   * @param finalBlobHash The blob hash of the final blob used in the new-path shnarf computation.
    * @param l2MerkleRoots is an array of L2 message Merkle roots of depth l2MerkleTreesDepth between last finalized block and finalSubmissionData.finalBlockNumber.
    * @param filteredAddresses is an array of addresses that are filtered from forced transactions.
+   * @param verifierKeys is an array of guest-program verifier keys used in this finalization batch.
    * @param l2MessagingBlocksOffsets indicates by offset from currentL2BlockNumber which L2 blocks contain MessageSent events.
    */
-  struct FinalizationDataV4 {
+  struct FinalizationDataV5 {
     bytes32 parentStateRootHash;
     uint256 endBlockNumber;
     ShnarfData shnarfData;
@@ -92,8 +96,11 @@ interface ILineaRollupBase {
     uint256 lastFinalizedForcedTransactionNumber;
     uint256 finalForcedTransactionNumber;
     bytes32 lastFinalizedForcedTransactionRollingHash;
+    bytes32 finalBlockHash;
+    bytes32 finalBlobHash;
     bytes32[] l2MerkleRoots;
     address[] filteredAddresses;
+    bytes32[] verifierKeys;
     bytes l2MessagingBlocksOffsets;
   }
 
@@ -122,19 +129,32 @@ interface ILineaRollupBase {
   );
 
   /**
+   * @notice Emitted when guest-program verifier keys are added to the allowed set.
+   * @param verifierKeys The verifier keys being set.
+   */
+  event VerifierKeysSet(bytes32[] verifierKeys);
+
+  /**
+   * @notice Emitted when guest-program verifier keys are removed from the allowed set.
+   * @param verifierKeys The verifier keys being unset.
+   */
+  event VerifierKeysUnset(bytes32[] verifierKeys);
+
+  /**
    * @notice Emitted when L2 blocks have been finalized on L1.
    * @param startBlockNumber The indexed L2 block number indicating which block the finalization the data starts from.
    * @param endBlockNumber The indexed L2 block number indicating which block the finalization the data ends on.
    * @param shnarf The indexed shnarf being set as currentFinalizedShnarf in the current finalization.
-   * @param parentStateRootHash The parent L2 state root hash that the current finalization starts from.
-   * @param finalStateRootHash The L2 state root hash that the current finalization ends on.
+   * @param parentBlockHash The parent L2 block hash that the current finalization starts from.
+   *   Will be EMPTY_HASH on the first post-upgrade finalization (migration marker).
+   * @param finalBlockHash The L2 block hash that the current finalization ends on.
    */
-  event DataFinalizedV3(
+  event DataFinalizedV4(
     uint256 indexed startBlockNumber,
     uint256 indexed endBlockNumber,
     bytes32 indexed shnarf,
-    bytes32 parentStateRootHash,
-    bytes32 finalStateRootHash
+    bytes32 parentBlockHash,
+    bytes32 finalBlockHash
   );
 
   /**
@@ -177,7 +197,7 @@ interface ILineaRollupBase {
   error FinalizationStateIncorrect(bytes32 expected, bytes32 value);
 
   /**
-   * @dev Thrown when the final block state equals the zero hash during finalization.
+   * @dev Thrown when the final block hash equals the zero hash during finalization.
    */
   error FinalBlockStateEqualsZeroHash();
 
@@ -212,6 +232,21 @@ interface ILineaRollupBase {
   error AddressIsNotFiltered(address addressNotFiltered);
 
   /**
+   * @dev Thrown when the verifier keys array provided is empty.
+   */
+  error VerifierKeysEmpty();
+
+  /**
+   * @dev Thrown when a verifier key is not found in the allowed set.
+   */
+  error VerifierKeyNotFound(bytes32 verifierKey);
+
+  /**
+   * @dev Thrown when a verifier key is already set in the allowed set.
+   */
+  error VerifierKeyAlreadySet(bytes32 verifierKey);
+
+  /**
    * @notice Returns the ABI version and not the reinitialize version.
    * @return contractVersion The contract ABI version.
    */
@@ -233,6 +268,20 @@ interface ILineaRollupBase {
   function unsetVerifierAddress(uint256 _proofType) external;
 
   /**
+   * @notice Adds verifier keys to the allowed set.
+   * @dev SET_VERIFIER_KEY_ROLE is required to execute.
+   * @param _verifierKeys The verifier keys to add.
+   */
+  function setVerifierKeys(bytes32[] calldata _verifierKeys) external;
+
+  /**
+   * @notice Removes verifier keys from the allowed set.
+   * @dev UNSET_VERIFIER_KEY_ROLE is required to execute.
+   * @param _verifierKeys The verifier keys to remove.
+   */
+  function unsetVerifierKeys(bytes32[] calldata _verifierKeys) external;
+
+  /**
    * @notice Finalize compressed blocks with proof.
    * @dev OPERATOR_ROLE is required to execute.
    * @param _aggregatedProof The aggregated proof.
@@ -242,6 +291,6 @@ interface ILineaRollupBase {
   function finalizeBlocks(
     bytes calldata _aggregatedProof,
     uint256 _proofType,
-    FinalizationDataV4 calldata _finalizationData
+    FinalizationDataV5 calldata _finalizationData
   ) external;
 }
