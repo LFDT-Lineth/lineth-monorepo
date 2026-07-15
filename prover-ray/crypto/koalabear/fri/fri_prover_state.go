@@ -67,12 +67,12 @@ func NewProverState(p Params, levels []Level) (*ProverState, error) {
 		trees:   make([]*Tree, p.numRounds),
 	}
 
-	// Layer 0 is committed up front; its root is supplied externally rather than stored in FRIRoots.
+	// Layer 0 is committed up front; its root is supplied externally rather than stored in RoundRoots.
 	copy(st.running, levels[0].Evals)
 	st.layers[0] = st.running
 
 	if p.numRounds > 1 {
-		st.FRIRoots = make([]field.Octuplet, p.numRounds-1)
+		st.RoundRoots = make([]field.Octuplet, p.numRounds-1)
 	}
 
 	return st, nil
@@ -119,7 +119,7 @@ func (st *ProverState) Fold(alpha field.Ext) field.Octuplet {
 	tree := buildTreeExt(st.running)
 	st.trees[j+1] = tree
 	root := tree.Root()
-	st.FRIRoots[j] = root // root of layer j+1 → FRIRoots[(j+1)-1]
+	st.RoundRoots[j] = root // root of layer j+1 → RoundRoots[(j+1)-1]
 	return root
 }
 
@@ -131,56 +131,12 @@ func (st *ProverState) Open(openedPositions []int) Proof {
 		panic("fri: ProverState.Open: called before all folding rounds were consumed")
 	}
 
-	st.FRIQueries = make([]Query, st.p.NumQueries)
-	if st.plan.numLevels > 1 {
-		st.LevelQueries = make([][]QueryLayer, st.plan.numLevels-1)
-		for l := range st.LevelQueries {
-			st.LevelQueries[l] = make([]QueryLayer, st.p.NumQueries)
-		}
-	}
-
-	// Invert the schedule into level index → intro round jl. A level's codeword
-	// lives in the indexing of its intro round, so an outer query position s
-	// opens leaf s>>jl in it (matching the verifier, which reads it at s>>(j+1)
-	// with j+1 == jl).
-	roundOfLevel := make([]int, st.plan.numLevels)
-	for jl, l := range st.plan.levelAtRound {
-		roundOfLevel[l] = jl
-	}
+	st.RunningQueries = make([]RunningQuery, st.p.NumQueries)
 
 	for k := range st.p.NumQueries {
 		s := openedPositions[k]
-		st.FRIQueries[k] = openQueryExt(
-			s,
-			openLevelTreesAt(st.levels[0].Trees, len(st.levels[0].Evals), s),
-			st.layers,
-			st.trees,
-			st.p.numRounds,
-		)
-		for l := 1; l < st.plan.numLevels; l++ {
-			base := s >> roundOfLevel[l]
-			st.LevelQueries[l-1][k] = openLevelTreesAt(st.levels[l].Trees, len(st.levels[l].Evals), base)
-		}
+		st.RunningQueries[k] = openRunningQueryExt(s, st.layers, st.trees, st.p.numRounds)
 	}
 
 	return st.Proof
-}
-
-func openLevelTreesAt(trees []*Tree, levelSize, base int) QueryLayer {
-	opening := make(QueryLayer, len(trees))
-	for i, tree := range trees {
-		opening[i] = tree.OpenBranch(levelTreeLeafIndex(tree, levelSize, base))
-	}
-	return opening
-}
-
-func levelTreeLeafIndex(tree *Tree, levelSize, base int) int {
-	if tree == nil {
-		panic("fri: levelTreeLeafIndex: nil tree")
-	}
-	idx, err := levelLeafIndex(tree.NumLeaves(), levelSize, base)
-	if err != nil {
-		panic("fri: levelTreeLeafIndex: " + err.Error())
-	}
-	return idx
 }
