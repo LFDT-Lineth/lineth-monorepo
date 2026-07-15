@@ -1132,6 +1132,11 @@ func (branch InputTreeOpening) pairAtLevel(levelSize int) (*RowPair, error) {
 	return branch.Leaves[levelLog], nil
 }
 
+// reconstructQueryValueAt combines bundle's columns with running (this
+// level's own round's running-codeword value) at x. running seeds the ladder, so it
+// is weighted by alphaDeep^len(bundle.Entries).
+// bundle.Entries is walked highest AlphaPower first (canonicalLayout assigns
+// them 0..len(Entries)-1 in order, so that's simply the reverse index order).
 func reconstructQueryValueAt(
 	pcs *PCS,
 	bundle sizeBundle,
@@ -1143,17 +1148,11 @@ func reconstructQueryValueAt(
 	alphaDeep field.Ext,
 	x field.Ext,
 	sibling bool,
+	running field.Ext,
 ) (field.Ext, error) {
-	numPowers := 0
-	for _, entry := range bundle.Entries {
-		if entry.AlphaPower >= numPowers {
-			numPowers = entry.AlphaPower + 1
-		}
-	}
-	alphaDeepPowers := powers(alphaDeep, numPowers)
-
-	var value field.Ext
-	for _, entry := range bundle.Entries {
+	value := running
+	for i := len(bundle.Entries) - 1; i >= 0; i-- {
+		entry := bundle.Entries[i]
 		claims, err := pcs.claimsForEntry(claimed, entry, zeta)
 		if err != nil {
 			return field.Ext{}, err
@@ -1172,7 +1171,7 @@ func reconstructQueryValueAt(
 		if err != nil {
 			return field.Ext{}, err
 		}
-		term.Mul(&term, &alphaDeepPowers[entry.AlphaPower])
+		value.Mul(&value, &alphaDeep)
 		value.Add(&value, &term)
 	}
 	return value, nil
@@ -1275,10 +1274,9 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	resolved := make([]resolvedQuery, pcs.Params.NumQueries)
 	for queryIdx, queryPosition := range positions {
 		rq := resolvedQuery{
-			Rounds:     make([]inputPair, pcs.Params.numRounds),
-			Aux:        make(map[int]inputPair, len(layout)),
-			AuxColumns: make(map[int]int, len(layout)),
-			Final:      proof.FRIProof.FinalPolyExt[queryPosition>>pcs.Params.numRounds],
+			Rounds: make([]inputPair, pcs.Params.numRounds),
+			Aux:    make(map[int]inputPair, len(layout)),
+			Final:  proof.FRIProof.FinalPolyExt[queryPosition>>pcs.Params.numRounds],
 		}
 
 		inputOpening := proof.InputQueries[queryIdx]
@@ -1286,12 +1284,40 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 			return fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
 		}
 
+		// Running layers: authenticate and decode directly from the committed
+		// codeword -- no PCS reconstruction involved. Computed before the level
+		// loop below, since a level's own reconstruction seeds on this same
+		// round's running pair (rq.Rounds[0] is left at its zero value, so
+		// round 0 needs no special case).
+		for j := 1; j < pcs.Params.numRounds; j++ {
+			opening := proof.FRIProof.RunningQueries[queryIdx][j-1]
+			if err = checkQueryLayerShape(opening, runningRoots[j], pcs.Params.N>>j, true); err != nil {
+				return fmt.Errorf("fri: pcs.Verify: query %d round %d: %w", queryIdx, j, err)
+			}
+			branch, err := authenticateQueryLayer(fmt.Sprintf("round %d", j), opening, runningRoots[j], queryPosition>>j)
+			if err != nil {
+				return fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
+			}
+			if len(branch.Siblings) == 0 {
+				return fmt.Errorf("fri: pcs.Verify: query %d round %d: branch carries no sibling", queryIdx, j)
+			}
+			self, err := octupletToExt(branch.Leaf)
+			if err != nil {
+				return fmt.Errorf("fri: pcs.Verify: query %d round %d: decode leaf: %w", queryIdx, j, err)
+			}
+			sib, err := octupletToExt(branch.Siblings[len(branch.Siblings)-1])
+			if err != nil {
+				return fmt.Errorf("fri: pcs.Verify: query %d round %d: decode sibling: %w", queryIdx, j, err)
+			}
+			rq.Rounds[j] = inputPair{Self: self, Sibling: sib}
+		}
+
 		// Every level -- including the main degree-D polynomial, introduced
 		// at round 0 -- binds the same way: authenticate its rows against
 		// their declared shape, then reconstruct its conjugate pair at
 		// (position, position^1), using alphaDeep = FoldAlphas[round]²: the
 		// square of that SAME round's own fold challenge, never an earlier
-		// round's (see checkFolds).
+		// round's (see reconstructQueryValueAt).
 		for levelIdx, bundle := range layout {
 			round, err := pcs.roundForSize(bundle.SizeLog2)
 			if err != nil {
@@ -1318,42 +1344,16 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 			alphaDeep.Square(&foldAlphas[round])
 			levelPos := queryPosition >> round
 			self, err := reconstructQueryValueAt(pcs, bundle, inputOpening, inputIndexByBatch, levelSize,
-				claimed, zeta, alphaDeep, domainPointExt(domain, levelPos), false)
+				claimed, zeta, alphaDeep, domainPointExt(domain, levelPos), false, rq.Rounds[round].Self)
 			if err != nil {
 				return err
 			}
 			sib, err := reconstructQueryValueAt(pcs, bundle, inputOpening, inputIndexByBatch, levelSize,
-				claimed, zeta, alphaDeep, domainPointExt(domain, levelPos^1), true)
+				claimed, zeta, alphaDeep, domainPointExt(domain, levelPos^1), true, rq.Rounds[round].Sibling)
 			if err != nil {
 				return err
 			}
 			rq.Aux[round] = inputPair{Self: self, Sibling: sib}
-			rq.AuxColumns[round] = len(bundle.Entries)
-		}
-
-		// Running layers: authenticate and decode directly from the
-		// committed codeword -- no PCS reconstruction involved.
-		for j := 1; j < pcs.Params.numRounds; j++ {
-			opening := proof.FRIProof.RunningQueries[queryIdx][j-1]
-			if err = checkQueryLayerShape(opening, runningRoots[j], pcs.Params.N>>j, true); err != nil {
-				return fmt.Errorf("fri: pcs.Verify: query %d round %d: %w", queryIdx, j, err)
-			}
-			branch, err := authenticateQueryLayer(fmt.Sprintf("round %d", j), opening, runningRoots[j], queryPosition>>j)
-			if err != nil {
-				return fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
-			}
-			if len(branch.Siblings) == 0 {
-				return fmt.Errorf("fri: pcs.Verify: query %d round %d: branch carries no sibling", queryIdx, j)
-			}
-			self, err := octupletToExt(branch.Leaf)
-			if err != nil {
-				return fmt.Errorf("fri: pcs.Verify: query %d round %d: decode leaf: %w", queryIdx, j, err)
-			}
-			sib, err := octupletToExt(branch.Siblings[len(branch.Siblings)-1])
-			if err != nil {
-				return fmt.Errorf("fri: pcs.Verify: query %d round %d: decode sibling: %w", queryIdx, j, err)
-			}
-			rq.Rounds[j] = inputPair{Self: self, Sibling: sib}
 		}
 
 		resolved[queryIdx] = rq

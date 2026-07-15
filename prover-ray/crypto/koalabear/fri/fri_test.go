@@ -25,9 +25,8 @@ func bitReverseIdx(i, nbits int) int {
 
 // TestFoldLayerInternally checks that folding a bit-reversed codeword of P with
 // challenge alpha yields the bit-reversed codeword of the folded polynomial
-// Q(Y) = P_e(Y) + alpha·P_o(Y), and that a non-nil auxiliary vector adds
-// alpha²·aux at the matching output position. The expected codeword is built by
-// an independent canonical evaluation, so this also pins down the bit-reversed
+// Q(Y) = P_e(Y) + alpha·P_o(Y). The expected codeword is built by an
+// independent canonical evaluation, so this also pins down the bit-reversed
 // twiddle alignment.
 func TestFoldLayerInternally(t *testing.T) {
 
@@ -79,50 +78,13 @@ func TestFoldLayerInternally(t *testing.T) {
 			want[tt] = polynomials.EvalCanonicalExt(qcoeffs, field.Lift(y))
 		}
 
-		got := foldLayerInternally(layer, nil, field.Ext{}, alpha, domain, invTwo)
+		got := foldLayerInternally(layer, alpha, domain, invTwo)
 		if len(got) != half {
 			t.Fatalf("n=%d: fold returned %d values, want %d", n, len(got), half)
 		}
 		for tt := range half {
 			if !got[tt].Equal(&want[tt]) {
 				t.Fatalf("n=%d: fold[%d] = %s, want %s", n, tt, got[tt].String(), want[tt].String())
-			}
-		}
-
-		// aux: a second same-size codeword on the same domain (a level
-		// introduced at this round), folded by the same formula (same alpha)
-		// and weighted by auxWeight in the output.
-		auxCoeffs := make([]field.Ext, n)
-		for i := range auxCoeffs {
-			auxCoeffs[i] = field.PseudoRandExt(prng)
-		}
-		aux := make([]field.Ext, n)
-		for m := range n {
-			var x field.Element
-			x.Exp(g, big.NewInt(int64(bitReverseIdx(m, kN))))
-			aux[m] = polynomials.EvalCanonicalExt(auxCoeffs, field.Lift(x))
-		}
-		auxQCoeffs := make([]field.Ext, half)
-		for i := range auxQCoeffs {
-			var odd field.Ext
-			odd.Mul(&auxCoeffs[2*i+1], &alpha)
-			auxQCoeffs[i].Add(&auxCoeffs[2*i], &odd)
-		}
-		wantAuxFold := make([]field.Ext, half)
-		for tt := range half {
-			var y field.Element
-			y.Exp(g2, big.NewInt(int64(bitReverseIdx(tt, kN-1))))
-			wantAuxFold[tt] = polynomials.EvalCanonicalExt(auxQCoeffs, field.Lift(y))
-		}
-
-		auxWeight := field.PseudoRandExt(prng)
-		gotAux := foldLayerInternally(layer, aux, auxWeight, alpha, domain, invTwo)
-		for tt := range half {
-			var wantCombined, term field.Ext
-			term.Mul(&wantAuxFold[tt], &auxWeight)
-			wantCombined.Add(&want[tt], &term)
-			if !gotAux[tt].Equal(&wantCombined) {
-				t.Fatalf("n=%d: fold+aux[%d] mismatch", n, tt)
 			}
 		}
 	}
@@ -157,27 +119,20 @@ func TestCheckFolds(t *testing.T) {
 
 	const s = 3
 	self0, sib0 := field.PseudoRandExt(prng), field.PseudoRandExt(prng)
-	sib1 := field.PseudoRandExt(prng)
 	alpha0, alpha1 := field.PseudoRandExt(prng), field.PseudoRandExt(prng)
 	aux1Self, aux1Sib := field.PseudoRandExt(prng), field.PseudoRandExt(prng)
 
 	// self1 is round 0's fold output (no level introduces at round 0).
 	self1 := fold(self0, sib0, alpha0, p.domainsLight[0], s)
 
-	// The level introduced at round 1 is the primary pair; (self1, sib1) --
-	// the running codeword from round 0 -- combines in alongside it, weighted
-	// by alpha1² (THIS SAME round's own challenge, never an earlier round's).
-	var weight, wSelf, wSib, combinedSelf, combinedSib field.Ext
-	weight.Square(&alpha1)
-	wSelf.Mul(&self1, &weight)
-	wSib.Mul(&sib1, &weight)
-	combinedSelf.Add(&aux1Self, &wSelf)
-	combinedSib.Add(&aux1Sib, &wSib)
-	final := fold(combinedSelf, combinedSib, alpha1, p.domainsLight[1], s>>1)
+	// The level introduced at round 1 (aux1Self, aux1Sib) already has the
+	// round-0 running codeword folded into it (see reconstructQueryValueAt),
+	// so checkFolds takes it as-is, in place of Rounds[1].
+	final := fold(aux1Self, aux1Sib, alpha1, p.domainsLight[1], s>>1)
 
 	newResolved := func() []resolvedQuery {
 		return []resolvedQuery{{
-			Rounds: []inputPair{{Self: self0, Sibling: sib0}, {Self: self1, Sibling: sib1}},
+			Rounds: []inputPair{{Self: self0, Sibling: sib0}, {Self: self1}},
 			Aux:    map[int]inputPair{1: {Self: aux1Self, Sibling: aux1Sib}},
 			Final:  final,
 		}}

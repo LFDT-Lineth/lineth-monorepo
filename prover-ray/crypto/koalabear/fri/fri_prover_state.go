@@ -84,15 +84,11 @@ func (st *ProverState) HasNext() bool {
 }
 
 // Fold consumes one folding challenge. If a level is introduced at this round,
-// it is column-batched using alpha² (alphaDeep = alpha², the square of THIS
-// SAME just-sampled challenge -- never an earlier round's, or the batching
-// weight could be chosen after the running codeword is already known, which
-// is unsound) and becomes the primary codeword being folded; the running
-// codeword from the preceding round, if any, folds in alongside it, weighted
-// by alphaDeep^n (n = the level's own column count). Fold commits the new
-// layer and returns its Merkle root; on the final fold the running polynomial
-// becomes the final polynomial — revealed in the clear rather than committed
-// — and the returned root is the zero octuplet.
+// it is combined via alphaDeep (= alpha²) seeded by the running codeword
+// from the preceding round (see EvalsAt); Fold commits the
+// new layer and returns its Merkle root; on the final fold the running
+// polynomial becomes the final polynomial — revealed in the clear rather
+// than committed — and the returned root is the zero octuplet.
 func (st *ProverState) Fold(alpha field.Ext) field.Octuplet {
 
 	if !st.HasNext() {
@@ -102,23 +98,16 @@ func (st *ProverState) Fold(alpha field.Ext) field.Octuplet {
 	j := st.round
 
 	primary := st.running
-	var running []field.Ext
-	var weight field.Ext
 	if l, ok := st.plan.levelAtRound[j]; ok {
 		var alphaDeep field.Ext
 		alphaDeep.Square(&alpha)
-		primary = st.levels[l].EvalsAt(alphaDeep)
+		primary = st.levels[l].EvalsAt(alphaDeep, st.running)
 		if want := st.p.N >> j; len(primary) != want {
 			panic(fmt.Sprintf("fri: ProverState.Fold: levels[%d].EvalsAt returned %d values, want %d", l, len(primary), want))
 		}
-		if j > 0 {
-			running = st.running
-			n := len(st.levels[l].Columns)
-			weight = powers(alphaDeep, n+1)[n]
-		}
 	}
 
-	st.running = foldLayerInternally(primary, running, weight, alpha, st.p.domains[j], st.p.invTwo)
+	st.running = foldLayerInternally(primary, alpha, st.p.domains[j], st.p.invTwo)
 	st.layers[j+1] = st.running
 	st.round = j + 1
 

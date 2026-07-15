@@ -174,13 +174,14 @@ type Level struct {
 	DenominatorInverses []field.Ext
 }
 
-// EvalsAt returns this level's evaluations, column-batched using alphaDeep as
-// the power-ladder base.
-func (l Level) EvalsAt(alphaDeep field.Ext) []field.Ext {
-	alphaDeepPowers := powers(alphaDeep, len(l.Columns))
+// EvalsAt returns this level's evaluations, combined with the running codeword.
+// running seeds the ladder, so its contribution is weighted by alphaDeep^len(Columns).
+func (l Level) EvalsAt(alphaDeep field.Ext, running []field.Ext) []field.Ext {
 	evals := make([]field.Ext, l.Size)
+	copy(evals, running)
 	for pos := range evals {
-		for columnIdx, column := range l.Columns {
+		for c := len(l.Columns) - 1; c >= 0; c-- {
+			column := l.Columns[c]
 			var columnSum field.Ext
 			for _, claim := range column.Claims {
 				pointIdx := l.ClaimPointIndexes[claim.Point]
@@ -192,9 +193,8 @@ func (l Level) EvalsAt(alphaDeep field.Ext) []field.Ext {
 				columnSum.Add(&columnSum, &term)
 			}
 
-			var weighted field.Ext
-			weighted.Mul(&columnSum, &alphaDeepPowers[columnIdx])
-			evals[pos].Add(&evals[pos], &weighted)
+			evals[pos].Mul(&evals[pos], &alphaDeep)
+			evals[pos].Add(&evals[pos], &columnSum)
 		}
 	}
 	return evals
@@ -331,10 +331,9 @@ func checkOpeningProofShape(p Params, prf Proof, foldAlphas []field.Ext, positio
 // caller. checkFolds consumes only this: it never touches a row, a root, a
 // branch, or alpha_DEEP.
 type resolvedQuery struct {
-	Rounds     []inputPair       // Rounds[j] = (self, sibling) of the running codeword at round j (unused at j=0)
-	Aux        map[int]inputPair // Aux[j] = the pair of the level introduced at round j, if any (always present at j=0)
-	AuxColumns map[int]int       // AuxColumns[j] = number of columns batched into Aux[j] (sets the running codeword's weight in checkFolds)
-	Final      field.Ext         // the final-polynomial target for this query
+	Rounds []inputPair       // Rounds[j] = (self, sibling) of the running codeword at round j (unused at j=0)
+	Aux    map[int]inputPair // Aux[j] = the pair of the level introduced at round j, if any (always present at j=0). Already includes the running codeword from round j-1, folded in via Horner (see reconstructQueryValueAt).
+	Final  field.Ext         // the final-polynomial target for this query
 }
 
 // checkFolds verifies the FRI fold recurrence for every query against values
@@ -347,24 +346,11 @@ func checkFolds(p Params, resolved []resolvedQuery, foldAlphas []field.Ext, posi
 			base := s >> j
 			self, sib := rq.Rounds[j].Self, rq.Rounds[j].Sibling
 
-			// A level introduced at this round is the primary pair being
-			// folded; the running codeword from the preceding round --
-			// absent at round 0, since there is no round -1 -- combines with
-			// it before the single fold below (Fold is linear), weighted by
-			// alphaDeep^n: alphaDeep the square of THIS SAME round's challenge.
-
+			// A level introduced at this round takes over as the primary
+			// pair being folded (it already has the running codeword baked
+			// in, see resolvedQuery.Aux).
 			if levelPair, ok := rq.Aux[j]; ok {
 				self, sib = levelPair.Self, levelPair.Sibling
-				if j > 0 {
-					var alphaDeep, wRunning, wSib field.Ext
-					alphaDeep.Square(&foldAlphas[j])
-					n := rq.AuxColumns[j]
-					weight := powers(alphaDeep, n+1)[n]
-					wRunning.Mul(&rq.Rounds[j].Self, &weight)
-					wSib.Mul(&rq.Rounds[j].Sibling, &weight)
-					self.Add(&self, &wRunning)
-					sib.Add(&sib, &wSib)
-				}
 			}
 
 			// x is the domain point of the opened leaf. The codeword is bit-reversed,
@@ -446,34 +432,17 @@ func buildTreeExt(layer []field.Ext) *Tree {
 // is itself in bit-reversed order over the half-size domain, ready to be fed
 // back into the next round.
 //
-// aux, when non-empty, is a second codeword on the same domain as layer (the
-// running codeword, weighted in alongside a level introduced this round):
-// since Fold is linear, its weighted contribution auxWeight·Fold(aux) is
-// computed by folding layer+auxWeight·aux once, rather than folding layer and
-// aux separately and adding the results.
-//
 // The folding formula, writing x = g^i for the natural-order domain point of
 // pair j (i.e. i = bitReverse(j) over the half-domain):
 //
-//	next[j] = (layer[2j] + auxWeight·aux[2j] + layer[2j+1] + auxWeight·aux[2j+1]) / 2
-//	        + alpha * (layer[2j] + auxWeight·aux[2j] - layer[2j+1] - auxWeight·aux[2j+1]) / (2x)
-func foldLayerInternally(
-	layer []field.Ext,
-	aux []field.Ext,
-	auxWeight field.Ext,
-	alpha field.Ext,
-	domain *fft.Domain,
-	invTwo field.Element,
-) []field.Ext {
+//	next[j] = (layer[2j] + layer[2j+1]) / 2 + alpha * (layer[2j] - layer[2j+1]) / (2x)
+func foldLayerInternally(layer []field.Ext, alpha field.Ext, domain *fft.Domain, invTwo field.Element) []field.Ext {
 
 	// domain is the input layer's domain: its generator supplies the twiddles
 	// g^{-i} for the conjugate pairs, so its cardinality matches len(layer) (the
 	// half-size output uses this same domain, not its own).
 	if int(domain.Cardinality) != len(layer) {
 		panic("fri: foldLayerInternally: len(layer) != domain.Cardinality")
-	}
-	if len(aux) > 0 && len(aux) != len(layer) {
-		panic("fri: foldLayerInternally: len(aux) != len(layer)")
 	}
 
 	var (
@@ -496,14 +465,6 @@ func foldLayerInternally(
 
 	for j := range half {
 		p, q := layer[2*j], layer[2*j+1]
-
-		if len(aux) > 0 {
-			var wp, wq field.Ext
-			wp.Mul(&aux[2*j], &auxWeight)
-			wq.Mul(&aux[2*j+1], &auxWeight)
-			p.Add(&p, &wp)
-			q.Add(&q, &wq)
-		}
 
 		var sum, diff field.Ext
 		sum.Add(&p, &q)
