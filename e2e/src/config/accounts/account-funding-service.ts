@@ -1,9 +1,10 @@
-import { wait } from "@lfdt-lineth/shared-utils";
 import { Mutex } from "async-mutex";
 import { Address, BaseError, Client, PrivateKeyAccount, PublicActions } from "viem";
 import { getTransactionCount, sendTransaction } from "viem/actions";
 
 import {
+  awaitUntil,
+  AwaitUntilTimeoutError,
   createBlockNotFoundRetryExtension,
   estimateLineaGas,
   normalizeEip1559Fees,
@@ -99,58 +100,51 @@ export class AccountFundingService {
     targetAddress: Address,
     initialBalanceWei: bigint,
   ): Promise<TransactionResult | null> {
-    const deadline = Date.now() + FUND_TIMEOUT_MS;
-    let attempt = 0;
+    try {
+      const result = await awaitUntil(
+        async () => {
+          try {
+            const feeData = await this.estimateFees(whaleAccountWallet.address, targetAddress, initialBalanceWei);
+            const nonce = await this.nextNonce(whaleAccountAddress);
 
-    while (Date.now() < deadline) {
-      try {
-        const feeData = await this.estimateFees(whaleAccountWallet.address, targetAddress, initialBalanceWei);
-        const nonce = await this.nextNonce(whaleAccountAddress);
+            return await sendTransactionWithRetry(
+              this.client,
+              (fees) =>
+                sendTransaction(this.client, {
+                  account: whaleAccountWallet,
+                  chain: this.client.chain,
+                  type: "eip1559",
+                  to: targetAddress,
+                  value: initialBalanceWei,
+                  nonce,
+                  gas: 21000n,
+                  ...feeData,
+                  ...fees,
+                }),
+              { receiptTimeoutMs: DEFAULT_RECEIPT_TIMEOUT_MS },
+            );
+          } catch (error) {
+            this.invalidateNonce(whaleAccountAddress);
+            throw error;
+          }
+        },
+        () => true,
+        { timeoutMs: FUND_TIMEOUT_MS, pollingIntervalMs: FUND_RETRY_DELAY_MS, shouldRetry: isTransientFundingError },
+      );
 
-        const result = await sendTransactionWithRetry(
-          this.client,
-          (fees) =>
-            sendTransaction(this.client, {
-              account: whaleAccountWallet,
-              chain: this.client.chain,
-              type: "eip1559",
-              to: targetAddress,
-              value: initialBalanceWei,
-              nonce,
-              gas: 21000n,
-              ...feeData,
-              ...fees,
-            }),
-          { receiptTimeoutMs: DEFAULT_RECEIPT_TIMEOUT_MS },
-        );
+      this.logger.debug(
+        `Account funded. targetAddress=${targetAddress} txHash=${result.hash} whaleAccount=${whaleAccountAddress}`,
+      );
 
-        this.logger.debug(
-          `Account funded. targetAddress=${targetAddress} txHash=${result.hash} whaleAccount=${whaleAccountAddress}`,
-        );
-
-        return result;
-      } catch (error) {
-        this.invalidateNonce(whaleAccountAddress);
-        attempt++;
-
-        if (!isTransientFundingError(error) || Date.now() >= deadline) {
-          this.logger.error(
-            `Failed to fund account. address=${targetAddress} attempt=${attempt} error=${(error as Error).message}`,
-          );
-          return null;
-        }
-
-        this.logger.warn(
-          `Transient error funding account, retrying. address=${targetAddress} attempt=${attempt} error=${(error as Error).message}`,
-        );
-        await wait(FUND_RETRY_DELAY_MS);
+      return result;
+    } catch (error) {
+      if (error instanceof AwaitUntilTimeoutError) {
+        this.logger.error(`Failed to fund account: timeout after ${error.timeoutMs}ms. address=${targetAddress}`);
+      } else {
+        this.logger.error(`Failed to fund account. address=${targetAddress} error=${(error as Error).message}`);
       }
+      return null;
     }
-
-    this.logger.error(
-      `Failed to fund account: timeout after ${attempt} attempts. address=${targetAddress} timeoutMs=${FUND_TIMEOUT_MS}`,
-    );
-    return null;
   }
 
   /**

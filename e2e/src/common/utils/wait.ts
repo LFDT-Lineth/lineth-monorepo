@@ -20,6 +20,12 @@ export class AwaitUntilTimeoutError extends Error {
 export type AwaitUntilOptions = {
   pollingIntervalMs?: number;
   timeoutMs?: number;
+  /**
+   * Optional predicate called when `callback` throws. Return `true` to retry
+   * the operation, or `false` to rethrow the error immediately without waiting
+   * for the deadline. When omitted, all errors are retried until the deadline.
+   */
+  shouldRetry?: (error: unknown) => boolean;
 };
 
 export async function awaitUntil<T>(
@@ -27,7 +33,7 @@ export async function awaitUntil<T>(
   stopRetry: (value: T) => boolean,
   options: AwaitUntilOptions = {},
 ): Promise<T> {
-  const { pollingIntervalMs = 500, timeoutMs = 2 * 60 * 1000 } = options;
+  const { pollingIntervalMs = 500, timeoutMs = 2 * 60 * 1000, shouldRetry } = options;
   const deadline = Date.now() + timeoutMs;
   let lastError: Error | undefined;
   let attemptCount = 0;
@@ -41,6 +47,10 @@ export async function awaitUntil<T>(
         return result;
       }
     } catch (error) {
+      if (shouldRetry && !shouldRetry(error)) {
+        throw error;
+      }
+
       lastError = error as Error;
       attemptCount++;
 
