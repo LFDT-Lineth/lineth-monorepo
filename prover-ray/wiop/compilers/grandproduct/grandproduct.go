@@ -6,7 +6,7 @@
 // CompileViaGrandProduct:
 //
 //   - Phase 1 (permutation → grand product): every unreduced permutation
-//     [wiop.LookupQuery] is reduced to a single aggregated
+//     [wiop.TableRelationQuery] is reduced to a single aggregated
 //     [wiop.GrandProduct] query. For each query a fresh β coin (and an α coin
 //     when the table is multi-column) is sampled; each A-fragment row becomes
 //     a numerator factor (β + RLC_α(row)) and each B-fragment row a
@@ -49,7 +49,7 @@ import (
 const packingArity = 3
 
 // Compile runs both grand-product compilation phases on sys: it first reduces
-// every permutation [wiop.LookupQuery] into an aggregated [wiop.GrandProduct]
+// every permutation [wiop.TableRelationQuery] into an aggregated [wiop.GrandProduct]
 // (see [compilePermutations]), then reduces every [wiop.GrandProduct] into
 // running-product Z columns (see [compileGrandProducts]). Each phase is a
 // no-op when its input queries are absent.

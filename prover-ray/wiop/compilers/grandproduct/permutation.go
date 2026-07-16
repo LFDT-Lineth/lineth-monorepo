@@ -6,7 +6,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
-// compilePermutations reduces every unreduced permutation [wiop.LookupQuery]
+// compilePermutations reduces every unreduced permutation [wiop.TableRelationQuery]
 // in sys into a single aggregated [wiop.GrandProduct] query, then registers a
 // prover action that assigns the grand-product Result and a verifier action
 // ([CheckResultIsOne]) asserting that Result == 1.
@@ -21,7 +21,7 @@ import (
 // column.
 func compilePermutations(sys *wiop.System) {
 	var (
-		perms    []*wiop.LookupQuery
+		perms    []*wiop.TableRelationQuery
 		maxRound *wiop.Round
 	)
 	for _, q := range sys.TableRelations {
@@ -129,7 +129,7 @@ func rlcOfTable(alpha *wiop.CoinField, tab wiop.Table) wiop.Expression {
 // fragment of a permutation query. It drives α allocation: α is required once
 // any fragment is multi-column, both to combine columns and to carry the α^w
 // length sentinel that disambiguates mixed widths.
-func maxFragmentWidth(q *wiop.LookupQuery) int {
+func maxFragmentWidth(q *wiop.TableRelationQuery) int {
 	w := 0
 	for _, tab := range q.A {
 		if tab.Width() > w {

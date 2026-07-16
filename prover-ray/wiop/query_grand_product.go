@@ -12,7 +12,7 @@ import (
 //
 //	Result = ( ∏_k ∏_row Numerator_k[row] ) / ( ∏_k ∏_row Denominator_k[row] )
 //
-// It is the target of the permutation argument: a [LookupQuery] of kind
+// It is the target of the permutation argument: a [TableRelationQuery] of kind
 // [KindPermutation] is reduced (by the grandproduct compiler) to a
 // GrandProduct whose Result the verifier then constrains to be one. The
 // product is taken over every row of every factor's module, padding rows

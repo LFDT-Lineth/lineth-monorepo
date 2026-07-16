@@ -28,17 +28,17 @@ type System struct {
 	// system via [System.NewLagrangeEval] and [System.NewLagrangeEvalFrom],
 	// in declaration order.
 	LagrangeEvals []*LagrangeEval
-	// TableRelations holds all [LookupQuery] queries registered with this
+	// TableRelations holds all [TableRelationQuery] queries registered with this
 	// system via [System.NewInclusion] and [System.NewPermutation], in
 	// declaration order.
-	TableRelations []*LookupQuery
+	TableRelations []*TableRelationQuery
 	// LogDerivativeSums holds all [LogDerivativeSum] queries registered with
 	// this system via [System.NewLogDerivativeSum], in declaration order.
 	LogDerivativeSums []*LogDerivativeSum
 	// GrandProducts holds all [GrandProduct] queries registered with this
 	// system via [System.NewGrandProduct], in declaration order. The
 	// grandproduct compiler also creates these when reducing permutation
-	// [LookupQuery] queries.
+	// [TableRelationQuery] queries.
 	GrandProducts []*GrandProduct
 	// MessageBuses holds all [MessageBus] queries registered with this system
 	// via [System.NewMessageBusSend] and [System.NewMessageBusReceive], in
