@@ -6,6 +6,13 @@ const ssz_decode = @import("zesu_ssz_decode");
 const ssz_output = @import("zesu_ssz_output");
 const zesu_allocator = @import("zesu_allocator");
 
+/// Log-preserving stateless-execution seam (full event logs, unlike `runStateless`'s bloom-only
+/// output). `pub` for `evm_execution_guest_test.zig`'s parity check; the guest itself never calls
+/// this directly — it reaches the seam through `l2_execution.runL2Execution`.
+pub const execution = @import("execution.zig");
+const l2_execution = @import("l2_execution.zig");
+const l2_execution_ssz = @import("l2_execution_ssz");
+
 // Heap start from the linker script (canonical Linea layout: `_heap_start` = 0x48800000, grows up).
 extern var _heap_start: u8;
 // Linker script does not actually constraint the heap to 256 MiB, but this is a reasonable upper bound
@@ -48,11 +55,13 @@ pub fn runStateless(allocator: std.mem.Allocator, ssz_input: []const u8) !Result
     return .{ .out = out, .success = success };
 }
 
-/// zkVM guest entry. Reads the SSZ StatelessInput via the zkvm-standards `read_input` — the same ABI
-/// Zesu uses — then executes it and exits 0 on successful_validation, 1 otherwise. WHERE the input
-/// lives is the proving system's concern, NOT the guest's: for Linea, `read_input` is satisfied by
-/// zesu-zkvm's `linea/src/zkvm_io.zig` (imported as `linea_zkvm_io`), which reads the memory-mapped
-/// `_in_start` (framed `[u64 LE len][SSZ]`). The guest never names a memory slot.
+/// zkVM guest entry. Reads the extended `L2ExecutionProofPrivateInput` via `read_input`, runs
+/// `l2_execution.runL2Execution`, and emits the SSZ output via `write_output`. Exits 0 on success,
+/// 1 on any error. `read_input`/`write_output` are satisfied by zesu-zkvm's `linea_zkvm_io` — where
+/// the input lives and how the output surfaces is the proving system's concern, not the guest's.
+///
+/// This frozen riscv64 binary has no argv, so output format is fixed at build time (always SSZ);
+/// the `--json`/`--ssz` toggle lives on the native `l2-execution-runner` tool instead.
 fn guestMain() callconv(.c) noreturn {
     const zkvm_io = @import("linea_zkvm_io");
 
@@ -63,10 +72,19 @@ fn guestMain() callconv(.c) noreturn {
     var buf_ptr: [*]const u8 = undefined;
     var buf_size: usize = undefined;
     zkvm_io.read_input(&buf_ptr, &buf_size);
-    const ssz_input = buf_ptr[0..buf_size];
+    const raw_input = buf_ptr[0..buf_size];
 
-    const result = runStateless(allocator, ssz_input) catch exit(1);
-    exit(if (result.success) 0 else 1);
+    const encoded_output = runL2ExecutionGuest(allocator, raw_input) catch exit(1);
+    zkvm_io.write_output(encoded_output);
+    exit(0);
+}
+
+/// Decode -> execute -> encode, factored out of `guestMain` so the whole pipeline is one
+/// `catch exit(1)` away from a clean guest rejection.
+fn runL2ExecutionGuest(allocator: std.mem.Allocator, raw_input: []const u8) ![]u8 {
+    const decoded = try l2_execution_ssz.decodeInput(allocator, raw_input);
+    const result = try l2_execution.runL2Execution(allocator, decoded);
+    return l2_execution_ssz.encodeOutput(allocator, result);
 }
 
 comptime {

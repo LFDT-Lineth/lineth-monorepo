@@ -66,6 +66,18 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    // The extended wire format's SSZ codec, built for the SAME riscv64/optimize pair as the guest
+    // itself (mirrors the native l2_execution_ssz_mod below, for the test host). `l2_execution.zig`
+    // is pulled into `evm_execution_guest.zig` via a plain relative import, not a separate module:
+    // a separate module would double-claim `execution.zig`, which both files import. The native
+    // `guest_mod` used by vanilla test/spec runners never needs this wiring — Zig's lazy analysis
+    // skips it since `guestMain` (the only caller) isn't `@export`-ed for that target.
+    const l2_execution_ssz_guest_mod = b.createModule(.{
+        .root_source_file = b.path("src/l2_execution_ssz.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
     const guest_module = b.createModule(.{
         .root_source_file = b.path(source),
         .target = target,
@@ -76,6 +88,7 @@ pub fn build(b: *std.Build) void {
     guest_module.addImport("zesu_zkvm_accel", zesu_accel_mod);
     guest_module.addImport("lineth_zkvm_accel", lineth_accel_mod);
     guest_module.addImport("linea_zkvm_io", linea_io_mod);
+    guest_module.addImport("l2_execution_ssz", l2_execution_ssz_guest_mod);
     guest_module.addOptions("build_options", guest_options); // keccak_accel flag, read in zkvm_provide.zig
     common.clearFreestandingNativeLinkage(b, guest_module);
     common.installGuestElf(b, guest_module, gp_name);
@@ -111,6 +124,7 @@ pub fn build(b: *std.Build) void {
 
     const test_step = b.step("test", "Run native Zig unit tests for the EVM execution guest");
     const spec_step = b.step("spec-tests", "Run the guest against all EF zkevm stateless fixtures (host)");
+    const extended_vanilla_step = b.step("extended-vanilla", "Regression guard: assert the dummy-wrapped extended guest (runL2Execution) agrees with the vanilla guest on validity over EF zkevm fixtures");
     const prep_fixtures_step = b.step("prep-execution-specs-json-fixtures", "Expose EF zkevm stateless fixtures for external runners");
 
     // Integration smoke test for the delegated precompiles: verifies zesu-zkvm's stdlibs_accel
@@ -129,6 +143,163 @@ pub fn build(b: *std.Build) void {
         .optimize = host_optimize,
     }));
     test_step.dependOn(&b.addRunArtifact(accel_tests).step);
+
+    const l2_execution_ssz_mod = b.createModule(.{
+        .root_source_file = b.path("src/l2_execution_ssz.zig"),
+        .target = native_target,
+        .optimize = host_optimize,
+    });
+    const l2_execution_ssz_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("test/l2_execution_ssz_test.zig"),
+            .target = native_target,
+            .optimize = host_optimize,
+        }),
+    });
+    l2_execution_ssz_tests.root_module.addImport("l2_execution_ssz", l2_execution_ssz_mod);
+    l2_execution_ssz_tests.root_module.addAnonymousImport("l2_execution_input.ssz", .{
+        .root_source_file = b.path("../../rollup_spec/src/rollup_spec/prover_io/testdata/getZkL2ExecutionProofV1.input.ssz"),
+    });
+    l2_execution_ssz_tests.root_module.addAnonymousImport("l2_execution_output.ssz", .{
+        .root_source_file = b.path("../../rollup_spec/src/rollup_spec/prover_io/testdata/getZkL2ExecutionProofV1.output.ssz"),
+    });
+    test_step.dependOn(&b.addRunArtifact(l2_execution_ssz_tests).step);
+
+    // ── l2-execution guest logic (src/l2_execution.zig) unit tests ──────────────────────────────────
+    // These `zig build test` UNIT TESTS run only on the native target — like the l2_execution_ssz
+    // codec tests above, and like every other `b.addTest` artifact in this file. That's a standard
+    // Zig constraint, not specific to this module: a freestanding riscv64 target has no OS to run a
+    // `std.testing` binary against, so test binaries are always compiled and run for the native host.
+    // The `l2_execution.zig` LOGIC ITSELF is not native-only — it's compiled into the riscv64 guest
+    // ELF too, reached via `evm_execution_guest.zig`'s relative import inside `guestMain` (see the
+    // module-wiring comment near `l2_execution_ssz_guest_mod` above).
+    //
+    // These tests exercise the Linea-layer logic — the FTX rolling hash, dynamicChainConfigHash,
+    // hash_address_list/hash_hash_list, the L1->L2 bridge storage-slot math, L2->L1 message
+    // extraction, forced-transaction dispatch, and the witness-backed MPT account/storage reads —
+    // against hand-built fixtures and Python-computed expected values (see Readme.md §6.3/§6.5/§2.1).
+    // Needs the full zesu import set (MPT, executor types/tx-decode, primitives, accelerators for
+    // ecrecover) plus the sibling `l2_execution_ssz` module.
+    const l2_execution_mod = b.createModule(.{
+        .root_source_file = b.path("src/l2_execution.zig"),
+        .target = native_target,
+        .optimize = host_optimize,
+    });
+    addExecutionImports(l2_execution_mod, native_imports);
+    l2_execution_mod.addImport("l2_execution_ssz", l2_execution_ssz_mod);
+
+    const l2_execution_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("test/l2_execution_test.zig"),
+            .target = native_target,
+            .optimize = host_optimize,
+        }),
+    });
+    l2_execution_tests.root_module.addImport("l2_execution", l2_execution_mod);
+    l2_execution_tests.root_module.addImport("l2_execution_ssz", l2_execution_ssz_mod);
+    l2_execution_tests.root_module.addImport("zesu_executor", native_imports.executor);
+    l2_execution_tests.root_module.addImport("zesu_mpt", native_imports.mpt);
+    l2_execution_tests.root_module.addImport("zesu_input", native_imports.input);
+    l2_execution_tests.root_module.addImport("zesu_primitives", native_imports.primitives);
+    l2_execution_tests.root_module.addImport("zesu_allocator", native_imports.allocator);
+    l2_execution_tests.root_module.addImport("zesu_accelerators", native_imports.accelerators);
+    // Informational-only diagnostic (not a pass/fail gate): decodes the golden, hand-authored
+    // getZkL2ExecutionProofV1 input vector and reports how far `runL2Execution` gets. That vector's
+    // witnesses are dummy (`stateRoot=0x1111...`), so real execution can never reproduce it — this
+    // only documents where it errors.
+    l2_execution_tests.root_module.addAnonymousImport("l2_execution_input.ssz", .{
+        .root_source_file = b.path("../../rollup_spec/src/rollup_spec/prover_io/testdata/getZkL2ExecutionProofV1.input.ssz"),
+    });
+    linkNativeZesuCrypto(l2_execution_tests, native_target, native_crypto);
+    test_step.dependOn(&b.addRunArtifact(l2_execution_tests).step);
+
+    // ── l2-execution JSON output shape (src/l2_execution_json.zig) ──────────────────────────────────
+    // Native-only, pure std + the sibling `l2_execution_ssz` module (no zesu dependency): asserts
+    // `encodeOutputJson`'s field names/order/hex format agree byte-for-byte with the Python
+    // reference codec's `proof_io_v1.encode_response`, using the same golden values as the
+    // committed `getZkL2ExecutionProofV1.response.json` fixture.
+    const l2_execution_json_mod = b.createModule(.{
+        .root_source_file = b.path("src/l2_execution_json.zig"),
+        .target = native_target,
+        .optimize = host_optimize,
+    });
+    l2_execution_json_mod.addImport("l2_execution_ssz", l2_execution_ssz_mod);
+
+    const l2_execution_json_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("test/l2_execution_json_test.zig"),
+            .target = native_target,
+            .optimize = host_optimize,
+        }),
+    });
+    l2_execution_json_tests.root_module.addImport("l2_execution_json", l2_execution_json_mod);
+    l2_execution_json_tests.root_module.addImport("l2_execution_ssz", l2_execution_ssz_mod);
+    test_step.dependOn(&b.addRunArtifact(l2_execution_json_tests).step);
+
+    // ── Vanilla-input dummy-fill wrap (src/vanilla_wrap.zig) ────────────────────────────────────────
+    // Wraps a vanilla EF `SszStatelessInput` into an extended `L2ExecutionProofPrivateInput` with
+    // dummy rollup fields, so the extended guest can run against the same EF corpus the vanilla guest
+    // runs on. Needs `zesu_ssz_decode` (to read the vanilla input's chain_id/fee_recipient) and the
+    // sibling `l2_execution_ssz` module (to build + encode the wrapper).
+    const vanilla_wrap_mod = b.createModule(.{
+        .root_source_file = b.path("src/vanilla_wrap.zig"),
+        .target = native_target,
+        .optimize = host_optimize,
+    });
+    vanilla_wrap_mod.addImport("zesu_ssz_decode", native_imports.ssz_decode);
+    vanilla_wrap_mod.addImport("l2_execution_ssz", l2_execution_ssz_mod);
+
+    // ── `l2-execution-wrap` native host tool ────────────────────────────────────────────────────────
+    // Wraps a vanilla EF stateless-input .ssz into an extended L2ExecutionProofPrivateInput .ssz
+    // (zero l2MessageServiceAddress -> bridge suppression), so the ZkC harness can feed the extended
+    // guest the same EF corpus the vanilla guest ran on. Installed to zig-out/bin so `make compile`
+    // (plain `zig build`) produces it alongside the guest ELF; the Go harness invokes it per input.
+    const l2_execution_wrap_exe = b.addExecutable(.{
+        .name = "l2-execution-wrap",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("test/l2_execution_wrap.zig"),
+            .target = native_target,
+            .optimize = host_optimize,
+        }),
+    });
+    l2_execution_wrap_exe.root_module.addImport("vanilla_wrap", vanilla_wrap_mod);
+    linkNativeZesuCrypto(l2_execution_wrap_exe, native_target, native_crypto);
+    b.installArtifact(l2_execution_wrap_exe);
+
+    const run_l2_execution_wrap_step = b.step(
+        "l2-execution-wrap",
+        "Run the native l2-execution-wrap tool (vanilla .ssz -> extended .ssz)",
+    );
+    const run_l2_execution_wrap = b.addRunArtifact(l2_execution_wrap_exe);
+    if (b.args) |extra| run_l2_execution_wrap.addArgs(extra);
+    run_l2_execution_wrap_step.dependOn(&run_l2_execution_wrap.step);
+
+    // ── `l2-execution-runner` native host tool ──────────────────────────────────────────────────────
+    // Standalone host executable: SSZ extended-input file in, SSZ (default) or JSON (`--json`)
+    // output on stdout. See test/l2_execution_runner.zig's doc comment for why the SSZ/JSON toggle
+    // lives here rather than in the freestanding guest. Not gated behind the lazy
+    // execution-spec-tests fixtures below — it takes an arbitrary input file, not the EF corpus.
+    const l2_execution_runner_exe = b.addExecutable(.{
+        .name = "l2-execution-runner",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("test/l2_execution_runner.zig"),
+            .target = native_target,
+            .optimize = host_optimize,
+        }),
+    });
+    l2_execution_runner_exe.root_module.addImport("l2_execution", l2_execution_mod);
+    l2_execution_runner_exe.root_module.addImport("l2_execution_ssz", l2_execution_ssz_mod);
+    l2_execution_runner_exe.root_module.addImport("l2_execution_json", l2_execution_json_mod);
+    linkNativeZesuCrypto(l2_execution_runner_exe, native_target, native_crypto);
+    b.installArtifact(l2_execution_runner_exe);
+
+    const run_l2_execution_runner_step = b.step(
+        "l2-execution-runner",
+        "Run the native l2-execution-runner (SSZ extended-input file -> SSZ/JSON output on stdout)",
+    );
+    const run_l2_execution_runner = b.addRunArtifact(l2_execution_runner_exe);
+    if (b.args) |extra| run_l2_execution_runner.addArgs(extra);
+    run_l2_execution_runner_step.dependOn(&run_l2_execution_runner.step);
 
     // The SSZ fixture comes from the execution-spec-tests zkevm dependency (lazy: only fetched when
     // this test is built). An empty-block vector → no transactions → no secp256k1/curve precompiles,
@@ -154,6 +325,12 @@ pub fn build(b: *std.Build) void {
         });
         tests.root_module.addImport("evm_execution_guest", guest_mod);
         tests.root_module.addImport("evm_execution_fixtures", fixtures_mod);
+        // Direct zesu imports so the test can decode the SSZ fixture and run zesu's vanilla
+        // executeStatelessInput itself, to assert executeStatelessInputWithLogs (src/execution.zig)
+        // computes the SAME roots on the same input.
+        tests.root_module.addImport("zesu_executor", native_imports.executor);
+        tests.root_module.addImport("zesu_ssz_decode", native_imports.ssz_decode);
+        tests.root_module.addImport("zesu_allocator", native_imports.allocator);
         linkNativeZesuCrypto(tests, native_target, native_crypto);
 
         test_step.dependOn(&b.addRunArtifact(tests).step);
@@ -181,6 +358,48 @@ pub fn build(b: *std.Build) void {
         if (b.args) |extra| run_spec.addArgs(extra);
         spec_step.dependOn(&run_spec.step);
 
+        // ── extended-vs-vanilla validity parity runner (permanent regression guard) ──
+        // The single regression runner for the extended guest: wraps the vanilla EF input into a
+        // dummy-filled extended input (vanilla_wrap.wrapVanillaAsExtended, single payload, empty
+        // FTX, zero l2_message_service_address) and asserts l2_execution.runL2Execution — the
+        // extended guest's actual Linea-layer logic, delegating per-block execution to
+        // `execution.executeStatelessInputWithLogs` — agrees with guest.runStateless on validity.
+        // Once wrapped, every other Linea-layer check (conflation invariants, FTX dispatch, bridge
+        // reads, message extraction) is either trivially satisfied or suppressed, so this single
+        // comparison already exercises the delegated execution seam (including the hand-copied
+        // header-chain preamble and EIP-7928 BAL path) end-to-end — a separate seam-only runner
+        // would be redundant with it. Pass-through extra args after `--`, e.g.
+        // `zig build extended-vanilla -- --fork Amsterdam --limit 300`.
+        const extended_vanilla_runner_exe = b.addExecutable(.{
+            .name = "extended-vanilla-runner",
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("test/extended_vanilla_runner.zig"),
+                .target = native_target,
+                .optimize = host_optimize,
+            }),
+        });
+        // NOT `evm_execution_guest` (guest_mod): that module relative-imports `l2_execution.zig`
+        // inside `guestMain`, so combining it with `l2_execution_mod` as a second, separately-rooted
+        // module in the same compile unit is a Zig module-graph conflict ("file exists in modules
+        // 'l2_execution' and 'evm_execution_guest'") — the same constraint documented above for
+        // `l2_execution_ssz_guest_mod`. The vanilla-validity check is reimplemented inline in
+        // `extended_vanilla_runner.zig` instead (decode + executeStatelessInput + root comparison,
+        // exactly mirroring `runStateless`), so only the zesu modules it needs directly are wired.
+        extended_vanilla_runner_exe.root_module.addImport("l2_execution", l2_execution_mod);
+        extended_vanilla_runner_exe.root_module.addImport("l2_execution_ssz", l2_execution_ssz_mod);
+        extended_vanilla_runner_exe.root_module.addImport("vanilla_wrap", vanilla_wrap_mod);
+        extended_vanilla_runner_exe.root_module.addImport("zesu_executor", native_imports.executor);
+        extended_vanilla_runner_exe.root_module.addImport("zesu_ssz_decode", native_imports.ssz_decode);
+        extended_vanilla_runner_exe.root_module.addImport("zesu_allocator", native_imports.allocator);
+        extended_vanilla_runner_exe.root_module.addImport("zesu_mpt", native_imports.mpt);
+        linkNativeZesuCrypto(extended_vanilla_runner_exe, native_target, native_crypto);
+
+        const run_extended_vanilla = b.addRunArtifact(extended_vanilla_runner_exe);
+        run_extended_vanilla.addArg("--fixtures");
+        run_extended_vanilla.addDirectoryArg(fixtures_dep.path("blockchain_tests"));
+        if (b.args) |extra| run_extended_vanilla.addArgs(extra);
+        extended_vanilla_step.dependOn(&run_extended_vanilla.step);
+
         const fixtures_parent = std.fs.path.dirname(execution_specs_fixtures_link) orelse ".";
         const mkdir_fixtures_parent = b.addSystemCommand(&.{ "mkdir", "-p", fixtures_parent });
         const remove_old_fixtures_link = b.addSystemCommand(&.{ "rm", "-rf", execution_specs_fixtures_link });
@@ -203,6 +422,22 @@ const ZesuImports = struct {
     executor: *std.Build.Module,
     ssz_decode: *std.Build.Module,
     ssz_output: *std.Build.Module,
+    // Log-preserving seam (src/execution.zig) additions: everything executor/main.zig's
+    // executeStatelessInput/executeBlockStateless preamble touches that isn't already reachable
+    // through the `executor` module's public re-exports. `primitives` isn't exposed by name in
+    // zesu's build.zig comments but IS added via the same expose=true addModule() call as the rest
+    // of this list — needed for the SpecId/isEnabledIn/KECCAK_EMPTY the copied BAL validation uses.
+    primitives: *std.Build.Module,
+    mpt: *std.Build.Module,
+    db: *std.Build.Module,
+    context: *std.Build.Module,
+    input: *std.Build.Module,
+    hardfork: *std.Build.Module,
+    rlp_decode: *std.Build.Module,
+    // The crypto-accelerator interface tx_signing.zig uses for ecrecover/keccak256. Not re-exported
+    // by the `executor` module (tx_signing.zig is one of its private submodules), so
+    // l2_execution.zig's own sender-recovery port imports it directly.
+    accelerators: *std.Build.Module,
 };
 
 /// Pull zesu's exposed modules by name. Which crypto backend zesu uses is selected inside zesu by
@@ -213,6 +448,14 @@ fn zesuImports(zesu: *std.Build.Dependency) ZesuImports {
         .executor = zesu.module("executor"),
         .ssz_decode = zesu.module("ssz_decode"),
         .ssz_output = zesu.module("ssz_output"),
+        .primitives = zesu.module("primitives"),
+        .mpt = zesu.module("mpt"),
+        .db = zesu.module("db"),
+        .context = zesu.module("context"),
+        .input = zesu.module("input"),
+        .hardfork = zesu.module("hardfork"),
+        .rlp_decode = zesu.module("rlp_decode"),
+        .accelerators = zesu.module("accelerators"),
     };
 }
 
@@ -221,6 +464,14 @@ fn addExecutionImports(module: *std.Build.Module, imports: ZesuImports) void {
     module.addImport("zesu_executor", imports.executor);
     module.addImport("zesu_ssz_decode", imports.ssz_decode);
     module.addImport("zesu_ssz_output", imports.ssz_output);
+    module.addImport("zesu_primitives", imports.primitives);
+    module.addImport("zesu_mpt", imports.mpt);
+    module.addImport("zesu_db", imports.db);
+    module.addImport("zesu_context", imports.context);
+    module.addImport("zesu_input", imports.input);
+    module.addImport("zesu_hardfork", imports.hardfork);
+    module.addImport("zesu_rlp_decode", imports.rlp_decode);
+    module.addImport("zesu_accelerators", imports.accelerators);
 }
 
 const NativeCrypto = struct {

@@ -7,8 +7,10 @@ package main
 //   make -C riscv-guests/l2-execution run-execution-specs-ssz-fixtures EXECUTION_SPECS_RUN_SSZ_LIMIT=0
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -19,6 +21,11 @@ import (
 	"strings"
 	"time"
 )
+
+// Exit code the l2-execution-wrap tool returns for a vanilla input that carries EIP-7685 execution
+// requests: the extended guest rejects these by Linea policy, so the harness skips them instead of
+// proving a guaranteed-reject block.
+const wrapSkipExitCode = 3
 
 const (
 	fixturePathColumnWidth = 40
@@ -46,8 +53,9 @@ type selectedInput struct {
 	jsonFile      string
 	testName      string
 	blockIndex    int
-	file          string
-	size          int
+	vanillaFile   string // raw vanilla stateless-input .ssz written from the fixture
+	file          string // wrapped extended-input .ssz fed to the guest
+	size          int    // size of the wrapped input actually run
 	expectedValid bool
 }
 
@@ -121,10 +129,36 @@ func main() {
 		}
 	}
 
+	// Wrap pass: the guest reads the EXTENDED input, so wrap each vanilla .ssz (dummy rollup
+	// fields, zero l2MessageServiceAddress -> bridge suppression, so the guest runs it like
+	// vanilla). Inputs the wrap tool flags as carrying EIP-7685 execution requests are SKIPPED
+	// (the guest would reject them by policy) and counted — never silently dropped.
+	wrapBin := filepath.Join(guestDir, "zig-out", "bin", "l2-execution-wrap")
+	var runnable []selectedInput
+	skipped := 0
+	for _, input := range inputs {
+		skip, err := wrapInput(wrapBin, input.vanillaFile, input.file)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			hadError = true
+			continue
+		}
+		if skip {
+			skipped++
+			testName := fmt.Sprintf("%s:%s[%d]", filepath.ToSlash(input.jsonFile), input.testName, input.blockIndex)
+			fmt.Fprintf(os.Stderr, "skip (execution requests unsupported): %s\n", testName)
+			continue
+		}
+		if info, statErr := os.Stat(input.file); statErr == nil {
+			input.size = int(info.Size())
+		}
+		runnable = append(runnable, input)
+	}
+
 	printTableHeader()
 
 	passed := 0
-	for _, input := range inputs {
+	for _, input := range runnable {
 		success, userTime := runGuest(guestDir, input.file, *zkcFlags)
 		ok := success == input.expectedValid
 		if ok {
@@ -136,12 +170,12 @@ func main() {
 		printTableRow(input.fixturePath, testName, input.size, userTime, ok)
 	}
 
-	fmt.Fprintf(os.Stderr, "summary: %d/%d passed\n", passed, len(inputs))
-	if len(inputs) == 0 {
+	fmt.Fprintf(os.Stderr, "summary: %d/%d passed (%d skipped: execution requests unsupported)\n", passed, len(runnable), skipped)
+	if len(runnable) == 0 {
 		fmt.Fprintln(os.Stderr, "no tests ran")
 		os.Exit(1)
 	}
-	if hadError || passed != len(inputs) {
+	if hadError || passed != len(runnable) {
 		os.Exit(1)
 	}
 }
@@ -255,8 +289,10 @@ func writeSSZInputs(sszDir, fixturePath, targetDir, jsonPath string, limit int) 
 		if limit > 0 && len(out) >= limit {
 			break
 		}
-		outPath := filepath.Join(outDir, fmt.Sprintf("%04d.ssz", i))
-		if err := os.WriteFile(outPath, block.input, 0o644); err != nil {
+		// The guest now consumes the EXTENDED input, so write the vanilla fixture bytes to a
+		// `.vanilla.ssz` here and let the wrap pass in main() produce the `.ssz` the guest reads.
+		vanillaPath := filepath.Join(outDir, fmt.Sprintf("%04d.vanilla.ssz", i))
+		if err := os.WriteFile(vanillaPath, block.input, 0o644); err != nil {
 			return nil, err
 		}
 		out = append(out, selectedInput{
@@ -264,12 +300,30 @@ func writeSSZInputs(sszDir, fixturePath, targetDir, jsonPath string, limit int) 
 			jsonFile:      jsonRel,
 			testName:      block.testName,
 			blockIndex:    block.blockIndex,
-			file:          outPath,
+			vanillaFile:   vanillaPath,
+			file:          filepath.Join(outDir, fmt.Sprintf("%04d.ssz", i)),
 			size:          len(block.input),
 			expectedValid: block.expectedValid,
 		})
 	}
 	return out, nil
+}
+
+// Wraps one vanilla stateless-input .ssz into the extended .ssz the guest reads, using the native
+// l2-execution-wrap tool. Returns skip=true when the tool signals the input carries EIP-7685
+// execution requests (unsupported by Linea policy).
+func wrapInput(wrapBin, vanillaFile, wrappedFile string) (skip bool, err error) {
+	cmd := exec.Command(wrapBin, vanillaFile, wrappedFile)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if runErr := cmd.Run(); runErr != nil {
+		var exitErr *exec.ExitError
+		if errors.As(runErr, &exitErr) && exitErr.ExitCode() == wrapSkipExitCode {
+			return true, nil
+		}
+		return false, fmt.Errorf("wrap %s: %w: %s", vanillaFile, runErr, strings.TrimSpace(stderr.String()))
+	}
+	return false, nil
 }
 
 // Extracts stateless inputs from one fixture JSON file.

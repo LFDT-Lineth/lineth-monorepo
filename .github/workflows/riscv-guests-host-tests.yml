@@ -4,7 +4,9 @@
 #   - spec-tests: `make spec-test` in l2-execution — the FULL EF execution-spec-tests zkevm
 #     stateless suite (~2,880 fixture files / ~16.8k blocks) run through the guest on the host.
 #     This is deliberately NOT orchestrated: the EF suite only exists for the EVM-execution guest.
-# Both run the guest logic natively (no RISC-V, no ZKC); running the guest through the ZKC
+#   - regression-tests: `make regression-test` in l2-execution — the dummy-wrap/vanilla-equivalence
+#     regression guard (extended_vanilla_runner.zig), over the Amsterdam EF corpus.
+# All three run the guest logic natively (no RISC-V, no ZKC); running the guest through the ZKC
 # interpreter is covered separately, by its own dedicated workflow.
 name: riscv-guests host tests
 
@@ -67,6 +69,23 @@ jobs:
 
       - name: Run full EF zkevm stateless fixture suite
         run: make spec-test
+        working-directory: riscv-guests/l2-execution
+        timeout-minutes: 30
+
+  regression-tests:
+    name: l2-execution extended-guest regression guards (host)
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          submodules: false
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup-riscv-guests
+
+      - name: Run extended-guest regression guards
+        run: make regression-test
         working-directory: riscv-guests/l2-execution
         timeout-minutes: 30
 

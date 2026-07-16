@@ -9,7 +9,7 @@
 # itself (ELF->JSON via elf_to_json_gen, then zkc) is owned by
 # arithmetization/src/test/Makefile; fixture-exec/fixture-debug build that ELF and hand it over.
 
-.PHONY: fetch test spec-test prep-execution-specs-json-fixtures run-execution-specs-ssz-fixtures clean compile exec debug require-input
+.PHONY: fetch test spec-test regression-test prep-execution-specs-json-fixtures run-execution-specs-ssz-fixtures clean compile exec debug require-input
 
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
@@ -66,6 +66,15 @@ test:
 SPEC_ARGS ?=
 spec-test:
 	$(ZIG) build spec-tests $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) $(if $(strip $(SPEC_ARGS)),-- $(SPEC_ARGS))
+
+# Permanent regression guard for the extended guest, run against the EF zkevm corpus on the host
+# (see extended_vanilla_runner.zig): asserts the dummy-wrapped extended guest (runL2Execution,
+# delegating per-block execution to execution.executeStatelessInputWithLogs) agrees with the
+# vanilla guest (runStateless) on validity — the property `run-execution-specs-ssz-fixtures` (below)
+# depends on. Scoped to --fork Amsterdam to keep runtime bounded; narrow further with REGRESSION_ARGS.
+REGRESSION_ARGS ?= --fork Amsterdam
+regression-test:
+	$(ZIG) build extended-vanilla $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) -- $(REGRESSION_ARGS)
 
 # Re-uses logic from build.zig to download execution-spec JSON fixtures under $(EXECUTION_SPECS_FIXTURES_DIR).
 prep-execution-specs-json-fixtures:
