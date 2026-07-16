@@ -25,7 +25,7 @@ func (s *schemaScanner) defineNativeModule(mod schema.Module[koalabear.Element])
 	modName := mod.Name().String()
 	if after, found := strings.CutPrefix(modName, nativeMulmod); found {
 		if err := s.defineNativeMulmod(mod, after); err != nil {
-			return fmt.Errorf("native mulmod %s: %v", modName, err)
+			return fmt.Errorf("native mulmod %s: %w", modName, err)
 		}
 		return nil
 	}
@@ -35,7 +35,7 @@ func (s *schemaScanner) defineNativeModule(mod schema.Module[koalabear.Element])
 func (s *schemaScanner) defineNativeMulmod(mod schema.Module[koalabear.Element], after string) error {
 	nbBits, err := strconv.Atoi(after)
 	if err != nil {
-		return fmt.Errorf("invalid number of bits: %v", err)
+		return fmt.Errorf("invalid number of bits: %w", err)
 	}
 
 	modName := mod.Name().String()
@@ -83,7 +83,7 @@ func (s *schemaScanner) defineNativeMulmod(mod schema.Module[koalabear.Element],
 		}
 		idx, err := strconv.Atoi(idxS)
 		if err != nil {
-			return fmt.Errorf("invalid limb index %q: %v", idxS, err)
+			return fmt.Errorf("invalid limb index %q: %w", idxS, err)
 		}
 		if idx < 0 || idx >= nbLimbs {
 			return fmt.Errorf("limb index %d out of range [0, %d)", idx, nbLimbs)
