@@ -206,9 +206,9 @@ func (a *carryProverAction) Run(rt *wiop.Runtime) {
 // carryRow computes the carry values for a single row of the multiplication
 // identity, base 2^nbBitsPerLimb.
 func carryRow(left, right, quo, mod, res []uint64, nbBitsPerLimb int) []field.Element {
-	// TODO: this is called for every row. We can optimize it by reusing the
-	// pools for lhsProd, rhsProd etc., but then we need to be careful when we
-	// add parallelization. Only if it shows in profile
+	// XXX(ivokub): this is called for every row. We can optimize it by reusing
+	// the pools for lhsProd, rhsProd etc., but then we need to be careful when
+	// we add parallelization. Only if it shows in profile
 	lhsProd := limbMul(left, right)
 	rhsProd := limbMul(quo, mod)
 	for j := range res {
@@ -218,7 +218,7 @@ func carryRow(left, right, quo, mod, res []uint64, nbBitsPerLimb int) []field.El
 	}
 	nbCarry := max(len(lhsProd), len(rhsProd))
 	out := make([]field.Element, nbCarry)
-	carry := new(big.Int) // TODO: can use uint64 for carry?
+	carry := new(big.Int) // XXX(ivokub): can use uint64 for carry?
 	tmp := new(big.Int)
 	for j := 0; j < nbCarry; j++ {
 		if j < len(lhsProd) {
