@@ -8,7 +8,10 @@ from .l1_rollup import FinalizationSubmission
 from .l2_execution import hash_address_list, hash_hash_list
 from .rollup import (
 <<<<<<< HEAD
+<<<<<<< HEAD
     BLOB_BYTES_LENGTH,
+=======
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
 =======
 >>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
     RollupProof,
@@ -111,6 +114,9 @@ def run_rollup_aggregation_guest(
 =======
         parent_shnarf=first_proof.public_inputs.parent_shnarf,
         end_shnarf=last_proof.public_inputs.end_shnarf,
+<<<<<<< HEAD
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
+=======
 >>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
         program_vks=program_vks,
     )

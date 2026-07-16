@@ -54,6 +54,7 @@ _PROVER_VERSION = "4.0.0-riscv"
 _EXEC_VK = Hash32(bytes([0xAA]) * 32)
 _ROLLUP_VK = Hash32(bytes([0xBB]) * 32)
 
+<<<<<<< HEAD
 
 def _fixture(name: str) -> Path:
     """Resolve `<name>.json`, allowing an optional `<startBlock>-<endBlock>-` prefix."""
@@ -68,6 +69,8 @@ def _fixture(name: str) -> Path:
 _EXEC_VK = Hash32(bytes([0xAA]) * 32)
 _ROLLUP_VK = Hash32(bytes([0xBB]) * 32)
 
+=======
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
 
 def _load(path: Path) -> dict:
     return json.loads(path.read_text())
@@ -312,6 +315,9 @@ def _sample_rollup_public_input() -> RollupPublicInput:
 =======
         parent_shnarf=Hash32(bytes([0x47]) * 32),
         end_shnarf=Hash32(bytes([0x8D]) * 32),
+<<<<<<< HEAD
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
+=======
 >>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
         program_vks=[_EXEC_VK],
     )
@@ -353,6 +359,9 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     assert len(req.l2_execution_proofs) == 2
 =======
     assert len(req.l2_execution_proofs) == 1
+<<<<<<< HEAD
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
+=======
 >>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
     verifiable = req.l2_execution_proofs[0]
     proof = verifiable.proof
@@ -371,6 +380,7 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     # the coordinator-populated wrapper, not the guest-emitted proof itself.
     assert verifiable.program_vk == _EXEC_VK
 <<<<<<< HEAD
+<<<<<<< HEAD
 
     verifiable2 = req.l2_execution_proofs[1]
     proof2 = verifiable2.proof
@@ -378,6 +388,8 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     assert int(proof2.start_block_number) == 12
     assert int(proof2.public_inputs.end_block_number) == 14
     assert int(proof2.public_inputs.parent_ftx_number) == 18
+=======
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
 =======
 >>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
 
@@ -468,8 +480,12 @@ def test_encode_rollup_response_shape_and_values() -> None:
         "dynamicChainConfigHash", "parentFtxRollingHash", "parentFtxNumber",
         "endFtxRollingHash", "endProcessedFtxNumber", "filteredAddressesHash",
 <<<<<<< HEAD
+<<<<<<< HEAD
         "parentDataRollingHash", "endDataRollingHash", "parentBlockHash", "endBlockHash",
         "startOffset", "endOffset", "programVks",
+=======
+        "parentShnarf", "endShnarf", "programVks",
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
 =======
         "parentShnarf", "endShnarf", "programVks",
 >>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
@@ -505,7 +521,10 @@ def _sample_finalization_submission() -> FinalizationSubmission:
         public_inputs=replace(
             _sample_rollup_public_input(),
 <<<<<<< HEAD
+<<<<<<< HEAD
             start_offset=0,
+=======
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
 =======
 >>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
             program_vks=[_EXEC_VK, _ROLLUP_VK],
@@ -527,6 +546,9 @@ def test_decode_aggregation_request_maps_all_fields() -> None:
     assert len(req.rollup_proofs) == 2
 =======
     assert len(req.rollup_proofs) == 1
+<<<<<<< HEAD
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
+=======
 >>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
     verifiable = req.rollup_proofs[0]
     proof = verifiable.proof
@@ -642,8 +664,12 @@ def test_encode_aggregation_response_is_l1_sufficient() -> None:
         "dynamicChainConfigHash", "parentFtxRollingHash", "parentFtxNumber",
         "endFtxRollingHash", "endProcessedFtxNumber", "filteredAddressesHash",
 <<<<<<< HEAD
+<<<<<<< HEAD
         "parentDataRollingHash", "endDataRollingHash", "parentBlockHash", "endBlockHash",
         "startOffset", "endOffset", "programVks",
+=======
+        "parentShnarf", "endShnarf", "programVks",
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
 =======
         "parentShnarf", "endShnarf", "programVks",
 >>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))

@@ -27,6 +27,9 @@
 =======
     "parentShnarf": "0x4747474747474747474747474747474747474747474747474747474747474747",
     "endShnarf": "0x8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d8d",
+<<<<<<< HEAD:rollup_spec/src/rollup_spec/prover_io/testdata/10-14-getZkRollupProofV1.response.json
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555)):rollup_spec/src/rollup_spec/prover_io/testdata/getZkRollupProofV1.response.json
+=======
 >>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555)):rollup_spec/src/rollup_spec/prover_io/testdata/getZkRollupProofV1.response.json
     "programVks": [
       "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"

@@ -523,6 +523,9 @@ def _encode_rollup_public_inputs(pi: RollupPublicInput) -> dict:
 =======
         "parentShnarf": _hx(pi.parent_shnarf),
         "endShnarf": _hx(pi.end_shnarf),
+<<<<<<< HEAD
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
+=======
 >>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
         # §ProgramVK anchoring: canonical sorted, distinct list of ALL guest
         # program VKs verified beneath this proof, checked against L1's single
@@ -612,6 +615,9 @@ def _decode_rollup_public_input(obj: dict, ctx: str) -> RollupPublicInput:
 =======
         parent_shnarf=h("parentShnarf"),
         end_shnarf=h("endShnarf"),
+<<<<<<< HEAD
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
+=======
 >>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
         program_vks=[
             Hash32(_bytes_from_hex(v, f"{ctx}programVks[{i}]"))

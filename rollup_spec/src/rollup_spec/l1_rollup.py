@@ -210,11 +210,14 @@ def finalize_rollup(
             raise Exception("program VK is not approved")
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     state.current_finalized_position_commitment = keccak256(
         pi.end_data_rolling_hash + _encode_offset(pi.end_offset)
     )
     state.current_finalized_last_block_hash = pi.end_block_hash
 =======
+=======
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
     state.current_finalized_shnarf = pi.end_shnarf
     state.current_finalized_last_block_hash = state.submitted_shnarf_last_block_hashes[pi.end_shnarf]
 >>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))

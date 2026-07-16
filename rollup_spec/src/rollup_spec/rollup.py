@@ -295,6 +295,7 @@ class RollupPublicInput:
     The rollup / rollup-aggregation public input tuple from Readme.md section 2.4.
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     `parent_block_hash` / `end_block_hash` are execution continuity — the role
     the old 3-input shnarf's `lastBlockHash` used to play — now explicit
     public-input fields rather than folded into the DA accumulator (§3.1).
@@ -303,6 +304,8 @@ class RollupPublicInput:
     positions; `end_offset` is a derived output (computed from the guest's own
     recompression), not trusted witness input.
 
+=======
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
 =======
 >>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
     `program_vks` is the set of ALL guest program VKs verified beneath this proof
@@ -341,6 +344,9 @@ class RollupPublicInput:
 =======
     parent_shnarf: Hash32
     end_shnarf: Hash32
+<<<<<<< HEAD
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
+=======
 >>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
     program_vks: List[Hash32] = field(default_factory=list)
 
@@ -382,6 +388,9 @@ class RollupProofPrivateInput:
 =======
     blobs: List[BlobWitness]
     l2_execution_proofs: List[VerifiableL2ExecutionProof]
+<<<<<<< HEAD
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
+=======
 >>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
 
 
@@ -390,7 +399,11 @@ class RollupProof:
     """
     A rollup proof as the rollup guest emits it: the guest *output* (the
 <<<<<<< HEAD
+<<<<<<< HEAD
     20-field `public_inputs` tuple + the root/address preimages) plus the
+=======
+    14-field `public_inputs` tuple + the root/address preimages) plus the
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
 =======
     14-field `public_inputs` tuple + the root/address preimages) plus the
 >>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
@@ -496,6 +509,9 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
 =======
     blob_start_block_number = rollup_input.blobs[0].block_number_range[0]
     blob_end_block_number = rollup_input.blobs[-1].block_number_range[1]
+<<<<<<< HEAD
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
+=======
 >>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
     # Unwrap once: everything below except the recursive-verify loop only needs
     # the guest-emitted `L2ExecutionProof`, not the coordinator-attached VK.
@@ -503,9 +519,12 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     verify_l2_execution_proof_tiling(
         l2_execution_proofs,
 <<<<<<< HEAD
+<<<<<<< HEAD
         rollup_start_block_number,
         rollup_end_block_number,
 =======
+=======
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
         blob_start_block_number,
         blob_end_block_number,
 >>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
@@ -539,8 +558,11 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     last_proof = l2_execution_proofs[-1]
     for proof in l2_execution_proofs:
 <<<<<<< HEAD
+<<<<<<< HEAD
         boundary_index = int(proof.public_inputs.end_block_number) - rollup_start_block_number
 =======
+=======
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
         boundary_index = int(proof.public_inputs.end_block_number) - blob_start_block_number
 >>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
         if boundary_index < 0 or boundary_index >= len(truncated_block_hashes):
@@ -604,6 +626,9 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
 =======
         parent_shnarf=rollup_input.parent_shnarf,
         end_shnarf=current_shnarf,
+<<<<<<< HEAD
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
+=======
 >>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
         program_vks=program_vks,
     )
