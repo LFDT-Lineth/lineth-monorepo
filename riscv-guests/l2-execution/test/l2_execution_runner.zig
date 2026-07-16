@@ -95,8 +95,8 @@ pub fn main(init: std.process.Init) !void {
 
     const out_bytes = switch (format) {
         .ssz => blk: {
-            const r = l2_execution_ssz.encodeOutput(result.public_inputs);
-            break :blk alloc.dupe(u8, &r.out) catch |err| {
+            const encoded = l2_execution_ssz.encodeOutput(result.public_inputs);
+            break :blk alloc.dupe(u8, &encoded) catch |err| {
                 std.debug.print("error: failed to allocate SSZ output: {s}\n", .{@errorName(err)});
                 std.process.exit(1);
             };

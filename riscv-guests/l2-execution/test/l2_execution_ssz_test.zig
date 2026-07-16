@@ -92,12 +92,11 @@ test "output: encode commits ONLY hashPublicInputs(public_inputs)" {
         .tx_froms_hash = repeat32(0x07),
     };
 
-    const result = l2_execution_ssz.encodeOutput(public_inputs);
-    const encoded = &result.out;
+    const out = l2_execution_ssz.encodeOutput(public_inputs);
+    const encoded = &out;
 
     // 2(schema) + 32(hash) = 34 bytes total — ONLY the hash, nothing else.
     try std.testing.expectEqual(@as(usize, 34), encoded.len);
-    try std.testing.expect(result.success);
     try std.testing.expectEqualSlices(u8, &[_]u8{ 0x00, 0x03 }, encoded[0..2]); // OUTPUT_SCHEMA_ID
 
     const pi_hash = l2_execution_ssz.hashPublicInputs(public_inputs);

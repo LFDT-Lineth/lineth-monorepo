@@ -371,25 +371,26 @@ pub fn hashPublicInputs(pi: L2ExecutionProofPublicInput) [32]u8 {
     return out;
 }
 
-/// Fixed-size stack buffer, so committing the guest's output never needs a heap allocation — a
-/// simpler version of zesu's own `Result` convention (`out: [N]u8, len: usize, success: bool`):
-/// there's no `len` here because there is only one output shape (`keccak256(public_inputs)`, always
-/// exactly `OUTPUT_SIZE` bytes), unlike zesu's genuine 105-vs-73-byte success/failure split.
-pub const Result = struct {
-    out: [OUTPUT_SIZE]u8,
-    success: bool,
-};
-
 /// Encode the extended l2-execution guest's ACTUAL wire output: the 0x0003 schema id followed by
-/// ONLY `keccak256(public_inputs)` (see `hashPublicInputs`) — 32 bytes, nothing else.
+/// ONLY `keccak256(public_inputs)` (see `hashPublicInputs`) — 32 bytes, nothing else. Returns a
+/// fixed-size stack array (no allocator, no error union) since this is the only output shape.
+///
+/// Deliberately NOT zesu's vanilla `Result{out, len, success}` convention (`run.zig`): zesu commits
+/// on failure too, but what it commits is the SSZ hash_tree_root of the WHOLE (untrusted, always
+/// available pre-execution) `NewPayloadRequest` paired with `success=0x00` — a binding commitment
+/// to which specific input was rejected, not to anything execution produced. There is no
+/// input-derived equivalent here that's worth committing on failure: any invalidity is a hard
+/// Zig-error guest rejection (`exit(1)`, nothing written to `write_output`), so `encodeOutput` is
+/// only ever reached after a full, successful `L2ExecutionProofPublicInput` already exists — a
+/// `success` field on this type would be permanently `true` and couldn't mean anything.
 /// `start_block_number` and the `l2_l1_messages`/`tx_froms`/`filtered_addresses` preimages on
 /// `L2ExecutionProofOutput` are NOT part of this wire format; they exist for off-chain/native
 /// tooling only (see `l2_execution_json.zig`'s `encodeOutputJson`). The plain 16-field
 /// public-input tuple is never written to the wire either; it is only available via
 /// `encodePublicInputsBytes`/`hashPublicInputs`, for logging or off-chain inspection.
-pub fn encodeOutput(pi: L2ExecutionProofPublicInput) Result {
+pub fn encodeOutput(pi: L2ExecutionProofPublicInput) [OUTPUT_SIZE]u8 {
     var out: [OUTPUT_SIZE]u8 = undefined;
     std.mem.writeInt(u16, out[0..2], OUTPUT_SCHEMA_ID, .big);
     @memcpy(out[SCHEMA_ID_SIZE..], &hashPublicInputs(pi));
-    return .{ .out = out, .success = true };
+    return out;
 }

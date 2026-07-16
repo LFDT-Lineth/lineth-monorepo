@@ -43,17 +43,16 @@ fn guestMain() callconv(.c) noreturn {
     zkvm_io.read_input(&buf_ptr, &buf_size);
     const raw_input = buf_ptr[0..buf_size];
 
-    const result = runL2ExecutionGuest(allocator, raw_input) catch exit(1);
-    zkvm_io.write_output(&result.out);
+    const out = runL2ExecutionGuest(allocator, raw_input) catch exit(1);
+    zkvm_io.write_output(&out);
     exit(0);
 }
 
 /// Decode -> execute -> encode, factored out of `guestMain` so the whole pipeline is one
-/// `catch exit(1)` away from a clean guest rejection. Returns `l2_execution_ssz.Result` BY VALUE
-/// (mirrors zesu's own `Result` convention — see that type's doc comment) rather than an
-/// allocator-backed slice: the output is a small, fixed size, so there's nothing for an allocator
-/// to do here.
-fn runL2ExecutionGuest(allocator: std.mem.Allocator, raw_input: []const u8) !l2_execution_ssz.Result {
+/// `catch exit(1)` away from a clean guest rejection. Returns the output BY VALUE (a small,
+/// fixed-size array — see `l2_execution_ssz.encodeOutput`'s doc comment) rather than an
+/// allocator-backed slice: there's nothing for an allocator to do here.
+fn runL2ExecutionGuest(allocator: std.mem.Allocator, raw_input: []const u8) ![l2_execution_ssz.OUTPUT_SIZE]u8 {
     const decoded = try l2_execution_ssz.decodeInput(allocator, raw_input);
     const result = try l2_execution.runL2Execution(allocator, decoded);
 
