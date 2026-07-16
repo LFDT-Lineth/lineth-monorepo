@@ -36,7 +36,7 @@ fn main<registers, ram, state_row0, state_row1, state_row2, state_row3, state_ro
     // Will be done once per guest upgrade.
     var pc_predecoding:Address = base
     var end_predecoding:Address = executable_region_end()
-    while pc_predecoding < end_predecoding {
+    while pc_predecoding<end_predecoding {
         var instruction:Instruction = read_instruction_from_blobs(pc_predecoding)
         predecoding(pc_predecoding, instruction)
         pc_predecoding = (pc_predecoding + 4) as Address
