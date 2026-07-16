@@ -1,0 +1,7 @@
+type Address = u64
+
+memory ram(index:Address) -> (st:u8)
+
+fn write_8<ram>(address:Address, value:u8) {
+    ram[address] = value
+}

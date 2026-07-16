@@ -1,0 +1,21 @@
+fn main() {
+    var x:[u8;2]
+    var y:[u8;2]
+    //
+    x[0] = 0
+    x[1] = 1
+    y[0] = 0
+    y[1] = 2
+    // ASSERT: x != y
+    f(x, y)
+}
+
+fn f(l:[u8;2], r:[u8;2]) {
+    if id(l) == id(r) {
+        fail
+    }
+}
+
+fn id(x:[u8;2]) -> (r:[u8;2]) {
+    r = x
+}

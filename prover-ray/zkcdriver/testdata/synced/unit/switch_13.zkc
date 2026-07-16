@@ -1,0 +1,27 @@
+pub input data(address:u16) -> (word:u32)
+
+fn main() {
+    var x:u32 = data[0]
+    var y:u32 = data[1]
+    //
+    if f(x) != y {
+        fail
+    }
+}
+
+fn f(x:u32) -> (y:u32) {
+    switch x {
+        case 1: {
+            y = 0
+        }
+        case 2: {
+            y = 0
+        }
+        case 3: {
+            y = 0
+        }
+        default: {
+            y = x
+        }
+    }
+}

@@ -1,0 +1,52 @@
+// Poseidon state: where computations take place
+// The Poseidon state is defined as an array of KOALABEAR field elements (felts)
+// of length STATE_WIDTH × 2, which looks like so:
+//
+//    [ σ₁, σ₂, ..., σₙ │ τ₁, τ₂, ..., τₙ]
+//
+// where n ≡ STATE_WIDTH, the σ-part of the state holds the actual Poseidon state,
+// and the τ-part of the state is meant as temporary storage for operations
+// updating the full Poseidon state.
+memory poseidon_state(address:u8) -> (felt:𝔽)
+
+fn write_to_state<poseidon_state>(address:u8, value:𝔽) -> () {
+    poseidon_state[address] = value
+}
+
+fn read_from_state<poseidon_state>(address:u8) -> (value:𝔽) {
+    value = poseidon_state[address]
+    return
+}
+
+fn write_to_tmp<poseidon_state>(address:u8, value:𝔽) -> () {
+    poseidon_state[address + STATE_WIDTH] = value
+}
+
+fn read_from_tmp<poseidon_state>(address:u8) -> (value:𝔽) {
+    value = poseidon_state[address + STATE_WIDTH]
+    return
+}
+
+fn wipe_tmp<poseidon_state>() {
+    for i:u8 = 0; i<STATE_WIDTH; i = i + 1 {
+        poseidon_state[i + STATE_WIDTH] = 0
+    }
+}
+
+fn state_to_ram<ram, poseidon_state>(address:Address, index:u8) -> (address_updt:Address) {
+    var b3:u8
+    var b2:u8
+    var b1:u8
+    var b0:u8
+    b3::b2::b1::b0 = (poseidon_state[index] as u32)
+    ram[address + 3] = b3
+    ram[address + 2] = b2
+    ram[address + 1] = b1
+    ram[address + 0] = b0
+    address_updt = address + 4
+}
+
+fn print_state<poseidon_state>() {
+    for i:u8 = 0; i<STATE_WIDTH; i = i + 1 {
+    }
+}

@@ -1,5 +1,5 @@
 pub input data(address:u8) -> (byte:u8)
-#[bipartite]
+#[paged]
 memory ram(address:u8) -> (byte:u8)
 
 fn main<ram>() {

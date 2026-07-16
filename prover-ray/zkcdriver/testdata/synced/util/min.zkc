@@ -1,0 +1,25 @@
+pub input data(address:u16) -> (val:u64)
+
+// Determine the minimum of two u64 values and check it against the expected
+// value.  This is a ZkC port of the assembly utility test asm/util/min.  The
+// assembly detects the ordering via a subtraction borrow; ZkC expresses the
+// same comparison directly.
+fn main() {
+    var x:u64 = data[0]
+    var y:u64 = data[1]
+    var expected:u64 = data[2]
+    //
+    if min_u64(x, y) != expected {
+        fail
+    }
+    return
+}
+
+fn min_u64(x:u64, y:u64) -> (z:u64) {
+    if x <= y {
+        z = x
+    } else {
+        z = y
+    }
+    return
+}

@@ -1,0 +1,14 @@
+pub input data(address:u8) -> (byte:u8)
+
+// prove that x / 8 == z.  Division by a constant power of two is optimised
+// into a right shift in fast mode (see OptimizeDivisions).
+fn main() {
+    var x:u8 = data[0]
+    var z:u8 = data[1]
+
+    if (x / 8) != z {
+        fail
+    }
+
+    return
+}

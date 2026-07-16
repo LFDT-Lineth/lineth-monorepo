@@ -1,4 +1,4 @@
-fn keyword_in_middle_of_word() {
+fn main() {
     var X_as_Y:u32
     var X_break_Y:u32
     var X_continue_Y:u32

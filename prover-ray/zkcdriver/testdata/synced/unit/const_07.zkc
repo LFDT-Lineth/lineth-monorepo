@@ -1,0 +1,15 @@
+// ============================================================================
+// Constants wider than 64 bits (i.e. requiring more than two 32-bit limbs in
+// the wide load-constant bytecode).
+// ============================================================================
+
+pub input data(address:u1) -> (word:u32)
+pub output result(address:u1) -> (word:u128)
+
+fn main() {
+    var x:u128 = 0xcafe00000000000000000badc0ffee
+
+    result[0] = x + (data[0] as u128)
+
+    return
+}

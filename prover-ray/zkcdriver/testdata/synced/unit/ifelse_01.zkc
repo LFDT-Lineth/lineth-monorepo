@@ -1,4 +1,8 @@
 // Original example: if/else-if chain with empty bodies (parse/compile check only).
+fn main() {
+    m(0)
+}
+
 fn m(x:u32) {
     if x == 1 {
 

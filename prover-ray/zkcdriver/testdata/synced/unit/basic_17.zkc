@@ -1,4 +1,4 @@
-fn keyword_at_beginning_of_word() {
+fn main() {
     var as_X:u32
     var break_X:u32
     var continue_X:u32

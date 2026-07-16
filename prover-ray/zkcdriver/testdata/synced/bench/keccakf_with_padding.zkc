@@ -1,0 +1,401 @@
+// Implementation of the Keccak-f[1600] permutation
+// State size is 1600 bits
+// Version with multi-rate padding
+
+// ===================================================================
+// Keccak-f[1600] parameters and constants
+// ===================================================================
+
+// State is a 5x5xW matrix
+// For a state size of 1600, W = 64 (5x5x64 = 1600 bits)
+// State is a 5x5 matrix with 64-bit lanes
+type lane = u64
+// The output is 256 bits, so capacity is 2 * 256 = 512 bits
+// Rate = State size - Capacity = 1600 - 512 = 1088 bits
+const bitrate:u64 = 1088
+type bitrate_type = u1088
+// n is the number of rounds
+// n = 12 + 2 * l with 2^l = W
+const n:u5 = 24
+
+// Round constants values
+static RC(address:u5) -> (rc:u64) {
+    0x0000000000000001,
+    0x0000000000008082,
+    0x800000000000808A,
+    0x8000000080008000,
+    0x000000000000808B,
+    0x0000000080000001,
+    0x8000000080008081,
+    0x8000000000008009,
+    0x000000000000008A,
+    0x0000000000000088,
+    0x0000000080008009,
+    0x000000008000000A,
+    0x000000008000808B,
+    0x800000000000008B,
+    0x8000000000008089,
+    0x8000000000008003,
+    0x8000000000008002,
+    0x8000000000000080,
+    0x000000000000800A,
+    0x800000008000000A,
+    0x8000000080008081,
+    0x8000000000008080,
+    0x0000000080000001,
+    0x8000000080008008
+}
+
+// Rotation offsets values
+// column 5 to 7 are unused and filled with 0
+static rot_offset(x:u3, y:u3) -> (offset:u6) {
+    0, 36, 3, 41, 18, 0, 0, 0,
+    1, 44, 10, 45, 2, 0, 0, 0,
+    62, 6, 43, 15, 61, 0, 0, 0,
+    28, 55, 25, 21, 56, 0, 0, 0,
+    27, 20, 39, 8, 14, 0, 0, 0
+}
+
+// Padding constants
+const suffix:u1088 = 1
+const terminator_block:u1088 = 128 // 0b10000000
+type message_type = u5440
+const message_bits:u64 = 5440
+type message_minus_bitrate = u4352
+// In this implementation, the input is the raw message
+// The message can be of any length up to 5440 bits
+pub input message(address:u1) -> (data:message_type)
+pub input message_length(address:u1) -> (length:u64)
+memory n_blocks(address:u1) -> (length:u64)
+memory blocks(address:u64) -> (block:bitrate_type)
+memory state_row0(address:u3) -> (state:lane)
+memory state_row1(address:u3) -> (state:lane)
+memory state_row2(address:u3) -> (state:lane)
+memory state_row3(address:u3) -> (state:lane)
+memory state_row4(address:u3) -> (state:lane)
+memory b0(address:u3) -> (state:lane)
+memory b1(address:u3) -> (state:lane)
+memory b2(address:u3) -> (state:lane)
+memory b3(address:u3) -> (state:lane)
+memory b4(address:u3) -> (state:lane)
+memory c(address:u3) -> (state:lane)
+memory d(address:u3) -> (state:lane)
+pub output result(address:u1) -> (out:u256)
+
+// Accelerator function for modulo 5
+static mod5(address:u5) -> (result:u3) {
+    0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4
+}
+
+const byte_length:u64 = 8
+
+// ===================================================================
+// Main function
+// ===================================================================
+
+fn main<n_blocks, blocks, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d>() {
+
+    multi_rate_padding()
+
+    // no initialization as the state is already filled with 0
+
+    absorbing_phase()
+
+    squeezing_phase()
+
+}
+
+// ===================================================================
+// Multi-rate padding function
+// ===================================================================
+
+fn multi_rate_padding<blocks, n_blocks>() {
+    var raw_message:message_type = message[0]
+    var message_length:u64 = message_length[0]
+    var index:u64 = 0
+    if message_length>message_bits {
+        fail
+    }
+    var message_start:u64 = message_bits - message_length
+
+    // If message is larger than one block, fill complete blocks
+    while ((index + 1) * bitrate)<message_length {
+        blocks[index] = extract_bitrate_from_msg(raw_message, message_start + (index * bitrate))
+        index = index + 1
+    }
+
+    // Remaining message bits for the last block
+    var len_last:u64 = message_length - (index * bitrate)
+    var last_block:u1088 = extract_bitrate_from_msg(raw_message, message_start + (index * bitrate))
+
+    // For multi-rate padding, we need to append a single bit 1 (suffix) followed by the
+    // minimum number of bits 0 followed by a single bit 1 (terminator) such that the length of
+    // the result is a multiple of the block length.
+    // Suffix : sets bit (1080 - len_last)
+    // Terminator : sets bit 1080 (terminator_block constant)
+    // Combined suffix+terminator when they share the same byte, at bit 1080: 0x10000001
+
+    if (len_last + (2 * byte_length)) <= bitrate {
+        // Normal case: both suffix and terminator fit in this block
+        var shift_amount:u1088 = (1080 - len_last) as u1088
+        var suffix_block:u1088 = suffix << shift_amount
+        blocks[index] = last_block | suffix_block | terminator_block
+        n_blocks[0] = index + 1
+    } else {
+        if (len_last + byte_length) <= bitrate {
+            // Combined case: suffix and terminator share the same byte
+            // At bit 1080 = 0b00000001 | 0b10000000 = 0x81 = 129
+            var combined:bitrate_type = 129
+            blocks[index] = last_block | combined
+            n_blocks[0] = index + 1
+        } else {
+            // Overflow case: message fills the block entirely, no room for suffix
+            // Current block = message only
+            blocks[index] = last_block
+            // Suffix and terminator block = suffix at bit 0 + terminator at bit 1080
+            var suffix_and_terminator_block:u1088 = (suffix << (1080 as bitrate_type)) | terminator_block
+            blocks[index + 1] = suffix_and_terminator_block
+            n_blocks[0] = index + 2
+        }
+    }
+}
+
+// ===================================================================
+// Sponge absorption and squeezing phases
+// ===================================================================
+
+// Xor the input blocks into the state
+fn absorbing_phase<n_blocks, blocks, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d>() {
+    for i:u64 = 0; i<n_blocks[0]; i = i + 1 {
+        var c16:u64, c15:u64, c14:u64, c13:u64, c12:u64, c11:u64, c10:u64, c9:u64, c8:u64, c7:u64, c6:u64, c5:u64, c4:u64, c3:u64, c2:u64, c1:u64, c0:u64
+        c16::c15::c14::c13::c12::c11::c10::c9::c8::c7::c6::c5::c4::c3::c2::c1::c0 = blocks[i]
+        state_row0[0] = state_row0[0] ^ switch_endian_u64(c16)
+        state_row1[0] = state_row1[0] ^ switch_endian_u64(c15)
+        state_row2[0] = state_row2[0] ^ switch_endian_u64(c14)
+        state_row3[0] = state_row3[0] ^ switch_endian_u64(c13)
+        state_row4[0] = state_row4[0] ^ switch_endian_u64(c12)
+        state_row0[1] = state_row0[1] ^ switch_endian_u64(c11)
+        state_row1[1] = state_row1[1] ^ switch_endian_u64(c10)
+        state_row2[1] = state_row2[1] ^ switch_endian_u64(c9)
+        state_row3[1] = state_row3[1] ^ switch_endian_u64(c8)
+        state_row4[1] = state_row4[1] ^ switch_endian_u64(c7)
+        state_row0[2] = state_row0[2] ^ switch_endian_u64(c6)
+        state_row1[2] = state_row1[2] ^ switch_endian_u64(c5)
+        state_row2[2] = state_row2[2] ^ switch_endian_u64(c4)
+        state_row3[2] = state_row3[2] ^ switch_endian_u64(c3)
+        state_row4[2] = state_row4[2] ^ switch_endian_u64(c2)
+        state_row0[3] = state_row0[3] ^ switch_endian_u64(c1)
+        state_row1[3] = state_row1[3] ^ switch_endian_u64(c0)
+
+        keccakf()
+    }
+
+}
+
+fn squeezing_phase<state_row0, state_row1, state_row2, state_row3, state_row4>() {
+    result[0] = switch_endian_u64(state_row0[0])::switch_endian_u64(state_row1[0])::switch_endian_u64(state_row2[0])::switch_endian_u64(state_row3[0])
+}
+
+// ===================================================================
+// The Keccak-f permutation
+// ===================================================================
+
+fn keccakf<state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d>() {
+    for j:u5 = 0; j<n; j = j + 1 {
+        var round_constant:u64 = RC[j]
+        keccakf_round(round_constant)
+    }
+}
+
+fn keccakf_round<state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d>(round_constant:u64) {
+    theta()
+    rho()
+    pi()
+    chi()
+    iota(round_constant)
+}
+
+// THETA: column parity mixing step
+// C[x] = A[x,0] ^ A[x,1] ^ A[x,2] ^ A[x,3] ^ A[x,4]
+// D[x] = C[x-1] ^ rot(C[x+1], 1)
+// A[x,y] = A[x,y] ^ D[x]
+fn theta<state_row0, state_row1, state_row2, state_row3, state_row4, c, d>() {
+
+    c[0] = state_row0[0] ^ state_row0[1] ^ state_row0[2] ^ state_row0[3] ^ state_row0[4]
+    c[1] = state_row1[0] ^ state_row1[1] ^ state_row1[2] ^ state_row1[3] ^ state_row1[4]
+    c[2] = state_row2[0] ^ state_row2[1] ^ state_row2[2] ^ state_row2[3] ^ state_row2[4]
+    c[3] = state_row3[0] ^ state_row3[1] ^ state_row3[2] ^ state_row3[3] ^ state_row3[4]
+    c[4] = state_row4[0] ^ state_row4[1] ^ state_row4[2] ^ state_row4[3] ^ state_row4[4]
+
+    for i_minus_one:u5 = 0; i_minus_one<5; i_minus_one = i_minus_one + 1 {
+        var i:u5 = i_minus_one + 1
+        d[mod5(i)] = c[i_minus_one as u3] ^ bit_rotl64(c[mod5(i + 1)], 1)
+    }
+
+    for j:u3 = 0; j<5; j = j + 1 {
+        state_row0[j] = state_row0[j] ^ d[0]
+        state_row1[j] = state_row1[j] ^ d[1]
+        state_row2[j] = state_row2[j] ^ d[2]
+        state_row3[j] = state_row3[j] ^ d[3]
+        state_row4[j] = state_row4[j] ^ d[4]
+    }
+
+}
+
+// RHO: lane rotations step
+// B[y, (2x+3y) mod 5] = rot(A[x,y], r[x,y])
+fn rho<state_row0, state_row1, state_row2, state_row3, state_row4>() {
+
+    for j:u3 = 0; j<5; j = j + 1 {
+        state_row0[j] = bit_rotl64(state_row0[j], rot_offset(0, j))
+        state_row1[j] = bit_rotl64(state_row1[j], rot_offset(1, j))
+        state_row2[j] = bit_rotl64(state_row2[j], rot_offset(2, j))
+        state_row3[j] = bit_rotl64(state_row3[j], rot_offset(3, j))
+        state_row4[j] = bit_rotl64(state_row4[j], rot_offset(4, j))
+    }
+}
+
+// PI: lane permutation step
+// A[x,y] → B[y, (2x+3y) mod 5]
+fn pi<state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4>() {
+
+    // bY[Z] = state_rowX[Y] with Z = (2*X + 3*Y) mod 5
+
+    b0[0] = state_row0[0] // Z = (2*0 + 3*0) mod 5
+    b1[3] = state_row0[1] // Z = (2*0 + 3*1) mod 5
+    b2[1] = state_row0[2] // Z = (2*0 + 3*2) mod 5
+    b3[4] = state_row0[3] // Z = (2*0 + 3*3) mod 5
+    b4[2] = state_row0[4] // Z = (2*0 + 3*4) mod 5
+    b0[2] = state_row1[0] // Z = (2*1 + 3*0) mod 5
+    b1[0] = state_row1[1] // Z = (2*1 + 3*1) mod 5
+    b2[3] = state_row1[2] // Z = (2*1 + 3*2) mod 5
+    b3[1] = state_row1[3] // Z = (2*1 + 3*3) mod 5
+    b4[4] = state_row1[4] // Z = (2*1 + 3*4) mod 5
+    b0[4] = state_row2[0] // Z = (2*2 + 3*0) mod 5
+    b1[2] = state_row2[1] // Z = (2*2 + 3*1) mod 5
+    b2[0] = state_row2[2] // Z = (2*2 + 3*2) mod 5
+    b3[3] = state_row2[3] // Z = (2*2 + 3*3) mod 5
+    b4[1] = state_row2[4] // Z = (2*2 + 3*4) mod 5
+    b0[1] = state_row3[0] // Z = (2*3 + 3*0) mod 5
+    b1[4] = state_row3[1] // Z = (2*3 + 3*1) mod 5
+    b2[2] = state_row3[2] // Z = (2*3 + 3*2) mod 5
+    b3[0] = state_row3[3] // Z = (2*3 + 3*3) mod 5
+    b4[3] = state_row3[4] // Z = (2*3 + 3*4) mod 5
+    b0[3] = state_row4[0] // Z = (2*4 + 3*0) mod 5
+    b1[1] = state_row4[1] // Z = (2*4 + 3*1) mod 5
+    b2[4] = state_row4[2] // Z = (2*4 + 3*2) mod 5
+    b3[2] = state_row4[3] // Z = (2*4 + 3*3) mod 5
+    b4[0] = state_row4[4] // Z = (2*4 + 3*4) mod 5
+}
+
+// CHI: non-linear step
+// A[x,y] = B[x,y] ^ ((not B[x+1,y]) and B[x+2,y])
+fn chi<state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4>() {
+
+    for j:u3 = 0; j<5; j = j + 1 {
+        state_row0[j] = b0[j] ^ ((~b1[j]) & b2[j])
+        state_row1[j] = b1[j] ^ ((~b2[j]) & b3[j])
+        state_row2[j] = b2[j] ^ ((~b3[j]) & b4[j])
+        state_row3[j] = b3[j] ^ ((~b4[j]) & b0[j])
+        state_row4[j] = b4[j] ^ ((~b0[j]) & b1[j])
+    }
+
+}
+
+// IOTA: round constant step
+// A[0,0] = A[0,0] ^ RC
+fn iota<state_row0>(round_constant:u64) {
+    state_row0[0] = state_row0[0] ^ round_constant
+}
+
+// ===================================================================
+// Helper functions
+// ===================================================================
+
+// rotate left by n bits
+fn bit_rotl64(word:u64, n:u6) -> (res:u64) {
+    var b5:u1
+    var b4:u1
+    var b3:u1
+    var b2:u1
+    var b1:u1
+    var b0:u1
+    b5::b4::b3::b2::b1::b0 = n
+    var w:u64 = word
+    // rotate by 32 if bit 5 is set
+    if b5 == 1 {
+        var hi:u32
+        var lo:u32
+        hi::lo = w
+        w = lo::hi
+    }
+    // rotate by 16 if bit 4 is set
+    if b4 == 1 {
+        var hi:u16
+        var lo:u48
+        hi::lo = w
+        w = lo::hi
+    }
+    // rotate by 8 if bit 3 is set
+    if b3 == 1 {
+        var hi:u8
+        var lo:u56
+        hi::lo = w
+        w = lo::hi
+    }
+    // rotate by 4 if bit 2 is set
+    if b2 == 1 {
+        var hi:u4
+        var lo:u60
+        hi::lo = w
+        w = lo::hi
+    }
+    // rotate by 2 if bit 1 is set
+    if b1 == 1 {
+        var hi:u2
+        var lo:u62
+        hi::lo = w
+        w = lo::hi
+    }
+    // rotate by 1 if bit 0 is set
+    if b0 == 1 {
+        var hi:u1
+        var lo:u63
+        hi::lo = w
+        w = lo::hi
+    }
+    res = w
+}
+
+// Convert u64 input from big-endian to little-endian
+// and reverse
+fn switch_endian_u64(val:u64) -> (res:u64) {
+    var hi:u32
+    var lo:u32
+    hi::lo = val
+    var sw_hi:u32 = switch_endian_u32(hi)
+    var sw_lo:u32 = switch_endian_u32(lo)
+    res = sw_lo::sw_hi
+}
+
+fn switch_endian_u32(val:u32) -> (res:u32) {
+    var hi:u16
+    var lo:u16
+    hi::lo = val
+    var sw_hi:u16 = switch_endian_u16(hi)
+    var sw_lo:u16 = switch_endian_u16(lo)
+    res = sw_lo::sw_hi
+}
+
+fn switch_endian_u16(val:u16) -> (res:u16) {
+    var hi:u8
+    var lo:u8
+    hi::lo = val
+    res = lo::hi
+}
+
+fn extract_bitrate_from_msg(val:message_type, start_bits:u64) -> (res:bitrate_type) {
+    var shifted:message_type = val << (start_bits as message_type)
+    var message_leftover:message_minus_bitrate
+    res::message_leftover = shifted
+}

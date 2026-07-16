@@ -1,0 +1,71 @@
+// Right-rotate a u64 value by n bits (n in 0..63).
+//
+// Decomposes n into its 6 individual bits and conditionally applies
+// a fixed-size rotation for each power-of-two shift amount, using
+// destructuring + concatenation for efficiency.
+
+pub input data(address:u2) -> (word:u64)
+
+fn main() {
+    var word:u64 = data[0]
+    var n:u6 = data[1] as u6
+    var expected:u64 = data[2]
+    var res:u64 = bit_rotr64(word, n)
+    if res != expected {
+        fail
+    }
+}
+
+fn bit_rotr64(word:u64, n:u6) -> (res:u64) {
+    var b5:u1
+    var b4:u1
+    var b3:u1
+    var b2:u1
+    var b1:u1
+    var b0:u1
+    b5::b4::b3::b2::b1::b0 = n
+    var w:u64 = word
+    // rotate by 32 if bit 5 is set
+    if b5 == 1 {
+        var hi:u32
+        var lo:u32
+        hi::lo = w
+        w = lo::hi
+    }
+    // rotate by 16 if bit 4 is set
+    if b4 == 1 {
+        var hi:u48
+        var lo:u16
+        hi::lo = w
+        w = lo::hi
+    }
+    // rotate by 8 if bit 3 is set
+    if b3 == 1 {
+        var hi:u56
+        var lo:u8
+        hi::lo = w
+        w = lo::hi
+    }
+    // rotate by 4 if bit 2 is set
+    if b2 == 1 {
+        var hi:u60
+        var lo:u4
+        hi::lo = w
+        w = lo::hi
+    }
+    // rotate by 2 if bit 1 is set
+    if b1 == 1 {
+        var hi:u62
+        var lo:u2
+        hi::lo = w
+        w = lo::hi
+    }
+    // rotate by 1 if bit 0 is set
+    if b0 == 1 {
+        var hi:u63
+        var lo:u1
+        hi::lo = w
+        w = lo::hi
+    }
+    res = w
+}

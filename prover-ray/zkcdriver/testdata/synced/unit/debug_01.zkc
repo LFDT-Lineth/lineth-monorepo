@@ -1,0 +1,25 @@
+pub input data(address:u16) -> (byte:u8)
+
+// prove that two numbers add up to a third, reporting progress via a
+// #[debug] function.
+fn main() {
+    var lhs:u8 = data[0]
+    var rhs:u8 = data[1]
+    var res:u8 = data[2]
+    // report inputs (elided in quiet mode)
+    show(lhs, rhs)
+    // check expected outcome
+    if (lhs + rhs) != res {
+        fail
+    }
+    return
+}
+
+// Report an intermediate computation.  Calls to this function are elided
+// entirely when compiling in quiet mode.  Observe that, whilst a #[debug]
+// function may read memories, it must not return values or write memories.
+#[debug]
+fn show(x:u8, y:u8) {
+    var z:u8 = data[2]
+    printf "checking %d + %d == %d\n", x, y, z
+}

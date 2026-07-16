@@ -1,0 +1,18 @@
+pub input data(address:u16) -> (v:u32)
+
+// Prove x - y - z == e for u32 values.  Under register splitting on a 16-bit
+// field this is a chained subtraction (two subtrahends) whose low limb can
+// borrow more than one 2^16 unit; it exercises the borrow handling of split
+// subtraction.
+fn main() {
+    var x:u32 = data[0]
+    var y:u32 = data[1]
+    var z:u32 = data[2]
+    var e:u32 = data[3]
+
+    if (x - y - z) != e {
+        fail
+    }
+
+    return
+}

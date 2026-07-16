@@ -1,0 +1,12 @@
+pub input data(address:u1) -> (data:u64)
+pub output hi(address:u1) -> (hi:u32)
+
+fn main() {
+    hi[0] = hi_32(data[0])
+    return
+}
+
+fn hi_32(value:u64) -> (hi:u32) {
+    hi = (value >> 32) as u32
+    return
+}

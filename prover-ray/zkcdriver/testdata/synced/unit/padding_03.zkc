@@ -1,0 +1,15 @@
+pub input data(address:u8) -> (byte:u8)
+memory tmp(address:u8) -> (byte:u8)
+
+fn main<tmp>() {
+    var x:u8 = data[0]
+    var y:u8
+    tmp[0] = 0xFF
+    // We force main to be a MLI
+    y = 0
+    y = f(x)
+}
+
+fn f<tmp>(x:u8) -> (y:u8) {
+    y = tmp[0] / x
+}

@@ -1,0 +1,17 @@
+pub input data(address:u8) -> (byte:u8)
+
+// Regression for OptimizeDivisions: the divisor `d` is assigned different
+// power-of-two constants on different paths (8 or 16), so it must NOT be treated
+// as a single statically-known constant and rewritten into a shift.  data is
+// [x, c, z] and the program checks that (x / d) == z, where d = (c != 0 ? 16 : 8) depends on c.
+fn main() {
+    var x:u8 = data[0]
+    var c:u8 = data[1]
+    var z:u8 = data[2]
+
+    if (x / (c != 0 ? 16:8)) != z {
+        fail
+    }
+
+    return
+}

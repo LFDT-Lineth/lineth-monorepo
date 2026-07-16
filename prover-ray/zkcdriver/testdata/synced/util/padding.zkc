@@ -1,0 +1,72 @@
+pub input data(address:u16) -> (val:u64)
+
+// Left-align ("right pad") a u64 input so that its most significant byte is
+// non-zero, and check the result against the expected value.  This is a ZkC
+// port of the assembly utility test asm/util/padding (ported from u128 down to
+// u64).
+//
+// The input is repeatedly shifted up by one byte until its most significant
+// byte is non-zero (a zero input is left unchanged).
+fn main() {
+    var arg:u64 = data[0]
+    var expected:u64 = data[1]
+    //
+    if rpad_64(arg) != expected {
+        fail
+    }
+    // native variant
+    if rpad_64_native(arg) != expected {
+        fail
+    }
+    return
+}
+
+fn rpad_64(arg:u64) -> (res:u64) {
+    var leading_zeroes:u8
+    var remaining:u56
+    leading_zeroes::remaining = arg
+    if leading_zeroes != 0 {
+        // most significant byte already non-zero
+        res = arg
+        return
+    }
+    if remaining != 0 {
+        // shift up by one byte and recurse
+        var z:u8 = 0
+        res = rpad_64(remaining::z)
+        return
+    }
+    // input is zero
+    res = arg
+    return
+}
+
+// Left-align ("right pad") a u64 input using a native loop rather than
+// recursive decomposition: count the leading zero bytes, then shift up.
+fn rpad_64_native(arg:u64) -> (res:u64) {
+    var b:u8
+    var shift:u6
+    var lzb:u4
+    var counting:u1
+    var shiftbits:u6
+    if arg == 0 {
+        res = 0
+        return
+    }
+    lzb = 0
+    counting = 1
+    for i:u4 = 0; i<8; i = i + 1 {
+        shift = (7 - (i as u6)) * 8
+        b = ((arg >> shift) & 0xff) as u8
+        if b == 0 {
+            if counting == 1 {
+                lzb = lzb + 1
+            }
+        } else {
+            counting = 0
+        }
+    }
+    shiftbits = (lzb as u6) * 8
+    res = arg << shiftbits
+    return
+}

@@ -1,0 +1,17 @@
+// ===================================================================
+// felt casting test
+// ===================================================================
+
+fn main() {
+    var neg_one:𝔽 = 0x7f000000 as 𝔽 // ok
+    var one:𝔽 = 0x1 as 𝔽 // ok
+    var zero:𝔽 = 0x0 as 𝔽 // ok
+
+    if (neg_one * neg_one) != one {
+        fail
+    }
+
+    if (neg_one + one) != zero {
+        fail
+    }
+}

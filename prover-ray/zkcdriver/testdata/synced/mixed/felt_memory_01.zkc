@@ -1,0 +1,25 @@
+// ===================================================================
+// memory test: reads and writes to felt memory
+// ===================================================================
+
+memory felt_memory(address:u8) -> (felt:𝔽)
+
+fn main<felt_memory>() {
+    var felt:𝔽 = 13
+    var read_felt:𝔽
+    write_to_state(0, felt)
+    read_felt = read_from_state(0)
+
+    if felt != read_felt {
+        fail
+    }
+}
+
+fn write_to_state<felt_memory>(address:u8, value:𝔽) -> () {
+    felt_memory[address] = value
+}
+
+fn read_from_state<felt_memory>(address:u8) -> (value:𝔽) {
+    value = felt_memory[address]
+    return
+}

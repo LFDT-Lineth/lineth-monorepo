@@ -1,0 +1,16 @@
+pub input data(address:u16) -> (byte:u16)
+
+fn main() {
+    var u:u32 = data[0] as u32
+    var v:u32 = data[1] as u32
+    var w:u32 = data[2] as u32
+    var h:u32 = f(u, v) as u32
+    //
+    if h != w {
+        fail
+    }
+}
+
+fn f(x:u32, y:u32) -> (r:u16) {
+    r = (x + y) as u16
+}

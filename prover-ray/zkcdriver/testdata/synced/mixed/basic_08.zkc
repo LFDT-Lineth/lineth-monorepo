@@ -1,0 +1,15 @@
+pub input data(address:u16) -> (word:u32)
+
+const MINUS_1:𝔽 = 2130706432
+const MINUS_2:𝔽 = 2 * MINUS_1
+
+// prove that two numbers add up to a third.
+fn main() {
+    var val:𝔽 = data[0] as 𝔽
+    var v1:𝔽 = 2 * MINUS_1 * val
+    var v2:𝔽 = MINUS_2 * val
+    //
+    if v1 != v2 {
+        fail
+    }
+}

@@ -15,6 +15,8 @@ fn main() {
     rhs = (rhs << 8) | data[5] as u32
     rhs = (rhs << 8) | data[6] as u32
     rhs = (rhs << 8) | data[7] as u32
+    //
+    printf "lhs=%x, rhs=%x\n", lhs, rhs
     // check expected outcome
     sum[0] = add(lhs, rhs)
     //

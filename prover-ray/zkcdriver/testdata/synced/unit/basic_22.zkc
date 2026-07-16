@@ -2,7 +2,7 @@
 // decoding issue #1696
 // =====================
 
-input inputs(c:u1) -> (d:u1)
+input inputs(c:u3) -> (d:u1)
 
 fn main() {
 

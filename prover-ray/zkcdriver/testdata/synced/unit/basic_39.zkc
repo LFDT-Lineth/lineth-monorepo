@@ -1,0 +1,13 @@
+pub input data(address:u8) -> (word:u16)
+
+fn main() {
+    var x:u16 = data[0]
+    var y:u16
+    // following line should cause a constraint
+    // failure when x >=256.
+    y = (x as u8) as u16
+    //
+    if y != x {
+        fail
+    }
+}

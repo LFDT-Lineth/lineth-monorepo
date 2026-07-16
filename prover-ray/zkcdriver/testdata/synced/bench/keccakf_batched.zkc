@@ -1,0 +1,338 @@
+// Batched variant of keccakf.zkc.
+//
+// Instead of one Keccak-f[1600] hash per VM boot, this version takes
+// `n_vectors` independent inputs and produces `n_vectors` digests in a
+// single boot. The per-vector loop lives in ZkC rather than in the Go
+// test harness, so a single `.accepts` line stands in for what used to
+// be N separate cases.
+//
+// Per-vector message lengths are allowed to differ; the number of
+// pre-padded blocks for vector v is read from `block_counts[v]`. The
+// blocks array is the flat concatenation of every vector's blocks in
+// order, and a running offset (`offset`) tracks where the current
+// vector's blocks start.
+//
+// Layout (matching the regenerated `keccakf.accepts` fixture):
+//   - `n_vectors[0]`        : number of independent hashes to compute
+//   - `block_counts[v]`     : number of pre-padded 1088-bit blocks for vector v
+//   - `blocks[offset + i]`  : i-th block of vector v, with
+//                             offset = sum(block_counts[0..v-1])
+//   - `result[v]`           : 256-bit digest of vector v
+
+// ===================================================================
+// Keccak-f[1600] parameters and constants
+// ===================================================================
+
+type lane = u64
+const bitrate:u64 = 1088
+type bitrate_type = u1088
+const n:u5 = 24
+
+static RC(address:u5) -> (rc:u64) {
+    0x0000000000000001,
+    0x0000000000008082,
+    0x800000000000808A,
+    0x8000000080008000,
+    0x000000000000808B,
+    0x0000000080000001,
+    0x8000000080008081,
+    0x8000000000008009,
+    0x000000000000008A,
+    0x0000000000000088,
+    0x0000000080008009,
+    0x000000008000000A,
+    0x000000008000808B,
+    0x800000000000008B,
+    0x8000000000008089,
+    0x8000000000008003,
+    0x8000000000008002,
+    0x8000000000000080,
+    0x000000000000800A,
+    0x800000008000000A,
+    0x8000000080008081,
+    0x8000000000008080,
+    0x0000000080000001,
+    0x8000000080008008
+}
+
+static rot_offset(x:u3, y:u3) -> (offset:u6) {
+    0, 36, 3, 41, 18, 0, 0, 0,
+    1, 44, 10, 45, 2, 0, 0, 0,
+    62, 6, 43, 15, 61, 0, 0, 0,
+    28, 55, 25, 21, 56, 0, 0, 0,
+    27, 20, 39, 8, 14, 0, 0, 0
+}
+
+// Inputs and outputs (see header comment for layout details).
+pub input n_vectors(address:u1) -> (count:u64)
+pub input block_counts(address:u64) -> (count:u64)
+pub input blocks(address:u64) -> (block:bitrate_type)
+memory state_row0(address:u3) -> (state:lane)
+memory state_row1(address:u3) -> (state:lane)
+memory state_row2(address:u3) -> (state:lane)
+memory state_row3(address:u3) -> (state:lane)
+memory state_row4(address:u3) -> (state:lane)
+memory b0(address:u3) -> (state:lane)
+memory b1(address:u3) -> (state:lane)
+memory b2(address:u3) -> (state:lane)
+memory b3(address:u3) -> (state:lane)
+memory b4(address:u3) -> (state:lane)
+memory c(address:u3) -> (state:lane)
+memory d(address:u3) -> (state:lane)
+pub output result(address:u64) -> (out:u256)
+
+static mod5(address:u5) -> (result:u3) {
+    0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4
+}
+
+const byte_length:u64 = 8
+
+// ===================================================================
+// Main function
+// ===================================================================
+
+fn main<state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d>() {
+
+    // Memory is zero-initialised at boot, so the first iteration starts
+    // from a clean Keccak state.  `reset_state()` at the end of each
+    // iteration leaves the state clean for the next vector (and does a
+    // tiny bit of wasted work after the last one, which is fine).
+    //
+    // `offset` is the cumulative number of blocks already consumed; it
+    // points at the first block of the current vector.
+    var offset:u64 = 0
+    for v:u64 = 0; v<n_vectors[0]; v = v + 1 {
+        var nb:u64 = block_counts[v]
+        absorbing_phase(offset, nb)
+        squeezing_phase(v)
+        reset_state()
+        offset = offset + nb
+    }
+
+}
+
+fn reset_state<state_row0, state_row1, state_row2, state_row3, state_row4>() {
+    for j:u3 = 0; j<5; j = j + 1 {
+        state_row0[j] = 0
+        state_row1[j] = 0
+        state_row2[j] = 0
+        state_row3[j] = 0
+        state_row4[j] = 0
+    }
+    // b0..b4, c and d are overwritten on every keccakf round, so they
+    // don't need to be reset here.
+}
+
+// ===================================================================
+// Sponge absorption and squeezing phases
+// ===================================================================
+
+fn absorbing_phase<state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d>(base:u64, nb:u64) {
+    for i:u64 = 0; i<nb; i = i + 1 {
+        var c16:u64, c15:u64, c14:u64, c13:u64, c12:u64, c11:u64, c10:u64, c9:u64, c8:u64, c7:u64, c6:u64, c5:u64, c4:u64, c3:u64, c2:u64, c1:u64, c0:u64
+        c16::c15::c14::c13::c12::c11::c10::c9::c8::c7::c6::c5::c4::c3::c2::c1::c0 = blocks[base + i]
+        state_row0[0] = state_row0[0] ^ switch_endian_u64(c16)
+        state_row1[0] = state_row1[0] ^ switch_endian_u64(c15)
+        state_row2[0] = state_row2[0] ^ switch_endian_u64(c14)
+        state_row3[0] = state_row3[0] ^ switch_endian_u64(c13)
+        state_row4[0] = state_row4[0] ^ switch_endian_u64(c12)
+        state_row0[1] = state_row0[1] ^ switch_endian_u64(c11)
+        state_row1[1] = state_row1[1] ^ switch_endian_u64(c10)
+        state_row2[1] = state_row2[1] ^ switch_endian_u64(c9)
+        state_row3[1] = state_row3[1] ^ switch_endian_u64(c8)
+        state_row4[1] = state_row4[1] ^ switch_endian_u64(c7)
+        state_row0[2] = state_row0[2] ^ switch_endian_u64(c6)
+        state_row1[2] = state_row1[2] ^ switch_endian_u64(c5)
+        state_row2[2] = state_row2[2] ^ switch_endian_u64(c4)
+        state_row3[2] = state_row3[2] ^ switch_endian_u64(c3)
+        state_row4[2] = state_row4[2] ^ switch_endian_u64(c2)
+        state_row0[3] = state_row0[3] ^ switch_endian_u64(c1)
+        state_row1[3] = state_row1[3] ^ switch_endian_u64(c0)
+
+        keccakf()
+    }
+}
+
+fn squeezing_phase<state_row0, state_row1, state_row2, state_row3, state_row4>(v:u64) {
+    result[v] = switch_endian_u64(state_row0[0])::switch_endian_u64(state_row1[0])::switch_endian_u64(state_row2[0])::switch_endian_u64(state_row3[0])
+}
+
+// ===================================================================
+// The Keccak-f permutation
+// ===================================================================
+
+fn keccakf<state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d>() {
+    for j:u5 = 0; j<n; j = j + 1 {
+        var round_constant:u64 = RC[j]
+        keccakf_round(round_constant)
+    }
+}
+
+fn keccakf_round<state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d>(round_constant:u64) {
+    theta()
+    rho()
+    pi()
+    chi()
+    iota(round_constant)
+}
+
+// THETA: column parity mixing step
+fn theta<state_row0, state_row1, state_row2, state_row3, state_row4, c, d>() {
+
+    c[0] = state_row0[0] ^ state_row0[1] ^ state_row0[2] ^ state_row0[3] ^ state_row0[4]
+    c[1] = state_row1[0] ^ state_row1[1] ^ state_row1[2] ^ state_row1[3] ^ state_row1[4]
+    c[2] = state_row2[0] ^ state_row2[1] ^ state_row2[2] ^ state_row2[3] ^ state_row2[4]
+    c[3] = state_row3[0] ^ state_row3[1] ^ state_row3[2] ^ state_row3[3] ^ state_row3[4]
+    c[4] = state_row4[0] ^ state_row4[1] ^ state_row4[2] ^ state_row4[3] ^ state_row4[4]
+
+    for i_minus_one:u5 = 0; i_minus_one<5; i_minus_one = i_minus_one + 1 {
+        var i:u5 = i_minus_one + 1
+        d[mod5(i)] = c[i_minus_one as u3] ^ bit_rotl64(c[mod5(i + 1)], 1)
+    }
+
+    for j:u3 = 0; j<5; j = j + 1 {
+        state_row0[j] = state_row0[j] ^ d[0]
+        state_row1[j] = state_row1[j] ^ d[1]
+        state_row2[j] = state_row2[j] ^ d[2]
+        state_row3[j] = state_row3[j] ^ d[3]
+        state_row4[j] = state_row4[j] ^ d[4]
+    }
+
+}
+
+// RHO: lane rotations step
+fn rho<state_row0, state_row1, state_row2, state_row3, state_row4>() {
+
+    for j:u3 = 0; j<5; j = j + 1 {
+        state_row0[j] = bit_rotl64(state_row0[j], rot_offset(0, j))
+        state_row1[j] = bit_rotl64(state_row1[j], rot_offset(1, j))
+        state_row2[j] = bit_rotl64(state_row2[j], rot_offset(2, j))
+        state_row3[j] = bit_rotl64(state_row3[j], rot_offset(3, j))
+        state_row4[j] = bit_rotl64(state_row4[j], rot_offset(4, j))
+    }
+}
+
+// PI: lane permutation step
+fn pi<state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4>() {
+    // bY[Z] = state_rowX[Y] with Z = (2*X + 3*Y) mod 5
+    b0[0] = state_row0[0] // Z = (2*0 + 3*0) mod 5
+    b1[3] = state_row0[1] // Z = (2*0 + 3*1) mod 5
+    b2[1] = state_row0[2] // Z = (2*0 + 3*2) mod 5
+    b3[4] = state_row0[3] // Z = (2*0 + 3*3) mod 5
+    b4[2] = state_row0[4] // Z = (2*0 + 3*4) mod 5
+    b0[2] = state_row1[0] // Z = (2*1 + 3*0) mod 5
+    b1[0] = state_row1[1] // Z = (2*1 + 3*1) mod 5
+    b2[3] = state_row1[2] // Z = (2*1 + 3*2) mod 5
+    b3[1] = state_row1[3] // Z = (2*1 + 3*3) mod 5
+    b4[4] = state_row1[4] // Z = (2*1 + 3*4) mod 5
+    b0[4] = state_row2[0] // Z = (2*2 + 3*0) mod 5
+    b1[2] = state_row2[1] // Z = (2*2 + 3*1) mod 5
+    b2[0] = state_row2[2] // Z = (2*2 + 3*2) mod 5
+    b3[3] = state_row2[3] // Z = (2*2 + 3*3) mod 5
+    b4[1] = state_row2[4] // Z = (2*2 + 3*4) mod 5
+    b0[1] = state_row3[0] // Z = (2*3 + 3*0) mod 5
+    b1[4] = state_row3[1] // Z = (2*3 + 3*1) mod 5
+    b2[2] = state_row3[2] // Z = (2*3 + 3*2) mod 5
+    b3[0] = state_row3[3] // Z = (2*3 + 3*3) mod 5
+    b4[3] = state_row3[4] // Z = (2*3 + 3*4) mod 5
+    b0[3] = state_row4[0] // Z = (2*4 + 3*0) mod 5
+    b1[1] = state_row4[1] // Z = (2*4 + 3*1) mod 5
+    b2[4] = state_row4[2] // Z = (2*4 + 3*2) mod 5
+    b3[2] = state_row4[3] // Z = (2*4 + 3*3) mod 5
+    b4[0] = state_row4[4] // Z = (2*4 + 3*4) mod 5
+}
+
+// CHI: non-linear step
+fn chi<state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4>() {
+
+    for j:u3 = 0; j<5; j = j + 1 {
+        state_row0[j] = b0[j] ^ ((~b1[j]) & b2[j])
+        state_row1[j] = b1[j] ^ ((~b2[j]) & b3[j])
+        state_row2[j] = b2[j] ^ ((~b3[j]) & b4[j])
+        state_row3[j] = b3[j] ^ ((~b4[j]) & b0[j])
+        state_row4[j] = b4[j] ^ ((~b0[j]) & b1[j])
+    }
+
+}
+
+// IOTA: round constant step
+fn iota<state_row0>(round_constant:u64) {
+    state_row0[0] = state_row0[0] ^ round_constant
+}
+
+// ===================================================================
+// Helper functions
+// ===================================================================
+
+fn bit_rotl64(word:u64, n:u6) -> (res:u64) {
+    var b5:u1
+    var b4:u1
+    var b3:u1
+    var b2:u1
+    var b1:u1
+    var b0:u1
+    b5::b4::b3::b2::b1::b0 = n
+    var w:u64 = word
+    if b5 == 1 {
+        var hi:u32
+        var lo:u32
+        hi::lo = w
+        w = lo::hi
+    }
+    if b4 == 1 {
+        var hi:u16
+        var lo:u48
+        hi::lo = w
+        w = lo::hi
+    }
+    if b3 == 1 {
+        var hi:u8
+        var lo:u56
+        hi::lo = w
+        w = lo::hi
+    }
+    if b2 == 1 {
+        var hi:u4
+        var lo:u60
+        hi::lo = w
+        w = lo::hi
+    }
+    if b1 == 1 {
+        var hi:u2
+        var lo:u62
+        hi::lo = w
+        w = lo::hi
+    }
+    if b0 == 1 {
+        var hi:u1
+        var lo:u63
+        hi::lo = w
+        w = lo::hi
+    }
+    res = w
+}
+
+fn switch_endian_u64(val:u64) -> (res:u64) {
+    var hi:u32
+    var lo:u32
+    hi::lo = val
+    var sw_hi:u32 = switch_endian_u32(hi)
+    var sw_lo:u32 = switch_endian_u32(lo)
+    res = sw_lo::sw_hi
+}
+
+fn switch_endian_u32(val:u32) -> (res:u32) {
+    var hi:u16
+    var lo:u16
+    hi::lo = val
+    var sw_hi:u16 = switch_endian_u16(hi)
+    var sw_lo:u16 = switch_endian_u16(lo)
+    res = sw_lo::sw_hi
+}
+
+fn switch_endian_u16(val:u16) -> (res:u16) {
+    var hi:u8
+    var lo:u8
+    hi::lo = val
+    res = lo::hi
+}

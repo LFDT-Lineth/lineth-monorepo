@@ -1,0 +1,6 @@
+pub input data(address:u1) -> (word:u16)
+
+fn main() {
+    var x:u16 = data[0]
+    var lo:u8 = (x | 0xFFFF) as u8
+}

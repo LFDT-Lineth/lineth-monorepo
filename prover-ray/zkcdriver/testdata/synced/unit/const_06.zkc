@@ -1,0 +1,14 @@
+// ============================================================================
+// Constants wider than 16 bits used directly within arithmetic.
+// ============================================================================
+
+pub input data(address:u1) -> (word:u32)
+pub output result(address:u1) -> (word:u64)
+
+fn main() {
+    var x:u32 = data[0]
+
+    result[0] = (x as u64) + 0xfa17010badc0ffee
+
+    return
+}

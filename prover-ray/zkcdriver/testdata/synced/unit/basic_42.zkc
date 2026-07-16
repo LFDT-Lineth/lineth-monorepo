@@ -1,0 +1,15 @@
+pub input data(address:u1) -> (data:u32)
+pub output product(address:u1) -> (product:u32)
+
+fn main() {
+    product[0] = mul(data[0], data[1])
+    return
+}
+
+fn mul(a:u32, b:u32) -> (lo:u32) {
+    var a_tmp:u64 = a as u64 // left-pad a to 64 bits
+    var b_tmp:u64 = b as u64 // left-pad b to 64 bits
+    var hi:u32
+    hi::lo = a_tmp * b_tmp // take the low 32 bits
+    return
+}

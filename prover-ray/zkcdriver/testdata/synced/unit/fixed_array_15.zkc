@@ -1,0 +1,12 @@
+pub input data(address:u8) -> (word:u16)
+pub output result(address:u8) -> (byte:u8)
+
+fn main() {
+    var a:u8
+    var b:u8
+    var items:[u16;1]
+    items[0] = data[0]
+    a::b = items[0]
+    result[0] = b
+    result[1] = a
+}

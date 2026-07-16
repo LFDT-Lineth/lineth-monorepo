@@ -1,0 +1,24 @@
+pub input data(address:u8) -> (word:u16)
+
+fn main() {
+    var items:[u16;2]
+    var items2:[u16;2]
+
+    items[0] = data[0]
+    items[1] = data[1]
+    items2[0] = data[2]
+    items2[1] = data[3]
+
+    var expected:u16 = data[4]
+    var pick:u16
+
+    if items != items2 {
+        pick = 0x3333
+    } else {
+        pick = 0x4444
+    }
+
+    if pick != expected {
+        fail
+    }
+}

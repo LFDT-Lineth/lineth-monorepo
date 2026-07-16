@@ -1,0 +1,12 @@
+pub input data(address:u1) -> (word:u16)
+
+fn main() {
+    var x:u16 = data[0]
+    var y:u8 = data[1] as u8
+    //
+    var x_lo:u8 = (x & 0xFF) as u8
+    //
+    if x_lo != y {
+        fail
+    }
+}

@@ -8,7 +8,7 @@ const CASE_MATCH:exmp = 13
 //  * empty or not
 //  * default present or not
 //  * position of the default keyword
-fn main_switch_01() {
+fn main() {
 
     var discr:exmp = CASE_MATCH
 

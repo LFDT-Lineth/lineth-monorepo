@@ -1,0 +1,35 @@
+pub input data(address:u8) -> (byte:u8)
+
+fn main() {
+    var x:u8 = data[0]
+    var r:u8 = data[1]
+
+    switch x {
+        case 0: {
+            r = returnZero(x)
+        }
+        case 1: {
+            r = returnOne(x)
+        }
+        default: {
+            r = returnTwo(x)
+        }
+    }
+
+    return
+}
+
+fn returnZero(x:u8) -> (y:u8) {
+    y = 0
+    return
+}
+
+fn returnOne(x:u8) -> (y:u8) {
+    y = 1
+    return
+}
+
+fn returnTwo(x:u8) -> (y:u8) {
+    y = 2
+    return
+}

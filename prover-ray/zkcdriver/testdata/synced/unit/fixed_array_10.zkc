@@ -1,0 +1,35 @@
+input data(addr:u3) -> (b:u8)
+
+fn main() {
+    var expected:[u8;4]
+    var before:[u8;4]
+    var actual:[u8;4]
+    //
+    before[0] = data[0]
+    before[1] = data[1]
+    before[2] = data[2]
+    before[3] = data[3]
+    //
+    expected[0] = data[4]
+    expected[1] = data[5]
+    expected[2] = data[6]
+    expected[3] = data[7]
+    //
+    actual = rev(before)
+    //
+    if actual[0] != expected[0] ||
+    actual[1] != expected[1] ||
+    actual[2] != expected[2] ||
+    actual[3] != expected[3] {
+        fail
+    }
+}
+
+type ARR = [u8;4]
+
+fn rev(xs:[u8;4]) -> (ys:ARR) {
+    ys[0] = xs[3]
+    ys[1] = xs[2]
+    ys[2] = xs[1]
+    ys[3] = xs[0]
+}

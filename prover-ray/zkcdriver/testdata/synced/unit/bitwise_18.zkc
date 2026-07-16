@@ -1,0 +1,32 @@
+const SGNEXTMASK:u64 = 0xFFFFFFFF_00000000
+
+pub input data(address:u1) -> (data:u32)
+pub output product(address:u1) -> (product:u32)
+
+fn main() {
+    product[0] = mulh(data[0], data[1])
+    return
+}
+
+fn mulh(a:u32, b:u32) -> (hi:u32) {
+    var a_tmp:u128 = sgn_extension_u32_u64(a) as u128 // left-pad a with sign extension to 128 bits
+    var b_tmp:u128 = sgn_extension_u32_u64(b) as u128 // left-pad b with sign extension to 128 bits
+    var c_tmp:u128 = a_tmp * b_tmp // result fits in 128 bits
+    var lo:u32
+    hi::lo = (c_tmp & 0xFFFFFFFF_FFFFFFFF) as u64 // take the high 32 bits (after masking to 64 bits)
+    return
+}
+
+fn sgn_extension_u32_u64(value:u32) -> (ext_value:u64) {
+    // cast from u32 to u64
+    ext_value = value as u64
+
+    // if first bit of int is one, the first 32 bits are 1 as well
+    var first_bit:u32
+    first_bit = value >> 31
+    if first_bit == 1 {
+        ext_value = SGNEXTMASK | ext_value
+    }
+
+    return
+}

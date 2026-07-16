@@ -1,0 +1,13 @@
+// access once memory
+input ROM(address_1:u3, address_2:u5) -> (value:u4)
+output WOM(address_1:u2, address_2:u6) -> (value:u4)
+
+fn main<>() {
+    var r:u4 = 7
+    WOM[0, 16] = f(r)
+}
+
+fn f<>(r:u4) -> (x:u4) {
+    x = r + ROM[1, 3]
+    return
+}

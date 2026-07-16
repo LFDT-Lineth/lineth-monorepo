@@ -1,0 +1,33 @@
+pub input data(address:u16) -> (byte:u8)
+memory ram(address:u8) -> (byte:u8)
+
+// A #[debug] function may read memories and call other #[debug] functions.
+fn main<ram>() {
+    var lhs:u8 = data[0]
+    var rhs:u8 = data[1]
+    var res:u8 = data[2]
+    //
+    ram[0] = res
+    // report inputs (elided in quiet mode)
+    report(lhs, rhs)
+    // check expected outcome
+    if (lhs + rhs) != res {
+        fail
+    }
+    return
+}
+
+#[debug]
+fn report<ram>(x:u8, y:u8) {
+    // call another #[debug] function with memory effects
+    show()
+    // branch within a debug function (regression check for Cmp.ExternUses)
+    if x <= y {
+        printf "%d + %d = %d\n", x, y, x + y
+    }
+}
+
+#[debug]
+fn show<ram>() {
+    printf "expecting %d\n", ram[0]
+}

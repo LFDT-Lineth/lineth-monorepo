@@ -1,0 +1,23 @@
+pub input data(address:u16) -> (byte:u8)
+
+// Calls to #[debug] functions are elided when compiling in quiet mode.  This
+// test runs in quiet mode, hence it only accepts because the call to crash()
+// below is never compiled.
+fn main() {
+    var lhs:u8 = data[0]
+    var rhs:u8 = data[1]
+    var res:u8 = data[2]
+    // elided in quiet mode (would otherwise fail)
+    crash(lhs)
+    // check expected outcome
+    if (lhs + rhs) != res {
+        fail
+    }
+    return
+}
+
+#[debug]
+fn crash(x:u8) {
+    printf "x = %d\n", x
+    fail
+}

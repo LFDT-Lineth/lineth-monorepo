@@ -1,5 +1,5 @@
 pub input data(address:u8) -> (byte:u8)
-#[bipartite]
+#[paged]
 memory ram(address:u64) -> (byte:u8)
 
 fn main<ram>() {
@@ -7,12 +7,13 @@ fn main<ram>() {
     var address:u8 = data[1]
     var expected:u8 = data[2]
     var actual:u8
-    // copy over data, starting at the top of memory and moving downwards
+    // copy over data, starting at the last word of the first page and
+    // crossing over into the second page
     for i:u8 = 0; i != length; i = i + 1 {
-        ram[0xffffffffffffffff - (i as u64)] = data[i]
+        ram[0xfffff + (i as u64)] = data[i]
     }
     // Make the read
-    actual = ram[0xffffffffffffffff - (address as u64)]
+    actual = ram[0xfffff + (address as u64)]
     // check expected against actual
     if expected != actual {
         fail
