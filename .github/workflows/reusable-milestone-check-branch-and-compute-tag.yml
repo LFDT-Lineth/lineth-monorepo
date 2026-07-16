@@ -51,10 +51,6 @@ jobs:
         uses: ./.github/actions/run-git-cliff-commands
         with:
           component-name: linea
-          # Scope-and-path gated: cliff.toml keeps only commits scoped to
-          # any releasable component (coordinator, linea-besu, maru, prover,
-          # postman, tx-exclusion-api), AND include-path restricts to the union
-          # of all component paths.
           cliff-config: cliff.toml
           include-path: |
             coordinator/**
