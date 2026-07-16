@@ -22,6 +22,9 @@ const (
 )
 
 func TestZkcIntegrationTestSynced(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping synced integration tests in short mode")
+	}
 	testFiles, err := filepath.Glob(testdataGlob)
 	if err != nil {
 		t.Fatalf("error globbing testdata: %v", err)
