@@ -4,7 +4,8 @@
 # The `linea` milestone bundles every releasable component, so — unlike the
 # per-component configs that gate on a single scope — this config keeps a commit
 # when ANY of its comma-separated scopes is one of the component scopes:
-#   coordinator, linea-besu, maru, prover, postman, tx-exclusion-api
+#   coordinator, linea-besu, tracer, sequencer, maru, prover, postman,
+#   tx-exclusion-api
 # e.g. `feat(coordinator): x`, `fix(linea-besu): y`, or a shared
 # `feat(coordinator,prover): z` all qualify.
 #
@@ -74,7 +75,7 @@ protect_breaking_commits = false
 # Keep ONLY commits whose scope list contains one of the component scopes as a
 # whole, comma-delimited token; group them by type so the changelog renders
 # sections. The scope fragment
-# `\(([^)]*,)?\s*(coordinator|linea-besu|maru|prover|postman|tx-exclusion-api)\s*(,[^)]*)?\)`
+# `\(([^)]*,)?\s*(coordinator|linea-besu|tracer|sequencer|maru|prover|postman|tx-exclusion-api)\s*(,[^)]*)?\)`
 # matches `(coordinator)`, `(a,prover)`, `(maru,b)`, `(a,linea-besu,b)` — but NOT
 # `(linea-besu-package)` or `(prover-ray)` (exact-token match). The optional `!`
 # for breaking changes sits after `)`, so breaking commits still match and stay
@@ -84,12 +85,12 @@ commit_parsers = [
     # bump the version or appear in the changelog.
     { message = "^chore\\([^)]*\\): update CHANGELOG\\.md", skip = true },
 
-    { message = "^feat\\(([^)]*,)?\\s*(coordinator|linea-besu|maru|prover|postman|tx-exclusion-api)\\s*(,[^)]*)?\\)", group = "<!-- 0 -->🚀 Features" },
-    { message = "^fix\\(([^)]*,)?\\s*(coordinator|linea-besu|maru|prover|postman|tx-exclusion-api)\\s*(,[^)]*)?\\)", group = "<!-- 1 -->🐛 Bug Fixes" },
-    { message = "^perf\\(([^)]*,)?\\s*(coordinator|linea-besu|maru|prover|postman|tx-exclusion-api)\\s*(,[^)]*)?\\)", group = "<!-- 4 -->⚡ Performance" },
-    { message = "^refactor\\(([^)]*,)?\\s*(coordinator|linea-besu|maru|prover|postman|tx-exclusion-api)\\s*(,[^)]*)?\\)", group = "<!-- 2 -->🚜 Refactor" },
-    { message = "^(chore|ci)\\(([^)]*,)?\\s*(coordinator|linea-besu|maru|prover|postman|tx-exclusion-api)\\s*(,[^)]*)?\\)", group = "<!-- 7 -->⚙️ Miscellaneous Tasks" },
-    { message = "^revert\\(([^)]*,)?\\s*(coordinator|linea-besu|maru|prover|postman|tx-exclusion-api)\\s*(,[^)]*)?\\)", group = "<!-- 9 -->◀️ Revert" },
+    { message = "^feat\\(([^)]*,)?\\s*(coordinator|linea-besu|tracer|sequencer|maru|prover|postman|tx-exclusion-api)\\s*(,[^)]*)?\\)", group = "<!-- 0 -->🚀 Features" },
+    { message = "^fix\\(([^)]*,)?\\s*(coordinator|linea-besu|tracer|sequencer|maru|prover|postman|tx-exclusion-api)\\s*(,[^)]*)?\\)", group = "<!-- 1 -->🐛 Bug Fixes" },
+    { message = "^perf\\(([^)]*,)?\\s*(coordinator|linea-besu|tracer|sequencer|maru|prover|postman|tx-exclusion-api)\\s*(,[^)]*)?\\)", group = "<!-- 4 -->⚡ Performance" },
+    { message = "^refactor\\(([^)]*,)?\\s*(coordinator|linea-besu|tracer|sequencer|maru|prover|postman|tx-exclusion-api)\\s*(,[^)]*)?\\)", group = "<!-- 2 -->🚜 Refactor" },
+    { message = "^(chore|ci)\\(([^)]*,)?\\s*(coordinator|linea-besu|tracer|sequencer|maru|prover|postman|tx-exclusion-api)\\s*(,[^)]*)?\\)", group = "<!-- 7 -->⚙️ Miscellaneous Tasks" },
+    { message = "^revert\\(([^)]*,)?\\s*(coordinator|linea-besu|tracer|sequencer|maru|prover|postman|tx-exclusion-api)\\s*(,[^)]*)?\\)", group = "<!-- 9 -->◀️ Revert" },
 
     # Everything else (other scopes, no scope, doc/style/test) is skipped so it
     # neither bumps the version nor shows up in the changelog.

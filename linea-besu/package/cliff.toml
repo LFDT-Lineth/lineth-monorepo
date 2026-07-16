@@ -2,15 +2,17 @@
 # https://git-cliff.org/docs/configuration
 #
 # Unlike the default `cliff.toml` (which selects a component's commits by the
-# files they touch, via `--include-path`), this config selects commits purely
-# by their conventional-commit SCOPE: only commits scoped to `linea-besu` are
-# kept, so the version bump and changelog for `linea-besu-package` derive from
-# those commits alone. A commit qualifies when `linea-besu` is ANY of its
-# comma-separated scopes, e.g. `feat(linea-besu): x` or
-# `feat(coordinator,linea-besu,prover): x`.
+# files they touch, via `--include-path`), this config selects commits by their
+# conventional-commit SCOPE: only commits scoped to one of the linea-besu
+# package scopes are kept, so the version bump and changelog for
+# `linea-besu-package` derive from those commits alone. A commit qualifies when
+# ANY of its comma-separated scopes is `linea-besu`, `tracer`, or `sequencer`,
+# e.g. `feat(linea-besu): x`, `fix(tracer): y`, or
+# `feat(coordinator,sequencer,prover): z`.
 #
-# Use it with `--include-path '**'` (so path filtering is a no-op) so selection
-# is driven entirely by scope.
+# In the release workflows this config is combined with `--include-path` so
+# selection is scope-AND-path gated: a commit must both carry one of these
+# scopes and touch a linea-besu package path to drive the bump/changelog.
 
 
 [changelog]
@@ -42,23 +44,24 @@ require_conventional = false
 split_commits = false
 commit_preprocessors = []
 protect_breaking_commits = false
-# Keep ONLY commits whose scope list contains `linea-besu` as a whole,
-# comma-delimited token; group them by type so the changelog renders sections.
-# The scope fragment `\(([^)]*,)?\s*linea-besu\s*(,[^)]*)?\)` matches
-# `(linea-besu)`, `(a,linea-besu)`, `(linea-besu,b)`, `(a,linea-besu,b)` — but
-# NOT `(linea-besu-package)` (exact-token match). The optional `!` for breaking
+# Keep ONLY commits whose scope list contains one of `linea-besu`, `tracer`, or
+# `sequencer` as a whole, comma-delimited token; group them by type so the
+# changelog renders sections. The scope fragment
+# `\(([^)]*,)?\s*(linea-besu|tracer|sequencer)\s*(,[^)]*)?\)` matches
+# `(linea-besu)`, `(a,tracer)`, `(sequencer,b)`, `(a,linea-besu,b)` — but NOT
+# `(linea-besu-package)` (exact-token match). The optional `!` for breaking
 # changes sits after `)`, so breaking commits still match and stay flagged.
 commit_parsers = [
     # Drop auto-generated CHANGELOG-update commits (any scope) so they never
     # bump the version or appear in the changelog.
     { message = "^chore\\([^)]*\\): update CHANGELOG\\.md", skip = true },
 
-    { message = "^feat\\(([^)]*,)?\\s*linea-besu\\s*(,[^)]*)?\\)", group = "<!-- 0 -->🚀 Features" },
-    { message = "^fix\\(([^)]*,)?\\s*linea-besu\\s*(,[^)]*)?\\)", group = "<!-- 1 -->🐛 Bug Fixes" },
-    { message = "^perf\\(([^)]*,)?\\s*linea-besu\\s*(,[^)]*)?\\)", group = "<!-- 4 -->⚡ Performance" },
-    { message = "^refactor\\(([^)]*,)?\\s*linea-besu\\s*(,[^)]*)?\\)", group = "<!-- 2 -->🚜 Refactor" },
-    { message = "^(chore|ci)\\(([^)]*,)?\\s*linea-besu\\s*(,[^)]*)?\\)", group = "<!-- 7 -->⚙️ Miscellaneous Tasks" },
-    { message = "^revert\\(([^)]*,)?\\s*linea-besu\\s*(,[^)]*)?\\)", group = "<!-- 9 -->◀️ Revert" },
+    { message = "^feat\\(([^)]*,)?\\s*(linea-besu|tracer|sequencer)\\s*(,[^)]*)?\\)", group = "<!-- 0 -->🚀 Features" },
+    { message = "^fix\\(([^)]*,)?\\s*(linea-besu|tracer|sequencer)\\s*(,[^)]*)?\\)", group = "<!-- 1 -->🐛 Bug Fixes" },
+    { message = "^perf\\(([^)]*,)?\\s*(linea-besu|tracer|sequencer)\\s*(,[^)]*)?\\)", group = "<!-- 4 -->⚡ Performance" },
+    { message = "^refactor\\(([^)]*,)?\\s*(linea-besu|tracer|sequencer)\\s*(,[^)]*)?\\)", group = "<!-- 2 -->🚜 Refactor" },
+    { message = "^(chore|ci)\\(([^)]*,)?\\s*(linea-besu|tracer|sequencer)\\s*(,[^)]*)?\\)", group = "<!-- 7 -->⚙️ Miscellaneous Tasks" },
+    { message = "^revert\\(([^)]*,)?\\s*(linea-besu|tracer|sequencer)\\s*(,[^)]*)?\\)", group = "<!-- 9 -->◀️ Revert" },
 
     # Everything else (other scopes, no scope, doc/style/test) is skipped so it
     # neither bumps the version nor shows up in the changelog.
