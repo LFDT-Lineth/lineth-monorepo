@@ -47,6 +47,7 @@ comptime {
     @export(&bls12_map_fp_to_g1, .{ .name = "zkvm_bls12_map_fp_to_g1" });
     @export(&bls12_map_fp2_to_g2, .{ .name = "zkvm_bls12_map_fp2_to_g2" });
     @export(&secp256r1_verify, .{ .name = "zkvm_secp256r1_verify" });
+    @export(&log, .{ .name = "zkvm_log" });
 }
 
 const OK: i32 = 0;
@@ -124,4 +125,19 @@ fn bls12_map_fp_to_g1(field_element: *const [48]u8, result: *[96]u8) callconv(.c
 }
 fn bls12_map_fp2_to_g2(field_element: *const [96]u8, result: *[192]u8) callconv(.c) i32 {
     return if (zesu_accel.bls12_map_fp2_to_g2(field_element, result)) OK else ERR;
+}
+
+// ── Runtime: zkvm_log ────────────────────────────────────────────────────────────────────────────
+// Not a precompile, but the same "statically-linked, define every extern locally" situation applies:
+// zesu's own root module (zesu/src/zkvm/root.zig) declares `extern fn zkvm_log(level, msg_ptr,
+// msg_len)`, and zesu-zkvm's reference implementation for THIS exact backend (linea_host.zig)
+// forwards it to `io.printStr(msg)` — the same Linux write ecall to fd=1 that `linea_zkvm_io`'s
+// `write_output` uses (see evm_execution_guest.zig's `guestMain`). The Linea zkVM captures ALL
+// stdout bytes as the program's single observable output, so a real call here would interleave with
+// (and corrupt) the guest's actual `write_output` commit. NO-OP for now; re-enable once ZkC exposes
+// logging that doesn't alias the output commitment.
+fn log(level: u8, msg_ptr: [*]const u8, msg_len: usize) callconv(.c) void {
+    _ = level;
+    _ = msg_ptr;
+    _ = msg_len;
 }

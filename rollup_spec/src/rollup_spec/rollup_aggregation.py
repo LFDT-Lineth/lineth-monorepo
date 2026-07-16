@@ -5,7 +5,7 @@ from ethereum.crypto.hash import Hash32
 from ethereum.state import Address
 
 from .l1_rollup import FinalizationSubmission
-from .l2_execution import hash_address_list, hash_hash_list
+from .l2_execution import hash_address_list, hash_digest_list
 from .rollup import (
     RollupProof,
     RollupPublicInput,
@@ -80,7 +80,7 @@ def run_rollup_aggregation_guest(
     public_inputs = RollupPublicInput(
         end_block_number=last_proof.public_inputs.end_block_number,
         end_block_timestamp=last_proof.public_inputs.end_block_timestamp,
-        l2_l1_bridge_transaction_tree=hash_hash_list(merged_l2_l1_roots),
+        l2_l1_bridge_transaction_tree=hash_digest_list(merged_l2_l1_roots),
         parent_l1_l2_bridge_rolling_hash=first_proof.public_inputs.parent_l1_l2_bridge_rolling_hash,
         parent_l1_l2_bridge_rolling_hash_message_number=(
             first_proof.public_inputs.parent_l1_l2_bridge_rolling_hash_message_number
@@ -127,7 +127,7 @@ def verify_rollup_proof(program_vk: Hash32, proof: RollupProof) -> None:
     # First: the recursive STARK verify against the explicit verify key.
     recursive_stark_verify(program_vk, proof.proof)
     # PRECOMPILE: keccak256 (preimage-binding checks).
-    if hash_hash_list(proof.l2_l1_roots) != proof.public_inputs.l2_l1_bridge_transaction_tree:
+    if hash_digest_list(proof.l2_l1_roots) != proof.public_inputs.l2_l1_bridge_transaction_tree:
         raise Exception("invalid l2L1BridgeTransactionTree preimage")
     if hash_address_list(proof.filtered_addresses) != proof.public_inputs.filtered_addresses_hash:
         raise Exception("invalid rollup filteredAddressesHash preimage")

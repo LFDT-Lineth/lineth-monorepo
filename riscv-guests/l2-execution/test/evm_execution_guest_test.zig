@@ -5,6 +5,7 @@ const guest = @import("evm_execution_guest");
 const executor = @import("zesu_executor");
 const ssz_decode = @import("zesu_ssz_decode");
 const zesu_allocator = @import("zesu_allocator");
+const mpt = @import("zesu_mpt");
 
 // Runs the thin wrapper (vanilla zesu stateless execution) on a real execution-spec-tests zkevm SSZ
 // fixture and asserts the serialized validation result matches the fixture's expected output —
@@ -41,7 +42,10 @@ test "executeStatelessInputWithLogs matches vanilla executeStatelessInput's root
     // singleton being set by the caller — mirrors what guest.runStateless does before calling it.
     zesu_allocator.set(allocator);
     const vanilla = try executor.executeStatelessInput(allocator, si, si.chain_config.fork_name);
-    const with_logs = try guest.execution.executeStatelessInputWithLogs(allocator, si, si.chain_config.fork_name.?);
+
+    var node_index = try mpt.buildNodeIndex(allocator, si.witness.nodes);
+    defer node_index.deinit();
+    const with_logs = try guest.execution.executeStatelessInputWithLogs(allocator, si, si.chain_config.fork_name.?, &node_index);
 
     try std.testing.expectEqualSlices(u8, &vanilla.pre_state_root, &with_logs.pre_state_root);
     try std.testing.expectEqualSlices(u8, &vanilla.post_state_root, &with_logs.post_state_root);

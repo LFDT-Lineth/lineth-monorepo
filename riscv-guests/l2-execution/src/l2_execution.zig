@@ -5,8 +5,10 @@
 //!   - per-block execution + full logs: `execution.executeStatelessInputWithLogs`;
 //!   - vanilla stateless-input decode: `zesu_ssz_decode.decode`;
 //!   - witness-backed MPT account/storage reads: `zesu_mpt.verifyAccountIndexed` /
-//!     `verifyStorageIndexed` over a NodeIndex built from ALL payloads' witness state nodes combined
-//!     (mirrors the Python reference's `_build_node_index` over `all_witnesses`).
+//!     `verifyStorageIndexed` over a NodeIndex built ONCE from ALL payloads' witness state nodes
+//!     combined (mirrors the Python reference's `_build_node_index` over `all_witnesses`) — the
+//!     SAME index is then passed into `execution.executeStatelessInputWithLogs` for every payload,
+//!     so the guest never pays for `mpt.buildNodeIndex` more than this one time.
 //!
 //! Transaction-sender recovery for forced transactions NOT in the block (the Invalid/Refused §6.5
 //! sub-cases) needs the same ECDSA recovery zesu's block executor performs internally
@@ -23,6 +25,7 @@ const input = @import("zesu_input");
 const primitives = @import("zesu_primitives");
 const ssz_decode = @import("zesu_ssz_decode");
 const zesu_allocator = @import("zesu_allocator");
+const rlp_decode = @import("zesu_rlp_decode");
 const l2_execution_ssz = @import("l2_execution_ssz");
 
 const execution = @import("execution.zig");
@@ -101,7 +104,11 @@ fn addToForcedTxRollingHash(prev: [32]u8, tx_hash: [32]u8, deadline: u64, from_a
     return mpt.keccak256(&buf);
 }
 
-fn hashHashList(alloc: std.mem.Allocator, values: []const [32]u8) ![32]u8 {
+/// Hash of a list of 32-byte digests (e.g. `l2_l1_messages_hash`'s message-hash preimages). Named
+/// `hashDigestList`, matching the Python oracle's `hash_digest_list` (renamed from `hash_hash_list`
+/// for the same reason): "hash a HashList" reads as a typo, not a type name; `Digest` avoids the
+/// verb/noun clash.
+fn hashDigestList(alloc: std.mem.Allocator, values: []const [32]u8) ![32]u8 {
     const buf = try alloc.alloc(u8, values.len * 32);
     defer alloc.free(buf);
     for (values, 0..) |v, i| @memcpy(buf[i * 32 ..][0..32], &v);
@@ -338,16 +345,39 @@ pub fn runL2Execution(alloc: std.mem.Allocator, in: l2_execution_ssz.L2Execution
         if (!std.mem.eql(u8, &payload.parent_hash, &current_parent_hash)) return error.ParentHashChainMismatch;
         if (payload.base_fee_per_gas != base_fee) return error.BaseFeeNotConstant;
         if (!std.mem.eql(u8, &payload.fee_recipient, &in.chain_config.coinbase)) return error.FeeRecipientMismatch;
-        // Monotonic timestamps and block-number contiguity follow from the engine's per-block
-        // checks plus the parentHash chaining asserted above, so they are not restated here.
+        // A real, hash-verified parent header MUST be resolvable from this payload's own witness,
+        // UNLESS this genuinely is genesis (block 0), which has no parent to prove — theoretically
+        // supported (some Lineth deployment could start a range there), but constrained to the
+        // standard Ethereum convention (parent_hash == zero) so the exemption can't be (ab)used to
+        // skip the header check for anything other than a real genesis block. This guards against a
+        // real gap: `execution.zig`'s `pre_state_root` derivation (`rlp_decode.findPreStateRoot(...)
+        // orelse ep.state_root`) falls back to the payload's OWN claimed (post-execution) state_root
+        // as its pre-state root whenever no witness header matches — self-referential, and
+        // completely disconnected from the real state behind `payload.parent_hash`. Combined with a
+        // no-op block, that lets a forged witness pick an arbitrary starting trie and forge whatever
+        // it reads from it (e.g. the first payload's `readL1L2BridgeState` reads, below, which land
+        // straight in the public output). Requiring this to resolve forces `execution.zig`'s own
+        // header-chain verification to run for real (never silently skipped) and ties
+        // `payload.block_number` to the real parent's real number — closing the
+        // block-number-contiguity gap noted below as a side effect, since `findPreStateRoot` only
+        // matches a header that's part of the hash-chain verified back to `payload.parent_hash`.
+        if (payload.block_number == 0) {
+            if (!std.mem.allEqual(u8, &payload.parent_hash, 0)) return error.InvalidGenesisParentHash;
+        } else if (rlp_decode.findPreStateRoot(si.witness.headers, payload.block_number) == null) {
+            return error.MissingParentHeaderWitness;
+        }
+        // Monotonic timestamps follow from the engine's per-block check (zesu's
+        // block_validation.validateBlock: `env.timestamp <= env.parent_timestamp` ->
+        // error.InvalidBlockTimestampOlderThanParent), fed the witness-verified parent header's own
+        // timestamp — guaranteed reachable now that a real parent header is required above.
 
-        // ── Linea policy: this rollup does not support EIP-7685 requests ──
+        // ── Lineth policy: this rollup does not support EIP-7685 requests ──
         const requests = si.new_payload_request.execution_requests;
         if (requests.deposits.len != 0 or requests.withdrawals.len != 0 or requests.consolidations.len != 0) {
             return error.ExecutionRequestsNotSupported;
         }
 
-        // ── Linea policy: no beacon-chain withdrawals — this is an L2 rollup, not L1. Rejected here
+        // ── Lineth policy: no beacon-chain withdrawals — this is an L2 rollup, not L1. Rejected here
         // (cheap length check) rather than processed, so no proving cycles are ever spent crediting
         // a withdrawal that can't legitimately exist on this chain.
         if (payload.withdrawals.len != 0) {
@@ -362,7 +392,10 @@ pub fn runL2Execution(alloc: std.mem.Allocator, in: l2_execution_ssz.L2Execution
         }
 
         // ── State transition (delegated) ──
-        const result = try execution.executeStatelessInputWithLogs(alloc, si, GUEST_FORK);
+        // Reuses the SAME combined `node_index` built above (not a fresh per-payload one — see
+        // `executeStatelessInputWithLogs`'s doc comment): it's a superset of `si.witness.nodes`
+        // alone, so every proof this payload's execution needs is already indexed.
+        const result = try execution.executeStatelessInputWithLogs(alloc, si, GUEST_FORK, &node_index);
         // Validity check the delegated seam deliberately does NOT do (executeStatelessInputWithLogs
         // is a faithful executeStatelessInput replica and returns computed roots without judging
         // them): reject any block whose recomputed post-state / receipts roots disagree with the
@@ -418,7 +451,7 @@ pub fn runL2Execution(alloc: std.mem.Allocator, in: l2_execution_ssz.L2Execution
         .end_block_hash = last_payload.block_hash,
         .end_block_number = last_payload.block_number,
         .end_block_timestamp = last_payload.timestamp,
-        .l2_l1_messages_hash = try hashHashList(alloc, l2_l1_messages.items),
+        .l2_l1_messages_hash = try hashDigestList(alloc, l2_l1_messages.items),
         .parent_l1_l2_bridge_rolling_hash = parent_bridge.hash,
         .parent_l1_l2_bridge_rolling_hash_message_number = parent_bridge.number,
         .end_l1_l2_bridge_rolling_hash = end_bridge.hash,
@@ -448,7 +481,7 @@ pub const test_api = struct {
     pub const mappingSlotFn = mappingSlot;
     pub const chainConfigHashFn = chainConfigHash;
     pub const addToForcedTxRollingHashFn = addToForcedTxRollingHash;
-    pub const hashHashListFn = hashHashList;
+    pub const hashDigestListFn = hashDigestList;
     pub const hashAddressListFn = hashAddressList;
     pub const readAccountFn = readAccount;
     pub const readStorageFn = readStorage;

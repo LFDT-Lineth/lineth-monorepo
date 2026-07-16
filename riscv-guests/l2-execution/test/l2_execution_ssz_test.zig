@@ -68,42 +68,39 @@ test "input: decoded fields match the request fixture" {
     try std.testing.expectEqual(@as(usize, 0), ftx1.signed_tx_rlp.len);
 }
 
-// Cross-language byte-exact gate (output): build the same logical value the Python side built
-// from `getZkL2ExecutionProofV1.response.json` and assert `encodeOutput` reproduces the committed
-// golden vector exactly.
-test "output: encode reproduces the golden vector exactly" {
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-    defer arena.deinit();
-    const alloc = arena.allocator();
-
-    const value = l2_execution_ssz.L2ExecutionProofOutput{
-        .public_inputs = .{
-            .parent_block_hash = repeat32(0x0a),
-            .end_block_hash = repeat32(0x0b),
-            .end_block_number = 1000503,
-            .end_block_timestamp = 1763000123,
-            .l2_l1_messages_hash = repeat32(0x01),
-            .parent_l1_l2_bridge_rolling_hash = repeat32(0x02),
-            .parent_l1_l2_bridge_rolling_hash_message_number = 0,
-            .end_l1_l2_bridge_rolling_hash = repeat32(0x03),
-            .end_l1_l2_bridge_rolling_hash_message_number = 5,
-            .dynamic_chain_config_hash = repeat32(0xc0),
-            .parent_ftx_rolling_hash = repeat32(0x04),
-            .parent_processed_ftx_number = 16,
-            .end_ftx_rolling_hash = repeat32(0x05),
-            .end_processed_ftx_number = 18,
-            .filtered_addresses_hash = repeat32(0x06),
-            .tx_froms_hash = repeat32(0x07),
-        },
-        .start_block_number = 1000501,
-        .l2_l1_messages = &[_][32]u8{repeat32(0x08)},
-        .tx_froms = &[_][20]u8{ repeat20(0x01), repeat20(0x02) },
-        .filtered_addresses = &[_][20]u8{repeat20(0x09)},
+// `encodeOutput` now commits ONLY `keccak256(public_inputs)` — 32 bytes, nothing else — instead of
+// the plain 368-byte tuple the Python reference codec (and this file's `output_bytes` golden
+// vector) still emits, so this can no longer be a byte-exact gate against `output_bytes`. It
+// instead asserts internal self-consistency against `hashPublicInputs` directly.
+test "output: encode commits ONLY hashPublicInputs(public_inputs)" {
+    const public_inputs = l2_execution_ssz.L2ExecutionProofPublicInput{
+        .parent_block_hash = repeat32(0x0a),
+        .end_block_hash = repeat32(0x0b),
+        .end_block_number = 1000503,
+        .end_block_timestamp = 1763000123,
+        .l2_l1_messages_hash = repeat32(0x01),
+        .parent_l1_l2_bridge_rolling_hash = repeat32(0x02),
+        .parent_l1_l2_bridge_rolling_hash_message_number = 0,
+        .end_l1_l2_bridge_rolling_hash = repeat32(0x03),
+        .end_l1_l2_bridge_rolling_hash_message_number = 5,
+        .dynamic_chain_config_hash = repeat32(0xc0),
+        .parent_ftx_rolling_hash = repeat32(0x04),
+        .parent_processed_ftx_number = 16,
+        .end_ftx_rolling_hash = repeat32(0x05),
+        .end_processed_ftx_number = 18,
+        .filtered_addresses_hash = repeat32(0x06),
+        .tx_froms_hash = repeat32(0x07),
     };
 
-    const encoded = try l2_execution_ssz.encodeOutput(alloc, value);
+    const encoded = try l2_execution_ssz.encodeOutput(std.testing.allocator, public_inputs);
+    defer std.testing.allocator.free(encoded);
 
-    try std.testing.expectEqualSlices(u8, output_bytes, encoded);
+    // 2(schema) + 32(hash) = 34 bytes total — ONLY the hash, nothing else.
+    try std.testing.expectEqual(@as(usize, 34), encoded.len);
+    try std.testing.expectEqualSlices(u8, &[_]u8{ 0x00, 0x03 }, encoded[0..2]); // OUTPUT_SCHEMA_ID
+
+    const pi_hash = l2_execution_ssz.hashPublicInputs(public_inputs);
+    try std.testing.expectEqualSlices(u8, &pi_hash, encoded[2..34]);
 }
 
 test "input: rejects a body shorter than the fixed head" {

@@ -50,7 +50,7 @@ test "addToForcedTxRollingHash matches the Python oracle" {
     try testing.expectEqualSlices(u8, &want, &got);
 }
 
-test "hashAddressList / hashHashList match the Python oracle, including the empty-list case" {
+test "hashAddressList / hashDigestList match the Python oracle, including the empty-list case" {
     var arena = std.heap.ArenaAllocator.init(testing.allocator);
     defer arena.deinit();
     const alloc = arena.allocator();
@@ -58,7 +58,7 @@ test "hashAddressList / hashHashList match the Python oracle, including the empt
     const empty_want = [_]u8{ 0xc5, 0xd2, 0x46, 0x01, 0x86, 0xf7, 0x23, 0x3c, 0x92, 0x7e, 0x7d, 0xb2, 0xdc, 0xc7, 0x03, 0xc0, 0xe5, 0x00, 0xb6, 0x53, 0xca, 0x82, 0x27, 0x3b, 0x7b, 0xfa, 0xd8, 0x04, 0x5d, 0x85, 0xa4, 0x70 };
     const empty_addrs = try api.hashAddressListFn(alloc, &.{});
     try testing.expectEqualSlices(u8, &empty_want, &empty_addrs);
-    const empty_hashes = try api.hashHashListFn(alloc, &.{});
+    const empty_hashes = try api.hashDigestListFn(alloc, &.{});
     try testing.expectEqualSlices(u8, &empty_want, &empty_hashes);
 
     const addr1 = repeat(20, 0x01);
@@ -70,7 +70,7 @@ test "hashAddressList / hashHashList match the Python oracle, including the empt
     const h1 = repeat(32, 0xaa);
     const h2 = repeat(32, 0xbb);
     const hash_want = [_]u8{ 0x9f, 0x89, 0xfa, 0xaf, 0x14, 0x95, 0x29, 0x83, 0x00, 0xca, 0x41, 0xed, 0xde, 0x79, 0xc5, 0xcc, 0x9c, 0xb9, 0xbf, 0x17, 0xe1, 0xc9, 0xef, 0x97, 0xac, 0xfd, 0xc5, 0x31, 0x94, 0xf9, 0x01, 0xe1 };
-    const got_hash = try api.hashHashListFn(alloc, &.{ h1, h2 });
+    const got_hash = try api.hashDigestListFn(alloc, &.{ h1, h2 });
     try testing.expectEqualSlices(u8, &hash_want, &got_hash);
 }
 

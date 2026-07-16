@@ -460,7 +460,7 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
         end_block_hash=last_payload.block_hash,
         end_block_number=last_payload.block_number,
         end_block_timestamp=U64(last_payload.timestamp),
-        l2_l1_messages_hash=hash_hash_list(l2_l1_message_hashes),
+        l2_l1_messages_hash=hash_digest_list(l2_l1_message_hashes),
         parent_l1_l2_bridge_rolling_hash=parent_rolling_hash,
         parent_l1_l2_bridge_rolling_hash_message_number=parent_rolling_hash_number,
         end_l1_l2_bridge_rolling_hash=end_rolling_hash,
@@ -483,7 +483,7 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
     )
 
 
-def hash_hash_list(values: Sequence[Hash32]) -> Hash32:
+def hash_digest_list(values: Sequence[Hash32]) -> Hash32:
     return keccak256(b"".join(bytes(value) for value in values))
 
 

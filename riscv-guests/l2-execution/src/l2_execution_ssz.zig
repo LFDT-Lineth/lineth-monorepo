@@ -15,8 +15,13 @@
 //!   SszL2ExecutionProofPrivateInput:  92 bytes  [32+8+20+20+8+4]
 //!   SszLineaPayloadInput:              8 bytes  [4+4]
 //!   SszForcedTransactionWitness:      21 bytes  [8+4+1+8]
-//!   SszL2ExecutionProofOutput:       388 bytes  [368(public_inputs)+8+4+4+4]
-//!   SszL2ExecutionProofPublicInput:  368 bytes  (16 fields, all fixed-size)
+//!   SszL2ExecutionProofOutput:        32 bytes  (ONLY `keccak256(public_inputs)` — see
+//!     `hashPublicInputs`/`encodeOutput`; `L2ExecutionProofOutput`'s other fields —
+//!     `start_block_number`, `l2_l1_messages`, `tx_froms`, `filtered_addresses` — are off-chain/
+//!     native-tooling data (see `l2_execution_json.zig`), never part of this wire format)
+//!   SszL2ExecutionProofPublicInput:  368 bytes  (16 fields, all fixed-size) — never written to the
+//!     wire itself; only its hash is (`encodePublicInputsBytes` exists purely for logging/off-chain
+//!     visibility, e.g. the guest's `zkvm_log` call).
 
 const std = @import("std");
 
@@ -307,10 +312,10 @@ pub fn encodeInput(alloc: std.mem.Allocator, v: L2ExecutionProofPrivateInput) ![
 }
 
 // ── L2ExecutionProofOutput (the extended guest OUTPUT) ────────────────────────
-// public_inputs has no variable fields, so it is inlined directly (368 bytes).
+// The plain public-input tuple, SSZ-encoded, has no variable fields (368 bytes).
 const PI_FIXED_SIZE: usize = 368;
-// public_inputs(368) + start_block_number(8) + 3 list offsets(4 each) = 388.
-const OUTPUT_FIXED_SIZE: usize = PI_FIXED_SIZE + 8 + 4 + 4 + 4;
+// The wire output is ONLY keccak256(public_inputs) — nothing else.
+const OUTPUT_BODY_SIZE: usize = 32;
 
 /// Write a 32-byte hash at the cursor and advance it.
 inline fn putHash(out: []u8, pos: *usize, value: [32]u8) void {
@@ -345,48 +350,35 @@ fn encodePublicInputs(out: []u8, pi: L2ExecutionProofPublicInput) void {
     std.debug.assert(pos == PI_FIXED_SIZE);
 }
 
-/// Encode the extended l2-execution guest output: the 0x0003 schema id
-/// followed by the SSZ `SszL2ExecutionProofOutput` — the full public-input
-/// tuple plus the revealed preimages the rollup guest needs. There is no
-/// `proof` field: that is attached by the prover layer above the guest.
-pub fn encodeOutput(alloc: std.mem.Allocator, v: L2ExecutionProofOutput) ![]u8 {
-    if (v.l2_l1_messages.len > MAX_MESSAGES) return error.InvalidSsz;
-    if (v.tx_froms.len > MAX_TX_FROMS) return error.InvalidSsz;
-    if (v.filtered_addresses.len > MAX_FILTERED) return error.InvalidSsz;
+/// SSZ-encode the plain public-input tuple to its fixed 368-byte wire representation. Exposed for
+/// callers that need the plain tuple outside `encodeOutput`'s hash-only wire output — namely
+/// `hashPublicInputs` below and the guest's pre-hash debug log (`zkvm_log`, see
+/// `evm_execution_guest.zig`).
+pub fn encodePublicInputsBytes(pi: L2ExecutionProofPublicInput) [PI_FIXED_SIZE]u8 {
+    var out: [PI_FIXED_SIZE]u8 = undefined;
+    encodePublicInputs(&out, pi);
+    return out;
+}
 
-    const msgs_len = v.l2_l1_messages.len * 32;
-    const froms_len = v.tx_froms.len * 20;
-    const filtered_len = v.filtered_addresses.len * 20;
-    const body_len = OUTPUT_FIXED_SIZE + msgs_len + froms_len + filtered_len;
+/// keccak256 of the SSZ-encoded plain public-input tuple — the single field `encodeOutput` commits
+/// in place of the 16-field tuple itself.
+pub fn hashPublicInputs(pi: L2ExecutionProofPublicInput) [32]u8 {
+    const encoded = encodePublicInputsBytes(pi);
+    var out: [32]u8 = undefined;
+    std.crypto.hash.sha3.Keccak256.hash(&encoded, &out, .{});
+    return out;
+}
 
-    const out = try alloc.alloc(u8, SCHEMA_ID_SIZE + body_len);
+/// Encode the extended l2-execution guest's ACTUAL wire output: the 0x0003 schema id followed by
+/// ONLY `keccak256(public_inputs)` (see `hashPublicInputs`) — 32 bytes, nothing else.
+/// `start_block_number` and the `l2_l1_messages`/`tx_froms`/`filtered_addresses` preimages on
+/// `L2ExecutionProofOutput` are NOT part of this wire format; they exist for off-chain/native
+/// tooling only (see `l2_execution_json.zig`'s `encodeOutputJson`). The plain 16-field
+/// public-input tuple is never written to the wire either; it is only available via
+/// `encodePublicInputsBytes`/`hashPublicInputs`, for logging or off-chain inspection.
+pub fn encodeOutput(alloc: std.mem.Allocator, pi: L2ExecutionProofPublicInput) ![]u8 {
+    const out = try alloc.alloc(u8, SCHEMA_ID_SIZE + OUTPUT_BODY_SIZE);
     std.mem.writeInt(u16, out[0..2], OUTPUT_SCHEMA_ID, .big);
-    const body = out[SCHEMA_ID_SIZE..];
-
-    encodePublicInputs(body[0..PI_FIXED_SIZE], v.public_inputs);
-    writeU64(body, PI_FIXED_SIZE, v.start_block_number);
-
-    const off_msgs: u32 = @intCast(OUTPUT_FIXED_SIZE);
-    const off_froms: u32 = @intCast(OUTPUT_FIXED_SIZE + msgs_len);
-    const off_filtered: u32 = @intCast(OUTPUT_FIXED_SIZE + msgs_len + froms_len);
-    writeU32(body, PI_FIXED_SIZE + 8, off_msgs);
-    writeU32(body, PI_FIXED_SIZE + 12, off_froms);
-    writeU32(body, PI_FIXED_SIZE + 16, off_filtered);
-
-    var pos: usize = OUTPUT_FIXED_SIZE;
-    for (v.l2_l1_messages) |hash| {
-        @memcpy(body[pos..][0..32], &hash);
-        pos += 32;
-    }
-    for (v.tx_froms) |addr| {
-        @memcpy(body[pos..][0..20], &addr);
-        pos += 20;
-    }
-    for (v.filtered_addresses) |addr| {
-        @memcpy(body[pos..][0..20], &addr);
-        pos += 20;
-    }
-    std.debug.assert(pos == body.len);
-
+    @memcpy(out[SCHEMA_ID_SIZE..], &hashPublicInputs(pi));
     return out;
 }

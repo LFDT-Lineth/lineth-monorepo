@@ -32,7 +32,7 @@ from .l2_execution import (
     L2ExecutionProofPublicInput,
     VerifiableL2ExecutionProof,
     hash_address_list,
-    hash_hash_list,
+    hash_digest_list,
 )
 
 L2_L1_TREE_DEPTH = 5
@@ -536,7 +536,7 @@ def verify_l2_execution_proof(program_vk: Hash32, proof: L2ExecutionProof) -> No
     recursive_stark_verify(program_vk, proof.proof)
     # The three checks below are PRECOMPILE: keccak256 in production (used
     # to verify the preimage bindings that the rollup proof consumes).
-    if hash_hash_list(proof.l2_l1_messages) != proof.public_inputs.l2_l1_messages_hash:
+    if hash_digest_list(proof.l2_l1_messages) != proof.public_inputs.l2_l1_messages_hash:
         raise Exception("invalid L2-to-L1 message-list preimage")
     if hash_address_list(proof.tx_froms) != proof.public_inputs.tx_froms_hash:
         raise Exception("invalid txFromsHash preimage")
@@ -589,7 +589,7 @@ def build_l2_messages_tree(msgs: Sequence[Hash32]) -> Tuple[List[Hash32], Hash32
     calldata; the returned hash is the public `l2L1BridgeTransactionTree`.
     """
     roots = build_l2_message_roots(msgs)
-    return roots, hash_hash_list(roots)
+    return roots, hash_digest_list(roots)
 
 
 def build_l2_message_roots(msgs: Sequence[Hash32]) -> List[Hash32]:

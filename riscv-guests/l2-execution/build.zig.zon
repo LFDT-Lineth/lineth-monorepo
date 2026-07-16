@@ -14,7 +14,7 @@
         // SszStatelessInput vectors zesu validates against. Lazy: only fetched when the native test
         // (which reads a fixture from it) is built.
         .execution_spec_tests_zkevm = .{
-            .url = "https://github.com/ethereum/execution-specs/releases/download/tests-zkevm%40v0.4.1/fixtures_zkevm.tar.gz",
+            .url = "https://github.com/ethereum/execution-specs/releases/download/tests-zkevm%40v0.6.2/fixtures_zkevm.tar.gz",
             .hash = "N-V-__8AAOKjNuwrs7f2UozWmLSRumAsqbHVgWvai3e75cbJ",
             .lazy = true,
         },

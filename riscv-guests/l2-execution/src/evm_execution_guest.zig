@@ -84,8 +84,22 @@ fn guestMain() callconv(.c) noreturn {
 fn runL2ExecutionGuest(allocator: std.mem.Allocator, raw_input: []const u8) ![]u8 {
     const decoded = try l2_execution_ssz.decodeInput(allocator, raw_input);
     const result = try l2_execution.runL2Execution(allocator, decoded);
-    return l2_execution_ssz.encodeOutput(allocator, result);
+
+    // Debug visibility for the plain, SSZ-encoded 16-field public-input tuple: `encodeOutput`
+    // below commits only its keccak256 (see `l2_execution_ssz.hashPublicInputs`), so this is the
+    // only place the plain tuple is still observable. `zkvm_log` (zesu's real logging ABI — see
+    // zesu/src/zkvm/root.zig — DEFINED as a no-op in `zkvm_provide.zig`, see its doc comment for
+    // why) is the standard sink for this; level 0 mirrors zesu's own `std.log`/panic usage.
+    const public_inputs_bytes = l2_execution_ssz.encodePublicInputsBytes(result.public_inputs);
+    zkvm_log(0, &public_inputs_bytes, public_inputs_bytes.len);
+
+    return l2_execution_ssz.encodeOutput(allocator, result.public_inputs);
 }
+
+/// zesu's own logging ABI (see zesu/src/zkvm/root.zig's doc comment) — DEFINED (as a no-op, for
+/// now) in `zkvm_provide.zig` alongside every other `zkvm_*` symbol this statically-linked ELF must
+/// satisfy locally.
+extern fn zkvm_log(level: u8, msg_ptr: [*]const u8, msg_len: usize) void;
 
 comptime {
     // Export `main` only for the freestanding RISC-V guest, which owns its entry point. Native

@@ -5,7 +5,7 @@ from ethereum.crypto.hash import Hash32
 from ethereum.state import Address
 from ethereum_types.numeric import U64
 
-from .l2_execution import hash_address_list, hash_hash_list
+from .l2_execution import hash_address_list, hash_digest_list
 from .rollup import L2_L1_TREE_DEPTH, RollupPublicInput, ShnarfWitness
 
 
@@ -147,7 +147,7 @@ def finalize_rollup(state: LineaRollupState, submission: FinalizationSubmission)
         pi.end_processed_ftx_number,
     )
 
-    if hash_hash_list(submission.l2_l1_roots) != pi.l2_l1_bridge_transaction_tree:
+    if hash_digest_list(submission.l2_l1_roots) != pi.l2_l1_bridge_transaction_tree:
         raise Exception("submitted L2-to-L1 roots do not match public input")
     for root in submission.l2_l1_roots:
         state.l2_merkle_roots_depths[root] = L2_L1_TREE_DEPTH

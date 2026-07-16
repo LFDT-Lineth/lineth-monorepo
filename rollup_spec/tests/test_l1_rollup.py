@@ -27,7 +27,7 @@ from rollup_spec.l1_rollup import (
     PlonkVerifier,
     finalize_rollup,
 )
-from rollup_spec.l2_execution import hash_address_list, hash_hash_list
+from rollup_spec.l2_execution import hash_address_list, hash_digest_list
 from rollup_spec.rollup import RollupPublicInput
 
 # Distinct VK / hash byte-pattern helpers (mirrors the style in
@@ -78,7 +78,7 @@ def _base_submission(program_vks) -> FinalizationSubmission:
     pi = RollupPublicInput(
         end_block_number=U64(1000520),
         end_block_timestamp=U64(1763000457),
-        l2_l1_bridge_transaction_tree=hash_hash_list([]),
+        l2_l1_bridge_transaction_tree=hash_digest_list([]),
         parent_l1_l2_bridge_rolling_hash=_L1L2_ROLLING_HASH,
         parent_l1_l2_bridge_rolling_hash_message_number=U64(0),
         end_l1_l2_bridge_rolling_hash=_L1L2_ROLLING_HASH,
