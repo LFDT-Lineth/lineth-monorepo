@@ -15,9 +15,9 @@ import (
 const (
 	ENTRY_POINT_AND_BLOBS_COUNT = "entry_point_and_blobs_count"
 	BLOBS_OFFSET_AND_SIZE       = "blobs_offset_and_size"
+	BLOBS_EXECUTABLE            = "blobs_executable"
 	BLOBS_DATA                  = "blobs_data"
 	INSTRUCTION_BASE            = "instruction_base"
-	INSTRUCTION_COUNT           = "instruction_count"
 	DECODED                     = "decoded"
 )
 
@@ -742,9 +742,10 @@ func unifiedOperands(instrType uint32, normImm12, simm12 uint32, bImm, jImm, uIm
 }
 
 type memoryBlob struct {
-	offset uint64
-	data   []byte
-	name   string
+	offset     uint64
+	data       []byte
+	name       string
+	executable bool
 }
 
 // bitWriter accumulates values into a big-endian, MSB-first bit stream. This
@@ -808,7 +809,7 @@ func main() {
 	if inBytes.isSsz {
 		blobs = append(blobs, sszInputBlobs(inBytesOffset, inBytes.data)...)
 	} else if len(inBytes.data) > 0 {
-		blobs = append(blobs, memoryBlob{offset: inBytesOffset, data: inBytes.data, name: "in_bytes"})
+		blobs = append(blobs, memoryBlob{offset: inBytesOffset, data: inBytes.data, name: "in_bytes", executable: false})
 	}
 	// Optionally write a .sections file with the indexes, offsets, sizes and names of the blobs for debugging purposes.
 	// This is controlled by the ELF2JSON_WRITE_SECTIONS environment variable, which must be set to "true" to enable this feature.
@@ -831,8 +832,8 @@ func main() {
 	}
 	// Statically decode the executable region into the pre-decoded instruction
 	// input tables consumed by the interpreter.
-	base, nRecords, decodedHex := buildDecodedProgram(elfFile.Sections)
-	printJson(blobs, elfFile.Entry, base, nRecords, decodedHex)
+	base, _, decodedHex := buildDecodedProgram(elfFile.Sections)
+	printJson(blobs, elfFile.Entry, base, decodedHex)
 }
 
 // parseInBytes turns an arg into input bytes. Four forms:
@@ -894,9 +895,9 @@ func sszInputBlobs(inBytesOffset uint64, ssz []byte) []memoryBlob {
 
 	prefix := make([]byte, 8)
 	binary.LittleEndian.PutUint64(prefix, uint64(len(ssz)))
-	blobs := []memoryBlob{{offset: inBytesOffset, data: prefix, name: "ssz_length"}}
+	blobs := []memoryBlob{{offset: inBytesOffset, data: prefix, name: "ssz_length", executable: false}}
 	if len(ssz) > 0 {
-		blobs = append(blobs, memoryBlob{offset: payloadOffset, data: ssz, name: "ssz_payload"})
+		blobs = append(blobs, memoryBlob{offset: payloadOffset, data: ssz, name: "ssz_payload", executable: false})
 	}
 	return blobs
 }
@@ -938,7 +939,12 @@ func extractProgramBlobs(progs []*elf.Prog, sections []*elf.Section) []memoryBlo
 			if s.Addr < p.Vaddr || sectionEnd > progEnd {
 				continue
 			}
-			sectionBlobs = append(sectionBlobs, memoryBlob{offset: s.Addr, data: readSectionBytes(s), name: s.Name})
+			sectionBlobs = append(sectionBlobs, memoryBlob{
+				offset:     s.Addr,
+				data:       readSectionBytes(s),
+				name:       s.Name,
+				executable: s.Flags&elf.SHF_EXECINSTR != 0,
+			})
 		}
 		sort.Slice(sectionBlobs, func(i, j int) bool { return sectionBlobs[i].offset < sectionBlobs[j].offset })
 		blobs = append(blobs, sectionBlobs...)
@@ -1149,13 +1155,17 @@ func maxDecodedRecordsFromEnv() uint64 {
 }
 
 func writeSectionsFile(file *os.File, blobs []memoryBlob) {
-	fmt.Fprintln(file, "index, offset,             size,               name")
+	fmt.Fprintln(file, "index, offset,             size,               exec, name")
 	for i, blob := range blobs {
-		fmt.Fprintf(file, "%-5d, 0x%016x, 0x%016x, %s\n", i, blob.offset, len(blob.data), blob.name)
+		exec := "no"
+		if blob.executable {
+			exec = "yes"
+		}
+		fmt.Fprintf(file, "%-5d, 0x%016x, 0x%016x, %-3s, %s\n", i, blob.offset, len(blob.data), exec, blob.name)
 	}
 }
 
-func printJson(blobs []memoryBlob, entryPoint, instructionBase, instructionCount uint64, decodedHex string) {
+func printJson(blobs []memoryBlob, entryPoint, instructionBase uint64, decodedHex string) {
 	var (
 		entryPointString   = fmt.Sprintf("%016x", entryPoint)
 		blobsCountString   = fmt.Sprintf("%016x", len(blobs))
@@ -1171,12 +1181,21 @@ func printJson(blobs []memoryBlob, entryPoint, instructionBase, instructionCount
 		}
 	}
 
+	var executableBits bitWriter
+	for _, blob := range blobs {
+		if blob.executable {
+			executableBits.writeBits(1, 1)
+		} else {
+			executableBits.writeBits(0, 1)
+		}
+	}
+
 	fmt.Println("{")
 	fmt.Printf("\t\"%s\": \"0x%s\",\n", ENTRY_POINT_AND_BLOBS_COUNT, entryPointAndBlobs)
 	fmt.Printf("\t\"%s\": \"0x%s\",\n", BLOBS_OFFSET_AND_SIZE, strings.Join(blobMetadata, "____"))
+	fmt.Printf("\t\"%s\": \"0x%s\",\n", BLOBS_EXECUTABLE, hex.EncodeToString(executableBits.buf))
 	fmt.Printf("\t\"%s\": \"0x%s\",\n", BLOBS_DATA, strings.Join(blobData, "____"))
 	fmt.Printf("\t\"%s\": \"0x%016x\",\n", INSTRUCTION_BASE, instructionBase)
-	fmt.Printf("\t\"%s\": \"0x%016x\",\n", INSTRUCTION_COUNT, instructionCount)
 	fmt.Printf("\t\"%s\": \"0x%s\"\n", DECODED, decodedHex)
 	fmt.Println("}")
 }

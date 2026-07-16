@@ -8,10 +8,8 @@ include "check/check_j_type.zkc"
 include "check/check_u_type.zkc"
 include "check/check_s_type.zkc"
 
-// Verify that the raw instruction word `instruction` decodes to the pre-decoded
-// record `decoded[index]`.
-fn predecoding(index:u64, instruction:Instruction) {
-
+// Check that the raw word `instruction` at `pc` matches `decoded` at that address.
+fn predecoding(pc:Address, instruction:Instruction) {
     // Variables from raw RISCV program
     var instruction_parameters:u25
     var opcode:Opcode
@@ -23,48 +21,48 @@ fn predecoding(index:u64, instruction:Instruction) {
     var rs1_decoded:Register
     var rs2_decoded:Register
     var rd_decoded:Register
-    compute_op, imm_decoded, rs1_decoded, rs2_decoded, rd_decoded = decoded[index]
+    compute_op, imm_decoded, rs1_decoded, rs2_decoded, rd_decoded = decoded[(pc - instruction_base[0]) >> 2]
 
     var instruction_type:Type = instruction_type_from_opcode(opcode)
     switch instruction_type {
         case B_TYPE: {
-            check_b_type(index, instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
+            check_b_type(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
         }
         case S_TYPE: {
-            check_s_type(index, instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
+            check_s_type(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, imm_decoded)
         }
         case J_TYPE: {
-            check_j_type(index, instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
+            check_j_type(instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
         }
         case U_TYPE: {
-            check_u_type(index, instruction_parameters, opcode, compute_op, rd_decoded, imm_decoded)
+            check_u_type(instruction_parameters, opcode, compute_op, rd_decoded, imm_decoded)
         }
         case I_TYPE: {
-            check_i_type(index, instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
+            check_i_type(instruction_parameters, opcode, compute_op, rs1_decoded, rd_decoded, imm_decoded)
         }
         case R_TYPE: {
-            check_r_type(index, instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
+            check_r_type(instruction_parameters, opcode, compute_op, rs1_decoded, rs2_decoded, rd_decoded)
         }
         case UNDEFINED_TYPE: {
             // Unknown opcode (padding, embedded data, CSR, etc.) → COMPUTE_INVALID.
             if compute_op != COMPUTE_INVALID {
-                printf "[ERROR] undefined opcode requires COMPUTE_INVALID (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                printf "[ERROR] undefined opcode requires COMPUTE_INVALID (pc=%d compute_op=%x opcode=%x params=%x)\n", pc, compute_op, opcode, instruction_parameters
                 fail
             }
         }
         case MISC_MEM_TYPE: {
             // FENCE / FENCE.I — no-op on this implementation.
             if opcode != OPCODE_MISCMEM {
-                printf "[ERROR] invalid MISC_MEM opcode (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
+                printf "[ERROR] invalid MISC_MEM opcode (pc=%d opcode=%x params=%x)\n", pc, opcode, instruction_parameters
                 fail
             }
             if compute_op != COMPUTE_MISC_MEM {
-                printf "[ERROR] MISC_MEM requires COMPUTE_MISC_MEM (index=%d compute_op=%x opcode=%x params=%x)\n", index, compute_op, opcode, instruction_parameters
+                printf "[ERROR] MISC_MEM requires COMPUTE_MISC_MEM (pc=%d compute_op=%x opcode=%x params=%x)\n", pc, compute_op, opcode, instruction_parameters
                 fail
             }
         }
         default: {
-            printf "[ERROR] invalid instruction type (index=%d opcode=%x params=%x)\n", index, opcode, instruction_parameters
+            printf "[ERROR] invalid instruction type (pc=%d opcode=%x params=%x)\n", pc, opcode, instruction_parameters
             fail
         }
     }

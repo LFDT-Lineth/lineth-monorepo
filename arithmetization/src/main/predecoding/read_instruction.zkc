@@ -1,4 +1,4 @@
-// Read a 32-bit little-endian instruction word from the blob image
+// Read a 32-bit little-endian instruction word from executable-flagged blobs only.
 fn read_instruction_from_blobs(pc:Address) -> (instruction:Instruction) {
     var blobs_count:u64
     var entry_point:Address
@@ -9,20 +9,22 @@ fn read_instruction_from_blobs(pc:Address) -> (instruction:Instruction) {
         var blob_offset:Address
         var blob_size:Length
         blob_offset, blob_size = blobs_offset_and_size[i]
+        var executable:u1 = blobs_executable[i]
 
-        if pc >= blob_offset && (pc + 4) <= (blob_offset + blob_size) {
-            var in_blob:Address = pc - blob_offset
-            var b0:Byte = blobs_data[internal_offset + in_blob]
-            var b1:Byte = blobs_data[internal_offset + in_blob + 1]
-            var b2:Byte = blobs_data[internal_offset + in_blob + 2]
-            var b3:Byte = blobs_data[internal_offset + in_blob + 3]
-            instruction = (b0 as Instruction) | ((b1 as Instruction) << 8) | ((b2 as Instruction) << 16) | ((b3 as Instruction) << 24)
-            return
+        if executable != 0 {
+            if pc >= blob_offset && (pc + 4) <= (blob_offset + blob_size) {
+                var in_blob:Address = pc - blob_offset
+                var b0:Byte = blobs_data[internal_offset + in_blob]
+                var b1:Byte = blobs_data[internal_offset + in_blob + 1]
+                var b2:Byte = blobs_data[internal_offset + in_blob + 2]
+                var b3:Byte = blobs_data[internal_offset + in_blob + 3]
+                instruction = (b0 as Instruction) | ((b1 as Instruction) << 8) | ((b2 as Instruction) << 16) | ((b3 as Instruction) << 24)
+                return
+            }
         }
         internal_offset = internal_offset + blob_size
     }
 
-    // predecoded table is dense and has no gaps, but blob image is sparse
-    // so we return a 0 instruction for out-of-bounds PC
+    // Gap in the dense executable span, or pc outside any executable blob.
     instruction = 0
 }

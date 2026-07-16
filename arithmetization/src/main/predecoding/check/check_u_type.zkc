@@ -1,4 +1,4 @@
-fn check_u_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rd_decoded:Register, imm_decoded:DoubleWord) {
+fn check_u_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rd_decoded:Register, imm_decoded:DoubleWord) {
     var imm20:u20
     var rd:Register
     imm20::rd = instruction_parameters
@@ -52,11 +52,11 @@ fn check_u_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op
 
     // Check that the decoded operands match the raw instruction parameters.
     if rd_decoded != rd {
-        printf "[ERROR] rd mismatch (index=%d compute_op=%x opcode=%x rd_decoded=%d)\n", index, compute_op, opcode, rd_decoded
+        printf "[ERROR] rd mismatch (compute_op=%x opcode=%x rd_decoded=%d)\n", compute_op, opcode, rd_decoded
         fail
     }
     if imm_decoded != imm {
-        printf "[ERROR] imm mismatch (index=%d compute_op=%x opcode=%x imm_decoded=%x)\n", index, compute_op, opcode, imm_decoded
+        printf "[ERROR] imm mismatch (compute_op=%x opcode=%x imm_decoded=%x)\n", compute_op, opcode, imm_decoded
         fail
     }
 }

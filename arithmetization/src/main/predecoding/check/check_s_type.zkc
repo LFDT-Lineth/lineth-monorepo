@@ -1,4 +1,4 @@
-fn check_s_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rs1_decoded:Register, rs2_decoded:Register, imm_decoded:DoubleWord) {
+fn check_s_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rs1_decoded:Register, rs2_decoded:Register, imm_decoded:DoubleWord) {
 
     var imm_sign:u1
     var funct3:Funct3
@@ -50,15 +50,15 @@ fn check_s_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op
 
     // Check that the decoded operands match the raw instruction parameters.
     if rs1_decoded != rs1 {
-        printf "[ERROR] rs1 mismatch (index=%d compute_op=%x opcode=%x rs1_decoded=%d)\n", index, compute_op, opcode, rs1_decoded
+        printf "[ERROR] rs1 mismatch (compute_op=%x opcode=%x rs1_decoded=%d)\n", compute_op, opcode, rs1_decoded
         fail
     }
     if rs2_decoded != rs2 {
-        printf "[ERROR] rs2 mismatch (index=%d compute_op=%x opcode=%x rs2_decoded=%d)\n", index, compute_op, opcode, rs2_decoded
+        printf "[ERROR] rs2 mismatch (compute_op=%x opcode=%x rs2_decoded=%d)\n", compute_op, opcode, rs2_decoded
         fail
     }
     if imm_decoded != imm {
-        printf "[ERROR] imm mismatch (index=%d compute_op=%x opcode=%x imm_decoded=%x)\n", index, compute_op, opcode, imm_decoded
+        printf "[ERROR] imm mismatch (compute_op=%x opcode=%x imm_decoded=%x)\n", compute_op, opcode, imm_decoded
         fail
     }
 }

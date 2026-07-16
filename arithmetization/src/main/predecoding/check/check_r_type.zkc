@@ -1,4 +1,4 @@
-fn check_r_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rs1_decoded:Register, rs2_decoded:Register, rd_decoded:Register) {
+fn check_r_type(instruction_parameters:u25, opcode:Opcode, compute_op:ComputeOp, rs1_decoded:Register, rs2_decoded:Register, rd_decoded:Register) {
     var funct7:Funct7
     var funct3:Funct3
     var rs1:Register
@@ -487,15 +487,15 @@ fn check_r_type(index:u64, instruction_parameters:u25, opcode:Opcode, compute_op
 
     // Check that the decoded operands match the raw instruction parameters.
     if rs1_decoded != rs1 {
-        printf "[ERROR] rs1 mismatch (index=%d compute_op=%x opcode=%x rs1_decoded=%d)\n", index, compute_op, opcode, rs1_decoded
+        printf "[ERROR] rs1 mismatch (compute_op=%x opcode=%x rs1_decoded=%d)\n", compute_op, opcode, rs1_decoded
         fail
     }
     if rs2_decoded != rs2 {
-        printf "[ERROR] rs2 mismatch (index=%d compute_op=%x opcode=%x rs2_decoded=%d)\n", index, compute_op, opcode, rs2_decoded
+        printf "[ERROR] rs2 mismatch (compute_op=%x opcode=%x rs2_decoded=%d)\n", compute_op, opcode, rs2_decoded
         fail
     }
     if rd_decoded != rd {
-        printf "[ERROR] rd mismatch (index=%d compute_op=%x opcode=%x rd_decoded=%d)\n", index, compute_op, opcode, rd_decoded
+        printf "[ERROR] rd mismatch (compute_op=%x opcode=%x rd_decoded=%d)\n", compute_op, opcode, rd_decoded
         fail
     }
 }

@@ -13,6 +13,7 @@ include "utils/register_utils.zkc"
 include "memory.zkc"
 include "../predecoding/predecoding.zkc"
 include "../predecoding/read_instruction.zkc"
+include "../predecoding/executable_region.zkc"
 include "../lib/poseidon2/ram.zkc"
 
 // TODO @Ghost
@@ -31,14 +32,13 @@ fn main<registers, ram, state_row0, state_row1, state_row2, state_row3, state_ro
     // Predecoding justification
     // ==========================
 
-    // Note: this is a static linear pass over instruction indices. Will be done only at
-    // each guest program upgrade.
-    // Count of pre-decoded instructions
-    var count:u64 = instruction_count[0]
+    // Note: static linear pass over the executable region;
+    // Will be done once per guest upgrade.
     var pc_predecoding:Address = base
-    for index:u64 = 0; index<count; index = index + 1 {
+    var end_predecoding:Address = executable_region_end()
+    while pc_predecoding < end_predecoding {
         var instruction:Instruction = read_instruction_from_blobs(pc_predecoding)
-        predecoding(index, instruction)
+        predecoding(pc_predecoding, instruction)
         pc_predecoding = (pc_predecoding + 4) as Address
     }
 
