@@ -71,28 +71,28 @@ jobs:
           # scoped to that component, AND include-path restricts to its paths.
           - component: coordinator
             folder-name: coordinator
-            cliff-config: coordinator/cliff.toml
+            scopes: coordinator|deps|misc
             include-path: coordinator/**
           - component: maru
             folder-name: maru
-            cliff-config: maru/cliff.toml
+            scopes: maru|deps|misc
             include-path: maru/**
           - component: prover
             folder-name: prover
-            cliff-config: prover/cliff.toml
+            scopes: prover|deps|misc
             include-path: prover/**
           - component: postman
             folder-name: postman
-            cliff-config: postman/cliff.toml
+            scopes: postman|deps|misc
             include-path: postman/**
           - component: tx-exclusion-api
             folder-name: transaction-exclusion-api
-            cliff-config: transaction-exclusion-api/cliff.toml
+            scopes: tx-exclusion-api|deps|misc
             include-path: transaction-exclusion-api/**
           - component: linea-besu-package
             folder-name: linea-besu/package
             artifact-name: linea-besu-package
-            cliff-config: linea-besu/package/cliff.toml
+            scopes: linea-besu|tracer|sequencer|deps|misc
             include-path: |
               tracer/**
               tracer-constraints/**
@@ -103,7 +103,7 @@ jobs:
           - component: linea
             folder-name: .
             artifact-name: linea
-            cliff-config: cliff.toml
+            scopes: coordinator|linea-besu|tracer|sequencer|maru|prover|postman|tx-exclusion-api|deps|misc
             include-path: |
               coordinator/**
               maru/**
@@ -144,7 +144,7 @@ jobs:
           component-name: ${{ matrix.component }}
           folder-name: ${{ matrix.folder-name }}
           include-path: ${{ matrix.include-path }}
-          cliff-config: ${{ matrix.cliff-config }}
+          scopes: ${{ matrix.scopes }}
           prepend-changelog: 'true'
 
       - name: Upload CHANGELOG.md artifact

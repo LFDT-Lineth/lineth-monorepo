@@ -39,22 +39,22 @@ jobs:
           # Scope-and-path gated: cliff-<component>.toml keeps only commits
           # scoped to that component, AND include-path restricts to its paths.
           - component-name: coordinator
-            cliff-config: coordinator/cliff.toml
+            scopes: coordinator|deps|misc
             include-path: coordinator/**
           - component-name: maru
-            cliff-config: maru/cliff.toml
+            scopes: maru|deps|misc
             include-path: maru/**
           - component-name: prover
-            cliff-config: prover/cliff.toml
+            scopes: prover|deps|misc
             include-path: prover/**
           - component-name: postman
-            cliff-config: postman/cliff.toml
+            scopes: postman|deps|misc
             include-path: postman/**
           - component-name: tx-exclusion-api
-            cliff-config: transaction-exclusion-api/cliff.toml
+            scopes: tx-exclusion-api|deps|misc
             include-path: transaction-exclusion-api/**
           - component-name: linea-besu-package
-            cliff-config: linea-besu/package/cliff.toml
+            scopes: linea-besu|tracer|sequencer|deps|misc
             include-path: |
               tracer/**
               tracer-constraints/**
@@ -89,7 +89,7 @@ jobs:
         with:
           component-name: ${{ matrix.component-name }}
           include-path: ${{ matrix.include-path }}
-          cliff-config: ${{ matrix.cliff-config }}
+          scopes: ${{ matrix.scopes }}
           release_tag_suffix: ${{ inputs.release_tag_suffix }}
           generate-changelog-with-next-tag-version: 'true'
 

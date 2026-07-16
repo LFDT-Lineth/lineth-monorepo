@@ -21,8 +21,8 @@ on:
         description: 'newline-separated string to represent the "git-cliff --include-path filter"'
         required: true
         type: string
-      cliff-config:
-        description: 'git-cliff config file for scope-and-path gating (e.g. coordinator/cliff.toml)'
+      scopes:
+        description: "Regex alternation of conventional-commit scopes to gate on (e.g. 'coordinator' or 'linea-besu|tracer|sequencer|deps|misc')"
         required: true
         type: string
       image_tag_suffix:
@@ -88,7 +88,7 @@ jobs:
     with:
       component-name: ${{ inputs.component-name }}
       include-path: ${{ inputs.include-path }}
-      cliff-config: ${{ inputs.cliff-config }}
+      scopes: ${{ inputs.scopes }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }}
 
   run-test-coordinator:
@@ -238,7 +238,7 @@ jobs:
       component-name: ${{ inputs.component-name }}
       folder-name: ${{ inputs.folder-name }}
       include-path: ${{ inputs.include-path }}
-      cliff-config: ${{ inputs.cliff-config }}
+      scopes: ${{ inputs.scopes }}
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }}
       draft_release: ${{ inputs.draft_release }}

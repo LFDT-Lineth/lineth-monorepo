@@ -36,9 +36,9 @@ jobs:
     with:
       component-name: prover
       folder-name: prover
-      # Scope-and-path gated: prover/cliff.toml keeps only `prover`-scoped
+      # Scope-and-path gated: the shared cliff.template.toml (scope `prover`) keeps only `prover`-scoped
       # commits, AND include-path restricts to the prover paths.
-      cliff-config: prover/cliff.toml
+      scopes: prover|deps|misc
       include-path: prover/**
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }}

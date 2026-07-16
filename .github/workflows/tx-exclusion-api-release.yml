@@ -35,10 +35,10 @@ jobs:
     with:
       component-name: tx-exclusion-api
       folder-name: transaction-exclusion-api
-      # Scope-and-path gated: transaction-exclusion-api/cliff.toml keeps only
+      # Scope-and-path gated: the shared cliff.template.toml (scope `tx-exclusion-api`) keeps only
       # `tx-exclusion-api`-scoped commits, AND include-path restricts to the
       # transaction-exclusion-api paths.
-      cliff-config: transaction-exclusion-api/cliff.toml
+      scopes: tx-exclusion-api|deps|misc
       include-path: transaction-exclusion-api/**
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }}
