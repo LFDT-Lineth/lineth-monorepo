@@ -12,6 +12,7 @@ Run from the rollup_spec/ directory:  python -m pytest
 """
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -46,6 +47,12 @@ from rollup_spec.stateless_input import decode_stateless_input_ssz
 # not depend on its own location relative to the data.
 _TESTDATA_DIR = Path(rollup_spec.__file__).resolve().parent / "prover_io" / "testdata"
 _PROVER_VERSION = "4.0.0-riscv"
+
+# ProgramVK anchoring test vectors (match the byte-patterns in the fixtures).
+# Origins are noted for tracing only — on the wire/L1 they form one combined
+# `programVks` set.
+_EXEC_VK = Hash32(bytes([0xAA]) * 32)
+_ROLLUP_VK = Hash32(bytes([0xBB]) * 32)
 
 
 def _load(path: Path) -> dict:
@@ -276,6 +283,7 @@ def _sample_rollup_public_input() -> RollupPublicInput:
         filtered_addresses_hash=Hash32(bytes([0x66]) * 32),
         parent_shnarf=Hash32(bytes([0x47]) * 32),
         end_shnarf=Hash32(bytes([0x8D]) * 32),
+        program_vks=[_EXEC_VK],
     )
 
 
@@ -309,7 +317,8 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     assert blob.block_rlps == [bytes.fromhex("f90215a0"), bytes.fromhex("f90216b1")]
 
     assert len(req.l2_execution_proofs) == 1
-    proof = req.l2_execution_proofs[0]
+    verifiable = req.l2_execution_proofs[0]
+    proof = verifiable.proof
     assert bytes(proof.proof) == bytes.fromhex("abcdef")
     assert int(proof.start_block_number) == 1000501
     # endBlockNumber is read from the public inputs, not a wrapper field.
@@ -321,6 +330,9 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     assert proof.l2_l1_messages == [Hash32(bytes([0x08]) * 32)]
     assert proof.tx_froms == [Address(bytes([0x01]) * 20), Address(bytes([0x02]) * 20)]
     assert proof.filtered_addresses == [Address(bytes([0x03]) * 20), Address(bytes([0x04]) * 20)]
+    # §ProgramVK anchoring: the exec proof's VK is read from the request, onto
+    # the coordinator-populated wrapper, not the guest-emitted proof itself.
+    assert verifiable.program_vk == _EXEC_VK
 
 
 def test_decode_rollup_request_missing_field_is_rejected() -> None:
@@ -388,13 +400,16 @@ def test_encode_rollup_response_shape_and_values() -> None:
     assert pi["endShnarf"] == "0x" + ("8d" * 32)
     assert pi["parentProcessedFtxNumber"] == 7
     assert pi["endProcessedFtxNumber"] == 9
+    # §ProgramVK anchoring: one combined programVks list (exec/rollup not
+    # distinguished on the wire). A rollup proof lists the exec VK it verified.
+    assert pi["programVks"] == ["0x" + ("aa" * 32)]
     assert set(pi.keys()) == {
         "endBlockNumber", "endBlockTimestamp", "l2L1BridgeTransactionTree",
         "parentL1L2BridgeRollingHash", "parentL1L2BridgeRollingHashMessageNumber",
         "endL1L2BridgeRollingHash", "endL1L2BridgeRollingHashMessageNumber",
         "dynamicChainConfigHash", "parentFtxRollingHash", "parentProcessedFtxNumber",
         "endFtxRollingHash", "endProcessedFtxNumber", "filteredAddressesHash",
-        "parentShnarf", "endShnarf",
+        "parentShnarf", "endShnarf", "programVks",
     }
 
     assert out["l2L1Roots"] == ["0x" + ("77" * 32), "0x" + ("88" * 32)]
@@ -419,8 +434,14 @@ def _sample_finalization_submission() -> FinalizationSubmission:
     # would yield (one rollup proof -> merged roots/addresses are that proof's).
     # `proof` is a placeholder the prover would fill; here it stands in as
     # 0xdeadbeef to exercise serialization.
+    # The aggregation PI carries the single combined `program_vks` set
+    # (§ProgramVK anchoring): the bubbled exec VK and this aggregation's rollup
+    # VK, in canonical (sorted-distinct) order — 0xAA precedes 0xBB.
     return FinalizationSubmission(
-        public_inputs=_sample_rollup_public_input(),
+        public_inputs=replace(
+            _sample_rollup_public_input(),
+            program_vks=[_EXEC_VK, _ROLLUP_VK],
+        ),
         proof=b"\xde\xad\xbe\xef",
         l2_l1_roots=[Hash32(bytes([0x77]) * 32), Hash32(bytes([0x88]) * 32)],
         filtered_addresses=[Address(bytes([0x01]) * 20)],
@@ -435,13 +456,19 @@ def test_decode_aggregation_request_maps_all_fields() -> None:
     req = decode_aggregation_request(_valid_aggregation_request())
 
     assert len(req.rollup_proofs) == 1
-    proof = req.rollup_proofs[0]
+    verifiable = req.rollup_proofs[0]
+    proof = verifiable.proof
     assert bytes(proof.proof) == bytes.fromhex("abcdef")
     assert int(proof.start_block_number) == 1000501
     # endBlockNumber is read from the public inputs, not a wrapper field.
     assert int(proof.public_inputs.end_block_number) == 1000520
     assert proof.l2_l1_roots == [Hash32(bytes([0x77]) * 32), Hash32(bytes([0x88]) * 32)]
     assert proof.filtered_addresses == [Address(bytes([0x01]) * 20)]
+    # §ProgramVK anchoring: the rollup proof's own VK, on the coordinator-
+    # populated wrapper, plus its single combined program_vks list (here the
+    # exec VK it verified).
+    assert verifiable.program_vk == _ROLLUP_VK
+    assert proof.public_inputs.program_vks == [_EXEC_VK]
 
     pi = proof.public_inputs
     assert int(pi.end_block_timestamp) == 1763000457
@@ -514,6 +541,7 @@ def test_encode_aggregation_response_is_l1_sufficient() -> None:
     # it is sufficient for the L1 verification step.
     assert out["l2L1Roots"] == ["0x" + ("77" * 32), "0x" + ("88" * 32)]
     assert out["filteredAddresses"] == ["0x" + ("01" * 20)]
+    assert "programVks" not in out
     assert out["l2MessagingBlocksOffsets"] == []
     assert set(out.keys()) == {
         "proverVersion", "proof", "startBlockNumber", "publicInputs",
@@ -526,13 +554,15 @@ def test_encode_aggregation_response_is_l1_sufficient() -> None:
     assert pi["endShnarf"] == "0x" + ("8d" * 32)
     assert pi["parentProcessedFtxNumber"] == 7
     assert pi["endProcessedFtxNumber"] == 9
+    # Combined: bubbled exec VK (0xaa) then this aggregation's rollup VK (0xbb).
+    assert pi["programVks"] == ["0x" + ("aa" * 32), "0x" + ("bb" * 32)]
     assert set(pi.keys()) == {
         "endBlockNumber", "endBlockTimestamp", "l2L1BridgeTransactionTree",
         "parentL1L2BridgeRollingHash", "parentL1L2BridgeRollingHashMessageNumber",
         "endL1L2BridgeRollingHash", "endL1L2BridgeRollingHashMessageNumber",
         "dynamicChainConfigHash", "parentFtxRollingHash", "parentProcessedFtxNumber",
         "endFtxRollingHash", "endProcessedFtxNumber", "filteredAddressesHash",
-        "parentShnarf", "endShnarf",
+        "parentShnarf", "endShnarf", "programVks",
     }
 
 
