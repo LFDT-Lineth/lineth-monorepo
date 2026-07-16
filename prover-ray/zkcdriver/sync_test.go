@@ -1,85 +1,75 @@
 package zkcdriver_test
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/files"
 )
 
 const (
-	testdataSyncDir = "testdata/synced"
 	acceptExtension = ".accepts"
-	binExtension    = ".bin"
+	zkcExtension    = ".zkc"
+	// testdataGlob is the glob pattern used to find all the testdata files for
+	// the synced integration tests. Currently we only match unit tests, but we
+	// can extend this to include other types of tests (mixed/bench) in the
+	// future.
+	testdataGlob = "testdata/synced/unit/*.zkc"
 )
 
-func TestZKCIntegrationSynced(t *testing.T) {
-
-	// numPassing is the number of tests that passed
-	numPassing := 0
-
-	err := filepath.Walk(testdataSyncDir,
-		func(path string, info os.FileInfo, err error) error {
-
-			if err != nil {
-				return err
+func TestZkcIntegrationTestSynced(t *testing.T) {
+	testFiles, err := filepath.Glob(testdataGlob)
+	if err != nil {
+		t.Fatalf("error globbing testdata: %v", err)
+	}
+	if len(testFiles) == 0 {
+		t.Fatalf("no testdata found. Have you run `make download-zkc-testdata`?")
+	}
+	for _, f := range testFiles {
+		splitName := strings.Split(f, string(filepath.Separator))
+		baseName := filepath.Join(splitName[len(splitName)-2:]...)
+		t.Run(baseName, func(t *testing.T) {
+			basePath := strings.TrimSuffix(f, zkcExtension)
+			acceptPath := basePath + acceptExtension
+			if files.CheckFilePath(acceptPath) != nil {
+				t.Fatalf("accept file %s does not exist for test-case %s", acceptPath, f)
 			}
-
-			// The corset function for parsing the inputs of the test-case may
-			// panic. We recover from that panic and skip the test-case.
-			defer func() {
-				if r := recover(); r != nil {
-					fmt.Println("recovered from: ", r)
+			binF, err := compileBinaryConstraints(f)
+			if err != nil {
+				t.Fatalf("failed to compile binary constraints: %v", err)
+			}
+			inputF := files.MustRead(acceptPath)
+			defer inputF.Close()
+			inputFBuf := bufio.NewScanner(inputF)
+			lineNr := 0
+			for inputFBuf.Scan() {
+				line := inputFBuf.Text()
+				// check that we're not in a comment line. I.e. we only want lines starting with `{` to be considered as test-cases.
+				if !strings.HasPrefix(line, "{") {
+					continue
 				}
-			}()
-
-			if info.IsDir() || filepath.Ext(path) != binExtension {
-				return nil
-			}
-
-			acceptPath := strings.TrimSuffix(path, binExtension) + acceptExtension
-			inputStr, readErr := os.ReadFile(acceptPath) //nolint
-			if readErr != nil {
-				// If the .accept file does not exist, we skip the test.
-				return nil //nolint
-			}
-
-			sys, input, err := parseTestCase(zkcTestCase{
-				BinFilePath: path,
-				InputStr:    string(inputStr),
-			})
-
-			if err != nil {
-				// The corset input parsing failed. In that case, we consider
-				// there is a bug in corset side and we skip the test.
-				return nil //nolint
-			}
-
-			testName := strings.TrimPrefix(
-				strings.TrimSuffix(path, binExtension), "testdata/")
-
-			t.Run(testName, func(t *testing.T) {
-				err := runTestCase(sys, *input, zkcTestCase{
-					BinFilePath: path,
-					InputStr:    string(inputStr),
+				t.Run(fmt.Sprintf("case=%d", lineNr), func(t *testing.T) {
+					sys, zkcInput, zkcOutputs, err := parseTestCase(zkcTestCase{ZkcFilePath: f, InputStr: line}, binF)
+					if err != nil {
+						t.Fatalf("failed to parse test case: %v", err)
+					}
+					if err = runProveVerify(sys, zkcInput, binF); err != nil {
+						t.Errorf("failed to run test case: %v", err)
+					}
+					for outputName, expectedOutput := range zkcOutputs {
+						if !bytes.Equal(expectedOutput, zkcInput.Inputs[outputName]) {
+							t.Errorf("output mismatch for %s: expected %x, got %x", outputName, expectedOutput, zkcInput.Inputs[outputName])
+						}
+					}
 				})
+				lineNr++
+			}
 
-				if err != nil {
-					t.Fatalf("test %s failed: %v", testName, err)
-				}
-
-				numPassing++
-			})
-
-			return nil
 		})
 
-	if err != nil {
-		t.Fatalf("error walking %s: %v", testdataSyncDir, err)
-	}
-
-	if numPassing == 0 {
-		t.Fatalf("no test were executed, there must be a bug. Could be corset side.")
 	}
 }
