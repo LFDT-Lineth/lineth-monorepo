@@ -67,24 +67,34 @@ jobs:
       matrix:
         component: [ coordinator, maru, prover, postman, tx-exclusion-api, linea-besu-package, linea ]
         include:
+          # Scope-and-path gated: cliff-<component>.toml keeps only commits
+          # scoped to that component, AND include-path restricts to its paths.
           - component: coordinator
             folder-name: coordinator
+            cliff-config: coordinator/cliff.toml
             include-path: coordinator/**
           - component: maru
             folder-name: maru
+            cliff-config: maru/cliff.toml
             include-path: maru/**
           - component: prover
             folder-name: prover
+            cliff-config: prover/cliff.toml
             include-path: prover/**
           - component: postman
             folder-name: postman
+            cliff-config: postman/cliff.toml
             include-path: postman/**
           - component: tx-exclusion-api
             folder-name: transaction-exclusion-api
+            cliff-config: transaction-exclusion-api/cliff.toml
             include-path: transaction-exclusion-api/**
           - component: linea-besu-package
             folder-name: linea-besu/package
             artifact-name: linea-besu-package
+            # Scope-and-path gated: linea-besu/package/cliff.toml keeps only `linea-besu`-scoped
+            # commits, AND include-path restricts to the linea-besu package paths.
+            cliff-config: linea-besu/package/cliff.toml
             include-path: |
               tracer/**
               tracer-constraints/**
@@ -95,8 +105,14 @@ jobs:
           - component: linea
             folder-name: .
             artifact-name: linea
+            # Scope-and-path gated: cliff.toml keeps only commits scoped to
+            # any releasable component (coordinator, linea-besu, maru, prover,
+            # postman, tx-exclusion-api), AND include-path restricts to the union
+            # of all component paths.
+            cliff-config: cliff.toml
             include-path: |
               coordinator/**
+              maru/**
               postman/**
               prover/**
               transaction-exclusion-api/**
@@ -134,6 +150,7 @@ jobs:
           component-name: ${{ matrix.component }}
           folder-name: ${{ matrix.folder-name }}
           include-path: ${{ matrix.include-path }}
+          cliff-config: ${{ matrix.cliff-config }}
           prepend-changelog: 'true'
 
       - name: Upload CHANGELOG.md artifact

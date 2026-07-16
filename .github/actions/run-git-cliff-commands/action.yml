@@ -20,9 +20,8 @@ inputs:
       Blank/whitespace-only lines are ignored; leading/trailing whitespace on each line is trimmed.
     required: true
   cliff-config:
-    description: "Path to the cliff.toml config file"
-    required: false
-    default: "cliff.toml"
+    description: "Path to the git-cliff config file for scope-and-path gating (e.g. coordinator/cliff.toml)"
+    required: true
   release_tag_suffix:
     description: "Custom release tag suffix, i.e. release tag would be releases/[component]/v[semver]-[suffix]"
     required: false

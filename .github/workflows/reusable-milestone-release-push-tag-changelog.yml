@@ -127,14 +127,17 @@ jobs:
 
           # Entries are listed in the user-facing top-to-bottom order; we
           # iterate them in reverse below so coordinator ends up on top.
-          # Format per entry: <tag>|<version>|<json-array-of-include-paths>
+          # Format per entry: <tag>|<version>|<cliff-config>|<json-array-of-include-paths>
+          # Every component is scope-and-path gated: its cliff-<component>.toml
+          # keeps only commits scoped to that component, AND the include-paths
+          # restrict to that component's paths — a commit must satisfy both.
           components=(
-            "coordinator|${COORDINATOR_VERSION}|[\"coordinator/**\"]"
-            "maru|${MARU_VERSION}|[\"maru/**\"]"
-            "postman|${POSTMAN_VERSION}|[\"postman/**\"]"
-            "prover|${PROVER_VERSION}|[\"prover/**\"]"
-            "tx-exclusion-api|${TX_EXCLUSION_API_VERSION}|[\"transaction-exclusion-api/**\"]"
-            "linea-besu-package|${LINEA_BESU_VERSION}|[\"tracer/**\",\"tracer-constraints/**\",\"linea-besu/plugins/linea-sequencer/**\",\"linea-besu/besu/**\",\"linea-besu/package/**\",\"gradle/libs.versions.toml\"]"
+            "coordinator|${COORDINATOR_VERSION}|coordinator/cliff.toml|[\"coordinator/**\"]"
+            "maru|${MARU_VERSION}|maru/cliff.toml|[\"maru/**\"]"
+            "postman|${POSTMAN_VERSION}|postman/cliff.toml|[\"postman/**\"]"
+            "prover|${PROVER_VERSION}|prover/cliff.toml|[\"prover/**\"]"
+            "tx-exclusion-api|${TX_EXCLUSION_API_VERSION}|transaction-exclusion-api/cliff.toml|[\"transaction-exclusion-api/**\"]"
+            "linea-besu-package|${LINEA_BESU_VERSION}|linea-besu/package/cliff.toml|[\"tracer/**\",\"tracer-constraints/**\",\"linea-besu/plugins/linea-sequencer/**\",\"linea-besu/besu/**\",\"linea-besu/package/**\",\"gradle/libs.versions.toml\"]"
           )
 
           for (( i=${#components[@]}-1; i>=0; i-- )); do
@@ -142,10 +145,12 @@ jobs:
             tag="${entry%%|*}"
             rest="${entry#*|}"
             version="${rest%%|*}"
+            rest="${rest#*|}"
+            config="${rest%%|*}"
             paths_json="${rest#*|}"
             mapfile -t paths < <(echo "$paths_json" | jq -r '.[]')
 
-            args=(--unreleased --tag "$tag" --tag-pattern "$LINEA_TAG_PATTERN" --prepend "${TMP_CHANGELOG}")
+            args=(--config "$config" --unreleased --tag "$tag" --tag-pattern "$LINEA_TAG_PATTERN" --prepend "${TMP_CHANGELOG}")
             for p in "${paths[@]}"; do
               args+=(--include-path "$p")
             done

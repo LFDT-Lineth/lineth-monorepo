@@ -186,6 +186,7 @@ jobs:
     with:
       component-name: coordinator
       folder-name: coordinator
+      cliff-config: coordinator/cliff.toml
       include-path: coordinator/**
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }} # no release tag suffix should be allowed for milestone component release, only for dry run cases
@@ -205,6 +206,7 @@ jobs:
     with:
       component-name: prover
       folder-name: prover
+      cliff-config: prover/cliff.toml
       include-path: prover/**
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }} # no release tag suffix should be allowed for milestone component release, only for dry run cases
@@ -224,6 +226,7 @@ jobs:
     with:
       component-name: postman
       folder-name: postman
+      cliff-config: postman/cliff.toml
       include-path: postman/**
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }} # no release tag suffix should be allowed for milestone component release, only for dry run cases
@@ -243,6 +246,7 @@ jobs:
     with:
       component-name: tx-exclusion-api
       folder-name: transaction-exclusion-api
+      cliff-config: transaction-exclusion-api/cliff.toml
       include-path: transaction-exclusion-api/**
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }} # non-empty release_tag_suffix can be only for non-main milestone release (e.g. dry run release)
@@ -262,6 +266,7 @@ jobs:
     with:
       component-name: maru
       folder-name: maru
+      cliff-config: maru/cliff.toml
       include-path: maru/**
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }} # no release tag suffix should be allowed for milestone component release, only for dry run cases

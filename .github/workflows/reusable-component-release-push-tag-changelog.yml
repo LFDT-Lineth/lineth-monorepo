@@ -15,6 +15,10 @@ on:
         description: 'newline-separated string to represent the "git-cliff --include-path filter"'
         required: true
         type: string
+      cliff-config:
+        description: "Path to the git-cliff config file for scope-and-path gating (e.g. linea-besu/package/cliff.toml)"
+        required: true
+        type: string
       release_tag_suffix:
         description: "Custom tag release tag suffix, i.e. releases/[component]/v[semver]-[suffix]"
         required: false
@@ -114,6 +118,7 @@ jobs:
           component-name: ${{ inputs.component-name }}
           folder-name: ${{ inputs.folder-name }}
           include-path: ${{ inputs.include-path }}
+          cliff-config: ${{ inputs.cliff-config }}
           release_tag_suffix: ${{ inputs.release_tag_suffix }}
           prepend-changelog: 'true'
           generate-changelog-with-next-tag-version: 'true'

@@ -1,5 +1,21 @@
-# git-cliff ~ configuration file
+# git-cliff ~ configuration file for the `linea` milestone (aggregate) release.
 # https://git-cliff.org/docs/configuration
+#
+# The `linea` milestone bundles every releasable component, so — unlike the
+# per-component configs that gate on a single scope — this config keeps a commit
+# when ANY of its comma-separated scopes is one of the component scopes:
+#   coordinator, linea-besu, maru, prover, postman, tx-exclusion-api
+# e.g. `feat(coordinator): x`, `fix(linea-besu): y`, or a shared
+# `feat(coordinator,prover): z` all qualify.
+#
+# In the milestone workflows this config is combined with `--include-path` (the
+# union of all component paths) so selection is scope-AND-path gated: a commit
+# must both carry a component scope and touch a component path to drive the
+# milestone version bump and changelog.
+#
+# The scope alternation matches each token exactly (bounded by `(` / `,` / `)`),
+# so `(linea-besu-package)` does NOT match `linea-besu`, and `(prover-ray)` does
+# NOT match `prover`.
 
 
 [changelog]
@@ -55,26 +71,29 @@ commit_preprocessors = [
 ]
 # Prevent commits that are breaking from being excluded by commit parsers.
 protect_breaking_commits = false
-# An array of regex based parsers for extracting data from the commit message.
-# Assigns commits to groups.
-# Optionally sets the commit's scope and can decide to exclude commits from further processing.
+# Keep ONLY commits whose scope list contains one of the component scopes as a
+# whole, comma-delimited token; group them by type so the changelog renders
+# sections. The scope fragment
+# `\(([^)]*,)?\s*(coordinator|linea-besu|maru|prover|postman|tx-exclusion-api)\s*(,[^)]*)?\)`
+# matches `(coordinator)`, `(a,prover)`, `(maru,b)`, `(a,linea-besu,b)` — but NOT
+# `(linea-besu-package)` or `(prover-ray)` (exact-token match). The optional `!`
+# for breaking changes sits after `)`, so breaking commits still match and stay
+# flagged.
 commit_parsers = [
-    { message = "^feat", group = "<!-- 0 -->🚀 Features" },
-    { message = "^fix", group = "<!-- 1 -->🐛 Bug Fixes" },
-    { message = "^doc", group = "<!-- 3 -->📚 Documentation", skip = true },
-    { message = "^perf", group = "<!-- 4 -->⚡ Performance" },
-    { message = "^refactor", group = "<!-- 2 -->🚜 Refactor" },
-    { message = "^style", group = "<!-- 5 -->🎨 Styling" },
-    { message = "^test", group = "<!-- 6 -->🧪 Testing", skip = true },
-    # Skip auto-generated CHANGELOG-update commits from the release & preview
-    # workflows (any scope) so they don't contribute to future version bumps
-    # or show up in future changelogs. Must precede the broader "^chore|^ci"
-    # rule below — git-cliff applies the first matching parser.
-    { message = "^chore\\([^)]+\\): update CHANGELOG\\.md", skip = true },
-    { message = "^chore|^ci", group = "<!-- 7 -->⚙️ Miscellaneous Tasks" },
-    { body = ".*security", group = "<!-- 8 -->🛡️ Security" },
-    { message = "^revert", group = "<!-- 9 -->◀️ Revert" },
-    { message = ".*", group = "<!-- 10 -->💼 Other", skip = true },
+    # Drop auto-generated CHANGELOG-update commits (any scope) so they never
+    # bump the version or appear in the changelog.
+    { message = "^chore\\([^)]*\\): update CHANGELOG\\.md", skip = true },
+
+    { message = "^feat\\(([^)]*,)?\\s*(coordinator|linea-besu|maru|prover|postman|tx-exclusion-api)\\s*(,[^)]*)?\\)", group = "<!-- 0 -->🚀 Features" },
+    { message = "^fix\\(([^)]*,)?\\s*(coordinator|linea-besu|maru|prover|postman|tx-exclusion-api)\\s*(,[^)]*)?\\)", group = "<!-- 1 -->🐛 Bug Fixes" },
+    { message = "^perf\\(([^)]*,)?\\s*(coordinator|linea-besu|maru|prover|postman|tx-exclusion-api)\\s*(,[^)]*)?\\)", group = "<!-- 4 -->⚡ Performance" },
+    { message = "^refactor\\(([^)]*,)?\\s*(coordinator|linea-besu|maru|prover|postman|tx-exclusion-api)\\s*(,[^)]*)?\\)", group = "<!-- 2 -->🚜 Refactor" },
+    { message = "^(chore|ci)\\(([^)]*,)?\\s*(coordinator|linea-besu|maru|prover|postman|tx-exclusion-api)\\s*(,[^)]*)?\\)", group = "<!-- 7 -->⚙️ Miscellaneous Tasks" },
+    { message = "^revert\\(([^)]*,)?\\s*(coordinator|linea-besu|maru|prover|postman|tx-exclusion-api)\\s*(,[^)]*)?\\)", group = "<!-- 9 -->◀️ Revert" },
+
+    # Everything else (other scopes, no scope, doc/style/test) is skipped so it
+    # neither bumps the version nor shows up in the changelog.
+    { message = ".*", skip = true },
 ]
 # Exclude commits that are not matched by any commit parser.
 filter_commits = true
@@ -82,8 +101,8 @@ filter_commits = true
 fail_on_unmatched_commit = false
 # An array of link parsers for extracting external references, and turning them into URLs, using regex.
 link_parsers = []
-# Include only the tags that belong to the current branch.
-use_branch_tags = false # false means including all tags in the repo
+# Include only the tags that belong to the current branch, false means including all tags in the repo.
+use_branch_tags = false
 # Order releases topologically instead of chronologically.
 topo_order = false
 # Order commits topologically instead of chronologically.

@@ -21,6 +21,10 @@ on:
         description: 'newline-separated string to represent the "git-cliff --include-path filter"'
         required: true
         type: string
+      cliff-config:
+        description: 'git-cliff config file for scope-and-path gating (e.g. coordinator/cliff.toml)'
+        required: true
+        type: string
       image_tag_suffix:
         description: 'Custom docker image tag suffix, i.e. docker image tag would be [semver]-[YYYYMMDD]-[commit]-[suffix], if not given, would be [semver]-[YYYYMMDD]-[commit]'
         required: false
@@ -66,6 +70,7 @@ jobs:
       component-name: ${{ inputs.component-name }}
       folder-name: ${{ inputs.folder-name }}
       include-path: ${{ inputs.include-path }}
+      cliff-config: ${{ inputs.cliff-config }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }}
       upload_changelog: ${{ inputs.upload_changelog }}
     secrets: inherit

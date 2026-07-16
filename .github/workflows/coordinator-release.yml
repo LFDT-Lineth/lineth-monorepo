@@ -35,6 +35,9 @@ jobs:
     with:
       component-name: coordinator
       folder-name: coordinator
+      # Scope-and-path gated: coordinator/cliff.toml keeps only `coordinator`-scoped
+      # commits, AND include-path restricts to the coordinator paths.
+      cliff-config: coordinator/cliff.toml
       include-path: coordinator/**
       image_tag_suffix: ${{ inputs.image_tag_suffix }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }}

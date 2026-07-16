@@ -60,6 +60,9 @@ jobs:
       # Release tag uses 'linea-besu-package' (e.g. releases/linea-besu-package/v1.2.3)
       component-name: linea-besu-package
       folder-name: linea-besu/package
+      # Scope-and-path gated: linea-besu/package/cliff.toml keeps only commits scoped to
+      # `linea-besu`, AND include-path restricts to the linea-besu package paths.
+      cliff-config: linea-besu/package/cliff.toml
       include-path: |
         tracer/**
         tracer-constraints/**
