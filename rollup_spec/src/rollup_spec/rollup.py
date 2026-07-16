@@ -294,6 +294,7 @@ class RollupPublicInput:
     """
     The rollup / rollup-aggregation public input tuple from Readme.md section 2.4.
 
+<<<<<<< HEAD
     `parent_block_hash` / `end_block_hash` are execution continuity — the role
     the old 3-input shnarf's `lastBlockHash` used to play — now explicit
     public-input fields rather than folded into the DA accumulator (§3.1).
@@ -302,6 +303,8 @@ class RollupPublicInput:
     positions; `end_offset` is a derived output (computed from the guest's own
     recompression), not trusted witness input.
 
+=======
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
     `program_vks` is the set of ALL guest program VKs verified beneath this proof
     (§ProgramVK anchoring), checked against L1's single combined `approvedVks`
     set. It is semantically a SET, encoded as a CANONICAL sorted, distinct list
@@ -328,12 +331,17 @@ class RollupPublicInput:
     end_ftx_rolling_hash: Hash32
     end_processed_ftx_number: U64
     filtered_addresses_hash: Hash32
+<<<<<<< HEAD
     parent_data_rolling_hash: Hash32
     end_data_rolling_hash: Hash32
     parent_block_hash: Hash32
     end_block_hash: Hash32
     start_offset: int
     end_offset: int
+=======
+    parent_shnarf: Hash32
+    end_shnarf: Hash32
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
     program_vks: List[Hash32] = field(default_factory=list)
 
 
@@ -364,19 +372,28 @@ class RollupProofPrivateInput:
     parent_data_rolling_hash: Hash32
     start_offset: int
     chain_id: U64
+<<<<<<< HEAD
     conflations: List[ConflationWitness]
     chunks: List[Hash32]
     l2_execution_proofs: List[VerifiableL2ExecutionProof]
     opaque_prefix_bytes: bytes = b""
     opaque_suffix_bytes: bytes = b""
     boundary_prev_data_rolling_hash: Optional[Hash32] = None
+=======
+    blobs: List[BlobWitness]
+    l2_execution_proofs: List[VerifiableL2ExecutionProof]
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
 
 
 @dataclass
 class RollupProof:
     """
     A rollup proof as the rollup guest emits it: the guest *output* (the
+<<<<<<< HEAD
     20-field `public_inputs` tuple + the root/address preimages) plus the
+=======
+    14-field `public_inputs` tuple + the root/address preimages) plus the
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
     `proof` bytes the aggregation guest recursively verifies.
 
     Guest/prover boundary: the guest emits `public_inputs` and the preimage
@@ -460,6 +477,7 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
         parent_hashes.extend(conflation_parent_hashes)
         segments.append(_compress_conflation_segment(conflation_truncated))
 
+<<<<<<< HEAD
     own_stream_bytes = b"".join(segments)
     end_data_rolling_hash, end_offset = _verify_and_fold_chunks(
         own_stream_bytes,
@@ -475,13 +493,22 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     rollup_end_block_number = int(
         rollup_input.l2_execution_proofs[-1].proof.public_inputs.end_block_number
     )
+=======
+    blob_start_block_number = rollup_input.blobs[0].block_number_range[0]
+    blob_end_block_number = rollup_input.blobs[-1].block_number_range[1]
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
     # Unwrap once: everything below except the recursive-verify loop only needs
     # the guest-emitted `L2ExecutionProof`, not the coordinator-attached VK.
     l2_execution_proofs = [vp.proof for vp in rollup_input.l2_execution_proofs]
     verify_l2_execution_proof_tiling(
         l2_execution_proofs,
+<<<<<<< HEAD
         rollup_start_block_number,
         rollup_end_block_number,
+=======
+        blob_start_block_number,
+        blob_end_block_number,
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
     )
 
     concatenated_froms: List[Address] = []
@@ -511,7 +538,11 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     first_proof = l2_execution_proofs[0]
     last_proof = l2_execution_proofs[-1]
     for proof in l2_execution_proofs:
+<<<<<<< HEAD
         boundary_index = int(proof.public_inputs.end_block_number) - rollup_start_block_number
+=======
+        boundary_index = int(proof.public_inputs.end_block_number) - blob_start_block_number
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
         if boundary_index < 0 or boundary_index >= len(truncated_block_hashes):
             raise Exception("l2-execution proof boundary falls outside the conflation block range")
         if proof.public_inputs.end_block_hash != truncated_block_hashes[boundary_index]:
@@ -563,12 +594,17 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
         end_ftx_rolling_hash=last_proof.public_inputs.end_ftx_rolling_hash,
         end_processed_ftx_number=last_proof.public_inputs.end_processed_ftx_number,
         filtered_addresses_hash=hash_address_list(concatenated_filtered_addresses),
+<<<<<<< HEAD
         parent_data_rolling_hash=rollup_input.parent_data_rolling_hash,
         end_data_rolling_hash=end_data_rolling_hash,
         parent_block_hash=first_proof.public_inputs.parent_block_hash,
         end_block_hash=last_proof.public_inputs.end_block_hash,
         start_offset=rollup_input.start_offset,
         end_offset=end_offset,
+=======
+        parent_shnarf=rollup_input.parent_shnarf,
+        end_shnarf=current_shnarf,
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
         program_vks=program_vks,
     )
 

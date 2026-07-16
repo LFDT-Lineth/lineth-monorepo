@@ -48,6 +48,12 @@ from rollup_spec.stateless_input import decode_stateless_input_ssz
 _TESTDATA_DIR = Path(rollup_spec.__file__).resolve().parent / "prover_io" / "testdata"
 _PROVER_VERSION = "4.0.0-riscv"
 
+# ProgramVK anchoring test vectors (match the byte-patterns in the fixtures).
+# Origins are noted for tracing only — on the wire/L1 they form one combined
+# `programVks` set.
+_EXEC_VK = Hash32(bytes([0xAA]) * 32)
+_ROLLUP_VK = Hash32(bytes([0xBB]) * 32)
+
 
 def _fixture(name: str) -> Path:
     """Resolve `<name>.json`, allowing an optional `<startBlock>-<endBlock>-` prefix."""
@@ -296,12 +302,17 @@ def _sample_rollup_public_input() -> RollupPublicInput:
         end_ftx_rolling_hash=Hash32(bytes([0x55]) * 32),
         end_processed_ftx_number=U64(9),
         filtered_addresses_hash=Hash32(bytes([0x66]) * 32),
+<<<<<<< HEAD
         parent_data_rolling_hash=Hash32(bytes([0x47]) * 32),
         end_data_rolling_hash=Hash32(bytes([0x8D]) * 32),
         parent_block_hash=Hash32(bytes([0x0A]) * 32),
         end_block_hash=Hash32(bytes([0x0B]) * 32),
         start_offset=4,
         end_offset=131072,
+=======
+        parent_shnarf=Hash32(bytes([0x47]) * 32),
+        end_shnarf=Hash32(bytes([0x8D]) * 32),
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
         program_vks=[_EXEC_VK],
     )
 
@@ -333,12 +344,16 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     assert req.conflations[0].block_rlps == [bytes.fromhex("f90215a0"), bytes.fromhex("f90216b1")]
     assert req.conflations[1].block_rlps == [bytes.fromhex("f90215aa"), bytes.fromhex("f90216bb")]
 
+<<<<<<< HEAD
     assert len(req.chunks) == 1
     assert bytes(req.chunks[0]) == bytes([0x1A]) * 32
     assert req.opaque_prefix_bytes == bytes([0xAB]) * 4
     assert req.opaque_suffix_bytes == b""
 
     assert len(req.l2_execution_proofs) == 2
+=======
+    assert len(req.l2_execution_proofs) == 1
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
     verifiable = req.l2_execution_proofs[0]
     proof = verifiable.proof
     assert bytes(proof.proof) == bytes.fromhex("abcdef")
@@ -355,6 +370,7 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     # §ProgramVK anchoring: the exec proof's VK is read from the request, onto
     # the coordinator-populated wrapper, not the guest-emitted proof itself.
     assert verifiable.program_vk == _EXEC_VK
+<<<<<<< HEAD
 
     verifiable2 = req.l2_execution_proofs[1]
     proof2 = verifiable2.proof
@@ -362,6 +378,8 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     assert int(proof2.start_block_number) == 12
     assert int(proof2.public_inputs.end_block_number) == 14
     assert int(proof2.public_inputs.parent_ftx_number) == 18
+=======
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
 
 
 def test_decode_rollup_request_missing_field_is_rejected() -> None:
@@ -449,8 +467,12 @@ def test_encode_rollup_response_shape_and_values() -> None:
         "endL1L2BridgeRollingHash", "endL1L2BridgeRollingHashMessageNumber",
         "dynamicChainConfigHash", "parentFtxRollingHash", "parentFtxNumber",
         "endFtxRollingHash", "endProcessedFtxNumber", "filteredAddressesHash",
+<<<<<<< HEAD
         "parentDataRollingHash", "endDataRollingHash", "parentBlockHash", "endBlockHash",
         "startOffset", "endOffset", "programVks",
+=======
+        "parentShnarf", "endShnarf", "programVks",
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
     }
 
     assert out["programVk"] == "0x" + ("bb" * 32)
@@ -482,7 +504,10 @@ def _sample_finalization_submission() -> FinalizationSubmission:
     return FinalizationSubmission(
         public_inputs=replace(
             _sample_rollup_public_input(),
+<<<<<<< HEAD
             start_offset=0,
+=======
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
             program_vks=[_EXEC_VK, _ROLLUP_VK],
         ),
         proof=b"\xde\xad\xbe\xef",
@@ -498,7 +523,11 @@ def _sample_finalization_submission() -> FinalizationSubmission:
 def test_decode_aggregation_request_maps_all_fields() -> None:
     req = decode_aggregation_request(_valid_aggregation_request())
 
+<<<<<<< HEAD
     assert len(req.rollup_proofs) == 2
+=======
+    assert len(req.rollup_proofs) == 1
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
     verifiable = req.rollup_proofs[0]
     proof = verifiable.proof
     assert bytes(proof.proof) == bytes.fromhex("abcdef")
@@ -612,8 +641,12 @@ def test_encode_aggregation_response_is_l1_sufficient() -> None:
         "endL1L2BridgeRollingHash", "endL1L2BridgeRollingHashMessageNumber",
         "dynamicChainConfigHash", "parentFtxRollingHash", "parentFtxNumber",
         "endFtxRollingHash", "endProcessedFtxNumber", "filteredAddressesHash",
+<<<<<<< HEAD
         "parentDataRollingHash", "endDataRollingHash", "parentBlockHash", "endBlockHash",
         "startOffset", "endOffset", "programVks",
+=======
+        "parentShnarf", "endShnarf", "programVks",
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
     }
 
 
