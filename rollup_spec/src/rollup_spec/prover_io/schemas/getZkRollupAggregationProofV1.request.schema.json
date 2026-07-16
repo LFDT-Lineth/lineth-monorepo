@@ -56,12 +56,17 @@
         "endFtxRollingHash",
         "endProcessedFtxNumber",
         "filteredAddressesHash",
+<<<<<<< HEAD
         "parentDataRollingHash",
         "endDataRollingHash",
         "parentBlockHash",
         "endBlockHash",
         "startOffset",
         "endOffset",
+=======
+        "parentShnarf",
+        "endShnarf",
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
         "programVks"
       ],
       "properties": {
@@ -78,12 +83,17 @@
         "endFtxRollingHash": { "$ref": "#/$defs/hash32" },
         "endProcessedFtxNumber": { "$ref": "#/$defs/uint" },
         "filteredAddressesHash": { "$ref": "#/$defs/hash32" },
+<<<<<<< HEAD
         "parentDataRollingHash": { "$ref": "#/$defs/hash32" },
         "endDataRollingHash": { "$ref": "#/$defs/hash32" },
         "parentBlockHash": { "$ref": "#/$defs/hash32" },
         "endBlockHash": { "$ref": "#/$defs/hash32" },
         "startOffset": { "$ref": "#/$defs/uint" },
         "endOffset": { "$ref": "#/$defs/uint" },
+=======
+        "parentShnarf": { "$ref": "#/$defs/hash32" },
+        "endShnarf": { "$ref": "#/$defs/hash32" },
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
         "programVks": {
           "description": "Distinct, sorted ascending by byte value: the canonical encoding of the set of guest program VKs verified beneath this proof (order carries no meaning).",
           "type": "array",

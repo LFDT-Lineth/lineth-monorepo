@@ -7,7 +7,10 @@ from ethereum.state import Address
 from .l1_rollup import FinalizationSubmission
 from .l2_execution import hash_address_list, hash_hash_list
 from .rollup import (
+<<<<<<< HEAD
     BLOB_BYTES_LENGTH,
+=======
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
     RollupProof,
     RollupPublicInput,
     VerifiableRollupProof,
@@ -96,6 +99,7 @@ def run_rollup_aggregation_guest(
         end_ftx_rolling_hash=last_proof.public_inputs.end_ftx_rolling_hash,
         end_processed_ftx_number=last_proof.public_inputs.end_processed_ftx_number,
         filtered_addresses_hash=hash_address_list(merged_filtered_addresses),
+<<<<<<< HEAD
         # Position-pair pass-through (§3.4): the extremes are exposed, not
         # asserted here — L1 checks them against committed state (§3.6).
         parent_data_rolling_hash=first_proof.public_inputs.parent_data_rolling_hash,
@@ -104,6 +108,10 @@ def run_rollup_aggregation_guest(
         end_block_hash=last_proof.public_inputs.end_block_hash,
         start_offset=first_proof.public_inputs.start_offset,
         end_offset=last_proof.public_inputs.end_offset,
+=======
+        parent_shnarf=first_proof.public_inputs.parent_shnarf,
+        end_shnarf=last_proof.public_inputs.end_shnarf,
+>>>>>>> 0d54b1fba (feat(misc): Added details on GP VK anchoring and update management (#3555))
         program_vks=program_vks,
     )
 
