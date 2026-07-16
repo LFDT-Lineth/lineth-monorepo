@@ -12,6 +12,13 @@ name: Arithmetization zkc interpreter benchmark (base vs optim)
 # the machine state similar across runs.
 
 # Benchmark data :
+# -- For L2 Guest
+# Runs the l2-execution guest program with the stateless_input.ssz test vector in
+# riscv-guests/l2-execution/test/testdata/stateless_input.ssz
+# This test vector is considered a tiny block - it contains 35 keccak calls (when 
+# a small block on Mainnet has 1k).
+# Use the input keccak_accel to run the benchmark with the zkc keccak-accelerator.
+# 1 test vector = 4 blocks
 # -- For Keccak
 # In arithmetization/src/test/common_inputs/keccak.all
 # There are 20k test vectors you can select from to run the benchmark.
@@ -53,6 +60,11 @@ on:
         required: false
         type: string
         default: main
+      keccak_accel:
+        description: 'Run l2-execution guest with zkc keccak-accelerator'
+        required: false
+        type: boolean
+        default: true
       n_vectors_keccak:
         description: 'First N Keccak test vectors from keccak.all (x4 for number of blocks)'
         required: false
@@ -111,9 +123,15 @@ jobs:
           git worktree add /tmp/wt-opt  refs/bench/opt
 
       - name: Build ELFs, helpers, and per-variant JSON inputs
+        env:
+          KECCAK_ACCEL: ${{ inputs.keccak_accel }}
         run: |
           set -eux
           mkdir -p /tmp/bench/logs
+          ZIG_KECCAK_ARGS=()
+          if [[ "${KECCAK_ACCEL:-true}" == "true" ]]; then
+            ZIG_KECCAK_ARGS=(-Dkeccak-accel=true)
+          fi
           TEST_DIR="$PWD/arithmetization/src/test"
           # Blake: synthesize a single .all line at the requested rounds count.
           go build -o /tmp/bench/blake_rounds_to_in_bytes "$TEST_DIR/scripts/blake_rounds_to_in_bytes/main.go"
@@ -126,8 +144,8 @@ jobs:
           for variant in base opt; do
             wt="/tmp/wt-${variant}"
             wt_test="${wt}/arithmetization/src/test"
-            # l2-execution guest (accelerated keccak): build the rv64im ELF from this
-            # worktree, then convert it to ZKC JSON with the committed sample SSZ input.
+            # l2-execution guest: build the rv64im ELF from this worktree, then convert
+            # it to ZKC JSON with the committed sample SSZ input.
             L2_GUEST_DIR="${wt}/riscv-guests/l2-execution"
             BUILD_COMMON_DIR="${wt}/riscv-guests/build_common"
             L2_GUEST_BIN="${L2_GUEST_DIR}/zig-out/bin/evm_execution_guest"
@@ -136,7 +154,7 @@ jobs:
             make -C "$BUILD_COMMON_DIR" linker-script
             (
               cd "$L2_GUEST_DIR"
-              zig build --cache-dir "$L2_GUEST_ZIG_CACHE" --summary all -Dkeccak-accel=true
+              zig build --cache-dir "$L2_GUEST_ZIG_CACHE" --summary all "${ZIG_KECCAK_ARGS[@]}"
             )
             make -C "$BUILD_COMMON_DIR" elf-to-json \
               BIN_EXT="$L2_GUEST_BIN" \
@@ -268,7 +286,7 @@ jobs:
           /tmp/bench/render_bench_summary \
             -logs /tmp/bench/logs \
             -iters ${{ inputs.iterations || 1}} \
-            -workloads keccak,blake,l2_guest \
+            -workloads l2_guest,keccak,blake \
             -blake-n 1 \
             "${fast_mode_arg[@]}" \
             -base-ref "${{ inputs.base_ref || 'main' }}" \

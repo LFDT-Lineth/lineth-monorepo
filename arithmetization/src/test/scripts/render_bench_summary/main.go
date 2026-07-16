@@ -691,36 +691,36 @@ func main() {
 	out.WriteString("\n")
 
 	out.WriteString("### Machine exec steps\n")
+	if wantL2Guest {
+		renderStepCounts(&out, l2, *fastMode)
+	}
 	if wantKeccak {
 		renderStepCounts(&out, kc, *fastMode)
 	}
 	if wantBlake {
 		renderStepCounts(&out, bl, *fastMode)
 	}
-	if wantL2Guest {
-		renderStepCounts(&out, l2, *fastMode)
-	}
 
 	out.WriteString("\n### Per-iteration timings\n")
+	if wantL2Guest {
+		renderPerIter(&out, l2, *iters)
+	}
 	if wantKeccak {
 		renderPerIter(&out, kc, *iters)
 	}
 	if wantBlake {
 		renderPerIter(&out, bl, *iters)
 	}
-	if wantL2Guest {
-		renderPerIter(&out, l2, *iters)
-	}
 
 	out.WriteString("\n### Aggregates")
+	if wantL2Guest {
+		renderAggregate(&out, l2)
+	}
 	if wantKeccak {
 		renderAggregate(&out, kc)
 	}
 	if wantBlake {
 		renderAggregate(&out, bl)
-	}
-	if wantL2Guest {
-		renderAggregate(&out, l2)
 	}
 
 	fmt.Print(out.String())
