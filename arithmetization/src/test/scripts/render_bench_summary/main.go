@@ -6,6 +6,7 @@
 //
 //	keccak_{opt|base}_<i>.log          - 1 file per (variant, iter)
 //	blake_{opt|base}_<i>_<vec>.log     - M files per (variant, iter) where M = -blake-n
+//	l2_guest_{opt|base}_<i>.log        - 1 file per (variant, iter)
 //
 // Each log is `/usr/bin/time -v <zkc> ... <prog>` output, where `<zkc>` is
 // either the RISC-V interpreter (`zkc execute`) or the native compiler/VM
@@ -72,6 +73,8 @@ var (
 	reKeccakWarmupLogName = regexp.MustCompile(`^keccak_(opt|base)_warmup\.log$`)
 	reBlakeLogName        = regexp.MustCompile(`^blake_(opt|base)_(\d+)_(\d+)\.log$`)
 	reBlakeWarmupLogName  = regexp.MustCompile(`^blake_(opt|base)_warmup_(\d+)\.log$`)
+	reL2GuestLogName       = regexp.MustCompile(`^l2_guest_(opt|base)_(\d+)\.log$`)
+	reL2GuestWarmupLogName = regexp.MustCompile(`^l2_guest_(opt|base)_warmup\.log$`)
 )
 
 func parseWall(s string) (float64, error) {
@@ -148,13 +151,16 @@ func parseLog(path string, requireExecution bool) (metrics, error) {
 	return m, nil
 }
 
-func discover(logsDir string, iters, blakeN int, fastMode bool) (kc, bl workload, err error) {
+func discover(logsDir string, iters, blakeN int, fastMode bool) (kc, bl, l2 workload, err error) {
 	kc.name = "keccak"
 	bl.name = "blake"
+	l2.name = "l2_guest"
 	kc.opt.byIter = make(map[int]*metrics)
 	kc.base.byIter = make(map[int]*metrics)
 	bl.opt.byIter = make(map[int]*metrics)
 	bl.base.byIter = make(map[int]*metrics)
+	l2.opt.byIter = make(map[int]*metrics)
+	l2.base.byIter = make(map[int]*metrics)
 
 	requireExecution := !fastMode
 
@@ -168,7 +174,7 @@ func discover(logsDir string, iters, blakeN int, fastMode bool) (kc, bl workload
 
 	entries, err := os.ReadDir(logsDir)
 	if err != nil {
-		return kc, bl, fmt.Errorf("read logs dir %s: %w", logsDir, err)
+		return kc, bl, l2, fmt.Errorf("read logs dir %s: %w", logsDir, err)
 	}
 
 	for _, e := range entries {
@@ -182,7 +188,7 @@ func discover(logsDir string, iters, blakeN int, fastMode bool) (kc, bl workload
 			variant := mm[1]
 			m, perr := parseLog(full, true)
 			if perr != nil {
-				return kc, bl, perr
+				return kc, bl, l2, perr
 			}
 			target := &kc.opt
 			if variant == "base" {
@@ -201,7 +207,7 @@ func discover(logsDir string, iters, blakeN int, fastMode bool) (kc, bl workload
 			}
 			m, perr := parseLog(full, requireExecution)
 			if perr != nil {
-				return kc, bl, perr
+				return kc, bl, l2, perr
 			}
 			target := &kc.opt
 			if variant == "base" {
@@ -211,11 +217,44 @@ func discover(logsDir string, iters, blakeN int, fastMode bool) (kc, bl workload
 			continue
 		}
 
+		if mm := reL2GuestWarmupLogName.FindStringSubmatch(name); mm != nil {
+			variant := mm[1]
+			m, perr := parseLog(full, true)
+			if perr != nil {
+				return kc, bl, l2, perr
+			}
+			target := &l2.opt
+			if variant == "base" {
+				target = &l2.base
+			}
+			target.warmupSteps = m.steps
+			target.warmupStepsPresent = true
+			continue
+		}
+
+		if mm := reL2GuestLogName.FindStringSubmatch(name); mm != nil {
+			variant := mm[1]
+			iter, _ := strconv.Atoi(mm[2])
+			if iter < 1 || iter > iters {
+				continue
+			}
+			m, perr := parseLog(full, requireExecution)
+			if perr != nil {
+				return kc, bl, l2, perr
+			}
+			target := &l2.opt
+			if variant == "base" {
+				target = &l2.base
+			}
+			target.byIter[iter] = &m
+			continue
+		}
+
 		if mm := reBlakeWarmupLogName.FindStringSubmatch(name); mm != nil {
 			variant := mm[1]
 			m, perr := parseLog(full, true)
 			if perr != nil {
-				return kc, bl, perr
+				return kc, bl, l2, perr
 			}
 			vi := 0
 			if variant == "base" {
@@ -244,7 +283,7 @@ func discover(logsDir string, iters, blakeN int, fastMode bool) (kc, bl workload
 			}
 			m, perr := parseLog(full, requireExecution)
 			if perr != nil {
-				return kc, bl, perr
+				return kc, bl, l2, perr
 			}
 			vi := 0
 			if variant == "base" {
@@ -268,7 +307,7 @@ func discover(logsDir string, iters, blakeN int, fastMode bool) (kc, bl workload
 
 	for key, a := range blakeAggs {
 		if a.count != blakeN {
-			return kc, bl, fmt.Errorf("blake iter=%d variant=%d: got %d log(s), expected %d", key[0], key[1], a.count, blakeN)
+			return kc, bl, l2, fmt.Errorf("blake iter=%d variant=%d: got %d log(s), expected %d", key[0], key[1], a.count, blakeN)
 		}
 		m := &metrics{
 			constraintS: a.constraintS,
@@ -285,7 +324,7 @@ func discover(logsDir string, iters, blakeN int, fastMode bool) (kc, bl workload
 
 	for vi, a := range blakeWarmupAggs {
 		if a.count != blakeN {
-			return kc, bl, fmt.Errorf("blake warmup variant=%d: got %d log(s), expected %d", vi, a.count, blakeN)
+			return kc, bl, l2, fmt.Errorf("blake warmup variant=%d: got %d log(s), expected %d", vi, a.count, blakeN)
 		}
 		target := &bl.opt
 		if vi == 1 {
@@ -295,7 +334,7 @@ func discover(logsDir string, iters, blakeN int, fastMode bool) (kc, bl workload
 		target.warmupStepsPresent = true
 	}
 
-	return kc, bl, nil
+	return kc, bl, l2, nil
 }
 
 func sortedIters(m map[int]*metrics) []int {
@@ -565,7 +604,7 @@ func formatFloat(v float64) string {
 
 // parseWorkloads splits a comma-separated `-workloads` value into the set of
 // workloads we will render. Unknown entries are rejected.
-func parseWorkloads(s string) (wantKeccak, wantBlake bool, err error) {
+func parseWorkloads(s string) (wantKeccak, wantBlake, wantL2Guest bool, err error) {
 	for _, part := range strings.Split(s, ",") {
 		switch strings.TrimSpace(strings.ToLower(part)) {
 		case "":
@@ -574,21 +613,23 @@ func parseWorkloads(s string) (wantKeccak, wantBlake bool, err error) {
 			wantKeccak = true
 		case "blake":
 			wantBlake = true
+		case "l2_guest":
+			wantL2Guest = true
 		default:
-			return false, false, fmt.Errorf("unknown workload %q (allowed: keccak, blake)", part)
+			return false, false, false, fmt.Errorf("unknown workload %q (allowed: keccak, blake, l2_guest)", part)
 		}
 	}
-	if !wantKeccak && !wantBlake {
-		return false, false, fmt.Errorf("no workloads requested (use -workloads keccak,blake)")
+	if !wantKeccak && !wantBlake && !wantL2Guest {
+		return false, false, false, fmt.Errorf("no workloads requested (use -workloads keccak,blake,l2_guest)")
 	}
-	return wantKeccak, wantBlake, nil
+	return wantKeccak, wantBlake, wantL2Guest, nil
 }
 
 func main() {
 	logsDir := flag.String("logs", "", "directory containing the per-iter benchmark logs")
 	iters := flag.Int("iters", 5, "number of timed iterations per (workload, variant)")
 	blakeN := flag.Int("blake-n", 3, "number of Blake vectors aggregated per (variant, iter)")
-	workloads := flag.String("workloads", "keccak,blake", "comma-separated list of workloads to render (keccak,blake)")
+	workloads := flag.String("workloads", "keccak,blake", "comma-separated list of workloads to render (keccak,blake,l2_guest)")
 	baseRef := flag.String("base-ref", "", "baseline branch/commit ref (informational)")
 	optimRef := flag.String("optim-ref", "", "optim-test branch/commit ref (informational)")
 	zkcVersion := flag.String("zkc-version", "", "zkc repo ref used to build the zkc binary (informational, deprecated: use -zkc-ref-base/-zkc-ref-optim)")
@@ -602,13 +643,13 @@ func main() {
 		fmt.Fprintln(os.Stderr, "error: -logs is required")
 		os.Exit(1)
 	}
-	wantKeccak, wantBlake, err := parseWorkloads(*workloads)
+	wantKeccak, wantBlake, wantL2Guest, err := parseWorkloads(*workloads)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		os.Exit(1)
 	}
 
-	kc, bl, err := discover(*logsDir, *iters, *blakeN, *fastMode)
+	kc, bl, l2, err := discover(*logsDir, *iters, *blakeN, *fastMode)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		os.Exit(1)
@@ -656,6 +697,9 @@ func main() {
 	if wantBlake {
 		renderStepCounts(&out, bl, *fastMode)
 	}
+	if wantL2Guest {
+		renderStepCounts(&out, l2, *fastMode)
+	}
 
 	out.WriteString("\n### Per-iteration timings\n")
 	if wantKeccak {
@@ -664,6 +708,9 @@ func main() {
 	if wantBlake {
 		renderPerIter(&out, bl, *iters)
 	}
+	if wantL2Guest {
+		renderPerIter(&out, l2, *iters)
+	}
 
 	out.WriteString("\n### Aggregates")
 	if wantKeccak {
@@ -671,6 +718,9 @@ func main() {
 	}
 	if wantBlake {
 		renderAggregate(&out, bl)
+	}
+	if wantL2Guest {
+		renderAggregate(&out, l2)
 	}
 
 	fmt.Print(out.String())

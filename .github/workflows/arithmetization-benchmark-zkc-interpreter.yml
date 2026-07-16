@@ -124,12 +124,29 @@ jobs:
           # Build guest JSON on each worktree so elf_to_json_gen output matches that
           # branch's main.zkc inputs (e.g. pre-decoded instruction tables on optim only).
           for variant in base opt; do
-            wt="/tmp/wt-${variant}/arithmetization/src/test"
+            wt="/tmp/wt-${variant}"
+            wt_test="${wt}/arithmetization/src/test"
+            # l2-execution guest (accelerated keccak): build the rv64im ELF from this
+            # worktree, then convert it to ZKC JSON with the committed sample SSZ input.
+            L2_GUEST_DIR="${wt}/riscv-guests/l2-execution"
+            BUILD_COMMON_DIR="${wt}/riscv-guests/build_common"
+            L2_GUEST_BIN="${L2_GUEST_DIR}/zig-out/bin/evm_execution_guest"
+            L2_GUEST_INPUT="${L2_GUEST_DIR}/test/testdata/stateless_input.ssz"
+            L2_GUEST_ZIG_CACHE="${L2_GUEST_DIR}/.zig-cache"
+            make -C "$BUILD_COMMON_DIR" linker-script
+            (
+              cd "$L2_GUEST_DIR"
+              zig build --cache-dir "$L2_GUEST_ZIG_CACHE" --summary all -Dkeccak-accel=true
+            )
+            make -C "$BUILD_COMMON_DIR" elf-to-json \
+              BIN_EXT="$L2_GUEST_BIN" \
+              JSON_EXT="/tmp/l2-guest-${variant}.json" \
+              IN_BYTES="@${L2_GUEST_INPUT}"
             mkdir -p "/tmp/bench/json/blake-${variant}"
-            make -C "$wt" keccak-rust-json \
+            make -C "$wt_test" keccak-rust-json \
               KECCAK_N_VECTORS=${{ inputs.n_vectors_keccak || 10 }} \
               KECCAK_JSON_FILE="/tmp/keccak-${variant}.json"
-            make -C "$wt" blake-rust-json \
+            make -C "$wt_test" blake-rust-json \
               BLAKE_ALL_FILE=/tmp/blake_custom.all \
               BLAKE_N_VECTORS=1 \
               BLAKE_JSON_DIR="/tmp/bench/json/blake-${variant}"
@@ -166,6 +183,11 @@ jobs:
               > "$2" 2>&1
           }
 
+          run_l2_guest() {  # $1=variant (opt|base)  $2=label (warmup|iter#)  optional: --fast
+            run_zkc_exec "$1" "/tmp/bench/logs/l2_guest_${1}_${2}.log" "/tmp/l2-guest-${1}.json" \
+              "/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc" "${3:-}"
+          }
+
           run_keccak() {  # $1=variant (opt|base)  $2=label (warmup|iter#)  optional: --fast
             run_zkc_exec "$1" "/tmp/bench/logs/keccak_${1}_${2}.log" "/tmp/keccak-${1}.json" \
               "/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc" "${3:-}"
@@ -178,6 +200,15 @@ jobs:
               n=$(basename "$json" .json)
               run_zkc_exec "$1" "/tmp/bench/logs/blake_${1}_${2}_${n}.log" "$json" "$zkc_main" "${3:-}"
             done
+          }
+
+          run_gogen_l2_guest() {  # $1=variant (opt|base)  $2=label (warmup|iter#)
+            local zkc_bin="/tmp/zkc-${1}"
+            local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
+            "$zkc_bin" generate --fast -v -q --field KOALABEAR_16 -o riscv.go "$zkc_main"
+            go build -o riscv-gogen riscv.go
+            /usr/bin/time -v ./riscv-gogen < "/tmp/l2-guest-${1}.json" \
+              > "/tmp/bench/logs/l2_guest_${1}_${2}.log" 2>&1
           }
 
           run_gogen_keccak() {  # $1=variant (opt|base)  $2=label (warmup|iter#)
@@ -202,7 +233,7 @@ jobs:
             done
           }
 
-          for wl in keccak blake; do
+          for wl in keccak blake l2_guest; do
             log "=== workload: ${wl} ==="
             # Untimed warmup: opt then base. Primes the page cache and shared libs
             # so both branches face an already-warm filesystem on iteration 1.
@@ -237,6 +268,7 @@ jobs:
           /tmp/bench/render_bench_summary \
             -logs /tmp/bench/logs \
             -iters ${{ inputs.iterations || 1}} \
+            -workloads keccak,blake,l2_guest \
             -blake-n 1 \
             "${fast_mode_arg[@]}" \
             -base-ref "${{ inputs.base_ref || 'main' }}" \
