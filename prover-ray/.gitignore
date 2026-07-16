@@ -1,2 +1,3 @@
 .claude/
 *.log
+zkcdriver/testdata/**/*.bin
