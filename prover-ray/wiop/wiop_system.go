@@ -28,13 +28,18 @@ type System struct {
 	// system via [System.NewLagrangeEval] and [System.NewLagrangeEvalFrom],
 	// in declaration order.
 	LagrangeEvals []*LagrangeEval
-	// TableRelations holds all [TableRelation] queries registered with this
-	// system via [System.NewPermutation] and [System.NewInclusion], in
+	// TableRelations holds all [TableRelationQuery] queries registered with this
+	// system via [System.NewInclusion] and [System.NewPermutation], in
 	// declaration order.
-	TableRelations []*LookupQuery
+	TableRelations []*TableRelationQuery
 	// LogDerivativeSums holds all [LogDerivativeSum] queries registered with
 	// this system via [System.NewLogDerivativeSum], in declaration order.
 	LogDerivativeSums []*LogDerivativeSum
+	// GrandProducts holds all [GrandProduct] queries registered with this
+	// system via [System.NewGrandProduct], in declaration order. The
+	// grandproduct compiler also creates these when reducing permutation
+	// [TableRelationQuery] queries.
+	GrandProducts []*GrandProduct
 	// MessageBuses holds all [MessageBus] queries registered with this system
 	// via [System.NewMessageBusSend] and [System.NewMessageBusReceive], in
 	// declaration order.
@@ -48,18 +53,6 @@ type System struct {
 	// [Proof] (in a [PublicInput], aligned to this order) and are received by
 	// [System.Verify] alongside the proof.
 	PublicInputs []*Cell
-	// MessageBusSkipInShardCheck controls whether the messagebus compiler
-	// registers its per-handle in-shard verifier action — a
-	// [messagebus.CheckHandleSumInShard] — which asserts the per-segment LDS
-	// Results sum to that action's Expected value on this shard alone. When
-	// false (the default) the pass registers one such action per handle,
-	// preserving the single-shard "sum is zero" guarantee. Set to true in
-	// sharded protocols where a downstream cross-shard layer owns the
-	// consistency check and the in-shard residual must remain unasserted so
-	// it can be carried over to the cross-shard identity (typically the
-	// cross-shard layer registers its own CheckHandleSumInShard instances
-	// with appropriate non-zero Expected values).
-	MessageBusSkipInShardCheck bool
 	// scratchArena backs the [PlanningContext] used by [Materialize]. It is
 	// nil until Materialize is called.
 	scratchArena *arena.VectorArena

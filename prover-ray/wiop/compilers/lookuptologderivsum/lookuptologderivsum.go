@@ -1,4 +1,4 @@
-// Package lookuptologderivsum compiles every unreduced [wiop.LookupQuery]
+// Package lookuptologderivsum compiles every unreduced [wiop.TableRelationQuery]
 // into a single [wiop.LogDerivativeSum] query whose final result is asserted
 // to be zero. It is the prover-ray analogue of linea/prover/protocol/compiler/
 // logderivativesum's LookupIntoLogDerivativeSum pass.
@@ -36,7 +36,7 @@
 // A-side, mirroring linea/lookuptologderivsum's IsFilteredOnIncluding
 // handling.
 //
-// After Compile runs, every consumed [wiop.LookupQuery] is marked reduced
+// After Compile runs, every consumed [wiop.TableRelationQuery] is marked reduced
 // and a single [wiop.LogDerivativeSum] query is left in sys for the
 // downstream [logderivativesum] compiler pass to consume.
 //
@@ -56,7 +56,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
-// Compile reduces every unreduced inclusion [wiop.LookupQuery] in sys to a
+// Compile reduces every unreduced inclusion [wiop.TableRelationQuery] in sys to a
 // single [wiop.LogDerivativeSum] query plus a multiplicity column per
 // lookup-table fragment, plus a verifier action that asserts the resulting
 // LogDerivativeSum result equals zero.
@@ -135,7 +135,7 @@ func Compile(sys *wiop.System) {
 
 	var (
 		fractions  []wiop.Fraction
-		consumedQs []*wiop.LookupQuery
+		consumedQs []*wiop.TableRelationQuery
 	)
 	for _, k := range keys {
 		g := groups[k]
@@ -180,6 +180,10 @@ func collectGroups(sys *wiop.System) map[string]*lookupGroup {
 	groups := make(map[string]*lookupGroup)
 	for _, q := range sys.TableRelations {
 		if q.IsReduced() {
+			continue
+		}
+		// Permutation queries are handled by the grandproduct pass.
+		if q.Kind == wiop.KindPermutation {
 			continue
 		}
 		if len(q.B) != 1 {
