@@ -275,9 +275,9 @@ def _decode_payload_stateless_inputs(payloads: Sequence[LineaPayloadInput]) -> L
 @dataclass
 class L2ExecutionProof:
     """
-    An l2-execution proof as the rollup guest consumes it: the guest *output*
-    (the 15-field `public_inputs` tuple + the revealed hash preimages) plus the
-    `proof` bytes the rollup guest recursively verifies.
+    An l2-execution proof as the l2-execution guest emits it: the guest
+    *output* (the 15-field `public_inputs` tuple + the revealed hash
+    preimages) plus the `proof` bytes the rollup guest recursively verifies.
 
     Guest/prover boundary: the guest emits `public_inputs` and the preimage
     lists only; `proof` is attached by the zkVM/prover layer above — a guest
@@ -286,6 +286,10 @@ class L2ExecutionProof:
     `end_block_number` is intentionally absent: it is already
     `public_inputs.end_block_number`. Only `start_block_number` (not in the PI
     tuple) is carried, so the rollup guest can verify proof tiling.
+
+    This type has no verifying-key field: a guest cannot attest its own VK, so
+    `run_l2_execution_guest` never produces one. See `VerifiableL2ExecutionProof`
+    for the coordinator-populated wrapper the rollup guest actually consumes.
     """
     public_inputs: L2ExecutionProofPublicInput
     start_block_number: U64
@@ -293,6 +297,23 @@ class L2ExecutionProof:
     l2_l1_messages: List[Hash32] = field(default_factory=list)
     tx_froms: List[Address] = field(default_factory=list)
     filtered_addresses: List[Address] = field(default_factory=list)
+
+
+@dataclass
+class VerifiableL2ExecutionProof:
+    """
+    An `L2ExecutionProof` paired with the `program_vk` the rollup guest
+    recursively verifies it against (§ProgramVK anchoring).
+
+    `program_vk` is a *runtime input* the coordinator supplies — the same
+    value it verifies `proof` against here is the value bubbled up into the
+    rollup guest's `program_vks` public output, so the anchored VK is provably
+    the key the verification ran against. Never produced by
+    `run_l2_execution_guest` (a guest cannot attest its own VK); only the
+    rollup request codec constructs this wrapper.
+    """
+    proof: L2ExecutionProof
+    program_vk: Hash32
 
 
 def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2ExecutionProof:
