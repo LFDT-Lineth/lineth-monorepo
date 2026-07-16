@@ -245,7 +245,8 @@ func newNonNativeRandomScenario(name string, nbBits int) *NonNativeScenario {
 // AssignInvalid perturbs the last row's Result by ±1, violating the relation
 // on exactly that row while keeping it within [0, Modulus) (or non-negative,
 // when Modulus is zero).
-func newNonNativeScenario(name string, nbBits int, lefts, rights, moduli, quotientOverride []*big.Int) *NonNativeScenario {
+func newNonNativeScenario(name string, nbBits int, lefts, rights, moduli,
+	quotientOverride []*big.Int) *NonNativeScenario {
 	nbRows := len(lefts)
 	nbLimbs := (nbBits + nonNativeBitsPerLimb - 1) / nonNativeBitsPerLimb
 
