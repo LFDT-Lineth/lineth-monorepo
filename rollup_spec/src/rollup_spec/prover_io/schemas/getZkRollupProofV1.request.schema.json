@@ -116,7 +116,8 @@
         "publicInputs",
         "l2L1Messages",
         "txFroms",
-        "filteredAddresses"
+        "filteredAddresses",
+        "programVk"
       ],
       "properties": {
         "proof": { "$ref": "#/$defs/hex" },
@@ -124,7 +125,8 @@
         "publicInputs": { "$ref": "#/$defs/l2ExecutionPublicInputs" },
         "l2L1Messages": { "type": "array", "items": { "$ref": "#/$defs/hash32" } },
         "txFroms": { "type": "array", "items": { "$ref": "#/$defs/address" } },
-        "filteredAddresses": { "type": "array", "items": { "$ref": "#/$defs/address" } }
+        "filteredAddresses": { "type": "array", "items": { "$ref": "#/$defs/address" } },
+        "programVk": { "$ref": "#/$defs/hash32" }
       }
     }
   }

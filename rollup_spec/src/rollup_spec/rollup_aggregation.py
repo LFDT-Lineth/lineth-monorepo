@@ -1,12 +1,17 @@
 from dataclasses import dataclass
-from typing import List
+from typing import List, Set
 
 from ethereum.crypto.hash import Hash32
 from ethereum.state import Address
 
 from .l1_rollup import FinalizationSubmission
 from .l2_execution import hash_address_list, hash_hash_list
-from .rollup import RollupProof, RollupPublicInput
+from .rollup import (
+    RollupProof,
+    RollupPublicInput,
+    VerifiableRollupProof,
+    recursive_stark_verify,
+)
 
 
 @dataclass
@@ -15,7 +20,7 @@ class RollupAggregationProofPrivateInput:
     Logical rollup-aggregation request. The topology is flat across M rollup
     proofs, as specified in Readme.md section 2.3.
     """
-    rollup_proofs: List[RollupProof]
+    rollup_proofs: List[VerifiableRollupProof]
 
 
 def run_rollup_aggregation_guest(
@@ -33,20 +38,44 @@ def run_rollup_aggregation_guest(
     if len(aggregation_input.rollup_proofs) == 0:
         raise Exception("rollup-aggregation proof must consume at least one rollup proof")
 
-    for proof in aggregation_input.rollup_proofs:
-        verify_rollup_proof(proof)
+    for vp in aggregation_input.rollup_proofs:
+        verify_rollup_proof(vp.program_vk, vp.proof)
 
-    for left, right in zip(aggregation_input.rollup_proofs, aggregation_input.rollup_proofs[1:]):
+    # Unwrap once: continuity and boundary aggregation only need the
+    # guest-emitted `RollupProof`, not the coordinator-attached VK.
+    rollup_proofs = [vp.proof for vp in aggregation_input.rollup_proofs]
+    for left, right in zip(rollup_proofs, rollup_proofs[1:]):
         assert_rollup_proof_continuity(left, right)
 
-    first_proof = aggregation_input.rollup_proofs[0]
-    last_proof = aggregation_input.rollup_proofs[-1]
+    first_proof = rollup_proofs[0]
+    last_proof = rollup_proofs[-1]
     merged_l2_l1_roots: List[Hash32] = []
     merged_filtered_addresses: List[Address] = []
 
-    for proof in aggregation_input.rollup_proofs:
-        merged_l2_l1_roots.extend(proof.l2_l1_roots)
-        merged_filtered_addresses.extend(proof.filtered_addresses)
+    # §ProgramVK anchoring: emit ONE `program_vks` set as a CANONICAL sorted,
+    # distinct list — L1 does not distinguish exec vs rollup VKs (single combined
+    # `approvedVks` set), and sorting makes the commitment a pure function of the
+    # set's contents. The set is the union of every rollup proof's bubbled
+    # `public_inputs.program_vks` (the exec VKs it verified) and each proof's own
+    # `program_vk`. `rollup_vks` is kept only as internal trace of the distinct
+    # rollup `program_vk`s that were verified.
+    rollup_vks: List[Hash32] = []  # internal trace only
+    seen_rollup_vks: Set[Hash32] = set()
+    program_vk_set: Set[Hash32] = set()
+
+    for vp in aggregation_input.rollup_proofs:
+        merged_l2_l1_roots.extend(vp.proof.l2_l1_roots)
+        merged_filtered_addresses.extend(vp.proof.filtered_addresses)
+        if vp.program_vk not in seen_rollup_vks:
+            seen_rollup_vks.add(vp.program_vk)
+            rollup_vks.append(vp.program_vk)
+        # Union in the bubbled exec VKs verified beneath this rollup proof, plus
+        # the rollup proof's own VK.
+        program_vk_set.update(vp.proof.public_inputs.program_vks)
+        program_vk_set.add(vp.program_vk)
+
+    # Canonical set encoding: sorted ascending by byte value (Hash32 is bytes).
+    program_vks = sorted(program_vk_set)
 
     public_inputs = RollupPublicInput(
         end_block_number=last_proof.public_inputs.end_block_number,
@@ -68,6 +97,7 @@ def run_rollup_aggregation_guest(
         filtered_addresses_hash=hash_address_list(merged_filtered_addresses),
         parent_shnarf=first_proof.public_inputs.parent_shnarf,
         end_shnarf=last_proof.public_inputs.end_shnarf,
+        program_vks=program_vks,
     )
 
     return FinalizationSubmission(
@@ -79,18 +109,23 @@ def run_rollup_aggregation_guest(
     )
 
 
-def verify_rollup_proof(proof: RollupProof) -> None:
+def verify_rollup_proof(program_vk: Hash32, proof: RollupProof) -> None:
     """
     Verify an inner rollup proof against its claimed public inputs.
 
     PRECOMPILE (production guest): recursive STARK verification.
         Same primitive as `verify_l2_execution_proof` (§rollup.py) — the zkVM's
-        in-circuit recursive verifier. In this reference, the
-        recursive-verify step is implicit; `RollupProof.proof` stands in for
-        the recursive STARK bytes the guest would actually check. We only
+        in-circuit recursive verifier. `program_vk` is the explicit verify-key
+        parameter it checks against (§ProgramVK anchoring); the aggregation guest
+        passes the same `program_vk` it bubbles up into `rollup_vks` /
+        `program_vks`, so the anchored VK is provably the key the verification
+        ran against. `RollupProof.proof` stands in for the recursive STARK bytes
+        the guest would actually check. Beyond the recursive verify, we only
         re-validate the hash preimages (`l2L1BridgeTransactionTree`,
         `filteredAddressesHash`) the rollup-aggregation proof consumes.
     """
+    # First: the recursive STARK verify against the explicit verify key.
+    recursive_stark_verify(program_vk, proof.proof)
     # PRECOMPILE: keccak256 (preimage-binding checks).
     if hash_hash_list(proof.l2_l1_roots) != proof.public_inputs.l2_l1_bridge_transaction_tree:
         raise Exception("invalid l2L1BridgeTransactionTree preimage")
