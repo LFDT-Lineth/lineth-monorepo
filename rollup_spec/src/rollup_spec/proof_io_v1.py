@@ -64,6 +64,7 @@ from .l2_execution import (
     L2ExecutionProof,
     L2ExecutionProofPrivateInput,
     L2ExecutionProofPublicInput,
+    VerifiableL2ExecutionProof,
     run_l2_execution_guest,
 )
 from .rollup import (
@@ -71,6 +72,7 @@ from .rollup import (
     RollupProof,
     RollupProofPrivateInput,
     RollupPublicInput,
+    VerifiableRollupProof,
     run_rollup_guest,
 )
 from .l1_rollup import FinalizationSubmission
@@ -357,11 +359,11 @@ def _decode_l2_execution_public_input(obj: dict, ctx: str) -> L2ExecutionProofPu
     )
 
 
-def _decode_l2_execution_proof(obj: dict, ctx: str) -> L2ExecutionProof:
+def _decode_l2_execution_proof(obj: dict, ctx: str) -> VerifiableL2ExecutionProof:
     l2_l1_messages = _require_list(obj, "l2L1Messages", ctx)
     tx_froms = _require_list(obj, "txFroms", ctx)
     filtered_addresses = _require_list(obj, "filteredAddresses", ctx)
-    return L2ExecutionProof(
+    proof = L2ExecutionProof(
         public_inputs=_decode_l2_execution_public_input(
             _require(obj, "publicInputs", ctx), f"{ctx}publicInputs."
         ),
@@ -378,6 +380,12 @@ def _decode_l2_execution_proof(obj: dict, ctx: str) -> L2ExecutionProof:
             Address(_bytes_from_hex(a, f"{ctx}filteredAddresses[{i}]"))
             for i, a in enumerate(filtered_addresses)
         ],
+    )
+    return VerifiableL2ExecutionProof(
+        proof=proof,
+        # §ProgramVK anchoring: the l2-execution proof's VK, supplied by the
+        # coordinator as a runtime input for the rollup guest's recursive verify.
+        program_vk=Hash32(_bytes_from_hex(_require(obj, "programVk", ctx), f"{ctx}programVk")),
     )
 
 
@@ -467,6 +475,10 @@ def _encode_rollup_public_inputs(pi: RollupPublicInput) -> dict:
         "filteredAddressesHash": _hx(pi.filtered_addresses_hash),
         "parentShnarf": _hx(pi.parent_shnarf),
         "endShnarf": _hx(pi.end_shnarf),
+        # §ProgramVK anchoring: canonical sorted, distinct list of ALL guest
+        # program VKs verified beneath this proof, checked against L1's single
+        # combined approved-VK set (exec vs rollup not distinguished).
+        "programVks": [_hx(v) for v in pi.program_vks],
     }
 
 
@@ -521,6 +533,7 @@ def _decode_rollup_public_input(obj: dict, ctx: str) -> RollupPublicInput:
     def n(key: str) -> U64:
         return _u64(_require(obj, key, ctx), f"{ctx}{key}")
 
+    program_vks = _require_list(obj, "programVks", ctx)
     return RollupPublicInput(
         end_block_number=n("endBlockNumber"),
         end_block_timestamp=n("endBlockTimestamp"),
@@ -537,13 +550,17 @@ def _decode_rollup_public_input(obj: dict, ctx: str) -> RollupPublicInput:
         filtered_addresses_hash=h("filteredAddressesHash"),
         parent_shnarf=h("parentShnarf"),
         end_shnarf=h("endShnarf"),
+        program_vks=[
+            Hash32(_bytes_from_hex(v, f"{ctx}programVks[{i}]"))
+            for i, v in enumerate(program_vks)
+        ],
     )
 
 
-def _decode_rollup_proof(obj: dict, ctx: str) -> RollupProof:
+def _decode_rollup_proof(obj: dict, ctx: str) -> VerifiableRollupProof:
     l2_l1_roots = _require_list(obj, "l2L1Roots", ctx)
     filtered_addresses = _require_list(obj, "filteredAddresses", ctx)
-    return RollupProof(
+    proof = RollupProof(
         public_inputs=_decode_rollup_public_input(
             _require(obj, "publicInputs", ctx), f"{ctx}publicInputs."
         ),
@@ -556,6 +573,12 @@ def _decode_rollup_proof(obj: dict, ctx: str) -> RollupProof:
             Address(_bytes_from_hex(a, f"{ctx}filteredAddresses[{i}]"))
             for i, a in enumerate(filtered_addresses)
         ],
+    )
+    return VerifiableRollupProof(
+        proof=proof,
+        # §ProgramVK anchoring: the rollup proof's own VK, supplied by the
+        # coordinator for the aggregation guest's recursive verify.
+        program_vk=Hash32(_bytes_from_hex(_require(obj, "programVk", ctx), f"{ctx}programVk")),
     )
 
 
