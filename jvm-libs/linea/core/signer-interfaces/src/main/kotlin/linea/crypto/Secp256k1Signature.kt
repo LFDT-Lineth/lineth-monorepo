@@ -14,13 +14,13 @@ data class Secp256k1Signature(val r: BigInteger, val s: BigInteger) {
   }
 
   /** Encodes as the 64-byte r || s wire format, each component left-padded to 32 bytes. */
-  fun toBytes(): ByteArray = padTo32(r) + padTo32(s)
+  fun toRSBytes(): ByteArray = padTo32(r) + padTo32(s)
 
   companion object {
     const val COMPONENT_SIZE_BYTES = 32
     const val SIZE_BYTES = 2 * COMPONENT_SIZE_BYTES
 
-    fun fromBytes(bytes: ByteArray): Secp256k1Signature {
+    fun fromRSBytes(bytes: ByteArray): Secp256k1Signature {
       require(bytes.size == SIZE_BYTES) { "signature must be $SIZE_BYTES bytes (r || s), got ${bytes.size}" }
       return Secp256k1Signature(
         r = BigInteger(1, bytes.copyOfRange(0, COMPONENT_SIZE_BYTES)),

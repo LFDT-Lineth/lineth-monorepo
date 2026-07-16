@@ -29,28 +29,28 @@ class Secp256k1SignatureTest {
   @Test
   fun `round-trips through the 64-byte encoding, left-padding short components`() {
     val signature = Secp256k1Signature(BigInteger.ONE, Secp256k1.HALF_N)
-    val bytes = signature.toBytes()
+    val bytes = signature.toRSBytes()
     assertThat(bytes).hasSize(Secp256k1Signature.SIZE_BYTES)
     assertThat(bytes.copyOfRange(0, 31)).containsOnly(0)
-    assertThat(Secp256k1Signature.fromBytes(bytes)).isEqualTo(signature)
+    assertThat(Secp256k1Signature.fromRSBytes(bytes)).isEqualTo(signature)
   }
 
   @Test
-  fun `toBytes drops the sign byte of 33-byte magnitudes`() {
+  fun `toRSBytes drops the sign byte of 33-byte magnitudes`() {
     val signature = Secp256k1Signature(Secp256k1.N - BigInteger.ONE, Secp256k1.HALF_N)
-    val bytes = signature.toBytes()
+    val bytes = signature.toRSBytes()
     assertThat(bytes).hasSize(Secp256k1Signature.SIZE_BYTES)
-    assertThat(Secp256k1Signature.fromBytes(bytes)).isEqualTo(signature)
+    assertThat(Secp256k1Signature.fromRSBytes(bytes)).isEqualTo(signature)
   }
 
   @Test
-  fun `fromBytes rejects wrong lengths and non-canonical encodings`() {
-    assertThatThrownBy { Secp256k1Signature.fromBytes(ByteArray(65)) }
+  fun `fromRSBytes rejects wrong lengths and non-canonical encodings`() {
+    assertThatThrownBy { Secp256k1Signature.fromRSBytes(ByteArray(65)) }
       .isInstanceOf(IllegalArgumentException::class.java)
       .hasMessageContaining("64 bytes")
-    val highS = Secp256k1Signature(BigInteger.ONE, BigInteger.ONE).toBytes()
+    val highS = Secp256k1Signature(BigInteger.ONE, BigInteger.ONE).toRSBytes()
     (Secp256k1.HALF_N + BigInteger.ONE).toByteArray().takeLast(32).forEachIndexed { i, b -> highS[32 + i] = b }
-    assertThatThrownBy { Secp256k1Signature.fromBytes(highS) }
+    assertThatThrownBy { Secp256k1Signature.fromRSBytes(highS) }
       .isInstanceOf(IllegalArgumentException::class.java)
       .hasMessageContaining("low-s")
   }

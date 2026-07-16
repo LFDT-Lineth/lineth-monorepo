@@ -13,12 +13,12 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 class Web3SignerRestClient(
   private val client: HttpRestClient,
   private val publicKey: ByteArray,
-) : Signer {
+) : Signer<Secp256k1Signature> {
   private val publicKeyHex = publicKey.encodeHex()
 
   override fun publicKey(): ByteArray = publicKey
 
-  override fun sign(bytes: ByteArray): SafeFuture<ByteArray> {
+  override fun sign(bytes: ByteArray): SafeFuture<Secp256k1Signature> {
     val path = WEB3SIGNER_SIGN_ENDPOINT + publicKeyHex
     val requestJson =
       """
@@ -30,7 +30,7 @@ class Web3SignerRestClient(
       when (val body = response.map { (it as HttpResponseImpl<*>).body().toString() }) {
         is Ok -> {
           val signature = body.value.decodeHex()
-          Secp256k1Signature.fromBytes(signature.sliceArray(0 until Secp256k1Signature.SIZE_BYTES)).toBytes()
+          Secp256k1Signature.fromRSBytes(signature.sliceArray(0 until Secp256k1Signature.SIZE_BYTES))
         }
 
         is Err -> throw body.error.asException()

@@ -6,7 +6,6 @@ import io.vertx.core.http.HttpVersion
 import io.vertx.core.http.PoolOptions
 import io.vertx.ext.web.client.WebClientOptions
 import io.vertx.junit5.VertxExtension
-import linea.crypto.Secp256k1Signature
 import linea.crypto.Web3SignerRestClient
 import linea.kotlin.encodeHex
 import net.consensys.linea.httprest.client.VertxHttpRestClient
@@ -77,10 +76,10 @@ class Web3SignerRestClientTest {
 
     assertThat(web3SignerClient.publicKey()).isEqualTo(publicKeyBytes)
 
-    val signedBytes = web3SignerClient.sign(msg.toByteArray()).get()
-    assertThat(signedBytes).isEqualTo(signature.r + signature.s)
+    val signed = web3SignerClient.sign(msg.toByteArray()).get()
+    assertThat(signed.toRSBytes()).isEqualTo(signature.r + signature.s)
 
-    val (r, s) = Secp256k1Signature.fromBytes(signedBytes)
+    val (r, s) = signed
     assertThat(r).isEqualTo(BigInteger(Hex.toHexString(signature.r), 16))
     assertThat(s).isEqualTo(BigInteger(Hex.toHexString(signature.s), 16))
 

@@ -14,12 +14,12 @@ import java.math.BigInteger
 class ECKeypairSignerAdapterTest {
   private val keyPair: ECKeyPair = ECKeyPair.create(BigInteger.ONE)
 
-  private val signer = object : Signer {
+  private val signer = object : Signer<Secp256k1Signature> {
     override fun publicKey(): ByteArray = Numeric.toBytesPadded(keyPair.publicKey, 64)
 
-    override fun sign(bytes: ByteArray): SafeFuture<ByteArray> {
+    override fun sign(bytes: ByteArray): SafeFuture<Secp256k1Signature> {
       val signature = keyPair.sign(Hash.sha3(bytes))
-      return SafeFuture.completedFuture(Secp256k1Signature(signature.r, signature.s).toBytes())
+      return SafeFuture.completedFuture(Secp256k1Signature(signature.r, signature.s))
     }
   }
 

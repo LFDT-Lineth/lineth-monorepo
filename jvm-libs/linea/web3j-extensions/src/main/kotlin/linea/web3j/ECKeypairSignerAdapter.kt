@@ -7,7 +7,7 @@ import org.web3j.crypto.ECKeyPair
 import java.math.BigInteger
 
 class ECKeypairSignerAdapter(
-  private val signerDelegate: Signer,
+  private val signerDelegate: Signer<Secp256k1Signature>,
 ) :
   ECKeyPair(BigInteger.ZERO, BigInteger(1, signerDelegate.publicKey())) {
   override fun equals(other: Any?): Boolean {
@@ -35,7 +35,7 @@ class ECKeypairSignerAdapter(
 
   override fun sign(transaction: ByteArray): ECDSASignature {
     // web3j's TxSignService seam is synchronous, so this is where the async signer is awaited.
-    val signature = Secp256k1Signature.fromBytes(signerDelegate.sign(transaction).get())
+    val signature = signerDelegate.sign(transaction).get()
     return ECDSASignature(signature.r, signature.s)
   }
 }

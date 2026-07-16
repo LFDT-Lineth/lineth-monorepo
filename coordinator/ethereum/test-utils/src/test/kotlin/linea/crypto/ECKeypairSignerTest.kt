@@ -19,7 +19,7 @@ class ECKeypairSignerTest {
   @Test
   fun `signs the keccak256 digest of the payload`() {
     val payload = "payload to sign".toByteArray()
-    val signature = Secp256k1Signature.fromBytes(signer.sign(payload).get())
+    val signature = signer.sign(payload).get()
     val expected = keyPair.sign(Hash.sha3(payload))
     assertThat(signature.r).isEqualTo(expected.r)
     assertThat(signature.s).isEqualTo(expected.s)
