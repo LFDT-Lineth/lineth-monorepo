@@ -112,7 +112,7 @@ func (s *schemaScanner) defineNativeMulmod(mod schema.Module[koalabear.Element],
 			{quotientLimbs, nativeMulmodQuotient},
 		} {
 			if err := assignLimb(j.limbs, j.prefix, regs[i]); err != nil {
-				return fmt.Errorf("assign limb: %v", err)
+				return fmt.Errorf("assign limb: %w", err)
 			}
 		}
 	}
