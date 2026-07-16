@@ -1,15 +1,16 @@
 # l2-execution guest — self-contained lifecycle.
 #
 # This folder is its own Zig package (build.zig + build.zig.zon). The riscv-guests/ top-level
-# Makefile fans `compile`/`test`/`spec-test`/`fetch`/`clean` out to this file for every guest;
-# guest-specific targets (the ZKC fixture-exec/fixture-debug below) live here, not in the orchestrator.
+# Makefile fans `compile`/`test`/`fetch`/`clean` out to this file for every guest; guest-specific
+# targets (reference-test, the ZKC fixture-exec/fixture-debug below) live here, not in the
+# orchestrator.
 #
 # Scope split: building + host-testing is proving-system-AGNOSTIC and lives here (`compile` links the
 # statically-linked rv64im ELF — the zkvm-standards artifact — via build_common). Only the ZKC run
 # itself (ELF->JSON via elf_to_json_gen, then zkc) is owned by
 # arithmetization/src/test/Makefile; fixture-exec/fixture-debug build that ELF and hand it over.
 
-.PHONY: fetch test spec-test regression-test prep-execution-specs-json-fixtures run-execution-specs-ssz-fixtures clean compile exec debug require-input
+.PHONY: fetch test reference-test prep-execution-specs-json-fixtures run-execution-specs-ssz-fixtures clean compile exec debug require-input
 
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
@@ -60,21 +61,15 @@ fetch:
 test:
 	$(ZIG) build test $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS)
 
-# Run the guest against the full EF zkevm stateless fixture set on the host. Fixtures come from the
-# lazy execution_spec_tests_zkevm dependency. Narrow/triage with SPEC_ARGS, e.g.
-# `make spec-test SPEC_ARGS="--fork Amsterdam -x"` or `SPEC_ARGS="--report-only"`.
-SPEC_ARGS ?=
-spec-test:
-	$(ZIG) build spec-tests $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) $(if $(strip $(SPEC_ARGS)),-- $(SPEC_ARGS))
-
-# Permanent regression guard for the extended guest, run against the EF zkevm corpus on the host
-# (see extended_vanilla_runner.zig): asserts the dummy-wrapped extended guest (runL2Execution,
-# delegating per-block execution to execution.executeStatelessInputWithLogs) agrees with the
-# vanilla guest (runStateless) on validity — the property `run-execution-specs-ssz-fixtures` (below)
-# depends on. Scoped to --fork Amsterdam to keep runtime bounded; narrow further with REGRESSION_ARGS.
-REGRESSION_ARGS ?= --fork Amsterdam
-regression-test:
-	$(ZIG) build extended-vanilla $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) -- $(REGRESSION_ARGS)
+# Permanent reference-test guard for the extended guest, run against the EF zkevm corpus on the
+# host (see extended_vanilla_runner.zig): asserts the dummy-wrapped extended guest (runL2Execution,
+# delegating per-block execution to execution.executeStatelessInputWithLogs) agrees with the EF
+# fixture's own expected validity verdict — the property `run-execution-specs-ssz-fixtures`
+# (below) depends on. Scoped to --fork Amsterdam to keep runtime bounded; narrow further with
+# REFERENCE_ARGS.
+REFERENCE_ARGS ?= --fork Amsterdam
+reference-test:
+	$(ZIG) build extended-vanilla $(ZIG_BUILD_FLAGS) $(ZIG_FETCH_FLAGS) -- $(REFERENCE_ARGS)
 
 # Re-uses logic from build.zig to download execution-spec JSON fixtures under $(EXECUTION_SPECS_FIXTURES_DIR).
 prep-execution-specs-json-fixtures:

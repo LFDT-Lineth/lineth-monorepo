@@ -10,9 +10,10 @@
 //! Everything here (dir walk, JSON parse, per-block extraction, fork filter, reporting) is
 //! guest-agnostic. The *only* guest-specific piece is the comptime `Adapter`, which adapts the
 //! fixture's vanilla SSZ `StatelessInput` to whatever shape a given guest consumes and then runs
-//! and checks it. The vanilla guest's adapter is identity; a future extended guest (see
-//! rollup_spec — extra `forced_transactions`/rollup fields) supplies an adapter whose
-//! `adaptInput` wraps + re-encodes the input, and reuses this file unchanged.
+//! and checks it. `extended_vanilla_runner.zig`'s `ExtendedVanillaAdapter` (the sole consumer of
+//! this file) wraps the vanilla input into the extended `L2ExecutionProofPrivateInput` shape
+//! (dummy-filled rollup fields — see `vanilla_wrap.zig`) and checks validity against a vanilla
+//! zesu baseline computed in the same run, rather than against the fixture's own expected output.
 //!
 //! Adapter contract (comptime duck-typed):
 //!   pub const label: []const u8

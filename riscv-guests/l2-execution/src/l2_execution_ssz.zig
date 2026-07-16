@@ -316,6 +316,8 @@ pub fn encodeInput(alloc: std.mem.Allocator, v: L2ExecutionProofPrivateInput) ![
 const PI_FIXED_SIZE: usize = 368;
 // The wire output is ONLY keccak256(public_inputs) — nothing else.
 const OUTPUT_BODY_SIZE: usize = 32;
+/// Total wire-output size: the 0x0003 schema id (2 bytes) + keccak256(public_inputs) (32 bytes).
+pub const OUTPUT_SIZE: usize = SCHEMA_ID_SIZE + OUTPUT_BODY_SIZE;
 
 /// Write a 32-byte hash at the cursor and advance it.
 inline fn putHash(out: []u8, pos: *usize, value: [32]u8) void {
@@ -369,6 +371,15 @@ pub fn hashPublicInputs(pi: L2ExecutionProofPublicInput) [32]u8 {
     return out;
 }
 
+/// Fixed-size stack buffer, so committing the guest's output never needs a heap allocation — a
+/// simpler version of zesu's own `Result` convention (`out: [N]u8, len: usize, success: bool`):
+/// there's no `len` here because there is only one output shape (`keccak256(public_inputs)`, always
+/// exactly `OUTPUT_SIZE` bytes), unlike zesu's genuine 105-vs-73-byte success/failure split.
+pub const Result = struct {
+    out: [OUTPUT_SIZE]u8,
+    success: bool,
+};
+
 /// Encode the extended l2-execution guest's ACTUAL wire output: the 0x0003 schema id followed by
 /// ONLY `keccak256(public_inputs)` (see `hashPublicInputs`) — 32 bytes, nothing else.
 /// `start_block_number` and the `l2_l1_messages`/`tx_froms`/`filtered_addresses` preimages on
@@ -376,9 +387,9 @@ pub fn hashPublicInputs(pi: L2ExecutionProofPublicInput) [32]u8 {
 /// tooling only (see `l2_execution_json.zig`'s `encodeOutputJson`). The plain 16-field
 /// public-input tuple is never written to the wire either; it is only available via
 /// `encodePublicInputsBytes`/`hashPublicInputs`, for logging or off-chain inspection.
-pub fn encodeOutput(alloc: std.mem.Allocator, pi: L2ExecutionProofPublicInput) ![]u8 {
-    const out = try alloc.alloc(u8, SCHEMA_ID_SIZE + OUTPUT_BODY_SIZE);
+pub fn encodeOutput(pi: L2ExecutionProofPublicInput) Result {
+    var out: [OUTPUT_SIZE]u8 = undefined;
     std.mem.writeInt(u16, out[0..2], OUTPUT_SCHEMA_ID, .big);
     @memcpy(out[SCHEMA_ID_SIZE..], &hashPublicInputs(pi));
-    return out;
+    return .{ .out = out, .success = true };
 }

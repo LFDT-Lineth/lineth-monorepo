@@ -3,7 +3,7 @@
 //! reads via `read_input`.
 //!
 //! This is the ZkC-harness counterpart of the in-process `vanilla_wrap.wrapVanillaAsExtended` used
-//! by the host parity regression guard (`test/extended_vanilla_runner.zig`): both share the SAME fill
+//! by the host reference-test guard (`test/extended_vanilla_runner.zig`): both share the SAME fill
 //! semantics (single payload carrying the vanilla bytes verbatim, empty FTX, zero parent FTX
 //! fields, chain_id/coinbase read off the vanilla payload, and — crucially — a ZERO
 //! l2_message_service_address, which triggers the guest's bridge-suppression branch so the extended

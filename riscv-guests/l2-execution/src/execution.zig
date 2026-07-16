@@ -23,11 +23,11 @@ const HEADER_FIELDS_BETWEEN_PARENT_HASH_AND_NUMBER = 7;
 
 // Log-preserving stateless-execution seam.
 //
-// `runStateless` (evm_execution_guest.zig) calls zesu's `executor.executeStatelessInput`, whose
-// `ProofOutput` keeps only a per-receipt `logs_bloom` and drops the actual event logs. Later
-// rollup phases need the full logs (address + topics + data) to derive L1 message events, so this
-// file re-runs the SAME preamble and block-execution path but returns the un-projected `Receipt`
-// slice (with `.logs` intact) alongside the pre/post state roots.
+// Zesu's own `executor.executeStatelessInput`'s `ProofOutput` keeps only a per-receipt
+// `logs_bloom` and drops the actual event logs. Rollup phases need the full logs (address +
+// topics + data) to derive L1 message events, so this file re-runs the SAME preamble and
+// block-execution path but returns the un-projected `Receipt` slice (with `.logs` intact)
+// alongside the pre/post state roots.
 //
 // `buildEnv`/`finalizeOutputWithLogs` below are adapted from Zesu's private `executor/main.zig`
 // glue (not exposed, so copied). Block/BAL validation and the accessed-entry builder are NOT

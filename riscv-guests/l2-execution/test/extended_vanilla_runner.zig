@@ -1,15 +1,20 @@
-//! `extended-vanilla-runner` — regression guard: the extended guest, run through the dummy-fill
-//! wrap (`vanilla_wrap.wrapVanillaAsExtended`), must agree with the vanilla guest on validity over
-//! the real EF zkevm corpus. This is the property `run-execution-specs-ssz-fixtures` depends on,
-//! checked here cheaply on the host instead of via ZkC.
+//! `extended-vanilla-runner` — reference-test guard: the extended guest, run through the dummy-fill
+//! wrap (`vanilla_wrap.wrapVanillaAsExtended`), must agree with the EF fixture's OWN expected
+//! validity verdict (`successful_validation`, byte 32 of the vanilla `SszStatelessValidationResult`
+//! — see zesu's `ssz_output.zig`) over the real EF zkevm corpus. This is the property
+//! `run-execution-specs-ssz-fixtures` depends on, checked here cheaply on the host instead of via
+//! ZkC.
 //!
-//! The vanilla-side check reimplements `evm_execution_guest.runStateless` inline rather than
-//! importing it: that module relative-imports `l2_execution.zig`, so combining it with the
-//! `l2_execution` module here in one compile unit is a Zig module-graph conflict.
+//! Deliberately NOT a differential check against a second, independently-run implementation (e.g.
+//! re-running zesu's own `executor.executeStatelessInput` inline): a reference-test corpus's whole
+//! point is to BE the source of truth, so this checks the extended guest against the fixture's own
+//! expected result directly — that also catches a bug shared by both the extended and vanilla
+//! paths (they delegate to the same zesu executor), which a vanilla-vs-extended differential check
+//! never could, since both sides would agree while still being wrong.
 //!
 //! The allowed disagreements are `error.ExecutionRequestsNotSupported` (EF fixtures carrying
 //! EIP-7685 requests) and `error.WithdrawalsNotSupported` (EF fixtures carrying beacon-chain
-//! withdrawals) — both valid to vanilla Ethereum but rejected by Linea policy. Any other
+//! withdrawals) — both valid to vanilla Ethereum but rejected by Lineth policy. Any other
 //! disagreement fails the run.
 //!
 //! Reuses `spec_runner.zig`'s fixture walk; this file supplies only the `Adapter`, CLI, and
@@ -20,9 +25,6 @@ const spec_runner = @import("spec_runner.zig");
 const l2_execution = @import("l2_execution");
 const l2_execution_ssz = @import("l2_execution_ssz");
 const vanilla_wrap = @import("vanilla_wrap");
-const executor = @import("zesu_executor");
-const ssz_decode = @import("zesu_ssz_decode");
-const zesu_allocator = @import("zesu_allocator");
 
 /// Error-name -> occurrence count, across every disagreement where the extended pipeline errored.
 /// File-scope: the comptime `Adapter` contract has no room for extra per-run state, and this tool
@@ -36,7 +38,7 @@ fn recordError(name: []const u8) void {
 }
 
 const ExtendedVanillaAdapter = struct {
-    pub const label = "extended-vs-vanilla validity parity (dummy-wrapped l2_execution.runL2Execution vs guest.runStateless)";
+    pub const label = "extended guest vs EF fixture ground truth (dummy-wrapped l2_execution.runL2Execution vs the fixture's own successful_validation)";
 
     pub fn adaptInput(
         alloc: std.mem.Allocator,
@@ -53,7 +55,13 @@ const ExtendedVanillaAdapter = struct {
         expected_output: []const u8,
         ctx: spec_runner.BlockContext,
     ) !bool {
-        _ = expected_output; // this guard compares extended vs vanilla, not either against the EF expectation
+        // Ground truth: the fixture's OWN expected result, not a second, independently-run
+        // implementation (see the file header comment for why).
+        if (expected_output.len <= 32) {
+            std.debug.print("FAIL {s}[{}]  expected_output too short ({} bytes)\n", .{ ctx.test_name, ctx.block_index, expected_output.len });
+            return false;
+        }
+        const expected_valid = expected_output[32] == 0x01;
 
         const extended_in = l2_execution_ssz.decodeInput(alloc, guest_input) catch |err| {
             std.debug.print("FAIL {s}[{}]  extended decodeInput error: {s}\n", .{ ctx.test_name, ctx.block_index, @errorName(err) });
@@ -61,23 +69,6 @@ const ExtendedVanillaAdapter = struct {
         };
         // The vanilla bytes are carried verbatim as the single payload's stateless_input_ssz.
         std.debug.assert(extended_in.payloads.len == 1);
-        const vanilla_ssz = extended_in.payloads[0].stateless_input_ssz;
-
-        // Vanilla validity check — copy-identical to `evm_execution_guest.runStateless` (see this
-        // file's header comment for why it's reimplemented here instead of imported).
-        zesu_allocator.set(alloc);
-        const vanilla_si = ssz_decode.decode(alloc, vanilla_ssz) catch |err| {
-            std.debug.print("FAIL {s}[{}]  vanilla ssz decode error: {s}\n", .{ ctx.test_name, ctx.block_index, @errorName(err) });
-            return false;
-        };
-        const vanilla_ep = &vanilla_si.new_payload_request.execution_payload;
-        zesu_allocator.set(alloc);
-        const vanilla_valid = blk: {
-            const proof = executor.executeStatelessInput(alloc, vanilla_si, vanilla_si.chain_config.fork_name) catch break :blk false;
-            if (!std.mem.eql(u8, &proof.post_state_root, &vanilla_ep.state_root)) break :blk false;
-            if (!std.mem.eql(u8, &proof.receipts_root, &vanilla_ep.receipts_root)) break :blk false;
-            break :blk true;
-        };
 
         var extended_err_name: []const u8 = "";
         const extended_valid = blk: {
@@ -88,11 +79,11 @@ const ExtendedVanillaAdapter = struct {
             break :blk true;
         };
 
-        if (extended_valid == vanilla_valid) return true;
+        if (extended_valid == expected_valid) return true;
 
-        // The allowed disagreements (see the file header comment): a vanilla-valid block the
-        // extended guest rejects for a Linea-policy reason (EIP-7685 requests or withdrawals).
-        if (!extended_valid and vanilla_valid and
+        // The allowed disagreements (see the file header comment): a fixture-valid block the
+        // extended guest rejects for a Lineth-policy reason (EIP-7685 requests or withdrawals).
+        if (!extended_valid and expected_valid and
             (std.mem.eql(u8, extended_err_name, "ExecutionRequestsNotSupported") or
                 std.mem.eql(u8, extended_err_name, "WithdrawalsNotSupported")))
         {
@@ -101,13 +92,13 @@ const ExtendedVanillaAdapter = struct {
 
         if (extended_valid) {
             std.debug.print(
-                "FAIL {s}[{}]  disagree: vanilla=invalid extended=valid\n",
+                "FAIL {s}[{}]  disagree: fixture=invalid extended=valid\n",
                 .{ ctx.test_name, ctx.block_index },
             );
         } else {
             recordError(extended_err_name);
             std.debug.print(
-                "FAIL {s}[{}]  disagree: vanilla=valid extended=invalid ({s})\n",
+                "FAIL {s}[{}]  disagree: fixture=valid extended=invalid ({s})\n",
                 .{ ctx.test_name, ctx.block_index, extended_err_name },
             );
         }
@@ -116,10 +107,10 @@ const ExtendedVanillaAdapter = struct {
 };
 
 const usage =
-    \\extended-vanilla-runner — regression guard: assert the dummy-wrapped extended l2-execution guest
-    \\(l2_execution.runL2Execution) agrees with the vanilla guest (guest.runStateless) on block
-    \\validity, over EF zkevm stateless fixtures. The only allowed disagreement is a vanilla-valid
-    \\block whose EIP-7685 execution requests the extended guest rejects by Linea policy.
+    \\extended-vanilla-runner — reference-test guard: assert the dummy-wrapped extended l2-execution guest
+    \\(l2_execution.runL2Execution) agrees with the EF fixture's own expected validity verdict, over
+    \\EF zkevm stateless fixtures. The only allowed disagreement is a fixture-valid block whose
+    \\EIP-7685 execution requests the extended guest rejects by Lineth policy.
     \\
     \\usage: extended-vanilla-runner [--fixtures DIR] [--file FILE] [--fork NAME] [--match SUBSTR] [--limit N] [-x] [--report-only]
     \\  --fixtures DIR   directory of blockchain_tests JSON fixtures (passed by `zig build extended-vanilla`)

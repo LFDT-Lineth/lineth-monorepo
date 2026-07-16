@@ -94,9 +94,12 @@ pub fn main(init: std.process.Init) !void {
     };
 
     const out_bytes = switch (format) {
-        .ssz => l2_execution_ssz.encodeOutput(alloc, result.public_inputs) catch |err| {
-            std.debug.print("error: failed to SSZ-encode output: {s}\n", .{@errorName(err)});
-            std.process.exit(1);
+        .ssz => blk: {
+            const r = l2_execution_ssz.encodeOutput(result.public_inputs);
+            break :blk alloc.dupe(u8, &r.out) catch |err| {
+                std.debug.print("error: failed to allocate SSZ output: {s}\n", .{@errorName(err)});
+                std.process.exit(1);
+            };
         },
         .json => l2_execution_json.encodeOutputJson(alloc, result) catch |err| {
             std.debug.print("error: failed to JSON-encode output: {s}\n", .{@errorName(err)});

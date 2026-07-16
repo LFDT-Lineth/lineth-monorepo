@@ -3,7 +3,7 @@
 //! same corpus the vanilla guest runs on (the EF execution-spec-tests zkevm fixtures).
 //!
 //! Real wiring, shared by both consumers that need to run the extended guest "as vanilla":
-//!   - `test/extended_vanilla_runner.zig` calls this in-process (host parity regression guard);
+//!   - `test/extended_vanilla_runner.zig` calls this in-process (host reference-test guard);
 //!   - the `l2-execution-wrap` CLI (`test/l2_execution_wrap.zig`) is a thin wrapper around it for
 //!     the ZkC arithmetization harness (`scripts/run_execution_specs_ssz_fixtures.go`), which can't
 //!     call Zig in-process.

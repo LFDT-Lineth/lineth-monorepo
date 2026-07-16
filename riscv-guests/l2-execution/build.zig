@@ -70,8 +70,8 @@ pub fn build(b: *std.Build) void {
     // itself (mirrors the native l2_execution_ssz_mod below, for the test host). `l2_execution.zig`
     // is pulled into `evm_execution_guest.zig` via a plain relative import, not a separate module:
     // a separate module would double-claim `execution.zig`, which both files import. The native
-    // `guest_mod` used by vanilla test/spec runners never needs this wiring — Zig's lazy analysis
-    // skips it since `guestMain` (the only caller) isn't `@export`-ed for that target.
+    // `guest_mod` used by the native test never needs this wiring — Zig's lazy analysis skips it
+    // since `guestMain` (the only caller) isn't `@export`-ed for that target.
     const l2_execution_ssz_guest_mod = b.createModule(.{
         .root_source_file = b.path("src/l2_execution_ssz.zig"),
         .target = target,
@@ -94,12 +94,14 @@ pub fn build(b: *std.Build) void {
     common.installGuestElf(b, guest_module, gp_name);
 
     // ── Native test ───────────────────────────────────────────────────────────
-    // Runs the thin wrapper (vanilla zesu stateless execution) on the host against a real
-    // execution-spec-tests zkevm SSZ fixture, asserting the serialized validation result matches —
-    // the same end-to-end check as zesu's zkevm-blockchain-test-runner. Links zesu's full native
-    // crypto backend; linea adds the library search path so it links on macOS. The
-    // committed fixture is an empty block (only keccak), but the full backend is linked so the suite
-    // can grow to tx-bearing fixtures (ecrecover/curves) without further build changes.
+    // Runs `execution.executeStatelessInputWithLogs` (the log-preserving seam `l2_execution.zig`
+    // delegates per-block execution to) against a real execution-spec-tests zkevm SSZ fixture on
+    // the host, asserting it computes the SAME pre/post/receipts roots as zesu's own vanilla
+    // `executor.executeStatelessInput` — i.e. adding the log-preserving path doesn't change
+    // validation outcomes. Links zesu's full native crypto backend; linea adds the library search
+    // path so it links on macOS. The committed fixture is an empty block (only keccak), but the
+    // full backend is linked so the suite can grow to tx-bearing fixtures (ecrecover/curves)
+    // without further build changes.
     //
     // Host artifacts never build at ReleaseSmall: zig 0.16 (stable and dev.3153) -Oz miscompiles
     // zesu's value-semantics hot paths on aarch64 hosts — stack slots of by-value hash-map captures
@@ -123,8 +125,7 @@ pub fn build(b: *std.Build) void {
     addExecutionImports(guest_mod, native_imports);
 
     const test_step = b.step("test", "Run native Zig unit tests for the EVM execution guest");
-    const spec_step = b.step("spec-tests", "Run the guest against all EF zkevm stateless fixtures (host)");
-    const extended_vanilla_step = b.step("extended-vanilla", "Regression guard: assert the dummy-wrapped extended guest (runL2Execution) agrees with the vanilla guest on validity over EF zkevm fixtures");
+    const extended_vanilla_step = b.step("extended-vanilla", "Reference-test guard: assert the dummy-wrapped extended guest (runL2Execution) agrees with the EF fixture's own expected validity over EF zkevm fixtures");
     const prep_fixtures_step = b.step("prep-execution-specs-json-fixtures", "Expose EF zkevm stateless fixtures for external runners");
 
     // Integration smoke test for the delegated precompiles: verifies zesu-zkvm's stdlibs_accel
@@ -340,35 +341,14 @@ pub fn build(b: *std.Build) void {
 
         test_step.dependOn(&b.addRunArtifact(tests).step);
 
-        // ── Spec-test runner ────────────────────────────────────────────────────
-        // Standalone host executable that walks the WHOLE zkevm fixture tree and runs every block
-        // through this guest (mirrors zesu's zkevm-blockchain-test-runner). Fixtures come from the
-        // same lazy dependency — no curl, no embedding; `zig build spec-tests` passes the
-        // blockchain_tests/ directory as --fixtures. Pass-through extra args after `--`, e.g.
-        // `zig build spec-tests -- --fork Amsterdam -x`.
-        const spec_runner_exe = b.addExecutable(.{
-            .name = "evm-execution-spec-runner",
-            .root_module = b.createModule(.{
-                .root_source_file = b.path("test/evm_spec_runner.zig"),
-                .target = native_target,
-                .optimize = host_optimize,
-            }),
-        });
-        spec_runner_exe.root_module.addImport("evm_execution_guest", guest_mod);
-        linkNativeZesuCrypto(spec_runner_exe, native_target, native_crypto);
-
-        const run_spec = b.addRunArtifact(spec_runner_exe);
-        run_spec.addArg("--fixtures");
-        run_spec.addDirectoryArg(fixtures_dep.path("blockchain_tests"));
-        if (b.args) |extra| run_spec.addArgs(extra);
-        spec_step.dependOn(&run_spec.step);
-
-        // ── extended-vs-vanilla validity parity runner (permanent regression guard) ──
-        // The single regression runner for the extended guest: wraps the vanilla EF input into a
+        // ── extended-vs-fixture validity reference-test guard (permanent) ──
+        // The single reference-test runner for the extended guest: wraps the vanilla EF input into a
         // dummy-filled extended input (vanilla_wrap.wrapVanillaAsExtended, single payload, empty
         // FTX, zero l2_message_service_address) and asserts l2_execution.runL2Execution — the
         // extended guest's actual Linea-layer logic, delegating per-block execution to
-        // `execution.executeStatelessInputWithLogs` — agrees with guest.runStateless on validity.
+        // `execution.executeStatelessInputWithLogs` — agrees with the EF fixture's OWN expected
+        // validity verdict (not a second, independently re-run implementation — see
+        // extended_vanilla_runner.zig's header comment for why).
         // Once wrapped, every other Linea-layer check (conflation invariants, FTX dispatch, bridge
         // reads, message extraction) is either trivially satisfied or suppressed, so this single
         // comparison already exercises the delegated execution seam (including the hand-copied
@@ -387,16 +367,10 @@ pub fn build(b: *std.Build) void {
         // inside `guestMain`, so combining it with `l2_execution_mod` as a second, separately-rooted
         // module in the same compile unit is a Zig module-graph conflict ("file exists in modules
         // 'l2_execution' and 'evm_execution_guest'") — the same constraint documented above for
-        // `l2_execution_ssz_guest_mod`. The vanilla-validity check is reimplemented inline in
-        // `extended_vanilla_runner.zig` instead (decode + executeStatelessInput + root comparison,
-        // exactly mirroring `runStateless`), so only the zesu modules it needs directly are wired.
+        // `l2_execution_ssz_guest_mod`.
         extended_vanilla_runner_exe.root_module.addImport("l2_execution", l2_execution_mod);
         extended_vanilla_runner_exe.root_module.addImport("l2_execution_ssz", l2_execution_ssz_mod);
         extended_vanilla_runner_exe.root_module.addImport("vanilla_wrap", vanilla_wrap_mod);
-        extended_vanilla_runner_exe.root_module.addImport("zesu_executor", native_imports.executor);
-        extended_vanilla_runner_exe.root_module.addImport("zesu_ssz_decode", native_imports.ssz_decode);
-        extended_vanilla_runner_exe.root_module.addImport("zesu_allocator", native_imports.allocator);
-        extended_vanilla_runner_exe.root_module.addImport("zesu_mpt", native_imports.mpt);
         linkNativeZesuCrypto(extended_vanilla_runner_exe, native_target, native_crypto);
 
         const run_extended_vanilla = b.addRunArtifact(extended_vanilla_runner_exe);

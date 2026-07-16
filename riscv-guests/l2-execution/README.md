@@ -1,12 +1,12 @@
 # L2 Execution Guest
 
-This package contains the RISC-V guest program for vanilla EVM execution. The guest is a thin wrapper over Zesu's stateless executor: it decodes an SSZ-encoded `StatelessInput`, executes the block, and serializes the SSZ validation result — the same pipeline as Zesu's `runner.runStateless` / `zkevm-blockchain-test-runner`. Rollup-specific validation is intentionally out of scope for this iteration.
+This package contains the RISC-V guest program for the Rollup's extended l2-execution proof: the Linea-layer logic (`l2_execution.zig`) on top of per-block stateless execution — conflation of a contiguous block range, forced transactions, the L1<->L2 message bridge, and the 16-field public-input tuple. Per-block execution itself is delegated to a log-preserving seam (`execution.zig`) over Zesu's stateless executor, which decodes an SSZ-encoded `StatelessInput` and executes the block.
 
 ## Scope
 
-- Decodes an SSZ `SszStatelessInput` (execution payload + execution witness + chain config) with Zesu's `ssz_decode`, executes it with Zesu's stateless executor, and serializes the 105-byte `SszStatelessValidationResult` with `ssz_output`.
-- The native Zig test replays a real execution-spec-tests `tests-zkevm` fixture — pulled in as a lazy `build.zig.zon` dependency, not checked in — and asserts the serialized result matches the fixture's expected output.
-- Does not include blob compression, recursive proof aggregation, or Rollup-specific public-input validation.
+- Decodes the extended `L2ExecutionProofPrivateInput` SSZ envelope (a contiguous run of payloads, each carrying an opaque vanilla `SszStatelessInput` plus forced-transaction witnesses), runs `l2_execution.runL2Execution`, and emits the SSZ output — `keccak256` of the public-input tuple plus the revealed hash preimages the rollup guest needs.
+- The native Zig tests replay a real execution-spec-tests `tests-zkevm` fixture and hand-built fixtures against Python-oracle-computed expected values (see `Readme.md` §6.3/§6.5/§2.1); `zig build extended-vanilla` reference-tests the whole EF zkevm corpus by wrapping each block into a dummy-filled extended input and checking the extended guest's validity verdict against the fixture's own expected result — the reference-test corpus is the source of truth, not a second re-run implementation.
+- Does not include blob compression or recursive proof aggregation — those are the rollup/rollup-aggregation guests' concern.
 - Keeps cryptographic precompile/signature acceleration behind Zesu's `accel_impl` boundary. The freestanding guest leaves the `zkvm_*` accelerator symbols **unresolved** for the proving system to supply/intercept — there is no in-guest software provider. The native host test instead links Zesu's `default.zig` backend against system crypto libraries (see [Native test dependencies](../README.md#native-test-dependencies)).
 
 ## Development
