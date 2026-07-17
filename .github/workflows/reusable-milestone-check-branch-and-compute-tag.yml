@@ -51,6 +51,7 @@ jobs:
         uses: ./.github/actions/run-git-cliff-commands
         with:
           component-name: linea
+          scopes: coordinator|linea-besu|tracer|sequencer|maru|prover|postman|tx-exclusion-api|deps|misc
           include-path: |
             coordinator/**
             maru/**
