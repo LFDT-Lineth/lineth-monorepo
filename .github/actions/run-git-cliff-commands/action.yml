@@ -19,10 +19,13 @@ inputs:
 
       Blank/whitespace-only lines are ignored; leading/trailing whitespace on each line is trimmed.
     required: true
-  cliff-config:
-    description: "Path to the cliff.toml config file"
+  scopes:
+    description: "Regex alternation of conventional-commit scopes to gate on, injected into the shared template (e.g. 'coordinator' or 'linea-besu|tracer|sequencer|deps|misc')"
+    required: true
+  cliff-template:
+    description: "Path to the shared git-cliff template containing the @@SCOPES@@ placeholder"
     required: false
-    default: "cliff.toml"
+    default: "cliff.template.toml"
   release_tag_suffix:
     description: "Custom release tag suffix, i.e. release tag would be releases/[component]/v[semver]-[suffix]"
     required: false
@@ -70,13 +73,35 @@ runs:
           echo '__PATHS_EOF__'
         } >> "$GITHUB_OUTPUT"
 
+    # Render the shared cliff template into a temp config with the caller's
+    # scopes injected into the @@SCOPES@@ placeholder. git-cliff can't inject
+    # scopes into commit_parsers itself, so we substitute at run time and point
+    # every git cliff invocation below at the rendered file.
+    - name: Render git-cliff config with injected scopes
+      id: render
+      shell: bash
+      env:
+        SCOPES: ${{ inputs.scopes }}
+        TEMPLATE: ${{ inputs.cliff-template }}
+      run: |
+        set -euo pipefail
+        if [ -z "${SCOPES}" ]; then
+          echo "scopes input must be non-empty" >&2
+          exit 1
+        fi
+        rendered="${RUNNER_TEMP:-/tmp}/cliff.rendered.toml"
+        # '#' delimiter is safe: neither the placeholder nor scope tokens (which
+        # may contain '|') contain '#'.
+        sed "s#@@SCOPES@@#${SCOPES}#g" "${TEMPLATE}" > "${rendered}"
+        echo "config=${rendered}" >> "$GITHUB_OUTPUT"
+
     # Compute the next release version
     - name: Compute next ${{ inputs.component-name }} version (semver)
       id: version
       shell: bash
       env:
         COMPONENT: ${{ inputs.component-name }}
-        CLIFF_CONFIG: ${{ inputs.cliff-config }}
+        CLIFF_CONFIG: ${{ steps.render.outputs.config }}
         RELEASE_TAG_SUFFIX: ${{ inputs.release_tag_suffix }}
       run: |
         set -euo pipefail
@@ -147,7 +172,7 @@ runs:
       if: steps.version.outputs.changed == 'true'
       env:
         COMPONENT: ${{ inputs.component-name }}
-        CLIFF_CONFIG: ${{ inputs.cliff-config }}
+        CLIFF_CONFIG: ${{ steps.render.outputs.config }}
         TAG_CONFIG: ${{ inputs.generate-changelog-with-next-tag-version == 'true' && format(' --tag {0}', steps.version.outputs.version) || '' }}
       shell: bash
       run: |
@@ -171,7 +196,7 @@ runs:
       env:
         COMPONENT: ${{ inputs.component-name }}
         FOLDER_NAME: ${{ inputs.folder-name }}
-        CLIFF_CONFIG: ${{ inputs.cliff-config }}
+        CLIFF_CONFIG: ${{ steps.render.outputs.config }}
         TAG_CONFIG: ${{ inputs.generate-changelog-with-next-tag-version == 'true' && format(' --tag {0}', steps.version.outputs.version) || '' }}
         TARGET_REF: ${{ github.head_ref || github.ref_name }}
       shell: bash
