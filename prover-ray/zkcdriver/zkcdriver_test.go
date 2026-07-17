@@ -7,6 +7,11 @@ import (
 	"os"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/localvanishing"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/rangecheck"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
@@ -118,9 +123,11 @@ func traceZkc(
 }
 
 func proverCompilePipeline(sys *wiop.System) {
-	// no-op for now
-	_ = sys
-	// global.Compile(sys)
+	rangecheck.Compile(sys)
+	lookuptologderivsum.Compile(sys)
+	logderivativesum.Compile(sys)
+	localvanishing.Compile(sys)
+	global.Compile(sys)
 }
 
 // runProveVerify proves and verifies a given test-case, returning an error if the proof fails to verify.
