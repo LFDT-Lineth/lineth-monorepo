@@ -36,7 +36,8 @@
         "endProcessedFtxNumber",
         "filteredAddressesHash",
         "parentShnarf",
-        "endShnarf"
+        "endShnarf",
+        "programVks"
       ],
       "properties": {
         "endBlockNumber": { "$ref": "#/$defs/uint" },
@@ -53,7 +54,13 @@
         "endProcessedFtxNumber": { "$ref": "#/$defs/uint" },
         "filteredAddressesHash": { "$ref": "#/$defs/hash32" },
         "parentShnarf": { "$ref": "#/$defs/hash32" },
-        "endShnarf": { "$ref": "#/$defs/hash32" }
+        "endShnarf": { "$ref": "#/$defs/hash32" },
+        "programVks": {
+          "description": "Distinct, sorted ascending by byte value: the canonical encoding of the set of guest program VKs verified beneath this proof (order carries no meaning).",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/hash32" }
+        }
       }
     },
     "l2L1Roots": {

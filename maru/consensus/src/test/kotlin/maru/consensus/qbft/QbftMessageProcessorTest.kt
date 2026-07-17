@@ -43,7 +43,7 @@ class QbftMessageProcessorTest {
   private val keyData = PrivateKeyGenerator.generatePrivateKey()
   private val nodeKey = keyData.nodeKey
   private val messageAuthor = Address.wrap(Bytes.wrap(keyData.address))
-  private val localAddress = Address.fromHexString("0x1234567890123456789012345678901234567890")
+  private val localAddress = Address.fromHexStringStrict("0x1234567890123456789012345678901234567890")
 
   private val validatorProvider = mock<QbftValidatorProviderAdapter>()
   private val bftEventQueue = BftEventQueue(10)
@@ -136,7 +136,7 @@ class QbftMessageProcessorTest {
 
   @Test
   fun `should reject current message from unknown validator`() {
-    val knownValidator = Address.fromHexString("0xABCDEF1234567890123456789012345678901234")
+    val knownValidator = Address.fromHexStringStrict("0xABCDEF1234567890123456789012345678901234")
     val messageProcessor = createMessageProcessor(chainHeight = 100UL)
     whenever(validatorProvider.getValidatorsForBlock(any())).thenReturn(
       listOf(knownValidator, localAddress), // messageAuthor is not in this list

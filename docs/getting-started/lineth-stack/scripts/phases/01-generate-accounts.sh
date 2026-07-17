@@ -25,11 +25,20 @@ corepack prepare pnpm@11.9.0 --activate >/dev/null 2>&1 || true
 if [ ! -x "$WORKSPACE_DIR/node_modules/.bin/ts-node" ] \
   || [ ! -d "$WORKSPACE_DIR/node_modules/.pnpm" ] \
   || [ ! -e "$CONTRACTS_DIR/node_modules/ethers" ]; then
-  log "Installing minimal workspace dependencies for TypeScript account setup"
-  (
+  log "Installing minimal workspace dependencies for TypeScript account setup (seconds from a warm cache; ~2 minutes on a cold one)"
+  # Full pnpm output goes to a container-local log; it is only interesting on
+  # failure, where the tail is dumped below.
+  install_log="/tmp/pnpm-install.log"
+  if (
     cd "$WORKSPACE_DIR"
     HUSKY=0 CI=true pnpm install --filter linea-monorepo --filter contracts... --no-frozen-lockfile --prefer-offline
-  )
+  ) > "$install_log" 2>&1; then
+    log "Workspace dependencies ready"
+  else
+    printf '[account-setup] ----- last 40 lines of pnpm install output -----\n' >&2
+    tail -40 "$install_log" >&2
+    die "pnpm install failed inside account-setup container"
+  fi
 fi
 
 cd "$CONTRACTS_DIR"

@@ -2,7 +2,16 @@
 
 ### ⚙️ Miscellaneous Tasks
 
-- *(coordinator)* Update kotlin to v2.4 (#3454)
+- *(linea-besu)* Tidy v2.0.0 changelog entries (#3574)
+## [2.0.0] - 2026-07-14
+
+### 🐛 Bug Fixes
+
+- *(linea-besu)* Updating Besu version (#3535)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(deps)* Align bouncycastle catalog pin to 1.84 (#3562)
 ## [1.1.1] - 2026-06-26
 
 ### 🐛 Bug Fixes
