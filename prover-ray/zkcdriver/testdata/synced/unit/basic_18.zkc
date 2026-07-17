@@ -1,4 +1,4 @@
-fn keyword_at_end_of_word() {
+fn main() {
     var X_as:u32
     var X_break:u32
     var X_continue:u32

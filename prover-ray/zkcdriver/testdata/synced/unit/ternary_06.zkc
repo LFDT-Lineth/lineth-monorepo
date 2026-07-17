@@ -1,0 +1,10 @@
+pub input data(address:u1) -> (data:u15)
+pub output casted(address:u1) -> (casted:u8)
+
+fn main() {
+    // the not followed branch would have issue at runtime if executed
+
+    casted[0] = data[0] <= 0xEF ? (data[0] as u8):((data[0] & 0xEF) as u8)
+
+    return
+}

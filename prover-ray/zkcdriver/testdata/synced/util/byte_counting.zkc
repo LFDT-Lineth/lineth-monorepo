@@ -1,0 +1,97 @@
+pub input data(address:u16) -> (val:u64)
+
+// Count the number of non-zero bytes among the first `size` (most significant)
+// bytes of a right-padded u64 limb, and check it against the expected value.
+// This is a ZkC port of the assembly utility test asm/util/byte_counting
+// (ported from u128 down to u64).
+//
+// The implementation recursively splits the limb in half.  When the requested
+// size spans both halves the counts are summed; otherwise only the high half
+// (which holds the most significant bytes) is inspected.
+fn main() {
+    var limb:u64 = data[0]
+    var size:u4 = data[1] as u4
+    var expected:u4 = data[2] as u4
+    //
+    if counts_nz_64(limb, size) != expected {
+        fail
+    }
+    // native variant
+    if counts_nz_64_native(limb, size) != expected {
+        fail
+    }
+    return
+}
+
+fn counts_nz_64(limb:u64, size:u4) -> (non_zeros:u4) {
+    var high:u32
+    var low:u32
+    high::low = limb
+    if size<4 {
+        non_zeros = counts_nz_32(high, size as u3) as u4
+    } else {
+        var nz_high:u3 = counts_nz_32(high, 4)
+        var nz_low:u3 = counts_nz_32(low, (size - 4) as u3)
+        non_zeros = (nz_high as u4) + (nz_low as u4)
+    }
+    return
+}
+
+fn counts_nz_32(limb:u32, size:u3) -> (non_zeros:u3) {
+    var high:u16
+    var low:u16
+    high::low = limb
+    if size<2 {
+        non_zeros = counts_nz_16(high, size as u2) as u3
+    } else {
+        var nz_high:u2 = counts_nz_16(high, 2)
+        var nz_low:u2 = counts_nz_16(low, (size - 2) as u2)
+        non_zeros = (nz_high as u3) + (nz_low as u3)
+    }
+    return
+}
+
+fn counts_nz_16(limb:u16, size:u2) -> (non_zeros:u2) {
+    var high:u8
+    var low:u8
+    high::low = limb
+    if size<1 {
+        non_zeros = counts_nz_8(high, size as u1) as u2
+    } else {
+        var nz_high:u1 = counts_nz_8(high, 1)
+        var nz_low:u1 = counts_nz_8(low, (size - 1) as u1)
+        non_zeros = (nz_high as u2) + (nz_low as u2)
+    }
+    return
+}
+
+fn counts_nz_8(limb:u8, size:u1) -> (non_zeros:u1) {
+    if size == 0 {
+        non_zeros = 0
+    } else {
+        if limb != 0 {
+            non_zeros = 1
+        } else {
+            non_zeros = 0
+        }
+    }
+    return
+}
+
+// Count the number of non-zero bytes among the first `size` most-significant
+// bytes using a native loop over the bytes rather than recursive decomposition.
+fn counts_nz_64_native(limb:u64, size:u4) -> (non_zeros:u4) {
+    var b:u8
+    var shift:u6
+    non_zeros = 0
+    for i:u4 = 0; i<8; i = i + 1 {
+        if i<size {
+            shift = (7 - (i as u6)) * 8
+            b = ((limb >> shift) & 0xff) as u8
+            if b != 0 {
+                non_zeros = non_zeros + 1
+            }
+        }
+    }
+    return
+}

@@ -1,0 +1,16 @@
+pub input data(address:u16) -> (byte:u16)
+
+fn main() {
+    var left:u16 = data[0]
+    var right:u16 = data[1]
+    var res:u8 = data[2] as u8
+
+    if f(left, right) != res {
+        fail
+    }
+}
+
+#[inline]
+fn f(x:u16, y:u16) -> (r:u8) {
+    r = (2 * x * y) as u8
+}

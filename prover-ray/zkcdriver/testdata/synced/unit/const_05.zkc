@@ -1,0 +1,19 @@
+// ============================================================================
+// Constants which do not fit the 16-bit immediate of the short load-constant
+// bytecode must not be truncated (e.g. 0xfa1701 must not become 0x1701).
+// ============================================================================
+
+pub input data(address:u1) -> (word:u32)
+pub output result(address:u1) -> (word:u32)
+
+fn main() {
+    var x:u32 = data[0]
+
+    if x == 0xfa1701 {
+        result[0] = 0xc0ffee
+    } else {
+        result[0] = x
+    }
+
+    return
+}

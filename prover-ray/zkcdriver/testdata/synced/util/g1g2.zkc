@@ -1,0 +1,71 @@
+pub input data(address:u16) -> (val:u64)
+
+// The G1/G2 mixing function used in the BLAKE2 compression function, and a
+// check of its four outputs against the expected values.  This is a ZkC port
+// of the assembly utility test asm/util/g1g2.
+fn main() {
+    var vA:u64 = data[0]
+    var vB:u64 = data[1]
+    var vC:u64 = data[2]
+    var vD:u64 = data[3]
+    var x:u64 = data[4]
+    var y:u64 = data[5]
+    var eA:u64 = data[6]
+    var eB:u64 = data[7]
+    var eC:u64 = data[8]
+    var eD:u64 = data[9]
+    //
+    var rA:u64
+    var rB:u64
+    var rC:u64
+    var rD:u64
+    rA, rB, rC, rD = g1g2(vA, vB, vC, vD, x, y)
+    //
+    if rA != eA {
+        fail
+    }
+    if rB != eB {
+        fail
+    }
+    if rC != eC {
+        fail
+    }
+    if rD != eD {
+        fail
+    }
+    return
+}
+
+fn g1g2(vA:u64, vB:u64, vC:u64, vD:u64, x:u64, y:u64) -> (rA:u64, rB:u64, rC:u64, rD:u64) {
+    // g1
+    var t0:u64
+    var a1:u64
+    t0::a1 = (vA as u128) + (vB as u128) + (x as u128)
+    var d1:u64 = bit_ror64(vD ^ a1, 32)
+    var t1:u64
+    var c1:u64
+    t1::c1 = (vC as u128) + (d1 as u128)
+    var b1:u64 = bit_ror64(vB ^ c1, 24)
+    // g2
+    var t2:u64
+    var a2:u64
+    t2::a2 = (a1 as u128) + (b1 as u128) + (y as u128)
+    var d2:u64 = bit_ror64(d1 ^ a2, 16)
+    var t3:u64
+    var c2:u64
+    t3::c2 = (c1 as u128) + (d2 as u128)
+    var b2:u64 = bit_ror64(b1 ^ c2, 63)
+    //
+    rA = a2
+    rB = b2
+    rC = c2
+    rD = d2
+    return
+}
+
+// Rotate a u64 word right by n in [1,63].
+fn bit_ror64(value:u64, n:u6) -> (res:u64) {
+    var shift:u7 = 64 - (n as u7)
+    res = (value << shift) | (value >> n)
+    return
+}

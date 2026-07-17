@@ -1,0 +1,35 @@
+// we test the full address range of a WOM
+output WOM(address_1:u2, address_2:u2) -> (value:u4)
+input ROM(address_1:u2, address_2:u2) -> (value:u4)
+
+fn main<>() {
+    WOM[0, 0] = 0x0
+    WOM[0, 1] = 0x1
+    WOM[0, 2] = 0x2
+    WOM[0, 3] = 0x3
+    WOM[1, 0] = 0x4
+    WOM[1, 1] = 0x5
+    WOM[1, 2] = 0x6
+    WOM[1, 3] = 0x7
+    WOM[2, 0] = 0x8
+    WOM[2, 1] = 0x9
+    WOM[2, 2] = 0xa
+    WOM[2, 3] = 0xb
+    WOM[3, 0] = 0xc
+    WOM[3, 1] = 0xd
+    WOM[3, 2] = 0xe
+    WOM[3, 3] = 0xf
+
+    var x:u5 = 0
+    var r:u4
+
+    for i:u3 = 0; i<4; i = i + 1 {
+        for j:u3 = 0; j<4; j = j + 1 {
+            r = ROM[i as u2, j as u2]
+            if x != (r as u5) {
+                fail "x = %d != %d = ROM[%d,%d]", x, r, i, j
+            }
+            x = x + 1
+        }
+    }
+}

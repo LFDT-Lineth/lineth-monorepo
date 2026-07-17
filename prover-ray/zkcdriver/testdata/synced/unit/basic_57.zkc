@@ -1,0 +1,14 @@
+pub input data(address:u16) -> (byte:u8)
+
+fn main() {
+    var x:u8 = data[0]
+    var y:u8 = data[1]
+    //
+    f(x as u32, y as u32)
+}
+
+fn f(x:u32, y:u32) {
+    if x == y {
+        fail
+    }
+}

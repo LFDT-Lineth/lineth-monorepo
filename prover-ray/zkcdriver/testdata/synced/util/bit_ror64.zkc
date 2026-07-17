@@ -1,0 +1,137 @@
+pub input data(address:u16) -> (val:u64)
+
+// Rotate a u64 word right by n in [0,63] and check it against the expected
+// value.  This is a ZkC port of the assembly utility test asm/util/bit_ror64.
+//
+// The implementation decomposes the shift amount bit-by-bit, starting from the
+// most significant bit, conditionally rotating right by a power of two at each
+// level.  A rotate right by k is expressed as `lo::hi` where `hi::lo = word`
+// splits off the low k bits, which then wrap around to the top.
+fn main() {
+    var word:u64 = data[0]
+    var n:u6 = data[1] as u6
+    var expected:u64 = data[2]
+    //
+    var res:u64
+    res = bit_ror64(word, n)
+    //
+    if res != expected {
+        fail
+    }
+    // native variant
+    var res_native:u64
+    res_native = bit_ror64_native(word, n)
+    if res_native != expected {
+        fail
+    }
+    return
+}
+
+fn bit_ror64(word:u64, n:u6) -> (res:u64) {
+    if n == 0 {
+        res = word
+        return
+    }
+    var b:u1
+    var m:u5
+    b::m = n
+    if b == 0 {
+        res = bit_ror64_u5(word, m)
+    } else {
+        // rotate right by 32
+        var hi:u32
+        var lo:u32
+        hi::lo = word
+        res = bit_ror64_u5(lo::hi, m)
+    }
+    return
+}
+
+fn bit_ror64_u5(word:u64, n:u5) -> (res:u64) {
+    var b:u1
+    var m:u4
+    b::m = n
+    if b == 0 {
+        res = bit_ror64_u4(word, m)
+    } else {
+        // rotate right by 16
+        var hi:u48
+        var lo:u16
+        hi::lo = word
+        res = bit_ror64_u4(lo::hi, m)
+    }
+    return
+}
+
+fn bit_ror64_u4(word:u64, n:u4) -> (res:u64) {
+    var b:u1
+    var m:u3
+    b::m = n
+    if b == 0 {
+        res = bit_ror64_u3(word, m)
+    } else {
+        // rotate right by 8
+        var hi:u56
+        var lo:u8
+        hi::lo = word
+        res = bit_ror64_u3(lo::hi, m)
+    }
+    return
+}
+
+fn bit_ror64_u3(word:u64, n:u3) -> (res:u64) {
+    var b:u1
+    var m:u2
+    b::m = n
+    if b == 0 {
+        res = bit_ror64_u2(word, m)
+    } else {
+        // rotate right by 4
+        var hi:u60
+        var lo:u4
+        hi::lo = word
+        res = bit_ror64_u2(lo::hi, m)
+    }
+    return
+}
+
+fn bit_ror64_u2(word:u64, n:u2) -> (res:u64) {
+    var b:u1
+    var m:u1
+    b::m = n
+    if b == 0 {
+        res = bit_ror64_u1(word, m)
+    } else {
+        // rotate right by 2
+        var hi:u62
+        var lo:u2
+        hi::lo = word
+        res = bit_ror64_u1(lo::hi, m)
+    }
+    return
+}
+
+fn bit_ror64_u1(word:u64, n:u1) -> (res:u64) {
+    if n == 0 {
+        res = word
+        return
+    }
+    // rotate right by 1
+    var hi:u63
+    var lo:u1
+    hi::lo = word
+    res = lo::hi
+    return
+}
+
+// Rotate a u64 word right by n in [0,63] using native shift/or operators
+// rather than recursive decomposition.
+fn bit_ror64_native(word:u64, n:u6) -> (res:u64) {
+    if n == 0 {
+        res = word
+        return
+    }
+    var shift:u7 = 64 - (n as u7)
+    res = (word >> n) | (word << shift)
+    return
+}

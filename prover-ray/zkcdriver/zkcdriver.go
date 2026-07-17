@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
-	"github.com/consensys/go-corset/pkg/util/collection/typed"
-	"github.com/consensys/go-corset/pkg/util/field/koalabear"
-	"github.com/consensys/go-corset/pkg/zkc/constraints"
+	"github.com/LFDT-Lineth/zkc/pkg/util/collection/typed"
+	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
+	"github.com/LFDT-Lineth/zkc/pkg/zkc/constraints"
 	"github.com/sirupsen/logrus"
 )
 
@@ -126,7 +126,7 @@ func (a *ZkCDriver) AssignWithPreRead(run *wiop.Runtime, preRead PreReadInputs) 
 	// Attempt to trace the ZkC program using the provided inputs, generating a
 	// fully expanded AIR-compatible trace.
 	tracingStart := time.Now()
-	expandedTrace, errs := a.BinaryFile.Trace(inputs, a.TracingConfig)
+	_, _, expandedTrace, errs := a.BinaryFile.Trace(inputs, a.TracingConfig)
 
 	if len(errs) > 0 {
 		logrus.Panicf("tracing failed: %v", errors.Join(errs...).Error())

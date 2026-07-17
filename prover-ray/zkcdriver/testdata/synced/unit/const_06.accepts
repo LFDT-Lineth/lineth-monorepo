@@ -1,0 +1,3 @@
+{ "data": "0x00000000", "result": "0xfa17010badc0ffee" }
+{ "data": "0x00000001", "result": "0xfa17010badc0ffef" }
+{ "data": "0xffffffff", "result": "0xfa17010cadc0ffed" }

@@ -1,0 +1,16 @@
+pub input data(address:u16) -> (word:u64)
+
+fn main() {
+    var val:u64 = data[0]
+    var res:u64 = data[1]
+    //
+    if inc(val) != res {
+        fail
+    }
+}
+
+fn inc(val:u64) -> (res:u64) {
+    var c:u1
+    //
+    c::res = (val as u65) + 1
+}

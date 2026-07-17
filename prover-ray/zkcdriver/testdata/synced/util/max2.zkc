@@ -1,0 +1,25 @@
+pub input data(address:u16) -> (val:u64)
+
+// Determine the maximum of two u64 values and check it against the expected
+// value.  This is a ZkC port of the assembly utility test asm/util/max2.  The
+// assembly detects arg1 >= arg2 via a subtraction borrow; ZkC expresses the
+// same comparison directly.
+fn main() {
+    var arg1:u64 = data[0]
+    var arg2:u64 = data[1]
+    var expected:u64 = data[2]
+    //
+    if max_u64(arg1, arg2) != expected {
+        fail
+    }
+    return
+}
+
+fn max_u64(arg1:u64, arg2:u64) -> (res:u64) {
+    if arg1 >= arg2 {
+        res = arg1
+    } else {
+        res = arg2
+    }
+    return
+}

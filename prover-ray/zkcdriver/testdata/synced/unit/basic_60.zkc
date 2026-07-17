@@ -1,0 +1,13 @@
+pub input in(address:u16) -> (byte:u32)
+pub output out(address:u16) -> (byte:u32)
+
+// prove that two numbers add up to a third.
+fn main() {
+    var hi:u31
+    var lo:u1
+    // 1+in[0] shift >> 1
+    hi::lo = in[0] + 1
+    out[0] = hi as u32
+    //
+    return
+}

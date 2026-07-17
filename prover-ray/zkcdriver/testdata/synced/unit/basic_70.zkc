@@ -1,0 +1,14 @@
+pub input data(address:u32) -> (word:u32)
+
+// Minimal reproduction of the multiply-granularity panic on KOALABEAR_16:
+// a multiplication by the constant 2^29 = 0x20000000 (bit-length 30).  Since
+// KOALABEAR_16 has BandWidth 30, no sub-limb granularity g (even g=1) satisfies
+// kbits + g <= BandWidth, so mulGranularity panics during register splitting.
+fn main() {
+    var x:u32 = data[0]
+    var z:u32 = data[1]
+
+    if (x * 0x20000000) != z {
+        fail
+    }
+}

@@ -1,0 +1,63 @@
+pub input data(address:u16) -> (val:u64)
+
+// Reverse the byte order of a u64 word (big-endian <-> little-endian) and
+// check it against the expected value.  This is a ZkC port of the assembly
+// utility test asm/util/switch_endian.
+//
+// The implementation recursively splits the word in half and swaps the two
+// (byte-reversed) halves via the `::` split/concat operator.
+fn main() {
+    var word:u64 = data[0]
+    var expected:u64 = data[1]
+    //
+    if switch_endian_u64(word) != expected {
+        fail
+    }
+    // native variant
+    if switch_endian_u64_native(word) != expected {
+        fail
+    }
+    return
+}
+
+fn switch_endian_u64(arg:u64) -> (res:u64) {
+    var hi:u32
+    var lo:u32
+    hi::lo = arg
+    var sw_hi:u32 = switch_endian_u32(hi)
+    var sw_lo:u32 = switch_endian_u32(lo)
+    res = sw_lo::sw_hi
+    return
+}
+
+fn switch_endian_u32(arg:u32) -> (res:u32) {
+    var hi:u16
+    var lo:u16
+    hi::lo = arg
+    var sw_hi:u16 = switch_endian_u16(hi)
+    var sw_lo:u16 = switch_endian_u16(lo)
+    res = sw_lo::sw_hi
+    return
+}
+
+fn switch_endian_u16(arg:u16) -> (res:u16) {
+    var hi:u8
+    var lo:u8
+    hi::lo = arg
+    res = lo::hi
+    return
+}
+
+// Reverse the byte order of a u64 word using native bitwise operators rather
+// than recursive decomposition.
+fn switch_endian_u64_native(arg:u64) -> (res:u64) {
+    res = ((arg & 0xff) << 56)
+     | ((arg & 0xff00) << 40)
+     | ((arg & 0xff0000) << 24)
+     | ((arg & 0xff000000) << 8)
+     | ((arg >> 8) & 0xff000000)
+     | ((arg >> 24) & 0xff0000)
+     | ((arg >> 40) & 0xff00)
+     | ((arg >> 56) & 0xff)
+    return
+}

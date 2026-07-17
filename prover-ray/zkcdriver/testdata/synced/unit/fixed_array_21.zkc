@@ -1,0 +1,21 @@
+pub input data(address:u8) -> (word:u16)
+
+fn main() {
+    var items:[u16;2]
+    var items2:[u16;2]
+
+    items[0] = data[0]
+    items[1] = data[1]
+    items2[0] = data[2]
+    items2[1] = data[3]
+
+    var t_val:u16 = data[4]
+    var f_val:u16 = data[5]
+    var expected:u16 = data[6]
+
+    var pick:u16 = (items == items2 ? t_val:f_val)
+
+    if pick != expected {
+        fail
+    }
+}

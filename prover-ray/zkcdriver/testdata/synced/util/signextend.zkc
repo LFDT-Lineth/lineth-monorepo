@@ -1,0 +1,174 @@
+pub input data(address:u16) -> (val:u64)
+
+// Sign-extend a u64 word given a size, and check the result against the
+// expected value.  This is a ZkC port of the assembly utility test
+// asm/util/signextend (ported from u256 down to u64).
+//
+// For a u64 word, t = 7 - size selects (from the most significant byte, index
+// 0) the byte whose most significant bit is the sign.  All more significant
+// bytes [0, t) are then overwritten with that sign (0x00 or 0xFF), while byte t
+// and everything below it are left unchanged.
+fn main() {
+    var size:u3 = data[0] as u3
+    var word:u64 = data[1]
+    var expected:u64 = data[2]
+    //
+    if signextend(size, word) != expected {
+        fail
+    }
+    // native variant
+    if signextend_native(size, word) != expected {
+        fail
+    }
+    return
+}
+
+fn signextend(size:u3, word:u64) -> (res:u64) {
+    var t:u3 = 7 - size
+    var t_byte:u8 = byte64(word, t)
+    // take the most significant bit of t_byte
+    var msb:u1
+    var rest:u7
+    msb::rest = t_byte
+    if msb == 0 {
+        // fill with 0s from 0 to t
+        res = fill_bytes_between(word, 0, t as u4, 0)
+    } else {
+        // fill with 1s from 0 to t
+        res = fill_bytes_between(word, 0, t as u4, 255)
+    }
+    return
+}
+
+// ---- byte extraction (see byte.zkc) -----------------------------------------
+
+fn byte64(word:u64, n:u3) -> (res:u8) {
+    var msb:u1
+    var m:u2
+    var high:u32
+    var low:u32
+    msb::m = n
+    high::low = word
+    if msb == 0 {
+        res = byte32(high, m)
+    } else {
+        res = byte32(low, m)
+    }
+    return
+}
+
+fn byte32(word:u32, n:u2) -> (res:u8) {
+    var msb:u1
+    var m:u1
+    var high:u16
+    var low:u16
+    msb::m = n
+    high::low = word
+    if msb == 0 {
+        res = byte16(high, m)
+    } else {
+        res = byte16(low, m)
+    }
+    return
+}
+
+fn byte16(word:u16, n:u1) -> (res:u8) {
+    var high:u8
+    var low:u8
+    high::low = word
+    if n == 0 {
+        res = high
+    } else {
+        res = low
+    }
+    return
+}
+
+// ---- fill_bytes / set_byte (see fill_bytes.zkc, set_byte.zkc) ----------------
+
+fn fill_bytes_between(word:u64, start:u4, end:u4, value:u8) -> (res:u64) {
+    if start == end {
+        res = word
+        return
+    }
+    var s:u1
+    var offset:u3
+    s::offset = start
+    if s == 1 {
+        res = word
+        return
+    }
+    var nword:u64 = set_byte64(word, offset, value)
+    res = fill_bytes_between(nword, (offset as u4) + 1, end, value)
+    return
+}
+
+fn set_byte64(word:u64, n:u3, value:u8) -> (res:u64) {
+    var hi:u32
+    var lo:u32
+    hi::lo = word
+    var b:u1
+    var m:u2
+    var v:u32
+    b::m = n
+    if b == 0 {
+        v = set_byte32(hi, m, value)
+        res = v::lo
+    } else {
+        v = set_byte32(lo, m, value)
+        res = hi::v
+    }
+    return
+}
+
+fn set_byte32(word:u32, n:u2, value:u8) -> (res:u32) {
+    var hi:u16
+    var lo:u16
+    hi::lo = word
+    var b:u1
+    var m:u1
+    var v:u16
+    b::m = n
+    if b == 0 {
+        v = set_byte16(hi, m, value)
+        res = v::lo
+    } else {
+        v = set_byte16(lo, m, value)
+        res = hi::v
+    }
+    return
+}
+
+fn set_byte16(word:u16, n:u1, value:u8) -> (res:u16) {
+    var hi:u8
+    var lo:u8
+    hi::lo = word
+    if n == 0 {
+        res = value::lo
+    } else {
+        res = hi::value
+    }
+    return
+}
+
+// Sign-extend a u64 word given a size using native bitwise operators rather
+// than recursive decomposition: read the sign bit, then set or clear the more
+// significant bytes [0, t) via a mask.
+fn signextend_native(size:u3, word:u64) -> (res:u64) {
+    var signpos:u6 = ((size as u6) * 8) + 7
+    var sign:u1 = ((word >> signpos) & 1) as u1
+    var t:u3 = 7 - size
+    if t == 0 {
+        res = word
+        return
+    }
+    var k:u6 = ((8 - (t as u7)) * 8) as u6
+    var allones:u64 = 0xffffffffffffffff
+    var mask:u64 = allones << k
+    if sign == 0 {
+        res = word & ~mask
+    } else {
+        res = word | mask
+    }
+    return
+}

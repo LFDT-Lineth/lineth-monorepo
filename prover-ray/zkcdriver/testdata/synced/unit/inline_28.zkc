@@ -1,0 +1,18 @@
+input in(addr:u16) -> (w:u16)
+output out(addr:u16) -> (lhs:u16, rhs:u16)
+
+fn main() {
+    var len:u16 = in[0]
+    //
+    for i:u16 = 0; i<len; i = i + 1 {
+        var l:u16 = in[i + i + 1]
+        var r:u16 = in[i + i + 2]
+        out[i] = f(l, r)
+    }
+}
+
+#[inline]
+fn f(x:u16, y:u16) -> (l:u16, r:u16) {
+    r = x
+    l = y
+}

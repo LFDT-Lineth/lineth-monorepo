@@ -1,3 +1,7 @@
 type address = u160
 // starts with u
 type uniform = u32
+
+fn main() {
+    var x:uniform = 1
+}

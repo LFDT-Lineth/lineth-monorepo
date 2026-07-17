@@ -1,0 +1,15 @@
+pub input data(address:u32) -> (word:u256)
+
+fn main() {
+    var x:u256 = data[0]
+    var y:u256 = data[1]
+    var z:u256 = data[2]
+
+    if xor(x, y) != z {
+        fail
+    }
+}
+
+fn xor(x:u256, y:u256) -> (z:u256) {
+    z = x ^ y
+}

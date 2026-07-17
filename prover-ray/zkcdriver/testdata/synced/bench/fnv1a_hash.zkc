@@ -16,13 +16,12 @@ fn main() {
 }
 
 fn hasher(start:u32, end:u32) -> (hash:u64) {
-    var tmp:u128
+    var w:u64
     //
     hash = OFFSET64
     //
     for i:u32 = start; i<end; i = i + 1 {
         hash = hash ^ (data[i] as u64)
-        tmp = (hash as u128) * PRIME64
-        hash = (tmp & 0xffffffff_ffffffff) as u64
+        w::hash = (hash as u128) * PRIME64
     }
 }

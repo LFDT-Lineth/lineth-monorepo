@@ -1,6 +1,7 @@
-type address = u160
-const ADD:address = 0x9
-const PRC_MAX:u160 = 0x11
+type address = u120
+const ADD:address = 0x12345678_aabbccdc_00112233_010101
+const PRC_MAX:u120 = 0x12345678_aabbccdd_00112233_010101
+
 fn main() {
     if ADD>PRC_MAX {
         fail

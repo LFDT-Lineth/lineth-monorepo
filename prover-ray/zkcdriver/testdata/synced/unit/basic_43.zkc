@@ -1,0 +1,14 @@
+const SGNEXTMASK:u64 = 0xFFFFFFFF_00000000
+
+pub input data(address:u1) -> (data:u32)
+pub output product(address:u1) -> (product:u32)
+
+fn main() {
+    product[0] = mulhu(data[0], data[1])
+    return
+}
+
+fn mulhu(a:u32, b:u32) -> (hi:u32) {
+    var lo:u32
+    hi::lo = (a as u64) * (b as u64)
+}

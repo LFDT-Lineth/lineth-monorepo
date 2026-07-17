@@ -1,0 +1,27 @@
+// regression tests for multi-line RAM assignments
+//
+// The parseLVal function handles the left-hand side of an assignment
+// being an assignment to a read-write memory. It has a line:
+//
+// var name = symbol.NewUnresolved(reg, symbol.WRITEABLE_MEMORY, XXX)
+//
+// Initially, XXX was 1; the fix sets XXX to uint(len(index)).
+// The initial code rejected `ram[a,b] = ...` at linking even though
+// the read `ram[a,b]` was accepted; the fix uses uint(len(index)).
+pub input data(address:u8) -> (byte:u8)
+memory ram(a:u8, b:u8) -> (byte:u8)
+
+fn main<ram>() {
+    var p:u8 = data[0]
+    var q:u8 = data[1]
+    // multi-line writes (the previously-rejected form)
+    ram[1, 2] = p
+    ram[2, 1] = q
+    // multi-line reads back; both lines must matter
+    if ram[1, 2] != p {
+        fail
+    }
+    if ram[2, 1] != q {
+        fail
+    }
+}

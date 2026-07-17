@@ -1,0 +1,18 @@
+pub input data(address:u16) -> (byte:u32)
+pub output sum(address:u16) -> (byte:u32)
+
+// prove that two numbers add up to a third.
+fn main() {
+    var lhs:u32 = data[0]
+    var rhs:u32 = data[1]
+    // check expected outcome
+    sum[0] = add(lhs, rhs)
+    //
+    return
+}
+
+#[inline]
+fn add(lhs:u32, rhs:u32) -> (r:u32) {
+    r = lhs + rhs
+    return
+}

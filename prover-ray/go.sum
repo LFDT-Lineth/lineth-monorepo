@@ -1,3 +1,5 @@
+github.com/LFDT-Lineth/zkc v1.2.22-rc1 h1:HCZ2Y5+UifhIIhuS1Sn1cDDkjagLl24RmgyIYCNrP4s=
+github.com/LFDT-Lineth/zkc v1.2.22-rc1/go.mod h1:5TiLsaRfSKKeJLs8noagL62vHIWyalP7nLTWDzkSrIE=
 github.com/bits-and-blooms/bitset v1.24.4 h1:95H15Og1clikBrKr/DuzMXkQzECs1M6hhoGXLwLQOZE=
 github.com/bits-and-blooms/bitset v1.24.4/go.mod h1:7hO7Gc7Pp1vODcmWvKMRA9BNmbv6a/7QIWpPxHddWR8=
 github.com/blang/semver/v4 v4.0.0 h1:1PFHFE6yCCTv8C1TeyNNarDzntLi7wMI5i/pzqYIsAM=

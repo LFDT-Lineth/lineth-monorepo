@@ -1,0 +1,27 @@
+pub input data(address:u2) -> (word:u32)
+
+fn main() {
+    var a:u32 = data[0]
+    var b:u32 = data[1]
+    var res:u32 = data[2]
+    //
+    if gcd(a, b) != res {
+        fail
+    }
+}
+
+// Euclid's GCD algorithm, implemented recursively following gcd.dfy.
+//
+// The Dafny source computes the *extended* GCD, returning the Bezout
+// coefficients (g,x,y) with (a*x)+(b*y) == g.  Those coefficients are signed
+// (Dafny `int`) and generally negative, which cannot be represented in ZkC's
+// unsigned, overflow-trapping u32 arithmetic.  Hence only the gcd value `g` is
+// computed here; the recursive structure (base case a==0 => b; otherwise
+// recurse on (b % a, a)) mirrors the Dafny function exactly.
+fn gcd(a:u32, b:u32) -> (r:u32) {
+    if a == 0 {
+        r = b
+    } else {
+        r = gcd(b % a, a)
+    }
+}

@@ -1,5 +1,11 @@
 include "includes/*.zkc"
 
+fn main() {
+    if f() != 0xffff {
+        fail
+    }
+}
+
 fn f() -> (r:UINT16) {
     r = MAX_U16
 }

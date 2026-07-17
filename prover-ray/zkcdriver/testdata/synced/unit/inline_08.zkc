@@ -1,0 +1,21 @@
+pub input data(address:u16) -> (byte:u8)
+
+// prove that two numbers add up to a third.
+fn main() {
+    var lhs:u8 = data[0]
+    var rhs:u8 = data[1]
+    var res:u8 = data[2]
+    // check expected outcome
+    res = check(lhs + rhs, res)
+
+    return
+}
+
+#[inline]
+fn check(actual:u8, expected:u8) -> (r:u8) {
+    if actual != expected {
+        fail
+    }
+    r = 1
+    return
+}

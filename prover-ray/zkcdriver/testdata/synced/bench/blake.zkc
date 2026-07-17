@@ -80,14 +80,33 @@ static SIGMA(line:u4, column:u4) -> (sigma:u4) {
 }
 
 fn g1g2<v_buffer>(a:u4, b:u4, c:u4, d:u4, x:u64, y:u64) {
+    var t0:u64, t1:u64, t2:u64, t3:u64
+    var a0:u64, b0:u64, c0:u64, d0:u64
+    var a1:u64, b1:u64, c1:u64, d1:u64
+    var a2:u64, b2:u64, c2:u64, d2:u64
+    // read
+    a0 = v_buffer[a]
+    b0 = v_buffer[b]
+    c0 = v_buffer[c]
+    d0 = v_buffer[d]
     // g1
-    v_buffer[a] = ((v_buffer[a] as u128 + v_buffer[b] as u128 + x as u128) & MASK_u64) as u64
-    v_buffer[d] = ((v_buffer[d] ^ v_buffer[a]) >> 32) | ((v_buffer[d] ^ v_buffer[a]) << 32)
-    v_buffer[c] = ((v_buffer[c] as u128 + v_buffer[d] as u128) & MASK_u64) as u64
-    v_buffer[b] = ((v_buffer[b] ^ v_buffer[c]) >> 24) | ((v_buffer[b] ^ v_buffer[c]) << 40)
+    t0::a1 = (a0 as u128) + (b0 as u128) + (x as u128)
+    d1 = bit_rotr64(d0 ^ a1, 32)
+    t1::c1 = (c0 as u128) + (d1 as u128)
+    b1 = bit_rotr64(b0 ^ c1, 24)
     // g2
-    v_buffer[a] = ((v_buffer[a] as u128 + v_buffer[b] as u128 + y as u128) & MASK_u64) as u64
-    v_buffer[d] = ((v_buffer[d] ^ v_buffer[a]) >> 16) | ((v_buffer[d] ^ v_buffer[a]) << 48)
-    v_buffer[c] = ((v_buffer[c] as u128 + v_buffer[d] as u128) & MASK_u64) as u64
-    v_buffer[b] = ((v_buffer[b] ^ v_buffer[c]) >> 63) | ((v_buffer[b] ^ v_buffer[c]) << 1)
+    t2::a2 = (a1 as u128) + (b1 as u128) + (y as u128)
+    d2 = bit_rotr64(d1 ^ a2, 16)
+    t3::c2 = (c1 as u128) + (d2 as u128)
+    b2 = bit_rotr64(b1 ^ c2, 63)
+    // write
+    v_buffer[a] = a2
+    v_buffer[b] = b2
+    v_buffer[c] = c2
+    v_buffer[d] = d2
+}
+
+fn bit_rotr64(value:u64, n:u6) -> (res:u64) {
+    var shift:u7 = 64 - (n as u7)
+    res = (value << shift) | (value >> n)
 }

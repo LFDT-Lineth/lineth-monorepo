@@ -1,0 +1,93 @@
+pub input data(address:u16) -> (val:u64)
+
+// Extract the nth byte from a u64 word (where n==0 returns the most
+// significant byte) and check it against the expected value.  This is a ZkC
+// port of the assembly utility test asm/util/byte.
+fn main() {
+    var word:u64 = data[0]
+    var n:u3 = data[1] as u3
+    var expected:u8 = data[2] as u8
+    //
+    // recursive decomposition variant
+    var res:u8
+    res = byte64(word, n)
+    //
+    if res != expected {
+        fail
+    }
+    //
+    // native bitwise variant
+    var res_native:u8
+    res_native = byte64_native(word, n)
+    //
+    if res_native != expected {
+        fail
+    }
+    return
+}
+
+// Extract the nth byte from a u64 value (n==0 returns the most significant
+// byte) using native bitwise operators rather than recursive decomposition.
+// Byte n occupies bits [(7-n)*8, (7-n)*8 + 7], so it is recovered by shifting
+// it down to the bottom and masking off the rest.
+fn byte64_native(word:u64, n:u3) -> (res:u8) {
+    var shift:u6 = (7 - (n as u6)) * 8
+    res = ((word >> shift) & 0xff) as u8
+    return
+}
+
+// Extract the nth byte from a u64 value, where n==0 returns the most
+// significant byte.
+fn byte64(word:u64, n:u3) -> (res:u8) {
+    var msb:u1
+    var m:u2
+    var high:u32
+    var low:u32
+    // Break down index (msb is the most significant bit).
+    msb::m = n
+    // Break down word.
+    high::low = word
+    //
+    if msb == 0 {
+        res = byte32(high, m)
+    } else {
+        res = byte32(low, m)
+    }
+    return
+}
+
+// Extract the nth byte from a u32 value, where n==0 returns the most
+// significant byte.
+fn byte32(word:u32, n:u2) -> (res:u8) {
+    var msb:u1
+    var m:u1
+    var high:u16
+    var low:u16
+    // Break down index (msb is the most significant bit).
+    msb::m = n
+    // Break down word.
+    high::low = word
+    //
+    if msb == 0 {
+        res = byte16(high, m)
+    } else {
+        res = byte16(low, m)
+    }
+    return
+}
+
+// Extract the nth byte from a u16 value, where n==0 returns the most
+// significant byte.
+fn byte16(word:u16, n:u1) -> (res:u8) {
+    var high:u8
+    var low:u8
+    // Break down word.
+    high::low = word
+    // Select high or low byte.
+    if n == 0 {
+        res = high
+    } else {
+        res = low
+    }
+    return
+}

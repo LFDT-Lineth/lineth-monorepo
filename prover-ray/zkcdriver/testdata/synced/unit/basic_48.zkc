@@ -1,0 +1,52 @@
+pub input data(address:u16) -> (word:u64)
+
+fn main() {
+    var lhs:u64 = data[0]
+    var rhs:u64 = data[1]
+    var res:u64 = data[2]
+    //
+    if max_lt(lhs, rhs) != res {
+        fail
+    }
+    if max_gt(lhs, rhs) != res {
+        fail
+    }
+    if max_lteq(lhs, rhs) != res {
+        fail
+    }
+    if max_gteq(lhs, rhs) != res {
+        fail
+    }
+}
+
+fn max_lt(v:u64, w:u64) -> (r:u64) {
+    if v<w {
+        r = w
+    } else {
+        r = v
+    }
+}
+
+fn max_gt(v:u64, w:u64) -> (r:u64) {
+    if v>w {
+        r = v
+    } else {
+        r = w
+    }
+}
+
+fn max_lteq(v:u64, w:u64) -> (r:u64) {
+    if v <= w {
+        r = w
+    } else {
+        r = v
+    }
+}
+
+fn max_gteq(v:u64, w:u64) -> (r:u64) {
+    if v >= w {
+        r = v
+    } else {
+        r = w
+    }
+}

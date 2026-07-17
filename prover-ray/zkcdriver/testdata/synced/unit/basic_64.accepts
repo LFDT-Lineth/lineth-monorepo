@@ -1,0 +1,6 @@
+{ "data": "0x0a03", "result": "0x0005" }
+{ "data": "0xff00", "result": "0x00fd" }
+{ "data": "0x050a", "result": "0x03f9" }
+{ "data": "0x00ff", "result": "0x02ff" }
+{ "data": "0xffff", "result": "0x03fe" }
+{ "data": "0x0000", "result": "0x03fe" }

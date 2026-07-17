@@ -1,2 +1,8 @@
 const LARGE:u16 = 32
 const LARGEMO:u16 = LARGE + 1
+
+fn main() {
+    if (LARGE + 1) != LARGEMO {
+        fail
+    }
+}

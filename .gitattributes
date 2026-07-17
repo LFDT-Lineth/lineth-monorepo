@@ -26,5 +26,9 @@ prover/prover-assets/**/**/**/**/*.bin binary
 prover/prover-assets/kzgsrs/* binary
 prover/zkevm/arithmetization/*.bin binary
 
+prover-ray/zkcdriver/testdata/*.bin binary
+prover-ray/zkcdriver/testdata/synced/**/*.bin binary
+prover-ray/zkcdriver/testdata/synced/**/**/*.bin binary
+
 *.woff2 binary
 

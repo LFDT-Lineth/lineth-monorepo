@@ -1,2 +1,10 @@
 type bool = u1
 const TRUE:bool = 1
+
+fn main() {
+    var b:bool = 0
+    //
+    if b == TRUE {
+        fail
+    }
+}

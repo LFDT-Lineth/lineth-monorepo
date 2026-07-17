@@ -1,0 +1,18 @@
+pub input data(address:u8) -> (byte:u8)
+
+fn main() {
+    var x:u8 = data[0]
+    while x<255
+    {
+        x = addOne(x)
+    }
+
+    if (x != 255) {
+        fail
+    }
+}
+
+fn addOne(x:u8) -> (r:u8) {
+    r = x + 1
+    return
+}

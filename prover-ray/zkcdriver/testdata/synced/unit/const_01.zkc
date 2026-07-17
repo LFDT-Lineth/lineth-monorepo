@@ -1,1 +1,7 @@
 const MAX_ADDR:u16 = 255
+
+fn main() {
+    if MAX_ADDR != 255 {
+        fail
+    }
+}

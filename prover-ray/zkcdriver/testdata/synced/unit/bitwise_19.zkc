@@ -1,0 +1,22 @@
+const SGNEXTMASK:u64 = 0xFFFFFFFF_00000000
+
+pub input data(address:u1) -> (data:u32)
+pub output product(address:u1) -> (product:u32)
+
+fn main() {
+    product[0] = mulhsu(data[0], data[1])
+    return
+}
+
+fn mulhsu(a:u32, b:u32) -> (hi:u32) {
+    var a_tmp:u128 = sgn_extension_u32_u64(a) as u128 // left-pad a with sign extension to 128 bits
+    var b_tmp:u128 = b as u128 // left-pad b to 128 bits
+    var c_tmp:u128 = a_tmp * b_tmp // result fits in 128 bits
+    var lo:u32
+    hi::lo = (c_tmp & 0xFFFFFFFF_FFFFFFFF) as u64
+}
+
+fn sgn_extension_u32_u64(value:u32) -> (ext_value:u64) {
+    var sign_bit:u64 = (value >> 31) as u64
+    ext_value = (sign_bit * SGNEXTMASK) | (value as u64)
+}

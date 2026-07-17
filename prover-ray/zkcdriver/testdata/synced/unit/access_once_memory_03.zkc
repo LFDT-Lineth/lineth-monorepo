@@ -1,0 +1,7 @@
+// write once memory
+output WOM(address_1:u2, address_2:u2) -> (value:u4)
+
+fn main<>() {
+    WOM[0, 1] = 1
+    WOM[0, 0] = 1
+}

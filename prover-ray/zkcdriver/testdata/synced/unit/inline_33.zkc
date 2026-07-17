@@ -1,0 +1,15 @@
+input data(addr:u16) -> (word:u32)
+
+fn main() {
+    var lhs:u32 = data[0]
+    var rhs:u32 = data[1]
+    //
+    f(lhs, rhs)
+}
+
+#[inline]
+fn f(x:u32, y:u32) {
+    if x == y {
+        fail
+    }
+}

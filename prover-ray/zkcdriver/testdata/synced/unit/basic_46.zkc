@@ -1,0 +1,16 @@
+pub input data(address:u16) -> (word:u64)
+
+fn main() {
+    var val:u64 = data[0]
+    var res:u64 = data[1]
+    //
+    if double(val) != res {
+        fail
+    }
+}
+
+fn double(val:u64) -> (res:u64) {
+    var tmp:u64
+    //
+    tmp::res = (val as u128) * 2
+}

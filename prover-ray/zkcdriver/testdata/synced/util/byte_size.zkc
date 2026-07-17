@@ -1,0 +1,89 @@
+pub input data(address:u16) -> (val:u64)
+
+// Compute the byte size of a trimmed u64 word (the number of bytes needed to
+// represent it, returning 0 for 0) and check it against the expected value.
+// This is a ZkC port of the assembly utility test asm/util/byte_size (ported
+// from u256 down to u64).  It is defined as log256(word)+1 for a non-zero word.
+fn main() {
+    var word:u64 = data[0]
+    var expected:u8 = data[1] as u8
+    //
+    if (byte_size_u64(word) as u8) != expected {
+        fail
+    }
+    // native variant
+    if (byte_size_native(word) as u8) != expected {
+        fail
+    }
+    return
+}
+
+fn byte_size_u64(arg:u64) -> (res:u4) {
+    if arg == 0 {
+        res = 0
+        return
+    }
+    var tmp:u3 = log256_u64(arg)
+    res = (tmp as u4) + 1
+    return
+}
+
+// ---- log256 (see log256.zkc) -------------------------------------------------
+
+fn log256_u64(arg:u64) -> (res:u3) {
+    var hi:u32
+    var lo:u32
+    hi::lo = arg
+    var tmp:u2
+    if hi == 0 {
+        tmp = log256_u32(lo)
+        res = tmp as u3
+    } else {
+        tmp = log256_u32(hi)
+        res = (tmp as u3) + 4
+    }
+    return
+}
+
+fn log256_u32(arg:u32) -> (res:u2) {
+    var hi:u16
+    var lo:u16
+    hi::lo = arg
+    var tmp:u1
+    if hi == 0 {
+        tmp = log256_u16(lo)
+        res = tmp as u2
+    } else {
+        tmp = log256_u16(hi)
+        res = (tmp as u2) + 2
+    }
+    return
+}
+
+fn log256_u16(arg:u16) -> (res:u1) {
+    var hi:u8
+    var lo:u8
+    hi::lo = arg
+    if hi == 0 {
+        res = 0
+    } else {
+        res = 1
+    }
+    return
+}
+
+// Compute the byte size of a trimmed u64 word using a native loop over the
+// bytes rather than recursive decomposition.
+fn byte_size_native(arg:u64) -> (res:u4) {
+    var b:u8
+    var shift:u6
+    res = 0
+    for i:u4 = 0; i<8; i = i + 1 {
+        shift = (i as u6) * 8
+        b = ((arg >> shift) & 0xff) as u8
+        if b != 0 {
+            res = (i as u4) + 1
+        }
+    }
+    return
+}

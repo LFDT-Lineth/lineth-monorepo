@@ -1,0 +1,10 @@
+pub input data(address:u8) -> (word:u16)
+
+fn main() {
+    var x:u16 = data[0]
+    var y:u16 = data[1]
+    var z:u16 = data[2]
+    var r0:u0
+    // check sums to zero
+    r0 = (x - y - z) as u0
+}

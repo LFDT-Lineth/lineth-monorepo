@@ -1,4 +1,11 @@
-type address = u160
+type address = u128
+
+fn main() {
+    if f(0xabcdef00_01020304_aabbddee_00000000) != 0 {
+        fail
+    }
+}
+
 fn f(x:address) -> (r:address) {
     r = 0
     return

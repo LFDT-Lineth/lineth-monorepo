@@ -1,0 +1,16 @@
+pub input data(address:u16) -> (v:u32)
+
+// Prove x / y == q for u32 values.  Under register splitting on a 16-bit field
+// the division lowers to a hint plus multi-limb multiplication and (chained)
+// subtractions, exercising both split subtraction and multi-limb hint operands.
+fn main() {
+    var x:u32 = data[0]
+    var y:u32 = data[1]
+    var q:u32 = data[2]
+
+    if (x / y) != q {
+        fail
+    }
+
+    return
+}

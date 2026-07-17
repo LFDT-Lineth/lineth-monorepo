@@ -1,0 +1,39 @@
+const MINUS_ONE:u32 = 0xffffffff
+
+pub input data(address:u2) -> (data:u32)
+pub output result(address:u1) -> (result:u32)
+
+fn main() {
+    result[0] = long_division_u32(data[0], data[1], data[2] as u1)
+    return
+}
+
+// unsigned binary long division
+fn long_division_u32(a:u32, b:u32, get_remainder:u1) -> (result:u32) {
+    if b == 0 {
+        if get_remainder == 0 {
+            result = MINUS_ONE
+            return
+        }
+        // get_remainder == 1
+        result = a
+        return
+    } // division by zero
+    var q:u32 = 0
+    var r:u32 = 0
+    for i:u32 = 0; i<32; i = i + 1 {
+        r = ((r << 1) | ((a >> (31 - i)) & 1))
+        if r >= b {
+            r = r - b
+            var tmp:u32 = 1 << (31 - i)
+            q = q | tmp
+        }
+    }
+    if get_remainder == 0 {
+        result = q
+        return
+    }
+    // get_remainder == 1
+    result = r
+    return
+}
