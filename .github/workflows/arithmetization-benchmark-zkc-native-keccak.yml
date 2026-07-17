@@ -179,8 +179,11 @@ jobs:
           zkc_prog="$PWD/arithmetization/src/test/zkc/keccakf/keccakf_batched.zkc"
           for variant in base opt; do
             echo "=== zkc-${variant} exec --stats ==="
+            printf '### zkc-%s exec --stats\n```\n' "$variant" >> "$GITHUB_STEP_SUMMARY"
             "/tmp/zkc-${variant}" exec --stats --field KOALABEAR_16 \
-              /tmp/keccakf_input.json "$zkc_prog" 2>&1 || true
+              /tmp/keccakf_input.json "$zkc_prog" \
+              2>&1 | tee -a "$GITHUB_STEP_SUMMARY" || true
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
             echo "==="
           done
 

@@ -297,10 +297,13 @@ jobs:
         run: |
           set -eux
           for variant in base opt; do
-            echo "=== zkc-${variant} execute --stats (keccak) ==="
-            "/tmp/zkc-${variant}" execute --stats \
+            echo "=== zkc-${variant} exec --stats (keccak) ==="
+            printf '### zkc-%s exec --stats (keccak)\n```\n' "$variant" >> "$GITHUB_STEP_SUMMARY"
+            "/tmp/zkc-${variant}" exec --stats \
               "/tmp/keccak-${variant}.json" \
-              "/tmp/wt-${variant}/arithmetization/src/main/riscv/main.zkc" 2>&1 || true
+              "/tmp/wt-${variant}/arithmetization/src/main/riscv/main.zkc" \
+              2>&1 | tee -a "$GITHUB_STEP_SUMMARY" || true
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
             echo "==="
           done
 
