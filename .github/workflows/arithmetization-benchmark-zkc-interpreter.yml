@@ -307,6 +307,18 @@ jobs:
           done
           log "all workloads done"
 
+      - name: Print zkc --stats for base and optim
+        if: always()
+        run: |
+          set -eux
+          for variant in base opt; do
+            echo "::group::zkc-${variant} execute --stats (keccak)"
+            "/tmp/zkc-${variant}" execute --stats \
+              "/tmp/keccak-${variant}.json" \
+              "/tmp/wt-${variant}/arithmetization/src/main/riscv/main.zkc" || true
+            echo "::endgroup::"
+          done
+
       - name: Parse logs and emit summary
         if: always()
         shell: bash
