@@ -56,6 +56,7 @@ func TestZkcIntegrationTestSynced(t *testing.T) {
 					continue
 				}
 				t.Run(fmt.Sprintf("case=%d", lineNr), func(t *testing.T) {
+					t.Parallel()
 					sys, zkcInput, zkcOutputs, err := parseTestCase(zkcTestCase{ZkcFilePath: f, InputStr: line}, binF)
 					if err != nil {
 						t.Fatalf("failed to parse test case: %v", err)
