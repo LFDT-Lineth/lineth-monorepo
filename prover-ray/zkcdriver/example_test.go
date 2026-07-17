@@ -65,7 +65,6 @@ func parseTestCase(scenario zkcTestCase) (
 	inputs *zkcdriver.PreReadInputs,
 	err error,
 ) {
-
 	// Create a system
 	sys = wiop.NewSystemf("zkc-test/%s", scenario.BinFilePath)
 	sys.NewRound()
@@ -93,7 +92,6 @@ func runTestCase(
 	inputs zkcdriver.PreReadInputs,
 	scenario zkcTestCase,
 ) error {
-
 	// Construct the ZkC driver
 	driver := zkcdriver.NewZkCDriver(
 		sys,

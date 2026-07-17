@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/LFDT-Lineth/zkc/pkg/util/file"
 )
 
 const (
@@ -39,38 +41,37 @@ func TestZKCIntegrationSynced(t *testing.T) {
 			}
 
 			acceptPath := strings.TrimSuffix(path, binExtension) + acceptExtension
-			inputStr, readErr := os.ReadFile(acceptPath) //nolint
-			if readErr != nil {
-				// If the .accept file does not exist, we skip the test.
-				return nil //nolint
-			}
-
-			sys, input, err := parseTestCase(zkcTestCase{
-				BinFilePath: path,
-				InputStr:    string(inputStr),
-			})
-
-			if err != nil {
-				// The corset input parsing failed. In that case, we consider
-				// there is a bug in corset side and we skip the test.
-				return nil //nolint
-			}
-
-			testName := strings.TrimPrefix(
-				strings.TrimSuffix(path, binExtension), "testdata/")
-
-			t.Run(testName, func(t *testing.T) {
-				err := runTestCase(sys, *input, zkcTestCase{
+			// Parse all input vectors
+			inputVectors := file.ReadInputFileAsLines(acceptPath)
+			// Test each input vector
+			for _, inputVector := range inputVectors {
+				sys, input, err := parseTestCase(zkcTestCase{
 					BinFilePath: path,
-					InputStr:    string(inputStr),
+					InputStr:    inputVector,
 				})
 
 				if err != nil {
-					t.Fatalf("test %s failed: %v", testName, err)
+					// The corset input parsing failed. In that case, we consider
+					// there is a bug in corset side and we skip the test.
+					return nil //nolint
 				}
 
-				numPassing++
-			})
+				testName := strings.TrimPrefix(
+					strings.TrimSuffix(path, binExtension), "testdata/")
+
+				t.Run(testName, func(t *testing.T) {
+					err := runTestCase(sys, *input, zkcTestCase{
+						BinFilePath: path,
+						InputStr:    inputVector,
+					})
+
+					if err != nil {
+						t.Fatalf("test %s failed: %v", testName, err)
+					}
+
+					numPassing++
+				})
+			}
 
 			return nil
 		})
