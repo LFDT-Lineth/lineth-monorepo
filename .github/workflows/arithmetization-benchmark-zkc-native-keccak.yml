@@ -83,8 +83,8 @@ jobs:
           # so they coexist on disk.
           for variant in base opt; do
             case "$variant" in
-              base) ref="${{ inputs.zkc_base_ref || 'v1.2.20' }}" ;;
-              opt)  ref="${{ inputs.zkc_optim_ref || 'v1.2.20' }}" ;;
+              base) ref="${{ inputs.zkc_base_ref || 'v1.2.21' }}" ;;
+              opt)  ref="${{ inputs.zkc_optim_ref || 'v1.2.21' }}" ;;
             esac
             tmpbin=$(mktemp -d)
             # go-corset was renamed/moved to github.com/LFDT-Lineth/zkc. The module
@@ -172,6 +172,18 @@ jobs:
           done
           log "all variants done"
 
+      - name: Print zkc --stats for base and optim
+        if: always()
+        run: |
+          set -eux
+          zkc_prog="$PWD/arithmetization/src/test/zkc/keccakf/keccakf_batched.zkc"
+          for variant in base opt; do
+            echo "::group::zkc-${variant} execute --stats"
+            "/tmp/zkc-${variant}" execute --stats --field KOALABEAR_16 \
+              /tmp/keccakf_input.json "$zkc_prog" || true
+            echo "::endgroup::"
+          done
+
       - name: Parse logs and emit summary
         if: always()
         shell: bash
@@ -190,8 +202,8 @@ jobs:
             "${fast_mode_arg[@]}" \
             -base-ref "${{ inputs.zkc_base_ref || 'main' }}" \
             -optim-ref "${{ inputs.zkc_optim_ref || 'main' }}" \
-            -zkc-ref-base "${{ inputs.zkc_base_ref || 'v1.2.20' }}" \
-            -zkc-ref-optim "${{ inputs.zkc_optim_ref || 'v1.2.20' }}" \
+            -zkc-ref-base "${{ inputs.zkc_base_ref || 'v1.2.21' }}" \
+            -zkc-ref-optim "${{ inputs.zkc_optim_ref || 'v1.2.21' }}" \
             -keccak-n-vectors ${{ inputs.n_vectors_keccak || 100 }} \
             | tee -a "$GITHUB_STEP_SUMMARY" \
             | tee /tmp/bench/logs/summary.md

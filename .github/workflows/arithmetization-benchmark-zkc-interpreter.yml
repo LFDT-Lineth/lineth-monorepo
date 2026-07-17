@@ -119,8 +119,8 @@ jobs:
           set -eux
           for variant in base opt; do
             case "$variant" in
-              base) ref="${{ inputs.zkc_ref_base || 'v1.2.20' }}" ;;
-              opt)  ref="${{ inputs.zkc_ref_optim || 'v1.2.20' }}" ;;
+              base) ref="${{ inputs.zkc_ref_base || 'v1.2.21' }}" ;;
+              opt)  ref="${{ inputs.zkc_ref_optim || 'v1.2.21' }}" ;;
             esac
             tmpbin=$(mktemp -d)
             GOBIN="$tmpbin" go install "github.com/LFDT-Lineth/zkc/cmd/zkc@${ref}" \
@@ -292,6 +292,18 @@ jobs:
           done
           log "all workloads done"
 
+      - name: Print zkc --stats for base and optim
+        if: always()
+        run: |
+          set -eux
+          for variant in base opt; do
+            echo "::group::zkc-${variant} execute --stats (keccak)"
+            "/tmp/zkc-${variant}" execute --stats \
+              "/tmp/keccak-${variant}.json" \
+              "/tmp/wt-${variant}/arithmetization/src/main/riscv/main.zkc" || true
+            echo "::endgroup::"
+          done
+
       - name: Parse logs and emit summary
         if: always()
         shell: bash
@@ -315,8 +327,8 @@ jobs:
             -l2-guest-keccak-accel "$l2_keccak_accel" \
             -base-ref "${{ inputs.base_ref || 'main' }}" \
             -optim-ref "${{ inputs.optim_ref || github.event.pull_request.head.sha || github.sha }}" \
-            -zkc-ref-base "${{ inputs.zkc_ref_base || 'v1.2.20' }}" \
-            -zkc-ref-optim "${{ inputs.zkc_ref_optim || 'v1.2.20' }}" \
+            -zkc-ref-base "${{ inputs.zkc_ref_base || 'v1.2.21' }}" \
+            -zkc-ref-optim "${{ inputs.zkc_ref_optim || 'v1.2.21' }}" \
             -keccak-n-vectors ${{ inputs.n_vectors_keccak || 10 }} \
             -blake-rounds ${{ inputs.n_rounds_blake || 12 }} \
             | tee -a "$GITHUB_STEP_SUMMARY" \
