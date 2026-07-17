@@ -277,18 +277,22 @@ jobs:
         shell: bash
         env:
           FAST_MODE: ${{ inputs.fast_mode }}
+          KECCAK_ACCEL: ${{ inputs.keccak_accel }}
         run: |
           set -o pipefail
           mkdir -p /tmp/bench/logs
           if [[ -z "${FAST_MODE:-}" ]]; then FAST_MODE=true; fi
           fast_mode_arg=(-fast-mode=false)
           if [[ "$FAST_MODE" == "true" ]]; then fast_mode_arg=(-fast-mode=true); fi
+          l2_keccak_accel=disabled
+          [[ "${KECCAK_ACCEL:-true}" == "true" ]] && l2_keccak_accel=activated
           /tmp/bench/render_bench_summary \
             -logs /tmp/bench/logs \
             -iters ${{ inputs.iterations || 1}} \
             -workloads l2_guest,keccak,blake \
             -blake-n 1 \
             "${fast_mode_arg[@]}" \
+            -l2-guest-keccak-accel "$l2_keccak_accel" \
             -base-ref "${{ inputs.base_ref || 'main' }}" \
             -optim-ref "${{ inputs.optim_ref || github.event.pull_request.head.sha || github.sha }}" \
             -zkc-ref-base "${{ inputs.zkc_ref_base || 'v1.2.20' }}" \

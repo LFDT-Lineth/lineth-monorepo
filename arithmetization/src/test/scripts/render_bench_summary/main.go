@@ -637,6 +637,7 @@ func main() {
 	zkcRefOptim := flag.String("zkc-ref-optim", "", "zkc repo ref for optim-branch runs (informational)")
 	keccakNVectors := flag.Int("keccak-n-vectors", 0, "number of Keccak vectors batched into one zkc exec (informational, 0 = omit)")
 	blakeRounds := flag.Int("blake-rounds", 0, "number of Blake2b compression rounds (informational, 0 = omit)")
+	l2GuestKeccakAccel := flag.String("l2-guest-keccak-accel", "", "l2-execution guest keccak accelerator (informational: activated|disabled, empty = omit)")
 	fastMode := flag.Bool("fast-mode", false, "timed iterations used gogen (no execution steps in iter logs; read steps from warmup logs)")
 	flag.Parse()
 	if *logsDir == "" {
@@ -687,6 +688,9 @@ func main() {
 	}
 	if wantBlake && *blakeRounds > 0 {
 		fmt.Fprintf(&out, "- number of Blake compression rounds: %d\n", *blakeRounds)
+	}
+	if wantL2Guest && *l2GuestKeccakAccel != "" {
+		fmt.Fprintf(&out, "- l2 guest keccak accelerator: %s\n", *l2GuestKeccakAccel)
 	}
 	out.WriteString("\n")
 
