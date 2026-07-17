@@ -178,10 +178,10 @@ jobs:
           set -eux
           zkc_prog="$PWD/arithmetization/src/test/zkc/keccakf/keccakf_batched.zkc"
           for variant in base opt; do
-            echo "::group::zkc-${variant} execute --stats"
-            "/tmp/zkc-${variant}" execute --stats --field KOALABEAR_16 \
-              /tmp/keccakf_input.json "$zkc_prog" || true
-            echo "::endgroup::"
+            echo "=== zkc-${variant} exec --stats ==="
+            "/tmp/zkc-${variant}" exec --stats --field KOALABEAR_16 \
+              /tmp/keccakf_input.json "$zkc_prog" 2>&1 || true
+            echo "==="
           done
 
       - name: Parse logs and emit summary

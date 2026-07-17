@@ -297,11 +297,11 @@ jobs:
         run: |
           set -eux
           for variant in base opt; do
-            echo "::group::zkc-${variant} execute --stats (keccak)"
+            echo "=== zkc-${variant} execute --stats (keccak) ==="
             "/tmp/zkc-${variant}" execute --stats \
               "/tmp/keccak-${variant}.json" \
-              "/tmp/wt-${variant}/arithmetization/src/main/riscv/main.zkc" || true
-            echo "::endgroup::"
+              "/tmp/wt-${variant}/arithmetization/src/main/riscv/main.zkc" 2>&1 || true
+            echo "==="
           done
 
       - name: Parse logs and emit summary
