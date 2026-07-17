@@ -175,15 +175,17 @@ jobs:
       - name: Print zkc --stats for base and optim
         if: always()
         run: |
-          set -eux
           zkc_prog="$PWD/arithmetization/src/test/zkc/keccakf/keccakf_batched.zkc"
           for variant in base opt; do
             echo "=== zkc-${variant} exec --stats ==="
-            printf '### zkc-%s exec --stats\n```\n' "$variant" >> "$GITHUB_STEP_SUMMARY"
+            stats_file="/tmp/zkc_stats_${variant}.txt"
             "/tmp/zkc-${variant}" exec --stats --field KOALABEAR_16 \
               /tmp/keccakf_input.json "$zkc_prog" \
-              2>&1 | tee -a "$GITHUB_STEP_SUMMARY" || true
-            echo '```' >> "$GITHUB_STEP_SUMMARY"
+              >"$stats_file" 2>&1 || true
+            cat "$stats_file"
+            printf '### zkc-%s exec --stats\n```\n' "$variant" >> "$GITHUB_STEP_SUMMARY"
+            cat "$stats_file" >> "$GITHUB_STEP_SUMMARY"
+            printf '```\n' >> "$GITHUB_STEP_SUMMARY"
             echo "==="
           done
 
