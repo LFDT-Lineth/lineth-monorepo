@@ -1,4 +1,4 @@
-name: Tracer sample guest programs run (Add in Zig and Blake in Rust)
+name: Tracer guest programs run - l2-execution, Add in Zig and Blake in Rust
 
 on:
   pull_request:
@@ -6,6 +6,9 @@ on:
       - main
     paths:
       - 'arithmetization/**'
+      - 'riscv-guests/l2-execution/**'
+      - 'riscv-guests/build_common/**'
+      - 'riscv-guests/lineth-accelerators/**'
       - '.github/actions/setup-arithmetization-riscv/**'
       - '.github/workflows/arithmetization-*.yml'
   push:
@@ -13,6 +16,9 @@ on:
      - main
     paths:
      - 'arithmetization/**'
+     - 'riscv-guests/l2-execution/**'
+     - 'riscv-guests/build_common/**'
+     - 'riscv-guests/lineth-accelerators/**'
      - '.github/actions/setup-arithmetization-riscv/**'
      - '.github/workflows/arithmetization-*.yml'
   workflow_call:
@@ -57,4 +63,12 @@ jobs:
         run: make blake-rust-exec
         working-directory: arithmetization/src/test
         timeout-minutes: 30
+
+      - name: Run l2-execution guest program with zkc interpreter
+        run: make -C riscv-guests/l2-execution exec
+        timeout-minutes: 30
+        env:
+          INPUT: test/testdata/stateless_input.ssz
+          KECCAK_ACCEL: true
+          ZKC_EXEC_FLAGS: "-q -v"
 
