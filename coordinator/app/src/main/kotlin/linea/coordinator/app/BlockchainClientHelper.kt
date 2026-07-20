@@ -23,7 +23,6 @@ import org.web3j.crypto.Credentials
 import org.web3j.protocol.Web3j
 import org.web3j.service.TxSignServiceImpl
 import org.web3j.tx.gas.ContractGasProvider
-import org.web3j.utils.Numeric
 import java.io.FileInputStream
 import java.nio.file.Path
 import java.security.KeyStore
@@ -112,8 +111,8 @@ fun createTransactionManager(
         val poolOptions = PoolOptions()
           .setHttp1MaxSize(web3SignerConfig.maxPoolSize)
         val httpRestClient = VertxHttpRestClient(webClientOptions, poolOptions, vertx)
-        val signer = Web3SignerRestClient(httpRestClient, signerConfig.web3signer.publicKey.encodeHex())
-        val signerAdapter = ECKeypairSignerAdapter(signer::sign, Numeric.toBigInt(signerConfig.web3signer.publicKey))
+        val signer = Web3SignerRestClient(httpRestClient, signerConfig.web3signer.publicKey)
+        val signerAdapter = ECKeypairSignerAdapter(signer)
         val web3SignerCredentials = Credentials.create(signerAdapter)
         Web3SignerTxSignService(web3SignerCredentials)
       }
