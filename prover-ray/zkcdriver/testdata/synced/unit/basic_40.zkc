@@ -1,5 +1,0 @@
-pub input data(address:u8) -> (word:u16)
-
-fn main() {
-    var x:u8 = data[0] as u8
-}

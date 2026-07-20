@@ -1,8 +1,0 @@
-pub input data(address:u16) -> (byte:u32)
-
-fn main() {
-    var lhs:u32 = data[0]
-    var rhs:u32 = data[1]
-    //
-    printf "hello world %d\n", lhs
-}

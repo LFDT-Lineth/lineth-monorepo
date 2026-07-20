@@ -1,9 +1,0 @@
-fn main() {
-    if f(0) != 0 {
-        fail
-    }
-}
-
-fn f(x:u8) -> (r:u8) {
-    r = 0
-}

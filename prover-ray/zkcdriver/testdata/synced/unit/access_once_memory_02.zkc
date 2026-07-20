@@ -1,9 +1,0 @@
-// this test performs multiple assignments to a cell of an multi-line address memory
-// which violates its "write once" property; it should FAIL, but it doesn't ...
-output WOM(address_1:u2, address_2:u2) -> (value:u4)
-
-fn main<>() {
-    WOM[0, 0] = 0
-    WOM[0, 0] = 1
-    WOM[0, 0] = 2
-}

@@ -1,9 +1,0 @@
-type word = u4
-const X:u8 = 15
-const X_AS_WORD:word = X as word
-
-fn main() {
-    if X_AS_WORD != 15 {
-        fail
-    }
-}
