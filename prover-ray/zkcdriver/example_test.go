@@ -46,7 +46,7 @@ func TestRunZKCExamples(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to parse test case: %v", err)
 			}
-			if err := runProveVerify(sys, inputs, binF); err != nil {
+			if err := runProveVerify(sys, inputs, binF, proverCompilePipeline); err != nil {
 				t.Fatalf("failed to run test case: %v", err)
 			}
 		})

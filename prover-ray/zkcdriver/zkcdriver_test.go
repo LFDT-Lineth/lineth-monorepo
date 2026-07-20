@@ -131,7 +131,7 @@ func proverCompilePipeline(sys *wiop.System) {
 }
 
 // runProveVerify proves and verifies a given test-case, returning an error if the proof fails to verify.
-func runProveVerify(sys *wiop.System, inputs *zkcdriver.PreReadInputs, binFile *constraints.BinaryFile[koalabear.Element]) (err error) {
+func runProveVerify(sys *wiop.System, inputs *zkcdriver.PreReadInputs, binFile *constraints.BinaryFile[koalabear.Element], proverCompilePipeline func(*wiop.System)) (err error) {
 	// recover panics. ZKC tends to panic when it fails tracing, so we want to catch those and return them as errors.
 	defer func() {
 		r := recover()
