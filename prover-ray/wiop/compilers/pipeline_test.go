@@ -10,11 +10,19 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/localvanishing"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/rangecheck"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func init() {
+	// Full-pipeline tests exercise the PCS end-to-end; keep the query count
+	// tiny so the suite stays fast. Production callers never touch this
+	// variable (see pcs.SetFRINumQueriesForTest).
+	pcs.SetFRINumQueriesForTest(2)
+}
 
 // compileFullPipeline runs every wiop compilation pass in the canonical
 // order so that each pass can consume the previous one's output:
@@ -24,6 +32,7 @@ import (
 //  3. logderivativesum:     LogDerivativeSum → recurrence Vanishings + endpoint openings
 //  4. localvanishing:       scalar Vanishings → multi-valued Vanishings via the Lagrange lift
 //  5. global:               multi-valued Vanishings → quotient shares + LagrangeEval claims
+//  6. pcs:                  commit every committed round, open every LagrangeEval claim
 //
 // Each pass is a no-op when its input queries are absent, so this ordering
 // is safe to apply uniformly to every wioptest scenario regardless of which
@@ -35,6 +44,24 @@ func compileFullPipeline(sys *wiop.System) {
 	logderivativesum.Compile(sys)
 	localvanishing.Compile(sys)
 	global.Compile(sys)
+	// FRI cannot fold a size-1 codeword, so skip the PCS pass for scenarios
+	// that declare any statically size-1 module. Left as a known gap until
+	// the PCS/FRI layer handles the D=1 edge case.
+	if !hasStaticSizeOneModule(sys) {
+		pcs.Compile(sys)
+	}
+}
+
+// hasStaticSizeOneModule reports whether sys declares any statically-sized
+// module of size 1. Dynamic modules whose runtime size happens to be 1 are
+// not detected here; those scenarios would still panic during Prove.
+func hasStaticSizeOneModule(sys *wiop.System) bool {
+	for _, m := range sys.Modules {
+		if !m.IsDynamic() && m.Size() == 1 {
+			return true
+		}
+	}
+	return false
 }
 
 // These tests drive every scenario through the full

@@ -45,13 +45,16 @@ import (
 const (
 	// friInverseRate is the FRI blow-up factor (codeword size / plaintext size).
 	friInverseRate = 2
-	// friNumQueries is the number of FRI query openings. This is obtained from
-	// https://github.com/ethereum/soundcalc
-	//
-	// To match 128 bits of security, we determined that the following number of
-	// queries is required.
-	friNumQueries = 229
 )
+
+// friNumQueries is the number of FRI query openings. This is obtained from
+// https://github.com/ethereum/soundcalc
+//
+// To match 128 bits of security, we determined that the following number of
+// queries is required. It is a variable (rather than a constant) so tests
+// exercising the full compilation pipeline can lower it via
+// [SetFRINumQueriesForTest]; production callers must never mutate it.
+var friNumQueries = 229
 
 var (
 	// maxCommittableSizeLog2 is the fixed capacity of the static FRI parameters:
