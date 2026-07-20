@@ -27,27 +27,15 @@ type Params struct {
 
 func (p Params) numRounds() uint8 { return p.LogPlainTextSize - p.logFinalPolySize }
 
-type Config struct {
-	WoFullDomainAllocation bool
-	LogFinalPolySize       uint8
-}
-
-type Option func(c *Config) error
-
-func WoFullDomainAllocation() Option {
-	return func(c *Config) error {
-		c.WoFullDomainAllocation = true
-		return nil
-	}
-}
+type Option func(c *Params) error
 
 // LogFinalPolySize sets the log2 of the number of coefficients FRI folds down
 // to before stopping (default 0: fold to a single constant). Folding stops
 // earlier the larger this is, trading fold rounds for a larger revealed
 // final polynomial.
 func LogFinalPolySize(log2Size uint8) Option {
-	return func(c *Config) error {
-		c.LogFinalPolySize = log2Size
+	return func(c *Params) error {
+		c.logFinalPolySize = log2Size
 		return nil
 	}
 }
@@ -59,9 +47,14 @@ func NewParams(
 	logCodewordSize, logPlainTextSize uint8, numQueries uint,
 	opts ...Option,
 ) (Params, error) {
-	var config Config
+	res := Params{
+		LogCodewordSize:  logCodewordSize,
+		LogPlainTextSize: logPlainTextSize,
+		NumQueries:       numQueries,
+	}
+
 	for _, opt := range opts {
-		if err := opt(&config); err != nil {
+		if err := opt(&res); err != nil {
 			return Params{}, err
 		}
 	}
@@ -76,27 +69,15 @@ func NewParams(
 	if numQueries <= 0 {
 		return Params{}, fmt.Errorf("fri: numQueries must be positive, got %d", numQueries)
 	}
-	if config.LogFinalPolySize >= logPlainTextSize {
+	if res.logFinalPolySize >= logPlainTextSize {
 		return Params{}, fmt.Errorf("fri: initial plaintext must be larger than final poly. got 2^%d ≤ 2^%d",
-			config.LogFinalPolySize, logPlainTextSize)
+			res.logFinalPolySize, logPlainTextSize)
 	} // This guarantees that there is a folding round.
 
-	res := Params{
-		LogCodewordSize:  logCodewordSize,
-		LogPlainTextSize: logPlainTextSize,
-		NumQueries:       numQueries,
-		logFinalPolySize: config.LogFinalPolySize,
-	}
-
 	res.domains = make([]*fft.Domain, res.numRounds()+1)
-	if !config.WoFullDomainAllocation {
-		for j := range res.numRounds() {
-			res.domains[j] = fft.NewDomain(uint64(1) << (logCodewordSize - j))
-		}
+	for j := range res.numRounds() + 1 {
+		res.domains[j] = fft.NewDomain(uint64(1) << (logCodewordSize - j))
 	}
-	// domains[numRounds] (the tiny final-layer domain) is needed to decode and
-	// re-expand FinalPoly regardless of WoFullDomainAllocation.
-	res.domains[res.numRounds()] = fft.NewDomain(uint64(1) << (logCodewordSize - res.numRounds()))
 	res.domainsLight = make([]domainLight, res.numRounds()+1)
 	for j := range res.numRounds() + 1 {
 		g, err := koalabear.Generator(uint64(1) << (logCodewordSize - j))
