@@ -157,7 +157,7 @@ func TestVerifyRejectsProofMutations(t *testing.T) {
 
 	// One main level (D=8) plus one extra level (D=2) to also exercise the
 	// same input branch carrying a smaller aligned level leaf.
-	fx := newLDTFixture(t, 16, 8, 4)
+	fx := newLDTFixture(t, 4, 3, 4)
 	fx.addLevel(t, 3, field.VecPseudoRandExt(prng, 8))
 	fx.addLevel(t, 1, field.VecPseudoRandExt(prng, 2))
 
@@ -196,7 +196,7 @@ func TestVerifyRejectsProofMutations(t *testing.T) {
 func TestVerifyRejectsMissingBottomLevel(t *testing.T) {
 	prng := rand.New(utils.NewRandSource(20240607))
 
-	fx := newLDTFixture(t, 8, 4, 1)
+	fx := newLDTFixture(t, 3, 2, 1)
 	fx.addLevel(t, 2, field.VecPseudoRandExt(prng, 4))
 	fx.addLevel(t, 1, field.VecPseudoRandExt(prng, 2))
 

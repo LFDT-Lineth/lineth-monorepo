@@ -124,6 +124,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 )
 
 // =============================================================================
@@ -135,11 +136,11 @@ import (
 // across many proofs.
 //
 // Invariants (enforced by NewPCS):
-//   - len(Encoders) == Params.numRounds + 1 (one encoder per size in
-//     the multi-size schedule, sizes 2^0 .. 2^numRounds).
+//   - len(Encoders) == Params.LogPlainTextSize + 1 (one encoder per size
+//     in the multi-size schedule, sizes 2^0 .. 2^Params.LogPlainTextSize).
 //   - Encoders[i].PlainTextSize == 1 << i.
-//   - All Encoders share the same inverse rate, equal to Params.N /
-//     Params.D.
+//   - All Encoders share the same inverse rate, equal to
+//     2^(Params.LogCodewordSize - Params.LogPlainTextSize).
 type PCS struct {
 	Params   Params
 	Encoders []*RSEncoder
@@ -162,8 +163,9 @@ func (pcs *PCS) Reset() {
 // NewPCS validates the encoder schedule against Params and returns a
 // ready-to-use PCS.
 func NewPCS(params Params, encoders []*RSEncoder) (*PCS, error) {
-	if len(encoders) != params.numRounds+1 {
-		return nil, fmt.Errorf("fri: NewPCS: got %d encoders, want %d", len(encoders), params.numRounds+1)
+	wantEncoders := params.LogPlainTextSize + 1
+	if len(encoders) != int(wantEncoders) {
+		return nil, fmt.Errorf("fri: NewPCS: got %d encoders, want %d", len(encoders), wantEncoders)
 	}
 	if len(encoders) == 0 {
 		return nil, fmt.Errorf("fri: NewPCS: no encoders")
@@ -183,7 +185,7 @@ func NewPCS(params Params, encoders []*RSEncoder) (*PCS, error) {
 	}
 
 	inverseRate := encoders[0].InverseRate()
-	wantInverseRate := params.N / params.D
+	wantInverseRate := 1 << (params.LogCodewordSize - params.LogPlainTextSize)
 	if inverseRate != wantInverseRate {
 		return nil, fmt.Errorf("fri: NewPCS: inverse rate %d, want %d", inverseRate, wantInverseRate)
 	}
@@ -246,7 +248,7 @@ type SizedShifts struct {
 // Verify. Made package-internal; callers don't need to look inside.
 type deepEntry struct {
 	BatchIdx   int
-	SizeLog2   int
+	SizeLog2   uint8
 	RowIdx     int
 	IsExt      bool
 	AlphaPower int
@@ -254,7 +256,7 @@ type deepEntry struct {
 }
 
 type sizeBundle struct {
-	SizeLog2 int
+	SizeLog2 uint8
 	Entries  []deepEntry
 }
 
@@ -284,7 +286,7 @@ func canonicalLayout(shapes []Shape, shifts []BatchShifts) (layout, error) {
 
 	res := make(layout, 0, maxSizeLog2+1)
 	for sizeLog2 := maxSizeLog2; sizeLog2 >= 0; sizeLog2-- {
-		bundle := sizeBundle{SizeLog2: sizeLog2}
+		bundle := sizeBundle{SizeLog2: uint8(sizeLog2)}
 		alphaDeepPower := 0
 
 		for batchIdx := range shapes {
@@ -301,7 +303,7 @@ func canonicalLayout(shapes []Shape, shifts []BatchShifts) (layout, error) {
 			for rowIdx := range sizedShape.BaseWidth {
 				bundle.Entries = append(bundle.Entries, deepEntry{
 					BatchIdx:   batchIdx,
-					SizeLog2:   sizeLog2,
+					SizeLog2:   uint8(sizeLog2),
 					RowIdx:     rowIdx,
 					AlphaPower: alphaDeepPower,
 					Shifts:     cloneInts(sizedShifts.Base[rowIdx]),
@@ -311,7 +313,7 @@ func canonicalLayout(shapes []Shape, shifts []BatchShifts) (layout, error) {
 			for rowIdx := range sizedShape.ExtWidth {
 				bundle.Entries = append(bundle.Entries, deepEntry{
 					BatchIdx:   batchIdx,
-					SizeLog2:   sizeLog2,
+					SizeLog2:   uint8(sizeLog2),
 					RowIdx:     rowIdx,
 					IsExt:      true,
 					AlphaPower: alphaDeepPower,
@@ -340,6 +342,9 @@ func validateSizedLayout(batchIdx, sizeLog2 int, shape SizedShape, shifts SizedS
 	if len(shifts.Ext) != shape.ExtWidth {
 		return fmt.Errorf("fri: canonicalLayout: batch %d size %d has %d ext shift rows, want %d",
 			batchIdx, sizeLog2, len(shifts.Ext), shape.ExtWidth)
+	}
+	if sizeLog2 > 255 {
+		return fmt.Errorf("fri: canonicalLayout: batch %d size %d is too large", batchIdx, sizeLog2)
 	}
 	size := 1 << sizeLog2
 	for rowIdx, rowShifts := range shifts.Base {
@@ -449,19 +454,6 @@ func denominatorInverses(domainPoints, claimPoints []field.Ext) ([]field.Ext, er
 		}
 	}
 	return field.BatchInvertExt(denominators), nil
-}
-
-func powers(x field.Ext, length int) []field.Ext {
-	if length <= 0 {
-		return nil
-	}
-
-	powers := make([]field.Ext, length)
-	powers[0].SetOne()
-	for i := 1; i < len(powers); i++ {
-		powers[i].Mul(&powers[i-1], &x)
-	}
-	return powers
 }
 
 // =============================================================================
@@ -620,7 +612,7 @@ func validateBatchClaimShape(claimed BatchClaimedValues, shifts BatchShifts, zet
 //
 // The FRI schedule is restricted to the largest size actually opened, so the
 // fold count follows the witness rather than the (possibly larger, static)
-// Params: a size-2^k top level folds k times regardless of Params.D >= 2^k.
+// Params: a size-2^k top level folds k times regardless of Params.LogPlainTextSize >= k.
 func (pcs *PCS) NewProverState() (*ProverState, error) {
 	if len(pcs.openings) == 0 {
 		return nil, fmt.Errorf("fri: NewProverState: AddOpening must be called first")
@@ -643,10 +635,10 @@ func (pcs *PCS) NewProverState() (*ProverState, error) {
 	return state, nil
 }
 
-// layoutMaxSizeLog2 returns the largest size (log2) present in a canonical
+// maxSizeLog2 returns the largest size (log2) present in a canonical
 // layout, i.e. the top of the FRI schedule the verifier needs.
-func layoutMaxSizeLog2(l layout) int {
-	maxIdx := 0
+func (l layout) maxSizeLog2() uint8 {
+	maxIdx := uint8(0)
 	for _, bundle := range l {
 		if bundle.SizeLog2 > maxIdx {
 			maxIdx = bundle.SizeLog2
@@ -657,8 +649,8 @@ func layoutMaxSizeLog2(l layout) int {
 
 // maxOpeningSizeLog2 returns the largest size (log2) opened across all pending
 // openings, i.e. the top of the FRI schedule this proof actually needs.
-func (pcs *PCS) maxOpeningSizeLog2() int {
-	maxIdx := 0
+func (pcs *PCS) maxOpeningSizeLog2() uint8 {
+	maxIdx := uint8(0)
 	for _, opening := range pcs.openings {
 		for _, bundle := range opening.layout {
 			if bundle.SizeLog2 > maxIdx {
@@ -678,7 +670,7 @@ func (pcs *PCS) restrictToOpenings() (*PCS, error) {
 
 // restrictTo returns a view of this PCS with Params restricted to top size
 // 2^topSizeLog2, sharing the encoders, openings, and zeta.
-func (pcs *PCS) restrictTo(topSizeLog2 int) (*PCS, error) {
+func (pcs *PCS) restrictTo(topSizeLog2 uint8) (*PCS, error) {
 	restrictedParams, err := pcs.Params.restrictTo(topSizeLog2)
 	if err != nil {
 		return nil, err
@@ -691,8 +683,8 @@ func (pcs *PCS) restrictTo(topSizeLog2 int) (*PCS, error) {
 	}, nil
 }
 
-func (pcs *PCS) shiftedPoint(sizeLog2, shift int, zeta field.Ext) (field.Ext, error) {
-	if sizeLog2 < 0 || sizeLog2 >= len(pcs.Encoders) {
+func (pcs *PCS) shiftedPoint(sizeLog2 uint8, shift int, zeta field.Ext) (field.Ext, error) {
+	if int(sizeLog2) >= len(pcs.Encoders) {
 		return field.Ext{}, fmt.Errorf("size %d has no encoder", sizeLog2)
 	}
 	encoder := pcs.Encoders[sizeLog2]
@@ -727,13 +719,14 @@ func (pcs *PCS) shiftedPoint(sizeLog2, shift int, zeta field.Ext) (field.Ext, er
 // challenge), so the batched evaluations themselves are computed later, by
 // Level.EvalsAt.
 func (pcs *PCS) reconstructLevels() ([]Level, error) {
-	levels := make([]Level, 0, pcs.Params.numRounds+1)
-	for sizeLog2 := pcs.Params.numRounds; sizeLog2 >= 0; sizeLog2-- {
+	logD := pcs.Params.LogPlainTextSize
+	levels := make([]Level, 0, logD+1)
+	for sizeLog2 := int(logD); sizeLog2 >= 0; sizeLog2-- {
 		var columns []quotientColumn
 		var trees []*Tree
 		for _, opening := range pcs.openings {
 			for _, bundle := range opening.layout {
-				if bundle.SizeLog2 != sizeLog2 {
+				if bundle.SizeLog2 != uint8(sizeLog2) {
 					continue
 				}
 				trees = append(trees, opening.committed.Tree)
@@ -757,7 +750,7 @@ func (pcs *PCS) reconstructLevels() ([]Level, error) {
 			continue
 		}
 
-		domain := pcs.Params.domainsLight[pcs.Params.numRounds-sizeLog2]
+		domain := pcs.Params.domainsLight[logD-uint8(sizeLog2)]
 		size, err := reconstructDomainSize(domain)
 		if err != nil {
 			return nil, err
@@ -784,7 +777,7 @@ func (pcs *PCS) reconstructLevels() ([]Level, error) {
 		}
 
 		levels = append(levels, Level{
-			D:                   1 << sizeLog2,
+			LogPlainTextSize:    uint8(sizeLog2),
 			Trees:               trees,
 			Size:                size,
 			Columns:             columns,
@@ -796,16 +789,17 @@ func (pcs *PCS) reconstructLevels() ([]Level, error) {
 	return levels, nil
 }
 
-func (pcs *PCS) roundForSize(sizeLog2 int) (int, error) {
-	if sizeLog2 < 0 || sizeLog2 > pcs.Params.numRounds {
+func (pcs *PCS) roundForSize(sizeLog2 uint8) (uint8, error) {
+	logD := pcs.Params.LogPlainTextSize
+	if sizeLog2 > logD {
 		return 0, fmt.Errorf("fri: reconstructLevels: size %d is outside params schedule", sizeLog2)
 	}
-	return pcs.Params.numRounds - sizeLog2, nil
+	return logD - sizeLog2, nil
 }
 
 func encodedColumnEvals(committed CommitterState, entry deepEntry) ([]field.Ext, error) {
 	table := committed.EncodedTable
-	if entry.SizeLog2 >= len(table) {
+	if int(entry.SizeLog2) >= len(table) {
 		return nil, fmt.Errorf("fri: reconstructLevels: missing encoded size %d", entry.SizeLog2)
 	}
 	sized := table[entry.SizeLog2]
@@ -851,7 +845,7 @@ func (pcs *PCS) claimsForBatchEntry(
 	entry deepEntry,
 	zeta field.Ext,
 ) ([]quotientClaim, error) {
-	if entry.SizeLog2 >= len(claimed) {
+	if int(entry.SizeLog2) >= len(claimed) {
 		return nil, fmt.Errorf("fri: reconstructLevels: missing claims for size %d", entry.SizeLog2)
 	}
 	var values []field.Ext
@@ -915,10 +909,10 @@ func (pcs *PCS) openInputQueries(queryPositions []int) []InputQuery {
 func (pcs *PCS) inputOpeningCommitments() []CommitterState {
 	seen := make(map[field.Octuplet]bool)
 	var inputs []CommitterState
-	for sizeLog2 := pcs.Params.numRounds; sizeLog2 >= 0; sizeLog2-- {
+	for sizeLog2 := int(pcs.Params.LogPlainTextSize); sizeLog2 >= 0; sizeLog2-- {
 		for _, opening := range pcs.openings {
 			for _, bundle := range opening.layout {
-				if bundle.SizeLog2 != sizeLog2 {
+				if bundle.SizeLog2 != uint8(sizeLog2) {
 					continue
 				}
 				root := opening.committed.Tree.Root()
@@ -936,10 +930,11 @@ func (pcs *PCS) inputOpeningCommitments() []CommitterState {
 func openInputTreeOpening(p Params, committed CommitterState, queryPosition int) InputTreeOpening {
 	tree := committed.Tree
 	numLeaves := tree.NumLeaves()
-	if numLeaves > p.N || p.N%numLeaves != 0 {
+	codewordSize := 1 << p.LogCodewordSize
+	if numLeaves > codewordSize || codewordSize%numLeaves != 0 {
 		panic("fri: openInputTreeOpening: tree size incompatible with domain size")
 	}
-	leafIndex := queryPosition / (p.N / numLeaves)
+	leafIndex := queryPosition / (codewordSize / numLeaves)
 	branch := tree.OpenBranch(leafIndex)
 	input := InputTreeOpening{
 		// The bottom level's own sibling digest is derived from its pair
@@ -1238,18 +1233,18 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	}
 	// Restrict the FRI schedule to the largest opened size so the fold count
 	// tracks the witness rather than the (static) Params; mirrors the prover.
-	pcs, err = pcs.restrictTo(layoutMaxSizeLog2(layout))
+	pcs, err = pcs.restrictTo(layout.maxSizeLog2())
 	if err != nil {
 		return err
 	}
 	if err = pcs.checkClaimPointsOutOfDomain(layout, in.Zeta); err != nil {
 		return err
 	}
-	if len(proof.InputQueries) != pcs.Params.NumQueries {
+	if len(proof.InputQueries) != int(pcs.Params.NumQueries) {
 		return fmt.Errorf("fri: pcs.Verify: proof has %d input queries, want %d",
 			len(proof.InputQueries), pcs.Params.NumQueries)
 	}
-	if len(in.Challenges.QueryPositions) < pcs.Params.NumQueries {
+	if len(in.Challenges.QueryPositions) < int(pcs.Params.NumQueries) {
 		return fmt.Errorf("fri: pcs.Verify: %d query positions, need at least %d",
 			len(in.Challenges.QueryPositions), pcs.Params.NumQueries)
 	}
@@ -1261,7 +1256,7 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	}
 
 	runningRoots := make([]QueryLayerRoots, pcs.Params.numRounds)
-	for j := 1; j < pcs.Params.numRounds; j++ {
+	for j := uint8(1); j < pcs.Params.numRounds; j++ {
 		runningRoots[j] = QueryLayerRoots{proof.FRIProof.RoundRoots[j-1]}
 	}
 
@@ -1269,12 +1264,16 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	zeta := in.Zeta
 	foldAlphas := in.Challenges.FoldAlphas
 
+	finalCodeword := make([]field.Ext, 1<<(pcs.Params.LogCodewordSize-pcs.Params.numRounds))
+	copy(finalCodeword, proof.FRIProof.FinalPoly)
+	pcs.Params.domains[pcs.Params.numRounds].FFTExt6(finalCodeword, fft.DIF)
+
 	resolved := make([]resolvedQuery, pcs.Params.NumQueries)
 	for queryIdx, queryPosition := range positions {
 		rq := resolvedQuery{
 			Rounds: make([]inputPair, pcs.Params.numRounds),
-			Aux:    make(map[int]inputPair, len(layout)),
-			Final:  proof.FRIProof.FinalPoly[queryPosition>>pcs.Params.numRounds],
+			Aux:    make(map[uint8]inputPair, len(layout)),
+			Final:  finalCodeword[queryPosition>>pcs.Params.numRounds],
 		}
 
 		inputOpening := proof.InputQueries[queryIdx]
@@ -1287,12 +1286,13 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 		// loop below, since a level's own reconstruction seeds on this same
 		// round's running pair (rq.Rounds[0] is left at its zero value, so
 		// round 0 needs no special case).
-		for j := 1; j < pcs.Params.numRounds; j++ {
+		for j := uint8(1); j < pcs.Params.numRounds; j++ {
 			opening := proof.FRIProof.RunningQueries[queryIdx][j-1]
-			if err = checkQueryLayerShape(opening, runningRoots[j], pcs.Params.N>>j, true); err != nil {
+			if err = checkQueryLayerShape(
+				opening, runningRoots[j], 1<<(pcs.Params.LogCodewordSize-j), true); err != nil {
 				return fmt.Errorf("fri: pcs.Verify: query %d round %d: %w", queryIdx, j, err)
 			}
-			branch, err := authenticateQueryLayer(fmt.Sprintf("round %d", j), opening, runningRoots[j], queryPosition>>j)
+			branch, err := authenticateQueryLayer(j, opening, runningRoots[j], queryPosition>>j)
 			if err != nil {
 				return fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
 			}
@@ -1391,10 +1391,11 @@ func authenticateInputQuery(p Params, opening InputQuery, roots QueryLayerRoots,
 			return fmt.Errorf("input tree %d: missing bottom level", i)
 		}
 		numLeaves := 1 << len(branch.Leaves)
-		if numLeaves > p.N || p.N%numLeaves != 0 {
-			return fmt.Errorf("input tree %d: tree size %d incompatible with domain size %d", i, numLeaves, p.N)
+		codewordSize := 1 << p.LogCodewordSize
+		if numLeaves > codewordSize || codewordSize%numLeaves != 0 {
+			return fmt.Errorf("input tree %d: tree size %d incompatible with domain size %d", i, numLeaves, codewordSize)
 		}
-		root, err := branch.RecoverRoot(queryPosition / (p.N / numLeaves))
+		root, err := branch.RecoverRoot(queryPosition / (codewordSize / numLeaves))
 		if err != nil {
 			return fmt.Errorf("input tree %d: recover root: %w", i, err)
 		}
@@ -1443,7 +1444,7 @@ func (pcs *PCS) checkClaimPointsOutOfDomain(layout layout, zeta field.Ext) error
 	// independent of the shift. It therefore suffices to test zeta once per
 	// distinct size present in the layout.
 	for _, bundle := range layout {
-		if bundle.SizeLog2 < 0 || bundle.SizeLog2 >= len(pcs.Encoders) {
+		if int(bundle.SizeLog2) >= len(pcs.Encoders) {
 			return fmt.Errorf("fri: pcs.Verify: size %d is outside params schedule", bundle.SizeLog2)
 		}
 		encoder := pcs.Encoders[bundle.SizeLog2]

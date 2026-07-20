@@ -32,10 +32,6 @@ func TestFoldLayerInternally(t *testing.T) {
 
 	prng := rand.New(utils.NewRandSource(1))
 
-	var two, invTwo field.Element
-	two.SetUint64(2)
-	invTwo.Inverse(&two)
-
 	for _, n := range []int{4, 8, 16} {
 
 		var (
@@ -78,7 +74,7 @@ func TestFoldLayerInternally(t *testing.T) {
 			want[tt] = polynomials.EvalCanonicalExt(qcoeffs, field.Lift(y))
 		}
 
-		got := foldLayerInternally(layer, alpha, domain, invTwo)
+		got := foldLayerInternally(layer, alpha, domain)
 		if len(got) != half {
 			t.Fatalf("n=%d: fold returned %d values, want %d", n, len(got), half)
 		}
@@ -90,14 +86,14 @@ func TestFoldLayerInternally(t *testing.T) {
 	}
 }
 
-// TestCheckOpeningProofShapeRejectsNonConstantFinalPoly targets the low-degree
-// bound checkFolds itself cannot enforce: after numRounds folds the running
-// polynomial's degree is forced below 1, i.e. it must be a single constant,
-// so every entry of FinalPoly must agree. This must be caught unconditionally
-// (not by chance query coverage of the differing entry), which is why it
-// belongs in checkOpeningProofShape rather than the per-query checkFolds.
-func TestCheckOpeningProofShapeRejectsNonConstantFinalPoly(t *testing.T) {
-	p, err := NewParams(8, 4, 1)
+// TestCheckOpeningProofShapeRejectsWrongFinalPolyLength targets the low-degree
+// bound: FinalPoly holds the folded polynomial's coefficients directly, so
+// its length alone is the degree bound (see pcs.Verify's final-codeword FFT
+// expansion). With the default logFinalPolyDegree=0 that length must be
+// exactly 1, so a 2-entry FinalPoly must be rejected before any query is
+// checked.
+func TestCheckOpeningProofShapeRejectsWrongFinalPolyLength(t *testing.T) {
+	p, err := NewParams(3, 2, 1)
 	require.NoError(t, err)
 
 	prf := Proof{
@@ -111,82 +107,7 @@ func TestCheckOpeningProofShapeRejectsNonConstantFinalPoly(t *testing.T) {
 	foldAlphas := make([]field.Ext, p.numRounds)
 	positions := []int{0}
 
-	require.ErrorContains(t, checkOpeningProofShape(p, prf, foldAlphas, positions), "FinalPoly is not constant")
-}
-
-// TestCheckFolds is a direct unit test of the pure fold-check: a
-// self-consistent set of resolved values (built by hand, no PCS or proof
-// involved) must verify, and breaking any single link in the recurrence --
-// an intermediate round, the aux mix-in, or the final target -- must be
-// rejected.
-func TestCheckFolds(t *testing.T) {
-	p, err := NewParams(8, 4, 1)
-	require.NoError(t, err)
-
-	prng := rand.New(utils.NewRandSource(1))
-
-	fold := func(self, sib, alpha field.Ext, domain domainLight, base int) field.Ext {
-		var xInv field.Element
-		x := domainPoint(domain, base)
-		xInv.Inverse(&x)
-
-		var sum, diff, out field.Ext
-		sum.Add(&self, &sib)
-		sum.MulByElement(&sum, &p.invTwo)
-		diff.Sub(&self, &sib)
-		diff.MulByElement(&diff, &p.invTwo)
-		diff.MulByElement(&diff, &xInv)
-		diff.Mul(&diff, &alpha)
-		out.Add(&sum, &diff)
-		return out
-	}
-
-	const s = 3
-	self0, sib0 := field.PseudoRandExt(prng), field.PseudoRandExt(prng)
-	alpha0, alpha1 := field.PseudoRandExt(prng), field.PseudoRandExt(prng)
-	aux1Self, aux1Sib := field.PseudoRandExt(prng), field.PseudoRandExt(prng)
-
-	// self1 is round 0's fold output (no level introduces at round 0).
-	self1 := fold(self0, sib0, alpha0, p.domainsLight[0], s)
-
-	// The level introduced at round 1 (aux1Self, aux1Sib) already has the
-	// round-0 running codeword folded into it (see reconstructQueryValueAt),
-	// so checkFolds takes it as-is, in place of Rounds[1].
-	final := fold(aux1Self, aux1Sib, alpha1, p.domainsLight[1], s>>1)
-
-	newResolved := func() []resolvedQuery {
-		return []resolvedQuery{{
-			Rounds: []inputPair{{Self: self0, Sibling: sib0}, {Self: self1}},
-			Aux:    map[int]inputPair{1: {Self: aux1Self, Sibling: aux1Sib}},
-			Final:  final,
-		}}
-	}
-	foldAlphas := []field.Ext{alpha0, alpha1}
-	positions := []int{s}
-
-	require.NoError(t, checkFolds(p, newResolved(), foldAlphas, positions))
-
-	one := field.Lift(field.One())
-
-	t.Run("broken intermediate round", func(t *testing.T) {
-		resolved := newResolved()
-		resolved[0].Rounds[1].Self.Add(&resolved[0].Rounds[1].Self, &one)
-		require.ErrorContains(t, checkFolds(p, resolved, foldAlphas, positions), "folded value mismatch")
-	})
-
-	t.Run("broken aux", func(t *testing.T) {
-		resolved := newResolved()
-		auxPair := resolved[0].Aux[1]
-		auxPair.Self.Add(&auxPair.Self, &one)
-		resolved[0].Aux[1] = auxPair
-		require.ErrorContains(t, checkFolds(p, resolved, foldAlphas, positions), "does not match FinalPoly")
-	})
-
-	t.Run("broken final", func(t *testing.T) {
-		resolved := newResolved()
-		resolved[0].Final.Add(&resolved[0].Final, &one)
-		require.ErrorContains(t, checkFolds(p, resolved, foldAlphas, positions), "does not match FinalPoly")
-	})
+	require.ErrorContains(t, checkOpeningProofShape(p, prf, foldAlphas, positions), "FinalPoly has 2 entries, want 1")
 }
 
 // TestProveVerify is the end-to-end check: an honest proof verifies across a few
@@ -199,14 +120,15 @@ func TestCheckFolds(t *testing.T) {
 func TestProveVerify(t *testing.T) {
 
 	type cfg struct {
-		name     string
-		n, d, nq int
-		extraDs  []int
+		name       string
+		logN, logD uint8
+		nq         uint
+		extraDs    []int
 	}
 	cfgs := []cfg{
-		{"single-level", 8, 4, 3, nil},
-		{"one-extra", 16, 8, 4, []int{2}},
-		{"two-extra", 16, 8, 4, []int{4, 2}},
+		{"single-level", 3, 2, 3, nil},
+		{"one-extra", 4, 3, 4, []int{2}},
+		{"two-extra", 4, 3, 4, []int{4, 2}},
 	}
 
 	prng := rand.New(utils.NewRandSource(99))
@@ -214,10 +136,10 @@ func TestProveVerify(t *testing.T) {
 	for _, c := range cfgs {
 		t.Run(c.name, func(t *testing.T) {
 
-			fx := newLDTFixture(t, c.n, c.d, c.nq)
-			fx.addLevel(t, utils.Log2Ceil(c.d), field.VecPseudoRandExt(prng, c.d))
+			fx := newLDTFixture(t, c.logN, c.logD, c.nq)
+			fx.addLevel(t, c.logD, field.VecPseudoRandExt(prng, 1<<int(c.logD)))
 			for _, d := range c.extraDs {
-				fx.addLevel(t, utils.Log2Ceil(d), field.VecPseudoRandExt(prng, d))
+				fx.addLevel(t, uint8(utils.Log2Ceil(d)), field.VecPseudoRandExt(prng, d))
 			}
 
 			foldAlphas := make([]field.Ext, fx.pcs.Params.numRounds)
@@ -226,7 +148,7 @@ func TestProveVerify(t *testing.T) {
 			}
 			positions := make([]int, fx.pcs.Params.NumQueries)
 			for i := range positions {
-				positions[i] = int(prng.Uint64() % uint64(c.n))
+				positions[i] = int(prng.Uint64() % (1 << uint64(c.logN)))
 			}
 
 			proof := fx.open(t, foldAlphas, positions)
@@ -245,6 +167,30 @@ func TestProveVerify(t *testing.T) {
 	}
 }
 
+// TestProveVerifyWithFinalPolyDegree checks that stopping FRI before a single
+// constant (logFinalPolyDegree > 0) still verifies honestly and still rejects a
+// tampered final coefficient.
+func TestProveVerifyWithFinalPolyDegree(t *testing.T) {
+	prng := rand.New(utils.NewRandSource(7))
+
+	fx := newLDTFixture(t, 4, 3, 4, FinalPolyDegree(1))
+	fx.addLevel(t, 3, field.VecPseudoRandExt(prng, 8))
+
+	foldAlphas := make([]field.Ext, fx.pcs.Params.numRounds)
+	for i := range foldAlphas {
+		foldAlphas[i] = field.PseudoRandExt(prng)
+	}
+	positions := []int{1, 5, 9, 13}
+
+	proof := fx.open(t, foldAlphas, positions)
+	require.Len(t, proof.FRIProof.FinalPoly, 2)
+	require.NoError(t, fx.verify(foldAlphas, positions, proof))
+
+	one := field.Lift(field.One())
+	proof.FRIProof.FinalPoly[1].Add(&proof.FRIProof.FinalPoly[1], &one)
+	require.Error(t, fx.verify(foldAlphas, positions, proof))
+}
+
 // TestProverStateOpenLoopsOverLevelTrees checks that a level backed by
 // multiple trees (here, two PCS batches sharing a size) is opened and
 // authenticated independently per tree.
@@ -252,7 +198,7 @@ func TestProverStateOpenLoopsOverLevelTrees(t *testing.T) {
 
 	prng := rand.New(utils.NewRandSource(20260624))
 
-	fx := newLDTFixture(t, 16, 8, 2)
+	fx := newLDTFixture(t, 4, 3, 2)
 	fx.addLevel(t, 3, field.VecPseudoRandExt(prng, 8)) // top level, D=8: two trees
 	fx.addLevel(t, 3, field.VecPseudoRandExt(prng, 8))
 	fx.addLevel(t, 1, field.VecPseudoRandExt(prng, 2)) // extra level, D=2: two trees
@@ -276,7 +222,7 @@ func TestProverStateOpenLoopsOverLevelTrees(t *testing.T) {
 		assert.Equal(t, fx.roots[i], root)
 	}
 
-	base := positions[0] >> utils.Log2Ceil(8/2) // p.D/extraD = 8/2
+	base := positions[0] >> utils.Log2Ceil(8/2) // p.LogPlainTextSize - extraLevelLog2 = 3-1
 	for i, branch := range inputQuery[2:] {
 		root, err := branch.RecoverRoot(base)
 		require.NoError(t, err)
@@ -288,23 +234,24 @@ func TestProverStateOpenLoopsOverLevelTrees(t *testing.T) {
 	require.Error(t, fx.verify(foldAlphas, positions, proof))
 }
 
-func verifierInputsForLevels(levels []Level) ([]QueryLayerRoots, []int) {
+func verifierInputsForLevels(levels []Level) ([]QueryLayerRoots, []uint8) {
 	levelRoots := make([]QueryLayerRoots, len(levels))
-	levelDs := make([]int, len(levels))
+	levelLogSizes := make([]uint8, len(levels))
 	for i := range levels {
 		levelRoots[i] = make(QueryLayerRoots, len(levels[i].Trees))
 		for j, tree := range levels[i].Trees {
 			levelRoots[i][j] = tree.Root()
 		}
-		levelDs[i] = levels[i].D
+		levelLogSizes[i] = levels[i].LogPlainTextSize
 	}
-	return levelRoots, levelDs
+	return levelRoots, levelLogSizes
 }
 
 // proverForTest runs multi-degree FRI (commit + query phase) and returns a Proof
-// together with the query positions. levels[0].D must equal p.D and every Level
-// must contain one evaluation vector on exactly one rail. levels is sorted
-// in-place in decreasing order of D.
+// together with the query positions. levels[0].LogPlainTextSize must equal
+// p.LogPlainTextSize and every Level must contain one evaluation vector on
+// exactly one rail. levels is sorted in-place in decreasing order of
+// LogPlainTextSize.
 //
 // This helper is test-only and INSECURE: it takes the folding challenges
 // (alphas) and the query positions (openedPositions) as explicit inputs instead
@@ -323,7 +270,7 @@ func proverForTest(p Params, levels []Level, alphas []field.Ext, openedPositions
 	if err != nil {
 		utils.Panic("could not build prover state: %v", err)
 	}
-	if len(alphas) < p.numRounds {
+	if len(alphas) < int(p.numRounds) {
 		utils.Panic("fri: Prove: need %d folding challenges, got %d", p.numRounds, len(alphas))
 	}
 

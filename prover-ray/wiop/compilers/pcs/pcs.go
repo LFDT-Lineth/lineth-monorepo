@@ -43,8 +43,8 @@ import (
 )
 
 const (
-	// friInverseRate is the FRI blow-up factor (codeword size / plaintext size).
-	friInverseRate = 2
+	// friLogInverseRate is the FRI blow-up factor (codeword size / plaintext size).
+	friLogInverseRate = 1
 	// friNumQueries is the number of FRI query openings. This is obtained from
 	// https://github.com/ethereum/soundcalc
 	//
@@ -58,7 +58,7 @@ var (
 	// the largest committed column size the PCS supports, 2^22 — matching the
 	// wiop column-size ceiling. Every proof folds only as many rounds as its own
 	// witness needs (see [fri.Params] restriction); this is just the ceiling.
-	maxCommittableSizeLog2 = utils.Log2Ceil(wiop.ColumnSizeMaxSupported)
+	maxCommittableSizeLog2 = uint8(utils.Log2Ceil(wiop.ColumnSizeMaxSupported))
 )
 
 // The FRI parameters and encoder schedule are a pure function of the fixed
@@ -75,13 +75,12 @@ var (
 // fixed maximum capacity.
 func staticFRI() (fri.Params, []*fri.RSEncoder) {
 	staticFRIOnce.Do(func() {
-		d := 1 << maxCommittableSizeLog2
-		params, err := fri.NewParams(friInverseRate*d, d, friNumQueries)
+		params, err := fri.NewParams(friLogInverseRate+maxCommittableSizeLog2, maxCommittableSizeLog2, friNumQueries)
 		if err != nil {
 			panic(fmt.Errorf("pcs: staticFRI: %w", err))
 		}
 		staticFRIParams = params
-		staticFRIEncoders = buildEncoders(friInverseRate, maxCommittableSizeLog2)
+		staticFRIEncoders = buildEncoders(1<<friLogInverseRate, maxCommittableSizeLog2)
 	})
 	return staticFRIParams, staticFRIEncoders
 }
@@ -109,7 +108,7 @@ func effectiveN(rt *wiop.Runtime, batches []batchRef) int {
 			maxSizeIndex = idx
 		}
 	}
-	return friInverseRate * (1 << maxSizeIndex)
+	return 1 << (maxSizeIndex + friLogInverseRate)
 }
 
 // ColumnLocation records where a column sits inside its round's committed batch:
@@ -156,7 +155,7 @@ func Compile(sys *wiop.System) {
 	// runtime exposes the (static) precomputed assignments; its encoders are a
 	// prefix of the static schedule so the root is stable across proof runs.
 	if len(sys.PrecomputedRound.Columns) > 0 {
-		st := commitToRound(friInverseRate, &sys.PrecomputedRound.Round, wiop.NewRuntime(sys))
+		st := commitToRound(1<<friLogInverseRate, &sys.PrecomputedRound.Round, wiop.NewRuntime(sys))
 		c.precomputed = st
 		c.precomputedRoot = st.Tree.Root()
 		sys.PrecomputedCommitment = c.precomputedRoot
@@ -229,7 +228,7 @@ type commitRoundAction struct {
 }
 
 func (a *commitRoundAction) Run(rt *wiop.Runtime) {
-	st := commitToRound(friInverseRate, a.round, rt)
+	st := commitToRound(1<<friLogInverseRate, a.round, rt)
 	rt.Commitments[a.round.ID] = st.Tree.Root()
 	rt.SetState(committedStateKey(a.round.ID), st)
 }
@@ -292,7 +291,7 @@ func (c *compiled) open(rt *wiop.Runtime) fri.OpeningProof {
 	}
 
 	fs.UpdateExt(state.FinalPoly...)
-	positions := fs.RandomManyIntegers(pcs.Params.NumQueries, effectiveN(rt, batches))
+	positions := fs.RandomManyIntegers(int(pcs.Params.NumQueries), effectiveN(rt, batches))
 	return pcs.Open(state, positions)
 }
 
@@ -318,7 +317,7 @@ func (c *compiled) verify(rt *wiop.Runtime, proof fri.OpeningProof) error {
 	foldAlphas = append(foldAlphas, fs.RandomFext())
 
 	fs.UpdateExt(proof.FRIProof.FinalPoly...)
-	queryPositions := fs.RandomManyIntegers(pcs.Params.NumQueries, effectiveN(rt, batches))
+	queryPositions := fs.RandomManyIntegers(int(pcs.Params.NumQueries), effectiveN(rt, batches))
 
 	return pcs.Verify(fri.VerifyInputs{
 		Roots:         c.collectRoots(rt, batches),
@@ -381,7 +380,7 @@ func committedStateKey(roundID int) string {
 // buildEncoders builds the encoder schedule for sizes 2^0 .. 2^maxSizeIndex at
 // the given inverse rate. The schedule is a deterministic function of (rate,
 // index), so a per-round schedule is always a prefix of the global one.
-func buildEncoders(inverseRate, maxSizeIndex int) []*fri.RSEncoder {
+func buildEncoders(inverseRate, maxSizeIndex uint8) []*fri.RSEncoder {
 	encoders := make([]*fri.RSEncoder, maxSizeIndex+1)
 	for i := range encoders {
 		enc := fri.NewEncoder(uint64(inverseRate)*(1<<i), 1<<i)
@@ -407,7 +406,7 @@ func roundMaxSizeIndex(round *wiop.Round, rt *wiop.Runtime) int {
 // size (base then extension within each size, in column-declaration order) and
 // FRI-commits it with a freshly-built per-round encoder schedule (a prefix of
 // the global schedule). The column ordering matches [getLayout] exactly.
-func commitToRound(inverseRate int, round *wiop.Round, rt *wiop.Runtime) *fri.CommitterState {
+func commitToRound(inverseRate uint8, round *wiop.Round, rt *wiop.Runtime) *fri.CommitterState {
 
 	var (
 		cols          = round.Columns
@@ -439,8 +438,10 @@ func commitToRound(inverseRate int, round *wiop.Round, rt *wiop.Runtime) *fri.Co
 			)
 		}
 	}
-
-	committerState := fri.Commit(buildEncoders(inverseRate, maxSizeIndex), sortedColumns[:maxSizeIndex+1])
+	if maxSizeIndex > 255 {
+		panic("pcs: maxSizeIndex too big")
+	}
+	committerState := fri.Commit(buildEncoders(inverseRate, uint8(maxSizeIndex)), sortedColumns[:maxSizeIndex+1])
 	return &committerState
 }
 

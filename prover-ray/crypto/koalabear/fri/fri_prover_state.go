@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 )
 
 // ProverState drives the FRI commit and query phases as a coin-fed state
@@ -37,7 +38,7 @@ type ProverState struct {
 
 	// round is the next folding round to run; equivalently the number of folds
 	// performed so far and the index of the current running layer.
-	round int
+	round uint8
 
 	running []field.Ext   // evaluations of layer[round]
 	layers  [][]field.Ext // layers[0..round]; layers[numRounds] is the final polynomial
@@ -53,7 +54,7 @@ type ProverState struct {
 func NewProverState(p Params, levels []Level) (*ProverState, error) {
 
 	sort.Slice(levels, func(i, j int) bool {
-		return levels[i].D > levels[j].D
+		return levels[i].LogPlainTextSize > levels[j].LogPlainTextSize
 	})
 
 	plan, err := buildProvePlan(p, levels)
@@ -65,7 +66,7 @@ func NewProverState(p Params, levels []Level) (*ProverState, error) {
 		p:       p,
 		plan:    plan,
 		levels:  levels,
-		running: make([]field.Ext, p.N),
+		running: make([]field.Ext, 1<<p.LogCodewordSize),
 		layers:  make([][]field.Ext, p.numRounds+1),
 		trees:   make([]*Tree, p.numRounds),
 	}
@@ -102,18 +103,30 @@ func (st *ProverState) Fold(alpha field.Ext) field.Octuplet {
 		var alphaDeep field.Ext
 		alphaDeep.Square(&alpha)
 		primary = st.levels[l].EvalsAt(alphaDeep, st.running)
-		if want := st.p.N >> j; len(primary) != want {
+		if want := 1 << (st.p.LogCodewordSize - j); len(primary) != want {
 			panic(fmt.Sprintf("fri: ProverState.Fold: levels[%d].EvalsAt returned %d values, want %d", l, len(primary), want))
 		}
 	}
 
-	st.running = foldLayerInternally(primary, alpha, st.p.domains[j], st.p.invTwo)
+	st.running = foldLayerInternally(primary, alpha, st.p.domains[j])
 	st.layers[j+1] = st.running
 	st.round = j + 1
 
 	if j+1 == st.p.numRounds {
-		// Final layer: revealed directly, no Merkle commitment.
-		st.FinalPoly = st.running
+		// Final layer: revealed directly, no Merkle commitment, as its
+		// 2^logFinalPolyDegree coefficients rather than its codeword. The
+		// inverse FFT (DIT undoes the DIF forward encode without a separate
+		// bit-reverse step -- see EncodeExt) must leave every higher
+		// coefficient zero for a sufficiently low-degree witness.
+		coeffs := append([]field.Ext(nil), st.running...)
+		st.p.domains[j+1].FFTInverseExt6(coeffs, fft.DIT)
+		f := 1 << st.p.logFinalPolyDegree
+		for i, c := range coeffs[f:] {
+			if !c.IsZero() {
+				panic(fmt.Sprintf("fri: ProverState.Fold: final layer has nonzero coefficient %d, not low-degree enough", f+i))
+			}
+		}
+		st.FinalPoly = coeffs[:f]
 		return field.Octuplet{}
 	}
 
@@ -136,7 +149,7 @@ func (st *ProverState) Open(openedPositions []int) Proof {
 
 	for k := range st.p.NumQueries {
 		s := openedPositions[k]
-		st.RunningQueries[k] = openRunningQueryExt(s, st.layers, st.trees, st.p.numRounds)
+		st.RunningQueries[k] = st.openRunningQueryExt(s)
 	}
 
 	return st.Proof

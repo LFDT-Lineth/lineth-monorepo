@@ -101,9 +101,9 @@ func TestCanonicalLayout_RejectsShiftInvariants(t *testing.T) {
 // out-of-domain point and is accepted (its zero value is not a sentinel), but
 // a later opening carrying a different zeta is rejected.
 func TestAddOpeningZeta(t *testing.T) {
-	params, err := NewParams(8, 4, 1)
+	params, err := NewParams(3, 2, 1)
 	require.NoError(t, err)
-	pcs, err := NewPCS(params, makeEncoders(params.numRounds+1, 2))
+	pcs, err := NewPCS(params, makeEncoders(int(params.numRounds+1), 2))
 	require.NoError(t, err)
 
 	witness := make(Batch, 3)
@@ -122,7 +122,7 @@ func TestAddOpeningZeta(t *testing.T) {
 
 func TestOpenInputTreeOpeningAlignsMultiSizeRows(t *testing.T) {
 	prng := rand.New(utils.NewRandSource(20260625))
-	params, err := NewParams(16, 8, 1)
+	params, err := NewParams(4, 3, 1)
 	require.NoError(t, err)
 
 	levelEncoder := NewEncoder(8, 4)
@@ -198,7 +198,7 @@ func openForTest(t *testing.T, pcs *PCS, in openInputs) (OpeningProof, []BatchCl
 	}
 	started, err := pcs.NewProverState()
 	require.NoError(t, err)
-	require.GreaterOrEqual(t, len(in.Challenges.QueryPositions), pcs.Params.NumQueries)
+	require.GreaterOrEqual(t, len(in.Challenges.QueryPositions), int(pcs.Params.NumQueries))
 	queryPositions := in.Challenges.QueryPositions[:pcs.Params.NumQueries]
 
 	// Fold until the (possibly restricted) prover state is exhausted, so this
@@ -216,7 +216,7 @@ func openForTest(t *testing.T, pcs *PCS, in openInputs) (OpeningProof, []BatchCl
 func claimedValuesForTest(t *testing.T, pcs *PCS, witness Batch, shifts BatchShifts, zeta field.Ext) BatchClaimedValues {
 	t.Helper()
 
-	evalRow := func(poly field.Vec, sizeLog2 int, rowShifts []int) []field.Ext {
+	evalRow := func(poly field.Vec, sizeLog2 uint8, rowShifts []int) []field.Ext {
 		values := make([]field.Ext, len(rowShifts))
 		for i, shift := range rowShifts {
 			point, err := pcs.shiftedPoint(sizeLog2, shift, zeta)
@@ -236,12 +236,12 @@ func claimedValuesForTest(t *testing.T, pcs *PCS, witness Batch, shifts BatchShi
 		for rowIdx, rowShifts := range sizedShifts.Base {
 			row := sizedWitness.Base[rowIdx]
 			require.Len(t, row, 1<<sizeLog2)
-			sized.Base[rowIdx] = evalRow(field.VecFromBase(row), sizeLog2, rowShifts)
+			sized.Base[rowIdx] = evalRow(field.VecFromBase(row), uint8(sizeLog2), rowShifts)
 		}
 		for rowIdx, rowShifts := range sizedShifts.Ext {
 			row := sizedWitness.Ext[rowIdx]
 			require.Len(t, row, 1<<sizeLog2)
-			sized.Ext[rowIdx] = evalRow(field.VecFromExt(row), sizeLog2, rowShifts)
+			sized.Ext[rowIdx] = evalRow(field.VecFromExt(row), uint8(sizeLog2), rowShifts)
 		}
 		claimed[sizeLog2] = sized
 	}
@@ -251,9 +251,9 @@ func claimedValuesForTest(t *testing.T, pcs *PCS, witness Batch, shifts BatchShi
 func newPCSOpenVerifyFixture(t *testing.T) pcsOpenVerifyFixture {
 	t.Helper()
 
-	params, err := NewParams(8, 4, 1)
+	params, err := NewParams(3, 2, 1)
 	require.NoError(t, err)
-	encoders := makeEncoders(params.numRounds+1, 2)
+	encoders := makeEncoders(int(params.numRounds+1), 2)
 	pcs, err := NewPCS(params, encoders)
 	require.NoError(t, err)
 
@@ -309,9 +309,9 @@ func TestPCSOpenVerifyNormalFlow(t *testing.T) {
 // The FRI schedule must restrict to the witness (2 folds), not fold 4 times.
 func TestPCSStaticParamsLargerThanWitness(t *testing.T) {
 	// D=16 static capacity, witness columns are size 4 (sizeLog2=2).
-	params, err := NewParams(32, 16, 1)
+	params, err := NewParams(5, 4, 1)
 	require.NoError(t, err)
-	encoders := makeEncoders(params.numRounds+1, 2) // sizes 2^0..2^4
+	encoders := makeEncoders(int(params.numRounds+1), 2) // sizes 2^0..2^4
 	pcs, err := NewPCS(params, encoders)
 	require.NoError(t, err)
 
@@ -344,9 +344,9 @@ func TestPCSStaticParamsLargerThanWitness(t *testing.T) {
 		Challenges: challenges,
 	})
 
-	// The witness top is size 4 → exactly 2 folds → final poly of the inverse-rate
-	// size (2), not the 4 folds Params.D=16 would dictate.
-	require.Len(t, proof.FRIProof.FinalPoly, 2)
+	// The witness top is size 4 → exactly 2 folds → a single final coefficient
+	// (logFinalPolyDegree=0), not the 4 folds Params.LogPlainTextSize=4 would dictate.
+	require.Len(t, proof.FRIProof.FinalPoly, 1)
 
 	require.NoError(t, pcs.Verify(VerifyInputs{
 		Roots:         []field.Octuplet{committed[0].Tree.Root()},
@@ -359,9 +359,9 @@ func TestPCSStaticParamsLargerThanWitness(t *testing.T) {
 }
 
 func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
-	params, err := NewParams(16, 8, 2)
+	params, err := NewParams(4, 3, 2)
 	require.NoError(t, err)
-	encoders := makeEncoders(params.numRounds+1, 2)
+	encoders := makeEncoders(int(params.numRounds+1), 2)
 	pcs, err := NewPCS(params, encoders)
 	require.NoError(t, err)
 
