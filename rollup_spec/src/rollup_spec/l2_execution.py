@@ -18,7 +18,7 @@ from .block import (
     ExecutionPayload,
     ForcedTransactionAcceptance,
     ForcedTransactionWitness,
-    LineaPayloadInput,
+    LinethPayloadInput,
     ResolvedForcedTransaction,
     StatelessInput,
     decode_signed_transaction_rlp,
@@ -240,7 +240,7 @@ class L2ExecutionProofPublicInput:
 @dataclass
 class L2ExecutionProofPrivateInput:
     """
-    l2-execution guest input: one Linea wrapper per block in the conflation.
+    l2-execution guest input: one Lineth wrapper per block in the conflation.
 
     Each wrapper's `stateless_input_ssz` is the raw vanilla stateless-input
     byte slice, decoded inside the guest path (no decoded-input fallback). The
@@ -253,11 +253,11 @@ class L2ExecutionProofPrivateInput:
     """
     parent_ftx_rolling_hash: Hash32
     parent_last_processed_ftx_number: U64
-    payloads: List[LineaPayloadInput]
+    payloads: List[LinethPayloadInput]
     chain_config: ChainConfig
 
 
-def _decode_payload_stateless_inputs(payloads: Sequence[LineaPayloadInput]) -> List[StatelessInput]:
+def _decode_payload_stateless_inputs(payloads: Sequence[LinethPayloadInput]) -> List[StatelessInput]:
     """
     Decode the vanilla stateless-input SSZ bytes inside the guest path — matching
     the underlying engine's boundary, where the guest receives length-delimited
@@ -322,7 +322,7 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
     block range.
 
     The per-block state transition is delegated to the underlying engine
-    (`execute_stateless_input`); this function adds only the Linea logic on top —
+    (`execute_stateless_input`); this function adds only the Lineth logic on top —
     conflation-level linking, the empty-`executionRequests` policy, forced
     transactions, L2->L1 messages, and the L1->L2 bridge rolling-hash reads.
     """
@@ -330,7 +330,7 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
         raise Exception("l2-execution proof must cover at least one payload")
 
     # Parse each vanilla stateless input ONCE via the underlying engine's parser
-    # (e.g. Zesu); the parsed objects are shared between execution and the Linea
+    # (e.g. Zesu); the parsed objects are shared between execution and the Lineth
     # logic below, so nothing is re-parsed.
     stateless_inputs = _decode_payload_stateless_inputs(execution_input.payloads)
     all_witnesses = [stateless_input.witness for stateless_input in stateless_inputs]
@@ -352,7 +352,7 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
     filtered_addresses: List[Address] = []
     results: List[StatelessExecutionResult] = []
 
-    for linea_payload, stateless_input in zip(execution_input.payloads, stateless_inputs):
+    for lineth_payload, stateless_input in zip(execution_input.payloads, stateless_inputs):
         payload = stateless_input.new_payload_request.execution_payload
 
         # ── Conflation-level invariants the engine cannot know (it validates each
@@ -369,7 +369,7 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
         # engine's per-block timestamp/parent checks plus the parentHash chaining
         # asserted above, so they are not restated here.
 
-        # ── Linea policy: this rollup does not support EIP-7685 requests ──
+        # ── Lineth policy: this rollup does not support EIP-7685 requests ──
         requests = stateless_input.new_payload_request.execution_requests
         if requests.deposits or requests.withdrawals or requests.consolidations:
             raise Exception("execution requests are not supported by this rollup")
@@ -381,7 +381,7 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
         result = execute_stateless_input(stateless_input)
         results.append(result)
 
-        # Linea PI: recover each transaction sender for `txFromsHash`.
+        # Lineth PI: recover each transaction sender for `txFromsHash`.
         for tx_rlp in parse_payload_transaction_rlps(payload):
             tx_froms.append(
                 recover_sender(
@@ -400,7 +400,7 @@ def run_l2_execution_guest(execution_input: L2ExecutionProofPrivateInput) -> L2E
                 execution_input.chain_config,
                 payload,
                 block_parent_state,
-                linea_payload.rollup_extension.forced_transactions,
+                lineth_payload.rollup_extension.forced_transactions,
             )
         )
         filtered_addresses.extend(block_filtered_addresses)

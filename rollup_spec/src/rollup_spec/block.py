@@ -64,7 +64,7 @@ class ForcedTransactionAcceptance(Enum):
 
       - `BadPrecompile` — every L2 precompile is just ordinary RISC-V code
         in the new design, so "disallowed precompile" can't fire.
-      - `TooManyLogs`   — Linea's previous Type-2 stack imposed a per-tx
+      - `TooManyLogs`   — Lineth's previous Type-2 stack imposed a per-tx
         log cap to keep the bespoke arithmetization tractable; the Type-1
         RISC-V stack has no such cap.
       - `Other`         — the canonical Java enum's transient-failure
@@ -195,8 +195,8 @@ class StatelessChainConfig:
     """
     Chain context carried inside the stateless input.
 
-    Linea still carries its proof-range `ChainConfig` outside the standard
-    stateless payload because it also contains Linea-specific fields such as the
+    Lineth still carries its proof-range `ChainConfig` outside the standard
+    stateless payload because it also contains Lineth-specific fields such as the
     L2MessageService address and coinbase. The guest must reject a payload whose
     stateless `chain_id` disagrees with the proof-range chain config. `active_fork`
     is the resolved `ProtocolFork` decoded from the SSZ `chain_config.active_fork`
@@ -255,8 +255,8 @@ class StatelessInput:
     Decoded stateless input matching the underlying engine's guest boundary.
 
     Forced-transaction metadata is deliberately not here — it rides on
-    `LineaPayloadInput.rollup_extension` so the stateless input stays vanilla.
-    `public_keys` is decoded only because it is part of the stateless input; Linea
+    `LinethPayloadInput.rollup_extension` so the stateless input stays vanilla.
+    `public_keys` is decoded only because it is part of the stateless input; Lineth
     derives signers via `recover_sender(chainID, tx)`, not from it.
     """
     new_payload_request: NewPayloadRequest
@@ -268,19 +268,19 @@ class StatelessInput:
 @dataclass
 class LinethRollupExtension:
     """
-    Linea-only fields beside the vanilla stateless input. Must not be appended to
+    Lineth-only fields beside the vanilla stateless input. Must not be appended to
     the stateless-input SSZ byte slice passed to the decoder.
     """
     forced_transactions: List[ForcedTransactionWitness] = field(default_factory=list)
 
 
 @dataclass
-class LineaPayloadInput:
+class LinethPayloadInput:
     """
-    One block of Linea l2-execution guest input.
+    One block of Lineth l2-execution guest input.
 
     `stateless_input_ssz` is the vanilla stateless-input byte slice
-    (length-delimited, decoded on its own); `rollup_extension` is Linea-only
+    (length-delimited, decoded on its own); `rollup_extension` is Lineth-only
     metadata consumed after payload execution, intentionally outside the
     stateless input.
     """
