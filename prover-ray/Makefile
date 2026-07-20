@@ -45,7 +45,4 @@ download-zkc-testdata:
 	rm -rf $(ZKC_TESTDATA_SYNC_DST_DIR)/invalid
 	find $(ZKC_TESTDATA_SYNC_DST_DIR) -type f -name "*.rejects" -delete
 
-	# lets delete all large fixtures
-	find $(ZKC_TESTDATA_SYNC_DST_DIR) -type f -size +50k -delete
-
 	# we don't compile binaries. They are compiled as-needed during integration tests (to be up-to-date)
