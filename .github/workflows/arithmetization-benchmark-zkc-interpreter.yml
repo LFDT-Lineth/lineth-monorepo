@@ -226,6 +226,14 @@ jobs:
               "/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc" "${3:-}"
           }
 
+          run_zkc_compile() {  # $1=variant  $2=log path  $3=json  $4=zkc_main
+            "/tmp/zkc-${1}" exec --stats --inline "$3" "$4" >"$2" 2>&1 || true
+            cat "$2"
+            printf '### zkc-%s exec --stats (%s)\n```\n' "$1" "$(basename "$3" .json)" >> "$GITHUB_STEP_SUMMARY"
+            cat "$2" >> "$GITHUB_STEP_SUMMARY"
+            printf '```\n' >> "$GITHUB_STEP_SUMMARY"
+          }
+
           run_keccak() {  # $1=variant (opt|base)  $2=label (warmup|iter#)  optional: --fast
             run_zkc_exec "$1" "/tmp/bench/logs/keccak_${1}_${2}.log" "/tmp/keccak-${1}.json" \
               "/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc" "${3:-}"
@@ -277,6 +285,8 @@ jobs:
             # so both branches face an already-warm filesystem on iteration 1.
             reset_state; log "${wl}: warmup opt  (untimed)"; run_${wl} opt  warmup --fast
             reset_state; log "${wl}: warmup base (untimed)"; run_${wl} base warmup --fast
+            reset_state; log "${wl}: warmup opt  (untimed)"; run_stats_${wl} opt  warmup
+            reset_state; log "${wl}: warmup base (untimed)"; run_stats_${wl} base warmup
             # Timed runs: opt_i, base_i alternating, starting with opt.
             # Run in fast (with gogen) or tracing mode
             for i in $(seq 1 "$ITERS"); do
@@ -291,23 +301,6 @@ jobs:
             done
           done
           log "all workloads done"
-
-      - name: Print zkc --stats for base and optim
-        if: always()
-        run: |
-          for variant in base opt; do
-            echo "=== zkc-${variant} exec --stats (keccak) ==="
-            stats_file="/tmp/zkc_stats_${variant}.txt"
-            "/tmp/zkc-${variant}" exec --stats \
-              "/tmp/keccak-${variant}.json" \
-              "/tmp/wt-${variant}/arithmetization/src/main/riscv/main.zkc" \
-              >"$stats_file" 2>&1 || true
-            cat "$stats_file"
-            printf '### zkc-%s exec --stats (keccak)\n```\n' "$variant" >> "$GITHUB_STEP_SUMMARY"
-            cat "$stats_file" >> "$GITHUB_STEP_SUMMARY"
-            printf '```\n' >> "$GITHUB_STEP_SUMMARY"
-            echo "==="
-          done
 
       - name: Parse logs and emit summary
         if: always()
