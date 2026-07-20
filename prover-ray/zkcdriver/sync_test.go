@@ -12,6 +12,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/files"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -27,6 +28,11 @@ const (
 )
 
 func TestZkcIntegrationTestSynced(t *testing.T) {
+	// logs are chatty. Set the output to the test's output so that we can see
+	// it in case of failures (but not in the normal case, where we want to keep
+	// the test output clean)
+	logrus.SetOutput(t.Output())
+
 	// set the proverCompilePipeline to the full prover pipeline, unless we're
 	// in short mode, in which case we skip the full prover pipeline.
 	sysPipeline := proverCompilePipeline
