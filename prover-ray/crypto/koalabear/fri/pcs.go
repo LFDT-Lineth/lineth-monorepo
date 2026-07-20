@@ -777,9 +777,7 @@ func (pcs *PCS) reconstructLevels() ([]Level, error) {
 		}
 
 		levels = append(levels, Level{
-			LogPlainTextSize:    uint8(sizeLog2),
 			Trees:               trees,
-			Size:                size,
 			Columns:             columns,
 			ClaimPointIndexes:   claimPointIndexes,
 			ClaimPoints:         claimPoints,
@@ -1255,8 +1253,8 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 		return err
 	}
 
-	runningRoots := make([]QueryLayerRoots, pcs.Params.numRounds)
-	for j := uint8(1); j < pcs.Params.numRounds; j++ {
+	runningRoots := make([]QueryLayerRoots, pcs.Params.numRounds())
+	for j := uint8(1); j < pcs.Params.numRounds(); j++ {
 		runningRoots[j] = QueryLayerRoots{proof.FRIProof.RoundRoots[j-1]}
 	}
 
@@ -1264,16 +1262,16 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	zeta := in.Zeta
 	foldAlphas := in.Challenges.FoldAlphas
 
-	finalCodeword := make([]field.Ext, 1<<(pcs.Params.LogCodewordSize-pcs.Params.numRounds))
+	finalCodeword := make([]field.Ext, 1<<(pcs.Params.LogCodewordSize-pcs.Params.numRounds()))
 	copy(finalCodeword, proof.FRIProof.FinalPoly)
-	pcs.Params.domains[pcs.Params.numRounds].FFTExt6(finalCodeword, fft.DIF)
+	pcs.Params.domains[pcs.Params.numRounds()].FFTExt6(finalCodeword, fft.DIF)
 
 	resolved := make([]resolvedQuery, pcs.Params.NumQueries)
 	for queryIdx, queryPosition := range positions {
 		rq := resolvedQuery{
-			Rounds: make([]inputPair, pcs.Params.numRounds),
+			Rounds: make([]inputPair, pcs.Params.numRounds()),
 			Aux:    make(map[uint8]inputPair, len(layout)),
-			Final:  finalCodeword[queryPosition>>pcs.Params.numRounds],
+			Final:  finalCodeword[queryPosition>>pcs.Params.numRounds()],
 		}
 
 		inputOpening := proof.InputQueries[queryIdx]
@@ -1286,7 +1284,7 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 		// loop below, since a level's own reconstruction seeds on this same
 		// round's running pair (rq.Rounds[0] is left at its zero value, so
 		// round 0 needs no special case).
-		for j := uint8(1); j < pcs.Params.numRounds; j++ {
+		for j := uint8(1); j < pcs.Params.numRounds(); j++ {
 			opening := proof.FRIProof.RunningQueries[queryIdx][j-1]
 			if err = checkQueryLayerShape(
 				opening, runningRoots[j], 1<<(pcs.Params.LogCodewordSize-j), true); err != nil {
@@ -1321,9 +1319,9 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 			if err != nil {
 				return err
 			}
-			if round >= pcs.Params.numRounds {
+			if round >= pcs.Params.numRounds() {
 				return fmt.Errorf("fri: pcs.Verify: level %d introduced at round %d, must be < %d",
-					levelIdx, round, pcs.Params.numRounds)
+					levelIdx, round, pcs.Params.numRounds())
 			}
 			domain := pcs.Params.domainsLight[round]
 			levelSize, err := reconstructDomainSize(domain)

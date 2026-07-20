@@ -17,18 +17,19 @@ import (
 // Build once with NewParams; reuse across many Prove/Verify calls.
 type Params struct {
 	LogCodewordSize  uint8 // log2 of the codeword domain size
-	LogPlainTextSize uint8 // log2 of the plaintext polynomial size; always numRounds + logFinalPolyDegree
+	LogPlainTextSize uint8 // log2 of the plaintext polynomial size; always numRounds + logFinalPolySize
 	NumQueries       uint  // number of independent queries (controls soundness error ≈ (1-δ)^Q)
 
-	numRounds          uint8 // numRounds = LogPlainTextSize - logFinalPolyDegree: folding stops once the plaintext degree is < 2^logFinalPolyDegree
-	logFinalPolyDegree uint8
-	domains            []*fft.Domain // domains[j] has cardinality 2^(LogCodewordSize-j), generator ωⱼ; domains[numRounds] is always present (see NewParams)
-	domainsLight       []domainLight // domainLight stores only the cardinality and the domain generator
+	logFinalPolySize uint8         // logFinalPolySize = log2(the final polynomial's degree + 1)
+	domains          []*fft.Domain // domains[j] has cardinality 2^(LogCodewordSize-j), generator ωⱼ
+	domainsLight     []domainLight // domainLight stores only the cardinality and the domain generator
 }
+
+func (p Params) numRounds() uint8 { return p.LogPlainTextSize - p.logFinalPolySize }
 
 type Config struct {
 	WoFullDomainAllocation bool
-	LogFinalPolyDegree     uint8
+	LogFinalPolySize       uint8
 }
 
 type Option func(c *Config) error
@@ -40,13 +41,13 @@ func WoFullDomainAllocation() Option {
 	}
 }
 
-// FinalPolyDegree sets the log2 of the number of coefficients FRI folds down
+// LogFinalPolySize sets the log2 of the number of coefficients FRI folds down
 // to before stopping (default 0: fold to a single constant). Folding stops
 // earlier the larger this is, trading fold rounds for a larger revealed
 // final polynomial.
-func FinalPolyDegree(log2Size uint8) Option {
+func LogFinalPolySize(log2Size uint8) Option {
 	return func(c *Config) error {
-		c.LogFinalPolyDegree = log2Size
+		c.LogFinalPolySize = log2Size
 		return nil
 	}
 }
@@ -58,16 +59,6 @@ func NewParams(
 	logCodewordSize, logPlainTextSize uint8, numQueries uint,
 	opts ...Option,
 ) (Params, error) {
-	if logCodewordSize > MaxLogCodewordSize {
-		return Params{}, fmt.Errorf("fri: Codeword size too large: 2^%d > 2^%d", logCodewordSize, MaxLogCodewordSize)
-	}
-	if logPlainTextSize >= logCodewordSize {
-		return Params{}, fmt.Errorf("fri: Codeword size must be greater than plaintext size, got CodewordSize=2^%d PlainTextSize=2^%d", logCodewordSize, logPlainTextSize)
-	}
-	if numQueries <= 0 {
-		return Params{}, fmt.Errorf("fri: numQueries must be positive, got %d", numQueries)
-	}
-
 	var config Config
 	for _, opt := range opts {
 		if err := opt(&config); err != nil {
@@ -75,31 +66,39 @@ func NewParams(
 		}
 	}
 
-	if config.LogFinalPolyDegree >= logPlainTextSize {
-		return Params{}, fmt.Errorf("fri: LogFinalPolyDegree=%d must be in [0,%d)",
-			config.LogFinalPolyDegree, logPlainTextSize)
+	if logCodewordSize > MaxLogCodewordSize {
+		return Params{}, fmt.Errorf("fri: codeword size too large: 2^%d > 2^%d", logCodewordSize, MaxLogCodewordSize)
 	}
-	numRounds := logPlainTextSize - config.LogFinalPolyDegree
+	if logPlainTextSize >= logCodewordSize {
+		return Params{}, fmt.Errorf("fri: want codeword size > plaintext size, got 2^%d ≤ 2^%d",
+			logCodewordSize, logPlainTextSize)
+	}
+	if numQueries <= 0 {
+		return Params{}, fmt.Errorf("fri: numQueries must be positive, got %d", numQueries)
+	}
+	if config.LogFinalPolySize >= logPlainTextSize {
+		return Params{}, fmt.Errorf("fri: initial plaintext must be larger than final poly. got 2^%d ≤ 2^%d",
+			config.LogFinalPolySize, logPlainTextSize)
+	} // This guarantees that there is a folding round.
 
 	res := Params{
-		LogCodewordSize:    logCodewordSize,
-		LogPlainTextSize:   logPlainTextSize,
-		NumQueries:         numQueries,
-		numRounds:          numRounds,
-		logFinalPolyDegree: config.LogFinalPolyDegree,
+		LogCodewordSize:  logCodewordSize,
+		LogPlainTextSize: logPlainTextSize,
+		NumQueries:       numQueries,
+		logFinalPolySize: config.LogFinalPolySize,
 	}
 
-	res.domains = make([]*fft.Domain, numRounds+1)
+	res.domains = make([]*fft.Domain, res.numRounds()+1)
 	if !config.WoFullDomainAllocation {
-		for j := range numRounds {
+		for j := range res.numRounds() {
 			res.domains[j] = fft.NewDomain(uint64(1) << (logCodewordSize - j))
 		}
 	}
 	// domains[numRounds] (the tiny final-layer domain) is needed to decode and
 	// re-expand FinalPoly regardless of WoFullDomainAllocation.
-	res.domains[numRounds] = fft.NewDomain(uint64(1) << (logCodewordSize - numRounds))
-	res.domainsLight = make([]domainLight, numRounds+1)
-	for j := range numRounds + 1 {
+	res.domains[res.numRounds()] = fft.NewDomain(uint64(1) << (logCodewordSize - res.numRounds()))
+	res.domainsLight = make([]domainLight, res.numRounds()+1)
+	for j := range res.numRounds() + 1 {
 		g, err := koalabear.Generator(uint64(1) << (logCodewordSize - j))
 		if err != nil {
 			return Params{}, err
@@ -116,25 +115,24 @@ func NewParams(
 // precomputed domains via a slice offset. It lets a single statically-sized
 // Params — built once at the maximum supported size — drive proofs whose
 // witness is smaller: the number of fold rounds becomes
-// topSizeLog2-logFinalPolyDegree (witness-dependent) rather than p.numRounds,
-// and the final polynomial still has size 2^logFinalPolyDegree. No domains
+// topSizeLog2-logFinalPolySize (witness-dependent) rather than p.numRounds,
+// and the final polynomial still has size 2^logFinalPolySize. No domains
 // are rebuilt and no zero rounds are folded. offset always lands on
 // p.numRounds (in the unrestricted array) regardless of topSizeLog2, so
 // res.domains[res.numRounds] is always p.domains[p.numRounds] -- the one
 // domain NewParams always builds.
 func (p Params) restrictTo(topSizeLog2 uint8) (Params, error) {
-	if topSizeLog2 < p.logFinalPolyDegree || topSizeLog2 > p.LogPlainTextSize {
+	if topSizeLog2 < p.logFinalPolySize || topSizeLog2 > p.LogPlainTextSize {
 		return Params{}, fmt.Errorf("fri: restrictTo: top size 2^%d outside [2^%d, PlainTextSize=2^%d]",
-			topSizeLog2, p.logFinalPolyDegree, p.LogPlainTextSize)
+			topSizeLog2, p.logFinalPolySize, p.LogPlainTextSize)
 	}
 	offset := p.LogPlainTextSize - topSizeLog2
 	res := Params{
-		LogCodewordSize:    p.LogCodewordSize - offset,
-		LogPlainTextSize:   topSizeLog2,
-		NumQueries:         p.NumQueries,
-		numRounds:          topSizeLog2 - p.logFinalPolyDegree,
-		logFinalPolyDegree: p.logFinalPolyDegree,
-		domains:            p.domains[offset:],
+		LogCodewordSize:  p.LogCodewordSize - offset,
+		LogPlainTextSize: topSizeLog2,
+		NumQueries:       p.NumQueries,
+		logFinalPolySize: p.logFinalPolySize,
+		domains:          p.domains[offset:],
 	}
 	res.domainsLight = p.domainsLight[offset:]
 	return res, nil
@@ -171,20 +169,11 @@ type QueryLayerRoots []field.Octuplet
 type RunningQuery []QueryLayer
 
 // Level holds one polynomial introduced at the folding round where the running
-// polynomial's degree matches Level.LogPlainTextSize. Trees are the pre-built
-// paired-leaf Merkle trees backing it.
-//
-// The polynomial's evaluations are not stored directly: Size, Columns, and
-// the ClaimPoints/ClaimPointIndexes/DenominatorInverses data batch the
-// per-column DEEP quotients into it, but only once alphaDeep is known -- see
-// EvalsAt. That challenge is the square of this level's own introduction
-// round's fold challenge, sampled at fold time, so the batched evaluations
-// cannot be precomputed any earlier.
+// polynomial's codeword length matches len(Columns[0].Evals). Trees are the
+// pre-built paired-leaf Merkle trees backing it.
 type Level struct {
-	LogPlainTextSize uint8
-	Trees            []*Tree
+	Trees []*Tree
 
-	Size                int
 	Columns             []quotientColumn
 	ClaimPointIndexes   map[field.Ext]int
 	ClaimPoints         []field.Ext
@@ -194,7 +183,7 @@ type Level struct {
 // EvalsAt returns this level's evaluations, combined with the running codeword.
 // running seeds the ladder, so its contribution is weighted by alphaDeep^len(Columns).
 func (l Level) EvalsAt(alphaDeep field.Ext, running []field.Ext) []field.Ext {
-	evals := make([]field.Ext, l.Size)
+	evals := make([]field.Ext, len(running))
 	copy(evals, running)
 	for pos := range evals {
 		for c := len(l.Columns) - 1; c >= 0; c-- {
@@ -223,7 +212,7 @@ func (l Level) EvalsAt(alphaDeep field.Ext, running []field.Ext) []field.Ext {
 type Proof struct {
 	// Running-polynomial FRI path
 	RoundRoots []field.Octuplet // Merkle roots for running poly T_1..T_{r-1}
-	// FinalPoly holds the folded polynomial's 2^logFinalPolyDegree coefficients.
+	// FinalPoly holds the folded polynomial's 2^logFinalPolySize coefficients.
 	FinalPoly      []field.Ext
 	RunningQueries []RunningQuery
 }
@@ -239,22 +228,15 @@ func (p Params) FullDomainGenerator() field.Element {
 
 // provePlan is the validated, precomputed schedule that NewProverState derives
 // from the caller-supplied levels: levelAtRound maps a folding round j to the
-// level index l introduced there. A level of size levels[l].LogPlainTextSize
-// is introduced at round jl = p.LogPlainTextSize - levels[l].LogPlainTextSize
-// — precisely when the running polynomial has folded down to that level's
-// degree.
+// level index l introduced there.
 type provePlan struct {
 	numLevels    uint8
 	levelAtRound map[uint8]uint8
 }
 
 // buildProvePlan validates levels and computes the provePlan schedule. It
-// enforces that every level's size is non-negative and at most
-// p.LogPlainTextSize with non-empty, non-nil trees, that no two levels are
-// introduced at the same folding round, and that exactly one level is
-// introduced at round 0 (i.e. has LogPlainTextSize == p.LogPlainTextSize).
-// levels must already be sorted in decreasing order of LogPlainTextSize
-// (Prove does this).
+// enforces no two levels are introduced at the same folding round, and that
+// exactly one level is introduced at round 0 (i.e. with codeword length 2^p.LogCodewordSize).
 func buildProvePlan(p Params, levels []Level) (provePlan, error) {
 	var plan provePlan
 	if len(levels) == 0 || len(levels) > 255 {
@@ -264,19 +246,17 @@ func buildProvePlan(p Params, levels []Level) (provePlan, error) {
 	plan.numLevels = uint8(len(levels))
 	plan.levelAtRound = make(map[uint8]uint8, plan.numLevels)
 	for l := range plan.numLevels {
-		logSize := levels[l].LogPlainTextSize
-		if logSize > p.LogPlainTextSize {
+		if len(levels[l].Columns) == 0 {
+			return plan, fmt.Errorf("fri: Prove: levels[%d] has no columns", l)
+		}
+		logCodewordLen := uint8(utils.Log2Ceil(len(levels[l].Columns[0].Evals)))
+		if logCodewordLen > p.LogCodewordSize {
 			return plan,
-				fmt.Errorf("fri: Prove: levels[%d].LogPlainTextSize=%d exceeds p.LogPlainTextSize=%d",
-					l, logSize, p.LogPlainTextSize)
+				fmt.Errorf("fri: Prove: levels[%d] codeword length 2^%d exceeds p.LogCodewordSize=%d",
+					l, logCodewordLen, p.LogCodewordSize)
 		}
 
-		jl := p.LogPlainTextSize - logSize
-		if jl >= p.numRounds {
-			return plan, fmt.Errorf(
-				"fri: Prove: levels[%d].LogPlainTextSize=%d gives intro round %d, must be in 0..%d",
-				l, logSize, jl, p.numRounds-1)
-		}
+		jl := p.LogCodewordSize - logCodewordLen
 		if _, dup := plan.levelAtRound[jl]; dup {
 			return plan, fmt.Errorf("fri: Prove: two levels share intro round %d", jl)
 		}
@@ -286,7 +266,7 @@ func buildProvePlan(p Params, levels []Level) (provePlan, error) {
 		}
 	}
 	if _, ok := plan.levelAtRound[0]; !ok {
-		return plan, fmt.Errorf("fri: Prove: no level introduced at round 0 (need one with LogPlainTextSize=p.LogPlainTextSize)")
+		return plan, fmt.Errorf("fri: Prove: no level introduced at round 0 (there must be a top level)")
 	}
 
 	return plan, nil
@@ -312,10 +292,7 @@ func checkLevelTrees(label string, trees []*Tree) error {
 // challenge lengths before any authentication or reconstruction runs, so a
 // malformed proof can never cause an out-of-bounds access later.
 func checkOpeningProofShape(p Params, prf Proof, foldAlphas []field.Ext, positions []int) error {
-	wantRoundRoots := p.numRounds - 1
-	if p.numRounds <= 1 {
-		wantRoundRoots = 0
-	}
+	wantRoundRoots := p.numRounds() - 1
 	wantLayersPerRQuery := wantRoundRoots
 	if len(prf.RoundRoots) != int(wantRoundRoots) {
 		return fmt.Errorf("fri: pcs.Verify: proof has %d round roots, want %d", len(prf.RoundRoots), wantRoundRoots)
@@ -327,11 +304,11 @@ func checkOpeningProofShape(p Params, prf Proof, foldAlphas []field.Ext, positio
 	}
 	// FinalPoly holds the folded polynomial's coefficients directly (not its
 	// codeword): its length alone bounds the degree.
-	if want := 1 << p.logFinalPolyDegree; len(prf.FinalPoly) != want {
+	if want := 1 << p.logFinalPolySize; len(prf.FinalPoly) != want {
 		return fmt.Errorf("fri: pcs.Verify: FinalPoly has %d entries, want %d", len(prf.FinalPoly), want)
 	}
-	if len(foldAlphas) < int(p.numRounds) {
-		return fmt.Errorf("fri: pcs.Verify: %d folding challenges, need at least %d", len(foldAlphas), p.numRounds)
+	if len(foldAlphas) < int(p.numRounds()) {
+		return fmt.Errorf("fri: pcs.Verify: %d folding challenges, need at least %d", len(foldAlphas), p.numRounds())
 	}
 	for k, q := range prf.RunningQueries {
 		if len(q) != int(wantLayersPerRQuery) {
@@ -351,7 +328,7 @@ func checkOpeningProofShape(p Params, prf Proof, foldAlphas []field.Ext, positio
 // branch, or alpha_DEEP.
 type resolvedQuery struct {
 	Rounds []inputPair         // Rounds[j] = (self, sibling) of the running codeword at round j (unused at j=0)
-	Aux    map[uint8]inputPair // Aux[j] = the pair of the level introduced at round j, if any (always present at j=0). Already includes the running codeword from round j-1, folded in via Horner (see reconstructQueryValueAt).
+	Aux    map[uint8]inputPair // Aux[j] = the pair of the level introduced at round j, if any (always present at j=0).
 	Final  field.Ext           // the final-polynomial target for this query
 }
 
@@ -364,7 +341,7 @@ func checkFolds(p Params, resolved []resolvedQuery, foldAlphas []field.Ext, posi
 		xInv := domainPoint(p.domainsLight[0], s)
 		xInv.Inverse(&xInv)
 
-		for j := range p.numRounds {
+		for j := range p.numRounds() {
 			self, sib := rq.Rounds[j].Self, rq.Rounds[j].Sibling
 
 			// A level introduced at this round takes over as the primary
@@ -385,7 +362,7 @@ func checkFolds(p Params, resolved []resolvedQuery, foldAlphas []field.Ext, posi
 
 			// The fold output must equal the queried leaf of the next layer (whose
 			// position is base>>1 = s>>(j+1)); at the last round, the final polynomial.
-			if j < p.numRounds-1 {
+			if j < p.numRounds()-1 {
 				if !sum.Equal(&rq.Rounds[j+1].Self) {
 					return fmt.Errorf("fri: pcs.Verify: query %d round %d: folded value mismatch with round %d leaf",
 						queryIdx, j, j+1)
@@ -534,11 +511,11 @@ func mapExtToOctuplet(exts []field.Ext) []field.Octuplet {
 // openRunningQueryExt builds the Merkle opening data for query index s across
 // running extension folding levels. Input-tree openings are carried separately.
 func (st *ProverState) openRunningQueryExt(s int) RunningQuery {
-	if st.p.numRounds <= 1 {
+	if st.p.numRounds() <= 1 {
 		return nil
 	}
-	q := make(RunningQuery, st.p.numRounds-1)
-	for j := uint8(1); j < st.p.numRounds; j++ {
+	q := make(RunningQuery, st.p.numRounds()-1)
+	for j := uint8(1); j < st.p.numRounds(); j++ {
 
 		var (
 			base = s >> j

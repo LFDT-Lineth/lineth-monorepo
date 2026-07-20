@@ -2,7 +2,6 @@ package fri
 
 import (
 	"fmt"
-	"sort"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
@@ -49,13 +48,8 @@ type ProverState struct {
 // the machine with the zero codeword: round 0 always introduces a level (the
 // main degree-D polynomial), which folds in as described in [ProverState.Fold]
 // against this zero seed -- there being no round -1 to fold a real codeword
-// from. levels is sorted in-place by decreasing degree (as buildProvePlan
-// requires).
+// from.
 func NewProverState(p Params, levels []Level) (*ProverState, error) {
-
-	sort.Slice(levels, func(i, j int) bool {
-		return levels[i].LogPlainTextSize > levels[j].LogPlainTextSize
-	})
 
 	plan, err := buildProvePlan(p, levels)
 	if err != nil {
@@ -67,13 +61,13 @@ func NewProverState(p Params, levels []Level) (*ProverState, error) {
 		plan:    plan,
 		levels:  levels,
 		running: make([]field.Ext, 1<<p.LogCodewordSize),
-		layers:  make([][]field.Ext, p.numRounds+1),
-		trees:   make([]*Tree, p.numRounds),
+		layers:  make([][]field.Ext, p.numRounds()+1),
+		trees:   make([]*Tree, p.numRounds()),
 	}
 	st.layers[0] = st.running
 
-	if p.numRounds > 1 {
-		st.RoundRoots = make([]field.Octuplet, p.numRounds-1)
+	if p.numRounds() > 1 {
+		st.RoundRoots = make([]field.Octuplet, p.numRounds()-1)
 	}
 
 	return st, nil
@@ -81,7 +75,7 @@ func NewProverState(p Params, levels []Level) (*ProverState, error) {
 
 // HasNext reports whether another folding challenge is expected.
 func (st *ProverState) HasNext() bool {
-	return st.round < st.p.numRounds
+	return st.round < st.p.numRounds()
 }
 
 // Fold consumes one folding challenge. If a level is introduced at this round,
@@ -112,15 +106,15 @@ func (st *ProverState) Fold(alpha field.Ext) field.Octuplet {
 	st.layers[j+1] = st.running
 	st.round = j + 1
 
-	if j+1 == st.p.numRounds {
+	if j+1 == st.p.numRounds() {
 		// Final layer: revealed directly, no Merkle commitment, as its
-		// 2^logFinalPolyDegree coefficients rather than its codeword. The
+		// 2^logFinalPolySize coefficients rather than its codeword. The
 		// inverse FFT (DIT undoes the DIF forward encode without a separate
 		// bit-reverse step -- see EncodeExt) must leave every higher
 		// coefficient zero for a sufficiently low-degree witness.
 		coeffs := append([]field.Ext(nil), st.running...)
 		st.p.domains[j+1].FFTInverseExt6(coeffs, fft.DIT)
-		f := 1 << st.p.logFinalPolyDegree
+		f := 1 << st.p.logFinalPolySize
 		for i, c := range coeffs[f:] {
 			if !c.IsZero() {
 				panic(fmt.Sprintf("fri: ProverState.Fold: final layer has nonzero coefficient %d, not low-degree enough", f+i))
@@ -141,7 +135,7 @@ func (st *ProverState) Fold(alpha field.Ext) field.Octuplet {
 // completed Proof. It must be called after all numRounds folds.
 func (st *ProverState) Open(openedPositions []int) Proof {
 
-	if st.round != st.p.numRounds {
+	if st.round != st.p.numRounds() {
 		panic("fri: ProverState.Open: called before all folding rounds were consumed")
 	}
 

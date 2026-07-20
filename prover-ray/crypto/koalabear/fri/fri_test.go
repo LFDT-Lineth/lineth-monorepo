@@ -89,7 +89,7 @@ func TestFoldLayerInternally(t *testing.T) {
 // TestCheckOpeningProofShapeRejectsWrongFinalPolyLength targets the low-degree
 // bound: FinalPoly holds the folded polynomial's coefficients directly, so
 // its length alone is the degree bound (see pcs.Verify's final-codeword FFT
-// expansion). With the default logFinalPolyDegree=0 that length must be
+// expansion). With the default logFinalPolySize=0 that length must be
 // exactly 1, so a 2-entry FinalPoly must be rejected before any query is
 // checked.
 func TestCheckOpeningProofShapeRejectsWrongFinalPolyLength(t *testing.T) {
@@ -97,14 +97,14 @@ func TestCheckOpeningProofShapeRejectsWrongFinalPolyLength(t *testing.T) {
 	require.NoError(t, err)
 
 	prf := Proof{
-		RoundRoots:     make([]field.Octuplet, p.numRounds-1),
+		RoundRoots:     make([]field.Octuplet, p.numRounds()-1),
 		RunningQueries: make([]RunningQuery, p.NumQueries),
 		FinalPoly:      []field.Ext{{}, field.Lift(field.One())},
 	}
 	for k := range prf.RunningQueries {
-		prf.RunningQueries[k] = make(RunningQuery, p.numRounds-1)
+		prf.RunningQueries[k] = make(RunningQuery, p.numRounds()-1)
 	}
-	foldAlphas := make([]field.Ext, p.numRounds)
+	foldAlphas := make([]field.Ext, p.numRounds())
 	positions := []int{0}
 
 	require.ErrorContains(t, checkOpeningProofShape(p, prf, foldAlphas, positions), "FinalPoly has 2 entries, want 1")
@@ -142,7 +142,7 @@ func TestProveVerify(t *testing.T) {
 				fx.addLevel(t, uint8(utils.Log2Ceil(d)), field.VecPseudoRandExt(prng, d))
 			}
 
-			foldAlphas := make([]field.Ext, fx.pcs.Params.numRounds)
+			foldAlphas := make([]field.Ext, fx.pcs.Params.numRounds())
 			for i := range foldAlphas {
 				foldAlphas[i] = field.PseudoRandExt(prng)
 			}
@@ -168,15 +168,15 @@ func TestProveVerify(t *testing.T) {
 }
 
 // TestProveVerifyWithFinalPolyDegree checks that stopping FRI before a single
-// constant (logFinalPolyDegree > 0) still verifies honestly and still rejects a
+// constant (logFinalPolySize > 0) still verifies honestly and still rejects a
 // tampered final coefficient.
 func TestProveVerifyWithFinalPolyDegree(t *testing.T) {
 	prng := rand.New(utils.NewRandSource(7))
 
-	fx := newLDTFixture(t, 4, 3, 4, FinalPolyDegree(1))
+	fx := newLDTFixture(t, 4, 3, 4, LogFinalPolySize(1))
 	fx.addLevel(t, 3, field.VecPseudoRandExt(prng, 8))
 
-	foldAlphas := make([]field.Ext, fx.pcs.Params.numRounds)
+	foldAlphas := make([]field.Ext, fx.pcs.Params.numRounds())
 	for i := range foldAlphas {
 		foldAlphas[i] = field.PseudoRandExt(prng)
 	}
@@ -189,6 +189,22 @@ func TestProveVerifyWithFinalPolyDegree(t *testing.T) {
 	one := field.Lift(field.One())
 	proof.FRIProof.FinalPoly[1].Add(&proof.FRIProof.FinalPoly[1], &one)
 	require.Error(t, fx.verify(foldAlphas, positions, proof))
+
+	// Same nonconstant final poly, but the sole opening is below the static
+	// plaintext size, so the proof runs through the restrictTo path (which the
+	// case above, opening at the full size, does not).
+	fxR := newLDTFixture(t, 4, 3, 4, LogFinalPolySize(1))
+	fxR.addLevel(t, 2, field.VecPseudoRandExt(prng, 4))
+
+	foldAlphasR := make([]field.Ext, fxR.pcs.Params.numRounds())
+	for i := range foldAlphasR {
+		foldAlphasR[i] = field.PseudoRandExt(prng)
+	}
+	positionsR := []int{1, 3, 5, 7}
+
+	proofR := fxR.open(t, foldAlphasR, positionsR)
+	require.Len(t, proofR.FRIProof.FinalPoly, 2)
+	require.NoError(t, fxR.verify(foldAlphasR, positionsR, proofR))
 }
 
 // TestProverStateOpenLoopsOverLevelTrees checks that a level backed by
@@ -204,7 +220,7 @@ func TestProverStateOpenLoopsOverLevelTrees(t *testing.T) {
 	fx.addLevel(t, 1, field.VecPseudoRandExt(prng, 2)) // extra level, D=2: two trees
 	fx.addLevel(t, 1, field.VecPseudoRandExt(prng, 2))
 
-	foldAlphas := make([]field.Ext, fx.pcs.Params.numRounds)
+	foldAlphas := make([]field.Ext, fx.pcs.Params.numRounds())
 	for i := range foldAlphas {
 		foldAlphas[i] = field.PseudoRandExt(prng)
 	}
@@ -234,24 +250,21 @@ func TestProverStateOpenLoopsOverLevelTrees(t *testing.T) {
 	require.Error(t, fx.verify(foldAlphas, positions, proof))
 }
 
-func verifierInputsForLevels(levels []Level) ([]QueryLayerRoots, []uint8) {
+func verifierInputsForLevels(levels []Level) []QueryLayerRoots {
 	levelRoots := make([]QueryLayerRoots, len(levels))
-	levelLogSizes := make([]uint8, len(levels))
 	for i := range levels {
 		levelRoots[i] = make(QueryLayerRoots, len(levels[i].Trees))
 		for j, tree := range levels[i].Trees {
 			levelRoots[i][j] = tree.Root()
 		}
-		levelLogSizes[i] = levels[i].LogPlainTextSize
 	}
-	return levelRoots, levelLogSizes
+	return levelRoots
 }
 
 // proverForTest runs multi-degree FRI (commit + query phase) and returns a Proof
-// together with the query positions. levels[0].LogPlainTextSize must equal
-// p.LogPlainTextSize and every Level must contain one evaluation vector on
-// exactly one rail. levels is sorted in-place in decreasing order of
-// LogPlainTextSize.
+// together with the query positions. levels[0]'s codeword length must equal
+// 2^p.LogCodewordSize and every Level must contain one evaluation vector on
+// exactly one rail.
 //
 // This helper is test-only and INSECURE: it takes the folding challenges
 // (alphas) and the query positions (openedPositions) as explicit inputs instead
@@ -270,12 +283,12 @@ func proverForTest(p Params, levels []Level, alphas []field.Ext, openedPositions
 	if err != nil {
 		utils.Panic("could not build prover state: %v", err)
 	}
-	if len(alphas) < int(p.numRounds) {
-		utils.Panic("fri: Prove: need %d folding challenges, got %d", p.numRounds, len(alphas))
+	if len(alphas) < int(p.numRounds()) {
+		utils.Panic("fri: Prove: need %d folding challenges, got %d", p.numRounds(), len(alphas))
 	}
 
 	// Drive the state machine: feed one folding challenge per round, then open.
-	for j := range p.numRounds {
+	for j := range p.numRounds() {
 		st.Fold(alphas[j])
 	}
 

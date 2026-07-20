@@ -103,7 +103,7 @@ func TestCanonicalLayout_RejectsShiftInvariants(t *testing.T) {
 func TestAddOpeningZeta(t *testing.T) {
 	params, err := NewParams(3, 2, 1)
 	require.NoError(t, err)
-	pcs, err := NewPCS(params, makeEncoders(int(params.numRounds+1), 2))
+	pcs, err := NewPCS(params, makeEncoders(int(params.numRounds()+1), 2))
 	require.NoError(t, err)
 
 	witness := make(Batch, 3)
@@ -253,7 +253,7 @@ func newPCSOpenVerifyFixture(t *testing.T) pcsOpenVerifyFixture {
 
 	params, err := NewParams(3, 2, 1)
 	require.NoError(t, err)
-	encoders := makeEncoders(int(params.numRounds+1), 2)
+	encoders := makeEncoders(int(params.numRounds()+1), 2)
 	pcs, err := NewPCS(params, encoders)
 	require.NoError(t, err)
 
@@ -311,7 +311,7 @@ func TestPCSStaticParamsLargerThanWitness(t *testing.T) {
 	// D=16 static capacity, witness columns are size 4 (sizeLog2=2).
 	params, err := NewParams(5, 4, 1)
 	require.NoError(t, err)
-	encoders := makeEncoders(int(params.numRounds+1), 2) // sizes 2^0..2^4
+	encoders := makeEncoders(int(params.numRounds()+1), 2) // sizes 2^0..2^4
 	pcs, err := NewPCS(params, encoders)
 	require.NoError(t, err)
 
@@ -345,7 +345,7 @@ func TestPCSStaticParamsLargerThanWitness(t *testing.T) {
 	})
 
 	// The witness top is size 4 → exactly 2 folds → a single final coefficient
-	// (logFinalPolyDegree=0), not the 4 folds Params.LogPlainTextSize=4 would dictate.
+	// (logFinalPolySize=0), not the 4 folds Params.LogPlainTextSize=4 would dictate.
 	require.Len(t, proof.FRIProof.FinalPoly, 1)
 
 	require.NoError(t, pcs.Verify(VerifyInputs{
@@ -361,7 +361,7 @@ func TestPCSStaticParamsLargerThanWitness(t *testing.T) {
 func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	params, err := NewParams(4, 3, 2)
 	require.NoError(t, err)
-	encoders := makeEncoders(int(params.numRounds+1), 2)
+	encoders := makeEncoders(int(params.numRounds()+1), 2)
 	pcs, err := NewPCS(params, encoders)
 	require.NoError(t, err)
 
@@ -393,7 +393,7 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	started, err := pcs.NewProverState()
 	require.NoError(t, err)
 	require.Len(t, started.levels, 2)
-	levelRoots, _ := verifierInputsForLevels(started.levels)
+	levelRoots := verifierInputsForLevels(started.levels)
 	require.Len(t, levelRoots, 2)
 	require.Len(t, levelRoots[0], 2)
 	require.Len(t, levelRoots[1], 2)
@@ -426,7 +426,7 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	positions := []int{3, 11}
 	referenceProof := proverForTest(params, referenceLevels, foldAlphas, positions)
 
-	for round := range params.numRounds {
+	for round := range params.numRounds() {
 		started.Fold(foldAlphas[round])
 	}
 	gotProof := started.Open(positions)

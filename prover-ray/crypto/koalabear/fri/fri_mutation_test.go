@@ -161,7 +161,7 @@ func TestVerifyRejectsProofMutations(t *testing.T) {
 	fx.addLevel(t, 3, field.VecPseudoRandExt(prng, 8))
 	fx.addLevel(t, 1, field.VecPseudoRandExt(prng, 2))
 
-	foldAlphas := make([]field.Ext, fx.pcs.Params.numRounds)
+	foldAlphas := make([]field.Ext, fx.pcs.Params.numRounds())
 	for i := range foldAlphas {
 		foldAlphas[i] = field.PseudoRandExt(prng)
 	}
