@@ -70,5 +70,4 @@ jobs:
         env:
           INPUT: test/testdata/stateless_input.ssz
           KECCAK_ACCEL: true
-          ZKC_EXEC_FLAGS: "-q -v"
 

@@ -198,7 +198,7 @@ jobs:
           set -uo pipefail
           mkdir -p /tmp/bench/logs
           ITERS=${{ inputs.iterations || 1 }}
-          if [[ -z "${FAST_MODE:-}" ]]; then FAST_MODE=true; fi
+          if [[ -z "${FAST_MODE:-}" ]]; then FAST_MODE=false; fi
 
           # progress prints
           log() { printf '[%s] %s\n' "$(date +'%H:%M:%S')" "$*"; }
