@@ -1,7 +1,6 @@
 package zkcdriver_test
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/files"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/zkc/pkg/util/file"
 	"github.com/sirupsen/logrus"
 )
 
@@ -78,12 +78,9 @@ func TestZkcIntegrationTestSynced(t *testing.T) {
 				fatalIfNotKnown(t, failures, baseName, -2, failReasonCompileZkc, "failed to compile binary constraints: %v", err)
 				return
 			}
-			inputF := files.MustRead(acceptPath)
-			defer inputF.Close()
-			inputFBuf := bufio.NewScanner(inputF)
 			lineNr := 0
-			for inputFBuf.Scan() {
-				line := inputFBuf.Text()
+			acceptCases := file.ReadInputFileAsLines(acceptPath)
+			for _, line := range acceptCases {
 				// check that we're not in a comment line. I.e. we only want lines starting with `{` to be considered as test-cases.
 				if !strings.HasPrefix(line, "{") {
 					continue
