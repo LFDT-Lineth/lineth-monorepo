@@ -227,9 +227,9 @@ jobs:
           }
 
           run_zkc_compile() {  # $1=variant  $2=log path  $3=json  $4=zkc_main
-            "/tmp/zkc-${1}" exec --stats --inline "$3" "$4" >"$2" 2>&1 || true
+            "/tmp/zkc-${1}" compile --stats --inline "$3" "$4" >"$2" 2>&1 || true
             cat "$2"
-            printf '### zkc-%s exec --stats (%s)\n```\n' "$1" "$(basename "$3" .json)" >> "$GITHUB_STEP_SUMMARY"
+            printf '### zkc-%s compile --stats (%s)\n```\n' "$1" "$(basename "$3" .json)" >> "$GITHUB_STEP_SUMMARY"
             cat "$2" >> "$GITHUB_STEP_SUMMARY"
             printf '```\n' >> "$GITHUB_STEP_SUMMARY"
           }
