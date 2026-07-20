@@ -99,7 +99,6 @@ function parseMapstructure(tag) {
   if (raw === "-") return { present: true, skip: true };
   const parts = raw.split(",");
   const name = parts[0];
-  const squash = parts.includes("squash") || parts.includes(",squash".slice(1));
   // ",squash" alone → name empty + squash
   if (raw === ",squash" || (name === "" && parts.includes("squash"))) {
     return { present: true, squash: true, name: "" };

@@ -3,7 +3,6 @@
  * Extraction is done by parse-go.js; this file turns the extract into MDX partials + wrapper.
  */
 
-const fs = require("node:fs");
 const path = require("node:path");
 const prettier = require("prettier");
 
