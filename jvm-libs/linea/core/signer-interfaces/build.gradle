@@ -1,0 +1,19 @@
+plugins {
+  id 'net.consensys.zkevm.kotlin-library-conventions'
+}
+
+description = "Backend-neutral remote signing contracts (KMS/HSM backends implement them out of tree)"
+
+dependencies {
+  // SafeFuture appears in the Signer signatures, so consumers need it exported
+  // (the conventions plugin only adds it at implementation scope).
+  api("tech.pegasys.teku.internal:async:${libs.versions.teku.get()}") {
+    exclude group: 'org.slf4j'
+    exclude group: 'com.github.jnr'
+    exclude group: 'com.squareup.okhttp3'
+    exclude group: 'org.apache.logging.log4j'
+    exclude group: 'tech.pegasys.teku.internal', module: 'metrics'
+    exclude group: 'tech.pegasys.teku.internal', module: 'time'
+    exclude group: 'com.google.guava', module: 'guava'
+  }
+}
