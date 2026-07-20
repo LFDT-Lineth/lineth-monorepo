@@ -18,18 +18,19 @@ var ErrNotImplemented = errors.New("not yet implemented")
 // safe for concurrent use after that — each [Prove] call gets its own
 // wiop.Runtime.
 type Core struct {
-	cfg    Config
-	sys    *wiop.System
-	driver *zkcdriver.ZkCDriver
-	elf    []byte
+	cfg      Config
+	sys      *wiop.System
+	driver   *zkcdriver.ZkCDriver
+	elfBlobs []memoryBlob // ELF sections pre-extracted once in New; reused per job
+	elfEntry uint64       // guest ELF entry point, also pre-extracted in New
 }
 
 // New loads the circuit binary and the guest ELF, calls [zkcdriver.NewZkCDriver]
 // to define all columns and constraints, and returns a [Core] ready to prove.
 //
 // Compiler passes (rangecheck → lookup → logderiv → localvanishing → global)
-// and wiop.Materialize are not yet wired — they must be added before the
-// system can produce cryptographically sound proofs (see backend-overview.md §4).
+// and wiop.Materialize are not yet wired. They must be added before the
+// system can produce sound proofs (see wiki backend-overview.md §4).
 func New(cfg Config) (*Core, error) {
 	binBytes, err := os.ReadFile(cfg.CircuitBinPath)
 	if err != nil {
@@ -39,6 +40,11 @@ func New(cfg Config) (*Core, error) {
 	elfBytes, err := os.ReadFile(cfg.GuestELFPath)
 	if err != nil {
 		return nil, fmt.Errorf("reading guest ELF %q: %w", cfg.GuestELFPath, err)
+	}
+
+	precomputed, entry, err := loadELFBlobs(elfBytes)
+	if err != nil {
+		return nil, fmt.Errorf("extracting ELF blobs: %w", err)
 	}
 
 	sys := wiop.NewSystemf("linea-riscv")
@@ -54,10 +60,11 @@ func New(cfg Config) (*Core, error) {
 	//   wiop.Materialize(sys)
 
 	return &Core{
-		cfg:    cfg,
-		sys:    sys,
-		driver: driver,
-		elf:    elfBytes,
+		cfg:      cfg,
+		sys:      sys,
+		driver:   driver,
+		elfBlobs: precomputed,
+		elfEntry: entry,
 	}, nil
 }
 
@@ -86,8 +93,11 @@ func (c *Core) Prove(ctx context.Context, job Job) Result {
 }
 
 // buildInputs converts a Job's Payload into the three ZkC pub-input blobs.
+// ELF blobs are pre-extracted in [New] and reused across calls; only the SSZ
+// blobs differ per job.
 func (c *Core) buildInputs(job Job) (map[string][]byte, error) {
-	return BuildZkcInputs(c.elf, decodePayload(job), c.cfg.inOrigin())
+	blobs := append(append([]memoryBlob{}, c.elfBlobs...), sszBlobs(c.cfg.inOrigin(), decodePayload(job))...)
+	return encodeInputs(blobs, c.elfEntry)
 }
 
 // runProve calls AssignWithPreRead, sys.Prove, and sys.Verify.
@@ -120,7 +130,7 @@ func EncodeStatelessInput(_ []byte) ([]byte, error) {
 // SerializeProof encodes a wiop.Proof into the wire bytes the coordinator
 // expects in the "proof" field of the response.
 //
-// Wire format not yet decided (backend-overview.md §6).
+// Wire format not yet decided (wiki backend-overview.md §6).
 func SerializeProof(_ wiop.Proof, _ wiop.PublicInput) ([]byte, error) {
 	return nil, fmt.Errorf("SerializeProof: %w", ErrNotImplemented)
 }
