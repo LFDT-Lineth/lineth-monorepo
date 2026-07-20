@@ -1,3 +1,8 @@
+## [unreleased]
+
+### ⚙️ Miscellaneous Tasks
+
+- *(misc)* Update jackson from 2.19.4 to 2.22.1 (#3595)
 ## [1.3.0] - 2026-07-14
 
 ### 🚀 Features
