@@ -27,7 +27,6 @@ import maru.p2p.messages.StatusManager
 import maru.p2p.testutils.NetworkUtil.findFreePort
 import maru.p2p.testutils.NetworkUtil.findFreePorts
 import maru.p2p.topics.BesuMessageDataSerDe
-import maru.serialization.rlp.RLPSerializers
 import org.apache.tuweni.bytes.Bytes
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatNoException
@@ -101,6 +100,11 @@ class P2PTest {
         beaconChain = beaconChain,
       )
     private val statusManager: StatusManager = StatusManager(beaconChain, forkIdHashManager)
+    private val blockHashing =
+      DataGenerators.testForkAwareBlockHashing(
+        chainId = chainId,
+        validatorSet = setOf(DataGenerators.randomValidator()),
+      )
 
     private fun inMemoryBeaconChainFromGenesis(
       genesisTimestampSeconds: ULong = 0UL,
@@ -135,7 +139,7 @@ class P2PTest {
           reputation = reputationConfig,
         ),
         chainId = chainId,
-        serDe = RLPSerializers.SealedBeaconBlockCompressorSerializer,
+        blockHashing = blockHashing,
         metricsFacade = TestMetrics.TestMetricsFacade,
         statusManager = statusManager,
         beaconChain = beaconChain,
@@ -409,7 +413,7 @@ class P2PTest {
     val expectedStatus =
       Status(
         forkIdHash = forkIdHashManager.currentForkHash(),
-        latestStateRoot = latestBeaconBlockHeader.hash,
+        latestStateRoot = latestBeaconBlockHeader.beaconBlockIdHash,
         latestBlockNumber = latestBeaconBlockHeader.number,
       )
     val peer1 =
@@ -822,7 +826,7 @@ class P2PTest {
     val beaconBlockHeader = mock<BeaconBlockHeader>()
     whenever(beaconChain.getLatestBeaconState()).thenReturn(beaconState)
     whenever(beaconState.beaconBlockHeader).thenReturn(beaconBlockHeader)
-    whenever(beaconBlockHeader.hash).thenReturn(ByteArray(32))
+    whenever(beaconBlockHeader.beaconBlockIdHash).thenReturn(ByteArray(32))
     whenever(beaconBlockHeader.number).thenReturn(0uL, 1uL, 2uL, 3uL, 4uL, 5uL)
 
     val statusManager = StatusManager(beaconChain, forkIdHashManager)

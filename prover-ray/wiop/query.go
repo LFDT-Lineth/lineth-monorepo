@@ -27,7 +27,7 @@ type Query interface {
 	Round() *Round
 	// Check verifies the query predicate against a concrete runtime assignment.
 	// Returns a non-nil error if the predicate does not hold.
-	Check(Runtime) error
+	Check(*Runtime) error
 	// IsReduced reports whether a compiler pass has already consumed and
 	// rewritten this query into a simpler form.
 	IsReduced() bool
@@ -59,10 +59,10 @@ type AssignableQuery interface {
 	Query
 	// IsAlreadyAssigned reports whether the query's result cells already hold
 	// an assignment in the given runtime.
-	IsAlreadyAssigned(Runtime) bool
+	IsAlreadyAssigned(*Runtime) bool
 	// SelfAssign evaluates the query predicate and writes the result into the
 	// query's result cells in the given runtime.
-	SelfAssign(Runtime)
+	SelfAssign(*Runtime)
 }
 
 // baseQuery is an internal helper struct that provides the boilerplate fields

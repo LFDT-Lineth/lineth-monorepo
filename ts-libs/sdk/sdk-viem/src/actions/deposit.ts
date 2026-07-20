@@ -42,6 +42,13 @@ import {
 } from "viem/actions";
 import { parseAccount } from "viem/utils";
 
+import {
+  BRIDGED_TO_NATIVE_TOKEN_ABI,
+  BRIDGE_TOKEN_ABI,
+  CLAIM_MESSAGE_ABI,
+  COMPLETE_BRIDGING_ABI,
+  SEND_MESSAGE_ABI,
+} from "../abis";
 import { AccountNotFoundError, AccountNotFoundErrorType } from "../errors/account";
 import { GetAccountParameter } from "../types/account";
 import { computeMessageHash } from "../utils/computeMessageHash";
@@ -242,23 +249,7 @@ async function estimateEthBridgingGasUsed<chain extends Chain | undefined, _acco
 
   return estimateContractGas(client, {
     address: l2MessageServiceAddress,
-    abi: [
-      {
-        inputs: [
-          { internalType: "address", name: "_from", type: "address" },
-          { internalType: "address", name: "_to", type: "address" },
-          { internalType: "uint256", name: "_fee", type: "uint256" },
-          { internalType: "uint256", name: "_value", type: "uint256" },
-          { internalType: "address payable", name: "_feeRecipient", type: "address" },
-          { internalType: "bytes", name: "_calldata", type: "bytes" },
-          { internalType: "uint256", name: "_nonce", type: "uint256" },
-        ],
-        name: "claimMessage",
-        outputs: [],
-        stateMutability: "nonpayable",
-        type: "function",
-      },
-    ] as const,
+    abi: CLAIM_MESSAGE_ABI,
     functionName: "claimMessage",
     account: account as `0x${string}`,
     args: [account, recipient, 0n, amount, zeroAddress as `0x${string}`, "0x" as `0x${string}`, nextMessageNonce],
@@ -308,41 +299,7 @@ async function estimateERC20BridgingGasUsed<
   });
 
   const encodedData = encodeFunctionData({
-    abi: [
-      {
-        inputs: [
-          {
-            internalType: "address",
-            name: "_nativeToken",
-            type: "address",
-          },
-          {
-            internalType: "uint256",
-            name: "_amount",
-            type: "uint256",
-          },
-          {
-            internalType: "address",
-            name: "_recipient",
-            type: "address",
-          },
-          {
-            internalType: "uint256",
-            name: "_chainId",
-            type: "uint256",
-          },
-          {
-            internalType: "bytes",
-            name: "_tokenMetadata",
-            type: "bytes",
-          },
-        ],
-        name: "completeBridging",
-        outputs: [],
-        stateMutability: "nonpayable",
-        type: "function",
-      },
-    ],
+    abi: COMPLETE_BRIDGING_ABI,
     functionName: "completeBridging",
     args: [tokenAddress, amount, recipient, BigInt(chainId), tokenMetadata],
   });
@@ -361,23 +318,7 @@ async function estimateERC20BridgingGasUsed<
 
   return estimateContractGas(client, {
     address: l2MessageServiceAddress,
-    abi: [
-      {
-        inputs: [
-          { internalType: "address", name: "_from", type: "address" },
-          { internalType: "address", name: "_to", type: "address" },
-          { internalType: "uint256", name: "_fee", type: "uint256" },
-          { internalType: "uint256", name: "_value", type: "uint256" },
-          { internalType: "address payable", name: "_feeRecipient", type: "address" },
-          { internalType: "bytes", name: "_calldata", type: "bytes" },
-          { internalType: "uint256", name: "_nonce", type: "uint256" },
-        ],
-        name: "claimMessage",
-        outputs: [],
-        stateMutability: "nonpayable",
-        type: "function",
-      },
-    ] as const,
+    abi: CLAIM_MESSAGE_ABI,
     functionName: "claimMessage",
     account: account,
     args: [l1TokenBridgeAddress, l2TokenBridgeAddress, 0n, 0n, zeroAddress, encodedData, nextMessageNonce],
@@ -414,27 +355,7 @@ async function prepareERC20TokenParams<chain extends Chain | undefined, _account
       },
       {
         address: getContractsAddressesByChainId(l1ChainId).tokenBridge,
-        abi: [
-          {
-            inputs: [
-              {
-                internalType: "address",
-                name: "bridged",
-                type: "address",
-              },
-            ],
-            name: "bridgedToNativeToken",
-            outputs: [
-              {
-                internalType: "address",
-                name: "native",
-                type: "address",
-              },
-            ],
-            stateMutability: "view",
-            type: "function",
-          },
-        ],
+        abi: BRIDGED_TO_NATIVE_TOKEN_ABI,
         functionName: "bridgedToNativeToken",
         args: [token],
       },
@@ -562,19 +483,7 @@ async function depositETH<
     value: amount + bridgingFee,
     account: account_,
     data: encodeFunctionData({
-      abi: [
-        {
-          inputs: [
-            { internalType: "address", name: "_to", type: "address" },
-            { internalType: "uint256", name: "_fee", type: "uint256" },
-            { internalType: "bytes", name: "_calldata", type: "bytes" },
-          ],
-          name: "sendMessage",
-          outputs: [],
-          stateMutability: "payable",
-          type: "function",
-        },
-      ],
+      abi: SEND_MESSAGE_ABI,
       functionName: "sendMessage",
       args: [to, bridgingFee, data],
     }),
@@ -698,31 +607,7 @@ async function depositERC20<
     value: bridgingFee,
     account: account,
     data: encodeFunctionData({
-      abi: [
-        {
-          inputs: [
-            {
-              internalType: "address",
-              name: "_token",
-              type: "address",
-            },
-            {
-              internalType: "uint256",
-              name: "_amount",
-              type: "uint256",
-            },
-            {
-              internalType: "address",
-              name: "_recipient",
-              type: "address",
-            },
-          ],
-          name: "bridgeToken",
-          outputs: [],
-          stateMutability: "payable",
-          type: "function",
-        },
-      ],
+      abi: BRIDGE_TOKEN_ABI,
       functionName: "bridgeToken",
       args: [token, amount, to],
     }),

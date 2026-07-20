@@ -35,8 +35,10 @@ export const ConfigSchema = z.object({
     maxTopicsPerPoll: z.number().int().positive("Max topics per poll must be positive"),
   }),
   anthropic: z.object({
-    // Authentication key for the Anthropic Claude API
+    // LiteLLM virtual key used to authenticate against the LiteLLM proxy
     apiKey: NonEmptyString("Anthropic API key is required"),
+    // Optional LiteLLM proxy base URL
+    baseUrl: NonEmptyUrl("Invalid LiteLLM/Anthropic base URL").optional(),
     // Claude model ID used for proposal risk analysis
     model: NonEmptyString("Model name is required"),
     // Maximum tokens Claude can generate per analysis response
@@ -93,6 +95,7 @@ export function loadConfigFromEnv(env: Record<string, string | undefined>): Conf
     },
     anthropic: {
       apiKey: env.ANTHROPIC_API_KEY ?? "",
+      baseUrl: env.ANTHROPIC_BASE_URL,
       model: env.CLAUDE_MODEL ?? "claude-sonnet-4-20250514",
       maxOutputTokens: parseInt(env.ANTHROPIC_MAX_OUTPUT_TOKENS ?? "4096", 10),
       maxProposalChars: parseInt(env.ANTHROPIC_MAX_PROPOSAL_CHARS ?? "700000", 10),

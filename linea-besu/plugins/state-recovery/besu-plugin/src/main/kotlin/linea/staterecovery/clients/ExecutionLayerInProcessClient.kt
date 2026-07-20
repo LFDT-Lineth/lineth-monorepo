@@ -10,6 +10,8 @@ import linea.staterecovery.StateRecoveryStatus
 import linea.staterecovery.plugin.BlockImporter
 import linea.staterecovery.plugin.RecoveryModeManager
 import org.apache.logging.log4j.LogManager
+import org.apache.tuweni.bytes.Bytes32
+import org.hyperledger.besu.datatypes.Hash
 import org.hyperledger.besu.plugin.data.BlockHeader
 import org.hyperledger.besu.plugin.services.BlockSimulationService
 import org.hyperledger.besu.plugin.services.BlockchainService
@@ -64,8 +66,13 @@ class ExecutionLayerInProcessClient(
 
         is BlockParameter.BlockNumber ->
           blockchainService
-            .getBlockByNumber(blockParameter.getNumber().toLong())
+            .getBlockByNumber(blockParameter.number.toLong())
             .map { it.blockHeader }
+            .getOrNull()
+
+        is BlockParameter.BlockHash ->
+          blockchainService
+            .getBlockHeaderByHash(Hash.wrap(Bytes32.wrap(blockParameter.hashBytes)))
             .getOrNull()
       }
 

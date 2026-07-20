@@ -24,7 +24,7 @@ class StatusManager(
     val statusPayload =
       Status(
         forkIdHash = forkIdHashManager.currentForkHash(),
-        latestStateRoot = latestBeaconBlockHeader.hash,
+        latestStateRoot = latestBeaconBlockHeader.beaconBlockIdHash,
         latestBlockNumber = latestBeaconBlockHeader.number,
       )
     val statusMessage =

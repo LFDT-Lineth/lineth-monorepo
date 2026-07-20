@@ -10,6 +10,7 @@ import {
 import {
   generateRoleAssignments,
   getAddressesFromRegistryOrEnv,
+  getBooleanEnvVarOrDefault,
   getEnvVarOrDefault,
   requireAddressFromRegistryOrEnv,
   tryVerifyContract,
@@ -29,6 +30,7 @@ const func: DeployFunction = withSignerUiSession(
   async function (hre: HardhatRuntimeEnvironment) {
     const signer = await getUiSigner(hre);
     const contractName = "TokenBridge";
+    const deployTokenBridgeOnL1 = getBooleanEnvVarOrDefault("DEPLOY_TOKEN_BRIDGE_ON_L1", false);
 
     const l2MessageServiceAddress = requireAddressFromRegistryOrEnv(
       network.name,
@@ -54,7 +56,7 @@ const func: DeployFunction = withSignerUiSession(
     let deployingChainMessageService = l2MessageServiceAddress;
     let reservedAddresses: string[];
 
-    if (process.env.DEPLOY_TOKEN_BRIDGE_ON_L1 === "true") {
+    if (deployTokenBridgeOnL1) {
       securityCouncilAddress = requireAddressFromRegistryOrEnv(
         network.name,
         "L1_SECURITY_COUNCIL",
@@ -128,7 +130,7 @@ const func: DeployFunction = withSignerUiSession(
 
     const tokenBridgeAddress = await tokenBridge.getAddress();
 
-    if (process.env.DEPLOY_TOKEN_BRIDGE_ON_L1 === "true") {
+    if (deployTokenBridgeOnL1) {
       console.log(`L1 TokenBridge deployed on ${network.name}, at address: ${tokenBridgeAddress}`);
     } else {
       console.log(`L2 TokenBridge deployed on ${network.name}, at address: ${tokenBridgeAddress}`);

@@ -15,7 +15,6 @@ java {
 
 kotlin {
   compilerOptions {
-    freeCompilerArgs.add("-Xannotation-default-target=param-property")
     sourceSets.configureEach {
       languageSettings.optIn("kotlin.time.ExperimentalTime")
     }

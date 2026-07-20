@@ -52,6 +52,14 @@
 - Linea Tokens Audit Report: [https://github.com/Cyfrin/cyfrin-audit-reports/blob/b9aace5911e3ff84488cb5199cfd28e7fe24d6aa/reports/2025-09-10-cyfrin-linea-tokens-v2.5.pdf](https://github.com/Cyfrin/cyfrin-audit-reports/blob/b9aace5911e3ff84488cb5199cfd28e7fe24d6aa/reports/2025-09-10-cyfrin-linea-tokens-v2.5.pdf)
 
 ---
+## Linea Rollup, L2MessageService and TokenBridge Smart Contract Audits
+### Eighth Audit Round
+#### Forced Transactions
+**Diligence**
+- Linea Forced Transactions - [https://diligence.security/audits/2026/02/linea-forced-transactions/](https://diligence.security/audits/2026/02/linea-forced-transactions/)
+
+**Cyfrin**
+- Linea Forced Transactions - [https://github.com/Cyfrin/cyfrin-audit-reports/blob/9397aab67a15854b08eb302722cdebf5ddb3ac3f/reports/2026-06-18-cyfrin-linea-forced-txns-v2.0.pdf](https://github.com/Cyfrin/cyfrin-audit-reports/blob/9397aab67a15854b08eb302722cdebf5ddb3ac3f/reports/2026-06-18-cyfrin-linea-forced-txns-v2.0.pdf)
 
 ## Linea Rollup, L2MessageService and TokenBridge Smart Contract Audits
 ### Seventh Audit Round
