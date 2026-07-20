@@ -132,6 +132,16 @@ tasks.register('checkCoordinatorConfigDocs', JavaExec) {
   mainClass = 'linea.coordinator.config.v2.docs.ConfigDocCheckMain'
 }
 
+// Regenerates the committed Coordinator config documentation artifacts from the TOML schema.
+// Working directory is the repo root so the default output paths resolve.
+tasks.register('generateCoordinatorConfigDocs', JavaExec) {
+  group = 'documentation'
+  description = 'Generates the Coordinator config JSON schema snapshot (and reference docs).'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'linea.coordinator.config.v2.docs.ConfigDocsGenerateMain'
+  workingDir = rootProject.projectDir
+}
+
 run {
   workingDir = rootProject.projectDir
   jvmArgs = [
