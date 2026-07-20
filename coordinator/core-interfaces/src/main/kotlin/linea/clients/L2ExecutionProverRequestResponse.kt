@@ -1,0 +1,364 @@
+package linea.clients
+
+import linea.domain.BlockInterval
+import linea.domain.StartBlockTimestampProvider
+import linea.ethapi.ExecutionWitness
+import linea.forcedtx.ForcedTransactionInclusionResult
+import linea.kotlin.byteArrayListEquals
+import linea.kotlin.byteArrayListHashCode
+import java.math.BigInteger
+import kotlin.time.Instant
+
+data class ExecutionInfo(
+  val blockNumber: ULong,
+  val executionPayload: ExecutionPayload,
+  val executionWitness: ExecutionWitness,
+  val executionRequests: List<ByteArray>,
+  val forcedTransactions: List<ForcedTransaction>,
+) {
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as ExecutionInfo
+
+    if (blockNumber != other.blockNumber) return false
+    if (executionPayload != other.executionPayload) return false
+    if (executionWitness != other.executionWitness) return false
+    if (!executionRequests.byteArrayListEquals(other.executionRequests)) return false
+    if (forcedTransactions != other.forcedTransactions) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = blockNumber.hashCode()
+    result = 31 * result + executionPayload.hashCode()
+    result = 31 * result + executionWitness.hashCode()
+    result = 31 * result + executionRequests.byteArrayListHashCode()
+    result = 31 * result + forcedTransactions.hashCode()
+    return result
+  }
+}
+
+data class L2ExecutionProofRequestV1(
+  val executions: List<ExecutionInfo>,
+  val chainConfig: ChainConfig,
+  val parentFtxRollingHash: ByteArray,
+  val parentFtxNumber: ULong,
+) : BlockInterval, StartBlockTimestampProvider {
+  init {
+    require(executions.isNotEmpty()) { "executions must not be empty" }
+    require(
+      executions.zipWithNext().all { (current, next) ->
+        next.blockNumber == current.blockNumber + 1UL
+      },
+    ) {
+      "executions must be sorted ascending and consecutive"
+    }
+  }
+
+  override val startBlockNumber: ULong
+    get() = executions.first().blockNumber
+  override val endBlockNumber: ULong
+    get() = executions.last().blockNumber
+  override val startBlockTimestamp: Instant
+    get() = Instant.fromEpochSeconds(executions.first().executionPayload.timestamp.toLong())
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as L2ExecutionProofRequestV1
+
+    if (executions != other.executions) return false
+    if (chainConfig != other.chainConfig) return false
+    if (!parentFtxRollingHash.contentEquals(other.parentFtxRollingHash)) return false
+    if (parentFtxNumber != other.parentFtxNumber) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = executions.hashCode()
+    result = 31 * result + chainConfig.hashCode()
+    result = 31 * result + parentFtxRollingHash.contentHashCode()
+    result = 31 * result + parentFtxNumber.hashCode()
+    return result
+  }
+}
+
+data class ForcedTransaction(
+  val ftxNumber: ULong,
+  val deadlineBlockNumber: ULong,
+  val signedTxRlp: ByteArray,
+  val acceptance: ForcedTransactionInclusionResult,
+) {
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as ForcedTransaction
+
+    if (ftxNumber != other.ftxNumber) return false
+    if (deadlineBlockNumber != other.deadlineBlockNumber) return false
+    if (!signedTxRlp.contentEquals(other.signedTxRlp)) return false
+    if (acceptance != other.acceptance) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = ftxNumber.hashCode()
+    result = 31 * result + deadlineBlockNumber.hashCode()
+    result = 31 * result + signedTxRlp.contentHashCode()
+    result = 31 * result + acceptance.hashCode()
+    return result
+  }
+}
+
+// References StatelessChainConfig in rollup_spec/src/rollup_spec/block.py
+data class ChainConfig(
+  val chainId: ULong,
+  val forkName: String,
+) {
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as ChainConfig
+
+    if (chainId != other.chainId) return false
+    if (forkName != other.forkName) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = chainId.hashCode()
+    result = 31 * result + forkName.hashCode()
+    return result
+  }
+}
+
+data class Withdrawal(
+  val index: ULong,
+  val validatorIndex: ULong,
+  val address: ByteArray,
+  val amount: ULong,
+) {
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as Withdrawal
+
+    if (index != other.index) return false
+    if (validatorIndex != other.validatorIndex) return false
+    if (!address.contentEquals(other.address)) return false
+    if (amount != other.amount) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = index.hashCode()
+    result = 31 * result + validatorIndex.hashCode()
+    result = 31 * result + address.contentHashCode()
+    result = 31 * result + amount.hashCode()
+    return result
+  }
+}
+
+/**
+ * Execution PayLoad V4 (Payload V3 + blockAccessList) for the Engine API and Beacon Block
+ * Should retrieve by using eth_getBlockByNumber/eth_getBlockByHash or debug_getRawBlock
+ */
+data class ExecutionPayload(
+  val parentHash: ByteArray,
+  val feeRecipient: ByteArray,
+  val stateRoot: ByteArray,
+  val receiptsRoot: ByteArray,
+  val logsBloom: ByteArray,
+  val prevRandao: ByteArray,
+  val blockNumber: ULong,
+  val gasLimit: ULong,
+  val gasUsed: ULong,
+  val timestamp: ULong,
+  val extraData: ByteArray,
+  val baseFeePerGas: BigInteger,
+  val blockHash: ByteArray,
+  val transactions: List<ByteArray>,
+  val withdrawals: List<Withdrawal>,
+  val blobGasUsed: ULong,
+  val excessBlobGas: ULong,
+  val blockAccessList: ByteArray,
+) {
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as ExecutionPayload
+
+    if (!parentHash.contentEquals(other.parentHash)) return false
+    if (!feeRecipient.contentEquals(other.feeRecipient)) return false
+    if (!stateRoot.contentEquals(other.stateRoot)) return false
+    if (!receiptsRoot.contentEquals(other.receiptsRoot)) return false
+    if (!logsBloom.contentEquals(other.logsBloom)) return false
+    if (!prevRandao.contentEquals(other.prevRandao)) return false
+    if (blockNumber != other.blockNumber) return false
+    if (gasLimit != other.gasLimit) return false
+    if (gasUsed != other.gasUsed) return false
+    if (timestamp != other.timestamp) return false
+    if (!extraData.contentEquals(other.extraData)) return false
+    if (baseFeePerGas != other.baseFeePerGas) return false
+    if (!blockHash.contentEquals(other.blockHash)) return false
+    if (!transactions.byteArrayListEquals(other.transactions)) return false
+    if (withdrawals != other.withdrawals) return false
+    if (blobGasUsed != other.blobGasUsed) return false
+    if (excessBlobGas != other.excessBlobGas) return false
+    if (!blockAccessList.contentEquals(other.blockAccessList)) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = parentHash.contentHashCode()
+    result = 31 * result + feeRecipient.contentHashCode()
+    result = 31 * result + stateRoot.contentHashCode()
+    result = 31 * result + receiptsRoot.contentHashCode()
+    result = 31 * result + logsBloom.contentHashCode()
+    result = 31 * result + prevRandao.contentHashCode()
+    result = 31 * result + blockNumber.hashCode()
+    result = 31 * result + gasLimit.hashCode()
+    result = 31 * result + gasUsed.hashCode()
+    result = 31 * result + timestamp.hashCode()
+    result = 31 * result + extraData.contentHashCode()
+    result = 31 * result + baseFeePerGas.hashCode()
+    result = 31 * result + blockHash.contentHashCode()
+    result = 31 * result + transactions.byteArrayListHashCode()
+    result = 31 * result + withdrawals.hashCode()
+    result = 31 * result + blobGasUsed.hashCode()
+    result = 31 * result + excessBlobGas.hashCode()
+    result = 31 * result + blockAccessList.contentHashCode()
+    return result
+  }
+}
+
+/**
+ * The 15-field PI tuple emitted by an l2-execution proof (rollup_spec §2.1).
+ *
+ * Domain twin of `linea.coordinator.clients.prover.riscv.ExecutionPublicInputsDto`. Kept here (rather than reusing
+ * the DTO) because this module is depended upon by the prover-client modules, not the other way around. Field names
+ * and types are identical to the DTO so the DTO -> domain mapping is a straight field copy.
+ */
+data class L2ExecutionProofPublicInputs(
+  val parentBlockHash: ByteArray,
+  val endBlockHash: ByteArray,
+  val endBlockNumber: ULong,
+  val endBlockTimestamp: Instant,
+  val l2L1MessagesHash: ByteArray,
+  val parentL1L2BridgeRollingHash: ByteArray,
+  val parentL1L2BridgeRollingHashMessageNumber: ULong,
+  val endL1L2BridgeRollingHash: ByteArray,
+  val endL1L2BridgeRollingHashMessageNumber: ULong,
+  val dynamicChainConfigHash: ByteArray,
+  val parentFtxRollingHash: ByteArray,
+  val parentFtxNumber: ULong,
+  val endFtxRollingHash: ByteArray,
+  val endFtxNumber: ULong,
+  val filteredAddressesHash: ByteArray,
+  val txFromsHash: ByteArray,
+) {
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as L2ExecutionProofPublicInputs
+
+    if (!parentBlockHash.contentEquals(other.parentBlockHash)) return false
+    if (!endBlockHash.contentEquals(other.endBlockHash)) return false
+    if (endBlockNumber != other.endBlockNumber) return false
+    if (endBlockTimestamp != other.endBlockTimestamp) return false
+    if (!l2L1MessagesHash.contentEquals(other.l2L1MessagesHash)) return false
+    if (!parentL1L2BridgeRollingHash.contentEquals(other.parentL1L2BridgeRollingHash)) return false
+    if (parentL1L2BridgeRollingHashMessageNumber != other.parentL1L2BridgeRollingHashMessageNumber) return false
+    if (!endL1L2BridgeRollingHash.contentEquals(other.endL1L2BridgeRollingHash)) return false
+    if (endL1L2BridgeRollingHashMessageNumber != other.endL1L2BridgeRollingHashMessageNumber) return false
+    if (!dynamicChainConfigHash.contentEquals(other.dynamicChainConfigHash)) return false
+    if (!parentFtxRollingHash.contentEquals(other.parentFtxRollingHash)) return false
+    if (parentFtxNumber != other.parentFtxNumber) return false
+    if (!endFtxRollingHash.contentEquals(other.endFtxRollingHash)) return false
+    if (endFtxNumber != other.endFtxNumber) return false
+    if (!filteredAddressesHash.contentEquals(other.filteredAddressesHash)) return false
+    if (!txFromsHash.contentEquals(other.txFromsHash)) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = parentBlockHash.contentHashCode()
+    result = 31 * result + endBlockHash.contentHashCode()
+    result = 31 * result + endBlockNumber.hashCode()
+    result = 31 * result + endBlockTimestamp.hashCode()
+    result = 31 * result + l2L1MessagesHash.contentHashCode()
+    result = 31 * result + parentL1L2BridgeRollingHash.contentHashCode()
+    result = 31 * result + parentL1L2BridgeRollingHashMessageNumber.hashCode()
+    result = 31 * result + endL1L2BridgeRollingHash.contentHashCode()
+    result = 31 * result + endL1L2BridgeRollingHashMessageNumber.hashCode()
+    result = 31 * result + dynamicChainConfigHash.contentHashCode()
+    result = 31 * result + parentFtxRollingHash.contentHashCode()
+    result = 31 * result + parentFtxNumber.hashCode()
+    result = 31 * result + endFtxRollingHash.contentHashCode()
+    result = 31 * result + endFtxNumber.hashCode()
+    result = 31 * result + filteredAddressesHash.contentHashCode()
+    result = 31 * result + txFromsHash.contentHashCode()
+    return result
+  }
+}
+
+/**
+ * Response of a l2-execution proof.
+ *
+ * Mirrors `linea.coordinator.clients.prover.riscv.L2ExecutionProofResponseDto` field-for-field so that a proof
+ * response — whether read from a JSON file or returned by a REST endpoint — deserializes into the DTO and maps
+ * directly onto this domain type.
+ */
+data class L2ExecutionProofResponseV1(
+  override val startBlockNumber: ULong,
+  override val endBlockNumber: ULong,
+  val proof: ByteArray,
+  val publicInputs: L2ExecutionProofPublicInputs,
+  val l2L1Messages: List<ByteArray>,
+  val txFroms: List<ByteArray>,
+  val filteredAddresses: List<ByteArray>,
+
+) : BlockInterval {
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as L2ExecutionProofResponseV1
+
+    if (startBlockNumber != other.startBlockNumber) return false
+    if (endBlockNumber != other.endBlockNumber) return false
+    if (!proof.contentEquals(other.proof)) return false
+    if (publicInputs != other.publicInputs) return false
+    if (!l2L1Messages.byteArrayListEquals(other.l2L1Messages)) return false
+    if (!txFroms.byteArrayListEquals(other.txFroms)) return false
+    if (!filteredAddresses.byteArrayListEquals(other.filteredAddresses)) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = startBlockNumber.hashCode()
+    result = 31 * result + endBlockNumber.hashCode()
+    result = 31 * result + proof.contentHashCode()
+    result = 31 * result + publicInputs.hashCode()
+    result = 31 * result + l2L1Messages.byteArrayListHashCode()
+    result = 31 * result + txFroms.byteArrayListHashCode()
+    result = 31 * result + filteredAddresses.byteArrayListHashCode()
+    return result
+  }
+}

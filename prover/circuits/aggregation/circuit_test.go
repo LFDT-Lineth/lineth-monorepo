@@ -109,12 +109,31 @@ func TestAggregationFewDifferentInners(t *testing.T) {
 	testAggregation(t, 3, 2, 6, 10)
 }
 
+// A sub-proof whose circuit ID is not set in the mask must make the aggregation
+// circuit unsatisfiable. Claims use IDs {0,1}; mask 0b10 disallows ID 0.
+func TestAggregationAllowlistRejectsDisallowedCircuit(t *testing.T) {
+	runAggregation(t, 0b10, true, 2, 5)
+}
+
+// A non-all-ones mask that still permits every ID in use must solve. Claims use
+// IDs {0,1}; mask 0b011 permits them and clears unused bit 2.
+func TestAggregationAllowlistAcceptsWithRestrictiveMask(t *testing.T) {
+	runAggregation(t, 0b011, false, 3, 5)
+}
+
 // It generates subCircuits (exec/decomp/invalidity) and interconnection proofs to be aggregated.
 //
 //	nbVerifyingKey and maxNbProofs are parameters for the subCircuits (exec/decomp/invalidity).
 //
 // To generate the proofs based on the same SRS, replace the occurrence of circuits.MockCircuitID() with circuits.MockCircuitID(0).
 func testAggregation(t *testing.T, nbVerifyingKey int, maxNbProofs ...int) {
+	// Allow-all bitmask: every circuit ID used in the test is permitted.
+	runAggregation(t, (1<<nbVerifyingKey)-1, false, nbVerifyingKey, maxNbProofs...)
+}
+
+// runAggregation checks the aggregation circuit with the given IsAllowedCircuitID
+// mask. expectSolveErr asserts the allow-list gate rejects the witness.
+func runAggregation(t *testing.T, isAllowedMask int, expectSolveErr bool, nbVerifyingKey int, maxNbProofs ...int) {
 
 	// Mock circuits (exec, comp,invalidity) to aggregate
 	var innerSetups []circuits.Setup
@@ -208,9 +227,6 @@ func testAggregation(t *testing.T, nbVerifyingKey int, maxNbProofs ...int) {
 		decompPI := utils.RightPad(innerPiPartition[typeDecomp], len(piCircuit.DecompressionPublicInput))
 		invalPI := utils.RightPad(innerPiPartition[typeInval], len(piCircuit.InvalidityPublicInput))
 
-		// Set IsAllowedCircuitID bitmask to allow all circuit IDs used in the test.
-		isAllowedMask := (1 << nbVerifyingKey) - 1
-
 		piAssignment := pi_interconnection.DummyCircuit{
 			AggregationPublicInput:   [2]frontend.Variable{aggregationPIBytes[:16], aggregationPIBytes[16:]},
 			ExecutionPublicInput:     utils.ToVariableSlice(execPI),
@@ -248,7 +264,12 @@ func testAggregation(t *testing.T, nbVerifyingKey int, maxNbProofs ...int) {
 		aggrAssignment, err := aggregation.AssignAggregationCircuit(nc, innerProofClaims, piInfo, aggregationPI)
 		assert.NoError(t, err)
 
-		assert.NoError(t, test.IsSolved(aggrCircuit, aggrAssignment, ecc.BW6_761.ScalarField()))
+		solveErr := test.IsSolved(aggrCircuit, aggrAssignment, ecc.BW6_761.ScalarField())
+		if expectSolveErr {
+			assert.Error(t, solveErr, "allow-list gate should reject a disallowed circuit ID")
+		} else {
+			assert.NoError(t, solveErr)
+		}
 	}
 
 }

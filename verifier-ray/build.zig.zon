@@ -3,7 +3,12 @@
     .fingerprint = 0xd1f807a3b6cefe12,
     .version = "0.1.0",
     .minimum_zig_version = "0.16.0",
-    .dependencies = .{},
+    .dependencies = .{
+        // shared build utilities for Zig build to R5 target
+        .build_common = .{ .path = "../riscv-guests/build_common" },
+        // Linea zkVM accelerator wrappers — used by the R5 entry point (main.zig) for zkvm_exit and precompile acceleration. Only used when building for the R5 target.
+        .lineth_accelerators = .{ .path = "../riscv-guests/lineth-accelerators" },
+    },
     .paths = .{
         "README.md",
         "build.zig",

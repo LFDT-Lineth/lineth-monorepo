@@ -54,7 +54,7 @@ modules = [
     {module = "BIN", limit = 262144, limit_large = 524288},
     {module = "BLAKE2FMODEXPDATA", limit = 16384, limit_large = 32768},
     {module = "BLOCKDATA", limit = 4096, limit_large = 8192},
-    {module = "BLOCKHASH", limit = 2048, limit_large = 4096},
+    {module = "BLOCKHASH", limit = 4096, limit_large = 8192},
     {module = "ECDATA", limit = 65536, limit_large = 131072},
     {module = "EUC", limit = 65536, limit_large = 131072},
     {module = "EXP", limit = 65536, limit_large = 131072},

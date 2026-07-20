@@ -16,6 +16,7 @@ import io.vertx.micrometer.MicrometerMetricsOptions
 import io.vertx.micrometer.backends.BackendRegistries
 import linea.contract.l1.LinethRollupSmartContractClientReadOnly
 import linea.contract.l1.Web3JLinethRollupSmartContractClientReadOnly
+import linea.ethapi.EthLogsSearcherImpl
 import linea.kotlin.encodeHex
 import linea.timer.JvmTimerFactory
 import linea.timer.TimerFactory
@@ -36,7 +37,6 @@ import maru.consensus.StaticValidatorProvider
 import maru.consensus.blockimport.ElForkAwareBlockImporter
 import maru.consensus.state.FinalizationProvider
 import maru.consensus.state.InstantFinalizationProvider
-import maru.core.SealedBeaconBlock
 import maru.database.BeaconChain
 import maru.database.P2PState
 import maru.database.kv.KvDatabaseFactory
@@ -55,8 +55,7 @@ import maru.p2p.P2PPeersHeadBlockProvider
 import maru.p2p.fork.ForkPeeringManager
 import maru.p2p.fork.LenientForkPeeringManager
 import maru.p2p.messages.StatusManager
-import maru.serialization.SerDe
-import maru.serialization.rlp.RLPSerializers
+import maru.serialization.rlp.ForkAwareBlockHashing
 import maru.services.LongRunningService
 import maru.services.NoOpLongRunningService
 import maru.syncing.AlwaysSyncedController
@@ -98,7 +97,7 @@ interface MaruAppFactoryCreator {
       ByteArray,
       P2PConfig,
       UInt,
-      SerDe<SealedBeaconBlock>,
+      ForkAwareBlockHashing,
       MetricsFacade,
       BesuMetricsSystem,
       StatusManager,
@@ -126,7 +125,7 @@ class MaruAppFactory : MaruAppFactoryCreator {
       ByteArray,
       P2PConfig,
       UInt,
-      SerDe<SealedBeaconBlock>,
+      ForkAwareBlockHashing,
       MetricsFacade,
       BesuMetricsSystem,
       StatusManager,
@@ -146,6 +145,8 @@ class MaruAppFactory : MaruAppFactoryCreator {
       }
 
     checkL2EthApiEndpointAndForks(clock, beaconGenesisConfig, l2EthWeb3j)
+
+    val blockHashing = ForkAwareBlockHashing(beaconGenesisConfig)
 
     config.persistence.dataPath.createDirectories()
     val privateKey = getOrGeneratePrivateKey(config.persistence.privateKeyPath)
@@ -179,8 +180,9 @@ class MaruAppFactory : MaruAppFactoryCreator {
           databasePath = config.persistence.dataPath,
           metricsSystem = besuMetricsSystemAdapter,
           metricCategory = BesuMetricsCategoryAdapter.from(MaruMetricsCategory.STORAGE),
+          blockHashing = blockHashing,
         ).also {
-          dbInitialization(beaconGenesisConfig, it)
+          dbInitialization(beaconGenesisConfig, it, blockHashing)
         }
 
     val qbftFork = beaconGenesisConfig.getForkByConfigType(QbftConsensusConfig::class)
@@ -214,6 +216,7 @@ class MaruAppFactory : MaruAppFactoryCreator {
     val p2pNetwork =
       overridingP2PNetwork ?: setupP2PNetwork(
         forkSchedule = beaconGenesisConfig,
+        blockHashing = blockHashing,
         p2pConfig = config.p2p,
         privateKey = privateKey,
         chainId = beaconGenesisConfig.chainId,
@@ -298,6 +301,7 @@ class MaruAppFactory : MaruAppFactoryCreator {
         ),
         allowEmptyBlocks = config.allowEmptyBlocks,
         timerFactory = timerFactory,
+        blockHashing = blockHashing,
       )
     } else {
       AlwaysSyncedController(kvDatabase)
@@ -339,6 +343,7 @@ class MaruAppFactory : MaruAppFactoryCreator {
       apiServer = apiServer,
       syncControllerManager = syncControllerImpl,
       timerFactory = timerFactory,
+      blockHashing = blockHashing,
     )
   }
 
@@ -371,9 +376,12 @@ class MaruAppFactory : MaruAppFactoryCreator {
               ?: Web3JLinethRollupSmartContractClientReadOnly(
                 web3j = web3jClient,
                 contractAddress = lineaConfig.contractAddress.encodeHex(),
-                ethLogsClient = createEthApiClient(
-                  web3jClient = web3jClient,
+                ethLogsSearcher = EthLogsSearcherImpl(
                   vertx = vertx,
+                  ethApiClient = createEthApiClient(
+                    web3jClient = web3jClient,
+                    vertx = vertx,
+                  ),
                 ),
                 log = LogManager.getLogger("maru.clients.l1.linea"),
               )
@@ -396,6 +404,7 @@ class MaruAppFactory : MaruAppFactoryCreator {
 
     private fun setupP2PNetwork(
       forkSchedule: ForksSchedule,
+      blockHashing: ForkAwareBlockHashing,
       p2pConfig: P2PConfig?,
       privateKey: ByteArray,
       chainId: UInt,
@@ -410,7 +419,7 @@ class MaruAppFactory : MaruAppFactoryCreator {
         ByteArray,
         P2PConfig,
         UInt,
-        SerDe<SealedBeaconBlock>,
+        ForkAwareBlockHashing,
         MetricsFacade,
         BesuMetricsSystem,
         StatusManager,
@@ -444,7 +453,7 @@ class MaruAppFactory : MaruAppFactoryCreator {
           ).also { log.info("using p2p ip={}", it) }
           .let { p2pConfig.copy(ipAddress = it) },
         chainId,
-        RLPSerializers.SealedBeaconBlockCompressorSerializer,
+        blockHashing,
         metricsFacade,
         besuMetricsSystem,
         statusManager,
@@ -493,11 +502,13 @@ class MaruAppFactory : MaruAppFactoryCreator {
   private fun dbInitialization(
     beaconGenesisConfig: ForksSchedule,
     beaconChain: BeaconChain,
+    blockHashing: ForkAwareBlockHashing,
   ) {
     val qbftForkConfig = beaconGenesisConfig.getForkByConfigType(QbftConsensusConfig::class)
     val beaconChainInitialization =
       BeaconChainInitialization(
         beaconChain = beaconChain,
+        blockHashing = blockHashing,
       )
     val qbftConsensusConfig = qbftForkConfig.configuration as QbftConsensusConfig
     beaconChainInitialization.ensureDbIsInitialized(qbftConsensusConfig.validatorSet)

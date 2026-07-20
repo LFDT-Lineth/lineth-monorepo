@@ -1,15 +1,15 @@
 name: Arithmetization native zkc benchmark - Keccak (base vs optim)
 
 # Benchmark of native zkc batched Keccak-f function against two
-# zkc versions: a "base" version and an "optim" version. 
+# zkc versions: a "base" version and an "optim" version.
 #
-# Benchmark methodology : 
+# Benchmark methodology :
 # one untimed warm-up (untimed) + N timed iterations for the base variant
 # one untimed warm-up (untimed) + N timed iterations for the optim variant
 # Per-iteration `cache_thrasher` + sleep attempts to keep CPU cache state comparable across timed runs.
 # Launched with zkc exec --field KOALABEAR_16 <input.json> <program.zkc>
 #
-# Benchmark data : 
+# Benchmark data :
 # In arithmetization/src/test/zkc/keccakf/keccakf_batched.accepts
 # There are 20k test vectors you can select from to run the benchmark.
 # Each test vector has a raw message of 16 * 32 bytes, ie fits in 4 blocks of 1088 bits.
@@ -68,7 +68,7 @@ jobs:
     timeout-minutes: 120
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
           submodules: false
@@ -83,8 +83,8 @@ jobs:
           # so they coexist on disk.
           for variant in base opt; do
             case "$variant" in
-              base) ref="${{ inputs.zkc_base_ref || 'main' }}" ;;
-              opt)  ref="${{ inputs.zkc_optim_ref || 'main' }}" ;;
+              base) ref="${{ inputs.zkc_base_ref || 'v1.2.20' }}" ;;
+              opt)  ref="${{ inputs.zkc_optim_ref || 'v1.2.20' }}" ;;
             esac
             tmpbin=$(mktemp -d)
             # go-corset was renamed/moved to github.com/LFDT-Lineth/zkc. The module
@@ -140,7 +140,7 @@ jobs:
           # Run fast mode with gogen
           run_gogen_native_keccak() {  # $1=variant (base|opt)  $2=label (warmup|iter#)
             local variant="$1" label="$2" zkc_bin="/tmp/zkc-${1}"
-            "$zkc_bin" generate -v -q --field KOALABEAR_16 -o riscv.go "$zkc_prog"
+            "$zkc_bin" generate --fast -v -q --field KOALABEAR_16 -o riscv.go "$zkc_prog"
             go build -o riscv-gogen riscv.go
             /usr/bin/time -v ./riscv-gogen < /tmp/keccakf_input.json \
               > "/tmp/bench/logs/keccak_${variant}_${label}.log" 2>&1
@@ -190,15 +190,16 @@ jobs:
             "${fast_mode_arg[@]}" \
             -base-ref "${{ inputs.zkc_base_ref || 'main' }}" \
             -optim-ref "${{ inputs.zkc_optim_ref || 'main' }}" \
-            -zkc-ref-base "${{ inputs.zkc_base_ref || 'main' }}" \
-            -zkc-ref-optim "${{ inputs.zkc_optim_ref || 'main' }}" \
+            -zkc-ref-base "${{ inputs.zkc_base_ref || 'v1.2.20' }}" \
+            -zkc-ref-optim "${{ inputs.zkc_optim_ref || 'v1.2.20' }}" \
             -keccak-n-vectors ${{ inputs.n_vectors_keccak || 100 }} \
             | tee -a "$GITHUB_STEP_SUMMARY" \
             | tee /tmp/bench/logs/summary.md
 
       - name: Upload benchmark logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: zkc-native-keccak-bench-logs
           path: /tmp/bench/logs
+

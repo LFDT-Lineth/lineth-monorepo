@@ -12,6 +12,8 @@ import {
 } from "viem";
 import { readContract } from "viem/actions";
 
+import { INBOX_L1_L2_MESSAGE_STATUS_ABI } from "../abis";
+
 export type GetL1ToL2MessageStatusReturnType = OnChainMessageStatus;
 
 export type GetL1ToL2MessageStatusParameters = {
@@ -57,15 +59,7 @@ export async function getL1ToL2MessageStatus<chain extends Chain | undefined, ac
 
   const status = await readContract(client, {
     address: l2MessageService,
-    abi: [
-      {
-        inputs: [{ internalType: "bytes32", name: "messageHash", type: "bytes32" }],
-        name: "inboxL1L2MessageStatus",
-        outputs: [{ internalType: "uint256", name: "messageStatus", type: "uint256" }],
-        stateMutability: "view",
-        type: "function",
-      },
-    ],
+    abi: INBOX_L1_L2_MESSAGE_STATUS_ABI,
     functionName: "inboxL1L2MessageStatus",
     args: [messageHash],
   });

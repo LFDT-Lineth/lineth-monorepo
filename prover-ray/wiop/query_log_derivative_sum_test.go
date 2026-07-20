@@ -15,14 +15,14 @@ import (
 func TestLogDerivativeSum_Soundness_Completeness(t *testing.T) {
 	sc := wioptest.NewLogDerivativeSumScenario()
 	rt := wiop.NewRuntime(sc.Sys)
-	sc.RunHonest(&rt)
+	sc.RunHonest(rt)
 	require.NoError(t, sc.Query.Check(rt), "honest witness must pass Check")
 }
 
 func TestLogDerivativeSum_Soundness_InvalidWitness(t *testing.T) {
 	sc := wioptest.NewLogDerivativeSumScenario()
 	rt := wiop.NewRuntime(sc.Sys)
-	sc.RunInvalid(&rt)
+	sc.RunInvalid(rt)
 	assert.Error(t, sc.Query.Check(rt), "invalid witness must be rejected by Check")
 }
 

@@ -3,8 +3,10 @@ package linea
 import com.sksamuel.hoplite.ConfigLoaderBuilder
 import com.sksamuel.hoplite.ExperimentalHoplite
 import com.sksamuel.hoplite.addFileSource
+import io.vertx.core.Vertx
 import linea.contract.l1.LinethRollupContractVersion
 import linea.contract.l1.LinethRollupSmartContractClient
+import linea.ethapi.EthLogsSearcherImpl
 import linea.kotlin.gwei
 import linea.web3j.SmartContractErrors
 import linea.web3j.gas.StaticGasProvider
@@ -75,6 +77,7 @@ interface ContractsManager {
 
 object MakeFileDelegatedContractsManager : ContractsManager {
   private val log = LoggerFactory.getLogger(MakeFileDelegatedContractsManager::class.java)
+  private val vertx: Vertx = Vertx.vertx()
 
   @OptIn(ExperimentalHoplite::class)
   val linethRollupContractErrors = findPathTo("config")!!
@@ -175,11 +178,12 @@ object MakeFileDelegatedContractsManager : ContractsManager {
     smartContractErrors: SmartContractErrors?,
   ): LinethRollupSmartContractClient {
     return Web3JLinethRollupSmartContractClient.load(
-      contractAddress,
-      Web3jClientManager.l1Client,
-      transactionManager,
-      gasProvider,
-      smartContractErrors ?: linethRollupContractErrors,
+      contractAddress = contractAddress,
+      web3j = Web3jClientManager.l1Client,
+      transactionManager = transactionManager,
+      contractGasProvider = gasProvider,
+      smartContractErrors = smartContractErrors ?: linethRollupContractErrors,
+      ethLogsSearcher = EthLogsSearcherImpl(vertx = vertx, ethApiClient = EthApiClientManager.l1Client),
     )
   }
 }

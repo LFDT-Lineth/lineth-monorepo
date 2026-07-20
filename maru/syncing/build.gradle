@@ -24,6 +24,7 @@ dependencies {
   implementation project(':maru:observability')
   implementation project(':maru:p2p')
   implementation project(':maru:storage')
+  implementation project(':maru:serialization')
   implementation project(':jvm-libs:linea:core:metrics')
   implementation project(':jvm-libs:generic:extensions:kotlin')
   implementation project(':jvm-libs:linea:core:long-running-service')
@@ -37,7 +38,6 @@ dependencies {
   implementation "tech.pegasys.teku.internal:eth2:${libs.versions.teku.get()}"
 
   testImplementation project(':maru:crypto')
-  testImplementation project(':maru:serialization')
   testImplementation(testFixtures(project(':maru:core')))
   testImplementation(testFixtures(project(':maru:executionlayer')))
   testImplementation(testFixtures(project(':maru:observability')))

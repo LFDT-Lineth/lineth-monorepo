@@ -427,7 +427,7 @@ func GetTestTracesLimits() *TracesLimits {
 			{Module: "bin", Limit: 262144, LimitLarge: 524288},
 			{Module: "blake2fmodexpdata", Limit: 16384, LimitLarge: 32768},
 			{Module: "blockdata", Limit: 4096, LimitLarge: 8192},
-			{Module: "blockhash", Limit: 2048, LimitLarge: 4096},
+			{Module: "blockhash", Limit: 4096, LimitLarge: 8192},
 			{Module: "ecdata", Limit: 65536, LimitLarge: 131072},
 			{Module: "euc", Limit: 65536, LimitLarge: 131072},
 			{Module: "exp", Limit: 65536, LimitLarge: 131072},

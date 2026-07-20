@@ -62,7 +62,7 @@ public final class Log extends GasProjection {
 
   @Override
   public long memoryExpansion() {
-    return gc.memoryExpansionGasCost(frame, offset, size);
+    return memoryExpansionGasCost(gc, frame, offset, size);
   }
 
   @Override

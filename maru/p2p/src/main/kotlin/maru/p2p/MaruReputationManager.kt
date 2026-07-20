@@ -105,6 +105,11 @@ class MaruReputationManager(
     )
   }
 
+  override fun getInboundConnectionRejectionReason(peerAddress: PeerAddress): Optional<DisconnectReason> =
+    peerReputations
+      .getCached(peerAddress.id)
+      .flatMap { it.currentBanReason(timeProvider.timeInMillis) }
+
   override fun reportDisconnection(
     peerAddress: PeerAddress,
     reason: Optional<DisconnectReason>,
@@ -151,6 +156,13 @@ class MaruReputationManager(
   inner class Reputation {
     @Volatile
     private var suitableAfter: Optional<UInt64> = Optional.empty()
+
+    // Set only when suitableAfter marks a ban (bad/permanent disconnect reason, or a
+    // score-threshold breach), never for a routine outbound-dial cooldown. Inbound connection
+    // rejection must ignore temporary outbound cooldowns, so it keys off this instead of
+    // suitableAfter directly.
+    @Volatile
+    private var banReason: DisconnectReason? = null
     private val score = AtomicInteger(DEFAULT_SCORE)
 
     fun reportInitiatedConnectionFailed(failureTime: UInt64) {
@@ -165,6 +177,9 @@ class MaruReputationManager(
       suitableAfter = Optional.empty()
     }
 
+    fun currentBanReason(currentTime: UInt64): Optional<DisconnectReason> =
+      if (!isSuitableAt(currentTime)) Optional.ofNullable(banReason) else Optional.empty()
+
     fun reportDisconnection(
       disconnectTime: UInt64,
       reason: Optional<DisconnectReason>,
@@ -175,9 +190,11 @@ class MaruReputationManager(
           reason.map { it.isPermanent }.orElse(false)
         ) {
           suitableAfter = Optional.of(disconnectTime.plus(banPeriod))
+          banReason = reason.orElse(DisconnectReason.REMOTE_FAULT)
           score.set(DEFAULT_SCORE)
         } else if (locallyInitiated) {
           suitableAfter = Optional.of(disconnectTime.plus(cooldownPeriod))
+          banReason = null
         }
       }
     }
@@ -201,6 +218,7 @@ class MaruReputationManager(
       val shouldDisconnect = newScore <= disconnectScoreThreshold
       if (shouldDisconnect) {
         suitableAfter = Optional.of(currentTime.plus(banPeriod))
+        banReason = DisconnectReason.REMOTE_FAULT
         score.set(DEFAULT_SCORE)
       }
       return shouldDisconnect

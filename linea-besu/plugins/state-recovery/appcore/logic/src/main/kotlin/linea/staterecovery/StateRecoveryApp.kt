@@ -6,7 +6,7 @@ import linea.LongRunningService
 import linea.clients.StateManagerClientV1
 import linea.contract.l1.LinethRollupSmartContractClientReadOnly
 import linea.domain.BlockParameter
-import linea.domain.BlockParameter.Companion.toBlockParameter
+import linea.domain.toBlockParameter
 import net.consensys.linea.async.AsyncRetryer
 import net.consensys.linea.blob.BlobDecompressorVersion
 import net.consensys.linea.blob.GoNativeBlobDecompressorFactory

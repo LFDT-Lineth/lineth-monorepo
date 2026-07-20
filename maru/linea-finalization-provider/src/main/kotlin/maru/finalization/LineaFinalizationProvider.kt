@@ -11,7 +11,7 @@ package maru.finalization
 import linea.contract.l1.LinethRollupSmartContractClientReadOnly
 import linea.domain.BlockData
 import linea.domain.BlockParameter
-import linea.domain.BlockParameter.Companion.toBlockParameter
+import linea.domain.toBlockParameter
 import linea.ethapi.EthApiClient
 import linea.kotlin.encodeHex
 import linea.timer.PeriodicPollingService

@@ -23,6 +23,7 @@ import { sendTransaction } from "viem/actions";
 import { parseAccount } from "viem/utils";
 
 import { getMessageProof } from "./getMessageProof";
+import { CLAIM_MESSAGE_WITH_PROOF_ABI } from "../abis";
 import { AccountNotFoundError, AccountNotFoundErrorType } from "../errors/account";
 import {
   MissingMessageProofOrClientForClaimingOnL1Error,
@@ -51,6 +52,10 @@ export type ClaimOnL1Parameters<
         lineaRollupAddress?: Address;
         // Defaults to the message service address for the L2 chain
         l2MessageServiceAddress?: Address;
+        // Block in which the `MessageSent` event was emitted. When provided, the lookup queries only that
+        // block instead of the full `earliest`..`latest` range. This is REQUIRED when the RPC provider does
+        // not support large block ranges; otherwise the default full-range query will be rejected.
+        messageL2BlockNumber?: bigint;
       }
     | {
         messageNonce: bigint;
@@ -196,6 +201,7 @@ export async function claimOnL1<
     messageProof,
     lineaRollupAddress,
     l2MessageServiceAddress,
+    messageL2BlockNumber,
     ...tx
   } = parameters;
 
@@ -232,6 +238,9 @@ export async function claimOnL1<
         nonce: messageNonce,
         calldata,
       }),
+      ...(messageL2BlockNumber
+        ? { l2LogsBlockRange: { fromBlock: messageL2BlockNumber, toBlock: messageL2BlockNumber } }
+        : {}),
     });
   } else {
     proof = messageProof;
@@ -243,33 +252,7 @@ export async function claimOnL1<
     to: lineaRollup,
     account,
     data: encodeFunctionData({
-      abi: [
-        {
-          inputs: [
-            {
-              components: [
-                { internalType: "bytes32[]", name: "proof", type: "bytes32[]" },
-                { internalType: "uint256", name: "messageNumber", type: "uint256" },
-                { internalType: "uint32", name: "leafIndex", type: "uint32" },
-                { internalType: "address", name: "from", type: "address" },
-                { internalType: "address", name: "to", type: "address" },
-                { internalType: "uint256", name: "fee", type: "uint256" },
-                { internalType: "uint256", name: "value", type: "uint256" },
-                { internalType: "address payable", name: "feeRecipient", type: "address" },
-                { internalType: "bytes32", name: "merkleRoot", type: "bytes32" },
-                { internalType: "bytes", name: "data", type: "bytes" },
-              ],
-              internalType: "struct IL1MessageService.ClaimMessageWithProofParams",
-              name: "_params",
-              type: "tuple",
-            },
-          ],
-          name: "claimMessageWithProof",
-          outputs: [],
-          stateMutability: "nonpayable",
-          type: "function",
-        },
-      ],
+      abi: CLAIM_MESSAGE_WITH_PROOF_ABI,
       functionName: "claimMessageWithProof",
       args: [
         {

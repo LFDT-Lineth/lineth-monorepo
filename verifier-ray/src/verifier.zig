@@ -2,7 +2,8 @@ const protocol = @import("protocol/root.zig");
 const vanishing = @import("query/vanishing.zig");
 const logderivativesum = @import("query/logderivativesum.zig");
 const ext = @import("field/koalabear_ext.zig");
-// TODO(new-sub-verifier): add import here
+const profiling = @import("profiling.zig");
+// TODO(new-sub-verifier): add import here — step 1 below.
 
 // ── Adding a new sub-verifier ─────────────────────────────────────────────────
 //
@@ -81,9 +82,13 @@ pub fn verify(
     comptime systems: Systems,
     proof: Proof,
 ) !void {
+    profiling.reset();
+    if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.verify_start, 0);
+
     // Step 1 — replay transcript, derive all coins. `replay` comptime-validates
     // `spec` internal consistency and returns the stack-allocated coin array.
     const all_coins = try protocol.replay(spec, proof.rounds);
+    if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.transcript_done, 0);
 
     // Step 2 — assemble the shared context routed to every sub-verifier.
     const ctx = protocol.Context{
@@ -92,12 +97,19 @@ pub fn verify(
     };
 
     // Step 3 — dispatch each sub-verifier with ctx + its own claims.
+    // TODO(new-sub-verifier): add dispatch call here — step 4 above.
+    if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.vanishing_start, 0);
     try vanishing.verify(systems.vanishing, .{
         .ctx = ctx,
         .witness_claims = proof.witness_claims,
         .quotient_claims = proof.quotient_claims,
         .module_sizes = proof.module_sizes,
     });
+    if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.vanishing_done, 0);
+
     try logderivativesum.verify(systems.logderivativesum, ctx);
+
+    if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.logderivativesum_done, profiling.snapshot().poseidon2_compress);
     // TODO(new-sub-verifier): dispatch here — step 4 above.
+    // TODO(profiling): add a final verify_done marker once more phases run after logderivativesum.
 }

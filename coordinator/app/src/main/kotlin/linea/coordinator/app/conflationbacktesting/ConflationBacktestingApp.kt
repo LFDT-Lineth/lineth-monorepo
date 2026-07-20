@@ -38,9 +38,10 @@ import linea.coordinator.config.v2.TracesConfig.ClientApiConfig
 import linea.domain.Aggregation
 import linea.domain.Block
 import linea.domain.BlockInterval
-import linea.domain.BlockParameter
+import linea.domain.toBlockParameter
 import linea.encoding.BlockRLPEncoder
 import linea.ethapi.EthApiClient
+import linea.ethapi.EthLogsSearcherImpl
 import linea.kotlin.decodeHex
 import linea.persistence.DisabledForcedTransactionsDao
 import linea.timer.VertxTimerFactory
@@ -160,7 +161,7 @@ class ConflationBacktestingApp(
 
   private val lastProcessedBlockNumber = conflationBacktestingAppConfig.startBlockNumber - 1uL
   private val lastProcessedBlock = l2EthClient.ethGetBlockByNumberTxHashes(
-    BlockParameter.fromNumber(lastProcessedBlockNumber),
+    lastProcessedBlockNumber.toBlockParameter(),
   ).get()
   private val lastProcessedTimestamp = Instant.fromEpochSeconds(lastProcessedBlock.timestamp.toLong())
   val blobCompressor = BlobCompressorFactory.getInstance(
@@ -328,10 +329,11 @@ class ConflationBacktestingApp(
       log = log,
     ),
     ethApiClient = l2EthClient,
+    ethLogsSearcher = EthLogsSearcherImpl(vertx = vertx, ethApiClient = l2EthClient),
     contractAddress = backtestingCoordinatorConfig.protocol.l2.contractAddress,
     smartContractErrors = backtestingCoordinatorConfig.smartContractErrors,
     smartContractDeploymentBlockNumber = backtestingCoordinatorConfig.protocol.l2.contractDeploymentBlockNumber
-      ?.getNumber(),
+      ?.number,
   )
 
   private val proofAggregationCoordinatorService: LongRunningService = ProofAggregationCoordinatorService.create(

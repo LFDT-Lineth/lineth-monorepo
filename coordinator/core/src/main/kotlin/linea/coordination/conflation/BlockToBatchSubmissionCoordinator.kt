@@ -13,7 +13,7 @@ import linea.domain.Block
 import linea.domain.BlockCounters
 import linea.encoding.BlockEncoder
 import linea.error.ErrorResponse
-import net.consensys.linea.async.toSafeFuture
+import net.consensys.linea.async.toSafeFutureNonNull
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -77,6 +77,6 @@ class BlockToBatchSubmissionCoordinator(
         encoder.encode(block)
       },
     )
-      .toSafeFuture()
+      .toSafeFutureNonNull()
   }
 }

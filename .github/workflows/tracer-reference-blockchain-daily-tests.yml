@@ -2,8 +2,6 @@ permissions: read-all
 name: Daily Tracer Blockchain Tests
 
 on:
-  schedule:
-    - cron: 0 21 * * 1-5
   workflow_dispatch:
     inputs:
       test_filter:

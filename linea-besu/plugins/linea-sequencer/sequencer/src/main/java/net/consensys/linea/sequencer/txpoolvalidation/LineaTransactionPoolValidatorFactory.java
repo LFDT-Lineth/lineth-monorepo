@@ -55,6 +55,7 @@ public class LineaTransactionPoolValidatorFactory implements PluginTransactionPo
   private final InvalidTransactionByLineCountCache invalidTransactionByLineCountCache;
   private final TransactionProfitabilityCalculator transactionProfitabilityCalculator;
   private final Set<Address> deniedAddresses;
+  private final boolean blockTransactionValidatorActive;
 
   public LineaTransactionPoolValidatorFactory(
       final BesuConfiguration besuConfiguration,
@@ -69,7 +70,8 @@ public class LineaTransactionPoolValidatorFactory implements PluginTransactionPo
       final Optional<JsonRpcManager> rejectedTxJsonRpcManager,
       final InvalidTransactionByLineCountCache invalidTransactionByLineCountCache,
       final TransactionProfitabilityCalculator transactionProfitabilityCalculator,
-      final Set<Address> deniedAddresses) {
+      final Set<Address> deniedAddresses,
+      final boolean blockTransactionValidatorActive) {
     this.besuConfiguration = besuConfiguration;
     this.blockchainService = blockchainService;
     this.worldStateService = worldStateService;
@@ -83,6 +85,7 @@ public class LineaTransactionPoolValidatorFactory implements PluginTransactionPo
     this.invalidTransactionByLineCountCache = invalidTransactionByLineCountCache;
     this.transactionProfitabilityCalculator = transactionProfitabilityCalculator;
     this.deniedAddresses = deniedAddresses;
+    this.blockTransactionValidatorActive = blockTransactionValidatorActive;
   }
 
   /**
@@ -93,8 +96,31 @@ public class LineaTransactionPoolValidatorFactory implements PluginTransactionPo
    */
   @Override
   public PluginTransactionPoolValidator createTransactionValidator() {
+    final List<PluginTransactionPoolValidator> validators = createValidators();
+
+    return (transaction, isLocal, hasPriority) ->
+        validators.stream()
+            .map(v -> v.validateTransaction(transaction, isLocal, hasPriority))
+            .filter(Optional::isPresent)
+            .findFirst()
+            .map(Optional::get);
+  }
+
+  /**
+   * Builds the ordered list of pool validators, run in sequence in fail-fast mode.
+   *
+   * <p>The transaction-type validator is omitted when {@link
+   * net.consensys.linea.sequencer.txvalidation.LineaBlockTransactionValidatorPlugin} is active: its
+   * protocol-level rule already validates transaction types at pool admission, so adding the
+   * pool-level validator here would validate types twice.
+   *
+   * @return the validators to run, in order
+   */
+  List<PluginTransactionPoolValidator> createValidators() {
     final List<PluginTransactionPoolValidator> validators = new ArrayList<>();
-    validators.add(new TransactionTypeValidator(txValidatorConf));
+    if (!blockTransactionValidatorActive) {
+      validators.add(new TransactionTypeValidator(txValidatorConf));
+    }
     validators.add(new TraceLineLimitValidator(invalidTransactionByLineCountCache));
     validators.add(new DeniedAddressValidator(deniedAddresses));
     validators.add(new PrecompileAddressValidator());
@@ -120,11 +146,6 @@ public class LineaTransactionPoolValidatorFactory implements PluginTransactionPo
             l1L2BridgeConfiguration,
             rejectedTxJsonRpcManager));
 
-    return (transaction, isLocal, hasPriority) ->
-        validators.stream()
-            .map(v -> v.validateTransaction(transaction, isLocal, hasPriority))
-            .filter(Optional::isPresent)
-            .findFirst()
-            .map(Optional::get);
+    return validators;
   }
 }

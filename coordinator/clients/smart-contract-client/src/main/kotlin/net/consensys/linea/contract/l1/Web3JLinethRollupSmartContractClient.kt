@@ -1,17 +1,16 @@
 package net.consensys.linea.contract.l1
 
+import linea.EthLogsSearcher
 import linea.contract.LinethRollupV6
 import linea.contract.l1.BlockAndNonce
 import linea.contract.l1.LinethRollupSmartContractClient
 import linea.contract.l1.Web3JLinethRollupSmartContractClientReadOnly
 import linea.domain.BlobRecord
-import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.ProofToFinalize
 import linea.domain.gas.GasPriceCaps
-import linea.ethapi.EthLogsClient
+import linea.domain.toBlockParameter
 import linea.kotlin.toULong
 import linea.web3j.SmartContractErrors
-import linea.web3j.ethapi.createEthApiClient
 import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
 import net.consensys.linea.contract.Web3JContractAsyncHelper
 import org.apache.logging.log4j.LogManager
@@ -29,12 +28,14 @@ class Web3JLinethRollupSmartContractClient internal constructor(
   private val transactionManager: AsyncFriendlyTransactionManager,
   private val web3jContractHelper: Web3JContractAsyncHelper,
   private val web3jLineaClient: LinethRollupV6,
-  ethLogsClient: EthLogsClient = createEthApiClient(web3j),
+  ethLogsSearcher: EthLogsSearcher,
+  l1EventSearchMaxBlockRange: UInt = 10_000u,
   private val log: Logger = LogManager.getLogger(Web3JLinethRollupSmartContractClient::class.java),
 ) : Web3JLinethRollupSmartContractClientReadOnly(
   contractAddress = contractAddress,
   web3j = web3j,
-  ethLogsClient = ethLogsClient,
+  ethLogsSearcher = ethLogsSearcher,
+  l1EventSearchMaxBlockRange = l1EventSearchMaxBlockRange,
   log = log,
 ),
   LinethRollupSmartContractClient {
@@ -45,6 +46,7 @@ class Web3JLinethRollupSmartContractClient internal constructor(
       transactionManager: AsyncFriendlyTransactionManager,
       contractGasProvider: ContractGasProvider,
       smartContractErrors: SmartContractErrors,
+      ethLogsSearcher: EthLogsSearcher,
       useEthEstimateGas: Boolean = false,
     ): Web3JLinethRollupSmartContractClient {
       val web3JContractAsyncHelper =
@@ -70,6 +72,7 @@ class Web3JLinethRollupSmartContractClient internal constructor(
         transactionManager = transactionManager,
         web3jContractHelper = web3JContractAsyncHelper,
         web3jLineaClient = linethRollupEnhancedWrapper,
+        ethLogsSearcher = ethLogsSearcher,
       )
     }
 
@@ -79,6 +82,7 @@ class Web3JLinethRollupSmartContractClient internal constructor(
       credentials: Credentials,
       contractGasProvider: ContractGasProvider,
       smartContractErrors: SmartContractErrors,
+      ethLogsSearcher: EthLogsSearcher,
       useEthEstimateGas: Boolean,
     ): Web3JLinethRollupSmartContractClient {
       return load(
@@ -88,6 +92,7 @@ class Web3JLinethRollupSmartContractClient internal constructor(
         AsyncFriendlyTransactionManager(web3j, credentials),
         contractGasProvider,
         smartContractErrors,
+        ethLogsSearcher,
         useEthEstimateGas,
       )
     }
