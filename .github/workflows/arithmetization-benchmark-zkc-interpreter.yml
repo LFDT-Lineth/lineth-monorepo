@@ -229,7 +229,7 @@ jobs:
           run_zkc_compile() {  # $1=variant (opt|base)  $2=label (warmup|iter#)
             local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
             local log="/tmp/bench/logs/compile_${1}_${2}.log"
-            "/tmp/zkc-${1}" compile --stats --inline "$zkc_main" >"$log" 2>&1 || true
+            "/tmp/zkc-${1}" compile --stats --quiet --inline "$zkc_main" >"$log" 2>&1 || true
           }
 
           run_keccak() {  # $1=variant (opt|base)  $2=label (warmup|iter#)  optional: --fast
