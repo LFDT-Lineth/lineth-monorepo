@@ -251,7 +251,7 @@ type Controller struct {
 type Prometheus struct {
 	// Enabled toggles the Prometheus metrics endpoint on or off.
 	Enabled bool
-	// The underlying implementation defaults to :9090.
+	// Port for the metrics endpoint; defaults to 9090 (Prometheus library default, not set by the prover).
 	Port int
 	// The default implementation default to /metrics. The route should be
 	// prefixed with a "/". If it is not, the underlying implementation will
@@ -311,7 +311,7 @@ type DataAvailability struct {
 	// DictPaths points to dictionaries used for decompressing executions data stored in the DA layer.
 	DictPaths []string `mapstructure:"dict_paths"`
 
-	// DictNbBytes number of bytes in the prover dictionary
+	// DictNbBytes is the number of bytes in the prover dictionary.
 	DictNbBytes int `mapstructure:"dict_nb_bytes" validate:"number,gt=0"`
 }
 
@@ -342,7 +342,7 @@ type Aggregation struct {
 	// ProverMode stores the kind of prover to use.
 	ProverMode ProverMode `mapstructure:"prover_mode" validate:"required,oneof=dev full"`
 
-	// Number of proofs that are supported by the aggregation circuit.
+	// NumProofs is the list of supported aggregation batch sizes (circuit variants), e.g. [10, 20, 50, 100].
 	NumProofs []int `mapstructure:"num_proofs" validate:"required,dive,gt=0,number"`
 
 	// IsAllowedCircuitID is a bitmask encoding which circuit IDs are allowed.
@@ -351,11 +351,7 @@ type Aggregation struct {
 	// Use circuits.GlobalCircuitIDMapping to set the appropriate bits.
 	IsAllowedCircuitID uint64 `mapstructure:"is_allowed_circuit_id" validate:"required"`
 
-	// note @gbotrel keeping that around in case we need to support two emulation contract
-	// during a migration.
-	// Verifier ID to assign to the proof once generated. It will be used
-	// by the L1 contracts to determine which solidity Plonk verifier
-	// contract should be used to verify the proof.
+	// VerifierID is assigned to the proof and used by L1 contracts to select the Solidity Plonk verifier contract.
 	VerifierID int `mapstructure:"verifier_id" validate:"gte=0,number"`
 }
 
