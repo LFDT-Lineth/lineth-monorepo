@@ -60,9 +60,12 @@ func compilePipelineBeforePCS(sys *wiop.System) {
 	logderivativesum.Compile(sys)
 	localvanishing.Compile(sys)
 	global.Compile(sys)
-	// FRI cannot fold a size-1 codeword, so skip the PCS pass for scenarios
-	// that declare any statically size-1 module. Left as a known gap until
-	// the PCS/FRI layer handles the D=1 edge case.
+}
+
+// compilePCS runs the PCS pass unless the system declares a statically size-1
+// module. FRI cannot fold a size-1 codeword, so those scenarios skip PCS — a
+// known gap until the PCS/FRI layer handles the D=1 edge case.
+func compilePCS(sys *wiop.System) {
 	if !hasStaticSizeOneModule(sys) {
 		pcs.Compile(sys)
 	}
