@@ -11,7 +11,7 @@ dependencies {
   implementation project(":jvm-libs:generic:extensions:kotlin")
   implementation project(':jvm-libs:generic:persistence:db')
   implementation project(":transaction-exclusion-api:core")
-  implementation "com.fasterxml.jackson.core:jackson-databind:${libs.versions.jackson.get()}"
+  implementation "com.fasterxml.jackson.core:jackson-databind"
   implementation "io.vertx:vertx-pg-client:${libs.versions.vertx.get()}"
 
   testImplementation(testFixtures(project(":transaction-exclusion-api:core")))

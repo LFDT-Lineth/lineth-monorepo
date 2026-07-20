@@ -12,9 +12,9 @@ dependencies {
   implementation project(":jvm-libs:generic:extensions:futures")
   implementation project(":jvm-libs:generic:extensions:kotlin")
   implementation project(":jvm-libs:generic:serialization:jackson")
-  implementation "com.fasterxml.jackson.core:jackson-annotations:${libs.versions.jackson.get()}"
-  api "com.fasterxml.jackson.core:jackson-databind:${libs.versions.jackson.get()}"
-  implementation "com.fasterxml.jackson.module:jackson-module-kotlin:${libs.versions.jackson.get()}"
+  implementation "com.fasterxml.jackson.core:jackson-annotations"
+  api "com.fasterxml.jackson.core:jackson-databind"
+  implementation "com.fasterxml.jackson.module:jackson-module-kotlin"
 
   api "io.vertx:vertx-micrometer-metrics"
 
