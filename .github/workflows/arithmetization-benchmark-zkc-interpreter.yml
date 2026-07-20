@@ -232,6 +232,11 @@ jobs:
             "/tmp/zkc-${1}" compile --stats --quiet --inline "$zkc_main" >"$log" 2>&1 || true
           }
 
+          run_l2_guest() {  # $1=variant (opt|base)  $2=label (warmup|iter#)  optional: --fast
+            run_zkc_exec "$1" "/tmp/bench/logs/l2_guest_${1}_${2}.log" "/tmp/l2-guest-${1}.json" \
+              "/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc" "${3:-}"
+          }
+
           run_keccak() {  # $1=variant (opt|base)  $2=label (warmup|iter#)  optional: --fast
             run_zkc_exec "$1" "/tmp/bench/logs/keccak_${1}_${2}.log" "/tmp/keccak-${1}.json" \
               "/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc" "${3:-}"
