@@ -12,6 +12,7 @@ import linea.coordinator.config.v2.DatabaseConfig
 import linea.coordinator.config.v2.logPretty
 import linea.coordinator.extensions.CoordinatorContext
 import linea.coordinator.extensions.CoordinatorExtensionFactory
+import linea.coordinator.extensions.CustomSignerFactory
 import linea.fileio.DirectoryCleaner
 import linea.persistence.DisabledForcedTransactionsDao
 import linea.persistence.conflation.AggregationsRepositoryImpl
@@ -41,10 +42,11 @@ import kotlin.time.Clock
 class CoordinatorApp(
   private val configs: CoordinatorConfig,
   private val clock: Clock = Clock.System,
-  // Single seam for the enterprise distribution: contributes extra services and JSON-RPC
+  // Single seam for downstream distributions: contributes extra services and JSON-RPC
   // handlers that share this app's Vertx, metrics and DB. Defaults to no-op so the OSS app
   // behaves identically when no extension is supplied.
   extensionsFactory: CoordinatorExtensionFactory = CoordinatorExtensionFactory.NOOP,
+  customSignerFactory: CustomSignerFactory? = null,
 ) {
   private val log: Logger = LogManager.getLogger(this::class.java)
   private val vertx: Vertx =
@@ -169,6 +171,7 @@ class CoordinatorApp(
       smartContractErrors = configs.smartContractErrors,
       metricsFacade = micrometerMetricsFacade,
       clock = this.clock,
+      customSignerFactory = customSignerFactory,
     )
 
   // Resolve extensions once, against the infrastructure already built above. Done before any

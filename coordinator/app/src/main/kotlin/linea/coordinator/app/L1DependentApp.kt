@@ -18,6 +18,7 @@ import linea.coordinator.config.v2.CoordinatorConfig
 import linea.coordinator.config.v2.Type2StateProofManagerConfig
 import linea.coordinator.config.v2.isDisabled
 import linea.coordinator.config.v2.isEnabled
+import linea.coordinator.extensions.CustomSignerFactory
 import linea.domain.BlobSubmittedEvent
 import linea.domain.BlockNumberAndHash
 import linea.domain.BlockParameter
@@ -85,6 +86,7 @@ class L1DependentApp(
   private val smartContractErrors: SmartContractErrors,
   private val metricsFacade: MetricsFacade,
   private val clock: Clock,
+  private val customSignerFactory: CustomSignerFactory? = null,
 ) : LongRunningService {
   private val log = LogManager.getLogger(this::class.java)
 
@@ -123,6 +125,7 @@ class L1DependentApp(
       rpcUrl = configs.l1Submission.aggregation.l1Endpoint.toString(),
       log = LogManager.getLogger("clients.l1.eth.finalization"),
     ),
+    customSignerFactory = customSignerFactory,
   )
 
   private val l1MinPriorityFeeCalculator: FeesCalculator = WMAFeesCalculator(
@@ -330,6 +333,7 @@ class L1DependentApp(
       vertx,
       signerConfig = configs.l1Submission.blob.signer,
       client = l1Web3jClient,
+      customSignerFactory = customSignerFactory,
     )
     createLineaContractClient(
       vertx = vertx,
@@ -499,6 +503,7 @@ class L1DependentApp(
   private val messageAnchoringApp: LongRunningService = MessageAnchoringAppConfigurator.create(
     vertx = vertx,
     configs = configs,
+    customSignerFactory = customSignerFactory,
   )
 
   private val conflationApp = ConflationApp(

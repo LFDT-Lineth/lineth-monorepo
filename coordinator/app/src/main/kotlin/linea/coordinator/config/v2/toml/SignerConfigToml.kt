@@ -10,6 +10,7 @@ data class SignerConfigToml(
   val type: SignerType,
   val web3j: Web3jConfig?,
   val web3signer: Web3SignerConfig?,
+  val custom: CustomConfig? = null,
 ) {
   init {
     when {
@@ -20,12 +21,17 @@ data class SignerConfigToml(
       type == SignerType.WEB3SIGNER && web3signer == null -> {
         throw IllegalArgumentException("signetType=$type requires web3signer config")
       }
+
+      type == SignerType.CUSTOM && custom == null -> {
+        throw IllegalArgumentException("signerType=$type requires custom config")
+      }
     }
   }
 
   enum class SignerType(val mame: String) {
     WEB3J("web3j"),
     WEB3SIGNER("web3signer"),
+    CUSTOM("custom"),
     ;
 
     companion object {
@@ -39,8 +45,17 @@ data class SignerConfigToml(
       return when (this) {
         WEB3J -> SignerConfig.SignerType.WEB3J
         WEB3SIGNER -> SignerConfig.SignerType.WEB3SIGNER
+        CUSTOM -> SignerConfig.SignerType.CUSTOM
       }
     }
+  }
+
+  data class CustomConfig(val name: String) {
+    init {
+      require(name.isNotBlank()) { "custom signer name must not be blank" }
+    }
+
+    fun reified(): SignerConfig.CustomConfig = SignerConfig.CustomConfig(name)
   }
 
   data class Web3jConfig(
@@ -162,6 +177,7 @@ data class SignerConfigToml(
           },
         )
       },
+      custom = custom?.reified(),
     )
   }
 }

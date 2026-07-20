@@ -8,6 +8,7 @@ import io.vertx.ext.web.client.WebClientOptions
 import linea.contract.l1.LineaSmartContractClient
 import linea.coordinator.config.v2.L1SubmissionConfig
 import linea.coordinator.config.v2.SignerConfig
+import linea.coordinator.extensions.CustomSignerFactory
 import linea.crypto.Web3SignerRestClient
 import linea.ethapi.EthLogsSearcherImpl
 import linea.kotlin.encodeHex
@@ -34,6 +35,7 @@ fun createTransactionManager(
   vertx: Vertx,
   signerConfig: SignerConfig,
   client: Web3j,
+  customSignerFactory: CustomSignerFactory? = null,
 ): AsyncFriendlyTransactionManager {
   fun loadKeyAndTrustStoreFromFiles(
     webClientOptions: WebClientOptions,
@@ -115,6 +117,14 @@ fun createTransactionManager(
         val signerAdapter = ECKeypairSignerAdapter(signer)
         val web3SignerCredentials = Credentials.create(signerAdapter)
         Web3SignerTxSignService(web3SignerCredentials)
+      }
+
+      SignerConfig.SignerType.CUSTOM -> {
+        val factory = checkNotNull(customSignerFactory) {
+          "Custom signer '${signerConfig.custom!!.name}' requires a CustomSignerFactory"
+        }
+        val signer = factory.create(signerConfig.custom!!.name)
+        TxSignServiceImpl(Credentials.create(ECKeypairSignerAdapter(signer)))
       }
     }
 
