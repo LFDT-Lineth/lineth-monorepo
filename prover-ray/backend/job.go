@@ -28,7 +28,7 @@ type Job struct {
 	// SSZ-encoded StatelessInput that the guest reads at _in_start.
 	//
 	// Multi-block conflation encoding is not yet decided (open question #1
-	// in backend-overview.md).
+	// in wiki backend-overview.md).
 	Payload []byte
 }
 
@@ -47,7 +47,7 @@ const (
 // col.At(pos).Open(ctx) exposes a column position as a cell, RegisterPublicInputs
 // registers it, and sys.Prove returns its value in wiop.PublicInput. What
 // remains is establishing which columns/positions in RISCV-ZKC.bin carry each
-// of these 15 fields (backend-overview.md §7, open question #5).
+// of these 15 fields (wiki backend-overview.md §7, open question #5).
 //
 // Field names follow the coordinator response schema
 // (rollup_spec/src/rollup_spec/prover_io/getZkL2ExecutionProofV1.response.json).
@@ -65,7 +65,7 @@ type Result struct {
 	Status ResultStatus
 
 	// ProofBytes is the serialized wiop.Proof. Wire format not yet decided
-	// (backend-overview.md §6); nil when Status is ResultStatusFailed.
+	// (wiki backend-overview.md §6); nil when Status is ResultStatusFailed.
 	ProofBytes []byte
 
 	PublicInputs PublicInputs
