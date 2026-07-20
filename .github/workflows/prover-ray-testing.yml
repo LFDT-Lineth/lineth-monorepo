@@ -88,11 +88,4 @@ jobs:
     - name: Test
       working-directory: prover-ray
       run: |
-        go test -p=1 -short -timeout=120s ./...
-    # disabled as it takes many hours to run on the runner
-        # - name: Test (32 bits & race)
-    #   working-directory: prover
-    #   if: matrix.go-version == '1.25.7'
-    #   run: |
-    #       go test -p=1 -tags=nocorset,fuzzlight -timeout=120m -short -race  ./...
-
+        go test -short -timeout=120s ./...
