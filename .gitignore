@@ -78,7 +78,7 @@ proving_key.bin
 **/.direnv
 
 # Prisma generated clients
-/native-yield-operations/lido-governance-monitor/prisma/client/
+operations/native-yield/lido-governance-monitor/prisma/client/
 
 bin/
 build/
@@ -93,7 +93,7 @@ target/
 tmp/
 typechain/
 typechain-types/
-generated/
+**/generated/**
 __pycache__/
 
 /besu-plugins/linea-sequencer/**/site
@@ -176,6 +176,9 @@ prover/*.json
 # Usually helper shell scripts to run the prover
 prover/*.sh
 
+## Verifier-ray generated testdata fixtures
+!verifier-ray/testdata/generated/*.zig
+
 .claude/settings.local.json
 contracts/.claude/settings.local.json
 *.analysis-report.html
@@ -202,6 +205,7 @@ arithmetization/src/test/rust/src/blake/blake_test_vectors
 arithmetization/src/test/rust/src/blake/blake_with_in_bytes
 arithmetization/src/test/rust/src/blake/blake_with_in_embedded
 arithmetization/src/test/common_inputs/*.json
+arithmetization/src/test/common_inputs/*.json.err
 
 # RISC-V guest build artifacts and dependency caches are ignored per-directory:
 # see riscv-guests/.gitignore (each guest package has its own zig-out/zig-pkg/.zig-cache).

@@ -20,9 +20,11 @@ import linea.coordinator.config.v2.isDisabled
 import linea.coordinator.config.v2.isEnabled
 import linea.domain.BlobSubmittedEvent
 import linea.domain.BlockNumberAndHash
+import linea.domain.BlockParameter
 import linea.domain.FinalizationSubmittedEvent
 import linea.domain.RetryConfig
 import linea.ethapi.EthApiClient
+import linea.ethapi.EthLogsSearcherImpl
 import linea.finalization.AggregationFinalizationCoordinator
 import linea.finalization.AggregationSubmitterImpl
 import linea.finalization.FinalizationHandler
@@ -142,7 +144,7 @@ class L1DependentApp(
   private val l1FinalizationPriorityFeeCalculator: FeesCalculator = BoundableFeeCalculator(
     BoundableFeeCalculator.Config(
       feeUpperBound = configs.l1Submission!!.aggregation.gas.fallback.priorityFeePerGasUpperBound.toDouble(),
-      feeLowerBound = configs.l1Submission.aggregation.gas.fallback.priorityFeePerGasUpperBound.toDouble(),
+      feeLowerBound = configs.l1Submission.aggregation.gas.fallback.priorityFeePerGasLowerBound.toDouble(),
       feeMargin = 0.0,
     ),
     l1MinPriorityFeeCalculator,
@@ -173,11 +175,16 @@ class L1DependentApp(
     Web3JLineaRollupSmartContractClientReadOnly(
       contractAddress = configs.protocol.l1.contractAddress,
       web3j = web3j,
-      ethLogsClient = createEthApiClient(
-        web3jClient = web3j,
-        requestRetryConfig = configs.l1FinalizationMonitor.l1RequestRetries,
+      ethLogsSearcher = EthLogsSearcherImpl(
         vertx = vertx,
+        ethApiClient = createEthApiClient(
+          web3jClient = web3j,
+          requestRetryConfig = configs.l1FinalizationMonitor.l1RequestRetries,
+          vertx = vertx,
+        ),
       ),
+      finalizedStateSearchInitialBlockParameter = configs.protocol.l1.contractDeploymentBlockNumber
+        ?: BlockParameter.Tag.EARLIEST,
     )
   }
 
@@ -325,6 +332,7 @@ class L1DependentApp(
       client = l1Web3jClient,
     )
     createLineaContractClient(
+      vertx = vertx,
       dataAvailabilityType = configs.l1Submission.dataAvailability,
       contractAddress = configs.protocol.l1.contractAddress,
       transactionManager = transactionManager,
@@ -422,6 +430,7 @@ class L1DependentApp(
         ),
       )
       val lineaSmartContractClientForFinalization = createLineaContractClient(
+        vertx = vertx,
         dataAvailabilityType = configs.l1Submission.dataAvailability,
         contractAddress = configs.protocol.l1.contractAddress,
         transactionManager = finalizationTransactionManager,

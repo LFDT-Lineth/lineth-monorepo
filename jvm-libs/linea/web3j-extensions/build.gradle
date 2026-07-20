@@ -9,6 +9,7 @@ description="Web3j extensions for Linea"
 dependencies {
   api "org.web3j:core:${libs.versions.web3j.get()}"
   api project(':jvm-libs:linea:core:domain-models')
+  api project(':jvm-libs:linea:core:signer-interfaces')
   api project(':jvm-libs:linea:clients:interfaces')
   api project(':jvm-libs:generic:logging')
   api project(':jvm-libs:generic:errors')
@@ -16,6 +17,8 @@ dependencies {
   api project(':jvm-libs:generic:extensions:futures')
   api project(':jvm-libs:linea:besu-libs')
   api project(':jvm-libs:generic:serialization:jackson')
+
+
 
   testImplementation(testFixtures(project(":jvm-libs:generic:json-rpc")))
   testImplementation "org.apache.logging.log4j:log4j-slf4j2-impl:${libs.versions.log4j.get()}"

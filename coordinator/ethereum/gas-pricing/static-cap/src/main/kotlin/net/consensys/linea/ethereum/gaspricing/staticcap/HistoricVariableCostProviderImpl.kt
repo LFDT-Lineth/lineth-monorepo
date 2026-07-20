@@ -2,7 +2,7 @@ package net.consensys.linea.ethereum.gaspricing.staticcap
 
 import linea.OneKWei
 import linea.domain.BlockParameter
-import linea.domain.BlockParameter.Companion.toBlockParameter
+import linea.domain.toBlockParameter
 import linea.ethapi.EthApiBlockClient
 import linea.kotlin.encodeHex
 import net.consensys.linea.ethereum.gaspricing.HistoricVariableCostProvider
@@ -19,13 +19,13 @@ class HistoricVariableCostProviderImpl(
   private var lastVariableCost: AtomicReference<Pair<ULong, Double>> =
     AtomicReference(0UL to 0.0)
 
-  private fun getHistoricVariableCostInWei(blockParameter: BlockParameter): SafeFuture<Double> {
+  private fun getHistoricVariableCostInWei(blockParameter: BlockParameter.BlockNumber): SafeFuture<Double> {
     return ethApiBlockClient.ethFindBlockByNumberTxHashes(blockParameter)
       .thenApply { block ->
         if (block == null) {
           log.warn(
             "Block {} not found, the requesting node could be out-of-sync",
-            blockParameter.getNumber(),
+            blockParameter.number,
           )
           throw IllegalStateException("Block $blockParameter not found")
         } else {

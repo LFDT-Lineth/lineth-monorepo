@@ -1,0 +1,33 @@
+{
+  "name": "lineth-quickstart",
+  "version": "1.0.0",
+  "description": "Operating manual for the Lineth Stack quickstart at docs/getting-started/lineth-stack: boot/run the Docker-Compose dev L2 (local or Sepolia L1), get past the Sepolia funding step, read finality signals, run smoke/traffic tests, reset, and debug failing boots.",
+  "author": "linea",
+  "license": "AGPL-3.0",
+  "keywords": [
+    "lineth-stack",
+    "quickstart",
+    "linea",
+    "l2",
+    "docker-compose",
+    "sepolia",
+    "local-l1",
+    "prover",
+    "finality",
+    "web3signer"
+  ],
+  "categories": [
+    "development",
+    "blockchain",
+    "devops"
+  ],
+  "triggers": [
+    "start the stack",
+    "run the quickstart",
+    "boot lineth locally",
+    "lineth-stack",
+    "quickstart deploy failing",
+    "finality not advancing",
+    "reset the quickstart"
+  ]
+}

@@ -25,6 +25,7 @@ class L1MessageSentEventsPoller(
   private val l1MessagesSentFetchLimit: UInt,
   private val l1MessagesSentFetchTimeout: Duration,
   private val l1BlockSearchChuck: UInt,
+  private val l1EventSearchMaxBlockRange: UInt,
   private val l1HighestBlock: BlockParameter,
   private val l2HighestBlock: BlockParameter,
   private val log: Logger = LogManager.getLogger(L1MessageSentEventsPoller::class.java),
@@ -39,6 +40,7 @@ class L1MessageSentEventsPoller(
     l1SmartContractAddress = l1SmartContractAddress,
     l1EventsSearcher = l1EventsSearcher,
     l1HighestBlock = l1HighestBlock,
+    l1EventSearchMaxBlockRange = l1EventSearchMaxBlockRange,
     log = log,
   )
   private val lastFetchedMessageNumber: AtomicLong = AtomicLong(0L)

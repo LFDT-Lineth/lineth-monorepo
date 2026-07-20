@@ -14,12 +14,13 @@ WORKDIR /usr/src/app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
 COPY patches/ ./patches/
 
+COPY patches/ ./patches/
 COPY ts-libs/eslint-config/ ./ts-libs/eslint-config/
 COPY operations/cli/ ./operations/cli/
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --prefer-offline --ignore-scripts
 RUN pnpm run -F operations build
-RUN pnpm deploy --legacy --filter=./operations/cli --prod ./prod --config.allowUnusedPatches=true
+RUN pnpm --config.allow-unused-patches=true --config.block-exotic-subdeps=false deploy --legacy --filter=./operations/cli --prod ./prod
 
 FROM node:${NODE_VERSION}-slim AS release
 

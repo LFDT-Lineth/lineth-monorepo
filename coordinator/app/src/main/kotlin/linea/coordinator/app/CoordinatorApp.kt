@@ -9,6 +9,9 @@ import linea.coordinator.api.Api
 import linea.coordinator.app.conflationbacktesting.ConflationBacktestingService
 import linea.coordinator.config.v2.CoordinatorConfig
 import linea.coordinator.config.v2.DatabaseConfig
+import linea.coordinator.config.v2.logPretty
+import linea.coordinator.extensions.CoordinatorContext
+import linea.coordinator.extensions.CoordinatorExtensionFactory
 import linea.fileio.DirectoryCleaner
 import linea.persistence.DisabledForcedTransactionsDao
 import linea.persistence.conflation.AggregationsRepositoryImpl
@@ -38,6 +41,10 @@ import kotlin.time.Clock
 class CoordinatorApp(
   private val configs: CoordinatorConfig,
   private val clock: Clock = Clock.System,
+  // Single seam for the enterprise distribution: contributes extra services and JSON-RPC
+  // handlers that share this app's Vertx, metrics and DB. Defaults to no-op so the OSS app
+  // behaves identically when no extension is supplied.
+  extensionsFactory: CoordinatorExtensionFactory = CoordinatorExtensionFactory.NOOP,
 ) {
   private val log: Logger = LogManager.getLogger(this::class.java)
   private val vertx: Vertx =
@@ -45,7 +52,23 @@ class CoordinatorApp(
       log.trace("System properties: {}", System.getProperties())
       val vertxConfig = loadVertxConfig()
       log.debug("Vertx full configs: {}", vertxConfig)
+      // Raw single-line dump kept for existing tooling that parses this line.
       log.info("App configs: {}", configs)
+      // Human-readable form: one fully-qualified `path: value` per INFO event so each config is a
+      // separate line in log aggregators (Grafana/Loki) instead of a collapsed multi-line blob.
+      configs.logPretty(log)
+      log.trace(
+        "Full smartContractErrors ({} entries): {}",
+        configs.smartContractErrors.size,
+        configs.smartContractErrors,
+      )
+      configs.l1Submission?.dynamicGasPriceCap?.let { dgc ->
+        log.trace("dynamicGasPriceCap.timeOfDayMultipliers: {}", dgc.timeOfDayMultipliers)
+        log.trace(
+          "dynamicGasPriceCap.gasPriceCapCalculation.timeOfTheDayMultipliers: {}",
+          dgc.gasPriceCapCalculation.timeOfTheDayMultipliers,
+        )
+      }
 
       Vertx.vertx(vertxConfig)
     }
@@ -148,6 +171,25 @@ class CoordinatorApp(
       clock = this.clock,
     )
 
+  // Resolve extensions once, against the infrastructure already built above. Done before any
+  // service is started so their services join the lifecycle and their handlers join the router.
+  private val extensions =
+    extensionsFactory.create(
+      object : CoordinatorContext {
+        override val vertx: Vertx = this@CoordinatorApp.vertx
+        override val metricsFacade = micrometerMetricsFacade
+        override val sqlClient: SqlClient = this@CoordinatorApp.sqlClient
+      },
+    )
+  private val extensionServices = extensions.flatMap { it.services() }
+  private val extensionRpcHandlers = extensions.flatMap { it.jsonRpcHandlers().entries }
+    .associate { it.key to it.value }
+    .also { handlers ->
+      if (handlers.isNotEmpty()) {
+        log.info("Registered {} extension JSON-RPC handler(s): {}", handlers.size, handlers.keys)
+      }
+    }
+
   private val api =
     Api(
       configs = Api.Config(
@@ -160,6 +202,7 @@ class CoordinatorApp(
       conflationBacktestingService = conflationBacktestingService,
       metricsFacade = micrometerMetricsFacade,
       conflationCheckpointResumeLatch = l1App::signalTargetCheckpointResumeFromApi,
+      additionalRequestHandlers = extensionRpcHandlers,
     )
 
   private val requestFileCleanup =
@@ -201,6 +244,9 @@ class CoordinatorApp(
     requestFileCleanup.cleanup()
       .thenCompose { l1App.start() }
       .thenCompose { conflationBacktestingService.start() }
+      .thenCompose {
+        SafeFuture.allOf(*extensionServices.map { it.start().toSafeFuture() }.toTypedArray())
+      }
       .thenCompose { api.start() }
       .get()
 
@@ -210,6 +256,7 @@ class CoordinatorApp(
   fun stop(): Int {
     return try {
       SafeFuture.allOf(
+        SafeFuture.allOf(*extensionServices.map { it.stop().toSafeFuture() }.toTypedArray()),
         l1App.stop(),
         api.stop(),
         conflationBacktestingService.stop(),

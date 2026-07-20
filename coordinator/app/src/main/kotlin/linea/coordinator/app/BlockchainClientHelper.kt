@@ -9,10 +9,12 @@ import linea.contract.l1.LineaSmartContractClient
 import linea.coordinator.config.v2.L1SubmissionConfig
 import linea.coordinator.config.v2.SignerConfig
 import linea.crypto.Web3SignerRestClient
+import linea.ethapi.EthLogsSearcherImpl
 import linea.kotlin.encodeHex
 import linea.web3j.ECKeypairSignerAdapter
 import linea.web3j.SmartContractErrors
 import linea.web3j.Web3SignerTxSignService
+import linea.web3j.ethapi.createEthApiClient
 import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
 import net.consensys.linea.contract.l1.Web3JLineaRollupSmartContractClient
 import net.consensys.linea.contract.l1.Web3JLineaValidiumSmartContractClient
@@ -21,7 +23,6 @@ import org.web3j.crypto.Credentials
 import org.web3j.protocol.Web3j
 import org.web3j.service.TxSignServiceImpl
 import org.web3j.tx.gas.ContractGasProvider
-import org.web3j.utils.Numeric
 import java.io.FileInputStream
 import java.nio.file.Path
 import java.security.KeyStore
@@ -110,8 +111,8 @@ fun createTransactionManager(
         val poolOptions = PoolOptions()
           .setHttp1MaxSize(web3SignerConfig.maxPoolSize)
         val httpRestClient = VertxHttpRestClient(webClientOptions, poolOptions, vertx)
-        val signer = Web3SignerRestClient(httpRestClient, signerConfig.web3signer.publicKey.encodeHex())
-        val signerAdapter = ECKeypairSignerAdapter(signer::sign, Numeric.toBigInt(signerConfig.web3signer.publicKey))
+        val signer = Web3SignerRestClient(httpRestClient, signerConfig.web3signer.publicKey)
+        val signerAdapter = ECKeypairSignerAdapter(signer)
         val web3SignerCredentials = Credentials.create(signerAdapter)
         Web3SignerTxSignService(web3SignerCredentials)
       }
@@ -121,6 +122,7 @@ fun createTransactionManager(
 }
 
 fun createLineaContractClient(
+  vertx: Vertx,
   dataAvailabilityType: L1SubmissionConfig.DataAvailability,
   contractAddress: String,
   transactionManager: AsyncFriendlyTransactionManager,
@@ -137,6 +139,7 @@ fun createLineaContractClient(
         transactionManager = transactionManager,
         contractGasProvider = contractGasProvider,
         smartContractErrors = smartContractErrors,
+        ethLogsSearcher = EthLogsSearcherImpl(vertx = vertx, ethApiClient = createEthApiClient(web3jClient)),
         useEthEstimateGas = useEthEstimateGas,
       )
 

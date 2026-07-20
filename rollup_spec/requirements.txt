@@ -6,3 +6,9 @@ ethereum-execution @ git+https://github.com/ethereum/execution-specs.git@a456712
 ckzg>=2.1
 lz4>=4
 remerkleable>=0.1.28
+# Validates the V1 prover-request/response fixtures against the shared JSON
+# schemas in src/rollup_spec/prover_io/schemas/ (tests/test_fixture_schema_conformance.py).
+jsonschema>=4.18
+# Test runner, so a single `pip install -r requirements.txt` + `python -m pytest`
+# covers the whole suite (no separate install steps).
+pytest>=7.0

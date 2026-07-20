@@ -46,8 +46,7 @@ public final class ExtCodeCopy extends GasProjection {
 
   @Override
   public long memoryExpansion() {
-
-    return gc.memoryExpansionGasCost(frame, offset, this.size);
+    return memoryExpansionGasCost(gc, frame, offset, this.size);
   }
 
   @Override

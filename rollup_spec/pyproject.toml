@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rollup-spec"
+version = "0.1.0"
+description = "Lineth Type-1 RISC-V rollup reference spec, prover I/O JSON schemas, and the host-side JSON <-> guest-dataclass codec."
+requires-python = ">=3.11"
+# Dependencies are defined once, in requirements.txt (the single source of truth).
+dynamic = ["dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"rollup_spec" = [
+  "prover_io/schemas/*.json",
+  "prover_io/testdata/*.json",
+]
+
+[tool.pytest.ini_options]
+# src/ layout: put the package import root on sys.path so `import rollup_spec`
+# resolves without an editable install. `testpaths` makes a bare `python -m pytest`
+# discover both suites under tests/.
+pythonpath = ["src"]
+testpaths = ["tests"]

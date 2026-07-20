@@ -115,6 +115,10 @@ const hash = await claimOnL1(client, {
     proof: ['0x…'],
     leafIndex: 0,
   },
+  // Optional. The L2 block in which the message was sent. When the proof is auto-fetched, this
+  // restricts the L2 `MessageSent` lookup to a single block. Recommended if your RPC provider
+  // rejects large `eth_getLogs` block ranges.
+  messageL2BlockNumber: 1_234_567n,
 });
 ```
 
@@ -225,6 +229,9 @@ const client = createPublicClient({
 });
 const message = await getMessageByMessageHash(client, {
   messageHash: '0x1234…',
+  // Optional. Restricts the lookup to a single block instead of the full `earliest`..`latest`
+  // range. Required if your RPC provider rejects large `eth_getLogs` block ranges.
+  messageBlockNumber: 1_234_567n,
 });
 ```
 
@@ -281,6 +288,9 @@ const client = createPublicClient({
 });
 const receipt = await getTransactionReceiptByMessageHash(client, {
   messageHash: '0x1234…',
+  // Optional. Restricts the lookup to a single block instead of the full `earliest`..`latest`
+  // range. Required if your RPC provider rejects large `eth_getLogs` block ranges.
+  messageBlockNumber: 1_234_567n,
 });
 ```
 

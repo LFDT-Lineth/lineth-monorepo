@@ -34,7 +34,7 @@ runs:
   steps:
     - name: Login to Docker Hub
       if: ${{ github.ref == 'refs/heads/main' && inputs.last_commit_tag_exists == '0' }}
-      uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 #v3.4.0
+      uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 #v3.7.0
       with:
         username: ${{ inputs.docker_username }}
         password: ${{ inputs.docker_password }}
@@ -67,7 +67,7 @@ runs:
         docker save ${{ inputs.image_name }}:${{ inputs.commit_tag }} | gzip > ${{ steps.split.outputs.image_name_suffix }}-docker-image.tar.gz
     - name: Upload Docker image artifact for later use in e2e test
       if: ${{ github.ref == 'refs/heads/main' && inputs.last_commit_tag_exists == '0' }}
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: ${{ steps.split.outputs.image_name_suffix }}
         path: ${{ steps.split.outputs.image_name_suffix }}-docker-image.tar.gz
@@ -77,3 +77,4 @@ runs:
       run: |
         echo "image_tagged=$IMAGE_TAGGED" >> $GITHUB_OUTPUT
         echo "image_name_suffix: ${{ steps.split.outputs.image_name_suffix }}"
+

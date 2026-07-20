@@ -14,6 +14,7 @@ import maru.consensus.ValidatorProvider
 import maru.database.BeaconChain
 import maru.p2p.PeerLookup
 import maru.p2p.PeersHeadBlockProvider
+import maru.serialization.rlp.ForkAwareBlockHashing
 import maru.services.LongRunningService
 import maru.subscription.InOrderFanoutSubscriptionManager
 import maru.syncing.beaconchain.CLSyncServiceImpl
@@ -208,6 +209,7 @@ class BeaconSyncControllerImpl(
       pipelineConfig: BeaconChainDownloadPipelineFactory.Config,
       allowEmptyBlocks: Boolean = true,
       timerFactory: TimerFactory,
+      blockHashing: ForkAwareBlockHashing,
     ): SyncController {
       val clSyncService =
         CLSyncServiceImpl(
@@ -219,6 +221,7 @@ class BeaconSyncControllerImpl(
           peerLookup = peerLookup,
           besuMetrics = besuMetrics,
           metricsFacade = metricsFacade,
+          blockHashing = blockHashing,
         )
       val controller =
         BeaconSyncControllerImpl(

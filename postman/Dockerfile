@@ -28,6 +28,7 @@ ENV NATIVE_LIBS_RELEASE_TAG=${NATIVE_LIBS_RELEASE_TAG}
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
 COPY patches/ ./patches/
 
+COPY patches/ ./patches/
 COPY ./postman/package.json ./postman/package.json
 COPY ./ts-libs/sdk/sdk-core/package.json ./ts-libs/sdk/sdk-core/package.json
 COPY ./ts-libs/sdk/sdk-viem/package.json ./ts-libs/sdk/sdk-viem/package.json
@@ -48,7 +49,7 @@ COPY ./ts-libs/eslint-config ./ts-libs/eslint-config
 
 # Build and create production deployment
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm run build \
-    && pnpm deploy --legacy --filter=./postman --prod ./prod/postman --config.allowUnusedPatches=true
+    && pnpm --config.allow-unused-patches=true --config.block-exotic-subdeps=false deploy --legacy --filter=./postman --prod ./prod/postman
 
 FROM node:${NODE_VERSION}-slim AS production
 

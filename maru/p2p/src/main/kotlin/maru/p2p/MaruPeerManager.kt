@@ -122,7 +122,13 @@ class MaruPeerManager(
   private fun connectedPeers(): Map<NodeId, MaruPeer> = peers.filter { it.value.isConnected }
 
   override fun onDisconnect(peer: Peer) {
-    peers.remove(peer.id)
+    // When two nodes connect to each other simultaneously, onConnect fires twice for the same NodeId
+    // and the second call overwrites the first entry in peers.  When the duplicate connection is
+    // then closed, onDisconnect would naively evict the surviving connection.  Guard against that
+    // by only removing the entry when the stored MaruPeer is itself no longer connected.
+    peers.computeIfPresent(peer.id) { _, storedPeer ->
+      if (storedPeer.isConnected) storedPeer else null
+    }
     log.debug("Peer={} disconnected", peer.id)
   }
 

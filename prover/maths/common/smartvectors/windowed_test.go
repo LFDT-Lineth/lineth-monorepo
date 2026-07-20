@@ -64,3 +64,28 @@ func TestEdgeCases(t *testing.T) {
 	},
 		"NewConstant.Subvector should panic with 'zero length are not allowed' message")
 }
+
+// TestCoWindowRange checks that the range covers the union of every window,
+// independently of argument order, and that constants are skipped.
+func TestCoWindowRange(t *testing.T) {
+	const size = 16
+	a := NewPaddedCircularWindow(vector.Rand(3), field.Zero(), 2, size) // [2, 5)
+	b := NewPaddedCircularWindow(vector.Rand(4), field.Zero(), 8, size) // [8, 12)
+	c := NewConstant(field.Zero(), size)
+
+	start, stop := CoWindowRange(a, b)
+	require.Equal(t, 2, start)
+	require.Equal(t, 12, stop)
+
+	start, stop = CoWindowRange(b, a)
+	require.Equal(t, 2, start)
+	require.Equal(t, 12, stop)
+
+	start, stop = CoWindowRange(c, a, c)
+	require.Equal(t, 2, start)
+	require.Equal(t, 5, stop)
+
+	start, stop = CoWindowRange(NewRegular(vector.Rand(size)), a)
+	require.Equal(t, 0, start)
+	require.Equal(t, size, stop)
+}

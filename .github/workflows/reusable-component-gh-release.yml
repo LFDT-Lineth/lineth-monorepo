@@ -21,6 +21,10 @@ on:
         description: 'newline-separated string to represent the "git-cliff --include-path filter"'
         required: true
         type: string
+      scopes:
+        description: "Regex alternation of conventional-commit scopes to gate on (e.g. 'coordinator' or 'linea-besu|tracer|sequencer|deps|misc')"
+        required: true
+        type: string
       image_tag_suffix:
         description: 'Custom docker image tag suffix, i.e. docker image tag would be [semver]-[YYYYMMDD]-[commit]-[suffix], if not given, would be [semver]-[YYYYMMDD]-[commit]'
         required: false
@@ -66,6 +70,7 @@ jobs:
       component-name: ${{ inputs.component-name }}
       folder-name: ${{ inputs.folder-name }}
       include-path: ${{ inputs.include-path }}
+      scopes: ${{ inputs.scopes }}
       release_tag_suffix: ${{ inputs.release_tag_suffix }}
       upload_changelog: ${{ inputs.upload_changelog }}
     secrets: inherit
@@ -146,7 +151,7 @@ jobs:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Append Changelog Action to release note
         id: append_change_log
@@ -191,7 +196,7 @@ jobs:
           echo "COMPONENT_CAP=${COMPONENT_NAME^}" >> $GITHUB_ENV
 
       - name: gh-release
-        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b #v2.5.0
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 #v2.6.2
         with:
           name: ${{ env.COMPONENT_CAP }} v${{ needs.release-push-tag-changelog.outputs.release_version }}
           tag_name: ${{ needs.release-push-tag-changelog.outputs.release_tag }}
@@ -201,3 +206,4 @@ jobs:
           generate_release_notes: false
           target_commitish: ${{ github.sha }}
           fail_on_unmatched_files: true
+
