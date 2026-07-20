@@ -81,6 +81,10 @@ jobs:
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
+    - name: Checkout ZKC testdata
+      working-directory: prover-ray
+      run: |
+        make download-zkc-testdata
     - name: Test
       working-directory: prover-ray
       run: |
