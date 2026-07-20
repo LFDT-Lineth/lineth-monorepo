@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -341,9 +343,77 @@ func TestBuildJSON_EntryFormat(t *testing.T) {
 		"entry_point_and_blobs_count must be 0x{entry}_{count} in 16-hex-char fields")
 }
 
-// TestCore_New_Integration is a placeholder for a full Core.New() integration
-// test. It requires go tool zkc (PR 3580) to compile the ZKC binary on-the-fly
-// and a real guest ELF. Neither is available yet.
-func TestCore_New_Integration(t *testing.T) {
-	t.Skip("needs go tool zkc (PR 3580 merged) and a real guest ELF to compile the circuit binary")
+// TestBuildZkcInputs_NoLoadableSegments verifies that an ELF whose only
+// segment is not PT_LOAD is rejected with a clear error rather than producing
+// an empty blob set.
+func TestBuildZkcInputs_NoLoadableSegments(t *testing.T) {
+	elfBytes := makeMinimalELF(t, testEntry, testSecAddr, testSecData)
+	// The program header starts at byte 64; its first field is p_type
+	// (uint32 LE). Rewrite PT_LOAD (1) to PT_NOTE (4).
+	binary.LittleEndian.PutUint32(elfBytes[64:68], 4)
+
+	_, err := BuildZkcInputs(elfBytes, []byte{0x01}, DefaultINOrigin)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no loadable sections")
+}
+
+// zkcTestBin is a small synthetic ZkC circuit checked in for the zkcdriver
+// tests; NewZkCDriver accepts it, which is all Core.New needs.
+const zkcTestBin = "../zkcdriver/testdata/zkc_01.bin"
+
+// TestNew verifies that New precomputes the ELF blobs and entry point at
+// construction and that the resulting Core builds the same inputs as the
+// parse-every-call path.
+func TestNew(t *testing.T) {
+	elfBytes := makeMinimalELF(t, testEntry, testSecAddr, testSecData)
+	elfPath := filepath.Join(t.TempDir(), "guest.elf")
+	require.NoError(t, os.WriteFile(elfPath, elfBytes, 0o600))
+
+	c, err := New(Config{CircuitBinPath: zkcTestBin, GuestELFPath: elfPath})
+	require.NoError(t, err)
+
+	assert.Len(t, c.elfBlobs, 1, "one loadable section must be precomputed")
+	assert.Equal(t, testEntry, c.elfEntry)
+
+	ssz := []byte{0xAA, 0xBB}
+	fromCore, err := c.buildInputs(Job{Payload: ssz})
+	require.NoError(t, err)
+	fromFull, err := BuildZkcInputs(elfBytes, ssz, DefaultINOrigin)
+	require.NoError(t, err)
+	assert.Equal(t, fromFull, fromCore)
+}
+
+// TestNew_Errors verifies that New reports missing or invalid startup inputs
+// with errors naming the offending path.
+func TestNew_Errors(t *testing.T) {
+	elfBytes := makeMinimalELF(t, testEntry, testSecAddr, testSecData)
+	elfPath := filepath.Join(t.TempDir(), "guest.elf")
+	require.NoError(t, os.WriteFile(elfPath, elfBytes, 0o600))
+
+	badELFPath := filepath.Join(t.TempDir(), "bad.elf")
+	require.NoError(t, os.WriteFile(badELFPath, []byte("not an elf"), 0o600))
+
+	cases := []struct {
+		name    string
+		cfg     Config
+		wantErr string
+	}{
+		{"MissingCircuitBin",
+			Config{CircuitBinPath: "does/not/exist.bin", GuestELFPath: elfPath},
+			"circuit bin"},
+		{"MissingGuestELF",
+			Config{CircuitBinPath: zkcTestBin, GuestELFPath: "does/not/exist.elf"},
+			"guest ELF"},
+		{"InvalidGuestELF",
+			Config{CircuitBinPath: zkcTestBin, GuestELFPath: badELFPath},
+			"ELF"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := New(tc.cfg)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tc.wantErr)
+		})
+	}
 }
