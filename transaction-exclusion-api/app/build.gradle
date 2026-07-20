@@ -26,9 +26,9 @@ dependencies {
   implementation "com.sksamuel.hoplite:hoplite-core:${libs.versions.hoplite.get()}"
   implementation "com.sksamuel.hoplite:hoplite-toml:${libs.versions.hoplite.get()}"
   implementation "io.micrometer:micrometer-registry-prometheus:${libs.versions.micrometer.get()}"
-  implementation "com.fasterxml.jackson.core:jackson-annotations:${libs.versions.jackson.get()}"
-  implementation "com.fasterxml.jackson.core:jackson-databind:${libs.versions.jackson.get()}"
-  implementation "com.fasterxml.jackson.module:jackson-module-kotlin:${libs.versions.jackson.get()}"
+  implementation "com.fasterxml.jackson.core:jackson-annotations"
+  implementation "com.fasterxml.jackson.core:jackson-databind"
+  implementation "com.fasterxml.jackson.module:jackson-module-kotlin"
 
   implementation(project(":jvm-libs:linea:besu-libs"))
 
