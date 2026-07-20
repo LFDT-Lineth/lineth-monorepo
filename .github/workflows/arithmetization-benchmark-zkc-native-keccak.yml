@@ -179,7 +179,7 @@ jobs:
           for variant in base opt; do
             echo "=== zkc-${variant} compile --stats ==="
             stats_file="/tmp/zkc_stats_${variant}.txt"
-            "/tmp/zkc-${variant}" compile --stats --field KOALABEAR_16 \
+            "/tmp/zkc-${variant}" compile --stats --quiet --inline --field KOALABEAR_16 \
               /tmp/keccakf_input.json "$zkc_prog" \
               >"$stats_file" 2>&1 || true
             cat "$stats_file"
