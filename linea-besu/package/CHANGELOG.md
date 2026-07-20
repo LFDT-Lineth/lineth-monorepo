@@ -1,8 +1,24 @@
 ## [unreleased]
 
+### ⚙️ Miscellaneous Tasks
+
+- *(linea-besu)* Tidy v2.0.0 changelog entries (#3574)
+## [2.0.0] - 2026-07-14
+
+### 🐛 Bug Fixes
+
+- *(linea-besu)* Updating Besu version (#3535)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(deps)* Align bouncycastle catalog pin to 1.84 (#3562)
+## [1.1.1] - 2026-06-26
+
 ### 🐛 Bug Fixes
 
 - *(e2e)* Trying to fix rare profitability issues, FTX fix (#3388)
+- *(besu-plugins)* Removed mutual exclusiveness of the txpool and blo… (#3416)
+- *(Maru)* Fixed a bug when simultaneous mutual connection attempts r… (#3439)
 ## [1.1.0] - 2026-06-11
 
 ### 🚀 Features

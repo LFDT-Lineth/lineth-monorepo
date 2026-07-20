@@ -125,7 +125,7 @@ fun createAppClients(
         rpcUrl = l1RpcEndpoint.toString(),
         log = LogManager.getLogger("linea.plugin.staterecovery.clients.l1.smart-contract"),
       ),
-      ethLogsClient = ethLogsSearcher,
+      ethLogsSearcher = ethLogsSearcher,
     )
   val blobScanClient =
     BlobScanClient.create(

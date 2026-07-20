@@ -6,6 +6,25 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 )
 
+// leafDomainTag domain-separates Merkle leaves so a table with the same row
+// values but a different (BaseWidth, ExtWidth) shape hashes to a different
+// digest. Without this, e.g. an all-zero base row and an all-zero ext row
+// collide, letting two structurally distinct commitments share a Merkle root
+// and get deduplicated inside inputOpeningRoots.
+const leafDomainTag uint64 = 0x4c66_7269_5f6c_6631 // "Lfri_lf1"
+
+// absorbLeafHeader writes the domain tag and (baseWidth, extWidth) into h
+// before any row values. Prover ([MultiSizeTable.Merkleize]) and verifier
+// ([hashRowOpening]) MUST call this identically or roots will not
+// reconstruct.
+func absorbLeafHeader(h *poseidon2.MDHasher, baseWidth, extWidth int) {
+	var tag, b, e field.Element
+	tag.SetUint64(leafDomainTag)
+	b.SetUint64(uint64(baseWidth))
+	e.SetUint64(uint64(extWidth))
+	h.WriteElements(tag, b, e)
+}
+
 // CommitterState collects the data that are built during the commitment phase
 // of FRI. This includes the RS codewords and their Merkle tree.
 type CommitterState struct {
@@ -17,7 +36,7 @@ type CommitterState struct {
 
 // Commit commits to a sorted list of tables. The table must satisfy the format
 // expected by [MultiSizeTable.checkWellFormedness] with a K of 1.
-func Commit(encoder []*RSEncoder, witness MultiSizeTable) CommitterState {
+func Commit(encoders []*RSEncoder, witness MultiSizeTable) CommitterState {
 
 	k, err := witness.checkWellFormedness()
 	if err != nil {
@@ -28,7 +47,7 @@ func Commit(encoder []*RSEncoder, witness MultiSizeTable) CommitterState {
 		panic("k must be one")
 	}
 
-	encoded := witness.Encode(encoder)
+	encoded := witness.Encode(encoders)
 	tree := encoded.Merkleize()
 
 	return CommitterState{
@@ -82,6 +101,7 @@ func (table MultiSizeTable) Merkleize() *Tree {
 
 		for j := range size {
 			hasher.Reset()
+			absorbLeafHeader(hasher, len(table[i].Base), len(table[i].Ext))
 
 			for k := range table[i].Base {
 				hasher.WriteElements(table[i].Base[k][j])
@@ -113,6 +133,21 @@ func (table MultiSizeTable) Merkleize() *Tree {
 	}
 
 	return NewTree(leaves)
+}
+
+// Shape returns the per-size row counts of the batch, discarding the
+// polynomial values. It is the verifier-side view of a committed batch: a
+// caller that holds the committed table builds VerifyInputs.Shapes from it,
+// without needing the witness data.
+func (table MultiSizeTable) Shape() Shape {
+	shape := make(Shape, len(table))
+	for sizeLog2 := range table {
+		shape[sizeLog2] = SizedShape{
+			BaseWidth: len(table[sizeLog2].Base),
+			ExtWidth:  len(table[sizeLog2].Ext),
+		}
+	}
+	return shape
 }
 
 // assertValidMultiEncoder checks that the provided list of encoder:

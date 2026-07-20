@@ -197,7 +197,10 @@ async function main(): Promise<void> {
   console.log(`Threshold: ${threshold}, Model: ${model}`);
   console.log("");
 
-  const anthropicClient = new Anthropic({ apiKey });
+  const anthropicClient = new Anthropic({
+    apiKey,
+    ...(process.env.ANTHROPIC_BASE_URL ? { baseURL: process.env.ANTHROPIC_BASE_URL } : {}),
+  });
   const aiClient = new ClaudeAIClient(noopLogger, anthropicClient, model, systemPrompt, maxOutputTokens, maxProposalChars);
 
   const results: EvalResult[] = [];

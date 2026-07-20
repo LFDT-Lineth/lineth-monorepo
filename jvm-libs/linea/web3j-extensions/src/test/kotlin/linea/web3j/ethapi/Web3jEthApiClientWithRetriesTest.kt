@@ -3,8 +3,8 @@ package linea.web3j.ethapi
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.domain.BlockParameter
-import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.RetryConfig
+import linea.domain.toBlockParameter
 import linea.ethapi.EthApiClient
 import linea.jsonrpc.TestingJsonRpcServer
 import net.consensys.linea.jsonrpc.JsonRpcErrorResponseException
@@ -88,7 +88,7 @@ class Web3jEthApiClientWithRetriesTest {
     assertThat(jsonRpcServer.recordedRequests()).hasSize(3)
 
     jsonRpcServer.cleanRecordedRequests()
-    runCatching { client.ethGetBlockByNumberFullTxs(2.toBlockParameter()).get() }
+    runCatching { client.ethGetBlockByNumberFullTxs(2UL.toBlockParameter()).get() }
     assertThat(jsonRpcServer.recordedRequests()).hasSize(3)
   }
 }

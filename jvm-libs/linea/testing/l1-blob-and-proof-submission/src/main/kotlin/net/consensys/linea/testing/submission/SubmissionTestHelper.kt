@@ -10,6 +10,7 @@ import linea.kotlin.toHexString
 import linea.web3j.waitForTxReceipt
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
+import org.web3j.crypto.transaction.type.Transaction4844
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
@@ -61,12 +62,14 @@ fun assertTxsSuccess(
 fun submitBlobs(
   contractClient: LineaRollupSmartContractClient,
   aggregationsAndBlobs: List<AggregationAndBlobs>,
-  blobChunksSize: Int = 9,
+  blobChunksSize: Int = Transaction4844.MAX_BLOBS_PER_TRANSACTION,
   awaitForPreviousTxBeforeSubmittingNext: Boolean = false,
   l1EthApiClient: EthApiClient,
   log: Logger,
 ): List<Pair<String, List<BlobRecord>>> {
-  require(blobChunksSize in 1..9) { "blobChunksSize must be between 1..9" }
+  require(blobChunksSize in 1..Transaction4844.MAX_BLOBS_PER_TRANSACTION) {
+    "blobChunksSize must be between 1..${Transaction4844.MAX_BLOBS_PER_TRANSACTION}"
+  }
 
   return aggregationsAndBlobs
     .map { (agg, aggBlobs) ->
@@ -96,7 +99,7 @@ fun submitBlobsAndAggregationsAndWaitExecution(
   contractClientForBlobSubmission: LineaRollupSmartContractClient,
   contractClientForAggregationSubmission: LineaRollupSmartContractClient = contractClientForBlobSubmission,
   aggregationsAndBlobs: List<AggregationAndBlobs>,
-  blobChunksMaxSize: Int = 9,
+  blobChunksMaxSize: Int = Transaction4844.MAX_BLOBS_PER_TRANSACTION,
   l1EthApiClient: EthApiClient,
   waitTimeout: Duration = 2.minutes,
   log: Logger = LogManager.getLogger("linea.testing.submission"),

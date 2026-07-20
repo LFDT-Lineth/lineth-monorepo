@@ -43,6 +43,30 @@ export function getEnvVarOrDefault(envVar: string, defaultValue: unknown) {
   return envValue;
 }
 
+/**
+ * Parses a strict boolean env var ("true"/"false"). Returns `defaultValue` when unset/empty.
+ * Throws on any other value so a typo never silently becomes `false`.
+ * Do NOT route booleans through getEnvVarOrDefault — it returns the string "false" (truthy).
+ */
+export function getBooleanEnvVarOrDefault(name: string, defaultValue: boolean): boolean {
+  const raw = process.env[name];
+  if (raw === undefined || raw === "") {
+    return defaultValue;
+  }
+  if (raw === "true") return true;
+  if (raw === "false") return false;
+  throw new Error(`${name} must be either "true" or "false", got: ${raw}`);
+}
+
+/** Strict required boolean — throws when unset/empty. Use for required flags. */
+export function getBooleanEnvVar(name: string): boolean {
+  const raw = process.env[name];
+  if (raw === undefined || raw === "") {
+    throw new Error(`Required boolean environment variable "${name}" is missing or empty.`);
+  }
+  return getBooleanEnvVarOrDefault(name, false);
+}
+
 export function getOptionalEnvVar(name: string): string | undefined {
   const envValue = process.env[name];
   if (envValue === undefined) {

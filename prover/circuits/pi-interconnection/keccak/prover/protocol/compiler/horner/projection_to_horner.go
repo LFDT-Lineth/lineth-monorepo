@@ -11,7 +11,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/protocol/wizardutils"
 	sym "github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/symbolic"
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
 // ProjectionContext is a compilation artefact generated during the execution of

@@ -1,6 +1,8 @@
 package linea.ftx.conflation
 
 import com.github.michaelbull.result.getOrThrow
+import linea.EthLogsSearcher
+import linea.SearchDirection
 import linea.clients.GenerateTracesResponse
 import linea.clients.GetZkEVMStateMerkleProofResponse
 import linea.clients.InvalidityProofRequest
@@ -15,11 +17,9 @@ import linea.contract.events.ForcedTransactionAddedEvent
 import linea.domain.BlockInterval
 import linea.domain.BlockParameter
 import linea.domain.InvalidityProofIndex
-import linea.ethapi.EthLogsClient
-import linea.ethapi.EthLogsFilterOptions
 import linea.forcedtx.ForcedTransactionInclusionResult
-import linea.kotlin.toHexStringUInt256
 import linea.persistence.ForcedTransactionRecord
+import linea.persistence.ForcedTransactionsDao
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.apache.tuweni.bytes.Bytes
@@ -35,9 +35,11 @@ class InvalidityProofAssembler(
   private val invalidityProofClient: InvalidityProverClientV1,
   private val stateManagerClient: StateManagerClientV1,
   private val accountProofClient: StateManagerAccountProofClient,
-  private val ethApiLogsClient: EthLogsClient,
+  private val ethApiLogsSearcher: EthLogsSearcher,
+  private val ftxDao: ForcedTransactionsDao,
   private val tracesClient: TracesConflationVirtualBlockClientV1,
   private val contractAddress: String,
+  private val l1EventSearchMaxBlockRange: UInt,
   private val log: Logger = LogManager.getLogger(InvalidityProofAssembler::class.java),
 ) {
 
@@ -83,27 +85,44 @@ class InvalidityProofAssembler(
       }
   }
 
-  private fun getPrevFtxRollingHash(ftxNumber: ULong): SafeFuture<ByteArray> {
+  internal fun getPrevFtxRollingHash(ftxNumber: ULong): SafeFuture<ByteArray> {
     if (ftxNumber == 1uL) {
       return SafeFuture.completedFuture(ByteArray(32))
     }
     val prevFtxNumber = ftxNumber - 1uL
-    return ethApiLogsClient
-      .ethGetLogs(
-        filterOptions = EthLogsFilterOptions(
-          fromBlock = BlockParameter.Tag.EARLIEST,
-          toBlock = BlockParameter.Tag.LATEST,
-          address = contractAddress,
-          topics = listOf(
-            ForcedTransactionAddedEvent.topic,
-            prevFtxNumber.toHexStringUInt256(),
-          ),
-        ),
-      ).thenApply { logs ->
-        if (logs.isEmpty()) {
+    // The previous FTX's rolling hash is persisted with its record, so read it from the DB and skip
+    // the eth_getLogs entirely. Records are pruned after finalization, so fall back to a bounded
+    // on-chain binary search when the previous FTX is no longer in the DB.
+    return ftxDao.findByNumber(prevFtxNumber)
+      .thenCompose { record ->
+        if (record != null) {
+          SafeFuture.completedFuture(record.ftxRollingHash)
+        } else {
+          findPrevFtxRollingHashOnChain(prevFtxNumber)
+        }
+      }
+  }
+
+  private fun findPrevFtxRollingHashOnChain(prevFtxNumber: ULong): SafeFuture<ByteArray> {
+    return ethApiLogsSearcher
+      .findLog(
+        fromBlock = BlockParameter.Tag.EARLIEST,
+        toBlock = BlockParameter.Tag.LATEST,
+        chunkSize = l1EventSearchMaxBlockRange.toInt(),
+        address = contractAddress,
+        topics = listOf(ForcedTransactionAddedEvent.topic),
+      ) { ethLog ->
+        val foundFtxNumber = ForcedTransactionAddedEvent.fromEthLog(ethLog).event.forcedTransactionNumber
+        when {
+          foundFtxNumber < prevFtxNumber -> SearchDirection.FORWARD
+          foundFtxNumber > prevFtxNumber -> SearchDirection.BACKWARD
+          else -> null
+        }
+      }.thenApply { ethLog ->
+        if (ethLog == null) {
           throw IllegalStateException("No ForcedTransactionAdded event found for ftx=$prevFtxNumber")
         }
-        ForcedTransactionAddedEvent.fromEthLog(logs.first()).event.forcedTransactionRollingHash
+        ForcedTransactionAddedEvent.fromEthLog(ethLog).event.forcedTransactionRollingHash
       }
   }
 

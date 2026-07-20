@@ -8,7 +8,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/protocol/wizard"
 	sym "github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/symbolic"
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
 // Context stores the compilation Context for a single PlonkInWizard query

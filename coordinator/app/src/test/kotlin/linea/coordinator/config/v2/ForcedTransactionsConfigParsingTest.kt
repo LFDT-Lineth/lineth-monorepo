@@ -42,6 +42,7 @@ class ForcedTransactionsConfigParsingTest {
       polling-timeout = "PT10S"
       eth-logs-search-success-backoff-delay = "PT0.5S"
       eth-logs-search-block-chunk-size = 500
+      eth-logs-search-max-block-range = 5000
       """.trimIndent()
 
     val config =
@@ -74,6 +75,7 @@ class ForcedTransactionsConfigParsingTest {
           pollingTimeout = 10.seconds,
           ethLogsSearchSuccessBackoffDelay = 500.milliseconds,
           ethLogsSearchBlockChunkSize = 500u,
+          ethLogsSearchMaxBlockRange = 5000u,
         ),
       )
 

@@ -5,9 +5,9 @@ import linea.contract.l1.BlockAndNonce
 import linea.contract.l1.LineaValidiumSmartContractClient
 import linea.contract.l1.Web3JLineaValidiumSmartContractClientReadOnly
 import linea.domain.BlobRecord
-import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.ProofToFinalize
 import linea.domain.gas.GasPriceCaps
+import linea.domain.toBlockParameter
 import linea.kotlin.toULong
 import linea.web3j.SmartContractErrors
 import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager

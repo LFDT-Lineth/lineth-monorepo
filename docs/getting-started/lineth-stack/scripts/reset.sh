@@ -13,13 +13,16 @@ LINETH_LOG_CONTEXT="reset"
 COMPOSE="docker compose --env-file versions.env --env-file .env --profile stack-partial-prover"
 RESET_LOCAL_L1=false
 FORGET_DEPLOYER=false
+PURGE_DEPS=false
 
 usage() {
   cat <<'EOF'
-Usage: ./scripts/reset.sh [--local-l1] [--forget-deployer]
+Usage: ./scripts/reset.sh [--local-l1] [--forget-deployer] [--purge-deps]
 
   --local-l1          also remove the quickstart local L1 data volume
   --forget-deployer  remove the generated Sepolia deployer keystore
+  --purge-deps        also remove the preserved pnpm download-cache volume, so
+                      the next boot re-downloads all Node dependencies
 EOF
 }
 
@@ -30,6 +33,9 @@ while [ "$#" -gt 0 ]; do
       ;;
     --forget-deployer)
       FORGET_DEPLOYER=true
+      ;;
+    --purge-deps)
+      PURGE_DEPS=true
       ;;
     -h|--help)
       usage
@@ -48,14 +54,14 @@ if [ "$(lineth_l1_mode || true)" = "local" ]; then
   RESET_LOCAL_L1=true
 fi
 
-lineth_banner "reset · clean quickstart state"
+lineth_subtitle "reset · clean quickstart state"
 
 lineth_section "docker compose"
-if [ "$RESET_LOCAL_L1" = "true" ]; then
-  COMPOSE="$COMPOSE --profile local-l1"
-fi
+# Always tear down the local-l1 profile too, so stale local L1 containers are
+# removed even when the current .env is Sepolia (e.g. after a mode switch).
+# RESET_LOCAL_L1 only gates wiping the local L1 chain data volume below.
 # shellcheck disable=SC2086
-$COMPOSE down -v --remove-orphans
+$COMPOSE --profile local-l1 down -v --remove-orphans
 docker volume rm \
   lineth-stack-shared-config \
   lineth-stack-l2-genesis \
@@ -63,6 +69,18 @@ docker volume rm \
   lineth-stack-postman-runtime-config >/dev/null 2>&1 || true
 if [ "$RESET_LOCAL_L1" = "true" ]; then
   docker volume rm lineth-stack-local-l1-data >/dev/null 2>&1 || true
+fi
+# lineth-stack-contracts-pnpm-store is external in docker-compose.yml, so the
+# `down -v` above leaves it alone: fresh boots reinstall node_modules from the
+# lockfile but resolve package tarballs from this local cache instead of the
+# npm registry. Only --purge-deps removes it.
+if [ "$PURGE_DEPS" = "true" ]; then
+  docker volume rm lineth-stack-contracts-pnpm-store >/dev/null 2>&1 || true
+  lineth_info "removed pnpm download-cache volume; next boot re-downloads Node dependencies"
+fi
+if docker network inspect lineth-stack_linea >/dev/null 2>&1; then
+  lineth_warn "lineth-stack_linea network still in use by an external container"
+  lineth_info "inspect with: docker network inspect lineth-stack_linea"
 fi
 
 lineth_section "host artifacts"

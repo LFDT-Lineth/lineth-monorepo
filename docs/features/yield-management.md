@@ -2,11 +2,24 @@
 
 > Earning yield on bridged ETH via Lido staking, with on-chain withdrawal reserve management and validator proof verification.
 
+> Canonical spec: <https://hackmd.io/@kyzooroast/Hk7DQXH6lx>. This document is a plain-language overview. If it conflicts with the spec, the spec governs. Safety and liveness properties are stated precisely there; descriptions here may paraphrase and are not standalone security guarantees.
+
 ## Overview
 
-The YieldManager allows Linea to stake bridged ETH held in the LinethRollup contract into yield-bearing protocols (currently Lido stVaults). Revenue is reported to L2 yield recipients. The system maintains withdrawal reserves to ensure bridge redemptions remain liquid.
+Users bridge ETH from Ethereum L1 into Linea. Instead of letting it sit idle, Linea stakes the surplus in Lido V3 stVaults and reports the earned yield to L2 for distribution. The ETH kept on L1 - held by the `L1MessageService` contract - is the withdrawal reserve that pays out bridge redemptions. Under normal operation an automation service rebalances the reserve between configured minimum and target levels; if it falls into deficit, anyone can permissionlessly trigger replenishment, and a last-resort LST withdrawal path remains available to users.
 
-Key invariant: user funds in the rollup must always be redeemable. The withdrawal reserve mechanism enforces minimum and target reserve levels, triggering unstaking when reserves fall below thresholds.
+### Safety and liveness
+
+Safety properties - must hold at all times:
+
+- Yield reports exclude all accumulated system obligations from the amount sent to L2.
+- User principal (L1 deposits plus L2 circulating ETH) is never used to settle obligations; obligations are paid only from unreported yield.
+- New beacon-chain deposits are paused whenever the reserve is in deficit, stETH liabilities are outstanding, or ossification (a permanent freeze of a yield provider) is initiated or completed.
+
+Liveness properties - must eventually hold, though timing is not guaranteed:
+
+- At least one withdrawal path stays available to users, even if delayed. Permissionless unstaking and reserve replenishment activate during reserve deficits, and replenishment takes precedence over repaying obligations.
+- Vault accounting reports are refreshed at least every 48 hours; stale reports block withdrawals and LST minting until updated.
 
 ## Components
 
@@ -24,13 +37,13 @@ Key invariant: user funds in the rollup must always be redeemable. The withdrawa
 
 ```mermaid
 flowchart TD
-    LR[LinethRollup] -->|"transferFundsToReserve / receiveFundsFromReserve"| YM[YieldManager]
+    L1["L1MessageService (withdrawal reserve)"] -->|"transferFundsForNativeYield / receiveFundsFromReserve"| YM[YieldManager]
     YM -->|"fundYieldProvider"| LP[LidoStVaultYieldProvider]
     LP -->|stake| Lido[Lido stVault]
     YM -->|"reportYield"| L2[L2 Yield Recipient]
     YM -->|"unstake / unstakePermissionless"| LP
     LP -->|withdraw| YM
-    VCP[ValidatorContainerProofVerifier] -->|"prove validator status"| YM
+    VCP[ValidatorContainerProofVerifier] -->|"verify validator container vs EIP-4788 root"| YM
 ```
 
 ## Withdrawal Reserve
@@ -44,7 +57,7 @@ The reserve system uses four parameters:
 | `targetWithdrawalReservePercentageBps` | Target reserve % (higher than minimum) |
 | `targetWithdrawalReserveAmount` | Target reserve absolute amount |
 
-The effective reserve is `max(percentageBased, absoluteAmount)`. When the reserve falls below minimum, `replenishWithdrawalReserve` triggers unstaking from yield providers.
+The effective reserve is `max(percentageBased, absoluteAmount)`. When the reserve drops below the minimum threshold, anyone may call `replenishWithdrawalReserve` to permissionlessly withdraw ETH from yield providers into the `L1MessageService`, restoring the reserve up to the target (not just the minimum). The call is only available while the reserve is in deficit.
 
 ## Roles
 
@@ -62,7 +75,7 @@ The effective reserve is `max(percentageBased, absoluteAmount)`. When the reserv
 
 ## Permissionless Unstaking
 
-`unstakePermissionless` allows anyone to trigger unstaking for a validator by providing a beacon chain proof (via `ValidatorContainerProofVerifier`) that the validator has exited. This prevents yield providers from indefinitely locking funds.
+`unstakePermissionless` lets anyone request a partial withdrawal from a single validator when the reserve is in deficit. The caller supplies a validator-container proof - pubkey, withdrawal credentials, effective balance, and activation epochs - which `ValidatorContainerProofVerifier` checks against the EIP-4788 beacon chain root. The amount is capped to the remaining reserve deficit that other liquidity sources cannot cover. This gives a censorship-resistant way to start replenishment when the operator is unavailable; the beacon chain still takes time to fulfil the withdrawal.
 
 ## Ossification
 
@@ -135,7 +148,7 @@ A standalone TypeScript service (`operations/native-yield/lido-governance-monito
 | ProposalFetcher | `lido-governance-monitor/src/services/` | Aggregates proposals from all sources |
 | ProposalProcessor | `lido-governance-monitor/src/services/` | AI analysis with retry logic |
 | NotificationService | `lido-governance-monitor/src/services/` | Slack alerting |
-| ClaudeAIClient | `lido-governance-monitor/src/clients/` | Anthropic Claude integration |
+| ClaudeAIClient | `lido-governance-monitor/src/clients/` | Claude integration, routed through the LiteLLM proxy (`ANTHROPIC_BASE_URL`) for cost tracking |
 | ProposalRepository | `lido-governance-monitor/src/clients/db/` | Prisma PostgreSQL persistence |
 
 ---

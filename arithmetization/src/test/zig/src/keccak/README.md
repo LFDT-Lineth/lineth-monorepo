@@ -24,8 +24,8 @@ src
         ├── build.zig.zon      # dependency file for zig tests
         └── src
             └── keccak
-                ├── keccak_with_provider_batched_inputs.zig      # test using provider with batched inputs
-                ├── keccak_with_provider.zig                     # test using provider with trivial inputs
-                ├── keccak_with_zkc_wrapper.zig                  # test using zkc wrapper with trivial inputs
-                └── README.md                                    # You are here
+                ├── keccak_batched_input_native.zig       # test using provider with batched inputs
+                ├── keccak_native.zig                     # test using provider with trivial inputs
+                ├── keccak_zkc.zig                        # test using zkc wrapper with trivial inputs
+                └── README.md                             # You are here
 ```

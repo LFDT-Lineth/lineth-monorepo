@@ -258,11 +258,13 @@ In `batched` mode, the Makefile writes the selected vectors as one big-endian `I
 `main.go` converts an ELF and optional input bytes into the JSON consumed by `zkc`:
 
 ```bash
-go run main.go <elfFile> <inBytes|@hexFile> <inBytesOffset>
+go run main.go <elfFile> <inBytes|@hexFile|@sszFile> <inBytesOffset>
 ```
 
 Use inline `0x...` for small inputs and `@path/to/in_bytes` for a file containing one `0x...` blob.
 Both forms are interpreted as big-endian `IN_BYTES` and reversed before being written to RAM.
+Use `@path/to/input.ssz` for raw SSZ input; the helper writes the `[u64 LE length]` prefix at `IN_ORIGIN`
+and the SSZ payload at `IN_ORIGIN + 8` as separate blobs.
 
 ## JSON input format
 
@@ -279,6 +281,7 @@ The ELF-to-JSON helper writes sparse memory blobs in this shape:
 Use `_` to read fields inside one packed value and `____` to read separate blobs or array items.
 `zkc` ignores `_` in JSON input strings, so these separators are only for inspection.
 For `IN_BYTES`, pass hex in big-endian order; the ELF-to-JSON helper writes the reversed bytes into `blobs_data`.
+For `.ssz` input files, the helper writes the length prefix and raw payload without reversing the payload.
 
 ## Target ISA
 
