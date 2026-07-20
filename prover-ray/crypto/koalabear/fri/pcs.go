@@ -1024,6 +1024,7 @@ func openEncodedRow(table SizedTable, row int) RowOpening {
 
 func hashRowOpening(row RowOpening) field.Octuplet {
 	hasher := poseidon2.NewMDHasher()
+	absorbLeafHeader(hasher, len(row.Base), len(row.Ext))
 	for _, base := range row.Base {
 		hasher.WriteElements(base)
 	}
