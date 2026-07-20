@@ -100,11 +100,11 @@ func runTestCase(
 		zkcdriver.Settings{},
 		files.MustRead(scenario.BinFilePath))
 
-	proof := sys.Prove(func(rt *wiop.Runtime) {
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
 		driver.AssignWithPreRead(rt, inputs)
 	})
 
-	if err := sys.Verify(proof); err != nil {
+	if err := sys.Verify(proof, pub); err != nil {
 		return fmt.Errorf("error running verifier: %w", err)
 	}
 

@@ -37,6 +37,11 @@ Enforces backwards compatibility for public APIs and versioned assets (ABIs, con
 - Wildcard Solidity imports (`import "path/to/File.sol"`)
 - `console.log` or `console.error` with sensitive data (tokens, keys, connection strings)
 - New dependencies added without justification in the PR description
+- Unpinned dependency versions in `dependencies`/`devDependencies`, catalog entries, or overrides (`^` caret or `~`
+  tilde ranges). Treat these as **blocking**: floating ranges pull unreviewed releases and widen the supply-chain attack
+  surface. Require an exact pin (`workspace:` and `catalog:` references are allowed when the catalog itself pins an exact
+  version). Do not flag intentional `peerDependencies` ranges or `engines` (`>=`) constraints; those are compatibility
+  windows, not install targets.
 - Environment variable changes not reflected in `.env.template` or `.env.example`
 - Hardcoded addresses or chain IDs that should be configurable
 - Unchecked arithmetic in Solidity without a safety comment

@@ -13,7 +13,6 @@ import static net.consensys.linea.metrics.LineaMetricCategory.TX_POOL_PROFITABIL
 
 import com.google.auto.service.AutoService;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
 import net.consensys.linea.config.LineaRejectedTxReportingConfiguration;
@@ -37,7 +36,6 @@ import org.hyperledger.besu.plugin.services.transactionpool.TransactionPoolServi
 @Slf4j
 @AutoService(BesuPlugin.class)
 public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPlugin {
-  public static final AtomicBoolean registered = new AtomicBoolean(false);
 
   private ServiceManager serviceManager;
   private TransactionPoolValidatorService transactionPoolValidatorService;
@@ -48,7 +46,6 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
 
   @Override
   public void doRegister(final ServiceManager serviceManager) {
-    registered.set(true);
     this.serviceManager = serviceManager;
 
     transactionPoolValidatorService =
@@ -71,14 +68,6 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
 
   @Override
   public void doStart() {
-    if (LineaBlockTransactionValidatorPlugin.registered.get()) {
-      throw new IllegalStateException(
-          "Both LineaBlockTransactionValidatorPlugin and LineaTransactionPoolValidatorPlugin are"
-              + " enabled. Only one should be active at a time since their transaction type"
-              + " validation functionality overlaps. Use LineaTransactionPoolValidatorPlugin for"
-              + " RPC/P2P nodes or LineaBlockTransactionValidatorPlugin for validator nodes.");
-    }
-
     if (l1L2BridgeSharedConfiguration().equals(LineaL1L2BridgeSharedConfiguration.TEST_DEFAULT)) {
       throw new IllegalArgumentException("L1L2 bridge settings have not been defined.");
     }
@@ -111,7 +100,8 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
                   rejectedTxJsonRpcManager,
                   getInvalidTransactionByLineCountCache(),
                   transactionProfitabilityCalculator,
-                  sharedDeniedAddresses));
+                  sharedDeniedAddresses,
+                  LineaBlockTransactionValidatorPlugin.registered.get()));
       transactionPoolValidatorService.registerPluginTransactionValidatorFactory(
           lineaTransactionPoolValidatorFactory.get());
 
@@ -164,7 +154,6 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
   @Override
   public void stop() {
     super.stop();
-    registered.set(false);
     rejectedTxJsonRpcManager.ifPresent(JsonRpcManager::shutdown);
   }
 }

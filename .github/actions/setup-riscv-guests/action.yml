@@ -29,7 +29,7 @@ runs:
     # Bump the two SHAs here AND in the cache key together.
     - name: Cache blst + mcl builds
       id: crypto-cache
-      uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
         path: ~/.crypto-libs
         key: crypto-libs-blst-e7f90de551e8df682f3cc99067d204d8b90d27ad-mcl-0499298adcfad3bbcebf77f17700ebbe97166060
@@ -67,7 +67,7 @@ runs:
 
     # Zig package fetches (zesu, zesu-zkvm, EF zkevm fixtures) land in each guest's zig-pkg/.
     - name: Cache Zig package fetches
-      uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
         path: riscv-guests/*/zig-pkg
         key: riscv-guests-zig-pkg-${{ hashFiles('riscv-guests/**/build.zig.zon') }}
@@ -79,9 +79,10 @@ runs:
     # restore (restore-keys fallback) still reuses every unchanged object. Keys hash only tracked
     # build inputs — zig-pkg/ is populated at run time and must stay out of the key.
     - name: Cache Zig compile cache
-      uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
         path: riscv-guests/*/.zig-cache
         key: riscv-guests-zig-cache-${{ hashFiles('riscv-guests/.zigversion', 'riscv-guests/build_common/**', 'riscv-guests/*/build.zig', 'riscv-guests/*/build.zig.zon', 'riscv-guests/*/src/**') }}
         restore-keys: |
           riscv-guests-zig-cache-
+

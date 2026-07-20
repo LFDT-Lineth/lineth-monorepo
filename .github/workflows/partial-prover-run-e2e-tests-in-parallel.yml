@@ -37,11 +37,11 @@ jobs:
     name: Run test:partial-prover:${{ matrix.test }} e2e tests
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Download local linea-besu-package docker image
         if: ${{ inputs.linea_besu_package_image_tag == '' }}
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: linea-besu-package
           path: ${{ github.workspace }}/tmp/artifacts
@@ -55,7 +55,7 @@ jobs:
 
       - name: Download local prover docker image
         if: ${{ inputs.prover_image_tag == '' }}
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: linea-prover
           path: ${{ github.workspace }}/tmp/artifacts
@@ -80,7 +80,7 @@ jobs:
           chmod -R a+rw tmp/local/
 
       - name: Spin up fresh environment with besu tracing with retry
-        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 #v3.0.2
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4.0.0
         with:
           max_attempts: 10
           retry_on: error
@@ -133,7 +133,7 @@ jobs:
           if-no-files-found: error
           path: |
             docker_logs/**/*
-      
+
       - name: Archive shared folder
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: failure()
@@ -141,3 +141,4 @@ jobs:
           name: end-2-end-shared-folder-${{ matrix.archive-name }}
           path: |
             tmp/local/**/*
+

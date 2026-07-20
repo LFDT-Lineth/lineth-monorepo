@@ -1,6 +1,5 @@
 import * as dotenv from "dotenv";
 import { ethers } from "ethers";
-import fs from "fs";
 import path from "path";
 
 import { abi as LineaRollupV8Abi, bytecode as LineaRollupV8Bytecode } from "./dynamic-artifacts/LineaRollupV8.json";
@@ -37,8 +36,13 @@ import {
   PRECOMPILES_ADDRESSES,
   FORCED_TRANSACTION_SENDER_ROLE,
 } from "../common/constants";
-import { deployContractFromArtifacts, getInitializerData } from "../common/helpers/deployments";
-import { getEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment";
+import {
+  deployContractFromArtifacts,
+  getDeployNonceFromEnv,
+  getInitializerData,
+  loadArtifactFromDirectory,
+} from "../common/helpers/deployments";
+import { getBooleanEnvVarOrDefault, getEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment";
 import { resolveOneModelFeeOverrides } from "../common/helpers/feeOverrides";
 import {
   getDeploymentNetworkName,
@@ -48,55 +52,6 @@ import {
 import { generateRoleAssignments } from "../common/helpers/roles";
 
 dotenv.config();
-
-function findContractArtifacts(
-  folderPath: string,
-  contractName: string,
-): { abi: ethers.InterfaceAbi; bytecode: ethers.BytesLike } {
-  const files = fs.readdirSync(folderPath);
-
-  const foundFile = files.find((file) => file === `${contractName}.json`);
-
-  if (!foundFile) {
-    // Throw an error if the file is not found
-    throw new Error(`Contract "${contractName}" not found in folder "${folderPath}"`);
-  }
-
-  // Construct the full file path
-  const filePath = path.join(folderPath, foundFile);
-
-  // Read the file content
-  const fileContent = fs.readFileSync(filePath, "utf-8").trim();
-  const parsedContent = JSON.parse(fileContent);
-  return parsedContent;
-}
-
-function getBooleanEnvVarOrDefault(name: string, defaultValue: boolean): boolean {
-  const rawValue = process.env[name];
-  if (rawValue === undefined || rawValue === "") {
-    return defaultValue;
-  }
-  if (rawValue === "true") {
-    return true;
-  }
-  if (rawValue === "false") {
-    return false;
-  }
-  throw new Error(`${name} must be either "true" or "false"`);
-}
-
-async function getDeployNonce(wallet: ethers.Wallet): Promise<number> {
-  const l1Nonce = process.env.L1_NONCE;
-  if (l1Nonce === undefined || l1Nonce === "") {
-    return wallet.getNonce();
-  }
-
-  if (!/^[0-9]+$/.test(l1Nonce)) {
-    throw new Error(`L1_NONCE must be a non-negative integer, got: ${l1Nonce}`);
-  }
-
-  return Number(l1Nonce);
-}
 
 async function main() {
   const networkName = getDeploymentNetworkName();
@@ -138,7 +93,7 @@ async function main() {
   ];
   const roleAddresses = getEnvVarOrDefault("LINEA_ROLLUP_ROLE_ADDRESSES", defaultRoleAddresses);
 
-  const verifierArtifacts = findContractArtifacts(path.join(__dirname, "./dynamic-artifacts"), verifierName);
+  const verifierArtifacts = loadArtifactFromDirectory(path.join(__dirname, "./dynamic-artifacts"), verifierName);
 
   const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
 
@@ -149,7 +104,7 @@ async function main() {
   // used. resolveOneModelFeeOverrides guarantees a single, complete fee model.
   const feeOverrides = await resolveOneModelFeeOverrides(provider, "L1_DEPLOY_GAS_PRICE_WEI");
 
-  const walletNonce = await getDeployNonce(wallet);
+  const walletNonce = await getDeployNonceFromEnv(wallet, "L1_NONCE");
 
   const [verifier, lineaRollupImplementation, proxyAdmin, addressFilter] = await Promise.all([
     deployContractFromArtifacts(verifierName, verifierArtifacts.abi, verifierArtifacts.bytecode, wallet, {

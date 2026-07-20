@@ -1,6 +1,6 @@
 package linea.coordinator.app.conflation
 
-import linea.domain.BlockParameter.Companion.toBlockParameter
+import linea.domain.toBlockParameter
 import linea.ethapi.EthApiClient
 import linea.persistence.AggregationsRepository
 import linea.persistence.BatchesRepository

@@ -152,7 +152,7 @@ disabled = false
 submission-delay = "PT1S"
 submission-tick-interval = "PT1S"
 max-submission-transactions-per-tick = 10
-target-blobs-per-transaction=9
+target-blobs-per-transaction=6
 db-max-blobs-to-return = 100
 [l1-submission.blob.gas]
 gas-limit = 10000000
@@ -268,6 +268,9 @@ polling-interval = "PT0.2S"
 polling-timeout = "PT10S"
 eth-logs-search-success-backoff-delay = "PT0.5S"
 eth-logs-search-block-chunk-size = 1000
+# Widest block span for binary-search point lookups (e.g. ForcedTransactionAdded by ftx number).
+# Bound to the provider's eth_getLogs cap (e.g. Infura rejects spans > 10000 blocks).
+eth-logs-search-max-block-range = 10000
 
 [l2-network-gas-pricing] # old [dynamic-gas-price-service]
 disabled = false

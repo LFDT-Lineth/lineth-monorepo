@@ -1,13 +1,15 @@
 package linea.contract.l1
 
+import linea.EthLogsSearcher
+import linea.SearchDirection
 import linea.contract.FAKE_READ_ONLY_CREDENTIALS
 import linea.contract.LineaRollupV6
 import linea.contract.LineaRollupV8
 import linea.contract.events.FinalizedStateUpdatedEvent
 import linea.domain.BlockParameter
-import linea.ethapi.EthLogsClient
+import linea.domain.EthLogEvent
+import linea.domain.toBlockParameter
 import linea.kotlin.toBigInteger
-import linea.kotlin.toHexStringUInt256
 import linea.kotlin.toULong
 import linea.web3j.domain.toWeb3j
 import net.consensys.linea.async.toSafeFuture
@@ -23,7 +25,9 @@ import java.util.concurrent.atomic.AtomicReference
 open class Web3JLineaRollupSmartContractClientReadOnly(
   val web3j: Web3j,
   val contractAddress: String,
-  private val ethLogsClient: EthLogsClient,
+  private val ethLogsSearcher: EthLogsSearcher,
+  private val l1EventSearchMaxBlockRange: UInt = 10_000u,
+  private val finalizedStateSearchInitialBlockParameter: BlockParameter = BlockParameter.Tag.EARLIEST,
   private val log: Logger = LogManager.getLogger(Web3JLineaRollupSmartContractClientReadOnly::class.java),
 ) : LineaRollupSmartContractClientReadOnly,
   LineaRollupSmartContractClientReadOnlyFinalizedStateProvider,
@@ -210,23 +214,67 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
       }
   }
 
-  private fun findFinalizedStateEvent(
+  // The finalized L2 block number increases monotonically, so each FinalizedStateUpdated event is at
+  // an L1 block >= the previous one. We remember the last found L1 block and start the next search
+  // there, turning the repeated finalization-monitor lookups (polled every ~500ms) into a small
+  // forward search instead of a full-chain binary search. A full-range fallback covers the rare case
+  // where the cached window overshoots (e.g. an L1 reorg moved the event earlier, or a caller queries
+  // a historical block).
+  private val finalizedStateSearchFromBlock = AtomicReference<BlockParameter>(
+    finalizedStateSearchInitialBlockParameter,
+  )
+
+  internal fun findFinalizedStateEvent(
     upToBlock: BlockParameter,
-    finalisedBlockNumber: ULong,
+    finalizedBlockNumber: ULong,
   ): SafeFuture<FinalizedStateUpdatedEvent?> {
-    return ethLogsClient.getLogs(
-      fromBlock = BlockParameter.Tag.EARLIEST,
-      toBlock = upToBlock,
-      address = contractAddress,
-      topics = listOf(
-        FinalizedStateUpdatedEvent.topic,
-        finalisedBlockNumber.toHexStringUInt256(),
-      ),
-    ).thenApply { logs ->
-      // only one log expected because we use indexed finalized block number
-      logs.firstOrNull()
-        ?.let(FinalizedStateUpdatedEvent::fromEthLog)
+    val fromBlock = finalizedStateSearchFromBlock.get()
+    val search =
+      if (fromBlock == BlockParameter.Tag.EARLIEST) {
+        searchFinalizedStateEvent(BlockParameter.Tag.EARLIEST, upToBlock, finalizedBlockNumber)
+      } else {
+        searchFinalizedStateEvent(fromBlock, upToBlock, finalizedBlockNumber)
+          // The cached forward window is only an optimization: on a miss OR any failure (e.g. it sits
+          // after a historical upToBlock, which EthLogsSearcher rejects as an invalid range) fall back
+          // to the authoritative full-range search, which re-surfaces any genuine (e.g. RPC) error.
+          .exceptionally { null }
+          .thenCompose { event ->
+            if (event != null) {
+              SafeFuture.completedFuture(event)
+            } else {
+              searchFinalizedStateEvent(finalizedStateSearchInitialBlockParameter, upToBlock, finalizedBlockNumber)
+            }
+          }
+      }
+    return search.thenApply { event ->
+      event?.also { finalizedStateSearchFromBlock.set(it.log.blockNumber.toBlockParameter()) }
         ?.event
+    }
+  }
+
+  private fun searchFinalizedStateEvent(
+    fromBlock: BlockParameter,
+    upToBlock: BlockParameter,
+    finalizedBlockNumber: ULong,
+  ): SafeFuture<EthLogEvent<FinalizedStateUpdatedEvent>?> {
+    // FinalizedStateUpdated has a unique, monotonically-increasing indexed blockNumber, so we binary
+    // search for it in bounded chunks instead of an unbounded getLogs(EARLIEST..upToBlock) query,
+    // which rate-limited providers (e.g. Infura) reject for spans > 10_000 blocks.
+    return ethLogsSearcher.findLog(
+      fromBlock = fromBlock,
+      toBlock = upToBlock,
+      chunkSize = l1EventSearchMaxBlockRange.toInt(),
+      address = contractAddress,
+      topics = listOf(FinalizedStateUpdatedEvent.topic),
+    ) { ethLog ->
+      val foundBlockNumber = FinalizedStateUpdatedEvent.fromEthLog(ethLog).event.blockNumber
+      when {
+        foundBlockNumber < finalizedBlockNumber -> SearchDirection.FORWARD
+        foundBlockNumber > finalizedBlockNumber -> SearchDirection.BACKWARD
+        else -> null
+      }
+    }.thenApply { ethLog ->
+      ethLog?.let(FinalizedStateUpdatedEvent::fromEthLog)
     }
   }
 
@@ -234,7 +282,7 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
     upToBlock: BlockParameter,
     finalisedBlockNumber: ULong,
   ): SafeFuture<FinalizedStateUpdatedEvent> {
-    return findFinalizedStateEvent(upToBlock = upToBlock, finalisedBlockNumber = finalisedBlockNumber)
+    return findFinalizedStateEvent(upToBlock = upToBlock, finalizedBlockNumber = finalisedBlockNumber)
       .thenApply { event ->
         // it means contract was just upgraded but no event published yet,
         // we cannot deterministically get the finalized fields

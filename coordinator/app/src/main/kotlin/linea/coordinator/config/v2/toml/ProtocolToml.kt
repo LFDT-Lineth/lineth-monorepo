@@ -36,6 +36,7 @@ data class ProtocolToml(
   data class Layer1Config(
     val contractAddress: String,
     val blockTime: Duration = 12.seconds,
+    val contractDeploymentBlockNumber: ULong?,
   )
 
   data class Layer2Config(
@@ -55,6 +56,8 @@ data class ProtocolToml(
       ProtocolConfig.Layer1Config(
         contractAddress = this.l1.contractAddress,
         blockTime = this.l1.blockTime,
+        contractDeploymentBlockNumber = this.l1.contractDeploymentBlockNumber
+          ?.let { BlockParameter.BlockNumber(it) },
       ),
       l2 =
       ProtocolConfig.Layer2Config(

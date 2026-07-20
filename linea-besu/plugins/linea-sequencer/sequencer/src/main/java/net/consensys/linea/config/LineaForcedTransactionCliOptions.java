@@ -65,7 +65,8 @@ public class LineaForcedTransactionCliOptions implements LineaCliOptions {
       final LineaForcedTransactionConfiguration config) {
     final LineaForcedTransactionCliOptions options = create();
     options.statusCacheSize = config.statusCacheSize();
-    options.chainSecurityViolationBeforeDeadlineInclusionAllowance = (int) config.chainSecurityViolationHoldOffBeforeDeadline();
+    options.chainSecurityViolationBeforeDeadlineInclusionAllowance =
+        (int) config.chainSecurityViolationHoldOffBeforeDeadline();
     return options;
   }
 

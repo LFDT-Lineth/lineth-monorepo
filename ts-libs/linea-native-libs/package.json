@@ -38,8 +38,8 @@
     "jest-it-up": "4.0.1",
     "ts-jest": "catalog:",
     "tsup": "catalog:",
-    "unzipper": "0.12.3",
-    "viem": "2.52.2"
+    "unzipper": "0.12.5",
+    "viem": "2.53.1"
   },
   "dependencies": {
     "koffi": "2.16.2"

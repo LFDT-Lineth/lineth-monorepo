@@ -751,8 +751,7 @@ function ContractsDeployUiPage() {
               transactionProgress: {
                 requestId: prev.pendingRequest.id,
                 stage: "submitted_waiting_for_rpc",
-                message:
-                  "Transaction submitted in the wallet. Waiting for Hardhat to confirm the handoff on the RPC.",
+                message: "Transaction submitted in the wallet. Waiting for Hardhat to confirm the handoff on the RPC.",
                 updatedAt: new Date().toISOString(),
               },
             }
@@ -882,8 +881,8 @@ function ContractsDeployUiPage() {
                 <p className="deploy-quick-action__label">{pending.label}</p>
                 {session?.transactionOrdinal && session.transactionOrdinal > 1 ? (
                   <p className="deploy-quick-action__hint">
-                    Hardhat is waiting for wallet step {session.transactionOrdinal}. OpenZeppelin proxy deploys
-                    usually need several signatures — approve each one until the terminal reports complete.
+                    Hardhat is waiting for wallet step {session.transactionOrdinal}. OpenZeppelin proxy deploys usually
+                    need several signatures — approve each one until the terminal reports complete.
                   </p>
                 ) : null}
                 <TransactionKindBadges details={pending.transactionDetails} />

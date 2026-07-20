@@ -112,10 +112,14 @@ latest_blob_tx() {
     | tail -1
 }
 
+coordinator_started() {
+  docker logs --since "$WATCH_SINCE" coordinator 2>/dev/null | grep -F -q 'Started :)'
+}
+
 account_setup_progress_lines() {
   if docker inspect account-setup >/dev/null 2>&1; then
     docker logs --tail 120 account-setup 2>&1 \
-      | grep -E '\[account-setup\] (Preparing Node/ethers account setup runtime|Installing minimal workspace dependencies for TypeScript account setup|Using |Reused encrypted keystore|Wrote encrypted keystore|L1 deployer:|L1 deployer balance:|L1 deployer required minimum:|L1 safe listener start block|Wrote /accounts/addresses-precomputed.json|Pre-computed|Done)' \
+      | grep -E '\[account-setup\] (Preparing Node/ethers account setup runtime|Installing minimal workspace dependencies for TypeScript account setup|Workspace dependencies ready|Using |Reused encrypted keystore|Wrote encrypted keystore|L1 deployer:|L1 deployer balance:|L1 deployer required minimum:|L1 safe listener start block|Wrote /accounts/addresses-precomputed.json|Pre-computed|Done)' \
       | awk 'length($0) > 220 { $0 = substr($0, 1, 220) "..." } { print }' \
       | tail -8
   fi
@@ -749,6 +753,20 @@ progress_phase() {
     return
   fi
 
+  if [ -n "$(latest_finalization_tx || true)" ]; then
+    printf 'Wait for finality: finalize tx submitted; waiting for coordinator to confirm on L1 (first confirmation can lag a couple of minutes)'
+    return
+  fi
+
+  case "$coordinator_state" in
+    running\ *)
+      if ! coordinator_started; then
+        printf 'Wait for finality: coordinator is starting: one-time scan of L1 event history before proving begins (a few minutes on Sepolia, fast on local L1)'
+        return
+      fi
+      ;;
+  esac
+
   printf 'Wait for finality: waiting for first finalization'
 }
 
@@ -766,10 +784,33 @@ progress_section_for_phase() {
 failure_tail() {
   name="$1"
   docker logs --tail 100 "$name" 2>&1 \
-    | grep -E 'ERROR|Error:|error code|insufficient funds|Failed|FATAL|ADDRESS MISMATCH|balance too low|Cannot fund|max fee per gas less than block base fee' \
+    | grep -E 'ERROR|Error:|error code|insufficient funds|Failed|FATAL|ADDRESS MISMATCH|balance too low|Cannot fund|max fee per gas less than block base fee|could not coalesce error|already known|eth_sendRawTransaction|UNKNOWN_ERROR' \
     | tail -12 \
     | awk 'length($0) > 260 { $0 = substr($0, 1, 260) "..." } { print }' \
     | lineth_indent || true
+}
+
+container_finished_at() {
+  docker inspect -f '{{.State.FinishedAt}}' "$1" 2>/dev/null || true
+}
+
+# Containers stopped by a previous session (e.g. `docker compose stop` sends
+# SIGTERM, leaving exit code 143) keep that stale exited state until
+# `docker compose up -d` reaches them. Snapshot those pre-existing exits at
+# watch startup so check_terminal_failure only fails on exits that happen
+# during this run (a restarted container that dies gets a new FinishedAt).
+WATCH_STALE_EXITS=""
+snapshot_stale_exits() {
+  WATCH_STALE_EXITS=""
+  for name in l2-genesis-init config-render deploy-contracts runtime-config-finalize coordinator prover postman; do
+    state="$(container_state "$name")"
+    case "$state" in
+      exited\ 0|running\ *|created\ *|missing) ;;
+      exited\ *)
+        WATCH_STALE_EXITS="$WATCH_STALE_EXITS|$name=$state@$(container_finished_at "$name")|"
+        ;;
+    esac
+  done
 }
 
 check_terminal_failure() {
@@ -779,6 +820,13 @@ check_terminal_failure() {
       exited\ 0|running\ *|created\ *|missing)
         ;;
       exited\ *)
+        stale_key="|$name=$state@$(container_finished_at "$name")|"
+        case "$WATCH_STALE_EXITS" in
+          *"$stale_key"*)
+            # Stale exit recorded before this run started; not a new failure.
+            continue
+            ;;
+        esac
         lineth_error "$name $state"
         failure_tail "$name"
         return 1
@@ -802,8 +850,7 @@ progress_stream() {
   existing_addresses_notice_printed=""
   deployed_links_printed=""
   last_pipeline_event=""
-  last_blob=""
-  last_finalization=""
+  pipeline_seen_count=0
   last_finalized=""
   last_retry_noise=""
   first_finalized_seen=""
@@ -849,37 +896,45 @@ progress_stream() {
 
     deploy_phase="$(last_deploy_phase || true)"
     if [ -n "$deploy_phase" ] && [ "$deploy_phase" != "$last_seen_deploy_phase" ]; then
-      lineth_kv "Deploy step" "$deploy_phase"
+      if [ "$last_progress_section" != "Wait for finality" ]; then
+        lineth_kv "Deploy step" "$deploy_phase"
+        changed=1
+      fi
       last_seen_deploy_phase="$deploy_phase"
-      changed=1
     fi
 
     deploy_contract="$(last_deploy_contract || true)"
     if [ "${LINETH_VERBOSE:-false}" = "true" ] \
       && [ -n "$deploy_contract" ] \
       && [ "$deploy_contract" != "$last_deploy_contract" ]; then
-      lineth_kv "Deployed contract" "$deploy_contract"
+      if [ "$last_progress_section" != "Wait for finality" ]; then
+        lineth_kv "Deployed contract" "$deploy_contract"
+        changed=1
+      fi
       last_deploy_contract="$deploy_contract"
-      changed=1
     fi
 
     deploy_pending="$(last_deploy_pending || true)"
     if [ "${LINETH_VERBOSE:-false}" = "true" ] \
       && [ -n "$deploy_pending" ] \
       && [ "$deploy_pending" != "$last_deploy_pending" ]; then
-      lineth_kv "Pending deploy tx" "$deploy_pending"
+      if [ "$last_progress_section" != "Wait for finality" ]; then
+        lineth_kv "Pending deploy tx" "$deploy_pending"
+        changed=1
+      fi
       last_deploy_pending="$deploy_pending"
-      changed=1
     fi
 
     deploy_reuse_lines="$(deploy_reuse_lines || true)"
     if [ -n "$deploy_reuse_lines" ]; then
-      printf '%s\n' "$deploy_reuse_lines" | while IFS= read -r deploy_reuse; do
-        [ -n "$deploy_reuse" ] || continue
-        if ! printf '%s\n' "$printed_deploy_reuse_lines" | grep -Fxq "$deploy_reuse"; then
-          lineth_kv "Deploy reuse" "$deploy_reuse"
-        fi
-      done
+      if [ "$last_progress_section" != "Wait for finality" ]; then
+        printf '%s\n' "$deploy_reuse_lines" | while IFS= read -r deploy_reuse; do
+          [ -n "$deploy_reuse" ] || continue
+          if ! printf '%s\n' "$printed_deploy_reuse_lines" | grep -Fxq "$deploy_reuse"; then
+            lineth_kv "Deploy reuse" "$deploy_reuse"
+          fi
+        done
+      fi
       new_reuse_lines="$(printf '%s\n' "$deploy_reuse_lines" | while IFS= read -r deploy_reuse; do
         [ -n "$deploy_reuse" ] || continue
         if ! printf '%s\n' "$printed_deploy_reuse_lines" | grep -Fxq "$deploy_reuse"; then
@@ -889,24 +944,28 @@ progress_stream() {
       if [ -n "$new_reuse_lines" ]; then
         printed_deploy_reuse_lines="${printed_deploy_reuse_lines}${printed_deploy_reuse_lines:+
 }$new_reuse_lines"
-        changed=1
+        if [ "$last_progress_section" != "Wait for finality" ]; then
+          changed=1
+        fi
       fi
     fi
 
     deploy_detail="$(last_deploy_detail || true)"
     if [ -n "$deploy_detail" ] && [ "$deploy_detail" != "$last_deploy_detail" ]; then
-      case "$deploy_detail" in
-        wrote\ /deployments/addresses.json*|wrote\ /deployments/deploy-runtime.env*|Done*)
-          lineth_kv "Deploy detail" "$deploy_detail"
-          changed=1
-          ;;
-        *)
-          if [ "${LINETH_VERBOSE:-false}" = "true" ]; then
+      if [ "$last_progress_section" != "Wait for finality" ]; then
+        case "$deploy_detail" in
+          wrote\ /deployments/addresses.json*|wrote\ /deployments/deploy-runtime.env*|Done*)
             lineth_kv "Deploy detail" "$deploy_detail"
             changed=1
-          fi
-          ;;
-      esac
+            ;;
+          *)
+            if [ "${LINETH_VERBOSE:-false}" = "true" ]; then
+              lineth_kv "Deploy detail" "$deploy_detail"
+              changed=1
+            fi
+            ;;
+        esac
+      fi
       last_deploy_detail="$deploy_detail"
     fi
 
@@ -914,18 +973,22 @@ progress_stream() {
     if [ "${LINETH_VERBOSE:-false}" = "true" ] \
       && [ -n "$deploy_activity" ] \
       && [ "$deploy_activity" != "$last_deploy_activity" ]; then
-      lineth_kv "Deploy activity" "$deploy_activity"
+      if [ "$last_progress_section" != "Wait for finality" ]; then
+        lineth_kv "Deploy activity" "$deploy_activity"
+        changed=1
+      fi
       last_deploy_activity="$deploy_activity"
-      changed=1
     fi
 
     deploy_progress="$(last_deploy_progress || true)"
     if [ "${LINETH_VERBOSE:-false}" = "true" ] \
       && [ -n "$deploy_progress" ] \
       && [ "$deploy_progress" != "$last_deploy_progress" ]; then
-      lineth_kv "Deploy progress" "$deploy_progress"
+      if [ "$last_progress_section" != "Wait for finality" ]; then
+        lineth_kv "Deploy progress" "$deploy_progress"
+        changed=1
+      fi
       last_deploy_progress="$deploy_progress"
-      changed=1
     fi
 
     if [ -z "$deployed_links_printed" ] \
@@ -952,25 +1015,23 @@ progress_stream() {
         changed=1
       fi
 
-      pipeline_event="$(pipeline_events | tail -1 || true)"
-      if [ -n "$pipeline_event" ] && [ "$pipeline_event" != "$last_pipeline_event" ]; then
-        lineth_kv "Finality pipeline" "$pipeline_event"
-        last_pipeline_event="$pipeline_event"
-        changed=1
-      fi
-
-      blob="$(latest_blob_tx || true)"
-      if [ -n "$blob" ] && [ "$blob" != "$last_blob" ]; then
-        lineth_kv "Blob tx" "$blob"
-        last_blob="$blob"
-        changed=1
-      fi
-
-      finalization="$(latest_finalization_tx || true)"
-      if [ -n "$finalization" ] && [ "$finalization" != "$last_finalization" ]; then
-        lineth_kv "Finalization tx" "$finalization"
-        last_finalization="$finalization"
-        changed=1
+      pipeline_all="$(pipeline_events || true)"
+      if [ -n "$pipeline_all" ]; then
+        pipeline_count="$(printf '%s\n' "$pipeline_all" | wc -l | tr -d '[:space:]')"
+        if [ "$pipeline_count" -lt "$pipeline_seen_count" ]; then
+          # Log window reset (e.g. coordinator container recreated); replay from the start.
+          pipeline_seen_count=0
+        fi
+        if [ "$pipeline_count" -gt "$pipeline_seen_count" ]; then
+          printf '%s\n' "$pipeline_all" \
+            | tail -n "+$((pipeline_seen_count + 1))" \
+            | while IFS= read -r pipeline_event; do
+              [ -n "$pipeline_event" ] && lineth_kv "Finality pipeline" "$pipeline_event"
+            done
+          last_pipeline_event="$(printf '%s\n' "$pipeline_all" | tail -1)"
+          pipeline_seen_count="$pipeline_count"
+          changed=1
+        fi
       fi
 
       finalized="$(latest_finalized_block || true)"
@@ -1075,4 +1136,5 @@ if [ "$WATCH_MODE" = "once" ]; then
   exit 0
 fi
 
+snapshot_stale_exits
 progress_stream
