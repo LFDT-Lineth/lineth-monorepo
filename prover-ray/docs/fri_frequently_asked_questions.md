@@ -1049,3 +1049,133 @@ For one query path, the verifier performs these checks:
    - round 1: `T_1` folds to the opened `T_2` value, with `F_4` mixed in;
    - round 2: `T_2` folds to the opened `T_3` value;
    - round 3: `T_3` folds to `FinalPolyExt[s >> 4]`.
+
+## Mermaid Diagrams
+
+These diagrams use the same end-to-end example as above:
+
+```text
+A_1, A_2  have native size 16, encoded size 32
+B_1, B_2  have native size 8,  encoded size 16
+C_1       has native size 4,  encoded size 8
+```
+
+All five columns are in one WIOP batch, so the input commitment has one root
+`rho`.
+
+### Commitment, Quotient, And Folding Flow
+
+```mermaid
+flowchart TD
+  subgraph InputCommitment [Input commitment]
+    A["A1, A2<br/>native size 16"] --> EncodeA["RS encode<br/>codeword size 32"]
+    B["B1, B2<br/>native size 8"] --> EncodeB["RS encode<br/>codeword size 16"]
+    C["C1<br/>native size 4"] --> EncodeC["RS encode<br/>codeword size 8"]
+
+    EncodeA --> Table["MultiSizeTable"]
+    EncodeB --> Table
+    EncodeC --> Table
+    Table --> Merkleize["multi-size Merkleize"]
+    Merkleize --> Rho["input root rho"]
+  end
+
+  subgraph Claims [Opening claims]
+    Zeta["zeta"] --> ShiftClaims["shifts and claimed y values"]
+    ShiftClaims --> DeepChallenge["alpha_DEEP"]
+  end
+
+  subgraph VirtualLevels [Virtual DEEP quotient levels]
+    Rho -.-> F16["F16<br/>size-32 codeword"]
+    Rho -.-> F8["F8<br/>size-16 codeword"]
+    Rho -.-> F4["F4<br/>size-8 codeword"]
+    DeepChallenge --> F16
+    DeepChallenge --> F8
+    DeepChallenge --> F4
+  end
+
+  F16 --> Fold0["fold with alpha0"]
+  F8 --> Mix0["add alpha0^2 * F8"]
+  Fold0 --> Mix0
+  Mix0 --> T1["T1"]
+  T1 --> Root1["FRI root rho1"]
+
+  T1 --> Fold1["fold with alpha1"]
+  F4 --> Mix1["add alpha1^2 * F4"]
+  Fold1 --> Mix1
+  Mix1 --> T2["T2"]
+  T2 --> Root2["FRI root rho2"]
+
+  T2 --> Fold2["fold with alpha2"]
+  Fold2 --> T3["T3"]
+  T3 --> Root3["FRI root rho3"]
+
+  T3 --> Fold3["fold with alpha3"]
+  Fold3 --> Final["FinalPolyExt<br/>length 2"]
+```
+
+Read this as two commitments happening at different layers:
+
+- `rho` commits the original WIOP columns.
+- `rho1`, `rho2`, and `rho3` commit the running FRI layers.
+- `F16`, `F8`, and `F4` are virtual quotient codewords. They are computed by
+  the prover but reconstructed only at sampled points by the verifier.
+
+### Multi-Size Merkle Branch
+
+For one top query position `s`, the same input root `rho` authenticates the
+largest row plus aligned smaller rows.
+
+```mermaid
+flowchart BT
+  ALeaf["A row at s<br/>H(A1 at s, A2 at s)"] --> ABinary["binary hash"]
+  ASib["A conjugate row at s xor 1<br/>H(A1 at s xor 1, A2 at s xor 1)"] --> ABinary
+
+  ABinary --> WithB["hash(binary, B aux)"]
+  BAux["B aux row at s >> 1<br/>H(B1 at s >> 1, B2 at s >> 1)"] --> WithB
+
+  WithB --> NextBinary["binary hash with sibling subtree"]
+  Other1["sibling subtree hash"] --> NextBinary
+
+  NextBinary --> WithC["hash(binary, C aux)"]
+  CAux["C aux row at s >> 2<br/>H(C1 at s >> 2)"] --> WithC
+
+  WithC --> Higher["continue Merkle path"]
+  Other2["higher sibling hashes"] --> Higher
+  Higher --> Rho["input root rho"]
+```
+
+The `A` values are bottom leaves. The `B` and `C` values are auxiliary leaves at
+the levels where the tree has folded down to their encoded sizes.
+
+### One Verifier Query Path
+
+```mermaid
+flowchart TD
+  S["sample query position s in [0, 32)"] --> OpenInput["open input rows under rho"]
+
+  OpenInput --> AOpen["A rows:<br/>s and s xor 1"]
+  OpenInput --> BOpen["B row:<br/>s >> 1"]
+  OpenInput --> COpen["C row:<br/>s >> 2"]
+
+  AOpen --> Reconstruct["reconstruct virtual values"]
+  BOpen --> Reconstruct
+  COpen --> Reconstruct
+
+  Reconstruct --> Vals["F16(x), F16(-x),<br/>F8(x^2), F4(x^4)"]
+
+  Vals --> Check0["round 0 check<br/>fold(F16 pair, alpha0) + alpha0^2 F8<br/>equals opened T1 at s >> 1"]
+  Check0 --> AuthT1["authenticate T1 branch<br/>under rho1"]
+
+  AuthT1 --> Check1["round 1 check<br/>fold(T1 pair, alpha1) + alpha1^2 F4<br/>equals opened T2 at s >> 2"]
+  Check1 --> AuthT2["authenticate T2 branch<br/>under rho2"]
+
+  AuthT2 --> Check2["round 2 check<br/>fold(T2 pair, alpha2)<br/>equals opened T3 at s >> 3"]
+  Check2 --> AuthT3["authenticate T3 branch<br/>under rho3"]
+
+  AuthT3 --> Check3["round 3 check<br/>fold(T3 pair, alpha3)<br/>equals FinalPolyExt at s >> 4"]
+  Check3 --> Accept["query path accepted"]
+```
+
+The verifier never reconstructs the whole virtual quotient codeword. It only
+reconstructs the values that lie on sampled query paths and checks that those
+values are consistent with authenticated Merkle openings and the FRI folds.
