@@ -9,16 +9,7 @@ foundry_version = "stable"
 # Test settings
 match-path = 'test/foundry/*'
 
-# Default solc compiler settings
-evm_version = "cancun"
+# Default solc compiler settings (osaka: clz + transient storage; matches Hardhat)
+evm_version = "osaka"
 optimizer = true
 optimizer_runs = 10_000
-
-# Compiler overrides
-additional_compiler_profiles = [ { name = "london", evm_version = "london" } ]
-
-# Specify EVM_VERSION restrictions for contract compilation
-compilation_restrictions = [
-    { paths = "./**/L2MessageService.sol", evm_version = "london" },
-    { paths = "./**/TokenBridge.sol", evm_version = "london" },
-]

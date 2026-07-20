@@ -167,14 +167,14 @@ contracts/
 
 ### LineaRollup (L1)
 
-The main L1 contract managing state submissions and finalization.
+The main L1 contract managing state submissions and finalization (ABI `"9.0"`). Continuity is anchored on `blockHashes`; shnarf is `keccak256(parentShnarf, finalBlockHash, dataHash)`.
 
 **Key Functions:**
 
 ```solidity
-// Submit blob data via EIP-4844
+// Submit EIP-4844 blobs (final L2 block hash per blob; no L1 KZG point-eval)
 function submitBlobs(
-    BlobSubmission[] calldata _blobSubmissions,
+    bytes32[] calldata _blobFinalBlockHashes,
     bytes32 _parentShnarf,
     bytes32 _finalBlobShnarf
 ) public whenTypeAndGeneralNotPaused(PauseType.STATE_DATA_SUBMISSION) onlyRole(OPERATOR_ROLE);
@@ -183,7 +183,7 @@ function submitBlobs(
 function finalizeBlocks(
     bytes calldata _aggregatedProof,
     uint256 _proofType,
-    FinalizationDataV3 calldata _finalizationData
+    FinalizationDataV5 calldata _finalizationData
 ) public whenTypeAndGeneralNotPaused(PauseType.FINALIZATION) onlyRole(OPERATOR_ROLE);
 
 // Send message to L2
@@ -214,18 +214,18 @@ function claimMessageWithProof(
 **Events:**
 
 ```solidity
-event DataSubmittedV3(
+event DataSubmittedV4(
     bytes32 parentShnarf,
     bytes32 indexed shnarf,
-    bytes32 finalStateRootHash
+    bytes32 finalBlockHash
 );
 
-event DataFinalizedV3(
+event DataFinalizedV4(
     uint256 indexed startBlockNumber,
     uint256 indexed endBlockNumber,
     bytes32 indexed shnarf,
-    bytes32 parentStateRootHash,
-    bytes32 finalStateRootHash
+    bytes32 parentBlockHash,
+    bytes32 finalBlockHash
 );
 
 event MessageSent(

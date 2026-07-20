@@ -47,6 +47,10 @@ export const MINIMUM_FEE_SETTER_ROLE = generateKeccak256(["string"], ["MINIMUM_F
 export const OPERATOR_ROLE = generateKeccak256(["string"], ["OPERATOR_ROLE"], { encodePacked: true });
 export const VERIFIER_SETTER_ROLE = generateKeccak256(["string"], ["VERIFIER_SETTER_ROLE"], { encodePacked: true });
 export const VERIFIER_UNSETTER_ROLE = generateKeccak256(["string"], ["VERIFIER_UNSETTER_ROLE"], { encodePacked: true });
+export const SET_VERIFIER_KEY_ROLE = generateKeccak256(["string"], ["SET_VERIFIER_KEY_ROLE"], { encodePacked: true });
+export const UNSET_VERIFIER_KEY_ROLE = generateKeccak256(["string"], ["UNSET_VERIFIER_KEY_ROLE"], {
+  encodePacked: true,
+});
 export const L1_MERKLE_ROOTS_SETTER_ROLE = generateKeccak256(["string"], ["L1_MERKLE_ROOTS_SETTER_ROLE"], {
   encodePacked: true,
 });
@@ -222,6 +226,8 @@ export const VALIDIUM_ROLES = [
   UNPAUSE_STATE_DATA_SUBMISSION_ROLE,
   VERIFIER_SETTER_ROLE,
   VERIFIER_UNSETTER_ROLE,
+  SET_VERIFIER_KEY_ROLE,
+  UNSET_VERIFIER_KEY_ROLE,
   RATE_LIMIT_SETTER_ROLE,
   USED_RATE_LIMIT_RESETTER_ROLE,
   PAUSE_L1_L2_ROLE,
@@ -244,6 +250,8 @@ export const LINEA_ROLLUP_V8_ROLES = [
   ...BASE_ROLES,
   VERIFIER_SETTER_ROLE,
   VERIFIER_UNSETTER_ROLE,
+  SET_VERIFIER_KEY_ROLE,
+  UNSET_VERIFIER_KEY_ROLE,
   RATE_LIMIT_SETTER_ROLE,
   USED_RATE_LIMIT_RESETTER_ROLE,
   PAUSE_L1_L2_ROLE,

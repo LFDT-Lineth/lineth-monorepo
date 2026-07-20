@@ -42,7 +42,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY     | true     | key | Infura API Key. This is required only when deploying contracts to a live network, not required when deploying on a local dev network. |
-| INITIAL_L2_STATE_ROOT_HASH   | true      | bytes | Initial State Root Hash (shared base) |
+| INITIAL_L2_BLOCK_HASH   | true      | bytes | Initial L2 block hash at genesis (shared base) |
 | INITIAL_L2_BLOCK_NUMBER   | true      | uint256 | Initial L2 Block Number (shared base) |
 | L2_GENESIS_TIMESTAMP | true | uint256 | Genesis timestamp (shared base) |
 | L1_SECURITY_COUNCIL  | registry\|env | address | Security Council Address. Read from registry on stable networks; env var used as fallback. |
@@ -73,7 +73,7 @@ pnpm exec hardhat deploy --network sepolia --tags PlonkVerifier,LineaRollup,Time
 
 Base command with cli arguments:
 ```shell
-VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> INITIAL_L2_STATE_ROOT_HASH=<bytes> INITIAL_L2_BLOCK_NUMBER=<value> L2_GENESIS_TIMESTAMP=<value> L1_SECURITY_COUNCIL=<address> LINEA_ROLLUP_OPERATORS=<address> LINEA_ROLLUP_RATE_LIMIT_PERIOD=<value> LINEA_ROLLUP_RATE_LIMIT_AMOUNT=<value> YIELD_MANAGER_ADDRESS=<address> TIMELOCK_PROPOSERS=<address> TIMELOCK_EXECUTORS=<address> TIMELOCK_ADMIN_ADDRESS=<address> MIN_DELAY=<value> VERIFIER_CONTRACT_NAME=PlonkVerifierForMultiTypeDataAggregation VERIFIER_IS_ALLOWED_CIRCUIT_ID=<value> pnpm exec hardhat deploy --network sepolia --tags PlonkVerifier,LineaRollup,Timelock
+VERIFY_CONTRACT=true DEPLOYER_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> INITIAL_L2_BLOCK_HASH=<bytes> INITIAL_L2_BLOCK_NUMBER=<value> L2_GENESIS_TIMESTAMP=<value> L1_SECURITY_COUNCIL=<address> LINEA_ROLLUP_OPERATORS=<address> LINEA_ROLLUP_RATE_LIMIT_PERIOD=<value> LINEA_ROLLUP_RATE_LIMIT_AMOUNT=<value> YIELD_MANAGER_ADDRESS=<address> TIMELOCK_PROPOSERS=<address> TIMELOCK_EXECUTORS=<address> TIMELOCK_ADMIN_ADDRESS=<address> MIN_DELAY=<value> VERIFIER_CONTRACT_NAME=PlonkVerifierForMultiTypeDataAggregation VERIFIER_IS_ALLOWED_CIRCUIT_ID=<value> pnpm exec hardhat deploy --network sepolia --tags PlonkVerifier,LineaRollup,Timelock
 ```
 
 (make sure to replace `<value>` `<bytes>` `<key>` `<address>` with actual values)

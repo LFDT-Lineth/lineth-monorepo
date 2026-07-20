@@ -48,7 +48,7 @@ pnpm -F contracts run solidity:docgen
 ### Compiler and EVM
 
 - Solidity version: `0.8.33` (exact for contracts, caret `^0.8.33` for interfaces/abstract/libraries)
-- EVM version: osaka (Hardhat), cancun (Foundry)
+- EVM version: osaka (Hardhat and Foundry)
 - OpenZeppelin contracts: 4.9.6
 
 ### Licenses

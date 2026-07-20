@@ -14,7 +14,6 @@ import {
   TestLineaRollup,
   TestValidium,
 } from "contracts/typechain-types";
-import { toBeHex } from "ethers";
 import { ethers } from "hardhat";
 
 import { getAccountsFixture, getRoleAddressesFixture, getValidiumRoleAddressesFixture } from "./before";
@@ -56,11 +55,11 @@ export async function deployValidiumFixture() {
 
   const { addressFilter } = await deployAddressFilter(securityCouncil.address, [nonAuthorizedAccount.address]);
 
-  const verifier = await deployTestPlonkVerifierForDataAggregation();
+  const verifier = await deployTrueVerifier();
   const { parentStateRootHash } = firstCompressedDataContent;
 
   const initializationData = {
-    initialStateRootHash: parentStateRootHash,
+    initialBlockHash: parentStateRootHash,
     initialL2BlockNumber: 0,
     genesisTimestamp: DEFAULT_LAST_FINALIZED_TIMESTAMP,
     defaultVerifier: verifier,
@@ -69,6 +68,7 @@ export async function deployValidiumFixture() {
     roleAddresses,
     pauseTypeRoles: VALIDIUM_PAUSE_TYPES_ROLES,
     unpauseTypeRoles: VALIDIUM_UNPAUSE_TYPES_ROLES,
+    verifierKeys: [] as string[],
     defaultAdmin: securityCouncil.address,
     shnarfProvider: ADDRESS_ZERO,
     addressFilter: await addressFilter.getAddress(),
@@ -95,13 +95,13 @@ export async function deployLineaRollupFixture() {
 
   const { addressFilter } = await deployAddressFilter(securityCouncil.address, [nonAuthorizedAccount.address]);
 
-  const verifier = await deployTestPlonkVerifierForDataAggregation();
+  const verifier = await deployTrueVerifier();
   const { parentStateRootHash } = firstCompressedDataContent;
 
   const yieldManager = await deployMockYieldManager();
 
   const initializationData: LineaRollupInitializationData = {
-    initialStateRootHash: parentStateRootHash,
+    initialBlockHash: parentStateRootHash,
     initialL2BlockNumber: 0n,
     genesisTimestamp: DEFAULT_LAST_FINALIZED_TIMESTAMP,
     defaultVerifier: verifier,
@@ -110,6 +110,7 @@ export async function deployLineaRollupFixture() {
     roleAddresses,
     pauseTypeRoles: LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES as unknown as PauseTypeRole[],
     unpauseTypeRoles: LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES as unknown as PauseTypeRole[],
+    verifierKeys: [],
     defaultAdmin: securityCouncil.address,
     shnarfProvider: ADDRESS_ZERO,
     addressFilter: await addressFilter.getAddress(),
@@ -187,33 +188,9 @@ export async function deployAddressFilterFixture() {
   return { addressFilter };
 }
 
-async function deployTestPlonkVerifierForDataAggregation(): Promise<string> {
-  const mimc = (await deployFromFactory("Mimc")) as Mimc;
-  const testPlonkVerifierFactory = await ethers.getContractFactory("TestPlonkVerifierForDataAggregation", {
-    libraries: { Mimc: await mimc.getAddress() },
-  });
-  const verifier = await testPlonkVerifierFactory.deploy([
-    {
-      value: toBeHex(59144, 32),
-      name: "chainId",
-    },
-    {
-      value: toBeHex(7n, 32),
-      name: "baseFee",
-    },
-    {
-      value: toBeHex("0x8f81e2e3f8b46467523463835f965ffe476e1c9e", 32),
-      name: "coinbase",
-    },
-    {
-      value: toBeHex("0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec", 32),
-      name: "l2MessageServiceAddress",
-    },
-    {
-      value: toBeHex(0n, 32),
-      name: "isAllowedCircuitID",
-    },
-  ]);
+async function deployTrueVerifier(): Promise<string> {
+  const verifierFactory = await ethers.getContractFactory("IntegrationTestTrueVerifier");
+  const verifier = await verifierFactory.deploy();
   await verifier.waitForDeployment();
   return await verifier.getAddress();
 }

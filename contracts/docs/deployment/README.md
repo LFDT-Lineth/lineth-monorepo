@@ -48,9 +48,9 @@ Environment variables follow a consistent naming pattern:
 - `L1_SECURITY_COUNCIL` — shared across all L1 contracts (Linea Rollup, Validium, Token Bridge L1, RecoverFunds, Yield Manager)
 - `L2_SECURITY_COUNCIL` — shared across all L2 contracts (L2 Message Service, Rollup Revenue Vault, Token Bridge L2)
 
-**Shared L1 base (Linea Rollup & Validium):** `INITIAL_L2_STATE_ROOT_HASH`, `INITIAL_L2_BLOCK_NUMBER`, `L2_GENESIS_TIMESTAMP` — common to both products via shared contract base
+**Shared L1 base (Linea Rollup & Validium):** `INITIAL_L2_BLOCK_HASH`, `INITIAL_L2_BLOCK_NUMBER`, `L2_GENESIS_TIMESTAMP` — common to both products via shared contract base. `INITIAL_L2_BLOCK_HASH` is the initial L2 block hash, passed as `initialBlockHash` on-chain.
 
-**Product-specific:** `LINEA_ROLLUP_OPERATORS`, `LINEA_ROLLUP_RATE_LIMIT_*`, `VALIDIUM_OPERATORS`, `VALIDIUM_RATE_LIMIT_*`
+**Product-specific:** `LINEA_ROLLUP_OPERATORS`, `LINEA_ROLLUP_RATE_LIMIT_*`, `LINEA_ROLLUP_VERIFIER_KEYS` (optional on fresh deploy; seeds guest-program keys at `initialize`, with `SET_VERIFIER_KEY_ROLE` / `UNSET_VERIFIER_KEY_ROLE` defaulting to the security council via `LINEA_ROLLUP_V8_ROLES`), `VALIDIUM_OPERATORS`, `VALIDIUM_RATE_LIMIT_*`, `VALIDIUM_VERIFIER_KEYS` (optional on fresh deploy; same role defaults via `VALIDIUM_ROLES`)
 
 **RPC endpoints:** `L1_RPC_URL`, `L2_RPC_URL`, `CUSTOM_RPC_URL` (replaces legacy `BLOCKCHAIN_NODE`, `L2_BLOCKCHAIN_NODE`, `CUSTOM_BLOCKCHAIN_URL`)
 
@@ -167,7 +167,7 @@ Verifier deployments require chain-configuration inputs in addition to the contr
 | Contract | Doc | Tags |
 |----------|-----|------|
 | PlonkVerifier | [verifier.md](l1/verifier.md) | `PlonkVerifier` |
-| LineaRollup | [linea-rollup.md](l1/linea-rollup.md) | `LineaRollup`, `LineaRollupWithReinitialization`, `LineaRollupV8WithReinitialization` |
+| LineaRollup | [linea-rollup.md](l1/linea-rollup.md) | `LineaRollup`, `LineaRollupWithReinitialization`, `LineaRollupV8WithReinitialization`, `LineaRollupV9WithReinitialization` |
 | Validium | [validium.md](l1/validium.md) | `Validium` |
 | Timelock | [timelock.md](l1/timelock.md) | `Timelock` |
 | YieldManager | [yield-manager.md](l1/yield-manager.md) | `YieldManager`, `YieldManagerArtifacts`, `YieldManagerImplementation` |
