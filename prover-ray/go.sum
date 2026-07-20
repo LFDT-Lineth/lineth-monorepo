@@ -1,5 +1,9 @@
+github.com/LFDT-Lineth/zkc v1.2.21-0.20260713194944-3fddcd3234a8 h1:40VhvOrQsZVreVhoNjkQSe5tyk3N4bB1W7L5Z6ZMxOo=
+github.com/LFDT-Lineth/zkc v1.2.21-0.20260713194944-3fddcd3234a8/go.mod h1:5TiLsaRfSKKeJLs8noagL62vHIWyalP7nLTWDzkSrIE=
 github.com/LFDT-Lineth/zkc v1.2.22-rc1 h1:HCZ2Y5+UifhIIhuS1Sn1cDDkjagLl24RmgyIYCNrP4s=
 github.com/LFDT-Lineth/zkc v1.2.22-rc1/go.mod h1:5TiLsaRfSKKeJLs8noagL62vHIWyalP7nLTWDzkSrIE=
+github.com/LFDT-Lineth/zkc v1.2.22-rc1.0.20260720094741-0f50ec76cddd h1:ra0H0Qlzd4grJYu+kb81ikVZdDd5YyTPfJvqiYCD/4w=
+github.com/LFDT-Lineth/zkc v1.2.22-rc1.0.20260720094741-0f50ec76cddd/go.mod h1:5TiLsaRfSKKeJLs8noagL62vHIWyalP7nLTWDzkSrIE=
 github.com/benbjohnson/clock v1.1.0 h1:Q92kusRqC1XV2MjkWETPvjJVqKetz1OzxZB7mHJLju8=
 github.com/benbjohnson/clock v1.1.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=
 github.com/bits-and-blooms/bitset v1.24.4 h1:95H15Og1clikBrKr/DuzMXkQzECs1M6hhoGXLwLQOZE=

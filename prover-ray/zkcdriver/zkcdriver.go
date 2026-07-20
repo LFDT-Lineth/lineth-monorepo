@@ -129,7 +129,7 @@ func (a *ZkCDriver) AssignWithPreRead(run *wiop.Runtime, preRead *PreReadInputs)
 	// Attempt to trace the ZkC program using the provided inputs, generating a
 	// fully expanded AIR-compatible trace.
 	tracingStart := time.Now()
-	_, _, expandedTrace, errs := a.BinaryFile.Trace(inputs, a.TracingConfig)
+	_, expandedTrace, errs := a.BinaryFile.Trace(inputs, a.TracingConfig)
 
 	if len(errs) > 0 {
 		logrus.Panicf("tracing failed: %v", errors.Join(errs...).Error())

@@ -103,7 +103,7 @@ func traceZkc(
 	}()
 
 	// trace program with given input
-	outputs, _, tr, errs := binFile.Trace(input, tracingCfg)
+	outputs, tr, errs := binFile.Trace(input, tracingCfg)
 	if len(errs) > 0 {
 		return nil, fmt.Errorf("could not trace the binary file: %w", errors.Join(errs...))
 	}
