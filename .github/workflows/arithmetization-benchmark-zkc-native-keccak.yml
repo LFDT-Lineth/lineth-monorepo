@@ -141,7 +141,7 @@ jobs:
           run_compile_native_keccak() {  # $1=variant (base|opt)  $2=label (warmup|iter#)
             local log="/tmp/bench/logs/compile_${1}_${2}.log"
             "/tmp/zkc-${1}" compile --stats --quiet --inline --field KOALABEAR_16 \
-              /tmp/keccakf_input.json "$zkc_prog" >"$log" 2>&1 || true
+              "$zkc_prog" >"$log" 2>&1 || true
           }
 
           # Run fast mode with gogen
