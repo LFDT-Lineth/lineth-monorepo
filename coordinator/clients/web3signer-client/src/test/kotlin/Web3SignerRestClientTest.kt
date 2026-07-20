@@ -80,7 +80,11 @@ class Web3SignerRestClientTest {
 
     assertThat(web3SignerClient.publicKey()).isEqualTo(publicKeyBytes)
 
+<<<<<<< HEAD
     val signed = web3SignerClient.sign(digest).get()
+=======
+    val signed = web3SignerClient.sign(msg.toByteArray()).get()
+>>>>>>> ee3d4c440 (feat(jvm-libs): unify signing behind an opaque Signer contract in signer-interfaces (#3552))
     assertThat(signed.toRSBytes()).isEqualTo(signature.r + signature.s)
 
     val (r, s) = signed
@@ -128,6 +132,10 @@ class Web3SignerRestClientTest {
             .withStatusMessage("Public Key not found"),
         ),
     )
+<<<<<<< HEAD
     assertThrows<Exception> { web3SignerClient.sign(Hash.sha3("Message".toByteArray())).get() }
+=======
+    assertThrows<Exception> { web3SignerClient.sign("Message".toByteArray()).get() }
+>>>>>>> ee3d4c440 (feat(jvm-libs): unify signing behind an opaque Signer contract in signer-interfaces (#3552))
   }
 }
