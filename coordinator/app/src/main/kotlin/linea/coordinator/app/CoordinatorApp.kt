@@ -46,7 +46,7 @@ class CoordinatorApp(
   // handlers that share this app's Vertx, metrics and DB. Defaults to no-op so the OSS app
   // behaves identically when no extension is supplied.
   extensionsFactory: CoordinatorExtensionFactory = CoordinatorExtensionFactory.NOOP,
-  customSignerFactory: CustomSignerFactory? = null,
+  customSignerFactory: CustomSignerFactory? = extensionsFactory.customSignerFactory,
 ) {
   private val log: Logger = LogManager.getLogger(this::class.java)
   private val vertx: Vertx =

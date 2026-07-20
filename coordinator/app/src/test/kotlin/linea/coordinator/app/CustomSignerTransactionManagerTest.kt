@@ -1,10 +1,17 @@
 package linea.coordinator.app
 
 import io.vertx.core.Vertx
+import linea.anchoring.MessageAnchoringApp
+import linea.coordinator.config.v2.CoordinatorConfig
+import linea.coordinator.config.v2.MessageAnchoringConfig
+import linea.coordinator.config.v2.ProtocolConfig
 import linea.coordinator.config.v2.SignerConfig
+import linea.coordinator.extensions.CoordinatorExtensionFactory
 import linea.coordinator.extensions.CustomSignerFactory
 import linea.crypto.Secp256k1Signature
 import linea.crypto.Signer
+import linea.jsonrpc.TestingJsonRpcServer
+import net.consensys.linea.async.get
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -21,6 +28,7 @@ import org.web3j.utils.Numeric
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.math.BigInteger
 import java.util.concurrent.CompletableFuture
+import kotlin.time.Duration.Companion.seconds
 
 class CustomSignerTransactionManagerTest {
   private val signerConfig = SignerConfig(
@@ -58,6 +66,95 @@ class CustomSignerTransactionManagerTest {
     }
       .isInstanceOf(IllegalStateException::class.java)
       .hasMessageContaining("l1-submitter")
+  }
+
+  @Test
+  fun `custom signer config requires custom settings`() {
+    assertThatThrownBy {
+      SignerConfig(
+        type = SignerConfig.SignerType.CUSTOM,
+        web3j = null,
+        web3signer = null,
+      )
+    }
+      .isInstanceOf(IllegalArgumentException::class.java)
+      .hasMessageContaining("requires custom config")
+  }
+
+  @Test
+  fun `extension factory has no custom signer by default`() {
+    assertThat(CoordinatorExtensionFactory.NOOP.customSignerFactory).isNull()
+  }
+
+  @Test
+  fun `message anchoring is disabled when its config is absent`() {
+    val configs = mock(CoordinatorConfig::class.java)
+    `when`(configs.messageAnchoring).thenReturn(null)
+
+    val service = MessageAnchoringAppConfigurator.create(
+      vertx = mock(Vertx::class.java),
+      configs = configs,
+    )
+
+    assertThat(service).isSameAs(DisabledLongRunningService)
+  }
+
+  @Test
+  fun `message anchoring resolves its custom signer through the supplied factory`() {
+    val vertx = Vertx.vertx()
+    val jsonRpcServer = TestingJsonRpcServer(vertx = vertx)
+    jsonRpcServer.handle("eth_getTransactionCount") { "0x0" }
+    jsonRpcServer.handle("eth_chainId") { "0xe708" }
+    jsonRpcServer.handle("eth_blockNumber") { "0x0" }
+    var resolvedName: String? = null
+
+    try {
+      val configs = messageAnchoringConfigs(jsonRpcServer, signerConfig)
+
+      val service = MessageAnchoringAppConfigurator.create(
+        vertx = vertx,
+        configs = configs,
+        customSignerFactory = CustomSignerFactory { name ->
+          resolvedName = name
+          TestSigner
+        },
+      )
+
+      assertThat(service).isInstanceOf(MessageAnchoringApp::class.java)
+      assertThat(resolvedName).isEqualTo("l1-submitter")
+    } finally {
+      jsonRpcServer.stopHttpServer().get()
+      vertx.close().get()
+    }
+  }
+
+  private fun messageAnchoringConfigs(
+    jsonRpcServer: TestingJsonRpcServer,
+    signerConfig: SignerConfig,
+  ): CoordinatorConfig {
+    val messageAnchoringConfig = MessageAnchoringConfig(
+      l1Endpoint = jsonRpcServer.httpEndpoint,
+      l2Endpoint = jsonRpcServer.httpEndpoint,
+      signer = signerConfig,
+    )
+    val layer1Config = ProtocolConfig.Layer1Config(
+      contractAddress = "0x0000000000000000000000000000000000000001",
+      blockTime = 1.seconds,
+      contractDeploymentBlockNumber = null,
+    )
+    val layer2Config = ProtocolConfig.Layer2Config(
+      contractAddress = "0x0000000000000000000000000000000000000002",
+      contractDeploymentBlockNumber = null,
+    )
+    val protocolConfig = mock(ProtocolConfig::class.java)
+    `when`(protocolConfig.l1).thenReturn(layer1Config)
+    `when`(protocolConfig.l2).thenReturn(layer2Config)
+
+    val configs = mock(CoordinatorConfig::class.java)
+    `when`(configs.messageAnchoring).thenReturn(messageAnchoringConfig)
+    `when`(configs.protocol).thenReturn(protocolConfig)
+    `when`(configs.smartContractErrors).thenReturn(emptyMap())
+    return configs
   }
 
   private fun web3jWithZeroNonce(): Web3j {
