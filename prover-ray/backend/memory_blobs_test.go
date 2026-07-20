@@ -132,8 +132,8 @@ func TestSszBlobs_LengthPrefixAtInOrigin(t *testing.T) {
 	got := sszBlobs(DefaultINOrigin, ssz)
 	require.Len(t, got, 2)
 
-	// First blob: 8-byte LE length at inOrigin.
-	assert.Equal(t, DefaultINOrigin, got[0].offset, "first blob offset must be inOrigin")
+	// First memory blob: 8-byte LE length at inOrigin.
+	assert.Equal(t, DefaultINOrigin, got[0].offset, "first memory blob offset must be inOrigin")
 	require.Len(t, got[0].data, 8, "length prefix must be exactly 8 bytes")
 	assert.Equal(t, uint64(3), binary.LittleEndian.Uint64(got[0].data), "length prefix must encode payload length as LE uint64")
 }
@@ -143,16 +143,16 @@ func TestSszBlobs_PayloadAtInOriginPlus8(t *testing.T) {
 	got := sszBlobs(DefaultINOrigin, ssz)
 	require.Len(t, got, 2)
 
-	// Second blob: raw SSZ bytes at inOrigin+8.
-	assert.Equal(t, DefaultINOrigin+8, got[1].offset, "payload blob offset must be inOrigin+8")
-	assert.Equal(t, ssz, got[1].data, "payload blob must contain the raw SSZ bytes")
+	// Second memory blob: raw SSZ bytes at inOrigin+8.
+	assert.Equal(t, DefaultINOrigin+8, got[1].offset, "payload memory blob offset must be inOrigin+8")
+	assert.Equal(t, ssz, got[1].data, "payload memory blob must contain the raw SSZ bytes")
 }
 
 func TestSszBlobs_EmptySSZ(t *testing.T) {
-	// Empty SSZ: only the 8-byte length blob, no payload blob.
+	// Empty SSZ: only the 8-byte length memory blob, no payload memory blob.
 	got := sszBlobs(DefaultINOrigin, nil)
-	require.Len(t, got, 1, "empty SSZ must produce exactly one blob (length prefix only)")
-	assert.Equal(t, DefaultINOrigin, got[0].offset, "length prefix blob offset must be inOrigin")
+	require.Len(t, got, 1, "empty SSZ must produce exactly one memory blob (length prefix only)")
+	assert.Equal(t, DefaultINOrigin, got[0].offset, "length prefix memory blob offset must be inOrigin")
 	assert.Equal(t, uint64(0), binary.LittleEndian.Uint64(got[0].data), "length prefix must be zero for empty SSZ")
 }
 
@@ -170,56 +170,56 @@ func TestBuildJSON_EntryPointIs16HexChars(t *testing.T) {
 }
 
 func TestBuildJSON_BlobCountEncodedWith16HexChars(t *testing.T) {
-	blobs := []memoryBlob{
+	memBlobs := []memoryBlob{
 		{offset: 0x1000, data: []byte{0x01}},
 		{offset: 0x2000, data: []byte{0x02}},
 	}
-	j := string(buildJSON(blobs, 0))
+	j := string(buildJSON(memBlobs, 0))
 	// count = 2 must appear as 16 hex chars
 	assert.Contains(t, j, `_0000000000000002"`)
 }
 
 func TestBuildJSON_FourUnderscoresBetweenBlobs(t *testing.T) {
-	// Blob boundaries in blobs_offset_and_size and blobs_data must be
+	// Memory blob boundaries in blobs_offset_and_size and blobs_data must be
 	// separated by "____" (four underscores). This is the delimiter that
 	// zkc_util.ParseJsonInputFile and the reference elf_to_json_gen tool both use.
-	blobs := []memoryBlob{
+	memBlobs := []memoryBlob{
 		{offset: 0x1000, data: []byte{0xAA}},
 		{offset: 0x2000, data: []byte{0xBB}},
 	}
-	j := string(buildJSON(blobs, 0))
-	assert.Contains(t, j, "____", "blob boundaries must use four underscores as separator")
+	j := string(buildJSON(memBlobs, 0))
+	assert.Contains(t, j, "____", "memory blob boundaries must use four underscores as separator")
 }
 
 func TestBuildJSON_OffsetSizeSingleUnderscore(t *testing.T) {
-	// Within one blob's offset_size entry, offset and size are separated by
+	// Within one memory blob's offset_size entry, offset and size are separated by
 	// a single underscore, not four.
-	blobs := []memoryBlob{{offset: 0x00800000, data: []byte{0x01, 0x02}}}
-	j := string(buildJSON(blobs, 0))
+	memBlobs := []memoryBlob{{offset: 0x00800000, data: []byte{0x01, 0x02}}}
+	j := string(buildJSON(memBlobs, 0))
 	// Expect "0000000000800000_0000000000000002" (single _ between offset and size)
 	assert.Contains(t, j, "0000000000800000_0000000000000002")
 }
 
 func TestBuildJSON_BlobDataEncodedAsLowerHex(t *testing.T) {
-	// zkc_util.ParseJsonInputFile is case-sensitive: blob data must be lowercase hex.
+	// zkc_util.ParseJsonInputFile is case-sensitive: memory blob data must be lowercase hex.
 	data := []byte{0xDE, 0xAD, 0xBE, 0xEF}
 	j := string(buildJSON([]memoryBlob{{offset: 0, data: data}}, 0))
-	assert.Contains(t, j, hex.EncodeToString(data), `blob data must be lowercase hex ("deadbeef", not "DEADBEEF")`)
+	assert.Contains(t, j, hex.EncodeToString(data), `memory blob data must be lowercase hex ("deadbeef", not "DEADBEEF")`)
 }
 
 func TestBuildJSON_SingleBlobNoFourUnderscores(t *testing.T) {
-	// With only one blob, no "____" separator should appear.
+	// With only one memory blob, no "____" separator should appear.
 	j := string(buildJSON([]memoryBlob{{offset: 0x1000, data: []byte{0x01}}}, 0))
 	assert.NotContains(t, j, "____")
 }
 
 func TestElfBlobs_ExtractsSectionAtCorrectOffset(t *testing.T) {
 	elfBytes := makeMinimalELF(t, testEntry, testSecAddr, testSecData)
-	blobs, _, err := loadELFBlobs(elfBytes)
+	memBlobs, _, err := loadELFBlobs(elfBytes)
 	require.NoError(t, err)
-	require.Len(t, blobs, 1, "one loadable section must yield one blob")
-	assert.Equal(t, testSecAddr, blobs[0].offset, "blob offset must match the section's virtual address")
-	assert.Equal(t, testSecData, blobs[0].data, "blob data must match the section bytes")
+	require.Len(t, memBlobs, 1, "one loadable section must yield one memory blob")
+	assert.Equal(t, testSecAddr, memBlobs[0].offset, "memory blob offset must match the section's virtual address")
+	assert.Equal(t, testSecData, memBlobs[0].data, "memory blob data must match the section bytes")
 }
 
 func TestElfBlobs_EntryPointPreserved(t *testing.T) {
@@ -326,17 +326,17 @@ func TestCore_BuildInputs_MatchesBuildZkcInputs(t *testing.T) {
 // zkc_util.ParseJsonInputFile accepts both without special-casing.
 
 func TestBuildJSON_OffsetSizeFormat(t *testing.T) {
-	// elf_to_json_gen formats each blob as "%016x_%016x" % (offset, size).
-	blobs := []memoryBlob{{offset: 0x00800000, data: make([]byte, 0x1234)}}
-	j := string(buildJSON(blobs, testEntry))
+	// elf_to_json_gen formats each memory blob as "%016x_%016x" % (offset, size).
+	memBlobs := []memoryBlob{{offset: 0x00800000, data: make([]byte, 0x1234)}}
+	j := string(buildJSON(memBlobs, testEntry))
 	assert.Contains(t, j, "0000000000800000_0000000000001234",
 		"blobs_offset_and_size must use 16-hex-char offset and size separated by a single underscore")
 }
 
 func TestBuildJSON_EntryFormat(t *testing.T) {
 	// elf_to_json_gen formats the first key as "0x{entry16hex}_{count16hex}".
-	blobs := []memoryBlob{{offset: 0, data: []byte{0}}}
-	j := string(buildJSON(blobs, 0x00800150))
+	memBlobs := []memoryBlob{{offset: 0, data: []byte{0}}}
+	j := string(buildJSON(memBlobs, 0x00800150))
 	assert.Contains(t, j, `"0x0000000000800150_0000000000000001"`,
 		"entry_point_and_blobs_count must be 0x{entry}_{count} in 16-hex-char fields")
 }

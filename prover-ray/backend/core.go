@@ -15,7 +15,7 @@ import (
 var ErrNotImplemented = errors.New("not yet implemented")
 
 // Core is the shared proving kernel. Initialize once via [New]; it is
-// safe for concurrent use after that — each [Prove] call gets its own
+// safe for concurrent use after that; each [Prove] call gets its own
 // wiop.Runtime.
 type Core struct {
 	cfg      Config
@@ -92,12 +92,14 @@ func (c *Core) Prove(ctx context.Context, job Job) Result {
 	}
 }
 
-// buildInputs converts a Job's Payload into the three ZkC pub-input blobs.
-// ELF blobs are pre-extracted in [New] and reused across calls; only the SSZ
-// blobs differ per job.
+// buildInputs converts a Job's Payload into the three ZkC pub-input memory blobs.
+// ELF memory blobs are pre-extracted in [New] and reused across calls; only the
+// SSZ memory blobs differ per job.
 func (c *Core) buildInputs(job Job) (map[string][]byte, error) {
-	blobs := append(append([]memoryBlob{}, c.elfBlobs...), sszBlobs(c.cfg.inOrigin(), decodePayload(job))...)
-	return encodeInputs(blobs, c.elfEntry)
+	memBlobs := make([]memoryBlob, 0, len(c.elfBlobs)+2)
+	memBlobs = append(memBlobs, c.elfBlobs...)
+	memBlobs = append(memBlobs, sszBlobs(c.cfg.inOrigin(), decodePayload(job))...)
+	return encodeInputs(memBlobs, c.elfEntry)
 }
 
 // runProve calls AssignWithPreRead, sys.Prove, and sys.Verify.

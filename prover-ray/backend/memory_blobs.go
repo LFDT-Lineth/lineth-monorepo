@@ -29,35 +29,35 @@ type memoryBlob struct {
 //   - "blobs_data"
 //
 // elfBytes is the raw guest ELF. sszInput is the raw SSZ StatelessInput (not
-// yet framed — BuildZkcInputs adds the [u64 LE len] prefix). inOrigin is the
+// yet framed; BuildZkcInputs adds the [u64 LE len] prefix). inOrigin is the
 // guest RAM address where the SSZ input is placed (use [DefaultINOrigin]).
 func BuildZkcInputs(elfBytes, sszInput []byte, inOrigin uint64) (map[string][]byte, error) {
-	blobs, entry, err := loadELFBlobs(elfBytes)
+	memBlobs, entry, err := loadELFBlobs(elfBytes)
 	if err != nil {
 		return nil, err
 	}
-	blobs = append(blobs, sszBlobs(inOrigin, sszInput)...)
-	return encodeInputs(blobs, entry)
+	memBlobs = append(memBlobs, sszBlobs(inOrigin, sszInput)...)
+	return encodeInputs(memBlobs, entry)
 }
 
 // loadELFBlobs parses elfBytes as a guest ELF and returns the pre-extracted
-// RAM blobs and entry point. Callers that process many jobs from the same ELF
+// memory blobs and entry point. Callers that process many jobs from the same ELF
 // should call this once at startup and cache the result on [Core].
-func loadELFBlobs(elfBytes []byte) (blobs []memoryBlob, entry uint64, err error) {
+func loadELFBlobs(elfBytes []byte) (memBlobs []memoryBlob, entry uint64, err error) {
 	ef, err := elf.NewFile(bytes.NewReader(elfBytes))
 	if err != nil {
 		return nil, 0, fmt.Errorf("parsing guest ELF: %w", err)
 	}
-	blobs, err = elfBlobs(ef)
+	memBlobs, err = elfBlobs(ef)
 	if err != nil {
 		return nil, 0, err
 	}
-	return blobs, ef.Entry, nil
+	return memBlobs, ef.Entry, nil
 }
 
-// elfBlobs extracts allocated, file-backed ELF sections as RAM blobs.
+// elfBlobs extracts allocated, file-backed ELF sections as memory blobs.
 // SHT_NOBITS sections (.bss, padding) are omitted: guest RAM is zero-
-// initialized before blob loading, so explicit zeros waste space.
+// initialized before memory blob loading, so explicit zeros waste space.
 func elfBlobs(ef *elf.File) ([]memoryBlob, error) {
 	var result []memoryBlob
 
@@ -95,38 +95,38 @@ func elfBlobs(ef *elf.File) ([]memoryBlob, error) {
 	return result, nil
 }
 
-// sszBlobs splits ssz into the two blobs that linea_zkvm_io expects at
+// sszBlobs splits ssz into the two memory blobs that linea_zkvm_io expects at
 // _in_start: an 8-byte LE length prefix followed by the raw SSZ payload.
 // The split matches elf_to_json_gen's sszInputBlobs (commit 09fcdb42).
 func sszBlobs(inOrigin uint64, ssz []byte) []memoryBlob {
 	prefix := make([]byte, 8)
 	binary.LittleEndian.PutUint64(prefix, uint64(len(ssz)))
-	blobs := []memoryBlob{{offset: inOrigin, data: prefix}}
+	memBlobs := []memoryBlob{{offset: inOrigin, data: prefix}}
 	if len(ssz) > 0 {
-		blobs = append(blobs, memoryBlob{offset: inOrigin + 8, data: ssz})
+		memBlobs = append(memBlobs, memoryBlob{offset: inOrigin + 8, data: ssz})
 	}
-	return blobs
+	return memBlobs
 }
 
-// buildJSON encodes blobs and entryPoint into the compact JSON hex format that
+// buildJSON encodes memory blobs and entryPoint into the compact JSON hex format that
 // zkc_util.ParseJsonInputFile decodes. Blob boundaries are separated by "____"
 // (four underscores); offset and size within one entry use a single "_".
-func buildJSON(blobs []memoryBlob, entryPoint uint64) []byte {
-	offsetSizeParts := make([]string, len(blobs))
-	dataParts := make([]string, len(blobs))
-	for i, b := range blobs {
+func buildJSON(memBlobs []memoryBlob, entryPoint uint64) []byte {
+	offsetSizeParts := make([]string, len(memBlobs))
+	dataParts := make([]string, len(memBlobs))
+	for i, b := range memBlobs {
 		offsetSizeParts[i] = fmt.Sprintf("%016x_%016x", b.offset, len(b.data))
 		dataParts[i] = hex.EncodeToString(b.data)
 	}
 	return []byte(`{` +
-		`"entry_point_and_blobs_count":"0x` + fmt.Sprintf("%016x_%016x", entryPoint, len(blobs)) + `",` +
+		`"entry_point_and_blobs_count":"0x` + fmt.Sprintf("%016x_%016x", entryPoint, len(memBlobs)) + `",` +
 		`"blobs_offset_and_size":"0x` + strings.Join(offsetSizeParts, "____") + `",` +
 		`"blobs_data":"0x` + strings.Join(dataParts, "____") + `"` +
 		`}`)
 }
 
-// encodeInputs formats blobs as JSON (see [buildJSON]) and parses them
+// encodeInputs formats memory blobs as JSON (see [buildJSON]) and parses them
 // into the keyed byte map that [zkcdriver.PreReadInputs] expects.
-func encodeInputs(blobs []memoryBlob, entryPoint uint64) (map[string][]byte, error) {
-	return zkc_util.ParseJsonInputFile(buildJSON(blobs, entryPoint))
+func encodeInputs(memBlobs []memoryBlob, entryPoint uint64) (map[string][]byte, error) {
+	return zkc_util.ParseJsonInputFile(buildJSON(memBlobs, entryPoint))
 }
