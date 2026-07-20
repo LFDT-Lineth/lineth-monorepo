@@ -22,16 +22,16 @@ export class EthersLinethRollupLogClient implements ILinethRollupLogClient {
    * Initializes a new instance of the `EthersLinethRollupLogClient`.
    *
    * @param {Provider | BrowserProvider} provider - The JSON RPC provider for interacting with the Ethereum network.
-   * @param {string} contractAddress - The address of the Linea Rollup contract.
+   * @param {string} contractAddress - The address of the Lineth Rollup contract.
    */
   constructor(provider: Provider | BrowserProvider, contractAddress: string) {
     this.linethRollup = LinethRollup__factory.connect(contractAddress, provider);
   }
 
   /**
-   * Fetches event logs from the Linea Rollup contract based on the provided filters and block range.
+   * Fetches event logs from the Lineth Rollup contract based on the provided filters and block range.
    *
-   * This generic method queries the Ethereum blockchain for events emitted by the Linea Rollup contract that match the given criteria. It filters the events further based on the optional parameters for block range and log index, ensuring that only relevant events are returned.
+   * This generic method queries the Ethereum blockchain for events emitted by the Lineth Rollup contract that match the given criteria. It filters the events further based on the optional parameters for block range and log index, ensuring that only relevant events are returned.
    *
    * @template TCEevent - A type parameter extending `TypedContractEvent`, representing the specific event type to fetch.
    * @param {TypedDeferredTopicFilter<TypedContractEvent>} eventFilter - The filter criteria used to select the events to be fetched. This includes the contract address, event signature, and any additional filter parameters.

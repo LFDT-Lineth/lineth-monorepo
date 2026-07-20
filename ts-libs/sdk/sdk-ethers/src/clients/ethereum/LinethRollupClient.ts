@@ -44,9 +44,9 @@ export class LinethRollupClient implements ILinethRollupClient<
 
   /**
    * @notice Initializes a new instance of the `LinethRollupClient`.
-   * @dev This constructor sets up the Linea Rollup Client with the necessary dependencies and configurations.
+   * @dev This constructor sets up the Lineth Rollup Client with the necessary dependencies and configurations.
    * @param {ethers.Provider} provider The provider for interacting with the blockchain.
-   * @param {string} contractAddress The address of the Linea Rollup contract.
+   * @param {string} contractAddress The address of the Lineth Rollup contract.
    * @param {ILinethRollupLogClient} linethRollupLogClient An instance of a class implementing the `ILinethRollupLogClient` interface for fetching events from the blockchain.
    * @param {IL2MessageServiceLogClient} l2MessageServiceLogClient An instance of a class implementing the `IL2MessageServiceLogClient` interface for fetching events from the blockchain.
    * @param {IEthereumGasProvider} gasProvider An instance of a class implementing the `IEthereumGasProvider` interface for providing gas estimates.

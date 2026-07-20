@@ -25,7 +25,7 @@ export class MerkleTreeService implements IMerkleTreeService {
    * Initializes a new instance of the `MerkleTreeService`.
    *
    * @param {IProvider} provider - The provider for interacting with the blockchain.
-   * @param {string} contractAddress - The address of the Linea Rollup contract.
+   * @param {string} contractAddress - The address of the Lineth Rollup contract.
    * @param {ILinethRollupLogClient} linethRollupLogClient - An instance of a class implementing the `ILinethRollupLogClient` interface for fetching events from ethereum.
    * @param {IL2MessageServiceLogClient} l2MessageServiceLogClient - An instance of a class implementing the `IL2MessageServiceLogClient` interface for fetching events from linea.
    * @param {number} l2MessageTreeDepth - The depth of the L2 message tree.

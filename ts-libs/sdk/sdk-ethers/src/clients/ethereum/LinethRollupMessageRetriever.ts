@@ -17,7 +17,7 @@ export class LinethRollupMessageRetriever implements IMessageRetriever<Transacti
    *
    * @param {IProvider} provider - The provider for interacting with the blockchain.
    * @param {ILinethRollupLogClient} linethRollupLogClient - An instance of a class implementing the `ILinethRollupLogClient` interface for fetching events from the blockchain.
-   * @param {string} contractAddress - The address of the Linea Rollup contract.
+   * @param {string} contractAddress - The address of the Lineth Rollup contract.
    */
   constructor(
     private readonly provider: IProvider<
