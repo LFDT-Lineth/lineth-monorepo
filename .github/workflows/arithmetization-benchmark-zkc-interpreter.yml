@@ -278,8 +278,8 @@ jobs:
           }
 
           ## Run stats separately while tracing is not possible
-          reset_state; log "${wl}: warmup opt  (untimed)"; run_zkc_compile opt  warmup
-          reset_state; log "${wl}: warmup base (untimed)"; run_zkc_compile base warmup
+          reset_state; log "stats run: opt  (untimed)"; run_zkc_compile opt  warmup
+          reset_state; log "stats run: base (untimed)"; run_zkc_compile base warmup
           ## Loop on workloads
           for wl in keccak blake l2_guest; do
             log "=== workload: ${wl} ==="
