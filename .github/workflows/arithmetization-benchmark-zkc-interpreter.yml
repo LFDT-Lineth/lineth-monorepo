@@ -285,8 +285,8 @@ jobs:
             # so both branches face an already-warm filesystem on iteration 1.
             reset_state; log "${wl}: warmup opt  (untimed)"; run_${wl} opt  warmup --fast
             reset_state; log "${wl}: warmup base (untimed)"; run_${wl} base warmup --fast
-            reset_state; log "${wl}: warmup opt  (untimed)"; run_stats_${wl} opt  warmup
-            reset_state; log "${wl}: warmup base (untimed)"; run_stats_${wl} base warmup
+            reset_state; log "${wl}: warmup opt  (untimed)"; run_zkc_compile opt  warmup
+            reset_state; log "${wl}: warmup base (untimed)"; run_zkc_compile base warmup
             # Timed runs: opt_i, base_i alternating, starting with opt.
             # Run in fast (with gogen) or tracing mode
             for i in $(seq 1 "$ITERS"); do
