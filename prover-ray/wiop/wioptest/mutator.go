@@ -98,7 +98,7 @@ func (m Mutator) Compile(sys *wiop.System) {
 //
 // Panics unless exactly one of Column or Cell is set, or if a column Row is out
 // of bounds.
-func (m Mutator) Apply(rt wiop.Runtime) {
+func (m Mutator) Apply(rt *wiop.Runtime) {
 	m.validate()
 	tweak := m.Tweak
 	if tweak == nil {
@@ -182,7 +182,7 @@ func (m Mutator) String() string {
 // mutationAction runs a Mutator's tweak as a prover action.
 type mutationAction struct{ m Mutator }
 
-func (a mutationAction) Run(rt wiop.Runtime) { a.m.Apply(rt) }
+func (a mutationAction) Run(rt *wiop.Runtime) { a.m.Apply(rt) }
 
 // genAt reads entry i of v as a [field.Gen], preserving its field kind.
 func genAt(v field.Vec, i int) field.Gen {

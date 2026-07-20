@@ -4,8 +4,11 @@ import * as path from "node:path";
 import { encryptKeystoreJson, HDNodeWallet, isAddress, JsonRpcProvider, Wallet } from "ethers";
 
 import { resolveL1DeployerConfig } from "./deployer-wallet";
+import { envNumber } from "./lib/env";
+import { sanitizeExternalError } from "./lib/errors";
+import { ensureDir, writeFileAtomic } from "./lib/fs";
 import { computeBootPrecomputedAddresses } from "./quickstart-invariants";
-import { runL1PolicyCheck, sanitizeExternalError } from "./sepolia-policy";
+import { runL1PolicyCheck } from "./sepolia-policy";
 
 type RuntimeWallet = HDNodeWallet | Wallet;
 
@@ -53,7 +56,7 @@ type BuildPrecomputedAddressPlanInput = {
   wallets: Record<string, RuntimeWallet>;
 };
 
-const DEFAULT_RUNTIME_PASSWORD = "linea-local-dev";
+const DEFAULT_RUNTIME_PASSWORD = "lineth-local-dev";
 const ACCOUNTS_DIR = process.env.LINETH_ACCOUNTS_DIR ?? process.env.LINETH_SHARED_DIR ?? "/accounts";
 const OUT_JSON = path.join(ACCOUNTS_DIR, "addresses-precomputed.json");
 const OUT_RUNTIME_KEYS_ENV = path.join(ACCOUNTS_DIR, "runtime-keys.env");
@@ -102,25 +105,6 @@ function die(message: string): never {
   throw new Error(`[account-setup] ERROR: ${message}`);
 }
 
-function envNumber(name: string, fallback: number): number {
-  const raw = process.env[name] ?? fallback.toString();
-  if (!/^[0-9]+$/.test(raw)) {
-    die(`${name} must be an integer value`);
-  }
-  return Number(raw);
-}
-
-function ensureDir(dir: string) {
-  fs.mkdirSync(dir, { recursive: true });
-}
-
-function writeFileMode(file: string, contents: string, mode: number) {
-  const tmp = `${file}.tmp`;
-  fs.writeFileSync(tmp, contents, { mode });
-  fs.renameSync(tmp, file);
-  fs.chmodSync(file, mode);
-}
-
 // DEV-ONLY file mode. These generated runtime keystores, the keystore password
 // file, the compatibility runtime-keys.env, and the Web3Signer YAMLs are written
 // world-readable on purpose. Host artifacts are bind-mounted into containers that
@@ -161,12 +145,12 @@ async function loadOrCreateRuntimeWallet(role: RuntimeRole, password: string): P
   const wallet = Wallet.createRandom();
   const encrypted = await encryptKeystoreJson({ address: wallet.address, privateKey: wallet.privateKey }, password, {
     scrypt: {
-      N: envNumber("LINETH_KEYSTORE_SCRYPT_N", 1 << 12),
-      r: envNumber("LINETH_KEYSTORE_SCRYPT_R", 8),
-      p: envNumber("LINETH_KEYSTORE_SCRYPT_P", 1),
+      N: envNumber("LINETH_KEYSTORE_SCRYPT_N", process.env, 1 << 12),
+      r: envNumber("LINETH_KEYSTORE_SCRYPT_R", process.env, 8),
+      p: envNumber("LINETH_KEYSTORE_SCRYPT_P", process.env, 1),
     },
   });
-  writeFileMode(file, `${encrypted}\n`, CONTAINER_READABLE_FILE_MODE);
+  writeFileAtomic(file, `${encrypted}\n`, CONTAINER_READABLE_FILE_MODE);
   log(`Wrote encrypted keystore for ${role.label}: ${file}`);
   return wallet;
 }
@@ -327,18 +311,18 @@ function writeRuntimeKeysEnv(wallets: Record<string, RuntimeWallet>) {
     ...runtimeRoles.map((role) => `${role.envName}='${wallets[role.envName].privateKey}'`),
     "",
   ];
-  writeFileMode(OUT_RUNTIME_KEYS_ENV, lines.join("\n"), CONTAINER_READABLE_FILE_MODE);
+  writeFileAtomic(OUT_RUNTIME_KEYS_ENV, lines.join("\n"), CONTAINER_READABLE_FILE_MODE);
   log(`Wrote ${OUT_RUNTIME_KEYS_ENV}`);
 }
 
 function writeKeystorePasswordFile(password: string) {
-  writeFileMode(OUT_KEYSTORE_PASSWORD_FILE, `${password}\n`, CONTAINER_READABLE_FILE_MODE);
+  writeFileAtomic(OUT_KEYSTORE_PASSWORD_FILE, `${password}\n`, CONTAINER_READABLE_FILE_MODE);
   log(`Wrote ${OUT_KEYSTORE_PASSWORD_FILE}`);
 }
 
 function writeWeb3SignerKey(fileName: string, label: string, keyFile: string) {
   const file = path.join(OUT_WEB3SIGNER_KEYS_DIR, `${fileName}.yaml`);
-  writeFileMode(
+  writeFileAtomic(
     file,
     `# ============================================================\n` +
       `# DEV ONLY — generated at boot by account-setup.ts.\n` +
@@ -433,7 +417,7 @@ async function main() {
     wallets,
   });
 
-  writeFileMode(OUT_JSON, `${JSON.stringify(addresses, null, 2)}\n`, CONTAINER_READABLE_FILE_MODE);
+  writeFileAtomic(OUT_JSON, `${JSON.stringify(addresses, null, 2)}\n`, CONTAINER_READABLE_FILE_MODE);
   log(`${reused ? "Reused" : "Wrote"} ${OUT_JSON}`);
   log(`Pre-computed L1 LinethRollupV8 (proxy): ${addresses.l1.LinethRollupV8}`);
   log(`Pre-computed L2 MessageService: ${addresses.l2.L2MessageService}`);

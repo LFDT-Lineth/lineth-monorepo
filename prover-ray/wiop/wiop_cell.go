@@ -33,7 +33,7 @@ type Cell struct {
 	//
 	// An explicit assignment always wins: if the cell is already assigned when
 	// the runtime would resolve it, Assigner is not called.
-	Assigner func(Runtime) field.Gen
+	Assigner func(*Runtime) field.Gen
 }
 
 // Round returns the round in which this cell is committed. It is always
@@ -76,12 +76,12 @@ func (c *Cell) IsSized() bool {
 // EvaluateVector implements [Expression]. Panics unconditionally: a cell is
 // scalar and produces no vector. Check IsMultiValued() before calling
 // EvaluateVector.
-func (c *Cell) EvaluateVector(_ Runtime) ConcreteVector {
+func (c *Cell) EvaluateVector(_ *Runtime) ConcreteVector {
 	panic("wiop: EvaluateVector() cannot be called on a FieldPromise")
 }
 
 // EvaluateSingle implements [Expression].
-func (c *Cell) EvaluateSingle(rt Runtime) ConcreteField {
+func (c *Cell) EvaluateSingle(rt *Runtime) ConcreteField {
 	return ConcreteField{Value: rt.GetCellValue(c), promise: c}
 }
 

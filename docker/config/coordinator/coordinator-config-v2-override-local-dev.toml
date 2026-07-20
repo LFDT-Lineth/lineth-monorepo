@@ -59,6 +59,7 @@ polling-interval = "PT0.2S"
 polling-timeout = "PT10S"
 eth-logs-search-success-backoff-delay = "PT0.5S"
 eth-logs-search-block-chunk-size = 1000
+eth-logs-search-max-block-range = 10000
 
 [message-anchoring.l1-event-scraping]
 polling-interval = "PT1S"

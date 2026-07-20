@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://linea.build/schemas/getZkRollupAggregationProofV1.response.schema.json",
+  "title": "getZkRollupAggregationProof V1 response",
+  "description": "Prover -> coordinator rollup-aggregation proof response (the final proof). The shared, versioned contract for the rollup-aggregation guest output (a FinalizationSubmission) and the coordinator's Jackson mapper. The publicInputs are the 14-field rollup PI tuple; the response additionally carries the revealed preimages L1 finalize_rollup consumes as calldata (l2L1Roots, filteredAddresses, l2MessagingBlocksOffsets), so it is sufficient for L1 finalization.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "proverVersion",
+    "proof",
+    "startBlockNumber",
+    "publicInputs",
+    "l2L1Roots",
+    "filteredAddresses",
+    "l2MessagingBlocksOffsets"
+  ],
+  "properties": {
+    "proverVersion": { "type": "string" },
+    "proof": { "$ref": "#/$defs/hex" },
+    "startBlockNumber": { "$ref": "#/$defs/uint" },
+    "publicInputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "endBlockNumber",
+        "endBlockTimestamp",
+        "l2L1BridgeTransactionTree",
+        "parentL1L2BridgeRollingHash",
+        "parentL1L2BridgeRollingHashMessageNumber",
+        "endL1L2BridgeRollingHash",
+        "endL1L2BridgeRollingHashMessageNumber",
+        "dynamicChainConfigHash",
+        "parentFtxRollingHash",
+        "parentProcessedFtxNumber",
+        "endFtxRollingHash",
+        "endProcessedFtxNumber",
+        "filteredAddressesHash",
+        "parentShnarf",
+        "endShnarf",
+        "programVks"
+      ],
+      "properties": {
+        "endBlockNumber": { "$ref": "#/$defs/uint" },
+        "endBlockTimestamp": { "$ref": "#/$defs/uint" },
+        "l2L1BridgeTransactionTree": { "$ref": "#/$defs/hash32" },
+        "parentL1L2BridgeRollingHash": { "$ref": "#/$defs/hash32" },
+        "parentL1L2BridgeRollingHashMessageNumber": { "$ref": "#/$defs/uint" },
+        "endL1L2BridgeRollingHash": { "$ref": "#/$defs/hash32" },
+        "endL1L2BridgeRollingHashMessageNumber": { "$ref": "#/$defs/uint" },
+        "dynamicChainConfigHash": { "$ref": "#/$defs/hash32" },
+        "parentFtxRollingHash": { "$ref": "#/$defs/hash32" },
+        "parentProcessedFtxNumber": { "$ref": "#/$defs/uint" },
+        "endFtxRollingHash": { "$ref": "#/$defs/hash32" },
+        "endProcessedFtxNumber": { "$ref": "#/$defs/uint" },
+        "filteredAddressesHash": { "$ref": "#/$defs/hash32" },
+        "parentShnarf": { "$ref": "#/$defs/hash32" },
+        "endShnarf": { "$ref": "#/$defs/hash32" },
+        "programVks": {
+          "description": "Distinct, sorted ascending by byte value: the canonical encoding of the set of guest program VKs verified beneath this proof (order carries no meaning).",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/hash32" }
+        }
+      }
+    },
+    "l2L1Roots": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/hash32" }
+    },
+    "filteredAddresses": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/address" }
+    },
+    "l2MessagingBlocksOffsets": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/uint" }
+    }
+  },
+  "$defs": {
+    "uint": { "type": "integer", "minimum": 0 },
+    "hex": { "type": "string", "pattern": "^0x([0-9a-fA-F]{2})*$" },
+    "hash32": { "type": "string", "pattern": "^0x[0-9a-fA-F]{64}$" },
+    "address": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" }
+  }
+}

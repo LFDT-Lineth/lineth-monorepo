@@ -8,6 +8,8 @@ LINETH_LOG_CONTEXT="l2-test-tx"
 . "$SCRIPT_DIR/../lib/logging.sh"
 # shellcheck disable=SC1091
 . "$SCRIPT_DIR/../lib/runtime.sh"
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/../lib/smoke.sh"
 lineth_runtime_init "$SCRIPT_DIR"
 STACK_DIR="$LINETH_STACK_DIR"
 
@@ -25,9 +27,7 @@ case "${VALUE_WEI:-1}" in
   ''|*[!0-9]*) die "VALUE_WEI must be a non-negative integer" ;;
 esac
 
-if ! docker info >/dev/null 2>&1; then
-  die "Docker daemon is not reachable"
-fi
+lineth_require_docker
 
 [ -s "$(lineth_accounts_file runtime-keys.env)" ] || die "runtime-keys.env missing. Boot the stack first."
 [ -s "$(lineth_accounts_file addresses-precomputed.json)" ] || die "addresses-precomputed.json missing. Boot the stack first."
@@ -37,7 +37,6 @@ if [ -f versions.env ]; then
   . ./versions.env
 fi
 
-FOUNDRY_IMAGE="${FOUNDRY_IMAGE:-ghcr.io/foundry-rs/foundry:${FOUNDRY_TAG:-latest}}"
 L2_RPC_URL="${L2_RPC_URL:-http://sequencer:8545}"
 L2_GAS_PRICE_WEI="${L2_GAS_PRICE_WEI:-100000000}"
 HOST_PORT_L2_BLOCKSCOUT_FRONTEND="$(lineth_host_port HOST_PORT_L2_BLOCKSCOUT_FRONTEND 4001)"
@@ -59,7 +58,7 @@ if ! lineth_run_stream docker run --rm \
   -e L2_RPC_URL="$L2_RPC_URL" \
   -e L2_GAS_PRICE_WEI="$L2_GAS_PRICE_WEI" \
   -e BLOCKSCOUT_BASE_URL="$BLOCKSCOUT_BASE_URL" \
-  "$FOUNDRY_IMAGE" \
+  "$(lineth_foundry_image)" \
   -lc '
     set -eu
 

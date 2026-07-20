@@ -14,6 +14,7 @@ import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.jsonrpc.HttpRequestHandler
 import net.consensys.linea.jsonrpc.JsonRpcMessageHandler
 import net.consensys.linea.jsonrpc.JsonRpcMessageProcessor
+import net.consensys.linea.jsonrpc.JsonRpcRequestHandler
 import net.consensys.linea.jsonrpc.JsonRpcRequestRouter
 import net.consensys.linea.jsonrpc.httpserver.HttpJsonRpcServer
 import net.consensys.linea.metrics.MetricsFacade
@@ -28,6 +29,8 @@ class Api(
   private val conflationBacktestingService: ConflationBacktestingService,
   private val metricsFacade: MetricsFacade,
   private val conflationCheckpointResumeLatch: () -> Boolean,
+  // Extra JSON-RPC methods contributed by coordinator extensions, merged into the core router.
+  private val additionalRequestHandlers: Map<String, JsonRpcRequestHandler> = emptyMap(),
 ) : LongRunningService {
   data class Config(
     val observabilityPort: UInt,
@@ -59,7 +62,11 @@ class Api(
         ConflationStopJobRequestHandler(conflationBacktestingService = conflationBacktestingService),
       ConflationTargetCheckpointResumeRequestHandler.METHOD_NAME to
         ConflationTargetCheckpointResumeRequestHandler(signalResume = conflationCheckpointResumeLatch),
-    )
+    ).let { coreHandlers ->
+      val clashes = coreHandlers.keys.intersect(additionalRequestHandlers.keys)
+      require(clashes.isEmpty()) { "Extension JSON-RPC methods clash with core methods: $clashes" }
+      coreHandlers + additionalRequestHandlers
+    }
     val messageHandler: JsonRpcMessageHandler =
       JsonRpcMessageProcessor(JsonRpcRequestRouter(requestHandlers), metricsFacade)
 

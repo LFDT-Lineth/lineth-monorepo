@@ -165,7 +165,7 @@ class AggregationFinalizationCoordinator(
       parentShnarf = aggregationData.parentShnarf,
       parentL1RollingHash = aggregationData.parentL1RollingHash,
       parentL1RollingHashMessageNumber = aggregationData.parentL1RollingHashMessageNumber,
-    ).thenApply { Unit }
+    ).thenApply { }
   }
 
   override fun handleError(error: Throwable) {

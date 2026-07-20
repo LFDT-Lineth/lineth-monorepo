@@ -46,7 +46,7 @@ jobs:
           exit 1
 
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
 
@@ -73,7 +73,7 @@ jobs:
       id-token: write
     steps:
       - name: Checkout release commit
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ inputs.release_commit_sha }}
 
@@ -81,7 +81,7 @@ jobs:
         uses: ./.github/actions/setup-nodejs
         with:
           pnpm-install-options: "--frozen-lockfile --prefer-offline --ignore-scripts"
-  
+
       - name: Build sdk-core
         run: pnpm -F @lfdt-lineth/sdk-core run build
 
@@ -182,7 +182,7 @@ jobs:
 
       - name: Create GitHub Release
         if: ${{ !inputs.dry_run }}
-        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b #v2.5.0
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 #v2.6.2
         with:
           tag_name: "@lfdt-lineth/sdk-core@${{ steps.release_notes.outputs.version }}"
           name: "@lfdt-lineth/sdk-core@${{ steps.release_notes.outputs.version }}"
@@ -202,7 +202,7 @@ jobs:
       id-token: write
     steps:
       - name: Checkout release commit
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ inputs.release_commit_sha }}
 
@@ -229,7 +229,7 @@ jobs:
             echo "::error::@consensys/linea-sdk-core@${CORE_VERSION} is not published on npm. Run this workflow for sdk-core with dual_publish_legacy enabled first."
             exit 1
           fi
-      
+
       - name: Build sdk-viem
         run: pnpm -F "@lfdt-lineth/sdk-viem..." run build
 
@@ -335,7 +335,7 @@ jobs:
 
       - name: Create GitHub Release
         if: ${{ !inputs.dry_run }}
-        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b #v2.5.0
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 #v2.6.2
         with:
           tag_name: "@lfdt-lineth/sdk-viem@${{ steps.release_notes.outputs.version }}"
           name: "@lfdt-lineth/sdk-viem@${{ steps.release_notes.outputs.version }}"
@@ -355,3 +355,4 @@ jobs:
     secrets:
       channel_id: ${{ secrets.SLACK_ENGINEERING_ALERTS_CHANNEL_ID }}
       slack_bot_token: ${{ secrets.SLACK_GITHUB_ACTIONS_ALERTS_BOT_TOKEN }}
+

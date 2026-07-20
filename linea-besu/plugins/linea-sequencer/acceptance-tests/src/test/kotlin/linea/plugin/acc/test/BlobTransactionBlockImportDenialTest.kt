@@ -17,9 +17,8 @@ import org.junit.jupiter.api.Test
  * Tests that verify blob transactions are correctly rejected during block import at the protocol
  * level (via LineaBlockTransactionValidatorPlugin).
  *
- * Uses BLOCK_VALIDATOR_REQUESTED_PLUGINS instead of DEFAULT_REQUESTED_PLUGINS since
- * LineaBlockTransactionValidatorPlugin and LineaTransactionPoolValidatorPlugin cannot be active
- * simultaneously.
+ * Uses BLOCK_VALIDATOR_REQUESTED_PLUGINS instead of DEFAULT_REQUESTED_PLUGINS so the block-import
+ * validation path is exercised in isolation (without the pool-level validator also running).
  */
 class BlobTransactionBlockImportDenialTest : LineaPluginPoSTestBase() {
 

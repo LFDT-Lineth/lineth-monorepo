@@ -5,8 +5,9 @@ import {
   abi as TestERC20Abi,
   bytecode as TestERC20Bytecode,
 } from "./static-artifacts/TestERC20.json";
-import { deployContractFromArtifacts } from "../common/helpers/deployments";
-import { getRequiredEnvVar } from "../common/helpers/environment";
+import { deployContractFromArtifacts, getDeployNonceFromEnv } from "../common/helpers/deployments";
+import { getBooleanEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment";
+import { LOCAL_L2_DEPLOY_FEE_OVERRIDES } from "../common/helpers/feeOverrides";
 import { get1559Fees } from "../scripts/utils";
 
 async function main() {
@@ -24,24 +25,20 @@ async function main() {
   let walletNonce;
   let fees = {};
 
-  if (process.env.TEST_ERC20_L1 === "true") {
-    if (!process.env.L1_NONCE) {
-      walletNonce = await wallet.getNonce();
-    } else {
-      walletNonce = parseInt(process.env.L1_NONCE) + ORDERED_NONCE_POST_LINETHROLLUP + ORDERED_NONCE_POST_TOKENBRIDGE;
-    }
+  if (getBooleanEnvVarOrDefault("TEST_ERC20_L1", false)) {
+    walletNonce = await getDeployNonceFromEnv(
+      wallet,
+      "L1_NONCE",
+      ORDERED_NONCE_POST_LINETHROLLUP + ORDERED_NONCE_POST_TOKENBRIDGE,
+    );
     fees = { gasPrice: (await get1559Fees(provider)).gasPrice };
   } else {
-    if (!process.env.L2_NONCE) {
-      walletNonce = await wallet.getNonce();
-    } else {
-      walletNonce =
-        parseInt(process.env.L2_NONCE) + ORDERED_NONCE_POST_L2MESSAGESERVICE + ORDERED_NONCE_POST_TOKENBRIDGE;
-    }
-    fees = {
-      maxFeePerGas: 7_200_000_000_000n,
-      maxPriorityFeePerGas: 7_000_000_000_000n,
-    };
+    walletNonce = await getDeployNonceFromEnv(
+      wallet,
+      "L2_NONCE",
+      ORDERED_NONCE_POST_L2MESSAGESERVICE + ORDERED_NONCE_POST_TOKENBRIDGE,
+    );
+    fees = { ...LOCAL_L2_DEPLOY_FEE_OVERRIDES };
   }
 
   await deployContractFromArtifacts(

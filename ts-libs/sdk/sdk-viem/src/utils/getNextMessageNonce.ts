@@ -1,6 +1,8 @@
 import { Account, Address, Chain, Client, ReadContractErrorType, Transport } from "viem";
 import { readContract } from "viem/actions";
 
+import { NEXT_MESSAGE_NUMBER_ABI } from "../abis";
+
 export type GetNextMessageNonceParameters = {
   lineaRollupAddress: Address;
 };
@@ -17,21 +19,7 @@ export async function getNextMessageNonce<chain extends Chain | undefined, _acco
 
   return readContract(client, {
     address: lineaRollupAddress,
-    abi: [
-      {
-        inputs: [],
-        name: "nextMessageNumber",
-        outputs: [
-          {
-            internalType: "uint256",
-            name: "",
-            type: "uint256",
-          },
-        ],
-        stateMutability: "view",
-        type: "function",
-      },
-    ],
+    abi: NEXT_MESSAGE_NUMBER_ABI,
     functionName: "nextMessageNumber",
   });
 }

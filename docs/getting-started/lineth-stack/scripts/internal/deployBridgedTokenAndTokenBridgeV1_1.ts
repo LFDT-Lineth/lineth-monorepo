@@ -52,6 +52,10 @@ import { getEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environ
 import { assertSingleFeeModel, FeeOverrides, resolveOneModelFeeOverrides } from "../common/helpers/feeOverrides";
 import { generateRoleAssignments } from "../common/helpers/roles";
 
+const { formatQuickstartDeployRpcError } = require("/scripts/internal/deploy-rpc-error") as {
+  formatQuickstartDeployRpcError: (error: unknown) => Error | undefined;
+};
+
 async function main() {
   let securityCouncilAddress;
 
@@ -183,6 +187,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error);
+  console.error(formatQuickstartDeployRpcError(error) ?? error);
   process.exitCode = 1;
 });
