@@ -225,7 +225,7 @@ describe("WinstonLogger", () => {
       makeLogger("Test").error("oops", { error });
 
       // Stackless Errors render as `${name}: ${message}` (no stack frames to append).
-      expect(getLogOutput()).toContain("error=\"Error: no stack\"");
+      expect(getLogOutput()).toContain('error="Error: no stack"');
     });
 
     it("does not produce an error.stack key", () => {
