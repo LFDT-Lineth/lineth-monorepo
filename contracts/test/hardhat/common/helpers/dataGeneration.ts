@@ -36,11 +36,42 @@ export type ProofFinalizationContext = {
 };
 
 /**
+ * Shape of the pre-generated JSON compressed-data/blob fixtures.
+ * @dev Fixtures predate the blockhash-centric ABI cutover and were generated with real
+ *   `parentStateRootHash` / `finalStateRootHash` values (no block hashes). Since submission/finalization
+ *   tests only need distinct, consistently round-tripped bytes32 values (not real block-hash semantics),
+ *   these hash fields are reused as `initialBlockHash` / `finalBlockHash` inputs below rather than
+ *   regenerating fixtures. Fields specific to the legacy 5-field/Horner-Y shnarf scheme (`snarkHash`,
+ *   `expectedX`, `expectedY`, `expectedShnarf`) are no longer read and are intentionally omitted here.
+ */
+type FixtureSubmission = {
+  parentStateRootHash: string;
+  finalStateRootHash: string;
+  compressedData: string;
+  commitment?: string;
+  prevShnarf?: string;
+};
+
+export type ComputedCalldataSubmission = CalldataSubmissionData & {
+  parentShnarf: string;
+  expectedShnarf: string;
+  dataHash: string;
+};
+
+export type ComputedBlobSubmission = BlobSubmission & {
+  parentShnarf: string;
+  expectedShnarf: string;
+};
+
+/**
  * Converts AggregatedProofData to finalization data parameters.
  * This consolidates the repeated mapping pattern used across finalization tests.
  */
 export function proofDataToFinalizationParams(context: ProofFinalizationContext): Partial<FinalizationData> {
   const { proofData, shnarfDataGenerator, blobParentShnarfIndex, isMultiple } = context;
+  const shnarfData = shnarfDataGenerator(blobParentShnarfIndex, isMultiple);
+  const isBlob = shnarfDataGenerator === generateBlobParentShnarfData;
+  const anchors = getFinalizationAnchors(blobParentShnarfIndex, { isMultiple, isBlob });
 
   return {
     l1RollingHash: proofData.l1RollingHash,
@@ -48,18 +79,23 @@ export function proofDataToFinalizationParams(context: ProofFinalizationContext)
     lastFinalizedTimestamp: BigInt(proofData.parentAggregationLastBlockTimestamp),
     endBlockNumber: BigInt(proofData.finalBlockNumber),
     parentStateRootHash: proofData.parentStateRootHash,
+    // Fresh deploy seeds blockHashes[initial]; soft continuity expects that parent on the new path.
+    parentBlockHash: proofData.parentStateRootHash,
     finalTimestamp: BigInt(proofData.finalTimestamp),
     l2MerkleRoots: proofData.l2MerkleRoots,
     l2MerkleTreesDepth: BigInt(proofData.l2MerkleTreesDepth),
     l2MessagingBlocksOffsets: proofData.l2MessagingBlocksOffsets,
     aggregatedProof: proofData.aggregatedProof,
-    shnarfData: shnarfDataGenerator(blobParentShnarfIndex, isMultiple),
+    shnarfData,
     lastFinalizedL1RollingHash: proofData.lastFinalizedL1RollingHash,
     lastFinalizedL1RollingHashMessageNumber: BigInt(proofData.lastFinalizedL1RollingHashMessageNumber),
     lastFinalizedForcedTransactionRollingHash: proofData.parentAggregationFtxRollingHash,
     lastFinalizedForcedTransactionNumber: BigInt(proofData.parentAggregationFtxNumber),
     finalForcedTransactionNumber: BigInt(proofData.finalFtxNumber),
     filteredAddresses: proofData.filteredAddresses,
+    finalBlockHash: anchors?.finalBlockHash ?? proofData.finalStateRootHash,
+    finalBlobHash: anchors?.finalBlobHash ?? HASH_ZERO,
+    verifierKeys: [],
   };
 }
 
@@ -90,85 +126,16 @@ export async function generateFinalizationData(overrides?: Partial<FinalizationD
   };
 }
 
-export function generateCallDataSubmission(startDataIndex: number, finalDataIndex: number): CalldataSubmissionData[] {
-  return COMPRESSED_SUBMISSION_DATA.slice(startDataIndex, finalDataIndex).map((data) => {
-    const returnData = {
-      finalStateRootHash: data.finalStateRootHash,
-      snarkHash: data.snarkHash,
-      compressedData: ethers.hexlify(ethers.decodeBase64(data.compressedData)),
-    };
-    return returnData;
-  });
-}
-
-export function generateBlobDataSubmission(
-  startDataIndex: number,
-  finalDataIndex: number,
-  isMultiple: boolean = false,
-): {
-  blobDataSubmission: BlobSubmission[];
-  compressedBlobs: string[];
-  parentShnarf: string;
-  finalShnarf: string;
-} {
-  const dataSet = isMultiple ? BLOB_SUBMISSION_DATA_MULTIPLE_PROOF : BLOB_SUBMISSION_DATA;
-  const compressedBlobs: string[] = [];
-  const parentShnarf = dataSet[startDataIndex].prevShnarf;
-  const finalShnarf = dataSet[finalDataIndex - 1].expectedShnarf;
-
-  const blobDataSubmission = dataSet.slice(startDataIndex, finalDataIndex).map((data) => {
-    compressedBlobs.push(ethers.hexlify(ethers.decodeBase64(data.compressedData)));
-    const returnData: BlobSubmission = {
-      dataEvaluationClaim: data.expectedY,
-      kzgCommitment: data.commitment,
-      kzgProof: data.kzgProofContract,
-      finalStateRootHash: data.finalStateRootHash,
-      snarkHash: data.snarkHash,
-    };
-    return returnData;
-  });
-  return {
-    compressedBlobs,
-    blobDataSubmission,
-    parentShnarf,
-    finalShnarf,
-  };
-}
-
-export function generateBlobDataSubmissionFromFile(filePath: string): {
-  blobDataSubmission: BlobSubmission[];
-  compressedBlobs: string[];
-  parentShnarf: string;
-  finalShnarf: string;
-} {
-  const fileContents = JSON.parse(fs.readFileSync(filePath, "utf-8"));
-
-  const compressedBlobs: string[] = [];
-  const parentShnarf = fileContents.prevShnarf;
-  const finalShnarf = fileContents.expectedShnarf;
-
-  compressedBlobs.push(ethers.hexlify(ethers.decodeBase64(fileContents.compressedData)));
-
-  const blobDataSubmission = [
-    {
-      dataEvaluationClaim: fileContents.expectedY,
-      kzgCommitment: fileContents.commitment,
-      kzgProof: fileContents.kzgProofContract,
-      finalStateRootHash: fileContents.finalStateRootHash,
-      snarkHash: fileContents.snarkHash,
-    },
-  ];
-
-  return {
-    compressedBlobs,
-    blobDataSubmission,
-    parentShnarf,
-    finalShnarf,
-  };
+/**
+ * Mirrors the Solidity 3-field _computeShnarf:
+ * keccak256(abi.encodePacked(parentShnarf, finalBlockHash, dataHash)).
+ */
+export function computeShnarfV2(parentShnarf: string, finalBlockHash: string, dataHash: string): string {
+  return ethers.keccak256(ethers.concat([parentShnarf, finalBlockHash, dataHash]));
 }
 
 /**
- * Mirrors the Solidity _computeShnarf: keccak256(abi.encodePacked(parentShnarf, snarkHash, finalStateRootHash, dataEvaluationPoint, dataEvaluationClaim)).
+ * Legacy 5-field shnarf (kept for migration negative tests).
  */
 export function computeShnarf(shnarfData: ShnarfData): string {
   return ethers.keccak256(
@@ -185,77 +152,219 @@ export function computeShnarf(shnarfData: ShnarfData): string {
 /**
  * Computes the genesis shnarf the same way the contract does during initialization.
  */
-export function computeGenesisShnarf(initialStateRootHash: string): string {
-  return computeShnarf({
-    parentShnarf: HASH_ZERO,
+export function computeGenesisShnarf(initialBlockHash: string): string {
+  return computeShnarfV2(HASH_ZERO, initialBlockHash, HASH_ZERO);
+}
+
+/**
+ * EIP-4844 versioned blob hash from a KZG commitment: 0x01 || sha256(commitment)[1:].
+ */
+export function computeBlobVersionedHash(commitment: string): string {
+  return `0x01${ethers.sha256(commitment).slice(4)}`;
+}
+
+// See `FixtureSubmission` doc comment: reuses the fixture's state root hash as a stand-in block hash.
+function getInitialBlockHash(dataSet: FixtureSubmission[]): string {
+  return dataSet[0].parentStateRootHash;
+}
+
+function buildCalldataShnarfChain(
+  dataSet: FixtureSubmission[],
+  startDataIndex: number,
+  finalDataIndex: number,
+): ComputedCalldataSubmission[] {
+  const initialBlockHash = getInitialBlockHash(dataSet);
+  let parentShnarf = computeGenesisShnarf(initialBlockHash);
+
+  const chain: ComputedCalldataSubmission[] = [];
+  for (let i = 0; i < finalDataIndex; i++) {
+    const data = dataSet[i];
+    const compressedData = ethers.hexlify(ethers.decodeBase64(data.compressedData));
+    // Fixture state root hash reused as the stand-in block hash (see `FixtureSubmission`).
+    const blockHash = data.finalStateRootHash;
+    const dataHash = ethers.keccak256(compressedData);
+    const expectedShnarf = computeShnarfV2(parentShnarf, blockHash, dataHash);
+    if (i >= startDataIndex) {
+      chain.push({
+        blockHash,
+        compressedData,
+        parentShnarf,
+        expectedShnarf,
+        dataHash,
+      });
+    }
+    parentShnarf = expectedShnarf;
+  }
+  return chain;
+}
+
+function buildBlobShnarfChain(
+  dataSet: FixtureSubmission[],
+  startDataIndex: number,
+  finalDataIndex: number,
+): ComputedBlobSubmission[] {
+  const initialBlockHash = getInitialBlockHash(dataSet);
+  let parentShnarf = computeGenesisShnarf(initialBlockHash);
+
+  const chain: ComputedBlobSubmission[] = [];
+  for (let i = 0; i < finalDataIndex; i++) {
+    const data = dataSet[i];
+    const compressedData = ethers.hexlify(ethers.decodeBase64(data.compressedData));
+    // Fixture state root hash reused as the stand-in block hash (see `FixtureSubmission`).
+    const finalBlockHash = data.finalStateRootHash;
+    const dataHash = computeBlobVersionedHash(data.commitment!);
+    const expectedShnarf = computeShnarfV2(parentShnarf, finalBlockHash, dataHash);
+    if (i >= startDataIndex) {
+      chain.push({
+        finalBlockHash,
+        dataHash,
+        compressedData,
+        kzgCommitment: data.commitment!,
+        parentShnarf,
+        expectedShnarf,
+      });
+    }
+    parentShnarf = expectedShnarf;
+  }
+  return chain;
+}
+
+export function generateCallDataSubmission(startDataIndex: number, finalDataIndex: number): CalldataSubmissionData[] {
+  return buildCalldataShnarfChain(COMPRESSED_SUBMISSION_DATA, startDataIndex, finalDataIndex).map(
+    ({ blockHash, compressedData }) => ({ blockHash, compressedData }),
+  );
+}
+
+export function generateCallDataSubmissionWithShnarfs(
+  startDataIndex: number,
+  finalDataIndex: number,
+): ComputedCalldataSubmission[] {
+  return buildCalldataShnarfChain(COMPRESSED_SUBMISSION_DATA, startDataIndex, finalDataIndex);
+}
+
+export function generateBlobDataSubmission(
+  startDataIndex: number,
+  finalDataIndex: number,
+  isMultiple: boolean = false,
+): {
+  blobDataSubmission: BlobSubmission[];
+  blobFinalBlockHashes: string[];
+  compressedBlobs: string[];
+  parentShnarf: string;
+  finalShnarf: string;
+} {
+  const dataSet = isMultiple ? BLOB_SUBMISSION_DATA_MULTIPLE_PROOF : BLOB_SUBMISSION_DATA;
+  const chain = buildBlobShnarfChain(dataSet, startDataIndex, finalDataIndex);
+  return {
+    blobDataSubmission: chain.map(({ finalBlockHash, dataHash, compressedData, kzgCommitment }) => ({
+      finalBlockHash,
+      dataHash,
+      compressedData,
+      kzgCommitment: kzgCommitment!,
+    })),
+    blobFinalBlockHashes: chain.map((item) => item.finalBlockHash),
+    compressedBlobs: chain.map((item) => item.compressedData),
+    parentShnarf: chain[0].parentShnarf,
+    finalShnarf: chain[chain.length - 1].expectedShnarf,
+  };
+}
+
+export function generateBlobDataSubmissionFromFile(filePath: string): {
+  blobDataSubmission: BlobSubmission[];
+  blobFinalBlockHashes: string[];
+  compressedBlobs: string[];
+  parentShnarf: string;
+  finalShnarf: string;
+} {
+  const fileContents = JSON.parse(fs.readFileSync(filePath, "utf-8")) as FixtureSubmission;
+  const compressedData = ethers.hexlify(ethers.decodeBase64(fileContents.compressedData));
+  // Fixture state root hash reused as the stand-in block hash (see `FixtureSubmission`).
+  const finalBlockHash = fileContents.finalStateRootHash;
+  const dataHash = computeBlobVersionedHash(fileContents.commitment!);
+  // Single-file helpers are used after a known parent; fall back to fixture prevShnarf when present,
+  // otherwise treat parent as genesis from parentStateRootHash.
+  const parentShnarf = fileContents.prevShnarf ?? computeGenesisShnarf(fileContents.parentStateRootHash);
+  const finalShnarf = computeShnarfV2(parentShnarf, finalBlockHash, dataHash);
+
+  return {
+    compressedBlobs: [compressedData],
+    blobDataSubmission: [
+      {
+        finalBlockHash,
+        dataHash,
+        compressedData,
+        kzgCommitment: fileContents.commitment!,
+      },
+    ],
+    blobFinalBlockHashes: [finalBlockHash],
+    parentShnarf,
+    finalShnarf,
+  };
+}
+
+function emptyShnarfPadding(parentShnarf: string): ShnarfData {
+  return {
+    parentShnarf,
     snarkHash: HASH_ZERO,
-    finalStateRootHash: initialStateRootHash,
+    finalStateRootHash: HASH_ZERO,
     dataEvaluationPoint: HASH_ZERO,
     dataEvaluationClaim: HASH_ZERO,
-  });
+  };
 }
 
 export function generateParentShnarfData(index: number, multiple?: boolean): ShnarfData {
+  const dataSet = multiple ? COMPRESSED_SUBMISSION_DATA_MULTIPLE_PROOF : COMPRESSED_SUBMISSION_DATA;
   if (index === 0) {
-    return {
-      parentShnarf: HASH_ZERO,
-      snarkHash: HASH_ZERO,
-      finalStateRootHash: multiple
-        ? COMPRESSED_SUBMISSION_DATA_MULTIPLE_PROOF[0].parentStateRootHash
-        : COMPRESSED_SUBMISSION_DATA[0].parentStateRootHash,
-      dataEvaluationPoint: HASH_ZERO,
-      dataEvaluationClaim: HASH_ZERO,
-    };
+    return emptyShnarfPadding(HASH_ZERO);
   }
-  const parentSubmissionData = multiple
-    ? COMPRESSED_SUBMISSION_DATA_MULTIPLE_PROOF[index - 1]
-    : COMPRESSED_SUBMISSION_DATA[index - 1];
-
-  return {
-    parentShnarf: parentSubmissionData.prevShnarf,
-    snarkHash: parentSubmissionData.snarkHash,
-    finalStateRootHash: parentSubmissionData.finalStateRootHash,
-    dataEvaluationPoint: parentSubmissionData.expectedX,
-    dataEvaluationClaim: parentSubmissionData.expectedY,
-  };
+  const chain = buildCalldataShnarfChain(dataSet, index - 1, index);
+  return emptyShnarfPadding(chain[0].parentShnarf);
 }
 
 export function generateBlobParentShnarfData(index: number, multiple?: boolean): ShnarfData {
+  const dataSet = multiple ? BLOB_SUBMISSION_DATA_MULTIPLE_PROOF : BLOB_SUBMISSION_DATA;
   if (index === 0) {
-    return {
-      parentShnarf: HASH_ZERO,
-      snarkHash: HASH_ZERO,
-      finalStateRootHash: multiple
-        ? BLOB_SUBMISSION_DATA_MULTIPLE_PROOF[0].parentStateRootHash
-        : BLOB_SUBMISSION_DATA[0].parentStateRootHash,
-      dataEvaluationPoint: HASH_ZERO,
-      dataEvaluationClaim: HASH_ZERO,
-    };
+    return emptyShnarfPadding(HASH_ZERO);
   }
-  const parentSubmissionData = multiple
-    ? BLOB_SUBMISSION_DATA_MULTIPLE_PROOF[index - 1]
-    : BLOB_SUBMISSION_DATA[index - 1];
+  const chain = buildBlobShnarfChain(dataSet, index - 1, index);
+  return emptyShnarfPadding(chain[0].parentShnarf);
+}
 
-  return {
-    parentShnarf: parentSubmissionData.prevShnarf,
-    snarkHash: parentSubmissionData.snarkHash,
-    finalStateRootHash: parentSubmissionData.finalStateRootHash,
-    dataEvaluationPoint: parentSubmissionData.expectedX,
-    dataEvaluationClaim: parentSubmissionData.expectedY,
-  };
+/**
+ * Anchors for finalization after submissions `[0, blobParentShnarfIndex)`.
+ */
+export function getFinalizationAnchors(
+  blobParentShnarfIndex: number,
+  options: { isMultiple?: boolean; isBlob?: boolean } = {},
+): { finalBlockHash: string; finalBlobHash: string } | undefined {
+  const lastSubmissionIndex = blobParentShnarfIndex - 1;
+  if (lastSubmissionIndex < 0) {
+    return undefined;
+  }
+  const { isMultiple = false, isBlob = false } = options;
+  if (isBlob) {
+    const dataSet = isMultiple ? BLOB_SUBMISSION_DATA_MULTIPLE_PROOF : BLOB_SUBMISSION_DATA;
+    const chain = buildBlobShnarfChain(dataSet, lastSubmissionIndex, lastSubmissionIndex + 1);
+    return { finalBlockHash: chain[0].finalBlockHash, finalBlobHash: chain[0].dataHash };
+  }
+  const dataSet = isMultiple ? COMPRESSED_SUBMISSION_DATA_MULTIPLE_PROOF : COMPRESSED_SUBMISSION_DATA;
+  const chain = buildCalldataShnarfChain(dataSet, lastSubmissionIndex, lastSubmissionIndex + 1);
+  return { finalBlockHash: chain[0].blockHash, finalBlobHash: chain[0].dataHash };
 }
 
 export function generateParentAndExpectedShnarfForIndex(index: number): ParentAndExpectedShnarf {
+  const chain = buildCalldataShnarfChain(COMPRESSED_SUBMISSION_DATA, index, index + 1);
   return {
-    parentShnarf: COMPRESSED_SUBMISSION_DATA[index].prevShnarf,
-    expectedShnarf: COMPRESSED_SUBMISSION_DATA[index].expectedShnarf,
+    parentShnarf: chain[0].parentShnarf,
+    expectedShnarf: chain[0].expectedShnarf,
   };
 }
 
 export function generateParentAndExpectedShnarfForMulitpleIndex(index: number): ParentAndExpectedShnarf {
+  const chain = buildCalldataShnarfChain(COMPRESSED_SUBMISSION_DATA_MULTIPLE_PROOF, index, index + 1);
   return {
-    parentShnarf: COMPRESSED_SUBMISSION_DATA_MULTIPLE_PROOF[index].prevShnarf,
-    expectedShnarf: COMPRESSED_SUBMISSION_DATA_MULTIPLE_PROOF[index].expectedShnarf,
+    parentShnarf: chain[0].parentShnarf,
+    expectedShnarf: chain[0].expectedShnarf,
   };
 }
 
@@ -263,19 +372,9 @@ export function generateCallDataSubmissionMultipleProofs(
   startDataIndex: number,
   finalDataIndex: number,
 ): CalldataSubmissionData[] {
-  return COMPRESSED_SUBMISSION_DATA_MULTIPLE_PROOF.slice(startDataIndex, finalDataIndex).map((data) => {
-    const returnData = {
-      parentStateRootHash: data.parentStateRootHash,
-      dataParentHash: data.parentDataHash,
-      finalStateRootHash: data.finalStateRootHash,
-      firstBlockNumber: BigInt(data.conflationOrder.startingBlockNumber),
-      endBlockNumber: BigInt(data.conflationOrder.upperBoundaries.slice(-1)[0]),
-      snarkHash: data.snarkHash,
-      compressedData: ethers.hexlify(ethers.decodeBase64(data.compressedData)),
-      parentShnarf: data.prevShnarf,
-    };
-    return returnData;
-  });
+  return buildCalldataShnarfChain(COMPRESSED_SUBMISSION_DATA_MULTIPLE_PROOF, startDataIndex, finalDataIndex).map(
+    ({ blockHash, compressedData }) => ({ blockHash, compressedData }),
+  );
 }
 
 /**
@@ -305,19 +404,6 @@ export interface SubmissionSetupResult {
 /**
  * Helper to submit calldata before finalization tests.
  * Encapsulates the repeated pattern of generating and submitting calldata in a loop.
- *
- * @param lineaRollup - The LineaRollup contract instance (connected to operator)
- * @param config - Configuration for the submission
- * @returns Final index for use in subsequent operations
- *
- * @example
- * ```typescript
- * const { finalIndex } = await submitCalldataBeforeFinalization(
- *   lineaRollup.connect(operator),
- *   { startIndex: 0, finalIndex: 4, maxGasLimit: MAX_GAS_LIMIT }
- * );
- * // Use finalIndex for generateParentShnarfData(finalIndex)
- * ```
  */
 export async function submitCalldataBeforeFinalization(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

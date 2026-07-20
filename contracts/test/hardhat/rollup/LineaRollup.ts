@@ -20,7 +20,6 @@ import blobAggregatedProof1To155 from "../_testData/compressedDataEip4844/aggreg
 import {
   ADDRESS_ZERO,
   FALLBACK_OPERATOR_ADDRESS,
-  HASH_WITHOUT_ZERO_FIRST_BYTE,
   HASH_ZERO,
   INITIAL_MIGRATION_BLOCK,
   INITIAL_WITHDRAW_LIMIT,
@@ -28,6 +27,8 @@ import {
   OPERATOR_ROLE,
   VERIFIER_SETTER_ROLE,
   VERIFIER_UNSETTER_ROLE,
+  SET_VERIFIER_KEY_ROLE,
+  UNSET_VERIFIER_KEY_ROLE,
   GENESIS_L2_TIMESTAMP,
   EMPTY_CALLDATA,
   DEFAULT_ADMIN_ROLE,
@@ -36,13 +37,11 @@ import {
   LINEA_ROLLUP_INITIALIZE_SIGNATURE,
   FORCED_TRANSACTION_FEE,
   SET_ADDRESS_FILTER_ROLE,
-  MAX_GAS_LIMIT,
   INITIALIZED_ALREADY_MESSAGE,
 } from "../common/constants";
 import { deployUpgradableFromFactory, reinitializeUpgradeableProxy } from "../common/deployment";
 import {
   calculateRollingHash,
-  encodeData,
   generateRandomBytes,
   expectEvent,
   buildAccessErrorMessage,
@@ -73,7 +72,7 @@ describe("Linea Rollup contract", () => {
   let addressFilterAddress: string;
   let addressFilter: AddressFilter;
 
-  const { compressedData, expectedX, expectedY, parentStateRootHash } = firstCompressedDataContent;
+  const { parentStateRootHash } = firstCompressedDataContent;
 
   before(async () => {
     ({ admin, securityCouncil, operator, nonAuthorizedAccount, alternateShnarfProviderAddress } =
@@ -103,7 +102,7 @@ describe("Linea Rollup contract", () => {
   describe("Initialisation", () => {
     // Helper to create default initialization data (type inferred to match contract expectations)
     const createDefaultInitData = () => ({
-      initialStateRootHash: parentStateRootHash,
+      initialBlockHash: parentStateRootHash,
       initialL2BlockNumber: INITIAL_MIGRATION_BLOCK,
       genesisTimestamp: GENESIS_L2_TIMESTAMP,
       defaultVerifier: verifier,
@@ -112,6 +111,7 @@ describe("Linea Rollup contract", () => {
       roleAddresses: [...roleAddresses.slice(1)],
       pauseTypeRoles: LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES,
       unpauseTypeRoles: LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
+      verifierKeys: [] as string[],
       defaultAdmin: securityCouncil.address,
       shnarfProvider: ADDRESS_ZERO,
       addressFilter: addressFilterAddress,
@@ -191,10 +191,16 @@ describe("Linea Rollup contract", () => {
       expect(await lineaRollup.hasRole(VERIFIER_UNSETTER_ROLE, securityCouncil.address)).to.be.true;
     });
 
-    it("Should store the startingRootHash in storage for the first block number", async () => {
+    it("Should assign SET_VERIFIER_KEY_ROLE and UNSET_VERIFIER_KEY_ROLE to securityCouncil", async () => {
+      ({ verifier, lineaRollup } = await loadFixture(deployLineaRollupFixture));
+      expect(await lineaRollup.hasRole(SET_VERIFIER_KEY_ROLE, securityCouncil.address)).to.be.true;
+      expect(await lineaRollup.hasRole(UNSET_VERIFIER_KEY_ROLE, securityCouncil.address)).to.be.true;
+    });
+
+    it("Should store the starting block hash in storage for the first block number", async () => {
       // This test needs explicit BigInt types for event verification
       const initializationData: LineaRollupInitializationData = {
-        initialStateRootHash: parentStateRootHash,
+        initialBlockHash: parentStateRootHash,
         initialL2BlockNumber: BigInt(INITIAL_MIGRATION_BLOCK),
         genesisTimestamp: BigInt(GENESIS_L2_TIMESTAMP),
         defaultVerifier: verifier,
@@ -203,13 +209,14 @@ describe("Linea Rollup contract", () => {
         roleAddresses,
         pauseTypeRoles: LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES as unknown as PauseTypeRole[],
         unpauseTypeRoles: LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES as unknown as PauseTypeRole[],
+        verifierKeys: [],
         defaultAdmin: securityCouncil.address,
         shnarfProvider: ADDRESS_ZERO,
         addressFilter: addressFilterAddress,
       };
 
       const expectedAsTuple = [
-        initializationData.initialStateRootHash,
+        initializationData.initialBlockHash,
         initializationData.initialL2BlockNumber,
         initializationData.genesisTimestamp,
         initializationData.defaultVerifier,
@@ -218,6 +225,7 @@ describe("Linea Rollup contract", () => {
         initializationData.roleAddresses.map((r) => [r.addressWithRole, r.role]),
         initializationData.pauseTypeRoles.map((p) => [BigInt(p.pauseType), p.role]),
         initializationData.unpauseTypeRoles.map((p) => [BigInt(p.pauseType), p.role]),
+        initializationData.verifierKeys,
         initializationData.defaultAdmin,
         initializationData.shnarfProvider,
         initializationData.addressFilter,
@@ -238,11 +246,11 @@ describe("Linea Rollup contract", () => {
         lineaRollup,
         receipt!,
         "LineaRollupBaseInitialized",
-        [ethers.zeroPadBytes(ethers.toUtf8Bytes("8.0"), 8), expectedAsTuple, computeGenesisShnarf(parentStateRootHash)],
+        [ethers.zeroPadBytes(ethers.toUtf8Bytes("9.0"), 8), expectedAsTuple, computeGenesisShnarf(parentStateRootHash)],
         38,
       );
 
-      expect(await lineaRollup.stateRootHashes(INITIAL_MIGRATION_BLOCK)).to.be.equal(parentStateRootHash);
+      expect(await lineaRollup.blockHashes(INITIAL_MIGRATION_BLOCK)).to.be.equal(parentStateRootHash);
     });
 
     it("Should assign the VERIFIER_SETTER_ROLE to both SecurityCouncil and Operator", async () => {
@@ -301,7 +309,7 @@ describe("Linea Rollup contract", () => {
 
     it("Should have the correct contract version", async () => {
       ({ verifier, lineaRollup } = await loadFixture(deployLineaRollupFixture));
-      expect(await lineaRollup.CONTRACT_VERSION()).to.equal("8.0");
+      expect(await lineaRollup.CONTRACT_VERSION()).to.equal("9.0");
     });
 
     it("Should revert if the initialize function is called a second time", async () => {
@@ -309,7 +317,7 @@ describe("Linea Rollup contract", () => {
       const initData = { ...createDefaultInitData(), roleAddresses };
       const initializeCall = lineaRollup.initialize(initData, FALLBACK_OPERATOR_ADDRESS, yieldManager);
 
-      await expectRevertWithCustomError(lineaRollup, initializeCall, "InitializedVersionWrong", [0, 9]);
+      await expectRevertWithCustomError(lineaRollup, initializeCall, "InitializedVersionWrong", [0, 10]);
     });
   });
 
@@ -383,16 +391,16 @@ describe("Linea Rollup contract", () => {
       expect(await lineaRollup.addressFilter()).to.equal(addressFilterAddress);
     });
 
-    it("Next contract version number should be 8.0", async () => {
+    it("CONTRACT_VERSION reflects ABI 9.0 after bytecode upgrade", async () => {
       await reinitializeUpgradeableProxy(lineaRollup, LineaRollup__factory.abi, "reinitializeLineaRollupV9", [
         FORCED_TRANSACTION_FEE,
         addressFilterAddress,
       ]);
 
-      expect(await lineaRollup.CONTRACT_VERSION()).to.equal("8.0");
+      expect(await lineaRollup.CONTRACT_VERSION()).to.equal("9.0");
     });
 
-    it("Next contract version number should be 8.0", async () => {
+    it("Should emit LineaRollupVersionChanged 7.1 to 8.0 for V9 reinit", async () => {
       const upgradeCall = reinitializeUpgradeableProxy(
         lineaRollup,
         LineaRollup__factory.abi,
@@ -420,6 +428,79 @@ describe("Linea Rollup contract", () => {
       );
 
       await expectRevertWithReason(secondUpgradeCall, INITIALIZED_ALREADY_MESSAGE);
+    });
+  });
+
+  describe("Upgrading / reinitialisation V10", () => {
+    beforeEach(async () => {
+      await lineaRollup.setSlotValue(0, 9);
+    });
+
+    it("Should emit LineaRollupVersionChanged 8.0 to 9.0", async () => {
+      const upgradeCall = reinitializeUpgradeableProxy(
+        lineaRollup,
+        LineaRollup__factory.abi,
+        "reinitializeLineaRollupV10",
+        [],
+      );
+
+      const previousVersion = ethers.zeroPadBytes(ethers.toUtf8Bytes("8.0"), 8);
+      const newVersion = ethers.zeroPadBytes(ethers.toUtf8Bytes("9.0"), 8);
+
+      await expectEvent(lineaRollup, upgradeCall, "LineaRollupVersionChanged", [previousVersion, newVersion]);
+      expect(await lineaRollup.CONTRACT_VERSION()).to.equal("9.0");
+    });
+
+    it("Fails to reinitialize V10 twice", async () => {
+      await reinitializeUpgradeableProxy(lineaRollup, LineaRollup__factory.abi, "reinitializeLineaRollupV10", []);
+
+      const secondUpgradeCall = reinitializeUpgradeableProxy(
+        lineaRollup,
+        LineaRollup__factory.abi,
+        "reinitializeLineaRollupV10",
+        [],
+      );
+
+      await expectRevertWithReason(secondUpgradeCall, INITIALIZED_ALREADY_MESSAGE);
+    });
+  });
+
+  describe("Verifier keys admin", () => {
+    const verifierKey = generateRandomBytes(32);
+
+    it("Should revert setVerifierKeys without SET_VERIFIER_KEY_ROLE", async () => {
+      await expectRevertWithReason(
+        lineaRollup.connect(nonAuthorizedAccount).setVerifierKeys([verifierKey]),
+        buildAccessErrorMessage(nonAuthorizedAccount, SET_VERIFIER_KEY_ROLE),
+      );
+    });
+
+    it("Should set and unset verifier keys", async () => {
+      await expectEvent(
+        lineaRollup,
+        lineaRollup.connect(securityCouncil).setVerifierKeys([verifierKey]),
+        "VerifierKeysSet",
+        [[verifierKey]],
+      );
+      expect(await lineaRollup.verifierKeys(verifierKey)).to.equal(true);
+
+      await expectEvent(
+        lineaRollup,
+        lineaRollup.connect(securityCouncil).unsetVerifierKeys([verifierKey]),
+        "VerifierKeysUnset",
+        [[verifierKey]],
+      );
+      expect(await lineaRollup.verifierKeys(verifierKey)).to.equal(false);
+    });
+
+    it("Should revert when setting an already-set verifier key", async () => {
+      await lineaRollup.connect(securityCouncil).setVerifierKeys([verifierKey]);
+      await expectRevertWithCustomError(
+        lineaRollup,
+        lineaRollup.connect(securityCouncil).setVerifierKeys([verifierKey]),
+        "VerifierKeyAlreadySet",
+        [verifierKey],
+      );
     });
   });
 
@@ -589,38 +670,7 @@ describe("Linea Rollup contract", () => {
     });
   });
 
-  describe("Calculate Y value for Compressed Data", () => {
-    it("Should successfully calculate y", async () => {
-      const compressedDataBytes = ethers.decodeBase64(compressedData);
-
-      expect(await lineaRollup.calculateY(compressedDataBytes, expectedX, { gasLimit: MAX_GAS_LIMIT })).to.equal(
-        expectedY,
-      );
-    });
-
-    it("Should revert if first byte is no zero", async () => {
-      const compressedDataBytes = encodeData(
-        ["bytes32", "bytes32", "bytes32"],
-        [generateRandomBytes(32), HASH_WITHOUT_ZERO_FIRST_BYTE, generateRandomBytes(32)],
-      );
-
-      await expectRevertWithCustomError(
-        lineaRollup,
-        lineaRollup.calculateY(compressedDataBytes, expectedX, { gasLimit: MAX_GAS_LIMIT }),
-        "FirstByteIsNotZero",
-      );
-    });
-
-    it("Should revert if bytes length is not a multiple of 32", async () => {
-      const compressedDataBytes = generateRandomBytes(56);
-
-      await expectRevertWithCustomError(
-        lineaRollup,
-        lineaRollup.calculateY(compressedDataBytes, expectedX, { gasLimit: MAX_GAS_LIMIT }),
-        "BytesLengthNotMultipleOf32",
-      );
-    });
-  });
+  // calculateY was removed with the blockhash-centric shnarf cutover (no L1 Horner evaluation).
 
   describe("liveness recovery operator Role", () => {
     const expectedLastFinalizedState = calculateLastFinalizedState(

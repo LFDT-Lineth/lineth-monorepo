@@ -27,7 +27,7 @@ const func: DeployFunction = withSignerUiSession("03_deploy_LineaRollup.ts", asy
   // LineaRollup DEPLOYED AS UPGRADEABLE PROXY (OpenZeppelin transparent). Hardhat Upgrades may reuse an
   // implementation and/or ProxyAdmin from `.openzeppelin/` for this network, so you might sign fewer than three txs.
   const verifierAddress = requireAddressFromRegistryOrEnv(network.name, "PlonkVerifier", "VERIFIER_ADDRESS");
-  const lineaRollupInitialStateRootHash = getRequiredEnvVar("INITIAL_L2_STATE_ROOT_HASH");
+  const lineaRollupInitialBlockHash = getRequiredEnvVar("INITIAL_L2_BLOCK_HASH");
   const lineaRollupInitialL2BlockNumber = getRequiredEnvVar("INITIAL_L2_BLOCK_NUMBER");
   const lineaRollupSecurityCouncil = requireAddressFromRegistryOrEnv(
     network.name,
@@ -53,12 +53,16 @@ const func: DeployFunction = withSignerUiSession("03_deploy_LineaRollup.ts", asy
   const yieldManagerAddress = requireAddressFromRegistryOrEnv(network.name, "YieldManager", "YIELD_MANAGER_ADDRESS");
 
   const addressFilter = requireAddressFromRegistryOrEnv(network.name, "AddressFilter", "LINEA_ROLLUP_ADDRESS_FILTER");
+  const verifierKeys = (getEnvVarOrDefault("LINEA_ROLLUP_VERIFIER_KEYS", "") as string)
+    .split(",")
+    .map((key) => key.trim())
+    .filter((key) => key.length > 0);
 
   const contract = await deployUpgradableFromFactory(
     "LineaRollup",
     [
       {
-        initialStateRootHash: lineaRollupInitialStateRootHash,
+        initialBlockHash: lineaRollupInitialBlockHash,
         initialL2BlockNumber: lineaRollupInitialL2BlockNumber,
         genesisTimestamp: lineaRollupGenesisTimestamp,
         defaultVerifier: verifierAddress,
@@ -67,6 +71,7 @@ const func: DeployFunction = withSignerUiSession("03_deploy_LineaRollup.ts", asy
         roleAddresses,
         pauseTypeRoles,
         unpauseTypeRoles,
+        verifierKeys,
         defaultAdmin: lineaRollupSecurityCouncil,
         shnarfProvider: ADDRESS_ZERO,
         addressFilter,

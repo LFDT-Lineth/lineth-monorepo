@@ -7,11 +7,11 @@ import { FailedFinalizeParams, SucceedFinalizeParams, SucceedFinalizeParamsCallF
 import { TEST_PUBLIC_VERIFIER_INDEX } from "../../common/constants";
 import {
   calculateLastFinalizedState,
+  computeShnarfV2,
   expectEvent,
   expectEventDirectFromReceiptData,
   expectRevertWithCustomError,
   generateFinalizationData,
-  generateKeccak256,
   proofDataToFinalizationParams,
 } from "../../common/helpers";
 
@@ -31,6 +31,12 @@ export async function expectSuccessfulFinalize(params: SucceedFinalizeParams) {
     .connect(operator)
     .finalizeBlocks(proofData.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
 
+  const expectedFinalShnarf = computeShnarfV2(
+    finalizationData.shnarfData.parentShnarf,
+    finalizationData.finalBlockHash,
+    finalizationData.finalBlobHash,
+  );
+
   await expectEvent(lineaRollup, finalizeCompressedCall, "FinalizedStateUpdated", [
     finalizationData.endBlockNumber,
     finalizationData.finalTimestamp,
@@ -38,21 +44,21 @@ export async function expectSuccessfulFinalize(params: SucceedFinalizeParams) {
     finalizationData.finalForcedTransactionNumber,
   ]);
 
-  await expectEvent(lineaRollup, finalizeCompressedCall, "DataFinalizedV3", [
+  await expectEvent(lineaRollup, finalizeCompressedCall, "DataFinalizedV4", [
     BigInt(proofData.lastFinalizedBlockNumber) + 1n,
     finalizationData.endBlockNumber,
-    proofData.finalShnarf,
-    finalizationData.parentStateRootHash,
-    proofData.finalStateRootHash,
+    expectedFinalShnarf,
+    finalizationData.parentBlockHash,
+    finalizationData.finalBlockHash,
   ]);
 
-  const [expectedFinalStateRootHash, lastFinalizedBlockNumber, lastFinalizedState] = await Promise.all([
-    lineaRollup.stateRootHashes(finalizationData.endBlockNumber),
+  const [expectedFinalBlockHash, lastFinalizedBlockNumber, lastFinalizedState] = await Promise.all([
+    lineaRollup.blockHashes(finalizationData.endBlockNumber),
     lineaRollup.currentL2BlockNumber(),
     lineaRollup.currentFinalizedState(),
   ]);
 
-  expect(expectedFinalStateRootHash).to.equal(finalizationData.shnarfData.finalStateRootHash);
+  expect(expectedFinalBlockHash).to.equal(finalizationData.finalBlockHash);
   expect(lastFinalizedBlockNumber).to.equal(finalizationData.endBlockNumber);
   expect(lastFinalizedState).to.equal(
     calculateLastFinalizedState(
@@ -97,18 +103,12 @@ export async function expectSuccessfulFinalizeViaCallForwarder(params: SucceedFi
   await upgradedContract.setRollingHash(proofData.l1RollingHashMessageNumber, proofData.l1RollingHash);
 
   const shnarfData = shnarfDataGenerator(blobParentShnarfIndex, isMultiple);
-
-  const finalShnarf = generateKeccak256(
-    ["bytes32", "bytes32", "bytes32", "bytes32", "bytes32"],
-    [
-      shnarfData.parentShnarf,
-      shnarfData.snarkHash,
-      shnarfData.finalStateRootHash,
-      shnarfData.dataEvaluationPoint,
-      shnarfData.dataEvaluationClaim,
-    ],
+  const expectedFinalShnarf = computeShnarfV2(
+    shnarfData.parentShnarf,
+    finalizationData.finalBlockHash,
+    finalizationData.finalBlobHash,
   );
-  const blobShnarfExists = await upgradedContract.blobShnarfExists(finalShnarf);
+  const blobShnarfExists = await upgradedContract.blobShnarfExists(expectedFinalShnarf);
   expect(blobShnarfExists).to.equal(1n);
 
   await upgradedContract.setRollingHash(proofData.l1RollingHashMessageNumber, proofData.l1RollingHash);
@@ -118,6 +118,7 @@ export async function expectSuccessfulFinalizeViaCallForwarder(params: SucceedFi
     0,
     [
       finalizationData.parentStateRootHash,
+      finalizationData.parentBlockHash,
       BigInt(finalizationData.endBlockNumber),
       [
         shnarfData.parentShnarf,
@@ -136,19 +137,22 @@ export async function expectSuccessfulFinalizeViaCallForwarder(params: SucceedFi
       finalizationData.lastFinalizedForcedTransactionNumber,
       finalizationData.finalForcedTransactionNumber,
       finalizationData.lastFinalizedForcedTransactionRollingHash,
+      finalizationData.finalBlockHash,
+      finalizationData.finalBlobHash,
       finalizationData.l2MerkleRoots,
       finalizationData.filteredAddresses,
+      finalizationData.verifierKeys,
       finalizationData.l2MessagingBlocksOffsets,
     ],
   ];
 
   const encodedCall = ethers.concat([
-    "0x755bc62f",
+    "0x8da8b592",
     ethers.AbiCoder.defaultAbiCoder().encode(
       [
         "bytes",
         "uint256",
-        "tuple(bytes32,uint256,tuple(bytes32,bytes32,bytes32,bytes32,bytes32),uint256,uint256,bytes32,bytes32,uint256,uint256,uint256,uint256,uint256,bytes32,bytes32[],address[],bytes)",
+        "tuple(bytes32,bytes32,uint256,tuple(bytes32,bytes32,bytes32,bytes32,bytes32),uint256,uint256,bytes32,bytes32,uint256,uint256,uint256,uint256,uint256,bytes32,bytes32,bytes32,bytes32[],address[],bytes32[],bytes)",
       ],
       txData,
     ),
@@ -195,24 +199,24 @@ export async function expectSuccessfulFinalizeViaCallForwarder(params: SucceedFi
   expectEventDirectFromReceiptData(
     upgradedContract as BaseContract,
     receipt!,
-    "DataFinalizedV3",
+    "DataFinalizedV4",
     [
       BigInt(proofData.lastFinalizedBlockNumber) + 1n,
       finalizationData.endBlockNumber,
-      proofData.finalShnarf,
-      finalizationData.parentStateRootHash,
-      proofData.finalStateRootHash,
+      expectedFinalShnarf,
+      finalizationData.parentBlockHash,
+      finalizationData.finalBlockHash,
     ],
     dataFinalizedLogIndex,
   );
 
-  const [expectedFinalStateRootHash, lastFinalizedBlockNumber, lastFinalizedState] = await Promise.all([
-    upgradedContract.stateRootHashes(finalizationData.endBlockNumber),
+  const [expectedFinalBlockHash, lastFinalizedBlockNumber, lastFinalizedState] = await Promise.all([
+    upgradedContract.blockHashes(finalizationData.endBlockNumber),
     upgradedContract.currentL2BlockNumber(),
     upgradedContract.currentFinalizedState(),
   ]);
 
-  expect(expectedFinalStateRootHash).to.equal(finalizationData.shnarfData.finalStateRootHash);
+  expect(expectedFinalBlockHash).to.equal(finalizationData.finalBlockHash);
   expect(lastFinalizedBlockNumber).to.equal(finalizationData.endBlockNumber);
   expect(lastFinalizedState).to.equal(
     calculateLastFinalizedState(

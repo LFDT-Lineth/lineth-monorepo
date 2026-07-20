@@ -10,6 +10,8 @@ Linea operates as a zk-rollup where L2 state transitions are posted to and verif
 2. **Shnarf chaining** — Each submission extends a rolling commitment (`shnarf`) linking all prior submissions.
 3. **Finalization** — An aggregated ZK proof verifies state transitions on-chain, updating the finalized state.
 
+ABI string: `CONTRACT_VERSION()` returns `"9.0"`. Continuity is anchored on `blockHashes[blockNumber]` (with a one-way migration from legacy `stateRootHashes` on upgraded proxies).
+
 Two contract variants exist:
 
 - **LineaRollup** — Full rollup with EIP-4844 blob DA. Inherits L1 messaging, yield management, and liveness recovery.
@@ -25,13 +27,14 @@ Both share `LineaRollupBase` for finalization logic, verifier management, and sh
 | LineaRollupBase | `contracts/src/rollup/LineaRollupBase.sol` | Shared finalization, verifier, shnarf logic |
 | Validium | `contracts/src/rollup/Validium.sol` | Calldata-only DA variant |
 | LivenessRecovery | `contracts/src/rollup/LivenessRecovery.sol` | Emergency operator recovery after 6-month inactivity |
-| Eip4844BlobAcceptor | `contracts/src/rollup/dataAvailability/Eip4844BlobAcceptor.sol` | EIP-4844 blob verification on-chain |
+| Eip4844BlobAcceptor | `contracts/src/rollup/dataAvailability/Eip4844BlobAcceptor.sol` | EIP-4844 blob submission (final block hashes per blob) |
+| CalldataBlobAcceptor | `contracts/src/rollup/dataAvailability/CalldataBlobAcceptor.sol` | Calldata compressed-data submission |
 | ShnarfDataAcceptor | `contracts/src/rollup/dataAvailability/ShnarfDataAcceptor.sol` | Validium shnarf submission |
 | PlonkVerifierForDataAggregation | `contracts/src/verifiers/PlonkVerifierForDataAggregation.sol` | Aggregation proof verification |
 | BlobSubmissionCoordinator | `coordinator/ethereum/blob-submitter/` | Periodic blob submission to L1 |
 | AggregationFinalizationCoordinator | `coordinator/ethereum/blob-submitter/` | Schedules finalization after aggregation proof |
 | Blob Compressor | `jvm-libs/linea/blob-compressor/` | Go native library for block compression |
-| Shnarf Calculator | `jvm-libs/linea/blob-shnarf-calculator/` | Go native library for shnarf/KZG computation |
+| Shnarf Calculator | `jvm-libs/linea/blob-shnarf-calculator/` | Go native library for shnarf computation (coordinator still on the pre-9.0 formula until stack cutover) |
 
 ## Inheritance
 
@@ -55,21 +58,25 @@ Validium
 
 | Variable | Type | Description |
 |----------|------|-------------|
+| `blockHashes` | `mapping(uint256 => bytes32)` | Authoritative L2 block hash per finalized block number |
+| `stateRootHashes` | `mapping(uint256 => bytes32)` | Legacy continuity (migration path only when `blockHashes[last]` is empty) |
 | `currentFinalizedShnarf` | `bytes32` | Latest finalized shnarf hash |
-| `currentFinalizedState` | `bytes32` | Composite of last message number, rolling hash, timestamp |
+| `currentFinalizedState` | `bytes32` | Composite of last message number, rolling hash, forced-tx fields, timestamp |
+| `verifierKeys` | `mapping(bytes32 => bool)` | Allowed guest-program verifier keys |
 | `livenessRecoveryOperator` | `address` | Emergency recovery operator address |
 
 | Role | Purpose |
 |------|---------|
 | `OPERATOR_ROLE` | Submit blobs, finalize blocks |
 | `VERIFIER_SETTER_ROLE` / `VERIFIER_UNSETTER_ROLE` | Manage verifier contract addresses |
+| `SET_VERIFIER_KEY_ROLE` / `UNSET_VERIFIER_KEY_ROLE` | Manage guest-program verifier keys |
 | `DEFAULT_ADMIN_ROLE` | Grant/revoke roles |
 
 ---
 
 ## Data Submission
 
-The coordinator compresses batches of L2 blocks into blobs and submits them to LineaRollup on L1.
+The coordinator compresses batches of L2 blocks into blobs and submits them to LineaRollup on L1. On-chain blob acceptance no longer verifies KZG commitments via the point-evaluation precompile; operators supply the final L2 block hash per blob and the expected shnarf chain.
 
 ### Submission Flow
 
@@ -77,45 +84,49 @@ The coordinator compresses batches of L2 blocks into blobs and submits them to L
 sequenceDiagram
     participant Coord as Coordinator
     participant Comp as BlobCompressor
-    participant Shnarf as ShnarfCalculator
     participant L1 as LineaRollup (L1)
 
     Coord->>Comp: Compress batches into blob
     Comp-->>Coord: compressedData (≤127KB)
-    Coord->>Shnarf: calculateShnarf(compressedData, stateRoots, prevShnarf)
-    Shnarf-->>Coord: commitment, kzgProofs, expectedShnarf
-    Coord->>L1: submitBlobs(blobSubmissionData[], parentShnarf, finalBlobShnarf)
-    L1->>L1: Point evaluation precompile verify per blob
-    L1->>L1: Chain shnarf, store, emit DataSubmittedV3
+    Coord->>L1: submitBlobs(blobFinalBlockHashes[], parentShnarf, finalBlobShnarf)
+    L1->>L1: Chain 3-field shnarf per blobhash(i)
+    L1->>L1: Store shnarf, emit DataSubmittedV4
 ```
 
 ### Contract Interface
 
 ```solidity
 function submitBlobs(
-    BlobSubmission[] calldata _blobSubmissions,
+    bytes32[] calldata _blobFinalBlockHashes,
     bytes32 _parentShnarf,
     bytes32 _finalBlobShnarf
 ) external;
 
-struct BlobSubmission {
-    uint256 dataEvaluationClaim;
-    bytes kzgCommitment;
-    bytes kzgProof;
-    bytes32 finalStateRootHash;
-    bytes32 snarkHash;
+function submitDataAsCalldata(
+    CompressedCalldataSubmissionV2 calldata _submission,
+    bytes32 _parentShnarf,
+    bytes32 _expectedShnarf
+) external;
+
+struct CompressedCalldataSubmissionV2 {
+    bytes32 blockHash;
+    bytes compressedData;
 }
 ```
 
-Point evaluation uses `POINT_EVALUATION_PRECOMPILE_ADDRESS` (0x0a) with `BLS_CURVE_MODULUS` field validation and `POINT_EVALUATION_FIELD_ELEMENTS_LENGTH` (4096).
+For EIP-4844 submissions, `dataHash` in the shnarf formula is `blobhash(i)`. For calldata, it is `keccak256(compressedData)`.
 
 ### Shnarf Computation
 
 The shnarf is a rolling commitment linking consecutive submissions:
 
 ```
-shnarf = keccak256(parentShnarf, snarkHash, finalStateRootHash, dataEvaluationPoint, dataEvaluationClaim)
+shnarf = keccak256(parentShnarf, finalBlockHash, dataHash)
 ```
+
+Genesis shnarf at init: `keccak256(EMPTY, initialBlockHash, EMPTY)`.
+
+Legacy 5-field `_computeShnarf(parent, snarkHash, finalStateRootHash, evalPoint, evalClaim)` remains as an unused-by-finalization overload for transition helpers only.
 
 ### Blob Structure
 
@@ -156,13 +167,18 @@ sequenceDiagram
 
     Prover-->>Coord: Aggregation proof response (file system)
     Coord->>L1: finalizeBlocks(aggregatedProof, proofType, finalizationData)
-    L1->>L1: Validate shnarf continuity
+    L1->>L1: Validate verifierKeys allowlist
+    alt blockHashes parent empty
+        L1->>L1: Migration path via stateRootHashes
+    else blockhash path
+        L1->>L1: Soft parentBlockHash continuity check
+    end
     L1->>L1: Validate rolling hash (L1→L2 message integrity)
     L1->>L1: Anchor L2→L1 Merkle roots
     L1->>Verifier: _verifyProof(publicInput, proof)
     Verifier-->>L1: proof valid
-    L1->>L1: Update currentFinalizedShnarf, currentFinalizedState
-    L1->>L1: Emit DataFinalizedV3
+    L1->>L1: Update blockHashes, currentFinalizedShnarf, currentFinalizedState
+    L1->>L1: Emit DataFinalizedV4
 ```
 
 ### Contract Interface
@@ -171,13 +187,14 @@ sequenceDiagram
 function finalizeBlocks(
     bytes calldata _aggregatedProof,
     uint256 _proofType,
-    FinalizationDataV3 calldata _finalizationData
-) public whenTypeAndGeneralNotPaused(PauseType.FINALIZATION) onlyRole(OPERATOR_ROLE);
+    FinalizationDataV5 calldata _finalizationData
+) external whenTypeAndGeneralNotPaused(PauseType.FINALIZATION) onlyRole(OPERATOR_ROLE);
 
-struct FinalizationDataV3 {
-    bytes32 parentStateRootHash;
+struct FinalizationDataV5 {
+    bytes32 parentStateRootHash;       // migration path only
+    bytes32 parentBlockHash;           // soft continuity on new path
     uint256 endBlockNumber;
-    ShnarfData shnarfData;
+    ShnarfData shnarfData;             // V5 uses parentShnarf; other fields are padding
     uint256 lastFinalizedTimestamp;
     uint256 finalTimestamp;
     bytes32 lastFinalizedL1RollingHash;
@@ -185,28 +202,40 @@ struct FinalizationDataV3 {
     uint256 lastFinalizedL1RollingHashMessageNumber;
     uint256 l1RollingHashMessageNumber;
     uint256 l2MerkleTreesDepth;
+    uint256 lastFinalizedForcedTransactionNumber;
+    uint256 finalForcedTransactionNumber;
+    bytes32 lastFinalizedForcedTransactionRollingHash;
+    bytes32 finalBlockHash;
+    bytes32 finalBlobHash;
     bytes32[] l2MerkleRoots;
+    address[] filteredAddresses;
+    bytes32[] verifierKeys;
     bytes l2MessagingBlocksOffsets;
 }
 ```
 
+Final shnarf at finalize: `keccak256(shnarfData.parentShnarf, finalBlockHash, finalBlobHash)`. Must already exist via prior submission.
+
 ### Public Input Computation
 
-The verifier receives a single `uint256` public input derived from `_computePublicInput` in `LineaRollupBase`:
+The verifier receives a single `uint256` public input derived from `_computePublicInput` in `LineaRollupBase` (field order abbreviated):
 
 ```
 keccak256(
     lastFinalizedShnarf, finalShnarf,
-    lastFinalizedTimestamp, finalTimestamp,
-    lastFinalizedBlockNumber, endBlockNumber,
+    finalTimestamp, endBlockNumber,
     lastFinalizedL1RollingHash, l1RollingHash,
     lastFinalizedL1RollingHashMessageNumber, l1RollingHashMessageNumber,
+    lastFinalizedForcedTransactionRollingHash, finalForcedTransactionRollingHash,
+    lastFinalizedForcedTransactionNumber, finalForcedTransactionNumber,
     l2MerkleTreesDepth, keccak256(l2MerkleRoots),
-    verifierChainConfiguration
+    verifierChainConfiguration,
+    keccak256(filteredAddresses),
+    keccak256(verifierKeys)
 ) mod MODULO_R
 ```
 
-`MODULO_R` is the BN254 scalar field order. `verifierChainConfiguration` is obtained from the verifier contract via `IPlonkVerifier.getChainConfiguration()`. The Merkle roots array is pre-hashed before inclusion.
+`MODULO_R` is the BN254 scalar field order. `verifierChainConfiguration` comes from `IPlonkVerifier.getChainConfiguration()`. Guest-program `verifierKeys` used in the batch must be present in the on-chain allowlist.
 
 ### Rolling Hash Validation
 
@@ -228,7 +257,10 @@ The aggregation proof recursively verifies N execution proofs and M compression 
 | `FinalizationStateIncorrect` | Parent state does not match current finalized state |
 | `FinalizationInTheFuture` | Final timestamp exceeds current block timestamp |
 | `InvalidProof` | Proof verification failed |
-| `StartingRootHashDoesNotMatch` | Parent state root mismatch |
+| `StartingRootHashDoesNotMatch` | Migration path: parent state root mismatch |
+| `StartingBlockHashDoesNotMatch` | Soft continuity: declared `parentBlockHash` mismatch |
+| `VerifierKeyNotFound` | Finalization uses a verifier key not in the allowlist |
+| `FinalizationBlockHashIsZeroHash` | `finalBlockHash` is zero |
 
 ---
 
@@ -240,21 +272,25 @@ If no finalization occurs for `SIX_MONTHS_IN_SECONDS` (182 days, due to Solidity
 
 | Event | Description |
 |-------|-------------|
-| `DataSubmittedV3` | Blob data accepted on L1 |
-| `DataFinalizedV3` | Blocks finalized with proof |
+| `DataSubmittedV4` | Blob/calldata accepted (`parentShnarf`, indexed `shnarf`, `finalBlockHash`) |
+| `DataFinalizedV4` | Blocks finalized (`start`/`end`, indexed `shnarf`, `parentBlockHash`, `finalBlockHash`) |
 | `VerifierAddressChanged` | Verifier contract updated |
+| `VerifierKeysSet` / `VerifierKeysUnset` | Guest-program verifier key allowlist changed |
+| `LineaRollupVersionChanged` | ABI string bump recorded on upgrade |
 
 ## Test Coverage
 
 | Test File | Runner | Validates |
 |-----------|--------|-----------|
-| `contracts/test/hardhat/rollup/LineaRollup.ts` | Hardhat | Initialization, roles, pause, operator actions |
-| `contracts/test/hardhat/rollup/LineaRollup/BlobSubmission.ts` | Hardhat | EIP-4844 blob submission, KZG proofs, calldata |
-| `contracts/test/hardhat/rollup/LineaRollup/Finalization.ts` | Hardhat | Proof verification, state updates, error cases |
+| `contracts/test/hardhat/rollup/LineaRollup.ts` | Hardhat | Init, roles, pause, V10 reinit, verifier-key admin |
+| `contracts/test/hardhat/rollup/LineaRollup/CalldataSubmission.ts` | Hardhat | V2 calldata submit, `DataSubmittedV4` |
+| `contracts/test/hardhat/rollup/LineaRollup/BlobSubmission.ts` | Hardhat | Hash-array blob submit, shnarf continuity errors |
+| `contracts/test/hardhat/rollup/LineaRollup/Finalization.ts` | Hardhat | V5 finalization, events, error cases |
+| `contracts/test/hardhat/rollup/LineaRollup/FinalizationMigration.ts` | Hardhat | `stateRootHashes` → `blockHashes` migration + soft continuity |
 | `contracts/test/hardhat/rollup/Validium.ts` | Hardhat | Validium-specific behavior |
 | `contracts/test/hardhat/verifiers/PlonkVerifierForDataAggregation.ts` | Hardhat | Verifier contract correctness |
-| `contracts/test/foundry/LineaRollup.t.sol` | Foundry | Shnarf calculation, `_calculateY` |
-| `e2e/src/submission-finalization.spec.ts` | Jest | End-to-end submission and finalization |
+| `contracts/test/foundry/LineaRollup.t.sol` | Foundry | V2 submit, 3-field shnarf, blockhash finalize |
+| `e2e/src/submission-finalization.spec.ts` | Jest | End-to-end submission and finalization (stack still on prior ABI until cutover) |
 | `e2e/src/restart.spec.ts` | Jest | Finalization resumes after coordinator restart |
 
 ## Related Documentation
@@ -265,5 +301,6 @@ If no finalization occurs for `SIX_MONTHS_IN_SECONDS` (182 days, due to Solidity
 - [Tech: Contracts Component](../tech/components/contracts.md) — Contract addresses, directory structure, deployment details
 - [Workflow: LineaRollup](../../contracts/docs/workflows/LineaRollup.md)
 - [Workflow: Blob Submission and Finalization](../../contracts/docs/workflows/operations/blobSubmissionAndFinalization.md)
+- [Deployment: LineaRollup](../../contracts/docs/deployment/l1/linea-rollup.md)
 - [Official docs: Smart Contracts](https://docs.linea.build/protocol/architecture/smart-contracts)
 - [Official docs: Transaction Lifecycle](https://docs.linea.build/technology/transaction-lifecycle)

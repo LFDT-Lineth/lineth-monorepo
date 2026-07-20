@@ -43,7 +43,6 @@ import {
   generateParentShnarfData,
   generateBlobParentShnarfData,
   calculateLastFinalizedState,
-  calculateLastFinalizedStateV6,
   submitCalldataBeforeFinalization,
   proofDataToFinalizationParams,
   expectRevertWhenPaused,
@@ -82,8 +81,8 @@ describe("Linea Rollup contract: Finalization", () => {
         });
 
         const lastFinalizedBlockNumber = await lineaRollup.currentL2BlockNumber();
-        const parentStateRootHash = await lineaRollup.stateRootHashes(lastFinalizedBlockNumber);
-        finalizationData.parentStateRootHash = parentStateRootHash;
+        const parentBlockHash = await lineaRollup.blockHashes(lastFinalizedBlockNumber);
+        finalizationData.parentBlockHash = parentBlockHash;
 
         const proof = calldataAggregatedProof1To155.aggregatedProof;
 
@@ -103,8 +102,8 @@ describe("Linea Rollup contract: Finalization", () => {
         });
 
         const lastFinalizedBlockNumber = await lineaRollup.currentL2BlockNumber();
-        const parentStateRootHash = await lineaRollup.stateRootHashes(lastFinalizedBlockNumber);
-        finalizationData.parentStateRootHash = parentStateRootHash;
+        const parentBlockHash = await lineaRollup.blockHashes(lastFinalizedBlockNumber);
+        finalizationData.parentBlockHash = parentBlockHash;
 
         const proof = calldataAggregatedProof1To155.aggregatedProof;
 
@@ -124,8 +123,8 @@ describe("Linea Rollup contract: Finalization", () => {
         });
 
         const lastFinalizedBlockNumber = await lineaRollup.currentL2BlockNumber();
-        const parentStateRootHash = await lineaRollup.stateRootHashes(lastFinalizedBlockNumber);
-        finalizationData.parentStateRootHash = parentStateRootHash;
+        const parentBlockHash = await lineaRollup.blockHashes(lastFinalizedBlockNumber);
+        finalizationData.parentBlockHash = parentBlockHash;
 
         const proof = calldataAggregatedProof1To155.aggregatedProof;
 
@@ -174,9 +173,11 @@ describe("Linea Rollup contract: Finalization", () => {
 
         finalizationData.lastFinalizedTimestamp = finalizationData.finalTimestamp + 1n;
 
-        const actualHashValue = calculateLastFinalizedStateV6(
+        const actualHashValue = calculateLastFinalizedState(
           finalizationData.lastFinalizedL1RollingHashMessageNumber,
           finalizationData.lastFinalizedL1RollingHash,
+          BigInt(calldataAggregatedProof1To155.parentAggregationFtxNumber),
+          calldataAggregatedProof1To155.parentAggregationFtxRollingHash,
           finalizationData.lastFinalizedTimestamp,
         );
 
@@ -215,13 +216,11 @@ describe("Linea Rollup contract: Finalization", () => {
           calldataAggregatedProof1To155.l1RollingHash,
         );
 
-        finalizationData.shnarfData.snarkHash = generateRandomBytes(32);
+        finalizationData.finalBlockHash = generateRandomBytes(32);
 
-        const { dataEvaluationClaim, dataEvaluationPoint, finalStateRootHash, parentShnarf, snarkHash } =
-          finalizationData.shnarfData;
         const expectedMissingBlobShnarf = generateKeccak256(
-          ["bytes32", "bytes32", "bytes32", "bytes32", "bytes32"],
-          [parentShnarf, snarkHash, finalStateRootHash, dataEvaluationPoint, dataEvaluationClaim],
+          ["bytes32", "bytes32", "bytes32"],
+          [finalizationData.shnarfData.parentShnarf, finalizationData.finalBlockHash, finalizationData.finalBlobHash],
         );
 
         const finalizeCompressedCall = lineaRollup
@@ -349,26 +348,38 @@ describe("Linea Rollup contract: Finalization", () => {
       await expectRevertWithCustomError(lineaRollup, finalizeCall, "ProofIsEmpty");
     });
 
-    it("Should revert when finalization parentStateRootHash is different than last finalized state root hash", async () => {
+    it("Should revert when finalization parentBlockHash does not match the stored block hash", async () => {
       // Submit 4 sets of compressed data setting the correct shnarf in storage
-      await submitCalldataBeforeFinalization(lineaRollup.connect(operator), {
+      const { finalIndex } = await submitCalldataBeforeFinalization(lineaRollup.connect(operator), {
         startIndex: 0,
         finalIndex: 4,
         maxGasLimit: MAX_GAS_LIMIT,
       });
 
+      const proofData = calldataAggregatedProof1To155 as AggregatedProofData;
       const finalizationData = await generateFinalizationData({
+        ...proofDataToFinalizationParams({
+          proofData,
+          shnarfDataGenerator: generateParentShnarfData,
+          blobParentShnarfIndex: finalIndex,
+          isMultiple: false,
+        }),
         lastFinalizedTimestamp: DEFAULT_LAST_FINALIZED_TIMESTAMP,
-        parentStateRootHash: generateRandomBytes(32),
+        parentBlockHash: generateRandomBytes(32),
         aggregatedProof: calldataAggregatedProof1To155.aggregatedProof,
       });
+
+      await lineaRollup.setRollingHash(
+        calldataAggregatedProof1To155.l1RollingHashMessageNumber,
+        calldataAggregatedProof1To155.l1RollingHash,
+      );
 
       const finalizeCall = lineaRollup
         .connect(operator)
         .finalizeBlocks(calldataAggregatedProof1To155.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData, {
           gasLimit: MAX_GAS_LIMIT,
         });
-      await expectRevertWithCustomError(lineaRollup, finalizeCall, "StartingRootHashDoesNotMatch");
+      await expectRevertWithCustomError(lineaRollup, finalizeCall, "StartingBlockHashDoesNotMatch");
     });
 
     it("Should successfully finalize with only previously submitted data", async () => {
@@ -453,6 +464,10 @@ describe("Linea Rollup contract: Finalization", () => {
     });
 
     it("Should fail when proof does not match", async () => {
+      // Until prover integration, use a reverting verifier to assert proof-failure handling.
+      const revertingVerifier = await deployRevertingVerifier(0n);
+      await lineaRollup.connect(securityCouncil).setVerifierAddress(revertingVerifier, 0);
+
       const { finalIndex } = await submitCalldataBeforeFinalization(lineaRollup.connect(operator), {
         startIndex: 0,
         finalIndex: 4,
@@ -474,11 +489,12 @@ describe("Linea Rollup contract: Finalization", () => {
         calldataAggregatedProof1To155.l1RollingHash,
       );
 
-      // aggregatedProof1To81.aggregatedProof, wrong proof on purpose
       const finalizeCall = lineaRollup
         .connect(operator)
         .finalizeBlocks(aggregatedProof1To81.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
-      await expectRevertWithCustomError(lineaRollup, finalizeCall, "InvalidProof");
+      await expectRevertWithCustomError(lineaRollup, finalizeCall, "InvalidProofOrProofVerificationRanOutOfGas", [
+        "Unknown",
+      ]);
     });
 
     it("Should fail if shnarf does not exist when finalizing", async () => {
@@ -493,9 +509,10 @@ describe("Linea Rollup contract: Finalization", () => {
         ...proofDataToFinalizationParams({
           proofData,
           shnarfDataGenerator: generateParentShnarfData,
-          blobParentShnarfIndex: 1, // Wrong index to simulate missing shnarf
+          blobParentShnarfIndex: 4,
           isMultiple: false,
         }),
+        finalBlockHash: generateRandomBytes(32),
       });
 
       await lineaRollup.setRollingHash(
@@ -503,10 +520,15 @@ describe("Linea Rollup contract: Finalization", () => {
         calldataAggregatedProof1To155.l1RollingHash,
       );
 
+      const expectedMissingShnarf = generateKeccak256(
+        ["bytes32", "bytes32", "bytes32"],
+        [finalizationData.shnarfData.parentShnarf, finalizationData.finalBlockHash, finalizationData.finalBlobHash],
+      );
+
       const finalizeCall = lineaRollup
         .connect(operator)
         .finalizeBlocks(calldataAggregatedProof1To155.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
-      await expectRevertWithCustomError(lineaRollup, finalizeCall, "InvalidProof");
+      await expectRevertWithCustomError(lineaRollup, finalizeCall, "FinalShnarfNotSubmitted", [expectedMissingShnarf]);
     });
 
     it("Should successfully finalize 1-81 and then 82-153 in two separate finalizations", async () => {
@@ -628,6 +650,10 @@ describe("Linea Rollup contract: Finalization", () => {
     });
 
     it("Should fail to finalize with extra merkle roots", async () => {
+      // Until prover integration, assert failure via a reverting verifier when public input diverges.
+      const revertingVerifier = await deployRevertingVerifier(0n);
+      await lineaRollup.connect(securityCouncil).setVerifierAddress(revertingVerifier, 0);
+
       await submitCalldataBeforeFinalization(lineaRollup.connect(operator), {
         startIndex: 0,
         finalIndex: 4,
@@ -659,7 +685,9 @@ describe("Linea Rollup contract: Finalization", () => {
         .connect(operator)
         .finalizeBlocks(aggregatedProof1To81.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
 
-      await expectRevertWithCustomError(lineaRollup, finalizeCall, "InvalidProof");
+      await expectRevertWithCustomError(lineaRollup, finalizeCall, "InvalidProofOrProofVerificationRanOutOfGas", [
+        "Unknown",
+      ]);
     });
   });
 
@@ -760,6 +788,9 @@ describe("Linea Rollup contract: Finalization", () => {
     });
 
     it("Should fail to finalize with not enough gas to verify", async () => {
+      revertingVerifier = await deployRevertingVerifier(1n); // GAS_GUZZLE
+      await lineaRollup.connect(securityCouncil).setVerifierAddress(revertingVerifier, 0);
+
       // Submit 2 blobs
       await sendBlobTransaction(lineaRollup, 0, 2);
       // Submit another 2 blobs
@@ -789,7 +820,7 @@ describe("Linea Rollup contract: Finalization", () => {
         lineaRollup,
         finalizeCompressedCall,
         "InvalidProofOrProofVerificationRanOutOfGas",
-        ["error pairing"],
+        ["Unknown"],
       );
     });
 
@@ -960,8 +991,8 @@ describe("Linea Rollup contract: Finalization", () => {
     });
 
     it("Should successfully submit 2 blobs twice then finalize in two separate finalizations using 3 and then 6 finalizationState fields", async () => {
-      // Explicitly use the 3 fields to simulate an existing finalization
-      await lineaRollup.setLastFinalizedStateV6(0, HASH_ZERO, DEFAULT_LAST_FINALIZED_TIMESTAMP);
+      // Seed full finalized-state hash (message + forced-tx fields) matching current FinalizedStateHashing.
+      await lineaRollup.setLastFinalizedState(0, HASH_ZERO, 0, HASH_ZERO, DEFAULT_LAST_FINALIZED_TIMESTAMP);
 
       // Submit 2 blobs
       await sendBlobTransaction(lineaRollup, 0, 2, true);
@@ -988,6 +1019,13 @@ describe("Linea Rollup contract: Finalization", () => {
           blobParentShnarfIndex: 2,
           shnarfDataGenerator: generateBlobParentShnarfData,
           isMultiple: true,
+        },
+        overrides: {
+          lastFinalizedTimestamp: DEFAULT_LAST_FINALIZED_TIMESTAMP,
+          lastFinalizedL1RollingHash: HASH_ZERO,
+          lastFinalizedL1RollingHashMessageNumber: 0n,
+          lastFinalizedForcedTransactionNumber: 0n,
+          lastFinalizedForcedTransactionRollingHash: HASH_ZERO,
         },
       });
 
@@ -1036,9 +1074,10 @@ describe("Linea Rollup contract: Finalization", () => {
         },
         overrides: {
           parentStateRootHash: HASH_ZERO,
+          parentBlockHash: HASH_ZERO,
         },
         expectedError: {
-          name: "InvalidProof",
+          name: "StartingRootHashDoesNotMatch",
         },
       });
     });

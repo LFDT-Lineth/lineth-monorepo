@@ -5,17 +5,16 @@ import { AddressFilter, TestLineaRollup } from "contracts/typechain-types";
 import { BaseContract } from "ethers";
 import { ethers } from "hardhat";
 
-import firstCompressedDataContent from "../../_testData/compressedData/blocks-1-46.json";
 import { GENERAL_PAUSE_TYPE, HASH_ZERO, OPERATOR_ROLE, STATE_DATA_SUBMISSION_PAUSE_TYPE } from "../../common/constants";
 import {
   generateRandomBytes,
-  generateKeccak256,
   buildAccessErrorMessage,
   expectRevertWithCustomError,
   expectRevertWithReason,
   generateBlobDataSubmission,
   expectEventDirectFromReceiptData,
   expectRevertWhenPaused,
+  computeShnarfV2,
 } from "../../common/helpers";
 import {
   deployForcedTransactionGatewayFixture,
@@ -38,8 +37,6 @@ describe("Linea Rollup contract: EIP-4844 Blob submission tests", () => {
   let addressFilterAddress: string;
   let addressFilter: AddressFilter;
 
-  const { prevShnarf } = firstCompressedDataContent;
-
   before(async () => {
     ({ securityCouncil, operator, nonAuthorizedAccount } = await loadFixture(getAccountsFixture));
   });
@@ -50,7 +47,6 @@ describe("Linea Rollup contract: EIP-4844 Blob submission tests", () => {
     addressFilterAddress = await addressFilter.getAddress();
 
     await lineaRollup.setLastFinalizedBlock(0);
-    await lineaRollup.setupParentShnarf(prevShnarf);
     await lineaRollup.connect(securityCouncil).setAddressFilter(addressFilterAddress);
   });
 
@@ -70,10 +66,10 @@ describe("Linea Rollup contract: EIP-4844 Blob submission tests", () => {
     const expectedEventArgs = [
       parentShnarf,
       finalShnarf,
-      blobDataSubmission[blobDataSubmission.length - 1].finalStateRootHash,
+      blobDataSubmission[blobDataSubmission.length - 1].finalBlockHash,
     ];
 
-    expectEventDirectFromReceiptData(lineaRollup as BaseContract, receipt!, "DataSubmittedV3", expectedEventArgs);
+    expectEventDirectFromReceiptData(lineaRollup as BaseContract, receipt!, "DataSubmittedV4", expectedEventArgs);
 
     const blobShnarfExists = await lineaRollup.blobShnarfExists(finalShnarf);
     expect(blobShnarfExists).to.equal(1n);
@@ -83,14 +79,14 @@ describe("Linea Rollup contract: EIP-4844 Blob submission tests", () => {
     const lineaRollupAddress = await lineaRollup.getAddress();
     const { blobDataSubmission, compressedBlobs } = generateBlobDataSubmission(0, 1);
     const nonExistingParentShnarf = generateRandomBytes(32);
-
-    const wrongExpectedShnarf = generateKeccak256(
-      ["bytes32", "bytes32", "bytes32", "bytes32", "bytes32"],
-      [HASH_ZERO, HASH_ZERO, blobDataSubmission[0].finalStateRootHash, HASH_ZERO, HASH_ZERO],
+    const wrongExpectedShnarf = computeShnarfV2(
+      nonExistingParentShnarf,
+      blobDataSubmission[0].finalBlockHash,
+      blobDataSubmission[0].dataHash,
     );
 
     const encodedCall = lineaRollup.interface.encodeFunctionData("submitBlobs", [
-      blobDataSubmission,
+      blobDataSubmission.map((b) => b.finalBlockHash),
       nonExistingParentShnarf,
       wrongExpectedShnarf,
     ]);
@@ -133,15 +129,14 @@ describe("Linea Rollup contract: EIP-4844 Blob submission tests", () => {
   });
 
   it("Should revert if the caller does not have the OPERATOR_ROLE", async () => {
-    const { blobDataSubmission, parentShnarf, finalShnarf } = generateBlobDataSubmission(0, 1);
+    const { blobFinalBlockHashes, parentShnarf, finalShnarf } = generateBlobDataSubmission(0, 1);
 
     await expectRevertWithReason(
-      lineaRollup.connect(nonAuthorizedAccount).submitBlobs(blobDataSubmission, parentShnarf, finalShnarf),
+      lineaRollup.connect(nonAuthorizedAccount).submitBlobs(blobFinalBlockHashes, parentShnarf, finalShnarf),
       buildAccessErrorMessage(nonAuthorizedAccount, OPERATOR_ROLE),
     );
   });
 
-  // Parameterized pause type tests for blob submission
   const blobSubmissionPauseTypes = [
     { pauseType: GENERAL_PAUSE_TYPE, name: "GENERAL_PAUSE_TYPE" },
     { pauseType: STATE_DATA_SUBMISSION_PAUSE_TYPE, name: "STATE_DATA_SUBMISSION_PAUSE_TYPE" },
@@ -149,13 +144,13 @@ describe("Linea Rollup contract: EIP-4844 Blob submission tests", () => {
 
   blobSubmissionPauseTypes.forEach(({ pauseType, name }) => {
     it(`Should revert if ${name} is enabled`, async () => {
-      const { blobDataSubmission, parentShnarf, finalShnarf } = generateBlobDataSubmission(0, 1);
+      const { blobFinalBlockHashes, parentShnarf, finalShnarf } = generateBlobDataSubmission(0, 1);
 
       await lineaRollup.connect(securityCouncil).pauseByType(pauseType);
 
       await expectRevertWhenPaused(
         lineaRollup,
-        lineaRollup.connect(operator).submitBlobs(blobDataSubmission, parentShnarf, finalShnarf),
+        lineaRollup.connect(operator).submitBlobs(blobFinalBlockHashes, parentShnarf, finalShnarf),
         pauseType,
       );
     });
@@ -163,15 +158,14 @@ describe("Linea Rollup contract: EIP-4844 Blob submission tests", () => {
 
   it("Should revert if the blob data is empty at any index", async () => {
     const lineaRollupAddress = await lineaRollup.getAddress();
-    const { blobDataSubmission, compressedBlobs, parentShnarf, finalShnarf } = generateBlobDataSubmission(0, 2);
+    const { blobFinalBlockHashes, compressedBlobs, parentShnarf, finalShnarf } = generateBlobDataSubmission(0, 2);
 
     const encodedCall = lineaRollup.interface.encodeFunctionData("submitBlobs", [
-      blobDataSubmission,
+      blobFinalBlockHashes,
       parentShnarf,
       finalShnarf,
     ]);
 
-    // Pass only the first blob to simulate empty blob at index 1
     const transaction = await buildBlobTransaction({
       lineaRollupAddress,
       encodedCall,
@@ -188,14 +182,15 @@ describe("Linea Rollup contract: EIP-4844 Blob submission tests", () => {
     );
   });
 
-  it("Should fail if the final state root hash is empty", async () => {
+  it("Should fail if the final block hash yields a wrong expected shnarf", async () => {
     const lineaRollupAddress = await lineaRollup.getAddress();
     const { blobDataSubmission, compressedBlobs, parentShnarf, finalShnarf } = generateBlobDataSubmission(0, 1);
 
-    blobDataSubmission[0].finalStateRootHash = HASH_ZERO;
+    const wrongHashes = [HASH_ZERO];
+    const actualShnarf = computeShnarfV2(parentShnarf, HASH_ZERO, blobDataSubmission[0].dataHash);
 
     const encodedCall = lineaRollup.interface.encodeFunctionData("submitBlobs", [
-      blobDataSubmission,
+      wrongHashes,
       parentShnarf,
       finalShnarf,
     ]);
@@ -208,48 +203,19 @@ describe("Linea Rollup contract: EIP-4844 Blob submission tests", () => {
 
     const signedTx = await getWalletForIndex(2).signTransaction(transaction);
 
-    // TODO: Make the failure shnarf dynamic and computed
     await expectRevertWithCustomError(lineaRollup, ethers.provider.broadcastTransaction(signedTx), "FinalShnarfWrong", [
       finalShnarf,
-      "0x4337f604948e810af24274096031ee2bbf4d6bc87919c72dd87ede2c091803e1",
+      actualShnarf,
     ]);
-  });
-
-  it("Should revert when snarkHash is zero hash", async () => {
-    const lineaRollupAddress = await lineaRollup.getAddress();
-    const { blobDataSubmission, compressedBlobs, parentShnarf, finalShnarf } = generateBlobDataSubmission(0, 1);
-
-    // Set the snarkHash to a random value for a specific index
-    blobDataSubmission[0].snarkHash = generateRandomBytes(32);
-
-    const encodedCall = lineaRollup.interface.encodeFunctionData("submitBlobs", [
-      blobDataSubmission,
-      parentShnarf,
-      finalShnarf,
-    ]);
-
-    const transaction = await buildBlobTransaction({
-      lineaRollupAddress,
-      encodedCall,
-      compressedBlobs,
-    });
-
-    const signedTx = await getWalletForIndex(2).signTransaction(transaction);
-
-    await expectRevertWithCustomError(
-      lineaRollup,
-      ethers.provider.broadcastTransaction(signedTx),
-      "PointEvaluationFailed",
-    );
   });
 
   it("Should revert if the final shnarf is wrong", async () => {
     const lineaRollupAddress = await lineaRollup.getAddress();
-    const { blobDataSubmission, compressedBlobs, parentShnarf, finalShnarf } = generateBlobDataSubmission(0, 2);
+    const { blobFinalBlockHashes, compressedBlobs, parentShnarf, finalShnarf } = generateBlobDataSubmission(0, 2);
     const badFinalShnarf = generateRandomBytes(32);
 
     const encodedCall = lineaRollup.interface.encodeFunctionData("submitBlobs", [
-      blobDataSubmission,
+      blobFinalBlockHashes,
       parentShnarf,
       badFinalShnarf,
     ]);
@@ -272,11 +238,10 @@ describe("Linea Rollup contract: EIP-4844 Blob submission tests", () => {
     await sendBlobTransaction(lineaRollup, 0, 1);
 
     const lineaRollupAddress = await lineaRollup.getAddress();
-    const { blobDataSubmission, compressedBlobs, parentShnarf, finalShnarf } = generateBlobDataSubmission(0, 1);
+    const { blobFinalBlockHashes, compressedBlobs, parentShnarf, finalShnarf } = generateBlobDataSubmission(0, 1);
 
-    // Try to submit the same blob data again
     const encodedCall = lineaRollup.interface.encodeFunctionData("submitBlobs", [
-      blobDataSubmission,
+      blobFinalBlockHashes,
       parentShnarf,
       finalShnarf,
     ]);
@@ -297,46 +262,13 @@ describe("Linea Rollup contract: EIP-4844 Blob submission tests", () => {
     );
   });
 
-  it("Should revert with PointEvaluationFailed when point evaluation fails", async () => {
-    const lineaRollupAddress = await lineaRollup.getAddress();
-    const { blobDataSubmission, compressedBlobs, parentShnarf, finalShnarf } = generateBlobDataSubmission(0, 1);
-
-    // Modify the kzgProof to an invalid value to trigger the PointEvaluationFailed revert
-    blobDataSubmission[0].kzgProof = HASH_ZERO;
-
-    const encodedCall = lineaRollup.interface.encodeFunctionData("submitBlobs", [
-      blobDataSubmission,
-      parentShnarf,
-      finalShnarf,
-    ]);
-
-    const transaction = await buildBlobTransaction({
-      lineaRollupAddress,
-      encodedCall,
-      compressedBlobs,
-    });
-
-    const signedTx = await getWalletForIndex(2).signTransaction(transaction);
-
-    await expectRevertWithCustomError(
-      lineaRollup,
-      ethers.provider.broadcastTransaction(signedTx),
-      "PointEvaluationFailed",
-    );
-  });
-
   it("Should revert if there is less data than blobs", async () => {
     const lineaRollupAddress = await lineaRollup.getAddress();
 
-    const {
-      blobDataSubmission: blobSubmission,
-      compressedBlobs,
-      parentShnarf,
-      finalShnarf,
-    } = generateBlobDataSubmission(0, 2, true);
+    const { blobFinalBlockHashes, compressedBlobs, parentShnarf, finalShnarf } = generateBlobDataSubmission(0, 2, true);
 
     const encodedCall = lineaRollup.interface.encodeFunctionData("submitBlobs", [
-      [blobSubmission[0]],
+      [blobFinalBlockHashes[0]],
       parentShnarf,
       finalShnarf,
     ]);

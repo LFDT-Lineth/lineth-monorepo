@@ -26,7 +26,7 @@ const func: DeployFunction = withSignerUiSession("03_deploy_Validium.ts", async 
 
   // Validium DEPLOYED AS UPGRADEABLE PROXY
   const verifierAddress = requireAddressFromRegistryOrEnv(network.name, "PlonkVerifier", "VERIFIER_ADDRESS");
-  const validiumInitialStateRootHash = getRequiredEnvVar("INITIAL_L2_STATE_ROOT_HASH");
+  const validiumInitialBlockHash = getRequiredEnvVar("INITIAL_L2_BLOCK_HASH");
   const validiumInitialL2BlockNumber = getRequiredEnvVar("INITIAL_L2_BLOCK_NUMBER");
   const validiumSecurityCouncil = requireAddressFromRegistryOrEnv(
     network.name,
@@ -45,12 +45,16 @@ const func: DeployFunction = withSignerUiSession("03_deploy_Validium.ts", async 
   ]);
   const roleAddresses = getEnvVarOrDefault("VALIDIUM_ROLE_ADDRESSES", defaultRoleAddresses);
   const addressFilter = requireAddressFromRegistryOrEnv(network.name, "AddressFilter", "LINEA_ROLLUP_ADDRESS_FILTER");
+  const verifierKeys = (getEnvVarOrDefault("VALIDIUM_VERIFIER_KEYS", "") as string)
+    .split(",")
+    .map((key) => key.trim())
+    .filter((key) => key.length > 0);
 
   const contract = await deployUpgradableFromFactory(
     "Validium",
     [
       {
-        initialStateRootHash: validiumInitialStateRootHash,
+        initialBlockHash: validiumInitialBlockHash,
         initialL2BlockNumber: validiumInitialL2BlockNumber,
         genesisTimestamp: validiumGenesisTimestamp,
         defaultVerifier: verifierAddress,
@@ -59,6 +63,7 @@ const func: DeployFunction = withSignerUiSession("03_deploy_Validium.ts", async 
         roleAddresses,
         pauseTypeRoles,
         unpauseTypeRoles,
+        verifierKeys,
         defaultAdmin: validiumSecurityCouncil,
         shnarfProvider: ADDRESS_ZERO,
         addressFilter,

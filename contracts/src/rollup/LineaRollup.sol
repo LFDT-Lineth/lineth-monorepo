@@ -38,12 +38,11 @@ contract LineaRollup is
    * @param _livenessRecoveryOperator The liveness recovery operator address.
    * @param _yieldManager The yield manager address.
    */
-  // TODO: determine reinitializer version (currently 9 — increment if this is an upgrade, keep if fresh deploy only)
   function initialize(
     BaseInitializationData calldata _initializationData,
     address _livenessRecoveryOperator,
     address _yieldManager
-  ) external onlyInitializedVersion(0) reinitializer(9) {
+  ) external onlyInitializedVersion(0) reinitializer(10) {
     bytes32 genesisShnarf = _computeShnarf(EMPTY_HASH, _initializationData.initialBlockHash, EMPTY_HASH);
 
     _blobShnarfExists[genesisShnarf] = SHNARF_EXISTS_DEFAULT_VALUE;
@@ -88,5 +87,16 @@ contract LineaRollup is
     nextForcedTransactionNumber = 1;
 
     emit LineaRollupVersionChanged(bytes8("7.1"), bytes8("8.0"));
+  }
+
+  /**
+   * @notice Bumps the ABI version for the blockhash-centric (RISC-V) ABI cutover.
+   * @dev This function is a reinitializer and can only be called once per version. Should be called using an upgradeAndCall transaction to the ProxyAdmin.
+   * @dev Does not populate blockHashes for the last finalized block — the first post-upgrade finalization takes the migration path.
+   * @dev Verifier keys and SET_VERIFIER_KEY_ROLE / UNSET_VERIFIER_KEY_ROLE are configured separately via `grantRole` and
+   *   `setVerifierKeys` after upgrade (kept out of this reinitializer to minimize contract size).
+   */
+  function reinitializeLineaRollupV10() external reinitializer(10) {
+    emit LineaRollupVersionChanged(bytes8("8.0"), bytes8("9.0"));
   }
 }

@@ -3,12 +3,14 @@ import { expect } from "chai";
 import { TestLineaRollup } from "contracts/typechain-types";
 import { ethers } from "hardhat";
 
+import { OPERATOR_ROLE } from "../../common/constants";
 import { deployUpgradableFromFactory } from "../../common/deployment";
+import { generateRandomBytes } from "../../common/helpers";
 
 const EMPTY_HASH = ethers.ZeroHash;
 const INITIAL_BLOCK_NUMBER = 100n;
-const LEGACY_PARENT_STATE_ROOT = ethers.id("legacy-parent-state-root");
-const INITIAL_BLOCK_HASH = ethers.id("initial-block-hash");
+const LEGACY_PARENT_STATE_ROOT = generateRandomBytes(32);
+const INITIAL_BLOCK_HASH = generateRandomBytes(32);
 const PROOF = "0x01";
 
 describe("LineaRollup finalization migration", () => {
@@ -29,7 +31,7 @@ describe("LineaRollup finalization migration", () => {
       roleAddresses: [
         {
           addressWithRole: operator.address,
-          role: ethers.id("OPERATOR_ROLE"),
+          role: OPERATOR_ROLE,
         },
       ],
       pauseTypeRoles: [],
@@ -78,8 +80,8 @@ describe("LineaRollup finalization migration", () => {
       lastFinalizedForcedTransactionNumber: 0n,
       finalForcedTransactionNumber: 0n,
       lastFinalizedForcedTransactionRollingHash: EMPTY_HASH,
-      finalBlockHash: ethers.id("migration-final-block-hash"),
-      finalBlobHash: ethers.id("migration-final-blob-hash"),
+      finalBlockHash: generateRandomBytes(32),
+      finalBlobHash: generateRandomBytes(32),
       l2MerkleRoots: [],
       filteredAddresses: [],
       verifierKeys: [],
@@ -113,7 +115,7 @@ describe("LineaRollup finalization migration", () => {
   it("rejects a nonzero declared parent block hash during migration", async () => {
     const { lineaRollup, operator } = await loadFixture(deployFixture);
     const finalizationData = await createFinalizationData(lineaRollup, {
-      parentBlockHash: ethers.id("unexpected-parent-block-hash"),
+      parentBlockHash: generateRandomBytes(32),
     });
 
     await expect(
@@ -124,7 +126,7 @@ describe("LineaRollup finalization migration", () => {
   it("rejects an incorrect legacy parent state root during migration", async () => {
     const { lineaRollup, operator } = await loadFixture(deployFixture);
     const finalizationData = await createFinalizationData(lineaRollup, {
-      parentStateRootHash: ethers.id("incorrect-parent-state-root"),
+      parentStateRootHash: generateRandomBytes(32),
     });
 
     await expect(
@@ -185,8 +187,8 @@ describe("LineaRollup finalization migration", () => {
     const migrationData = await createFinalizationData(lineaRollup);
     await lineaRollup.connect(operator).finalizeBlocks(PROOF, 0, migrationData);
 
-    const nextFinalBlockHash = ethers.id("next-final-block-hash");
-    const nextFinalBlobHash = ethers.id("next-final-blob-hash");
+    const nextFinalBlockHash = generateRandomBytes(32);
+    const nextFinalBlobHash = generateRandomBytes(32);
     const nextFinalizationData = await createFinalizationData(lineaRollup, {
       parentStateRootHash: EMPTY_HASH,
       parentBlockHash: migrationData.finalBlockHash,
@@ -213,7 +215,7 @@ describe("LineaRollup finalization migration", () => {
 
     const nextFinalizationData = await createFinalizationData(lineaRollup, {
       parentStateRootHash: EMPTY_HASH,
-      parentBlockHash: ethers.id("incorrect-parent-block-hash"),
+      parentBlockHash: generateRandomBytes(32),
       endBlockNumber: 300n,
       shnarfData: {
         ...migrationData.shnarfData,
@@ -221,8 +223,8 @@ describe("LineaRollup finalization migration", () => {
       },
       lastFinalizedTimestamp: migrationData.finalTimestamp,
       finalTimestamp: migrationData.finalTimestamp + 1n,
-      finalBlockHash: ethers.id("next-final-block-hash"),
-      finalBlobHash: ethers.id("next-final-blob-hash"),
+      finalBlockHash: generateRandomBytes(32),
+      finalBlobHash: generateRandomBytes(32),
     });
 
     await expect(
