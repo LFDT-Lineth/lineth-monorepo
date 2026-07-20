@@ -1,0 +1,155 @@
+{
+  "excluded": [
+    {
+      "goField": "Controller.LocalID",
+      "reason": "env-only/CLI (--local-id), not TOML"
+    },
+    {
+      "goField": "Controller.WorkerCmdTmpl",
+      "reason": "mapstructure:\"-\""
+    },
+    {
+      "goField": "Controller.WorkerCmdLargeTmpl",
+      "reason": "mapstructure:\"-\""
+    },
+    {
+      "goField": "PublicInput.MockKeccakWizard",
+      "reason": "not serialized (testing only)"
+    },
+    {
+      "goField": "PublicInput.ChainID",
+      "reason": "filled post-load from layer2"
+    },
+    {
+      "goField": "PublicInput.BaseFee",
+      "reason": "filled post-load from layer2"
+    },
+    {
+      "goField": "PublicInput.CoinBase",
+      "reason": "filled post-load from layer2"
+    },
+    {
+      "goField": "PublicInput.L2MsgServiceAddr",
+      "reason": "filled post-load from layer2"
+    },
+    {
+      "goField": "PublicInput.IsAllowedCircuitID",
+      "reason": "filled post-load from aggregation"
+    },
+    {
+      "goField": "Config.Layer2.MsgSvcContract",
+      "reason": "mapstructure:\"-\""
+    },
+    {
+      "goField": "Config.Layer2.CoinBase",
+      "reason": "mapstructure:\"-\""
+    },
+    {
+      "goField": "TracesLimits.ToLargeMode",
+      "reason": "runtime-only"
+    },
+    {
+      "goField": "TracesLimits.ScalingFactor",
+      "reason": "runtime-only"
+    },
+    {
+      "goField": "TracesLimits.Modules",
+      "reason": "traces_limits documented as note only (no module row dump)"
+    }
+  ],
+  "missingDescriptions": [
+    {
+      "key": "controller.prometheus.enabled",
+      "goField": "Prometheus.Enabled"
+    },
+    {
+      "key": "controller.enable_data_availability",
+      "goField": "Controller.EnableDataAvailability"
+    },
+    {
+      "key": "controller.enable_aggregation",
+      "goField": "Controller.EnableAggregation"
+    },
+    {
+      "key": "controller.enable_invalidity",
+      "goField": "Controller.EnableInvalidity"
+    },
+    {
+      "key": "controller.worker_cmd_tmpl",
+      "goField": "Controller.WorkerCmd"
+    },
+    {
+      "key": "controller.worker_cmd_large_tmpl",
+      "goField": "Controller.WorkerCmdLarge"
+    },
+    {
+      "key": "execution.requests_root_dir",
+      "goField": "WithRequestDir.RequestsRootDir"
+    },
+    {
+      "key": "data_availability.requests_root_dir",
+      "goField": "WithRequestDir.RequestsRootDir"
+    },
+    {
+      "key": "invalidity.requests_root_dir",
+      "goField": "WithRequestDir.RequestsRootDir"
+    },
+    {
+      "key": "aggregation.requests_root_dir",
+      "goField": "WithRequestDir.RequestsRootDir"
+    },
+    {
+      "key": "public_input_interconnection.max_nb_data_availability",
+      "goField": "PublicInput.MaxNbDataAvailability"
+    },
+    {
+      "key": "public_input_interconnection.max_nb_execution",
+      "goField": "PublicInput.MaxNbExecution"
+    },
+    {
+      "key": "public_input_interconnection.max_nb_invalidity",
+      "goField": "PublicInput.MaxNbInvalidity"
+    },
+    {
+      "key": "public_input_interconnection.max_nb_circuits",
+      "goField": "PublicInput.MaxNbCircuits"
+    },
+    {
+      "key": "public_input_interconnection.l2_msg_merkle_depth",
+      "goField": "PublicInput.L2MsgMerkleDepth"
+    },
+    {
+      "key": "public_input_interconnection.l2_msg_max_nb_merkle",
+      "goField": "PublicInput.L2MsgMaxNbMerkle"
+    },
+    {
+      "key": "debug.performance_monitor.active",
+      "goField": "PerformanceMonitor.Active"
+    },
+    {
+      "key": "debug.performance_monitor.sample_duration",
+      "goField": "PerformanceMonitor.SampleDuration"
+    },
+    {
+      "key": "debug.performance_monitor.profile_dir",
+      "goField": "PerformanceMonitor.ProfileDir"
+    },
+    {
+      "key": "debug.performance_monitor.profile",
+      "goField": "PerformanceMonitor.Profile"
+    }
+  ],
+  "unresolvedDefaults": [
+    {
+      "key": "data_availability.max_uncompressed_nb_bytes",
+      "expression": "v1.MaxUncompressedBytes"
+    }
+  ],
+  "tracesLimitsTreatment": "note-only (no module row dump)",
+  "envOnlyExcluded": [
+    {
+      "goField": "Controller.LocalID",
+      "reason": "env-only/CLI (--local-id), not TOML"
+    }
+  ]
+}

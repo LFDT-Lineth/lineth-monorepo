@@ -1,0 +1,834 @@
+{
+  "generatedFrom": "prover/config (static Go parse)",
+  "note": "Public-safe TOML config keys. Defaults from config_default.go only; never from config-*.toml.",
+  "counts": {
+    "total": 59,
+    "sections": 10,
+    "rendered": 59,
+    "excluded": 14
+  },
+  "perSection": {
+    "top-level": {
+      "title": "Top-level",
+      "keyCount": 4,
+      "noteOnly": false
+    },
+    "controller": {
+      "title": "Controller",
+      "keyCount": 14,
+      "noteOnly": false
+    },
+    "execution": {
+      "title": "Execution",
+      "keyCount": 8,
+      "noteOnly": false
+    },
+    "data-availability": {
+      "title": "Data availability",
+      "keyCount": 6,
+      "noteOnly": false
+    },
+    "invalidity": {
+      "title": "Invalidity",
+      "keyCount": 5,
+      "noteOnly": false
+    },
+    "aggregation": {
+      "title": "Aggregation",
+      "keyCount": 5,
+      "noteOnly": false
+    },
+    "public-input-interconnection": {
+      "title": "Public input interconnection",
+      "keyCount": 7,
+      "noteOnly": false
+    },
+    "debug": {
+      "title": "Debug",
+      "keyCount": 6,
+      "noteOnly": false
+    },
+    "layer2": {
+      "title": "Layer2",
+      "keyCount": 4,
+      "noteOnly": false
+    },
+    "traces-limits": {
+      "title": "Traces limits",
+      "keyCount": 0,
+      "noteOnly": true
+    }
+  },
+  "sections": [
+    {
+      "id": "top-level",
+      "title": "Top-level",
+      "noteOnly": false,
+      "partial": "top-level.mdx"
+    },
+    {
+      "id": "controller",
+      "title": "Controller",
+      "noteOnly": false,
+      "partial": "controller.mdx"
+    },
+    {
+      "id": "execution",
+      "title": "Execution",
+      "noteOnly": false,
+      "partial": "execution.mdx"
+    },
+    {
+      "id": "data-availability",
+      "title": "Data availability",
+      "noteOnly": false,
+      "partial": "data-availability.mdx"
+    },
+    {
+      "id": "invalidity",
+      "title": "Invalidity",
+      "noteOnly": false,
+      "partial": "invalidity.mdx"
+    },
+    {
+      "id": "aggregation",
+      "title": "Aggregation",
+      "noteOnly": false,
+      "partial": "aggregation.mdx"
+    },
+    {
+      "id": "public-input-interconnection",
+      "title": "Public input interconnection",
+      "noteOnly": false,
+      "partial": "public-input-interconnection.mdx"
+    },
+    {
+      "id": "debug",
+      "title": "Debug",
+      "noteOnly": false,
+      "partial": "debug.mdx"
+    },
+    {
+      "id": "layer2",
+      "title": "Layer2",
+      "noteOnly": false,
+      "partial": "layer2.mdx"
+    },
+    {
+      "id": "traces-limits",
+      "title": "Traces limits",
+      "noteOnly": true,
+      "partial": "traces-limits.mdx"
+    }
+  ],
+  "keys": [
+    {
+      "key": "aggregation.is_allowed_circuit_id",
+      "goField": "Aggregation.IsAllowedCircuitID",
+      "type": "uint64",
+      "description": "IsAllowedCircuitID is a bitmask encoding which circuit IDs are allowed. Bit i (LSb to MSb) indicates whether circuit ID i is allowed. This should be computed based on the environment (testnet vs mainnet). Use circuits.GlobalCircuitIDMapping to set the appropriate bits.",
+      "required": true,
+      "oneof": null,
+      "allowedRequired": "required",
+      "section": "aggregation",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "aggregation.num_proofs",
+      "goField": "Aggregation.NumProofs",
+      "type": "[]int",
+      "description": "Number of proofs that are supported by the aggregation circuit.",
+      "required": true,
+      "oneof": null,
+      "allowedRequired": "required; gt=0",
+      "section": "aggregation",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "aggregation.prover_mode",
+      "goField": "Aggregation.ProverMode",
+      "type": "string",
+      "description": "ProverMode stores the kind of prover to use.",
+      "required": true,
+      "oneof": ["dev", "full"],
+      "allowedRequired": "required; dev|full",
+      "section": "aggregation",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "aggregation.requests_root_dir",
+      "goField": "WithRequestDir.RequestsRootDir",
+      "type": "string",
+      "description": "",
+      "required": true,
+      "oneof": null,
+      "allowedRequired": "required",
+      "section": "aggregation",
+      "default": "/shared/prover-aggregation",
+      "defaultResolved": true
+    },
+    {
+      "key": "aggregation.verifier_id",
+      "goField": "Aggregation.VerifierID",
+      "type": "int",
+      "description": "during a migration. Verifier ID to assign to the proof once generated. It will be used by the L1 contracts to determine which solidity Plonk verifier contract should be used to verify the proof.",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "gte=0",
+      "section": "aggregation",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "assets_dir",
+      "goField": "Config.AssetsDir",
+      "type": "string",
+      "description": "AssetsDir stores the root of the directory where the assets are stored (setup) or",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "",
+      "section": "top-level",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "controller.defer_to_other_large_codes",
+      "goField": "Controller.DeferToOtherLargeCodes",
+      "type": "[]int",
+      "description": "List of exit codes for which the job will put back the job to be reexecuted in large mode.",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "",
+      "section": "controller",
+      "default": "[137]",
+      "defaultResolved": true
+    },
+    {
+      "key": "controller.enable_aggregation",
+      "goField": "Controller.EnableAggregation",
+      "type": "bool",
+      "description": "",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "",
+      "section": "controller",
+      "default": "true",
+      "defaultResolved": true
+    },
+    {
+      "key": "controller.enable_data_availability",
+      "goField": "Controller.EnableDataAvailability",
+      "type": "bool",
+      "description": "",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "",
+      "section": "controller",
+      "default": "true",
+      "defaultResolved": true
+    },
+    {
+      "key": "controller.enable_execution",
+      "goField": "Controller.EnableExecution",
+      "type": "bool",
+      "description": "defaults to true; the controller will not pick associated jobs if false.",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "",
+      "section": "controller",
+      "default": "true",
+      "defaultResolved": true
+    },
+    {
+      "key": "controller.enable_invalidity",
+      "goField": "Controller.EnableInvalidity",
+      "type": "bool",
+      "description": "",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "",
+      "section": "controller",
+      "default": "true",
+      "defaultResolved": true
+    },
+    {
+      "key": "controller.prometheus.enabled",
+      "goField": "Prometheus.Enabled",
+      "type": "bool",
+      "description": "",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "",
+      "section": "controller",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "controller.prometheus.port",
+      "goField": "Prometheus.Port",
+      "type": "int",
+      "description": "The underlying implementation defaults to :9090.",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "",
+      "section": "controller",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "controller.prometheus.route",
+      "goField": "Prometheus.Route",
+      "type": "string",
+      "description": "The default implementation default to /metrics. The route should be prefixed with a \"/\". If it is not, the underlying implementation will assign it.",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "",
+      "section": "controller",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "controller.retry_delays",
+      "goField": "Controller.RetryDelays",
+      "type": "[]int",
+      "description": "The delays at which we retry when we find no files in the queue. If this is set to [0, 1, 2, 3, 4, 5]. It will retry after 0 sec the first time it cannot find a file in the queue, 1 sec the second time and so on. Once it reaches the final value it keeps it as a final retry delay.",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "",
+      "section": "controller",
+      "default": "[0, 1, 2, 3, 5, 8, 13, 21, 44, 85]",
+      "defaultResolved": true
+    },
+    {
+      "key": "controller.retry_locally_with_large_codes",
+      "goField": "Controller.RetryLocallyWithLargeCodes",
+      "type": "[]int",
+      "description": "List of exit codes for which the job will retry in large mode",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "",
+      "section": "controller",
+      "default": "[77, 333, 2]",
+      "defaultResolved": true
+    },
+    {
+      "key": "controller.spot_instance_reclaim_time_seconds",
+      "goField": "Controller.SpotInstanceReclaimTime",
+      "type": "int",
+      "description": "The number of seconds infra (AWS) waits before reclaiming a spot instance",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "",
+      "section": "controller",
+      "default": "120",
+      "defaultResolved": true
+    },
+    {
+      "key": "controller.termination_grace_period_seconds",
+      "goField": "Controller.TerminationGracePeriod",
+      "type": "int",
+      "description": "The number of seconds the controller should wait before killing a worker after receiving a SIGTERM",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "",
+      "section": "controller",
+      "default": "2700",
+      "defaultResolved": true
+    },
+    {
+      "key": "controller.worker_cmd_large_tmpl",
+      "goField": "Controller.WorkerCmdLarge",
+      "type": "string",
+      "description": "",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "",
+      "section": "controller",
+      "default": "prover prove --config {{.ConfFile}} --in {{.InFile}} --out {{.OutFile}} --large",
+      "defaultResolved": true
+    },
+    {
+      "key": "controller.worker_cmd_tmpl",
+      "goField": "Controller.WorkerCmd",
+      "type": "string",
+      "description": "",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "",
+      "section": "controller",
+      "default": "prover prove --config {{.ConfFile}} --in {{.InFile}} --out {{.OutFile}}",
+      "defaultResolved": true
+    },
+    {
+      "key": "data_availability.dict_nb_bytes",
+      "goField": "DataAvailability.DictNbBytes",
+      "type": "int",
+      "description": "DictNbBytes number of bytes in the prover dictionary",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "gt=0",
+      "section": "data-availability",
+      "default": "65536",
+      "defaultResolved": true
+    },
+    {
+      "key": "data_availability.dict_paths",
+      "goField": "DataAvailability.DictPaths",
+      "type": "[]string",
+      "description": "DictPaths points to dictionaries used for decompressing executions data stored in the DA layer.",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "",
+      "section": "data-availability",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "data_availability.max_nb_batches",
+      "goField": "DataAvailability.MaxNbBatches",
+      "type": "int",
+      "description": "MaxNbBatches is the maximum number of execution batches allowed in a single DA proof.",
+      "required": true,
+      "oneof": null,
+      "allowedRequired": "required; gt=0",
+      "section": "data-availability",
+      "default": "100",
+      "defaultResolved": true
+    },
+    {
+      "key": "data_availability.max_uncompressed_nb_bytes",
+      "goField": "DataAvailability.MaxUncompressedNbBytes",
+      "type": "int",
+      "description": "MaxUncompressedNbBytes is the maximum number of bytes in the uncompressed blob payload.",
+      "required": true,
+      "oneof": null,
+      "allowedRequired": "required; gt=0",
+      "section": "data-availability",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "data_availability.prover_mode",
+      "goField": "DataAvailability.ProverMode",
+      "type": "string",
+      "description": "ProverMode stores the kind of prover to use.",
+      "required": true,
+      "oneof": ["dev", "full"],
+      "allowedRequired": "required; dev|full",
+      "section": "data-availability",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "data_availability.requests_root_dir",
+      "goField": "WithRequestDir.RequestsRootDir",
+      "type": "string",
+      "description": "",
+      "required": true,
+      "oneof": null,
+      "allowedRequired": "required",
+      "section": "data-availability",
+      "default": "/shared/prover-compression",
+      "defaultResolved": true
+    },
+    {
+      "key": "debug.performance_monitor.active",
+      "goField": "PerformanceMonitor.Active",
+      "type": "bool",
+      "description": "",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "",
+      "section": "debug",
+      "default": "false",
+      "defaultResolved": true
+    },
+    {
+      "key": "debug.performance_monitor.profile",
+      "goField": "PerformanceMonitor.Profile",
+      "type": "string",
+      "description": "",
+      "required": false,
+      "oneof": ["prover-steps", "prover-rounds", "all"],
+      "allowedRequired": "prover-steps|prover-rounds|all",
+      "section": "debug",
+      "default": "prover-rounds",
+      "defaultResolved": true
+    },
+    {
+      "key": "debug.performance_monitor.profile_dir",
+      "goField": "PerformanceMonitor.ProfileDir",
+      "type": "string",
+      "description": "",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "",
+      "section": "debug",
+      "default": "/shared/prover-execution/profiling",
+      "defaultResolved": true
+    },
+    {
+      "key": "debug.performance_monitor.sample_duration",
+      "goField": "PerformanceMonitor.SampleDuration",
+      "type": "time.Duration",
+      "description": "",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "",
+      "section": "debug",
+      "default": "1s",
+      "defaultResolved": true
+    },
+    {
+      "key": "debug.profiling",
+      "goField": "Debug.Profiling",
+      "type": "bool",
+      "description": "Profiling indicates whether we want to generate profiles using the [runtime/pprof] pkg. Profiles the entire execution proof request-response lifecycle",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "",
+      "section": "debug",
+      "default": "false",
+      "defaultResolved": true
+    },
+    {
+      "key": "debug.tracing",
+      "goField": "Debug.Tracing",
+      "type": "bool",
+      "description": "Tracing indicates whether we want to generate traces using the [runtime/trace] pkg. Traces can later be read using the `go tool trace` command.",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "",
+      "section": "debug",
+      "default": "false",
+      "defaultResolved": true
+    },
+    {
+      "key": "environment",
+      "goField": "Config.Environment",
+      "type": "string",
+      "description": "Environment is informational only — it indicates which environment (e.g. devnet, sepolia, mainnet) the config file targets. It is not used for setup paths or any runtime logic; all environments share the same setup and are differentiated only by layer2 public inputs.",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "",
+      "section": "top-level",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "execution.can_run_full_large",
+      "goField": "Execution.CanRunFullLarge",
+      "type": "bool",
+      "description": "CanRunFullLarge indicates whether the prover is running on a large machine (and can run full large traces).",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "",
+      "section": "execution",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "execution.conflated_traces_dir",
+      "goField": "Execution.ConflatedTracesDir",
+      "type": "string",
+      "description": "ConflatedTracesDir stores the directory where the conflation traces are stored.",
+      "required": true,
+      "oneof": null,
+      "allowedRequired": "required",
+      "section": "execution",
+      "default": "/shared/traces/conflated",
+      "defaultResolved": true
+    },
+    {
+      "key": "execution.ignore_compatibility_check",
+      "goField": "Execution.IgnoreCompatibilityCheck",
+      "type": "bool",
+      "description": "IgnoreCompatiblityCheck indicates whether to ignore constaints version checking between trace files and zkevm.bin constraint files. Specifically, this check ensures that the zkevm.bin file used within the prover was generated from the same commit of linea-constraints as the generated lt trace file. Set this to true to disable compatibility checks (default: false).",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "",
+      "section": "execution",
+      "default": "false",
+      "defaultResolved": true
+    },
+    {
+      "key": "execution.keep_traces_until_block",
+      "goField": "Execution.KeepTracesUntilBlock",
+      "type": "int",
+      "description": "KeepTraceUntil is an optional parameter (default to 0) that indicates a maximum block height under which the prover will *not* delete the execution traces from EFS. The block height that is compared to this value is the \"end\" block of the request range.",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "",
+      "section": "execution",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "execution.limitless_with_debug",
+      "goField": "Execution.LimitlessWithDebug",
+      "type": "bool",
+      "description": "LimitlessWithDebug is only looked at when the limitless prover is activated. When set to true, the limitless prover will only run in debug mode and not produce any proof. This is useful to investigate bugs in the limitless prover. The field is optional and defaults to false.",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "",
+      "section": "execution",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "execution.prover_mode",
+      "goField": "Execution.ProverMode",
+      "type": "string",
+      "description": "ProverMode stores the kind of prover to use.",
+      "required": true,
+      "oneof": ["dev", "partial", "full", "proofless", "bench", "check-only", "limitless"],
+      "allowedRequired": "required; dev|partial|full|proofless|bench|check-only|limitless",
+      "section": "execution",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "execution.requests_root_dir",
+      "goField": "WithRequestDir.RequestsRootDir",
+      "type": "string",
+      "description": "",
+      "required": true,
+      "oneof": null,
+      "allowedRequired": "required",
+      "section": "execution",
+      "default": "/shared/prover-execution",
+      "defaultResolved": true
+    },
+    {
+      "key": "execution.serialization",
+      "goField": "Execution.Serialization",
+      "type": "bool",
+      "description": "Serialization enables loading the inner circuit (wizard IOP) from a serialized file on disk via memory-mapping, instead of compiling it at proving time. The file is produced during setup by protocol/serde.",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "",
+      "section": "execution",
+      "default": "false",
+      "defaultResolved": true
+    },
+    {
+      "key": "invalidity.can_run_full_large",
+      "goField": "Invalidity.CanRunFullLarge",
+      "type": "bool",
+      "description": "CanRunFullLarge indicates whether the prover can run with large trace limits.",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "",
+      "section": "invalidity",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "invalidity.limitless_with_debug",
+      "goField": "Invalidity.LimitlessWithDebug",
+      "type": "bool",
+      "description": "LimitlessWithDebug is only looked at when the limitless invalidity prover is activated. When set to true, the limitless invalidity prover will only run in debug mode and not produce any proof. This is useful to investigate bugs in the limitless invalidity prover. The field is optional and defaults to false.",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "",
+      "section": "invalidity",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "invalidity.max_rlp_byte_size",
+      "goField": "Invalidity.MaxRlpByteSize",
+      "type": "int",
+      "description": "MaxRlpByteSize specifies the maximum size of the RLP-encoded data, in bytes (this is the payload size without signature)",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "gte=0",
+      "section": "invalidity",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "invalidity.prover_mode",
+      "goField": "Invalidity.ProverMode",
+      "type": "string",
+      "description": "ProverMode stores the kind of prover to use.",
+      "required": true,
+      "oneof": ["dev", "partial", "full", "limitless"],
+      "allowedRequired": "required; dev|partial|full|limitless",
+      "section": "invalidity",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "invalidity.requests_root_dir",
+      "goField": "WithRequestDir.RequestsRootDir",
+      "type": "string",
+      "description": "",
+      "required": true,
+      "oneof": null,
+      "allowedRequired": "required",
+      "section": "invalidity",
+      "default": "/shared/prover-invalidity",
+      "defaultResolved": true
+    },
+    {
+      "key": "layer2.base_fee",
+      "goField": "Config.Layer2.BaseFee",
+      "type": "uint",
+      "description": "No validator tag: presence is enforced in newConfigFromFile via viper.IsSet. `required` would reject 0, which is valid on gasless chains where every block has baseFeePerGas=0.",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "",
+      "section": "layer2",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "layer2.chain_id",
+      "goField": "Config.Layer2.ChainID",
+      "type": "uint",
+      "description": "ChainID stores the ID of the Linea L2 network to consider.",
+      "required": true,
+      "oneof": null,
+      "allowedRequired": "required",
+      "section": "layer2",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "layer2.coin_base",
+      "goField": "Config.Layer2.CoinBaseStr",
+      "type": "string",
+      "description": "CoinBaseStr stores the coinbase address of Linea as a string.",
+      "required": true,
+      "oneof": null,
+      "allowedRequired": "required; eth_addr",
+      "section": "layer2",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "layer2.message_service_contract",
+      "goField": "Config.Layer2.MsgSvcContractStr",
+      "type": "string",
+      "description": "MsgSvcContractStr stores the unique ID of the Service Contract (SC), that is, it's address, as a string. The Service Contract (SC) is a smart contract that the L2 network uses to send messages (i.e., transactions) to the L1 (mainnet). Use this field when you need the ETH address as a string.",
+      "required": true,
+      "oneof": null,
+      "allowedRequired": "required; eth_addr",
+      "section": "layer2",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "log_level",
+      "goField": "Config.LogLevel",
+      "type": "uint8",
+      "description": "LogLevel sets the log level for the logger.",
+      "required": true,
+      "oneof": null,
+      "allowedRequired": "required; gte=0; lte=6",
+      "section": "top-level",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "public_input_interconnection.execution_max_nb_msg",
+      "goField": "PublicInput.ExecutionMaxNbMsg",
+      "type": "int",
+      "description": "if not set, will be set to MaxNbDA + MaxNbExecution +maxNbInvalidity",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "gte=0",
+      "section": "public-input-interconnection",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "public_input_interconnection.l2_msg_max_nb_merkle",
+      "goField": "PublicInput.L2MsgMaxNbMerkle",
+      "type": "int",
+      "description": "",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "gte=0",
+      "section": "public-input-interconnection",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "public_input_interconnection.l2_msg_merkle_depth",
+      "goField": "PublicInput.L2MsgMerkleDepth",
+      "type": "int",
+      "description": "",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "gte=0",
+      "section": "public-input-interconnection",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "public_input_interconnection.max_nb_circuits",
+      "goField": "PublicInput.MaxNbCircuits",
+      "type": "int",
+      "description": "",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "gte=0",
+      "section": "public-input-interconnection",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "public_input_interconnection.max_nb_data_availability",
+      "goField": "PublicInput.MaxNbDataAvailability",
+      "type": "int",
+      "description": "",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "gte=0",
+      "section": "public-input-interconnection",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "public_input_interconnection.max_nb_execution",
+      "goField": "PublicInput.MaxNbExecution",
+      "type": "int",
+      "description": "",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "gte=0",
+      "section": "public-input-interconnection",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "public_input_interconnection.max_nb_invalidity",
+      "goField": "PublicInput.MaxNbInvalidity",
+      "type": "int",
+      "description": "",
+      "required": false,
+      "oneof": null,
+      "allowedRequired": "gte=0",
+      "section": "public-input-interconnection",
+      "default": null,
+      "defaultResolved": false
+    },
+    {
+      "key": "version",
+      "goField": "Config.Version",
+      "type": "string",
+      "description": "if we supply as is to coordinator in responses, coordinator should parse semver",
+      "required": true,
+      "oneof": null,
+      "allowedRequired": "required; semver",
+      "section": "top-level",
+      "default": null,
+      "defaultResolved": false
+    }
+  ]
+}

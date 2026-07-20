@@ -1,0 +1,186 @@
+name: "Prover config docs"
+
+# Generates Linea prover TOML config MDX partials and (optionally) opens a PR
+# into Consensys/doc.linea writing ONLY docs/stack/reference/_generated/prover/.
+#
+# Extraction is a Node static parse of prover/config/*.go (no Go compile).
+# Live PR path requires the CREATE_GITHUB_PR GitHub App installed on
+# Consensys/doc.linea (TechOps). Until then, use dry_run=true (default).
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Generate + check only; do not open a doc.linea PR"
+        required: false
+        type: boolean
+        default: true
+  # Enable once the CREATE_GITHUB_PR app is installed on Consensys/doc.linea:
+  # push:
+  #   tags:
+  #     - 'prover-*'
+
+concurrency:
+  group: prover-config-docs-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generate-drift-check:
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+    steps:
+      - name: Checkout monorepo
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+          cache-dependency-path: scripts/prover-options/pnpm-lock.yaml
+
+      - name: Install generator dependencies
+        working-directory: scripts/prover-options
+        run: pnpm install --frozen-lockfile
+
+      # check alone is the drift gate: re-extracts and compares to committed output/
+      # (do not run generate first — that would rewrite output/ and make drift tautological)
+      - name: Drift + completeness check
+        working-directory: scripts/prover-options
+        run: pnpm run check
+
+      - name: Dry-run summary
+        if: ${{ inputs.dry_run }}
+        working-directory: scripts/prover-options
+        run: |
+          set -euo pipefail
+          echo "Dry-run: check passed against committed output (no doc.linea PR)."
+          echo "Committed partials:"
+          find output/_generated/prover -type f -name '*.mdx' | sort
+
+  publish-doc-linea:
+    if: ${{ !inputs.dry_run }}
+    needs: generate-drift-check
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+    permissions:
+      contents: read
+    steps:
+      - name: Ensure running on main or prover tag
+        if: github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/prover-')
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          echo "::error::prover-config-docs publish must be triggered from main or a prover-* tag, got $REF"
+          exit 1
+
+      - name: Checkout monorepo
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+          cache-dependency-path: scripts/prover-options/pnpm-lock.yaml
+
+      - name: Install generator dependencies
+        working-directory: scripts/prover-options
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate partials
+        working-directory: scripts/prover-options
+        run: pnpm run generate
+
+      # Publish-only stamp: not part of monorepo generate/check (avoids SHA drift on every commit).
+      - name: Write provenance partial
+        working-directory: scripts/prover-options
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          SOURCE_REF_NAME: ${{ github.ref_name }}
+          SOURCE_REF_TYPE: ${{ github.ref_type }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${SOURCE_SHA}" ]]; then
+            echo "Refusing to publish: GITHUB_SHA / SOURCE_SHA is empty" >&2
+            exit 1
+          fi
+          SHORT="${SOURCE_SHA:0:7}"
+          OUT="output/_generated/prover/provenance.mdx"
+          mkdir -p "$(dirname "$OUT")"
+          LINE="Generated from [\`LFDT-Lineth/lineth-monorepo@${SHORT}\`](https://github.com/LFDT-Lineth/lineth-monorepo/commit/${SOURCE_SHA})."
+          if [[ "${SOURCE_REF_TYPE}" == "tag" && "${SOURCE_REF_NAME}" == prover-* ]]; then
+            LINE="${LINE} (release \`${SOURCE_REF_NAME}\`)."
+          fi
+          {
+            echo "${LINE}"
+            echo ""
+            echo "Keys may differ in other prover releases."
+            echo ""
+          } > "$OUT"
+          echo "Wrote $OUT"
+          cat "$OUT"
+
+      - name: Generate App token for Consensys/doc.linea
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.CREATE_GITHUB_PR_APP_ID }}
+          private-key: ${{ secrets.CREATE_GITHUB_PR_PRIVATE_KEY }}
+          owner: Consensys
+          repositories: |
+            doc.linea
+
+      - name: Checkout doc.linea
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: Consensys/doc.linea
+          token: ${{ steps.app-token.outputs.token }}
+          path: doc.linea
+
+      - name: Copy only _generated/prover partials
+        run: |
+          set -euo pipefail
+          DEST="doc.linea/docs/stack/reference/_generated/prover"
+          SRC="scripts/prover-options/output/_generated/prover"
+          if [[ -z "$(find "$SRC" -type f -name '*.mdx' | head -1)" ]]; then
+            echo "Refusing to publish: no MDX partials under $SRC" >&2
+            exit 1
+          fi
+          rm -rf "$DEST"
+          mkdir -p "$DEST"
+          cp -R "$SRC/." "$DEST/"
+          # Hard invariant: never touch the human-owned wrapper.
+          if git -C doc.linea status --porcelain -- "docs/stack/reference/linea-prover-options.mdx" | grep -q .; then
+            echo "Refusing to proceed: wrapper page would be modified." >&2
+            exit 1
+          fi
+          echo "Staged doc.linea changes (should be under _generated/prover only):"
+          git -C doc.linea status --short
+
+      - name: Set timestamp
+        id: timestamp
+        shell: bash
+        run: echo "TIMESTAMP=$(date -u +%Y%m%d%H%M%S)" >> "$GITHUB_OUTPUT"
+
+      - name: Create pull request on doc.linea
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          path: doc.linea
+          commit-message: "docs: update Linea prover config partials"
+          branch: ci/prover-config-docs-${{ steps.timestamp.outputs.TIMESTAMP }}
+          base: main
+          title: "docs: update Linea prover config partials"
+          body: |
+            Auto-generated Linea prover TOML config MDX partials from `LFDT-Lineth/lineth-monorepo`.
+
+            This PR updates **only** `docs/stack/reference/_generated/prover/`.
+            The human-owned wrapper `linea-prover-options.mdx` is intentionally untouched.
+          add-paths: |
+            docs/stack/reference/_generated/prover/**
