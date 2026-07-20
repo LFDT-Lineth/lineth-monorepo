@@ -81,7 +81,11 @@ class Web3SignerRestClientTest {
     assertThat(web3SignerClient.publicKey()).isEqualTo(publicKeyBytes)
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     val signed = web3SignerClient.sign(digest).get()
+=======
+    val signed = web3SignerClient.sign(msg.toByteArray()).get()
+>>>>>>> ee3d4c440 (feat(jvm-libs): unify signing behind an opaque Signer contract in signer-interfaces (#3552))
 =======
     val signed = web3SignerClient.sign(msg.toByteArray()).get()
 >>>>>>> ee3d4c440 (feat(jvm-libs): unify signing behind an opaque Signer contract in signer-interfaces (#3552))
@@ -133,7 +137,11 @@ class Web3SignerRestClientTest {
         ),
     )
 <<<<<<< HEAD
+<<<<<<< HEAD
     assertThrows<Exception> { web3SignerClient.sign(Hash.sha3("Message".toByteArray())).get() }
+=======
+    assertThrows<Exception> { web3SignerClient.sign("Message".toByteArray()).get() }
+>>>>>>> ee3d4c440 (feat(jvm-libs): unify signing behind an opaque Signer contract in signer-interfaces (#3552))
 =======
     assertThrows<Exception> { web3SignerClient.sign("Message".toByteArray()).get() }
 >>>>>>> ee3d4c440 (feat(jvm-libs): unify signing behind an opaque Signer contract in signer-interfaces (#3552))
