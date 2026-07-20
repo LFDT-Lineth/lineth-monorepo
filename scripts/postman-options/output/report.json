@@ -1,0 +1,182 @@
+{
+  "missingDescriptions": [
+    {
+      "envVar": "POSTGRES_HOST",
+      "field": "databaseOptions.host",
+      "schemaField": null
+    },
+    {
+      "envVar": "POSTGRES_PORT",
+      "field": "databaseOptions.port",
+      "schemaField": null
+    },
+    {
+      "envVar": "POSTGRES_USER",
+      "field": "databaseOptions.username",
+      "schemaField": null
+    },
+    {
+      "envVar": "POSTGRES_PASSWORD",
+      "field": "databaseOptions.password",
+      "schemaField": null
+    },
+    {
+      "envVar": "POSTGRES_DB",
+      "field": "databaseOptions.database",
+      "schemaField": null
+    },
+    {
+      "envVar": "POSTGRES_SSL",
+      "field": "databaseOptions.ssl",
+      "schemaField": null
+    },
+    {
+      "envVar": "POSTGRES_SSL_REJECT_UNAUTHORIZED",
+      "field": "databaseOptions.ssl.rejectUnauthorized",
+      "schemaField": null
+    },
+    {
+      "envVar": "POSTGRES_SSL_CA_PATH",
+      "field": "databaseOptions.ssl.ca",
+      "schemaField": null
+    }
+  ],
+  "placeholderDefaults": [
+    {
+      "envVar": "L1_RPC_URL",
+      "placeholder": ""
+    },
+    {
+      "envVar": "L1_CONTRACT_ADDRESS",
+      "placeholder": ""
+    },
+    {
+      "envVar": "L2_RPC_URL",
+      "placeholder": ""
+    },
+    {
+      "envVar": "L2_CONTRACT_ADDRESS",
+      "placeholder": ""
+    },
+    {
+      "envVar": "L1_SIGNER_PRIVATE_KEY",
+      "placeholder": "0x"
+    },
+    {
+      "envVar": "L2_SIGNER_PRIVATE_KEY",
+      "placeholder": "0x"
+    },
+    {
+      "envVar": "L1_WEB3_SIGNER_ENDPOINT",
+      "placeholder": ""
+    },
+    {
+      "envVar": "L2_WEB3_SIGNER_ENDPOINT",
+      "placeholder": ""
+    },
+    {
+      "envVar": "L1_WEB3_SIGNER_PUBLIC_KEY",
+      "placeholder": "0x"
+    },
+    {
+      "envVar": "L2_WEB3_SIGNER_PUBLIC_KEY",
+      "placeholder": "0x"
+    },
+    {
+      "envVar": "L1_WEB3_SIGNER_TLS_KEYSTORE_PASSWORD",
+      "placeholder": ""
+    },
+    {
+      "envVar": "L2_WEB3_SIGNER_TLS_KEYSTORE_PASSWORD",
+      "placeholder": ""
+    },
+    {
+      "envVar": "L1_WEB3_SIGNER_TLS_TRUSTSTORE_PATH",
+      "placeholder": ""
+    },
+    {
+      "envVar": "L2_WEB3_SIGNER_TLS_TRUSTSTORE_PATH",
+      "placeholder": ""
+    },
+    {
+      "envVar": "L1_WEB3_SIGNER_TLS_TRUSTSTORE_PASSWORD",
+      "placeholder": ""
+    },
+    {
+      "envVar": "L2_WEB3_SIGNER_TLS_TRUSTSTORE_PASSWORD",
+      "placeholder": ""
+    },
+    {
+      "envVar": "L1_AWS_KMS_KEY_ID",
+      "placeholder": ""
+    },
+    {
+      "envVar": "L2_AWS_KMS_KEY_ID",
+      "placeholder": ""
+    },
+    {
+      "envVar": "POSTGRES_HOST",
+      "placeholder": "127.0.0.1",
+      "reason": "secret-default-suppressed"
+    },
+    {
+      "envVar": "POSTGRES_USER",
+      "placeholder": "postgres",
+      "reason": "secret-default-suppressed"
+    },
+    {
+      "envVar": "POSTGRES_PASSWORD",
+      "placeholder": "postgres",
+      "reason": "secret-default-suppressed"
+    }
+  ],
+  "secretVars": [
+    "L1_AWS_KMS_KEY_ID",
+    "L1_AWS_KMS_REGION",
+    "L1_CLAIM_VIA_ADDRESS",
+    "L1_CONTRACT_ADDRESS",
+    "L1_EVENT_FILTER_FROM_ADDRESS",
+    "L1_EVENT_FILTER_TO_ADDRESS",
+    "L1_RPC_URL",
+    "L1_SIGNER_PRIVATE_KEY",
+    "L1_WEB3_SIGNER_ENDPOINT",
+    "L1_WEB3_SIGNER_PUBLIC_KEY",
+    "L1_WEB3_SIGNER_TLS_KEYSTORE_PASSWORD",
+    "L1_WEB3_SIGNER_TLS_KEYSTORE_PATH",
+    "L1_WEB3_SIGNER_TLS_TRUSTSTORE_PASSWORD",
+    "L1_WEB3_SIGNER_TLS_TRUSTSTORE_PATH",
+    "L2_AWS_KMS_KEY_ID",
+    "L2_AWS_KMS_REGION",
+    "L2_CLAIM_VIA_ADDRESS",
+    "L2_CONTRACT_ADDRESS",
+    "L2_EVENT_FILTER_FROM_ADDRESS",
+    "L2_EVENT_FILTER_TO_ADDRESS",
+    "L2_RPC_URL",
+    "L2_SIGNER_PRIVATE_KEY",
+    "L2_WEB3_SIGNER_ENDPOINT",
+    "L2_WEB3_SIGNER_PUBLIC_KEY",
+    "L2_WEB3_SIGNER_TLS_KEYSTORE_PASSWORD",
+    "L2_WEB3_SIGNER_TLS_KEYSTORE_PATH",
+    "L2_WEB3_SIGNER_TLS_TRUSTSTORE_PASSWORD",
+    "L2_WEB3_SIGNER_TLS_TRUSTSTORE_PATH",
+    "POSTGRES_HOST",
+    "POSTGRES_PASSWORD",
+    "POSTGRES_SSL_CA_PATH",
+    "POSTGRES_USER"
+  ],
+  "uncorrelated": [],
+  "schemaOnlyNoEnv": [
+    {
+      "field": "claiming.feeRecipientAddress",
+      "reason": "Present in schema.ts with .describe() but no envLoader.ts mapping"
+    }
+  ],
+  "inventoryGaps": {
+    "missingFromInventory": [],
+    "extraInInventory": []
+  },
+  "sourceFiles": [
+    "postman/src/application/postman/app/config/envLoader.ts",
+    "postman/src/application/postman/app/config/schema.ts"
+  ]
+}
