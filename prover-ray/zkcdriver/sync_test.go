@@ -88,7 +88,7 @@ func TestZkcIntegrationTestSynced(t *testing.T) {
 				l := lineNr
 				t.Run(fmt.Sprintf("case=%d", lineNr), func(t *testing.T) {
 					t.Parallel()
-					sys, zkcInput, zkcOutputs, err := parseTestCase(zkcTestCase{ZkcFilePath: f, InputStr: line}, binF)
+					zkcInput, zkcOutputs, err := parseTestCase(zkcTestCase{ZkcFilePath: f, InputStr: line}, binF)
 					if err != nil {
 						fatalIfNotKnown(t, failures, baseName, l, failReasonParse, "failed to parse test case: %v", err)
 						return
@@ -99,7 +99,7 @@ func TestZkcIntegrationTestSynced(t *testing.T) {
 							return
 						}
 					}
-					if err = runProveVerify(sys, zkcInput, binF, sysPipeline); err != nil {
+					if err = runProveVerify(zkcInput, binF, sysPipeline); err != nil {
 						fatalIfNotKnown(t, failures, baseName, l, failReasonProve, "failed to run test case: %v", err)
 						return
 					}

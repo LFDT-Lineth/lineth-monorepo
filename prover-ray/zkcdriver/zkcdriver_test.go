@@ -64,20 +64,16 @@ func compileBinaryConstraints(srcPath string) (binfile *constraints.BinaryFile[k
 // parseTestCase creates a system and the corresponding zkc-driver running the
 // given zkcTestCase. The function also sanity-checks the inputs of the testcase.
 func parseTestCase(scenario zkcTestCase, binF *constraints.BinaryFile[koalabear.Element]) (
-	sys *wiop.System,
 	inputs *zkcdriver.PreReadInputs,
 	outputs map[string][]byte,
 	err error,
 ) {
-	// Create a system
-	sys = wiop.NewSystemf("zkc-test/%s", scenario.ZkcFilePath)
-	sys.NewRound()
 
 	// Parse the inputs of the test-case
 	inputs = &zkcdriver.PreReadInputs{}
 	inputs.Inputs, inputs.Err = zkc_util.ParseJsonInputFile([]byte(scenario.InputStr))
 	if inputs.Err != nil {
-		return nil, nil, nil, fmt.Errorf("could not parse test-case inputs: %w", inputs.Err)
+		return nil, nil, fmt.Errorf("could not parse test-case inputs: %w", inputs.Err)
 	}
 	// the input file also has outputs what the zkc program produces. Lets
 	// filter them out for tracing purposes, so that we can sanity-check the
@@ -87,10 +83,10 @@ func parseTestCase(scenario zkcTestCase, binF *constraints.BinaryFile[koalabear.
 	// This sanity-checks the corset inputs of the test-case
 	outputs, err = traceZkc(binF, constraints.DEFAULT_TRACE_CONFIG, filteredInputs)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("constraint check failed: %w", err)
+		return nil, nil, fmt.Errorf("constraint check failed: %w", err)
 	}
 
-	return sys, inputs, outputs, nil
+	return inputs, outputs, nil
 }
 
 func traceZkc(
@@ -131,7 +127,7 @@ func proverCompilePipeline(sys *wiop.System) {
 }
 
 // runProveVerify proves and verifies a given test-case, returning an error if the proof fails to verify.
-func runProveVerify(sys *wiop.System, inputs *zkcdriver.PreReadInputs, binFile *constraints.BinaryFile[koalabear.Element], proverCompilePipeline func(*wiop.System)) (err error) {
+func runProveVerify(inputs *zkcdriver.PreReadInputs, binFile *constraints.BinaryFile[koalabear.Element], proverCompilePipeline func(*wiop.System)) (err error) {
 	// recover panics. ZKC tends to panic when it fails tracing, so we want to catch those and return them as errors.
 	defer func() {
 		r := recover()
@@ -139,6 +135,9 @@ func runProveVerify(sys *wiop.System, inputs *zkcdriver.PreReadInputs, binFile *
 			err = fmt.Errorf("panic during test-case execution: %v", r)
 		}
 	}()
+	// Create a system
+	sys := wiop.NewSystemf("zkc-test")
+	sys.NewRound()
 
 	// lets do constraint serialization roundtrip, to ensure that the binary file is still valid after serialization
 	compiledConstraints, err := binFile.MarshalBinary()
