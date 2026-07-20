@@ -13,7 +13,7 @@ services:
       - ./config/coordinator/coordinator-config-v2.toml:/coordinator/coordinator-config-v2.toml:ro
 
   maru:
-    image: consensys/maru:${MARU_TAG:-v1.2.1-20260410142843-d326b73}
+    image: consensys/maru:${MARU_TAG:-1.3.0-20260714-ced387a}
     hostname: maru
     container_name: maru
     profiles: [ "l2", "l2-bc", "debug" ]
