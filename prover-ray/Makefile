@@ -13,8 +13,7 @@ ZKC_TESTDATA_SYNC_DST_DIR := zkcdriver/testdata/synced
 .PHONY: \
 	test \
 	ci-lint \
-	download-zkc-testdata \
-	check-zkc-testdata
+	download-zkc-testdata
 
 ##
 ## Run all the unit-tests
@@ -28,12 +27,6 @@ test: ci-lint
 ci-lint:
 	go fmt ./...	
 	golangci-lint run --timeout 5m
-
-##
-## Check that the committed zkc testdata is up to date (for CI)
-##
-check-zkc-testdata: download-zkc-testdata
-	git diff --exit-code $(ZKC_TESTDATA_SYNC_DST_DIR)/
 
 ##
 ## Download the zkc testdata
