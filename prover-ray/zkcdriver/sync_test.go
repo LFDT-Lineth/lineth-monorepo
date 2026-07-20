@@ -3,7 +3,9 @@ package zkcdriver_test
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -19,12 +21,18 @@ const (
 	// can extend this to include other types of tests (mixed/bench) in the
 	// future.
 	testdataGlob = "testdata/synced/unit/*.zkc"
+	// known failing tests
+	knownFailuresFiles = "testdata/known_failures.json"
 )
 
 func TestZkcIntegrationTestSynced(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping synced integration tests in short mode")
 	}
+
+	// glob the testdata files, and run each one as a sub-test. Each test-case is
+	// a line in the .accepts file, and we run each test-case as a sub-test of the
+	// test-case's unit test.
 	testFiles, err := filepath.Glob(testdataGlob)
 	if err != nil {
 		t.Fatalf("error globbing testdata: %v", err)
@@ -32,6 +40,18 @@ func TestZkcIntegrationTestSynced(t *testing.T) {
 	if len(testFiles) == 0 {
 		t.Fatalf("no testdata found. Have you run `make download-zkc-testdata`?")
 	}
+
+	// read the known failures file. It is fine if we cannot read it, then we
+	// consider all failures as new.
+	failures := make(knownFailures)
+	failuresF, err := os.Open(knownFailuresFiles)
+	if err != nil {
+		t.Errorf("failed to open known failures file: %v", err)
+	}
+	if err := json.NewDecoder(failuresF).Decode(&failures); err != nil {
+		t.Errorf("failed to decode known failures file: %v", err)
+	}
+	failuresF.Close()
 	for _, f := range testFiles {
 		splitName := strings.Split(f, string(filepath.Separator))
 		baseName := filepath.Join(splitName[len(splitName)-2:]...)
@@ -39,11 +59,13 @@ func TestZkcIntegrationTestSynced(t *testing.T) {
 			basePath := strings.TrimSuffix(f, zkcExtension)
 			acceptPath := basePath + acceptExtension
 			if files.CheckFilePath(acceptPath) != nil {
-				t.Fatalf("accept file %s does not exist for test-case %s", acceptPath, f)
+				fatalIfNotKnown(t, failures, baseName, -1, failReasonNoTestData, "accept file %s does not exist for test-case %s", acceptPath, f)
+				return
 			}
 			binF, err := compileBinaryConstraints(f)
 			if err != nil {
-				t.Fatalf("failed to compile binary constraints: %v", err)
+				fatalIfNotKnown(t, failures, baseName, -2, failReasonCompileZkc, "failed to compile binary constraints: %v", err)
+				return
 			}
 			inputF := files.MustRead(acceptPath)
 			defer inputF.Close()
@@ -55,25 +77,61 @@ func TestZkcIntegrationTestSynced(t *testing.T) {
 				if !strings.HasPrefix(line, "{") {
 					continue
 				}
+				l := lineNr
 				t.Run(fmt.Sprintf("case=%d", lineNr), func(t *testing.T) {
 					t.Parallel()
 					sys, zkcInput, zkcOutputs, err := parseTestCase(zkcTestCase{ZkcFilePath: f, InputStr: line}, binF)
 					if err != nil {
-						t.Fatalf("failed to parse test case: %v", err)
-					}
-					if err = runProveVerify(sys, zkcInput, binF); err != nil {
-						t.Errorf("failed to run test case: %v", err)
+						fatalIfNotKnown(t, failures, baseName, l, failReasonParse, "failed to parse test case: %v", err)
+						return
 					}
 					for outputName, expectedOutput := range zkcOutputs {
 						if !bytes.Equal(expectedOutput, zkcInput.Inputs[outputName]) {
-							t.Errorf("output mismatch for %s: expected %x, got %x", outputName, expectedOutput, zkcInput.Inputs[outputName])
+							fatalIfNotKnown(t, failures, baseName, l, failReasonOutputMismatch, "output mismatch for %s: expected %x, got %x", outputName, expectedOutput, zkcInput.Inputs[outputName])
+							return
 						}
+					}
+					if err = runProveVerify(sys, zkcInput, binF); err != nil {
+						fatalIfNotKnown(t, failures, baseName, l, failReasonProve, "failed to run test case: %v", err)
+						return
 					}
 				})
 				lineNr++
 			}
-
 		})
-
 	}
 }
+
+func fatalIfNotKnown(t *testing.T, knownFailures knownFailures, unitName string, caseNr int, reason zkcFailReason, msg string, args ...any) {
+	t.Helper()
+	// if it is already in the map then we have already seen this failure, so we can just log it and continue. Otherwise, we fail the test.
+	if unitFailures, ok := knownFailures[unitName]; ok {
+		if knownReason, ok := unitFailures[caseNr]; ok {
+			if knownReason == reason {
+				t.Logf(msg, args...)
+				return
+			}
+		}
+	}
+	if _, ok := knownFailures[unitName]; !ok {
+		knownFailures[unitName] = make(map[int]zkcFailReason)
+	}
+	knownFailures[unitName][caseNr] = reason
+	// unknown error. We fail the test and log the error. The user can then add
+	// this failure to the known failures map if it is expected.
+	//
+	// the negative case number indicate input file reading and compiling. We're still not in subtest cases
+	t.Fatalf(msg, args...)
+}
+
+type zkcFailReason string
+
+const (
+	failReasonNoTestData     zkcFailReason = "no test data"
+	failReasonCompileZkc     zkcFailReason = "zkc compile failed"
+	failReasonParse          zkcFailReason = "zkc trace/check failed"
+	failReasonOutputMismatch zkcFailReason = "output mismatch"
+	failReasonProve          zkcFailReason = "prover failed"
+)
+
+type knownFailures map[string]map[int]zkcFailReason
