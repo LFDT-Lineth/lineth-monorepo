@@ -226,12 +226,10 @@ jobs:
               "/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc" "${3:-}"
           }
 
-          run_zkc_compile() {  # $1=variant  $2=log path  $3=json  $4=zkc_main
-            "/tmp/zkc-${1}" compile --stats --inline "$3" "$4" >"$2" 2>&1 || true
-            cat "$2"
-            printf '### zkc-%s compile --stats (%s)\n```\n' "$1" "$(basename "$3" .json)" >> "$GITHUB_STEP_SUMMARY"
-            cat "$2" >> "$GITHUB_STEP_SUMMARY"
-            printf '```\n' >> "$GITHUB_STEP_SUMMARY"
+          run_zkc_compile() {  # $1=variant (opt|base)  $2=label (warmup|iter#)
+            local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
+            local log="/tmp/bench/logs/compile_${1}_${2}.log"
+            "/tmp/zkc-${1}" compile --stats --inline "$zkc_main" >"$log" 2>&1 || true
           }
 
           run_keccak() {  # $1=variant (opt|base)  $2=label (warmup|iter#)  optional: --fast
@@ -279,14 +277,16 @@ jobs:
             done
           }
 
+          ## Run stats separately while tracing is not possible
+          reset_state; log "${wl}: warmup opt  (untimed)"; run_zkc_compile opt  warmup
+          reset_state; log "${wl}: warmup base (untimed)"; run_zkc_compile base warmup
+          ## Loop on workloads
           for wl in keccak blake l2_guest; do
             log "=== workload: ${wl} ==="
             # Untimed warmup: opt then base. Primes the page cache and shared libs
             # so both branches face an already-warm filesystem on iteration 1.
             reset_state; log "${wl}: warmup opt  (untimed)"; run_${wl} opt  warmup --fast
             reset_state; log "${wl}: warmup base (untimed)"; run_${wl} base warmup --fast
-            reset_state; log "${wl}: warmup opt  (untimed)"; run_zkc_compile opt  warmup
-            reset_state; log "${wl}: warmup base (untimed)"; run_zkc_compile base warmup
             # Timed runs: opt_i, base_i alternating, starting with opt.
             # Run in fast (with gogen) or tracing mode
             for i in $(seq 1 "$ITERS"); do
@@ -331,6 +331,15 @@ jobs:
             -blake-rounds ${{ inputs.n_rounds_blake || 12 }} \
             | tee -a "$GITHUB_STEP_SUMMARY" \
             | tee /tmp/bench/logs/summary.md
+          ## Print stats for warmup at the end of the benchmark
+          for variant in opt base; do
+            log="/tmp/bench/logs/compile_${variant}_warmup.log"
+            if [[ -f "$log" ]]; then
+              printf '### Interpreter %s constraints stats\n```\n' "$variant" >> "$GITHUB_STEP_SUMMARY"
+              cat "$log" >> "$GITHUB_STEP_SUMMARY"
+              printf '```\n' >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
 
       - name: Upload benchmark logs
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
