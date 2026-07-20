@@ -137,6 +137,13 @@ jobs:
             sleep 5
           }
 
+          # Run stats separately while tracing is not possible
+          run_compile_native_keccak() {  # $1=variant (base|opt)  $2=label (warmup|iter#)
+            local log="/tmp/bench/logs/compile_${1}_${2}.log"
+            "/tmp/zkc-${1}" compile --stats --quiet --inline --field KOALABEAR_16 \
+              /tmp/keccakf_input.json "$zkc_prog" >"$log" 2>&1 || true
+          }
+
           # Run fast mode with gogen
           run_gogen_native_keccak() {  # $1=variant (base|opt)  $2=label (warmup|iter#)
             local variant="$1" label="$2" zkc_bin="/tmp/zkc-${1}"
@@ -158,9 +165,11 @@ jobs:
               > "/tmp/bench/logs/keccak_${1}_${2}.log" 2>&1
           }
 
+          ## Loop on variants
           for variant in base opt; do
             log "=== variant: ${variant} ==="
             reset_state; log "${variant}: warmup (untimed)"; run_native_keccak "$variant" warmup --fast
+            reset_state; log "stats run: ${variant} (untimed)"; run_compile_native_keccak "$variant" warmup
             for i in $(seq 1 "$ITERS"); do
               reset_state; log "${variant}: iter ${i}/${ITERS}"
               if [[ "$FAST_MODE" == "true" ]]; then
@@ -171,23 +180,6 @@ jobs:
             done
           done
           log "all variants done"
-
-      - name: Print zkc --stats for base and optim
-        if: always()
-        run: |
-          zkc_prog="$PWD/arithmetization/src/test/zkc/keccakf/keccakf_batched.zkc"
-          for variant in base opt; do
-            echo "=== zkc-${variant} compile --stats ==="
-            stats_file="/tmp/zkc_stats_${variant}.txt"
-            "/tmp/zkc-${variant}" compile --stats --quiet --inline --field KOALABEAR_16 \
-              /tmp/keccakf_input.json "$zkc_prog" \
-              >"$stats_file" 2>&1 || true
-            cat "$stats_file"
-            printf '### zkc-%s compile --stats\n```\n' "$variant" >> "$GITHUB_STEP_SUMMARY"
-            cat "$stats_file" >> "$GITHUB_STEP_SUMMARY"
-            printf '```\n' >> "$GITHUB_STEP_SUMMARY"
-            echo "==="
-          done
 
       - name: Parse logs and emit summary
         if: always()
@@ -212,6 +204,15 @@ jobs:
             -keccak-n-vectors ${{ inputs.n_vectors_keccak || 100 }} \
             | tee -a "$GITHUB_STEP_SUMMARY" \
             | tee /tmp/bench/logs/summary.md
+          ## Print stats for warmup at the end of the benchmark
+          for variant in opt base; do
+            log="/tmp/bench/logs/compile_${variant}_warmup.log"
+            if [[ -f "$log" ]]; then
+              printf '### Native keccak %s stats\n```\n' "$variant" >> "$GITHUB_STEP_SUMMARY"
+              cat "$log" >> "$GITHUB_STEP_SUMMARY"
+              printf '```\n' >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
 
       - name: Upload benchmark logs
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
