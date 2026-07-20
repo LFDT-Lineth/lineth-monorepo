@@ -231,21 +231,25 @@ type Controller struct {
 	// The number of seconds the controller should wait before killing a worker after receiving a SIGTERM
 	TerminationGracePeriod int `mapstructure:"termination_grace_period_seconds"`
 
-	// defaults to true; the controller will not pick associated jobs if false.
+	// EnableExecution controls whether execution jobs are picked up; defaults to true.
 	EnableExecution        bool `mapstructure:"enable_execution"`
+	// EnableDataAvailability controls whether data-availability jobs are picked up; defaults to true.
 	EnableDataAvailability bool `mapstructure:"enable_data_availability"`
+	// EnableAggregation controls whether aggregation jobs are picked up; defaults to true.
 	EnableAggregation      bool `mapstructure:"enable_aggregation"`
+	// EnableInvalidity controls whether invalidity jobs are picked up; defaults to true.
 	EnableInvalidity       bool `mapstructure:"enable_invalidity"`
 
-	// TODO @gbotrel the only reason we keep these is for test purposes; default value is fine,
-	// we should remove them from here for readability.
+	// WorkerCmd is the template string for spawning a standard worker process.
 	WorkerCmd          string             `mapstructure:"worker_cmd_tmpl"`
+	// WorkerCmdLarge is the template string for spawning a large-mode worker process.
 	WorkerCmdLarge     string             `mapstructure:"worker_cmd_large_tmpl"`
 	WorkerCmdTmpl      *template.Template `mapstructure:"-"`
 	WorkerCmdLargeTmpl *template.Template `mapstructure:"-"`
 }
 
 type Prometheus struct {
+	// Enabled toggles the Prometheus metrics endpoint on or off.
 	Enabled bool
 	// The underlying implementation defaults to :9090.
 	Port int
@@ -356,6 +360,7 @@ type Aggregation struct {
 }
 
 type WithRequestDir struct {
+	// RequestsRootDir is the root directory for incoming job requests and completed results.
 	RequestsRootDir string `mapstructure:"requests_root_dir" validate:"required"`
 }
 
@@ -372,13 +377,20 @@ func (cfg *WithRequestDir) DirDone() string {
 }
 
 type PublicInput struct {
+	// MaxNbDataAvailability is the max number of DA proofs per aggregation.
 	MaxNbDataAvailability int `mapstructure:"max_nb_data_availability" validate:"gte=0"`
+	// MaxNbExecution is the max number of execution proofs per aggregation.
 	MaxNbExecution        int `mapstructure:"max_nb_execution" validate:"gte=0"`
+	// MaxNbInvalidity is the max number of invalidity proofs per aggregation.
 	MaxNbInvalidity       int `mapstructure:"max_nb_invalidity" validate:"gte=0"`
-	MaxNbCircuits         int `mapstructure:"max_nb_circuits" validate:"gte=0"` // if not set, will be set to MaxNbDA + MaxNbExecution +maxNbInvalidity
+	// MaxNbCircuits is an optional combined cap across all proof types; zero disables the check.
+	MaxNbCircuits         int `mapstructure:"max_nb_circuits" validate:"gte=0"`
+	// ExecutionMaxNbMsg is the max number of L2-to-L1 messages per execution proof.
 	ExecutionMaxNbMsg     int `mapstructure:"execution_max_nb_msg" validate:"gte=0"`
+	// L2MsgMerkleDepth is the depth of each L2-to-L1 message Merkle tree.
 	L2MsgMerkleDepth      int `mapstructure:"l2_msg_merkle_depth" validate:"gte=0"`
-	L2MsgMaxNbMerkle      int `mapstructure:"l2_msg_max_nb_merkle" validate:"gte=0"` // if not explicitly provided (i.e. non-positive) it will be set to maximum
+	// L2MsgMaxNbMerkle is the max number of L2-to-L1 Merkle trees per aggregation; auto-computed when zero.
+	L2MsgMaxNbMerkle      int `mapstructure:"l2_msg_max_nb_merkle" validate:"gte=0"`
 
 	// not serialized
 
@@ -405,9 +417,13 @@ type Debug struct {
 }
 
 type PerformanceMonitor struct {
+	// Active enables granular per-step or per-round CPU profiling of the prover.
 	Active         bool          `mapstructure:"active"`
+	// SampleDuration is the sampling interval used when collecting performance profiles.
 	SampleDuration time.Duration `mapstructure:"sample_duration"`
+	// ProfileDir is the directory where performance profile files are written.
 	ProfileDir     string        `mapstructure:"profile_dir"`
+	// Profile selects the profiling scope: "prover-steps", "prover-rounds", or "all".
 	Profile        string        `mapstructure:"profile" validate:"oneof=prover-steps prover-rounds all"`
 }
 
