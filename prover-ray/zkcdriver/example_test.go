@@ -33,6 +33,13 @@ func TestRunZKCExamples(t *testing.T) {
 			ZkcFilePath: "testdata/zkc_02.zkc",
 			InputStr:    `{"data": "0x000f_8000"}`,
 		},
+		{
+			// A test case which doesn't use memory which would translate to lookup constraints
+			// which zkc doesn't yet generate. This is the only test case which should work even
+			// with pcs compiler added to the pipeline.
+			ZkcFilePath: "testdata/no-memory.zkc",
+			InputStr:    `{}`,
+		},
 	}
 
 	for _, tc := range basicTestCases {
