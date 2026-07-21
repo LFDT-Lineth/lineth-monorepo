@@ -681,8 +681,9 @@ func (a *ModuleGLAssignSendReceiveGlobal) Run(run *wizard.ProverRuntime) {
 // checks the values of [ModuleGL.SentValuesGlobalHash] and
 // [ModuleGL.ReceivedValuesGlobalHash].
 func (a *ModuleGLCheckSendReceiveGlobal) Run(run wizard.Runtime) error {
+
 	if len(a.ReceivedValuesGlobalMap) == 0 {
-		return nil
+		return a.ModuleGL.checkMultiSetHash(run)
 	}
 
 	var (
@@ -773,7 +774,9 @@ func (a *ModuleGLCheckSendReceiveGlobal) Run(run wizard.Runtime) error {
 // checks the values of [ModuleGL.SentValuesGlobalHash] and
 // [ModuleGL.ReceivedValuesGlobalHash].
 func (a *ModuleGLCheckSendReceiveGlobal) RunGnark(api frontend.API, run wizard.GnarkRuntime) {
+
 	if len(a.ReceivedValuesGlobalMap) == 0 {
+		a.ModuleGL.checkGnarkMultiSetHash(api, run)
 		return
 	}
 
