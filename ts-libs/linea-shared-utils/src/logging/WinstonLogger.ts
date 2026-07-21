@@ -78,14 +78,16 @@ const DEFAULT_REDACT_KEYS: ReadonlyArray<string> = [
 const URL_PATTERN_RE = /\b(?:https?|wss?|postgres(?:ql)?|mysql|mongodb|redis):\/\/[^\s"'<>`\\]+/gi;
 
 /**
- * Hard cap on the final formatted log line length, in characters. Loki rejects log
- * entries larger than 262144 bytes; capping at 250 KiB (256000 chars) leaves headroom
- * for the timestamp/level/logger prefix and the truncation marker.
+ * Hard cap on the final formatted log line length, in characters. Downstream log
+ * aggregators impose entry-size limits, so an unbounded line is dropped (or truncates
+ * the agent's send buffer); capping at 250 KiB (256000 chars) keeps lines well within
+ * typical limits while leaving headroom for the timestamp/level/logger prefix and the
+ * truncation marker.
  *
- * Applied unconditionally to every WinstonLogger consumer because the Grafana Alloy
- * sidecar and Loki backend are shared infrastructure across all services using this
- * logger. Exposing it as a per-consumer option would let one service opt out and
- * reintroduce the entry-size drop storm this cap prevents.
+ * Applied unconditionally to every WinstonLogger consumer because the log pipeline is
+ * shared across all services using this logger. Exposing it as a per-consumer option
+ * would let one service opt out and reintroduce the dropped-line failures this cap
+ * prevents.
  */
 const MAX_LOG_LINE_LENGTH = 250 * 1024;
 const TRUNCATION_MARKER_PREFIX = " ... [truncated, +";
