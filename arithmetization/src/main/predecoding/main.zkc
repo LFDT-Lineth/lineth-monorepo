@@ -8,14 +8,16 @@ include "inputs.zkc"
 // Justify (in a one-time proof) that the raw RISC-V program in the input JSON
 // corresponds to its pre-decoded instruction table - a static linear pass over
 // the executable region [instruction_base, executable_region_end): read each raw
-// word from executable-flagged blobs and verify it matches decoded[(pc-base)>>2].
-fn main() {
+// word from executable-flagged blobs and verify it matches decoded_rom[(pc-base)>>2].
+fn main<decoded_ram>() {
     var pc:Address = instruction_base[0]
     var end:Address = executable_region_end()
 
     while pc < end {
         var instruction:Instruction = read_instruction_from_blobs(pc)
         predecoding(pc, instruction)
+        decoded_ram[pc>>2] = decoded_rom[pc>>2]
         pc = (pc + 4) as Address
     }
+
 }

@@ -9,7 +9,7 @@ include "check/check_u_type.zkc"
 include "check/check_s_type.zkc"
 
 // Check that the raw word `instruction` at `pc` matches `decoded` at that address.
-fn predecoding(pc:Address, instruction:Instruction) {
+fn predecoding<decoded_ram>(pc:Address, instruction:Instruction) {
     // Variables from raw RISCV program
     var instruction_parameters:u25
     var opcode:Opcode
@@ -21,7 +21,7 @@ fn predecoding(pc:Address, instruction:Instruction) {
     var rs1_decoded:Register
     var rs2_decoded:Register
     var rd_decoded:Register
-    compute_op, imm_decoded, rs1_decoded, rs2_decoded, rd_decoded = decoded[(pc - instruction_base[0]) >> 2]
+    compute_op, imm_decoded, rs1_decoded, rs2_decoded, rd_decoded = decoded_rom[(pc - instruction_base[0]) >> 2]
 
     var instruction_type:Type = instruction_type_from_opcode(opcode)
     switch instruction_type {

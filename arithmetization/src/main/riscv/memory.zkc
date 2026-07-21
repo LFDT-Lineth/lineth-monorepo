@@ -44,4 +44,5 @@ pub input instruction_base(i:u1) -> (base:Address)
 // Pre-decoded instruction stream, indexed by instruction index (one record per
 // 4-byte word of the executable region). Each record holds the unified semantic
 // compute op and operands for direct dispatch in interpreter.zkc.
-pub input decoded(i:u64) -> (compute_op:ComputeOp, imm:DoubleWord, rs1:Register, rs2:Register, rd:Register)
+pub input decoded_rom(i:u64) -> (compute_op:ComputeOp, imm:DoubleWord, rs1:Register, rs2:Register, rd:Register)
+memory decoded_ram(i:u64) -> (compute_op:ComputeOp, imm:DoubleWord, rs1:Register, rs2:Register, rd:Register)
