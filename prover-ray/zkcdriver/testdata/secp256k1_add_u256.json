@@ -1,0 +1,20 @@
+{
+    "in_x1": "0x79be_667e_f9dc_bbac_55a0_6295_ce87_0b07_029b_fcdb_2dce_28d9_59f2_815b_16f8_1798",
+    "in_y1": "0x483a_da77_26a3_c465_5da4_fbfc_0e11_08a8_fd17_b448_a685_5419_9c47_d08f_fb10_d4b8",
+    "in_x2": "0xc604_7f94_41ed_7d6d_3045_406e_95c0_7cd8_5c77_8e4b_8cef_3ca7_abac_09b9_5c70_9ee5",
+    "in_y2": "0x1ae1_68fe_a63d_c339_a3c5_8419_466c_eaee_f7f6_3265_3266_d0e1_2364_31a9_50cf_e52a",
+    "in_x3": "0xf930_8a01_9258_c310_4934_4f85_f89d_5229_b531_c845_836f_99b0_8601_f113_bce0_36f9",
+    "in_y3": "0x388f_7b0f_632d_e814_0fe3_37e6_2a37_f356_6500_a999_34c2_231b_6cb9_fd75_84b8_e672",
+    "in_lambda": "0x3421_1981_5c0f_816f_31f4_31a9_fe98_a6c7_6d11_425e_caea_ecf2_d0ef_6def_197c_56b0",
+    "in_dx": "0x4c46_1915_4810_c1c0_daa4_ddd8_c739_71d1_59db_9170_5f21_13ce_51b9_885e_4578_874d",
+    "in_dy": "0xd2a6_8e87_7f99_fed4_4620_881d_385b_e245_fade_7e1c_8be1_7cc7_871c_6118_55bf_0ca1",
+    "in_x1_minus_x3": "0x808d_dc7d_6783_f89c_0c6c_130f_d5e9_b8dd_4d6a_3495_aa5e_8f28_d3f0_9046_5a17_dcce",
+    "in_k_p1_curve": "0x00",
+    "in_k_p2_curve": "0x00",
+    "in_k_p3_curve": "0x00",
+    "in_k_dx": "0x00",
+    "in_k_dy": "0x01",
+    "in_k_x1_minus_x3": "0x01",
+    "in_k_x3": "0x02",
+    "in_k_y3": "0x00"
+}

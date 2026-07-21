@@ -1,0 +1,160 @@
+type tWidth      = u256
+type tWidthLarge = u512
+type tAddr       = u8
+type tCarry      = u8
+
+pub input in_x1(address:tAddr) -> (val:tWidth)
+pub input in_y1(address:tAddr) -> (val:tWidth)
+pub input in_x2(address:tAddr) -> (val:tWidth)
+pub input in_y2(address:tAddr) -> (val:tWidth)
+pub input in_x3(address:tAddr) -> (val:tWidth)
+pub input in_y3(address:tAddr) -> (val:tWidth)
+
+input in_lambda(address:tAddr) -> (val:tWidth)
+input in_dx(address:tAddr) -> (val:tWidth)
+input in_dy(address:tAddr) -> (val:tWidth)
+input in_x1_minus_x3(address:tAddr) -> (val:tWidth)
+
+input in_k_p1_curve(address:tAddr) -> (val:tCarry)
+input in_k_p2_curve(address:tAddr) -> (val:tCarry)
+input in_k_p3_curve(address:tAddr) -> (val:tCarry)
+input in_k_dx(address:tAddr) -> (val:tCarry)
+input in_k_dy(address:tAddr) -> (val:tCarry)
+input in_k_x1_minus_x3(address:tAddr) -> (val:tCarry)
+input in_k_x3(address:tAddr) -> (val:tCarry)
+input in_k_y3(address:tAddr) -> (val:tCarry)
+
+fn main() {
+    var p:tWidth = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f
+
+    var x1:tWidth = in_x1[0]
+    var y1:tWidth = in_y1[0]
+    var x2:tWidth = in_x2[0]
+    var y2:tWidth = in_y2[0]
+    var x3:tWidth = in_x3[0]
+    var y3:tWidth = in_y3[0]
+
+    var lambda:tWidth = in_lambda[0]
+    var dx:tWidth = in_dx[0]
+    var dy:tWidth = in_dy[0]
+    var x1_minus_x3:tWidth = in_x1_minus_x3[0]
+
+    var k_p1_curve:tCarry = in_k_p1_curve[0]
+    var k_p2_curve:tCarry = in_k_p2_curve[0]
+    var k_p3_curve:tCarry = in_k_p3_curve[0]
+    var k_dx:tCarry = in_k_dx[0]
+    var k_dy:tCarry = in_k_dy[0]
+    var k_x1_minus_x3:tCarry = in_k_x1_minus_x3[0]
+    var k_x3:tCarry = in_k_x3[0]
+    var k_y3:tCarry = in_k_y3[0]
+
+    // First exercise only:
+    // - ordinary affine secp256k1 addition over Fp, with p = 2^256 - 2^32 - 977
+    // - lambda, dx = x2 - x1, dy = y2 - y1, x1_minus_x3 = x1 - x3, and
+    //   the small modular carry witnesses k_* are supplied by the prover input
+    // - this avoids modular inversion for lambda and avoids u256 branchy
+    //   add/sub helpers; each add/sub relation is checked as a branchless u512
+    //   integer equation
+    // - canonical coordinate/lambda/delta range checks x < p are not enforced yet
+    // - no point-at-infinity representation
+    // - no doubling case P == Q
+    // - no vertical case P == -Q
+    // - no scalar multiplication, scalar-field arithmetic modulo n, ECDSA
+    //   recovery-id handling, Keccak, or address derivation
+
+    var p_large:tWidthLarge = p as tWidthLarge
+
+    // Check P1, P2, and P3 are on y^2 = x^3 + 7 over Fp.
+    // Each relation is encoded as x^3 + 7 = y^2 + k*p over u512.
+    var p1_y2:tWidth = mulmod_256(y1, y1, p)
+    var p1_x2:tWidth = mulmod_256(x1, x1, p)
+    var p1_x3:tWidth = mulmod_256(p1_x2, x1, p)
+    var p1_curve_lhs:tWidthLarge = (p1_x3 as tWidthLarge) + (7 as tWidthLarge)
+    var p1_curve_rhs:tWidthLarge = (p1_y2 as tWidthLarge) + ((k_p1_curve as tWidthLarge) * p_large)
+    if p1_curve_lhs != p1_curve_rhs {
+        fail
+    }
+
+    var p2_y2:tWidth = mulmod_256(y2, y2, p)
+    var p2_x2:tWidth = mulmod_256(x2, x2, p)
+    var p2_x3:tWidth = mulmod_256(p2_x2, x2, p)
+    var p2_curve_lhs:tWidthLarge = (p2_x3 as tWidthLarge) + (7 as tWidthLarge)
+    var p2_curve_rhs:tWidthLarge = (p2_y2 as tWidthLarge) + ((k_p2_curve as tWidthLarge) * p_large)
+    if p2_curve_lhs != p2_curve_rhs {
+        fail
+    }
+
+    var p3_y2:tWidth = mulmod_256(y3, y3, p)
+    var p3_x2:tWidth = mulmod_256(x3, x3, p)
+    var p3_x3:tWidth = mulmod_256(p3_x2, x3, p)
+    var p3_curve_lhs:tWidthLarge = (p3_x3 as tWidthLarge) + (7 as tWidthLarge)
+    var p3_curve_rhs:tWidthLarge = (p3_y2 as tWidthLarge) + ((k_p3_curve as tWidthLarge) * p_large)
+    if p3_curve_lhs != p3_curve_rhs {
+        fail
+    }
+
+    // Check dx = x2 - x1 mod p and dy = y2 - y1 mod p.
+    var dx_lhs:tWidthLarge = (x2 as tWidthLarge) + ((k_dx as tWidthLarge) * p_large)
+    var dx_rhs:tWidthLarge = (x1 as tWidthLarge) + (dx as tWidthLarge)
+    if dx_lhs != dx_rhs {
+        fail
+    }
+
+    var dy_lhs:tWidthLarge = (y2 as tWidthLarge) + ((k_dy as tWidthLarge) * p_large)
+    var dy_rhs:tWidthLarge = (y1 as tWidthLarge) + (dy as tWidthLarge)
+    if dy_lhs != dy_rhs {
+        fail
+    }
+
+    // Check lambda = dy / dx by verifying lambda * dx = dy mod p.
+    if mulmod_256(lambda, dx, p) != dy {
+        fail
+    }
+
+    // Check x3 = lambda^2 - x1 - x2 mod p by rewriting it as:
+    // lambda^2 + k_x3*p = x3 + x1 + x2.
+    var lambda2:tWidth = mulmod_256(lambda, lambda, p)
+    var x3_lhs:tWidthLarge = (lambda2 as tWidthLarge) + ((k_x3 as tWidthLarge) * p_large)
+    var x3_rhs:tWidthLarge = (x3 as tWidthLarge) + (x1 as tWidthLarge) + (x2 as tWidthLarge)
+    if x3_lhs != x3_rhs {
+        fail
+    }
+
+    // Check x1_minus_x3 = x1 - x3 mod p.
+    var x1_minus_x3_lhs:tWidthLarge = (x1 as tWidthLarge) + ((k_x1_minus_x3 as tWidthLarge) * p_large)
+    var x1_minus_x3_rhs:tWidthLarge = (x3 as tWidthLarge) + (x1_minus_x3 as tWidthLarge)
+    if x1_minus_x3_lhs != x1_minus_x3_rhs {
+        fail
+    }
+
+    // Check y3 = lambda*(x1 - x3) - y1 mod p by rewriting it as:
+    // y3_tmp + k_y3*p = y3 + y1.
+    var y3_tmp:tWidth = mulmod_256(lambda, x1_minus_x3, p)
+    var y3_lhs:tWidthLarge = (y3_tmp as tWidthLarge) + ((k_y3 as tWidthLarge) * p_large)
+    var y3_rhs:tWidthLarge = (y3 as tWidthLarge) + (y1 as tWidthLarge)
+    if y3_lhs != y3_rhs {
+        fail
+    }
+}
+
+// Copied from modexp_u256.zkc. prover-ray recognizes #[native] mulmod_256
+// and lowers it to a NonNative query over the limb columns.
+#[native]
+fn mulmod_256(lhsL:tWidth, rhsL:tWidth, modL:tWidth) -> (remainder:tWidth) {
+    // integer product result `product = lhsL * rhsL`
+    var product:tWidthLarge = (lhsL as tWidthLarge) * (rhsL as tWidthLarge)
+
+    var overflow:tWidth
+    var quotient:tWidth
+    overflow::quotient = product / (modL as tWidthLarge)
+    if overflow != 0 {
+        fail
+    }
+    var overflow2:tWidth
+    // XXX(ivo): two ways of computing the remainder. First one is approx 20% faster
+    overflow2::remainder = product - ((quotient as tWidthLarge) * (modL as tWidthLarge))
+    //overflow2::remainder = product % (modL as tWidthLarge)
+    if overflow2 != 0 {
+        fail
+    }
+}
