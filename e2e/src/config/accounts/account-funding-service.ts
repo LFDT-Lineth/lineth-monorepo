@@ -1,8 +1,10 @@
 import { Mutex } from "async-mutex";
-import { Address, Client, PrivateKeyAccount, PublicActions } from "viem";
+import { Address, BaseError, Client, PrivateKeyAccount, PublicActions } from "viem";
 import { getTransactionCount, sendTransaction } from "viem/actions";
 
 import {
+  awaitUntil,
+  AwaitUntilTimeoutError,
   createBlockNotFoundRetryExtension,
   estimateLineaGas,
   normalizeEip1559Fees,
@@ -17,6 +19,52 @@ type FundingClient = Client & Pick<PublicActions, "estimateFeesPerGas">;
 type FeeData = Eip1559Fees;
 
 const DEFAULT_RECEIPT_TIMEOUT_MS = 30_000;
+
+// 60 s is less than half the smallest EIP-7702 test timeout (120 s), so a funding failure
+// will surface as a clear error message before Jest's deadline rather than a generic
+// "test timed out". It is also large enough to outlast brief sequencer instability windows
+// (observed ~3 s in CI) with many retries to spare at the 500 ms polling interval.
+const FUND_TIMEOUT_MS = 60_000;
+
+// One L2 block (~1 s) is usually enough for mempool pressure from concurrent test setups
+// to clear. 500 ms keeps retries responsive while giving the sequencer time to process
+// the competing transactions that caused the immediate rejection.
+const FUND_RETRY_DELAY_MS = 500;
+
+/**
+ * Typed viem error names that indicate a transient RPC / mempool condition.
+ * A brief pause and a fresh on-chain nonce are likely to resolve these on the next attempt.
+ *
+ * - NonceTooLowError         — stale cached nonce; re-fetch and retry
+ * - FeeCapTooLowError        — covers "replacement transaction underpriced" / "transaction underpriced"
+ * - TipAboveFeeCapError      — fee estimation drift between estimate and submit
+ * - TransactionRejectedRpcError — mempool full, already known, general RPC rejection
+ * - InternalRpcError         — transient sequencer / node error
+ * - LimitExceededRpcError    — pool limits or rate limiting
+ */
+const TRANSIENT_FUNDING_ERROR_NAMES = new Set([
+  "NonceTooLowError",
+  "FeeCapTooLowError",
+  "TipAboveFeeCapError",
+  "TransactionRejectedRpcError",
+  "InternalRpcError",
+  "LimitExceededRpcError",
+]);
+
+/**
+ * Returns true when the error (or any cause in its chain) is a known transient
+ * RPC / mempool condition. Uses BaseError.walk() to inspect the full cause chain,
+ * matching the same pattern used in retry.ts.
+ */
+function isTransientFundingError(error: unknown): boolean {
+  if (!(error instanceof BaseError)) return false;
+  return (
+    error.walk((cause) => {
+      const name = (cause as { name?: string }).name;
+      return typeof name === "string" && TRANSIENT_FUNDING_ERROR_NAMES.has(name);
+    }) !== null
+  );
+}
 
 /**
  * Sends funding transactions from a whale account to newly generated test accounts.
@@ -39,8 +87,12 @@ export class AccountFundingService {
 
   /**
    * Funds a single target address from the whale account.
-   * Returns the transaction result on success or null if all retry attempts are exhausted.
-   * On terminal failure, invalidates the cached nonce so the next call re-fetches from chain.
+   * Returns the transaction result on success, or null if the attempt fails.
+   *
+   * Retries within a FUND_TIMEOUT_MS deadline on transient RPC / mempool errors (e.g.
+   * immediate rejection due to nonce pressure or sequencer instability). Each retry
+   * invalidates the cached nonce so the next attempt re-fetches from chain.
+   * Non-transient errors (reverts, authorization failures, etc.) bail out immediately.
    */
   async fundAccount(
     whaleAccountWallet: PrivateKeyAccount,
@@ -49,24 +101,35 @@ export class AccountFundingService {
     initialBalanceWei: bigint,
   ): Promise<TransactionResult | null> {
     try {
-      const feeData = await this.estimateFees(whaleAccountWallet.address, targetAddress, initialBalanceWei);
-      const nonce = await this.nextNonce(whaleAccountAddress);
+      const result = await awaitUntil(
+        async () => {
+          try {
+            const feeData = await this.estimateFees(whaleAccountWallet.address, targetAddress, initialBalanceWei);
+            const nonce = await this.nextNonce(whaleAccountAddress);
 
-      const result = await sendTransactionWithRetry(
-        this.client,
-        (fees) =>
-          sendTransaction(this.client, {
-            account: whaleAccountWallet,
-            chain: this.client.chain,
-            type: "eip1559",
-            to: targetAddress,
-            value: initialBalanceWei,
-            nonce,
-            gas: 21000n,
-            ...feeData,
-            ...fees,
-          }),
-        { receiptTimeoutMs: DEFAULT_RECEIPT_TIMEOUT_MS },
+            return await sendTransactionWithRetry(
+              this.client,
+              (fees) =>
+                sendTransaction(this.client, {
+                  account: whaleAccountWallet,
+                  chain: this.client.chain,
+                  type: "eip1559",
+                  to: targetAddress,
+                  value: initialBalanceWei,
+                  nonce,
+                  gas: 21000n,
+                  ...feeData,
+                  ...fees,
+                }),
+              { receiptTimeoutMs: DEFAULT_RECEIPT_TIMEOUT_MS },
+            );
+          } catch (error) {
+            this.invalidateNonce(whaleAccountAddress);
+            throw error;
+          }
+        },
+        () => true,
+        { timeoutMs: FUND_TIMEOUT_MS, pollingIntervalMs: FUND_RETRY_DELAY_MS, shouldRetry: isTransientFundingError },
       );
 
       this.logger.debug(
@@ -75,8 +138,11 @@ export class AccountFundingService {
 
       return result;
     } catch (error) {
-      this.logger.error(`Failed to fund account. address=${targetAddress} error=${(error as Error).message}`);
-      this.invalidateNonce(whaleAccountAddress);
+      if (error instanceof AwaitUntilTimeoutError) {
+        this.logger.error(`Failed to fund account: timeout after ${error.timeoutMs}ms. address=${targetAddress}`);
+      } else {
+        this.logger.error(`Failed to fund account. address=${targetAddress} error=${(error as Error).message}`);
+      }
       return null;
     }
   }

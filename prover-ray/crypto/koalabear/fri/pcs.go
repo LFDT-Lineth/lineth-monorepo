@@ -1010,14 +1010,17 @@ func openEncodedRow(table SizedTable, row int) RowOpening {
 
 func hashRowOpening(row RowOpening) field.Octuplet {
 	hasher := poseidon2.NewMDHasher()
+	absorbLeafHeader(hasher, len(row.Base), len(row.Ext))
 	writeRowOpeningElements(hasher, row)
 	return hasher.SumDigest()
 }
 
 // hashAuxPair must match Merkleize's even-before-odd hash order regardless of
-// which one is Self, hence selfIsEven.
+// which one is Self, hence selfIsEven. The domain-separation header is written
+// once per leaf (both rows share the same shape).
 func hashAuxPair(pair RowPair, selfIsEven bool) field.Octuplet {
 	hasher := poseidon2.NewMDHasher()
+	absorbLeafHeader(hasher, len(pair[0].Base), len(pair[0].Ext))
 	if selfIsEven {
 		writeRowOpeningElements(hasher, pair[0])
 		writeRowOpeningElements(hasher, pair[1])

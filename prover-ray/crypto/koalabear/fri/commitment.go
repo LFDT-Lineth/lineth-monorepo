@@ -6,6 +6,25 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 )
 
+// leafDomainTag domain-separates Merkle leaves so a table with the same row
+// values but a different (BaseWidth, ExtWidth) shape hashes to a different
+// digest. Without this, e.g. an all-zero base row and an all-zero ext row
+// collide, letting two structurally distinct commitments share a Merkle root
+// and get deduplicated inside inputOpeningRoots.
+const leafDomainTag uint64 = 0x4c66_7269_5f6c_6631 // "Lfri_lf1"
+
+// absorbLeafHeader writes the domain tag and (baseWidth, extWidth) into h
+// before any row values. Prover ([MultiSizeTable.Merkleize]) and verifier
+// ([hashRowOpening]) MUST call this identically or roots will not
+// reconstruct.
+func absorbLeafHeader(h *poseidon2.MDHasher, baseWidth, extWidth int) {
+	var tag, b, e field.Element
+	tag.SetUint64(leafDomainTag)
+	b.SetUint64(uint64(baseWidth))
+	e.SetUint64(uint64(extWidth))
+	h.WriteElements(tag, b, e)
+}
+
 // CommitterState collects the data that are built during the commitment phase
 // of FRI. This includes the RS codewords and their Merkle tree.
 type CommitterState struct {
@@ -80,6 +99,7 @@ func (table MultiSizeTable) Merkleize() *Tree {
 		leaves[len(leaves)-1] = make([]field.Octuplet, size)
 		for j := range size {
 			hasher.Reset()
+			absorbLeafHeader(hasher, len(table[bottom].Base), len(table[bottom].Ext))
 			writeRowElements(hasher, table[bottom], j)
 			leaves[len(leaves)-1][j] = hasher.SumDigest()
 		}
@@ -93,6 +113,7 @@ func (table MultiSizeTable) Merkleize() *Tree {
 		leaves[i] = make([]field.Octuplet, size/2)
 		for j := range size / 2 {
 			hasher.Reset()
+			absorbLeafHeader(hasher, len(table[i].Base), len(table[i].Ext))
 			writeRowElements(hasher, table[i], 2*j)
 			writeRowElements(hasher, table[i], 2*j+1)
 			leaves[i][j] = hasher.SumDigest()

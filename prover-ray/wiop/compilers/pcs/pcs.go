@@ -43,15 +43,19 @@ import (
 )
 
 const (
-	// friLogInverseRate is the FRI blow-up factor (codeword size / plaintext size).
+	// friLogInverseRate is the log2 of the FRI blow-up factor (codeword size /
+	// plaintext size).
 	friLogInverseRate = 1
-	// friNumQueries is the number of FRI query openings. This is obtained from
-	// https://github.com/ethereum/soundcalc
-	//
-	// To match 128 bits of security, we determined that the following number of
-	// queries is required.
-	friNumQueries = 229
 )
+
+// friNumQueries is the number of FRI query openings. This is obtained from
+// https://github.com/ethereum/soundcalc
+//
+// To match 128 bits of security, we determined that the following number of
+// queries is required. It is a variable (rather than a constant) so tests
+// exercising the full compilation pipeline can lower it via
+// [SetFRINumQueriesForTest]; production callers must never mutate it.
+var friNumQueries = 229
 
 var (
 	// maxCommittableSizeLog2 is the fixed capacity of the static FRI parameters:
@@ -75,7 +79,7 @@ var (
 // fixed maximum capacity.
 func staticFRI() (fri.Params, []*fri.RSEncoder) {
 	staticFRIOnce.Do(func() {
-		params, err := fri.NewParams(friLogInverseRate+maxCommittableSizeLog2, maxCommittableSizeLog2, friNumQueries)
+		params, err := fri.NewParams(friLogInverseRate+maxCommittableSizeLog2, maxCommittableSizeLog2, uint(friNumQueries))
 		if err != nil {
 			panic(fmt.Errorf("pcs: staticFRI: %w", err))
 		}
