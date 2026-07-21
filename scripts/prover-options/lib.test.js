@@ -24,11 +24,20 @@ test("escapeCell escapes MDX-sensitive characters", () => {
 
 test("dev-noise comments are stripped from descriptions", () => {
   assert.equal(isDevNoiseComment("TODO @gbotrel fix this"), true);
+  assert.equal(isDevNoiseComment("@gbotrel alone at line start"), true);
   assert.equal(isDevNoiseComment("not serialized"), true);
   assert.equal(isDevNoiseComment("for testing purposes only"), true);
   assert.equal(isDevNoiseComment("duplicate from Config.Layer2"), true);
   assert.equal(isDevNoiseComment("The delays at which we retry"), false);
   assert.equal(cleanDescription(["// TODO @gbotrel noise", "// Real description here"]), "Real description here");
+  // Mid-line @gbotrel must not truncate useful text (AssetsDir two-line doc comment).
+  assert.equal(
+    cleanDescription([
+      "// AssetsDir stores the root of the directory where the assets are stored (setup) or",
+      "// accessed (prover). The file structure is described in TODO @gbotrel.",
+    ]),
+    "AssetsDir stores the root of the directory where the assets are stored (setup) or accessed (prover).",
+  );
 });
 
 test("partialComponentName", () => {

@@ -69,7 +69,8 @@ function isDevNoiseComment(line) {
   if (/^TODO\b/i.test(t)) return true;
   if (/^FIXME\b/i.test(t)) return true;
   if (/^XXX\b/i.test(t)) return true;
-  if (/@gbotrel\b/i.test(t)) return true;
+  // Line-start only — mid-sentence @gbotrel must not drop useful text (see cleanDescription).
+  if (/^@gbotrel\b/i.test(t)) return true;
   if (/not serialized/i.test(t)) return true;
   if (/for testing purposes only/i.test(t)) return true;
   if (/^duplicate from\b/i.test(t)) return true;
@@ -79,13 +80,25 @@ function isDevNoiseComment(line) {
   return false;
 }
 
+function scrubGbotrelSentences(line) {
+  // Drop sentences that mention @gbotrel; keep the rest of the line.
+  const sentences = line.split(/(?<=\.)\s+/);
+  return sentences
+    .filter((s) => !/@gbotrel\b/i.test(s))
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function cleanDescription(commentLines) {
   const kept = [];
   for (const raw of commentLines) {
-    const line = String(raw)
+    let line = String(raw)
       .replace(/^\s*\/\/\s?/, "")
       .trim();
     if (isDevNoiseComment(line)) continue;
+    line = scrubGbotrelSentences(line);
+    if (!line || isDevNoiseComment(line)) continue;
     kept.push(line);
   }
   return kept.join(" ").replace(/\s+/g, " ").trim();

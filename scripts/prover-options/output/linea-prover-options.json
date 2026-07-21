@@ -186,7 +186,7 @@
       "key": "assets_dir",
       "goField": "Config.AssetsDir",
       "type": "string",
-      "description": "AssetsDir stores the root of the directory where the assets are stored (setup) or",
+      "description": "AssetsDir stores the root of the directory where the assets are stored (setup) or accessed (prover).",
       "required": false,
       "oneof": null,
       "allowedRequired": "",
