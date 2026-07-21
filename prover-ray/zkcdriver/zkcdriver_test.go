@@ -13,6 +13,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/nonnative"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/rangecheck"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field"
@@ -121,6 +122,7 @@ func traceZkc(
 }
 
 func proverCompilePipeline(sys *wiop.System) {
+	nonnative.Compile(sys)
 	rangecheck.Compile(sys)
 	lookuptologderivsum.Compile(sys)
 	messagebus.Compile(sys)
