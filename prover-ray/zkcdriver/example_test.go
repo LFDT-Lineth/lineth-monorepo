@@ -1,7 +1,6 @@
 package zkcdriver_test
 
 import (
-	"strconv"
 	"testing"
 )
 
@@ -36,8 +35,8 @@ func TestRunZKCExamples(t *testing.T) {
 		},
 	}
 
-	for i, tc := range basicTestCases {
-		t.Run(tc.ZkcFilePath+strconv.Itoa(i), func(t *testing.T) {
+	for _, tc := range basicTestCases {
+		t.Run(tc.ZkcFilePath, func(t *testing.T) {
 			binF, err := compileBinaryConstraints(tc.ZkcFilePath)
 			if err != nil {
 				t.Fatalf("failed to compile binary constraints: %v", err)
