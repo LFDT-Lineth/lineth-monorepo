@@ -1,4 +1,4 @@
-name: Tracer simple zkc binary run and check
+name: Tracer simple zkc binary runs and checks
 
 on:
   pull_request:
@@ -47,3 +47,11 @@ jobs:
           ZKC_FILES: src/test/zkc/simple_add.zkc
           ZKC_INPUT: src/test/zkc/simple_add.json
 
+      - name: Trace Keccak rust and check it
+        run: make -C keccak-rust-exec
+        working-directory: arithmetization/src/test
+        env:
+          ZKC_REF: ${{ inputs.zkc-ref || '8e19e640b6fe99746be464d591b0cec3533d9b83' }}
+          KECCAK_N_VECTORS: 1
+          KECCAK_JSON_FILE: rust/src/keccak/keccak.json
+          ZKC_EXEC_FLAGS: "--check -q"
