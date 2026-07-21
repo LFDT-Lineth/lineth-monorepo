@@ -29,6 +29,10 @@ Module-level named constants in `WinstonLogger.ts` (no raw string literals per w
 - `MAX_LOG_LINE_LENGTH = 250 * 1024` (256,000 characters). Sits under Loki's 262,144-byte entry limit with ~6 KB headroom for the timestamp/level/logger prefix and the truncation marker.
 - A truncation marker suffix that reports the omitted character count, e.g. ` ... [truncated, +N chars]`.
 
+### Unconditional default for all consumers
+
+The cap is a hardcoded module constant applied unconditionally inside the shared `printf` formatter. It is **not** exposed as a `WinstonLoggerOptions` field and cannot be disabled per-consumer. Rationale: the Grafana Alloy sidecar and Loki backend are common infrastructure shared across every service that uses `WinstonLogger` (postman, native-yield automation service, shared-utils servers, etc.), so the line-size contract must hold for all consumers by default. Making it configurable would let one service opt out and reintroduce the same drop storm this fix prevents.
+
 ### Where the cap is applied
 
 In the existing `printf` formatter, after the final `str` is fully assembled (`time=... level=... logger=... msg=...` + metadata + optional `error=...`). If `str.length > MAX_LOG_LINE_LENGTH`, the string is truncated so its total length equals `MAX_LOG_LINE_LENGTH` and ends with the marker. The marker reports `N = originalLength - (MAX_LOG_LINE_LENGTH - markerLength)` omitted characters.
