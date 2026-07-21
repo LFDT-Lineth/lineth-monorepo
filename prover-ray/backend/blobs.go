@@ -28,9 +28,12 @@ type memoryBlob struct {
 //   - "blobs_offset_and_size"
 //   - "blobs_data"
 //
-// elfBytes is the raw guest ELF. sszInput is the raw SSZ StatelessInput (not
-// yet framed; BuildZkcInputs adds the [u64 LE len] prefix). inOrigin is the
-// guest RAM address where the SSZ input is placed (use [DefaultINOrigin]).
+// elfBytes is the raw guest ELF. sszInput is the framed StatelessInput the
+// guest reads at _in_start: the 0x0001 schema id followed by the SSZ body
+// (the guest's deserializer strips the schema id). BuildZkcInputs prepends
+// only the [u64 LE len] prefix; it neither adds nor strips the schema id.
+// inOrigin is the guest RAM address where the input is placed
+// (use [DefaultINOrigin]).
 func BuildZkcInputs(elfBytes, sszInput []byte, inOrigin uint64) (map[string][]byte, error) {
 	memBlobs, entry, err := loadELFBlobs(elfBytes)
 	if err != nil {
