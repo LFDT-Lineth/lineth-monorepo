@@ -1,9 +1,5 @@
-# The go-corset module name
+# The zkc module name
 ZKC_MOD := github.com/LFDT-Lineth/zkc
-# The version of go-corset as presented in the go.mod
-ZKC_VERSION := $(shell go list -m -f '{{.Version}}' $(ZKC_MOD))
-# The go path, usually $HOME/go
-GOPATH := $(shell go env GOPATH)
 # The directory where to find the zkc testdata
 ZKC_TESTDATA_SYNC_SRC_DIR := $(shell go list -m -f '{{.Dir}}' $(ZKC_MOD))/testdata/zkc
 ZKC_TESTDATA_SYNC_DST_DIR := zkcdriver/testdata/synced
@@ -36,8 +32,8 @@ download-zkc-testdata:
 	rm -rf $(ZKC_TESTDATA_SYNC_DST_DIR)/*
 	mkdir -p $(ZKC_TESTDATA_SYNC_DST_DIR)
 
-	# go get zkc, then we can copy the testdata from the module's directory
-	go get $(ZKC_MOD)@$(ZKC_VERSION)
+	# download dependencies, then we can copy the testdata from the module's directory
+	go mod download $(ZKC_MOD)
 	cp -rf $(ZKC_TESTDATA_SYNC_SRC_DIR)/* $(ZKC_TESTDATA_SYNC_DST_DIR)
 	chmod -R u+w $(ZKC_TESTDATA_SYNC_DST_DIR)
 
