@@ -25,6 +25,8 @@ class ConfigSchemaWalkerTest {
     @param:ConfigSection(description = "Legacy section.", deprecated = true, replacement = "retries")
     val legacyRetries: NestedToml = NestedToml(),
     val undocumented: Int = 0,
+    // consecutive capitals: Hoplite treats each uppercase as a boundary
+    val httpTLSPort: Int = 0,
   ) {
     data class NestedToml(
       @param:ConfigDoc("Timeout.", default = "PT1S")
@@ -40,7 +42,19 @@ class ConfigSchemaWalkerTest {
   fun `renders kebab keys via Hoplite and sorts by path`() {
     val paths = keys().map { it.path }
     assertThat(paths).isSorted
-    assertThat(paths).contains("hostname", "port", "retries", "retries.timeout", "legacy-retries")
+    assertThat(paths).contains(
+      "hostname",
+      "port",
+      "password",
+      "endpoint",
+      "limits",
+      "retries",
+      "retries.timeout",
+      "legacy-retries",
+      "legacy-retries.timeout",
+      "undocumented",
+      "http-t-l-s-port",
+    )
   }
 
   @Test
