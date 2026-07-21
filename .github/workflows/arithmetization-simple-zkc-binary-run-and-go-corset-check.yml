@@ -48,7 +48,7 @@ jobs:
           ZKC_INPUT: src/test/zkc/simple_add.json
 
       - name: Trace Keccak rust and check it
-        run: make -C keccak-rust-exec
+        run: make keccak-rust-exec
         working-directory: arithmetization/src/test
         env:
           ZKC_REF: ${{ inputs.zkc-ref || '8e19e640b6fe99746be464d591b0cec3533d9b83' }}
