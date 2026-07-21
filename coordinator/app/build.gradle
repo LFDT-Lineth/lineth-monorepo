@@ -3,6 +3,13 @@ import org.gradle.api.tasks.testing.logging.TestLogEvent
 
 plugins {
   id 'net.consensys.zkevm.kotlin-application-conventions'
+  id 'linea.config-docs'
+}
+
+// Config documentation tooling: creates the `configDocs` source set and the
+// checkConfigDocs/generateConfigDocs tasks, driven by the spec below.
+configDocs {
+  spec = 'linea.coordinator.config.v2.docs.CoordinatorConfigDocsSpec'
 }
 configurations.configureEach {
   exclude group: "org.rocksdb", module: "rocksdbjni"
