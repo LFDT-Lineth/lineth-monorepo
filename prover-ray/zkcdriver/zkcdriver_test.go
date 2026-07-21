@@ -8,10 +8,11 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/grandproduct"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/localvanishing"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/nonnative"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/rangecheck"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field"
@@ -120,12 +121,23 @@ func traceZkc(
 }
 
 func proverCompilePipeline(sys *wiop.System) {
-	nonnative.Compile(sys)
 	rangecheck.Compile(sys)
 	lookuptologderivsum.Compile(sys)
+	messagebus.Compile(sys)
+	grandproduct.Compile(sys)
 	logderivativesum.Compile(sys)
 	localvanishing.Compile(sys)
 	global.Compile(sys)
+	// XXX(ivokub): we have disabled pcs compiler for now as zkc compiler doesn't generate lookup constraints.
+	// in that case we would have columns which are not constrained at all and we would get a panic in the
+	// pcs compiler due to shifts not defined.
+	//
+	// replug when zkc start emitting lookup constraints, see https://github.com/LFDT-Lineth/zkc/issues/2013
+	//
+	// and when replugging, then we should also construct a new wiop.System for verifier to ensure that the
+	// verifier doesn't have access to the prover's internal state, so that we would have a more realistic
+	// test case. We should also do it in the pipeline test then.
+	// pcs.Compile(sys)
 }
 
 // runProveVerify proves and verifies a given test-case, returning an error if the proof fails to verify.
