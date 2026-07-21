@@ -133,6 +133,10 @@ func proverCompilePipeline(sys *wiop.System) {
 	// pcs compiler due to shifts not defined.
 	//
 	// replug when zkc start emitting lookup constraints, see https://github.com/LFDT-Lineth/zkc/issues/2013
+	//
+	// and when replugging, then we should also construct a new wiop.System for verifier to ensure that the
+	// verifier doesn't have access to the prover's internal state, so that we would have a more realistic
+	// test case. We should also do it in the pipeline test then.
 	// pcs.Compile(sys)
 }
 
