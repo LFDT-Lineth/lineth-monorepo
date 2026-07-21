@@ -55,7 +55,7 @@ install-zkc:
 # Compile zkc program in a binary file
 zkc-compile: $(ZKC_FILES)
 	mkdir -p $(ZKC_BINDIR)
-	zkc compile -o $(ZKC_BINDIR)/$(ZKC_BINARY) --wir $(ZKC_MAIN)
+	zkc compile -o $(ZKC_BINDIR)/$(ZKC_BINARY) --bci $(ZKC_MAIN)
 
 # Check execution of the compiled zkc binary against an input JSON
 # Only works for small zkc programs for now
