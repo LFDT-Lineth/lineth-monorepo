@@ -63,7 +63,7 @@ EXT          := $(suffix $(TEST))
 # Paths below are determined by TEST and the extension
 SRC  := $(MAKEFILE_DIR)$(if $(filter .s,$(EXT)),asm,$(if $(filter .zig,$(EXT)),zig,rust))/src/$(TEST)
 BIN  := $(MAKEFILE_DIR)$(if $(filter .s,$(EXT)),asm/bin/,$(if $(filter .zig,$(EXT)),zig/zig-out/bin/,rust/target/riscv64im-unknown-none-elf/release/))$(NAME)
-JSON := $(BIN).json
+JSON ?= $(BIN).json
 # Note: in the future the JSON file will be removed and main.zkc will receive directly the ELF file
 
 # If true, generates an objdump of the generated ELF for debugging purposes
