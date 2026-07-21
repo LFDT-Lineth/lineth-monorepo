@@ -1,0 +1,591 @@
+{
+    "unit/access_once_memory_02.zkc": {
+        "-1": "no test data"
+    },
+    "unit/access_once_memory_04.zkc": {
+        "0": "output mismatch"
+    },
+    "unit/basic_01.zkc": {
+        "-1": "no test data"
+    },
+    "unit/basic_11.zkc": {
+        "5": "zkc trace/check failed"
+    },
+    "unit/basic_12.zkc": {
+        "5": "zkc trace/check failed"
+    },
+    "unit/basic_13.zkc": {
+        "5": "zkc trace/check failed"
+    },
+    "unit/basic_14.zkc": {
+        "-2": "zkc compile failed"
+    },
+    "unit/basic_17.zkc": {
+        "-1": "no test data"
+    },
+    "unit/basic_18.zkc": {
+        "-1": "no test data"
+    },
+    "unit/basic_19.zkc": {
+        "-1": "no test data"
+    },
+    "unit/basic_26.zkc": {
+        "1": "zkc trace/check failed",
+        "2": "zkc trace/check failed",
+        "3": "zkc trace/check failed"
+    },
+    "unit/basic_27.zkc": {
+        "1": "zkc trace/check failed",
+        "2": "zkc trace/check failed",
+        "3": "zkc trace/check failed"
+    },
+    "unit/basic_28.zkc": {
+        "1": "zkc trace/check failed",
+        "2": "zkc trace/check failed",
+        "3": "zkc trace/check failed"
+    },
+    "unit/basic_36.zkc": {
+        "-1": "no test data"
+    },
+    "unit/basic_45.zkc": {
+        "4": "zkc trace/check failed"
+    },
+    "unit/basic_47.zkc": {
+        "0": "zkc trace/check failed",
+        "1": "zkc trace/check failed",
+        "10": "zkc trace/check failed",
+        "11": "zkc trace/check failed",
+        "12": "zkc trace/check failed",
+        "14": "zkc trace/check failed",
+        "15": "zkc trace/check failed",
+        "16": "zkc trace/check failed",
+        "17": "zkc trace/check failed",
+        "18": "zkc trace/check failed",
+        "19": "zkc trace/check failed",
+        "2": "zkc trace/check failed",
+        "20": "zkc trace/check failed",
+        "21": "zkc trace/check failed",
+        "22": "zkc trace/check failed",
+        "23": "zkc trace/check failed",
+        "24": "zkc trace/check failed",
+        "25": "zkc trace/check failed",
+        "26": "zkc trace/check failed",
+        "28": "zkc trace/check failed",
+        "29": "zkc trace/check failed",
+        "3": "zkc trace/check failed",
+        "30": "zkc trace/check failed",
+        "31": "zkc trace/check failed",
+        "32": "zkc trace/check failed",
+        "33": "zkc trace/check failed",
+        "34": "zkc trace/check failed",
+        "35": "zkc trace/check failed",
+        "36": "zkc trace/check failed",
+        "37": "zkc trace/check failed",
+        "38": "zkc trace/check failed",
+        "39": "zkc trace/check failed",
+        "4": "zkc trace/check failed",
+        "40": "zkc trace/check failed",
+        "41": "zkc trace/check failed",
+        "42": "zkc trace/check failed",
+        "43": "zkc trace/check failed",
+        "44": "zkc trace/check failed",
+        "45": "zkc trace/check failed",
+        "46": "zkc trace/check failed",
+        "47": "zkc trace/check failed",
+        "48": "zkc trace/check failed",
+        "49": "zkc trace/check failed",
+        "5": "zkc trace/check failed",
+        "50": "zkc trace/check failed",
+        "51": "zkc trace/check failed",
+        "52": "zkc trace/check failed",
+        "53": "zkc trace/check failed",
+        "55": "zkc trace/check failed",
+        "56": "zkc trace/check failed",
+        "57": "zkc trace/check failed",
+        "58": "zkc trace/check failed",
+        "59": "zkc trace/check failed",
+        "6": "zkc trace/check failed",
+        "60": "zkc trace/check failed",
+        "61": "zkc trace/check failed",
+        "62": "zkc trace/check failed",
+        "63": "zkc trace/check failed",
+        "64": "zkc trace/check failed",
+        "65": "zkc trace/check failed",
+        "66": "zkc trace/check failed",
+        "67": "zkc trace/check failed",
+        "68": "zkc trace/check failed",
+        "69": "zkc trace/check failed",
+        "7": "zkc trace/check failed",
+        "70": "zkc trace/check failed",
+        "71": "zkc trace/check failed",
+        "72": "zkc trace/check failed",
+        "73": "zkc trace/check failed",
+        "75": "zkc trace/check failed",
+        "76": "zkc trace/check failed",
+        "77": "zkc trace/check failed",
+        "78": "zkc trace/check failed",
+        "79": "zkc trace/check failed",
+        "8": "zkc trace/check failed",
+        "80": "zkc trace/check failed",
+        "81": "zkc trace/check failed",
+        "82": "zkc trace/check failed",
+        "83": "zkc trace/check failed",
+        "84": "zkc trace/check failed",
+        "85": "zkc trace/check failed",
+        "86": "zkc trace/check failed",
+        "87": "zkc trace/check failed",
+        "88": "zkc trace/check failed",
+        "89": "zkc trace/check failed",
+        "9": "zkc trace/check failed",
+        "90": "zkc trace/check failed",
+        "91": "zkc trace/check failed",
+        "92": "zkc trace/check failed",
+        "93": "zkc trace/check failed",
+        "94": "zkc trace/check failed",
+        "95": "zkc trace/check failed",
+        "96": "zkc trace/check failed",
+        "97": "zkc trace/check failed",
+        "98": "zkc trace/check failed",
+        "99": "zkc trace/check failed"
+    },
+    "unit/basic_48.zkc": {
+        "10": "zkc trace/check failed",
+        "100": "zkc trace/check failed",
+        "101": "zkc trace/check failed",
+        "102": "zkc trace/check failed",
+        "103": "zkc trace/check failed",
+        "11": "zkc trace/check failed",
+        "12": "zkc trace/check failed",
+        "13": "zkc trace/check failed",
+        "14": "zkc trace/check failed",
+        "15": "zkc trace/check failed",
+        "16": "zkc trace/check failed",
+        "17": "zkc trace/check failed",
+        "18": "zkc trace/check failed",
+        "19": "zkc trace/check failed",
+        "2": "zkc trace/check failed",
+        "20": "zkc trace/check failed",
+        "21": "zkc trace/check failed",
+        "22": "zkc trace/check failed",
+        "23": "zkc trace/check failed",
+        "24": "zkc trace/check failed",
+        "25": "zkc trace/check failed",
+        "26": "zkc trace/check failed",
+        "27": "zkc trace/check failed",
+        "28": "zkc trace/check failed",
+        "29": "zkc trace/check failed",
+        "3": "zkc trace/check failed",
+        "30": "zkc trace/check failed",
+        "31": "zkc trace/check failed",
+        "32": "zkc trace/check failed",
+        "33": "zkc trace/check failed",
+        "34": "zkc trace/check failed",
+        "35": "zkc trace/check failed",
+        "36": "zkc trace/check failed",
+        "37": "zkc trace/check failed",
+        "38": "zkc trace/check failed",
+        "39": "zkc trace/check failed",
+        "4": "zkc trace/check failed",
+        "40": "zkc trace/check failed",
+        "41": "zkc trace/check failed",
+        "42": "zkc trace/check failed",
+        "43": "zkc trace/check failed",
+        "44": "zkc trace/check failed",
+        "45": "zkc trace/check failed",
+        "46": "zkc trace/check failed",
+        "47": "zkc trace/check failed",
+        "48": "zkc trace/check failed",
+        "49": "zkc trace/check failed",
+        "5": "zkc trace/check failed",
+        "50": "zkc trace/check failed",
+        "51": "zkc trace/check failed",
+        "52": "zkc trace/check failed",
+        "53": "zkc trace/check failed",
+        "54": "zkc trace/check failed",
+        "55": "zkc trace/check failed",
+        "56": "zkc trace/check failed",
+        "57": "zkc trace/check failed",
+        "58": "zkc trace/check failed",
+        "59": "zkc trace/check failed",
+        "6": "zkc trace/check failed",
+        "60": "zkc trace/check failed",
+        "61": "zkc trace/check failed",
+        "62": "zkc trace/check failed",
+        "63": "zkc trace/check failed",
+        "64": "zkc trace/check failed",
+        "65": "zkc trace/check failed",
+        "66": "zkc trace/check failed",
+        "67": "zkc trace/check failed",
+        "68": "zkc trace/check failed",
+        "69": "zkc trace/check failed",
+        "7": "zkc trace/check failed",
+        "70": "zkc trace/check failed",
+        "71": "zkc trace/check failed",
+        "72": "zkc trace/check failed",
+        "73": "zkc trace/check failed",
+        "74": "zkc trace/check failed",
+        "75": "zkc trace/check failed",
+        "76": "zkc trace/check failed",
+        "77": "zkc trace/check failed",
+        "78": "zkc trace/check failed",
+        "79": "zkc trace/check failed",
+        "8": "zkc trace/check failed",
+        "80": "zkc trace/check failed",
+        "81": "zkc trace/check failed",
+        "82": "zkc trace/check failed",
+        "83": "zkc trace/check failed",
+        "84": "zkc trace/check failed",
+        "85": "zkc trace/check failed",
+        "86": "zkc trace/check failed",
+        "87": "zkc trace/check failed",
+        "88": "zkc trace/check failed",
+        "89": "zkc trace/check failed",
+        "9": "zkc trace/check failed",
+        "90": "zkc trace/check failed",
+        "91": "zkc trace/check failed",
+        "92": "zkc trace/check failed",
+        "93": "zkc trace/check failed",
+        "94": "zkc trace/check failed",
+        "95": "zkc trace/check failed",
+        "96": "zkc trace/check failed",
+        "97": "zkc trace/check failed",
+        "98": "zkc trace/check failed",
+        "99": "zkc trace/check failed"
+    },
+    "unit/basic_57.zkc": {
+        "-1": "no test data"
+    },
+    "unit/basic_62.zkc": {
+        "6": "zkc trace/check failed"
+    },
+    "unit/basic_64.zkc": {
+        "2": "zkc trace/check failed",
+        "3": "zkc trace/check failed",
+        "4": "zkc trace/check failed",
+        "5": "zkc trace/check failed"
+    },
+    "unit/basic_67.zkc": {
+        "1": "zkc trace/check failed",
+        "3": "zkc trace/check failed",
+        "4": "zkc trace/check failed"
+    },
+    "unit/basic_72.zkc": {
+        "0": "zkc trace/check failed"
+    },
+    "unit/bignum_02.zkc": {
+        "10": "zkc trace/check failed",
+        "11": "zkc trace/check failed",
+        "12": "zkc trace/check failed",
+        "13": "zkc trace/check failed",
+        "14": "zkc trace/check failed",
+        "15": "zkc trace/check failed",
+        "16": "zkc trace/check failed",
+        "17": "zkc trace/check failed",
+        "18": "zkc trace/check failed",
+        "9": "zkc trace/check failed"
+    },
+    "unit/bignum_10.zkc": {
+        "0": "zkc trace/check failed"
+    },
+    "unit/bignum_11.zkc": {
+        "1": "zkc trace/check failed",
+        "10": "zkc trace/check failed",
+        "11": "zkc trace/check failed",
+        "12": "zkc trace/check failed",
+        "13": "zkc trace/check failed",
+        "14": "zkc trace/check failed",
+        "16": "zkc trace/check failed",
+        "17": "zkc trace/check failed",
+        "18": "zkc trace/check failed",
+        "19": "zkc trace/check failed",
+        "2": "zkc trace/check failed",
+        "20": "zkc trace/check failed",
+        "21": "zkc trace/check failed",
+        "23": "zkc trace/check failed",
+        "24": "zkc trace/check failed",
+        "25": "zkc trace/check failed",
+        "26": "zkc trace/check failed",
+        "27": "zkc trace/check failed",
+        "28": "zkc trace/check failed",
+        "29": "zkc trace/check failed",
+        "3": "zkc trace/check failed",
+        "31": "zkc trace/check failed",
+        "32": "zkc trace/check failed",
+        "33": "zkc trace/check failed",
+        "34": "zkc trace/check failed",
+        "35": "zkc trace/check failed",
+        "36": "zkc trace/check failed",
+        "38": "zkc trace/check failed",
+        "39": "zkc trace/check failed",
+        "4": "zkc trace/check failed",
+        "40": "zkc trace/check failed",
+        "41": "zkc trace/check failed",
+        "43": "zkc trace/check failed",
+        "45": "zkc trace/check failed",
+        "46": "zkc trace/check failed",
+        "47": "zkc trace/check failed",
+        "48": "zkc trace/check failed",
+        "49": "zkc trace/check failed",
+        "50": "zkc trace/check failed",
+        "52": "zkc trace/check failed",
+        "53": "zkc trace/check failed",
+        "6": "zkc trace/check failed",
+        "7": "zkc trace/check failed",
+        "8": "zkc trace/check failed",
+        "9": "zkc trace/check failed"
+    },
+    "unit/bignum_12.zkc": {
+        "0": "zkc trace/check failed",
+        "1": "zkc trace/check failed",
+        "10": "zkc trace/check failed",
+        "11": "zkc trace/check failed",
+        "12": "zkc trace/check failed",
+        "13": "zkc trace/check failed",
+        "14": "zkc trace/check failed",
+        "15": "zkc trace/check failed",
+        "16": "zkc trace/check failed",
+        "17": "zkc trace/check failed",
+        "18": "zkc trace/check failed",
+        "19": "zkc trace/check failed",
+        "2": "zkc trace/check failed",
+        "20": "zkc trace/check failed",
+        "21": "zkc trace/check failed",
+        "22": "zkc trace/check failed",
+        "23": "zkc trace/check failed",
+        "24": "zkc trace/check failed",
+        "25": "zkc trace/check failed",
+        "26": "zkc trace/check failed",
+        "27": "zkc trace/check failed",
+        "28": "zkc trace/check failed",
+        "29": "zkc trace/check failed",
+        "3": "zkc trace/check failed",
+        "30": "zkc trace/check failed",
+        "31": "zkc trace/check failed",
+        "32": "zkc trace/check failed",
+        "33": "zkc trace/check failed",
+        "34": "zkc trace/check failed",
+        "35": "zkc trace/check failed",
+        "36": "zkc trace/check failed",
+        "37": "zkc trace/check failed",
+        "38": "zkc trace/check failed",
+        "39": "zkc trace/check failed",
+        "4": "zkc trace/check failed",
+        "40": "zkc trace/check failed",
+        "41": "zkc trace/check failed",
+        "42": "zkc trace/check failed",
+        "43": "zkc trace/check failed",
+        "44": "zkc trace/check failed",
+        "5": "zkc trace/check failed",
+        "6": "zkc trace/check failed",
+        "7": "zkc trace/check failed",
+        "8": "zkc trace/check failed",
+        "9": "zkc trace/check failed"
+    },
+    "unit/bignum_13.zkc": {
+        "1": "zkc trace/check failed",
+        "10": "zkc trace/check failed",
+        "11": "zkc trace/check failed",
+        "12": "zkc trace/check failed",
+        "13": "zkc trace/check failed",
+        "15": "zkc trace/check failed",
+        "16": "zkc trace/check failed",
+        "17": "zkc trace/check failed",
+        "19": "zkc trace/check failed",
+        "2": "zkc trace/check failed",
+        "20": "zkc trace/check failed",
+        "21": "zkc trace/check failed",
+        "22": "zkc trace/check failed",
+        "24": "zkc trace/check failed",
+        "25": "zkc trace/check failed",
+        "26": "zkc trace/check failed",
+        "27": "zkc trace/check failed",
+        "28": "zkc trace/check failed",
+        "29": "zkc trace/check failed",
+        "3": "zkc trace/check failed",
+        "31": "zkc trace/check failed",
+        "32": "zkc trace/check failed",
+        "33": "zkc trace/check failed",
+        "34": "zkc trace/check failed",
+        "35": "zkc trace/check failed",
+        "36": "zkc trace/check failed",
+        "37": "zkc trace/check failed",
+        "38": "zkc trace/check failed",
+        "39": "zkc trace/check failed",
+        "4": "zkc trace/check failed",
+        "41": "zkc trace/check failed",
+        "42": "zkc trace/check failed",
+        "43": "zkc trace/check failed",
+        "44": "zkc trace/check failed",
+        "46": "zkc trace/check failed",
+        "47": "zkc trace/check failed",
+        "48": "zkc trace/check failed",
+        "49": "zkc trace/check failed",
+        "5": "zkc trace/check failed",
+        "50": "zkc trace/check failed",
+        "51": "zkc trace/check failed",
+        "52": "zkc trace/check failed",
+        "53": "zkc trace/check failed",
+        "6": "zkc trace/check failed",
+        "8": "zkc trace/check failed"
+    },
+    "unit/bignum_15.zkc": {
+        "0": "zkc trace/check failed",
+        "1": "zkc trace/check failed",
+        "2": "zkc trace/check failed",
+        "3": "zkc trace/check failed",
+        "4": "zkc trace/check failed",
+        "5": "zkc trace/check failed"
+    },
+    "unit/break_01.zkc": {
+        "0": "zkc trace/check failed",
+        "1": "zkc trace/check failed",
+        "2": "zkc trace/check failed",
+        "3": "zkc trace/check failed",
+        "4": "zkc trace/check failed"
+    },
+    "unit/cfg_01.zkc": {
+        "-1": "no test data"
+    },
+    "unit/cfg_02.zkc": {
+        "-1": "no test data"
+    },
+    "unit/const_01.zkc": {
+        "-1": "no test data"
+    },
+    "unit/const_02.zkc": {
+        "-1": "no test data"
+    },
+    "unit/continue_01.zkc": {
+        "0": "zkc trace/check failed",
+        "1": "zkc trace/check failed",
+        "2": "zkc trace/check failed",
+        "3": "zkc trace/check failed",
+        "4": "zkc trace/check failed"
+    },
+    "unit/fixed_array_01.zkc": {
+        "-1": "no test data"
+    },
+    "unit/fixed_array_02.zkc": {
+        "-1": "no test data"
+    },
+    "unit/fixed_array_03.zkc": {
+        "-1": "no test data"
+    },
+    "unit/fixed_array_05.zkc": {
+        "-1": "no test data"
+    },
+    "unit/fixed_array_06.zkc": {
+        "-1": "no test data"
+    },
+    "unit/fixed_array_07.zkc": {
+        "-1": "no test data"
+    },
+    "unit/fixed_array_08.zkc": {
+        "-1": "no test data"
+    },
+    "unit/fixed_array_09.zkc": {
+        "-1": "no test data"
+    },
+    "unit/fixed_array_16.zkc": {
+        "0": "output mismatch"
+    },
+    "unit/fixed_array_22.zkc": {
+        "0": "zkc trace/check failed"
+    },
+    "unit/fixed_array_23.zkc": {
+        "-1": "no test data"
+    },
+    "unit/for_02.zkc": {
+        "-1": "no test data"
+    },
+    "unit/for_03.zkc": {
+        "1": "zkc trace/check failed",
+        "10": "zkc trace/check failed",
+        "11": "zkc trace/check failed",
+        "12": "zkc trace/check failed",
+        "2": "zkc trace/check failed",
+        "3": "zkc trace/check failed",
+        "4": "zkc trace/check failed",
+        "5": "zkc trace/check failed",
+        "6": "zkc trace/check failed",
+        "7": "zkc trace/check failed",
+        "8": "zkc trace/check failed",
+        "9": "zkc trace/check failed"
+    },
+    "unit/ifelse_01.zkc": {
+        "-1": "no test data"
+    },
+    "unit/ifelse_02.zkc": {
+        "-1": "no test data"
+    },
+    "unit/include_01.zkc": {
+        "-1": "no test data"
+    },
+    "unit/include_02.zkc": {
+        "-1": "no test data"
+    },
+    "unit/inline_28.zkc": {
+        "1": "zkc trace/check failed",
+        "2": "zkc trace/check failed",
+        "3": "zkc trace/check failed"
+    },
+    "unit/printf_04.zkc": {
+        "-1": "no test data"
+    },
+    "unit/switch_01.zkc": {
+        "-1": "no test data"
+    },
+    "unit/switch_02.zkc": {
+        "-1": "no test data"
+    },
+    "unit/switch_03.zkc": {
+        "-1": "no test data"
+    },
+    "unit/switch_08.zkc": {
+        "-1": "no test data"
+    },
+    "unit/type_01.zkc": {
+        "-1": "no test data"
+    },
+    "unit/type_02.zkc": {
+        "-1": "no test data"
+    },
+    "unit/type_03.zkc": {
+        "-1": "no test data"
+    },
+    "unit/type_04.zkc": {
+        "-1": "no test data"
+    },
+    "unit/type_05.zkc": {
+        "-1": "no test data"
+    },
+    "unit/type_06.zkc": {
+        "-1": "no test data"
+    },
+    "unit/type_07.zkc": {
+        "-1": "no test data"
+    },
+    "unit/type_09.zkc": {
+        "-1": "no test data"
+    },
+    "unit/while_02.zkc": {
+        "1": "zkc trace/check failed",
+        "2": "zkc trace/check failed",
+        "3": "zkc trace/check failed",
+        "4": "zkc trace/check failed"
+    },
+    "unit/while_03.zkc": {
+        "1": "zkc trace/check failed",
+        "10": "zkc trace/check failed",
+        "11": "zkc trace/check failed",
+        "12": "zkc trace/check failed",
+        "2": "zkc trace/check failed",
+        "3": "zkc trace/check failed",
+        "4": "zkc trace/check failed",
+        "5": "zkc trace/check failed",
+        "6": "zkc trace/check failed",
+        "7": "zkc trace/check failed",
+        "8": "zkc trace/check failed",
+        "9": "zkc trace/check failed"
+    }
+}

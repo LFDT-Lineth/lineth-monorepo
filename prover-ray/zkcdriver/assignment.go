@@ -6,9 +6,9 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
-	"github.com/consensys/go-corset/pkg/ir/air"
-	"github.com/consensys/go-corset/pkg/trace"
-	"github.com/consensys/go-corset/pkg/util/field/koalabear"
+	"github.com/LFDT-Lineth/zkc/pkg/ir/air"
+	"github.com/LFDT-Lineth/zkc/pkg/trace"
+	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
