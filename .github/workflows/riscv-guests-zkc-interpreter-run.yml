@@ -64,7 +64,7 @@ jobs:
     # gogen+fast execution is light (~tens of MB, seconds), so the 32 GB tier the heavy interpreter
     # path would have needed is unnecessary — this job is build-bound, not memory-bound. The mid tier
     # (16 GB) covers the zig/zesu build and the run comfortably.
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     steps:
       - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
