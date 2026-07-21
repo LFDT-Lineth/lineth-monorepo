@@ -53,7 +53,7 @@ Added to `ts-libs/linea-shared-utils/src/logging/__tests__/WinstonLogger.test.ts
 
 1. A line under the limit is emitted unchanged (no marker present).
 2. A line over the limit (metadata value larger than 250 KB) is truncated to exactly `MAX_LOG_LINE_LENGTH` characters and ends with the truncation marker.
-3. The marker reports the correct number of omitted characters.
+3. The marker reports the correct overage (characters the original line exceeded the cap by).
 
 ## Files changed
 
