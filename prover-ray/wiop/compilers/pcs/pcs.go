@@ -45,13 +45,16 @@ import (
 const (
 	// friInverseRate is the FRI blow-up factor (codeword size / plaintext size).
 	friInverseRate = 2
-	// friNumQueries is the number of FRI query openings. This is obtained from
-	// https://github.com/ethereum/soundcalc
-	//
-	// To match 128 bits of security, we determined that the following number of
-	// queries is required.
-	friNumQueries = 229
 )
+
+// friNumQueries is the number of FRI query openings. This is obtained from
+// https://github.com/ethereum/soundcalc
+//
+// To match 128 bits of security, we determined that the following number of
+// queries is required. It is a variable (rather than a constant) so tests
+// exercising the full compilation pipeline can lower it via
+// [SetFRINumQueriesForTest]; production callers must never mutate it.
+var friNumQueries = 229
 
 var (
 	// maxCommittableSizeLog2 is the fixed capacity of the static FRI parameters:
@@ -292,10 +295,7 @@ func (c *compiled) open(rt *wiop.Runtime) fri.OpeningProof {
 
 	fs.UpdateExt(state.FinalPolyExt...)
 	positions := fs.RandomManyIntegers(pcs.Params.NumQueries, effectiveN(rt, batches))
-	return fri.OpeningProof{
-		RowOpenings: pcs.OpenedRows(positions),
-		FRIProof:    state.Open(positions),
-	}
+	return pcs.Open(state, positions)
 }
 
 // verify replays the opening transcript exactly as the prover produced it and
@@ -313,8 +313,8 @@ func (c *compiled) verify(rt *wiop.Runtime, proof fri.OpeningProof) error {
 	// absorbing each intermediate layer root. The final round reveals the final
 	// polynomial and commits no root, so its challenge is squeezed without a
 	// matching absorption.
-	foldAlphas := make([]field.Ext, 0, len(proof.FRIProof.FRIRoots)+1)
-	for _, friRoot := range proof.FRIProof.FRIRoots {
+	foldAlphas := make([]field.Ext, 0, len(proof.FRIProof.RoundRoots)+1)
+	for _, friRoot := range proof.FRIProof.RoundRoots {
 		foldAlphas = append(foldAlphas, fs.RandomFext())
 		fs.Update(friRoot[:]...)
 	}
