@@ -16,22 +16,22 @@ func TestRunZKCExamples(t *testing.T) {
 	basicTestCases := []zkcTestCase{
 		{
 			ZkcFilePath: "testdata/zkc_01.zkc",
-			InputStr:    "{\"data\": \"0x0041_0042\" }",
+			InputStr:    `{"data": "0x0041_0042"}`,
 		},
 		{
 
 			ZkcFilePath: "testdata/zkc_01.zkc",
-			InputStr:    "{\"data\": \"0x0000_0001\" }",
+			InputStr:    `{"data": "0x0000_0001"}`,
 		},
 		{
 
 			ZkcFilePath: "testdata/zkc_02.zkc",
-			InputStr:    "{\"data\": \"0x0003_0008\" }",
+			InputStr:    `{"data": "0x0003_0008"}`,
 		},
 		{
 
 			ZkcFilePath: "testdata/zkc_02.zkc",
-			InputStr:    "{\"data\": \"0x000f_8000\" }",
+			InputStr:    `{"data": "0x000f_8000"}`,
 		},
 	}
 
