@@ -2,6 +2,9 @@ package zkcdriver_test
 
 import (
 	"testing"
+
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 )
 
 // zkcTestCase represents a zkc testcase. The user only needs to populate
@@ -9,6 +12,7 @@ import (
 type zkcTestCase struct {
 	ZkcFilePath string
 	InputStr    string
+	compileFn   func(*wiop.System)
 }
 
 func TestRunZKCExamples(t *testing.T) {
@@ -39,6 +43,10 @@ func TestRunZKCExamples(t *testing.T) {
 			// with pcs compiler added to the pipeline.
 			ZkcFilePath: "testdata/no-memory.zkc",
 			InputStr:    `{}`,
+			compileFn: func(sys *wiop.System) {
+				proverCompilePipeline(sys)
+				pcs.Compile(sys)
+			},
 		},
 	}
 
@@ -52,7 +60,12 @@ func TestRunZKCExamples(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to parse test case: %v", err)
 			}
-			if err := runProveVerify(inputs, binF, proverCompilePipeline); err != nil {
+			compileFn := proverCompilePipeline
+			if tc.compileFn != nil {
+				compileFn = tc.compileFn
+			}
+
+			if err := runProveVerify(inputs, binF, compileFn); err != nil {
 				t.Fatalf("failed to run test case: %v", err)
 			}
 		})
