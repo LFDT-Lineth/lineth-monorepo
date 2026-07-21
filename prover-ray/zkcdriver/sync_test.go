@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/files"
@@ -110,21 +111,28 @@ func TestZkcIntegrationTestSynced(t *testing.T) {
 	}
 }
 
+var failuresMapMutex = new(sync.RWMutex)
+
 func fatalIfNotKnown(t *testing.T, knownFailures knownFailures, unitName string, caseNr int, reason zkcFailReason, msg string, args ...any) {
 	t.Helper()
 	// if it is already in the map then we have already seen this failure, so we can just log it and continue. Otherwise, we fail the test.
+	failuresMapMutex.RLock()
 	if unitFailures, ok := knownFailures[unitName]; ok {
 		if knownReason, ok := unitFailures[caseNr]; ok {
 			if knownReason == reason {
 				t.Logf(msg, args...)
+				failuresMapMutex.RUnlock()
 				return
 			}
 		}
 	}
+	failuresMapMutex.RUnlock()
+	failuresMapMutex.Lock()
 	if _, ok := knownFailures[unitName]; !ok {
 		knownFailures[unitName] = make(map[int]zkcFailReason)
 	}
 	knownFailures[unitName][caseNr] = reason
+	failuresMapMutex.Unlock()
 	// unknown error. We fail the test and log the error. The user can then add
 	// this failure to the known failures map if it is expected.
 	//
