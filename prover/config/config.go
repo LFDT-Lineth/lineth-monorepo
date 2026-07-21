@@ -231,13 +231,13 @@ type Controller struct {
 	// The number of seconds the controller should wait before killing a worker after receiving a SIGTERM
 	TerminationGracePeriod int `mapstructure:"termination_grace_period_seconds"`
 
-	// EnableExecution controls whether execution jobs are picked up; defaults to true.
+	// EnableExecution controls whether execution jobs are picked up.
 	EnableExecution bool `mapstructure:"enable_execution"`
-	// EnableDataAvailability controls whether data-availability jobs are picked up; defaults to true.
+	// EnableDataAvailability controls whether data-availability jobs are picked up.
 	EnableDataAvailability bool `mapstructure:"enable_data_availability"`
-	// EnableAggregation controls whether aggregation jobs are picked up; defaults to true.
+	// EnableAggregation controls whether aggregation jobs are picked up.
 	EnableAggregation bool `mapstructure:"enable_aggregation"`
-	// EnableInvalidity controls whether invalidity jobs are picked up; defaults to true.
+	// EnableInvalidity controls whether invalidity jobs are picked up.
 	EnableInvalidity bool `mapstructure:"enable_invalidity"`
 
 	// WorkerCmd is the template string for spawning a standard worker process.
