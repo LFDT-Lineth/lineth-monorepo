@@ -16,13 +16,13 @@ create table if not exists blobs (
     start_block_number             bigint,
     end_block_number               bigint,
     conflation_calculator_version  varchar(256),
-    blob_hash                      varchar(256),
+    blob_hash                      varchar(256), -- remove after RISC-V
     status                         smallint,
     start_block_timestamp          bigint,
     end_block_timestamp            bigint,
     batches_count                  integer,
-    expected_shnarf                varchar(256),
-    blob_compression_proof         jsonb,
+    expected_shnarf                varchar(256), -- remove after RISC-V
+    blob_compression_proof         jsonb, -- rename to blob_info after RISC-V
     primary key (start_block_number, end_block_number, conflation_calculator_version)
 );
 create index blob_start_block_number_idx ON blobs using btree (start_block_number);
