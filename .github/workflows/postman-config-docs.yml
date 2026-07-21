@@ -54,6 +54,14 @@ jobs:
         working-directory: scripts/postman-options
         run: pnpm run check
 
+      - name: Unit + public-safe tests
+        working-directory: scripts/postman-options
+        run: pnpm test
+
+      - name: Prettier check
+        working-directory: scripts/postman-options
+        run: pnpm run prettier:check
+
       - name: Dry-run summary
         if: ${{ inputs.dry_run }}
         working-directory: scripts/postman-options

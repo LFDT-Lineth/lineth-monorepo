@@ -175,6 +175,7 @@
     "missingFromInventory": [],
     "extraInInventory": []
   },
+  "defaultKindMismatches": [],
   "sourceFiles": [
     "postman/src/application/postman/app/config/envLoader.ts",
     "postman/src/application/postman/app/config/schema.ts"

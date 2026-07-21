@@ -208,13 +208,13 @@
       "type": "string",
       "description": "AWS KMS key ID or ARN used for signing",
       "required": false,
-      "requiredLabel": "optional; used when SIGNER_TYPE is \"aws-kms\"",
+      "requiredLabel": "optional; used when L1_SIGNER_TYPE is \"aws-kms\"",
       "oneof": null,
       "section": "signer",
       "default": null,
       "defaultResolved": false,
       "secret": true,
-      "allowedRequired": "optional; used when SIGNER_TYPE is \"aws-kms\""
+      "allowedRequired": "optional; used when L1_SIGNER_TYPE is \"aws-kms\""
     },
     {
       "key": "L1_AWS_KMS_REGION",
@@ -493,13 +493,13 @@
       "type": "hex private key (32 bytes)",
       "description": "Hex-encoded 32-byte private key used to sign transactions",
       "required": false,
-      "requiredLabel": "optional; used when SIGNER_TYPE is \"private-key\"",
+      "requiredLabel": "optional; used when L1_SIGNER_TYPE is \"private-key\"",
       "oneof": null,
       "section": "signer",
       "default": null,
       "defaultResolved": false,
       "secret": true,
-      "allowedRequired": "optional; used when SIGNER_TYPE is \"private-key\""
+      "allowedRequired": "optional; used when L1_SIGNER_TYPE is \"private-key\""
     },
     {
       "key": "L1_SIGNER_TYPE",
@@ -523,13 +523,13 @@
       "type": "string",
       "description": "Web3Signer HTTP(S) endpoint URL",
       "required": false,
-      "requiredLabel": "optional; used when SIGNER_TYPE is \"web3signer\"",
+      "requiredLabel": "optional; used when L1_SIGNER_TYPE is \"web3signer\"",
       "oneof": null,
       "section": "signer",
       "default": null,
       "defaultResolved": false,
       "secret": true,
-      "allowedRequired": "optional; used when SIGNER_TYPE is \"web3signer\""
+      "allowedRequired": "optional; used when L1_SIGNER_TYPE is \"web3signer\""
     },
     {
       "key": "L1_WEB3_SIGNER_PUBLIC_KEY",
@@ -538,13 +538,13 @@
       "type": "hex string",
       "description": "Public key of the Web3Signer signing account",
       "required": false,
-      "requiredLabel": "optional; used when SIGNER_TYPE is \"web3signer\"",
+      "requiredLabel": "optional; used when L1_SIGNER_TYPE is \"web3signer\"",
       "oneof": null,
       "section": "signer",
       "default": null,
       "defaultResolved": false,
       "secret": true,
-      "allowedRequired": "optional; used when SIGNER_TYPE is \"web3signer\""
+      "allowedRequired": "optional; used when L1_SIGNER_TYPE is \"web3signer\""
     },
     {
       "key": "L1_WEB3_SIGNER_TLS_KEYSTORE_PASSWORD",
@@ -613,13 +613,13 @@
       "type": "string",
       "description": "AWS KMS key ID or ARN used for signing",
       "required": false,
-      "requiredLabel": "optional; used when SIGNER_TYPE is \"aws-kms\"",
+      "requiredLabel": "optional; used when L2_SIGNER_TYPE is \"aws-kms\"",
       "oneof": null,
       "section": "signer",
       "default": null,
       "defaultResolved": false,
       "secret": true,
-      "allowedRequired": "optional; used when SIGNER_TYPE is \"aws-kms\""
+      "allowedRequired": "optional; used when L2_SIGNER_TYPE is \"aws-kms\""
     },
     {
       "key": "L2_AWS_KMS_REGION",
@@ -913,13 +913,13 @@
       "type": "hex private key (32 bytes)",
       "description": "Hex-encoded 32-byte private key used to sign transactions",
       "required": false,
-      "requiredLabel": "optional; used when SIGNER_TYPE is \"private-key\"",
+      "requiredLabel": "optional; used when L2_SIGNER_TYPE is \"private-key\"",
       "oneof": null,
       "section": "signer",
       "default": null,
       "defaultResolved": false,
       "secret": true,
-      "allowedRequired": "optional; used when SIGNER_TYPE is \"private-key\""
+      "allowedRequired": "optional; used when L2_SIGNER_TYPE is \"private-key\""
     },
     {
       "key": "L2_SIGNER_TYPE",
@@ -943,13 +943,13 @@
       "type": "string",
       "description": "Web3Signer HTTP(S) endpoint URL",
       "required": false,
-      "requiredLabel": "optional; used when SIGNER_TYPE is \"web3signer\"",
+      "requiredLabel": "optional; used when L2_SIGNER_TYPE is \"web3signer\"",
       "oneof": null,
       "section": "signer",
       "default": null,
       "defaultResolved": false,
       "secret": true,
-      "allowedRequired": "optional; used when SIGNER_TYPE is \"web3signer\""
+      "allowedRequired": "optional; used when L2_SIGNER_TYPE is \"web3signer\""
     },
     {
       "key": "L2_WEB3_SIGNER_PUBLIC_KEY",
@@ -958,13 +958,13 @@
       "type": "hex string",
       "description": "Public key of the Web3Signer signing account",
       "required": false,
-      "requiredLabel": "optional; used when SIGNER_TYPE is \"web3signer\"",
+      "requiredLabel": "optional; used when L2_SIGNER_TYPE is \"web3signer\"",
       "oneof": null,
       "section": "signer",
       "default": null,
       "defaultResolved": false,
       "secret": true,
-      "allowedRequired": "optional; used when SIGNER_TYPE is \"web3signer\""
+      "allowedRequired": "optional; used when L2_SIGNER_TYPE is \"web3signer\""
     },
     {
       "key": "L2_WEB3_SIGNER_TLS_KEYSTORE_PASSWORD",
@@ -1030,8 +1030,8 @@
       "key": "LOG_LEVEL",
       "envVar": "LOG_LEVEL",
       "field": "loggerOptions.level",
-      "type": "any",
-      "description": "Winston logger options (e.g. log level)",
+      "type": "string",
+      "description": "Log level for the Winston logger",
       "required": false,
       "requiredLabel": "optional",
       "oneof": null,

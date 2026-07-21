@@ -43,6 +43,8 @@ const ENV_INVENTORY = [
     env: "LOG_LEVEL",
     field: "loggerOptions.level",
     schemaField: "loggerOptions",
+    typeHint: "string",
+    description: "Log level for the Winston logger",
     defaultKind: "literal:info",
     required: false,
   },
@@ -608,14 +610,20 @@ function resolveDefault(defaultKind) {
 
 function expandInventoryEntry(entry) {
   if (entry.expand === "prefix") {
-    return ["L1", "L2"].map((prefix) => ({
-      ...entry,
-      env: `${prefix}_${entry.envSuffix}`,
-      field: entry.field,
-      expand: undefined,
-      envSuffix: undefined,
-      prefix,
-    }));
+    return ["L1", "L2"].map((prefix) => {
+      const expanded = {
+        ...entry,
+        env: `${prefix}_${entry.envSuffix}`,
+        field: entry.field,
+        expand: undefined,
+        envSuffix: undefined,
+        prefix,
+      };
+      if (typeof entry.condition === "string" && entry.condition.includes("SIGNER_TYPE")) {
+        expanded.condition = entry.condition.replaceAll("SIGNER_TYPE", `${prefix}_SIGNER_TYPE`);
+      }
+      return expanded;
+    });
   }
   if (entry.expand === "sponsoring") {
     // L1 claiming reads L2_L1_…; L2 claiming reads L1_L2_…
@@ -637,6 +645,59 @@ function expandInventoryEntry(entry) {
     ];
   }
   return [entry];
+}
+
+/**
+ * Verify inventory defaultKind claims against envLoader.ts source text.
+ * Only literal: and bool-false are checked; placeholder/optional/conditional skip.
+ * Returns a list of mismatch messages (empty = OK).
+ */
+function verifyDefaultKinds(envLoaderSource, expandedEntries) {
+  const mismatches = [];
+  for (const entry of expandedEntries) {
+    const kind = entry.defaultKind;
+    if (!kind) continue;
+
+    if (kind.startsWith("literal:")) {
+      const value = kind.slice("literal:".length);
+      const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      let matched = false;
+      if (entry.prefix) {
+        const suffix = entry.env.replace(new RegExp(`^${entry.prefix}_`), "");
+        const tplRe = new RegExp(`process\\.env\\[\`\\$\\{prefix\\}_${suffix}\`\\]\\s*\\?\\?\\s*['"]${escaped}['"]`);
+        matched = tplRe.test(envLoaderSource);
+      } else {
+        const dotRe = new RegExp(`process\\.env\\.${entry.env}\\s*\\?\\?\\s*['"]${escaped}['"]`);
+        matched = dotRe.test(envLoaderSource);
+      }
+      if (!matched) {
+        mismatches.push(
+          `${entry.env}: defaultKind ${JSON.stringify(kind)} not found as ?? ${JSON.stringify(value)} in envLoader`,
+        );
+      }
+      continue;
+    }
+
+    if (kind === "bool-false") {
+      let matched = false;
+      if (entry.prefix && entry.env.endsWith("_ENABLE_POSTMAN_SPONSORING")) {
+        // Sponsoring uses ${opposite}_${prefix}_ENABLE_POSTMAN_SPONSORING
+        const re = /process\.env\[`\$\{opposite\}_\$\{prefix\}_ENABLE_POSTMAN_SPONSORING`\]\s*===\s*["']true["']/;
+        matched = re.test(envLoaderSource);
+      } else if (entry.prefix) {
+        const suffix = entry.env.replace(new RegExp(`^${entry.prefix}_`), "");
+        const tplRe = new RegExp(`process\\.env\\[\`\\$\\{prefix\\}_${suffix}\`\\]\\s*===\\s*['"]true['"]`);
+        matched = tplRe.test(envLoaderSource);
+      } else {
+        const dotRe = new RegExp(`process\\.env\\.${entry.env}\\s*===\\s*['"]true['"]`);
+        matched = dotRe.test(envLoaderSource);
+      }
+      if (!matched) {
+        mismatches.push(`${entry.env}: defaultKind "bool-false" not found as === "true" in envLoader`);
+      }
+    }
+  }
+  return mismatches;
 }
 
 /** Parse a JS/TS string literal starting at `pos` (must point at opening quote). */
@@ -837,81 +898,78 @@ function extract(monorepoRoot) {
   const schemaFields = parseSchemaFields(schemaSource);
   const sourceRefs = collectSourceEnvRefs(envLoaderSource);
 
+  const expandedEntries = ENV_INVENTORY.flatMap((raw) => expandInventoryEntry(raw));
+  const defaultKindMismatches = verifyDefaultKinds(envLoaderSource, expandedEntries);
+
   const rows = [];
   const missingDescriptions = [];
   const placeholderDefaults = [];
   const secretVars = [];
   const uncorrelated = [];
 
-  for (const raw of ENV_INVENTORY) {
-    for (const entry of expandInventoryEntry(raw)) {
-      const schemaMeta = entry.schemaField ? schemaFields.get(entry.schemaField) : null;
-      let { value: defaultValue, placeholder, placeholderRaw } = resolveDefault(entry.defaultKind);
+  for (const entry of expandedEntries) {
+    const schemaMeta = entry.schemaField ? schemaFields.get(entry.schemaField) : null;
+    let { value: defaultValue, placeholder, placeholderRaw } = resolveDefault(entry.defaultKind);
 
-      let description = schemaMeta?.description || "";
-      // loggerOptions.level → parent loggerOptions describe
-      if (!description && entry.schemaField === "loggerOptions") {
-        description = schemaFields.get("loggerOptions")?.description || "";
-      }
+    let description = entry.description || schemaMeta?.description || "";
 
-      let type = entry.typeHint || schemaMeta?.type || "";
-      if (entry.oneof) {
-        type = `string (${entry.oneof.join("|")})`;
-      }
+    let type = entry.typeHint || schemaMeta?.type || "";
+    if (entry.oneof) {
+      type = `string (${entry.oneof.join("|")})`;
+    }
 
-      const correlated = Boolean(description) || entry.schemaField === null;
-      // passthrough DB leaves intentionally have no leaf describe
-      if (!description) {
-        missingDescriptions.push({
-          envVar: entry.env,
-          field: entry.field,
-          schemaField: entry.schemaField,
-        });
-        if (entry.schemaField && !schemaMeta) {
-          uncorrelated.push({ envVar: entry.env, field: entry.field, schemaField: entry.schemaField });
-        }
-      }
-
-      if (placeholder) {
-        placeholderDefaults.push({
-          envVar: entry.env,
-          placeholder: placeholderRaw ?? "",
-        });
-      }
-
-      const secret = isSecretEnv(entry.env, entry.secret);
-      if (secret) {
-        secretVars.push(entry.env);
-        // Never publish defaults for secrets/endpoints (even literal source fallbacks).
-        if (defaultValue != null) {
-          placeholderDefaults.push({
-            envVar: entry.env,
-            placeholder: String(defaultValue),
-            reason: "secret-default-suppressed",
-          });
-          defaultValue = null;
-        }
-      }
-
-      const requiredFlag =
-        entry.required === true ? true : entry.required === false ? false : schemaMeta ? !schemaMeta.optional : false;
-
-      rows.push({
-        key: entry.env,
+    const correlated = Boolean(description) || entry.schemaField === null;
+    // passthrough DB leaves intentionally have no leaf describe
+    if (!description) {
+      missingDescriptions.push({
         envVar: entry.env,
         field: entry.field,
-        description,
-        default: defaultValue,
-        type,
-        required: requiredFlag,
-        requiredLabel: formatRequired({ ...entry, required: requiredFlag }, schemaMeta),
-        section: entry.section,
-        secret,
-        oneof: entry.oneof || schemaMeta?.oneof || null,
-        defaultResolved: defaultValue != null,
-        correlated,
+        schemaField: entry.schemaField,
+      });
+      if (entry.schemaField && !schemaMeta) {
+        uncorrelated.push({ envVar: entry.env, field: entry.field, schemaField: entry.schemaField });
+      }
+    }
+
+    if (placeholder) {
+      placeholderDefaults.push({
+        envVar: entry.env,
+        placeholder: placeholderRaw ?? "",
       });
     }
+
+    const secret = isSecretEnv(entry.env, entry.secret);
+    if (secret) {
+      secretVars.push(entry.env);
+      // Never publish defaults for secrets/endpoints (even literal source fallbacks).
+      if (defaultValue != null) {
+        placeholderDefaults.push({
+          envVar: entry.env,
+          placeholder: String(defaultValue),
+          reason: "secret-default-suppressed",
+        });
+        defaultValue = null;
+      }
+    }
+
+    const requiredFlag =
+      entry.required === true ? true : entry.required === false ? false : schemaMeta ? !schemaMeta.optional : false;
+
+    rows.push({
+      key: entry.env,
+      envVar: entry.env,
+      field: entry.field,
+      description,
+      default: defaultValue,
+      type,
+      required: requiredFlag,
+      requiredLabel: formatRequired({ ...entry, required: requiredFlag }, schemaMeta),
+      section: entry.section,
+      secret,
+      oneof: entry.oneof || schemaMeta?.oneof || null,
+      defaultResolved: defaultValue != null,
+      correlated,
+    });
   }
 
   // Completeness vs source: every source ref must appear in inventory
@@ -983,6 +1041,7 @@ function extract(monorepoRoot) {
       missingFromInventory,
       extraInInventory,
     },
+    defaultKindMismatches,
     sourceFiles: [ENV_LOADER_REL, SCHEMA_REL],
   };
 
@@ -990,6 +1049,14 @@ function extract(monorepoRoot) {
     const err = new Error(
       `Env inventory drift vs ${ENV_LOADER_REL}: ` +
         `missing=${JSON.stringify(missingFromInventory)} extra=${JSON.stringify(extraInInventory)}`,
+    );
+    err.report = report;
+    throw err;
+  }
+
+  if (defaultKindMismatches.length) {
+    const err = new Error(
+      `Env inventory defaultKind drift vs ${ENV_LOADER_REL}: ` + JSON.stringify(defaultKindMismatches),
     );
     err.report = report;
     throw err;
@@ -1008,5 +1075,6 @@ module.exports = {
   collectSourceEnvRefs,
   expandInventoryEntry,
   resolveDefault,
+  verifyDefaultKinds,
   PLACEHOLDER_DEFAULTS,
 };

@@ -5,7 +5,7 @@ const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 
 const { escapeCell, isNeutralPartial, checkCompleteness, build, partialComponentName } = require("./lib");
-const { extract } = require("./parse-postman");
+const { extract, expandInventoryEntry, verifyDefaultKinds } = require("./parse-postman");
 const {
   TOOL_ROOT,
   MONOREPO_ROOT,
@@ -78,6 +78,9 @@ test("spot-check known defaults, types, and descriptions", { skip: !hasCommitted
   const byKey = new Map(manifest.keys.map((k) => [k.envVar, k]));
 
   assert.equal(byKey.get("LOG_LEVEL").default, "info");
+  assert.match(byKey.get("LOG_LEVEL").type, /string/);
+  assert.match(byKey.get("LOG_LEVEL").description, /log level/i);
+  assert.doesNotMatch(byKey.get("LOG_LEVEL").type, /\bany\b/);
   assert.equal(byKey.get("POSTGRES_PORT").default, "5432");
 
   const rpc = byKey.get("L1_RPC_URL");
@@ -100,6 +103,35 @@ test("spot-check known defaults, types, and descriptions", { skip: !hasCommitted
   assert.equal(pk.default, null);
   assert.ok(pk.secret);
   assert.ok(pk.description.length > 0);
+  assert.match(pk.requiredLabel, /L1_SIGNER_TYPE/);
+
+  const pk2 = byKey.get("L2_SIGNER_PRIVATE_KEY");
+  assert.match(pk2.requiredLabel, /L2_SIGNER_TYPE/);
+
+  assert.equal(byKey.get("L1_L2_AUTO_CLAIM_ENABLED").default, "false");
+  assert.equal(byKey.get("L1_L2_AUTO_CLAIM_ENABLED").required, true);
+});
+
+test("verifyDefaultKinds flags literal mismatch against envLoader source", () => {
+  const src = 'level: process.env.LOG_LEVEL ?? "info",\n';
+  const ok = verifyDefaultKinds(src, [{ env: "LOG_LEVEL", defaultKind: "literal:info" }]);
+  assert.deepEqual(ok, []);
+
+  const bad = verifyDefaultKinds(src, [{ env: "LOG_LEVEL", defaultKind: "literal:debug" }]);
+  assert.equal(bad.length, 1);
+  assert.match(bad[0], /LOG_LEVEL/);
+});
+
+test("expandInventoryEntry prefixes SIGNER_TYPE in conditions", () => {
+  const [l1, l2] = expandInventoryEntry({
+    expand: "prefix",
+    envSuffix: "SIGNER_PRIVATE_KEY",
+    condition: 'used when SIGNER_TYPE is "private-key"',
+    defaultKind: "placeholder:0x",
+  });
+  assert.equal(l1.env, "L1_SIGNER_PRIVATE_KEY");
+  assert.equal(l1.condition, 'used when L1_SIGNER_TYPE is "private-key"');
+  assert.equal(l2.condition, 'used when L2_SIGNER_TYPE is "private-key"');
 });
 
 test("partials are neutral tables", { skip: !hasCommittedOutput }, () => {
