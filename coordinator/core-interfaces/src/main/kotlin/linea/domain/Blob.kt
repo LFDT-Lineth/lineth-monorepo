@@ -154,6 +154,25 @@ data class BlobRecord(
   }
 }
 
+data class BlobRecordV2(
+  override val startBlockNumber: ULong,
+  override val endBlockNumber: ULong,
+  val startBlockTimestamp: Instant,
+  val endBlockTimestamp: Instant,
+  val parentShnarf: ByteArray,
+  val endShnarf: ByteArray,
+  val totalBatchesCount: UInt,
+  val blobsData: List<BlobData>,
+) : BlockInterval {
+
+}
+
+data class BlobData(
+  val blobHash: ByteArray,
+  val compressedData: ByteArray,
+  val batchesCount: UInt,
+)
+
 enum class BlobStatus {
   COMPRESSION_PROVING,
   COMPRESSION_PROVEN,
