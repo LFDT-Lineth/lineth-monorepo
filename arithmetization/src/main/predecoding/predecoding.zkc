@@ -21,7 +21,7 @@ fn predecoding<decoded_ram>(pc:Address, instruction:Instruction) {
     var rs1_decoded:Register
     var rs2_decoded:Register
     var rd_decoded:Register
-    compute_op, imm_decoded, rs1_decoded, rs2_decoded, rd_decoded = decoded_rom[(pc - instruction_base[0]) >> 2]
+    compute_op, imm_decoded, rs1_decoded, rs2_decoded, rd_decoded = decoded_rom[(pc - instruction_base[0]) / 4]
 
     var instruction_type:Type = instruction_type_from_opcode(opcode)
     switch instruction_type {

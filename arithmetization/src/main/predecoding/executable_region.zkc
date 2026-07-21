@@ -19,6 +19,7 @@ fn executable_region_end() -> (end:Address) {
         }
     }
 
+    // Align up to the next 4-byte boundary
     var rem:Address = max_end % 4
     if rem != 0 {
         end = (max_end + (4 - rem)) as Address
