@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	zkc_util "github.com/consensys/go-corset/pkg/zkc/util"
+	zkc_util "github.com/LFDT-Lineth/zkc/pkg/zkc/util"
 )
 
 // blob is an in-memory guest RAM region: a contiguous byte slice mapped at a
