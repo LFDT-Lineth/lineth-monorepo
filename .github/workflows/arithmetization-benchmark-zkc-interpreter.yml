@@ -15,7 +15,7 @@ name: Arithmetization zkc interpreter benchmark (base vs optim)
 # -- For L2 Guest
 # Runs the l2-execution guest program with the stateless_input.ssz test vector in
 # riscv-guests/l2-execution/test/testdata/stateless_input.ssz
-# This test vector is considered a tiny block - it contains 35 keccak calls (when 
+# This test vector is considered a tiny block - it contains 35 keccak calls (when
 # a small block on Mainnet has 1k).
 # Use the input keccak_accel to run the benchmark with the zkc keccak-accelerator.
 # 1 test vector = 4 blocks
@@ -119,8 +119,8 @@ jobs:
           set -eux
           for variant in base opt; do
             case "$variant" in
-              base) ref="${{ inputs.zkc_ref_base || 'v1.2.20' }}" ;;
-              opt)  ref="${{ inputs.zkc_ref_optim || 'v1.2.20' }}" ;;
+              base) ref="${{ inputs.zkc_ref_base || 'v1.2.22' }}" ;;
+              opt)  ref="${{ inputs.zkc_ref_optim || 'v1.2.22' }}" ;;
             esac
             tmpbin=$(mktemp -d)
             GOBIN="$tmpbin" go install "github.com/LFDT-Lineth/zkc/cmd/zkc@${ref}" \
@@ -213,8 +213,8 @@ jobs:
           TEST_MAKE_DIR="$PWD/arithmetization/src/test"
 
           run_zkc_exec() {  # $1=variant  $2=log path  $3=json  $4=zkc_main  optional: --fast
-            local exec_flags="-v -q"
-            if [[ "${5:-}" == "--fast" ]]; then exec_flags="--fast -v -q"; fi
+            local exec_flags="-v"
+            if [[ "${5:-}" == "--fast" ]]; then exec_flags="--fast -v"; fi
             /usr/bin/time -v env ZKC="/tmp/zkc-${1}" ZKC_EXEC_FLAGS="$exec_flags" \
               make -C "$TEST_MAKE_DIR" --no-print-directory zkc-exec \
               JSON="$3" ZKC_MAIN="$4" \
@@ -224,6 +224,23 @@ jobs:
           run_l2_guest() {  # $1=variant (opt|base)  $2=label (warmup|iter#)  optional: --fast
             run_zkc_exec "$1" "/tmp/bench/logs/l2_guest_${1}_${2}.log" "/tmp/l2-guest-${1}.json" \
               "/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc" "${3:-}"
+          }
+
+          run_zkc_compile() {  # $1=variant (opt|base)  $2=label (warmup|iter#)
+            local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
+            local log="/tmp/bench/logs/compile_${1}_${2}.log"
+            "/tmp/zkc-${1}" compile --stats --inline "$zkc_main" >"$log" 2>&1 || true
+          }
+
+          run_l2_guest() {  # $1=variant (opt|base)  $2=label (warmup|iter#)  optional: --fast
+            run_zkc_exec "$1" "/tmp/bench/logs/l2_guest_${1}_${2}.log" "/tmp/l2-guest-${1}.json" \
+              "/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc" "${3:-}"
+          }
+
+          run_zkc_compile() {  # $1=variant (opt|base)  $2=label (warmup|iter#)
+            local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
+            local log="/tmp/bench/logs/compile_${1}_${2}.log"
+            "/tmp/zkc-${1}" compile --stats --inline "$zkc_main" >"$log" 2>&1 || true
           }
 
           run_keccak() {  # $1=variant (opt|base)  $2=label (warmup|iter#)  optional: --fast
@@ -243,7 +260,7 @@ jobs:
           run_gogen_l2_guest() {  # $1=variant (opt|base)  $2=label (warmup|iter#)
             local zkc_bin="/tmp/zkc-${1}"
             local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
-            "$zkc_bin" generate --fast -v -q --field KOALABEAR_16 -o riscv.go "$zkc_main"
+            "$zkc_bin" generate --fast -v --field KOALABEAR_16 -o riscv.go "$zkc_main"
             go build -o riscv-gogen riscv.go
             /usr/bin/time -v ./riscv-gogen < "/tmp/l2-guest-${1}.json" \
               > "/tmp/bench/logs/l2_guest_${1}_${2}.log" 2>&1
@@ -252,7 +269,7 @@ jobs:
           run_gogen_keccak() {  # $1=variant (opt|base)  $2=label (warmup|iter#)
             local zkc_bin="/tmp/zkc-${1}"
             local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
-            "$zkc_bin" generate --fast -v -q --field KOALABEAR_16 -o riscv.go "$zkc_main"
+            "$zkc_bin" generate --fast -v --field KOALABEAR_16 -o riscv.go "$zkc_main"
             go build -o riscv-gogen riscv.go
             /usr/bin/time -v ./riscv-gogen < "/tmp/keccak-${1}.json" \
               > "/tmp/bench/logs/keccak_${1}_${2}.log" 2>&1
@@ -261,7 +278,7 @@ jobs:
           run_gogen_blake() {   # $1=variant  $2=label. Runs all N vectors, one log file per vector.
             local zkc_bin="/tmp/zkc-${1}"
             local zkc_main="/tmp/wt-${1}/arithmetization/src/main/riscv/main.zkc"
-            "$zkc_bin" generate --fast -v -q --field KOALABEAR_16 -o riscv.go "$zkc_main"
+            "$zkc_bin" generate --fast -v --field KOALABEAR_16 -o riscv.go "$zkc_main"
             go build -o riscv-gogen riscv.go
             for json in /tmp/bench/json/blake-"${1}"/*.json; do
               local n
@@ -271,7 +288,11 @@ jobs:
             done
           }
 
-          for wl in keccak blake l2_guest; do
+          ## Run stats separately while tracing is not possible
+          reset_state; log "stats run: opt  (untimed)"; run_zkc_compile opt  warmup
+          reset_state; log "stats run: base (untimed)"; run_zkc_compile base warmup
+          ## Loop on workloads
+          for wl in l2_guest keccak blake; do
             log "=== workload: ${wl} ==="
             # Untimed warmup: opt then base. Primes the page cache and shared libs
             # so both branches face an already-warm filesystem on iteration 1.
@@ -315,12 +336,21 @@ jobs:
             -l2-guest-keccak-accel "$l2_keccak_accel" \
             -base-ref "${{ inputs.base_ref || 'main' }}" \
             -optim-ref "${{ inputs.optim_ref || github.event.pull_request.head.sha || github.sha }}" \
-            -zkc-ref-base "${{ inputs.zkc_ref_base || 'v1.2.20' }}" \
-            -zkc-ref-optim "${{ inputs.zkc_ref_optim || 'v1.2.20' }}" \
+            -zkc-ref-base "${{ inputs.zkc_ref_base || 'v1.2.22' }}" \
+            -zkc-ref-optim "${{ inputs.zkc_ref_optim || 'v1.2.22' }}" \
             -keccak-n-vectors ${{ inputs.n_vectors_keccak || 10 }} \
             -blake-rounds ${{ inputs.n_rounds_blake || 12 }} \
             | tee -a "$GITHUB_STEP_SUMMARY" \
             | tee /tmp/bench/logs/summary.md
+          ## Print stats for warmup at the end of the benchmark
+          for variant in opt base; do
+            log="/tmp/bench/logs/compile_${variant}_warmup.log"
+            if [[ -f "$log" ]]; then
+              printf '### Interpreter %s constraints stats\n```\n' "$variant" >> "$GITHUB_STEP_SUMMARY"
+              cat "$log" >> "$GITHUB_STEP_SUMMARY"
+              printf '```\n' >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
 
       - name: Upload benchmark logs
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

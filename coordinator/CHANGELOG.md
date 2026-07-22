@@ -1,4 +1,4 @@
-## [unreleased]
+## [1.0.0] - 2026-07-22
 
 ### 🚀 Features
 
@@ -9,6 +9,8 @@
 ### ⚙️ Miscellaneous Tasks
 
 - *(misc)* Refactor hoplite decoders to it's own module (#3557)
+- *(misc)* Update jackson from 2.19.4 to 2.22.1 (#3595)
+- *(misc)* Cleanup redundant deps (#3596)
 ## [0.3.0] - 2026-07-07
 
 ### 🚀 Features

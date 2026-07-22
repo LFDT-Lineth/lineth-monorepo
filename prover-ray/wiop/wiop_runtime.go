@@ -234,7 +234,7 @@ func (run *Runtime) AssignColumn(col *Column, v *ConcreteVector) {
 
 	if m.IsDynamic() && run.currentRound.ID == 0 {
 		currSize := run.dynamicSizes[m.index]
-		run.dynamicSizes[m.index] = max(currSize, dataLen)
+		run.dynamicSizes[m.index] = utils.NextPowerOfTwo(max(currSize, dataLen))
 	} else if m.IsDynamic() && dataLen > run.dynamicSizes[m.index] {
 		// This is needed because we need to include the module sizes in the
 		// fiat-shamir transcript of the first-round.
