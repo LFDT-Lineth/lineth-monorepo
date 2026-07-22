@@ -24,13 +24,13 @@ on:
   workflow_call:
     inputs:
       zkc-ref:
-        description: 'zkc commit/branch/tag (defaults to main)'
+        description: 'Optional zkc commit/branch/tag (default: arithmetization/Makefile ZKC_REF)'
         required: false
         type: string
   workflow_dispatch:
     inputs:
       zkc-ref:
-        description: 'zkc commit/branch/tag (defaults to main)'
+        description: 'Optional zkc commit/branch/tag (default: arithmetization/Makefile ZKC_REF)'
         required: false
         type: string
 
@@ -42,7 +42,6 @@ jobs:
   sample-guest-programs-run:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     env:
-      ZKC_REF: ${{ inputs.zkc-ref || 'v1.2.22' }}
       ZKC_EXEC_FLAGS: "--fast"
     steps:
       - name: Checkout repository
@@ -52,6 +51,8 @@ jobs:
 
       - name: Setup Environment
         uses: ./.github/actions/setup-arithmetization-riscv
+        with:
+          zkc-ref: ${{ inputs.zkc-ref }}
 
       - name: Install zkc and run simple Zig guest program with zkc interpreter
         # IN_BYTES values not used in the sum test program but is still written in memory
