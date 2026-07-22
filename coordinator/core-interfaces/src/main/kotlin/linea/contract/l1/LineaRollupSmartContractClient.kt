@@ -16,7 +16,29 @@ data class BlobsSubmissionV9(
   val blobFinalBlockHashes: List<ByteArray>,
   val parentShnarf: ByteArray,
   val finalBlobShnarf: ByteArray,
-)
+) {
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as BlobsSubmissionV9
+
+    if (blobs != other.blobs) return false
+    if (blobFinalBlockHashes != other.blobFinalBlockHashes) return false
+    if (!parentShnarf.contentEquals(other.parentShnarf)) return false
+    if (!finalBlobShnarf.contentEquals(other.finalBlobShnarf)) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = blobs.hashCode()
+    result = 31 * result + blobFinalBlockHashes.hashCode()
+    result = 31 * result + parentShnarf.contentHashCode()
+    result = 31 * result + finalBlobShnarf.contentHashCode()
+    return result
+  }
+}
 
 data class ShnarfDataV9(
   val parentShnarf: ByteArray,
@@ -24,7 +46,31 @@ data class ShnarfDataV9(
   val finalStateRootHash: ByteArray,
   val dataEvaluationPoint: ByteArray,
   val dataEvaluationClaim: ByteArray,
-)
+) {
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as ShnarfDataV9
+
+    if (!parentShnarf.contentEquals(other.parentShnarf)) return false
+    if (!snarkHash.contentEquals(other.snarkHash)) return false
+    if (!finalStateRootHash.contentEquals(other.finalStateRootHash)) return false
+    if (!dataEvaluationPoint.contentEquals(other.dataEvaluationPoint)) return false
+    if (!dataEvaluationClaim.contentEquals(other.dataEvaluationClaim)) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = parentShnarf.contentHashCode()
+    result = 31 * result + snarkHash.contentHashCode()
+    result = 31 * result + finalStateRootHash.contentHashCode()
+    result = 31 * result + dataEvaluationPoint.contentHashCode()
+    result = 31 * result + dataEvaluationClaim.contentHashCode()
+    return result
+  }
+}
 
 data class FinalizationDataV9(
   val aggregatedProof: ByteArray,
@@ -49,7 +95,65 @@ data class FinalizationDataV9(
   val filteredAddresses: List<ByteArray>,
   val verifierKeys: List<ByteArray>,
   val l2MessagingBlocksOffsets: ByteArray,
-)
+) {
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as FinalizationDataV9
+
+    if (proofType != other.proofType) return false
+    if (l2MerkleTreesDepth != other.l2MerkleTreesDepth) return false
+    if (!aggregatedProof.contentEquals(other.aggregatedProof)) return false
+    if (!parentStateRootHash.contentEquals(other.parentStateRootHash)) return false
+    if (!parentBlockHash.contentEquals(other.parentBlockHash)) return false
+    if (endBlockNumber != other.endBlockNumber) return false
+    if (shnarfData != other.shnarfData) return false
+    if (lastFinalizedTimestamp != other.lastFinalizedTimestamp) return false
+    if (finalTimestamp != other.finalTimestamp) return false
+    if (!lastFinalizedL1RollingHash.contentEquals(other.lastFinalizedL1RollingHash)) return false
+    if (!l1RollingHash.contentEquals(other.l1RollingHash)) return false
+    if (lastFinalizedL1RollingHashMessageNumber != other.lastFinalizedL1RollingHashMessageNumber) return false
+    if (l1RollingHashMessageNumber != other.l1RollingHashMessageNumber) return false
+    if (lastFinalizedForcedTransactionNumber != other.lastFinalizedForcedTransactionNumber) return false
+    if (finalForcedTransactionNumber != other.finalForcedTransactionNumber) return false
+    if (!lastFinalizedForcedTransactionRollingHash.contentEquals(other.lastFinalizedForcedTransactionRollingHash)) return false
+    if (!finalBlockHash.contentEquals(other.finalBlockHash)) return false
+    if (!finalBlobHash.contentEquals(other.finalBlobHash)) return false
+    if (l2MerkleRoots != other.l2MerkleRoots) return false
+    if (filteredAddresses != other.filteredAddresses) return false
+    if (verifierKeys != other.verifierKeys) return false
+    if (!l2MessagingBlocksOffsets.contentEquals(other.l2MessagingBlocksOffsets)) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = proofType
+    result = 31 * result + l2MerkleTreesDepth
+    result = 31 * result + aggregatedProof.contentHashCode()
+    result = 31 * result + parentStateRootHash.contentHashCode()
+    result = 31 * result + parentBlockHash.contentHashCode()
+    result = 31 * result + endBlockNumber.hashCode()
+    result = 31 * result + shnarfData.hashCode()
+    result = 31 * result + lastFinalizedTimestamp.hashCode()
+    result = 31 * result + finalTimestamp.hashCode()
+    result = 31 * result + lastFinalizedL1RollingHash.contentHashCode()
+    result = 31 * result + l1RollingHash.contentHashCode()
+    result = 31 * result + lastFinalizedL1RollingHashMessageNumber.hashCode()
+    result = 31 * result + l1RollingHashMessageNumber.hashCode()
+    result = 31 * result + lastFinalizedForcedTransactionNumber.hashCode()
+    result = 31 * result + finalForcedTransactionNumber.hashCode()
+    result = 31 * result + lastFinalizedForcedTransactionRollingHash.contentHashCode()
+    result = 31 * result + finalBlockHash.contentHashCode()
+    result = 31 * result + finalBlobHash.contentHashCode()
+    result = 31 * result + l2MerkleRoots.hashCode()
+    result = 31 * result + filteredAddresses.hashCode()
+    result = 31 * result + verifierKeys.hashCode()
+    result = 31 * result + l2MessagingBlocksOffsets.contentHashCode()
+    return result
+  }
+}
 
 interface LineaSmartContractClient : LineaSmartContractClientReadOnly {
   fun currentNonce(): ULong
