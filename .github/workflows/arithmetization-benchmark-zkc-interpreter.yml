@@ -215,7 +215,7 @@ jobs:
           TEST_MAKE_DIR="$PWD/arithmetization/src/test"
 
           run_zkc_exec() {  # $1=variant  $2=log path  $3=json  $4=zkc_main  optional: --fast
-            local exec_flags="-v"
+            local exec_flags="-vv"
             if [[ "${5:-}" == "--fast" ]]; then exec_flags="--fast -v"; fi
             /usr/bin/time -v env ZKC="/tmp/zkc-${1}" ZKC_EXEC_FLAGS="$exec_flags" \
               make -C "$TEST_MAKE_DIR" --no-print-directory zkc-exec \
@@ -321,6 +321,8 @@ jobs:
         env:
           FAST_MODE: ${{ inputs.fast_mode }}
           KECCAK_ACCEL: ${{ inputs.keccak_accel }}
+          ZKC_REF_BASE_INPUT: ${{ inputs.zkc_ref_base }}
+          ZKC_REF_OPTIM_INPUT: ${{ inputs.zkc_ref_optim }}
         run: |
           set -o pipefail
           mkdir -p /tmp/bench/logs
@@ -329,6 +331,9 @@ jobs:
           if [[ "$FAST_MODE" == "true" ]]; then fast_mode_arg=(-fast-mode=true); fi
           l2_keccak_accel=disabled
           [[ "${KECCAK_ACCEL:-true}" == "true" ]] && l2_keccak_accel=activated
+          # Resolve the zkc refs at runtime
+          zkc_ref_base="${ZKC_REF_BASE_INPUT:-$ZKC_REF}"
+          zkc_ref_optim="${ZKC_REF_OPTIM_INPUT:-$ZKC_REF}"
           /tmp/bench/render_bench_summary \
             -logs /tmp/bench/logs \
             -iters ${{ inputs.iterations || 1}} \
@@ -338,8 +343,8 @@ jobs:
             -l2-guest-keccak-accel "$l2_keccak_accel" \
             -base-ref "${{ inputs.base_ref || 'main' }}" \
             -optim-ref "${{ inputs.optim_ref || github.event.pull_request.head.sha || github.sha }}" \
-            -zkc-ref-base "${{ inputs.zkc_ref_base || env.ZKC_REF }}" \
-            -zkc-ref-optim "${{ inputs.zkc_ref_optim || env.ZKC_REF }}" \
+            -zkc-ref-base "$zkc_ref_base" \
+            -zkc-ref-optim "$zkc_ref_optim" \
             -keccak-n-vectors ${{ inputs.n_vectors_keccak || 10 }} \
             -blake-rounds ${{ inputs.n_rounds_blake || 12 }} \
             | tee -a "$GITHUB_STEP_SUMMARY" \

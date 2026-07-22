@@ -188,12 +188,17 @@ jobs:
         shell: bash
         env:
           FAST_MODE: ${{ inputs.fast_mode }}
+          ZKC_REF_BASE_INPUT: ${{ inputs.zkc_base_ref }}
+          ZKC_REF_OPTIM_INPUT: ${{ inputs.zkc_optim_ref }}
         run: |
           set -o pipefail
           mkdir -p /tmp/bench/logs
           if [[ -z "${FAST_MODE:-}" ]]; then FAST_MODE=true; fi
           fast_mode_arg=(-fast-mode=false)
           if [[ "$FAST_MODE" == "true" ]]; then fast_mode_arg=(-fast-mode=true); fi
+          # Resolve the zkc refs at runtime
+          zkc_ref_base="${ZKC_REF_BASE_INPUT:-$ZKC_REF}"
+          zkc_ref_optim="${ZKC_REF_OPTIM_INPUT:-$ZKC_REF}"
           /tmp/bench/render_bench_summary \
             -logs /tmp/bench/logs \
             -iters ${{ inputs.iterations || 1 }} \
@@ -201,8 +206,8 @@ jobs:
             "${fast_mode_arg[@]}" \
             -base-ref "${{ inputs.zkc_base_ref || 'main' }}" \
             -optim-ref "${{ inputs.zkc_optim_ref || 'main' }}" \
-            -zkc-ref-base "${{ inputs.zkc_base_ref || env.ZKC_REF }}" \
-            -zkc-ref-optim "${{ inputs.zkc_optim_ref || env.ZKC_REF }}" \
+            -zkc-ref-base "$zkc_ref_base" \
+            -zkc-ref-optim "$zkc_ref_optim" \
             -keccak-n-vectors ${{ inputs.n_vectors_keccak || 100 }} \
             | tee -a "$GITHUB_STEP_SUMMARY" \
             | tee /tmp/bench/logs/summary.md
