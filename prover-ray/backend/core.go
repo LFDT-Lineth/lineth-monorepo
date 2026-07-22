@@ -75,7 +75,7 @@ func New(cfg Config) (*Core, error) {
 func (c *Core) Prove(ctx context.Context, job Job) Result {
 	inputs := c.buildInputs(job)
 
-	proof, pub, err := c.runProve(ctx, zkcdriver.PreReadInputs{Inputs: inputs})
+	proof, pub, err := c.runProve(ctx, &zkcdriver.PreReadInputs{Inputs: inputs})
 	if err != nil {
 		return failResult(job.ID, err)
 	}
@@ -105,7 +105,7 @@ func (c *Core) buildInputs(job Job) map[string][]byte {
 // runProve calls AssignWithPreRead, sys.Prove, and sys.Verify.
 func (c *Core) runProve(
 	ctx context.Context,
-	preRead zkcdriver.PreReadInputs,
+	preRead *zkcdriver.PreReadInputs,
 ) (wiop.Proof, wiop.PublicInput, error) {
 	_ = ctx // cancellation not yet propagated into the prover internals
 
