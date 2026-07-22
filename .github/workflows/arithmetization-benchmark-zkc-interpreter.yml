@@ -338,8 +338,8 @@ jobs:
             -l2-guest-keccak-accel "$l2_keccak_accel" \
             -base-ref "${{ inputs.base_ref || 'main' }}" \
             -optim-ref "${{ inputs.optim_ref || github.event.pull_request.head.sha || github.sha }}" \
-            -zkc-ref-base "${{ inputs.zkc_ref_base || 'v1.2.22' }}" \
-            -zkc-ref-optim "${{ inputs.zkc_ref_optim || 'v1.2.22' }}" \
+            -zkc-ref-base "${{ inputs.zkc_ref_base || env.ZKC_REF }}" \
+            -zkc-ref-optim "${{ inputs.zkc_ref_optim || env.ZKC_REF }}" \
             -keccak-n-vectors ${{ inputs.n_vectors_keccak || 10 }} \
             -blake-rounds ${{ inputs.n_rounds_blake || 12 }} \
             | tee -a "$GITHUB_STEP_SUMMARY" \
