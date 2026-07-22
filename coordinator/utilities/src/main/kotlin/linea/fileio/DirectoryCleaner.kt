@@ -10,9 +10,9 @@ import java.nio.file.Path
 import kotlin.io.path.isDirectory
 
 class DirectoryCleaner(
-  val vertx: Vertx,
-  val directories: List<Path>,
-  val fileFilters: List<FileFilter>,
+  private val vertx: Vertx,
+  private val directories: List<Path>,
+  private val fileFilters: List<FileFilter>,
 ) {
   private val log = LogManager.getLogger(this::class.java)
 
