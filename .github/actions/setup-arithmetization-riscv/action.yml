@@ -66,7 +66,11 @@ runs:
           if [ -z "$zkc_ref" ]; then
             zkc_ref="$(make -C arithmetization -s --no-print-directory echo-zkc-version)"
           fi
-          echo "ZKC_REF=$zkc_ref" >> "$GITHUB_ENV"
+          {
+            echo "ZKC_REF<<EOF"
+            echo "$zkc_ref"
+            echo "EOF"
+          } >> "$GITHUB_ENV"
 
 
 
