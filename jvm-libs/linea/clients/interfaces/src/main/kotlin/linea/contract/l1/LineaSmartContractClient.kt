@@ -9,6 +9,7 @@ enum class LineaRollupContractVersion : Comparable<LineaRollupContractVersion> {
   V6, // more efficient data submission and new events for state recovery
   V7, // Native Yield (no practical changes for the coordinator)
   V8, // Forced Transactions
+  V9, // RISC-V
 }
 
 enum class LineaValidiumContractVersion : Comparable<LineaValidiumContractVersion> {

@@ -5,6 +5,7 @@ import linea.SearchDirection
 import linea.contract.FAKE_READ_ONLY_CREDENTIALS
 import linea.contract.LineaRollupV6
 import linea.contract.LineaRollupV8
+import linea.contract.LinethRollupV9
 import linea.contract.events.FinalizedStateUpdatedEvent
 import linea.domain.BlockParameter
 import linea.domain.EthLogEvent
@@ -37,6 +38,10 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
     return contractClientAtBlock(blockParameter, LineaRollupV8::class.java)
   }
 
+  protected fun contractClientV9AtBlock(blockParameter: BlockParameter): LinethRollupV9 {
+    return contractClientAtBlock(blockParameter, LinethRollupV9::class.java)
+  }
+
   protected fun <T : Contract> loadContractClient(contract: Class<T>): T {
     @Suppress("UNCHECKED_CAST")
     return when {
@@ -48,6 +53,13 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
       )
 
       LineaRollupV8::class.java.isAssignableFrom(contract) -> LineaRollupV8.load(
+        contractAddress,
+        web3j,
+        FAKE_READ_ONLY_CREDENTIALS,
+        StaticGasProvider(BigInteger.ZERO, BigInteger.ZERO),
+      )
+
+      LinethRollupV9::class.java.isAssignableFrom(contract) -> LinethRollupV9.load(
         contractAddress,
         web3j,
         FAKE_READ_ONLY_CREDENTIALS,
@@ -103,6 +115,7 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
       version.startsWith("6") -> LineaRollupContractVersion.V6
       version.startsWith("7") -> LineaRollupContractVersion.V7
       version.startsWith("8") -> LineaRollupContractVersion.V8
+      version.startsWith("9") -> LineaRollupContractVersion.V9
       else -> throw IllegalStateException("Unsupported contract version: $version")
     }
   }
@@ -140,6 +153,8 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
           LineaRollupContractVersion.V7,
           LineaRollupContractVersion.V8,
           -> contractClientV8AtBlock(blockParameter).blobShnarfExists(shnarf)
+          LineaRollupContractVersion.V9 -> // just ensure not regression while WIP
+            contractClientV9AtBlock(blockParameter).blobShnarfExists(shnarf)
         }
           .sendAsync()
           .thenApply { it != BigInteger.ZERO }
@@ -201,7 +216,9 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
               ),
             )
 
-          LineaRollupContractVersion.V8 ->
+          LineaRollupContractVersion.V8,
+          LineaRollupContractVersion.V9,
+          ->
             findFinalizedStateEvent(blockParameter, finalizedBlockNumber)
               .thenApply { finalizedState ->
                 val forcedTransactionNumber = finalizedState?.forcedTransactionNumber ?: 0UL
