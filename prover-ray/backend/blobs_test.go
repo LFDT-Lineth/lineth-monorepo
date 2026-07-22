@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	zkc_util "github.com/consensys/go-corset/pkg/zkc/util"
+	zkc_util "github.com/LFDT-Lineth/zkc/pkg/zkc/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
