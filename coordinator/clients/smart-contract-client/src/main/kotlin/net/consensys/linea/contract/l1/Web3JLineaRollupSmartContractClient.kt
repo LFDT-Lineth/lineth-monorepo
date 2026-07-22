@@ -2,7 +2,10 @@ package net.consensys.linea.contract.l1
 
 import linea.EthLogsSearcher
 import linea.contract.LineaRollupV6
+import linea.contract.l1.BlobsSubmissionV9
 import linea.contract.l1.BlockAndNonce
+import linea.contract.l1.FinalizationDataV9
+import linea.contract.l1.LineaRollupContractVersion
 import linea.contract.l1.LineaRollupSmartContractClient
 import linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
 import linea.domain.BlobRecord
@@ -206,6 +209,58 @@ class Web3JLineaRollupSmartContractClient internal constructor(
             parentL1RollingHashMessageNumber,
           )
         web3jContractHelper.sendTransactionAfterEthCallAsync(function, BigInteger.ZERO, gasPriceCaps)
+          .thenApply { result -> result.transactionHash }
+      }
+  }
+
+  override fun submitBlobsV9(
+    blobData: BlobsSubmissionV9,
+    gasPriceCaps: GasPriceCaps?,
+    preflightWithEthCall: Boolean,
+  ): SafeFuture<String> {
+    val function = FunctionBuildersV9.buildSubmitBlobsFunctionV9(blobData)
+
+    return getVersion()
+      .thenCompose { version ->
+        if (version < LineaRollupContractVersion.V9) {
+          SafeFuture.failedFuture<String>(RuntimeException("Contract version=$version not supported"))
+        }
+        if (preflightWithEthCall) {
+          web3jContractHelper.executeBlobEthCall(
+            function = function,
+            blobs = blobData.blobs,
+            gasPriceCaps = gasPriceCaps,
+          )
+        } else {
+          SafeFuture.completedFuture<String>(null)
+        }
+      }.thenCompose {
+        web3jContractHelper.sendBlobCarryingTransactionAndGetTxHash(
+          function = function,
+          blobs = blobData.blobs,
+          gasPriceCaps = gasPriceCaps,
+        )
+      }
+  }
+
+  override fun finalizeBlocksV9(
+    data: FinalizationDataV9,
+    gasPriceCaps: GasPriceCaps?,
+    preflightWithEthCall: Boolean,
+  ): SafeFuture<String> {
+    val function = FunctionBuildersV9.buildFinalizeBlocksFunctionV9(data)
+
+    return getVersion()
+      .thenCompose { version ->
+        if (version < LineaRollupContractVersion.V9) {
+          SafeFuture.failedFuture<String>(RuntimeException("Contract version=$version not supported"))
+        }
+
+        if (preflightWithEthCall) {
+          web3jContractHelper.sendTransactionAfterEthCallAsync(function, BigInteger.ZERO, gasPriceCaps)
+        } else {
+          web3jContractHelper.sendTransactionAsync(function, BigInteger.ZERO, gasPriceCaps)
+        }
           .thenApply { result -> result.transactionHash }
       }
   }
