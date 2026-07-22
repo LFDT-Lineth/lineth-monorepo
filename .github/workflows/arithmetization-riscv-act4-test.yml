@@ -45,5 +45,5 @@ jobs:
         run: make act4-exec
         working-directory: arithmetization/src/test
         env:
-          ZKC_REF: ${{ inputs.zkc-ref || '8e19e640b6fe99746be464d591b0cec3533d9b83' }}
+          ZKC_REF: ${{ inputs.zkc-ref || '94502bd1195d4782a9615579a755c343269f62b5' }}
 
