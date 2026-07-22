@@ -233,10 +233,10 @@ func buildProvePlan(p Params, levels []Level) (provePlan, error) {
 		}
 
 		jl := utils.Log2Ceil(p.D / levels[l].D)
-		if jl < 1 || jl >= p.numRounds {
+		if jl < 1 || jl > p.numRounds {
 			return plan, fmt.Errorf(
 				"fri: Prove: levels[%d].D=%d gives intro round %d, must be in 1..%d",
-				l, levels[l].D, jl, p.numRounds-1)
+				l, levels[l].D, jl, p.numRounds)
 		}
 		if _, dup := plan.levelAtRound[jl]; dup {
 			return plan, fmt.Errorf("fri: Prove: two levels share intro round %d", jl)

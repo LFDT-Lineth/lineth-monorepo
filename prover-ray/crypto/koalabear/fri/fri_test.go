@@ -205,6 +205,20 @@ func TestProveVerify(t *testing.T) {
 		{"single-level", 8, 4, 3, nil},
 		{"one-extra", 16, 8, 4, []int{2}},
 		{"two-extra", 16, 8, 4, []int{4, 2}},
+		// A D=1 extra level (a constant polynomial) is introduced at round
+		// jl == numRounds, i.e. the very last fold, the same round that
+		// produces FinalPolyExt. Regression test for the off-by-one that
+		// previously rejected this as "intro round numRounds, must be in
+		// 1..numRounds-1" in both buildProvePlan and pcs.Verify.
+		{"extra-D1-at-final-round", 16, 8, 4, []int{2, 1}},
+		// The top-level polynomial itself has D=1 (a constant), so numRounds
+		// == 0: HasNext() is false from the start, no fold ever runs, and
+		// layer 0 IS the final layer. Regression test for two bugs this
+		// exposed: (1) NewProverState never populated FinalPolyExt when no
+		// Fold call happens, failing shape validation ("FinalPolyExt has 0
+		// entries, want N"); (2) once fixed, pcs.Verify indexed Rounds[0] into
+		// a zero-length slice (allocated with size numRounds==0), panicking.
+		{"top-level-D1-zero-rounds", 2, 1, 2, nil},
 	}
 
 	prng := rand.New(utils.NewRandSource(99))

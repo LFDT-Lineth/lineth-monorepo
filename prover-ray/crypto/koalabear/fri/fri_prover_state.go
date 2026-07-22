@@ -75,6 +75,14 @@ func NewProverState(p Params, levels []Level) (*ProverState, error) {
 		st.RoundRoots = make([]field.Octuplet, p.numRounds-1)
 	}
 
+	// D=1: the top level is already the final layer, so there is nothing to
+	// fold (HasNext is false from the start) and Fold is never called to
+	// populate FinalPolyExt. Reveal layer 0 directly, matching the size
+	// N>>numRounds == N that checkOpeningProofShape expects.
+	if p.numRounds == 0 {
+		st.FinalPolyExt = st.running
+	}
+
 	return st, nil
 }
 
