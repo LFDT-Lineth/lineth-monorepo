@@ -213,6 +213,21 @@ class Web3JLineaRollupSmartContractClient internal constructor(
       }
   }
 
+  private fun ensureMinVersion(
+    nimVersion: LineaRollupContractVersion,
+  ): SafeFuture<LineaRollupContractVersion> {
+    return getVersion()
+      .thenCompose { version ->
+        if (version < nimVersion) {
+          SafeFuture.failedFuture(
+            RuntimeException("Contract version=$version is lower than required version=$nimVersion"),
+          )
+        } else {
+          SafeFuture.completedFuture(version)
+        }
+      }
+  }
+
   override fun submitBlobsV9(
     blobData: BlobsSubmissionV9,
     gasPriceCaps: GasPriceCaps?,
@@ -220,11 +235,8 @@ class Web3JLineaRollupSmartContractClient internal constructor(
   ): SafeFuture<String> {
     val function = FunctionBuildersV9.buildSubmitBlobsFunctionV9(blobData)
 
-    return getVersion()
-      .thenCompose { version ->
-        if (version < LineaRollupContractVersion.V9) {
-          SafeFuture.failedFuture<String>(RuntimeException("Contract version=$version not supported"))
-        }
+    return ensureMinVersion(LineaRollupContractVersion.V9)
+      .thenCompose {
         if (preflightWithEthCall) {
           web3jContractHelper.executeBlobEthCall(
             function = function,
@@ -250,12 +262,8 @@ class Web3JLineaRollupSmartContractClient internal constructor(
   ): SafeFuture<String> {
     val function = FunctionBuildersV9.buildFinalizeBlocksFunctionV9(data)
 
-    return getVersion()
-      .thenCompose { version ->
-        if (version < LineaRollupContractVersion.V9) {
-          SafeFuture.failedFuture<String>(RuntimeException("Contract version=$version not supported"))
-        }
-
+    return ensureMinVersion(LineaRollupContractVersion.V9)
+      .thenCompose {
         if (preflightWithEthCall) {
           web3jContractHelper.sendTransactionAfterEthCallAsync(function, BigInteger.ZERO, gasPriceCaps)
         } else {
