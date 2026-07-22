@@ -117,11 +117,13 @@ jobs:
       - name: Build two zkc binaries (base + opt) via go install
         run: |
           set -eux
+          default_ref="${ZKC_REF}"
           for variant in base opt; do
             case "$variant" in
-              base) ref="${{ inputs.zkc_ref_base || 'v1.2.22' }}" ;;
-              opt)  ref="${{ inputs.zkc_ref_optim || 'v1.2.22' }}" ;;
+              base) ref="${{ inputs.zkc_ref_base }}" ;;
+              opt)  ref="${{ inputs.zkc_ref_optim }}" ;;
             esac
+            ref="${ref:-$default_ref}"
             tmpbin=$(mktemp -d)
             GOBIN="$tmpbin" go install "github.com/LFDT-Lineth/zkc/cmd/zkc@${ref}" \
               || GOBIN="$tmpbin" go install "github.com/consensys/go-corset/cmd/zkc@${ref}"

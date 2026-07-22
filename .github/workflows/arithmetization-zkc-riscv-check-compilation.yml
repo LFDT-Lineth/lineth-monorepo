@@ -19,7 +19,7 @@ on:
   workflow_dispatch:
     inputs:
       zkc-ref:
-        description: 'zkc commit/branch/tag (defaults to pinned ref below)'
+        description: 'Optional zkc commit/branch/tag (default: arithmetization/Makefile ZKC_REF)'
         required: false
         type: string
 
@@ -38,11 +38,11 @@ jobs:
 
       - name: Setup Environment
         uses: ./.github/actions/setup-arithmetization-riscv
+        with:
+          zkc-ref: ${{ inputs.zkc-ref }}
 
       - name: Install zkc and check compilation of RISC-V in ZkC
         run: make -C arithmetization riscv-check-compilation
-        env:
-          ZKC_REF: ${{ inputs.zkc-ref || 'v1.2.22' }}
 
       - name: Linting Check
         run: make -C arithmetization riscv-check-lint

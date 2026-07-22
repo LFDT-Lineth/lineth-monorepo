@@ -17,6 +17,11 @@ on:
      - '.github/workflows/arithmetization-*.yml'
   workflow_call:
   workflow_dispatch:
+    inputs:
+      zkc-ref:
+        description: 'Optional zkc commit/branch/tag (default: arithmetization/Makefile ZKC_REF)'
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -33,6 +38,8 @@ jobs:
 
       - name: Setup Environment
         uses: ./.github/actions/setup-arithmetization-riscv
+        with:
+          zkc-ref: ${{ inputs.zkc-ref }}
 
       - name: Install Sail
         run: make -C arithmetization install-sail
@@ -44,6 +51,4 @@ jobs:
       - name: Run ACT4 tests
         run: make act4-exec
         working-directory: arithmetization/src/test
-        env:
-          ZKC_REF: ${{ inputs.zkc-ref || 'v1.2.22' }}
 

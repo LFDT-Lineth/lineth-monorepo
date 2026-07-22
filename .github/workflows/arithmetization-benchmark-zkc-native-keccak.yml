@@ -81,11 +81,13 @@ jobs:
           set -eux
           # We collect each install into its own GOBIN and rename the output
           # so they coexist on disk.
+          default_ref="${ZKC_REF}"
           for variant in base opt; do
             case "$variant" in
-              base) ref="${{ inputs.zkc_base_ref || 'v1.2.22' }}" ;;
-              opt)  ref="${{ inputs.zkc_optim_ref || 'v1.2.22' }}" ;;
+              base) ref="${{ inputs.zkc_base_ref }}" ;;
+              opt)  ref="${{ inputs.zkc_optim_ref }}" ;;
             esac
+            ref="${ref:-$default_ref}"
             tmpbin=$(mktemp -d)
             # go-corset was renamed/moved to github.com/LFDT-Lineth/zkc. The module
             # path must match the ref's own go.mod: post-rename refs (e.g. main) use
