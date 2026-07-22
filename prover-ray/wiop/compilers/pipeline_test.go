@@ -62,9 +62,7 @@ func compilePipelineBeforePCS(sys *wiop.System) {
 	global.Compile(sys)
 }
 
-// compilePCS runs the PCS pass unless the system declares a statically size-1
-// module. FRI cannot fold a size-1 codeword, so those scenarios skip PCS — a
-// known gap until the PCS/FRI layer handles the D=1 edge case.
+// compilePCS runs the PCS pass.
 func compilePCS(sys *wiop.System) {
 	pcs.Compile(sys)
 }
