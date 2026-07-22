@@ -385,7 +385,7 @@ func committedStateKey(roundID int) string {
 // the given inverse rate. The schedule is a deterministic function of (rate,
 // index), so a per-round schedule is always a prefix of the global one.
 func buildEncoders(inverseRate, maxSizeIndex uint8) []*fri.RSEncoder {
-	encoders := make([]*fri.RSEncoder, maxSizeIndex+1)
+	encoders := make([]*fri.RSEncoder, int(maxSizeIndex)+1)
 	for i := range encoders {
 		enc := fri.NewEncoder(uint64(inverseRate)*(1<<i), 1<<i)
 		encoders[i] = &enc
