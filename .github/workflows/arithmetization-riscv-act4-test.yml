@@ -16,6 +16,11 @@ on:
      - '.github/actions/setup-arithmetization-riscv/**'
      - '.github/workflows/arithmetization-*.yml'
   workflow_call:
+    inputs:
+      zkc-ref:
+        description: 'Optional zkc commit/branch/tag (default: arithmetization/Makefile ZKC_REF)'
+        required: false
+        type: string
   workflow_dispatch:
     inputs:
       zkc-ref:
