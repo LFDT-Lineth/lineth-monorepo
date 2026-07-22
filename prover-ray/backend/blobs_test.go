@@ -10,6 +10,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/LFDT-Lineth/zkc/pkg/util/field"
+	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
+	"github.com/LFDT-Lineth/zkc/pkg/util/source"
+	"github.com/LFDT-Lineth/zkc/pkg/zkc/compiler"
+	"github.com/LFDT-Lineth/zkc/pkg/zkc/compiler/ast"
+	"github.com/LFDT-Lineth/zkc/pkg/zkc/compiler/codegen"
+	"github.com/LFDT-Lineth/zkc/pkg/zkc/constraints"
 	zkc_util "github.com/LFDT-Lineth/zkc/pkg/zkc/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -342,9 +349,47 @@ func TestBuildZkcInputs_NoLoadableSegments(t *testing.T) {
 	assert.Contains(t, err.Error(), "no loadable sections")
 }
 
-// zkcTestBin is a small synthetic ZkC circuit checked in for the zkcdriver
-// tests; NewZkCDriver accepts it, which is all Core.New needs.
-const zkcTestBin = "../zkcdriver/testdata/zkc_01.bin"
+// zkcTestSrc is a small ZkC source program shared with the zkcdriver tests;
+// compileZKCBin turns it into a bin that NewZkCDriver accepts, which is all
+// Core.New needs.
+const zkcTestSrc = "../zkcdriver/testdata/zkc_01.zkc"
+
+// compileZKCBin compiles a .zkc source into a serialized ZkC binary in the
+// current zkc format, writes it to a temp file, and returns the path. Core.New
+// reads a compiled circuit bin from disk, so tests need one built from source
+// rather than a checked-in artifact that goes stale on every zkc version bump.
+//
+// This mirrors compileBinaryConstraints in zkcdriver's test package; it can be
+// dropped in favor of a shared call once zkcdriver exposes a public compile
+// helper.
+func compileZKCBin(t *testing.T, srcPath string) string {
+	t.Helper()
+
+	srcBytes, err := os.ReadFile(srcPath)
+	require.NoError(t, err)
+
+	src := source.NewSourceFile(srcPath, srcBytes)
+	zkcField := field.KOALABEAR_16
+	zkcCfg := codegen.DEFAULT_CONFIG.SplitRegisters(true).Quiet(true)
+
+	macroProgram, _, errs := compiler.Compile(zkcField, *src)
+	if len(errs) > 0 {
+		t.Fatalf("zkc macro compile %q: %v", srcPath, errs)
+	}
+	ir, errs := ast.Compile(macroProgram, zkcCfg)
+	if len(errs) > 0 {
+		t.Fatalf("zkc ast compile %q: %v", srcPath, errs)
+	}
+
+	binF := constraints.NewBinaryFile[koalabear.Element](nil, nil, zkcField, zkcCfg.GetMaxStaticDepth(), ir)
+	binBytes, err := binF.MarshalBinary()
+	require.NoError(t, err)
+
+	binPath := filepath.Join(t.TempDir(), "circuit.bin")
+	//nolint:gosec // G703 false positive: binPath is under the test's own t.TempDir().
+	require.NoError(t, os.WriteFile(binPath, binBytes, 0o600))
+	return binPath
+}
 
 // TestNew verifies that New precomputes the ELF blobs and entry point at
 // construction and that the resulting Core builds the same inputs as the
@@ -354,7 +399,7 @@ func TestNew(t *testing.T) {
 	elfPath := filepath.Join(t.TempDir(), "guest.elf")
 	require.NoError(t, os.WriteFile(elfPath, elfBytes, 0o600))
 
-	c, err := New(Config{CircuitBinPath: zkcTestBin, GuestELFPath: elfPath})
+	c, err := New(Config{CircuitBinPath: compileZKCBin(t, zkcTestSrc), GuestELFPath: elfPath})
 	require.NoError(t, err)
 
 	assert.Len(t, c.elfBlobs, 1, "one loadable section must be precomputed")
@@ -377,6 +422,9 @@ func TestNew_Errors(t *testing.T) {
 	badELFPath := filepath.Join(t.TempDir(), "bad.elf")
 	require.NoError(t, os.WriteFile(badELFPath, []byte("not an elf"), 0o600))
 
+	// A valid circuit bin so the guest-ELF cases fail on the ELF, not the bin.
+	binPath := compileZKCBin(t, zkcTestSrc)
+
 	cases := []struct {
 		name    string
 		cfg     Config
@@ -386,10 +434,10 @@ func TestNew_Errors(t *testing.T) {
 			Config{CircuitBinPath: "does/not/exist.bin", GuestELFPath: elfPath},
 			"circuit bin"},
 		{"MissingGuestELF",
-			Config{CircuitBinPath: zkcTestBin, GuestELFPath: "does/not/exist.elf"},
+			Config{CircuitBinPath: binPath, GuestELFPath: "does/not/exist.elf"},
 			"guest ELF"},
 		{"InvalidGuestELF",
-			Config{CircuitBinPath: zkcTestBin, GuestELFPath: badELFPath},
+			Config{CircuitBinPath: binPath, GuestELFPath: badELFPath},
 			"ELF"},
 	}
 
