@@ -25,11 +25,9 @@ import linea.submission.L1ShnarfBasedAlreadySubmittedBlobsFilter
 import linea.web3j.SmartContractErrors
 import linea.web3j.createWeb3jHttpClient
 import linea.web3j.ethapi.createEthApiClient
-import net.consensys.linea.ethereum.gaspricing.BoundableFeeCalculator
 import net.consensys.linea.ethereum.gaspricing.FeesCalculator
 import net.consensys.linea.ethereum.gaspricing.FeesFetcher
 import net.consensys.linea.ethereum.gaspricing.WMAFeesCalculator
-import net.consensys.linea.ethereum.gaspricing.WMAGasProvider
 import net.consensys.linea.ethereum.gaspricing.dynamiccap.FeeHistoriesRepositoryImpl
 import net.consensys.linea.ethereum.gaspricing.dynamiccap.FeeHistoryCachingService
 import net.consensys.linea.ethereum.gaspricing.dynamiccap.GasPriceCapCalculatorImpl
@@ -86,92 +84,40 @@ class L1RelayingAppV1(
       priorityFeeWmaCoefficient = 1.0,
     ),
   ),
-
   val lineaSmartContractClientForDataSubmission: LineaSmartContractClient = run {
-    val l1DataSubmissionPriorityFeeCalculator: FeesCalculator = BoundableFeeCalculator(
-      BoundableFeeCalculator.Config(
-        feeUpperBound = l1SubmissionConfig.blob.gas.fallback.priorityFeePerGasUpperBound.toDouble(),
-        feeLowerBound = l1SubmissionConfig.blob.gas.fallback.priorityFeePerGasLowerBound.toDouble(),
-        feeMargin = 0.0,
-      ),
-      l1MinPriorityFeeCalculator,
-    )
-    // The below gas provider will act as the primary gas provider if L1
-    // dynamic gas pricing is disabled and will act as a fallback gas provider
-    // if L1 dynamic gas pricing is enabled
-    val primaryOrFallbackGasProvider = WMAGasProvider(
-      chainId = l1ChainId.toLong(),
-      feesFetcher = feesFetcher,
-      priorityFeeCalculator = l1DataSubmissionPriorityFeeCalculator,
-      config = WMAGasProvider.Config(
-        gasLimit = l1SubmissionConfig.blob.gas.gasLimit,
-        maxFeePerGasCap = l1SubmissionConfig.blob.gas.maxFeePerGasCap,
-        maxPriorityFeePerGasCap = l1SubmissionConfig.blob.gas.maxPriorityFeePerGasCap,
-        maxFeePerBlobGasCap = l1SubmissionConfig.blob.gas.maxFeePerBlobGasCap,
-      ),
-    )
     val l1Web3jClient = createWeb3jHttpClient(
       rpcUrl = l1SubmissionConfig.blob.l1Endpoint.toString(),
       log = LogManager.getLogger("clients.l1.eth.data-submission"),
     )
-    val transactionManager = createTransactionManager(
-      vertx,
-      signerConfig = l1SubmissionConfig.blob.signer,
-      client = l1Web3jClient,
-    )
     createLineaContractClient(
       vertx = vertx,
-      dataAvailabilityType = l1SubmissionConfig.dataAvailability,
       contractAddress = configs.protocol.l1.contractAddress,
-      transactionManager = transactionManager,
-      contractGasProvider = primaryOrFallbackGasProvider,
-      web3jClient = l1Web3jClient,
       smartContractErrors = smartContractErrors,
-      // eth_estimateGas would fail because we submit multiple blob tx
-      // and 2nd would fail with revert reason
-      useEthEstimateGas = false,
+      dataAvailabilityType = l1SubmissionConfig.dataAvailability,
+      l1Web3jClient = l1Web3jClient,
+      l1ChainId = l1ChainId,
+      l1MinPriorityFeeCalculator = l1MinPriorityFeeCalculator,
+      feesFetcher = feesFetcher,
+      signerConfig = l1SubmissionConfig.blob.signer,
+      gasConfig = l1SubmissionConfig.blob.gas,
     )
   },
   val lineaSmartContractClientForFinalization: LineaSmartContractClient = run {
-    val l1FinalizationPriorityFeeCalculator: FeesCalculator = BoundableFeeCalculator(
-      BoundableFeeCalculator.Config(
-        feeUpperBound = l1SubmissionConfig.aggregation.gas.fallback.priorityFeePerGasUpperBound.toDouble(),
-        feeLowerBound = l1SubmissionConfig.aggregation.gas.fallback.priorityFeePerGasLowerBound.toDouble(),
-        feeMargin = 0.0,
-      ),
-      l1MinPriorityFeeCalculator,
-    )
-    // The below gas provider will act as the primary gas provider if L1
-    // dynamic gas pricing is disabled and will act as a fallback gas provider
-    // if L1 dynamic gas pricing is enabled
-    val primaryOrFallbackGasProvider = WMAGasProvider(
-      chainId = l1ChainId.toLong(),
-      feesFetcher = feesFetcher,
-      priorityFeeCalculator = l1FinalizationPriorityFeeCalculator,
-      config = WMAGasProvider.Config(
-        gasLimit = l1SubmissionConfig.aggregation.gas.gasLimit,
-        maxFeePerGasCap = l1SubmissionConfig.aggregation.gas.maxFeePerGasCap,
-        maxPriorityFeePerGasCap = l1SubmissionConfig.aggregation.gas.maxPriorityFeePerGasCap,
-        maxFeePerBlobGasCap = 0UL, // we do not submit blobs in finalization tx
-      ),
-    )
     val l1Web3jClient = createWeb3jHttpClient(
       rpcUrl = l1SubmissionConfig.aggregation.l1Endpoint.toString(),
       log = LogManager.getLogger("clients.l1.eth.finalization"),
     )
     createLineaContractClient(
       vertx = vertx,
-      dataAvailabilityType = l1SubmissionConfig.dataAvailability,
       contractAddress = configs.protocol.l1.contractAddress,
-      transactionManager = createTransactionManager(
-        vertx = vertx,
-        signerConfig = l1SubmissionConfig.aggregation.signer,
-        client = l1Web3jClient,
-      ),
-      contractGasProvider = primaryOrFallbackGasProvider,
-      web3jClient = l1Web3jClient,
       smartContractErrors = smartContractErrors,
-      useEthEstimateGas = true,
+      dataAvailabilityType = l1SubmissionConfig.dataAvailability,
+      l1Web3jClient = l1Web3jClient,
+      l1ChainId = l1ChainId,
+      l1MinPriorityFeeCalculator = l1MinPriorityFeeCalculator,
+      feesFetcher = feesFetcher,
+      signerConfig = l1SubmissionConfig.aggregation.signer,
+      gasConfig = l1SubmissionConfig.aggregation.gas,
     )
   },
   val log: Logger = LogManager.getLogger(L1RelayingAppV1::class.java),

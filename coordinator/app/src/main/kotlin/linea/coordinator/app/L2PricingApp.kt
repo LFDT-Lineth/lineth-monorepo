@@ -70,7 +70,7 @@ class L2PricingApp(
       jsonRpcGasPriceUpdaterConfig = null,
       // we do not use miner_setGasPrice RPC method, so we set it to infinite
       jsonRpcPriceUpdateInterval = Duration.INFINITE,
-      // there no other way to work now without setting extra data into sequencer node
+      // there is no other way to work now without setting extra data into the sequencer node
       extraDataPricingPropagationEnabled = true,
       extraDataUpdateInterval = l2NetworkGasPricingConfig.priceUpdateInterval,
       variableFeesCalculatorConfig = VariableFeesCalculator.Config(

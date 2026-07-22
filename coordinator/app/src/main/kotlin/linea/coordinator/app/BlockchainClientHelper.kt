@@ -18,6 +18,10 @@ import linea.web3j.ethapi.createEthApiClient
 import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
 import net.consensys.linea.contract.l1.Web3JLineaRollupSmartContractClient
 import net.consensys.linea.contract.l1.Web3JLineaValidiumSmartContractClient
+import net.consensys.linea.ethereum.gaspricing.BoundableFeeCalculator
+import net.consensys.linea.ethereum.gaspricing.FeesCalculator
+import net.consensys.linea.ethereum.gaspricing.FeesFetcher
+import net.consensys.linea.ethereum.gaspricing.WMAGasProvider
 import net.consensys.linea.httprest.client.VertxHttpRestClient
 import org.web3j.crypto.Credentials
 import org.web3j.protocol.Web3j
@@ -153,4 +157,57 @@ fun createLineaContractClient(
         useEthEstimateGas = useEthEstimateGas,
       )
   }
+}
+
+fun createLineaContractClient(
+  l1ChainId: ULong,
+  contractAddress: String,
+  smartContractErrors: SmartContractErrors,
+  vertx: Vertx,
+  l1Web3jClient: Web3j,
+  feesFetcher: FeesFetcher,
+  signerConfig: SignerConfig,
+  gasConfig: L1SubmissionConfig.GasConfig,
+  l1MinPriorityFeeCalculator: FeesCalculator,
+  dataAvailabilityType: L1SubmissionConfig.DataAvailability,
+): LineaSmartContractClient {
+  val l1DataSubmissionPriorityFeeCalculator: FeesCalculator = BoundableFeeCalculator(
+    BoundableFeeCalculator.Config(
+      feeUpperBound = gasConfig.fallback.priorityFeePerGasUpperBound.toDouble(),
+      feeLowerBound = gasConfig.fallback.priorityFeePerGasLowerBound.toDouble(),
+      feeMargin = 0.0,
+    ),
+    l1MinPriorityFeeCalculator,
+  )
+  // The below gas provider will act as the primary gas provider if L1
+  // dynamic gas pricing is disabled and will act as a fallback gas provider
+  // if L1 dynamic gas pricing is enabled
+  val primaryOrFallbackGasProvider = WMAGasProvider(
+    chainId = l1ChainId.toLong(),
+    feesFetcher = feesFetcher,
+    priorityFeeCalculator = l1DataSubmissionPriorityFeeCalculator,
+    config = WMAGasProvider.Config(
+      gasLimit = gasConfig.gasLimit,
+      maxFeePerGasCap = gasConfig.maxFeePerGasCap,
+      maxPriorityFeePerGasCap = gasConfig.maxPriorityFeePerGasCap,
+      maxFeePerBlobGasCap = gasConfig.maxFeePerBlobGasCap,
+    ),
+  )
+  val transactionManager = createTransactionManager(
+    vertx = vertx,
+    signerConfig = signerConfig,
+    client = l1Web3jClient,
+  )
+  return createLineaContractClient(
+    vertx = vertx,
+    dataAvailabilityType = dataAvailabilityType,
+    contractAddress = contractAddress,
+    transactionManager = transactionManager,
+    contractGasProvider = primaryOrFallbackGasProvider,
+    web3jClient = l1Web3jClient,
+    smartContractErrors = smartContractErrors,
+    // eth_estimateGas would fail because we submit multiple blob tx
+    // and 2nd would fail with revert reason
+    useEthEstimateGas = false,
+  )
 }

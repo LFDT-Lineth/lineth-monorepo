@@ -11,7 +11,6 @@ import linea.coordinator.config.v2.CoordinatorConfig
 import linea.coordinator.config.v2.Type2StateProofManagerConfig
 import linea.coordinator.config.v2.isDisabled
 import linea.domain.BlockNumberAndHash
-import linea.ethapi.EthApiClient
 import linea.finalization.FinalizationHandler
 import linea.finalization.FinalizationMonitor
 import linea.finalization.FinalizationMonitorImpl
@@ -51,7 +50,7 @@ class L1FinalizationMonitorApp(
 ) : LongRunningService {
   private val log = LogManager.getLogger(this::class.java)
 
-  private val l1FinalizationMonitor = run {
+  private val l1FinalizationMonitor =
     FinalizationMonitorImpl(
       config =
       FinalizationMonitorImpl.Config(
@@ -67,25 +66,7 @@ class L1FinalizationMonitorApp(
       ),
       vertx = vertx,
     )
-  }
-
-  private val l1FinalizationHandlerForShomeiRpc: LongRunningService = run {
-    val l2EthApiClient: EthApiClient = createEthApiClient(
-      rpcUrl = configs.l1FinalizationMonitor.l2Endpoint.toString(),
-      log = LogManager.getLogger("clients.l2.eth.shomei-frontend"),
-      requestRetryConfig = configs.l1FinalizationMonitor.l2RequestRetries,
-      vertx = vertx,
-    )
-    setupL1FinalizationMonitorForShomeiFrontend(
-      type2StateProofProviderConfig = configs.type2StateProofProvider,
-      httpJsonRpcClientFactory = httpJsonRpcClientFactory,
-      finalizedStateDataProvider = finalizedStateDataProvider,
-      l2EthApiClient = l2EthApiClient,
-      vertx = vertx,
-    )
-  }
-
-  val highestAcceptedFinalizationTracker = HighestULongTracker(lastFinalizedBlock).also {
+  private val highestAcceptedFinalizationTracker = HighestULongTracker(lastFinalizedBlock).also {
     metricsFacade.createGauge(
       category = LineaMetricsCategory.AGGREGATION,
       name = "highest.accepted.block.number",
@@ -95,6 +76,12 @@ class L1FinalizationMonitorApp(
   }
 
   init {
+    setupShomeiFrontendFinalizationNotifier(
+      l1FinalizationMonitor = l1FinalizationMonitor,
+      type2StateProofProviderConfig = configs.type2StateProofProvider,
+      httpJsonRpcClientFactory = httpJsonRpcClientFactory,
+      vertx = vertx,
+    )
     mapOf(
       "last_proven_block_provider" to FinalizationHandler { update: FinalizationMonitor.FinalizationUpdate ->
         l1FinalizationUpdateHandler(update.blockNumber.toLong())
@@ -116,7 +103,6 @@ class L1FinalizationMonitorApp(
 
   override fun start(): CompletableFuture<Unit> {
     return l1FinalizationMonitor.start()
-      .thenCompose { l1FinalizationHandlerForShomeiRpc.start() }
       .thenPeek {
         log.info("L1FinalizationMonitorApp started")
       }
@@ -125,21 +111,19 @@ class L1FinalizationMonitorApp(
   override fun stop(): CompletableFuture<Unit> {
     return SafeFuture.allOf(
       l1FinalizationMonitor.stop(),
-      l1FinalizationHandlerForShomeiRpc.stop(),
     )
       .thenApply { log.info("L1FinalizationMonitorApp Stopped") }
   }
 
   companion object {
-    fun setupL1FinalizationMonitorForShomeiFrontend(
+    private fun setupShomeiFrontendFinalizationNotifier(
+      l1FinalizationMonitor: FinalizationMonitor,
       type2StateProofProviderConfig: Type2StateProofManagerConfig,
       httpJsonRpcClientFactory: VertxHttpJsonRpcClientFactory,
-      finalizedStateDataProvider: FinalizedStateDataProvider,
-      l2EthApiClient: EthApiClient,
       vertx: Vertx,
-    ): LongRunningService {
+    ) {
       if (type2StateProofProviderConfig.isDisabled()) {
-        return DisabledLongRunningService
+        return
       }
 
       val finalizedBlockNotifier = run {
@@ -156,25 +140,11 @@ class L1FinalizationMonitorApp(
         ForkChoiceUpdaterImpl(type2StateProofProviderClients)
       }
 
-      val l1FinalizationMonitor =
-        FinalizationMonitorImpl(
-          config =
-          FinalizationMonitorImpl.Config(
-            pollingInterval = type2StateProofProviderConfig.l1PollingInterval,
-            l1QueryBlockTag = type2StateProofProviderConfig.l1QueryBlockTag,
-          ),
-          finalizedStateDataProvider = finalizedStateDataProvider,
-          l2EthApiClient = l2EthApiClient,
-          vertx = vertx,
-        )
-
-      l1FinalizationMonitor.addFinalizationHandler("type 2 state proof provider finalization updates", {
+      l1FinalizationMonitor.addFinalizationHandler("shomei rpc finalization updates", {
         finalizedBlockNotifier.updateFinalizedBlock(
           BlockNumberAndHash(it.blockNumber, it.blockHash.toArray()),
         )
       })
-
-      return l1FinalizationMonitor
     }
   }
 }

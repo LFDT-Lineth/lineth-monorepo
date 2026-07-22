@@ -254,7 +254,7 @@ class ConflationAppV1(
     )
     log.info(
       "Resuming aggregation from block={} inclusive blockTime={}",
-      lastAggregatedBlock.number + 1u,
+      lastAggregatedBlock.number + 1UL,
       lastAggregatedBlock.timestamp,
     )
   }
