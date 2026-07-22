@@ -48,9 +48,14 @@ class L1FinalizationMonitorApp(
   private val forcedTransactionsDao: ForcedTransactionsDao,
   private val metricsFacade: MetricsFacade,
   private val l1FinalizationUpdateHandler: (blockNumber: Long) -> SafeFuture<Unit>,
+  private val l2EthApiClient: EthApiClient = createEthApiClient(
+    rpcUrl = configs.l1FinalizationMonitor.l2Endpoint.toString(),
+    log = LogManager.getLogger("clients.l2.eth.finalization-monitor"),
+    requestRetryConfig = configs.l1FinalizationMonitor.l2RequestRetries,
+    vertx = vertx,
+  ),
 ) : LongRunningService {
   private val log = LogManager.getLogger(this::class.java)
-
   private val l1FinalizationMonitor =
     FinalizationMonitorImpl(
       config =
@@ -59,12 +64,7 @@ class L1FinalizationMonitorApp(
         l1QueryBlockTag = configs.l1FinalizationMonitor.l1QueryBlockTag,
       ),
       finalizedStateDataProvider = finalizedStateDataProvider,
-      l2EthApiClient = createEthApiClient(
-        rpcUrl = configs.l1FinalizationMonitor.l2Endpoint.toString(),
-        log = LogManager.getLogger("clients.l2.eth.finalization-monitor"),
-        requestRetryConfig = configs.l1FinalizationMonitor.l2RequestRetries,
-        vertx = vertx,
-      ),
+      l2EthApiClient = l2EthApiClient,
       vertx = vertx,
     )
   private val highestAcceptedFinalizationTracker = HighestULongTracker(lastFinalizedBlock).also {
@@ -79,6 +79,7 @@ class L1FinalizationMonitorApp(
     type2StateProofProviderConfig = configs.type2StateProofProvider,
     httpJsonRpcClientFactory = httpJsonRpcClientFactory,
     finalizedStateDataProvider = finalizedStateDataProvider,
+    l2EthApiClient = l2EthApiClient,
     vertx = vertx,
   )
 
