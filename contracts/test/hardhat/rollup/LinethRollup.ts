@@ -239,7 +239,7 @@ describe("Linea Rollup contract", () => {
       await expectEventDirectFromReceiptData(
         linethRollup,
         receipt!,
-        "LinethRollupBaseInitialized",
+        "LineaRollupBaseInitialized",
         [ethers.zeroPadBytes(ethers.toUtf8Bytes("8.0"), 8), expectedAsTuple, computeGenesisShnarf(parentStateRootHash)],
         38,
       );
@@ -325,7 +325,7 @@ describe("Linea Rollup contract", () => {
       const upgradeCall = reinitializeUpgradeableProxy(
         linethRollup,
         LinethRollup__factory.abi,
-        "reinitializeLinethRollupV9",
+        "reinitializeLineaRollupV9",
         [0n, addressFilterAddress],
       );
 
@@ -336,7 +336,7 @@ describe("Linea Rollup contract", () => {
       const upgradeCall = reinitializeUpgradeableProxy(
         linethRollup,
         LinethRollup__factory.abi,
-        "reinitializeLinethRollupV9",
+        "reinitializeLineaRollupV9",
         [FORCED_TRANSACTION_FEE, ADDRESS_ZERO],
       );
 
@@ -344,7 +344,7 @@ describe("Linea Rollup contract", () => {
     });
 
     it("Should set the next forced transaction number to 1", async () => {
-      await reinitializeUpgradeableProxy(linethRollup, LinethRollup__factory.abi, "reinitializeLinethRollupV9", [
+      await reinitializeUpgradeableProxy(linethRollup, LinethRollup__factory.abi, "reinitializeLineaRollupV9", [
         FORCED_TRANSACTION_FEE,
         addressFilterAddress,
       ]);
@@ -355,7 +355,7 @@ describe("Linea Rollup contract", () => {
     it("Should emit the AddressFilterChanged event when the address filter is set", async () => {
       await expectEvent(
         linethRollup,
-        reinitializeUpgradeableProxy(linethRollup, LinethRollup__factory.abi, "reinitializeLinethRollupV9", [
+        reinitializeUpgradeableProxy(linethRollup, LinethRollup__factory.abi, "reinitializeLineaRollupV9", [
           FORCED_TRANSACTION_FEE,
           addressFilterAddress,
         ]),
@@ -367,7 +367,7 @@ describe("Linea Rollup contract", () => {
     it("Should emit the ForcedTransactionFeeSet event when the address filter is set", async () => {
       await expectEvent(
         linethRollup,
-        reinitializeUpgradeableProxy(linethRollup, LinethRollup__factory.abi, "reinitializeLinethRollupV9", [
+        reinitializeUpgradeableProxy(linethRollup, LinethRollup__factory.abi, "reinitializeLineaRollupV9", [
           FORCED_TRANSACTION_FEE,
           addressFilterAddress,
         ]),
@@ -377,7 +377,7 @@ describe("Linea Rollup contract", () => {
     });
 
     it("Should set the address filter", async () => {
-      await reinitializeUpgradeableProxy(linethRollup, LinethRollup__factory.abi, "reinitializeLinethRollupV9", [
+      await reinitializeUpgradeableProxy(linethRollup, LinethRollup__factory.abi, "reinitializeLineaRollupV9", [
         FORCED_TRANSACTION_FEE,
         addressFilterAddress,
       ]);
@@ -386,7 +386,7 @@ describe("Linea Rollup contract", () => {
     });
 
     it("Next contract version number should be 8.0", async () => {
-      await reinitializeUpgradeableProxy(linethRollup, LinethRollup__factory.abi, "reinitializeLinethRollupV9", [
+      await reinitializeUpgradeableProxy(linethRollup, LinethRollup__factory.abi, "reinitializeLineaRollupV9", [
         FORCED_TRANSACTION_FEE,
         addressFilterAddress,
       ]);
@@ -398,18 +398,18 @@ describe("Linea Rollup contract", () => {
       const upgradeCall = reinitializeUpgradeableProxy(
         linethRollup,
         LinethRollup__factory.abi,
-        "reinitializeLinethRollupV9",
+        "reinitializeLineaRollupV9",
         [FORCED_TRANSACTION_FEE, addressFilterAddress],
       );
 
       const previousVersion = ethers.zeroPadBytes(ethers.toUtf8Bytes("7.1"), 8);
       const newVersion = ethers.zeroPadBytes(ethers.toUtf8Bytes("8.0"), 8);
 
-      await expectEvent(linethRollup, upgradeCall, "LinethRollupVersionChanged", [previousVersion, newVersion]);
+      await expectEvent(linethRollup, upgradeCall, "LineaRollupVersionChanged", [previousVersion, newVersion]);
     });
 
     it("Fails to reinitialize twice", async () => {
-      await reinitializeUpgradeableProxy(linethRollup, LinethRollup__factory.abi, "reinitializeLinethRollupV9", [
+      await reinitializeUpgradeableProxy(linethRollup, LinethRollup__factory.abi, "reinitializeLineaRollupV9", [
         FORCED_TRANSACTION_FEE,
         addressFilterAddress,
       ]);
@@ -417,7 +417,7 @@ describe("Linea Rollup contract", () => {
       const secondUpgradeCall = reinitializeUpgradeableProxy(
         linethRollup,
         LinethRollup__factory.abi,
-        "reinitializeLinethRollupV9",
+        "reinitializeLineaRollupV9",
         [FORCED_TRANSACTION_FEE, addressFilterAddress],
       );
 

@@ -292,7 +292,7 @@ Requires a `schemaFile` that defines the storage layout.
     "schemaFile": "../schemas/lineth-rollup.json",
     "storagePaths": [
       {
-        "path": "LinethRollupYieldExtensionStorage:_yieldManager",
+        "path": "LineaRollupYieldExtensionStorage:_yieldManager",
         "expected": "0xafeB487DD3E3Cb0342e8CF0215987FfDc9b72c9b"
       },
       {

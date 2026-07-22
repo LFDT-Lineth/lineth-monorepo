@@ -27,8 +27,6 @@ WORKDIR /usr/src/app
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
 COPY patches/ ./patches/
-
-COPY patches/ ./patches/
 COPY ./operations/native-yield/lido-governance-monitor/package.json ./operations/native-yield/lido-governance-monitor/package.json
 COPY ./ts-libs/linea-shared-utils/package.json ./ts-libs/linea-shared-utils/package.json
 COPY ./ts-libs/eslint-config/package.json ./ts-libs/eslint-config/package.json

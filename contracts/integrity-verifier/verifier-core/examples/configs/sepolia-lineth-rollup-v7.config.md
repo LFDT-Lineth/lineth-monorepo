@@ -33,7 +33,7 @@ schema: ../schemas/lineth-rollup.json
 
 ### State Verification
 
-The following checks verify the state after `reinitializeLinethRollupV7()` execution:
+The following checks verify the state after `reinitializeLineaRollupV7()` execution:
 
 | Type | Description | Check | Params | Expected |
 |------|-------------|-------|--------|----------|
@@ -44,7 +44,7 @@ The following checks verify the state after `reinitializeLinethRollupV7()` execu
 | viewCall | PAUSE_NATIVE_YIELD_STAKING_ROLE | `hasRole` | `0xcc10d6eec3c757d645e27b3f3001a3ba52f692da0bce25fabf58c6ecaf376450`,`0xe6Ec44e651B6d961c15f1A8df9eA7DFaDb986eA1` | true |
 | viewCall | UNPAUSE_NATIVE_YIELD_STAKING_ROLE | `hasRole` | `0x4b4665d8754e6ea0608430ef3e91c1b45c72aafe8800e289cd35f38d85361858`,`0xe6Ec44e651B6d961c15f1A8df9eA7DFaDb986eA1` | true |
 | slot | OZ _initialized version | `0x0` | uint8 | `7` |
-| storagePath | Yield manager address | `LinethRollupYieldExtensionStorage:_yieldManager` | | `0xafeB487DD3E3Cb0342e8CF0215987FfDc9b72c9b` |
+| storagePath | Yield manager address | `LineaRollupYieldExtensionStorage:_yieldManager` | | `0xafeB487DD3E3Cb0342e8CF0215987FfDc9b72c9b` |
 
 ### Role Reference
 

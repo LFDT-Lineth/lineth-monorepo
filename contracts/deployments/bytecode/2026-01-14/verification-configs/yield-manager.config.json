@@ -19,9 +19,9 @@
         "schemaFile": "./yield-manager.schema.json",
         "viewCalls": [
           {
-            "$comment": "Verify linethRollup immutable - the LinethRollup proxy address",
+            "$comment": "Verify lineaRollup immutable - the LineaRollup proxy address",
             "function": "L1_MESSAGE_SERVICE",
-            "expected": "${LINETH_ROLLUP_ADDRESS}"
+            "expected": "${LINEA_ROLLUP_ADDRESS}"
           },
           {
             "$comment": "Verify minimumWithdrawalReservePercentageBps - 9000 = 90%",
@@ -302,15 +302,15 @@
       }
     },
     {
-      "$comment": "Verify implementation bytecode directly. Constructor arg: LinethRollup proxy address",
+      "$comment": "Verify implementation bytecode directly. Constructor arg: LineaRollup proxy address",
       "name": "YieldManager-Implementation",
       "chain": "ethereum-dynamic",
       "address": "${YIELD_MANAGER_IMPLEMENTATION_ADDRESS}",
       "artifactFile": "../YieldManager.json",
       "isProxy": false,
-      "constructorArgs": ["${LINETH_ROLLUP_ADDRESS}"],
+      "constructorArgs": ["${LINEA_ROLLUP_ADDRESS}"],
       "immutableValues": {
-        "L1_MESSAGE_SERVICE": "${LINETH_ROLLUP_ADDRESS}"
+        "L1_MESSAGE_SERVICE": "${LINEA_ROLLUP_ADDRESS}"
       },
       "stateVerification": {
       "slots": [
