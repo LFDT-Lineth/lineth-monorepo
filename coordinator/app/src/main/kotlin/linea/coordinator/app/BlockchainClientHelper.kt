@@ -19,6 +19,8 @@ import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
 import net.consensys.linea.contract.l1.Web3JLineaRollupSmartContractClient
 import net.consensys.linea.contract.l1.Web3JLineaValidiumSmartContractClient
 import net.consensys.linea.httprest.client.VertxHttpRestClient
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
 import org.web3j.crypto.Credentials
 import org.web3j.protocol.Web3j
 import org.web3j.service.TxSignServiceImpl
@@ -34,6 +36,7 @@ fun createTransactionManager(
   vertx: Vertx,
   signerConfig: SignerConfig,
   client: Web3j,
+  log: Logger = LogManager.getLogger("clients.web3signer"),
 ): AsyncFriendlyTransactionManager {
   fun loadKeyAndTrustStoreFromFiles(
     webClientOptions: WebClientOptions,
@@ -110,7 +113,7 @@ fun createTransactionManager(
             }
         val poolOptions = PoolOptions()
           .setHttp1MaxSize(web3SignerConfig.maxPoolSize)
-        val httpRestClient = VertxHttpRestClient(webClientOptions, poolOptions, vertx)
+        val httpRestClient = VertxHttpRestClient(webClientOptions, poolOptions, vertx, log)
         val signer = Web3SignerRestClient(httpRestClient, signerConfig.web3signer.publicKey)
         val signerAdapter = ECKeypairSignerAdapter(signer)
         val web3SignerCredentials = Credentials.create(signerAdapter)
