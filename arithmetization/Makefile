@@ -11,7 +11,7 @@ REPO_ROOT := $(abspath $(MAKEFILE_DIR)/..)
 ZKC ?= $(REPO_ROOT)/zkc
 ZKC_REPO ?= https://github.com/LFDT-Lineth/zkc.git
 # Optional: pin a commit or branch (e.g. 763f30878e5fc260f0d88863c9883c904f8fc056). Leave empty for default branch.
-ZKC_REF ?=v1.2.22
+ZKC_REF ?=v1.2.23
 
 # Used to install Sail for ACT4 host builds.
 ACT4_RISCV_DIR ?= $(HOME)/riscv
@@ -25,7 +25,11 @@ ZKC_BINDIR ?= $(MAKEFILE_DIR)bin
 ZKC_BINARY ?= riscv.bin
 ZKC_INPUT ?= input.json
 
-.PHONY: checkout-zkc-repo install-zkc install-sail zkc-compile zkc-check zkc-compile-and-check check
+.PHONY: checkout-zkc-repo echo-zkc-version install-zkc install-sail zkc-compile zkc-check zkc-compile-and-check check
+
+# Print the pinned zkc ref (used by CI setup to populate $GITHUB_ENV).
+echo-zkc-version:
+	@echo $(ZKC_REF)
 
 # Fetch zkc repository if missing (no-op when CI already checked it out into ZKC).
 checkout-zkc-repo:
