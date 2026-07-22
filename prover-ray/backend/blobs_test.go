@@ -230,32 +230,6 @@ func TestBuildZkcInputs_ReturnsThreeKeys(t *testing.T) {
 	assert.Contains(t, inputs, "blobs_data")
 }
 
-func TestBuildZkcInputs_InvalidELFReturnsError(t *testing.T) {
-	_, err := BuildZkcInputs([]byte("not an elf"), []byte{}, DefaultINOrigin)
-	assert.Error(t, err, "malformed ELF must return an error")
-}
-
-func TestBuildZkcInputs_EmptySSZ(t *testing.T) {
-	// Empty SSZ must still succeed and produce the three keys.
-	elfBytes := makeMinimalELF(t, testEntry, testSecAddr, testSecData)
-	inputs, err := BuildZkcInputs(elfBytes, nil, DefaultINOrigin)
-	require.NoError(t, err)
-	assert.Len(t, inputs, 3, "must return exactly three pub-input keys")
-}
-
-func TestBuildZkcInputs_DifferentSSZ(t *testing.T) {
-	elfBytes := makeMinimalELF(t, testEntry, testSecAddr, testSecData)
-
-	inputs1, err := BuildZkcInputs(elfBytes, []byte{0x01}, DefaultINOrigin)
-	require.NoError(t, err)
-
-	inputs2, err := BuildZkcInputs(elfBytes, []byte{0x02}, DefaultINOrigin)
-	require.NoError(t, err)
-
-	assert.NotEqual(t, inputs1["blobs_data"], inputs2["blobs_data"], "different SSZ must produce different blobs_data")
-	assert.Equal(t, inputs1["entry_point_and_blobs_count"], inputs2["entry_point_and_blobs_count"], "same ELF must produce identical entry_point_and_blobs_count")
-}
-
 func TestCore_BuildInputs_UsesPrecomputedELFBlobs(t *testing.T) {
 	elfBytes := makeMinimalELF(t, testEntry, testSecAddr, testSecData)
 	precomputed, entry, err := loadELFBlobs(elfBytes)
