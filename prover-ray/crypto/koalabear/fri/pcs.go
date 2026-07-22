@@ -1253,7 +1253,10 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	resolved := make([]resolvedQuery, pcs.Params.NumQueries)
 	for queryIdx, queryPosition := range positions {
 		rq := resolvedQuery{
-			Rounds: make([]inputPair, pcs.Params.numRounds),
+			// Round 0's (self, sibling) pair is always populated below, even
+			// when numRounds == 0 (D=1, no folding at all), so this always
+			// needs room for at least one round.
+			Rounds: make([]inputPair, max(pcs.Params.numRounds, 1)),
 			Aux:    make(map[int]field.Ext, len(layout)-1),
 			Final:  proof.FRIProof.FinalPolyExt[queryPosition>>pcs.Params.numRounds],
 		}
@@ -1280,6 +1283,20 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 			return err
 		}
 		rq.Rounds[0] = inputPair{Self: self, Sibling: sib}
+
+		// D=1: there is no fold round to tie the committed top-level leaves to
+		// FinalPolyExt (checkFolds' loop runs zero iterations), so bind them
+		// directly here: the revealed final polynomial IS layer 0 in the clear,
+		// and both conjugate positions must match it exactly.
+		if pcs.Params.numRounds == 0 {
+			sibFinal := proof.FRIProof.FinalPolyExt[queryPosition^1]
+			if !self.Equal(&rq.Final) {
+				return fmt.Errorf("fri: pcs.Verify: query %d: round-0 leaf does not match FinalPoly", queryIdx)
+			}
+			if !sib.Equal(&sibFinal) {
+				return fmt.Errorf("fri: pcs.Verify: query %d: round-0 sibling does not match FinalPoly", queryIdx)
+			}
+		}
 
 		// Auxiliary levels: one authenticated value per level, mixed into the
 		// fold at that level's introduction round.
