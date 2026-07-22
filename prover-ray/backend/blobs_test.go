@@ -4,10 +4,13 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	zkc_util "github.com/consensys/go-corset/pkg/zkc/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -158,61 +161,40 @@ func TestSszBlobs_EmptySSZ(t *testing.T) {
 	assert.Equal(t, uint64(0), binary.LittleEndian.Uint64(got[0].data), "length prefix must be zero for empty SSZ")
 }
 
-func TestBuildJSON_ContainsThreeKeys(t *testing.T) {
-	j := string(buildJSON([]memoryBlob{{offset: 0x1000, data: []byte{0x01}}}, 0x800000))
-	assert.Contains(t, j, `"entry_point_and_blobs_count"`)
-	assert.Contains(t, j, `"blobs_offset_and_size"`)
-	assert.Contains(t, j, `"blobs_data"`)
-}
-
-func TestBuildJSON_EntryPointIs16HexChars(t *testing.T) {
-	j := string(buildJSON([]memoryBlob{{offset: 0, data: []byte{0}}}, 0x00800000))
-	// entry_point must be exactly 16 hex characters: 0000000000800000
-	assert.Contains(t, j, `"0x0000000000800000_`)
-}
-
-func TestBuildJSON_BlobCountEncodedWith16HexChars(t *testing.T) {
-	memBlobs := []memoryBlob{
+func TestEncodeInputs_EntryPointAndCount(t *testing.T) {
+	inputs := encodeInputs([]memoryBlob{
 		{offset: 0x1000, data: []byte{0x01}},
 		{offset: 0x2000, data: []byte{0x02}},
-	}
-	j := string(buildJSON(memBlobs, 0))
-	// count = 2 must appear as 16 hex chars
-	assert.Contains(t, j, `_0000000000000002"`)
+	}, testEntry)
+
+	got := inputs["entry_point_and_blobs_count"]
+	require.Len(t, got, 16, "entry_point_and_blobs_count must be two BE uint64s")
+	assert.Equal(t, testEntry, binary.BigEndian.Uint64(got[:8]), "first 8 bytes must be the BE entry point")
+	assert.Equal(t, uint64(2), binary.BigEndian.Uint64(got[8:]), "last 8 bytes must be the BE blob count")
 }
 
-func TestBuildJSON_FourUnderscoresBetweenBlobs(t *testing.T) {
-	// Memory blob boundaries in blobs_offset_and_size and blobs_data must be
-	// separated by "____" (four underscores). This is the delimiter that
-	// zkc_util.ParseJsonInputFile and the reference elf_to_json_gen tool both use.
+func TestEncodeInputs_OffsetAndSizePairs(t *testing.T) {
 	memBlobs := []memoryBlob{
-		{offset: 0x1000, data: []byte{0xAA}},
+		{offset: 0x00800000, data: make([]byte, 0x1234)},
 		{offset: 0x2000, data: []byte{0xBB}},
 	}
-	j := string(buildJSON(memBlobs, 0))
-	assert.Contains(t, j, "____", "memory blob boundaries must use four underscores as separator")
+	inputs := encodeInputs(memBlobs, 0)
+
+	got := inputs["blobs_offset_and_size"]
+	require.Len(t, got, 32, "blobs_offset_and_size must be one 16-byte pair per blob")
+	assert.Equal(t, uint64(0x00800000), binary.BigEndian.Uint64(got[0:8]))
+	assert.Equal(t, uint64(0x1234), binary.BigEndian.Uint64(got[8:16]))
+	assert.Equal(t, uint64(0x2000), binary.BigEndian.Uint64(got[16:24]))
+	assert.Equal(t, uint64(1), binary.BigEndian.Uint64(got[24:32]))
 }
 
-func TestBuildJSON_OffsetSizeSingleUnderscore(t *testing.T) {
-	// Within one memory blob's offset_size entry, offset and size are separated by
-	// a single underscore, not four.
-	memBlobs := []memoryBlob{{offset: 0x00800000, data: []byte{0x01, 0x02}}}
-	j := string(buildJSON(memBlobs, 0))
-	// Expect "0000000000800000_0000000000000002" (single _ between offset and size)
-	assert.Contains(t, j, "0000000000800000_0000000000000002")
-}
-
-func TestBuildJSON_BlobDataEncodedAsLowerHex(t *testing.T) {
-	// zkc_util.ParseJsonInputFile is case-sensitive: memory blob data must be lowercase hex.
-	data := []byte{0xDE, 0xAD, 0xBE, 0xEF}
-	j := string(buildJSON([]memoryBlob{{offset: 0, data: data}}, 0))
-	assert.Contains(t, j, hex.EncodeToString(data), `memory blob data must be lowercase hex ("deadbeef", not "DEADBEEF")`)
-}
-
-func TestBuildJSON_SingleBlobNoFourUnderscores(t *testing.T) {
-	// With only one memory blob, no "____" separator should appear.
-	j := string(buildJSON([]memoryBlob{{offset: 0x1000, data: []byte{0x01}}}, 0))
-	assert.NotContains(t, j, "____")
+func TestEncodeInputs_DataConcatenated(t *testing.T) {
+	memBlobs := []memoryBlob{
+		{offset: 0x1000, data: []byte{0xAA, 0xBB}},
+		{offset: 0x2000, data: []byte{0xCC}},
+	}
+	inputs := encodeInputs(memBlobs, 0)
+	assert.Equal(t, []byte{0xAA, 0xBB, 0xCC}, inputs["blobs_data"], "blobs_data must be all blob bytes concatenated in order")
 }
 
 func TestElfBlobs_ExtractsSectionAtCorrectOffset(t *testing.T) {
@@ -288,11 +270,8 @@ func TestCore_BuildInputs_UsesPrecomputedELFBlobs(t *testing.T) {
 	ssz1 := []byte{0x01, 0x02}
 	ssz2 := []byte{0xFF, 0xFE}
 
-	inputs1, err := c.buildInputs(Job{Payload: ssz1})
-	require.NoError(t, err)
-
-	inputs2, err := c.buildInputs(Job{Payload: ssz2})
-	require.NoError(t, err)
+	inputs1 := c.buildInputs(Job{Payload: ssz1})
+	inputs2 := c.buildInputs(Job{Payload: ssz2})
 
 	assert.NotEqual(t, inputs1["blobs_data"], inputs2["blobs_data"], "different SSZ must produce different blobs_data")
 	assert.Equal(t, inputs1["entry_point_and_blobs_count"], inputs2["entry_point_and_blobs_count"], "same ELF must produce identical entry_point_and_blobs_count")
@@ -313,8 +292,7 @@ func TestCore_BuildInputs_MatchesBuildZkcInputs(t *testing.T) {
 
 	// Core.buildInputs (precomputed path) must produce identical output to
 	// BuildZkcInputs (parse-every-call path).
-	fromCore, err := c.buildInputs(Job{Payload: ssz})
-	require.NoError(t, err)
+	fromCore := c.buildInputs(Job{Payload: ssz})
 
 	fromFull, err := BuildZkcInputs(elfBytes, ssz, DefaultINOrigin)
 	require.NoError(t, err)
@@ -322,25 +300,58 @@ func TestCore_BuildInputs_MatchesBuildZkcInputs(t *testing.T) {
 	assert.Equal(t, fromFull, fromCore, "precomputed path must produce identical output to BuildZkcInputs")
 }
 
-// elf_to_json_gen (arithmetization/elf_to_json_gen/main.go) is the reference
-// tool that produces ZkC pub-input JSON for the same circuit. The two
-// implementations must produce the same key structure and hex encoding so that
-// zkc_util.ParseJsonInputFile accepts both without special-casing.
-
-func TestBuildJSON_OffsetSizeFormat(t *testing.T) {
-	// elf_to_json_gen formats each memory blob as "%016x_%016x" % (offset, size).
-	memBlobs := []memoryBlob{{offset: 0x00800000, data: make([]byte, 0x1234)}}
-	j := string(buildJSON(memBlobs, testEntry))
-	assert.Contains(t, j, "0000000000800000_0000000000001234",
-		"blobs_offset_and_size must use 16-hex-char offset and size separated by a single underscore")
+// referenceJSON mirrors printJson in the reference elf_to_json_gen tool
+// (arithmetization/src/test/scripts/elf_to_json_gen/main.go): the JSON hex
+// form of the ZkC pub inputs that zkc_util.ParseJsonInputFile decodes. Blob
+// boundaries are separated by "____" (four underscores); offset and size
+// within one entry use a single "_".
+func referenceJSON(memBlobs []memoryBlob, entryPoint uint64) []byte {
+	offsetSizeParts := make([]string, len(memBlobs))
+	dataParts := make([]string, len(memBlobs))
+	for i, b := range memBlobs {
+		offsetSizeParts[i] = fmt.Sprintf("%016x_%016x", b.offset, len(b.data))
+		dataParts[i] = hex.EncodeToString(b.data)
+	}
+	return []byte(`{` +
+		`"entry_point_and_blobs_count":"0x` + fmt.Sprintf("%016x_%016x", entryPoint, len(memBlobs)) + `",` +
+		`"blobs_offset_and_size":"0x` + strings.Join(offsetSizeParts, "____") + `",` +
+		`"blobs_data":"0x` + strings.Join(dataParts, "____") + `"` +
+		`}`)
 }
 
-func TestBuildJSON_EntryFormat(t *testing.T) {
-	// elf_to_json_gen formats the first key as "0x{entry16hex}_{count16hex}".
-	memBlobs := []memoryBlob{{offset: 0, data: []byte{0}}}
-	j := string(buildJSON(memBlobs, 0x00800150))
-	assert.Contains(t, j, `"0x0000000000800150_0000000000000001"`,
-		"entry_point_and_blobs_count must be 0x{entry}_{count} in 16-hex-char fields")
+// TestEncodeInputs_MatchesReferenceJSON pins encodeInputs to the reference
+// wire format: building the map directly must be byte-identical to encoding
+// the elf_to_json_gen JSON and decoding it with zkc's own parser.
+func TestEncodeInputs_MatchesReferenceJSON(t *testing.T) {
+	cases := []struct {
+		name     string
+		memBlobs []memoryBlob
+		entry    uint64
+	}{
+		{"SingleBlob",
+			[]memoryBlob{{offset: 0x00800000, data: []byte{0x97, 0x02, 0x00, 0x00}}},
+			testEntry},
+		{"MultipleBlobs",
+			[]memoryBlob{
+				{offset: 0x00800000, data: []byte{0xDE, 0xAD}},
+				{offset: 0x00900000, data: []byte{0xBE, 0xEF, 0x01}},
+				{offset: 0x00A00000, data: make([]byte, 0x123)},
+			},
+			0x00800150},
+		{"ELFPlusSSZ",
+			append(
+				[]memoryBlob{{offset: testSecAddr, data: testSecData}},
+				sszBlobs(DefaultINOrigin, []byte{0x00, 0x01, 0xAA, 0xBB})...),
+			testEntry},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			want, err := zkc_util.ParseJsonInputFile(referenceJSON(tc.memBlobs, tc.entry))
+			require.NoError(t, err)
+			assert.Equal(t, want, encodeInputs(tc.memBlobs, tc.entry))
+		})
+	}
 }
 
 // TestBuildZkcInputs_NoLoadableSegments verifies that an ELF whose only
@@ -376,8 +387,7 @@ func TestNew(t *testing.T) {
 	assert.Equal(t, testEntry, c.elfEntry)
 
 	ssz := []byte{0xAA, 0xBB}
-	fromCore, err := c.buildInputs(Job{Payload: ssz})
-	require.NoError(t, err)
+	fromCore := c.buildInputs(Job{Payload: ssz})
 	fromFull, err := BuildZkcInputs(elfBytes, ssz, DefaultINOrigin)
 	require.NoError(t, err)
 	assert.Equal(t, fromFull, fromCore)

@@ -14,6 +14,9 @@ import (
 // ErrNotImplemented is returned by stubs that are not yet wired up.
 var ErrNotImplemented = errors.New("not yet implemented")
 
+// wiopSystemName names the wiop constraint system built in [New].
+const wiopSystemName = "linea-riscv"
+
 // Core is the shared proving kernel. Initialize once via [New]; it is
 // safe for concurrent use after that; each [Prove] call gets its own
 // wiop.Runtime.
@@ -47,7 +50,7 @@ func New(cfg Config) (*Core, error) {
 		return nil, fmt.Errorf("extracting ELF blobs: %w", err)
 	}
 
-	sys := wiop.NewSystemf("linea-riscv")
+	sys := wiop.NewSystemf(wiopSystemName)
 	sys.NewRound()
 	driver := zkcdriver.NewZkCDriver(sys, zkcdriver.Settings{}, bytes.NewReader(binBytes))
 
@@ -70,10 +73,7 @@ func New(cfg Config) (*Core, error) {
 
 // Prove runs a single [Job] end-to-end and returns its [Result].
 func (c *Core) Prove(ctx context.Context, job Job) Result {
-	inputs, err := c.buildInputs(job)
-	if err != nil {
-		return failResult(job.ID, err)
-	}
+	inputs := c.buildInputs(job)
 
 	proof, pub, err := c.runProve(ctx, zkcdriver.PreReadInputs{Inputs: inputs})
 	if err != nil {
@@ -95,7 +95,7 @@ func (c *Core) Prove(ctx context.Context, job Job) Result {
 // buildInputs converts a Job's Payload into the three ZkC pub-input memory blobs.
 // ELF memory blobs are pre-extracted in [New] and reused across calls; only the
 // SSZ memory blobs differ per job.
-func (c *Core) buildInputs(job Job) (map[string][]byte, error) {
+func (c *Core) buildInputs(job Job) map[string][]byte {
 	memBlobs := make([]memoryBlob, 0, len(c.elfBlobs)+2)
 	memBlobs = append(memBlobs, c.elfBlobs...)
 	memBlobs = append(memBlobs, sszBlobs(c.cfg.inOrigin(), decodePayload(job))...)

@@ -4,12 +4,8 @@ import (
 	"bytes"
 	"debug/elf"
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
 	"sort"
-	"strings"
-
-	zkc_util "github.com/consensys/go-corset/pkg/zkc/util"
 )
 
 // memoryBlob is an in-memory guest RAM region: a contiguous byte slice mapped
@@ -40,7 +36,7 @@ func BuildZkcInputs(elfBytes, sszInput []byte, inOrigin uint64) (map[string][]by
 		return nil, err
 	}
 	memBlobs = append(memBlobs, sszBlobs(inOrigin, sszInput)...)
-	return encodeInputs(memBlobs, entry)
+	return encodeInputs(memBlobs, entry), nil
 }
 
 // loadELFBlobs parses elfBytes as a guest ELF and returns the pre-extracted
@@ -111,25 +107,35 @@ func sszBlobs(inOrigin uint64, ssz []byte) []memoryBlob {
 	return memBlobs
 }
 
-// buildJSON encodes memory blobs and entryPoint into the compact JSON hex format that
-// zkc_util.ParseJsonInputFile decodes. Blob boundaries are separated by "____"
-// (four underscores); offset and size within one entry use a single "_".
-func buildJSON(memBlobs []memoryBlob, entryPoint uint64) []byte {
-	offsetSizeParts := make([]string, len(memBlobs))
-	dataParts := make([]string, len(memBlobs))
-	for i, b := range memBlobs {
-		offsetSizeParts[i] = fmt.Sprintf("%016x_%016x", b.offset, len(b.data))
-		dataParts[i] = hex.EncodeToString(b.data)
-	}
-	return []byte(`{` +
-		`"entry_point_and_blobs_count":"0x` + fmt.Sprintf("%016x_%016x", entryPoint, len(memBlobs)) + `",` +
-		`"blobs_offset_and_size":"0x` + strings.Join(offsetSizeParts, "____") + `",` +
-		`"blobs_data":"0x` + strings.Join(dataParts, "____") + `"` +
-		`}`)
-}
+// encodeInputs builds the keyed byte map that [zkcdriver.PreReadInputs]
+// expects, one entry per pub-input key:
+//
+//   - "entry_point_and_blobs_count": [8 BE entry point][8 BE blob count]
+//   - "blobs_offset_and_size":       per blob, [8 BE offset][8 BE size]
+//   - "blobs_data":                  all blob bytes concatenated
+//
+// The layout is byte-identical to zkc_util.ParseJsonInputFile applied to the
+// JSON that the reference elf_to_json_gen tool emits, without the JSON round
+// trip; TestEncodeInputs_MatchesReferenceJSON pins the equivalence.
+func encodeInputs(memBlobs []memoryBlob, entryPoint uint64) map[string][]byte {
+	entryAndCount := binary.BigEndian.AppendUint64(make([]byte, 0, 16), entryPoint)
+	entryAndCount = binary.BigEndian.AppendUint64(entryAndCount, uint64(len(memBlobs)))
 
-// encodeInputs formats memory blobs as JSON (see [buildJSON]) and parses them
-// into the keyed byte map that [zkcdriver.PreReadInputs] expects.
-func encodeInputs(memBlobs []memoryBlob, entryPoint uint64) (map[string][]byte, error) {
-	return zkc_util.ParseJsonInputFile(buildJSON(memBlobs, entryPoint))
+	var dataLen int
+	for _, b := range memBlobs {
+		dataLen += len(b.data)
+	}
+	offsetAndSize := make([]byte, 0, 16*len(memBlobs))
+	data := make([]byte, 0, dataLen)
+	for _, b := range memBlobs {
+		offsetAndSize = binary.BigEndian.AppendUint64(offsetAndSize, b.offset)
+		offsetAndSize = binary.BigEndian.AppendUint64(offsetAndSize, uint64(len(b.data)))
+		data = append(data, b.data...)
+	}
+
+	return map[string][]byte{
+		"entry_point_and_blobs_count": entryAndCount,
+		"blobs_offset_and_size":       offsetAndSize,
+		"blobs_data":                  data,
+	}
 }
