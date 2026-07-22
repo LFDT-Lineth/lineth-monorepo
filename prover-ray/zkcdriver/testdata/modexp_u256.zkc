@@ -1,6 +1,6 @@
-type tWidth      = u256
+include "./nonnative_utils.zkc"
+
 type tWidthOf    = u257
-type tWidthLarge = u512
 type tAddr       = u8
 
 pub input in_base(address:tAddr) -> (val:tWidth)
@@ -53,25 +53,5 @@ fn modexp_loop(base:tWidth, exp:tWidth, mod:tWidth) -> (res:tWidth) {
         }
         acc = mulmod_256(acc, acc, mod)
         e = half
-    }
-}
-
-#[native]
-fn mulmod_256(lhsL:tWidth, rhsL:tWidth, modL:tWidth) -> (remainder:tWidth) {
-    // integer product result `product = lhsL * rhsL`
-    var product:tWidthLarge = (lhsL as tWidthLarge) * (rhsL as tWidthLarge)
-
-    var overflow:tWidth
-    var quotient:tWidth
-    overflow::quotient = product / (modL as tWidthLarge)
-    if overflow != 0 {
-        fail
-    }
-    var overflow2:tWidth
-    // XXX(ivo): two ways of computing the remainder. First one is approx 20% faster
-    overflow2::remainder = product - ((quotient as tWidthLarge) * (modL as tWidthLarge))
-    //overflow2::remainder = product % (modL as tWidthLarge)
-    if overflow2 != 0 {
-        fail
     }
 }

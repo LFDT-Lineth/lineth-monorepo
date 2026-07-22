@@ -1,5 +1,5 @@
-type tWidth      = u256
-type tWidthLarge = u512
+include "./nonnative_utils.zkc"
+
 type tAddr       = u8
 type tCarry      = u8
 
@@ -133,28 +133,6 @@ fn main() {
     var y3_lhs:tWidthLarge = (y3_tmp as tWidthLarge) + ((k_y3 as tWidthLarge) * p_large)
     var y3_rhs:tWidthLarge = (y3 as tWidthLarge) + (y1 as tWidthLarge)
     if y3_lhs != y3_rhs {
-        fail
-    }
-}
-
-// Copied from modexp_u256.zkc. prover-ray recognizes #[native] mulmod_256
-// and lowers it to a NonNative query over the limb columns.
-#[native]
-fn mulmod_256(lhsL:tWidth, rhsL:tWidth, modL:tWidth) -> (remainder:tWidth) {
-    // integer product result `product = lhsL * rhsL`
-    var product:tWidthLarge = (lhsL as tWidthLarge) * (rhsL as tWidthLarge)
-
-    var overflow:tWidth
-    var quotient:tWidth
-    overflow::quotient = product / (modL as tWidthLarge)
-    if overflow != 0 {
-        fail
-    }
-    var overflow2:tWidth
-    // XXX(ivo): two ways of computing the remainder. First one is approx 20% faster
-    overflow2::remainder = product - ((quotient as tWidthLarge) * (modL as tWidthLarge))
-    //overflow2::remainder = product % (modL as tWidthLarge)
-    if overflow2 != 0 {
         fail
     }
 }
