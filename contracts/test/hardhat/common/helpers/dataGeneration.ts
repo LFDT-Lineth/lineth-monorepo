@@ -360,7 +360,7 @@ export function generateParentAndExpectedShnarfForIndex(index: number): ParentAn
   };
 }
 
-export function generateParentAndExpectedShnarfForMulitpleIndex(index: number): ParentAndExpectedShnarf {
+export function generateParentAndExpectedShnarfForMultipleIndex(index: number): ParentAndExpectedShnarf {
   const chain = buildCalldataShnarfChain(COMPRESSED_SUBMISSION_DATA_MULTIPLE_PROOF, index, index + 1);
   return {
     parentShnarf: chain[0].parentShnarf,
@@ -417,7 +417,7 @@ export async function submitCalldataBeforeFinalization(
     : generateCallDataSubmission(startIndex, finalIndex);
 
   const getShnarfFn = useMultipleProofs
-    ? generateParentAndExpectedShnarfForMulitpleIndex
+    ? generateParentAndExpectedShnarfForMultipleIndex
     : generateParentAndExpectedShnarfForIndex;
 
   let index = startIndex;
