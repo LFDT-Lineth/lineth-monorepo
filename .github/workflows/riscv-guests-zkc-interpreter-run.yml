@@ -96,7 +96,7 @@ jobs:
           ZKC_REF: ${{ inputs.zkc-ref || 'main' }}
 
         run: make -C arithmetization install-zkc
-      # Execute the guest via zkc's generated-Go backend (--gogen) in fast mode (--fast), quiet (-q):
+      # Execute the guest via zkc's generated-Go backend (--gogen) in fast mode (--fast):
       # the interpreter does not implement tracing yet, so this runnability check skips the trace path
       # — and gogen+fast is light (tens of MB, seconds, vs the tree-walking interpreter's ~15 GB). Uses
       # exec's default INPUT (the committed sample stateless input). A trap/failure still exits
@@ -106,5 +106,5 @@ jobs:
       #
       # TODO: gogen is disabled until it start supporting native arithmetic
       - name: Run l2-execution guest under zkc (gogen, fast, accel keccak)
-        run: make -C riscv-guests/l2-execution exec KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--quiet --fast"
+        run: make -C riscv-guests/l2-execution exec KECCAK_ACCEL=true ZKC_EXEC_FLAGS="--fast"
 
