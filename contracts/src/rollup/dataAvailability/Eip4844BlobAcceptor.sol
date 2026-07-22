@@ -50,6 +50,7 @@ abstract contract Eip4844BlobAcceptor is LocalShnarfProvider, ShnarfDataAcceptor
       currentBlobHash = blobhash(i);
 
       require(currentBlobHash != EMPTY_HASH, EmptyBlobDataAtIndex(i));
+      require(_blobFinalBlockHashes[i] != 0x0, FinalBlockHashIsZeroHash());
 
       computedShnarf = _computeShnarf(computedShnarf, _blobFinalBlockHashes[i], currentBlobHash);
     }
