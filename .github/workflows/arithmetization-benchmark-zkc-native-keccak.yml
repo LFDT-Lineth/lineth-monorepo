@@ -149,7 +149,7 @@ jobs:
           # Run fast mode with gogen
           run_gogen_native_keccak() {  # $1=variant (base|opt)  $2=label (warmup|iter#)
             local variant="$1" label="$2" zkc_bin="/tmp/zkc-${1}"
-            "$zkc_bin" generate --fast -v --field KOALABEAR_16 -o riscv.go "$zkc_prog"
+            "$zkc_bin" generate --fast -vv --field KOALABEAR_16 -o riscv.go "$zkc_prog"
             go build -o riscv-gogen riscv.go
             /usr/bin/time -v ./riscv-gogen < /tmp/keccakf_input.json \
               > "/tmp/bench/logs/keccak_${variant}_${label}.log" 2>&1
@@ -159,8 +159,8 @@ jobs:
 
           # Run in tracing or fast mode via make zkc-exec
           run_native_keccak() {  # $1=variant (base|opt)  $2=label (warmup|iter#)  optional: --fast
-            local exec_flags="-v --field KOALABEAR_16"
-            if [[ "${3:-}" == "--fast" ]]; then exec_flags="--fast -v --field KOALABEAR_16"; fi
+            local exec_flags="-vv --field KOALABEAR_16"
+            if [[ "${3:-}" == "--fast" ]]; then exec_flags="--fast -vv --field KOALABEAR_16"; fi
             /usr/bin/time -v env ZKC="/tmp/zkc-${1}" ZKC_EXEC_FLAGS="$exec_flags" \
               make -C "$TEST_MAKE_DIR" --no-print-directory zkc-exec \
               JSON=/tmp/keccakf_input.json ZKC_MAIN="$zkc_prog" \
