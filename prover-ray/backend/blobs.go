@@ -95,8 +95,10 @@ func elfBlobs(ef *elf.File) ([]memoryBlob, error) {
 }
 
 // sszBlobs splits ssz into the two memory blobs that linea_zkvm_io expects at
-// _in_start: an 8-byte LE length prefix followed by the raw SSZ payload.
-// The split matches elf_to_json_gen's sszInputBlobs (commit 09fcdb42).
+// _in_start: an 8-byte LE length prefix followed by the payload bytes. It does
+// not interpret the payload; callers pass the framed StatelessInput (0x0001
+// schema id + SSZ body, see [BuildZkcInputs]). The split matches
+// elf_to_json_gen's sszInputBlobs (commit 09fcdb42).
 func sszBlobs(inOrigin uint64, ssz []byte) []memoryBlob {
 	prefix := make([]byte, 8)
 	binary.LittleEndian.PutUint64(prefix, uint64(len(ssz)))

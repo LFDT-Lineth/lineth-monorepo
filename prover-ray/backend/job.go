@@ -23,9 +23,11 @@ type Job struct {
 	StartBlock uint64
 	EndBlock   uint64
 
-	// Payload is the raw SSZ bytes for the block range (already framed or
-	// not yet — see [EncodeStatelessInput]). For l2-execution, this is the
-	// SSZ-encoded StatelessInput that the guest reads at _in_start.
+	// Payload is the framed StatelessInput for the block: the 0x0001 schema
+	// id followed by the SSZ body, i.e. the output of [EncodeStatelessInput].
+	// [BuildZkcInputs] prepends the [u64 LE len] prefix before the guest reads
+	// the bytes at _in_start, so callers supply the framed bytes only and must
+	// not add the length prefix themselves.
 	//
 	// Multi-block conflation encoding is not yet decided (open question #1
 	// in wiki backend-overview.md).
