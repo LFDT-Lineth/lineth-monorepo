@@ -83,8 +83,8 @@ jobs:
           # so they coexist on disk.
           for variant in base opt; do
             case "$variant" in
-              base) ref="${{ inputs.zkc_base_ref || 'v1.2.21' }}" ;;
-              opt)  ref="${{ inputs.zkc_optim_ref || 'v1.2.21' }}" ;;
+              base) ref="${{ inputs.zkc_base_ref || 'v1.2.22' }}" ;;
+              opt)  ref="${{ inputs.zkc_optim_ref || 'v1.2.22' }}" ;;
             esac
             tmpbin=$(mktemp -d)
             # go-corset was renamed/moved to github.com/LFDT-Lineth/zkc. The module
@@ -140,7 +140,7 @@ jobs:
           # Run stats separately while tracing is not possible
           run_compile_native_keccak() {  # $1=variant (base|opt)  $2=label (warmup|iter#)
             local log="/tmp/bench/logs/compile_${1}_${2}.log"
-            "/tmp/zkc-${1}" compile --stats --quiet --inline --field KOALABEAR_16 \
+            "/tmp/zkc-${1}" compile --stats --inline --field KOALABEAR_16 \
               "$zkc_prog" >"$log" 2>&1 || true
           }
 
@@ -199,8 +199,8 @@ jobs:
             "${fast_mode_arg[@]}" \
             -base-ref "${{ inputs.zkc_base_ref || 'main' }}" \
             -optim-ref "${{ inputs.zkc_optim_ref || 'main' }}" \
-            -zkc-ref-base "${{ inputs.zkc_base_ref || 'v1.2.21' }}" \
-            -zkc-ref-optim "${{ inputs.zkc_optim_ref || 'v1.2.21' }}" \
+            -zkc-ref-base "${{ inputs.zkc_base_ref || 'v1.2.22' }}" \
+            -zkc-ref-optim "${{ inputs.zkc_optim_ref || 'v1.2.22' }}" \
             -keccak-n-vectors ${{ inputs.n_vectors_keccak || 100 }} \
             | tee -a "$GITHUB_STEP_SUMMARY" \
             | tee /tmp/bench/logs/summary.md
