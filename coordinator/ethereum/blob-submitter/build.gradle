@@ -21,16 +21,11 @@ dependencies {
 
   testImplementation(project(":jvm-libs:linea:testing:l1-blob-and-proof-submission"))
   testImplementation(project(':coordinator:ethereum:test-utils'))
-  testImplementation(project(":coordinator:persistence"))
   testImplementation(testFixtures(project(":coordinator:ethereum:gas-pricing")))
   testImplementation(testFixtures(project(":coordinator:core-interfaces")))
   testImplementation(testFixtures(project(":jvm-libs:generic:extensions:kotlin")))
   testImplementation(testFixtures(project(":jvm-libs:generic:persistence:db")))
   testImplementation("io.vertx:vertx-junit5")
-  testImplementation("com.fasterxml.jackson.core:jackson-databind")
-  testImplementation("com.fasterxml.jackson.core:jackson-annotations")
-  testImplementation("com.fasterxml.jackson.module:jackson-module-kotlin")
-  testImplementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
   testImplementation("org.apache.logging.log4j:log4j-slf4j2-impl:2.20.0")
 }
 

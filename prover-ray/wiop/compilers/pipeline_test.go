@@ -10,6 +10,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/localvanishing"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/rangecheck"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
@@ -29,10 +30,12 @@ func init() {
 //
 //  1. rangecheck:           RangeCheck → Inclusion TableRelation
 //  2. lookuptologderivsum:  Inclusion → LogDerivativeSum
-//  3. logderivativesum:     LogDerivativeSum → recurrence Vanishings + endpoint openings
-//  4. localvanishing:       scalar Vanishings → multi-valued Vanishings via the Lagrange lift
-//  5. global:               multi-valued Vanishings → quotient shares + LagrangeEval claims
-//  6. pcs:                  commit every committed round, open every LagrangeEval claim
+//  3. messagebus:           MessageBus → GrandProduct
+//  4. grandproduct:         TableRelationQuery -> GrandProduct; GrandProduct → Z columns + Vanishing + endpoint openings
+//  5. logderivativesum:     LogDerivativeSum → recurrence Vanishings + endpoint openings
+//  6. localvanishing:       scalar Vanishings → multi-valued Vanishings via the Lagrange lift
+//  7. global:               multi-valued Vanishings → quotient shares + LagrangeEval claims
+//  8. pcs:                  commit every committed round, open every LagrangeEval claim
 //
 // Each pass is a no-op when its input queries are absent, so this ordering
 // is safe to apply uniformly to every wioptest scenario regardless of which
@@ -52,6 +55,7 @@ func compileFullPipeline(sys *wiop.System) {
 func compilePipelineBeforePCS(sys *wiop.System) {
 	rangecheck.Compile(sys)
 	lookuptologderivsum.Compile(sys)
+	messagebus.Compile(sys)
 	grandproduct.Compile(sys)
 	logderivativesum.Compile(sys)
 	localvanishing.Compile(sys)
