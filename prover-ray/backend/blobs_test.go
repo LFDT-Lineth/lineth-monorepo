@@ -144,13 +144,13 @@ func TestSszBlobs_LengthPrefixAtInOrigin(t *testing.T) {
 }
 
 func TestSszBlobs_PayloadAtInOriginPlus8(t *testing.T) {
-	ssz := []byte{0xAA, 0xBB, 0xCC}
-	got := sszBlobs(DefaultINOrigin, ssz)
+	payload := []byte{0xAA, 0xBB, 0xCC}
+	got := sszBlobs(DefaultINOrigin, payload)
 	require.Len(t, got, 2)
 
-	// Second memory blob: raw SSZ bytes at inOrigin+8.
+	// Second memory blob: the payload bytes at inOrigin+8.
 	assert.Equal(t, DefaultINOrigin+8, got[1].offset, "payload memory blob offset must be inOrigin+8")
-	assert.Equal(t, ssz, got[1].data, "payload memory blob must contain the raw SSZ bytes")
+	assert.Equal(t, payload, got[1].data, "payload memory blob must contain the payload bytes verbatim")
 }
 
 func TestSszBlobs_EmptySSZ(t *testing.T) {

@@ -92,9 +92,9 @@ func (c *Core) Prove(ctx context.Context, job Job) Result {
 	}
 }
 
-// buildInputs converts a Job's Payload into the three ZkC pub-input memory blobs.
-// ELF memory blobs are pre-extracted in [New] and reused across calls; only the
-// SSZ memory blobs differ per job.
+// buildInputs converts a Job's Payload into the three ZkC pub-input values,
+// keyed by name (see [encodeInputs]). ELF memory blobs are pre-extracted in
+// [New] and reused across calls; only the SSZ memory blobs differ per job.
 func (c *Core) buildInputs(job Job) map[string][]byte {
 	memBlobs := make([]memoryBlob, 0, len(c.elfBlobs)+2)
 	memBlobs = append(memBlobs, c.elfBlobs...)
