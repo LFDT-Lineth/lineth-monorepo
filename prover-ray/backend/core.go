@@ -47,7 +47,7 @@ func New(cfg Config) (*Core, error) {
 
 	precomputed, entry, err := loadELFBlobs(elfBytes)
 	if err != nil {
-		return nil, fmt.Errorf("extracting ELF blobs: %w", err)
+		return nil, fmt.Errorf("extracting ELF blobs from %q: %w", cfg.GuestELFPath, err)
 	}
 
 	sys := wiop.NewSystemf(wiopSystemName)
