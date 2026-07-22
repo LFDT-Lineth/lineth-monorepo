@@ -80,9 +80,9 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
   private val smartContractVersionCache = AtomicReference<LineaRollupContractVersion>(null)
 
   private fun getSmartContractVersion(): SafeFuture<LineaRollupContractVersion> {
-    return if (smartContractVersionCache.get() == LineaRollupContractVersion.V8) {
+    return if (smartContractVersionCache.get() == LineaRollupContractVersion.latest) {
       // once upgraded, it's not downgraded
-      SafeFuture.completedFuture(LineaRollupContractVersion.V8)
+      SafeFuture.completedFuture(LineaRollupContractVersion.latest)
     } else {
       fetchSmartContractVersion()
         .thenPeek { contractLatestVersion ->

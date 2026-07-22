@@ -21,7 +21,9 @@ internal object Web3JLineaRollupFunctionBuilders {
       LineaRollupContractVersion.V7,
       LineaRollupContractVersion.V8,
       -> buildSubmitBlobsFunctionV6(blobs)
-      LineaRollupContractVersion.V9 -> TODO("Blob Submission for contract V9 (RISC-V) not implemented yet")
+
+      LineaRollupContractVersion.V9 ->
+        throw UnsupportedOperationException("version=$version not supported, please use submitBlobsV9 instead")
     }
   }
 
@@ -88,7 +90,9 @@ internal object Web3JLineaRollupFunctionBuilders {
         parentL1RollingHash,
         parentL1RollingHashMessageNumber,
       )
-      LineaRollupContractVersion.V9 -> TODO("Finalization for contract V9 (RISC-V) not implemented yet")
+
+      LineaRollupContractVersion.V9 ->
+        throw UnsupportedOperationException("version=$version not supported, please use finalizeBlocksV9 instead")
     }
   }
 
