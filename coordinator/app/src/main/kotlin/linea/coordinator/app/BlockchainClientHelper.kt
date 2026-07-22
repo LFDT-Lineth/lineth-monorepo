@@ -170,6 +170,7 @@ fun createLineaContractClient(
   gasConfig: L1SubmissionConfig.GasConfig,
   l1MinPriorityFeeCalculator: FeesCalculator,
   dataAvailabilityType: L1SubmissionConfig.DataAvailability,
+  useEthEstimateGas: Boolean = false,
 ): LineaSmartContractClient {
   val l1DataSubmissionPriorityFeeCalculator: FeesCalculator = BoundableFeeCalculator(
     BoundableFeeCalculator.Config(
@@ -208,6 +209,6 @@ fun createLineaContractClient(
     smartContractErrors = smartContractErrors,
     // eth_estimateGas would fail because we submit multiple blob tx
     // and 2nd would fail with revert reason
-    useEthEstimateGas = false,
+    useEthEstimateGas = useEthEstimateGas,
   )
 }

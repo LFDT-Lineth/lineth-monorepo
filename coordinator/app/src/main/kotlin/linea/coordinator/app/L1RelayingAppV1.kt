@@ -84,7 +84,7 @@ class L1RelayingAppV1(
       priorityFeeWmaCoefficient = 1.0,
     ),
   ),
-  val lineaSmartContractClientForDataSubmission: LineaSmartContractClient = run {
+  private val lineaSmartContractClientForDataSubmission: LineaSmartContractClient = run {
     val l1Web3jClient = createWeb3jHttpClient(
       rpcUrl = l1SubmissionConfig.blob.l1Endpoint.toString(),
       log = LogManager.getLogger("clients.l1.eth.data-submission"),
@@ -100,9 +100,10 @@ class L1RelayingAppV1(
       feesFetcher = feesFetcher,
       signerConfig = l1SubmissionConfig.blob.signer,
       gasConfig = l1SubmissionConfig.blob.gas,
+      useEthEstimateGas = false,
     )
   },
-  val lineaSmartContractClientForFinalization: LineaSmartContractClient = run {
+  private val lineaSmartContractClientForFinalization: LineaSmartContractClient = run {
     val l1Web3jClient = createWeb3jHttpClient(
       rpcUrl = l1SubmissionConfig.aggregation.l1Endpoint.toString(),
       log = LogManager.getLogger("clients.l1.eth.finalization"),
@@ -118,9 +119,10 @@ class L1RelayingAppV1(
       feesFetcher = feesFetcher,
       signerConfig = l1SubmissionConfig.aggregation.signer,
       gasConfig = l1SubmissionConfig.aggregation.gas,
+      useEthEstimateGas = true,
     )
   },
-  val log: Logger = LogManager.getLogger(L1RelayingAppV1::class.java),
+  private val log: Logger = LogManager.getLogger(L1RelayingAppV1::class.java),
 ) : LongRunningService {
   init {
     if (l1SubmissionConfig.blob.isDisabled()) {
