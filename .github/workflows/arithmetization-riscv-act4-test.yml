@@ -15,7 +15,7 @@ on:
      - 'arithmetization/**'
      - '.github/actions/setup-arithmetization-riscv/**'
      - '.github/workflows/arithmetization-*.yml'
-  workflow_call: approve
+  workflow_call:
   workflow_dispatch:
 
 permissions:
