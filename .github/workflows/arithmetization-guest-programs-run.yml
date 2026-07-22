@@ -42,7 +42,7 @@ jobs:
   sample-guest-programs-run:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     env:
-      ZKC_REF: ${{ inputs.zkc-ref || '8e19e640b6fe99746be464d591b0cec3533d9b83' }}
+      ZKC_REF: ${{ inputs.zkc-ref || '94502bd1195d4782a9615579a755c343269f62b5' }}
       ZKC_EXEC_FLAGS: "--fast -q"
     steps:
       - name: Checkout repository
