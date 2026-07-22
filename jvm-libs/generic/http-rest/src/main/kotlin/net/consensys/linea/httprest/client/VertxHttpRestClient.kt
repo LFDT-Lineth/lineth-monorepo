@@ -12,6 +12,7 @@ import io.vertx.ext.web.client.WebClient
 import io.vertx.ext.web.client.WebClientOptions
 import linea.error.ErrorResponse
 import net.consensys.linea.async.toSafeFuture
+import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -20,16 +21,21 @@ import java.net.URI
 class VertxHttpRestClient(
   private val webClientOptions: WebClientOptions,
   poolOptions: PoolOptions = PoolOptions(),
-  private val vertx: Vertx,
+  val vertx: Vertx,
+  private val log: Logger = LogManager.getLogger(VertxHttpRestClient::class.java),
+  private val requestResponseLogLevel: Level = Level.TRACE,
+  private val failuresLogLevel: Level = Level.DEBUG,
 ) : HttpRestClient {
   private var webClient = WebClient.create(vertx, webClientOptions, poolOptions)
-  private val log: Logger = LogManager.getLogger(this.javaClass)
 
   override fun get(
     path: String,
     params: List<Pair<String, String>>,
     resultMapper: (Any?) -> Any?,
   ): SafeFuture<Result<Any?, ErrorResponse<RestErrorType>>> {
+    val method = "GET"
+    logRequest(method, path, params)
+
     return webClient
       .get(webClientOptions.defaultPort, webClientOptions.defaultHost, path)
       .apply {
@@ -40,28 +46,17 @@ class VertxHttpRestClient(
       .send()
       .flatMap { response: HttpResponse<Buffer> ->
         if (isSuccessStatusCode(response.statusCode())) {
-          log.debug("Received response with status code: ${response.statusCode()}")
+          logResponse(isError = false, method = method, path = path, requestBody = params, response = response)
           Future.succeededFuture(Ok(resultMapper(response)))
         } else {
-          log.error(
-            "Something went wrong: " +
-              "endpoint=${URI(
-                "http",
-                null,
-                webClientOptions.defaultHost,
-                webClientOptions.defaultPort,
-                path,
-                null,
-                null,
-              ).toURL()}, " +
-              "statusMessage=${response.statusMessage()}",
-          )
+          logResponse(isError = true, method = method, path = path, requestBody = params, response = response)
           val errorType = RestErrorType.fromStatusCode(response.statusCode())
           Future.succeededFuture(Err(ErrorResponse(errorType, response.statusMessage())))
         }
       }
-      .onFailure { err ->
-        Err(ErrorResponse(RestErrorType.UNKNOWN, err.message ?: "Unknown error"))
+      .recover { err ->
+        logRequestFailure(method, path, params, err)
+        Future.succeededFuture(Err(ErrorResponse(RestErrorType.UNKNOWN, err.message ?: "Unknown error")))
       }
       .toSafeFuture()
   }
@@ -71,36 +66,87 @@ class VertxHttpRestClient(
     buffer: Buffer,
     resultMapper: (Any?) -> Any?,
   ): SafeFuture<Result<Any?, ErrorResponse<RestErrorType>>> {
+    val method = "POST"
+    logRequest(method, path, buffer)
+
     return webClient
       .post(webClientOptions.defaultPort, webClientOptions.defaultHost, path)
       .putHeader("Content-Type", "application/json")
       .sendBuffer(buffer)
       .flatMap { httpResponse: HttpResponse<Buffer> ->
         if (isSuccessStatusCode(httpResponse.statusCode())) {
-          log.debug("Received response with status code: ${httpResponse.statusCode()}")
+          logResponse(isError = false, method = method, path = path, requestBody = buffer, response = httpResponse)
           Future.succeededFuture(Ok(resultMapper(httpResponse)))
         } else {
-          log.error(
-            "Something went wrong: " +
-              "endpoint=${URI(
-                "http",
-                null,
-                webClientOptions.defaultHost,
-                webClientOptions.defaultPort,
-                path,
-                null,
-                null,
-              ).toURL()}, " +
-              "statusMessage=${httpResponse.statusMessage()}",
-          )
+          logResponse(isError = true, method = method, path = path, requestBody = buffer, response = httpResponse)
           val errorType = RestErrorType.fromStatusCode(httpResponse.statusCode())
           Future.succeededFuture(Err(ErrorResponse(errorType, httpResponse.statusMessage())))
         }
       }
-      .onFailure { err ->
-        Err(ErrorResponse(RestErrorType.UNKNOWN, err.message ?: "Unknown error"))
+      .recover { err ->
+        logRequestFailure(method, path, buffer, err)
+        Future.succeededFuture(Err(ErrorResponse(RestErrorType.UNKNOWN, err.message ?: "Unknown error")))
       }
       .toSafeFuture()
+  }
+
+  private fun buildEndpointUri(path: String): URI {
+    return URI(
+      if (webClientOptions.isSsl) "https" else "http",
+      null,
+      webClientOptions.defaultHost,
+      webClientOptions.defaultPort,
+      path,
+      null,
+      null,
+    )
+  }
+
+  private fun logRequest(method: String, path: String, body: Any?, level: Level = requestResponseLogLevel) {
+    if (!log.isEnabled(level)) return
+    log.log(level, "--> {} {} {}", method, buildEndpointUri(path), body ?: "")
+  }
+
+  private fun logResponse(
+    isError: Boolean,
+    method: String,
+    path: String,
+    requestBody: Any?,
+    response: HttpResponse<Buffer>,
+  ) {
+    val logLevel = if (isError) failuresLogLevel else requestResponseLogLevel
+    if (isError && !log.isEnabled(requestResponseLogLevel)) {
+      // in case of error, log the request that originated the error
+      // to help replicate and debug later
+      logRequest(method, path, requestBody, logLevel)
+    }
+
+    if (!log.isEnabled(logLevel)) return
+    log.log(
+      logLevel,
+      "<-- {} {} {}",
+      buildEndpointUri(path),
+      response.statusCode(),
+      response.statusMessage(),
+    )
+  }
+
+  private fun logRequestFailure(method: String, path: String, requestBody: Any?, failureCause: Throwable) {
+    if (!log.isEnabled(requestResponseLogLevel)) {
+      // request/response tracing wasn't active, log the request that originated the error
+      // to help replicate and debug later
+      logRequest(method, path, requestBody, failuresLogLevel)
+    }
+
+    if (!log.isEnabled(failuresLogLevel)) return
+    log.log(
+      failuresLogLevel,
+      "<--> {} {} failed with error={}",
+      method,
+      buildEndpointUri(path),
+      failureCause.message,
+      failureCause,
+    )
   }
 
   private fun isSuccessStatusCode(statusCode: Int): Boolean {
