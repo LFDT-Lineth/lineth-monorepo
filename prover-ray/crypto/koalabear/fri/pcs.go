@@ -1289,8 +1289,8 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 			if err != nil {
 				return err
 			}
-			if round >= pcs.Params.numRounds {
-				return fmt.Errorf("fri: pcs.Verify: level %d introduced at round %d, must be < %d",
+			if round > pcs.Params.numRounds {
+				return fmt.Errorf("fri: pcs.Verify: level %d introduced at round %d, must be <= %d",
 					levelIdx, round, pcs.Params.numRounds)
 			}
 			domain := pcs.Params.domainsLight[round]
