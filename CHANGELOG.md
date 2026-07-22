@@ -94,3 +94,4 @@
 - *(deps)* Align bouncycastle catalog pin to 1.84 (#3562)
 - *(linea-besu)* Tidy v2.0.0 changelog entries (#3574)
 - *(misc)* Update jackson from 2.19.4 to 2.22.1 (#3595)
+- *(misc)* Cleanup redundant deps (#3596)

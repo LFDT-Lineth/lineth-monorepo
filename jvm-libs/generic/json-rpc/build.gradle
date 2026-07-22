@@ -23,7 +23,6 @@ dependencies {
   api "io.vertx:vertx-lang-kotlin"
 
   testImplementation "io.vertx:vertx-junit5"
-  testImplementation "io.vertx:vertx-micrometer-metrics"
   testImplementation "io.micrometer:micrometer-registry-prometheus:${libs.versions.micrometer.get()}"
   testImplementation "io.rest-assured:rest-assured:${libs.versions.restassured.get()}"
   testImplementation "io.rest-assured:json-schema-validator:${libs.versions.restassured.get()}"
