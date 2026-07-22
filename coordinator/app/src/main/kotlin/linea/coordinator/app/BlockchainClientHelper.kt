@@ -172,7 +172,7 @@ fun createLineaContractClient(
   dataAvailabilityType: L1SubmissionConfig.DataAvailability,
   useEthEstimateGas: Boolean = false,
 ): LineaSmartContractClient {
-  val l1DataSubmissionPriorityFeeCalculator: FeesCalculator = BoundableFeeCalculator(
+  val l1PriorityFeeCalculator: FeesCalculator = BoundableFeeCalculator(
     BoundableFeeCalculator.Config(
       feeUpperBound = gasConfig.fallback.priorityFeePerGasUpperBound.toDouble(),
       feeLowerBound = gasConfig.fallback.priorityFeePerGasLowerBound.toDouble(),
@@ -186,7 +186,7 @@ fun createLineaContractClient(
   val primaryOrFallbackGasProvider = WMAGasProvider(
     chainId = l1ChainId.toLong(),
     feesFetcher = feesFetcher,
-    priorityFeeCalculator = l1DataSubmissionPriorityFeeCalculator,
+    priorityFeeCalculator = l1PriorityFeeCalculator,
     config = WMAGasProvider.Config(
       gasLimit = gasConfig.gasLimit,
       maxFeePerGasCap = gasConfig.maxFeePerGasCap,
