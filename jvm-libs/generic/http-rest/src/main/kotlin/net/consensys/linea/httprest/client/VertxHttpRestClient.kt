@@ -21,10 +21,11 @@ import java.net.URI
 class VertxHttpRestClient(
   private val webClientOptions: WebClientOptions,
   poolOptions: PoolOptions = PoolOptions(),
-  val vertx: Vertx,
+  vertx: Vertx,
   private val log: Logger = LogManager.getLogger(VertxHttpRestClient::class.java),
   private val requestResponseLogLevel: Level = Level.TRACE,
   private val failuresLogLevel: Level = Level.DEBUG,
+  private val maskRequestBody: Boolean = requestResponseLogLevel != Level.TRACE,
 ) : HttpRestClient {
   private var webClient = WebClient.create(vertx, webClientOptions, poolOptions)
 
@@ -104,7 +105,15 @@ class VertxHttpRestClient(
 
   private fun logRequest(method: String, path: String, body: Any?, level: Level = requestResponseLogLevel) {
     if (!log.isEnabled(level)) return
-    log.log(level, "--> {} {} {}", method, buildEndpointUri(path), body ?: "")
+    val renderedBody = body.toString().let {
+      if (maskRequestBody) {
+        "Hidden Body: size=${it.length} (toString() characters)"
+      } else {
+        it
+      }
+    }
+
+    log.log(level, "--> {} {} {}", method, buildEndpointUri(path), renderedBody)
   }
 
   private fun logResponse(
@@ -124,7 +133,8 @@ class VertxHttpRestClient(
     if (!log.isEnabled(logLevel)) return
     log.log(
       logLevel,
-      "<-- {} {} {}",
+      "<-- {} {} {} {}",
+      method,
       buildEndpointUri(path),
       response.statusCode(),
       response.statusMessage(),
