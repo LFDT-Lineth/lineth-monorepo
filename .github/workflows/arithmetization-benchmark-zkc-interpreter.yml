@@ -137,7 +137,7 @@ jobs:
       - name: Add worktrees for base and optim branches
         run: |
           set -eux
-          BASE_REF="${{ inputs.base_ref || 'main' }}"
+          BASE_REF="${{ inputs.base_ref || github.event.pull_request.head.sha || github.sha }}"
           OPTIM_REF="${{ inputs.optim_ref || github.event.pull_request.head.sha || github.sha }}"
           git fetch origin "${BASE_REF}":refs/bench/base
           git fetch origin "${OPTIM_REF}":refs/bench/opt
