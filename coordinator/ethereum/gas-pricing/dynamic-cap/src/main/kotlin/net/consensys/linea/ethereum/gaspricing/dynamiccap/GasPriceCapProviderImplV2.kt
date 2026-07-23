@@ -19,6 +19,7 @@ class GasPriceCapProviderImplV2(
   private val feeHistoriesRepository: FeeHistoriesRepositoryWithCache,
   private val gasPriceCapCalculator: GasPriceCapCalculator,
   private val clock: Clock = Clock.System,
+  private val log: Logger = LogManager.getLogger(GasPriceCapProviderImplV2::class.java),
 ) : GasPriceCapProviderV2 {
   data class Config(
     val enabled: Boolean,
@@ -31,8 +32,6 @@ class GasPriceCapProviderImplV2(
     val finalizationTargetMaxDelay: Duration,
     val gasPriceCapsCoefficient: Double,
   )
-
-  private val log: Logger = LogManager.getLogger(this::class.java)
 
   init {
     require(config.gasFeePercentile >= 0.0) {
@@ -79,7 +78,7 @@ class GasPriceCapProviderImplV2(
     return timeOfDayMultipliers[tdmKey]!!
   }
 
-  private fun calculateGasPriceCapsHelper(timestamp: Instant): GasPriceCaps {
+  private fun calculateGasPriceCaps(timestamp: Instant): GasPriceCaps {
     val elapsedTimeSinceBlockTimestamp = getElapsedTimeSinceBlockTimestamp(timestamp)
     val percentileGasFees = feeHistoriesRepository.getCachedPercentileGasFees()
     val timeOfDayMultiplier = getTimeOfDayMultiplierForNow(config.timeOfDayMultipliers)
@@ -124,16 +123,12 @@ class GasPriceCapProviderImplV2(
     return gasPriceCaps
   }
 
-  private fun calculateGasPriceCaps(timestamp: Instant): SafeFuture<GasPriceCaps?> {
+  override fun getGasPriceCaps(timestamp: Instant): SafeFuture<GasPriceCaps?> {
     return if (config.enabled && hasEnoughDataForGasPriceCapCalculation()) {
-      calculateGasPriceCapsHelper(timestamp)
+      calculateGasPriceCaps(timestamp)
     } else {
       null
     }.let { SafeFuture.completedFuture(it) }
-  }
-
-  override fun getGasPriceCaps(timestamp: Instant): SafeFuture<GasPriceCaps?> {
-    return calculateGasPriceCaps(timestamp)
   }
 
   override fun getGasPriceCapsWithCoefficient(timestamp: Instant): SafeFuture<GasPriceCaps?> {

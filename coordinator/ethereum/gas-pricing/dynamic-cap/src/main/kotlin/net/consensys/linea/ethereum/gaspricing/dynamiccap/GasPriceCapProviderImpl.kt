@@ -17,10 +17,12 @@ class GasPriceCapProviderImpl(
   feeHistoriesRepository: FeeHistoriesRepositoryWithCache,
   gasPriceCapCalculator: GasPriceCapCalculator,
   clock: Clock = Clock.System,
+  private val log: Logger = LogManager.getLogger(GasPriceCapProviderImpl::class.java),
   val delegate: GasPriceCapProviderImplV2 = GasPriceCapProviderImplV2(
     gasPriceCapCalculator = gasPriceCapCalculator,
     feeHistoriesRepository = feeHistoriesRepository,
     clock = clock,
+    log = log,
     config = GasPriceCapProviderImplV2.Config(
       enabled = config.enabled,
       gasFeePercentile = config.gasFeePercentile,
@@ -45,8 +47,6 @@ class GasPriceCapProviderImpl(
     val finalizationTargetMaxDelay: Duration,
     val gasPriceCapsCoefficient: Double,
   )
-
-  private val log: Logger = LogManager.getLogger(this::class.java)
 
   init {
     require(config.gasFeePercentile >= 0.0) {
