@@ -38,6 +38,10 @@ sourceSets {
 }
 
 dependencies {
+  // @ConfigDoc/@ConfigSection annotations applied to the TOML config classes. Compile-time only
+  // (read by the config-docs tooling, never at app runtime) so it stays out of the production jar.
+  compileOnly project(':jvm-libs:linea:config-docs')
+
   implementation project(':jvm-libs:generic:json-rpc')
   implementation project(':jvm-libs:generic:http-rest')
   implementation project(':jvm-libs:generic:vertx-helper')

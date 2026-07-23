@@ -1,15 +1,39 @@
 package linea.coordinator.config.v2.toml
 
+import linea.config.docs.ConfigDoc
 import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 data class RequestRetriesToml(
+  @param:ConfigDoc(
+    description = "Maximum number of retry attempts. Omit for endless retries.",
+    example = "3",
+  )
   val maxRetries: UInt? = null,
+  @param:ConfigDoc(
+    description = "Overall timeout across all retry attempts. Omit to disable the timeout.",
+    example = "PT10S",
+  )
   val timeout: Duration? = null,
+  @param:ConfigDoc(
+    description = "Grace period during which initial failures are ignored (not logged/counted) " +
+      "before retries are treated as errors. Omit to disable.",
+    example = "PT5S",
+  )
   val ignoreFirstExceptionsUntilTimeElapsed: Duration? = null,
+  @param:ConfigDoc(
+    description = "Delay between retry attempts.",
+    default = "PT1S",
+    example = "PT1S",
+  )
   val backoffDelay: Duration = 1.seconds,
+  @param:ConfigDoc(
+    description = "Number of consecutive failures after which warning logs start being emitted. " +
+      "Omit to use the default threshold.",
+    example = "3",
+  )
   val failuresWarningThreshold: UInt? = null,
 ) {
   init {
