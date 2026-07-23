@@ -1,7 +1,7 @@
-package linea.coordinator.config.v2.toml
+package linea.config.docs
 
 /**
- * Documents a leaf Coordinator config value that can appear directly in TOML.
+ * Documents a leaf config value that can appear directly in TOML.
  *
  * Use on scalar values, enums, lists, maps, durations, URLs, paths, and other leaf types,
  * i.e. constructor parameters that are not themselves config data classes. Nested config
@@ -50,7 +50,7 @@ annotation class ConfigDoc(
 )
 
 /**
- * Documents a nested Coordinator config TOML table.
+ * Documents a nested config TOML table.
  *
  * Use when a constructor parameter is itself another config data class rather than a direct
  * value. Leaf values within that nested class should be annotated with [ConfigDoc].

@@ -1,8 +1,6 @@
-package linea.coordinator.config.v2.docs
+package linea.config.docs
 
 import com.sksamuel.hoplite.KebabCaseParamMapper
-import linea.coordinator.config.v2.toml.ConfigDoc
-import linea.coordinator.config.v2.toml.ConfigSection
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.KParameter
@@ -11,23 +9,38 @@ import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.primaryConstructor
 
 /**
- * Walks the primary constructors of Coordinator Hoplite TOML schema classes via reflection and
- * produces a flat, path-sorted list of [ConfigKey]s describing every config key.
+ * Decides whether a config parameter's type is a nested *section* (a config table to recurse
+ * into) rather than a leaf value. Applications supply their own detector because section classes
+ * live in application-specific packages; see [sectionByPackagePrefix] for the common case.
+ */
+fun interface SectionDetector {
+  fun isSection(kClass: KClass<*>): Boolean
+}
+
+/**
+ * A [SectionDetector] that treats a Kotlin data class as a section when its qualified name starts
+ * with any of the given [packagePrefixes]. This scopes recursion to the application's own config
+ * classes and excludes library types (`Masked`, `Duration`, `BlockParameter`, maps, ...).
+ */
+fun sectionByPackagePrefix(vararg packagePrefixes: String): SectionDetector = SectionDetector { kClass ->
+  kClass.isData && packagePrefixes.any { kClass.qualifiedName?.startsWith(it) == true }
+}
+
+/**
+ * Walks the primary constructors of Hoplite TOML schema classes via reflection and produces a
+ * flat, path-sorted list of [ConfigKey]s describing every config key.
  *
  * The walk is purely structural — it does not depend on the documentation annotations being
  * present — so undocumented parameters still appear in the output and can be reported by the
- * documentation-completeness check. A parameter is treated as a nested *section* (and recursed
- * into) when its type is a Kotlin data class declared under [CONFIG_PACKAGE]; everything else
- * (scalars, enums, durations, URLs, `Masked`, `BlockParameter`, lists, maps, ...) is a leaf.
- *
- * Dynamic maps are documented as a single key rather than enumerating their entries.
+ * documentation-completeness check. Whether a parameter is a nested section (and recursed into)
+ * is decided by the supplied [SectionDetector]; everything else (scalars, enums, durations, URLs,
+ * `Masked`, `BlockParameter`, lists, maps, ...) is a leaf. Dynamic maps are documented as a single
+ * key rather than enumerating their entries.
  *
  * Config keys are rendered with Hoplite's [KebabCaseParamMapper] so the documented path matches
  * how Hoplite maps property names when parsing the TOML.
  */
 object ConfigSchemaWalker {
-  const val CONFIG_PACKAGE = "linea.coordinator.config.v2.toml"
-
   /**
    * Display names for types whose reflected name is unhelpful. `Masked` is a typealias for
    * `com.sksamuel.hoplite.Secret`, and typealiases are erased in reflection, so the underlying
@@ -38,17 +51,17 @@ object ConfigSchemaWalker {
   )
 
   /** Walks a single root config class, returning its keys sorted by path. */
-  fun walk(rootClass: KClass<*>): List<ConfigKey> {
+  fun walk(rootClass: KClass<*>, sectionDetector: SectionDetector): List<ConfigKey> {
     val keys = mutableListOf<ConfigKey>()
-    walkClass(rootClass, prefix = "", onStack = emptySet(), sink = keys)
+    walkClass(rootClass, prefix = "", onStack = emptySet(), sectionDetector = sectionDetector, sink = keys)
     return keys.sortedBy { it.path }
   }
 
   /** Walks several root config classes and merges their keys, sorted by path. */
-  fun walkAll(rootClasses: List<KClass<*>>): List<ConfigKey> {
+  fun walkAll(rootClasses: List<KClass<*>>, sectionDetector: SectionDetector): List<ConfigKey> {
     val keys = mutableListOf<ConfigKey>()
     for (rootClass in rootClasses) {
-      walkClass(rootClass, prefix = "", onStack = emptySet(), sink = keys)
+      walkClass(rootClass, prefix = "", onStack = emptySet(), sectionDetector = sectionDetector, sink = keys)
     }
     return keys.sortedBy { it.path }
   }
@@ -57,6 +70,7 @@ object ConfigSchemaWalker {
     kClass: KClass<*>,
     prefix: String,
     onStack: Set<KClass<*>>,
+    sectionDetector: SectionDetector,
     sink: MutableList<ConfigKey>,
   ) {
     val constructor = kClass.primaryConstructor ?: return
@@ -67,8 +81,9 @@ object ConfigSchemaWalker {
       val path = prefix + kebabKey(parameter, constructor, kClass)
       val type = parameter.type
       val required = !parameter.isOptional && !type.isMarkedNullable
+      val sectionClass = (type.classifier as? KClass<*>)?.takeIf { sectionDetector.isSection(it) }
 
-      if (isSection(type)) {
+      if (sectionClass != null) {
         val sectionAnnotation = parameter.findAnnotation<ConfigSection>()
         sink.add(
           ConfigKey(
@@ -86,9 +101,8 @@ object ConfigSchemaWalker {
             propertyName = propertyName,
           ),
         )
-        val sectionClass = type.classifier as KClass<*>
         if (sectionClass !in onStack) {
-          walkClass(sectionClass, "$path.", onStack + kClass, sink)
+          walkClass(sectionClass, "$path.", onStack + kClass, sectionDetector, sink)
         }
       } else {
         val doc = parameter.findAnnotation<ConfigDoc>()
@@ -126,12 +140,6 @@ object ConfigSchemaWalker {
 
   /** Maps the annotation's `""` "unset" sentinel (and null) to null for the ConfigKey model. */
   private fun String?.orNull(): String? = this?.ifEmpty { null }
-
-  /** A section is a config data class declared in the coordinator TOML config package. */
-  private fun isSection(type: KType): Boolean {
-    val kClass = type.classifier as? KClass<*> ?: return false
-    return kClass.isData && (kClass.qualifiedName?.startsWith(CONFIG_PACKAGE) == true)
-  }
 
   /** Renders a [KType] as a readable string such as `UInt?` or `Map<TracingModuleV4, UInt>`. */
   internal fun renderType(type: KType): String {
