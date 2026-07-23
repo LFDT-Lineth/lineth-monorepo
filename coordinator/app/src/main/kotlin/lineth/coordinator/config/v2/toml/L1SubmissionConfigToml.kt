@@ -3,10 +3,13 @@ package lineth.coordinator.config.v2.toml
 import linea.config.docs.ConfigDoc
 import linea.config.docs.ConfigSection
 <<<<<<< HEAD:coordinator/app/src/main/kotlin/lineth/coordinator/config/v2/toml/L1SubmissionConfigToml.kt
+<<<<<<< HEAD:coordinator/app/src/main/kotlin/lineth/coordinator/config/v2/toml/L1SubmissionConfigToml.kt
 import lineth.coordinator.config.v2.L1SubmissionConfig
 import lineth.coordinator.config.v2.L1SubmissionConfig.DynamicGasPriceCapConfig.GasPriceCapCalculationConfig
 import lineth.ethereum.gaspricing.dynamiccap.TimeOfDayMultipliers
 =======
+=======
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)):coordinator/app/src/main/kotlin/linea/coordinator/config/v2/toml/L1SubmissionConfigToml.kt
 import linea.coordinator.config.v2.L1SubmissionConfig
 import linea.coordinator.config.v2.L1SubmissionConfig.DynamicGasPriceCapConfig.GasPriceCapCalculationConfig
 import net.consensys.linea.ethereum.gaspricing.dynamiccap.TimeOfDayMultipliers
