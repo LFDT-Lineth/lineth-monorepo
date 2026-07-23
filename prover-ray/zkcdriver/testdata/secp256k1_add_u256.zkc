@@ -22,35 +22,9 @@ fn main() {
     var y3:tWidth = in_y3[0]
 
     // Check P1, P2, and P3 are on y^2 = x^3 + 7 over Fp.
-    var p1_y2:tWidth = mulmod_256(y1, y1, p)
-    var p1_x2:tWidth = mulmod_256(x1, x1, p)
-    var p1_x3:tWidth = mulmod_256(p1_x2, x1, p)
-
-    // x^3 + 7
-    var p1_curve_lhs:tWidth = addmod_256(p1_x3, 7, p)
-    if p1_curve_lhs != p1_y2 {
-        fail
-    }
-
-    var p2_y2:tWidth = mulmod_256(y2, y2, p)
-    var p2_x2:tWidth = mulmod_256(x2, x2, p)
-    var p2_x3:tWidth = mulmod_256(p2_x2, x2, p)
-
-    // x^3 + 7
-    var p2_curve_lhs:tWidth = addmod_256(p2_x3, 7, p)
-    if p2_curve_lhs != p2_y2 {
-        fail
-    }
-
-    var p3_y2:tWidth = mulmod_256(y3, y3, p)
-    var p3_x2:tWidth = mulmod_256(x3, x3, p)
-    var p3_x3:tWidth = mulmod_256(p3_x2, x3, p)
-
-    // x^3 + 7
-    var p3_curve_lhs:tWidth = addmod_256(p3_x3, 7, p)
-    if p3_curve_lhs != p3_y2 {
-        fail
-    }
+    assert_on_curve_secp256k1(x1, y1)
+    assert_on_curve_secp256k1(x2, y2)
+    assert_on_curve_secp256k1(x3, y3)
 
     // apply ec_add for secp256k1
     var x3_:tWidth, y3_:tWidth
@@ -60,6 +34,17 @@ fn main() {
         fail
     }
     
+}
+
+// fails if (x, y) is not a finite point on y^2 = x^3 + 7 over Fp
+fn assert_on_curve_secp256k1(x:tWidth, y:tWidth) {
+    var y2:tWidth = mulmod_256(y, y, p)
+    var x2:tWidth = mulmod_256(x, x, p)
+    var x3:tWidth = mulmod_256(x2, x, p)
+    var rhs:tWidth = addmod_256(x3, 7, p)
+    if rhs != y2 {
+        fail
+    }
 }
 
 // add function for secp256k1 (distinct finite-point addition; precondition: x1 != x2)
