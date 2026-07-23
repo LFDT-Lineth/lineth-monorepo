@@ -1,5 +1,9 @@
 ## [unreleased]
 
+### 🐛 Bug Fixes
+
+- *(coordinator)* Small fix on start/stop handlers (#3621)
+
 ### 🚜 Refactor
 
 - *(coordinator)* Decompose L1DependentApp into smaller scoped apps (#3615)

@@ -46,6 +46,7 @@
 - *(coordinator)* L1FinalizationPriorityFeeCalculator feeLowerBound config (#3517)
 - *(misc)* Web3j-solc solidity resolution workaround (#3516)
 - *(linea-besu)* Updating Besu version (#3535)
+- *(coordinator)* Small fix on start/stop handlers (#3621)
 
 ### 🚜 Refactor
 
