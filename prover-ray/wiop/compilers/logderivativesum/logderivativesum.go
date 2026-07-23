@@ -14,7 +14,7 @@
 // The compiler reduces every [wiop.LogDerivativeSum] query into:
 //
 //   - one or more "running-sum" extension columns Z, each absorbing up to
-//     packingArity fractions whose vector-valued sides live on the same module;
+//     PackingArity fractions whose vector-valued sides live on the same module;
 //   - a vanishing recurrence per Z column linking it to its source fractions;
 //   - a local constraint pinning the row-0 boundary of each Z column;
 //   - an opening of Z[n-1] (column endpoint) per Z column;
@@ -40,9 +40,13 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
-// packingArity is the maximum number of fractions packed into a single Z
+// PackingArity is the maximum number of fractions packed into a single Z
 // column. The value matches the linea/logderivativesum compiler.
-const packingArity = 3
+//
+// It is exported because it is part of the accumulator budget: the
+// lookuptologderivsum compiler divides the per-lookup row limit by this arity,
+// since up to PackingArity fractions share one running-sum column.
+const PackingArity = 3
 
 // Compile reduces every [wiop.LogDerivativeSum] query in sys to a Z-column
 // recurrence plus endpoint openings, and registers prover/verifier
@@ -104,11 +108,11 @@ func bucketByModule(fractions []wiop.Fraction) []fractionBucket {
 	return buckets
 }
 
-// packFractions splits a list of fractions into groups of at most packingArity.
+// packFractions splits a list of fractions into groups of at most PackingArity.
 func packFractions(fractions []wiop.Fraction) [][]wiop.Fraction {
-	groups := make([][]wiop.Fraction, 0, utils.DivCeil(len(fractions), packingArity))
-	for k := 0; k < len(fractions); k += packingArity {
-		end := k + packingArity
+	groups := make([][]wiop.Fraction, 0, utils.DivCeil(len(fractions), PackingArity))
+	for k := 0; k < len(fractions); k += PackingArity {
+		end := k + PackingArity
 		if end > len(fractions) {
 			end = len(fractions)
 		}
@@ -220,7 +224,7 @@ func buildZ(
 	}
 }
 
-// buildZExpressions packs up to packingArity filter-aware fractions into a
+// buildZExpressions packs up to PackingArity filter-aware fractions into a
 // single Numerator/Denominator pair using the cross-product identity
 //
 //	Σ_j (F_j · N_j) / D_j = (Σ_j F_j · N_j · ∏_{k≠j} D_k) / (∏_k D_k).

@@ -54,6 +54,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
 )
 
 // Compile reduces every unreduced inclusion [wiop.TableRelationQuery] in sys to a
@@ -133,6 +134,14 @@ func Compile(sys *wiop.System) {
 	// enough to randomise every denominator in the aggregated query.
 	gamma := coinRound.NewCoinField(compCtx.Childf("gamma"))
 
+	// Register one row-limit check per lookup query, before the group loop
+	// below registers any M-assignment task on the same witness round. The
+	// check runs first (registration order), so the prover fails fast — it
+	// panics on an over-limit lookup instead of walking its (billions of) rows
+	// to fill M; the verifier re-runs it and rejects the proof. The check
+	// validates both the query's included (A) and including (B) sides.
+	registerRowLimitChecks(sys, groups)
+
 	var (
 		fractions  []wiop.Fraction
 		consumedQs []*wiop.TableRelationQuery
@@ -156,6 +165,56 @@ func Compile(sys *wiop.System) {
 	// registered so a panic during construction leaves the system unchanged.
 	for _, q := range consumedQs {
 		q.MarkAsReduced()
+	}
+}
+
+// registerRowLimitChecks attaches one [rowLimitAction] per unreduced inclusion
+// query — the natural unit, since the bound is a property of the whole lookup
+// (both its A and B sides), not of any single fragment. Each action is
+// registered on its query's group witness round, which is where compileGroup
+// later places that group's M-assignment task; registering here, ahead of the
+// group loop, guarantees the row-limit check runs before M is filled.
+//
+// The effective per-side limit for a query is [wiop.MaxLookupRows] divided by
+// the accumulator budget it shares with other lookups:
+//
+//   - logderivativesum.PackingArity — up to that many fractions are packed into
+//     one running-sum Z column, so they share its accumulator;
+//   - the number of lookups reduced into the query's group — queries that share
+//     an including (B) table share a single multiplicity column M and one
+//     aggregated LogDerivativeSum.
+//
+// The group lookup supplies both the round and that group's lookup count. Every
+// remaining inclusion query has len(B) == 1 (collectGroups already panicked
+// otherwise), so canonicalIncludingKey(q.B[0]) always resolves to a collected
+// group.
+func registerRowLimitChecks(sys *wiop.System, groups map[string]*lookupGroup) {
+	// Number of distinct lookup queries in each group. Queries sharing an
+	// including table are grouped together and drain the same budget.
+	lookupsPerGroup := make(map[string]int, len(groups))
+	for key, g := range groups {
+		seen := make(map[*wiop.TableRelationQuery]struct{})
+		for _, inc := range g.included {
+			seen[inc.query] = struct{}{}
+		}
+		lookupsPerGroup[key] = len(seen)
+	}
+
+	for _, q := range sys.TableRelations {
+		if q.IsReduced() || q.Kind == wiop.KindPermutation {
+			continue
+		}
+		key := canonicalIncludingKey(q.B[0])
+		g := groups[key]
+
+		divisor := uint64(logderivativesum.PackingArity * lookupsPerGroup[key])
+		limit := wiop.MaxLookupRows / divisor
+
+		// One instance serves both roles: it panics as a prover action and
+		// returns an error as a verifier action.
+		rowLimit := &rowLimitAction{query: q, limit: limit}
+		g.witnessRound.RegisterAction(rowLimit)
+		g.witnessRound.RegisterVerifierAction(rowLimit)
 	}
 }
 
@@ -413,6 +472,30 @@ func viewExprs(cols []*wiop.ColumnView) []wiop.Expression {
 		out[i] = cv
 	}
 	return out
+}
+
+// rowLimitAction enforces the per-lookup row bound for a single source query on
+// both sides of the protocol. As a prover action it panics (the prover is
+// trusted code about to build an unsound witness); as a verifier action it
+// returns an error so the verifier rejects the proof gracefully.
+//
+// limit is the effective per-side bound for this query: [wiop.MaxLookupRows]
+// divided by the accumulator budget it shares with the lookups compiled
+// alongside it (see registerRowLimitChecks).
+type rowLimitAction struct {
+	query *wiop.TableRelationQuery
+	limit uint64
+}
+
+// Run implements [wiop.ProverAction]: it panics on an over-limit lookup.
+func (a *rowLimitAction) Run(rt *wiop.Runtime) {
+	a.query.CheckRowLimit(rt, a.limit)
+}
+
+// Check implements [wiop.VerifierAction]: it returns an error on an over-limit
+// lookup so the verifier rejects the proof.
+func (a *rowLimitAction) Check(rt *wiop.Runtime) error {
+	return a.query.ValidateRowLimit(rt, a.limit)
 }
 
 // ResultIsZeroVerifierAction asserts that the aggregated [wiop.LogDerivativeSum]

@@ -229,6 +229,101 @@ func TestCompile_SingleColumn_NoMatchPanics(t *testing.T) {
 	}, "M assignment must panic when an active A row has no match in B")
 }
 
+// ---- Row limit (driven through the real prover/verifier) ----
+//
+// These tests exceed wiop.MaxLookupRows (2^30) for real by declaring a
+// module of that size. No 2^30 vector is ever materialised: a static module's
+// size is metadata, the row-limit action reads only that size, and it is
+// registered to run before the M-assignment task, so the prover fails fast on
+// the size check without ever walking the rows.
+
+// buildOverLimitLookup compiles a single-column inclusion S ⊆ T whose A side
+// (aSize) and B side (bSize) are declared with the given module sizes. Columns
+// are assigned as constant vectors so no per-row memory is allocated. The
+// returned runtime is fully assigned and ready to drive.
+func buildOverLimitLookup(t *testing.T, aSize, bSize int) *wiop.Runtime {
+	t.Helper()
+	sys := wiop.NewSystemf("ll-limit")
+	r0 := sys.NewRound()
+	// PaddingDirectionRight lets a length-1 Plain stand in for the whole column:
+	// every row past the first takes the padding value, so the assignment is O(1)
+	// regardless of the module size.
+	modT := sys.NewSizedModule(sys.Context.Childf("modT"), bSize, wiop.PaddingDirectionRight)
+	modS := sys.NewSizedModule(sys.Context.Childf("modS"), aSize, wiop.PaddingDirectionRight)
+	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
+	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+	sys.NewInclusion(
+		sys.Context.Childf("inc"),
+		[]wiop.Table{wiop.NewTable(colS.View())},
+		[]wiop.Table{wiop.NewTable(colT.View())},
+	)
+	lookuptologderivsum.Compile(sys)
+
+	rt := wiop.NewRuntime(sys)
+	// A constant column: value 7 in every row (Plain length 1 + matching padding).
+	seven := makeVec(7)
+	seven.Padding = field.NewElement(7)
+	rt.AssignColumn(colT, seven)
+	rt.AssignColumn(colS, seven)
+	return rt
+}
+
+// TestCompile_RowLimit_ProverPanics drives the real prover of a lookup
+// whose A side has 2^30 rows. The row-limit prover action — registered on the
+// witness round ahead of the M-assignment task — must panic before any row is
+// touched.
+func TestCompile_RowLimit_ProverPanics(t *testing.T) {
+	rt := buildOverLimitLookup(t, 1<<30, 2) // A side = 2^30 rows (>= bound); B side tiny.
+	assert.Panics(t, func() { runRound(rt) }, // round 0: limit action, then M task.
+		"prover must panic when a lookup side reaches the row limit")
+}
+
+// TestCompile_RowLimit_VerifierRejects runs the real verifier checks of a
+// lookup whose B side has 2^30 rows. The row-limit verifier action must return
+// an error (rejecting the proof) independently of the prover.
+func TestCompile_RowLimit_VerifierRejects(t *testing.T) {
+	rt := buildOverLimitLookup(t, 2, 1<<30) // B side = 2^30 rows (>= bound); A side tiny.
+	err := checkAllVerifierActions(rt)
+	assert.ErrorContains(t, err, "effective per-lookup row limit",
+		"verifier must reject a proof when a lookup side reaches the row limit")
+}
+
+// TestCompile_RowLimit_GroupingTightensBound builds two lookups that share the
+// same including (B) table, so they are reduced together and drain the same
+// accumulator budget. Each has a 2^28-row A side.
+//
+// A lone lookup's effective A-side limit is MaxLookupRows/PackingArity =
+// 2^30/3 ≈ 3.58e8, which 2^28 ≈ 2.68e8 clears. Grouping the two lookups divides
+// the budget again by the group's lookup count (2), giving 2^30/6 ≈ 1.79e8 —
+// which 2^28 exceeds. The verifier must therefore reject, proving the divisor
+// includes the number of lookups grouped together.
+func TestCompile_RowLimit_GroupingTightensBound(t *testing.T) {
+	sys := wiop.NewSystemf("ll-limit-group")
+	r0 := sys.NewRound()
+	// One shared B table (same colT pointer ⇒ same canonicalIncludingKey ⇒ both
+	// queries land in one group).
+	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionRight)
+	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
+	bTable := wiop.NewTable(colT.View())
+
+	for i := 0; i < 2; i++ {
+		modS := sys.NewSizedModule(sys.Context.Childf("modS%d", i), 1<<28, wiop.PaddingDirectionRight)
+		colS := modS.NewColumn(sys.Context.Childf("S%d", i), wiop.VisibilityOracle, r0)
+		sys.NewInclusion(
+			sys.Context.Childf("inc%d", i),
+			[]wiop.Table{wiop.NewTable(colS.View())},
+			[]wiop.Table{bTable},
+		)
+	}
+	lookuptologderivsum.Compile(sys)
+
+	// The verifier check reads only module sizes, so no assignment is needed.
+	rt := wiop.NewRuntime(sys)
+	err := checkAllVerifierActions(rt)
+	assert.ErrorContains(t, err, "effective per-lookup row limit",
+		"grouping two lookups must halve the budget and reject a 2^28-row side")
+}
+
 // ---- Filter on the included side (A) ----
 
 func TestCompile_FilterOnIncluded(t *testing.T) {

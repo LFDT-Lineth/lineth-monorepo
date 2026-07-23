@@ -92,6 +92,78 @@ func (t Table) Round() *Round {
 // Width returns the number of columns in this Table.
 func (t Table) Width() int { return len(t.Columns) }
 
+// MaxLookupRows is the total row budget shared by everything that a lookup is
+// compiled together with. For one lookup with fragmented source tables
+// S_1..S_n (the A side) and target tables T_1..T_k (the B side), the sum of the
+// row counts across all A fragments — and, independently, across all B
+// fragments — must stay strictly below an effective limit derived from this
+// budget. Exceeding it lets the row-index accumulators in the reduced
+// constraints overflow when the argument is instantiated over a small field.
+//
+// The effective per-side limit is smaller than MaxLookupRows because the
+// compiler shares the same accumulators across several lookups: it is
+// MaxLookupRows divided by the compiler's packing arity and by the number of
+// lookups reduced together (see the lookuptologderivsum compiler, which
+// computes it and passes it to [TableRelationQuery.CheckRowLimit] /
+// [TableRelationQuery.ValidateRowLimit]).
+//
+// The limit is enforced on both sides: the prover panics
+// ([TableRelationQuery.CheckRowLimit]) since it is trusted code about to build
+// an unsound witness, while the verifier rejects the proof with an error
+// ([TableRelationQuery.ValidateRowLimit]).
+//
+// The bound is a deliberately loose upper bound: it sums whole fragment heights
+// and ignores selectors, so rows that a selector would exclude are still
+// counted.
+const MaxLookupRows uint64 = 1 << 30
+
+// ValidateRowLimit returns an error if the total number of rows summed across
+// all A fragments, or independently across all B fragments, reaches limit. Row
+// counts are taken from each fragment's module runtime size; selectors are
+// ignored, so this counts every row of every fragment, not just the selected
+// ones. limit is the effective per-side bound the caller has derived from
+// [MaxLookupRows] (see that constant).
+//
+// The two sides are checked independently: each must stay below the bound on
+// its own. The check runs against a [Runtime] because fragment heights are only
+// known per-run for dynamic modules. This is the verifier-facing form; the
+// prover uses [TableRelationQuery.CheckRowLimit], which panics on the
+// same condition.
+func (tr *TableRelationQuery) ValidateRowLimit(rt *Runtime, limit uint64) error {
+	if err := checkTablesRowLimit(tr.context.Path(), "A", tr.A, rt, limit); err != nil {
+		return err
+	}
+	return checkTablesRowLimit(tr.context.Path(), "B", tr.B, rt, limit)
+}
+
+// CheckRowLimit panics if [TableRelationQuery.ValidateRowLimit] would return an
+// error for the given limit. Used on the prover side, where an over-limit
+// lookup is a fatal programming error rather than a proof to reject gracefully.
+func (tr *TableRelationQuery) CheckRowLimit(rt *Runtime, limit uint64) {
+	if err := tr.ValidateRowLimit(rt, limit); err != nil {
+		panic(err)
+	}
+}
+
+// checkTablesRowLimit sums the runtime row counts of every fragment in
+// tables and returns an error if the total reaches limit.
+func checkTablesRowLimit(path, side string, tables []Table, rt *Runtime, limit uint64) error {
+	var sum uint64
+	for _, tab := range tables {
+		sum += uint64(tab.Module().RuntimeSize(rt))
+	}
+	if sum >= limit {
+		return fmt.Errorf(
+			"wiop: TableRelationQuery(%s): total rows on the %s side reach %d, "+
+				"which is >= the effective per-lookup row limit %d (= MaxLookupRows=%d shared across the "+
+				"lookups compiled together); the row-index accumulators in the reduced constraints would "+
+				"overflow over a small field. Split the lookup so each side stays below the limit",
+			path, side, sum, limit, MaxLookupRows,
+		)
+	}
+	return nil
+}
+
 // LookupKind selects the relational predicate asserted by a [TableRelationQuery].
 type LookupKind uint8
 
