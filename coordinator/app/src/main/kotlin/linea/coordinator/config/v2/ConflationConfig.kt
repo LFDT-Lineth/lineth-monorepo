@@ -32,6 +32,7 @@ data class ConflationConfig(
   val proofAggregation: ProofAggregation = ProofAggregation(),
   val tracesLimits: TracesCounters,
   val backtestingDirectory: Path? = null,
+  val riscvStartingBlockTimestampInclusive: Instant? = null,
 ) : FeatureToggle {
   data class BlobCompression(
     val blobSizeLimit: UInt = 102400u,
