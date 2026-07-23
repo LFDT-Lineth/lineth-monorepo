@@ -2,13 +2,21 @@ package lineth.coordinator.config.v2.toml
 
 import linea.config.docs.ConfigDoc
 import linea.config.docs.ConfigSection
+<<<<<<< HEAD:coordinator/app/src/main/kotlin/lineth/coordinator/config/v2/toml/ProtocolToml.kt
+=======
+import linea.coordinator.config.v2.ProtocolConfig
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)):coordinator/app/src/main/kotlin/linea/coordinator/config/v2/toml/ProtocolToml.kt
 import linea.domain.BlockParameter
 import lineth.coordinator.config.v2.ProtocolConfig
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 data class ProtocolToml(
+<<<<<<< HEAD:coordinator/app/src/main/kotlin/lineth/coordinator/config/v2/toml/ProtocolToml.kt
   @param:ConfigSection("Lineth genesis state root and shnarf.")
+=======
+  @param:ConfigSection("Linea genesis state root and shnarf.")
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)):coordinator/app/src/main/kotlin/linea/coordinator/config/v2/toml/ProtocolToml.kt
   val genesis: Genesis,
   @param:ConfigSection("L1 rollup contract and timing settings.")
   val l1: Layer1Config,
@@ -17,12 +25,20 @@ data class ProtocolToml(
 ) {
   data class Genesis(
     @param:ConfigDoc(
+<<<<<<< HEAD:coordinator/app/src/main/kotlin/lineth/coordinator/config/v2/toml/ProtocolToml.kt
       description = "Genesis state root hash of the Lineth chain (hex).",
+=======
+      description = "Genesis state root hash of the Linea chain (hex).",
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)):coordinator/app/src/main/kotlin/linea/coordinator/config/v2/toml/ProtocolToml.kt
       example = "0x01d9afcd495c870f3ae9d8362cd0257a7de2057055058183596719285cae6101",
     )
     val genesisStateRootHash: ByteArray,
     @param:ConfigDoc(
+<<<<<<< HEAD:coordinator/app/src/main/kotlin/lineth/coordinator/config/v2/toml/ProtocolToml.kt
       description = "Genesis shnarf (starting shnarf) of the Lineth chain (hex).",
+=======
+      description = "Genesis shnarf (starting shnarf) of the Linea chain (hex).",
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)):coordinator/app/src/main/kotlin/linea/coordinator/config/v2/toml/ProtocolToml.kt
       example = "0xc286ff42414401ccdc23ea8e738775378e8f6c6f7b2966eb2747798d45571b79",
     )
     val genesisShnarf: ByteArray,
@@ -48,7 +64,11 @@ data class ProtocolToml(
 
   data class Layer1Config(
     @param:ConfigDoc(
+<<<<<<< HEAD:coordinator/app/src/main/kotlin/lineth/coordinator/config/v2/toml/ProtocolToml.kt
       description = "Address of the Lineth rollup contract on L1.",
+=======
+      description = "Address of the Linea rollup contract on L1.",
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)):coordinator/app/src/main/kotlin/linea/coordinator/config/v2/toml/ProtocolToml.kt
       example = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
     )
     val contractAddress: String,
@@ -63,7 +83,11 @@ data class ProtocolToml(
 
   data class Layer2Config(
     @param:ConfigDoc(
+<<<<<<< HEAD:coordinator/app/src/main/kotlin/lineth/coordinator/config/v2/toml/ProtocolToml.kt
       description = "Address of the Lineth contract on L2.",
+=======
+      description = "Address of the Linea contract on L2.",
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)):coordinator/app/src/main/kotlin/linea/coordinator/config/v2/toml/ProtocolToml.kt
       example = "0xe537D669CA013d86EBeF1D64e40fC74CADC91987",
     )
     val contractAddress: String,
