@@ -3,6 +3,7 @@
 ### 🚀 Features
 
 - *(coordinator)* Wire config-docs via a buildSrc plugin and declarative spec (#3607)
+- *(coordinator)* Document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)
 
 ### 🐛 Bug Fixes
 
