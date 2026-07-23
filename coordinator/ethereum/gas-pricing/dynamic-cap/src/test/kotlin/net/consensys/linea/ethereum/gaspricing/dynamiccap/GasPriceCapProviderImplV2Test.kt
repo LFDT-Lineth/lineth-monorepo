@@ -33,7 +33,7 @@ class GasPriceCapProviderImplV2Test {
   )
   private val p10BaseFeeGas = 1000000000uL // 1GWei
   private val p10BaseFeeBlobGas = 100000000uL // 0.1GWei
-  private val avgP10Reward = 200000000uL // 2GWei
+  private val avgP10Reward = 200000000uL // 0.2GWei
   private val storedFeeHistoriesNum = 100
   private val adjustmentConstant = 25U
   private val finalizationTargetMaxDelay = 6.hours
