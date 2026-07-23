@@ -95,7 +95,10 @@ internal object FunctionBuildersV9 {
         // l2MerkleRoots
         finalization.l2MerkleRoots,
         // filteredAddresses
-        finalization.filteredAddresses.map { it.encodeHex() },
+        finalization.filteredAddresses.mapIndexed { i, address ->
+          require(address.size == 20) { "filteredAddresses[$i] must be 20 bytes (address), got ${address.size}" }
+          address.encodeHex()
+        },
         // verifierKeys
         finalization.verifierKeys,
         // l2MessagingBlocksOffsets
