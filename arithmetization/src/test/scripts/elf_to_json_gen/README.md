@@ -28,10 +28,7 @@ and the field set and order of every record **must** match the corresponding
 | `decoded`                     | `compute_op, imm, rs1, rs2, rd`                      | unified pre-decoded instruction table (one record per 4-byte word)|
 
 The semantic operation, its writeback (`*_WB`) variant,
-and rd=`x0` no-op folding are all encoded directly in `compute_op` (there is no
-longer a separate `instruction_type` or `writeback` field). At runtime the
-interpreter dispatches on a single flat `switch compute_op` (see
-`interpreter.zkc`).
+and rd=`x0` no-op folding are all encoded directly in `compute_op`.
 
 For I-type the 12-bit immediate (normalized for shifts at ELF time) is
 sign-extended to 64 bits at decode time into `imm`.
