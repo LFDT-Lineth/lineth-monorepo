@@ -44,9 +44,9 @@ The layout is **dense** over `[instruction_base, executable_region_end)`:
 `(pc - instruction_base) / 4` subscripts directly into `decoded[]`, matching
 PC-driven execution. Each step holds `pc`; branches and jumps update it; `index`
 is derived in constant time. A dense layout avoids per-step blob walks or raw
-word decoding from `blobs_data`. Gaps between executable ELF sections still
-occupy slots (typically `COMPUTE_INVALID`), keeping the PC → index mapping
-uniform across the whole span.
+word decoding from `blobs_data`. Gaps between executable ELF sections (e.g.
+exec → data → exec in the address map) still occupy slots as `COMPUTE_INVALID`,
+keeping the PC → index mapping uniform across the whole span.
 
 ### Compute operation and bitfields
 
@@ -65,7 +65,7 @@ The interpreter does not branch on `(opcode, funct3, funct7)` at runtime — it
 | `OP_*` / `RTYPE_*`        | Compute when the result is discarded into `x0` |
 | `OP_*_WB` / `RTYPE_*_WB`  | Same operation plus writeback to `registers[rd]` |
 | `COMPUTE_MISC_MEM` (0)    | Folded no-ops and `FENCE` — advance `pc` only |
-| `COMPUTE_INVALID` (255)   | Unknown or unsupported encoding — interpreter fails if executed |
+| `COMPUTE_INVALID` (255)   | Words the interpreter does not model (gaps, padding, unsupported opcodes). Execution **fails only if `pc` reaches that slot** (jump or fall-through into a gap). |
 
 Immediates are sign-extended and shift amounts normalized in Go; the interpreter
 reads a ready-to-use `imm:DoubleWord`. Unused operand fields (e.g. `rs2` on
@@ -101,7 +101,7 @@ emits JSON public inputs for `riscv/memory.zkc`:
 | Output group | Keys | Purpose |
 | ------------ | ---- | ------- |
 | RAM image    | `entry_point_and_blobs_count`, `blobs_offset_and_size`, `blobs_executable`, `blobs_data` | Sparse loadable sections (+ optional `IN_BYTES` at a fixed offset) |
-| Decode table | `instruction_base`, `decoded[]` | Lowest executable address and one dense row per 4-byte word (gaps → `COMPUTE_INVALID`) |
+| Decode table | `instruction_base`, `decoded[]` | Lowest executable address and one dense row per 4-byte word; inter-section gaps → `COMPUTE_INVALID` |
 
 [`Predecoded program generation README`](../test/scripts/elf_to_json_gen/README.md)
 
