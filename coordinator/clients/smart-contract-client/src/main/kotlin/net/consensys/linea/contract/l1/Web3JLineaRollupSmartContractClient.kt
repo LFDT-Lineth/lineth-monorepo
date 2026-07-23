@@ -214,13 +214,13 @@ class Web3JLineaRollupSmartContractClient internal constructor(
   }
 
   private fun ensureMinVersion(
-    nimVersion: LineaRollupContractVersion,
+    minVersion: LineaRollupContractVersion,
   ): SafeFuture<LineaRollupContractVersion> {
     return getVersion()
       .thenCompose { version ->
-        if (version < nimVersion) {
+        if (version < minVersion) {
           SafeFuture.failedFuture(
-            RuntimeException("Contract version=$version is lower than required version=$nimVersion"),
+            RuntimeException("Contract version=$version is lower than required version=$minVersion"),
           )
         } else {
           SafeFuture.completedFuture(version)
