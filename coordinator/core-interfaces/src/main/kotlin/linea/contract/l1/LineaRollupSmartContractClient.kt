@@ -3,6 +3,8 @@ package linea.contract.l1
 import linea.domain.BlobRecord
 import linea.domain.ProofToFinalize
 import linea.domain.gas.GasPriceCaps
+import linea.kotlin.byteArrayListEquals
+import linea.kotlin.byteArrayListHashCode
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Instant
 
@@ -23,8 +25,8 @@ data class BlobsSubmissionV9(
 
     other as BlobsSubmissionV9
 
-    if (blobs != other.blobs) return false
-    if (blobFinalBlockHashes != other.blobFinalBlockHashes) return false
+    if (!blobs.byteArrayListEquals(other.blobs)) return false
+    if (!blobFinalBlockHashes.byteArrayListEquals(other.blobFinalBlockHashes)) return false
     if (!parentShnarf.contentEquals(other.parentShnarf)) return false
     if (!finalBlobShnarf.contentEquals(other.finalBlobShnarf)) return false
 
@@ -32,8 +34,8 @@ data class BlobsSubmissionV9(
   }
 
   override fun hashCode(): Int {
-    var result = blobs.hashCode()
-    result = 31 * result + blobFinalBlockHashes.hashCode()
+    var result = blobs.byteArrayListHashCode()
+    result = 31 * result + blobFinalBlockHashes.byteArrayListHashCode()
     result = 31 * result + parentShnarf.contentHashCode()
     result = 31 * result + finalBlobShnarf.contentHashCode()
     return result
@@ -117,12 +119,17 @@ data class FinalizationDataV9(
     if (l1RollingHashMessageNumber != other.l1RollingHashMessageNumber) return false
     if (lastFinalizedForcedTransactionNumber != other.lastFinalizedForcedTransactionNumber) return false
     if (finalForcedTransactionNumber != other.finalForcedTransactionNumber) return false
-    if (!lastFinalizedForcedTransactionRollingHash.contentEquals(other.lastFinalizedForcedTransactionRollingHash)) return false
+    if (!lastFinalizedForcedTransactionRollingHash.contentEquals(
+        other.lastFinalizedForcedTransactionRollingHash,
+      )
+    ) {
+      return false
+    }
     if (!finalBlockHash.contentEquals(other.finalBlockHash)) return false
     if (!finalBlobHash.contentEquals(other.finalBlobHash)) return false
-    if (l2MerkleRoots != other.l2MerkleRoots) return false
-    if (filteredAddresses != other.filteredAddresses) return false
-    if (verifierKeys != other.verifierKeys) return false
+    if (!l2MerkleRoots.byteArrayListEquals(other.l2MerkleRoots)) return false
+    if (!filteredAddresses.byteArrayListEquals(other.filteredAddresses)) return false
+    if (!verifierKeys.byteArrayListEquals(other.verifierKeys)) return false
     if (!l2MessagingBlocksOffsets.contentEquals(other.l2MessagingBlocksOffsets)) return false
 
     return true
@@ -147,9 +154,9 @@ data class FinalizationDataV9(
     result = 31 * result + lastFinalizedForcedTransactionRollingHash.contentHashCode()
     result = 31 * result + finalBlockHash.contentHashCode()
     result = 31 * result + finalBlobHash.contentHashCode()
-    result = 31 * result + l2MerkleRoots.hashCode()
-    result = 31 * result + filteredAddresses.hashCode()
-    result = 31 * result + verifierKeys.hashCode()
+    result = 31 * result + l2MerkleRoots.byteArrayListHashCode()
+    result = 31 * result + filteredAddresses.byteArrayListHashCode()
+    result = 31 * result + verifierKeys.byteArrayListHashCode()
     result = 31 * result + l2MessagingBlocksOffsets.contentHashCode()
     return result
   }

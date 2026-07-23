@@ -220,7 +220,7 @@ class Web3JLineaRollupSmartContractClient internal constructor(
       .thenCompose { version ->
         if (version < minVersion) {
           SafeFuture.failedFuture(
-            RuntimeException("Contract version=$version is lower than required version=$minVersion"),
+            RuntimeException("Contract version=$version is lower than minimum required version=$minVersion"),
           )
         } else {
           SafeFuture.completedFuture(version)
@@ -233,10 +233,11 @@ class Web3JLineaRollupSmartContractClient internal constructor(
     gasPriceCaps: GasPriceCaps?,
     preflightWithEthCall: Boolean,
   ): SafeFuture<String> {
-    val function = FunctionBuildersV9.buildSubmitBlobsFunctionV9(blobData)
-
     return ensureMinVersion(LineaRollupContractVersion.V9)
-      .thenCompose {
+      .thenApply {
+        FunctionBuildersV9.buildSubmitBlobsFunctionV9(blobData)
+      }
+      .thenCompose { function ->
         if (preflightWithEthCall) {
           web3jContractHelper.executeBlobEthCall(
             function = function,
@@ -245,13 +246,13 @@ class Web3JLineaRollupSmartContractClient internal constructor(
           )
         } else {
           SafeFuture.completedFuture<String>(null)
+        }.thenCompose {
+          web3jContractHelper.sendBlobCarryingTransactionAndGetTxHash(
+            function = function,
+            blobs = blobData.blobs,
+            gasPriceCaps = gasPriceCaps,
+          )
         }
-      }.thenCompose {
-        web3jContractHelper.sendBlobCarryingTransactionAndGetTxHash(
-          function = function,
-          blobs = blobData.blobs,
-          gasPriceCaps = gasPriceCaps,
-        )
       }
   }
 
@@ -260,10 +261,11 @@ class Web3JLineaRollupSmartContractClient internal constructor(
     gasPriceCaps: GasPriceCaps?,
     preflightWithEthCall: Boolean,
   ): SafeFuture<String> {
-    val function = FunctionBuildersV9.buildFinalizeBlocksFunctionV9(data)
-
     return ensureMinVersion(LineaRollupContractVersion.V9)
-      .thenCompose {
+      .thenApply {
+        FunctionBuildersV9.buildFinalizeBlocksFunctionV9(data)
+      }
+      .thenCompose { function ->
         if (preflightWithEthCall) {
           web3jContractHelper.sendTransactionAfterEthCallAsync(function, BigInteger.ZERO, gasPriceCaps)
         } else {

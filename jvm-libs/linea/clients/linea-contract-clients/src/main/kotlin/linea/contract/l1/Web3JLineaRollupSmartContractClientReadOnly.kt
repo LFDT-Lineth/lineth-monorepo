@@ -66,7 +66,7 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
         StaticGasProvider(BigInteger.ZERO, BigInteger.ZERO),
       )
 
-      else -> throw IllegalArgumentException("Unsupported contract type: ${contract::class.java}")
+      else -> throw IllegalArgumentException("Unsupported contract type: ${contract.name}")
     } as T
   }
 
@@ -110,7 +110,7 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
       .thenApply(::parseContractVersion)
   }
 
-  private fun parseContractVersion(version: String): LineaRollupContractVersion {
+  internal fun parseContractVersion(version: String): LineaRollupContractVersion {
     return when {
       version.startsWith("6") -> LineaRollupContractVersion.V6
       version.startsWith("7") -> LineaRollupContractVersion.V7

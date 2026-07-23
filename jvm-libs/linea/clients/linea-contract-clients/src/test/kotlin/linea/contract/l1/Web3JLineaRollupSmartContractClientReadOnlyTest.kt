@@ -7,6 +7,7 @@ import linea.domain.toBlockParameter
 import linea.ethapi.EthLogsSearcherImpl
 import linea.ethapi.FakeEthApiClient
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -35,6 +36,19 @@ class Web3JLineaRollupSmartContractClientReadOnlyTest {
   @AfterEach
   fun tearDown() {
     vertx.close()
+  }
+
+  @Test
+  fun `parseContractVersion maps major version prefixes and rejects unsupported versions`() {
+    assertThat(client.parseContractVersion("6.0")).isEqualTo(LineaRollupContractVersion.V6)
+    assertThat(client.parseContractVersion("7.1")).isEqualTo(LineaRollupContractVersion.V7)
+    assertThat(client.parseContractVersion("8.0")).isEqualTo(LineaRollupContractVersion.V8)
+    assertThat(client.parseContractVersion("9.0")).isEqualTo(LineaRollupContractVersion.V9)
+    assertThat(client.parseContractVersion("9.0.0-rc.1")).isEqualTo(LineaRollupContractVersion.V9)
+
+    assertThatThrownBy { client.parseContractVersion("5.0") }
+      .isInstanceOf(IllegalStateException::class.java)
+      .hasMessageContaining("Unsupported contract version: 5.0")
   }
 
   @Test
