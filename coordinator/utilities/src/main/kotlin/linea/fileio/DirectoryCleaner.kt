@@ -40,10 +40,9 @@ class DirectoryCleaner(
               vertx.fileSystem()
                 .delete(filePath)
                 .toSafeFuture()
-                .whenComplete { _, deleteException ->
-                  deleteException?.also { log.warn("Failed to delete $filePath", it) }
+                .handleException { deleteException ->
+                  log.warn("Failed to delete $filePath", deleteException)
                 }
-                .thenApply { }
             deletions.add(deletion)
           }
         }
