@@ -12,27 +12,6 @@ jobs:
 go run main.go <elfFile> <inBytes|@hexFile> <inBytesOffset> > input.json
 ```
 
-## What pre-decoding is and why
-
-Without pre-decoding, the ZkC interpreter decodes each instruction *at runtime,
-every step*: fetch the 32-bit word from RAM, peel off the `opcode`, derive the
-instruction `type`, then split out the bitfields (`rd`, `rs1`, `imm`, …).
-That work repeats for every executed instruction and adds to the machine's cost.
-
-Because the program text is static, this tool decodes **every instruction word
-once, ahead of time**, and ships the results as extra input tables in the JSON.
-At runtime the interpreter just does a table lookup by instruction index instead
-of decoding.
-
-The tables are indexed by instruction address, not execution step:
-
-```
-index = (pc - instruction_base) / 4
-```
-
-This keeps the tables proportional to program size (one record per 4-byte word
-in the executable span), not to the number of executed steps.
-
 ## The JSON output
 
 `printJson` emits the following keys. Each value is a single `0x…` hex string,
@@ -48,11 +27,7 @@ and the field set and order of every record **must** match the corresponding
 | `instruction_base`            | `base:Address`                                       | lowest executable address (4-aligned); maps `pc` → table index    |
 | `decoded`                     | `compute_op, imm, rs1, rs2, rd`                      | unified pre-decoded instruction table (one record per 4-byte word)|
 
-There is **no** separate `instruction_count` key: the number of decoded records
-is the length of `decoded` (one per 4-byte word of the executable span). Earlier
-revisions emitted a `decoded_core` table plus per-format tables (`decoded_itype`,
-`decoded_rtype`, `decoded_stype`, …); these have been folded into the single
-unified `decoded` table. The semantic operation, its writeback (`*_WB`) variant,
+The semantic operation, its writeback (`*_WB`) variant,
 and rd=`x0` no-op folding are all encoded directly in `compute_op` (there is no
 longer a separate `instruction_type` or `writeback` field). At runtime the
 interpreter dispatches on a single flat `switch compute_op` (see
@@ -243,32 +218,6 @@ Operand fields not used by a given instruction format are written as zero (e.g.
 > matching `writeBits` calls here (and vice versa). A width or order mismatch
 > silently misaligns the whole stream and the interpreter reads garbage.
 
-## Pre-decoding verification (separate ZkC program)
-
-This tool is the **trusted decoder** for the pre-decoded tables. A one-time ZkC
-proof program re-reads each raw instruction word from the blob image and checks
-that `decoded[index]` is consistent with the raw `(opcode, funct3, funct7, …)`
-fields and operands.
-
-| File | Role |
-| ---- | ---- |
-| `arithmetization/src/main/predecoding/main.zkc` | Entry point: linear scan over `[instruction_base, executable_region_end())` |
-| `arithmetization/src/main/predecoding/predecoding.zkc` | Dispatches by instruction type + per-type operand checkers |
-| `arithmetization/src/main/predecoding/executable_region.zkc` | Computes the end of the executable region |
-| `arithmetization/src/main/predecoding/check/check_{b,i,r,j,u,s}_type.zkc` | Per instruction-format operand verification |
-| `arithmetization/src/main/predecoding/read_instruction.zkc` | Fetches the raw 32-bit word at `pc` from blobs |
-| `arithmetization/src/main/common/constants.zkc` | Canonical `OPCODE_*`, `FUNCT3_*`, `FUNCT7_*`, `RTYPE_*`, … constants |
-
-`predecoding` derives the instruction type from the raw opcode and, per type,
-verifies that `decoded[index].compute_op` and operands are consistent with the
-raw `(opcode, funct3, funct7, …)` fields (mirroring `classifyInstruction` in
-`main.go`). `COMPUTE_MISC_MEM` and `COMPUTE_INVALID` need no operand checks once
-the type/compute_op match.
-
-When adding a new instruction encoding to `decodeRTypeSemantic` (or any other
-`decode*Semantic` function), update the matching checker under
-`predecoding/check/`, and extend `main_test.go` (`TestClassify*`) so the Go
-decoder and ZkC verifier stay in sync.
 
 ## Related files
 
