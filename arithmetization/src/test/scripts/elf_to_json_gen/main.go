@@ -18,7 +18,7 @@ const (
 	BLOBS_EXECUTABLE            = "blobs_executable"
 	BLOBS_DATA                  = "blobs_data"
 	INSTRUCTION_BASE            = "instruction_base"
-	DECODED_ROM                 = "decoded_rom"
+	DECODED                     = "decoded"
 )
 
 // Instruction type identifiers. These MUST match the Type constants in
@@ -1093,7 +1093,7 @@ func buildDecodedProgram(sections []*elf.Section) (base uint64, nRecords uint64,
 	// Decode each instruction word. Field bit widths MUST match the semantic
 	// types declared for the inputs in memory.zkc, because zkc packs input
 	// records tightly by bit width:
-	//   decoded_rom: compute_op:ComputeOp(u8), imm:DoubleWord(u64), rs1:Register(u5), rs2:Register(u5), rd:Register(u5)
+	//   decoded: compute_op:ComputeOp(u8), imm:DoubleWord(u64), rs1:Register(u5), rs2:Register(u5), rd:Register(u5)
 	var decodedBits bitWriter
 	for off := uint64(0); off+4 <= uint64(len(image)); off += 4 {
 		instr := uint32(image[off]) | uint32(image[off+1])<<8 | uint32(image[off+2])<<16 | uint32(image[off+3])<<24
@@ -1196,6 +1196,6 @@ func printJson(blobs []memoryBlob, entryPoint, instructionBase uint64, decodedHe
 	fmt.Printf("\t\"%s\": \"0x%s\",\n", BLOBS_EXECUTABLE, hex.EncodeToString(executableBits.buf))
 	fmt.Printf("\t\"%s\": \"0x%s\",\n", BLOBS_DATA, strings.Join(blobData, "____"))
 	fmt.Printf("\t\"%s\": \"0x%016x\",\n", INSTRUCTION_BASE, instructionBase)
-	fmt.Printf("\t\"%s\": \"0x%s\"\n", DECODED_ROM, decodedHex)
+	fmt.Printf("\t\"%s\": \"0x%s\"\n", DECODED, decodedHex)
 	fmt.Println("}")
 }
