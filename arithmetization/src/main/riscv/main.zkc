@@ -33,7 +33,7 @@ fn main<registers, ram, state_row0, state_row1, state_row2, state_row3, state_ro
     // ==========================
 
     // Note: static linear pass over the executable region;
-    // Will be done once per guest upgrade.
+    // Could be done once per guest upgrade.
     var pc_predecoding:Address = base
     var end_predecoding:Address = executable_region_end()
     while pc_predecoding<end_predecoding {
@@ -65,7 +65,7 @@ fn main<registers, ram, state_row0, state_row1, state_row2, state_row3, state_ro
 
     // We interpret pc == MAX_UINT_64 as the stop signal, which is set by the ecall instruction
     while pc != MAX_UINT_64 {
-        var index:u64 = (pc - base) >> 2
+        var index:u64 = (pc - base) / 4
 
         // clock cycle starts at 1
         clock_cycle = clock_cycle + 1

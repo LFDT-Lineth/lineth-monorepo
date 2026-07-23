@@ -22,7 +22,7 @@ const (
 )
 
 // Instruction type identifiers. These MUST match the Type constants in
-// arithmetization/src/main/riscv/utils/constants.zkc.
+// arithmetization/src/main/common/constants.zkc.
 const (
 	undefinedType = 0
 	rType         = 1
@@ -355,7 +355,8 @@ const (
 	funct12Ebreak = 0b000000000001
 )
 
-// Unified compute_op bases. These MUST match compute_ops.zkc.
+// Unified compute_op bases. These MUST match the ComputeOp constants in
+// arithmetization/src/main/common/constants.zkc.
 const (
 	computeMiscMem   = 0
 	computeITypeBase = 1
