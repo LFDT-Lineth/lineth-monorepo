@@ -3,8 +3,13 @@ package linea.contract.l1
 import linea.EthLogsSearcher
 import linea.SearchDirection
 import linea.contract.FAKE_READ_ONLY_CREDENTIALS
+<<<<<<< HEAD:jvm-libs/linea/clients/linea-contract-clients/src/main/kotlin/linea/contract/l1/Web3JLinethRollupSmartContractClientReadOnly.kt
 import linea.contract.LinethRollupV6
 import linea.contract.LinethRollupV8
+=======
+import linea.contract.LineaRollupV6
+import linea.contract.LineaRollupV8
+>>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618)):jvm-libs/linea/clients/linea-contract-clients/src/main/kotlin/linea/contract/l1/Web3JLineaRollupSmartContractClientReadOnly.kt
 import linea.contract.LinethRollupV9
 import linea.contract.events.FinalizedStateUpdatedEvent
 import linea.domain.BlockParameter
@@ -35,13 +40,23 @@ open class Web3JLinethRollupSmartContractClientReadOnly(
   private val finalizedStateSearchInitialBlockParameter: BlockParameter = BlockParameter.Tag.EARLIEST,
   private val versionRefreshInterval: Duration = 6.seconds,
   private val clock: Clock = Clock.System,
+<<<<<<< HEAD:jvm-libs/linea/clients/linea-contract-clients/src/main/kotlin/linea/contract/l1/Web3JLinethRollupSmartContractClientReadOnly.kt
   private val log: Logger = LogManager.getLogger(Web3JLinethRollupSmartContractClientReadOnly::class.java),
 ) : LinethRollupSmartContractClientReadOnly,
   LinethRollupSmartContractClientReadOnlyFinalizedStateProvider,
+=======
+  private val log: Logger = LogManager.getLogger(Web3JLineaRollupSmartContractClientReadOnly::class.java),
+) : LineaRollupSmartContractClientReadOnly,
+  LineaRollupSmartContractClientReadOnlyFinalizedStateProvider,
+>>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618)):jvm-libs/linea/clients/linea-contract-clients/src/main/kotlin/linea/contract/l1/Web3JLineaRollupSmartContractClientReadOnly.kt
   FinalizedStateDataProvider {
 
   protected fun contractClientV8AtBlock(blockParameter: BlockParameter): LinethRollupV8 {
     return contractClientAtBlock(blockParameter, LinethRollupV8::class.java)
+  }
+
+  protected fun contractClientV9AtBlock(blockParameter: BlockParameter): LinethRollupV9 {
+    return contractClientAtBlock(blockParameter, LinethRollupV9::class.java)
   }
 
   protected fun contractClientV9AtBlock(blockParameter: BlockParameter): LinethRollupV9 {
@@ -84,6 +99,7 @@ open class Web3JLinethRollupSmartContractClientReadOnly(
   }
 
   private data class CachedVersion(
+<<<<<<< HEAD:jvm-libs/linea/clients/linea-contract-clients/src/main/kotlin/linea/contract/l1/Web3JLinethRollupSmartContractClientReadOnly.kt
     val version: LinethRollupContractVersion,
     val fetchedAt: Instant,
   )
@@ -96,6 +112,20 @@ open class Web3JLinethRollupSmartContractClientReadOnly(
       // once upgraded, it's not downgraded
       cached?.version == LinethRollupContractVersion.latest ->
         SafeFuture.completedFuture(LinethRollupContractVersion.latest)
+=======
+    val version: LineaRollupContractVersion,
+    val fetchedAt: Instant,
+  )
+
+  private val smartContractVersionCache = AtomicReference<CachedVersion>(null)
+
+  private fun getSmartContractVersion(): SafeFuture<LineaRollupContractVersion> {
+    val cached = smartContractVersionCache.get()
+    return when {
+      // once upgraded, it's not downgraded
+      cached?.version == LineaRollupContractVersion.latest ->
+        SafeFuture.completedFuture(LineaRollupContractVersion.latest)
+>>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618)):jvm-libs/linea/clients/linea-contract-clients/src/main/kotlin/linea/contract/l1/Web3JLineaRollupSmartContractClientReadOnly.kt
 
       // below latest: serve from cache within the refresh interval so repeated getVersion calls
       // don't refetch on every call, while still detecting an upgrade within versionRefreshInterval
@@ -132,12 +162,21 @@ open class Web3JLinethRollupSmartContractClientReadOnly(
       .thenApply(::parseContractVersion)
   }
 
+<<<<<<< HEAD:jvm-libs/linea/clients/linea-contract-clients/src/main/kotlin/linea/contract/l1/Web3JLinethRollupSmartContractClientReadOnly.kt
   internal fun parseContractVersion(version: String): LinethRollupContractVersion {
     return when {
       version.startsWith("6") -> LinethRollupContractVersion.V6
       version.startsWith("7") -> LinethRollupContractVersion.V7
       version.startsWith("8") -> LinethRollupContractVersion.V8
       version.startsWith("9") -> LinethRollupContractVersion.V9
+=======
+  internal fun parseContractVersion(version: String): LineaRollupContractVersion {
+    return when {
+      version.startsWith("6") -> LineaRollupContractVersion.V6
+      version.startsWith("7") -> LineaRollupContractVersion.V7
+      version.startsWith("8") -> LineaRollupContractVersion.V8
+      version.startsWith("9") -> LineaRollupContractVersion.V9
+>>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618)):jvm-libs/linea/clients/linea-contract-clients/src/main/kotlin/linea/contract/l1/Web3JLineaRollupSmartContractClientReadOnly.kt
       else -> throw IllegalStateException("Unsupported contract version: $version")
     }
   }
@@ -175,7 +214,11 @@ open class Web3JLinethRollupSmartContractClientReadOnly(
           LinethRollupContractVersion.V7,
           LinethRollupContractVersion.V8,
           -> contractClientV8AtBlock(blockParameter).blobShnarfExists(shnarf)
+<<<<<<< HEAD:jvm-libs/linea/clients/linea-contract-clients/src/main/kotlin/linea/contract/l1/Web3JLinethRollupSmartContractClientReadOnly.kt
           LinethRollupContractVersion.V9 -> // just ensure not regression while WIP
+=======
+          LineaRollupContractVersion.V9 -> // just ensure not regression while WIP
+>>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618)):jvm-libs/linea/clients/linea-contract-clients/src/main/kotlin/linea/contract/l1/Web3JLineaRollupSmartContractClientReadOnly.kt
             contractClientV9AtBlock(blockParameter).blobShnarfExists(shnarf)
         }
           .sendAsync()
@@ -238,8 +281,13 @@ open class Web3JLinethRollupSmartContractClientReadOnly(
               ),
             )
 
+<<<<<<< HEAD:jvm-libs/linea/clients/linea-contract-clients/src/main/kotlin/linea/contract/l1/Web3JLinethRollupSmartContractClientReadOnly.kt
           LinethRollupContractVersion.V8,
           LinethRollupContractVersion.V9,
+=======
+          LineaRollupContractVersion.V8,
+          LineaRollupContractVersion.V9,
+>>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618)):jvm-libs/linea/clients/linea-contract-clients/src/main/kotlin/linea/contract/l1/Web3JLineaRollupSmartContractClientReadOnly.kt
           ->
             findFinalizedStateEvent(blockParameter, finalizedBlockNumber)
               .thenApply { finalizedState ->

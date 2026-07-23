@@ -13,7 +13,11 @@ enum class LinethRollupContractVersion : Comparable<LinethRollupContractVersion>
   ;
 
   companion object {
+<<<<<<< HEAD
     val latest: LinethRollupContractVersion = entries.last()
+=======
+    val latest: LineaRollupContractVersion = entries.last()
+>>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618))
   }
 }
 
