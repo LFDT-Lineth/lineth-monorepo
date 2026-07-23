@@ -2,6 +2,10 @@ package lineth.coordinator.config.v2.toml
 
 import linea.config.docs.ConfigDoc
 import linea.config.docs.ConfigSection
+<<<<<<< HEAD:coordinator/app/src/main/kotlin/lineth/coordinator/config/v2/toml/L1FinalizationMonitorConfigToml.kt
+=======
+import linea.coordinator.config.v2.L1FinalizationMonitorConfig
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)):coordinator/app/src/main/kotlin/linea/coordinator/config/v2/toml/L1FinalizationMonitorConfigToml.kt
 import linea.domain.BlockParameter
 import lineth.coordinator.config.v2.L1FinalizationMonitorConfig
 import java.net.URL

@@ -1382,6 +1382,7 @@
         "deprecated": false,
         "replacement": null
       },
+<<<<<<< HEAD
       "l1-submission.aggregation.signer.custom": {
         "type": "CustomConfig?",
         "section": true,
@@ -1402,12 +1403,18 @@
         "deprecated": false,
         "replacement": null
       },
+=======
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
       "l1-submission.aggregation.signer.type": {
         "type": "SignerType",
         "section": false,
         "required": true,
         "default": null,
+<<<<<<< HEAD
         "description": "Signer backend to use: WEB3J, WEB3SIGNER, or CUSTOM.",
+=======
+        "description": "Signer backend to use: WEB3J (local private key) or WEB3SIGNER (remote signer).",
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
         "example": "web3signer",
         "deprecated": false,
         "replacement": null
@@ -1752,6 +1759,7 @@
         "deprecated": false,
         "replacement": null
       },
+<<<<<<< HEAD
       "l1-submission.blob.signer.custom": {
         "type": "CustomConfig?",
         "section": true,
@@ -1772,12 +1780,18 @@
         "deprecated": false,
         "replacement": null
       },
+=======
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
       "l1-submission.blob.signer.type": {
         "type": "SignerType",
         "section": false,
         "required": true,
         "default": null,
+<<<<<<< HEAD
         "description": "Signer backend to use: WEB3J, WEB3SIGNER, or CUSTOM.",
+=======
+        "description": "Signer backend to use: WEB3J (local private key) or WEB3SIGNER (remote signer).",
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
         "example": "web3signer",
         "deprecated": false,
         "replacement": null
@@ -3002,6 +3016,7 @@
         "deprecated": false,
         "replacement": null
       },
+<<<<<<< HEAD
       "message-anchoring.signer.custom": {
         "type": "CustomConfig?",
         "section": true,
@@ -3022,12 +3037,18 @@
         "deprecated": false,
         "replacement": null
       },
+=======
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
       "message-anchoring.signer.type": {
         "type": "SignerType",
         "section": false,
         "required": true,
         "default": null,
+<<<<<<< HEAD
         "description": "Signer backend to use: WEB3J, WEB3SIGNER, or CUSTOM.",
+=======
+        "description": "Signer backend to use: WEB3J (local private key) or WEB3SIGNER (remote signer).",
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
         "example": "web3signer",
         "deprecated": false,
         "replacement": null
@@ -3157,7 +3178,11 @@
         "section": true,
         "required": true,
         "default": null,
+<<<<<<< HEAD
         "description": "Lineth protocol contract addresses and genesis settings.",
+=======
+        "description": "Linea protocol contract addresses and genesis settings.",
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -3167,7 +3192,11 @@
         "section": true,
         "required": true,
         "default": null,
+<<<<<<< HEAD
         "description": "Lineth genesis state root and shnarf.",
+=======
+        "description": "Linea genesis state root and shnarf.",
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -3177,7 +3206,11 @@
         "section": false,
         "required": true,
         "default": null,
+<<<<<<< HEAD
         "description": "Genesis shnarf (starting shnarf) of the Lineth chain (hex).",
+=======
+        "description": "Genesis shnarf (starting shnarf) of the Linea chain (hex).",
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
         "example": "0xc286ff42414401ccdc23ea8e738775378e8f6c6f7b2966eb2747798d45571b79",
         "deprecated": false,
         "replacement": null
@@ -3187,7 +3220,11 @@
         "section": false,
         "required": true,
         "default": null,
+<<<<<<< HEAD
         "description": "Genesis state root hash of the Lineth chain (hex).",
+=======
+        "description": "Genesis state root hash of the Linea chain (hex).",
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
         "example": "0x01d9afcd495c870f3ae9d8362cd0257a7de2057055058183596719285cae6101",
         "deprecated": false,
         "replacement": null
@@ -3217,7 +3254,11 @@
         "section": false,
         "required": true,
         "default": null,
+<<<<<<< HEAD
         "description": "Address of the Lineth rollup contract on L1.",
+=======
+        "description": "Address of the Linea rollup contract on L1.",
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
         "example": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
         "deprecated": false,
         "replacement": null
@@ -3247,7 +3288,11 @@
         "section": false,
         "required": true,
         "default": null,
+<<<<<<< HEAD
         "description": "Address of the Lineth contract on L2.",
+=======
+        "description": "Address of the Linea contract on L2.",
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
         "example": "0xe537D669CA013d86EBeF1D64e40fC74CADC91987",
         "deprecated": false,
         "replacement": null
@@ -3273,15 +3318,22 @@
         "replacement": null
       },
       "prover.blob-compression": {
+<<<<<<< HEAD
         "type": "ProverConfigToml?",
         "section": true,
         "required": false,
+=======
+        "type": "ProverDirectoriesToml",
+        "section": true,
+        "required": true,
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
         "default": null,
         "description": "Blob compression prover request/response directories.",
         "example": null,
         "deprecated": false,
         "replacement": null
       },
+<<<<<<< HEAD
       "prover.blob-compression.fork-name": {
         "type": "String?",
         "section": false,
@@ -3292,6 +3344,8 @@
         "deprecated": false,
         "replacement": null
       },
+=======
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
       "prover.blob-compression.fs-requests-directory": {
         "type": "String",
         "section": false,
@@ -3312,6 +3366,7 @@
         "deprecated": false,
         "replacement": null
       },
+<<<<<<< HEAD
       "prover.blob-compression.program-vk": {
         "type": "String?",
         "section": false,
@@ -3322,6 +3377,8 @@
         "deprecated": false,
         "replacement": null
       },
+=======
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
       "prover.enable-request-files-cleanup": {
         "type": "Boolean",
         "section": false,
@@ -3333,7 +3390,11 @@
         "replacement": null
       },
       "prover.execution": {
+<<<<<<< HEAD
         "type": "ProverConfigToml",
+=======
+        "type": "ProverDirectoriesToml",
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
         "section": true,
         "required": true,
         "default": null,
@@ -3342,6 +3403,7 @@
         "deprecated": false,
         "replacement": null
       },
+<<<<<<< HEAD
       "prover.execution.fork-name": {
         "type": "String?",
         "section": false,
@@ -3352,6 +3414,8 @@
         "deprecated": false,
         "replacement": null
       },
+=======
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
       "prover.execution.fs-requests-directory": {
         "type": "String",
         "section": false,
@@ -3372,6 +3436,7 @@
         "deprecated": false,
         "replacement": null
       },
+<<<<<<< HEAD
       "prover.execution.program-vk": {
         "type": "String?",
         "section": false,
@@ -3382,6 +3447,8 @@
         "deprecated": false,
         "replacement": null
       },
+=======
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
       "prover.fs-inprogress-proving-suffix-pattern": {
         "type": "String",
         "section": false,
@@ -3423,7 +3490,11 @@
         "replacement": null
       },
       "prover.invalidity": {
+<<<<<<< HEAD
         "type": "ProverConfigToml?",
+=======
+        "type": "ProverDirectoriesToml?",
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
         "section": true,
         "required": false,
         "default": null,
@@ -3432,6 +3503,7 @@
         "deprecated": false,
         "replacement": null
       },
+<<<<<<< HEAD
       "prover.invalidity.fork-name": {
         "type": "String?",
         "section": false,
@@ -3442,6 +3514,8 @@
         "deprecated": false,
         "replacement": null
       },
+=======
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
       "prover.invalidity.fs-requests-directory": {
         "type": "String",
         "section": false,
@@ -3462,6 +3536,7 @@
         "deprecated": false,
         "replacement": null
       },
+<<<<<<< HEAD
       "prover.invalidity.program-vk": {
         "type": "String?",
         "section": false,
@@ -3472,6 +3547,8 @@
         "deprecated": false,
         "replacement": null
       },
+=======
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
       "prover.new": {
         "type": "ProverToml?",
         "section": true,
@@ -3483,15 +3560,22 @@
         "replacement": null
       },
       "prover.new.blob-compression": {
+<<<<<<< HEAD
         "type": "ProverConfigToml?",
         "section": true,
         "required": false,
+=======
+        "type": "ProverDirectoriesToml",
+        "section": true,
+        "required": true,
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
         "default": null,
         "description": "Blob compression prover request/response directories.",
         "example": null,
         "deprecated": false,
         "replacement": null
       },
+<<<<<<< HEAD
       "prover.new.blob-compression.fork-name": {
         "type": "String?",
         "section": false,
@@ -3502,6 +3586,8 @@
         "deprecated": false,
         "replacement": null
       },
+=======
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
       "prover.new.blob-compression.fs-requests-directory": {
         "type": "String",
         "section": false,
@@ -3522,6 +3608,7 @@
         "deprecated": false,
         "replacement": null
       },
+<<<<<<< HEAD
       "prover.new.blob-compression.program-vk": {
         "type": "String?",
         "section": false,
@@ -3532,6 +3619,8 @@
         "deprecated": false,
         "replacement": null
       },
+=======
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
       "prover.new.enable-request-files-cleanup": {
         "type": "Boolean",
         "section": false,
@@ -3543,7 +3632,11 @@
         "replacement": null
       },
       "prover.new.execution": {
+<<<<<<< HEAD
         "type": "ProverConfigToml",
+=======
+        "type": "ProverDirectoriesToml",
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
         "section": true,
         "required": true,
         "default": null,
@@ -3552,6 +3645,7 @@
         "deprecated": false,
         "replacement": null
       },
+<<<<<<< HEAD
       "prover.new.execution.fork-name": {
         "type": "String?",
         "section": false,
@@ -3562,6 +3656,8 @@
         "deprecated": false,
         "replacement": null
       },
+=======
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
       "prover.new.execution.fs-requests-directory": {
         "type": "String",
         "section": false,
@@ -3582,6 +3678,7 @@
         "deprecated": false,
         "replacement": null
       },
+<<<<<<< HEAD
       "prover.new.execution.program-vk": {
         "type": "String?",
         "section": false,
@@ -3592,6 +3689,8 @@
         "deprecated": false,
         "replacement": null
       },
+=======
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
       "prover.new.fs-inprogress-proving-suffix-pattern": {
         "type": "String",
         "section": false,
@@ -3633,7 +3732,11 @@
         "replacement": null
       },
       "prover.new.invalidity": {
+<<<<<<< HEAD
         "type": "ProverConfigToml?",
+=======
+        "type": "ProverDirectoriesToml?",
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
         "section": true,
         "required": false,
         "default": null,
@@ -3642,6 +3745,7 @@
         "deprecated": false,
         "replacement": null
       },
+<<<<<<< HEAD
       "prover.new.invalidity.fork-name": {
         "type": "String?",
         "section": false,
@@ -3652,6 +3756,8 @@
         "deprecated": false,
         "replacement": null
       },
+=======
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
       "prover.new.invalidity.fs-requests-directory": {
         "type": "String",
         "section": false,
@@ -3672,6 +3778,7 @@
         "deprecated": false,
         "replacement": null
       },
+<<<<<<< HEAD
       "prover.new.invalidity.program-vk": {
         "type": "String?",
         "section": false,
@@ -3682,6 +3789,8 @@
         "deprecated": false,
         "replacement": null
       },
+=======
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
       "prover.new.new": {
         "type": "ProverToml?",
         "section": true,
@@ -3693,7 +3802,11 @@
         "replacement": null
       },
       "prover.new.proof-aggregation": {
+<<<<<<< HEAD
         "type": "ProverConfigToml",
+=======
+        "type": "ProverDirectoriesToml",
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
         "section": true,
         "required": true,
         "default": null,
@@ -3702,6 +3815,7 @@
         "deprecated": false,
         "replacement": null
       },
+<<<<<<< HEAD
       "prover.new.proof-aggregation.fork-name": {
         "type": "String?",
         "section": false,
@@ -3712,6 +3826,8 @@
         "deprecated": false,
         "replacement": null
       },
+=======
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
       "prover.new.proof-aggregation.fs-requests-directory": {
         "type": "String",
         "section": false,
@@ -3732,6 +3848,7 @@
         "deprecated": false,
         "replacement": null
       },
+<<<<<<< HEAD
       "prover.new.proof-aggregation.program-vk": {
         "type": "String?",
         "section": false,
@@ -3792,6 +3909,8 @@
         "deprecated": false,
         "replacement": null
       },
+=======
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
       "prover.new.switch-block-number-inclusive": {
         "type": "ULong?",
         "section": false,
@@ -3813,7 +3932,11 @@
         "replacement": null
       },
       "prover.proof-aggregation": {
+<<<<<<< HEAD
         "type": "ProverConfigToml",
+=======
+        "type": "ProverDirectoriesToml",
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
         "section": true,
         "required": true,
         "default": null,
@@ -3822,6 +3945,7 @@
         "deprecated": false,
         "replacement": null
       },
+<<<<<<< HEAD
       "prover.proof-aggregation.fork-name": {
         "type": "String?",
         "section": false,
@@ -3832,6 +3956,8 @@
         "deprecated": false,
         "replacement": null
       },
+=======
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
       "prover.proof-aggregation.fs-requests-directory": {
         "type": "String",
         "section": false,
@@ -3852,6 +3978,7 @@
         "deprecated": false,
         "replacement": null
       },
+<<<<<<< HEAD
       "prover.proof-aggregation.program-vk": {
         "type": "String?",
         "section": false,
@@ -3912,6 +4039,8 @@
         "deprecated": false,
         "replacement": null
       },
+=======
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
       "prover.switch-block-number-inclusive": {
         "type": "ULong?",
         "section": false,
@@ -3932,6 +4061,7 @@
         "deprecated": false,
         "replacement": null
       },
+<<<<<<< HEAD
       "riscv-prover": {
         "type": "ProverToml?",
         "section": true,
@@ -4602,6 +4732,8 @@
         "deprecated": false,
         "replacement": null
       },
+=======
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
       "state-manager": {
         "type": "StateManagerToml",
         "section": true,
@@ -5510,14 +5642,22 @@
     }
   },
   "smart-contract-errors": {
+<<<<<<< HEAD
     "description": "Mapping of Lineth smart-contract revert error codes to messages.",
+=======
+    "description": "Mapping of Linea smart-contract revert error codes to messages.",
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
     "keys": {
       "smart-contract-errors": {
         "type": "Map<String, String>",
         "section": false,
         "required": true,
         "default": null,
+<<<<<<< HEAD
         "description": "Mapping of Lineth smart-contract revert error codes to human-readable messages, used to decode on-chain rejection reasons.",
+=======
+        "description": "Mapping of Linea smart-contract revert error codes to human-readable messages, used to decode on-chain rejection reasons.",
+>>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568))
         "example": null,
         "deprecated": false,
         "replacement": null
