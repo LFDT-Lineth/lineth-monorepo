@@ -20,3 +20,68 @@ fn mulmod_256(lhsL:tWidth, rhsL:tWidth, modL:tWidth) -> (remainder:tWidth) {
         fail
     }
 }
+
+//#[native] <- to be implemented as native if expensive
+fn addmod_256(lhsL:tWidth, rhsL:tWidth, modL:tWidth) -> (remainder:tWidth) {
+    if modL == 0 {
+        fail
+    }
+
+    var add:tWidthLarge = (lhsL as tWidthLarge) + (rhsL as tWidthLarge)
+    var quotient:tWidthLarge = add / (modL as tWidthLarge)
+    var remainderLarge:tWidthLarge = add - (quotient * (modL as tWidthLarge))
+
+    var overflow:tWidth
+    overflow::remainder = remainderLarge
+    if overflow != 0 {
+        fail
+    }
+}
+
+
+fn submod_256(lhsL:tWidth, rhsL:tWidth, modL:tWidth) -> (remainder:tWidth) {
+    if modL == 0 {
+        fail
+    }
+
+    // Standalone-safe version:
+    //   lhs - rhs mod modL
+    // = lhs + (modL - (rhs mod modL)) mod modL
+    //
+    // Reducing rhs first avoids underflow in `modL - rhs` when callers pass a
+    // non-canonical rhs. If callers already guarantee rhsL < modL, this can be
+    // optimized to `addmod_256(lhsL, modL - rhsL, modL)`.
+    var zero:tWidth = 0
+    var rhsReduced:tWidth = addmod_256(rhsL, zero, modL)
+    var negRhs:tWidth = modL - rhsReduced
+    remainder = addmod_256(lhsL, negRhs, modL)
+}
+
+
+
+fn invmod_256(inp:tWidth, modL:tWidth) -> (inv:tWidth) {
+    if modL == 0 {
+        fail
+    }
+    if inp == 0 {
+        fail
+    }
+    if inp == 1 {
+        inv = 1
+        return
+    }
+
+    // Fermat's little theorem: inp^(modL-2) mod modL = inp^(-1) mod modL
+    // Uses square-and-multiply over the 256 bits of the exponent.
+    var exp:tWidth = modL - 2
+    var base:tWidth = inp
+    inv = 1
+
+    for i:u64 = 0; i < (256 as u64); i = i+1 {
+        if (exp & 1) == 1 {
+            inv = mulmod_256(inv, base, modL)
+        }
+        base = mulmod_256(base, base, modL)
+        exp = exp >> 1
+    }
+}
