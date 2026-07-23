@@ -1,3 +1,8 @@
+## [unreleased]
+
+### ⚙️ Miscellaneous Tasks
+
+- *(coordinator)* Add riscv enablement config (#3617)
 ## [1.0.0] - 2026-07-22
 
 ### 🚀 Features
