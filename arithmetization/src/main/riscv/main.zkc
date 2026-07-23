@@ -27,6 +27,7 @@ fn main<registers, ram, state_row0, state_row1, state_row2, state_row3, state_ro
     // Base address of the pre-decoded instruction tables (lowest executable
     // instruction address). Used to map pc -> instruction index.
     var base:Address = instruction_base[0]
+    var exec_end:Address = executable_region_end()
 
     // ==========================
     // Predecoding justification
@@ -35,8 +36,7 @@ fn main<registers, ram, state_row0, state_row1, state_row2, state_row3, state_ro
     // Note: static linear pass over the executable region;
     // Could be done once per guest upgrade.
     var pc_predecoding:Address = base
-    var end_predecoding:Address = executable_region_end()
-    while pc_predecoding<end_predecoding {
+    while pc_predecoding<exec_end {
         var instruction:Instruction = read_instruction_from_blobs(pc_predecoding)
         predecoding(pc_predecoding, instruction)
         pc_predecoding = (pc_predecoding + 4) as Address
@@ -65,6 +65,13 @@ fn main<registers, ram, state_row0, state_row1, state_row2, state_row3, state_ro
 
     // We interpret pc == MAX_UINT_64 as the stop signal, which is set by the ecall instruction
     while pc != MAX_UINT_64 {
+        // Execution must stay inside the span justified by predecoding, at 4-byte
+        // aligned PCs, so decoded[(pc - base) / 4] matches the row checked at pc.
+        if pc < base || pc >= exec_end || ((pc - base) % 4) != 0 {
+            printf "[ERROR] pc outside executable span (pc=%d base=%d exec_end=%d)\n", pc, base, exec_end
+            fail
+        }
+
         var index:u64 = (pc - base) / 4
 
         // clock cycle starts at 1
