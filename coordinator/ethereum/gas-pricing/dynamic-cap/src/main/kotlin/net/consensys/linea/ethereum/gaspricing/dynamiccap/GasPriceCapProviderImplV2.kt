@@ -51,7 +51,7 @@ class GasPriceCapProviderImplV2(
     }
   }
 
-  internal fun isEnoughDataForGasPriceCapCalculation(): Boolean {
+  internal fun hasEnoughDataForGasPriceCapCalculation(): Boolean {
     val minNumOfFeeHistoriesNeeded = BigInteger.valueOf(config.gasFeePercentileWindowInBlocks.toLong())
       .minus(BigInteger.valueOf(config.gasFeePercentileWindowLeewayInBlocks.toLong()))
       .coerceAtLeast(BigInteger.ZERO).toULong()
@@ -79,11 +79,7 @@ class GasPriceCapProviderImplV2(
     return timeOfDayMultipliers[tdmKey]!!
   }
 
-  private fun calculateGasPriceCapsHelper(timestamp: Instant): GasPriceCaps? {
-    if (!isEnoughDataForGasPriceCapCalculation()) {
-      return null
-    }
-
+  private fun calculateGasPriceCapsHelper(timestamp: Instant): GasPriceCaps {
     val elapsedTimeSinceBlockTimestamp = getElapsedTimeSinceBlockTimestamp(timestamp)
     val percentileGasFees = feeHistoriesRepository.getCachedPercentileGasFees()
     val timeOfDayMultiplier = getTimeOfDayMultiplierForNow(config.timeOfDayMultipliers)
@@ -129,7 +125,7 @@ class GasPriceCapProviderImplV2(
   }
 
   private fun calculateGasPriceCaps(timestamp: Instant): SafeFuture<GasPriceCaps?> {
-    return if (config.enabled) {
+    return if (config.enabled && hasEnoughDataForGasPriceCapCalculation()) {
       calculateGasPriceCapsHelper(timestamp)
     } else {
       null
@@ -141,7 +137,7 @@ class GasPriceCapProviderImplV2(
   }
 
   override fun getGasPriceCapsWithCoefficient(timestamp: Instant): SafeFuture<GasPriceCaps?> {
-    return calculateGasPriceCaps(timestamp).thenApply {
+    return getGasPriceCaps(timestamp).thenApply {
       it?.run {
         val multipliedMaxBaseFeePerGasCap = it.maxBaseFeePerGasCap!!.toDouble() * config.gasPriceCapsCoefficient
         val multipliedMaxPriorityFeePerGas = it.maxPriorityFeePerGasCap.toDouble() * config.gasPriceCapsCoefficient

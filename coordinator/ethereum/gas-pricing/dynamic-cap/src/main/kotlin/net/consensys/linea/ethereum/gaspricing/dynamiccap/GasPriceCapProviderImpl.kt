@@ -69,7 +69,7 @@ class GasPriceCapProviderImpl(
     targetL2BlockNumber: Long,
     capsProvider: (Instant) -> SafeFuture<GasPriceCaps?>,
   ): SafeFuture<GasPriceCaps?> {
-    if (!config.enabled || !delegate.isEnoughDataForGasPriceCapCalculation()) {
+    if (!config.enabled || !delegate.hasEnoughDataForGasPriceCapCalculation()) {
       return SafeFuture.completedFuture(null)
     }
 
