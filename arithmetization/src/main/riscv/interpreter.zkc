@@ -729,7 +729,12 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
             v2_upper::v2_lower = v2
             printf "RTYPE_MULW "
             print_r_operands(rd, rs1, rs2)
-            result = sgn_extension_u32_u64(((sgn_extension_u32_u64(v1_lower) * sgn_extension_u32_u64(v2_lower)) & MAX_UINT_32_AS_U64) as Word)
+            product_upper::product_lower = (v1_lower as DoubleWord) * (v2_lower as DoubleWord)
+            if (sign_bit_of_word(product_lower) == 1) {
+                result = MAX_UINT_32::product_lower
+            } else {
+                result = product_lower as DoubleWord
+            }
         }
         case RTYPE_DIVW: {
             v1 = registers[rs1]
@@ -1032,7 +1037,12 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
             v2_upper::v2_lower = v2
             printf "RTYPE_MULW "
             print_r_operands(rd, rs1, rs2)
-            registers[rd] = sgn_extension_u32_u64(((sgn_extension_u32_u64(v1_lower) * sgn_extension_u32_u64(v2_lower)) & MAX_UINT_32_AS_U64) as Word)
+            product_upper::product_lower = (v1_lower as DoubleWord) * (v2_lower as DoubleWord)
+            if (sign_bit_of_word(product_lower) == 1) {
+                registers[rd] = MAX_UINT_32::product_lower
+            } else {
+                registers[rd] = product_lower as DoubleWord
+            }
         }
         case RTYPE_DIVW_WB: {
             v1 = registers[rs1]
