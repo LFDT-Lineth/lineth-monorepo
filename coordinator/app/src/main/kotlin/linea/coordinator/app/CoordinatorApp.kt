@@ -49,7 +49,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 
-class CoordinatorAppV2(
+class CoordinatorApp(
   private val configs: CoordinatorConfig,
   private val clock: Clock = Clock.System,
   // Single seam for the enterprise distribution: contributes extra services and JSON-RPC
@@ -272,9 +272,9 @@ class CoordinatorAppV2(
   private val extensions =
     extensionsFactory.create(
       object : CoordinatorContext {
-        override val vertx: Vertx = this@CoordinatorAppV2.vertx
+        override val vertx: Vertx = this@CoordinatorApp.vertx
         override val metricsFacade = micrometerMetricsFacade
-        override val sqlClient: SqlClient = this@CoordinatorAppV2.sqlClient
+        override val sqlClient: SqlClient = this@CoordinatorApp.sqlClient
       },
     )
   private val extensionServices = extensions.flatMap { it.services() }
