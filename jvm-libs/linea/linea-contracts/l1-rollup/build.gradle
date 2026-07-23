@@ -25,6 +25,9 @@ web3jContractWrappers {
 =======
   def contractV6Abi = contractsDir.file("LineaRollupV6.0.abi").asFile.absolutePath
   def contractV8Abi = contractsDir.file("LineaRollupV8.0.abi").asFile.absolutePath
+<<<<<<< HEAD
+>>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618))
+=======
 >>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618))
   def contractV9Abi = contractsDir.file("LinethRollupV9-rc.abi").asFile.absolutePath
 
@@ -36,6 +39,9 @@ web3jContractWrappers {
 =======
     "$contractV6Abi": "LineaRollupV6",
     "$contractV8Abi": "LineaRollupV8",
+<<<<<<< HEAD
+>>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618))
+=======
 >>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618))
     "$contractV9Abi": "LinethRollupV9",
   ]

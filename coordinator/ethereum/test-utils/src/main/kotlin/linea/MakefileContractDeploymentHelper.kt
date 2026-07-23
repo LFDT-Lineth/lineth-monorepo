@@ -88,6 +88,9 @@ fun makeDeployLinethRollup(
     LineaRollupContractVersion.V7 -> "make deploy-linea-rollup-v7"
     LineaRollupContractVersion.V8 -> "make deploy-linea-rollup-v8"
     LineaRollupContractVersion.V9 -> "make deploy-lineth-rollup-v9-stub"
+<<<<<<< HEAD
+>>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618))
+=======
 >>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618))
     // else -> throw IllegalArgumentException("Unsupported contract version: $contractVersion")
   }

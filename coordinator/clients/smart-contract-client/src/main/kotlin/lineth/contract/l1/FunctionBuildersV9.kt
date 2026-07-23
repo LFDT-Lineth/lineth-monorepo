@@ -1,5 +1,9 @@
 <<<<<<< HEAD:coordinator/clients/smart-contract-client/src/main/kotlin/lineth/contract/l1/FunctionBuildersV9.kt
+<<<<<<< HEAD:coordinator/clients/smart-contract-client/src/main/kotlin/lineth/contract/l1/FunctionBuildersV9.kt
 package lineth.contract.l1
+=======
+package net.consensys.linea.contract.l1
+>>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618)):coordinator/clients/smart-contract-client/src/main/kotlin/net/consensys/linea/contract/l1/FunctionBuildersV9.kt
 =======
 package net.consensys.linea.contract.l1
 >>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618)):coordinator/clients/smart-contract-client/src/main/kotlin/net/consensys/linea/contract/l1/FunctionBuildersV9.kt
