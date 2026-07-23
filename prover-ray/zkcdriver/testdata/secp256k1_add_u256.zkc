@@ -30,6 +30,7 @@ fn main() {
     var x3_:tWidth, y3_:tWidth
     x3_, y3_ = ec_add_secp256k1(x1, y1, x2, y2)
 
+    // validate the result
     if (x3 != x3_) || (y3 != y3_) {
         fail
     }
@@ -47,21 +48,51 @@ fn assert_on_curve_secp256k1(x:tWidth, y:tWidth) {
     }
 }
 
-// add function for secp256k1 (distinct finite-point addition; precondition: x1 != x2)
+// complete finite-point addition for secp256k1 (infinity case not yet handled)
 fn ec_add_secp256k1(x1:tWidth, y1:tWidth, x2:tWidth, y2:tWidth) -> (x3:tWidth, y3:tWidth) {
-    // lambda = (y2 - y1) * inv(x2 - x1)
-    var dy:tWidth = submod_256(y2, y1, p)
-    var dx:tWidth = submod_256(x2, x1, p)
-    var inv_dx:tWidth = invmod_256(dx, p)
-    var lambda:tWidth = mulmod_256(dy, inv_dx, p)
+    if x1 != x2 {
+        // --- Distinct finite-point addition ---
+        // lambda = (y2 - y1) * inv(x2 - x1)
+        var dy:tWidth = submod_256(y2, y1, p)
+        var dx:tWidth = submod_256(x2, x1, p)
+        var inv_dx:tWidth = invmod_256(dx, p)
+        var lambda:tWidth = mulmod_256(dy, inv_dx, p)
 
-    // x3 = lambda^2 - x1 - x2
-    var lambda2:tWidth = mulmod_256(lambda, lambda, p)
-    var lambda2_minus_x1:tWidth = submod_256(lambda2, x1, p)
-    x3 = submod_256(lambda2_minus_x1, x2, p)
+        // x3 = lambda^2 - x1 - x2
+        var lambda2:tWidth = mulmod_256(lambda, lambda, p)
+        var lambda2_minus_x1:tWidth = submod_256(lambda2, x1, p)
+        x3 = submod_256(lambda2_minus_x1, x2, p)
 
-    // y3 = lambda * (x1 - x3) - y1
-    var x1_minus_x3:tWidth = submod_256(x1, x3, p)
-    var lambda_x1_x3:tWidth = mulmod_256(lambda, x1_minus_x3, p)
-    y3 = submod_256(lambda_x1_x3, y1, p)
+        // y3 = lambda * (x1 - x3) - y1
+        var x1_minus_x3:tWidth = submod_256(x1, x3, p)
+        var lambda_x1_x3:tWidth = mulmod_256(lambda, x1_minus_x3, p)
+        y3 = submod_256(lambda_x1_x3, y1, p)
+    } else {
+        // x1 == x2: inverse or doubling
+        var neg_y1:tWidth = submod_256(0, y1, p)
+        if y2 == neg_y1 {
+            // --- Inverse / vertical case: P + (-P) = O (includes y1 = 0) ---
+            // Infinity not yet represented; return (0, 0) as sentinel
+            x3 = 0
+            y3 = 0
+        } else {
+            // --- Doubling case: x1 = x2, y1 = y2, y1 != 0 ---
+            // lambda = 3*x1^2 / (2*y1)
+            var x1sq:tWidth = mulmod_256(x1, x1, p)
+            var num:tWidth = mulmod_256(3, x1sq, p)
+            var den:tWidth = mulmod_256(2, y1, p)
+            var inv_den:tWidth = invmod_256(den, p)
+            var lambda_:tWidth = mulmod_256(num, inv_den, p)
+
+            // x3 = lambda^2 - 2*x1
+            var lambda2_:tWidth = mulmod_256(lambda_, lambda_, p)
+            var two_x1:tWidth = mulmod_256(2, x1, p)
+            x3 = submod_256(lambda2_, two_x1, p)
+
+            // y3 = lambda * (x1 - x3) - y1
+            var x1_minus_x3_:tWidth = submod_256(x1, x3, p)
+            var lambda_x1_x3_:tWidth = mulmod_256(lambda_, x1_minus_x3_, p)
+            y3 = submod_256(lambda_x1_x3_, y1, p)
+        }
+    }
 }
