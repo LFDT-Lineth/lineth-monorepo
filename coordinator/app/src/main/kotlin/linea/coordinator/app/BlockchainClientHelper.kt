@@ -125,6 +125,10 @@ fun createTransactionManager(
   return AsyncFriendlyTransactionManager(client, transactionSignService, -1L)
 }
 
+/**
+ * @param useEthEstimateGas `eth_estimateGas` may revert for multi-blob data-submission txs;
+ * disable it if it's the case.
+ */
 fun createLineaContractClient(
   vertx: Vertx,
   dataAvailabilityType: L1SubmissionConfig.DataAvailability,
@@ -159,6 +163,10 @@ fun createLineaContractClient(
   }
 }
 
+/**
+ * @param useEthEstimateGas `eth_estimateGas` may revert for multi-blob data-submission txs;
+ * disable it if it's the case.
+ */
 fun createLineaContractClient(
   l1ChainId: ULong,
   contractAddress: String,
@@ -207,8 +215,6 @@ fun createLineaContractClient(
     contractGasProvider = primaryOrFallbackGasProvider,
     web3jClient = l1Web3jClient,
     smartContractErrors = smartContractErrors,
-    // eth_estimateGas would fail because we submit multiple blob tx
-    // and 2nd would fail with revert reason
     useEthEstimateGas = useEthEstimateGas,
   )
 }

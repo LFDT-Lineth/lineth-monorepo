@@ -336,13 +336,6 @@ class L1RelayingAppV1(
         l1SubmissionConfig.dynamicGasPriceCap.feeHistoryFetcher.storagePeriod
           .div(configs.protocol.l1.blockTime).toUInt()
 
-      val l1EthApiClient = createEthApiClient(
-        rpcUrl = l1SubmissionConfig.dynamicGasPriceCap.feeHistoryFetcher.l1Endpoint.toString(),
-        log = LogManager.getLogger("clients.l1.eth.feehistory-cache"),
-        vertx = vertx,
-        requestRetryConfig = l1SubmissionConfig.dynamicGasPriceCap.feeHistoryFetcher.l1RequestRetries,
-      )
-
       val l1FeeHistoryFetcher: GasPriceCapFeeHistoryFetcher = GasPriceCapFeeHistoryFetcherImpl(
         ethApiFeeClient = l1EthApiClient,
         config = GasPriceCapFeeHistoryFetcherImpl.Config(
