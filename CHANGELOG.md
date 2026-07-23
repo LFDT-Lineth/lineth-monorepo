@@ -101,3 +101,4 @@
 - *(misc)* Cleanup redundant deps (#3596)
 - *(coordinator)* Add riscv enablement config (#3617)
 - *(coordinator)* Adds initial scafold for contract v9 RISC-V (#3618)
+- *(coordinator)* Cleanup replaced apps in PR #3615 (#3622)
