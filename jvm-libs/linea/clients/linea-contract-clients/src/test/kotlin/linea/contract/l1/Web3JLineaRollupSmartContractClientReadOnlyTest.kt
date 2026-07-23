@@ -6,12 +6,16 @@ import linea.domain.BlockParameter
 import linea.domain.toBlockParameter
 import linea.ethapi.EthLogsSearcherImpl
 import linea.ethapi.FakeEthApiClient
+import net.consensys.FakeFixedClock
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
 import org.web3j.protocol.Web3j
+import tech.pegasys.teku.infrastructure.async.SafeFuture
+import kotlin.time.Duration.Companion.seconds
 
 class Web3JLineaRollupSmartContractClientReadOnlyTest {
   private val contractAddress = "0x" + "aa".repeat(20)
@@ -35,6 +39,60 @@ class Web3JLineaRollupSmartContractClientReadOnlyTest {
   @AfterEach
   fun tearDown() {
     vertx.close()
+  }
+
+  @Test
+  fun `parseContractVersion maps major version prefixes and rejects unsupported versions`() {
+    assertThat(client.parseContractVersion("6.0")).isEqualTo(LineaRollupContractVersion.V6)
+    assertThat(client.parseContractVersion("7.1")).isEqualTo(LineaRollupContractVersion.V7)
+    assertThat(client.parseContractVersion("8.0")).isEqualTo(LineaRollupContractVersion.V8)
+    assertThat(client.parseContractVersion("9.0")).isEqualTo(LineaRollupContractVersion.V9)
+    assertThat(client.parseContractVersion("9.0.0-rc.1")).isEqualTo(LineaRollupContractVersion.V9)
+
+    assertThatThrownBy { client.parseContractVersion("5.0") }
+      .isInstanceOf(IllegalStateException::class.java)
+      .hasMessageContaining("Unsupported contract version: 5.0")
+  }
+
+  @Test
+  fun `getVersion caches below-latest versions for the refresh interval and short-circuits at latest`() {
+    val fakeClock = FakeFixedClock()
+    var onChainVersion = LineaRollupContractVersion.V8
+    var fetchCount = 0
+    val fakeClient = object : Web3JLineaRollupSmartContractClientReadOnly(
+      web3j = mock<Web3j>(),
+      contractAddress = contractAddress,
+      ethLogsSearcher = EthLogsSearcherImpl(vertx = vertx, ethApiClient = l1Client),
+      versionRefreshInterval = 30.seconds,
+      clock = fakeClock,
+    ) {
+      override fun fetchSmartContractVersion(
+        blockParameter: BlockParameter,
+      ): SafeFuture<LineaRollupContractVersion> {
+        fetchCount++
+        return SafeFuture.completedFuture(onChainVersion)
+      }
+    }
+
+    // first call fetches and caches
+    assertThat(fakeClient.getVersion().get()).isEqualTo(LineaRollupContractVersion.V8)
+    assertThat(fetchCount).isEqualTo(1)
+
+    // within the refresh interval: served from cache, no RPC
+    fakeClock.advanceBy(29.seconds)
+    assertThat(fakeClient.getVersion().get()).isEqualTo(LineaRollupContractVersion.V8)
+    assertThat(fetchCount).isEqualTo(1)
+
+    // after the refresh interval: refetches and detects the upgrade
+    fakeClock.advanceBy(2.seconds)
+    onChainVersion = LineaRollupContractVersion.V9
+    assertThat(fakeClient.getVersion().get()).isEqualTo(LineaRollupContractVersion.V9)
+    assertThat(fetchCount).isEqualTo(2)
+
+    // at the latest known version: short-circuits forever, even after the interval elapses
+    fakeClock.advanceBy(300.seconds)
+    assertThat(fakeClient.getVersion().get()).isEqualTo(LineaRollupContractVersion.V9)
+    assertThat(fetchCount).isEqualTo(2)
   }
 
   @Test
