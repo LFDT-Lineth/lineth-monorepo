@@ -31,7 +31,7 @@ class DirectoryCleaner(
 
   internal fun cleanDirectory(path: Path): SafeFuture<*> {
     return vertx.fileSystem().readDir(path.toString()).toSafeFuture()
-      .thenApply { filePaths ->
+      .thenCompose { filePaths ->
         val deletions = mutableListOf<SafeFuture<*>>()
         filePaths.forEach { filePath ->
           val file = File(filePath)

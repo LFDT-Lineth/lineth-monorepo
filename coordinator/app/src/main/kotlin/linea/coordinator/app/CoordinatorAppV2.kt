@@ -324,22 +324,25 @@ class CoordinatorAppV2(
 
   fun stop(): Int {
     return try {
-      SafeFuture.allOf(
-        SafeFuture.allOf(*extensionServices.map { it.stop().toSafeFuture() }.toTypedArray()),
-        l2PricingApp.stop(),
-        messageAnchoringApp.stop(),
-        l1RelayingAppV1.stop(),
-        conflationApp.stop(),
-        l1FinalizationMonitorApp.stop(),
-        api.stop(),
-        conflationBacktestingService.stop(),
-      ).thenApply {
-        LoadBalancingJsonRpcClient.stop()
-      }.thenCompose {
-        vertx.close().toSafeFuture().thenApply { log.info("vertx Stopped") }
-      }.thenApply {
-        log.info("CoordinatorApp Stopped")
-      }.get()
+      l1FinalizationMonitorApp.stop()
+        .thenCompose {
+          conflationApp.stop()
+          SafeFuture.allOf(
+            SafeFuture.allOf(*extensionServices.map { it.stop().toSafeFuture() }.toTypedArray()),
+            l2PricingApp.stop(),
+            messageAnchoringApp.stop(),
+            l1RelayingAppV1.stop(),
+            conflationApp.stop(),
+            api.stop(),
+            conflationBacktestingService.stop(),
+          )
+        }.thenApply {
+          LoadBalancingJsonRpcClient.stop()
+        }.thenCompose {
+          vertx.close().toSafeFuture().thenApply { log.info("vertx Stopped") }
+        }.thenApply {
+          log.info("CoordinatorApp Stopped")
+        }.get()
       0
     } catch (e: Exception) {
       log.error("CoordinatorApp Stopped with error: errorMessage={}", e.message, e)
