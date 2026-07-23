@@ -464,12 +464,7 @@ class ConflationAppV1(
       ),
       zkProofProductionCoordinator = ZkProofCreationCoordinatorImpl(
         executionProverClient = executionProverClient,
-        l2EthApiClient = createEthApiClient(
-          rpcUrl = configs.conflation.l2Endpoint.toString(),
-          log = LogManager.getLogger("clients.l2.eth.conflation"),
-          requestRetryConfig = configs.conflation.l2RequestRetries,
-          vertx = vertx,
-        ),
+        l2EthApiClient = l2EthClient,
         messageServiceAddress = configs.protocol.l2.contractAddress,
       ),
       batchProofHandler = batchProofHandler,
