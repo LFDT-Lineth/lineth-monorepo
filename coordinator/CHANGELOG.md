@@ -17,6 +17,7 @@
 
 - *(coordinator)* Add riscv enablement config (#3617)
 - *(coordinator)* Adds initial scafold for contract v9 RISC-V (#3618)
+- *(coordinator)* Cleanup replaced apps in PR #3615 (#3622)
 ## [1.0.0] - 2026-07-22
 
 ### 🚀 Features
