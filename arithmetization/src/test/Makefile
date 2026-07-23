@@ -137,8 +137,15 @@ install-zkc:
 	$(MAKE) -C $(ARITHMETIZATION_DIR) install-zkc
 
 # Run zkc exec (set TEST=... or JSON=path/to/input.json; override ZKC / ZKC_MAIN / ZKC_EXEC_FLAGS).
+# Fail on non-zero exit or any stderr (constraint failures etc.).
 zkc-exec: require-json
-	$(ZKC) exec $(ZKC_EXEC_FLAGS) $(JSON) $(ZKC_MAIN)
+	@err="$(JSON).err"; \
+	trap 'rm -f "$$err"' EXIT; \
+	$(ZKC) exec $(ZKC_EXEC_FLAGS) $(JSON) $(ZKC_MAIN) 2> "$$err"; \
+	status=$$?; \
+	cat "$$err" >&2; \
+	[ -s "$$err" ] && exit 1; \
+	exit $$status
 
 zkc-debug: require-json
 	$(ZKC) debug $(JSON) $(ZKC_MAIN)
@@ -231,16 +238,10 @@ vector-exec: require-vector-json-mode install-zkc
 	@if [ "$(VECTOR_JSON_MODE)" = "batched" ]; then \
 		[ -f $(VECTOR_JSON_FILE) ] || { echo "VECTOR_JSON_FILE not found: $(VECTOR_JSON_FILE). Run vector-json first"; exit 1; }; \
 		echo "RUN   $(VECTOR_JSON_FILE)"; \
-		err="$(VECTOR_JSON_FILE).err"; \
-		$(MAKE) --no-print-directory zkc-exec JSON=$(VECTOR_JSON_FILE) > /dev/null 2> "$$err"; \
-		status=$$?; \
-		if [ "$$status" -eq 0 ] && [ ! -s "$$err" ]; then \
+		if $(MAKE) --no-print-directory zkc-exec JSON=$(VECTOR_JSON_FILE) > /dev/null; then \
 			echo "PASS"; \
-			rm -f "$$err"; \
 		else \
 			echo "FAIL"; \
-			if [ ! -s "$$err" ]; then echo "zkc exited with code $$status" > "$$err"; fi; \
-			cat "$$err"; \
 			exit 1; \
 		fi; \
 	elif [ "$(VECTOR_JSON_MODE)" = "per-vector" ]; then \
@@ -249,17 +250,11 @@ vector-exec: require-vector-json-mode install-zkc
 			[ -f "$$json" ] || { echo "error: no vector JSONs found in $(VECTOR_JSON_DIR)" >&2; exit 1; }; \
 			i=$$((i + 1)); \
 			echo "RUN   case $$i  $$json"; \
-			err="$$json.err"; \
-			$(MAKE) --no-print-directory zkc-exec JSON="$$json" > /dev/null 2> "$$err"; \
-			status=$$?; \
-			if [ "$$status" -eq 0 ] && [ ! -s "$$err" ]; then \
+			if $(MAKE) --no-print-directory zkc-exec JSON="$$json" > /dev/null; then \
 				echo "PASS"; \
-				rm -f "$$err"; \
 				pass=$$((pass + 1)); \
 			else \
 				echo "FAIL"; \
-				if [ ! -s "$$err" ]; then echo "zkc exited with code $$status" > "$$err"; fi; \
-				cat "$$err"; \
 				fail=$$((fail + 1)); \
 			fi; \
 		done; \
@@ -438,7 +433,7 @@ act4-exec: install-zkc act4-build
 		echo "RUN   $$name  $$json"; \
 		$(MAKE) --no-print-directory zkc-exec JSON="$$json" > /dev/null 2> "$$base.err"; \
 		status=$$?; \
-		if [ "$$status" -eq 0 ] && [ ! -s "$$base.err" ]; then \
+		if [ "$$status" -eq 0 ]; then \
 			echo "PASS"; \
 			echo "PASS  $$name" >> "$(ACT4_RESULTS)"; \
 			pass=$$((pass + 1)); \
@@ -446,7 +441,6 @@ act4-exec: install-zkc act4-build
 		else \
 			echo "FAIL"; \
 			echo "FAIL  $$name" >> "$(ACT4_RESULTS)"; \
-			if [ ! -s "$$base.err" ]; then echo "zkc exited with code $$status" > "$$base.err"; fi; \
 			cat "$$base.err"; \
 			cat "$$base.err" >> "$(ACT4_RESULTS)"; \
 			fail=$$((fail + 1)); \
