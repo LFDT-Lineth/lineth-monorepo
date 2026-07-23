@@ -139,7 +139,7 @@ install-zkc:
 # Run zkc exec (set TEST=... or JSON=path/to/input.json; override ZKC / ZKC_MAIN / ZKC_EXEC_FLAGS).
 # Fail on non-zero exit, or on error-level stderr (e.g. ERRO[...] under --check for constraint failures).
 zkc-exec: require-json
-	@err="$$(mktemp)"; \
+	@err="$$(mktemp "${TMPDIR:-/tmp}/zkc-exec.XXXXXX")" || exit $$?; \
 	trap 'rm -f "$$err"' EXIT; \
 	$(ZKC) exec $(ZKC_EXEC_FLAGS) "$(JSON)" "$(ZKC_MAIN)" 2> "$$err"; \
 	status=$$?; \
