@@ -96,6 +96,19 @@ func TestIsRdZeroNoop(t *testing.T) {
 			want:  false,
 		},
 		{
+			name:  "sub x0 x0 x0",
+			instr: encodeRType(opcodeOP, 0b0100000, 0, 0, 0b000, 0),
+			want:  true,
+		},
+		{
+			// rd=rs1=rs2=x0 but (funct3, funct7) is not a supported OP encoding:
+			// must NOT fold to a no-op, otherwise an illegal encoding would
+			// execute silently instead of failing on COMPUTE_INVALID.
+			name:  "invalid op x0 x0 x0",
+			instr: encodeRType(opcodeOP, 0b0100000, 0, 0, 0b010, 0),
+			want:  false,
+		},
+		{
 			name:  "ld x0 0 t0",
 			instr: encodeIType(opcodeLOAD, 0b011, 0, 5, 0),
 			want:  false,

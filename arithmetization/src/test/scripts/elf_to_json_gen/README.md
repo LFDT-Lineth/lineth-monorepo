@@ -82,10 +82,13 @@ For an I-type instruction, the `decoded` record does not replay raw `funct3` /
 opcode bits. Instead, `decodeITypeSemantic` in `main.go` maps each I-type
 encoding to:
 
-- **`compute_op`** — what to execute. Writeback-capable ops have a pair:
+- **`compute_op`** — what to execute. Writeback-capable ops come in a pair:
   `READ8_SGN` (compute only) and `READ8_SGN_WB` (compute + `registers[rd] = result`).
-  Base opcodes are even; `*_WB` variants are odd. Control/system ops (`ITYPE_ECALL`,
-  `ITYPE_EBREAK`, `ITYPE_INVALID`) have no `_WB` variant.
+  The even/odd pairing applies to the **local** op indices in `main.go`
+  (base even, `*_WB` = base + 1); after adding `computeITypeBase` (1) to form the
+  unified `ComputeOp` stored in the JSON, the parity flips — e.g.
+  `READ8_SGN = 1` and `READ8_SGN_WB = 2` in `constants.zkc`. Control/system ops
+  (`ITYPE_ECALL`, `ITYPE_EBREAK`, `ITYPE_INVALID`) have no `_WB` variant.
 - **`imm`, `rs1`, `rd`** — operands (shift amounts are normalized at decode time;
   `imm` is the sign-extended 12-bit immediate)
 

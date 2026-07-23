@@ -95,7 +95,13 @@ func isRdZeroNoop(opcode, instrType, rd, rs1, rs2, funct3, imm12, funct7 uint32)
 		if opcode == opcodeCUSTOM1 {
 			return false
 		}
-		return rs1 == 0 && rs2 == 0
+		if rs1 != 0 || rs2 != 0 {
+			return false
+		}
+		// Only fold genuinely supported encodings; an unsupported (funct3, funct7)
+		// pair must stay COMPUTE_INVALID so the interpreter fails on it rather than
+		// silently executing it as a no-op.
+		return decodeRTypeSemantic(opcode, funct3, funct7) != rtypeInvalid
 	case uType:
 		return opcode == opcodeLUI
 	case iType:
