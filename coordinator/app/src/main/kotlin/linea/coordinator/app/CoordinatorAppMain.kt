@@ -29,7 +29,7 @@ class CoordinatorAppMain {
     }
 
     private fun startApp(configs: CoordinatorConfig) {
-      val app = CoordinatorApp(configs)
+      val app = CoordinatorAppV2(configs)
       Runtime.getRuntime()
         .addShutdownHook(
           Thread {

@@ -113,7 +113,7 @@
       <DebouncingFilter/>
       <appender-ref ref="console"/>
     </Logger>
-    <Logger name="linea.coordinator.clients.prover.GenericFileBasedProverClient" level="TRACE" additivity="false">
+    <Logger name="linea.coordinator.clients.prover.GenericFileBasedProverClient" level="INFO" additivity="false">
       <appender-ref ref="console"/>
     </Logger>
 <!--    <Logger name="clients.l2" level="DEBUG" additivity="false">-->
@@ -128,7 +128,7 @@
 <!--      <DebouncingFilter/>-->
 <!--      <appender-ref ref="console"/>-->
 <!--    </Logger>-->
-    <Logger name="clients.l2.ftx" level="TRACE" additivity="false">
+    <Logger name="clients.l2.ftx" level="INFO" additivity="false">
       <appender-ref ref="console"/>
     </Logger>
     <!--    <Logger name="clients.TracesCounters" level="TRACE" additivity="false">-->
