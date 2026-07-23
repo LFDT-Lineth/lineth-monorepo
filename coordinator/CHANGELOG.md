@@ -1,5 +1,9 @@
 ## [unreleased]
 
+### 🚀 Features
+
+- *(coordinator)* Wire config-docs via a buildSrc plugin and declarative spec (#3607)
+
 ### 🐛 Bug Fixes
 
 - *(coordinator)* Small fix on start/stop handlers (#3621)
