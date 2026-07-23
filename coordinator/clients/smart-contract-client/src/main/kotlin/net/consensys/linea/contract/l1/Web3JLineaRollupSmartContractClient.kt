@@ -245,7 +245,7 @@ class Web3JLineaRollupSmartContractClient internal constructor(
             gasPriceCaps = gasPriceCaps,
           )
         } else {
-          SafeFuture.completedFuture<String>(null)
+          SafeFuture.completedFuture(null)
         }.thenCompose {
           web3jContractHelper.sendBlobCarryingTransactionAndGetTxHash(
             function = function,
