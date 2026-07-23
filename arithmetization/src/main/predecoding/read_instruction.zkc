@@ -35,13 +35,13 @@ fn load_instruction_word_padded(data_offset:Length, in_blob:Address, blob_size:L
     if in_blob < blob_size {
         b0 = blobs_data[data_offset + in_blob]
     }
-    if in_blob + 1 < blob_size {
+    if (in_blob + 1) < blob_size {
         b1 = blobs_data[data_offset + in_blob + 1]
     }
-    if in_blob + 2 < blob_size {
+    if (in_blob + 2) < blob_size {
         b2 = blobs_data[data_offset + in_blob + 2]
     }
-    if in_blob + 3 < blob_size {
+    if (in_blob + 3) < blob_size {
         b3 = blobs_data[data_offset + in_blob + 3]
     }
 
