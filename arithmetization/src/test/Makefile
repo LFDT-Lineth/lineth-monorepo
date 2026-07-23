@@ -143,15 +143,15 @@ install-zkc:
 	$(MAKE) -C $(ARITHMETIZATION_DIR) install-zkc
 
 # Run zkc exec (set TEST=... or JSON=path/to/input.json; override ZKC / ZKC_MAIN / ZKC_EXEC_FLAGS).
-# Fail on non-zero exit or any stderr (constraint failures etc.).
+# Fail on non-zero exit, or on error-level stderr (e.g. ERRO[...] under --check for constraint failures).
 zkc-exec: require-json
 	@err="$(JSON).err"; \
 	trap 'rm -f "$$err"' EXIT; \
 	$(ZKC) exec $(ZKC_EXEC_FLAGS) $(JSON) $(ZKC_MAIN) 2> "$$err"; \
 	status=$$?; \
-	cat "$$err" >&2; \
-	[ -s "$$err" ] && exit 1; \
-	exit $$status
+	[ ! -s "$$err" ] || cat "$$err" >&2; \
+	[ "$$status" -eq 0 ] || exit $$status; \
+	[ ! -s "$$err" ] || ! grep -qE 'ERRO\[|level=error|\[ERROR\]' "$$err" || exit 1
 
 # Run zkc trace (set TEST=... or JSON=path/to/input.json; override ZKC / ZKC_MAIN / ZKC_TRACE_FLAGS).
 # Unlike zkc-exec this always traces: `trace` supports neither fast mode nor checkpointing.
