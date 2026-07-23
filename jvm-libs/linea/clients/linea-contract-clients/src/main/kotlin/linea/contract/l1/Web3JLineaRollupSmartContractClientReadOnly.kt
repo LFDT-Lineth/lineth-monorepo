@@ -22,6 +22,10 @@ import org.web3j.tx.gas.StaticGasProvider
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.math.BigInteger
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.time.Clock
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 open class Web3JLineaRollupSmartContractClientReadOnly(
   val web3j: Web3j,
@@ -29,6 +33,8 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
   private val ethLogsSearcher: EthLogsSearcher,
   private val l1EventSearchMaxBlockRange: UInt = 10_000u,
   private val finalizedStateSearchInitialBlockParameter: BlockParameter = BlockParameter.Tag.EARLIEST,
+  private val versionRefreshInterval: Duration = 6.seconds,
+  private val clock: Clock = Clock.System,
   private val log: Logger = LogManager.getLogger(Web3JLineaRollupSmartContractClientReadOnly::class.java),
 ) : LineaRollupSmartContractClientReadOnly,
   LineaRollupSmartContractClientReadOnlyFinalizedStateProvider,
@@ -77,30 +83,41 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
     }
   }
 
-  private val smartContractVersionCache = AtomicReference<LineaRollupContractVersion>(null)
+  private data class CachedVersion(
+    val version: LineaRollupContractVersion,
+    val fetchedAt: Instant,
+  )
+
+  private val smartContractVersionCache = AtomicReference<CachedVersion>(null)
 
   private fun getSmartContractVersion(): SafeFuture<LineaRollupContractVersion> {
-    return if (smartContractVersionCache.get() == LineaRollupContractVersion.latest) {
+    val cached = smartContractVersionCache.get()
+    return when {
       // once upgraded, it's not downgraded
-      SafeFuture.completedFuture(LineaRollupContractVersion.latest)
-    } else {
-      fetchSmartContractVersion()
-        .thenPeek { contractLatestVersion ->
-          if (smartContractVersionCache.get() != null &&
-            contractLatestVersion != smartContractVersionCache.get()
-          ) {
-            log.info(
-              "Smart contract upgraded: prevVersion={} upgradedVersion={}",
-              smartContractVersionCache.get(),
-              contractLatestVersion,
-            )
+      cached?.version == LineaRollupContractVersion.latest ->
+        SafeFuture.completedFuture(LineaRollupContractVersion.latest)
+
+      // below latest: serve from cache within the refresh interval so repeated getVersion calls
+      // don't refetch on every call, while still detecting an upgrade within versionRefreshInterval
+      cached != null && clock.now() < cached.fetchedAt + versionRefreshInterval ->
+        SafeFuture.completedFuture(cached.version)
+
+      else ->
+        fetchSmartContractVersion()
+          .thenPeek { contractLatestVersion ->
+            if (cached != null && contractLatestVersion != cached.version) {
+              log.info(
+                "Smart contract upgraded: prevVersion={} upgradedVersion={}",
+                cached.version,
+                contractLatestVersion,
+              )
+            }
+            smartContractVersionCache.set(CachedVersion(contractLatestVersion, clock.now()))
           }
-          smartContractVersionCache.set(contractLatestVersion)
-        }
     }
   }
 
-  private fun fetchSmartContractVersion(
+  internal open fun fetchSmartContractVersion(
     blockParameter: BlockParameter = BlockParameter.Tag.LATEST,
   ): SafeFuture<LineaRollupContractVersion> {
     return contractClientAtBlock(blockParameter, LineaRollupV6::class.java)
