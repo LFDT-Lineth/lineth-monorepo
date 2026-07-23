@@ -58,7 +58,6 @@ jobs:
         working-directory: arithmetization/src/test
         timeout-minutes: 15
         env:
-          ZKC_REF: ${{ inputs.zkc-ref || '8e19e640b6fe99746be464d591b0cec3533d9b83' }}
           KECCAK_N_VECTORS: 1
           KECCAK_JSON_FILE: common_inputs/keccak_check.json
           ZKC_EXEC_FLAGS: "--check -q"
