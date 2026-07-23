@@ -1,9 +1,12 @@
 // Read a 32-bit little-endian instruction word from executable-flagged blobs only.
+// Matches collectExecutableImage in elf_to_json_gen: trailing bytes in a partial final word are zero-filled.
+// Note: returns 0 if pc is outside the executable region.
 fn read_instruction_from_blobs(pc:Address) -> (instruction:Instruction) {
     var blobs_count:u64
     var entry_point:Address
     entry_point, blobs_count = entry_point_and_blobs_count[0]
     var internal_offset:Length = 0
+    instruction = 0
 
     for i:u64 = 0; i<blobs_count; i = i + 1 {
         var blob_offset:Address
@@ -12,19 +15,35 @@ fn read_instruction_from_blobs(pc:Address) -> (instruction:Instruction) {
         var executable:u1 = blobs_executable[i]
 
         if executable != 0 {
-            if pc >= blob_offset && (pc + 4) <= (blob_offset + blob_size) {
-                var in_blob:Address = pc - blob_offset
-                var b0:Byte = blobs_data[internal_offset + in_blob]
-                var b1:Byte = blobs_data[internal_offset + in_blob + 1]
-                var b2:Byte = blobs_data[internal_offset + in_blob + 2]
-                var b3:Byte = blobs_data[internal_offset + in_blob + 3]
-                instruction = (b0 as Instruction) | ((b1 as Instruction) << 8) | ((b2 as Instruction) << 16) | ((b3 as Instruction) << 24)
+            var blob_end:Address = (blob_offset + blob_size) as Address
+            if pc >= blob_offset && pc < blob_end {
+                instruction = load_instruction_word_padded(internal_offset, pc - blob_offset, blob_size)
                 return
             }
         }
         internal_offset = internal_offset + blob_size
     }
+}
 
-    // Gap in the dense executable span, or pc outside any executable blob.
-    instruction = 0
+// Load a little-endian 32-bit word from blob data, zero-padding bytes past blob_size.
+fn load_instruction_word_padded(data_offset:Length, in_blob:Address, blob_size:Length) -> (instruction:Instruction) {
+    var b0:Byte = 0
+    var b1:Byte = 0
+    var b2:Byte = 0
+    var b3:Byte = 0
+
+    if in_blob < blob_size {
+        b0 = blobs_data[data_offset + in_blob]
+    }
+    if in_blob + 1 < blob_size {
+        b1 = blobs_data[data_offset + in_blob + 1]
+    }
+    if in_blob + 2 < blob_size {
+        b2 = blobs_data[data_offset + in_blob + 2]
+    }
+    if in_blob + 3 < blob_size {
+        b3 = blobs_data[data_offset + in_blob + 3]
+    }
+
+    instruction = (b0 as Instruction) | ((b1 as Instruction) << 8) | ((b2 as Instruction) << 16) | ((b3 as Instruction) << 24)
 }
