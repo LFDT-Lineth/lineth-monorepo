@@ -273,7 +273,7 @@ func buildOverLimitLookup(t *testing.T, aSize, bSize int) *wiop.Runtime {
 // witness round ahead of the M-assignment task — must panic before any row is
 // touched.
 func TestCompile_RowLimit_ProverPanics(t *testing.T) {
-	rt := buildOverLimitLookup(t, 1<<30, 2) // A side = 2^30 rows (>= bound); B side tiny.
+	rt := buildOverLimitLookup(t, 1<<30, 2)   // A side = 2^30 rows (>= bound); B side tiny.
 	assert.Panics(t, func() { runRound(rt) }, // round 0: limit action, then M task.
 		"prover must panic when a lookup side reaches the row limit")
 }
