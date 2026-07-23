@@ -16,7 +16,7 @@ go run main.go <elfFile> <inBytes|@hexFile> <inBytesOffset> > input.json
 
 Without pre-decoding, the ZkC interpreter decodes each instruction *at runtime,
 every step*: fetch the 32-bit word from RAM, peel off the `opcode`, derive the
-instruction `type`, then split out the per-format fields (`rd`, `rs1`, `imm`, …).
+instruction `type`, then split out the bitfields (`rd`, `rs1`, `imm`, …).
 That work repeats for every executed instruction and adds to the machine's cost.
 
 Because the program text is static, this tool decodes **every instruction word
