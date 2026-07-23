@@ -4,8 +4,10 @@ import com.sksamuel.hoplite.ConfigException
 import linea.blob.BlobCompressorVersion
 import linea.blob.ShnarfCalculatorVersion
 import linea.coordinator.config.v2.toml.ConflationToml
+import linea.coordinator.config.v2.toml.DefaultsToml
 import linea.coordinator.config.v2.toml.parseConfig
 import linea.kotlin.toURL
+import net.consensys.linea.traces.TracesCountersV5
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -32,6 +34,7 @@ class ConflationParsingTest {
       consistent-number-of-blocks-on-l1-to-wait = 1
       force-stop-conflation-at-block-inclusive = 5000
       force-stop-conflation-at-block-timestamp-inclusive= 1758083130
+      riscv-starting-block-timestamp-inclusive = 1758083131
 
 
       [conflation.blob-compression]
@@ -65,6 +68,7 @@ class ConflationParsingTest {
         consistentNumberOfBlocksOnL1ToWait = 1u,
         forceStopConflationAtBlockInclusive = 5000u,
         forceStopConflationAtBlockTimestampInclusive = Instant.fromEpochSeconds(1758083130),
+        riscvStartingBlockTimestampInclusive = Instant.fromEpochSeconds(1758083131),
         blobCompression =
         ConflationToml.BlobCompressionToml(
           blobSizeLimit = 102_400U,
@@ -186,6 +190,24 @@ class ConflationParsingTest {
 
     assertThat(reifiedBlobCompression).isEqualTo(expectedBlobCompression)
     assertThat(reifiedBlobCompression.shnarfCalculatorVersion).isEqualTo(expectedShnarfCalculatorVersion)
+  }
+
+  @Test
+  fun `should reify riscvStartingBlockTimestampInclusive into domain config`() {
+    val domainConfig = config.reified(
+      defaults = DefaultsToml(),
+      tracesCountersLimitsV4 = null,
+      tracesCountersLimitsV5 = TracesCountersV5.EMPTY_TRACES_COUNT,
+    )
+    assertThat(domainConfig.riscvStartingBlockTimestampInclusive)
+      .isEqualTo(Instant.fromEpochSeconds(1758083131))
+
+    val domainConfigMinimal = configMinimal.copy(l2Endpoint = "http://l2-node:8545".toURL()).reified(
+      defaults = DefaultsToml(),
+      tracesCountersLimitsV4 = null,
+      tracesCountersLimitsV5 = TracesCountersV5.EMPTY_TRACES_COUNT,
+    )
+    assertThat(domainConfigMinimal.riscvStartingBlockTimestampInclusive).isNull()
   }
 
   @Test

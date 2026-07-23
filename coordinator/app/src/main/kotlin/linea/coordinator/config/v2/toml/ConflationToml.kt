@@ -27,6 +27,7 @@ data class ConflationToml(
   val blobCompression: BlobCompressionToml = BlobCompressionToml(),
   val proofAggregation: ProofAggregationToml = ProofAggregationToml(),
   val backtestingDirectory: Path? = null,
+  val riscvStartingBlockTimestampInclusive: Instant? = null,
 ) {
   init {
     require(proofAggregation.proofsLimit >= (blobCompression.batchesLimit ?: 1u) + 1u) {
@@ -119,6 +120,7 @@ data class ConflationToml(
           "either tracesCountersLimitsV4 or tracesCountersLimitsV5 must be set"
         },
       backtestingDirectory = backtestingDirectory,
+      riscvStartingBlockTimestampInclusive = this.riscvStartingBlockTimestampInclusive,
     )
   }
 }
