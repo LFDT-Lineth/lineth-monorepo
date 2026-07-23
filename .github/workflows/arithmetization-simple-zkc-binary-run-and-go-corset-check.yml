@@ -63,10 +63,10 @@ jobs:
           KECCAK_JSON_FILE: common_inputs/keccak_check.json
           ZKC_EXEC_FLAGS: "--check"
           
-      - name: Run a single Keccak custom1 opcode program and check it
+      - name: Run a single Keccak custom1 opcode program trace and check it
         working-directory: arithmetization/src/test
         run: make zkc-exec
         env:
           ZKC_EXEC_FLAGS: "--check"
-          JSON: json/keccak_single.json
+          JSON: rust/src/keccak/keccak_single.json
 
