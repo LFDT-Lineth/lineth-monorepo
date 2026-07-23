@@ -5,15 +5,23 @@ import io.vertx.core.Vertx
 import io.vertx.micrometer.backends.BackendRegistries
 import io.vertx.micrometer.backends.NoopBackendRegistry
 import io.vertx.sqlclient.SqlClient
+import linea.DisabledService
+import linea.LongRunningService
+import linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
 import linea.coordinator.api.Api
+import linea.coordinator.app.conflation.ConflationAppV1
 import linea.coordinator.app.conflationbacktesting.ConflationBacktestingService
 import linea.coordinator.config.v2.CoordinatorConfig
 import linea.coordinator.config.v2.DatabaseConfig
+import linea.coordinator.config.v2.isEnabled
 import linea.coordinator.config.v2.logPretty
 import linea.coordinator.extensions.CoordinatorContext
 import linea.coordinator.extensions.CoordinatorExtensionFactory
-import linea.fileio.DirectoryCleaner
+import linea.domain.BlockParameter
+import linea.domain.RetryConfig
+import linea.ethapi.EthLogsSearcherImpl
 import linea.persistence.DisabledForcedTransactionsDao
+import linea.persistence.FeeHistoriesPostgresDao
 import linea.persistence.conflation.AggregationsRepositoryImpl
 import linea.persistence.conflation.BatchesPostgresDao
 import linea.persistence.conflation.BlobsPostgresDao
@@ -27,6 +35,8 @@ import linea.persistence.db.Db
 import linea.persistence.db.PersistenceRetryer
 import linea.persistence.ftx.PostgresForcedTransactionsDao
 import linea.persistence.ftx.RetryingPostgresForcedTransactionsDao
+import linea.web3j.createWeb3jHttpClient
+import linea.web3j.ethapi.createEthApiClient
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.jsonrpc.client.LoadBalancingJsonRpcClient
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
@@ -37,6 +47,7 @@ import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.seconds
 
 class CoordinatorApp(
   private val configs: CoordinatorConfig,
@@ -113,21 +124,6 @@ class CoordinatorApp(
         persistenceRetryer = persistenceRetryer,
       ),
     )
-
-  private val forcedTransactionsDao = run {
-    if (configs.forcedTransactions?.disabled ?: true) {
-      DisabledForcedTransactionsDao()
-    } else {
-      RetryingPostgresForcedTransactionsDao(
-        delegate =
-        PostgresForcedTransactionsDao(
-          connection = sqlClient,
-        ),
-        persistenceRetryer = persistenceRetryer,
-      )
-    }
-  }
-
   private val blobsRepository =
     BlobsRepositoryImpl(
       blobsDao =
@@ -143,7 +139,6 @@ class CoordinatorApp(
         persistenceRetryer = persistenceRetryer,
       ),
     )
-
   private val aggregationsRepository =
     AggregationsRepositoryImpl(
       aggregationsPostgresDao =
@@ -155,21 +150,122 @@ class CoordinatorApp(
         persistenceRetryer = persistenceRetryer,
       ),
     )
+  private val forcedTransactionsDao = run {
+    if (configs.forcedTransactions?.disabled ?: true) {
+      DisabledForcedTransactionsDao()
+    } else {
+      RetryingPostgresForcedTransactionsDao(
+        delegate =
+        PostgresForcedTransactionsDao(
+          connection = sqlClient,
+        ),
+        persistenceRetryer = persistenceRetryer,
+      )
+    }
+  }
+  private val feeHistoriesDao = FeeHistoriesPostgresDao(sqlClient)
 
-  private val l1App =
-    L1DependentApp(
-      configs = configs,
-      vertx = vertx,
-      httpJsonRpcClientFactory = httpJsonRpcClientFactory,
-      batchesRepository = batchesRepository,
-      blobsRepository = blobsRepository,
-      forcedTransactionsDao = forcedTransactionsDao,
-      aggregationsRepository = aggregationsRepository,
-      sqlClient = sqlClient,
-      smartContractErrors = configs.smartContractErrors,
-      metricsFacade = micrometerMetricsFacade,
-      clock = this.clock,
+  private val l1ChainId: ULong = createEthApiClient(
+    rpcUrl = configs.l1FinalizationMonitor.l1Endpoint.toString(),
+    log = LogManager.getLogger("clients.l1.eth"),
+    vertx = vertx,
+    requestRetryConfig = RetryConfig.endlessRetry(
+      backoffDelay = 1.seconds,
+      failuresWarningThreshold = 3u,
+    ),
+  ).ethChainId().get()
+
+  private val lineaRollupClientForFinalizationMonitor = run {
+    val web3j = createWeb3jHttpClient(
+      rpcUrl = configs.l1FinalizationMonitor.l1Endpoint.toString(),
+      log = LogManager.getLogger("clients.l1.eth.finalization-monitor"),
     )
+    Web3JLineaRollupSmartContractClientReadOnly(
+      contractAddress = configs.protocol.l1.contractAddress,
+      web3j = web3j,
+      ethLogsSearcher = EthLogsSearcherImpl(
+        vertx = vertx,
+        ethApiClient = createEthApiClient(
+          web3jClient = web3j,
+          requestRetryConfig = configs.l1FinalizationMonitor.l1RequestRetries,
+          vertx = vertx,
+        ),
+      ),
+      finalizedStateSearchInitialBlockParameter = configs.protocol.l1.contractDeploymentBlockNumber
+        ?: BlockParameter.Tag.EARLIEST,
+    )
+  }
+
+  private val lastFinalizedBlock: ULong = L1BasedLastFinalizedBlockProvider(
+    vertx,
+    lineaRollupSmartContractClient = lineaRollupClientForFinalizationMonitor,
+    consistentNumberOfBlocksOnL1 = configs.conflation.consistentNumberOfBlocksOnL1ToWait,
+  ).getLastFinalizedBlock().get()
+
+  private val conflationApp: ConflationAppV1 = ConflationAppV1(
+    vertx = vertx,
+    clock = clock,
+    batchesRepository = batchesRepository,
+    blobsRepository = blobsRepository,
+    aggregationsRepository = aggregationsRepository,
+    forcedTransactionsDao = forcedTransactionsDao,
+    lastFinalizedBlock = lastFinalizedBlock,
+    configs = configs,
+    metricsFacade = micrometerMetricsFacade,
+    httpJsonRpcClientFactory = httpJsonRpcClientFactory,
+  )
+
+  private val l1FinalizationMonitorApp = L1FinalizationMonitorApp(
+    configs = configs,
+    vertx = vertx,
+    httpJsonRpcClientFactory = httpJsonRpcClientFactory,
+    finalizedStateDataProvider = lineaRollupClientForFinalizationMonitor,
+    lastFinalizedBlock = lastFinalizedBlock,
+    batchesRepository = batchesRepository,
+    blobsRepository = blobsRepository,
+    aggregationsRepository = aggregationsRepository,
+    forcedTransactionsDao = forcedTransactionsDao,
+    metricsFacade = micrometerMetricsFacade,
+    l1FinalizationUpdateHandler = conflationApp::updateLatestL1FinalizedBlock,
+  )
+
+  private val messageAnchoringApp: LongRunningService = MessageAnchoringAppConfigurator.create(
+    vertx = vertx,
+    configs = configs,
+  )
+
+  private val l1RelayingAppV1 = run {
+    if (configs.l1Submission.isEnabled()) {
+      L1RelayingAppV1(
+        configs = configs,
+        l1SubmissionConfig = configs.l1Submission!!,
+        vertx = vertx,
+        l1ChainId = l1ChainId,
+        lastFinalizedBlock = lastFinalizedBlock,
+        smartContractErrors = configs.smartContractErrors,
+        metricsFacade = micrometerMetricsFacade,
+        feeHistoriesDao = feeHistoriesDao,
+        blobsRepository = blobsRepository,
+        aggregationsRepository = aggregationsRepository,
+      )
+    } else {
+      log.warn("L1 submission disabled for blobs and aggregations")
+      DisabledService("L1RelayingApp")
+    }
+  }
+
+  private val l2PricingApp: LongRunningService =
+    if (configs.l2NetworkGasPricing.isEnabled()) {
+      L2PricingApp(
+        l2NetworkGasPricingConfig = configs.l2NetworkGasPricing!!,
+        vertx = vertx,
+        metricsFacade = micrometerMetricsFacade,
+        httpJsonRpcClientFactory = httpJsonRpcClientFactory,
+      )
+    } else {
+      log.warn("L2 Network dynamic gas pricing is disabled")
+      DisabledService("L2PricingApp")
+    }
 
   // Resolve extensions once, against the infrastructure already built above. Done before any
   // service is started so their services join the lifecycle and their handlers join the router.
@@ -201,39 +297,8 @@ class CoordinatorApp(
       vertx = vertx,
       conflationBacktestingService = conflationBacktestingService,
       metricsFacade = micrometerMetricsFacade,
-      conflationCheckpointResumeLatch = l1App::signalTargetCheckpointResumeFromApi,
+      conflationCheckpointResumeLatch = conflationApp::signalTargetCheckpointResumeFromApi,
       additionalRequestHandlers = extensionRpcHandlers,
-    )
-
-  private val requestFileCleanup =
-    DirectoryCleaner(
-      vertx = vertx,
-      directories =
-      listOfNotNull(
-        configs.proversConfig.proverA.execution.requestsDirectory,
-        configs.proversConfig.proverA.blobCompression.requestsDirectory,
-        configs.proversConfig.proverA.proofAggregation.requestsDirectory,
-        configs.proversConfig.proverB?.execution?.requestsDirectory,
-        configs.proversConfig.proverB?.blobCompression?.requestsDirectory,
-        configs.proversConfig.proverB?.proofAggregation?.requestsDirectory,
-      ),
-      fileFilters =
-      DirectoryCleaner.getSuffixFileFilters(
-        listOfNotNull(
-          configs.proversConfig.proverA.execution.inprogressRequestWritingSuffix,
-          configs.proversConfig.proverA.blobCompression.inprogressRequestWritingSuffix,
-          configs.proversConfig.proverA.proofAggregation.inprogressRequestWritingSuffix,
-          configs.proversConfig.proverB?.execution?.inprogressRequestWritingSuffix,
-          configs.proversConfig.proverB?.blobCompression?.inprogressRequestWritingSuffix,
-          configs.proversConfig.proverB?.proofAggregation?.inprogressRequestWritingSuffix,
-        ),
-      ) +
-        if (configs.proversConfig.enableRequestFilesCleanup) {
-          // Will delete prover request .json files from all the directories
-          listOf(DirectoryCleaner.JSON_FILE_FILTER)
-        } else {
-          emptyList()
-        },
     )
 
   init {
@@ -241,8 +306,12 @@ class CoordinatorApp(
   }
 
   fun start() {
-    requestFileCleanup.cleanup()
-      .thenCompose { l1App.start() }
+    SafeFuture.completedFuture(Unit)
+      .thenCompose { l1FinalizationMonitorApp.start() }
+      .thenCompose { conflationApp.start() }
+      .thenCompose { l1RelayingAppV1.start() }
+      .thenCompose { messageAnchoringApp.start() }
+      .thenCompose { l2PricingApp.start() }
       .thenCompose { conflationBacktestingService.start() }
       .thenCompose {
         SafeFuture.allOf(*extensionServices.map { it.start().toSafeFuture() }.toTypedArray())
@@ -255,20 +324,24 @@ class CoordinatorApp(
 
   fun stop(): Int {
     return try {
-      SafeFuture.allOf(
-        SafeFuture.allOf(*extensionServices.map { it.stop().toSafeFuture() }.toTypedArray()),
-        l1App.stop(),
-        api.stop(),
-        conflationBacktestingService.stop(),
-      ).thenApply {
-        LoadBalancingJsonRpcClient.stop()
-      }.thenCompose {
-        requestFileCleanup.cleanup()
-      }.thenCompose {
-        vertx.close().toSafeFuture().thenApply { log.info("vertx Stopped") }
-      }.thenApply {
-        log.info("CoordinatorApp Stopped")
-      }.get()
+      l1FinalizationMonitorApp.stop()
+        .thenCompose { conflationApp.stop() }
+        .thenCompose {
+          SafeFuture.allOf(
+            SafeFuture.allOf(*extensionServices.map { it.stop().toSafeFuture() }.toTypedArray()),
+            l2PricingApp.stop(),
+            messageAnchoringApp.stop(),
+            l1RelayingAppV1.stop(),
+            api.stop(),
+            conflationBacktestingService.stop(),
+          )
+        }.thenApply {
+          LoadBalancingJsonRpcClient.stop()
+        }.thenCompose {
+          vertx.close().toSafeFuture().thenApply { log.info("vertx Stopped") }
+        }.thenApply {
+          log.info("CoordinatorApp Stopped")
+        }.get()
       0
     } catch (e: Exception) {
       log.error("CoordinatorApp Stopped with error: errorMessage={}", e.message, e)
