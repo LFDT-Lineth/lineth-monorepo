@@ -3,6 +3,7 @@
 ### ⚙️ Miscellaneous Tasks
 
 - *(coordinator)* Add riscv enablement config (#3617)
+- *(coordinator)* Adds initial scafold for contract v9 RISC-V (#3618)
 ## [1.0.0] - 2026-07-22
 
 ### 🚀 Features

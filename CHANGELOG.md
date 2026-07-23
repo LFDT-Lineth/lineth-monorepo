@@ -97,3 +97,6 @@
 - *(ci)* Update image tags (#3553)
 - *(deps)* Align bouncycastle catalog pin to 1.84 (#3562)
 - *(linea-besu)* Tidy v2.0.0 changelog entries (#3574)
+- *(misc)* Cleanup redundant deps (#3596)
+- *(coordinator)* Add riscv enablement config (#3617)
+- *(coordinator)* Adds initial scafold for contract v9 RISC-V (#3618)
