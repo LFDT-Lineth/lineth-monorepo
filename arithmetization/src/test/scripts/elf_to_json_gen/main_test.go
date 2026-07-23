@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"debug/elf"
 	"encoding/binary"
 	"encoding/hex"
@@ -128,35 +129,91 @@ func TestIsRdZeroNoop(t *testing.T) {
 }
 
 func TestBuildDecodedProgramRewritesRdZeroNoop(t *testing.T) {
-	// Minimal synthetic executable image: one addi x0,x0,0 at base 0x1000.
+	// A single `addi x0, x0, 0` (an rd-zero noop) placed in an executable
+	// section at base 0x1000. buildDecodedProgram must rewrite it to a
+	// MISC_MEM record so the interpreter only advances PC by 4.
 	const base uint64 = 0x1000
 	instr := encodeIType(opcodeOPIMM, 0b000, 0, 0, 0)
-	image := make([]byte, 4)
-	image[0] = byte(instr)
-	image[1] = byte(instr >> 8)
-	image[2] = byte(instr >> 16)
-	image[3] = byte(instr >> 24)
+	code := make([]byte, 4)
+	binary.LittleEndian.PutUint32(code, instr)
 
-	var coreBits bitWriter
-	opcode := instr & 0x7f
-	rd := (instr >> 7) & 0x1f
-	rs1 := (instr >> 15) & 0x1f
-	funct3 := (instr >> 12) & 0x7
-	imm12 := (instr >> 20) & 0xfff
-	funct7 := (instr >> 25) & 0x7f
-	instrType := instructionTypeFromOpcode(opcode)
-	if isRdZeroNoop(opcode, instrType, rd, rs1, 0, funct3, imm12, funct7) {
-		instrType = miscMemType
+	f, err := elf.NewFile(bytes.NewReader(buildSyntheticELF(t, base, code)))
+	if err != nil {
+		t.Fatalf("elf.NewFile: %v", err)
 	}
-	coreBits.writeBits(uint64(opcode), 7)
-	coreBits.writeBits(uint64(instrType), 4)
-	coreBits.writeBits(uint64((instr>>7)&0x1ffffff), 25)
+	defer f.Close()
 
-	if instrType != miscMemType {
-		t.Fatalf("expected rewritten type %d, got %d", miscMemType, instrType)
+	gotBase, nRecords, decodedHex := buildDecodedProgram(f.Sections)
+	if gotBase != base {
+		t.Fatalf("base = %#x, want %#x", gotBase, base)
 	}
-	_ = base
-	_ = image
+	if nRecords != 1 {
+		t.Fatalf("nRecords = %d, want 1", nRecords)
+	}
+
+	ops := decodeComputeOpsFromHex(decodedHex, nRecords)
+	if ops[0] != computeMiscMem {
+		t.Fatalf("compute_op = %d, want %d (rd-zero noop rewritten to MISC_MEM)", ops[0], computeMiscMem)
+	}
+}
+
+// buildSyntheticELF builds a minimal little-endian RISC-V ELF64 image in memory
+// containing a single executable `.text` section (holding code, mapped at base)
+// plus a `.shstrtab`, suitable for feeding to elf.NewFile in tests.
+func buildSyntheticELF(t *testing.T, base uint64, code []byte) []byte {
+	t.Helper()
+	const (
+		ehSize  = 64 // Elf64_Ehdr
+		shSize  = 64 // Elf64_Shdr
+		numSecs = 3  // NULL, .text, .shstrtab
+	)
+
+	// Section-header string table: index 0 is the empty name.
+	shstrtab := []byte{0}
+	textNameOff := len(shstrtab)
+	shstrtab = append(shstrtab, ".text\x00"...)
+	shstrNameOff := len(shstrtab)
+	shstrtab = append(shstrtab, ".shstrtab\x00"...)
+
+	// Layout: [ehdr][code][shstrtab][section headers].
+	textOff := ehSize
+	shstrOff := textOff + len(code)
+	shoff := shstrOff + len(shstrtab)
+	buf := make([]byte, shoff+numSecs*shSize)
+
+	le := binary.LittleEndian
+	copy(buf, []byte{0x7f, 'E', 'L', 'F'})
+	buf[4] = 2 // ELFCLASS64
+	buf[5] = 1 // ELFDATA2LSB
+	buf[6] = 1 // EV_CURRENT
+	le.PutUint16(buf[16:], uint16(elf.ET_EXEC))
+	le.PutUint16(buf[18:], uint16(elf.EM_RISCV))
+	le.PutUint32(buf[20:], 1) // e_version
+	le.PutUint64(buf[24:], base)
+	le.PutUint64(buf[40:], uint64(shoff))
+	le.PutUint16(buf[52:], ehSize)
+	le.PutUint16(buf[58:], shSize)
+	le.PutUint16(buf[60:], numSecs)
+	le.PutUint16(buf[62:], 2) // e_shstrndx
+
+	copy(buf[textOff:], code)
+	copy(buf[shstrOff:], shstrtab)
+
+	writeShdr := func(idx int, name, typ uint32, flags, addr, off, size uint64) {
+		o := shoff + idx*shSize
+		le.PutUint32(buf[o:], name)
+		le.PutUint32(buf[o+4:], typ)
+		le.PutUint64(buf[o+8:], flags)
+		le.PutUint64(buf[o+16:], addr)
+		le.PutUint64(buf[o+24:], off)
+		le.PutUint64(buf[o+32:], size)
+	}
+	writeShdr(0, 0, uint32(elf.SHT_NULL), 0, 0, 0, 0)
+	writeShdr(1, uint32(textNameOff), uint32(elf.SHT_PROGBITS),
+		uint64(elf.SHF_ALLOC|elf.SHF_EXECINSTR), base, uint64(textOff), uint64(len(code)))
+	writeShdr(2, uint32(shstrNameOff), uint32(elf.SHT_STRTAB), 0, 0, uint64(shstrOff), uint64(len(shstrtab)))
+
+	return buf
 }
 
 func TestDecodeITypeSemantic(t *testing.T) {

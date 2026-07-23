@@ -1063,7 +1063,8 @@ func collectExecutableImage(sections []*elf.Section) (base uint64, image []byte,
 		}
 	}
 	if len(execSections) == 0 {
-		panic("no executable sections found for instruction decoding")
+		fmt.Fprintln(os.Stderr, "error: no executable sections found for instruction decoding")
+		os.Exit(1)
 	}
 	base = minAddr &^ 0x3
 	end := (maxEnd + 3) &^ uint64(0x3)
