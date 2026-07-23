@@ -58,6 +58,7 @@ jobs:
         working-directory: arithmetization/src/test
         timeout-minutes: 15
         env:
+          ZKC_REF: "" # Empty to avoid installing zkc again
           KECCAK_N_VECTORS: 1
           KECCAK_JSON_FILE: common_inputs/keccak_check.json
-          ZKC_EXEC_FLAGS: "--check -q"
+          ZKC_EXEC_FLAGS: "--check"
