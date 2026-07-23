@@ -1,5 +1,9 @@
 ## [unreleased]
 
+### 🚜 Refactor
+
+- *(coordinator)* Decompose L1DependentApp into smaller scoped apps (#3615)
+
 ### ⚙️ Miscellaneous Tasks
 
 - *(coordinator)* Add riscv enablement config (#3617)
