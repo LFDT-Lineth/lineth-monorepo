@@ -13,6 +13,7 @@
 - *(coordinator)* Add inital block number config for finalized state search (#3534)
 - *(coordinator)* Add extension seam (#3532)
 - *(coordinator)* Wire config-docs via a buildSrc plugin and declarative spec (#3607)
+- *(coordinator)* Document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)
 
 ### 🐛 Bug Fixes
 
