@@ -142,21 +142,16 @@ func TestIsRdZeroNoop(t *testing.T) {
 }
 
 func TestBuildDecodedProgramRewritesRdZeroNoop(t *testing.T) {
-	// A single `addi x0, x0, 0` (an rd-zero noop) placed in an executable
-	// section at base 0x1000. buildDecodedProgram must rewrite it to a
-	// MISC_MEM record so the interpreter only advances PC by 4.
+	// A single `addi x0, x0, 0` (an rd-zero noop) in an executable blob at
+	// base 0x1000. buildDecodedProgram must rewrite it to a MISC_MEM record so
+	// the interpreter only advances PC by 4.
 	const base uint64 = 0x1000
 	instr := encodeIType(opcodeOPIMM, 0b000, 0, 0, 0)
 	code := make([]byte, 4)
 	binary.LittleEndian.PutUint32(code, instr)
 
-	f, err := elf.NewFile(bytes.NewReader(buildSyntheticELF(t, base, code)))
-	if err != nil {
-		t.Fatalf("elf.NewFile: %v", err)
-	}
-	defer f.Close()
-
-	gotBase, nRecords, decodedHex := buildDecodedProgram(f.Sections)
+	blobs := []memoryBlob{{offset: base, data: code, executable: true, name: ".text"}}
+	gotBase, nRecords, decodedHex := buildDecodedProgram(blobs)
 	if gotBase != base {
 		t.Fatalf("base = %#x, want %#x", gotBase, base)
 	}
@@ -167,6 +162,31 @@ func TestBuildDecodedProgramRewritesRdZeroNoop(t *testing.T) {
 	ops := decodeComputeOpsFromHex(decodedHex, nRecords)
 	if ops[0] != computeMiscMem {
 		t.Fatalf("compute_op = %d, want %d (rd-zero noop rewritten to MISC_MEM)", ops[0], computeMiscMem)
+	}
+}
+
+func TestCollectExecutableImageUsesExecutableBlobsOnly(t *testing.T) {
+	const base uint64 = 0x1000
+	textInstr := encodeIType(opcodeOPIMM, 0b000, 5, 5, 1)
+	textCode := make([]byte, 4)
+	binary.LittleEndian.PutUint32(textCode, textInstr)
+
+	// Only loadable executable blob bytes belong in the pre-decoded image; a
+	// non-allocated SHF_EXECINSTR section at base+0x100 must not affect decoding.
+	blobs := []memoryBlob{
+		{offset: base, data: textCode, executable: true, name: ".text"},
+		{offset: base + 0x100, data: []byte{0xde, 0xad, 0xbe, 0xef}, executable: false, name: ".data"},
+	}
+
+	gotBase, image, nRecords := collectExecutableImage(blobs)
+	if gotBase != base {
+		t.Fatalf("base = %#x, want %#x", gotBase, base)
+	}
+	if nRecords != 1 {
+		t.Fatalf("nRecords = %d, want 1", nRecords)
+	}
+	if !bytes.Equal(image, textCode) {
+		t.Fatalf("image = %x, want %x", image, textCode)
 	}
 }
 
@@ -255,6 +275,7 @@ func TestDecodeITypeSemantic(t *testing.T) {
 		{name: "srliw", opcode: opcodeOPIMM32, funct3: 0b101, imm12: 0b000000000011, wantOp: itypeOpSrliw, wantImm12: 3},
 		{name: "sraiw", opcode: opcodeOPIMM32, funct3: 0b101, imm12: 0b010000000100, wantOp: itypeOpSraiw, wantImm12: 4},
 		{name: "jalr", opcode: opcodeJALR, funct3: 0, imm12: 0, wantOp: itypeJalr, wantImm12: 0},
+		{name: "invalid jalr funct3", opcode: opcodeJALR, funct3: 0b001, imm12: 0, wantOp: itypeInvalid, wantImm12: 0},
 		{name: "ecall", opcode: opcodeSYSTEM, funct3: 0, imm12: funct12Ecall, wantOp: itypeEcall, wantImm12: funct12Ecall},
 		{name: "ebreak", opcode: opcodeSYSTEM, funct3: 0, imm12: funct12Ebreak, wantOp: itypeEbreak, wantImm12: funct12Ebreak},
 		{name: "invalid slli funct6", opcode: opcodeOPIMM, funct3: 0b001, imm12: 0b010000000100, wantOp: itypeInvalid, wantImm12: 0b010000000100},
@@ -599,6 +620,7 @@ func TestClassifyInstructionExamples(t *testing.T) {
 		{name: "rd-zero noop", instr: encodeIType(opcodeOPIMM, 0b000, 0, 0, 0), want: computeMiscMem},
 		{name: "fence", instr: opcodeMISCMEM | (0b000 << 12) | (0b001 << 7), want: computeMiscMem},
 		{name: "addi", instr: encodeIType(opcodeOPIMM, 0b000, 5, 5, 1), want: computeITypeBase + itypeOpAddiWB},
+		{name: "invalid jalr funct3", instr: encodeIType(opcodeJALR, 0b001, 5, 5, 0), want: computeInvalid},
 		{name: "keccak", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b000, 1), want: computeRTypeBase + rtypeOpKeccak},
 		{name: "poseidon2", instr: encodeRType(opcodeCUSTOM1, 0, 0, 0, 0b001, 1), want: computeRTypeBase + rtypeOpPoseidon2},
 	}
@@ -670,8 +692,9 @@ func TestClassifyRoundTripELF(t *testing.T) {
 				t.Fatalf("elf.Open(%q): %v", elfPath, err)
 			}
 			defer f.Close()
-			_, image, nRecords := collectExecutableImage(f.Sections)
-			_, _, decodedHex := buildDecodedProgram(f.Sections)
+			blobs := extractProgramBlobs(f.Progs, f.Sections)
+			_, image, nRecords := collectExecutableImage(blobs)
+			_, _, decodedHex := buildDecodedProgram(blobs)
 			if uint64(len(image)/4) != nRecords {
 				t.Fatalf("image records %d != nRecords %d", len(image)/4, nRecords)
 			}

@@ -506,6 +506,9 @@ func decodeITypeSemantic(opcode, funct3, imm12 uint32) (computeOp, normalizedImm
 			return itypeInvalid, imm12
 		}
 	case opcodeJALR:
+		if funct3 != 0b000 {
+			return itypeInvalid, imm12
+		}
 		return itypeJalr, imm12
 	case opcodeSYSTEM:
 		switch funct3 {
@@ -838,8 +841,9 @@ func main() {
 		os.Exit(1)
 	}
 	// Statically decode the executable region into the pre-decoded instruction
-	// input tables consumed by the interpreter.
-	base, _, decodedHex := buildDecodedProgram(elfFile.Sections)
+	// input tables consumed by the interpreter. Must use the same executable
+	// blobs as blobs_data / read_instruction_from_blobs (not raw SHF_EXECINSTR sections).
+	base, _, decodedHex := buildDecodedProgram(blobs)
 	printJson(blobs, elfFile.Entry, base, decodedHex)
 }
 
@@ -1050,47 +1054,50 @@ func classifyInstruction(instr uint32) uint32 {
 }
 
 // collectExecutableImage builds the dense zero-filled executable span used by
-// buildDecodedProgram.
-func collectExecutableImage(sections []*elf.Section) (base uint64, image []byte, nRecords uint64) {
+// buildDecodedProgram from executable-flagged blobs (same bytes as blobs_data and
+// read_instruction_from_blobs in ZkC). Non-allocated SHF_EXECINSTR sections that
+// never appear in extractProgramBlobs are intentionally excluded.
+func collectExecutableImage(blobs []memoryBlob) (base uint64, image []byte, nRecords uint64) {
 	var (
-		execSections []*elf.Section
-		minAddr      = ^uint64(0)
-		maxEnd       uint64
+		minAddr = ^uint64(0)
+		maxEnd  uint64
+		nExec   int
 	)
-	for _, s := range sections {
-		if s.Size == 0 || s.Type == elf.SHT_NOBITS || s.Flags&elf.SHF_EXECINSTR == 0 {
+	for _, blob := range blobs {
+		if !blob.executable {
 			continue
 		}
-		execSections = append(execSections, s)
-		if s.Addr < minAddr {
-			minAddr = s.Addr
+		nExec++
+		if blob.offset < minAddr {
+			minAddr = blob.offset
 		}
-		if end := s.Addr + s.Size; end > maxEnd {
+		if end := blob.offset + uint64(len(blob.data)); end > maxEnd {
 			maxEnd = end
 		}
 	}
-	if len(execSections) == 0 {
-		fmt.Fprintln(os.Stderr, "error: no executable sections found for instruction decoding")
+	if nExec == 0 {
+		fmt.Fprintln(os.Stderr, "error: no executable blobs found for instruction decoding")
 		os.Exit(1)
 	}
 	base = minAddr &^ 0x3
 	end := (maxEnd + 3) &^ uint64(0x3)
 	nRecords = (end - base) / 4
 	image = make([]byte, end-base)
-	for _, s := range execSections {
-		data := readSectionBytes(s)
-		copy(image[s.Addr-base:], data)
+	for _, blob := range blobs {
+		if !blob.executable {
+			continue
+		}
+		copy(image[blob.offset-base:], blob.data)
 	}
 	return base, image, nRecords
 }
 
 // buildDecodedProgram statically decodes every 4-byte instruction word across
-// the executable region of the ELF, producing the base address plus the
-// hex-encoded decoded input array. The array is
-// dense (one record per word in [base, end)), indexed at runtime by
-// index = (pc - base) >> 2.
-func buildDecodedProgram(sections []*elf.Section) (base uint64, nRecords uint64, decodedHex string) {
-	base, image, nRecords := collectExecutableImage(sections)
+// the executable region, producing the base address plus the hex-encoded decoded
+// input array. The array is dense (one record per word in [base, end)), indexed
+// at runtime by index = (pc - base) >> 2.
+func buildDecodedProgram(blobs []memoryBlob) (base uint64, nRecords uint64, decodedHex string) {
+	base, image, nRecords := collectExecutableImage(blobs)
 	maxRecords := maxDecodedRecordsFromEnv()
 	if nRecords > maxRecords {
 		fmt.Fprintf(os.Stderr,

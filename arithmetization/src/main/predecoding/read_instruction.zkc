@@ -1,6 +1,7 @@
 // Read a 32-bit little-endian instruction word from executable-flagged blobs only.
-// Matches collectExecutableImage in elf_to_json_gen: trailing bytes in a partial final word are zero-filled.
-// Note: returns 0 if pc is outside the executable region.
+// Matches collectExecutableImage in elf_to_json_gen (executable blobs from
+// extractProgramBlobs). Trailing bytes in a partial final word are zero-filled.
+// Note: returns 0 if pc is outside any executable blob.
 fn read_instruction_from_blobs(pc:Address) -> (instruction:Instruction) {
     var blobs_count:u64
     var entry_point:Address

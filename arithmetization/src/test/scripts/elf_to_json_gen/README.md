@@ -172,15 +172,17 @@ The predicate lives in `isRdZeroNoop` in `main.go` (see `main_test.go`).
 
 All of this happens in `buildDecodedProgram`:
 
-1. **Find the code region.** Scan ELF sections, keep the executable, file-backed
-   ones (`SHF_EXECINSTR`), and compute the span `[base, end)` with `base` aligned
-   down and `end` up to a 4-byte boundary.
+1. **Find the code region.** Scan **executable blobs** emitted by
+   `extractProgramBlobs` (allocated `SHF_ALLOC` sections inside `PT_LOAD`, with
+   `SHF_EXECINSTR`), and compute the span `[base, end)` with `base` aligned down
+   and `end` up to a 4-byte boundary. Non-loadable exec sections are excluded so
+   pre-decoding matches `blobs_data` / `read_instruction_from_blobs`.
 2. **OOM guard.** The tables are *dense* (one record per 4-byte slot in the
    span), so an implausibly large / non-contiguous span is rejected. The cap is
    `defaultMaxDecodedRecords` (2,000,000), overridable via the
    `ELF2JSON_MAX_DECODED_RECORDS` environment variable.
-3. **Flatten to a byte image.** Copy each section into a zero-filled buffer so it
-   can be indexed contiguously (gaps read as zero).
+3. **Flatten to a byte image.** Copy each executable blob into a zero-filled
+   buffer so it can be indexed contiguously (gaps read as zero).
 4. **Decode each word.** Read the little-endian 32-bit instruction and extract
    fields with shifts/masks. `classifyInstruction` in `main.go` derives the
    instruction type (`instructionTypeFromOpcode`), applies the semantic
