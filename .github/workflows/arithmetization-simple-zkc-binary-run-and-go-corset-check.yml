@@ -53,10 +53,10 @@ jobs:
           ZKC_FILES: src/test/zkc/simple_add.zkc
           ZKC_INPUT: src/test/zkc/simple_add.json
 
-      - name: Run a single Keccak custom1 opcode program and check it
+      - name: Run a single Keccak custom1 opcode program trace and check it
         working-directory: arithmetization/src/test
         run: make zkc-exec
         env:
           ZKC_EXEC_FLAGS: "--check"
-          JSON: json/keccak_single.json
+          JSON: rust/src/keccak/keccak_single.json
 
