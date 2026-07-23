@@ -325,14 +325,13 @@ class CoordinatorAppV2(
   fun stop(): Int {
     return try {
       l1FinalizationMonitorApp.stop()
+        .thenCompose { conflationApp.stop() }
         .thenCompose {
-          conflationApp.stop()
           SafeFuture.allOf(
             SafeFuture.allOf(*extensionServices.map { it.stop().toSafeFuture() }.toTypedArray()),
             l2PricingApp.stop(),
             messageAnchoringApp.stop(),
             l1RelayingAppV1.stop(),
-            conflationApp.stop(),
             api.stop(),
             conflationBacktestingService.stop(),
           )
