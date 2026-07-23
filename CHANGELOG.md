@@ -53,6 +53,7 @@
 - *(maru)* Relocate Maru JVM libs (#3236)
 - *(misc)* Rename Linea to Lineth across documentation and codebase (#3316)
 - *(prover)* Remove redundant and unsafe utility functions (#3273)
+- *(coordinator)* Decompose L1DependentApp into smaller scoped apps (#3615)
 
 ### ⚡ Performance
 
