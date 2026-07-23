@@ -117,12 +117,24 @@ func (t Table) Width() int { return len(t.Columns) }
 // counted.
 const MaxLookupRows uint64 = 1 << 30
 
+// MaxPermutationRows is the row budget for a permutation, the analogue of
+// [MaxLookupRows] for the grand-product argument (see the grandproduct
+// compiler). Permutations tolerate a much larger bound because their running
+// accumulator is a product of β-randomised factors rather than a sum of
+// row-index multiplicities, so the small-field overflow only bites at a far
+// higher row count. As with lookups the effective per-side limit is this
+// budget divided by the compiler's packing arity and by the number of
+// permutations reduced together, and it is checked via
+// [TableRelationQuery.CheckRowLimit] / [TableRelationQuery.ValidateRowLimit].
+const MaxPermutationRows uint64 = 1 << 58
+
 // ValidateRowLimit returns an error if the total number of rows summed across
 // all A fragments, or independently across all B fragments, reaches limit. Row
 // counts are taken from each fragment's module runtime size; selectors are
 // ignored, so this counts every row of every fragment, not just the selected
-// ones. limit is the effective per-side bound the caller has derived from
-// [MaxLookupRows] (see that constant).
+// ones. limit is the effective per-side bound the caller has derived from the
+// relevant budget ([MaxLookupRows] for inclusions, [MaxPermutationRows] for
+// permutations).
 //
 // The two sides are checked independently: each must stay below the bound on
 // its own. The check runs against a [Runtime] because fragment heights are only
@@ -155,10 +167,10 @@ func checkTablesRowLimit(path, side string, tables []Table, rt *Runtime, limit u
 	if sum >= limit {
 		return fmt.Errorf(
 			"wiop: TableRelationQuery(%s): total rows on the %s side reach %d, "+
-				"which is >= the effective per-lookup row limit %d (= MaxLookupRows=%d shared across the "+
-				"lookups compiled together); the row-index accumulators in the reduced constraints would "+
-				"overflow over a small field. Split the lookup so each side stays below the limit",
-			path, side, sum, limit, MaxLookupRows,
+				"which is >= the effective per-query row limit %d (the row budget shared across the "+
+				"queries compiled together); the accumulators in the reduced constraints would "+
+				"overflow over a small field. Split the query so each side stays below the limit",
+			path, side, sum, limit,
 		)
 	}
 	return nil

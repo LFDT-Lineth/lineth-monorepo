@@ -40,6 +40,25 @@ func compilePermutations(sys *wiop.System) {
 		panic("wiop/compilers/grandproduct: permutation query references no round-bearing column")
 	}
 
+	// Enforce the per-permutation row limit before the grand-product discharge
+	// pass walks any row. The row-by-row accumulators are the per-module Z
+	// running-product columns, each packing up to packingArity factors; they are
+	// per module, so they do NOT grow with the number of permutations in the
+	// system (the aggregation into one GrandProduct only merges the final
+	// Result == 1 identity). The effective per-side limit is therefore
+	// MaxPermutationRows divided by the packing arity alone. Registered on
+	// maxRound (the witness round), which precedes the Result round where the
+	// row-walking prover actions live, so the prover fails fast; the verifier
+	// re-checks and rejects.
+	limit := wiop.MaxPermutationRows / uint64(packingArity)
+	for _, q := range perms {
+		// One instance serves both roles: it panics as a prover action and
+		// returns an error as a verifier action.
+		rowLimit := &rowLimitAction{query: q, limit: limit}
+		maxRound.RegisterAction(rowLimit)
+		maxRound.RegisterVerifierAction(rowLimit)
+	}
+
 	// β/α live one round after the witness columns; the GrandProduct Result one
 	// round after that. Both rounds must exist before NewGrandProduct runs.
 	coinRound := ensureNextRound(sys, maxRound)

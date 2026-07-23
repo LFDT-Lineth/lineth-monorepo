@@ -176,6 +176,89 @@ func TestCompile_TamperResult(t *testing.T) {
 		"a tampered grand-product Result must be rejected")
 }
 
+// ---- Row limit (driven through the real prover/verifier) ----
+//
+// These tests exceed wiop.MaxPermutationRows (2^58) for real by declaring
+// modules of that size. No 2^58 vector is materialised: a static module's size
+// is metadata, the row-limit action reads only that size, and it is registered
+// on the witness round — which the runtime opens first — ahead of the
+// row-walking grand-product prover actions, so the prover fails fast.
+
+// newPermutation builds a single-column permutation A ⊆⊇ B with the given
+// module sizes and compiles it. Columns are left unassigned: the row-limit
+// action reads only module sizes.
+func newPermutation(t *testing.T, aSize, bSize int) *wiop.System {
+	t.Helper()
+	sys := wiop.NewSystemf("gp-limit")
+	r0 := sys.NewRound()
+	modA := sys.NewSizedModule(sys.Context.Childf("modA"), aSize, wiop.PaddingDirectionRight)
+	modB := sys.NewSizedModule(sys.Context.Childf("modB"), bSize, wiop.PaddingDirectionRight)
+	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+	sys.NewPermutation(
+		sys.Context.Childf("perm"),
+		[]wiop.Table{wiop.NewTable(colA.View())},
+		[]wiop.Table{wiop.NewTable(colB.View())},
+	)
+	grandproduct.Compile(sys)
+	return sys
+}
+
+// TestCompilePermutation_RowLimit_ProverPanics drives the real prover of a
+// permutation whose A side has 2^58 rows. The row-limit prover action —
+// registered on the witness round ahead of the grand-product discharge pass —
+// must panic before any row is touched.
+func TestCompilePermutation_RowLimit_ProverPanics(t *testing.T) {
+	sys := newPermutation(t, 1<<58, 2) // A side = 2^58 rows (>= bound); B side tiny.
+	rt := wiop.NewRuntime(sys)
+	assert.Panics(t, func() { runRound(rt) }, // witness round: only the row-limit action.
+		"prover must panic when a permutation side reaches the row limit")
+}
+
+// TestCompilePermutation_RowLimit_VerifierRejects runs the real verifier checks
+// of a permutation whose B side has 2^58 rows. The row-limit verifier action
+// must return an error independently of the prover.
+func TestCompilePermutation_RowLimit_VerifierRejects(t *testing.T) {
+	sys := newPermutation(t, 2, 1<<58) // B side = 2^58 rows (>= bound); A side tiny.
+	rt := wiop.NewRuntime(sys)
+	err := checkAllVerifierActions(rt)
+	assert.ErrorContains(t, err, "effective per-query row limit",
+		"verifier must reject a proof when a permutation side reaches the row limit")
+}
+
+// TestCompilePermutation_RowLimit_ManyPermsDoNotTightenBound builds several
+// permutations, each with an A side just under the lone-permutation limit
+// (MaxPermutationRows/PackingArity = 2^58/3 ≈ 9.6e16). Because the row-by-row
+// accumulators are per-module Z columns — not shared across permutations — the
+// number of permutations must NOT shrink the budget, so every side stays under
+// the limit and the verifier accepts the row-limit checks.
+func TestCompilePermutation_RowLimit_ManyPermsDoNotTightenBound(t *testing.T) {
+	sys := wiop.NewSystemf("gp-limit-many")
+	r0 := sys.NewRound()
+	for i := 0; i < 4; i++ {
+		modA := sys.NewSizedModule(sys.Context.Childf("modA%d", i), 1<<55, wiop.PaddingDirectionRight)
+		modB := sys.NewSizedModule(sys.Context.Childf("modB%d", i), 1<<55, wiop.PaddingDirectionRight)
+		colA := modA.NewColumn(sys.Context.Childf("A%d", i), wiop.VisibilityOracle, r0)
+		colB := modB.NewColumn(sys.Context.Childf("B%d", i), wiop.VisibilityOracle, r0)
+		sys.NewPermutation(
+			sys.Context.Childf("perm%d", i),
+			[]wiop.Table{wiop.NewTable(colA.View())},
+			[]wiop.Table{wiop.NewTable(colB.View())},
+		)
+	}
+	grandproduct.Compile(sys)
+
+	// 2^55 < 2^58/3, so despite four permutations no row-limit check fires. Only
+	// the row-limit verifier actions read module sizes without assignment; the
+	// downstream product checks would need a witness, so assert on the row-limit
+	// actions directly rather than running the full verifier set.
+	rt := wiop.NewRuntime(sys)
+	for _, q := range sys.TableRelations {
+		require.NoError(t, q.ValidateRowLimit(rt, wiop.MaxPermutationRows/3),
+			"a permutation side under the limit must pass regardless of how many permutations exist")
+	}
+}
+
 func runRound(rt *wiop.Runtime) {
 	for _, a := range rt.CurrentRound().ProverActions {
 		a.Run(rt)

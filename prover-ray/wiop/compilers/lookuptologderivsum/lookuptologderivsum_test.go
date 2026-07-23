@@ -284,7 +284,7 @@ func TestCompile_RowLimit_ProverPanics(t *testing.T) {
 func TestCompile_RowLimit_VerifierRejects(t *testing.T) {
 	rt := buildOverLimitLookup(t, 2, 1<<30) // B side = 2^30 rows (>= bound); A side tiny.
 	err := checkAllVerifierActions(rt)
-	assert.ErrorContains(t, err, "effective per-lookup row limit",
+	assert.ErrorContains(t, err, "effective per-query row limit",
 		"verifier must reject a proof when a lookup side reaches the row limit")
 }
 
@@ -320,7 +320,7 @@ func TestCompile_RowLimit_GroupingTightensBound(t *testing.T) {
 	// The verifier check reads only module sizes, so no assignment is needed.
 	rt := wiop.NewRuntime(sys)
 	err := checkAllVerifierActions(rt)
-	assert.ErrorContains(t, err, "effective per-lookup row limit",
+	assert.ErrorContains(t, err, "effective per-query row limit",
 		"grouping two lookups must halve the budget and reject a 2^28-row side")
 }
 
