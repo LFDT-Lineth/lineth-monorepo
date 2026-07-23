@@ -12,7 +12,7 @@ import kotlin.time.Duration
 import kotlin.time.Instant
 
 class GasPriceCapProviderImpl(
-  val config: Config,
+  private val config: Config,
   private val l2EthApiBlockClient: EthApiBlockClient,
   feeHistoriesRepository: FeeHistoriesRepositoryWithCache,
   gasPriceCapCalculator: GasPriceCapCalculator,
