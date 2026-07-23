@@ -188,7 +188,6 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
     var shift_amount_6:u6
     var shift_discard_5:u27
     var shift_amount_5:u5
-    var word_working_copy:Word
     var overflow:SignBit
     var v1_upper:Word
     var v1_lower:Word
