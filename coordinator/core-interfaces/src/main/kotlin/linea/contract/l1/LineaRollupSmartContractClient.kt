@@ -76,7 +76,7 @@ data class ShnarfDataV9(
 
 data class FinalizationDataV9(
   val aggregatedProof: ByteArray,
-  val proofType: Int,
+  val proofType: UInt,
   val parentStateRootHash: ByteArray,
   val parentBlockHash: ByteArray,
   val endBlockNumber: ULong,
@@ -87,7 +87,7 @@ data class FinalizationDataV9(
   val l1RollingHash: ByteArray,
   val lastFinalizedL1RollingHashMessageNumber: ULong,
   val l1RollingHashMessageNumber: ULong,
-  val l2MerkleTreesDepth: Int,
+  val l2MerkleTreesDepth: UInt,
   val lastFinalizedForcedTransactionNumber: ULong,
   val finalForcedTransactionNumber: ULong,
   val lastFinalizedForcedTransactionRollingHash: ByteArray,
@@ -136,8 +136,8 @@ data class FinalizationDataV9(
   }
 
   override fun hashCode(): Int {
-    var result = proofType
-    result = 31 * result + l2MerkleTreesDepth
+    var result = proofType.toInt()
+    result = 31 * result + l2MerkleTreesDepth.toInt()
     result = 31 * result + aggregatedProof.contentHashCode()
     result = 31 * result + parentStateRootHash.contentHashCode()
     result = 31 * result + parentBlockHash.contentHashCode()

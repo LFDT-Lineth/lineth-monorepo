@@ -59,7 +59,7 @@ class Web3JLineaRollupSmartContractClientReadOnlyTest {
     val fakeClock = FakeFixedClock()
     var onChainVersion = LineaRollupContractVersion.V8
     var fetchCount = 0
-    val client = object : Web3JLineaRollupSmartContractClientReadOnly(
+    val fakeClient = object : Web3JLineaRollupSmartContractClientReadOnly(
       web3j = mock<Web3j>(),
       contractAddress = contractAddress,
       ethLogsSearcher = EthLogsSearcherImpl(vertx = vertx, ethApiClient = l1Client),
@@ -75,23 +75,23 @@ class Web3JLineaRollupSmartContractClientReadOnlyTest {
     }
 
     // first call fetches and caches
-    assertThat(client.getVersion().get()).isEqualTo(LineaRollupContractVersion.V8)
+    assertThat(fakeClient.getVersion().get()).isEqualTo(LineaRollupContractVersion.V8)
     assertThat(fetchCount).isEqualTo(1)
 
     // within the refresh interval: served from cache, no RPC
     fakeClock.advanceBy(29.seconds)
-    assertThat(client.getVersion().get()).isEqualTo(LineaRollupContractVersion.V8)
+    assertThat(fakeClient.getVersion().get()).isEqualTo(LineaRollupContractVersion.V8)
     assertThat(fetchCount).isEqualTo(1)
 
     // after the refresh interval: refetches and detects the upgrade
     fakeClock.advanceBy(2.seconds)
     onChainVersion = LineaRollupContractVersion.V9
-    assertThat(client.getVersion().get()).isEqualTo(LineaRollupContractVersion.V9)
+    assertThat(fakeClient.getVersion().get()).isEqualTo(LineaRollupContractVersion.V9)
     assertThat(fetchCount).isEqualTo(2)
 
     // at the latest known version: short-circuits forever, even after the interval elapses
     fakeClock.advanceBy(300.seconds)
-    assertThat(client.getVersion().get()).isEqualTo(LineaRollupContractVersion.V9)
+    assertThat(fakeClient.getVersion().get()).isEqualTo(LineaRollupContractVersion.V9)
     assertThat(fetchCount).isEqualTo(2)
   }
 

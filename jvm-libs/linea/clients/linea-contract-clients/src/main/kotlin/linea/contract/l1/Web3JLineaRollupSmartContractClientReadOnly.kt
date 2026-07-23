@@ -104,15 +104,20 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
 
       else ->
         fetchSmartContractVersion()
-          .thenPeek { contractLatestVersion ->
-            if (cached != null && contractLatestVersion != cached.version) {
-              log.info(
-                "Smart contract upgraded: prevVersion={} upgradedVersion={}",
-                cached.version,
-                contractLatestVersion,
-              )
+          .thenPeek { fetchedVersion ->
+            val current = smartContractVersionCache.get()
+            // prevent inflight request to override and rollback
+            if (current == null || fetchedVersion >= current.version) {
+              smartContractVersionCache.set(CachedVersion(fetchedVersion, clock.now()))
+
+              if (current != null && fetchedVersion != current.version) {
+                log.info(
+                  "Smart contract upgraded: prevVersion={} upgradedVersion={}",
+                  current.version,
+                  fetchedVersion,
+                )
+              }
             }
-            smartContractVersionCache.set(CachedVersion(contractLatestVersion, clock.now()))
           }
     }
   }
