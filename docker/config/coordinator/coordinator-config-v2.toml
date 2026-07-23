@@ -27,7 +27,8 @@ conflation-deadline-last-block-confirmation-delay = "PT2S" # recommended: at lea
 l2-fetch-blocks-limit = 4000
 backtesting-directory = "/data/conflation-backtesting"
 force-stop-conflation-at-block-inclusive=100_000_000
-#force-stop-conflation-at-block-timestamp-inclusive=2000000000
+# force-stop-conflation-at-block-timestamp-inclusive=2000000000
+# riscv-starting-block-timestamp-inclusive=2000000000
 
 # This is to prevent inflight trasactions that may change Smart contract state while coordinator is restarted.
 # Queries SMC for last finalised block, and keeps polling until this number of blocks observe the same state.
