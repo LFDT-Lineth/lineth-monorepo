@@ -13,6 +13,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/nonnative"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/rangecheck"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 	"github.com/LFDT-Lineth/zkc/pkg/util/field"
@@ -28,7 +29,7 @@ import (
 
 var (
 	zkcField = field.KOALABEAR_16
-	zkcCfg   = codegen.DEFAULT_CONFIG.SplitRegisters(true).Quiet(true)
+	zkcCfg   = codegen.DEFAULT_CONFIG
 )
 
 func compileBinaryConstraints(srcPath string) (binfile *constraints.BinaryFile[koalabear.Element], err error) {
@@ -121,6 +122,7 @@ func traceZkc(
 }
 
 func proverCompilePipeline(sys *wiop.System) {
+	nonnative.Compile(sys)
 	rangecheck.Compile(sys)
 	lookuptologderivsum.Compile(sys)
 	messagebus.Compile(sys)
