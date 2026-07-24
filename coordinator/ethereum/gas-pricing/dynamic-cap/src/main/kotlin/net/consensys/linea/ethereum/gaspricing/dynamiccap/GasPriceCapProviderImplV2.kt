@@ -76,7 +76,7 @@ class GasPriceCapProviderImplV2(
     val dateTime = LocalDateTime.ofEpochSecond(clock.now().epochSeconds, 0, ZoneOffset.UTC)
     val tdmKey = getTimeOfDayKey(dateTime.dayOfWeek, dateTime.hour)
     return timeOfDayMultipliers[tdmKey] ?: run {
-      log.info("Not multiplier found with key={} for date={}", tdmKey, dateTime)
+      log.info("No multiplier found for key={} date={} defaulting to 1.0", tdmKey, dateTime)
       1.0
     }
   }
@@ -127,16 +127,17 @@ class GasPriceCapProviderImplV2(
   }
 
   override fun getGasPriceCaps(timestamp: Instant): SafeFuture<GasPriceCaps?> {
-    return if (config.enabled && hasEnoughDataForGasPriceCapCalculation()) {
-      try {
-        calculateGasPriceCaps(timestamp)
-      } catch (e: Exception) {
-        log.warn("Gas price caps will default to null due to calculation error: errorMessage={}", e.message, e)
-        null
+    if (!config.enabled || !hasEnoughDataForGasPriceCapCalculation()) {
+      return SafeFuture.completedFuture(null)
+    }
+
+    val gasPriceCaps = runCatching { calculateGasPriceCaps(timestamp) }
+      .onFailure { th ->
+        log.warn("Gas price caps returned as null due to calculation failure: errorMessage={}", th.message, th)
       }
-    } else {
-      null
-    }.let { SafeFuture.completedFuture(it) }
+      .getOrNull()
+
+    return SafeFuture.completedFuture(gasPriceCaps)
   }
 
   override fun getGasPriceCapsWithCoefficient(timestamp: Instant): SafeFuture<GasPriceCaps?> {

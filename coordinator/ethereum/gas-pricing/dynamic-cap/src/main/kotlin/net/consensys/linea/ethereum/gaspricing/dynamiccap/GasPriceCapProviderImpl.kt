@@ -18,7 +18,7 @@ class GasPriceCapProviderImpl(
   gasPriceCapCalculator: GasPriceCapCalculator,
   clock: Clock = Clock.System,
   private val log: Logger = LogManager.getLogger(GasPriceCapProviderImpl::class.java),
-  val delegate: GasPriceCapProviderImplV2 = GasPriceCapProviderImplV2(
+  private val delegate: GasPriceCapProviderImplV2 = GasPriceCapProviderImplV2(
     gasPriceCapCalculator = gasPriceCapCalculator,
     feeHistoriesRepository = feeHistoriesRepository,
     clock = clock,
