@@ -18,6 +18,7 @@
 
 const zesu_accel = @import("zesu_zkvm_accel"); // zesu-zkvm's pure-Zig precompile backend (stdlibs_accel)
 const lineth_accel = @import("lineth_zkvm_accel"); // Lineth accelerator wrappers (source paths wired in build.zig)
+const linea_io = @import("linea_zkvm_io"); // zesu-zkvm's zkvm_io: default (stdout ecall) write_output
 const build_options = @import("build_options"); // keccak_accel: standard zig keccak vs Lineth wrapper
 
 // The manifest: every `zkvm_*` symbol zesu references, and where each comes from — keccak is either
@@ -47,17 +48,27 @@ comptime {
     @export(&bls12_map_fp_to_g1, .{ .name = "zkvm_bls12_map_fp_to_g1" });
     @export(&bls12_map_fp2_to_g2, .{ .name = "zkvm_bls12_map_fp2_to_g2" });
     @export(&secp256r1_verify, .{ .name = "zkvm_secp256r1_verify" });
-    //
-    //
+    // write_output (zkvm-standards io-interface): the Lineth custom-opcode accelerator
+    // when -Dwrite-output-accel is set, otherwise zesu's default stdout `write` ecall.
+    // Both are the extern symbol `write_output` that zesu-zkvm's extern_io.zig resolves.
     if (build_options.write_output_accel) {
-        @export(&lineth_accel.zkvm_write_output, .{ .name = "zkvm_write_output" });
+        @export(&lineth_accel.write_output, .{ .name = "write_output" });
     } else {
-        @export(&keccak256, .{ .name = "zkvm_write_output" });
+        @export(&write_output, .{ .name = "write_output" });
     }
 }
 
 const OK: i32 = 0;
 const ERR: i32 = 1;
+
+// ── io — zkvm-standards io-interface ──────────────────────────────────────────
+// Default (non-accelerated) write_output: forward the C-ABI (ptr+len) to zesu's
+// zkvm_io slice API, which appends to public output via the Linux write ecall
+// (a7=64, fd=1). Mirrors zesu-zkvm's linea_host.zig. The -Dwrite-output-accel
+// build replaces this with lineth_accel.write_output (custom opcode) above.
+fn write_output(ptr: [*]const u8, len: usize) callconv(.c) void {
+    linea_io.write_output(ptr[0..len]);
+}
 
 // Pairing/MSM pair layouts — must byte-match the C-ABI struct layout zesu passes to these zkvm_*
 // symbols; forwarded straight to stdlibs_accel's `anytype` parameters.
