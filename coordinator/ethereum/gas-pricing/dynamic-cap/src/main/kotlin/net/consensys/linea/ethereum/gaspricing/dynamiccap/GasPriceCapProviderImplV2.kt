@@ -75,7 +75,10 @@ class GasPriceCapProviderImplV2(
   private fun getTimeOfDayMultiplierForNow(timeOfDayMultipliers: TimeOfDayMultipliers): Double {
     val dateTime = LocalDateTime.ofEpochSecond(clock.now().epochSeconds, 0, ZoneOffset.UTC)
     val tdmKey = getTimeOfDayKey(dateTime.dayOfWeek, dateTime.hour)
-    return timeOfDayMultipliers[tdmKey]!!
+    return timeOfDayMultipliers[tdmKey] ?: run {
+      log.info("Not multiplier found with key={} for date={}", tdmKey, dateTime)
+      1.0
+    }
   }
 
   private fun calculateGasPriceCaps(timestamp: Instant): GasPriceCaps {
