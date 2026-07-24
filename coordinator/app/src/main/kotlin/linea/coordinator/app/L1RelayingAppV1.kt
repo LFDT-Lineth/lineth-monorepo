@@ -133,12 +133,57 @@ class L1RelayingAppV1(
     }
   }
 
-  private val highestAcceptedBlobTracker = HighestULongTracker(lastFinalizedBlock).also {
+  // Metrics Setup
+  val highestAcceptedBlobTracker = HighestULongTracker(lastFinalizedBlock)
+  val latestBlobSubmittedBlockNumberTracker = LatestBlobSubmittedBlockNumberTracker(lastFinalizedBlock)
+  val latestFinalizationSubmittedBlockNumberTracker = LatestFinalizationSubmittedBlockNumberTracker(lastFinalizedBlock)
+  val blobSubmissionDelayHistogram = metricsFacade.createHistogram(
+    category = LineaMetricsCategory.BLOB,
+    name = "submission.delay",
+    description = "Delay between blob submission and end block timestamps",
+    baseUnit = "seconds",
+  )
+  val finalizationSubmissionDelayHistogram = metricsFacade.createHistogram(
+    category = LineaMetricsCategory.AGGREGATION,
+    name = "submission.delay",
+    description = "Delay between finalization submission and end block timestamps",
+    baseUnit = "seconds",
+  )
+  val blobSubmittedEventConsumers: Map<Consumer<BlobSubmittedEvent>, String> = mapOf(
+    Consumer<BlobSubmittedEvent> { blobSubmission ->
+      latestBlobSubmittedBlockNumberTracker(blobSubmission)
+    } to "Submitted Blob Tracker Consumer",
+    Consumer<BlobSubmittedEvent> { blobSubmission ->
+      blobSubmissionDelayHistogram.record(blobSubmission.getSubmissionDelay().toDouble())
+    } to "Blob Submission Delay Consumer",
+  )
+  val submittedFinalizationConsumers: Map<Consumer<FinalizationSubmittedEvent>, String> = mapOf(
+    Consumer<FinalizationSubmittedEvent> { finalizationSubmission ->
+      latestFinalizationSubmittedBlockNumberTracker(finalizationSubmission)
+    } to "Finalization Submission Consumer",
+    Consumer<FinalizationSubmittedEvent> { finalizationSubmission ->
+      finalizationSubmissionDelayHistogram.record(finalizationSubmission.getSubmissionDelay().toDouble())
+    } to "Finalization Submission Delay Consumer",
+  )
+
+  open fun init() {
+    metricsFacade.createGauge(
+      category = LineaMetricsCategory.AGGREGATION,
+      name = "highest.submitted.on.l1",
+      description = "Highest submitted finalization end block number on l1",
+      measurementSupplier = latestFinalizationSubmittedBlockNumberTracker::get,
+    )
     metricsFacade.createGauge(
       category = LineaMetricsCategory.BLOB,
       name = "highest.accepted.block.number",
       description = "Highest accepted blob end block number",
-      measurementSupplier = it,
+      measurementSupplier = highestAcceptedBlobTracker::get,
+    )
+    metricsFacade.createGauge(
+      category = LineaMetricsCategory.BLOB,
+      name = "highest.submitted.on.l1",
+      description = "Highest submitted blob end block number on l1",
+      measurementSupplier = latestBlobSubmittedBlockNumberTracker::get,
     )
   }
 
@@ -205,7 +250,7 @@ class L1RelayingAppV1(
       null
     }
 
-  private val gasPriceCapProviderForDataSubmission =
+  open val gasPriceCapProviderForDataSubmission =
     gasPriceCapProvider?.let { provider ->
       GasPriceCapProviderForDataSubmission(
         config = GasPriceCapProviderForDataSubmission.Config(
@@ -218,34 +263,22 @@ class L1RelayingAppV1(
       )
     }
 
-  private val blobSubmissionCoordinator = run {
+  open val gasPriceCapProviderForFinalization =
+    gasPriceCapProvider?.let { provider ->
+      GasPriceCapProviderForFinalization(
+        config = GasPriceCapProviderForFinalization.Config(
+          maxPriorityFeePerGasCap = l1SubmissionConfig.aggregation.gas.maxPriorityFeePerGasCap,
+          maxFeePerGasCap = l1SubmissionConfig.aggregation.gas.maxFeePerGasCap,
+        ),
+        gasPriceCapProvider = provider,
+        metricsFacade = metricsFacade,
+      )
+    }
+
+  open val blobSubmissionCoordinator = run {
     if (l1SubmissionConfig.isDisabled() || l1SubmissionConfig.blob.isDisabled()) {
       DisabledLongRunningService
     } else {
-      val latestBlobSubmittedBlockNumberTracker = LatestBlobSubmittedBlockNumberTracker(0UL)
-      metricsFacade.createGauge(
-        category = LineaMetricsCategory.BLOB,
-        name = "highest.submitted.on.l1",
-        description = "Highest submitted blob end block number on l1",
-        measurementSupplier = { latestBlobSubmittedBlockNumberTracker.get() },
-      )
-
-      val blobSubmissionDelayHistogram = metricsFacade.createHistogram(
-        category = LineaMetricsCategory.BLOB,
-        name = "submission.delay",
-        description = "Delay between blob submission and end block timestamps",
-        baseUnit = "seconds",
-      )
-
-      val blobSubmittedEventConsumers: Map<Consumer<BlobSubmittedEvent>, String> = mapOf(
-        Consumer<BlobSubmittedEvent> { blobSubmission ->
-          latestBlobSubmittedBlockNumberTracker(blobSubmission)
-        } to "Submitted Blob Tracker Consumer",
-        Consumer<BlobSubmittedEvent> { blobSubmission ->
-          blobSubmissionDelayHistogram.record(blobSubmission.getSubmissionDelay().toDouble())
-        } to "Blob Submission Delay Consumer",
-      )
-
       BlobSubmissionCoordinator.create(
         config = BlobSubmissionCoordinator.Config(
           pollingInterval = l1SubmissionConfig.blob.submissionTickInterval,
@@ -267,46 +300,10 @@ class L1RelayingAppV1(
     }
   }
 
-  private val gasPriceCapProviderForFinalization =
-    gasPriceCapProvider?.let { provider ->
-      GasPriceCapProviderForFinalization(
-        config = GasPriceCapProviderForFinalization.Config(
-          maxPriorityFeePerGasCap = l1SubmissionConfig.aggregation.gas.maxPriorityFeePerGasCap,
-          maxFeePerGasCap = l1SubmissionConfig.aggregation.gas.maxFeePerGasCap,
-        ),
-        gasPriceCapProvider = provider,
-        metricsFacade = metricsFacade,
-      )
-    }
-
-  private val aggregationFinalizationCoordinator = run {
+  open val aggregationFinalizationCoordinator = run {
     if (l1SubmissionConfig.isDisabled() || l1SubmissionConfig.aggregation.isDisabled()) {
       DisabledLongRunningService
     } else {
-      val latestFinalizationSubmittedBlockNumberTracker = LatestFinalizationSubmittedBlockNumberTracker(0UL)
-      metricsFacade.createGauge(
-        category = LineaMetricsCategory.AGGREGATION,
-        name = "highest.submitted.on.l1",
-        description = "Highest submitted finalization end block number on l1",
-        measurementSupplier = { latestFinalizationSubmittedBlockNumberTracker.get() },
-      )
-
-      val finalizationSubmissionDelayHistogram = metricsFacade.createHistogram(
-        category = LineaMetricsCategory.AGGREGATION,
-        name = "submission.delay",
-        description = "Delay between finalization submission and end block timestamps",
-        baseUnit = "seconds",
-      )
-
-      val submittedFinalizationConsumers: Map<Consumer<FinalizationSubmittedEvent>, String> = mapOf(
-        Consumer<FinalizationSubmittedEvent> { finalizationSubmission ->
-          latestFinalizationSubmittedBlockNumberTracker(finalizationSubmission)
-        } to "Finalization Submission Consumer",
-        Consumer<FinalizationSubmittedEvent> { finalizationSubmission ->
-          finalizationSubmissionDelayHistogram.record(finalizationSubmission.getSubmissionDelay().toDouble())
-        } to "Finalization Submission Delay Consumer",
-      )
-
       AggregationFinalizationCoordinator.create(
         config = AggregationFinalizationCoordinator.Config(
           pollingInterval = l1SubmissionConfig.aggregation.submissionTickInterval,
@@ -368,6 +365,7 @@ class L1RelayingAppV1(
     }
 
   override fun start(): CompletableFuture<Unit> {
+    init()
     return SafeFuture.completedFuture(Unit)
       .thenCompose { blobSubmissionCoordinator.start() }
       .thenCompose { aggregationFinalizationCoordinator.start() }
