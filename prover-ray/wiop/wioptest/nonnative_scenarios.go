@@ -204,15 +204,20 @@ func newNonNativeRandomScenario(name string, nbBits int) *NonNativeScenario {
 	var err error
 
 	bound := new(big.Int).Lsh(big.NewInt(1), uint(nbBits))
-	bound.Sub(bound, big.NewInt(1))
 
 	lefts := make([]*big.Int, nbRows)
 	rights := make([]*big.Int, nbRows)
 	moduli := make([]*big.Int, nbRows)
 	for i := range nbRows {
-		moduli[i], err = rand.Int(rand.Reader, bound)
-		if err != nil {
-			panic(err)
+		// Ensure modulus is non-zero; crypto/rand.Int rejects max <= 0.
+		for {
+			moduli[i], err = rand.Int(rand.Reader, bound)
+			if err != nil {
+				panic(err)
+			}
+			if moduli[i].Sign() != 0 {
+				break
+			}
 		}
 		lefts[i], err = rand.Int(rand.Reader, moduli[i])
 		if err != nil {
