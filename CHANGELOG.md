@@ -14,6 +14,7 @@
 - *(coordinator)* Add extension seam (#3532)
 - *(coordinator)* Wire config-docs via a buildSrc plugin and declarative spec (#3607)
 - *(coordinator)* Document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)
+- *(coordinator)* GasPriceCapProviderV2 and DRY (#3624)
 
 ### 🐛 Bug Fixes
 
