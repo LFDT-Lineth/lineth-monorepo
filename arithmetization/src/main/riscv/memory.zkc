@@ -33,3 +33,6 @@ memory b4(address:u3) -> (state:lane)
 memory c(address:u3) -> (state:lane)
 memory d(address:u3) -> (state:lane)
 memory padded_input_block(address:u5) -> (state:lane)
+
+// guest program output
+pub output guest_output(address:OutputAddress) -> (byte:u8)
