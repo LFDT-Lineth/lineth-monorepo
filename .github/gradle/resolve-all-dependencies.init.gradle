@@ -1,0 +1,16 @@
+// Registers a resolveAllDependencies task in every project so the cache seed
+// workflow can download the full dependency graph without compiling anything.
+allprojects {
+  tasks.register("resolveAllDependencies") {
+    notCompatibleWithConfigurationCache("resolves configurations eagerly")
+    doLast {
+      configurations.matching { it.canBeResolved }.each { cfg ->
+        try {
+          cfg.incoming.artifactView { lenient(true) }.files.each { }
+        } catch (Exception e) {
+          logger.lifecycle("Skipped ${project.path}:${cfg.name}: ${e.message}")
+        }
+      }
+    }
+  }
+}
