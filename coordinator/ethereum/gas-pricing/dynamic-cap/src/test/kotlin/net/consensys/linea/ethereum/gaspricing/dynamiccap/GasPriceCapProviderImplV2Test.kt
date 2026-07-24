@@ -1,26 +1,23 @@
 package net.consensys.linea.ethereum.gaspricing.dynamiccap
 
 import io.vertx.junit5.VertxExtension
-import linea.domain.createBlock
 import linea.domain.gas.GasPriceCaps
-import linea.domain.toBlockWithRandomTxHashes
-import linea.ethapi.EthApiBlockClient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.mock
-import tech.pegasys.teku.infrastructure.async.SafeFuture
+import java.math.BigDecimal
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Instant
 
 @ExtendWith(VertxExtension::class)
-class GasPriceCapProviderImplTest {
+class GasPriceCapProviderImplV2Test {
   private val currentTime = Instant.parse("2024-03-20T00:00:00Z") // Wednesday
   private val gasFeePercentile = 10.0
   private val gasFeePercentileWindowInBlocks = 100U
@@ -41,7 +38,6 @@ class GasPriceCapProviderImplTest {
   private val gasPriceCapCalculator = GasPriceCapCalculatorImpl()
 
   private lateinit var targetBlockTime: Instant
-  private lateinit var mockedL2EthApiBlockClient: EthApiBlockClient
   private lateinit var mockedL1FeeHistoriesRepository: FeeHistoriesRepositoryWithCache
   private lateinit var mockedClock: Clock
 
@@ -55,13 +51,12 @@ class GasPriceCapProviderImplTest {
     blobAdjustmentConstant: UInt = this.adjustmentConstant,
     finalizationTargetMaxDelay: Duration = this.finalizationTargetMaxDelay,
     gasPriceCapsCoefficient: Double = this.gasPriceCapsCoefficient,
-    l2EthApiBlockClient: EthApiBlockClient = mockedL2EthApiBlockClient,
     feeHistoriesRepository: FeeHistoriesRepositoryWithCache = mockedL1FeeHistoriesRepository,
     gasPriceCapCalculator: GasPriceCapCalculator = this.gasPriceCapCalculator,
     clock: Clock = mockedClock,
-  ): GasPriceCapProviderImpl {
-    return GasPriceCapProviderImpl(
-      config = GasPriceCapProviderImpl.Config(
+  ): GasPriceCapProviderImplV2 {
+    return GasPriceCapProviderImplV2(
+      config = GasPriceCapProviderImplV2.Config(
         enabled = enabled,
         gasFeePercentile = gasFeePercentile,
         gasFeePercentileWindowInBlocks = gasFeePercentileWindowInBlocks,
@@ -72,7 +67,6 @@ class GasPriceCapProviderImplTest {
         finalizationTargetMaxDelay = finalizationTargetMaxDelay,
         gasPriceCapsCoefficient = gasPriceCapsCoefficient,
       ),
-      l2EthApiBlockClient = l2EthApiBlockClient,
       feeHistoriesRepository = feeHistoriesRepository,
       gasPriceCapCalculator = gasPriceCapCalculator,
       clock = clock,
@@ -82,15 +76,6 @@ class GasPriceCapProviderImplTest {
   @BeforeEach
   fun beforeEach() {
     targetBlockTime = currentTime - 1.hours
-    val mockBlock = createBlock(
-      timestamp = targetBlockTime,
-    ).toBlockWithRandomTxHashes()
-
-    mockedL2EthApiBlockClient = mock<EthApiBlockClient> {
-      on { ethGetBlockByNumberTxHashes(any()) } doReturn SafeFuture.completedFuture(
-        mockBlock,
-      )
-    }
 
     mockedL1FeeHistoriesRepository = mock<FeeHistoriesRepositoryWithCache> {
       on { getCachedNumOfFeeHistoriesFromBlockNumber() } doReturn storedFeeHistoriesNum
@@ -147,11 +132,10 @@ class GasPriceCapProviderImplTest {
 
   @Test
   fun `gas price caps should be returned correctly`() {
-    val targetL2BlockNumber = 100L
     val gasPriceCapProvider = createGasPriceCapProvider()
 
     assertThat(
-      gasPriceCapProvider.getGasPriceCaps(targetL2BlockNumber).get(),
+      gasPriceCapProvider.getGasPriceCaps(targetBlockTime).get(),
     ).isEqualTo(
       GasPriceCaps(
         maxBaseFeePerGasCap = 1694444444uL,
@@ -164,14 +148,15 @@ class GasPriceCapProviderImplTest {
 
   @Test
   fun `gas price caps with coefficient should be returned correctly`() {
-    val targetL2BlockNumber = 100L
     val gasPriceCapProvider = createGasPriceCapProvider()
-    val expectedMaxBaseFeePerGasCap = (1694444444 * gasPriceCapsCoefficient).toULong()
-    val expectedMaxPriorityFeePerGasCap = (338888888 * gasPriceCapsCoefficient).toULong()
-    val expectedMaxFeePerBlobGasCap = (169444444 * gasPriceCapsCoefficient).toULong()
+    val coeff = gasPriceCapsCoefficient.toBigDecimal()
+    val expectedMaxBaseFeePerGasCap = (1694444444.toBigDecimal() * coeff).toLong().toULong()
+    val expectedMaxPriorityFeePerGasCap = (338888888.toBigDecimal() * coeff).toLong().toULong()
+    val expectedMaxFeePerBlobGasCap =
+      (169444444.toBigDecimal() * coeff).coerceAtLeast(BigDecimal.ONE).toLong().toULong()
 
     assertThat(
-      gasPriceCapProvider.getGasPriceCapsWithCoefficient(targetL2BlockNumber).get(),
+      gasPriceCapProvider.getGasPriceCapsWithCoefficient(targetBlockTime).get(),
     ).isEqualTo(
       GasPriceCaps(
         maxBaseFeePerGasCap = expectedMaxBaseFeePerGasCap,
@@ -184,75 +169,60 @@ class GasPriceCapProviderImplTest {
 
   @Test
   fun `gas price caps should be null if disabled`() {
-    val targetL2BlockNumber = 100L
     val gasPriceCapProvider = createGasPriceCapProvider(
       enabled = false,
     )
 
     assertThat(
-      gasPriceCapProvider.getGasPriceCaps(targetL2BlockNumber).get(),
+      gasPriceCapProvider.getGasPriceCaps(targetBlockTime).get(),
     ).isNull()
 
     assertThat(
-      gasPriceCapProvider.getGasPriceCapsWithCoefficient(targetL2BlockNumber).get(),
+      gasPriceCapProvider.getGasPriceCapsWithCoefficient(targetBlockTime).get(),
     ).isNull()
   }
 
   @Test
   fun `gas price caps should be null if not enough fee history data`() {
-    val targetL2BlockNumber = 100L
     val gasPriceCapProvider = createGasPriceCapProvider(
       gasFeePercentileWindowInBlocks = 200U,
     )
 
     assertThat(
-      gasPriceCapProvider.getGasPriceCaps(targetL2BlockNumber).get(),
+      gasPriceCapProvider.getGasPriceCaps(targetBlockTime).get(),
     ).isNull()
 
     assertThat(
-      gasPriceCapProvider.getGasPriceCapsWithCoefficient(targetL2BlockNumber).get(),
+      gasPriceCapProvider.getGasPriceCapsWithCoefficient(targetBlockTime).get(),
     ).isNull()
   }
 
   @Test
   fun `gas price caps should be null if error on feeHistoriesRepository`() {
-    val targetL2BlockNumber = 100L
     mockedL1FeeHistoriesRepository = mock<FeeHistoriesRepositoryWithCache> {
-      on { getNumOfFeeHistoriesFromBlockNumber(any(), any()) } doReturn SafeFuture.failedFuture(
-        Error("Throw error for testing"),
-      )
+      on { getCachedNumOfFeeHistoriesFromBlockNumber() } doReturn storedFeeHistoriesNum
+      on { getCachedPercentileGasFees() } doThrow RuntimeException("Throw error for testing")
     }
-    val gasPriceCapProvider = createGasPriceCapProvider(
-      l2EthApiBlockClient = mockedL2EthApiBlockClient,
-    )
+    val gasPriceCapProvider = createGasPriceCapProvider()
 
     assertThat(
-      gasPriceCapProvider.getGasPriceCaps(targetL2BlockNumber).get(),
+      gasPriceCapProvider.getGasPriceCaps(targetBlockTime).get(),
     ).isNull()
 
     assertThat(
-      gasPriceCapProvider.getGasPriceCapsWithCoefficient(targetL2BlockNumber).get(),
+      gasPriceCapProvider.getGasPriceCapsWithCoefficient(targetBlockTime).get(),
     ).isNull()
   }
 
   @Test
-  fun `gas price caps should be null if error on l2ExtendedWeb3JClient`() {
-    val targetL2BlockNumber = 100L
-    mockedL2EthApiBlockClient = mock<EthApiBlockClient> {
-      on { ethGetBlockByNumberTxHashes(any()) } doReturn SafeFuture.failedFuture(
-        Error("Throw error for testing"),
-      )
-    }
+  fun `time of day multiplier should default to 1_0 when key is missing`() {
+    val baselineCaps = createGasPriceCapProvider().getGasPriceCaps(targetBlockTime).get()
     val gasPriceCapProvider = createGasPriceCapProvider(
-      l2EthApiBlockClient = mockedL2EthApiBlockClient,
+      timeOfDayMultipliers = emptyMap(),
     )
 
     assertThat(
-      gasPriceCapProvider.getGasPriceCaps(targetL2BlockNumber).get(),
-    ).isNull()
-
-    assertThat(
-      gasPriceCapProvider.getGasPriceCapsWithCoefficient(targetL2BlockNumber).get(),
-    ).isNull()
+      gasPriceCapProvider.getGasPriceCaps(targetBlockTime).get(),
+    ).isEqualTo(baselineCaps)
   }
 }
