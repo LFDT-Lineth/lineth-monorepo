@@ -57,7 +57,7 @@ class GasPriceCapProviderWithHardCaps(
     coerceAtMost(cap).let { if (it == 0uL) cap else it }
 
   private fun effectiveCap(base: ULong): ULong =
-    (base.toBigDecimal() * config.capMultiplier.toBigDecimal()).toBigInteger().toULong()
+    (base.toBigDecimal() * config.capMultiplier.toBigDecimal()).toULong()
 
   private fun coerce(caps: GasPriceCaps): GasPriceCaps {
     val priorityCap = effectiveCap(config.maxPriorityFeePerGasCap)

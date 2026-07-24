@@ -5,6 +5,7 @@ import linea.gaspricing.GasPriceCapProviderV2
 import linea.kotlin.minusCoercingUnderflow
 import linea.kotlin.toBigDecimal
 import linea.kotlin.toGWei
+import linea.kotlin.toULong
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -152,12 +153,12 @@ class GasPriceCapProviderImplV2(
           val multipliedMaxBaseFeePerGasCap =
             // NOTE: at this stage maxBaseFeePerGasCap is always defined
             // on upper classes (e.g GasPriceCapProviderForDataSubmission) may be nullified
-            (it.maxBaseFeePerGasCap!!.toBigDecimal() * coeff).toLong().toULong()
+            (it.maxBaseFeePerGasCap!!.toBigDecimal() * coeff).toULong()
           val multipliedMaxPriorityFeePerGas =
-            (it.maxPriorityFeePerGasCap.toBigDecimal() * coeff).toLong().toULong()
+            (it.maxPriorityFeePerGasCap.toBigDecimal() * coeff).toULong()
           val multipliedMaxFeePerBlobGasCap =
             (it.maxFeePerBlobGasCap.toBigDecimal() * coeff)
-              .coerceAtLeast(BigDecimal.ONE).toLong().toULong()
+              .coerceAtLeast(BigDecimal.ONE).toULong()
           GasPriceCaps(
             maxBaseFeePerGasCap = multipliedMaxBaseFeePerGasCap,
             maxPriorityFeePerGasCap = multipliedMaxPriorityFeePerGas,
