@@ -3,6 +3,13 @@ import org.gradle.api.tasks.testing.logging.TestLogEvent
 
 plugins {
   id 'net.consensys.zkevm.kotlin-application-conventions'
+  id 'linea.config-docs'
+}
+
+// Config documentation tooling: creates the `configDocs` source set and the
+// checkConfigDocs/generateConfigDocs tasks, driven by the spec below.
+configDocs {
+  spec = 'linea.coordinator.config.v2.docs.CoordinatorConfigDocsSpec'
 }
 configurations.configureEach {
   exclude group: "org.rocksdb", module: "rocksdbjni"
@@ -31,6 +38,10 @@ sourceSets {
 }
 
 dependencies {
+  // @ConfigDoc/@ConfigSection annotations applied to the TOML config classes. Compile-time only
+  // (read by the config-docs tooling, never at app runtime) so it stays out of the production jar.
+  compileOnly project(':jvm-libs:linea:config-docs')
+
   implementation project(':jvm-libs:generic:json-rpc')
   implementation project(':jvm-libs:generic:http-rest')
   implementation project(':jvm-libs:generic:vertx-helper')
@@ -63,8 +74,6 @@ dependencies {
   implementation project(':coordinator:ethereum:gas-pricing:dynamic-cap')
   implementation project(':coordinator:ethereum:gas-pricing')
 
-  // Used by the config documentation generator to walk TOML schema classes via reflection.
-  implementation "org.jetbrains.kotlin:kotlin-reflect:${libs.versions.kotlin.get()}"
   implementation "info.picocli:picocli:${libs.versions.picoli.get()}"
   implementation "io.vertx:vertx-web-client"
   implementation "com.sksamuel.hoplite:hoplite-core:${libs.versions.hoplite.get()}"

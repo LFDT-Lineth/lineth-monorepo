@@ -1,4 +1,4 @@
-package linea.coordinator.config.v2.docs
+package linea.config.docs
 
 /**
  * A single entry produced by [ConfigSchemaWalker] for one constructor parameter of a TOML
@@ -12,8 +12,8 @@ package linea.coordinator.config.v2.docs
  *   when none was declared (required parameters, or optionals missing a declared default).
  * @property description from `@ConfigDoc`/`@ConfigSection`, or empty when not annotated.
  * @property example from `@ConfigDoc`, or null when unset.
- * @property deprecated from `@ConfigDoc`.
- * @property replacement replacement key path from `@ConfigDoc`, or null when unset.
+ * @property deprecated from `@ConfigDoc`/`@ConfigSection`.
+ * @property replacement replacement key path from `@ConfigDoc`/`@ConfigSection`, or null when unset.
  * @property isSection true when the parameter is a nested config table rather than a leaf value.
  * @property annotated true when the relevant annotation (`@ConfigDoc` for leaves,
  *   `@ConfigSection` for sections) is present. Used by the documentation-completeness check.
