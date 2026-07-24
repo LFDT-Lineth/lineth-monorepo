@@ -10,6 +10,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.mock
+import java.math.BigDecimal
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
@@ -148,9 +149,11 @@ class GasPriceCapProviderImplV2Test {
   @Test
   fun `gas price caps with coefficient should be returned correctly`() {
     val gasPriceCapProvider = createGasPriceCapProvider()
-    val expectedMaxBaseFeePerGasCap = (1694444444 * gasPriceCapsCoefficient).toULong()
-    val expectedMaxPriorityFeePerGasCap = (338888888 * gasPriceCapsCoefficient).toULong()
-    val expectedMaxFeePerBlobGasCap = (169444444 * gasPriceCapsCoefficient).toULong()
+    val coeff = gasPriceCapsCoefficient.toBigDecimal()
+    val expectedMaxBaseFeePerGasCap = (1694444444.toBigDecimal() * coeff).toLong().toULong()
+    val expectedMaxPriorityFeePerGasCap = (338888888.toBigDecimal() * coeff).toLong().toULong()
+    val expectedMaxFeePerBlobGasCap =
+      (169444444.toBigDecimal() * coeff).coerceAtLeast(BigDecimal.ONE).toLong().toULong()
 
     assertThat(
       gasPriceCapProvider.getGasPriceCapsWithCoefficient(targetBlockTime).get(),
