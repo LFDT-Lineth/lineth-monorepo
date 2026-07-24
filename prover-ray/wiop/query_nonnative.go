@@ -28,7 +28,7 @@ var _ Query = (*NonNative)(nil)
 // the query to a polynomial identity check that is enforced by the global
 // compiler.
 //
-// Use [System.NewNonNative] to construct and register an instance.
+// Use [Module.NewNonNative] to construct and register an instance.
 type NonNative struct {
 	baseQuery
 	// Module is the module all operand columns belong to.
@@ -170,14 +170,14 @@ func (m *Module) NewNonNative(
 	left, right, modulus, result, quotient []*Column,
 ) *NonNative {
 	if m == nil {
-		panic("wiop: System.NewNonNative requires a non-nil Module")
+		panic("wiop: Module.NewNonNative requires a non-nil Module")
 	}
 	if ctx == nil {
-		panic("wiop: System.NewNonNative requires a non-nil ContextFrame")
+		panic("wiop: Module.NewNonNative requires a non-nil ContextFrame")
 	}
 	if nbBitsPerLimb <= 0 {
 		panic(fmt.Sprintf(
-			"wiop: System.NewNonNative requires a positive NbBitsPerLimb, got %d", nbBitsPerLimb,
+			"wiop: Module.NewNonNative requires a positive NbBitsPerLimb, got %d", nbBitsPerLimb,
 		))
 	}
 
@@ -196,22 +196,22 @@ func (m *Module) NewNonNative(
 	}
 	for _, g := range groups {
 		if len(g.cols) == 0 {
-			panic(fmt.Sprintf("wiop: System.NewNonNative requires a non-empty %s limb slice", g.name))
+			panic(fmt.Sprintf("wiop: Module.NewNonNative requires a non-empty %s limb slice", g.name))
 		}
 		if nbLimbs != 0 && len(g.cols) != nbLimbs {
 			panic(fmt.Sprintf(
-				"wiop: System.NewNonNative requires all limb slices to have the same length, got %d for %s, expected %d",
+				"wiop: Module.NewNonNative requires all limb slices to have the same length, got %d for %s, expected %d",
 				len(g.cols), g.name, nbLimbs,
 			))
 		}
 		nbLimbs = len(g.cols)
 		for i, c := range g.cols {
 			if c == nil {
-				panic(fmt.Sprintf("wiop: System.NewNonNative: %s limb %d is nil", g.name, i))
+				panic(fmt.Sprintf("wiop: Module.NewNonNative: %s limb %d is nil", g.name, i))
 			}
 			if c.Module != m {
 				panic(fmt.Sprintf(
-					"wiop: System.NewNonNative: %s limb %d belongs to module %q, expected %q",
+					"wiop: Module.NewNonNative: %s limb %d belongs to module %q, expected %q",
 					g.name, i, c.Module.Context.Path(), m.Context.Path(),
 				))
 			}
@@ -219,7 +219,7 @@ func (m *Module) NewNonNative(
 				inputRound = c.Round()
 			} else if c.Round() != inputRound {
 				panic(fmt.Sprintf(
-					"wiop: System.NewNonNative: %s limb %d is committed in round %d, expected round %d",
+					"wiop: Module.NewNonNative: %s limb %d is committed in round %d, expected round %d",
 					g.name, i, c.Round().ID, inputRound.ID,
 				))
 			}
