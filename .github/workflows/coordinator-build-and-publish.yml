@@ -65,6 +65,26 @@ jobs:
       - name: Build dist
         run: ./gradlew coordinator:app:installDist
 
+      # For published images (releases and develop): verify the config is documented and
+      # regenerate the reference docs so they can be attached to the image as an artifact.
+      - name: Generate coordinator config docs
+        if: ${{ env.PUSH_IMAGE == 'true' }}
+        run: |
+          ./gradlew -V :coordinator:app:checkConfigDocs :coordinator:app:generateConfigDocs
+          # Stage flat so the files sit at the artifact root (not under docs/tech/components/).
+          mkdir -p "${{ runner.temp }}/coordinator-config-docs"
+          cp docs/tech/components/coordinator-config-reference.md \
+             docs/tech/components/coordinator-config-schema.json \
+             "${{ runner.temp }}/coordinator-config-docs/"
+
+      - name: Upload coordinator config docs
+        if: ${{ env.PUSH_IMAGE == 'true' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coordinator-config-docs-${{ env.IMAGE_TAG_WITH_SUFFIX != '' && env.IMAGE_TAG_WITH_SUFFIX || env.IMAGE_TAG }}
+          path: ${{ runner.temp }}/coordinator-config-docs
+          if-no-files-found: error
+
       - name: Build and publish Docker image
         uses: ./.github/actions/docker-build-publish
         with:
