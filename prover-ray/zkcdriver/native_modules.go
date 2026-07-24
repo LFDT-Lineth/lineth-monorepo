@@ -47,17 +47,26 @@ func (s *schemaScanner) defineNativeMulmod(mod schema.Module[koalabear.Element],
 	// schema. All limb registers of a mulmod module share the same width.
 	nbBitsPerLimb := 0
 	for _, reg := range mod.Registers() {
+		matched := false
 		for _, prefix := range []string{
 			nativeMulmodLeft, nativeMulmodRight, nativeMulmodModulus,
 			nativeMulmodRemainder, nativeMulmodQuotient,
 		} {
 			if _, found := strings.CutPrefix(reg.Name(), prefix); found {
-				nbBitsPerLimb = int(reg.Width())
+				matched = true
 				break
 			}
 		}
-		if nbBitsPerLimb != 0 {
-			break
+		if !matched {
+			continue
+		}
+		w := int(reg.Width())
+		if nbBitsPerLimb == 0 {
+			nbBitsPerLimb = w
+			continue
+		}
+		if w != nbBitsPerLimb {
+			return fmt.Errorf("inconsistent limb width: register %q has width %d, expected %d", reg.Name(), w, nbBitsPerLimb)
 		}
 	}
 	if nbBitsPerLimb == 0 {
