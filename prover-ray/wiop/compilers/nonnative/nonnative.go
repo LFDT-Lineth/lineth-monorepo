@@ -161,7 +161,7 @@ func (a *carryProverAction) Run(rt *wiop.Runtime) {
 	// out, as uint64.
 	readRow := func(cols []*wiop.ConcreteVector, row int, out []uint64) {
 		for j := range out {
-			f := cols[j].ElementAtN(wiop.PaddingDirectionRight, nbRows, row).AsBase()
+			f := cols[j].ElementAtN(m.Padding, nbRows, row).AsBase()
 			out[j] = f.Uint64()
 		}
 	}

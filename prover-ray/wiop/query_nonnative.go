@@ -99,11 +99,11 @@ func (q *NonNative) Check(rt *Runtime) error {
 	// 0*0 = 0 + 0*0 holds, we can skip the rows that are not assigned in the
 	// input round.
 	for row := range nbRows {
-		left := composeLimbsRow(leftCols, q.NbBitsPerLimb, nbRows, row)
-		right := composeLimbsRow(rightCols, q.NbBitsPerLimb, nbRows, row)
-		mod := composeLimbsRow(modCols, q.NbBitsPerLimb, nbRows, row)
-		res := composeLimbsRow(resCols, q.NbBitsPerLimb, nbRows, row)
-		quo := composeLimbsRow(quoCols, q.NbBitsPerLimb, nbRows, row)
+		left := composeLimbsRow(leftCols, q.NbBitsPerLimb, nbRows, row, m.Padding)
+		right := composeLimbsRow(rightCols, q.NbBitsPerLimb, nbRows, row, m.Padding)
+		mod := composeLimbsRow(modCols, q.NbBitsPerLimb, nbRows, row, m.Padding)
+		res := composeLimbsRow(resCols, q.NbBitsPerLimb, nbRows, row, m.Padding)
+		quo := composeLimbsRow(quoCols, q.NbBitsPerLimb, nbRows, row, m.Padding)
 
 		product.Mul(left, right)
 		expected.Mul(quo, mod)
@@ -138,14 +138,14 @@ func getColumnAssignments(rt *Runtime, cols []*Column) ([]*ConcreteVector, bool)
 
 // composeLimbsRow recomposes the little-endian limbs of a single row into a
 // big.Int, base 2^nbBitsPerLimb.
-func composeLimbsRow(cols []*ConcreteVector, nbBitsPerLimb, nbRows, row int) *big.Int {
+func composeLimbsRow(cols []*ConcreteVector, nbBitsPerLimb, nbRows, row int, pd PaddingDirection) *big.Int {
 	res := new(big.Int)
 	limb := new(big.Int)
 	for i := len(cols) - 1; i >= 0; i-- {
 		// we need to assign `f` here because `Uint64()` below is defined on
 		// pointer receivers, and `cols[i].ElementAtN(...)` returns a value, not
 		// a pointer.
-		f := cols[i].ElementAtN(PaddingDirectionRight, nbRows, row).AsBase()
+		f := cols[i].ElementAtN(pd, nbRows, row).AsBase()
 		limb.SetUint64(f.Uint64())
 		res.Lsh(res, uint(nbBitsPerLimb))
 		res.Or(res, limb)
