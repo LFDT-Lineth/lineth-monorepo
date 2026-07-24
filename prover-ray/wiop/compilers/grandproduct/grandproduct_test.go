@@ -227,36 +227,48 @@ func TestCompilePermutation_RowLimit_VerifierRejects(t *testing.T) {
 }
 
 // TestCompilePermutation_RowLimit_ManyPermsDoNotTightenBound builds several
-// permutations, each with an A side just under the lone-permutation limit
-// (MaxPermutationRows/PackingArity = 2^58/3 ≈ 9.6e16). Because the row-by-row
-// accumulators are per-module Z columns — not shared across permutations — the
-// number of permutations must NOT shrink the budget, so every side stays under
-// the limit and the verifier accepts the row-limit checks.
+// honest permutations and drives the whole system through the real prover and
+// verifier. The row-by-row accumulators are per-module Z columns — not shared
+// across permutations — so the effective per-query row limit is
+// MaxPermutationRows/packingArity regardless of how many permutations exist.
+// The row-limit verifier action fires naturally as part of Verify (it is one of
+// the registered verifier actions) and, together with the grand-product result
+// and final-product checks, must accept the honest multi-permutation witness.
+//
+// (The bound cannot be probed for real end-to-end: a module large enough to be
+// discriminating would need >= 2^54 materialised rows. That the limit is NOT
+// divided by the permutation count is pinned by the ProverPanics/VerifierRejects
+// tests above, which fix it at MaxPermutationRows/packingArity.)
 func TestCompilePermutation_RowLimit_ManyPermsDoNotTightenBound(t *testing.T) {
 	sys := wiop.NewSystemf("gp-limit-many")
 	r0 := sys.NewRound()
-	for i := 0; i < 4; i++ {
-		modA := sys.NewSizedModule(sys.Context.Childf("modA%d", i), 1<<55, wiop.PaddingDirectionRight)
-		modB := sys.NewSizedModule(sys.Context.Childf("modB%d", i), 1<<55, wiop.PaddingDirectionRight)
-		colA := modA.NewColumn(sys.Context.Childf("A%d", i), wiop.VisibilityOracle, r0)
-		colB := modB.NewColumn(sys.Context.Childf("B%d", i), wiop.VisibilityOracle, r0)
+
+	const nPerms = 4
+	aCols := make([]*wiop.Column, nPerms)
+	bCols := make([]*wiop.Column, nPerms)
+	for i := 0; i < nPerms; i++ {
+		modA := sys.NewSizedModule(sys.Context.Childf("modA%d", i), 4, wiop.PaddingDirectionNone)
+		modB := sys.NewSizedModule(sys.Context.Childf("modB%d", i), 4, wiop.PaddingDirectionNone)
+		aCols[i] = modA.NewColumn(sys.Context.Childf("A%d", i), wiop.VisibilityOracle, r0)
+		bCols[i] = modB.NewColumn(sys.Context.Childf("B%d", i), wiop.VisibilityOracle, r0)
 		sys.NewPermutation(
 			sys.Context.Childf("perm%d", i),
-			[]wiop.Table{wiop.NewTable(colA.View())},
-			[]wiop.Table{wiop.NewTable(colB.View())},
+			[]wiop.Table{wiop.NewTable(aCols[i].View())},
+			[]wiop.Table{wiop.NewTable(bCols[i].View())},
 		)
 	}
 	grandproduct.Compile(sys)
 
-	// 2^55 < 2^58/3, so despite four permutations no row-limit check fires. Only
-	// the row-limit verifier actions read module sizes without assignment; the
-	// downstream product checks would need a witness, so assert on the row-limit
-	// actions directly rather than running the full verifier set.
-	rt := wiop.NewRuntime(sys)
-	for _, q := range sys.TableRelations {
-		require.NoError(t, q.ValidateRowLimit(rt, wiop.MaxPermutationRows/3),
-			"a permutation side under the limit must pass regardless of how many permutations exist")
-	}
+	// B is a genuine reordering of A on every permutation, so each side is a
+	// valid witness and all four are well under the per-query row limit.
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
+		for i := 0; i < nPerms; i++ {
+			rt.AssignColumn(aCols[i], makeVecU64(10, 20, 30, 40))
+			rt.AssignColumn(bCols[i], makeVecU64(30, 10, 40, 20))
+		}
+	})
+	require.NoError(t, sys.Verify(proof, pub),
+		"an honest multi-permutation witness under the row limit must be accepted regardless of how many permutations exist")
 }
 
 func runRound(rt *wiop.Runtime) {
