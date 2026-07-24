@@ -3,6 +3,8 @@ package wiop
 import (
 	"fmt"
 	"math/big"
+
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 )
 
 // enforce that NonNative implements Query
@@ -175,9 +177,9 @@ func (m *Module) NewNonNative(
 	if ctx == nil {
 		panic("wiop: Module.NewNonNative requires a non-nil ContextFrame")
 	}
-	if nbBitsPerLimb <= 0 {
+	if nbBitsPerLimb <= 0 || nbBitsPerLimb >= field.Bits-3 { // we need some headroom for ops
 		panic(fmt.Sprintf(
-			"wiop: Module.NewNonNative requires a positive NbBitsPerLimb, got %d", nbBitsPerLimb,
+			"wiop: Module.NewNonNative requires a NbBitsPerLimb in [1, %d), got %d", field.Bits-3, nbBitsPerLimb,
 		))
 	}
 
