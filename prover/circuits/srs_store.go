@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"sort"
 	"strconv"
+	"sync"
 
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark-crypto/kzg"
@@ -23,14 +24,35 @@ import (
 )
 
 type SRSStore struct {
+	// mu guards entries; a file is safe to read unlocked because it is only
+	// registered after being atomically published, and published files are immutable.
+	mu      sync.RWMutex
 	entries map[ecc.ID][]fsEntry
+	rootDir string
 }
 
 type fsEntry struct {
 	isCanonical bool
 	size        int
 	path        string
+	source      string // the ceremony tag in the file name: aleo, aztec or celo
 }
+
+// curveFileNames maps a curve ID to the token naming it in SRS file names.
+var curveFileNames = map[ecc.ID]string{
+	ecc.BLS12_377: "bls12377",
+	ecc.BN254:     "bn254",
+	ecc.BW6_761:   "bw6761",
+}
+
+// curveIDsByFileName is the inverse of curveFileNames.
+var curveIDsByFileName = func() map[string]ecc.ID {
+	m := make(map[string]ecc.ID, len(curveFileNames))
+	for id, name := range curveFileNames {
+		m[name] = id
+	}
+	return m
+}()
 
 // NewSRSStore creates a new SRSStore
 func NewSRSStore(rootDir string) (*SRSStore, error) {
@@ -45,6 +67,7 @@ func NewSRSStore(rootDir string) (*SRSStore, error) {
 
 	srsStore := &SRSStore{
 		entries: make(map[ecc.ID][]fsEntry),
+		rootDir: rootDir,
 	}
 	srsStore.entries[ecc.BLS12_377] = []fsEntry{}
 	srsStore.entries[ecc.BN254] = []fsEntry{}
@@ -68,15 +91,9 @@ func NewSRSStore(rootDir string) (*SRSStore, error) {
 
 		isCanonical := matches[2] == "canonical"
 		size, _ := strconv.Atoi(matches[3])
-		var curveID ecc.ID
-		switch matches[4] {
-		case "bls12377":
-			curveID = ecc.BLS12_377
-		case "bn254":
-			curveID = ecc.BN254
-		case "bw6761":
-			curveID = ecc.BW6_761
-		default:
+		source := matches[5]
+		curveID, ok := curveIDsByFileName[matches[4]]
+		if !ok {
 			return nil, errors.New("curve not supported")
 		}
 
@@ -84,6 +101,7 @@ func NewSRSStore(rootDir string) (*SRSStore, error) {
 			isCanonical: isCanonical,
 			size:        size,
 			path:        filepath.Join(rootDir, fileName),
+			source:      source,
 		})
 
 	}
@@ -102,9 +120,12 @@ func (store *SRSStore) GetSRS(ctx context.Context, ccs constraint.ConstraintSyst
 	sizeCanonical, sizeLagrange := plonk.SRSSize(ccs)
 	curveID := fieldToCurve(ccs.Field())
 
+	entries := store.entriesSnapshot(curveID)
+
 	// find the canonical srs
 	var canonicalSRS kzg.SRS
-	for _, entry := range store.entries[curveID] {
+	var canonicalEntry fsEntry
+	for _, entry := range entries {
 		if entry.isCanonical && entry.size >= sizeCanonical {
 			canonicalSRS = kzg.NewSRS(curveID)
 			data, err := os.ReadFile(entry.path)
@@ -114,6 +135,7 @@ func (store *SRSStore) GetSRS(ctx context.Context, ccs constraint.ConstraintSyst
 			if err := canonicalSRS.ReadDump(bytes.NewReader(data), sizeCanonical); err != nil {
 				return nil, nil, err
 			}
+			canonicalEntry = entry
 			break
 		}
 	}
@@ -124,18 +146,32 @@ func (store *SRSStore) GetSRS(ctx context.Context, ccs constraint.ConstraintSyst
 
 	// find the lagrange srs
 	var lagrangeSRS kzg.SRS
-	for _, entry := range store.entries[curveID] {
-		if !entry.isCanonical && entry.size == sizeLagrange {
-			lagrangeSRS = kzg.NewSRS(curveID)
-			data, err := os.ReadFile(entry.path)
-			if err != nil {
-				return nil, nil, err
-			}
-			if err := lagrangeSRS.ReadDump(bytes.NewReader(data)); err != nil {
-				return nil, nil, err
-			}
-			break
+	for _, entry := range entries {
+		if entry.isCanonical || entry.size != sizeLagrange {
+			continue
 		}
+		if entry.source != canonicalEntry.source {
+			// a lagrange basis from a different ceremony is inconsistent with
+			// the canonical SRS; skip it rather than mix ceremonies
+			logrus.Debugf("skipping lagrange SRS %s: ceremony %q != canonical's %q", entry.path, entry.source, canonicalEntry.source)
+			continue
+		}
+		srs := kzg.NewSRS(curveID)
+		data, err := os.ReadFile(entry.path)
+		if err == nil {
+			err = srs.ReadDump(bytes.NewReader(data))
+		}
+		if err == nil && pkG1Len(srs) != sizeLagrange {
+			err = fmt.Errorf("dump has %d points, want %d", pkG1Len(srs), sizeLagrange)
+		}
+		if err != nil {
+			// a lagrange dump is reconstructible (unlike the canonical SRS): log
+			// and fall back to deriving, which re-persists over this same path
+			logrus.Warnf("could not load lagrange SRS %s, re-deriving it: %v", entry.path, err)
+			continue
+		}
+		lagrangeSRS = srs
+		break
 	}
 
 	if lagrangeSRS == nil {
@@ -143,15 +179,119 @@ func (store *SRSStore) GetSRS(ctx context.Context, ccs constraint.ConstraintSyst
 		if sizeCanonical < sizeLagrange {
 			panic("canonical SRS is smaller than lagrange SRS")
 		}
-		logrus.Debugf("computing lagrange SRS from canonical SRS %d -> %d\n", sizeCanonical, sizeLagrange)
+		logrus.Debugf("computing lagrange SRS from canonical SRS %d -> %d", sizeCanonical, sizeLagrange)
 		var err error
 		lagrangeSRS, err = toLagrange(canonicalSRS, sizeLagrange)
 		if err != nil {
 			return nil, nil, err
 		}
+		// Persist the derived Lagrange SRS so subsequent runs load it from disk
+		// instead of re-deriving it. Best-effort: a failed write must not fail
+		// the caller.
+		if err := store.cacheLagrange(lagrangeSRS, sizeLagrange, curveID, canonicalEntry.source); err != nil {
+			logrus.Warnf("could not persist derived lagrange SRS (continuing): %v", err)
+		}
 	}
 
 	return canonicalSRS, lagrangeSRS, nil
+}
+
+// entriesSnapshot returns a copy of the entries for curveID, safe to iterate unlocked.
+func (store *SRSStore) entriesSnapshot(curveID ecc.ID) []fsEntry {
+	store.mu.RLock()
+	defer store.mu.RUnlock()
+	return append([]fsEntry(nil), store.entries[curveID]...)
+}
+
+// register adds a lagrange entry to the index unless an equivalent one exists.
+func (store *SRSStore) register(curveID ecc.ID, newEntry fsEntry) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	for _, entry := range store.entries[curveID] {
+		if !entry.isCanonical && entry.size == newEntry.size && entry.source == newEntry.source {
+			return
+		}
+	}
+	store.entries[curveID] = append(store.entries[curveID], newEntry)
+	sort.Slice(store.entries[curveID], func(i, j int) bool {
+		return store.entries[curveID][i].size < store.entries[curveID][j].size
+	})
+}
+
+// cacheLagrange writes a derived Lagrange SRS into the store's directory using
+// the naming scheme NewSRSStore parses, and registers it in the index. The dump
+// is fsync'd and renamed into place atomically, so a torn write cannot appear
+// under a trusted name; a bad dump is caught on the next load and re-derived.
+func (store *SRSStore) cacheLagrange(lagrangeSRS kzg.SRS, sizeLagrange int, curveID ecc.ID, source string) error {
+	curveName, ok := curveFileNames[curveID]
+	if !ok {
+		return fmt.Errorf("curve not supported: %s", curveID)
+	}
+
+	fileName := fmt.Sprintf("kzg_srs_lagrange_%d_%s_%s.memdump", sizeLagrange, curveName, source)
+	finalPath := filepath.Join(store.rootDir, fileName)
+
+	f, err := os.CreateTemp(store.rootDir, fileName+".tmp")
+	if err != nil {
+		return err
+	}
+	if err := lagrangeSRS.WriteDump(f); err != nil {
+		f.Close()
+		os.Remove(f.Name())
+		return fmt.Errorf("writing srs dump: %w", err)
+	}
+	if err := f.Sync(); err != nil {
+		f.Close()
+		os.Remove(f.Name())
+		return err
+	}
+	if err := f.Close(); err != nil {
+		os.Remove(f.Name())
+		return err
+	}
+	// ceremony files in the store are world-readable; match them so the cache
+	// stays loadable when a later run uses a different uid
+	if err := os.Chmod(f.Name(), 0o644); err != nil {
+		os.Remove(f.Name())
+		return err
+	}
+	if err := os.Rename(f.Name(), finalPath); err != nil {
+		os.Remove(f.Name())
+		return err
+	}
+	syncDir(store.rootDir)
+
+	store.register(curveID, fsEntry{isCanonical: false, size: sizeLagrange, path: finalPath, source: source})
+
+	logrus.Infof("persisted derived lagrange SRS to %s", finalPath)
+	return nil
+}
+
+// pkG1Len returns the number of G1 proving-key points in the SRS, or -1.
+func pkG1Len(srs kzg.SRS) int {
+	switch srs := srs.(type) {
+	case *kzg254.SRS:
+		return len(srs.Pk.G1)
+	case *kzg377.SRS:
+		return len(srs.Pk.G1)
+	case *kzgbw6.SRS:
+		return len(srs.Pk.G1)
+	default:
+		return -1
+	}
+}
+
+// syncDir best-effort fsyncs a directory so a just-renamed file survives a crash.
+func syncDir(dir string) {
+	d, err := os.Open(dir)
+	if err != nil {
+		logrus.Warnf("could not open %s to sync it: %v", dir, err)
+		return
+	}
+	if err := d.Sync(); err != nil {
+		logrus.Warnf("could not sync %s: %v", dir, err)
+	}
+	d.Close()
 }
 
 func toLagrange(srs kzg.SRS, sizeLagrange int) (kzg.SRS, error) {
