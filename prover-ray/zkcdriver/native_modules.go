@@ -14,11 +14,11 @@ import (
 const (
 	nativeMulmod = "mulmod_"
 
-	nativeMulmodLeft     = "lhsL'"
-	nativeMulmodRight    = "rhsL'"
-	nativeMulmodModulus  = "modL'"
-	nativeMulmodRemainer = "remainder'"
-	nativeMulmodQuotient = "quotient'"
+	nativeMulmodLeft      = "lhsL'"
+	nativeMulmodRight     = "rhsL'"
+	nativeMulmodModulus   = "modL'"
+	nativeMulmodRemainder = "remainder'"
+	nativeMulmodQuotient  = "quotient'"
 )
 
 func (s *schemaScanner) defineNativeModule(mod schema.Module[koalabear.Element]) error {
@@ -46,7 +46,7 @@ func (s *schemaScanner) defineNativeMulmod(mod schema.Module[koalabear.Element],
 	for _, reg := range mod.Registers() {
 		for _, prefix := range []string{
 			nativeMulmodLeft, nativeMulmodRight, nativeMulmodModulus,
-			nativeMulmodRemainer, nativeMulmodQuotient,
+			nativeMulmodRemainder, nativeMulmodQuotient,
 		} {
 			if _, found := strings.CutPrefix(reg.Name(), prefix); found {
 				nbBitsPerLimb = int(reg.Width())
@@ -108,7 +108,7 @@ func (s *schemaScanner) defineNativeMulmod(mod schema.Module[koalabear.Element],
 			{leftLimbs, nativeMulmodLeft},
 			{rightLimbs, nativeMulmodRight},
 			{modulusLimbs, nativeMulmodModulus},
-			{resultLimbs, nativeMulmodRemainer},
+			{resultLimbs, nativeMulmodRemainder},
 			{quotientLimbs, nativeMulmodQuotient},
 		} {
 			if err := assignLimb(j.limbs, j.prefix, regs[i]); err != nil {
@@ -124,7 +124,7 @@ func (s *schemaScanner) defineNativeMulmod(mod schema.Module[koalabear.Element],
 		{leftLimbs, nativeMulmodLeft},
 		{rightLimbs, nativeMulmodRight},
 		{modulusLimbs, nativeMulmodModulus},
-		{resultLimbs, nativeMulmodRemainer},
+		{resultLimbs, nativeMulmodRemainder},
 		{quotientLimbs, nativeMulmodQuotient},
 	} {
 		for i := range j.limbs {
