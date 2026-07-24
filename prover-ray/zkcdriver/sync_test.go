@@ -80,7 +80,11 @@ func TestZkcIntegrationTestSynced(t *testing.T) {
 				return
 			}
 			lineNr := 0
-			acceptCases := file.ReadInputFileAsLines(acceptPath)
+			acceptCases, ok := file.ReadInputFileAsLines(acceptPath)
+			if !ok {
+				fatalIfNotKnown(t, failures, baseName, -3, failReasonNoTestData, "failed to read accept file %s for test-case %s", acceptPath, f)
+				return
+			}
 			for _, line := range acceptCases {
 				// check that we're not in a comment line. I.e. we only want lines starting with `{` to be considered as test-cases.
 				if !strings.HasPrefix(line, "{") {

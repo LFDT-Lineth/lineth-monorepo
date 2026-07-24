@@ -29,7 +29,7 @@ import (
 
 var (
 	zkcField = field.KOALABEAR_16
-	zkcCfg   = codegen.DEFAULT_CONFIG.SplitRegisters(true).Quiet(true)
+	zkcCfg   = codegen.DEFAULT_CONFIG
 )
 
 func compileBinaryConstraints(srcPath string) (binfile *constraints.BinaryFile[koalabear.Element], err error) {
@@ -105,7 +105,7 @@ func traceZkc(
 	}()
 
 	// trace program with given input
-	outputs, tr, errs := binFile.Trace(input, tracingCfg)
+	outputs, _, tr, errs := binFile.Trace(input, tracingCfg)
 	if len(errs) > 0 {
 		return nil, fmt.Errorf("could not trace the binary file: %w", errors.Join(errs...))
 	}
