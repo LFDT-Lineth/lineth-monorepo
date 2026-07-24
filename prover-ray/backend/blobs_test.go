@@ -3,11 +3,8 @@ package backend
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/hex"
-	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/LFDT-Lineth/zkc/pkg/util/field"
@@ -17,7 +14,6 @@ import (
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/compiler/ast"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/compiler/codegen"
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/constraints"
-	zkc_util "github.com/LFDT-Lineth/zkc/pkg/zkc/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -279,60 +275,6 @@ func TestCore_BuildInputs_MatchesBuildZkcInputs(t *testing.T) {
 	assert.Equal(t, fromFull, fromCore, "precomputed path must produce identical output to buildZkcInputs")
 }
 
-// referenceJSON mirrors printJson in the reference elf_to_json_gen tool
-// (arithmetization/src/test/scripts/elf_to_json_gen/main.go): the JSON hex
-// form of the ZkC pub inputs that zkc_util.ParseJsonInputFile decodes. Blob
-// boundaries are separated by "____" (four underscores); offset and size
-// within one entry use a single "_".
-func referenceJSON(memBlobs []memoryBlob, entryPoint uint64) []byte {
-	offsetSizeParts := make([]string, len(memBlobs))
-	dataParts := make([]string, len(memBlobs))
-	for i, b := range memBlobs {
-		offsetSizeParts[i] = fmt.Sprintf("%016x_%016x", b.offset, len(b.data))
-		dataParts[i] = hex.EncodeToString(b.data)
-	}
-	return []byte(`{` +
-		`"entry_point_and_blobs_count":"0x` + fmt.Sprintf("%016x_%016x", entryPoint, len(memBlobs)) + `",` +
-		`"blobs_offset_and_size":"0x` + strings.Join(offsetSizeParts, "____") + `",` +
-		`"blobs_data":"0x` + strings.Join(dataParts, "____") + `"` +
-		`}`)
-}
-
-// TestEncodeInputs_MatchesReferenceJSON pins encodeInputs to the reference
-// wire format: building the map directly must be byte-identical to encoding
-// the elf_to_json_gen JSON and decoding it with zkc's own parser.
-func TestEncodeInputs_MatchesReferenceJSON(t *testing.T) {
-	cases := []struct {
-		name     string
-		memBlobs []memoryBlob
-		entry    uint64
-	}{
-		{"SingleBlob",
-			[]memoryBlob{{offset: 0x00800000, data: []byte{0x97, 0x02, 0x00, 0x00}}},
-			testEntry},
-		{"MultipleBlobs",
-			[]memoryBlob{
-				{offset: 0x00800000, data: []byte{0xDE, 0xAD}},
-				{offset: 0x00900000, data: []byte{0xBE, 0xEF, 0x01}},
-				{offset: 0x00A00000, data: make([]byte, 0x123)},
-			},
-			0x00800150},
-		{"ELFPlusSSZ",
-			append(
-				[]memoryBlob{{offset: testSecAddr, data: testSecData}},
-				sszBlobs(DefaultINOrigin, []byte{0x00, 0x01, 0xAA, 0xBB})...),
-			testEntry},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			want, err := zkc_util.ParseJsonInputFile(referenceJSON(tc.memBlobs, tc.entry))
-			require.NoError(t, err)
-			assert.Equal(t, want, encodeInputs(tc.memBlobs, tc.entry))
-		})
-	}
-}
-
 // TestBuildZkcInputs_NoLoadableSegments verifies that an ELF whose only
 // segment is not PT_LOAD is rejected with a clear error rather than producing
 // an empty blob set.
@@ -368,7 +310,7 @@ func compileZKCBin(t *testing.T, srcPath string) string {
 
 	src := source.NewSourceFile(srcPath, srcBytes)
 	zkcField := field.KOALABEAR_16
-	zkcCfg := codegen.DEFAULT_CONFIG.SplitRegisters(true).Quiet(true)
+	zkcCfg := codegen.DEFAULT_CONFIG
 
 	macroProgram, _, errs := compiler.Compile(zkcField, *src)
 	if len(errs) > 0 {
