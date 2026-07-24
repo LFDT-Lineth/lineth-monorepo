@@ -122,9 +122,10 @@ const MaxLookupRows uint64 = 1 << 30
 // compiler). Permutations tolerate a much larger bound because their running
 // accumulator is a product of β-randomised factors rather than a sum of
 // row-index multiplicities, so the small-field overflow only bites at a far
-// higher row count. As with lookups the effective per-side limit is this
-// budget divided by the compiler's packing arity and by the number of
-// permutations reduced together, and it is checked via
+// higher row count. The effective per-side limit is this budget itself: the
+// grand-product accumulators are per-module Z columns, so neither the packing
+// arity (which shrinks the number of Z columns, not the rows each walks) nor
+// the number of permutations reduced together tightens it. It is checked via
 // [TableRelationQuery.CheckRowLimit] / [TableRelationQuery.ValidateRowLimit].
 const MaxPermutationRows uint64 = 1 << 58
 

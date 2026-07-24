@@ -204,24 +204,57 @@ func newPermutation(t *testing.T, aSize, bSize int) *wiop.System {
 	return sys
 }
 
-// TestCompilePermutation_RowLimit_ProverPanics drives the real prover of a
-// permutation whose A side has 2^58 rows. The row-limit prover action —
-// registered on the witness round ahead of the grand-product discharge pass —
-// must panic before any row is touched.
+// TestCompilePermutation_RowLimit_ProverPanics drives the real prover
+// ([wiop.System.Prove]) of a permutation whose A side has 2^58 rows. The
+// row-limit prover action — the only action on the witness round, registered
+// ahead of the grand-product discharge pass — must panic before any row is
+// touched, so the witness callback need not assign anything.
 func TestCompilePermutation_RowLimit_ProverPanics(t *testing.T) {
 	sys := newPermutation(t, 1<<58, 2) // A side = 2^58 rows (>= bound); B side tiny.
-	rt := wiop.NewRuntime(sys)
-	assert.Panics(t, func() { runRound(rt) }, // witness round: only the row-limit action.
+	assert.Panics(t, func() { sys.Prove(func(*wiop.Runtime) {}) },
 		"prover must panic when a permutation side reaches the row limit")
 }
 
-// TestCompilePermutation_RowLimit_VerifierRejects runs the real verifier checks
-// of a permutation whose B side has 2^58 rows. The row-limit verifier action
-// must return an error independently of the prover.
+// TestCompilePermutation_RowLimit_VerifierRejects runs the real verifier
+// ([wiop.System.Verify]) against a maliciously inflated proof. An honest prover
+// cannot produce a proof for a 2^58-row permutation (it would panic, and the
+// row walk is infeasible anyway), so we prove an honest permutation over
+// dynamic modules at a small size, then rewrite the B-side module's declared
+// size in the proof to 2^58. The row-limit verifier action — the first verifier
+// action, on the witness round — must reject before any other check runs.
 func TestCompilePermutation_RowLimit_VerifierRejects(t *testing.T) {
-	sys := newPermutation(t, 2, 1<<58) // B side = 2^58 rows (>= bound); A side tiny.
-	rt := wiop.NewRuntime(sys)
-	err := checkAllVerifierActions(rt)
+	sys := wiop.NewSystemf("gp-limit-verify")
+	r0 := sys.NewRound()
+	modA := sys.NewDynamicModule(sys.Context.Childf("modA"), wiop.PaddingDirectionRight)
+	modB := sys.NewDynamicModule(sys.Context.Childf("modB"), wiop.PaddingDirectionRight)
+	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+	sys.NewPermutation(
+		sys.Context.Childf("perm"),
+		[]wiop.Table{wiop.NewTable(colA.View())},
+		[]wiop.Table{wiop.NewTable(colB.View())},
+	)
+	grandproduct.Compile(sys)
+
+	// Honest, small permutation witness: B is a reordering of A.
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
+		rt.AssignColumn(colA, makeVecU64(10, 20, 30, 40))
+		rt.AssignColumn(colB, makeVecU64(30, 10, 40, 20))
+	})
+	require.NoError(t, sys.Verify(proof, pub), "sanity: the honest witness must verify")
+
+	// Malicious inflation: claim the B module spans 2^58 rows. DynamicSizes is
+	// keyed by the module's position in sys.Modules.
+	bIdx := -1
+	for i, m := range sys.Modules {
+		if m == modB {
+			bIdx = i
+		}
+	}
+	require.GreaterOrEqual(t, bIdx, 0, "modB must be registered in the system")
+	proof.DynamicSizes[bIdx] = 1 << 58
+
+	err := sys.Verify(proof, pub)
 	assert.ErrorContains(t, err, "effective per-query row limit",
 		"verifier must reject a proof when a permutation side reaches the row limit")
 }
