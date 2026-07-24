@@ -107,7 +107,7 @@ jar {
   def classPathAttribute = configurations.runtimeClasspath.elements.map { locations ->
     locations
         .collect { it.asFile.name }
-        .findAll { it.endsWith('jar') }
+        .findAll { it.endsWith(".jar") }
         .join(' ')
   }
   manifest {
