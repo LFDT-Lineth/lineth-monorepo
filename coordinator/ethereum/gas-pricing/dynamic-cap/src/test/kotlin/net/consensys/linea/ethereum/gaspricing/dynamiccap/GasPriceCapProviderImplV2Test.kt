@@ -210,6 +210,7 @@ class GasPriceCapProviderImplV2Test {
       gasPriceCapProvider.getGasPriceCapsWithCoefficient(targetBlockTime).get(),
     ).isNull()
   }
+
   @Test
   fun `time of day multiplier should default to 1_0 when key is missing`() {
     val baselineCaps = createGasPriceCapProvider().getGasPriceCaps(targetBlockTime).get()

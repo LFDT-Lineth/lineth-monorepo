@@ -68,23 +68,23 @@ class GasPriceCapProviderImplV2(
     return isEnoughData
   }
 
-  private fun getElapsedTimeSinceBlockTimestamp(blockTimestamp: Instant): Duration {
-    return (clock.now() - blockTimestamp).coerceAtLeast(Duration.ZERO)
+  private fun getElapsedTimeSinceBlockTimestamp(blockTimestamp: Instant, referenceTime: Instant): Duration {
+    return (referenceTime - blockTimestamp).coerceAtLeast(Duration.ZERO)
   }
 
-  private fun getTimeOfDayMultiplierForNow(timeOfDayMultipliers: TimeOfDayMultipliers): Double {
-    val dateTime = LocalDateTime.ofEpochSecond(clock.now().epochSeconds, 0, ZoneOffset.UTC)
+  private fun getTimeOfDayMultiplierForNow(referenceTime: Instant): Double {
+    val dateTime = LocalDateTime.ofEpochSecond(referenceTime.epochSeconds, 0, ZoneOffset.UTC)
     val tdmKey = getTimeOfDayKey(dateTime.dayOfWeek, dateTime.hour)
-    return timeOfDayMultipliers[tdmKey] ?: run {
+    return config.timeOfDayMultipliers[tdmKey] ?: run {
       log.info("No multiplier found for key={} date={} defaulting to 1.0", tdmKey, dateTime)
       1.0
     }
   }
 
-  private fun calculateGasPriceCaps(timestamp: Instant): GasPriceCaps {
-    val elapsedTimeSinceBlockTimestamp = getElapsedTimeSinceBlockTimestamp(timestamp)
+  private fun calculateGasPriceCaps(blockTimestamp: Instant, referenceTime: Instant): GasPriceCaps {
+    val elapsedTimeSinceBlockTimestamp = getElapsedTimeSinceBlockTimestamp(blockTimestamp, referenceTime)
     val percentileGasFees = feeHistoriesRepository.getCachedPercentileGasFees()
-    val timeOfDayMultiplier = getTimeOfDayMultiplierForNow(config.timeOfDayMultipliers)
+    val timeOfDayMultiplier = getTimeOfDayMultiplierForNow(referenceTime)
     val maxPriorityFeePerGasCap = gasPriceCapCalculator.calculateGasPriceCap(
       adjustmentConstant = config.adjustmentConstant,
       finalizationTargetMaxDelay = config.finalizationTargetMaxDelay,
@@ -131,7 +131,7 @@ class GasPriceCapProviderImplV2(
       return SafeFuture.completedFuture(null)
     }
 
-    val gasPriceCaps = runCatching { calculateGasPriceCaps(timestamp) }
+    val gasPriceCaps = runCatching { calculateGasPriceCaps(timestamp, clock.now()) }
       .onFailure { th ->
         log.warn("Gas price caps returned as null due to calculation failure: errorMessage={}", th.message, th)
       }
