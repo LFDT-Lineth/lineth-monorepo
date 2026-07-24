@@ -11,6 +11,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/nonnative"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/rangecheck"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
@@ -28,14 +29,15 @@ func init() {
 // compileFullPipeline runs every wiop compilation pass in the canonical
 // order so that each pass can consume the previous one's output:
 //
-//  1. rangecheck:           RangeCheck → Inclusion TableRelation
-//  2. lookuptologderivsum:  Inclusion → LogDerivativeSum
-//  3. messagebus:           MessageBus → GrandProduct
-//  4. grandproduct:         TableRelationQuery -> GrandProduct; GrandProduct → Z columns + Vanishing + endpoint openings
-//  5. logderivativesum:     LogDerivativeSum → recurrence Vanishings + endpoint openings
-//  6. localvanishing:       scalar Vanishings → multi-valued Vanishings via the Lagrange lift
-//  7. global:               multi-valued Vanishings → quotient shares + LagrangeEval claims
-//  8. pcs:                  commit every committed round, open every LagrangeEval claim
+//  1. nonnative:            NonNative → Vanishing
+//  2. rangecheck:           RangeCheck → Inclusion TableRelation
+//  3. lookuptologderivsum:  Inclusion → LogDerivativeSum
+//  4. messagebus:           MessageBus → GrandProduct
+//  5. grandproduct:         TableRelationQuery -> GrandProduct; GrandProduct → Z columns + Vanishing + endpoint openings
+//  6. logderivativesum:     LogDerivativeSum → recurrence Vanishings + endpoint openings
+//  7. localvanishing:       scalar Vanishings → multi-valued Vanishings via the Lagrange lift
+//  8. global:               multi-valued Vanishings → quotient shares + LagrangeEval claims
+//  9. pcs:                  commit every committed round, open every LagrangeEval claim
 //
 // Each pass is a no-op when its input queries are absent, so this ordering
 // is safe to apply uniformly to every wioptest scenario regardless of which
@@ -53,6 +55,7 @@ func compileFullPipeline(sys *wiop.System) {
 // inject a prover-side tamper on a compiled column before the PCS pass hides
 // and commits it.
 func compilePipelineBeforePCS(sys *wiop.System) {
+	nonnative.Compile(sys)
 	rangecheck.Compile(sys)
 	lookuptologderivsum.Compile(sys)
 	messagebus.Compile(sys)
@@ -285,6 +288,31 @@ func TestFullPipeline_RangeCheckScenarios(t *testing.T) {
 			proof, pub := sc.Sys.Prove(sc.AssignWitness)
 			require.NoError(t, sc.Sys.Verify(proof, pub),
 				"full pipeline must accept an honest witness")
+		})
+	}
+}
+
+// TestFullPipeline_NonNativeScenarios runs the full pipeline on every
+// [wioptest.NonNativeScenarios] fixture. The nonnative pass reduces each
+// [wiop.NonNative] query to a multi-valued [wiop.Vanishing] identity checked at
+// a shared random point; this is then checked by global compiler using quotient
+// argument.
+func TestFullPipeline_NonNativeScenarios(t *testing.T) {
+	for _, build := range wioptest.NonNativeScenarios() {
+		sc := build()
+		t.Run(sc.Name, func(t *testing.T) {
+			compileFullPipeline(sc.Sys)
+			proof, pub := sc.Sys.Prove(sc.AssignHonest)
+			require.NoError(t, sc.Sys.Verify(proof, pub),
+				"full pipeline must accept an honest witness")
+		})
+
+		t.Run(sc.Name+"/Soundness", func(t *testing.T) {
+			sc := build()
+			compileFullPipeline(sc.Sys)
+			proof, pub := sc.Sys.Prove(sc.AssignInvalid)
+			assert.Error(t, sc.Sys.Verify(proof, pub),
+				"full pipeline must reject an invalid witness")
 		})
 	}
 }
