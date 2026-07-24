@@ -47,6 +47,13 @@ comptime {
     @export(&bls12_map_fp_to_g1, .{ .name = "zkvm_bls12_map_fp_to_g1" });
     @export(&bls12_map_fp2_to_g2, .{ .name = "zkvm_bls12_map_fp2_to_g2" });
     @export(&secp256r1_verify, .{ .name = "zkvm_secp256r1_verify" });
+    //
+    //
+    if (build_options.write_output_accel) {
+        @export(&lineth_accel.zkvm_write_output, .{ .name = "zkvm_write_output" });
+    } else {
+        @export(&keccak256, .{ .name = "zkvm_write_output" });
+    }
 }
 
 const OK: i32 = 0;
