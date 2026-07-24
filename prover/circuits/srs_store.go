@@ -156,17 +156,19 @@ func (store *SRSStore) GetSRS(ctx context.Context, ccs constraint.ConstraintSyst
 
 func toLagrange(srs kzg.SRS, sizeLagrange int) (kzg.SRS, error) {
 	var err error
+	// the verifying key is basis-independent: carry it over so the derived SRS
+	// (and any dump written from it) is faithful, not just its proving key
 	switch srs := srs.(type) {
 	case *kzg254.SRS:
-		lagrange := &kzg254.SRS{}
+		lagrange := &kzg254.SRS{Vk: srs.Vk}
 		lagrange.Pk.G1, err = kzg254.ToLagrangeG1(srs.Pk.G1[:sizeLagrange])
 		return lagrange, err
 	case *kzg377.SRS:
-		lagrange := &kzg377.SRS{}
+		lagrange := &kzg377.SRS{Vk: srs.Vk}
 		lagrange.Pk.G1, err = kzg377.ToLagrangeG1(srs.Pk.G1[:sizeLagrange])
 		return lagrange, err
 	case *kzgbw6.SRS:
-		lagrange := &kzgbw6.SRS{}
+		lagrange := &kzgbw6.SRS{Vk: srs.Vk}
 		lagrange.Pk.G1, err = kzgbw6.ToLagrangeG1(srs.Pk.G1[:sizeLagrange])
 		return lagrange, err
 	default:
