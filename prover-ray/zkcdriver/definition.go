@@ -203,10 +203,6 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 			utils.Panic("lookup %q has %d source fragments; only single-fragment lookups are supported", name, len(cs.Unwrap().Sources))
 		}
 
-		if numCol == 0 {
-			return
-		}
-
 		// this will panic over interleaved columns, we can debug that later
 		for i := range numCol {
 			wSources[i] = s.compColumnByCorsetColumnAccess(cSource.Module, cSource.Terms[i])
