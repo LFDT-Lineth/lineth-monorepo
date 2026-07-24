@@ -10,9 +10,9 @@ import java.nio.file.Path
 import kotlin.io.path.isDirectory
 
 class DirectoryCleaner(
-  val vertx: Vertx,
-  val directories: List<Path>,
-  val fileFilters: List<FileFilter>,
+  private val vertx: Vertx,
+  private val directories: List<Path>,
+  private val fileFilters: List<FileFilter>,
 ) {
   private val log = LogManager.getLogger(this::class.java)
 
@@ -31,7 +31,7 @@ class DirectoryCleaner(
 
   internal fun cleanDirectory(path: Path): SafeFuture<*> {
     return vertx.fileSystem().readDir(path.toString()).toSafeFuture()
-      .thenApply { filePaths ->
+      .thenCompose { filePaths ->
         val deletions = mutableListOf<SafeFuture<*>>()
         filePaths.forEach { filePath ->
           val file = File(filePath)
@@ -40,10 +40,9 @@ class DirectoryCleaner(
               vertx.fileSystem()
                 .delete(filePath)
                 .toSafeFuture()
-                .whenComplete { _, deleteException ->
-                  deleteException?.also { log.warn("Failed to delete $filePath", it) }
+                .handleException { deleteException ->
+                  log.warn("Failed to delete $filePath", deleteException)
                 }
-                .thenApply { }
             deletions.add(deletion)
           }
         }

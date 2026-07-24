@@ -70,6 +70,26 @@ func NewProverState(p Params, levels []Level) (*ProverState, error) {
 		st.RoundRoots = make([]field.Octuplet, p.numRounds()-1)
 	}
 
+	// D=1: HasNext is false from the start so Fold is never called and
+	// FinalPoly is never populated. Apply the top level directly (alphaDeep
+	// is irrelevant when there is only one column) and extract coefficients
+	// via IFFT, matching the logic in Fold's final-round branch.
+	if p.numRounds() == 0 {
+		if l, ok := plan.levelAtRound[0]; ok {
+			var alphaDeep field.Ext
+			st.running = st.levels[l].EvalsAt(alphaDeep, st.running)
+		}
+		coeffs := append([]field.Ext(nil), st.running...)
+		p.domains[0].FFTInverseExt6(coeffs, fft.DIT)
+		f := 1 << p.logFinalPolySize
+		for i, c := range coeffs[f:] {
+			if !c.IsZero() {
+				panic(fmt.Sprintf("fri: ProverState: D=1 final layer has nonzero coefficient %d", f+i))
+			}
+		}
+		st.FinalPoly = coeffs[:f]
+	}
+
 	return st, nil
 }
 

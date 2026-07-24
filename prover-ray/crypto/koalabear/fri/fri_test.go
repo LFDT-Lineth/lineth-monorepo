@@ -129,6 +129,19 @@ func TestProveVerify(t *testing.T) {
 		{"single-level", 3, 2, 3, nil},
 		{"one-extra", 4, 3, 4, []int{2}},
 		{"two-extra", 4, 3, 4, []int{4, 2}},
+		// A D=1 extra level (a constant polynomial) is introduced at round
+		// jl == numRounds(), at the boundary of the fold schedule. Regression
+		// test for the off-by-one that previously rejected this as
+		// "intro round numRounds, must be < numRounds" in buildProvePlan and
+		// pcs.Verify.
+		{"extra-D1-at-final-round", 4, 3, 4, []int{2, 1}},
+		// The top-level polynomial itself has D=1 (a constant), so numRounds
+		// == 0: HasNext() is false from the start, no fold ever runs, and
+		// layer 0 IS the final layer. Regression test for two bugs this
+		// exposed: (1) NewProverState never populated FinalPoly when no Fold
+		// call happens; (2) pcs.Verify indexed Rounds[0] into a zero-length
+		// slice (allocated with size numRounds==0), panicking.
+		{"top-level-D1-zero-rounds", 1, 0, 2, nil},
 	}
 
 	prng := rand.New(utils.NewRandSource(99))
