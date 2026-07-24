@@ -4,22 +4,20 @@ import (
 	"bytes"
 	"debug/elf"
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
+	"io"
 	"sort"
-	"strings"
-
-	zkc_util "github.com/LFDT-Lineth/zkc/pkg/zkc/util"
 )
 
-// blob is an in-memory guest RAM region: a contiguous byte slice mapped at a
-// specific address.
-type blob struct {
+// memoryBlob is an in-memory guest RAM region: a contiguous byte slice mapped
+// at a specific address. Named to match the arith team's memoryBlob in
+// elf_to_json_gen/main.go. Not related to EIP-4844 blobs.
+type memoryBlob struct {
 	offset uint64
 	data   []byte
 }
 
-// BuildZkcInputs constructs the map[string][]byte that [zkcdriver.PreReadInputs]
+// buildZkcInputs constructs the map[string][]byte that [zkcdriver.PreReadInputs]
 // expects. It produces the three pub-input keys that RISCV-ZKC.bin's main.zkc
 // declares:
 //
@@ -27,28 +25,56 @@ type blob struct {
 //   - "blobs_offset_and_size"
 //   - "blobs_data"
 //
-// elfBytes is the raw guest ELF. sszInput is the raw SSZ StatelessInput (not
-// yet framed — BuildZkcInputs adds the [u64 LE len] prefix). inOrigin is the
-// guest RAM address where the SSZ input is placed (use [DefaultINOrigin]).
-func BuildZkcInputs(elfBytes, sszInput []byte, inOrigin uint64) (map[string][]byte, error) {
-	ef, err := elf.NewFile(bytes.NewReader(elfBytes))
-	if err != nil {
-		return nil, fmt.Errorf("parsing guest ELF: %w", err)
-	}
-
-	blobs, err := elfBlobs(ef)
+// elfBytes is the raw guest ELF. sszInput is the framed StatelessInput the
+// guest reads at _in_start: the 0x0001 schema id followed by the SSZ body
+// (the guest's deserializer strips the schema id). buildZkcInputs prepends
+// only the [u64 LE len] prefix; it neither adds nor strips the schema id.
+// inOrigin is the guest RAM address where the input is placed
+// (use [DefaultINOrigin]).
+//
+// This is a one-shot helper that parses the ELF on every call; today only
+// tests use it. The per-job proving path does NOT go through here:
+// [Core.buildInputs] reuses the guest ELF parsed once in [New] (c.elf) and
+// appends only the per-job SSZ blobs.
+func buildZkcInputs(elfBytes, sszInput []byte, inOrigin uint64) (map[string][]byte, error) {
+	parsedELF, err := loadELFInputs(bytes.NewReader(elfBytes))
 	if err != nil {
 		return nil, err
 	}
-	blobs = append(blobs, sszBlobs(inOrigin, sszInput)...)
-	return encodeInputs(blobs, ef.Entry)
+	memBlobs := append(parsedELF.blobs, sszBlobs(inOrigin, sszInput)...)
+	return encodeInputs(memBlobs, parsedELF.entry), nil
 }
 
-// elfBlobs extracts allocated, file-backed ELF sections as RAM blobs.
+// elfInputs is the ELF's precomputed contribution to the ZkC inputs: its
+// loadable sections as memory blobs plus the entry point. Extracted once in
+// [New] and reused for every job; only the per-job SSZ blobs differ.
+type elfInputs struct {
+	blobs []memoryBlob
+	entry uint64
+}
+
+// loadELFInputs parses the guest ELF read from r and returns its memory blobs
+// and entry point. r must stay valid until this returns; the section bytes are
+// copied out, so the caller may close it afterward. Callers that process many
+// jobs from the same ELF should call this once at startup and cache the result
+// on [Core].
+func loadELFInputs(r io.ReaderAt) (elfInputs, error) {
+	ef, err := elf.NewFile(r)
+	if err != nil {
+		return elfInputs{}, fmt.Errorf("parsing guest ELF: %w", err)
+	}
+	blobs, err := elfBlobs(ef)
+	if err != nil {
+		return elfInputs{}, err
+	}
+	return elfInputs{blobs: blobs, entry: ef.Entry}, nil
+}
+
+// elfBlobs extracts allocated, file-backed ELF sections as memory blobs.
 // SHT_NOBITS sections (.bss, padding) are omitted: guest RAM is zero-
-// initialized before blob loading, so explicit zeros waste space.
-func elfBlobs(ef *elf.File) ([]blob, error) {
-	var result []blob
+// initialized before memory blob loading, so explicit zeros waste space.
+func elfBlobs(ef *elf.File) ([]memoryBlob, error) {
+	var result []memoryBlob
 
 	for _, p := range ef.Progs {
 		if p.Type != elf.PT_LOAD || p.Memsz == 0 {
@@ -56,7 +82,7 @@ func elfBlobs(ef *elf.File) ([]blob, error) {
 		}
 		progEnd := p.Vaddr + p.Memsz
 
-		var segBlobs []blob
+		var segBlobs []memoryBlob
 		for _, s := range ef.Sections {
 			if s.Size == 0 || s.Type == elf.SHT_NOBITS || s.Flags&elf.SHF_ALLOC == 0 {
 				continue
@@ -69,7 +95,7 @@ func elfBlobs(ef *elf.File) ([]blob, error) {
 			if err != nil {
 				return nil, fmt.Errorf("reading ELF section %s: %w", s.Name, err)
 			}
-			segBlobs = append(segBlobs, blob{offset: s.Addr, data: data})
+			segBlobs = append(segBlobs, memoryBlob{offset: s.Addr, data: data})
 		}
 
 		sort.Slice(segBlobs, func(i, j int) bool {
@@ -84,38 +110,50 @@ func elfBlobs(ef *elf.File) ([]blob, error) {
 	return result, nil
 }
 
-// sszBlobs splits ssz into the two blobs that linea_zkvm_io expects at
-// _in_start: an 8-byte LE length prefix followed by the raw SSZ payload.
-// The split matches elf_to_json_gen's sszInputBlobs (commit 09fcdb42).
-func sszBlobs(inOrigin uint64, ssz []byte) []blob {
+// sszBlobs splits ssz into the two memory blobs that linea_zkvm_io expects at
+// _in_start: an 8-byte LE length prefix followed by the payload bytes. It does
+// not interpret the payload; callers pass the framed StatelessInput (0x0001
+// schema id + SSZ body, see [buildZkcInputs]). The split matches
+// elf_to_json_gen's sszInputBlobs (commit 09fcdb42).
+func sszBlobs(inOrigin uint64, ssz []byte) []memoryBlob {
 	prefix := make([]byte, 8)
 	binary.LittleEndian.PutUint64(prefix, uint64(len(ssz)))
-	blobs := []blob{{offset: inOrigin, data: prefix}}
+	memBlobs := []memoryBlob{{offset: inOrigin, data: prefix}}
 	if len(ssz) > 0 {
-		blobs = append(blobs, blob{offset: inOrigin + 8, data: ssz})
+		memBlobs = append(memBlobs, memoryBlob{offset: inOrigin + 8, data: ssz})
 	}
-	return blobs
+	return memBlobs
 }
 
-// encodeInputs encodes blobs into the JSON hex format that
-// zkc_util.ParseJsonInputFile decodes. The format is identical to what
-// elf_to_json_gen/main.go produces, ensuring compatibility with the
-// existing zkcdriver input reader.
-func encodeInputs(blobs []blob, entryPoint uint64) (map[string][]byte, error) {
-	offsetSizeParts := make([]string, len(blobs))
-	dataParts := make([]string, len(blobs))
-	for i, b := range blobs {
-		offsetSizeParts[i] = fmt.Sprintf("%016x_%016x", b.offset, len(b.data))
-		dataParts[i] = hex.EncodeToString(b.data)
+// encodeInputs builds the keyed byte map that [zkcdriver.PreReadInputs]
+// expects, one entry per pub-input key:
+//
+//   - "entry_point_and_blobs_count": [8 BE entry point][8 BE blob count]
+//   - "blobs_offset_and_size":       per blob, [8 BE offset][8 BE size]
+//   - "blobs_data":                  all blob bytes concatenated
+//
+// The layout is intended to be byte-identical to zkc_util.ParseJsonInputFile
+// applied to the JSON that the reference elf_to_json_gen tool emits, without the
+// JSON round trip; see TestEncodeInputs_* in blobs_test.go for layout checks.
+func encodeInputs(memBlobs []memoryBlob, entryPoint uint64) map[string][]byte {
+	entryAndCount := binary.BigEndian.AppendUint64(make([]byte, 0, 16), entryPoint)
+	entryAndCount = binary.BigEndian.AppendUint64(entryAndCount, uint64(len(memBlobs)))
+
+	var dataLen int
+	for _, b := range memBlobs {
+		dataLen += len(b.data)
+	}
+	offsetAndSize := make([]byte, 0, 16*len(memBlobs))
+	data := make([]byte, 0, dataLen)
+	for _, b := range memBlobs {
+		offsetAndSize = binary.BigEndian.AppendUint64(offsetAndSize, b.offset)
+		offsetAndSize = binary.BigEndian.AppendUint64(offsetAndSize, uint64(len(b.data)))
+		data = append(data, b.data...)
 	}
 
-	// Blob boundaries are separated by "____" (four underscores); individual
-	// fields within one entry use a single "_" as a visual separator.
-	json := []byte(`{` +
-		`"entry_point_and_blobs_count":"0x` + fmt.Sprintf("%016x_%016x", entryPoint, len(blobs)) + `",` +
-		`"blobs_offset_and_size":"0x` + strings.Join(offsetSizeParts, "____") + `",` +
-		`"blobs_data":"0x` + strings.Join(dataParts, "____") + `"` +
-		`}`)
-
-	return zkc_util.ParseJsonInputFile(json)
+	return map[string][]byte{
+		"entry_point_and_blobs_count": entryAndCount,
+		"blobs_offset_and_size":       offsetAndSize,
+		"blobs_data":                  data,
+	}
 }
