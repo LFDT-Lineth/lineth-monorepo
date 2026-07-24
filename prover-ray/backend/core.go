@@ -15,7 +15,7 @@ import (
 var ErrNotImplemented = errors.New("not yet implemented")
 
 // wiopSystemName names the wiop constraint system built in [New].
-const wiopSystemName = "linea-riscv"
+const wiopSystemName = "lineth-riscv"
 
 // Core is the shared proving kernel. Initialize once via [New]; it is
 // safe for concurrent use after that; each [Prove] call gets its own
