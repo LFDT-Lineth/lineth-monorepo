@@ -37,6 +37,9 @@ func (s *schemaScanner) defineNativeMulmod(mod schema.Module[koalabear.Element],
 	if err != nil {
 		return fmt.Errorf("invalid number of bits: %w", err)
 	}
+	if nbBits <= 0 {
+		return fmt.Errorf("invalid number of bits %d: must be positive", nbBits)
+	}
 
 	modName := mod.Name().String()
 
