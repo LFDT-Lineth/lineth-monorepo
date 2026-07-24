@@ -229,7 +229,7 @@ func TestBuildZkcInputs_ReturnsThreeKeys(t *testing.T) {
 	// These three key names are declared in RISCV-ZKC.bin's main.zkc. A name
 	// mismatch causes a silent no-op when the prover loads inputs.
 	elfBytes := makeMinimalELF(t, testEntry, testSecAddr, testSecData)
-	inputs, err := BuildZkcInputs(elfBytes, []byte{0x01, 0x02}, DefaultINOrigin)
+	inputs, err := buildZkcInputs(elfBytes, []byte{0x01, 0x02}, DefaultINOrigin)
 	require.NoError(t, err)
 
 	assert.Contains(t, inputs, "entry_point_and_blobs_count")
@@ -258,7 +258,7 @@ func TestCore_BuildInputs_UsesPrecomputedELFBlobs(t *testing.T) {
 	assert.Equal(t, inputs1["entry_point_and_blobs_count"], inputs2["entry_point_and_blobs_count"], "same ELF must produce identical entry_point_and_blobs_count")
 }
 
-func TestCore_BuildInputs_MatchesBuildZkcInputs(t *testing.T) {
+func TestCore_BuildInputs_MatchesbuildZkcInputs(t *testing.T) {
 	elfBytes := makeMinimalELF(t, testEntry, testSecAddr, testSecData)
 	precomputed, entry, err := loadELFBlobs(elfBytes)
 	require.NoError(t, err)
@@ -272,13 +272,13 @@ func TestCore_BuildInputs_MatchesBuildZkcInputs(t *testing.T) {
 	ssz := []byte{0xAA, 0xBB}
 
 	// Core.buildInputs (precomputed path) must produce identical output to
-	// BuildZkcInputs (parse-every-call path).
+	// buildZkcInputs (parse-every-call helper).
 	fromCore := c.buildInputs(Job{Payload: ssz})
 
-	fromFull, err := BuildZkcInputs(elfBytes, ssz, DefaultINOrigin)
+	fromFull, err := buildZkcInputs(elfBytes, ssz, DefaultINOrigin)
 	require.NoError(t, err)
 
-	assert.Equal(t, fromFull, fromCore, "precomputed path must produce identical output to BuildZkcInputs")
+	assert.Equal(t, fromFull, fromCore, "precomputed path must produce identical output to buildZkcInputs")
 }
 
 // referenceJSON mirrors printJson in the reference elf_to_json_gen tool
@@ -344,7 +344,7 @@ func TestBuildZkcInputs_NoLoadableSegments(t *testing.T) {
 	// (uint32 LE). Rewrite PT_LOAD (1) to PT_NOTE (4).
 	binary.LittleEndian.PutUint32(elfBytes[64:68], 4)
 
-	_, err := BuildZkcInputs(elfBytes, []byte{0x01}, DefaultINOrigin)
+	_, err := buildZkcInputs(elfBytes, []byte{0x01}, DefaultINOrigin)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no loadable sections")
 }
@@ -407,7 +407,7 @@ func TestNew(t *testing.T) {
 
 	ssz := []byte{0xAA, 0xBB}
 	fromCore := c.buildInputs(Job{Payload: ssz})
-	fromFull, err := BuildZkcInputs(elfBytes, ssz, DefaultINOrigin)
+	fromFull, err := buildZkcInputs(elfBytes, ssz, DefaultINOrigin)
 	require.NoError(t, err)
 	assert.Equal(t, fromFull, fromCore)
 }

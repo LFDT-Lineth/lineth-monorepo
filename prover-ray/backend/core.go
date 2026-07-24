@@ -122,7 +122,7 @@ func (c *Core) runProve(
 
 // EncodeStatelessInput encodes the coordinator's per-block payload into the
 // framed StatelessInput the guest consumes: the 0x0001 schema id followed by
-// the SSZ body. [BuildZkcInputs] later prepends the [u64 LE len] prefix.
+// the SSZ body. [buildZkcInputs] later prepends the [u64 LE len] prefix.
 //
 // Not yet implemented. Reference codec: arithmetization/proof_io_v1.py.
 func EncodeStatelessInput(_ []byte) ([]byte, error) {

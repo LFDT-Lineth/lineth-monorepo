@@ -16,7 +16,7 @@ type memoryBlob struct {
 	data   []byte
 }
 
-// BuildZkcInputs constructs the map[string][]byte that [zkcdriver.PreReadInputs]
+// buildZkcInputs constructs the map[string][]byte that [zkcdriver.PreReadInputs]
 // expects. It produces the three pub-input keys that RISCV-ZKC.bin's main.zkc
 // declares:
 //
@@ -26,11 +26,16 @@ type memoryBlob struct {
 //
 // elfBytes is the raw guest ELF. sszInput is the framed StatelessInput the
 // guest reads at _in_start: the 0x0001 schema id followed by the SSZ body
-// (the guest's deserializer strips the schema id). BuildZkcInputs prepends
+// (the guest's deserializer strips the schema id). buildZkcInputs prepends
 // only the [u64 LE len] prefix; it neither adds nor strips the schema id.
 // inOrigin is the guest RAM address where the input is placed
 // (use [DefaultINOrigin]).
-func BuildZkcInputs(elfBytes, sszInput []byte, inOrigin uint64) (map[string][]byte, error) {
+//
+// This is a one-shot helper that parses the ELF on every call, for callers and
+// tests that hold only raw ELF bytes. The per-job proving path does NOT go
+// through here: [Core.buildInputs] reuses the ELF blobs parsed once in [New]
+// (c.elfBlobs) and appends only the per-job SSZ blobs.
+func buildZkcInputs(elfBytes, sszInput []byte, inOrigin uint64) (map[string][]byte, error) {
 	memBlobs, entry, err := loadELFBlobs(elfBytes)
 	if err != nil {
 		return nil, err
@@ -97,7 +102,7 @@ func elfBlobs(ef *elf.File) ([]memoryBlob, error) {
 // sszBlobs splits ssz into the two memory blobs that linea_zkvm_io expects at
 // _in_start: an 8-byte LE length prefix followed by the payload bytes. It does
 // not interpret the payload; callers pass the framed StatelessInput (0x0001
-// schema id + SSZ body, see [BuildZkcInputs]). The split matches
+// schema id + SSZ body, see [buildZkcInputs]). The split matches
 // elf_to_json_gen's sszInputBlobs (commit 09fcdb42).
 func sszBlobs(inOrigin uint64, ssz []byte) []memoryBlob {
 	prefix := make([]byte, 8)

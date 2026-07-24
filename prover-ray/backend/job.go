@@ -25,7 +25,7 @@ type Job struct {
 
 	// Payload is the framed StatelessInput for the block: the 0x0001 schema
 	// id followed by the SSZ body, i.e. the output of [EncodeStatelessInput].
-	// [BuildZkcInputs] prepends the [u64 LE len] prefix before the guest reads
+	// [buildZkcInputs] prepends the [u64 LE len] prefix before the guest reads
 	// the bytes at _in_start, so callers supply the framed bytes only and must
 	// not add the length prefix themselves.
 	//
