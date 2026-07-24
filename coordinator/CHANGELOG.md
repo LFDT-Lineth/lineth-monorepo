@@ -2,6 +2,26 @@
 
 ### 🚀 Features
 
+- *(coordinator)* Wire config-docs via a buildSrc plugin and declarative spec (#3607)
+- *(coordinator)* Document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)
+
+### 🐛 Bug Fixes
+
+- *(coordinator)* Small fix on start/stop handlers (#3621)
+
+### 🚜 Refactor
+
+- *(coordinator)* Decompose L1DependentApp into smaller scoped apps (#3615)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(coordinator)* Add riscv enablement config (#3617)
+- *(coordinator)* Adds initial scafold for contract v9 RISC-V (#3618)
+- *(coordinator)* Cleanup replaced apps in PR #3615 (#3622)
+## [1.0.0] - 2026-07-22
+
+### 🚀 Features
+
 - *(coordinator)* [**breaking**] Web3j upgrade to onboard 7594 support (#3514)
 - *(coordinator)* Add inital block number config for finalized state search (#3534)
 - *(coordinator)* Add extension seam (#3532)
@@ -10,6 +30,7 @@
 
 - *(misc)* Refactor hoplite decoders to it's own module (#3557)
 - *(misc)* Update jackson from 2.19.4 to 2.22.1 (#3595)
+- *(misc)* Cleanup redundant deps (#3596)
 ## [0.3.0] - 2026-07-07
 
 ### 🚀 Features

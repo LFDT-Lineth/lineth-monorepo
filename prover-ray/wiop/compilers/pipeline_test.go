@@ -65,25 +65,9 @@ func compilePipelineBeforePCS(sys *wiop.System) {
 	global.Compile(sys)
 }
 
-// compilePCS runs the PCS pass unless the system declares a statically size-1
-// module. FRI cannot fold a size-1 codeword, so those scenarios skip PCS — a
-// known gap until the PCS/FRI layer handles the D=1 edge case.
+// compilePCS runs the PCS pass.
 func compilePCS(sys *wiop.System) {
-	if !hasStaticSizeOneModule(sys) {
-		pcs.Compile(sys)
-	}
-}
-
-// hasStaticSizeOneModule reports whether sys declares any statically-sized
-// module of size 1. Dynamic modules whose runtime size happens to be 1 are
-// not detected here; those scenarios would still panic during Prove.
-func hasStaticSizeOneModule(sys *wiop.System) bool {
-	for _, m := range sys.Modules {
-		if !m.IsDynamic() && m.Size() == 1 {
-			return true
-		}
-	}
-	return false
+	pcs.Compile(sys)
 }
 
 // These tests drive every scenario through the full
