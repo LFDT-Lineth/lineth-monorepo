@@ -243,13 +243,13 @@ func TestCore_BuildInputs_UsesPrecomputedELFBlobs(t *testing.T) {
 		elf: parsedELF,
 	}
 
-	ssz1 := []byte{0x01, 0x02}
-	ssz2 := []byte{0xFF, 0xFE}
+	payload1 := []byte{0x01, 0x02}
+	payload2 := []byte{0xFF, 0xFE}
 
-	inputs1 := c.buildInputs(Job{Payload: ssz1})
-	inputs2 := c.buildInputs(Job{Payload: ssz2})
+	inputs1 := c.buildInputs(Job{Payload: payload1})
+	inputs2 := c.buildInputs(Job{Payload: payload2})
 
-	assert.NotEqual(t, inputs1["blobs_data"], inputs2["blobs_data"], "different SSZ must produce different blobs_data")
+	assert.NotEqual(t, inputs1["blobs_data"], inputs2["blobs_data"], "different payloads must produce different blobs_data")
 	assert.Equal(t, inputs1["entry_point_and_blobs_count"], inputs2["entry_point_and_blobs_count"], "same ELF must produce identical entry_point_and_blobs_count")
 }
 

@@ -132,9 +132,9 @@ func sszBlobs(inOrigin uint64, ssz []byte) []memoryBlob {
 //   - "blobs_offset_and_size":       per blob, [8 BE offset][8 BE size]
 //   - "blobs_data":                  all blob bytes concatenated
 //
-// The layout is byte-identical to zkc_util.ParseJsonInputFile applied to the
-// JSON that the reference elf_to_json_gen tool emits, without the JSON round
-// trip; TestEncodeInputs_MatchesReferenceJSON pins the equivalence.
+// The layout is intended to be byte-identical to zkc_util.ParseJsonInputFile
+// applied to the JSON that the reference elf_to_json_gen tool emits, without the
+// JSON round trip; see TestEncodeInputs_* in blobs_test.go for layout checks.
 func encodeInputs(memBlobs []memoryBlob, entryPoint uint64) map[string][]byte {
 	entryAndCount := binary.BigEndian.AppendUint64(make([]byte, 0, 16), entryPoint)
 	entryAndCount = binary.BigEndian.AppendUint64(entryAndCount, uint64(len(memBlobs)))
