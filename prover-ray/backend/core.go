@@ -39,12 +39,13 @@ func New(cfg Config) (*Core, error) {
 	}
 	defer binFile.Close()
 
-	elfBytes, err := os.ReadFile(cfg.GuestELFPath)
+	elfFile, err := os.Open(cfg.GuestELFPath)
 	if err != nil {
-		return nil, fmt.Errorf("reading guest ELF %q: %w", cfg.GuestELFPath, err)
+		return nil, fmt.Errorf("opening guest ELF %q: %w", cfg.GuestELFPath, err)
 	}
+	defer elfFile.Close()
 
-	parsedELF, err := loadELFInputs(elfBytes)
+	parsedELF, err := loadELFInputs(elfFile)
 	if err != nil {
 		return nil, fmt.Errorf("extracting ELF blobs from %q: %w", cfg.GuestELFPath, err)
 	}

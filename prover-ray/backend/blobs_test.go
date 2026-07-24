@@ -202,7 +202,7 @@ func TestEncodeInputs_DataConcatenated(t *testing.T) {
 
 func TestElfBlobs_ExtractsSectionAtCorrectOffset(t *testing.T) {
 	elfBytes := makeMinimalELF(t, testEntry, testSecAddr, testSecData)
-	parsedELF, err := loadELFInputs(elfBytes)
+	parsedELF, err := loadELFInputs(bytes.NewReader(elfBytes))
 	require.NoError(t, err)
 	require.Len(t, parsedELF.blobs, 1, "one loadable section must yield one memory blob")
 	assert.Equal(t, testSecAddr, parsedELF.blobs[0].offset, "memory blob offset must match the section's virtual address")
@@ -211,13 +211,13 @@ func TestElfBlobs_ExtractsSectionAtCorrectOffset(t *testing.T) {
 
 func TestElfBlobs_EntryPointPreserved(t *testing.T) {
 	elfBytes := makeMinimalELF(t, testEntry, testSecAddr, testSecData)
-	parsedELF, err := loadELFInputs(elfBytes)
+	parsedELF, err := loadELFInputs(bytes.NewReader(elfBytes))
 	require.NoError(t, err)
 	assert.Equal(t, testEntry, parsedELF.entry, "entry point must match ELF e_entry")
 }
 
 func TestElfBlobs_InvalidELFReturnsError(t *testing.T) {
-	_, err := loadELFInputs([]byte("not an elf"))
+	_, err := loadELFInputs(bytes.NewReader([]byte("not an elf")))
 	assert.Error(t, err, "malformed ELF must return an error")
 }
 
@@ -235,7 +235,7 @@ func TestBuildZkcInputs_ReturnsThreeKeys(t *testing.T) {
 
 func TestCore_BuildInputs_UsesPrecomputedELFBlobs(t *testing.T) {
 	elfBytes := makeMinimalELF(t, testEntry, testSecAddr, testSecData)
-	parsedELF, err := loadELFInputs(elfBytes)
+	parsedELF, err := loadELFInputs(bytes.NewReader(elfBytes))
 	require.NoError(t, err)
 
 	c := &Core{
@@ -255,7 +255,7 @@ func TestCore_BuildInputs_UsesPrecomputedELFBlobs(t *testing.T) {
 
 func TestCore_BuildInputs_MatchesBuildZkcInputs(t *testing.T) {
 	elfBytes := makeMinimalELF(t, testEntry, testSecAddr, testSecData)
-	parsedELF, err := loadELFInputs(elfBytes)
+	parsedELF, err := loadELFInputs(bytes.NewReader(elfBytes))
 	require.NoError(t, err)
 
 	c := &Core{

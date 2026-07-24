@@ -5,6 +5,7 @@ import (
 	"debug/elf"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"sort"
 )
 
@@ -36,7 +37,7 @@ type memoryBlob struct {
 // [Core.buildInputs] reuses the guest ELF parsed once in [New] (c.elf) and
 // appends only the per-job SSZ blobs.
 func buildZkcInputs(elfBytes, sszInput []byte, inOrigin uint64) (map[string][]byte, error) {
-	parsedELF, err := loadELFInputs(elfBytes)
+	parsedELF, err := loadELFInputs(bytes.NewReader(elfBytes))
 	if err != nil {
 		return nil, err
 	}
@@ -52,11 +53,13 @@ type elfInputs struct {
 	entry uint64
 }
 
-// loadELFInputs parses elfBytes and returns the ELF's memory blobs and entry
-// point. Callers that process many jobs from the same ELF should call this
-// once at startup and cache the result on [Core].
-func loadELFInputs(elfBytes []byte) (elfInputs, error) {
-	ef, err := elf.NewFile(bytes.NewReader(elfBytes))
+// loadELFInputs parses the guest ELF read from r and returns its memory blobs
+// and entry point. r must stay valid until this returns; the section bytes are
+// copied out, so the caller may close it afterward. Callers that process many
+// jobs from the same ELF should call this once at startup and cache the result
+// on [Core].
+func loadELFInputs(r io.ReaderAt) (elfInputs, error) {
+	ef, err := elf.NewFile(r)
 	if err != nil {
 		return elfInputs{}, fmt.Errorf("parsing guest ELF: %w", err)
 	}
