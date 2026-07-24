@@ -21,11 +21,10 @@ const wiopSystemName = "linea-riscv"
 // safe for concurrent use after that; each [Prove] call gets its own
 // wiop.Runtime.
 type Core struct {
-	cfg      Config
-	sys      *wiop.System
-	driver   *zkcdriver.ZkCDriver
-	elfBlobs []memoryBlob // ELF sections pre-extracted once in New; reused per job
-	elfEntry uint64       // guest ELF entry point, also pre-extracted in New
+	cfg    Config
+	sys    *wiop.System
+	driver *zkcdriver.ZkCDriver
+	elf    elfInputs // guest ELF sections + entry point, extracted once in New; reused per job
 }
 
 // New loads the circuit binary and the guest ELF, calls [zkcdriver.NewZkCDriver]
@@ -45,7 +44,7 @@ func New(cfg Config) (*Core, error) {
 		return nil, fmt.Errorf("reading guest ELF %q: %w", cfg.GuestELFPath, err)
 	}
 
-	precomputed, entry, err := loadELFBlobs(elfBytes)
+	parsedELF, err := loadELFInputs(elfBytes)
 	if err != nil {
 		return nil, fmt.Errorf("extracting ELF blobs from %q: %w", cfg.GuestELFPath, err)
 	}
@@ -63,11 +62,10 @@ func New(cfg Config) (*Core, error) {
 	//   wiop.Materialize(sys)
 
 	return &Core{
-		cfg:      cfg,
-		sys:      sys,
-		driver:   driver,
-		elfBlobs: precomputed,
-		elfEntry: entry,
+		cfg:    cfg,
+		sys:    sys,
+		driver: driver,
+		elf:    parsedELF,
 	}, nil
 }
 
@@ -96,10 +94,10 @@ func (c *Core) Prove(ctx context.Context, job Job) Result {
 // keyed by name (see [encodeInputs]). ELF memory blobs are pre-extracted in
 // [New] and reused across calls; only the SSZ memory blobs differ per job.
 func (c *Core) buildInputs(job Job) map[string][]byte {
-	memBlobs := make([]memoryBlob, 0, len(c.elfBlobs)+2)
-	memBlobs = append(memBlobs, c.elfBlobs...)
+	memBlobs := make([]memoryBlob, 0, len(c.elf.blobs)+2)
+	memBlobs = append(memBlobs, c.elf.blobs...)
 	memBlobs = append(memBlobs, sszBlobs(c.cfg.inOrigin(), decodePayload(job))...)
-	return encodeInputs(memBlobs, c.elfEntry)
+	return encodeInputs(memBlobs, c.elf.entry)
 }
 
 // runProve calls AssignWithPreRead, sys.Prove, and sys.Verify.

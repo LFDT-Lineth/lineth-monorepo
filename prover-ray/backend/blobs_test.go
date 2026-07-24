@@ -206,22 +206,22 @@ func TestEncodeInputs_DataConcatenated(t *testing.T) {
 
 func TestElfBlobs_ExtractsSectionAtCorrectOffset(t *testing.T) {
 	elfBytes := makeMinimalELF(t, testEntry, testSecAddr, testSecData)
-	memBlobs, _, err := loadELFBlobs(elfBytes)
+	parsedELF, err := loadELFInputs(elfBytes)
 	require.NoError(t, err)
-	require.Len(t, memBlobs, 1, "one loadable section must yield one memory blob")
-	assert.Equal(t, testSecAddr, memBlobs[0].offset, "memory blob offset must match the section's virtual address")
-	assert.Equal(t, testSecData, memBlobs[0].data, "memory blob data must match the section bytes")
+	require.Len(t, parsedELF.blobs, 1, "one loadable section must yield one memory blob")
+	assert.Equal(t, testSecAddr, parsedELF.blobs[0].offset, "memory blob offset must match the section's virtual address")
+	assert.Equal(t, testSecData, parsedELF.blobs[0].data, "memory blob data must match the section bytes")
 }
 
 func TestElfBlobs_EntryPointPreserved(t *testing.T) {
 	elfBytes := makeMinimalELF(t, testEntry, testSecAddr, testSecData)
-	_, entry, err := loadELFBlobs(elfBytes)
+	parsedELF, err := loadELFInputs(elfBytes)
 	require.NoError(t, err)
-	assert.Equal(t, testEntry, entry, "entry point must match ELF e_entry")
+	assert.Equal(t, testEntry, parsedELF.entry, "entry point must match ELF e_entry")
 }
 
 func TestElfBlobs_InvalidELFReturnsError(t *testing.T) {
-	_, _, err := loadELFBlobs([]byte("not an elf"))
+	_, err := loadELFInputs([]byte("not an elf"))
 	assert.Error(t, err, "malformed ELF must return an error")
 }
 
@@ -239,13 +239,12 @@ func TestBuildZkcInputs_ReturnsThreeKeys(t *testing.T) {
 
 func TestCore_BuildInputs_UsesPrecomputedELFBlobs(t *testing.T) {
 	elfBytes := makeMinimalELF(t, testEntry, testSecAddr, testSecData)
-	precomputed, entry, err := loadELFBlobs(elfBytes)
+	parsedELF, err := loadELFInputs(elfBytes)
 	require.NoError(t, err)
 
 	c := &Core{
-		cfg:      Config{INOrigin: DefaultINOrigin},
-		elfBlobs: precomputed,
-		elfEntry: entry,
+		cfg: Config{INOrigin: DefaultINOrigin},
+		elf: parsedELF,
 	}
 
 	ssz1 := []byte{0x01, 0x02}
@@ -258,15 +257,14 @@ func TestCore_BuildInputs_UsesPrecomputedELFBlobs(t *testing.T) {
 	assert.Equal(t, inputs1["entry_point_and_blobs_count"], inputs2["entry_point_and_blobs_count"], "same ELF must produce identical entry_point_and_blobs_count")
 }
 
-func TestCore_BuildInputs_MatchesbuildZkcInputs(t *testing.T) {
+func TestCore_BuildInputs_MatchesBuildZkcInputs(t *testing.T) {
 	elfBytes := makeMinimalELF(t, testEntry, testSecAddr, testSecData)
-	precomputed, entry, err := loadELFBlobs(elfBytes)
+	parsedELF, err := loadELFInputs(elfBytes)
 	require.NoError(t, err)
 
 	c := &Core{
-		cfg:      Config{INOrigin: DefaultINOrigin},
-		elfBlobs: precomputed,
-		elfEntry: entry,
+		cfg: Config{INOrigin: DefaultINOrigin},
+		elf: parsedELF,
 	}
 
 	ssz := []byte{0xAA, 0xBB}
@@ -402,8 +400,8 @@ func TestNew(t *testing.T) {
 	c, err := New(Config{CircuitBinPath: compileZKCBin(t, zkcTestSrc), GuestELFPath: elfPath})
 	require.NoError(t, err)
 
-	assert.Len(t, c.elfBlobs, 1, "one loadable section must be precomputed")
-	assert.Equal(t, testEntry, c.elfEntry)
+	assert.Len(t, c.elf.blobs, 1, "one loadable section must be precomputed")
+	assert.Equal(t, testEntry, c.elf.entry)
 
 	ssz := []byte{0xAA, 0xBB}
 	fromCore := c.buildInputs(Job{Payload: ssz})

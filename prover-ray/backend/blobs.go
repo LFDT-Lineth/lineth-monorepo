@@ -31,32 +31,40 @@ type memoryBlob struct {
 // inOrigin is the guest RAM address where the input is placed
 // (use [DefaultINOrigin]).
 //
-// This is a one-shot helper that parses the ELF on every call, for callers and
-// tests that hold only raw ELF bytes. The per-job proving path does NOT go
-// through here: [Core.buildInputs] reuses the ELF blobs parsed once in [New]
-// (c.elfBlobs) and appends only the per-job SSZ blobs.
+// This is a one-shot helper that parses the ELF on every call; today only
+// tests use it. The per-job proving path does NOT go through here:
+// [Core.buildInputs] reuses the guest ELF parsed once in [New] (c.elf) and
+// appends only the per-job SSZ blobs.
 func buildZkcInputs(elfBytes, sszInput []byte, inOrigin uint64) (map[string][]byte, error) {
-	memBlobs, entry, err := loadELFBlobs(elfBytes)
+	parsedELF, err := loadELFInputs(elfBytes)
 	if err != nil {
 		return nil, err
 	}
-	memBlobs = append(memBlobs, sszBlobs(inOrigin, sszInput)...)
-	return encodeInputs(memBlobs, entry), nil
+	memBlobs := append(parsedELF.blobs, sszBlobs(inOrigin, sszInput)...)
+	return encodeInputs(memBlobs, parsedELF.entry), nil
 }
 
-// loadELFBlobs parses elfBytes as a guest ELF and returns the pre-extracted
-// memory blobs and entry point. Callers that process many jobs from the same ELF
-// should call this once at startup and cache the result on [Core].
-func loadELFBlobs(elfBytes []byte) (memBlobs []memoryBlob, entry uint64, err error) {
+// elfInputs is the ELF's precomputed contribution to the ZkC inputs: its
+// loadable sections as memory blobs plus the entry point. Extracted once in
+// [New] and reused for every job; only the per-job SSZ blobs differ.
+type elfInputs struct {
+	blobs []memoryBlob
+	entry uint64
+}
+
+// loadELFInputs parses elfBytes and returns the ELF's memory blobs and entry
+// point. Callers that process many jobs from the same ELF should call this
+// once at startup and cache the result on [Core].
+func loadELFInputs(elfBytes []byte) (elfInputs, error) {
 	ef, err := elf.NewFile(bytes.NewReader(elfBytes))
 	if err != nil {
-		return nil, 0, fmt.Errorf("parsing guest ELF: %w", err)
+		return elfInputs{}, fmt.Errorf("parsing guest ELF: %w", err)
 	}
-	memBlobs, err = elfBlobs(ef)
+	blobs, err := elfBlobs(ef)
 	if err != nil {
-		return nil, 0, err
+		return elfInputs{}, err
 	}
-	return memBlobs, ef.Entry, nil
+	return elfInputs{blobs: blobs, entry: ef.Entry}, nil
 }
 
 // elfBlobs extracts allocated, file-backed ELF sections as memory blobs.
