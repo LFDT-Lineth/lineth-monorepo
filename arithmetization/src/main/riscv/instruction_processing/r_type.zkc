@@ -541,7 +541,7 @@ output_write_address:OutputAddress) ->
             } else if (funct3 == FUNCT3_WRITE_OUTPUT) && (funct7 == FUNCT7_WRITE_OUTPUT) {
                 printf "zkvm_io.write_output call "
                 // TODO: rename www to write_output ...
-                new_output_write_address = www(v1 as Address, v2 as OutputAddress, output_write_address)
+                new_output_write_address = www(v1 as Address, v2 as OutputSize, output_write_address)
             } else {
                 printf "[ERROR] Unsupported R-type custom-1 instruction with\n"
                 printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3
