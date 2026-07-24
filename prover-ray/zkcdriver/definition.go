@@ -118,7 +118,11 @@ func (s *schemaScanner) scanColumns() {
 			// issue, care must be taken to ensure it really happens (e.g.
 			// through testing negative cases which should cause constraint
 			// failures).
-			logrus.Panic("zkcdriver: add support for native modules!")
+
+			if err := s.defineNativeModule(modDecl); err != nil {
+				logrus.Panicf("zkcdriver: failed to define native module %s: %v", modDecl.Name(), err)
+			}
+			continue
 		}
 
 		// moduleName is the name of the module as given by the arithmetization
