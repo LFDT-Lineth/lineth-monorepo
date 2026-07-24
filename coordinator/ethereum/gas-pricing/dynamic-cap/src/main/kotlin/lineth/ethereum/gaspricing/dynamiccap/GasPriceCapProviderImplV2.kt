@@ -1,11 +1,21 @@
+<<<<<<< HEAD:coordinator/ethereum/gas-pricing/dynamic-cap/src/main/kotlin/lineth/ethereum/gaspricing/dynamiccap/GasPriceCapProviderImplV2.kt
 package lineth.ethereum.gaspricing.dynamiccap
 
 import linea.domain.gas.GasPriceCaps
+=======
+package net.consensys.linea.ethereum.gaspricing.dynamiccap
+
+import linea.domain.gas.GasPriceCaps
+import linea.gaspricing.GasPriceCapProviderV2
+>>>>>>> 04dab17d5 (feat(coordinator): GasPriceCapProviderV2 and DRY (#3624)):coordinator/ethereum/gas-pricing/dynamic-cap/src/main/kotlin/net/consensys/linea/ethereum/gaspricing/dynamiccap/GasPriceCapProviderImplV2.kt
 import linea.kotlin.minusCoercingUnderflow
 import linea.kotlin.toBigDecimal
 import linea.kotlin.toGWei
 import linea.kotlin.toULong
+<<<<<<< HEAD:coordinator/ethereum/gas-pricing/dynamic-cap/src/main/kotlin/lineth/ethereum/gaspricing/dynamiccap/GasPriceCapProviderImplV2.kt
 import lineth.gaspricing.GasPriceCapProviderV2
+=======
+>>>>>>> 04dab17d5 (feat(coordinator): GasPriceCapProviderV2 and DRY (#3624)):coordinator/ethereum/gas-pricing/dynamic-cap/src/main/kotlin/net/consensys/linea/ethereum/gaspricing/dynamiccap/GasPriceCapProviderImplV2.kt
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -148,6 +158,7 @@ class GasPriceCapProviderImplV2(
   override fun getGasPriceCapsWithCoefficient(timestamp: Instant): SafeFuture<GasPriceCaps?> {
     return getGasPriceCaps(timestamp)
       .thenApply { caps ->
+<<<<<<< HEAD:coordinator/ethereum/gas-pricing/dynamic-cap/src/main/kotlin/lineth/ethereum/gaspricing/dynamiccap/GasPriceCapProviderImplV2.kt
         caps?.withCoefficient(config.gasPriceCapsCoefficient)
       }
   }
@@ -173,3 +184,26 @@ internal fun GasPriceCaps.withCoefficient(coefficient: Double): GasPriceCaps {
     maxFeePerBlobGasCap = multipliedFeePerBlobGasCap,
   )
 }
+=======
+        caps?.let {
+          val coeff = config.gasPriceCapsCoefficient.toBigDecimal()
+          val multipliedMaxBaseFeePerGasCap =
+            // NOTE: at this stage maxBaseFeePerGasCap is always defined
+            // on upper classes (e.g GasPriceCapProviderForDataSubmission) may be nullified
+            (it.maxBaseFeePerGasCap!!.toBigDecimal() * coeff).toULong()
+          val multipliedMaxPriorityFeePerGas =
+            (it.maxPriorityFeePerGasCap.toBigDecimal() * coeff).toULong()
+          val multipliedMaxFeePerBlobGasCap =
+            (it.maxFeePerBlobGasCap.toBigDecimal() * coeff)
+              .coerceAtLeast(BigDecimal.ONE).toULong()
+          GasPriceCaps(
+            maxBaseFeePerGasCap = multipliedMaxBaseFeePerGasCap,
+            maxPriorityFeePerGasCap = multipliedMaxPriorityFeePerGas,
+            maxFeePerGasCap = multipliedMaxBaseFeePerGasCap + multipliedMaxPriorityFeePerGas,
+            maxFeePerBlobGasCap = multipliedMaxFeePerBlobGasCap,
+          )
+        }
+      }
+  }
+}
+>>>>>>> 04dab17d5 (feat(coordinator): GasPriceCapProviderV2 and DRY (#3624)):coordinator/ethereum/gas-pricing/dynamic-cap/src/main/kotlin/net/consensys/linea/ethereum/gaspricing/dynamiccap/GasPriceCapProviderImplV2.kt
