@@ -1,7 +1,6 @@
 package backend
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -34,10 +33,11 @@ type Core struct {
 // and wiop.Materialize are not yet wired. They must be added before the
 // system can produce sound proofs (see wiki backend-overview.md §4).
 func New(cfg Config) (*Core, error) {
-	binBytes, err := os.ReadFile(cfg.CircuitBinPath)
+	binFile, err := os.Open(cfg.CircuitBinPath)
 	if err != nil {
-		return nil, fmt.Errorf("reading circuit bin %q: %w", cfg.CircuitBinPath, err)
+		return nil, fmt.Errorf("opening circuit bin %q: %w", cfg.CircuitBinPath, err)
 	}
+	defer binFile.Close()
 
 	elfBytes, err := os.ReadFile(cfg.GuestELFPath)
 	if err != nil {
@@ -51,7 +51,7 @@ func New(cfg Config) (*Core, error) {
 
 	sys := wiop.NewSystemf(wiopSystemName)
 	sys.NewRound()
-	driver := zkcdriver.NewZkCDriver(sys, zkcdriver.Settings{}, bytes.NewReader(binBytes))
+	driver := zkcdriver.NewZkCDriver(sys, zkcdriver.Settings{}, binFile)
 
 	// Compiler passes go here once the real RISC-V .bin is fully supported:
 	//   compilers.RangeCheck(sys)
