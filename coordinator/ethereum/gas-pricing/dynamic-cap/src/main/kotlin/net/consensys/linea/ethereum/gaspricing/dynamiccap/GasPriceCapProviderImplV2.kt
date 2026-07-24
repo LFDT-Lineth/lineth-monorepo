@@ -125,7 +125,12 @@ class GasPriceCapProviderImplV2(
 
   override fun getGasPriceCaps(timestamp: Instant): SafeFuture<GasPriceCaps?> {
     return if (config.enabled && hasEnoughDataForGasPriceCapCalculation()) {
-      calculateGasPriceCaps(timestamp)
+      try {
+        calculateGasPriceCaps(timestamp)
+      } catch (e: Exception) {
+        log.warn("Gas price caps will default to null due to calculation error: errorMessage={}", e.message, e)
+        null
+      }
     } else {
       null
     }.let { SafeFuture.completedFuture(it) }

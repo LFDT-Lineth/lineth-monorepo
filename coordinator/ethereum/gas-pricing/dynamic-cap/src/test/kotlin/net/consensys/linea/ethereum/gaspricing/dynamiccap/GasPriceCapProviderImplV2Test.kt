@@ -1,19 +1,15 @@
 package net.consensys.linea.ethereum.gaspricing.dynamiccap
 
 import io.vertx.junit5.VertxExtension
-import linea.domain.createBlock
 import linea.domain.gas.GasPriceCaps
-import linea.domain.toBlockWithRandomTxHashes
-import linea.ethapi.EthApiBlockClient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.mock
-import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
@@ -41,7 +37,6 @@ class GasPriceCapProviderImplV2Test {
   private val gasPriceCapCalculator = GasPriceCapCalculatorImpl()
 
   private lateinit var targetBlockTime: Instant
-  private lateinit var mockedL2EthApiBlockClient: EthApiBlockClient
   private lateinit var mockedL1FeeHistoriesRepository: FeeHistoriesRepositoryWithCache
   private lateinit var mockedClock: Clock
 
@@ -80,15 +75,6 @@ class GasPriceCapProviderImplV2Test {
   @BeforeEach
   fun beforeEach() {
     targetBlockTime = currentTime - 1.hours
-    val mockBlock = createBlock(
-      timestamp = targetBlockTime,
-    ).toBlockWithRandomTxHashes()
-
-    mockedL2EthApiBlockClient = mock<EthApiBlockClient> {
-      on { ethGetBlockByNumberTxHashes(any()) } doReturn SafeFuture.completedFuture(
-        mockBlock,
-      )
-    }
 
     mockedL1FeeHistoriesRepository = mock<FeeHistoriesRepositoryWithCache> {
       on { getCachedNumOfFeeHistoriesFromBlockNumber() } doReturn storedFeeHistoriesNum
@@ -211,9 +197,8 @@ class GasPriceCapProviderImplV2Test {
   @Test
   fun `gas price caps should be null if error on feeHistoriesRepository`() {
     mockedL1FeeHistoriesRepository = mock<FeeHistoriesRepositoryWithCache> {
-      on { getNumOfFeeHistoriesFromBlockNumber(any(), any()) } doReturn SafeFuture.failedFuture(
-        Error("Throw error for testing"),
-      )
+      on { getCachedNumOfFeeHistoriesFromBlockNumber() } doReturn storedFeeHistoriesNum
+      on { getCachedPercentileGasFees() } doThrow RuntimeException("Throw error for testing")
     }
     val gasPriceCapProvider = createGasPriceCapProvider()
 

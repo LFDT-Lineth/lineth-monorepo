@@ -81,7 +81,7 @@ class GasPriceCapProviderImpl(
           "Gas price caps will default to null because it could not fetch block={}, errorMessage={}",
           targetL2BlockNumber,
           th.message,
-          th.cause,
+          th,
         )
         null
       }
