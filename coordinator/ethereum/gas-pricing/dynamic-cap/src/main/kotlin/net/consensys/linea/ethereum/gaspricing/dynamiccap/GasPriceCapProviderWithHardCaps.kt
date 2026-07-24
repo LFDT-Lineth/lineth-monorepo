@@ -2,6 +2,8 @@ package net.consensys.linea.ethereum.gaspricing.dynamiccap
 
 import linea.domain.gas.GasPriceCaps
 import linea.gaspricing.GasPriceCapProvider
+import linea.kotlin.toBigDecimal
+import linea.kotlin.toULong
 import linea.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -55,7 +57,7 @@ class GasPriceCapProviderWithHardCaps(
     coerceAtMost(cap).let { if (it == 0uL) cap else it }
 
   private fun effectiveCap(base: ULong): ULong =
-    (base.toString().toBigDecimal() * config.capMultiplier.toBigDecimal()).toLong().toULong()
+    (base.toBigDecimal() * config.capMultiplier.toBigDecimal()).toBigInteger().toULong()
 
   private fun coerce(caps: GasPriceCaps): GasPriceCaps {
     val priorityCap = effectiveCap(config.maxPriorityFeePerGasCap)

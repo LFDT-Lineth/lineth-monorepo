@@ -55,7 +55,7 @@ class GasPriceCapProviderImplV2(
     val minNumOfFeeHistoriesNeeded =
       config.gasFeePercentileWindowInBlocks
         .minusCoercingUnderflow(config.gasFeePercentileWindowLeewayInBlocks)
-        .toInt()
+        .toLong()
 
     val numOfValidFeeHistories = feeHistoriesRepository.getCachedNumOfFeeHistoriesFromBlockNumber()
     val hasEnoughData = numOfValidFeeHistories >= minNumOfFeeHistoriesNeeded
