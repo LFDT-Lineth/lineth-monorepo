@@ -2,12 +2,13 @@ package net.consensys.linea.ethereum.gaspricing.dynamiccap
 
 import linea.domain.gas.GasPriceCaps
 import linea.gaspricing.GasPriceCapProviderV2
+import linea.kotlin.minusCoercingUnderflow
+import linea.kotlin.toBigDecimal
 import linea.kotlin.toGWei
-import linea.kotlin.toULong
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
-import java.math.BigInteger
+import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import kotlin.time.Clock
@@ -51,13 +52,14 @@ class GasPriceCapProviderImplV2(
   }
 
   internal fun hasEnoughDataForGasPriceCapCalculation(): Boolean {
-    val minNumOfFeeHistoriesNeeded = BigInteger.valueOf(config.gasFeePercentileWindowInBlocks.toLong())
-      .minus(BigInteger.valueOf(config.gasFeePercentileWindowLeewayInBlocks.toLong()))
-      .coerceAtLeast(BigInteger.ZERO).toULong()
+    val minNumOfFeeHistoriesNeeded =
+      config.gasFeePercentileWindowInBlocks
+        .minusCoercingUnderflow(config.gasFeePercentileWindowLeewayInBlocks)
+        .toInt()
 
     val numOfValidFeeHistories = feeHistoriesRepository.getCachedNumOfFeeHistoriesFromBlockNumber()
-    val isEnoughData = numOfValidFeeHistories.toULong() >= minNumOfFeeHistoriesNeeded
-    if (!isEnoughData) {
+    val hasEnoughData = numOfValidFeeHistories >= minNumOfFeeHistoriesNeeded
+    if (!hasEnoughData) {
       log.warn(
         "Not enough fee history data for gas price cap update: numOfValidFeeHistoriesInDb={}, " +
           "minNumOfFeeHistoriesNeeded={}",
@@ -65,7 +67,7 @@ class GasPriceCapProviderImplV2(
         minNumOfFeeHistoriesNeeded,
       )
     }
-    return isEnoughData
+    return hasEnoughData
   }
 
   private fun getElapsedTimeSinceBlockTimestamp(blockTimestamp: Instant, referenceTime: Instant): Duration {
@@ -131,7 +133,9 @@ class GasPriceCapProviderImplV2(
       return SafeFuture.completedFuture(null)
     }
 
-    val gasPriceCaps = runCatching { calculateGasPriceCaps(timestamp, clock.now()) }
+    val gasPriceCaps = runCatching {
+      calculateGasPriceCaps(timestamp, clock.now())
+    }
       .onFailure { th ->
         log.warn("Gas price caps returned as null due to calculation failure: errorMessage={}", th.message, th)
       }
@@ -141,19 +145,26 @@ class GasPriceCapProviderImplV2(
   }
 
   override fun getGasPriceCapsWithCoefficient(timestamp: Instant): SafeFuture<GasPriceCaps?> {
-    return getGasPriceCaps(timestamp).thenApply {
-      it?.run {
-        val multipliedMaxBaseFeePerGasCap = it.maxBaseFeePerGasCap!!.toDouble() * config.gasPriceCapsCoefficient
-        val multipliedMaxPriorityFeePerGas = it.maxPriorityFeePerGasCap.toDouble() * config.gasPriceCapsCoefficient
-        val multipliedMaxFeePerBlobGasCap = (it.maxFeePerBlobGasCap.toDouble() * config.gasPriceCapsCoefficient)
-          .coerceAtLeast(1.0)
-        GasPriceCaps(
-          maxBaseFeePerGasCap = multipliedMaxBaseFeePerGasCap.toULong(),
-          maxPriorityFeePerGasCap = multipliedMaxPriorityFeePerGas.toULong(),
-          maxFeePerGasCap = (multipliedMaxBaseFeePerGasCap + multipliedMaxPriorityFeePerGas).toULong(),
-          maxFeePerBlobGasCap = multipliedMaxFeePerBlobGasCap.toULong(),
-        )
+    return getGasPriceCaps(timestamp)
+      .thenApply { caps ->
+        caps?.let {
+          val coeff = config.gasPriceCapsCoefficient.toBigDecimal()
+          val multipliedMaxBaseFeePerGasCap =
+            // NOTE: at this stage maxBaseFeePerGasCap is always defined
+            // on upper classes (e.g GasPriceCapProviderForDataSubmission) may be nullified
+            (it.maxBaseFeePerGasCap!!.toBigDecimal() * coeff).toLong().toULong()
+          val multipliedMaxPriorityFeePerGas =
+            (it.maxPriorityFeePerGasCap.toBigDecimal() * coeff).toLong().toULong()
+          val multipliedMaxFeePerBlobGasCap =
+            (it.maxFeePerBlobGasCap.toBigDecimal() * coeff)
+              .coerceAtLeast(BigDecimal.ONE).toLong().toULong()
+          GasPriceCaps(
+            maxBaseFeePerGasCap = multipliedMaxBaseFeePerGasCap,
+            maxPriorityFeePerGasCap = multipliedMaxPriorityFeePerGas,
+            maxFeePerGasCap = multipliedMaxBaseFeePerGasCap + multipliedMaxPriorityFeePerGas,
+            maxFeePerBlobGasCap = multipliedMaxFeePerBlobGasCap,
+          )
+        }
       }
-    }
   }
 }

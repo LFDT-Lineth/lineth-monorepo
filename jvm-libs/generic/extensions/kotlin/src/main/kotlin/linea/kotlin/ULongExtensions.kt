@@ -2,6 +2,7 @@ package linea.kotlin
 
 import linea.OneEth
 import linea.OneGWei
+import java.math.BigDecimal
 import java.math.BigInteger
 
 fun ULong.toKWeiUInt(): UInt = this.toDouble().tokWeiUInt()
@@ -27,6 +28,7 @@ private fun ULong.toByteArray(): ByteArray =
  */
 fun ULong.Companion.fromHexString(value: String): ULong = value.removePrefix("0x").toULong(16)
 fun ULong.toBigInteger(): BigInteger = BigInteger(this.toString())
+fun ULong.toBigDecimal(): BigDecimal = BigDecimal(this.toString())
 fun ULong.toHexString(hexPrefix: Boolean = true): String = this.toString(16).let {
   if (hexPrefix) {
     "0x$it"
