@@ -41,16 +41,16 @@ func compilePermutations(sys *wiop.System) {
 	}
 
 	// Enforce the per-permutation row limit before the grand-product discharge
-	// pass walks any row. The row-by-row accumulators are the per-module Z
-	// running-product columns, each packing up to packingArity factors; they are
-	// per module, so they do NOT grow with the number of permutations in the
-	// system (the aggregation into one GrandProduct only merges the final
-	// Result == 1 identity). The effective per-side limit is therefore
-	// MaxPermutationRows divided by the packing arity alone. Registered on
-	// maxRound (the witness round), which precedes the Result round where the
-	// row-walking prover actions live, so the prover fails fast; the verifier
-	// re-checks and rejects.
-	limit := wiop.MaxPermutationRows / uint64(packingArity)
+	// pass walks any row. Packing factors into one Z column shrinks the NUMBER of
+	// Z columns, not the rows each one walks (a Z column still spans its module's
+	// rows), so the packing arity does not enlarge the per-side row budget. The
+	// accumulators are also per module, so the budget does NOT grow with the
+	// number of permutations either (the aggregation into one GrandProduct only
+	// merges the final Result == 1 identity). The effective per-side limit is
+	// therefore MaxPermutationRows. Registered on maxRound (the witness round),
+	// which precedes the Result round where the row-walking prover actions live,
+	// so the prover fails fast; the verifier re-checks and rejects.
+	limit := wiop.MaxPermutationRows
 	for _, q := range perms {
 		// One instance serves both roles: it panics as a prover action and
 		// returns an error as a verifier action.

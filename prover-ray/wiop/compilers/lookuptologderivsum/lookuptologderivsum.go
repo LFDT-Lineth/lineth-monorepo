@@ -54,7 +54,6 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
 )
 
 // Compile reduces every unreduced inclusion [wiop.TableRelationQuery] in sys to a
@@ -176,13 +175,11 @@ func Compile(sys *wiop.System) {
 // group loop, guarantees the row-limit check runs before M is filled.
 //
 // The effective per-side limit for a query is [wiop.MaxLookupRows] divided by
-// the accumulator budget it shares with other lookups:
-//
-//   - logderivativesum.PackingArity — up to that many fractions are packed into
-//     one running-sum Z column, so they share its accumulator;
-//   - the number of lookups reduced into the query's group — queries that share
-//     an including (B) table share a single multiplicity column M and one
-//     aggregated LogDerivativeSum.
+// the number of lookups reduced into the query's group: queries that share an
+// including (B) table share a single multiplicity column M and one aggregated
+// LogDerivativeSum, so they drain the same budget. Packing fractions into one
+// running-sum Z column shrinks the number of Z columns, not the rows each one
+// walks, so it does not enlarge the budget and plays no part here.
 //
 // The group lookup supplies both the round and that group's lookup count. Every
 // remaining inclusion query has len(B) == 1 (collectGroups already panicked
@@ -207,8 +204,7 @@ func registerRowLimitChecks(sys *wiop.System, groups map[string]*lookupGroup) {
 		key := canonicalIncludingKey(q.B[0])
 		g := groups[key]
 
-		divisor := uint64(logderivativesum.PackingArity * lookupsPerGroup[key])
-		limit := wiop.MaxLookupRows / divisor
+		limit := wiop.MaxLookupRows / uint64(lookupsPerGroup[key])
 
 		// One instance serves both roles: it panics as a prover action and
 		// returns an error as a verifier action.

@@ -290,13 +290,13 @@ func TestCompile_RowLimit_VerifierRejects(t *testing.T) {
 
 // TestCompile_RowLimit_GroupingTightensBound builds two lookups that share the
 // same including (B) table, so they are reduced together and drain the same
-// accumulator budget. Each has a 2^28-row A side.
+// accumulator budget. Each has a 2^29-row A side.
 //
-// A lone lookup's effective A-side limit is MaxLookupRows/PackingArity =
-// 2^30/3 ≈ 3.58e8, which 2^28 ≈ 2.68e8 clears. Grouping the two lookups divides
-// the budget again by the group's lookup count (2), giving 2^30/6 ≈ 1.79e8 —
-// which 2^28 exceeds. The verifier must therefore reject, proving the divisor
-// includes the number of lookups grouped together.
+// A lone lookup's effective A-side limit is MaxLookupRows = 2^30, which 2^29
+// clears. Grouping the two lookups divides the budget by the group's lookup
+// count (2), giving 2^30/2 = 2^29 — which a 2^29-row side reaches. The verifier
+// must therefore reject, proving the divisor is the number of lookups grouped
+// together.
 func TestCompile_RowLimit_GroupingTightensBound(t *testing.T) {
 	sys := wiop.NewSystemf("ll-limit-group")
 	r0 := sys.NewRound()
@@ -307,7 +307,7 @@ func TestCompile_RowLimit_GroupingTightensBound(t *testing.T) {
 	bTable := wiop.NewTable(colT.View())
 
 	for i := 0; i < 2; i++ {
-		modS := sys.NewSizedModule(sys.Context.Childf("modS%d", i), 1<<28, wiop.PaddingDirectionRight)
+		modS := sys.NewSizedModule(sys.Context.Childf("modS%d", i), 1<<29, wiop.PaddingDirectionRight)
 		colS := modS.NewColumn(sys.Context.Childf("S%d", i), wiop.VisibilityOracle, r0)
 		sys.NewInclusion(
 			sys.Context.Childf("inc%d", i),
@@ -321,7 +321,7 @@ func TestCompile_RowLimit_GroupingTightensBound(t *testing.T) {
 	rt := wiop.NewRuntime(sys)
 	err := checkAllVerifierActions(rt)
 	assert.ErrorContains(t, err, "effective per-query row limit",
-		"grouping two lookups must halve the budget and reject a 2^28-row side")
+		"grouping two lookups must halve the budget and reject a 2^29-row side")
 }
 
 // ---- Filter on the included side (A) ----
