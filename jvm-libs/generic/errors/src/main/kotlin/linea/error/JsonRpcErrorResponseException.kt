@@ -6,6 +6,6 @@ class JsonRpcErrorResponseException(
   val rpcErrorData: Any? = null,
   val method: String? = null,
 ) : RuntimeException(
-  "${method?.let { "$it failed with JsonRpcError: " }}" +
+  "${method?.let { "$it failed with JsonRpcError: " } ?: ""}" +
     "code=$rpcErrorCode message=$rpcErrorMessage errorData=$rpcErrorData",
 )

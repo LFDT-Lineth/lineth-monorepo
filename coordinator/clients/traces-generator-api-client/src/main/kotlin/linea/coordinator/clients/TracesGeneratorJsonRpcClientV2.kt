@@ -163,11 +163,11 @@ class TracesGeneratorJsonRpcClientV2(
             throw throwable
           }
         }
-    } catch (th: Throwable) {
+    } catch (e: Exception) {
       if (config.ignoreTracesGeneratorErrors) {
         SafeFuture.completedFuture(Ok(fallbackResponseProvider()))
       } else {
-        throw th
+        throw e
       }
     }
   }
