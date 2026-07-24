@@ -3,13 +3,38 @@ package net.consensys.linea.ethereum.gaspricing.staticcap
 import linea.domain.FeeHistory
 import org.apache.logging.log4j.Logger
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.mock
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.stream.Stream
 
 class AverageWeightedFeesCalculatorTest {
+  @Test
+  fun `fetches ratios once per calculation`() {
+    val fetchCount = AtomicInteger()
+    val feeHistory = FeeHistory(
+      oldestBlock = 100UL,
+      baseFeePerGas = listOf(100UL, 110UL),
+      reward = emptyList(),
+      gasUsedRatio = listOf(0.0),
+      baseFeePerBlobGas = emptyList(),
+      blobGasUsedRatio = emptyList(),
+    )
+    val calculator = AverageWeightedFeesCalculator(
+      feeListFetcher = { it.baseFeePerGas },
+      ratioListFetcher = {
+        fetchCount.incrementAndGet()
+        it.gasUsedRatio
+      },
+      log = mock(),
+    )
+
+    assertThat(calculator.calculateFees(feeHistory)).isEqualTo(100.0)
+    assertThat(fetchCount).hasValue(1)
+  }
 
   @ParameterizedTest(name = "{0}")
   @MethodSource("averageWeightedFeesCalculatorTestCases")
