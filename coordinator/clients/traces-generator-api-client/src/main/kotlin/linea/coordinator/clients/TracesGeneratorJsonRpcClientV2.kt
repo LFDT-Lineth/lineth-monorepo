@@ -157,6 +157,7 @@ class TracesGeneratorJsonRpcClientV2(
           }
         }
         .exceptionally { throwable ->
+          rethrowError(throwable)
           if (config.ignoreTracesGeneratorErrors) {
             Ok(fallbackResponseProvider())
           } else {
@@ -170,6 +171,10 @@ class TracesGeneratorJsonRpcClientV2(
         throw e
       }
     }
+  }
+
+  private fun rethrowError(throwable: Throwable) {
+    (throwable as? Error ?: throwable.cause as? Error)?.let { throw it }
   }
 
   internal class RequestBuilder(

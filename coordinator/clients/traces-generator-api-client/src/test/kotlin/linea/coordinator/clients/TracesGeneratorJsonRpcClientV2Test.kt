@@ -14,6 +14,7 @@ import com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration.options
 import com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
+import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
 import io.vertx.junit5.VertxExtension
@@ -36,6 +37,9 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
+import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import java.net.URI
 import java.net.URL
 import java.util.concurrent.ExecutionException
@@ -495,6 +499,47 @@ class TracesGeneratorJsonRpcClientV2Test {
     result as Ok
     assertThat(result.value.tracesCounters).isEqualTo(TracesCountersV2.EMPTY_TRACES_COUNT)
     assertThat(result.value.tracesEngineVersion).isEqualTo("fallback")
+  }
+
+  @Test
+  fun `getTracesCounters does not convert asynchronous errors to fallback responses`() {
+    val fatalError = AssertionError("fatal")
+    val failingRpcClient = mock<JsonRpcClient>()
+    whenever(failingRpcClient.makeRequest(any(), any()))
+      .thenReturn(Future.failedFuture(fatalError))
+    val client = TracesGeneratorJsonRpcClientV2(
+      failingRpcClient,
+      TracesGeneratorJsonRpcClientV2.Config(
+        ignoreTracesGeneratorErrors = true,
+        fallBackTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+      ),
+    )
+
+    val exception = assertThrows<ExecutionException> {
+      client.getTracesCounters(1UL).get()
+    }
+
+    assertThat(exception.cause).isSameAs(fatalError)
+  }
+
+  @Test
+  fun `getTracesCounters does not convert synchronous errors to fallback responses`() {
+    val fatalError = AssertionError("fatal")
+    val failingRpcClient = mock<JsonRpcClient>()
+    whenever(failingRpcClient.makeRequest(any(), any())).thenThrow(fatalError)
+    val client = TracesGeneratorJsonRpcClientV2(
+      failingRpcClient,
+      TracesGeneratorJsonRpcClientV2.Config(
+        ignoreTracesGeneratorErrors = true,
+        fallBackTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+      ),
+    )
+
+    val thrown = assertThrows<AssertionError> {
+      client.getTracesCounters(1UL)
+    }
+
+    assertThat(thrown).isSameAs(fatalError)
   }
 
   @Test
