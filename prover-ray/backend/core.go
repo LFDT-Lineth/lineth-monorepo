@@ -99,6 +99,10 @@ func (c *Core) Prove(ctx context.Context, job Job) Result {
 // [New] and reused across calls; only the per-job StatelessInput blobs
 // (schema id + SSZ body) differ.
 func (c *Core) buildInputs(job Job) (map[string][]byte, error) {
+	if err := sanityCheckJobs(job); err != nil {
+		return nil, err
+	}
+
 	sszMemBlobs, err := sszBlobs(c.cfg.inOrigin(), decodePayload(job))
 	if err != nil {
 		return nil, err
@@ -107,6 +111,22 @@ func (c *Core) buildInputs(job Job) (map[string][]byte, error) {
 	memBlobs = append(memBlobs, c.elf.blobs...)
 	memBlobs = append(memBlobs, sszMemBlobs...)
 	return encodeInputs(memBlobs, c.elf.entry), nil
+}
+
+func sanityCheckJobs(job Job) error {
+	// Inverted ranges are malformed input.
+	if job.EndBlock < job.StartBlock {
+		return fmt.Errorf("invalid block range [%d, %d]: EndBlock < StartBlock",
+			job.StartBlock, job.EndBlock)
+	}
+
+	// Multi-block SSZ conflation is not implemented yet.
+	if job.EndBlock > job.StartBlock {
+		return fmt.Errorf("multi-block job [%d, %d]: %w",
+			job.StartBlock, job.EndBlock, ErrNotImplemented)
+	}
+
+	return nil
 }
 
 // runProve calls AssignWithPreRead, sys.Prove, and sys.Verify.
@@ -135,9 +155,13 @@ func SerializeProof(_ wiop.Proof, _ wiop.PublicInput) ([]byte, error) {
 	return nil, fmt.Errorf("SerializeProof: %w", ErrNotImplemented)
 }
 
-// decodePayload extracts the raw SSZ bytes from a Job's Payload.
-// Today it is a pass-through; once the coordinator API encoding is finalized
-// this will handle any wrapping (JSON envelope, multi-block conflation, etc.).
+// decodePayload extracts the framed SSZ bytes from a Job's Payload.
+//
+// Payload is the framed SSZ produced by [EncodeStatelessInput] at the
+// job-adapter boundary (mirroring proof_io_v1.py, which encodes at
+// request-decode time), so for a single-block job the pass-through IS the
+// contract. Multi-block unwrapping lands here once the conflation format is
+// decided (open question #1 in wiki backend-overview.md).
 func decodePayload(job Job) []byte {
 	return job.Payload
 }
