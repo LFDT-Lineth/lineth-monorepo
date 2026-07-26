@@ -1272,11 +1272,7 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 	resolved := make([]resolvedQuery, pcs.Params.NumQueries)
 	for queryIdx, queryPosition := range positions {
 		rq := resolvedQuery{
-			// Rounds[0..numRounds()-1] hold running-layer pairs; Rounds[0] is
-			// always zero (no committed layer at round 0). An extra slot at
-			// index numRounds() holds the zero seed for any level introduced
-			// at that boundary round (e.g. a D=1 aux level at the final round).
-			Rounds: make([]inputPair, pcs.Params.numRounds()+1),
+			Rounds: make([]inputPair, pcs.Params.numRounds()),
 			Aux:    make(map[uint8]inputPair, len(layout)),
 			Final:  finalCodeword[queryPosition>>pcs.Params.numRounds()],
 		}
@@ -1326,8 +1322,8 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 			if err != nil {
 				return err
 			}
-			if round > pcs.Params.numRounds() {
-				return fmt.Errorf("fri: pcs.Verify: level %d introduced at round %d, must be <= %d",
+			if round >= pcs.Params.numRounds() {
+				return fmt.Errorf("fri: pcs.Verify: level %d introduced at round %d, must be < %d",
 					levelIdx, round, pcs.Params.numRounds())
 			}
 			domain := pcs.Params.domainsLight[round]
@@ -1344,15 +1340,7 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 				return fmt.Errorf("fri: pcs.Verify: query %d: %w", queryIdx, err)
 			}
 			var alphaDeep field.Ext
-			if int(round) < len(foldAlphas) {
-				alphaDeep.Square(&foldAlphas[round])
-			} else if len(foldAlphas) > 0 {
-				// Boundary round (round == numRounds()): no fold challenge exists
-				// at this round. Use the first power of the last fold challenge to
-				// batch the bundle's entries; the first power is distinct from round
-				// numRounds()-1's alphaDeep = foldAlphas[numRounds()-1]^2.
-				alphaDeep = foldAlphas[len(foldAlphas)-1]
-			}
+			alphaDeep.Square(&foldAlphas[round])
 			levelPos := queryPosition >> round
 			self, err := reconstructQueryValueAt(pcs, bundle, inputOpening, inputIndexByBatch, levelSize,
 				claimed, zeta, alphaDeep, domainPointExt(domain, levelPos), false, rq.Rounds[round].Self)
@@ -1365,21 +1353,6 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 				return err
 			}
 			rq.Aux[round] = inputPair{Self: self, Sibling: sib}
-		}
-
-		// D=1: numRounds()==0 so checkFolds runs zero iterations and never
-		// ties the top-level pair to the final polynomial. Do it explicitly:
-		// the revealed FinalPoly IS the constant layer-0 codeword and both
-		// conjugate positions must match it exactly.
-		if pcs.Params.numRounds() == 0 {
-			pair := rq.Aux[0]
-			sibFinal := finalCodeword[queryPosition^1]
-			if !pair.Self.Equal(&rq.Final) {
-				return fmt.Errorf("fri: pcs.Verify: query %d: round-0 self does not match FinalPoly", queryIdx)
-			}
-			if !pair.Sibling.Equal(&sibFinal) {
-				return fmt.Errorf("fri: pcs.Verify: query %d: round-0 sibling does not match FinalPoly", queryIdx)
-			}
 		}
 
 		resolved[queryIdx] = rq

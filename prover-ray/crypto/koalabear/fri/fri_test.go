@@ -129,19 +129,6 @@ func TestProveVerify(t *testing.T) {
 		{"single-level", 3, 2, 3, nil},
 		{"one-extra", 4, 3, 4, []int{2}},
 		{"two-extra", 4, 3, 4, []int{4, 2}},
-		// A D=1 extra level (a constant polynomial) is introduced at round
-		// jl == numRounds(), at the boundary of the fold schedule. Regression
-		// test for the off-by-one that previously rejected this as
-		// "intro round numRounds, must be < numRounds" in buildProvePlan and
-		// pcs.Verify.
-		{"extra-D1-at-final-round", 4, 3, 4, []int{2, 1}},
-		// The top-level polynomial itself has D=1 (a constant), so numRounds
-		// == 0: HasNext() is false from the start, no fold ever runs, and
-		// layer 0 IS the final layer. Regression test for two bugs this
-		// exposed: (1) NewProverState never populated FinalPoly when no Fold
-		// call happens; (2) pcs.Verify indexed Rounds[0] into a zero-length
-		// slice (allocated with size numRounds==0), panicking.
-		{"top-level-D1-zero-rounds", 1, 0, 2, nil},
 	}
 
 	prng := rand.New(utils.NewRandSource(99))
@@ -178,40 +165,6 @@ func TestProveVerify(t *testing.T) {
 			}
 		})
 	}
-}
-
-// TestBoundaryRoundLevelClaimVerified is a regression test for the soundness gap
-// where a D=1 aux level at the boundary round (jl == numRounds()) had its
-// evaluation claim silently ignored: checkFolds skipped rq.Aux[numRounds()],
-// and alphaDeep was zero so reconstructQueryValueAt discarded all but the first
-// entry's DEEP quotient. A tampered Ext claimed value must be rejected.
-func TestBoundaryRoundLevelClaimVerified(t *testing.T) {
-	prng := rand.New(utils.NewRandSource(2025))
-
-	// logN=4, logD=3 → numRounds=3. The D=1 extra level has logCodewordLen=1,
-	// so jl = logN - logCodewordLen = 4 - 1 = 3 = numRounds().
-	fx := newLDTFixture(t, 4, 3, 2)
-	fx.addLevel(t, 3, field.VecPseudoRandExt(prng, 8))
-	fx.addLevel(t, 0, field.VecPseudoRandExt(prng, 1))
-
-	foldAlphas := make([]field.Ext, fx.pcs.Params.numRounds())
-	for i := range foldAlphas {
-		foldAlphas[i] = field.PseudoRandExt(prng)
-	}
-	positions := make([]int, fx.pcs.Params.NumQueries)
-	for i := range positions {
-		positions[i] = int(prng.Uint64() % (1 << 4))
-	}
-
-	proof := fx.open(t, foldAlphas, positions)
-	require.NoError(t, fx.verify(foldAlphas, positions, proof), "honest proof must verify")
-
-	// Tamper: flip the D=1 boundary level's Ext claimed evaluation from 0 to 1.
-	// The prover committed to R(X) = X*target(X) evaluated at zeta=0, so the
-	// honest claim is R(0) = 0; a false claim must be rejected.
-	fx.claims[1][0].Ext[0][0] = field.Lift(field.One())
-	require.Error(t, fx.verify(foldAlphas, positions, proof),
-		"tampered Ext claim for D=1 boundary-round level must be rejected")
 }
 
 // TestProveVerifyWithFinalPolyDegree checks that stopping FRI before a single

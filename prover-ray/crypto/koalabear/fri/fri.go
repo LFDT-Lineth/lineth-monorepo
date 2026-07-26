@@ -69,10 +69,10 @@ func NewParams(
 	if numQueries <= 0 {
 		return Params{}, fmt.Errorf("fri: numQueries must be positive, got %d", numQueries)
 	}
-	if res.logFinalPolySize > logPlainTextSize {
-		return Params{}, fmt.Errorf("fri: final poly size 2^%d exceeds plaintext size 2^%d",
+	if res.logFinalPolySize >= logPlainTextSize {
+		return Params{}, fmt.Errorf("fri: initial plaintext must be larger than final poly. got 2^%d ≤ 2^%d",
 			res.logFinalPolySize, logPlainTextSize)
-	}
+	} // This guarantees that there is a folding round.
 
 	res.domains = make([]*fft.Domain, res.numRounds()+1)
 	for j := range res.numRounds() + 1 {
@@ -238,11 +238,6 @@ func buildProvePlan(p Params, levels []Level) (provePlan, error) {
 		}
 
 		jl := p.LogCodewordSize - logCodewordLen
-		if jl > p.numRounds() {
-			return plan, fmt.Errorf(
-				"fri: Prove: levels[%d] codeword 2^%d gives intro round %d, which exceeds numRounds %d",
-				l, logCodewordLen, jl, p.numRounds())
-		}
 		if _, dup := plan.levelAtRound[jl]; dup {
 			return plan, fmt.Errorf("fri: Prove: two levels share intro round %d", jl)
 		}
@@ -278,10 +273,7 @@ func checkLevelTrees(label string, trees []*Tree) error {
 // challenge lengths before any authentication or reconstruction runs, so a
 // malformed proof can never cause an out-of-bounds access later.
 func checkOpeningProofShape(p Params, prf Proof, foldAlphas []field.Ext, positions []int) error {
-	var wantRoundRoots uint8
-	if p.numRounds() > 0 {
-		wantRoundRoots = p.numRounds() - 1
-	}
+	wantRoundRoots := p.numRounds() - 1
 	wantLayersPerRQuery := wantRoundRoots
 	if len(prf.RoundRoots) != int(wantRoundRoots) {
 		return fmt.Errorf("fri: pcs.Verify: proof has %d round roots, want %d", len(prf.RoundRoots), wantRoundRoots)
@@ -362,20 +354,6 @@ func checkFolds(p Params, resolved []resolvedQuery, foldAlphas []field.Ext, posi
 			}
 
 			xInv.Square(&xInv)
-		}
-
-		// A level at the boundary round numRounds() is authenticated but not
-		// folded. Its batched DEEP quotient must evaluate identically at both
-		// conjugate positions (Self == Sibling), which is equivalent to the
-		// underlying polynomial being constant — i.e., all claims are satisfied.
-		// The numRounds()==0 case is handled separately in pcs.Verify.
-		if p.numRounds() > 0 {
-			if pair, ok := rq.Aux[p.numRounds()]; ok {
-				if !pair.Self.Equal(&pair.Sibling) {
-					return fmt.Errorf("fri: pcs.Verify: query %d: boundary-round DEEP quotient is not constant",
-						queryIdx)
-				}
-			}
 		}
 	}
 	return nil
