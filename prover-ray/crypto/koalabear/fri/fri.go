@@ -363,6 +363,20 @@ func checkFolds(p Params, resolved []resolvedQuery, foldAlphas []field.Ext, posi
 
 			xInv.Square(&xInv)
 		}
+
+		// A level at the boundary round numRounds() is authenticated but not
+		// folded. Its batched DEEP quotient must evaluate identically at both
+		// conjugate positions (Self == Sibling), which is equivalent to the
+		// underlying polynomial being constant — i.e., all claims are satisfied.
+		// The numRounds()==0 case is handled separately in pcs.Verify.
+		if p.numRounds() > 0 {
+			if pair, ok := rq.Aux[p.numRounds()]; ok {
+				if !pair.Self.Equal(&pair.Sibling) {
+					return fmt.Errorf("fri: pcs.Verify: query %d: boundary-round DEEP quotient is not constant",
+						queryIdx)
+				}
+			}
+		}
 	}
 	return nil
 }

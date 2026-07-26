@@ -1346,6 +1346,12 @@ func (pcs *PCS) Verify(in VerifyInputs, proof OpeningProof) error {
 			var alphaDeep field.Ext
 			if int(round) < len(foldAlphas) {
 				alphaDeep.Square(&foldAlphas[round])
+			} else if len(foldAlphas) > 0 {
+				// Boundary round (round == numRounds()): no fold challenge exists
+				// at this round. Use the first power of the last fold challenge to
+				// batch the bundle's entries; the first power is distinct from round
+				// numRounds()-1's alphaDeep = foldAlphas[numRounds()-1]^2.
+				alphaDeep = foldAlphas[len(foldAlphas)-1]
 			}
 			levelPos := queryPosition >> round
 			self, err := reconstructQueryValueAt(pcs, bundle, inputOpening, inputIndexByBatch, levelSize,
