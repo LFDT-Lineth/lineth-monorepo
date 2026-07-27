@@ -1081,7 +1081,6 @@ func hashAuxPair(pair RowPair, selfIsEven bool) field.Octuplet {
 		writeRowOpeningElements(hasher, pair[1])
 		writeRowOpeningElements(hasher, pair[0])
 	}
-	return hasher.SumDigest()
 }
 
 func writeRowOpeningElements(hasher *poseidon2.MDHasher, row RowOpening) {
