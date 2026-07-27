@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/holiman/uint256"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -79,6 +80,34 @@ func TestRecoverPublicKey_RoundTrip(t *testing.T) {
 			tx: types.NewTx(&types.DynamicFeeTx{
 				ChainID: chainID, Nonce: 3, GasTipCap: big.NewInt(1), GasFeeCap: big.NewInt(2),
 				Gas: 21000, To: &to, Value: big.NewInt(4),
+			}),
+		},
+		{
+			name:   "Blob4844",
+			signer: types.LatestSignerForChainID(chainID),
+			tx: types.NewTx(&types.BlobTx{
+				ChainID:    uint256.MustFromBig(chainID),
+				Nonce:      4,
+				GasTipCap:  uint256.NewInt(1),
+				GasFeeCap:  uint256.NewInt(2),
+				Gas:        21000,
+				To:         to,
+				Value:      uint256.NewInt(5),
+				BlobFeeCap: uint256.NewInt(1),
+				BlobHashes: []common.Hash{{0x01}},
+			}),
+		},
+		{
+			name:   "SetCode7702",
+			signer: types.LatestSignerForChainID(chainID),
+			tx: types.NewTx(&types.SetCodeTx{
+				ChainID:   uint256.MustFromBig(chainID),
+				Nonce:     5,
+				GasTipCap: uint256.NewInt(1),
+				GasFeeCap: uint256.NewInt(2),
+				Gas:       21000,
+				To:        to,
+				Value:     uint256.NewInt(6),
 			}),
 		},
 	}
