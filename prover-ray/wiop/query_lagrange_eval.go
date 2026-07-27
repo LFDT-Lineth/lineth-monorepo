@@ -124,22 +124,24 @@ func (le *LagrangeEval) evalPolynomials(rt *Runtime) []field.Gen {
 	evalPoint := le.EvaluationPoint.EvaluateSingle(rt)
 	results := make([]field.Gen, len(le.Polynomials))
 	for i, pv := range le.Polynomials {
-		// Adjust the evaluation point for the column view's cyclic shift.
-		// C'[j] = C[(j+k) mod n]  implies  C'(z) = C(ω^k · z),
-		// so we evaluate the original column data at ω^k · z instead.
-		z := evalPoint.Value
-		if k := pv.ShiftingOffset; k != 0 {
-			var (
-				n      = pv.Column.Module.RuntimeSize(rt)
-				omega  = field.RootOfUnityBy(n)
-				omegaK field.Element
-			)
-			omegaK.ExpInt64(omega, int64(k))
-			z = z.Mul(field.ElemFromBase(omegaK))
-		}
+		z := ShiftedEvalPoint(evalPoint.Value, pv.ShiftingOffset, pv.Column.Module.RuntimeSize(rt))
 		results[i] = evalLagrangePadded(rt.GetColumnAssignment(pv.Column), pv.Column.Module, rt, z)
 	}
 	return results
+}
+
+// ShiftedEvalPoint returns z·ω_n^k, the point at which a k-shifted view of a
+// size-n column is evaluated: a cyclic shift C'[j] = C[(j+k) mod n] satisfies
+// C'(z) = C(ω^k·z). Shared by [LagrangeEval] and the PCS compiler's revealed-
+// column check so both evaluate at the same point.
+func ShiftedEvalPoint(z field.Gen, k, n int) field.Gen {
+	if k == 0 {
+		return z
+	}
+	omega := field.RootOfUnityBy(n)
+	var omegaK field.Element
+	omegaK.ExpInt64(omega, int64(k))
+	return z.Mul(field.ElemFromBase(omegaK))
 }
 
 // CheckGnark implements [GnarkCheckableQuery]. Asserts inside a gnark circuit

@@ -74,13 +74,13 @@ type Runtime struct {
 func NewRuntime(sys *System) *Runtime {
 
 	run := &Runtime{
-		System:       sys,
-		fs:           fiatshamir.NewFiatShamir(),
-		columns:      make(map[ObjectID]*ConcreteVector),
-		cells:        make(map[ObjectID]field.Gen),
-		coins:        make(map[ObjectID]field.Gen),
-		state:        make(map[string]any),
-		dynamicSizes: make(map[int]int),
+		System:          sys,
+		fs:              fiatshamir.NewFiatShamir(),
+		columns:         make(map[ObjectID]*ConcreteVector),
+		cells:           make(map[ObjectID]field.Gen),
+		coins:           make(map[ObjectID]field.Gen),
+		state:           make(map[string]any),
+		dynamicSizes:    make(map[int]int),
 		lock:            &sync.Mutex{},
 		Commitments:     make(map[int]field.Octuplet),
 		RevealedColumns: make(map[ObjectID]field.Vec),

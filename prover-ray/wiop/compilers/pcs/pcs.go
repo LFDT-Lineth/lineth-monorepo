@@ -372,7 +372,7 @@ func (a *revealVerifierAction) Check(rt *wiop.Runtime) error {
 				}
 				coeffs = canonicalCoeffs(rt, col)
 			}
-			point := shiftedEvalPoint(zeta, colView.ShiftingOffset, col.Module.RuntimeSize(rt))
+			point := wiop.ShiftedEvalPoint(zeta, colView.ShiftingOffset, col.Module.RuntimeSize(rt))
 			got := polynomials.EvalCanonical(coeffs, point).AsExt()
 			want := rt.GetCellValue(eval.EvaluationClaims[k]).AsExt()
 			if !got.Equal(&want) {
@@ -382,18 +382,6 @@ func (a *revealVerifierAction) Check(rt *wiop.Runtime) error {
 		}
 	}
 	return nil
-}
-
-// shiftedEvalPoint returns zeta·ω_n^k, the point at which a k-shifted view of a
-// size-n column is evaluated (C'(z) = C(ω^k·z), see [wiop.LagrangeEval]).
-func shiftedEvalPoint(zeta field.Gen, k, n int) field.Gen {
-	if k == 0 {
-		return zeta
-	}
-	omega := field.RootOfUnityBy(n)
-	var omegaK field.Element
-	omegaK.ExpInt64(omega, int64(k))
-	return zeta.Mul(field.ElemFromBase(omegaK))
 }
 
 // =============================================================================

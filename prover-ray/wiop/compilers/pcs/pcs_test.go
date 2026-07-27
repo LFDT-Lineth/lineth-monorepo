@@ -10,10 +10,8 @@ import (
 )
 
 func init() {
-	// The Compile-level unit tests below use small (size-4) columns to exercise
-	// the FRI commit/open/verify path. Disable small-column reveal by default so
-	// they take that path (as they did before reveal existed); the dedicated
-	// reveal tests re-enable it via withReveal.
+	// Size-4+ fixtures below take the FRI path; threshold 1 is the minimum, since
+	// FRI cannot commit a size-1 column. Reveal tests raise it via withReveal.
 	SetMaxRevealLenForTest(1)
 }
 
