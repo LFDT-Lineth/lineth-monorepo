@@ -9,15 +9,15 @@ import { globalTeardown } from "./global-teardown";
 
 const logger = createTestLogger();
 
-let isForcefullyShuttingDown = false;
+let shutdownAlreadyTried = false;
 async function handleForcedShutdown(signal: NodeJS.Signals) {
   // In case of a forced shutdown, prevent another cleanup being run
-  if (isForcefullyShuttingDown) {
+  if (shutdownAlreadyTried) {
     process.exit(constants.signals[signal] ?? 1);
   }
 
   logger.info("Forcefully shutting down, stopping background processes...");
-  isForcefullyShuttingDown = true;
+  shutdownAlreadyTried = true;
 
   try {
     await globalTeardown();
