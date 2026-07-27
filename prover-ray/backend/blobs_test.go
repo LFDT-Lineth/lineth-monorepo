@@ -2,7 +2,9 @@ package backend
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
+	"math"
 	"os"
 	"path/filepath"
 	"testing"
@@ -137,7 +139,8 @@ func makeMinimalELF(t *testing.T, entryPoint, sectionAddr uint64, sectionData []
 
 func TestSszBlobs_LengthPrefixAtInOrigin(t *testing.T) {
 	ssz := []byte{0xAA, 0xBB, 0xCC}
-	got := sszBlobs(DefaultINOrigin, ssz)
+	got, err := sszBlobs(DefaultINOrigin, ssz)
+	require.NoError(t, err)
 	require.Len(t, got, 2)
 
 	// First memory blob: 8-byte LE length at inOrigin.
@@ -148,7 +151,8 @@ func TestSszBlobs_LengthPrefixAtInOrigin(t *testing.T) {
 
 func TestSszBlobs_PayloadAtInOriginPlus8(t *testing.T) {
 	payload := []byte{0xAA, 0xBB, 0xCC}
-	got := sszBlobs(DefaultINOrigin, payload)
+	got, err := sszBlobs(DefaultINOrigin, payload)
+	require.NoError(t, err)
 	require.Len(t, got, 2)
 
 	// Second memory blob: the payload bytes at inOrigin+8.
@@ -158,10 +162,20 @@ func TestSszBlobs_PayloadAtInOriginPlus8(t *testing.T) {
 
 func TestSszBlobs_EmptySSZ(t *testing.T) {
 	// Empty SSZ: only the 8-byte length memory blob, no payload memory blob.
-	got := sszBlobs(DefaultINOrigin, nil)
+	got, err := sszBlobs(DefaultINOrigin, nil)
+	require.NoError(t, err)
 	require.Len(t, got, 1, "empty SSZ must produce exactly one memory blob (length prefix only)")
 	assert.Equal(t, DefaultINOrigin, got[0].offset, "length prefix memory blob offset must be inOrigin")
 	assert.Equal(t, uint64(0), binary.LittleEndian.Uint64(got[0].data), "length prefix must be zero for empty SSZ")
+}
+
+func TestBuildZkcInputs_SSZOffsetOverflow(t *testing.T) {
+	elfBytes := makeMinimalELF(t, testEntry, testSecAddr, testSecData)
+
+	_, err := buildZkcInputs(elfBytes, []byte{0x01}, math.MaxUint64-4)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "SSZ input offset overflow")
+	assert.Contains(t, err.Error(), "in_origin=0xfffffffffffffffb")
 }
 
 func TestEncodeInputs_EntryPointAndCount(t *testing.T) {
@@ -246,8 +260,10 @@ func TestCore_BuildInputs_UsesPrecomputedELFBlobs(t *testing.T) {
 	payload1 := []byte{0x01, 0x02}
 	payload2 := []byte{0xFF, 0xFE}
 
-	inputs1 := c.buildInputs(Job{Payload: payload1})
-	inputs2 := c.buildInputs(Job{Payload: payload2})
+	inputs1, err := c.buildInputs(Job{Payload: payload1})
+	require.NoError(t, err)
+	inputs2, err := c.buildInputs(Job{Payload: payload2})
+	require.NoError(t, err)
 
 	assert.NotEqual(t, inputs1["blobs_data"], inputs2["blobs_data"], "different payloads must produce different blobs_data")
 	assert.Equal(t, inputs1["entry_point_and_blobs_count"], inputs2["entry_point_and_blobs_count"], "same ELF must produce identical entry_point_and_blobs_count")
@@ -267,12 +283,27 @@ func TestCore_BuildInputs_MatchesBuildZkcInputs(t *testing.T) {
 
 	// Core.buildInputs (precomputed path) must produce identical output to
 	// buildZkcInputs (parse-every-call helper).
-	fromCore := c.buildInputs(Job{Payload: ssz})
+	fromCore, err := c.buildInputs(Job{Payload: ssz})
+	require.NoError(t, err)
 
 	fromFull, err := buildZkcInputs(elfBytes, ssz, DefaultINOrigin)
 	require.NoError(t, err)
 
 	assert.Equal(t, fromFull, fromCore, "precomputed path must produce identical output to buildZkcInputs")
+}
+
+func TestCore_Prove_BuildInputsError(t *testing.T) {
+	c := &Core{
+		cfg: Config{INOrigin: math.MaxUint64 - 4},
+	}
+
+	result := c.Prove(context.Background(), Job{ID: "job-1", Payload: []byte{0x01}})
+
+	assert.Equal(t, "job-1", result.JobID)
+	assert.Equal(t, ResultStatusFailed, result.Status)
+	require.Error(t, result.Err)
+	assert.Contains(t, result.Err.Error(), "building inputs")
+	assert.Contains(t, result.Err.Error(), "SSZ input offset overflow")
 }
 
 // TestBuildZkcInputs_NoLoadableSegments verifies that an ELF whose only
@@ -287,6 +318,54 @@ func TestBuildZkcInputs_NoLoadableSegments(t *testing.T) {
 	_, err := buildZkcInputs(elfBytes, []byte{0x01}, DefaultINOrigin)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no loadable sections")
+}
+
+func TestBuildZkcInputs_LoadableSegmentFileSizeExceedsMemSize(t *testing.T) {
+	elfBytes := makeMinimalELF(t, testEntry, testSecAddr, testSecData)
+	// Program header starts at byte 64. p_filesz is at +32, p_memsz at +40.
+	binary.LittleEndian.PutUint64(elfBytes[64+32:64+40], 2)
+	binary.LittleEndian.PutUint64(elfBytes[64+40:64+48], 1)
+
+	_, err := buildZkcInputs(elfBytes, []byte{0x01}, DefaultINOrigin)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "file size larger than memory size")
+}
+
+func TestBuildZkcInputs_LoadableSegmentAddressOverflow(t *testing.T) {
+	elfBytes := makeMinimalELF(t, testEntry, testSecAddr, testSecData)
+	// Program header starts at byte 64. p_vaddr is at +16, p_memsz at +40.
+	binary.LittleEndian.PutUint64(elfBytes[64+16:64+24], math.MaxUint64-1)
+	binary.LittleEndian.PutUint64(elfBytes[64+40:64+48], 4)
+
+	_, err := buildZkcInputs(elfBytes, []byte{0x01}, DefaultINOrigin)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "segment address overflow")
+}
+
+func TestBuildZkcInputs_SectionAddressOverflow(t *testing.T) {
+	elfBytes := makeMinimalELF(t, testEntry, testSecAddr, testSecData)
+	shOff := binary.LittleEndian.Uint64(elfBytes[40:48])
+	textSection := shOff + 64 // section 0 is NULL, section 1 is .text
+	// Section header field offsets: sh_addr at +16, sh_size at +32.
+	binary.LittleEndian.PutUint64(elfBytes[textSection+16:textSection+24], math.MaxUint64-1)
+	binary.LittleEndian.PutUint64(elfBytes[textSection+32:textSection+40], 4)
+
+	_, err := buildZkcInputs(elfBytes, []byte{0x01}, DefaultINOrigin)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "section .text address overflow")
+}
+
+func TestBuildZkcInputs_SectionShortRead(t *testing.T) {
+	elfBytes := makeMinimalELF(t, testEntry, testSecAddr, testSecData)
+	shOff := binary.LittleEndian.Uint64(elfBytes[40:48])
+	textSection := shOff + 64 // section 0 is NULL, section 1 is .text
+	// Section header field offsets: sh_offset at +24, sh_size at +32.
+	binary.LittleEndian.PutUint64(elfBytes[textSection+24:textSection+32], uint64(len(elfBytes)-2))
+	binary.LittleEndian.PutUint64(elfBytes[textSection+32:textSection+40], 4)
+
+	_, err := buildZkcInputs(elfBytes, []byte{0x01}, DefaultINOrigin)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "short read for section .text")
 }
 
 // zkcTestSrc is a small ZkC source program shared with the zkcdriver tests;
@@ -346,7 +425,8 @@ func TestNew(t *testing.T) {
 	assert.Equal(t, testEntry, c.elf.entry)
 
 	ssz := []byte{0xAA, 0xBB}
-	fromCore := c.buildInputs(Job{Payload: ssz})
+	fromCore, err := c.buildInputs(Job{Payload: ssz})
+	require.NoError(t, err)
 	fromFull, err := buildZkcInputs(elfBytes, ssz, DefaultINOrigin)
 	require.NoError(t, err)
 	assert.Equal(t, fromFull, fromCore)
