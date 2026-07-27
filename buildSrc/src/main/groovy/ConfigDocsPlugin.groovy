@@ -42,13 +42,16 @@ class ConfigDocsPlugin implements Plugin<Project> {
       spec
     }
 
-    project.tasks.register('checkConfigDocs', JavaExec) {
+    def checkConfigDocs = project.tasks.register('checkConfigDocs', JavaExec) {
       it.group = 'verification'
       it.description = 'Verifies that every config key is documented.'
       it.classpath = configDocs.runtimeClasspath
       it.mainClass.set('linea.config.docs.ConfigDocsCheckMain')
       it.argumentProviders.add({ [specProvider.get()] } as org.gradle.process.CommandLineArgumentProvider)
     }
+
+    // Enforce documentation completeness as part of `check` (and therefore CI's buildNeeded).
+    project.tasks.matching { it.name == 'check' }.configureEach { it.dependsOn(checkConfigDocs) }
 
     project.tasks.register('generateConfigDocs', JavaExec) {
       it.group = 'documentation'
