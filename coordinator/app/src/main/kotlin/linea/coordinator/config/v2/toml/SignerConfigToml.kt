@@ -10,7 +10,7 @@ import java.nio.file.Path
 
 data class SignerConfigToml(
   @param:ConfigDoc(
-    description = "Signer backend to use: WEB3J (local private key) or WEB3SIGNER (remote signer).",
+    description = "Signer backend to use: WEB3J, WEB3SIGNER, or CUSTOM.",
     example = "web3signer",
   )
   val type: SignerType,
@@ -18,6 +18,7 @@ data class SignerConfigToml(
   val web3j: Web3jConfig?,
   @param:ConfigSection("Remote Web3Signer settings; required when type is WEB3SIGNER.")
   val web3signer: Web3SignerConfig?,
+  @param:ConfigSection("Named signer settings; required when type is CUSTOM.")
   val custom: CustomConfig? = null,
 ) {
   init {
@@ -58,7 +59,10 @@ data class SignerConfigToml(
     }
   }
 
-  data class CustomConfig(val name: String) {
+  data class CustomConfig(
+    @param:ConfigDoc("Logical signer name resolved by the injected signer factory.")
+    val name: String,
+  ) {
     init {
       require(name.isNotBlank()) { "custom signer name must not be blank" }
     }
