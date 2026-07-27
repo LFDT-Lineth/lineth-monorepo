@@ -261,18 +261,20 @@ func TestSRSStore_GetSRS_PersistsDerivedLagrange(t *testing.T) {
 		})
 	}
 
-	t.Run("never_pairs_across_ceremonies", func(t *testing.T) {
+	t.Run("rejects_lagrange_from_a_different_setup", func(t *testing.T) {
 		assert := require.New(t)
-		// a valid same-size lagrange dump from a DIFFERENT ceremony must be
-		// skipped, left untouched, and a matching one derived instead
+		// a same-size lagrange dump derived from a DIFFERENT canonical SRS (so a
+		// different verifying key) must be rejected and re-derived, even though
+		// its filename and point count both match
 		subDir := t.TempDir()
 		dumpToFile(t, canonical, filepath.Join(subDir, fmt.Sprintf("kzg_srs_canonical_%d_bn254_aleo.memdump", canonicalSize)))
-		lagrange, err := toLagrange(canonical, lagrangeSize)
+
+		otherCanonical, _, err := unsafekzg.NewSRS(cs)
 		assert.NoError(err)
-		celoPath := filepath.Join(subDir, fmt.Sprintf("kzg_srs_lagrange_%d_bn254_celo.memdump", lagrangeSize))
-		dumpToFile(t, lagrange, celoPath)
-		celoBefore, err := os.Stat(celoPath)
+		otherLagrange, err := toLagrange(otherCanonical, lagrangeSize)
 		assert.NoError(err)
+		lagrangePath := filepath.Join(subDir, fmt.Sprintf("kzg_srs_lagrange_%d_bn254_aleo.memdump", lagrangeSize))
+		dumpToFile(t, otherLagrange, lagrangePath)
 
 		store, err := NewSRSStore(subDir)
 		assert.NoError(err)
@@ -280,11 +282,13 @@ func TestSRSStore_GetSRS_PersistsDerivedLagrange(t *testing.T) {
 		assert.NoError(err)
 		assert.NotNil(lagrangeSRS)
 
-		celoAfter, err := os.Stat(celoPath)
-		assert.NoError(err, "the mismatched-ceremony dump must be left untouched")
-		assert.Equal(celoBefore.ModTime(), celoAfter.ModTime())
-		_, err = os.Stat(filepath.Join(subDir, fmt.Sprintf("kzg_srs_lagrange_%d_bn254_aleo.memdump", lagrangeSize)))
-		assert.NoError(err, "a lagrange dump matching the canonical's ceremony must be derived and persisted")
+		// the foreign dump must have been re-derived over: its Vk now matches
+		// this canonical
+		reloaded := kzg.NewSRS(ecc.BN254)
+		data, err := os.ReadFile(lagrangePath)
+		assert.NoError(err)
+		assert.NoError(reloaded.ReadDump(bytes.NewReader(data)))
+		assertSameVk(t, canonical, reloaded)
 	})
 
 	t.Run("read_only_store_dir_is_best_effort", func(t *testing.T) {

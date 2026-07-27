@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -16,6 +17,7 @@ import (
 	"github.com/consensys/gnark-crypto/kzg"
 	"github.com/consensys/gnark/backend/plonk"
 	"github.com/consensys/gnark/constraint"
+	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/sirupsen/logrus"
 
 	kzg377 "github.com/consensys/gnark-crypto/ecc/bls12-377/kzg"
@@ -150,19 +152,21 @@ func (store *SRSStore) GetSRS(ctx context.Context, ccs constraint.ConstraintSyst
 		if entry.isCanonical || entry.size != sizeLagrange {
 			continue
 		}
-		if entry.source != canonicalEntry.source {
-			// a lagrange basis from a different ceremony is inconsistent with
-			// the canonical SRS; skip it rather than mix ceremonies
-			logrus.Debugf("skipping lagrange SRS %s: ceremony %q != canonical's %q", entry.path, entry.source, canonicalEntry.source)
-			continue
-		}
 		srs := kzg.NewSRS(curveID)
 		data, err := os.ReadFile(entry.path)
 		if err == nil {
 			err = srs.ReadDump(bytes.NewReader(data))
 		}
+		// catch a wrong-size dump here, where it re-derives, rather than letting
+		// plonk.Setup reject it later as an unrecoverable error
 		if err == nil && pkG1Len(srs) != sizeLagrange {
 			err = fmt.Errorf("dump has %d points, want %d", pkG1Len(srs), sizeLagrange)
+		}
+		if err == nil {
+			// the KZG verifying key is basis-independent, so a lagrange dump
+			// derived from this canonical SRS must carry the same Vk; a mismatch
+			// means a stale, foreign-ceremony, or mislabelled dump — re-derive it
+			err = utils.WriterstoEqual(srsVk(canonicalSRS), srsVk(srs))
 		}
 		if err != nil {
 			// a lagrange dump is reconstructible (unlike the canonical SRS): log
@@ -265,6 +269,22 @@ func (store *SRSStore) cacheLagrange(lagrangeSRS kzg.SRS, sizeLagrange int, curv
 
 	logrus.Infof("persisted derived lagrange SRS to %s", finalPath)
 	return nil
+}
+
+// srsVk exposes the SRS verifying key for equality checks. The Vk is
+// basis-independent, so a canonical SRS and a lagrange dump derived from it
+// carry the same one.
+func srsVk(srs kzg.SRS) io.WriterTo {
+	switch s := srs.(type) {
+	case *kzg254.SRS:
+		return &s.Vk
+	case *kzg377.SRS:
+		return &s.Vk
+	case *kzgbw6.SRS:
+		return &s.Vk
+	default:
+		return nil
+	}
 }
 
 // pkG1Len returns the number of G1 proving-key points in the SRS, or -1.
