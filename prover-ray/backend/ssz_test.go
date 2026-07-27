@@ -87,6 +87,16 @@ func TestEncodeStatelessInput_InvalidJSON(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestParseJSONObject_RejectsTrailingJSON(t *testing.T) {
+	_, err := parseJSONObject([]byte(`{"a":1} {}`), "payload")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unexpected trailing JSON value")
+
+	_, err = parseJSONObject([]byte(`{"a":1} trailing`), "payload")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unexpected trailing data")
+}
+
 // TestEncodeStatelessInput_MissingChainConfig asserts a clear error when
 // chainConfig is absent from an otherwise valid payload.
 func TestEncodeStatelessInput_MissingChainConfig(t *testing.T) {
@@ -286,6 +296,11 @@ func TestEncodeStatelessInput_MalformedInputs(t *testing.T) {
 				npr(o)["executionRequests"] = map[string]any{"consolidations": []any{map[string]any{}}}
 			},
 			"consolidations must be empty"},
+		{"NullExecutionRequestsList",
+			func(o map[string]any) {
+				npr(o)["executionRequests"] = map[string]any{"deposits": nil}
+			},
+			"executionRequests.deposits"},
 		{"FeeRecipientWrongLength",
 			func(o map[string]any) { ep(o)["feeRecipient"] = "0x1111" },
 			"feeRecipient"},
@@ -408,6 +423,12 @@ func TestEncodeStatelessInput_MalformedInputs(t *testing.T) {
 			assert.Contains(t, err.Error(), tc.wantErr)
 		})
 	}
+}
+
+func TestAddSSZLength_RejectsUint32Overflow(t *testing.T) {
+	_, err := addSSZLength("container", maxSSZSerializedBytes, 1)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "uint32 offset limit")
 }
 
 // TestBuildInputs_MultiBlock_NotImplemented rejects multi-block jobs.

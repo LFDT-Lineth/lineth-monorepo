@@ -5,7 +5,9 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"math/big"
 	"strconv"
 	"strings"
@@ -52,11 +54,14 @@ const activeFork = "Amsterdam"
 // we check it explicitly.
 const maxExtraDataBytes = 32
 
+const maxSSZSerializedBytes uint64 = 1<<32 - 1
+
 // SSZ list/vector bounds mirrored from rollup_spec/stateless_input.py and
 // rollup_spec/canonical_ssz.py. The hand-written encoder must reject inputs
 // outside these bounds just like the reference remerkleable encoder does.
 const (
 	maxBytesPerTransaction     = 1 << 30
+	maxBlockAccessListBytes    = 1 << 30
 	maxTransactionsPerPayload  = 1 << 20
 	maxWithdrawalsPerPayload   = 1 << 4
 	maxBlobCommitmentsPerBlock = 4096
@@ -85,6 +90,12 @@ func parseJSONObject(data []byte, ctx string) (jsonObj, error) {
 	}
 	if obj == nil {
 		return nil, fmt.Errorf("%s: expected object", ctx)
+	}
+	var extra any
+	if err := dec.Decode(&extra); err == nil {
+		return nil, fmt.Errorf("%s: unexpected trailing JSON value", ctx)
+	} else if !errors.Is(err, io.EOF) {
+		return nil, fmt.Errorf("%s: unexpected trailing data: %w", ctx, err)
 	}
 	return obj, nil
 }
@@ -218,31 +229,43 @@ func variable(data []byte) sszField { return sszField{data: data, variable: true
 // sszContainer serializes an ordered list of fields per the SSZ spec: fixed
 // fields inline, variable fields as uint32 little-endian offsets (relative to
 // the start of the container) followed by their data in the heap section.
-func sszContainer(fields ...sszField) []byte {
-	fixedLen := 0
+func sszContainer(fields ...sszField) ([]byte, error) {
+	var fixedLen uint64
 	for _, f := range fields {
 		if f.variable {
-			fixedLen += 4
+			var err error
+			fixedLen, err = addSSZLength("container fixed section", fixedLen, 4)
+			if err != nil {
+				return nil, err
+			}
 		} else {
-			fixedLen += len(f.data)
+			var err error
+			fixedLen, err = addSSZLength("container fixed section", fixedLen, len(f.data))
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
-	head := make([]byte, 0, fixedLen)
+	head := make([]byte, 0, int(fixedLen))
 	var heap []byte
 	offset := fixedLen
 	for _, f := range fields {
 		if f.variable {
+			nextOffset, err := addSSZLength("container", offset, len(f.data))
+			if err != nil {
+				return nil, err
+			}
 			var off [4]byte
-			binary.LittleEndian.PutUint32(off[:], uint32(offset)) //nolint:gosec // offsets are bounded by payload size
+			binary.LittleEndian.PutUint32(off[:], uint32(offset)) //nolint:gosec // checked by addSSZLength
 			head = append(head, off[:]...)
 			heap = append(heap, f.data...)
-			offset += len(f.data)
+			offset = nextOffset
 		} else {
 			head = append(head, f.data...)
 		}
 	}
-	return append(head, heap...)
+	return append(head, heap...), nil
 }
 
 // sszListFixed encodes a list whose elements are all fixed-size: their
@@ -258,18 +281,39 @@ func sszListFixed(elems [][]byte) []byte {
 // sszListVariable encodes a list whose elements are variable-size: a section of
 // uint32 little-endian offsets (relative to the start of the list) followed by
 // the element data. An empty list encodes to no bytes.
-func sszListVariable(elems [][]byte) []byte {
-	head := make([]byte, 0, 4*len(elems))
+func sszListVariable(elems [][]byte) ([]byte, error) {
+	var headLen uint64
+	for range elems {
+		var err error
+		headLen, err = addSSZLength("variable list fixed section", headLen, 4)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	head := make([]byte, 0, int(headLen))
 	var heap []byte
-	offset := 4 * len(elems)
+	offset := headLen
 	for _, e := range elems {
+		nextOffset, err := addSSZLength("variable list", offset, len(e))
+		if err != nil {
+			return nil, err
+		}
 		var off [4]byte
-		binary.LittleEndian.PutUint32(off[:], uint32(offset)) //nolint:gosec // offsets are bounded by payload size
+		binary.LittleEndian.PutUint32(off[:], uint32(offset)) //nolint:gosec // checked by addSSZLength
 		head = append(head, off[:]...)
 		heap = append(heap, e...)
-		offset += len(e)
+		offset = nextOffset
 	}
-	return append(head, heap...)
+	return append(head, heap...), nil
+}
+
+func addSSZLength(ctx string, total uint64, n int) (uint64, error) {
+	add := uint64(n)
+	if add > maxSSZSerializedBytes || total > maxSSZSerializedBytes-add {
+		return 0, fmt.Errorf("%s: serialized size exceeds uint32 offset limit", ctx)
+	}
+	return total + add, nil
 }
 
 func sszUint64(v uint64) []byte {
@@ -377,7 +421,7 @@ func sszWithdrawalFromObj(obj jsonObj) ([]byte, error) {
 		fixed(sszUint64(validatorIndex)),
 		fixed(addr),
 		fixed(sszUint64(amount)),
-	), nil
+	)
 }
 
 func sszExecutionPayloadFromObj(obj jsonObj) ([]byte, error) {
@@ -528,7 +572,11 @@ func sszExecutionPayloadFromObj(obj jsonObj) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("blockAccessList: %w", err)
 	}
-	if err := checkByteLen("blockAccessList", len(blockAccessList), maxBytesPerTransaction); err != nil {
+	if err := checkByteLen("blockAccessList", len(blockAccessList), maxBlockAccessListBytes); err != nil {
+		return nil, err
+	}
+	txList, err := sszListVariable(txs)
+	if err != nil {
 		return nil, err
 	}
 	slotNumber, err := optionalUint64(obj, "slotNumber", 0)
@@ -552,13 +600,13 @@ func sszExecutionPayloadFromObj(obj jsonObj) ([]byte, error) {
 		variable(extraData),
 		fixed(baseFeeBytes),
 		fixed(blockHash),
-		variable(sszListVariable(txs)),
+		variable(txList),
 		variable(sszListFixed(withdrawals)),
 		fixed(sszUint64(blobGasUsed)),
 		fixed(sszUint64(excessBlobGas)),
 		variable(blockAccessList),
 		fixed(sszUint64(slotNumber)),
-	), nil
+	)
 }
 
 func sszExecutionRequestsFromObj(obj jsonObj) ([]byte, error) {
@@ -571,6 +619,13 @@ func sszExecutionRequestsFromObj(obj jsonObj) ([]byte, error) {
 		if err := json.Unmarshal(raw, &items); err != nil {
 			return nil, fmt.Errorf("executionRequests.%s: expected array: %w", key, err)
 		}
+		// This is intentionally stricter than stateless_input.py's direct
+		// helper, whose truthiness check treats null like empty. The real Python
+		// request path rejects non-arrays before injecting the empty encoder
+		// object, so keep this boundary schema-shaped too.
+		if items == nil {
+			return nil, fmt.Errorf("executionRequests.%s: expected array", key)
+		}
 		if len(items) != 0 {
 			return nil, fmt.Errorf("executionRequests.%s must be empty", key)
 		}
@@ -580,7 +635,7 @@ func sszExecutionRequestsFromObj(obj jsonObj) ([]byte, error) {
 		variable(nil),
 		variable(nil),
 		variable(nil),
-	), nil
+	)
 }
 
 func sszNewPayloadRequestFromObj(obj jsonObj) ([]byte, error) {
@@ -632,7 +687,7 @@ func sszNewPayloadRequestFromObj(obj jsonObj) ([]byte, error) {
 		variable(sszListFixed(versionedHashes)),
 		fixed(parentBeacon),
 		variable(execRequests),
-	), nil
+	)
 }
 
 func sszExecutionWitnessFromObj(obj jsonObj) ([]byte, error) {
@@ -655,7 +710,7 @@ func sszExecutionWitnessFromObj(obj jsonObj) ([]byte, error) {
 			}
 			elems[i] = b
 		}
-		return sszListVariable(elems), nil
+		return sszListVariable(elems)
 	}
 
 	state, err := encodeList("state", maxWitnessNodes, maxBytesPerWitnessNode)
@@ -675,7 +730,7 @@ func sszExecutionWitnessFromObj(obj jsonObj) ([]byte, error) {
 		variable(state),
 		variable(codes),
 		variable(headers),
-	), nil
+	)
 }
 
 // forkIndex resolves a fork name to its SSZ active_fork index, mirroring
@@ -713,23 +768,29 @@ func sszChainConfigFromObj(obj jsonObj) ([]byte, error) {
 	}
 
 	// SszForkActivation: two empty optional (max-length-1) uint64 lists.
-	activation := sszContainer(
+	activation, err := sszContainer(
 		variable(nil), // block_number
 		variable(nil), // timestamp
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	// SszForkConfig: fork index | activation | blob_schedule (empty list).
-	forkConfig := sszContainer(
+	forkConfig, err := sszContainer(
 		fixed(sszUint64(idx)),
 		variable(activation),
 		variable(nil), // blob_schedule: empty List[SszBlobSchedule, 1]
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	// SszChainConfig: chain_id | active_fork.
 	return sszContainer(
 		fixed(sszUint64(chainID)),
 		variable(forkConfig),
-	), nil
+	)
 }
 
 // recoverPublicKey recovers the 65-byte uncompressed SEC1 public key
@@ -889,7 +950,7 @@ func sszStatelessInputFromObj(obj jsonObj) ([]byte, error) {
 		variable(witness),
 		variable(chainConfig),
 		variable(sszListFixed(keys)),
-	), nil
+	)
 }
 
 // EncodeStatelessInput SSZ-encodes the coordinator's per-block payload into the

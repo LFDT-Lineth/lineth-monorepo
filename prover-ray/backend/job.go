@@ -25,11 +25,10 @@ type Job struct {
 
 	// Payload is the framed StatelessInput for the block: the 0x0001 schema id
 	// followed by the SSZ StatelessInput, exactly the output of
-	// [EncodeStatelessInput], which the job adapter calls when translating
-	// a coordinator request into Jobs. [Core.Prove] passes these bytes through
-	// [decodePayload], and [sszBlobs] prepends the [u64 LE len] prefix before
-	// the guest reads the bytes at _in_start. Callers supply the framed bytes
-	// only and must not add the length prefix themselves.
+	// [EncodeStatelessInput]. [Core.Prove] passes these bytes through
+	// [decodePayload], and [sszBlobs] prepends the [u64 LE len] prefix the
+	// guest reads at _in_start. Callers supply the framed bytes only and must
+	// not add the length prefix themselves.
 	//
 	// Multi-block conflation encoding is not yet decided (open question #1
 	// in wiki backend-overview.md); [Core.Prove] rejects jobs spanning more
