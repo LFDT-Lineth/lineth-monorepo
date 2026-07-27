@@ -118,14 +118,14 @@ class PostgresAggregationsDao(
     """.trimIndent(),
   )
 
-  private val insertSql =
-    """
-      insert into $aggregationsTable
-      (start_block_number, end_block_number, status, start_block_timestamp, batch_count, aggregation_proof)
-      VALUES ($1, $2, $3, $4, $5, CAST($6::text as jsonb))
-    """.trimIndent()
-
-  private val insertQuery = connection.preparedQuery(insertSql)
+  private val insertQuery =
+    connection.preparedQuery(
+      """
+        insert into $aggregationsTable
+        (start_block_number, end_block_number, status, start_block_timestamp, batch_count, aggregation_proof)
+        VALUES ($1, $2, $3, $4, $5, CAST($6::text as jsonb))
+      """.trimIndent(),
+    )
 
   private val selectAggregations =
     connection.preparedQuery(
@@ -290,7 +290,7 @@ class PostgresAggregationsDao(
         batchCount,
         aggregationProof,
       )
-    queryLog.log(Level.TRACE, insertSql, params)
+    queryLog.log(Level.TRACE, insertQuery.toString(), params)
     return insertQuery.execute(Tuple.tuple(params))
       .map { }
       .recover { th ->

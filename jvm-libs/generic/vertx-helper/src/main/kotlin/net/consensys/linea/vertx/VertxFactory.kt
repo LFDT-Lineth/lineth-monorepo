@@ -19,27 +19,7 @@ object VertxFactory {
     jvmMetricsEnabled: Boolean = true,
     prometheusMetricsEnabled: Boolean = true,
     preferNativeTransport: Boolean = true,
-  ): Vertx = Vertx.vertx(
-    createVertxOptions(
-      maxEventLoopExecuteTime = maxEventLoopExecuteTime,
-      maxWorkerExecuteTime = maxWorkerExecuteTime,
-      blockedThreadCheckInterval = blockedThreadCheckInterval,
-      warningExceptionTime = warningExceptionTime,
-      jvmMetricsEnabled = jvmMetricsEnabled,
-      prometheusMetricsEnabled = prometheusMetricsEnabled,
-      preferNativeTransport = preferNativeTransport,
-    ),
-  )
-
-  internal fun createVertxOptions(
-    maxEventLoopExecuteTime: Duration? = 5.seconds,
-    maxWorkerExecuteTime: Duration? = 30.seconds,
-    blockedThreadCheckInterval: Duration? = 5.seconds,
-    warningExceptionTime: Duration? = 60.seconds,
-    jvmMetricsEnabled: Boolean = true,
-    prometheusMetricsEnabled: Boolean = true,
-    preferNativeTransport: Boolean = true,
-  ): VertxOptions {
+  ): Vertx {
     val configs = JsonObject()
     maxEventLoopExecuteTime?.let {
       configs.put("maxEventLoopExecuteTime", it.inWholeMilliseconds)
@@ -71,6 +51,6 @@ object VertxFactory {
       }
       configs.put("metricsOptions", metricsOptions)
     }
-    return VertxOptions(configs)
+    return createVertxWithJsonConfigs(configs)
   }
 }
