@@ -12,12 +12,14 @@ import (
 	"sort"
 	"strconv"
 	"sync"
+	"sync/atomic"
 
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark-crypto/kzg"
 	"github.com/consensys/gnark/backend/plonk"
 	"github.com/consensys/gnark/constraint"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils/parallel"
 	"github.com/sirupsen/logrus"
 
 	kzg377 "github.com/consensys/gnark-crypto/ecc/bls12-377/kzg"
@@ -168,6 +170,9 @@ func (store *SRSStore) GetSRS(ctx context.Context, ccs constraint.ConstraintSyst
 			// means a stale, foreign-ceremony, or mislabelled dump — re-derive it
 			err = utils.WriterstoEqual(srsVk(canonicalSRS), srsVk(srs))
 		}
+		if err == nil {
+			err = pkG1OnCurve(srs)
+		}
 		if err != nil {
 			// a lagrange dump is reconstructible (unlike the canonical SRS): log
 			// and fall back to deriving, which re-persists over this same path
@@ -225,7 +230,9 @@ func (store *SRSStore) register(curveID ecc.ID, newEntry fsEntry) {
 // cacheLagrange writes a derived Lagrange SRS into the store's directory using
 // the naming scheme NewSRSStore parses, and registers it in the index. The dump
 // is fsync'd and renamed into place atomically, so a torn write cannot appear
-// under a trusted name; a bad dump is caught on the next load and re-derived.
+// under a trusted name. On load, framing, size, setup-identity (Vk) and
+// point-validity (on-curve) errors are all caught and re-derived; substitution
+// of validly-encoded points is out of scope, as for every file in the store.
 func (store *SRSStore) cacheLagrange(lagrangeSRS kzg.SRS, sizeLagrange int, curveID ecc.ID, source string) error {
 	curveName, ok := curveFileNames[curveID]
 	if !ok {
@@ -268,6 +275,39 @@ func (store *SRSStore) cacheLagrange(lagrangeSRS kzg.SRS, sizeLagrange int, curv
 	store.register(curveID, fsEntry{isCanonical: false, size: sizeLagrange, path: finalPath, source: source})
 
 	logrus.Infof("persisted derived lagrange SRS to %s", finalPath)
+	return nil
+}
+
+// pkG1OnCurve fails if any proving-key point is off-curve. ReadDump is a raw
+// copy with no point validation, so this is what actually catches a corrupted
+// dump: a random bit-flip virtually never lands on the curve. Runs over points
+// already in memory, in parallel — seconds, against hours of re-derivation.
+func pkG1OnCurve(srs kzg.SRS) error {
+	var bad atomic.Int64
+	bad.Store(-1)
+	check := func(isOnCurve func(i int) bool, n int) {
+		parallel.Execute(n, func(start, stop int) {
+			for i := start; i < stop; i++ {
+				if !isOnCurve(i) {
+					bad.Store(int64(i))
+					return
+				}
+			}
+		})
+	}
+	switch s := srs.(type) {
+	case *kzg254.SRS:
+		check(func(i int) bool { return s.Pk.G1[i].IsOnCurve() }, len(s.Pk.G1))
+	case *kzg377.SRS:
+		check(func(i int) bool { return s.Pk.G1[i].IsOnCurve() }, len(s.Pk.G1))
+	case *kzgbw6.SRS:
+		check(func(i int) bool { return s.Pk.G1[i].IsOnCurve() }, len(s.Pk.G1))
+	default:
+		return fmt.Errorf("unsupported SRS type %T", srs)
+	}
+	if i := bad.Load(); i >= 0 {
+		return fmt.Errorf("proving-key point %d is not on the curve", i)
+	}
 	return nil
 }
 

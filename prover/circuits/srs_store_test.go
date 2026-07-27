@@ -233,6 +233,9 @@ func TestSRSStore_GetSRS_PersistsDerivedLagrange(t *testing.T) {
 		content []byte
 	}{
 		{"garbage", []byte("garbage")},
+		// one flipped bit in the point region loads cleanly and passes the
+		// length check, but leaves an off-curve point — must be re-derived
+		{"bitflipped", bitflip(dumpBytes(t, mustToLagrange(t, canonical, lagrangeSize)))},
 		// a valid but wrong-size dump: catches the pkG1Len length guard
 		{"undersized", dumpBytes(t, mustToLagrange(t, canonical, lagrangeSize/2))},
 	} {
@@ -325,4 +328,11 @@ func dumpBytes(t *testing.T, srs kzg.SRS) []byte {
 	var buf bytes.Buffer
 	require.NoError(t, srs.WriteDump(&buf))
 	return buf.Bytes()
+}
+
+// bitflip flips one bit inside the point region of a serialized dump.
+func bitflip(dump []byte) []byte {
+	out := append([]byte(nil), dump...)
+	out[len(out)-100] ^= 0x01
+	return out
 }
