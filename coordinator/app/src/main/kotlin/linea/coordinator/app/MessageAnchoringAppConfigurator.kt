@@ -6,7 +6,6 @@ import linea.anchoring.MessageAnchoringApp
 import linea.contract.l2.Web3JL2MessageServiceSmartContractClient
 import linea.coordinator.config.v2.CoordinatorConfig
 import linea.coordinator.config.v2.isDisabled
-import linea.coordinator.extensions.CustomSignerFactory
 import linea.ethapi.EthLogsSearcherImpl
 import linea.web3j.createWeb3jHttpClient
 import linea.web3j.ethapi.createEthApiClient
@@ -16,7 +15,7 @@ object MessageAnchoringAppConfigurator {
   fun create(
     vertx: Vertx,
     configs: CoordinatorConfig,
-    customSignerFactory: CustomSignerFactory? = null,
+    signerFactory: SignerFactory = DefaultSignerFactory,
   ): LongRunningService {
     if (configs.messageAnchoring.isDisabled()) {
       LogManager.getLogger(MessageAnchoringApp::class.java).warn("Message anchoring is disabled")
@@ -44,7 +43,7 @@ object MessageAnchoringAppConfigurator {
         vertx = vertx,
         signerConfig = configs.messageAnchoring.signer,
         client = l2Web3jClient,
-        customSignerFactory = customSignerFactory,
+        signerFactory = signerFactory,
       )
     val messageAnchoringApp =
       MessageAnchoringApp(

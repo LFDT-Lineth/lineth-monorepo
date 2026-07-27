@@ -5,7 +5,6 @@ plugins {
 dependencies {
   // Stable contracts an extension is allowed to depend on.
   api project(':jvm-libs:linea:core:long-running-service')
-  api project(':jvm-libs:linea:core:signer-interfaces')
   api project(':jvm-libs:generic:json-rpc')
   api project(':jvm-libs:linea:core:metrics')
   api "io.vertx:vertx-core"

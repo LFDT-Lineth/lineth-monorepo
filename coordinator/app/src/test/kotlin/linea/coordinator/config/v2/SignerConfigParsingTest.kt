@@ -139,6 +139,16 @@ class SignerConfigParsingTest {
       .isInstanceOf(IllegalArgumentException::class.java)
       .hasMessageContaining("requires custom config")
 
+    assertThatThrownBy {
+      SignerConfig(
+        type = SignerConfig.SignerType.CUSTOM,
+        web3j = null,
+        web3signer = null,
+      )
+    }
+      .isInstanceOf(IllegalArgumentException::class.java)
+      .hasMessageContaining("requires custom config")
+
     assertThatThrownBy { SignerConfigToml.CustomConfig(" ") }
       .isInstanceOf(IllegalArgumentException::class.java)
       .hasMessageContaining("must not be blank")

@@ -53,9 +53,6 @@ interface CoordinatorExtension {
 fun interface CoordinatorExtensionFactory {
   fun create(context: CoordinatorContext): List<CoordinatorExtension>
 
-  val customSignerFactory: CustomSignerFactory?
-    get() = null
-
   companion object {
     val NOOP = CoordinatorExtensionFactory { emptyList() }
   }
