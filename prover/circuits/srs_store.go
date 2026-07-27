@@ -29,7 +29,9 @@ import (
 
 type SRSStore struct {
 	// mu guards entries; a file is safe to read unlocked because it is only
-	// registered after being atomically published, and published files are immutable.
+	// registered after being atomically published, and a re-publish renames a
+	// new file over the path — rename(2) swaps the directory entry, so an
+	// in-flight read keeps its old inode and never sees a mix.
 	mu      sync.RWMutex
 	entries map[ecc.ID][]fsEntry
 	rootDir string
@@ -157,20 +159,22 @@ func (store *SRSStore) GetSRS(ctx context.Context, ccs constraint.ConstraintSyst
 		srs := kzg.NewSRS(curveID)
 		data, err := os.ReadFile(entry.path)
 		if err == nil {
+			// catches a truncated or unparseable dump
 			err = srs.ReadDump(bytes.NewReader(data))
 		}
-		// catch a wrong-size dump here, where it re-derives, rather than letting
-		// plonk.Setup reject it later as an unrecoverable error
 		if err == nil && pkG1Len(srs) != sizeLagrange {
+			// catches a wrong-size dump here, where it re-derives, rather than
+			// letting plonk.Setup reject it later as an unrecoverable error
 			err = fmt.Errorf("dump has %d points, want %d", pkG1Len(srs), sizeLagrange)
 		}
 		if err == nil {
-			// the KZG verifying key is basis-independent, so a lagrange dump
-			// derived from this canonical SRS must carry the same Vk; a mismatch
-			// means a stale, foreign-ceremony, or mislabelled dump — re-derive it
+			// catches a dump from a different setup: the KZG verifying key is
+			// basis-independent, so a lagrange dump derived from this canonical
+			// SRS must carry the same Vk
 			err = utils.WriterstoEqual(srsVk(canonicalSRS), srsVk(srs))
 		}
 		if err == nil {
+			// catches bit-rot in the point data, which parses cleanly
 			err = pkG1OnCurve(srs)
 		}
 		if err != nil {
