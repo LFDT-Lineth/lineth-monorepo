@@ -14,6 +14,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fri"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 )
 
 // go run main.go --min-log2 8 --max-log2 12 --base-polys 400 --ext-polys 400
@@ -38,7 +39,8 @@ func main() {
 	}
 	validateConfig()
 
-	params, err := fri.NewParams(uint8(*maxLog2+*rate), uint8(*maxLog2), uint(*numQueries))
+	rateLog2 := utils.Log2Ceil(*rate)
+	params, err := fri.NewParams(uint8(*maxLog2+rateLog2), uint8(*maxLog2), uint(*numQueries))
 	if err != nil {
 		fail("NewParams: %v", err)
 	}
@@ -205,13 +207,13 @@ func makeShiftList(size, maxShifts int, rng uint64) ([]int, uint64) {
 	return out, rng
 }
 
-func makeChallenges(domainSize, numRounds, numQueries int, seed uint64) fri.Challenges {
+func makeChallenges(domainSizeLog2, numRounds, numQueries int, seed uint64) fri.Challenges {
 	rng := seed
 	foldAlphas := make([]field.Ext, numRounds)
 	for i := range foldAlphas {
 		foldAlphas[i], rng = nextExt(rng)
 	}
-	queryPositions := makeQueryPositions(domainSize, numQueries, rng)
+	queryPositions := makeQueryPositions(1<<domainSizeLog2, numQueries, rng)
 	return fri.Challenges{
 		FoldAlphas:     foldAlphas,
 		QueryPositions: queryPositions,
