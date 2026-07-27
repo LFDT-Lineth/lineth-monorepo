@@ -4,10 +4,14 @@ import { createTestLogger } from "../logger";
 const logger = createTestLogger();
 
 export default async (): Promise<void> => {
+  await globalTeardown();
+};
+
+export async function globalTeardown() {
   try {
     await stopL2TrafficGeneration();
   } catch (error) {
     logger.error(`Error stopping L2 traffic generation: ${error}`);
     // Don't throw - teardown failures shouldn't mask test failures
   }
-};
+}
