@@ -155,13 +155,7 @@ func SerializeProof(_ wiop.Proof, _ wiop.PublicInput) ([]byte, error) {
 	return nil, fmt.Errorf("SerializeProof: %w", ErrNotImplemented)
 }
 
-// decodePayload extracts the framed SSZ bytes from a Job's Payload.
-//
-// Payload is the framed SSZ produced by [EncodeStatelessInput] at the
-// job-adapter boundary (mirroring proof_io_v1.py, which encodes at
-// request-decode time), so for a single-block job the pass-through IS the
-// contract. Multi-block unwrapping lands here once the conflation format is
-// decided (open question #1 in wiki backend-overview.md).
+// decodePayload returns the job's framed SSZ payload.
 func decodePayload(job Job) []byte {
 	return job.Payload
 }

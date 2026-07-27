@@ -178,11 +178,7 @@ func TestEncodeStatelessInput_NoTransactions_EmptyPublicKeys(t *testing.T) {
 	assert.Equal(t, byte(0x01), got[1], "schema id low byte")
 }
 
-// TestEncodeStatelessInput_UnsupportedFork verifies that a forkName which is
-// known to protocolForks but is not the single fork this backend supports
-// (activeFork = Amsterdam) returns a clear error rather than silently encoding
-// the wrong fork index. Truly unknown forkName values are covered by the
-// UnknownForkName case in TestEncodeStatelessInput_NegativeCases.
+// TestEncodeStatelessInput_UnsupportedFork rejects known but inactive forks.
 func TestEncodeStatelessInput_UnsupportedFork(t *testing.T) {
 	unsupportedFork := `{
   "newPayloadRequest": {
@@ -254,15 +250,11 @@ func TestEncodeStatelessInput_InvalidHexField(t *testing.T) {
 	require.Error(t, err)
 }
 
-// TestEncodeStatelessInput_MalformedInputs sweeps the encoder's error paths:
-// each case takes the valid full fixture, breaks exactly one field, and
-// asserts a clear error naming that field. This pins the error messages as a
-// contract and covers the negative branches the golden vectors cannot reach.
+// TestEncodeStatelessInput_MalformedInputs covers malformed payload fields.
 func TestEncodeStatelessInput_MalformedInputs(t *testing.T) {
 	base, err := os.ReadFile("testdata/stateless_input_full.json")
 	require.NoError(t, err)
 
-	// Navigation helpers over the decoded JSON object.
 	npr := func(o map[string]any) map[string]any {
 		return o["newPayloadRequest"].(map[string]any)
 	}
@@ -273,7 +265,6 @@ func TestEncodeStatelessInput_MalformedInputs(t *testing.T) {
 		return o["executionWitness"].(map[string]any)
 	}
 
-	// notHex is valid-length-looking but undecodable hex, reused across cases.
 	const notHex = "0xzz"
 
 	cases := []struct {
@@ -387,12 +378,18 @@ func TestEncodeStatelessInput_MalformedInputs(t *testing.T) {
 	}
 }
 
-// TestBuildInputs_MultiBlock_NotImplemented asserts that Core.buildInputs
-// returns ErrNotImplemented when a job spans more than one block.
-// Multi-block SSZ conflation format is not yet decided
-// (open question #1 in wiki backend-overview.md).
+// TestBuildInputs_MultiBlock_NotImplemented rejects multi-block jobs.
 func TestBuildInputs_MultiBlock_NotImplemented(t *testing.T) {
 	c := &Core{cfg: Config{}}
 	_, err := c.buildInputs(Job{StartBlock: 1, EndBlock: 2, Type: ProofTypeL2Execution})
 	require.ErrorIs(t, err, ErrNotImplemented)
+}
+
+// TestBuildInputs_InvertedRange rejects malformed block ranges.
+func TestBuildInputs_InvertedRange(t *testing.T) {
+	c := &Core{cfg: Config{}}
+	_, err := c.buildInputs(Job{StartBlock: 5, EndBlock: 3, Type: ProofTypeL2Execution})
+	require.Error(t, err)
+	require.NotErrorIs(t, err, ErrNotImplemented)
+	require.Contains(t, err.Error(), "invalid block range")
 }
