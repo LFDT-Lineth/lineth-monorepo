@@ -318,16 +318,16 @@ func hexToFixed(s string, n int) ([]byte, error) {
 	return b, nil
 }
 
-func checkListLen(name string, got, max int) error {
-	if got > max {
-		return fmt.Errorf("%s: expected <= %d items, got %d", name, max, got)
+func checkListLen(name string, got, limit int) error {
+	if got > limit {
+		return fmt.Errorf("%s: expected <= %d items, got %d", name, limit, got)
 	}
 	return nil
 }
 
-func checkByteLen(name string, got, max int) error {
-	if got > max {
-		return fmt.Errorf("%s: expected <= %d bytes, got %d", name, max, got)
+func checkByteLen(name string, got, limit int) error {
+	if got > limit {
+		return fmt.Errorf("%s: expected <= %d bytes, got %d", name, limit, got)
 	}
 	return nil
 }
