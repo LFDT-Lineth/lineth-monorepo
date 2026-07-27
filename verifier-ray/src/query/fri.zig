@@ -24,6 +24,7 @@ pub const Error = merkle.Error || error{
     NonCanonicalLeaf,
     FoldMismatch,
     FinalPolyMismatch,
+    BoundaryAuxNotConstant,
 };
 
 /// FRI configuration shared by every check in this module. Comptime, since it
@@ -57,9 +58,13 @@ pub const Pair = struct {
 pub const ResolvedQuery = struct {
     /// rounds[j] = the running codeword's (self, sibling) pair authenticated
     /// at round j; filled by `resolveRunningLayers` for j in [1, num_rounds).
+    /// Length num_rounds.
     rounds: []const Pair,
     /// aux[j] = the level pair introduced at round j (reconstructed by the
-    /// DEEP/PCS layer), if any; when present it supersedes rounds[j].
+    /// DEEP/PCS layer), if any; when present it supersedes rounds[j]. Length
+    /// num_rounds + 1: a level may be introduced at the boundary round
+    /// (index num_rounds, one past the last fold), authenticated but never
+    /// folded -- see `checkFolds`.
     aux: []const ?Pair,
     /// The final polynomial evaluated at this query's final-domain point.
     final: ext.Ext,
@@ -94,7 +99,7 @@ pub fn checkOpeningProofShape(
     fold_alphas: []const ext.Ext,
     positions: []const usize,
 ) Error!void {
-    const want_round_roots = params.num_rounds - 1;
+    const want_round_roots: u8 = if (params.num_rounds > 0) params.num_rounds - 1 else 0;
     if (proof.round_roots.len != want_round_roots) return Error.InvalidRoundRootCount;
     if (proof.running_queries.len != params.num_queries) return Error.InvalidRunningQueryCount;
     if (proof.final_poly.len != (@as(usize, 1) << params.log_final_poly_size)) return Error.InvalidFinalPolyLength;
@@ -120,6 +125,7 @@ pub fn resolveRunningLayers(
     position: usize,
     rounds: []Pair,
 ) Error!void {
+    if (params.num_rounds == 0) return; // no running layers at all (D=1)
     for (1..@as(usize, params.num_rounds)) |j| {
         const branch = query_branches[j - 1];
         const want_siblings = params.log_codeword_size - j;
@@ -137,7 +143,9 @@ pub fn resolveRunningLayers(
 
 /// Verifies the FRI fold recurrence for every query against values the caller
 /// has already authenticated and reconstructed: pure arithmetic, no Merkle
-/// proof or row ever passes through it. Mirrors prover-ray's `checkFolds`.
+/// proof or row ever passes through it. Mirrors prover-ray's `checkFolds`,
+/// including the boundary-round check (a level introduced past the last fold
+/// round must have a constant DEEP quotient).
 ///
 /// At each round j, the fold point's inverse is squared from the previous
 /// round's rather than recomputed from scratch: x_{j+1} = x_j^2 under the
@@ -174,6 +182,17 @@ pub fn checkFolds(
             } else if (!sum.eql(rq.final)) return Error.FinalPolyMismatch;
 
             x_inv = x_inv.square();
+        }
+
+        // A level introduced at the boundary round (index num_rounds) is
+        // authenticated but never folded: its batched DEEP quotient must
+        // evaluate identically at both conjugate positions. The num_rounds
+        // == 0 case (no rounds at all) is handled entirely in query/pcs.zig,
+        // against the final polynomial directly rather than this check.
+        if (params.num_rounds > 0) {
+            if (rq.aux[params.num_rounds]) |pair| {
+                if (!pair.self.eql(pair.sibling)) return Error.BoundaryAuxNotConstant;
+            }
         }
     }
 }

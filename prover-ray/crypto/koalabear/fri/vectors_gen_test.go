@@ -82,7 +82,7 @@ type jsonFoldCase struct {
 	// is always the zero pair (never read; round 0 always has a level), and
 	// rounds[j] for j >= 1 is decoded from RunningBranches[j-1].
 	ExpectedRounds []jsonPair  `json:"expected_rounds"`
-	Aux            []*jsonPair `json:"aux"` // len = NumRounds; nil where no level is introduced
+	Aux            []*jsonPair `json:"aux"` // len = NumRounds+1 (index NumRounds is the boundary round); nil where no level is introduced
 
 	// Exactly one of these is set for a case expected to fail; both empty
 	// means the whole honest sequence (shape, running layers, fold) must
@@ -315,7 +315,9 @@ func buildHonestFoldCase(
 		rounds[j] = jsonPair{Self: toJSONExt(layer[base]), Sibling: toJSONExt(layer[base^1])}
 	}
 
-	aux := make([]*jsonPair, numRounds)
+	// aux[numRounds] (the boundary-round slot) is always nil here: none of
+	// this generator's scenarios introduce a level at jl == numRounds.
+	aux := make([]*jsonPair, numRounds+1)
 	for j := 0; j < numRounds; j++ {
 		combined, ok := combinedAtRound[uint8(j)]
 		if !ok {
