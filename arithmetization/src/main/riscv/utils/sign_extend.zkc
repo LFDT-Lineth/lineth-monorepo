@@ -21,33 +21,33 @@ const SGNEXTMASK_U16:u64 = 0xFFFFFFFF_FFFF0000
 // Shift right extracts the sign bit
 // Use multiply as a switch to set or not upper bits
 
-#[inline]
+//#[inline]
 fn sgn_extension_u32_u64(value:u32) -> (ext_value:u64) {
     ext_value = (value as u64) | (((value >> 31) as u64) * SGNEXTMASK_U32)
 }
 
-#[inline]
+//#[inline]
 fn sgn_extension_u21_u64(value:u21) -> (ext_value:u64) {
     ext_value = (value as u64) | (((value >> 20) as u64) * SGNEXTMASK_U21)
 }
 
-#[inline]
+//#[inline]
 fn sgn_extension_u16_u64(value:u16) -> (ext_value:u64) {
     ext_value = (value as u64) | (((value >> 15) as u64) * SGNEXTMASK_U16)
 }
 
-#[inline]
+//#[inline]
 fn sgn_extension_u12_u64(value:u12) -> (ext_value:u64) {
     ext_value = (value as u64) | (((value >> 11) as u64) * SGNEXTMASK_U12)
 }
 
-#[inline]
+//#[inline]
 fn sgn_extension_u8_u64(value:u8) -> (ext_value:u64) {
     ext_value = (value as u64) | (((value >> 7) as u64) * SGNEXTMASK_U8)
 }
 
 // 64-bit arithmetic right shift
-#[inline]
+//#[inline]
 fn _ashr_u64(value:DoubleWord, shamt:u6) -> (out:DoubleWord) {
     var sign:SignBit = sign_bit_of_double_word(value)
     var logical:DoubleWord = value >> shamt

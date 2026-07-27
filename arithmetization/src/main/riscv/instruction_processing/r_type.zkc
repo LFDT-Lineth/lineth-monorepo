@@ -5,6 +5,7 @@ include "../utils/negative.zkc"
 include "../utils/sign_bit.zkc"
 include "../utils/sign_extend.zkc"
 include "../utils/signed_comparisons.zkc"
+include "../utils/multiplication.zkc"
 include "../../lib/keccak/impl.zkc"
 include "../../lib/poseidon2/ram.zkc"
 
@@ -39,7 +40,6 @@ include "../../lib/poseidon2/ram.zkc"
 // follow RISC-V semantics: division by zero returns −1 (or the dividend for REM),
 // and signed overflow (INT_MIN / −1) returns INT_MIN (or 0 for REM).
 fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d, padded_input_block, poseidon2_state>(opcode:Opcode, instruction_parameters:u25) {
-
     var funct7:Funct7
     var rs2:Register
     var rs1:Register
@@ -47,10 +47,6 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
     var rd:Register
     var v1:DoubleWord
     var v2:DoubleWord
-    var v1_sign:SignBit
-    var v2_sign:SignBit
-    var v1_abs:UnsignedDoubleWord
-    var v2_abs:UnsignedDoubleWord
     var shift_discard_6:u58 // 58 + 6 = 64, used for DoubleWords
     var shift_amount_6:u6
     var shift_discard_5:u27 // 27 + 5 = 32, used for Words
@@ -101,7 +97,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                         case FUNCT7_MUL: {
                             printf "MUL "
                             print_r_operands(rd, rs1, rs2)
-                            registers[rd] = (((v1 as u128) * (v2 as u128)) & MAX_UINT_64_AS_U128) as u64
+                            double_word_working_copy, registers[rd] = mul64_uu(v1, v2)
                         }
                         default: {
                             printf "[ERROR] Unsupported R-type instruction with\n"
@@ -124,18 +120,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                         case FUNCT7_MULH: {
                             printf "MULH "
                             print_r_operands(rd, rs1, rs2)
-                            v1_sign = sign_bit_of_double_word(v1)
-                            v2_sign = sign_bit_of_double_word(v2)
-                            v1_abs = absolute_value_double_word(v1)
-                            v2_abs = absolute_value_double_word(v2)
-                            var v1_times_v2_as_u128:u128 = (v1_abs as u128) * (v2_abs as u128)
-                            // Two's-complement negate the product when the operand signs
-                            // differ.  Guard with `!= 0` because `~0 + 1` overflows u128
-                            // (and `-0 == 0` anyway, so there's nothing to negate).
-                            if (v1_sign ^ v2_sign) == 1 && v1_times_v2_as_u128 != 0 {
-                                v1_times_v2_as_u128 = (~v1_times_v2_as_u128) + 1
-                            }
-                            registers[rd] = (v1_times_v2_as_u128 >> 64) as u64
+                            registers[rd], double_word_working_copy = mul64_ss(v1, v2)
                         }
                         default: {
                             printf "[ERROR] Unsupported R-type instruction with\n"
@@ -157,14 +142,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                         case FUNCT7_MULHSU: {
                             printf "MULHSU "
                             print_r_operands(rd, rs1, rs2)
-                            v1_abs = absolute_value_double_word(v1)
-                            var v1_times_v2_as_u128:u128 = (v1_abs as u128) * (v2 as u128)
-                            // Same overflow guard as MULH above.
-                            v1_sign = sign_bit_of_double_word(v1)
-                            if v1_sign == 1 && v1_times_v2_as_u128 != 0 {
-                                v1_times_v2_as_u128 = (~v1_times_v2_as_u128) + 1
-                            }
-                            registers[rd] = (v1_times_v2_as_u128 >> 64) as u64
+                            registers[rd], double_word_working_copy = mul64_su(v1, v2)
                         }
                         default: {
                             printf "[ERROR] Unsupported R-type instruction with\n"
@@ -190,7 +168,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                         case FUNCT7_MULHU: {
                             printf "MULHU "
                             print_r_operands(rd, rs1, rs2)
-                            registers[rd] = (((v1 as u128) * (v2 as u128)) >> 64) as u64
+                            registers[rd], double_word_working_copy = mul64_uu(v1, v2)
                         }
                         default: {
                             printf "[ERROR] Unsupported R-type instruction with\n"
@@ -217,15 +195,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                             } else if (v1 == OVERFLOW_DIVIDEND) && (v2 == NEGATIVE_ONE_AS_I64) {
                                 registers[rd] = OVERFLOW_DIVIDEND
                             } else {
-                                v1_sign = sign_bit_of_double_word(v1)
-                                v2_sign = sign_bit_of_double_word(v2)
-                                v1_abs = absolute_value_double_word(v1)
-                                v2_abs = absolute_value_double_word(v2)
-                                registers[rd] = v1_abs / v2_abs
-                                var result_sign:SignBit = v1_sign ^ v2_sign
-                                if result_sign == 1 {
-                                    registers[rd] = negative_of_double_word(registers[rd])
-                                }
+                                registers[rd] = div64_ss(v1, v2)
                             }
                         }
                         default: {
@@ -263,7 +233,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                             if v2 == 0 {
                                 registers[rd] = NEGATIVE_ONE_AS_I64
                             } else {
-                                registers[rd] = v1 / v2
+                                registers[rd] = div64_uu(v1, v2)
                             }
                         }
                         default: {
@@ -286,19 +256,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                         case FUNCT7_REM: {
                             printf "REM "
                             print_r_operands(rd, rs1, rs2)
-                            if v2 == 0 {
-                                registers[rd] = v1
-                            } else if (v1 == OVERFLOW_DIVIDEND) && (v2 == NEGATIVE_ONE_AS_I64) {
-                                registers[rd] = 0
-                            } else {
-                                v1_sign = sign_bit_of_double_word(v1)
-                                v1_abs = absolute_value_double_word(v1)
-                                v2_abs = absolute_value_double_word(v2)
-                                registers[rd] = v1_abs % v2_abs
-                                if v1_sign == 1 {
-                                    registers[rd] = negative_of_double_word(registers[rd])
-                                }
-                            }
+                            registers[rd] = rem64_ss(v1, v2)
                         }
                         default: {
                             printf "[ERROR] Unsupported R-type instruction with\n"
@@ -320,11 +278,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                         case FUNCT7_REMU: {
                             printf "REMU "
                             print_r_operands(rd, rs1, rs2)
-                            if v2 == 0 {
-                                registers[rd] = v1
-                            } else {
-                                registers[rd] = v1 % v2
-                            }
+                            registers[rd] = rem64_uu(v1, v2)
                         }
                         default: {
                             printf "[ERROR] Unsupported R-type instruction with\n"
@@ -375,12 +329,8 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                         case FUNCT7_MULW: {
                             printf "MULW "
                             print_r_operands(rd, rs1, rs2)
-                            product_upper::product_lower = (v1_lower as DoubleWord) * (v2_lower as DoubleWord)
-                            if sign_bit_of_word(product_lower) == 1 {
-                                registers[rd] = MAX_UINT_32::product_lower
-                            } else {
-                                registers[rd] = product_lower as DoubleWord
-                            }
+                            product_upper, product_lower = mul32_uu(v1_lower, v2_lower)
+                            registers[rd] = sgn_extension_u32_u64(product_lower)
                         }
                         default: {
                             printf "[ERROR] Unsupported R-type instruction with\n"
@@ -417,12 +367,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                         if v2_lower == 0 {
                             registers[rd] = NEGATIVE_ONE_AS_I64
                         } else {
-                            word_wip = v1_lower_abs / v2_lower_abs
-                            if sign_bit_of_word(v1_lower) == sign_bit_of_word(v2_lower) {
-                                registers[rd] = sgn_extension_u32_u64(word_wip)
-                            } else {
-                                registers[rd] = sgn_extension_u32_u64(negative_of_word(word_wip))
-                            }
+                            registers[rd] = sgn_extension_u32_u64(div32_ss(v1_lower, v2_lower))
                         }
                     } else {
                         printf "[ERROR] Unsupported R-type instruction with\n"
@@ -461,7 +406,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                             if v2_lower == 0 {
                                 registers[rd] = NEGATIVE_ONE_AS_I64
                             } else {
-                                registers[rd] = sgn_extension_u32_u64(v1_lower / v2_lower)
+                                registers[rd] = sgn_extension_u32_u64(div32_uu(v1_lower, v2_lower))
                             }
                         }
                         default: {
@@ -477,16 +422,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                     if funct7 == FUNCT7_REMW {
                         printf "REMW "
                         print_r_operands(rd, rs1, rs2)
-                        if v2_lower == 0 {
-                            registers[rd] = sgn_extension_u32_u64(v1_lower)
-                        } else {
-                            word_wip = v1_lower_abs % v2_lower_abs
-                            if sign_bit_of_word(v1_lower) == 0 {
-                                registers[rd] = sgn_extension_u32_u64(word_wip)
-                            } else {
-                                registers[rd] = sgn_extension_u32_u64(negative_of_word(word_wip))
-                            }
-                        }
+                        registers[rd] = sgn_extension_u32_u64(rem32_ss(v1_lower, v2_lower))
                     } else {
                         printf "[ERROR] Unsupported R-type instruction with\n"
                         printf "\topcode ≡ OP_32 ≡ %x ≡ %b\n", opcode, opcode
@@ -499,11 +435,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
                     if funct7 == FUNCT7_REMUW {
                         printf "REMUW "
                         print_r_operands(rd, rs1, rs2)
-                        if v2_lower == 0 {
-                            registers[rd] = sgn_extension_u32_u64(v1_lower)
-                        } else {
-                            registers[rd] = sgn_extension_u32_u64(v1_lower % v2_lower)
-                        }
+                        registers[rd] = sgn_extension_u32_u64(rem32_uu(v1_lower, v2_lower))
                     } else {
                         printf "[ERROR] Unsupported R-type instruction with\n"
                         printf "\topcode ≡ OP_32 ≡ %x ≡ %b\n", opcode, opcode
@@ -547,3 +479,5 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
         }
     }
 }
+
+
