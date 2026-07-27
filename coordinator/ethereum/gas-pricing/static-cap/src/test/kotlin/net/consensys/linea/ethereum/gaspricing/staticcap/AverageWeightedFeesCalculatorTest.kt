@@ -1,13 +1,12 @@
 package net.consensys.linea.ethereum.gaspricing.staticcap
 
 import linea.domain.FeeHistory
-import org.apache.logging.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import org.mockito.kotlin.mock
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.stream.Stream
 
@@ -29,7 +28,7 @@ class AverageWeightedFeesCalculatorTest {
         fetchCount.incrementAndGet()
         it.gasUsedRatio
       },
-      log = mock(),
+      log = log,
     )
 
     assertThat(calculator.calculateFees(feeHistory)).isEqualTo(100.0)
@@ -43,10 +42,9 @@ class AverageWeightedFeesCalculatorTest {
     expectedWeightedAverage: Double,
     feeHistory: FeeHistory,
   ) {
-    val mockLog = mock<Logger>()
     val feeList = { fh: FeeHistory -> fh.baseFeePerGas }
     val ratioList = { fh: FeeHistory -> fh.gasUsedRatio }
-    val actualWeightedAverage = AverageWeightedFeesCalculator(feeList, ratioList, mockLog)
+    val actualWeightedAverage = AverageWeightedFeesCalculator(feeList, ratioList, log)
       .calculateFees(feeHistory)
     assertThat(actualWeightedAverage).isEqualTo(expectedWeightedAverage)
   }
@@ -85,6 +83,7 @@ class AverageWeightedFeesCalculatorTest {
   }
 
   companion object {
+    private val log = LogManager.getLogger(AverageWeightedFeesCalculatorTest::class.java)
 
     data class FeeHistoryTestCase(
       val name: String,

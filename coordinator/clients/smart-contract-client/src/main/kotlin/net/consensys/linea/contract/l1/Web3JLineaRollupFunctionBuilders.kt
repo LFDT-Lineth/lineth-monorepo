@@ -102,19 +102,18 @@ internal object Web3JLineaRollupFunctionBuilders {
     parentL1RollingHash: ByteArray,
     parentL1RollingHashMessageNumber: Long,
   ): Function {
-    val blobCompressionProof = aggregationLastBlob.blobCompressionProof!!
     val aggregationEndBlobInfo =
       LineaRollupV6.ShnarfData(
         // parentShnarf
-        blobCompressionProof.prevShnarf,
+        aggregationLastBlob.blobCompressionProof!!.prevShnarf,
         // snarkHash
-        blobCompressionProof.snarkHash,
+        aggregationLastBlob.blobCompressionProof!!.snarkHash,
         // finalStateRootHash
-        blobCompressionProof.finalStateRootHash,
+        aggregationLastBlob.blobCompressionProof!!.finalStateRootHash,
         // dataEvaluationPoint
-        blobCompressionProof.expectedX,
+        aggregationLastBlob.blobCompressionProof!!.expectedX,
         // dataEvaluationClaim
-        blobCompressionProof.expectedY,
+        aggregationLastBlob.blobCompressionProof!!.expectedY,
       )
 
 //  FinalizationDataV3(
