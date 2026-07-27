@@ -173,11 +173,13 @@ func extractProgramBlobs(progs []*elf.Prog, sections []*elf.Section) []memoryBlo
 			panic(fmt.Sprintf("loadable segment at %#x has file size larger than memory size", p.Vaddr))
 		}
 
-		var sectionBlobs []memoryBlob
 		progEnd := p.Vaddr + p.Memsz
 		if progEnd < p.Vaddr {
 			panic(fmt.Sprintf("loadable segment address overflow at %#x", p.Vaddr))
 		}
+		fileEnd := p.Vaddr + p.Filesz
+
+		var sectionBlobs []memoryBlob
 		for _, s := range sections {
 			if s.Size == 0 || s.Type == elf.SHT_NOBITS || s.Flags&elf.SHF_ALLOC == 0 {
 				continue
@@ -186,7 +188,9 @@ func extractProgramBlobs(progs []*elf.Prog, sections []*elf.Section) []memoryBlo
 			if sectionEnd < s.Addr {
 				panic(fmt.Sprintf("section %s address overflow at %#x", s.Name, s.Addr))
 			}
-			if s.Addr < p.Vaddr || sectionEnd > progEnd {
+			// Only include bytes backed by PT_LOAD file contents; the Memsz tail is
+			// zero-filled guest RAM.
+			if s.Addr < p.Vaddr || sectionEnd > fileEnd {
 				continue
 			}
 			sectionBlobs = append(sectionBlobs, memoryBlob{offset: s.Addr, data: readSectionBytes(s), name: s.Name})

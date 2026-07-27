@@ -97,6 +97,7 @@ func elfBlobs(ef *elf.File) ([]memoryBlob, error) {
 		if progEnd < p.Vaddr {
 			return nil, fmt.Errorf("loadable segment address overflow at %#x", p.Vaddr)
 		}
+		fileEnd := p.Vaddr + p.Filesz
 
 		var segBlobs []memoryBlob
 		for _, s := range ef.Sections {
@@ -107,7 +108,9 @@ func elfBlobs(ef *elf.File) ([]memoryBlob, error) {
 			if sectionEnd < s.Addr {
 				return nil, fmt.Errorf("section %s address overflow at %#x", s.Name, s.Addr)
 			}
-			if s.Addr < p.Vaddr || sectionEnd > progEnd {
+			// Only include bytes backed by PT_LOAD file contents; the Memsz tail is
+			// zero-filled guest RAM.
+			if s.Addr < p.Vaddr || sectionEnd > fileEnd {
 				continue
 			}
 			data, err := io.ReadAll(s.Open())

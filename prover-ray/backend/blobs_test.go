@@ -355,6 +355,23 @@ func TestBuildZkcInputs_SectionAddressOverflow(t *testing.T) {
 	assert.Contains(t, err.Error(), "section .text address overflow")
 }
 
+func TestBuildZkcInputs_SectionInZeroFillSegmentRangeSkipped(t *testing.T) {
+	elfBytes := makeMinimalELF(t, testEntry, testSecAddr, testSecData)
+	// Program header starts at byte 64. Keep p_memsz large enough to cover the
+	// section, but shrink p_filesz so the section lives in the zero-fill tail.
+	binary.LittleEndian.PutUint64(elfBytes[64+32:64+40], 2)
+	binary.LittleEndian.PutUint64(elfBytes[64+40:64+48], 8)
+
+	shOff := binary.LittleEndian.Uint64(elfBytes[40:48])
+	textSection := shOff + 64 // section 0 is NULL, section 1 is .text
+	// Section header field offset: sh_addr at +16.
+	binary.LittleEndian.PutUint64(elfBytes[textSection+16:textSection+24], testSecAddr+2)
+
+	_, err := buildZkcInputs(elfBytes, []byte{0x01}, DefaultINOrigin)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no loadable sections")
+}
+
 func TestBuildZkcInputs_SectionShortRead(t *testing.T) {
 	elfBytes := makeMinimalELF(t, testEntry, testSecAddr, testSecData)
 	shOff := binary.LittleEndian.Uint64(elfBytes[40:48])
