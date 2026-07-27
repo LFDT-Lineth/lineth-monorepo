@@ -1,0 +1,49 @@
+name: actions-cache-cleanup
+
+permissions:
+  actions: write
+  contents: read
+
+# The repo's Actions cache sits at the 10GB cap, mostly duplicated per-PR
+# zig, CodeQL and node entries, which evicts the shared Gradle cache within
+# hours of it being written. Frees PR cache entries so main's caches survive.
+on:
+  pull_request_target:
+    types:
+      - closed
+  schedule:
+    - cron: "43 2 * * *"
+  workflow_dispatch:
+
+jobs:
+  cleanup-closed-pr:
+    if: github.event_name == 'pull_request_target'
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    timeout-minutes: 10
+    steps:
+      - name: Delete caches of the closed PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          for ref in "refs/pull/${PR}/merge" "refs/pull/${PR}/head"; do
+            gh cache list --repo "$REPO" --ref "$ref" --limit 100 --json id --jq '.[].id' \
+              | while read -r id; do gh cache delete "$id" --repo "$REPO" || true; done
+          done
+
+  sweep-stale-pr-caches:
+    if: github.event_name != 'pull_request_target'
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    timeout-minutes: 10
+    steps:
+      - name: Delete PR caches not accessed for 3 days
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh api --paginate "repos/${REPO}/actions/caches?per_page=100" \
+            --jq '.actions_caches[] | select(.ref | startswith("refs/pull/")) | select((.last_accessed_at | fromdateiso8601) < (now - 259200)) | .id' \
+            | while read -r id; do
+                gh api -X DELETE "repos/${REPO}/actions/caches/${id}" || true
+              done
