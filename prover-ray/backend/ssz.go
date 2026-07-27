@@ -608,7 +608,7 @@ func encodeStatelessInput(in *statelessInputJSON) ([]byte, error) {
 // EncodeStatelessInput SSZ-encodes the coordinator's per-block payload into the
 // byte slice the guest reads at _in_start: the two-byte 0x0001 schema id
 // followed by the SSZ SszStatelessInput. The [u64 LE len] frame is added later
-// by [BuildZkcInputs]; this returns the framed SSZ only.
+// by [buildZkcInputs]; this returns the framed SSZ only.
 //
 // The input is the readable encoder_obj form produced by
 // proof_io_v1.py::_decode_payload. Byte-for-byte compatibility with the Python
