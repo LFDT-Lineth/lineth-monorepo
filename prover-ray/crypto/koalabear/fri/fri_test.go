@@ -25,17 +25,12 @@ func bitReverseIdx(i, nbits int) int {
 
 // TestFoldLayerInternally checks that folding a bit-reversed codeword of P with
 // challenge alpha yields the bit-reversed codeword of the folded polynomial
-// Q(Y) = P_e(Y) + alpha·P_o(Y), and that a non-nil auxiliary vector adds
-// alpha²·aux at the matching output position. The expected codeword is built by
-// an independent canonical evaluation, so this also pins down the bit-reversed
+// Q(Y) = P_e(Y) + alpha·P_o(Y). The expected codeword is built by an
+// independent canonical evaluation, so this also pins down the bit-reversed
 // twiddle alignment.
 func TestFoldLayerInternally(t *testing.T) {
 
 	prng := rand.New(utils.NewRandSource(1))
-
-	var two, invTwo field.Element
-	two.SetUint64(2)
-	invTwo.Inverse(&two)
 
 	for _, n := range []int{4, 8, 16} {
 
@@ -79,7 +74,7 @@ func TestFoldLayerInternally(t *testing.T) {
 			want[tt] = polynomials.EvalCanonicalExt(qcoeffs, field.Lift(y))
 		}
 
-		got := foldLayerInternally(layer, nil, alpha, domain, invTwo)
+		got := foldLayerInternally(layer, alpha, domain)
 		if len(got) != half {
 			t.Fatalf("n=%d: fold returned %d values, want %d", n, len(got), half)
 		}
@@ -88,103 +83,31 @@ func TestFoldLayerInternally(t *testing.T) {
 				t.Fatalf("n=%d: fold[%d] = %s, want %s", n, tt, got[tt].String(), want[tt].String())
 			}
 		}
-
-		// aux: the fold mixes alpha²·aux[t] into output position t
-		aux := make([]field.Ext, half)
-		for i := range aux {
-			aux[i] = field.PseudoRandExt(prng)
-		}
-		var alpha2 field.Ext
-		alpha2.Square(&alpha)
-
-		gotAux := foldLayerInternally(layer, aux, alpha, domain, invTwo)
-		for tt := range half {
-			var wantAux, term field.Ext
-			term.Mul(&aux[tt], &alpha2)
-			wantAux.Add(&want[tt], &term)
-			if !gotAux[tt].Equal(&wantAux) {
-				t.Fatalf("n=%d: fold+aux[%d] mismatch", n, tt)
-			}
-		}
 	}
 }
 
-// TestCheckFolds is a direct unit test of the pure fold-check: a
-// self-consistent set of resolved values (built by hand, no PCS or proof
-// involved) must verify, and breaking any single link in the recurrence --
-// an intermediate round, the aux mix-in, or the final target -- must be
-// rejected.
-func TestCheckFolds(t *testing.T) {
-	p, err := NewParams(8, 4, 1)
+// TestCheckOpeningProofShapeRejectsWrongFinalPolyLength targets the low-degree
+// bound: FinalPoly holds the folded polynomial's coefficients directly, so
+// its length alone is the degree bound (see pcs.Verify's final-codeword FFT
+// expansion). With the default logFinalPolySize=0 that length must be
+// exactly 1, so a 2-entry FinalPoly must be rejected before any query is
+// checked.
+func TestCheckOpeningProofShapeRejectsWrongFinalPolyLength(t *testing.T) {
+	p, err := NewParams(3, 2, 1)
 	require.NoError(t, err)
 
-	prng := rand.New(utils.NewRandSource(1))
-
-	fold := func(self, sib, alpha field.Ext, domain domainLight, base int, aux *field.Ext) field.Ext {
-		var xInv field.Element
-		x := domainPoint(domain, base)
-		xInv.Inverse(&x)
-
-		var sum, diff, out field.Ext
-		sum.Add(&self, &sib)
-		sum.MulByElement(&sum, &p.invTwo)
-		diff.Sub(&self, &sib)
-		diff.MulByElement(&diff, &p.invTwo)
-		diff.MulByElement(&diff, &xInv)
-		diff.Mul(&diff, &alpha)
-		out.Add(&sum, &diff)
-		if aux != nil {
-			var alpha2, term field.Ext
-			alpha2.Square(&alpha)
-			term.Mul(aux, &alpha2)
-			out.Add(&out, &term)
-		}
-		return out
+	prf := Proof{
+		RoundRoots:     make([]field.Octuplet, p.numRounds()-1),
+		RunningQueries: make([]RunningQuery, p.NumQueries),
+		FinalPoly:      []field.Ext{{}, field.Lift(field.One())},
 	}
-
-	const s = 3
-	self0, sib0 := field.PseudoRandExt(prng), field.PseudoRandExt(prng)
-	sib1 := field.PseudoRandExt(prng)
-	alpha0, alpha1 := field.PseudoRandExt(prng), field.PseudoRandExt(prng)
-	aux1 := field.PseudoRandExt(prng)
-
-	// self1 is round 0's fold output (with aux1 mixed in); final is round 1's.
-	self1 := fold(self0, sib0, alpha0, p.domainsLight[0], s, &aux1)
-	final := fold(self1, sib1, alpha1, p.domainsLight[1], s>>1, nil)
-
-	newResolved := func() []resolvedQuery {
-		return []resolvedQuery{{
-			Rounds: []inputPair{{Self: self0, Sibling: sib0}, {Self: self1, Sibling: sib1}},
-			Aux:    map[int]field.Ext{1: aux1},
-			Final:  final,
-		}}
+	for k := range prf.RunningQueries {
+		prf.RunningQueries[k] = make(RunningQuery, p.numRounds()-1)
 	}
-	foldAlphas := []field.Ext{alpha0, alpha1}
-	positions := []int{s}
+	foldAlphas := make([]field.Ext, p.numRounds())
+	positions := []int{0}
 
-	require.NoError(t, checkFolds(p, newResolved(), foldAlphas, positions))
-
-	one := field.Lift(field.One())
-
-	t.Run("broken intermediate round", func(t *testing.T) {
-		resolved := newResolved()
-		resolved[0].Rounds[1].Self.Add(&resolved[0].Rounds[1].Self, &one)
-		require.ErrorContains(t, checkFolds(p, resolved, foldAlphas, positions), "folded value mismatch")
-	})
-
-	t.Run("broken aux", func(t *testing.T) {
-		resolved := newResolved()
-		aux := resolved[0].Aux[1]
-		aux.Add(&aux, &one)
-		resolved[0].Aux[1] = aux
-		require.ErrorContains(t, checkFolds(p, resolved, foldAlphas, positions), "folded value mismatch")
-	})
-
-	t.Run("broken final", func(t *testing.T) {
-		resolved := newResolved()
-		resolved[0].Final.Add(&resolved[0].Final, &one)
-		require.ErrorContains(t, checkFolds(p, resolved, foldAlphas, positions), "does not match FinalPoly")
-	})
+	require.ErrorContains(t, checkOpeningProofShape(p, prf, foldAlphas, positions), "FinalPoly has 2 entries, want 1")
 }
 
 // TestProveVerify is the end-to-end check: an honest proof verifies across a few
@@ -192,19 +115,33 @@ func TestCheckFolds(t *testing.T) {
 // It exercises the full ProverState (Fold/Open), the query opening, and
 // checkFolds including the alpha²-batched extra levels, going through
 // pcs.Verify (the sole FRI entry point) via the ldtFixture compiler: each
-// level is a PCS column whose reconstructed DEEP quotient is an arbitrary
-// target codeword, independent of degree.
+// level is a PCS column whose reconstructed DEEP quotient is a genuinely
+// low-degree target codeword.
 func TestProveVerify(t *testing.T) {
 
 	type cfg struct {
-		name     string
-		n, d, nq int
-		extraDs  []int
+		name       string
+		logN, logD uint8
+		nq         uint
+		extraDs    []int
 	}
 	cfgs := []cfg{
-		{"single-level", 8, 4, 3, nil},
-		{"one-extra", 16, 8, 4, []int{2}},
-		{"two-extra", 16, 8, 4, []int{4, 2}},
+		{"single-level", 3, 2, 3, nil},
+		{"one-extra", 4, 3, 4, []int{2}},
+		{"two-extra", 4, 3, 4, []int{4, 2}},
+		// A D=1 extra level (a constant polynomial) is introduced at round
+		// jl == numRounds(), at the boundary of the fold schedule. Regression
+		// test for the off-by-one that previously rejected this as
+		// "intro round numRounds, must be < numRounds" in buildProvePlan and
+		// pcs.Verify.
+		{"extra-D1-at-final-round", 4, 3, 4, []int{2, 1}},
+		// The top-level polynomial itself has D=1 (a constant), so numRounds
+		// == 0: HasNext() is false from the start, no fold ever runs, and
+		// layer 0 IS the final layer. Regression test for two bugs this
+		// exposed: (1) NewProverState never populated FinalPoly when no Fold
+		// call happens; (2) pcs.Verify indexed Rounds[0] into a zero-length
+		// slice (allocated with size numRounds==0), panicking.
+		{"top-level-D1-zero-rounds", 1, 0, 2, nil},
 	}
 
 	prng := rand.New(utils.NewRandSource(99))
@@ -212,35 +149,109 @@ func TestProveVerify(t *testing.T) {
 	for _, c := range cfgs {
 		t.Run(c.name, func(t *testing.T) {
 
-			fx := newLDTFixture(t, c.n, c.d, c.nq)
-			fx.addLevel(t, utils.Log2Ceil(c.d), field.VecPseudoRandExt(prng, c.n))
+			fx := newLDTFixture(t, c.logN, c.logD, c.nq)
+			fx.addLevel(t, c.logD, field.VecPseudoRandExt(prng, 1<<int(c.logD)))
 			for _, d := range c.extraDs {
-				fx.addLevel(t, utils.Log2Ceil(d), field.VecPseudoRandExt(prng, c.n*d/c.d))
+				fx.addLevel(t, uint8(utils.Log2Ceil(d)), field.VecPseudoRandExt(prng, d))
 			}
 
-			alphaDeep := field.PseudoRandExt(prng)
-			foldAlphas := make([]field.Ext, fx.pcs.Params.numRounds)
+			foldAlphas := make([]field.Ext, fx.pcs.Params.numRounds())
 			for i := range foldAlphas {
 				foldAlphas[i] = field.PseudoRandExt(prng)
 			}
 			positions := make([]int, fx.pcs.Params.NumQueries)
 			for i := range positions {
-				positions[i] = int(prng.Uint64() % uint64(c.n))
+				positions[i] = int(prng.Uint64() % (1 << uint64(c.logN)))
 			}
 
-			proof := fx.open(t, alphaDeep, foldAlphas, positions)
+			proof := fx.open(t, foldAlphas, positions)
 
-			if err := fx.verify(alphaDeep, foldAlphas, positions, proof); err != nil {
+			if err := fx.verify(foldAlphas, positions, proof); err != nil {
 				t.Fatalf("Verify (honest) failed: %v", err)
 			}
 
 			// Tampering an opened input leaf must make verification fail.
-			proof.InputQueries[0][0].Leaf.Ext[0] = field.PseudoRandExt(prng)
-			if err := fx.verify(alphaDeep, foldAlphas, positions, proof); err == nil {
+			branch := proof.InputQueries[0][0]
+			branch.Leaves[len(branch.Leaves)-1][0].Ext[0] = field.PseudoRandExt(prng)
+			if err := fx.verify(foldAlphas, positions, proof); err == nil {
 				t.Fatalf("Verify accepted a proof with a tampered leaf")
 			}
 		})
 	}
+}
+
+// TestBoundaryRoundLevelClaimVerified is a regression test for the soundness gap
+// where a D=1 aux level at the boundary round (jl == numRounds()) had its
+// evaluation claim silently ignored: checkFolds skipped rq.Aux[numRounds()],
+// and alphaDeep was zero so reconstructQueryValueAt discarded all but the first
+// entry's DEEP quotient. A tampered Ext claimed value must be rejected.
+func TestBoundaryRoundLevelClaimVerified(t *testing.T) {
+	prng := rand.New(utils.NewRandSource(2025))
+
+	// logN=4, logD=3 → numRounds=3. The D=1 extra level has logCodewordLen=1,
+	// so jl = logN - logCodewordLen = 4 - 1 = 3 = numRounds().
+	fx := newLDTFixture(t, 4, 3, 2)
+	fx.addLevel(t, 3, field.VecPseudoRandExt(prng, 8))
+	fx.addLevel(t, 0, field.VecPseudoRandExt(prng, 1))
+
+	foldAlphas := make([]field.Ext, fx.pcs.Params.numRounds())
+	for i := range foldAlphas {
+		foldAlphas[i] = field.PseudoRandExt(prng)
+	}
+	positions := make([]int, fx.pcs.Params.NumQueries)
+	for i := range positions {
+		positions[i] = int(prng.Uint64() % (1 << 4))
+	}
+
+	proof := fx.open(t, foldAlphas, positions)
+	require.NoError(t, fx.verify(foldAlphas, positions, proof), "honest proof must verify")
+
+	// Tamper: flip the D=1 boundary level's Ext claimed evaluation from 0 to 1.
+	// The prover committed to R(X) = X*target(X) evaluated at zeta=0, so the
+	// honest claim is R(0) = 0; a false claim must be rejected.
+	fx.claims[1][0].Ext[0][0] = field.Lift(field.One())
+	require.Error(t, fx.verify(foldAlphas, positions, proof),
+		"tampered Ext claim for D=1 boundary-round level must be rejected")
+}
+
+// TestProveVerifyWithFinalPolyDegree checks that stopping FRI before a single
+// constant (logFinalPolySize > 0) still verifies honestly and still rejects a
+// tampered final coefficient.
+func TestProveVerifyWithFinalPolyDegree(t *testing.T) {
+	prng := rand.New(utils.NewRandSource(7))
+
+	fx := newLDTFixture(t, 4, 3, 4, LogFinalPolySize(1))
+	fx.addLevel(t, 3, field.VecPseudoRandExt(prng, 8))
+
+	foldAlphas := make([]field.Ext, fx.pcs.Params.numRounds())
+	for i := range foldAlphas {
+		foldAlphas[i] = field.PseudoRandExt(prng)
+	}
+	positions := []int{1, 5, 9, 13}
+
+	proof := fx.open(t, foldAlphas, positions)
+	require.Len(t, proof.FRIProof.FinalPoly, 2)
+	require.NoError(t, fx.verify(foldAlphas, positions, proof))
+
+	one := field.Lift(field.One())
+	proof.FRIProof.FinalPoly[1].Add(&proof.FRIProof.FinalPoly[1], &one)
+	require.Error(t, fx.verify(foldAlphas, positions, proof))
+
+	// Same nonconstant final poly, but the sole opening is below the static
+	// plaintext size, so the proof runs through the restrictTo path (which the
+	// case above, opening at the full size, does not).
+	fxR := newLDTFixture(t, 4, 3, 4, LogFinalPolySize(1))
+	fxR.addLevel(t, 2, field.VecPseudoRandExt(prng, 4))
+
+	foldAlphasR := make([]field.Ext, fxR.pcs.Params.numRounds())
+	for i := range foldAlphasR {
+		foldAlphasR[i] = field.PseudoRandExt(prng)
+	}
+	positionsR := []int{1, 3, 5, 7}
+
+	proofR := fxR.open(t, foldAlphasR, positionsR)
+	require.Len(t, proofR.FRIProof.FinalPoly, 2)
+	require.NoError(t, fxR.verify(foldAlphasR, positionsR, proofR))
 }
 
 // TestProverStateOpenLoopsOverLevelTrees checks that a level backed by
@@ -250,21 +261,20 @@ func TestProverStateOpenLoopsOverLevelTrees(t *testing.T) {
 
 	prng := rand.New(utils.NewRandSource(20260624))
 
-	fx := newLDTFixture(t, 16, 8, 2)
-	fx.addLevel(t, 3, field.VecPseudoRandExt(prng, 16)) // top level, D=8: two trees
-	fx.addLevel(t, 3, field.VecPseudoRandExt(prng, 16))
-	fx.addLevel(t, 1, field.VecPseudoRandExt(prng, 4)) // extra level, D=2: two trees
-	fx.addLevel(t, 1, field.VecPseudoRandExt(prng, 4))
+	fx := newLDTFixture(t, 4, 3, 2)
+	fx.addLevel(t, 3, field.VecPseudoRandExt(prng, 8)) // top level, D=8: two trees
+	fx.addLevel(t, 3, field.VecPseudoRandExt(prng, 8))
+	fx.addLevel(t, 1, field.VecPseudoRandExt(prng, 2)) // extra level, D=2: two trees
+	fx.addLevel(t, 1, field.VecPseudoRandExt(prng, 2))
 
-	alphaDeep := field.PseudoRandExt(prng)
-	foldAlphas := make([]field.Ext, fx.pcs.Params.numRounds)
+	foldAlphas := make([]field.Ext, fx.pcs.Params.numRounds())
 	for i := range foldAlphas {
 		foldAlphas[i] = field.PseudoRandExt(prng)
 	}
 	positions := []int{3, 11}
 
-	proof := fx.open(t, alphaDeep, foldAlphas, positions)
-	require.NoError(t, fx.verify(alphaDeep, foldAlphas, positions, proof))
+	proof := fx.open(t, foldAlphas, positions)
+	require.NoError(t, fx.verify(foldAlphas, positions, proof))
 
 	inputQuery := proof.InputQueries[0]
 	require.Len(t, inputQuery, 4)
@@ -275,34 +285,33 @@ func TestProverStateOpenLoopsOverLevelTrees(t *testing.T) {
 		assert.Equal(t, fx.roots[i], root)
 	}
 
-	base := positions[0] >> utils.Log2Ceil(8/2) // p.D/extraD = 8/2
+	base := positions[0] >> utils.Log2Ceil(8/2) // p.LogPlainTextSize - extraLevelLog2 = 3-1
 	for i, branch := range inputQuery[2:] {
 		root, err := branch.RecoverRoot(base)
 		require.NoError(t, err)
 		assert.Equal(t, fx.roots[2+i], root)
 	}
 
-	proof.InputQueries[0][1].Leaf.Ext[0] = field.PseudoRandExt(prng)
-	require.Error(t, fx.verify(alphaDeep, foldAlphas, positions, proof))
+	branch := proof.InputQueries[0][1]
+	branch.Leaves[len(branch.Leaves)-1][0].Ext[0] = field.PseudoRandExt(prng)
+	require.Error(t, fx.verify(foldAlphas, positions, proof))
 }
 
-func verifierInputsForLevels(levels []Level) ([]QueryLayerRoots, []int) {
+func verifierInputsForLevels(levels []Level) []QueryLayerRoots {
 	levelRoots := make([]QueryLayerRoots, len(levels))
-	levelDs := make([]int, len(levels))
 	for i := range levels {
 		levelRoots[i] = make(QueryLayerRoots, len(levels[i].Trees))
 		for j, tree := range levels[i].Trees {
 			levelRoots[i][j] = tree.Root()
 		}
-		levelDs[i] = levels[i].D
 	}
-	return levelRoots, levelDs
+	return levelRoots
 }
 
 // proverForTest runs multi-degree FRI (commit + query phase) and returns a Proof
-// together with the query positions. levels[0].D must equal p.D and every Level
-// must contain one evaluation vector on exactly one rail. levels is sorted
-// in-place in decreasing order of D.
+// together with the query positions. levels[0]'s codeword length must equal
+// 2^p.LogCodewordSize and every Level must contain one evaluation vector on
+// exactly one rail.
 //
 // This helper is test-only and INSECURE: it takes the folding challenges
 // (alphas) and the query positions (openedPositions) as explicit inputs instead
@@ -321,12 +330,12 @@ func proverForTest(p Params, levels []Level, alphas []field.Ext, openedPositions
 	if err != nil {
 		utils.Panic("could not build prover state: %v", err)
 	}
-	if len(alphas) < p.numRounds {
-		utils.Panic("fri: Prove: need %d folding challenges, got %d", p.numRounds, len(alphas))
+	if len(alphas) < int(p.numRounds()) {
+		utils.Panic("fri: Prove: need %d folding challenges, got %d", p.numRounds(), len(alphas))
 	}
 
 	// Drive the state machine: feed one folding challenge per round, then open.
-	for j := range p.numRounds {
+	for j := range p.numRounds() {
 		st.Fold(alphas[j])
 	}
 

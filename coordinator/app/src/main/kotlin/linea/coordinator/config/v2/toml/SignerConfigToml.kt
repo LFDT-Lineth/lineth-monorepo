@@ -1,14 +1,22 @@
 package linea.coordinator.config.v2.toml
 
 import com.sksamuel.hoplite.Masked
+import linea.config.docs.ConfigDoc
+import linea.config.docs.ConfigSection
 import linea.coordinator.config.v2.SignerConfig
 import linea.kotlin.decodeHex
 import java.net.URL
 import java.nio.file.Path
 
 data class SignerConfigToml(
+  @param:ConfigDoc(
+    description = "Signer backend to use: WEB3J (local private key) or WEB3SIGNER (remote signer).",
+    example = "web3signer",
+  )
   val type: SignerType,
+  @param:ConfigSection("Local Web3j signer settings; required when type is WEB3J.")
   val web3j: Web3jConfig?,
+  @param:ConfigSection("Remote Web3Signer settings; required when type is WEB3SIGNER.")
   val web3signer: Web3SignerConfig?,
   val custom: CustomConfig? = null,
 ) {
@@ -59,6 +67,7 @@ data class SignerConfigToml(
   }
 
   data class Web3jConfig(
+    @param:ConfigDoc("Hex-encoded 32-byte private key used to sign transactions. Masked in logs.")
     val privateKey: Masked,
   ) {
     init {
@@ -83,10 +92,18 @@ data class SignerConfigToml(
   }
 
   data class Web3SignerConfig(
+    @param:ConfigDoc(
+      description = "Web3Signer HTTP endpoint.",
+      example = "http://web3signer:9000",
+    )
     val endpoint: URL,
+    @param:ConfigDoc("Hex-encoded 64-byte public key whose corresponding key Web3Signer holds.")
     val publicKey: ByteArray,
+    @param:ConfigDoc(description = "Maximum size of the HTTP connection pool to Web3Signer.", default = "10")
     val maxPoolSize: Int = 10,
+    @param:ConfigDoc(description = "Whether to keep Web3Signer HTTP connections alive.", default = "true")
     val keepAlive: Boolean = true,
+    @param:ConfigSection("TLS settings for the Web3Signer connection; omit for plaintext.")
     val tls: TlsConfig?,
   ) {
     init {
@@ -95,9 +112,19 @@ data class SignerConfigToml(
     }
 
     data class TlsConfig(
+      @param:ConfigDoc(
+        description = "Path to the client keystore used for mutual TLS with Web3Signer.",
+        example = "/etc/coordinator/keystore.p12",
+      )
       val keyStorePath: Path,
+      @param:ConfigDoc("Password for the client keystore. Masked in logs.")
       val keyStorePassword: Masked,
+      @param:ConfigDoc(
+        description = "Path to the truststore used to validate the Web3Signer certificate.",
+        example = "/etc/coordinator/truststore.p12",
+      )
       val trustStorePath: Path,
+      @param:ConfigDoc("Password for the truststore. Masked in logs.")
       val trustStorePassword: Masked,
     ) {
       init {

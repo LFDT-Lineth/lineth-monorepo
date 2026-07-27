@@ -1,0 +1,19 @@
+// Fibonacci(100) computed entirely with fixed, in-program constants: no
+// `pub input` table is declared, so this program has no lookup-backed memory.
+//
+// This test should also work with PCS attached as well.
+fn main() {
+    var t:u128
+    var a:u128 = 0
+    var b:u128 = 1
+
+    for i:u8 = 0; i < 100; i = i + 1 {
+        t = a + b
+        a = b
+        b = t
+    }
+
+    if a != 354224848179261915075 {
+        fail
+    }
+}

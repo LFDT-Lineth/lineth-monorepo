@@ -11,6 +11,7 @@ import linea.crypto.Signer
 import linea.crypto.Web3SignerRestClient
 import linea.kotlin.encodeHex
 import net.consensys.linea.httprest.client.VertxHttpRestClient
+import org.apache.logging.log4j.LogManager
 import org.web3j.crypto.Credentials
 import org.web3j.utils.Numeric
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -96,7 +97,12 @@ private fun createWeb3Signer(
       }
   val poolOptions = PoolOptions().setHttp1MaxSize(config.maxPoolSize)
   return Web3SignerRestClient(
-    VertxHttpRestClient(webClientOptions, poolOptions, vertx),
+    VertxHttpRestClient(
+      webClientOptions,
+      poolOptions,
+      vertx,
+      LogManager.getLogger("clients.web3signer"),
+    ),
     config.publicKey,
   )
 }
