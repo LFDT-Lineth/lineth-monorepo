@@ -136,7 +136,7 @@ func applyMutation(root reflect.Value, m proofMutation) {
 }
 
 // nolint -- ignores: error should be the last return parameters
-func safeVerify(fx *ldtFixture, alphaDeep field.Ext, foldAlphas []field.Ext,
+func safeVerify(fx *ldtFixture, foldAlphas []field.Ext,
 	positions []int, proof OpeningProof) (err error, panicked bool) {
 
 	defer func() {
@@ -145,7 +145,7 @@ func safeVerify(fx *ldtFixture, alphaDeep field.Ext, foldAlphas []field.Ext,
 			err = fmt.Errorf("panic: %v", r)
 		}
 	}()
-	err = fx.verify(alphaDeep, foldAlphas, positions, proof)
+	err = fx.verify(foldAlphas, positions, proof)
 	return
 }
 
@@ -157,23 +157,22 @@ func TestVerifyRejectsProofMutations(t *testing.T) {
 
 	// One main level (D=8) plus one extra level (D=2) to also exercise the
 	// same input branch carrying a smaller aligned level leaf.
-	fx := newLDTFixture(t, 16, 8, 4)
-	fx.addLevel(t, 3, field.VecPseudoRandExt(prng, 16))
-	fx.addLevel(t, 1, field.VecPseudoRandExt(prng, 4))
+	fx := newLDTFixture(t, 4, 3, 4)
+	fx.addLevel(t, 3, field.VecPseudoRandExt(prng, 8))
+	fx.addLevel(t, 1, field.VecPseudoRandExt(prng, 2))
 
-	alphaDeep := field.PseudoRandExt(prng)
-	foldAlphas := make([]field.Ext, fx.pcs.Params.numRounds)
+	foldAlphas := make([]field.Ext, fx.pcs.Params.numRounds())
 	for i := range foldAlphas {
 		foldAlphas[i] = field.PseudoRandExt(prng)
 	}
 	// Positions chosen to probe every final-layer index (size N>>numRounds = 2),
-	// so that mutating any FinalPolyExt entry is detected by some query.
+	// so that mutating any FinalPoly entry is detected by some query.
 	positions := []int{1, 5, 9, 13}
 
 	// Canonical proof: fx.open is deterministic given the same challenges, so
 	// it can be re-derived per mutation below without re-registering openings.
-	base := fx.open(t, alphaDeep, foldAlphas, positions)
-	require.NoError(t, fx.verify(alphaDeep, foldAlphas, positions, base))
+	base := fx.open(t, foldAlphas, positions)
+	require.NoError(t, fx.verify(foldAlphas, positions, base))
 
 	var muts []proofMutation
 	collectMutations(reflect.ValueOf(&base).Elem(), nil, "OpeningProof", &muts)
@@ -182,42 +181,36 @@ func TestVerifyRejectsProofMutations(t *testing.T) {
 	for _, m := range muts {
 		t.Run(m.name, func(t *testing.T) {
 			// Re-derive the canonical proof deterministically, then mutate it.
-			proof := fx.open(t, alphaDeep, foldAlphas, positions)
+			proof := fx.open(t, foldAlphas, positions)
 			applyMutation(reflect.ValueOf(&proof).Elem(), m)
 
-			err, panicked := safeVerify(fx, alphaDeep, foldAlphas, positions, proof)
+			err, panicked := safeVerify(fx, foldAlphas, positions, proof)
 			require.False(t, panicked, "mutation made Verify panic: %v", err)
 			require.Error(t, err)
 		})
 	}
 }
 
-// TestVerifyRejectsSpuriousConjugateLeaf targets the non-malleability invariant
-// in authenticateInputQuery: a branch may carry a ConjugateLeaf iff it backs
-// the top level. The reflection-based mutation test above only mutates
-// existing values, so it can never flip a nil ConjugateLeaf to non-nil; this
-// test exercises that case directly.
-func TestVerifyRejectsSpuriousConjugateLeaf(t *testing.T) {
+// TestVerifyRejectsMissingBottomLevel targets authenticateInputQuery's
+// invariant that every branch's bottom (deepest) level pair is mandatory.
+func TestVerifyRejectsMissingBottomLevel(t *testing.T) {
 	prng := rand.New(utils.NewRandSource(20240607))
 
-	fx := newLDTFixture(t, 8, 4, 1)
-	fx.addLevel(t, 2, field.VecPseudoRandExt(prng, 8))
-	fx.addLevel(t, 1, field.VecPseudoRandExt(prng, 4))
+	fx := newLDTFixture(t, 3, 2, 1)
+	fx.addLevel(t, 2, field.VecPseudoRandExt(prng, 4))
+	fx.addLevel(t, 1, field.VecPseudoRandExt(prng, 2))
 
-	alphaDeep := field.PseudoRandExt(prng)
 	foldAlphas := []field.Ext{field.PseudoRandExt(prng), field.PseudoRandExt(prng)}
 	positions := []int{1}
 
-	proof := fx.open(t, alphaDeep, foldAlphas, positions)
-	require.NoError(t, fx.verify(alphaDeep, foldAlphas, positions, proof))
+	proof := fx.open(t, foldAlphas, positions)
+	require.NoError(t, fx.verify(foldAlphas, positions, proof))
 
-	nonTop := &proof.InputQueries[0][1]
-	require.Nil(t, nonTop.ConjugateLeaf)
-	spurious := nonTop.Leaf
-	nonTop.ConjugateLeaf = &spurious
+	branch := &proof.InputQueries[0][1]
+	branch.Leaves[len(branch.Leaves)-1] = nil
 
-	err := fx.verify(alphaDeep, foldAlphas, positions, proof)
-	require.ErrorContains(t, err, "conjugate leaf presence inconsistent")
+	err := fx.verify(foldAlphas, positions, proof)
+	require.ErrorContains(t, err, "missing bottom level")
 }
 
 func TestPCSVerifyRejectsMutations(t *testing.T) {
@@ -239,22 +232,25 @@ func TestPCSVerifyRejectsMutations(t *testing.T) {
 		{
 			name: "tampered branch",
 			mutate: func(fx *pcsOpenVerifyFixture) {
-				fx.proof.InputQueries[0][0].Leaf.Ext[0].Add(&fx.proof.InputQueries[0][0].Leaf.Ext[0], &oneExt)
+				branch := fx.proof.InputQueries[0][0]
+				self := &branch.Leaves[len(branch.Leaves)-1][0]
+				self.Ext[0].Add(&self.Ext[0], &oneExt)
 			},
 			wantErr: "Merkle proof invalid",
 		},
 		{
 			name: "misaligned auxiliary row",
 			mutate: func(fx *pcsOpenVerifyFixture) {
-				row := openEncodedRow(fx.committed[0].EncodedTable[1], 0)
-				fx.proof.InputQueries[0][0].AuxSiblings[2] = &row
+				pair := fx.proof.InputQueries[0][0].Leaves[1]
+				pair[0].Ext[0].Add(&pair[0].Ext[0], &oneExt)
 			},
 			wantErr: "Merkle proof invalid",
 		},
 		{
 			name: "tampered top sibling row",
 			mutate: func(fx *pcsOpenVerifyFixture) {
-				conjugate := fx.proof.InputQueries[0][0].ConjugateLeaf
+				branch := fx.proof.InputQueries[0][0]
+				conjugate := &branch.Leaves[len(branch.Leaves)-1][1]
 				conjugate.Ext[0].Add(&conjugate.Ext[0], &oneExt)
 			},
 			wantErr: "Merkle proof invalid",
@@ -277,7 +273,10 @@ func TestPCSVerifyRejectsMutations(t *testing.T) {
 		{
 			name: "alpha mismatch",
 			mutate: func(fx *pcsOpenVerifyFixture) {
-				fx.input.Challenges.AlphaDeep = field.UintsToExt(41, 0, 0, 0, 0, 0)
+				// FoldAlphas[0] governs both round 0's fold and (squared) the
+				// main level's own alphaDeep -- there is no separate
+				// alpha_DEEP challenge to mismatch anymore.
+				fx.input.Challenges.FoldAlphas[0] = field.UintsToExt(41, 0, 0, 0, 0, 0)
 			},
 			wantErr: "folded value mismatch",
 		},

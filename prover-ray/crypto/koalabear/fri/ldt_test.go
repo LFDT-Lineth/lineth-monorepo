@@ -7,7 +7,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// ldtFixture commits R(X)=X*target(X) at zeta=0, so the DEEP quotient is target.
+// ldtFixture commits R(X)=X*target(X) at zeta=0, so the DEEP quotient is
+// target. target is genuinely low-degree: addLevel RS-encodes the given
+// plaintext-sized coefficients up to the level's full codeword domain, so
+// FinalPoly legitimately comes out constant after an honest fold.
 type ldtFixture struct {
 	pcs *PCS
 
@@ -17,22 +20,25 @@ type ldtFixture struct {
 	claims []BatchClaimedValues
 }
 
-func newLDTFixture(t *testing.T, n, d, numQueries int) *ldtFixture {
+func newLDTFixture(t *testing.T, logN, logD uint8, numQueries uint, opts ...Option) *ldtFixture {
 	t.Helper()
 
-	params, err := NewParams(n, d, numQueries)
+	params, err := NewParams(logN, logD, numQueries, opts...)
 	require.NoError(t, err)
-	encoders := makeEncoders(params.numRounds+1, n/d)
+	encoders := makeEncoders(int(params.LogPlainTextSize)+1, 1<<int(logN-logD))
 	pcs, err := NewPCS(params, encoders)
 	require.NoError(t, err)
 
 	return &ldtFixture{pcs: pcs}
 }
 
-func (fx *ldtFixture) addLevel(t *testing.T, sizeLog2 int, target []field.Ext) {
+func (fx *ldtFixture) addLevel(t *testing.T, sizeLog2 uint8, coeffs []field.Ext) {
 	t.Helper()
 
-	domain := fx.pcs.Params.domainsLight[fx.pcs.Params.numRounds-sizeLog2]
+	require.Len(t, coeffs, 1<<sizeLog2)
+	target := fx.pcs.Encoders[sizeLog2].EncodeExt(coeffs)
+
+	domain := fx.pcs.Params.domainsLight[fx.pcs.Params.LogPlainTextSize-sizeLog2]
 	size, err := reconstructDomainSize(domain)
 	require.NoError(t, err)
 	require.Len(t, target, size)
@@ -66,10 +72,10 @@ func (fx *ldtFixture) addLevel(t *testing.T, sizeLog2 int, target []field.Ext) {
 	fx.claims = append(fx.claims, claimed)
 }
 
-func (fx *ldtFixture) open(t *testing.T, alphaDeep field.Ext, foldAlphas []field.Ext, positions []int) OpeningProof {
+func (fx *ldtFixture) open(t *testing.T, foldAlphas []field.Ext, positions []int) OpeningProof {
 	t.Helper()
 
-	started, err := fx.pcs.NewProverState(alphaDeep)
+	started, err := fx.pcs.NewProverState()
 	require.NoError(t, err)
 	for round := 0; started.HasNext(); round++ {
 		started.Fold(foldAlphas[round])
@@ -77,14 +83,13 @@ func (fx *ldtFixture) open(t *testing.T, alphaDeep field.Ext, foldAlphas []field
 	return fx.pcs.Open(started, positions)
 }
 
-func (fx *ldtFixture) verify(alphaDeep field.Ext, foldAlphas []field.Ext, positions []int, proof OpeningProof) error {
+func (fx *ldtFixture) verify(foldAlphas []field.Ext, positions []int, proof OpeningProof) error {
 	return fx.pcs.Verify(VerifyInputs{
 		Roots:         fx.roots,
 		Shapes:        fx.shapes,
 		Shifts:        fx.shifts,
 		ClaimedValues: fx.claims,
 		Challenges: Challenges{
-			AlphaDeep:      alphaDeep,
 			FoldAlphas:     foldAlphas,
 			QueryPositions: positions,
 		},
