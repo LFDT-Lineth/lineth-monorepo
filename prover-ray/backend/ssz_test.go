@@ -10,53 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// payload0JSON is the encoder_obj form of payload[0] from
-// rollup_spec/src/rollup_spec/prover_io/testdata/getZkL2ExecutionProofV1.request.json,
-// as defined by proof_io_v1.py::_decode_payload: statelessInput fields with
-// executionRequests replaced by {} and chainConfig injected at the top level.
-// May differ from the coordinator's wire format.
-//
-// The corresponding expected SSZ output is in testdata/stateless_input_payload0.ssz.
-// See testdata/README.md for metadata and regeneration instructions.
-const payload0JSON = `{
-  "newPayloadRequest": {
-    "executionPayload": {
-      "parentHash":      "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
-      "feeRecipient":    "0x0000000000000000000000000000000000000000",
-      "stateRoot":       "0x1111111111111111111111111111111111111111111111111111111111111111",
-      "receiptsRoot":    "0x2222222222222222222222222222222222222222222222222222222222222222",
-      "logsBloom":       "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-      "prevRandao":      "0x3333333333333333333333333333333333333333333333333333333333333333",
-      "blockNumber":     1000501,
-      "gasLimit":        30000000,
-      "gasUsed":         12000000,
-      "timestamp":       1763000101,
-      "extraData":       "0x",
-      "baseFeePerGas":   "0x01",
-      "blockHash":       "0x0101010101010101010101010101010101010101010101010101010101010101",
-      "transactions":    ["0x02f86882e7088001843b9aca008252089422222222222222222222222222222222222222228080c080a0b09c2773ac7819dcf8cea66d878d5a41ebc04079162d4f78b7e8add87caa81a8a002cb3f20eb686af3b082e97d96a9fd7f68fabb9e927885a29738824b1d2dcd29"],
-      "withdrawals":     [],
-      "blobGasUsed":     0,
-      "excessBlobGas":   0,
-      "blockAccessList": "0x"
-    },
-    "versionedHashes":       [],
-    "parentBeaconBlockRoot": "0x4444444444444444444444444444444444444444444444444444444444444444",
-    "executionRequests":     {}
-  },
-  "executionWitness": {
-    "state":   ["0xf800000000"],
-    "codes":   ["0x6000000000"],
-    "headers": ["0xf90000000a"]
-  },
-  "chainConfig": {
-    "chainId":  59144,
-    "forkName": "Amsterdam"
-  }
-}`
-
-// payload0JSONNoChainConfig is payload0JSON with chainConfig omitted; used to
-// verify that a missing chainConfig produces a clear error.
+// payload0JSONNoChainConfig omits chainConfig from an otherwise valid payload.
 const payload0JSONNoChainConfig = `{
   "newPayloadRequest": {
     "executionPayload": {
@@ -94,7 +48,10 @@ const payload0JSONNoChainConfig = `{
 // reference SSZ output stored in testdata/stateless_input_payload0.ssz.
 // See testdata/README.md for provenance and regeneration instructions.
 func TestEncodeStatelessInput_GoldenVector(t *testing.T) {
-	got, err := EncodeStatelessInput([]byte(payload0JSON))
+	input, err := os.ReadFile("testdata/stateless_input_payload0.json")
+	require.NoError(t, err)
+
+	got, err := EncodeStatelessInput(input)
 	require.NoError(t, err)
 
 	want, err := os.ReadFile("testdata/stateless_input_payload0.ssz")
