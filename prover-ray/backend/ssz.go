@@ -1,11 +1,13 @@
 package backend
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"strconv"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/core/types"
@@ -50,71 +52,154 @@ const activeFork = "Amsterdam"
 // we check it explicitly.
 const maxExtraDataBytes = 32
 
-// JSON input model (readable encoder_obj form)
+// SSZ list/vector bounds mirrored from rollup_spec/stateless_input.py and
+// rollup_spec/canonical_ssz.py. The hand-written encoder must reject inputs
+// outside these bounds just like the reference remerkleable encoder does.
+const (
+	maxBytesPerTransaction     = 1 << 30
+	maxTransactionsPerPayload  = 1 << 20
+	maxWithdrawalsPerPayload   = 1 << 4
+	maxBlobCommitmentsPerBlock = 4096
+	maxWitnessNodes            = 1 << 20
+	maxWitnessCodes            = 1 << 16
+	maxWitnessHeaders          = 256
+	maxBytesPerWitnessNode     = 1 << 20
+	maxBytesPerCode            = 1 << 24
+	maxBytesPerHeader          = 1 << 10
+	maxPublicKeys              = 1 << 15
+)
 
-// statelessInputJSON's sections are pointers so an absent section is reported
-// as a clear error rather than silently encoded at zero values, matching the
-// reference encoder's strictness.
-type statelessInputJSON struct {
-	NewPayloadRequest *newPayloadRequestJSON `json:"newPayloadRequest"`
-	ExecutionWitness  *executionWitnessJSON  `json:"executionWitness"`
-	ChainConfig       *chainConfigJSON       `json:"chainConfig"`
+// JSON input model (readable encoder_obj form). The Python reference consumes a
+// dict and indexes required fields directly. Keep the Go port map-based too, so
+// missing required fields error before any SSZ bytes are built.
+
+type jsonObj map[string]json.RawMessage
+
+func parseJSONObject(data []byte, ctx string) (jsonObj, error) {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+
+	var obj jsonObj
+	if err := dec.Decode(&obj); err != nil {
+		return nil, fmt.Errorf("%s: parsing JSON object: %w", ctx, err)
+	}
+	if obj == nil {
+		return nil, fmt.Errorf("%s: expected object", ctx)
+	}
+	return obj, nil
 }
 
-type newPayloadRequestJSON struct {
-	ExecutionPayload      executionPayloadJSON   `json:"executionPayload"`
-	VersionedHashes       []string               `json:"versionedHashes"`
-	ParentBeaconBlockRoot string                 `json:"parentBeaconBlockRoot"`
-	ExecutionRequests     *executionRequestsJSON `json:"executionRequests"`
+func requireRaw(obj jsonObj, key string) (json.RawMessage, error) {
+	raw, ok := obj[key]
+	if !ok {
+		return nil, fmt.Errorf("missing %s", key)
+	}
+	return raw, nil
 }
 
-type executionPayloadJSON struct {
-	ParentHash      string           `json:"parentHash"`
-	FeeRecipient    string           `json:"feeRecipient"`
-	StateRoot       string           `json:"stateRoot"`
-	ReceiptsRoot    string           `json:"receiptsRoot"`
-	LogsBloom       string           `json:"logsBloom"`
-	PrevRandao      string           `json:"prevRandao"`
-	BlockNumber     uint64           `json:"blockNumber"`
-	GasLimit        uint64           `json:"gasLimit"`
-	GasUsed         uint64           `json:"gasUsed"`
-	Timestamp       uint64           `json:"timestamp"`
-	ExtraData       string           `json:"extraData"`
-	BaseFeePerGas   string           `json:"baseFeePerGas"`
-	BlockHash       string           `json:"blockHash"`
-	Transactions    []string         `json:"transactions"`
-	Withdrawals     []withdrawalJSON `json:"withdrawals"`
-	BlobGasUsed     uint64           `json:"blobGasUsed"`
-	ExcessBlobGas   uint64           `json:"excessBlobGas"`
-	BlockAccessList string           `json:"blockAccessList"`
-	// SlotNumber is absent from the readable payload; canonical default 0.
-	SlotNumber uint64 `json:"slotNumber"`
+func requireObject(obj jsonObj, key string) (jsonObj, error) {
+	raw, err := requireRaw(obj, key)
+	if err != nil {
+		return nil, err
+	}
+	child, err := parseJSONObject(raw, key)
+	if err != nil {
+		return nil, err
+	}
+	return child, nil
 }
 
-type withdrawalJSON struct {
-	Index          uint64 `json:"index"`
-	ValidatorIndex uint64 `json:"validatorIndex"`
-	Address        string `json:"address"`
-	Amount         uint64 `json:"amount"`
+func requireString(obj jsonObj, key string) (string, error) {
+	raw, err := requireRaw(obj, key)
+	if err != nil {
+		return "", err
+	}
+	var value string
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return "", fmt.Errorf("%s: expected string: %w", key, err)
+	}
+	return value, nil
 }
 
-// executionRequestsJSON models the object form the encoder expects. The rollup
-// rejects EIP-7685 requests (rollup_spec §2.1): all three lists must be empty.
-type executionRequestsJSON struct {
-	Deposits       []json.RawMessage `json:"deposits"`
-	Withdrawals    []json.RawMessage `json:"withdrawals"`
-	Consolidations []json.RawMessage `json:"consolidations"`
+func requireStringList(obj jsonObj, key string) ([]string, error) {
+	raw, err := requireRaw(obj, key)
+	if err != nil {
+		return nil, err
+	}
+	var values []string
+	if err := json.Unmarshal(raw, &values); err != nil {
+		return nil, fmt.Errorf("%s: expected string array: %w", key, err)
+	}
+	if values == nil {
+		return nil, fmt.Errorf("%s: expected string array", key)
+	}
+	return values, nil
 }
 
-type executionWitnessJSON struct {
-	State   []string `json:"state"`
-	Codes   []string `json:"codes"`
-	Headers []string `json:"headers"`
+func requireObjectList(obj jsonObj, key string) ([]jsonObj, error) {
+	raw, err := requireRaw(obj, key)
+	if err != nil {
+		return nil, err
+	}
+	var rawItems []json.RawMessage
+	if err := json.Unmarshal(raw, &rawItems); err != nil {
+		return nil, fmt.Errorf("%s: expected object array: %w", key, err)
+	}
+	if rawItems == nil {
+		return nil, fmt.Errorf("%s: expected object array", key)
+	}
+	items := make([]jsonObj, len(rawItems))
+	for i, rawItem := range rawItems {
+		item, err := parseJSONObject(rawItem, fmt.Sprintf("%s[%d]", key, i))
+		if err != nil {
+			return nil, err
+		}
+		items[i] = item
+	}
+	return items, nil
 }
 
-type chainConfigJSON struct {
-	ChainID  uint64 `json:"chainId"`
-	ForkName string `json:"forkName"`
+func requireUint64(obj jsonObj, key string) (uint64, error) {
+	raw, err := requireRaw(obj, key)
+	if err != nil {
+		return 0, err
+	}
+	return parseUint64JSON(raw, key)
+}
+
+func optionalUint64(obj jsonObj, key string, defaultValue uint64) (uint64, error) {
+	raw, ok := obj[key]
+	if !ok {
+		return defaultValue, nil
+	}
+	return parseUint64JSON(raw, key)
+}
+
+func parseUint64JSON(raw json.RawMessage, key string) (uint64, error) {
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.UseNumber()
+
+	var value any
+	if err := dec.Decode(&value); err != nil {
+		return 0, fmt.Errorf("%s: expected uint64: %w", key, err)
+	}
+
+	switch v := value.(type) {
+	case json.Number:
+		n, err := strconv.ParseUint(v.String(), 10, 64)
+		if err != nil {
+			return 0, fmt.Errorf("%s: expected uint64: %w", key, err)
+		}
+		return n, nil
+	case string:
+		n, err := strconv.ParseUint(v, 10, 64)
+		if err != nil {
+			return 0, fmt.Errorf("%s: expected decimal uint64 string: %w", key, err)
+		}
+		return n, nil
+	default:
+		return 0, fmt.Errorf("%s: expected uint64, got %T", key, value)
+	}
 }
 
 // SSZ serialization primitives
@@ -233,6 +318,20 @@ func hexToFixed(s string, n int) ([]byte, error) {
 	return b, nil
 }
 
+func checkListLen(name string, got, max int) error {
+	if got > max {
+		return fmt.Errorf("%s: expected <= %d items, got %d", name, max, got)
+	}
+	return nil
+}
+
+func checkByteLen(name string, got, max int) error {
+	if got > max {
+		return fmt.Errorf("%s: expected <= %d bytes, got %d", name, max, got)
+	}
+	return nil
+}
+
 // parseUint256Hex parses a 0x-prefixed hex quantity (matching the Python
 // reference's int(value, 16) for base_fee_per_gas).
 func parseUint256Hex(s string) (*big.Int, error) {
@@ -247,55 +346,121 @@ func parseUint256Hex(s string) (*big.Int, error) {
 	return v, nil
 }
 
-// container encoders
+// JSON object -> SSZ bytes. These functions mirror
+// rollup_spec/stateless_input.py's _ssz_*_from_obj helpers.
 
-func encodeWithdrawal(w withdrawalJSON) ([]byte, error) {
-	addr, err := hexToFixed(w.Address, 20)
+func sszWithdrawalFromObj(obj jsonObj) ([]byte, error) {
+	index, err := requireUint64(obj, "index")
+	if err != nil {
+		return nil, err
+	}
+	validatorIndex, err := requireUint64(obj, "validatorIndex")
+	if err != nil {
+		return nil, err
+	}
+	address, err := requireString(obj, "address")
+	if err != nil {
+		return nil, err
+	}
+	amount, err := requireUint64(obj, "amount")
+	if err != nil {
+		return nil, err
+	}
+
+	addr, err := hexToFixed(address, 20)
 	if err != nil {
 		return nil, fmt.Errorf("withdrawal address: %w", err)
 	}
 	// All fields fixed-size: index | validator_index | address | amount.
 	return sszContainer(
-		fixed(sszUint64(w.Index)),
-		fixed(sszUint64(w.ValidatorIndex)),
+		fixed(sszUint64(index)),
+		fixed(sszUint64(validatorIndex)),
 		fixed(addr),
-		fixed(sszUint64(w.Amount)),
+		fixed(sszUint64(amount)),
 	), nil
 }
 
-func encodeExecutionPayload(ep executionPayloadJSON) ([]byte, error) {
-	parentHash, err := hexToFixed(ep.ParentHash, 32)
+func sszExecutionPayloadFromObj(obj jsonObj) ([]byte, error) {
+	parentHashValue, err := requireString(obj, "parentHash")
+	if err != nil {
+		return nil, err
+	}
+	parentHash, err := hexToFixed(parentHashValue, 32)
 	if err != nil {
 		return nil, fmt.Errorf("parentHash: %w", err)
 	}
-	feeRecipient, err := hexToFixed(ep.FeeRecipient, 20)
+	feeRecipientValue, err := requireString(obj, "feeRecipient")
+	if err != nil {
+		return nil, err
+	}
+	feeRecipient, err := hexToFixed(feeRecipientValue, 20)
 	if err != nil {
 		return nil, fmt.Errorf("feeRecipient: %w", err)
 	}
-	stateRoot, err := hexToFixed(ep.StateRoot, 32)
+	stateRootValue, err := requireString(obj, "stateRoot")
+	if err != nil {
+		return nil, err
+	}
+	stateRoot, err := hexToFixed(stateRootValue, 32)
 	if err != nil {
 		return nil, fmt.Errorf("stateRoot: %w", err)
 	}
-	receiptsRoot, err := hexToFixed(ep.ReceiptsRoot, 32)
+	receiptsRootValue, err := requireString(obj, "receiptsRoot")
+	if err != nil {
+		return nil, err
+	}
+	receiptsRoot, err := hexToFixed(receiptsRootValue, 32)
 	if err != nil {
 		return nil, fmt.Errorf("receiptsRoot: %w", err)
 	}
-	logsBloom, err := hexToFixed(ep.LogsBloom, 256)
+	logsBloomValue, err := requireString(obj, "logsBloom")
+	if err != nil {
+		return nil, err
+	}
+	logsBloom, err := hexToFixed(logsBloomValue, 256)
 	if err != nil {
 		return nil, fmt.Errorf("logsBloom: %w", err)
 	}
-	prevRandao, err := hexToFixed(ep.PrevRandao, 32)
+	prevRandaoValue, err := requireString(obj, "prevRandao")
+	if err != nil {
+		return nil, err
+	}
+	prevRandao, err := hexToFixed(prevRandaoValue, 32)
 	if err != nil {
 		return nil, fmt.Errorf("prevRandao: %w", err)
 	}
-	extraData, err := hexToBytes(ep.ExtraData)
+	blockNumber, err := requireUint64(obj, "blockNumber")
+	if err != nil {
+		return nil, err
+	}
+	gasLimit, err := requireUint64(obj, "gasLimit")
+	if err != nil {
+		return nil, err
+	}
+	gasUsed, err := requireUint64(obj, "gasUsed")
+	if err != nil {
+		return nil, err
+	}
+	timestamp, err := requireUint64(obj, "timestamp")
+	if err != nil {
+		return nil, err
+	}
+	extraDataValue, err := requireString(obj, "extraData")
+	if err != nil {
+		return nil, err
+	}
+	extraData, err := hexToBytes(extraDataValue)
 	if err != nil {
 		return nil, fmt.Errorf("extraData: %w", err)
 	}
 	if len(extraData) > maxExtraDataBytes {
 		return nil, fmt.Errorf("extraData: expected <= %d bytes, got %d", maxExtraDataBytes, len(extraData))
 	}
-	baseFee, err := parseUint256Hex(ep.BaseFeePerGas)
+	baseFeePerGas, err := requireString(obj, "baseFeePerGas")
+	if err != nil {
+		return nil, err
+	}
+	baseFee, err := parseUint256Hex(baseFeePerGas)
 	if err != nil {
 		return nil, fmt.Errorf("baseFeePerGas: %w", err)
 	}
@@ -303,32 +468,72 @@ func encodeExecutionPayload(ep executionPayloadJSON) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("baseFeePerGas: %w", err)
 	}
-	blockHash, err := hexToFixed(ep.BlockHash, 32)
+	blockHashValue, err := requireString(obj, "blockHash")
+	if err != nil {
+		return nil, err
+	}
+	blockHash, err := hexToFixed(blockHashValue, 32)
 	if err != nil {
 		return nil, fmt.Errorf("blockHash: %w", err)
 	}
 
-	txs := make([][]byte, len(ep.Transactions))
-	for i, tx := range ep.Transactions {
+	transactionValues, err := requireStringList(obj, "transactions")
+	if err != nil {
+		return nil, err
+	}
+	if err := checkListLen("transactions", len(transactionValues), maxTransactionsPerPayload); err != nil {
+		return nil, err
+	}
+	txs := make([][]byte, len(transactionValues))
+	for i, tx := range transactionValues {
 		b, err := hexToBytes(tx)
 		if err != nil {
 			return nil, fmt.Errorf("transactions[%d]: %w", i, err)
 		}
+		if err := checkByteLen(fmt.Sprintf("transactions[%d]", i), len(b), maxBytesPerTransaction); err != nil {
+			return nil, err
+		}
 		txs[i] = b
 	}
 
-	withdrawals := make([][]byte, len(ep.Withdrawals))
-	for i, w := range ep.Withdrawals {
-		b, err := encodeWithdrawal(w)
+	withdrawalObjs, err := requireObjectList(obj, "withdrawals")
+	if err != nil {
+		return nil, err
+	}
+	if err := checkListLen("withdrawals", len(withdrawalObjs), maxWithdrawalsPerPayload); err != nil {
+		return nil, err
+	}
+	withdrawals := make([][]byte, len(withdrawalObjs))
+	for i, withdrawalObj := range withdrawalObjs {
+		b, err := sszWithdrawalFromObj(withdrawalObj)
 		if err != nil {
 			return nil, fmt.Errorf("withdrawals[%d]: %w", i, err)
 		}
 		withdrawals[i] = b
 	}
 
-	blockAccessList, err := hexToBytes(ep.BlockAccessList)
+	blobGasUsed, err := requireUint64(obj, "blobGasUsed")
+	if err != nil {
+		return nil, err
+	}
+	excessBlobGas, err := requireUint64(obj, "excessBlobGas")
+	if err != nil {
+		return nil, err
+	}
+	blockAccessListValue, err := requireString(obj, "blockAccessList")
+	if err != nil {
+		return nil, err
+	}
+	blockAccessList, err := hexToBytes(blockAccessListValue)
 	if err != nil {
 		return nil, fmt.Errorf("blockAccessList: %w", err)
+	}
+	if err := checkByteLen("blockAccessList", len(blockAccessList), maxBytesPerTransaction); err != nil {
+		return nil, err
+	}
+	slotNumber, err := optionalUint64(obj, "slotNumber", 0)
+	if err != nil {
+		return nil, err
 	}
 
 	// Field order mirrors canonical_ssz.ExecutionPayload plus the two Amsterdam
@@ -340,37 +545,35 @@ func encodeExecutionPayload(ep executionPayloadJSON) ([]byte, error) {
 		fixed(receiptsRoot),
 		fixed(logsBloom),
 		fixed(prevRandao),
-		fixed(sszUint64(ep.BlockNumber)),
-		fixed(sszUint64(ep.GasLimit)),
-		fixed(sszUint64(ep.GasUsed)),
-		fixed(sszUint64(ep.Timestamp)),
+		fixed(sszUint64(blockNumber)),
+		fixed(sszUint64(gasLimit)),
+		fixed(sszUint64(gasUsed)),
+		fixed(sszUint64(timestamp)),
 		variable(extraData),
 		fixed(baseFeeBytes),
 		fixed(blockHash),
 		variable(sszListVariable(txs)),
 		variable(sszListFixed(withdrawals)),
-		fixed(sszUint64(ep.BlobGasUsed)),
-		fixed(sszUint64(ep.ExcessBlobGas)),
+		fixed(sszUint64(blobGasUsed)),
+		fixed(sszUint64(excessBlobGas)),
 		variable(blockAccessList),
-		fixed(sszUint64(ep.SlotNumber)),
+		fixed(sszUint64(slotNumber)),
 	), nil
 }
 
-// encodeExecutionRequests encodes an ExecutionRequests container. The rollup
-// requires all three request lists empty; a non-empty list is rejected, and so
-// is an absent executionRequests object (the reference encoder requires it).
-func encodeExecutionRequests(er *executionRequestsJSON) ([]byte, error) {
-	if er == nil {
-		return nil, fmt.Errorf("missing executionRequests")
-	}
-	if len(er.Deposits) != 0 {
-		return nil, fmt.Errorf("executionRequests.deposits must be empty")
-	}
-	if len(er.Withdrawals) != 0 {
-		return nil, fmt.Errorf("executionRequests.withdrawals must be empty")
-	}
-	if len(er.Consolidations) != 0 {
-		return nil, fmt.Errorf("executionRequests.consolidations must be empty")
+func sszExecutionRequestsFromObj(obj jsonObj) ([]byte, error) {
+	for _, key := range []string{"deposits", "withdrawals", "consolidations"} {
+		raw, ok := obj[key]
+		if !ok {
+			continue
+		}
+		var items []json.RawMessage
+		if err := json.Unmarshal(raw, &items); err != nil {
+			return nil, fmt.Errorf("executionRequests.%s: expected array: %w", key, err)
+		}
+		if len(items) != 0 {
+			return nil, fmt.Errorf("executionRequests.%s must be empty", key)
+		}
 	}
 	// Three empty variable-size lists: deposits | withdrawals | consolidations.
 	return sszContainer(
@@ -380,14 +583,25 @@ func encodeExecutionRequests(er *executionRequestsJSON) ([]byte, error) {
 	), nil
 }
 
-func encodeNewPayloadRequest(npr newPayloadRequestJSON) ([]byte, error) {
-	ep, err := encodeExecutionPayload(npr.ExecutionPayload)
+func sszNewPayloadRequestFromObj(obj jsonObj) ([]byte, error) {
+	executionPayloadObj, err := requireObject(obj, "executionPayload")
+	if err != nil {
+		return nil, err
+	}
+	ep, err := sszExecutionPayloadFromObj(executionPayloadObj)
 	if err != nil {
 		return nil, fmt.Errorf("executionPayload: %w", err)
 	}
 
-	versionedHashes := make([][]byte, len(npr.VersionedHashes))
-	for i, h := range npr.VersionedHashes {
+	versionedHashesValues, err := requireStringList(obj, "versionedHashes")
+	if err != nil {
+		return nil, err
+	}
+	if err := checkListLen("versionedHashes", len(versionedHashesValues), maxBlobCommitmentsPerBlock); err != nil {
+		return nil, err
+	}
+	versionedHashes := make([][]byte, len(versionedHashesValues))
+	for i, h := range versionedHashesValues {
 		b, err := hexToFixed(h, 32)
 		if err != nil {
 			return nil, fmt.Errorf("versionedHashes[%d]: %w", i, err)
@@ -395,12 +609,20 @@ func encodeNewPayloadRequest(npr newPayloadRequestJSON) ([]byte, error) {
 		versionedHashes[i] = b
 	}
 
-	parentBeacon, err := hexToFixed(npr.ParentBeaconBlockRoot, 32)
+	parentBeaconBlockRoot, err := requireString(obj, "parentBeaconBlockRoot")
+	if err != nil {
+		return nil, err
+	}
+	parentBeacon, err := hexToFixed(parentBeaconBlockRoot, 32)
 	if err != nil {
 		return nil, fmt.Errorf("parentBeaconBlockRoot: %w", err)
 	}
 
-	execRequests, err := encodeExecutionRequests(npr.ExecutionRequests)
+	executionRequestsObj, err := requireObject(obj, "executionRequests")
+	if err != nil {
+		return nil, err
+	}
+	execRequests, err := sszExecutionRequestsFromObj(executionRequestsObj)
 	if err != nil {
 		return nil, err
 	}
@@ -413,28 +635,38 @@ func encodeNewPayloadRequest(npr newPayloadRequestJSON) ([]byte, error) {
 	), nil
 }
 
-func encodeExecutionWitness(w executionWitnessJSON) ([]byte, error) {
-	encodeList := func(name string, items []string) ([]byte, error) {
+func sszExecutionWitnessFromObj(obj jsonObj) ([]byte, error) {
+	encodeList := func(name string, maxItems, maxBytes int) ([]byte, error) {
+		items, err := requireStringList(obj, name)
+		if err != nil {
+			return nil, err
+		}
+		if err := checkListLen(name, len(items), maxItems); err != nil {
+			return nil, err
+		}
 		elems := make([][]byte, len(items))
 		for i, s := range items {
 			b, err := hexToBytes(s)
 			if err != nil {
 				return nil, fmt.Errorf("%s[%d]: %w", name, i, err)
 			}
+			if err := checkByteLen(fmt.Sprintf("%s[%d]", name, i), len(b), maxBytes); err != nil {
+				return nil, err
+			}
 			elems[i] = b
 		}
 		return sszListVariable(elems), nil
 	}
 
-	state, err := encodeList("state", w.State)
+	state, err := encodeList("state", maxWitnessNodes, maxBytesPerWitnessNode)
 	if err != nil {
 		return nil, err
 	}
-	codes, err := encodeList("codes", w.Codes)
+	codes, err := encodeList("codes", maxWitnessCodes, maxBytesPerCode)
 	if err != nil {
 		return nil, err
 	}
-	headers, err := encodeList("headers", w.Headers)
+	headers, err := encodeList("headers", maxWitnessHeaders, maxBytesPerHeader)
 	if err != nil {
 		return nil, err
 	}
@@ -466,8 +698,16 @@ func forkIndex(name string) (uint64, error) {
 	return uint64(idx), nil //nolint:gosec // idx is a small non-negative index
 }
 
-func encodeChainConfig(cc chainConfigJSON) ([]byte, error) {
-	idx, err := forkIndex(cc.ForkName)
+func sszChainConfigFromObj(obj jsonObj) ([]byte, error) {
+	chainID, err := requireUint64(obj, "chainId")
+	if err != nil {
+		return nil, err
+	}
+	forkName, err := requireString(obj, "forkName")
+	if err != nil {
+		return nil, err
+	}
+	idx, err := forkIndex(forkName)
 	if err != nil {
 		return nil, err
 	}
@@ -487,7 +727,7 @@ func encodeChainConfig(cc chainConfigJSON) ([]byte, error) {
 
 	// SszChainConfig: chain_id | active_fork.
 	return sszContainer(
-		fixed(sszUint64(cc.ChainID)),
+		fixed(sszUint64(chainID)),
 		variable(forkConfig),
 	), nil
 }
@@ -513,6 +753,9 @@ func recoverPublicKey(txBytes []byte, chainID *big.Int) ([]byte, error) {
 	case tx.Type() == types.LegacyTxType && !tx.Protected():
 		signer = types.HomesteadSigner{}
 	case tx.Type() == types.LegacyTxType:
+		if chainID.Sign() <= 0 {
+			return nil, fmt.Errorf("invalid payload chain id %s", chainID)
+		}
 		signer = types.LatestSignerForChainID(chainID)
 	default:
 		txChainID := tx.ChainId()
@@ -573,37 +816,72 @@ func smallRecID(rec *big.Int) (byte, error) {
 	return byte(rec.Uint64()), nil
 }
 
-func encodeStatelessInput(in *statelessInputJSON) ([]byte, error) {
-	npr, err := encodeNewPayloadRequest(*in.NewPayloadRequest)
+func recoverPublicKeys(transactions []string, chainID uint64) ([][]byte, error) {
+	if err := checkListLen("public_keys", len(transactions), maxPublicKeys); err != nil {
+		return nil, err
+	}
+
+	keys := make([][]byte, len(transactions))
+	payloadChainID := new(big.Int).SetUint64(chainID)
+	for i, tx := range transactions {
+		raw, err := hexToBytes(tx)
+		if err != nil {
+			return nil, fmt.Errorf("transactions[%d]: %w", i, err)
+		}
+		key, err := recoverPublicKey(raw, payloadChainID)
+		if err != nil {
+			return nil, fmt.Errorf("transactions[%d]: %w", i, err)
+		}
+		keys[i] = key
+	}
+	return keys, nil
+}
+
+func sszStatelessInputFromObj(obj jsonObj) ([]byte, error) {
+	nprObj, err := requireObject(obj, "newPayloadRequest")
+	if err != nil {
+		return nil, err
+	}
+	npr, err := sszNewPayloadRequestFromObj(nprObj)
 	if err != nil {
 		return nil, fmt.Errorf("newPayloadRequest: %w", err)
 	}
 
-	witness, err := encodeExecutionWitness(*in.ExecutionWitness)
+	witnessObj, err := requireObject(obj, "executionWitness")
+	if err != nil {
+		return nil, err
+	}
+	witness, err := sszExecutionWitnessFromObj(witnessObj)
 	if err != nil {
 		return nil, fmt.Errorf("executionWitness: %w", err)
 	}
 
-	chainConfig, err := encodeChainConfig(*in.ChainConfig)
+	chainConfigObj, err := requireObject(obj, "chainConfig")
+	if err != nil {
+		return nil, err
+	}
+	chainConfig, err := sszChainConfigFromObj(chainConfigObj)
 	if err != nil {
 		return nil, fmt.Errorf("chainConfig: %w", err)
 	}
 
 	// public_keys are recovered from the payload transactions (the readable
 	// request does not carry them).
-	chainID := new(big.Int).SetUint64(in.ChainConfig.ChainID)
-	txs := in.NewPayloadRequest.ExecutionPayload.Transactions
-	keys := make([][]byte, len(txs))
-	for i, tx := range txs {
-		raw, err := hexToBytes(tx)
-		if err != nil {
-			return nil, fmt.Errorf("public_keys: transactions[%d]: %w", i, err)
-		}
-		key, err := recoverPublicKey(raw, chainID)
-		if err != nil {
-			return nil, fmt.Errorf("public_keys: transactions[%d]: %w", i, err)
-		}
-		keys[i] = key
+	executionPayloadObj, err := requireObject(nprObj, "executionPayload")
+	if err != nil {
+		return nil, fmt.Errorf("newPayloadRequest: %w", err)
+	}
+	txs, err := requireStringList(executionPayloadObj, "transactions")
+	if err != nil {
+		return nil, fmt.Errorf("public_keys: %w", err)
+	}
+	chainID, err := requireUint64(chainConfigObj, "chainId")
+	if err != nil {
+		return nil, fmt.Errorf("public_keys: %w", err)
+	}
+	keys, err := recoverPublicKeys(txs, chainID)
+	if err != nil {
+		return nil, fmt.Errorf("public_keys: %w", err)
 	}
 
 	return sszContainer(
@@ -623,21 +901,12 @@ func encodeStatelessInput(in *statelessInputJSON) ([]byte, error) {
 // proof_io_v1.py::_decode_payload. Byte-for-byte compatibility with the Python
 // reference encoder is pinned by testdata/stateless_input_payload0.ssz.
 func EncodeStatelessInput(payload []byte) ([]byte, error) {
-	var in statelessInputJSON
-	if err := json.Unmarshal(payload, &in); err != nil {
-		return nil, fmt.Errorf("EncodeStatelessInput: parsing JSON: %w", err)
-	}
-	if in.NewPayloadRequest == nil {
-		return nil, fmt.Errorf("EncodeStatelessInput: missing newPayloadRequest")
-	}
-	if in.ExecutionWitness == nil {
-		return nil, fmt.Errorf("EncodeStatelessInput: missing executionWitness")
-	}
-	if in.ChainConfig == nil {
-		return nil, fmt.Errorf("EncodeStatelessInput: missing chainConfig")
+	obj, err := parseJSONObject(payload, "statelessInput")
+	if err != nil {
+		return nil, fmt.Errorf("EncodeStatelessInput: %w", err)
 	}
 
-	raw, err := encodeStatelessInput(&in)
+	raw, err := sszStatelessInputFromObj(obj)
 	if err != nil {
 		return nil, fmt.Errorf("EncodeStatelessInput: %w", err)
 	}

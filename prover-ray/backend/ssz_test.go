@@ -238,6 +238,39 @@ func TestEncodeStatelessInput_MalformedInputs(t *testing.T) {
 		{"MissingExecutionRequests",
 			func(o map[string]any) { delete(npr(o), "executionRequests") },
 			"missing executionRequests"},
+		{"MissingExecutionPayload",
+			func(o map[string]any) { delete(npr(o), "executionPayload") },
+			"missing executionPayload"},
+		{"MissingBlockNumber",
+			func(o map[string]any) { delete(ep(o), "blockNumber") },
+			"missing blockNumber"},
+		{"MissingTransactions",
+			func(o map[string]any) { delete(ep(o), "transactions") },
+			"missing transactions"},
+		{"MissingWithdrawals",
+			func(o map[string]any) { delete(ep(o), "withdrawals") },
+			"missing withdrawals"},
+		{"MissingWithdrawalAmount",
+			func(o map[string]any) { delete(ep(o)["withdrawals"].([]any)[0].(map[string]any), "amount") },
+			"missing amount"},
+		{"MissingVersionedHashes",
+			func(o map[string]any) { delete(npr(o), "versionedHashes") },
+			"missing versionedHashes"},
+		{"MissingWitnessState",
+			func(o map[string]any) { delete(witness(o), "state") },
+			"missing state"},
+		{"MissingWitnessCodes",
+			func(o map[string]any) { delete(witness(o), "codes") },
+			"missing codes"},
+		{"MissingWitnessHeaders",
+			func(o map[string]any) { delete(witness(o), "headers") },
+			"missing headers"},
+		{"MissingChainID",
+			func(o map[string]any) { delete(o["chainConfig"].(map[string]any), "chainId") },
+			"missing chainId"},
+		{"MissingForkName",
+			func(o map[string]any) { delete(o["chainConfig"].(map[string]any), "forkName") },
+			"missing forkName"},
 		{"NonEmptyDeposits",
 			func(o map[string]any) {
 				npr(o)["executionRequests"] = map[string]any{"deposits": []any{map[string]any{}}}
@@ -297,12 +330,31 @@ func TestEncodeStatelessInput_MalformedInputs(t *testing.T) {
 				ep(o)["withdrawals"].([]any)[0].(map[string]any)["address"] = "0x55"
 			},
 			"withdrawals[0]"},
+		{"TooManyWithdrawals",
+			func(o map[string]any) {
+				firstWithdrawal := ep(o)["withdrawals"].([]any)[0]
+				withdrawals := make([]any, maxWithdrawalsPerPayload+1)
+				for i := range withdrawals {
+					withdrawals[i] = firstWithdrawal
+				}
+				ep(o)["withdrawals"] = withdrawals
+			},
+			"withdrawals"},
 		{"BlockAccessListNotHex",
 			func(o map[string]any) { ep(o)["blockAccessList"] = notHex },
 			"blockAccessList"},
 		{"VersionedHashWrongLength",
 			func(o map[string]any) { npr(o)["versionedHashes"] = []any{"0x77"} },
 			"versionedHashes[0]"},
+		{"TooManyVersionedHashes",
+			func(o map[string]any) {
+				hashes := make([]any, maxBlobCommitmentsPerBlock+1)
+				for i := range hashes {
+					hashes[i] = "0x" + strings.Repeat("77", 32)
+				}
+				npr(o)["versionedHashes"] = hashes
+			},
+			"versionedHashes"},
 		{"ParentBeaconBlockRootWrongLength",
 			func(o map[string]any) { npr(o)["parentBeaconBlockRoot"] = "0x44" },
 			"parentBeaconBlockRoot"},
@@ -315,6 +367,29 @@ func TestEncodeStatelessInput_MalformedInputs(t *testing.T) {
 		{"WitnessHeadersNotHex",
 			func(o map[string]any) { witness(o)["headers"] = []any{notHex} },
 			"headers[0]"},
+		{"WitnessHeaderTooLarge",
+			func(o map[string]any) {
+				witness(o)["headers"] = []any{"0x" + strings.Repeat("aa", maxBytesPerHeader+1)}
+			},
+			"headers[0]"},
+		{"TooManyWitnessHeaders",
+			func(o map[string]any) {
+				headers := make([]any, maxWitnessHeaders+1)
+				for i := range headers {
+					headers[i] = "0x01"
+				}
+				witness(o)["headers"] = headers
+			},
+			"headers"},
+		{"TooManyPublicKeys",
+			func(o map[string]any) {
+				transactions := make([]any, maxPublicKeys+1)
+				for i := range transactions {
+					transactions[i] = "0xdead"
+				}
+				ep(o)["transactions"] = transactions
+			},
+			"public_keys"},
 		{"UnknownForkName",
 			func(o map[string]any) { o["chainConfig"].(map[string]any)["forkName"] = "Foo" },
 			"unknown fork name"},
