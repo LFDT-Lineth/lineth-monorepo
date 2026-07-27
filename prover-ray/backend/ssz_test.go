@@ -44,21 +44,25 @@ const payload0JSONNoChainConfig = `{
   }
 }`
 
-// TestEncodeStatelessInput_GoldenVector asserts byte-exact agreement with the
-// reference SSZ output stored in testdata/stateless_input_payload0.ssz.
+// TestEncodeStatelessInput_GoldenVectors asserts byte-exact agreement with the
+// reference SSZ outputs for the L2 execution request fixture's payloads.
 // See testdata/README.md for provenance and regeneration instructions.
-func TestEncodeStatelessInput_GoldenVector(t *testing.T) {
-	input, err := os.ReadFile("testdata/stateless_input_payload0.json")
-	require.NoError(t, err)
+func TestEncodeStatelessInput_GoldenVectors(t *testing.T) {
+	for _, name := range []string{"payload0", "payload1"} {
+		t.Run(name, func(t *testing.T) {
+			input, err := os.ReadFile("testdata/stateless_input_" + name + ".json")
+			require.NoError(t, err)
 
-	got, err := EncodeStatelessInput(input)
-	require.NoError(t, err)
+			got, err := EncodeStatelessInput(input)
+			require.NoError(t, err)
 
-	want, err := os.ReadFile("testdata/stateless_input_payload0.ssz")
-	require.NoError(t, err, "missing testdata/stateless_input_payload0.ssz; see testdata/README.md")
+			want, err := os.ReadFile("testdata/stateless_input_" + name + ".ssz")
+			require.NoError(t, err, "missing testdata/stateless_input_"+name+".ssz; see testdata/README.md")
 
-	assert.Equal(t, want, got,
-		"SSZ output differs from reference; see testdata/README.md for regeneration instructions")
+			assert.Equal(t, want, got,
+				"SSZ output differs from reference; see testdata/README.md for regeneration instructions")
+		})
+	}
 }
 
 // TestEncodeStatelessInput_GoldenVector_Full asserts byte-exact agreement for
