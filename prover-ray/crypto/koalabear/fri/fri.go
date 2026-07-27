@@ -8,6 +8,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/consensys/gnark-crypto/field/koalabear"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 	gutils "github.com/consensys/gnark-crypto/utils"
@@ -124,9 +125,17 @@ type domainLight struct {
 	generator   field.Element
 }
 
+// bitReverseExponent maps a bit-reversed-order position to its natural-order
+// exponent over a size-2^logSize domain. Codewords are stored in bit-reversed
+// order (see RSEncoder.Encode), so the domain point at slot `position` is
+// generator^bitReverseExponent(position, logSize).
+func bitReverseExponent(position, logSize int) int {
+	return int(bits.Reverse64(uint64(position)) >> (64 - uint(logSize)))
+}
+
 func domainPoint(domain domainLight, position int) field.Element {
 	logSize := bits.TrailingZeros64(domain.cardinality)
-	exponent := bits.Reverse64(uint64(position)) >> (64 - logSize)
+	exponent := bitReverseExponent(position, logSize)
 
 	var x field.Element
 	x.Exp(domain.generator, big.NewInt(int64(exponent)))
@@ -155,35 +164,60 @@ type RunningQuery []QueryLayer
 type Level struct {
 	Trees []*Tree
 
-	Columns             []quotientColumn
-	ClaimPointIndexes   map[field.Ext]int
-	ClaimPoints         []field.Ext
-	DenominatorInverses []field.Ext
+	Columns []quotientColumn
+
+	// DenomBaseInv is the single length-N (codeword-domain size) inverse
+	// vector 1/(ω^e − ζ) in natural order (index e = exponent). Every claim
+	// point's inverse column is a scaled rotation of this one vector, so the
+	// prover batch-inverts N values per level instead of N×P (P = distinct
+	// claim points). N is a power of two, so log2(N) is recovered from
+	// len(DenomBaseInv) where needed.
+	DenomBaseInv []field.Ext
 }
 
 // EvalsAt returns this level's evaluations, combined with the running codeword.
 // running seeds the ladder, so its contribution is weighted by alphaDeep^len(Columns).
+//
+// Denominator inverses are reconstructed on the fly from DenomBaseInv via the
+// rotation identity 1/(ω^e − ζ·ω_n^s) = ω^{−rs}·(1/(ω^{e−rs} − ζ)): claim k
+// contributes scale_k · DenomBaseInv[(e − rot_k) mod N], where e = bitReverse(pos),
+// rot_k = rs mod N, scale_k = ω^{−rs}.
 func (l Level) EvalsAt(alphaDeep field.Ext, running []field.Ext) []field.Ext {
 	evals := make([]field.Ext, len(running))
 	copy(evals, running)
-	for pos := range evals {
-		for c := len(l.Columns) - 1; c >= 0; c-- {
-			column := l.Columns[c]
-			var columnSum field.Ext
-			for _, claim := range column.Claims {
-				pointIdx := l.ClaimPointIndexes[claim.Point]
-				inv := l.DenominatorInverses[pos*len(l.ClaimPoints)+pointIdx]
 
-				var numerator, term field.Ext
-				numerator.Sub(&column.Evals[pos], &claim.Value)
-				term.Mul(&numerator, &inv)
-				columnSum.Add(&columnSum, &term)
+	mask := len(l.DenomBaseInv) - 1
+	logSize := bits.TrailingZeros(uint(len(l.DenomBaseInv)))
+
+	// The outer loop over positions is embarrassingly parallel: read-only
+	// inputs, disjoint writes to evals[pos].
+	parallel.Execute(len(evals), func(start, end int) {
+		for pos := start; pos < end; pos++ {
+			// e is the natural-order exponent of this position's domain point
+			// (codewords are stored at bit-reversed indices).
+			e := bitReverseExponent(pos, logSize)
+			for c := len(l.Columns) - 1; c >= 0; c-- {
+				column := &l.Columns[c]
+				ev := &column.Evals[pos]
+				var columnSum field.Ext
+				for k := range column.Claims {
+					rot := &column.Rotations[k]
+					// (e - rot) & mask is the correct mod-N index even when the
+					// difference is negative (two's-complement, N a power of 2).
+					inv := &l.DenomBaseInv[(e-rot.Rot)&mask]
+
+					var numerator, term field.Ext
+					numerator.Sub(ev, &column.Claims[k].Value)
+					term.Mul(&numerator, inv)
+					term.MulByElement(&term, &rot.Scale)
+					columnSum.Add(&columnSum, &term)
+				}
+
+				evals[pos].Mul(&evals[pos], &alphaDeep)
+				evals[pos].Add(&evals[pos], &columnSum)
 			}
-
-			evals[pos].Mul(&evals[pos], &alphaDeep)
-			evals[pos].Add(&evals[pos], &columnSum)
 		}
-	}
+	})
 	return evals
 }
 
@@ -494,6 +528,19 @@ func octupletToExt(o field.Octuplet) (field.Ext, error) {
 	return res, nil
 }
 
+// extLimbs returns an extension's six base-field coordinates in the canonical
+// order every Merkle leaf and octuplet packing uses. It is the single source
+// of truth for that layout: writeRowElements, writeRowOpeningElements,
+// leafLayout.writeRow, and mapExtToOctuplet all route through it, since a
+// divergence here would silently break Merkle-root reconstruction.
+func extLimbs(e field.Ext) [6]field.Element {
+	return [6]field.Element{
+		e.B0.A0, e.B0.A1,
+		e.B1.A0, e.B1.A1,
+		e.B2.A0, e.B2.A1,
+	}
+}
+
 // mapExtToOctuplet converts a slice of field extensions into a slice of
 // octuplets, packing each extension's six coordinates into the first six
 // octuplet entries and leaving coordinates 6 and 7 zero. It is the slice-wise
@@ -501,12 +548,8 @@ func octupletToExt(o field.Octuplet) (field.Ext, error) {
 func mapExtToOctuplet(exts []field.Ext) []field.Octuplet {
 	res := make([]field.Octuplet, len(exts))
 	for i := range exts {
-		e := exts[i]
-		res[i] = field.Octuplet{
-			e.B0.A0, e.B0.A1,
-			e.B1.A0, e.B1.A1,
-			e.B2.A0, e.B2.A1,
-		}
+		limbs := extLimbs(exts[i])
+		copy(res[i][:], limbs[:])
 	}
 	return res
 }
