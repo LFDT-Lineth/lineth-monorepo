@@ -178,10 +178,13 @@ func TestEncodeStatelessInput_NoTransactions_EmptyPublicKeys(t *testing.T) {
 	assert.Equal(t, byte(0x01), got[1], "schema id low byte")
 }
 
-// TestEncodeStatelessInput_UnknownFork verifies that an unrecognised forkName
-// returns a clear error rather than silently encoding a wrong fork index.
-func TestEncodeStatelessInput_UnknownFork(t *testing.T) {
-	unknownFork := `{
+// TestEncodeStatelessInput_UnsupportedFork verifies that a forkName which is
+// known to protocolForks but is not the single fork this backend supports
+// (activeFork = Amsterdam) returns a clear error rather than silently encoding
+// the wrong fork index. Truly unknown forkName values are covered by the
+// UnknownForkName case in TestEncodeStatelessInput_NegativeCases.
+func TestEncodeStatelessInput_UnsupportedFork(t *testing.T) {
+	unsupportedFork := `{
   "newPayloadRequest": {
     "executionPayload": {
       "parentHash":      "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -210,7 +213,7 @@ func TestEncodeStatelessInput_UnknownFork(t *testing.T) {
   "executionWitness": { "state": [], "codes": [], "headers": [] },
   "chainConfig": { "chainId": 59144, "forkName": "Prague" }
 }`
-	_, err := EncodeStatelessInput([]byte(unknownFork))
+	_, err := EncodeStatelessInput([]byte(unsupportedFork))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "fork")
 }
