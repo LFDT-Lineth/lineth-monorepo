@@ -44,6 +44,11 @@ type Proof struct {
 	// core wiop package does not depend on the FRI package. Nil when the protocol
 	// was not PCS-compiled.
 	PCSOpeningProof *fri.OpeningProof
+	// RevealedColumns carries the canonical coefficients of the small columns
+	// the PCS compiler reveals in the clear instead of committing via FRI. The
+	// verifier absorbs them into Fiat-Shamir during the transcript replay and
+	// checks their evaluation claims by direct Horner evaluation.
+	RevealedColumns map[ObjectID]field.Vec
 }
 
 // PublicInput carries the values of the system's registered public inputs, in
@@ -103,6 +108,7 @@ func (sys *System) Prove(assign func(rt *Runtime)) (Proof, PublicInput) {
 		proof.Commitments[id] = commitment
 	}
 	proof.PCSOpeningProof = rt.PCSOpeningProof
+	proof.RevealedColumns = rt.RevealedColumns
 
 	// piIdx maps each registered public-input cell to its position in the
 	// statement. Their values are captured into the returned PublicInput, not
@@ -178,6 +184,7 @@ func (sys *System) Verify(proof Proof, pub PublicInput) error {
 		rt.Commitments[id] = commitment
 	}
 	rt.PCSOpeningProof = proof.PCSOpeningProof
+	rt.RevealedColumns = proof.RevealedColumns
 
 	// Dynamic-module sizes must be known before the transcript replay:
 	// AdvanceRound feeds them into Fiat-Shamir, and a PCS-compiled protocol hides
@@ -277,6 +284,14 @@ func (sys *System) Verify(proof Proof, pub PublicInput) error {
 
 		if !rt.HasCellValue(cell) {
 			return fmt.Errorf("cell %q not used in proof", cell.Context.Path())
+		}
+	}
+
+	// Every revealed-column entry must name a real column; the PCS verifier
+	// action performs the semantic checks.
+	for id := range proof.RevealedColumns {
+		if sys.LookupColumn(id) == nil {
+			return fmt.Errorf("revealed column %q not found in system", id)
 		}
 	}
 

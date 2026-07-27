@@ -60,6 +60,10 @@ type Runtime struct {
 	// [Proof] and [System.Verify] restores it here before running verifier
 	// actions. Mirrors the transport role of [Runtime.Commitments].
 	PCSOpeningProof *fri.OpeningProof
+	// RevealedColumns holds the canonical coefficients of the small columns the
+	// PCS compiler reveals in the clear; [Runtime.AdvanceRound] absorbs each
+	// entry into Fiat-Shamir. Mirrors the transport role of [Runtime.Commitments].
+	RevealedColumns map[ObjectID]field.Vec
 }
 
 // NewRuntime creates a fresh Runtime for sys. currentRound is initialised to
@@ -77,8 +81,9 @@ func NewRuntime(sys *System) *Runtime {
 		coins:        make(map[ObjectID]field.Gen),
 		state:        make(map[string]any),
 		dynamicSizes: make(map[int]int),
-		lock:         &sync.Mutex{},
-		Commitments:  make(map[int]field.Octuplet),
+		lock:            &sync.Mutex{},
+		Commitments:     make(map[int]field.Octuplet),
+		RevealedColumns: make(map[ObjectID]field.Vec),
 	}
 	if len(sys.Rounds) == 0 {
 		panic("wiop: NewRuntime: system has no interactive rounds")
@@ -162,6 +167,16 @@ func (run *Runtime) AdvanceRound() {
 			))
 		}
 		run.fs.Update(commitment[:]...)
+	}
+
+	// Feed the revealed small-column coefficients into the Fiat-Shamir state:
+	// like a commitment, they bind the (internal) column to the transcript
+	// before any later coin is drawn. Iterating the round's columns keeps the
+	// absorption order canonical on both sides.
+	for _, col := range run.currentRound.Columns {
+		if coeffs, ok := run.RevealedColumns[col.Context.ID]; ok {
+			run.fs.UpdateSV(coeffs)
+		}
 	}
 
 	// Feed oracle and public column assignments into the Fiat-Shamir state.

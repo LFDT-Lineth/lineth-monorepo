@@ -34,12 +34,16 @@ package pcs
 
 import (
 	"fmt"
+	"slices"
 	"sync"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fri"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/consensys/gnark-crypto/field/koalabear/fft"
+	gnarkutils "github.com/consensys/gnark-crypto/utils"
 )
 
 const (
@@ -64,6 +68,44 @@ var (
 	// witness needs (see [fri.Params] restriction); this is just the ceiling.
 	maxCommittableSizeLog2 = uint8(utils.Log2Ceil(wiop.ColumnSizeMaxSupported))
 )
+
+// maxRevealLen is the largest padded column length that is revealed in the clear
+// (coefficients transported in [wiop.Proof.RevealedColumns], claims checked by
+// Horner evaluation) instead of committed via FRI. A variable only so tests can
+// adjust it via [SetMaxRevealLenForTest]; production callers must never mutate it.
+var maxRevealLen = 8
+
+// isRevealColumn reports whether col is revealed in the clear rather than
+// committed via FRI: a pure function of the static padded length, so prover and
+// verifier agree without a runtime. Dynamic modules always go to FRI.
+func isRevealColumn(col *wiop.Column) bool {
+	if col.Module.IsDynamic() {
+		return false
+	}
+	return utils.NextPowerOfTwo(col.Module.Size()) <= maxRevealLen
+}
+
+// roundHasFRIColumn reports whether r owns at least one column committed via FRI.
+func roundHasFRIColumn(r *wiop.Round) bool {
+	return slices.ContainsFunc(r.Columns, func(col *wiop.Column) bool { return !isRevealColumn(col) })
+}
+
+// roundHasRevealColumn reports whether r owns at least one revealed column.
+func roundHasRevealColumn(r *wiop.Round) bool {
+	return slices.ContainsFunc(r.Columns, isRevealColumn)
+}
+
+// committableRuntimeSize returns the padded runtime length of a FRI-committed
+// column, panicking if the FRI parameters cannot commit it. Only a dynamic
+// module can trip this: static columns are classified at compile time.
+func committableRuntimeSize(col *wiop.Column, rt *wiop.Runtime) int {
+	size := utils.NextPowerOfTwo(col.Module.RuntimeSize(rt))
+	if params, _ := staticFRI(); !params.CanCommitLen(size) {
+		panic(fmt.Sprintf("pcs: column %q has runtime length %d, which FRI cannot commit",
+			col.Context.Path(), size))
+	}
+	return size
+}
 
 // The FRI parameters and encoder schedule are a pure function of the fixed
 // capacity, so they are built once per process and shared across every compiled
@@ -147,64 +189,83 @@ type batchRef struct {
 // Compile wires the polynomial-commitment scheme onto sys. It must run last, after
 // every arithmetization pass has registered its columns and [wiop.LagrangeEval]
 // queries. It is a no-op when no columns are committed.
+//
+// Each committed column is discharged by length (see [isRevealColumn]): large
+// columns are committed via FRI, small ones revealed in the clear.
 func Compile(sys *wiop.System) {
 	batches := committedBatches(sys)
-	if len(batches) == 0 {
+	hasReveal := roundHasRevealColumn(&sys.PrecomputedRound.Round) ||
+		slices.ContainsFunc(sys.Rounds, roundHasRevealColumn)
+
+	if len(batches) == 0 && !hasReveal {
 		return
 	}
 
 	c := &compiled{}
 
-	// Commit the static precomputed round once, if it owns columns. A throwaway
-	// runtime exposes the (static) precomputed assignments; its encoders are a
-	// prefix of the static schedule so the root is stable across proof runs.
-	if len(sys.PrecomputedRound.Columns) > 0 {
+	// Commit the static precomputed round once, if it owns (FRI) columns. A
+	// throwaway runtime exposes the (static) precomputed assignments; its encoders
+	// are a prefix of the static schedule so the root is stable across proof runs.
+	if roundHasFRIColumn(&sys.PrecomputedRound.Round) {
 		st := commitToRound(1<<friLogInverseRate, &sys.PrecomputedRound.Round, wiop.NewRuntime(sys))
 		c.precomputed = st
 		c.precomputedRoot = st.Tree.Root()
 		sys.PrecomputedCommitment = c.precomputedRoot
 	}
 
-	// For each committed interactive round: hide its columns, flag the round as
-	// carrying a commitment (so AdvanceRound absorbs the root), and register the
-	// commit action that computes that root at prove time.
-	for _, b := range batches {
-		if b.isPrecomp {
+	// For each committed interactive round: hide its columns, then register the
+	// commit and/or reveal action depending on which kinds of columns it owns.
+	for _, r := range sys.Rounds {
+		fri := roundHasFRIColumn(r)
+		reveal := roundHasRevealColumn(r)
+		if !fri && !reveal {
 			continue
 		}
-		hideCommittedColumns(b.round)
-		b.round.HasCommitment = true
-		b.round.RegisterAction(&commitRoundAction{c: c, round: b.round})
+		hideCommittedColumns(r)
+		if fri {
+			r.HasCommitment = true
+			r.RegisterAction(&commitRoundAction{c: c, round: r})
+		}
+		if reveal {
+			r.RegisterAction(&revealRoundAction{round: r})
+		}
 	}
 
 	// A fresh final round hosts the opening: putting it after every committed
 	// round guarantees AdvanceRound absorbs the last committed round's root
 	// before the opening squeezes alpha_DEEP.
 	openingRound := sys.NewRound()
-	openingRound.RegisterAction(&openingProverAction{c: c})
-	openingRound.RegisterVerifierAction(&openingVerifierAction{c: c})
+	if len(batches) > 0 {
+		openingRound.RegisterAction(&openingProverAction{c: c})
+		openingRound.RegisterVerifierAction(&openingVerifierAction{c: c})
+	}
+	if hasReveal {
+		openingRound.RegisterVerifierAction(&revealVerifierAction{})
+	}
 }
 
-// committedBatches returns the canonical batch ordering: every interactive round
-// that owns columns (in round order), then the precomputed round if it owns
-// columns. Deterministic from the System alone, so prover and verifier agree.
+// committedBatches returns the canonical FRI batch ordering: every interactive
+// round that owns at least one FRI column (in round order), then the precomputed
+// round if it owns FRI columns. Deterministic from the System alone, so prover
+// and verifier agree.
 func committedBatches(sys *wiop.System) []batchRef {
 	var refs []batchRef
 	for _, r := range sys.Rounds {
-		if len(r.Columns) > 0 {
+		if roundHasFRIColumn(r) {
 			refs = append(refs, batchRef{round: r})
 		}
 	}
-	if len(sys.PrecomputedRound.Columns) > 0 {
+	if roundHasFRIColumn(&sys.PrecomputedRound.Round) {
 		refs = append(refs, batchRef{round: &sys.PrecomputedRound.Round, isPrecomp: true})
 	}
 	return refs
 }
 
 // hideCommittedColumns turns every column of a committed round internal so it is
-// neither absorbed as raw data into Fiat-Shamir nor carried in the proof; the
-// commitment stands in for it. Verifier-visible (public) columns cannot be
-// replaced by a commitment, so they are rejected explicitly.
+// neither absorbed as raw data into Fiat-Shamir nor carried in the proof: a FRI
+// column is stood in for by its commitment, a revealed column by its transported
+// coefficients. Verifier-visible (public) columns cannot be hidden, so they are
+// rejected explicitly.
 func hideCommittedColumns(round *wiop.Round) {
 	for i := range round.Columns {
 		col := round.Columns[i]
@@ -251,6 +312,88 @@ type openingVerifierAction struct{ c *compiled }
 
 func (a *openingVerifierAction) Check(rt *wiop.Runtime) error {
 	return a.c.verify(rt, *rt.PCSOpeningProof)
+}
+
+// revealRoundAction stores the coefficients of one round's revealed columns on
+// the runtime, from where [System.Prove] carries them into the proof and
+// [Runtime.AdvanceRound] absorbs them into Fiat-Shamir.
+type revealRoundAction struct{ round *wiop.Round }
+
+func (a *revealRoundAction) Run(rt *wiop.Runtime) {
+	for _, col := range a.round.Columns {
+		if !isRevealColumn(col) {
+			continue
+		}
+		rt.RevealedColumns[col.Context.ID] = canonicalCoeffs(rt, col)
+	}
+}
+
+// canonicalCoeffs returns the natural-order monomial coefficients of col's
+// padded assignment: IFFT, then a bit-reversal to undo the DIF output order.
+func canonicalCoeffs(rt *wiop.Runtime, col *wiop.Column) field.Vec {
+	size := utils.NextPowerOfTwo(col.Module.RuntimeSize(rt))
+	assignment := rt.GetColumnAssignment(col)
+	domain := fft.NewDomain(uint64(size))
+
+	if col.IsExtension {
+		coeffs := writeDownVectorExt(assignment, size)
+		domain.FFTInverseExt6(coeffs, fft.DIF)
+		gnarkutils.BitReverse(coeffs)
+		return field.VecFromExt(coeffs)
+	}
+
+	coeffs := writeDownVectorBase(assignment, size)
+	domain.FFTInverse(coeffs, fft.DIF)
+	gnarkutils.BitReverse(coeffs)
+	return field.VecFromBase(coeffs)
+}
+
+// revealVerifierAction Horner-evaluates each revealed column's coefficients at
+// the (shift-adjusted) opening point and compares to the claimed value. This
+// direct check replaces the FRI opening for revealed columns.
+type revealVerifierAction struct{}
+
+func (a *revealVerifierAction) Check(rt *wiop.Runtime) error {
+	sys := rt.System
+	for _, eval := range sys.LagrangeEvals {
+		zeta := eval.EvaluationPoint.EvaluateSingle(rt).Value
+		for k, colView := range eval.Polynomials {
+			col := colView.Column
+			if !isRevealColumn(col) {
+				continue
+			}
+			coeffs, ok := rt.RevealedColumns[col.Context.ID]
+			if !ok {
+				// Precomputed columns are static, so the verifier derives their
+				// coefficients itself; anything else must come from the proof.
+				if col.Round() != &sys.PrecomputedRound.Round {
+					return fmt.Errorf("pcs: revealed column %q has no coefficients in the proof",
+						col.Context.Path())
+				}
+				coeffs = canonicalCoeffs(rt, col)
+			}
+			point := shiftedEvalPoint(zeta, colView.ShiftingOffset, col.Module.RuntimeSize(rt))
+			got := polynomials.EvalCanonical(coeffs, point).AsExt()
+			want := rt.GetCellValue(eval.EvaluationClaims[k]).AsExt()
+			if !got.Equal(&want) {
+				return fmt.Errorf("pcs: revealed column %q: evaluation does not match claimed value",
+					col.Context.Path())
+			}
+		}
+	}
+	return nil
+}
+
+// shiftedEvalPoint returns zeta·ω_n^k, the point at which a k-shifted view of a
+// size-n column is evaluated (C'(z) = C(ω^k·z), see [wiop.LagrangeEval]).
+func shiftedEvalPoint(zeta field.Gen, k, n int) field.Gen {
+	if k == 0 {
+		return zeta
+	}
+	omega := field.RootOfUnityBy(n)
+	var omegaK field.Element
+	omegaK.ExpInt64(omega, int64(k))
+	return zeta.Mul(field.ElemFromBase(omegaK))
 }
 
 // =============================================================================
@@ -398,6 +541,9 @@ func buildEncoders(inverseRate, maxSizeIndex uint8) []*fri.RSEncoder {
 func roundMaxSizeIndex(round *wiop.Round, rt *wiop.Runtime) int {
 	maxSizeIndex := 0
 	for _, col := range round.Columns {
+		if isRevealColumn(col) {
+			continue
+		}
 		size := utils.NextPowerOfTwo(col.Module.RuntimeSize(rt))
 		if idx := utils.Log2Ceil(size); idx > maxSizeIndex {
 			maxSizeIndex = idx
@@ -420,13 +566,13 @@ func commitToRound(inverseRate uint8, round *wiop.Round, rt *wiop.Runtime) *fri.
 
 	for _, col := range cols {
 
-		size := utils.NextPowerOfTwo(col.Module.RuntimeSize(rt))
+		if isRevealColumn(col) {
+			continue
+		}
+
+		size := committableRuntimeSize(col, rt)
 		sizeIndex := utils.Log2Ceil(size)
 		assignment := rt.GetColumnAssignment(col)
-
-		if size != 1<<sizeIndex {
-			panic("wiop: only powers of 2 are supported")
-		}
 
 		maxSizeIndex = max(maxSizeIndex, sizeIndex)
 
@@ -463,12 +609,12 @@ func getLayout(round *wiop.Round, rt *wiop.Runtime) (map[wiop.ObjectID]ColumnLoc
 
 	for _, col := range cols {
 
-		size := utils.NextPowerOfTwo(col.Module.RuntimeSize(rt))
-		sizeIndex := utils.Log2Ceil(size)
-
-		if size != 1<<sizeIndex {
-			panic("wiop: only powers of 2 are supported")
+		if isRevealColumn(col) {
+			continue
 		}
+
+		size := committableRuntimeSize(col, rt)
+		sizeIndex := utils.Log2Ceil(size)
 
 		for len(shape) <= sizeIndex {
 			shape = append(shape, fri.SizedShape{})
@@ -544,6 +690,11 @@ func recoverBatchClaims(rt *wiop.Runtime, batches []batchRef) (
 		}
 
 		for k, colView := range eval.Polynomials {
+
+			// Revealed columns are checked by [revealVerifierAction] instead.
+			if isRevealColumn(colView.Column) {
+				continue
+			}
 
 			round := colView.Column.Round()
 			batchIdx, ok := batchOf[round]

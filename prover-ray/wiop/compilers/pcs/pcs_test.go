@@ -1,12 +1,30 @@
 package pcs
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/stretchr/testify/require"
 )
+
+func init() {
+	// The Compile-level unit tests below use small (size-4) columns to exercise
+	// the FRI commit/open/verify path. Disable small-column reveal by default so
+	// they take that path (as they did before reveal existed); the dedicated
+	// reveal tests re-enable it via withReveal.
+	SetMaxRevealLenForTest(1)
+}
+
+// withReveal sets maxRevealLen for the duration of a test and restores the
+// prior value afterwards.
+func withReveal(t *testing.T, n int) {
+	t.Helper()
+	old := maxRevealLen
+	SetMaxRevealLenForTest(n)
+	t.Cleanup(func() { SetMaxRevealLenForTest(old) })
+}
 
 // selfAssignLagrange is a prover action that fills a LagrangeEval's claim cells
 // from the committed column assignments. In the real pipeline the global pass
@@ -25,20 +43,26 @@ func baseVec(n int, val uint64) *wiop.ConcreteVector {
 	return &wiop.ConcreteVector{Plain: field.VecFromBase(elems)}
 }
 
-// newPCSTestSystem builds the smallest protocol the PCS pass can compile: a
-// size-4 oracle column committed in round 0, evaluated at a verifier coin in
-// round 1 via a LagrangeEval. The claim cell is self-assigned by a round-1
-// prover action so sys.Prove drives the whole flow.
-func newPCSTestSystem() (*wiop.System, *wiop.Column, *wiop.LagrangeEval) {
+// newPCSSizedSystem builds the smallest protocol the PCS pass can compile: one
+// oracle column of the given size committed in round 0, evaluated at a verifier
+// coin in round 1 via a LagrangeEval. The claim cell is self-assigned by a
+// round-1 prover action so sys.Prove drives the whole flow.
+func newPCSSizedSystem(size int) (*wiop.System, *wiop.Column, *wiop.LagrangeEval) {
 	sys := wiop.NewSystemf("pcs-it")
 	r0 := sys.NewRound()
 	r1 := sys.NewRound()
-	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
+	mod := sys.NewSizedModule(sys.Context.Childf("mod"), size, wiop.PaddingDirectionNone)
 	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
 	zeta := r1.NewCoinField(sys.Context.Childf("zeta"))
 	le := sys.NewLagrangeEval(sys.Context.Childf("le"), []*wiop.ColumnView{col.View()}, zeta)
 	r1.RegisterAction(&selfAssignLagrange{le: le})
 	return sys, col, le
+}
+
+// newPCSTestSystem is [newPCSSizedSystem] at size 4, the FRI-path fixture used
+// by the Compile tests (reveal is disabled in this package's test init).
+func newPCSTestSystem() (*wiop.System, *wiop.Column, *wiop.LagrangeEval) {
+	return newPCSSizedSystem(4)
 }
 
 // TestCompileEndToEnd checks that an honest witness passes through the full
@@ -125,4 +149,81 @@ func TestCompileRejectsTamperedCommitment(t *testing.T) {
 	proof.Commitments[0] = root
 
 	require.Error(t, sys.Verify(proof, pub), "a tampered commitment must be rejected")
+}
+
+// proveReveal compiles and proves a one-column system of the given size with
+// reveal enabled up to length 8.
+func proveReveal(t *testing.T, size int) (*wiop.System, wiop.Proof, wiop.PublicInput) {
+	t.Helper()
+	withReveal(t, 8)
+	sys, col, _ := newPCSSizedSystem(size)
+	Compile(sys)
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
+		rt.AssignColumn(col, baseVec(size, 3))
+	})
+	return sys, proof, pub
+}
+
+// TestCompileRevealSmallColumn checks the reveal path end to end: an honest
+// witness verifies with no FRI opening, the coefficients travel in the proof,
+// and tampering with either the claim or the coefficients is rejected.
+func TestCompileRevealSmallColumn(t *testing.T) {
+	for _, size := range []int{1, 8} {
+		t.Run(fmt.Sprintf("honest-size-%d", size), func(t *testing.T) {
+			sys, proof, pub := proveReveal(t, size)
+			require.Empty(t, proof.Columns, "revealed column must not survive as a raw oracle column")
+			require.Nil(t, proof.PCSOpeningProof, "a reveal-only proof carries no FRI opening")
+			require.NotEmpty(t, proof.RevealedColumns, "proof must carry the revealed coefficients")
+			require.NoError(t, sys.Verify(proof, pub), "honest reveal witness must verify")
+		})
+	}
+
+	t.Run("tampered-claim", func(t *testing.T) {
+		sys, proof, pub := proveReveal(t, 4)
+		for id := range proof.Cells { // the sole claim cell; honest value is 3
+			proof.Cells[id] = field.ElemZero()
+		}
+		require.Error(t, sys.Verify(proof, pub), "a tampered reveal claim must be rejected")
+	})
+
+	t.Run("tampered-coefficients", func(t *testing.T) {
+		sys, proof, pub := proveReveal(t, 4)
+		one := field.One()
+		for id, coeffs := range proof.RevealedColumns {
+			base := coeffs.AsBase()
+			base[0].Add(&base[0], &one)
+			proof.RevealedColumns[id] = field.VecFromBase(base)
+		}
+		require.Error(t, sys.Verify(proof, pub), "tampered revealed coefficients must be rejected")
+	})
+}
+
+// TestCompileRevealAndFRIMixed checks a round owning both a revealed (small) and
+// a FRI-committed (large) column: both are discharged and an honest witness
+// verifies.
+func TestCompileRevealAndFRIMixed(t *testing.T) {
+	withReveal(t, 8)
+
+	sys := wiop.NewSystemf("pcs-mixed")
+	r0 := sys.NewRound()
+	r1 := sys.NewRound()
+	small := sys.NewSizedModule(sys.Context.Childf("small"), 4, wiop.PaddingDirectionNone)
+	large := sys.NewSizedModule(sys.Context.Childf("large"), 16, wiop.PaddingDirectionNone)
+	smallCol := small.NewColumn(sys.Context.Childf("smallCol"), wiop.VisibilityOracle, r0)
+	largeCol := large.NewColumn(sys.Context.Childf("largeCol"), wiop.VisibilityOracle, r0)
+	zeta := r1.NewCoinField(sys.Context.Childf("zeta"))
+	le := sys.NewLagrangeEval(sys.Context.Childf("le"),
+		[]*wiop.ColumnView{smallCol.View(), largeCol.View()}, zeta)
+	r1.RegisterAction(&selfAssignLagrange{le: le})
+
+	Compile(sys)
+
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
+		rt.AssignColumn(smallCol, baseVec(4, 3))
+		rt.AssignColumn(largeCol, baseVec(16, 5))
+	})
+
+	require.NotNil(t, proof.PCSOpeningProof, "mixed proof must carry the FRI opening for the large column")
+	require.NotEmpty(t, proof.RevealedColumns, "mixed proof must carry the small column's coefficients")
+	require.NoError(t, sys.Verify(proof, pub), "honest mixed witness must verify")
 }

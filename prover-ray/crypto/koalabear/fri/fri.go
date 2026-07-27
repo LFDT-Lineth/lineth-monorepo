@@ -27,6 +27,12 @@ type Params struct {
 
 func (p Params) numRounds() uint8 { return p.LogPlainTextSize - p.logFinalPolySize }
 
+// CanCommitLen reports whether these FRI parameters will accept a plaintext of
+// the given length (a power of two) as a committed level.
+func (p Params) CanCommitLen(plaintextLen int) bool {
+	return plaintextLen >= 1<<(p.logFinalPolySize+1) && plaintextLen <= 1<<p.LogPlainTextSize
+}
+
 type Option func(c *Params) error
 
 // LogFinalPolySize sets the log2 of the number of coefficients FRI folds down
