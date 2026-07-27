@@ -50,6 +50,7 @@
 - *(misc)* Web3j-solc solidity resolution workaround (#3516)
 - *(linea-besu)* Updating Besu version (#3535)
 - *(coordinator)* Small fix on start/stop handlers (#3621)
+- *(coordinator)* Truncate coefficient-adjusted gas caps (#3644)
 
 ### 🚜 Refactor
 
