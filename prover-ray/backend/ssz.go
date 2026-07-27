@@ -44,6 +44,12 @@ var protocolForks = []string{
 // rollup_spec/fork.py::ACTIVE_FORK.
 const activeFork = "Amsterdam"
 
+// maxExtraDataBytes bounds extra_data, mirroring
+// rollup_spec/canonical_ssz.py::MAX_EXTRA_DATA_BYTES (ByteList[2**5]). The
+// reference SSZ encoder enforces this at encode time via the ByteList type;
+// we check it explicitly.
+const maxExtraDataBytes = 32
+
 // JSON input model (readable encoder_obj form)
 
 // statelessInputJSON's sections are pointers so an absent section is reported
@@ -285,6 +291,9 @@ func encodeExecutionPayload(ep executionPayloadJSON) ([]byte, error) {
 	extraData, err := hexToBytes(ep.ExtraData)
 	if err != nil {
 		return nil, fmt.Errorf("extraData: %w", err)
+	}
+	if len(extraData) > maxExtraDataBytes {
+		return nil, fmt.Errorf("extraData: expected <= %d bytes, got %d", maxExtraDataBytes, len(extraData))
 	}
 	baseFee, err := parseUint256Hex(ep.BaseFeePerGas)
 	if err != nil {
