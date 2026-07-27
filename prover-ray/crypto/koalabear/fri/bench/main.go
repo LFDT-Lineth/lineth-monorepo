@@ -38,8 +38,7 @@ func main() {
 	}
 	validateConfig()
 
-	maxN := 1 << *maxLog2
-	params, err := fri.NewParams((*rate)*maxN, maxN, *numQueries)
+	params, err := fri.NewParams(uint8(*maxLog2+*rate), uint8(*maxLog2), uint(*numQueries))
 	if err != nil {
 		fail("NewParams: %v", err)
 	}
@@ -57,7 +56,7 @@ func main() {
 	batch := makeSyntheticBatch(*minLog2, *maxLog2, *basePolys, *extPolys, *seed)
 	shifts := makeSyntheticShifts(batch, *maxShifts, *seed^0x5eed)
 	zeta := sampleChallenge(*seed ^ 0x7e7a)
-	challenges := makeChallenges(params.N, *maxLog2, *numQueries, *seed^0xc0ffee)
+	challenges := makeChallenges(int(params.LogCodewordSize), *maxLog2, *numQueries, *seed^0xc0ffee)
 	shapes := []fri.Shape{shapeFromBatch(batch)}
 
 	phases := make([]phaseReport, 0, 3)
@@ -208,14 +207,12 @@ func makeShiftList(size, maxShifts int, rng uint64) ([]int, uint64) {
 
 func makeChallenges(domainSize, numRounds, numQueries int, seed uint64) fri.Challenges {
 	rng := seed
-	alphaDeep, rng := nextExt(rng)
 	foldAlphas := make([]field.Ext, numRounds)
 	for i := range foldAlphas {
 		foldAlphas[i], rng = nextExt(rng)
 	}
 	queryPositions := makeQueryPositions(domainSize, numQueries, rng)
 	return fri.Challenges{
-		AlphaDeep:      alphaDeep,
 		FoldAlphas:     foldAlphas,
 		QueryPositions: queryPositions,
 	}
@@ -301,7 +298,7 @@ func open(
 		}
 	}
 
-	state, err := pcs.NewProverState(challenges.AlphaDeep)
+	state, err := pcs.NewProverState()
 	if err != nil {
 		return fri.OpeningProof{}, nil, err
 	}
