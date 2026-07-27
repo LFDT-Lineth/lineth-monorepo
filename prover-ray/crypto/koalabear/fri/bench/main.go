@@ -91,7 +91,7 @@ func main() {
 
 	fmt.Println()
 	printSummary(phases, runtime.GOMAXPROCS(0))
-	fmt.Printf("\nproof: %d FRI roots, %d query openings\n", len(proof.FRIProof.FRIRoots), len(proof.FRIProof.FRIQueries))
+	fmt.Printf("\nproof: %d FRI roots, %d query openings\n", len(proof.FRIProof.RoundRoots), len(proof.FRIProof.RunningQueries))
 }
 
 func validateConfig() {
@@ -309,10 +309,7 @@ func open(
 		state.Fold(challenges.FoldAlphas[round])
 	}
 	queryPositions := challenges.QueryPositions[:pcs.Params.NumQueries]
-	return fri.OpeningProof{
-		RowOpenings: pcs.OpenedRows(queryPositions),
-		FRIProof:    state.Open(queryPositions),
-	}, batchClaims, nil
+	return pcs.Open(state, queryPositions), batchClaims, nil
 }
 
 func computeClaimedValues(batch fri.Batch, shifts fri.BatchShifts, zeta field.Ext) fri.BatchClaimedValues {
@@ -351,7 +348,6 @@ func pointAtShift(sizeLog2, shift int, zeta field.Ext) field.Ext {
 	point.MulByElement(&zeta, &rotation)
 	return point
 }
-
 
 type phaseReport struct {
 	name string
