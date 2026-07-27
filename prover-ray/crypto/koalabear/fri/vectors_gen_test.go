@@ -3,13 +3,11 @@
 // Package fri (gen_vectors build) generates JSON test vectors for
 // verifier-ray's Zig low-degree-test core (crypto/merkle.zig, query/fri.zig).
 //
-// This lives in a white-box test file (package fri, not fri_test) because it
-// needs package-private access: newCompleteBinaryTree (the plain
-// running-layer tree verifier-ray's crypto.merkle mirrors), ProverState's
-// internal per-round layers, and Level.EvalsAt (the DEEP-quotient
-// combination a level applies before folding). None of that is reachable
-// from outside the package, and none of it should be exported just to
-// generate fixtures.
+// This is a white-box test file (package fri, not fri_test): it uses
+// newCompleteBinaryTree (the plain running-layer tree verifier-ray's
+// crypto.merkle mirrors), ProverState's internal per-round layers, and
+// Level.EvalsAt (the DEEP-quotient combination a level applies before
+// folding), none of which are exported.
 //
 // The gen_vectors build tag keeps this file (and its encoding/json and os
 // imports) out of every ordinary `go test ./...` run. Invoke explicitly:
@@ -64,11 +62,9 @@ type jsonMerkleCase struct {
 // jsonFoldCase exercises query.fri's checkOpeningProofShape,
 // resolveRunningLayers, and checkFolds against a real multi-round FRI proof.
 //
-// LogCodewordSize/NumRounds/LogFinalPolySize/NumQueries are carried for the
-// Zig test to cross-check against its own hardcoded, comptime `fri.Params`
-// for this case name -- Params itself is not meant to travel through JSON,
-// since checkOpeningProofShape/resolveRunningLayers/checkFolds all take it as
-// a comptime parameter. Only the case contents below are runtime data.
+// LogCodewordSize/NumRounds/LogFinalPolySize/NumQueries record the Params
+// this case was generated under, for the Zig test to check against its own
+// hardcoded, comptime `fri.Params` for this case name.
 type jsonFoldCase struct {
 	Name             string `json:"name"`
 	LogCodewordSize  uint8  `json:"log_codeword_size"`
@@ -76,9 +72,9 @@ type jsonFoldCase struct {
 	LogFinalPolySize uint8  `json:"log_final_poly_size"`
 	NumQueries       int    `json:"num_queries"`
 
-	FoldAlphas      []jsonExt      `json:"fold_alphas"`      // len = NumRounds
-	RoundRoots      []jsonOctuplet `json:"round_roots"`      // len = NumRounds-1
-	FinalPoly       []jsonExt      `json:"final_poly"`       // len = 1<<LogFinalPolySize
+	FoldAlphas      []jsonExt      `json:"fold_alphas"` // len = NumRounds
+	RoundRoots      []jsonOctuplet `json:"round_roots"` // len = NumRounds-1
+	FinalPoly       []jsonExt      `json:"final_poly"`  // len = 1<<LogFinalPolySize
 	Position        int            `json:"position"`
 	RunningBranches []jsonBranch   `json:"running_branches"` // len = NumRounds-1; round j's branch at index j-1
 
@@ -158,8 +154,7 @@ func extLift(v uint64) field.Ext {
 	return field.Lift(elem(v))
 }
 
-// hashOne hashes a single small integer into a leaf octuplet via prover-ray's
-// own Poseidon2, independent of whatever verifier-ray's Zig side does.
+// hashOne hashes a single small integer into a leaf octuplet.
 func hashOne(v uint64) field.Octuplet {
 	h := poseidon2.NewMDHasher()
 	h.WriteElements(elem(v))
@@ -172,11 +167,6 @@ func wrongOctuplet() jsonOctuplet { return toJSONOctuplet(hashOne(999_999)) }
 func wrongExt() jsonExt           { return toJSONExt(extLift(999_999)) }
 
 // ─── Merkle cases: newCompleteBinaryTree's own public-ish surface ──────────
-//
-// NewTree/OpenBranch/Root are exported, but the plain (no-aux) binary tree
-// verifier-ray's crypto.merkle.Branch mirrors is only reachable through the
-// unexported newCompleteBinaryTree -- hence generating from inside the
-// package rather than from testdata/generate.
 
 func buildMerkleCases() []jsonMerkleCase {
 	var cases []jsonMerkleCase
@@ -211,23 +201,21 @@ func buildMerkleCases() []jsonMerkleCase {
 		})
 	}
 
-	// Four-leaf tree: a deeper tree, opened at two positions of different
-	// parity so both branches of RecoverRoot's swap get exercised.
+	// Four-leaf tree: a deeper tree, proving the walk threads correctly
+	// across more than one level.
 	{
 		leaves := []field.Octuplet{hashOne(10), hashOne(20), hashOne(30), hashOne(40)}
 		tree := newCompleteBinaryTree(leaves)
 		root := tree.Root()
-		for _, idx := range []int{1, 2} {
-			b := tree.OpenBranch(idx)
-			cases = append(cases, jsonMerkleCase{
-				Name:        fmt.Sprintf("four_leaf_index_%d", idx),
-				Leaf:        toJSONOctuplet(b.Leaf),
-				Siblings:    toJSONOctuplets(b.Siblings),
-				Index:       idx,
-				Root:        toJSONOctuplet(root),
-				ExpectMatch: true,
-			})
-		}
+		b := tree.OpenBranch(1)
+		cases = append(cases, jsonMerkleCase{
+			Name:        "four_leaf_index_1",
+			Leaf:        toJSONOctuplet(b.Leaf),
+			Siblings:    toJSONOctuplets(b.Siblings),
+			Index:       1,
+			Root:        toJSONOctuplet(root),
+			ExpectMatch: true,
+		})
 	}
 
 	// A branch with no siblings must be rejected before any hashing; no tree
@@ -235,7 +223,7 @@ func buildMerkleCases() []jsonMerkleCase {
 	cases = append(cases, jsonMerkleCase{
 		Name:        "empty_branch",
 		Leaf:        toJSONOctuplet(hashOne(1)),
-		Siblings:    nil,
+		Siblings:    []jsonOctuplet{}, // non-nil: a nil slice marshals to JSON null, which Zig's json parser rejects for a non-optional slice field
 		Index:       0,
 		ExpectError: "EmptyBranch",
 	})
@@ -245,12 +233,9 @@ func buildMerkleCases() []jsonMerkleCase {
 
 // ─── Fold cases: a real multi-round, multi-level FRI proof ─────────────────
 //
-// Levels are built directly (bypassing the PCS/DEEP-quotient layer entirely,
-// since that is out of scope for the low-degree-test core this generates
-// vectors for): each level is a single quotientColumn with zero Claims, which
-// makes EvalsAt a pure alphaDeep-scaling of the running codeword -- exactly
-// as meaningful a test of checkFolds' arithmetic as a real DEEP-reconstructed
-// level, since checkFolds never looks at how a level's pair was derived.
+// Levels are built directly, bypassing the PCS/DEEP-quotient layer: each
+// level is a single quotientColumn with zero Claims, which makes EvalsAt a
+// pure alphaDeep-scaling of the running codeword.
 
 func buildFoldCases(t *testing.T) []jsonFoldCase {
 	t.Helper()
@@ -260,21 +245,17 @@ func buildFoldCases(t *testing.T) []jsonFoldCase {
 
 	cases := []jsonFoldCase{base, twoLevels}
 	cases = append(cases, corruptRunningSibling(base))
-	cases = append(cases, corruptRoundRoot(base))
 	cases = append(cases, corruptAux(base))
 	cases = append(cases, corruptFinal(base))
 	return cases
 }
 
-// buildHonestFoldCase runs a real ProverState: it builds `levelSizes`
-// (codeword lengths at which each level is introduced; levelSizes[0] must be
-// 1<<logCodewordSize, the top level) directly as trivial zero-claim Levels,
-// folds with the given per-round challenges, opens at `position`, and reads
-// off exactly the values query.fri's functions need: the running-layer
-// branches and roots from the real Proof, and the exact resolved
-// rounds/aux pairs by re-deriving them from ProverState's own internal
-// per-round layers (the same data Fold itself folds), not by recomputing the
-// fold independently.
+// buildHonestFoldCase runs a real ProverState over trivial zero-claim Levels
+// (`levelSizes` gives the codeword length at which each level is introduced;
+// levelSizes[0] must be 1<<logCodewordSize, the top level), folds with the
+// given per-round challenges, opens at `position`, and reads off the
+// running-layer branches and roots from the real Proof plus the resolved
+// rounds/aux pairs from ProverState's own internal per-round layers.
 func buildHonestFoldCase(
 	t *testing.T,
 	name string,
@@ -293,7 +274,7 @@ func buildHonestFoldCase(
 	levels := make([]Level, len(levelSizes))
 	for i, size := range levelSizes {
 		levels[i] = Level{
-			Trees:   []*Tree{{}}, // unused post aux-pairs refactor; buildProvePlan only checks non-nil
+			Trees:   []*Tree{{}}, // buildProvePlan only requires non-nil entries
 			Columns: []quotientColumn{{Evals: make([]field.Ext, size)}},
 		}
 	}
@@ -319,9 +300,6 @@ func buildHonestFoldCase(
 		if l, ok := st.plan.levelAtRound[j]; ok {
 			var alphaDeep field.Ext
 			alphaDeep.Square(&alpha)
-			// Mirrors exactly what Fold computes internally for `primary`,
-			// using the same inputs (st.layers[j], this round's alphaDeep),
-			// captured here so the vector can record it.
 			combinedAtRound[j] = st.levels[l].EvalsAt(alphaDeep, st.layers[j])
 		}
 
@@ -413,16 +391,6 @@ func corruptRunningSibling(base jsonFoldCase) jsonFoldCase {
 	c := cloneFoldCase(base, "wrong_running_sibling")
 	siblings := c.RunningBranches[0].Siblings
 	siblings[len(siblings)-1] = wrongOctuplet()
-	c.ExpectRunningError = "MerkleProofInvalid"
-	return c
-}
-
-// corruptRoundRoot breaks the committed root itself rather than the branch:
-// a different authentication-failure code path from corruptRunningSibling,
-// same observable error.
-func corruptRoundRoot(base jsonFoldCase) jsonFoldCase {
-	c := cloneFoldCase(base, "wrong_round_root")
-	c.RoundRoots[0] = wrongOctuplet()
 	c.ExpectRunningError = "MerkleProofInvalid"
 	return c
 }

@@ -7,204 +7,238 @@ const poseidon2 = verifier_ray.crypto.poseidon2;
 const merkle = verifier_ray.crypto.merkle;
 const fri = verifier_ray.query.fri;
 
-// ─── crypto.merkle ───────────────────────────────────────────────────────────
+// Test vectors generated from prover-ray: crypto.merkle's tree-walk is
+// checked against roots and branches from prover-ray's own
+// newCompleteBinaryTree and Poseidon2, and query.fri's fold arithmetic is
+// checked against a real multi-round, multi-level FRI proof at non-trivial
+// (bit-reversed, mixed-parity) query positions. Regenerate via
+// `make generate-testdata`; see
+// prover-ray/crypto/koalabear/fri/vectors_gen_test.go.
+const fixtures_json = @import("test_fri_vectors").raw;
 
-test "merkle branch recovers the root of a hand-built two-leaf tree" {
-    const leaf0 = poseidon2.hashElements(&.{field.Element.init(1)});
-    const leaf1 = poseidon2.hashElements(&.{field.Element.init(2)});
-    const root = merkle.hashNode(leaf0, leaf1, null);
-
-    // Opening the even leaf: no swap at the only level.
-    const branch0 = merkle.Branch{ .leaf = leaf0, .siblings = &.{leaf1} };
-    const recovered0 = try branch0.recoverRoot(0);
-    try std.testing.expect(std.meta.eql(recovered0, root));
-
-    // Opening the odd leaf: the parity swap must land the same root.
-    const branch1 = merkle.Branch{ .leaf = leaf1, .siblings = &.{leaf0} };
-    const recovered1 = try branch1.recoverRoot(1);
-    try std.testing.expect(std.meta.eql(recovered1, root));
-}
-
-test "merkle branch rejects a wrong sibling" {
-    const leaf0 = poseidon2.hashElements(&.{field.Element.init(1)});
-    const leaf1 = poseidon2.hashElements(&.{field.Element.init(2)});
-    const wrong_sibling = poseidon2.hashElements(&.{field.Element.init(3)});
-    const root = merkle.hashNode(leaf0, leaf1, null);
-
-    const branch = merkle.Branch{ .leaf = leaf0, .siblings = &.{wrong_sibling} };
-    const recovered = try branch.recoverRoot(0);
-    try std.testing.expect(!std.meta.eql(recovered, root));
-}
-
-test "merkle branch with no siblings is rejected" {
-    const leaf = poseidon2.hashElements(&.{field.Element.init(1)});
-    const branch = merkle.Branch{ .leaf = leaf, .siblings = &.{} };
-    try std.testing.expectError(error.EmptyBranch, branch.recoverRoot(0));
-}
-
-// ─── query.fri: a single fold round, no Merkle tree involved ───────────────
+// ─── JSON wire types ─────────────────────────────────────────────────────────
 //
-// log_codeword_size = 1 (domain size 2), num_rounds = 1: round 0 is both the
-// first and the last round, so its level (aux[0], always present per
-// ResolvedQuery's contract) folds straight into the final polynomial. There
-// is no running layer to authenticate (num_rounds - 1 == 0), so this case
-// exercises checkFolds' arithmetic in isolation.
-//
-// x = domainPoint(log_size=1, position=0) = generator^bitrev_1(0) = generator^0 = 1,
-// so 1/x = 1 too, and the fold reduces to plain field arithmetic:
-//   sum  = self + sib           = 3 + 5   = 8
-//   diff = (self - sib) * 1 * a = (3 - 5) * 7 = -14
-//   expected = (sum + diff) / 2 = (8 - 14) / 2 = -3
+// Field/Ext elements travel as their canonical uint64 representation;
+// Octuplets and Exts are fixed-length arrays in the same coordinate order
+// prover-ray's generator emits (Ext: [B0.a0, B0.a1, B1.a0, B1.a1, B2.a0,
+// B2.a1]).
 
-const one_round_params: fri.Params = .{ .log_codeword_size = 1, .num_rounds = 1, .log_final_poly_size = 0, .num_queries = 1 };
+const JsonOctuplet = [8]u64;
+const JsonExt = [6]u64;
 
-test "checkFolds accepts a single honest fold round" {
-    const params = one_round_params;
-    const aux_pair = fri.Pair{ .self = ext.Ext.lift(field.Element.init(3)), .sibling = ext.Ext.lift(field.Element.init(5)) };
-    const alpha = ext.Ext.lift(field.Element.init(7));
-    const final = ext.Ext.lift(field.Element.init(field.modulus - 3));
-
-    const resolved = [_]fri.ResolvedQuery{.{
-        .rounds = &.{.{ .self = ext.Ext.zero(), .sibling = ext.Ext.zero() }},
-        .aux = &.{aux_pair},
-        .final = final,
-    }};
-
-    try fri.checkFolds(params, &resolved, &.{alpha}, &.{0});
-}
-
-test "checkFolds rejects a mismatched final polynomial" {
-    const params = one_round_params;
-    const aux_pair = fri.Pair{ .self = ext.Ext.lift(field.Element.init(3)), .sibling = ext.Ext.lift(field.Element.init(5)) };
-    const alpha = ext.Ext.lift(field.Element.init(7));
-    // Off by one from the honest value derived above.
-    const wrong_final = ext.Ext.lift(field.Element.init(field.modulus - 2));
-
-    const resolved = [_]fri.ResolvedQuery{.{
-        .rounds = &.{.{ .self = ext.Ext.zero(), .sibling = ext.Ext.zero() }},
-        .aux = &.{aux_pair},
-        .final = wrong_final,
-    }};
-
-    try std.testing.expectError(
-        error.FinalPolyMismatch,
-        fri.checkFolds(params, &resolved, &.{alpha}, &.{0}),
-    );
-}
-
-// ─── query.fri: two rounds, exercising resolveRunningLayers ─────────────────
-//
-// log_codeword_size = 2 (domain size 4), num_rounds = 2: round 0 introduces
-// the top level and folds into round 1's *running* codeword (a real,
-// hand-built two-leaf Merkle tree); round 1 has no level of its own and folds
-// straight into the final polynomial.
-//
-// Query position s = 0 throughout, so every domain point this test needs is
-// x = generator^bitrev(0) = 1 and its square is again 1 -- the fold point
-// never leaves 1, keeping the arithmetic by-hand-checkable:
-//   round 0: sum = 3+5 = 8, diff = (3-5)*1*7 = -14, folded = (8-14)/2 = -3
-//            -> this is round 1's running "self" value
-//   round 1: sum = -3+11 = 8, diff = (-3-11)*1*13 = -182, folded = (8-182)/2 = -87
-
-const two_round_params: fri.Params = .{ .log_codeword_size = 2, .num_rounds = 2, .log_final_poly_size = 0, .num_queries = 1 };
-
-fn extToOctuplet(value: ext.Ext) poseidon2.Digest {
-    return .{
-        value.B0.a0,          value.B0.a1,
-        value.B1.a0,          value.B1.a1,
-        value.B2.a0,          value.B2.a1,
-        field.Element.zero(), field.Element.zero(),
-    };
-}
-
-const TwoRoundFixture = struct {
-    proof: fri.Proof,
-    fold_alphas: [2]ext.Ext,
-    positions: [1]usize,
-    round1_self: ext.Ext, // = the honest round-0 fold result, redundant with proof but handy for assertions
+const JsonBranch = struct {
+    leaf: JsonOctuplet,
+    siblings: []JsonOctuplet,
 };
 
-// Built once, at comptime (forced by the top-level `const` below): the nested
-// slices this fixture returns (round_roots, running_queries, and each
-// branch's siblings) would otherwise point into buildTwoRoundFixture's stack
-// frame and dangle the moment it returns. A comptime-evaluated container-level
-// const gets its backing data placed in static storage instead.
-fn buildTwoRoundFixture() TwoRoundFixture {
-    // Poseidon2's permutation loop trips the default 1000-backwards-branch
-    // comptime budget; this fixture is forced to comptime (see
-    // two_round_fixture below) so it needs a larger one.
-    @setEvalBranchQuota(1_000_000);
-    const round1_self = ext.Ext.lift(field.Element.init(field.modulus - 3)); // -3, see derivation above
-    const round1_sibling = ext.Ext.lift(field.Element.init(11));
+const JsonPair = struct {
+    self: JsonExt,
+    sibling: JsonExt,
+};
 
-    const leaf0 = extToOctuplet(round1_self);
-    const leaf1 = extToOctuplet(round1_sibling);
-    const root1 = merkle.hashNode(leaf0, leaf1, null);
+const JsonMerkleCase = struct {
+    name: []const u8,
+    leaf: JsonOctuplet,
+    siblings: []JsonOctuplet,
+    index: usize,
+    root: JsonOctuplet,
+    expect_match: bool,
+    expect_error: []const u8 = "",
+};
 
+// log_codeword_size/num_rounds/log_final_poly_size/num_queries record the
+// Params a case was generated under; runFoldCase checks them against the
+// hardcoded comptime fri.Params it runs the case with.
+const JsonFoldCase = struct {
+    name: []const u8,
+    log_codeword_size: u8,
+    num_rounds: u8,
+    log_final_poly_size: u8,
+    num_queries: usize,
+    fold_alphas: []JsonExt,
+    round_roots: []JsonOctuplet,
+    final_poly: []JsonExt,
+    position: usize,
+    running_branches: []JsonBranch,
+    expected_rounds: []JsonPair,
+    aux: []?JsonPair,
+    expect_running_error: []const u8 = "",
+    expect_fold_error: []const u8 = "",
+};
+
+const Fixtures = struct {
+    merkle_cases: []JsonMerkleCase,
+    fold_cases: []JsonFoldCase,
+};
+
+fn loadFixtures(allocator: std.mem.Allocator) !Fixtures {
+    return std.json.parseFromSliceLeaky(Fixtures, allocator, fixtures_json, .{});
+}
+
+// ─── JSON -> verifier_ray value conversions ──────────────────────────────────
+
+fn toDigest(o: JsonOctuplet) poseidon2.Digest {
+    var out: poseidon2.Digest = undefined;
+    for (&out, o) |*dst, v| dst.* = field.Element.init(v);
+    return out;
+}
+
+fn toDigests(allocator: std.mem.Allocator, os: []JsonOctuplet) ![]poseidon2.Digest {
+    const out = try allocator.alloc(poseidon2.Digest, os.len);
+    for (out, os) |*dst, o| dst.* = toDigest(o);
+    return out;
+}
+
+fn toExt(e: JsonExt) ext.Ext {
     return .{
-        .proof = .{
-            .round_roots = &.{root1},
-            .final_poly = &.{ext.Ext.lift(field.Element.init(field.modulus - 87))}, // -87, see derivation above
-            .running_queries = &.{&.{.{ .leaf = leaf0, .siblings = &.{leaf1} }}},
-        },
-        .fold_alphas = .{ ext.Ext.lift(field.Element.init(7)), ext.Ext.lift(field.Element.init(13)) },
-        .positions = .{0},
-        .round1_self = round1_self,
+        .B0 = .{ .a0 = field.Element.init(e[0]), .a1 = field.Element.init(e[1]) },
+        .B1 = .{ .a0 = field.Element.init(e[2]), .a1 = field.Element.init(e[3]) },
+        .B2 = .{ .a0 = field.Element.init(e[4]), .a1 = field.Element.init(e[5]) },
     };
 }
 
-const two_round_fixture: TwoRoundFixture = buildTwoRoundFixture();
-
-test "checkOpeningProofShape + resolveRunningLayers + checkFolds accept an honest two-round proof" {
-    const params = two_round_params;
-    const fixture = two_round_fixture;
-
-    try fri.checkOpeningProofShape(params, fixture.proof, &fixture.fold_alphas, &fixture.positions);
-
-    var rounds: [2]fri.Pair = undefined;
-    try fri.resolveRunningLayers(params, fixture.proof.round_roots, fixture.proof.running_queries[0], fixture.positions[0], &rounds);
-    try std.testing.expect(rounds[1].self.eql(fixture.round1_self));
-    try std.testing.expect(rounds[1].sibling.eql(ext.Ext.lift(field.Element.init(11))));
-
-    const aux0 = fri.Pair{ .self = ext.Ext.lift(field.Element.init(3)), .sibling = ext.Ext.lift(field.Element.init(5)) };
-    const resolved = [_]fri.ResolvedQuery{.{
-        .rounds = &rounds,
-        .aux = &.{ aux0, null },
-        .final = fixture.proof.final_poly[0],
-    }};
-
-    try fri.checkFolds(params, &resolved, &fixture.fold_alphas, &fixture.positions);
+fn toExts(allocator: std.mem.Allocator, es: []JsonExt) ![]ext.Ext {
+    const out = try allocator.alloc(ext.Ext, es.len);
+    for (out, es) |*dst, e| dst.* = toExt(e);
+    return out;
 }
 
-test "resolveRunningLayers rejects a running root that does not match the branch" {
-    const params = two_round_params;
-    const fixture = two_round_fixture;
-    const wrong_roots = [_]poseidon2.Digest{poseidon2.hashElements(&.{field.Element.init(999)})};
-
-    var rounds: [2]fri.Pair = undefined;
-    try std.testing.expectError(
-        error.MerkleProofInvalid,
-        fri.resolveRunningLayers(params, &wrong_roots, fixture.proof.running_queries[0], fixture.positions[0], &rounds),
-    );
+fn toPair(p: JsonPair) fri.Pair {
+    return .{ .self = toExt(p.self), .sibling = toExt(p.sibling) };
 }
 
-test "checkFolds rejects a level pair that disagrees with the resolved running layer" {
-    const params = two_round_params;
-    const fixture = two_round_fixture;
+fn toOptPairs(allocator: std.mem.Allocator, ps: []?JsonPair) ![]?fri.Pair {
+    const out = try allocator.alloc(?fri.Pair, ps.len);
+    for (out, ps) |*dst, p| dst.* = if (p) |v| toPair(v) else null;
+    return out;
+}
 
-    var rounds: [2]fri.Pair = undefined;
-    try fri.resolveRunningLayers(params, fixture.proof.round_roots, fixture.proof.running_queries[0], fixture.positions[0], &rounds);
+fn toBranch(allocator: std.mem.Allocator, b: JsonBranch) !merkle.Branch {
+    return .{ .leaf = toDigest(b.leaf), .siblings = try toDigests(allocator, b.siblings) };
+}
 
-    // A level pair that does not fold to rounds[1].self (honestly {3, 5}).
-    const wrong_aux0 = fri.Pair{ .self = ext.Ext.lift(field.Element.init(4)), .sibling = ext.Ext.lift(field.Element.init(5)) };
-    const resolved = [_]fri.ResolvedQuery{.{
-        .rounds = &rounds,
-        .aux = &.{ wrong_aux0, null },
-        .final = fixture.proof.final_poly[0],
-    }};
+fn toBranches(allocator: std.mem.Allocator, bs: []JsonBranch) ![]merkle.Branch {
+    const out = try allocator.alloc(merkle.Branch, bs.len);
+    for (out, bs) |*dst, b| dst.* = try toBranch(allocator, b);
+    return out;
+}
 
-    try std.testing.expectError(
-        error.FoldMismatch,
-        fri.checkFolds(params, &resolved, &fixture.fold_alphas, &fixture.positions),
-    );
+// Maps a fixture's error-name string to the corresponding error value.
+fn mapError(name: []const u8) fri.Error {
+    if (std.mem.eql(u8, name, "MerkleProofInvalid")) return error.MerkleProofInvalid;
+    if (std.mem.eql(u8, name, "FoldMismatch")) return error.FoldMismatch;
+    if (std.mem.eql(u8, name, "FinalPolyMismatch")) return error.FinalPolyMismatch;
+    if (std.mem.eql(u8, name, "InvalidRunningLayerShape")) return error.InvalidRunningLayerShape;
+    std.debug.panic("fri_test: unrecognized expected error name '{s}'", .{name});
+}
+
+fn mapMerkleError(name: []const u8) merkle.Error {
+    if (std.mem.eql(u8, name, "EmptyBranch")) return error.EmptyBranch;
+    std.debug.panic("fri_test: unrecognized expected merkle error name '{s}'", .{name});
+}
+
+// ─── crypto.merkle: vectors from prover-ray's newCompleteBinaryTree ─────────
+
+fn runMerkleCase(allocator: std.mem.Allocator, case: JsonMerkleCase) !void {
+    const branch = merkle.Branch{
+        .leaf = toDigest(case.leaf),
+        .siblings = try toDigests(allocator, case.siblings),
+    };
+
+    if (case.expect_error.len > 0) {
+        try std.testing.expectError(mapMerkleError(case.expect_error), branch.recoverRoot(case.index));
+        return;
+    }
+
+    const recovered = try branch.recoverRoot(case.index);
+    const matches = std.meta.eql(recovered, toDigest(case.root));
+    try std.testing.expectEqual(case.expect_match, matches);
+}
+
+test "merkle branches from prover-ray vectors" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const fixtures = try loadFixtures(allocator);
+    try std.testing.expect(fixtures.merkle_cases.len > 0);
+    for (fixtures.merkle_cases) |case| {
+        runMerkleCase(allocator, case) catch |err| {
+            std.debug.print("merkle case '{s}' failed: {}\n", .{ case.name, err });
+            return err;
+        };
+    }
+}
+
+// ─── query.fri: vectors from a real multi-round, multi-level FRI proof ─────
+//
+// Every fold case shares this shape: domain size 16 (log_codeword_size = 4),
+// 3 folding rounds.
+const fold_params: fri.Params = .{
+    .log_codeword_size = 4,
+    .num_rounds = 3,
+    .log_final_poly_size = 0,
+    .num_queries = 1,
+};
+
+fn runFoldCase(allocator: std.mem.Allocator, comptime params: fri.Params, case: JsonFoldCase) !void {
+    try std.testing.expectEqual(case.log_codeword_size, params.log_codeword_size);
+    try std.testing.expectEqual(case.num_rounds, params.num_rounds);
+    try std.testing.expectEqual(case.log_final_poly_size, params.log_final_poly_size);
+    try std.testing.expectEqual(case.num_queries, params.num_queries);
+
+    const fold_alphas = try toExts(allocator, case.fold_alphas);
+    const round_roots = try toDigests(allocator, case.round_roots);
+    const final_poly = try toExts(allocator, case.final_poly);
+    const running_branches = try toBranches(allocator, case.running_branches);
+    const positions = try allocator.dupe(usize, &.{case.position});
+
+    const proof = fri.Proof{
+        .round_roots = round_roots,
+        .final_poly = final_poly,
+        .running_queries = &.{running_branches},
+    };
+
+    try fri.checkOpeningProofShape(params, proof, fold_alphas, positions);
+
+    const rounds = try allocator.alloc(fri.Pair, params.num_rounds);
+    const running_result = fri.resolveRunningLayers(params, round_roots, running_branches, case.position, rounds);
+
+    if (case.expect_running_error.len > 0) {
+        try std.testing.expectError(mapError(case.expect_running_error), running_result);
+        return;
+    }
+    try running_result;
+
+    const want_rounds = case.expected_rounds;
+    for (rounds[1..], want_rounds[1..]) |got, want| {
+        const want_pair = toPair(want);
+        try std.testing.expect(got.self.eql(want_pair.self));
+        try std.testing.expect(got.sibling.eql(want_pair.sibling));
+    }
+
+    const aux = try toOptPairs(allocator, case.aux);
+    const resolved = [_]fri.ResolvedQuery{.{ .rounds = rounds, .aux = aux, .final = final_poly[0] }};
+    const fold_result = fri.checkFolds(params, &resolved, fold_alphas, positions);
+
+    if (case.expect_fold_error.len > 0) {
+        try std.testing.expectError(mapError(case.expect_fold_error), fold_result);
+        return;
+    }
+    try fold_result;
+}
+
+test "fri fold cases from prover-ray vectors" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const fixtures = try loadFixtures(allocator);
+    try std.testing.expect(fixtures.fold_cases.len > 0);
+    for (fixtures.fold_cases) |case| {
+        runFoldCase(allocator, fold_params, case) catch |err| {
+            std.debug.print("fold case '{s}' failed: {}\n", .{ case.name, err });
+            return err;
+        };
+    }
 }
