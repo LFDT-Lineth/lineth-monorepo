@@ -40,7 +40,11 @@ func main() {
 	validateConfig()
 
 	rateLog2 := utils.Log2Ceil(*rate)
-	params, err := fri.NewParams(uint8(*maxLog2+rateLog2), uint8(*maxLog2), uint(*numQueries))
+	logCodewordSize := *maxLog2 + rateLog2
+	if logCodewordSize > int(fri.MaxLogCodewordSize) {
+		fail("-max-log2 + log2(rate) must be <= %d, got %d", fri.MaxLogCodewordSize, logCodewordSize)
+	}
+	params, err := fri.NewParams(uint8(logCodewordSize), uint8(*maxLog2), uint(*numQueries))
 	if err != nil {
 		fail("NewParams: %v", err)
 	}
