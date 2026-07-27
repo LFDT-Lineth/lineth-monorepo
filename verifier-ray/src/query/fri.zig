@@ -223,4 +223,3 @@ fn octupletToExt(digest: poseidon2.Digest) Error!ext.Ext {
         .B2 = .{ .a0 = digest[4], .a1 = digest[5] },
     };
 }
-
