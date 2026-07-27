@@ -2,6 +2,7 @@ package linea.coordinator.clients
 
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.Result
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.containing
@@ -24,6 +25,9 @@ import linea.clients.TracesServiceErrorType
 import linea.error.ErrorResponse
 import linea.kotlin.encodeHex
 import net.consensys.linea.async.get
+import net.consensys.linea.jsonrpc.JsonRpcErrorResponse
+import net.consensys.linea.jsonrpc.JsonRpcRequest
+import net.consensys.linea.jsonrpc.JsonRpcSuccessResponse
 import net.consensys.linea.jsonrpc.client.JsonRpcClient
 import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
@@ -37,9 +41,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.kotlin.any
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
 import java.net.URI
 import java.net.URL
 import java.util.concurrent.ExecutionException
@@ -504,11 +505,8 @@ class TracesGeneratorJsonRpcClientV2Test {
   @Test
   fun `getTracesCounters does not convert asynchronous errors to fallback responses`() {
     val fatalError = AssertionError("fatal")
-    val failingRpcClient = mock<JsonRpcClient>()
-    whenever(failingRpcClient.makeRequest(any(), any()))
-      .thenReturn(Future.failedFuture(fatalError))
     val client = TracesGeneratorJsonRpcClientV2(
-      failingRpcClient,
+      FailingJsonRpcClient(fatalError, failAsynchronously = true),
       TracesGeneratorJsonRpcClientV2.Config(
         ignoreTracesGeneratorErrors = true,
         fallBackTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
@@ -525,10 +523,8 @@ class TracesGeneratorJsonRpcClientV2Test {
   @Test
   fun `getTracesCounters does not convert synchronous errors to fallback responses`() {
     val fatalError = AssertionError("fatal")
-    val failingRpcClient = mock<JsonRpcClient>()
-    whenever(failingRpcClient.makeRequest(any(), any())).thenThrow(fatalError)
     val client = TracesGeneratorJsonRpcClientV2(
-      failingRpcClient,
+      FailingJsonRpcClient(fatalError, failAsynchronously = false),
       TracesGeneratorJsonRpcClientV2.Config(
         ignoreTracesGeneratorErrors = true,
         fallBackTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
@@ -611,6 +607,21 @@ class TracesGeneratorJsonRpcClientV2Test {
         .withHeader("Content-Type", equalTo("application/json"))
         .withRequestBody(equalToJson(expectedJsonRequest.toString(), false, false)),
     )
+  }
+
+  private class FailingJsonRpcClient(
+    private val failure: Throwable,
+    private val failAsynchronously: Boolean,
+  ) : JsonRpcClient {
+    override fun makeRequest(
+      request: JsonRpcRequest,
+      resultMapper: (Any?) -> Any?,
+    ): Future<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> {
+      if (failAsynchronously) {
+        return Future.failedFuture(failure)
+      }
+      throw failure
+    }
   }
 
   @Test
