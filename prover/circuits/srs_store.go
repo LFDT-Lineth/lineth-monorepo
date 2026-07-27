@@ -46,8 +46,9 @@ type fsEntry struct {
 	source      string // the ceremony tag in the file name: aleo, aztec or celo
 }
 
-// orphanTempMaxAge is how old a temp file must be before store construction
-// sweeps it; a live writer refreshes its temp's mtime while streaming the dump.
+// orphanTempMaxAge is how long a temp file's last write must lie in the past
+// before store construction deletes it; a live writer keeps refreshing its
+// temp's mtime while streaming the dump.
 const orphanTempMaxAge = time.Hour
 
 // curveFileNames maps a curve ID to the token naming it in SRS file names.
@@ -99,8 +100,9 @@ func NewSRSStore(rootDir string) (*SRSStore, error) {
 		matches := srsRegexp.FindStringSubmatch(fileName)
 		if matches == nil {
 			// a crash mid-write (e.g. an OOM-kill during a multi-GiB dump)
-			// orphans a temp file that nothing indexes or reclaims; sweep it
-			// once it is old enough that no live writer can still own it
+			// orphans a temp file that nothing indexes or reclaims; delete it
+			// once its last write is more than an hour old — a live writer's
+			// temp is always newer than that
 			if strings.HasPrefix(fileName, "kzg_srs_") && strings.Contains(fileName, ".memdump.tmp") {
 				if info, err := entry.Info(); err == nil && time.Since(info.ModTime()) > orphanTempMaxAge {
 					if err := os.Remove(filepath.Join(rootDir, fileName)); err != nil {
