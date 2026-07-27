@@ -38,12 +38,17 @@ class GlobalAggregationCalculator(
   init {
     require(syncAggregationTrigger.size + deferredAggregationTrigger.size > 0) { "Specify at least one trigger" }
     deferredAggregationTrigger.forEach { it.onAggregationTrigger(this::handleAggregationTrigger) }
+    // pendingBlobs is only mutated inside @Synchronized methods (locking on `this`), but these gauge
+    // callbacks are invoked from the metrics-scrape thread, so they must take the same lock before
+    // iterating it to avoid a ConcurrentModificationException racing with newBlob/handleAggregationTrigger.
     metricsFacade.createGauge(
       category = LineaMetricsCategory.AGGREGATION,
       name = "proofs.ready",
       description = "Number of proofs pending for aggregation",
       measurementSupplier = {
-        pendingBlobs.size + pendingBlobs.sumOf { it.numberOfBatches }.toLong()
+        synchronized(this) {
+          pendingBlobs.size + pendingBlobs.sumOf { it.numberOfBatches }.toLong()
+        }
       },
     )
     metricsFacade.createGauge(
@@ -51,7 +56,9 @@ class GlobalAggregationCalculator(
       name = "batches.ready",
       description = "Number of batches pending for aggregation",
       measurementSupplier = {
-        pendingBlobs.sumOf { it.numberOfBatches }.toLong()
+        synchronized(this) {
+          pendingBlobs.sumOf { it.numberOfBatches }.toLong()
+        }
       },
     )
     metricsFacade.createGauge(
@@ -59,7 +66,9 @@ class GlobalAggregationCalculator(
       name = "blobs.ready",
       description = "Number of blobs pending for aggregation",
       measurementSupplier = {
-        pendingBlobs.size
+        synchronized(this) {
+          pendingBlobs.size
+        }
       },
     )
   }

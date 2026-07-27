@@ -30,6 +30,18 @@ data class ConflationCreateProverRequestJsonDto(
   )
 
   fun toDomainObject(): ConflationBacktestingConfig {
+    // startBlockNumber/endBlockNumber/batchesFixedSize are caller-supplied Longs/Ints converted to
+    // ULong/UInt below. That conversion is a bit-reinterpretation, not a range check, so a negative
+    // input silently becomes a huge unsigned value (e.g. -1 -> ULong.MAX_VALUE) instead of being
+    // rejected. Validate on the signed values first, before any unsigned arithmetic is done downstream
+    // (ConflationBacktestingApp computes startBlockNumber - 1uL, which underflows if startBlockNumber == 0).
+    require(startBlockNumber >= 1) { "startBlockNumber must be >= 1, got $startBlockNumber" }
+    require(endBlockNumber >= startBlockNumber) {
+      "endBlockNumber ($endBlockNumber) must be >= startBlockNumber ($startBlockNumber)"
+    }
+    batchesFixedSize?.let {
+      require(it > 0) { "batchesFixedSize must be > 0 when set, got $it" }
+    }
     return ConflationBacktestingConfig(
       startBlockNumber = this.startBlockNumber.toULong(),
       endBlockNumber = this.endBlockNumber.toULong(),

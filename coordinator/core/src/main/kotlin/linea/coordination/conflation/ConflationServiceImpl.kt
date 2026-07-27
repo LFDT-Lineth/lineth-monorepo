@@ -55,7 +55,9 @@ class ConflationServiceImpl(
       category = LineaMetricsCategory.CONFLATION,
       name = "inprogress.blocks",
       description = "Number of blocks in progress of conflation",
-      measurementSupplier = { blocksInProgress.size },
+      // blocksInProgress is only mutated inside @Synchronized methods (locking on `this`); this gauge
+      // callback runs from the metrics-scrape thread, so it takes the same lock before reading.
+      measurementSupplier = { synchronized(this) { blocksInProgress.size } },
     )
     metricsFacade.createGauge(
       category = LineaMetricsCategory.CONFLATION,

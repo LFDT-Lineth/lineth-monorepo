@@ -260,7 +260,11 @@ class L1RelayingAppV1(
         lineaSmartContractClient = lineaSmartContractClientForDataSubmission,
         gasPriceCapProvider = gasPriceCapProviderForDataSubmission,
         alreadySubmittedBlobsFilter = alreadySubmittedBlobsFilter,
-        blobSubmittedEventDispatcher = EventDispatcher(blobSubmittedEventConsumers),
+        blobSubmittedEventDispatcher = EventDispatcher(
+          consumers = blobSubmittedEventConsumers,
+          metricsFacade = metricsFacade,
+          metricsCategory = LineaMetricsCategory.BLOB,
+        ),
         vertx = vertx,
         clock = Clock.System,
       )
@@ -319,7 +323,11 @@ class L1RelayingAppV1(
         aggregationSubmitter = AggregationSubmitterImpl(
           lineaSmartContractClient = lineaSmartContractClientForFinalization,
           gasPriceCapProvider = gasPriceCapProviderForFinalization,
-          aggregationSubmittedEventConsumer = EventDispatcher(submittedFinalizationConsumers),
+          aggregationSubmittedEventConsumer = EventDispatcher(
+            consumers = submittedFinalizationConsumers,
+            metricsFacade = metricsFacade,
+            metricsCategory = LineaMetricsCategory.AGGREGATION,
+          ),
         ),
         vertx = vertx,
         clock = Clock.System,

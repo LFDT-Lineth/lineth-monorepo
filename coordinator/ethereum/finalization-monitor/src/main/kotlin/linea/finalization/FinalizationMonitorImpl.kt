@@ -77,18 +77,21 @@ class FinalizationMonitorImpl(
           handlerName,
           finalizationUpdate.blockNumber,
         )
-        try {
+        val handlerFuture: SafeFuture<*> = try {
           finalizationHandler.handleUpdate(finalizationUpdate)
-            .thenApply { }
         } catch (th: Throwable) {
-          log.error(
-            "Finalization handler={} failed. errorMessage={}",
-            handlerName,
-            th.message,
-            th,
-          )
-          SafeFuture.completedFuture(Unit)
+          SafeFuture.failedFuture<Any?>(th)
         }
+        handlerFuture
+          .thenApply { }
+          .exceptionally { th ->
+            log.error(
+              "Finalization handler={} failed. errorMessage={}",
+              handlerName,
+              th.message,
+              th,
+            )
+          }
       }
     }.thenApply {}
   }

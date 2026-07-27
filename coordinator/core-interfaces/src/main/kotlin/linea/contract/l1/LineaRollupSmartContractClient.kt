@@ -171,14 +171,6 @@ interface LineaSmartContractClient : LineaSmartContractClientReadOnly {
    */
   fun updateNonceAndReferenceBlockToLastL1Block(): SafeFuture<BlockAndNonce>
 
-  // TODO: not used, shall be removed
-  fun finalizeBlocksEthCall(
-    aggregation: ProofToFinalize,
-    aggregationLastBlob: BlobRecord,
-    parentL1RollingHash: ByteArray,
-    parentL1RollingHashMessageNumber: Long,
-  ): SafeFuture<String?>
-
   fun finalizeBlocks(
     aggregation: ProofToFinalize,
     aggregationLastBlob: BlobRecord,

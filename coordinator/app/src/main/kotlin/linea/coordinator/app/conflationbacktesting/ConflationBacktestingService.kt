@@ -39,6 +39,7 @@ class ConflationBacktestingService(
   private val conflationBackTestingApps: MutableMap<String, ConflationBacktestingApp> = ConcurrentHashMap()
 
   fun submitConflationBacktestingJob(conflationBacktestingConfig: ConflationBacktestingConfig): String {
+    validateRequestedApiHostsAreAllowed(conflationBacktestingConfig)
     val jobId = conflationBacktestingConfig.jobId()
     val app = ConflationBacktestingApp(
       vertx = vertx,
@@ -63,6 +64,31 @@ class ConflationBacktestingService(
       log.error("Conflation backtesting job failed: jobId={}, errorMessage={}", jobId, error.message, error)
     }
     return jobId
+  }
+
+  /**
+   * The tracesApi/shomeiApi endpoints on an incoming request are caller-supplied, and this service
+   * uses them to make outbound HTTP requests. Without this check a caller could point the coordinator
+   * at an arbitrary host (SSRF), so requests are restricted to hosts already trusted elsewhere in this
+   * coordinator's own config (configs.traces / configs.stateManager).
+   */
+  private fun validateRequestedApiHostsAreAllowed(conflationBacktestingConfig: ConflationBacktestingConfig) {
+    val allowedHosts = buildSet {
+      configs.traces.common?.endpoints?.forEach { add(it.host) }
+      configs.traces.counters?.endpoints?.forEach { add(it.host) }
+      configs.traces.conflation?.endpoints?.forEach { add(it.host) }
+      configs.stateManager.endpoints.forEach { add(it.host) }
+    }
+    val requestedHosts = listOfNotNull(
+      conflationBacktestingConfig.tracesApi.endpoint.host,
+      conflationBacktestingConfig.tracesConflationApi?.endpoint?.host,
+      conflationBacktestingConfig.shomeiApi.endpoint.host,
+    )
+    val disallowedHosts = requestedHosts.filterNot { it in allowedHosts }
+    require(disallowedHosts.isEmpty()) {
+      "Requested API host(s) are not in the allowlist of configured traces/stateManager hosts: " +
+        "disallowedHosts=$disallowedHosts allowedHosts=$allowedHosts"
+    }
   }
 
   fun getConflationBacktestingJobStatus(jobId: String): ConflationBacktestingJobStatus {

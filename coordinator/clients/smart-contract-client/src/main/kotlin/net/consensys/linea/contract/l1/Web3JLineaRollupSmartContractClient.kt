@@ -171,26 +171,6 @@ class Web3JLineaRollupSmartContractClient internal constructor(
       }
   }
 
-  override fun finalizeBlocksEthCall(
-    aggregation: ProofToFinalize,
-    aggregationLastBlob: BlobRecord,
-    parentL1RollingHash: ByteArray,
-    parentL1RollingHashMessageNumber: Long,
-  ): SafeFuture<String?> {
-    return getVersion()
-      .thenCompose { version ->
-        val function =
-          Web3JLineaRollupFunctionBuilders.buildFinalizeBlocksFunction(
-            version,
-            aggregation,
-            aggregationLastBlob,
-            parentL1RollingHash,
-            parentL1RollingHashMessageNumber,
-          )
-        web3jContractHelper.executeEthCall(function)
-      }
-  }
-
   override fun finalizeBlocksAfterEthCall(
     aggregation: ProofToFinalize,
     aggregationLastBlob: BlobRecord,

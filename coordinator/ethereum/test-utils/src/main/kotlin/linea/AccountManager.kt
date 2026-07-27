@@ -159,7 +159,6 @@ private open class WhaleBasedAccountManager(
           throw RuntimeException(
             "Failed to send funds from accAddress=${whaleAccount.address}, " +
               "accBalance=$accountBalance, " +
-              "accPrivKey=0x...${whaleAccount.privateKey.takeLast(8)}, " +
               "error: ${e.message}",
           )
         }
