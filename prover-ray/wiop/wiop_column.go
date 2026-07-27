@@ -30,6 +30,9 @@ type Module struct {
 	// RangeChecks holds all [RangeCheck] queries registered on this module
 	// via [Module.NewRangeCheck], in declaration order.
 	RangeChecks []*RangeCheck
+	// NonNatives holds all [NonNative] queries registered on this module via
+	// [Module.NewNonNative], in declaration order.
+	NonNatives []*NonNative
 	// size is zero when the module has not yet been sized. Use [Module.Size]
 	// and [Module.SetSize] rather than accessing this field directly.
 	size int
