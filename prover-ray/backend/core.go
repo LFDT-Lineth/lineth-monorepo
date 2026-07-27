@@ -155,7 +155,9 @@ func SerializeProof(_ wiop.Proof, _ wiop.PublicInput) ([]byte, error) {
 	return nil, fmt.Errorf("SerializeProof: %w", ErrNotImplemented)
 }
 
-// decodePayload returns the job's framed SSZ payload.
+// decodePayload extracts the raw SSZ bytes from a Job's Payload.
+// Today it is a pass-through; once the coordinator API encoding is finalized
+// this will handle any wrapping (JSON envelope, multi-block conflation, etc.).
 func decodePayload(job Job) []byte {
 	return job.Payload
 }
