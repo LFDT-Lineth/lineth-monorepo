@@ -11,8 +11,10 @@ import (
 	"regexp"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark-crypto/kzg"
@@ -43,6 +45,10 @@ type fsEntry struct {
 	path        string
 	source      string // the ceremony tag in the file name: aleo, aztec or celo
 }
+
+// orphanTempMaxAge is how old a temp file must be before store construction
+// sweeps it; a live writer refreshes its temp's mtime while streaming the dump.
+const orphanTempMaxAge = time.Hour
 
 // curveFileNames maps a curve ID to the token naming it in SRS file names.
 var curveFileNames = map[ecc.ID]string{
@@ -92,6 +98,18 @@ func NewSRSStore(rootDir string) (*SRSStore, error) {
 		fileName := entry.Name()
 		matches := srsRegexp.FindStringSubmatch(fileName)
 		if matches == nil {
+			// a crash mid-write (e.g. an OOM-kill during a multi-GiB dump)
+			// orphans a temp file that nothing indexes or reclaims; sweep it
+			// once it is old enough that no live writer can still own it
+			if strings.HasPrefix(fileName, "kzg_srs_") && strings.Contains(fileName, ".memdump.tmp") {
+				if info, err := entry.Info(); err == nil && time.Since(info.ModTime()) > orphanTempMaxAge {
+					if err := os.Remove(filepath.Join(rootDir, fileName)); err != nil {
+						logrus.Warnf("could not remove orphaned srs temp file %s: %v", fileName, err)
+					} else {
+						logrus.Infof("removed orphaned srs temp file %s", fileName)
+					}
+				}
+			}
 			continue
 		}
 
@@ -122,6 +140,11 @@ func NewSRSStore(rootDir string) (*SRSStore, error) {
 	return srsStore, nil
 }
 
+// GetSRS returns the canonical and Lagrange SRS for the circuit, deriving and
+// persisting the Lagrange form when no loadable dump is on disk. Concurrent
+// callers requesting the same missing size each derive independently (the
+// store is race-safe but does not deduplicate the work); every in-repo caller
+// is sequential today.
 func (store *SRSStore) GetSRS(ctx context.Context, ccs constraint.ConstraintSystem) (kzg.SRS, kzg.SRS, error) {
 	sizeCanonical, sizeLagrange := plonk.SRSSize(ccs)
 	curveID := fieldToCurve(ccs.Field())
@@ -174,7 +197,8 @@ func (store *SRSStore) GetSRS(ctx context.Context, ccs constraint.ConstraintSyst
 			err = utils.WriterstoEqual(srsVk(canonicalSRS), srsVk(srs))
 		}
 		if err == nil {
-			// catches bit-rot in the point data, which parses cleanly
+			// catches corrupted point data — ReadDump copies bytes without
+			// validating them
 			err = pkG1OnCurve(srs)
 		}
 		if err != nil {

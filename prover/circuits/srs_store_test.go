@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark-crypto/kzg"
@@ -189,6 +190,31 @@ func TestSRSStore_PersistsDerivedLagrange(t *testing.T) {
 		leftovers, err := filepath.Glob(filepath.Join(dir, "*.tmp*"))
 		assert.NoError(err)
 		assert.Empty(leftovers, "a failed publish must not leave temp files behind")
+	})
+
+	t.Run("sweeps_only_aged_orphan_temps", func(t *testing.T) {
+		assert := require.New(t)
+		dir := t.TempDir()
+		canonical := newTestCanonicalSRS(t, ecc.BN254, 16)
+		dumpToFile(t, canonical, filepath.Join(dir, "kzg_srs_canonical_16_bn254_aztec.memdump"))
+
+		// a crash-orphaned temp (old) and a concurrent writer's temp (fresh)
+		aged := filepath.Join(dir, "kzg_srs_lagrange_8_bn254_aztec.memdump.tmp111")
+		fresh := filepath.Join(dir, "kzg_srs_lagrange_8_bn254_aztec.memdump.tmp222")
+		assert.NoError(os.WriteFile(aged, []byte("dead"), 0o600))
+		assert.NoError(os.WriteFile(fresh, []byte("live"), 0o600))
+		assert.NoError(os.Chtimes(aged, time.Now().Add(-2*time.Hour), time.Now().Add(-2*time.Hour)))
+
+		store, err := NewSRSStore(dir)
+		assert.NoError(err)
+
+		_, err = os.Stat(aged)
+		assert.True(os.IsNotExist(err), "an aged orphan temp must be swept")
+		_, err = os.Stat(fresh)
+		assert.NoError(err, "a fresh temp must be spared")
+		for _, entry := range store.entriesSnapshot(ecc.BN254) {
+			assert.True(entry.isCanonical, "temp files must never be indexed")
+		}
 	})
 }
 
