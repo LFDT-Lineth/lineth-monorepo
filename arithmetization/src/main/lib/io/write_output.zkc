@@ -2,7 +2,8 @@
 
 fn www<ram>(offset:Address, size:OutputSize, output_write_address:OutputAddress) -> (new_output_write_address:OutputAddress) {
   new_output_write_address = output_write_address + size
-  for i:OutputAddress = 0; i < size; i = i + 1 {
-    guest_output[output_write_address + i] = ram[offset + i]
-  }
+
+    for i:OutputAddress = 0; i < size; i = i + 1 {
+      guest_output[output_write_address + i] = read_8(offset + (i as Address))
+    }
 }
