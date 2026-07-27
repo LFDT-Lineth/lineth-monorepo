@@ -1,0 +1,41 @@
+name: gradle-cache-seed
+
+permissions:
+  contents: read
+  actions: read
+
+# Keeps a warm Gradle dependency cache available on main at all times.
+# PR jobs restore it read-only, so without this workflow the cache disappears
+# whenever the repo's 10GB Actions cache budget evicts it, and every job then
+# downloads the full dependency graph from Maven Central and hits 429 rate limits.
+on:
+  schedule:
+    - cron: "17 */4 * * *"
+  push:
+    branches:
+      - main
+    paths:
+      - "gradle/**"
+      - "gradle.properties"
+      - "settings.gradle"
+      - "**/*.gradle"
+      - "**/*.gradle.kts"
+  workflow_dispatch:
+
+concurrency:
+  group: gradle-cache-seed
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup Java and Gradle
+        uses: ./.github/actions/setup-java-and-gradle
+
+      - name: Resolve all dependencies
+        run: ./gradlew --init-script .github/gradle/resolve-all-dependencies.init.gradle resolveAllDependencies
