@@ -43,6 +43,7 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 import java.net.URL
+import java.util.concurrent.CompletionException
 import java.util.concurrent.ExecutionException
 import kotlin.random.Random
 import kotlin.random.nextUInt
@@ -507,6 +508,24 @@ class TracesGeneratorJsonRpcClientV2Test {
     val fatalError = AssertionError("fatal")
     val client = TracesGeneratorJsonRpcClientV2(
       FailingJsonRpcClient(fatalError, failAsynchronously = true),
+      TracesGeneratorJsonRpcClientV2.Config(
+        ignoreTracesGeneratorErrors = true,
+        fallBackTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+      ),
+    )
+
+    val exception = assertThrows<ExecutionException> {
+      client.getTracesCounters(1UL).get()
+    }
+
+    assertThat(exception.cause).isSameAs(fatalError)
+  }
+
+  @Test
+  fun `getTracesCounters unwraps asynchronous fatal errors before applying fallback`() {
+    val fatalError = AssertionError("fatal")
+    val client = TracesGeneratorJsonRpcClientV2(
+      FailingJsonRpcClient(CompletionException(fatalError), failAsynchronously = true),
       TracesGeneratorJsonRpcClientV2.Config(
         ignoreTracesGeneratorErrors = true,
         fallBackTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
