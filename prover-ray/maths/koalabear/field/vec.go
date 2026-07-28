@@ -359,6 +359,44 @@ func VecScaleInto(res Vec, s Gen, v Vec) {
 }
 
 // ---------------------------------------------------------------------------
+// ScaleAcc — accumulating variants of VecScale
+// ---------------------------------------------------------------------------
+//
+// Scalar placeholders: these are the hot kernels of the FRI DEEP-quotient
+// combine pass (see fri.Level.EvalsAt) and are meant to delegate to the
+// AVX-512 gnark-crypto VectorE6 kernels (ScalarMulAccByElement / ScalarMulAcc
+// on extensions.VectorE6) once they exist — tracked in
+// https://github.com/Consensys/gnark-crypto/issues/867. Until then they run
+// the plain scalar loops below.
+
+// VecScaleAccExtBase accumulates res[i] += s * a[i] where s is an extension
+// scalar and a is a base vector. Uses [Ext.MulByElement] to exploit the base
+// structure of each a[i].
+// Cost: 6 base multiplications per element.
+// res and a must have equal length.
+func VecScaleAccExtBase(res []Ext, s Ext, a []Element) {
+	mustEqualLen2(len(res), len(a))
+	var t Ext
+	for i := range res {
+		t.MulByElement(&s, &a[i])
+		res[i].Add(&res[i], &t)
+	}
+}
+
+// VecScaleAccExtExt accumulates res[i] += s * a[i] where s is an extension
+// scalar and a is an extension vector.
+// Cost: ~24 base multiplications per element.
+// res and a must have equal length.
+func VecScaleAccExtExt(res []Ext, s Ext, a []Ext) {
+	mustEqualLen2(len(res), len(a))
+	var t Ext
+	for i := range res {
+		t.Mul(&s, &a[i])
+		res[i].Add(&res[i], &t)
+	}
+}
+
+// ---------------------------------------------------------------------------
 // BatchInv
 // ---------------------------------------------------------------------------
 
