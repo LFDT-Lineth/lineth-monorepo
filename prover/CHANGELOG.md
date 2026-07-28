@@ -2,8 +2,8 @@
 
 ### 🐛 Bug Fixes
 
-- *(prover)* Bind aggregation's initial state root to the parent shnarf via in-circuit opening (#3542)
 - *(prover)* Fix the bitdecompose.go by removing IsPackedLimbNotZero (#3475)
+- *(prover)* Bind aggregation's initial state root to the parent shnarf via in-circuit opening (#3542)
 
 ### 🚜 Refactor
 
