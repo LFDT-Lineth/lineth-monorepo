@@ -76,3 +76,47 @@ func TestMustFindModuleLimitsReturnsLongestMatch(t *testing.T) {
 		}
 	}
 }
+
+func TestPersistDerivedSRSDefaultsOff(t *testing.T) {
+	assert := require.New(t)
+
+	// writing into the SRS directory must never be something an operator gets by
+	// omission: with the key absent, it stays off
+	v := viper.New()
+	v.SetConfigType("toml")
+	assert.NoError(v.ReadConfig(strings.NewReader("assets_dir = \"/tmp/assets\"\n")))
+	var cfg Config
+	assert.NoError(v.Unmarshal(&cfg))
+	assert.False(cfg.PersistDerivedSRS, "persist_derived_srs must default to false")
+
+	// and it is settable for the self-hoster who wants it
+	v = viper.New()
+	v.SetConfigType("toml")
+	assert.NoError(v.ReadConfig(strings.NewReader("persist_derived_srs = true\n")))
+	var optedIn Config
+	assert.NoError(v.Unmarshal(&optedIn))
+	assert.True(optedIn.PersistDerivedSRS)
+}
+
+func TestShippedConfigsDoNotOptIntoSRSWrites(t *testing.T) {
+	assert := require.New(t)
+
+	// none of the checked-in configs may turn the write on: a deployment that
+	// wants it has to say so itself
+	files, err := os.ReadDir(".")
+	assert.NoError(err)
+	checked := 0
+	for _, f := range files {
+		if !strings.HasPrefix(f.Name(), "config-") || !strings.HasSuffix(f.Name(), ".toml") {
+			continue
+		}
+		v := viper.New()
+		v.SetConfigFile(f.Name())
+		assert.NoError(v.ReadInConfig(), f.Name())
+		var cfg Config
+		assert.NoError(v.Unmarshal(&cfg), f.Name())
+		assert.False(cfg.PersistDerivedSRS, "%s must not opt into SRS writes", f.Name())
+		checked++
+	}
+	assert.Greater(checked, 0, "no config files were checked")
+}

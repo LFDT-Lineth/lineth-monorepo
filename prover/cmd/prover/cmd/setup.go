@@ -222,9 +222,10 @@ func updateSetup(ctx context.Context, cfg *config.Config, force bool,
 
 	// Provisioning, not proving: this is the one place allowed to write into the
 	// SRS directory, so a later prove-time read finds the Lagrange basis already
-	// there instead of spending hours re-deriving it. Best-effort, since the
-	// setup itself derives the basis in memory either way.
-	if persister, ok := srsProvider.(circuits.LagrangePersister); ok {
+	// there instead of spending hours re-deriving it. Opt-in, because it makes
+	// the SRS directory writable; best-effort, since the setup derives the basis
+	// in memory either way.
+	if persister, ok := srsProvider.(circuits.LagrangePersister); ok && cfg.PersistDerivedSRS {
 		if err := persister.DeriveAndPersistLagrange(ctx, ccs); err != nil {
 			logrus.Warnf("could not persist derived lagrange SRS for %s (continuing): %v", circuit, err)
 		}
