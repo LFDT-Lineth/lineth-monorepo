@@ -7,6 +7,7 @@ plugins {
 
 dependencies {
   implementation(project(":coordinator:core"))
+  implementation(project(":jvm-libs:linea:core:signer-interfaces"))
   implementation(project(":coordinator:clients:smart-contract-client"))
   implementation(project(":jvm-libs:linea:clients:eth-logs-searcher"))
   implementation(project(":jvm-libs:linea:web3j-extensions"))
@@ -17,10 +18,10 @@ dependencies {
   }
   implementation "com.sksamuel.hoplite:hoplite-core:${libs.versions.hoplite.get()}"
   implementation "com.sksamuel.hoplite:hoplite-toml:${libs.versions.hoplite.get()}"
-  implementation "com.fasterxml.jackson.core:jackson-annotations:${libs.versions.jackson.get()}"
-  implementation "com.fasterxml.jackson.core:jackson-databind:${libs.versions.jackson.get()}"
-  implementation "com.fasterxml.jackson.module:jackson-module-kotlin:${libs.versions.jackson.get()}"
-  implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${libs.versions.jackson.get()}"
+  implementation "com.fasterxml.jackson.core:jackson-annotations"
+  implementation "com.fasterxml.jackson.core:jackson-databind"
+  implementation "com.fasterxml.jackson.module:jackson-module-kotlin"
+  implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310"
   implementation "org.awaitility:awaitility:${libs.versions.awaitility.get()}"
 }
 

@@ -14,9 +14,9 @@ dependencies {
   api project(':jvm-libs:generic:extensions:kotlin')
   api "io.consensys.tuweni:tuweni-bytes:${libs.versions.tuweni.get()}"
 
-  implementation "com.fasterxml.jackson.core:jackson-annotations:${libs.versions.jackson.get()}"
-  implementation "com.fasterxml.jackson.core:jackson-databind:${libs.versions.jackson.get()}"
-  implementation "com.fasterxml.jackson.module:jackson-module-kotlin:${libs.versions.jackson.get()}"
+  implementation "com.fasterxml.jackson.core:jackson-annotations"
+  implementation "com.fasterxml.jackson.core:jackson-databind"
+  implementation "com.fasterxml.jackson.module:jackson-module-kotlin"
 
   testImplementation(project(":jvm-libs:linea:testing:file-system"))
   testImplementation project(':jvm-libs:linea:metrics:micrometer')

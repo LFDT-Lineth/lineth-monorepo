@@ -35,30 +35,6 @@ class EthFeeHistoryBlobExtended : Response<EthFeeHistoryBlobExtended.FeeHistoryB
     @JsonProperty("baseFeePerBlobGas") val baseFeePerBlobGas: List<String>,
     @JsonProperty("blobGasUsedRatio") val blobGasUsedRatio: List<Double>,
   ) {
-    override fun equals(other: Any?): Boolean {
-      if (this === other) return true
-      if (javaClass != other?.javaClass) return false
-
-      other as FeeHistoryBlobExtended
-
-      if (oldestBlock != other.oldestBlock) return false
-      if (reward != other.reward) return false
-      if (baseFeePerGas != other.baseFeePerGas) return false
-      if (gasUsedRatio != other.gasUsedRatio) return false
-      if (baseFeePerBlobGas != other.baseFeePerBlobGas) return false
-      return blobGasUsedRatio == other.blobGasUsedRatio
-    }
-
-    override fun hashCode(): Int {
-      var result = oldestBlock.hashCode()
-      result = 31 * result + reward.hashCode()
-      result = 31 * result + baseFeePerGas.hashCode()
-      result = 31 * result + gasUsedRatio.hashCode()
-      result = 31 * result + baseFeePerBlobGas.hashCode()
-      result = 31 * result + blobGasUsedRatio.hashCode()
-      return result
-    }
-
     fun toLineaDomain(): FeeHistory {
       return FeeHistory(
         oldestBlock = oldestBlock.uLongFromPrefixedHex(),

@@ -6,6 +6,25 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 )
 
+// leafDomainTag domain-separates Merkle leaves so a table with the same row
+// values but a different (BaseWidth, ExtWidth) shape hashes to a different
+// digest. Without this, e.g. an all-zero base row and an all-zero ext row
+// collide, letting two structurally distinct commitments share a Merkle root
+// and get deduplicated inside inputOpeningRoots.
+const leafDomainTag uint64 = 0x4c66_7269_5f6c_6631 // "Lfri_lf1"
+
+// absorbLeafHeader writes the domain tag and (baseWidth, extWidth) into h
+// before any row values. Prover ([MultiSizeTable.Merkleize]) and verifier
+// ([hashRowOpening]) MUST call this identically or roots will not
+// reconstruct.
+func absorbLeafHeader(h *poseidon2.MDHasher, baseWidth, extWidth int) {
+	var tag, b, e field.Element
+	tag.SetUint64(leafDomainTag)
+	b.SetUint64(uint64(baseWidth))
+	e.SetUint64(uint64(extWidth))
+	h.WriteElements(tag, b, e)
+}
+
 // CommitterState collects the data that are built during the commitment phase
 // of FRI. This includes the RS codewords and their Merkle tree.
 type CommitterState struct {
@@ -63,38 +82,40 @@ func (table MultiSizeTable) Encode(encoders []*RSEncoder) MultiSizeTable {
 	return encoded
 }
 
-// Merkleize merkleizes the table using Poseidon2. The encoded table is hashed
-// line-by-line to form the leaves and auxiliary leaves of a [Tree]. The tree
-// is then built from these leaves.
+// Merkleize merkleizes the table using Poseidon2. Every table but the bottom
+// (largest) one is digested as conjugate pairs, one tree depth shallower than
+// its own size, so it folds the same way the bottom table's leaf pairs do.
 func (table MultiSizeTable) Merkleize() *Tree {
 
-	// leaves stores the Merkle leaves of the tree
-	leaves := make([][]field.Octuplet, len(table))
+	bottom := len(table) - 1
+
+	// One slot wider than table: shallowest slot (index 0's shifted pair)
+	// would otherwise be a negative index.
+	leaves := make([][]field.Octuplet, len(table)+1)
 	hasher := poseidon2.NewMDHasher()
 
-	for i := range table {
+	if table[bottom].NumRows() > 0 {
+		size := table[bottom].Size()
+		leaves[len(leaves)-1] = make([]field.Octuplet, size)
+		for j := range size {
+			hasher.Reset()
+			absorbLeafHeader(hasher, len(table[bottom].Base), len(table[bottom].Ext))
+			writeRowElements(hasher, table[bottom], j)
+			leaves[len(leaves)-1][j] = hasher.SumDigest()
+		}
+	}
+
+	for i := range bottom {
 		if table[i].NumRows() == 0 {
 			continue
 		}
-
 		size := table[i].Size()
-		leaves[i] = make([]field.Octuplet, size)
-
-		for j := range size {
+		leaves[i] = make([]field.Octuplet, size/2)
+		for j := range size / 2 {
 			hasher.Reset()
-
-			for k := range table[i].Base {
-				hasher.WriteElements(table[i].Base[k][j])
-			}
-
-			for k := range table[i].Ext {
-				ext := table[i].Ext[k][j]
-				hasher.WriteElements(
-					ext.B0.A0, ext.B0.A1,
-					ext.B1.A0, ext.B1.A1,
-					ext.B2.A0, ext.B2.A1)
-			}
-
+			absorbLeafHeader(hasher, len(table[i].Base), len(table[i].Ext))
+			writeRowElements(hasher, table[i], 2*j)
+			writeRowElements(hasher, table[i], 2*j+1)
 			leaves[i][j] = hasher.SumDigest()
 		}
 	}
@@ -113,6 +134,21 @@ func (table MultiSizeTable) Merkleize() *Tree {
 	}
 
 	return NewTree(leaves)
+}
+
+// writeRowElements absorbs one row into hasher without resetting or summing,
+// so a caller can digest several rows into one combined value.
+func writeRowElements(hasher *poseidon2.MDHasher, t SizedTable, row int) {
+	for k := range t.Base {
+		hasher.WriteElements(t.Base[k][row])
+	}
+	for k := range t.Ext {
+		ext := t.Ext[k][row]
+		hasher.WriteElements(
+			ext.B0.A0, ext.B0.A1,
+			ext.B1.A0, ext.B1.A1,
+			ext.B2.A0, ext.B2.A1)
+	}
 }
 
 // Shape returns the per-size row counts of the batch, discarding the
