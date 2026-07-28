@@ -12,6 +12,17 @@ type SRSProvider interface {
 	GetSRS(ctx context.Context, ccs constraint.ConstraintSystem) (kzg.SRS, kzg.SRS, error)
 }
 
+// LagrangePersister is implemented by SRS providers that can pre-compute the
+// Lagrange basis and leave it on disk for later runs.
+//
+// It is deliberately separate from SRSProvider: obtaining an SRS is something
+// every prove path does, whereas writing into the SRS directory is a
+// provisioning action. Keeping the write off the interface every caller holds
+// is what stops it from happening implicitly.
+type LagrangePersister interface {
+	DeriveAndPersistLagrange(ctx context.Context, ccs constraint.ConstraintSystem) error
+}
+
 type UnsafeSRSProvider struct {
 }
 

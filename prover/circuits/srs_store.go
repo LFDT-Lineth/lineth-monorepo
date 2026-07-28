@@ -156,12 +156,48 @@ func NewSRSStore(rootDir string) (*SRSStore, error) {
 	return srsStore, nil
 }
 
-// GetSRS returns the canonical and Lagrange SRS for the circuit, deriving and
-// persisting the Lagrange form when no loadable dump is on disk. Concurrent
-// callers requesting the same missing size each derive independently (the
-// store is race-safe but does not deduplicate the work); every in-repo caller
-// is sequential today.
+// GetSRS returns the canonical and Lagrange SRS for the circuit.
+//
+// It only reads. When no loadable Lagrange dump is on disk the basis is derived
+// in memory and discarded with the process, exactly as it was before the store
+// learned to cache. Populating the store is DeriveAndPersistLagrange's job, so
+// that a prove-time read can never mutate the SRS directory: an operator can
+// mount it read-only and still be sure the fast path is available, because
+// whether the dump exists was decided at provisioning time, not by whichever
+// process happened to ask first.
 func (store *SRSStore) GetSRS(ctx context.Context, ccs constraint.ConstraintSystem) (kzg.SRS, kzg.SRS, error) {
+	canonicalSRS, lagrangeSRS, _, err := store.resolveSRS(ccs)
+	return canonicalSRS, lagrangeSRS, err
+}
+
+// DeriveAndPersistLagrange makes the Lagrange basis for ccs available on disk,
+// so later runs load it instead of spending hours re-deriving it. It is a no-op
+// when a loadable dump is already there, and it is the only path in the store
+// that writes.
+//
+// Best-effort is the caller's choice here rather than the store's: the error is
+// returned so an explicit provisioning step can report it, where a prove-time
+// read had to swallow it.
+func (store *SRSStore) DeriveAndPersistLagrange(ctx context.Context, ccs constraint.ConstraintSystem) error {
+	_, lagrangeSRS, derived, err := store.resolveSRS(ccs)
+	if err != nil {
+		return err
+	}
+	if !derived {
+		// a loadable dump is already on disk; nothing to publish
+		return nil
+	}
+	_, sizeLagrange := plonk.SRSSize(ccs)
+	return store.cacheLagrange(lagrangeSRS, sizeLagrange, fieldToCurve(ccs.Field()))
+}
+
+// resolveSRS loads the canonical SRS and either loads or derives the matching
+// Lagrange basis, reporting whether it had to derive. It never writes.
+//
+// Concurrent callers requesting the same missing size each derive independently
+// (the store is race-safe but does not deduplicate the work); every in-repo
+// caller is sequential today.
+func (store *SRSStore) resolveSRS(ccs constraint.ConstraintSystem) (kzg.SRS, kzg.SRS, bool, error) {
 	sizeCanonical, sizeLagrange := plonk.SRSSize(ccs)
 	curveID := fieldToCurve(ccs.Field())
 
@@ -174,17 +210,17 @@ func (store *SRSStore) GetSRS(ctx context.Context, ccs constraint.ConstraintSyst
 			canonicalSRS = kzg.NewSRS(curveID)
 			data, err := os.ReadFile(entry.path)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, false, err
 			}
 			if err := canonicalSRS.ReadDump(bytes.NewReader(data), sizeCanonical); err != nil {
-				return nil, nil, err
+				return nil, nil, false, err
 			}
 			break
 		}
 	}
 
 	if canonicalSRS == nil {
-		return nil, nil, fmt.Errorf("could not find canonical SRS for curve %s and size %d", curveID, sizeCanonical)
+		return nil, nil, false, fmt.Errorf("could not find canonical SRS for curve %s and size %d", curveID, sizeCanonical)
 	}
 
 	// find the lagrange srs
@@ -233,20 +269,14 @@ func (store *SRSStore) GetSRS(ctx context.Context, ccs constraint.ConstraintSyst
 			panic("canonical SRS is smaller than lagrange SRS")
 		}
 		logrus.Debugf("computing lagrange SRS from canonical SRS %d -> %d", sizeCanonical, sizeLagrange)
-		var err error
-		lagrangeSRS, err = toLagrange(canonicalSRS, sizeLagrange)
+		lagrangeSRS, err := toLagrange(canonicalSRS, sizeLagrange)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, false, err
 		}
-		// Persist the derived Lagrange SRS so subsequent runs load it from disk
-		// instead of re-deriving it. Best-effort: a failed write must not fail
-		// the caller.
-		if err := store.cacheLagrange(lagrangeSRS, sizeLagrange, curveID); err != nil {
-			logrus.Warnf("could not persist derived lagrange SRS (continuing): %v", err)
-		}
+		return canonicalSRS, lagrangeSRS, true, nil
 	}
 
-	return canonicalSRS, lagrangeSRS, nil
+	return canonicalSRS, lagrangeSRS, false, nil
 }
 
 // entriesSnapshot returns a copy of the entries for curveID, safe to iterate unlocked.
