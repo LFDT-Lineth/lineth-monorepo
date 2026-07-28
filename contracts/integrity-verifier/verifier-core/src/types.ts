@@ -91,7 +91,7 @@ export interface ViewCallConfig {
 }
 
 export interface NamespaceConfig {
-  /** ERC-7201 namespace identifier (e.g., "linea.storage.YieldManager") */
+  /** ERC-7201 namespace identifier (e.g., "linea.storage.YieldManagerStorage") */
   id: string;
   /** Variables within the namespace to verify */
   variables: NamespaceVariable[];
