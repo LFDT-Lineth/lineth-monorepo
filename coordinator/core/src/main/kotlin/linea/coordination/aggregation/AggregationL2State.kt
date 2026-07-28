@@ -20,6 +20,8 @@ data class AggregationL2State(
       return false
     }
     if (!parentAggregationLastL1RollingHash.contentEquals(other.parentAggregationLastL1RollingHash)) return false
+    if (parentAggregationLastFtxNumber != other.parentAggregationLastFtxNumber) return false
+    if (!parentAggregationLastFtxRollingHash.contentEquals(other.parentAggregationLastFtxRollingHash)) return false
 
     return true
   }
@@ -28,6 +30,8 @@ data class AggregationL2State(
     var result = parentAggregationLastBlockTimestamp.hashCode()
     result = 31 * result + parentAggregationLastL1RollingHashMessageNumber.hashCode()
     result = 31 * result + parentAggregationLastL1RollingHash.contentHashCode()
+    result = 31 * result + parentAggregationLastFtxNumber.hashCode()
+    result = 31 * result + parentAggregationLastFtxRollingHash.contentHashCode()
     return result
   }
 }
