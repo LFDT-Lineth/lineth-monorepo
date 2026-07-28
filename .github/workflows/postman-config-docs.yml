@@ -53,10 +53,9 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm -F "@lfdt-lineth/postman..." install --frozen-lockfile
 
       # check alone is the drift gate: re-extracts and compares to committed output/
-      # (do not run generate first — that would rewrite output/ and make drift tautological)
       - name: Drift + completeness check
         run: pnpm --filter @lfdt-lineth/postman run docs:check
 
@@ -69,7 +68,7 @@ jobs:
           find postman/docs/_generated/postman -type f -name '*.mdx' | sort
 
   publish-doc-linea:
-    if: ${{ !inputs.dry_run }}
+    if: ${{ github.event_name == 'workflow_dispatch' && !inputs.dry_run }}
     needs: generate-drift-check
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
     permissions:
@@ -96,7 +95,7 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm -F "@lfdt-lineth/postman..." install --frozen-lockfile
 
       - name: Generate partials
         run: pnpm --filter @lfdt-lineth/postman run docs:generate
