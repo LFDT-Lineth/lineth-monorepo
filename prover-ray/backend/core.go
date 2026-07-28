@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 
+	zkc_r5 "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/zkc-r5"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 )
@@ -23,7 +24,7 @@ type Core struct {
 	cfg    Config
 	sys    *wiop.System
 	driver *zkcdriver.ZkCDriver
-	elf    elfInputs // guest ELF sections + entry point, extracted once in New; reused per job
+	elf    zkc_r5.GuestProgramSections // guest ELF sections + entry point, extracted once in New; reused per job
 }
 
 // New loads the circuit binary and the guest ELF, calls [zkcdriver.NewZkCDriver]
@@ -45,7 +46,7 @@ func New(cfg Config) (*Core, error) {
 	}
 	defer elfFile.Close()
 
-	parsedELF, err := loadELFInputs(elfFile)
+	parsedELF, err := zkc_r5.LoadGuestElf(elfFile)
 	if err != nil {
 		return nil, fmt.Errorf("extracting ELF blobs from %q: %w", cfg.GuestELFPath, err)
 	}
@@ -96,10 +97,8 @@ func (c *Core) Prove(ctx context.Context, job Job) Result {
 // [New] and reused across calls; only the per-job StatelessInput blobs
 // (schema id + SSZ body) differ.
 func (c *Core) buildInputs(job Job) map[string][]byte {
-	memBlobs := make([]memoryBlob, 0, len(c.elf.blobs)+2)
-	memBlobs = append(memBlobs, c.elf.blobs...)
-	memBlobs = append(memBlobs, sszBlobs(c.cfg.inOrigin(), decodePayload(job))...)
-	return encodeInputs(memBlobs, c.elf.entry)
+	dataSections := zkc_r5.NewDataSection(zkc_r5.DefaultINOrigin, decodePayload(job))
+	return zkc_r5.EncodeGuestAndMemoryForZkc(c.elf, dataSections)
 }
 
 // runProve calls AssignWithPreRead, sys.Prove, and sys.Verify.
