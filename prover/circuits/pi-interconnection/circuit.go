@@ -20,6 +20,7 @@ import (
 	"github.com/consensys/gnark/std/compress"
 	"github.com/consensys/gnark/std/lookup/logderivlookup"
 	"github.com/consensys/gnark/std/math/cmp"
+	"github.com/consensys/gnark/std/rangecheck"
 	blobdecompression "github.com/consensys/linea-monorepo/prover/circuits/dataavailability/v2"
 	"github.com/consensys/linea-monorepo/prover/circuits/execution"
 	"github.com/consensys/linea-monorepo/prover/circuits/internal"
@@ -159,6 +160,11 @@ func (c *Circuit) Define(api frontend.API) error {
 	// same shnarf chain. Since ParentShnarf is bound into the aggregation
 	// public input (pinned on-chain as lastFinalizedShnarf), this forces
 	// initialStateRootHash to equal the genuine finalized state root.
+	rc := rangecheck.New(api)
+	for _, b := range c.GrandparentShnarf {
+		rc.Check(b, 8)
+	}
+	c.ParentShnarfPreimage.RangeCheck(api)
 	shnarfs := ComputeShnarfs(&hshK, c.GrandparentShnarf, shnarfParams)
 	internal.AssertSliceEquals(api, shnarfs[0][:], c.ParentShnarf[:])
 	shnarfs = shnarfs[1:]
