@@ -12,7 +12,9 @@
     "clean": "rimraf dist node_modules coverage tsconfig.build.tsbuildinfo",
     "build": "tsc -p tsconfig.build.json",
     "test": "jest --bail --detectOpenHandles --forceExit",
-    "migration:create": "ts-node -P ./tsconfig.json -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:create ./src/infrastructure/persistence/migrations/${MIGRATION_NAME}"
+    "migration:create": "ts-node -P ./tsconfig.json -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:create ./src/infrastructure/persistence/migrations/${MIGRATION_NAME}",
+    "docs:generate": "ts-node -P tsconfig.json scripts/generate-config-docs.ts && prettier --write \"docs/_generated/postman/*.mdx\" \"docs/linea-postman-options.mdx\"",
+    "docs:check": "ts-node -P tsconfig.json scripts/check-config-docs.ts && prettier --check \"docs/_generated/postman/*.mdx\" \"docs/linea-postman-options.mdx\""
   },
   "dependencies": {
     "@lfdt-lineth/native-libs": "workspace:*",
