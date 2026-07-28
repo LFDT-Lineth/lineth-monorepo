@@ -1,64 +1,99 @@
 include "./nonnative_utils.zkc"
 
 type tAddr       = u8
-type tCarry      = u8
 
+// secp256k1 modulus
 const p:tWidth = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f
-pub input in_x1(address:tAddr) -> (val:tWidth)
-pub input in_y1(address:tAddr) -> (val:tWidth)
-pub input in_x2(address:tAddr) -> (val:tWidth)
-pub input in_y2(address:tAddr) -> (val:tWidth)
-pub input in_x3(address:tAddr) -> (val:tWidth)
-pub input in_y3(address:tAddr) -> (val:tWidth)
+
+// Batched test vectors: in_n[0] cases, each a triple (P1, P2, P3 = P1 + P2).
+// in_is_double[i] = 1 marks a doubling case (P1 == P2), which the second loop
+// additionally checks against the dedicated projective doubling formula.
+pub input in_n(address:u1)             -> (count:u8)
+pub input in_x1(address:tAddr)         -> (val:tWidth)
+pub input in_y1(address:tAddr)         -> (val:tWidth)
+pub input in_x2(address:tAddr)         -> (val:tWidth)
+pub input in_y2(address:tAddr)         -> (val:tWidth)
+pub input in_x3(address:tAddr)         -> (val:tWidth)
+pub input in_y3(address:tAddr)         -> (val:tWidth)
+pub input in_is_double(address:tAddr)  -> (flag:u8)
 
 
 fn main() {
 
-    // Reduce inputs to canonical form up front, so downstream raw comparisons
-    // (ec_add's `x1 != x2`, the x3/y3 result check) operate on residues, not
-    // on non-canonical u256 encodings that alias the same field element.
-    var x1:tWidth = reduce_256(in_x1[0], p)
-    var y1:tWidth = reduce_256(in_y1[0], p)
-    var x2:tWidth = reduce_256(in_x2[0], p)
-    var y2:tWidth = reduce_256(in_y2[0], p)
-    var x3:tWidth = reduce_256(in_x3[0], p)
-    var y3:tWidth = reduce_256(in_y3[0], p)
+    var n:u8 = in_n[0]
 
-    // Check P1, P2, and P3 are on y^2 = x^3 + 7 over Fp.
-    assert_on_curve_secp256k1(x1, y1)
-    assert_on_curve_secp256k1(x2, y2)
-    assert_on_curve_secp256k1(x3, y3)
+    // Loop 1: every case is validated with both the affine group law
+    // (secp_add_affine) and the complete projective addition round-trip.
+    for i:tAddr = 0; i < n; i = i + 1 {
+        printf "add for index: %d\n", i
+        // Reduce inputs to canonical form up front, so downstream raw comparisons
+        // (ec_add's `x1 != x2`, the x3/y3 result check) operate on residues, not
+        // on non-canonical u256 encodings that alias the same field element.
+        var x1:tWidth = reduce_256(in_x1[i], p)
+        var y1:tWidth = reduce_256(in_y1[i], p)
+        var x2:tWidth = reduce_256(in_x2[i], p)
+        var y2:tWidth = reduce_256(in_y2[i], p)
+        var x3:tWidth = reduce_256(in_x3[i], p)
+        var y3:tWidth = reduce_256(in_y3[i], p)
 
-    // apply ec_add for secp256k1
-    var x3_:tWidth, y3_:tWidth
-    x3_, y3_ = ec_add_secp256k1(x1, y1, x2, y2)
+        // Check P1, P2, and P3 are on y^2 = x^3 + 7 over Fp.
+        assert_on_curve_secp256k1(x1, y1)
+        assert_on_curve_secp256k1(x2, y2)
+        assert_on_curve_secp256k1(x3, y3)
 
-    // validate the result
-    if (x3 != x3_) || (y3 != y3_) {
-        fail
+        // affine group law
+        var x3a:tWidth, y3a:tWidth
+        x3a, y3a = secp_add_affine(x1, y1, x2, y2)
+        if (x3 != x3a) || (y3 != y3a) {
+            fail
+        }
+
+        // complete projective addition: lift P1, P2, add, convert back to affine
+        var X1:tWidth, Y1:tWidth, Z1:tWidth
+        X1, Y1, Z1 = secp_affine_to_projective(x1, y1)
+
+        var X2:tWidth, Y2:tWidth, Z2:tWidth
+        X2, Y2, Z2 = secp_affine_to_projective(x2, y2)
+
+        var X3p:tWidth, Y3p:tWidth, Z3p:tWidth
+        X3p, Y3p, Z3p = secp_add_projective(X1, Y1, Z1, X2, Y2, Z2)
+
+        var x3p:tWidth, y3p:tWidth
+        x3p, y3p = secp_projective_to_affine(X3p, Y3p, Z3p)
+
+        if (x3 != x3p) || (y3 != y3p) {
+            fail
+        }
     }
 
-    // validate the projective formula: lift P1, P2 to projective, add, and
-    // convert back to affine — must match the claimed affine result (x3, y3).
-    var X1:tWidth, Y1:tWidth, Z1:tWidth
-    X1, Y1, Z1 = secp_affine_to_projective(x1, y1)
+    // Loop 2: doubling cases (P1 == P2) also exercise the dedicated projective
+    // doubling formula. 2*P1 must match the claimed result (x3, y3).
+    for i:tAddr = 0; i < n; i = i + 1 {
+        if in_is_double[i] != 0 {
+            printf "double for index: %d\n", i
+            var x1:tWidth = reduce_256(in_x1[i], p)
+            var y1:tWidth = reduce_256(in_y1[i], p)
+            var x3:tWidth = reduce_256(in_x3[i], p)
+            var y3:tWidth = reduce_256(in_y3[i], p)
 
-    var X2:tWidth, Y2:tWidth, Z2:tWidth
-    X2, Y2, Z2 = secp_affine_to_projective(x2, y2)
+            var X1:tWidth, Y1:tWidth, Z1:tWidth
+            X1, Y1, Z1 = secp_affine_to_projective(x1, y1)
 
-    var X3p:tWidth, Y3p:tWidth, Z3p:tWidth
-    X3p, Y3p, Z3p = secp_add_projective(X1, Y1, Z1, X2, Y2, Z2)
+            var Xd:tWidth, Yd:tWidth, Zd:tWidth
+            Xd, Yd, Zd = secp_double_projective(X1, Y1, Z1)
 
-    var x3p:tWidth, y3p:tWidth
-    x3p, y3p = secp_projective_to_affine(X3p, Y3p, Z3p)
+            var xd:tWidth, yd:tWidth
+            xd, yd = secp_projective_to_affine(Xd, Yd, Zd)
 
-    if (x3 != x3p) || (y3 != y3p) {
-        fail
+            if (x3 != xd) || (y3 != yd) {
+                fail
+            }
+        }
     }
 }
 
-// fails if (x, y) is not a finite point on y^2 = x^3 + 7 over Fp
-// Expects canonical inputs (x, y < p); callers reduce via reduce_256.
+// fails if (x, y) is not a finite point on y^2 = x^3 + 7 over Fp,
+// expects canonical inputs (x, y < p); callers reduce via reduce_256.
 fn assert_on_curve_secp256k1(x:tWidth, y:tWidth) {
     var y2:tWidth = mulmod_256(y, y, p)
     var x2:tWidth = mulmod_256(x, x, p)
@@ -70,7 +105,7 @@ fn assert_on_curve_secp256k1(x:tWidth, y:tWidth) {
 }
 
 // complete finite-point addition for secp256k1 (infinity case not yet handled)
-fn ec_add_secp256k1(x1:tWidth, y1:tWidth, x2:tWidth, y2:tWidth) -> (x3:tWidth, y3:tWidth) {
+fn secp_add_affine(x1:tWidth, y1:tWidth, x2:tWidth, y2:tWidth) -> (x3:tWidth, y3:tWidth) {
     if x1 != x2 {
         // --- Distinct finite-point addition ---
         // lambda = (y2 - y1) * inv(x2 - x1)
@@ -240,7 +275,7 @@ fn secp_double_projective(X1:tWidth, Y1:tWidth, Z1:tWidth) -> (X3:tWidth, Y3:tWi
     Z3                 = addmod_256(S3_4, S3_4, p)
 }
 
-// Z = 0 means point at infinity; returns (0, 0) sentinel (matching ec_add_secp256k1 convention)
+// Z = 0 means point at infinity; returns (0, 0) sentinel (matching secp_add_affine convention)
 fn secp_projective_to_affine(X:tWidth, Y:tWidth, Z:tWidth) -> (x:tWidth, y:tWidth) {
     if Z == 0 {
         x = 0

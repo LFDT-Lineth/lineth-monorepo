@@ -7,7 +7,8 @@ References:
 - secp256k1 parameters: <https://std.neuromancer.sk/secg/secp256k1/>
 - Short-Weierstrass group law: <https://www.hyperelliptic.org/EFD/g1p/auto-shortw.html>
 - Homogeneous projective complete addition (a=0): <https://hyperelliptic.org/EFD/g1p/auto-shortw-projective.html#addition-add-2015-rcb>
-- Homogeneous projective doubling (a=0): <https://hyperelliptic.org/EFD/g1p/auto-shortw-projective.html#doubling-dbl-2015-rcb-2>
+- Homogeneous projective doubling (used here, `dbl-1998-cmo`): <https://hyperelliptic.org/EFD/g1p/auto-shortw-projective.html#doubling-dbl-1998-cmo>
+- Cohen–Miyaji–Ono, *Efficient elliptic curve exponentiation using mixed coordinates* (ASIACRYPT 1998, LNCS 1514, pp. 51–65) — source of the doubling formula: <https://doi.org/10.1007/3-540-49649-1_6>
 - Jacobian formulas for `a = 0` short-Weierstrass curves: <https://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html>
 - Complete addition formulas for prime order elliptic curves (Renes–Costello–Batina 2015): <https://eprint.iacr.org/2015/1060>
 - gnark-crypto secp256k1 API notes: <https://pkg.go.dev/github.com/consensys/gnark-crypto/ecc/secp256k1>
@@ -443,14 +444,17 @@ Operation count: **12 mul + 29 add/sub** (12 `mul` lines; 19 semantic add/sub + 
 
 When implementing double-and-add scalar multiplication, every bit of the scalar produces one doubling and at most one addition. Since doublings dominate (log₂ scalar ≈ 256 iterations), a dedicated doubling formula that is cheaper than the general addition is worth using.
 
-For secp256k1 (`a = 0`, `b = 7`) in homogeneous projective:
+This is the standard-projective doubling of **Cohen–Miyaji–Ono 1998**, catalogued
+in the EFD as [`dbl-1998-cmo`](https://hyperelliptic.org/EFD/g1p/auto-shortw-projective.html#doubling-dbl-1998-cmo).
+The general CMO formula is `w = a·Z1² + 3·X1²`; for secp256k1 (`a = 0`) the `a·Z1²`
+term drops, giving `w = 3·X1²`. All other steps are identical to the EFD entry.
 
 **Inputs:** `P = (X1 : Y1 : Z1)`, `P ≠ O`.
 **Output:** `(X3 : Y3 : Z3) = 2P`.
 
 ```text
-Derivation: the tangent slope in affine is λ = 3x² / (2y).
-Lifted to projective with W = 3·X1² (numerator), S = Y1·Z1 (half-denominator):
+CMO 1998 (dbl-1998-cmo), specialized to a = 0. The affine tangent slope
+λ = 3x² / (2y) lifts to W = 3·X1² (numerator), S = Y1·Z1 (half-denominator):
 
 W  = 3·X1²                    // tangent numerator (a=0 drops the a·Z1² term)
 S  = Y1·Z1
