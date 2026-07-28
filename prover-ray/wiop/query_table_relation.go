@@ -177,6 +177,62 @@ func checkTablesRowLimit(path, side string, tables []Table, rt *Runtime, limit u
 	return nil
 }
 
+// PrevalidateRowLimit is the compile-time analogue of
+// [TableRelationQuery.ValidateRowLimit]: it checks the same per-side row budget
+// but from static module sizes alone, so it runs at compile time, during a
+// compiler pass, with no [Runtime] in hand. A sized module contributes its
+// fixed height; a dynamic (or otherwise unsized) module, whose height is only
+// known per-run, is counted as its maximum possible height
+// [ColumnSizeMaxSupported] (2^22). This makes the check a conservative upper
+// bound: a lookup that passes at compile time cannot overflow the reduced
+// accumulators for any runtime assignment, so it complements — rather than
+// replaces — the exact runtime checks ([TableRelationQuery.CheckRowLimit] /
+// [TableRelationQuery.ValidateRowLimit]).
+func (tr *TableRelationQuery) PrevalidateRowLimit(limit uint64) error {
+	if err := precheckTablesRowLimit(tr.context.Path(), "A", tr.A, limit); err != nil {
+		return err
+	}
+	return precheckTablesRowLimit(tr.context.Path(), "B", tr.B, limit)
+}
+
+// PrecheckRowLimit panics if [TableRelationQuery.PrevalidateRowLimit] would
+// return an error for the given limit. Used at compile time (from a compiler
+// pass), where an over-budget lookup is a programming error worth surfacing
+// before any witness is assigned.
+func (tr *TableRelationQuery) PrecheckRowLimit(limit uint64) {
+	if err := tr.PrevalidateRowLimit(limit); err != nil {
+		panic(err)
+	}
+}
+
+// precheckTablesRowLimit sums the static row counts of every fragment in tables
+// and returns an error if the total reaches limit. It is the compile-time
+// helper behind [TableRelationQuery.PrevalidateRowLimit]: sized modules
+// contribute their fixed height; dynamic or unsized modules contribute the
+// maximum possible height [ColumnSizeMaxSupported] (2^22).
+func precheckTablesRowLimit(path, side string, tables []Table, limit uint64) error {
+	var sum uint64
+	for _, tab := range tables {
+		m := tab.Module()
+		if m.IsSized() {
+			sum += uint64(m.Size())
+		} else {
+			sum += uint64(ColumnSizeMaxSupported)
+		}
+	}
+	if sum >= limit {
+		return fmt.Errorf(
+			"wiop: TableRelationQuery(%s): total rows on the %s side reach %d "+
+				"(dynamic/unsized modules counted as their maximum height %d), which is >= the "+
+				"effective per-query row limit %d (the row budget shared across the queries "+
+				"compiled together); the accumulators in the reduced constraints would overflow "+
+				"over a small field. Split the query so each side stays below the limit",
+			path, side, sum, ColumnSizeMaxSupported, limit,
+		)
+	}
+	return nil
+}
+
 // LookupKind selects the relational predicate asserted by a [TableRelationQuery].
 type LookupKind uint8
 

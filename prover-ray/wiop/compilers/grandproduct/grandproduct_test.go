@@ -176,18 +176,22 @@ func TestCompile_TamperResult(t *testing.T) {
 		"a tampered grand-product Result must be rejected")
 }
 
-// ---- Row limit (driven through the real prover/verifier) ----
+// ---- Row limit (compile-time check + runtime verifier) ----
 //
 // These tests exceed wiop.MaxPermutationRows (2^58) for real by declaring
-// modules of that size. No 2^58 vector is materialised: a static module's size
-// is metadata, the row-limit action reads only that size, and it is registered
-// on the witness round — which the runtime opens first — ahead of the
-// row-walking grand-product prover actions, so the prover fails fast.
+// static modules of that size. No 2^58 vector is materialised: a static
+// module's size is metadata, and the compile-time row-limit check
+// ([wiop.TableRelationQuery.PrecheckRowLimit], invoked from Compile) reads only
+// that size. Because the compile-time bound is a conservative upper bound
+// (dynamic modules are counted as their 2^22 max, static ones as their exact
+// size), an over-limit static permutation is caught during Compile itself —
+// before any witness exists — so these assert on Compile panicking. The runtime
+// verifier variant is exercised via a maliciously inflated proof over a dynamic
+// module, the one case Compile cannot pre-catch.
 
-// newPermutation builds a single-column permutation A ⊆⊇ B with the given
-// module sizes and compiles it. Columns are left unassigned: the row-limit
-// action reads only module sizes.
-func newPermutation(t *testing.T, aSize, bSize int) *wiop.System {
+// newPermutationSystem builds (but does not compile) a single-column
+// permutation A ⊆⊇ B with the given static module sizes.
+func newPermutationSystem(t *testing.T, aSize, bSize int) *wiop.System {
 	t.Helper()
 	sys := wiop.NewSystemf("gp-limit")
 	r0 := sys.NewRound()
@@ -200,19 +204,58 @@ func newPermutation(t *testing.T, aSize, bSize int) *wiop.System {
 		[]wiop.Table{wiop.NewTable(colA.View())},
 		[]wiop.Table{wiop.NewTable(colB.View())},
 	)
-	grandproduct.Compile(sys)
 	return sys
 }
 
-// TestCompilePermutation_RowLimit_ProverPanics drives the real prover
-// ([wiop.System.Prove]) of a permutation whose A side has 2^58 rows. The
-// row-limit prover action — the only action on the witness round, registered
-// ahead of the grand-product discharge pass — must panic before any row is
-// touched, so the witness callback need not assign anything.
-func TestCompilePermutation_RowLimit_ProverPanics(t *testing.T) {
-	sys := newPermutation(t, 1<<58, 2) // A side = 2^58 rows (>= bound); B side tiny.
-	assert.Panics(t, func() { sys.Prove(func(*wiop.Runtime) {}) },
-		"prover must panic when a permutation side reaches the row limit")
+// TestCompilePermutation_RowLimit_CompilePanics_ASide compiles a permutation
+// whose A side has 2^58 rows. The compile-time row-limit check must panic
+// before any witness is assigned.
+func TestCompilePermutation_RowLimit_CompilePanics_ASide(t *testing.T) {
+	sys := newPermutationSystem(t, 1<<58, 2) // A side = 2^58 rows (>= bound); B side tiny.
+	assert.Panics(t, func() { grandproduct.Compile(sys) },
+		"Compile must panic when a permutation A side reaches the row limit")
+}
+
+// TestCompilePermutation_RowLimit_CompilePanics_BSide compiles a permutation
+// whose B side has 2^58 rows, exercising the B-side branch of the check
+// independently of the A side.
+func TestCompilePermutation_RowLimit_CompilePanics_BSide(t *testing.T) {
+	sys := newPermutationSystem(t, 2, 1<<58) // B side = 2^58 rows (>= bound); A side tiny.
+	assert.Panics(t, func() { grandproduct.Compile(sys) },
+		"Compile must panic when a permutation B side reaches the row limit")
+}
+
+// TestCompilePermutation_RowLimit_MultipleFragmentsCombine builds a single
+// permutation whose A side has two fragments, each 2^57 rows. Neither fragment
+// reaches the MaxPermutationRows = 2^58 budget alone, but the check sums the
+// fragment heights per side (2^57 + 2^57 = 2^58), so their combined height
+// reaches the limit and Compile must panic. This exercises the per-side
+// summation across multiple columns, as opposed to a single over-sized column.
+func TestCompilePermutation_RowLimit_MultipleFragmentsCombine(t *testing.T) {
+	sys := wiop.NewSystemf("gp-limit-multifrag")
+	r0 := sys.NewRound()
+
+	// Two A fragments, each 2^57 rows and individually under budget.
+	modA0 := sys.NewSizedModule(sys.Context.Childf("modA0"), 1<<57, wiop.PaddingDirectionRight)
+	colA0 := modA0.NewColumn(sys.Context.Childf("A0"), wiop.VisibilityOracle, r0)
+	modA1 := sys.NewSizedModule(sys.Context.Childf("modA1"), 1<<57, wiop.PaddingDirectionRight)
+	colA1 := modA1.NewColumn(sys.Context.Childf("A1"), wiop.VisibilityOracle, r0)
+
+	// Two matching B fragments so the permutation is well-formed; the A side
+	// trips the check first.
+	modB0 := sys.NewSizedModule(sys.Context.Childf("modB0"), 1<<57, wiop.PaddingDirectionRight)
+	colB0 := modB0.NewColumn(sys.Context.Childf("B0"), wiop.VisibilityOracle, r0)
+	modB1 := sys.NewSizedModule(sys.Context.Childf("modB1"), 1<<57, wiop.PaddingDirectionRight)
+	colB1 := modB1.NewColumn(sys.Context.Childf("B1"), wiop.VisibilityOracle, r0)
+
+	sys.NewPermutation(
+		sys.Context.Childf("perm"),
+		[]wiop.Table{wiop.NewTable(colA0.View()), wiop.NewTable(colA1.View())},
+		[]wiop.Table{wiop.NewTable(colB0.View()), wiop.NewTable(colB1.View())},
+	)
+
+	assert.Panics(t, func() { grandproduct.Compile(sys) },
+		"two 2^57-row A fragments must sum to the 2^58 budget and make Compile reject the permutation")
 }
 
 // TestCompilePermutation_RowLimit_VerifierRejects runs the real verifier

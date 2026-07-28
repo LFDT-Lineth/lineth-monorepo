@@ -52,6 +52,14 @@ func compilePermutations(sys *wiop.System) {
 	// so the prover fails fast; the verifier re-checks and rejects.
 	limit := wiop.MaxPermutationRows
 	for _, q := range perms {
+		// Compile-time check: the same per-side row budget, but evaluated from
+		// static module sizes with dynamic (or otherwise unsized) modules counted
+		// as their maximum height 2^22. This surfaces an over-budget permutation
+		// during compilation — before any witness is assigned — on top of the
+		// exact prover/verifier runtime checks registered below. It panics,
+		// matching the compile-time failure convention of this pass.
+		q.PrecheckRowLimit(limit)
+
 		// One instance serves both roles: it panics as a prover action and
 		// returns an error as a verifier action.
 		rowLimit := &rowLimitAction{query: q, limit: limit}

@@ -174,6 +174,13 @@ func Compile(sys *wiop.System) {
 // later places that group's M-assignment task; registering here, ahead of the
 // group loop, guarantees the row-limit check runs before M is filled.
 //
+// In addition to the runtime prover/verifier actions, each query is checked
+// against the same budget at compile time via
+// [wiop.TableRelationQuery.PrecheckRowLimit], which panics immediately on an
+// over-budget lookup. That compile-time check counts dynamic (or otherwise
+// unsized) modules as their maximum height 2^22, so it is a conservative upper
+// bound that complements the exact runtime checks rather than replacing them.
+//
 // The effective per-side limit for a query is [wiop.MaxLookupRows] divided by
 // the number of lookups reduced into the query's group: queries that share an
 // including (B) table share a single multiplicity column M and one aggregated
@@ -205,6 +212,14 @@ func registerRowLimitChecks(sys *wiop.System, groups map[string]*lookupGroup) {
 		g := groups[key]
 
 		limit := wiop.MaxLookupRows / uint64(lookupsPerGroup[key])
+
+		// Compile-time check: the same per-side row budget, but evaluated from
+		// static module sizes with dynamic (or otherwise unsized) modules
+		// counted as their maximum height 2^22. This surfaces an over-budget
+		// lookup during compilation — before any witness is assigned — on top of
+		// the exact prover/verifier runtime checks registered below. It panics,
+		// matching the compile-time failure convention of this pass.
+		q.PrecheckRowLimit(limit)
 
 		// One instance serves both roles: it panics as a prover action and
 		// returns an error as a verifier action.
