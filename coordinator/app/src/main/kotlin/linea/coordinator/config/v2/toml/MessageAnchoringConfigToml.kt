@@ -11,7 +11,7 @@ import kotlin.time.Duration.Companion.seconds
 
 data class MessageAnchoringConfigToml(
   @param:ConfigDoc(description = "Whether L1 to L2 message anchoring is disabled.", default = "false")
-  var disabled: Boolean = false,
+  val disabled: Boolean = false,
   @param:ConfigDoc(description = "Interval between message anchoring ticks.", default = "PT10S")
   val anchoringTickInterval: Duration = 10.seconds,
   @param:ConfigDoc(description = "Maximum number of messages buffered awaiting anchoring.", default = "10000")

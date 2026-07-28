@@ -14,14 +14,7 @@ import linea.domain.toBlockParameter
 import kotlin.reflect.KType
 
 @Suppress("UNCHECKED_CAST")
-open class AbstractBlockParameterDecoder<T : BlockParameter> : Decoder<T> {
-  override fun supports(type: KType): Boolean = type.classifier in
-    listOf(
-      BlockParameter::class,
-      BlockParameter.Tag::class,
-      BlockParameter.BlockNumber::class,
-    )
-
+abstract class AbstractBlockParameterDecoder<T : BlockParameter> : Decoder<T> {
   override fun decode(node: Node, type: KType, context: DecoderContext): ConfigResult<T> {
     return when (node) {
       is StringNode ->

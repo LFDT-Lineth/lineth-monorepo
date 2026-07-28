@@ -1,7 +1,6 @@
 package linea.persistence.conflation
 
 import io.vertx.core.Future
-import io.vertx.pgclient.PgException
 import io.vertx.sqlclient.Row
 import io.vertx.sqlclient.SqlClient
 import io.vertx.sqlclient.Tuple
@@ -16,6 +15,7 @@ import linea.error.DuplicatedRecordException
 import linea.kotlin.decodeHex
 import linea.persistence.AggregationsDao
 import linea.persistence.db.SQLQueryLogger
+import linea.persistence.db.isDuplicateKeyException
 import net.consensys.linea.async.toSafeFuture
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
@@ -294,9 +294,7 @@ class PostgresAggregationsDao(
     return insertQuery.execute(Tuple.tuple(params))
       .map { }
       .recover { th ->
-        if (th is PgException &&
-          th.errorMessage == "duplicate key value violates unique constraint \"aggregations_pkey\""
-        ) {
+        if (isDuplicateKeyException(th)) {
           Future.failedFuture(
             DuplicatedRecordException(
               "Aggregation startBlockNumber=$startBlockNumber, endBlockNumber=$endBlockNumber " +

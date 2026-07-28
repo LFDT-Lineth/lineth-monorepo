@@ -1,12 +1,12 @@
 package linea.persistence.conflation
 
 import io.vertx.core.Future
-import io.vertx.pgclient.PgException
 import io.vertx.sqlclient.SqlClient
 import io.vertx.sqlclient.Tuple
 import linea.domain.Batch
 import linea.error.DuplicatedRecordException
 import linea.persistence.db.SQLQueryLogger
+import linea.persistence.db.isDuplicateKeyException
 import net.consensys.linea.async.toSafeFuture
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
@@ -104,7 +104,7 @@ class BatchesPostgresDao(
     return insertQuery.execute(Tuple.tuple(params))
       .map { }
       .recover { th ->
-        if (th is PgException && th.errorMessage == "duplicate key value violates unique constraint \"batches_pkey\"") {
+        if (isDuplicateKeyException(th)) {
           Future.failedFuture(
             DuplicatedRecordException(
               "Batch startBlockNumber=$startBlockNumber, endBlockNumber=$endBlockNumber " +
