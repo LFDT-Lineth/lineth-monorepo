@@ -23,7 +23,7 @@ func TestInclusion_Soundness_InvalidWitness(t *testing.T) {
 	sc := wioptest.NewInclusionScenario()
 	rt := wiop.NewRuntime(sc.Sys)
 	sc.RunInvalid(rt)
-	assert.Error(t, sc.Query.Check(rt), "invalid witness must be rejected by Check")
+	require.Error(t, sc.Query.Check(rt), "invalid witness must be rejected by Check")
 }
 
 // ---- Table constructors ----
@@ -109,7 +109,7 @@ func TestInclusion_Check_Mismatch(t *testing.T) {
 	rt.AssignColumn(colB, baseVec(4, 2)) // A not in B
 
 	err := inc.Check(rt)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestInclusion_NewInclusion_NilCtxPanic(t *testing.T) {
@@ -247,7 +247,7 @@ func TestInclusion_PaddingLeft_Mismatch(t *testing.T) {
 	rt.AssignColumn(colB, vB)
 
 	err := inc.Check(rt)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 // ---- Inclusion with selector + padding (covers the selector path in inclusionBuildSet) ----
@@ -309,7 +309,7 @@ func TestInclusion_PaddingRight_Mismatch(t *testing.T) {
 	rt.AssignColumn(colB, vB)
 
 	err := inc.Check(rt)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 // TestInclusion_PaddingRight_WithSelector_Mismatch exercises the selector path
@@ -343,7 +343,7 @@ func TestInclusion_PaddingRight_WithSelector_Mismatch(t *testing.T) {
 	rt.AssignColumn(selA, selVec)
 
 	err := inc.Check(rt)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 // ---- Row limit (runtime + compile-time static forms) ----
@@ -372,7 +372,7 @@ func newRowLimitInclusion(t *testing.T, aSize, bSize int) (*wiop.TableRelationQu
 // whose per-side totals stay strictly below the limit.
 func TestValidateRowLimit_UnderLimit(t *testing.T) {
 	inc, rt := newRowLimitInclusion(t, 4, 8)
-	assert.NoError(t, inc.ValidateRowLimit(rt, wiop.MaxLookupRows))
+	require.NoError(t, inc.ValidateRowLimit(rt, wiop.MaxLookupRows))
 	assert.NotPanics(t, func() { inc.CheckRowLimit(rt, wiop.MaxLookupRows) })
 }
 
@@ -380,22 +380,22 @@ func TestValidateRowLimit_UnderLimit(t *testing.T) {
 // CheckRowLimit panics when a side reaches the limit.
 func TestValidateRowLimit_OverLimit(t *testing.T) {
 	incA, rtA := newRowLimitInclusion(t, 1<<30, 2) // A side reaches the 2^30 bound.
-	assert.ErrorContains(t, incA.ValidateRowLimit(rtA, wiop.MaxLookupRows), "effective per-query row limit")
+	require.ErrorContains(t, incA.ValidateRowLimit(rtA, wiop.MaxLookupRows), "effective per-query row limit")
 	assert.Panics(t, func() { incA.CheckRowLimit(rtA, wiop.MaxLookupRows) })
 
 	incB, rtB := newRowLimitInclusion(t, 2, 1<<30) // B side reaches the bound.
-	assert.ErrorContains(t, incB.ValidateRowLimit(rtB, wiop.MaxLookupRows), "effective per-query row limit")
+	require.ErrorContains(t, incB.ValidateRowLimit(rtB, wiop.MaxLookupRows), "effective per-query row limit")
 }
 
 // TestPrevalidateRowLimit_SizedModules confirms the compile-time check matches
 // the runtime form for static modules (their static size == runtime size).
 func TestPrevalidateRowLimit_SizedModules(t *testing.T) {
 	incOK, _ := newRowLimitInclusion(t, 4, 8)
-	assert.NoError(t, incOK.PrevalidateRowLimit(wiop.MaxLookupRows))
+	require.NoError(t, incOK.PrevalidateRowLimit(wiop.MaxLookupRows))
 	assert.NotPanics(t, func() { incOK.PrecheckRowLimit(wiop.MaxLookupRows) })
 
 	incBad, _ := newRowLimitInclusion(t, 1<<30, 2)
-	assert.ErrorContains(t, incBad.PrevalidateRowLimit(wiop.MaxLookupRows), "effective per-query row limit")
+	require.ErrorContains(t, incBad.PrevalidateRowLimit(wiop.MaxLookupRows), "effective per-query row limit")
 	assert.Panics(t, func() { incBad.PrecheckRowLimit(wiop.MaxLookupRows) })
 }
 
@@ -418,7 +418,7 @@ func TestPrevalidateRowLimit_DynamicCountsAsMax(t *testing.T) {
 		[]wiop.Table{wiop.NewTable(dynCol.View())},
 		[]wiop.Table{wiop.NewTable(colT.View())},
 	)
-	assert.NoError(t, inc.PrevalidateRowLimit(wiop.MaxLookupRows),
+	require.NoError(t, inc.PrevalidateRowLimit(wiop.MaxLookupRows),
 		"one dynamic fragment (counted as 2^22) is under the 2^30 budget")
 
 	// 2^30 / 2^22 = 256 dynamic fragments on the A side reach the budget.
@@ -433,6 +433,6 @@ func TestPrevalidateRowLimit_DynamicCountsAsMax(t *testing.T) {
 		aFrags,
 		[]wiop.Table{wiop.NewTable(colT.View())},
 	)
-	assert.ErrorContains(t, incMany.PrevalidateRowLimit(wiop.MaxLookupRows), "effective per-query row limit",
+	require.ErrorContains(t, incMany.PrevalidateRowLimit(wiop.MaxLookupRows), "effective per-query row limit",
 		"256 dynamic fragments counted as 2^22 each reach the 2^30 budget")
 }

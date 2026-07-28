@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestValidateRowLimit_DynamicOverLimit is a white-box test of the verifier
@@ -48,7 +49,7 @@ func TestValidateRowLimit_DynamicOverLimit(t *testing.T) {
 	rt.dynamicSizes[dynMod.index] = 1 << 30
 
 	err := inc.ValidateRowLimit(rt, MaxLookupRows)
-	assert.ErrorContains(t, err, "effective per-query row limit",
+	require.ErrorContains(t, err, "effective per-query row limit",
 		"verifier must reject a lookup whose dynamic side claims more rows than the budget")
 
 	assert.Panics(t, func() { inc.CheckRowLimit(rt, MaxLookupRows) },
@@ -78,6 +79,6 @@ func TestValidateRowLimit_DynamicWithinCap(t *testing.T) {
 	rt := NewRuntime(sys)
 	rt.dynamicSizes[dynMod.index] = ColumnSizeMaxSupported // the maximum honest size.
 
-	assert.NoError(t, inc.ValidateRowLimit(rt, MaxLookupRows),
+	require.NoError(t, inc.ValidateRowLimit(rt, MaxLookupRows),
 		"a dynamic side at the 2^22 cap is well within the 2^30 budget")
 }
