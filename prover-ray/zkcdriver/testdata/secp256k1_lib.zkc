@@ -1,0 +1,262 @@
+// secp256k1 elliptic-curve library (no main, no inputs) — include this from
+// programs that need the group law. See secp256k1_ec_add_formulas.md for the
+// derivations and references.
+include "./nonnative_utils.zkc"
+
+// secp256k1 modulus (base field). NOTE: this is the field prime p, NOT the
+// group order n. Scalars are reduced mod n, never mod p.
+const p:tWidth = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f
+
+// secp256k1 group order n (number of points in the prime-order subgroup).
+// Scalars must lie in [0, n); secp_scalar_mul rejects k >= n.
+const n:tWidth = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141
+
+// fails if (x, y) is not a finite point on y^2 = x^3 + 7 over Fp,
+// expects canonical inputs (x, y < p); callers reduce via reduce_256.
+fn assert_on_curve_secp256k1(x:tWidth, y:tWidth) {
+    var y2:tWidth = mulmod_256(y, y, p)
+    var x2:tWidth = mulmod_256(x, x, p)
+    var x3:tWidth = mulmod_256(x2, x, p)
+    var rhs:tWidth = addmod_256(x3, 7, p)
+    if rhs != y2 {
+        fail
+    }
+}
+
+// complete finite-point addition for secp256k1 (infinity case not handled, sentinel (0, 0) is provided)
+fn secp_add_affine(x1:tWidth, y1:tWidth, x2:tWidth, y2:tWidth) -> (x3:tWidth, y3:tWidth) {
+    if x1 != x2 {
+        // --- Distinct finite-point addition ---
+        // lambda = (y2 - y1) * inv(x2 - x1)
+        var dy:tWidth = submod_256(y2, y1, p)
+        var dx:tWidth = submod_256(x2, x1, p)
+        var inv_dx:tWidth = invmod_256(dx, p)
+        var lambda:tWidth = mulmod_256(dy, inv_dx, p)
+
+        // x3 = lambda^2 - x1 - x2
+        var lambda2:tWidth = mulmod_256(lambda, lambda, p)
+        var lambda2_minus_x1:tWidth = submod_256(lambda2, x1, p)
+        x3 = submod_256(lambda2_minus_x1, x2, p)
+
+        // y3 = lambda * (x1 - x3) - y1
+        var x1_minus_x3:tWidth = submod_256(x1, x3, p)
+        var lambda_x1_x3:tWidth = mulmod_256(lambda, x1_minus_x3, p)
+        y3 = submod_256(lambda_x1_x3, y1, p)
+    } else {
+        // x1 == x2: inverse or doubling
+        var neg_y1:tWidth = submod_256(0, y1, p)
+        if y2 == neg_y1 {
+            // --- Inverse / vertical case: P + (-P) = O (includes y1 = 0) ---
+            // Infinity not yet represented; return (0, 0) as sentinel
+            x3 = 0
+            y3 = 0
+        } else {
+            // --- Doubling case: x1 = x2, y1 = y2, y1 != 0 ---
+            // lambda = 3*x1^2 / (2*y1)
+            var x1sq:tWidth = mulmod_256(x1, x1, p)
+            var num:tWidth = mulmod_256(3, x1sq, p)
+            var den:tWidth = mulmod_256(2, y1, p)
+            var inv_den:tWidth = invmod_256(den, p)
+            var lambda_:tWidth = mulmod_256(num, inv_den, p)
+
+            // x3 = lambda^2 - 2*x1
+            var lambda2_:tWidth = mulmod_256(lambda_, lambda_, p)
+            var two_x1:tWidth = mulmod_256(2, x1, p)
+            x3 = submod_256(lambda2_, two_x1, p)
+
+            // y3 = lambda * (x1 - x3) - y1
+            var x1_minus_x3_:tWidth = submod_256(x1, x3, p)
+            var lambda_x1_x3_:tWidth = mulmod_256(lambda_, x1_minus_x3_, p)
+            y3 = submod_256(lambda_x1_x3_, y1, p)
+        }
+    }
+}
+
+fn secp_affine_to_projective(x:tWidth, y:tWidth) -> (X:tWidth, Y:tWidth, Z:tWidth) {
+    X = x
+    Y = y
+    Z = 1
+}
+
+// Complete projective addition for secp256k1 (a=0, b3=21).
+// Implements RCB 2015 (https://eprint.iacr.org/2015/1060.pdf) Algorithm 7 — correct for all input pairs with no case analysis.
+fn secp_add_projective(X1:tWidth, Y1:tWidth, Z1:tWidth, X2:tWidth, Y2:tWidth, Z2:tWidth) -> (X3:tWidth, Y3:tWidth, Z3:tWidth) {
+
+    // products of matching coordinates
+    var xx:tWidth      = mulmod_256(X1, X2, p)
+    var yy:tWidth      = mulmod_256(Y1, Y2, p)
+    var zz:tWidth      = mulmod_256(Z1, Z2, p)
+
+    // X1Y2+X2Y1 via Karatsuba
+    var sx1y1:tWidth   = addmod_256(X1, Y1, p)
+    var sx2y2:tWidth   = addmod_256(X2, Y2, p)
+    var pxy:tWidth     = mulmod_256(sx1y1, sx2y2, p)
+    var diag_xy:tWidth = addmod_256(xx, yy, p)
+    var cxy:tWidth     = submod_256(pxy, diag_xy, p)    // X1Y2 + X2Y1
+
+    // Y1Z2+Y2Z1 via Karatsuba
+    var sy1z1:tWidth   = addmod_256(Y1, Z1, p)
+    var sy2z2:tWidth   = addmod_256(Y2, Z2, p)
+    var pyz:tWidth     = mulmod_256(sy1z1, sy2z2, p)
+    var diag_yz:tWidth = addmod_256(yy, zz, p)
+    var cyz:tWidth     = submod_256(pyz, diag_yz, p)    // Y1Z2 + Y2Z1
+
+    // X1Z2+X2Z1 via Karatsuba
+    var sx1z1:tWidth   = addmod_256(X1, Z1, p)
+    var sx2z2:tWidth   = addmod_256(X2, Z2, p)
+    var pxz:tWidth     = mulmod_256(sx1z1, sx2z2, p)
+    var diag_xz:tWidth = addmod_256(xx, zz, p)
+    var cxz:tWidth     = submod_256(pxz, diag_xz, p)   // X1Z2 + X2Z1
+
+    // 3·(X1X2)
+    var xx2:tWidth     = addmod_256(xx, xx, p)
+    var xx3:tWidth     = addmod_256(xx2, xx, p)
+
+    // 21·(Z1Z2)  — b3 = 21 = 16+4+1 via 5 addmods
+    var zz2:tWidth     = addmod_256(zz, zz, p)
+    var zz4:tWidth     = addmod_256(zz2, zz2, p)
+    var zz8:tWidth     = addmod_256(zz4, zz4, p)
+    var zz16:tWidth    = addmod_256(zz8, zz8, p)
+    var zz20:tWidth    = addmod_256(zz16, zz4, p)
+    var zz21:tWidth    = addmod_256(zz20, zz, p)
+
+    // 21·(X1Z2+X2Z1)
+    var cxz2:tWidth    = addmod_256(cxz, cxz, p)
+    var cxz4:tWidth    = addmod_256(cxz2, cxz2, p)
+    var cxz8:tWidth    = addmod_256(cxz4, cxz4, p)
+    var cxz16:tWidth   = addmod_256(cxz8, cxz8, p)
+    var cxz20:tWidth   = addmod_256(cxz16, cxz4, p)
+    var cxz21:tWidth   = addmod_256(cxz20, cxz, p)
+
+    // paper steps 22-23
+    var pre_z3:tWidth  = addmod_256(yy, zz21, p)       // Y1Y2 + 21·Z1Z2
+    var t1:tWidth      = submod_256(yy, zz21, p)       // Y1Y2 - 21·Z1Z2
+
+    // X3 (paper steps 25-27)
+    var m_a:tWidth     = mulmod_256(cyz, cxz21, p)
+    var m_b:tWidth     = mulmod_256(cxy, t1, p)
+    X3                 = submod_256(m_b, m_a, p)
+
+    // Y3 (paper steps 28-30)
+    var m_c:tWidth     = mulmod_256(cxz21, xx3, p)
+    var m_d:tWidth     = mulmod_256(t1, pre_z3, p)
+    Y3                 = addmod_256(m_d, m_c, p)
+
+    // Z3 (paper steps 31-33)
+    var m_e:tWidth     = mulmod_256(xx3, cxy, p)
+    var m_f:tWidth     = mulmod_256(pre_z3, cyz, p)
+    Z3                 = addmod_256(m_f, m_e, p)
+}
+
+// Dedicated projective doubling for secp256k1 (a=0, b=7).
+// Cheaper than secp_add_projective; use for the doubling step in scalar multiplication.
+// Precondition: P != O (Z1 != 0, Y1 != 0 — guaranteed for valid secp256k1 subgroup points).
+// Not optimal, the most efficient one is in jacobian coordinates.
+fn secp_double_projective(X1:tWidth, Y1:tWidth, Z1:tWidth) -> (X3:tWidth, Y3:tWidth, Z3:tWidth) {
+
+    // basic products
+    var x1sq:tWidth    = mulmod_256(X1, X1, p)         // X1²
+    var y1sq:tWidth    = mulmod_256(Y1, Y1, p)         // Y1²
+    var S:tWidth       = mulmod_256(Y1, Z1, p)         // Y1·Z1
+
+    // W = 3·X1²  (tangent numerator, a=0)
+    var x1sq2:tWidth   = addmod_256(x1sq, x1sq, p)
+    var W:tWidth       = addmod_256(x1sq2, x1sq, p)
+
+    // B = X1·Y1·S
+    var x1y1:tWidth    = mulmod_256(X1, Y1, p)
+    var B:tWidth       = mulmod_256(x1y1, S, p)
+
+    // H = W² - 8B
+    var W2:tWidth      = mulmod_256(W, W, p)
+    var B2:tWidth      = addmod_256(B, B, p)
+    var B4:tWidth      = addmod_256(B2, B2, p)
+    var B8:tWidth      = addmod_256(B4, B4, p)
+    var H:tWidth       = submod_256(W2, B8, p)
+
+    // X3 = 2·H·S
+    var HS:tWidth      = mulmod_256(H, S, p)
+    X3                 = addmod_256(HS, HS, p)
+
+    // Y3 = W·(4B - H) - 8·Y1²·S²
+    var S2:tWidth      = mulmod_256(S, S, p)
+    var y1sqS2:tWidth  = mulmod_256(y1sq, S2, p)
+    var B4mH:tWidth    = submod_256(B4, H, p)
+    var WB4mH:tWidth   = mulmod_256(W, B4mH, p)
+    var y1sqS2_2:tWidth = addmod_256(y1sqS2, y1sqS2, p)
+    var y1sqS2_4:tWidth = addmod_256(y1sqS2_2, y1sqS2_2, p)
+    var y1sqS2_8:tWidth = addmod_256(y1sqS2_4, y1sqS2_4, p)
+    Y3                  = submod_256(WB4mH, y1sqS2_8, p)
+
+    // Z3 = 8·S³
+    var S3:tWidth      = mulmod_256(S2, S, p)
+    var S3_2:tWidth    = addmod_256(S3, S3, p)
+    var S3_4:tWidth    = addmod_256(S3_2, S3_2, p)
+    Z3                 = addmod_256(S3_4, S3_4, p)
+}
+
+// Z = 0 means point at infinity; returns (0, 0) sentinel (matching secp_add_affine convention)
+fn secp_projective_to_affine(X:tWidth, Y:tWidth, Z:tWidth) -> (x:tWidth, y:tWidth) {
+    if Z == 0 {
+        x = 0
+        y = 0
+    } else {
+        var z_inv:tWidth = invmod_256(Z, p)
+        x = mulmod_256(X, z_inv, p)
+        y = mulmod_256(Y, z_inv, p)
+    }
+}
+
+// Scalar multiplication Q = k*P for secp256k1, in homogeneous projective coords.
+// MSB-first double-and-add with MSB-initialisation: the accumulator is set to P
+// at the top-most set bit rather than starting from O, so every doubling acts on
+// a non-O point and the dedicated (incomplete) doubling formula is always valid.
+// Additions use the complete formula.
+//
+// Requires 1 <=k < n (the group order): this is enforced below with a hard fail.
+// For k in [1, n) every intermediate j*P has 1 <= j < n and is therefore never
+// O, so no branch handles O here. (k = 0 leaves the accumulator at O -> (0,0).)
+fn secp_scalar_mul(k:tWidth, Px:tWidth, Py:tWidth) -> (Qx:tWidth, Qy:tWidth) {
+    // Reject scalars outside the group range; keeps every intermediate off O.
+    if k >= n || k == 0 {
+        fail
+    }
+
+    // lift P to projective
+    var PX:tWidth, PY:tWidth, PZ:tWidth
+    PX, PY, PZ = secp_affine_to_projective(Px, Py)
+
+    // accumulator Q = O = (0 : 1 : 0); `started` flips to 1 at the first set bit
+    var QX:tWidth = 0
+    var QY:tWidth = 1
+    var QZ:tWidth = 0
+    var started:u8 = 0
+
+    // Walk bits MSB -> LSB. Using only constant shifts (like invmod_256):
+    // peel the top bit off `krun`, then shift left by one each iteration.
+    var krun:tWidth = k
+    for i:u64 = 0; i < (256 as u64); i = i + 1 {
+        var top:tWidth = (krun >> 255) & 1
+        krun = krun << 1
+
+        // double first (only once the accumulator holds a real, non-O point)
+        if started == 1 {
+            QX, QY, QZ = secp_double_projective(QX, QY, QZ)
+        }
+
+        // then conditionally add P
+        if top == 1 {
+            if started == 1 {
+                QX, QY, QZ = secp_add_projective(QX, QY, QZ, PX, PY, PZ)
+            } else {
+                // first set bit: initialise accumulator to P (avoids doubling O)
+                QX = PX
+                QY = PY
+                QZ = PZ
+                started = 1
+            }
+        }
+    }
+
+    Qx, Qy = secp_projective_to_affine(QX, QY, QZ)
+}

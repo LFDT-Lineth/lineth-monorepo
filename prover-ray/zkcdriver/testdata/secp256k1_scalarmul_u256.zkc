@@ -1,0 +1,36 @@
+include "./secp256k1_lib.zkc"
+
+// Verifies Q = k*P over secp256k1.
+//   in_k  : the scalar (256-bit integer; used mod n by the group law)
+//   in_px, in_py : the base point P (affine)
+//   in_qx, in_qy : the claimed result Q (affine)
+pub input in_k(address:u1)   -> (k:tWidth)
+pub input in_px(address:u1)  -> (val:tWidth)
+pub input in_py(address:u1)  -> (val:tWidth)
+pub input in_qx(address:u1)  -> (val:tWidth)
+pub input in_qy(address:u1)  -> (val:tWidth)
+
+fn main() {
+    // The scalar is a raw 256-bit integer. Do NOT reduce it mod p — it is a
+    // ring element mod the group order n, and double-and-add over its bits
+    // computes (k mod n)*P directly.
+    var k:tWidth = in_k[0]
+
+    // Point coordinates are Fp elements: reduce to canonical form and validate.
+    var px:tWidth = reduce_256(in_px[0], p)
+    var py:tWidth = reduce_256(in_py[0], p)
+    var qx:tWidth = reduce_256(in_qx[0], p)
+    var qy:tWidth = reduce_256(in_qy[0], p)
+    assert_on_curve_secp256k1(px, py)
+    assert_on_curve_secp256k1(qx, qy)
+
+    // Compute k*P and check it matches the claimed Q.
+    var rx:tWidth, ry:tWidth
+    rx, ry = secp_scalar_mul(k, px, py)
+
+    printf "k*P = (%x, %x)\n", rx, ry
+
+    if (rx != qx) || (ry != qy) {
+        fail
+    }
+}

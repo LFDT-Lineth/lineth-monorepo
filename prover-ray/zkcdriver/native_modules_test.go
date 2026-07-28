@@ -42,8 +42,10 @@ func TestNative(t *testing.T) {
 	}
 }
 
-func TestSecp256k1Add(t *testing.T) {
-	const zkcPath = "testdata/secp256k1_add_u256"
+// runZkcCase compiles the program at <zkcPath>.zkc, traces it against
+// <zkcPath>.json, and runs the full prove/verify pipeline.
+func runZkcCase(t *testing.T, zkcPath string) {
+	t.Helper()
 
 	zkcInputPath := zkcPath + ".json"
 	zkcInputProgram := zkcPath + ".zkc"
@@ -69,5 +71,13 @@ func TestSecp256k1Add(t *testing.T) {
 	if err := runProveVerify(inputs, binf, proverCompilePipeline); err != nil {
 		t.Fatalf("failed to run test case: %v", err)
 	}
+}
+
+func TestSecp256k1Add(t *testing.T) {
+	runZkcCase(t, "testdata/secp256k1_add_u256")
+}
+
+func TestSecp256k1ScalarMul(t *testing.T) {
+	runZkcCase(t, "testdata/secp256k1_scalarmul_u256")
 }
 
