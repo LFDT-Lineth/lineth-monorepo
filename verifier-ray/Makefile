@@ -127,6 +127,7 @@ test-codegen:
 
 generate-testdata:
 	cd testdata/generate && go run .
+	cd testdata/generate/fri && go run .
 	cd ../prover-ray/crypto/koalabear/fri && go test -tags gen_vectors -run '^TestGenerateVectors$$' .
 
 verify-testdata: generate-testdata
