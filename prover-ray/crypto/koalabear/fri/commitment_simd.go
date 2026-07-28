@@ -148,20 +148,30 @@ func hashSizedLeaves(t SizedTable, paired bool, out []field.Octuplet) {
 	l := newLeafLayout(t, paired)
 	nbLeaves := len(out)
 
-	parallel.Execute(nbLeaves, func(start, end int) {
-		matrix := make([]field.Element, simdLanes*l.colSize)
-		var hasher *poseidon2.MDHasher
-
-		j := start
-		for ; j+simdLanes <= end; j += simdLanes {
-			l.fillGroup(matrix, t, j)
-			poseidon2.Compressx16Columns(matrix, l.colSize, out[j:j+simdLanes])
-		}
-		for ; j < end; j++ {
-			if hasher == nil {
-				hasher = poseidon2.NewMDHasher()
+	// Parallelize over SIMD groups, not individual leaves: parallel.Execute
+	// splits its range across GOMAXPROCS workers, so parallelizing over leaves
+	// gives each worker a chunk of nbLeaves/GOMAXPROCS. On a many-core machine
+	// that chunk is often < simdLanes, which sent whole sizes down the scalar
+	// path and never touched the AVX-512 batch permutation. Making the group
+	// (16 leaves) the unit of work keeps every full group on the SIMD path and
+	// leaves a single scalar tail of nbLeaves%16 for the whole array.
+	nbGroups := nbLeaves / simdLanes
+	if nbGroups > 0 {
+		parallel.Execute(nbGroups, func(start, end int) {
+			matrix := make([]field.Element, simdLanes*l.colSize)
+			for g := start; g < end; g++ {
+				j := g * simdLanes
+				l.fillGroup(matrix, t, j)
+				poseidon2.Compressx16Columns(matrix, l.colSize, out[j:j+simdLanes])
 			}
+		})
+	}
+
+	// Scalar tail: the final nbLeaves%16 leaves that do not fill a group.
+	if tail := nbGroups * simdLanes; tail < nbLeaves {
+		hasher := poseidon2.NewMDHasher()
+		for j := tail; j < nbLeaves; j++ {
 			out[j] = l.hashLeafScalar(hasher, t, j)
 		}
-	})
+	}
 }
