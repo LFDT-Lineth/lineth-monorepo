@@ -102,7 +102,7 @@ jobs:
           fi
           rm -rf "$DEST"
           mkdir -p "$DEST"
-          cp -R "$SRC/.." "$DEST/"
+          cp -R "$SRC/." "$DEST/"
           # Hard invariant: never touch the human-owned wrapper.
           if git -C doc.linea status --porcelain -- "docs/stack/reference/linea-postman-options.mdx" | grep -q .; then
             echo "Refusing to proceed: wrapper page would be modified." >&2
