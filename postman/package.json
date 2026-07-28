@@ -42,6 +42,7 @@
     "jest": "catalog:",
     "jest-environment-node": "catalog:",
     "jest-mock-extended": "catalog:",
+    "prettier": "catalog:",
     "ts-jest": "catalog:",
     "yargs": "catalog:"
   },
