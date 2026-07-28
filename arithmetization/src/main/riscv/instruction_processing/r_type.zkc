@@ -82,7 +82,7 @@ output_write_address:OutputAddress) ->
     // bit string of their additions is the same in both interpretations.
     // This also holds for subtraction.
 
-    // true in all cases, save for the write_output custom opcode
+    // true in all cases, except for the write_output custom opcode
     new_output_write_address = output_write_address
 
     switch opcode {

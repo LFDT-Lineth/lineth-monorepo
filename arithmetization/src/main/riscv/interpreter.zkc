@@ -17,7 +17,7 @@ padded_input_block, poseidon2_state>(instruction:u32, pc:Address, output_write_a
     instruction_parameters::opcode = instruction
     instruction_type = instruction_type_from_opcode(opcode)
 
-    // true in all cases, save potentially for R_TYPE instructions
+    // true in all cases, except potentially for R_TYPE instructions
     new_output_write_address = output_write_address
 
     // TODO: handle the case where rd = 0: we will handle this in RAM itself, likely by adding an extra read-write pair
