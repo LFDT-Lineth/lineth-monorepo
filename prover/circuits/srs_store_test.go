@@ -298,7 +298,11 @@ func TestSRSStore_GetSRS_PersistsDerivedLagrange(t *testing.T) {
 		subDir := t.TempDir()
 		dumpToFile(t, canonical, filepath.Join(subDir, fmt.Sprintf("kzg_srs_canonical_%d_bn254_aleo.memdump", canonicalSize)))
 
-		otherCanonical, _, err := unsafekzg.NewSRS(cs)
+		// unsafekzg.NewSRS memoises on (curve, size, toxic value), so calling it
+		// again with no toxic value returns the very same SRS and the dump below
+		// would carry a matching Vk: an explicit toxic value is what makes this
+		// a different setup at all
+		otherCanonical, _, err := unsafekzg.NewSRS(cs, unsafekzg.WithToxicValue(big.NewInt(7919)))
 		assert.NoError(err)
 		otherLagrange, err := toLagrange(otherCanonical, lagrangeSize)
 		assert.NoError(err)
