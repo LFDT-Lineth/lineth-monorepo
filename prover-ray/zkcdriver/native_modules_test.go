@@ -41,3 +41,33 @@ func TestNative(t *testing.T) {
 		})
 	}
 }
+
+func TestSecp256k1Add(t *testing.T) {
+	const zkcPath = "testdata/secp256k1_add_u256"
+
+	zkcInputPath := zkcPath + ".json"
+	zkcInputProgram := zkcPath + ".zkc"
+	binf, err := compileBinaryConstraints(zkcInputProgram)
+	if err != nil {
+		t.Fatalf("failed to compile zkc source: %v", err)
+	}
+	if files.CheckFilePath(zkcInputPath) != nil {
+		t.Fatalf("zkc input file %s does not exist", zkcInputPath)
+	}
+	inputBytes, err := os.ReadFile(zkcInputPath)
+	if err != nil {
+		t.Fatalf("failed to read zkc input file: %v", err)
+	}
+	tc := zkcTestCase{
+		ZkcFilePath: zkcInputPath,
+		InputStr:    string(inputBytes),
+	}
+	inputs, _, err := parseTestCase(tc, binf)
+	if err != nil {
+		t.Fatalf("failed to parse test case: %v", err)
+	}
+	if err := runProveVerify(inputs, binf, proverCompilePipeline); err != nil {
+		t.Fatalf("failed to run test case: %v", err)
+	}
+}
+
