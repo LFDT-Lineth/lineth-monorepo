@@ -4,6 +4,7 @@ go 1.25.7
 
 require (
 	github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260618065234-5d29f81a0d2c
+	github.com/consensys/gnark-crypto v0.20.2-0.20260521181528-f8db9b5b907d
 	github.com/consensys/linea-monorepo/verifier-ray/codegen v0.0.0
 )
 
@@ -11,7 +12,6 @@ require (
 	github.com/bits-and-blooms/bitset v1.24.4 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/consensys/gnark v0.14.1-0.20260219004710-bbfb2f70a565 // indirect
-	github.com/consensys/gnark-crypto v0.20.2-0.20260521181528-f8db9b5b907d // indirect
 	github.com/fxamacker/cbor/v2 v2.9.1 // indirect
 	github.com/google/pprof v0.0.0-20260402051712-545e8a4df936 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
@@ -26,3 +26,8 @@ require (
 )
 
 replace github.com/consensys/linea-monorepo/verifier-ray/codegen => ../../codegen
+
+// Build the FRI/PCS generator against the local prover-ray working tree, which
+// carries the FRI/PCS API the fixture uses (the pinned published version does
+// not). Keep in sync with the local prover-ray module path.
+replace github.com/LFDT-Lineth/lineth-monorepo/prover-ray => ../../../prover-ray

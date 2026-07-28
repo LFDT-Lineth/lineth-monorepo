@@ -78,6 +78,30 @@ pub fn build(b: *std.Build) void {
             .{ .name = "verifier_ray", .module = verifier_mod },
         },
     });
+    const test_frip_mod = b.addModule("test_frip", .{
+        .root_source_file = b.path("testdata/generated/frip.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "verifier_ray", .module = verifier_mod },
+        },
+    });
+    const test_coexist_mod = b.addModule("test_coexist", .{
+        .root_source_file = b.path("testdata/generated/coexist.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "verifier_ray", .module = verifier_mod },
+        },
+    });
+    const test_realpcs_mod = b.addModule("test_realpcs", .{
+        .root_source_file = b.path("testdata/generated/realpcs.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "verifier_ray", .module = verifier_mod },
+        },
+    });
 
     const embedded_data_opts = b.addOptions();
     embedded_data_opts.addOption(usize, "spec_index", embedded_spec);
@@ -130,6 +154,9 @@ pub fn build(b: *std.Build) void {
                     .{ .name = "verifier_ray", .module = verifier_mod },
                     .{ .name = "test_vectors", .module = test_vectors_mod },
                     .{ .name = "test_vanishing", .module = test_vanishing_mod },
+                    .{ .name = "test_frip", .module = test_frip_mod },
+                    .{ .name = "test_coexist", .module = test_coexist_mod },
+                    .{ .name = "test_realpcs", .module = test_realpcs_mod },
                 },
             }),
         });

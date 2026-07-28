@@ -1,7 +1,9 @@
 const protocol = @import("protocol/root.zig");
 const vanishing = @import("query/vanishing.zig");
 const logderivativesum = @import("query/logderivativesum.zig");
+const pcs = @import("pcs/verify.zig");
 const ext = @import("field/koalabear_ext.zig");
+const fiat_shamir = @import("crypto/fiat_shamir.zig");
 const profiling = @import("profiling.zig");
 // TODO(new-sub-verifier): add import here — step 1 below.
 
@@ -31,8 +33,8 @@ const profiling = @import("profiling.zig");
 //           .claims = proof.sub_verifier_claims,
 //       });
 //
-//  Nothing else changes: protocol.Spec, protocol.replay, and all existing
-//  sub-verifiers are untouched.
+//  Nothing else changes: protocol.Spec, protocol.replayWithTranscript, and all
+//  existing sub-verifiers are untouched.
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Compiled systems for every sub-verifier in the protocol.
@@ -40,6 +42,11 @@ const profiling = @import("profiling.zig");
 pub const Systems = struct {
     vanishing: vanishing.System,
     logderivativesum: logderivativesum.System = .{},
+    /// FRI/PCS opening-proof verifier. Mandatory and non-defaulted: PCS is what
+    /// authenticates the committed claims the query sub-verifiers consume, so a
+    /// protocol has no verifiable shape without it. Omitting this field is a
+    /// compile error, which is deliberate — there is no "PCS-disabled" System.
+    pcs: pcs.System,
     // TODO(new-sub-verifier): add compiled system field here — step 2 above.
 };
 
@@ -50,18 +57,32 @@ pub const Systems = struct {
 /// Protocol-level round messages (public columns + cells) are shared across
 /// every sub-verifier. Sub-verifier-specific claim slices are routed only to
 /// the verifier that registered them. Coins are not stored here — they are
-/// re-derived deterministically by `protocol.replay` from the round messages.
+/// re-derived deterministically by `protocol.replayWithTranscript` from the
+/// round messages.
 pub const Proof = struct {
     rounds: []const protocol.RoundMessage,
-    // vanishing claims
-    witness_claims: []const ext.Ext,
-    quotient_claims: []const ext.Ext,
     /// Per-module domain sizes for dynamically-sized vanishing modules.
     /// Must be populated when the compiled system has dynamic modules;
     /// defaults to an empty slice, which produces `MissingDynamicModuleSize`
     /// if any dynamic module is present.
     module_sizes: []const usize = &.{},
+    /// The PCS opening the vanishing witness/quotient claims are re-sliced from.
+    /// There is no "raw claims" alternative: claims must be PCS-authenticated,
+    /// so the two sub-verifiers provably consume the same values. This makes
+    /// "feed PCS and vanishing different values" unrepresentable.
+    claims: PcsClaims,
     // TODO(new-sub-verifier): add claim fields here if needed — step 3 above.
+};
+
+/// The runtime PCS data the verifier feeds to `pcs.verify`: the opening proof
+/// plus the batch commitments and claimed evaluations. `inputs.zeta` is set by
+/// `verify` from the replayed coin `all_coins[system.zeta_coin_index]` (not
+/// taken from here); the fold challenges and query positions are derived by
+/// `pcs.verify` from the live transcript. So the only trusted-from-caller PCS
+/// data is the roots, entry_claims, and the opening proof itself.
+pub const PcsClaims = struct {
+    inputs: pcs.Inputs,
+    proof: pcs.Proof,
 };
 
 /// Verifies a proof against the compiled protocol in three steps:
@@ -85,9 +106,13 @@ pub fn verify(
     profiling.reset();
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.verify_start, 0);
 
-    // Step 1 — replay transcript, derive all coins. `replay` comptime-validates
-    // `spec` internal consistency and returns the stack-allocated coin array.
-    const all_coins = try protocol.replay(spec, proof.rounds);
+    // Step 1 — replay transcript, derive all protocol coins. The transcript is
+    // owned here and threaded by pointer through each phase: `protocol` absorbs
+    // the round messages + squeezes the protocol coins, leaving it at the state
+    // a transcript-continuing sub-verifier (PCS) resumes from. `protocol` stays
+    // FRI-agnostic — the FRI squeeze schedule lives in `pcs.replayWithTranscript`.
+    var transcript = fiat_shamir.Transcript.init();
+    const all_coins = try protocol.replayWithTranscript(&transcript, spec, proof.rounds);
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.transcript_done, 0);
 
     // Step 2 — assemble the shared context routed to every sub-verifier.
@@ -98,11 +123,40 @@ pub fn verify(
 
     // Step 3 — dispatch each sub-verifier with ctx + its own claims.
     // TODO(new-sub-verifier): add dispatch call here — step 4 above.
+
+    // PCS runs first: it authenticates the committed claims the query
+    // sub-verifiers below consume. PCS is mandatory (see `Systems.pcs`), so
+    // there is no trust-input fallback — the claims always come from a checked
+    // opening.
+    //
+    // The vanishing witness/quotient claims are re-derived from the
+    // PCS-authenticated `entry_claims` (never read from `proof`), closing the
+    // gap where a prover could feed PCS and vanishing different values for the
+    // same column. Storage for the derived claims is comptime-bounded by the
+    // vanishing System's claim totals, so nothing allocates.
+    var derived_witness: [systems.vanishing.total_witness_claims]ext.Ext = undefined;
+    var derived_quotient: [systems.vanishing.total_quotient_claims]ext.Ext = undefined;
+
+    // zeta is the Fiat-Shamir opening coin, not a value from the proof.
+    var inputs = proof.claims.inputs;
+    inputs.zeta = all_coins[systems.pcs.zeta_coin_index];
+    // Derive the FRI challenges by continuing the SAME transcript (PCS owns its
+    // squeeze schedule), then check the proof against them. Derivation and
+    // checking are separate calls: the first touches the transcript, the second
+    // is pure arithmetic.
+    const pcs_coins = pcs.replayWithTranscript(systems.pcs, &transcript, proof.claims.proof);
+    try pcs.verify(systems.pcs, inputs, proof.claims.proof, pcs_coins);
+
+    // Route each authenticated entry_claim to the vanishing claim slot that
+    // consumes it (same column at zeta, per the codegen-emitted maps).
+    try routeClaims(systems.pcs.witness_map, inputs.entry_claims, &derived_witness);
+    try routeClaims(systems.pcs.quotient_map, inputs.entry_claims, &derived_quotient);
+
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.vanishing_start, 0);
     try vanishing.verify(systems.vanishing, .{
         .ctx = ctx,
-        .witness_claims = proof.witness_claims,
-        .quotient_claims = proof.quotient_claims,
+        .witness_claims = &derived_witness,
+        .quotient_claims = &derived_quotient,
         .module_sizes = proof.module_sizes,
     });
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.vanishing_done, 0);
@@ -112,4 +166,23 @@ pub fn verify(
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.logderivativesum_done, profiling.snapshot().poseidon2_compress);
     // TODO(new-sub-verifier): dispatch here — step 4 above.
     // TODO(profiling): add a final verify_done marker once more phases run after logderivativesum.
+}
+
+/// Fills `out` with the authenticated claim each `map` entry points at:
+/// `out[k] = entry_claims[map[k].entry][map[k].shift]`. `map.len` must equal
+/// `out.len` (the vanishing System's claim total) and every ClaimRef must be in
+/// range, else the PCS/vanishing metadata disagree — a codegen bug, surfaced as
+/// an error rather than an out-of-bounds panic.
+fn routeClaims(
+    map: []const pcs.ClaimRef,
+    entry_claims: []const []const ext.Ext,
+    out: []ext.Ext,
+) error{ClaimMapMismatch}!void {
+    if (map.len != out.len) return error.ClaimMapMismatch;
+    for (map, out) |ref, *slot| {
+        if (ref.entry >= entry_claims.len) return error.ClaimMapMismatch;
+        const col = entry_claims[ref.entry];
+        if (ref.shift >= col.len) return error.ClaimMapMismatch;
+        slot.* = col[ref.shift];
+    }
 }

@@ -25,6 +25,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/localvanishing"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
+	pcscompiler "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/rangecheck"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/consensys/linea-monorepo/verifier-ray/codegen"
@@ -33,6 +34,38 @@ import (
 const koalaModulus = uint64(2_130_706_433)
 
 func main() {
+	// `-frip` regenerates ONLY the FRI/PCS fixture. It is separated because the
+	// FRI/PCS API lives in the local prover-ray working tree (see the replace in
+	// go.mod), which is newer than the pinned version the legacy vanishing/verify
+	// fixtures were generated against; regenerating those here would churn them
+	// against the upgraded prover-ray. Run the default (no flag) only when
+	// intentionally refreshing the legacy fixtures against the current tree.
+	for _, arg := range os.Args[1:] {
+		if arg == "-frip" {
+			if err := writeFripFixture(); err != nil {
+				panic(err)
+			}
+			return
+		}
+		if arg == "-coexist-diagnose" {
+			diagnoseCoexist()
+			return
+		}
+		if arg == "-coexist" {
+			if err := writeCoexistFixture(); err != nil {
+				panic(err)
+			}
+			return
+		}
+		if arg == "-realpcs" {
+			fmt.Println(realPCSScenarioName())
+			if err := writeRealPCSFixture(); err != nil {
+				panic(err)
+			}
+			return
+		}
+	}
+
 	var out bytes.Buffer
 	writeHeader(&out)
 	writeFieldCases(&out)
@@ -59,7 +92,7 @@ func main() {
 	if err := writeCompiledFixtures(fixtureCases, compiledSystems); err != nil {
 		panic(err)
 	}
-	if err := writeVerifyFixtures(fixtureCases, compiledSystems); err != nil {
+	if err := writeVerifyFixtures(fixtureCases); err != nil {
 		panic(err)
 	}
 }
@@ -551,6 +584,14 @@ type fixtureCase struct {
 	name    string
 	honest  vanishingProofView
 	invalid *vanishingProofView
+	// pcs is the PCS-enabled fixture (committed columns + FRI opening) used to
+	// generate the mandatory-PCS `verify.zig` fixtures. It is built from an
+	// INDEPENDENT copy of the scenario's system compiled with
+	// `compilePipelineWithPCS` (compiling mutates the system, and the vanishing
+	// view above is extracted from a PCS-free copy so `vanishing.zig` is
+	// unchanged). Every fixture scenario is PCS-viable (commits columns + opens
+	// LagrangeEvals), so this is always populated.
+	pcs *coexistFixture
 }
 
 type vanishingProofView struct {
@@ -574,7 +615,17 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 	var cases []fixtureCase
 	var systems []codegen.CompiledSystem
 
-	add := func(source, name string, sys *wiop.System, honest assignFn, invalid assignFn) error {
+	// Fixtures need the FRI query count fixed to keep the PCS openings small,
+	// matching the coexist/realpcs fixtures. This is a fixture concern, not a
+	// verifier one — the verifier checks whatever the proof declares.
+	pcscompiler.SetFRINumQueriesForTest(1)
+
+	// add compiles the scenario twice from independent copies: `sys`/honest/invalid
+	// go through the PCS-free pipeline for the `vanishing.zig` view (unchanged),
+	// and `pcsBuild()` yields a fresh copy compiled with the full PCS pipeline for
+	// the mandatory-PCS `verify.zig` fixture. Compiling mutates a system, so the
+	// two copies must be independent (mirrors realpcs.go's probe pattern).
+	add := func(source, name string, sys *wiop.System, honest assignFn, invalid assignFn, pcsBuild func() (*wiop.System, assignFn)) error {
 		compileFullPipeline(sys)
 		routing, err := codegen.BuildCoinRouting(sys)
 		if err != nil {
@@ -598,38 +649,53 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 			proof := extractVanishingProofView(sys, runProver(sys, invalid))
 			invalidProof = &proof
 		}
-		cases = append(cases, fixtureCase{name: name, honest: honestProof, invalid: invalidProof})
+
+		// PCS fixture from an independent copy compiled with pcs.Compile last.
+		pcsSys, pcsHonest := pcsBuild()
+		compilePipelineWithPCS(pcsSys)
+		if len(pcscompiler.CommittedBatches(pcsSys)) == 0 || len(pcsSys.LagrangeEvals) == 0 {
+			return fmt.Errorf("%s/%s commits no columns / opens no LagrangeEvals; not PCS-viable", source, name)
+		}
+		pcsRt := runProver(pcsSys, pcsHonest)
+		fx := extractPcsFixture(pcsSys, pcsRt)
+
+		cases = append(cases, fixtureCase{name: name, honest: honestProof, invalid: invalidProof, pcs: &fx})
 		systems = append(systems, codegen.CompiledSystem{Routing: routing, Vanishing: vanishingSystem, LogDeriv: logDeriv})
 		return nil
 	}
 
 	for _, factory := range wioptest.VanishingScenarios() {
 		sc := factory()
-		if err := add("Vanishing", sc.Name, sc.Sys, sc.AssignHonest, sc.AssignInvalid); err != nil {
+		if err := add("Vanishing", sc.Name, sc.Sys, sc.AssignHonest, sc.AssignInvalid,
+			func() (*wiop.System, assignFn) { s := factory(); return s.Sys, s.AssignHonest }); err != nil {
 			return nil, nil, err
 		}
 	}
 	for _, factory := range wioptest.LocalVanishingScenarios() {
 		sc := factory()
-		if err := add("LocalVanishing", sc.Name, sc.Sys, sc.AssignHonest, sc.AssignInvalid); err != nil {
+		if err := add("LocalVanishing", sc.Name, sc.Sys, sc.AssignHonest, sc.AssignInvalid,
+			func() (*wiop.System, assignFn) { s := factory(); return s.Sys, s.AssignHonest }); err != nil {
 			return nil, nil, err
 		}
 	}
 	for _, factory := range wioptest.LogDerivativeSumCompilerScenarios() {
 		sc := factory()
-		if err := add("LogDerivativeSumCompiler", sc.Name, sc.Sys, sc.AssignWitness, nil); err != nil {
+		if err := add("LogDerivativeSumCompiler", sc.Name, sc.Sys, sc.AssignWitness, nil,
+			func() (*wiop.System, assignFn) { s := factory(); return s.Sys, s.AssignWitness }); err != nil {
 			return nil, nil, err
 		}
 	}
 	for _, factory := range wioptest.LookupScenarios() {
 		sc := factory()
-		if err := add("Lookup", sc.Name, sc.Sys, sc.AssignWitness, nil); err != nil {
+		if err := add("Lookup", sc.Name, sc.Sys, sc.AssignWitness, nil,
+			func() (*wiop.System, assignFn) { s := factory(); return s.Sys, s.AssignWitness }); err != nil {
 			return nil, nil, err
 		}
 	}
 	for _, factory := range wioptest.RangeCheckCompilerScenarios() {
 		sc := factory()
-		if err := add("RangeCheckCompiler", sc.Name, sc.Sys, sc.AssignWitness, nil); err != nil {
+		if err := add("RangeCheckCompiler", sc.Name, sc.Sys, sc.AssignWitness, nil,
+			func() (*wiop.System, assignFn) { s := factory(); return s.Sys, s.AssignWitness }); err != nil {
 			return nil, nil, err
 		}
 	}
@@ -643,7 +709,11 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		sys, col := buildLagrangeSelectorBoundarySystem()
 		honest := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(7, 99, 7, 7))) }
 		invalid := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(7, 98, 7, 7))) }
-		if err := add("Vanishing", "LagrangeSelectorBoundary", sys, honest, invalid); err != nil {
+		pcsBuild := func() (*wiop.System, assignFn) {
+			s, c := buildLagrangeSelectorBoundarySystem()
+			return s, func(rt *wiop.Runtime) { rt.AssignColumn(c, concreteBase(elems(7, 99, 7, 7))) }
+		}
+		if err := add("Vanishing", "LagrangeSelectorBoundary", sys, honest, invalid, pcsBuild); err != nil {
 			return nil, nil, err
 		}
 	}
@@ -656,13 +726,19 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		sys, col := buildDynamicLagrangeSelectorBoundarySystem()
 		honest := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(7, 99, 7, 7))) }
 		invalid := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(7, 98, 7, 7))) }
-		if err := add("Vanishing", "DynamicLagrangeSelectorBoundary", sys, honest, invalid); err != nil {
+		pcsBuild := func() (*wiop.System, assignFn) {
+			s, c := buildDynamicLagrangeSelectorBoundarySystem()
+			return s, func(rt *wiop.Runtime) { rt.AssignColumn(c, concreteBase(elems(7, 99, 7, 7))) }
+		}
+		if err := add("Vanishing", "DynamicLagrangeSelectorBoundary", sys, honest, invalid, pcsBuild); err != nil {
 			return nil, nil, err
 		}
 	}
 	// Larger MultiColumn scenario for stress profiling.
 	sys, honest := buildLookupMultiColumnBenchSystem()
-	if err := add("Lookup", "MultiColumnBench", sys, honest, nil); err != nil {
+	if err := add("Lookup", "MultiColumnBench", sys, honest, nil, func() (*wiop.System, assignFn) {
+		return buildLookupMultiColumnBenchSystem()
+	}); err != nil {
 		return nil, nil, err
 	}
 
@@ -761,9 +837,9 @@ func buildDynamicLagrangeSelectorBoundarySystem() (*wiop.System, *wiop.Column) {
 
 // runProver creates a runtime for sys, applies assign, advances all rounds
 // running every prover action, and returns the completed runtime.
-func runProver(sys *wiop.System, assign assignFn) wiop.Runtime {
+func runProver(sys *wiop.System, assign assignFn) *wiop.Runtime {
 	rt := wiop.NewRuntime(sys)
-	assign(&rt)
+	assign(rt)
 	for _, action := range rt.CurrentRound().ProverActions {
 		action.Run(rt)
 	}
@@ -778,7 +854,7 @@ func runProver(sys *wiop.System, assign assignFn) wiop.Runtime {
 
 // extractVanishingProofView reads witness/quotient claims and round trace data
 // from an already-completed runtime.
-func extractVanishingProofView(sys *wiop.System, rt wiop.Runtime) vanishingProofView {
+func extractVanishingProofView(sys *wiop.System, rt *wiop.Runtime) vanishingProofView {
 	verifiers := globalVerifiers(sys)
 
 	var witnessClaims []field.Ext
@@ -819,7 +895,7 @@ func globalVerifiers(sys *wiop.System) []*global.Verifier {
 	return verifiers
 }
 
-func dynamicModuleSizes(verifiers []*global.Verifier, rt wiop.Runtime) []int {
+func dynamicModuleSizes(verifiers []*global.Verifier, rt *wiop.Runtime) []int {
 	indices := map[*wiop.Module]int{}
 	for _, verifier := range verifiers {
 		module := verifier.Module
@@ -837,7 +913,7 @@ func dynamicModuleSizes(verifiers []*global.Verifier, rt wiop.Runtime) []int {
 	return out
 }
 
-func runtimeTraceRoundFromRuntime(rt wiop.Runtime, round *wiop.Round) runtimeTraceRound {
+func runtimeTraceRoundFromRuntime(rt *wiop.Runtime, round *wiop.Round) runtimeTraceRound {
 	var trace runtimeTraceRound
 	for _, col := range round.Columns {
 		if col.Visibility < wiop.VisibilityOracle || !rt.HasColumnAssignment(col) {
@@ -983,24 +1059,16 @@ func writeTraceCell(out *bytes.Buffer, cell runtimeTraceCell, indent string) {
 	}
 }
 
-func writeVerifyFixtures(cases []fixtureCase, systems []codegen.CompiledSystem) error {
+func writeVerifyFixtures(cases []fixtureCase) error {
 	var out bytes.Buffer
 	writeVerifyHeader(&out, len(cases))
-	opts := codegen.CompiledSystemZigOptions{
-		EmitHeader:      false,
-		ProtocolImport:  "protocol",
-		FieldImport:     "field",
-		VanishingImport: "vanishing",
-		LogDerivImport:  "logderivativesum",
-	}
 
+	// Each case is emitted as a self-contained namespace struct carrying its own
+	// PCS-compiled spec/vanishing/logderiv/pcs System + proof (see writeVerifyCase).
 	for i := range cases {
-		if err := codegen.WriteCompiledSystemZig(&out, i, systems[i], opts); err != nil {
-			return err
-		}
 		writeVerifyCase(&out, i, cases[i])
 	}
-	writeVerifyMetadata(&out, cases, systems)
+	writeVerifyMetadata(&out, cases)
 	writeVerifyCaseSwitch(&out, cases)
 	writeVerifyInputSwitch(&out, cases)
 	writeVerifyFailingInputSwitch(&out, cases)
@@ -1024,6 +1092,11 @@ func writeVerifyHeader(out *bytes.Buffer, count int) {
 	fmt.Fprintln(out, "const vanishing = verifier_ray.query.vanishing;")
 	fmt.Fprintln(out, "const logderivativesum = verifier_ray.query.logderivativesum;")
 	fmt.Fprintln(out, "const verifier = verifier_ray.verifier;")
+	fmt.Fprintln(out, "const pcs = verifier_ray.pcs.root;")
+	fmt.Fprintln(out, "const layout = pcs.layout;")
+	fmt.Fprintln(out, "const pcsverify = pcs.verify;")
+	fmt.Fprintln(out, "const tree = pcs.tree;")
+	fmt.Fprintln(out, "const pl = pcs.paired_leaf;")
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "pub const VerifyCase = struct {")
 	fmt.Fprintln(out, "    name: []const u8,")
@@ -1047,120 +1120,34 @@ func writeVerifyHeader(out *bytes.Buffer, count int) {
 	fmt.Fprintln(out)
 }
 
+// writeVerifyCase emits one PCS-enabled fixture case as a self-contained Zig
+// namespace `const verify_case_N = struct { ... };`. Wrapping each case in its
+// own struct lets the shared coexist emitters reuse their FIXED internal const
+// names (system_0, params, roots, pcs_system, proof, iq_*, rq_*, …) without
+// colliding across the 91 cases — the struct scope isolates them. The public
+// accessors below reach in via `verify_case_N.systems` / `verify_case_N.proof`.
 func writeVerifyCase(out *bytes.Buffer, idx int, tc fixtureCase) {
-	writeVerifyProof(out, fmt.Sprintf("verify_case_%d", idx), tc.honest)
-	if tc.invalid != nil {
-		writeVerifyProof(out, fmt.Sprintf("verify_case_%d_failing", idx), *tc.invalid)
+	if tc.pcs == nil {
+		panic(fmt.Sprintf("verify case %d (%s) has no PCS fixture", idx, tc.name))
 	}
-	fmt.Fprintf(
-		out,
-		"const verify_case_%d_systems = verifier.Systems{ .vanishing = system_%d, .logderivativesum = system_%d_logderiv };\n",
-		idx, idx, idx,
-	)
-	fmt.Fprintln(out)
-}
-
-func writeVerifyProof(out *bytes.Buffer, prefix string, proof vanishingProofView) {
-	fmt.Fprintf(out, "const %s_witness_claims = [_]ext.Ext{\n", prefix)
-	for _, claim := range proof.witnessClaims {
-		fmt.Fprintf(out, "    %s,\n", extValueLiteral(claim))
-	}
-	fmt.Fprintln(out, "};")
-	fmt.Fprintln(out)
-
-	fmt.Fprintf(out, "const %s_quotient_claims = [_]ext.Ext{\n", prefix)
-	for _, claim := range proof.quotientClaims {
-		fmt.Fprintf(out, "    %s,\n", extValueLiteral(claim))
-	}
-	fmt.Fprintln(out, "};")
-	fmt.Fprintln(out)
-
-	fmt.Fprintf(out, "const %s_module_sizes = [_]usize%s;\n", prefix, intArrayLiteral(proof.moduleSizes))
-	fmt.Fprintln(out)
-
-	for roundIdx, round := range proof.rounds {
-		writeVerifyRoundData(out, prefix, roundIdx, round)
-	}
-
-	fmt.Fprintf(out, "const %s_rounds = [_]protocol.RoundMessage{\n", prefix)
-	for roundIdx := range proof.rounds {
-		fmt.Fprintf(out, "    .{ .columns = &%s_round_%d_columns, .cells = &%s_round_%d_cells },\n", prefix, roundIdx, prefix, roundIdx)
-	}
-	fmt.Fprintln(out, "};")
-	fmt.Fprintln(out)
-
-	fmt.Fprintf(out, "const %s_proof = verifier.Proof{\n", prefix)
-	fmt.Fprintf(out, "    .rounds = &%s_rounds,\n", prefix)
-	fmt.Fprintf(out, "    .witness_claims = &%s_witness_claims,\n", prefix)
-	fmt.Fprintf(out, "    .quotient_claims = &%s_quotient_claims,\n", prefix)
-	fmt.Fprintf(out, "    .module_sizes = &%s_module_sizes,\n", prefix)
+	fmt.Fprintf(out, "const verify_case_%d = struct {\n", idx)
+	emitCoexistBody(out, *tc.pcs)
 	fmt.Fprintln(out, "};")
 	fmt.Fprintln(out)
 }
 
-func writeVerifyRoundData(out *bytes.Buffer, prefix string, roundIdx int, round runtimeTraceRound) {
-	for columnIdx, column := range round.columns {
-		switch {
-		case column.publicBaseValues != nil:
-			fmt.Fprintf(out, "const %s_round_%d_column_%d_base = [_]field.Element{\n", prefix, roundIdx, columnIdx)
-			for _, value := range column.publicBaseValues {
-				fmt.Fprintf(out, "    %s,\n", fieldValueLiteral(value))
-			}
-			fmt.Fprintln(out, "};")
-			fmt.Fprintln(out)
-		case column.publicExtValues != nil:
-			fmt.Fprintf(out, "const %s_round_%d_column_%d_ext = [_]ext.Ext{\n", prefix, roundIdx, columnIdx)
-			for _, value := range column.publicExtValues {
-				fmt.Fprintf(out, "    %s,\n", extValueLiteral(value))
-			}
-			fmt.Fprintln(out, "};")
-			fmt.Fprintln(out)
-		}
-	}
-
-	fmt.Fprintf(out, "const %s_round_%d_columns = [_]protocol.ColumnMessage{\n", prefix, roundIdx)
-	for columnIdx, column := range round.columns {
-		switch {
-		case column.commitments != nil:
-			for _, value := range column.commitments {
-				fmt.Fprintf(out, "    .{ .oracle_commitment = %s },\n", commitmentValueLiteral(value))
-			}
-		case column.publicBaseValues != nil:
-			fmt.Fprintf(out, "    .{ .public_column = .{ .base = &%s_round_%d_column_%d_base } },\n", prefix, roundIdx, columnIdx)
-		case column.publicExtValues != nil:
-			fmt.Fprintf(out, "    .{ .public_column = .{ .ext = &%s_round_%d_column_%d_ext } },\n", prefix, roundIdx, columnIdx)
-		default:
-			panic("runtime trace column has no data variant")
-		}
-	}
-	fmt.Fprintln(out, "};")
-	fmt.Fprintln(out)
-
-	fmt.Fprintf(out, "const %s_round_%d_cells = [_]protocol.Scalar{\n", prefix, roundIdx)
-	for _, cell := range round.cells {
-		switch {
-		case cell.baseValue != nil:
-			fmt.Fprintf(out, "    .{ .base = %s },\n", fieldValueLiteral(*cell.baseValue))
-		case cell.extValue != nil:
-			fmt.Fprintf(out, "    .{ .ext = %s },\n", extValueLiteral(*cell.extValue))
-		default:
-			panic("runtime trace cell has no data variant")
-		}
-	}
-	fmt.Fprintln(out, "};")
-	fmt.Fprintln(out)
-}
-
-func writeVerifyMetadata(out *bytes.Buffer, cases []fixtureCase, systems []codegen.CompiledSystem) {
+func writeVerifyMetadata(out *bytes.Buffer, cases []fixtureCase) {
 	fmt.Fprintln(out, "pub const metadata = [_]VerifyCaseMetadata{")
-	for i, tc := range cases {
-		vanishingSystem := systems[i].Vanishing
+	for _, tc := range cases {
+		// Metadata describes the emitted (PCS-compiled) verify.zig fixture, so it
+		// reads from the PCS fixture's vanishing System + coin routing.
+		vanishingSystem := tc.pcs.van
 		expressionCount, bucketCount, vanishingCount := vanishingBenchCounts(vanishingSystem)
 		fmt.Fprintf(out, "    .{ .name = \"%s\", .module_count = %d, .dynamic_module_count = %d, .round_count = %d, .expression_count = %d, .bucket_count = %d, .vanishing_count = %d, .total_witness_claims = %d, .total_quotient_claims = %d },\n",
 			codegen.ZigString(tc.name),
 			len(vanishingSystem.Modules),
 			vanishingSystem.DynamicModuleCount,
-			len(systems[i].Routing.RoundCoinCounts),
+			len(tc.pcs.routing.RoundCoinCounts),
 			expressionCount,
 			bucketCount,
 			vanishingCount,
@@ -1178,7 +1165,7 @@ func writeVerifyCaseSwitch(out *bytes.Buffer, cases []fixtureCase) {
 	for i, tc := range cases {
 		fmt.Fprintf(
 			out,
-			"        %d => .{ .name = \"%s\", .spec = system_%d_spec, .systems = verify_case_%d_systems },\n",
+			"        %d => .{ .name = \"%s\", .spec = verify_case_%d.spec, .systems = verify_case_%d.systems },\n",
 			i,
 			codegen.ZigString(tc.name),
 			i,
@@ -1198,25 +1185,24 @@ func writeVerifyInputSwitch(out *bytes.Buffer, cases []fixtureCase) {
 	fmt.Fprintln(out, "pub fn getInput(comptime index: usize) verifier.Proof {")
 	fmt.Fprintln(out, "    return switch (index) {")
 	for i := range cases {
-		fmt.Fprintf(out, "        %d => verify_case_%d_proof,\n", i, i)
+		fmt.Fprintf(out, "        %d => verify_case_%d.proof,\n", i, i)
 	}
 	fmt.Fprintln(out, "        else => @compileError(\"unknown verifier fixture case index\"),")
 	fmt.Fprintln(out, "    };")
 	fmt.Fprintln(out, "}")
 }
 
-// writeVerifyFailingInputSwitch emits the getInputFailing accessor, returning
-// the failing (invalid) proof data for a fixture case. Not every case defines a
-// failing input, so cases without one produce a comptime error when requested.
+// writeVerifyFailingInputSwitch emits the getInputFailing accessor. The
+// mandatory-PCS fixtures do not carry a pre-built failing PCS opening (a
+// tampered witness assignment does not by itself yield an inconsistent FRI
+// proof), so every case is a compile error here. Negative-path coverage lives
+// in the coexist/realpcs tests, which corrupt an authenticated entry_claim and
+// assert `error.FoldMismatch`.
 func writeVerifyFailingInputSwitch(out *bytes.Buffer, cases []fixtureCase) {
 	fmt.Fprintln(out, "pub fn getInputFailing(comptime index: usize) verifier.Proof {")
 	fmt.Fprintln(out, "    return switch (index) {")
 	for i, tc := range cases {
-		if tc.invalid != nil {
-			fmt.Fprintf(out, "        %d => verify_case_%d_failing_proof,\n", i, i)
-		} else {
-			fmt.Fprintf(out, "        %d => @compileError(\"verifier fixture case %d (%s) has no failing input\"),\n", i, i, codegen.ZigString(tc.name))
-		}
+		fmt.Fprintf(out, "        %d => @compileError(\"verifier fixture case %d (%s) has no failing PCS input\"),\n", i, i, codegen.ZigString(tc.name))
 	}
 	fmt.Fprintln(out, "        else => @compileError(\"unknown verifier fixture case index\"),")
 	fmt.Fprintln(out, "    };")
@@ -1232,34 +1218,6 @@ func vanishingBenchCounts(system codegen.VanishingSystem) (expressionCount, buck
 		}
 	}
 	return expressionCount, bucketCount, vanishingCount
-}
-
-func fieldValueLiteral(value field.Element) string {
-	return fmt.Sprintf(".{ .value = %d }", u(value))
-}
-
-func extValueLiteral(value field.Ext) string {
-	a0, a1, b0, b1, c0, c1 := field.ExtToUint64s(&value)
-	return fmt.Sprintf(
-		"ext.Ext{ .B0 = .{ .a0 = .{ .value = %d }, .a1 = .{ .value = %d } }, .B1 = .{ .a0 = .{ .value = %d }, .a1 = .{ .value = %d } }, .B2 = .{ .a0 = .{ .value = %d }, .a1 = .{ .value = %d } } }",
-		a0, a1, b0, b1, c0, c1,
-	)
-}
-
-func commitmentValueLiteral(value field.Octuplet) string {
-	parts := make([]string, len(value))
-	for i, elem := range value {
-		parts[i] = fieldValueLiteral(elem)
-	}
-	return "commitment.Commitment{ " + strings.Join(parts, ", ") + " }"
-}
-
-func intArrayLiteral(values []int) string {
-	parts := make([]string, len(values))
-	for i, value := range values {
-		parts[i] = fmt.Sprintf("%d", value)
-	}
-	return "{ " + strings.Join(parts, ", ") + " }"
 }
 
 func elem(v uint64) field.Element {

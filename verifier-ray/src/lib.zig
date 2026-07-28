@@ -24,3 +24,14 @@ pub const query = struct {
     pub const vanishing = @import("query/vanishing.zig");
     pub const logderivativesum = @import("query/logderivativesum.zig");
 };
+
+pub const pcs = struct {
+    pub const params = @import("pcs/params.zig");
+    pub const tree = @import("pcs/tree.zig");
+    pub const paired_leaf = @import("pcs/paired_leaf.zig");
+    pub const layout = @import("pcs/layout.zig");
+    pub const fold = @import("pcs/fold.zig");
+    pub const reconstruct = @import("pcs/reconstruct.zig");
+    pub const verify = @import("pcs/verify.zig");
+    pub const root = @import("pcs/root.zig");
+};

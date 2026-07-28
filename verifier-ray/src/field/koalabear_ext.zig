@@ -79,6 +79,16 @@ pub const Ext = extern struct {
         return self.mulByBase(rhs.inverse());
     }
 
+    /// inv2 = (p+1)/2 = 2^{-1} mod p for KoalaBear (p = 2_130_706_433).
+    /// Halving is a scalar multiply by this base-field constant.
+    pub const inv2: base.Element = .{ .value = (base.modulus + 1) / 2 };
+
+    /// Divide by two. Mirrors prover-ray's field.Ext.Halve: a scalar multiply
+    /// by 2^{-1}, used by the FRI fold recurrence.
+    pub fn halve(self: Ext) Ext {
+        return self.mulByBase(inv2);
+    }
+
     pub fn mul(self: Ext, rhs: Ext) Ext {
         // Karatsuba for cubic extension: 6 E2 muls instead of 9 (schoolbook).
         // F_{p^6} = F_{p^2}[v]/(v^3 - nr), nr = u+1 in F_{p^2}.

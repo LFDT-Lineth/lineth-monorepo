@@ -46,7 +46,16 @@ pub const Context = struct {
 /// message rounds are `round_coin_counts[1..]`; `rounds` must have that length.
 /// `spec` is comptime-validated for internal consistency, so its callers — both
 /// `verifier.verify` and direct test callers — get the same guarantees.
-pub fn replay(
+///
+/// The transcript is CALLER-OWNED and passed by pointer: this function absorbs
+/// the round messages and squeezes the protocol coins into it, leaving it at the
+/// state after the final round. A sub-verifier that must continue squeezing from
+/// that same state (the FRI/PCS opener derives its fold challenges and query
+/// positions there) is handed the SAME `transcript` pointer next, mirroring
+/// prover-ray's `fs := rt.GetFS()`. This keeps `protocol` FRI-agnostic: it owns
+/// only the protocol-coin phase; each scheme owns its own continuation.
+pub fn replayWithTranscript(
+    transcript: *fiat_shamir.Transcript,
     comptime spec: Spec,
     rounds: []const RoundMessage,
 ) Error![spec.total_round_coins]Coin {
@@ -71,7 +80,6 @@ pub fn replay(
     // round per remaining entry.
     if (rounds.len != spec.round_coin_counts.len - 1) return error.InvalidRoundCount;
 
-    var transcript = fiat_shamir.Transcript.init();
     var all_coins: [spec.total_round_coins]Coin = undefined;
 
     inline for (1..spec.round_coin_counts.len) |round_index| {
@@ -90,4 +98,12 @@ pub fn replay(
     }
 
     return all_coins;
+}
+
+/// Coin-only convenience over `replayWithTranscript` for callers that do not
+/// continue the transcript (every sub-verifier except a transcript-continuing
+/// one like PCS). Uses a throwaway local transcript.
+pub fn replay(comptime spec: Spec, rounds: []const RoundMessage) Error![spec.total_round_coins]Coin {
+    var transcript = fiat_shamir.Transcript.init();
+    return replayWithTranscript(&transcript, spec, rounds);
 }
