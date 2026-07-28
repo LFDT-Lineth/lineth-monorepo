@@ -1,4 +1,7 @@
-package backend
+// Package ssz encodes the rollup_spec Amsterdam SszStatelessInput payload used
+// by prover-ray. It is schema-specific and golden-vector pinned against
+// rollup_spec/stateless_input.py; it is not a general-purpose SSZ library.
+package ssz
 
 import (
 	"bytes"
