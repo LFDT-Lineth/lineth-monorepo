@@ -72,14 +72,16 @@ internal class L1MessageSentEventsFetcher(
       ).thenApply { result ->
         lastSearch.set(LastSearch(result.endBlockNumber, startingMessageNumber))
         val events = result.logs.map(MessageSentEvent::fromEthLog)
-        log.debug(
-          "fetched MessageSent events from L1: messageNumbers={} l1Blocks={}",
-          CommonDomainFunctions.blockIntervalString(
-            events.first().event.messageNumber,
-            events.last().event.messageNumber,
-          ),
-          result.intervalString(),
-        )
+        if (events.isNotEmpty()) {
+          log.debug(
+            "fetched MessageSent events from L1: messageNumbers={} l1Blocks={}",
+            CommonDomainFunctions.blockIntervalString(
+              events.first().event.messageNumber,
+              events.last().event.messageNumber,
+            ),
+            result.intervalString(),
+          )
+        }
         events
       }
     }

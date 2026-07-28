@@ -27,7 +27,7 @@ object VertxFactory {
     }
     maxWorkerExecuteTime?.let {
       configs.put("maxWorkerExecuteTime", it.inWholeMilliseconds)
-      configs.put("maxWorkerExecuteTimeTimeUnit", "MILLISECONDS")
+      configs.put("maxWorkerExecuteTimeUnit", "MILLISECONDS")
     }
     blockedThreadCheckInterval?.let {
       configs.put("blockedThreadCheckInterval", it.inWholeMilliseconds)

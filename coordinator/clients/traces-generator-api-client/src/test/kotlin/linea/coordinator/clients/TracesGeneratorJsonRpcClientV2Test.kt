@@ -2,6 +2,7 @@ package linea.coordinator.clients
 
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.Result
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.containing
@@ -14,6 +15,7 @@ import com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration.options
 import com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
+import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
 import io.vertx.junit5.VertxExtension
@@ -23,6 +25,9 @@ import linea.clients.TracesServiceErrorType
 import linea.error.ErrorResponse
 import linea.kotlin.encodeHex
 import net.consensys.linea.async.get
+import net.consensys.linea.jsonrpc.JsonRpcErrorResponse
+import net.consensys.linea.jsonrpc.JsonRpcRequest
+import net.consensys.linea.jsonrpc.JsonRpcSuccessResponse
 import net.consensys.linea.jsonrpc.client.JsonRpcClient
 import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
@@ -38,6 +43,7 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 import java.net.URL
+import java.util.concurrent.CompletionException
 import java.util.concurrent.ExecutionException
 import kotlin.random.Random
 import kotlin.random.nextUInt
@@ -498,6 +504,60 @@ class TracesGeneratorJsonRpcClientV2Test {
   }
 
   @Test
+  fun `getTracesCounters does not convert asynchronous errors to fallback responses`() {
+    val fatalError = AssertionError("fatal")
+    val client = TracesGeneratorJsonRpcClientV2(
+      FailingJsonRpcClient(fatalError, failAsynchronously = true),
+      TracesGeneratorJsonRpcClientV2.Config(
+        ignoreTracesGeneratorErrors = true,
+        fallBackTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+      ),
+    )
+
+    val exception = assertThrows<ExecutionException> {
+      client.getTracesCounters(1UL).get()
+    }
+
+    assertThat(exception.cause).isSameAs(fatalError)
+  }
+
+  @Test
+  fun `getTracesCounters unwraps asynchronous fatal errors before applying fallback`() {
+    val fatalError = AssertionError("fatal")
+    val client = TracesGeneratorJsonRpcClientV2(
+      FailingJsonRpcClient(CompletionException(fatalError), failAsynchronously = true),
+      TracesGeneratorJsonRpcClientV2.Config(
+        ignoreTracesGeneratorErrors = true,
+        fallBackTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+      ),
+    )
+
+    val exception = assertThrows<ExecutionException> {
+      client.getTracesCounters(1UL).get()
+    }
+
+    assertThat(exception.cause).isSameAs(fatalError)
+  }
+
+  @Test
+  fun `getTracesCounters does not convert synchronous errors to fallback responses`() {
+    val fatalError = AssertionError("fatal")
+    val client = TracesGeneratorJsonRpcClientV2(
+      FailingJsonRpcClient(fatalError, failAsynchronously = false),
+      TracesGeneratorJsonRpcClientV2.Config(
+        ignoreTracesGeneratorErrors = true,
+        fallBackTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+      ),
+    )
+
+    val thrown = assertThrows<AssertionError> {
+      client.getTracesCounters(1UL)
+    }
+
+    assertThat(thrown).isSameAs(fatalError)
+  }
+
+  @Test
   fun generateVirtualBlockConflatedTracesToFile() {
     val blockNumber = 50L
 
@@ -566,6 +626,21 @@ class TracesGeneratorJsonRpcClientV2Test {
         .withHeader("Content-Type", equalTo("application/json"))
         .withRequestBody(equalToJson(expectedJsonRequest.toString(), false, false)),
     )
+  }
+
+  private class FailingJsonRpcClient(
+    private val failure: Throwable,
+    private val failAsynchronously: Boolean,
+  ) : JsonRpcClient {
+    override fun makeRequest(
+      request: JsonRpcRequest,
+      resultMapper: (Any?) -> Any?,
+    ): Future<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> {
+      if (failAsynchronously) {
+        return Future.failedFuture(failure)
+      }
+      throw failure
+    }
   }
 
   @Test
