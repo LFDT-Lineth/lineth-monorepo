@@ -408,10 +408,30 @@ type claimRotation struct {
 // Level.EvalsAt). Rotations runs parallel to Claims and lives here — rather than
 // on quotientClaim — so the verifier's claim type (which also instantiates
 // quotientClaim, via claimsForEntry) stays free of prover-only state.
+// quotientColumn holds one opened column's codeword over the domain. To avoid
+// allocating (and, for base columns, widening) a fresh 4N-length []E6 per
+// column in reconstructLevels — the dominant cost of Open — the codeword is
+// aliased directly from the committed table: ext columns keep their []field.Ext
+// in EvalsExt, base columns keep their []field.Element in EvalsBase. Exactly one
+// is non-nil; isBase reports which. Level.EvalsAt lifts base elements to E6 on
+// the stack as it reads them.
 type quotientColumn struct {
-	Evals     []field.Ext // Evals over the codeword domain
+	EvalsExt  []field.Ext     // set for ext columns; nil for base
+	EvalsBase []field.Element // set for base columns; nil for ext
 	Claims    []quotientClaim
 	Rotations []claimRotation
+}
+
+// isBase reports whether this column's codeword is stored as base elements.
+func (c *quotientColumn) isBase() bool { return c.EvalsBase != nil }
+
+// codewordLen returns the number of evaluations in the column's codeword,
+// regardless of whether it is stored as base or ext.
+func (c *quotientColumn) codewordLen() int {
+	if c.EvalsBase != nil {
+		return len(c.EvalsBase)
+	}
+	return len(c.EvalsExt)
 }
 
 func reconstructDomainSize(domain domainLight) (int, error) {
@@ -767,11 +787,11 @@ func (pcs *PCS) reconstructLevels() ([]Level, error) {
 				}
 				trees = append(trees, opening.committed.Tree)
 				for _, entry := range bundle.Entries {
-					evals, err := encodedColumnEvals(opening.committed, entry)
+					column, err := encodedColumnEvals(opening.committed, entry)
 					if err != nil {
 						return nil, err
 					}
-					claims, err := pcs.openingClaimsForEntry(opening, entry)
+					column.Claims, err = pcs.openingClaimsForEntry(opening, entry)
 					if err != nil {
 						return nil, err
 					}
@@ -786,11 +806,8 @@ func (pcs *PCS) reconstructLevels() ([]Level, error) {
 						expo := (size - rot) & (size - 1)
 						rotations[i].Scale.Exp(domain.generator, big.NewInt(int64(expo)))
 					}
-					columns = append(columns, quotientColumn{
-						Evals:     evals,
-						Claims:    claims,
-						Rotations: rotations,
-					})
+					column.Rotations = rotations
+					columns = append(columns, column)
 				}
 			}
 		}
@@ -799,9 +816,9 @@ func (pcs *PCS) reconstructLevels() ([]Level, error) {
 		}
 
 		for columnIdx, column := range columns {
-			if len(column.Evals) != size {
+			if column.codewordLen() != size {
 				return nil, fmt.Errorf("fri: reconstructLevels: column %d has %d evals, want %d",
-					columnIdx, len(column.Evals), size)
+					columnIdx, column.codewordLen(), size)
 			}
 			if err = checkColumnClaimPoints(columnIdx, column.Claims); err != nil {
 				return nil, err
@@ -830,32 +847,33 @@ func (pcs *PCS) roundForSize(sizeLog2 uint8) (uint8, error) {
 	return logD - sizeLog2, nil
 }
 
-func encodedColumnEvals(committed CommitterState, entry deepEntry) ([]field.Ext, error) {
+// encodedColumnEvals aliases the entry's codeword from the committed table into
+// a quotientColumn (populating exactly one of EvalsExt / EvalsBase). The
+// committed table is never mutated after Commit, and both consumers of these
+// slices — Level.EvalsAt during folding and the query phase — read them
+// read-only, so aliasing rather than copying is safe. This avoids allocating a
+// fresh 4N-length []E6 per column (and, for base columns, widening every
+// element to E6) — the dominant cost of reconstructLevels. EvalsAt lifts base
+// elements to E6 on the stack as it reads them.
+func encodedColumnEvals(committed CommitterState, entry deepEntry) (quotientColumn, error) {
 	table := committed.EncodedTable
 	if int(entry.SizeLog2) >= len(table) {
-		return nil, fmt.Errorf("fri: reconstructLevels: missing encoded size %d", entry.SizeLog2)
+		return quotientColumn{}, fmt.Errorf("fri: reconstructLevels: missing encoded size %d", entry.SizeLog2)
 	}
 	sized := table[entry.SizeLog2]
 	if entry.IsExt {
 		if entry.RowIdx >= len(sized.Ext) {
-			return nil, fmt.Errorf("fri: reconstructLevels: size %d missing ext row %d",
+			return quotientColumn{}, fmt.Errorf("fri: reconstructLevels: size %d missing ext row %d",
 				entry.SizeLog2, entry.RowIdx)
 		}
-		evals := make([]field.Ext, len(sized.Ext[entry.RowIdx]))
-		copy(evals, sized.Ext[entry.RowIdx])
-		return evals, nil
+		return quotientColumn{EvalsExt: sized.Ext[entry.RowIdx]}, nil
 	}
 
 	if entry.RowIdx >= len(sized.Base) {
-		return nil, fmt.Errorf("fri: reconstructLevels: size %d missing base row %d",
+		return quotientColumn{}, fmt.Errorf("fri: reconstructLevels: size %d missing base row %d",
 			entry.SizeLog2, entry.RowIdx)
 	}
-	base := sized.Base[entry.RowIdx]
-	evals := make([]field.Ext, len(base))
-	for i := range base {
-		evals[i] = field.Lift(base[i])
-	}
-	return evals, nil
+	return quotientColumn{EvalsBase: sized.Base[entry.RowIdx]}, nil
 }
 
 func (pcs *PCS) claimsForEntry(
