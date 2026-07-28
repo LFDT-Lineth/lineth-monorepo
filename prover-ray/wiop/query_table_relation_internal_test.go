@@ -82,3 +82,47 @@ func TestValidateRowLimit_DynamicWithinCap(t *testing.T) {
 	require.NoError(t, inc.ValidateRowLimit(rt, MaxLookupRows),
 		"a dynamic side at the 2^22 cap is well within the 2^30 budget")
 }
+
+// TestPermutationRowLimit_DynamicOverLimit is the permutation analogue of
+// [TestValidateRowLimit_DynamicOverLimit]: it white-box tests the runtime
+// row-limit check (prover panic + verifier error) for the one scenario the
+// compile-time check cannot catch — a dynamic module whose runtime domain size
+// exceeds the 2^22 upper bound the compile-time check assumes.
+//
+// The grandproduct compiler enforces the permutation budget [MaxPermutationRows]
+// via the same [TableRelationQuery.CheckRowLimit] / .ValidateRowLimit pair; at
+// compile time a dynamic module counts as [ColumnSizeMaxSupported] (2^22), so a
+// single-fragment dynamic permutation clears the budget and compilation
+// succeeds. Only the runtime checks, reading the (dishonestly) claimed domain
+// size, catch an over-budget side. It is white-box (package wiop) for the same
+// reason as the lookup case: seeding an oversized dynamic size — as
+// [System.Verify] does from the proof — needs the unexported dynamicSizes map.
+func TestPermutationRowLimit_DynamicOverLimit(t *testing.T) {
+	sys := NewSystemf("rowlimit-perm-verifier")
+	r0 := sys.NewRound()
+
+	// A side on a dynamic module; B side a tiny static module.
+	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 2, PaddingDirectionRight)
+	colB := modB.NewColumn(sys.Context.Childf("B"), VisibilityOracle, r0)
+
+	dynA := sys.NewDynamicModule(sys.Context.Childf("dynA"), PaddingDirectionRight)
+	colA := dynA.NewColumn(sys.Context.Childf("A"), VisibilityOracle, r0)
+
+	perm := sys.NewPermutation(
+		sys.Context.Childf("perm"),
+		[]Table{NewTable(colA.View())},
+		[]Table{NewTable(colB.View())},
+	)
+
+	rt := NewRuntime(sys)
+	// Claim an oversized dynamic A-side domain: 2^58 rows, at the permutation
+	// budget and far beyond the 2^22 the compile-time check assumed.
+	rt.dynamicSizes[dynA.index] = 1 << 58
+
+	err := perm.ValidateRowLimit(rt, MaxPermutationRows)
+	require.ErrorContains(t, err, "effective per-query row limit",
+		"verifier must reject a permutation whose dynamic side claims more rows than the budget")
+
+	assert.Panics(t, func() { perm.CheckRowLimit(rt, MaxPermutationRows) },
+		"prover must panic on the same over-limit dynamic side")
+}
