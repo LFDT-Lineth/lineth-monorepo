@@ -76,7 +76,7 @@ Safe Member
 
 | Contract           | Address                                           |
 |--------------------|---------------------------------------------------|
-| LinethRollup        | `0xd194Bd535d285f05D7B411E21A1460D11B0876F`       |
+| LinethRollup        | `0xd19d4B5d358258f05D7B411E21A1460D11B0876F`       |
 | L1 TokenBridge     | `0x051F1D88f0aF5763fB888eC4378b4D8B29ea3319`       |
 | L2MessageService   | `0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec`      |
 | L2 Token Bridge    | `0x353012dc4a9A6cF55c941bADC267f82004A8ceB9`        |

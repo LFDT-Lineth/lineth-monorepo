@@ -58,7 +58,7 @@ import { LinethRollupInitializationData, PauseTypeRole } from "../common/types";
 
 ensureKzgSetup();
 
-describe("Linea Rollup contract", () => {
+describe("Lineth Rollup contract", () => {
   let linethRollup: TestLinethRollup;
   let verifier: string;
   let callForwardingProxy: CallForwardingProxy;

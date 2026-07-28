@@ -41,6 +41,8 @@ const func: DeployFunction = withSignerUiSession(
         [
           proxyAddress,
           newImplementation,
+          // `reinitializeLineaRollupV9` matches the function name defined in LinethRollup.sol -
+          // not a mismatch, the function itself was not renamed as part of the rebrand.
           LinethRollup__factory.createInterface().encodeFunctionData("reinitializeLineaRollupV9", [
             forcedTransactionFeeInWei,
             addressFilter,
