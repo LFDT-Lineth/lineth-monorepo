@@ -24,4 +24,3 @@ interface BlobsDaoG<T> {
 
 interface BlobsDao : BlobsDaoG<BlobRecord>
 interface BlobsDaoV2 : BlobsDaoG<BlobRecordV2>
-

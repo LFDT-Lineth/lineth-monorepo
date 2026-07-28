@@ -35,7 +35,6 @@ abstract class BlobsPostgresDaoG<T : BlockInterval>(
     }
   }
 
-
   private val selectSql =
     """
       with previous_ends as (select *,
