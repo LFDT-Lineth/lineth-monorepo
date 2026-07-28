@@ -19,6 +19,14 @@ on:
         required: false
         type: boolean
         default: true
+  pull_request:
+    paths:
+      - "postman/src/application/postman/app/config/envLoader.ts"
+      - "postman/src/application/postman/app/config/schema.ts"
+      - "postman/scripts/generate-config-docs.ts"
+      - "postman/scripts/check-config-docs.ts"
+      - "postman/docs/_generated/postman/**"
+      - ".github/workflows/postman-config-docs.yml"
   # Enable once the DOC_LINEA_PR app is installed on Consensys/doc.linea:
   # push:
   #   tags:
