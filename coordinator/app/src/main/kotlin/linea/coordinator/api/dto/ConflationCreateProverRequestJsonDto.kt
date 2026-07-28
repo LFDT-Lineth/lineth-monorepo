@@ -43,10 +43,11 @@ data class ConflationCreateProverRequestJsonDto(
   }
 
   companion object {
+    private val objectMapper = jacksonObjectMapper()
+      .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+
     fun parseFrom(request: JsonRpcRequest): List<ConflationCreateProverRequestJsonDto> {
       try {
-        val objectMapper = jacksonObjectMapper()
-          .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
         return objectMapper.readValue(
           objectMapper.writeValueAsString(request.params),
           Array<ConflationCreateProverRequestJsonDto>::class.java,
