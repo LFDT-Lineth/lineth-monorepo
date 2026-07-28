@@ -1,7 +1,9 @@
 package utils_test
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/utils"
@@ -75,3 +77,53 @@ func TestNextPowerOfTwoExample(t *testing.T) {
 		})
 	}
 }
+
+// constWriterTo writes a fixed payload, so a test can control the exact bytes
+// each operand of WriterstoEqual produces.
+type constWriterTo []byte
+
+func (c constWriterTo) WriteTo(w io.Writer) (int64, error) {
+	n, err := w.Write(c)
+	return int64(n), err
+}
+
+func TestWriterstoEqual(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		expected []byte
+		actual   []byte
+		equal    bool
+	}{
+		{"identical", []byte("abcd"), []byte("abcd"), true},
+		// the regression: same length, different content. Serializing both
+		// operands into one reused buffer compared a slice with itself and
+		// reported these equal.
+		{"same length, different content", []byte("abcd"), []byte("wxyz"), false},
+		{"differs in last byte only", []byte("abcd"), []byte("abcz"), false},
+		{"shorter actual", []byte("abcd"), []byte("ab"), false},
+		{"longer actual", []byte("ab"), []byte("abcd"), false},
+		{"both empty", []byte{}, []byte{}, true},
+		{"empty vs non-empty", []byte{}, []byte("a"), false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := utils.WriterstoEqual(constWriterTo(tc.expected), constWriterTo(tc.actual))
+			if tc.equal {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+			}
+		})
+	}
+}
+
+func TestWriterstoEqualPropagatesWriteErrors(t *testing.T) {
+	boom := errors.New("boom")
+	require.ErrorIs(t, utils.WriterstoEqual(failingWriterTo{boom}, constWriterTo("a")), boom)
+	require.ErrorIs(t, utils.WriterstoEqual(constWriterTo("a"), failingWriterTo{boom}), boom)
+}
+
+// failingWriterTo always fails, to check the error is returned rather than
+// swallowed into a false "not equal".
+type failingWriterTo struct{ err error }
+
+func (f failingWriterTo) WriteTo(io.Writer) (int64, error) { return 0, f.err }
