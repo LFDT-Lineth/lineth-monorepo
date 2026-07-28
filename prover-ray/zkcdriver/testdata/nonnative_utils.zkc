@@ -21,6 +21,16 @@ fn mulmod_256(lhsL:tWidth, rhsL:tWidth, modL:tWidth) -> (remainder:tWidth) {
     }
 }
 
+// Returns the canonical representative of `val` in [0, modL), i.e. val mod modL.
+// Callers that branch on raw (unreduced) equality/inequality of field elements
+// must reduce their inputs through this first, otherwise non-canonical encodings
+// (e.g. val = x + modL) alias the same residue while comparing as distinct u256
+// values. Implemented as addmod with 0, which reduces its inputs.
+fn reduce_256(val:tWidth, modL:tWidth) -> (remainder:tWidth) {
+    var zero:tWidth = 0
+    remainder = addmod_256(val, zero, modL)
+}
+
 //#[native] <- to be implemented as native if expensive
 fn addmod_256(lhsL:tWidth, rhsL:tWidth, modL:tWidth) -> (remainder:tWidth) {
     if modL == 0 {
