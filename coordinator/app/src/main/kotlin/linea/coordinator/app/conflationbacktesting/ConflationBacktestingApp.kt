@@ -35,7 +35,6 @@ import linea.coordinator.clients.prover.ProverConfig
 import linea.coordinator.config.toJsonRpcRetry
 import linea.coordinator.config.v2.CoordinatorConfig
 import linea.coordinator.config.v2.TracesConfig.ClientApiConfig
-import linea.domain.Aggregation
 import linea.domain.Block
 import linea.domain.BlockInterval
 import linea.domain.toBlockParameter
@@ -342,9 +341,7 @@ class ConflationBacktestingApp(
     aggregationCoordinatorPollingInterval =
     backtestingCoordinatorConfig.conflation.proofAggregation.coordinatorPollingInterval,
     startBlockNumberInclusive = conflationBacktestingAppConfig.startBlockNumber,
-    aggregationProofHandler = { aggregation: Aggregation ->
-      SafeFuture.completedFuture(Unit)
-    },
+    aggregationProofHandler = { _ -> SafeFuture.completedFuture(Unit) },
     aggregationProofRequestHandler = { proofIndex, unProvenAggregation ->
       log.info(
         "Backtesting aggregation proof request produced: aggregation={}",
