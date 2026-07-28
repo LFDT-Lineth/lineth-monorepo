@@ -646,7 +646,7 @@ services:
       - ./scripts/lib:/scripts/lib:ro
       - ./scripts/phases:/scripts/phases:ro
       # Forked deploy script — bind-mounted OVER the upstream path. Drops the
-      # stale upstream ORDERED_NONCE_POST_LINTHRROLLUP offset, serializes all
+      # stale upstream ORDERED_NONCE_POST_LINETHROLLUP offset, serializes all
       # deploys so ethers manages nonces from live wallet state, and routes
       # fees through the shared single-fee-model helper. See
       # scripts/internal/deployBridgedTokenAndTokenBridgeV1_1.ts header for details.

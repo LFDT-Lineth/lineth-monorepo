@@ -26,7 +26,7 @@ Captured by `makefile-contracts.mk:158-159`:
 | `L1_NONCE` | output of `get-wallet-nonce.ts --wallet-priv-key 0xac09…ff80 --rpc-url http://l1-el-node:8545` | computed at runtime |
 | `L2_NONCE` | output of `get-wallet-nonce.ts --wallet-priv-key 0x1dd1…1aae --rpc-url http://l2-node-besu:8545` | computed at runtime |
 
-Both are exported to the env of every leaf target. The upstream scripts computed their own offsets from a fixed nonce-ordering convention (constants `ORDERED_NONCE_POST_LINTHRROLLUP`, `ORDERED_NONCE_POST_TOKENBRIDGE`, `ORDERED_NONCE_POST_L2MESSAGESERVICE` baked into the deploy scripts).
+Both are exported to the env of every leaf target. The upstream scripts computed their own offsets from a fixed nonce-ordering convention (constants `ORDERED_NONCE_POST_LINETHROLLUP`, `ORDERED_NONCE_POST_TOKENBRIDGE`, `ORDERED_NONCE_POST_L2MESSAGESERVICE` baked into the deploy scripts).
 
 Note: in our serial flow the scripts read the wallet's live nonce. `deployPlonkVerifierAndLinethRollupV8.ts` honors an explicit `L1_NONCE` when set but falls back to `wallet.getNonce()`. The forked `deployBridgedTokenAndTokenBridgeV1_1.ts` no longer reads `L1_NONCE` / `L2_NONCE` at all — it serializes every deploy and lets ethers manage nonces from live wallet state. `04-deploy-contracts.sh` still captures `L1_NONCE` / `L2_NONCE` in the prelude (for V8 and logging) and additionally guards each step against redeploying past the expected deterministic nonce.
 

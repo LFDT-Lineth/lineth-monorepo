@@ -3,7 +3,7 @@
 //
 // 1. Every deploy is serialized via sequential `await` with no explicit nonce
 //    overrides, so ethers manages nonces from live wallet state. This drops the
-//    upstream `ORDERED_NONCE_POST_LINTHRROLLUP` offset, which was stale for this
+//    upstream `ORDERED_NONCE_POST_LINETHROLLUP` offset, which was stale for this
 //    quickstart's deploy order and broke against any non-fresh deployer.
 //
 // 2. remoteSender is supplied directly via REMOTE_TOKEN_BRIDGE_ADDRESS env
