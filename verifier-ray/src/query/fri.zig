@@ -20,6 +20,7 @@ pub const Error = merkle.Error || error{
     InsufficientPositions,
     PositionOutOfRange,
     InvalidRunningLayerShape,
+    InvalidResolvedQueryCount,
     MerkleProofInvalid,
     NonCanonicalLeaf,
     FoldMismatch,
@@ -48,6 +49,9 @@ pub const Params = struct {
         comptime {
             if (self.log_final_poly_size > self.log_plaintext_size) {
                 @compileError("fri: log_final_poly_size exceeds log_plaintext_size");
+            }
+            if (self.log_plaintext_size >= self.log_codeword_size) {
+                @compileError("fri: log_plaintext_size must be less than log_codeword_size");
             }
         }
         return self.log_plaintext_size - self.log_final_poly_size;
@@ -176,6 +180,7 @@ pub fn checkFolds(
     positions: []const usize,
 ) Error!void {
     const num_rounds = params.numRounds();
+    if (resolved.len != params.num_queries) return Error.InvalidResolvedQueryCount;
     if (fold_alphas.len < num_rounds) return Error.InsufficientFoldAlphas;
     if (positions.len < resolved.len) return Error.InsufficientPositions;
 
