@@ -159,7 +159,7 @@ type QueryLayerRoots []field.Octuplet
 type RunningQuery []QueryLayer
 
 // Level holds one polynomial introduced at the folding round where the running
-// polynomial's codeword length matches len(Columns[0].Evals). Trees are the
+// polynomial's codeword length matches Columns[0].codewordLen(). Trees are the
 // pre-built paired-leaf Merkle trees backing it.
 type Level struct {
 	Trees []*Tree
@@ -198,7 +198,17 @@ func (l Level) EvalsAt(alphaDeep field.Ext, running []field.Ext) []field.Ext {
 			e := bitReverseExponent(pos, logSize)
 			for c := len(l.Columns) - 1; c >= 0; c-- {
 				column := &l.Columns[c]
-				ev := &column.Evals[pos]
+				// ev is this position's codeword value as an E6. Base columns are
+				// stored as []field.Element (not widened at reconstruct time), so
+				// lift on the stack here; ext columns are read by reference.
+				var ev *field.Ext
+				var lifted field.Ext
+				if column.isBase() {
+					lifted = field.Lift(column.EvalsBase[pos])
+					ev = &lifted
+				} else {
+					ev = &column.EvalsExt[pos]
+				}
 				var columnSum field.Ext
 				for k := range column.Claims {
 					rot := &column.Rotations[k]
@@ -264,7 +274,7 @@ func buildProvePlan(p Params, levels []Level) (provePlan, error) {
 		if len(levels[l].Columns) == 0 {
 			return plan, fmt.Errorf("fri: Prove: levels[%d] has no columns", l)
 		}
-		logCodewordLen := uint8(utils.Log2Ceil(len(levels[l].Columns[0].Evals)))
+		logCodewordLen := uint8(utils.Log2Ceil(levels[l].Columns[0].codewordLen()))
 		if logCodewordLen > p.LogCodewordSize {
 			return plan,
 				fmt.Errorf("fri: Prove: levels[%d] codeword length 2^%d exceeds p.LogCodewordSize=%d",
