@@ -11,7 +11,7 @@ interface BlobsDaoG<T> {
   fun getConsecutiveBlobsFromBlockNumber(
     startingBlockNumberInclusive: ULong,
     endBlockCreatedBefore: Instant,
-  ): SafeFuture<List<BlobRecord>>
+  ): SafeFuture<List<T>>
 
   fun findBlobByStartBlockNumber(startBlockNumber: ULong): SafeFuture<T?>
 
