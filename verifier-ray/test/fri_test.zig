@@ -265,3 +265,13 @@ test "resolveRunningLayers and checkFolds reject undersized buffers" {
         fri.checkFolds(fold_params, &resolved, &fold_alphas, &positions),
     );
 }
+
+test "checkFolds rejects a resolved-query count under params.num_queries" {
+    const empty: [0]fri.ResolvedQuery = .{};
+    const fold_alphas: [3]ext.Ext = .{ ext.Ext.zero(), ext.Ext.zero(), ext.Ext.zero() };
+    const positions: [0]usize = .{};
+    try std.testing.expectError(
+        error.InvalidResolvedQueryCount,
+        fri.checkFolds(fold_params, &empty, &fold_alphas, &positions),
+    );
+}
