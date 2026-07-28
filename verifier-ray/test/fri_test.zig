@@ -176,14 +176,14 @@ test "merkle branches from prover-ray vectors" {
 // 3 folding rounds.
 const fold_params: fri.Params = .{
     .log_codeword_size = 4,
-    .num_rounds = 3,
+    .log_plaintext_size = 3, // numRounds() = 3 - 0 = 3
     .log_final_poly_size = 0,
     .num_queries = 1,
 };
 
 fn runFoldCase(allocator: std.mem.Allocator, comptime params: fri.Params, case: JsonFoldCase) !void {
     try std.testing.expectEqual(case.log_codeword_size, params.log_codeword_size);
-    try std.testing.expectEqual(case.num_rounds, params.num_rounds);
+    try std.testing.expectEqual(case.num_rounds, params.numRounds());
     try std.testing.expectEqual(case.log_final_poly_size, params.log_final_poly_size);
     try std.testing.expectEqual(case.num_queries, params.num_queries);
 
@@ -201,7 +201,10 @@ fn runFoldCase(allocator: std.mem.Allocator, comptime params: fri.Params, case: 
 
     try fri.checkOpeningProofShape(params, proof, fold_alphas, positions);
 
-    const rounds = try allocator.alloc(fri.Pair, params.num_rounds);
+    // rounds[0] is never written (round 0 always introduces a level), so
+    // initialize it rather than leaving allocator garbage.
+    const rounds = try allocator.alloc(fri.Pair, params.numRounds());
+    @memset(rounds, .{ .self = ext.Ext.zero(), .sibling = ext.Ext.zero() });
     const running_result = fri.resolveRunningLayers(params, round_roots, running_branches, case.position, rounds);
 
     if (case.expect_running_error.len > 0) {
@@ -211,6 +214,7 @@ fn runFoldCase(allocator: std.mem.Allocator, comptime params: fri.Params, case: 
     try running_result;
 
     const want_rounds = case.expected_rounds;
+    try std.testing.expectEqual(rounds.len, want_rounds.len);
     for (rounds[1..], want_rounds[1..]) |got, want| {
         const want_pair = toPair(want);
         try std.testing.expect(got.self.eql(want_pair.self));
@@ -241,4 +245,23 @@ test "fri fold cases from prover-ray vectors" {
             return err;
         };
     }
+}
+
+test "resolveRunningLayers and checkFolds reject undersized buffers" {
+    var rounds: [1]fri.Pair = undefined;
+    const branches: [0]merkle.Branch = .{};
+    const roots: [0]poseidon2.Digest = .{};
+    try std.testing.expectError(
+        error.InvalidRunningLayerShape,
+        fri.resolveRunningLayers(fold_params, &roots, &branches, 0, &rounds),
+    );
+
+    var aux: [1]?fri.Pair = .{null};
+    const resolved = [_]fri.ResolvedQuery{.{ .rounds = &rounds, .aux = &aux, .final = ext.Ext.zero() }};
+    const fold_alphas: [3]ext.Ext = .{ ext.Ext.zero(), ext.Ext.zero(), ext.Ext.zero() };
+    const positions: [1]usize = .{0};
+    try std.testing.expectError(
+        error.InvalidRunningLayerShape,
+        fri.checkFolds(fold_params, &resolved, &fold_alphas, &positions),
+    );
 }

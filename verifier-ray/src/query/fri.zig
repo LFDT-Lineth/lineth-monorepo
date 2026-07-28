@@ -34,15 +34,24 @@ pub const Error = merkle.Error || error{
 pub const Params = struct {
     /// log2 of the codeword domain size (`fri.Params.LogCodewordSize`).
     log_codeword_size: u8,
-    /// Number of folding rounds
-    /// (`fri.Params.LogPlainTextSize - logFinalPolySize`).
-    num_rounds: u8,
+    /// log2 of the plaintext polynomial size (`fri.Params.LogPlainTextSize`).
+    log_plaintext_size: u8,
     /// log2 of the number of coefficients the final polynomial reveals
     /// (`fri.Params.logFinalPolySize`, private in Go); this length is the
     /// enforced low-degree bound on the final layer.
     log_final_poly_size: u8 = 0,
     /// Number of independent FRI queries.
     num_queries: usize,
+
+    /// Number of folding rounds: `fri.Params.numRounds()`.
+    pub fn numRounds(comptime self: Params) u8 {
+        comptime {
+            if (self.log_final_poly_size > self.log_plaintext_size) {
+                @compileError("fri: log_final_poly_size exceeds log_plaintext_size");
+            }
+        }
+        return self.log_plaintext_size - self.log_final_poly_size;
+    }
 };
 
 /// One fold round's conjugate pair (self, sibling): prover-ray's `inputPair`.
@@ -58,13 +67,13 @@ pub const Pair = struct {
 pub const ResolvedQuery = struct {
     /// rounds[j] = the running codeword's (self, sibling) pair authenticated
     /// at round j; filled by `resolveRunningLayers` for j in [1, num_rounds).
-    /// Length num_rounds.
+    /// Length num_rounds, checked by `checkFolds`.
     rounds: []const Pair,
     /// aux[j] = the level pair introduced at round j (reconstructed by the
     /// DEEP/PCS layer), if any; when present it supersedes rounds[j]. Length
     /// num_rounds + 1: a level may be introduced at the boundary round
     /// (index num_rounds, one past the last fold), authenticated but never
-    /// folded -- see `checkFolds`.
+    /// folded -- see `checkFolds`, which also checks this length.
     aux: []const ?Pair,
     /// The final polynomial evaluated at this query's final-domain point.
     final: ext.Ext,
@@ -99,11 +108,12 @@ pub fn checkOpeningProofShape(
     fold_alphas: []const ext.Ext,
     positions: []const usize,
 ) Error!void {
-    const want_round_roots: u8 = if (params.num_rounds > 0) params.num_rounds - 1 else 0;
+    const num_rounds = params.numRounds();
+    const want_round_roots: u8 = if (num_rounds > 0) num_rounds - 1 else 0;
     if (proof.round_roots.len != want_round_roots) return Error.InvalidRoundRootCount;
     if (proof.running_queries.len != params.num_queries) return Error.InvalidRunningQueryCount;
     if (proof.final_poly.len != (@as(usize, 1) << params.log_final_poly_size)) return Error.InvalidFinalPolyLength;
-    if (fold_alphas.len < params.num_rounds) return Error.InsufficientFoldAlphas;
+    if (fold_alphas.len < num_rounds) return Error.InsufficientFoldAlphas;
     if (positions.len < params.num_queries) return Error.InsufficientPositions;
 
     const codeword_size = @as(usize, 1) << params.log_codeword_size;
@@ -118,6 +128,9 @@ pub fn checkOpeningProofShape(
 /// `rounds[0]` is left untouched: round 0 always introduces the top level (see
 /// `ResolvedQuery`), so its running pair is never read. Mirrors the
 /// running-layer loop inside prover-ray's `pcs.Verify`.
+///
+/// Validates every input length itself, since `rounds` is a caller-allocated
+/// output buffer `checkOpeningProofShape` never sees.
 pub fn resolveRunningLayers(
     comptime params: Params,
     round_roots: []const poseidon2.Digest,
@@ -125,8 +138,13 @@ pub fn resolveRunningLayers(
     position: usize,
     rounds: []Pair,
 ) Error!void {
-    if (params.num_rounds == 0) return; // no running layers at all (D=1)
-    for (1..@as(usize, params.num_rounds)) |j| {
+    const num_rounds = params.numRounds();
+    if (num_rounds == 0) return; // no running layers at all (D=1)
+    if (rounds.len != num_rounds) return Error.InvalidRunningLayerShape;
+    if (query_branches.len != num_rounds - 1) return Error.InvalidRunningLayerShape;
+    if (round_roots.len != num_rounds - 1) return Error.InvalidRunningLayerShape;
+
+    for (1..@as(usize, num_rounds)) |j| {
         const branch = query_branches[j - 1];
         const want_siblings = params.log_codeword_size - j;
         if (branch.siblings.len != want_siblings) return Error.InvalidRunningLayerShape;
@@ -157,14 +175,18 @@ pub fn checkFolds(
     fold_alphas: []const ext.Ext,
     positions: []const usize,
 ) Error!void {
-    if (fold_alphas.len < params.num_rounds) return Error.InsufficientFoldAlphas;
+    const num_rounds = params.numRounds();
+    if (fold_alphas.len < num_rounds) return Error.InsufficientFoldAlphas;
     if (positions.len < resolved.len) return Error.InsufficientPositions;
 
     const generator = fullDomainGenerator(params);
     for (resolved, positions[0..resolved.len]) |rq, s| {
+        if (rq.rounds.len != num_rounds) return Error.InvalidRunningLayerShape;
+        if (rq.aux.len != @as(usize, num_rounds) + 1) return Error.InvalidRunningLayerShape;
+
         var x_inv = domainPoint(params.log_codeword_size, generator, s).inverse();
 
-        for (0..params.num_rounds) |j| {
+        for (0..num_rounds) |j| {
             var pair = rq.rounds[j];
             if (rq.aux[j]) |level_pair| pair = level_pair;
 
@@ -177,7 +199,7 @@ pub fn checkFolds(
             sum = sum.add(diff);
             sum = sum.mulByBase(inv_two);
 
-            if (j < params.num_rounds - 1) {
+            if (j < num_rounds - 1) {
                 if (!sum.eql(rq.rounds[j + 1].self)) return Error.FoldMismatch;
             } else if (!sum.eql(rq.final)) return Error.FinalPolyMismatch;
 
@@ -189,8 +211,8 @@ pub fn checkFolds(
         // evaluate identically at both conjugate positions. The num_rounds
         // == 0 case (no rounds at all) is handled entirely in query/pcs.zig,
         // against the final polynomial directly rather than this check.
-        if (params.num_rounds > 0) {
-            if (rq.aux[params.num_rounds]) |pair| {
+        if (num_rounds > 0) {
+            if (rq.aux[num_rounds]) |pair| {
                 if (!pair.self.eql(pair.sibling)) return Error.BoundaryAuxNotConstant;
             }
         }
