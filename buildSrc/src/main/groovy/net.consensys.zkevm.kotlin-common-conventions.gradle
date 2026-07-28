@@ -18,6 +18,10 @@ plugins.withId('java-test-fixtures') {
 
 dependencies {
   api platform("io.vertx:vertx-stack-depchain:${libs.versions.vertx.get()}")
+  // jackson-annotations drops the patch version from 2.20 onwards while every other jackson
+  // artifact keeps one (e.g. jackson-annotations:2.22 vs jackson-databind:2.22.1), so individual
+  // jackson-* dependencies must be declared WITHOUT a version and let this platform resolve it.
+  api platform("com.fasterxml.jackson:jackson-bom:${libs.versions.jackson.get()}")
   //<utils>
   implementation "com.michael-bull.kotlin-result:kotlin-result:${libs.versions.kotlinResult.get()}"
   implementation ("tech.pegasys.teku.internal:async:${libs.versions.teku.get()}") {

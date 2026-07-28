@@ -1,0 +1,4537 @@
+{
+  "coordinator": {
+    "description": "Main Coordinator configuration.",
+    "keys": {
+      "api": {
+        "type": "ApiConfigToml",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Coordinator JSON-RPC and observability API settings.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "api.json-rpc-path": {
+        "type": "String",
+        "section": false,
+        "required": false,
+        "default": "/",
+        "description": "HTTP path the JSON-RPC API is served on.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "api.json-rpc-port": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "0",
+        "description": "Port serving the coordinator JSON-RPC API. 0 picks a random free port.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "api.json-rpc-server-verticles": {
+        "type": "Int",
+        "section": false,
+        "required": false,
+        "default": "1",
+        "description": "Number of Vert.x verticles serving the JSON-RPC API.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "api.observability-port": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "9545",
+        "description": "Port serving observability endpoints (metrics/health).",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation": {
+        "type": "ConflationToml",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Block conflation, blob compression, and proof aggregation settings.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.backtesting-directory": {
+        "type": "Path?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Directory used to persist conflation backtesting data. Omit to disable backtesting output.",
+        "example": "/data/conflation-backtesting",
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.blob-compression": {
+        "type": "BlobCompressionToml",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Blob compression settings.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.blob-compression.batches-limit": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum number of batches per blob. Omit for no explicit limit.",
+        "example": "1",
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.blob-compression.blob-compressor-version": {
+        "type": "BlobCompressorVersion",
+        "section": false,
+        "required": false,
+        "default": "V3",
+        "description": "Blob compressor version to use.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.blob-compression.blob-size-limit": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "102400",
+        "description": "Maximum compressed blob size in bytes before a blob is finalized.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.blob-compression.handler-polling-interval": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1S",
+        "description": "Interval between blob compression handler runs.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.blocks-limit": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum number of L2 blocks in a single conflation. Omit for no block-count limit.",
+        "example": "2",
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.conflation-deadline": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum time to wait before conflating available blocks even if limits are not reached. Omit to disable deadline-based conflation.",
+        "example": "PT6S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.conflation-deadline-check-interval": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT30S",
+        "description": "How often to check whether the conflation deadline has elapsed.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.conflation-deadline-last-block-confirmation-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT30S",
+        "description": "Delay after the last block before confirming it, to absorb short reorgs.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.consistent-number-of-blocks-on-l1-to-wait": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "32",
+        "description": "Number of L1 blocks to wait for consistency (finality safety margin); defaults to one epoch.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.disabled": {
+        "type": "Boolean",
+        "section": false,
+        "required": false,
+        "default": "false",
+        "description": "Whether conflation is disabled.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.force-stop-conflation-at-block-inclusive": {
+        "type": "ULong?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Inclusive L2 block number at which to stop conflating. Omit to conflate indefinitely.",
+        "example": "100000000",
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.force-stop-conflation-at-block-timestamp-inclusive": {
+        "type": "Instant?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Inclusive block timestamp at which to stop conflating. Omit to conflate indefinitely.",
+        "example": "2024-01-01T00:00:00Z",
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.l2-endpoint": {
+        "type": "URL?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 endpoint used for conflation. Falls back to defaults.l2-endpoint.",
+        "example": "http://sequencer:8545",
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.l2-fetch-blocks-limit": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum number of L2 blocks to fetch that are unproven and held in memory. Omit for no limit.",
+        "example": "4000",
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.l2-logs-endpoint": {
+        "type": "URL?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 endpoint used for eth_getLogs during conflation. Falls back to l2-endpoint/defaults.",
+        "example": "http://sequencer:8545",
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.l2-request-retries": {
+        "type": "RequestRetriesToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Retry policy for L2 conflation requests; falls back to defaults.l2-request-retries.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.l2-request-retries.backoff-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1S",
+        "description": "Delay between retry attempts.",
+        "example": "PT1S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.l2-request-retries.failures-warning-threshold": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Number of consecutive failures after which warning logs start being emitted. Omit to use the default threshold.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.l2-request-retries.ignore-first-exceptions-until-time-elapsed": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Grace period during which initial failures are ignored (not logged/counted) before retries are treated as errors. Omit to disable.",
+        "example": "PT5S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.l2-request-retries.max-retries": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum number of retry attempts. Omit for endless retries.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.l2-request-retries.timeout": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Overall timeout across all retry attempts. Omit to disable the timeout.",
+        "example": "PT10S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.new-blocks-polling-interval": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1S",
+        "description": "Interval between polls for new L2 blocks.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.proof-aggregation": {
+        "type": "ProofAggregationToml",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Proof aggregation settings.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.proof-aggregation.aggregation-size-multiple-of": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "1",
+        "description": "Aggregations are only closed when their size is a multiple of this value.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.proof-aggregation.blobs-limit": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum number of blobs in a single aggregation. Omit for no explicit limit.",
+        "example": "6",
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.proof-aggregation.coordinator-polling-interval": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT3S",
+        "description": "Interval between coordinator polls for new proofs to aggregate.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.proof-aggregation.deadline": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum time to wait before aggregating available proofs. Omit to disable deadline-based aggregation (wait indefinitely).",
+        "example": "PT1M",
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.proof-aggregation.deadline-check-interval": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT30S",
+        "description": "How often to check whether the aggregation deadline has elapsed.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.proof-aggregation.proofs-limit": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "300",
+        "description": "Maximum number of proofs in a single aggregation.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.proof-aggregation.target-end-blocks": {
+        "type": "List<ULong>?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 block numbers that must end an aggregation (e.g. hard-fork boundaries). Omit for none.",
+        "example": "[]",
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.proof-aggregation.timestamp-based-hard-forks": {
+        "type": "List<Instant>",
+        "section": false,
+        "required": false,
+        "default": "[]",
+        "description": "Timestamps that force an aggregation boundary (e.g. timestamp-based hard forks).",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.proof-aggregation.wait-api-resume-after-target-block": {
+        "type": "Boolean",
+        "section": false,
+        "required": false,
+        "default": "false",
+        "description": "Whether to wait for the API to resume after the target block before aggregating.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.proof-aggregation.wait-for-no-l2-activity-to-trigger-aggregation": {
+        "type": "Boolean",
+        "section": false,
+        "required": false,
+        "default": "false",
+        "description": "Whether to wait for a period of no L2 activity before triggering an aggregation.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.proof-aggregation.wait-target-block-l1-finalization": {
+        "type": "Boolean",
+        "section": false,
+        "required": false,
+        "default": "false",
+        "description": "Whether to wait for the target block to be finalized on L1 before aggregating.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "conflation.riscv-starting-block-timestamp-inclusive": {
+        "type": "Instant?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "RISC-V starting block timestamp (inclusive).",
+        "example": "2027-01-01T00:00:00Z",
+        "deprecated": false,
+        "replacement": null
+      },
+      "database": {
+        "type": "DatabaseToml",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Coordinator PostgreSQL persistence settings.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "database.hostname": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "PostgreSQL hostname used by the coordinator persistence layer.",
+        "example": "postgres",
+        "deprecated": false,
+        "replacement": null
+      },
+      "database.password": {
+        "type": "Masked",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "PostgreSQL password. Masked in logs.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "database.persistence-retries": {
+        "type": "RequestRetriesToml",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Retry policy for database persistence operations.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "database.persistence-retries.backoff-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1S",
+        "description": "Delay between retry attempts.",
+        "example": "PT1S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "database.persistence-retries.failures-warning-threshold": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Number of consecutive failures after which warning logs start being emitted. Omit to use the default threshold.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "database.persistence-retries.ignore-first-exceptions-until-time-elapsed": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Grace period during which initial failures are ignored (not logged/counted) before retries are treated as errors. Omit to disable.",
+        "example": "PT5S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "database.persistence-retries.max-retries": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum number of retry attempts. Omit for endless retries.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "database.persistence-retries.timeout": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Overall timeout across all retry attempts. Omit to disable the timeout.",
+        "example": "PT10S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "database.port": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "5432",
+        "description": "PostgreSQL port.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "database.read-pipelining-limit": {
+        "type": "Int",
+        "section": false,
+        "required": false,
+        "default": "10",
+        "description": "Maximum number of read queries pipelined on a single connection.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "database.read-pool-size": {
+        "type": "Int",
+        "section": false,
+        "required": false,
+        "default": "10",
+        "description": "Connection pool size for read-only queries.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "database.schema": {
+        "type": "String",
+        "section": false,
+        "required": false,
+        "default": "linea_coordinator",
+        "description": "PostgreSQL schema (database) name.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "database.schema-version": {
+        "type": "Int",
+        "section": false,
+        "required": false,
+        "default": "4",
+        "description": "Expected database schema version; must match a supported migration version.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "database.transactional-pool-size": {
+        "type": "Int",
+        "section": false,
+        "required": false,
+        "default": "10",
+        "description": "Connection pool size for transactional (read-write) queries.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "database.username": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "PostgreSQL username.",
+        "example": "postgres",
+        "deprecated": false,
+        "replacement": null
+      },
+      "defaults": {
+        "type": "DefaultsToml",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Shared defaults (L1/L2 endpoints and retry policies) reused by coordinator services.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "defaults.l1-endpoint": {
+        "type": "URL?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Default L1 execution-layer JSON-RPC endpoint used by services that do not override it.",
+        "example": "http://l1-el-node:8545",
+        "deprecated": false,
+        "replacement": null
+      },
+      "defaults.l1-request-retries": {
+        "type": "RequestRetriesToml",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Default retry policy for L1 requests, reused by services that do not override it.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "defaults.l1-request-retries.backoff-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1S",
+        "description": "Delay between retry attempts.",
+        "example": "PT1S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "defaults.l1-request-retries.failures-warning-threshold": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Number of consecutive failures after which warning logs start being emitted. Omit to use the default threshold.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "defaults.l1-request-retries.ignore-first-exceptions-until-time-elapsed": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Grace period during which initial failures are ignored (not logged/counted) before retries are treated as errors. Omit to disable.",
+        "example": "PT5S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "defaults.l1-request-retries.max-retries": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum number of retry attempts. Omit for endless retries.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "defaults.l1-request-retries.timeout": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Overall timeout across all retry attempts. Omit to disable the timeout.",
+        "example": "PT10S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "defaults.l2-endpoint": {
+        "type": "URL?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Default L2 JSON-RPC endpoint used by services that do not override it.",
+        "example": "http://sequencer:8545",
+        "deprecated": false,
+        "replacement": null
+      },
+      "defaults.l2-request-retries": {
+        "type": "RequestRetriesToml",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Default retry policy for L2 requests, reused by services that do not override it.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "defaults.l2-request-retries.backoff-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1S",
+        "description": "Delay between retry attempts.",
+        "example": "PT1S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "defaults.l2-request-retries.failures-warning-threshold": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Number of consecutive failures after which warning logs start being emitted. Omit to use the default threshold.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "defaults.l2-request-retries.ignore-first-exceptions-until-time-elapsed": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Grace period during which initial failures are ignored (not logged/counted) before retries are treated as errors. Omit to disable.",
+        "example": "PT5S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "defaults.l2-request-retries.max-retries": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum number of retry attempts. Omit for endless retries.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "defaults.l2-request-retries.timeout": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Overall timeout across all retry attempts. Omit to disable the timeout.",
+        "example": "PT10S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "forced-transactions": {
+        "type": "ForcedTransactionsConfigToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Forced transactions handling settings; omit the section to disable the feature.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "forced-transactions.disabled": {
+        "type": "Boolean",
+        "section": false,
+        "required": false,
+        "default": "false",
+        "description": "Whether forced transactions handling is disabled.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "forced-transactions.invalidity-proof-check-interval": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT2M",
+        "description": "Interval between checks for invalidity proofs of forced transactions.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "forced-transactions.l1-endpoint": {
+        "type": "URL?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L1 endpoint used to read forced transactions. Falls back to defaults.l1-endpoint.",
+        "example": "http://l1-el-node:8545",
+        "deprecated": false,
+        "replacement": null
+      },
+      "forced-transactions.l1-event-scraping": {
+        "type": "L1EventScraping",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "L1 event scraping (log polling) settings for forced transactions.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "forced-transactions.l1-event-scraping.eth-logs-search-block-chunk-size": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "1000",
+        "description": "Number of blocks scanned per eth_getLogs chunk.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "forced-transactions.l1-event-scraping.eth-logs-search-max-block-range": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "10000",
+        "description": "Maximum block range covered by a single eth_getLogs search.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "forced-transactions.l1-event-scraping.eth-logs-search-success-backoff-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT0.001S",
+        "description": "Backoff delay after a successful eth_getLogs search before the next one.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "forced-transactions.l1-event-scraping.polling-interval": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT12S",
+        "description": "Interval between L1 log polling attempts.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "forced-transactions.l1-event-scraping.polling-timeout": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT5S",
+        "description": "Timeout for each L1 log polling request.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "forced-transactions.l1-highest-block-tag": {
+        "type": "BlockParameter",
+        "section": false,
+        "required": false,
+        "default": "FINALIZED",
+        "description": "L1 block tag up to which forced-transaction events are read.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "forced-transactions.l1-request-retries": {
+        "type": "RequestRetriesToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Retry policy for L1 requests; falls back to defaults.l1-request-retries.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "forced-transactions.l1-request-retries.backoff-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1S",
+        "description": "Delay between retry attempts.",
+        "example": "PT1S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "forced-transactions.l1-request-retries.failures-warning-threshold": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Number of consecutive failures after which warning logs start being emitted. Omit to use the default threshold.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "forced-transactions.l1-request-retries.ignore-first-exceptions-until-time-elapsed": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Grace period during which initial failures are ignored (not logged/counted) before retries are treated as errors. Omit to disable.",
+        "example": "PT5S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "forced-transactions.l1-request-retries.max-retries": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum number of retry attempts. Omit for endless retries.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "forced-transactions.l1-request-retries.timeout": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Overall timeout across all retry attempts. Omit to disable the timeout.",
+        "example": "PT10S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "forced-transactions.processing-batch-size": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "10",
+        "description": "Number of forced transactions processed per batch.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "forced-transactions.processing-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT0S",
+        "description": "Delay before processing a forced transaction after it is detected.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "forced-transactions.processing-tick-interval": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT2M",
+        "description": "Interval between forced-transaction processing ticks.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "forced-transactions.sequencer-endpoint": {
+        "type": "URL",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Sequencer endpoint to which forced transactions are submitted.",
+        "example": "http://sequencer:8545",
+        "deprecated": false,
+        "replacement": null
+      },
+      "forced-transactions.sequencer-request-retries": {
+        "type": "RequestRetriesToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Retry policy for sequencer requests; falls back to defaults.l2-request-retries.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "forced-transactions.sequencer-request-retries.backoff-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1S",
+        "description": "Delay between retry attempts.",
+        "example": "PT1S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "forced-transactions.sequencer-request-retries.failures-warning-threshold": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Number of consecutive failures after which warning logs start being emitted. Omit to use the default threshold.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "forced-transactions.sequencer-request-retries.ignore-first-exceptions-until-time-elapsed": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Grace period during which initial failures are ignored (not logged/counted) before retries are treated as errors. Omit to disable.",
+        "example": "PT5S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "forced-transactions.sequencer-request-retries.max-retries": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum number of retry attempts. Omit for endless retries.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "forced-transactions.sequencer-request-retries.timeout": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Overall timeout across all retry attempts. Omit to disable the timeout.",
+        "example": "PT10S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-finalization-monitor": {
+        "type": "L1FinalizationMonitorConfigToml",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "L1 finalization monitor polling settings.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-finalization-monitor.l1-endpoint": {
+        "type": "URL?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L1 endpoint for finalization monitoring. Falls back to defaults.l1-endpoint.",
+        "example": "http://l1-el-node:8545",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-finalization-monitor.l1-polling-interval": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT6S",
+        "description": "Interval between L1 finalization polls.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-finalization-monitor.l1-query-block-tag": {
+        "type": "Tag",
+        "section": false,
+        "required": false,
+        "default": "FINALIZED",
+        "description": "L1 block tag treated as finalized (e.g. FINALIZED, SAFE, LATEST).",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-finalization-monitor.l1-request-retries": {
+        "type": "RequestRetriesToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Retry policy for L1 requests; falls back to defaults.l1-request-retries.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-finalization-monitor.l1-request-retries.backoff-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1S",
+        "description": "Delay between retry attempts.",
+        "example": "PT1S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-finalization-monitor.l1-request-retries.failures-warning-threshold": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Number of consecutive failures after which warning logs start being emitted. Omit to use the default threshold.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-finalization-monitor.l1-request-retries.ignore-first-exceptions-until-time-elapsed": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Grace period during which initial failures are ignored (not logged/counted) before retries are treated as errors. Omit to disable.",
+        "example": "PT5S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-finalization-monitor.l1-request-retries.max-retries": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum number of retry attempts. Omit for endless retries.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-finalization-monitor.l1-request-retries.timeout": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Overall timeout across all retry attempts. Omit to disable the timeout.",
+        "example": "PT10S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-finalization-monitor.l2-endpoint": {
+        "type": "URL?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 endpoint for finalization monitoring. Falls back to defaults.l2-endpoint.",
+        "example": "http://sequencer:8545",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-finalization-monitor.l2-request-retries": {
+        "type": "RequestRetriesToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Retry policy for L2 requests; falls back to defaults.l2-request-retries.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-finalization-monitor.l2-request-retries.backoff-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1S",
+        "description": "Delay between retry attempts.",
+        "example": "PT1S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-finalization-monitor.l2-request-retries.failures-warning-threshold": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Number of consecutive failures after which warning logs start being emitted. Omit to use the default threshold.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-finalization-monitor.l2-request-retries.ignore-first-exceptions-until-time-elapsed": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Grace period during which initial failures are ignored (not logged/counted) before retries are treated as errors. Omit to disable.",
+        "example": "PT5S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-finalization-monitor.l2-request-retries.max-retries": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum number of retry attempts. Omit for endless retries.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-finalization-monitor.l2-request-retries.timeout": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Overall timeout across all retry attempts. Omit to disable the timeout.",
+        "example": "PT10S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission": {
+        "type": "L1SubmissionConfigToml",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "L1 blob/aggregation submission (data availability and finalization) settings.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation": {
+        "type": "AggregationSubmissionToml",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Aggregation (finalization) submission settings.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.disabled": {
+        "type": "Boolean",
+        "section": false,
+        "required": false,
+        "default": "false",
+        "description": "Whether aggregation submission is disabled.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.gas": {
+        "type": "GasConfigToml",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Gas settings for aggregation submission transactions.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.gas.fallback": {
+        "type": "FallbackGasConfig",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Fallback priority-fee bounds used when dynamic pricing is unavailable.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.gas.fallback.priority-fee-per-gas-lower-bound": {
+        "type": "ULong",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Lower bound for the fallback priority fee per gas.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.gas.fallback.priority-fee-per-gas-upper-bound": {
+        "type": "ULong",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Upper bound for the fallback priority fee per gas.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.gas.gas-limit": {
+        "type": "ULong",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Gas limit for L1 submission transactions.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.gas.max-fee-per-blob-gas-cap": {
+        "type": "ULong",
+        "section": false,
+        "required": false,
+        "default": "0",
+        "description": "Cap on the max fee per blob gas for blob transactions. 0 disables the cap.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.gas.max-fee-per-gas-cap": {
+        "type": "ULong",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Cap on the EIP-1559 max fee per gas for L1 submission transactions.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.gas.max-priority-fee-per-gas-cap": {
+        "type": "ULong",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Cap on the EIP-1559 max priority fee per gas for L1 submission transactions.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.l1-endpoint": {
+        "type": "URL?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L1 endpoint for aggregation submission. Falls back to defaults.l1-endpoint.",
+        "example": "http://l1-el-node:8545",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.l1-request-retries": {
+        "type": "RequestRetriesToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Retry policy for aggregation requests; falls back to defaults.l1-request-retries.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.l1-request-retries.backoff-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1S",
+        "description": "Delay between retry attempts.",
+        "example": "PT1S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.l1-request-retries.failures-warning-threshold": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Number of consecutive failures after which warning logs start being emitted. Omit to use the default threshold.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.l1-request-retries.ignore-first-exceptions-until-time-elapsed": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Grace period during which initial failures are ignored (not logged/counted) before retries are treated as errors. Omit to disable.",
+        "example": "PT5S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.l1-request-retries.max-retries": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum number of retry attempts. Omit for endless retries.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.l1-request-retries.timeout": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Overall timeout across all retry attempts. Omit to disable the timeout.",
+        "example": "PT10S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.max-submissions-per-tick": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "1",
+        "description": "Maximum aggregation submissions sent per tick.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.signer": {
+        "type": "SignerConfigToml",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Signer used to sign aggregation submission transactions.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.signer.type": {
+        "type": "SignerType",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Signer backend to use: WEB3J (local private key) or WEB3SIGNER (remote signer).",
+        "example": "web3signer",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.signer.web3j": {
+        "type": "Web3jConfig?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Local Web3j signer settings; required when type is WEB3J.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.signer.web3j.private-key": {
+        "type": "Masked",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Hex-encoded 32-byte private key used to sign transactions. Masked in logs.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.signer.web3signer": {
+        "type": "Web3SignerConfig?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Remote Web3Signer settings; required when type is WEB3SIGNER.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.signer.web3signer.endpoint": {
+        "type": "URL",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Web3Signer HTTP endpoint.",
+        "example": "http://web3signer:9000",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.signer.web3signer.keep-alive": {
+        "type": "Boolean",
+        "section": false,
+        "required": false,
+        "default": "true",
+        "description": "Whether to keep Web3Signer HTTP connections alive.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.signer.web3signer.max-pool-size": {
+        "type": "Int",
+        "section": false,
+        "required": false,
+        "default": "10",
+        "description": "Maximum size of the HTTP connection pool to Web3Signer.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.signer.web3signer.public-key": {
+        "type": "ByteArray",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Hex-encoded 64-byte public key whose corresponding key Web3Signer holds.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.signer.web3signer.tls": {
+        "type": "TlsConfig?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "TLS settings for the Web3Signer connection; omit for plaintext.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.signer.web3signer.tls.key-store-password": {
+        "type": "Masked",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Password for the client keystore. Masked in logs.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.signer.web3signer.tls.key-store-path": {
+        "type": "Path",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Path to the client keystore used for mutual TLS with Web3Signer.",
+        "example": "/etc/coordinator/keystore.p12",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.signer.web3signer.tls.trust-store-password": {
+        "type": "Masked",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Password for the truststore. Masked in logs.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.signer.web3signer.tls.trust-store-path": {
+        "type": "Path",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Path to the truststore used to validate the Web3Signer certificate.",
+        "example": "/etc/coordinator/truststore.p12",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.submission-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT0S",
+        "description": "Delay before submitting an aggregation after it becomes eligible.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.submission-tick-interval": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT24S",
+        "description": "Interval between aggregation submission ticks.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob": {
+        "type": "BlobSubmissionConfigToml",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Blob (data availability) submission settings.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.db-max-blobs-to-return": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "100",
+        "description": "Maximum number of blobs read from the database per query.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.disabled": {
+        "type": "Boolean",
+        "section": false,
+        "required": false,
+        "default": "false",
+        "description": "Whether blob submission is disabled.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.gas": {
+        "type": "GasConfigToml",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Gas settings for blob submission transactions.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.gas.fallback": {
+        "type": "FallbackGasConfig",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Fallback priority-fee bounds used when dynamic pricing is unavailable.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.gas.fallback.priority-fee-per-gas-lower-bound": {
+        "type": "ULong",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Lower bound for the fallback priority fee per gas.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.gas.fallback.priority-fee-per-gas-upper-bound": {
+        "type": "ULong",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Upper bound for the fallback priority fee per gas.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.gas.gas-limit": {
+        "type": "ULong",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Gas limit for L1 submission transactions.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.gas.max-fee-per-blob-gas-cap": {
+        "type": "ULong",
+        "section": false,
+        "required": false,
+        "default": "0",
+        "description": "Cap on the max fee per blob gas for blob transactions. 0 disables the cap.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.gas.max-fee-per-gas-cap": {
+        "type": "ULong",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Cap on the EIP-1559 max fee per gas for L1 submission transactions.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.gas.max-priority-fee-per-gas-cap": {
+        "type": "ULong",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Cap on the EIP-1559 max priority fee per gas for L1 submission transactions.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.l1-endpoint": {
+        "type": "URL?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L1 endpoint for blob submission. Falls back to defaults.l1-endpoint.",
+        "example": "http://l1-el-node:8545",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.l1-request-retries": {
+        "type": "RequestRetriesToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Retry policy for blob submission requests; falls back to defaults.l1-request-retries.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.l1-request-retries.backoff-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1S",
+        "description": "Delay between retry attempts.",
+        "example": "PT1S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.l1-request-retries.failures-warning-threshold": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Number of consecutive failures after which warning logs start being emitted. Omit to use the default threshold.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.l1-request-retries.ignore-first-exceptions-until-time-elapsed": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Grace period during which initial failures are ignored (not logged/counted) before retries are treated as errors. Omit to disable.",
+        "example": "PT5S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.l1-request-retries.max-retries": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum number of retry attempts. Omit for endless retries.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.l1-request-retries.timeout": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Overall timeout across all retry attempts. Omit to disable the timeout.",
+        "example": "PT10S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.max-submission-transactions-per-tick": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "2",
+        "description": "Maximum blob submission transactions sent per tick.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.signer": {
+        "type": "SignerConfigToml",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Signer used to sign blob submission transactions.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.signer.type": {
+        "type": "SignerType",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Signer backend to use: WEB3J (local private key) or WEB3SIGNER (remote signer).",
+        "example": "web3signer",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.signer.web3j": {
+        "type": "Web3jConfig?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Local Web3j signer settings; required when type is WEB3J.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.signer.web3j.private-key": {
+        "type": "Masked",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Hex-encoded 32-byte private key used to sign transactions. Masked in logs.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.signer.web3signer": {
+        "type": "Web3SignerConfig?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Remote Web3Signer settings; required when type is WEB3SIGNER.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.signer.web3signer.endpoint": {
+        "type": "URL",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Web3Signer HTTP endpoint.",
+        "example": "http://web3signer:9000",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.signer.web3signer.keep-alive": {
+        "type": "Boolean",
+        "section": false,
+        "required": false,
+        "default": "true",
+        "description": "Whether to keep Web3Signer HTTP connections alive.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.signer.web3signer.max-pool-size": {
+        "type": "Int",
+        "section": false,
+        "required": false,
+        "default": "10",
+        "description": "Maximum size of the HTTP connection pool to Web3Signer.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.signer.web3signer.public-key": {
+        "type": "ByteArray",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Hex-encoded 64-byte public key whose corresponding key Web3Signer holds.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.signer.web3signer.tls": {
+        "type": "TlsConfig?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "TLS settings for the Web3Signer connection; omit for plaintext.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.signer.web3signer.tls.key-store-password": {
+        "type": "Masked",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Password for the client keystore. Masked in logs.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.signer.web3signer.tls.key-store-path": {
+        "type": "Path",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Path to the client keystore used for mutual TLS with Web3Signer.",
+        "example": "/etc/coordinator/keystore.p12",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.signer.web3signer.tls.trust-store-password": {
+        "type": "Masked",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Password for the truststore. Masked in logs.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.signer.web3signer.tls.trust-store-path": {
+        "type": "Path",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Path to the truststore used to validate the Web3Signer certificate.",
+        "example": "/etc/coordinator/truststore.p12",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.submission-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT0S",
+        "description": "Delay before submitting a blob after it becomes eligible.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.submission-tick-interval": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT12S",
+        "description": "Interval between blob submission ticks.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.target-blobs-per-transaction": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "6",
+        "description": "Target number of blobs per submission transaction (EIP-4844/7594 network cap is 6).",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.data-availability": {
+        "type": "DataAvailability",
+        "section": false,
+        "required": false,
+        "default": "ROLLUP",
+        "description": "Data availability mode: ROLLUP submits blobs to L1, VALIDIUM submits off-chain.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.disabled": {
+        "type": "Boolean",
+        "section": false,
+        "required": false,
+        "default": "false",
+        "description": "Whether L1 submission is disabled.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.dynamic-gas-price-cap": {
+        "type": "DynamicGasPriceCapToml",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Dynamic L1 gas price cap calculation settings.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.dynamic-gas-price-cap.disabled": {
+        "type": "Boolean",
+        "section": false,
+        "required": false,
+        "default": "false",
+        "description": "Whether dynamic gas price cap calculation is disabled.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.dynamic-gas-price-cap.fee-history-fetcher": {
+        "type": "FeeHistoryFetcherConfig",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "L1 fee-history fetcher settings feeding the gas price cap calculation.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.dynamic-gas-price-cap.fee-history-fetcher.fetch-interval": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT3S",
+        "description": "Interval between fee-history fetches.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.dynamic-gas-price-cap.fee-history-fetcher.l1-endpoint": {
+        "type": "URL?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L1 endpoint for fetching fee history. Falls back to defaults.l1-endpoint.",
+        "example": "http://l1-el-node:8545",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.dynamic-gas-price-cap.fee-history-fetcher.l1-request-retries": {
+        "type": "RequestRetriesToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Retry policy for fee-history requests; falls back to defaults.l1-request-retries.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.dynamic-gas-price-cap.fee-history-fetcher.l1-request-retries.backoff-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1S",
+        "description": "Delay between retry attempts.",
+        "example": "PT1S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.dynamic-gas-price-cap.fee-history-fetcher.l1-request-retries.failures-warning-threshold": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Number of consecutive failures after which warning logs start being emitted. Omit to use the default threshold.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.dynamic-gas-price-cap.fee-history-fetcher.l1-request-retries.ignore-first-exceptions-until-time-elapsed": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Grace period during which initial failures are ignored (not logged/counted) before retries are treated as errors. Omit to disable.",
+        "example": "PT5S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.dynamic-gas-price-cap.fee-history-fetcher.l1-request-retries.max-retries": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum number of retry attempts. Omit for endless retries.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.dynamic-gas-price-cap.fee-history-fetcher.l1-request-retries.timeout": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Overall timeout across all retry attempts. Omit to disable the timeout.",
+        "example": "PT10S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.dynamic-gas-price-cap.fee-history-fetcher.max-block-count": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "1000",
+        "description": "Maximum number of blocks requested per fee-history call.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.dynamic-gas-price-cap.fee-history-fetcher.num-of-blocks-before-latest": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "4",
+        "description": "Number of blocks before the latest to stop at when fetching fee history.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.dynamic-gas-price-cap.fee-history-fetcher.reward-percentiles": {
+        "type": "List<UInt>",
+        "section": false,
+        "required": false,
+        "default": "[10, 20, 30, 40, 50, 60, 70, 80, 90, 100]",
+        "description": "Reward percentiles requested from eth_feeHistory.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.dynamic-gas-price-cap.fee-history-fetcher.storage-period": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT240H",
+        "description": "How long fetched fee-history data is retained.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.dynamic-gas-price-cap.gas-price-cap-calculation": {
+        "type": "GasPriceCapCalculationToml",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Parameters for computing the dynamic gas price cap.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.dynamic-gas-price-cap.gas-price-cap-calculation.adjustment-constant": {
+        "type": "UInt",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Additive constant applied when adjusting the (execution) gas price cap.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.dynamic-gas-price-cap.gas-price-cap-calculation.base-fee-per-gas-percentile": {
+        "type": "UInt",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Percentile (1-100) of historical base fee per gas used in the calculation.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.dynamic-gas-price-cap.gas-price-cap-calculation.base-fee-per-gas-percentile-window": {
+        "type": "Duration",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Time window over which the base-fee-per-gas percentile is computed.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.dynamic-gas-price-cap.gas-price-cap-calculation.base-fee-per-gas-percentile-window-leeway": {
+        "type": "Duration",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Leeway subtracted from the base-fee-per-gas percentile window.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.dynamic-gas-price-cap.gas-price-cap-calculation.blob-adjustment-constant": {
+        "type": "UInt",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Additive constant applied when adjusting the blob gas price cap.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.dynamic-gas-price-cap.gas-price-cap-calculation.finalization-target-max-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Maximum expected delay to finalization, used to scale the gas price cap.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.dynamic-gas-price-cap.gas-price-cap-calculation.gas-price-caps-check-coefficient": {
+        "type": "Double",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Coefficient applied when checking computed gas price caps.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.dynamic-gas-price-cap.gas-price-cap-calculation.historic-avg-reward-constant": {
+        "type": "ULong",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Constant used for the historical average reward calculation.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.dynamic-gas-price-cap.gas-price-cap-calculation.historic-base-fee-per-blob-gas-lower-bound": {
+        "type": "ULong",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Lower bound for the historical base fee per blob gas.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.fallback-gas-price": {
+        "type": "FallbackGasPriceToml",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Fallback gas price settings used when dynamic pricing is unavailable.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.fallback-gas-price.fee-history-block-count": {
+        "type": "UInt",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Number of blocks of fee history used to compute the fallback gas price.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.fallback-gas-price.fee-history-reward-percentile": {
+        "type": "UInt",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Reward percentile (1-100) used to compute the fallback gas price.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing": {
+        "type": "L2NetworkGasPricingConfigToml",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "L2 network gas pricing (dynamic gas price publishing) settings.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.disabled": {
+        "type": "Boolean",
+        "section": false,
+        "required": false,
+        "default": "false",
+        "description": "Whether L2 network gas pricing is disabled.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.dynamic-gas-pricing": {
+        "type": "DynamicGasPricingToml",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Dynamic (usage-based) gas pricing parameters.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.dynamic-gas-pricing.blob-submission-expected-execution-gas": {
+        "type": "ULong",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Expected L1 execution gas consumed by a blob submission transaction.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.dynamic-gas-pricing.calldata-based-pricing": {
+        "type": "CalldataBasedPricingToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Optional calldata-based pricing overrides; omit to disable.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.dynamic-gas-pricing.calldata-based-pricing.block-size-non-calldata-overhead": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "540",
+        "description": "Per-block non-calldata size overhead (bytes) in the calculation.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.dynamic-gas-pricing.calldata-based-pricing.calldata-sum-size-block-count": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "5",
+        "description": "Number of recent blocks summed when measuring calldata usage.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.dynamic-gas-pricing.calldata-based-pricing.calldata-sum-size-target": {
+        "type": "ULong",
+        "section": false,
+        "required": false,
+        "default": "109000",
+        "description": "Target total calldata size (bytes) across the measured blocks.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.dynamic-gas-pricing.calldata-based-pricing.fee-change-denominator": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "32",
+        "description": "Denominator controlling how quickly the fee reacts to calldata-usage deviations.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.dynamic-gas-pricing.l1-blob-gas": {
+        "type": "ULong",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Expected L1 blob gas used per blob when computing the variable cost.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.dynamic-gas-pricing.margin": {
+        "type": "Double",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Multiplier applied to the computed variable cost (safety/profit margin).",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.dynamic-gas-pricing.variable-cost-lower-bound": {
+        "type": "ULong",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Lower bound for the computed variable cost component.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.dynamic-gas-pricing.variable-cost-upper-bound": {
+        "type": "ULong",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Upper bound for the computed variable cost component.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.extra-data-update-endpoint": {
+        "type": "URL",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "L2 endpoint that receives the computed gas pricing via the extra-data update call.",
+        "example": "http://sequencer:8545",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.extra-data-update-request-retries": {
+        "type": "RequestRetriesToml",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Retry policy for extra-data update requests.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.extra-data-update-request-retries.backoff-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1S",
+        "description": "Delay between retry attempts.",
+        "example": "PT1S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.extra-data-update-request-retries.failures-warning-threshold": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Number of consecutive failures after which warning logs start being emitted. Omit to use the default threshold.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.extra-data-update-request-retries.ignore-first-exceptions-until-time-elapsed": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Grace period during which initial failures are ignored (not logged/counted) before retries are treated as errors. Omit to disable.",
+        "example": "PT5S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.extra-data-update-request-retries.max-retries": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum number of retry attempts. Omit for endless retries.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.extra-data-update-request-retries.timeout": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Overall timeout across all retry attempts. Omit to disable the timeout.",
+        "example": "PT10S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.fee-history-block-count": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "1000",
+        "description": "Number of blocks of fee history used in gas pricing.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.fee-history-reward-percentile": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "15",
+        "description": "Reward percentile (1-100) of fee history used in gas pricing.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.flat-rate-gas-pricing": {
+        "type": "FlatRateGasPricingToml",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Flat-rate gas pricing parameters.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.flat-rate-gas-pricing.compressed-tx-size": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "125",
+        "description": "Assumed compressed size (bytes) of a transaction.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.flat-rate-gas-pricing.expected-gas": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "21000",
+        "description": "Assumed gas used by a plain transfer transaction.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.flat-rate-gas-pricing.gas-price-lower-bound": {
+        "type": "ULong",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Lower bound (in wei) for the flat-rate L2 gas price.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.flat-rate-gas-pricing.gas-price-upper-bound": {
+        "type": "ULong",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Upper bound (in wei) for the flat-rate L2 gas price.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.flat-rate-gas-pricing.plain-transfer-cost-multiplier": {
+        "type": "Double",
+        "section": false,
+        "required": false,
+        "default": "1.0",
+        "description": "Multiplier applied to the plain-transfer cost when computing the price.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.gas-price-fixed-cost": {
+        "type": "ULong",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Fixed cost component (in wei) added to the computed L2 gas price.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.l1-endpoint": {
+        "type": "URL?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L1 endpoint used for gas pricing. Falls back to defaults.l1-endpoint.",
+        "example": "http://l1-el-node:8545",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.l1-request-retries": {
+        "type": "RequestRetriesToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Retry policy for L1 gas-pricing requests; falls back to defaults.l1-request-retries.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.l1-request-retries.backoff-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1S",
+        "description": "Delay between retry attempts.",
+        "example": "PT1S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.l1-request-retries.failures-warning-threshold": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Number of consecutive failures after which warning logs start being emitted. Omit to use the default threshold.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.l1-request-retries.ignore-first-exceptions-until-time-elapsed": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Grace period during which initial failures are ignored (not logged/counted) before retries are treated as errors. Omit to disable.",
+        "example": "PT5S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.l1-request-retries.max-retries": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum number of retry attempts. Omit for endless retries.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.l1-request-retries.timeout": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Overall timeout across all retry attempts. Omit to disable the timeout.",
+        "example": "PT10S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.l2-endpoint": {
+        "type": "URL?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 endpoint used for gas pricing. Falls back to defaults.l2-endpoint.",
+        "example": "http://sequencer:8545",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.l2-request-retries": {
+        "type": "RequestRetriesToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Retry policy for L2 gas-pricing requests; falls back to defaults.l2-request-retries.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.l2-request-retries.backoff-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1S",
+        "description": "Delay between retry attempts.",
+        "example": "PT1S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.l2-request-retries.failures-warning-threshold": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Number of consecutive failures after which warning logs start being emitted. Omit to use the default threshold.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.l2-request-retries.ignore-first-exceptions-until-time-elapsed": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Grace period during which initial failures are ignored (not logged/counted) before retries are treated as errors. Omit to disable.",
+        "example": "PT5S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.l2-request-retries.max-retries": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum number of retry attempts. Omit for endless retries.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.l2-request-retries.timeout": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Overall timeout across all retry attempts. Omit to disable the timeout.",
+        "example": "PT10S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "l2-network-gas-pricing.price-update-interval": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT12S",
+        "description": "Interval between L2 gas price recalculations/updates.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring": {
+        "type": "MessageAnchoringConfigToml",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "L1 to L2 message anchoring settings.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.anchoring-tick-interval": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT10S",
+        "description": "Interval between message anchoring ticks.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.disabled": {
+        "type": "Boolean",
+        "section": false,
+        "required": false,
+        "default": "false",
+        "description": "Whether L1 to L2 message anchoring is disabled.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.gas": {
+        "type": "GasConfig",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Gas settings for anchoring transactions.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.gas.fee-history-block-count": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "4",
+        "description": "Number of blocks of fee history used to price anchoring transactions.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.gas.fee-history-reward-percentile": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "15",
+        "description": "Reward percentile (1-100) of fee history used to price anchoring transactions.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.gas.gas-limit": {
+        "type": "ULong",
+        "section": false,
+        "required": false,
+        "default": "2500000",
+        "description": "Gas limit for anchoring transactions.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.gas.max-fee-per-gas-cap": {
+        "type": "ULong",
+        "section": false,
+        "required": false,
+        "default": "100000000000",
+        "description": "Cap on the EIP-1559 max fee per gas for anchoring transactions (wei).",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.l1-endpoint": {
+        "type": "URL?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L1 endpoint used for anchoring. Falls back to defaults.l1-endpoint.",
+        "example": "http://l1-el-node:8545",
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.l1-event-scraping": {
+        "type": "L1EventScrapping",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "L1 event scraping (log polling) settings for message anchoring.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.l1-event-scraping.eth-logs-search-block-chunk-size": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "1000",
+        "description": "Number of blocks scanned per eth_getLogs chunk.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.l1-event-scraping.eth-logs-search-max-block-range": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "10000",
+        "description": "Maximum block range covered by a single eth_getLogs search.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.l1-event-scraping.eth-logs-search-success-backoff-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT0.001S",
+        "description": "Backoff delay after a successful eth_getLogs search before the next one.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.l1-event-scraping.polling-interval": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT6S",
+        "description": "Interval between L1 log polling attempts.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.l1-event-scraping.polling-timeout": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT5S",
+        "description": "Timeout for each L1 log polling request.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.l1-highest-block-tag": {
+        "type": "BlockParameter",
+        "section": false,
+        "required": false,
+        "default": "FINALIZED",
+        "description": "L1 block tag up to which message events are read (e.g. FINALIZED, LATEST, or a number).",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.l1-request-retries": {
+        "type": "RequestRetriesToml",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Retry policy for L1 anchoring requests.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.l1-request-retries.backoff-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1S",
+        "description": "Delay between retry attempts.",
+        "example": "PT1S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.l1-request-retries.failures-warning-threshold": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Number of consecutive failures after which warning logs start being emitted. Omit to use the default threshold.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.l1-request-retries.ignore-first-exceptions-until-time-elapsed": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Grace period during which initial failures are ignored (not logged/counted) before retries are treated as errors. Omit to disable.",
+        "example": "PT5S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.l1-request-retries.max-retries": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum number of retry attempts. Omit for endless retries.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.l1-request-retries.timeout": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Overall timeout across all retry attempts. Omit to disable the timeout.",
+        "example": "PT10S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.l2-endpoint": {
+        "type": "URL?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 endpoint used for anchoring. Falls back to defaults.l2-endpoint.",
+        "example": "http://sequencer:8545",
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.l2-highest-block-tag": {
+        "type": "BlockParameter",
+        "section": false,
+        "required": false,
+        "default": "LATEST",
+        "description": "L2 block tag up to which anchoring state is read (e.g. LATEST, FINALIZED, or a number).",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.l2-request-retries": {
+        "type": "RequestRetriesToml",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Retry policy for L2 anchoring requests.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.l2-request-retries.backoff-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1S",
+        "description": "Delay between retry attempts.",
+        "example": "PT1S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.l2-request-retries.failures-warning-threshold": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Number of consecutive failures after which warning logs start being emitted. Omit to use the default threshold.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.l2-request-retries.ignore-first-exceptions-until-time-elapsed": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Grace period during which initial failures are ignored (not logged/counted) before retries are treated as errors. Omit to disable.",
+        "example": "PT5S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.l2-request-retries.max-retries": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum number of retry attempts. Omit for endless retries.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.l2-request-retries.timeout": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Overall timeout across all retry attempts. Omit to disable the timeout.",
+        "example": "PT10S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.max-messages-to-anchor-per-l2-transaction": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "100",
+        "description": "Maximum number of messages anchored in a single L2 transaction.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.message-queue-capacity": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "10000",
+        "description": "Maximum number of messages buffered awaiting anchoring.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.signer": {
+        "type": "SignerConfigToml",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Signer used to sign anchoring transactions.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.signer.type": {
+        "type": "SignerType",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Signer backend to use: WEB3J (local private key) or WEB3SIGNER (remote signer).",
+        "example": "web3signer",
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.signer.web3j": {
+        "type": "Web3jConfig?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Local Web3j signer settings; required when type is WEB3J.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.signer.web3j.private-key": {
+        "type": "Masked",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Hex-encoded 32-byte private key used to sign transactions. Masked in logs.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.signer.web3signer": {
+        "type": "Web3SignerConfig?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Remote Web3Signer settings; required when type is WEB3SIGNER.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.signer.web3signer.endpoint": {
+        "type": "URL",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Web3Signer HTTP endpoint.",
+        "example": "http://web3signer:9000",
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.signer.web3signer.keep-alive": {
+        "type": "Boolean",
+        "section": false,
+        "required": false,
+        "default": "true",
+        "description": "Whether to keep Web3Signer HTTP connections alive.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.signer.web3signer.max-pool-size": {
+        "type": "Int",
+        "section": false,
+        "required": false,
+        "default": "10",
+        "description": "Maximum size of the HTTP connection pool to Web3Signer.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.signer.web3signer.public-key": {
+        "type": "ByteArray",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Hex-encoded 64-byte public key whose corresponding key Web3Signer holds.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.signer.web3signer.tls": {
+        "type": "TlsConfig?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "TLS settings for the Web3Signer connection; omit for plaintext.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.signer.web3signer.tls.key-store-password": {
+        "type": "Masked",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Password for the client keystore. Masked in logs.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.signer.web3signer.tls.key-store-path": {
+        "type": "Path",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Path to the client keystore used for mutual TLS with Web3Signer.",
+        "example": "/etc/coordinator/keystore.p12",
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.signer.web3signer.tls.trust-store-password": {
+        "type": "Masked",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Password for the truststore. Masked in logs.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.signer.web3signer.tls.trust-store-path": {
+        "type": "Path",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Path to the truststore used to validate the Web3Signer certificate.",
+        "example": "/etc/coordinator/truststore.p12",
+        "deprecated": false,
+        "replacement": null
+      },
+      "protocol": {
+        "type": "ProtocolToml",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Linea protocol contract addresses and genesis settings.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "protocol.genesis": {
+        "type": "Genesis",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Linea genesis state root and shnarf.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "protocol.genesis.genesis-shnarf": {
+        "type": "ByteArray",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Genesis shnarf (starting shnarf) of the Linea chain (hex).",
+        "example": "0xc286ff42414401ccdc23ea8e738775378e8f6c6f7b2966eb2747798d45571b79",
+        "deprecated": false,
+        "replacement": null
+      },
+      "protocol.genesis.genesis-state-root-hash": {
+        "type": "ByteArray",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Genesis state root hash of the Linea chain (hex).",
+        "example": "0x01d9afcd495c870f3ae9d8362cd0257a7de2057055058183596719285cae6101",
+        "deprecated": false,
+        "replacement": null
+      },
+      "protocol.l1": {
+        "type": "Layer1Config",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "L1 rollup contract and timing settings.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "protocol.l1.block-time": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT12S",
+        "description": "Average L1 block time, used for timing estimates.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "protocol.l1.contract-address": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Address of the Linea rollup contract on L1.",
+        "example": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
+        "deprecated": false,
+        "replacement": null
+      },
+      "protocol.l1.contract-deployment-block-number": {
+        "type": "ULong?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L1 block number at which the rollup contract was deployed. Omit if not applicable.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "protocol.l2": {
+        "type": "Layer2Config",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "L2 contract settings.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "protocol.l2.contract-address": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Address of the Linea contract on L2.",
+        "example": "0xe537D669CA013d86EBeF1D64e40fC74CADC91987",
+        "deprecated": false,
+        "replacement": null
+      },
+      "protocol.l2.contract-deployment-block-number": {
+        "type": "ULong?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "L2 block number at which the contract was deployed. Omit if not applicable.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover": {
+        "type": "ProverToml",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "File-based prover request/response directories and switch-over settings.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.blob-compression": {
+        "type": "ProverDirectoriesToml",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Blob compression prover request/response directories.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.blob-compression.fs-requests-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator writes prover request files to.",
+        "example": "/data/prover/v3/execution/requests",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.blob-compression.fs-responses-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator reads prover response files from.",
+        "example": "/data/prover/v3/execution/responses",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.enable-request-files-cleanup": {
+        "type": "Boolean",
+        "section": false,
+        "required": false,
+        "default": "false",
+        "description": "Whether to delete request files after their responses are processed.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.execution": {
+        "type": "ProverDirectoriesToml",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Execution (block) prover request/response directories.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.execution.fs-requests-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator writes prover request files to.",
+        "example": "/data/prover/v3/execution/requests",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.execution.fs-responses-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator reads prover response files from.",
+        "example": "/data/prover/v3/execution/responses",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.fs-inprogress-proving-suffix-pattern": {
+        "type": "String",
+        "section": false,
+        "required": false,
+        "default": "\\.inprogress\\.prover.*",
+        "description": "Regex matching filenames a prover has claimed and is working on, so the coordinator treats them as in-progress.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.fs-inprogress-request-writing-suffix": {
+        "type": "String",
+        "section": false,
+        "required": false,
+        "default": ".inprogress_coordinator_writing",
+        "description": "Filename suffix appended while the coordinator is still writing a request file, so provers ignore partially-written requests.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.fs-polling-interval": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT15S",
+        "description": "Interval between scans of the prover response directories for new responses.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.fs-polling-timeout": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "infinite",
+        "description": "Maximum time to wait for a prover response before timing out. Defaults to no timeout.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.invalidity": {
+        "type": "ProverDirectoriesToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Invalidity prover request/response directories; omit to disable.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.invalidity.fs-requests-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator writes prover request files to.",
+        "example": "/data/prover/v3/execution/requests",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.invalidity.fs-responses-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator reads prover response files from.",
+        "example": "/data/prover/v3/execution/responses",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new": {
+        "type": "ProverToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Next prover version to switch over to at the configured switch block/timestamp.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.blob-compression": {
+        "type": "ProverDirectoriesToml",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Blob compression prover request/response directories.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.blob-compression.fs-requests-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator writes prover request files to.",
+        "example": "/data/prover/v3/execution/requests",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.blob-compression.fs-responses-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator reads prover response files from.",
+        "example": "/data/prover/v3/execution/responses",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.enable-request-files-cleanup": {
+        "type": "Boolean",
+        "section": false,
+        "required": false,
+        "default": "false",
+        "description": "Whether to delete request files after their responses are processed.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.execution": {
+        "type": "ProverDirectoriesToml",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Execution (block) prover request/response directories.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.execution.fs-requests-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator writes prover request files to.",
+        "example": "/data/prover/v3/execution/requests",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.execution.fs-responses-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator reads prover response files from.",
+        "example": "/data/prover/v3/execution/responses",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.fs-inprogress-proving-suffix-pattern": {
+        "type": "String",
+        "section": false,
+        "required": false,
+        "default": "\\.inprogress\\.prover.*",
+        "description": "Regex matching filenames a prover has claimed and is working on, so the coordinator treats them as in-progress.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.fs-inprogress-request-writing-suffix": {
+        "type": "String",
+        "section": false,
+        "required": false,
+        "default": ".inprogress_coordinator_writing",
+        "description": "Filename suffix appended while the coordinator is still writing a request file, so provers ignore partially-written requests.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.fs-polling-interval": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT15S",
+        "description": "Interval between scans of the prover response directories for new responses.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.fs-polling-timeout": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "infinite",
+        "description": "Maximum time to wait for a prover response before timing out. Defaults to no timeout.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.invalidity": {
+        "type": "ProverDirectoriesToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Invalidity prover request/response directories; omit to disable.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.invalidity.fs-requests-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator writes prover request files to.",
+        "example": "/data/prover/v3/execution/requests",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.invalidity.fs-responses-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator reads prover response files from.",
+        "example": "/data/prover/v3/execution/responses",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.new": {
+        "type": "ProverToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Next prover version to switch over to at the configured switch block/timestamp.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.proof-aggregation": {
+        "type": "ProverDirectoriesToml",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Proof aggregation prover request/response directories.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.proof-aggregation.fs-requests-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator writes prover request files to.",
+        "example": "/data/prover/v3/execution/requests",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.proof-aggregation.fs-responses-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator reads prover response files from.",
+        "example": "/data/prover/v3/execution/responses",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.switch-block-number-inclusive": {
+        "type": "ULong?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Inclusive L2 block number at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockTimestamp.",
+        "example": "1000000",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.new.switch-block-timestamp": {
+        "type": "Instant?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Timestamp at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockNumberInclusive.",
+        "example": "2024-01-01T00:00:00Z",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.proof-aggregation": {
+        "type": "ProverDirectoriesToml",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Proof aggregation prover request/response directories.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.proof-aggregation.fs-requests-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator writes prover request files to.",
+        "example": "/data/prover/v3/execution/requests",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.proof-aggregation.fs-responses-directory": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory the coordinator reads prover response files from.",
+        "example": "/data/prover/v3/execution/responses",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.switch-block-number-inclusive": {
+        "type": "ULong?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Inclusive L2 block number at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockTimestamp.",
+        "example": "1000000",
+        "deprecated": false,
+        "replacement": null
+      },
+      "prover.switch-block-timestamp": {
+        "type": "Instant?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Timestamp at which to switch from this prover to the `new` prover. Mutually exclusive with switchBlockNumberInclusive.",
+        "example": "2024-01-01T00:00:00Z",
+        "deprecated": false,
+        "replacement": null
+      },
+      "state-manager": {
+        "type": "StateManagerToml",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Shomei state manager client settings.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "state-manager.endpoints": {
+        "type": "List<URL>",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Shomei state manager JSON-RPC endpoints.",
+        "example": "[\"http://shomei:8888\"]",
+        "deprecated": false,
+        "replacement": null
+      },
+      "state-manager.request-limit-per-endpoint": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "4294967295",
+        "description": "Maximum number of concurrent in-flight requests per state manager endpoint.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "state-manager.request-retries": {
+        "type": "RequestRetriesToml",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Retry policy for state manager requests.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "state-manager.request-retries.backoff-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1S",
+        "description": "Delay between retry attempts.",
+        "example": "PT1S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "state-manager.request-retries.failures-warning-threshold": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Number of consecutive failures after which warning logs start being emitted. Omit to use the default threshold.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "state-manager.request-retries.ignore-first-exceptions-until-time-elapsed": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Grace period during which initial failures are ignored (not logged/counted) before retries are treated as errors. Omit to disable.",
+        "example": "PT5S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "state-manager.request-retries.max-retries": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum number of retry attempts. Omit for endless retries.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "state-manager.request-retries.timeout": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Overall timeout across all retry attempts. Omit to disable the timeout.",
+        "example": "PT10S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "state-manager.request-timeout": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Timeout for each state manager request. Omit to disable the timeout.",
+        "example": "PT30S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces": {
+        "type": "TracesToml",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Trace generation (traces API / conflation counters) client settings.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.conflation": {
+        "type": "ClientApiConfigToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Overrides for the traces conflation client; falls back to the shared traces settings.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.conflation.endpoints": {
+        "type": "List<URL>?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Endpoints for this specific traces client. Falls back to traces.endpoints when omitted.",
+        "example": "[\"http://traces-node:8545\"]",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.conflation.request-limit-per-endpoint": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Per-endpoint concurrent request limit for this client. Falls back to the shared value.",
+        "example": "4",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.conflation.request-retries": {
+        "type": "RequestRetriesToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Retry policy for this client; falls back to the shared traces retry policy.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.conflation.request-retries.backoff-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1S",
+        "description": "Delay between retry attempts.",
+        "example": "PT1S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.conflation.request-retries.failures-warning-threshold": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Number of consecutive failures after which warning logs start being emitted. Omit to use the default threshold.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.conflation.request-retries.ignore-first-exceptions-until-time-elapsed": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Grace period during which initial failures are ignored (not logged/counted) before retries are treated as errors. Omit to disable.",
+        "example": "PT5S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.conflation.request-retries.max-retries": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum number of retry attempts. Omit for endless retries.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.conflation.request-retries.timeout": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Overall timeout across all retry attempts. Omit to disable the timeout.",
+        "example": "PT10S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.conflation.request-timeout": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Request timeout for this client. Falls back to the shared value.",
+        "example": "PT30S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.counters": {
+        "type": "ClientApiConfigToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Overrides for the traces counters client; falls back to the shared traces settings.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.counters.endpoints": {
+        "type": "List<URL>?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Endpoints for this specific traces client. Falls back to traces.endpoints when omitted.",
+        "example": "[\"http://traces-node:8545\"]",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.counters.request-limit-per-endpoint": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Per-endpoint concurrent request limit for this client. Falls back to the shared value.",
+        "example": "4",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.counters.request-retries": {
+        "type": "RequestRetriesToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Retry policy for this client; falls back to the shared traces retry policy.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.counters.request-retries.backoff-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1S",
+        "description": "Delay between retry attempts.",
+        "example": "PT1S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.counters.request-retries.failures-warning-threshold": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Number of consecutive failures after which warning logs start being emitted. Omit to use the default threshold.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.counters.request-retries.ignore-first-exceptions-until-time-elapsed": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Grace period during which initial failures are ignored (not logged/counted) before retries are treated as errors. Omit to disable.",
+        "example": "PT5S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.counters.request-retries.max-retries": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum number of retry attempts. Omit for endless retries.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.counters.request-retries.timeout": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Overall timeout across all retry attempts. Omit to disable the timeout.",
+        "example": "PT10S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.counters.request-timeout": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Request timeout for this client. Falls back to the shared value.",
+        "example": "PT30S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.endpoints": {
+        "type": "List<URL>?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Traces generator endpoints shared by the counters and conflation clients. Required unless both counters.endpoints and conflation.endpoints are set.",
+        "example": "[\"http://traces-node:8545\"]",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.ignore-traces-generator-errors": {
+        "type": "Boolean",
+        "section": false,
+        "required": false,
+        "default": "false",
+        "description": "Whether to continue despite traces generator errors instead of failing.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new": {
+        "type": "TracesToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Next traces client config to switch over to at the configured switch block.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.conflation": {
+        "type": "ClientApiConfigToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Overrides for the traces conflation client; falls back to the shared traces settings.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.conflation.endpoints": {
+        "type": "List<URL>?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Endpoints for this specific traces client. Falls back to traces.endpoints when omitted.",
+        "example": "[\"http://traces-node:8545\"]",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.conflation.request-limit-per-endpoint": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Per-endpoint concurrent request limit for this client. Falls back to the shared value.",
+        "example": "4",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.conflation.request-retries": {
+        "type": "RequestRetriesToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Retry policy for this client; falls back to the shared traces retry policy.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.conflation.request-retries.backoff-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1S",
+        "description": "Delay between retry attempts.",
+        "example": "PT1S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.conflation.request-retries.failures-warning-threshold": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Number of consecutive failures after which warning logs start being emitted. Omit to use the default threshold.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.conflation.request-retries.ignore-first-exceptions-until-time-elapsed": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Grace period during which initial failures are ignored (not logged/counted) before retries are treated as errors. Omit to disable.",
+        "example": "PT5S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.conflation.request-retries.max-retries": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum number of retry attempts. Omit for endless retries.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.conflation.request-retries.timeout": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Overall timeout across all retry attempts. Omit to disable the timeout.",
+        "example": "PT10S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.conflation.request-timeout": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Request timeout for this client. Falls back to the shared value.",
+        "example": "PT30S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.counters": {
+        "type": "ClientApiConfigToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Overrides for the traces counters client; falls back to the shared traces settings.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.counters.endpoints": {
+        "type": "List<URL>?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Endpoints for this specific traces client. Falls back to traces.endpoints when omitted.",
+        "example": "[\"http://traces-node:8545\"]",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.counters.request-limit-per-endpoint": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Per-endpoint concurrent request limit for this client. Falls back to the shared value.",
+        "example": "4",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.counters.request-retries": {
+        "type": "RequestRetriesToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Retry policy for this client; falls back to the shared traces retry policy.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.counters.request-retries.backoff-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1S",
+        "description": "Delay between retry attempts.",
+        "example": "PT1S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.counters.request-retries.failures-warning-threshold": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Number of consecutive failures after which warning logs start being emitted. Omit to use the default threshold.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.counters.request-retries.ignore-first-exceptions-until-time-elapsed": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Grace period during which initial failures are ignored (not logged/counted) before retries are treated as errors. Omit to disable.",
+        "example": "PT5S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.counters.request-retries.max-retries": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum number of retry attempts. Omit for endless retries.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.counters.request-retries.timeout": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Overall timeout across all retry attempts. Omit to disable the timeout.",
+        "example": "PT10S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.counters.request-timeout": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Request timeout for this client. Falls back to the shared value.",
+        "example": "PT30S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.endpoints": {
+        "type": "List<URL>?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Traces generator endpoints shared by the counters and conflation clients. Required unless both counters.endpoints and conflation.endpoints are set.",
+        "example": "[\"http://traces-node:8545\"]",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.ignore-traces-generator-errors": {
+        "type": "Boolean",
+        "section": false,
+        "required": false,
+        "default": "false",
+        "description": "Whether to continue despite traces generator errors instead of failing.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.new": {
+        "type": "TracesToml?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Next traces client config to switch over to at the configured switch block.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.request-limit-per-endpoint": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "4294967295",
+        "description": "Maximum number of concurrent in-flight requests per traces endpoint.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.request-retries": {
+        "type": "RequestRetriesToml",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Retry policy for traces generator requests.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.request-retries.backoff-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1S",
+        "description": "Delay between retry attempts.",
+        "example": "PT1S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.request-retries.failures-warning-threshold": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Number of consecutive failures after which warning logs start being emitted. Omit to use the default threshold.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.request-retries.ignore-first-exceptions-until-time-elapsed": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Grace period during which initial failures are ignored (not logged/counted) before retries are treated as errors. Omit to disable.",
+        "example": "PT5S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.request-retries.max-retries": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum number of retry attempts. Omit for endless retries.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.request-retries.timeout": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Overall timeout across all retry attempts. Omit to disable the timeout.",
+        "example": "PT10S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.request-timeout": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Timeout for each traces generator request. Omit to disable the timeout.",
+        "example": "PT30S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.new.switch-block-number-inclusive": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Inclusive L2 block number at which to switch from this traces config to the `new` one.",
+        "example": "1000000",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.request-limit-per-endpoint": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "4294967295",
+        "description": "Maximum number of concurrent in-flight requests per traces endpoint.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.request-retries": {
+        "type": "RequestRetriesToml",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Retry policy for traces generator requests.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.request-retries.backoff-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1S",
+        "description": "Delay between retry attempts.",
+        "example": "PT1S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.request-retries.failures-warning-threshold": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Number of consecutive failures after which warning logs start being emitted. Omit to use the default threshold.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.request-retries.ignore-first-exceptions-until-time-elapsed": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Grace period during which initial failures are ignored (not logged/counted) before retries are treated as errors. Omit to disable.",
+        "example": "PT5S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.request-retries.max-retries": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum number of retry attempts. Omit for endless retries.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.request-retries.timeout": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Overall timeout across all retry attempts. Omit to disable the timeout.",
+        "example": "PT10S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.request-timeout": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Timeout for each traces generator request. Omit to disable the timeout.",
+        "example": "PT30S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "traces.switch-block-number-inclusive": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Inclusive L2 block number at which to switch from this traces config to the `new` one.",
+        "example": "1000000",
+        "deprecated": false,
+        "replacement": null
+      },
+      "type2-state-proof-provider": {
+        "type": "Type2StateProofManagerToml",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Type-2 state proof provider (shnarf/state proof) settings.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "type2-state-proof-provider.disabled": {
+        "type": "Boolean",
+        "section": false,
+        "required": false,
+        "default": "false",
+        "description": "Whether the type-2 state proof provider is disabled.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "type2-state-proof-provider.endpoints": {
+        "type": "List<URL>",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Type-2 state proof provider JSON-RPC endpoints.",
+        "example": "[\"http://shomei-frontend:8888\"]",
+        "deprecated": false,
+        "replacement": null
+      },
+      "type2-state-proof-provider.l1-polling-interval": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT6S",
+        "description": "Interval between L1 polls for state proof updates.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "type2-state-proof-provider.l1-query-block-tag": {
+        "type": "Tag",
+        "section": false,
+        "required": false,
+        "default": "FINALIZED",
+        "description": "L1 block tag queried for state proofs (e.g. FINALIZED, LATEST).",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "type2-state-proof-provider.request-retries": {
+        "type": "RequestRetriesToml",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Retry policy for type-2 state proof requests.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "type2-state-proof-provider.request-retries.backoff-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1S",
+        "description": "Delay between retry attempts.",
+        "example": "PT1S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "type2-state-proof-provider.request-retries.failures-warning-threshold": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Number of consecutive failures after which warning logs start being emitted. Omit to use the default threshold.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "type2-state-proof-provider.request-retries.ignore-first-exceptions-until-time-elapsed": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Grace period during which initial failures are ignored (not logged/counted) before retries are treated as errors. Omit to disable.",
+        "example": "PT5S",
+        "deprecated": false,
+        "replacement": null
+      },
+      "type2-state-proof-provider.request-retries.max-retries": {
+        "type": "UInt?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Maximum number of retry attempts. Omit for endless retries.",
+        "example": "3",
+        "deprecated": false,
+        "replacement": null
+      },
+      "type2-state-proof-provider.request-retries.timeout": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Overall timeout across all retry attempts. Omit to disable the timeout.",
+        "example": "PT10S",
+        "deprecated": false,
+        "replacement": null
+      }
+    }
+  },
+  "traces-limits-v4": {
+    "description": "Per-module trace counter limits for v4 tracing modules.",
+    "keys": {
+      "traces-limits": {
+        "type": "Map<TracingModuleV4, UInt>",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Per-module trace counter limits (v4 tracing modules). Each entry maps a tracing module name to its maximum trace count.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      }
+    }
+  },
+  "traces-limits-v5": {
+    "description": "Per-module trace counter limits for v5 tracing modules.",
+    "keys": {
+      "traces-limits": {
+        "type": "Map<TracingModuleV5, UInt>",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Per-module trace counter limits (v5 tracing modules). Each entry maps a tracing module name to its maximum trace count.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      }
+    }
+  },
+  "gas-price-cap-time-of-day-multipliers": {
+    "description": "L1 dynamic gas price cap time-of-day multipliers.",
+    "keys": {
+      "gas-price-cap-time-of-day-multipliers": {
+        "type": "Map<String, Double>",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "L1 dynamic gas price cap multipliers keyed by time-of-day/day-of-week slot; each entry scales the base gas price cap for that slot.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      }
+    }
+  },
+  "smart-contract-errors": {
+    "description": "Mapping of Linea smart-contract revert error codes to messages.",
+    "keys": {
+      "smart-contract-errors": {
+        "type": "Map<String, String>",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Mapping of Linea smart-contract revert error codes to human-readable messages, used to decode on-chain rejection reasons.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      }
+    }
+  }
+}

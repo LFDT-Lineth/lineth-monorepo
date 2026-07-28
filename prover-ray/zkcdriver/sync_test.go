@@ -1,85 +1,161 @@
 package zkcdriver_test
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
+
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/files"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/zkc/pkg/util/file"
+	"github.com/sirupsen/logrus"
 )
 
 const (
-	testdataSyncDir = "testdata/synced"
 	acceptExtension = ".accepts"
-	binExtension    = ".bin"
+	zkcExtension    = ".zkc"
+	// testdataGlob is the glob pattern used to find all the testdata files for
+	// the synced integration tests. Currently we only match unit tests, but we
+	// can extend this to include other types of tests (mixed/bench) in the
+	// future.
+	testdataGlob = "testdata/synced/unit/*.zkc"
+	// known failing tests
+	knownFailuresFiles = "testdata/known_failures.json"
+	// maxCasesPerUnit is the maximum number of test-cases per unit test.
+	// Currently we only run first 50 test-cases, but could potentially sample
+	// random cases from the whole set.
+	maxCasesPerUnit = 50
 )
 
-func TestZKCIntegrationSynced(t *testing.T) {
+func TestZkcIntegrationTestSynced(t *testing.T) {
+	// logs are chatty. Set the output to the test's output so that we can see
+	// it in case of failures (but not in the normal case, where we want to keep
+	// the test output clean)
+	logrus.SetOutput(t.Output())
 
-	// numPassing is the number of tests that passed
-	numPassing := 0
-
-	err := filepath.Walk(testdataSyncDir,
-		func(path string, info os.FileInfo, err error) error {
-
-			if err != nil {
-				return err
-			}
-
-			// The corset function for parsing the inputs of the test-case may
-			// panic. We recover from that panic and skip the test-case.
-			defer func() {
-				if r := recover(); r != nil {
-					fmt.Println("recovered from: ", r)
-				}
-			}()
-
-			if info.IsDir() || filepath.Ext(path) != binExtension {
-				return nil
-			}
-
-			acceptPath := strings.TrimSuffix(path, binExtension) + acceptExtension
-			inputStr, readErr := os.ReadFile(acceptPath) //nolint
-			if readErr != nil {
-				// If the .accept file does not exist, we skip the test.
-				return nil //nolint
-			}
-
-			sys, input, err := parseTestCase(zkcTestCase{
-				BinFilePath: path,
-				InputStr:    string(inputStr),
-			})
-
-			if err != nil {
-				// The corset input parsing failed. In that case, we consider
-				// there is a bug in corset side and we skip the test.
-				return nil //nolint
-			}
-
-			testName := strings.TrimPrefix(
-				strings.TrimSuffix(path, binExtension), "testdata/")
-
-			t.Run(testName, func(t *testing.T) {
-				err := runTestCase(sys, *input, zkcTestCase{
-					BinFilePath: path,
-					InputStr:    string(inputStr),
-				})
-
-				if err != nil {
-					t.Fatalf("test %s failed: %v", testName, err)
-				}
-
-				numPassing++
-			})
-
-			return nil
-		})
-
-	if err != nil {
-		t.Fatalf("error walking %s: %v", testdataSyncDir, err)
+	// set the proverCompilePipeline to the full prover pipeline, unless we're
+	// in short mode, in which case we skip the full prover pipeline.
+	sysPipeline := proverCompilePipeline
+	if testing.Short() {
+		t.Log("short mode, skipping full prover pipeline")
+		sysPipeline = func(_ *wiop.System) {}
 	}
 
-	if numPassing == 0 {
-		t.Fatalf("no test were executed, there must be a bug. Could be corset side.")
+	// glob the testdata files, and run each one as a sub-test. Each test-case is
+	// a line in the .accepts file, and we run each test-case as a sub-test of the
+	// test-case's unit test.
+	testFiles, err := filepath.Glob(testdataGlob)
+	if err != nil {
+		t.Fatalf("error globbing testdata: %v", err)
+	}
+	if len(testFiles) == 0 {
+		t.Fatalf("no testdata found. Have you run `make download-zkc-testdata`?")
+	}
+
+	// read the known failures file. It is fine if we cannot read it, then we
+	// consider all failures as new.
+	failures := make(knownFailures)
+	failuresF, err := os.Open(knownFailuresFiles)
+	if err != nil {
+		t.Errorf("failed to open known failures file: %v", err)
+	}
+	if err := json.NewDecoder(failuresF).Decode(&failures); err != nil {
+		t.Errorf("failed to decode known failures file: %v", err)
+	}
+	failuresF.Close()
+	for _, f := range testFiles {
+		splitName := strings.Split(f, string(filepath.Separator))
+		baseName := filepath.Join(splitName[len(splitName)-2:]...)
+		t.Run(baseName, func(t *testing.T) {
+			basePath := strings.TrimSuffix(f, zkcExtension)
+			acceptPath := basePath + acceptExtension
+			if files.CheckFilePath(acceptPath) != nil {
+				fatalIfNotKnown(t, failures, baseName, -1, failReasonNoTestData, "accept file %s does not exist for test-case %s", acceptPath, f)
+				return
+			}
+			binF, err := compileBinaryConstraints(f)
+			if err != nil {
+				fatalIfNotKnown(t, failures, baseName, -2, failReasonCompileZkc, "failed to compile binary constraints: %v", err)
+				return
+			}
+			lineNr := 0
+			acceptCases, ok := file.ReadInputFileAsLines(acceptPath)
+			if !ok {
+				fatalIfNotKnown(t, failures, baseName, -3, failReasonNoTestData, "failed to read accept file %s for test-case %s", acceptPath, f)
+				return
+			}
+			for _, line := range acceptCases[:min(len(acceptCases), maxCasesPerUnit)] {
+				// check that we're not in a comment line. I.e. we only want lines starting with `{` to be considered as test-cases.
+				if !strings.HasPrefix(line, "{") {
+					continue
+				}
+				l := lineNr
+				t.Run(fmt.Sprintf("case=%d", lineNr), func(t *testing.T) {
+					t.Parallel()
+					zkcInput, zkcOutputs, err := parseTestCase(zkcTestCase{ZkcFilePath: f, InputStr: line}, binF)
+					if err != nil {
+						fatalIfNotKnown(t, failures, baseName, l, failReasonParse, "failed to parse test case: %v", err)
+						return
+					}
+					for outputName, expectedOutput := range zkcOutputs {
+						if !bytes.Equal(expectedOutput, zkcInput.Inputs[outputName]) {
+							fatalIfNotKnown(t, failures, baseName, l, failReasonOutputMismatch, "output mismatch for %s: expected %x, got %x", outputName, expectedOutput, zkcInput.Inputs[outputName])
+							return
+						}
+					}
+					if err = runProveVerify(zkcInput, binF, sysPipeline); err != nil {
+						fatalIfNotKnown(t, failures, baseName, l, failReasonProve, "failed to run test case: %v", err)
+						return
+					}
+				})
+				lineNr++
+			}
+		})
 	}
 }
+
+var failuresMapMutex = new(sync.RWMutex)
+
+func fatalIfNotKnown(t *testing.T, knownFailures knownFailures, unitName string, caseNr int, reason zkcFailReason, msg string, args ...any) {
+	t.Helper()
+	// if it is already in the map then we have already seen this failure, so we can just log it and continue. Otherwise, we fail the test.
+	failuresMapMutex.RLock()
+	if unitFailures, ok := knownFailures[unitName]; ok {
+		if knownReason, ok := unitFailures[caseNr]; ok {
+			if knownReason == reason {
+				t.Logf(msg, args...)
+				failuresMapMutex.RUnlock()
+				return
+			}
+		}
+	}
+	failuresMapMutex.RUnlock()
+	failuresMapMutex.Lock()
+	if _, ok := knownFailures[unitName]; !ok {
+		knownFailures[unitName] = make(map[int]zkcFailReason)
+	}
+	knownFailures[unitName][caseNr] = reason
+	failuresMapMutex.Unlock()
+	// unknown error. We fail the test and log the error. The user can then add
+	// this failure to the known failures map if it is expected.
+	//
+	// the negative case number indicate input file reading and compiling. We're still not in subtest cases
+	t.Fatalf(msg, args...)
+}
+
+type zkcFailReason string
+
+const (
+	failReasonNoTestData     zkcFailReason = "no test data"
+	failReasonCompileZkc     zkcFailReason = "zkc compile failed"
+	failReasonParse          zkcFailReason = "zkc trace/check failed"
+	failReasonOutputMismatch zkcFailReason = "output mismatch"
+	failReasonProve          zkcFailReason = "prover failed"
+)
+
+type knownFailures map[string]map[int]zkcFailReason
