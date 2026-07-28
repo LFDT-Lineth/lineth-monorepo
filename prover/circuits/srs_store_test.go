@@ -101,7 +101,7 @@ func TestSRSStore_PersistsDerivedLagrange(t *testing.T) {
 
 			lagrange, err := toLagrange(canonical, 8)
 			assert.NoError(err)
-			assert.NoError(store.cacheLagrange(lagrange, 8, tc.curveID, "aztec"))
+			assert.NoError(store.cacheLagrange(lagrange, 8, tc.curveID))
 
 			// a fresh store must pick the cached file up and be able to load it
 			fresh, err := NewSRSStore(dir)
@@ -140,7 +140,7 @@ func TestSRSStore_PersistsDerivedLagrange(t *testing.T) {
 			go func() {
 				defer wg.Done()
 				_ = store.entriesSnapshot(ecc.BN254)
-				errs <- store.cacheLagrange(lagrange, 8, ecc.BN254, "aztec")
+				errs <- store.cacheLagrange(lagrange, 8, ecc.BN254)
 			}()
 		}
 		wg.Wait()
@@ -166,7 +166,7 @@ func TestSRSStore_PersistsDerivedLagrange(t *testing.T) {
 		assert.NoError(err)
 		lagrange, err := toLagrange(canonical, 8)
 		assert.NoError(err)
-		assert.NoError(store.cacheLagrange(lagrange, 8, ecc.BN254, "aztec"))
+		assert.NoError(store.cacheLagrange(lagrange, 8, ecc.BN254))
 
 		leftovers, err := filepath.Glob(filepath.Join(dir, "*.tmp*"))
 		assert.NoError(err)
@@ -184,8 +184,8 @@ func TestSRSStore_PersistsDerivedLagrange(t *testing.T) {
 		assert.NoError(err)
 
 		// a directory squatting on the final name makes the rename fail
-		assert.NoError(os.Mkdir(filepath.Join(dir, "kzg_srs_lagrange_8_bn254_aztec.memdump"), 0o700))
-		assert.Error(store.cacheLagrange(lagrange, 8, ecc.BN254, "aztec"), "publish must fail when the final name is taken by a directory")
+		assert.NoError(os.Mkdir(filepath.Join(dir, "kzg_srs_lagrange_8_bn254_derived.memdump"), 0o700))
+		assert.Error(store.cacheLagrange(lagrange, 8, ecc.BN254), "publish must fail when the final name is taken by a directory")
 
 		leftovers, err := filepath.Glob(filepath.Join(dir, "*.tmp*"))
 		assert.NoError(err)
@@ -238,9 +238,12 @@ func TestSRSStore_GetSRS_PersistsDerivedLagrange(t *testing.T) {
 	assert.NoError(err)
 	assert.NotNil(lagrangeSRS)
 
-	cachedPath := filepath.Join(dir, fmt.Sprintf("kzg_srs_lagrange_%d_bn254_aleo.memdump", lagrangeSize))
+	// published under the derived tag, never under the canonical file's ceremony
+	cachedPath := filepath.Join(dir, fmt.Sprintf("kzg_srs_lagrange_%d_bn254_derived.memdump", lagrangeSize))
 	info, err := os.Stat(cachedPath)
 	assert.NoError(err, "GetSRS must persist the derived lagrange SRS")
+	_, err = os.Stat(filepath.Join(dir, fmt.Sprintf("kzg_srs_lagrange_%d_bn254_aleo.memdump", lagrangeSize)))
+	assert.True(os.IsNotExist(err), "a derived basis must not be published under a ceremony tag")
 	assert.Equal(os.FileMode(0o644), info.Mode().Perm(), "the cached dump must be world-readable like the ceremony files")
 
 	// a fresh store must serve the same request from the cached file, without
@@ -265,10 +268,11 @@ func TestSRSStore_GetSRS_PersistsDerivedLagrange(t *testing.T) {
 		// a valid but wrong-size dump: catches the pkG1Len length guard
 		{"undersized", dumpBytes(t, mustToLagrange(t, canonical, lagrangeSize/2))},
 	} {
-		t.Run("re_derives_over_unloadable_cache/"+bad.name, func(t *testing.T) {
+		t.Run("re_derives_beside_unloadable_cache/"+bad.name, func(t *testing.T) {
 			assert := require.New(t)
 			// an unloadable lagrange dump beside a valid canonical: GetSRS must
-			// warn, re-derive, and overwrite the bad file in place
+			// warn, re-derive, and publish under the derived tag while leaving
+			// the ceremony-tagged file it did not write completely alone
 			subDir := t.TempDir()
 			dumpToFile(t, canonical, filepath.Join(subDir, fmt.Sprintf("kzg_srs_canonical_%d_bn254_aleo.memdump", canonicalSize)))
 			badPath := filepath.Join(subDir, fmt.Sprintf("kzg_srs_lagrange_%d_bn254_aleo.memdump", lagrangeSize))
@@ -280,12 +284,18 @@ func TestSRSStore_GetSRS_PersistsDerivedLagrange(t *testing.T) {
 			assert.NoError(err, "an unloadable cached lagrange SRS must not fail GetSRS")
 			assert.NotNil(lagrangeSRS)
 
-			// the bad file was repaired in place with a loadable, correct-size dump
+			// the operator's file is untouched, byte for byte
+			stillBad, err := os.ReadFile(badPath)
+			assert.NoError(err, "the rejected dump must not be deleted")
+			assert.Equal(bad.content, stillBad, "the rejected dump must not be overwritten")
+
+			// and a loadable, correct-size, same-setup dump exists beside it
+			derivedPath := filepath.Join(subDir, fmt.Sprintf("kzg_srs_lagrange_%d_bn254_derived.memdump", lagrangeSize))
 			reloaded := kzg.NewSRS(ecc.BN254)
-			data, err := os.ReadFile(badPath)
-			assert.NoError(err)
-			assert.NoError(reloaded.ReadDump(bytes.NewReader(data)), "the repaired cache file must be loadable")
-			assert.Equal(lagrangeSize, pkG1Len(reloaded), "the repaired cache file must have the right size")
+			data, err := os.ReadFile(derivedPath)
+			assert.NoError(err, "a derived dump must have been published")
+			assert.NoError(reloaded.ReadDump(bytes.NewReader(data)), "the derived dump must be loadable")
+			assert.Equal(lagrangeSize, pkG1Len(reloaded), "the derived dump must have the right size")
 			assertSameVk(t, canonical, reloaded)
 		})
 	}
@@ -308,6 +318,8 @@ func TestSRSStore_GetSRS_PersistsDerivedLagrange(t *testing.T) {
 		assert.NoError(err)
 		lagrangePath := filepath.Join(subDir, fmt.Sprintf("kzg_srs_lagrange_%d_bn254_aleo.memdump", lagrangeSize))
 		dumpToFile(t, otherLagrange, lagrangePath)
+		foreignBefore, err := os.ReadFile(lagrangePath)
+		assert.NoError(err)
 
 		store, err := NewSRSStore(subDir)
 		assert.NoError(err)
@@ -315,11 +327,14 @@ func TestSRSStore_GetSRS_PersistsDerivedLagrange(t *testing.T) {
 		assert.NoError(err)
 		assert.NotNil(lagrangeSRS)
 
-		// the foreign dump must have been re-derived over: its Vk now matches
-		// this canonical
-		reloaded := kzg.NewSRS(ecc.BN254)
-		data, err := os.ReadFile(lagrangePath)
+		// the foreign dump is left alone; a matching basis is published beside it
+		foreignAfter, err := os.ReadFile(lagrangePath)
 		assert.NoError(err)
+		assert.Equal(foreignBefore, foreignAfter, "a dump from another setup must not be overwritten")
+
+		reloaded := kzg.NewSRS(ecc.BN254)
+		data, err := os.ReadFile(filepath.Join(subDir, fmt.Sprintf("kzg_srs_lagrange_%d_bn254_derived.memdump", lagrangeSize)))
+		assert.NoError(err, "a derived dump matching this canonical must have been published")
 		assert.NoError(reloaded.ReadDump(bytes.NewReader(data)))
 		assertSameVk(t, canonical, reloaded)
 	})
@@ -339,9 +354,47 @@ func TestSRSStore_GetSRS_PersistsDerivedLagrange(t *testing.T) {
 		_, lagrangeSRS, err := roStore.GetSRS(context.TODO(), cs)
 		assert.NoError(err, "a read-only store directory must not fail GetSRS")
 		assert.NotNil(lagrangeSRS)
-		_, err = os.Stat(filepath.Join(roDir, fmt.Sprintf("kzg_srs_lagrange_%d_bn254_aleo.memdump", lagrangeSize)))
+		_, err = os.Stat(filepath.Join(roDir, fmt.Sprintf("kzg_srs_lagrange_%d_bn254_derived.memdump", lagrangeSize)))
 		assert.True(os.IsNotExist(err), "nothing must be published to a read-only directory")
 	})
+}
+
+// TestSRSStore_DerivedDumpsNeverClaimACeremony pins the provenance rule: a
+// locally computed basis is published under derivedSourceTag whatever ceremony
+// the canonical SRS it came from was tagged with, and is loadable again from
+// that name.
+func TestSRSStore_DerivedDumpsNeverClaimACeremony(t *testing.T) {
+	for _, ceremony := range []string{"aleo", "aztec", "celo"} {
+		t.Run("canonical_"+ceremony, func(t *testing.T) {
+			assert := require.New(t)
+			dir := t.TempDir()
+
+			canonical := newTestCanonicalSRS(t, ecc.BN254, 16)
+			dumpToFile(t, canonical, filepath.Join(dir, fmt.Sprintf("kzg_srs_canonical_16_bn254_%s.memdump", ceremony)))
+
+			store, err := NewSRSStore(dir)
+			assert.NoError(err)
+			lagrange, err := toLagrange(canonical, 8)
+			assert.NoError(err)
+			assert.NoError(store.cacheLagrange(lagrange, 8, ecc.BN254))
+
+			assert.FileExists(filepath.Join(dir, "kzg_srs_lagrange_8_bn254_derived.memdump"))
+			_, err = os.Stat(filepath.Join(dir, fmt.Sprintf("kzg_srs_lagrange_8_bn254_%s.memdump", ceremony)))
+			assert.True(os.IsNotExist(err), "a derived basis must never inherit the canonical file's ceremony tag")
+
+			// the derived tag must round-trip through the store's own parser
+			fresh, err := NewSRSStore(dir)
+			assert.NoError(err)
+			indexed := false
+			for _, entry := range fresh.entriesSnapshot(ecc.BN254) {
+				if !entry.isCanonical && entry.size == 8 {
+					indexed = true
+					assert.Equal(derivedSourceTag, entry.source)
+				}
+			}
+			assert.True(indexed, "a derived dump must be indexed on the next construction")
+		})
+	}
 }
 
 // mustToLagrange derives a lagrange SRS or fails the test.

@@ -43,8 +43,20 @@ type fsEntry struct {
 	isCanonical bool
 	size        int
 	path        string
-	source      string // the ceremony tag in the file name: aleo, aztec or celo
+	source      string // the provenance tag in the file name: aleo, aztec, celo or derived
 }
+
+// derivedSourceTag is the provenance tag for a Lagrange basis this process
+// computed locally, as opposed to one distributed from a ceremony.
+//
+// A derived basis is only as trustworthy as the canonical SRS it was computed
+// from, so it must not inherit that file's ceremony tag. Whoever later lists
+// the store, restores a backup, or bakes the directory into an image has to be
+// able to tell computed material from attested material, and a file name is
+// the only signal they get. Nothing in the store validates that a file tagged
+// "aztec" descends from that ceremony, so a tag written by code is a
+// provenance claim the code cannot support: never write one.
+const derivedSourceTag = "derived"
 
 // orphanTempMaxAge is how long a temp file's last write must lie in the past
 // before store construction deletes it; a live writer keeps refreshing its
@@ -86,7 +98,9 @@ func NewSRSStore(rootDir string) (*SRSStore, error) {
 	srsStore.entries[ecc.BN254] = []fsEntry{}
 	srsStore.entries[ecc.BW6_761] = []fsEntry{}
 
-	srsRegexp := regexp.MustCompile(`^(kzg_srs)_(canonical|lagrange)_(\d+)_(bls12377|bn254|bw6761)_(aleo|aztec|celo)\.memdump$`)
+	// the trailing group is the provenance tag: one of the three ceremonies the
+	// store may be seeded from, or derivedSourceTag for a locally computed basis
+	srsRegexp := regexp.MustCompile(`^(kzg_srs)_(canonical|lagrange)_(\d+)_(bls12377|bn254|bw6761)_(aleo|aztec|celo|` + derivedSourceTag + `)\.memdump$`)
 
 	for _, entry := range dir {
 		if entry.IsDir() {
@@ -155,7 +169,6 @@ func (store *SRSStore) GetSRS(ctx context.Context, ccs constraint.ConstraintSyst
 
 	// find the canonical srs
 	var canonicalSRS kzg.SRS
-	var canonicalEntry fsEntry
 	for _, entry := range entries {
 		if entry.isCanonical && entry.size >= sizeCanonical {
 			canonicalSRS = kzg.NewSRS(curveID)
@@ -166,7 +179,6 @@ func (store *SRSStore) GetSRS(ctx context.Context, ccs constraint.ConstraintSyst
 			if err := canonicalSRS.ReadDump(bytes.NewReader(data), sizeCanonical); err != nil {
 				return nil, nil, err
 			}
-			canonicalEntry = entry
 			break
 		}
 	}
@@ -205,7 +217,9 @@ func (store *SRSStore) GetSRS(ctx context.Context, ccs constraint.ConstraintSyst
 		}
 		if err != nil {
 			// a lagrange dump is reconstructible (unlike the canonical SRS): log
-			// and fall back to deriving, which re-persists over this same path
+			// and fall back to deriving. The rejected file is left exactly as it
+			// is: a derived basis is published under derivedSourceTag, so this
+			// process never overwrites a file it did not write.
 			logrus.Warnf("could not load lagrange SRS %s, re-deriving it: %v", entry.path, err)
 			continue
 		}
@@ -227,7 +241,7 @@ func (store *SRSStore) GetSRS(ctx context.Context, ccs constraint.ConstraintSyst
 		// Persist the derived Lagrange SRS so subsequent runs load it from disk
 		// instead of re-deriving it. Best-effort: a failed write must not fail
 		// the caller.
-		if err := store.cacheLagrange(lagrangeSRS, sizeLagrange, curveID, canonicalEntry.source); err != nil {
+		if err := store.cacheLagrange(lagrangeSRS, sizeLagrange, curveID); err != nil {
 			logrus.Warnf("could not persist derived lagrange SRS (continuing): %v", err)
 		}
 	}
@@ -263,13 +277,17 @@ func (store *SRSStore) register(curveID ecc.ID, newEntry fsEntry) {
 // under a trusted name. On load, framing, size, setup-identity (Vk) and
 // point-validity (on-curve) errors are all caught and re-derived; substitution
 // of validly-encoded points is out of scope, as for every file in the store.
-func (store *SRSStore) cacheLagrange(lagrangeSRS kzg.SRS, sizeLagrange int, curveID ecc.ID, source string) error {
+//
+// The published name always carries derivedSourceTag, so the only file this can
+// ever replace is one it wrote itself: a ceremony dump on the same path is
+// impossible by construction, and a stale derived dump is safe to supersede.
+func (store *SRSStore) cacheLagrange(lagrangeSRS kzg.SRS, sizeLagrange int, curveID ecc.ID) error {
 	curveName, ok := curveFileNames[curveID]
 	if !ok {
 		return fmt.Errorf("curve not supported: %s", curveID)
 	}
 
-	fileName := fmt.Sprintf("kzg_srs_lagrange_%d_%s_%s.memdump", sizeLagrange, curveName, source)
+	fileName := fmt.Sprintf("kzg_srs_lagrange_%d_%s_%s.memdump", sizeLagrange, curveName, derivedSourceTag)
 	finalPath := filepath.Join(store.rootDir, fileName)
 
 	f, err := os.CreateTemp(store.rootDir, fileName+".tmp")
@@ -302,7 +320,7 @@ func (store *SRSStore) cacheLagrange(lagrangeSRS kzg.SRS, sizeLagrange int, curv
 	}
 	syncDir(store.rootDir)
 
-	store.register(curveID, fsEntry{isCanonical: false, size: sizeLagrange, path: finalPath, source: source})
+	store.register(curveID, fsEntry{isCanonical: false, size: sizeLagrange, path: finalPath, source: derivedSourceTag})
 
 	logrus.Infof("persisted derived lagrange SRS to %s", finalPath)
 	return nil
