@@ -21,18 +21,6 @@ import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
-/**
- * The remaining three components of the keccak preimage of the previous
- * aggregation's final shnarf (its other two components are the grandparent
- * shnarf, carried alongside this as parentAggregationFinalShnarfGrandparent,
- * and the parent state root, already implicit in the first execution proof).
- */
-data class ParentShnarfDto(
-  val snarkHash: String,
-  val x: String,
-  val y: String,
-)
-
 data class AggregationProofRequestDto(
   val executionProofs: List<String>,
   val compressionProofs: List<String>,
@@ -42,8 +30,7 @@ data class AggregationProofRequestDto(
   val parentAggregationLastL1RollingHash: String,
   val parentAggregationLastFtxNumber: Long,
   val parentAggregationLastFtxRollingHash: String,
-  val parentAggregationFinalShnarfGrandparent: String,
-  val parentShnarf: ParentShnarfDto,
+  val parentDecompressionProof: String?,
 ) {
   companion object {
     fun fromDomainObject(
@@ -89,12 +76,9 @@ data class AggregationProofRequestDto(
         parentAggregationLastL1RollingHash = proofsToAggregate.parentAggregationLastL1RollingHash.encodeHex(),
         parentAggregationLastFtxNumber = proofsToAggregate.parentAggregationLastFtxNumber.toLong(),
         parentAggregationLastFtxRollingHash = proofsToAggregate.parentAggregationLastFtxRollingHash.encodeHex(),
-        parentAggregationFinalShnarfGrandparent = proofsToAggregate.grandparentShnarf.encodeHex(),
-        parentShnarf = ParentShnarfDto(
-          snarkHash = proofsToAggregate.parentShnarfSnarkHash.encodeHex(),
-          x = proofsToAggregate.parentShnarfX.encodeHex(),
-          y = proofsToAggregate.parentShnarfY.encodeHex(),
-        ),
+        parentDecompressionProof = proofsToAggregate.parentCompressionProofIndex?.let {
+          compressionProofResponseFileNameProvider.getFileName(it)
+        },
       )
     }
   }

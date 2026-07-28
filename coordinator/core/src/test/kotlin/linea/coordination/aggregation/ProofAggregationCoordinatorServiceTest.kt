@@ -16,7 +16,6 @@ import linea.domain.InvalidityProofIndex
 import linea.domain.ProofsToAggregate
 import linea.domain.createBlobRecord
 import linea.domain.createProofToFinalize
-import linea.kotlin.zeroHash32
 import linea.persistence.AggregationsRepository
 import linea.persistence.BlobsRepository
 import net.consensys.linea.metrics.MetricsFacade
@@ -233,10 +232,12 @@ class ProofAggregationCoordinatorServiceTest {
         parentAggregationLastL1RollingHash = rollingInfo1.parentAggregationLastL1RollingHash,
         parentAggregationLastFtxNumber = rollingInfo1.parentAggregationLastFtxNumber,
         parentAggregationLastFtxRollingHash = rollingInfo1.parentAggregationLastFtxRollingHash,
-        grandparentShnarf = parentBlob1.blobCompressionProof!!.prevShnarf,
-        parentShnarfSnarkHash = parentBlob1.blobCompressionProof!!.snarkHash,
-        parentShnarfX = parentBlob1.blobCompressionProof!!.expectedX,
-        parentShnarfY = parentBlob1.blobCompressionProof!!.expectedY,
+        parentCompressionProofIndex = CompressionProofIndex(
+          startBlockNumber = parentBlob1.startBlockNumber,
+          endBlockNumber = parentBlob1.endBlockNumber,
+          hash = parentBlob1.expectedShnarf,
+          startBlockTimestamp = parentBlob1.startBlockTime,
+        ),
         startBlockTimestamp = compressionBlobs1.first().blobCounters.startBlockTimestamp,
       )
 
@@ -258,10 +259,12 @@ class ProofAggregationCoordinatorServiceTest {
         parentAggregationLastL1RollingHash = rollingInfo2.parentAggregationLastL1RollingHash,
         parentAggregationLastFtxNumber = rollingInfo2.parentAggregationLastFtxNumber,
         parentAggregationLastFtxRollingHash = rollingInfo2.parentAggregationLastFtxRollingHash,
-        grandparentShnarf = parentBlob2.blobCompressionProof!!.prevShnarf,
-        parentShnarfSnarkHash = parentBlob2.blobCompressionProof!!.snarkHash,
-        parentShnarfX = parentBlob2.blobCompressionProof!!.expectedX,
-        parentShnarfY = parentBlob2.blobCompressionProof!!.expectedY,
+        parentCompressionProofIndex = CompressionProofIndex(
+          startBlockNumber = parentBlob2.startBlockNumber,
+          endBlockNumber = parentBlob2.endBlockNumber,
+          hash = parentBlob2.expectedShnarf,
+          startBlockTimestamp = parentBlob2.startBlockTime,
+        ),
         startBlockTimestamp = compressionBlobs2.first().blobCounters.startBlockTimestamp,
       )
 
@@ -470,10 +473,7 @@ class ProofAggregationCoordinatorServiceTest {
         parentAggregationLastL1RollingHash = rollingInfo.parentAggregationLastL1RollingHash,
         parentAggregationLastFtxNumber = rollingInfo.parentAggregationLastFtxNumber,
         parentAggregationLastFtxRollingHash = rollingInfo.parentAggregationLastFtxRollingHash,
-        grandparentShnarf = zeroHash32(),
-        parentShnarfSnarkHash = zeroHash32(),
-        parentShnarfX = zeroHash32(),
-        parentShnarfY = zeroHash32(),
+        parentCompressionProofIndex = null,
         startBlockTimestamp = blob.blobCounters.startBlockTimestamp,
       )
 
@@ -551,9 +551,7 @@ class ProofAggregationCoordinatorServiceTest {
     whenever(mockInvalidityProofProvider.getInvalidityProofs(any(), any()))
       .thenReturn(SafeFuture.completedFuture(emptyList()))
 
-    // The parent blob (ending at block 100) is missing at first — this must make
-    // getParentShnarfPreimage throw, which AsyncRetryer retries. Only after a few
-    // attempts does the parent blob's compression proof become available.
+    // The parent blob is missing at first, forcing a retry, then appears.
     val parentBlob = createBlobRecord(startBlockNumber = 91uL, endBlockNumber = 100uL)
     val missingBlobCount = AtomicInteger(3)
     whenever(mockBlobsRepository.findBlobByEndBlockNumber(100L))
@@ -582,10 +580,12 @@ class ProofAggregationCoordinatorServiceTest {
         parentAggregationLastL1RollingHash = rollingInfo.parentAggregationLastL1RollingHash,
         parentAggregationLastFtxNumber = rollingInfo.parentAggregationLastFtxNumber,
         parentAggregationLastFtxRollingHash = rollingInfo.parentAggregationLastFtxRollingHash,
-        grandparentShnarf = parentBlob.blobCompressionProof!!.prevShnarf,
-        parentShnarfSnarkHash = parentBlob.blobCompressionProof!!.snarkHash,
-        parentShnarfX = parentBlob.blobCompressionProof!!.expectedX,
-        parentShnarfY = parentBlob.blobCompressionProof!!.expectedY,
+        parentCompressionProofIndex = CompressionProofIndex(
+          startBlockNumber = parentBlob.startBlockNumber,
+          endBlockNumber = parentBlob.endBlockNumber,
+          hash = parentBlob.expectedShnarf,
+          startBlockTimestamp = parentBlob.startBlockTime,
+        ),
         startBlockTimestamp = blob.blobCounters.startBlockTimestamp,
       )
 

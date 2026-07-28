@@ -7,10 +7,8 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Instant
 
 /**
- * In-memory implementation of [BlobsRepository] for conflation backtesting, where there is no
- * Postgres-backed blobs table. Fed by [saveNewBlob] as blobs are proven, so that later
- * aggregation requests can look up a previous blob's full [BlobRecord] (including its
- * [linea.domain.BlobCompressionProof], needed to open its shnarf).
+ * In-memory [BlobsRepository] for conflation backtesting, which has no Postgres-backed blobs
+ * table. Fed by [saveNewBlob] as blobs are proven.
  */
 class InMemoryBlobsRepository : BlobsRepository {
   private val blobsByStartBlockNumber = ConcurrentHashMap<Long, BlobRecord>()

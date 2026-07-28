@@ -155,13 +155,9 @@ func (c *Circuit) Define(api frontend.API) error {
 		api.AssertIsEqual(c.DataAvailabilityPublicInput[i], api.Mul(rDA.InRange[i], piq.Sum(api)))
 	}
 
-	// CHECK_PARENT_SHNARF: open the parent shnarf as one more link, prepended,
-	// to the same shnarf chain. ParentShnarfPreimage.NewStateRootHash is the
-	// same bytes initialStateRootHash was derived from above, so this simply
-	// verifies that the previous aggregation's committed shnarf, opened
-	// against the preimage supplied here, reconstructs to ParentShnarf. Since
-	// ParentShnarf is bound into the aggregation public input (which the
-	// contract pins to its stored lastFinalizedShnarf), this forces
+	// CHECK_PARENT_SHNARF: prepend the parent shnarf as one more link in the
+	// same shnarf chain. Since ParentShnarf is bound into the aggregation
+	// public input (pinned on-chain as lastFinalizedShnarf), this forces
 	// initialStateRootHash to equal the genuine finalized state root.
 	shnarfs := ComputeShnarfs(&hshK, c.GrandparentShnarf, shnarfParams)
 	internal.AssertSliceEquals(api, shnarfs[0][:], c.ParentShnarf[:])

@@ -34,13 +34,8 @@ type Aggregation struct {
 	ParentAggregationFinalShnarf string
 	ParentStateRootHash          string
 
-	// The remaining four components of the keccak preimage of
-	// ParentAggregationFinalShnarf (its fifth component is
-	// ParentStateRootHash itself): the previous aggregation's last blob
-	// submission's parent shnarf (grandparent shnarf), snark hash, data
-	// evaluation point and data evaluation claim, all in 0x prefixed
-	// hexstring. These let the circuit open ParentAggregationFinalShnarf and
-	// bind ParentStateRootHash to the state root it actually commits to.
+	// Remaining components of ParentAggregationFinalShnarf's keccak preimage
+	// (its state root is ParentStateRootHash), letting the circuit open it.
 	GrandparentShnarf string
 	ParentShnarf      ShnarfPreimage
 
@@ -200,10 +195,6 @@ func (pi *AggregationFPI) ToSnarkType(maxNbFilteredAddresses int) AggregationFPI
 				IsAllowedCircuitID:      pi.IsAllowedCircuitID,
 			},
 		},
-		InitialStateRootHash: [2]frontend.Variable{
-			pi.InitialStateRootHash[:16],
-			pi.InitialStateRootHash[16:],
-		},
 		L2MsgMerkleTreeRoots:   make([][32]frontend.Variable, len(pi.L2MsgMerkleTreeRoots)),
 		FinalBlockNumber:       pi.FinalBlockNumber,
 		FinalBlockTimestamp:    pi.FinalBlockTimestamp,
@@ -282,7 +273,6 @@ type FilteredAddressesFPISnark struct {
 
 type AggregationFPISnark struct {
 	AggregationFPIQSnark
-	InitialStateRootHash   [2]frontend.Variable
 	NbL2Messages           frontend.Variable // TODO not used in hash. delete if not necessary
 	L2MsgMerkleTreeRoots   [][32]frontend.Variable
 	NbL2MsgMerkleTreeRoots frontend.Variable

@@ -6,10 +6,12 @@ import kotlin.time.Instant
 
 class ProofsToAggregateTest {
   private fun proofsToAggregate(
-    grandparentShnarf: ByteArray = ByteArray(32) { 1 },
-    parentShnarfSnarkHash: ByteArray = ByteArray(32) { 2 },
-    parentShnarfX: ByteArray = ByteArray(32) { 3 },
-    parentShnarfY: ByteArray = ByteArray(32) { 4 },
+    parentCompressionProofIndex: CompressionProofIndex? = CompressionProofIndex(
+      startBlockNumber = 1uL,
+      endBlockNumber = 10uL,
+      hash = ByteArray(32) { 1 },
+      startBlockTimestamp = Instant.fromEpochSeconds(0),
+    ),
   ): ProofsToAggregate =
     ProofsToAggregate(
       compressionProofIndexes = listOf(
@@ -27,40 +29,38 @@ class ProofsToAggregateTest {
       parentAggregationLastL1RollingHash = ByteArray(32) { 6 },
       parentAggregationLastFtxNumber = 0uL,
       parentAggregationLastFtxRollingHash = ByteArray(32) { 7 },
-      grandparentShnarf = grandparentShnarf,
-      parentShnarfSnarkHash = parentShnarfSnarkHash,
-      parentShnarfX = parentShnarfX,
-      parentShnarfY = parentShnarfY,
+      parentCompressionProofIndex = parentCompressionProofIndex,
       startBlockTimestamp = Instant.fromEpochSeconds(1),
     )
 
   @Test
-  fun `equals returns true for equal shnarf preimage fields`() {
+  fun `equals returns true for equal parentCompressionProofIndex`() {
     assertThat(proofsToAggregate()).isEqualTo(proofsToAggregate())
   }
 
   @Test
-  fun `equals returns false when grandparentShnarf differs`() {
-    val other = proofsToAggregate(grandparentShnarf = ByteArray(32) { 9 })
+  fun `equals returns false when parentCompressionProofIndex differs`() {
+    val other = proofsToAggregate(
+      parentCompressionProofIndex = CompressionProofIndex(
+        startBlockNumber = 1uL,
+        endBlockNumber = 10uL,
+        hash = ByteArray(32) { 9 },
+        startBlockTimestamp = Instant.fromEpochSeconds(0),
+      ),
+    )
     assertThat(proofsToAggregate()).isNotEqualTo(other)
   }
 
   @Test
-  fun `equals returns false when parentShnarfSnarkHash differs`() {
-    val other = proofsToAggregate(parentShnarfSnarkHash = ByteArray(32) { 9 })
+  fun `equals returns false when parentCompressionProofIndex is null vs non-null`() {
+    val other = proofsToAggregate(parentCompressionProofIndex = null)
     assertThat(proofsToAggregate()).isNotEqualTo(other)
   }
 
   @Test
-  fun `equals returns false when parentShnarfX differs`() {
-    val other = proofsToAggregate(parentShnarfX = ByteArray(32) { 9 })
-    assertThat(proofsToAggregate()).isNotEqualTo(other)
-  }
-
-  @Test
-  fun `equals returns false when parentShnarfY differs`() {
-    val other = proofsToAggregate(parentShnarfY = ByteArray(32) { 9 })
-    assertThat(proofsToAggregate()).isNotEqualTo(other)
+  fun `equals returns true when parentCompressionProofIndex is null on both sides`() {
+    assertThat(proofsToAggregate(parentCompressionProofIndex = null))
+      .isEqualTo(proofsToAggregate(parentCompressionProofIndex = null))
   }
 
   @Test
@@ -69,18 +69,9 @@ class ProofsToAggregateTest {
   }
 
   @Test
-  fun `toString includes hex-encoded shnarf preimage fields`() {
-    val proof = proofsToAggregate(
-      grandparentShnarf = ByteArray(32) { 1 },
-      parentShnarfSnarkHash = ByteArray(32) { 2 },
-      parentShnarfX = ByteArray(32) { 3 },
-      parentShnarfY = ByteArray(32) { 4 },
-    )
-    val string = proof.toString()
+  fun `toString includes parentCompressionProofIndex`() {
+    val string = proofsToAggregate().toString()
 
-    assertThat(string).contains("grandparentShnarf=")
-    assertThat(string).contains("parentShnarfSnarkHash=")
-    assertThat(string).contains("parentShnarfX=")
-    assertThat(string).contains("parentShnarfY=")
+    assertThat(string).contains("parentCompressionProofIndex=")
   }
 }

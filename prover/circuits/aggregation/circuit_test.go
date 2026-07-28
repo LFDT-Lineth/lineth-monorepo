@@ -75,7 +75,6 @@ func TestPublicInput(t *testing.T) {
 
 		// TODO incorporate into public input hash or decide not to
 		sfpi.NbDataAvailability = -1
-		sfpi.InitialStateRootHash = [2]frontend.Variable{0, -2}
 		sfpi.NbL2Messages = -5
 
 		// Set up FilteredAddresses (similar to how assign.go does it)

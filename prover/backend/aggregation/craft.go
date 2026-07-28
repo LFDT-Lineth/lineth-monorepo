@@ -48,12 +48,15 @@ func collectFields(cfg *config.Config, req *Request) (*CollectedFields, error) {
 			LastFinalizedL1RollingHash:              req.ParentAggregationLastL1RollingHash,
 			LastFinalizedL1RollingHashMessageNumber: uint(req.ParentAggregationLastL1RollingHashMessageNumber),
 			ParentStateRootHashContract:             req.ParentAggregationStateRootHashContract,
-			GrandparentShnarf:                       req.GrandparentShnarf,
-			ParentShnarf:                            req.ParentShnarf,
 			LastFinalizedFtxRollingHash:             req.ParentAggregationLastFtxRollingHash,
 			LastFinalizedFtxNumber:                  uint(req.ParentAggregationLastFtxNumber),
 		}
 	)
+
+	var err error
+	if cf.GrandparentShnarf, cf.ParentShnarf, err = readParentShnarfPreimage(cfg, req); err != nil {
+		return nil, err
+	}
 
 	cf.ExecutionPI = make([]public_input.Execution, 0, len(req.ExecutionProofs))
 	cf.InvalidityPI = make([]public_input.Invalidity, 0, len(req.InvalidityProofs))
@@ -232,6 +235,31 @@ func collectFields(cfg *config.Config, req *Request) (*CollectedFields, error) {
 	}
 
 	return cf, nil
+}
+
+// readParentShnarfPreimage reads the parent shnarf's keccak preimage from the
+// decompression proof response referenced by req.ParentDecompressionProof.
+// Returns the all-zero genesis preimage if that field is empty.
+func readParentShnarfPreimage(cfg *config.Config, req *Request) (grandparentShnarf string, parentShnarf public_input.ShnarfPreimage, err error) {
+	if req.ParentDecompressionProof == "" {
+		var zero [32]byte
+		emptyHash := utils.HexEncodeToString(zero[:])
+		return emptyHash, public_input.ShnarfPreimage{SnarkHash: emptyHash, X: emptyHash, Y: emptyHash}, nil
+	}
+
+	fpath := path.Join(cfg.DataAvailability.DirTo(), req.ParentDecompressionProof)
+	f := files.MustRead(fpath)
+
+	var dp dataavailability.Response
+	if err = json.NewDecoder(f).Decode(&dp); err != nil {
+		return "", public_input.ShnarfPreimage{}, fmt.Errorf("fields collection, decoding parent decompression proof %s, %w", fpath, err)
+	}
+
+	return dp.PrevShnarf, public_input.ShnarfPreimage{
+		SnarkHash: dp.SnarkHash,
+		X:         dp.ExpectedX,
+		Y:         dp.ExpectedY,
+	}, nil
 }
 
 // Prepare the response without running the actual proof
