@@ -25,4 +25,5 @@ pub const query = struct {
     pub const vanishing = @import("query/vanishing.zig");
     pub const logderivativesum = @import("query/logderivativesum.zig");
     pub const fri = @import("query/fri.zig");
+    pub const pcs = @import("query/pcs.zig");
 };
