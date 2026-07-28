@@ -1,5 +1,7 @@
 github.com/LFDT-Lineth/zkc v1.2.25-0.20260724062105-9d6ddad19ab7 h1:wml7SbmiJuGzki/TpxSvA0nm16nZFNorXQfw279JYVo=
 github.com/LFDT-Lineth/zkc v1.2.25-0.20260724062105-9d6ddad19ab7/go.mod h1:sBRNMvovYHKzGBhayuSA5m5HMadXWmI/rX8nNsaMidE=
+github.com/LFDT-Lineth/zkc v1.2.25-0.20260727081733-2599d25d9227 h1:W+YQE2gdD5qNfmiUzrpjvHcHvEkUnWyMzHfMsQtyUeg=
+github.com/LFDT-Lineth/zkc v1.2.25-0.20260727081733-2599d25d9227/go.mod h1:sBRNMvovYHKzGBhayuSA5m5HMadXWmI/rX8nNsaMidE=
 github.com/benbjohnson/clock v1.1.0 h1:Q92kusRqC1XV2MjkWETPvjJVqKetz1OzxZB7mHJLju8=
 github.com/benbjohnson/clock v1.1.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=
 github.com/bits-and-blooms/bitset v1.24.4 h1:95H15Og1clikBrKr/DuzMXkQzECs1M6hhoGXLwLQOZE=
