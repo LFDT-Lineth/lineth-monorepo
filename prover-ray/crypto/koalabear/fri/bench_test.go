@@ -39,20 +39,24 @@ type benchConfig struct {
 
 func (c benchConfig) name() string {
 	suffix := ""
-	if c.sharedShifts != nil {
-		suffix = "/shifts=shared"
+	if c.sharedShifts == nil {
+		suffix = "/shifts=random"
 	}
 	return fmt.Sprintf("sizes=%d..%d/base=%d/ext=%d/rate=%d/queries=%d%s",
 		c.minLog2, c.maxLog2, c.basePolys, c.extPolys, c.rate, c.numQueries, suffix)
 }
 
-// benchConfigs mirrors bench/main.go's defaults (the large one) plus a small
-// config for quick iteration, and a production-like variant of the large
-// config whose rows all share a tiny fixed shift set {0,1,2}.
+// benchConfigs: the headline configs open every row at the shared shift set
+// {0,1,2}, matching production protocols where all rows of a proof share a
+// handful of claim points (ζ, ζω, …) — the shape Level.EvalsAt's grouped
+// combine pass is optimized for. The /shifts=random variant draws 1–3
+// uniformly-random shifts per row instead; that is adversarial for the
+// grouping (every column becomes its own group) and is kept to track the
+// worst case.
 var benchConfigs = []benchConfig{
-	{minLog2: 8, maxLog2: 10, basePolys: 64, extPolys: 64, rate: 4, numQueries: 32, maxShifts: 3, seed: 1},
-	{minLog2: 8, maxLog2: 12, basePolys: 400, extPolys: 400, rate: 4, numQueries: 32, maxShifts: 3, seed: 1},
+	{minLog2: 8, maxLog2: 10, basePolys: 64, extPolys: 64, rate: 4, numQueries: 32, sharedShifts: []int{0, 1, 2}, seed: 1},
 	{minLog2: 8, maxLog2: 12, basePolys: 400, extPolys: 400, rate: 4, numQueries: 32, sharedShifts: []int{0, 1, 2}, seed: 1},
+	{minLog2: 8, maxLog2: 12, basePolys: 400, extPolys: 400, rate: 4, numQueries: 32, maxShifts: 3, seed: 1},
 }
 
 // benchFixture bundles everything the phase benchmarks need, built once per
