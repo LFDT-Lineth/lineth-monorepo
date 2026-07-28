@@ -243,6 +243,16 @@ fn domainPoint(log_size: u8, generator: field.Element, position: usize) field.El
     return generator.pow(@as(u64, bitReverse(position, log_size)));
 }
 
+/// The extension-field evaluation point for a query position at the
+/// size-2^log_size domain: prover-ray's `domainPointExt`. `log_size` is
+/// comptime since callers (the PCS/DEEP layer) only ever evaluate this at a
+/// level's own round, itself derived from the comptime layout.
+pub fn domainPointExt(comptime log_size: u8, position: usize) ext.Ext {
+    const generator = comptime field.rootOfUnityBy(@as(usize, 1) << log_size) catch
+        @compileError("fri: log_size exceeds the supported KoalaBear root-of-unity order");
+    return ext.Ext.lift(domainPoint(log_size, generator, position));
+}
+
 fn bitReverse(value: usize, width: u8) usize {
     if (width == 0) return 0;
     // field.rootOfUnityBy bounds every domain log-size to <= max_order_root
