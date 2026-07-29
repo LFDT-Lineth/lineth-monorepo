@@ -1,4 +1,4 @@
-package minimal_elf
+package minimalelf
 
 import (
 	"bytes"
@@ -70,7 +70,8 @@ func Make(entryPoint, sectionAddr uint64, sectionData []byte) []byte {
 	}
 
 	// ELF header (64 bytes)
-	buf.Write([]byte{0x7f, 'E', 'L', 'F', 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0}) // e_ident (magic + class/data/version/OS/ABI)
+	// e_ident (magic + class/data/version/OS/ABI)
+	buf.Write([]byte{0x7f, 'E', 'L', 'F', 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 
 	w(uint16(2))        // e_type:      ET_EXEC
 	w(uint16(243))      // e_machine:   EM_RISCV

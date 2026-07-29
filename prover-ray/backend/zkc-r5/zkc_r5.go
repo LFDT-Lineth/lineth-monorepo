@@ -1,4 +1,4 @@
-package zkc_r5
+package zkcr5
 
 import (
 	"bytes"
