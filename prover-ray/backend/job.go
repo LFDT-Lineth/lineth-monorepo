@@ -1,7 +1,6 @@
 package backend
 
 // ProofType identifies which guest program to use for a proof request.
-// It corresponds to proof_type in the Prover Gateway job protocol.
 type ProofType string
 
 const (
@@ -10,9 +9,8 @@ const (
 	ProofTypeL2Execution ProofType = "l2-execution"
 )
 
-// Job is a single unit of proving work, delivery-system-agnostic.
-// The gateway worker or the filesystem controller both produce Jobs;
-// [Core.Prove] consumes them.
+// Job is the normalized input to [Core.Prove], after request delivery and
+// protocol-specific translation have already happened.
 type Job struct {
 	// ID is an opaque identifier used to correlate the Result.
 	ID string
@@ -20,15 +18,20 @@ type Job struct {
 	// Type selects the guest ELF and any proof-type-specific processing.
 	Type ProofType
 
+	// StartBlock and EndBlock identify the block range covered by Payload.
+	// Single-block jobs set both to the same block number.
 	StartBlock uint64
 	EndBlock   uint64
 
-	// Payload is the framed StatelessInput for the block: the 0x0001 schema id
-	// followed by the SSZ StatelessInput, exactly the output of
-	// utils/ssz.EncodeStatelessInput. [Core.Prove] passes these bytes through
-	// [decodePayload], and the R5 data-section builder prepends the [u64 LE len]
-	// prefix the guest reads at _in_start. Callers supply the framed bytes only
-	// and must not add the length prefix themselves.
+	// Payload is the raw guest input carried into the RISC-V guest data section.
+	// [Core.Prove] passes these bytes through [decodePayload], and the guest
+	// data-section builder prepends the [u64 LE len] prefix the guest reads at
+	// _in_start. Callers supply the guest bytes only and must not add the length
+	// prefix themselves.
+	//
+	// For L2 execution jobs today, Payload is the framed StatelessInput: the
+	// 0x0001 schema id followed by the SSZ StatelessInput, exactly the output of
+	// utils/ssz.EncodeStatelessInput.
 	//
 	// Multi-block conflation encoding is not yet decided (open question #1
 	// in wiki backend-overview.md); [Core.Prove] rejects jobs spanning more

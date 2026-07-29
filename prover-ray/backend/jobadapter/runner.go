@@ -28,16 +28,20 @@ type Runner struct {
 }
 
 // RunResult is the outcome for one request body. Callers write ResponseBody
-// back to their queue and use Success to choose the completed or failed path.
+// back to their queue and use ProofSucceeded to choose the success or failure
+// archive suffix.
 type RunResult struct {
-	ResponseBody any
-	Success      bool
+	ResponseBody   any
+	ProofSucceeded bool
 }
 
 // NewRunner creates the reusable request-to-proof runner.
 func NewRunner(prover Prover, proverVersion string) (*Runner, error) {
 	if prover == nil {
 		return nil, fmt.Errorf("jobadapter.NewRunner: prover must not be nil")
+	}
+	if proverVersion == "" {
+		return nil, fmt.Errorf("jobadapter.NewRunner: proverVersion must be set")
 	}
 	return &Runner{prover: prover, proverVersion: proverVersion}, nil
 }
@@ -77,7 +81,7 @@ func (r *Runner) Run(ctx context.Context, id string, data []byte) RunResult {
 		return RunResult{ResponseBody: failureResponse(id, err)}
 	}
 	return RunResult{
-		ResponseBody: newExecutionResponse(result, payload.BlockNumber, r.proverVersion),
-		Success:      true,
+		ResponseBody:   newExecutionResponse(result, payload.BlockNumber, r.proverVersion),
+		ProofSucceeded: true,
 	}
 }

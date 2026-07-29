@@ -64,22 +64,14 @@ func TestNewExecutionResponse_MapsV1Fields(t *testing.T) {
 	assert.Equal(t, repeatHex(0x0a), pi.TxFromsHash)
 }
 
-func TestNewExecutionResponse_JSONShape(t *testing.T) {
-	resp := newExecutionResponse(backend.Result{}, 42, "")
-	raw, err := jsonMarshalObject(resp)
+func TestNewExecutionResponse_MatchesReferenceResponseShape(t *testing.T) {
+	raw, err := jsonMarshalObject(newExecutionResponse(backend.Result{}, 42, "test-version"))
 	require.NoError(t, err)
 
 	assertResponseShapeMatchesReference(t, raw)
 	assert.NotContains(t, raw, "status")
 	assert.NotContains(t, raw, "error")
 	assert.NotContains(t, raw, "jobId")
-}
-
-func TestNewExecutionResponse_MatchesReferenceResponseShape(t *testing.T) {
-	raw, err := jsonMarshalObject(newExecutionResponse(backend.Result{}, 42, ""))
-	require.NoError(t, err)
-
-	assertResponseShapeMatchesReference(t, raw)
 }
 
 func TestNewExecutionResponse_MatchesReferenceResponseValues(t *testing.T) {

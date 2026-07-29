@@ -43,12 +43,14 @@ type Config struct {
 	// Defaults to one second when unset.
 	PollInterval time.Duration
 	// ProverVersion is emitted on successful getZkL2ExecutionProofV1-shaped
-	// responses and must be set by process config.
+	// responses and must be set by runtime config.
 	ProverVersion string
 }
 
 const statusFailed = "failed"
 
+// failureResponseBody is used only when the filesystem adapter cannot read a
+// claimed request, before jobadapter.Runner can build its own failure response.
 type failureResponseBody struct {
 	JobID  string `json:"jobId"`
 	Status string `json:"status"`
@@ -163,13 +165,13 @@ func (a *Adapter) processRequest(ctx context.Context, name string) (bool, error)
 		return false, fmt.Errorf("jobadapter: claiming %s: %w", name, err)
 	}
 
-	result := a.run(ctx, name, claimed)
+	runResult := a.run(ctx, name, claimed)
 
-	if err := a.writeResponse(name, result.ResponseBody); err != nil {
+	if err := a.writeResponse(name, runResult.ResponseBody); err != nil {
 		_ = os.Rename(claimed, src) // best-effort: avoid stranding the claimed request
 		return false, err
 	}
-	if err := a.archive(claimed, name, result.Success); err != nil {
+	if err := a.archive(claimed, name, runResult.ProofSucceeded); err != nil {
 		_ = os.Rename(claimed, src) // best-effort: allow retry after archive infrastructure failures
 		return false, err
 	}
@@ -244,9 +246,9 @@ func writeFileAtomic(path string, data []byte, perm fs.FileMode) error {
 
 // archive moves the claimed request into requests-done/, tagging failures so a
 // human can tell them apart.
-func (a *Adapter) archive(claimed, name string, success bool) error {
+func (a *Adapter) archive(claimed, name string, proofSucceeded bool) error {
 	suffix := failureSuffix
-	if success {
+	if proofSucceeded {
 		suffix = successSuffix
 	}
 	dst := filepath.Join(a.doneDir(), name+suffix)
