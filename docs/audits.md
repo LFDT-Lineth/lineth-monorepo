@@ -1,4 +1,4 @@
-# Security audit catalog
+# Security audit reports
 
 This page is the canonical inventory of published security audit reports for Lineth components,
 Linea Mainnet contracts, and relevant dependencies.
