@@ -1,8 +1,9 @@
 // Package jobadapter turns coordinator proof requests into backend jobs.
 //
-// Runner is the shared request-to-proof path. It decodes a
-// getZkL2ExecutionProofV1 request, SSZ-encodes the payload for the RISC-V
-// guest, calls the Prover, and formats the V1 response body.
+// Runner is the shared request-to-proof path used by protocol adapters such as
+// filesystem and a future prover-side gateway adapter. It decodes a
+// getZkL2ExecutionProofV1 request, SSZ-encodes the payload for the RISC-V guest,
+// calls the Prover, and formats the V1 response body.
 package jobadapter
 
 import (
