@@ -15,6 +15,7 @@
 - *(coordinator)* Wire config-docs via a buildSrc plugin and declarative spec (#3607)
 - *(coordinator)* Document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)
 - *(coordinator)* GasPriceCapProviderV2 and DRY (#3624)
+- *(coordinator)* Support custom transaction signers (#3597)
 
 ### 🐛 Bug Fixes
 
