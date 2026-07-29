@@ -53,7 +53,7 @@ class CoordinatorApp(
   private val configs: CoordinatorConfig,
   private val clock: Clock = Clock.System,
   // Single seam for downstream distributions: contributes extra services and JSON-RPC
-  // handlers that share this app's Vertx, metrics and DB. Defaults to no-op so the OSS app
+  // handlers that share this app's Vertx, metrics and DB. Defaults to no-op so the app
   // behaves identically when no extension is supplied.
   extensionsFactory: CoordinatorExtensionFactory = CoordinatorExtensionFactory.NOOP,
   signerFactory: SignerFactory = DefaultSignerFactory,

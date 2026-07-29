@@ -31,7 +31,7 @@ interface CoordinatorContext {
  * shutdown, and merges [jsonRpcHandlers] into the JSON-RPC router. Implementations must not
  * start/stop their own services or open their own server.
  *
- * This is the single seam downstream distributions use to extend the OSS coordinator.
+ * This is the single seam downstream distributions use to extend the coordinator.
  * Both members default to empty so an extension can contribute services only, handlers only,
  * or both.
  */
@@ -47,7 +47,7 @@ interface CoordinatorExtension {
  * Builds the extensions for a run, given the shared [CoordinatorContext].
  *
  * Invoked once by [CoordinatorApp] after its internal components are constructed but before
- * anything is started. Defaults to contributing nothing, so the OSS app behaves identically
+ * anything is started. Defaults to contributing nothing, so the app behaves identically
  * when no extension is supplied.
  */
 fun interface CoordinatorExtensionFactory {

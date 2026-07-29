@@ -34,7 +34,7 @@ fun interface SignerFactory {
   ): Signer<Secp256k1Signature>
 }
 
-/** Creates the OSS local-key and Web3Signer backends. */
+/** Creates the built-in local-key and Web3Signer backends. */
 object DefaultSignerFactory : SignerFactory {
   override fun create(
     vertx: Vertx,
