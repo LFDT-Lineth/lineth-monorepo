@@ -999,6 +999,8 @@ func EncodeStatelessInput(payload []byte) ([]byte, error) {
 		return nil, fmt.Errorf("EncodeStatelessInput: %w", err)
 	}
 
+	// Mirrors the Python reference's `schema_id_bytes + raw`; Go does the
+	// allocation with an int capacity, so keep the length addition checked.
 	frameCap, err := checkedSliceLen("stateless input frame", len(statelessInputSchemaID), len(raw))
 	if err != nil {
 		return nil, fmt.Errorf("EncodeStatelessInput: %w", err)
