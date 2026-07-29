@@ -84,8 +84,8 @@ func TestDecodeRequest_Malformed(t *testing.T) {
 		wantErr string
 	}{
 		{"MissingGuestProgramID",
-			func(o map[string]any) { delete(o, "guestProgramId") },
-			"guestProgramId"},
+			func(o map[string]any) { delete(o, guestProgramIDKey) },
+			guestProgramIDKey},
 		{"MissingProofRequest",
 			func(o map[string]any) { delete(o, "proofRequest") },
 			"proofRequest"},
@@ -96,17 +96,17 @@ func TestDecodeRequest_Malformed(t *testing.T) {
 			func(o map[string]any) { delete(pr(o)["chainConfig"].(map[string]any), "forkName") },
 			"forkName"},
 		{"MissingChainID",
-			func(o map[string]any) { delete(pr(o)["chainConfig"].(map[string]any), "chainId") },
-			"chainId"},
+			func(o map[string]any) { delete(pr(o)["chainConfig"].(map[string]any), chainIDKey) },
+			chainIDKey},
 		{"MissingPayloads",
-			func(o map[string]any) { delete(pr(o), "payloads") },
-			"payloads"},
+			func(o map[string]any) { delete(pr(o), payloadsKey) },
+			payloadsKey},
 		{"EmptyPayloads",
-			func(o map[string]any) { pr(o)["payloads"] = []any{} },
-			"payloads"},
+			func(o map[string]any) { pr(o)[payloadsKey] = []any{} },
+			payloadsKey},
 		{"PayloadsNotArray",
-			func(o map[string]any) { pr(o)["payloads"] = map[string]any{} },
-			"payloads"},
+			func(o map[string]any) { pr(o)[payloadsKey] = map[string]any{} },
+			payloadsKey},
 		{"MissingStatelessInput",
 			func(o map[string]any) { delete(payload0(o), "statelessInput") },
 			"statelessInput"},
@@ -117,14 +117,14 @@ func TestDecodeRequest_Malformed(t *testing.T) {
 			func(o map[string]any) { npr(o)["executionRequests"] = map[string]any{"x": 1} },
 			"executionRequests"},
 		{"GuestProgramIDNotString",
-			func(o map[string]any) { o["guestProgramId"] = 123 },
-			"guestProgramId"},
+			func(o map[string]any) { o[guestProgramIDKey] = 123 },
+			guestProgramIDKey},
 		{"GuestProgramIDBadHex",
-			func(o map[string]any) { o["guestProgramId"] = "0xzz" },
-			"guestProgramId"},
+			func(o map[string]any) { o[guestProgramIDKey] = "0xzz" },
+			guestProgramIDKey},
 		{"ChainIDNotParseable",
-			func(o map[string]any) { chainConfig(o)["chainId"] = "not-a-number" },
-			"chainId"},
+			func(o map[string]any) { chainConfig(o)[chainIDKey] = "not-a-number" },
+			chainIDKey},
 		{"MissingExecutionPayload",
 			func(o map[string]any) { delete(npr(o), "executionPayload") },
 			"executionPayload"},
@@ -159,7 +159,7 @@ func TestDecodeRequest_InvalidJSON(t *testing.T) {
 func TestDecodeRequest_ChainIDHexString(t *testing.T) {
 	var obj map[string]any
 	require.NoError(t, json.Unmarshal(readFixture(t, "request_single_block.json"), &obj))
-	obj["proofRequest"].(map[string]any)["chainConfig"].(map[string]any)["chainId"] = "0xe708"
+	obj["proofRequest"].(map[string]any)["chainConfig"].(map[string]any)[chainIDKey] = "0xe708"
 	raw, err := json.Marshal(obj)
 	require.NoError(t, err)
 

@@ -15,6 +15,13 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/ssz"
 )
 
+const (
+	guestProgramIDKey = "guestProgramId"
+	chainIDKey        = "chainId"
+	forkNameKey       = "forkName"
+	payloadsKey       = "payloads"
+)
+
 // DecodedPayload is one block's worth of a decoded request: the framed SSZ the
 // guest reads (the output of [ssz.EncodeStatelessInput]) and the block
 // number that payload proves.
@@ -47,11 +54,11 @@ func DecodeRequest(data []byte) (*Request, error) {
 		return nil, fmt.Errorf("DecodeRequest: parsing JSON: %w", err)
 	}
 
-	gpidRaw, err := requireField(env, "guestProgramId", "")
+	gpidRaw, err := requireField(env, guestProgramIDKey, "")
 	if err != nil {
 		return nil, err
 	}
-	guestProgramID, err := hexString(gpidRaw, "guestProgramId")
+	guestProgramID, err := hexString(gpidRaw, guestProgramIDKey)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +80,7 @@ func DecodeRequest(data []byte) (*Request, error) {
 	if err := json.Unmarshal(ccRaw, &chainConfig); err != nil {
 		return nil, fmt.Errorf("DecodeRequest: proofRequest.chainConfig: %w", err)
 	}
-	chainIDRaw, err := requireField(chainConfig, "chainId", "proofRequest.chainConfig.")
+	chainIDRaw, err := requireField(chainConfig, chainIDKey, "proofRequest.chainConfig.")
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +88,7 @@ func DecodeRequest(data []byte) (*Request, error) {
 	if err != nil {
 		return nil, err
 	}
-	forkNameRaw, err := requireField(chainConfig, "forkName", "proofRequest.chainConfig.")
+	forkNameRaw, err := requireField(chainConfig, forkNameKey, "proofRequest.chainConfig.")
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +97,7 @@ func DecodeRequest(data []byte) (*Request, error) {
 		return nil, fmt.Errorf("DecodeRequest: proofRequest.chainConfig.forkName: %w", err)
 	}
 
-	payloadsRaw, err := requireField(proofRequest, "payloads", "proofRequest.")
+	payloadsRaw, err := requireField(proofRequest, payloadsKey, "proofRequest.")
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +170,7 @@ func decodePayload(raw json.RawMessage, index int, chainID uint64, forkName stri
 		return DecodedPayload{}, fmt.Errorf("DecodeRequest: %sstatelessInput.newPayloadRequest: %w", ctx, err)
 	}
 	statelessInput["newPayloadRequest"] = nprEncoded
-	chainConfig, err := json.Marshal(map[string]any{"chainId": chainID, "forkName": forkName})
+	chainConfig, err := json.Marshal(map[string]any{chainIDKey: chainID, forkNameKey: forkName})
 	if err != nil {
 		return DecodedPayload{}, fmt.Errorf("DecodeRequest: %schainConfig: %w", ctx, err)
 	}
