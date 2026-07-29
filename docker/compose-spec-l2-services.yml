@@ -429,7 +429,7 @@ services:
   web3signer:
     hostname: web3signer
     container_name: web3signer
-    image: consensys/web3signer:26.3.0
+    image: consensys/web3signer:develop
     profiles: [ "l2", "debug", "external-to-monorepo" ]
     ports:
       - "9000:9000"
@@ -772,4 +772,3 @@ services:
       - --trace-start-block-number=0
     volumes:
       - ./config/shomei/log4j.xml:/log4j.xml:ro
-

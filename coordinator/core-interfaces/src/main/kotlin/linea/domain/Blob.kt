@@ -134,7 +134,7 @@ data class BlobRecord(
     if (startBlockTime != other.startBlockTime) return false
     if (endBlockTime != other.endBlockTime) return false
     if (batchesCount != other.batchesCount) return false
-    if (!expectedShnarf.contentEquals(expectedShnarf)) return false
+    if (!expectedShnarf.contentEquals(other.expectedShnarf)) return false
     if (blobCompressionProof != other.blobCompressionProof) return false
 
     return true
@@ -180,7 +180,7 @@ data class BlobSubmittedEvent(
     if (endBlockTime != other.endBlockTime) return false
     if (!lastShnarf.contentEquals(other.lastShnarf)) return false
     if (submissionTimestamp != other.submissionTimestamp) return false
-    if (transactionHash.contentEquals(transactionHash)) return false
+    if (!transactionHash.contentEquals(other.transactionHash)) return false
 
     return true
   }

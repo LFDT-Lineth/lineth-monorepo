@@ -9,6 +9,12 @@ import (
 	"sort"
 )
 
+const (
+	entryPointAndBlobsCountKey = "entry_point_and_blobs_count"
+	blobsOffsetAndSizeKey      = "blobs_offset_and_size"
+	blobsDataKey               = "blobs_data"
+)
+
 // memoryBlob is an in-memory guest RAM region: a contiguous byte slice mapped
 // at a specific address. Named to match the arith team's memoryBlob in
 // elf_to_json_gen/main.go. Not related to EIP-4844 blobs.
@@ -41,7 +47,11 @@ func buildZkcInputs(elfBytes, sszInput []byte, inOrigin uint64) (map[string][]by
 	if err != nil {
 		return nil, err
 	}
-	memBlobs := append(parsedELF.blobs, sszBlobs(inOrigin, sszInput)...)
+	sszMemBlobs, err := sszBlobs(inOrigin, sszInput)
+	if err != nil {
+		return nil, err
+	}
+	memBlobs := append(parsedELF.blobs, sszMemBlobs...)
 	return encodeInputs(memBlobs, parsedELF.entry), nil
 }
 
@@ -80,7 +90,13 @@ func elfBlobs(ef *elf.File) ([]memoryBlob, error) {
 		if p.Type != elf.PT_LOAD || p.Memsz == 0 {
 			continue
 		}
+		if p.Filesz > p.Memsz {
+			return nil, fmt.Errorf("loadable segment at %#x has file size larger than memory size", p.Vaddr)
+		}
 		progEnd := p.Vaddr + p.Memsz
+		if progEnd < p.Vaddr {
+			return nil, fmt.Errorf("loadable segment address overflow at %#x", p.Vaddr)
+		}
 
 		var segBlobs []memoryBlob
 		for _, s := range ef.Sections {
@@ -88,12 +104,18 @@ func elfBlobs(ef *elf.File) ([]memoryBlob, error) {
 				continue
 			}
 			sectionEnd := s.Addr + s.Size
+			if sectionEnd < s.Addr {
+				return nil, fmt.Errorf("section %s address overflow at %#x", s.Name, s.Addr)
+			}
 			if s.Addr < p.Vaddr || sectionEnd > progEnd {
 				continue
 			}
-			data, err := s.Data()
+			data, err := io.ReadAll(s.Open())
 			if err != nil {
 				return nil, fmt.Errorf("reading ELF section %s: %w", s.Name, err)
+			}
+			if uint64(len(data)) != s.Size {
+				return nil, fmt.Errorf("short read for section %s: got %d bytes, expected %d", s.Name, len(data), s.Size)
 			}
 			segBlobs = append(segBlobs, memoryBlob{offset: s.Addr, data: data})
 		}
@@ -115,14 +137,19 @@ func elfBlobs(ef *elf.File) ([]memoryBlob, error) {
 // not interpret the payload; callers pass the framed StatelessInput (0x0001
 // schema id + SSZ body, see [buildZkcInputs]). The split matches
 // elf_to_json_gen's sszInputBlobs (commit 09fcdb42).
-func sszBlobs(inOrigin uint64, ssz []byte) []memoryBlob {
+func sszBlobs(inOrigin uint64, ssz []byte) ([]memoryBlob, error) {
+	payloadOffset := inOrigin + 8
+	if payloadOffset < inOrigin {
+		return nil, fmt.Errorf("SSZ input offset overflow: in_origin=%#x", inOrigin)
+	}
+
 	prefix := make([]byte, 8)
 	binary.LittleEndian.PutUint64(prefix, uint64(len(ssz)))
 	memBlobs := []memoryBlob{{offset: inOrigin, data: prefix}}
 	if len(ssz) > 0 {
-		memBlobs = append(memBlobs, memoryBlob{offset: inOrigin + 8, data: ssz})
+		memBlobs = append(memBlobs, memoryBlob{offset: payloadOffset, data: ssz})
 	}
-	return memBlobs
+	return memBlobs, nil
 }
 
 // encodeInputs builds the keyed byte map that [zkcdriver.PreReadInputs]
@@ -152,8 +179,8 @@ func encodeInputs(memBlobs []memoryBlob, entryPoint uint64) map[string][]byte {
 	}
 
 	return map[string][]byte{
-		"entry_point_and_blobs_count": entryAndCount,
-		"blobs_offset_and_size":       offsetAndSize,
-		"blobs_data":                  data,
+		entryPointAndBlobsCountKey: entryAndCount,
+		blobsOffsetAndSizeKey:      offsetAndSize,
+		blobsDataKey:               data,
 	}
 }

@@ -72,7 +72,10 @@ func New(cfg Config) (*Core, error) {
 
 // Prove runs a single [Job] end-to-end and returns its [Result].
 func (c *Core) Prove(ctx context.Context, job Job) Result {
-	inputs := c.buildInputs(job)
+	inputs, err := c.buildInputs(job)
+	if err != nil {
+		return failResult(job.ID, fmt.Errorf("building inputs: %w", err))
+	}
 
 	proof, pub, err := c.runProve(ctx, &zkcdriver.PreReadInputs{Inputs: inputs})
 	if err != nil {
@@ -95,11 +98,35 @@ func (c *Core) Prove(ctx context.Context, job Job) Result {
 // keyed by name (see [encodeInputs]). ELF memory blobs are pre-extracted in
 // [New] and reused across calls; only the per-job StatelessInput blobs
 // (schema id + SSZ body) differ.
-func (c *Core) buildInputs(job Job) map[string][]byte {
+func (c *Core) buildInputs(job Job) (map[string][]byte, error) {
+	if err := sanityCheckJobs(job); err != nil {
+		return nil, err
+	}
+
+	sszMemBlobs, err := sszBlobs(c.cfg.inOrigin(), decodePayload(job))
+	if err != nil {
+		return nil, err
+	}
 	memBlobs := make([]memoryBlob, 0, len(c.elf.blobs)+2)
 	memBlobs = append(memBlobs, c.elf.blobs...)
-	memBlobs = append(memBlobs, sszBlobs(c.cfg.inOrigin(), decodePayload(job))...)
-	return encodeInputs(memBlobs, c.elf.entry)
+	memBlobs = append(memBlobs, sszMemBlobs...)
+	return encodeInputs(memBlobs, c.elf.entry), nil
+}
+
+func sanityCheckJobs(job Job) error {
+	// Inverted ranges are malformed input.
+	if job.EndBlock < job.StartBlock {
+		return fmt.Errorf("invalid block range [%d, %d]: EndBlock < StartBlock",
+			job.StartBlock, job.EndBlock)
+	}
+
+	// Multi-block SSZ conflation is not implemented yet.
+	if job.EndBlock > job.StartBlock {
+		return fmt.Errorf("multi-block job [%d, %d]: %w",
+			job.StartBlock, job.EndBlock, ErrNotImplemented)
+	}
+
+	return nil
 }
 
 // runProve calls AssignWithPreRead, sys.Prove, and sys.Verify.
@@ -118,15 +145,6 @@ func (c *Core) runProve(
 	}
 
 	return proof, pub, nil
-}
-
-// EncodeStatelessInput encodes the coordinator's per-block payload into the
-// framed StatelessInput the guest consumes: the 0x0001 schema id followed by
-// the SSZ body. The proving backend later prepends the [u64 LE len] prefix.
-//
-// Not yet implemented. Reference codec: arithmetization/proof_io_v1.py.
-func EncodeStatelessInput(_ []byte) ([]byte, error) {
-	return nil, fmt.Errorf("EncodeStatelessInput: %w", ErrNotImplemented)
 }
 
 // SerializeProof encodes a wiop.Proof into the wire bytes the coordinator

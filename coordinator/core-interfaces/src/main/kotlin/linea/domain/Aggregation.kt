@@ -195,7 +195,7 @@ data class FinalizationSubmittedEvent(
     if (!parentL1RollingHash.contentEquals(other.parentL1RollingHash)) return false
     if (parentL1RollingHashMessageNumber != other.parentL1RollingHashMessageNumber) return false
     if (submissionTimestamp != other.submissionTimestamp) return false
-    if (transactionHash.contentEquals(other.transactionHash)) return false
+    if (!transactionHash.contentEquals(other.transactionHash)) return false
 
     return true
   }
