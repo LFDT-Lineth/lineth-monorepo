@@ -12,9 +12,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSszBlobs_LengthPrefixAtInOrigin(t *testing.T) {
-	ssz := []byte{0xAA, 0xBB, 0xCC}
-	got, err := zkc_r5.NewDataSection(zkc_r5.DefaultINOrigin, ssz)
+func TestDataSection_LengthPrefixAtInOrigin(t *testing.T) {
+	data := []byte{0xAA, 0xBB, 0xCC}
+	got, err := zkc_r5.NewDataSection(zkc_r5.DefaultINOrigin, data)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 
@@ -24,7 +24,7 @@ func TestSszBlobs_LengthPrefixAtInOrigin(t *testing.T) {
 	assert.Equal(t, uint64(3), binary.LittleEndian.Uint64(got[0].Data), "length prefix must encode payload length as LE uint64")
 }
 
-func TestSszBlobs_PayloadAtInOriginPlus8(t *testing.T) {
+func TestDataSection_PayloadAtInOriginPlus8(t *testing.T) {
 	payload := []byte{0xAA, 0xBB, 0xCC}
 	got, err := zkc_r5.NewDataSection(zkc_r5.DefaultINOrigin, payload)
 	require.NoError(t, err)
@@ -35,16 +35,16 @@ func TestSszBlobs_PayloadAtInOriginPlus8(t *testing.T) {
 	assert.Equal(t, payload, got[1].Data, "payload memory blob must contain the payload bytes verbatim")
 }
 
-func TestSszBlobs_EmptySSZ(t *testing.T) {
-	// Empty SSZ: only the 8-byte length memory blob, no payload memory blob.
+func TestDataSection_Empty(t *testing.T) {
+	// Empty data: only the 8-byte length memory blob, no payload memory blob.
 	got, err := zkc_r5.NewDataSection(zkc_r5.DefaultINOrigin, nil)
 	require.NoError(t, err)
-	require.Len(t, got, 1, "empty SSZ must produce exactly one memory blob (length prefix only)")
+	require.Len(t, got, 1, "empty data must produce exactly one memory blob (length prefix only)")
 	assert.Equal(t, zkc_r5.DefaultINOrigin, got[0].Offset, "length prefix memory blob offset must be inOrigin")
-	assert.Equal(t, uint64(0), binary.LittleEndian.Uint64(got[0].Data), "length prefix must be zero for empty SSZ")
+	assert.Equal(t, uint64(0), binary.LittleEndian.Uint64(got[0].Data), "length prefix must be zero for empty data")
 }
 
-func TestNewDataSection_OffsetOverflow(t *testing.T) {
+func TestDataSection_OffsetOverflow(t *testing.T) {
 	_, err := zkc_r5.NewDataSection(math.MaxUint64-4, []byte{0x01})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "data input offset overflow")
