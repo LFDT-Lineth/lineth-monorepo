@@ -5,7 +5,7 @@ go 1.25.7
 require (
 	github.com/LFDT-Lineth/zkc v1.2.25-0.20260724062105-9d6ddad19ab7
 	github.com/consensys/gnark v0.14.1-0.20260219004710-bbfb2f70a565
-	github.com/consensys/gnark-crypto v0.20.2-0.20260727184013-0d62bae233ab
+	github.com/consensys/gnark-crypto v0.20.2-0.20260728224514-500ec11ab077
 	github.com/go-playground/assert/v2 v2.2.0
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
