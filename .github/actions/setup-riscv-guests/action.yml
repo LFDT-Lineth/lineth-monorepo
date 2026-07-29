@@ -19,51 +19,23 @@ runs:
       with:
         version: ${{ steps.zigversion.outputs.version }}
 
-    - name: Install apt crypto dependencies
-      shell: bash
-      run: |
-        sudo apt-get update -qq
-        sudo apt-get install -y --no-install-recommends libsecp256k1-dev libssl-dev build-essential git
-
-    # blst + mcl are not packaged for Ubuntu; build once from pinned tags and cache the artifacts.
-    # Bump the two SHAs here AND in the cache key together.
+    # blst + mcl are not packaged for Ubuntu; `install-native-crypto-deps` builds them from the
+    # pinned tags once and installs into /usr/local — the SAME command a developer runs locally.
+    # Cache /usr/local's result directly so a hit skips straight to a no-op inside that target.
     - name: Cache blst + mcl builds
-      id: crypto-cache
       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
-        path: ~/.crypto-libs
+        path: |
+          /usr/local/lib/libblst.a
+          /usr/local/lib/libmcl.so
+          /usr/local/include/blst.h
+          /usr/local/include/blst_aux.h
+          /usr/local/include/mcl
         key: crypto-libs-blst-e7f90de551e8df682f3cc99067d204d8b90d27ad-mcl-0499298adcfad3bbcebf77f17700ebbe97166060
 
-    - name: Build blst and mcl from source
-      if: steps.crypto-cache.outputs.cache-hit != 'true'
+    - name: Install native crypto deps (blst, mcl)
       shell: bash
-      run: |
-        BLST_SHA=e7f90de551e8df682f3cc99067d204d8b90d27ad   # v0.3.16
-        MCL_SHA=0499298adcfad3bbcebf77f17700ebbe97166060    # v3.06
-        STAGE="$HOME/.crypto-libs"
-        mkdir -p "$STAGE/lib" "$STAGE/include"
-
-        git clone https://github.com/supranational/blst.git "$HOME/blst-src"
-        git -C "$HOME/blst-src" checkout --detach "$BLST_SHA"
-        (cd "$HOME/blst-src" && ./build.sh)
-        cp "$HOME/blst-src/libblst.a" "$STAGE/lib/"
-        cp "$HOME/blst-src/bindings/blst.h" "$HOME/blst-src/bindings/blst_aux.h" "$STAGE/include/"
-
-        git clone https://github.com/herumi/mcl.git "$HOME/mcl-src"
-        git -C "$HOME/mcl-src" checkout --detach "$MCL_SHA"
-        make -C "$HOME/mcl-src" -j"$(nproc)"
-        cp "$HOME/mcl-src/lib/libmcl.so" "$STAGE/lib/"
-        cp -r "$HOME/mcl-src/include/mcl" "$STAGE/include/"
-
-    - name: Install blst and mcl into /usr/local
-      shell: bash
-      run: |
-        sudo cp "$HOME/.crypto-libs/lib/libblst.a" /usr/local/lib/
-        sudo cp "$HOME/.crypto-libs/lib/libmcl.so" /usr/local/lib/
-        sudo rm -f /usr/local/lib/libmcl.a
-        sudo cp "$HOME/.crypto-libs/include/blst.h" "$HOME/.crypto-libs/include/blst_aux.h" /usr/local/include/
-        sudo cp -r "$HOME/.crypto-libs/include/mcl" /usr/local/include/
-        sudo ldconfig
+      run: make -C riscv-guests install-native-crypto-deps
 
     # Zig package fetches (zesu, zesu-zkvm, EF zkevm fixtures) land in each guest's zig-pkg/.
     - name: Cache Zig package fetches

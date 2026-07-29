@@ -43,6 +43,27 @@ runs:
           echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
           echo "${HOME}/.local/share/mise/shims" >> "${GITHUB_PATH}"
 
+      # blst + mcl are not packaged for Ubuntu; `install-native-crypto-deps` (riscv-guests/Makefile)
+      # builds them from the pinned tags once and installs into /usr/local — the SAME command a
+      # developer runs locally, and the same one .github/actions/setup-riscv-guests calls, so there
+      # is one recipe to keep in sync instead of two. The l2-execution guest's native host tools
+      # (l2-execution-wrap, l2-execution-runner) link them via the default `zig build` step this job
+      # also runs, even though the benchmark itself only consumes the freestanding riscv64 ELF.
+      - name: Cache blst + mcl builds
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: |
+            /usr/local/lib/libblst.a
+            /usr/local/lib/libmcl.so
+            /usr/local/include/blst.h
+            /usr/local/include/blst_aux.h
+            /usr/local/include/mcl
+          key: crypto-libs-blst-e7f90de551e8df682f3cc99067d204d8b90d27ad-mcl-0499298adcfad3bbcebf77f17700ebbe97166060
+
+      - name: Install native crypto deps (blst, mcl)
+        shell: bash
+        run: make -C riscv-guests install-native-crypto-deps
+
       - name: Install riscv64-unknown-elf toolchain
         # Install the riscv64-unknown-elf toolchain
         # Use the xpack-dev-tools/riscv-none-elf-gcc-xpack for riscv64-none-elf-gcc
