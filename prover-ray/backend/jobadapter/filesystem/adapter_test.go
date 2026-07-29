@@ -190,6 +190,7 @@ func TestAdapter_SingleBlock_Success(t *testing.T) {
 
 	require.Len(t, mock.jobs, 1)
 	job := mock.jobs[0]
+	assert.Equal(t, strings.TrimSuffix(singleReqName, ".json"), job.ID)
 	assert.Equal(t, backend.ProofTypeL2Execution, job.Type)
 	assert.Equal(t, uint64(1000501), job.StartBlock)
 	assert.Equal(t, uint64(1000501), job.EndBlock)
@@ -324,6 +325,7 @@ func TestAdapter_ForcedTransactions_NotImplemented(t *testing.T) {
 	resp := readFailureResponse(t, root, singleReqName)
 	assert.Equal(t, "failed", resp.Status)
 	assert.Contains(t, resp.Error, "forced transactions")
+	assert.Contains(t, resp.Error, backend.ErrNotImplemented.Error())
 }
 
 // TestAdapter_MultiBlock verifies a multi-block request is rejected (not yet
@@ -356,6 +358,20 @@ func TestAdapter_SkipsInProgress(t *testing.T) {
 	assert.Equal(t, 0, n)
 	assert.Empty(t, mock.jobs)
 	assert.FileExists(t, inProgress, "an .inprogress file must be left untouched")
+}
+
+// TestAdapter_LostClaim verifies processRequest treats a missing request as
+// another worker winning the claim race.
+func TestAdapter_LostClaim(t *testing.T) {
+	mock := &mockProver{}
+	a, root := newAdapter(t, mock)
+
+	handled, err := a.processRequest(context.Background(), singleReqName)
+
+	require.NoError(t, err)
+	assert.False(t, handled)
+	assert.Empty(t, mock.jobs)
+	assert.NoFileExists(t, filepath.Join(root, "responses", singleReqName))
 }
 
 // TestNew_Validation covers New's argument

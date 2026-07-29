@@ -14,6 +14,8 @@ import (
 // guestProgramID is the routing id in the request fixtures.
 const guestProgramID = "0x17d2e0660946012c80c5fe6bbecc2076a6f6f5aa58606efe66a14426d2ffe46f"
 
+const invalidNumber = "not-a-number"
+
 const referenceL2ExecutionRequest = "../../../rollup_spec/src/rollup_spec/prover_io/testdata/getZkL2ExecutionProofV1.request.json"
 
 func readFixture(t *testing.T, name string) []byte {
@@ -80,9 +82,12 @@ func TestDecodeRequest_ReferenceFixture(t *testing.T) {
 	assert.Len(t, req.Payloads[1].ForcedTransactions, 2)
 }
 
-// TestDecodeRequest_Malformed sweeps the envelope error paths: each case breaks
-// one field of the valid single-block request and asserts an error naming it.
-func TestDecodeRequest_Malformed(t *testing.T) {
+// TestDecodeRequest_InvalidRequestShape sweeps the envelope error paths: each
+// case breaks one required field or type in the valid single-block request and
+// asserts an error naming it. Valid forcedTransactions are accepted by the
+// decoder; Runner rejects them later only because the backend does not support
+// proving them yet.
+func TestDecodeRequest_InvalidRequestShape(t *testing.T) {
 	base := readFixture(t, "request_single_block.json")
 
 	pr := func(o map[string]any) map[string]any {
@@ -102,6 +107,14 @@ func TestDecodeRequest_Malformed(t *testing.T) {
 	}
 	rollupExtension := func(o map[string]any) map[string]any {
 		return payload0(o)[rollupExtensionKey].(map[string]any)
+	}
+	validForcedTx := func() map[string]any {
+		return map[string]any{
+			numberKey:      16,
+			deadlineKey:    1000599,
+			signedTxRlpKey: "0x02f86b",
+			acceptanceKey:  forcedTxIncluded,
+		}
 	}
 
 	cases := []struct {
@@ -146,7 +159,7 @@ func TestDecodeRequest_Malformed(t *testing.T) {
 			func(o map[string]any) { delete(pr(o), parentLastProcessedFtxNumberKey) },
 			parentLastProcessedFtxNumberKey},
 		{"BadParentLastProcessedFtxNumber",
-			func(o map[string]any) { pr(o)[parentLastProcessedFtxNumberKey] = "not-a-number" },
+			func(o map[string]any) { pr(o)[parentLastProcessedFtxNumberKey] = invalidNumber },
 			parentLastProcessedFtxNumberKey},
 		{"MissingPayloads",
 			func(o map[string]any) { delete(pr(o), payloadsKey) },
@@ -178,24 +191,67 @@ func TestDecodeRequest_Malformed(t *testing.T) {
 		{"ForcedTransactionsNull",
 			func(o map[string]any) { rollupExtension(o)[forcedTransactionsKey] = nil },
 			forcedTransactionsKey},
-		{"ForcedTransactionBadSignedTx",
+		{"ForcedTransactionMissingNumber",
 			func(o map[string]any) {
-				rollupExtension(o)[forcedTransactionsKey] = []any{map[string]any{
-					numberKey:      16,
-					deadlineKey:    1000599,
-					signedTxRlpKey: "02f86b",
-					acceptanceKey:  forcedTxIncluded,
-				}}
+				tx := validForcedTx()
+				delete(tx, numberKey)
+				rollupExtension(o)[forcedTransactionsKey] = []any{tx}
+			},
+			numberKey},
+		{"ForcedTransactionBadNumber",
+			func(o map[string]any) {
+				tx := validForcedTx()
+				tx[numberKey] = invalidNumber
+				rollupExtension(o)[forcedTransactionsKey] = []any{tx}
+			},
+			numberKey},
+		{"ForcedTransactionMissingDeadline",
+			func(o map[string]any) {
+				tx := validForcedTx()
+				delete(tx, deadlineKey)
+				rollupExtension(o)[forcedTransactionsKey] = []any{tx}
+			},
+			deadlineKey},
+		{"ForcedTransactionBadDeadline",
+			func(o map[string]any) {
+				tx := validForcedTx()
+				tx[deadlineKey] = invalidNumber
+				rollupExtension(o)[forcedTransactionsKey] = []any{tx}
+			},
+			deadlineKey},
+		{"ForcedTransactionMissingSignedTx",
+			func(o map[string]any) {
+				tx := validForcedTx()
+				delete(tx, signedTxRlpKey)
+				rollupExtension(o)[forcedTransactionsKey] = []any{tx}
 			},
 			signedTxRlpKey},
+		{"ForcedTransactionBadSignedTx",
+			func(o map[string]any) {
+				tx := validForcedTx()
+				tx[signedTxRlpKey] = "02f86b"
+				rollupExtension(o)[forcedTransactionsKey] = []any{tx}
+			},
+			signedTxRlpKey},
+		{"ForcedTransactionMissingAcceptance",
+			func(o map[string]any) {
+				tx := validForcedTx()
+				delete(tx, acceptanceKey)
+				rollupExtension(o)[forcedTransactionsKey] = []any{tx}
+			},
+			acceptanceKey},
+		{"ForcedTransactionAcceptanceNotString",
+			func(o map[string]any) {
+				tx := validForcedTx()
+				tx[acceptanceKey] = 123
+				rollupExtension(o)[forcedTransactionsKey] = []any{tx}
+			},
+			acceptanceKey},
 		{"ForcedTransactionBadAcceptance",
 			func(o map[string]any) {
-				rollupExtension(o)[forcedTransactionsKey] = []any{map[string]any{
-					numberKey:      16,
-					deadlineKey:    1000599,
-					signedTxRlpKey: "0x02f86b",
-					acceptanceKey:  "NOPE",
-				}}
+				tx := validForcedTx()
+				tx[acceptanceKey] = "NOPE"
+				rollupExtension(o)[forcedTransactionsKey] = []any{tx}
 			},
 			acceptanceKey},
 		{"ExecutionRequestsNonEmpty",
@@ -220,7 +276,7 @@ func TestDecodeRequest_Malformed(t *testing.T) {
 			func(o map[string]any) { o[guestProgramIDKey] = "0x1234" },
 			guestProgramIDKey},
 		{"ChainIDNotParseable",
-			func(o map[string]any) { chainConfig(o)[chainIDKey] = "not-a-number" },
+			func(o map[string]any) { chainConfig(o)[chainIDKey] = invalidNumber },
 			chainIDKey},
 		{"MissingExecutionPayload",
 			func(o map[string]any) { delete(npr(o), executionPayloadKey) },

@@ -118,6 +118,7 @@ func TestRunner_RunForcedTransactionsNotImplemented(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, "forced-tx-job", failure.JobID)
 	assert.Contains(t, failure.Error, "forced transactions")
+	assert.Contains(t, failure.Error, backend.ErrNotImplemented.Error())
 }
 
 func TestRunner_RunProverFailure(t *testing.T) {
@@ -135,6 +136,23 @@ func TestRunner_RunProverFailure(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, "prove-fail-job", failure.JobID)
 	assert.Contains(t, failure.Error, "prove boom")
+}
+
+func TestRunner_RunProverFailureWithoutError(t *testing.T) {
+	mock := &mockProver{result: func(job backend.Job) backend.Result {
+		return backend.Result{JobID: job.ID, Status: backend.ResultStatusFailed}
+	}}
+	runner, err := NewRunner(mock, testProverVersion)
+	require.NoError(t, err)
+
+	result := runner.Run(context.Background(), "prove-fail-job", readFixture(t, "request_single_block.json"))
+
+	require.False(t, result.ProofSucceeded)
+	require.Len(t, mock.jobs, 1)
+	failure, ok := result.ResponseBody.(failureResponseBody)
+	require.True(t, ok)
+	assert.Equal(t, "prove-fail-job", failure.JobID)
+	assert.Contains(t, failure.Error, "prover returned status failed")
 }
 
 func TestNewRunner_Validation(t *testing.T) {
