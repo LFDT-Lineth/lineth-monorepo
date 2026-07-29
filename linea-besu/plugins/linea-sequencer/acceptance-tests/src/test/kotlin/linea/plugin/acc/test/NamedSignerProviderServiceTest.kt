@@ -13,6 +13,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
+import java.net.URLClassLoader
 
 @Tag("AcceptanceTest")
 class NamedSignerProviderServiceTest : LineaPluginTestBase() {
@@ -31,5 +32,8 @@ class NamedSignerProviderServiceTest : LineaPluginTestBase() {
     assertThat(NamedSignerProviderConsumerTestPlugin.providerClassLoader)
       .isNotNull()
       .isNotSameAs(NamedSignerProviderService::class.java.classLoader)
+      .isInstanceOf(URLClassLoader::class.java)
+    assertThat((NamedSignerProviderConsumerTestPlugin.providerClassLoader as URLClassLoader).urLs)
+      .anyMatch { it.toString().contains("signer-test-plugin") }
   }
 }

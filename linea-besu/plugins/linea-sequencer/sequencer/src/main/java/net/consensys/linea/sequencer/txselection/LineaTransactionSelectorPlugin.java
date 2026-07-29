@@ -174,11 +174,16 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
     }
     String derivedAddress = Numeric.prependHexPrefix(Keys.getAddress(new BigInteger(1, publicKey)));
     if (!derivedAddress.equalsIgnoreCase(config.signerAddress())) {
+      final String signerIdentifier =
+          switch (config.signerType()) {
+            case WEB3SIGNER -> config.signerKeyId();
+            case CUSTOM -> config.signerName();
+          };
       throw new IllegalArgumentException(
           "Configured liveness signer address does not match "
               + config.signerType()
               + " signer '"
-              + (config.signerName() != null ? config.signerName() : config.signerKeyId())
+              + signerIdentifier
               + "'");
     }
     return signer;
