@@ -147,15 +147,19 @@ func NewDataSection(inOrigin uint64, data []byte) ([]ElfSection, error) {
 // guestSections is the ELF's loadable sections, and memory is any additional
 // memory blobs (e.g. the framed StatelessInput).
 //
-// The caller must ensure that the guestSections and memory slices are sorted by
-// offset and that the blobs do not overlap. It is ensured by calling
-// [PrepareInput] directly on the guest ELF and raw input data.
+// It sorts the combined sections by offset without mutating either input slice.
+// Callers must ensure that the sections do not overlap.
 func EncodeGuestAndMemoryForZkc(guestSections GuestProgramSections, memory []ElfSection) map[string][]byte {
 	entryAndCount := binary.BigEndian.AppendUint64(make([]byte, 0, 16), guestSections.EntryPoint)
 	entryAndCount = binary.BigEndian.AppendUint64(entryAndCount, uint64(len(guestSections.Sections)+len(memory)))
 
 	var dataLen int
-	allSections := append(guestSections.Sections, memory...)
+	allSections := make([]ElfSection, 0, len(guestSections.Sections)+len(memory))
+	allSections = append(allSections, guestSections.Sections...)
+	allSections = append(allSections, memory...)
+	sort.SliceStable(allSections, func(i, j int) bool {
+		return allSections[i].Offset < allSections[j].Offset
+	})
 	for _, b := range allSections {
 		dataLen += len(b.Data)
 	}

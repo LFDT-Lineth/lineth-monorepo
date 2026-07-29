@@ -78,10 +78,10 @@ func TestEncodeInputs_OffsetAndSizePairs(t *testing.T) {
 
 	got := inputs["blobs_offset_and_size"]
 	require.Len(t, got, 32, "blobs_offset_and_size must be one 16-byte pair per blob")
-	assert.Equal(t, uint64(0x00800000), binary.BigEndian.Uint64(got[0:8]))
-	assert.Equal(t, uint64(0x1234), binary.BigEndian.Uint64(got[8:16]))
-	assert.Equal(t, uint64(0x2000), binary.BigEndian.Uint64(got[16:24]))
-	assert.Equal(t, uint64(1), binary.BigEndian.Uint64(got[24:32]))
+	assert.Equal(t, uint64(0x2000), binary.BigEndian.Uint64(got[0:8]))
+	assert.Equal(t, uint64(1), binary.BigEndian.Uint64(got[8:16]))
+	assert.Equal(t, uint64(0x00800000), binary.BigEndian.Uint64(got[16:24]))
+	assert.Equal(t, uint64(0x1234), binary.BigEndian.Uint64(got[24:32]))
 }
 
 func TestEncodeInputs_DataConcatenated(t *testing.T) {
@@ -91,6 +91,27 @@ func TestEncodeInputs_DataConcatenated(t *testing.T) {
 	}
 	inputs := zkc_r5.EncodeGuestAndMemoryForZkc(zkc_r5.GuestProgramSections{}, memBlobs)
 	assert.Equal(t, []byte{0xAA, 0xBB, 0xCC}, inputs["blobs_data"], "blobs_data must be all blob bytes concatenated in order")
+}
+
+func TestEncodeInputs_SortsCombinedSectionsWithoutMutatingInputs(t *testing.T) {
+	sections := make([]zkc_r5.ElfSection, 2, 4)
+	sections[0] = zkc_r5.ElfSection{Offset: 0x3000, Data: []byte{0x03}}
+	sections[1] = zkc_r5.ElfSection{Offset: 0x1000, Data: []byte{0x01}}
+	guestSections := zkc_r5.GuestProgramSections{
+		Sections: sections,
+	}
+	memory := []zkc_r5.ElfSection{
+		{Offset: 0x2000, Data: []byte{0x02}},
+		{Offset: 0x4000, Data: []byte{0x04}},
+	}
+
+	inputs := zkc_r5.EncodeGuestAndMemoryForZkc(guestSections, memory)
+
+	assert.Equal(t, []byte{0x01, 0x02, 0x03, 0x04}, inputs["blobs_data"])
+	assert.Equal(t, uint64(0x3000), guestSections.Sections[0].Offset)
+	assert.Equal(t, uint64(0x1000), guestSections.Sections[1].Offset)
+	assert.Equal(t, uint64(0x2000), memory[0].Offset)
+	assert.Equal(t, uint64(0x4000), memory[1].Offset)
 }
 
 func TestElfBlobs_ExtractsSectionAtCorrectOffset(t *testing.T) {
