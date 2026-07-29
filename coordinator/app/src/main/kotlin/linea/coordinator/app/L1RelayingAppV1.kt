@@ -51,7 +51,7 @@ import kotlin.time.Clock
  *   - submit blobs
  *   - submit aggregations/finalizations
  */
-class L1RelayingAppV1(
+open class L1RelayingAppV1(
   private val configs: CoordinatorConfig,
   // Note/Todo: l1SubmissionConfig should be the only necessary one, however requires deeper refactor
   private val l1SubmissionConfig: L1SubmissionConfig = configs.l1Submission!!,
