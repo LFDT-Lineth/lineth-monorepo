@@ -39,6 +39,9 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
     var imm12:Imm12
     var rs1:Register
     var rd:Register
+    var tmpWord1:Word
+    var tmpWord2:Word
+    var tmpDWord1:DoubleWord
 
     imm12::rs1::funct3::rd = instruction_parameters
 
@@ -61,37 +64,38 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
                 case FUNCT3_LB: {
                     printf "LB "
                     print_i_memory_operands(rd, rs1, signext_imm12_64)
-                    registers[rd] = sgn_extension_u8_u64(read_8(rs1_plus_signext_imm12))
+                    tmpDWord1 = sgn_extension_u8_u64(read_8(rs1_plus_signext_imm12))
                 }
                 case FUNCT3_LH: {
                     printf "LH "
                     print_i_memory_operands(rd, rs1, signext_imm12_64)
-                    registers[rd] = sgn_extension_u16_u64(read_16(rs1_plus_signext_imm12))
+                    tmpDWord1 = sgn_extension_u16_u64(read_16(rs1_plus_signext_imm12))
                 }
                 case FUNCT3_LW: {
                     printf "LW "
                     print_i_memory_operands(rd, rs1, signext_imm12_64)
-                    registers[rd] = sgn_extension_u32_u64(read_32(rs1_plus_signext_imm12))
+                    tmpWord1 = read_32(rs1_plus_signext_imm12)
+                    tmpDWord1 = sgn_extension_u32_u64(tmpWord1)
                 }
                 case FUNCT3_LBU: {
                     printf "LBU "
                     print_i_memory_operands(rd, rs1, signext_imm12_64)
-                    registers[rd] = read_8(rs1_plus_signext_imm12) as DoubleWord
+                    tmpDWord1 = read_8(rs1_plus_signext_imm12) as DoubleWord
                 }
                 case FUNCT3_LHU: {
                     printf "LHU "
                     print_i_memory_operands(rd, rs1, signext_imm12_64)
-                    registers[rd] = read_16(rs1_plus_signext_imm12) as DoubleWord
+                    tmpDWord1 = read_16(rs1_plus_signext_imm12) as DoubleWord
                 }
                 case FUNCT3_LWU: {
                     printf "LWU "
                     print_i_memory_operands(rd, rs1, signext_imm12_64)
-                    registers[rd] = read_32(rs1_plus_signext_imm12) as DoubleWord
+                    tmpDWord1 = read_32(rs1_plus_signext_imm12) as DoubleWord
                 }
                 case FUNCT3_LD: {
                     printf "LD "
                     print_i_memory_operands(rd, rs1, signext_imm12_64)
-                    registers[rd] = read_64(rs1_plus_signext_imm12) as DoubleWord
+                    tmpDWord1 = read_64(rs1_plus_signext_imm12) as DoubleWord
                 }
                 default: {
                     printf "[ERROR] Unsupported LOAD instruction of I-Type\n"
@@ -99,6 +103,8 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
                     fail
                 }
             }
+            //
+            registers[rd] = tmpDWord1
         }
 
         // ===================================
@@ -115,31 +121,33 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
                 case FUNCT3_ADDI: {
                     printf "ADDI "
                     print_i_operands(rd, rs1, signext_imm12_64)
-                    registers[rd] = rs1_plus_signext_imm12
+                    tmpDWord1 = rs1_plus_signext_imm12
                 }
                 case FUNCT3_SLLI: {
                     funct6::uimm6 = imm12
                     if funct6 == FUNCT6_SLLI {
                         printf "SLLI "
                         print_i_shift6_operands(rd, rs1, uimm6)
-                        registers[rd] = registers[rs1] << uimm6
+                        tmpDWord1 = registers[rs1] << uimm6
+                    } else {
+                        return
                     }
                 }
                 case FUNCT3_SLTI: {
                     printf "SLTI "
                     print_i_operands(rd, rs1, signext_imm12_64)
-                    registers[rd] = signed_LT(registers[rs1], signext_imm12_64) as DoubleWord
+                    tmpDWord1 = signed_LT(registers[rs1], signext_imm12_64) as DoubleWord
                 }
                 case FUNCT3_SLTIU: {
                     printf "SLTIU "
                     print_i_operands(rd, rs1, signext_imm12_64)
                     // Warn: this is an unsigned comparison (even if imm12 is SGN_EXT)
-                    registers[rd] = registers[rs1]<signext_imm12_64 ? 1:0
+                    tmpDWord1 = registers[rs1]<signext_imm12_64 ? 1:0
                 }
                 case FUNCT3_XORI: {
                     printf "XORI "
                     print_i_operands(rd, rs1, signext_imm12_64)
-                    registers[rd] = registers[rs1] ^ signext_imm12_64
+                    tmpDWord1 = registers[rs1] ^ signext_imm12_64
                 }
                 case FUNCT3_SRLI: {
                     funct6::uimm6 = imm12
@@ -148,26 +156,35 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
                         case FUNCT6_SRLI: {
                             printf "SRLI "
                             print_i_shift6_operands(rd, rs1, uimm6)
-                            registers[rd] = registers[rs1] >> uimm6
+                            tmpDWord1 = registers[rs1] >> uimm6
                         }
                         case FUNCT6_SRAI: {
                             printf "SRAI "
                             print_i_shift6_operands(rd, rs1, uimm6)
-                            registers[rd] = _ashr_u64(registers[rs1], uimm6)
+                            tmpDWord1 = _ashr_u64(registers[rs1], uimm6)
+                        }
+                        //
+                        default: {
+                            fail
                         }
                     }
                 }
                 case FUNCT3_ORI: {
                     printf "ORI "
                     print_i_operands(rd, rs1, signext_imm12_64)
-                    registers[rd] = registers[rs1] | signext_imm12_64
+                    tmpDWord1 = registers[rs1] | signext_imm12_64
                 }
                 case FUNCT3_ANDI: {
                     printf "ANDI "
                     print_i_operands(rd, rs1, signext_imm12_64)
-                    registers[rd] = registers[rs1] & signext_imm12_64
+                    tmpDWord1 = registers[rs1] & signext_imm12_64
+                }
+                default: {
+                    fail
                 }
             }
+            //
+            registers[rd] = tmpDWord1
         }
 
         // ===================================================
@@ -185,13 +202,18 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
                 case FUNCT3_ADDIW: {
                     printf "ADDIW "
                     print_i_operands(rd, rs1, signext_imm12_64)
-                    registers[rd] = sgn_extension_u32_u64((rs1_plus_signext_imm12 & MAX_UINT_32_AS_U64) as Word)
+                    tmpWord1 = (rs1_plus_signext_imm12 & MAX_UINT_32_AS_U64) as Word
+                    tmpDWord1 = sgn_extension_u32_u64(tmpWord1)
                 }
                 case FUNCT3_SLLIW: {
                     if funct7 == FUNCT7_SLLIW {
                         printf "SLLIW "
                         print_i_shift5_operands(rd, rs1, uimm5)
-                        registers[rd] = sgn_extension_u32_u64(((registers[rs1] & MAX_UINT_32_AS_U64) as Word) << uimm5)
+                        tmpWord2 = ((registers[rs1] & MAX_UINT_32_AS_U64) as Word)
+                        tmpWord1 = tmpWord2 << uimm5
+                        tmpDWord1 = sgn_extension_u32_u64(tmpWord1)
+                    } else {
+                        return
                     }
                 }
                 case FUNCT3_SRLIW: {
@@ -200,16 +222,27 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
                         case FUNCT7_SRLIW: {
                             printf "SRLIW "
                             print_i_shift5_operands(rd, rs1, uimm5)
-                            registers[rd] = sgn_extension_u32_u64(((registers[rs1] & MAX_UINT_32_AS_U64) as Word) >> uimm5)
+                            tmpWord2 = ((registers[rs1] & MAX_UINT_32_AS_U64) as Word)
+                            tmpWord1 = tmpWord2 >> uimm5
+                            tmpDWord1 = sgn_extension_u32_u64(tmpWord1)
                         }
                         case FUNCT7_SRAIW: {
                             printf "SRAIW "
                             print_i_shift5_operands(rd, rs1, uimm5)
-                            registers[rd] = sgn_extension_u32_u64(_ashr_u32(registers[rs1], uimm5))
+                            tmpWord1 = _ashr_u32(registers[rs1], uimm5)
+                            tmpDWord1 = sgn_extension_u32_u64(tmpWord1)
+                        }
+                        default: {
+                            fail
                         }
                     }
                 }
+                default: {
+                    fail
+                }
             }
+            //
+            registers[rd] = tmpDWord1
         }
 
         // =================
@@ -293,3 +326,4 @@ fn process_syscall<registers, ram>(pc:Address) -> (new_pc:Address) {
         }
     }
 }
+

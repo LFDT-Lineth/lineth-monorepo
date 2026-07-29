@@ -1,75 +1,49 @@
 include "../memory.zkc"
 include "../utils/constants.zkc"
 
-// We use ram with word size of 32 bits.
-// To write a single byte to RAM at a byte address (address), we need to:
-// 1. Calculate the word index
-// word_idx = byte_address / word_size_in_bytes, here 4
-// 2. Calculate the offset
-// offset = address % word_size_in_bytes, here 4
-// 3. Load the word from RAM at the calculated word index word_idx
-// 4. Mask the byte(s) value(s) we want to write over
-// 5. Insert the byte(s) value(s) we want to write into the masked word
-// 6. Write the word back to RAM at the calculated word index word_idx
-
 fn write_8<ram>(address:Address, value:u8) -> () {
-    var word_idx:Address = address / 4
-    var offset:Address = address % 4
-    switch offset {
+    var boffset:u2
+    var woffset:u62
+    var tmp0:u8, tmp1:u8, tmp2:u8, tmp3:u8
+    var word:u32
+    //
+    woffset::boffset = address
+    // Read four bytes
+    tmp3::tmp2::tmp1::tmp0 = ram[woffset as u64]
+    //
+    switch boffset {
         case 0: {
-            var hi:u24
-            var lo:u8
-            hi::lo = ram[word_idx]
-            ram[word_idx] = hi::value
-            return
+            word = tmp3::tmp2::tmp1::value
         }
         case 1: {
-            var hi:u16
-            var mid:u8
-            var lo:u8
-            hi::mid::lo = ram[word_idx]
-            ram[word_idx] = hi::value::lo
-            return
+            word = tmp3::tmp2::value::tmp0
         }
         case 2: {
-            var hi:u8
-            var mid:u8
-            var lo:u16
-            hi::mid::lo = ram[word_idx]
-            ram[word_idx] = hi::value::lo
-            return
+            word = tmp3::value::tmp1::tmp0
         }
         default: {
-            // Case 3 and default case are collapse to reduce the number of instructions. 
-            // Default case cannot happen as offset is the result of % 4.
-            var hi:u8
-            var lo:u24
-            hi::lo = ram[word_idx]
-            ram[word_idx] = value::lo
-            return
+            word = value::tmp2::tmp1::tmp0
         }
     }
+    //
+    ram[woffset as u64] = word
 }
 
 fn write_16<ram>(address:Address, value:u16) -> () {
-    var word_idx:Address
-    var offset:Address = address % 4
-    switch offset {
+    var boffset:u2
+    var woffset:u62
+    var hi:u16, lo:u16
+    //
+    woffset::boffset = address
+    //
+    switch boffset {
         case 0: {
-            word_idx = address / 4
-            var hi:u16
-            var lo:u16
-            hi::lo = ram[word_idx]
-            ram[word_idx] = hi::value
-            return
+            hi::lo = ram[woffset as u64]
+            ram[woffset as u64] = hi::value
         }
         case 2: {
-            word_idx = address / 4
-            var hi:u16
-            var lo:u16
-            hi::lo = ram[word_idx]
-            ram[word_idx] = value::lo
-            return
+            hi::lo = ram[woffset as u64]
+            ram[woffset as u64] = value::lo
         }
         default: {
             // Case 1, 3 and default case are collapse to reduce the number of instructions. 
@@ -79,49 +53,44 @@ fn write_16<ram>(address:Address, value:u16) -> () {
             b1::b0 = value
             write_8(address, b0)
             write_8(address + 1, b1)
-            return
         }
     }
 }
 
 fn write_32<ram>(address:Address, value:u32) -> () {
-    var word_idx:Address = address / 4
-    var offset:Address = address % 4
-    switch offset {
-        case 0: {
-            ram[word_idx] = value
-            return
-        }
-        default: {
-            var lo:u16
-            var hi:u16
-            hi::lo = value
-            write_16(address, lo)
-            write_16(address + 2, hi)
-            return
-        }
+    var boffset:u2
+    var woffset:u62
+    //
+    woffset::boffset = address
+    // check for aligned write
+    if boffset == 0 {
+        ram[woffset as u64] = value
+        return
     }
+    // unaligned case
+    var lo:u16, hi:u16
+    // decompose value
+    hi::lo = value
+    // write limbs
+    write_16(address, lo)
+    write_16(address + 2, hi)
 }
 
 fn write_64<ram>(address:Address, value:u64) -> () {
-    var word_idx:Address = address / 4
-    var offset:Address = address % 4
-    switch offset {
-        case 0: {
-            var lo:u32
-            var hi:u32
-            hi::lo = value
-            ram[word_idx] = lo
-            ram[word_idx + 1] = hi
-            return
-        }
-        default: {
-            var lo:u32
-            var hi:u32
-            hi::lo = value
-            write_32(address, lo)
-            write_32(address + 4, hi)
-            return
-        }
+    var boffset:u2
+    var woffset:u62
+    var lo:u32, hi:u32
+    // decompose value
+    hi::lo = value
+    // decompose address
+    woffset::boffset = address
+    // check for aligned write
+    if boffset == 0 {
+        ram[woffset as u64] = lo
+        ram[(woffset + 1) as u64] = hi
+        return
     }
+    // unaligned case
+    write_32(address, lo)
+    write_32(address + 4, hi)
 }
