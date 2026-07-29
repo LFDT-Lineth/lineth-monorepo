@@ -32,6 +32,7 @@ jobs:
         uses: ./.github/actions/setup-zig
         with:
           version: '0.16.0'
+          dependency-hash-paths: arithmetization/src/test/zig/build.zig.zon
 
       - name: Install GNU time
         run: sudo apt-get update && sudo apt-get install -y time

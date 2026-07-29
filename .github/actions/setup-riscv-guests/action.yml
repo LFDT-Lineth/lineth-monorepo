@@ -18,6 +18,7 @@ runs:
       uses: ./.github/actions/setup-zig
       with:
         version: ${{ steps.zigversion.outputs.version }}
+        dependency-hash-paths: riscv-guests/*/build.zig.zon
 
     - name: Install apt crypto dependencies
       shell: bash
