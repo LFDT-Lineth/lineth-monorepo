@@ -56,7 +56,7 @@ func TestCore_BuildInputs_MatchesBuildZkcInputs(t *testing.T) {
 	fromCore, err := c.buildInputs(Job{Payload: ssz})
 	require.NoError(t, err)
 
-	fromFull, err := zkc_r5.PrepareInput(minimal_elf.MinimalElfProgram, ssz, zkc_r5.DefaultINOrigin)
+	fromFull, err := zkc_r5.PrepareInput(minimal_elf.MinimalElfProgram, ssz)
 	require.NoError(t, err)
 
 	assert.Equal(t, fromFull, fromCore, "precomputed path must produce identical output to buildZkcInputs")
@@ -121,7 +121,7 @@ func TestNew(t *testing.T) {
 	ssz := []byte{0xAA, 0xBB}
 	fromCore, err := c.buildInputs(Job{Payload: ssz})
 	require.NoError(t, err)
-	fromFull, err := zkc_r5.PrepareInput(minimal_elf.MinimalElfProgram, ssz, zkc_r5.DefaultINOrigin)
+	fromFull, err := zkc_r5.PrepareInput(minimal_elf.MinimalElfProgram, ssz)
 	require.NoError(t, err)
 	assert.Equal(t, fromFull, fromCore)
 }

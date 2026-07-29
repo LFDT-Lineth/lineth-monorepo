@@ -44,9 +44,8 @@ func TestSszBlobs_EmptySSZ(t *testing.T) {
 	assert.Equal(t, uint64(0), binary.LittleEndian.Uint64(got[0].Data), "length prefix must be zero for empty SSZ")
 }
 
-func TestBuildZkcInputs_SSZOffsetOverflow(t *testing.T) {
-	elfBytes := minimal_elf.Make(minimal_elf.DefaultEntryPoint, minimal_elf.DefaultSectionAddr, minimal_elf.ValidSectionData)
-	_, err := zkc_r5.PrepareInput(elfBytes, []byte{0x01}, math.MaxUint64-4)
+func TestNewDataSection_OffsetOverflow(t *testing.T) {
+	_, err := zkc_r5.NewDataSection(math.MaxUint64-4, []byte{0x01})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "data input offset overflow")
 	assert.Contains(t, err.Error(), "in_origin=0xfffffffffffffffb")
@@ -116,7 +115,7 @@ func TestElfBlobs_InvalidELFReturnsError(t *testing.T) {
 func TestBuildZkcInputs_ReturnsThreeKeys(t *testing.T) {
 	// These three key names are declared in RISCV-ZKC.bin's main.zkc. A name
 	// mismatch causes a silent no-op when the prover loads inputs.
-	inputs, err := zkc_r5.PrepareInput(minimal_elf.MinimalElfProgram, []byte{0x01, 0x02}, zkc_r5.DefaultINOrigin)
+	inputs, err := zkc_r5.PrepareInput(minimal_elf.MinimalElfProgram, []byte{0x01, 0x02})
 	require.NoError(t, err)
 
 	assert.Contains(t, inputs, "entry_point_and_blobs_count")
@@ -133,7 +132,7 @@ func TestBuildZkcInputs_NoLoadableSegments(t *testing.T) {
 	// (uint32 LE). Rewrite PT_LOAD (1) to PT_NOTE (4).
 	binary.LittleEndian.PutUint32(elfBytes[64:68], 4)
 
-	_, err := zkc_r5.PrepareInput(elfBytes, []byte{0x01}, zkc_r5.DefaultINOrigin)
+	_, err := zkc_r5.PrepareInput(elfBytes, []byte{0x01})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no loadable sections")
 }
@@ -144,7 +143,7 @@ func TestBuildZkcInputs_LoadableSegmentFileSizeExceedsMemSize(t *testing.T) {
 	binary.LittleEndian.PutUint64(elfBytes[64+32:64+40], 2)
 	binary.LittleEndian.PutUint64(elfBytes[64+40:64+48], 1)
 
-	_, err := zkc_r5.PrepareInput(elfBytes, []byte{0x01}, zkc_r5.DefaultINOrigin)
+	_, err := zkc_r5.PrepareInput(elfBytes, []byte{0x01})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "file size larger than memory size")
 }
@@ -155,7 +154,7 @@ func TestBuildZkcInputs_LoadableSegmentAddressOverflow(t *testing.T) {
 	binary.LittleEndian.PutUint64(elfBytes[64+16:64+24], math.MaxUint64-1)
 	binary.LittleEndian.PutUint64(elfBytes[64+40:64+48], 4)
 
-	_, err := zkc_r5.PrepareInput(elfBytes, []byte{0x01}, zkc_r5.DefaultINOrigin)
+	_, err := zkc_r5.PrepareInput(elfBytes, []byte{0x01})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "segment address overflow")
 }
@@ -168,7 +167,7 @@ func TestBuildZkcInputs_SectionAddressOverflow(t *testing.T) {
 	binary.LittleEndian.PutUint64(elfBytes[textSection+16:textSection+24], math.MaxUint64-1)
 	binary.LittleEndian.PutUint64(elfBytes[textSection+32:textSection+40], 4)
 
-	_, err := zkc_r5.PrepareInput(elfBytes, []byte{0x01}, zkc_r5.DefaultINOrigin)
+	_, err := zkc_r5.PrepareInput(elfBytes, []byte{0x01})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "section .text address overflow")
 }
@@ -181,7 +180,7 @@ func TestBuildZkcInputs_SectionShortRead(t *testing.T) {
 	binary.LittleEndian.PutUint64(elfBytes[textSection+24:textSection+32], uint64(len(elfBytes)-2))
 	binary.LittleEndian.PutUint64(elfBytes[textSection+32:textSection+40], 4)
 
-	_, err := zkc_r5.PrepareInput(elfBytes, []byte{0x01}, zkc_r5.DefaultINOrigin)
+	_, err := zkc_r5.PrepareInput(elfBytes, []byte{0x01})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "short read for section .text")
 }

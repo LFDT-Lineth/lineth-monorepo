@@ -31,14 +31,13 @@ type ElfSection struct {
 //   - "blobs_data"
 //
 // guestElfBytes is the raw guest ELF. guestInputData is the input data the
-// guest reads at _in_start. guestInputDataOrigin is the guest RAM address where
-// the input is placed (use [DefaultINOrigin]).
-func PrepareInput(guestElfBytes, guestInputData []byte, guestInputDataOrigin uint64) (map[string][]byte, error) {
+// guest reads at _in_start, placed at [DefaultINOrigin].
+func PrepareInput(guestElfBytes, guestInputData []byte) (map[string][]byte, error) {
 	programSections, err := LoadGuestElf(bytes.NewReader(guestElfBytes))
 	if err != nil {
 		return nil, err
 	}
-	dataSections, err := NewDataSection(guestInputDataOrigin, guestInputData)
+	dataSections, err := NewDataSection(DefaultINOrigin, guestInputData)
 	if err != nil {
 		return nil, err
 	}
