@@ -61,6 +61,13 @@ func readResponse(t *testing.T, root, name string) Response {
 	return resp
 }
 
+func writeRequestObject(t *testing.T, root, name string, obj map[string]any) {
+	t.Helper()
+	raw, err := json.Marshal(obj)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(root, "requests", name), raw, 0o600))
+}
+
 // TestAdapter_SingleBlock_Success is the happy path: a single-block request is
 // decoded, proved, its response written, and the request archived.
 func TestAdapter_SingleBlock_Success(t *testing.T) {
@@ -146,6 +153,36 @@ func TestAdapter_MalformedRequest(t *testing.T) {
 	resp := readResponse(t, root, "bad.json")
 	assert.Equal(t, "failed", resp.Status)
 	assert.FileExists(t, filepath.Join(root, "requests-done", "bad.json.failed"))
+}
+
+// TestAdapter_ForcedTransactions_NotImplemented verifies that the adapter does
+// not silently drop rollupExtension.forcedTransactions while the backend has no
+// field for them yet.
+func TestAdapter_ForcedTransactions_NotImplemented(t *testing.T) {
+	mock := &mockProver{}
+	a, root := newAdapter(t, mock)
+
+	var obj map[string]any
+	require.NoError(t, json.Unmarshal(readFixture(t, "request_single_block.json"), &obj))
+	payload := obj[proofRequestKey].(map[string]any)[payloadsKey].([]any)[0].(map[string]any)
+	payload[rollupExtensionKey].(map[string]any)[forcedTransactionsKey] = []any{
+		map[string]any{
+			numberKey:      16,
+			deadlineKey:    1000599,
+			signedTxRlpKey: "0x02f86b",
+			acceptanceKey:  forcedTxIncluded,
+		},
+	}
+	writeRequestObject(t, root, singleReqName, obj)
+
+	n, err := a.processOnce(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, 1, n)
+	assert.Empty(t, mock.jobs, "forced transactions must not be dropped before proving")
+
+	resp := readResponse(t, root, singleReqName)
+	assert.Equal(t, "failed", resp.Status)
+	assert.Contains(t, resp.Error, "forced transactions")
 }
 
 // TestAdapter_MultiBlock verifies a multi-block request is rejected (not yet

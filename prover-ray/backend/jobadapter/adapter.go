@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -194,6 +195,12 @@ func (a *Adapter) run(ctx context.Context, name, claimed string) (Response, bool
 	}
 
 	payload := req.Payloads[0]
+	if len(payload.ForcedTransactions) != 0 {
+		return failureResponse(id, fmt.Errorf(
+			"forced transactions are not supported (got %d): %w",
+			len(payload.ForcedTransactions), backend.ErrNotImplemented)), false
+	}
+
 	result := a.prover.Prove(ctx, backend.Job{
 		ID:         id,
 		Type:       backend.ProofTypeL2Execution,
@@ -202,7 +209,11 @@ func (a *Adapter) run(ctx context.Context, name, claimed string) (Response, bool
 		Payload:    payload.FramedSSZ,
 	})
 	if result.Status != backend.ResultStatusOK {
-		return failureResponse(id, result.Err), false
+		err := result.Err
+		if err == nil {
+			err = fmt.Errorf("prover returned status %s", result.Status)
+		}
+		return failureResponse(id, err), false
 	}
 	return Response{
 		JobID:    id,
@@ -224,9 +235,43 @@ func (a *Adapter) writeResponse(name string, resp Response) error {
 	if err != nil {
 		return fmt.Errorf("jobadapter: encoding response for %s: %w", name, err)
 	}
-	if err := os.WriteFile(filepath.Join(a.responsesDir(), name), data, filePerm); err != nil {
+	if err := writeFileAtomic(filepath.Join(a.responsesDir(), name), data, filePerm); err != nil {
 		return fmt.Errorf("jobadapter: writing response for %s: %w", name, err)
 	}
+	return nil
+}
+
+func writeFileAtomic(path string, data []byte, perm fs.FileMode) error {
+	dir := filepath.Dir(path)
+	base := filepath.Base(path)
+
+	tmp, err := os.CreateTemp(dir, "."+base+".tmp-*")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	keepTemp := false
+	defer func() {
+		if !keepTemp {
+			_ = os.Remove(tmpName)
+		}
+	}()
+
+	if err := tmp.Chmod(perm); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(tmpName, path); err != nil {
+		return err
+	}
+	keepTemp = true
 	return nil
 }
 

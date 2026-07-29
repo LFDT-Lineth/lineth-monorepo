@@ -20,14 +20,44 @@ const (
 	chainIDKey        = "chainId"
 	forkNameKey       = "forkName"
 	payloadsKey       = "payloads"
+
+	proofRequestKey        = "proofRequest"
+	chainConfigKey         = "chainConfig"
+	statelessInputKey      = "statelessInput"
+	newPayloadRequestKey   = "newPayloadRequest"
+	executionPayloadKey    = "executionPayload"
+	executionRequestsKey   = "executionRequests"
+	rollupExtensionKey     = "rollupExtension"
+	forcedTransactionsKey  = "forcedTransactions"
+	blockNumberKey         = "blockNumber"
+	numberKey              = "number"
+	deadlineKey            = "deadline"
+	signedTxRlpKey         = "signedTxRlp"
+	acceptanceKey          = "acceptance"
+	guestProgramIDByteSize = 32
+
+	forcedTxIncluded            = "INCLUDED"
+	forcedTxBadNonce            = "BAD_NONCE"
+	forcedTxBadBalance          = "BAD_BALANCE"
+	forcedTxFilteredAddressFrom = "FILTERED_ADDRESS_FROM"
+	forcedTxFilteredAddressTo   = "FILTERED_ADDRESS_TO"
 )
+
+var validForcedTransactionAcceptances = map[string]struct{}{
+	forcedTxIncluded:            {},
+	forcedTxBadNonce:            {},
+	forcedTxBadBalance:          {},
+	forcedTxFilteredAddressFrom: {},
+	forcedTxFilteredAddressTo:   {},
+}
 
 // DecodedPayload is one block's worth of a decoded request: the framed SSZ the
 // guest reads (the output of [ssz.EncodeStatelessInput]) and the block
 // number that payload proves.
 type DecodedPayload struct {
-	BlockNumber uint64
-	FramedSSZ   []byte
+	BlockNumber        uint64
+	FramedSSZ          []byte
+	ForcedTransactions []json.RawMessage
 }
 
 // Request is a decoded getZkL2ExecutionProofV1 request: routing metadata, the
@@ -35,8 +65,9 @@ type DecodedPayload struct {
 // range is implied by the payloads (their executionPayload.blockNumber), as in
 // the reference decoder.
 type Request struct {
-	// GuestProgramID is routing metadata; it is not verified here
-	// (open question #6 in wiki backend-overview.md).
+	// GuestProgramID is routing metadata; this decoder validates its shape but
+	// does not verify it against the configured guest ELF (open question #6 in
+	// wiki backend-overview.md).
 	GuestProgramID []byte
 	ChainID        uint64
 	ForkName       string
@@ -47,7 +78,9 @@ type Request struct {
 // each payload's statelessInput, porting proof_io_v1.py::decode_request and
 // _decode_payload: it injects {chainId, forkName} into each payload's
 // statelessInput and reduces executionRequests to {} (rejecting any non-empty
-// list) before calling [ssz.EncodeStatelessInput].
+// list) before calling [ssz.EncodeStatelessInput]. It also validates and
+// preserves rollupExtension.forcedTransactions for the adapter capability
+// check.
 func DecodeRequest(data []byte) (*Request, error) {
 	var env map[string]json.RawMessage
 	if err := json.Unmarshal(data, &env); err != nil {
@@ -62,23 +95,31 @@ func DecodeRequest(data []byte) (*Request, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(guestProgramID) != guestProgramIDByteSize {
+		return nil, fmt.Errorf(
+			"DecodeRequest: %s must be %d bytes, got %d",
+			guestProgramIDKey,
+			guestProgramIDByteSize,
+			len(guestProgramID),
+		)
+	}
 
-	prRaw, err := requireField(env, "proofRequest", "")
+	prRaw, err := requireField(env, proofRequestKey, "")
 	if err != nil {
 		return nil, err
 	}
-	var proofRequest map[string]json.RawMessage
-	if err := json.Unmarshal(prRaw, &proofRequest); err != nil {
-		return nil, fmt.Errorf("DecodeRequest: proofRequest: %w", err)
-	}
-
-	ccRaw, err := requireField(proofRequest, "chainConfig", "proofRequest.")
+	proofRequest, err := object(prRaw, proofRequestKey)
 	if err != nil {
 		return nil, err
 	}
-	var chainConfig map[string]json.RawMessage
-	if err := json.Unmarshal(ccRaw, &chainConfig); err != nil {
-		return nil, fmt.Errorf("DecodeRequest: proofRequest.chainConfig: %w", err)
+
+	ccRaw, err := requireField(proofRequest, chainConfigKey, "proofRequest.")
+	if err != nil {
+		return nil, err
+	}
+	chainConfig, err := object(ccRaw, "proofRequest.chainConfig")
+	if err != nil {
+		return nil, err
 	}
 	chainIDRaw, err := requireField(chainConfig, chainIDKey, "proofRequest.chainConfig.")
 	if err != nil {
@@ -104,6 +145,9 @@ func DecodeRequest(data []byte) (*Request, error) {
 	var payloadObjs []json.RawMessage
 	if err := json.Unmarshal(payloadsRaw, &payloadObjs); err != nil {
 		return nil, fmt.Errorf("DecodeRequest: proofRequest.payloads must be an array: %w", err)
+	}
+	if payloadObjs == nil {
+		return nil, fmt.Errorf("DecodeRequest: proofRequest.payloads must be an array")
 	}
 	if len(payloadObjs) == 0 {
 		return nil, fmt.Errorf("DecodeRequest: proofRequest.payloads must be non-empty")
@@ -132,26 +176,27 @@ func DecodeRequest(data []byte) (*Request, error) {
 func decodePayload(raw json.RawMessage, index int, chainID uint64, forkName string) (DecodedPayload, error) {
 	ctx := fmt.Sprintf("proofRequest.payloads[%d].", index)
 
-	var payload map[string]json.RawMessage
-	if err := json.Unmarshal(raw, &payload); err != nil {
-		return DecodedPayload{}, fmt.Errorf("DecodeRequest: %sstatelessInput: %w", ctx, err)
-	}
-	siRaw, err := requireField(payload, "statelessInput", ctx)
+	payload, err := object(raw, strings.TrimSuffix(ctx, "."))
 	if err != nil {
 		return DecodedPayload{}, err
-	}
-	var statelessInput map[string]json.RawMessage
-	if err := json.Unmarshal(siRaw, &statelessInput); err != nil {
-		return DecodedPayload{}, fmt.Errorf("DecodeRequest: %sstatelessInput: %w", ctx, err)
 	}
 
-	nprRaw, err := requireField(statelessInput, "newPayloadRequest", ctx+"statelessInput.")
+	siRaw, err := requireField(payload, statelessInputKey, ctx)
 	if err != nil {
 		return DecodedPayload{}, err
 	}
-	var newPayloadRequest map[string]json.RawMessage
-	if err := json.Unmarshal(nprRaw, &newPayloadRequest); err != nil {
-		return DecodedPayload{}, fmt.Errorf("DecodeRequest: %sstatelessInput.newPayloadRequest: %w", ctx, err)
+	statelessInput, err := object(siRaw, ctx+"statelessInput")
+	if err != nil {
+		return DecodedPayload{}, err
+	}
+
+	nprRaw, err := requireField(statelessInput, newPayloadRequestKey, ctx+"statelessInput.")
+	if err != nil {
+		return DecodedPayload{}, err
+	}
+	newPayloadRequest, err := object(nprRaw, ctx+"statelessInput.newPayloadRequest")
+	if err != nil {
+		return DecodedPayload{}, err
 	}
 
 	if err := rejectNonEmptyExecutionRequests(newPayloadRequest, ctx); err != nil {
@@ -164,17 +209,17 @@ func decodePayload(raw json.RawMessage, index int, chainID uint64, forkName stri
 	}
 
 	// Build the encoder_obj: executionRequests -> {}, chainConfig injected.
-	newPayloadRequest["executionRequests"] = json.RawMessage("{}")
+	newPayloadRequest[executionRequestsKey] = json.RawMessage("{}")
 	nprEncoded, err := json.Marshal(newPayloadRequest)
 	if err != nil {
 		return DecodedPayload{}, fmt.Errorf("DecodeRequest: %sstatelessInput.newPayloadRequest: %w", ctx, err)
 	}
-	statelessInput["newPayloadRequest"] = nprEncoded
+	statelessInput[newPayloadRequestKey] = nprEncoded
 	chainConfig, err := json.Marshal(map[string]any{chainIDKey: chainID, forkNameKey: forkName})
 	if err != nil {
 		return DecodedPayload{}, fmt.Errorf("DecodeRequest: %schainConfig: %w", ctx, err)
 	}
-	statelessInput["chainConfig"] = chainConfig
+	statelessInput[chainConfigKey] = chainConfig
 
 	encoderObj, err := json.Marshal(statelessInput)
 	if err != nil {
@@ -184,14 +229,22 @@ func decodePayload(raw json.RawMessage, index int, chainID uint64, forkName stri
 	if err != nil {
 		return DecodedPayload{}, fmt.Errorf("DecodeRequest: %sstatelessInput: %w", ctx, err)
 	}
+	forcedTransactions, err := payloadForcedTransactions(payload, ctx)
+	if err != nil {
+		return DecodedPayload{}, err
+	}
 
-	return DecodedPayload{BlockNumber: blockNumber, FramedSSZ: framedSSZ}, nil
+	return DecodedPayload{
+		BlockNumber:        blockNumber,
+		FramedSSZ:          framedSSZ,
+		ForcedTransactions: forcedTransactions,
+	}, nil
 }
 
 // rejectNonEmptyExecutionRequests enforces that executionRequests is present as
 // an array and empty (the rollup rejects EIP-7685 requests, rollup_spec §2.1).
 func rejectNonEmptyExecutionRequests(newPayloadRequest map[string]json.RawMessage, ctx string) error {
-	erRaw, err := requireField(newPayloadRequest, "executionRequests", ctx+"statelessInput.newPayloadRequest.")
+	erRaw, err := requireField(newPayloadRequest, executionRequestsKey, ctx+"statelessInput.newPayloadRequest.")
 	if err != nil {
 		return err
 	}
@@ -199,22 +252,98 @@ func rejectNonEmptyExecutionRequests(newPayloadRequest map[string]json.RawMessag
 	if err := json.Unmarshal(erRaw, &executionRequests); err != nil {
 		return fmt.Errorf("DecodeRequest: %sexecutionRequests must be an array: %w", ctx, err)
 	}
+	if executionRequests == nil {
+		return fmt.Errorf("DecodeRequest: %sexecutionRequests must be an array", ctx)
+	}
 	if len(executionRequests) != 0 {
 		return fmt.Errorf("DecodeRequest: %sexecutionRequests must be empty", ctx)
 	}
 	return nil
 }
 
+func payloadForcedTransactions(payload map[string]json.RawMessage, ctx string) ([]json.RawMessage, error) {
+	reRaw, err := requireField(payload, rollupExtensionKey, ctx)
+	if err != nil {
+		return nil, err
+	}
+	rollupExtension, err := object(reRaw, ctx+"rollupExtension")
+	if err != nil {
+		return nil, err
+	}
+	ftRaw, err := requireField(rollupExtension, forcedTransactionsKey, ctx+"rollupExtension.")
+	if err != nil {
+		return nil, err
+	}
+	var forcedTransactions []json.RawMessage
+	if err := json.Unmarshal(ftRaw, &forcedTransactions); err != nil {
+		return nil, fmt.Errorf("DecodeRequest: %srollupExtension.forcedTransactions must be an array: %w", ctx, err)
+	}
+	if forcedTransactions == nil {
+		return nil, fmt.Errorf("DecodeRequest: %srollupExtension.forcedTransactions must be an array", ctx)
+	}
+	for i, raw := range forcedTransactions {
+		itemCtx := fmt.Sprintf("%srollupExtension.forcedTransactions[%d].", ctx, i)
+		if err := validateForcedTransaction(raw, itemCtx); err != nil {
+			return nil, err
+		}
+	}
+	return forcedTransactions, nil
+}
+
+func validateForcedTransaction(raw json.RawMessage, ctx string) error {
+	forcedTransaction, err := object(raw, strings.TrimSuffix(ctx, "."))
+	if err != nil {
+		return err
+	}
+
+	numberRaw, err := requireField(forcedTransaction, numberKey, ctx)
+	if err != nil {
+		return err
+	}
+	if _, err := u64(numberRaw, ctx+numberKey); err != nil {
+		return err
+	}
+
+	deadlineRaw, err := requireField(forcedTransaction, deadlineKey, ctx)
+	if err != nil {
+		return err
+	}
+	if _, err := u64(deadlineRaw, ctx+deadlineKey); err != nil {
+		return err
+	}
+
+	signedTxRaw, err := requireField(forcedTransaction, signedTxRlpKey, ctx)
+	if err != nil {
+		return err
+	}
+	if _, err := hexString(signedTxRaw, ctx+signedTxRlpKey); err != nil {
+		return err
+	}
+
+	acceptanceRaw, err := requireField(forcedTransaction, acceptanceKey, ctx)
+	if err != nil {
+		return err
+	}
+	var acceptance string
+	if err := json.Unmarshal(acceptanceRaw, &acceptance); err != nil {
+		return fmt.Errorf("DecodeRequest: %s%s must be a string: %w", ctx, acceptanceKey, err)
+	}
+	if _, ok := validForcedTransactionAcceptances[acceptance]; !ok {
+		return fmt.Errorf("DecodeRequest: %s%s has unsupported value %q", ctx, acceptanceKey, acceptance)
+	}
+	return nil
+}
+
 func payloadBlockNumber(newPayloadRequest map[string]json.RawMessage, ctx string) (uint64, error) {
-	epRaw, err := requireField(newPayloadRequest, "executionPayload", ctx+"statelessInput.newPayloadRequest.")
+	epRaw, err := requireField(newPayloadRequest, executionPayloadKey, ctx+"statelessInput.newPayloadRequest.")
 	if err != nil {
 		return 0, err
 	}
-	var executionPayload map[string]json.RawMessage
-	if err := json.Unmarshal(epRaw, &executionPayload); err != nil {
-		return 0, fmt.Errorf("DecodeRequest: %sstatelessInput.newPayloadRequest.executionPayload: %w", ctx, err)
+	executionPayload, err := object(epRaw, ctx+"statelessInput.newPayloadRequest.executionPayload")
+	if err != nil {
+		return 0, err
 	}
-	bnRaw, err := requireField(executionPayload, "blockNumber", ctx+"statelessInput.newPayloadRequest.executionPayload.")
+	bnRaw, err := requireField(executionPayload, blockNumberKey, ctx+"statelessInput.newPayloadRequest.executionPayload.")
 	if err != nil {
 		return 0, err
 	}
@@ -229,6 +358,17 @@ func requireField(m map[string]json.RawMessage, key, ctx string) (json.RawMessag
 		return nil, fmt.Errorf("DecodeRequest: missing %s%s", ctx, key)
 	}
 	return v, nil
+}
+
+func object(raw json.RawMessage, ctx string) (map[string]json.RawMessage, error) {
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &obj); err != nil {
+		return nil, fmt.Errorf("DecodeRequest: %s must be an object: %w", ctx, err)
+	}
+	if obj == nil {
+		return nil, fmt.Errorf("DecodeRequest: %s must be an object", ctx)
+	}
+	return obj, nil
 }
 
 // u64 parses an Ethereum quantity that may appear as a JSON number or a
@@ -251,6 +391,9 @@ func hexString(raw json.RawMessage, ctx string) ([]byte, error) {
 	var s string
 	if err := json.Unmarshal(raw, &s); err != nil {
 		return nil, fmt.Errorf("DecodeRequest: %s must be a hex string: %w", ctx, err)
+	}
+	if !strings.HasPrefix(s, "0x") {
+		return nil, fmt.Errorf("DecodeRequest: %s must be a 0x-prefixed hex string", ctx)
 	}
 	b, err := hex.DecodeString(strings.TrimPrefix(s, "0x"))
 	if err != nil {

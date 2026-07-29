@@ -56,14 +56,7 @@
           }
         },
         "rollupExtension": {
-          "forcedTransactions": [
-            {
-              "number": 16,
-              "deadline": 1000599,
-              "signedTxRlp": "0x02f86b",
-              "acceptance": "INCLUDED"
-            }
-          ]
+          "forcedTransactions": []
         }
       }
     ]
