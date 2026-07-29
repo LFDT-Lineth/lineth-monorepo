@@ -21,20 +21,26 @@ const (
 	forkNameKey       = "forkName"
 	payloadsKey       = "payloads"
 
-	proofRequestKey        = "proofRequest"
-	chainConfigKey         = "chainConfig"
-	statelessInputKey      = "statelessInput"
-	newPayloadRequestKey   = "newPayloadRequest"
-	executionPayloadKey    = "executionPayload"
-	executionRequestsKey   = "executionRequests"
-	rollupExtensionKey     = "rollupExtension"
-	forcedTransactionsKey  = "forcedTransactions"
-	blockNumberKey         = "blockNumber"
-	numberKey              = "number"
-	deadlineKey            = "deadline"
-	signedTxRlpKey         = "signedTxRlp"
-	acceptanceKey          = "acceptance"
-	guestProgramIDByteSize = 32
+	proofRequestKey                 = "proofRequest"
+	chainConfigKey                  = "chainConfig"
+	l2MessageServiceAddressKey      = "l2MessageServiceAddress"
+	coinbaseKey                     = "coinbase"
+	parentFtxRollingHashKey         = "parentFtxRollingHash"
+	parentLastProcessedFtxNumberKey = "parentLastProcessedFtxNumber"
+	statelessInputKey               = "statelessInput"
+	newPayloadRequestKey            = "newPayloadRequest"
+	executionPayloadKey             = "executionPayload"
+	executionRequestsKey            = "executionRequests"
+	rollupExtensionKey              = "rollupExtension"
+	forcedTransactionsKey           = "forcedTransactions"
+	blockNumberKey                  = "blockNumber"
+	numberKey                       = "number"
+	deadlineKey                     = "deadline"
+	signedTxRlpKey                  = "signedTxRlp"
+	acceptanceKey                   = "acceptance"
+	guestProgramIDByteSize          = 32
+	hashByteSize                    = 32
+	addressByteSize                 = 20
 
 	forcedTxIncluded            = "INCLUDED"
 	forcedTxBadNonce            = "BAD_NONCE"
@@ -121,6 +127,17 @@ func DecodeRequest(data []byte) (*Request, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := validateHexField(
+		chainConfig,
+		l2MessageServiceAddressKey,
+		"proofRequest.chainConfig.",
+		addressByteSize,
+	); err != nil {
+		return nil, err
+	}
+	if err := validateHexField(chainConfig, coinbaseKey, "proofRequest.chainConfig.", addressByteSize); err != nil {
+		return nil, err
+	}
 	chainIDRaw, err := requireField(chainConfig, chainIDKey, "proofRequest.chainConfig.")
 	if err != nil {
 		return nil, err
@@ -136,6 +153,21 @@ func DecodeRequest(data []byte) (*Request, error) {
 	var forkName string
 	if err := json.Unmarshal(forkNameRaw, &forkName); err != nil {
 		return nil, fmt.Errorf("DecodeRequest: proofRequest.chainConfig.forkName: %w", err)
+	}
+
+	if err := validateHexField(proofRequest, parentFtxRollingHashKey, "proofRequest.", hashByteSize); err != nil {
+		return nil, err
+	}
+	parentLastProcessedFtxNumberRaw, err := requireField(
+		proofRequest,
+		parentLastProcessedFtxNumberKey,
+		"proofRequest.",
+	)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := u64(parentLastProcessedFtxNumberRaw, "proofRequest."+parentLastProcessedFtxNumberKey); err != nil {
+		return nil, err
 	}
 
 	payloadsRaw, err := requireField(proofRequest, payloadsKey, "proofRequest.")
@@ -170,9 +202,10 @@ func DecodeRequest(data []byte) (*Request, error) {
 	}, nil
 }
 
-// decodePayload builds the encoder_obj for one payload (statelessInput with
-// chainConfig injected and executionRequests reduced to {}), SSZ-encodes it,
-// and reads its block number. Mirrors proof_io_v1.py::_decode_payload.
+// decodePayload builds the encoder object for one payload: it injects
+// chainConfig into statelessInput and converts the already-validated empty
+// executionRequests list into the empty container shape expected by the SSZ
+// encoder. Mirrors proof_io_v1.py::_decode_payload.
 func decodePayload(raw json.RawMessage, index int, chainID uint64, forkName string) (DecodedPayload, error) {
 	ctx := fmt.Sprintf("proofRequest.payloads[%d].", index)
 
@@ -400,4 +433,19 @@ func hexString(raw json.RawMessage, ctx string) ([]byte, error) {
 		return nil, fmt.Errorf("DecodeRequest: %s: invalid hex: %w", ctx, err)
 	}
 	return b, nil
+}
+
+func validateHexField(m map[string]json.RawMessage, key, ctx string, wantBytes int) error {
+	raw, err := requireField(m, key, ctx)
+	if err != nil {
+		return err
+	}
+	b, err := hexString(raw, ctx+key)
+	if err != nil {
+		return err
+	}
+	if len(b) != wantBytes {
+		return fmt.Errorf("DecodeRequest: %s%s must be %d bytes, got %d", ctx, key, wantBytes, len(b))
+	}
+	return nil
 }

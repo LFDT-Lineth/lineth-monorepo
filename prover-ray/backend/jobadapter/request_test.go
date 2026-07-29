@@ -14,6 +14,8 @@ import (
 // guestProgramID is the routing id in the request fixtures.
 const guestProgramID = "0x17d2e0660946012c80c5fe6bbecc2076a6f6f5aa58606efe66a14426d2ffe46f"
 
+const referenceL2ExecutionRequest = "../../../rollup_spec/src/rollup_spec/prover_io/testdata/getZkL2ExecutionProofV1.request.json"
+
 func readFixture(t *testing.T, name string) []byte {
 	t.Helper()
 	b, err := os.ReadFile("testdata/" + name)
@@ -60,6 +62,24 @@ func TestDecodeRequest_MultiBlock(t *testing.T) {
 	assert.Len(t, req.Payloads[1].ForcedTransactions, 2)
 }
 
+// TestDecodeRequest_ReferenceFixture verifies the Go decoder accepts the
+// language-neutral V1 request fixture from rollup_spec.
+func TestDecodeRequest_ReferenceFixture(t *testing.T) {
+	data, err := os.ReadFile(referenceL2ExecutionRequest)
+	require.NoError(t, err)
+
+	req, err := DecodeRequest(data)
+	require.NoError(t, err)
+
+	assert.Equal(t, uint64(59144), req.ChainID)
+	assert.Equal(t, "Amsterdam", req.ForkName)
+	require.Len(t, req.Payloads, 2)
+	assert.Equal(t, uint64(1000501), req.Payloads[0].BlockNumber)
+	assert.Equal(t, uint64(1000502), req.Payloads[1].BlockNumber)
+	assert.Len(t, req.Payloads[0].ForcedTransactions, 1)
+	assert.Len(t, req.Payloads[1].ForcedTransactions, 2)
+}
+
 // TestDecodeRequest_Malformed sweeps the envelope error paths: each case breaks
 // one field of the valid single-block request and asserts an error naming it.
 func TestDecodeRequest_Malformed(t *testing.T) {
@@ -98,12 +118,36 @@ func TestDecodeRequest_Malformed(t *testing.T) {
 		{"MissingChainConfig",
 			func(o map[string]any) { delete(pr(o), chainConfigKey) },
 			chainConfigKey},
+		{"MissingL2MessageServiceAddress",
+			func(o map[string]any) { delete(chainConfig(o), l2MessageServiceAddressKey) },
+			l2MessageServiceAddressKey},
+		{"BadL2MessageServiceAddress",
+			func(o map[string]any) { chainConfig(o)[l2MessageServiceAddressKey] = "0x1234" },
+			l2MessageServiceAddressKey},
+		{"MissingCoinbase",
+			func(o map[string]any) { delete(chainConfig(o), coinbaseKey) },
+			coinbaseKey},
+		{"BadCoinbase",
+			func(o map[string]any) { chainConfig(o)[coinbaseKey] = "0x1234" },
+			coinbaseKey},
 		{"MissingForkName",
 			func(o map[string]any) { delete(pr(o)["chainConfig"].(map[string]any), forkNameKey) },
 			forkNameKey},
 		{"MissingChainID",
 			func(o map[string]any) { delete(pr(o)["chainConfig"].(map[string]any), chainIDKey) },
 			chainIDKey},
+		{"MissingParentFtxRollingHash",
+			func(o map[string]any) { delete(pr(o), parentFtxRollingHashKey) },
+			parentFtxRollingHashKey},
+		{"BadParentFtxRollingHash",
+			func(o map[string]any) { pr(o)[parentFtxRollingHashKey] = "0x1234" },
+			parentFtxRollingHashKey},
+		{"MissingParentLastProcessedFtxNumber",
+			func(o map[string]any) { delete(pr(o), parentLastProcessedFtxNumberKey) },
+			parentLastProcessedFtxNumberKey},
+		{"BadParentLastProcessedFtxNumber",
+			func(o map[string]any) { pr(o)[parentLastProcessedFtxNumberKey] = "not-a-number" },
+			parentLastProcessedFtxNumberKey},
 		{"MissingPayloads",
 			func(o map[string]any) { delete(pr(o), payloadsKey) },
 			payloadsKey},

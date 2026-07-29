@@ -48,6 +48,18 @@ func newAdapter(t *testing.T, prover Prover) (*Adapter, string) {
 	return a, root
 }
 
+func newAdapterWithConfig(t *testing.T, cfg Config, prover Prover) (*Adapter, string) {
+	t.Helper()
+	root := t.TempDir()
+	cfg.RootDir = root
+	if cfg.PollInterval == 0 {
+		cfg.PollInterval = 5 * time.Millisecond
+	}
+	a, err := New(cfg, prover)
+	require.NoError(t, err)
+	return a, root
+}
+
 func placeRequest(t *testing.T, root, name, fixture string) {
 	t.Helper()
 	data := readFixture(t, fixture)
@@ -119,6 +131,20 @@ func TestAdapter_SingleBlock_Success(t *testing.T) {
 	assert.NoFileExists(t, filepath.Join(root, "requests", singleReqName))
 	assert.NoFileExists(t, filepath.Join(root, "requests", singleReqName+".inprogress"))
 	assert.FileExists(t, filepath.Join(root, "requests-done", singleReqName))
+}
+
+// TestAdapter_SingleBlock_UsesConfiguredProverVersion verifies the success
+// response carries the version configured for this adapter instance.
+func TestAdapter_SingleBlock_UsesConfiguredProverVersion(t *testing.T) {
+	a, root := newAdapterWithConfig(t, Config{ProverVersion: "test-prover-version"}, &mockProver{})
+	placeRequest(t, root, singleReqName, "request_single_block.json")
+
+	n, err := a.processOnce(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, 1, n)
+
+	resp := readExecutionResponse(t, root, singleReqName)
+	assert.Equal(t, "test-prover-version", resp["proverVersion"])
 }
 
 // TestAdapter_ClaimsBeforeProving verifies the request is renamed to
