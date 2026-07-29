@@ -452,3 +452,13 @@ func TestAddSSZLength_RejectsUint32Overflow(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "uint32 offset limit")
 }
+
+func TestCheckedAllocHelpers_RejectIntOverflow(t *testing.T) {
+	_, err := checkedAllocCap("container", uint64(maxInt)+1)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "Go allocation limit")
+
+	_, err = checkedSliceLen("frame", maxInt, 1)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "Go allocation limit")
+}
