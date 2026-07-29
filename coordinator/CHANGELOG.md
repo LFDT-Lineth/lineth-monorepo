@@ -1,5 +1,9 @@
 ## [unreleased]
 
+### 🚀 Features
+
+- *(coordinator)* Support custom transaction signers (#3597)
+
 ### 🐛 Bug Fixes
 
 - *(coordinator)* Correct ByteArray equality checks in domain classes (#3625)
