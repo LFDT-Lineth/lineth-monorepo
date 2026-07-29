@@ -5,8 +5,8 @@ const pcs = @import("query/pcs.zig");
 const fiat_shamir = @import("crypto/fiat_shamir.zig");
 const poseidon2 = @import("crypto/poseidon2.zig");
 const ext = @import("field/koalabear_ext.zig");
-// TODO(new-sub-verifier): add import here — step 1 below.
 const profiling = @import("profiling.zig");
+// TODO(new-sub-verifier): add import here — step 1 below.
 
 // ── Adding a new sub-verifier ─────────────────────────────────────────────────
 //
@@ -135,7 +135,7 @@ pub fn verify(
     // the check is pure arithmetic.
     if (comptime systems.pcs) |pcs_system| {
         const opening = proof.pcs_opening orelse return error.MissingPcsOpening;
-        const pcs_challenges = pcs.deriveChallenges(pcs_system, &transcript, opening.proof.fri_proof);
+        const pcs_challenges = try pcs.deriveChallenges(pcs_system, &transcript, opening.proof.fri_proof);
         try pcs.verify(pcs_system, .{
             .roots = opening.roots,
             .claimed_values = opening.claimed_values,
