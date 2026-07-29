@@ -41,7 +41,7 @@ func PrepareInput(guestElfBytes, guestInputData []byte) (map[string][]byte, erro
 	if err != nil {
 		return nil, err
 	}
-	return EncodeGuestAndMemoryForZkc(programSections, dataSections), nil
+	return EncodeGuestAndMemoryForZkc(programSections, dataSections)
 }
 
 // GuestProgramSections is the ELF's precomputed contribution to the ZkC inputs: its
@@ -147,19 +147,23 @@ func NewDataSection(inOrigin uint64, data []byte) ([]ElfSection, error) {
 // guestSections is the ELF's loadable sections, and memory is any additional
 // memory blobs (e.g. the framed StatelessInput).
 //
-// It sorts the combined sections by offset without mutating either input slice.
-// Callers must ensure that the sections do not overlap.
-func EncodeGuestAndMemoryForZkc(guestSections GuestProgramSections, memory []ElfSection) map[string][]byte {
+// It sorts the combined sections by offset without mutating either input slice,
+// and rejects overlapping or overflowing address ranges.
+func EncodeGuestAndMemoryForZkc(guestSections GuestProgramSections, memory []ElfSection) (map[string][]byte, error) {
 	entryAndCount := binary.BigEndian.AppendUint64(make([]byte, 0, 16), guestSections.EntryPoint)
 	entryAndCount = binary.BigEndian.AppendUint64(entryAndCount, uint64(len(guestSections.Sections)+len(memory)))
 
-	var dataLen int
 	allSections := make([]ElfSection, 0, len(guestSections.Sections)+len(memory))
 	allSections = append(allSections, guestSections.Sections...)
 	allSections = append(allSections, memory...)
 	sort.SliceStable(allSections, func(i, j int) bool {
 		return allSections[i].Offset < allSections[j].Offset
 	})
+	if err := validateNonOverlappingSections(allSections); err != nil {
+		return nil, err
+	}
+
+	var dataLen int
 	for _, b := range allSections {
 		dataLen += len(b.Data)
 	}
@@ -175,5 +179,29 @@ func EncodeGuestAndMemoryForZkc(guestSections GuestProgramSections, memory []Elf
 		entryPointAndBlobsCountKey: entryAndCount,
 		blobsOffsetAndSizeKey:      offsetAndSize,
 		blobsDataKey:               data,
+	}, nil
+}
+
+func validateNonOverlappingSections(sections []ElfSection) error {
+	var previousOffset, previousEnd uint64
+	hasPrevious := false
+	for _, section := range sections {
+		if len(section.Data) == 0 {
+			continue
+		}
+		end := section.Offset + uint64(len(section.Data))
+		if end < section.Offset {
+			return fmt.Errorf("memory section at %#x with %d bytes overflows address space", section.Offset, len(section.Data))
+		}
+		if hasPrevious && section.Offset < previousEnd {
+			return fmt.Errorf(
+				"memory section at %#x overlaps section at %#x ending at %#x",
+				section.Offset,
+				previousOffset,
+				previousEnd,
+			)
+		}
+		previousOffset, previousEnd, hasPrevious = section.Offset, end, true
 	}
+	return nil
 }

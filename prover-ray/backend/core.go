@@ -107,7 +107,7 @@ func (c *Core) buildInputs(job Job) (map[string][]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("building data section: %w", err)
 	}
-	return zkc_r5.EncodeGuestAndMemoryForZkc(c.elf, dataSections), nil
+	return zkc_r5.EncodeGuestAndMemoryForZkc(c.elf, dataSections)
 }
 
 func sanityCheckJobs(job Job) error {

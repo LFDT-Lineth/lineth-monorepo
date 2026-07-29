@@ -53,7 +53,7 @@ func TestNewDataSection_OffsetOverflow(t *testing.T) {
 
 func TestEncodeInputs_EntryPointAndCount(t *testing.T) {
 	const entryPoint = 0x11223344
-	inputs := zkc_r5.EncodeGuestAndMemoryForZkc(
+	inputs, err := zkc_r5.EncodeGuestAndMemoryForZkc(
 		zkc_r5.GuestProgramSections{
 			EntryPoint: entryPoint,
 		},
@@ -62,6 +62,7 @@ func TestEncodeInputs_EntryPointAndCount(t *testing.T) {
 			{Offset: 0x2000, Data: []byte{0x02}},
 		},
 	)
+	require.NoError(t, err)
 
 	got := inputs["entry_point_and_blobs_count"]
 	require.Len(t, got, 16, "entry_point_and_blobs_count must be two BE uint64s")
@@ -74,7 +75,8 @@ func TestEncodeInputs_OffsetAndSizePairs(t *testing.T) {
 		{Offset: 0x00800000, Data: make([]byte, 0x1234)},
 		{Offset: 0x2000, Data: []byte{0xBB}},
 	}
-	inputs := zkc_r5.EncodeGuestAndMemoryForZkc(zkc_r5.GuestProgramSections{}, memBlobs)
+	inputs, err := zkc_r5.EncodeGuestAndMemoryForZkc(zkc_r5.GuestProgramSections{}, memBlobs)
+	require.NoError(t, err)
 
 	got := inputs["blobs_offset_and_size"]
 	require.Len(t, got, 32, "blobs_offset_and_size must be one 16-byte pair per blob")
@@ -89,7 +91,8 @@ func TestEncodeInputs_DataConcatenated(t *testing.T) {
 		{Offset: 0x1000, Data: []byte{0xAA, 0xBB}},
 		{Offset: 0x2000, Data: []byte{0xCC}},
 	}
-	inputs := zkc_r5.EncodeGuestAndMemoryForZkc(zkc_r5.GuestProgramSections{}, memBlobs)
+	inputs, err := zkc_r5.EncodeGuestAndMemoryForZkc(zkc_r5.GuestProgramSections{}, memBlobs)
+	require.NoError(t, err)
 	assert.Equal(t, []byte{0xAA, 0xBB, 0xCC}, inputs["blobs_data"], "blobs_data must be all blob bytes concatenated in order")
 }
 
@@ -105,13 +108,65 @@ func TestEncodeInputs_SortsCombinedSectionsWithoutMutatingInputs(t *testing.T) {
 		{Offset: 0x4000, Data: []byte{0x04}},
 	}
 
-	inputs := zkc_r5.EncodeGuestAndMemoryForZkc(guestSections, memory)
+	inputs, err := zkc_r5.EncodeGuestAndMemoryForZkc(guestSections, memory)
+	require.NoError(t, err)
 
 	assert.Equal(t, []byte{0x01, 0x02, 0x03, 0x04}, inputs["blobs_data"])
 	assert.Equal(t, uint64(0x3000), guestSections.Sections[0].Offset)
 	assert.Equal(t, uint64(0x1000), guestSections.Sections[1].Offset)
 	assert.Equal(t, uint64(0x2000), memory[0].Offset)
 	assert.Equal(t, uint64(0x4000), memory[1].Offset)
+}
+
+func TestEncodeInputs_RejectsInvalidAddressRanges(t *testing.T) {
+	tests := []struct {
+		name          string
+		guestSections zkc_r5.GuestProgramSections
+		memory        []zkc_r5.ElfSection
+		wantErr       string
+	}{
+		{
+			name: "overlapping guest and memory sections",
+			guestSections: zkc_r5.GuestProgramSections{
+				Sections: []zkc_r5.ElfSection{{Offset: 0x2000, Data: []byte{0x01, 0x02}}},
+			},
+			memory:  []zkc_r5.ElfSection{{Offset: 0x2001, Data: []byte{0x03}}},
+			wantErr: "overlaps",
+		},
+		{
+			name:    "overlapping memory sections",
+			memory:  []zkc_r5.ElfSection{{Offset: 0x2001, Data: []byte{0x01}}, {Offset: 0x2000, Data: []byte{0x02, 0x03}}},
+			wantErr: "overlaps",
+		},
+		{
+			name:    "address range overflow",
+			memory:  []zkc_r5.ElfSection{{Offset: math.MaxUint64, Data: []byte{0x01}}},
+			wantErr: "overflows address space",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			inputs, err := zkc_r5.EncodeGuestAndMemoryForZkc(test.guestSections, test.memory)
+			require.Error(t, err)
+			assert.Nil(t, inputs)
+			assert.Contains(t, err.Error(), test.wantErr)
+		})
+	}
+}
+
+func TestEncodeInputs_AllowsAdjacentAndEmptySections(t *testing.T) {
+	inputs, err := zkc_r5.EncodeGuestAndMemoryForZkc(
+		zkc_r5.GuestProgramSections{
+			Sections: []zkc_r5.ElfSection{
+				{Offset: 0x1000, Data: []byte{0x01, 0x02}},
+				{Offset: 0x1002, Data: nil},
+			},
+		},
+		[]zkc_r5.ElfSection{{Offset: 0x1002, Data: []byte{0x03}}},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, []byte{0x01, 0x02, 0x03}, inputs["blobs_data"])
 }
 
 func TestElfBlobs_ExtractsSectionAtCorrectOffset(t *testing.T) {
