@@ -12,7 +12,11 @@ import linea.web3j.ethapi.createEthApiClient
 import org.apache.logging.log4j.LogManager
 
 object MessageAnchoringAppConfigurator {
-  fun create(vertx: Vertx, configs: CoordinatorConfig): LongRunningService {
+  fun create(
+    vertx: Vertx,
+    configs: CoordinatorConfig,
+    signerFactory: SignerFactory = DefaultSignerFactory,
+  ): LongRunningService {
     if (configs.messageAnchoring.isDisabled()) {
       LogManager.getLogger(MessageAnchoringApp::class.java).warn("Message anchoring is disabled")
       return DisabledLongRunningService
@@ -39,6 +43,7 @@ object MessageAnchoringAppConfigurator {
         vertx = vertx,
         signerConfig = configs.messageAnchoring.signer,
         client = l2Web3jClient,
+        signerFactory = signerFactory,
       )
     val messageAnchoringApp =
       MessageAnchoringApp(
