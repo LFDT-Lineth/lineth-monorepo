@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"math/big"
 	"strconv"
 	"strings"
@@ -58,8 +59,6 @@ const activeFork = "Amsterdam"
 const maxExtraDataBytes = 32
 
 const maxSSZSerializedBytes uint64 = 1<<32 - 1
-
-var maxInt = int(^uint(0) >> 1)
 
 // SSZ list/vector bounds mirrored from rollup_spec/stateless_input.py and
 // rollup_spec/canonical_ssz.py. The hand-written encoder must reject inputs
@@ -330,14 +329,14 @@ func addSSZLength(ctx string, total uint64, n int) (uint64, error) {
 }
 
 func checkedAllocCap(ctx string, n uint64) (int, error) {
-	if n > uint64(maxInt) {
+	if n > uint64(math.MaxInt) {
 		return 0, fmt.Errorf("%s: serialized size exceeds Go allocation limit", ctx)
 	}
 	return int(n), nil
 }
 
 func checkedSliceLen(ctx string, a, b int) (int, error) {
-	if a < 0 || b < 0 || a > maxInt-b {
+	if a < 0 || b < 0 || a > math.MaxInt-b {
 		return 0, fmt.Errorf("%s: serialized size exceeds Go allocation limit", ctx)
 	}
 	return a + b, nil
