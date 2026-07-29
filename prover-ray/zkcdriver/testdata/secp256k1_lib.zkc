@@ -3,6 +3,10 @@
 // derivations and references.
 include "./nonnative_utils.zkc"
 
+// One bit wider than tWidth; used to split a scalar into (high 256 bits :: low bit)
+// via the `half::bit = k
+type tWidthSplit = u257
+
 // secp256k1 modulus (base field). NOTE: this is the field prime p, NOT the
 // group order n. Scalars are reduced mod n, never mod p.
 const p:tWidth = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f
@@ -216,9 +220,9 @@ fn secp_projective_to_affine(X:tWidth, Y:tWidth, Z:tWidth) -> (x:tWidth, y:tWidt
 // Requires 1 <=k < n (the group order): this is enforced below with a hard fail.
 // For k in [1, n) every intermediate j*P has 1 <= j < n and is therefore never
 // O, so no branch handles O here. (k = 0 leaves the accumulator at O -> (0,0).)
-fn secp_scalar_mul(k:tWidth, Px:tWidth, Py:tWidth) -> (Qx:tWidth, Qy:tWidth) {
+fn secp_scalar_mul_loop(k:tWidth, Px:tWidth, Py:tWidth) -> (Qx:tWidth, Qy:tWidth) {
     // Reject scalars outside the group range; keeps every intermediate off O.
-    if k >= n || k == 0 {
+    if k >= n || k <= 0 {
         fail
     }
 
@@ -257,6 +261,65 @@ fn secp_scalar_mul(k:tWidth, Px:tWidth, Py:tWidth) -> (Qx:tWidth, Qy:tWidth) {
             }
         }
     }
+
+    Qx, Qy = secp_projective_to_affine(QX, QY, QZ)
+}
+
+// Recursive scalar multiplication over projective coords
+//   k*P = 2*((k >> 1)*P) + (k & 1)*P,   base case 0*P = O = (0 : 1 : 0)
+// Bits are peeled LSB-first on the way down and applied on the way back up, so
+// the unwind is MSB-first double-and-add — the same schedule as the loop version.
+// The loop version's `started` flag is not needed here: O is explicit (Z = 0),
+// doubling O is guarded to return O, and the complete addition absorbs O + P = P
+// at the top set bit.
+fn secp_scalar_mul_proj_recursion(k:tWidth, PX:tWidth, PY:tWidth, PZ:tWidth) -> (QX:tWidth, QY:tWidth, QZ:tWidth) {
+    if k == 0 {
+        // O = (0 : 1 : 0)
+        QX = 0
+        QY = 1
+        QZ = 0
+    } else {
+        var half:tWidth
+        var bit:u1
+        half::bit = k as tWidthSplit
+
+        var HX:tWidth, HY:tWidth, HZ:tWidth
+        HX, HY, HZ = secp_scalar_mul_proj_recursion(half, PX, PY, PZ)
+
+        // D = 2*H. The dedicated doubling requires H != O, so guard on Z:
+        // above k's top set bit H is still O, and 2*O = O.
+        var DX:tWidth, DY:tWidth, DZ:tWidth
+        if HZ == 0 {
+            DX = 0
+            DY = 1
+            DZ = 0
+        } else {
+            DX, DY, DZ = secp_double_projective(HX, HY, HZ)
+        }
+
+        if bit == 1 {
+            // complete addition: also correct when D = O (returns P)
+            QX, QY, QZ = secp_add_projective(DX, DY, DZ, PX, PY, PZ)
+        } else {
+            QX = DX
+            QY = DY
+            QZ = DZ
+        }
+    }
+}
+
+// Affine wrapper around the recursive scalar multiplication; same contract as
+// secp_scalar_mul_loop (rejects k = 0 and k >= n).
+fn secp_scalar_mul_recursion(k:tWidth, Px:tWidth, Py:tWidth) -> (Qx:tWidth, Qy:tWidth) {
+    if k >= n || k <= 0 {
+        fail
+    }
+
+    var PX:tWidth, PY:tWidth, PZ:tWidth
+    PX, PY, PZ = secp_affine_to_projective(Px, Py)
+
+    var QX:tWidth, QY:tWidth, QZ:tWidth
+    QX, QY, QZ = secp_scalar_mul_proj_recursion(k, PX, PY, PZ)
 
     Qx, Qy = secp_projective_to_affine(QX, QY, QZ)
 }

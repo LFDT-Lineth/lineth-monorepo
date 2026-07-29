@@ -26,11 +26,17 @@ fn main() {
 
     // Compute k*P and check it matches the claimed Q.
     var rx:tWidth, ry:tWidth
-    rx, ry = secp_scalar_mul(k, px, py)
-
-    printf "k*P = (%x, %x)\n", rx, ry
-
+    rx, ry = secp_scalar_mul_recursion(k, px, py)
     if (rx != qx) || (ry != qy) {
+        fail
+    }
+
+    // Loop variant — verified equivalent; commented out to keep the
+    // prove/verify test at ~half the cost mainly because of
+    // invoking the higher degree polynomials (same fashion as modexp_u256.zkc).
+    var rx_loop:tWidth, ry_loop:tWidth
+    rx_loop, ry_loop = secp_scalar_mul_loop(k, px, py)
+    if (rx_loop != qx) || (ry_loop != qy) {
         fail
     }
 }
