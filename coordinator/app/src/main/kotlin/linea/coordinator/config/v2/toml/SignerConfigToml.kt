@@ -37,7 +37,7 @@ data class SignerConfigToml(
     }
   }
 
-  enum class SignerType(val mame: String) {
+  enum class SignerType(val displayName: String) {
     WEB3J("web3j"),
     WEB3SIGNER("web3signer"),
     CUSTOM("custom"),
@@ -45,7 +45,7 @@ data class SignerConfigToml(
 
     companion object {
       fun valueOfIgnoreCase(name: String): SignerType {
-        return SignerType.entries.firstOrNull { it.mame.equals(name, ignoreCase = true) }
+        return SignerType.entries.firstOrNull { it.displayName.equals(name, ignoreCase = true) }
           ?: throw IllegalArgumentException("Unknown signer type: $name")
       }
     }

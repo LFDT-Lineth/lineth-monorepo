@@ -1,7 +1,6 @@
 package linea.coordinator.config.v2.toml
 
 import linea.config.docs.ConfigDoc
-import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -55,14 +54,6 @@ data class RequestRetriesToml(
       "failuresWarningThreshold must be greater than or equal to 0. value=$failuresWarningThreshold"
     }
   }
-
-  internal val asJsonRpcRetryConfig =
-    RequestRetryConfig(
-      maxRetries = maxRetries,
-      timeout = timeout,
-      backoffDelay = backoffDelay,
-      failuresWarningThreshold = failuresWarningThreshold ?: 0u,
-    )
 
   internal val asDomain: linea.domain.RetryConfig =
     linea.domain.RetryConfig(

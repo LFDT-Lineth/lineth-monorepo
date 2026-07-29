@@ -12,7 +12,7 @@ import kotlin.time.Duration.Companion.seconds
 
 data class ForcedTransactionsConfigToml(
   @param:ConfigDoc(description = "Whether forced transactions handling is disabled.", default = "false")
-  var disabled: Boolean = false,
+  val disabled: Boolean = false,
   @param:ConfigDoc(
     description = "L1 endpoint used to read forced transactions. Falls back to defaults.l1-endpoint.",
     example = "http://l1-el-node:8545",
