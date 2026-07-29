@@ -35,7 +35,7 @@ fn main<registers, ram, state_row0, state_row1, state_row2, state_row3, state_ro
         internal_offset = internal_offset + blob_size
     }
 
-    var output_write_address : OutputAddress = 0
+    var output_write_address:OutputAddress = 0
 
     // We interpret pc == MAX_UINT_64 as the stop signal, which is set by the ecall instruction
     while pc != MAX_UINT_64 {
