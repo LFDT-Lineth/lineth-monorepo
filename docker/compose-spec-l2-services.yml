@@ -429,7 +429,7 @@ services:
   web3signer:
     hostname: web3signer
     container_name: web3signer
-    image: consensys/web3signer:develop
+    image: consensys/web3signer:26.7.0-RC1
     profiles: [ "l2", "debug", "external-to-monorepo" ]
     ports:
       - "9000:9000"
