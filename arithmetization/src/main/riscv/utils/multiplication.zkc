@@ -52,10 +52,10 @@ fn div32_ss(lhs:u32, rhs:u32) -> (res:u32) {
     // Perform unsigned division
     var val:u32 = lhs / rhs
     // Apply sign
-    if sign_bit_of_word(lhs) == sign_bit_of_word(rhs) {
-        res = val
-    } else {
+    if sign_bit_of_word(lhs) != sign_bit_of_word(rhs) {
         res = negative_of_word(val)
+    } else {
+        res = val
     }
 }
 
@@ -70,7 +70,7 @@ fn div64_ss(lhs:u64, rhs:u64) -> (res:u64) {
     // Perform unsigned division
     var val:u64 = lhs_abs / rhs_abs
     // Apply sign
-    if sign_bit_of_double_word(lhs) == sign_bit_of_double_word(rhs) {
+    if sign_bit_of_double_word(lhs) != sign_bit_of_double_word(rhs) {
         res = negative_of_double_word(val)
     } else {
         res = val
