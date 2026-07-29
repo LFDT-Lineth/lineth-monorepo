@@ -169,7 +169,8 @@ L1 blob/aggregation submission (data availability and finalization) settings.
 | `l1-submission.aggregation.l1-request-retries.max-retries` | `UInt?` | no | - | active | Maximum number of retry attempts. Omit for endless retries. Example: `3`. |
 | `l1-submission.aggregation.l1-request-retries.timeout` | `Duration?` | no | - | active | Overall timeout across all retry attempts. Omit to disable the timeout. Example: `PT10S`. |
 | `l1-submission.aggregation.max-submissions-per-tick` | `UInt` | no | `1` | active | Maximum aggregation submissions sent per tick. |
-| `l1-submission.aggregation.signer.type` | `SignerType` | yes | - | active | Signer backend to use: WEB3J (local private key) or WEB3SIGNER (remote signer). Example: `web3signer`. |
+| `l1-submission.aggregation.signer.custom.name` | `String` | yes | - | active | Logical signer name resolved by the injected signer factory. |
+| `l1-submission.aggregation.signer.type` | `SignerType` | yes | - | active | Signer backend to use: WEB3J, WEB3SIGNER, or CUSTOM. Example: `web3signer`. |
 | `l1-submission.aggregation.signer.web3j.private-key` | `Masked` | yes | - | active | Hex-encoded 32-byte private key used to sign transactions. Masked in logs. |
 | `l1-submission.aggregation.signer.web3signer.endpoint` | `URL` | yes | - | active | Web3Signer HTTP endpoint. Example: `http://web3signer:9000`. |
 | `l1-submission.aggregation.signer.web3signer.keep-alive` | `Boolean` | no | `true` | active | Whether to keep Web3Signer HTTP connections alive. |
@@ -196,7 +197,8 @@ L1 blob/aggregation submission (data availability and finalization) settings.
 | `l1-submission.blob.l1-request-retries.max-retries` | `UInt?` | no | - | active | Maximum number of retry attempts. Omit for endless retries. Example: `3`. |
 | `l1-submission.blob.l1-request-retries.timeout` | `Duration?` | no | - | active | Overall timeout across all retry attempts. Omit to disable the timeout. Example: `PT10S`. |
 | `l1-submission.blob.max-submission-transactions-per-tick` | `UInt` | no | `2` | active | Maximum blob submission transactions sent per tick. |
-| `l1-submission.blob.signer.type` | `SignerType` | yes | - | active | Signer backend to use: WEB3J (local private key) or WEB3SIGNER (remote signer). Example: `web3signer`. |
+| `l1-submission.blob.signer.custom.name` | `String` | yes | - | active | Logical signer name resolved by the injected signer factory. |
+| `l1-submission.blob.signer.type` | `SignerType` | yes | - | active | Signer backend to use: WEB3J, WEB3SIGNER, or CUSTOM. Example: `web3signer`. |
 | `l1-submission.blob.signer.web3j.private-key` | `Masked` | yes | - | active | Hex-encoded 32-byte private key used to sign transactions. Masked in logs. |
 | `l1-submission.blob.signer.web3signer.endpoint` | `URL` | yes | - | active | Web3Signer HTTP endpoint. Example: `http://web3signer:9000`. |
 | `l1-submission.blob.signer.web3signer.keep-alive` | `Boolean` | no | `true` | active | Whether to keep Web3Signer HTTP connections alive. |
@@ -312,7 +314,8 @@ L1 to L2 message anchoring settings.
 | `message-anchoring.l2-request-retries.timeout` | `Duration?` | no | - | active | Overall timeout across all retry attempts. Omit to disable the timeout. Example: `PT10S`. |
 | `message-anchoring.max-messages-to-anchor-per-l2-transaction` | `UInt` | no | `100` | active | Maximum number of messages anchored in a single L2 transaction. |
 | `message-anchoring.message-queue-capacity` | `UInt` | no | `10000` | active | Maximum number of messages buffered awaiting anchoring. |
-| `message-anchoring.signer.type` | `SignerType` | yes | - | active | Signer backend to use: WEB3J (local private key) or WEB3SIGNER (remote signer). Example: `web3signer`. |
+| `message-anchoring.signer.custom.name` | `String` | yes | - | active | Logical signer name resolved by the injected signer factory. |
+| `message-anchoring.signer.type` | `SignerType` | yes | - | active | Signer backend to use: WEB3J, WEB3SIGNER, or CUSTOM. Example: `web3signer`. |
 | `message-anchoring.signer.web3j.private-key` | `Masked` | yes | - | active | Hex-encoded 32-byte private key used to sign transactions. Masked in logs. |
 | `message-anchoring.signer.web3signer.endpoint` | `URL` | yes | - | active | Web3Signer HTTP endpoint. Example: `http://web3signer:9000`. |
 | `message-anchoring.signer.web3signer.keep-alive` | `Boolean` | no | `true` | active | Whether to keep Web3Signer HTTP connections alive. |
