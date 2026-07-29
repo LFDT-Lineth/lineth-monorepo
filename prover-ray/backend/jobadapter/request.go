@@ -83,10 +83,10 @@ type Request struct {
 // DecodeRequest parses a getZkL2ExecutionProofV1 request body and SSZ-encodes
 // each payload's statelessInput, porting proof_io_v1.py::decode_request and
 // _decode_payload: it injects {chainId, forkName} into each payload's
-// statelessInput and reduces executionRequests to {} (rejecting any non-empty
-// list) before calling [ssz.EncodeStatelessInput]. It also validates and
-// preserves rollupExtension.forcedTransactions for the adapter capability
-// check.
+// statelessInput and converts the already-validated empty executionRequests
+// list into the empty container shape expected by [ssz.EncodeStatelessInput].
+// It also validates and preserves rollupExtension.forcedTransactions for the
+// adapter capability check.
 func DecodeRequest(data []byte) (*Request, error) {
 	var env map[string]json.RawMessage
 	if err := json.Unmarshal(data, &env); err != nil {
@@ -123,39 +123,12 @@ func DecodeRequest(data []byte) (*Request, error) {
 	if err != nil {
 		return nil, err
 	}
-	chainConfig, err := object(ccRaw, "proofRequest.chainConfig")
+	chainConfig, err := decodeChainConfig(ccRaw)
 	if err != nil {
 		return nil, err
-	}
-	if err := validateHexField(
-		chainConfig,
-		l2MessageServiceAddressKey,
-		"proofRequest.chainConfig.",
-		addressByteSize,
-	); err != nil {
-		return nil, err
-	}
-	if err := validateHexField(chainConfig, coinbaseKey, "proofRequest.chainConfig.", addressByteSize); err != nil {
-		return nil, err
-	}
-	chainIDRaw, err := requireField(chainConfig, chainIDKey, "proofRequest.chainConfig.")
-	if err != nil {
-		return nil, err
-	}
-	chainID, err := u64(chainIDRaw, "proofRequest.chainConfig.chainId")
-	if err != nil {
-		return nil, err
-	}
-	forkNameRaw, err := requireField(chainConfig, forkNameKey, "proofRequest.chainConfig.")
-	if err != nil {
-		return nil, err
-	}
-	var forkName string
-	if err := json.Unmarshal(forkNameRaw, &forkName); err != nil {
-		return nil, fmt.Errorf("DecodeRequest: proofRequest.chainConfig.forkName: %w", err)
 	}
 
-	if err := validateHexField(proofRequest, parentFtxRollingHashKey, "proofRequest.", hashByteSize); err != nil {
+	if err := validateFixedHexField(proofRequest, parentFtxRollingHashKey, "proofRequest.", hashByteSize); err != nil {
 		return nil, err
 	}
 	parentLastProcessedFtxNumberRaw, err := requireField(
@@ -187,7 +160,7 @@ func DecodeRequest(data []byte) (*Request, error) {
 
 	payloads := make([]DecodedPayload, len(payloadObjs))
 	for i, raw := range payloadObjs {
-		p, err := decodePayload(raw, i, chainID, forkName)
+		p, err := decodePayload(raw, i, chainConfig.chainID, chainConfig.forkName)
 		if err != nil {
 			return nil, err
 		}
@@ -196,10 +169,58 @@ func DecodeRequest(data []byte) (*Request, error) {
 
 	return &Request{
 		GuestProgramID: guestProgramID,
-		ChainID:        chainID,
-		ForkName:       forkName,
+		ChainID:        chainConfig.chainID,
+		ForkName:       chainConfig.forkName,
 		Payloads:       payloads,
 	}, nil
+}
+
+type decodedChainConfig struct {
+	chainID  uint64
+	forkName string
+}
+
+func decodeChainConfig(raw json.RawMessage) (decodedChainConfig, error) {
+	chainConfig, err := object(raw, "proofRequest.chainConfig")
+	if err != nil {
+		return decodedChainConfig{}, err
+	}
+	if err := validateFixedHexField(
+		chainConfig,
+		l2MessageServiceAddressKey,
+		"proofRequest.chainConfig.",
+		addressByteSize,
+	); err != nil {
+		return decodedChainConfig{}, err
+	}
+	if err := validateFixedHexField(
+		chainConfig,
+		coinbaseKey,
+		"proofRequest.chainConfig.",
+		addressByteSize,
+	); err != nil {
+		return decodedChainConfig{}, err
+	}
+
+	chainIDRaw, err := requireField(chainConfig, chainIDKey, "proofRequest.chainConfig.")
+	if err != nil {
+		return decodedChainConfig{}, err
+	}
+	chainID, err := u64(chainIDRaw, "proofRequest.chainConfig.chainId")
+	if err != nil {
+		return decodedChainConfig{}, err
+	}
+
+	forkNameRaw, err := requireField(chainConfig, forkNameKey, "proofRequest.chainConfig.")
+	if err != nil {
+		return decodedChainConfig{}, err
+	}
+	var forkName string
+	if err := json.Unmarshal(forkNameRaw, &forkName); err != nil {
+		return decodedChainConfig{}, fmt.Errorf("DecodeRequest: proofRequest.chainConfig.forkName: %w", err)
+	}
+
+	return decodedChainConfig{chainID: chainID, forkName: forkName}, nil
 }
 
 // decodePayload builds the encoder object for one payload: it injects
@@ -435,7 +456,7 @@ func hexString(raw json.RawMessage, ctx string) ([]byte, error) {
 	return b, nil
 }
 
-func validateHexField(m map[string]json.RawMessage, key, ctx string, wantBytes int) error {
+func validateFixedHexField(m map[string]json.RawMessage, key, ctx string, wantBytes int) error {
 	raw, err := requireField(m, key, ctx)
 	if err != nil {
 		return err

@@ -75,11 +75,11 @@ func readExecutionResponse(t *testing.T, root, name string) map[string]any {
 	return resp
 }
 
-func readFailureResponse(t *testing.T, root, name string) FailureResponse {
+func readFailureResponse(t *testing.T, root, name string) failureResponseBody {
 	t.Helper()
 	data, err := os.ReadFile(filepath.Join(root, "responses", name))
 	require.NoError(t, err)
-	var resp FailureResponse
+	var resp failureResponseBody
 	require.NoError(t, json.Unmarshal(data, &resp))
 	return resp
 }

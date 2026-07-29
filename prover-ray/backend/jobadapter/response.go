@@ -7,11 +7,11 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
 )
 
-// ExecutionResponse is the success response body for getZkL2ExecutionProofV1.
+// executionResponse is the success response body for getZkL2ExecutionProofV1.
 // It mirrors proof_io_v1.py::encode_response structurally. The proof bytes and
 // publicInputs values are still placeholders until backend proof serialization
 // and public-input extraction are wired.
-type ExecutionResponse struct {
+type executionResponse struct {
 	ProverVersion     string                `json:"proverVersion"`
 	ProofHex          string                `json:"proof"`
 	StartBlockNumber  uint64                `json:"startBlockNumber"`
@@ -40,17 +40,17 @@ type executionPublicInputs struct {
 	TxFromsHash                              string `json:"txFromsHash"`
 }
 
-// FailureResponse is a temporary adapter-owned operational format, not a
+// failureResponseBody is a temporary adapter-owned operational format, not a
 // reference-defined coordinator response. Treat it as provisional until the
 // coordinator/backend failure semantics are agreed.
-type FailureResponse struct {
+type failureResponseBody struct {
 	JobID  string `json:"jobId"`
 	Status string `json:"status"`
 	Error  string `json:"error,omitempty"`
 }
 
-func newExecutionResponse(result backend.Result, startBlockNumber uint64, proverVersion string) ExecutionResponse {
-	return ExecutionResponse{
+func newExecutionResponse(result backend.Result, startBlockNumber uint64, proverVersion string) executionResponse {
+	return executionResponse{
 		ProverVersion:     proverVersion,
 		ProofHex:          hexBytes(result.ProofBytes),
 		StartBlockNumber:  startBlockNumber,
@@ -82,12 +82,12 @@ func publicInputs(pi backend.PublicInputs) executionPublicInputs {
 	}
 }
 
-func failureResponse(id string, err error) FailureResponse {
+func failureResponse(id string, err error) failureResponseBody {
 	msg := ""
 	if err != nil {
 		msg = err.Error()
 	}
-	return FailureResponse{JobID: id, Status: statusFailed, Error: msg}
+	return failureResponseBody{JobID: id, Status: statusFailed, Error: msg}
 }
 
 func hexHash(v [32]byte) string {
