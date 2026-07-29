@@ -334,10 +334,13 @@ func TestAdapter_WriteResponseError(t *testing.T) {
 	_, err := a.processOnce(context.Background())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "response")
+	assert.FileExists(t, filepath.Join(root, "requests", singleReqName))
+	assert.NoFileExists(t, filepath.Join(root, "requests", singleReqName+inProgressSuffix))
 }
 
 // TestAdapter_ArchiveError verifies a failure moving the request to
-// requests-done/ surfaces as an error.
+// requests-done/ surfaces as an error without leaving the request stranded as
+// .inprogress.
 func TestAdapter_ArchiveError(t *testing.T) {
 	a, root := newAdapter(t, &mockProver{})
 	placeRequest(t, root, singleReqName, "request_single_block.json")
@@ -346,6 +349,8 @@ func TestAdapter_ArchiveError(t *testing.T) {
 	_, err := a.processOnce(context.Background())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "archiving")
+	assert.FileExists(t, filepath.Join(root, "requests", singleReqName))
+	assert.NoFileExists(t, filepath.Join(root, "requests", singleReqName+inProgressSuffix))
 }
 
 // TestAdapter_Run_ReturnsProcessError verifies Run surfaces an infrastructure

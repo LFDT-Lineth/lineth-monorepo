@@ -155,9 +155,11 @@ func (a *Adapter) processRequest(ctx context.Context, name string) (bool, error)
 	resp, success := a.run(ctx, name, claimed)
 
 	if err := a.writeResponse(name, resp); err != nil {
+		_ = os.Rename(claimed, src) // best-effort: avoid stranding the request as .inprogress
 		return false, err
 	}
 	if err := a.archive(claimed, name, success); err != nil {
+		_ = os.Rename(claimed, src) // best-effort: allow retry after archive infrastructure failures
 		return false, err
 	}
 	return true, nil
