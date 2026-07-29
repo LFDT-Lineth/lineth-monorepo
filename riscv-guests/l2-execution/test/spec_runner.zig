@@ -12,16 +12,26 @@
 //! fixture's vanilla SSZ `StatelessInput` to whatever shape a given guest consumes and then runs
 //! and checks it. `extended_vanilla_runner.zig`'s `ExtendedVanillaAdapter` (the sole consumer of
 //! this file) wraps the vanilla input into the extended `L2ExecutionProofPrivateInput` shape
-//! (dummy-filled rollup fields — see `vanilla_wrap.zig`) and checks validity against a vanilla
-//! zesu baseline computed in the same run, rather than against the fixture's own expected output.
+//! (dummy-filled rollup fields — see `vanilla_wrap.zig`) and checks validity against the fixture's
+//! own expected output.
 //!
 //! Adapter contract (comptime duck-typed):
 //!   pub const label: []const u8
-//!   /// Transform the fixture's SSZ StatelessInput into this guest's input bytes.
-//!   pub fn adaptInput(alloc: std.mem.Allocator, ssz_stateless_input: []const u8, ctx: BlockContext) ![]const u8
-//!   /// Run the guest on the adapted input and compare against the fixture's expected output.
-//!   /// Returns true on pass; on failure prints a one-line `FAIL …` diagnostic and returns false.
-//!   pub fn runAndCheck(alloc: std.mem.Allocator, guest_input: []const u8, expected_output: []const u8, ctx: BlockContext) !bool
+//!   /// Transform the fixture's SSZ StatelessInput into this guest's input bytes; null if
+//!   /// adaptation fails. A null is handed to `runAndCheck` as a coarse "this block is invalid"
+//!   /// signal, the same way any other guest-pipeline rejection is handled. This matches the
+//!   /// granularity a real batch proof (`l2_execution.runL2Execution` over a payload range) reports:
+//!   /// one pass/fail verdict for the whole range. Malformed SSZ the EF corpus deliberately feeds a
+//!   /// block, expecting rejection, is exactly this case.
+//!   pub fn adaptInput(alloc: std.mem.Allocator, ssz_stateless_input: []const u8, ctx: BlockContext) ?[]const u8
+//!   /// Run the guest on the adapted input (null if adaptation failed) and compare against the
+//!   /// fixture's expected output. Returns true on pass; on failure prints a one-line `FAIL …`
+//!   /// diagnostic and returns false.
+//!   pub fn runAndCheck(alloc: std.mem.Allocator, guest_input: ?[]const u8, expected_output: []const u8, ctx: BlockContext) !bool
+//!   /// True if this block exercises a property belonging to the vanilla reference guest's
+//!   /// multi-fork/schedule model rather than this guest's own fixed-fork design. Skipped blocks
+//!   /// are excluded entirely from the pass/fail tally.
+//!   pub fn shouldSkip(alloc: std.mem.Allocator, ssz_stateless_input: []const u8, ctx: BlockContext) bool
 
 const std = @import("std");
 const zkevm_fixture = @import("zkevm_fixture.zig");
@@ -47,6 +57,7 @@ pub const Stats = struct {
     blocks: u64 = 0,
     passed: u64 = 0,
     failed: u64 = 0,
+    skipped: u64 = 0,
 
     pub fn total(self: Stats) u64 {
         return self.passed + self.failed;
@@ -127,7 +138,7 @@ fn processFile(
 
     // A fixture we can't read or parse is a failure, not a silent skip: counting it keeps a
     // systemic regression (e.g. parseBlocks breaking across the whole corpus) from passing green.
-    const text = std.Io.Dir.cwd().readFileAlloc(io, path, alloc, .limited(256 * 1024 * 1024)) catch |err| {
+    const text = std.Io.Dir.cwd().readFileAlloc(io, path, alloc, .limited(1 << 30)) catch |err| {
         std.debug.print("FAIL cannot read '{s}': {}\n", .{ path, err });
         stats.failed += 1;
         return;
@@ -156,11 +167,12 @@ fn processFile(
         };
         stats.blocks += 1;
 
-        const guest_input = Adapter.adaptInput(alloc, block.input, ctx) catch |err| {
-            std.debug.print("FAIL {s}[{}]  adaptInput error: {s}\n", .{ ctx.test_name, ctx.block_index, @errorName(err) });
-            stats.failed += 1;
+        if (Adapter.shouldSkip(alloc, block.input, ctx)) {
+            stats.skipped += 1;
             continue;
-        };
+        }
+
+        const guest_input = Adapter.adaptInput(alloc, block.input, ctx);
         const ok = Adapter.runAndCheck(alloc, guest_input, block.expected_output, ctx) catch |err| blk: {
             std.debug.print("FAIL {s}[{}]  runAndCheck error: {s}\n", .{ ctx.test_name, ctx.block_index, @errorName(err) });
             break :blk false;

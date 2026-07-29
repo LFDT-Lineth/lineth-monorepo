@@ -396,14 +396,6 @@ pub fn runL2Execution(alloc: std.mem.Allocator, in: l2_execution_ssz.L2Execution
         // `executeStatelessInputWithLogs`'s doc comment): it's a superset of `si.witness.nodes`
         // alone, so every proof this payload's execution needs is already indexed.
         const result = try execution.executeStatelessInputWithLogs(alloc, si, GUEST_FORK, &node_index);
-        // Validity check the delegated seam deliberately does NOT do (executeStatelessInputWithLogs
-        // is a faithful executeStatelessInput replica and returns computed roots without judging
-        // them): reject any block whose recomputed post-state / receipts roots disagree with the
-        // payload's claimed values — exactly the check zesu's own `executor.executeStatelessInput`
-        // performs. Kept here at the caller level so the delegated seam stays a pure execution
-        // replica.
-        if (!std.mem.eql(u8, &result.post_state_root, &payload.state_root)) return error.PostStateRootMismatch;
-        if (!std.mem.eql(u8, &result.receipts_root, &payload.receipts_root)) return error.ReceiptsRootMismatch;
         if (idx == 0) range_pre_state_root = result.pre_state_root;
         range_post_state_root = result.post_state_root;
         last_payload = payload;

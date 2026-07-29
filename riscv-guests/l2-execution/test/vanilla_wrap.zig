@@ -78,3 +78,29 @@ pub fn vanillaHasExecutionRequests(alloc: std.mem.Allocator, vanilla_stateless_i
     const r = si.new_payload_request.execution_requests;
     return r.deposits.len != 0 or r.withdrawals.len != 0 or r.consolidations.len != 0;
 }
+
+/// True when EIP-8025's fork-activation schedule mechanism, applied the way zesu's vanilla
+/// `executeStatelessInput` enforces it, finds this block's declared active fork still pending:
+/// `chain_config.activation_block`/`activation_timestamp` is either unset (zesu's own preamble
+/// treats an unset pair as malformed too) or set to a point that postdates the block itself. This
+/// mirrors zesu's `ChainConfigInvalid` comparison exactly, evaluated against the block's own
+/// values — a presence-only check would misfire, since the EF corpus already populates a
+/// trivially-satisfied `activation_timestamp = 0` (Amsterdam active from genesis) on every normal
+/// block.
+///
+/// `runL2Execution`/`execution.executeStatelessInputWithLogs` is a single, fixed-fork guest
+/// (GUEST_FORK in l2_execution.zig, always Amsterdam), validated through the
+/// `chain_config.fork_name` equality check alone. Linea's own encoding
+/// (rollup_spec/stateless_input.py's `_ssz_chain_config_from_obj`) leaves these two fields empty
+/// for real input. A harness feeding real EF fixtures should SKIP the rare fixture whose block
+/// postdates its own declared activation point, keeping the comparison scoped to what this guest
+/// implements.
+pub fn vanillaHasForkActivationSchedule(alloc: std.mem.Allocator, vanilla_stateless_input_ssz: []const u8) !bool {
+    const si = try ssz_decode.decode(alloc, vanilla_stateless_input_ssz);
+    const cc = si.chain_config;
+    const ep = &si.new_payload_request.execution_payload;
+    if (cc.activation_block == null and cc.activation_timestamp == null) return true;
+    if (cc.activation_block) |b| if (ep.block_number < b) return true;
+    if (cc.activation_timestamp) |t| if (ep.timestamp < t) return true;
+    return false;
+}

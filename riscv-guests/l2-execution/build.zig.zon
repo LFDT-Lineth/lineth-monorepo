@@ -4,18 +4,13 @@
     .fingerprint = 0x16d3d5ae145fe30c,
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
-        // Upstream Consensys/zesu, pinned by commit. Includes the PR #44 work (exposed module
-        // graph + accel_impl include-path fix + -Dcrypto-prefix).
-        // TEMPORARY local-preview override — see the two-line pub patch applied to this worktree at
-        // /tmp/zesu-pinned-preview (a detached checkout of the SAME commit pinned below). Revert to
-        // the url+hash form before committing.
-        .zesu = .{ .path = "../../../../../../tmp/zesu-pinned-preview" },
-        // execution-spec-tests zkevm stateless fixtures (tests-zkevm@v0.4.1) — the same SSZ
-        // SszStatelessInput vectors zesu validates against. Lazy: only fetched when the native test
-        // (which reads a fixture from it) is built.
+        .zesu = .{
+            .url = "https://github.com/Consensys/zesu/archive/fc9a8e289811b0d37893df05d21931369adb9fde.tar.gz",
+            .hash = "zesu-0.1.0-UtqpAALaQwB7MkgNQS7de6P4OSrYYw1lJ4ScupPcohgM",
+        },
         .execution_spec_tests_zkevm = .{
             .url = "https://github.com/ethereum/execution-specs/releases/download/tests-zkevm%40v0.6.2/fixtures_zkevm.tar.gz",
-            .hash = "N-V-__8AAOKjNuwrs7f2UozWmLSRumAsqbHVgWvai3e75cbJ",
+            .hash = "N-V-__8AAP____94w9jBcI9yat7v2Mt9Lb-iJ5TOtfLo6-Ab",
             .lazy = true,
         },
         // Consensys/zesu-zkvm — the Linea zkVM runtime. We consume only its pure-Zig precompile

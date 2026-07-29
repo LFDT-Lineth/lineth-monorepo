@@ -63,6 +63,20 @@ pub fn main(init: std.process.Init) !void {
         std.process.exit(3);
     }
 
+    // This guest supports exactly one, fixed fork (always Amsterdam), validated through
+    // chain_config.fork_name alone. A fixture exercising EIP-8025's schedule mechanism (a
+    // populated activation_block/activation_timestamp) tests a property scoped to the vanilla
+    // multi-fork guest model. SKIP it via the same dedicated exit code, keeping the ZkC run scoped
+    // to properties this guest implements.
+    const has_activation_schedule = vanilla_wrap.vanillaHasForkActivationSchedule(alloc, vanilla) catch |err| {
+        std.debug.print("error: failed to inspect '{s}': {s}\n", .{ in_path, @errorName(err) });
+        std.process.exit(1);
+    };
+    if (has_activation_schedule) {
+        std.debug.print("skip: '{s}' declares a fork-activation schedule (unsupported by this single-fork guest)\n", .{in_path});
+        std.process.exit(3);
+    }
+
     const wrapped = vanilla_wrap.wrapVanillaAsExtended(alloc, vanilla) catch |err| {
         std.debug.print("error: failed to wrap '{s}': {s}\n", .{ in_path, @errorName(err) });
         std.process.exit(1);

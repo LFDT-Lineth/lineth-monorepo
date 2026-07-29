@@ -240,6 +240,12 @@ fn executeBlockStatelessWithLogs(
     var access_log = ctx.journaled_state.takeAccessLog();
     defer access_log.deinit();
     const accessed = try executor.buildAccessedEntries(alloc, access_log, result.alloc, result.deleted_accounts, result.system_address_user_touched);
-    try block_validation.validatePostExecution(alloc, env, spec, result.cumulative_gas, result.blob_gas_used, ep.block_access_list, accessed);
-    return finalizeOutputWithLogs(alloc, pre_state_root, result, node_index, spec, ctx.getDb());
+    const proof = try finalizeOutputWithLogs(alloc, pre_state_root, result, node_index, spec, ctx.getDb());
+    try block_validation.validatePostExecution(alloc, env, spec, result.cumulative_gas, result.blob_gas_used, ep.block_access_list, accessed, .{
+        .computed_state_root = proof.post_state_root,
+        .expected_state_root = ep.state_root,
+        .computed_receipts_root = proof.receipts_root,
+        .expected_receipts_root = ep.receipts_root,
+    });
+    return proof;
 }

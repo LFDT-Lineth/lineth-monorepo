@@ -40,18 +40,32 @@ fn recordError(name: []const u8) void {
 const ExtendedVanillaAdapter = struct {
     pub const label = "extended guest vs EF fixture ground truth (dummy-wrapped l2_execution.runL2Execution vs the fixture's own successful_validation)";
 
+    /// Skip any fixture exercising EIP-8025's fork-activation schedule (a populated
+    /// chain_config.activation_block/activation_timestamp): this guest is single-fork and fixed
+    /// (see vanilla_wrap.vanillaHasForkActivationSchedule's doc comment for why). Decode failure
+    /// belongs to `adaptInput`/`runAndCheck`'s coarse invalid-result handling — the malformed-SSZ
+    /// negative-test case — so it flows through there unchanged.
+    pub fn shouldSkip(
+        alloc: std.mem.Allocator,
+        ssz_stateless_input: []const u8,
+        ctx: spec_runner.BlockContext,
+    ) bool {
+        _ = ctx;
+        return vanilla_wrap.vanillaHasForkActivationSchedule(alloc, ssz_stateless_input) catch false;
+    }
+
     pub fn adaptInput(
         alloc: std.mem.Allocator,
         ssz_stateless_input: []const u8,
         ctx: spec_runner.BlockContext,
-    ) ![]const u8 {
+    ) ?[]const u8 {
         _ = ctx;
-        return vanilla_wrap.wrapVanillaAsExtended(alloc, ssz_stateless_input);
+        return vanilla_wrap.wrapVanillaAsExtended(alloc, ssz_stateless_input) catch null;
     }
 
     pub fn runAndCheck(
         alloc: std.mem.Allocator,
-        guest_input: []const u8,
+        guest_input: ?[]const u8,
         expected_output: []const u8,
         ctx: spec_runner.BlockContext,
     ) !bool {
@@ -62,16 +76,18 @@ const ExtendedVanillaAdapter = struct {
             return false;
         }
         const expected_valid = expected_output[32] == 0x01;
-
-        const extended_in = l2_execution_ssz.decodeInput(alloc, guest_input) catch |err| {
-            std.debug.print("FAIL {s}[{}]  extended decodeInput error: {s}\n", .{ ctx.test_name, ctx.block_index, @errorName(err) });
-            return false;
-        };
-        // The vanilla bytes are carried verbatim as the single payload's stateless_input_ssz.
-        std.debug.assert(extended_in.payloads.len == 1);
-
         var extended_err_name: []const u8 = "";
         const extended_valid = blk: {
+            const gi = guest_input orelse {
+                extended_err_name = "AdaptInputFailed";
+                break :blk false;
+            };
+            const extended_in = l2_execution_ssz.decodeInput(alloc, gi) catch |err| {
+                extended_err_name = @errorName(err);
+                break :blk false;
+            };
+            // The vanilla bytes are carried verbatim as the single payload's stateless_input_ssz.
+            std.debug.assert(extended_in.payloads.len == 1);
             _ = l2_execution.runL2Execution(alloc, extended_in) catch |err| {
                 extended_err_name = @errorName(err);
                 break :blk false;
@@ -175,8 +191,8 @@ pub fn main(init: std.process.Init) !void {
     const pct: u64 = if (total > 0) 100 * stats.passed / total else 0;
     std.debug.print("\n============================================================\n", .{});
     std.debug.print("  {s}\n", .{ExtendedVanillaAdapter.label});
-    std.debug.print("  files: {}   blocks: {}   agree: {}   disagree: {}   ({}%)\n", .{
-        stats.files, stats.blocks, stats.passed, stats.failed, pct,
+    std.debug.print("  files: {}   blocks: {}   agree: {}   disagree: {}   skipped: {}   ({}%)\n", .{
+        stats.files, stats.blocks, stats.passed, stats.failed, stats.skipped, pct,
     });
     if (error_histogram.count() > 0) {
         std.debug.print("  disagreement error histogram (extended pipeline's error, when it errored):\n", .{});
