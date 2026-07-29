@@ -10,7 +10,7 @@ import java.nio.file.Path
 
 data class SignerConfigToml(
   @param:ConfigDoc(
-    description = "Signer backend to use: WEB3J (local private key) or WEB3SIGNER (remote signer).",
+    description = "Signer backend to use: WEB3J, WEB3SIGNER, or CUSTOM.",
     example = "web3signer",
   )
   val type: SignerType,
@@ -18,6 +18,8 @@ data class SignerConfigToml(
   val web3j: Web3jConfig?,
   @param:ConfigSection("Remote Web3Signer settings; required when type is WEB3SIGNER.")
   val web3signer: Web3SignerConfig?,
+  @param:ConfigSection("Named signer settings; required when type is CUSTOM.")
+  val custom: CustomConfig? = null,
 ) {
   init {
     when {
@@ -28,12 +30,17 @@ data class SignerConfigToml(
       type == SignerType.WEB3SIGNER && web3signer == null -> {
         throw IllegalArgumentException("signetType=$type requires web3signer config")
       }
+
+      type == SignerType.CUSTOM && custom == null -> {
+        throw IllegalArgumentException("signerType=$type requires custom config")
+      }
     }
   }
 
   enum class SignerType(val displayName: String) {
     WEB3J("web3j"),
     WEB3SIGNER("web3signer"),
+    CUSTOM("custom"),
     ;
 
     companion object {
@@ -47,8 +54,20 @@ data class SignerConfigToml(
       return when (this) {
         WEB3J -> SignerConfig.SignerType.WEB3J
         WEB3SIGNER -> SignerConfig.SignerType.WEB3SIGNER
+        CUSTOM -> SignerConfig.SignerType.CUSTOM
       }
     }
+  }
+
+  data class CustomConfig(
+    @param:ConfigDoc("Logical signer name resolved by the injected signer factory.")
+    val name: String,
+  ) {
+    init {
+      require(name.isNotBlank()) { "custom signer name must not be blank" }
+    }
+
+    fun reified(): SignerConfig.CustomConfig = SignerConfig.CustomConfig(name)
   }
 
   data class Web3jConfig(
@@ -189,6 +208,7 @@ data class SignerConfigToml(
           },
         )
       },
+      custom = custom?.reified(),
     )
   }
 }
