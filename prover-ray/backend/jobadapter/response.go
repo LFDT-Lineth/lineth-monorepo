@@ -8,9 +8,9 @@ import (
 )
 
 // executionResponse is the success response body for getZkL2ExecutionProofV1.
-// It mirrors proof_io_v1.py::encode_response structurally. The proof bytes and
-// publicInputs values are still placeholders until backend proof serialization
-// and public-input extraction are wired.
+// It mirrors proof_io_v1.py::encode_response structurally. The adapter maps
+// proof bytes and publicInputs from backend.Result; Core returns placeholder
+// values until proof serialization and public-input extraction are wired.
 type executionResponse struct {
 	ProverVersion     string                `json:"proverVersion"`
 	ProofHex          string                `json:"proof"`

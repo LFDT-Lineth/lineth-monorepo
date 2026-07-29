@@ -18,8 +18,6 @@ import (
 // the adapter treats the base name as the job id and response name.
 const singleReqName = "1000501-1000501-getZkL2ExecutionProofV1.json"
 
-const zeroHashHex = "0x0000000000000000000000000000000000000000000000000000000000000000"
-
 // mockProver stands in for backend.Core. It records the jobs it receives, runs
 // an optional hook mid-Prove (to observe the claim), and returns a configurable
 // result (defaulting to success).
@@ -94,7 +92,17 @@ func writeRequestObject(t *testing.T, root, name string, obj map[string]any) {
 // TestAdapter_SingleBlock_Success is the happy path: a single-block request is
 // decoded, proved, its response written, and the request archived.
 func TestAdapter_SingleBlock_Success(t *testing.T) {
-	mock := &mockProver{}
+	mock := &mockProver{result: func(job backend.Job) backend.Result {
+		return backend.Result{
+			JobID:  job.ID,
+			Status: backend.ResultStatusOK,
+			PublicInputs: backend.PublicInputs{
+				ParentBlockHash: filledHash(0x11),
+				EndBlockNumber:  1000501,
+			},
+			ProofBytes: []byte{0xde, 0xad},
+		}
+	}}
 	a, root := newAdapter(t, mock)
 	placeRequest(t, root, singleReqName, "request_single_block.json")
 
@@ -126,7 +134,10 @@ func TestAdapter_SingleBlock_Success(t *testing.T) {
 	publicInputs, ok := resp["publicInputs"].(map[string]any)
 	require.True(t, ok)
 	assert.Len(t, publicInputs, 16)
-	assert.Equal(t, zeroHashHex, publicInputs["parentBlockHash"])
+	assert.Equal(t, repeatHex(0x11), publicInputs["parentBlockHash"])
+	endBlockNumber, ok := publicInputs["endBlockNumber"].(float64)
+	require.True(t, ok)
+	assert.Equal(t, 1000501, int(endBlockNumber))
 
 	assert.NoFileExists(t, filepath.Join(root, "requests", singleReqName))
 	assert.NoFileExists(t, filepath.Join(root, "requests", singleReqName+".inprogress"))

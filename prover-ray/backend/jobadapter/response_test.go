@@ -19,7 +19,7 @@ func TestNewExecutionResponse_MapsV1Fields(t *testing.T) {
 		PublicInputs: backend.PublicInputs{
 			ParentBlockHash:                          filledHash(0x01),
 			EndBlockHash:                             filledHash(0x02),
-			EndBlockNumber:                           1000501,
+			EndBlockNumber:                           1000503,
 			EndBlockTimestamp:                        1763000101,
 			L2L1MessagesHash:                         filledHash(0x03),
 			ParentL1L2BridgeRollingHash:              filledHash(0x04),
@@ -36,11 +36,11 @@ func TestNewExecutionResponse_MapsV1Fields(t *testing.T) {
 		},
 	}
 
-	resp := newExecutionResponse(result, 1000500, "test-version")
+	resp := newExecutionResponse(result, 1000501, "test-version")
 
 	assert.Equal(t, "test-version", resp.ProverVersion)
 	assert.Equal(t, "0xcafe", resp.ProofHex)
-	assert.Equal(t, uint64(1000500), resp.StartBlockNumber)
+	assert.Equal(t, uint64(1000501), resp.StartBlockNumber)
 	assert.Empty(t, resp.L2L1Messages)
 	assert.Empty(t, resp.TxFroms)
 	assert.Empty(t, resp.FilteredAddresses)
@@ -48,7 +48,7 @@ func TestNewExecutionResponse_MapsV1Fields(t *testing.T) {
 	pi := resp.PublicInputs
 	assert.Equal(t, repeatHex(0x01), pi.ParentBlockHash)
 	assert.Equal(t, repeatHex(0x02), pi.EndBlockHash)
-	assert.Equal(t, uint64(1000501), pi.EndBlockNumber)
+	assert.Equal(t, uint64(1000503), pi.EndBlockNumber)
 	assert.Equal(t, uint64(1763000101), pi.EndBlockTimestamp)
 	assert.Equal(t, repeatHex(0x03), pi.L2L1MessagesHash)
 	assert.Equal(t, repeatHex(0x04), pi.ParentL1L2BridgeRollingHash)
