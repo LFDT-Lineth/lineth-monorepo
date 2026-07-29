@@ -110,12 +110,21 @@ pub fn PcsChallenges(comptime system: System) type {
 ///
 /// This is the transcript-touching counterpart of `verify`, which then checks
 /// the proof against these challenges without touching the transcript.
+///
+/// `fri_proof.round_roots` must hold exactly `num_rounds - 1` intermediate-layer
+/// roots (the shape `verify` later re-checks). This is validated up front rather
+/// than trusted: the absorb loop indexes the fixed-size `fold_alphas` buffer by
+/// root position, so an over-long `round_roots` would otherwise write past it —
+/// a stack overflow in release builds, where bounds checks are disabled.
 pub fn deriveChallenges(
     comptime system: System,
     transcript: *fiat_shamir.Transcript,
     fri_proof: fri.Proof,
-) PcsChallenges(system) {
+) fri.Error!PcsChallenges(system) {
     const num_rounds = comptime system.params.numRounds();
+    const want_round_roots = if (num_rounds > 0) num_rounds - 1 else 0;
+    if (fri_proof.round_roots.len != want_round_roots) return fri.Error.InvalidRoundRootCount;
+
     var challenges = PcsChallenges(system){};
 
     // One challenge per intermediate layer root, absorbing the root between

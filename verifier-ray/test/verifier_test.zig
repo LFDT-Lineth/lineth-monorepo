@@ -56,7 +56,7 @@ test "verify rejects proof with wrong round count" {
 
 // numRounds = log_plaintext_size - log_final_poly_size = 2, so fold_alphas has
 // length 2 and the FRI proof carries numRounds-1 = 1 running-layer root.
-const coin_system = pcs.System{
+const challenge_system = pcs.System{
     .params = .{ .log_codeword_size = 4, .log_plaintext_size = 2, .num_queries = 3 },
     .layout = &.{},
 };
@@ -67,7 +67,9 @@ fn digest(seed: u32) poseidon2.Digest {
     return d;
 }
 
-fn coinFriProof(root_seed: u32) fri.Proof {
+// A well-shaped FRI proof for `challenge_system`: exactly num_rounds-1 == 1
+// running-layer root.
+fn challengeFriProof(root_seed: u32) fri.Proof {
     const S = struct {
         var round_roots: [1]poseidon2.Digest = undefined;
         var final_poly = [_]ext.Ext{ext.Ext.zero()};
@@ -78,7 +80,7 @@ fn coinFriProof(root_seed: u32) fri.Proof {
 
 test "deriveChallenges produces the comptime-sized shape" {
     var transcript = fiat_shamir.Transcript.init();
-    const challenges = pcs.deriveChallenges(coin_system, &transcript, coinFriProof(1));
+    const challenges = try pcs.deriveChallenges(challenge_system, &transcript, challengeFriProof(1));
     try std.testing.expectEqual(@as(usize, 2), challenges.fold_alphas.len);
     try std.testing.expectEqual(@as(usize, 3), challenges.query_positions.len);
     // Query positions are reduced into the codeword domain (2^4 = 16).
@@ -88,8 +90,8 @@ test "deriveChallenges produces the comptime-sized shape" {
 test "deriveChallenges is deterministic for the same transcript and proof" {
     var t1 = fiat_shamir.Transcript.init();
     var t2 = fiat_shamir.Transcript.init();
-    const a = pcs.deriveChallenges(coin_system, &t1, coinFriProof(7));
-    const b = pcs.deriveChallenges(coin_system, &t2, coinFriProof(7));
+    const a = try pcs.deriveChallenges(challenge_system, &t1, challengeFriProof(7));
+    const b = try pcs.deriveChallenges(challenge_system, &t2, challengeFriProof(7));
     for (a.fold_alphas, b.fold_alphas) |x, y| try std.testing.expect(x.eql(y));
     try std.testing.expectEqualSlices(usize, &a.query_positions, &b.query_positions);
 }
@@ -102,8 +104,8 @@ test "deriveChallenges depends on the absorbed transcript state" {
     var t2 = fiat_shamir.Transcript.init();
     t1.updateExt(&.{ext.Ext.fromUints(.{ 1, 0, 0, 0, 0, 0 })});
     t2.updateExt(&.{ext.Ext.fromUints(.{ 2, 0, 0, 0, 0, 0 })});
-    const a = pcs.deriveChallenges(coin_system, &t1, coinFriProof(9));
-    const b = pcs.deriveChallenges(coin_system, &t2, coinFriProof(9));
+    const a = try pcs.deriveChallenges(challenge_system, &t1, challengeFriProof(9));
+    const b = try pcs.deriveChallenges(challenge_system, &t2, challengeFriProof(9));
     var any_alpha_differs = false;
     for (a.fold_alphas, b.fold_alphas) |x, y| {
         if (!x.eql(y)) any_alpha_differs = true;
