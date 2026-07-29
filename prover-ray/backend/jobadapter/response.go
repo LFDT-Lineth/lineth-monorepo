@@ -7,10 +7,12 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
 )
 
+const statusFailed = "failed"
+
 // executionResponse is the success response body for getZkL2ExecutionProofV1.
 // It mirrors proof_io_v1.py::encode_response structurally. The adapter maps
-// proof bytes and publicInputs from backend.Result; Core returns placeholder
-// values until proof serialization and public-input extraction are wired.
+// proof bytes and publicInputs from backend.Result. Those values are
+// provisional until proof serialization and public-input extraction are wired.
 type executionResponse struct {
 	ProverVersion     string                `json:"proverVersion"`
 	ProofHex          string                `json:"proof"`

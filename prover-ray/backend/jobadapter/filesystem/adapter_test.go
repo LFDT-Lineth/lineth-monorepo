@@ -1,15 +1,19 @@
-package jobadapter
+package filesystem
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/jobadapter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -38,7 +42,9 @@ func (m *mockProver) Prove(_ context.Context, job backend.Job) backend.Result {
 	return backend.Result{JobID: job.ID, Status: backend.ResultStatusOK, ProofBytes: []byte{0xde, 0xad}}
 }
 
-func newAdapter(t *testing.T, prover Prover) (*Adapter, string) {
+const referenceL2ExecutionResponse = "../../../../rollup_spec/src/rollup_spec/prover_io/testdata/getZkL2ExecutionProofV1.response.json"
+
+func newAdapter(t *testing.T, prover jobadapter.Prover) (*Adapter, string) {
 	t.Helper()
 	root := t.TempDir()
 	a, err := New(Config{RootDir: root, PollInterval: 5 * time.Millisecond}, prover)
@@ -46,7 +52,7 @@ func newAdapter(t *testing.T, prover Prover) (*Adapter, string) {
 	return a, root
 }
 
-func newAdapterWithConfig(t *testing.T, cfg Config, prover Prover) (*Adapter, string) {
+func newAdapterWithConfig(t *testing.T, cfg Config, prover jobadapter.Prover) (*Adapter, string) {
 	t.Helper()
 	root := t.TempDir()
 	cfg.RootDir = root
@@ -89,6 +95,69 @@ func writeRequestObject(t *testing.T, root, name string, obj map[string]any) {
 	require.NoError(t, os.WriteFile(filepath.Join(root, "requests", name), raw, 0o600))
 }
 
+func readFixture(t *testing.T, name string) []byte {
+	t.Helper()
+	b, err := os.ReadFile("../testdata/" + name)
+	require.NoError(t, err)
+	return b
+}
+
+func filledHash(b byte) [32]byte {
+	var out [32]byte
+	for i := range out {
+		out[i] = b
+	}
+	return out
+}
+
+func repeatHex(b byte) string {
+	return "0x" + strings.Repeat(fmt.Sprintf("%02x", b), 32)
+}
+
+func assertResponseShapeMatchesReference(t *testing.T, got map[string]any) {
+	t.Helper()
+	want := readReferenceResponse(t)
+	assertJSONShape(t, want, got, "response")
+}
+
+func readReferenceResponse(t *testing.T) map[string]any {
+	t.Helper()
+	data, err := os.ReadFile(referenceL2ExecutionResponse)
+	require.NoError(t, err)
+
+	var raw map[string]any
+	require.NoError(t, json.Unmarshal(data, &raw))
+	return raw
+}
+
+func assertJSONShape(t *testing.T, want, got map[string]any, path string) {
+	t.Helper()
+	require.Len(t, got, len(want), "%s field count", path)
+	for key, wantValue := range want {
+		gotValue, ok := got[key]
+		require.True(t, ok, "%s.%s missing", path, key)
+		assertJSONValueKind(t, wantValue, gotValue, path+"."+key)
+	}
+}
+
+func assertJSONValueKind(t *testing.T, want, got any, path string) {
+	t.Helper()
+	switch wantValue := want.(type) {
+	case map[string]any:
+		gotValue, ok := got.(map[string]any)
+		require.True(t, ok, "%s must be an object", path)
+		assertJSONShape(t, wantValue, gotValue, path)
+	case []any:
+		gotValue, ok := got.([]any)
+		require.True(t, ok, "%s must be an array", path)
+		if len(wantValue) == 0 {
+			assert.Empty(t, gotValue, "%s must be empty", path)
+		}
+	default:
+		assert.Equal(t, reflect.TypeOf(want), reflect.TypeOf(got), "%s type", path)
+	}
+}
+
 // TestAdapter_SingleBlock_Success is the happy path: a single-block request is
 // decoded, proved, its response written, and the request archived.
 func TestAdapter_SingleBlock_Success(t *testing.T) {
@@ -115,13 +184,13 @@ func TestAdapter_SingleBlock_Success(t *testing.T) {
 	assert.Equal(t, backend.ProofTypeL2Execution, job.Type)
 	assert.Equal(t, uint64(1000501), job.StartBlock)
 	assert.Equal(t, uint64(1000501), job.EndBlock)
-	wantSSZ, err := os.ReadFile("testdata/single_block_expected.ssz")
+	wantSSZ, err := os.ReadFile("../testdata/single_block_expected.ssz")
 	require.NoError(t, err)
 	assert.Equal(t, wantSSZ, job.Payload, "job payload must be the framed SSZ")
 
 	resp := readExecutionResponse(t, root, singleReqName)
 	assertResponseShapeMatchesReference(t, resp)
-	assert.Equal(t, defaultProverVersion, resp["proverVersion"])
+	assert.Equal(t, jobadapter.DefaultProverVersion, resp["proverVersion"])
 	assert.Equal(t, "0xdead", resp["proof"])
 	startBlockNumber, ok := resp["startBlockNumber"].(float64)
 	require.True(t, ok)
@@ -159,7 +228,7 @@ func TestAdapter_SingleBlock_UsesConfiguredProverVersion(t *testing.T) {
 }
 
 // TestAdapter_ClaimsBeforeProving verifies the request is renamed to
-// .inprogress before the Prover runs, so a second worker cannot pick it up.
+// .inprogress before the jobadapter.Prover runs, so a second worker cannot pick it up.
 func TestAdapter_ClaimsBeforeProving(t *testing.T) {
 	var claimed, originalGone bool
 	var root string
@@ -201,7 +270,7 @@ func TestAdapter_ProveFailure(t *testing.T) {
 }
 
 // TestAdapter_MalformedRequest verifies undecodable JSON never reaches the
-// Prover, produces a failure response, and is archived so the loop continues.
+// jobadapter.Prover, produces a failure response, and is archived so the loop continues.
 func TestAdapter_MalformedRequest(t *testing.T) {
 	mock := &mockProver{}
 	a, root := newAdapter(t, mock)
@@ -210,7 +279,7 @@ func TestAdapter_MalformedRequest(t *testing.T) {
 	n, err := a.processOnce(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, 1, n)
-	assert.Empty(t, mock.jobs, "Prover must not be called for a malformed request")
+	assert.Empty(t, mock.jobs, "jobadapter.Prover must not be called for a malformed request")
 
 	resp := readFailureResponse(t, root, "bad.json")
 	assert.Equal(t, "failed", resp.Status)
@@ -226,13 +295,13 @@ func TestAdapter_ForcedTransactions_NotImplemented(t *testing.T) {
 
 	var obj map[string]any
 	require.NoError(t, json.Unmarshal(readFixture(t, "request_single_block.json"), &obj))
-	payload := obj[proofRequestKey].(map[string]any)[payloadsKey].([]any)[0].(map[string]any)
-	payload[rollupExtensionKey].(map[string]any)[forcedTransactionsKey] = []any{
+	payload := obj["proofRequest"].(map[string]any)["payloads"].([]any)[0].(map[string]any)
+	payload["rollupExtension"].(map[string]any)["forcedTransactions"] = []any{
 		map[string]any{
-			numberKey:      16,
-			deadlineKey:    1000599,
-			signedTxRlpKey: "0x02f86b",
-			acceptanceKey:  forcedTxIncluded,
+			"number":      16,
+			"deadline":    1000599,
+			"signedTxRlp": "0x02f86b",
+			"acceptance":  "INCLUDED",
 		},
 	}
 	writeRequestObject(t, root, singleReqName, obj)
@@ -248,7 +317,7 @@ func TestAdapter_ForcedTransactions_NotImplemented(t *testing.T) {
 }
 
 // TestAdapter_MultiBlock verifies a multi-block request is rejected (not yet
-// supported) without invoking the Prover.
+// supported) without invoking the jobadapter.Prover.
 func TestAdapter_MultiBlock(t *testing.T) {
 	mock := &mockProver{}
 	a, root := newAdapter(t, mock)
@@ -257,7 +326,7 @@ func TestAdapter_MultiBlock(t *testing.T) {
 	n, err := a.processOnce(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, 1, n)
-	assert.Empty(t, mock.jobs, "multi-block request must not reach the Prover")
+	assert.Empty(t, mock.jobs, "multi-block request must not reach the jobadapter.Prover")
 
 	resp := readFailureResponse(t, root, "1000501-1000502-getZkL2ExecutionProofV1.json")
 	assert.Equal(t, "failed", resp.Status)
@@ -278,7 +347,8 @@ func TestAdapter_SkipsInProgress(t *testing.T) {
 	assert.FileExists(t, inProgress, "an .inprogress file must be left untouched")
 }
 
-// TestNew_Validation covers New's argument checks and the PollInterval default.
+// TestNew_Validation covers New's argument
+// checks and the PollInterval default.
 func TestNew_Validation(t *testing.T) {
 	t.Run("EmptyRootDir", func(t *testing.T) {
 		_, err := New(Config{}, &mockProver{})
@@ -298,12 +368,13 @@ func TestNew_Validation(t *testing.T) {
 	t.Run("DefaultsProverVersion", func(t *testing.T) {
 		a, err := New(Config{RootDir: t.TempDir()}, &mockProver{})
 		require.NoError(t, err)
-		assert.Equal(t, defaultProverVersion, a.cfg.ProverVersion)
+		assert.Equal(t, jobadapter.DefaultProverVersion, a.cfg.ProverVersion)
 	})
 }
 
-// TestNew_MkdirFailure verifies New reports an error when its subdirectories
-// cannot be created (here RootDir is a regular file).
+// TestNew_MkdirFailure verifies New reports
+// an error when its subdirectories cannot be created (here RootDir is a regular
+// file).
 func TestNew_MkdirFailure(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "not-a-dir")
 	require.NoError(t, os.WriteFile(file, []byte("x"), 0o600))

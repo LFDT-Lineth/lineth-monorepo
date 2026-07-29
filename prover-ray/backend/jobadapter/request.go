@@ -1,8 +1,3 @@
-// Package jobadapter drives getZkL2ExecutionProofV1 proof requests from a
-// filesystem queue: it polls a requests directory for request files, drives
-// each through a [backend.Core], and writes responses. It is the boundary
-// where the coordinator's readable JSON is SSZ-encoded for the guest,
-// mirroring rollup_spec/src/rollup_spec/proof_io_v1.py.
 package jobadapter
 
 import (
@@ -86,7 +81,7 @@ type Request struct {
 // statelessInput and converts the already-validated empty executionRequests
 // list into the empty container shape expected by [ssz.EncodeStatelessInput].
 // It also validates and preserves rollupExtension.forcedTransactions for the
-// adapter capability check.
+// Runner capability check.
 func DecodeRequest(data []byte) (*Request, error) {
 	var env map[string]json.RawMessage
 	if err := json.Unmarshal(data, &env); err != nil {

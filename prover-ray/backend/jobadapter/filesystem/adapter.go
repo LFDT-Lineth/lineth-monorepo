@@ -1,4 +1,4 @@
-package jobadapter
+package filesystem
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/jobadapter"
 )
 
 const (
@@ -19,26 +19,19 @@ const (
 	responsesSubDir = "responses"
 	doneSubDir      = "requests-done"
 
-	// inProgressSuffix marks a request claimed by this worker; a file bearing
-	// it is skipped by the scan (another worker owns it, or it is mid-flight).
+	// inProgressSuffix marks a request claimed by this worker; files with this
+	// suffix are skipped by the scan.
 	inProgressSuffix = ".inprogress"
 	// failedSuffix distinguishes archived requests that did not prove.
 	failedSuffix = ".failed"
 
-	defaultPollInterval  = time.Second
-	defaultProverVersion = "4.0.0-riscv"
+	defaultPollInterval = time.Second
 
 	dirPerm  = 0o750
 	filePerm = 0o600
 )
 
-// Prover is the subset of [backend.Core] the adapter needs. It is an interface
-// so tests can drive the adapter with a mock and never build a circuit.
-type Prover interface {
-	Prove(ctx context.Context, job backend.Job) backend.Result
-}
-
-// Config holds the adapter's filesystem layout and poll cadence.
+// Config holds the filesystem queue layout and poll cadence.
 type Config struct {
 	// RootDir contains the requests/, responses/, and requests-done/
 	// subdirectories; [New] creates them if missing.
@@ -47,47 +40,60 @@ type Config struct {
 	// Defaults to one second when unset.
 	PollInterval time.Duration
 	// ProverVersion is emitted on successful getZkL2ExecutionProofV1-shaped
-	// responses. Defaults to defaultProverVersion when unset.
+	// responses. Defaults to jobadapter.DefaultProverVersion when unset.
 	ProverVersion string
 }
 
 const statusFailed = "failed"
 
-// Adapter polls a filesystem request queue and drives each request through a
-// [Prover].
+type failureResponseBody struct {
+	JobID  string `json:"jobId"`
+	Status string `json:"status"`
+	Error  string `json:"error,omitempty"`
+}
+
+// Adapter polls a filesystem request queue and sends each request to
+// jobadapter.Runner.
 type Adapter struct {
 	cfg    Config
-	prover Prover
+	runner *jobadapter.Runner
 }
 
 // New creates the requests/, responses/, and requests-done/ subdirectories
 // under cfg.RootDir and returns an [Adapter] ready to run.
-func New(cfg Config, prover Prover) (*Adapter, error) {
+func New(cfg Config, prover jobadapter.Prover) (*Adapter, error) {
 	if cfg.RootDir == "" {
-		return nil, fmt.Errorf("jobadapter.New: RootDir must be set")
+		return nil, fmt.Errorf("jobadapter/filesystem.New: RootDir must be set")
 	}
 	if prover == nil {
-		return nil, fmt.Errorf("jobadapter.New: prover must not be nil")
+		return nil, fmt.Errorf("jobadapter/filesystem.New: prover must not be nil")
 	}
 	if cfg.PollInterval <= 0 {
 		cfg.PollInterval = defaultPollInterval
 	}
 	if cfg.ProverVersion == "" {
-		cfg.ProverVersion = defaultProverVersion
+		cfg.ProverVersion = jobadapter.DefaultProverVersion
 	}
 
-	a := &Adapter{cfg: cfg, prover: prover}
+	runner, err := jobadapter.NewRunner(prover, cfg.ProverVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	a := &Adapter{cfg: cfg, runner: runner}
 	for _, dir := range []string{a.requestsDir(), a.responsesDir(), a.doneDir()} {
 		if err := os.MkdirAll(dir, dirPerm); err != nil {
-			return nil, fmt.Errorf("jobadapter.New: creating %s: %w", dir, err)
+			return nil, fmt.Errorf("jobadapter/filesystem.New: creating %s: %w", dir, err)
 		}
 	}
 	return a, nil
 }
 
-func (a *Adapter) requestsDir() string  { return filepath.Join(a.cfg.RootDir, requestsSubDir) }
-func (a *Adapter) responsesDir() string { return filepath.Join(a.cfg.RootDir, responsesSubDir) }
-func (a *Adapter) doneDir() string      { return filepath.Join(a.cfg.RootDir, doneSubDir) }
+func (a *Adapter) requestsDir() string { return filepath.Join(a.cfg.RootDir, requestsSubDir) }
+func (a *Adapter) responsesDir() string {
+	return filepath.Join(a.cfg.RootDir, responsesSubDir)
+}
+func (a *Adapter) doneDir() string { return filepath.Join(a.cfg.RootDir, doneSubDir) }
 
 // Run polls requests/ every cfg.PollInterval until ctx is cancelled, draining
 // the request it is processing before returning nil.
@@ -140,7 +146,7 @@ func (a *Adapter) processOnce(ctx context.Context) (int, error) {
 // processRequest claims one request (atomic rename to .inprogress), runs it,
 // writes its response, and archives it. It returns false without error when the
 // claim is lost to another worker. A returned error is an infrastructure
-// failure (filesystem), not a proof failure — those are recorded in the
+// failure (filesystem), not a proof failure; those are recorded in the
 // response.
 func (a *Adapter) processRequest(ctx context.Context, name string) (bool, error) {
 	src := filepath.Join(a.requestsDir(), name)
@@ -152,62 +158,38 @@ func (a *Adapter) processRequest(ctx context.Context, name string) (bool, error)
 		return false, fmt.Errorf("jobadapter: claiming %s: %w", name, err)
 	}
 
-	resp, success := a.run(ctx, name, claimed)
+	result := a.run(ctx, name, claimed)
 
-	if err := a.writeResponse(name, resp); err != nil {
+	if err := a.writeResponse(name, result.ResponseBody); err != nil {
 		_ = os.Rename(claimed, src) // best-effort: avoid stranding the request as .inprogress
 		return false, err
 	}
-	if err := a.archive(claimed, name, success); err != nil {
+	if err := a.archive(claimed, name, result.Success); err != nil {
 		_ = os.Rename(claimed, src) // best-effort: allow retry after archive infrastructure failures
 		return false, err
 	}
 	return true, nil
 }
 
-// run decodes the claimed request and proves it, returning the response body
-// and whether it succeeded. Decode, validation, and proof failures all map to a
-// failure response rather than an error.
-func (a *Adapter) run(ctx context.Context, name, claimed string) (any, bool) {
+// run reads the claimed request and hands it to Runner. Read failures map to
+// failure responses so the request can still be archived and the loop can
+// continue.
+func (a *Adapter) run(ctx context.Context, name, claimed string) jobadapter.RunResult {
 	id := strings.TrimSuffix(name, ".json")
 
 	data, err := os.ReadFile(claimed) //nolint:gosec // claimed is a scanned entry under RootDir/requests
 	if err != nil {
-		return failureResponse(id, err), false
+		return jobadapter.RunResult{ResponseBody: failureResponse(id, err)}
 	}
+	return a.runner.Run(ctx, id, data)
+}
 
-	req, err := DecodeRequest(data)
+func failureResponse(id string, err error) failureResponseBody {
+	msg := ""
 	if err != nil {
-		return failureResponse(id, err), false
+		msg = err.Error()
 	}
-	if len(req.Payloads) != 1 {
-		return failureResponse(id, fmt.Errorf(
-			"multi-block requests are not supported (got %d payloads): %w",
-			len(req.Payloads), backend.ErrNotImplemented)), false
-	}
-
-	payload := req.Payloads[0]
-	if len(payload.ForcedTransactions) != 0 {
-		return failureResponse(id, fmt.Errorf(
-			"forced transactions are not supported (got %d): %w",
-			len(payload.ForcedTransactions), backend.ErrNotImplemented)), false
-	}
-
-	result := a.prover.Prove(ctx, backend.Job{
-		ID:         id,
-		Type:       backend.ProofTypeL2Execution,
-		StartBlock: payload.BlockNumber,
-		EndBlock:   payload.BlockNumber,
-		Payload:    payload.FramedSSZ,
-	})
-	if result.Status != backend.ResultStatusOK {
-		err := result.Err
-		if err == nil {
-			err = fmt.Errorf("prover returned status %s", result.Status)
-		}
-		return failureResponse(id, err), false
-	}
-	return newExecutionResponse(result, payload.BlockNumber, a.cfg.ProverVersion), true
+	return failureResponseBody{JobID: id, Status: statusFailed, Error: msg}
 }
 
 func (a *Adapter) writeResponse(name string, resp any) error {
