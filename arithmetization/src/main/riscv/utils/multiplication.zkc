@@ -1,8 +1,3 @@
-// 32-bit "signed signed" multiplication
-fn mul32_ss(lhs:u32, rhs:u32) -> (hi:u32, lo:u32) {
-    hi::lo = (lhs as u64) * (rhs as u64)
-}
-
 // 32-bit "unsigned unsigned" multiplication
 fn mul32_uu(lhs:u32, rhs:u32) -> (hi:u32, lo:u32) {
     hi::lo = (lhs as u64) * (rhs as u64)
