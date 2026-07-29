@@ -62,8 +62,6 @@ pub const SizeBundle = struct {
 pub const System = struct {
     params: fri.Params,
     layout: []const SizeBundle,
-    num_batches: usize,
-    total_claims: usize,
 };
 
 pub const OpeningProof = struct {
@@ -90,10 +88,10 @@ pub const VerifyInput = struct {
 
 pub fn verify(comptime system: System, input: VerifyInput) Error!void {
     const params = system.params;
-    const mapping = comptime computeInputMapping(system);
+    const info = comptime computeLayoutInfo(system.layout);
 
-    if (input.roots.len != mapping.distinct_count) return Error.RootCountMismatch;
-    if (input.claimed_values.len != system.total_claims) return Error.ClaimedValueCountMismatch;
+    if (input.roots.len != info.distinct_count) return Error.RootCountMismatch;
+    if (input.claimed_values.len != info.total_claims) return Error.ClaimedValueCountMismatch;
     if (comptime systemHasMultiShiftEntry(system)) {
         if (input.zeta.isZero()) return Error.ZetaZeroWithMultipleShifts;
     }
@@ -120,7 +118,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
 
         const query_position = input.query_positions[query_idx];
         const opening = input.proof.input_queries[query_idx];
-        try authenticateInputQuery(params, opening, input.roots, mapping, query_position);
+        try authenticateInputQuery(params, opening, input.roots, info, query_position);
 
         if (num_rounds > 0) {
             const running_query = input.proof.fri_proof.running_queries[query_idx];
@@ -135,12 +133,14 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
             const domain_log_size = params.log_codeword_size - round;
             const level_size = @as(usize, 1) << domain_log_size;
 
-            try bindInputTreeOpenings(bundle, opening, mapping, level_size);
+            try bindInputTreeOpenings(bundle, opening, info, level_size);
 
-            const alpha_deep: ext.Ext = if (round < input.fold_alphas.len)
+            // fold_alphas.len == num_rounds exactly (checkOpeningProofShape
+            // above), so this matches prover-ray's round < len(foldAlphas).
+            const alpha_deep: ext.Ext = if (round < num_rounds)
                 input.fold_alphas[round].square()
-            else if (input.fold_alphas.len > 0)
-                input.fold_alphas[input.fold_alphas.len - 1]
+            else if (num_rounds > 0)
+                input.fold_alphas[num_rounds - 1]
             else
                 ext.Ext.zero();
 
@@ -150,7 +150,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
             const self_val = try reconstructQueryValueAt(
                 bundle,
                 opening,
-                mapping,
+                info,
                 level_size,
                 input.claimed_values,
                 input.zeta,
@@ -162,7 +162,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
             const sib_val = try reconstructQueryValueAt(
                 bundle,
                 opening,
-                mapping,
+                info,
                 level_size,
                 input.claimed_values,
                 input.zeta,
@@ -230,33 +230,44 @@ fn roundForSize(comptime params: fri.Params, comptime size_log2: u8) u8 {
     }
 }
 
-const InputMapping = struct { index_by_batch: [1024]usize, distinct_count: usize };
+/// Everything about `System.layout` that isn't already explicit in the
+/// layout itself: the batch-dedup mapping (prover-ray's `inputOpeningRoots`,
+/// done here by index since batch_idx is the identity of one commitment --
+/// codegen never assigns two distinct indices to the same commitment, so
+/// this always agrees with prover-ray's by-root-value dedup) and the total
+/// flattened claim count. One comptime walk over the layout, so neither can
+/// silently disagree with the layout describing them.
+const LayoutInfo = struct {
+    index_by_batch: []const usize,
+    distinct_count: usize,
+    total_claims: usize,
+};
 
-/// Assigns each distinct batch index (in first-declaration order across
-/// `system.layout`) a slot into `VerifyInput.roots`/`OpeningProof.input_queries`:
-/// prover-ray's `inputOpeningRoots`, computed at comptime here since batch
-/// identity is static rather than deduced from runtime root equality.
-///
-/// `index_by_batch` is oversized to a fixed 1024 rather than
-/// `system.num_batches` so this helper's return type doesn't depend on a
-/// second comptime parameter; only `index_by_batch[0..system.num_batches]`
-/// is ever read.
-fn computeInputMapping(comptime system: System) InputMapping {
+fn computeLayoutInfo(comptime layout: []const SizeBundle) LayoutInfo {
     comptime {
-        if (system.num_batches > 1024) @compileError("fri: pcs: num_batches exceeds computeInputMapping's fixed bound");
-        var index_by_batch: [1024]usize = undefined;
-        var assigned: [1024]bool = [_]bool{false} ** 1024;
-        var count: usize = 0;
-        for (system.layout) |bundle| {
+        var num_batches: usize = 0;
+        for (layout) |bundle| {
+            for (bundle.entries) |entry| {
+                if (entry.batch_idx >= num_batches) num_batches = entry.batch_idx + 1;
+            }
+        }
+
+        var index_by_batch: [num_batches]usize = undefined;
+        var assigned: [num_batches]bool = [_]bool{false} ** num_batches;
+        var distinct_count: usize = 0;
+        var total_claims: usize = 0;
+        for (layout) |bundle| {
             for (bundle.entries) |entry| {
                 if (!assigned[entry.batch_idx]) {
                     assigned[entry.batch_idx] = true;
-                    index_by_batch[entry.batch_idx] = count;
-                    count += 1;
+                    index_by_batch[entry.batch_idx] = distinct_count;
+                    distinct_count += 1;
                 }
+                total_claims += entry.shifts.len;
             }
         }
-        return .{ .index_by_batch = index_by_batch, .distinct_count = count };
+        const final_index_by_batch = index_by_batch;
+        return .{ .index_by_batch = &final_index_by_batch, .distinct_count = distinct_count, .total_claims = total_claims };
     }
 }
 
@@ -312,10 +323,10 @@ fn authenticateInputQuery(
     comptime params: fri.Params,
     opening: []const merkle.InputTreeOpening,
     roots: []const poseidon2.Digest,
-    comptime mapping: InputMapping,
+    comptime info: LayoutInfo,
     query_position: usize,
 ) Error!void {
-    if (opening.len != mapping.distinct_count or roots.len != mapping.distinct_count) return Error.InputTreeCountMismatch;
+    if (opening.len != info.distinct_count or roots.len != info.distinct_count) return Error.InputTreeCountMismatch;
 
     const codeword_size = @as(usize, 1) << params.log_codeword_size;
     for (opening, roots) |branch, root| {
@@ -336,13 +347,13 @@ fn authenticateInputQuery(
 fn bindInputTreeOpenings(
     comptime bundle: SizeBundle,
     opening: []const merkle.InputTreeOpening,
-    comptime mapping: InputMapping,
+    comptime info: LayoutInfo,
     level_size: usize,
 ) Error!void {
     const batches = comptime distinctBatchesInBundle(bundle);
     inline for (batches) |batch_idx| {
         const widths = comptime bundleBatchWidths(bundle, batch_idx);
-        const branch_idx = mapping.index_by_batch[batch_idx];
+        const branch_idx = info.index_by_batch[batch_idx];
         const pair = try opening[branch_idx].pairAtLevel(level_size);
         if (pair[0].base.len != widths.base or pair[0].ext.len != widths.ext) return Error.RowShapeMismatch;
         if (pair[1].base.len != widths.base or pair[1].ext.len != widths.ext) return Error.ConjugateRowShapeMismatch;
@@ -358,7 +369,7 @@ fn bindInputTreeOpenings(
 fn reconstructQueryValueAt(
     comptime bundle: SizeBundle,
     opening: []const merkle.InputTreeOpening,
-    comptime mapping: InputMapping,
+    comptime info: LayoutInfo,
     level_size: usize,
     claimed_values: []const ext.Ext,
     zeta: ext.Ext,
@@ -372,7 +383,7 @@ fn reconstructQueryValueAt(
     inline while (i > 0) {
         i -= 1;
         const entry = bundle.entries[i];
-        const branch_idx = mapping.index_by_batch[entry.batch_idx];
+        const branch_idx = info.index_by_batch[entry.batch_idx];
         const pair = try opening[branch_idx].pairAtLevel(level_size);
         const row = if (sibling) pair[1] else pair[0];
         const entry_value: ext.Ext = if (entry.is_ext) row.ext[entry.row_idx] else ext.Ext.lift(row.base[entry.row_idx]);
