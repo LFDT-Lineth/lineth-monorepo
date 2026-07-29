@@ -1,0 +1,117 @@
+# git-cliff ~ SHARED TEMPLATE for all component + milestone releases.
+# https://git-cliff.org/docs/configuration
+#
+# This is the single source of truth for every component's git-cliff config.
+# It is NOT usable as-is: the `@@SCOPES@@` placeholder in the commit_parsers
+# below must be replaced with a regex alternation of conventional-commit scopes
+# (e.g. `coordinator` or `linea-besu|tracer|sequencer`) before running git-cliff.
+# The `run-git-cliff-commands` action (and the milestone prepend loop) render a
+# temp copy with the caller-supplied `scopes` injected, then point
+# `git cliff --config` at that rendered file.
+#
+# git-cliff has no native way to inject the scope set into commit_parsers — TOML
+# has no variables/anchors, and git-cliff only Tera-templates the [changelog]
+# section, not the [git] parsers (env interpolation like `${SCOPES}` is rejected
+# as an invalid regex). Runtime placeholder substitution is therefore the
+# mechanism that lets one file serve every component.
+#
+# Selection is SCOPE based: only commits carrying one of the injected scopes are
+# kept, so the version bump and changelog derive from those commits alone. A
+# commit qualifies when ANY of its comma-separated scopes is in the set, e.g.
+# `feat(linea-besu): x` or `feat(coordinator,prover): x`. In the release
+# workflows this is combined with `--include-path` for scope-AND-path gating.
+
+
+[changelog]
+# A Tera template to be rendered for each release in the changelog.
+# See https://keats.github.io/tera/docs/#introduction
+body = """
+{% if version %}\
+    ## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+{% else %}\
+    ## [unreleased]
+{% endif %}\
+{% for group, commits in commits | group_by(attribute="group") %}
+    ### {{ group | striptags | trim | upper_first }}
+    {% for commit in commits %}
+        - {% if commit.scope %}*({{ commit.scope }})* {% endif %}\
+            {% if commit.breaking %}[**breaking**] {% endif %}\
+            {{ commit.message | upper_first }}\
+    {% endfor %}
+{% endfor %}
+"""
+# Remove leading and trailing whitespaces from the changelog's body.
+trim = true
+# Render body even when there are no releases to process.
+render_always = true
+# An array of regex based postprocessors to modify the changelog.
+postprocessors = [
+    # Replace the placeholder <REPO> with a URL.
+    #{ pattern = '<REPO>', replace = "https://github.com/orhun/git-cliff" },
+]
+# render body even when there are no releases to process
+# render_always = true
+# output file path
+# output = "test.md"
+
+[git]
+# Parse commits according to the conventional commits specification.
+# See https://www.conventionalcommits.org
+conventional_commits = true
+# Exclude commits that do not match the conventional commits specification.
+filter_unconventional = true
+# Require all commits to be conventional.
+# Takes precedence over filter_unconventional.
+require_conventional = false
+# Split commits on newlines, treating each line as an individual commit.
+split_commits = false
+# An array of regex based parsers to modify commit messages prior to further processing.
+commit_preprocessors = [
+    # Replace issue numbers with link templates to be updated in `changelog.postprocessors`.
+    #{ pattern = '\((\w+\s)?#([0-9]+)\)', replace = "([#${2}](<REPO>/issues/${2}))"},
+    # Check spelling of the commit message using https://github.com/crate-ci/typos.
+    # If the spelling is incorrect, it will be fixed automatically.
+    #{ pattern = '.*', replace_command = 'typos --write-changes -' },
+]
+# Prevent commits that are breaking from being excluded by commit parsers.
+protect_breaking_commits = false
+# Keep ONLY commits whose scope list contains one of the injected scopes as a
+# whole, comma-delimited token; group them by type so the changelog renders
+# sections. The scope fragment `\(([^)]*,)?\s*(@@SCOPES@@)\s*(,[^)]*)?\)` matches
+# the scope as a bounded token — e.g. with `@@SCOPES@@` = `linea-besu` it matches
+# `(linea-besu)`, `(a,linea-besu)`, `(linea-besu,b)` but NOT `(linea-besu-package)`.
+# The optional `!` for breaking changes sits after `)`, so breaking commits still
+# match and stay flagged.
+commit_parsers = [
+    # Drop auto-generated CHANGELOG-update commits (any scope) so they never
+    # bump the version or appear in the changelog.
+    { message = "^chore\\([^)]*\\): update CHANGELOG\\.md", skip = true },
+
+    { message = "^feat\\(([^)]*,)?\\s*(@@SCOPES@@)\\s*(,[^)]*)?\\)", group = "<!-- 0 -->🚀 Features" },
+    { message = "^fix\\(([^)]*,)?\\s*(@@SCOPES@@)\\s*(,[^)]*)?\\)", group = "<!-- 1 -->🐛 Bug Fixes" },
+    { message = "^perf\\(([^)]*,)?\\s*(@@SCOPES@@)\\s*(,[^)]*)?\\)", group = "<!-- 4 -->⚡ Performance" },
+    { message = "^refactor\\(([^)]*,)?\\s*(@@SCOPES@@)\\s*(,[^)]*)?\\)", group = "<!-- 2 -->🚜 Refactor" },
+    { message = "^(chore|ci)\\(([^)]*,)?\\s*(@@SCOPES@@)\\s*(,[^)]*)?\\)", group = "<!-- 7 -->⚙️ Miscellaneous Tasks" },
+    { message = "^revert\\(([^)]*,)?\\s*(@@SCOPES@@)\\s*(,[^)]*)?\\)", group = "<!-- 9 -->◀️ Revert" },
+
+    # Everything else (other scopes, no scope, doc/style/test) is skipped so it
+    # neither bumps the version nor shows up in the changelog.
+    { message = ".*", skip = true },
+]
+# Exclude commits that are not matched by any commit parser.
+filter_commits = true
+# Fail on a commit that is not matched by any commit parser.
+fail_on_unmatched_commit = false
+# An array of link parsers for extracting external references, and turning them into URLs, using regex.
+link_parsers = []
+# Include only the tags that belong to the current branch, false means including all tags in the repo.
+use_branch_tags = false
+# Order releases topologically instead of chronologically.
+topo_order = false
+# Order commits topologically instead of chronologically.
+topo_order_commits = true
+# Order of commits in each group/release within the changelog.
+# Allowed values: newest, oldest
+sort_commits = "oldest"
+# Process submodules commits
+recurse_submodules = false
