@@ -15,7 +15,7 @@ runs:
       run: echo "version=$(cat riscv-guests/.zigversion)" >> "$GITHUB_OUTPUT"
 
     - name: Install Zig
-      uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+      uses: ./.github/actions/setup-zig
       with:
         version: ${{ steps.zigversion.outputs.version }}
 

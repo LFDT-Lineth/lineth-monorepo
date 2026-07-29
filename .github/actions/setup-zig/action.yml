@@ -1,0 +1,27 @@
+name: 'Setup Zig (shared cache)'
+description: >
+  Installs Zig and caches its global cache directory under a job-name-agnostic key, so every
+  caller across every workflow shares one cache instead of each job growing its own copy.
+  Suppresses mlugg/setup-zig's own built-in cache, which keys on the calling job's id and writes
+  a brand-new entry every run.
+inputs:
+  version:
+    description: 'Version of the Zig compiler to install'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Zig
+      uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+      with:
+        version: ${{ inputs.version }}
+        use-cache: 'false'
+
+    - name: Cache Zig global cache directory
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      with:
+        path: .zig-cache
+        key: setup-zig-global-cache-${{ inputs.version }}-${{ hashFiles('**/build.zig.zon') }}
+        restore-keys: |
+          setup-zig-global-cache-${{ inputs.version }}-
