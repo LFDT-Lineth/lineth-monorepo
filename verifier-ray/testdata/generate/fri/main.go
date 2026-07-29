@@ -145,7 +145,7 @@ type pcsSizeBundle struct {
 // descending order, batches in declaration order, base rows then ext rows,
 // row declaration order, with the claim offset accumulating across the
 // whole layout (verifier_ray's flat claimed_values array).
-func computeLayout(shapes []fri.Shape, shifts []fri.BatchShifts) ([]pcsSizeBundle, int) {
+func computeLayout(shapes []fri.Shape, shifts []fri.BatchShifts) []pcsSizeBundle {
 	maxSizeLog2 := -1
 	for _, s := range shapes {
 		if len(s) > maxSizeLog2+1 {
@@ -182,7 +182,7 @@ func computeLayout(shapes []fri.Shape, shifts []fri.BatchShifts) ([]pcsSizeBundl
 			layout = append(layout, bundle)
 		}
 	}
-	return layout, offset
+	return layout
 }
 
 // flattenClaims reads claimed's per-(batch,size,row) values off in exactly
@@ -276,8 +276,6 @@ type pcsCaseData struct {
 	Params            fri.Params
 	LogFinalPolySize  uint8
 	Layout            []pcsSizeBundle
-	NumBatches        int
-	TotalClaims       int
 	Roots             []field.Octuplet
 	ClaimedValues     []field.Ext
 	Zeta              field.Ext
@@ -334,15 +332,13 @@ func buildPCSScenarioData(s pcsScenario) pcsCaseData {
 		panic(fmt.Sprintf("%s: self-check via pcs.Verify failed: %v", s.Name, err))
 	}
 
-	layout, totalClaims := computeLayout(shapes, s.Shifts)
+	layout := computeLayout(shapes, s.Shifts)
 
 	return pcsCaseData{
 		Name:             s.Name,
 		Params:           s.Params,
 		LogFinalPolySize: s.LogFinalPolySize,
 		Layout:           layout,
-		NumBatches:       len(s.Witnesses),
-		TotalClaims:      totalClaims,
 		Roots:            roots,
 		ClaimedValues:    flattenClaims(layout, claimed),
 		Zeta:             s.Zeta,
@@ -472,7 +468,7 @@ func corruptBoundaryClaimData(base pcsCaseData) pcsCaseData {
 
 // ─── Zig literal emission ───────────────────────────────────────────────────
 
-func pcsSystemLiteral(params fri.Params, logFinalPolySize uint8, layout []pcsSizeBundle, numBatches, totalClaims int) string {
+func pcsSystemLiteral(params fri.Params, logFinalPolySize uint8, layout []pcsSizeBundle) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "pcs.System{ .params = fri.Params{ .log_codeword_size = %d, .log_plaintext_size = %d, .log_final_poly_size = %d, .num_queries = %d }, .layout = &.{ ",
 		params.LogCodewordSize, params.LogPlainTextSize, logFinalPolySize, params.NumQueries)
@@ -490,7 +486,7 @@ func pcsSystemLiteral(params fri.Params, logFinalPolySize uint8, layout []pcsSiz
 		}
 		b.WriteString(" } }")
 	}
-	fmt.Fprintf(&b, " }, .num_batches = %d, .total_claims = %d }", numBatches, totalClaims)
+	b.WriteString(" } }")
 	return b.String()
 }
 
@@ -556,7 +552,7 @@ func pcsProofLiteral(proof fri.OpeningProof) string {
 func writePCSCase(out *bytes.Buffer, c pcsCaseData) {
 	fmt.Fprintf(out, "    .{\n")
 	fmt.Fprintf(out, "        .name = \"%s\",\n", c.Name)
-	fmt.Fprintf(out, "        .system = %s,\n", pcsSystemLiteral(c.Params, c.LogFinalPolySize, c.Layout, c.NumBatches, c.TotalClaims))
+	fmt.Fprintf(out, "        .system = %s,\n", pcsSystemLiteral(c.Params, c.LogFinalPolySize, c.Layout))
 	fmt.Fprintf(out, "        .roots = &%s,\n", commitmentSlice(c.Roots))
 	fmt.Fprintf(out, "        .claimed_values = &%s,\n", extSlice(c.ClaimedValues))
 	fmt.Fprintf(out, "        .zeta = %s,\n", ext6(c.Zeta))

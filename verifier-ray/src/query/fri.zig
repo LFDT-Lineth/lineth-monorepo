@@ -16,7 +16,7 @@ pub const Error = merkle.Error || error{
     InvalidRoundRootCount,
     InvalidRunningQueryCount,
     InvalidFinalPolyLength,
-    InsufficientFoldAlphas,
+    InvalidFoldAlphaCount,
     InsufficientPositions,
     PositionOutOfRange,
     InvalidRunningLayerShape,
@@ -103,8 +103,9 @@ pub const Proof = struct {
 /// proof can never cause an out-of-bounds access later. Mirrors prover-ray's
 /// `checkOpeningProofShape`.
 ///
-/// `fold_alphas` is read only for its length here — checking that at least
-/// `num_rounds` challenges are available — never for arithmetic; the fold
+/// `fold_alphas` is read only for its length here — checking that exactly
+/// `num_rounds` challenges are available (prover-ray's own documented
+/// `Challenges.FoldAlphas` contract), never for arithmetic; the fold
 /// challenges themselves are consumed later, by `checkFolds`.
 pub fn checkOpeningProofShape(
     comptime params: Params,
@@ -117,7 +118,7 @@ pub fn checkOpeningProofShape(
     if (proof.round_roots.len != want_round_roots) return Error.InvalidRoundRootCount;
     if (proof.running_queries.len != params.num_queries) return Error.InvalidRunningQueryCount;
     if (proof.final_poly.len != (@as(usize, 1) << params.log_final_poly_size)) return Error.InvalidFinalPolyLength;
-    if (fold_alphas.len < num_rounds) return Error.InsufficientFoldAlphas;
+    if (fold_alphas.len != num_rounds) return Error.InvalidFoldAlphaCount;
     if (positions.len < params.num_queries) return Error.InsufficientPositions;
 
     const codeword_size = @as(usize, 1) << params.log_codeword_size;
@@ -181,7 +182,7 @@ pub fn checkFolds(
 ) Error!void {
     const num_rounds = params.numRounds();
     if (resolved.len != params.num_queries) return Error.InvalidResolvedQueryCount;
-    if (fold_alphas.len < num_rounds) return Error.InsufficientFoldAlphas;
+    if (fold_alphas.len != num_rounds) return Error.InvalidFoldAlphaCount;
     if (positions.len < resolved.len) return Error.InsufficientPositions;
 
     const generator = fullDomainGenerator(params);
