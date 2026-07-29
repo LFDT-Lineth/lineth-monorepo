@@ -8,8 +8,14 @@ buildscript {
   }
 }
 
+apply plugin: 'java-library'
+
 repositories {
   mavenCentral()
+  maven {
+    url 'https://artifacts.consensys.net/public/teku/maven/'
+    content { includeGroupAndSubgroups('tech.pegasys') }
+  }
   maven {
     name = 'linea-besu'
     url = "https://artifacts.consensys.net/public/linea-besu/maven/"
@@ -30,6 +36,8 @@ ext.artifactId = 'sequencer-interfaces'
 jar { enabled = true }
 
 dependencies {
+  api project(':jvm-libs:linea:core:signer-interfaces')
+
   // Besu Plugin API and core dependencies
   compileOnly "org.hyperledger.besu:besu-plugin-api:${rootProject.ext.resolveBesuVersion()}"
   compileOnly "org.hyperledger.besu:besu-evm:${rootProject.ext.resolveBesuVersion()}"

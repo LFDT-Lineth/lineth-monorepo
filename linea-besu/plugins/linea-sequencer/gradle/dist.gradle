@@ -38,7 +38,7 @@ jar {
   // Kotlin standard library classes are available at runtime when the plugin is loaded by Besu
   from {
     configurations.runtimeClasspath
-      .filter { it.name.startsWith('kotlin-stdlib') }
+      .filter { it.name == "kotlin-stdlib-${libs.versions.kotlin.get()}.jar" }
       .collect { zipTree(it) }
   }
 }

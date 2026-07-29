@@ -13,6 +13,7 @@ import jakarta.validation.constraints.*;
 import java.nio.file.Path;
 import java.time.Duration;
 import lombok.Getter;
+import net.consensys.linea.config.LineaLivenessServiceConfiguration.SignerType;
 import net.consensys.linea.plugins.LineaCliOptions;
 import picocli.CommandLine.Option;
 
@@ -32,6 +33,8 @@ public class LineaLivenessServiceCliOptions implements LineaCliOptions {
 
   public static final String CONTRACT_ADDRESS = "--plugin-linea-liveness-contract-address";
 
+  public static final String SIGNER_TYPE = "--plugin-linea-liveness-signer-type";
+  public static final String SIGNER_NAME = "--plugin-linea-liveness-signer-name";
   public static final String SIGNER_URL = "--plugin-linea-liveness-signer-url";
   public static final String SIGNER_KEY_ID = "--plugin-linea-liveness-signer-key-id";
   public static final String SIGNER_ADDRESS = "--plugin-linea-liveness-signer-address";
@@ -91,8 +94,22 @@ public class LineaLivenessServiceCliOptions implements LineaCliOptions {
       arity = "1")
   private String contractAddress = null;
 
-  @NotBlank(message = "Web3Signer URL must not be blank")
-  @Pattern(regexp = "^https?://.*", message = "Web3Signer URL must be a valid HTTP or HTTPS URL")
+  @Option(
+      names = {SIGNER_TYPE},
+      hidden = true,
+      paramLabel = "<WEB3SIGNER|CUSTOM>",
+      description = "Liveness transaction signer type (default: ${DEFAULT-VALUE})",
+      defaultValue = "WEB3SIGNER")
+  private SignerType signerType = SignerType.WEB3SIGNER;
+
+  @Option(
+      names = {SIGNER_NAME},
+      hidden = true,
+      paramLabel = "<NAME>",
+      description = "Logical signer name resolved by a custom signer provider",
+      arity = "1")
+  private String signerName = null;
+
   @Option(
       names = {SIGNER_URL},
       hidden = true,
@@ -101,11 +118,6 @@ public class LineaLivenessServiceCliOptions implements LineaCliOptions {
       arity = "1")
   private String signerUrl = null;
 
-  @NotBlank(message = "Web3Signer key ID must not be blank")
-  @Pattern(
-      regexp = "^[a-zA-Z0-9._-]+$",
-      message =
-          "Web3Signer key ID must contain only alphanumeric characters, dots, underscores, and hyphens")
   @Option(
       names = {SIGNER_KEY_ID},
       hidden = true,
@@ -213,6 +225,8 @@ public class LineaLivenessServiceCliOptions implements LineaCliOptions {
     options.maxBlockAgeSeconds = config.maxBlockAgeSeconds;
     options.bundleMaxTimestampSurplusSecond = config.bundleMaxTimestampSurplusSecond;
     options.contractAddress = config.contractAddress;
+    options.signerType = config.signerType;
+    options.signerName = config.signerName;
     options.signerUrl = config.signerUrl;
     options.signerKeyId = config.signerKeyId;
     options.signerAddress = config.signerAddress;
@@ -234,21 +248,15 @@ public class LineaLivenessServiceCliOptions implements LineaCliOptions {
   @Override
   public LineaLivenessServiceConfiguration toDomainObject() {
     if (enabled) {
-      if (contractAddress == null
-          || signerUrl == null
-          || signerKeyId == null
-          || signerAddress == null) {
+      if (contractAddress == null || signerAddress == null) {
         throw new IllegalArgumentException(
             "Error: Missing some or all of these required argument(s) when liveness service is enabled: "
                 + CONTRACT_ADDRESS
                 + "=<SMC_ADDRESS>, "
-                + SIGNER_URL
-                + "=<URL>, "
-                + SIGNER_KEY_ID
-                + "=<PUBLIC_KEY_HEX>, "
                 + SIGNER_ADDRESS
                 + "=<EOA_ADDRESS>");
       }
+      validateSignerOptions();
 
       // Minimum gas limit for a contract call (21_000 for simple transfer plus some overhead)
       long minimumGasLimit = 21_000L;
@@ -295,6 +303,8 @@ public class LineaLivenessServiceCliOptions implements LineaCliOptions {
         .maxBlockAgeSeconds(Duration.ofSeconds(maxBlockAgeSeconds))
         .bundleMaxTimestampSurplusSecond(Duration.ofSeconds(bundleMaxTimestampSurplusSecond))
         .contractAddress(contractAddress)
+        .signerType(signerType)
+        .signerName(signerName)
         .signerUrl(signerUrl)
         .signerKeyId(signerKeyId)
         .signerAddress(signerAddress)
@@ -315,6 +325,8 @@ public class LineaLivenessServiceCliOptions implements LineaCliOptions {
         .add(MAX_BLOCK_AGE_SECONDS, maxBlockAgeSeconds)
         .add(BUNDLE_MAX_TIMESTAMP_SURPLUS_SECONDS, bundleMaxTimestampSurplusSecond)
         .add(CONTRACT_ADDRESS, contractAddress)
+        .add(SIGNER_TYPE, signerType)
+        .add(SIGNER_NAME, signerName)
         .add(SIGNER_URL, signerUrl)
         .add(SIGNER_KEY_ID, signerKeyId)
         .add(SIGNER_ADDRESS, signerAddress)
@@ -326,5 +338,46 @@ public class LineaLivenessServiceCliOptions implements LineaCliOptions {
         .add(GAS_LIMIT, gasLimit)
         .add(GAS_PRICE, gasPrice)
         .toString();
+  }
+
+  private void validateSignerOptions() {
+    if (signerType == SignerType.WEB3SIGNER) {
+      if (signerUrl == null
+          || signerUrl.isBlank()
+          || signerKeyId == null
+          || signerKeyId.isBlank()) {
+        throw new IllegalArgumentException(
+            "Error: " + SIGNER_URL + " and " + SIGNER_KEY_ID + " are required for WEB3SIGNER");
+      }
+      if (!signerUrl.matches("^https?://.*")) {
+        throw new IllegalArgumentException(
+            "Error: " + SIGNER_URL + " must be a valid HTTP or HTTPS URL");
+      }
+      if (!signerKeyId.matches("^[a-zA-Z0-9._-]+$")) {
+        throw new IllegalArgumentException(
+            "Error: " + SIGNER_KEY_ID + " contains unsupported characters");
+      }
+      if (signerName != null) {
+        throw new IllegalArgumentException(
+            "Error: " + SIGNER_NAME + " is only valid for CUSTOM signers");
+      }
+      return;
+    }
+
+    if (signerName == null || signerName.isBlank()) {
+      throw new IllegalArgumentException(
+          "Error: " + SIGNER_NAME + " is required for CUSTOM signers");
+    }
+    if (signerUrl != null || signerKeyId != null || tlsEnabled || hasTlsOptions()) {
+      throw new IllegalArgumentException(
+          "Error: Web3Signer URL, key ID, and TLS options are not valid for CUSTOM signers");
+    }
+  }
+
+  private boolean hasTlsOptions() {
+    return tlsKeyStorePath != null
+        || tlsKeyStorePassword != null
+        || tlsTrustStorePath != null
+        || tlsTrustStorePassword != null;
   }
 }

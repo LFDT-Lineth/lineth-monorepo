@@ -14,6 +14,13 @@ plugins {
 }
 
 allprojects {
+  repositories {
+    maven {
+      url 'https://artifacts.consensys.net/public/teku/maven/'
+      content { includeGroupAndSubgroups('tech.pegasys') }
+    }
+  }
+
   plugins.withId('net.consensys.besu-plugin-library') {
     besuPlugin {
       besuVersion = rootProject.providers.provider { rootProject.ext.resolveBesuVersion() }

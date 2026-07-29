@@ -8,22 +8,15 @@
  */
 package net.consensys.linea.sequencer.liveness;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.file.Path;
-import java.security.KeyStore;
-import java.security.SignatureException;
-import java.time.Duration;
-import java.util.*;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManagerFactory;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Optional;
+import java.util.function.Supplier;
+import linea.crypto.Secp256k1Signature;
+import linea.crypto.Signer;
+import linea.web3j.ECKeypairSignerAdapter;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.config.LineaLivenessServiceConfiguration;
 import org.apache.tuweni.bytes.Bytes;
@@ -36,19 +29,16 @@ import org.web3j.abi.FunctionEncoder;
 import org.web3j.abi.datatypes.Bool;
 import org.web3j.abi.datatypes.Function;
 import org.web3j.abi.datatypes.generated.Uint64;
+import org.web3j.crypto.Credentials;
 import org.web3j.crypto.RawTransaction;
-import org.web3j.crypto.Sign;
 import org.web3j.crypto.TransactionEncoder;
 import org.web3j.utils.Numeric;
 
 @Slf4j
 public class LineaLivenessTxBuilder implements LivenessTxBuilder {
   public static final BigInteger ZERO_TRANSACTION_VALUE = BigInteger.ZERO;
-  private final HttpClient httpClient;
-  private final ObjectMapper objectMapper;
-  private final BlockchainService blockchainService;
-  private final String signerKeyId;
-  private final String signerUrl;
+  private final Supplier<Optional<Wei>> nextBlockBaseFee;
+  private final Signer<Secp256k1Signature> signer;
   private final String livenessContractAddress;
   private final long gasPrice;
   private final long gasLimit;
@@ -58,70 +48,33 @@ public class LineaLivenessTxBuilder implements LivenessTxBuilder {
       final LineaLivenessServiceConfiguration lineaLivenessServiceConfiguration,
       final BlockchainService blockchainService,
       final BigInteger chainId) {
+    this(
+        lineaLivenessServiceConfiguration,
+        blockchainService,
+        chainId,
+        new Web3SignerDigestSigner(lineaLivenessServiceConfiguration));
+  }
+
+  public LineaLivenessTxBuilder(
+      final LineaLivenessServiceConfiguration lineaLivenessServiceConfiguration,
+      final BlockchainService blockchainService,
+      final BigInteger chainId,
+      final Signer<Secp256k1Signature> signer) {
+    this(
+        lineaLivenessServiceConfiguration, blockchainService::getNextBlockBaseFee, chainId, signer);
+  }
+
+  LineaLivenessTxBuilder(
+      final LineaLivenessServiceConfiguration lineaLivenessServiceConfiguration,
+      final Supplier<Optional<Wei>> nextBlockBaseFee,
+      final BigInteger chainId,
+      final Signer<Secp256k1Signature> signer) {
     this.chainId = chainId;
-    this.signerKeyId = lineaLivenessServiceConfiguration.signerKeyId();
-    this.signerUrl = lineaLivenessServiceConfiguration.signerUrl();
+    this.signer = signer;
     this.livenessContractAddress = lineaLivenessServiceConfiguration.contractAddress();
     this.gasPrice = lineaLivenessServiceConfiguration.gasPrice();
     this.gasLimit = lineaLivenessServiceConfiguration.gasLimit();
-    this.blockchainService = blockchainService;
-
-    boolean tlsEnabled = lineaLivenessServiceConfiguration.tlsEnabled();
-    Path tlsKeyStorePath = lineaLivenessServiceConfiguration.tlsKeyStorePath();
-    String tlsKeyStorePassword = lineaLivenessServiceConfiguration.tlsKeyStorePassword();
-    Path tlsTrustStorePath = lineaLivenessServiceConfiguration.tlsTrustStorePath();
-    String tlsTrustStorePassword = lineaLivenessServiceConfiguration.tlsTrustStorePassword();
-
-    // Build SSLContext instance
-    Optional<SSLContext> sslContext =
-        tlsEnabled
-            ? buildSSLContext(
-                tlsKeyStorePath, tlsKeyStorePassword, tlsTrustStorePath, tlsTrustStorePassword)
-            : Optional.empty();
-
-    // Initialize HTTP client and JSON mapper for Web3Signer API calls
-    HttpClient.Builder httpBuilder = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(30));
-    sslContext.ifPresent(httpBuilder::sslContext);
-
-    httpClient = httpBuilder.build();
-    objectMapper = new ObjectMapper();
-  }
-
-  private Optional<SSLContext> buildSSLContext(
-      Path clientKeystorePath,
-      String clientKeystorePassword,
-      Path trustStorePath,
-      String trustStorePassword) {
-    try (FileInputStream keyStoreFis =
-            new FileInputStream(clientKeystorePath.toAbsolutePath().toString());
-        FileInputStream trustStoreFis =
-            new FileInputStream(trustStorePath.toAbsolutePath().toString())) {
-      // Load client keystore
-      KeyStore keyStore = KeyStore.getInstance("PKCS12");
-      keyStore.load(keyStoreFis, clientKeystorePassword.toCharArray());
-
-      // Initialize KeyManagerFactory for client certificate
-      KeyManagerFactory keyManagerFactory =
-          KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-      keyManagerFactory.init(keyStore, clientKeystorePassword.toCharArray());
-
-      // Load truststore
-      KeyStore trustStore = KeyStore.getInstance("PKCS12");
-      trustStore.load(trustStoreFis, trustStorePassword.toCharArray());
-
-      // Initialize TrustManagerFactory for server certificate
-      TrustManagerFactory trustManagerFactory =
-          TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-      trustManagerFactory.init(trustStore);
-
-      // Initialize SSLContext
-      SSLContext sslContext = SSLContext.getInstance("TLS");
-      sslContext.init(
-          keyManagerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), null);
-      return Optional.of(sslContext);
-    } catch (Exception ex) {
-      throw new RuntimeException("Failed to initialize SSL context: " + ex.getMessage());
-    }
+    this.nextBlockBaseFee = nextBlockBaseFee;
   }
 
   /**
@@ -195,112 +148,27 @@ public class LineaLivenessTxBuilder implements LivenessTxBuilder {
    */
   private Wei getGasPrice() {
     // Use configured gas price
-    long adjustedGasPrice =
-        Math.max(gasPrice, blockchainService.getNextBlockBaseFee().orElse(Wei.ONE).toLong());
+    long adjustedGasPrice = Math.max(gasPrice, nextBlockBaseFee.get().orElse(Wei.ONE).toLong());
     log.debug("Adjusted gas price: {} Wei (configured as {} Wei)", adjustedGasPrice, gasPrice);
     return Wei.of(adjustedGasPrice);
   }
 
   /**
-   * Signs a raw transaction using Web3Signer.
-   *
-   * @param unsignedTransactionHex the hex of the encoded raw transaction to sign
-   * @return the signed transaction
-   */
-  private String signTransactionWithWeb3Signer(String unsignedTransactionHex) throws IOException {
-    try {
-      // Prepare the request body for Web3Signer
-      Map<String, String> requestBody = new HashMap<>();
-      requestBody.put("data", unsignedTransactionHex);
-      String jsonBody = objectMapper.writeValueAsString(requestBody);
-
-      // Create HTTP request to Web3Signer
-      String endpoint = signerUrl + "/api/v1/eth1/sign/" + signerKeyId;
-
-      HttpRequest request =
-          HttpRequest.newBuilder()
-              .uri(URI.create(endpoint))
-              .header("Content-Type", "application/json")
-              .timeout(Duration.ofSeconds(30))
-              .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
-              .build();
-
-      // Send request and get response
-      HttpResponse<String> response =
-          httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
-      if (response.statusCode() != 200) {
-        String responseBody = response.body();
-        String bodyDescription = responseBody != null ? responseBody : "<null>";
-        throw new IOException(
-            "Web3Signer API call failed with status: "
-                + response.statusCode()
-                + ", body: "
-                + bodyDescription);
-      }
-
-      // The response should be the signed transaction hex string
-      String responseBody = response.body();
-      if (responseBody == null) {
-        throw new IOException("Web3Signer API returned null response body");
-      }
-
-      String signedTransactionHex = responseBody.trim();
-
-      if (signedTransactionHex.isEmpty()) {
-        throw new IOException("Web3Signer API returned empty response body");
-      }
-
-      // Remove quotes if present (some APIs return quoted strings)
-      if (signedTransactionHex.startsWith("\"") && signedTransactionHex.endsWith("\"")) {
-        signedTransactionHex = signedTransactionHex.substring(1, signedTransactionHex.length() - 1);
-      }
-
-      log.debug("Successfully signed transaction with Web3Signer");
-      return signedTransactionHex;
-
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      throw new IOException("Web3Signer request was interrupted", e);
-    }
-  }
-
-  /**
-   * Signs a raw transaction using Web3Signer.
+   * Signs a raw transaction using the configured digest signer.
    *
    * @param rawTransaction the raw transaction to sign
    * @return the signed transaction
    * @throws IOException if signing fails, or the signed transaction is invalid
    */
   private Transaction signTransaction(RawTransaction rawTransaction) throws IOException {
-    // Get the unsigned serialized transaction
-    String unsignedTxEncodedHex = Numeric.toHexString(TransactionEncoder.encode(rawTransaction));
-
-    String signedTxEncodedHash = signTransactionWithWeb3Signer(unsignedTxEncodedHex);
-
-    // Additional validation layer (should not be needed due to signTransactionWithWeb3Signer
-    // validation, but provides defense in depth)
-    if (signedTxEncodedHash.trim().isEmpty()) {
-      throw new IOException("Signed transaction hex is null or empty");
-    }
-
     try {
-      Sign.SignatureData signatureData = getSignatureData(signedTxEncodedHash);
-      byte[] encodedSignedTxBytes = TransactionEncoder.encode(rawTransaction, signatureData);
-
+      Credentials credentials = Credentials.create(new ECKeypairSignerAdapter(signer));
+      byte[] encodedSignedTxBytes =
+          TransactionEncoder.signMessage(rawTransaction, chainId.longValue(), credentials);
       String encodedSignedTxHex = Numeric.toHexString(encodedSignedTxBytes);
-      log.debug("encodedSignedTxHex: {}", encodedSignedTxHex);
-
       return DomainObjectDecodeUtils.decodeRawTransaction(encodedSignedTxHex);
-    } catch (IllegalArgumentException e) {
-      throw new IOException("Failed to parse signed transaction hex: " + e.getMessage(), e);
     } catch (Exception e) {
-      throw new IOException("Unexpected error parsing signed transaction: " + e.getMessage(), e);
+      throw new IOException("Failed to sign liveness transaction: " + e.getMessage(), e);
     }
-  }
-
-  private Sign.SignatureData getSignatureData(String signedTxEncodedHash)
-      throws SignatureException {
-    return Sign.signatureDataFromHex(signedTxEncodedHash);
   }
 }

@@ -20,6 +20,8 @@ public record LineaLivenessServiceConfiguration(
     Duration maxBlockAgeSeconds,
     Duration bundleMaxTimestampSurplusSecond,
     String contractAddress,
+    SignerType signerType,
+    String signerName,
     String signerUrl,
     String signerKeyId,
     String signerAddress,
@@ -30,4 +32,47 @@ public record LineaLivenessServiceConfiguration(
     String tlsTrustStorePassword,
     long gasLimit,
     long gasPrice)
-    implements LineaOptionsConfiguration {}
+    implements LineaOptionsConfiguration {
+  public LineaLivenessServiceConfiguration {
+    signerType = signerType == null ? SignerType.WEB3SIGNER : signerType;
+  }
+
+  public LineaLivenessServiceConfiguration(
+      final boolean enabled,
+      final Duration maxBlockAgeSeconds,
+      final Duration bundleMaxTimestampSurplusSecond,
+      final String contractAddress,
+      final String signerUrl,
+      final String signerKeyId,
+      final String signerAddress,
+      final boolean tlsEnabled,
+      final Path tlsKeyStorePath,
+      final String tlsKeyStorePassword,
+      final Path tlsTrustStorePath,
+      final String tlsTrustStorePassword,
+      final long gasLimit,
+      final long gasPrice) {
+    this(
+        enabled,
+        maxBlockAgeSeconds,
+        bundleMaxTimestampSurplusSecond,
+        contractAddress,
+        SignerType.WEB3SIGNER,
+        null,
+        signerUrl,
+        signerKeyId,
+        signerAddress,
+        tlsEnabled,
+        tlsKeyStorePath,
+        tlsKeyStorePassword,
+        tlsTrustStorePath,
+        tlsTrustStorePassword,
+        gasLimit,
+        gasPrice);
+  }
+
+  public enum SignerType {
+    WEB3SIGNER,
+    CUSTOM
+  }
+}
