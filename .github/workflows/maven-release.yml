@@ -18,6 +18,7 @@ on:
           - ':jvm-libs:linea:blob-shnarf-calculator'
           - ':jvm-libs:linea:linea-contracts:l1-rollup'
           - ':jvm-libs:linea:linea-contracts:l2-message-service'
+          - ':jvm-libs:linea:core:signer-interfaces'
           - ':linea-besu:plugins:sequencer-interfaces'
       version:
         required: true
@@ -56,14 +57,29 @@ jobs:
         env:
           LIB_TO_RELEASE: ${{ github.event.inputs.libToRelease }}
           GITHUB_TOKEN: ${{ secrets._GITHUB_TOKEN_RELEASE_ACCESS }}
-        run: ./gradlew "${LIB_TO_RELEASE}:build"
+        run: |
+          if [[ "$LIB_TO_RELEASE" == ':linea-besu:plugins:sequencer-interfaces' ]]; then
+            ./gradlew \
+              ':jvm-libs:linea:core:signer-interfaces:build' \
+              "${LIB_TO_RELEASE}:build"
+          else
+            ./gradlew "${LIB_TO_RELEASE}:build"
+          fi
 
       - name: Deploy to Local File System
         env:
           LIB_TO_RELEASE: ${{ github.event.inputs.libToRelease }}
           INPUT_VERSION: ${{ github.event.inputs.version }}
           GITHUB_TOKEN: ${{ secrets._GITHUB_TOKEN_RELEASE_ACCESS }}
-        run: ./gradlew "${LIB_TO_RELEASE}:publish" "-Pversion=${INPUT_VERSION}"
+        run: |
+          if [[ "$LIB_TO_RELEASE" == ':linea-besu:plugins:sequencer-interfaces' ]]; then
+            ./gradlew \
+              ':jvm-libs:linea:core:signer-interfaces:publish' \
+              "${LIB_TO_RELEASE}:publish" \
+              "-Pversion=${INPUT_VERSION}"
+          else
+            ./gradlew "${LIB_TO_RELEASE}:publish" "-Pversion=${INPUT_VERSION}"
+          fi
 
       - name: Build and Release to Maven Central
         # ./gradlew clean is necessary because the build is cached
@@ -91,4 +107,3 @@ jobs:
           path: |
             build/jreleaser/trace.log
             build/jreleaser/output.properties
-

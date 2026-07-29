@@ -10,6 +10,8 @@ package net.consensys.linea.sequencer.liveness;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
@@ -28,12 +30,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.web3j.crypto.ECKeyPair;
 import org.web3j.crypto.Hash;
+import org.web3j.crypto.Keys;
 import org.web3j.crypto.Sign;
 import org.web3j.utils.Numeric;
 
 @WireMockTest
 class Web3SignerDigestSignerTest {
   private static final String SIGN_PATH = "/api/v1/eth1/sign/";
+  private static final String PUBLIC_KEYS_PATH = "/api/v1/eth1/publicKeys";
   private final ECKeyPair keyPair = ECKeyPair.create(BigInteger.ONE);
   private final byte[] publicKey = Numeric.toBytesPadded(keyPair.getPublicKey(), 64);
   private final String publicKeyHex = Numeric.toHexStringNoPrefix(publicKey);
@@ -69,6 +73,45 @@ class Web3SignerDigestSignerTest {
         .containsExactly(Bytes.concat(signature.getR(), signature.getS()));
     assertThat(signer.publicKey()).containsExactly(publicKey);
     verify(1, postRequestedFor(urlEqualTo(SIGN_PATH + publicKeyHex)));
+  }
+
+  @Test
+  void resolvesPublicKeyWhenKeyIdentifierIsAnAlias(final WireMockRuntimeInfo wireMock) {
+    final String keyAlias = "liveness-key";
+    final String signerAddress =
+        Numeric.prependHexPrefix(Keys.getAddress(new BigInteger(1, publicKey)));
+    final byte[] digest = Hash.sha3("aliased liveness key".getBytes(UTF_8));
+    final Sign.SignatureData signature = Sign.signMessage(digest, keyPair, false);
+    stubFor(
+        get(urlEqualTo(PUBLIC_KEYS_PATH))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody("[\"" + Numeric.toHexString(publicKey) + "\"]")));
+    stubFor(
+        post(urlEqualTo(SIGN_PATH + keyAlias))
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withBody(
+                        Numeric.toHexString(
+                            Bytes.concat(signature.getR(), signature.getS(), signature.getV())))));
+
+    final Web3SignerDigestSigner aliasSigner =
+        new Web3SignerDigestSigner(
+            LineaLivenessServiceConfiguration.builder()
+                .signerUrl(wireMock.getHttpBaseUrl())
+                .signerKeyId(keyAlias)
+                .signerAddress(signerAddress)
+                .tlsEnabled(false)
+                .build());
+
+    assertThat(aliasSigner.publicKey()).containsExactly(publicKey);
+    assertThat(aliasSigner.sign(digest).join().toRSBytes())
+        .containsExactly(Bytes.concat(signature.getR(), signature.getS()));
+    verify(1, getRequestedFor(urlEqualTo(PUBLIC_KEYS_PATH)));
+    verify(1, postRequestedFor(urlEqualTo(SIGN_PATH + keyAlias)));
   }
 
   @Test

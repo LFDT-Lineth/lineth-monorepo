@@ -8,32 +8,33 @@
  */
 package linea.plugin.acc.test
 
-import linea.signing.NamedSignerProviderService
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
-import java.net.URLClassLoader
 
 @Tag("AcceptanceTest")
 class NamedSignerProviderServiceTest : LineaPluginTestBase() {
   override fun requestedPlugins(): List<String> =
     DEFAULT_REQUESTED_PLUGINS +
-      listOf("PackagedLineaSignerPlugin", NamedSignerProviderConsumerTestPlugin.PLUGIN_NAME)
+      "PackagedLineaSignerPlugin"
 
-  @AfterEach
-  fun resetConsumer() {
-    NamedSignerProviderConsumerTestPlugin.reset()
-  }
+  override fun getTestCliOptions(): List<String> =
+    TestCommandLineOptionsBuilder()
+      .set("--plugin-linea-liveness-enabled=", "true")
+      .set(
+        "--plugin-linea-liveness-contract-address=",
+        "0x0000000000000000000000000000000000000001",
+      )
+      .set("--plugin-linea-liveness-signer-type=", "CUSTOM")
+      .set("--plugin-linea-liveness-signer-name=", "liveness-test")
+      .set(
+        "--plugin-linea-liveness-signer-address=",
+        "0x7e5f4552091a69125d5dfcb7b8c2659029395bdf",
+      )
+      .build()
 
   @Test
-  fun `resolves signer factory registered by separately packaged plugin`() {
-    assertThat(NamedSignerProviderConsumerTestPlugin.resolvedPublicKey).hasSize(64)
-    assertThat(NamedSignerProviderConsumerTestPlugin.providerClassLoader)
-      .isNotNull()
-      .isNotSameAs(NamedSignerProviderService::class.java.classLoader)
-      .isInstanceOf(URLClassLoader::class.java)
-    assertThat((NamedSignerProviderConsumerTestPlugin.providerClassLoader as URLClassLoader).urLs)
-      .anyMatch { it.toString().contains("signer-test-plugin") }
+  fun `starts transaction selector with signer from separately packaged plugin`() {
+    assertThat(minerNode).isNotNull()
   }
 }

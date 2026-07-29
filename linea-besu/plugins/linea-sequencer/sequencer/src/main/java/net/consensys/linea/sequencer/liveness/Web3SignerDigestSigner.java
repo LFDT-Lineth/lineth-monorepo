@@ -10,6 +10,8 @@ package net.consensys.linea.sequencer.liveness;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.FileInputStream;
+import java.io.IOException;
+import java.math.BigInteger;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -17,6 +19,7 @@ import java.net.http.HttpResponse;
 import java.security.KeyStore;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.HexFormat;
 import java.util.Map;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -24,12 +27,14 @@ import javax.net.ssl.TrustManagerFactory;
 import linea.crypto.Secp256k1Signature;
 import linea.crypto.Signer;
 import net.consensys.linea.config.LineaLivenessServiceConfiguration;
+import org.web3j.crypto.Keys;
 import org.web3j.utils.Numeric;
 import tech.pegasys.teku.infrastructure.async.SafeFuture;
 
 /** Web3Signer client that signs a caller-supplied digest without hashing it again. */
 public class Web3SignerDigestSigner implements Signer<Secp256k1Signature> {
   private static final int DIGEST_SIZE = 32;
+  private static final int PUBLIC_KEY_SIZE = 64;
   private static final int SIGNATURE_SIZE = Secp256k1Signature.SIZE_BYTES + 1;
   private final ObjectMapper objectMapper = new ObjectMapper();
   private final HttpClient httpClient;
@@ -38,12 +43,12 @@ public class Web3SignerDigestSigner implements Signer<Secp256k1Signature> {
 
   public Web3SignerDigestSigner(final LineaLivenessServiceConfiguration config) {
     endpoint = URI.create(config.signerUrl() + "/api/v1/eth1/sign/" + config.signerKeyId());
-    publicKey = Numeric.hexStringToByteArray(config.signerKeyId());
     HttpClient.Builder builder = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(30));
     if (config.tlsEnabled()) {
       builder.sslContext(buildSslContext(config));
     }
     httpClient = builder.build();
+    publicKey = resolvePublicKey(config);
   }
 
   @Override
@@ -94,6 +99,48 @@ public class Web3SignerDigestSigner implements Signer<Secp256k1Signature> {
     }
     return Secp256k1Signature.Companion.fromRSBytes(
         Arrays.copyOf(signature, Secp256k1Signature.SIZE_BYTES));
+  }
+
+  private byte[] resolvePublicKey(final LineaLivenessServiceConfiguration config) {
+    final String keyId = Numeric.cleanHexPrefix(config.signerKeyId());
+    if (keyId.matches("[0-9a-fA-F]{128}")) {
+      return HexFormat.of().parseHex(keyId);
+    }
+
+    final URI publicKeysEndpoint = URI.create(config.signerUrl() + "/api/v1/eth1/publicKeys");
+    final HttpRequest request =
+        HttpRequest.newBuilder()
+            .uri(publicKeysEndpoint)
+            .timeout(Duration.ofSeconds(30))
+            .GET()
+            .build();
+    try {
+      final HttpResponse<String> response =
+          httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+      if (response.statusCode() != 200) {
+        throw new IllegalStateException(
+            "Web3Signer public key request failed with status " + response.statusCode());
+      }
+      for (String candidate : objectMapper.readValue(response.body(), String[].class)) {
+        final byte[] candidateBytes = Numeric.hexStringToByteArray(candidate);
+        if (candidateBytes.length == PUBLIC_KEY_SIZE
+            && addressOf(candidateBytes).equalsIgnoreCase(config.signerAddress())) {
+          return candidateBytes;
+        }
+      }
+      throw new IllegalStateException(
+          "Web3Signer did not return a public key for configured signer address "
+              + config.signerAddress());
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IllegalStateException("Web3Signer public key request was interrupted", e);
+    } catch (IOException e) {
+      throw new IllegalStateException("Failed to resolve Web3Signer public key", e);
+    }
+  }
+
+  private static String addressOf(final byte[] publicKey) {
+    return Numeric.prependHexPrefix(Keys.getAddress(new BigInteger(1, publicKey)));
   }
 
   private static SSLContext buildSslContext(final LineaLivenessServiceConfiguration config) {
