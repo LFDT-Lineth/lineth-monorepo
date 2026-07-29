@@ -22,6 +22,8 @@ import (
 // the adapter treats the base name as the job id and response name.
 const singleReqName = "1000501-1000501-getZkL2ExecutionProofV1.json"
 
+const testProverVersion = "4.0.0-riscv"
+
 // mockProver stands in for backend.Core. It records the jobs it receives, runs
 // an optional hook mid-Prove (to observe the claim), and returns a configurable
 // result (defaulting to success).
@@ -47,7 +49,11 @@ const referenceL2ExecutionResponse = "../../../../rollup_spec/src/rollup_spec/pr
 func newAdapter(t *testing.T, prover jobadapter.Prover) (*Adapter, string) {
 	t.Helper()
 	root := t.TempDir()
-	a, err := New(Config{RootDir: root, PollInterval: 5 * time.Millisecond}, prover)
+	a, err := New(Config{
+		RequestsRootDir: root,
+		PollInterval:    5 * time.Millisecond,
+		ProverVersion:   testProverVersion,
+	}, prover)
 	require.NoError(t, err)
 	return a, root
 }
@@ -55,9 +61,12 @@ func newAdapter(t *testing.T, prover jobadapter.Prover) (*Adapter, string) {
 func newAdapterWithConfig(t *testing.T, cfg Config, prover jobadapter.Prover) (*Adapter, string) {
 	t.Helper()
 	root := t.TempDir()
-	cfg.RootDir = root
+	cfg.RequestsRootDir = root
 	if cfg.PollInterval == 0 {
 		cfg.PollInterval = 5 * time.Millisecond
+	}
+	if cfg.ProverVersion == "" {
+		cfg.ProverVersion = testProverVersion
 	}
 	a, err := New(cfg, prover)
 	require.NoError(t, err)
@@ -190,7 +199,7 @@ func TestAdapter_SingleBlock_Success(t *testing.T) {
 
 	resp := readExecutionResponse(t, root, singleReqName)
 	assertResponseShapeMatchesReference(t, resp)
-	assert.Equal(t, jobadapter.DefaultProverVersion, resp["proverVersion"])
+	assert.Equal(t, testProverVersion, resp["proverVersion"])
 	assert.Equal(t, "0xdead", resp["proof"])
 	startBlockNumber, ok := resp["startBlockNumber"].(float64)
 	require.True(t, ok)
@@ -210,7 +219,7 @@ func TestAdapter_SingleBlock_Success(t *testing.T) {
 
 	assert.NoFileExists(t, filepath.Join(root, "requests", singleReqName))
 	assert.NoFileExists(t, filepath.Join(root, "requests", singleReqName+".inprogress"))
-	assert.FileExists(t, filepath.Join(root, "requests-done", singleReqName))
+	assert.FileExists(t, filepath.Join(root, "requests-done", singleReqName+".success"))
 }
 
 // TestAdapter_SingleBlock_UsesConfiguredProverVersion verifies the success
@@ -228,7 +237,8 @@ func TestAdapter_SingleBlock_UsesConfiguredProverVersion(t *testing.T) {
 }
 
 // TestAdapter_ClaimsBeforeProving verifies the request is renamed to
-// .inprogress before the jobadapter.Prover runs, so a second worker cannot pick it up.
+// .inprogress before the jobadapter.Prover runs, so a second worker cannot pick
+// it up.
 func TestAdapter_ClaimsBeforeProving(t *testing.T) {
 	var claimed, originalGone bool
 	var root string
@@ -266,7 +276,7 @@ func TestAdapter_ProveFailure(t *testing.T) {
 	assert.Contains(t, resp.Error, "prove boom")
 
 	assert.NoFileExists(t, filepath.Join(root, "requests", singleReqName))
-	assert.FileExists(t, filepath.Join(root, "requests-done", singleReqName+".failed"))
+	assert.FileExists(t, filepath.Join(root, "requests-done", singleReqName+".failure"))
 }
 
 // TestAdapter_MalformedRequest verifies undecodable JSON never reaches the
@@ -283,7 +293,7 @@ func TestAdapter_MalformedRequest(t *testing.T) {
 
 	resp := readFailureResponse(t, root, "bad.json")
 	assert.Equal(t, "failed", resp.Status)
-	assert.FileExists(t, filepath.Join(root, "requests-done", "bad.json.failed"))
+	assert.FileExists(t, filepath.Join(root, "requests-done", "bad.json.failure"))
 }
 
 // TestAdapter_ForcedTransactions_NotImplemented verifies that the adapter does
@@ -330,6 +340,7 @@ func TestAdapter_MultiBlock(t *testing.T) {
 
 	resp := readFailureResponse(t, root, "1000501-1000502-getZkL2ExecutionProofV1.json")
 	assert.Equal(t, "failed", resp.Status)
+	assert.FileExists(t, filepath.Join(root, "requests-done", "1000501-1000502-getZkL2ExecutionProofV1.json.failure"))
 }
 
 // TestAdapter_SkipsInProgress verifies a file already claimed by another worker
@@ -350,36 +361,36 @@ func TestAdapter_SkipsInProgress(t *testing.T) {
 // TestNew_Validation covers New's argument
 // checks and the PollInterval default.
 func TestNew_Validation(t *testing.T) {
-	t.Run("EmptyRootDir", func(t *testing.T) {
+	t.Run("EmptyRequestsRootDir", func(t *testing.T) {
 		_, err := New(Config{}, &mockProver{})
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "RootDir")
+		assert.Contains(t, err.Error(), "RequestsRootDir")
 	})
 	t.Run("NilProver", func(t *testing.T) {
-		_, err := New(Config{RootDir: t.TempDir()}, nil)
+		_, err := New(Config{RequestsRootDir: t.TempDir(), ProverVersion: testProverVersion}, nil)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "prover")
 	})
+	t.Run("MissingProverVersion", func(t *testing.T) {
+		_, err := New(Config{RequestsRootDir: t.TempDir()}, &mockProver{})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "ProverVersion")
+	})
 	t.Run("DefaultsPollInterval", func(t *testing.T) {
-		a, err := New(Config{RootDir: t.TempDir()}, &mockProver{})
+		a, err := New(Config{RequestsRootDir: t.TempDir(), ProverVersion: testProverVersion}, &mockProver{})
 		require.NoError(t, err)
 		assert.Equal(t, defaultPollInterval, a.cfg.PollInterval)
-	})
-	t.Run("DefaultsProverVersion", func(t *testing.T) {
-		a, err := New(Config{RootDir: t.TempDir()}, &mockProver{})
-		require.NoError(t, err)
-		assert.Equal(t, jobadapter.DefaultProverVersion, a.cfg.ProverVersion)
 	})
 }
 
 // TestNew_MkdirFailure verifies New reports
-// an error when its subdirectories cannot be created (here RootDir is a regular
-// file).
+// an error when its subdirectories cannot be created (here RequestsRootDir is a
+// regular file).
 func TestNew_MkdirFailure(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "not-a-dir")
 	require.NoError(t, os.WriteFile(file, []byte("x"), 0o600))
 
-	_, err := New(Config{RootDir: file}, &mockProver{})
+	_, err := New(Config{RequestsRootDir: file, ProverVersion: testProverVersion}, &mockProver{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "creating")
 }
@@ -406,7 +417,7 @@ func TestAdapter_WriteResponseError(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "response")
 	assert.FileExists(t, filepath.Join(root, "requests", singleReqName))
-	assert.NoFileExists(t, filepath.Join(root, "requests", singleReqName+inProgressSuffix))
+	assert.NoFileExists(t, filepath.Join(root, "requests", singleReqName+".inprogress"))
 }
 
 // TestAdapter_ArchiveError verifies a failure moving the request to
@@ -421,7 +432,7 @@ func TestAdapter_ArchiveError(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "archiving")
 	assert.FileExists(t, filepath.Join(root, "requests", singleReqName))
-	assert.NoFileExists(t, filepath.Join(root, "requests", singleReqName+inProgressSuffix))
+	assert.NoFileExists(t, filepath.Join(root, "requests", singleReqName+".inprogress"))
 }
 
 // TestAdapter_Run_ReturnsProcessError verifies Run surfaces an infrastructure

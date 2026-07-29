@@ -61,7 +61,7 @@ func TestRunner_RunSingleBlock(t *testing.T) {
 
 func TestRunner_RunMalformedRequest(t *testing.T) {
 	mock := &mockProver{}
-	runner, err := NewRunner(mock, DefaultProverVersion)
+	runner, err := NewRunner(mock, "")
 	require.NoError(t, err)
 
 	result := runner.Run(context.Background(), "bad-job", []byte("not json"))
@@ -77,7 +77,7 @@ func TestRunner_RunMalformedRequest(t *testing.T) {
 
 func TestRunner_RunMultiBlockNotImplemented(t *testing.T) {
 	mock := &mockProver{}
-	runner, err := NewRunner(mock, DefaultProverVersion)
+	runner, err := NewRunner(mock, "")
 	require.NoError(t, err)
 
 	result := runner.Run(context.Background(), "multi-block-job", readFixture(t, "request_multi_block.json"))
@@ -106,7 +106,7 @@ func TestRunner_RunForcedTransactionsNotImplemented(t *testing.T) {
 	require.NoError(t, err)
 
 	mock := &mockProver{}
-	runner, err := NewRunner(mock, DefaultProverVersion)
+	runner, err := NewRunner(mock, "")
 	require.NoError(t, err)
 	result := runner.Run(context.Background(), "forced-tx-job", raw)
 
@@ -122,7 +122,7 @@ func TestRunner_RunProverFailure(t *testing.T) {
 	mock := &mockProver{result: func(job backend.Job) backend.Result {
 		return backend.Result{JobID: job.ID, Status: backend.ResultStatusFailed, Err: errors.New("prove boom")}
 	}}
-	runner, err := NewRunner(mock, DefaultProverVersion)
+	runner, err := NewRunner(mock, "")
 	require.NoError(t, err)
 
 	result := runner.Run(context.Background(), "prove-fail-job", readFixture(t, "request_single_block.json"))
@@ -136,7 +136,7 @@ func TestRunner_RunProverFailure(t *testing.T) {
 }
 
 func TestNewRunner_Validation(t *testing.T) {
-	_, err := NewRunner(nil, DefaultProverVersion)
+	_, err := NewRunner(nil, "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "prover")
 }

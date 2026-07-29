@@ -65,7 +65,7 @@ func TestNewExecutionResponse_MapsV1Fields(t *testing.T) {
 }
 
 func TestNewExecutionResponse_JSONShape(t *testing.T) {
-	resp := newExecutionResponse(backend.Result{}, 42, DefaultProverVersion)
+	resp := newExecutionResponse(backend.Result{}, 42, "")
 	raw, err := jsonMarshalObject(resp)
 	require.NoError(t, err)
 
@@ -76,7 +76,7 @@ func TestNewExecutionResponse_JSONShape(t *testing.T) {
 }
 
 func TestNewExecutionResponse_MatchesReferenceResponseShape(t *testing.T) {
-	raw, err := jsonMarshalObject(newExecutionResponse(backend.Result{}, 42, DefaultProverVersion))
+	raw, err := jsonMarshalObject(newExecutionResponse(backend.Result{}, 42, ""))
 	require.NoError(t, err)
 
 	assertResponseShapeMatchesReference(t, raw)
@@ -89,7 +89,7 @@ func TestNewExecutionResponse_MatchesReferenceResponseValues(t *testing.T) {
 	// backend result.
 	t.Skip("enable after proof serialization, public-input extraction, and l2L1Messages/txFroms/filteredAddresses response arrays are wired")
 
-	got, err := jsonMarshalObject(newExecutionResponse(backend.Result{}, 1000501, DefaultProverVersion))
+	got, err := jsonMarshalObject(newExecutionResponse(backend.Result{}, 1000501, ""))
 	require.NoError(t, err)
 
 	assert.Equal(t, readReferenceResponse(t), got)

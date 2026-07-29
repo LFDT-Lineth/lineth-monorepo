@@ -1,3 +1,8 @@
+// Package filesystem provides a file queue around jobadapter.Runner.
+//
+// Adapter finds request files, claims them with an atomic rename, passes their
+// contents to the runner, writes response files, and archives completed
+// requests.
 package filesystem
 
 import (
@@ -19,11 +24,9 @@ const (
 	responsesSubDir = "responses"
 	doneSubDir      = "requests-done"
 
-	// inProgressSuffix marks a request claimed by this worker; files with this
-	// suffix are skipped by the scan.
 	inProgressSuffix = ".inprogress"
-	// failedSuffix distinguishes archived requests that did not prove.
-	failedSuffix = ".failed"
+	successSuffix    = ".success"
+	failureSuffix    = ".failure"
 
 	defaultPollInterval = time.Second
 
@@ -33,14 +36,14 @@ const (
 
 // Config holds the filesystem queue layout and poll cadence.
 type Config struct {
-	// RootDir contains the requests/, responses/, and requests-done/
+	// RequestsRootDir contains the requests/, responses/, and requests-done/
 	// subdirectories; [New] creates them if missing.
-	RootDir string
+	RequestsRootDir string
 	// PollInterval is how often [Adapter.Run] rescans requests/ for new work.
 	// Defaults to one second when unset.
 	PollInterval time.Duration
 	// ProverVersion is emitted on successful getZkL2ExecutionProofV1-shaped
-	// responses. Defaults to jobadapter.DefaultProverVersion when unset.
+	// responses and must be set by process config.
 	ProverVersion string
 }
 
@@ -60,21 +63,20 @@ type Adapter struct {
 }
 
 // New creates the requests/, responses/, and requests-done/ subdirectories
-// under cfg.RootDir and returns an [Adapter] ready to run.
+// under cfg.RequestsRootDir and returns an [Adapter] ready to run.
 func New(cfg Config, prover jobadapter.Prover) (*Adapter, error) {
-	if cfg.RootDir == "" {
-		return nil, fmt.Errorf("jobadapter/filesystem.New: RootDir must be set")
+	if cfg.RequestsRootDir == "" {
+		return nil, fmt.Errorf("jobadapter/filesystem.New: RequestsRootDir must be set")
 	}
 	if prover == nil {
 		return nil, fmt.Errorf("jobadapter/filesystem.New: prover must not be nil")
 	}
+	if cfg.ProverVersion == "" {
+		return nil, fmt.Errorf("jobadapter/filesystem.New: ProverVersion must be set")
+	}
 	if cfg.PollInterval <= 0 {
 		cfg.PollInterval = defaultPollInterval
 	}
-	if cfg.ProverVersion == "" {
-		cfg.ProverVersion = jobadapter.DefaultProverVersion
-	}
-
 	runner, err := jobadapter.NewRunner(prover, cfg.ProverVersion)
 	if err != nil {
 		return nil, err
@@ -89,11 +91,13 @@ func New(cfg Config, prover jobadapter.Prover) (*Adapter, error) {
 	return a, nil
 }
 
-func (a *Adapter) requestsDir() string { return filepath.Join(a.cfg.RootDir, requestsSubDir) }
-func (a *Adapter) responsesDir() string {
-	return filepath.Join(a.cfg.RootDir, responsesSubDir)
+func (a *Adapter) requestsDir() string {
+	return filepath.Join(a.cfg.RequestsRootDir, requestsSubDir)
 }
-func (a *Adapter) doneDir() string { return filepath.Join(a.cfg.RootDir, doneSubDir) }
+func (a *Adapter) responsesDir() string {
+	return filepath.Join(a.cfg.RequestsRootDir, responsesSubDir)
+}
+func (a *Adapter) doneDir() string { return filepath.Join(a.cfg.RequestsRootDir, doneSubDir) }
 
 // Run polls requests/ every cfg.PollInterval until ctx is cancelled, draining
 // the request it is processing before returning nil.
@@ -113,9 +117,10 @@ func (a *Adapter) Run(ctx context.Context) error {
 }
 
 // processOnce scans requests/ once, processes every pending request file
-// (those ending in .json, skipping already-claimed .inprogress files), and
-// returns how many it handled. It stops early if ctx is cancelled, leaving the
-// remaining files for the next scan.
+// (those ending in .json), and returns how many it handled. Already-claimed
+// files such as req.json.inprogress are skipped because they no longer end in
+// .json. It stops early if ctx is cancelled, leaving the remaining files for
+// the next scan.
 func (a *Adapter) processOnce(ctx context.Context) (int, error) {
 	entries, err := os.ReadDir(a.requestsDir())
 	if err != nil {
@@ -161,7 +166,7 @@ func (a *Adapter) processRequest(ctx context.Context, name string) (bool, error)
 	result := a.run(ctx, name, claimed)
 
 	if err := a.writeResponse(name, result.ResponseBody); err != nil {
-		_ = os.Rename(claimed, src) // best-effort: avoid stranding the request as .inprogress
+		_ = os.Rename(claimed, src) // best-effort: avoid stranding the claimed request
 		return false, err
 	}
 	if err := a.archive(claimed, name, result.Success); err != nil {
@@ -177,7 +182,7 @@ func (a *Adapter) processRequest(ctx context.Context, name string) (bool, error)
 func (a *Adapter) run(ctx context.Context, name, claimed string) jobadapter.RunResult {
 	id := strings.TrimSuffix(name, ".json")
 
-	data, err := os.ReadFile(claimed) //nolint:gosec // claimed is a scanned entry under RootDir/requests
+	data, err := os.ReadFile(claimed) //nolint:gosec // claimed is a scanned entry under RequestsRootDir/requests
 	if err != nil {
 		return jobadapter.RunResult{ResponseBody: failureResponse(id, err)}
 	}
@@ -240,10 +245,11 @@ func writeFileAtomic(path string, data []byte, perm fs.FileMode) error {
 // archive moves the claimed request into requests-done/, tagging failures so a
 // human can tell them apart.
 func (a *Adapter) archive(claimed, name string, success bool) error {
-	dst := filepath.Join(a.doneDir(), name)
-	if !success {
-		dst += failedSuffix
+	suffix := failureSuffix
+	if success {
+		suffix = successSuffix
 	}
+	dst := filepath.Join(a.doneDir(), name+suffix)
 	if err := os.Rename(claimed, dst); err != nil {
 		return fmt.Errorf("jobadapter: archiving %s: %w", name, err)
 	}

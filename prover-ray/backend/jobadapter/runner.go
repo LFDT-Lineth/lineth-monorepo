@@ -1,3 +1,8 @@
+// Package jobadapter turns coordinator proof requests into backend jobs.
+//
+// Runner is the shared request-to-proof path. It decodes a
+// getZkL2ExecutionProofV1 request, SSZ-encodes the payload for the RISC-V
+// guest, calls the Prover, and formats the V1 response body.
 package jobadapter
 
 import (
@@ -7,13 +12,9 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
 )
 
-// DefaultProverVersion is used in successful responses when no version is
-// configured.
-const DefaultProverVersion = "4.0.0-riscv"
-
-// Prover is the proving engine behind the adapter: it receives a backend.Job
-// and returns the proof result. backend.Core satisfies this role; tests use a
-// mock so they never need to build a circuit.
+// Prover is the proving engine: it receives a backend.Job and returns the proof
+// result. backend.Core satisfies this role; tests use a mock so they never need
+// to build a circuit.
 type Prover interface {
 	Prove(ctx context.Context, job backend.Job) backend.Result
 }
@@ -26,8 +27,8 @@ type Runner struct {
 	proverVersion string
 }
 
-// RunResult is the outcome for one request body. Callers serialize
-// ResponseBody and use Success for complete/fail bookkeeping.
+// RunResult is the outcome for one request body. Callers write ResponseBody
+// back to their queue and use Success to choose the completed or failed path.
 type RunResult struct {
 	ResponseBody any
 	Success      bool
@@ -37,9 +38,6 @@ type RunResult struct {
 func NewRunner(prover Prover, proverVersion string) (*Runner, error) {
 	if prover == nil {
 		return nil, fmt.Errorf("jobadapter.NewRunner: prover must not be nil")
-	}
-	if proverVersion == "" {
-		proverVersion = DefaultProverVersion
 	}
 	return &Runner{prover: prover, proverVersion: proverVersion}, nil
 }
