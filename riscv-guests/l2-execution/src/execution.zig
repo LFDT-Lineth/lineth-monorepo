@@ -132,7 +132,9 @@ pub fn executeStatelessInputWithLogs(
 
     const HeaderInfo = struct { number: u64, parent_hash: [32]u8, hash: [32]u8 };
     var header_infos = std.ArrayListUnmanaged(HeaderInfo).empty;
+    defer header_infos.deinit(alloc);
     var block_hashes = std.ArrayListUnmanaged(types.BlockHashEntry).empty;
+    defer block_hashes.deinit(alloc);
     for (si.witness.headers) |hdr_rlp| {
         const hash = mpt.keccak256(hdr_rlp);
         const outer = mpt.rlp.decodeItem(hdr_rlp) catch return error.InvalidWitness;

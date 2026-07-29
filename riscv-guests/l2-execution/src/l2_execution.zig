@@ -220,6 +220,7 @@ fn validateForcedTransactions(
     var rejected = std.ArrayListUnmanaged([20]u8).empty;
 
     const payload_tx_hashes = try alloc.alloc([32]u8, payload.raw_transactions.len);
+    defer alloc.free(payload_tx_hashes);
     for (payload.raw_transactions, 0..) |raw, i| payload_tx_hashes[i] = mpt.keccak256(raw);
 
     for (forced_transactions) |ftx| {
