@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
+	"github.com/sirupsen/logrus"
 )
 
 // Module is a group of columns sharing the same domain size and padding
@@ -88,6 +90,13 @@ func (m *Module) SetSize(size int) {
 	}
 	if size <= 0 {
 		panic(fmt.Sprintf("wiop: Module.SetSize requires a positive size, got %d", size))
+	}
+	if !utils.IsPowerOfTwo(size) {
+		// @alex: this is really a warning, because it does not make much sense
+		// to use the padding system for non-power-of-two sizes for precomputed
+		// columns.
+		size = utils.NextPowerOfTwo(size)
+		logrus.Warn(fmt.Sprintf("wiop: Module.SetSize requires a power-of-two size, got %d, name %v", size, m.Context.Path()))
 	}
 	if m.IsSized() {
 		panic(fmt.Sprintf("wiop: module %q is already sized to %d; cannot resize to %d",

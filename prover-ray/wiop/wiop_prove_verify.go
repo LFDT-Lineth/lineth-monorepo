@@ -56,6 +56,15 @@ type Proof struct {
 // statement be hashed/serialised and compared identically on both sides.
 type PublicInput []field.Gen
 
+// ProveOptions are options for [System.Prove].
+type ProveOptions struct {
+	// CheckUnreducedQueries prompt the prover to run [Query.Check] on every
+	// query that has not yet been consumed by a compiler pass (i.e.
+	// [Query.IsReduced] returns false). This is helpful when debugging. Not
+	// needed in production.
+	CheckUnreducedQueries bool
+}
+
 // Prove runs the prover over every interactive round of sys and returns the
 // resulting [Proof].
 //
@@ -72,7 +81,13 @@ type PublicInput []field.Gen
 //
 // The caller is responsible for running the compiler passes (and, optionally,
 // [Materialize]) on sys before calling Prove.
-func (sys *System) Prove(assign func(rt *Runtime)) (Proof, PublicInput) {
+func (sys *System) Prove(assign func(rt *Runtime), proveOpts ...ProveOptions) (Proof, PublicInput) {
+
+	proveOpt := ProveOptions{}
+	if len(proveOpts) > 0 {
+		proveOpt = proveOpts[0]
+	}
+
 	rt := NewRuntime(sys)
 	assign(rt)
 
@@ -148,6 +163,10 @@ func (sys *System) Prove(assign func(rt *Runtime)) (Proof, PublicInput) {
 	pub := make(PublicInput, len(sys.PublicInputs))
 	for i, cell := range sys.PublicInputs {
 		pub[i] = rt.GetCellValue(cell)
+	}
+
+	if proveOpt.CheckUnreducedQueries {
+		sys.checkUnreducedQueries(rt)
 	}
 
 	return proof, pub
@@ -329,6 +348,66 @@ func (sys *System) Verify(proof Proof, pub PublicInput) error {
 			if err := va.Check(rt); err != nil {
 				return err
 			}
+		}
+	}
+
+	return nil
+}
+
+// checkUnreducedQueries calls [Query.Check] on every query that has not yet
+// been consumed by a compiler pass (i.e. [Query.IsReduced] returns false). It
+// is intended for pre-compilation testing: it directly validates that the
+// current [Runtime] assignment satisfies every raw query still pending.
+//
+// Returns the first error encountered, or nil if all unreduced queries pass.
+func (sys *System) checkUnreducedQueries(rt *Runtime) error {
+	check := func(q Query) error {
+		if q.IsReduced() {
+			return nil
+		}
+		return q.Check(rt)
+	}
+
+	for _, m := range sys.Modules {
+		for _, q := range m.Vanishings {
+			if err := check(q); err != nil {
+				return err
+			}
+		}
+		for _, q := range m.RangeChecks {
+			if err := check(q); err != nil {
+				return err
+			}
+		}
+		for _, q := range m.NonNatives {
+			if err := check(q); err != nil {
+				return err
+			}
+		}
+	}
+	for _, q := range sys.LagrangeEvals {
+		if err := check(q); err != nil {
+			return err
+		}
+	}
+	for _, q := range sys.TableRelations {
+		if err := check(q); err != nil {
+			return err
+		}
+	}
+	for _, q := range sys.LogDerivativeSums {
+		if err := check(q); err != nil {
+			return err
+		}
+	}
+	for _, q := range sys.GrandProducts {
+		if err := check(q); err != nil {
+			return err
+		}
+	}
+	for _, q := range sys.MessageBuses {
+		if err := check(q); err != nil {
+			return err
 		}
 	}
 

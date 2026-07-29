@@ -302,6 +302,14 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 			tableSource, tableTarget wiop.Table
 		)
 
+		if numCol == 0 {
+			// @alex Technically, this should be a panic but for now the
+			// arithmetization may give us lookup tables with 0 columns. We
+			// just skip those.
+			logrus.Warnf("[WARNING] inclusion constraint %q has zero columns", name)
+			return
+		}
+
 		// Sanity check for fragment lookup
 		if len(cs.Unwrap().Sources) != 1 {
 			utils.Panic("lookup %q has %d source fragments; only single-fragment lookups are supported", name, len(cs.Unwrap().Sources))

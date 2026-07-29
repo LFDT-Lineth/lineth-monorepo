@@ -169,9 +169,9 @@ func runProveVerify(inputs *zkcdriver.PreReadInputs, binFile *constraints.Binary
 	proverCompilePipeline(sys)
 
 	// Run the ZkC driver to produce a proof and public inputs
-	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
-		driver.AssignWithPreRead(rt, inputs)
-	})
+	proof, pub := sys.Prove(
+		func(rt *wiop.Runtime) { driver.AssignWithPreRead(rt, inputs) },
+		wiop.ProveOptions{CheckUnreducedQueries: true})
 
 	// Verify the proof and public inputs
 	if err := sys.Verify(proof, pub); err != nil {
