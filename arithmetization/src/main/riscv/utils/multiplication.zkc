@@ -49,8 +49,10 @@ fn div32_uu(lhs:u32, rhs:u32) -> (res:u32) {
 }
 
 fn div32_ss(lhs:u32, rhs:u32) -> (res:u32) {
+    var lhs_abs:u32 = absolute_value_word(lhs)
+    var rhs_abs:u32 = absolute_value_word(rhs)
     // Perform unsigned division
-    var val:u32 = lhs / rhs
+    var val:u32 = lhs_abs / rhs_abs
     // Apply sign
     if sign_bit_of_word(lhs) != sign_bit_of_word(rhs) {
         res = negative_of_word(val)
