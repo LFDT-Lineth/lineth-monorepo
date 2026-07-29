@@ -83,11 +83,7 @@ pub fn main(init: std.process.Init) !void {
         std.process.exit(1);
     };
 
-    // NOTE: the committed `getZkL2ExecutionProofV1.input.ssz` golden vector is a SYNTHETIC,
-    // hand-authored fixture with dummy witnesses (stateRoot=0x1111...) — real execution can never
-    // reproduce it, so `runL2Execution` erroring here (e.g. `error.InvalidWitness`) against that
-    // vector specifically is expected. This runner's job is to fail cleanly (non-zero exit, no
-    // panic) on any input it can't process, real or synthetic.
+    // This runner's job is to fail cleanly (non-zero exit, no panic) on any input it can't process.
     const result = l2_execution.runL2Execution(alloc, decoded) catch |err| {
         std.debug.print("error: runL2Execution failed: {s}\n", .{@errorName(err)});
         std.process.exit(1);

@@ -158,12 +158,6 @@ pub fn build(b: *std.Build) void {
         }),
     });
     l2_execution_ssz_tests.root_module.addImport("l2_execution_ssz", l2_execution_ssz_mod);
-    l2_execution_ssz_tests.root_module.addAnonymousImport("l2_execution_input.ssz", .{
-        .root_source_file = b.path("../../rollup_spec/src/rollup_spec/prover_io/testdata/getZkL2ExecutionProofV1.input.ssz"),
-    });
-    l2_execution_ssz_tests.root_module.addAnonymousImport("l2_execution_output.ssz", .{
-        .root_source_file = b.path("../../rollup_spec/src/rollup_spec/prover_io/testdata/getZkL2ExecutionProofV1.output.ssz"),
-    });
     test_step.dependOn(&b.addRunArtifact(l2_execution_ssz_tests).step);
 
     // ── l2-execution guest logic (src/l2_execution.zig) unit tests ──────────────────────────────────
@@ -204,13 +198,6 @@ pub fn build(b: *std.Build) void {
     l2_execution_tests.root_module.addImport("zesu_primitives", native_imports.primitives);
     l2_execution_tests.root_module.addImport("zesu_allocator", native_imports.allocator);
     l2_execution_tests.root_module.addImport("zesu_accelerators", native_imports.accelerators);
-    // Informational-only diagnostic (not a pass/fail gate): decodes the golden, hand-authored
-    // getZkL2ExecutionProofV1 input vector and reports how far `runL2Execution` gets. That vector's
-    // witnesses are dummy (`stateRoot=0x1111...`), so real execution can never reproduce it — this
-    // only documents where it errors.
-    l2_execution_tests.root_module.addAnonymousImport("l2_execution_input.ssz", .{
-        .root_source_file = b.path("../../rollup_spec/src/rollup_spec/prover_io/testdata/getZkL2ExecutionProofV1.input.ssz"),
-    });
     linkNativeZesuCrypto(l2_execution_tests, native_target, native_crypto);
     test_step.dependOn(&b.addRunArtifact(l2_execution_tests).step);
 

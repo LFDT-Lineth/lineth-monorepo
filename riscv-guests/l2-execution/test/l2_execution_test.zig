@@ -463,28 +463,3 @@ test "validateForcedTransactions: ascending-number and deadline checks" {
         api.validateForcedTransactionsFn(alloc, &rolling_hash2, &last_number2, CHAIN_ID, DUMMY_PAYLOAD, fixture.root, &fixture.index, &.{expired}),
     );
 }
-
-// ─── Golden-input diagnostic (informational only, NOT a pass/fail gate) ──────────────────────────
-//
-// `getZkL2ExecutionProofV1.input.ssz` is a hand-authored codec fixture with dummy witnesses
-// (`stateRoot=0x1111...`, no real trie nodes) — real block execution can never reproduce it. This
-// just decodes it and reports how far `runL2Execution` gets before erroring, for visibility; it
-// always passes regardless of the outcome.
-const golden_input_bytes = @embedFile("l2_execution_input.ssz");
-
-test "diagnostic: runL2Execution against the golden (dummy-witness) input vector" {
-    var arena = std.heap.ArenaAllocator.init(testing.allocator);
-    defer arena.deinit();
-    const alloc = arena.allocator();
-
-    const decoded = l2_execution_ssz.decodeInput(alloc, golden_input_bytes) catch |err| {
-        std.debug.print("\n[diagnostic] decodeInput failed: {s}\n", .{@errorName(err)});
-        return;
-    };
-
-    if (l2_execution.runL2Execution(alloc, decoded)) |output| {
-        std.debug.print("\n[diagnostic] runL2Execution unexpectedly SUCCEEDED against the dummy-witness golden vector: end_block_number={d}\n", .{output.public_inputs.end_block_number});
-    } else |err| {
-        std.debug.print("\n[diagnostic] runL2Execution stopped at: {s} (expected — golden vector has dummy witnesses)\n", .{@errorName(err)});
-    }
-}
