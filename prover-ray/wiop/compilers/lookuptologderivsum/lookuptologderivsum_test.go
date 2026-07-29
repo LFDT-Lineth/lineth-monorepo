@@ -630,12 +630,15 @@ func TestCompile_NoInclusions(t *testing.T) {
 		"compile without inclusion queries must register no LogDerivativeSum")
 }
 
-func TestCompile_MultiFragmentBPanics(t *testing.T) {
+// TestCompile_MultiFragmentB checks that a lookup whose target is the union of
+// two fragments (living on different modules) compiles, allocates one M column
+// per fragment, and proves/verifies when every S value appears in the union.
+func TestCompile_MultiFragmentB(t *testing.T) {
 	sys := wiop.NewSystemf("ll-multi-frag-B")
 	r0 := sys.NewRound()
 	modT1 := sys.NewSizedModule(sys.Context.Childf("modT1"), 4, wiop.PaddingDirectionNone)
-	modT2 := sys.NewSizedModule(sys.Context.Childf("modT2"), 4, wiop.PaddingDirectionNone)
-	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 2, wiop.PaddingDirectionNone)
+	modT2 := sys.NewSizedModule(sys.Context.Childf("modT2"), 2, wiop.PaddingDirectionNone)
+	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 4, wiop.PaddingDirectionNone)
 	colT1 := modT1.NewColumn(sys.Context.Childf("T1"), wiop.VisibilityOracle, r0)
 	colT2 := modT2.NewColumn(sys.Context.Childf("T2"), wiop.VisibilityOracle, r0)
 	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
@@ -647,8 +650,78 @@ func TestCompile_MultiFragmentBPanics(t *testing.T) {
 			wiop.NewTable(colT2.View()),
 		})
 
-	assert.Panics(t, func() { lookuptologderivsum.Compile(sys) },
-		"multi-fragment lookup tables are out of scope for this MVP")
+	colsT1Before := len(modT1.Columns)
+	colsT2Before := len(modT2.Columns)
+	lookuptologderivsum.Compile(sys)
+	assert.Len(t, modT1.Columns, colsT1Before+1,
+		"modT1 must carry exactly one new M column")
+	assert.Len(t, modT2.Columns, colsT2Before+1,
+		"modT2 must carry exactly one new M column")
+	logderivativesum.Compile(sys)
+
+	rt := wiop.NewRuntime(sys)
+	rt.AssignColumn(colT1, makeVec(10, 20, 30, 40))
+	rt.AssignColumn(colT2, makeVec(100, 200))
+	// Every S value is present in the union T1 ∪ T2; values are drawn from
+	// both fragments to exercise per-fragment M assignment.
+	rt.AssignColumn(colS, makeVec(10, 30, 100, 200))
+
+	driveProtocol(rt)
+	require.NoError(t, checkAllVerifierActions(rt))
+}
+
+// TestCompile_MultiFragmentBothSides checks a single inclusion whose A side and
+// B side are BOTH unions of two fragments living on different modules. This
+// crosses multi-fragment S (several included tables) with multi-fragment B (the
+// per-fragment mValues matrix): one M column is allocated per B fragment, and
+// every value drawn by either S fragment must resolve to some row of the T1 ∪ T2
+// union. The values are spread across both fragments on each side so neither the
+// A-side iteration nor the per-fragment M assignment is exercised on a single
+// fragment alone.
+func TestCompile_MultiFragmentBothSides(t *testing.T) {
+	sys := wiop.NewSystemf("ll-multi-frag-both")
+	r0 := sys.NewRound()
+
+	modT1 := sys.NewSizedModule(sys.Context.Childf("modT1"), 4, wiop.PaddingDirectionNone)
+	modT2 := sys.NewSizedModule(sys.Context.Childf("modT2"), 2, wiop.PaddingDirectionNone)
+	modS1 := sys.NewSizedModule(sys.Context.Childf("modS1"), 3, wiop.PaddingDirectionNone)
+	modS2 := sys.NewSizedModule(sys.Context.Childf("modS2"), 2, wiop.PaddingDirectionNone)
+
+	colT1 := modT1.NewColumn(sys.Context.Childf("T1"), wiop.VisibilityOracle, r0)
+	colT2 := modT2.NewColumn(sys.Context.Childf("T2"), wiop.VisibilityOracle, r0)
+	colS1 := modS1.NewColumn(sys.Context.Childf("S1"), wiop.VisibilityOracle, r0)
+	colS2 := modS2.NewColumn(sys.Context.Childf("S2"), wiop.VisibilityOracle, r0)
+
+	sys.NewInclusion(sys.Context.Childf("inc"),
+		[]wiop.Table{
+			wiop.NewTable(colS1.View()),
+			wiop.NewTable(colS2.View()),
+		},
+		[]wiop.Table{
+			wiop.NewTable(colT1.View()),
+			wiop.NewTable(colT2.View()),
+		})
+
+	colsT1Before := len(modT1.Columns)
+	colsT2Before := len(modT2.Columns)
+	lookuptologderivsum.Compile(sys)
+	assert.Len(t, modT1.Columns, colsT1Before+1,
+		"modT1 must carry exactly one new M column")
+	assert.Len(t, modT2.Columns, colsT2Before+1,
+		"modT2 must carry exactly one new M column")
+	logderivativesum.Compile(sys)
+
+	rt := wiop.NewRuntime(sys)
+	// Union T = T1 ∪ T2 = {10,20,30,40} ∪ {100,200}.
+	rt.AssignColumn(colT1, makeVec(10, 20, 30, 40))
+	rt.AssignColumn(colT2, makeVec(100, 200))
+	// Each S fragment draws from both B fragments; every value is in the union.
+	// Honest M: modT1 → [1,0,1,1], modT2 → [1,1].
+	rt.AssignColumn(colS1, makeVec(10, 30, 100))
+	rt.AssignColumn(colS2, makeVec(200, 40))
+
+	driveProtocol(rt)
+	require.NoError(t, checkAllVerifierActions(rt))
 }
 
 // ---- Soundness: verifier rejects an incorrect multiplicity column ----

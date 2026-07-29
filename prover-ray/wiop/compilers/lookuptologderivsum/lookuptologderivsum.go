@@ -40,12 +40,12 @@
 // and a single [wiop.LogDerivativeSum] query is left in sys for the
 // downstream [logderivativesum] compiler pass to consume.
 //
-// Scope (MVP): the compiler handles inclusion queries with len(B) == 1
-// (single-fragment lookup table). Multiple A fragments per query and
-// multiple queries per shared B are both supported. Permutation queries are
-// ignored. Multi-fragment B queries are explicitly rejected with a panic
-// at compile time so callers can rework them into multiple single-fragment
-// queries before running this pass.
+// Scope: the compiler handles inclusion queries with any number of B
+// fragments (a lookup table that is the union of fragments). Each B fragment
+// gets its own multiplicity column M and its own −M/(γ+RLC) term; the union
+// semantics are handled at M-assignment time by a fragment-tagged hash join
+// (see [mAssignmentTask]). Multiple A fragments per query and multiple queries
+// per shared B side are also supported. Permutation queries are ignored.
 package lookuptologderivsum
 
 import (
@@ -65,8 +65,7 @@ import (
 // already-reduced queries are skipped. If sys contains no eligible queries
 // the function is a no-op.
 //
-// Panics if any inclusion query has len(B) != 1 (multi-fragment lookup tables
-// are out of scope for this pass).
+// Panics if any inclusion query has an empty B side.
 func Compile(sys *wiop.System) {
 	groups := collectGroups(sys)
 	if len(groups) == 0 {
@@ -188,10 +187,9 @@ func Compile(sys *wiop.System) {
 // running-sum Z column shrinks the number of Z columns, not the rows each one
 // walks, so it does not enlarge the budget and plays no part here.
 //
-// The group lookup supplies both the round and that group's lookup count. Every
-// remaining inclusion query has len(B) == 1 (collectGroups already panicked
-// otherwise), so canonicalIncludingKey(q.B[0]) always resolves to a collected
-// group.
+// The group lookup supplies both the round and that group's lookup count.
+// canonicalIncludingKeyMulti(q.B) resolves the group the same way collectGroups
+// keyed it, so it always hits a collected group.
 func registerRowLimitChecks(sys *wiop.System, groups map[string]*lookupGroup) {
 	// Number of distinct lookup queries in each group. Queries sharing an
 	// including table are grouped together and drain the same budget.
@@ -208,7 +206,7 @@ func registerRowLimitChecks(sys *wiop.System, groups map[string]*lookupGroup) {
 		if q.IsReduced() || q.Kind == wiop.KindPermutation {
 			continue
 		}
-		key := canonicalIncludingKey(q.B[0])
+		key := canonicalIncludingKeyMulti(q.B)
 		g := groups[key]
 
 		limit := wiop.MaxLookupRows / uint64(lookupsPerGroup[key])
@@ -256,55 +254,62 @@ func collectGroups(sys *wiop.System) map[string]*lookupGroup {
 		if q.Kind == wiop.KindPermutation {
 			continue
 		}
-		if len(q.B) != 1 {
+		if len(q.B) == 0 {
 			panic(fmt.Sprintf(
-				"wiop/compilers/lookuptologderivsum: query %q has len(B)=%d; "+
-					"only single-fragment lookup tables are supported in this pass",
-				q.Context().Path(), len(q.B),
+				"wiop/compilers/lookuptologderivsum: query %q has an empty B side",
+				q.Context().Path(),
 			))
 		}
-		// Grouping key: queries that target the same lookup-table fragment
-		// fold into the same lookupGroup and therefore share a single M
-		// column. Two queries with distinct B descriptors that happen to
-		// reference the same underlying columns *with the same shifts and
-		// selector* are intentionally collapsed; canonicalIncludingKey
-		// encodes exactly the (column pointer, shift, selector) tuple so
-		// equality of key ⇔ equality of fragment as seen by the prover.
-		// Without this collapse, the same lookup table referenced by N
+		// Grouping key: queries that target the same B side — the same
+		// ordered union of lookup-table fragments — fold into the same
+		// lookupGroup and therefore share the group's per-fragment M columns.
+		// Two queries with distinct B descriptors that happen to reference the
+		// same underlying columns *with the same shifts and selectors, in the
+		// same order* are intentionally collapsed; canonicalIncludingKeyMulti
+		// encodes exactly the per-fragment (column pointer, shift, selector)
+		// tuples so equality of key ⇔ equality of B side as seen by the
+		// prover. Without this collapse, the same lookup table referenced by N
 		// queries would yield N independent multiplicity columns and the
 		// B-side terms would no longer cancel the union of A-side terms.
-		key := canonicalIncludingKey(q.B[0])
+		key := canonicalIncludingKeyMulti(q.B)
 		g, ok := groups[key]
 		if !ok {
 			// First query to hit this key supplies the canonical
-			// includingTable descriptor. Subsequent queries with the same
-			// key reuse it as-is — they are guaranteed by the key to
-			// describe an identical fragment, so we deliberately skip
+			// includingTable descriptors. Subsequent queries with the same
+			// key reuse them as-is — they are guaranteed by the key to
+			// describe identical fragments, so we deliberately skip
 			// re-validating cols/selector/module on later hits.
 			g = &lookupGroup{
-				including: includingTable{
-					cols:     q.B[0].Columns,
-					selector: q.B[0].Selector,
-					module:   q.B[0].Module(),
-				},
+				includings: make([]includingTable, len(q.B)),
 			}
-			if !allIncludingColumnsShareModule(g.including) {
-				panic(fmt.Sprintf(
-					"wiop/compilers/lookuptologderivsum: query %q has a B fragment whose "+
-						"columns or selector live on different modules",
-					q.Context().Path(),
-				))
+			for frag, bTab := range q.B {
+				it := includingTable{
+					cols:     bTab.Columns,
+					selector: bTab.Selector,
+					module:   bTab.Module(),
+				}
+				if !allIncludingColumnsShareModule(it) {
+					panic(fmt.Sprintf(
+						"wiop/compilers/lookuptologderivsum: query %q B fragment %d has "+
+							"columns or a selector living on different modules",
+						q.Context().Path(), frag,
+					))
+				}
+				g.includings[frag] = it
 			}
 			groups[key] = g
 		}
 		// Witness round must dominate every column referenced by the group.
-		// Including both B and every A fragment of *this* query keeps the
-		// invariant under incremental merging: when a later query reuses the
-		// same B but supplies an A on a later round, witnessRound advances
-		// accordingly so M (allocated on witnessRound by [compileGroup]) is
-		// still committed before α/γ are sampled in witnessRound + 1 —
-		// the soundness ordering of the log-derivative argument.
-		g.updateWitnessRound(q.B[0].Round())
+		// Including every B fragment and every A fragment of *this* query keeps
+		// the invariant under incremental merging: when a later query reuses
+		// the same B but supplies an A on a later round, witnessRound advances
+		// accordingly so the M columns (allocated on witnessRound by
+		// [compileGroup]) are still committed before α/γ are sampled in
+		// witnessRound + 1 — the soundness ordering of the log-derivative
+		// argument.
+		for _, bTab := range q.B {
+			g.updateWitnessRound(bTab.Round())
+		}
 		for _, tabA := range q.A {
 			g.updateWitnessRound(tabA.Round())
 			g.addIncluded(q, tabA)
@@ -325,61 +330,79 @@ func compileGroup(
 ) []wiop.Fraction {
 	gCtx := compCtx.Childf("group-%p", g)
 
-	// Consistency: every A fragment must have the same width as B.
+	// All B fragments share the same column width (enforced at construction by
+	// wiop.NewInclusion). Take the first fragment's width as the reference and
+	// assert every A fragment matches it.
+	bWidth := g.includings[0].width()
 	for i, inc := range g.included {
-		if len(inc.cols) != g.including.width() {
+		if len(inc.cols) != bWidth {
 			panic(fmt.Sprintf(
 				"wiop/compilers/lookuptologderivsum: included fragment %d in group %s has width %d "+
 					"but the lookup table has width %d",
-				i, gCtx.Path(), len(inc.cols), g.including.width(),
+				i, gCtx.Path(), len(inc.cols), bWidth,
 			))
 		}
 	}
 
-	// α is needed whenever we have to fold more than one column down to a
-	// single field element. The "effective" B-side width is the original
-	// width plus one when the IsFilteredOnIncluding trick prepends the
-	// B-selector to the row (and a constant 1 to every A-side).
-	prependOnesToA := g.including.selector != nil
-	effectiveWidth := g.including.width()
+	// The IsFilteredOnIncluding trick is applied group-wide: if any B fragment
+	// carries a selector we prepend a head to every B fragment (its own
+	// selector, or a constant 1 for the unfiltered fragments) and a constant 1
+	// to every A side. This keeps the effective row width uniform across all
+	// fragments and both sides, so an A row matches an active B row exactly
+	// when their column values coincide.
+	prependOnesToA := false
+	for _, it := range g.includings {
+		if it.selector != nil {
+			prependOnesToA = true
+			break
+		}
+	}
+	effectiveWidth := bWidth
 	if prependOnesToA {
 		effectiveWidth++
 	}
 
+	// α is needed whenever we have to fold more than one column down to a
+	// single field element.
 	var alpha *wiop.CoinField
 	if effectiveWidth > 1 {
 		alpha = coinRound.NewCoinField(gCtx.Childf("alpha"))
 	}
 
-	// Build the symbolic random linear combination of the B-side columns.
-	// When the B-side carries a selector we prepend it and prepend a
-	// constant-1 to every A side, mirroring the standard
-	// IsFilteredOnIncluding trick.
-	var bHead wiop.Expression
-	if prependOnesToA {
-		bHead = g.including.selector
-	}
-	bRLC := rlcOfViews(alpha, bHead, g.including.cols)
-
-	// M lives on the same module as B, in the group's witness round. This
-	// places M in the same round as the witness columns it depends on, and
+	// One −M/(γ+RLC(T)) fraction per B fragment, each with its own
+	// multiplicity column M committed on the group's witness round. Placing M
+	// there puts it in the same round as the witness columns it depends on and
 	// crucially *before* α and γ are sampled in coinRound — without that
-	// ordering a malicious prover could choose M as a function of γ and
-	// break log-derivative soundness.
-	mCol := g.including.module.NewColumn(
-		gCtx.Childf("M"),
-		wiop.VisibilityOracle,
-		g.witnessRound,
-	)
+	// ordering a malicious prover could choose M as a function of γ and break
+	// log-derivative soundness.
+	fractions := make([]wiop.Fraction, 0, len(g.includings)+len(g.included))
+	mCols := make([]*wiop.Column, len(g.includings))
+	for frag, it := range g.includings {
+		var bHead wiop.Expression
+		if prependOnesToA {
+			if it.selector != nil {
+				bHead = it.selector
+			} else {
+				// Unfiltered fragment inside a filtered group: its head is the
+				// constant 1, matching the A-side head so all its rows stay
+				// active.
+				bHead = wiop.NewConstantVector(it.module, field.One())
+			}
+		}
+		bRLC := rlcOfViews(alpha, bHead, it.cols)
 
-	// The T-side fraction:  −M / (γ + bRLC).
-	negM := wiop.Negate(mCol.View())
-	bDen := wiop.Add(gamma, bRLC)
-	fractions := make([]wiop.Fraction, 0, 1+len(g.included))
-	fractions = append(fractions, wiop.Fraction{
-		Numerator:   negM,
-		Denominator: bDen,
-	})
+		mCol := it.module.NewColumn(
+			gCtx.Childf("M-%d", frag),
+			wiop.VisibilityOracle,
+			g.witnessRound,
+		)
+		mCols[frag] = mCol
+
+		fractions = append(fractions, wiop.Fraction{
+			Numerator:   wiop.Negate(mCol.View()),
+			Denominator: wiop.Add(gamma, bRLC),
+		})
+	}
 
 	// The A-side fractions: one per A fragment.
 	for _, inc := range g.included {
@@ -403,13 +426,12 @@ func compileGroup(
 		})
 	}
 
-	// The prover task that fills M with multiplicities once the witness is
-	// in place. Registered on the group's witness round so it runs before
+	// The prover task that fills every M with multiplicities once the witness
+	// is in place. Registered on the group's witness round so it runs before
 	// AdvanceRound samples coinRound's α and γ.
 	g.witnessRound.RegisterAction(&mAssignmentTask{
-		m:               mCol,
-		bCols:           g.including.cols,
-		bSelector:       g.including.selector,
+		ms:              mCols,
+		includings:      append([]includingTable{}, g.includings...),
 		included:        append([]includedSpec{}, g.included...),
 		prependOneOnAOk: prependOnesToA,
 	})

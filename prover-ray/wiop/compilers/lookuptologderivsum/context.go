@@ -23,9 +23,10 @@ type includedSpec struct {
 	selector *wiop.ColumnView
 }
 
-// includingTable captures the lookup-table side (B fragment) of a group of
-// Inclusion queries. Two queries with the same canonicalIncludingKey share an
-// includingTable and therefore share a single multiplicity column M.
+// includingTable captures one lookup-table fragment (B fragment) of a group of
+// Inclusion queries. Two queries with the same canonicalIncludingKeyMulti
+// share the group's includingTables and therefore share its per-fragment
+// multiplicity columns M.
 type includingTable struct {
 	// cols is the ordered list of columns forming the B fragment.
 	cols []*wiop.ColumnView
@@ -40,35 +41,51 @@ type includingTable struct {
 // width reports the number of columns in the lookup-table fragment.
 func (t includingTable) width() int { return len(t.cols) }
 
-// canonicalIncludingKey returns a deterministic identity key for a B-side
-// table fragment so that distinct Inclusion queries that target the same
-// underlying lookup table can be grouped together.
+// canonicalIncludingKeyMulti returns a deterministic identity key for a whole
+// B side, i.e. the ordered union of lookup-table fragments of a single
+// Inclusion query. Two queries that target the same ordered set of fragments
+// (each with the same columns, shifts and selector) produce the same key and
+// therefore share the group's per-fragment multiplicity columns.
 //
-// The key combines the underlying [wiop.Column] pointer addresses, the
-// per-view shifting offsets, and the optional selector identity. Two
-// fragments produce the same key iff every component matches; this matches
-// the grouping semantics of the linea/logderivativesum compiler's
-// NameTable-based grouping.
-func canonicalIncludingKey(tab wiop.Table) string {
+// The fragment order is significant: it fixes the fragment index each M column
+// is bound to, so [F1,F2] and [F2,F1] are deliberately distinct keys. This
+// mirrors linea/logderivativesum, where NameTable concatenates the fragments
+// of a lookup table in their declaration order.
+func canonicalIncludingKeyMulti(tables []wiop.Table) string {
 	var sb strings.Builder
-	for _, cv := range tab.Columns {
-		fmt.Fprintf(&sb, "%p@%d|", cv.Column, cv.ShiftingOffset)
-	}
-	sb.WriteByte(';')
-	if tab.Selector != nil {
-		fmt.Fprintf(&sb, "sel=%p@%d", tab.Selector.Column, tab.Selector.ShiftingOffset)
-	} else {
-		sb.WriteString("sel=nil")
+	for _, tab := range tables {
+		writeFragmentKey(&sb, tab)
+		sb.WriteByte('#') // fragment separator
 	}
 	return sb.String()
 }
 
-// lookupGroup collects every Inclusion query that targets the same B-side
-// fragment. Within a group the compiler emits a single multiplicity column
-// (per fragment) and a single fraction set.
+// writeFragmentKey appends the canonical identity of a single fragment to sb:
+// the underlying [wiop.Column] pointer addresses, the per-view shifting
+// offsets, and the optional selector identity. Two fragments emit the same
+// bytes iff every component matches, mirroring the grouping semantics of the
+// linea/logderivativesum compiler's NameTable-based grouping.
+func writeFragmentKey(sb *strings.Builder, tab wiop.Table) {
+	for _, cv := range tab.Columns {
+		fmt.Fprintf(sb, "%p@%d|", cv.Column, cv.ShiftingOffset)
+	}
+	sb.WriteByte(';')
+	if tab.Selector != nil {
+		fmt.Fprintf(sb, "sel=%p@%d", tab.Selector.Column, tab.Selector.ShiftingOffset)
+	} else {
+		sb.WriteString("sel=nil")
+	}
+}
+
+// lookupGroup collects every Inclusion query that targets the same B side
+// (the same ordered union of lookup-table fragments). Within a group the
+// compiler emits one multiplicity column per B fragment and a single fraction
+// set (one −M/(γ+RLC) term per B fragment plus one term per A fragment).
 type lookupGroup struct {
-	including includingTable
-	included  []includedSpec
+	// includings holds the group's B-side fragments in declaration order. The
+	// slice index is the fragment index that each M column is bound to.
+	includings []includingTable
+	included   []includedSpec
 	// witnessRound is the latest round across every column referenced by the
 	// group's including and included fragments. M, α, γ live in
 	// witnessRound + 1; the LogDerivativeSum result lives in
