@@ -154,6 +154,7 @@ fn secp_add_projective(X1:tWidth, Y1:tWidth, Z1:tWidth, X2:tWidth, Y2:tWidth, Z2
 
 // Dedicated projective doubling for secp256k1 (a=0, b=7).
 // Cheaper than secp_add_projective; use for the doubling step in scalar multiplication.
+// ref: https://hyperelliptic.org/EFD/g1p/auto-shortw-projective.html#doubling-dbl-1998-cmo
 // Precondition: P != O (Z1 != 0, Y1 != 0 — guaranteed for valid secp256k1 subgroup points).
 // Not optimal, the most efficient one is in jacobian coordinates.
 fn secp_double_projective(X1:tWidth, Y1:tWidth, Z1:tWidth) -> (X3:tWidth, Y3:tWidth, Z3:tWidth) {

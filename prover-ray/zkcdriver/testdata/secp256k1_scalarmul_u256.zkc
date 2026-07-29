@@ -34,9 +34,9 @@ fn main() {
     // Loop variant — verified equivalent; commented out to keep the
     // prove/verify test at ~half the cost mainly because of
     // invoking the higher degree polynomials (same fashion as modexp_u256.zkc).
-    var rx_loop:tWidth, ry_loop:tWidth
-    rx_loop, ry_loop = secp_scalar_mul_loop(k, px, py)
-    if (rx_loop != qx) || (ry_loop != qy) {
-        fail
-    }
+    // var rx_loop:tWidth, ry_loop:tWidth
+    // rx_loop, ry_loop = secp_scalar_mul_loop(k, px, py)
+    // if (rx_loop != qx) || (ry_loop != qy) {
+    //    fail
+    //}
 }
