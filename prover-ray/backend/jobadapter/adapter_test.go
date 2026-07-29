@@ -18,6 +18,8 @@ import (
 // the adapter treats the base name as the job id and response name.
 const singleReqName = "1000501-1000501-getZkL2ExecutionProofV1.json"
 
+const zeroHashHex = "0x0000000000000000000000000000000000000000000000000000000000000000"
+
 // mockProver stands in for backend.Core. It records the jobs it receives, runs
 // an optional hook mid-Prove (to observe the claim), and returns a configurable
 // result (defaulting to success).
@@ -52,11 +54,20 @@ func placeRequest(t *testing.T, root, name, fixture string) {
 	require.NoError(t, os.WriteFile(filepath.Join(root, "requests", name), data, 0o600))
 }
 
-func readResponse(t *testing.T, root, name string) Response {
+func readExecutionResponse(t *testing.T, root, name string) map[string]any {
 	t.Helper()
 	data, err := os.ReadFile(filepath.Join(root, "responses", name))
 	require.NoError(t, err)
-	var resp Response
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(data, &resp))
+	return resp
+}
+
+func readFailureResponse(t *testing.T, root, name string) FailureResponse {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join(root, "responses", name))
+	require.NoError(t, err)
+	var resp FailureResponse
 	require.NoError(t, json.Unmarshal(data, &resp))
 	return resp
 }
@@ -88,8 +99,22 @@ func TestAdapter_SingleBlock_Success(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, wantSSZ, job.Payload, "job payload must be the framed SSZ")
 
-	resp := readResponse(t, root, singleReqName)
-	assert.Equal(t, "ok", resp.Status)
+	resp := readExecutionResponse(t, root, singleReqName)
+	assertResponseShapeMatchesReference(t, resp)
+	assert.Equal(t, defaultProverVersion, resp["proverVersion"])
+	assert.Equal(t, "0xdead", resp["proof"])
+	startBlockNumber, ok := resp["startBlockNumber"].(float64)
+	require.True(t, ok)
+	assert.Equal(t, 1000501, int(startBlockNumber))
+	assert.NotContains(t, resp, "status")
+	assert.NotContains(t, resp, "jobId")
+	assert.Empty(t, resp["l2L1Messages"])
+	assert.Empty(t, resp["txFroms"])
+	assert.Empty(t, resp["filteredAddresses"])
+	publicInputs, ok := resp["publicInputs"].(map[string]any)
+	require.True(t, ok)
+	assert.Len(t, publicInputs, 16)
+	assert.Equal(t, zeroHashHex, publicInputs["parentBlockHash"])
 
 	assert.NoFileExists(t, filepath.Join(root, "requests", singleReqName))
 	assert.NoFileExists(t, filepath.Join(root, "requests", singleReqName+".inprogress"))
@@ -130,7 +155,7 @@ func TestAdapter_ProveFailure(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 1, n)
 
-	resp := readResponse(t, root, singleReqName)
+	resp := readFailureResponse(t, root, singleReqName)
 	assert.Equal(t, "failed", resp.Status)
 	assert.Contains(t, resp.Error, "prove boom")
 
@@ -150,7 +175,7 @@ func TestAdapter_MalformedRequest(t *testing.T) {
 	assert.Equal(t, 1, n)
 	assert.Empty(t, mock.jobs, "Prover must not be called for a malformed request")
 
-	resp := readResponse(t, root, "bad.json")
+	resp := readFailureResponse(t, root, "bad.json")
 	assert.Equal(t, "failed", resp.Status)
 	assert.FileExists(t, filepath.Join(root, "requests-done", "bad.json.failed"))
 }
@@ -180,7 +205,7 @@ func TestAdapter_ForcedTransactions_NotImplemented(t *testing.T) {
 	assert.Equal(t, 1, n)
 	assert.Empty(t, mock.jobs, "forced transactions must not be dropped before proving")
 
-	resp := readResponse(t, root, singleReqName)
+	resp := readFailureResponse(t, root, singleReqName)
 	assert.Equal(t, "failed", resp.Status)
 	assert.Contains(t, resp.Error, "forced transactions")
 }
@@ -197,7 +222,7 @@ func TestAdapter_MultiBlock(t *testing.T) {
 	assert.Equal(t, 1, n)
 	assert.Empty(t, mock.jobs, "multi-block request must not reach the Prover")
 
-	resp := readResponse(t, root, "1000501-1000502-getZkL2ExecutionProofV1.json")
+	resp := readFailureResponse(t, root, "1000501-1000502-getZkL2ExecutionProofV1.json")
 	assert.Equal(t, "failed", resp.Status)
 }
 
@@ -232,6 +257,11 @@ func TestNew_Validation(t *testing.T) {
 		a, err := New(Config{RootDir: t.TempDir()}, &mockProver{})
 		require.NoError(t, err)
 		assert.Equal(t, defaultPollInterval, a.cfg.PollInterval)
+	})
+	t.Run("DefaultsProverVersion", func(t *testing.T) {
+		a, err := New(Config{RootDir: t.TempDir()}, &mockProver{})
+		require.NoError(t, err)
+		assert.Equal(t, defaultProverVersion, a.cfg.ProverVersion)
 	})
 }
 

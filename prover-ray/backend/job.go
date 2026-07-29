@@ -58,11 +58,22 @@ const (
 // Count and field names follow the coordinator response schema
 // (rollup_spec/src/rollup_spec/prover_io/getZkL2ExecutionProofV1.response.json).
 type PublicInputs struct {
-	ParentBlockHash      [32]byte
-	EndBlockHash         [32]byte
-	L2L1MessagesHash     [32]byte
-	ParentFtxRollingHash [32]byte
-	// Remaining 12 fields: pending column-to-field mapping.
+	ParentBlockHash                          [32]byte
+	EndBlockHash                             [32]byte
+	EndBlockNumber                           uint64
+	EndBlockTimestamp                        uint64
+	L2L1MessagesHash                         [32]byte
+	ParentL1L2BridgeRollingHash              [32]byte
+	ParentL1L2BridgeRollingHashMessageNumber uint64
+	EndL1L2BridgeRollingHash                 [32]byte
+	EndL1L2BridgeRollingHashMessageNumber    uint64
+	DynamicChainConfigHash                   [32]byte
+	ParentFtxRollingHash                     [32]byte
+	ParentProcessedFtxNumber                 uint64
+	EndFtxRollingHash                        [32]byte
+	EndProcessedFtxNumber                    uint64
+	FilteredAddressesHash                    [32]byte
+	TxFromsHash                              [32]byte
 }
 
 // Result is the backend's response for a completed [Job].

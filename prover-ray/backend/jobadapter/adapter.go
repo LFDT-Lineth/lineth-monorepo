@@ -2,7 +2,6 @@ package jobadapter
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,7 +25,8 @@ const (
 	// failedSuffix distinguishes archived requests that did not prove.
 	failedSuffix = ".failed"
 
-	defaultPollInterval = time.Second
+	defaultPollInterval  = time.Second
+	defaultProverVersion = "4.0.0-riscv"
 
 	dirPerm  = 0o750
 	filePerm = 0o600
@@ -46,25 +46,12 @@ type Config struct {
 	// PollInterval is how often [Adapter.Run] rescans requests/ for new work.
 	// Defaults to one second when unset.
 	PollInterval time.Duration
+	// ProverVersion is emitted on successful getZkL2ExecutionProofV1-shaped
+	// responses. Defaults to defaultProverVersion when unset.
+	ProverVersion string
 }
 
-// Response is the JSON body written to responses/ for each processed request.
-//
-// Provisional: the final shape is the getZkL2ExecutionProofV1 response schema,
-// but proof serialization and the public-input mapping are not built yet
-// (wiki backend-overview.md open questions #4 and #5). Today this carries the
-// outcome and, on success, the raw proof bytes.
-type Response struct {
-	JobID    string `json:"jobId"`
-	Status   string `json:"status"`
-	ProofHex string `json:"proof,omitempty"`
-	Error    string `json:"error,omitempty"`
-}
-
-const (
-	statusOK     = "ok"
-	statusFailed = "failed"
-)
+const statusFailed = "failed"
 
 // Adapter polls a filesystem request queue and drives each request through a
 // [Prover].
@@ -84,6 +71,9 @@ func New(cfg Config, prover Prover) (*Adapter, error) {
 	}
 	if cfg.PollInterval <= 0 {
 		cfg.PollInterval = defaultPollInterval
+	}
+	if cfg.ProverVersion == "" {
+		cfg.ProverVersion = defaultProverVersion
 	}
 
 	a := &Adapter{cfg: cfg, prover: prover}
@@ -176,7 +166,7 @@ func (a *Adapter) processRequest(ctx context.Context, name string) (bool, error)
 // run decodes the claimed request and proves it, returning the response body
 // and whether it succeeded. Decode, validation, and proof failures all map to a
 // failure response rather than an error.
-func (a *Adapter) run(ctx context.Context, name, claimed string) (Response, bool) {
+func (a *Adapter) run(ctx context.Context, name, claimed string) (any, bool) {
 	id := strings.TrimSuffix(name, ".json")
 
 	data, err := os.ReadFile(claimed) //nolint:gosec // claimed is a scanned entry under RootDir/requests
@@ -215,22 +205,10 @@ func (a *Adapter) run(ctx context.Context, name, claimed string) (Response, bool
 		}
 		return failureResponse(id, err), false
 	}
-	return Response{
-		JobID:    id,
-		Status:   statusOK,
-		ProofHex: "0x" + hex.EncodeToString(result.ProofBytes),
-	}, true
+	return newExecutionResponse(result, payload.BlockNumber, a.cfg.ProverVersion), true
 }
 
-func failureResponse(id string, err error) Response {
-	msg := ""
-	if err != nil {
-		msg = err.Error()
-	}
-	return Response{JobID: id, Status: statusFailed, Error: msg}
-}
-
-func (a *Adapter) writeResponse(name string, resp Response) error {
+func (a *Adapter) writeResponse(name string, resp any) error {
 	data, err := json.MarshalIndent(resp, "", "  ")
 	if err != nil {
 		return fmt.Errorf("jobadapter: encoding response for %s: %w", name, err)
