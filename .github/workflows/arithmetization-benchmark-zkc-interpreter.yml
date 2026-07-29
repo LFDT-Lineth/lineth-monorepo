@@ -298,8 +298,8 @@ jobs:
             log "=== workload: ${wl} ==="
             # Untimed warmup: opt then base. Primes the page cache and shared libs
             # so both branches face an already-warm filesystem on iteration 1.
-            reset_state; log "${wl}: warmup opt  (untimed)"; run_${wl} opt  warmup --fast
-            reset_state; log "${wl}: warmup base (untimed)"; run_${wl} base warmup --fast
+            reset_state; log "${wl}: warmup opt  (untimed)"; run_${wl} opt  warmup --fast -v
+            reset_state; log "${wl}: warmup base (untimed)"; run_${wl} base warmup --fast -v
             # Timed runs: opt_i, base_i alternating, starting with opt.
             # Run in fast (with gogen) or tracing mode
             for i in $(seq 1 "$ITERS"); do
