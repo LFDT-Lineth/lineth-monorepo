@@ -18,9 +18,9 @@
 // This is a first-iteration mock. utils/ssz.EncodeStatelessInput SSZ-encodes
 // the coordinator payload (single block) into the already-framed bytes carried
 // by [Job.Payload]. [Core.Prove] passes those bytes through [decodePayload],
-// and [sszBlobs] adds the guest's length prefix while building the ZkC
-// pub-input blobs. [SerializeProof] (wiop.Proof → wire bytes) is still stubbed
-// and returns [ErrNotImplemented].
+// and the R5 data-section builder adds the guest's length prefix while building
+// the ZkC pub-input blobs. [SerializeProof] (wiop.Proof → wire bytes) is still
+// stubbed and returns [ErrNotImplemented].
 //
 // Circuit compiler passes and [wiop.Materialize] are also not yet wired
 // in [New]; see the inline comments in [core.go].

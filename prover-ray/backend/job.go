@@ -56,7 +56,7 @@ const (
 // field, and which fields come from the wrapper instead (open question #5).
 //
 // Count and field names follow the coordinator response schema
-// (rollup_spec/src/rollup_spec/prover_io/getZkL2ExecutionProofV1.response.json).
+// (rollup_spec/src/rollup_spec/prover_io/schemas/getZkL2ExecutionProofV1.response.schema.json).
 type PublicInputs struct {
 	ParentBlockHash                          [32]byte
 	EndBlockHash                             [32]byte

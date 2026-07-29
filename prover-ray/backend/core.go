@@ -95,10 +95,9 @@ func (c *Core) Prove(ctx context.Context, job Job) Result {
 	}
 }
 
-// buildInputs converts a Job's Payload into the three ZkC pub-input values,
-// keyed by name (see [encodeInputs]). ELF memory blobs are pre-extracted in
-// [New] and reused across calls; only the per-job StatelessInput blobs
-// (schema id + SSZ body) differ.
+// buildInputs converts a Job's Payload into the guest and memory inputs ZkC
+// expects. ELF memory blobs are pre-extracted in [New] and reused across calls;
+// only the per-job StatelessInput data section (schema id + SSZ body) differs.
 func (c *Core) buildInputs(job Job) (map[string][]byte, error) {
 	if err := sanityCheckJobs(job); err != nil {
 		return nil, err
