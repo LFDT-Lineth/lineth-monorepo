@@ -212,13 +212,14 @@ class Web3JLinethRollupSmartContractClient internal constructor(
     blobData: BlobsSubmissionV9,
     gasPriceCaps: GasPriceCaps?,
     preflightWithEthCall: Boolean,
+    onlyEthCall: Boolean,
   ): SafeFuture<String> {
     return ensureMinVersion(LinethRollupContractVersion.V9)
       .thenApply {
         FunctionBuildersV9.buildSubmitBlobsFunctionV9(blobData)
       }
       .thenCompose { function ->
-        if (preflightWithEthCall) {
+        if (onlyEthCall || preflightWithEthCall) {
           web3jContractHelper.executeBlobEthCall(
             function = function,
             blobs = blobData.blobs,
@@ -227,11 +228,15 @@ class Web3JLinethRollupSmartContractClient internal constructor(
         } else {
           SafeFuture.completedFuture(null)
         }.thenCompose {
-          web3jContractHelper.sendBlobCarryingTransactionAndGetTxHash(
-            function = function,
-            blobs = blobData.blobs,
-            gasPriceCaps = gasPriceCaps,
-          )
+          if (!onlyEthCall) {
+            web3jContractHelper.sendBlobCarryingTransactionAndGetTxHash(
+              function = function,
+              blobs = blobData.blobs,
+              gasPriceCaps = gasPriceCaps,
+            )
+          } else {
+            SafeFuture.completedFuture(it)
+          }
         }
       }
   }

@@ -3,7 +3,6 @@ package lineth.submission
 import linea.contract.l1.LinethRollupSmartContractClient
 import linea.domain.BlobRecord
 import linea.domain.BlobSubmittedEvent
-import linea.domain.BlockIntervalData
 import linea.domain.toBlockIntervalsString
 import lineth.gaspricing.GasPriceCapProvider
 import org.apache.logging.log4j.LogManager
@@ -63,8 +62,8 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTx(
               gasPriceCaps,
             )
             val blobSubmittedEvent = BlobSubmittedEvent(
-              blobs = blobs.map { BlockIntervalData(it.startBlockNumber, it.endBlockNumber) },
-              endBlockTime = blobs.last().endBlockTime,
+              endBlockNumber = blobs.last().endBlockNumber,
+              endBlockTimestamp = blobs.last().endBlockTime,
               lastShnarf = blobs.last().expectedShnarf,
               submissionTimestamp = clock.now(),
               transactionHash = transactionHash.toByteArray(),
