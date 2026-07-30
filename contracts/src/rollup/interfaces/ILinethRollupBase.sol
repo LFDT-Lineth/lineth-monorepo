@@ -103,7 +103,7 @@ interface ILinethRollupBase {
    * @param previousVersion The previous version.
    * @param newVersion The new version.
    */
-  event LinethRollupVersionChanged(bytes8 indexed previousVersion, bytes8 indexed newVersion);
+  event LineaRollupVersionChanged(bytes8 indexed previousVersion, bytes8 indexed newVersion);
 
   /**
    * @notice Emitted when a verifier is set for a particular proof type.
@@ -160,7 +160,7 @@ interface ILinethRollupBase {
    * @param initializationData The initialization data.
    * @param genesisShnarf The genesis shnarf.
    */
-  event LinethRollupBaseInitialized(
+  event LineaRollupBaseInitialized(
     bytes8 indexed initialContractVersion,
     BaseInitializationData initializationData,
     bytes32 genesisShnarf

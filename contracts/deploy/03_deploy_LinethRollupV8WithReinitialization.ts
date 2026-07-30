@@ -41,7 +41,9 @@ const func: DeployFunction = withSignerUiSession(
         [
           proxyAddress,
           newImplementation,
-          LinethRollup__factory.createInterface().encodeFunctionData("reinitializeLinethRollupV9", [
+          // `reinitializeLineaRollupV9` matches the function name defined in LinethRollup.sol -
+          // not a mismatch, the function itself was not renamed as part of the rebrand.
+          LinethRollup__factory.createInterface().encodeFunctionData("reinitializeLineaRollupV9", [
             forcedTransactionFeeInWei,
             addressFilter,
           ]),
@@ -49,7 +51,7 @@ const func: DeployFunction = withSignerUiSession(
       ),
     ]);
 
-    console.log("Encoded upgradeAndCall calldata for reinitializeLinethRollupV9:");
+    console.log("Encoded upgradeAndCall calldata for reinitializeLineaRollupV9:");
     console.log("\n", upgradeCallWithReinitialization, "\n");
 
     await tryVerifyContract(implementationAddress);

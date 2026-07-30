@@ -28,11 +28,11 @@ Captured by `makefile-contracts.mk:158-159`:
 
 Both are exported to the env of every leaf target. The upstream scripts computed their own offsets from a fixed nonce-ordering convention (constants `ORDERED_NONCE_POST_LINEAROLLUP`, `ORDERED_NONCE_POST_TOKENBRIDGE`, `ORDERED_NONCE_POST_L2MESSAGESERVICE` baked into the deploy scripts).
 
-Note: in our serial flow the scripts read the wallet's live nonce. `deployPlonkVerifierAndLineaRollupV8.ts` honors an explicit `L1_NONCE` when set but falls back to `wallet.getNonce()`. The forked `deployBridgedTokenAndTokenBridgeV1_1.ts` no longer reads `L1_NONCE` / `L2_NONCE` at all — it serializes every deploy and lets ethers manage nonces from live wallet state. `04-deploy-contracts.sh` still captures `L1_NONCE` / `L2_NONCE` in the prelude (for V8 and logging) and additionally guards each step against redeploying past the expected deterministic nonce.
+Note: in our serial flow the scripts read the wallet's live nonce. `deployPlonkVerifierAndLinethRollupV8.ts` honors an explicit `L1_NONCE` when set but falls back to `wallet.getNonce()`. The forked `deployBridgedTokenAndTokenBridgeV1_1.ts` no longer reads `L1_NONCE` / `L2_NONCE` at all — it serializes every deploy and lets ethers manage nonces from live wallet state. `04-deploy-contracts.sh` still captures `L1_NONCE` / `L2_NONCE` in the prelude (for V8 and logging) and additionally guards each step against redeploying past the expected deterministic nonce.
 
 ## L1 leaf targets
 
-### 1. `deploy-linea-rollup-v8` → `deployPlonkVerifierAndLineaRollupV8.ts`
+### 1. `deploy-lineth-rollup-v8` → `deployPlonkVerifierAndLinethRollupV8.ts`
 
 Source: `makefile-contracts.mk:34-57` (V8 default).
 
@@ -127,14 +127,14 @@ Output: L2 BridgedToken + L2 TokenBridge addresses.
 
 The internal `make -j7` parallel run is replaced by serial execution. Order matters because:
 
-1. **`deploy-linea-rollup-v8`** must run before `deploy-token-bridge-l1` so we can forward `LINEA_ROLLUP_ADDRESS`.
+1. **`deploy-lineth-rollup-v8`** must run before `deploy-token-bridge-l1` so we can forward `LINEA_ROLLUP_ADDRESS`.
 2. **`deploy-l2messageservice`** must run before `deploy-token-bridge-l1` and `deploy-token-bridge-l2` so we can forward `L2_MESSAGE_SERVICE_ADDRESS`.
 3. **`deploy-token-bridge-l1`** and **`deploy-token-bridge-l2`** consume both forwarded addresses.
 Order in our serial flow:
 
 ```
 Prelude:  capture L1_NONCE, L2_NONCE
-Step 1:   deploy-linea-rollup-v8           [L1]   → emits LINEA_ROLLUP_ADDRESS
+Step 1:   deploy-lineth-rollup-v8           [L1]   → emits LINEA_ROLLUP_ADDRESS
 Step 2:   deploy-l2messageservice          [L2]   → emits L2_MESSAGE_SERVICE_ADDRESS
 Step 3:   deploy-token-bridge-l1           [L1]   ← consumes both addresses
 Step 4:   deploy-token-bridge-l2           [L2]   ← consumes both addresses

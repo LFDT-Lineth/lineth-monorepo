@@ -61,7 +61,7 @@ pnpm exec hardhat deploy --network sepolia --tags LinethRollupWithReinitializati
 
 ### LinethRollupV8WithReinitialization
 
-Deploys a new LinethRollup implementation and generates encoded `upgradeAndCall` calldata for `reinitializeLinethRollupV9`. Submit the printed calldata through the Security Council Safe targeting the ProxyAdmin.
+Deploys a new LinethRollup implementation and generates encoded `upgradeAndCall` calldata for `reinitializeLineaRollupV9`. Submit the printed calldata through the Security Council Safe targeting the ProxyAdmin.
 
 | Parameter name | Required | Input value | Description |
 |---|---|---|---|

@@ -81,11 +81,13 @@ jobs:
           set -eux
           # We collect each install into its own GOBIN and rename the output
           # so they coexist on disk.
+          default_ref="${ZKC_REF}"
           for variant in base opt; do
             case "$variant" in
-              base) ref="${{ inputs.zkc_base_ref || 'v1.2.20' }}" ;;
-              opt)  ref="${{ inputs.zkc_optim_ref || 'v1.2.20' }}" ;;
+              base) ref="${{ inputs.zkc_base_ref }}" ;;
+              opt)  ref="${{ inputs.zkc_optim_ref }}" ;;
             esac
+            ref="${ref:-$default_ref}"
             tmpbin=$(mktemp -d)
             # go-corset was renamed/moved to github.com/LFDT-Lineth/zkc. The module
             # path must match the ref's own go.mod: post-rename refs (e.g. main) use
@@ -137,10 +139,17 @@ jobs:
             sleep 5
           }
 
+          # Run stats separately while tracing is not possible
+          run_compile_native_keccak() {  # $1=variant (base|opt)  $2=label (warmup|iter#)
+            local log="/tmp/bench/logs/compile_${1}_${2}.log"
+            "/tmp/zkc-${1}" compile --stats --inline --field KOALABEAR_16 \
+              "$zkc_prog" >"$log" 2>&1 || true
+          }
+
           # Run fast mode with gogen
           run_gogen_native_keccak() {  # $1=variant (base|opt)  $2=label (warmup|iter#)
             local variant="$1" label="$2" zkc_bin="/tmp/zkc-${1}"
-            "$zkc_bin" generate --fast -v -q --field KOALABEAR_16 -o riscv.go "$zkc_prog"
+            "$zkc_bin" generate --fast -vv --field KOALABEAR_16 -o riscv.go "$zkc_prog"
             go build -o riscv-gogen riscv.go
             /usr/bin/time -v ./riscv-gogen < /tmp/keccakf_input.json \
               > "/tmp/bench/logs/keccak_${variant}_${label}.log" 2>&1
@@ -150,17 +159,19 @@ jobs:
 
           # Run in tracing or fast mode via make zkc-exec
           run_native_keccak() {  # $1=variant (base|opt)  $2=label (warmup|iter#)  optional: --fast
-            local exec_flags="-v -q --field KOALABEAR_16"
-            if [[ "${3:-}" == "--fast" ]]; then exec_flags="--fast -v -q --field KOALABEAR_16"; fi
+            local exec_flags="-vv --field KOALABEAR_16"
+            if [[ "${3:-}" == "--fast" ]]; then exec_flags="--fast -vv --field KOALABEAR_16"; fi
             /usr/bin/time -v env ZKC="/tmp/zkc-${1}" ZKC_EXEC_FLAGS="$exec_flags" \
               make -C "$TEST_MAKE_DIR" --no-print-directory zkc-exec \
               JSON=/tmp/keccakf_input.json ZKC_MAIN="$zkc_prog" \
               > "/tmp/bench/logs/keccak_${1}_${2}.log" 2>&1
           }
 
+          ## Loop on variants
           for variant in base opt; do
             log "=== variant: ${variant} ==="
             reset_state; log "${variant}: warmup (untimed)"; run_native_keccak "$variant" warmup --fast
+            reset_state; log "stats run: ${variant} (untimed)"; run_compile_native_keccak "$variant" warmup
             for i in $(seq 1 "$ITERS"); do
               reset_state; log "${variant}: iter ${i}/${ITERS}"
               if [[ "$FAST_MODE" == "true" ]]; then
@@ -177,12 +188,17 @@ jobs:
         shell: bash
         env:
           FAST_MODE: ${{ inputs.fast_mode }}
+          ZKC_REF_BASE_INPUT: ${{ inputs.zkc_base_ref }}
+          ZKC_REF_OPTIM_INPUT: ${{ inputs.zkc_optim_ref }}
         run: |
           set -o pipefail
           mkdir -p /tmp/bench/logs
           if [[ -z "${FAST_MODE:-}" ]]; then FAST_MODE=true; fi
           fast_mode_arg=(-fast-mode=false)
           if [[ "$FAST_MODE" == "true" ]]; then fast_mode_arg=(-fast-mode=true); fi
+          # Resolve the zkc refs at runtime
+          zkc_ref_base="${ZKC_REF_BASE_INPUT:-$ZKC_REF}"
+          zkc_ref_optim="${ZKC_REF_OPTIM_INPUT:-$ZKC_REF}"
           /tmp/bench/render_bench_summary \
             -logs /tmp/bench/logs \
             -iters ${{ inputs.iterations || 1 }} \
@@ -190,11 +206,20 @@ jobs:
             "${fast_mode_arg[@]}" \
             -base-ref "${{ inputs.zkc_base_ref || 'main' }}" \
             -optim-ref "${{ inputs.zkc_optim_ref || 'main' }}" \
-            -zkc-ref-base "${{ inputs.zkc_base_ref || 'v1.2.20' }}" \
-            -zkc-ref-optim "${{ inputs.zkc_optim_ref || 'v1.2.20' }}" \
+            -zkc-ref-base "$zkc_ref_base" \
+            -zkc-ref-optim "$zkc_ref_optim" \
             -keccak-n-vectors ${{ inputs.n_vectors_keccak || 100 }} \
             | tee -a "$GITHUB_STEP_SUMMARY" \
             | tee /tmp/bench/logs/summary.md
+          ## Print stats for warmup at the end of the benchmark
+          for variant in opt base; do
+            log="/tmp/bench/logs/compile_${variant}_warmup.log"
+            if [[ -f "$log" ]]; then
+              printf '### Native keccak %s stats\n```\n' "$variant" >> "$GITHUB_STEP_SUMMARY"
+              cat "$log" >> "$GITHUB_STEP_SUMMARY"
+              printf '```\n' >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
 
       - name: Upload benchmark logs
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

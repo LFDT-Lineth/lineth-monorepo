@@ -27,8 +27,6 @@ ENV NATIVE_LIBS_RELEASE_TAG=${NATIVE_LIBS_RELEASE_TAG}
 # This layer is cached unless these files change
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
 COPY patches/ ./patches/
-
-COPY patches/ ./patches/
 COPY ./postman/package.json ./postman/package.json
 COPY ./ts-libs/sdk/sdk-core/package.json ./ts-libs/sdk/sdk-core/package.json
 COPY ./ts-libs/sdk/sdk-viem/package.json ./ts-libs/sdk/sdk-viem/package.json
