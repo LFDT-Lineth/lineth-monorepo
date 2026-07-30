@@ -321,7 +321,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
         case R_KECCAK: {
             printf "KECCAK precompile "
             keccak(v1 as Address, v2 as u32, registers[rd] as Address)
-            tmpDWord1 = 0 // TODO: useless but required for compilation
+            return
         }
         case R_POSEIDON2: {
             printf "POSEIDON2 precompile "
@@ -329,7 +329,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
             // poseidon2(input_addr, output_addr) applies the permutation to the
             // STATE_WIDTH field elements at input_addr, writing the result to output_addr.
             poseidon2(v1 as Address, registers[rd] as Address)
-            tmpDWord1 = 0 // TODO: useless but required for compilation
+            return
         }
 
         default: {
@@ -342,9 +342,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
     }
 
     // For all operation except custom opcode, write the result in registers[rd]
-    if (opcode != CUSTOM_1) {
-        registers[rd] = tmpDWord1
-    }
-
+    // Note that for opcode == CUSTOM_1 we already returned, so nothin is written
+    registers[rd] = tmpDWord1
 }
 
