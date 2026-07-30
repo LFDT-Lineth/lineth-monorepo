@@ -660,7 +660,7 @@
         "type": "bytes8"
       }
     ],
-    "name": "LinethRollupVersionChanged",
+    "name": "LineaRollupVersionChanged",
     "type": "event"
   },
   {
@@ -2099,7 +2099,7 @@
         "type": "address"
       }
     ],
-    "name": "reinitializeLinethRollupV6",
+    "name": "reinitializeLineaRollupV6",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
