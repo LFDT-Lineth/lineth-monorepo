@@ -302,3 +302,37 @@ const MASK_64_ERASE_LAST_BIT:u64 = 0xfffffffffffffffe
 // ======================
 const EXIT_SYSCALL:DoubleWord = 93
 const WRITE_SYSCALL:DoubleWord = 64
+
+const R_ADD:u17 = ((OP as u17) << 10) | ((FUNCT3_ADD as u17) << 7) | (FUNCT7_ADD as u17)
+const R_SUB:u17 = ((OP as u17) << 10) | ((FUNCT3_ADD as u17) << 7) | (FUNCT7_SUB as u17)
+const R_MUL:u17 = ((OP as u17) << 10) | ((FUNCT3_ADD as u17) << 7) | (FUNCT7_SUB as u17)
+const R_SLL:u17 = ((OP as u17) << 10) | ((FUNCT3_SLL as u17) << 7) | (FUNCT7_SLL as u17)
+const R_MULH:u17 = ((OP as u17) << 10) | ((FUNCT3_SLL as u17) << 7) | (FUNCT7_MULH as u17)
+const R_SLT:u17 = ((OP as u17) << 10) | ((FUNCT3_SLT as u17) << 7) | (FUNCT7_SLT as u17)
+const R_MULHSU:u17 = ((OP as u17) << 10) | ((FUNCT3_SLT as u17) << 7) | (FUNCT7_MULHSU as u17)
+const R_SLTU:u17 = ((OP as u17) << 10) | ((FUNCT3_SLTU as u17) << 7) | (FUNCT7_SLTU as u17)
+const R_MULHU:u17 = ((OP as u17) << 10) | ((FUNCT3_SLTU as u17) << 7) | (FUNCT7_MULHU as u17)
+const R_XOR:u17 = ((OP as u17) << 10) | ((FUNCT3_XOR as u17) << 7) | (FUNCT7_XOR as u17)
+const R_DIV:u17 = ((OP as u17) << 10) | ((FUNCT3_XOR as u17) << 7) | (FUNCT7_DIV as u17)
+const R_SRL:u17 = ((OP as u17) << 10) | ((FUNCT3_SRL as u17) << 7) | (FUNCT7_SRL as u17)
+const R_SRA:u17 = ((OP as u17) << 10) | ((FUNCT3_SRL as u17) << 7) | (FUNCT7_SRA as u17)
+const R_DIVU:u17 = ((OP as u17) << 10) | ((FUNCT3_SRL as u17) << 7) | (FUNCT7_DIVU as u17)
+const R_OR:u17 = ((OP as u17) << 10) | ((FUNCT3_OR as u17) << 7) | (FUNCT7_OR as u17)
+const R_REM:u17 = ((OP as u17) << 10) | ((FUNCT3_OR as u17) << 7) | (FUNCT7_REM as u17)
+const R_AND:u17 = ((OP as u17) << 10) | ((FUNCT3_AND as u17) << 7) | (FUNCT7_AND as u17)
+const R_REMU:u17 = ((OP as u17) << 10) | ((FUNCT3_AND as u17) << 7) | (FUNCT7_REMU as u17)
+const R_ADDW:u17 = ((OP_32 as u17) << 10) | ((FUNCT3_ADDW as u17) << 7) | (FUNCT7_ADDW as u17)
+const R_SUBW:u17 = ((OP_32 as u17) << 10) | ((FUNCT3_ADDW as u17) << 7) | (FUNCT7_SUBW as u17)
+const R_MULW:u17 = ((OP_32 as u17) << 10) | ((FUNCT3_ADDW as u17) << 7) | (FUNCT7_MULW as u17)
+const R_SLLW:u17 = ((OP_32 as u17) << 10) | ((FUNCT3_SLLW as u17) << 7) | (FUNCT7_SLLW as u17)
+const R_DIVW:u17 = ((OP_32 as u17) << 10) | ((FUNCT3_DIVW as u17) << 7) | (FUNCT7_DIVW as u17)
+const R_SRLW:u17 = ((OP_32 as u17) << 10) | ((FUNCT3_SRLW as u17) << 7) | (FUNCT7_SRLW as u17)
+const R_SRAW:u17 = ((OP_32 as u17) << 10) | ((FUNCT3_SRLW as u17) << 7) | (FUNCT7_SRAW as u17)
+const R_DIVUW:u17 = ((OP_32 as u17) << 10) | ((FUNCT3_SRLW as u17) << 7) | (FUNCT7_DIVUW as u17)
+const R_REMW:u17 = ((OP_32 as u17) << 10) | ((FUNCT3_REMW as u17) << 7) | (FUNCT7_REMW as u17)
+const R_REMUW:u17 = ((OP_32 as u17) << 10) | ((FUNCT3_REMW as u17) << 7) | (FUNCT7_REMUW as u17)
+const R_KECCAK:u17 = ((CUSTOM_1 as u17) << 10) | ((FUNCT3_KECCAK as u17) << 7) | (FUNCT3_KECCAK as u17)
+const R_POSEIDON2:u17 = ((CUSTOM_1 as u17) << 10) | ((FUNCT3_POSEIDON2 as u17) << 7) | (FUNCT3_POSEIDON2 as u17)
+
+
+
