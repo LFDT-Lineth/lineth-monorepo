@@ -331,6 +331,6 @@ const R_SRLW:u17 = ((OP_32 as u17) << 10) | ((FUNCT3_SRLW as u17) << 7) | (FUNCT
 const R_SRAW:u17 = ((OP_32 as u17) << 10) | ((FUNCT3_SRLW as u17) << 7) | (FUNCT7_SRAW as u17)
 const R_DIVUW:u17 = ((OP_32 as u17) << 10) | ((FUNCT3_SRLW as u17) << 7) | (FUNCT7_DIVUW as u17)
 const R_REMW:u17 = ((OP_32 as u17) << 10) | ((FUNCT3_REMW as u17) << 7) | (FUNCT7_REMW as u17)
-const R_REMUW:u17 = ((OP_32 as u17) << 10) | ((FUNCT3_REMW as u17) << 7) | (FUNCT7_REMUW as u17)
+const R_REMUW:u17 = ((OP_32 as u17) << 10) | ((FUNCT3_REMUW as u17) << 7) | (FUNCT7_REMUW as u17)
 const R_KECCAK:u17 = ((CUSTOM_1 as u17) << 10) | ((FUNCT3_KECCAK as u17) << 7) | (FUNCT7_KECCAK as u17)
 const R_POSEIDON2:u17 = ((CUSTOM_1 as u17) << 10) | ((FUNCT3_POSEIDON2 as u17) << 7) | (FUNCT7_POSEIDON2 as u17)
