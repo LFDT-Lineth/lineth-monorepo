@@ -1,0 +1,34 @@
+name: 'Setup Zig (shared cache)'
+description: >
+  Installs Zig and caches its global cache directory under a job-name-agnostic key, so every
+  caller building the same dependency set shares one cache instead of each job growing its own
+  copy. Suppresses mlugg/setup-zig's own built-in cache, which keys on the calling job's id and
+  writes a brand-new entry every run.
+inputs:
+  version:
+    description: 'Version of the Zig compiler to install'
+    required: true
+  dependency-hash-paths:
+    description: >
+      Glob pattern covering the caller's own build.zig.zon file(s), passed to hashFiles(). Scopes
+      the dependency cache to the subproject that owns those files, so one subproject's dependency
+      bump doesn't invalidate another subproject's cache. Callers with an identical value share one
+      cache entry.
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Zig
+      uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+      with:
+        version: ${{ inputs.version }}
+        use-cache: 'false'
+
+    - name: Cache Zig global cache directory
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      with:
+        path: .zig-cache
+        key: setup-zig-global-cache-${{ inputs.version }}-${{ hashFiles(inputs.dependency-hash-paths) }}
+        restore-keys: |
+          setup-zig-global-cache-${{ inputs.version }}-
