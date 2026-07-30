@@ -250,12 +250,11 @@ describe("Linea Rollup Yield Extension", () => {
     it("Should successfully emit a synthetic MessageSent event with valid parameters", async () => {
       const yieldManagerSigner = await impersonateYieldManager();
       const amount = ethers.parseEther("1");
-      const lineaRollupAddress = await lineaRollup.getAddress();
       const nextMessageNumberBefore = await lineaRollup.nextMessageNumber();
       const l2YieldRecipient = ethers.Wallet.createRandom().address;
 
       const expectedMessageHash = computeMessageHash(
-        lineaRollupAddress,
+        yieldManager,
         l2YieldRecipient,
         0n,
         amount,
@@ -290,18 +289,10 @@ describe("Linea Rollup Yield Extension", () => {
       const yieldManagerSigner = await impersonateYieldManager();
 
       const amount = ethers.parseEther("0.5");
-      const lineaRollupAddress = await lineaRollup.getAddress();
       const messageNumber = await lineaRollup.nextMessageNumber();
       const l2YieldRecipient = ethers.Wallet.createRandom().address;
 
-      const messageHash = computeMessageHash(
-        lineaRollupAddress,
-        l2YieldRecipient,
-        0n,
-        amount,
-        messageNumber,
-        EMPTY_CALLDATA,
-      );
+      const messageHash = computeMessageHash(yieldManager, l2YieldRecipient, 0n, amount, messageNumber, EMPTY_CALLDATA);
       const expectedRollingHash = calculateRollingHash(ethers.ZeroHash, messageHash);
 
       // ACT
@@ -323,7 +314,6 @@ describe("Linea Rollup Yield Extension", () => {
 
     it("Should correctly update the rolling hash after sendMessage", async () => {
       // ARRANGE STAGE 1 - Perform sendMessage
-      const lineaRollupAddress = await lineaRollup.getAddress();
       const calldataPayload = ethers.randomBytes(32);
       const calldataHex = ethers.hexlify(calldataPayload);
 
@@ -360,7 +350,7 @@ describe("Linea Rollup Yield Extension", () => {
       const l2YieldRecipient = operator.address;
 
       const yieldMessageHash = computeMessageHash(
-        lineaRollupAddress,
+        yieldManager,
         l2YieldRecipient,
         0n,
         amount,
