@@ -45,8 +45,9 @@ func TestPublicInput(t *testing.T) {
 		col := m.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
 		// Open col[pos] into a cell; Open registers the local constraint
 		// cell == col[pos], which soundly binds the public input into the proof.
-		cell := col.At(pos).Open(sys.Context.Childf("my-public-input")) // we would use Context.Lable as a humand readable Name for the PublicInputs
-		sys.RegisterPublicInputs(cell)
+		cell := col.At(pos).Open(sys.Context.Childf("my-public-input"))
+		layout := &wiop.PublicInputLayout{GuestPublicOutputs: []*wiop.Cell{cell}}
+		layout.Register(sys)
 		localvanishing.Compile(sys)
 		global.Compile(sys)
 		return sys, col, cell
@@ -95,7 +96,7 @@ func TestPublicInputDynamicColumn(t *testing.T) {
 		m := sys.NewDynamicModule(sys.Context.Childf("m"), wiop.PaddingDirectionRight)
 		col := m.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
 		cell := col.At(pos).Open(sys.Context.Childf("open"))
-		sys.RegisterPublicInputs(cell)
+		(&wiop.PublicInputLayout{GuestPublicOutputs: []*wiop.Cell{cell}}).Register(sys)
 		localvanishing.Compile(sys)
 		global.Compile(sys)
 		return sys, col, cell
@@ -131,7 +132,8 @@ func TestRegisterDuplicatedPublicInputs(t *testing.T) {
 	col := m.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
 	cell := col.At(0).Open(sys.Context.Childf("open"))
 
-	// Duplicate registration of the same cell is rejected.
-	sys.RegisterPublicInputs(cell)
-	require.Panics(t, func() { sys.RegisterPublicInputs(cell) }, "duplicate cell must be rejected")
+	// A layout containing the same cell twice is rejected.
+	require.Panics(t, func() {
+		(&wiop.PublicInputLayout{GuestPublicOutputs: []*wiop.Cell{cell, cell}}).Register(sys)
+	}, "duplicate cell must be rejected")
 }

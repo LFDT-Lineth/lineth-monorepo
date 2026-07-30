@@ -46,14 +46,11 @@ type Proof struct {
 	PCSOpeningProof *fri.OpeningProof
 }
 
-// PublicInput carries the values of the system's registered public inputs, in
-// the same order as [System.PublicInputs] (registration order): PublicInput[i]
-// is the value of the cell PublicInputs[i]. It is produced by [System.Prove]
-// and consumed by [System.Verify] alongside the [Proof].
-//
-// Public inputs are always cells and are deliberately excluded from the proof's
-// cells (they are carried here instead). The deterministic order lets the
-// statement be hashed/serialised and compared identically on both sides.
+// PublicInput carries the values of the system's registered public inputs as a
+// flat, ordered slice of field elements. The ordering matches
+// [PublicInputLayout.Cells]
+// Use [PublicInputLayout.Unpack] to
+// interpret the flat values by semantic role.
 type PublicInput []field.Gen
 
 // Prove runs the prover over every interactive round of sys and returns the
@@ -108,6 +105,7 @@ func (sys *System) Prove(assign func(rt *Runtime)) (Proof, PublicInput) {
 	// statement. Their values are captured into the returned PublicInput, not
 	// into the proof, so the two structures never overlap.
 	piIdx := sys.publicInputIndex()
+	piCells := sys.publicInputCells()
 
 	for _, r := range sys.Rounds {
 		for _, col := range r.Columns {
@@ -143,10 +141,11 @@ func (sys *System) Prove(assign func(rt *Runtime)) (Proof, PublicInput) {
 	}
 
 	// Capture the registered public-input cells into a separate PublicInput, in
-	// registration order. GetCellValue resolves lazily-assigned openings, so a
-	// cell opened from a  column resolves to that column's value.
-	pub := make(PublicInput, len(sys.PublicInputs))
-	for i, cell := range sys.PublicInputs {
+	// the canonical order of PublicInputLayout.Cells. GetCellValue resolves
+	// lazily-assigned openings, so a cell opened from a column resolves to
+	// that column's value.
+	pub := make(PublicInput, len(piCells))
+	for i, cell := range piCells {
 		pub[i] = rt.GetCellValue(cell)
 	}
 
@@ -192,8 +191,9 @@ func (sys *System) Verify(proof Proof, pub PublicInput) error {
 	// values are read from pub rather than proof, enforcing the no-overlap
 	// invariant between the two structures.
 	piIdx := sys.publicInputIndex()
-	if len(pub) != len(sys.PublicInputs) {
-		return fmt.Errorf("wiop: public inputs length mismatch: got %d, want %d", len(pub), len(sys.PublicInputs))
+	piCells := sys.publicInputCells()
+	if len(pub) != len(piCells) {
+		return fmt.Errorf("wiop: public inputs length mismatch: got %d, want %d", len(pub), len(piCells))
 	}
 
 	// assignRound loads the proof's committed columns and cells (and the public
@@ -282,7 +282,7 @@ func (sys *System) Verify(proof Proof, pub PublicInput) error {
 
 	// Every registered public-input cell must have been consumed during the
 	// transcript replay (the length of pub was checked above).
-	for _, cell := range sys.PublicInputs {
+	for _, cell := range piCells {
 		if !rt.HasCellValue(cell) {
 			return fmt.Errorf("public-input cell %q not used", cell.Context.Path())
 		}
