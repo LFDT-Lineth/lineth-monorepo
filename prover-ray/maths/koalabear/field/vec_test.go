@@ -520,46 +520,6 @@ func TestVecScaleExtExt(t *testing.T) {
 	checkExtSlice(t, want, res)
 }
 
-// TestVecScaleAccExtBase verifies VecScaleAccExtBase (ext scalar × base
-// vector, accumulating) against element-wise MulByElement + Add on a copy of
-// the initial accumulator.
-func TestVecScaleAccExtBase(t *testing.T) {
-	rng := newRng()
-	s := PseudoRandExt(rng)
-	a := randomElems(testN)
-	res := randomExts(testN)
-	want := make([]Ext, testN)
-	copy(want, res)
-	VecScaleAccExtBase(res, s, a)
-
-	for i := range want {
-		var t Ext
-		t.MulByElement(&s, &a[i])
-		want[i].Add(&want[i], &t)
-	}
-	checkExtSlice(t, want, res)
-}
-
-// TestVecScaleAccExtExt verifies VecScaleAccExtExt (ext scalar × ext vector,
-// accumulating) against element-wise Mul + Add on a copy of the initial
-// accumulator.
-func TestVecScaleAccExtExt(t *testing.T) {
-	rng := newRng()
-	s := PseudoRandExt(rng)
-	a := randomExts(testN)
-	res := randomExts(testN)
-	want := make([]Ext, testN)
-	copy(want, res)
-	VecScaleAccExtExt(res, s, a)
-
-	for i := range want {
-		var t Ext
-		t.Mul(&s, &a[i])
-		want[i].Add(&want[i], &t)
-	}
-	checkExtSlice(t, want, res)
-}
-
 // TestVecScaleIntoDispatch verifies that VecScaleInto dispatches to the
 // correct typed variant for all four scalar/vector type combinations.
 func TestVecScaleIntoDispatch(t *testing.T) {

@@ -4,16 +4,21 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
+	"github.com/consensys/gnark-crypto/field/koalabear/vortex"
 )
 
 // simdLanes is the SIMD width of the AVX-512 batch Poseidon2 permutation: 16
-// independent Merkle-Damgard chains run per Compressx16 call.
+// independent Merkle-Damgard chains run per
+// vortex.CompressPoseidon2x16Columns call.
 const simdLanes = 16
 
-// leafLayout describes how one Merkleize leaf's element stream is laid out in a
-// Compressx16 matrix row so the front-to-back 8-element chunking reproduces
-// MDHasher's block sequence (see poseidon2.Compressx16). All leaves of a size
-// share this layout because they share (baseWidth, extWidth) and pairing.
+// leafLayout describes how one Merkleize leaf's element stream is laid out in
+// the batch-permutation matrix: the stream is blocked into groups of 8 with the
+// final partial block LEFT-padded with zeros, so the kernel's front-to-back
+// chunking reproduces MDHasher's block sequence (the sponge starts from a zero
+// state and absorbs each block with feed-forward, so the result is bit-identical
+// to hashLeafScalar). All leaves of a size share this layout because they share
+// (baseWidth, extWidth) and pairing.
 type leafLayout struct {
 	baseWidth int
 	extWidth  int
@@ -59,10 +64,10 @@ func (l leafLayout) dpos(p int) int {
 }
 
 // fillGroup fills the column-major matrix for the leaf group [g, g+16), laid out
-// matrix[pos*16+lane] as poseidon2.Compressx16Columns expects. In this layout a
-// column's 16 leaves are contiguous, so base columns are filled with a single
-// bulk copy of 16 consecutive leaf values (no per-element scatter), and the
-// kernel loads instead of gathering.
+// matrix[pos*16+lane] as vortex.CompressPoseidon2x16Columns expects. In this
+// layout a column's 16 leaves are contiguous, so base columns are filled with a
+// single bulk copy of 16 consecutive leaf values (no per-element scatter), and
+// the kernel loads each rate coordinate instead of gathering.
 func (l leafLayout) fillGroup(matrix []field.Element, t SizedTable, g int) {
 	// Header: identical for every lane.
 	for i := range l.header {
@@ -162,7 +167,7 @@ func hashSizedLeaves(t SizedTable, paired bool, out []field.Octuplet) {
 			for g := start; g < end; g++ {
 				j := g * simdLanes
 				l.fillGroup(matrix, t, j)
-				poseidon2.Compressx16Columns(matrix, l.colSize, out[j:j+simdLanes])
+				vortex.CompressPoseidon2x16Columns(matrix, l.colSize, out[j:j+simdLanes])
 			}
 		})
 	}

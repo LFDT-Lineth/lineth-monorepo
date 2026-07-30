@@ -61,31 +61,6 @@ func Compress(state, block field.Octuplet) field.Octuplet {
 	return vortex.CompressPoseidon2(state, block)
 }
 
-// Compressx16 runs 16 independent Merkle-Damgard sponge chains in AVX-512
-// lanes (10× faster per permutation than the scalar path). matrix is
-// 16*colSize row-major: row i is leaf i's full element stream, already blocked
-// into groups of 8 with the final partial block LEFT-padded with zeros so the
-// front-to-back chunking matches [MDHasher]'s block sequence. colSize must be a
-// multiple of 8. result[i] receives leaf i's digest and must have length 16.
-//
-// It is the 16-way SIMD equivalent of feeding matrix row i (unpadded stream)
-// through a fresh MDHasher and calling SumDigest — the initial sponge state is
-// zero and each 8-element block is absorbed with feed-forward, identical to
-// repeated [Compress] from a zero state.
-func Compressx16(matrix []field.Element, colSize int, result []field.Octuplet) {
-	vortex.CompressPoseidon2x16(matrix, colSize, result)
-}
-
-// Compressx16Columns is the column-major-input variant of Compressx16: matrix
-// is laid out matrix[col*16+lane] (the 16 lanes of each column are contiguous),
-// letting the AVX-512 kernel load each rate coordinate with a contiguous move
-// instead of a gather. Result and semantics match Compressx16 exactly; only the
-// input layout differs. This layout also lets the caller fill base columns with
-// bulk copies instead of an element-by-element scatter.
-func Compressx16Columns(matrix []field.Element, colSize int, result []field.Octuplet) {
-	vortex.CompressPoseidon2x16Columns(matrix, colSize, result)
-}
-
 // Reset clears the buffer, and reset state to iv
 func (d *MDHasher) Reset() {
 	d.buffer = d.buffer[:0]

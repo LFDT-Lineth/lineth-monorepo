@@ -12,6 +12,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/consensys/gnark-crypto/field/koalabear"
+	"github.com/consensys/gnark-crypto/field/koalabear/extensions"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 	gutils "github.com/consensys/gnark-crypto/utils"
 )
@@ -301,12 +302,16 @@ func (l Level) EvalsAt(alphaDeep field.Ext, running []field.Ext) []field.Ext {
 			g := &groups[gi]
 
 			clear(gbuf)
+			// gbuf += α^c · column evaluations, using gnark-crypto's AVX-512
+			// VectorE6 kernels (scalar fallback off AVX-512 hardware); the
+			// base-column variant exploits the base structure of each entry
+			// (6 base muls per element instead of ~24).
 			for _, c := range g.columns {
 				column := &l.Columns[c]
 				if column.isBase() {
-					field.VecScaleAccExtBase(gbuf, alphaPow[c], column.EvalsBase[start:end])
+					extensions.VectorE6(gbuf).ScalarMulAccByElement(koalabear.Vector(column.EvalsBase[start:end]), &alphaPow[c])
 				} else {
-					field.VecScaleAccExtExt(gbuf, alphaPow[c], column.EvalsExt[start:end])
+					extensions.VectorE6(gbuf).ScalarMulAcc(extensions.VectorE6(column.EvalsExt[start:end]), &alphaPow[c])
 				}
 			}
 

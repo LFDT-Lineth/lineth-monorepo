@@ -5,7 +5,6 @@ import (
 	"math/rand/v2"
 	"strings"
 
-	"github.com/consensys/gnark-crypto/field/koalabear"
 	"github.com/consensys/gnark-crypto/field/koalabear/extensions"
 )
 
@@ -358,35 +357,6 @@ func VecScaleInto(res Vec, s Gen, v Vec) {
 	default:
 		VecScaleExtExt(res.ext, s.Ext, v.ext)
 	}
-}
-
-// ---------------------------------------------------------------------------
-// ScaleAcc — accumulating variants of VecScale
-// ---------------------------------------------------------------------------
-//
-// These are the hot kernels of the FRI DEEP-quotient combine pass (see
-// fri.Level.EvalsAt); they delegate to gnark-crypto's AVX-512 VectorE6
-// kernels (https://github.com/Consensys/gnark-crypto/issues/867), which fall
-// back to the equivalent scalar loops off AVX-512 hardware.
-
-// VecScaleAccExtBase accumulates res[i] += s * a[i] where s is an extension
-// scalar and a is a base vector, exploiting the base structure of each a[i].
-// Cost: 6 base multiplications per element; AVX-512 vectorized (gnark-crypto
-// VectorE6.ScalarMulAccByElement).
-// res and a must have equal length.
-func VecScaleAccExtBase(res []Ext, s Ext, a []Element) {
-	mustEqualLen2(len(res), len(a))
-	extensions.VectorE6(res).ScalarMulAccByElement(koalabear.Vector(a), &s)
-}
-
-// VecScaleAccExtExt accumulates res[i] += s * a[i] where s is an extension
-// scalar and a is an extension vector.
-// Cost: ~24 base multiplications per element; AVX-512 vectorized
-// (gnark-crypto VectorE6.ScalarMulAcc).
-// res and a must have equal length.
-func VecScaleAccExtExt(res []Ext, s Ext, a []Ext) {
-	mustEqualLen2(len(res), len(a))
-	extensions.VectorE6(res).ScalarMulAcc(extensions.VectorE6(a), &s)
 }
 
 // ---------------------------------------------------------------------------
