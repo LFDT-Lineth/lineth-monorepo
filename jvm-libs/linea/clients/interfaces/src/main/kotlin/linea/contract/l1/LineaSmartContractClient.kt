@@ -9,6 +9,12 @@ enum class LinethRollupContractVersion : Comparable<LinethRollupContractVersion>
   V6, // more efficient data submission and new events for state recovery
   V7, // Native Yield (no practical changes for the coordinator)
   V8, // Forced Transactions
+  V9, // RISCV
+  ;
+
+  companion object {
+    val latest: LinethRollupContractVersion = entries.last()
+  }
 }
 
 enum class LineaValidiumContractVersion : Comparable<LineaValidiumContractVersion> {

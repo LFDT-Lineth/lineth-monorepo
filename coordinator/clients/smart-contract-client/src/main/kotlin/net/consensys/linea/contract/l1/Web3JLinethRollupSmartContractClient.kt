@@ -2,7 +2,10 @@ package net.consensys.linea.contract.l1
 
 import linea.EthLogsSearcher
 import linea.contract.LinethRollupV6
+import linea.contract.l1.BlobsSubmissionV9
 import linea.contract.l1.BlockAndNonce
+import linea.contract.l1.FinalizationDataV9
+import linea.contract.l1.LinethRollupContractVersion
 import linea.contract.l1.LinethRollupSmartContractClient
 import linea.contract.l1.Web3JLinethRollupSmartContractClientReadOnly
 import linea.domain.BlobRecord
@@ -206,6 +209,68 @@ class Web3JLinethRollupSmartContractClient internal constructor(
             parentL1RollingHashMessageNumber,
           )
         web3jContractHelper.sendTransactionAfterEthCallAsync(function, BigInteger.ZERO, gasPriceCaps)
+          .thenApply { result -> result.transactionHash }
+      }
+  }
+
+  private fun ensureMinVersion(
+    minVersion: LinethRollupContractVersion,
+  ): SafeFuture<LinethRollupContractVersion> {
+    return getVersion()
+      .thenCompose { version ->
+        if (version < minVersion) {
+          SafeFuture.failedFuture(
+            RuntimeException("Contract version=$version is lower than minimum required version=$minVersion"),
+          )
+        } else {
+          SafeFuture.completedFuture(version)
+        }
+      }
+  }
+
+  override fun submitBlobsV9(
+    blobData: BlobsSubmissionV9,
+    gasPriceCaps: GasPriceCaps?,
+    preflightWithEthCall: Boolean,
+  ): SafeFuture<String> {
+    return ensureMinVersion(LinethRollupContractVersion.V9)
+      .thenApply {
+        FunctionBuildersV9.buildSubmitBlobsFunctionV9(blobData)
+      }
+      .thenCompose { function ->
+        if (preflightWithEthCall) {
+          web3jContractHelper.executeBlobEthCall(
+            function = function,
+            blobs = blobData.blobs,
+            gasPriceCaps = gasPriceCaps,
+          )
+        } else {
+          SafeFuture.completedFuture(null)
+        }.thenCompose {
+          web3jContractHelper.sendBlobCarryingTransactionAndGetTxHash(
+            function = function,
+            blobs = blobData.blobs,
+            gasPriceCaps = gasPriceCaps,
+          )
+        }
+      }
+  }
+
+  override fun finalizeBlocksV9(
+    data: FinalizationDataV9,
+    gasPriceCaps: GasPriceCaps?,
+    preflightWithEthCall: Boolean,
+  ): SafeFuture<String> {
+    return ensureMinVersion(LinethRollupContractVersion.V9)
+      .thenApply {
+        FunctionBuildersV9.buildFinalizeBlocksFunctionV9(data)
+      }
+      .thenCompose { function ->
+        if (preflightWithEthCall) {
+          web3jContractHelper.sendTransactionAfterEthCallAsync(function, BigInteger.ZERO, gasPriceCaps)
+        } else {
+          web3jContractHelper.sendTransactionAsync(function, BigInteger.ZERO, gasPriceCaps)
+        }
           .thenApply { result -> result.transactionHash }
       }
   }

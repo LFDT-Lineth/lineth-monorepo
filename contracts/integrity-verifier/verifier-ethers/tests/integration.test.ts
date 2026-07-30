@@ -263,7 +263,7 @@ async function testVerifierWithEthers(): Promise<void> {
   assert(implAddress !== null, "Implementation address found");
   assertContains(implAddress!.toLowerCase(), "caaa421ffcf701befd676a2f5d0a161ccfa5a07e", "Correct implementation");
 
-  const slot = verifier.calculateErc7201Slot("linea.storage.LinethRollupYieldExtensionStorage");
+  const slot = verifier.calculateErc7201Slot("linea.storage.LineaRollupYieldExtensionStorage");
   assert(slot.startsWith("0x"), "ERC-7201 slot calculated");
 }
 

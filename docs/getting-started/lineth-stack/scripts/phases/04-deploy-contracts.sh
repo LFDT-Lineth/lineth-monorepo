@@ -664,7 +664,7 @@ explain_l1_rpc_submission_error() {
 verify_step1_gateway_mode() {
   local logfile="$1" logged_gateway_mode
 
-  if ! step_already_done "$logfile" "LineaRollupV${L1_CONTRACT_VERSION}"; then
+  if ! step_already_done "$logfile" "LinethRollupV${L1_CONTRACT_VERSION}"; then
     return 0
   fi
 
@@ -684,12 +684,12 @@ step1_l1_rollup() {
   step "Step 1: deploy L1 Verifier + LineaRollup"
   local script logfile primary_contract
 
-  script="$ART_DIR/deployPlonkVerifierAndLineaRollupV${L1_CONTRACT_VERSION}.ts"
+  script="$ART_DIR/deployPlonkVerifierAndLinethRollupV${L1_CONTRACT_VERSION}.ts"
   logfile="$LOG_DIR/step1-linea-rollup.log"
-  primary_contract="LineaRollupV${L1_CONTRACT_VERSION}"
+  primary_contract="LinethRollupV${L1_CONTRACT_VERSION}"
 
   verify_step1_gateway_mode "$logfile"
-  if step_already_done_with_code "$logfile" "$primary_contract" "$L1_RPC_URL" "L1" "$PRECOMPUTED_LINEA_ROLLUP" "LineaRollupV${L1_CONTRACT_VERSION}"; then
+  if step_already_done_with_code "$logfile" "$primary_contract" "$L1_RPC_URL" "L1" "$PRECOMPUTED_LINEA_ROLLUP" "LinethRollupV${L1_CONTRACT_VERSION}"; then
     log "Step 1: $logfile present — skipping deploy, re-using prior addresses"
     LINEA_ROLLUP_ADDRESS="$(extract_required_address "$logfile" "$primary_contract")"
     export LINEA_ROLLUP_ADDRESS
@@ -700,7 +700,7 @@ step1_l1_rollup() {
   [[ -f "$script" ]] || die "missing deploy script: $script"
 
   guard_redeploy_nonce_window "L1" "$L1_RPC_URL" "$L1_DEPLOYER_ADDRESS" \
-    "$EXPECTED_LINEA_ROLLUP_NONCE" "$PRECOMPUTED_LINEA_ROLLUP" "LineaRollupV${L1_CONTRACT_VERSION}"
+    "$EXPECTED_LINEA_ROLLUP_NONCE" "$PRECOMPUTED_LINEA_ROLLUP" "LinethRollupV${L1_CONTRACT_VERSION}"
 
   # The L1 deployer remains the admin/security-council account. Coordinator's
   # blob and finalization senders are separate derived operator addresses so
@@ -731,8 +731,8 @@ step1_l1_rollup() {
   ) 2>&1 | tee "$logfile"
 
   # Forward the rollup address into the global env for steps 3 + 4.
-  LINEA_ROLLUP_ADDRESS="$(extract_required_address "$logfile" "LineaRollupV${L1_CONTRACT_VERSION}")"
-  verify_address "$LINEA_ROLLUP_ADDRESS" "$PRECOMPUTED_LINEA_ROLLUP" "LineaRollupV${L1_CONTRACT_VERSION}"
+  LINEA_ROLLUP_ADDRESS="$(extract_required_address "$logfile" "LinethRollupV${L1_CONTRACT_VERSION}")"
+  verify_address "$LINEA_ROLLUP_ADDRESS" "$PRECOMPUTED_LINEA_ROLLUP" "LinethRollupV${L1_CONTRACT_VERSION}"
   FORCED_TX_GW_ADDRESS="$(extract_address "$logfile" "ForcedTransactionGateway")" || FORCED_TX_GW_ADDRESS=""
   if [[ -n "$FORCED_TX_GW_ADDRESS" ]]; then
     log "ForcedTransactionGateway deployed: $FORCED_TX_GW_ADDRESS"
@@ -989,7 +989,7 @@ extract_deploy_block() {
 }
 
 L2_MS_DEPLOY_BLOCK="$(extract_deploy_block "$LOG_DIR/step2-l2-message-service.log" "L2MessageService")"
-LINEA_ROLLUP_L1_DEPLOY_BLOCK="$(extract_deploy_block "$LOG_DIR/step1-linea-rollup.log" "LineaRollupV${L1_CONTRACT_VERSION}")"
+LINEA_ROLLUP_L1_DEPLOY_BLOCK="$(extract_deploy_block "$LOG_DIR/step1-linea-rollup.log" "LinethRollupV${L1_CONTRACT_VERSION}")"
 
 tmp_runtime_env="${DEPLOY_RUNTIME_ENV}.tmp"
 {

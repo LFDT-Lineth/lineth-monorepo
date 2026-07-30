@@ -30,7 +30,7 @@ import {
 } from "../../common/helpers";
 import { deployLinethRollupFixture } from "../../rollup/helpers/deploy";
 
-describe("Linea Rollup Yield Extension", () => {
+describe("Lineth Rollup Yield Extension", () => {
   let linethRollup: TestLinethRollup;
   let yieldManager: string;
   let operator: SignerWithAddress;

@@ -5,6 +5,7 @@ import linea.SearchDirection
 import linea.contract.FAKE_READ_ONLY_CREDENTIALS
 import linea.contract.LinethRollupV6
 import linea.contract.LinethRollupV8
+import linea.contract.LinethRollupV9
 import linea.contract.events.FinalizedStateUpdatedEvent
 import linea.domain.BlockParameter
 import linea.domain.EthLogEvent
@@ -21,6 +22,10 @@ import org.web3j.tx.gas.StaticGasProvider
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.math.BigInteger
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.time.Clock
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 open class Web3JLinethRollupSmartContractClientReadOnly(
   val web3j: Web3j,
@@ -28,6 +33,8 @@ open class Web3JLinethRollupSmartContractClientReadOnly(
   private val ethLogsSearcher: EthLogsSearcher,
   private val l1EventSearchMaxBlockRange: UInt = 10_000u,
   private val finalizedStateSearchInitialBlockParameter: BlockParameter = BlockParameter.Tag.EARLIEST,
+  private val versionRefreshInterval: Duration = 6.seconds,
+  private val clock: Clock = Clock.System,
   private val log: Logger = LogManager.getLogger(Web3JLinethRollupSmartContractClientReadOnly::class.java),
 ) : LinethRollupSmartContractClientReadOnly,
   LinethRollupSmartContractClientReadOnlyFinalizedStateProvider,
@@ -35,6 +42,10 @@ open class Web3JLinethRollupSmartContractClientReadOnly(
 
   protected fun contractClientV8AtBlock(blockParameter: BlockParameter): LinethRollupV8 {
     return contractClientAtBlock(blockParameter, LinethRollupV8::class.java)
+  }
+
+  protected fun contractClientV9AtBlock(blockParameter: BlockParameter): LinethRollupV9 {
+    return contractClientAtBlock(blockParameter, LinethRollupV9::class.java)
   }
 
   protected fun <T : Contract> loadContractClient(contract: Class<T>): T {
@@ -54,7 +65,14 @@ open class Web3JLinethRollupSmartContractClientReadOnly(
         StaticGasProvider(BigInteger.ZERO, BigInteger.ZERO),
       )
 
-      else -> throw IllegalArgumentException("Unsupported contract type: ${contract::class.java}")
+      LinethRollupV9::class.java.isAssignableFrom(contract) -> LinethRollupV9.load(
+        contractAddress,
+        web3j,
+        FAKE_READ_ONLY_CREDENTIALS,
+        StaticGasProvider(BigInteger.ZERO, BigInteger.ZERO),
+      )
+
+      else -> throw IllegalArgumentException("Unsupported contract type: ${contract.name}")
     } as T
   }
 
@@ -65,30 +83,46 @@ open class Web3JLinethRollupSmartContractClientReadOnly(
     }
   }
 
-  private val smartContractVersionCache = AtomicReference<LinethRollupContractVersion>(null)
+  private data class CachedVersion(
+    val version: LinethRollupContractVersion,
+    val fetchedAt: Instant,
+  )
+
+  private val smartContractVersionCache = AtomicReference<CachedVersion>(null)
 
   private fun getSmartContractVersion(): SafeFuture<LinethRollupContractVersion> {
-    return if (smartContractVersionCache.get() == LinethRollupContractVersion.V8) {
+    val cached = smartContractVersionCache.get()
+    return when {
       // once upgraded, it's not downgraded
-      SafeFuture.completedFuture(LinethRollupContractVersion.V8)
-    } else {
-      fetchSmartContractVersion()
-        .thenPeek { contractLatestVersion ->
-          if (smartContractVersionCache.get() != null &&
-            contractLatestVersion != smartContractVersionCache.get()
-          ) {
-            log.info(
-              "Smart contract upgraded: prevVersion={} upgradedVersion={}",
-              smartContractVersionCache.get(),
-              contractLatestVersion,
-            )
+      cached?.version == LinethRollupContractVersion.latest ->
+        SafeFuture.completedFuture(LinethRollupContractVersion.latest)
+
+      // below latest: serve from cache within the refresh interval so repeated getVersion calls
+      // don't refetch on every call, while still detecting an upgrade within versionRefreshInterval
+      cached != null && clock.now() < cached.fetchedAt + versionRefreshInterval ->
+        SafeFuture.completedFuture(cached.version)
+
+      else ->
+        fetchSmartContractVersion()
+          .thenPeek { fetchedVersion ->
+            val current = smartContractVersionCache.get()
+            // prevent inflight request to override and rollback
+            if (current == null || fetchedVersion >= current.version) {
+              smartContractVersionCache.set(CachedVersion(fetchedVersion, clock.now()))
+
+              if (current != null && fetchedVersion != current.version) {
+                log.info(
+                  "Smart contract upgraded: prevVersion={} upgradedVersion={}",
+                  current.version,
+                  fetchedVersion,
+                )
+              }
+            }
           }
-          smartContractVersionCache.set(contractLatestVersion)
-        }
     }
   }
 
-  private fun fetchSmartContractVersion(
+  internal open fun fetchSmartContractVersion(
     blockParameter: BlockParameter = BlockParameter.Tag.LATEST,
   ): SafeFuture<LinethRollupContractVersion> {
     return contractClientAtBlock(blockParameter, LinethRollupV6::class.java)
@@ -98,11 +132,12 @@ open class Web3JLinethRollupSmartContractClientReadOnly(
       .thenApply(::parseContractVersion)
   }
 
-  private fun parseContractVersion(version: String): LinethRollupContractVersion {
+  internal fun parseContractVersion(version: String): LinethRollupContractVersion {
     return when {
       version.startsWith("6") -> LinethRollupContractVersion.V6
       version.startsWith("7") -> LinethRollupContractVersion.V7
       version.startsWith("8") -> LinethRollupContractVersion.V8
+      version.startsWith("9") -> LinethRollupContractVersion.V9
       else -> throw IllegalStateException("Unsupported contract version: $version")
     }
   }
@@ -140,6 +175,8 @@ open class Web3JLinethRollupSmartContractClientReadOnly(
           LinethRollupContractVersion.V7,
           LinethRollupContractVersion.V8,
           -> contractClientV8AtBlock(blockParameter).blobShnarfExists(shnarf)
+          LinethRollupContractVersion.V9 -> // just ensure not regression while WIP
+            contractClientV9AtBlock(blockParameter).blobShnarfExists(shnarf)
         }
           .sendAsync()
           .thenApply { it != BigInteger.ZERO }
@@ -201,7 +238,9 @@ open class Web3JLinethRollupSmartContractClientReadOnly(
               ),
             )
 
-          LinethRollupContractVersion.V8 ->
+          LinethRollupContractVersion.V8,
+          LinethRollupContractVersion.V9,
+          ->
             findFinalizedStateEvent(blockParameter, finalizedBlockNumber)
               .thenApply { finalizedState ->
                 val forcedTransactionNumber = finalizedState?.forcedTransactionNumber ?: 0UL

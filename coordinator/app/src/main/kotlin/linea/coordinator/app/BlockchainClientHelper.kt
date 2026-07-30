@@ -18,7 +18,13 @@ import linea.web3j.ethapi.createEthApiClient
 import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
 import net.consensys.linea.contract.l1.Web3JLineaValidiumSmartContractClient
 import net.consensys.linea.contract.l1.Web3JLinethRollupSmartContractClient
+import net.consensys.linea.ethereum.gaspricing.BoundableFeeCalculator
+import net.consensys.linea.ethereum.gaspricing.FeesCalculator
+import net.consensys.linea.ethereum.gaspricing.FeesFetcher
+import net.consensys.linea.ethereum.gaspricing.WMAGasProvider
 import net.consensys.linea.httprest.client.VertxHttpRestClient
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
 import org.web3j.crypto.Credentials
 import org.web3j.protocol.Web3j
 import org.web3j.service.TxSignServiceImpl
@@ -34,6 +40,7 @@ fun createTransactionManager(
   vertx: Vertx,
   signerConfig: SignerConfig,
   client: Web3j,
+  log: Logger = LogManager.getLogger("clients.web3signer"),
 ): AsyncFriendlyTransactionManager {
   fun loadKeyAndTrustStoreFromFiles(
     webClientOptions: WebClientOptions,
@@ -110,7 +117,7 @@ fun createTransactionManager(
             }
         val poolOptions = PoolOptions()
           .setHttp1MaxSize(web3SignerConfig.maxPoolSize)
-        val httpRestClient = VertxHttpRestClient(webClientOptions, poolOptions, vertx)
+        val httpRestClient = VertxHttpRestClient(webClientOptions, poolOptions, vertx, log)
         val signer = Web3SignerRestClient(httpRestClient, signerConfig.web3signer.publicKey)
         val signerAdapter = ECKeypairSignerAdapter(signer)
         val web3SignerCredentials = Credentials.create(signerAdapter)
@@ -121,6 +128,10 @@ fun createTransactionManager(
   return AsyncFriendlyTransactionManager(client, transactionSignService, -1L)
 }
 
+/**
+ * @param useEthEstimateGas `eth_estimateGas` may revert for multi-blob data-submission txs;
+ * disable it if it's the case.
+ */
 fun createLineaContractClient(
   vertx: Vertx,
   dataAvailabilityType: L1SubmissionConfig.DataAvailability,
@@ -153,4 +164,60 @@ fun createLineaContractClient(
         useEthEstimateGas = useEthEstimateGas,
       )
   }
+}
+
+/**
+ * @param useEthEstimateGas `eth_estimateGas` may revert for multi-blob data-submission txs;
+ * disable it if it's the case.
+ */
+fun createLineaContractClient(
+  l1ChainId: ULong,
+  contractAddress: String,
+  smartContractErrors: SmartContractErrors,
+  vertx: Vertx,
+  l1Web3jClient: Web3j,
+  feesFetcher: FeesFetcher,
+  signerConfig: SignerConfig,
+  gasConfig: L1SubmissionConfig.GasConfig,
+  l1MinPriorityFeeCalculator: FeesCalculator,
+  dataAvailabilityType: L1SubmissionConfig.DataAvailability,
+  useEthEstimateGas: Boolean = false,
+): LineaSmartContractClient {
+  val l1PriorityFeeCalculator: FeesCalculator = BoundableFeeCalculator(
+    BoundableFeeCalculator.Config(
+      feeUpperBound = gasConfig.fallback.priorityFeePerGasUpperBound.toDouble(),
+      feeLowerBound = gasConfig.fallback.priorityFeePerGasLowerBound.toDouble(),
+      feeMargin = 0.0,
+    ),
+    l1MinPriorityFeeCalculator,
+  )
+  // The below gas provider will act as the primary gas provider if L1
+  // dynamic gas pricing is disabled and will act as a fallback gas provider
+  // if L1 dynamic gas pricing is enabled
+  val primaryOrFallbackGasProvider = WMAGasProvider(
+    chainId = l1ChainId.toLong(),
+    feesFetcher = feesFetcher,
+    priorityFeeCalculator = l1PriorityFeeCalculator,
+    config = WMAGasProvider.Config(
+      gasLimit = gasConfig.gasLimit,
+      maxFeePerGasCap = gasConfig.maxFeePerGasCap,
+      maxPriorityFeePerGasCap = gasConfig.maxPriorityFeePerGasCap,
+      maxFeePerBlobGasCap = gasConfig.maxFeePerBlobGasCap,
+    ),
+  )
+  val transactionManager = createTransactionManager(
+    vertx = vertx,
+    signerConfig = signerConfig,
+    client = l1Web3jClient,
+  )
+  return createLineaContractClient(
+    vertx = vertx,
+    dataAvailabilityType = dataAvailabilityType,
+    contractAddress = contractAddress,
+    transactionManager = transactionManager,
+    contractGasProvider = primaryOrFallbackGasProvider,
+    web3jClient = l1Web3jClient,
+    smartContractErrors = smartContractErrors,
+    useEthEstimateGas = useEthEstimateGas,
+  )
 }

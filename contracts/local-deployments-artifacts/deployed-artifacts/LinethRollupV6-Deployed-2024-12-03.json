@@ -271,7 +271,7 @@
         { "indexed": true, "internalType": "bytes8", "name": "previousVersion", "type": "bytes8" },
         { "indexed": true, "internalType": "bytes8", "name": "newVersion", "type": "bytes8" }
       ],
-      "name": "LinethRollupVersionChanged",
+      "name": "LineaRollupVersionChanged",
       "type": "event"
     },
     {
@@ -915,7 +915,7 @@
         },
         { "internalType": "address", "name": "_fallbackOperator", "type": "address" }
       ],
-      "name": "reinitializeLinethRollupV6",
+      "name": "reinitializeLineaRollupV6",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

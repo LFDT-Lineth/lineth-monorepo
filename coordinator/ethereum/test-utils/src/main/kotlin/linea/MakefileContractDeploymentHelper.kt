@@ -81,6 +81,7 @@ fun makeDeployLinethRollup(
     LinethRollupContractVersion.V6 -> "make deploy-lineth-rollup-v6"
     LinethRollupContractVersion.V7 -> "make deploy-lineth-rollup-v7"
     LinethRollupContractVersion.V8 -> "make deploy-lineth-rollup-v8"
+    LinethRollupContractVersion.V9 -> "make deploy-lineth-rollup-v9-stub"
     // else -> throw IllegalArgumentException("Unsupported contract version: $contractVersion")
   }
 

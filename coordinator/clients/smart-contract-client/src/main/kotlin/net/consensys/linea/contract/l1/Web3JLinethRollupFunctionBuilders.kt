@@ -21,6 +21,9 @@ internal object Web3JLinethRollupFunctionBuilders {
       LinethRollupContractVersion.V7,
       LinethRollupContractVersion.V8,
       -> buildSubmitBlobsFunctionV6(blobs)
+
+      LinethRollupContractVersion.V9 ->
+        throw UnsupportedOperationException("version=$version not supported, please use submitBlobsV9 instead")
     }
   }
 
@@ -87,6 +90,9 @@ internal object Web3JLinethRollupFunctionBuilders {
         parentL1RollingHash,
         parentL1RollingHashMessageNumber,
       )
+
+      LinethRollupContractVersion.V9 ->
+        throw UnsupportedOperationException("version=$version not supported, please use finalizeBlocksV9 instead")
     }
   }
 

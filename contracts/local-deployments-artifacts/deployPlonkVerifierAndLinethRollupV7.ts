@@ -1,6 +1,5 @@
 import * as dotenv from "dotenv";
 import { ethers } from "ethers";
-import fs from "fs";
 import path from "path";
 
 import { abi as LinethRollupV7Abi, bytecode as LinethRollupV7Bytecode } from "./dynamic-artifacts/LinethRollupV7.json";
@@ -20,7 +19,12 @@ import {
   OPERATOR_ROLE,
   YIELD_PROVIDER_STAKING_ROLE,
 } from "../common/constants";
-import { deployContractFromArtifacts, getInitializerData } from "../common/helpers/deployments";
+import {
+  deployContractFromArtifacts,
+  getDeployNonceFromEnv,
+  getInitializerData,
+  loadArtifactFromDirectory,
+} from "../common/helpers/deployments";
 import { getEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment";
 import {
   getDeploymentNetworkName,
@@ -31,28 +35,6 @@ import { generateRoleAssignments } from "../common/helpers/roles";
 import { get1559Fees } from "../scripts/utils";
 
 dotenv.config();
-
-function findContractArtifacts(
-  folderPath: string,
-  contractName: string,
-): { abi: ethers.InterfaceAbi; bytecode: ethers.BytesLike } {
-  const files = fs.readdirSync(folderPath);
-
-  const foundFile = files.find((file) => file === `${contractName}.json`);
-
-  if (!foundFile) {
-    // Throw an error if the file is not found
-    throw new Error(`Contract "${contractName}" not found in folder "${folderPath}"`);
-  }
-
-  // Construct the full file path
-  const filePath = path.join(folderPath, foundFile);
-
-  // Read the file content
-  const fileContent = fs.readFileSync(filePath, "utf-8").trim();
-  const parsedContent = JSON.parse(fileContent);
-  return parsedContent;
-}
 
 async function main() {
   const networkName = getDeploymentNetworkName();
@@ -91,7 +73,7 @@ async function main() {
   ];
   const roleAddresses = getEnvVarOrDefault("LINETH_ROLLUP_ROLE_ADDRESSES", defaultRoleAddresses);
 
-  const verifierArtifacts = findContractArtifacts(path.join(__dirname, "./dynamic-artifacts"), verifierName);
+  const verifierArtifacts = loadArtifactFromDirectory(path.join(__dirname, "./dynamic-artifacts"), verifierName);
 
   const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
 
@@ -99,13 +81,7 @@ async function main() {
 
   const { gasPrice } = await get1559Fees(provider);
 
-  let walletNonce;
-
-  if (!process.env.L1_NONCE) {
-    walletNonce = await wallet.getNonce();
-  } else {
-    walletNonce = parseInt(process.env.L1_NONCE);
-  }
+  const walletNonce = await getDeployNonceFromEnv(wallet, "L1_NONCE");
 
   const [verifier, linethRollupImplementation, proxyAdmin] = await Promise.all([
     deployContractFromArtifacts(verifierName, verifierArtifacts.abi, verifierArtifacts.bytecode, wallet, {
