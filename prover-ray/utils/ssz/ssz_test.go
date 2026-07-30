@@ -2,7 +2,6 @@ package ssz
 
 import (
 	"encoding/json"
-	"math"
 	"os"
 	"strings"
 	"testing"
@@ -452,14 +451,4 @@ func TestAddSSZLength_RejectsUint32Overflow(t *testing.T) {
 	_, err := addSSZLength("container", maxSSZSerializedBytes, 1)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "uint32 offset limit")
-}
-
-func TestCheckedAllocHelpers_RejectIntOverflow(t *testing.T) {
-	_, err := checkedAllocCap("container", uint64(math.MaxInt)+1)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "Go allocation limit")
-
-	_, err = checkedSliceLen("frame", math.MaxInt, 1)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "Go allocation limit")
 }

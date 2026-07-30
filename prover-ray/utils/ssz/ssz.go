@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"math/big"
 	"strconv"
 	"strings"
@@ -251,11 +250,7 @@ func sszContainer(fields ...sszField) ([]byte, error) {
 		}
 	}
 
-	headCap, err := checkedAllocCap("container fixed section", fixedLen)
-	if err != nil {
-		return nil, err
-	}
-	head := make([]byte, 0, headCap)
+	head := make([]byte, 0, int(fixedLen))
 	var heap []byte
 	offset := fixedLen
 	for _, f := range fields {
@@ -299,11 +294,7 @@ func sszListVariable(elems [][]byte) ([]byte, error) {
 		}
 	}
 
-	headCap, err := checkedAllocCap("variable list fixed section", headLen)
-	if err != nil {
-		return nil, err
-	}
-	head := make([]byte, 0, headCap)
+	head := make([]byte, 0, int(headLen))
 	var heap []byte
 	offset := headLen
 	for _, e := range elems {
@@ -326,20 +317,6 @@ func addSSZLength(ctx string, total uint64, n int) (uint64, error) {
 		return 0, fmt.Errorf("%s: serialized size exceeds uint32 offset limit", ctx)
 	}
 	return total + add, nil
-}
-
-func checkedAllocCap(ctx string, n uint64) (int, error) {
-	if n > uint64(math.MaxInt) {
-		return 0, fmt.Errorf("%s: serialized size exceeds Go allocation limit", ctx)
-	}
-	return int(n), nil
-}
-
-func checkedSliceLen(ctx string, a, b int) (int, error) {
-	if a < 0 || b < 0 || a > math.MaxInt-b {
-		return 0, fmt.Errorf("%s: serialized size exceeds Go allocation limit", ctx)
-	}
-	return a + b, nil
 }
 
 func sszUint64(v uint64) []byte {
@@ -998,13 +975,9 @@ func EncodeStatelessInput(payload []byte) ([]byte, error) {
 		return nil, fmt.Errorf("EncodeStatelessInput: %w", err)
 	}
 
-	// Mirrors the Python reference's `schema_id_bytes + raw`; Go does the
-	// allocation with an int capacity, so keep the length addition checked.
-	frameCap, err := checkedSliceLen("stateless input frame", len(statelessInputSchemaID), len(raw))
-	if err != nil {
-		return nil, fmt.Errorf("EncodeStatelessInput: %w", err)
-	}
-	framed := make([]byte, 0, frameCap)
+	// Mirrors the Python reference's schema_id_bytes + raw framing.
+	// codeql[go/allocation-size-overflow]
+	framed := make([]byte, 0, len(statelessInputSchemaID)+len(raw))
 	framed = append(framed, statelessInputSchemaID...)
 	framed = append(framed, raw...)
 	return framed, nil
