@@ -65,7 +65,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
 
     funct7::rs2::rs1::funct3::rd = instruction_parameters
 
-    var R_inst:u17 = opcode::funct7::funct3
+    var R_inst:u17 = opcode::funct3::funct7
 
     v1 = registers[rs1]
     v2 = registers[rs2]
