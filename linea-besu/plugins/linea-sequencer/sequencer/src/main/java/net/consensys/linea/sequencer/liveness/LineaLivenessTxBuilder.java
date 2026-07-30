@@ -168,6 +168,9 @@ public class LineaLivenessTxBuilder implements LivenessTxBuilder {
       String encodedSignedTxHex = Numeric.toHexString(encodedSignedTxBytes);
       return DomainObjectDecodeUtils.decodeRawTransaction(encodedSignedTxHex);
     } catch (Exception e) {
+      if (e instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
       throw new IOException("Failed to sign liveness transaction: " + e.getMessage(), e);
     }
   }

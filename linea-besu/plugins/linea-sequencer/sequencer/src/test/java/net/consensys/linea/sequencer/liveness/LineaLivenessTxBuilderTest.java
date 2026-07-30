@@ -14,6 +14,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import linea.crypto.Secp256k1Signature;
 import linea.crypto.Signer;
@@ -93,5 +96,56 @@ class LineaLivenessTxBuilderTest {
         .isInstanceOf(IOException.class)
         .hasMessageContaining("Failed to sign liveness transaction")
         .hasRootCauseMessage("KMS unavailable");
+  }
+
+  @Test
+  void restoresInterruptFlagWhenSigningIsInterrupted() throws Exception {
+    CountDownLatch signingStarted = new CountDownLatch(1);
+    Signer<Secp256k1Signature> signer =
+        new Signer<>() {
+          @Override
+          public byte[] publicKey() {
+            return Numeric.toBytesPadded(ECKeyPair.create(BigInteger.ONE).getPublicKey(), 64);
+          }
+
+          @Override
+          public SafeFuture<Secp256k1Signature> sign(final byte[] bytes) {
+            signingStarted.countDown();
+            return new SafeFuture<>();
+          }
+        };
+    LineaLivenessServiceConfiguration config =
+        LineaLivenessServiceConfiguration.builder()
+            .contractAddress("0x1111111111111111111111111111111111111111")
+            .gasLimit(100_000)
+            .gasPrice(7)
+            .build();
+    LineaLivenessTxBuilder builder =
+        new LineaLivenessTxBuilder(
+            config, () -> Optional.of(Wei.ONE), BigInteger.valueOf(1337), signer);
+    AtomicReference<Throwable> failure = new AtomicReference<>();
+    AtomicBoolean interrupted = new AtomicBoolean();
+    Thread signingThread =
+        Thread.ofPlatform()
+            .unstarted(
+                () -> {
+                  try {
+                    builder.buildUptimeTransaction(true, 1234, 0);
+                  } catch (Throwable error) {
+                    failure.set(error);
+                    interrupted.set(Thread.currentThread().isInterrupted());
+                  }
+                });
+
+    signingThread.start();
+    assertThat(signingStarted.await(5, TimeUnit.SECONDS)).isTrue();
+    signingThread.interrupt();
+    signingThread.join(5_000);
+
+    assertThat(signingThread.isAlive()).isFalse();
+    assertThat(failure.get())
+        .isInstanceOf(IOException.class)
+        .hasRootCauseInstanceOf(InterruptedException.class);
+    assertThat(interrupted).isTrue();
   }
 }
