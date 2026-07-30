@@ -44,7 +44,7 @@ schema: ../../examples/schemas/lineth-rollup.json
 | viewCall | Contract version | `CONTRACT_VERSION` | | `7.0` |
 | viewCall | OPERATOR_ROLE check | `hasRole` | `0x76ef52a5344b10ed112c1d48c7c06f51e919518ea6fb005f9b25b359b955e3be`,`0xe6Ec44e651B6d961c15f1A8df9eA7DFaDb986eA1` | true |
 | slot | Initialized version | `0x0` | uint8 | `7` |
-| storagePath | Yield manager address | `LinethRollupYieldExtensionStorage:_yieldManager` | | `0xafeB487DD3E3Cb0342e8CF0215987FfDc9b72c9b` |
+| storagePath | Yield manager address | `LineaRollupYieldExtensionStorage:_yieldManager` | | `0xafeB487DD3E3Cb0342e8CF0215987FfDc9b72c9b` |
 
 ---
 

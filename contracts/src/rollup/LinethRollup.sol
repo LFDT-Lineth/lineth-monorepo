@@ -77,7 +77,7 @@ contract LinethRollup is
    * @param _forcedTransactionFeeInWei The forced transaction fee in wei.
    * @param _addressFilter The address of the address filter.
    */
-  function reinitializeLinethRollupV9(
+  function reinitializeLineaRollupV9(
     uint256 _forcedTransactionFeeInWei,
     address _addressFilter
   ) external reinitializer(9) nonReentrant {
@@ -92,6 +92,6 @@ contract LinethRollup is
 
     nextForcedTransactionNumber = 1;
 
-    emit LinethRollupVersionChanged(bytes8("7.1"), bytes8("8.0"));
+    emit LineaRollupVersionChanged(bytes8("7.1"), bytes8("8.0"));
   }
 }

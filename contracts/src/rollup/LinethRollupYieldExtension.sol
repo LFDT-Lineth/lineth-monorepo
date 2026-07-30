@@ -22,18 +22,18 @@ abstract contract LinethRollupYieldExtension is LinethRollupBase, ILinethRollupY
   bool private transient IS_WITHDRAW_LST_ALLOWED;
 
   /// @dev To consider - could this be an immutable variable instead? Do we expect YieldManager instance to change at a different cadence than LinethRollup upgrades?
-  /// @custom:storage-location erc7201:linea.storage.LinethRollupYieldExtensionStorage
-  struct LinethRollupYieldExtensionStorage {
+  /// @custom:storage-location erc7201:linea.storage.LineaRollupYieldExtensionStorage
+  struct LineaRollupYieldExtensionStorage {
     address _yieldManager;
   }
 
-  // keccak256(abi.encode(uint256(keccak256("linea.storage.LinethRollupYieldExtensionStorage")) - 1)) & ~bytes32(uint256(0xff))
-  bytes32 private constant LinethRollupYieldExtensionStorageLocation =
+  // keccak256(abi.encode(uint256(keccak256("linea.storage.LineaRollupYieldExtensionStorage")) - 1)) & ~bytes32(uint256(0xff))
+  bytes32 private constant LineaRollupYieldExtensionStorageLocation =
     0x594904a11ae10ad7613c91ac3c92c7c3bba397934d377ce6d3e0aaffbc17df00;
 
-  function _storage() private pure returns (LinethRollupYieldExtensionStorage storage $) {
+  function _storage() private pure returns (LineaRollupYieldExtensionStorage storage $) {
     assembly {
-      $.slot := LinethRollupYieldExtensionStorageLocation
+      $.slot := LineaRollupYieldExtensionStorageLocation
     }
   }
 

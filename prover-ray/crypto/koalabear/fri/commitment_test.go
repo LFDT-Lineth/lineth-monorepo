@@ -30,7 +30,7 @@ func tableOfSize(size int, ctr *uint64) SizedTable {
 // rate (which must be >= 2 so plaintext size < codeword size).
 func makeEncoders(n, invRate int) []*RSEncoder {
 	encoders := make([]*RSEncoder, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		enc := NewEncoder(uint64(invRate)*(1<<i), 1<<i)
 		encoders[i] = &enc
 	}

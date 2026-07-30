@@ -20,7 +20,7 @@ import {
 } from "../../common/helpers";
 import { CalldataSubmissionData } from "../../common/types";
 
-describe("Linea Rollup contract: Calldata Submission", () => {
+describe("Lineth Rollup contract: Calldata Submission", () => {
   let linethRollup: TestLinethRollup;
 
   let securityCouncil: SignerWithAddress;

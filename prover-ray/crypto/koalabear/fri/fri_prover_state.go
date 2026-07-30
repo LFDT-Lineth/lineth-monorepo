@@ -2,9 +2,9 @@ package fri
 
 import (
 	"fmt"
-	"sort"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 )
 
 // ProverState drives the FRI commit and query phases as a coin-fed state
@@ -37,7 +37,7 @@ type ProverState struct {
 
 	// round is the next folding round to run; equivalently the number of folds
 	// performed so far and the index of the current running layer.
-	round int
+	round uint8
 
 	running []field.Ext   // evaluations of layer[round]
 	layers  [][]field.Ext // layers[0..round]; layers[numRounds] is the final polynomial
@@ -45,13 +45,11 @@ type ProverState struct {
 }
 
 // NewProverState validates the levels, builds the folding schedule, and seeds
-// the machine with the committed layer 0. levels is sorted in-place by
-// decreasing degree (as buildProvePlan requires).
+// the machine with the zero codeword: round 0 always introduces a level (the
+// main degree-D polynomial), which folds in as described in [ProverState.Fold]
+// against this zero seed -- there being no round -1 to fold a real codeword
+// from.
 func NewProverState(p Params, levels []Level) (*ProverState, error) {
-
-	sort.Slice(levels, func(i, j int) bool {
-		return levels[i].D > levels[j].D
-	})
 
 	plan, err := buildProvePlan(p, levels)
 	if err != nil {
@@ -62,17 +60,34 @@ func NewProverState(p Params, levels []Level) (*ProverState, error) {
 		p:       p,
 		plan:    plan,
 		levels:  levels,
-		running: make([]field.Ext, p.N),
-		layers:  make([][]field.Ext, p.numRounds+1),
-		trees:   make([]*Tree, p.numRounds),
+		running: make([]field.Ext, 1<<p.LogCodewordSize),
+		layers:  make([][]field.Ext, p.numRounds()+1),
+		trees:   make([]*Tree, p.numRounds()),
 	}
-
-	// Layer 0 is committed up front; its root is supplied externally rather than stored in RoundRoots.
-	copy(st.running, levels[0].Evals)
 	st.layers[0] = st.running
 
-	if p.numRounds > 1 {
-		st.RoundRoots = make([]field.Octuplet, p.numRounds-1)
+	if p.numRounds() > 1 {
+		st.RoundRoots = make([]field.Octuplet, p.numRounds()-1)
+	}
+
+	// D=1: HasNext is false from the start so Fold is never called and
+	// FinalPoly is never populated. Apply the top level directly (alphaDeep
+	// is irrelevant when there is only one column) and extract coefficients
+	// via IFFT, matching the logic in Fold's final-round branch.
+	if p.numRounds() == 0 {
+		if l, ok := plan.levelAtRound[0]; ok {
+			var alphaDeep field.Ext
+			st.running = st.levels[l].EvalsAt(alphaDeep, st.running)
+		}
+		coeffs := append([]field.Ext(nil), st.running...)
+		p.domains[0].FFTInverseExt6(coeffs, fft.DIT)
+		f := 1 << p.logFinalPolySize
+		for i, c := range coeffs[f:] {
+			if !c.IsZero() {
+				panic(fmt.Sprintf("fri: ProverState: D=1 final layer has nonzero coefficient %d", f+i))
+			}
+		}
+		st.FinalPoly = coeffs[:f]
 	}
 
 	return st, nil
@@ -80,14 +95,15 @@ func NewProverState(p Params, levels []Level) (*ProverState, error) {
 
 // HasNext reports whether another folding challenge is expected.
 func (st *ProverState) HasNext() bool {
-	return st.round < st.p.numRounds
+	return st.round < st.p.numRounds()
 }
 
-// Fold consumes one folding challenge. It folds the current layer into the next
-// one (mixing in the auxiliary half-codeword scheduled at the next round, batched
-// with alpha²), commits the new layer, and returns its Merkle root. On the final
-// fold the running polynomial becomes the final polynomial — revealed in the
-// clear rather than committed — and the returned root is the zero octuplet.
+// Fold consumes one folding challenge. If a level is introduced at this round,
+// it is combined via alphaDeep (= alpha²) seeded by the running codeword
+// from the preceding round (see EvalsAt); Fold commits the
+// new layer and returns its Merkle root; on the final fold the running
+// polynomial becomes the final polynomial — revealed in the clear rather
+// than committed — and the returned root is the zero octuplet.
 func (st *ProverState) Fold(alpha field.Ext) field.Octuplet {
 
 	if !st.HasNext() {
@@ -96,23 +112,35 @@ func (st *ProverState) Fold(alpha field.Ext) field.Octuplet {
 
 	j := st.round
 
-	// The level scheduled to come online at round j+1 is mixed into the fold
-	// output as the auxiliary half-codeword, batched with alpha². Its evaluation
-	// vector has length N>>(j+1) = N_{j+1}, exactly the size of the fold output,
-	// so it lands directly in committed layer j+1. aux stays nil when no level is
-	// introduced at round j+1 (including the last round).
-	var aux []field.Ext
-	if l, ok := st.plan.levelAtRound[j+1]; ok {
-		aux = st.levels[l].Evals
+	primary := st.running
+	if l, ok := st.plan.levelAtRound[j]; ok {
+		var alphaDeep field.Ext
+		alphaDeep.Square(&alpha)
+		primary = st.levels[l].EvalsAt(alphaDeep, st.running)
+		if want := 1 << (st.p.LogCodewordSize - j); len(primary) != want {
+			panic(fmt.Sprintf("fri: ProverState.Fold: levels[%d].EvalsAt returned %d values, want %d", l, len(primary), want))
+		}
 	}
 
-	st.running = foldLayerInternally(st.running, aux, alpha, st.p.domains[j], st.p.invTwo)
+	st.running = foldLayerInternally(primary, alpha, st.p.domains[j])
 	st.layers[j+1] = st.running
 	st.round = j + 1
 
-	if j+1 == st.p.numRounds {
-		// Final layer: revealed directly, no Merkle commitment.
-		st.FinalPolyExt = st.running
+	if j+1 == st.p.numRounds() {
+		// Final layer: revealed directly, no Merkle commitment, as its
+		// 2^logFinalPolySize coefficients rather than its codeword. The
+		// inverse FFT (DIT undoes the DIF forward encode without a separate
+		// bit-reverse step -- see EncodeExt) must leave every higher
+		// coefficient zero for a sufficiently low-degree witness.
+		coeffs := append([]field.Ext(nil), st.running...)
+		st.p.domains[j+1].FFTInverseExt6(coeffs, fft.DIT)
+		f := 1 << st.p.logFinalPolySize
+		for i, c := range coeffs[f:] {
+			if !c.IsZero() {
+				panic(fmt.Sprintf("fri: ProverState.Fold: final layer has nonzero coefficient %d, not low-degree enough", f+i))
+			}
+		}
+		st.FinalPoly = coeffs[:f]
 		return field.Octuplet{}
 	}
 
@@ -127,7 +155,7 @@ func (st *ProverState) Fold(alpha field.Ext) field.Octuplet {
 // completed Proof. It must be called after all numRounds folds.
 func (st *ProverState) Open(openedPositions []int) Proof {
 
-	if st.round != st.p.numRounds {
+	if st.round != st.p.numRounds() {
 		panic("fri: ProverState.Open: called before all folding rounds were consumed")
 	}
 
@@ -135,7 +163,7 @@ func (st *ProverState) Open(openedPositions []int) Proof {
 
 	for k := range st.p.NumQueries {
 		s := openedPositions[k]
-		st.RunningQueries[k] = openRunningQueryExt(s, st.layers, st.trees, st.p.numRounds)
+		st.RunningQueries[k] = st.openRunningQueryExt(s)
 	}
 
 	return st.Proof

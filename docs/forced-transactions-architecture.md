@@ -115,7 +115,7 @@ The **Sequencer** is responsible for block production:
   ┌──────────────────────────────────────┐
   │   ForcedTransactionGateway           │
   │   ────────────────────────────────── │
-  │   - LINETH_ROLLUP                     │
+  │   - LINEA_ROLLUP                     │
   │   - DESTINATION_CHAIN_ID             │
   │   - L2_BLOCK_BUFFER                  │
   │   - L2_BLOCK_DURATION_SECONDS        │
@@ -183,7 +183,7 @@ The user-facing contract that validates and submits forced transactions.
 
 | Parameter | Description |
 |-----------|-------------|
-| `LINETH_ROLLUP` | Reference to the LinethRollup contract |
+| `LINEA_ROLLUP` | Reference to the LinethRollup contract |
 | `DESTINATION_CHAIN_ID` | L2 chain ID for RLP encoding |
 | `L2_BLOCK_BUFFER` | Buffer added to deadline calculation (in L2 blocks) |
 | `L2_BLOCK_DURATION_SECONDS` | L2 block time in seconds, used to convert elapsed time to L2 blocks in deadline calculation |

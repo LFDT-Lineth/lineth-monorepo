@@ -46,6 +46,15 @@ jobs:
       - name: Build coordinator and Unit tests
         run: |
           ./gradlew -V coordinator:app:buildNeeded
+      - name: Verify generated coordinator config docs are up to date
+        run: |
+          ./gradlew -V :coordinator:app:generateConfigDocs
+          if ! git diff --exit-code -- \
+              docs/tech/components/coordinator-config-reference.md \
+              docs/tech/components/coordinator-config-schema.json; then
+            echo "::error::Coordinator config docs are out of date. Run './gradlew :coordinator:app:generateConfigDocs' and commit the changes."
+            exit 1
+          fi
       - name: Login to Docker Hub
         if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 #v3.7.0

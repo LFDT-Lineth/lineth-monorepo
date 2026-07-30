@@ -43,5 +43,6 @@ func All() []func() *Scenario {
 		NewLogDerivativeSumScenario,
 		NewInclusionScenario,
 		NewRangeCheckScenario,
+		NewNonNativeScenario,
 	}
 }
