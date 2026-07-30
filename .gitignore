@@ -179,6 +179,9 @@ prover/*.sh
 ## Verifier-ray generated testdata fixtures
 !verifier-ray/testdata/generated/*.zig
 
+## Verifier-ray codegen build artifact (compiled `go build` output, not source)
+verifier-ray/testdata/generate/generate
+
 .claude/settings.local.json
 contracts/.claude/settings.local.json
 *.analysis-report.html

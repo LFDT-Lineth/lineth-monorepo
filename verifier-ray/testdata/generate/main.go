@@ -656,6 +656,12 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		if len(pcscompiler.CommittedBatches(pcsSys)) == 0 || len(pcsSys.LagrangeEvals) == 0 {
 			return fmt.Errorf("%s/%s commits no columns / opens no LagrangeEvals; not PCS-viable", source, name)
 		}
+		// Fail CLOSED: reject any verifier action the Zig codegen does not emit,
+		// so a protocol whose boundary check would be silently dropped never
+		// produces a fixture that appears complete.
+		if err := codegen.AssertAllVerifierActionsHandled(pcsSys); err != nil {
+			return fmt.Errorf("%s/%s: %w", source, name, err)
+		}
 		pcsRt := runProver(pcsSys, pcsHonest)
 		fx := extractPcsFixture(pcsSys, pcsRt)
 

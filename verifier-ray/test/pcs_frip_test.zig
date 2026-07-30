@@ -93,3 +93,69 @@ test "frip: a tampered input-tree opening is rejected" {
     const coins = verify.replayWithTranscript(frip.system, &t, proof);
     try std.testing.expectError(error.InputTreeAuthFailed, verify.verify(frip.system, buildInputs(), proof, coins));
 }
+
+test "frip: a running-layer branch with the wrong sibling count is rejected" {
+    // The NEW exact-shape check (verify.zig resolveRunningLayers) requires a
+    // running layer j to carry exactly `log_codeword_size - j` siblings (and the
+    // same number of aux siblings), porting Go's checkQueryLayerShape(
+    // exactSiblings=true). Truncate the running-layer branch's sibling list so it
+    // is one short; the shape check must reject BEFORE Merkle recovery runs.
+    const orig = frip.running_queries[0][0];
+    // Drop the first sibling → an under-length branch (orig has
+    // log_codeword_size - 1 == 2 siblings for this fixture). Build the truncated
+    // slices explicitly from the original.
+    var sibs_buf: [8]pcs.tree.Octuplet = undefined;
+    var aux_buf: [8]?pcs.tree.Octuplet = undefined;
+    const keep = orig.siblings.len - 1;
+    for (0..keep) |i| {
+        sibs_buf[i] = orig.siblings[i + 1];
+        aux_buf[i] = orig.aux_siblings[i + 1];
+    }
+    const bad_branch = pcs.tree.Branch{
+        .leaf = orig.leaf,
+        .siblings = sibs_buf[0..keep],
+        .aux_siblings = aux_buf[0..keep],
+    };
+    const bad_q0 = [_]pcs.tree.Branch{bad_branch};
+    var bad_rq = [_][]const pcs.tree.Branch{undefined} ** frip.running_queries.len;
+    inline for (frip.running_queries, 0..) |q, i| bad_rq[i] = q;
+    bad_rq[0] = &bad_q0;
+
+    var proof = buildProof();
+    proof.fri.running_queries = &bad_rq;
+    var t = seededTranscript();
+    const coins = verify.replayWithTranscript(frip.system, &t, proof);
+    try std.testing.expectError(
+        error.RunningLayerShapeMismatch,
+        verify.verify(frip.system, buildInputs(), proof, coins),
+    );
+}
+
+test "frip: a tampered running-layer sibling is rejected" {
+    // Flip a coordinate of the running-layer branch's sibling: the shape is
+    // still correct, but the recovered running-layer Merkle root no longer
+    // matches the committed round root → RunningLayerAuthFailed.
+    const orig = frip.running_queries[0][0];
+    var bad_sibs = [_]pcs.tree.Octuplet{undefined} ** orig.siblings.len;
+    inline for (orig.siblings, 0..) |sib, i| bad_sibs[i] = sib;
+    bad_sibs[0][0] = bad_sibs[0][0].add(verifier_ray.field.koalabear.Element.one());
+
+    const bad_branch = pcs.tree.Branch{
+        .leaf = orig.leaf,
+        .siblings = &bad_sibs,
+        .aux_siblings = orig.aux_siblings,
+    };
+    const bad_q0 = [_]pcs.tree.Branch{bad_branch};
+    var bad_rq = [_][]const pcs.tree.Branch{undefined} ** frip.running_queries.len;
+    inline for (frip.running_queries, 0..) |q, i| bad_rq[i] = q;
+    bad_rq[0] = &bad_q0;
+
+    var proof = buildProof();
+    proof.fri.running_queries = &bad_rq;
+    var t = seededTranscript();
+    const coins = verify.replayWithTranscript(frip.system, &t, proof);
+    try std.testing.expectError(
+        error.RunningLayerAuthFailed,
+        verify.verify(frip.system, buildInputs(), proof, coins),
+    );
+}

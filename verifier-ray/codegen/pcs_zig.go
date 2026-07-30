@@ -51,10 +51,14 @@ func WritePcsSystemZig(w io.Writer, system PcsSystem, opts PcsZigOptions) error 
 
 	var b strings.Builder
 
-	// Params. log_final_poly_size is fixed at 0 for the current PCS (fold to a
-	// constant); it is surfaced as a field so the shape check stays explicit.
+	// Params. `Params` lives in params.zig and is re-exported by the pcs root
+	// module (as `pcs.Params`); it is NOT a member of verify.zig. So it must be
+	// referenced through PcsImport (the root), not VerifyImport — emitting
+	// `verify.Params` would not compile. log_final_poly_size is fixed at 0 for
+	// the current PCS (fold to a constant); surfaced as a field for an explicit
+	// shape check.
 	fmt.Fprintf(&b, "pub const %sparams = %s.Params{ .log_codeword_size = %d, .log_plaintext_size = %d, .num_queries = %d, .log_final_poly_size = %d };\n\n",
-		p, opts.VerifyImport, system.LogCodewordSize, system.LogPlaintextSize, system.NumQueries, system.LogFinalPolySize)
+		p, opts.PcsImport, system.LogCodewordSize, system.LogPlaintextSize, system.NumQueries, system.LogFinalPolySize)
 
 	// Shapes: one Shape per batch.
 	for bi, shape := range system.Shapes {

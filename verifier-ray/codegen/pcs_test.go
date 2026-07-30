@@ -138,12 +138,20 @@ func TestWritePcsSystemZigRenders(t *testing.T) {
 	}
 
 	var out bytes.Buffer
-	if err := WritePcsSystemZig(&out, pcs, PcsZigOptions{ConstPrefix: "system_0_"}); err != nil {
+	// Use the short qualified imports the multi-system files use (matching the
+	// committed coexist.zig header: pcs / layout / pcsverify), so the assertions
+	// below check the exact module a real generated file references.
+	if err := WritePcsSystemZig(&out, pcs, PcsZigOptions{
+		PcsImport: "pcs", LayoutImport: "layout", VerifyImport: "pcsverify", ConstPrefix: "system_0_",
+	}); err != nil {
 		t.Fatalf("WritePcsSystemZig() error = %v", err)
 	}
 	got := out.String()
 	for _, want := range []string{
-		"pub const system_0_params = ",
+		// Params must be referenced through the pcs ROOT module (pcs.Params),
+		// not verify.zig — verify.zig does not export Params, so `verify.Params`
+		// would not compile. This asserts the correct qualified reference.
+		"pub const system_0_params = pcs.Params{",
 		"pub const system_0_shapes = ",
 		"pub const system_0_shifts = ",
 		"const system_0_witness_map = ",
@@ -155,6 +163,12 @@ func TestWritePcsSystemZigRenders(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Errorf("emitted Zig missing %q\n---\n%s", want, got)
 		}
+	}
+	// Guard against the regression where Params is emitted as `verify.Params`
+	// (the default VerifyImport) — that identifier does not exist and the
+	// generated file would fail to compile.
+	if strings.Contains(got, "verify.Params") || strings.Contains(got, "pcsverify.Params") {
+		t.Errorf("Params must not be qualified with the verify module; got:\n%s", got)
 	}
 }
 

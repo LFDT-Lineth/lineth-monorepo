@@ -431,7 +431,17 @@ fn resolveLevels(
     // order as we walk bundles/entries.
     var g: usize = 0;
     inline for (system.layout) |bundle| {
-        const round = system.params.log_plaintext_size - bundle.size_log2;
+        // `round` MUST come from the RESTRICTED schedule `p`, not the static
+        // `system.params`: Go computes it via `roundForSize` on the restricted
+        // receiver (`pcs.go` roundForSize + the `pcs = pcs.restrictTo(...)`
+        // reassignment in Verify), i.e. round = maxSizeLog2(layout) - size_log2.
+        // Using the unrestricted `system.params.log_plaintext_size` here would
+        // make `round` too large by `log_plaintext_size - maxSizeLog2(layout)`
+        // whenever that offset is nonzero, desyncing every level_log / level_pos
+        // / fold-index and spuriously rejecting honest proofs. (The current
+        // codegen always emits log_plaintext_size == maxSizeLog2(layout), so the
+        // offset is 0 today — but the restricted frame is the correct one.)
+        const round = p.log_plaintext_size - bundle.size_log2;
         if (round > num_rounds) return Error.LevelRoundExceedsSchedule;
 
         const level_log: u6 = @intCast(p.log_codeword_size - round);
