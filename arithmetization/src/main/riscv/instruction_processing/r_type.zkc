@@ -75,265 +75,264 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
     // bit string of their additions is the same in both interpretations.
     // This also holds for subtraction.
 
-            v1_upper::v1_lower = v1
-            v2_upper::v2_lower = v2
+    v1_upper::v1_lower = v1
+    v2_upper::v2_lower = v2
 
     switch R_inst {
-    //
-    // cases opcode == OP:
-    //
-      // funct3 = 0b000 — base ADD/SUB and M-extension MUL
+        //
+        // cases opcode == OP:
+        //
+        // funct3 = 0b000 — base ADD/SUB and M-extension MUL
 
-      case R_ADD: {
-                            printf "ADD "
-                            print_r_operands(rd, rs1, rs2)
-                            overflow::tmpDWord1 = (v1 as u65) + (v2 as u65)
-                        }
-                        case R_SUB: {
-                            // we prevent underflow by pre-pending v1 with a 1
-                            printf "SUB "
-                            print_r_operands(rd, rs1, rs2)
-                            overflow::tmpDWord1 = ((1 as u1)::(v1 as u64)) - (v2 as u65)
-                        }
-                        case R_MUL: {
-                            printf "MUL "
-                            print_r_operands(rd, rs1, rs2)
-                            tmpDWord2, tmpDWord1 = mul64_uu(v1, v2)
-                        }
+        case R_ADD: {
+            printf "ADD "
+            print_r_operands(rd, rs1, rs2)
+            overflow::tmpDWord1 = (v1 as u65) + (v2 as u65)
+        }
+        case R_SUB: {
+            // we prevent underflow by pre-pending v1 with a 1
+            printf "SUB "
+            print_r_operands(rd, rs1, rs2)
+            overflow::tmpDWord1 = ((1 as u1)::(v1 as u64)) - (v2 as u65)
+        }
+        case R_MUL: {
+            printf "MUL "
+            print_r_operands(rd, rs1, rs2)
+            tmpDWord2, tmpDWord1 = mul64_uu(v1, v2)
+        }
 
-         // funct3 = 0b001 — base SLL and M-extension MULH
-                        case R_SLL: {
-                            printf "SLL "
-                            print_r_operands(rd, rs1, rs2)
-                            shift_discard_6::shift_amount_6 = v2
-                            tmpDWord1 = v1 << shift_amount_6
-                        }
-                        case R_MULH: {
-                            printf "MULH "
-                            print_r_operands(rd, rs1, rs2)
-                            tmpDWord1, tmpDWord2 = mul64_ss(v1, v2)
-                        }
+        // funct3 = 0b001 — base SLL and M-extension MULH
+        case R_SLL: {
+            printf "SLL "
+            print_r_operands(rd, rs1, rs2)
+            shift_discard_6::shift_amount_6 = v2
+            tmpDWord1 = v1 << shift_amount_6
+        }
+        case R_MULH: {
+            printf "MULH "
+            print_r_operands(rd, rs1, rs2)
+            tmpDWord1, tmpDWord2 = mul64_ss(v1, v2)
+        }
 
-                // funct3 = 0b010 — base SLT and M-extension MULHSU
+        // funct3 = 0b010 — base SLT and M-extension MULHSU
 
-                        case R_SLT: {
-                            printf "SLT "
-                            print_r_operands(rd, rs1, rs2)
-                            tmpDWord1 = signed_LT(v1, v2) as DoubleWord
-                        }
-                        case R_MULHSU: {
-                            printf "MULHSU "
-                            print_r_operands(rd, rs1, rs2)
-                            tmpDWord1, tmpDWord2 = mul64_su(v1, v2)
-                        }
+        case R_SLT: {
+            printf "SLT "
+            print_r_operands(rd, rs1, rs2)
+            tmpDWord1 = signed_LT(v1, v2) as DoubleWord
+        }
+        case R_MULHSU: {
+            printf "MULHSU "
+            print_r_operands(rd, rs1, rs2)
+            tmpDWord1, tmpDWord2 = mul64_su(v1, v2)
+        }
 
-                // funct3 = 0b011 — base SLTU and M-extension MULHU
-                        case R_SLTU: {
-                            printf "SLTU "
-                            print_r_operands(rd, rs1, rs2)
-                            if (v1<v2) {
-                                tmpDWord1 = 1
-                            } else {
-                                tmpDWord1 = 0
-                            }
-                        }
-                        case R_MULHU: {
-                            printf "MULHU "
-                            print_r_operands(rd, rs1, rs2)
-                            tmpDWord1, tmpDWord2 = mul64_uu(v1, v2)
-                        }
+        // funct3 = 0b011 — base SLTU and M-extension MULHU
+        case R_SLTU: {
+            printf "SLTU "
+            print_r_operands(rd, rs1, rs2)
+            if (v1<v2) {
+                tmpDWord1 = 1
+            } else {
+                tmpDWord1 = 0
+            }
+        }
+        case R_MULHU: {
+            printf "MULHU "
+            print_r_operands(rd, rs1, rs2)
+            tmpDWord1, tmpDWord2 = mul64_uu(v1, v2)
+        }
 
-                // funct3 = 0b100 — base XOR and M-extension DIV
-                        case R_XOR: {
-                            printf "XOR "
-                            print_r_operands(rd, rs1, rs2)
-                            tmpDWord1 = v1 ^ v2
-                        }
-                        case R_DIV: {
-                            printf "DIV "
-                            print_r_operands(rd, rs1, rs2)
-                            if v2 == 0 {
-                                tmpDWord1 = NEGATIVE_ONE_AS_I64
-                            } else if (v1 == OVERFLOW_DIVIDEND) && (v2 == NEGATIVE_ONE_AS_I64) {
-                                tmpDWord1 = OVERFLOW_DIVIDEND
-                            } else {
-                                tmpDWord1 = div64_ss(v1, v2)
-                            }
-                        }
+        // funct3 = 0b100 — base XOR and M-extension DIV
+        case R_XOR: {
+            printf "XOR "
+            print_r_operands(rd, rs1, rs2)
+            tmpDWord1 = v1 ^ v2
+        }
+        case R_DIV: {
+            printf "DIV "
+            print_r_operands(rd, rs1, rs2)
+            if v2 == 0 {
+                tmpDWord1 = NEGATIVE_ONE_AS_I64
+            } else if (v1 == OVERFLOW_DIVIDEND) && (v2 == NEGATIVE_ONE_AS_I64) {
+                tmpDWord1 = OVERFLOW_DIVIDEND
+            } else {
+                tmpDWord1 = div64_ss(v1, v2)
+            }
+        }
 
-                // funct3 = 0b101 — base SRL/SRA and M-extension DIVU
-                        case R_SRL: {
-                            printf "SRL "
-                            print_r_operands(rd, rs1, rs2)
-                            shift_discard_6::shift_amount_6 = v2
-                            tmpDWord1 = v1 >> shift_amount_6
-                        }
-                        case R_SRA: {
-                            printf "SRA "
-                            print_r_operands(rd, rs1, rs2)
-                            shift_discard_6::shift_amount_6 = v2
-                            if sign_bit_of_double_word(v1) == 1 {
-                                tmpDWord3 = bit_flip_double_word(v1)
-                                tmpDWord2 = tmpDWord3 >> shift_amount_6
-                                tmpDWord1 = bit_flip_double_word(tmpDWord2)
-                            } else {
-                                // default case is 0
-                                tmpDWord1 = v1 >> shift_amount_6
-                            }
-                        }
-                        case R_DIVU: {
-                            printf "DIVU "
-                            print_r_operands(rd, rs1, rs2)
-                            if v2 == 0 {
-                                tmpDWord1 = NEGATIVE_ONE_AS_I64
-                            } else {
-                                tmpDWord1 = div64_uu(v1, v2)
-                            }
-                        }
+        // funct3 = 0b101 — base SRL/SRA and M-extension DIVU
+        case R_SRL: {
+            printf "SRL "
+            print_r_operands(rd, rs1, rs2)
+            shift_discard_6::shift_amount_6 = v2
+            tmpDWord1 = v1 >> shift_amount_6
+        }
+        case R_SRA: {
+            printf "SRA "
+            print_r_operands(rd, rs1, rs2)
+            shift_discard_6::shift_amount_6 = v2
+            if sign_bit_of_double_word(v1) == 1 {
+                tmpDWord3 = bit_flip_double_word(v1)
+                tmpDWord2 = tmpDWord3 >> shift_amount_6
+                tmpDWord1 = bit_flip_double_word(tmpDWord2)
+            } else {
+                // default case is 0
+                tmpDWord1 = v1 >> shift_amount_6
+            }
+        }
+        case R_DIVU: {
+            printf "DIVU "
+            print_r_operands(rd, rs1, rs2)
+            if v2 == 0 {
+                tmpDWord1 = NEGATIVE_ONE_AS_I64
+            } else {
+                tmpDWord1 = div64_uu(v1, v2)
+            }
+        }
 
-                // funct3 = 0b110 — base OR and M-extension REM
-                        case R_OR: {
-                            printf "OR "
-                            print_r_operands(rd, rs1, rs2)
-                            tmpDWord1 = v1 | v2
-                        }
-                        case R_REM: {
-                            printf "REM "
-                            print_r_operands(rd, rs1, rs2)
-                            tmpDWord1 = rem64_ss(v1, v2)
-                        }
+        // funct3 = 0b110 — base OR and M-extension REM
+        case R_OR: {
+            printf "OR "
+            print_r_operands(rd, rs1, rs2)
+            tmpDWord1 = v1 | v2
+        }
+        case R_REM: {
+            printf "REM "
+            print_r_operands(rd, rs1, rs2)
+            tmpDWord1 = rem64_ss(v1, v2)
+        }
 
-                // funct3 = 0b111 — base AND and M-extension REMU
-                        case R_AND: {
-                            printf "AND "
-                            print_r_operands(rd, rs1, rs2)
-                            tmpDWord1 = v1 & v2
-                        }
-                        case R_REMU: {
-                            printf "REMU "
-                            print_r_operands(rd, rs1, rs2)
-                            tmpDWord1 = rem64_uu(v1, v2)
-                        }
+        // funct3 = 0b111 — base AND and M-extension REMU
+        case R_AND: {
+            printf "AND "
+            print_r_operands(rd, rs1, rs2)
+            tmpDWord1 = v1 & v2
+        }
+        case R_REMU: {
+            printf "REMU "
+            print_r_operands(rd, rs1, rs2)
+            tmpDWord1 = rem64_uu(v1, v2)
+        }
 
-                        //
+        //
         //case OP_32
-//
-            // =============================================
-            // RISCV-64-I base instruction set instructions
-            // =============================================
+        //
+        // =============================================
+        // RISCV-64-I base instruction set instructions
+        // =============================================
 
-                // funct3 = 0b000 — base ADDW/SUBW and M-extension MULW
-                        case R_ADDW: {
-                            printf "ADDW "
-                            print_r_operands(rd, rs1, rs2)
-                            overflow::tmpWord1 = (v1_lower as u33) + (v2_lower as u33)
-                            tmpDWord1 = sgn_extension_u32_u64(tmpWord1)
-                        }
-                        case R_SUBW: {
-                            printf "SUBW "
-                            print_r_operands(rd, rs1, rs2)
-                            // underflow prevention
-                            overflow::tmpWord1 = ((1 as u1)::v1_lower) - (v2_lower as u33)
-                            tmpDWord1 = sgn_extension_u32_u64(tmpWord1)
-                        }
-                        case R_MULW: {
-                            printf "MULW "
-                            print_r_operands(rd, rs1, rs2)
-                            tmpWord2, tmpWord1 = mul32_uu(v1_lower, v2_lower)
-                            tmpDWord1 = sgn_extension_u32_u64(tmpWord1)
-                        }
+        // funct3 = 0b000 — base ADDW/SUBW and M-extension MULW
+        case R_ADDW: {
+            printf "ADDW "
+            print_r_operands(rd, rs1, rs2)
+            overflow::tmpWord1 = (v1_lower as u33) + (v2_lower as u33)
+            tmpDWord1 = sgn_extension_u32_u64(tmpWord1)
+        }
+        case R_SUBW: {
+            printf "SUBW "
+            print_r_operands(rd, rs1, rs2)
+            // underflow prevention
+            overflow::tmpWord1 = ((1 as u1)::v1_lower) - (v2_lower as u33)
+            tmpDWord1 = sgn_extension_u32_u64(tmpWord1)
+        }
+        case R_MULW: {
+            printf "MULW "
+            print_r_operands(rd, rs1, rs2)
+            tmpWord2, tmpWord1 = mul32_uu(v1_lower, v2_lower)
+            tmpDWord1 = sgn_extension_u32_u64(tmpWord1)
+        }
 
-                // case FUNCT3_SLLW:
-                case R_SLLW: {
-                        printf "SLLW "
-                        print_r_operands(rd, rs1, rs2)
-                        shift_discard_5::shift_amount_5 = v2_lower
-                        tmpWord1 = v1_lower << shift_amount_5
-                        tmpDWord1 = sgn_extension_u32_u64(tmpWord1)
-                    }
+        // case FUNCT3_SLLW:
+        case R_SLLW: {
+            printf "SLLW "
+            print_r_operands(rd, rs1, rs2)
+            shift_discard_5::shift_amount_5 = v2_lower
+            tmpWord1 = v1_lower << shift_amount_5
+            tmpDWord1 = sgn_extension_u32_u64(tmpWord1)
+        }
 
-                // case FUNCT3_DIVW:
-                    // signed division satisfies
-                    // a, b ∈ Z
-                    // a = b∙q + r
-                    // 0 ≤ |r| < |b|
-                    // r and a have the same sign
-                    case R_DIVW: {
-                        printf "DIVW "
-                        print_r_operands(rd, rs1, rs2)
-                        if v2_lower == 0 {
-                            tmpDWord1 = NEGATIVE_ONE_AS_I64
-                        } else {
-                            tmpWord1 = div32_ss(v1_lower, v2_lower)
-                            tmpDWord1 = sgn_extension_u32_u64(tmpWord1)
-                        }
-                    }
+        // case FUNCT3_DIVW:
+        // signed division satisfies
+        // a, b ∈ Z
+        // a = b∙q + r
+        // 0 ≤ |r| < |b|
+        // r and a have the same sign
+        case R_DIVW: {
+            printf "DIVW "
+            print_r_operands(rd, rs1, rs2)
+            if v2_lower == 0 {
+                tmpDWord1 = NEGATIVE_ONE_AS_I64
+            } else {
+                tmpWord1 = div32_ss(v1_lower, v2_lower)
+                tmpDWord1 = sgn_extension_u32_u64(tmpWord1)
+            }
+        }
 
-                // funct3 = 0b101 — base SRLW/SRAW and M-extension DIVUW
-                         case R_SRLW: {
-                            printf "SRLW "
-                            print_r_operands(rd, rs1, rs2)
-                            shift_discard_5::shift_amount_5 = v2_lower
-                            tmpWord1 = v1_lower >> shift_amount_5
-                            tmpDWord1 = sgn_extension_u32_u64(tmpWord1)
-                        }
-                        case R_SRAW: {
-                            printf "SRAW "
-                            print_r_operands(rd, rs1, rs2)
-                            shift_discard_5::shift_amount_5 = v2_lower
-                            if sign_bit_of_word(v1_lower) == 1 {
-                                tmpWord3 = bit_flip_word(v1_lower)
-                                tmpWord2 = tmpWord3 >> shift_amount_5
-                                tmpWord1 = bit_flip_word(tmpWord2)
-                            } else {
-                                tmpWord1 = v1_lower >> shift_amount_5
-                            }
-                            tmpDWord1 = sgn_extension_u32_u64(tmpWord1)
-                        }
-                        case R_DIVUW: {
-                            printf "DIVUW "
-                            print_r_operands(rd, rs1, rs2)
-                            if v2_lower == 0 {
-                                tmpDWord1 = NEGATIVE_ONE_AS_I64
-                            } else {
-                                tmpWord1 = div32_uu(v1_lower, v2_lower)
-                                tmpDWord1 = sgn_extension_u32_u64(tmpWord1)
-                            }
-                        }
+        // funct3 = 0b101 — base SRLW/SRAW and M-extension DIVUW
+        case R_SRLW: {
+            printf "SRLW "
+            print_r_operands(rd, rs1, rs2)
+            shift_discard_5::shift_amount_5 = v2_lower
+            tmpWord1 = v1_lower >> shift_amount_5
+            tmpDWord1 = sgn_extension_u32_u64(tmpWord1)
+        }
+        case R_SRAW: {
+            printf "SRAW "
+            print_r_operands(rd, rs1, rs2)
+            shift_discard_5::shift_amount_5 = v2_lower
+            if sign_bit_of_word(v1_lower) == 1 {
+                tmpWord3 = bit_flip_word(v1_lower)
+                tmpWord2 = tmpWord3 >> shift_amount_5
+                tmpWord1 = bit_flip_word(tmpWord2)
+            } else {
+                tmpWord1 = v1_lower >> shift_amount_5
+            }
+            tmpDWord1 = sgn_extension_u32_u64(tmpWord1)
+        }
+        case R_DIVUW: {
+            printf "DIVUW "
+            print_r_operands(rd, rs1, rs2)
+            if v2_lower == 0 {
+                tmpDWord1 = NEGATIVE_ONE_AS_I64
+            } else {
+                tmpWord1 = div32_uu(v1_lower, v2_lower)
+                tmpDWord1 = sgn_extension_u32_u64(tmpWord1)
+            }
+        }
 
-                // case FUNCT3_REMW:
-                    case R_REMW: {
-                        printf "REMW "
-                        print_r_operands(rd, rs1, rs2)
-                        tmpDWord1 = sgn_extension_u32_u64(rem32_ss(v1_lower, v2_lower))
-                }
+        // case FUNCT3_REMW:
+        case R_REMW: {
+            printf "REMW "
+            print_r_operands(rd, rs1, rs2)
+            tmpDWord1 = sgn_extension_u32_u64(rem32_ss(v1_lower, v2_lower))
+        }
 
-                // case FUNCT3_REMUW:
-                    case R_REMUW: {
-                        printf "REMUW "
-                        print_r_operands(rd, rs1, rs2)
-                        tmpDWord1 = sgn_extension_u32_u64(rem32_uu(v1_lower, v2_lower))
-                    }
+        // case FUNCT3_REMUW:
+        case R_REMUW: {
+            printf "REMUW "
+            print_r_operands(rd, rs1, rs2)
+            tmpDWord1 = sgn_extension_u32_u64(rem32_uu(v1_lower, v2_lower))
+        }
 
-//
-// case CUSTOM_1
-//
+        //
+        // case CUSTOM_1
+        //
         case R_KECCAK: {
-                printf "KECCAK precompile "
-                keccak(v1 as Address, v2 as u32, registers[rd] as Address)
-                tmpDWord1 = 0 //useless
-            }
-            case R_POSEIDON2: {
-                printf "POSEIDON2 precompile "
-                // Note: registers[rd] isn't changed by this instruction, it's merely read.
-                // poseidon2(input_addr, output_addr) applies the permutation to the
-                // STATE_WIDTH field elements at input_addr, writing the result to output_addr.
-                poseidon2(v1 as Address, registers[rd] as Address)
-                tmpDWord1 = 0 //useless
-            }
+            printf "KECCAK precompile "
+            keccak(v1 as Address, v2 as u32, registers[rd] as Address)
+            tmpDWord1 = 0 // TODO: useless but required for compilation
+        }
+        case R_POSEIDON2: {
+            printf "POSEIDON2 precompile "
+            // Note: registers[rd] isn't changed by this instruction, it's merely read.
+            // poseidon2(input_addr, output_addr) applies the permutation to the
+            // STATE_WIDTH field elements at input_addr, writing the result to output_addr.
+            poseidon2(v1 as Address, registers[rd] as Address)
+            tmpDWord1 = 0 // TODO: useless but required for compilation
+        }
 
-
-default: {
+        default: {
             printf "[ERROR] Unsupported R-type instruction with\n"
             printf "\topcode ≡ %x ≡ %b\n", opcode, opcode
             printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3
@@ -344,7 +343,8 @@ default: {
 
     // For all operation except custom opcode, write the result in registers[rd]
     if (opcode != CUSTOM_1) {
-    registers[rd] = tmpDWord1}
-
+        registers[rd] = tmpDWord1
     }
+
+}
 
