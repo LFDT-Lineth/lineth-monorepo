@@ -102,6 +102,17 @@ pub fn build(b: *std.Build) void {
             .{ .name = "verifier_ray", .module = verifier_mod },
         },
     });
+    // The full multi-scenario verify fixture (also embedded into main.zig as
+    // `embedded_data`), exposed to the test suite so soundness tests can run the
+    // complete verifier.verify against a real PCS+vanishing+logderiv protocol.
+    const test_verify_mod = b.addModule("test_verify", .{
+        .root_source_file = b.path("testdata/generated/verify.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "verifier_ray", .module = verifier_mod },
+        },
+    });
 
     const embedded_data_opts = b.addOptions();
     embedded_data_opts.addOption(usize, "spec_index", embedded_spec);
@@ -157,6 +168,7 @@ pub fn build(b: *std.Build) void {
                     .{ .name = "test_frip", .module = test_frip_mod },
                     .{ .name = "test_coexist", .module = test_coexist_mod },
                     .{ .name = "test_realpcs", .module = test_realpcs_mod },
+                    .{ .name = "test_verify", .module = test_verify_mod },
                 },
             }),
         });

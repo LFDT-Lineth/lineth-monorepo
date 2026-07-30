@@ -51,6 +51,7 @@ pub const Error = error{
     QueryPositionOutOfRange,
     RunningQueryCountMismatch,
     RunningLayerCountMismatch,
+    RunningLayerShapeMismatch,
     ClaimShapeMismatch,
     ClaimPointInDomain,
     RowShapeMismatch,
@@ -391,6 +392,19 @@ fn resolveRunningLayers(
     while (j < num_rounds) : (j += 1) {
         const branch = layers[j - 1];
         const root = proof.fri.round_roots[j - 1];
+
+        // Exact branch-shape check, porting Go's `checkQueryLayerShape(...,
+        // exactSiblings=true)` (fri.go checkBranchShape). For running layer j the
+        // tree has `1 << (log_codeword_size - j)` leaves, so an authentic branch
+        // carries exactly `log_codeword_size - j` siblings (and the same number of
+        // aux siblings). `recoverRoot` alone only rejects branches *shorter* than
+        // the query position needs; this pins the exact height so an over-long
+        // forged branch is rejected before the (defence-in-depth) root check.
+        const want_siblings: usize = @as(usize, p.log_codeword_size) - j;
+        if (branch.siblings.len != want_siblings or branch.aux_siblings.len != want_siblings) {
+            return Error.RunningLayerShapeMismatch;
+        }
+
         const recovered = branch.recoverRoot(s >> @intCast(j)) catch return Error.RunningLayerAuthFailed;
         if (!octEql(recovered, root)) return Error.RunningLayerAuthFailed;
         if (branch.siblings.len == 0) return Error.RunningLayerAuthFailed;

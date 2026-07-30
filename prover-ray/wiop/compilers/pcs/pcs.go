@@ -89,6 +89,19 @@ func staticFRI() (fri.Params, []*fri.RSEncoder) {
 	return staticFRIParams, staticFRIEncoders
 }
 
+// FRILogInverseRate is the log2 of the FRI blow-up factor (codeword size /
+// plaintext size). Exported so out-of-package consumers — notably the
+// verifier-ray codegen — can reconstruct the per-proof FRI params from a
+// protocol's largest opened size (log_codeword = maxSize + FRILogInverseRate)
+// without duplicating the constant.
+const FRILogInverseRate = friLogInverseRate
+
+// FRINumQueries returns the number of FRI query openings currently configured.
+// It tracks [SetFRINumQueriesForTest], so the verifier-ray codegen emits the
+// same query count the prover committed to. Exported for that codegen; do not
+// use it to mutate query behaviour.
+func FRINumQueries() int { return friNumQueries }
+
 // newStaticPCS wraps the shared static parameters in a fresh, per-proof [fri.PCS]
 // (which carries the mutable opening state). Wrapping is cheap — no domains are
 // rebuilt — and each proof restricts the fold schedule to its own witness size.

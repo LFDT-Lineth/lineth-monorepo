@@ -4,6 +4,13 @@ go 1.25.7
 
 require github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260618065234-5d29f81a0d2c
 
+// Build the codegen against the local prover-ray working tree, which carries
+// the FRI/PCS extraction API (CommittedBatches, GetLayout, ColumnLocation,
+// FRILogInverseRate, FRINumQueries) that BuildPcsSystem consumes. The pinned
+// published version does not export these yet. Keep in sync with the
+// testdata/generate module's replace directive.
+replace github.com/LFDT-Lineth/lineth-monorepo/prover-ray => ../../prover-ray
+
 require (
 	github.com/bits-and-blooms/bitset v1.24.4 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
