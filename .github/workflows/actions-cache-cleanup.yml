@@ -27,6 +27,7 @@ jobs:
           REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
         run: |
+          set -o pipefail
           for ref in "refs/pull/${PR}/merge" "refs/pull/${PR}/head"; do
             gh cache list --repo "$REPO" --ref "$ref" --limit 100 --json id --jq '.[].id' \
               | while read -r id; do gh cache delete "$id" --repo "$REPO" || true; done
@@ -42,8 +43,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
         run: |
+          set -o pipefail
+          # jq's fromdateiso8601 does not accept GitHub's fractional seconds.
           gh api --paginate "repos/${REPO}/actions/caches?per_page=100" \
-            --jq '.actions_caches[] | select(.ref | startswith("refs/pull/")) | select((.last_accessed_at | fromdateiso8601) < (now - 259200)) | .id' \
+            --jq '.actions_caches[] | select(.ref | startswith("refs/pull/")) | select((.last_accessed_at | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601) < (now - 259200)) | .id' \
             | while read -r id; do
                 gh api -X DELETE "repos/${REPO}/actions/caches/${id}" || true
               done

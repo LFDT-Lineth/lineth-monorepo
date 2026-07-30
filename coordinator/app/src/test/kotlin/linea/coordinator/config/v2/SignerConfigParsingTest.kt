@@ -6,6 +6,7 @@ import linea.coordinator.config.v2.toml.parseConfig
 import linea.kotlin.decodeHex
 import linea.kotlin.toURL
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import java.nio.file.Path
 
@@ -38,6 +39,11 @@ class SignerConfigParsingTest {
       key-store-password = "xxxxx"
       trust-store-path = "web3signer-truststore.p12"
       trust-store-password = "xxxxx"
+
+      [customExample]
+      type = "CuStOm" # Shall be case insensitive
+      [customExample.custom]
+      name = "l1-submitter"
       """.trimIndent()
 
     val config =
@@ -91,6 +97,13 @@ class SignerConfigParsingTest {
             ),
           ),
         ),
+        customExample =
+        SignerConfigToml(
+          type = SignerConfigToml.SignerType.CUSTOM,
+          web3j = null,
+          web3signer = null,
+          custom = SignerConfigToml.CustomConfig("l1-submitter"),
+        ),
       )
   }
 
@@ -98,10 +111,46 @@ class SignerConfigParsingTest {
     val web3jExample: SignerConfigToml,
     val web3SignerExample: SignerConfigToml,
     val web3signerWithTlsExample: SignerConfigToml,
+    val customExample: SignerConfigToml,
   )
 
   @Test
   fun `should parse full state manager config`() {
     assertThat(parseConfig<WrapperConfig>(toml)).isEqualTo(config)
+    assertThat(parseConfig<WrapperConfig>(toml).customExample.reified()).isEqualTo(
+      SignerConfig(
+        type = SignerConfig.SignerType.CUSTOM,
+        web3j = null,
+        web3signer = null,
+        custom = SignerConfig.CustomConfig("l1-submitter"),
+      ),
+    )
+  }
+
+  @Test
+  fun `custom signer requires non-blank custom config`() {
+    assertThatThrownBy {
+      SignerConfigToml(
+        type = SignerConfigToml.SignerType.CUSTOM,
+        web3j = null,
+        web3signer = null,
+      )
+    }
+      .isInstanceOf(IllegalArgumentException::class.java)
+      .hasMessageContaining("requires custom config")
+
+    assertThatThrownBy {
+      SignerConfig(
+        type = SignerConfig.SignerType.CUSTOM,
+        web3j = null,
+        web3signer = null,
+      )
+    }
+      .isInstanceOf(IllegalArgumentException::class.java)
+      .hasMessageContaining("requires custom config")
+
+    assertThatThrownBy { SignerConfigToml.CustomConfig(" ") }
+      .isInstanceOf(IllegalArgumentException::class.java)
+      .hasMessageContaining("must not be blank")
   }
 }
