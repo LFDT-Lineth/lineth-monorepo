@@ -975,6 +975,8 @@ func EncodeStatelessInput(payload []byte) ([]byte, error) {
 		return nil, fmt.Errorf("EncodeStatelessInput: %w", err)
 	}
 
+	// Mirrors the Python reference's schema_id_bytes + raw framing.
+	// codeql[go/allocation-size-overflow]
 	framed := make([]byte, 0, len(statelessInputSchemaID)+len(raw))
 	framed = append(framed, statelessInputSchemaID...)
 	framed = append(framed, raw...)
