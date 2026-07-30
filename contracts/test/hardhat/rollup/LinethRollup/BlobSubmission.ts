@@ -29,7 +29,7 @@ import {
 
 ensureKzgSetup();
 
-describe("Linea Rollup contract: EIP-4844 Blob submission tests", () => {
+describe("Lineth Rollup contract: EIP-4844 Blob submission tests", () => {
   let linethRollup: TestLinethRollup;
 
   let securityCouncil: SignerWithAddress;

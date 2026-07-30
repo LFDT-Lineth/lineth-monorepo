@@ -650,7 +650,7 @@
           "type": "tuple"
         }
       ],
-      "name": "LinethRollupBaseInitialized",
+      "name": "LineaRollupBaseInitialized",
       "type": "event"
     },
     {
@@ -669,7 +669,7 @@
           "type": "bytes8"
         }
       ],
-      "name": "LinethRollupVersionChanged",
+      "name": "LineaRollupVersionChanged",
       "type": "event"
     },
     {

@@ -1,6 +1,5 @@
 import * as dotenv from "dotenv";
 import { ethers } from "ethers";
-import fs from "fs";
 import path from "path";
 
 import { abi as LinethRollupV8Abi, bytecode as LinethRollupV8Bytecode } from "./dynamic-artifacts/LinethRollupV8.json";
@@ -37,39 +36,22 @@ import {
   PRECOMPILES_ADDRESSES,
   FORCED_TRANSACTION_SENDER_ROLE,
 } from "../common/constants";
-import { deployContractFromArtifacts, getInitializerData } from "../common/helpers/deployments";
-import { getEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment";
+import {
+  deployContractFromArtifacts,
+  getDeployNonceFromEnv,
+  getInitializerData,
+  loadArtifactFromDirectory,
+} from "../common/helpers/deployments";
+import { getBooleanEnvVarOrDefault, getEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment";
+import { resolveOneModelFeeOverrides } from "../common/helpers/feeOverrides";
 import {
   getDeploymentNetworkName,
   requireAddressesFromRegistryOrEnv,
   requireAddressFromRegistryOrEnv,
 } from "../common/helpers/readAddress";
 import { generateRoleAssignments } from "../common/helpers/roles";
-import { get1559Fees } from "../scripts/utils";
 
 dotenv.config();
-
-function findContractArtifacts(
-  folderPath: string,
-  contractName: string,
-): { abi: ethers.InterfaceAbi; bytecode: ethers.BytesLike } {
-  const files = fs.readdirSync(folderPath);
-
-  const foundFile = files.find((file) => file === `${contractName}.json`);
-
-  if (!foundFile) {
-    // Throw an error if the file is not found
-    throw new Error(`Contract "${contractName}" not found in folder "${folderPath}"`);
-  }
-
-  // Construct the full file path
-  const filePath = path.join(folderPath, foundFile);
-
-  // Read the file content
-  const fileContent = fs.readFileSync(filePath, "utf-8").trim();
-  const parsedContent = JSON.parse(fileContent);
-  return parsedContent;
-}
 
 async function main() {
   const networkName = getDeploymentNetworkName();
@@ -90,14 +72,8 @@ async function main() {
   const linethRollupRateLimitAmountInWei = getRequiredEnvVar("LINETH_ROLLUP_RATE_LIMIT_AMOUNT");
   const linethRollupGenesisTimestamp = getRequiredEnvVar("L2_GENESIS_TIMESTAMP");
 
-  // Forced Transaction Gateway
-  const destinationChainId = getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_L2_CHAIN_ID");
-  const l2BlockBuffer = getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_L2_BLOCK_BUFFER");
-  const maxGasLimit = getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_MAX_GAS_LIMIT");
-  const maxInputLengthBuffer = getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_MAX_INPUT_LENGTH_BUFFER");
-
-  const l2BlockDurationSeconds = getRequiredEnvVar("FORCED_TRANSACTION_L2_BLOCK_DURATION_SECONDS");
-  const blockNumberDeadlineBuffer = getRequiredEnvVar("FORCED_TRANSACTION_BLOCK_NUMBER_DEADLINE_BUFFER");
+  // The default true preserves existing local deploy behavior; the quickstart opts into false to skip the gateway.
+  const deployForcedTransactionGateway = getBooleanEnvVarOrDefault("DEPLOY_FORCED_TRANSACTION_GATEWAY", true);
 
   const multiCallAddress = "0xcA11bde05977b3631167028862bE2a173976CA11";
   const linethRollupName = "LinethRollupV8";
@@ -110,8 +86,6 @@ async function main() {
     LINETH_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
   );
 
-  const securityCouncilPrivateKey = getRequiredEnvVar("SECURITY_COUNCIL_PRIVATE_KEY");
-
   // Use random hardcoded address until we introduce YieldManager E2E tests
   const automationServiceAddress = "0x3A9f0c2b8e7D4F6e1b5a9C2e0Fd7a4B6C8e9F1A2";
   const defaultRoleAddresses = [
@@ -122,34 +96,31 @@ async function main() {
   ];
   const roleAddresses = getEnvVarOrDefault("LINETH_ROLLUP_ROLE_ADDRESSES", defaultRoleAddresses);
 
-  const verifierArtifacts = findContractArtifacts(path.join(__dirname, "./dynamic-artifacts"), verifierName);
+  const verifierArtifacts = loadArtifactFromDirectory(path.join(__dirname, "./dynamic-artifacts"), verifierName);
 
   const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
 
   const wallet = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY!, provider);
 
-  const { gasPrice } = await get1559Fees(provider);
+  // The public quickstart can pin local L1 deploy gas for deterministic boot
+  // behavior via L1_DEPLOY_GAS_PRICE_WEI; otherwise the provider's fee data is
+  // used. resolveOneModelFeeOverrides guarantees a single, complete fee model.
+  const feeOverrides = await resolveOneModelFeeOverrides(provider, "L1_DEPLOY_GAS_PRICE_WEI");
 
-  let walletNonce;
-
-  if (!process.env.L1_NONCE) {
-    walletNonce = await wallet.getNonce();
-  } else {
-    walletNonce = parseInt(process.env.L1_NONCE);
-  }
+  const walletNonce = await getDeployNonceFromEnv(wallet, "L1_NONCE");
 
   const [verifier, linethRollupImplementation, proxyAdmin, addressFilter] = await Promise.all([
     deployContractFromArtifacts(verifierName, verifierArtifacts.abi, verifierArtifacts.bytecode, wallet, {
       nonce: walletNonce,
-      gasPrice,
+      ...feeOverrides,
     }),
     deployContractFromArtifacts(linethRollupImplementationName, LinethRollupV8Abi, LinethRollupV8Bytecode, wallet, {
       nonce: walletNonce + 1,
-      gasPrice,
+      ...feeOverrides,
     }),
     deployContractFromArtifacts(ProxyAdminContractName, ProxyAdminAbi, ProxyAdminBytecode, wallet, {
       nonce: walletNonce + 2,
-      gasPrice,
+      ...feeOverrides,
     }),
     deployContractFromArtifacts(
       AddressFilterContractName,
@@ -160,7 +131,7 @@ async function main() {
       PRECOMPILES_ADDRESSES,
       {
         nonce: walletNonce + 3,
-        gasPrice,
+        ...feeOverrides,
       },
     ),
   ]);
@@ -194,65 +165,88 @@ async function main() {
     "0xB7De4A2cf9E1c6a0B5f8d3e7a9C4B1a2e6d0f5C8",
   ]);
 
-  const [linethRollupContract, mimc] = await Promise.all([
-    deployContractFromArtifacts(
-      linethRollupName,
-      TransparentUpgradeableProxyAbi,
-      TransparentUpgradeableProxyBytecode,
-      wallet,
-      linethRollupImplementationAddress,
-      proxyAdminAddress,
-      initializer,
-      {
-        nonce: walletNonce + 4,
-        gasPrice,
-      },
-    ),
-    deployContractFromArtifacts(MimcAddressContractName, MimcAddressAbi, MimcAddressFilterBytecode, wallet, {
-      nonce: walletNonce + 5,
-      gasPrice,
-    }),
-  ]);
-
-  const [linethRollupAddress, mimcAddress] = await Promise.all([linethRollupContract.getAddress(), mimc.getAddress()]);
-
-  const args = [
-    linethRollupAddress,
-    destinationChainId,
-    l2BlockBuffer,
-    maxGasLimit,
-    maxInputLengthBuffer,
-    linethRollupSecurityCouncil,
-    addressFilterAddress,
-    l2BlockDurationSeconds,
-    blockNumberDeadlineBuffer,
-  ];
-
-  const forcedTransactionGateway = await deployContractFromArtifacts(
-    forcedTransactionGatewayName,
-    ForcedTransactionGatewayAbi,
-    ForcedTransactionGatewayBytecode,
+  const linethRollupContract = await deployContractFromArtifacts(
+    linethRollupName,
+    TransparentUpgradeableProxyAbi,
+    TransparentUpgradeableProxyBytecode,
     wallet,
-    { libraries: { "src/libraries/Mimc.sol:Mimc": mimcAddress } },
-    ...args,
+    linethRollupImplementationAddress,
+    proxyAdminAddress,
+    initializer,
     {
-      nonce: walletNonce + 6,
-      gasPrice,
+      nonce: walletNonce + 4,
+      ...feeOverrides,
     },
   );
 
-  const forcedTransactionGatewayAddress = await forcedTransactionGateway.getAddress();
-  const securityCouncilWallet = new ethers.Wallet(securityCouncilPrivateKey, provider);
-  const linethRollup = new ethers.Contract(linethRollupAddress, LinethRollupV8Abi, securityCouncilWallet);
+  const linethRollupAddress = await linethRollupContract.getAddress();
 
-  console.log(
-    `Granting FORCED_TRANSACTION_SENDER_ROLE to ForcedTransactionGateway at ${forcedTransactionGatewayAddress}...`,
-  );
-  const grantRoleTx = await linethRollup.grantRole(FORCED_TRANSACTION_SENDER_ROLE, forcedTransactionGatewayAddress, {
-    gasPrice,
-  });
-  await grantRoleTx.wait();
-  console.log(`FORCED_TRANSACTION_SENDER_ROLE granted to ForcedTransactionGateway`);
+  if (deployForcedTransactionGateway) {
+    const destinationChainId = getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_L2_CHAIN_ID");
+    const l2BlockBuffer = getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_L2_BLOCK_BUFFER");
+    const maxGasLimit = getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_MAX_GAS_LIMIT");
+    const maxInputLengthBuffer = getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_MAX_INPUT_LENGTH_BUFFER");
+    const l2BlockDurationSeconds = getRequiredEnvVar("FORCED_TRANSACTION_L2_BLOCK_DURATION_SECONDS");
+    const blockNumberDeadlineBuffer = getRequiredEnvVar("FORCED_TRANSACTION_BLOCK_NUMBER_DEADLINE_BUFFER");
+    const securityCouncilPrivateKey = getRequiredEnvVar("SECURITY_COUNCIL_PRIVATE_KEY");
+
+    const mimc = await deployContractFromArtifacts(
+      MimcAddressContractName,
+      MimcAddressAbi,
+      MimcAddressFilterBytecode,
+      wallet,
+      {
+        nonce: walletNonce + 5,
+        ...feeOverrides,
+      },
+    );
+    const mimcAddress = await mimc.getAddress();
+
+    const args = [
+      linethRollupAddress,
+      destinationChainId,
+      l2BlockBuffer,
+      maxGasLimit,
+      maxInputLengthBuffer,
+      linethRollupSecurityCouncil,
+      addressFilterAddress,
+      l2BlockDurationSeconds,
+      blockNumberDeadlineBuffer,
+    ];
+
+    const forcedTransactionGateway = await deployContractFromArtifacts(
+      forcedTransactionGatewayName,
+      ForcedTransactionGatewayAbi,
+      ForcedTransactionGatewayBytecode,
+      wallet,
+      { libraries: { "src/libraries/Mimc.sol:Mimc": mimcAddress } },
+      ...args,
+      {
+        nonce: walletNonce + 6,
+        ...feeOverrides,
+      },
+    );
+
+    const forcedTransactionGatewayAddress = await forcedTransactionGateway.getAddress();
+    const securityCouncilWallet = new ethers.Wallet(securityCouncilPrivateKey, provider);
+    const linethRollup = new ethers.Contract(linethRollupAddress, LinethRollupV8Abi, securityCouncilWallet);
+
+    console.log(
+      `Granting FORCED_TRANSACTION_SENDER_ROLE to ForcedTransactionGateway at ${forcedTransactionGatewayAddress}...`,
+    );
+    const grantRoleTx = await linethRollup.grantRole(
+      FORCED_TRANSACTION_SENDER_ROLE,
+      forcedTransactionGatewayAddress,
+      feeOverrides,
+    );
+    await grantRoleTx.wait();
+    console.log(`FORCED_TRANSACTION_SENDER_ROLE granted to ForcedTransactionGateway`);
+  } else {
+    console.log(
+      "DEPLOY_FORCED_TRANSACTION_GATEWAY=false; skipping Mimc and ForcedTransactionGateway deploy. " +
+        "The next L1 deploy starts after the LinethRollup proxy nonce.",
+    );
+  }
 }
 
 main().catch((error) => {

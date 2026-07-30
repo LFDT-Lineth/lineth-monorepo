@@ -1,4 +1,0 @@
-type boolean = u1
-type bool = boolean
-type b = bool
-const TRUE:b = 1

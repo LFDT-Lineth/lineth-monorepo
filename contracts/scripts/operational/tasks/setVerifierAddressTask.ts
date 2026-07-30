@@ -63,6 +63,6 @@ task("setVerifierAddress", "Sets the verifier address on a Message Service contr
       await tx.wait();
 
       const checkVerifierIsSet = await LinethRollup.verifiers(proofType);
-      console.log(`Linea Rollup implementation added ${checkVerifierIsSet} as new verifier`);
+      console.log(`Lineth Rollup implementation added ${checkVerifierIsSet} as new verifier`);
     });
   });

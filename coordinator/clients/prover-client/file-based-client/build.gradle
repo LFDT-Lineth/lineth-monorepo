@@ -18,10 +18,10 @@ dependencies {
   // Block dependencies
   implementation project(':jvm-libs:linea:besu-libs')
 
-  implementation "com.fasterxml.jackson.core:jackson-annotations:${libs.versions.jackson.get()}"
-  implementation "com.fasterxml.jackson.core:jackson-databind:${libs.versions.jackson.get()}"
-  implementation "com.fasterxml.jackson.module:jackson-module-kotlin:${libs.versions.jackson.get()}"
-  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${libs.versions.jackson.get()}")
+  implementation "com.fasterxml.jackson.core:jackson-annotations"
+  implementation "com.fasterxml.jackson.core:jackson-databind"
+  implementation "com.fasterxml.jackson.module:jackson-module-kotlin"
+  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
 
   testImplementation testFixtures(project(':coordinator:core-interfaces'))
   testImplementation testFixtures(project(':jvm-libs:linea:clients:interfaces'))

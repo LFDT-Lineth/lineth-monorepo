@@ -1,5 +1,9 @@
 ## [unreleased]
 
+### 🐛 Bug Fixes
+
+- *(prover)* Fix the bitdecompose.go by removing IsPackedLimbNotZero (#3475)
+
 ### 🚜 Refactor
 
 - *(prover)* Remove redundant and unsafe utility functions (#3273)

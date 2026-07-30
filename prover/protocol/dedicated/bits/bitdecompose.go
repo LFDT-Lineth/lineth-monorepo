@@ -17,8 +17,7 @@ type BitDecomposed struct {
 	Packed []ifaces.Column
 	// Bits lists the decomposed bits of the "packed" column in LSbit
 	// order.
-	Bits                []ifaces.Column
-	IsPackedLimbNotZero []ifaces.Column
+	Bits []ifaces.Column
 }
 
 // BitDecompose generates a bit decomposition of a column and returns
@@ -43,11 +42,10 @@ func BitDecompose(comp *wizard.CompiledIOP, packed []ifaces.Column, numBits int)
 	}
 
 	// This constraint ensures that the recombined bits are equal to the
-	// original column.
-	for i := 0; i*16 < numBits; i++ {
-		bd.IsPackedLimbNotZero = append(bd.IsPackedLimbNotZero, comp.InsertCommit(round, ifaces.ColIDf("IS_PACKED_NOT_ZERO_%v", i), packed[0].Size(), true))
-	}
-
+	// original column. It is enforced unconditionally on every limb that
+	// carries position bits: binding the committed packed limbs to the
+	// decomposed bits is what ties an accumulator position to the Merkle path
+	// actually walked, so it must not be gated by a prover-controlled column.
 	for i := len(packed) - 1; i >= 0; i-- {
 		ind := len(packed) - i - 1
 
@@ -63,12 +61,9 @@ func BitDecompose(comp *wizard.CompiledIOP, packed []ifaces.Column, numBits int)
 		comp.InsertGlobal(
 			round,
 			ifaces.QueryIDf("%v_BIT_RECOMBINATION", packed[i].GetColID()),
-			symbolic.Mul(
-				bd.IsPackedLimbNotZero[ind],
-				symbolic.Sub(
-					packed[i],
-					symbolic.NewPolyEval(symbolic.NewConstant(2), s),
-				),
+			symbolic.Sub(
+				packed[i],
+				symbolic.NewPolyEval(symbolic.NewConstant(2), s),
 			),
 		)
 	}
@@ -92,7 +87,6 @@ func (bd *BitDecomposed) Run(run *wizard.ProverRuntime) {
 	start, stop := smartvectors.CoCompactRange(assignments...)
 
 	bits := make([][]field.Element, len(bd.Bits))
-	notZero := make([][]field.Element, len(bd.IsPackedLimbNotZero))
 
 	el := make([]field.Element, len(assignments))
 	for row := start; row < stop; row++ {
@@ -115,27 +109,6 @@ func (bd *BitDecomposed) Run(run *wizard.ProverRuntime) {
 				bits[j] = append(bits[j], field.Zero())
 			}
 		}
-
-		for i := range bd.Packed {
-			// LSB limb packed[len-1] maps to IsPackedLimbNotZero[0].
-			ind := len(bd.Packed) - 1 - i
-			if ind >= len(bd.IsPackedLimbNotZero) {
-				continue
-			}
-
-			if el[i].IsZero() {
-				notZero[ind] = append(notZero[ind], field.Zero())
-			} else {
-				notZero[ind] = append(notZero[ind], field.One())
-			}
-		}
-	}
-
-	for i := range bd.IsPackedLimbNotZero {
-		run.AssignColumn(
-			bd.IsPackedLimbNotZero[i].GetColID(),
-			smartvectors.FromCompactWithRange(notZero[i], start, stop, size),
-		)
 	}
 
 	for j, bitCol := range bd.Bits {

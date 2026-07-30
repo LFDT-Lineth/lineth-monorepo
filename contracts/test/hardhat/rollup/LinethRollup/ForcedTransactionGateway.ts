@@ -47,7 +47,7 @@ import {
 } from "../../common/helpers";
 import { LastFinalizedState } from "../../common/types";
 
-describe("Linea Rollup contract: Forced Transactions", () => {
+describe("Lineth Rollup contract: Forced Transactions", () => {
   let linethRollup: TestLinethRollup;
   let addressFilter: AddressFilter;
   let forcedTransactionGateway: ForcedTransactionGateway;

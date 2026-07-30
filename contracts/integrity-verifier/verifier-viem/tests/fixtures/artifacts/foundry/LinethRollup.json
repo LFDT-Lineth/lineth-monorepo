@@ -693,7 +693,7 @@
           "type": "bytes8"
         }
       ],
-      "name": "LinethRollupVersionChanged",
+      "name": "LineaRollupVersionChanged",
       "type": "event"
     },
     {
@@ -2335,7 +2335,7 @@
           "type": "address"
         }
       ],
-      "name": "reinitializeLinethRollupV7",
+      "name": "reinitializeLineaRollupV7",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -2842,7 +2842,7 @@
     "pauseByType(uint8)": "e196fb5d",
     "pauseTypeStatuses(bytes32)": "cc5782f6",
     "periodInSeconds()": "c1dc0f07",
-    "reinitializeLinethRollupV7(tuple[],tuple[],tuple[],address)": "72b503b6",
+    "reinitializeLineaRollupV7(tuple[],tuple[],tuple[],address)": "72b503b6",
     "renounceRole(bytes32,address)": "36568abe",
     "reportNativeYield(uint256,address)": "4bb97413",
     "resetAmountUsedInPeriod()": "aea4f745",
