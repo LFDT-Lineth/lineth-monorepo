@@ -47,14 +47,13 @@ type Config struct {
 	ProverVersion string
 }
 
-const statusFailed = "failed"
-
 // failureResponseBody is used only when the filesystem adapter cannot read a
 // claimed request, before jobadapter.Runner can build its own failure response.
 type failureResponseBody struct {
-	JobID  string `json:"jobId"`
-	Status string `json:"status"`
-	Error  string `json:"error,omitempty"`
+	JobID       string                 `json:"jobId"`
+	Status      jobadapter.RunStatus   `json:"status"`
+	FailureCode jobadapter.FailureCode `json:"failureCode,omitempty"`
+	Error       string                 `json:"error,omitempty"`
 }
 
 // Adapter polls a filesystem request queue and sends each request to
@@ -171,7 +170,7 @@ func (a *Adapter) processRequest(ctx context.Context, name string) (bool, error)
 		_ = os.Rename(claimed, src) // best-effort: avoid stranding the claimed request
 		return false, err
 	}
-	if err := a.archive(claimed, name, runResult.ProofSucceeded); err != nil {
+	if err := a.archive(claimed, name, runResult.Status == jobadapter.RunStatusSuccess); err != nil {
 		_ = os.Rename(claimed, src) // best-effort: allow retry after archive infrastructure failures
 		return false, err
 	}
@@ -186,17 +185,22 @@ func (a *Adapter) run(ctx context.Context, name, claimed string) jobadapter.RunR
 
 	data, err := os.ReadFile(claimed) //nolint:gosec // claimed is a scanned entry under RequestsRootDir/requests
 	if err != nil {
-		return jobadapter.RunResult{ResponseBody: failureResponse(id, err)}
+		return jobadapter.RunResult{
+			ResponseBody: failureResponse(id, jobadapter.FailureCodeInternalError, err),
+			Status:       jobadapter.RunStatusFailed,
+			FailureCode:  jobadapter.FailureCodeInternalError,
+			Err:          err,
+		}
 	}
 	return a.runner.Run(ctx, id, data)
 }
 
-func failureResponse(id string, err error) failureResponseBody {
+func failureResponse(id string, code jobadapter.FailureCode, err error) failureResponseBody {
 	msg := ""
 	if err != nil {
 		msg = err.Error()
 	}
-	return failureResponseBody{JobID: id, Status: statusFailed, Error: msg}
+	return failureResponseBody{JobID: id, Status: jobadapter.RunStatusFailed, FailureCode: code, Error: msg}
 }
 
 func (a *Adapter) writeResponse(name string, resp any) error {

@@ -43,7 +43,9 @@ func TestRunner_RunSingleBlock(t *testing.T) {
 
 	result := runner.Run(context.Background(), "job-1", readFixture(t, "request_single_block.json"))
 
-	require.True(t, result.ProofSucceeded)
+	assert.Equal(t, RunStatusSuccess, result.Status)
+	assert.Empty(t, result.FailureCode)
+	require.NoError(t, result.Err)
 	require.Len(t, mock.jobs, 1)
 	job := mock.jobs[0]
 	assert.Equal(t, "job-1", job.ID)
@@ -68,12 +70,15 @@ func TestRunner_RunMalformedRequest(t *testing.T) {
 
 	result := runner.Run(context.Background(), "bad-job", []byte("not json"))
 
-	require.False(t, result.ProofSucceeded)
+	assert.Equal(t, RunStatusFailed, result.Status)
+	assert.Equal(t, FailureCodeInvalidInput, result.FailureCode)
+	require.Error(t, result.Err)
 	assert.Empty(t, mock.jobs)
 	failure, ok := result.ResponseBody.(failureResponseBody)
 	require.True(t, ok)
 	assert.Equal(t, "bad-job", failure.JobID)
-	assert.Equal(t, statusFailed, failure.Status)
+	assert.Equal(t, RunStatusFailed, failure.Status)
+	assert.Equal(t, FailureCodeInvalidInput, failure.FailureCode)
 	assert.Contains(t, failure.Error, "parsing JSON")
 }
 
@@ -84,11 +89,14 @@ func TestRunner_RunMultiBlockNotImplemented(t *testing.T) {
 
 	result := runner.Run(context.Background(), "multi-block-job", readFixture(t, "request_multi_block.json"))
 
-	require.False(t, result.ProofSucceeded)
+	assert.Equal(t, RunStatusFailed, result.Status)
+	assert.Equal(t, FailureCodeInvalidInput, result.FailureCode)
+	require.Error(t, result.Err)
 	assert.Empty(t, mock.jobs)
 	failure, ok := result.ResponseBody.(failureResponseBody)
 	require.True(t, ok)
 	assert.Equal(t, "multi-block-job", failure.JobID)
+	assert.Equal(t, FailureCodeInvalidInput, failure.FailureCode)
 	assert.Contains(t, failure.Error, "multi-block")
 }
 
@@ -112,11 +120,14 @@ func TestRunner_RunForcedTransactionsNotImplemented(t *testing.T) {
 	require.NoError(t, err)
 	result := runner.Run(context.Background(), "forced-tx-job", raw)
 
-	require.False(t, result.ProofSucceeded)
+	assert.Equal(t, RunStatusFailed, result.Status)
+	assert.Equal(t, FailureCodeInvalidInput, result.FailureCode)
+	require.Error(t, result.Err)
 	assert.Empty(t, mock.jobs)
 	failure, ok := result.ResponseBody.(failureResponseBody)
 	require.True(t, ok)
 	assert.Equal(t, "forced-tx-job", failure.JobID)
+	assert.Equal(t, FailureCodeInvalidInput, failure.FailureCode)
 	assert.Contains(t, failure.Error, "forced transactions")
 	assert.Contains(t, failure.Error, backend.ErrNotImplemented.Error())
 }
@@ -130,11 +141,14 @@ func TestRunner_RunProverFailure(t *testing.T) {
 
 	result := runner.Run(context.Background(), "prove-fail-job", readFixture(t, "request_single_block.json"))
 
-	require.False(t, result.ProofSucceeded)
+	assert.Equal(t, RunStatusFailed, result.Status)
+	assert.Equal(t, FailureCodeInternalError, result.FailureCode)
+	require.Error(t, result.Err)
 	require.Len(t, mock.jobs, 1)
 	failure, ok := result.ResponseBody.(failureResponseBody)
 	require.True(t, ok)
 	assert.Equal(t, "prove-fail-job", failure.JobID)
+	assert.Equal(t, FailureCodeInternalError, failure.FailureCode)
 	assert.Contains(t, failure.Error, "prove boom")
 }
 
@@ -147,11 +161,14 @@ func TestRunner_RunProverFailureWithoutError(t *testing.T) {
 
 	result := runner.Run(context.Background(), "prove-fail-job", readFixture(t, "request_single_block.json"))
 
-	require.False(t, result.ProofSucceeded)
+	assert.Equal(t, RunStatusFailed, result.Status)
+	assert.Equal(t, FailureCodeInternalError, result.FailureCode)
+	require.Error(t, result.Err)
 	require.Len(t, mock.jobs, 1)
 	failure, ok := result.ResponseBody.(failureResponseBody)
 	require.True(t, ok)
 	assert.Equal(t, "prove-fail-job", failure.JobID)
+	assert.Equal(t, FailureCodeInternalError, failure.FailureCode)
 	assert.Contains(t, failure.Error, "prover returned status failed")
 }
 

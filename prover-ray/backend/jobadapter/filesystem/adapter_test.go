@@ -273,7 +273,8 @@ func TestAdapter_ProveFailure(t *testing.T) {
 	assert.Equal(t, 1, n)
 
 	resp := readFailureResponse(t, root, singleReqName)
-	assert.Equal(t, "failed", resp.Status)
+	assert.Equal(t, jobadapter.RunStatusFailed, resp.Status)
+	assert.Equal(t, jobadapter.FailureCodeInternalError, resp.FailureCode)
 	assert.Contains(t, resp.Error, "prove boom")
 
 	assert.NoFileExists(t, filepath.Join(root, "requests", singleReqName))
@@ -293,7 +294,8 @@ func TestAdapter_MalformedRequest(t *testing.T) {
 	assert.Empty(t, mock.jobs, "jobadapter.Prover must not be called for a malformed request")
 
 	resp := readFailureResponse(t, root, "bad.json")
-	assert.Equal(t, "failed", resp.Status)
+	assert.Equal(t, jobadapter.RunStatusFailed, resp.Status)
+	assert.Equal(t, jobadapter.FailureCodeInvalidInput, resp.FailureCode)
 	assert.FileExists(t, filepath.Join(root, "requests-done", "bad.json.failure"))
 }
 
@@ -323,7 +325,8 @@ func TestAdapter_ForcedTransactions_NotImplemented(t *testing.T) {
 	assert.Empty(t, mock.jobs, "forced transactions must not be dropped before proving")
 
 	resp := readFailureResponse(t, root, singleReqName)
-	assert.Equal(t, "failed", resp.Status)
+	assert.Equal(t, jobadapter.RunStatusFailed, resp.Status)
+	assert.Equal(t, jobadapter.FailureCodeInvalidInput, resp.FailureCode)
 	assert.Contains(t, resp.Error, "forced transactions")
 	assert.Contains(t, resp.Error, backend.ErrNotImplemented.Error())
 }
@@ -341,7 +344,8 @@ func TestAdapter_MultiBlock(t *testing.T) {
 	assert.Empty(t, mock.jobs, "multi-block request must not reach the jobadapter.Prover")
 
 	resp := readFailureResponse(t, root, "1000501-1000502-getZkL2ExecutionProofV1.json")
-	assert.Equal(t, "failed", resp.Status)
+	assert.Equal(t, jobadapter.RunStatusFailed, resp.Status)
+	assert.Equal(t, jobadapter.FailureCodeInvalidInput, resp.FailureCode)
 	assert.FileExists(t, filepath.Join(root, "requests-done", "1000501-1000502-getZkL2ExecutionProofV1.json.failure"))
 }
 

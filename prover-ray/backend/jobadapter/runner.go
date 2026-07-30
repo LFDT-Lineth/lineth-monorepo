@@ -28,12 +28,33 @@ type Runner struct {
 	proverVersion string
 }
 
+// RunStatus is the normalized outcome status for one request body.
+type RunStatus string
+
+const (
+	RunStatusSuccess RunStatus = "success"
+	RunStatusFailed  RunStatus = "failed"
+)
+
+// FailureCode classifies failed outcomes in the same style as the future
+// gateway result flow. Filesystem responses are still provisional, but keeping
+// a code here avoids reducing failures to a bool.
+type FailureCode string
+
+const (
+	FailureCodeOOM           FailureCode = "oom"
+	FailureCodeInternalError FailureCode = "internal_error"
+	FailureCodeInvalidInput  FailureCode = "invalid_input"
+)
+
 // RunResult is the outcome for one request body. Callers write ResponseBody
-// back to their queue and use ProofSucceeded to choose the success or failure
-// archive suffix.
+// back to their queue and use Status/FailureCode for protocol-specific result
+// handling such as archive suffixes or future gateway result submission.
 type RunResult struct {
-	ResponseBody   any
-	ProofSucceeded bool
+	ResponseBody any
+	Status       RunStatus
+	FailureCode  FailureCode
+	Err          error
 }
 
 // NewRunner creates the reusable request-to-proof runner.
@@ -52,19 +73,19 @@ func NewRunner(prover Prover, proverVersion string) (*Runner, error) {
 func (r *Runner) Run(ctx context.Context, id string, data []byte) RunResult {
 	req, err := DecodeRequest(data)
 	if err != nil {
-		return RunResult{ResponseBody: failureResponse(id, err)}
+		return failedRunResult(id, FailureCodeInvalidInput, err)
 	}
 	if len(req.Payloads) != 1 {
-		return RunResult{ResponseBody: failureResponse(id, fmt.Errorf(
+		return failedRunResult(id, FailureCodeInvalidInput, fmt.Errorf(
 			"multi-block requests are not supported (got %d payloads): %w",
-			len(req.Payloads), backend.ErrNotImplemented))}
+			len(req.Payloads), backend.ErrNotImplemented))
 	}
 
 	payload := req.Payloads[0]
 	if len(payload.ForcedTransactions) != 0 {
-		return RunResult{ResponseBody: failureResponse(id, fmt.Errorf(
+		return failedRunResult(id, FailureCodeInvalidInput, fmt.Errorf(
 			"forced transactions are not supported (got %d): %w",
-			len(payload.ForcedTransactions), backend.ErrNotImplemented))}
+			len(payload.ForcedTransactions), backend.ErrNotImplemented))
 	}
 
 	result := r.prover.Prove(ctx, backend.Job{
@@ -79,10 +100,19 @@ func (r *Runner) Run(ctx context.Context, id string, data []byte) RunResult {
 		if err == nil {
 			err = fmt.Errorf("prover returned status %s", result.Status)
 		}
-		return RunResult{ResponseBody: failureResponse(id, err)}
+		return failedRunResult(id, FailureCodeInternalError, err)
 	}
 	return RunResult{
-		ResponseBody:   newExecutionResponse(result, payload.BlockNumber, r.proverVersion),
-		ProofSucceeded: true,
+		ResponseBody: newExecutionResponse(result, payload.BlockNumber, r.proverVersion),
+		Status:       RunStatusSuccess,
+	}
+}
+
+func failedRunResult(id string, code FailureCode, err error) RunResult {
+	return RunResult{
+		ResponseBody: failureResponse(id, code, err),
+		Status:       RunStatusFailed,
+		FailureCode:  code,
+		Err:          err,
 	}
 }

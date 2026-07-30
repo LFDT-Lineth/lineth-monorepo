@@ -7,8 +7,6 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
 )
 
-const statusFailed = "failed"
-
 // executionResponse is the success response body for getZkL2ExecutionProofV1.
 // It mirrors proof_io_v1.py::encode_response structurally. The adapter maps
 // proof bytes and publicInputs from backend.Result. Those values are
@@ -46,9 +44,10 @@ type executionPublicInputs struct {
 // reference-defined coordinator response. Treat it as provisional until the
 // coordinator/backend failure semantics are agreed.
 type failureResponseBody struct {
-	JobID  string `json:"jobId"`
-	Status string `json:"status"`
-	Error  string `json:"error,omitempty"`
+	JobID       string      `json:"jobId"`
+	Status      RunStatus   `json:"status"`
+	FailureCode FailureCode `json:"failureCode,omitempty"`
+	Error       string      `json:"error,omitempty"`
 }
 
 func newExecutionResponse(result backend.Result, startBlockNumber uint64, proverVersion string) executionResponse {
@@ -84,12 +83,12 @@ func publicInputs(pi backend.PublicInputs) executionPublicInputs {
 	}
 }
 
-func failureResponse(id string, err error) failureResponseBody {
+func failureResponse(id string, code FailureCode, err error) failureResponseBody {
 	msg := ""
 	if err != nil {
 		msg = err.Error()
 	}
-	return failureResponseBody{JobID: id, Status: statusFailed, Error: msg}
+	return failureResponseBody{JobID: id, Status: RunStatusFailed, FailureCode: code, Error: msg}
 }
 
 func hexHash(v [32]byte) string {
