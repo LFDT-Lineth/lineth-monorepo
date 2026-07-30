@@ -83,7 +83,7 @@
     },
     {
       "type": "function",
-      "name": "reinitializeLinethRollupV7",
+      "name": "reinitializeLineaRollupV7",
       "inputs": [
         { "name": "_yieldManager", "type": "address", "internalType": "address" },
         { "name": "_operators", "type": "address[]", "internalType": "address[]" },
@@ -150,7 +150,7 @@
     "submitData(bytes,bytes32,bytes,bytes)": "f5a5b0a8",
     "finalizeBlocks(bytes,uint256,(bytes,bytes32,bytes32,uint256))": "f5c5ad83",
     "setVerifierAddress(address,uint256)": "8f9a8f0e",
-    "reinitializeLinethRollupV7(address,address[],address[])": "a1b4c8f5"
+    "reinitializeLineaRollupV7(address,address[],address[])": "a1b4c8f5"
   },
   "ast": {},
   "metadata": "{}"

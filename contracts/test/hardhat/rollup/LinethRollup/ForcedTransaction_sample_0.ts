@@ -13,7 +13,7 @@ import {
 import { buildEip1559Transaction } from "../../common/helpers";
 import { getAccountsFixture, deployLinethRollupFixture, deployMimcFixture, deployAddressFilter } from "../helpers";
 
-describe.skip("Linea Rollup contract: Forced Transactions", () => {
+describe.skip("Lineth Rollup contract: Forced Transactions", () => {
   const MAX_GAS_LIMIT = 10_000_000n;
   const CHAIN_ID = 789979n;
 

@@ -89,7 +89,7 @@ export const ERC7201_NAMESPACE_PREFIX = "linea.storage.";
 export const KNOWN_NAMESPACES = {
   // Linea namespaces
   YIELD_MANAGER: "linea.storage.YieldManagerStorage",
-  LINETH_ROLLUP_YIELD_EXTENSION: "linea.storage.LinethRollupYieldExtensionStorage",
+  LINETH_ROLLUP_YIELD_EXTENSION: "linea.storage.LineaRollupYieldExtensionStorage",
   // OpenZeppelin v5 namespaces
   OZ_INITIALIZABLE: "openzeppelin.storage.Initializable",
   OZ_ACCESS_CONTROL: "openzeppelin.storage.AccessControl",

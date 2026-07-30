@@ -45,10 +45,10 @@ Environment variables follow a consistent naming pattern:
 
 **Shared per layer:**
 
-- `L1_SECURITY_COUNCIL` — shared across all L1 contracts (LinEth Rollup, Validium, Token Bridge L1, RecoverFunds, Yield Manager)
+- `L1_SECURITY_COUNCIL` — shared across all L1 contracts (Lineth Rollup, Validium, Token Bridge L1, RecoverFunds, Yield Manager)
 - `L2_SECURITY_COUNCIL` — shared across all L2 contracts (L2 Message Service, Rollup Revenue Vault, Token Bridge L2)
 
-**Shared L1 base (LinEth Rollup & Validium):** `INITIAL_L2_STATE_ROOT_HASH`, `INITIAL_L2_BLOCK_NUMBER`, `L2_GENESIS_TIMESTAMP` — common to both products via shared contract base
+**Shared L1 base (Lineth Rollup & Validium):** `INITIAL_L2_STATE_ROOT_HASH`, `INITIAL_L2_BLOCK_NUMBER`, `L2_GENESIS_TIMESTAMP` — common to both products via shared contract base
 
 **Product-specific:** `LINETH_ROLLUP_OPERATORS`, `LINETH_ROLLUP_RATE_LIMIT_*`, `VALIDIUM_OPERATORS`, `VALIDIUM_RATE_LIMIT_*`
 

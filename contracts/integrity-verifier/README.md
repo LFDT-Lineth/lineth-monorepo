@@ -292,7 +292,7 @@ Requires a `schemaFile` that defines the storage layout.
     "schemaFile": "../schemas/lineth-rollup.json",
     "storagePaths": [
       {
-        "path": "LinethRollupYieldExtensionStorage:_yieldManager",
+        "path": "LineaRollupYieldExtensionStorage:_yieldManager",
         "expected": "0xafeB487DD3E3Cb0342e8CF0215987FfDc9b72c9b"
       },
       {
@@ -330,7 +330,7 @@ Verify multiple variables within an ERC-7201 namespace. **Best for:** batch veri
   "stateVerification": {
     "namespaces": [
       {
-        "id": "linea.storage.YieldManager",
+        "id": "linea.storage.YieldManagerStorage",
         "variables": [
           { "offset": 0, "type": "address", "name": "owner", "expected": "0x..." },
           { "offset": 1, "type": "uint256", "name": "totalDeposits", "expected": "0" },
@@ -345,7 +345,7 @@ Verify multiple variables within an ERC-7201 namespace. **Best for:** batch veri
 **Fields:**
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `id` | string | ✓ | ERC-7201 namespace ID (e.g., `linea.storage.YieldManager`) |
+| `id` | string | ✓ | ERC-7201 namespace ID (e.g., `linea.storage.YieldManagerStorage`) |
 | `variables` | array | ✓ | Variables to verify |
 | `variables[].offset` | number | ✓ | Slot offset from namespace base (0, 1, 2, ...) |
 | `variables[].type` | string | ✓ | Solidity type |
@@ -732,7 +732,7 @@ const { schema } = generateSchema([{ source, fileName }]);
 The generator recognizes ERC-7201 namespace annotations in NatSpec comments:
 
 ```solidity
-/// @custom:storage-location erc7201:linea.storage.YieldManager
+/// @custom:storage-location erc7201:linea.storage.YieldManagerStorage
 struct YieldManagerStorage {
     address yieldProvider;
     uint256 totalYield;
@@ -746,8 +746,8 @@ This produces a schema with computed `baseSlot` for the namespace:
 {
   "structs": {
     "YieldManagerStorage": {
-      "namespace": "linea.storage.YieldManager",
-      "baseSlot": "0x594904a11ae10ad7613c91ac3c92c7c3bba397934d377ce6d3e0aaffbc17df00",
+      "namespace": "linea.storage.YieldManagerStorage",
+      "baseSlot": "0xdc1272075efdca0b85fb2d76cbb5f26d954dc18e040d6d0b67071bd5cbd04300",
       "fields": {
         "yieldProvider": { "slot": 0, "type": "address" },
         "totalYield": { "slot": 1, "type": "uint256" },

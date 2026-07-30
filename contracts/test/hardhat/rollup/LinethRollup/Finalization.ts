@@ -50,7 +50,7 @@ import {
 } from "../../common/helpers";
 import { AggregatedProofData } from "../../common/types";
 
-describe("Linea Rollup contract: Finalization", () => {
+describe("Lineth Rollup contract: Finalization", () => {
   let linethRollup: TestLinethRollup;
   let addressFilter: AddressFilter;
 

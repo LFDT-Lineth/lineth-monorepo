@@ -9,10 +9,10 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
-	"github.com/consensys/go-corset/pkg/ir/air"
-	"github.com/consensys/go-corset/pkg/schema"
-	"github.com/consensys/go-corset/pkg/schema/register"
-	"github.com/consensys/go-corset/pkg/util/field/koalabear"
+	"github.com/LFDT-Lineth/zkc/pkg/ir/air"
+	"github.com/LFDT-Lineth/zkc/pkg/schema"
+	"github.com/LFDT-Lineth/zkc/pkg/schema/register"
+	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
 )
 
 const (
@@ -118,7 +118,11 @@ func (s *schemaScanner) scanColumns() {
 			// issue, care must be taken to ensure it really happens (e.g.
 			// through testing negative cases which should cause constraint
 			// failures).
-			logrus.Panic("zkcdriver: add support for native modules!")
+
+			if err := s.defineNativeModule(modDecl); err != nil {
+				logrus.Panicf("zkcdriver: failed to define native module %s: %v", modDecl.Name(), err)
+			}
+			continue
 		}
 
 		// moduleName is the name of the module as given by the arithmetization

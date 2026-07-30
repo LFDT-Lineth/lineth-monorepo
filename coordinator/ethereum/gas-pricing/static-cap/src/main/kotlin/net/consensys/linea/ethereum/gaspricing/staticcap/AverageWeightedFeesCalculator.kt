@@ -16,14 +16,15 @@ open class AverageWeightedFeesCalculator(
     if (feeList.isEmpty()) {
       return 0.0
     }
-    val ratioList = if (ratioListFetcher(feeHistory).sumOf { it } == 0.0) {
+    val ratios = ratioListFetcher(feeHistory)
+    val ratioList = if (ratios.sumOf { it } == 0.0) {
       log.warn(
         "RatioSum is zero for all l1Blocks={}. Will fallback to Simple Average.",
         feeHistory.blocksRange().toIntervalString(),
       )
-      List(ratioListFetcher(feeHistory).size) { 1.0 }
+      List(ratios.size) { 1.0 }
     } else {
-      ratioListFetcher(feeHistory)
+      ratios
     }
     val weightedFeesSum = feeList.zip(ratioList).sumOf { it.first.toDouble() * it.second }
     val ratioSum = ratioList.sumOf { it }
