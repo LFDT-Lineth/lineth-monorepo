@@ -141,6 +141,10 @@ func Compile(sys *wiop.System) {
 		gp := sys.NewGrandProduct(compCtx.Childf("handle-%s", h), nums, dens)
 		cellByHandle[h] = gp.Result
 
+		// Expose this handle's accumulator as a public input, in the sorted
+		// handle order of this loop (fixed at compile time) — so MessageBus[i] refers to the same handle
+		// on every shard, which is what lets the cross-shard layer check by
+		// position.
 		sys.PublicInputs.Register(wiop.MessageBusPI, gp.Result)
 
 	}

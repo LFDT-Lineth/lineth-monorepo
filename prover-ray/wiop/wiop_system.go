@@ -65,6 +65,7 @@ func NewSystemf(msg string, args ...any) *System {
 	sys := &System{
 		Context:          ctx,
 		PrecomputedRound: &PrecomputedRound{Round: Round{system: nil}},
+		PublicInputs:     &PublicInputLayout{},
 	}
 
 	// Wire the back-reference after the System pointer is stable.
