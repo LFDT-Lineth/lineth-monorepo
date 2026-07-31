@@ -63,6 +63,44 @@ fn d1Leaf(c: field.Element) tree.Octuplet {
     return pl.hashRowOpening(row);
 }
 
+// Regression for the D=1 (numRounds==0) Fiat-Shamir schedule. prover-ray's
+// `pcs.go verify` squeezes the final fold challenge UNCONDITIONALLY (pcs.go:331),
+// even when there are no round roots, so for D=1 the query positions are drawn
+// from a transcript that has absorbed: [one discarded squeeze] → final_poly.
+// This asserts `deriveChallenges` reproduces that exact sequence: the derived
+// position must match a manual replay that performs the extra squeeze. Without
+// the unconditional squeeze the two would diverge, silently desynchronising the
+// verifier-ray positions from the reference.
+test "verify: D=1 challenge schedule squeezes the final alpha (matches prover-ray)" {
+    const fiat_shamir = verifier_ray.crypto.fiat_shamir;
+
+    const final_poly = [_]ext.Ext{ext.Ext.zero()};
+    const proof = verify.Proof{
+        .input_queries = &.{},
+        .fri = .{
+            .round_roots = &.{}, // D=1: no fold rounds
+            .final_poly = &final_poly,
+            .running_queries = &.{},
+        },
+    };
+
+    // What deriveChallenges (via replayWithTranscript) produces.
+    var t_actual = fiat_shamir.Transcript.init();
+    const coins = verify.replayWithTranscript(D1System, &t_actual, proof);
+
+    // Manual reference: the prover-ray D=1 sequence — one unconditional final
+    // squeeze (discarded, since there is no fold), then absorb final_poly, then
+    // draw the position(s) in [0, codeword_size).
+    var t_ref = fiat_shamir.Transcript.init();
+    _ = t_ref.randomExt(); // pcs.go:331 — squeezed even with zero round roots
+    t_ref.updateExt(&final_poly);
+    const codeword_size: usize = @as(usize, 1) << D1System.params.log_codeword_size;
+    var want: [1]usize = undefined;
+    t_ref.randomManyIntegers(&want, codeword_size);
+
+    try std.testing.expectEqual(want[0], coins.positions[0]);
+}
+
 test "verify: accepts a valid D=1 proof, rejects mutations" {
     const c = le(5);
     const zeta = e(777);

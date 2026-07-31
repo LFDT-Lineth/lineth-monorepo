@@ -114,7 +114,13 @@ func BuildVanishingSystem(sys *wiop.System, routing CoinRouting) (VanishingSyste
 	out := VanishingSystem{
 		SourceName: sys.Context.Path(),
 	}
-	dynamicIndices := map[*wiop.Module]int{}
+	// DynamicIndex must index the runtime module_sizes slice on the SAME ordering
+	// the Fiat-Shamir absorb schedule uses (ascending System.Modules order), not
+	// the order dynamic modules happen to be discovered while walking verifier
+	// actions. Otherwise a module's absorbed size and the size vanishing.verify
+	// reads for it would be different slots. Shared source of truth:
+	// DynamicModuleRanks (see coin_routing.go).
+	dynamicRanks := DynamicModuleRanks(sys)
 
 	for _, round := range sys.Rounds {
 		for _, action := range round.VerifierActions {
@@ -125,12 +131,7 @@ func BuildVanishingSystem(sys *wiop.System, routing CoinRouting) (VanishingSyste
 			moduleRef := verifier.Module
 			module := VanishingModule{SourceName: moduleRef.Context.Label, WitnessClaimOffset: out.TotalWitnessClaims}
 			if moduleRef.IsDynamic() {
-				idx, ok := dynamicIndices[moduleRef]
-				if !ok {
-					idx = len(dynamicIndices)
-					dynamicIndices[moduleRef] = idx
-				}
-				module.Size = ModuleSize{Dynamic: true, DynamicIndex: idx}
+				module.Size = ModuleSize{Dynamic: true, DynamicIndex: dynamicRanks[moduleRef]}
 			} else {
 				module.Size = ModuleSize{StaticSize: moduleRef.Size()}
 			}
@@ -194,7 +195,7 @@ func BuildVanishingSystem(sys *wiop.System, routing CoinRouting) (VanishingSyste
 		}
 	}
 
-	out.DynamicModuleCount = len(dynamicIndices)
+	out.DynamicModuleCount = len(dynamicRanks)
 	return out, nil
 }
 

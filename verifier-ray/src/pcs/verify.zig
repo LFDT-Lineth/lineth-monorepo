@@ -343,20 +343,29 @@ fn deriveChallenges(
     // The fold-alpha buffer is comptime-sized by the System's maxRounds. When a
     // protocol never folds (D=1, maxRounds==0) the buffer is a [0]ext.Ext, and
     // even a runtime-dead `ch.fold_alphas[i]` fails to compile ("cannot index
-    // into empty array"). `cap` is comptime, so this whole block is elided from
-    // the D=1 instantiation rather than analyzed.
+    // into empty array"). `cap` is comptime, so the round loop below is elided
+    // from the D=1 instantiation rather than analyzed.
     const cap = @typeInfo(@TypeOf(ch.fold_alphas)).array.len;
     if (cap > 0) {
         // One challenge per intermediate layer root, absorbing the root between
-        // squeezes; then the final round's challenge, with no root after it.
+        // squeezes.
         for (proof.fri.round_roots, 0..) |root, i| {
             ch.fold_alphas[i] = transcript.randomExt();
             transcript.updateElements(&root);
         }
-        if (num_rounds > 0) {
-            ch.fold_alphas[num_rounds - 1] = transcript.randomExt();
-        }
     }
+
+    // The final round's challenge is squeezed with no root after it. prover-ray
+    // (`wiop/compilers/pcs/pcs.go` `verify`, line 331) squeezes this
+    // UNCONDITIONALLY — including the D=1 (num_rounds == 0) case, where the round
+    // loop above is empty. That squeeze mutates the transcript (via the safeguard
+    // update after every squeeze) BEFORE `final_poly` is absorbed and the query
+    // positions are drawn, so skipping it in D=1 would desynchronise the
+    // positions from the reference. Squeeze it always; keep it only when a fold
+    // slot exists (for D=1 there is no fold, so the value is discarded — but the
+    // transcript side effect is what matters).
+    const final_alpha = transcript.randomExt();
+    if (cap > 0 and num_rounds > 0) ch.fold_alphas[num_rounds - 1] = final_alpha;
 
     transcript.updateExt(proof.fri.final_poly);
 

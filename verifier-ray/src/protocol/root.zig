@@ -1,7 +1,8 @@
 const types = @import("types.zig");
 const fiat_shamir = @import("../crypto/fiat_shamir.zig");
+const field = @import("../field/koalabear.zig");
 
-pub const Error = error{InvalidRoundCount};
+pub const Error = error{ InvalidRoundCount, MissingDynamicModuleSize };
 
 /// Raised when a sub-verifier's (comptime) cell reference points outside the
 /// (runtime) round messages a proof actually carries. The `(round, index)`
@@ -32,6 +33,18 @@ pub const Spec = struct {
     round_coin_offsets: []const usize,
     /// Total number of coins across all rounds; length of `all_coins`.
     total_round_coins: usize,
+    /// The `module_sizes` slots to absorb into the transcript at the START of
+    /// every round, in ascending `System.Modules` order — the exact order and
+    /// value prover-ray's `AdvanceRound` feeds each dynamic module's size into
+    /// Fiat-Shamir (`wiop/wiop_runtime.go` `AdvanceRound`). Binding the sizes
+    /// into the transcript makes every coin — zeta, fold alphas, query positions
+    /// — depend on the claimed `n`, closing the gap where a prover could reuse an
+    /// opening under a different dynamic size. Empty for a fully-static protocol.
+    ///
+    /// Each entry is an index into the runtime `module_sizes` slice. Distinct
+    /// from the vanishing `DynamicIndex`: the slot list is the FS absorb schedule,
+    /// codegen emits both from the same ascending order so they coincide.
+    dynamic_size_slots: []const usize = &.{},
 };
 
 /// All protocol-level data derived from a proof by the higher-level verifier.
@@ -80,6 +93,7 @@ pub fn replayWithTranscript(
     transcript: *fiat_shamir.Transcript,
     comptime spec: Spec,
     rounds: []const RoundMessage,
+    module_sizes: []const usize,
 ) Error![spec.total_round_coins]Coin {
     comptime {
         if (spec.round_coin_counts.len == 0)
@@ -106,6 +120,15 @@ pub fn replayWithTranscript(
 
     inline for (1..spec.round_coin_counts.len) |round_index| {
         const message = rounds[round_index - 1];
+        // Dynamic module sizes are absorbed FIRST each round, before the round's
+        // commitments/columns/cells — byte-for-byte prover-ray's `AdvanceRound`
+        // (sizes, then commitment, then columns, then cells). Absorbing here
+        // (rather than once, up front) preserves the transcript state at every
+        // squeeze point, so the per-round coins match the reference.
+        for (spec.dynamic_size_slots) |slot| {
+            if (slot >= module_sizes.len) return Error.MissingDynamicModuleSize;
+            transcript.updateElement(field.Element.init(@intCast(module_sizes[slot])));
+        }
         for (message.columns) |entry| {
             switch (entry) {
                 .oracle_commitment => |c| transcript.updateElements(&c),
@@ -125,7 +148,11 @@ pub fn replayWithTranscript(
 /// Coin-only convenience over `replayWithTranscript` for callers that do not
 /// continue the transcript (every sub-verifier except a transcript-continuing
 /// one like PCS). Uses a throwaway local transcript.
-pub fn replay(comptime spec: Spec, rounds: []const RoundMessage) Error![spec.total_round_coins]Coin {
+pub fn replay(
+    comptime spec: Spec,
+    rounds: []const RoundMessage,
+    module_sizes: []const usize,
+) Error![spec.total_round_coins]Coin {
     var transcript = fiat_shamir.Transcript.init();
-    return replayWithTranscript(&transcript, spec, rounds);
+    return replayWithTranscript(&transcript, spec, rounds, module_sizes);
 }

@@ -77,9 +77,29 @@ func TestWriteSpecZig(t *testing.T) {
 		".round_coin_counts = &[_]usize{ 0, 1, 1 },",
 		".round_coin_offsets = &[_]usize{ 0, 0, 1 },",
 		".total_round_coins = 2,",
+		// A fully-static protocol emits an empty absorb schedule.
+		".dynamic_size_slots = &[_]usize{  },",
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("generated spec missing %q\n--- got ---\n%s", want, out)
 		}
+	}
+}
+
+func TestWriteSpecZigEmitsDynamicSizeSchedule(t *testing.T) {
+	routing := CoinRouting{
+		RoundCoinCounts:  []int{0, 1},
+		RoundCoinOffsets: []int{0, 0},
+		TotalRoundCoins:  1,
+		DynamicSizeSlots: []int{0, 1, 2},
+	}
+
+	var buf bytes.Buffer
+	if err := WriteSpecZig(&buf, routing); err != nil {
+		t.Fatalf("WriteSpecZig() error = %v", err)
+	}
+
+	if want := ".dynamic_size_slots = &[_]usize{ 0, 1, 2 },"; !strings.Contains(buf.String(), want) {
+		t.Fatalf("generated spec missing %q\n--- got ---\n%s", want, buf.String())
 	}
 }
