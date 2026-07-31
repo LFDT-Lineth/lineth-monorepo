@@ -44,8 +44,6 @@ fn is_equal_affine_secp256k1(Px:u256, Py:u256, Qx:u256, Qy:u256) -> (res:u1) {
     }
 }
 
-// TODO: we should implement subgroup check as well
-
 // ------ conversion methods -------
 
 fn affine_to_projective_secp256k1(x:u256, y:u256) -> (X:u256, Y:u256, Z:u256) {
