@@ -37,16 +37,16 @@ func (s *schemaScanner) defineNativeModule(mod schema.Module[koalabear.Element])
 	}
 	if strings.HasPrefix(modName, expmodHint) {
 		// expmod_unconstrained_* is unconstrained. Though, we still need to register the columns so that lookups would work.
-		s.defineNativeUnconstrained(mod)
+		s.defineNativeExpUnconstrained(mod)
 		return nil
 	}
 	return fmt.Errorf("unknown native module %s", modName)
 }
 
-// defineNativeUnconstrained registers a wiop column for every register of a
+// defineNativeExpUnconstrained registers a wiop column for known register of a
 // native module without adding any constraint, leaving the module genuinely
 // unconstrained while still giving callers a valid column to reference.
-func (s *schemaScanner) defineNativeUnconstrained(mod schema.Module[koalabear.Element]) {
+func (s *schemaScanner) defineNativeExpUnconstrained(mod schema.Module[koalabear.Element]) {
 	modName := mod.Name().String()
 
 	moduleWIOP := s.Sys.NewDynamicModule(
