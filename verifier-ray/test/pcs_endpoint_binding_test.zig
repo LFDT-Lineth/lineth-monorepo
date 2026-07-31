@@ -29,7 +29,14 @@ const verifier = verifier_ray.verifier;
 // Case index 49 is the "SingleFractionAllOnes" LogDerivativeSum scenario; its
 // round-1 cells are [result, z_final] and its expression DAG binds the z_final
 // cell to column_claim 1 (the PCS-authenticated Z column) via L_3 (last row).
-const case_index: usize = 49;
+const case_index: usize = 29;
+
+// Fail loudly if fixture regeneration shifts the case ordering, rather than
+// silently exercising the wrong scenario.
+comptime {
+    if (!std.mem.eql(u8, vf.get(case_index).name, "SingleFractionAllOnes"))
+        @compileError("pcs_endpoint_binding_test: case_index no longer points at SingleFractionAllOnes; update it");
+}
 
 // spec/systems are comptime protocol descriptions; bind them as comptime
 // constants (verifier.verify takes them as comptime params). The proof is a

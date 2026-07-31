@@ -655,12 +655,11 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 			return nil, nil, err
 		}
 	}
-	for _, factory := range wioptest.LocalVanishingScenarios() {
-		sc := factory()
-		if err := add("LocalVanishing", sc.Name, sc.Sys, sc.AssignHonest, sc.AssignInvalid); err != nil {
-			return nil, nil, err
-		}
-	}
+	// LocalVanishing is intentionally NOT generated: at the verifier level every
+	// LocalVanishing scenario reduces to a vanishing System whose shape (module
+	// count, dynamic modules, batch count, empty logderiv) is a strict subset of
+	// the Vanishing set above. The local-vanishing *compiler* is exercised by
+	// prover-ray's own tests; the verifier sees nothing new here.
 	for _, factory := range wioptest.LogDerivativeSumCompilerScenarios() {
 		sc := factory()
 		if err := add("LogDerivativeSumCompiler", sc.Name, sc.Sys, sc.AssignWitness, nil); err != nil {
@@ -673,8 +672,15 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 			return nil, nil, err
 		}
 	}
+	// RangeCheck reduces to the same verifier shapes as Lookup (logderiv + ≥2
+	// modules + a precomputed batch), except for a 3-module / 4-batch layout that
+	// Lookup does not produce. Keep exactly one scenario (DistinctBounds) to cover
+	// that unique shape and drop the rest as verifier-redundant.
 	for _, factory := range wioptest.RangeCheckCompilerScenarios() {
 		sc := factory()
+		if sc.Name != "DistinctBounds" {
+			continue
+		}
 		if err := add("RangeCheckCompiler", sc.Name, sc.Sys, sc.AssignWitness, nil); err != nil {
 			return nil, nil, err
 		}
@@ -1275,6 +1281,18 @@ func writeVerifyFailingInputSwitch(out *bytes.Buffer, cases []fixtureCase) {
 		}
 	}
 	fmt.Fprintln(out, "        else => @compileError(\"unknown verifier fixture case index\"),")
+	fmt.Fprintln(out, "    };")
+	fmt.Fprintln(out, "}")
+	fmt.Fprintln(out)
+
+	// hasFailing lets a comptime sweep skip getInputFailing for cases that have
+	// no failing input (calling it there is a @compileError).
+	fmt.Fprintln(out, "pub fn hasFailing(comptime index: usize) bool {")
+	fmt.Fprintln(out, "    return switch (index) {")
+	for i, tc := range cases {
+		fmt.Fprintf(out, "        %d => %t,\n", i, tc.invalid != nil)
+	}
+	fmt.Fprintln(out, "        else => false,")
 	fmt.Fprintln(out, "    };")
 	fmt.Fprintln(out, "}")
 }

@@ -1,20 +1,57 @@
 const std = @import("std");
 const verifier_ray = @import("verifier_ray");
+const vf = @import("test_verify");
 
 const protocol = verifier_ray.protocol;
 const verifier = verifier_ray.verifier;
 const vanishing = verifier_ray.query.vanishing;
 const pcs = verifier_ray.query.pcs;
-const fri = verifier_ray.query.fri;
-const fiat_shamir = verifier_ray.crypto.fiat_shamir;
 const ext = verifier_ray.field.koalabear_ext;
-const poseidon2 = verifier_ray.crypto.poseidon2;
 
-// Note: there is no "empty protocol" verify test anymore — PCS is mandatory, so
-// `verify` always indexes a zeta coin, which a zero-coin spec cannot provide.
-// replayWithTranscript's own shape checks are covered by transcript_test.zig and
-// the round-count test below (which errors before PCS runs).
+// Tests for `verifier.verify`, the top-level entry point. Two layers:
+//   1. The end-to-end sweep below drives every generated fixture case through
+//      the full compileFullPipeline (Go, gen-time) → real proof → serialized
+//      verify.zig → verifier.verify chain. Honest proofs must verify; tampered
+//      ones must be rejected.
+//   2. The round-count guard needs no fixture: `verify` must reject a proof
+//      whose round count disagrees with the compiled spec, during transcript
+//      replay (before PCS runs).
+//
+// (The PCS-authenticated challenge derivation `verify` relies on is pinned
+// separately in pcs_test.zig.)
 
+test "all fixture cases: honest proofs verify end-to-end" {
+    inline for (0..vf.case_count) |i| {
+        const case = comptime vf.get(i);
+        verifier.verify(case.spec, case.systems, vf.getInput(i)) catch |err| {
+            std.debug.print("case {d} ({s}) unexpectedly failed: {s}\n", .{ i, case.name, @errorName(err) });
+            return err;
+        };
+    }
+}
+
+test "all fixture cases: tampered proofs are rejected" {
+    var checked: usize = 0;
+    inline for (0..vf.case_count) |i| {
+        if (comptime vf.hasFailing(i)) {
+            checked += 1;
+            const case = comptime vf.get(i);
+            const proof = vf.getInputFailing(i);
+            const err = verifier.verify(case.spec, case.systems, proof);
+            if (!std.meta.isError(err)) {
+                std.debug.print("case {d} ({s}) accepted a tampered proof\n", .{ i, case.name });
+                return error.TamperedProofAccepted;
+            }
+        }
+    }
+    // Guard against the sweep silently checking nothing (e.g. if hasFailing
+    // regressed to all-false): at least the vanishing scenarios carry failing
+    // inputs.
+    try std.testing.expect(checked > 0);
+}
+
+// Note: there is no "empty protocol" verify test — PCS is mandatory, so `verify`
+// always indexes a zeta coin, which a zero-coin spec cannot provide.
 test "verify rejects proof with wrong round count" {
     const spec = protocol.Spec{
         .round_coin_counts = &[_]usize{ 0, 1 },
@@ -34,10 +71,10 @@ test "verify rejects proof with wrong round count" {
     );
 }
 
-// A degenerate PCS system/opening for the transcript-shape tests above: no
-// batches, no layout, no claims. `verify` reaches replayWithTranscript (which
-// these tests exercise) before touching PCS, and an empty system authenticates
-// trivially. num_batches == 0 so resolveRoots fills a zero-length roots array.
+// A degenerate PCS system/opening: no batches, no layout, no claims. `verify`
+// reaches replayWithTranscript (which errors here on the bad round count) before
+// touching PCS, so an empty system suffices. num_batches == 0 makes resolveRoots
+// fill a zero-length roots array.
 const empty_pcs_system = pcs.System{
     .params = .{ .log_codeword_size = 1, .log_plaintext_size = 0, .num_queries = 1 },
     .layout = &.{},
@@ -48,72 +85,3 @@ const empty_pcs_opening = verifier.PcsOpening{
     .entry_claims = &.{},
     .proof = .{ .input_queries = &.{}, .fri_proof = .{ .round_roots = &.{}, .final_poly = &.{ext.Ext.zero()}, .running_queries = &.{} } },
 };
-
-// ── PCS challenge derivation ──────────────────────────────────────────────────
-//
-// `deriveChallenges` squeezes the FRI fold challenges + query positions from a
-// caller-owned transcript. There is no golden vector for these on this branch
-// (the pcs.zig fixtures carry synthetic challenges, not transcript-derived
-// ones), so these tests pin the properties that must hold regardless of the
-// exact values: correct shape, determinism, and sensitivity to the absorbed
-// transcript state.
-
-// numRounds = log_plaintext_size - log_final_poly_size = 2, so fold_alphas has
-// length 2 and the FRI proof carries numRounds-1 = 1 running-layer root.
-const challenge_system = pcs.System{
-    .params = .{ .log_codeword_size = 4, .log_plaintext_size = 2, .num_queries = 3 },
-    .layout = &.{},
-    .num_batches = 0,
-};
-
-fn digest(seed: u32) poseidon2.Digest {
-    var d: poseidon2.Digest = undefined;
-    for (&d, 0..) |*limb, i| limb.* = verifier_ray.field.koalabear.Element.init(seed +% @as(u32, @intCast(i)));
-    return d;
-}
-
-// A well-shaped FRI proof for `challenge_system`: exactly num_rounds-1 == 1
-// running-layer root.
-fn challengeFriProof(root_seed: u32) fri.Proof {
-    const S = struct {
-        var round_roots: [1]poseidon2.Digest = undefined;
-        var final_poly = [_]ext.Ext{ext.Ext.zero()};
-    };
-    S.round_roots[0] = digest(root_seed);
-    return .{ .round_roots = &S.round_roots, .final_poly = &S.final_poly, .running_queries = &.{} };
-}
-
-test "deriveChallenges produces the comptime-sized shape" {
-    var transcript = fiat_shamir.Transcript.init();
-    const challenges = try pcs.deriveChallenges(challenge_system, &transcript, challengeFriProof(1));
-    try std.testing.expectEqual(@as(usize, 2), challenges.fold_alphas.len);
-    try std.testing.expectEqual(@as(usize, 3), challenges.query_positions.len);
-    // Query positions are reduced into the codeword domain (2^4 = 16).
-    for (challenges.query_positions) |p| try std.testing.expect(p < 16);
-}
-
-test "deriveChallenges is deterministic for the same transcript and proof" {
-    var t1 = fiat_shamir.Transcript.init();
-    var t2 = fiat_shamir.Transcript.init();
-    const a = try pcs.deriveChallenges(challenge_system, &t1, challengeFriProof(7));
-    const b = try pcs.deriveChallenges(challenge_system, &t2, challengeFriProof(7));
-    for (a.fold_alphas, b.fold_alphas) |x, y| try std.testing.expect(x.eql(y));
-    try std.testing.expectEqualSlices(usize, &a.query_positions, &b.query_positions);
-}
-
-test "deriveChallenges depends on the absorbed transcript state" {
-    // Two transcripts diverging before derivation must yield different
-    // challenges: they are a function of the live Fiat-Shamir state, not just
-    // the proof. (Absorb one differing element up front.)
-    var t1 = fiat_shamir.Transcript.init();
-    var t2 = fiat_shamir.Transcript.init();
-    t1.updateExt(&.{ext.Ext.fromUints(.{ 1, 0, 0, 0, 0, 0 })});
-    t2.updateExt(&.{ext.Ext.fromUints(.{ 2, 0, 0, 0, 0, 0 })});
-    const a = try pcs.deriveChallenges(challenge_system, &t1, challengeFriProof(9));
-    const b = try pcs.deriveChallenges(challenge_system, &t2, challengeFriProof(9));
-    var any_alpha_differs = false;
-    for (a.fold_alphas, b.fold_alphas) |x, y| {
-        if (!x.eql(y)) any_alpha_differs = true;
-    }
-    try std.testing.expect(any_alpha_differs);
-}

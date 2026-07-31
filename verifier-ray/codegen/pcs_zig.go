@@ -170,15 +170,15 @@ func pcsIntArrayLiteral(xs []int) string {
 	return "{ " + strings.Join(parts, ", ") + " }"
 }
 
-// pcsOctupletLiteral emits a precomputed-batch root as a `[8]u32` literal
-// `.{ v0, v1, ..., v7 }` from the octuplet's canonical field values. Only the
-// (rare) precomputed batch reaches this path; the engine's BatchRoot.precomputed
-// is a poseidon2.Digest, which is a [8]u32.
+// pcsOctupletLiteral emits a precomputed-batch root as an `[8]field.Element`
+// literal `.{ .{ .value = v0 }, ... }` from the octuplet's canonical field
+// values. Only the (rare) precomputed batch reaches this path; the engine's
+// BatchRoot.precomputed is a poseidon2.Digest == [8]field.Element, so each limb
+// must be a field.Element (a bare integer would not coerce).
 func pcsOctupletLiteral(o field.Octuplet) string {
 	parts := make([]string, len(o))
 	for i := range o {
-		e := o[i]
-		parts[i] = fmt.Sprintf("%d", e.Uint64())
+		parts[i] = fmt.Sprintf(".{ .value = %d }", o[i].Uint64())
 	}
 	return ".{ " + strings.Join(parts, ", ") + " }"
 }
