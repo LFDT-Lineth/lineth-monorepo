@@ -25,13 +25,13 @@ func readFixture(t *testing.T, name string) []byte {
 	return b
 }
 
-// TestDecodeRequest_SingleBlock is the end-to-end golden: the single-block
+// TestDecodeL2ExecutionRequest_SingleBlock is the end-to-end golden: the single-block
 // request fixture must decode to one payload whose framed SSZ is byte-for-byte
 // the reference encoder's output (single_block_expected.ssz, a copy of
 // utils/ssz/testdata/stateless_input_payload0.ssz). This pins the whole envelope
 // path: chainConfig injection, executionRequests reduction, and SSZ encoding.
-func TestDecodeRequest_SingleBlock(t *testing.T) {
-	req, err := DecodeRequest(readFixture(t, "request_single_block.json"))
+func TestDecodeL2ExecutionRequest_SingleBlock(t *testing.T) {
+	req, err := DecodeL2ExecutionRequest(readFixture(t, "request_single_block.json"))
 	require.NoError(t, err)
 
 	assert.Equal(t, uint64(59144), req.ChainID)
@@ -50,11 +50,11 @@ func TestDecodeRequest_SingleBlock(t *testing.T) {
 		"framed SSZ must equal the reference encoder output")
 }
 
-// TestDecodeRequest_MultiBlock verifies that a request with M > 1 payloads
+// TestDecodeL2ExecutionRequest_MultiBlock verifies that a request with M > 1 payloads
 // decodes to M payloads with the block numbers in range order. The decoder
 // does not reject multi-block; the adapter does (single-block only for now).
-func TestDecodeRequest_MultiBlock(t *testing.T) {
-	req, err := DecodeRequest(readFixture(t, "request_multi_block.json"))
+func TestDecodeL2ExecutionRequest_MultiBlock(t *testing.T) {
+	req, err := DecodeL2ExecutionRequest(readFixture(t, "request_multi_block.json"))
 	require.NoError(t, err)
 
 	require.Len(t, req.Payloads, 2)
@@ -64,13 +64,13 @@ func TestDecodeRequest_MultiBlock(t *testing.T) {
 	assert.Len(t, req.Payloads[1].ForcedTransactions, 2)
 }
 
-// TestDecodeRequest_ReferenceFixture verifies the Go decoder accepts the
+// TestDecodeL2ExecutionRequest_ReferenceFixture verifies the Go decoder accepts the
 // language-neutral V1 request fixture from rollup_spec.
-func TestDecodeRequest_ReferenceFixture(t *testing.T) {
+func TestDecodeL2ExecutionRequest_ReferenceFixture(t *testing.T) {
 	data, err := os.ReadFile(referenceL2ExecutionRequest)
 	require.NoError(t, err)
 
-	req, err := DecodeRequest(data)
+	req, err := DecodeL2ExecutionRequest(data)
 	require.NoError(t, err)
 
 	assert.Equal(t, uint64(59144), req.ChainID)
@@ -82,12 +82,12 @@ func TestDecodeRequest_ReferenceFixture(t *testing.T) {
 	assert.Len(t, req.Payloads[1].ForcedTransactions, 2)
 }
 
-// TestDecodeRequest_InvalidRequestShape sweeps the envelope error paths: each
+// TestDecodeL2ExecutionRequest_InvalidRequestShape sweeps the envelope error paths: each
 // case breaks one required field or type in the valid single-block request and
 // asserts an error naming it. Valid forcedTransactions are accepted by the
 // decoder; Runner rejects them later only because the backend does not support
 // proving them yet.
-func TestDecodeRequest_InvalidRequestShape(t *testing.T) {
+func TestDecodeL2ExecutionRequest_InvalidRequestShape(t *testing.T) {
 	base := readFixture(t, "request_single_block.json")
 
 	pr := func(o map[string]any) map[string]any {
@@ -294,29 +294,29 @@ func TestDecodeRequest_InvalidRequestShape(t *testing.T) {
 			raw, err := json.Marshal(obj)
 			require.NoError(t, err)
 
-			_, err = DecodeRequest(raw)
+			_, err = DecodeL2ExecutionRequest(raw)
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), tc.wantErr)
 		})
 	}
 }
 
-// TestDecodeRequest_InvalidJSON asserts a clear error for garbage input.
-func TestDecodeRequest_InvalidJSON(t *testing.T) {
-	_, err := DecodeRequest([]byte("not json"))
+// TestDecodeL2ExecutionRequest_InvalidJSON asserts a clear error for garbage input.
+func TestDecodeL2ExecutionRequest_InvalidJSON(t *testing.T) {
+	_, err := DecodeL2ExecutionRequest([]byte("not json"))
 	require.Error(t, err)
 }
 
-// TestDecodeRequest_ChainIDHexString verifies a chainId given as a 0x-hex
+// TestDecodeL2ExecutionRequest_ChainIDHexString verifies a chainId given as a 0x-hex
 // quantity (not a JSON number) is accepted, matching the reference's _u64.
-func TestDecodeRequest_ChainIDHexString(t *testing.T) {
+func TestDecodeL2ExecutionRequest_ChainIDHexString(t *testing.T) {
 	var obj map[string]any
 	require.NoError(t, json.Unmarshal(readFixture(t, "request_single_block.json"), &obj))
 	obj[proofRequestKey].(map[string]any)[chainConfigKey].(map[string]any)[chainIDKey] = "0xe708"
 	raw, err := json.Marshal(obj)
 	require.NoError(t, err)
 
-	req, err := DecodeRequest(raw)
+	req, err := DecodeL2ExecutionRequest(raw)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(59144), req.ChainID)
 }

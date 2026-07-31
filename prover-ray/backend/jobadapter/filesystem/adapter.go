@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/jobadapter"
 )
 
@@ -192,7 +193,11 @@ func (a *Adapter) run(ctx context.Context, name, claimed string) jobadapter.RunR
 			Err:          err,
 		}
 	}
-	return a.runner.Run(ctx, id, data)
+	return a.runner.Run(ctx, jobadapter.RunRequest{
+		ID:   id,
+		Type: backend.ProofTypeL2Execution,
+		Body: data,
+	})
 }
 
 func failureResponse(id string, code jobadapter.FailureCode, err error) failureResponseBody {

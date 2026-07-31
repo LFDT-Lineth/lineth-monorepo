@@ -26,6 +26,10 @@ func (m *mockProver) Prove(_ context.Context, job backend.Job) backend.Result {
 	return backend.Result{JobID: job.ID, Status: backend.ResultStatusOK}
 }
 
+func l2ExecutionRunRequest(id string, body []byte) RunRequest {
+	return RunRequest{ID: id, Type: backend.ProofTypeL2Execution, Body: body}
+}
+
 func TestRunner_RunSingleBlock(t *testing.T) {
 	mock := &mockProver{result: func(job backend.Job) backend.Result {
 		return backend.Result{
@@ -41,7 +45,7 @@ func TestRunner_RunSingleBlock(t *testing.T) {
 	runner, err := NewRunner(mock, testProverVersion)
 	require.NoError(t, err)
 
-	result := runner.Run(context.Background(), "job-1", readFixture(t, "request_single_block.json"))
+	result := runner.Run(context.Background(), l2ExecutionRunRequest("job-1", readFixture(t, "request_single_block.json")))
 
 	assert.Equal(t, RunStatusSuccess, result.Status)
 	assert.Empty(t, result.FailureCode)
@@ -68,7 +72,7 @@ func TestRunner_RunMalformedRequest(t *testing.T) {
 	runner, err := NewRunner(mock, testProverVersion)
 	require.NoError(t, err)
 
-	result := runner.Run(context.Background(), "bad-job", []byte("not json"))
+	result := runner.Run(context.Background(), l2ExecutionRunRequest("bad-job", []byte("not json")))
 
 	assert.Equal(t, RunStatusFailed, result.Status)
 	assert.Equal(t, FailureCodeInvalidInput, result.FailureCode)
@@ -82,12 +86,38 @@ func TestRunner_RunMalformedRequest(t *testing.T) {
 	assert.Contains(t, failure.Error, "parsing JSON")
 }
 
+func TestRunner_RunUnsupportedProofType(t *testing.T) {
+	mock := &mockProver{}
+	runner, err := NewRunner(mock, testProverVersion)
+	require.NoError(t, err)
+
+	result := runner.Run(context.Background(), RunRequest{
+		ID:   "blob-job",
+		Type: backend.ProofType("blob"),
+		Body: readFixture(t, "request_single_block.json"),
+	})
+
+	assert.Equal(t, RunStatusFailed, result.Status)
+	assert.Equal(t, FailureCodeInvalidInput, result.FailureCode)
+	require.Error(t, result.Err)
+	assert.Empty(t, mock.jobs)
+	failure, ok := result.ResponseBody.(failureResponseBody)
+	require.True(t, ok)
+	assert.Equal(t, "blob-job", failure.JobID)
+	assert.Equal(t, FailureCodeInvalidInput, failure.FailureCode)
+	assert.Contains(t, failure.Error, "proof type")
+	assert.Contains(t, failure.Error, backend.ErrNotImplemented.Error())
+}
+
 func TestRunner_RunMultiBlockNotImplemented(t *testing.T) {
 	mock := &mockProver{}
 	runner, err := NewRunner(mock, testProverVersion)
 	require.NoError(t, err)
 
-	result := runner.Run(context.Background(), "multi-block-job", readFixture(t, "request_multi_block.json"))
+	result := runner.Run(
+		context.Background(),
+		l2ExecutionRunRequest("multi-block-job", readFixture(t, "request_multi_block.json")),
+	)
 
 	assert.Equal(t, RunStatusFailed, result.Status)
 	assert.Equal(t, FailureCodeInvalidInput, result.FailureCode)
@@ -118,7 +148,7 @@ func TestRunner_RunForcedTransactionsNotImplemented(t *testing.T) {
 	mock := &mockProver{}
 	runner, err := NewRunner(mock, testProverVersion)
 	require.NoError(t, err)
-	result := runner.Run(context.Background(), "forced-tx-job", raw)
+	result := runner.Run(context.Background(), l2ExecutionRunRequest("forced-tx-job", raw))
 
 	assert.Equal(t, RunStatusFailed, result.Status)
 	assert.Equal(t, FailureCodeInvalidInput, result.FailureCode)
@@ -139,7 +169,10 @@ func TestRunner_RunProverFailure(t *testing.T) {
 	runner, err := NewRunner(mock, testProverVersion)
 	require.NoError(t, err)
 
-	result := runner.Run(context.Background(), "prove-fail-job", readFixture(t, "request_single_block.json"))
+	result := runner.Run(
+		context.Background(),
+		l2ExecutionRunRequest("prove-fail-job", readFixture(t, "request_single_block.json")),
+	)
 
 	assert.Equal(t, RunStatusFailed, result.Status)
 	assert.Equal(t, FailureCodeInternalError, result.FailureCode)
@@ -159,7 +192,10 @@ func TestRunner_RunProverFailureWithoutError(t *testing.T) {
 	runner, err := NewRunner(mock, testProverVersion)
 	require.NoError(t, err)
 
-	result := runner.Run(context.Background(), "prove-fail-job", readFixture(t, "request_single_block.json"))
+	result := runner.Run(
+		context.Background(),
+		l2ExecutionRunRequest("prove-fail-job", readFixture(t, "request_single_block.json")),
+	)
 
 	assert.Equal(t, RunStatusFailed, result.Status)
 	assert.Equal(t, FailureCodeInternalError, result.FailureCode)
