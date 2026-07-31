@@ -1,4 +1,3 @@
-const std = @import("std");
 const field = @import("../field/koalabear.zig");
 const ext = @import("../field/koalabear_ext.zig");
 const field_value = @import("../field/value.zig");
@@ -62,14 +61,15 @@ pub const Transcript = struct {
         };
     }
 
-    /// Fills `out` with integers uniformly reduced modulo `upper_bound` (which
-    /// must be a power of two), consuming one Poseidon2 digest at a time and
-    /// taking its eight base limbs in order. Mirrors prover-ray's
-    /// `RandomManyIntegers`, used to derive FRI query positions from the live
-    /// transcript. Squeezing continues from the current transcript state, so
-    /// callers must have absorbed everything up to the query-derivation point.
-    pub fn randomManyIntegers(self: *Transcript, out: []usize, upper_bound: usize) void {
-        std.debug.assert(upper_bound != 0 and (upper_bound & (upper_bound - 1)) == 0);
+    /// Fills `out` with integers reduced into `[0, upper_bound)`, consuming one
+    /// Poseidon2 digest at a time and taking its eight base limbs in order.
+    /// `upper_bound` must be a power of two, so `% upper_bound` is uniform and
+    /// (being a comptime power-of-two divisor) lowers to a single mask — this
+    /// mirrors prover-ray's `RandomManyIntegers` expression line-for-line. We
+    /// derive FRI query positions and must reproduce the prover's transcript
+    /// exactly. Squeezing continues from the current transcript state, so callers
+    /// must have absorbed everything up to the query-derivation point.
+    pub fn randomManyIntegers(self: *Transcript, out: []usize, comptime upper_bound: usize) void {
         var i: usize = 0;
         while (i < out.len) {
             const digest = self.randomDigest();

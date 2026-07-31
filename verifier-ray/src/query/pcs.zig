@@ -141,7 +141,7 @@ pub fn deriveChallenges(
 
     transcript.updateExt(fri_proof.final_poly);
 
-    const codeword_size = @as(usize, 1) << @intCast(system.params.log_codeword_size);
+    const codeword_size = comptime @as(usize, 1) << @intCast(system.params.log_codeword_size);
     transcript.randomManyIntegers(&challenges.query_positions, codeword_size);
     return challenges;
 }
