@@ -70,6 +70,10 @@ pub const Transcript = struct {
     /// exactly. Squeezing continues from the current transcript state, so callers
     /// must have absorbed everything up to the query-derivation point.
     pub fn randomManyIntegers(self: *Transcript, out: []usize, comptime upper_bound: usize) void {
+        comptime {
+            if (upper_bound == 0 or (upper_bound & (upper_bound - 1)) != 0)
+                @compileError("fiat_shamir.randomManyIntegers: upper_bound must be a non-zero power of two");
+        }
         var i: usize = 0;
         while (i < out.len) {
             const digest = self.randomDigest();
