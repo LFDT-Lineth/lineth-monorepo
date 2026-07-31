@@ -40,7 +40,7 @@ fn addmod_128(lhsL:u128, rhsL:u128, modL:u128) -> (remainder:u128) {
         fail
     }
     var sum:u129 = (lhsL as u129) + (rhsL as u129)
-    if sum>(modL as u129) {
+    if sum>=(modL as u129) {
         sum = sum - (modL as u129)
     }
     var overflow:u1

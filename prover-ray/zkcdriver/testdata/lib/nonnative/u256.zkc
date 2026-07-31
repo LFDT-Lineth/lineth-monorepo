@@ -40,7 +40,7 @@ fn addmod_256(lhsL:u256, rhsL:u256, modL:u256) -> (remainder:u256) {
         fail
     }
     var sum:u257 = (lhsL as u257) + (rhsL as u257)
-    if sum>(modL as u257) {
+    if sum>=(modL as u257) {
         sum = sum - (modL as u257)
     }
     var overflow:u1

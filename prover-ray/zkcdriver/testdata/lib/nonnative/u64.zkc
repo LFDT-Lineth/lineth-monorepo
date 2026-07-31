@@ -40,7 +40,7 @@ fn addmod_64(lhsL:u64, rhsL:u64, modL:u64) -> (remainder:u64) {
         fail
     }
     var sum:u65 = (lhsL as u65) + (rhsL as u65)
-    if sum>(modL as u65) {
+    if sum>=(modL as u65) {
         sum = sum - (modL as u65)
     }
     var overflow:u1
