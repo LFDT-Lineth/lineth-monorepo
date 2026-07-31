@@ -22,8 +22,8 @@ class DomainEqualityTest {
   @Test
   fun `BlobSubmittedEvent equality compares transaction hash contents`() {
     val event = BlobSubmittedEvent(
-      blobs = listOf(BlockIntervalData(1UL, 2UL)),
-      endBlockTime = Instant.fromEpochSeconds(10),
+      endBlockNumber = 2UL,
+      endBlockTimestamp = Instant.fromEpochSeconds(10),
       lastShnarf = byteArrayOf(1),
       submissionTimestamp = Instant.fromEpochSeconds(20),
       transactionHash = byteArrayOf(2),
