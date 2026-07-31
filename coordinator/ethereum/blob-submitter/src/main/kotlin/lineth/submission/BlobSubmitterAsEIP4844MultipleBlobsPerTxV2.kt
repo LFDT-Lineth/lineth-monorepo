@@ -33,8 +33,11 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTxV2(
 
   private fun submitBlobsInSingleTx(blobRecord: BlobRecordV2, isEthCall: Boolean = false): SafeFuture<String> {
     return (
-      gasPriceCapProvider?.getGasPriceCaps(blobRecord.startBlockTimestamp)
-        ?: SafeFuture.completedFuture(null)
+      if (isEthCall) {
+        gasPriceCapProvider?.getGasPriceCapsWithCoefficient(blobRecord.startBlockTimestamp)
+      } else {
+        gasPriceCapProvider?.getGasPriceCaps(blobRecord.startBlockTimestamp)
+      } ?: SafeFuture.completedFuture(null)
       )
       .thenCompose { gasPriceCaps ->
         val nonce = contract.currentNonce()
@@ -71,14 +74,16 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTxV2(
               nonce,
               gasPriceCaps,
             )
-            val blobSubmittedEvent = BlobSubmittedEvent(
-              endBlockNumber = blobRecord.endBlockNumber,
-              endBlockTimestamp = blobRecord.endBlockTimestamp,
-              lastShnarf = blobRecord.endShnarf,
-              submissionTimestamp = clock.now(),
-              transactionHash = transactionHash.toByteArray(),
-            )
-            blobSubmittedEventConsumer.accept(blobSubmittedEvent)
+            if (!isEthCall) {
+              val blobSubmittedEvent = BlobSubmittedEvent(
+                endBlockNumber = blobRecord.endBlockNumber,
+                endBlockTimestamp = blobRecord.endBlockTimestamp,
+                lastShnarf = blobRecord.endShnarf,
+                submissionTimestamp = clock.now(),
+                transactionHash = transactionHash.toByteArray(),
+              )
+              blobSubmittedEventConsumer.accept(blobSubmittedEvent)
+            }
           }
       }
   }
