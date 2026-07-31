@@ -170,7 +170,7 @@ func buildBidirectionalShard(
 		col  *wiop.Column
 		vals []uint64
 	}
-	var toAssign []assignment
+	toAssign := make([]assignment, 0, 2*len(traffic)) // one send + one receive column per handle
 	handles := make([]string, 0, len(traffic))
 
 	for _, tr := range traffic {
