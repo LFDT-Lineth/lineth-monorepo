@@ -16,7 +16,6 @@ from ethereum.crypto.hash import Hash32, keccak256
 from ethereum.state import Address
 from ethereum_types.numeric import U64
 
-import rollup_spec
 from rollup_spec import l2_execution
 from rollup_spec.block import ChainConfig, LineaPayloadInput
 from rollup_spec.fork import Log
@@ -36,7 +35,7 @@ from rollup_spec.state_transition import (
 )
 from rollup_spec.stateless_input import decode_stateless_input_ssz
 
-_TESTDATA_DIR = Path(rollup_spec.__file__).resolve().parent / "prover_io" / "testdata"
+_TESTDATA_DIR = Path(l2_execution.__file__).resolve().parent / "prover_io" / "testdata"
 
 
 def _golden_vanilla_stateless_input_ssz() -> bytes:
