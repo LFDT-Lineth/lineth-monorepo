@@ -12,10 +12,6 @@ import (
 // row selector. It is the prover-ray equivalent of the (S, sFilter) pair
 // used by the linea/logderivativesum compiler.
 type includedSpec struct {
-	// query is the source [wiop.TableRelation] this fragment came from. The
-	// compiler keeps it around to mark every contributing query as reduced
-	// once the group has been compiled.
-	query *wiop.TableRelationQuery
 	// cols is the ordered list of columns forming the A fragment.
 	cols []*wiop.ColumnView
 	// selector is the optional A-side filter; nil means the fragment is fully
@@ -86,6 +82,11 @@ type lookupGroup struct {
 	// slice index is the fragment index that each M column is bound to.
 	includings []includingTable
 	included   []includedSpec
+	// queries lists the source Inclusion queries folded into this subgroup, in
+	// declaration order and without duplicates. The compiler uses it to
+	// precheck each query's row limit, to build error messages, and to mark
+	// every contributing query as reduced once the group has been compiled.
+	queries []*wiop.TableRelationQuery
 	// witnessRound is the latest round across every column referenced by the
 	// group's including and included fragments. M, α, γ live in
 	// witnessRound + 1; the LogDerivativeSum result lives in
@@ -93,11 +94,9 @@ type lookupGroup struct {
 	witnessRound *wiop.Round
 }
 
-// addIncluded appends a single A-side fragment to the group, taken from the
-// given query.
-func (g *lookupGroup) addIncluded(q *wiop.TableRelationQuery, tab wiop.Table) {
+// addIncluded appends a single A-side fragment to the group.
+func (g *lookupGroup) addIncluded(tab wiop.Table) {
 	g.included = append(g.included, includedSpec{
-		query:    q,
 		cols:     tab.Columns,
 		selector: tab.Selector,
 	})

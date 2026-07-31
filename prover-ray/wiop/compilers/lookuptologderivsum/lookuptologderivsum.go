@@ -145,9 +145,7 @@ func Compile(sys *wiop.System) {
 	for _, g := range groups {
 		gFractions := compileGroup(g, gamma, coinRound, compCtx)
 		fractions = append(fractions, gFractions...)
-		for _, inc := range g.included {
-			consumedQs = append(consumedQs, inc.query)
-		}
+		consumedQs = append(consumedQs, g.queries...)
 	}
 
 	ld := sys.NewLogDerivativeSum(compCtx.Childf("aggregated"), fractions)
@@ -195,15 +193,8 @@ func registerRowLimitChecks(groups []*lookupGroup) {
 	for _, g := range groups {
 		// A query's A fragments all live in the same subgroup (collectGroups
 		// keeps them together), so each query belongs to exactly one subgroup.
-		// De-duplicate the per-fragment included specs down to their queries for
-		// the compile-time per-query precheck.
-		seen := make(map[*wiop.TableRelationQuery]struct{})
-		for _, inc := range g.included {
-			if _, ok := seen[inc.query]; ok {
-				continue
-			}
-			seen[inc.query] = struct{}{}
-			inc.query.PrecheckRowLimit(wiop.MaxLookupRows)
+		for _, q := range g.queries {
+			q.PrecheckRowLimit(wiop.MaxLookupRows)
 		}
 
 		// Runtime check on the subgroup aggregate. One instance serves both
@@ -346,9 +337,10 @@ func collectGroups(sys *wiop.System) []*lookupGroup {
 			}
 			// Every A fragment of this query joins the current subgroup; the
 			// witness round advances to dominate each one.
+			current.queries = append(current.queries, q)
 			for _, tabA := range q.A {
 				current.updateWitnessRound(tabA.Round())
-				current.addIncluded(q, tabA)
+				current.addIncluded(tabA)
 			}
 			curACost += qACost
 		}
@@ -626,14 +618,9 @@ func (a *groupRowLimitAction) validate(rt *wiop.Runtime) error {
 // queries folded into the offending subgroup so the failure is traceable back
 // to source lookups.
 func (a *groupRowLimitAction) overLimitError(side string, rows uint64) error {
-	seen := make(map[*wiop.TableRelationQuery]struct{})
-	var paths []string
-	for _, inc := range a.group.included {
-		if _, ok := seen[inc.query]; ok {
-			continue
-		}
-		seen[inc.query] = struct{}{}
-		paths = append(paths, inc.query.Context().Path())
+	paths := make([]string, 0, len(a.group.queries))
+	for _, q := range a.group.queries {
+		paths = append(paths, q.Context().Path())
 	}
 	return fmt.Errorf(
 		"wiop/compilers/lookuptologderivsum: subgroup [%s] has total rows on the %s side "+
