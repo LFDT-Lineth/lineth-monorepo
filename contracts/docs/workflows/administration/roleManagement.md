@@ -1,7 +1,7 @@
 
 # 🛡️ Granting or Revoking Roles
 
-This document outlines the procedure for assigning or removing specific roles on various components of the Linea ecosystem: **LineaRollup**, **L2MessageService**, and **TokenBridge**.
+This document outlines the procedure for assigning or removing specific roles on various components of the Linea ecosystem: **LinethRollup**, **L2MessageService**, and **TokenBridge**.
 
 **Note**: These contracts are governed by the [Security Council Charter](../../security-council-charter.md).
 
@@ -52,7 +52,7 @@ Safe Member
 
 | Contract           | Address                                           |
 |--------------------|---------------------------------------------------|
-| LineaRollup        | `0xd194Bd535d285f05D7B411E21A1460D11B0876F`       |
+| LinethRollup        | `0xd19d4B5d358258f05D7B411E21A1460D11B0876F`       |
 | L1 TokenBridge     | `0x051F1D88f0aF5763fB888eC4378b4D8B29ea3319`       |
 | L2MessageService   | `0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec`      |
 | L2 Token Bridge    | `0x353012dc4a9A6cF55c941bADC267f82004A8ceB9`        |
@@ -61,7 +61,7 @@ Safe Member
 
 ## 🔑 Available Roles by Component
 
-### 📘 LineaRollup Roles
+### 📘 LinethRollup Roles
 
 - `DEFAULT_ADMIN_ROLE`
 - `VERIFIER_SETTER_ROLE`

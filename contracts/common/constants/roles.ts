@@ -106,7 +106,7 @@ export const FORCED_TRANSACTION_FEE_SETTER_ROLE = generateKeccak256(
     encodePacked: true,
   },
 );
-// Roles for LineaRollup introduced with YieldManager
+// Roles for LinethRollup introduced with YieldManager
 export const SET_YIELD_MANAGER_ROLE = generateKeccak256(["string"], ["SET_YIELD_MANAGER_ROLE"], {
   encodePacked: true,
 });
@@ -240,7 +240,7 @@ export const VALIDIUM_ROLES = [
   UNPAUSE_NATIVE_YIELD_STAKING_ROLE,
 ];
 
-export const LINEA_ROLLUP_V8_ROLES = [
+export const LINETH_ROLLUP_V8_ROLES = [
   ...BASE_ROLES,
   VERIFIER_SETTER_ROLE,
   VERIFIER_UNSETTER_ROLE,
@@ -264,7 +264,7 @@ export const LINEA_ROLLUP_V8_ROLES = [
   UNPAUSE_NATIVE_YIELD_STAKING_ROLE,
 ];
 
-export const LINEA_ROLLUP_V6_ROLES = [
+export const LINETH_ROLLUP_V6_ROLES = [
   ...BASE_ROLES,
   VERIFIER_SETTER_ROLE,
   VERIFIER_UNSETTER_ROLE,
@@ -280,8 +280,8 @@ export const LINEA_ROLLUP_V6_ROLES = [
   UNPAUSE_FINALIZATION_ROLE,
 ];
 
-export const LINEA_ROLLUP_V7_ROLES = [
-  ...LINEA_ROLLUP_V6_ROLES,
+export const LINETH_ROLLUP_V7_ROLES = [
+  ...LINETH_ROLLUP_V6_ROLES,
   SET_YIELD_MANAGER_ROLE,
   YIELD_PROVIDER_STAKING_ROLE,
   PAUSE_NATIVE_YIELD_STAKING_ROLE,

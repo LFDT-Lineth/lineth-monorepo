@@ -1,18 +1,14 @@
 package fri
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"math/big"
 	"math/bits"
-	"slices"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/consensys/gnark-crypto/field/koalabear"
-	"github.com/consensys/gnark-crypto/field/koalabear/extensions"
 	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 	gutils "github.com/consensys/gnark-crypto/utils"
 )
@@ -128,17 +124,9 @@ type domainLight struct {
 	generator   field.Element
 }
 
-// bitReverseExponent maps a bit-reversed-order position to its natural-order
-// exponent over a size-2^logSize domain. Codewords are stored in bit-reversed
-// order (see RSEncoder.Encode), so the domain point at slot `position` is
-// generator^bitReverseExponent(position, logSize).
-func bitReverseExponent(position, logSize int) int {
-	return int(bits.Reverse64(uint64(position)) >> (64 - uint(logSize)))
-}
-
 func domainPoint(domain domainLight, position int) field.Element {
 	logSize := bits.TrailingZeros64(domain.cardinality)
-	exponent := bitReverseExponent(position, logSize)
+	exponent := bits.Reverse64(uint64(position)) >> (64 - logSize)
 
 	var x field.Element
 	x.Exp(domain.generator, big.NewInt(int64(exponent)))
@@ -162,176 +150,40 @@ type QueryLayerRoots []field.Octuplet
 type RunningQuery []QueryLayer
 
 // Level holds one polynomial introduced at the folding round where the running
-// polynomial's codeword length matches Columns[0].codewordLen(). Trees are the
+// polynomial's codeword length matches len(Columns[0].Evals). Trees are the
 // pre-built paired-leaf Merkle trees backing it.
 type Level struct {
 	Trees []*Tree
 
-	Columns []quotientColumn
-
-	// DenomBaseInv is the single length-N (codeword-domain size) inverse
-	// vector 1/(ω^e − ζ) in natural order (index e = exponent). Every claim
-	// point's inverse column is a scaled rotation of this one vector, so the
-	// prover batch-inverts N values per level instead of N×P (P = distinct
-	// claim points). N is a power of two, so log2(N) is recovered from
-	// len(DenomBaseInv) where needed.
-	DenomBaseInv []field.Ext
-}
-
-// quotientGroup is EvalsAt's internal grouped view of a level: the columns
-// that share one claim-point set (production protocols open every row of a
-// level at the same handful of points, so there is typically a single group)
-// and, per distinct point, the rotation data plus the group's combined
-// claimed value.
-type quotientGroup struct {
-	columns []int        // indices into Level.Columns, in level order
-	points  []groupPoint // the group's claim points, in ascending-rotation order
-}
-
-// groupPoint is one distinct claim point z = ζ·ω_n^s of a group, carrying its
-// E2 rotation-identity data (see claimRotation) and the group's combined
-// claim Y_z = Σ_{c ∈ group} alphaDeep^c · y_{c,z}.
-type groupPoint struct {
-	rot           int
-	scale         field.Element
-	combinedClaim field.Ext
-}
-
-// groupColumnsByClaimPoints partitions a level's columns into quotientGroups
-// keyed by their claim-point set (canonically: sorted rotations). Within one
-// level all columns share the same domain and ζ, so equal rotations mean
-// equal claim points, and rotations are distinct within a column
-// (validateColumnShifts), making the per-point claim lookup unambiguous.
-func groupColumnsByClaimPoints(columns []quotientColumn, alphaPow []field.Ext) []quotientGroup {
-	groups := make([]quotientGroup, 0, 1)
-	index := make(map[string]int, 1)
-	var key []byte
-	for c := range columns {
-		column := &columns[c]
-		rots := make([]int, len(column.Rotations))
-		for k := range column.Rotations {
-			rots[k] = column.Rotations[k].Rot
-		}
-		slices.Sort(rots)
-		key = key[:0]
-		for _, rot := range rots {
-			key = binary.AppendUvarint(key, uint64(rot))
-		}
-		gi, ok := index[string(key)]
-		if !ok {
-			gi = len(groups)
-			index[string(key)] = gi
-			points := make([]groupPoint, len(rots))
-			for k, rot := range rots {
-				for j := range column.Rotations {
-					if column.Rotations[j].Rot == rot {
-						points[k] = groupPoint{rot: rot, scale: column.Rotations[j].Scale}
-						break
-					}
-				}
-			}
-			groups = append(groups, quotientGroup{points: points})
-		}
-		g := &groups[gi]
-		g.columns = append(g.columns, c)
-		for k := range g.points {
-			for j := range column.Rotations {
-				if column.Rotations[j].Rot == g.points[k].rot {
-					var t field.Ext
-					t.Mul(&alphaPow[c], &column.Claims[j].Value)
-					g.points[k].combinedClaim.Add(&g.points[k].combinedClaim, &t)
-					break
-				}
-			}
-		}
-	}
-	return groups
+	Columns             []quotientColumn
+	ClaimPointIndexes   map[field.Ext]int
+	ClaimPoints         []field.Ext
+	DenominatorInverses []field.Ext
 }
 
 // EvalsAt returns this level's evaluations, combined with the running codeword.
-// running seeds the ladder, so its contribution is weighted by
-// alphaDeep^len(Columns), and column c (level order) by alphaDeep^c.
-//
-// The batched DEEP quotient is computed combine-then-divide: the columns of
-// each quotientGroup are first combined into G_g(X) = Σ_{c∈g} alphaDeep^c·f_c(X)
-// — one multiply-accumulate per (position, column) — and the division happens
-// once per (position, DISTINCT point):
-//
-//	F(X) = running(X)·alphaDeep^C + Σ_g Σ_{z∈g} (G_g(X) − Y_{g,z}) / (X − z)
-//
-// rather than once per (position, column, claim). The regrouping is exact
-// field arithmetic, so the outputs — and hence roots, fold values, and
-// proofs — are bit-identical to the quotient-per-claim form (see
-// evalsAtReference in fri_evalsat_test.go).
-//
-// The combine pass runs through the field.VecScaleAcc* helpers — currently
-// scalar placeholders, to be swapped for gnark-crypto's AVX-512 VectorE6
-// kernels once available. The divide pass reconstructs denominator inverses
-// on the fly from DenomBaseInv via the rotation identity
-// 1/(ω^e − ζ·ω_n^s) = ω^{−rs}·(1/(ω^{e−rs} − ζ)): point z contributes
-// scale_z · DenomBaseInv[(e − rot_z) mod N], where e = bitReverse(pos),
-// rot_z = rs mod N, scale_z = ω^{−rs}.
+// running seeds the ladder, so its contribution is weighted by alphaDeep^len(Columns).
 func (l Level) EvalsAt(alphaDeep field.Ext, running []field.Ext) []field.Ext {
 	evals := make([]field.Ext, len(running))
-	if len(l.Columns) == 0 {
-		copy(evals, running)
-		return evals
-	}
+	copy(evals, running)
+	for pos := range evals {
+		for c := len(l.Columns) - 1; c >= 0; c-- {
+			column := l.Columns[c]
+			var columnSum field.Ext
+			for _, claim := range column.Claims {
+				pointIdx := l.ClaimPointIndexes[claim.Point]
+				inv := l.DenominatorInverses[pos*len(l.ClaimPoints)+pointIdx]
 
-	mask := len(l.DenomBaseInv) - 1
-	logSize := bits.TrailingZeros(uint(len(l.DenomBaseInv)))
-
-	alphaPow := make([]field.Ext, len(l.Columns))
-	alphaPow[0] = field.OneExt()
-	for c := 1; c < len(alphaPow); c++ {
-		alphaPow[c].Mul(&alphaPow[c-1], &alphaDeep)
-	}
-	var alphaTop field.Ext
-	alphaTop.Mul(&alphaPow[len(alphaPow)-1], &alphaDeep)
-
-	groups := groupColumnsByClaimPoints(l.Columns, alphaPow)
-
-	// The outer loop over position chunks is embarrassingly parallel:
-	// read-only inputs, disjoint writes to evals[start:end]. gbuf is the
-	// chunk-sized G_g scratch, reused across groups.
-	parallel.Execute(len(evals), func(start, end int) {
-		field.VecScaleExtExt(evals[start:end], alphaTop, running[start:end])
-
-		gbuf := make([]field.Ext, end-start)
-		for gi := range groups {
-			g := &groups[gi]
-
-			clear(gbuf)
-			// gbuf += α^c · column evaluations, using gnark-crypto's AVX-512
-			// VectorE6 kernels (scalar fallback off AVX-512 hardware); the
-			// base-column variant exploits the base structure of each entry
-			// (6 base muls per element instead of ~24).
-			for _, c := range g.columns {
-				column := &l.Columns[c]
-				if column.isBase() {
-					extensions.VectorE6(gbuf).ScalarMulAccByElement(koalabear.Vector(column.EvalsBase[start:end]), &alphaPow[c])
-				} else {
-					extensions.VectorE6(gbuf).ScalarMulAcc(extensions.VectorE6(column.EvalsExt[start:end]), &alphaPow[c])
-				}
+				var numerator, term field.Ext
+				numerator.Sub(&column.Evals[pos], &claim.Value)
+				term.Mul(&numerator, &inv)
+				columnSum.Add(&columnSum, &term)
 			}
 
-			for pos := start; pos < end; pos++ {
-				// e is the natural-order exponent of this position's domain
-				// point (codewords are stored at bit-reversed indices);
-				// (e - rot) & mask is the correct mod-N index even when the
-				// difference is negative (two's-complement, N a power of 2).
-				e := bitReverseExponent(pos, logSize)
-				for k := range g.points {
-					p := &g.points[k]
-					var term field.Ext
-					term.Sub(&gbuf[pos-start], &p.combinedClaim)
-					term.Mul(&term, &l.DenomBaseInv[(e-p.rot)&mask])
-					term.MulByElement(&term, &p.scale)
-					evals[pos].Add(&evals[pos], &term)
-				}
-			}
+			evals[pos].Mul(&evals[pos], &alphaDeep)
+			evals[pos].Add(&evals[pos], &columnSum)
 		}
-	})
+	}
 	return evals
 }
 
@@ -378,7 +230,7 @@ func buildProvePlan(p Params, levels []Level) (provePlan, error) {
 		if len(levels[l].Columns) == 0 {
 			return plan, fmt.Errorf("fri: Prove: levels[%d] has no columns", l)
 		}
-		logCodewordLen := uint8(utils.Log2Ceil(levels[l].Columns[0].codewordLen()))
+		logCodewordLen := uint8(utils.Log2Ceil(len(levels[l].Columns[0].Evals)))
 		if logCodewordLen > p.LogCodewordSize {
 			return plan,
 				fmt.Errorf("fri: Prove: levels[%d] codeword length 2^%d exceeds p.LogCodewordSize=%d",
@@ -642,19 +494,6 @@ func octupletToExt(o field.Octuplet) (field.Ext, error) {
 	return res, nil
 }
 
-// extLimbs returns an extension's six base-field coordinates in the canonical
-// order every Merkle leaf and octuplet packing uses. It is the single source
-// of truth for that layout: writeRowElements, writeRowOpeningElements,
-// leafLayout.writeRow, and mapExtToOctuplet all route through it, since a
-// divergence here would silently break Merkle-root reconstruction.
-func extLimbs(e field.Ext) [6]field.Element {
-	return [6]field.Element{
-		e.B0.A0, e.B0.A1,
-		e.B1.A0, e.B1.A1,
-		e.B2.A0, e.B2.A1,
-	}
-}
-
 // mapExtToOctuplet converts a slice of field extensions into a slice of
 // octuplets, packing each extension's six coordinates into the first six
 // octuplet entries and leaving coordinates 6 and 7 zero. It is the slice-wise
@@ -662,8 +501,12 @@ func extLimbs(e field.Ext) [6]field.Element {
 func mapExtToOctuplet(exts []field.Ext) []field.Octuplet {
 	res := make([]field.Octuplet, len(exts))
 	for i := range exts {
-		limbs := extLimbs(exts[i])
-		copy(res[i][:], limbs[:])
+		e := exts[i]
+		res[i] = field.Octuplet{
+			e.B0.A0, e.B0.A1,
+			e.B1.A0, e.B1.A1,
+			e.B2.A0, e.B2.A1,
+		}
 	}
 	return res
 }

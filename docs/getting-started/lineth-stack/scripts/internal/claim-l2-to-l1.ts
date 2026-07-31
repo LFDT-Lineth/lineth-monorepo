@@ -72,8 +72,8 @@ export async function claimL2ToL1(env = process.env, deps) {
     const l1RpcUrl = required(env, "L1_RPC_URL");
     const l2RpcUrl = required(env, "L2_RPC_URL");
     const l1Chain = chain(asChainId(env, "SMOKE_L1_CHAIN_ID"), "sepolia", l1RpcUrl);
-    const l2Chain = chain(asChainId(env, "SMOKE_L2_CHAIN_ID"), "local-linea", l2RpcUrl);
-    const lineaRollupAddress = requireMatch(env, "SMOKE_LINEA_ROLLUP_ADDRESS", ADDRESS_RE, "an address");
+    const l2Chain = chain(asChainId(env, "SMOKE_L2_CHAIN_ID"), "local-lineth", l2RpcUrl);
+    const linethRollupAddress = requireMatch(env, "SMOKE_LINETH_ROLLUP_ADDRESS", ADDRESS_RE, "an address");
     const l2MessageServiceAddress = requireMatch(
       env,
       "SMOKE_L2_MESSAGE_SERVICE_ADDRESS",
@@ -111,7 +111,7 @@ export async function claimL2ToL1(env = process.env, deps) {
     const common = {
       l2Client: l2PublicClient,
       messageHash,
-      lineaRollupAddress,
+      linethRollupAddress,
       l2MessageServiceAddress,
       l2LogsBlockRange,
     };
@@ -131,7 +131,7 @@ export async function claimL2ToL1(env = process.env, deps) {
       calldata,
       feeRecipient: resolvedDeps.zeroAddress,
       messageProof,
-      lineaRollupAddress,
+      linethRollupAddress,
     });
 
     return {

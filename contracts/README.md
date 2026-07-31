@@ -1,9 +1,9 @@
 # Smart Contracts
 
-Contains Ethereum smart contract code for the Linea Rollup and Message Service.
+Contains Ethereum smart contract code for the Lineth Rollup and Message Service.
 
-## LineaRollup (L1MessageService)
-The Linea Rollup, which contains the L1MessageService, is the smart contract that is responsible for:
+## LinethRollup (L1MessageService)
+The Lineth Rollup, which contains the L1MessageService, is the smart contract that is responsible for:
 
 - Submitting messages to be sent to Linea (L2) for later claiming.
 - Anchoring of L2 message Merkle roots to allow later claiming.
@@ -11,7 +11,7 @@ The Linea Rollup, which contains the L1MessageService, is the smart contract tha
 - Submission of L2 compressed data using EIP-4844 blobs or via calldata.
 - Finalization of L2 state on L1 using a Zero Knowledge Proof verified via a Plonk verifier contract.
 
-Workflow Documentation [Linea Rollup Workflows](./docs/workflows/LineaRollup.md)
+Workflow Documentation [Lineth Rollup Workflows](./docs/workflows/LinethRollup.md)
 
 ## Verifiers
 A Plonk based verifier contract is responsible for: 
@@ -111,9 +111,9 @@ This can be used by altering the values in the script file and running the scrip
 
 *Note the following nonce values for a fresh stack deploy:*
 
-The LineaRollup deploy uses nonce 3 as the following are deployed beforehand:
+The LinethRollup deploy uses nonce 3 as the following are deployed beforehand:
 - The verifier contract
-- The implementation LineaRollup.sol contract
+- The implementation LinethRollup.sol contract
 - The proxy admin contract
 
 The L2MessageService deploy uses nonce 2 as the following are deployed beforehand:
@@ -123,7 +123,7 @@ The L2MessageService deploy uses nonce 2 as the following are deployed beforehan
 
 **Deploying the L1 contracts**
 ```
-# This will deploy the Linea Rollup that is currently deployed on Mainnet - the current version is the LineaRollupV6.
+# This will deploy the Lineth Rollup that is currently deployed on Mainnet - the current version is the LinethRollupV6.
 # Some end to end tests will test future upgrades to validate the stack remains functional.
 
 # Note: By default a test/placeholder verifier contract is used `IntegrationTestTrueVerifier` if you wish to use a proper verifier, adjust the
@@ -132,7 +132,7 @@ The L2MessageService deploy uses nonce 2 as the following are deployed beforehan
 # Be sure to check the parameter values in the Makefile before executing the command.
 
 # deploy v6
-make deploy-linea-rollup-v6
+make deploy-lineth-rollup-v6
 
 make deploy-token-bridge-l1
 ```
@@ -154,7 +154,7 @@ make deploy-contracts
 
 The above command will trigger the following commands to deploy:
 
-- deploy-linea-rollup-v6 
+- deploy-lineth-rollup-v6 
 - deploy-token-bridge-l1 
 - deploy-l1-test-erc20 
 - deploy-l2messageservice 

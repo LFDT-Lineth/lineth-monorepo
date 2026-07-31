@@ -62,7 +62,7 @@ ts-libs/sdk/
 │  │  └──────────────────────┘  │  │  │ - claimOnL1()        │  │        │
 │  │                            │  │  │ - claimOnL2()        │  │        │
 │  │  ┌──────────────────────┐  │  │  └──────────────────────┘  │        │
-│  │  │ LineaRollupClient    │  │  │                            │        │
+│  │  │ LinethRollupClient    │  │  │                            │        │
 │  │  │ L2MessageService     │  │  │  ┌──────────────────────┐  │        │
 │  │  │    Client            │  │  │  │   Public Actions     │  │        │
 │  │  └──────────────────────┘  │  │  │                      │  │        │
@@ -156,7 +156,7 @@ interface MessageProof {
 ```typescript
 const mainnetAddresses = {
   l1: {
-    lineaRollup: '0xd19d4B5d358258f05D7B411E21A1460D11B0876F',
+    linethRollup: '0xd19d4B5d358258f05D7B411E21A1460D11B0876F',
     tokenBridge: '0x051F1D88f0aF5763fB888eC4378b4D8B29ea3319',
   },
   l2: {
@@ -171,7 +171,7 @@ const mainnetAddresses = {
 ```typescript
 const sepoliaAddresses = {
   l1: {
-    lineaRollup: '0xb218f8a4bc926cf1ca7b3423c154a0d627bdb7e5',
+    linethRollup: '0xb218f8a4bc926cf1ca7b3423c154a0d627bdb7e5',
     tokenBridge: '0x5506A3805fB6C857D16e3ce28e8D13fCB12F6433',
   },
   l2: {

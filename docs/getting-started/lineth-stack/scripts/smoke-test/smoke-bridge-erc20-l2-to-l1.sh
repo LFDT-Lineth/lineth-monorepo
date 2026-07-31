@@ -74,7 +74,7 @@ ADDR="$(lineth_deployments_file addresses.json)"
 [ -s "$PRE" ] || die "addresses-precomputed.json missing"
 [ -s "$ADDR" ] || die "addresses.json missing; deploy-contracts has not completed"
 
-LINEA_ROLLUP="$(lineth_json_section_addr "$ADDR" l1 LineaRollupV8)"
+LINETH_ROLLUP="$(lineth_json_section_addr "$ADDR" l1 LinethRollupV8)"
 L1_TOKEN_BRIDGE="$(lineth_json_section_addr "$ADDR" l1 TokenBridge)"
 L2_TOKEN_BRIDGE="$(lineth_json_section_addr "$ADDR" l2 TokenBridge)"
 L1_ERC20="$(lineth_json_section_addr "$ADDR" l1 ERC20Example)"
@@ -83,7 +83,7 @@ L1_DEPLOYER_ADDRESS="$(lineth_json_section_addr "$PRE" deployers l1)"
 L1_CHAIN_ID="$(lineth_json_meta_value "$ADDR" l1ChainId)"
 L2_CHAIN_ID="$(lineth_json_meta_value "$ADDR" l2ChainId)"
 
-lineth_require_address "L1 LineaRollupV8" "$LINEA_ROLLUP"
+lineth_require_address "L1 LinethRollupV8" "$LINETH_ROLLUP"
 lineth_require_address "L1 TokenBridge" "$L1_TOKEN_BRIDGE"
 lineth_require_address "L2 TokenBridge" "$L2_TOKEN_BRIDGE"
 lineth_require_address "L1 ERC20Example" "$L1_ERC20"
@@ -199,7 +199,7 @@ SEND_OUTPUT="$(
   docker run --rm \
     --user 0:0 \
     --entrypoint sh \
-    --network lineth-stack_linea \
+    --network lineth-stack_lineth \
     -v "$LINETH_ACCOUNTS_DIR:/accounts:ro" \
     -e L2_WITHDRAW_PRIVATE_KEY="${L2_WITHDRAW_PRIVATE_KEY:-}" \
     -e L2_BRIDGED_TOKEN="$L2_BRIDGED_TOKEN" \

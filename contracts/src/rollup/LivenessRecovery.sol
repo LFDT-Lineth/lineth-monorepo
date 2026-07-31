@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.33;
 
-import { LineaRollupBase } from "./LineaRollupBase.sol";
+import { LinethRollupBase } from "./LinethRollupBase.sol";
 import { ILivenessRecovery } from "./interfaces/ILivenessRecovery.sol";
 import { FinalizedStateHashing } from "../libraries/FinalizedStateHashing.sol";
 /**
@@ -9,7 +9,7 @@ import { FinalizedStateHashing } from "../libraries/FinalizedStateHashing.sol";
  * @author ConsenSys Software Inc.
  * @custom:security-contact security-report@linea.build
  */
-abstract contract LivenessRecovery is LineaRollupBase, ILivenessRecovery {
+abstract contract LivenessRecovery is LinethRollupBase, ILivenessRecovery {
   /// @dev In practice, when used, this is expected to be a close approximation to 6 months, and is intentional.
   uint256 internal constant SIX_MONTHS_IN_SECONDS = (365 / 2) * 24 * 60 * 60;
 

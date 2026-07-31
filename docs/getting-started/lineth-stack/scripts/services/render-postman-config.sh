@@ -35,7 +35,7 @@ json_uint() {
   sed -nE "s/.*\"$key\"[[:space:]]*:[[:space:]]*\"?([0-9]+)\"?.*/\1/p" "$PRECOMPUTED" | head -1
 }
 
-L1_CONTRACT_ADDRESS=$(json_address "LineaRollupV8")
+L1_CONTRACT_ADDRESS=$(json_address "LinethRollupV8")
 L2_CONTRACT_ADDRESS=$(json_address "L2MessageService")
 L1_LISTENER_INITIAL_FROM_BLOCK=$(json_uint "l1PostmanListenerStartBlock")
 L1_WEB3_SIGNER_PUBLIC_KEY=$(sed -nE 's/.*"l1PostmanPubkey":[[:space:]]*"(0x[a-fA-F0-9]{128})".*/\1/p' "$PRECOMPUTED" | head -1)

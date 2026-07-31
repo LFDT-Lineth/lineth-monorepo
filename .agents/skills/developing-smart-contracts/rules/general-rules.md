@@ -156,7 +156,7 @@ function replenishWithdrawalReserve(...) external {
 
 For new upgradeable contracts, prefer ERC-7201 namespaced storage over storage gaps. Storage gaps require manual size updates each time a new variable is added and are prone to human error.
 
-Pattern (from `LineaRollupYieldExtension.sol`):
+Pattern (from `LinethRollupYieldExtension.sol`):
 
 ```solidity
 /// @custom:storage-location erc7201:linea.storage.ContractNameStorage

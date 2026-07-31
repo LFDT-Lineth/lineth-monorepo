@@ -770,8 +770,8 @@ A summary of each of them is given below.
 
 ### Blobs
 
-The coordinator submits up to six blobs it generates at once to L1 using eip4844 standard to `v3.1 LineaRollup.submitBlobs` alongside
- the KZG proof. The LineaRollup smart contract verifies the validity of the proofs for the given blob data.
+The coordinator submits up to six blobs it generates at once to L1 using eip4844 standard to `v3.1 LinethRollup.submitBlobs` alongside
+ the KZG proof. The LinethRollup smart contract verifies the validity of the proofs for the given blob data.
 
 Blob submission can support sending up to six blobs at once. This allows for saving cost by amortizing the processing overhead over multiple blobs.
 
@@ -827,7 +827,7 @@ FinalizationDataV3
 
 ## L1 -> L2 messages
 
-Cross-chain operations happen when a user triggers a transaction on L1 by calling the `L1MessageService.sendMessage` method of message service smart contract, where L1MessageService is inherited by the deployed LineaRollup smart contract.
+Cross-chain operations happen when a user triggers a transaction on L1 by calling the `L1MessageService.sendMessage` method of message service smart contract, where L1MessageService is inherited by the deployed LinethRollup smart contract.
 
 ```
 sendMessage(

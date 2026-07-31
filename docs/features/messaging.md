@@ -15,7 +15,7 @@ The coordinator handles anchoring L1→L2 messages on L2, and the prover compute
 
 | Component | Path | Role |
 |-----------|------|------|
-| L1MessageService | `contracts/src/messaging/l1/L1MessageService.sol` | L1 send and claim (inherited by LineaRollup) |
+| L1MessageService | `contracts/src/messaging/l1/L1MessageService.sol` | L1 send and claim (inherited by LinethRollup) |
 | L1MessageManager | `contracts/src/messaging/l1/L1MessageManager.sol` | L1 message hash and Merkle root storage |
 | L2MessageService | `contracts/src/messaging/l2/L2MessageService.sol` | L2 send, claim, and anchoring |
 | L2MessageManager | `contracts/src/messaging/l2/L2MessageManager.sol` | L2 anchoring logic, rolling hash verification |
@@ -27,7 +27,7 @@ The coordinator handles anchoring L1→L2 messages on L2, and the prover compute
 ```mermaid
 sequenceDiagram
     participant User as L1 User
-    participant L1 as LineaRollup (L1)
+    participant L1 as LinethRollup (L1)
     participant Coord as Coordinator
     participant L2 as L2MessageService
 
@@ -51,7 +51,7 @@ sequenceDiagram
     participant User as L2 User
     participant L2 as L2MessageService
     participant Prover
-    participant L1 as LineaRollup (L1)
+    participant L1 as LinethRollup (L1)
     participant Claimer as L1 Claimer
 
     User->>L2: sendMessage(to, fee, calldata) + ETH
