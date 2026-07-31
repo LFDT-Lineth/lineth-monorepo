@@ -112,7 +112,7 @@ abstract contract LinethRollupYieldExtension is LinethRollupBase, ILinethRollupY
 
     uint256 messageNumber = nextMessageNumber++;
     bytes32 messageHash = MessageHashing._hashMessageWithEmptyCalldata(
-      address(this),
+      msg.sender,
       _l2YieldRecipient,
       0,
       _amount,

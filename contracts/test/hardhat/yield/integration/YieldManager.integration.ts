@@ -326,7 +326,7 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       const nextMessageNumberBefore = await linethRollup.nextMessageNumber();
 
       const expectedBytes = encodeSendMessage(
-        l1MessageServiceAddress,
+        yieldManagerAddress,
         await l2YieldRecipient.getAddress(),
         0n,
         yieldEarned,
@@ -365,7 +365,7 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       const nextMessageNumberBefore = await linethRollup.nextMessageNumber();
 
       const expectedBytes = encodeSendMessage(
-        l1MessageServiceAddress,
+        yieldManagerAddress,
         await l2YieldRecipient.getAddress(),
         0n,
         yieldEarned,
@@ -404,7 +404,7 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       const nextMessageNumberBefore = await linethRollup.nextMessageNumber();
 
       const expectedBytes = encodeSendMessage(
-        l1MessageServiceAddress,
+        yieldManagerAddress,
         await l2YieldRecipient.getAddress(),
         0n,
         yieldEarned,
@@ -448,7 +448,7 @@ describe("Integration tests with LinethRollup, YieldManager and LidoStVaultYield
       const nextMessageNumberBefore = await linethRollup.nextMessageNumber();
 
       const expectedBytes = encodeSendMessage(
-        l1MessageServiceAddress,
+        yieldManagerAddress,
         await l2YieldRecipient.getAddress(),
         0n,
         yieldEarned,

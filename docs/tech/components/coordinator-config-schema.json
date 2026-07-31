@@ -1382,12 +1382,32 @@
         "deprecated": false,
         "replacement": null
       },
+      "l1-submission.aggregation.signer.custom": {
+        "type": "CustomConfig?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Named signer settings; required when type is CUSTOM.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.aggregation.signer.custom.name": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Logical signer name resolved by the injected signer factory.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
       "l1-submission.aggregation.signer.type": {
         "type": "SignerType",
         "section": false,
         "required": true,
         "default": null,
-        "description": "Signer backend to use: WEB3J (local private key) or WEB3SIGNER (remote signer).",
+        "description": "Signer backend to use: WEB3J, WEB3SIGNER, or CUSTOM.",
         "example": "web3signer",
         "deprecated": false,
         "replacement": null
@@ -1732,12 +1752,32 @@
         "deprecated": false,
         "replacement": null
       },
+      "l1-submission.blob.signer.custom": {
+        "type": "CustomConfig?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Named signer settings; required when type is CUSTOM.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "l1-submission.blob.signer.custom.name": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Logical signer name resolved by the injected signer factory.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
       "l1-submission.blob.signer.type": {
         "type": "SignerType",
         "section": false,
         "required": true,
         "default": null,
-        "description": "Signer backend to use: WEB3J (local private key) or WEB3SIGNER (remote signer).",
+        "description": "Signer backend to use: WEB3J, WEB3SIGNER, or CUSTOM.",
         "example": "web3signer",
         "deprecated": false,
         "replacement": null
@@ -2962,12 +3002,32 @@
         "deprecated": false,
         "replacement": null
       },
+      "message-anchoring.signer.custom": {
+        "type": "CustomConfig?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Named signer settings; required when type is CUSTOM.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "message-anchoring.signer.custom.name": {
+        "type": "String",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Logical signer name resolved by the injected signer factory.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
       "message-anchoring.signer.type": {
         "type": "SignerType",
         "section": false,
         "required": true,
         "default": null,
-        "description": "Signer backend to use: WEB3J (local private key) or WEB3SIGNER (remote signer).",
+        "description": "Signer backend to use: WEB3J, WEB3SIGNER, or CUSTOM.",
         "example": "web3signer",
         "deprecated": false,
         "replacement": null
