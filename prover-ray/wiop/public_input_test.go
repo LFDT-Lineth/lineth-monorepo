@@ -46,7 +46,6 @@ func TestPublicInput(t *testing.T) {
 		// Open col[pos] into a cell; Open registers the local constraint
 		// cell == col[pos], which soundly binds the public input into the proof.
 		cell := col.At(pos).Open(sys.Context.Childf("my-public-input"))
-		sys.PublicInputs = &wiop.PublicInputLayout{}
 		sys.PublicInputs.Register(wiop.GuestPublicOutputsPI, cell)
 		localvanishing.Compile(sys)
 		global.Compile(sys)
@@ -96,7 +95,6 @@ func TestPublicInputDynamicColumn(t *testing.T) {
 		m := sys.NewDynamicModule(sys.Context.Childf("m"), wiop.PaddingDirectionRight)
 		col := m.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
 		cell := col.At(pos).Open(sys.Context.Childf("open"))
-		sys.PublicInputs = &wiop.PublicInputLayout{}
 		sys.PublicInputs.Register(wiop.GuestPublicOutputsPI, cell)
 		localvanishing.Compile(sys)
 		global.Compile(sys)
@@ -133,9 +131,7 @@ func TestPublicInputLayoutUnpack(t *testing.T) {
 	col := m.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
 	cellA := col.At(0).Open(sys.Context.Childf("a"))
 	cellB := col.At(1).Open(sys.Context.Childf("b"))
-	layout := &wiop.PublicInputLayout{}
-	layout.Register(wiop.GuestPublicOutputsPI, cellA, cellB)
-	sys.PublicInputs = layout
+	sys.PublicInputs.Register(wiop.GuestPublicOutputsPI, cellA, cellB)
 	localvanishing.Compile(sys)
 	global.Compile(sys)
 
@@ -143,12 +139,12 @@ func TestPublicInputLayoutUnpack(t *testing.T) {
 		rt.AssignColumn(col, piVec(10, 20, 30, 40))
 	})
 
-	vals, err := layout.Unpack(pub)
+	vals, err := sys.PublicInputs.Unpack(pub)
 	require.NoError(t, err)
 	require.Equal(t, []field.Gen{piGen(10), piGen(20)}, vals.GuestPublicOutputs)
 
 	// Wrong length is rejected.
-	_, err = layout.Unpack(wiop.PublicInput{})
+	_, err = sys.PublicInputs.Unpack(wiop.PublicInput{})
 	require.Error(t, err)
 }
 
