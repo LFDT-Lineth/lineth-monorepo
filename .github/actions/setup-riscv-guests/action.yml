@@ -15,9 +15,10 @@ runs:
       run: echo "version=$(cat riscv-guests/.zigversion)" >> "$GITHUB_OUTPUT"
 
     - name: Install Zig
-      uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+      uses: ./.github/actions/setup-zig
       with:
         version: ${{ steps.zigversion.outputs.version }}
+        dependency-hash-paths: riscv-guests/*/build.zig.zon
 
     # blst + mcl are not packaged for Ubuntu; `install-native-crypto-deps` builds them from the
     # pinned tags once and installs into /usr/local — the SAME command a developer runs locally.
