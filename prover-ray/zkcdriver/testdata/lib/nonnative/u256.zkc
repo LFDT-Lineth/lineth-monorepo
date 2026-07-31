@@ -1,0 +1,95 @@
+#[native]
+fn mulmod_256(lhsL:u256, rhsL:u256, modL:u256) -> (remainder:u256) {
+    if modL == 0 {
+        fail
+    }
+    // integer product result `product = lhsL * rhsL`
+    var product:u512 = (lhsL as u512) * (rhsL as u512)
+
+    var overflow:u256
+    var quotient:u256
+    overflow::quotient = product / (modL as u512)
+    if overflow != 0 {
+        fail
+    }
+    var overflow2:u256
+    // XXX(ivo): two ways of computing the remainder. First one is approx 20% faster
+    overflow2::remainder = product - ((quotient as u512) * (modL as u512))
+    //overflow2::remainder = product % (modL as u512)
+    if overflow2 != 0 {
+        fail
+    }
+}
+
+// Returns the canonical representative of `val` in [0, modL), i.e. val mod modL.
+// Callers that branch on raw (unreduced) equality/inequality of field elements
+// must reduce their inputs through this first, otherwise non-canonical encodings
+// (e.g. val = x + modL) alias the same residue while comparing as distinct u256
+// values. Implemented as addmod with 0, which reduces its inputs.
+fn reduce_256(val:u256, modL:u256) -> (remainder:u256) {
+    remainder = mulmod_256(1, val, modL)
+    if remainder > modL {
+        fail
+    }
+}
+
+// addmod_256 adds two values and reduces modulo modL. Assumes inputs are already
+// reduced
+fn addmod_256(lhsL:u256, rhsL:u256, modL:u256) -> (remainder:u256) {
+    if modL == 0 {
+        fail
+    }
+
+    var sum:u257 = (lhsL as u257) + (rhsL as u257)
+    if sum > (modL as u257) {
+        sum = sum - (modL as u257)
+    }
+    var overflow:u1
+    overflow::remainder = sum
+    if overflow != 0 {
+        fail
+    }
+}
+
+// submod_256 computes subtraction and mod reduces. It assumes inputs are already reduced
+fn submod_256(lhsL:u256, rhsL:u256, modL:u256) -> (remainder:u256) {
+    if modL == 0 {
+        fail
+    }
+    var lhs:u256
+    if rhsL > lhsL {
+        lhs = lhsL + modL
+    } else {
+        lhs = lhsL
+    }
+    remainder = lhs - rhsL
+}
+
+#[native]
+fn expmod_unconstrained_256(base: u256, exp: u256, mod: u256) -> (res: u256) {
+    if exp == 0 {
+        res = 1 % mod
+    } else {
+        var half:u256
+        var bit:u1
+        half::bit = exp as u257
+        var half_res:u256 = expmod_unconstrained_256(base, half, mod)
+        var sq:u256 = mulmod_256(half_res, half_res, mod)
+        if bit == 1 {
+            res = mulmod_256(sq, base, mod)
+        } else {
+            res = sq
+        }
+    }
+}
+
+fn invmod_256(inp: u256, modL: u256) -> (inv: u256) {
+    // we first hint the inversion
+    inv = expmod_unconstrained_256(inp, modL-2, modL)
+    // compute the product using the native product
+    var prod:u256 = mulmod_256(inv, inp, modL)
+    // now we check that the hinted inversion result is correct
+    if prod != 1 {
+        fail
+    }
+}

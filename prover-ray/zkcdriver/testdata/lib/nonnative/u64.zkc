@@ -1,0 +1,95 @@
+#[native]
+fn mulmod_64(lhsL:u64, rhsL:u64, modL:u64) -> (remainder:u64) {
+    if modL == 0 {
+        fail
+    }
+    // integer product result `product = lhsL * rhsL`
+    var product:u128 = (lhsL as u128) * (rhsL as u128)
+
+    var overflow:u64
+    var quotient:u64
+    overflow::quotient = product / (modL as u128)
+    if overflow != 0 {
+        fail
+    }
+    var overflow2:u64
+    // XXX(ivo): two ways of computing the remainder. First one is approx 20% faster
+    overflow2::remainder = product - ((quotient as u128) * (modL as u128))
+    //overflow2::remainder = product % (modL as u128)
+    if overflow2 != 0 {
+        fail
+    }
+}
+
+// Returns the canonical representative of `val` in [0, modL), i.e. val mod modL.
+// Callers that branch on raw (unreduced) equality/inequality of field elements
+// must reduce their inputs through this first, otherwise non-canonical encodings
+// (e.g. val = x + modL) alias the same residue while comparing as distinct u64
+// values. Implemented as addmod with 0, which reduces its inputs.
+fn reduce_64(val:u64, modL:u64) -> (remainder:u64) {
+    remainder = mulmod_64(1, val, modL)
+    if remainder > modL {
+        fail
+    }
+}
+
+// addmod_64 adds two values and reduces modulo modL. Assumes inputs are already
+// reduced
+fn addmod_64(lhsL:u64, rhsL:u64, modL:u64) -> (remainder:u64) {
+    if modL == 0 {
+        fail
+    }
+
+    var sum:u65 = (lhsL as u65) + (rhsL as u65)
+    if sum > (modL as u65) {
+        sum = sum - (modL as u65)
+    }
+    var overflow:u1
+    overflow::remainder = sum
+    if overflow != 0 {
+        fail
+    }
+}
+
+// submod_64 computes subtraction and mod reduces. It assumes inputs are already reduced
+fn submod_64(lhsL:u64, rhsL:u64, modL:u64) -> (remainder:u64) {
+    if modL == 0 {
+        fail
+    }
+    var lhs:u64
+    if rhsL > lhsL {
+        lhs = lhsL + modL
+    } else {
+        lhs = lhsL
+    }
+    remainder = lhs - rhsL
+}
+
+#[native]
+fn expmod_unconstrained_64(base: u64, exp: u64, mod: u64) -> (res: u64) {
+    if exp == 0 {
+        res = 1 % mod
+    } else {
+        var half:u64
+        var bit:u1
+        half::bit = exp as u65
+        var half_res:u64 = expmod_unconstrained_64(base, half, mod)
+        var sq:u64 = mulmod_64(half_res, half_res, mod)
+        if bit == 1 {
+            res = mulmod_64(sq, base, mod)
+        } else {
+            res = sq
+        }
+    }
+}
+
+fn invmod_64(inp: u64, modL: u64) -> (inv: u64) {
+    // we first hint the inversion
+    inv = expmod_unconstrained_64(inp, modL-2, modL)
+    // compute the product using the native product
+    var prod:u64 = mulmod_64(inv, inp, modL)
+    // now we check that the hinted inversion result is correct
+    if prod != 1 {
+        fail
+    }
+}
