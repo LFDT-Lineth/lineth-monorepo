@@ -761,9 +761,9 @@ func buildDynamicLagrangeSelectorBoundarySystem() (*wiop.System, *wiop.Column) {
 
 // runProver creates a runtime for sys, applies assign, advances all rounds
 // running every prover action, and returns the completed runtime.
-func runProver(sys *wiop.System, assign assignFn) wiop.Runtime {
+func runProver(sys *wiop.System, assign assignFn) *wiop.Runtime {
 	rt := wiop.NewRuntime(sys)
-	assign(&rt)
+	assign(rt)
 	for _, action := range rt.CurrentRound().ProverActions {
 		action.Run(rt)
 	}
@@ -778,7 +778,7 @@ func runProver(sys *wiop.System, assign assignFn) wiop.Runtime {
 
 // extractVanishingProofView reads witness/quotient claims and round trace data
 // from an already-completed runtime.
-func extractVanishingProofView(sys *wiop.System, rt wiop.Runtime) vanishingProofView {
+func extractVanishingProofView(sys *wiop.System, rt *wiop.Runtime) vanishingProofView {
 	verifiers := globalVerifiers(sys)
 
 	var witnessClaims []field.Ext
@@ -819,7 +819,7 @@ func globalVerifiers(sys *wiop.System) []*global.Verifier {
 	return verifiers
 }
 
-func dynamicModuleSizes(verifiers []*global.Verifier, rt wiop.Runtime) []int {
+func dynamicModuleSizes(verifiers []*global.Verifier, rt *wiop.Runtime) []int {
 	indices := map[*wiop.Module]int{}
 	for _, verifier := range verifiers {
 		module := verifier.Module
@@ -837,7 +837,7 @@ func dynamicModuleSizes(verifiers []*global.Verifier, rt wiop.Runtime) []int {
 	return out
 }
 
-func runtimeTraceRoundFromRuntime(rt wiop.Runtime, round *wiop.Round) runtimeTraceRound {
+func runtimeTraceRoundFromRuntime(rt *wiop.Runtime, round *wiop.Round) runtimeTraceRound {
 	var trace runtimeTraceRound
 	for _, col := range round.Columns {
 		if col.Visibility < wiop.VisibilityOracle || !rt.HasColumnAssignment(col) {

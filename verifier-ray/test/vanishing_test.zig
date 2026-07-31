@@ -19,7 +19,7 @@ test "vanishing quotient honest scenarios match prover-ray" {
         defer arena.deinit();
         const proof = try buildProofData(arena.allocator(), case.honest);
         var transcript = fiat_shamir.Transcript.init();
-        const coins = try protocol.replayWithTranscript(&transcript, spec, proof.rounds);
+        const coins = try protocol.replayWithTranscript(&transcript, spec, proof.rounds, proof.module_sizes);
         const ctx = protocol.Context{ .all_coins = &coins, .rounds = proof.rounds };
         try vanishing.verify(system, .{
             .ctx = ctx,
@@ -44,7 +44,7 @@ test "vanishing quotient invalid scenarios fail identity" {
         defer arena.deinit();
         const proof = try buildProofData(arena.allocator(), invalid);
         var transcript = fiat_shamir.Transcript.init();
-        const coins = try protocol.replayWithTranscript(&transcript, spec, proof.rounds);
+        const coins = try protocol.replayWithTranscript(&transcript, spec, proof.rounds, proof.module_sizes);
         const ctx = protocol.Context{ .all_coins = &coins, .rounds = proof.rounds };
         try std.testing.expectError(
             error.QuotientIdentityMismatch,
@@ -73,7 +73,7 @@ test "dynamic vanishing module sizes are required and validated" {
 
         const valid = try buildProofData(arena.allocator(), case.honest);
         var transcript = fiat_shamir.Transcript.init();
-        const coins = try protocol.replayWithTranscript(&transcript, spec, valid.rounds);
+        const coins = try protocol.replayWithTranscript(&transcript, spec, valid.rounds, valid.module_sizes);
         const ctx = protocol.Context{ .all_coins = &coins, .rounds = valid.rounds };
 
         try vanishing.verify(system, .{ .ctx = ctx, .witness_claims = valid.witness_claims, .quotient_claims = valid.quotient_claims, .module_sizes = valid.module_sizes });

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
 )
 
 // CoinRouting is the protocol-level Fiat-Shamir coin layout shared by every
@@ -20,6 +21,13 @@ type CoinRouting struct {
 	// TotalRoundCoins is the total number of coins across all rounds; the
 	// length of the Zig verifier's all_coins array.
 	TotalRoundCoins int
+	// DynamicModuleCount is the number of distinct dynamically-sized modules
+	// whose runtime sizes the prover absorbs into the transcript at each round
+	// advance (prover-ray's AdvanceRound). The Zig verifier's replay absorbs the
+	// first DynamicModuleCount entries of module_sizes at every round to stay
+	// byte-exact with the prover. Counted in the same order as the proof's
+	// module_sizes (VanishingSystem dynamic-module order).
+	DynamicModuleCount int
 }
 
 // BuildCoinRouting extracts the protocol-level coin layout from a compiled
@@ -46,5 +54,28 @@ func BuildCoinRouting(sys *wiop.System) (CoinRouting, error) {
 			out.RoundCoinCounts[0],
 		)
 	}
+
+	// Count distinct dynamically-sized modules, in the same order the proof's
+	// module_sizes uses (VanishingSystem dynamic-module order: first encounter
+	// across rounds → verifier actions). The Zig replay absorbs one transcript
+	// element per dynamic module at every round advance, mirroring prover-ray's
+	// AdvanceRound.
+	seenDynamic := map[*wiop.Module]struct{}{}
+	for _, round := range sys.Rounds {
+		for _, action := range round.VerifierActions {
+			verifier, ok := action.(*global.Verifier)
+			if !ok {
+				continue
+			}
+			if !verifier.Module.IsDynamic() {
+				continue
+			}
+			if _, seen := seenDynamic[verifier.Module]; !seen {
+				seenDynamic[verifier.Module] = struct{}{}
+				out.DynamicModuleCount++
+			}
+		}
+	}
+
 	return out, nil
 }

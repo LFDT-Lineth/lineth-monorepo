@@ -115,7 +115,7 @@ pub fn verify(
     // comptime-validates `spec` internal consistency and returns the
     // stack-allocated coin array.
     var transcript = fiat_shamir.Transcript.init();
-    const all_coins = try protocol.replayWithTranscript(&transcript, spec, proof.rounds);
+    const all_coins = try protocol.replayWithTranscript(&transcript, spec, proof.rounds, proof.module_sizes);
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.transcript_done, 0);
 
     // Step 2 — assemble the shared context routed to every sub-verifier.

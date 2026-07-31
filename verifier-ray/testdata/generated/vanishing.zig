@@ -16,6 +16,7 @@ pub const system_0_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "bool-col"
@@ -104,6 +105,7 @@ pub const system_1_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "fib"
@@ -192,6 +194,7 @@ pub const system_2_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "geo"
@@ -280,6 +283,7 @@ pub const system_3_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "ctr"
@@ -370,6 +374,7 @@ pub const system_4_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "pyth"
@@ -465,6 +470,7 @@ pub const system_5_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 1,
 };
 
 // scenario: "dyn-fib"
@@ -524,8 +530,8 @@ const scenario_5 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 1447242592, 978962941, 713008718, 2098986074, 810460008, 1622438948 }, .{ 1595630697, 1671389507, 1674422187, 1691736160, 1824101463, 792937680 }, .{ 1881232788, 627383792, 680025590, 1782463208, 1665432448, 1958953104 } },
-        .quotient_claims = &.{.{ 121605825, 302074000, 1996294172, 1700051928, 98596367, 812372901 }},
+        .witness_claims = &.{ .{ 909567050, 1656739169, 2048975680, 751897493, 1576570113, 154559052 }, .{ 299536069, 798071763, 1188258977, 1447829268, 424967821, 1741694229 }, .{ 864390407, 734432472, 978636059, 1086436238, 1729111891, 1377689226 } },
+        .quotient_claims = &.{.{ 1027894097, 264706113, 964166030, 878854478, 1311813075, 1536152420 }},
         .module_sizes = &.{8},
     },
     .invalid = .{
@@ -543,8 +549,8 @@ const scenario_5 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 1151832766, 489109694, 745564059, 2065529070, 787588006, 1722051715 }, .{ 1842952544, 1264021167, 1374471502, 1711228060, 247568247, 1873163260 }, .{ 468663487, 519972582, 1677417873, 175539661, 684550919, 698689360 } },
-        .quotient_claims = &.{.{ 105354878, 539148090, 407216735, 2029376794, 1215296786, 1606162197 }},
+        .witness_claims = &.{ .{ 1151982843, 452072004, 531228837, 256120931, 234976623, 865706353 }, .{ 381120049, 1259509436, 529266710, 1826966432, 1093980743, 1973972 }, .{ 196638957, 97839247, 136512574, 1996790669, 552855420, 512876314 } },
+        .quotient_claims = &.{.{ 1688908269, 1778594495, 1218168013, 1595588263, 1509468440, 505843405 }},
         .module_sizes = &.{8},
     },
 };
@@ -553,6 +559,7 @@ pub const system_6_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "const-col"
@@ -639,6 +646,7 @@ pub const system_7_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "fwd-shift"
@@ -725,6 +733,7 @@ pub const system_8_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "bool-cube"
@@ -817,6 +826,7 @@ pub const system_9_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lin-comb"
@@ -913,6 +923,7 @@ pub const system_10_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "fib-16"
@@ -1001,6 +1012,7 @@ pub const system_11_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "same-ratio"
@@ -1093,6 +1105,7 @@ pub const system_12_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "mixed-ratio"
@@ -1182,9 +1195,10 @@ const scenario_12 = Scenario{
 };
 
 pub const system_13_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 2 },
-    .total_round_coins = 4,
+    .total_round_coins = 3,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "multi-mod"
@@ -1227,7 +1241,7 @@ const system_13_modules = [_]vanishing.Module{
     // module: "modA"
     .{ .size = .{ .static = 4 }, .expressions = &system_13_module_0_expressions, .buckets = &system_13_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 2 },
     // module: "modB"
-    .{ .size = .{ .static = 8 }, .expressions = &system_13_module_1_expressions, .buckets = &system_13_module_1_buckets, .witness_claim_offset = 1, .merge_coin_index = 1, .eval_coin_index = 3 },
+    .{ .size = .{ .static = 8 }, .expressions = &system_13_module_1_expressions, .buckets = &system_13_module_1_buckets, .witness_claim_offset = 1, .merge_coin_index = 1, .eval_coin_index = 2 },
 };
 
 // system: "multi-mod"
@@ -1295,6 +1309,7 @@ pub const system_14_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "manual-cxl"
@@ -1383,6 +1398,7 @@ pub const system_15_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "pre-sel"
@@ -1471,6 +1487,7 @@ pub const system_16_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "cell-leaf"
@@ -1561,6 +1578,7 @@ pub const system_17_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 3,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "coin-scaled"
@@ -1657,6 +1675,7 @@ pub const system_18_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "step3"
@@ -1745,6 +1764,7 @@ pub const system_19_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "quartic"
@@ -1843,6 +1863,7 @@ pub const system_20_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 1,
 };
 
 // scenario: "dyn-leftpad"
@@ -1919,8 +1940,8 @@ const scenario_20 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 1441755679, 1546607480, 1167183543, 922434605, 1511134777, 977503327 }, .{ 1721837416, 1489126610, 2054060195, 2118877939, 1244571932, 1716699190 } },
-        .quotient_claims = &.{.{ 919044730, 699938810, 2114606905, 752538805, 1367047649, 551348400 }},
+        .witness_claims = &.{ .{ 1469513422, 1990984026, 1104822168, 758325456, 483134189, 1665451131 }, .{ 1031998150, 280721711, 1747426881, 1073230188, 1826504369, 1132575349 } },
+        .quotient_claims = &.{.{ 2048354218, 218461435, 122915321, 1405321472, 1979317636, 1236908769 }},
         .module_sizes = &.{8},
     },
 };
@@ -1929,6 +1950,7 @@ pub const system_21_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "cube-shift"
@@ -2021,6 +2043,7 @@ pub const system_22_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "mixed-hi-ratio"
@@ -2132,9 +2155,10 @@ const scenario_22 = Scenario{
 };
 
 pub const system_23_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 2 },
-    .total_round_coins = 4,
+    .total_round_coins = 3,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "multi-mod-hi-ratio"
@@ -2183,7 +2207,7 @@ const system_23_modules = [_]vanishing.Module{
     // module: "modA"
     .{ .size = .{ .static = 4 }, .expressions = &system_23_module_0_expressions, .buckets = &system_23_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 2 },
     // module: "modB"
-    .{ .size = .{ .static = 8 }, .expressions = &system_23_module_1_expressions, .buckets = &system_23_module_1_buckets, .witness_claim_offset = 1, .merge_coin_index = 1, .eval_coin_index = 3 },
+    .{ .size = .{ .static = 8 }, .expressions = &system_23_module_1_expressions, .buckets = &system_23_module_1_buckets, .witness_claim_offset = 1, .merge_coin_index = 1, .eval_coin_index = 2 },
 };
 
 // system: "multi-mod-hi-ratio"
@@ -2222,8 +2246,8 @@ const scenario_23 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 1512454731, 958598984, 360752375, 352626871, 392274282, 1763221166 }, .{ 1736202540, 1230922383, 1915178044, 916941519, 499064941, 1696376734 } },
-        .quotient_claims = &.{ .{ 378113683, 239649746, 622864702, 620833326, 1163421787, 1506158508 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 2032080460, 840407204, 478794511, 761911988, 1722796060, 1489447400 }, .{ 0, 0, 0, 0, 0, 0 } },
+        .witness_claims = &.{ .{ 1512454731, 958598984, 360752375, 352626871, 392274282, 1763221166 }, .{ 1209956587, 370094569, 1434975110, 788277908, 1239360919, 872309931 } },
+        .quotient_claims = &.{ .{ 378113683, 239649746, 622864702, 620833326, 1163421787, 1506158508 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 302489147, 1690553467, 1424096994, 197069477, 842516838, 750754091 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
     },
     .invalid = .{
@@ -2245,8 +2269,8 @@ const scenario_23 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 177595024, 812269657, 800835790, 879450272, 2074674568, 274976158 }, .{ 1406797314, 701206298, 712365316, 431506217, 2070867447, 169516254 } },
-        .quotient_claims = &.{ .{ 1642428581, 1801097239, 1265562164, 219862568, 518668642, 1134097256 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 505183367, 1411310835, 1889859229, 686174882, 1585152228, 1865482273 }, .{ 2096931289, 733472834, 1073059422, 1673570688, 543216611, 210903558 } },
+        .witness_claims = &.{ .{ 177595024, 812269657, 800835790, 879450272, 2074674568, 274976158 }, .{ 1951440508, 1392239785, 1070204721, 1753761275, 1752250979, 1066585038 } },
+        .quotient_claims = &.{ .{ 1642428581, 1801097239, 1265562164, 219862568, 518668642, 1134097256 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 1815830039, 510151843, 2112566642, 1217911695, 902047357, 1984872277 }, .{ 1434044728, 1060943788, 1823741220, 1368307431, 1488288549, 168974863 } },
         .module_sizes = &.{},
     },
 };
@@ -2255,6 +2279,7 @@ pub const system_24_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "cube-32"
@@ -2347,6 +2372,7 @@ pub const system_25_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "fwd-shift-3"
@@ -2433,6 +2459,7 @@ pub const system_26_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "two-shift"
@@ -2523,6 +2550,7 @@ pub const system_27_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 1,
 };
 
 // scenario: "dyn-quad"
@@ -2582,7 +2610,7 @@ const scenario_27 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{.{ 1413096820, 96070362, 393008447, 1671346176, 1527579318, 1184407193 }},
+        .witness_claims = &.{.{ 601249614, 1629899347, 1033266201, 348100009, 1510490613, 180614699 }},
         .quotient_claims = &.{.{ 1598029825, 0, 0, 0, 0, 0 }},
         .module_sizes = &.{8},
     },
@@ -2601,8 +2629,8 @@ const scenario_27 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{.{ 2062694608, 1504861030, 970551382, 1959951254, 31778349, 1060070188 }},
-        .quotient_claims = &.{.{ 1244967415, 1464920846, 357149961, 716507833, 409564937, 2027460110 }},
+        .witness_claims = &.{.{ 158542507, 333536486, 362854168, 285390145, 1106637606, 1070052536 }},
+        .quotient_claims = &.{.{ 2013443736, 1182353806, 1912581507, 122650090, 1492136043, 1705034976 }},
         .module_sizes = &.{8},
     },
 };
@@ -2611,6 +2639,7 @@ pub const system_28_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "quartic-shift"
@@ -2711,6 +2740,7 @@ pub const system_29_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-row0"
@@ -2797,6 +2827,7 @@ pub const system_30_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-rowN"
@@ -2883,6 +2914,7 @@ pub const system_31_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-shift"
@@ -2969,6 +3001,7 @@ pub const system_32_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-pair"
@@ -3059,6 +3092,7 @@ pub const system_33_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-multi"
@@ -3149,6 +3183,7 @@ pub const system_34_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-row1"
@@ -3237,6 +3272,7 @@ pub const system_35_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-cell"
@@ -3329,6 +3365,7 @@ pub const system_36_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 3,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-coin"
@@ -3427,6 +3464,7 @@ pub const system_37_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-anchors"
@@ -3528,6 +3566,7 @@ pub const system_38_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-const"
@@ -3616,6 +3655,7 @@ pub const system_39_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-wrap"
@@ -3702,6 +3742,7 @@ pub const system_40_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-prod"
@@ -3794,6 +3835,7 @@ pub const system_41_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 3,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-cell-coin"
@@ -3896,6 +3938,7 @@ pub const system_42_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-3col"
@@ -3990,6 +4033,7 @@ pub const system_43_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-multi-anchor-multi-col"
@@ -4084,6 +4128,7 @@ pub const system_44_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-cube"
@@ -4179,9 +4224,10 @@ const scenario_44 = Scenario{
 };
 
 pub const system_45_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 2 },
-    .total_round_coins = 4,
+    .total_round_coins = 3,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-multi-mod"
@@ -4222,7 +4268,7 @@ const system_45_modules = [_]vanishing.Module{
     // module: "modA"
     .{ .size = .{ .static = 4 }, .expressions = &system_45_module_0_expressions, .buckets = &system_45_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 2 },
     // module: "modB"
-    .{ .size = .{ .static = 4 }, .expressions = &system_45_module_1_expressions, .buckets = &system_45_module_1_buckets, .witness_claim_offset = 1, .merge_coin_index = 1, .eval_coin_index = 3 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_45_module_1_expressions, .buckets = &system_45_module_1_buckets, .witness_claim_offset = 1, .merge_coin_index = 1, .eval_coin_index = 2 },
 };
 
 // system: "lv-multi-mod"
@@ -4259,8 +4305,8 @@ const scenario_45 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 394027044, 704600399, 1315562949, 841189271, 68091860, 1392884829 }, .{ 498958901, 571822982, 417073808, 1299112904, 1171928233, 1496215771 } },
-        .quotient_claims = &.{ .{ 2032749915, 563781600, 1686410772, 1032608381, 1090475762, 1578962574 }, .{ 429098096, 1941233021, 1086825933, 68924398, 210770591, 1118943698 } },
+        .witness_claims = &.{ .{ 394027044, 704600399, 1315562949, 841189271, 68091860, 1392884829 }, .{ 490532521, 757930631, 426812741, 1305886327, 1730611419, 1883722554 } },
+        .quotient_claims = &.{ .{ 2032749915, 563781600, 1686410772, 1032608381, 1090475762, 1578962574 }, .{ 1657936869, 2001891148, 1983089234, 842741529, 11824234, 46694685 } },
         .module_sizes = &.{},
     },
     .invalid = .{
@@ -4280,8 +4326,8 @@ const scenario_45 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 1880561919, 1602638379, 1182471751, 598921129, 239689008, 1351139638 }, .{ 1985361843, 691009021, 1175894523, 1335561002, 949585664, 365019247 } },
-        .quotient_claims = &.{ .{ 1804236354, 696789751, 1149141792, 1084262301, 177683007, 1776142789 }, .{ 2011314576, 2115001176, 1401964263, 310236187, 551295849, 205692885 } },
+        .witness_claims = &.{ .{ 1880561919, 1602638379, 1182471751, 598921129, 239689008, 1351139638 }, .{ 314730548, 333389484, 1409759584, 1177307785, 1489532849, 417510086 } },
+        .quotient_claims = &.{ .{ 1804236354, 696789751, 1149141792, 1084262301, 177683007, 1776142789 }, .{ 1352931654, 821444945, 1862869265, 1766679736, 1335141004, 1179358429 } },
         .module_sizes = &.{},
     },
 };
@@ -4290,6 +4336,7 @@ pub const system_46_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 1,
 };
 
 // scenario: "lv-dyn-row0"
@@ -4347,8 +4394,8 @@ const scenario_46 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{.{ 1891684139, 1462113465, 1268379225, 223421746, 899026523, 876191255 }},
-        .quotient_claims = &.{.{ 1250866638, 790163901, 1171419139, 1663973373, 1581837529, 1914451230 }},
+        .witness_claims = &.{.{ 1206890110, 77801860, 2020325368, 445135374, 1320180030, 1770590819 }},
+        .quotient_claims = &.{.{ 1175230823, 1845663652, 1689637632, 55914990, 1974987842, 1034652683 }},
         .module_sizes = &.{8},
     },
     .invalid = .{
@@ -4366,8 +4413,8 @@ const scenario_46 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{.{ 1085956862, 171560619, 937768073, 957987431, 1736954368, 847931557 }},
-        .quotient_claims = &.{.{ 1825514900, 1223161481, 713913353, 1112048458, 584947956, 442732922 }},
+        .witness_claims = &.{.{ 579596495, 1521815294, 1967653641, 358493418, 1772955728, 1128939448 }},
+        .quotient_claims = &.{.{ 1251131205, 1335811891, 641900284, 477906011, 156006035, 1401582376 }},
         .module_sizes = &.{8},
     },
 };
@@ -4376,6 +4423,7 @@ pub const system_47_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 1,
 };
 
 // scenario: "lv-dyn-shift"
@@ -4433,8 +4481,8 @@ const scenario_47 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{.{ 170484856, 2100916483, 1743189282, 1012118600, 23041301, 1840258773 }},
-        .quotient_claims = &.{.{ 1211581303, 153673033, 626470969, 1996838739, 821877794, 129002686 }},
+        .witness_claims = &.{.{ 1002155942, 1638928690, 889815862, 795305784, 35405006, 661909017 }},
+        .quotient_claims = &.{.{ 1111878370, 664581805, 1181902845, 257391948, 1542033501, 512001935 }},
         .module_sizes = &.{8},
     },
     .invalid = .{
@@ -4452,8 +4500,8 @@ const scenario_47 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{.{ 1654528841, 148286215, 598317635, 644265069, 1889695918, 1142643855 }},
-        .quotient_claims = &.{.{ 987080008, 2035966932, 1624915475, 1656061659, 1562175443, 1093820716 }},
+        .witness_claims = &.{.{ 1206507443, 628811302, 805226275, 1988161426, 1314212529, 467414483 }},
+        .quotient_claims = &.{.{ 1306945540, 1939454756, 974143307, 1108749355, 292080399, 1345084393 }},
         .module_sizes = &.{8},
     },
 };
@@ -4462,6 +4510,7 @@ pub const system_48_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 1,
 };
 
 // scenario: "lv-dyn-prod"
@@ -4523,8 +4572,8 @@ const scenario_48 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 1433314169, 883105867, 1407030159, 264804234, 308027681, 984366226 }, .{ 1110518843, 2049707611, 1335582215, 1538161726, 610391510, 2094712215 } },
-        .quotient_claims = &.{ .{ 1576508277, 1662522539, 556209027, 70221195, 1243674255, 456360628 }, .{ 1856351107, 323075292, 695613788, 2085235981, 1665860371, 321604137 } },
+        .witness_claims = &.{ .{ 2070240927, 211385519, 1708875898, 10182832, 309120799, 221752083 }, .{ 209871606, 567439438, 1706481036, 951506340, 374132181, 808791959 } },
+        .quotient_claims = &.{ .{ 2005472437, 1778049344, 1536646264, 1799752366, 1406884516, 2122472072 }, .{ 58781250, 290369652, 282913017, 155612551, 1243910467, 1011002326 } },
         .module_sizes = &.{8},
     },
     .invalid = .{
@@ -4544,8 +4593,8 @@ const scenario_48 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 1384382885, 772493471, 1386970554, 1065339336, 2087089974, 1563010397 }, .{ 1633157404, 1225231125, 924647036, 710226224, 1391393316, 1752242409 } },
-        .quotient_claims = &.{ .{ 171699420, 645197761, 604882073, 1671706582, 656667189, 2118484058 }, .{ 1144398731, 107727674, 358302899, 414808064, 1517112730, 411942354 } },
+        .witness_claims = &.{ .{ 562202071, 1301525032, 993474849, 63643992, 1025756153, 641403695 }, .{ 1795272339, 157447877, 662316566, 42429328, 1394072913, 1137837941 } },
+        .quotient_claims = &.{ .{ 1375827943, 495835697, 398206779, 1089331830, 143322784, 532824233 }, .{ 680180691, 1261308774, 2123436100, 571732500, 1703683672, 464080946 } },
         .module_sizes = &.{8},
     },
 };
@@ -4554,6 +4603,7 @@ pub const system_49_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lds-ones"
@@ -4655,6 +4705,7 @@ pub const system_50_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lds-partial"
@@ -4767,6 +4818,7 @@ pub const system_51_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lds-zeros"
@@ -4879,6 +4931,7 @@ pub const system_52_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lds-maskzero"
@@ -4992,6 +5045,7 @@ pub const system_53_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lds-pack"
@@ -5169,9 +5223,10 @@ const scenario_53 = Scenario{
 };
 
 pub const system_54_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 2 },
-    .total_round_coins = 4,
+    .total_round_coins = 3,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lds-multi-mod"
@@ -5258,7 +5313,7 @@ const system_54_modules = [_]vanishing.Module{
     // module: "mA"
     .{ .size = .{ .static = 4 }, .expressions = &system_54_module_0_expressions, .buckets = &system_54_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 2 },
     // module: "mB"
-    .{ .size = .{ .static = 4 }, .expressions = &system_54_module_1_expressions, .buckets = &system_54_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 1, .eval_coin_index = 3 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_54_module_1_expressions, .buckets = &system_54_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 1, .eval_coin_index = 2 },
 };
 
 // system: "lds-multi-mod"
@@ -5316,8 +5371,8 @@ const scenario_54 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 738346471, 290150111, 9438612, 1350693002, 1618005237, 48531955 }, .{ 2029961733, 1362825326, 722958537, 2007678158, 1564404775, 1686633400 }, .{ 1765859010, 489925264, 1561382459, 1846142986, 361732688, 660941851 }, .{ 1408482789, 1239820076, 1942487532, 989526533, 1436578469, 1167093286 }, .{ 758360673, 1093397450, 1341593884, 1147035823, 1767674806, 1833643310 }, .{ 1630497720, 1231039232, 732146326, 1842226881, 530373422, 950538937 }, .{ 572137733, 1983572477, 397167080, 743439653, 1503687929, 569727079 } },
-        .quotient_claims = &.{ .{ 1669057901, 1298373226, 663209308, 459984645, 1728771928, 590756256 }, .{ 756112403, 778057456, 338994244, 522409474, 1646023811, 2006276678 }, .{ 340307850, 1883788951, 1829947498, 759662667, 248532606, 483765160 }, .{ 424303771, 1345845074, 1381162730, 47737889, 277947478, 1509969736 } },
+        .witness_claims = &.{ .{ 738346471, 290150111, 9438612, 1350693002, 1618005237, 48531955 }, .{ 2029961733, 1362825326, 722958537, 2007678158, 1564404775, 1686633400 }, .{ 1765859010, 489925264, 1561382459, 1846142986, 361732688, 660941851 }, .{ 1538574825, 1597198732, 1794055442, 628487450, 1401436496, 409513639 }, .{ 738346475, 290150111, 9438612, 1350693002, 1618005237, 48531955 }, .{ 993877622, 2054215117, 1195847626, 1417211735, 1881506543, 1012437043 }, .{ 428205615, 1146831089, 824058320, 1203982864, 363406646, 791893989 } },
+        .quotient_claims = &.{ .{ 1669057901, 1298373226, 663209308, 459984645, 1728771928, 590756256 }, .{ 71863244, 1204786095, 375815314, 229180857, 634627320, 101775613 }, .{ 2049539031, 206349076, 1667982706, 585359029, 1509720357, 434424554 }, .{ 1376459317, 1478454602, 884901246, 534862304, 539430637, 53329213 } },
         .module_sizes = &.{},
     },
 };
@@ -5326,6 +5381,7 @@ pub const system_55_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lds-size1"
@@ -5415,9 +5471,10 @@ const scenario_55 = Scenario{
 };
 
 pub const system_56_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 2 },
-    .total_round_coins = 4,
+    .total_round_coins = 3,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lds-cond"
@@ -5518,7 +5575,7 @@ const system_56_modules = [_]vanishing.Module{
     // module: "mS"
     .{ .size = .{ .static = 4 }, .expressions = &system_56_module_0_expressions, .buckets = &system_56_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 2 },
     // module: "mT"
-    .{ .size = .{ .static = 2 }, .expressions = &system_56_module_1_expressions, .buckets = &system_56_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 1, .eval_coin_index = 3 },
+    .{ .size = .{ .static = 2 }, .expressions = &system_56_module_1_expressions, .buckets = &system_56_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 1, .eval_coin_index = 2 },
 };
 
 // system: "lds-cond"
@@ -5579,8 +5636,8 @@ const scenario_56 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 83590582, 2067550175, 1494791621, 1879764123, 1564422720, 1466330176 }, .{ 1648007063, 1199383162, 1676356958, 253950101, 46256165, 673246730 }, .{ 785936489, 884262247, 1097463521, 917404917, 163451307, 1301905897 }, .{ 1146297469, 1175276216, 2020168389, 963951644, 197097813, 1252981434 }, .{ 1111179680, 1657326647, 722960999, 1740030733, 362275887, 1055196918 }, .{ 1726223289, 692702893, 1841822554, 380105795, 1670633740, 749316845 }, .{ 381272834, 1438003540, 288883879, 1750600638, 460072693, 1381389588 }, .{ 1672441828, 472384994, 1293215742, 1776050567, 638653996, 101562985 } },
-        .quotient_claims = &.{ .{ 98514630, 1509985466, 1338649975, 49731797, 1895600477, 180098445 }, .{ 1637096761, 758849936, 1613000841, 87559451, 718601026, 1674729869 }, .{ 416490443, 2004716615, 849198505, 692085409, 688990822, 1256627732 }, .{ 1634171029, 1223034835, 1688409636, 180407772, 1146591510, 228239827 }, .{ 488178148, 666404016, 343143519, 2015617704, 2045877917, 807938896 }, .{ 0, 0, 0, 0, 0, 0 } },
+        .witness_claims = &.{ .{ 83590582, 2067550175, 1494791621, 1879764123, 1564422720, 1466330176 }, .{ 1648007063, 1199383162, 1676356958, 253950101, 46256165, 673246730 }, .{ 785936489, 884262247, 1097463521, 917404917, 163451307, 1301905897 }, .{ 1146297469, 1175276216, 2020168389, 963951644, 197097813, 1252981434 }, .{ 1780772760, 244756798, 529092046, 1318398466, 172254101, 825230854 }, .{ 2066683245, 1508451075, 335256214, 1311470422, 1584680843, 346224318 }, .{ 40812878, 622255358, 1795450219, 819236011, 546025590, 1784482115 }, .{ 1368630327, 1813844886, 1101198839, 1730960371, 408165423, 270517192 } },
+        .quotient_claims = &.{ .{ 98514630, 1509985466, 1338649975, 49731797, 1895600477, 180098445 }, .{ 1637096761, 758849936, 1613000841, 87559451, 718601026, 1674729869 }, .{ 416490443, 2004716615, 849198505, 692085409, 688990822, 1256627732 }, .{ 777357723, 857690923, 1537691267, 971228310, 287062540, 458727423 }, .{ 1339328038, 575068038, 838140535, 1147969622, 765642458, 865560795 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
     },
 };
@@ -5589,6 +5646,7 @@ pub const system_57_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lds-many"
@@ -5840,6 +5898,7 @@ pub const system_58_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lds-size2"
@@ -5941,6 +6000,7 @@ pub const system_59_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lds-multi-q"
@@ -6076,6 +6136,7 @@ pub const system_60_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lds-vec-den"
@@ -6184,6 +6245,7 @@ pub const system_61_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lds-ones-pack"
@@ -6351,9 +6413,10 @@ const scenario_61 = Scenario{
 };
 
 pub const system_62_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-simple"
@@ -6450,7 +6513,7 @@ const system_62_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 4 }, .expressions = &system_62_module_0_expressions, .buckets = &system_62_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_62_module_1_expressions, .buckets = &system_62_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_62_module_1_expressions, .buckets = &system_62_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "lk-simple"
@@ -6514,16 +6577,17 @@ const scenario_62 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 1477922301, 670522841, 2035423668, 1186147306, 2084727353, 223516913 }, .{ 1549537752, 1396753844, 1014536670, 949950854, 1810883, 947840953 }, .{ 386885772, 375606459, 98694832, 254070520, 1497441813, 780369132 }, .{ 680194459, 788085356, 1236399793, 1336979090, 1748081386, 1477764423 }, .{ 1767394584, 541482937, 1495560027, 1662832357, 26765576, 1552004712 }, .{ 202256082, 1565189518, 1254272267, 1770694084, 2049892170, 868443 }, .{ 1219909799, 1214102039, 174929267, 292013885, 581558327, 376302691 } },
-        .quotient_claims = &.{ .{ 994585575, 24655604, 348794472, 87067436, 1069192944, 1760894175 }, .{ 1714302124, 2018575896, 1369284563, 1507104031, 944322423, 823042178 }, .{ 1872680044, 188178143, 930209923, 1482586749, 389706156, 1844156593 }, .{ 1426025008, 792875480, 568673841, 879106126, 2048762467, 611855569 }, .{ 1303463903, 2051922969, 1043775407, 479606632, 308583812, 1555525817 }, .{ 571099636, 224125065, 1911261870, 2120302029, 1342672947, 368927280 } },
+        .witness_claims = &.{ .{ 1477922301, 670522841, 2035423668, 1186147306, 2084727353, 223516913 }, .{ 1549537752, 1396753844, 1014536670, 949950854, 1810883, 947840953 }, .{ 386885772, 375606459, 98694832, 254070520, 1497441813, 780369132 }, .{ 680194459, 788085356, 1236399793, 1336979090, 1748081386, 1477764423 }, .{ 412277477, 678548019, 1297966997, 1539890247, 14065307, 87291456 }, .{ 1762928525, 186426394, 1759982236, 1649926487, 856531699, 1214541129 }, .{ 30804686, 1245435360, 2062203106, 1397467166, 802295128, 1296533236 } },
+        .quotient_claims = &.{ .{ 994585575, 24655604, 348794472, 87067436, 1069192944, 1760894175 }, .{ 1714302124, 2018575896, 1369284563, 1507104031, 944322423, 823042178 }, .{ 1872680044, 188178143, 930209923, 1482586749, 389706156, 1844156593 }, .{ 1736948041, 1400630505, 713383682, 424553053, 1846180475, 464153612 }, .{ 1685511013, 1602231473, 157807812, 2039055105, 1857817349, 2113970676 }, .{ 397008506, 337883439, 1905268708, 1395695233, 1418858164, 178934114 } },
         .module_sizes = &.{},
     },
 };
 
 pub const system_63_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-filterA"
@@ -6624,7 +6688,7 @@ const system_63_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 2 }, .expressions = &system_63_module_0_expressions, .buckets = &system_63_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_63_module_1_expressions, .buckets = &system_63_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_63_module_1_expressions, .buckets = &system_63_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "lk-filterA"
@@ -6689,16 +6753,17 @@ const scenario_63 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 1, 0, 0, 0, 0, 0 }, .{ 1857032177, 1323858048, 1714710979, 405056949, 220465544, 1010643224 }, .{ 1389967482, 809898620, 152351032, 2040412895, 1622320938, 1013382896 }, .{ 1482187919, 1502443929, 686817769, 249008227, 1077192600, 727710835 }, .{ 1412960943, 1258874862, 1673345022, 1619635484, 1973172956, 2027399722 }, .{ 726255006, 947885626, 467116852, 875993558, 254943421, 1790659169 }, .{ 779779727, 419935, 1035592153, 875526477, 697072906, 1480670989 }, .{ 637580435, 2053584170, 1047718101, 1983453372, 2010816830, 223333672 } },
-        .quotient_claims = &.{ .{ 1200755341, 873269886, 1905624671, 707890363, 363131385, 97764504 }, .{ 1027833084, 1381794692, 750157995, 886338748, 685217043, 619817834 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 1269299270, 2044857247, 1694571272, 1978317955, 762583269, 672440091 }, .{ 992782714, 1968677228, 1684794938, 1135686409, 103617243, 1637056685 }, .{ 1060717352, 33490451, 449315541, 346783822, 261166372, 1562947367 } },
+        .witness_claims = &.{ .{ 1, 0, 0, 0, 0, 0 }, .{ 1857032177, 1323858048, 1714710979, 405056949, 220465544, 1010643224 }, .{ 1389967482, 809898620, 152351032, 2040412895, 1622320938, 1013382896 }, .{ 1482187919, 1502443929, 686817769, 249008227, 1077192600, 727710835 }, .{ 71746506, 730002874, 1832298244, 619440269, 258060900, 814622387 }, .{ 1094896741, 1401425722, 1579762934, 1428041330, 1730147305, 934353194 }, .{ 30469183, 1110089149, 59524272, 849806143, 1223411871, 2075267479 }, .{ 1371360375, 1133414139, 1283416188, 1547219305, 1318152073, 347055008 } },
+        .quotient_claims = &.{ .{ 1200755341, 873269886, 1905624671, 707890363, 363131385, 97764504 }, .{ 1027833084, 1381794692, 750157995, 886338748, 685217043, 619817834 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 1098863586, 1294566925, 241979659, 1319133445, 451485024, 311328787 }, .{ 1472594668, 619279598, 1288374388, 85850785, 1110021886, 357935586 }, .{ 1949830267, 675762569, 875955018, 106162458, 1440910219, 562104181 } },
         .module_sizes = &.{},
     },
 };
 
 pub const system_64_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4 },
-    .total_round_coins = 6,
+    .total_round_coins = 5,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-filterT"
@@ -6811,7 +6876,7 @@ const system_64_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 4 }, .expressions = &system_64_module_0_expressions, .buckets = &system_64_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 2, .eval_coin_index = 4 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_64_module_1_expressions, .buckets = &system_64_module_1_buckets, .witness_claim_offset = 5, .merge_coin_index = 3, .eval_coin_index = 5 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_64_module_1_expressions, .buckets = &system_64_module_1_buckets, .witness_claim_offset = 5, .merge_coin_index = 3, .eval_coin_index = 4 },
 };
 
 // system: "lk-filterT"
@@ -6876,16 +6941,17 @@ const scenario_64 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 1085468757, 459773292, 1574192706, 368774443, 6781539, 843277217 }, .{ 1748633103, 194473842, 1349601621, 1178248682, 676924851, 1754490948 }, .{ 2048514268, 1281135242, 1359218741, 686206254, 1333648522, 528498930 }, .{ 1918826158, 1378288809, 33109540, 1346732256, 1707129768, 544754957 }, .{ 1608087595, 229886646, 787096353, 1249740438, 1068743986, 1486991825 }, .{ 1120273685, 460941318, 877468492, 302907417, 1441669684, 1429084191 }, .{ 1774364436, 680456794, 1793853995, 715167071, 104089280, 964656563 }, .{ 478530533, 1788266944, 1866906382, 1631671287, 199117045, 1019672951 } },
-        .quotient_claims = &.{ .{ 821728749, 1653608560, 1400598459, 798417239, 731670938, 1617341628 }, .{ 2065905339, 2126447551, 737695287, 232288793, 1099817096, 1280195036 }, .{ 1831459007, 898929958, 1736177247, 1723320871, 1412991984, 1990803516 }, .{ 128609616, 312927260, 1750395086, 1638604194, 846748200, 1950777037 }, .{ 135698284, 1981429801, 1739520859, 1029979096, 188097255, 1888033892 }, .{ 1227516633, 1254695213, 1446748088, 1833400706, 1069639485, 523801141 } },
+        .witness_claims = &.{ .{ 1085468757, 459773292, 1574192706, 368774443, 6781539, 843277217 }, .{ 1748633103, 194473842, 1349601621, 1178248682, 676924851, 1754490948 }, .{ 2048514268, 1281135242, 1359218741, 686206254, 1333648522, 528498930 }, .{ 1918826158, 1378288809, 33109540, 1346732256, 1707129768, 544754957 }, .{ 1608087595, 229886646, 787096353, 1249740438, 1068743986, 1486991825 }, .{ 1741819577, 1722781121, 1780111323, 1317678056, 399164193, 829248795 }, .{ 1671354865, 402940923, 229318117, 1484395157, 499241374, 2066662614 }, .{ 964775534, 1962546406, 651862202, 286834218, 2096798738, 45026781 } },
+        .quotient_claims = &.{ .{ 821728749, 1653608560, 1400598459, 798417239, 731670938, 1617341628 }, .{ 2065905339, 2126447551, 737695287, 232288793, 1099817096, 1280195036 }, .{ 1831459007, 898929958, 1736177247, 1723320871, 1412991984, 1990803516 }, .{ 1674086503, 1201841977, 384708061, 1942752927, 1967265351, 151995864 }, .{ 538589406, 266460933, 1011432038, 1040359531, 890771431, 72254868 }, .{ 1227516633, 1254695213, 1446748088, 1833400706, 1069639485, 523801141 } },
         .module_sizes = &.{},
     },
 };
 
 pub const system_65_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4 },
-    .total_round_coins = 6,
+    .total_round_coins = 5,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-double"
@@ -7002,7 +7068,7 @@ const system_65_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 4 }, .expressions = &system_65_module_0_expressions, .buckets = &system_65_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 2, .eval_coin_index = 4 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_65_module_1_expressions, .buckets = &system_65_module_1_buckets, .witness_claim_offset = 5, .merge_coin_index = 3, .eval_coin_index = 5 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_65_module_1_expressions, .buckets = &system_65_module_1_buckets, .witness_claim_offset = 5, .merge_coin_index = 3, .eval_coin_index = 4 },
 };
 
 // system: "lk-double"
@@ -7068,16 +7134,17 @@ const scenario_65 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 1886232708, 444878572, 1845206956, 179053891, 1557197751, 789864441 }, .{ 1318110728, 1978476692, 495027605, 1881072048, 306301856, 1524389438 }, .{ 1170029254, 31980586, 664433333, 781042096, 495451414, 1678346343 }, .{ 1051831246, 1065744625, 1612723605, 1169948467, 252098691, 246326792 }, .{ 1886232708, 444878572, 1845206956, 179053891, 1557197751, 789864441 }, .{ 1464521098, 1212162677, 1262233408, 108056021, 1111229172, 12492652 }, .{ 1470848180, 1870955405, 1424274336, 1090097863, 600208135, 1841570052 }, .{ 719410959, 929667833, 1757715583, 1267282880, 497670421, 1421992454 }, .{ 615450384, 1930001280, 1677408893, 452458594, 1938729997, 1803903216 } },
-        .quotient_claims = &.{ .{ 177457632, 1535180872, 2055533956, 600074726, 1887748522, 1861598064 }, .{ 661503847, 1417504119, 1825156834, 1177896667, 1581140070, 1792806157 }, .{ 191236440, 1671659118, 464817368, 146900638, 1698507504, 1991740115 }, .{ 722307363, 1329313293, 1361022787, 1371463943, 938506808, 179070029 }, .{ 515070841, 497701227, 1442998281, 700051928, 141140303, 2127876886 }, .{ 2058593186, 290354159, 269307665, 1474290789, 1975348335, 1417294884 } },
+        .witness_claims = &.{ .{ 1886232708, 444878572, 1845206956, 179053891, 1557197751, 789864441 }, .{ 1318110728, 1978476692, 495027605, 1881072048, 306301856, 1524389438 }, .{ 1170029254, 31980586, 664433333, 781042096, 495451414, 1678346343 }, .{ 1051831246, 1065744625, 1612723605, 1169948467, 252098691, 246326792 }, .{ 1886232708, 444878572, 1845206956, 179053891, 1557197751, 789864441 }, .{ 1886232708, 444878572, 1845206956, 179053891, 1557197751, 789864441 }, .{ 812595705, 152229741, 1635678828, 249634385, 1824404577, 606316995 }, .{ 960677179, 2098725847, 1466273100, 1349664337, 1635255019, 452360090 }, .{ 1603597675, 1806885534, 603881213, 1899650273, 1476732537, 1353073801 } },
+        .quotient_claims = &.{ .{ 177457632, 1535180872, 2055533956, 600074726, 1887748522, 1861598064 }, .{ 661503847, 1417504119, 1825156834, 1177896667, 1581140070, 1792806157 }, .{ 191236440, 1671659118, 464817368, 146900638, 1698507504, 1991740115 }, .{ 290859221, 1724386860, 815098141, 1902970510, 560038219, 1492166336 }, .{ 1083896720, 341619289, 730039693, 842280712, 1821270473, 1919922576 }, .{ 1589666772, 454073288, 1337383828, 1030447030, 920545837, 2091045633 } },
         .module_sizes = &.{},
     },
 };
 
 pub const system_66_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4 },
-    .total_round_coins = 6,
+    .total_round_coins = 5,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-multi-col"
@@ -7190,7 +7257,7 @@ const system_66_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 4 }, .expressions = &system_66_module_0_expressions, .buckets = &system_66_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 2, .eval_coin_index = 4 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_66_module_1_expressions, .buckets = &system_66_module_1_buckets, .witness_claim_offset = 5, .merge_coin_index = 3, .eval_coin_index = 5 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_66_module_1_expressions, .buckets = &system_66_module_1_buckets, .witness_claim_offset = 5, .merge_coin_index = 3, .eval_coin_index = 4 },
 };
 
 // system: "lk-multi-col"
@@ -7256,16 +7323,17 @@ const scenario_66 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 120663170, 1920019457, 1706496890, 225709487, 988008603, 1975767479 }, .{ 775045192, 639248399, 424626346, 1872637887, 875184373, 4976983 }, .{ 757758388, 731808515, 513172113, 1799458506, 554374612, 1378207932 }, .{ 786085313, 88911356, 1058149703, 304105848, 1247090168, 369263196 }, .{ 1996244321, 1713456282, 2023450760, 882693158, 976991590, 1741491466 }, .{ 1315371423, 1634035191, 1289590816, 906517524, 1853781455, 1745644317 }, .{ 1631720893, 1728012465, 1371415421, 1747198232, 1392782290, 1087244534 }, .{ 765075302, 624472253, 284679962, 1735265651, 582508615, 1443067427 }, .{ 1354931390, 1980083015, 1306891856, 812738495, 1123604078, 357377386 } },
-        .quotient_claims = &.{ .{ 2062368290, 1138266777, 1487615513, 728623398, 255852314, 113497719 }, .{ 149956230, 1071859853, 1919911475, 1179667381, 940220711, 1735386634 }, .{ 987439774, 1414429476, 468105946, 844063719, 1916890525, 1701059882 }, .{ 935288466, 1730488553, 1688281398, 1727525131, 341628910, 579383797 }, .{ 1725603748, 131868111, 1997317752, 469401995, 468104977, 2085840749 }, .{ 1455640041, 956342850, 1151664050, 2085074195, 475049121, 1761156731 } },
+        .witness_claims = &.{ .{ 120663170, 1920019457, 1706496890, 225709487, 988008603, 1975767479 }, .{ 775045192, 639248399, 424626346, 1872637887, 875184373, 4976983 }, .{ 757758388, 731808515, 513172113, 1799458506, 554374612, 1378207932 }, .{ 786085313, 88911356, 1058149703, 304105848, 1247090168, 369263196 }, .{ 1996244321, 1713456282, 2023450760, 882693158, 976991590, 1741491466 }, .{ 1547582790, 1668747183, 2108219768, 147338451, 197533957, 1513806380 }, .{ 341283326, 355195632, 1891465369, 2042501416, 922246947, 1038663265 }, .{ 191172152, 1368418895, 923738071, 1372025431, 1437176317, 266387084 }, .{ 1297541075, 1202195106, 731585737, 776414473, 356788275, 452779995 } },
+        .quotient_claims = &.{ .{ 2062368290, 1138266777, 1487615513, 728623398, 255852314, 113497719 }, .{ 149956230, 1071859853, 1919911475, 1179667381, 940220711, 1735386634 }, .{ 987439774, 1414429476, 468105946, 844063719, 1916890525, 1701059882 }, .{ 861919332, 1248344831, 749356261, 679058192, 2047849428, 1091195917 }, .{ 99087695, 354738987, 1489618329, 988587907, 1247113251, 2035934236 }, .{ 1476327297, 42991096, 199763412, 36717452, 1587860442, 129753861 } },
         .module_sizes = &.{},
     },
 };
 
 pub const system_67_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 3, 3 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 3, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 4 },
-    .total_round_coins = 7,
+    .total_round_coins = 5,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-shared"
@@ -7405,9 +7473,9 @@ const system_67_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 4 }, .expressions = &system_67_module_0_expressions, .buckets = &system_67_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 4 },
     // module: "modS1"
-    .{ .size = .{ .static = 4 }, .expressions = &system_67_module_1_expressions, .buckets = &system_67_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 5 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_67_module_1_expressions, .buckets = &system_67_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 4 },
     // module: "modS2"
-    .{ .size = .{ .static = 2 }, .expressions = &system_67_module_2_expressions, .buckets = &system_67_module_2_buckets, .witness_claim_offset = 7, .merge_coin_index = 3, .eval_coin_index = 6 },
+    .{ .size = .{ .static = 2 }, .expressions = &system_67_module_2_expressions, .buckets = &system_67_module_2_buckets, .witness_claim_offset = 7, .merge_coin_index = 3, .eval_coin_index = 4 },
 };
 
 // system: "lk-shared"
@@ -7478,16 +7546,17 @@ const scenario_67 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 1469969291, 678557623, 767848872, 1997320954, 1537212123, 1276716691 }, .{ 401997940, 525103940, 1881053576, 1901285395, 1986400878, 1622038768 }, .{ 1712190729, 1607883202, 1277978581, 384589123, 1624505700, 1551319630 }, .{ 499669938, 302764833, 1709290593, 650878552, 997536102, 1862193433 }, .{ 539021838, 188523706, 314773598, 1480225945, 1296020416, 1283918427 }, .{ 289207306, 1373079403, 787955826, 55050707, 1028953561, 990575494 }, .{ 1987720737, 1908366919, 1831176191, 416856371, 1620045595, 1012512542 }, .{ 1500717005, 946777632, 1253565260, 2032654841, 905057189, 2004637960 }, .{ 1578023972, 2089797846, 246041113, 1415609099, 492224442, 106455845 }, .{ 1975509254, 705365800, 1796996706, 1134667784, 175142167, 989683787 } },
-        .quotient_claims = &.{ .{ 927124547, 2018013631, 1052755326, 1525980066, 9749552, 1542022495 }, .{ 1306026659, 2066547138, 372449835, 1098390475, 1029723929, 289942796 }, .{ 981530062, 1992131692, 1436184040, 343424915, 429487658, 109843767 }, .{ 1836965225, 1968518073, 403497400, 812209803, 613985990, 791710529 }, .{ 1304863806, 1676716989, 2051714086, 2027431780, 435970785, 710064188 }, .{ 1550719620, 554929345, 55301333, 216560957, 561267749, 883487408 }, .{ 1692790973, 1359245157, 584723448, 1985941508, 1685103641, 536928737 }, .{ 1587157951, 682452127, 1796331743, 1405582182, 341285118, 746169842 }, .{ 0, 0, 0, 0, 0, 0 } },
+        .witness_claims = &.{ .{ 1469969291, 678557623, 767848872, 1997320954, 1537212123, 1276716691 }, .{ 401997940, 525103940, 1881053576, 1901285395, 1986400878, 1622038768 }, .{ 1712190729, 1607883202, 1277978581, 384589123, 1624505700, 1551319630 }, .{ 499669938, 302764833, 1709290593, 650878552, 997536102, 1862193433 }, .{ 392075064, 1685694886, 1786770714, 1964092639, 1199106670, 158197471 }, .{ 879898165, 1247679229, 1092806359, 99517491, 839528612, 2089594307 }, .{ 1594783833, 1384624741, 1398612830, 783512062, 1122257348, 1295680520 }, .{ 443686360, 1520472192, 723822742, 1616392610, 1402414157, 1624882663 }, .{ 504348184, 1516103286, 775783631, 1831871330, 2125573907, 486211142 }, .{ 279074911, 2109368366, 24714770, 1465344091, 356420446, 55498354 } },
+        .quotient_claims = &.{ .{ 927124547, 2018013631, 1052755326, 1525980066, 9749552, 1542022495 }, .{ 1306026659, 2066547138, 372449835, 1098390475, 1029723929, 289942796 }, .{ 981530062, 1992131692, 1436184040, 343424915, 429487658, 109843767 }, .{ 1955727488, 637820410, 1376612999, 1102793270, 1905464324, 427058137 }, .{ 691396850, 1015497342, 388266758, 2005613098, 1611532999, 1666046650 }, .{ 1611698857, 478090078, 1963392745, 1390808161, 828755468, 933542656 }, .{ 1609565258, 2014418856, 1620735762, 1887150952, 972946827, 73068841 }, .{ 1033674914, 1378922160, 989981605, 1380884543, 1228599131, 630204868 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
     },
 };
 
 pub const system_68_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 4, 4 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 4, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 5 },
-    .total_round_coins = 9,
+    .total_round_coins = 6,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-distinct"
@@ -7672,11 +7741,11 @@ const system_68_modules = [_]vanishing.Module{
     // module: "modT1"
     .{ .size = .{ .static = 4 }, .expressions = &system_68_module_0_expressions, .buckets = &system_68_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 5 },
     // module: "modT2"
-    .{ .size = .{ .static = 2 }, .expressions = &system_68_module_1_expressions, .buckets = &system_68_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 6 },
+    .{ .size = .{ .static = 2 }, .expressions = &system_68_module_1_expressions, .buckets = &system_68_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 5 },
     // module: "modS1"
-    .{ .size = .{ .static = 2 }, .expressions = &system_68_module_2_expressions, .buckets = &system_68_module_2_buckets, .witness_claim_offset = 8, .merge_coin_index = 3, .eval_coin_index = 7 },
+    .{ .size = .{ .static = 2 }, .expressions = &system_68_module_2_expressions, .buckets = &system_68_module_2_buckets, .witness_claim_offset = 8, .merge_coin_index = 3, .eval_coin_index = 5 },
     // module: "modS2"
-    .{ .size = .{ .static = 2 }, .expressions = &system_68_module_3_expressions, .buckets = &system_68_module_3_buckets, .witness_claim_offset = 11, .merge_coin_index = 4, .eval_coin_index = 8 },
+    .{ .size = .{ .static = 2 }, .expressions = &system_68_module_3_expressions, .buckets = &system_68_module_3_buckets, .witness_claim_offset = 11, .merge_coin_index = 4, .eval_coin_index = 5 },
 };
 
 // system: "lk-distinct"
@@ -7755,16 +7824,17 @@ const scenario_68 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 344965101, 250151658, 1965504424, 1410736901, 1311635351, 629297040 }, .{ 1600950591, 1601862716, 1284507299, 689289589, 56198258, 1612861437 }, .{ 1267215218, 1680581447, 651834011, 2014274260, 3645167, 655972814 }, .{ 1497497811, 2053331942, 1437931963, 80901518, 1028611050, 662694607 }, .{ 1, 0, 0, 0, 0, 0 }, .{ 1190506823, 1638235273, 1683905684, 410930088, 663778692, 568789620 }, .{ 490212575, 545417780, 1702967177, 844445905, 1799569688, 1154487143 }, .{ 207210825, 1640998581, 1074669161, 722798032, 864608084, 1299405912 }, .{ 242269791, 999470200, 242699038, 832468325, 1530562194, 289395994 }, .{ 187420974, 1148405863, 133111020, 1509406746, 167110273, 1136153180 }, .{ 1956570928, 1169745725, 914393654, 502739341, 384250073, 798604582 }, .{ 702358957, 1484217771, 1406416627, 1455466696, 1129654599, 1786744960 }, .{ 1878334511, 593542042, 1598829811, 1550570177, 668409887, 751391143 }, .{ 439135372, 704919565, 804895005, 1301482168, 1397807642, 218039973 } },
-        .quotient_claims = &.{ .{ 1031161365, 1248898220, 486154420, 1909860042, 1640239907, 1832150185 }, .{ 900282132, 1964686299, 757023381, 1163231669, 762457276, 1933458034 }, .{ 882208114, 110744426, 1712593332, 1605873647, 179894485, 1302738292 }, .{ 2106651447, 993659652, 1607784346, 1528627288, 244279209, 1712094798 }, .{ 398431118, 1290756637, 996844674, 988146817, 1493235289, 50331138 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 1051549402, 2019451314, 1776480744, 2106804700, 554949400, 242661020 }, .{ 141757850, 1659021276, 612095484, 699062616, 1490740558, 1955241291 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 1743795735, 545711993, 712113228, 1265709561, 845812102, 545468043 }, .{ 47671856, 65137875, 1686487946, 926937690, 728468326, 1308959671 }, .{ 0, 0, 0, 0, 0, 0 } },
+        .witness_claims = &.{ .{ 344965101, 250151658, 1965504424, 1410736901, 1311635351, 629297040 }, .{ 1600950591, 1601862716, 1284507299, 689289589, 56198258, 1612861437 }, .{ 1267215218, 1680581447, 651834011, 2014274260, 3645167, 655972814 }, .{ 1497497811, 2053331942, 1437931963, 80901518, 1028611050, 662694607 }, .{ 1, 0, 0, 0, 0, 0 }, .{ 1781154890, 1357349004, 1792573943, 2000496825, 1181453520, 2023000109 }, .{ 2030270941, 826304049, 1594298918, 1385585601, 1281894860, 1830983087 }, .{ 2053055221, 752357262, 1736319217, 1843446658, 1697755555, 1350515765 }, .{ 28251992, 370119024, 222404054, 1993890857, 318984297, 383786563 }, .{ 401438773, 1777757039, 153406004, 347984214, 1378688170, 1041762611 }, .{ 1689034894, 576612739, 773405130, 2073254478, 339551111, 270103153 }, .{ 349551543, 773357429, 338132490, 130209608, 949252913, 107706324 }, .{ 100435492, 1304402384, 536407515, 745120832, 848811573, 299723346 }, .{ 2053055221, 752357262, 1736319217, 1843446658, 1697755555, 1350515765 } },
+        .quotient_claims = &.{ .{ 1031161365, 1248898220, 486154420, 1909860042, 1640239907, 1832150185 }, .{ 900282132, 1964686299, 757023381, 1163231669, 762457276, 1933458034 }, .{ 882208114, 110744426, 1712593332, 1605873647, 179894485, 1302738292 }, .{ 1511678023, 604216381, 1821078081, 682318513, 874807617, 114399821 }, .{ 249687762, 660719211, 1582844716, 243893015, 1650867391, 183584002 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 1032606288, 85959959, 1370581064, 1897484577, 1891868656, 2130472400 }, .{ 1202375288, 642971829, 510620564, 114055977, 1824970372, 296487703 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 554357263, 1903696515, 419021178, 843799607, 1982001399, 967412650 }, .{ 1881018671, 1469987222, 547861717, 1886813418, 479839042, 1947122431 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
     },
 };
 
 pub const system_69_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4 },
-    .total_round_coins = 6,
+    .total_round_coins = 5,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-multi-filterT"
@@ -7893,7 +7963,7 @@ const system_69_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 4 }, .expressions = &system_69_module_0_expressions, .buckets = &system_69_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 2, .eval_coin_index = 4 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_69_module_1_expressions, .buckets = &system_69_module_1_buckets, .witness_claim_offset = 6, .merge_coin_index = 3, .eval_coin_index = 5 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_69_module_1_expressions, .buckets = &system_69_module_1_buckets, .witness_claim_offset = 6, .merge_coin_index = 3, .eval_coin_index = 4 },
 };
 
 // system: "lk-multi-filterT"
@@ -7960,16 +8030,17 @@ const scenario_69 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 2063241119, 599871082, 2109096341, 589052275, 931492669, 1238276776 }, .{ 1830466790, 1354570437, 462789206, 1108521052, 755130889, 1853219940 }, .{ 683110752, 1486025557, 1922307783, 1621328124, 907497600, 1655209167 }, .{ 1822694034, 722069657, 388608600, 68829170, 1181603978, 709649543 }, .{ 1247752263, 1163747852, 1687921141, 197571295, 202296858, 1270679163 }, .{ 547621187, 676462451, 1112607789, 617223437, 1352568436, 464808243 }, .{ 893797390, 1063274611, 663349174, 1119828942, 2029678278, 901619830 }, .{ 1774936058, 1415064734, 218209839, 1004651833, 1682710043, 492777651 }, .{ 1862786058, 555853024, 1884592823, 1247982956, 831604841, 556299638 }, .{ 1038561179, 481726589, 2106095072, 1829363442, 722372414, 907912537 } },
-        .quotient_claims = &.{ .{ 1544100444, 1636204138, 1494963378, 1565937013, 1282225237, 1449921631 }, .{ 1646664158, 509687008, 1818931827, 1188205690, 931056501, 739794524 }, .{ 1539037236, 1879841921, 1771739081, 845325949, 880043353, 1078093535 }, .{ 1393533597, 711826583, 1822397412, 1882671962, 1903478496, 1110557554 }, .{ 1120821032, 1037875125, 826190170, 1693240219, 874251119, 1168724203 }, .{ 1721317433, 496571386, 20580118, 1112413852, 1135902902, 1213175900 } },
+        .witness_claims = &.{ .{ 2063241119, 599871082, 2109096341, 589052275, 931492669, 1238276776 }, .{ 1830466790, 1354570437, 462789206, 1108521052, 755130889, 1853219940 }, .{ 683110752, 1486025557, 1922307783, 1621328124, 907497600, 1655209167 }, .{ 1822694034, 722069657, 388608600, 68829170, 1181603978, 709649543 }, .{ 1247752263, 1163747852, 1687921141, 197571295, 202296858, 1270679163 }, .{ 547621187, 676462451, 1112607789, 617223437, 1352568436, 464808243 }, .{ 932450615, 172823202, 988820306, 76095566, 438677160, 1868176057 }, .{ 774990792, 1774659260, 1641740761, 1418664558, 851471152, 1007452432 }, .{ 1412155676, 1563511080, 1570452938, 2120710212, 1507806481, 116520260 }, .{ 1845780714, 156351108, 1009327867, 1490494881, 789992578, 11652026 } },
+        .quotient_claims = &.{ .{ 1544100444, 1636204138, 1494963378, 1565937013, 1282225237, 1449921631 }, .{ 1646664158, 509687008, 1818931827, 1188205690, 931056501, 739794524 }, .{ 1539037236, 1879841921, 1771739081, 845325949, 880043353, 1078093535 }, .{ 1270127659, 1337443132, 652243404, 1770481218, 6458891, 829290002 }, .{ 447518441, 232514225, 222810624, 1300401196, 852973772, 546210111 }, .{ 1530825718, 1967048424, 136840503, 1752755865, 34105655, 1257556016 } },
         .module_sizes = &.{},
     },
 };
 
 pub const system_70_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-repeated"
@@ -8066,7 +8137,7 @@ const system_70_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 4 }, .expressions = &system_70_module_0_expressions, .buckets = &system_70_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_70_module_1_expressions, .buckets = &system_70_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_70_module_1_expressions, .buckets = &system_70_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "lk-repeated"
@@ -8130,16 +8201,17 @@ const scenario_70 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 2114740438, 710147231, 46014638, 73588339, 38905249, 1574734933 }, .{ 2044355842, 620945583, 141832617, 188265552, 1932130016, 155803384 }, .{ 742973209, 1311867276, 1180612702, 1860857460, 1810336163, 985752473 }, .{ 5121833, 1148117053, 1110088907, 1551093831, 1727111634, 393967488 }, .{ 940732152, 952007218, 1196082721, 1863339506, 1011164536, 1910261188 }, .{ 1189668855, 2097093140, 1343578325, 1044763963, 451381909, 1268742931 }, .{ 796349345, 1276178025, 669074650, 1591413898, 90457298, 546011893 } },
-        .quotient_claims = &.{ .{ 1042409305, 526117260, 1436399535, 1326670043, 1730610208, 667965731 }, .{ 1616529273, 94337517, 941761352, 1932460465, 1463442536, 41577350 }, .{ 356531083, 1359556257, 1620029519, 1565007003, 60931134, 2082228611 }, .{ 900741316, 376997697, 1127703852, 1830944690, 816014417, 1227094392 }, .{ 1344480205, 457058544, 1033233288, 1487613389, 32929167, 1786415525 }, .{ 2073784127, 628561975, 2076563661, 1133847960, 371247495, 154577863 } },
+        .witness_claims = &.{ .{ 2114740438, 710147231, 46014638, 73588339, 38905249, 1574734933 }, .{ 2044355842, 620945583, 141832617, 188265552, 1932130016, 155803384 }, .{ 742973209, 1311867276, 1180612702, 1860857460, 1810336163, 985752473 }, .{ 5121833, 1148117053, 1110088907, 1551093831, 1727111634, 393967488 }, .{ 1833263135, 434429747, 893870527, 1990709442, 1702186142, 573610610 }, .{ 1420080798, 1537624246, 181877119, 535570322, 178298448, 1768424585 }, .{ 5121833, 1148117053, 1110088907, 1551093831, 1727111634, 393967488 } },
+        .quotient_claims = &.{ .{ 1042409305, 526117260, 1436399535, 1326670043, 1730610208, 667965731 }, .{ 1616529273, 94337517, 941761352, 1932460465, 1463442536, 41577350 }, .{ 356531083, 1359556257, 1620029519, 1565007003, 60931134, 2082228611 }, .{ 534424970, 1787723505, 2099958983, 1989508153, 1888600214, 52552510 }, .{ 658054032, 871479803, 1281970403, 251585228, 1018166977, 910588794 }, .{ 632400598, 218684465, 520391397, 1350150894, 280751166, 731837968 } },
         .module_sizes = &.{},
     },
 };
 
 pub const system_71_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-shift-a"
@@ -8236,7 +8308,7 @@ const system_71_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 4 }, .expressions = &system_71_module_0_expressions, .buckets = &system_71_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_71_module_1_expressions, .buckets = &system_71_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_71_module_1_expressions, .buckets = &system_71_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "lk-shift-a"
@@ -8300,16 +8372,17 @@ const scenario_71 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 1, 0, 0, 0, 0, 0 }, .{ 1518356125, 435048787, 452898838, 841093971, 1254718917, 1405900429 }, .{ 934850844, 386811960, 307972845, 158421802, 958289838, 546310894 }, .{ 623751977, 159579668, 918362992, 30343634, 1443936360, 536094855 }, .{ 640948045, 2119412285, 67623143, 399442870, 1498445192, 1978257633 }, .{ 1286661429, 1963823707, 1097333211, 1357306707, 1942126301, 1329167088 }, .{ 622472387, 1078702802, 1376530065, 959977182, 1361156072, 1948297800 } },
-        .quotient_claims = &.{ .{ 972418233, 1115846349, 67093037, 626536251, 361478298, 673365317 }, .{ 166967926, 740615449, 72310850, 345174576, 892443166, 850812917 }, .{ 1116807051, 1447853362, 1634859432, 442267868, 1498272867, 981405744 }, .{ 566077723, 1952067860, 1473253722, 1122881529, 838769880, 499119315 }, .{ 389648782, 162276305, 1230046039, 299437836, 1551222386, 130919582 }, .{ 725457476, 1257124997, 1351228785, 882073296, 2056638019, 1090229448 } },
+        .witness_claims = &.{ .{ 1, 0, 0, 0, 0, 0 }, .{ 1518356125, 435048787, 452898838, 841093971, 1254718917, 1405900429 }, .{ 934850844, 386811960, 307972845, 158421802, 958289838, 546310894 }, .{ 623751977, 159579668, 918362992, 30343634, 1443936360, 536094855 }, .{ 612350308, 1695657646, 1677807595, 1289612462, 875987516, 724806004 }, .{ 1195855589, 1743894473, 1822733588, 1972284631, 1172416595, 1584395539 }, .{ 623751977, 159579668, 918362992, 30343634, 1443936360, 536094855 } },
+        .quotient_claims = &.{ .{ 972418233, 1115846349, 67093037, 626536251, 361478298, 673365317 }, .{ 166967926, 740615449, 72310850, 345174576, 892443166, 850812917 }, .{ 1116807051, 1447853362, 1634859432, 442267868, 1498272867, 981405744 }, .{ 946501631, 1709309053, 1537282979, 735710040, 1193434920, 87900016 }, .{ 973381618, 167380089, 1657047714, 1505993434, 913370914, 556223096 }, .{ 1546876839, 1109447599, 1724966182, 1117888954, 1394272883, 1915327223 } },
         .module_sizes = &.{},
     },
 };
 
 pub const system_72_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-shift-b"
@@ -8406,7 +8479,7 @@ const system_72_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 4 }, .expressions = &system_72_module_0_expressions, .buckets = &system_72_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_72_module_1_expressions, .buckets = &system_72_module_1_buckets, .witness_claim_offset = 5, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_72_module_1_expressions, .buckets = &system_72_module_1_buckets, .witness_claim_offset = 5, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "lk-shift-b"
@@ -8470,16 +8543,17 @@ const scenario_72 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 1, 0, 0, 0, 0, 0 }, .{ 1972431722, 1648676592, 367284747, 677177633, 215402787, 207236127 }, .{ 1707951522, 2008173708, 2057323119, 1188748549, 1277967790, 1866972509 }, .{ 1082831487, 2083813557, 1292708273, 1390076698, 812263153, 1899081552 }, .{ 1082831487, 2083813557, 1292708273, 1390076698, 812263153, 1899081552 }, .{ 1102918648, 1660564956, 7858902, 1628494249, 920358988, 1953915035 }, .{ 1678130982, 1708780129, 1807747577, 1226242015, 252486900, 1975616818 }, .{ 1451320576, 2083087437, 1113881320, 722974944, 2010120414, 914943888 } },
-        .quotient_claims = &.{ .{ 1460020267, 1304960367, 1108026919, 1366660426, 1259090688, 725171355 }, .{ 681583414, 287241962, 215428180, 1786464981, 74956961, 1679106820 }, .{ 1576029572, 1985478199, 413795448, 1272651358, 515461249, 967280755 }, .{ 495682356, 438449953, 1256220882, 613964774, 1017257581, 1476857123 }, .{ 872531969, 578707823, 746877893, 868075293, 56861450, 1943994477 }, .{ 1905549759, 1387685662, 1016106766, 557175930, 174090004, 396412249 } },
+        .witness_claims = &.{ .{ 1, 0, 0, 0, 0, 0 }, .{ 1972431722, 1648676592, 367284747, 677177633, 215402787, 207236127 }, .{ 1707951522, 2008173708, 2057323119, 1188748549, 1277967790, 1866972509 }, .{ 1082831487, 2083813557, 1292708273, 1390076698, 812263153, 1899081552 }, .{ 1082831487, 2083813557, 1292708273, 1390076698, 812263153, 1899081552 }, .{ 158274711, 482029841, 1763421686, 1453528800, 1915303646, 1923470306 }, .{ 422754911, 122532725, 73383314, 941957884, 852738643, 263733924 }, .{ 1082831487, 2083813557, 1292708273, 1390076698, 812263153, 1899081552 } },
+        .quotient_claims = &.{ .{ 1460020267, 1304960367, 1108026919, 1366660426, 1259090688, 725171355 }, .{ 681583414, 287241962, 215428180, 1786464981, 74956961, 1679106820 }, .{ 1576029572, 1985478199, 413795448, 1272651358, 515461249, 967280755 }, .{ 1710143147, 953493555, 841139353, 298231523, 1560038643, 362836317 }, .{ 1449123019, 1843464471, 1915278253, 344241452, 2055749472, 451599613 }, .{ 554676861, 145228234, 1716910985, 858055075, 1615245184, 1163425678 } },
         .module_sizes = &.{},
     },
 };
 
 pub const system_73_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 3, 3 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 3, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 4 },
-    .total_round_coins = 7,
+    .total_round_coins = 5,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-multi-A"
@@ -8619,9 +8693,9 @@ const system_73_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 4 }, .expressions = &system_73_module_0_expressions, .buckets = &system_73_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 4 },
     // module: "modS1"
-    .{ .size = .{ .static = 4 }, .expressions = &system_73_module_1_expressions, .buckets = &system_73_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 5 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_73_module_1_expressions, .buckets = &system_73_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 4 },
     // module: "modS2"
-    .{ .size = .{ .static = 2 }, .expressions = &system_73_module_2_expressions, .buckets = &system_73_module_2_buckets, .witness_claim_offset = 7, .merge_coin_index = 3, .eval_coin_index = 6 },
+    .{ .size = .{ .static = 2 }, .expressions = &system_73_module_2_expressions, .buckets = &system_73_module_2_buckets, .witness_claim_offset = 7, .merge_coin_index = 3, .eval_coin_index = 4 },
 };
 
 // system: "lk-multi-A"
@@ -8692,16 +8766,17 @@ const scenario_73 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 821303411, 766818729, 683024833, 1495276549, 1568701383, 1715981160 }, .{ 1490983140, 2019586234, 1860652665, 2006893490, 1530090012, 1948031068 }, .{ 1277169015, 1433767825, 2089377095, 2081431688, 132751147, 203369956 }, .{ 1337184577, 1809708409, 2024679539, 1928656945, 1148681493, 558581512 }, .{ 1286314825, 2061850893, 479537919, 81636852, 1847623885, 916358258 }, .{ 1422986444, 234942254, 1962819159, 75452973, 2071020792, 430004750 }, .{ 1117722326, 1810132180, 160382239, 346674191, 1249634500, 697698687 }, .{ 1534569272, 1634947175, 390679124, 705998480, 1293490837, 1009099402 }, .{ 390970897, 1607026468, 1620343357, 1166458914, 1521848909, 640353177 }, .{ 1842287375, 1720452007, 1014726290, 276800690, 1963260219, 323045491 } },
-        .quotient_claims = &.{ .{ 386377844, 852353680, 1989397473, 1609722117, 1279649437, 27408938 }, .{ 1812514213, 958521316, 459280088, 1420767794, 159657731, 658864966 }, .{ 1452842410, 621392065, 158719046, 1426895554, 1622230243, 1481603895 }, .{ 269066595, 650864645, 28707188, 1505606078, 1453533535, 282997136 }, .{ 12848404, 232104566, 1602496303, 2019951234, 773089090, 746544802 }, .{ 568941549, 791395205, 1621377554, 873392073, 142473899, 424725500 }, .{ 83830902, 717144313, 627994994, 1298550832, 2006581463, 1741501272 }, .{ 1733137170, 300598256, 1692389654, 2004902507, 675447929, 908676036 }, .{ 0, 0, 0, 0, 0, 0 } },
+        .witness_claims = &.{ .{ 821303411, 766818729, 683024833, 1495276549, 1568701383, 1715981160 }, .{ 1490983140, 2019586234, 1860652665, 2006893490, 1530090012, 1948031068 }, .{ 1277169015, 1433767825, 2089377095, 2081431688, 132751147, 203369956 }, .{ 1337184577, 1809708409, 2024679539, 1928656945, 1148681493, 558581512 }, .{ 1969582903, 1578389479, 1768177695, 530785241, 1280331193, 1996718825 }, .{ 1733875131, 954885423, 1841958022, 1631996671, 601811183, 2082434211 }, .{ 1074758942, 1878478029, 210150446, 1316001592, 442828203, 1897198498 }, .{ 2073942008, 556747141, 1387512302, 1181860528, 1710497174, 20059275 }, .{ 1982304594, 554520069, 623510179, 690596866, 1104842572, 1629393304 }, .{ 2085060339, 2130419879, 645544891, 1063558821, 516877355, 1122778508 } },
+        .quotient_claims = &.{ .{ 386377844, 852353680, 1989397473, 1609722117, 1279649437, 27408938 }, .{ 1812514213, 958521316, 459280088, 1420767794, 159657731, 658864966 }, .{ 1452842410, 621392065, 158719046, 1426895554, 1622230243, 1481603895 }, .{ 1610147154, 691943248, 1581812902, 793544684, 589114831, 1623398595 }, .{ 1542293408, 382333772, 1640561625, 1063061852, 1084716333, 588739365 }, .{ 641133797, 2112249554, 141688225, 1301440667, 1674847851, 184311604 }, .{ 1216145396, 588676138, 2073501042, 1795758446, 1915231967, 373925734 }, .{ 950862577, 1866511037, 2053766166, 1063851194, 652610555, 1632135368 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
     },
 };
 
 pub const system_74_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4 },
-    .total_round_coins = 6,
+    .total_round_coins = 5,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-w3"
@@ -8830,7 +8905,7 @@ const system_74_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 4 }, .expressions = &system_74_module_0_expressions, .buckets = &system_74_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 2, .eval_coin_index = 4 },
     // module: "modS"
-    .{ .size = .{ .static = 2 }, .expressions = &system_74_module_1_expressions, .buckets = &system_74_module_1_buckets, .witness_claim_offset = 6, .merge_coin_index = 3, .eval_coin_index = 5 },
+    .{ .size = .{ .static = 2 }, .expressions = &system_74_module_1_expressions, .buckets = &system_74_module_1_buckets, .witness_claim_offset = 6, .merge_coin_index = 3, .eval_coin_index = 4 },
 };
 
 // system: "lk-w3"
@@ -8898,16 +8973,17 @@ const scenario_74 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 1866473820, 1645348152, 713185907, 112900147, 549085352, 1594103542 }, .{ 804170110, 713151738, 83201412, 430566124, 1445823668, 281136656 }, .{ 1167452358, 739156341, 881025624, 471552526, 1726440196, 1889131625 }, .{ 703134478, 572080958, 95899155, 1876225357, 1744746201, 422063943 }, .{ 922596021, 909490669, 1074943132, 400693179, 813686550, 1959842184 }, .{ 731471532, 1582443570, 1385918173, 1531563821, 81368655, 622125505 }, .{ 925540148, 1589068365, 891796578, 721455358, 1772186136, 837731041 }, .{ 1053981775, 845771845, 1247775045, 1487817752, 673504981, 1858208488 }, .{ 177580648, 1938075408, 969346035, 1172784853, 2107817359, 767683937 }, .{ 870040638, 1046090114, 1162287820, 2034914275, 1702276239, 289839037 }, .{ 939286637, 530750298, 116228782, 1268844644, 1661722127, 242054547 } },
-        .quotient_claims = &.{ .{ 863322351, 321169273, 922708157, 809845934, 1460894272, 1007473880 }, .{ 847813714, 1237236207, 1100748846, 1519559507, 612260598, 888665755 }, .{ 806912051, 1471110033, 351346989, 1796854258, 281345603, 1466668227 }, .{ 292671260, 1440922850, 648602577, 49353053, 358320609, 1680764938 }, .{ 737096259, 1511163940, 122737503, 339042160, 990312813, 943911214 }, .{ 0, 0, 0, 0, 0, 0 } },
+        .witness_claims = &.{ .{ 1866473820, 1645348152, 713185907, 112900147, 549085352, 1594103542 }, .{ 804170110, 713151738, 83201412, 430566124, 1445823668, 281136656 }, .{ 1167452358, 739156341, 881025624, 471552526, 1726440196, 1889131625 }, .{ 703134478, 572080958, 95899155, 1876225357, 1744746201, 422063943 }, .{ 922596021, 909490669, 1074943132, 400693179, 813686550, 1959842184 }, .{ 731471532, 1582443570, 1385918173, 1531563821, 81368655, 622125505 }, .{ 1995706008, 88779654, 86516334, 619815677, 671520475, 303000824 }, .{ 2114522348, 215354123, 2053055289, 1589457433, 1774170642, 262232272 }, .{ 1033670943, 263472149, 1919060572, 2004564193, 1159545414, 367378476 }, .{ 2021002884, 1517841718, 1470329917, 2118092209, 542095828, 1741302994 }, .{ 628241575, 1004066745, 360103635, 1703303724, 906492156, 600271586 } },
+        .quotient_claims = &.{ .{ 863322351, 321169273, 922708157, 809845934, 1460894272, 1007473880 }, .{ 847813714, 1237236207, 1100748846, 1519559507, 612260598, 888665755 }, .{ 806912051, 1471110033, 351346989, 1796854258, 281345603, 1466668227 }, .{ 1669467287, 480973045, 816976271, 1910770006, 1601123535, 707653301 }, .{ 1613971874, 1803853097, 1230184143, 271719790, 235660328, 1233309913 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
     },
 };
 
 pub const system_75_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-size1"
@@ -8981,7 +9057,7 @@ const system_75_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 1 }, .expressions = &system_75_module_0_expressions, .buckets = &system_75_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "modS"
-    .{ .size = .{ .static = 1 }, .expressions = &system_75_module_1_expressions, .buckets = &system_75_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 1 }, .expressions = &system_75_module_1_expressions, .buckets = &system_75_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "lk-size1"
@@ -9052,9 +9128,10 @@ const scenario_75 = Scenario{
 };
 
 pub const system_76_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-precomp"
@@ -9151,7 +9228,7 @@ const system_76_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 4 }, .expressions = &system_76_module_0_expressions, .buckets = &system_76_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_76_module_1_expressions, .buckets = &system_76_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_76_module_1_expressions, .buckets = &system_76_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "lk-precomp"
@@ -9214,16 +9291,17 @@ const scenario_76 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 1, 0, 0, 0, 0, 0 }, .{ 747956757, 1136423088, 523000910, 2095793345, 1512212214, 738536534 }, .{ 1342932460, 14718152, 249715679, 719212583, 53623930, 1966135629 }, .{ 1462047242, 1057690960, 466413926, 2094586437, 624011363, 1913292958 }, .{ 759504993, 1843695936, 1407372221, 861549499, 1966428910, 1562575791 }, .{ 244478154, 1251071642, 1682349689, 1400167589, 1390308965, 516158987 }, .{ 115474274, 1875575129, 2123781071, 1699605276, 1264781625, 202034405 } },
-        .quotient_claims = &.{ .{ 1407122070, 1935588269, 738624351, 1236129782, 491147320, 1029013083 }, .{ 1605349078, 1727940588, 1333429626, 1031506665, 1591176418, 1010917441 }, .{ 309937505, 277349711, 347512327, 1550833202, 2044732893, 1403032199 }, .{ 600761738, 1374381117, 1484711180, 1913156969, 526240250, 1381664912 }, .{ 781742672, 1522311559, 313206109, 1750778481, 976932159, 1594201022 }, .{ 967592596, 873896067, 849174043, 690101907, 1935224180, 763119916 } },
+        .witness_claims = &.{ .{ 1, 0, 0, 0, 0, 0 }, .{ 747956757, 1136423088, 523000910, 2095793345, 1512212214, 738536534 }, .{ 1342932460, 14718152, 249715679, 719212583, 53623930, 1966135629 }, .{ 1462047242, 1057690960, 466413926, 2094586437, 624011363, 1913292958 }, .{ 1382749676, 994283345, 1607705523, 34913088, 618494219, 1392169899 }, .{ 787773973, 2115988281, 1880990754, 1411493850, 2077082503, 164570804 }, .{ 1462047242, 1057690960, 466413926, 2094586437, 624011363, 1913292958 } },
+        .quotient_claims = &.{ .{ 1407122070, 1935588269, 738624351, 1236129782, 491147320, 1029013083 }, .{ 1605349078, 1727940588, 1333429626, 1031506665, 1591176418, 1010917441 }, .{ 309937505, 277349711, 347512327, 1550833202, 2044732893, 1403032199 }, .{ 1558646923, 1033036425, 596994331, 1081052451, 533116695, 2040483355 }, .{ 525357355, 402765845, 797276807, 1099199768, 539530015, 1119788992 }, .{ 1820768928, 1853356722, 1783194106, 579873231, 85973540, 727674234 } },
         .module_sizes = &.{},
     },
 };
 
 pub const system_77_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-rep-s"
@@ -9320,7 +9398,7 @@ const system_77_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 4 }, .expressions = &system_77_module_0_expressions, .buckets = &system_77_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_77_module_1_expressions, .buckets = &system_77_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_77_module_1_expressions, .buckets = &system_77_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "lk-rep-s"
@@ -9384,16 +9462,17 @@ const scenario_77 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 1580170416, 1345126886, 339873943, 441557904, 1332026769, 496159646 }, .{ 408095546, 863147637, 481534414, 1399441247, 269421149, 177918836 }, .{ 408095546, 863147637, 481534414, 1399441247, 269421149, 177918836 }, .{ 1938489750, 503639950, 1042535177, 1747906548, 243702195, 1532047488 }, .{ 491192374, 408813669, 293556016, 1510326751, 169717504, 1921085415 }, .{ 485711018, 392106668, 1286027600, 1139319015, 321181296, 1706079892 }, .{ 10, 0, 0, 0, 0, 0 } },
-        .quotient_claims = &.{ .{ 2130706432, 0, 0, 0, 0, 0 }, .{ 1547809158, 1857007558, 1539634505, 84052897, 1809638029, 39329134 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 1451522734, 928494394, 1181222874, 373182261, 461099132, 206917970 }, .{ 776232532, 1321049690, 1500910979, 2114091894, 613016665, 829468437 }, .{ 0, 0, 0, 0, 0, 0 } },
+        .witness_claims = &.{ .{ 1580170416, 1345126886, 339873943, 441557904, 1332026769, 496159646 }, .{ 408095546, 863147637, 481534414, 1399441247, 269421149, 177918836 }, .{ 408095546, 863147637, 481534414, 1399441247, 269421149, 177918836 }, .{ 1938489750, 503639950, 1042535177, 1747906548, 243702195, 1532047488 }, .{ 803967211, 1487171244, 1909892164, 249562183, 1450783914, 1960247108 }, .{ 844730540, 1377339279, 430490459, 575122962, 1438634604, 541274376 }, .{ 10, 0, 0, 0, 0, 0 } },
+        .quotient_claims = &.{ .{ 2130706432, 0, 0, 0, 0, 0 }, .{ 1547809158, 1857007558, 1539634505, 84052897, 1809638029, 39329134 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 1324268703, 412658748, 370149501, 1840666258, 2083550815, 932312531 }, .{ 1287375359, 1228132978, 21525678, 741098200, 1225120491, 933846811 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
     },
 };
 
 pub const system_78_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-empty"
@@ -9494,7 +9573,7 @@ const system_78_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 4 }, .expressions = &system_78_module_0_expressions, .buckets = &system_78_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_78_module_1_expressions, .buckets = &system_78_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_78_module_1_expressions, .buckets = &system_78_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "lk-empty"
@@ -9559,16 +9638,17 @@ const scenario_78 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 524617994, 1945407625, 833060778, 1055007744, 658310397, 1489070958 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 975171527, 1733157254, 531291024, 840677557, 492223821, 1029602789 } },
+        .witness_claims = &.{ .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 524617994, 1945407625, 833060778, 1055007744, 658310397, 1489070958 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 682245332, 830106590, 804025212, 1927746648, 1134134939, 1401293482 } },
         .quotient_claims = &.{ .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
     },
 };
 
 pub const system_79_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "rc-basic"
@@ -9665,7 +9745,7 @@ const system_79_modules = [_]vanishing.Module{
     // module: "mod"
     .{ .size = .{ .static = 8 }, .expressions = &system_79_module_0_expressions, .buckets = &system_79_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "range-mod-b8"
-    .{ .size = .{ .static = 8 }, .expressions = &system_79_module_1_expressions, .buckets = &system_79_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 8 }, .expressions = &system_79_module_1_expressions, .buckets = &system_79_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "rc-basic"
@@ -9728,16 +9808,17 @@ const scenario_79 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 115841070, 837300603, 1249796317, 1148569715, 1190416379, 1214335849 }, .{ 75028470, 971262996, 1539619808, 324455493, 218985818, 224232763 }, .{ 1181254898, 1547046639, 27769123, 1507213657, 1399413325, 1643027999 }, .{ 1, 0, 0, 0, 0, 0 }, .{ 1946339562, 427773430, 1337192920, 1577962387, 1153446404, 544280646 }, .{ 1629411743, 1043478447, 1069063748, 802872581, 427691868, 1483771804 }, .{ 437462172, 1598233582, 1984214288, 1428507109, 169199261, 1671512674 } },
-        .quotient_claims = &.{ .{ 2005296590, 1705503900, 652867940, 552846555, 745577113, 384486629 }, .{ 773622557, 1239502591, 476166862, 814617344, 58915012, 1592991635 }, .{ 466501367, 1781322478, 875824356, 252254928, 1181994077, 46995058 }, .{ 811011842, 441596501, 1491246382, 1547543091, 1741886468, 586256162 }, .{ 665488426, 1026702371, 1592355303, 2062690766, 1889371412, 1767537685 }, .{ 1245719184, 2095591535, 221718733, 373375303, 225367510, 1019402880 } },
+        .witness_claims = &.{ .{ 115841070, 837300603, 1249796317, 1148569715, 1190416379, 1214335849 }, .{ 75028470, 971262996, 1539619808, 324455493, 218985818, 224232763 }, .{ 1181254898, 1547046639, 27769123, 1507213657, 1399413325, 1643027999 }, .{ 1, 0, 0, 0, 0, 0 }, .{ 2014865363, 1293405830, 880910116, 982136718, 940290054, 916370584 }, .{ 2055677963, 1159443437, 591086625, 1806250940, 1911720615, 1906473670 }, .{ 1181254898, 1547046639, 27769123, 1507213657, 1399413325, 1643027999 } },
+        .quotient_claims = &.{ .{ 2005296590, 1705503900, 652867940, 552846555, 745577113, 384486629 }, .{ 773622557, 1239502591, 476166862, 814617344, 58915012, 1592991635 }, .{ 466501367, 1781322478, 875824356, 252254928, 1181994077, 46995058 }, .{ 2118837746, 532879281, 256806508, 1736278799, 170956117, 1475244329 }, .{ 1357083876, 891203842, 1654539571, 1316089089, 2071791421, 537714798 }, .{ 1664205066, 349383955, 1254882077, 1878451505, 948712356, 2083711375 } },
         .module_sizes = &.{},
     },
 };
 
 pub const system_80_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "rc-shared"
@@ -9866,7 +9947,7 @@ const system_80_modules = [_]vanishing.Module{
     // module: "mod"
     .{ .size = .{ .static = 4 }, .expressions = &system_80_module_0_expressions, .buckets = &system_80_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "range-mod-b4"
-    .{ .size = .{ .static = 4 }, .expressions = &system_80_module_1_expressions, .buckets = &system_80_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_80_module_1_expressions, .buckets = &system_80_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "rc-shared"
@@ -9934,16 +10015,17 @@ const scenario_80 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 480221367, 743628715, 870860989, 265481320, 1674008277, 1840625699 }, .{ 1097096280, 1085829745, 1439325470, 900394577, 2121378422, 549872678 }, .{ 468832480, 517889411, 191686362, 1378370162, 579185460, 702490793 }, .{ 1221444742, 1296662385, 1464858228, 1722734828, 1510049853, 348480335 }, .{ 2, 0, 0, 0, 0, 0 }, .{ 2023475268, 1072197382, 1528763661, 1732411621, 1802481628, 1927394511 }, .{ 411771204, 857229659, 187167986, 914093796, 2009687918, 499217551 }, .{ 1138073395, 36369316, 1594690867, 1061732076, 1723081475, 608387656 } },
-        .quotient_claims = &.{ .{ 807820285, 152692730, 1185078206, 1457059219, 1548382773, 1116389148 }, .{ 2063526384, 1250304300, 2093892024, 97773333, 1810510770, 1146992931 }, .{ 70455144, 814208379, 529666707, 132842401, 1964935295, 1510480947 }, .{ 1036710388, 172607235, 199695140, 213566957, 1769255724, 1473474243 }, .{ 570801335, 917696402, 585346182, 763516047, 452689339, 153845623 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 295631090, 19890594, 254633919, 1296335671, 333641210, 2108514763 }, .{ 1302413433, 2016413888, 709616463, 1024432855, 247252944, 490982151 }, .{ 899579171, 830041781, 1720213950, 1760707922, 340761692, 1435160170 }, .{ 671892209, 1171932700, 2071943693, 493749140, 33676451, 1973143118 } },
+        .witness_claims = &.{ .{ 480221367, 743628715, 870860989, 265481320, 1674008277, 1840625699 }, .{ 1097096280, 1085829745, 1439325470, 900394577, 2121378422, 549872678 }, .{ 468832480, 517889411, 191686362, 1378370162, 579185460, 702490793 }, .{ 1221444742, 1296662385, 1464858228, 1722734828, 1510049853, 348480335 }, .{ 2, 0, 0, 0, 0, 0 }, .{ 1028339472, 508056278, 614339961, 99637390, 1004100369, 2115362224 }, .{ 1817928288, 1378535110, 725018017, 1624818116, 429416538, 1874440895 }, .{ 1097096280, 1085829745, 1439325470, 900394577, 2121378422, 549872678 } },
+        .quotient_claims = &.{ .{ 807820285, 152692730, 1185078206, 1457059219, 1548382773, 1116389148 }, .{ 2063526384, 1250304300, 2093892024, 97773333, 1810510770, 1146992931 }, .{ 70455144, 814208379, 529666707, 132842401, 1964935295, 1510480947 }, .{ 1036710388, 172607235, 199695140, 213566957, 1769255724, 1473474243 }, .{ 570801335, 917696402, 585346182, 763516047, 452689339, 153845623 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 295631090, 19890594, 254633919, 1296335671, 333641210, 2108514763 }, .{ 172605130, 1782704727, 1864086312, 1571595855, 1916446497, 756041956 }, .{ 1966948766, 1288974774, 863792899, 219706738, 1304126985, 1086074304 }, .{ 617173150, 1258276331, 246952225, 1799491171, 454081517, 626811396 } },
         .module_sizes = &.{},
     },
 };
 
 pub const system_81_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 3, 3 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 3, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 4 },
-    .total_round_coins = 7,
+    .total_round_coins = 5,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "rc-distinct"
@@ -10117,9 +10199,9 @@ const system_81_modules = [_]vanishing.Module{
     // module: "mod"
     .{ .size = .{ .static = 4 }, .expressions = &system_81_module_0_expressions, .buckets = &system_81_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 4 },
     // module: "range-mod-b4"
-    .{ .size = .{ .static = 4 }, .expressions = &system_81_module_1_expressions, .buckets = &system_81_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 5 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_81_module_1_expressions, .buckets = &system_81_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 4 },
     // module: "range-mod-b8"
-    .{ .size = .{ .static = 8 }, .expressions = &system_81_module_2_expressions, .buckets = &system_81_module_2_buckets, .witness_claim_offset = 8, .merge_coin_index = 3, .eval_coin_index = 6 },
+    .{ .size = .{ .static = 8 }, .expressions = &system_81_module_2_expressions, .buckets = &system_81_module_2_buckets, .witness_claim_offset = 8, .merge_coin_index = 3, .eval_coin_index = 4 },
 };
 
 // system: "rc-distinct"
@@ -10194,16 +10276,17 @@ const scenario_81 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 1696600193, 1230407209, 1850080603, 2129323997, 696255230, 842708503 }, .{ 940519169, 151711791, 1430760184, 309154805, 1250200225, 986451605 }, .{ 1299580645, 184356293, 1414936080, 1151453302, 2010877485, 1251566224 }, .{ 1427677275, 936016467, 1258072022, 770860960, 1396637815, 1416401107 }, .{ 1, 0, 0, 0, 0, 0 }, .{ 2055497957, 1417382836, 1825440439, 77247690, 1269859845, 1006412540 }, .{ 1431115921, 604031129, 535421611, 828797949, 481384922, 274811474 }, .{ 337753889, 1303933505, 1862422136, 1257816437, 66223985, 606696458 }, .{ 1451215226, 1404981181, 836230746, 1432140939, 1244450660, 802466280 }, .{ 708370855, 1351744996, 197871624, 1480785597, 1889106090, 2052373797 }, .{ 347156790, 170687102, 1162216295, 1017677109, 947584570, 903892613 }, .{ 666760969, 199368945, 972051260, 1004441138, 729538506, 1393469704 } },
-        .quotient_claims = &.{ .{ 861817122, 1551147652, 371847822, 2071946004, 1413983981, 1813232703 }, .{ 255341492, 464523970, 1227145334, 88072457, 138883747, 718723898 }, .{ 940814107, 1165284895, 153394888, 1939142318, 1303679837, 846166109 }, .{ 1424186953, 713463826, 1057559538, 446554942, 518285681, 872332223 }, .{ 390467078, 1459109947, 714541115, 1761458018, 641446714, 1699550623 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 760331573, 1496704056, 1892959767, 557120253, 1229828778, 1991487513 }, .{ 1739265813, 834665372, 86255503, 1480078773, 878922467, 1341389983 }, .{ 978205450, 1105535305, 947866530, 989464481, 1010071229, 982363007 }, .{ 63503180, 883030842, 1708330256, 392519934, 233837983, 157530936 }, .{ 2093357426, 757660102, 664070884, 1147404957, 1011662298, 1085073484 }, .{ 1991589814, 1514047401, 1597132770, 1715249012, 1718877437, 1974802066 }, .{ 1653387742, 96049752, 151738217, 1783613323, 511417920, 1549429534 } },
+        .witness_claims = &.{ .{ 1696600193, 1230407209, 1850080603, 2129323997, 696255230, 842708503 }, .{ 940519169, 151711791, 1430760184, 309154805, 1250200225, 986451605 }, .{ 1299580645, 184356293, 1414936080, 1151453302, 2010877485, 1251566224 }, .{ 1427677275, 936016467, 1258072022, 770860960, 1396637815, 1416401107 }, .{ 1, 0, 0, 0, 0, 0 }, .{ 789318866, 1044804699, 741712057, 1777022064, 1199344989, 2078091978 }, .{ 1571031190, 97711181, 1077630824, 636614210, 1353853424, 1807099083 }, .{ 940519169, 151711791, 1430760184, 309154805, 1250200225, 986451605 }, .{ 1262352130, 1139476012, 1936552663, 1503583996, 498209942, 11582248 }, .{ 1427795655, 1228340199, 1290240338, 286389896, 770755341, 1676141216 }, .{ 1062027, 1679326769, 2012326654, 633484613, 150094489, 2009410477 }, .{ 1602964307, 65080764, 1771436336, 463689271, 898112106, 1303338789 } },
+        .quotient_claims = &.{ .{ 861817122, 1551147652, 371847822, 2071946004, 1413983981, 1813232703 }, .{ 255341492, 464523970, 1227145334, 88072457, 138883747, 718723898 }, .{ 940814107, 1165284895, 153394888, 1939142318, 1303679837, 846166109 }, .{ 1424186953, 713463826, 1057559538, 446554942, 518285681, 872332223 }, .{ 390467078, 1459109947, 714541115, 1761458018, 641446714, 1699550623 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 760331573, 1496704056, 1892959767, 557120253, 1229828778, 1991487513 }, .{ 993925901, 2128280630, 286594380, 1244830015, 654004, 1685313383 }, .{ 866265673, 967084261, 2089213399, 1151540252, 595426211, 1874341553 }, .{ 754128492, 1893729030, 1588155467, 520389017, 1788468883, 1501718759 }, .{ 1470137976, 1181359075, 211130586, 1173504205, 1978513108, 946370093 }, .{ 1330598197, 326418115, 2081576555, 278837243, 501635344, 1490969318 }, .{ 139503546, 2044460229, 523907870, 909548066, 1515727532, 2079804619 } },
         .module_sizes = &.{},
     },
 };
 
 pub const system_82_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "rc-pow2"
@@ -10300,7 +10383,7 @@ const system_82_modules = [_]vanishing.Module{
     // module: "mod"
     .{ .size = .{ .static = 4 }, .expressions = &system_82_module_0_expressions, .buckets = &system_82_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "range-mod-b16"
-    .{ .size = .{ .static = 16 }, .expressions = &system_82_module_1_expressions, .buckets = &system_82_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 16 }, .expressions = &system_82_module_1_expressions, .buckets = &system_82_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "rc-pow2"
@@ -10363,16 +10446,17 @@ const scenario_82 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 575081530, 2061826698, 1289832144, 1318091127, 332340602, 231394720 }, .{ 1859662499, 945314107, 1901703378, 216594617, 343356294, 1278875065 }, .{ 2010179487, 841833299, 1556297254, 801325578, 562565928, 65884881 }, .{ 1173675847, 402418219, 2118505814, 2020447364, 932007661, 1275165056 }, .{ 132342509, 1469552389, 1000925594, 2041142079, 366512746, 577734346 }, .{ 59738860, 1068094442, 629246428, 249983977, 1737713497, 1045082973 }, .{ 419740341, 2035545680, 1856662201, 27852440, 2126422155, 2012470393 } },
-        .quotient_claims = &.{ .{ 530366180, 1060770584, 128589338, 103613253, 370515526, 2062158585 }, .{ 1499563346, 2004861455, 1926312219, 796540830, 799164852, 486099166 }, .{ 1811136603, 1865652148, 270048960, 1790336554, 832205432, 372787246 }, .{ 951561163, 1460170347, 231167548, 1995233772, 355643726, 2122687249 }, .{ 1690333780, 282790608, 1672706837, 568042364, 1622250150, 1194986662 }, .{ 331272846, 3087388, 1519769352, 1450905001, 1250427377, 1336002961 } },
+        .witness_claims = &.{ .{ 575081530, 2061826698, 1289832144, 1318091127, 332340602, 231394720 }, .{ 1859662499, 945314107, 1901703378, 216594617, 343356294, 1278875065 }, .{ 2010179487, 841833299, 1556297254, 801325578, 562565928, 65884881 }, .{ 781807532, 399124945, 426499541, 1626671520, 775717403, 1290705460 }, .{ 982943914, 730065837, 1383372042, 824060296, 1057972127, 2044632206 }, .{ 1278545189, 1090724115, 1623935279, 569457721, 754111666, 1006614774 }, .{ 166738346, 2038586463, 1200649997, 192704283, 1779135585, 910794973 } },
+        .quotient_claims = &.{ .{ 530366180, 1060770584, 128589338, 103613253, 370515526, 2062158585 }, .{ 1499563346, 2004861455, 1926312219, 796540830, 799164852, 486099166 }, .{ 1811136603, 1865652148, 270048960, 1790336554, 832205432, 372787246 }, .{ 745684866, 559822169, 461033560, 402303881, 414648906, 574108402 }, .{ 19834434, 1339296723, 427136893, 354325284, 1262729061, 1467443103 }, .{ 1646746225, 738159431, 1543983872, 1421825235, 1379143007, 671845701 } },
         .module_sizes = &.{},
     },
 };
 
 pub const system_83_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "rc-bound1"
@@ -10457,7 +10541,7 @@ const system_83_modules = [_]vanishing.Module{
     // module: "mod"
     .{ .size = .{ .static = 4 }, .expressions = &system_83_module_0_expressions, .buckets = &system_83_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "range-mod-b1"
-    .{ .size = .{ .static = 1 }, .expressions = &system_83_module_1_expressions, .buckets = &system_83_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 1 }, .expressions = &system_83_module_1_expressions, .buckets = &system_83_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "rc-bound1"
@@ -10527,9 +10611,10 @@ const scenario_83 = Scenario{
 };
 
 pub const system_84_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 3, 3 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 3, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 4 },
-    .total_round_coins = 7,
+    .total_round_coins = 5,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "rc-cross-mod"
@@ -10669,9 +10754,9 @@ const system_84_modules = [_]vanishing.Module{
     // module: "modA"
     .{ .size = .{ .static = 4 }, .expressions = &system_84_module_0_expressions, .buckets = &system_84_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 4 },
     // module: "modB"
-    .{ .size = .{ .static = 4 }, .expressions = &system_84_module_1_expressions, .buckets = &system_84_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 5 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_84_module_1_expressions, .buckets = &system_84_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 4 },
     // module: "range-mod-b4"
-    .{ .size = .{ .static = 4 }, .expressions = &system_84_module_2_expressions, .buckets = &system_84_module_2_buckets, .witness_claim_offset = 6, .merge_coin_index = 3, .eval_coin_index = 6 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_84_module_2_expressions, .buckets = &system_84_module_2_buckets, .witness_claim_offset = 6, .merge_coin_index = 3, .eval_coin_index = 4 },
 };
 
 // system: "rc-cross-mod"
@@ -10741,16 +10826,17 @@ const scenario_84 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 2053449688, 2042565553, 532592093, 103425601, 1740096634, 732178276 }, .{ 1143596815, 991683464, 601348465, 1987645444, 1254842150, 1007056813 }, .{ 1596693800, 1607216485, 382981907, 648956010, 1946800910, 1060844675 }, .{ 518935676, 945526412, 86592935, 541369858, 1192564221, 518366757 }, .{ 803060529, 1568076850, 1867172440, 1228880982, 439478500, 2065162683 }, .{ 641902059, 474538943, 867661738, 721181629, 715684361, 314131403 }, .{ 2, 0, 0, 0, 0, 0 }, .{ 110222939, 404907690, 572075182, 1494506095, 1841547703, 957782406 }, .{ 1447571313, 162051883, 1662846710, 1582649881, 1521424347, 483169784 }, .{ 1674257201, 1946316935, 1053297107, 1662187947, 1879819051, 815188650 } },
-        .quotient_claims = &.{ .{ 170490566, 201220495, 1673147622, 794082178, 1474259531, 1799516589 }, .{ 544469659, 797999777, 607793667, 754836011, 1980462368, 520561065 }, .{ 639989929, 590782789, 1835801222, 164776783, 815922830, 1135338496 }, .{ 1993914165, 584001309, 36675378, 250875001, 983958028, 793079439 }, .{ 1367852639, 508617088, 1929749285, 1964354195, 436326277, 1375160452 }, .{ 1714615074, 1734104679, 295590482, 182016292, 1269898110, 747805824 }, .{ 480393400, 890644856, 1152398266, 2060789889, 1664340516, 324956897 }, .{ 1678729790, 2072780340, 275791614, 1339377046, 927413133, 944967283 }, .{ 1929205086, 1047307947, 1487261904, 539759269, 1167491237, 968717317 } },
+        .witness_claims = &.{ .{ 2053449688, 2042565553, 532592093, 103425601, 1740096634, 732178276 }, .{ 1143596815, 991683464, 601348465, 1987645444, 1254842150, 1007056813 }, .{ 1596693800, 1607216485, 382981907, 648956010, 1946800910, 1060844675 }, .{ 951114763, 1000208997, 742998321, 1076916407, 2041854765, 690558235 }, .{ 1313995746, 1175754554, 1971920488, 878298486, 606032302, 375541179 }, .{ 534012636, 523489948, 1747724526, 1481750423, 183905523, 1069861758 }, .{ 2, 0, 0, 0, 0, 0 }, .{ 154513490, 176281760, 1065522247, 1923855231, 781219598, 666349881 }, .{ 1974219236, 147339505, 928009503, 286121978, 1751728566, 116592807 }, .{ 1596693800, 1607216485, 382981907, 648956010, 1946800910, 1060844675 } },
+        .quotient_claims = &.{ .{ 170490566, 201220495, 1673147622, 794082178, 1474259531, 1799516589 }, .{ 544469659, 797999777, 607793667, 754836011, 1980462368, 520561065 }, .{ 639989929, 590782789, 1835801222, 164776783, 815922830, 1135338496 }, .{ 2092075597, 1609514617, 775331813, 1814905316, 538310059, 696614942 }, .{ 2038937511, 600807980, 661674417, 1380950282, 235788106, 1055553855 }, .{ 767855043, 1575551005, 1044221811, 1296018021, 1263373733, 1572831108 }, .{ 289020851, 567266195, 964913838, 1998478521, 241011346, 905033566 }, .{ 1041767115, 534706879, 915119099, 621034411, 300488130, 1089584303 }, .{ 850726575, 949140855, 589810422, 1801152867, 498860773, 1990735874 } },
         .module_sizes = &.{},
     },
 };
 
 pub const system_85_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "rc-large"
@@ -10847,7 +10933,7 @@ const system_85_modules = [_]vanishing.Module{
     // module: "mod"
     .{ .size = .{ .static = 8 }, .expressions = &system_85_module_0_expressions, .buckets = &system_85_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "range-mod-b128"
-    .{ .size = .{ .static = 128 }, .expressions = &system_85_module_1_expressions, .buckets = &system_85_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 128 }, .expressions = &system_85_module_1_expressions, .buckets = &system_85_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "rc-large"
@@ -10910,16 +10996,17 @@ const scenario_85 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 1739473197, 8808923, 194665385, 859976886, 1408951739, 1841648938 }, .{ 679463455, 868506292, 739998921, 414587939, 1319795333, 376260247 }, .{ 1185089627, 2041707273, 1077607073, 1719530961, 1419853650, 1487273836 }, .{ 1542207697, 142481817, 439228287, 1902852509, 236091837, 1444906422 }, .{ 380058639, 1211709914, 608239775, 326450551, 1262509204, 1560319677 }, .{ 1413327959, 1455572231, 1885938662, 121317611, 1273040790, 755838963 }, .{ 807875093, 660025499, 1169912013, 744681833, 354420187, 15601144 } },
-        .quotient_claims = &.{ .{ 1199926003, 750680699, 2114416582, 868280022, 1936400621, 1336940628 }, .{ 1050097375, 667545953, 474470826, 240219647, 1822788381, 773016138 }, .{ 1480467139, 1272835257, 1290510402, 1036279540, 2108621557, 1803157882 }, .{ 1365111635, 57516534, 1773274169, 1446563580, 1342630358, 513003323 }, .{ 897869630, 1691678107, 295385951, 1057956263, 587405826, 607543899 }, .{ 1468395212, 1777647123, 939616632, 716334285, 742490008, 930164697 } },
+        .witness_claims = &.{ .{ 1739473197, 8808923, 194665385, 859976886, 1408951739, 1841648938 }, .{ 679463455, 868506292, 739998921, 414587939, 1319795333, 376260247 }, .{ 1185089627, 2041707273, 1077607073, 1719530961, 1419853650, 1487273836 }, .{ 1442615539, 218199147, 1526300131, 282009221, 2042049070, 1426332417 }, .{ 389015587, 1881539991, 1857772691, 862232901, 965031610, 1565113900 }, .{ 1734431831, 416816246, 1882136420, 1659783044, 219091270, 699254643 }, .{ 1770881993, 847021624, 1736512252, 1676607990, 2026916630, 659952403 } },
+        .quotient_claims = &.{ .{ 1199926003, 750680699, 2114416582, 868280022, 1936400621, 1336940628 }, .{ 1050097375, 667545953, 474470826, 240219647, 1822788381, 773016138 }, .{ 1480467139, 1272835257, 1290510402, 1036279540, 2108621557, 1803157882 }, .{ 770541322, 738538852, 2053062054, 158300239, 29800720, 691207628 }, .{ 2063358879, 949448488, 1459917243, 1917113381, 95600747, 729144411 }, .{ 908650391, 175230914, 2108663354, 212128635, 245995298, 1097997299 } },
         .module_sizes = &.{},
     },
 };
 
 pub const system_86_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "rc-np2"
@@ -11016,7 +11103,7 @@ const system_86_modules = [_]vanishing.Module{
     // module: "mod"
     .{ .size = .{ .static = 4 }, .expressions = &system_86_module_0_expressions, .buckets = &system_86_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "range-mod-b5"
-    .{ .size = .{ .static = 8 }, .expressions = &system_86_module_1_expressions, .buckets = &system_86_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 8 }, .expressions = &system_86_module_1_expressions, .buckets = &system_86_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "rc-np2"
@@ -11079,16 +11166,17 @@ const scenario_86 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 944662555, 1758904977, 1921631602, 2114348245, 1271712339, 339005994 }, .{ 550743152, 1165438609, 1731128604, 1276710211, 214920009, 1668822827 }, .{ 663555209, 917854102, 71608453, 1110552892, 1001315307, 1631260854 }, .{ 1421419418, 271714893, 679217728, 408870523, 1345985766, 1949939338 }, .{ 1959024941, 1909281986, 406775329, 1511571996, 300688046, 872146721 }, .{ 80356556, 1955460817, 1128001406, 1522805333, 2042173142, 2055061523 }, .{ 362971821, 669330983, 1732838720, 460996935, 845711396, 864974434 } },
-        .quotient_claims = &.{ .{ 203600633, 747110224, 797723665, 1774833643, 74807254, 802935777 }, .{ 2084946619, 966383160, 1997167055, 280675265, 33183383, 1563574331 }, .{ 1948107996, 251217641, 424120408, 1085097956, 2027166223, 1654730641 }, .{ 279942362, 639589629, 291593375, 1749327920, 226929550, 1960648580 }, .{ 804492371, 513016669, 69112794, 1170250192, 1311152637, 1995212031 }, .{ 1209566553, 749661661, 1493942391, 1425461028, 1962111807, 1883017278 } },
+        .witness_claims = &.{ .{ 944662555, 1758904977, 1921631602, 2114348245, 1271712339, 339005994 }, .{ 550743152, 1165438609, 1731128604, 1276710211, 214920009, 1668822827 }, .{ 663555209, 917854102, 71608453, 1110552892, 1001315307, 1631260854 }, .{ 695836890, 2110579242, 1257892408, 1674740129, 1395575626, 1229319495 }, .{ 888622110, 998913083, 1617459528, 1380688185, 1113947275, 111419348 }, .{ 375814188, 1817777675, 1763857387, 581305698, 1360043059, 1298146336 }, .{ 408797257, 877054751, 126311036, 275104000, 696756454, 1477905051 } },
+        .quotient_claims = &.{ .{ 203600633, 747110224, 797723665, 1774833643, 74807254, 802935777 }, .{ 2084946619, 966383160, 1997167055, 280675265, 33183383, 1563574331 }, .{ 1948107996, 251217641, 424120408, 1085097956, 2027166223, 1654730641 }, .{ 47451198, 198841271, 397612663, 919391182, 1904729534, 706664516 }, .{ 465821856, 157289707, 1451813406, 453402515, 236434188, 501081439 }, .{ 2009207422, 1385242564, 550839143, 1177729921, 2053455038, 358960999 } },
         .module_sizes = &.{},
     },
 };
 
 pub const system_87_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "rc-zeros"
@@ -11185,7 +11273,7 @@ const system_87_modules = [_]vanishing.Module{
     // module: "mod"
     .{ .size = .{ .static = 4 }, .expressions = &system_87_module_0_expressions, .buckets = &system_87_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "range-mod-b8"
-    .{ .size = .{ .static = 8 }, .expressions = &system_87_module_1_expressions, .buckets = &system_87_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 8 }, .expressions = &system_87_module_1_expressions, .buckets = &system_87_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "rc-zeros"
@@ -11248,8 +11336,8 @@ const scenario_87 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 38302521, 1203834736, 2002380044, 482886811, 784304061, 1258221343 }, .{ 231469106, 1544662575, 1831478121, 749308846, 1167281585, 941823484 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 1481601111, 2090607751, 299964160, 674378611, 1587805029, 1588117360 }, .{ 364727690, 1074043933, 1259384264, 2049291895, 281275567, 388854691 }, .{ 364727690, 1074043933, 1259384264, 2049291895, 281275567, 388854691 }, .{ 902094456, 1134172040, 659664331, 2108146138, 2103206311, 744011601 } },
-        .quotient_claims = &.{ .{ 527565321, 421345115, 946130812, 403232374, 1731843743, 2114460300 }, .{ 1043486419, 1391269023, 19988017, 75257742, 309055222, 87815758 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 1065353216, 0, 0, 0, 0, 0 }, .{ 1660279753, 214159309, 2025441496, 2033830254, 996538738, 380545021 }, .{ 0, 0, 0, 0, 0, 0 } },
+        .witness_claims = &.{ .{ 38302521, 1203834736, 2002380044, 482886811, 784304061, 1258221343 }, .{ 231469106, 1544662575, 1831478121, 749308846, 1167281585, 941823484 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 1473706561, 976077822, 191958063, 1159495373, 1017855309, 378590207 }, .{ 364727690, 1074043933, 1259384264, 2049291895, 281275567, 388854691 }, .{ 364727690, 1074043933, 1259384264, 2049291895, 281275567, 388854691 }, .{ 518834680, 665821427, 1689047881, 1294717194, 1346586559, 987180632 } },
+        .quotient_claims = &.{ .{ 527565321, 421345115, 946130812, 403232374, 1731843743, 2114460300 }, .{ 1043486419, 1391269023, 19988017, 75257742, 309055222, 87815758 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 1065353216, 0, 0, 0, 0, 0 }, .{ 203113010, 787726590, 1939665522, 109542960, 1354373789, 161928361 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
     },
 };
@@ -11258,6 +11346,7 @@ pub const system_88_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lagrange-sel"
@@ -11346,6 +11435,7 @@ pub const system_89_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 1,
 };
 
 // scenario: "lagrange-sel-dyn"
@@ -11405,8 +11495,8 @@ const scenario_89 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{.{ 1370783823, 1546879596, 798776142, 991766015, 1033848109, 1879031930 }},
-        .quotient_claims = &.{.{ 1757317135, 673144868, 1021019227, 431729862, 73071499, 20723336 }},
+        .witness_claims = &.{.{ 683326615, 219937169, 1442588775, 659032890, 1933816236, 580400180 }},
+        .quotient_claims = &.{.{ 1689679602, 710393538, 666240445, 1650194993, 802278114, 775896643 }},
         .module_sizes = &.{4},
     },
     .invalid = .{
@@ -11424,16 +11514,17 @@ const scenario_89 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{.{ 1671379099, 1820225737, 745496736, 1520101385, 483404820, 33935710 }},
-        .quotient_claims = &.{.{ 1758585595, 2051671926, 1287228006, 2025059932, 959328724, 423678391 }},
+        .witness_claims = &.{.{ 234636168, 1694384208, 487392842, 629070633, 1072321851, 1898444732 }},
+        .quotient_claims = &.{.{ 1598942675, 2110727288, 289851626, 1271122571, 2077411222, 137517246 }},
         .module_sizes = &.{4},
     },
 };
 
 pub const system_90_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4 },
-    .total_round_coins = 6,
+    .total_round_coins = 5,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-multi-col-bench"
@@ -11594,7 +11685,7 @@ const system_90_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 1024 }, .expressions = &system_90_module_0_expressions, .buckets = &system_90_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 2, .eval_coin_index = 4 },
     // module: "modS"
-    .{ .size = .{ .static = 1024 }, .expressions = &system_90_module_1_expressions, .buckets = &system_90_module_1_buckets, .witness_claim_offset = 8, .merge_coin_index = 3, .eval_coin_index = 5 },
+    .{ .size = .{ .static = 1024 }, .expressions = &system_90_module_1_expressions, .buckets = &system_90_module_1_buckets, .witness_claim_offset = 8, .merge_coin_index = 3, .eval_coin_index = 4 },
 };
 
 // system: "lk-multi-col-bench"
@@ -11666,8 +11757,8 @@ const scenario_90 = Scenario{
                 .cells = &.{},
             },
         },
-        .witness_claims = &.{ .{ 1748702377, 1571554460, 434540411, 803253030, 928805117, 41190350 }, .{ 855067382, 376743862, 1077790575, 661771324, 1517356977, 1968499514 }, .{ 1607941601, 1113433819, 389227288, 2080330645, 572113519, 1969674391 }, .{ 90128702, 743695162, 1898268676, 1540989831, 895564392, 1508821224 }, .{ 90128701, 743695162, 1898268676, 1540989831, 895564392, 1508821224 }, .{ 90128700, 743695162, 1898268676, 1540989831, 895564392, 1508821224 }, .{ 90128699, 743695162, 1898268676, 1540989831, 895564392, 1508821224 }, .{ 90128698, 743695162, 1898268676, 1540989831, 895564392, 1508821224 }, .{ 236519901, 378106282, 140492308, 401524997, 189363738, 494352460 }, .{ 605426351, 2088987309, 1887515462, 1463809296, 1523906810, 130915554 }, .{ 1288436193, 533645796, 1719925430, 770413010, 583374167, 254701941 }, .{ 1288436192, 533645796, 1719925430, 770413010, 583374167, 254701941 }, .{ 1288436191, 533645796, 1719925430, 770413010, 583374167, 254701941 }, .{ 1288436190, 533645796, 1719925430, 770413010, 583374167, 254701941 }, .{ 1288436189, 533645796, 1719925430, 770413010, 583374167, 254701941 } },
-        .quotient_claims = &.{ .{ 1947540421, 1353478170, 1666900840, 1764506940, 1519301126, 1371081689 }, .{ 146312673, 810891451, 1442360800, 152913700, 1443875636, 1182731810 }, .{ 1136184628, 1411739507, 1812698567, 924631708, 793215339, 1137784980 }, .{ 827668815, 613663025, 546085564, 566537271, 529181554, 813089799 }, .{ 1751942881, 1699284238, 217604115, 1163774581, 1014758695, 1179509290 }, .{ 191424595, 261814409, 829712141, 1973282830, 1663401823, 1426376065 } },
+        .witness_claims = &.{ .{ 1748702377, 1571554460, 434540411, 803253030, 928805117, 41190350 }, .{ 855067382, 376743862, 1077790575, 661771324, 1517356977, 1968499514 }, .{ 1607941601, 1113433819, 389227288, 2080330645, 572113519, 1969674391 }, .{ 90128702, 743695162, 1898268676, 1540989831, 895564392, 1508821224 }, .{ 90128701, 743695162, 1898268676, 1540989831, 895564392, 1508821224 }, .{ 90128700, 743695162, 1898268676, 1540989831, 895564392, 1508821224 }, .{ 90128699, 743695162, 1898268676, 1540989831, 895564392, 1508821224 }, .{ 90128698, 743695162, 1898268676, 1540989831, 895564392, 1508821224 }, .{ 167489515, 1696132433, 769114598, 1566211294, 1047482930, 1850480391 }, .{ 1497872104, 1482158874, 1155088711, 183921341, 833169085, 59291059 }, .{ 309585772, 358121085, 213172943, 495241510, 30553848, 1400018659 }, .{ 309585771, 358121085, 213172943, 495241510, 30553848, 1400018659 }, .{ 309585770, 358121085, 213172943, 495241510, 30553848, 1400018659 }, .{ 309585769, 358121085, 213172943, 495241510, 30553848, 1400018659 }, .{ 309585768, 358121085, 213172943, 495241510, 30553848, 1400018659 } },
+        .quotient_claims = &.{ .{ 1947540421, 1353478170, 1666900840, 1764506940, 1519301126, 1371081689 }, .{ 146312673, 810891451, 1442360800, 152913700, 1443875636, 1182731810 }, .{ 1136184628, 1411739507, 1812698567, 924631708, 793215339, 1137784980 }, .{ 1928845638, 610412498, 1005277102, 1518249630, 341391762, 1429023606 }, .{ 2115749217, 1041530516, 151694912, 2020039167, 456574084, 1666348173 }, .{ 344902869, 329558959, 498918008, 65291694, 767578086, 1121573679 } },
         .module_sizes = &.{},
     },
 };

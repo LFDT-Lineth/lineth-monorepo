@@ -33,6 +33,7 @@ pub const system_0_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "bool-col"
@@ -174,6 +175,7 @@ pub const system_1_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "fib"
@@ -335,6 +337,7 @@ pub const system_2_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "geo"
@@ -494,6 +497,7 @@ pub const system_3_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "ctr"
@@ -679,6 +683,7 @@ pub const system_4_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "pyth"
@@ -891,6 +896,7 @@ pub const system_5_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 1,
 };
 
 // scenario: "dyn-fib"
@@ -931,13 +937,13 @@ const system_5_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_5_logderiv = logderivativesum.System{ .queries = &system_5_logderiv_queries };
 const verify_case_5_witness_claims = [_]ext.Ext{
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1447242592 }, .a1 = .{ .value = 978962941 } }, .B1 = .{ .a0 = .{ .value = 713008718 }, .a1 = .{ .value = 2098986074 } }, .B2 = .{ .a0 = .{ .value = 810460008 }, .a1 = .{ .value = 1622438948 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1595630697 }, .a1 = .{ .value = 1671389507 } }, .B1 = .{ .a0 = .{ .value = 1674422187 }, .a1 = .{ .value = 1691736160 } }, .B2 = .{ .a0 = .{ .value = 1824101463 }, .a1 = .{ .value = 792937680 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1881232788 }, .a1 = .{ .value = 627383792 } }, .B1 = .{ .a0 = .{ .value = 680025590 }, .a1 = .{ .value = 1782463208 } }, .B2 = .{ .a0 = .{ .value = 1665432448 }, .a1 = .{ .value = 1958953104 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 909567050 }, .a1 = .{ .value = 1656739169 } }, .B1 = .{ .a0 = .{ .value = 2048975680 }, .a1 = .{ .value = 751897493 } }, .B2 = .{ .a0 = .{ .value = 1576570113 }, .a1 = .{ .value = 154559052 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 299536069 }, .a1 = .{ .value = 798071763 } }, .B1 = .{ .a0 = .{ .value = 1188258977 }, .a1 = .{ .value = 1447829268 } }, .B2 = .{ .a0 = .{ .value = 424967821 }, .a1 = .{ .value = 1741694229 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 864390407 }, .a1 = .{ .value = 734432472 } }, .B1 = .{ .a0 = .{ .value = 978636059 }, .a1 = .{ .value = 1086436238 } }, .B2 = .{ .a0 = .{ .value = 1729111891 }, .a1 = .{ .value = 1377689226 } } },
 };
 
 const verify_case_5_quotient_claims = [_]ext.Ext{
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 121605825 }, .a1 = .{ .value = 302074000 } }, .B1 = .{ .a0 = .{ .value = 1996294172 }, .a1 = .{ .value = 1700051928 } }, .B2 = .{ .a0 = .{ .value = 98596367 }, .a1 = .{ .value = 812372901 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1027894097 }, .a1 = .{ .value = 264706113 } }, .B1 = .{ .a0 = .{ .value = 964166030 }, .a1 = .{ .value = 878854478 } }, .B2 = .{ .a0 = .{ .value = 1311813075 }, .a1 = .{ .value = 1536152420 } } },
 };
 
 const verify_case_5_module_sizes = [_]usize{8};
@@ -989,13 +995,13 @@ const verify_case_5_proof = verifier.Proof{
 };
 
 const verify_case_5_failing_witness_claims = [_]ext.Ext{
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1151832766 }, .a1 = .{ .value = 489109694 } }, .B1 = .{ .a0 = .{ .value = 745564059 }, .a1 = .{ .value = 2065529070 } }, .B2 = .{ .a0 = .{ .value = 787588006 }, .a1 = .{ .value = 1722051715 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1842952544 }, .a1 = .{ .value = 1264021167 } }, .B1 = .{ .a0 = .{ .value = 1374471502 }, .a1 = .{ .value = 1711228060 } }, .B2 = .{ .a0 = .{ .value = 247568247 }, .a1 = .{ .value = 1873163260 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 468663487 }, .a1 = .{ .value = 519972582 } }, .B1 = .{ .a0 = .{ .value = 1677417873 }, .a1 = .{ .value = 175539661 } }, .B2 = .{ .a0 = .{ .value = 684550919 }, .a1 = .{ .value = 698689360 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1151982843 }, .a1 = .{ .value = 452072004 } }, .B1 = .{ .a0 = .{ .value = 531228837 }, .a1 = .{ .value = 256120931 } }, .B2 = .{ .a0 = .{ .value = 234976623 }, .a1 = .{ .value = 865706353 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 381120049 }, .a1 = .{ .value = 1259509436 } }, .B1 = .{ .a0 = .{ .value = 529266710 }, .a1 = .{ .value = 1826966432 } }, .B2 = .{ .a0 = .{ .value = 1093980743 }, .a1 = .{ .value = 1973972 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 196638957 }, .a1 = .{ .value = 97839247 } }, .B1 = .{ .a0 = .{ .value = 136512574 }, .a1 = .{ .value = 1996790669 } }, .B2 = .{ .a0 = .{ .value = 552855420 }, .a1 = .{ .value = 512876314 } } },
 };
 
 const verify_case_5_failing_quotient_claims = [_]ext.Ext{
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 105354878 }, .a1 = .{ .value = 539148090 } }, .B1 = .{ .a0 = .{ .value = 407216735 }, .a1 = .{ .value = 2029376794 } }, .B2 = .{ .a0 = .{ .value = 1215296786 }, .a1 = .{ .value = 1606162197 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1688908269 }, .a1 = .{ .value = 1778594495 } }, .B1 = .{ .a0 = .{ .value = 1218168013 }, .a1 = .{ .value = 1595588263 } }, .B2 = .{ .a0 = .{ .value = 1509468440 }, .a1 = .{ .value = 505843405 } } },
 };
 
 const verify_case_5_failing_module_sizes = [_]usize{8};
@@ -1052,6 +1058,7 @@ pub const system_6_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "const-col"
@@ -1191,6 +1198,7 @@ pub const system_7_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "fwd-shift"
@@ -1348,6 +1356,7 @@ pub const system_8_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "bool-cube"
@@ -1509,6 +1518,7 @@ pub const system_9_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lin-comb"
@@ -1690,6 +1700,7 @@ pub const system_10_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "fib-16"
@@ -1883,6 +1894,7 @@ pub const system_11_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "same-ratio"
@@ -2044,6 +2056,7 @@ pub const system_12_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "mixed-ratio"
@@ -2188,9 +2201,10 @@ const verify_case_12_failing_proof = verifier.Proof{
 const verify_case_12_systems = verifier.Systems{ .vanishing = system_12, .logderivativesum = system_12_logderiv };
 
 pub const system_13_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 2 },
-    .total_round_coins = 4,
+    .total_round_coins = 3,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "multi-mod"
@@ -2233,7 +2247,7 @@ const system_13_modules = [_]vanishing.Module{
     // module: "modA"
     .{ .size = .{ .static = 4 }, .expressions = &system_13_module_0_expressions, .buckets = &system_13_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 2 },
     // module: "modB"
-    .{ .size = .{ .static = 8 }, .expressions = &system_13_module_1_expressions, .buckets = &system_13_module_1_buckets, .witness_claim_offset = 1, .merge_coin_index = 1, .eval_coin_index = 3 },
+    .{ .size = .{ .static = 8 }, .expressions = &system_13_module_1_expressions, .buckets = &system_13_module_1_buckets, .witness_claim_offset = 1, .merge_coin_index = 1, .eval_coin_index = 2 },
 };
 
 // system: "multi-mod"
@@ -2402,6 +2416,7 @@ pub const system_14_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "manual-cxl"
@@ -2545,6 +2560,7 @@ pub const system_15_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "pre-sel"
@@ -2688,6 +2704,7 @@ pub const system_16_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "cell-leaf"
@@ -2831,6 +2848,7 @@ pub const system_17_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 3,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "coin-scaled"
@@ -2984,6 +3002,7 @@ pub const system_18_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "step3"
@@ -3145,6 +3164,7 @@ pub const system_19_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "quartic"
@@ -3344,6 +3364,7 @@ pub const system_20_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 1,
 };
 
 // scenario: "dyn-leftpad"
@@ -3439,12 +3460,12 @@ const verify_case_20_proof = verifier.Proof{
 };
 
 const verify_case_20_failing_witness_claims = [_]ext.Ext{
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1441755679 }, .a1 = .{ .value = 1546607480 } }, .B1 = .{ .a0 = .{ .value = 1167183543 }, .a1 = .{ .value = 922434605 } }, .B2 = .{ .a0 = .{ .value = 1511134777 }, .a1 = .{ .value = 977503327 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1721837416 }, .a1 = .{ .value = 1489126610 } }, .B1 = .{ .a0 = .{ .value = 2054060195 }, .a1 = .{ .value = 2118877939 } }, .B2 = .{ .a0 = .{ .value = 1244571932 }, .a1 = .{ .value = 1716699190 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1469513422 }, .a1 = .{ .value = 1990984026 } }, .B1 = .{ .a0 = .{ .value = 1104822168 }, .a1 = .{ .value = 758325456 } }, .B2 = .{ .a0 = .{ .value = 483134189 }, .a1 = .{ .value = 1665451131 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1031998150 }, .a1 = .{ .value = 280721711 } }, .B1 = .{ .a0 = .{ .value = 1747426881 }, .a1 = .{ .value = 1073230188 } }, .B2 = .{ .a0 = .{ .value = 1826504369 }, .a1 = .{ .value = 1132575349 } } },
 };
 
 const verify_case_20_failing_quotient_claims = [_]ext.Ext{
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 919044730 }, .a1 = .{ .value = 699938810 } }, .B1 = .{ .a0 = .{ .value = 2114606905 }, .a1 = .{ .value = 752538805 } }, .B2 = .{ .a0 = .{ .value = 1367047649 }, .a1 = .{ .value = 551348400 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 2048354218 }, .a1 = .{ .value = 218461435 } }, .B1 = .{ .a0 = .{ .value = 122915321 }, .a1 = .{ .value = 1405321472 } }, .B2 = .{ .a0 = .{ .value = 1979317636 }, .a1 = .{ .value = 1236908769 } } },
 };
 
 const verify_case_20_failing_module_sizes = [_]usize{8};
@@ -3501,6 +3522,7 @@ pub const system_21_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "cube-shift"
@@ -3688,6 +3710,7 @@ pub const system_22_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "mixed-hi-ratio"
@@ -3988,9 +4011,10 @@ const verify_case_22_failing_proof = verifier.Proof{
 const verify_case_22_systems = verifier.Systems{ .vanishing = system_22, .logderivativesum = system_22_logderiv };
 
 pub const system_23_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 2 },
-    .total_round_coins = 4,
+    .total_round_coins = 3,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "multi-mod-hi-ratio"
@@ -4039,7 +4063,7 @@ const system_23_modules = [_]vanishing.Module{
     // module: "modA"
     .{ .size = .{ .static = 4 }, .expressions = &system_23_module_0_expressions, .buckets = &system_23_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 2 },
     // module: "modB"
-    .{ .size = .{ .static = 8 }, .expressions = &system_23_module_1_expressions, .buckets = &system_23_module_1_buckets, .witness_claim_offset = 1, .merge_coin_index = 1, .eval_coin_index = 3 },
+    .{ .size = .{ .static = 8 }, .expressions = &system_23_module_1_expressions, .buckets = &system_23_module_1_buckets, .witness_claim_offset = 1, .merge_coin_index = 1, .eval_coin_index = 2 },
 };
 
 // system: "multi-mod-hi-ratio"
@@ -4056,13 +4080,13 @@ const system_23_logderiv_queries = [_]logderivativesum.Query{};
 const system_23_logderiv = logderivativesum.System{ .queries = &system_23_logderiv_queries };
 const verify_case_23_witness_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1512454731 }, .a1 = .{ .value = 958598984 } }, .B1 = .{ .a0 = .{ .value = 360752375 }, .a1 = .{ .value = 352626871 } }, .B2 = .{ .a0 = .{ .value = 392274282 }, .a1 = .{ .value = 1763221166 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1736202540 }, .a1 = .{ .value = 1230922383 } }, .B1 = .{ .a0 = .{ .value = 1915178044 }, .a1 = .{ .value = 916941519 } }, .B2 = .{ .a0 = .{ .value = 499064941 }, .a1 = .{ .value = 1696376734 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1209956587 }, .a1 = .{ .value = 370094569 } }, .B1 = .{ .a0 = .{ .value = 1434975110 }, .a1 = .{ .value = 788277908 } }, .B2 = .{ .a0 = .{ .value = 1239360919 }, .a1 = .{ .value = 872309931 } } },
 };
 
 const verify_case_23_quotient_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 378113683 }, .a1 = .{ .value = 239649746 } }, .B1 = .{ .a0 = .{ .value = 622864702 }, .a1 = .{ .value = 620833326 } }, .B2 = .{ .a0 = .{ .value = 1163421787 }, .a1 = .{ .value = 1506158508 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 2032080460 }, .a1 = .{ .value = 840407204 } }, .B1 = .{ .a0 = .{ .value = 478794511 }, .a1 = .{ .value = 761911988 } }, .B2 = .{ .a0 = .{ .value = 1722796060 }, .a1 = .{ .value = 1489447400 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 302489147 }, .a1 = .{ .value = 1690553467 } }, .B1 = .{ .a0 = .{ .value = 1424096994 }, .a1 = .{ .value = 197069477 } }, .B2 = .{ .a0 = .{ .value = 842516838 }, .a1 = .{ .value = 750754091 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } },
 };
 
@@ -4152,14 +4176,14 @@ const verify_case_23_proof = verifier.Proof{
 
 const verify_case_23_failing_witness_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 177595024 }, .a1 = .{ .value = 812269657 } }, .B1 = .{ .a0 = .{ .value = 800835790 }, .a1 = .{ .value = 879450272 } }, .B2 = .{ .a0 = .{ .value = 2074674568 }, .a1 = .{ .value = 274976158 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1406797314 }, .a1 = .{ .value = 701206298 } }, .B1 = .{ .a0 = .{ .value = 712365316 }, .a1 = .{ .value = 431506217 } }, .B2 = .{ .a0 = .{ .value = 2070867447 }, .a1 = .{ .value = 169516254 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1951440508 }, .a1 = .{ .value = 1392239785 } }, .B1 = .{ .a0 = .{ .value = 1070204721 }, .a1 = .{ .value = 1753761275 } }, .B2 = .{ .a0 = .{ .value = 1752250979 }, .a1 = .{ .value = 1066585038 } } },
 };
 
 const verify_case_23_failing_quotient_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1642428581 }, .a1 = .{ .value = 1801097239 } }, .B1 = .{ .a0 = .{ .value = 1265562164 }, .a1 = .{ .value = 219862568 } }, .B2 = .{ .a0 = .{ .value = 518668642 }, .a1 = .{ .value = 1134097256 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 505183367 }, .a1 = .{ .value = 1411310835 } }, .B1 = .{ .a0 = .{ .value = 1889859229 }, .a1 = .{ .value = 686174882 } }, .B2 = .{ .a0 = .{ .value = 1585152228 }, .a1 = .{ .value = 1865482273 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 2096931289 }, .a1 = .{ .value = 733472834 } }, .B1 = .{ .a0 = .{ .value = 1073059422 }, .a1 = .{ .value = 1673570688 } }, .B2 = .{ .a0 = .{ .value = 543216611 }, .a1 = .{ .value = 210903558 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1815830039 }, .a1 = .{ .value = 510151843 } }, .B1 = .{ .a0 = .{ .value = 2112566642 }, .a1 = .{ .value = 1217911695 } }, .B2 = .{ .a0 = .{ .value = 902047357 }, .a1 = .{ .value = 1984872277 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1434044728 }, .a1 = .{ .value = 1060943788 } }, .B1 = .{ .a0 = .{ .value = 1823741220 }, .a1 = .{ .value = 1368307431 } }, .B2 = .{ .a0 = .{ .value = 1488288549 }, .a1 = .{ .value = 168974863 } } },
 };
 
 const verify_case_23_failing_module_sizes = [_]usize{};
@@ -4252,6 +4276,7 @@ pub const system_24_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "cube-32"
@@ -4581,6 +4606,7 @@ pub const system_25_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "fwd-shift-3"
@@ -4738,6 +4764,7 @@ pub const system_26_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "two-shift"
@@ -4901,6 +4928,7 @@ pub const system_27_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 1,
 };
 
 // scenario: "dyn-quad"
@@ -4941,7 +4969,7 @@ const system_27_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_27_logderiv = logderivativesum.System{ .queries = &system_27_logderiv_queries };
 const verify_case_27_witness_claims = [_]ext.Ext{
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1413096820 }, .a1 = .{ .value = 96070362 } }, .B1 = .{ .a0 = .{ .value = 393008447 }, .a1 = .{ .value = 1671346176 } }, .B2 = .{ .a0 = .{ .value = 1527579318 }, .a1 = .{ .value = 1184407193 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 601249614 }, .a1 = .{ .value = 1629899347 } }, .B1 = .{ .a0 = .{ .value = 1033266201 }, .a1 = .{ .value = 348100009 } }, .B2 = .{ .a0 = .{ .value = 1510490613 }, .a1 = .{ .value = 180614699 } } },
 };
 
 const verify_case_27_quotient_claims = [_]ext.Ext{
@@ -4997,11 +5025,11 @@ const verify_case_27_proof = verifier.Proof{
 };
 
 const verify_case_27_failing_witness_claims = [_]ext.Ext{
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 2062694608 }, .a1 = .{ .value = 1504861030 } }, .B1 = .{ .a0 = .{ .value = 970551382 }, .a1 = .{ .value = 1959951254 } }, .B2 = .{ .a0 = .{ .value = 31778349 }, .a1 = .{ .value = 1060070188 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 158542507 }, .a1 = .{ .value = 333536486 } }, .B1 = .{ .a0 = .{ .value = 362854168 }, .a1 = .{ .value = 285390145 } }, .B2 = .{ .a0 = .{ .value = 1106637606 }, .a1 = .{ .value = 1070052536 } } },
 };
 
 const verify_case_27_failing_quotient_claims = [_]ext.Ext{
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1244967415 }, .a1 = .{ .value = 1464920846 } }, .B1 = .{ .a0 = .{ .value = 357149961 }, .a1 = .{ .value = 716507833 } }, .B2 = .{ .a0 = .{ .value = 409564937 }, .a1 = .{ .value = 2027460110 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 2013443736 }, .a1 = .{ .value = 1182353806 } }, .B1 = .{ .a0 = .{ .value = 1912581507 }, .a1 = .{ .value = 122650090 } }, .B2 = .{ .a0 = .{ .value = 1492136043 }, .a1 = .{ .value = 1705034976 } } },
 };
 
 const verify_case_27_failing_module_sizes = [_]usize{8};
@@ -5058,6 +5086,7 @@ pub const system_28_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "quartic-shift"
@@ -5301,6 +5330,7 @@ pub const system_29_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-row0"
@@ -5440,6 +5470,7 @@ pub const system_30_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-rowN"
@@ -5579,6 +5610,7 @@ pub const system_31_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-shift"
@@ -5718,6 +5750,7 @@ pub const system_32_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-pair"
@@ -5877,6 +5910,7 @@ pub const system_33_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-multi"
@@ -6020,6 +6054,7 @@ pub const system_34_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-row1"
@@ -6161,6 +6196,7 @@ pub const system_35_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-cell"
@@ -6306,6 +6342,7 @@ pub const system_36_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 3,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-coin"
@@ -6459,6 +6496,7 @@ pub const system_37_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-anchors"
@@ -6613,6 +6651,7 @@ pub const system_38_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-const"
@@ -6754,6 +6793,7 @@ pub const system_39_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-wrap"
@@ -6893,6 +6933,7 @@ pub const system_40_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-prod"
@@ -7070,6 +7111,7 @@ pub const system_41_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 3,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-cell-coin"
@@ -7227,6 +7269,7 @@ pub const system_42_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-3col"
@@ -7406,6 +7449,7 @@ pub const system_43_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-multi-anchor-multi-col"
@@ -7569,6 +7613,7 @@ pub const system_44_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-cube"
@@ -7765,9 +7810,10 @@ const verify_case_44_failing_proof = verifier.Proof{
 const verify_case_44_systems = verifier.Systems{ .vanishing = system_44, .logderivativesum = system_44_logderiv };
 
 pub const system_45_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 2 },
-    .total_round_coins = 4,
+    .total_round_coins = 3,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lv-multi-mod"
@@ -7808,7 +7854,7 @@ const system_45_modules = [_]vanishing.Module{
     // module: "modA"
     .{ .size = .{ .static = 4 }, .expressions = &system_45_module_0_expressions, .buckets = &system_45_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 2 },
     // module: "modB"
-    .{ .size = .{ .static = 4 }, .expressions = &system_45_module_1_expressions, .buckets = &system_45_module_1_buckets, .witness_claim_offset = 1, .merge_coin_index = 1, .eval_coin_index = 3 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_45_module_1_expressions, .buckets = &system_45_module_1_buckets, .witness_claim_offset = 1, .merge_coin_index = 1, .eval_coin_index = 2 },
 };
 
 // system: "lv-multi-mod"
@@ -7825,12 +7871,12 @@ const system_45_logderiv_queries = [_]logderivativesum.Query{};
 const system_45_logderiv = logderivativesum.System{ .queries = &system_45_logderiv_queries };
 const verify_case_45_witness_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 394027044 }, .a1 = .{ .value = 704600399 } }, .B1 = .{ .a0 = .{ .value = 1315562949 }, .a1 = .{ .value = 841189271 } }, .B2 = .{ .a0 = .{ .value = 68091860 }, .a1 = .{ .value = 1392884829 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 498958901 }, .a1 = .{ .value = 571822982 } }, .B1 = .{ .a0 = .{ .value = 417073808 }, .a1 = .{ .value = 1299112904 } }, .B2 = .{ .a0 = .{ .value = 1171928233 }, .a1 = .{ .value = 1496215771 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 490532521 }, .a1 = .{ .value = 757930631 } }, .B1 = .{ .a0 = .{ .value = 426812741 }, .a1 = .{ .value = 1305886327 } }, .B2 = .{ .a0 = .{ .value = 1730611419 }, .a1 = .{ .value = 1883722554 } } },
 };
 
 const verify_case_45_quotient_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 2032749915 }, .a1 = .{ .value = 563781600 } }, .B1 = .{ .a0 = .{ .value = 1686410772 }, .a1 = .{ .value = 1032608381 } }, .B2 = .{ .a0 = .{ .value = 1090475762 }, .a1 = .{ .value = 1578962574 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 429098096 }, .a1 = .{ .value = 1941233021 } }, .B1 = .{ .a0 = .{ .value = 1086825933 }, .a1 = .{ .value = 68924398 } }, .B2 = .{ .a0 = .{ .value = 210770591 }, .a1 = .{ .value = 1118943698 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1657936869 }, .a1 = .{ .value = 2001891148 } }, .B1 = .{ .a0 = .{ .value = 1983089234 }, .a1 = .{ .value = 842741529 } }, .B2 = .{ .a0 = .{ .value = 11824234 }, .a1 = .{ .value = 46694685 } } },
 };
 
 const verify_case_45_module_sizes = [_]usize{};
@@ -7891,12 +7937,12 @@ const verify_case_45_proof = verifier.Proof{
 
 const verify_case_45_failing_witness_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1880561919 }, .a1 = .{ .value = 1602638379 } }, .B1 = .{ .a0 = .{ .value = 1182471751 }, .a1 = .{ .value = 598921129 } }, .B2 = .{ .a0 = .{ .value = 239689008 }, .a1 = .{ .value = 1351139638 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1985361843 }, .a1 = .{ .value = 691009021 } }, .B1 = .{ .a0 = .{ .value = 1175894523 }, .a1 = .{ .value = 1335561002 } }, .B2 = .{ .a0 = .{ .value = 949585664 }, .a1 = .{ .value = 365019247 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 314730548 }, .a1 = .{ .value = 333389484 } }, .B1 = .{ .a0 = .{ .value = 1409759584 }, .a1 = .{ .value = 1177307785 } }, .B2 = .{ .a0 = .{ .value = 1489532849 }, .a1 = .{ .value = 417510086 } } },
 };
 
 const verify_case_45_failing_quotient_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1804236354 }, .a1 = .{ .value = 696789751 } }, .B1 = .{ .a0 = .{ .value = 1149141792 }, .a1 = .{ .value = 1084262301 } }, .B2 = .{ .a0 = .{ .value = 177683007 }, .a1 = .{ .value = 1776142789 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 2011314576 }, .a1 = .{ .value = 2115001176 } }, .B1 = .{ .a0 = .{ .value = 1401964263 }, .a1 = .{ .value = 310236187 } }, .B2 = .{ .a0 = .{ .value = 551295849 }, .a1 = .{ .value = 205692885 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1352931654 }, .a1 = .{ .value = 821444945 } }, .B1 = .{ .a0 = .{ .value = 1862869265 }, .a1 = .{ .value = 1766679736 } }, .B2 = .{ .a0 = .{ .value = 1335141004 }, .a1 = .{ .value = 1179358429 } } },
 };
 
 const verify_case_45_failing_module_sizes = [_]usize{};
@@ -7961,6 +8007,7 @@ pub const system_46_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 1,
 };
 
 // scenario: "lv-dyn-row0"
@@ -7999,11 +8046,11 @@ const system_46_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_46_logderiv = logderivativesum.System{ .queries = &system_46_logderiv_queries };
 const verify_case_46_witness_claims = [_]ext.Ext{
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1891684139 }, .a1 = .{ .value = 1462113465 } }, .B1 = .{ .a0 = .{ .value = 1268379225 }, .a1 = .{ .value = 223421746 } }, .B2 = .{ .a0 = .{ .value = 899026523 }, .a1 = .{ .value = 876191255 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1206890110 }, .a1 = .{ .value = 77801860 } }, .B1 = .{ .a0 = .{ .value = 2020325368 }, .a1 = .{ .value = 445135374 } }, .B2 = .{ .a0 = .{ .value = 1320180030 }, .a1 = .{ .value = 1770590819 } } },
 };
 
 const verify_case_46_quotient_claims = [_]ext.Ext{
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1250866638 }, .a1 = .{ .value = 790163901 } }, .B1 = .{ .a0 = .{ .value = 1171419139 }, .a1 = .{ .value = 1663973373 } }, .B2 = .{ .a0 = .{ .value = 1581837529 }, .a1 = .{ .value = 1914451230 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1175230823 }, .a1 = .{ .value = 1845663652 } }, .B1 = .{ .a0 = .{ .value = 1689637632 }, .a1 = .{ .value = 55914990 } }, .B2 = .{ .a0 = .{ .value = 1974987842 }, .a1 = .{ .value = 1034652683 } } },
 };
 
 const verify_case_46_module_sizes = [_]usize{8};
@@ -8055,11 +8102,11 @@ const verify_case_46_proof = verifier.Proof{
 };
 
 const verify_case_46_failing_witness_claims = [_]ext.Ext{
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1085956862 }, .a1 = .{ .value = 171560619 } }, .B1 = .{ .a0 = .{ .value = 937768073 }, .a1 = .{ .value = 957987431 } }, .B2 = .{ .a0 = .{ .value = 1736954368 }, .a1 = .{ .value = 847931557 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 579596495 }, .a1 = .{ .value = 1521815294 } }, .B1 = .{ .a0 = .{ .value = 1967653641 }, .a1 = .{ .value = 358493418 } }, .B2 = .{ .a0 = .{ .value = 1772955728 }, .a1 = .{ .value = 1128939448 } } },
 };
 
 const verify_case_46_failing_quotient_claims = [_]ext.Ext{
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1825514900 }, .a1 = .{ .value = 1223161481 } }, .B1 = .{ .a0 = .{ .value = 713913353 }, .a1 = .{ .value = 1112048458 } }, .B2 = .{ .a0 = .{ .value = 584947956 }, .a1 = .{ .value = 442732922 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1251131205 }, .a1 = .{ .value = 1335811891 } }, .B1 = .{ .a0 = .{ .value = 641900284 }, .a1 = .{ .value = 477906011 } }, .B2 = .{ .a0 = .{ .value = 156006035 }, .a1 = .{ .value = 1401582376 } } },
 };
 
 const verify_case_46_failing_module_sizes = [_]usize{8};
@@ -8116,6 +8163,7 @@ pub const system_47_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 1,
 };
 
 // scenario: "lv-dyn-shift"
@@ -8154,11 +8202,11 @@ const system_47_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_47_logderiv = logderivativesum.System{ .queries = &system_47_logderiv_queries };
 const verify_case_47_witness_claims = [_]ext.Ext{
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 170484856 }, .a1 = .{ .value = 2100916483 } }, .B1 = .{ .a0 = .{ .value = 1743189282 }, .a1 = .{ .value = 1012118600 } }, .B2 = .{ .a0 = .{ .value = 23041301 }, .a1 = .{ .value = 1840258773 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1002155942 }, .a1 = .{ .value = 1638928690 } }, .B1 = .{ .a0 = .{ .value = 889815862 }, .a1 = .{ .value = 795305784 } }, .B2 = .{ .a0 = .{ .value = 35405006 }, .a1 = .{ .value = 661909017 } } },
 };
 
 const verify_case_47_quotient_claims = [_]ext.Ext{
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1211581303 }, .a1 = .{ .value = 153673033 } }, .B1 = .{ .a0 = .{ .value = 626470969 }, .a1 = .{ .value = 1996838739 } }, .B2 = .{ .a0 = .{ .value = 821877794 }, .a1 = .{ .value = 129002686 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1111878370 }, .a1 = .{ .value = 664581805 } }, .B1 = .{ .a0 = .{ .value = 1181902845 }, .a1 = .{ .value = 257391948 } }, .B2 = .{ .a0 = .{ .value = 1542033501 }, .a1 = .{ .value = 512001935 } } },
 };
 
 const verify_case_47_module_sizes = [_]usize{8};
@@ -8210,11 +8258,11 @@ const verify_case_47_proof = verifier.Proof{
 };
 
 const verify_case_47_failing_witness_claims = [_]ext.Ext{
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1654528841 }, .a1 = .{ .value = 148286215 } }, .B1 = .{ .a0 = .{ .value = 598317635 }, .a1 = .{ .value = 644265069 } }, .B2 = .{ .a0 = .{ .value = 1889695918 }, .a1 = .{ .value = 1142643855 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1206507443 }, .a1 = .{ .value = 628811302 } }, .B1 = .{ .a0 = .{ .value = 805226275 }, .a1 = .{ .value = 1988161426 } }, .B2 = .{ .a0 = .{ .value = 1314212529 }, .a1 = .{ .value = 467414483 } } },
 };
 
 const verify_case_47_failing_quotient_claims = [_]ext.Ext{
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 987080008 }, .a1 = .{ .value = 2035966932 } }, .B1 = .{ .a0 = .{ .value = 1624915475 }, .a1 = .{ .value = 1656061659 } }, .B2 = .{ .a0 = .{ .value = 1562175443 }, .a1 = .{ .value = 1093820716 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1306945540 }, .a1 = .{ .value = 1939454756 } }, .B1 = .{ .a0 = .{ .value = 974143307 }, .a1 = .{ .value = 1108749355 } }, .B2 = .{ .a0 = .{ .value = 292080399 }, .a1 = .{ .value = 1345084393 } } },
 };
 
 const verify_case_47_failing_module_sizes = [_]usize{8};
@@ -8271,6 +8319,7 @@ pub const system_48_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 1,
 };
 
 // scenario: "lv-dyn-prod"
@@ -8311,13 +8360,13 @@ const system_48_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_48_logderiv = logderivativesum.System{ .queries = &system_48_logderiv_queries };
 const verify_case_48_witness_claims = [_]ext.Ext{
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1433314169 }, .a1 = .{ .value = 883105867 } }, .B1 = .{ .a0 = .{ .value = 1407030159 }, .a1 = .{ .value = 264804234 } }, .B2 = .{ .a0 = .{ .value = 308027681 }, .a1 = .{ .value = 984366226 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1110518843 }, .a1 = .{ .value = 2049707611 } }, .B1 = .{ .a0 = .{ .value = 1335582215 }, .a1 = .{ .value = 1538161726 } }, .B2 = .{ .a0 = .{ .value = 610391510 }, .a1 = .{ .value = 2094712215 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 2070240927 }, .a1 = .{ .value = 211385519 } }, .B1 = .{ .a0 = .{ .value = 1708875898 }, .a1 = .{ .value = 10182832 } }, .B2 = .{ .a0 = .{ .value = 309120799 }, .a1 = .{ .value = 221752083 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 209871606 }, .a1 = .{ .value = 567439438 } }, .B1 = .{ .a0 = .{ .value = 1706481036 }, .a1 = .{ .value = 951506340 } }, .B2 = .{ .a0 = .{ .value = 374132181 }, .a1 = .{ .value = 808791959 } } },
 };
 
 const verify_case_48_quotient_claims = [_]ext.Ext{
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1576508277 }, .a1 = .{ .value = 1662522539 } }, .B1 = .{ .a0 = .{ .value = 556209027 }, .a1 = .{ .value = 70221195 } }, .B2 = .{ .a0 = .{ .value = 1243674255 }, .a1 = .{ .value = 456360628 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1856351107 }, .a1 = .{ .value = 323075292 } }, .B1 = .{ .a0 = .{ .value = 695613788 }, .a1 = .{ .value = 2085235981 } }, .B2 = .{ .a0 = .{ .value = 1665860371 }, .a1 = .{ .value = 321604137 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 2005472437 }, .a1 = .{ .value = 1778049344 } }, .B1 = .{ .a0 = .{ .value = 1536646264 }, .a1 = .{ .value = 1799752366 } }, .B2 = .{ .a0 = .{ .value = 1406884516 }, .a1 = .{ .value = 2122472072 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 58781250 }, .a1 = .{ .value = 290369652 } }, .B1 = .{ .a0 = .{ .value = 282913017 }, .a1 = .{ .value = 155612551 } }, .B2 = .{ .a0 = .{ .value = 1243910467 }, .a1 = .{ .value = 1011002326 } } },
 };
 
 const verify_case_48_module_sizes = [_]usize{8};
@@ -8393,13 +8442,13 @@ const verify_case_48_proof = verifier.Proof{
 };
 
 const verify_case_48_failing_witness_claims = [_]ext.Ext{
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1384382885 }, .a1 = .{ .value = 772493471 } }, .B1 = .{ .a0 = .{ .value = 1386970554 }, .a1 = .{ .value = 1065339336 } }, .B2 = .{ .a0 = .{ .value = 2087089974 }, .a1 = .{ .value = 1563010397 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1633157404 }, .a1 = .{ .value = 1225231125 } }, .B1 = .{ .a0 = .{ .value = 924647036 }, .a1 = .{ .value = 710226224 } }, .B2 = .{ .a0 = .{ .value = 1391393316 }, .a1 = .{ .value = 1752242409 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 562202071 }, .a1 = .{ .value = 1301525032 } }, .B1 = .{ .a0 = .{ .value = 993474849 }, .a1 = .{ .value = 63643992 } }, .B2 = .{ .a0 = .{ .value = 1025756153 }, .a1 = .{ .value = 641403695 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1795272339 }, .a1 = .{ .value = 157447877 } }, .B1 = .{ .a0 = .{ .value = 662316566 }, .a1 = .{ .value = 42429328 } }, .B2 = .{ .a0 = .{ .value = 1394072913 }, .a1 = .{ .value = 1137837941 } } },
 };
 
 const verify_case_48_failing_quotient_claims = [_]ext.Ext{
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 171699420 }, .a1 = .{ .value = 645197761 } }, .B1 = .{ .a0 = .{ .value = 604882073 }, .a1 = .{ .value = 1671706582 } }, .B2 = .{ .a0 = .{ .value = 656667189 }, .a1 = .{ .value = 2118484058 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1144398731 }, .a1 = .{ .value = 107727674 } }, .B1 = .{ .a0 = .{ .value = 358302899 }, .a1 = .{ .value = 414808064 } }, .B2 = .{ .a0 = .{ .value = 1517112730 }, .a1 = .{ .value = 411942354 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1375827943 }, .a1 = .{ .value = 495835697 } }, .B1 = .{ .a0 = .{ .value = 398206779 }, .a1 = .{ .value = 1089331830 } }, .B2 = .{ .a0 = .{ .value = 143322784 }, .a1 = .{ .value = 532824233 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 680180691 }, .a1 = .{ .value = 1261308774 } }, .B1 = .{ .a0 = .{ .value = 2123436100 }, .a1 = .{ .value = 571732500 } }, .B2 = .{ .a0 = .{ .value = 1703683672 }, .a1 = .{ .value = 464080946 } } },
 };
 
 const verify_case_48_failing_module_sizes = [_]usize{8};
@@ -8480,6 +8529,7 @@ pub const system_49_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lds-ones"
@@ -8615,6 +8665,7 @@ pub const system_50_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lds-partial"
@@ -8785,6 +8836,7 @@ pub const system_51_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lds-zeros"
@@ -8955,6 +9007,7 @@ pub const system_52_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lds-maskzero"
@@ -9134,6 +9187,7 @@ pub const system_53_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lds-pack"
@@ -9410,9 +9464,10 @@ const verify_case_53_proof = verifier.Proof{
 const verify_case_53_systems = verifier.Systems{ .vanishing = system_53, .logderivativesum = system_53_logderiv };
 
 pub const system_54_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 2 },
-    .total_round_coins = 4,
+    .total_round_coins = 3,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lds-multi-mod"
@@ -9499,7 +9554,7 @@ const system_54_modules = [_]vanishing.Module{
     // module: "mA"
     .{ .size = .{ .static = 4 }, .expressions = &system_54_module_0_expressions, .buckets = &system_54_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 2 },
     // module: "mB"
-    .{ .size = .{ .static = 4 }, .expressions = &system_54_module_1_expressions, .buckets = &system_54_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 1, .eval_coin_index = 3 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_54_module_1_expressions, .buckets = &system_54_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 1, .eval_coin_index = 2 },
 };
 
 // system: "lds-multi-mod"
@@ -9525,17 +9580,17 @@ const verify_case_54_witness_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 738346471 }, .a1 = .{ .value = 290150111 } }, .B1 = .{ .a0 = .{ .value = 9438612 }, .a1 = .{ .value = 1350693002 } }, .B2 = .{ .a0 = .{ .value = 1618005237 }, .a1 = .{ .value = 48531955 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 2029961733 }, .a1 = .{ .value = 1362825326 } }, .B1 = .{ .a0 = .{ .value = 722958537 }, .a1 = .{ .value = 2007678158 } }, .B2 = .{ .a0 = .{ .value = 1564404775 }, .a1 = .{ .value = 1686633400 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1765859010 }, .a1 = .{ .value = 489925264 } }, .B1 = .{ .a0 = .{ .value = 1561382459 }, .a1 = .{ .value = 1846142986 } }, .B2 = .{ .a0 = .{ .value = 361732688 }, .a1 = .{ .value = 660941851 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1408482789 }, .a1 = .{ .value = 1239820076 } }, .B1 = .{ .a0 = .{ .value = 1942487532 }, .a1 = .{ .value = 989526533 } }, .B2 = .{ .a0 = .{ .value = 1436578469 }, .a1 = .{ .value = 1167093286 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 758360673 }, .a1 = .{ .value = 1093397450 } }, .B1 = .{ .a0 = .{ .value = 1341593884 }, .a1 = .{ .value = 1147035823 } }, .B2 = .{ .a0 = .{ .value = 1767674806 }, .a1 = .{ .value = 1833643310 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1630497720 }, .a1 = .{ .value = 1231039232 } }, .B1 = .{ .a0 = .{ .value = 732146326 }, .a1 = .{ .value = 1842226881 } }, .B2 = .{ .a0 = .{ .value = 530373422 }, .a1 = .{ .value = 950538937 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 572137733 }, .a1 = .{ .value = 1983572477 } }, .B1 = .{ .a0 = .{ .value = 397167080 }, .a1 = .{ .value = 743439653 } }, .B2 = .{ .a0 = .{ .value = 1503687929 }, .a1 = .{ .value = 569727079 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1538574825 }, .a1 = .{ .value = 1597198732 } }, .B1 = .{ .a0 = .{ .value = 1794055442 }, .a1 = .{ .value = 628487450 } }, .B2 = .{ .a0 = .{ .value = 1401436496 }, .a1 = .{ .value = 409513639 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 738346475 }, .a1 = .{ .value = 290150111 } }, .B1 = .{ .a0 = .{ .value = 9438612 }, .a1 = .{ .value = 1350693002 } }, .B2 = .{ .a0 = .{ .value = 1618005237 }, .a1 = .{ .value = 48531955 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 993877622 }, .a1 = .{ .value = 2054215117 } }, .B1 = .{ .a0 = .{ .value = 1195847626 }, .a1 = .{ .value = 1417211735 } }, .B2 = .{ .a0 = .{ .value = 1881506543 }, .a1 = .{ .value = 1012437043 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 428205615 }, .a1 = .{ .value = 1146831089 } }, .B1 = .{ .a0 = .{ .value = 824058320 }, .a1 = .{ .value = 1203982864 } }, .B2 = .{ .a0 = .{ .value = 363406646 }, .a1 = .{ .value = 791893989 } } },
 };
 
 const verify_case_54_quotient_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1669057901 }, .a1 = .{ .value = 1298373226 } }, .B1 = .{ .a0 = .{ .value = 663209308 }, .a1 = .{ .value = 459984645 } }, .B2 = .{ .a0 = .{ .value = 1728771928 }, .a1 = .{ .value = 590756256 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 756112403 }, .a1 = .{ .value = 778057456 } }, .B1 = .{ .a0 = .{ .value = 338994244 }, .a1 = .{ .value = 522409474 } }, .B2 = .{ .a0 = .{ .value = 1646023811 }, .a1 = .{ .value = 2006276678 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 340307850 }, .a1 = .{ .value = 1883788951 } }, .B1 = .{ .a0 = .{ .value = 1829947498 }, .a1 = .{ .value = 759662667 } }, .B2 = .{ .a0 = .{ .value = 248532606 }, .a1 = .{ .value = 483765160 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 424303771 }, .a1 = .{ .value = 1345845074 } }, .B1 = .{ .a0 = .{ .value = 1381162730 }, .a1 = .{ .value = 47737889 } }, .B2 = .{ .a0 = .{ .value = 277947478 }, .a1 = .{ .value = 1509969736 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 71863244 }, .a1 = .{ .value = 1204786095 } }, .B1 = .{ .a0 = .{ .value = 375815314 }, .a1 = .{ .value = 229180857 } }, .B2 = .{ .a0 = .{ .value = 634627320 }, .a1 = .{ .value = 101775613 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 2049539031 }, .a1 = .{ .value = 206349076 } }, .B1 = .{ .a0 = .{ .value = 1667982706 }, .a1 = .{ .value = 585359029 } }, .B2 = .{ .a0 = .{ .value = 1509720357 }, .a1 = .{ .value = 434424554 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1376459317 }, .a1 = .{ .value = 1478454602 } }, .B1 = .{ .a0 = .{ .value = 884901246 }, .a1 = .{ .value = 534862304 } }, .B2 = .{ .a0 = .{ .value = 539430637 }, .a1 = .{ .value = 53329213 } } },
 };
 
 const verify_case_54_module_sizes = [_]usize{};
@@ -9650,6 +9705,7 @@ pub const system_55_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lds-size1"
@@ -9763,9 +9819,10 @@ const verify_case_55_proof = verifier.Proof{
 const verify_case_55_systems = verifier.Systems{ .vanishing = system_55, .logderivativesum = system_55_logderiv };
 
 pub const system_56_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 2 },
-    .total_round_coins = 4,
+    .total_round_coins = 3,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lds-cond"
@@ -9866,7 +9923,7 @@ const system_56_modules = [_]vanishing.Module{
     // module: "mS"
     .{ .size = .{ .static = 4 }, .expressions = &system_56_module_0_expressions, .buckets = &system_56_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 2 },
     // module: "mT"
-    .{ .size = .{ .static = 2 }, .expressions = &system_56_module_1_expressions, .buckets = &system_56_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 1, .eval_coin_index = 3 },
+    .{ .size = .{ .static = 2 }, .expressions = &system_56_module_1_expressions, .buckets = &system_56_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 1, .eval_coin_index = 2 },
 };
 
 // system: "lds-cond"
@@ -9893,18 +9950,18 @@ const verify_case_56_witness_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1648007063 }, .a1 = .{ .value = 1199383162 } }, .B1 = .{ .a0 = .{ .value = 1676356958 }, .a1 = .{ .value = 253950101 } }, .B2 = .{ .a0 = .{ .value = 46256165 }, .a1 = .{ .value = 673246730 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 785936489 }, .a1 = .{ .value = 884262247 } }, .B1 = .{ .a0 = .{ .value = 1097463521 }, .a1 = .{ .value = 917404917 } }, .B2 = .{ .a0 = .{ .value = 163451307 }, .a1 = .{ .value = 1301905897 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1146297469 }, .a1 = .{ .value = 1175276216 } }, .B1 = .{ .a0 = .{ .value = 2020168389 }, .a1 = .{ .value = 963951644 } }, .B2 = .{ .a0 = .{ .value = 197097813 }, .a1 = .{ .value = 1252981434 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1111179680 }, .a1 = .{ .value = 1657326647 } }, .B1 = .{ .a0 = .{ .value = 722960999 }, .a1 = .{ .value = 1740030733 } }, .B2 = .{ .a0 = .{ .value = 362275887 }, .a1 = .{ .value = 1055196918 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1726223289 }, .a1 = .{ .value = 692702893 } }, .B1 = .{ .a0 = .{ .value = 1841822554 }, .a1 = .{ .value = 380105795 } }, .B2 = .{ .a0 = .{ .value = 1670633740 }, .a1 = .{ .value = 749316845 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 381272834 }, .a1 = .{ .value = 1438003540 } }, .B1 = .{ .a0 = .{ .value = 288883879 }, .a1 = .{ .value = 1750600638 } }, .B2 = .{ .a0 = .{ .value = 460072693 }, .a1 = .{ .value = 1381389588 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1672441828 }, .a1 = .{ .value = 472384994 } }, .B1 = .{ .a0 = .{ .value = 1293215742 }, .a1 = .{ .value = 1776050567 } }, .B2 = .{ .a0 = .{ .value = 638653996 }, .a1 = .{ .value = 101562985 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1780772760 }, .a1 = .{ .value = 244756798 } }, .B1 = .{ .a0 = .{ .value = 529092046 }, .a1 = .{ .value = 1318398466 } }, .B2 = .{ .a0 = .{ .value = 172254101 }, .a1 = .{ .value = 825230854 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 2066683245 }, .a1 = .{ .value = 1508451075 } }, .B1 = .{ .a0 = .{ .value = 335256214 }, .a1 = .{ .value = 1311470422 } }, .B2 = .{ .a0 = .{ .value = 1584680843 }, .a1 = .{ .value = 346224318 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 40812878 }, .a1 = .{ .value = 622255358 } }, .B1 = .{ .a0 = .{ .value = 1795450219 }, .a1 = .{ .value = 819236011 } }, .B2 = .{ .a0 = .{ .value = 546025590 }, .a1 = .{ .value = 1784482115 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1368630327 }, .a1 = .{ .value = 1813844886 } }, .B1 = .{ .a0 = .{ .value = 1101198839 }, .a1 = .{ .value = 1730960371 } }, .B2 = .{ .a0 = .{ .value = 408165423 }, .a1 = .{ .value = 270517192 } } },
 };
 
 const verify_case_56_quotient_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 98514630 }, .a1 = .{ .value = 1509985466 } }, .B1 = .{ .a0 = .{ .value = 1338649975 }, .a1 = .{ .value = 49731797 } }, .B2 = .{ .a0 = .{ .value = 1895600477 }, .a1 = .{ .value = 180098445 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1637096761 }, .a1 = .{ .value = 758849936 } }, .B1 = .{ .a0 = .{ .value = 1613000841 }, .a1 = .{ .value = 87559451 } }, .B2 = .{ .a0 = .{ .value = 718601026 }, .a1 = .{ .value = 1674729869 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 416490443 }, .a1 = .{ .value = 2004716615 } }, .B1 = .{ .a0 = .{ .value = 849198505 }, .a1 = .{ .value = 692085409 } }, .B2 = .{ .a0 = .{ .value = 688990822 }, .a1 = .{ .value = 1256627732 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1634171029 }, .a1 = .{ .value = 1223034835 } }, .B1 = .{ .a0 = .{ .value = 1688409636 }, .a1 = .{ .value = 180407772 } }, .B2 = .{ .a0 = .{ .value = 1146591510 }, .a1 = .{ .value = 228239827 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 488178148 }, .a1 = .{ .value = 666404016 } }, .B1 = .{ .a0 = .{ .value = 343143519 }, .a1 = .{ .value = 2015617704 } }, .B2 = .{ .a0 = .{ .value = 2045877917 }, .a1 = .{ .value = 807938896 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 777357723 }, .a1 = .{ .value = 857690923 } }, .B1 = .{ .a0 = .{ .value = 1537691267 }, .a1 = .{ .value = 971228310 } }, .B2 = .{ .a0 = .{ .value = 287062540 }, .a1 = .{ .value = 458727423 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1339328038 }, .a1 = .{ .value = 575068038 } }, .B1 = .{ .a0 = .{ .value = 838140535 }, .a1 = .{ .value = 1147969622 } }, .B2 = .{ .a0 = .{ .value = 765642458 }, .a1 = .{ .value = 865560795 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } },
 };
 
@@ -10032,6 +10089,7 @@ pub const system_57_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lds-many"
@@ -10415,6 +10473,7 @@ pub const system_58_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lds-size2"
@@ -10544,6 +10603,7 @@ pub const system_59_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lds-multi-q"
@@ -10730,6 +10790,7 @@ pub const system_60_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lds-vec-den"
@@ -10896,6 +10957,7 @@ pub const system_61_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lds-ones-pack"
@@ -11169,9 +11231,10 @@ const verify_case_61_proof = verifier.Proof{
 const verify_case_61_systems = verifier.Systems{ .vanishing = system_61, .logderivativesum = system_61_logderiv };
 
 pub const system_62_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-simple"
@@ -11268,7 +11331,7 @@ const system_62_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 4 }, .expressions = &system_62_module_0_expressions, .buckets = &system_62_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_62_module_1_expressions, .buckets = &system_62_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_62_module_1_expressions, .buckets = &system_62_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "lk-simple"
@@ -11295,18 +11358,18 @@ const verify_case_62_witness_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1549537752 }, .a1 = .{ .value = 1396753844 } }, .B1 = .{ .a0 = .{ .value = 1014536670 }, .a1 = .{ .value = 949950854 } }, .B2 = .{ .a0 = .{ .value = 1810883 }, .a1 = .{ .value = 947840953 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 386885772 }, .a1 = .{ .value = 375606459 } }, .B1 = .{ .a0 = .{ .value = 98694832 }, .a1 = .{ .value = 254070520 } }, .B2 = .{ .a0 = .{ .value = 1497441813 }, .a1 = .{ .value = 780369132 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 680194459 }, .a1 = .{ .value = 788085356 } }, .B1 = .{ .a0 = .{ .value = 1236399793 }, .a1 = .{ .value = 1336979090 } }, .B2 = .{ .a0 = .{ .value = 1748081386 }, .a1 = .{ .value = 1477764423 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1767394584 }, .a1 = .{ .value = 541482937 } }, .B1 = .{ .a0 = .{ .value = 1495560027 }, .a1 = .{ .value = 1662832357 } }, .B2 = .{ .a0 = .{ .value = 26765576 }, .a1 = .{ .value = 1552004712 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 202256082 }, .a1 = .{ .value = 1565189518 } }, .B1 = .{ .a0 = .{ .value = 1254272267 }, .a1 = .{ .value = 1770694084 } }, .B2 = .{ .a0 = .{ .value = 2049892170 }, .a1 = .{ .value = 868443 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1219909799 }, .a1 = .{ .value = 1214102039 } }, .B1 = .{ .a0 = .{ .value = 174929267 }, .a1 = .{ .value = 292013885 } }, .B2 = .{ .a0 = .{ .value = 581558327 }, .a1 = .{ .value = 376302691 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 412277477 }, .a1 = .{ .value = 678548019 } }, .B1 = .{ .a0 = .{ .value = 1297966997 }, .a1 = .{ .value = 1539890247 } }, .B2 = .{ .a0 = .{ .value = 14065307 }, .a1 = .{ .value = 87291456 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1762928525 }, .a1 = .{ .value = 186426394 } }, .B1 = .{ .a0 = .{ .value = 1759982236 }, .a1 = .{ .value = 1649926487 } }, .B2 = .{ .a0 = .{ .value = 856531699 }, .a1 = .{ .value = 1214541129 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 30804686 }, .a1 = .{ .value = 1245435360 } }, .B1 = .{ .a0 = .{ .value = 2062203106 }, .a1 = .{ .value = 1397467166 } }, .B2 = .{ .a0 = .{ .value = 802295128 }, .a1 = .{ .value = 1296533236 } } },
 };
 
 const verify_case_62_quotient_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 994585575 }, .a1 = .{ .value = 24655604 } }, .B1 = .{ .a0 = .{ .value = 348794472 }, .a1 = .{ .value = 87067436 } }, .B2 = .{ .a0 = .{ .value = 1069192944 }, .a1 = .{ .value = 1760894175 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1714302124 }, .a1 = .{ .value = 2018575896 } }, .B1 = .{ .a0 = .{ .value = 1369284563 }, .a1 = .{ .value = 1507104031 } }, .B2 = .{ .a0 = .{ .value = 944322423 }, .a1 = .{ .value = 823042178 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1872680044 }, .a1 = .{ .value = 188178143 } }, .B1 = .{ .a0 = .{ .value = 930209923 }, .a1 = .{ .value = 1482586749 } }, .B2 = .{ .a0 = .{ .value = 389706156 }, .a1 = .{ .value = 1844156593 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1426025008 }, .a1 = .{ .value = 792875480 } }, .B1 = .{ .a0 = .{ .value = 568673841 }, .a1 = .{ .value = 879106126 } }, .B2 = .{ .a0 = .{ .value = 2048762467 }, .a1 = .{ .value = 611855569 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1303463903 }, .a1 = .{ .value = 2051922969 } }, .B1 = .{ .a0 = .{ .value = 1043775407 }, .a1 = .{ .value = 479606632 } }, .B2 = .{ .a0 = .{ .value = 308583812 }, .a1 = .{ .value = 1555525817 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 571099636 }, .a1 = .{ .value = 224125065 } }, .B1 = .{ .a0 = .{ .value = 1911261870 }, .a1 = .{ .value = 2120302029 } }, .B2 = .{ .a0 = .{ .value = 1342672947 }, .a1 = .{ .value = 368927280 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1736948041 }, .a1 = .{ .value = 1400630505 } }, .B1 = .{ .a0 = .{ .value = 713383682 }, .a1 = .{ .value = 424553053 } }, .B2 = .{ .a0 = .{ .value = 1846180475 }, .a1 = .{ .value = 464153612 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1685511013 }, .a1 = .{ .value = 1602231473 } }, .B1 = .{ .a0 = .{ .value = 157807812 }, .a1 = .{ .value = 2039055105 } }, .B2 = .{ .a0 = .{ .value = 1857817349 }, .a1 = .{ .value = 2113970676 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 397008506 }, .a1 = .{ .value = 337883439 } }, .B1 = .{ .a0 = .{ .value = 1905268708 }, .a1 = .{ .value = 1395695233 } }, .B2 = .{ .a0 = .{ .value = 1418858164 }, .a1 = .{ .value = 178934114 } } },
 };
 
 const verify_case_62_module_sizes = [_]usize{};
@@ -11439,9 +11502,10 @@ const verify_case_62_proof = verifier.Proof{
 const verify_case_62_systems = verifier.Systems{ .vanishing = system_62, .logderivativesum = system_62_logderiv };
 
 pub const system_63_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-filterA"
@@ -11542,7 +11606,7 @@ const system_63_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 2 }, .expressions = &system_63_module_0_expressions, .buckets = &system_63_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_63_module_1_expressions, .buckets = &system_63_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_63_module_1_expressions, .buckets = &system_63_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "lk-filterA"
@@ -11569,19 +11633,19 @@ const verify_case_63_witness_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1857032177 }, .a1 = .{ .value = 1323858048 } }, .B1 = .{ .a0 = .{ .value = 1714710979 }, .a1 = .{ .value = 405056949 } }, .B2 = .{ .a0 = .{ .value = 220465544 }, .a1 = .{ .value = 1010643224 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1389967482 }, .a1 = .{ .value = 809898620 } }, .B1 = .{ .a0 = .{ .value = 152351032 }, .a1 = .{ .value = 2040412895 } }, .B2 = .{ .a0 = .{ .value = 1622320938 }, .a1 = .{ .value = 1013382896 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1482187919 }, .a1 = .{ .value = 1502443929 } }, .B1 = .{ .a0 = .{ .value = 686817769 }, .a1 = .{ .value = 249008227 } }, .B2 = .{ .a0 = .{ .value = 1077192600 }, .a1 = .{ .value = 727710835 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1412960943 }, .a1 = .{ .value = 1258874862 } }, .B1 = .{ .a0 = .{ .value = 1673345022 }, .a1 = .{ .value = 1619635484 } }, .B2 = .{ .a0 = .{ .value = 1973172956 }, .a1 = .{ .value = 2027399722 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 726255006 }, .a1 = .{ .value = 947885626 } }, .B1 = .{ .a0 = .{ .value = 467116852 }, .a1 = .{ .value = 875993558 } }, .B2 = .{ .a0 = .{ .value = 254943421 }, .a1 = .{ .value = 1790659169 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 779779727 }, .a1 = .{ .value = 419935 } }, .B1 = .{ .a0 = .{ .value = 1035592153 }, .a1 = .{ .value = 875526477 } }, .B2 = .{ .a0 = .{ .value = 697072906 }, .a1 = .{ .value = 1480670989 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 637580435 }, .a1 = .{ .value = 2053584170 } }, .B1 = .{ .a0 = .{ .value = 1047718101 }, .a1 = .{ .value = 1983453372 } }, .B2 = .{ .a0 = .{ .value = 2010816830 }, .a1 = .{ .value = 223333672 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 71746506 }, .a1 = .{ .value = 730002874 } }, .B1 = .{ .a0 = .{ .value = 1832298244 }, .a1 = .{ .value = 619440269 } }, .B2 = .{ .a0 = .{ .value = 258060900 }, .a1 = .{ .value = 814622387 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1094896741 }, .a1 = .{ .value = 1401425722 } }, .B1 = .{ .a0 = .{ .value = 1579762934 }, .a1 = .{ .value = 1428041330 } }, .B2 = .{ .a0 = .{ .value = 1730147305 }, .a1 = .{ .value = 934353194 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 30469183 }, .a1 = .{ .value = 1110089149 } }, .B1 = .{ .a0 = .{ .value = 59524272 }, .a1 = .{ .value = 849806143 } }, .B2 = .{ .a0 = .{ .value = 1223411871 }, .a1 = .{ .value = 2075267479 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1371360375 }, .a1 = .{ .value = 1133414139 } }, .B1 = .{ .a0 = .{ .value = 1283416188 }, .a1 = .{ .value = 1547219305 } }, .B2 = .{ .a0 = .{ .value = 1318152073 }, .a1 = .{ .value = 347055008 } } },
 };
 
 const verify_case_63_quotient_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1200755341 }, .a1 = .{ .value = 873269886 } }, .B1 = .{ .a0 = .{ .value = 1905624671 }, .a1 = .{ .value = 707890363 } }, .B2 = .{ .a0 = .{ .value = 363131385 }, .a1 = .{ .value = 97764504 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1027833084 }, .a1 = .{ .value = 1381794692 } }, .B1 = .{ .a0 = .{ .value = 750157995 }, .a1 = .{ .value = 886338748 } }, .B2 = .{ .a0 = .{ .value = 685217043 }, .a1 = .{ .value = 619817834 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1269299270 }, .a1 = .{ .value = 2044857247 } }, .B1 = .{ .a0 = .{ .value = 1694571272 }, .a1 = .{ .value = 1978317955 } }, .B2 = .{ .a0 = .{ .value = 762583269 }, .a1 = .{ .value = 672440091 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 992782714 }, .a1 = .{ .value = 1968677228 } }, .B1 = .{ .a0 = .{ .value = 1684794938 }, .a1 = .{ .value = 1135686409 } }, .B2 = .{ .a0 = .{ .value = 103617243 }, .a1 = .{ .value = 1637056685 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1060717352 }, .a1 = .{ .value = 33490451 } }, .B1 = .{ .a0 = .{ .value = 449315541 }, .a1 = .{ .value = 346783822 } }, .B2 = .{ .a0 = .{ .value = 261166372 }, .a1 = .{ .value = 1562947367 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1098863586 }, .a1 = .{ .value = 1294566925 } }, .B1 = .{ .a0 = .{ .value = 241979659 }, .a1 = .{ .value = 1319133445 } }, .B2 = .{ .a0 = .{ .value = 451485024 }, .a1 = .{ .value = 311328787 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1472594668 }, .a1 = .{ .value = 619279598 } }, .B1 = .{ .a0 = .{ .value = 1288374388 }, .a1 = .{ .value = 85850785 } }, .B2 = .{ .a0 = .{ .value = 1110021886 }, .a1 = .{ .value = 357935586 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1949830267 }, .a1 = .{ .value = 675762569 } }, .B1 = .{ .a0 = .{ .value = 875955018 }, .a1 = .{ .value = 106162458 } }, .B2 = .{ .a0 = .{ .value = 1440910219 }, .a1 = .{ .value = 562104181 } } },
 };
 
 const verify_case_63_module_sizes = [_]usize{};
@@ -11710,9 +11774,10 @@ const verify_case_63_proof = verifier.Proof{
 const verify_case_63_systems = verifier.Systems{ .vanishing = system_63, .logderivativesum = system_63_logderiv };
 
 pub const system_64_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4 },
-    .total_round_coins = 6,
+    .total_round_coins = 5,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-filterT"
@@ -11825,7 +11890,7 @@ const system_64_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 4 }, .expressions = &system_64_module_0_expressions, .buckets = &system_64_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 2, .eval_coin_index = 4 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_64_module_1_expressions, .buckets = &system_64_module_1_buckets, .witness_claim_offset = 5, .merge_coin_index = 3, .eval_coin_index = 5 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_64_module_1_expressions, .buckets = &system_64_module_1_buckets, .witness_claim_offset = 5, .merge_coin_index = 3, .eval_coin_index = 4 },
 };
 
 // system: "lk-filterT"
@@ -11853,17 +11918,17 @@ const verify_case_64_witness_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 2048514268 }, .a1 = .{ .value = 1281135242 } }, .B1 = .{ .a0 = .{ .value = 1359218741 }, .a1 = .{ .value = 686206254 } }, .B2 = .{ .a0 = .{ .value = 1333648522 }, .a1 = .{ .value = 528498930 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1918826158 }, .a1 = .{ .value = 1378288809 } }, .B1 = .{ .a0 = .{ .value = 33109540 }, .a1 = .{ .value = 1346732256 } }, .B2 = .{ .a0 = .{ .value = 1707129768 }, .a1 = .{ .value = 544754957 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1608087595 }, .a1 = .{ .value = 229886646 } }, .B1 = .{ .a0 = .{ .value = 787096353 }, .a1 = .{ .value = 1249740438 } }, .B2 = .{ .a0 = .{ .value = 1068743986 }, .a1 = .{ .value = 1486991825 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1120273685 }, .a1 = .{ .value = 460941318 } }, .B1 = .{ .a0 = .{ .value = 877468492 }, .a1 = .{ .value = 302907417 } }, .B2 = .{ .a0 = .{ .value = 1441669684 }, .a1 = .{ .value = 1429084191 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1774364436 }, .a1 = .{ .value = 680456794 } }, .B1 = .{ .a0 = .{ .value = 1793853995 }, .a1 = .{ .value = 715167071 } }, .B2 = .{ .a0 = .{ .value = 104089280 }, .a1 = .{ .value = 964656563 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 478530533 }, .a1 = .{ .value = 1788266944 } }, .B1 = .{ .a0 = .{ .value = 1866906382 }, .a1 = .{ .value = 1631671287 } }, .B2 = .{ .a0 = .{ .value = 199117045 }, .a1 = .{ .value = 1019672951 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1741819577 }, .a1 = .{ .value = 1722781121 } }, .B1 = .{ .a0 = .{ .value = 1780111323 }, .a1 = .{ .value = 1317678056 } }, .B2 = .{ .a0 = .{ .value = 399164193 }, .a1 = .{ .value = 829248795 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1671354865 }, .a1 = .{ .value = 402940923 } }, .B1 = .{ .a0 = .{ .value = 229318117 }, .a1 = .{ .value = 1484395157 } }, .B2 = .{ .a0 = .{ .value = 499241374 }, .a1 = .{ .value = 2066662614 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 964775534 }, .a1 = .{ .value = 1962546406 } }, .B1 = .{ .a0 = .{ .value = 651862202 }, .a1 = .{ .value = 286834218 } }, .B2 = .{ .a0 = .{ .value = 2096798738 }, .a1 = .{ .value = 45026781 } } },
 };
 
 const verify_case_64_quotient_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 821728749 }, .a1 = .{ .value = 1653608560 } }, .B1 = .{ .a0 = .{ .value = 1400598459 }, .a1 = .{ .value = 798417239 } }, .B2 = .{ .a0 = .{ .value = 731670938 }, .a1 = .{ .value = 1617341628 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 2065905339 }, .a1 = .{ .value = 2126447551 } }, .B1 = .{ .a0 = .{ .value = 737695287 }, .a1 = .{ .value = 232288793 } }, .B2 = .{ .a0 = .{ .value = 1099817096 }, .a1 = .{ .value = 1280195036 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1831459007 }, .a1 = .{ .value = 898929958 } }, .B1 = .{ .a0 = .{ .value = 1736177247 }, .a1 = .{ .value = 1723320871 } }, .B2 = .{ .a0 = .{ .value = 1412991984 }, .a1 = .{ .value = 1990803516 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 128609616 }, .a1 = .{ .value = 312927260 } }, .B1 = .{ .a0 = .{ .value = 1750395086 }, .a1 = .{ .value = 1638604194 } }, .B2 = .{ .a0 = .{ .value = 846748200 }, .a1 = .{ .value = 1950777037 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 135698284 }, .a1 = .{ .value = 1981429801 } }, .B1 = .{ .a0 = .{ .value = 1739520859 }, .a1 = .{ .value = 1029979096 } }, .B2 = .{ .a0 = .{ .value = 188097255 }, .a1 = .{ .value = 1888033892 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1674086503 }, .a1 = .{ .value = 1201841977 } }, .B1 = .{ .a0 = .{ .value = 384708061 }, .a1 = .{ .value = 1942752927 } }, .B2 = .{ .a0 = .{ .value = 1967265351 }, .a1 = .{ .value = 151995864 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 538589406 }, .a1 = .{ .value = 266460933 } }, .B1 = .{ .a0 = .{ .value = 1011432038 }, .a1 = .{ .value = 1040359531 } }, .B2 = .{ .a0 = .{ .value = 890771431 }, .a1 = .{ .value = 72254868 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1227516633 }, .a1 = .{ .value = 1254695213 } }, .B1 = .{ .a0 = .{ .value = 1446748088 }, .a1 = .{ .value = 1833400706 } }, .B2 = .{ .a0 = .{ .value = 1069639485 }, .a1 = .{ .value = 523801141 } } },
 };
 
@@ -12005,9 +12070,10 @@ const verify_case_64_proof = verifier.Proof{
 const verify_case_64_systems = verifier.Systems{ .vanishing = system_64, .logderivativesum = system_64_logderiv };
 
 pub const system_65_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4 },
-    .total_round_coins = 6,
+    .total_round_coins = 5,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-double"
@@ -12124,7 +12190,7 @@ const system_65_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 4 }, .expressions = &system_65_module_0_expressions, .buckets = &system_65_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 2, .eval_coin_index = 4 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_65_module_1_expressions, .buckets = &system_65_module_1_buckets, .witness_claim_offset = 5, .merge_coin_index = 3, .eval_coin_index = 5 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_65_module_1_expressions, .buckets = &system_65_module_1_buckets, .witness_claim_offset = 5, .merge_coin_index = 3, .eval_coin_index = 4 },
 };
 
 // system: "lk-double"
@@ -12152,19 +12218,19 @@ const verify_case_65_witness_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1170029254 }, .a1 = .{ .value = 31980586 } }, .B1 = .{ .a0 = .{ .value = 664433333 }, .a1 = .{ .value = 781042096 } }, .B2 = .{ .a0 = .{ .value = 495451414 }, .a1 = .{ .value = 1678346343 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1051831246 }, .a1 = .{ .value = 1065744625 } }, .B1 = .{ .a0 = .{ .value = 1612723605 }, .a1 = .{ .value = 1169948467 } }, .B2 = .{ .a0 = .{ .value = 252098691 }, .a1 = .{ .value = 246326792 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1886232708 }, .a1 = .{ .value = 444878572 } }, .B1 = .{ .a0 = .{ .value = 1845206956 }, .a1 = .{ .value = 179053891 } }, .B2 = .{ .a0 = .{ .value = 1557197751 }, .a1 = .{ .value = 789864441 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1464521098 }, .a1 = .{ .value = 1212162677 } }, .B1 = .{ .a0 = .{ .value = 1262233408 }, .a1 = .{ .value = 108056021 } }, .B2 = .{ .a0 = .{ .value = 1111229172 }, .a1 = .{ .value = 12492652 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1470848180 }, .a1 = .{ .value = 1870955405 } }, .B1 = .{ .a0 = .{ .value = 1424274336 }, .a1 = .{ .value = 1090097863 } }, .B2 = .{ .a0 = .{ .value = 600208135 }, .a1 = .{ .value = 1841570052 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 719410959 }, .a1 = .{ .value = 929667833 } }, .B1 = .{ .a0 = .{ .value = 1757715583 }, .a1 = .{ .value = 1267282880 } }, .B2 = .{ .a0 = .{ .value = 497670421 }, .a1 = .{ .value = 1421992454 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 615450384 }, .a1 = .{ .value = 1930001280 } }, .B1 = .{ .a0 = .{ .value = 1677408893 }, .a1 = .{ .value = 452458594 } }, .B2 = .{ .a0 = .{ .value = 1938729997 }, .a1 = .{ .value = 1803903216 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1886232708 }, .a1 = .{ .value = 444878572 } }, .B1 = .{ .a0 = .{ .value = 1845206956 }, .a1 = .{ .value = 179053891 } }, .B2 = .{ .a0 = .{ .value = 1557197751 }, .a1 = .{ .value = 789864441 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 812595705 }, .a1 = .{ .value = 152229741 } }, .B1 = .{ .a0 = .{ .value = 1635678828 }, .a1 = .{ .value = 249634385 } }, .B2 = .{ .a0 = .{ .value = 1824404577 }, .a1 = .{ .value = 606316995 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 960677179 }, .a1 = .{ .value = 2098725847 } }, .B1 = .{ .a0 = .{ .value = 1466273100 }, .a1 = .{ .value = 1349664337 } }, .B2 = .{ .a0 = .{ .value = 1635255019 }, .a1 = .{ .value = 452360090 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1603597675 }, .a1 = .{ .value = 1806885534 } }, .B1 = .{ .a0 = .{ .value = 603881213 }, .a1 = .{ .value = 1899650273 } }, .B2 = .{ .a0 = .{ .value = 1476732537 }, .a1 = .{ .value = 1353073801 } } },
 };
 
 const verify_case_65_quotient_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 177457632 }, .a1 = .{ .value = 1535180872 } }, .B1 = .{ .a0 = .{ .value = 2055533956 }, .a1 = .{ .value = 600074726 } }, .B2 = .{ .a0 = .{ .value = 1887748522 }, .a1 = .{ .value = 1861598064 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 661503847 }, .a1 = .{ .value = 1417504119 } }, .B1 = .{ .a0 = .{ .value = 1825156834 }, .a1 = .{ .value = 1177896667 } }, .B2 = .{ .a0 = .{ .value = 1581140070 }, .a1 = .{ .value = 1792806157 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 191236440 }, .a1 = .{ .value = 1671659118 } }, .B1 = .{ .a0 = .{ .value = 464817368 }, .a1 = .{ .value = 146900638 } }, .B2 = .{ .a0 = .{ .value = 1698507504 }, .a1 = .{ .value = 1991740115 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 722307363 }, .a1 = .{ .value = 1329313293 } }, .B1 = .{ .a0 = .{ .value = 1361022787 }, .a1 = .{ .value = 1371463943 } }, .B2 = .{ .a0 = .{ .value = 938506808 }, .a1 = .{ .value = 179070029 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 515070841 }, .a1 = .{ .value = 497701227 } }, .B1 = .{ .a0 = .{ .value = 1442998281 }, .a1 = .{ .value = 700051928 } }, .B2 = .{ .a0 = .{ .value = 141140303 }, .a1 = .{ .value = 2127876886 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 2058593186 }, .a1 = .{ .value = 290354159 } }, .B1 = .{ .a0 = .{ .value = 269307665 }, .a1 = .{ .value = 1474290789 } }, .B2 = .{ .a0 = .{ .value = 1975348335 }, .a1 = .{ .value = 1417294884 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 290859221 }, .a1 = .{ .value = 1724386860 } }, .B1 = .{ .a0 = .{ .value = 815098141 }, .a1 = .{ .value = 1902970510 } }, .B2 = .{ .a0 = .{ .value = 560038219 }, .a1 = .{ .value = 1492166336 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1083896720 }, .a1 = .{ .value = 341619289 } }, .B1 = .{ .a0 = .{ .value = 730039693 }, .a1 = .{ .value = 842280712 } }, .B2 = .{ .a0 = .{ .value = 1821270473 }, .a1 = .{ .value = 1919922576 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1589666772 }, .a1 = .{ .value = 454073288 } }, .B1 = .{ .a0 = .{ .value = 1337383828 }, .a1 = .{ .value = 1030447030 } }, .B2 = .{ .a0 = .{ .value = 920545837 }, .a1 = .{ .value = 2091045633 } } },
 };
 
 const verify_case_65_module_sizes = [_]usize{};
@@ -12313,9 +12379,10 @@ const verify_case_65_proof = verifier.Proof{
 const verify_case_65_systems = verifier.Systems{ .vanishing = system_65, .logderivativesum = system_65_logderiv };
 
 pub const system_66_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4 },
-    .total_round_coins = 6,
+    .total_round_coins = 5,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-multi-col"
@@ -12428,7 +12495,7 @@ const system_66_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 4 }, .expressions = &system_66_module_0_expressions, .buckets = &system_66_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 2, .eval_coin_index = 4 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_66_module_1_expressions, .buckets = &system_66_module_1_buckets, .witness_claim_offset = 5, .merge_coin_index = 3, .eval_coin_index = 5 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_66_module_1_expressions, .buckets = &system_66_module_1_buckets, .witness_claim_offset = 5, .merge_coin_index = 3, .eval_coin_index = 4 },
 };
 
 // system: "lk-multi-col"
@@ -12456,19 +12523,19 @@ const verify_case_66_witness_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 757758388 }, .a1 = .{ .value = 731808515 } }, .B1 = .{ .a0 = .{ .value = 513172113 }, .a1 = .{ .value = 1799458506 } }, .B2 = .{ .a0 = .{ .value = 554374612 }, .a1 = .{ .value = 1378207932 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 786085313 }, .a1 = .{ .value = 88911356 } }, .B1 = .{ .a0 = .{ .value = 1058149703 }, .a1 = .{ .value = 304105848 } }, .B2 = .{ .a0 = .{ .value = 1247090168 }, .a1 = .{ .value = 369263196 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1996244321 }, .a1 = .{ .value = 1713456282 } }, .B1 = .{ .a0 = .{ .value = 2023450760 }, .a1 = .{ .value = 882693158 } }, .B2 = .{ .a0 = .{ .value = 976991590 }, .a1 = .{ .value = 1741491466 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1315371423 }, .a1 = .{ .value = 1634035191 } }, .B1 = .{ .a0 = .{ .value = 1289590816 }, .a1 = .{ .value = 906517524 } }, .B2 = .{ .a0 = .{ .value = 1853781455 }, .a1 = .{ .value = 1745644317 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1631720893 }, .a1 = .{ .value = 1728012465 } }, .B1 = .{ .a0 = .{ .value = 1371415421 }, .a1 = .{ .value = 1747198232 } }, .B2 = .{ .a0 = .{ .value = 1392782290 }, .a1 = .{ .value = 1087244534 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 765075302 }, .a1 = .{ .value = 624472253 } }, .B1 = .{ .a0 = .{ .value = 284679962 }, .a1 = .{ .value = 1735265651 } }, .B2 = .{ .a0 = .{ .value = 582508615 }, .a1 = .{ .value = 1443067427 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1354931390 }, .a1 = .{ .value = 1980083015 } }, .B1 = .{ .a0 = .{ .value = 1306891856 }, .a1 = .{ .value = 812738495 } }, .B2 = .{ .a0 = .{ .value = 1123604078 }, .a1 = .{ .value = 357377386 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1547582790 }, .a1 = .{ .value = 1668747183 } }, .B1 = .{ .a0 = .{ .value = 2108219768 }, .a1 = .{ .value = 147338451 } }, .B2 = .{ .a0 = .{ .value = 197533957 }, .a1 = .{ .value = 1513806380 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 341283326 }, .a1 = .{ .value = 355195632 } }, .B1 = .{ .a0 = .{ .value = 1891465369 }, .a1 = .{ .value = 2042501416 } }, .B2 = .{ .a0 = .{ .value = 922246947 }, .a1 = .{ .value = 1038663265 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 191172152 }, .a1 = .{ .value = 1368418895 } }, .B1 = .{ .a0 = .{ .value = 923738071 }, .a1 = .{ .value = 1372025431 } }, .B2 = .{ .a0 = .{ .value = 1437176317 }, .a1 = .{ .value = 266387084 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1297541075 }, .a1 = .{ .value = 1202195106 } }, .B1 = .{ .a0 = .{ .value = 731585737 }, .a1 = .{ .value = 776414473 } }, .B2 = .{ .a0 = .{ .value = 356788275 }, .a1 = .{ .value = 452779995 } } },
 };
 
 const verify_case_66_quotient_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 2062368290 }, .a1 = .{ .value = 1138266777 } }, .B1 = .{ .a0 = .{ .value = 1487615513 }, .a1 = .{ .value = 728623398 } }, .B2 = .{ .a0 = .{ .value = 255852314 }, .a1 = .{ .value = 113497719 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 149956230 }, .a1 = .{ .value = 1071859853 } }, .B1 = .{ .a0 = .{ .value = 1919911475 }, .a1 = .{ .value = 1179667381 } }, .B2 = .{ .a0 = .{ .value = 940220711 }, .a1 = .{ .value = 1735386634 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 987439774 }, .a1 = .{ .value = 1414429476 } }, .B1 = .{ .a0 = .{ .value = 468105946 }, .a1 = .{ .value = 844063719 } }, .B2 = .{ .a0 = .{ .value = 1916890525 }, .a1 = .{ .value = 1701059882 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 935288466 }, .a1 = .{ .value = 1730488553 } }, .B1 = .{ .a0 = .{ .value = 1688281398 }, .a1 = .{ .value = 1727525131 } }, .B2 = .{ .a0 = .{ .value = 341628910 }, .a1 = .{ .value = 579383797 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1725603748 }, .a1 = .{ .value = 131868111 } }, .B1 = .{ .a0 = .{ .value = 1997317752 }, .a1 = .{ .value = 469401995 } }, .B2 = .{ .a0 = .{ .value = 468104977 }, .a1 = .{ .value = 2085840749 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1455640041 }, .a1 = .{ .value = 956342850 } }, .B1 = .{ .a0 = .{ .value = 1151664050 }, .a1 = .{ .value = 2085074195 } }, .B2 = .{ .a0 = .{ .value = 475049121 }, .a1 = .{ .value = 1761156731 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 861919332 }, .a1 = .{ .value = 1248344831 } }, .B1 = .{ .a0 = .{ .value = 749356261 }, .a1 = .{ .value = 679058192 } }, .B2 = .{ .a0 = .{ .value = 2047849428 }, .a1 = .{ .value = 1091195917 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 99087695 }, .a1 = .{ .value = 354738987 } }, .B1 = .{ .a0 = .{ .value = 1489618329 }, .a1 = .{ .value = 988587907 } }, .B2 = .{ .a0 = .{ .value = 1247113251 }, .a1 = .{ .value = 2035934236 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1476327297 }, .a1 = .{ .value = 42991096 } }, .B1 = .{ .a0 = .{ .value = 199763412 }, .a1 = .{ .value = 36717452 } }, .B2 = .{ .a0 = .{ .value = 1587860442 }, .a1 = .{ .value = 129753861 } } },
 };
 
 const verify_case_66_module_sizes = [_]usize{};
@@ -12617,9 +12684,10 @@ const verify_case_66_proof = verifier.Proof{
 const verify_case_66_systems = verifier.Systems{ .vanishing = system_66, .logderivativesum = system_66_logderiv };
 
 pub const system_67_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 3, 3 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 3, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 4 },
-    .total_round_coins = 7,
+    .total_round_coins = 5,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-shared"
@@ -12759,9 +12827,9 @@ const system_67_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 4 }, .expressions = &system_67_module_0_expressions, .buckets = &system_67_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 4 },
     // module: "modS1"
-    .{ .size = .{ .static = 4 }, .expressions = &system_67_module_1_expressions, .buckets = &system_67_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 5 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_67_module_1_expressions, .buckets = &system_67_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 4 },
     // module: "modS2"
-    .{ .size = .{ .static = 2 }, .expressions = &system_67_module_2_expressions, .buckets = &system_67_module_2_buckets, .witness_claim_offset = 7, .merge_coin_index = 3, .eval_coin_index = 6 },
+    .{ .size = .{ .static = 2 }, .expressions = &system_67_module_2_expressions, .buckets = &system_67_module_2_buckets, .witness_claim_offset = 7, .merge_coin_index = 3, .eval_coin_index = 4 },
 };
 
 // system: "lk-shared"
@@ -12789,23 +12857,23 @@ const verify_case_67_witness_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 401997940 }, .a1 = .{ .value = 525103940 } }, .B1 = .{ .a0 = .{ .value = 1881053576 }, .a1 = .{ .value = 1901285395 } }, .B2 = .{ .a0 = .{ .value = 1986400878 }, .a1 = .{ .value = 1622038768 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1712190729 }, .a1 = .{ .value = 1607883202 } }, .B1 = .{ .a0 = .{ .value = 1277978581 }, .a1 = .{ .value = 384589123 } }, .B2 = .{ .a0 = .{ .value = 1624505700 }, .a1 = .{ .value = 1551319630 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 499669938 }, .a1 = .{ .value = 302764833 } }, .B1 = .{ .a0 = .{ .value = 1709290593 }, .a1 = .{ .value = 650878552 } }, .B2 = .{ .a0 = .{ .value = 997536102 }, .a1 = .{ .value = 1862193433 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 539021838 }, .a1 = .{ .value = 188523706 } }, .B1 = .{ .a0 = .{ .value = 314773598 }, .a1 = .{ .value = 1480225945 } }, .B2 = .{ .a0 = .{ .value = 1296020416 }, .a1 = .{ .value = 1283918427 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 289207306 }, .a1 = .{ .value = 1373079403 } }, .B1 = .{ .a0 = .{ .value = 787955826 }, .a1 = .{ .value = 55050707 } }, .B2 = .{ .a0 = .{ .value = 1028953561 }, .a1 = .{ .value = 990575494 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1987720737 }, .a1 = .{ .value = 1908366919 } }, .B1 = .{ .a0 = .{ .value = 1831176191 }, .a1 = .{ .value = 416856371 } }, .B2 = .{ .a0 = .{ .value = 1620045595 }, .a1 = .{ .value = 1012512542 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1500717005 }, .a1 = .{ .value = 946777632 } }, .B1 = .{ .a0 = .{ .value = 1253565260 }, .a1 = .{ .value = 2032654841 } }, .B2 = .{ .a0 = .{ .value = 905057189 }, .a1 = .{ .value = 2004637960 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1578023972 }, .a1 = .{ .value = 2089797846 } }, .B1 = .{ .a0 = .{ .value = 246041113 }, .a1 = .{ .value = 1415609099 } }, .B2 = .{ .a0 = .{ .value = 492224442 }, .a1 = .{ .value = 106455845 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1975509254 }, .a1 = .{ .value = 705365800 } }, .B1 = .{ .a0 = .{ .value = 1796996706 }, .a1 = .{ .value = 1134667784 } }, .B2 = .{ .a0 = .{ .value = 175142167 }, .a1 = .{ .value = 989683787 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 392075064 }, .a1 = .{ .value = 1685694886 } }, .B1 = .{ .a0 = .{ .value = 1786770714 }, .a1 = .{ .value = 1964092639 } }, .B2 = .{ .a0 = .{ .value = 1199106670 }, .a1 = .{ .value = 158197471 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 879898165 }, .a1 = .{ .value = 1247679229 } }, .B1 = .{ .a0 = .{ .value = 1092806359 }, .a1 = .{ .value = 99517491 } }, .B2 = .{ .a0 = .{ .value = 839528612 }, .a1 = .{ .value = 2089594307 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1594783833 }, .a1 = .{ .value = 1384624741 } }, .B1 = .{ .a0 = .{ .value = 1398612830 }, .a1 = .{ .value = 783512062 } }, .B2 = .{ .a0 = .{ .value = 1122257348 }, .a1 = .{ .value = 1295680520 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 443686360 }, .a1 = .{ .value = 1520472192 } }, .B1 = .{ .a0 = .{ .value = 723822742 }, .a1 = .{ .value = 1616392610 } }, .B2 = .{ .a0 = .{ .value = 1402414157 }, .a1 = .{ .value = 1624882663 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 504348184 }, .a1 = .{ .value = 1516103286 } }, .B1 = .{ .a0 = .{ .value = 775783631 }, .a1 = .{ .value = 1831871330 } }, .B2 = .{ .a0 = .{ .value = 2125573907 }, .a1 = .{ .value = 486211142 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 279074911 }, .a1 = .{ .value = 2109368366 } }, .B1 = .{ .a0 = .{ .value = 24714770 }, .a1 = .{ .value = 1465344091 } }, .B2 = .{ .a0 = .{ .value = 356420446 }, .a1 = .{ .value = 55498354 } } },
 };
 
 const verify_case_67_quotient_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 927124547 }, .a1 = .{ .value = 2018013631 } }, .B1 = .{ .a0 = .{ .value = 1052755326 }, .a1 = .{ .value = 1525980066 } }, .B2 = .{ .a0 = .{ .value = 9749552 }, .a1 = .{ .value = 1542022495 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1306026659 }, .a1 = .{ .value = 2066547138 } }, .B1 = .{ .a0 = .{ .value = 372449835 }, .a1 = .{ .value = 1098390475 } }, .B2 = .{ .a0 = .{ .value = 1029723929 }, .a1 = .{ .value = 289942796 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 981530062 }, .a1 = .{ .value = 1992131692 } }, .B1 = .{ .a0 = .{ .value = 1436184040 }, .a1 = .{ .value = 343424915 } }, .B2 = .{ .a0 = .{ .value = 429487658 }, .a1 = .{ .value = 109843767 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1836965225 }, .a1 = .{ .value = 1968518073 } }, .B1 = .{ .a0 = .{ .value = 403497400 }, .a1 = .{ .value = 812209803 } }, .B2 = .{ .a0 = .{ .value = 613985990 }, .a1 = .{ .value = 791710529 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1304863806 }, .a1 = .{ .value = 1676716989 } }, .B1 = .{ .a0 = .{ .value = 2051714086 }, .a1 = .{ .value = 2027431780 } }, .B2 = .{ .a0 = .{ .value = 435970785 }, .a1 = .{ .value = 710064188 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1550719620 }, .a1 = .{ .value = 554929345 } }, .B1 = .{ .a0 = .{ .value = 55301333 }, .a1 = .{ .value = 216560957 } }, .B2 = .{ .a0 = .{ .value = 561267749 }, .a1 = .{ .value = 883487408 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1692790973 }, .a1 = .{ .value = 1359245157 } }, .B1 = .{ .a0 = .{ .value = 584723448 }, .a1 = .{ .value = 1985941508 } }, .B2 = .{ .a0 = .{ .value = 1685103641 }, .a1 = .{ .value = 536928737 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1587157951 }, .a1 = .{ .value = 682452127 } }, .B1 = .{ .a0 = .{ .value = 1796331743 }, .a1 = .{ .value = 1405582182 } }, .B2 = .{ .a0 = .{ .value = 341285118 }, .a1 = .{ .value = 746169842 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1955727488 }, .a1 = .{ .value = 637820410 } }, .B1 = .{ .a0 = .{ .value = 1376612999 }, .a1 = .{ .value = 1102793270 } }, .B2 = .{ .a0 = .{ .value = 1905464324 }, .a1 = .{ .value = 427058137 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 691396850 }, .a1 = .{ .value = 1015497342 } }, .B1 = .{ .a0 = .{ .value = 388266758 }, .a1 = .{ .value = 2005613098 } }, .B2 = .{ .a0 = .{ .value = 1611532999 }, .a1 = .{ .value = 1666046650 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1611698857 }, .a1 = .{ .value = 478090078 } }, .B1 = .{ .a0 = .{ .value = 1963392745 }, .a1 = .{ .value = 1390808161 } }, .B2 = .{ .a0 = .{ .value = 828755468 }, .a1 = .{ .value = 933542656 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1609565258 }, .a1 = .{ .value = 2014418856 } }, .B1 = .{ .a0 = .{ .value = 1620735762 }, .a1 = .{ .value = 1887150952 } }, .B2 = .{ .a0 = .{ .value = 972946827 }, .a1 = .{ .value = 73068841 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1033674914 }, .a1 = .{ .value = 1378922160 } }, .B1 = .{ .a0 = .{ .value = 989981605 }, .a1 = .{ .value = 1380884543 } }, .B2 = .{ .a0 = .{ .value = 1228599131 }, .a1 = .{ .value = 630204868 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } },
 };
 
@@ -12970,9 +13038,10 @@ const verify_case_67_proof = verifier.Proof{
 const verify_case_67_systems = verifier.Systems{ .vanishing = system_67, .logderivativesum = system_67_logderiv };
 
 pub const system_68_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 4, 4 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 4, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 5 },
-    .total_round_coins = 9,
+    .total_round_coins = 6,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-distinct"
@@ -13157,11 +13226,11 @@ const system_68_modules = [_]vanishing.Module{
     // module: "modT1"
     .{ .size = .{ .static = 4 }, .expressions = &system_68_module_0_expressions, .buckets = &system_68_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 5 },
     // module: "modT2"
-    .{ .size = .{ .static = 2 }, .expressions = &system_68_module_1_expressions, .buckets = &system_68_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 6 },
+    .{ .size = .{ .static = 2 }, .expressions = &system_68_module_1_expressions, .buckets = &system_68_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 5 },
     // module: "modS1"
-    .{ .size = .{ .static = 2 }, .expressions = &system_68_module_2_expressions, .buckets = &system_68_module_2_buckets, .witness_claim_offset = 8, .merge_coin_index = 3, .eval_coin_index = 7 },
+    .{ .size = .{ .static = 2 }, .expressions = &system_68_module_2_expressions, .buckets = &system_68_module_2_buckets, .witness_claim_offset = 8, .merge_coin_index = 3, .eval_coin_index = 5 },
     // module: "modS2"
-    .{ .size = .{ .static = 2 }, .expressions = &system_68_module_3_expressions, .buckets = &system_68_module_3_buckets, .witness_claim_offset = 11, .merge_coin_index = 4, .eval_coin_index = 8 },
+    .{ .size = .{ .static = 2 }, .expressions = &system_68_module_3_expressions, .buckets = &system_68_module_3_buckets, .witness_claim_offset = 11, .merge_coin_index = 4, .eval_coin_index = 5 },
 };
 
 // system: "lk-distinct"
@@ -13191,29 +13260,29 @@ const verify_case_68_witness_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1267215218 }, .a1 = .{ .value = 1680581447 } }, .B1 = .{ .a0 = .{ .value = 651834011 }, .a1 = .{ .value = 2014274260 } }, .B2 = .{ .a0 = .{ .value = 3645167 }, .a1 = .{ .value = 655972814 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1497497811 }, .a1 = .{ .value = 2053331942 } }, .B1 = .{ .a0 = .{ .value = 1437931963 }, .a1 = .{ .value = 80901518 } }, .B2 = .{ .a0 = .{ .value = 1028611050 }, .a1 = .{ .value = 662694607 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1190506823 }, .a1 = .{ .value = 1638235273 } }, .B1 = .{ .a0 = .{ .value = 1683905684 }, .a1 = .{ .value = 410930088 } }, .B2 = .{ .a0 = .{ .value = 663778692 }, .a1 = .{ .value = 568789620 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 490212575 }, .a1 = .{ .value = 545417780 } }, .B1 = .{ .a0 = .{ .value = 1702967177 }, .a1 = .{ .value = 844445905 } }, .B2 = .{ .a0 = .{ .value = 1799569688 }, .a1 = .{ .value = 1154487143 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 207210825 }, .a1 = .{ .value = 1640998581 } }, .B1 = .{ .a0 = .{ .value = 1074669161 }, .a1 = .{ .value = 722798032 } }, .B2 = .{ .a0 = .{ .value = 864608084 }, .a1 = .{ .value = 1299405912 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 242269791 }, .a1 = .{ .value = 999470200 } }, .B1 = .{ .a0 = .{ .value = 242699038 }, .a1 = .{ .value = 832468325 } }, .B2 = .{ .a0 = .{ .value = 1530562194 }, .a1 = .{ .value = 289395994 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 187420974 }, .a1 = .{ .value = 1148405863 } }, .B1 = .{ .a0 = .{ .value = 133111020 }, .a1 = .{ .value = 1509406746 } }, .B2 = .{ .a0 = .{ .value = 167110273 }, .a1 = .{ .value = 1136153180 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1956570928 }, .a1 = .{ .value = 1169745725 } }, .B1 = .{ .a0 = .{ .value = 914393654 }, .a1 = .{ .value = 502739341 } }, .B2 = .{ .a0 = .{ .value = 384250073 }, .a1 = .{ .value = 798604582 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 702358957 }, .a1 = .{ .value = 1484217771 } }, .B1 = .{ .a0 = .{ .value = 1406416627 }, .a1 = .{ .value = 1455466696 } }, .B2 = .{ .a0 = .{ .value = 1129654599 }, .a1 = .{ .value = 1786744960 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1878334511 }, .a1 = .{ .value = 593542042 } }, .B1 = .{ .a0 = .{ .value = 1598829811 }, .a1 = .{ .value = 1550570177 } }, .B2 = .{ .a0 = .{ .value = 668409887 }, .a1 = .{ .value = 751391143 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 439135372 }, .a1 = .{ .value = 704919565 } }, .B1 = .{ .a0 = .{ .value = 804895005 }, .a1 = .{ .value = 1301482168 } }, .B2 = .{ .a0 = .{ .value = 1397807642 }, .a1 = .{ .value = 218039973 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1781154890 }, .a1 = .{ .value = 1357349004 } }, .B1 = .{ .a0 = .{ .value = 1792573943 }, .a1 = .{ .value = 2000496825 } }, .B2 = .{ .a0 = .{ .value = 1181453520 }, .a1 = .{ .value = 2023000109 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 2030270941 }, .a1 = .{ .value = 826304049 } }, .B1 = .{ .a0 = .{ .value = 1594298918 }, .a1 = .{ .value = 1385585601 } }, .B2 = .{ .a0 = .{ .value = 1281894860 }, .a1 = .{ .value = 1830983087 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 2053055221 }, .a1 = .{ .value = 752357262 } }, .B1 = .{ .a0 = .{ .value = 1736319217 }, .a1 = .{ .value = 1843446658 } }, .B2 = .{ .a0 = .{ .value = 1697755555 }, .a1 = .{ .value = 1350515765 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 28251992 }, .a1 = .{ .value = 370119024 } }, .B1 = .{ .a0 = .{ .value = 222404054 }, .a1 = .{ .value = 1993890857 } }, .B2 = .{ .a0 = .{ .value = 318984297 }, .a1 = .{ .value = 383786563 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 401438773 }, .a1 = .{ .value = 1777757039 } }, .B1 = .{ .a0 = .{ .value = 153406004 }, .a1 = .{ .value = 347984214 } }, .B2 = .{ .a0 = .{ .value = 1378688170 }, .a1 = .{ .value = 1041762611 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1689034894 }, .a1 = .{ .value = 576612739 } }, .B1 = .{ .a0 = .{ .value = 773405130 }, .a1 = .{ .value = 2073254478 } }, .B2 = .{ .a0 = .{ .value = 339551111 }, .a1 = .{ .value = 270103153 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 349551543 }, .a1 = .{ .value = 773357429 } }, .B1 = .{ .a0 = .{ .value = 338132490 }, .a1 = .{ .value = 130209608 } }, .B2 = .{ .a0 = .{ .value = 949252913 }, .a1 = .{ .value = 107706324 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 100435492 }, .a1 = .{ .value = 1304402384 } }, .B1 = .{ .a0 = .{ .value = 536407515 }, .a1 = .{ .value = 745120832 } }, .B2 = .{ .a0 = .{ .value = 848811573 }, .a1 = .{ .value = 299723346 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 2053055221 }, .a1 = .{ .value = 752357262 } }, .B1 = .{ .a0 = .{ .value = 1736319217 }, .a1 = .{ .value = 1843446658 } }, .B2 = .{ .a0 = .{ .value = 1697755555 }, .a1 = .{ .value = 1350515765 } } },
 };
 
 const verify_case_68_quotient_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1031161365 }, .a1 = .{ .value = 1248898220 } }, .B1 = .{ .a0 = .{ .value = 486154420 }, .a1 = .{ .value = 1909860042 } }, .B2 = .{ .a0 = .{ .value = 1640239907 }, .a1 = .{ .value = 1832150185 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 900282132 }, .a1 = .{ .value = 1964686299 } }, .B1 = .{ .a0 = .{ .value = 757023381 }, .a1 = .{ .value = 1163231669 } }, .B2 = .{ .a0 = .{ .value = 762457276 }, .a1 = .{ .value = 1933458034 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 882208114 }, .a1 = .{ .value = 110744426 } }, .B1 = .{ .a0 = .{ .value = 1712593332 }, .a1 = .{ .value = 1605873647 } }, .B2 = .{ .a0 = .{ .value = 179894485 }, .a1 = .{ .value = 1302738292 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 2106651447 }, .a1 = .{ .value = 993659652 } }, .B1 = .{ .a0 = .{ .value = 1607784346 }, .a1 = .{ .value = 1528627288 } }, .B2 = .{ .a0 = .{ .value = 244279209 }, .a1 = .{ .value = 1712094798 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 398431118 }, .a1 = .{ .value = 1290756637 } }, .B1 = .{ .a0 = .{ .value = 996844674 }, .a1 = .{ .value = 988146817 } }, .B2 = .{ .a0 = .{ .value = 1493235289 }, .a1 = .{ .value = 50331138 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1511678023 }, .a1 = .{ .value = 604216381 } }, .B1 = .{ .a0 = .{ .value = 1821078081 }, .a1 = .{ .value = 682318513 } }, .B2 = .{ .a0 = .{ .value = 874807617 }, .a1 = .{ .value = 114399821 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 249687762 }, .a1 = .{ .value = 660719211 } }, .B1 = .{ .a0 = .{ .value = 1582844716 }, .a1 = .{ .value = 243893015 } }, .B2 = .{ .a0 = .{ .value = 1650867391 }, .a1 = .{ .value = 183584002 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1051549402 }, .a1 = .{ .value = 2019451314 } }, .B1 = .{ .a0 = .{ .value = 1776480744 }, .a1 = .{ .value = 2106804700 } }, .B2 = .{ .a0 = .{ .value = 554949400 }, .a1 = .{ .value = 242661020 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 141757850 }, .a1 = .{ .value = 1659021276 } }, .B1 = .{ .a0 = .{ .value = 612095484 }, .a1 = .{ .value = 699062616 } }, .B2 = .{ .a0 = .{ .value = 1490740558 }, .a1 = .{ .value = 1955241291 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1032606288 }, .a1 = .{ .value = 85959959 } }, .B1 = .{ .a0 = .{ .value = 1370581064 }, .a1 = .{ .value = 1897484577 } }, .B2 = .{ .a0 = .{ .value = 1891868656 }, .a1 = .{ .value = 2130472400 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1202375288 }, .a1 = .{ .value = 642971829 } }, .B1 = .{ .a0 = .{ .value = 510620564 }, .a1 = .{ .value = 114055977 } }, .B2 = .{ .a0 = .{ .value = 1824970372 }, .a1 = .{ .value = 296487703 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1743795735 }, .a1 = .{ .value = 545711993 } }, .B1 = .{ .a0 = .{ .value = 712113228 }, .a1 = .{ .value = 1265709561 } }, .B2 = .{ .a0 = .{ .value = 845812102 }, .a1 = .{ .value = 545468043 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 47671856 }, .a1 = .{ .value = 65137875 } }, .B1 = .{ .a0 = .{ .value = 1686487946 }, .a1 = .{ .value = 926937690 } }, .B2 = .{ .a0 = .{ .value = 728468326 }, .a1 = .{ .value = 1308959671 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 554357263 }, .a1 = .{ .value = 1903696515 } }, .B1 = .{ .a0 = .{ .value = 419021178 }, .a1 = .{ .value = 843799607 } }, .B2 = .{ .a0 = .{ .value = 1982001399 }, .a1 = .{ .value = 967412650 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1881018671 }, .a1 = .{ .value = 1469987222 } }, .B1 = .{ .a0 = .{ .value = 547861717 }, .a1 = .{ .value = 1886813418 } }, .B2 = .{ .a0 = .{ .value = 479839042 }, .a1 = .{ .value = 1947122431 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } },
 };
 
@@ -13405,9 +13474,10 @@ const verify_case_68_proof = verifier.Proof{
 const verify_case_68_systems = verifier.Systems{ .vanishing = system_68, .logderivativesum = system_68_logderiv };
 
 pub const system_69_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4 },
-    .total_round_coins = 6,
+    .total_round_coins = 5,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-multi-filterT"
@@ -13536,7 +13606,7 @@ const system_69_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 4 }, .expressions = &system_69_module_0_expressions, .buckets = &system_69_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 2, .eval_coin_index = 4 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_69_module_1_expressions, .buckets = &system_69_module_1_buckets, .witness_claim_offset = 6, .merge_coin_index = 3, .eval_coin_index = 5 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_69_module_1_expressions, .buckets = &system_69_module_1_buckets, .witness_claim_offset = 6, .merge_coin_index = 3, .eval_coin_index = 4 },
 };
 
 // system: "lk-multi-filterT"
@@ -13565,19 +13635,19 @@ const verify_case_69_witness_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1822694034 }, .a1 = .{ .value = 722069657 } }, .B1 = .{ .a0 = .{ .value = 388608600 }, .a1 = .{ .value = 68829170 } }, .B2 = .{ .a0 = .{ .value = 1181603978 }, .a1 = .{ .value = 709649543 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1247752263 }, .a1 = .{ .value = 1163747852 } }, .B1 = .{ .a0 = .{ .value = 1687921141 }, .a1 = .{ .value = 197571295 } }, .B2 = .{ .a0 = .{ .value = 202296858 }, .a1 = .{ .value = 1270679163 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 547621187 }, .a1 = .{ .value = 676462451 } }, .B1 = .{ .a0 = .{ .value = 1112607789 }, .a1 = .{ .value = 617223437 } }, .B2 = .{ .a0 = .{ .value = 1352568436 }, .a1 = .{ .value = 464808243 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 893797390 }, .a1 = .{ .value = 1063274611 } }, .B1 = .{ .a0 = .{ .value = 663349174 }, .a1 = .{ .value = 1119828942 } }, .B2 = .{ .a0 = .{ .value = 2029678278 }, .a1 = .{ .value = 901619830 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1774936058 }, .a1 = .{ .value = 1415064734 } }, .B1 = .{ .a0 = .{ .value = 218209839 }, .a1 = .{ .value = 1004651833 } }, .B2 = .{ .a0 = .{ .value = 1682710043 }, .a1 = .{ .value = 492777651 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1862786058 }, .a1 = .{ .value = 555853024 } }, .B1 = .{ .a0 = .{ .value = 1884592823 }, .a1 = .{ .value = 1247982956 } }, .B2 = .{ .a0 = .{ .value = 831604841 }, .a1 = .{ .value = 556299638 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1038561179 }, .a1 = .{ .value = 481726589 } }, .B1 = .{ .a0 = .{ .value = 2106095072 }, .a1 = .{ .value = 1829363442 } }, .B2 = .{ .a0 = .{ .value = 722372414 }, .a1 = .{ .value = 907912537 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 932450615 }, .a1 = .{ .value = 172823202 } }, .B1 = .{ .a0 = .{ .value = 988820306 }, .a1 = .{ .value = 76095566 } }, .B2 = .{ .a0 = .{ .value = 438677160 }, .a1 = .{ .value = 1868176057 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 774990792 }, .a1 = .{ .value = 1774659260 } }, .B1 = .{ .a0 = .{ .value = 1641740761 }, .a1 = .{ .value = 1418664558 } }, .B2 = .{ .a0 = .{ .value = 851471152 }, .a1 = .{ .value = 1007452432 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1412155676 }, .a1 = .{ .value = 1563511080 } }, .B1 = .{ .a0 = .{ .value = 1570452938 }, .a1 = .{ .value = 2120710212 } }, .B2 = .{ .a0 = .{ .value = 1507806481 }, .a1 = .{ .value = 116520260 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1845780714 }, .a1 = .{ .value = 156351108 } }, .B1 = .{ .a0 = .{ .value = 1009327867 }, .a1 = .{ .value = 1490494881 } }, .B2 = .{ .a0 = .{ .value = 789992578 }, .a1 = .{ .value = 11652026 } } },
 };
 
 const verify_case_69_quotient_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1544100444 }, .a1 = .{ .value = 1636204138 } }, .B1 = .{ .a0 = .{ .value = 1494963378 }, .a1 = .{ .value = 1565937013 } }, .B2 = .{ .a0 = .{ .value = 1282225237 }, .a1 = .{ .value = 1449921631 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1646664158 }, .a1 = .{ .value = 509687008 } }, .B1 = .{ .a0 = .{ .value = 1818931827 }, .a1 = .{ .value = 1188205690 } }, .B2 = .{ .a0 = .{ .value = 931056501 }, .a1 = .{ .value = 739794524 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1539037236 }, .a1 = .{ .value = 1879841921 } }, .B1 = .{ .a0 = .{ .value = 1771739081 }, .a1 = .{ .value = 845325949 } }, .B2 = .{ .a0 = .{ .value = 880043353 }, .a1 = .{ .value = 1078093535 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1393533597 }, .a1 = .{ .value = 711826583 } }, .B1 = .{ .a0 = .{ .value = 1822397412 }, .a1 = .{ .value = 1882671962 } }, .B2 = .{ .a0 = .{ .value = 1903478496 }, .a1 = .{ .value = 1110557554 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1120821032 }, .a1 = .{ .value = 1037875125 } }, .B1 = .{ .a0 = .{ .value = 826190170 }, .a1 = .{ .value = 1693240219 } }, .B2 = .{ .a0 = .{ .value = 874251119 }, .a1 = .{ .value = 1168724203 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1721317433 }, .a1 = .{ .value = 496571386 } }, .B1 = .{ .a0 = .{ .value = 20580118 }, .a1 = .{ .value = 1112413852 } }, .B2 = .{ .a0 = .{ .value = 1135902902 }, .a1 = .{ .value = 1213175900 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1270127659 }, .a1 = .{ .value = 1337443132 } }, .B1 = .{ .a0 = .{ .value = 652243404 }, .a1 = .{ .value = 1770481218 } }, .B2 = .{ .a0 = .{ .value = 6458891 }, .a1 = .{ .value = 829290002 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 447518441 }, .a1 = .{ .value = 232514225 } }, .B1 = .{ .a0 = .{ .value = 222810624 }, .a1 = .{ .value = 1300401196 } }, .B2 = .{ .a0 = .{ .value = 852973772 }, .a1 = .{ .value = 546210111 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1530825718 }, .a1 = .{ .value = 1967048424 } }, .B1 = .{ .a0 = .{ .value = 136840503 }, .a1 = .{ .value = 1752755865 } }, .B2 = .{ .a0 = .{ .value = 34105655 }, .a1 = .{ .value = 1257556016 } } },
 };
 
 const verify_case_69_module_sizes = [_]usize{};
@@ -13734,9 +13804,10 @@ const verify_case_69_proof = verifier.Proof{
 const verify_case_69_systems = verifier.Systems{ .vanishing = system_69, .logderivativesum = system_69_logderiv };
 
 pub const system_70_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-repeated"
@@ -13833,7 +13904,7 @@ const system_70_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 4 }, .expressions = &system_70_module_0_expressions, .buckets = &system_70_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_70_module_1_expressions, .buckets = &system_70_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_70_module_1_expressions, .buckets = &system_70_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "lk-repeated"
@@ -13860,18 +13931,18 @@ const verify_case_70_witness_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 2044355842 }, .a1 = .{ .value = 620945583 } }, .B1 = .{ .a0 = .{ .value = 141832617 }, .a1 = .{ .value = 188265552 } }, .B2 = .{ .a0 = .{ .value = 1932130016 }, .a1 = .{ .value = 155803384 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 742973209 }, .a1 = .{ .value = 1311867276 } }, .B1 = .{ .a0 = .{ .value = 1180612702 }, .a1 = .{ .value = 1860857460 } }, .B2 = .{ .a0 = .{ .value = 1810336163 }, .a1 = .{ .value = 985752473 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 5121833 }, .a1 = .{ .value = 1148117053 } }, .B1 = .{ .a0 = .{ .value = 1110088907 }, .a1 = .{ .value = 1551093831 } }, .B2 = .{ .a0 = .{ .value = 1727111634 }, .a1 = .{ .value = 393967488 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 940732152 }, .a1 = .{ .value = 952007218 } }, .B1 = .{ .a0 = .{ .value = 1196082721 }, .a1 = .{ .value = 1863339506 } }, .B2 = .{ .a0 = .{ .value = 1011164536 }, .a1 = .{ .value = 1910261188 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1189668855 }, .a1 = .{ .value = 2097093140 } }, .B1 = .{ .a0 = .{ .value = 1343578325 }, .a1 = .{ .value = 1044763963 } }, .B2 = .{ .a0 = .{ .value = 451381909 }, .a1 = .{ .value = 1268742931 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 796349345 }, .a1 = .{ .value = 1276178025 } }, .B1 = .{ .a0 = .{ .value = 669074650 }, .a1 = .{ .value = 1591413898 } }, .B2 = .{ .a0 = .{ .value = 90457298 }, .a1 = .{ .value = 546011893 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1833263135 }, .a1 = .{ .value = 434429747 } }, .B1 = .{ .a0 = .{ .value = 893870527 }, .a1 = .{ .value = 1990709442 } }, .B2 = .{ .a0 = .{ .value = 1702186142 }, .a1 = .{ .value = 573610610 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1420080798 }, .a1 = .{ .value = 1537624246 } }, .B1 = .{ .a0 = .{ .value = 181877119 }, .a1 = .{ .value = 535570322 } }, .B2 = .{ .a0 = .{ .value = 178298448 }, .a1 = .{ .value = 1768424585 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 5121833 }, .a1 = .{ .value = 1148117053 } }, .B1 = .{ .a0 = .{ .value = 1110088907 }, .a1 = .{ .value = 1551093831 } }, .B2 = .{ .a0 = .{ .value = 1727111634 }, .a1 = .{ .value = 393967488 } } },
 };
 
 const verify_case_70_quotient_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1042409305 }, .a1 = .{ .value = 526117260 } }, .B1 = .{ .a0 = .{ .value = 1436399535 }, .a1 = .{ .value = 1326670043 } }, .B2 = .{ .a0 = .{ .value = 1730610208 }, .a1 = .{ .value = 667965731 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1616529273 }, .a1 = .{ .value = 94337517 } }, .B1 = .{ .a0 = .{ .value = 941761352 }, .a1 = .{ .value = 1932460465 } }, .B2 = .{ .a0 = .{ .value = 1463442536 }, .a1 = .{ .value = 41577350 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 356531083 }, .a1 = .{ .value = 1359556257 } }, .B1 = .{ .a0 = .{ .value = 1620029519 }, .a1 = .{ .value = 1565007003 } }, .B2 = .{ .a0 = .{ .value = 60931134 }, .a1 = .{ .value = 2082228611 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 900741316 }, .a1 = .{ .value = 376997697 } }, .B1 = .{ .a0 = .{ .value = 1127703852 }, .a1 = .{ .value = 1830944690 } }, .B2 = .{ .a0 = .{ .value = 816014417 }, .a1 = .{ .value = 1227094392 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1344480205 }, .a1 = .{ .value = 457058544 } }, .B1 = .{ .a0 = .{ .value = 1033233288 }, .a1 = .{ .value = 1487613389 } }, .B2 = .{ .a0 = .{ .value = 32929167 }, .a1 = .{ .value = 1786415525 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 2073784127 }, .a1 = .{ .value = 628561975 } }, .B1 = .{ .a0 = .{ .value = 2076563661 }, .a1 = .{ .value = 1133847960 } }, .B2 = .{ .a0 = .{ .value = 371247495 }, .a1 = .{ .value = 154577863 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 534424970 }, .a1 = .{ .value = 1787723505 } }, .B1 = .{ .a0 = .{ .value = 2099958983 }, .a1 = .{ .value = 1989508153 } }, .B2 = .{ .a0 = .{ .value = 1888600214 }, .a1 = .{ .value = 52552510 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 658054032 }, .a1 = .{ .value = 871479803 } }, .B1 = .{ .a0 = .{ .value = 1281970403 }, .a1 = .{ .value = 251585228 } }, .B2 = .{ .a0 = .{ .value = 1018166977 }, .a1 = .{ .value = 910588794 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 632400598 }, .a1 = .{ .value = 218684465 } }, .B1 = .{ .a0 = .{ .value = 520391397 }, .a1 = .{ .value = 1350150894 } }, .B2 = .{ .a0 = .{ .value = 280751166 }, .a1 = .{ .value = 731837968 } } },
 };
 
 const verify_case_70_module_sizes = [_]usize{};
@@ -14004,9 +14075,10 @@ const verify_case_70_proof = verifier.Proof{
 const verify_case_70_systems = verifier.Systems{ .vanishing = system_70, .logderivativesum = system_70_logderiv };
 
 pub const system_71_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-shift-a"
@@ -14103,7 +14175,7 @@ const system_71_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 4 }, .expressions = &system_71_module_0_expressions, .buckets = &system_71_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_71_module_1_expressions, .buckets = &system_71_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_71_module_1_expressions, .buckets = &system_71_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "lk-shift-a"
@@ -14130,18 +14202,18 @@ const verify_case_71_witness_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1518356125 }, .a1 = .{ .value = 435048787 } }, .B1 = .{ .a0 = .{ .value = 452898838 }, .a1 = .{ .value = 841093971 } }, .B2 = .{ .a0 = .{ .value = 1254718917 }, .a1 = .{ .value = 1405900429 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 934850844 }, .a1 = .{ .value = 386811960 } }, .B1 = .{ .a0 = .{ .value = 307972845 }, .a1 = .{ .value = 158421802 } }, .B2 = .{ .a0 = .{ .value = 958289838 }, .a1 = .{ .value = 546310894 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 623751977 }, .a1 = .{ .value = 159579668 } }, .B1 = .{ .a0 = .{ .value = 918362992 }, .a1 = .{ .value = 30343634 } }, .B2 = .{ .a0 = .{ .value = 1443936360 }, .a1 = .{ .value = 536094855 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 640948045 }, .a1 = .{ .value = 2119412285 } }, .B1 = .{ .a0 = .{ .value = 67623143 }, .a1 = .{ .value = 399442870 } }, .B2 = .{ .a0 = .{ .value = 1498445192 }, .a1 = .{ .value = 1978257633 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1286661429 }, .a1 = .{ .value = 1963823707 } }, .B1 = .{ .a0 = .{ .value = 1097333211 }, .a1 = .{ .value = 1357306707 } }, .B2 = .{ .a0 = .{ .value = 1942126301 }, .a1 = .{ .value = 1329167088 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 622472387 }, .a1 = .{ .value = 1078702802 } }, .B1 = .{ .a0 = .{ .value = 1376530065 }, .a1 = .{ .value = 959977182 } }, .B2 = .{ .a0 = .{ .value = 1361156072 }, .a1 = .{ .value = 1948297800 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 612350308 }, .a1 = .{ .value = 1695657646 } }, .B1 = .{ .a0 = .{ .value = 1677807595 }, .a1 = .{ .value = 1289612462 } }, .B2 = .{ .a0 = .{ .value = 875987516 }, .a1 = .{ .value = 724806004 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1195855589 }, .a1 = .{ .value = 1743894473 } }, .B1 = .{ .a0 = .{ .value = 1822733588 }, .a1 = .{ .value = 1972284631 } }, .B2 = .{ .a0 = .{ .value = 1172416595 }, .a1 = .{ .value = 1584395539 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 623751977 }, .a1 = .{ .value = 159579668 } }, .B1 = .{ .a0 = .{ .value = 918362992 }, .a1 = .{ .value = 30343634 } }, .B2 = .{ .a0 = .{ .value = 1443936360 }, .a1 = .{ .value = 536094855 } } },
 };
 
 const verify_case_71_quotient_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 972418233 }, .a1 = .{ .value = 1115846349 } }, .B1 = .{ .a0 = .{ .value = 67093037 }, .a1 = .{ .value = 626536251 } }, .B2 = .{ .a0 = .{ .value = 361478298 }, .a1 = .{ .value = 673365317 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 166967926 }, .a1 = .{ .value = 740615449 } }, .B1 = .{ .a0 = .{ .value = 72310850 }, .a1 = .{ .value = 345174576 } }, .B2 = .{ .a0 = .{ .value = 892443166 }, .a1 = .{ .value = 850812917 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1116807051 }, .a1 = .{ .value = 1447853362 } }, .B1 = .{ .a0 = .{ .value = 1634859432 }, .a1 = .{ .value = 442267868 } }, .B2 = .{ .a0 = .{ .value = 1498272867 }, .a1 = .{ .value = 981405744 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 566077723 }, .a1 = .{ .value = 1952067860 } }, .B1 = .{ .a0 = .{ .value = 1473253722 }, .a1 = .{ .value = 1122881529 } }, .B2 = .{ .a0 = .{ .value = 838769880 }, .a1 = .{ .value = 499119315 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 389648782 }, .a1 = .{ .value = 162276305 } }, .B1 = .{ .a0 = .{ .value = 1230046039 }, .a1 = .{ .value = 299437836 } }, .B2 = .{ .a0 = .{ .value = 1551222386 }, .a1 = .{ .value = 130919582 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 725457476 }, .a1 = .{ .value = 1257124997 } }, .B1 = .{ .a0 = .{ .value = 1351228785 }, .a1 = .{ .value = 882073296 } }, .B2 = .{ .a0 = .{ .value = 2056638019 }, .a1 = .{ .value = 1090229448 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 946501631 }, .a1 = .{ .value = 1709309053 } }, .B1 = .{ .a0 = .{ .value = 1537282979 }, .a1 = .{ .value = 735710040 } }, .B2 = .{ .a0 = .{ .value = 1193434920 }, .a1 = .{ .value = 87900016 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 973381618 }, .a1 = .{ .value = 167380089 } }, .B1 = .{ .a0 = .{ .value = 1657047714 }, .a1 = .{ .value = 1505993434 } }, .B2 = .{ .a0 = .{ .value = 913370914 }, .a1 = .{ .value = 556223096 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1546876839 }, .a1 = .{ .value = 1109447599 } }, .B1 = .{ .a0 = .{ .value = 1724966182 }, .a1 = .{ .value = 1117888954 } }, .B2 = .{ .a0 = .{ .value = 1394272883 }, .a1 = .{ .value = 1915327223 } } },
 };
 
 const verify_case_71_module_sizes = [_]usize{};
@@ -14274,9 +14346,10 @@ const verify_case_71_proof = verifier.Proof{
 const verify_case_71_systems = verifier.Systems{ .vanishing = system_71, .logderivativesum = system_71_logderiv };
 
 pub const system_72_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-shift-b"
@@ -14373,7 +14446,7 @@ const system_72_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 4 }, .expressions = &system_72_module_0_expressions, .buckets = &system_72_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_72_module_1_expressions, .buckets = &system_72_module_1_buckets, .witness_claim_offset = 5, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_72_module_1_expressions, .buckets = &system_72_module_1_buckets, .witness_claim_offset = 5, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "lk-shift-b"
@@ -14401,18 +14474,18 @@ const verify_case_72_witness_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1707951522 }, .a1 = .{ .value = 2008173708 } }, .B1 = .{ .a0 = .{ .value = 2057323119 }, .a1 = .{ .value = 1188748549 } }, .B2 = .{ .a0 = .{ .value = 1277967790 }, .a1 = .{ .value = 1866972509 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1082831487 }, .a1 = .{ .value = 2083813557 } }, .B1 = .{ .a0 = .{ .value = 1292708273 }, .a1 = .{ .value = 1390076698 } }, .B2 = .{ .a0 = .{ .value = 812263153 }, .a1 = .{ .value = 1899081552 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1082831487 }, .a1 = .{ .value = 2083813557 } }, .B1 = .{ .a0 = .{ .value = 1292708273 }, .a1 = .{ .value = 1390076698 } }, .B2 = .{ .a0 = .{ .value = 812263153 }, .a1 = .{ .value = 1899081552 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1102918648 }, .a1 = .{ .value = 1660564956 } }, .B1 = .{ .a0 = .{ .value = 7858902 }, .a1 = .{ .value = 1628494249 } }, .B2 = .{ .a0 = .{ .value = 920358988 }, .a1 = .{ .value = 1953915035 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1678130982 }, .a1 = .{ .value = 1708780129 } }, .B1 = .{ .a0 = .{ .value = 1807747577 }, .a1 = .{ .value = 1226242015 } }, .B2 = .{ .a0 = .{ .value = 252486900 }, .a1 = .{ .value = 1975616818 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1451320576 }, .a1 = .{ .value = 2083087437 } }, .B1 = .{ .a0 = .{ .value = 1113881320 }, .a1 = .{ .value = 722974944 } }, .B2 = .{ .a0 = .{ .value = 2010120414 }, .a1 = .{ .value = 914943888 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 158274711 }, .a1 = .{ .value = 482029841 } }, .B1 = .{ .a0 = .{ .value = 1763421686 }, .a1 = .{ .value = 1453528800 } }, .B2 = .{ .a0 = .{ .value = 1915303646 }, .a1 = .{ .value = 1923470306 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 422754911 }, .a1 = .{ .value = 122532725 } }, .B1 = .{ .a0 = .{ .value = 73383314 }, .a1 = .{ .value = 941957884 } }, .B2 = .{ .a0 = .{ .value = 852738643 }, .a1 = .{ .value = 263733924 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1082831487 }, .a1 = .{ .value = 2083813557 } }, .B1 = .{ .a0 = .{ .value = 1292708273 }, .a1 = .{ .value = 1390076698 } }, .B2 = .{ .a0 = .{ .value = 812263153 }, .a1 = .{ .value = 1899081552 } } },
 };
 
 const verify_case_72_quotient_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1460020267 }, .a1 = .{ .value = 1304960367 } }, .B1 = .{ .a0 = .{ .value = 1108026919 }, .a1 = .{ .value = 1366660426 } }, .B2 = .{ .a0 = .{ .value = 1259090688 }, .a1 = .{ .value = 725171355 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 681583414 }, .a1 = .{ .value = 287241962 } }, .B1 = .{ .a0 = .{ .value = 215428180 }, .a1 = .{ .value = 1786464981 } }, .B2 = .{ .a0 = .{ .value = 74956961 }, .a1 = .{ .value = 1679106820 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1576029572 }, .a1 = .{ .value = 1985478199 } }, .B1 = .{ .a0 = .{ .value = 413795448 }, .a1 = .{ .value = 1272651358 } }, .B2 = .{ .a0 = .{ .value = 515461249 }, .a1 = .{ .value = 967280755 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 495682356 }, .a1 = .{ .value = 438449953 } }, .B1 = .{ .a0 = .{ .value = 1256220882 }, .a1 = .{ .value = 613964774 } }, .B2 = .{ .a0 = .{ .value = 1017257581 }, .a1 = .{ .value = 1476857123 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 872531969 }, .a1 = .{ .value = 578707823 } }, .B1 = .{ .a0 = .{ .value = 746877893 }, .a1 = .{ .value = 868075293 } }, .B2 = .{ .a0 = .{ .value = 56861450 }, .a1 = .{ .value = 1943994477 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1905549759 }, .a1 = .{ .value = 1387685662 } }, .B1 = .{ .a0 = .{ .value = 1016106766 }, .a1 = .{ .value = 557175930 } }, .B2 = .{ .a0 = .{ .value = 174090004 }, .a1 = .{ .value = 396412249 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1710143147 }, .a1 = .{ .value = 953493555 } }, .B1 = .{ .a0 = .{ .value = 841139353 }, .a1 = .{ .value = 298231523 } }, .B2 = .{ .a0 = .{ .value = 1560038643 }, .a1 = .{ .value = 362836317 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1449123019 }, .a1 = .{ .value = 1843464471 } }, .B1 = .{ .a0 = .{ .value = 1915278253 }, .a1 = .{ .value = 344241452 } }, .B2 = .{ .a0 = .{ .value = 2055749472 }, .a1 = .{ .value = 451599613 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 554676861 }, .a1 = .{ .value = 145228234 } }, .B1 = .{ .a0 = .{ .value = 1716910985 }, .a1 = .{ .value = 858055075 } }, .B2 = .{ .a0 = .{ .value = 1615245184 }, .a1 = .{ .value = 1163425678 } } },
 };
 
 const verify_case_72_module_sizes = [_]usize{};
@@ -14545,9 +14618,10 @@ const verify_case_72_proof = verifier.Proof{
 const verify_case_72_systems = verifier.Systems{ .vanishing = system_72, .logderivativesum = system_72_logderiv };
 
 pub const system_73_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 3, 3 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 3, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 4 },
-    .total_round_coins = 7,
+    .total_round_coins = 5,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-multi-A"
@@ -14687,9 +14761,9 @@ const system_73_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 4 }, .expressions = &system_73_module_0_expressions, .buckets = &system_73_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 4 },
     // module: "modS1"
-    .{ .size = .{ .static = 4 }, .expressions = &system_73_module_1_expressions, .buckets = &system_73_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 5 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_73_module_1_expressions, .buckets = &system_73_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 4 },
     // module: "modS2"
-    .{ .size = .{ .static = 2 }, .expressions = &system_73_module_2_expressions, .buckets = &system_73_module_2_buckets, .witness_claim_offset = 7, .merge_coin_index = 3, .eval_coin_index = 6 },
+    .{ .size = .{ .static = 2 }, .expressions = &system_73_module_2_expressions, .buckets = &system_73_module_2_buckets, .witness_claim_offset = 7, .merge_coin_index = 3, .eval_coin_index = 4 },
 };
 
 // system: "lk-multi-A"
@@ -14717,23 +14791,23 @@ const verify_case_73_witness_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1490983140 }, .a1 = .{ .value = 2019586234 } }, .B1 = .{ .a0 = .{ .value = 1860652665 }, .a1 = .{ .value = 2006893490 } }, .B2 = .{ .a0 = .{ .value = 1530090012 }, .a1 = .{ .value = 1948031068 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1277169015 }, .a1 = .{ .value = 1433767825 } }, .B1 = .{ .a0 = .{ .value = 2089377095 }, .a1 = .{ .value = 2081431688 } }, .B2 = .{ .a0 = .{ .value = 132751147 }, .a1 = .{ .value = 203369956 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1337184577 }, .a1 = .{ .value = 1809708409 } }, .B1 = .{ .a0 = .{ .value = 2024679539 }, .a1 = .{ .value = 1928656945 } }, .B2 = .{ .a0 = .{ .value = 1148681493 }, .a1 = .{ .value = 558581512 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1286314825 }, .a1 = .{ .value = 2061850893 } }, .B1 = .{ .a0 = .{ .value = 479537919 }, .a1 = .{ .value = 81636852 } }, .B2 = .{ .a0 = .{ .value = 1847623885 }, .a1 = .{ .value = 916358258 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1422986444 }, .a1 = .{ .value = 234942254 } }, .B1 = .{ .a0 = .{ .value = 1962819159 }, .a1 = .{ .value = 75452973 } }, .B2 = .{ .a0 = .{ .value = 2071020792 }, .a1 = .{ .value = 430004750 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1117722326 }, .a1 = .{ .value = 1810132180 } }, .B1 = .{ .a0 = .{ .value = 160382239 }, .a1 = .{ .value = 346674191 } }, .B2 = .{ .a0 = .{ .value = 1249634500 }, .a1 = .{ .value = 697698687 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1534569272 }, .a1 = .{ .value = 1634947175 } }, .B1 = .{ .a0 = .{ .value = 390679124 }, .a1 = .{ .value = 705998480 } }, .B2 = .{ .a0 = .{ .value = 1293490837 }, .a1 = .{ .value = 1009099402 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 390970897 }, .a1 = .{ .value = 1607026468 } }, .B1 = .{ .a0 = .{ .value = 1620343357 }, .a1 = .{ .value = 1166458914 } }, .B2 = .{ .a0 = .{ .value = 1521848909 }, .a1 = .{ .value = 640353177 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1842287375 }, .a1 = .{ .value = 1720452007 } }, .B1 = .{ .a0 = .{ .value = 1014726290 }, .a1 = .{ .value = 276800690 } }, .B2 = .{ .a0 = .{ .value = 1963260219 }, .a1 = .{ .value = 323045491 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1969582903 }, .a1 = .{ .value = 1578389479 } }, .B1 = .{ .a0 = .{ .value = 1768177695 }, .a1 = .{ .value = 530785241 } }, .B2 = .{ .a0 = .{ .value = 1280331193 }, .a1 = .{ .value = 1996718825 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1733875131 }, .a1 = .{ .value = 954885423 } }, .B1 = .{ .a0 = .{ .value = 1841958022 }, .a1 = .{ .value = 1631996671 } }, .B2 = .{ .a0 = .{ .value = 601811183 }, .a1 = .{ .value = 2082434211 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1074758942 }, .a1 = .{ .value = 1878478029 } }, .B1 = .{ .a0 = .{ .value = 210150446 }, .a1 = .{ .value = 1316001592 } }, .B2 = .{ .a0 = .{ .value = 442828203 }, .a1 = .{ .value = 1897198498 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 2073942008 }, .a1 = .{ .value = 556747141 } }, .B1 = .{ .a0 = .{ .value = 1387512302 }, .a1 = .{ .value = 1181860528 } }, .B2 = .{ .a0 = .{ .value = 1710497174 }, .a1 = .{ .value = 20059275 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1982304594 }, .a1 = .{ .value = 554520069 } }, .B1 = .{ .a0 = .{ .value = 623510179 }, .a1 = .{ .value = 690596866 } }, .B2 = .{ .a0 = .{ .value = 1104842572 }, .a1 = .{ .value = 1629393304 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 2085060339 }, .a1 = .{ .value = 2130419879 } }, .B1 = .{ .a0 = .{ .value = 645544891 }, .a1 = .{ .value = 1063558821 } }, .B2 = .{ .a0 = .{ .value = 516877355 }, .a1 = .{ .value = 1122778508 } } },
 };
 
 const verify_case_73_quotient_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 386377844 }, .a1 = .{ .value = 852353680 } }, .B1 = .{ .a0 = .{ .value = 1989397473 }, .a1 = .{ .value = 1609722117 } }, .B2 = .{ .a0 = .{ .value = 1279649437 }, .a1 = .{ .value = 27408938 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1812514213 }, .a1 = .{ .value = 958521316 } }, .B1 = .{ .a0 = .{ .value = 459280088 }, .a1 = .{ .value = 1420767794 } }, .B2 = .{ .a0 = .{ .value = 159657731 }, .a1 = .{ .value = 658864966 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1452842410 }, .a1 = .{ .value = 621392065 } }, .B1 = .{ .a0 = .{ .value = 158719046 }, .a1 = .{ .value = 1426895554 } }, .B2 = .{ .a0 = .{ .value = 1622230243 }, .a1 = .{ .value = 1481603895 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 269066595 }, .a1 = .{ .value = 650864645 } }, .B1 = .{ .a0 = .{ .value = 28707188 }, .a1 = .{ .value = 1505606078 } }, .B2 = .{ .a0 = .{ .value = 1453533535 }, .a1 = .{ .value = 282997136 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 12848404 }, .a1 = .{ .value = 232104566 } }, .B1 = .{ .a0 = .{ .value = 1602496303 }, .a1 = .{ .value = 2019951234 } }, .B2 = .{ .a0 = .{ .value = 773089090 }, .a1 = .{ .value = 746544802 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 568941549 }, .a1 = .{ .value = 791395205 } }, .B1 = .{ .a0 = .{ .value = 1621377554 }, .a1 = .{ .value = 873392073 } }, .B2 = .{ .a0 = .{ .value = 142473899 }, .a1 = .{ .value = 424725500 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 83830902 }, .a1 = .{ .value = 717144313 } }, .B1 = .{ .a0 = .{ .value = 627994994 }, .a1 = .{ .value = 1298550832 } }, .B2 = .{ .a0 = .{ .value = 2006581463 }, .a1 = .{ .value = 1741501272 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1733137170 }, .a1 = .{ .value = 300598256 } }, .B1 = .{ .a0 = .{ .value = 1692389654 }, .a1 = .{ .value = 2004902507 } }, .B2 = .{ .a0 = .{ .value = 675447929 }, .a1 = .{ .value = 908676036 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1610147154 }, .a1 = .{ .value = 691943248 } }, .B1 = .{ .a0 = .{ .value = 1581812902 }, .a1 = .{ .value = 793544684 } }, .B2 = .{ .a0 = .{ .value = 589114831 }, .a1 = .{ .value = 1623398595 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1542293408 }, .a1 = .{ .value = 382333772 } }, .B1 = .{ .a0 = .{ .value = 1640561625 }, .a1 = .{ .value = 1063061852 } }, .B2 = .{ .a0 = .{ .value = 1084716333 }, .a1 = .{ .value = 588739365 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 641133797 }, .a1 = .{ .value = 2112249554 } }, .B1 = .{ .a0 = .{ .value = 141688225 }, .a1 = .{ .value = 1301440667 } }, .B2 = .{ .a0 = .{ .value = 1674847851 }, .a1 = .{ .value = 184311604 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1216145396 }, .a1 = .{ .value = 588676138 } }, .B1 = .{ .a0 = .{ .value = 2073501042 }, .a1 = .{ .value = 1795758446 } }, .B2 = .{ .a0 = .{ .value = 1915231967 }, .a1 = .{ .value = 373925734 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 950862577 }, .a1 = .{ .value = 1866511037 } }, .B1 = .{ .a0 = .{ .value = 2053766166 }, .a1 = .{ .value = 1063851194 } }, .B2 = .{ .a0 = .{ .value = 652610555 }, .a1 = .{ .value = 1632135368 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } },
 };
 
@@ -14898,9 +14972,10 @@ const verify_case_73_proof = verifier.Proof{
 const verify_case_73_systems = verifier.Systems{ .vanishing = system_73, .logderivativesum = system_73_logderiv };
 
 pub const system_74_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4 },
-    .total_round_coins = 6,
+    .total_round_coins = 5,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-w3"
@@ -15029,7 +15104,7 @@ const system_74_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 4 }, .expressions = &system_74_module_0_expressions, .buckets = &system_74_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 2, .eval_coin_index = 4 },
     // module: "modS"
-    .{ .size = .{ .static = 2 }, .expressions = &system_74_module_1_expressions, .buckets = &system_74_module_1_buckets, .witness_claim_offset = 6, .merge_coin_index = 3, .eval_coin_index = 5 },
+    .{ .size = .{ .static = 2 }, .expressions = &system_74_module_1_expressions, .buckets = &system_74_module_1_buckets, .witness_claim_offset = 6, .merge_coin_index = 3, .eval_coin_index = 4 },
 };
 
 // system: "lk-w3"
@@ -15058,19 +15133,19 @@ const verify_case_74_witness_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 703134478 }, .a1 = .{ .value = 572080958 } }, .B1 = .{ .a0 = .{ .value = 95899155 }, .a1 = .{ .value = 1876225357 } }, .B2 = .{ .a0 = .{ .value = 1744746201 }, .a1 = .{ .value = 422063943 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 922596021 }, .a1 = .{ .value = 909490669 } }, .B1 = .{ .a0 = .{ .value = 1074943132 }, .a1 = .{ .value = 400693179 } }, .B2 = .{ .a0 = .{ .value = 813686550 }, .a1 = .{ .value = 1959842184 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 731471532 }, .a1 = .{ .value = 1582443570 } }, .B1 = .{ .a0 = .{ .value = 1385918173 }, .a1 = .{ .value = 1531563821 } }, .B2 = .{ .a0 = .{ .value = 81368655 }, .a1 = .{ .value = 622125505 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 925540148 }, .a1 = .{ .value = 1589068365 } }, .B1 = .{ .a0 = .{ .value = 891796578 }, .a1 = .{ .value = 721455358 } }, .B2 = .{ .a0 = .{ .value = 1772186136 }, .a1 = .{ .value = 837731041 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1053981775 }, .a1 = .{ .value = 845771845 } }, .B1 = .{ .a0 = .{ .value = 1247775045 }, .a1 = .{ .value = 1487817752 } }, .B2 = .{ .a0 = .{ .value = 673504981 }, .a1 = .{ .value = 1858208488 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 177580648 }, .a1 = .{ .value = 1938075408 } }, .B1 = .{ .a0 = .{ .value = 969346035 }, .a1 = .{ .value = 1172784853 } }, .B2 = .{ .a0 = .{ .value = 2107817359 }, .a1 = .{ .value = 767683937 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 870040638 }, .a1 = .{ .value = 1046090114 } }, .B1 = .{ .a0 = .{ .value = 1162287820 }, .a1 = .{ .value = 2034914275 } }, .B2 = .{ .a0 = .{ .value = 1702276239 }, .a1 = .{ .value = 289839037 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 939286637 }, .a1 = .{ .value = 530750298 } }, .B1 = .{ .a0 = .{ .value = 116228782 }, .a1 = .{ .value = 1268844644 } }, .B2 = .{ .a0 = .{ .value = 1661722127 }, .a1 = .{ .value = 242054547 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1995706008 }, .a1 = .{ .value = 88779654 } }, .B1 = .{ .a0 = .{ .value = 86516334 }, .a1 = .{ .value = 619815677 } }, .B2 = .{ .a0 = .{ .value = 671520475 }, .a1 = .{ .value = 303000824 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 2114522348 }, .a1 = .{ .value = 215354123 } }, .B1 = .{ .a0 = .{ .value = 2053055289 }, .a1 = .{ .value = 1589457433 } }, .B2 = .{ .a0 = .{ .value = 1774170642 }, .a1 = .{ .value = 262232272 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1033670943 }, .a1 = .{ .value = 263472149 } }, .B1 = .{ .a0 = .{ .value = 1919060572 }, .a1 = .{ .value = 2004564193 } }, .B2 = .{ .a0 = .{ .value = 1159545414 }, .a1 = .{ .value = 367378476 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 2021002884 }, .a1 = .{ .value = 1517841718 } }, .B1 = .{ .a0 = .{ .value = 1470329917 }, .a1 = .{ .value = 2118092209 } }, .B2 = .{ .a0 = .{ .value = 542095828 }, .a1 = .{ .value = 1741302994 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 628241575 }, .a1 = .{ .value = 1004066745 } }, .B1 = .{ .a0 = .{ .value = 360103635 }, .a1 = .{ .value = 1703303724 } }, .B2 = .{ .a0 = .{ .value = 906492156 }, .a1 = .{ .value = 600271586 } } },
 };
 
 const verify_case_74_quotient_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 863322351 }, .a1 = .{ .value = 321169273 } }, .B1 = .{ .a0 = .{ .value = 922708157 }, .a1 = .{ .value = 809845934 } }, .B2 = .{ .a0 = .{ .value = 1460894272 }, .a1 = .{ .value = 1007473880 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 847813714 }, .a1 = .{ .value = 1237236207 } }, .B1 = .{ .a0 = .{ .value = 1100748846 }, .a1 = .{ .value = 1519559507 } }, .B2 = .{ .a0 = .{ .value = 612260598 }, .a1 = .{ .value = 888665755 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 806912051 }, .a1 = .{ .value = 1471110033 } }, .B1 = .{ .a0 = .{ .value = 351346989 }, .a1 = .{ .value = 1796854258 } }, .B2 = .{ .a0 = .{ .value = 281345603 }, .a1 = .{ .value = 1466668227 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 292671260 }, .a1 = .{ .value = 1440922850 } }, .B1 = .{ .a0 = .{ .value = 648602577 }, .a1 = .{ .value = 49353053 } }, .B2 = .{ .a0 = .{ .value = 358320609 }, .a1 = .{ .value = 1680764938 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 737096259 }, .a1 = .{ .value = 1511163940 } }, .B1 = .{ .a0 = .{ .value = 122737503 }, .a1 = .{ .value = 339042160 } }, .B2 = .{ .a0 = .{ .value = 990312813 }, .a1 = .{ .value = 943911214 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1669467287 }, .a1 = .{ .value = 480973045 } }, .B1 = .{ .a0 = .{ .value = 816976271 }, .a1 = .{ .value = 1910770006 } }, .B2 = .{ .a0 = .{ .value = 1601123535 }, .a1 = .{ .value = 707653301 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1613971874 }, .a1 = .{ .value = 1803853097 } }, .B1 = .{ .a0 = .{ .value = 1230184143 }, .a1 = .{ .value = 271719790 } }, .B2 = .{ .a0 = .{ .value = 235660328 }, .a1 = .{ .value = 1233309913 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } },
 };
 
@@ -15222,9 +15297,10 @@ const verify_case_74_proof = verifier.Proof{
 const verify_case_74_systems = verifier.Systems{ .vanishing = system_74, .logderivativesum = system_74_logderiv };
 
 pub const system_75_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-size1"
@@ -15298,7 +15374,7 @@ const system_75_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 1 }, .expressions = &system_75_module_0_expressions, .buckets = &system_75_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "modS"
-    .{ .size = .{ .static = 1 }, .expressions = &system_75_module_1_expressions, .buckets = &system_75_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 1 }, .expressions = &system_75_module_1_expressions, .buckets = &system_75_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "lk-size1"
@@ -15434,9 +15510,10 @@ const verify_case_75_proof = verifier.Proof{
 const verify_case_75_systems = verifier.Systems{ .vanishing = system_75, .logderivativesum = system_75_logderiv };
 
 pub const system_76_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-precomp"
@@ -15533,7 +15610,7 @@ const system_76_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 4 }, .expressions = &system_76_module_0_expressions, .buckets = &system_76_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_76_module_1_expressions, .buckets = &system_76_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_76_module_1_expressions, .buckets = &system_76_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "lk-precomp"
@@ -15560,18 +15637,18 @@ const verify_case_76_witness_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 747956757 }, .a1 = .{ .value = 1136423088 } }, .B1 = .{ .a0 = .{ .value = 523000910 }, .a1 = .{ .value = 2095793345 } }, .B2 = .{ .a0 = .{ .value = 1512212214 }, .a1 = .{ .value = 738536534 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1342932460 }, .a1 = .{ .value = 14718152 } }, .B1 = .{ .a0 = .{ .value = 249715679 }, .a1 = .{ .value = 719212583 } }, .B2 = .{ .a0 = .{ .value = 53623930 }, .a1 = .{ .value = 1966135629 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1462047242 }, .a1 = .{ .value = 1057690960 } }, .B1 = .{ .a0 = .{ .value = 466413926 }, .a1 = .{ .value = 2094586437 } }, .B2 = .{ .a0 = .{ .value = 624011363 }, .a1 = .{ .value = 1913292958 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 759504993 }, .a1 = .{ .value = 1843695936 } }, .B1 = .{ .a0 = .{ .value = 1407372221 }, .a1 = .{ .value = 861549499 } }, .B2 = .{ .a0 = .{ .value = 1966428910 }, .a1 = .{ .value = 1562575791 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 244478154 }, .a1 = .{ .value = 1251071642 } }, .B1 = .{ .a0 = .{ .value = 1682349689 }, .a1 = .{ .value = 1400167589 } }, .B2 = .{ .a0 = .{ .value = 1390308965 }, .a1 = .{ .value = 516158987 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 115474274 }, .a1 = .{ .value = 1875575129 } }, .B1 = .{ .a0 = .{ .value = 2123781071 }, .a1 = .{ .value = 1699605276 } }, .B2 = .{ .a0 = .{ .value = 1264781625 }, .a1 = .{ .value = 202034405 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1382749676 }, .a1 = .{ .value = 994283345 } }, .B1 = .{ .a0 = .{ .value = 1607705523 }, .a1 = .{ .value = 34913088 } }, .B2 = .{ .a0 = .{ .value = 618494219 }, .a1 = .{ .value = 1392169899 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 787773973 }, .a1 = .{ .value = 2115988281 } }, .B1 = .{ .a0 = .{ .value = 1880990754 }, .a1 = .{ .value = 1411493850 } }, .B2 = .{ .a0 = .{ .value = 2077082503 }, .a1 = .{ .value = 164570804 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1462047242 }, .a1 = .{ .value = 1057690960 } }, .B1 = .{ .a0 = .{ .value = 466413926 }, .a1 = .{ .value = 2094586437 } }, .B2 = .{ .a0 = .{ .value = 624011363 }, .a1 = .{ .value = 1913292958 } } },
 };
 
 const verify_case_76_quotient_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1407122070 }, .a1 = .{ .value = 1935588269 } }, .B1 = .{ .a0 = .{ .value = 738624351 }, .a1 = .{ .value = 1236129782 } }, .B2 = .{ .a0 = .{ .value = 491147320 }, .a1 = .{ .value = 1029013083 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1605349078 }, .a1 = .{ .value = 1727940588 } }, .B1 = .{ .a0 = .{ .value = 1333429626 }, .a1 = .{ .value = 1031506665 } }, .B2 = .{ .a0 = .{ .value = 1591176418 }, .a1 = .{ .value = 1010917441 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 309937505 }, .a1 = .{ .value = 277349711 } }, .B1 = .{ .a0 = .{ .value = 347512327 }, .a1 = .{ .value = 1550833202 } }, .B2 = .{ .a0 = .{ .value = 2044732893 }, .a1 = .{ .value = 1403032199 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 600761738 }, .a1 = .{ .value = 1374381117 } }, .B1 = .{ .a0 = .{ .value = 1484711180 }, .a1 = .{ .value = 1913156969 } }, .B2 = .{ .a0 = .{ .value = 526240250 }, .a1 = .{ .value = 1381664912 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 781742672 }, .a1 = .{ .value = 1522311559 } }, .B1 = .{ .a0 = .{ .value = 313206109 }, .a1 = .{ .value = 1750778481 } }, .B2 = .{ .a0 = .{ .value = 976932159 }, .a1 = .{ .value = 1594201022 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 967592596 }, .a1 = .{ .value = 873896067 } }, .B1 = .{ .a0 = .{ .value = 849174043 }, .a1 = .{ .value = 690101907 } }, .B2 = .{ .a0 = .{ .value = 1935224180 }, .a1 = .{ .value = 763119916 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1558646923 }, .a1 = .{ .value = 1033036425 } }, .B1 = .{ .a0 = .{ .value = 596994331 }, .a1 = .{ .value = 1081052451 } }, .B2 = .{ .a0 = .{ .value = 533116695 }, .a1 = .{ .value = 2040483355 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 525357355 }, .a1 = .{ .value = 402765845 } }, .B1 = .{ .a0 = .{ .value = 797276807 }, .a1 = .{ .value = 1099199768 } }, .B2 = .{ .a0 = .{ .value = 539530015 }, .a1 = .{ .value = 1119788992 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1820768928 }, .a1 = .{ .value = 1853356722 } }, .B1 = .{ .a0 = .{ .value = 1783194106 }, .a1 = .{ .value = 579873231 } }, .B2 = .{ .a0 = .{ .value = 85973540 }, .a1 = .{ .value = 727674234 } } },
 };
 
 const verify_case_76_module_sizes = [_]usize{};
@@ -15696,9 +15773,10 @@ const verify_case_76_proof = verifier.Proof{
 const verify_case_76_systems = verifier.Systems{ .vanishing = system_76, .logderivativesum = system_76_logderiv };
 
 pub const system_77_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-rep-s"
@@ -15795,7 +15873,7 @@ const system_77_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 4 }, .expressions = &system_77_module_0_expressions, .buckets = &system_77_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_77_module_1_expressions, .buckets = &system_77_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_77_module_1_expressions, .buckets = &system_77_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "lk-rep-s"
@@ -15822,8 +15900,8 @@ const verify_case_77_witness_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 408095546 }, .a1 = .{ .value = 863147637 } }, .B1 = .{ .a0 = .{ .value = 481534414 }, .a1 = .{ .value = 1399441247 } }, .B2 = .{ .a0 = .{ .value = 269421149 }, .a1 = .{ .value = 177918836 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 408095546 }, .a1 = .{ .value = 863147637 } }, .B1 = .{ .a0 = .{ .value = 481534414 }, .a1 = .{ .value = 1399441247 } }, .B2 = .{ .a0 = .{ .value = 269421149 }, .a1 = .{ .value = 177918836 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1938489750 }, .a1 = .{ .value = 503639950 } }, .B1 = .{ .a0 = .{ .value = 1042535177 }, .a1 = .{ .value = 1747906548 } }, .B2 = .{ .a0 = .{ .value = 243702195 }, .a1 = .{ .value = 1532047488 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 491192374 }, .a1 = .{ .value = 408813669 } }, .B1 = .{ .a0 = .{ .value = 293556016 }, .a1 = .{ .value = 1510326751 } }, .B2 = .{ .a0 = .{ .value = 169717504 }, .a1 = .{ .value = 1921085415 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 485711018 }, .a1 = .{ .value = 392106668 } }, .B1 = .{ .a0 = .{ .value = 1286027600 }, .a1 = .{ .value = 1139319015 } }, .B2 = .{ .a0 = .{ .value = 321181296 }, .a1 = .{ .value = 1706079892 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 803967211 }, .a1 = .{ .value = 1487171244 } }, .B1 = .{ .a0 = .{ .value = 1909892164 }, .a1 = .{ .value = 249562183 } }, .B2 = .{ .a0 = .{ .value = 1450783914 }, .a1 = .{ .value = 1960247108 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 844730540 }, .a1 = .{ .value = 1377339279 } }, .B1 = .{ .a0 = .{ .value = 430490459 }, .a1 = .{ .value = 575122962 } }, .B2 = .{ .a0 = .{ .value = 1438634604 }, .a1 = .{ .value = 541274376 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 10 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } },
 };
 
@@ -15831,8 +15909,8 @@ const verify_case_77_quotient_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 2130706432 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1547809158 }, .a1 = .{ .value = 1857007558 } }, .B1 = .{ .a0 = .{ .value = 1539634505 }, .a1 = .{ .value = 84052897 } }, .B2 = .{ .a0 = .{ .value = 1809638029 }, .a1 = .{ .value = 39329134 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1451522734 }, .a1 = .{ .value = 928494394 } }, .B1 = .{ .a0 = .{ .value = 1181222874 }, .a1 = .{ .value = 373182261 } }, .B2 = .{ .a0 = .{ .value = 461099132 }, .a1 = .{ .value = 206917970 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 776232532 }, .a1 = .{ .value = 1321049690 } }, .B1 = .{ .a0 = .{ .value = 1500910979 }, .a1 = .{ .value = 2114091894 } }, .B2 = .{ .a0 = .{ .value = 613016665 }, .a1 = .{ .value = 829468437 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1324268703 }, .a1 = .{ .value = 412658748 } }, .B1 = .{ .a0 = .{ .value = 370149501 }, .a1 = .{ .value = 1840666258 } }, .B2 = .{ .a0 = .{ .value = 2083550815 }, .a1 = .{ .value = 932312531 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1287375359 }, .a1 = .{ .value = 1228132978 } }, .B1 = .{ .a0 = .{ .value = 21525678 }, .a1 = .{ .value = 741098200 } }, .B2 = .{ .a0 = .{ .value = 1225120491 }, .a1 = .{ .value = 933846811 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } },
 };
 
@@ -15966,9 +16044,10 @@ const verify_case_77_proof = verifier.Proof{
 const verify_case_77_systems = verifier.Systems{ .vanishing = system_77, .logderivativesum = system_77_logderiv };
 
 pub const system_78_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-empty"
@@ -16069,7 +16148,7 @@ const system_78_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 4 }, .expressions = &system_78_module_0_expressions, .buckets = &system_78_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "modS"
-    .{ .size = .{ .static = 4 }, .expressions = &system_78_module_1_expressions, .buckets = &system_78_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_78_module_1_expressions, .buckets = &system_78_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "lk-empty"
@@ -16099,7 +16178,7 @@ const verify_case_78_witness_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 975171527 }, .a1 = .{ .value = 1733157254 } }, .B1 = .{ .a0 = .{ .value = 531291024 }, .a1 = .{ .value = 840677557 } }, .B2 = .{ .a0 = .{ .value = 492223821 }, .a1 = .{ .value = 1029602789 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 682245332 }, .a1 = .{ .value = 830106590 } }, .B1 = .{ .a0 = .{ .value = 804025212 }, .a1 = .{ .value = 1927746648 } }, .B2 = .{ .a0 = .{ .value = 1134134939 }, .a1 = .{ .value = 1401293482 } } },
 };
 
 const verify_case_78_quotient_claims = [_]ext.Ext{
@@ -16249,9 +16328,10 @@ const verify_case_78_proof = verifier.Proof{
 const verify_case_78_systems = verifier.Systems{ .vanishing = system_78, .logderivativesum = system_78_logderiv };
 
 pub const system_79_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "rc-basic"
@@ -16348,7 +16428,7 @@ const system_79_modules = [_]vanishing.Module{
     // module: "mod"
     .{ .size = .{ .static = 8 }, .expressions = &system_79_module_0_expressions, .buckets = &system_79_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "range-mod-b8"
-    .{ .size = .{ .static = 8 }, .expressions = &system_79_module_1_expressions, .buckets = &system_79_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 8 }, .expressions = &system_79_module_1_expressions, .buckets = &system_79_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "rc-basic"
@@ -16375,18 +16455,18 @@ const verify_case_79_witness_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 75028470 }, .a1 = .{ .value = 971262996 } }, .B1 = .{ .a0 = .{ .value = 1539619808 }, .a1 = .{ .value = 324455493 } }, .B2 = .{ .a0 = .{ .value = 218985818 }, .a1 = .{ .value = 224232763 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1181254898 }, .a1 = .{ .value = 1547046639 } }, .B1 = .{ .a0 = .{ .value = 27769123 }, .a1 = .{ .value = 1507213657 } }, .B2 = .{ .a0 = .{ .value = 1399413325 }, .a1 = .{ .value = 1643027999 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1946339562 }, .a1 = .{ .value = 427773430 } }, .B1 = .{ .a0 = .{ .value = 1337192920 }, .a1 = .{ .value = 1577962387 } }, .B2 = .{ .a0 = .{ .value = 1153446404 }, .a1 = .{ .value = 544280646 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1629411743 }, .a1 = .{ .value = 1043478447 } }, .B1 = .{ .a0 = .{ .value = 1069063748 }, .a1 = .{ .value = 802872581 } }, .B2 = .{ .a0 = .{ .value = 427691868 }, .a1 = .{ .value = 1483771804 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 437462172 }, .a1 = .{ .value = 1598233582 } }, .B1 = .{ .a0 = .{ .value = 1984214288 }, .a1 = .{ .value = 1428507109 } }, .B2 = .{ .a0 = .{ .value = 169199261 }, .a1 = .{ .value = 1671512674 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 2014865363 }, .a1 = .{ .value = 1293405830 } }, .B1 = .{ .a0 = .{ .value = 880910116 }, .a1 = .{ .value = 982136718 } }, .B2 = .{ .a0 = .{ .value = 940290054 }, .a1 = .{ .value = 916370584 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 2055677963 }, .a1 = .{ .value = 1159443437 } }, .B1 = .{ .a0 = .{ .value = 591086625 }, .a1 = .{ .value = 1806250940 } }, .B2 = .{ .a0 = .{ .value = 1911720615 }, .a1 = .{ .value = 1906473670 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1181254898 }, .a1 = .{ .value = 1547046639 } }, .B1 = .{ .a0 = .{ .value = 27769123 }, .a1 = .{ .value = 1507213657 } }, .B2 = .{ .a0 = .{ .value = 1399413325 }, .a1 = .{ .value = 1643027999 } } },
 };
 
 const verify_case_79_quotient_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 2005296590 }, .a1 = .{ .value = 1705503900 } }, .B1 = .{ .a0 = .{ .value = 652867940 }, .a1 = .{ .value = 552846555 } }, .B2 = .{ .a0 = .{ .value = 745577113 }, .a1 = .{ .value = 384486629 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 773622557 }, .a1 = .{ .value = 1239502591 } }, .B1 = .{ .a0 = .{ .value = 476166862 }, .a1 = .{ .value = 814617344 } }, .B2 = .{ .a0 = .{ .value = 58915012 }, .a1 = .{ .value = 1592991635 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 466501367 }, .a1 = .{ .value = 1781322478 } }, .B1 = .{ .a0 = .{ .value = 875824356 }, .a1 = .{ .value = 252254928 } }, .B2 = .{ .a0 = .{ .value = 1181994077 }, .a1 = .{ .value = 46995058 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 811011842 }, .a1 = .{ .value = 441596501 } }, .B1 = .{ .a0 = .{ .value = 1491246382 }, .a1 = .{ .value = 1547543091 } }, .B2 = .{ .a0 = .{ .value = 1741886468 }, .a1 = .{ .value = 586256162 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 665488426 }, .a1 = .{ .value = 1026702371 } }, .B1 = .{ .a0 = .{ .value = 1592355303 }, .a1 = .{ .value = 2062690766 } }, .B2 = .{ .a0 = .{ .value = 1889371412 }, .a1 = .{ .value = 1767537685 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1245719184 }, .a1 = .{ .value = 2095591535 } }, .B1 = .{ .a0 = .{ .value = 221718733 }, .a1 = .{ .value = 373375303 } }, .B2 = .{ .a0 = .{ .value = 225367510 }, .a1 = .{ .value = 1019402880 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 2118837746 }, .a1 = .{ .value = 532879281 } }, .B1 = .{ .a0 = .{ .value = 256806508 }, .a1 = .{ .value = 1736278799 } }, .B2 = .{ .a0 = .{ .value = 170956117 }, .a1 = .{ .value = 1475244329 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1357083876 }, .a1 = .{ .value = 891203842 } }, .B1 = .{ .a0 = .{ .value = 1654539571 }, .a1 = .{ .value = 1316089089 } }, .B2 = .{ .a0 = .{ .value = 2071791421 }, .a1 = .{ .value = 537714798 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1664205066 }, .a1 = .{ .value = 349383955 } }, .B1 = .{ .a0 = .{ .value = 1254882077 }, .a1 = .{ .value = 1878451505 } }, .B2 = .{ .a0 = .{ .value = 948712356 }, .a1 = .{ .value = 2083711375 } } },
 };
 
 const verify_case_79_module_sizes = [_]usize{};
@@ -16551,9 +16631,10 @@ const verify_case_79_proof = verifier.Proof{
 const verify_case_79_systems = verifier.Systems{ .vanishing = system_79, .logderivativesum = system_79_logderiv };
 
 pub const system_80_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "rc-shared"
@@ -16682,7 +16763,7 @@ const system_80_modules = [_]vanishing.Module{
     // module: "mod"
     .{ .size = .{ .static = 4 }, .expressions = &system_80_module_0_expressions, .buckets = &system_80_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "range-mod-b4"
-    .{ .size = .{ .static = 4 }, .expressions = &system_80_module_1_expressions, .buckets = &system_80_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_80_module_1_expressions, .buckets = &system_80_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "rc-shared"
@@ -16710,9 +16791,9 @@ const verify_case_80_witness_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 468832480 }, .a1 = .{ .value = 517889411 } }, .B1 = .{ .a0 = .{ .value = 191686362 }, .a1 = .{ .value = 1378370162 } }, .B2 = .{ .a0 = .{ .value = 579185460 }, .a1 = .{ .value = 702490793 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1221444742 }, .a1 = .{ .value = 1296662385 } }, .B1 = .{ .a0 = .{ .value = 1464858228 }, .a1 = .{ .value = 1722734828 } }, .B2 = .{ .a0 = .{ .value = 1510049853 }, .a1 = .{ .value = 348480335 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 2 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 2023475268 }, .a1 = .{ .value = 1072197382 } }, .B1 = .{ .a0 = .{ .value = 1528763661 }, .a1 = .{ .value = 1732411621 } }, .B2 = .{ .a0 = .{ .value = 1802481628 }, .a1 = .{ .value = 1927394511 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 411771204 }, .a1 = .{ .value = 857229659 } }, .B1 = .{ .a0 = .{ .value = 187167986 }, .a1 = .{ .value = 914093796 } }, .B2 = .{ .a0 = .{ .value = 2009687918 }, .a1 = .{ .value = 499217551 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1138073395 }, .a1 = .{ .value = 36369316 } }, .B1 = .{ .a0 = .{ .value = 1594690867 }, .a1 = .{ .value = 1061732076 } }, .B2 = .{ .a0 = .{ .value = 1723081475 }, .a1 = .{ .value = 608387656 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1028339472 }, .a1 = .{ .value = 508056278 } }, .B1 = .{ .a0 = .{ .value = 614339961 }, .a1 = .{ .value = 99637390 } }, .B2 = .{ .a0 = .{ .value = 1004100369 }, .a1 = .{ .value = 2115362224 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1817928288 }, .a1 = .{ .value = 1378535110 } }, .B1 = .{ .a0 = .{ .value = 725018017 }, .a1 = .{ .value = 1624818116 } }, .B2 = .{ .a0 = .{ .value = 429416538 }, .a1 = .{ .value = 1874440895 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1097096280 }, .a1 = .{ .value = 1085829745 } }, .B1 = .{ .a0 = .{ .value = 1439325470 }, .a1 = .{ .value = 900394577 } }, .B2 = .{ .a0 = .{ .value = 2121378422 }, .a1 = .{ .value = 549872678 } } },
 };
 
 const verify_case_80_quotient_claims = [_]ext.Ext{
@@ -16723,9 +16804,9 @@ const verify_case_80_quotient_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 570801335 }, .a1 = .{ .value = 917696402 } }, .B1 = .{ .a0 = .{ .value = 585346182 }, .a1 = .{ .value = 763516047 } }, .B2 = .{ .a0 = .{ .value = 452689339 }, .a1 = .{ .value = 153845623 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 295631090 }, .a1 = .{ .value = 19890594 } }, .B1 = .{ .a0 = .{ .value = 254633919 }, .a1 = .{ .value = 1296335671 } }, .B2 = .{ .a0 = .{ .value = 333641210 }, .a1 = .{ .value = 2108514763 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1302413433 }, .a1 = .{ .value = 2016413888 } }, .B1 = .{ .a0 = .{ .value = 709616463 }, .a1 = .{ .value = 1024432855 } }, .B2 = .{ .a0 = .{ .value = 247252944 }, .a1 = .{ .value = 490982151 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 899579171 }, .a1 = .{ .value = 830041781 } }, .B1 = .{ .a0 = .{ .value = 1720213950 }, .a1 = .{ .value = 1760707922 } }, .B2 = .{ .a0 = .{ .value = 340761692 }, .a1 = .{ .value = 1435160170 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 671892209 }, .a1 = .{ .value = 1171932700 } }, .B1 = .{ .a0 = .{ .value = 2071943693 }, .a1 = .{ .value = 493749140 } }, .B2 = .{ .a0 = .{ .value = 33676451 }, .a1 = .{ .value = 1973143118 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 172605130 }, .a1 = .{ .value = 1782704727 } }, .B1 = .{ .a0 = .{ .value = 1864086312 }, .a1 = .{ .value = 1571595855 } }, .B2 = .{ .a0 = .{ .value = 1916446497 }, .a1 = .{ .value = 756041956 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1966948766 }, .a1 = .{ .value = 1288974774 } }, .B1 = .{ .a0 = .{ .value = 863792899 }, .a1 = .{ .value = 219706738 } }, .B2 = .{ .a0 = .{ .value = 1304126985 }, .a1 = .{ .value = 1086074304 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 617173150 }, .a1 = .{ .value = 1258276331 } }, .B1 = .{ .a0 = .{ .value = 246952225 }, .a1 = .{ .value = 1799491171 } }, .B2 = .{ .a0 = .{ .value = 454081517 }, .a1 = .{ .value = 626811396 } } },
 };
 
 const verify_case_80_module_sizes = [_]usize{};
@@ -16890,9 +16971,10 @@ const verify_case_80_proof = verifier.Proof{
 const verify_case_80_systems = verifier.Systems{ .vanishing = system_80, .logderivativesum = system_80_logderiv };
 
 pub const system_81_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 3, 3 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 3, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 4 },
-    .total_round_coins = 7,
+    .total_round_coins = 5,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "rc-distinct"
@@ -17066,9 +17148,9 @@ const system_81_modules = [_]vanishing.Module{
     // module: "mod"
     .{ .size = .{ .static = 4 }, .expressions = &system_81_module_0_expressions, .buckets = &system_81_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 4 },
     // module: "range-mod-b4"
-    .{ .size = .{ .static = 4 }, .expressions = &system_81_module_1_expressions, .buckets = &system_81_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 5 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_81_module_1_expressions, .buckets = &system_81_module_1_buckets, .witness_claim_offset = 4, .merge_coin_index = 2, .eval_coin_index = 4 },
     // module: "range-mod-b8"
-    .{ .size = .{ .static = 8 }, .expressions = &system_81_module_2_expressions, .buckets = &system_81_module_2_buckets, .witness_claim_offset = 8, .merge_coin_index = 3, .eval_coin_index = 6 },
+    .{ .size = .{ .static = 8 }, .expressions = &system_81_module_2_expressions, .buckets = &system_81_module_2_buckets, .witness_claim_offset = 8, .merge_coin_index = 3, .eval_coin_index = 4 },
 };
 
 // system: "rc-distinct"
@@ -17097,13 +17179,13 @@ const verify_case_81_witness_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1299580645 }, .a1 = .{ .value = 184356293 } }, .B1 = .{ .a0 = .{ .value = 1414936080 }, .a1 = .{ .value = 1151453302 } }, .B2 = .{ .a0 = .{ .value = 2010877485 }, .a1 = .{ .value = 1251566224 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1427677275 }, .a1 = .{ .value = 936016467 } }, .B1 = .{ .a0 = .{ .value = 1258072022 }, .a1 = .{ .value = 770860960 } }, .B2 = .{ .a0 = .{ .value = 1396637815 }, .a1 = .{ .value = 1416401107 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 2055497957 }, .a1 = .{ .value = 1417382836 } }, .B1 = .{ .a0 = .{ .value = 1825440439 }, .a1 = .{ .value = 77247690 } }, .B2 = .{ .a0 = .{ .value = 1269859845 }, .a1 = .{ .value = 1006412540 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1431115921 }, .a1 = .{ .value = 604031129 } }, .B1 = .{ .a0 = .{ .value = 535421611 }, .a1 = .{ .value = 828797949 } }, .B2 = .{ .a0 = .{ .value = 481384922 }, .a1 = .{ .value = 274811474 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 337753889 }, .a1 = .{ .value = 1303933505 } }, .B1 = .{ .a0 = .{ .value = 1862422136 }, .a1 = .{ .value = 1257816437 } }, .B2 = .{ .a0 = .{ .value = 66223985 }, .a1 = .{ .value = 606696458 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1451215226 }, .a1 = .{ .value = 1404981181 } }, .B1 = .{ .a0 = .{ .value = 836230746 }, .a1 = .{ .value = 1432140939 } }, .B2 = .{ .a0 = .{ .value = 1244450660 }, .a1 = .{ .value = 802466280 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 708370855 }, .a1 = .{ .value = 1351744996 } }, .B1 = .{ .a0 = .{ .value = 197871624 }, .a1 = .{ .value = 1480785597 } }, .B2 = .{ .a0 = .{ .value = 1889106090 }, .a1 = .{ .value = 2052373797 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 347156790 }, .a1 = .{ .value = 170687102 } }, .B1 = .{ .a0 = .{ .value = 1162216295 }, .a1 = .{ .value = 1017677109 } }, .B2 = .{ .a0 = .{ .value = 947584570 }, .a1 = .{ .value = 903892613 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 666760969 }, .a1 = .{ .value = 199368945 } }, .B1 = .{ .a0 = .{ .value = 972051260 }, .a1 = .{ .value = 1004441138 } }, .B2 = .{ .a0 = .{ .value = 729538506 }, .a1 = .{ .value = 1393469704 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 789318866 }, .a1 = .{ .value = 1044804699 } }, .B1 = .{ .a0 = .{ .value = 741712057 }, .a1 = .{ .value = 1777022064 } }, .B2 = .{ .a0 = .{ .value = 1199344989 }, .a1 = .{ .value = 2078091978 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1571031190 }, .a1 = .{ .value = 97711181 } }, .B1 = .{ .a0 = .{ .value = 1077630824 }, .a1 = .{ .value = 636614210 } }, .B2 = .{ .a0 = .{ .value = 1353853424 }, .a1 = .{ .value = 1807099083 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 940519169 }, .a1 = .{ .value = 151711791 } }, .B1 = .{ .a0 = .{ .value = 1430760184 }, .a1 = .{ .value = 309154805 } }, .B2 = .{ .a0 = .{ .value = 1250200225 }, .a1 = .{ .value = 986451605 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1262352130 }, .a1 = .{ .value = 1139476012 } }, .B1 = .{ .a0 = .{ .value = 1936552663 }, .a1 = .{ .value = 1503583996 } }, .B2 = .{ .a0 = .{ .value = 498209942 }, .a1 = .{ .value = 11582248 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1427795655 }, .a1 = .{ .value = 1228340199 } }, .B1 = .{ .a0 = .{ .value = 1290240338 }, .a1 = .{ .value = 286389896 } }, .B2 = .{ .a0 = .{ .value = 770755341 }, .a1 = .{ .value = 1676141216 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1062027 }, .a1 = .{ .value = 1679326769 } }, .B1 = .{ .a0 = .{ .value = 2012326654 }, .a1 = .{ .value = 633484613 } }, .B2 = .{ .a0 = .{ .value = 150094489 }, .a1 = .{ .value = 2009410477 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1602964307 }, .a1 = .{ .value = 65080764 } }, .B1 = .{ .a0 = .{ .value = 1771436336 }, .a1 = .{ .value = 463689271 } }, .B2 = .{ .a0 = .{ .value = 898112106 }, .a1 = .{ .value = 1303338789 } } },
 };
 
 const verify_case_81_quotient_claims = [_]ext.Ext{
@@ -17114,12 +17196,12 @@ const verify_case_81_quotient_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 390467078 }, .a1 = .{ .value = 1459109947 } }, .B1 = .{ .a0 = .{ .value = 714541115 }, .a1 = .{ .value = 1761458018 } }, .B2 = .{ .a0 = .{ .value = 641446714 }, .a1 = .{ .value = 1699550623 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 760331573 }, .a1 = .{ .value = 1496704056 } }, .B1 = .{ .a0 = .{ .value = 1892959767 }, .a1 = .{ .value = 557120253 } }, .B2 = .{ .a0 = .{ .value = 1229828778 }, .a1 = .{ .value = 1991487513 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1739265813 }, .a1 = .{ .value = 834665372 } }, .B1 = .{ .a0 = .{ .value = 86255503 }, .a1 = .{ .value = 1480078773 } }, .B2 = .{ .a0 = .{ .value = 878922467 }, .a1 = .{ .value = 1341389983 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 978205450 }, .a1 = .{ .value = 1105535305 } }, .B1 = .{ .a0 = .{ .value = 947866530 }, .a1 = .{ .value = 989464481 } }, .B2 = .{ .a0 = .{ .value = 1010071229 }, .a1 = .{ .value = 982363007 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 63503180 }, .a1 = .{ .value = 883030842 } }, .B1 = .{ .a0 = .{ .value = 1708330256 }, .a1 = .{ .value = 392519934 } }, .B2 = .{ .a0 = .{ .value = 233837983 }, .a1 = .{ .value = 157530936 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 2093357426 }, .a1 = .{ .value = 757660102 } }, .B1 = .{ .a0 = .{ .value = 664070884 }, .a1 = .{ .value = 1147404957 } }, .B2 = .{ .a0 = .{ .value = 1011662298 }, .a1 = .{ .value = 1085073484 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1991589814 }, .a1 = .{ .value = 1514047401 } }, .B1 = .{ .a0 = .{ .value = 1597132770 }, .a1 = .{ .value = 1715249012 } }, .B2 = .{ .a0 = .{ .value = 1718877437 }, .a1 = .{ .value = 1974802066 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1653387742 }, .a1 = .{ .value = 96049752 } }, .B1 = .{ .a0 = .{ .value = 151738217 }, .a1 = .{ .value = 1783613323 } }, .B2 = .{ .a0 = .{ .value = 511417920 }, .a1 = .{ .value = 1549429534 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 993925901 }, .a1 = .{ .value = 2128280630 } }, .B1 = .{ .a0 = .{ .value = 286594380 }, .a1 = .{ .value = 1244830015 } }, .B2 = .{ .a0 = .{ .value = 654004 }, .a1 = .{ .value = 1685313383 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 866265673 }, .a1 = .{ .value = 967084261 } }, .B1 = .{ .a0 = .{ .value = 2089213399 }, .a1 = .{ .value = 1151540252 } }, .B2 = .{ .a0 = .{ .value = 595426211 }, .a1 = .{ .value = 1874341553 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 754128492 }, .a1 = .{ .value = 1893729030 } }, .B1 = .{ .a0 = .{ .value = 1588155467 }, .a1 = .{ .value = 520389017 } }, .B2 = .{ .a0 = .{ .value = 1788468883 }, .a1 = .{ .value = 1501718759 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1470137976 }, .a1 = .{ .value = 1181359075 } }, .B1 = .{ .a0 = .{ .value = 211130586 }, .a1 = .{ .value = 1173504205 } }, .B2 = .{ .a0 = .{ .value = 1978513108 }, .a1 = .{ .value = 946370093 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1330598197 }, .a1 = .{ .value = 326418115 } }, .B1 = .{ .a0 = .{ .value = 2081576555 }, .a1 = .{ .value = 278837243 } }, .B2 = .{ .a0 = .{ .value = 501635344 }, .a1 = .{ .value = 1490969318 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 139503546 }, .a1 = .{ .value = 2044460229 } }, .B1 = .{ .a0 = .{ .value = 523907870 }, .a1 = .{ .value = 909548066 } }, .B2 = .{ .a0 = .{ .value = 1515727532 }, .a1 = .{ .value = 2079804619 } } },
 };
 
 const verify_case_81_module_sizes = [_]usize{};
@@ -17345,9 +17427,10 @@ const verify_case_81_proof = verifier.Proof{
 const verify_case_81_systems = verifier.Systems{ .vanishing = system_81, .logderivativesum = system_81_logderiv };
 
 pub const system_82_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "rc-pow2"
@@ -17444,7 +17527,7 @@ const system_82_modules = [_]vanishing.Module{
     // module: "mod"
     .{ .size = .{ .static = 4 }, .expressions = &system_82_module_0_expressions, .buckets = &system_82_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "range-mod-b16"
-    .{ .size = .{ .static = 16 }, .expressions = &system_82_module_1_expressions, .buckets = &system_82_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 16 }, .expressions = &system_82_module_1_expressions, .buckets = &system_82_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "rc-pow2"
@@ -17470,19 +17553,19 @@ const verify_case_82_witness_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 575081530 }, .a1 = .{ .value = 2061826698 } }, .B1 = .{ .a0 = .{ .value = 1289832144 }, .a1 = .{ .value = 1318091127 } }, .B2 = .{ .a0 = .{ .value = 332340602 }, .a1 = .{ .value = 231394720 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1859662499 }, .a1 = .{ .value = 945314107 } }, .B1 = .{ .a0 = .{ .value = 1901703378 }, .a1 = .{ .value = 216594617 } }, .B2 = .{ .a0 = .{ .value = 343356294 }, .a1 = .{ .value = 1278875065 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 2010179487 }, .a1 = .{ .value = 841833299 } }, .B1 = .{ .a0 = .{ .value = 1556297254 }, .a1 = .{ .value = 801325578 } }, .B2 = .{ .a0 = .{ .value = 562565928 }, .a1 = .{ .value = 65884881 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1173675847 }, .a1 = .{ .value = 402418219 } }, .B1 = .{ .a0 = .{ .value = 2118505814 }, .a1 = .{ .value = 2020447364 } }, .B2 = .{ .a0 = .{ .value = 932007661 }, .a1 = .{ .value = 1275165056 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 132342509 }, .a1 = .{ .value = 1469552389 } }, .B1 = .{ .a0 = .{ .value = 1000925594 }, .a1 = .{ .value = 2041142079 } }, .B2 = .{ .a0 = .{ .value = 366512746 }, .a1 = .{ .value = 577734346 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 59738860 }, .a1 = .{ .value = 1068094442 } }, .B1 = .{ .a0 = .{ .value = 629246428 }, .a1 = .{ .value = 249983977 } }, .B2 = .{ .a0 = .{ .value = 1737713497 }, .a1 = .{ .value = 1045082973 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 419740341 }, .a1 = .{ .value = 2035545680 } }, .B1 = .{ .a0 = .{ .value = 1856662201 }, .a1 = .{ .value = 27852440 } }, .B2 = .{ .a0 = .{ .value = 2126422155 }, .a1 = .{ .value = 2012470393 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 781807532 }, .a1 = .{ .value = 399124945 } }, .B1 = .{ .a0 = .{ .value = 426499541 }, .a1 = .{ .value = 1626671520 } }, .B2 = .{ .a0 = .{ .value = 775717403 }, .a1 = .{ .value = 1290705460 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 982943914 }, .a1 = .{ .value = 730065837 } }, .B1 = .{ .a0 = .{ .value = 1383372042 }, .a1 = .{ .value = 824060296 } }, .B2 = .{ .a0 = .{ .value = 1057972127 }, .a1 = .{ .value = 2044632206 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1278545189 }, .a1 = .{ .value = 1090724115 } }, .B1 = .{ .a0 = .{ .value = 1623935279 }, .a1 = .{ .value = 569457721 } }, .B2 = .{ .a0 = .{ .value = 754111666 }, .a1 = .{ .value = 1006614774 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 166738346 }, .a1 = .{ .value = 2038586463 } }, .B1 = .{ .a0 = .{ .value = 1200649997 }, .a1 = .{ .value = 192704283 } }, .B2 = .{ .a0 = .{ .value = 1779135585 }, .a1 = .{ .value = 910794973 } } },
 };
 
 const verify_case_82_quotient_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 530366180 }, .a1 = .{ .value = 1060770584 } }, .B1 = .{ .a0 = .{ .value = 128589338 }, .a1 = .{ .value = 103613253 } }, .B2 = .{ .a0 = .{ .value = 370515526 }, .a1 = .{ .value = 2062158585 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1499563346 }, .a1 = .{ .value = 2004861455 } }, .B1 = .{ .a0 = .{ .value = 1926312219 }, .a1 = .{ .value = 796540830 } }, .B2 = .{ .a0 = .{ .value = 799164852 }, .a1 = .{ .value = 486099166 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1811136603 }, .a1 = .{ .value = 1865652148 } }, .B1 = .{ .a0 = .{ .value = 270048960 }, .a1 = .{ .value = 1790336554 } }, .B2 = .{ .a0 = .{ .value = 832205432 }, .a1 = .{ .value = 372787246 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 951561163 }, .a1 = .{ .value = 1460170347 } }, .B1 = .{ .a0 = .{ .value = 231167548 }, .a1 = .{ .value = 1995233772 } }, .B2 = .{ .a0 = .{ .value = 355643726 }, .a1 = .{ .value = 2122687249 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1690333780 }, .a1 = .{ .value = 282790608 } }, .B1 = .{ .a0 = .{ .value = 1672706837 }, .a1 = .{ .value = 568042364 } }, .B2 = .{ .a0 = .{ .value = 1622250150 }, .a1 = .{ .value = 1194986662 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 331272846 }, .a1 = .{ .value = 3087388 } }, .B1 = .{ .a0 = .{ .value = 1519769352 }, .a1 = .{ .value = 1450905001 } }, .B2 = .{ .a0 = .{ .value = 1250427377 }, .a1 = .{ .value = 1336002961 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 745684866 }, .a1 = .{ .value = 559822169 } }, .B1 = .{ .a0 = .{ .value = 461033560 }, .a1 = .{ .value = 402303881 } }, .B2 = .{ .a0 = .{ .value = 414648906 }, .a1 = .{ .value = 574108402 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 19834434 }, .a1 = .{ .value = 1339296723 } }, .B1 = .{ .a0 = .{ .value = 427136893 }, .a1 = .{ .value = 354325284 } }, .B2 = .{ .a0 = .{ .value = 1262729061 }, .a1 = .{ .value = 1467443103 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1646746225 }, .a1 = .{ .value = 738159431 } }, .B1 = .{ .a0 = .{ .value = 1543983872 }, .a1 = .{ .value = 1421825235 } }, .B2 = .{ .a0 = .{ .value = 1379143007 }, .a1 = .{ .value = 671845701 } } },
 };
 
 const verify_case_82_module_sizes = [_]usize{};
@@ -17667,9 +17750,10 @@ const verify_case_82_proof = verifier.Proof{
 const verify_case_82_systems = verifier.Systems{ .vanishing = system_82, .logderivativesum = system_82_logderiv };
 
 pub const system_83_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "rc-bound1"
@@ -17754,7 +17838,7 @@ const system_83_modules = [_]vanishing.Module{
     // module: "mod"
     .{ .size = .{ .static = 4 }, .expressions = &system_83_module_0_expressions, .buckets = &system_83_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "range-mod-b1"
-    .{ .size = .{ .static = 1 }, .expressions = &system_83_module_1_expressions, .buckets = &system_83_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 1 }, .expressions = &system_83_module_1_expressions, .buckets = &system_83_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "rc-bound1"
@@ -17901,9 +17985,10 @@ const verify_case_83_proof = verifier.Proof{
 const verify_case_83_systems = verifier.Systems{ .vanishing = system_83, .logderivativesum = system_83_logderiv };
 
 pub const system_84_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 3, 3 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 3, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 4 },
-    .total_round_coins = 7,
+    .total_round_coins = 5,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "rc-cross-mod"
@@ -18043,9 +18128,9 @@ const system_84_modules = [_]vanishing.Module{
     // module: "modA"
     .{ .size = .{ .static = 4 }, .expressions = &system_84_module_0_expressions, .buckets = &system_84_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 4 },
     // module: "modB"
-    .{ .size = .{ .static = 4 }, .expressions = &system_84_module_1_expressions, .buckets = &system_84_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 5 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_84_module_1_expressions, .buckets = &system_84_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 4 },
     // module: "range-mod-b4"
-    .{ .size = .{ .static = 4 }, .expressions = &system_84_module_2_expressions, .buckets = &system_84_module_2_buckets, .witness_claim_offset = 6, .merge_coin_index = 3, .eval_coin_index = 6 },
+    .{ .size = .{ .static = 4 }, .expressions = &system_84_module_2_expressions, .buckets = &system_84_module_2_buckets, .witness_claim_offset = 6, .merge_coin_index = 3, .eval_coin_index = 4 },
 };
 
 // system: "rc-cross-mod"
@@ -18072,25 +18157,25 @@ const verify_case_84_witness_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 2053449688 }, .a1 = .{ .value = 2042565553 } }, .B1 = .{ .a0 = .{ .value = 532592093 }, .a1 = .{ .value = 103425601 } }, .B2 = .{ .a0 = .{ .value = 1740096634 }, .a1 = .{ .value = 732178276 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1143596815 }, .a1 = .{ .value = 991683464 } }, .B1 = .{ .a0 = .{ .value = 601348465 }, .a1 = .{ .value = 1987645444 } }, .B2 = .{ .a0 = .{ .value = 1254842150 }, .a1 = .{ .value = 1007056813 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1596693800 }, .a1 = .{ .value = 1607216485 } }, .B1 = .{ .a0 = .{ .value = 382981907 }, .a1 = .{ .value = 648956010 } }, .B2 = .{ .a0 = .{ .value = 1946800910 }, .a1 = .{ .value = 1060844675 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 518935676 }, .a1 = .{ .value = 945526412 } }, .B1 = .{ .a0 = .{ .value = 86592935 }, .a1 = .{ .value = 541369858 } }, .B2 = .{ .a0 = .{ .value = 1192564221 }, .a1 = .{ .value = 518366757 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 803060529 }, .a1 = .{ .value = 1568076850 } }, .B1 = .{ .a0 = .{ .value = 1867172440 }, .a1 = .{ .value = 1228880982 } }, .B2 = .{ .a0 = .{ .value = 439478500 }, .a1 = .{ .value = 2065162683 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 641902059 }, .a1 = .{ .value = 474538943 } }, .B1 = .{ .a0 = .{ .value = 867661738 }, .a1 = .{ .value = 721181629 } }, .B2 = .{ .a0 = .{ .value = 715684361 }, .a1 = .{ .value = 314131403 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 951114763 }, .a1 = .{ .value = 1000208997 } }, .B1 = .{ .a0 = .{ .value = 742998321 }, .a1 = .{ .value = 1076916407 } }, .B2 = .{ .a0 = .{ .value = 2041854765 }, .a1 = .{ .value = 690558235 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1313995746 }, .a1 = .{ .value = 1175754554 } }, .B1 = .{ .a0 = .{ .value = 1971920488 }, .a1 = .{ .value = 878298486 } }, .B2 = .{ .a0 = .{ .value = 606032302 }, .a1 = .{ .value = 375541179 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 534012636 }, .a1 = .{ .value = 523489948 } }, .B1 = .{ .a0 = .{ .value = 1747724526 }, .a1 = .{ .value = 1481750423 } }, .B2 = .{ .a0 = .{ .value = 183905523 }, .a1 = .{ .value = 1069861758 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 2 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 110222939 }, .a1 = .{ .value = 404907690 } }, .B1 = .{ .a0 = .{ .value = 572075182 }, .a1 = .{ .value = 1494506095 } }, .B2 = .{ .a0 = .{ .value = 1841547703 }, .a1 = .{ .value = 957782406 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1447571313 }, .a1 = .{ .value = 162051883 } }, .B1 = .{ .a0 = .{ .value = 1662846710 }, .a1 = .{ .value = 1582649881 } }, .B2 = .{ .a0 = .{ .value = 1521424347 }, .a1 = .{ .value = 483169784 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1674257201 }, .a1 = .{ .value = 1946316935 } }, .B1 = .{ .a0 = .{ .value = 1053297107 }, .a1 = .{ .value = 1662187947 } }, .B2 = .{ .a0 = .{ .value = 1879819051 }, .a1 = .{ .value = 815188650 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 154513490 }, .a1 = .{ .value = 176281760 } }, .B1 = .{ .a0 = .{ .value = 1065522247 }, .a1 = .{ .value = 1923855231 } }, .B2 = .{ .a0 = .{ .value = 781219598 }, .a1 = .{ .value = 666349881 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1974219236 }, .a1 = .{ .value = 147339505 } }, .B1 = .{ .a0 = .{ .value = 928009503 }, .a1 = .{ .value = 286121978 } }, .B2 = .{ .a0 = .{ .value = 1751728566 }, .a1 = .{ .value = 116592807 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1596693800 }, .a1 = .{ .value = 1607216485 } }, .B1 = .{ .a0 = .{ .value = 382981907 }, .a1 = .{ .value = 648956010 } }, .B2 = .{ .a0 = .{ .value = 1946800910 }, .a1 = .{ .value = 1060844675 } } },
 };
 
 const verify_case_84_quotient_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 170490566 }, .a1 = .{ .value = 201220495 } }, .B1 = .{ .a0 = .{ .value = 1673147622 }, .a1 = .{ .value = 794082178 } }, .B2 = .{ .a0 = .{ .value = 1474259531 }, .a1 = .{ .value = 1799516589 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 544469659 }, .a1 = .{ .value = 797999777 } }, .B1 = .{ .a0 = .{ .value = 607793667 }, .a1 = .{ .value = 754836011 } }, .B2 = .{ .a0 = .{ .value = 1980462368 }, .a1 = .{ .value = 520561065 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 639989929 }, .a1 = .{ .value = 590782789 } }, .B1 = .{ .a0 = .{ .value = 1835801222 }, .a1 = .{ .value = 164776783 } }, .B2 = .{ .a0 = .{ .value = 815922830 }, .a1 = .{ .value = 1135338496 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1993914165 }, .a1 = .{ .value = 584001309 } }, .B1 = .{ .a0 = .{ .value = 36675378 }, .a1 = .{ .value = 250875001 } }, .B2 = .{ .a0 = .{ .value = 983958028 }, .a1 = .{ .value = 793079439 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1367852639 }, .a1 = .{ .value = 508617088 } }, .B1 = .{ .a0 = .{ .value = 1929749285 }, .a1 = .{ .value = 1964354195 } }, .B2 = .{ .a0 = .{ .value = 436326277 }, .a1 = .{ .value = 1375160452 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1714615074 }, .a1 = .{ .value = 1734104679 } }, .B1 = .{ .a0 = .{ .value = 295590482 }, .a1 = .{ .value = 182016292 } }, .B2 = .{ .a0 = .{ .value = 1269898110 }, .a1 = .{ .value = 747805824 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 480393400 }, .a1 = .{ .value = 890644856 } }, .B1 = .{ .a0 = .{ .value = 1152398266 }, .a1 = .{ .value = 2060789889 } }, .B2 = .{ .a0 = .{ .value = 1664340516 }, .a1 = .{ .value = 324956897 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1678729790 }, .a1 = .{ .value = 2072780340 } }, .B1 = .{ .a0 = .{ .value = 275791614 }, .a1 = .{ .value = 1339377046 } }, .B2 = .{ .a0 = .{ .value = 927413133 }, .a1 = .{ .value = 944967283 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1929205086 }, .a1 = .{ .value = 1047307947 } }, .B1 = .{ .a0 = .{ .value = 1487261904 }, .a1 = .{ .value = 539759269 } }, .B2 = .{ .a0 = .{ .value = 1167491237 }, .a1 = .{ .value = 968717317 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 2092075597 }, .a1 = .{ .value = 1609514617 } }, .B1 = .{ .a0 = .{ .value = 775331813 }, .a1 = .{ .value = 1814905316 } }, .B2 = .{ .a0 = .{ .value = 538310059 }, .a1 = .{ .value = 696614942 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 2038937511 }, .a1 = .{ .value = 600807980 } }, .B1 = .{ .a0 = .{ .value = 661674417 }, .a1 = .{ .value = 1380950282 } }, .B2 = .{ .a0 = .{ .value = 235788106 }, .a1 = .{ .value = 1055553855 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 767855043 }, .a1 = .{ .value = 1575551005 } }, .B1 = .{ .a0 = .{ .value = 1044221811 }, .a1 = .{ .value = 1296018021 } }, .B2 = .{ .a0 = .{ .value = 1263373733 }, .a1 = .{ .value = 1572831108 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 289020851 }, .a1 = .{ .value = 567266195 } }, .B1 = .{ .a0 = .{ .value = 964913838 }, .a1 = .{ .value = 1998478521 } }, .B2 = .{ .a0 = .{ .value = 241011346 }, .a1 = .{ .value = 905033566 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1041767115 }, .a1 = .{ .value = 534706879 } }, .B1 = .{ .a0 = .{ .value = 915119099 }, .a1 = .{ .value = 621034411 } }, .B2 = .{ .a0 = .{ .value = 300488130 }, .a1 = .{ .value = 1089584303 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 850726575 }, .a1 = .{ .value = 949140855 } }, .B1 = .{ .a0 = .{ .value = 589810422 }, .a1 = .{ .value = 1801152867 } }, .B2 = .{ .a0 = .{ .value = 498860773 }, .a1 = .{ .value = 1990735874 } } },
 };
 
 const verify_case_84_module_sizes = [_]usize{};
@@ -18256,9 +18341,10 @@ const verify_case_84_proof = verifier.Proof{
 const verify_case_84_systems = verifier.Systems{ .vanishing = system_84, .logderivativesum = system_84_logderiv };
 
 pub const system_85_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "rc-large"
@@ -18355,7 +18441,7 @@ const system_85_modules = [_]vanishing.Module{
     // module: "mod"
     .{ .size = .{ .static = 8 }, .expressions = &system_85_module_0_expressions, .buckets = &system_85_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "range-mod-b128"
-    .{ .size = .{ .static = 128 }, .expressions = &system_85_module_1_expressions, .buckets = &system_85_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 128 }, .expressions = &system_85_module_1_expressions, .buckets = &system_85_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "rc-large"
@@ -18381,19 +18467,19 @@ const verify_case_85_witness_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1739473197 }, .a1 = .{ .value = 8808923 } }, .B1 = .{ .a0 = .{ .value = 194665385 }, .a1 = .{ .value = 859976886 } }, .B2 = .{ .a0 = .{ .value = 1408951739 }, .a1 = .{ .value = 1841648938 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 679463455 }, .a1 = .{ .value = 868506292 } }, .B1 = .{ .a0 = .{ .value = 739998921 }, .a1 = .{ .value = 414587939 } }, .B2 = .{ .a0 = .{ .value = 1319795333 }, .a1 = .{ .value = 376260247 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1185089627 }, .a1 = .{ .value = 2041707273 } }, .B1 = .{ .a0 = .{ .value = 1077607073 }, .a1 = .{ .value = 1719530961 } }, .B2 = .{ .a0 = .{ .value = 1419853650 }, .a1 = .{ .value = 1487273836 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1542207697 }, .a1 = .{ .value = 142481817 } }, .B1 = .{ .a0 = .{ .value = 439228287 }, .a1 = .{ .value = 1902852509 } }, .B2 = .{ .a0 = .{ .value = 236091837 }, .a1 = .{ .value = 1444906422 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 380058639 }, .a1 = .{ .value = 1211709914 } }, .B1 = .{ .a0 = .{ .value = 608239775 }, .a1 = .{ .value = 326450551 } }, .B2 = .{ .a0 = .{ .value = 1262509204 }, .a1 = .{ .value = 1560319677 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1413327959 }, .a1 = .{ .value = 1455572231 } }, .B1 = .{ .a0 = .{ .value = 1885938662 }, .a1 = .{ .value = 121317611 } }, .B2 = .{ .a0 = .{ .value = 1273040790 }, .a1 = .{ .value = 755838963 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 807875093 }, .a1 = .{ .value = 660025499 } }, .B1 = .{ .a0 = .{ .value = 1169912013 }, .a1 = .{ .value = 744681833 } }, .B2 = .{ .a0 = .{ .value = 354420187 }, .a1 = .{ .value = 15601144 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1442615539 }, .a1 = .{ .value = 218199147 } }, .B1 = .{ .a0 = .{ .value = 1526300131 }, .a1 = .{ .value = 282009221 } }, .B2 = .{ .a0 = .{ .value = 2042049070 }, .a1 = .{ .value = 1426332417 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 389015587 }, .a1 = .{ .value = 1881539991 } }, .B1 = .{ .a0 = .{ .value = 1857772691 }, .a1 = .{ .value = 862232901 } }, .B2 = .{ .a0 = .{ .value = 965031610 }, .a1 = .{ .value = 1565113900 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1734431831 }, .a1 = .{ .value = 416816246 } }, .B1 = .{ .a0 = .{ .value = 1882136420 }, .a1 = .{ .value = 1659783044 } }, .B2 = .{ .a0 = .{ .value = 219091270 }, .a1 = .{ .value = 699254643 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1770881993 }, .a1 = .{ .value = 847021624 } }, .B1 = .{ .a0 = .{ .value = 1736512252 }, .a1 = .{ .value = 1676607990 } }, .B2 = .{ .a0 = .{ .value = 2026916630 }, .a1 = .{ .value = 659952403 } } },
 };
 
 const verify_case_85_quotient_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1199926003 }, .a1 = .{ .value = 750680699 } }, .B1 = .{ .a0 = .{ .value = 2114416582 }, .a1 = .{ .value = 868280022 } }, .B2 = .{ .a0 = .{ .value = 1936400621 }, .a1 = .{ .value = 1336940628 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1050097375 }, .a1 = .{ .value = 667545953 } }, .B1 = .{ .a0 = .{ .value = 474470826 }, .a1 = .{ .value = 240219647 } }, .B2 = .{ .a0 = .{ .value = 1822788381 }, .a1 = .{ .value = 773016138 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1480467139 }, .a1 = .{ .value = 1272835257 } }, .B1 = .{ .a0 = .{ .value = 1290510402 }, .a1 = .{ .value = 1036279540 } }, .B2 = .{ .a0 = .{ .value = 2108621557 }, .a1 = .{ .value = 1803157882 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1365111635 }, .a1 = .{ .value = 57516534 } }, .B1 = .{ .a0 = .{ .value = 1773274169 }, .a1 = .{ .value = 1446563580 } }, .B2 = .{ .a0 = .{ .value = 1342630358 }, .a1 = .{ .value = 513003323 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 897869630 }, .a1 = .{ .value = 1691678107 } }, .B1 = .{ .a0 = .{ .value = 295385951 }, .a1 = .{ .value = 1057956263 } }, .B2 = .{ .a0 = .{ .value = 587405826 }, .a1 = .{ .value = 607543899 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1468395212 }, .a1 = .{ .value = 1777647123 } }, .B1 = .{ .a0 = .{ .value = 939616632 }, .a1 = .{ .value = 716334285 } }, .B2 = .{ .a0 = .{ .value = 742490008 }, .a1 = .{ .value = 930164697 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 770541322 }, .a1 = .{ .value = 738538852 } }, .B1 = .{ .a0 = .{ .value = 2053062054 }, .a1 = .{ .value = 158300239 } }, .B2 = .{ .a0 = .{ .value = 29800720 }, .a1 = .{ .value = 691207628 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 2063358879 }, .a1 = .{ .value = 949448488 } }, .B1 = .{ .a0 = .{ .value = 1459917243 }, .a1 = .{ .value = 1917113381 } }, .B2 = .{ .a0 = .{ .value = 95600747 }, .a1 = .{ .value = 729144411 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 908650391 }, .a1 = .{ .value = 175230914 } }, .B1 = .{ .a0 = .{ .value = 2108663354 }, .a1 = .{ .value = 212128635 } }, .B2 = .{ .a0 = .{ .value = 245995298 }, .a1 = .{ .value = 1097997299 } } },
 };
 
 const verify_case_85_module_sizes = [_]usize{};
@@ -19158,9 +19244,10 @@ const verify_case_85_proof = verifier.Proof{
 const verify_case_85_systems = verifier.Systems{ .vanishing = system_85, .logderivativesum = system_85_logderiv };
 
 pub const system_86_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "rc-np2"
@@ -19257,7 +19344,7 @@ const system_86_modules = [_]vanishing.Module{
     // module: "mod"
     .{ .size = .{ .static = 4 }, .expressions = &system_86_module_0_expressions, .buckets = &system_86_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "range-mod-b5"
-    .{ .size = .{ .static = 8 }, .expressions = &system_86_module_1_expressions, .buckets = &system_86_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 8 }, .expressions = &system_86_module_1_expressions, .buckets = &system_86_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "rc-np2"
@@ -19283,19 +19370,19 @@ const verify_case_86_witness_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 944662555 }, .a1 = .{ .value = 1758904977 } }, .B1 = .{ .a0 = .{ .value = 1921631602 }, .a1 = .{ .value = 2114348245 } }, .B2 = .{ .a0 = .{ .value = 1271712339 }, .a1 = .{ .value = 339005994 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 550743152 }, .a1 = .{ .value = 1165438609 } }, .B1 = .{ .a0 = .{ .value = 1731128604 }, .a1 = .{ .value = 1276710211 } }, .B2 = .{ .a0 = .{ .value = 214920009 }, .a1 = .{ .value = 1668822827 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 663555209 }, .a1 = .{ .value = 917854102 } }, .B1 = .{ .a0 = .{ .value = 71608453 }, .a1 = .{ .value = 1110552892 } }, .B2 = .{ .a0 = .{ .value = 1001315307 }, .a1 = .{ .value = 1631260854 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1421419418 }, .a1 = .{ .value = 271714893 } }, .B1 = .{ .a0 = .{ .value = 679217728 }, .a1 = .{ .value = 408870523 } }, .B2 = .{ .a0 = .{ .value = 1345985766 }, .a1 = .{ .value = 1949939338 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1959024941 }, .a1 = .{ .value = 1909281986 } }, .B1 = .{ .a0 = .{ .value = 406775329 }, .a1 = .{ .value = 1511571996 } }, .B2 = .{ .a0 = .{ .value = 300688046 }, .a1 = .{ .value = 872146721 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 80356556 }, .a1 = .{ .value = 1955460817 } }, .B1 = .{ .a0 = .{ .value = 1128001406 }, .a1 = .{ .value = 1522805333 } }, .B2 = .{ .a0 = .{ .value = 2042173142 }, .a1 = .{ .value = 2055061523 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 362971821 }, .a1 = .{ .value = 669330983 } }, .B1 = .{ .a0 = .{ .value = 1732838720 }, .a1 = .{ .value = 460996935 } }, .B2 = .{ .a0 = .{ .value = 845711396 }, .a1 = .{ .value = 864974434 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 695836890 }, .a1 = .{ .value = 2110579242 } }, .B1 = .{ .a0 = .{ .value = 1257892408 }, .a1 = .{ .value = 1674740129 } }, .B2 = .{ .a0 = .{ .value = 1395575626 }, .a1 = .{ .value = 1229319495 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 888622110 }, .a1 = .{ .value = 998913083 } }, .B1 = .{ .a0 = .{ .value = 1617459528 }, .a1 = .{ .value = 1380688185 } }, .B2 = .{ .a0 = .{ .value = 1113947275 }, .a1 = .{ .value = 111419348 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 375814188 }, .a1 = .{ .value = 1817777675 } }, .B1 = .{ .a0 = .{ .value = 1763857387 }, .a1 = .{ .value = 581305698 } }, .B2 = .{ .a0 = .{ .value = 1360043059 }, .a1 = .{ .value = 1298146336 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 408797257 }, .a1 = .{ .value = 877054751 } }, .B1 = .{ .a0 = .{ .value = 126311036 }, .a1 = .{ .value = 275104000 } }, .B2 = .{ .a0 = .{ .value = 696756454 }, .a1 = .{ .value = 1477905051 } } },
 };
 
 const verify_case_86_quotient_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 203600633 }, .a1 = .{ .value = 747110224 } }, .B1 = .{ .a0 = .{ .value = 797723665 }, .a1 = .{ .value = 1774833643 } }, .B2 = .{ .a0 = .{ .value = 74807254 }, .a1 = .{ .value = 802935777 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 2084946619 }, .a1 = .{ .value = 966383160 } }, .B1 = .{ .a0 = .{ .value = 1997167055 }, .a1 = .{ .value = 280675265 } }, .B2 = .{ .a0 = .{ .value = 33183383 }, .a1 = .{ .value = 1563574331 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1948107996 }, .a1 = .{ .value = 251217641 } }, .B1 = .{ .a0 = .{ .value = 424120408 }, .a1 = .{ .value = 1085097956 } }, .B2 = .{ .a0 = .{ .value = 2027166223 }, .a1 = .{ .value = 1654730641 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 279942362 }, .a1 = .{ .value = 639589629 } }, .B1 = .{ .a0 = .{ .value = 291593375 }, .a1 = .{ .value = 1749327920 } }, .B2 = .{ .a0 = .{ .value = 226929550 }, .a1 = .{ .value = 1960648580 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 804492371 }, .a1 = .{ .value = 513016669 } }, .B1 = .{ .a0 = .{ .value = 69112794 }, .a1 = .{ .value = 1170250192 } }, .B2 = .{ .a0 = .{ .value = 1311152637 }, .a1 = .{ .value = 1995212031 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1209566553 }, .a1 = .{ .value = 749661661 } }, .B1 = .{ .a0 = .{ .value = 1493942391 }, .a1 = .{ .value = 1425461028 } }, .B2 = .{ .a0 = .{ .value = 1962111807 }, .a1 = .{ .value = 1883017278 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 47451198 }, .a1 = .{ .value = 198841271 } }, .B1 = .{ .a0 = .{ .value = 397612663 }, .a1 = .{ .value = 919391182 } }, .B2 = .{ .a0 = .{ .value = 1904729534 }, .a1 = .{ .value = 706664516 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 465821856 }, .a1 = .{ .value = 157289707 } }, .B1 = .{ .a0 = .{ .value = 1451813406 }, .a1 = .{ .value = 453402515 } }, .B2 = .{ .a0 = .{ .value = 236434188 }, .a1 = .{ .value = 501081439 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 2009207422 }, .a1 = .{ .value = 1385242564 } }, .B1 = .{ .a0 = .{ .value = 550839143 }, .a1 = .{ .value = 1177729921 } }, .B2 = .{ .a0 = .{ .value = 2053455038 }, .a1 = .{ .value = 358960999 } } },
 };
 
 const verify_case_86_module_sizes = [_]usize{};
@@ -19440,9 +19527,10 @@ const verify_case_86_proof = verifier.Proof{
 const verify_case_86_systems = verifier.Systems{ .vanishing = system_86, .logderivativesum = system_86_logderiv };
 
 pub const system_87_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3 },
-    .total_round_coins = 5,
+    .total_round_coins = 4,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "rc-zeros"
@@ -19539,7 +19627,7 @@ const system_87_modules = [_]vanishing.Module{
     // module: "mod"
     .{ .size = .{ .static = 4 }, .expressions = &system_87_module_0_expressions, .buckets = &system_87_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 1, .eval_coin_index = 3 },
     // module: "range-mod-b8"
-    .{ .size = .{ .static = 8 }, .expressions = &system_87_module_1_expressions, .buckets = &system_87_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 8 }, .expressions = &system_87_module_1_expressions, .buckets = &system_87_module_1_buckets, .witness_claim_offset = 3, .merge_coin_index = 2, .eval_coin_index = 3 },
 };
 
 // system: "rc-zeros"
@@ -19565,10 +19653,10 @@ const verify_case_87_witness_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 38302521 }, .a1 = .{ .value = 1203834736 } }, .B1 = .{ .a0 = .{ .value = 2002380044 }, .a1 = .{ .value = 482886811 } }, .B2 = .{ .a0 = .{ .value = 784304061 }, .a1 = .{ .value = 1258221343 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 231469106 }, .a1 = .{ .value = 1544662575 } }, .B1 = .{ .a0 = .{ .value = 1831478121 }, .a1 = .{ .value = 749308846 } }, .B2 = .{ .a0 = .{ .value = 1167281585 }, .a1 = .{ .value = 941823484 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1481601111 }, .a1 = .{ .value = 2090607751 } }, .B1 = .{ .a0 = .{ .value = 299964160 }, .a1 = .{ .value = 674378611 } }, .B2 = .{ .a0 = .{ .value = 1587805029 }, .a1 = .{ .value = 1588117360 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1473706561 }, .a1 = .{ .value = 976077822 } }, .B1 = .{ .a0 = .{ .value = 191958063 }, .a1 = .{ .value = 1159495373 } }, .B2 = .{ .a0 = .{ .value = 1017855309 }, .a1 = .{ .value = 378590207 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 364727690 }, .a1 = .{ .value = 1074043933 } }, .B1 = .{ .a0 = .{ .value = 1259384264 }, .a1 = .{ .value = 2049291895 } }, .B2 = .{ .a0 = .{ .value = 281275567 }, .a1 = .{ .value = 388854691 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 364727690 }, .a1 = .{ .value = 1074043933 } }, .B1 = .{ .a0 = .{ .value = 1259384264 }, .a1 = .{ .value = 2049291895 } }, .B2 = .{ .a0 = .{ .value = 281275567 }, .a1 = .{ .value = 388854691 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 902094456 }, .a1 = .{ .value = 1134172040 } }, .B1 = .{ .a0 = .{ .value = 659664331 }, .a1 = .{ .value = 2108146138 } }, .B2 = .{ .a0 = .{ .value = 2103206311 }, .a1 = .{ .value = 744011601 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 518834680 }, .a1 = .{ .value = 665821427 } }, .B1 = .{ .a0 = .{ .value = 1689047881 }, .a1 = .{ .value = 1294717194 } }, .B2 = .{ .a0 = .{ .value = 1346586559 }, .a1 = .{ .value = 987180632 } } },
 };
 
 const verify_case_87_quotient_claims = [_]ext.Ext{
@@ -19576,7 +19664,7 @@ const verify_case_87_quotient_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1043486419 }, .a1 = .{ .value = 1391269023 } }, .B1 = .{ .a0 = .{ .value = 19988017 }, .a1 = .{ .value = 75257742 } }, .B2 = .{ .a0 = .{ .value = 309055222 }, .a1 = .{ .value = 87815758 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1065353216 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1660279753 }, .a1 = .{ .value = 214159309 } }, .B1 = .{ .a0 = .{ .value = 2025441496 }, .a1 = .{ .value = 2033830254 } }, .B2 = .{ .a0 = .{ .value = 996538738 }, .a1 = .{ .value = 380545021 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 203113010 }, .a1 = .{ .value = 787726590 } }, .B1 = .{ .a0 = .{ .value = 1939665522 }, .a1 = .{ .value = 109542960 } }, .B2 = .{ .a0 = .{ .value = 1354373789 }, .a1 = .{ .value = 161928361 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } },
 };
 
@@ -19725,6 +19813,7 @@ pub const system_88_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lagrange-sel"
@@ -19866,6 +19955,7 @@ pub const system_89_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1 },
     .total_round_coins = 2,
+    .dynamic_module_count = 1,
 };
 
 // scenario: "lagrange-sel-dyn"
@@ -19906,11 +19996,11 @@ const system_89_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_89_logderiv = logderivativesum.System{ .queries = &system_89_logderiv_queries };
 const verify_case_89_witness_claims = [_]ext.Ext{
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1370783823 }, .a1 = .{ .value = 1546879596 } }, .B1 = .{ .a0 = .{ .value = 798776142 }, .a1 = .{ .value = 991766015 } }, .B2 = .{ .a0 = .{ .value = 1033848109 }, .a1 = .{ .value = 1879031930 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 683326615 }, .a1 = .{ .value = 219937169 } }, .B1 = .{ .a0 = .{ .value = 1442588775 }, .a1 = .{ .value = 659032890 } }, .B2 = .{ .a0 = .{ .value = 1933816236 }, .a1 = .{ .value = 580400180 } } },
 };
 
 const verify_case_89_quotient_claims = [_]ext.Ext{
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1757317135 }, .a1 = .{ .value = 673144868 } }, .B1 = .{ .a0 = .{ .value = 1021019227 }, .a1 = .{ .value = 431729862 } }, .B2 = .{ .a0 = .{ .value = 73071499 }, .a1 = .{ .value = 20723336 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1689679602 }, .a1 = .{ .value = 710393538 } }, .B1 = .{ .a0 = .{ .value = 666240445 }, .a1 = .{ .value = 1650194993 } }, .B2 = .{ .a0 = .{ .value = 802278114 }, .a1 = .{ .value = 775896643 } } },
 };
 
 const verify_case_89_module_sizes = [_]usize{4};
@@ -19954,11 +20044,11 @@ const verify_case_89_proof = verifier.Proof{
 };
 
 const verify_case_89_failing_witness_claims = [_]ext.Ext{
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1671379099 }, .a1 = .{ .value = 1820225737 } }, .B1 = .{ .a0 = .{ .value = 745496736 }, .a1 = .{ .value = 1520101385 } }, .B2 = .{ .a0 = .{ .value = 483404820 }, .a1 = .{ .value = 33935710 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 234636168 }, .a1 = .{ .value = 1694384208 } }, .B1 = .{ .a0 = .{ .value = 487392842 }, .a1 = .{ .value = 629070633 } }, .B2 = .{ .a0 = .{ .value = 1072321851 }, .a1 = .{ .value = 1898444732 } } },
 };
 
 const verify_case_89_failing_quotient_claims = [_]ext.Ext{
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1758585595 }, .a1 = .{ .value = 2051671926 } }, .B1 = .{ .a0 = .{ .value = 1287228006 }, .a1 = .{ .value = 2025059932 } }, .B2 = .{ .a0 = .{ .value = 959328724 }, .a1 = .{ .value = 423678391 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1598942675 }, .a1 = .{ .value = 2110727288 } }, .B1 = .{ .a0 = .{ .value = 289851626 }, .a1 = .{ .value = 1271122571 } }, .B2 = .{ .a0 = .{ .value = 2077411222 }, .a1 = .{ .value = 137517246 } } },
 };
 
 const verify_case_89_failing_module_sizes = [_]usize{4};
@@ -20004,9 +20094,10 @@ const verify_case_89_failing_proof = verifier.Proof{
 const verify_case_89_systems = verifier.Systems{ .vanishing = system_89, .logderivativesum = system_89_logderiv };
 
 pub const system_90_spec = protocol.Spec{
-    .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 2 },
+    .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 1 },
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4 },
-    .total_round_coins = 6,
+    .total_round_coins = 5,
+    .dynamic_module_count = 0,
 };
 
 // scenario: "lk-multi-col-bench"
@@ -20167,7 +20258,7 @@ const system_90_modules = [_]vanishing.Module{
     // module: "modT"
     .{ .size = .{ .static = 1024 }, .expressions = &system_90_module_0_expressions, .buckets = &system_90_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 2, .eval_coin_index = 4 },
     // module: "modS"
-    .{ .size = .{ .static = 1024 }, .expressions = &system_90_module_1_expressions, .buckets = &system_90_module_1_buckets, .witness_claim_offset = 8, .merge_coin_index = 3, .eval_coin_index = 5 },
+    .{ .size = .{ .static = 1024 }, .expressions = &system_90_module_1_expressions, .buckets = &system_90_module_1_buckets, .witness_claim_offset = 8, .merge_coin_index = 3, .eval_coin_index = 4 },
 };
 
 // system: "lk-multi-col-bench"
@@ -20198,22 +20289,22 @@ const verify_case_90_witness_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 90128700 }, .a1 = .{ .value = 743695162 } }, .B1 = .{ .a0 = .{ .value = 1898268676 }, .a1 = .{ .value = 1540989831 } }, .B2 = .{ .a0 = .{ .value = 895564392 }, .a1 = .{ .value = 1508821224 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 90128699 }, .a1 = .{ .value = 743695162 } }, .B1 = .{ .a0 = .{ .value = 1898268676 }, .a1 = .{ .value = 1540989831 } }, .B2 = .{ .a0 = .{ .value = 895564392 }, .a1 = .{ .value = 1508821224 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 90128698 }, .a1 = .{ .value = 743695162 } }, .B1 = .{ .a0 = .{ .value = 1898268676 }, .a1 = .{ .value = 1540989831 } }, .B2 = .{ .a0 = .{ .value = 895564392 }, .a1 = .{ .value = 1508821224 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 236519901 }, .a1 = .{ .value = 378106282 } }, .B1 = .{ .a0 = .{ .value = 140492308 }, .a1 = .{ .value = 401524997 } }, .B2 = .{ .a0 = .{ .value = 189363738 }, .a1 = .{ .value = 494352460 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 605426351 }, .a1 = .{ .value = 2088987309 } }, .B1 = .{ .a0 = .{ .value = 1887515462 }, .a1 = .{ .value = 1463809296 } }, .B2 = .{ .a0 = .{ .value = 1523906810 }, .a1 = .{ .value = 130915554 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1288436193 }, .a1 = .{ .value = 533645796 } }, .B1 = .{ .a0 = .{ .value = 1719925430 }, .a1 = .{ .value = 770413010 } }, .B2 = .{ .a0 = .{ .value = 583374167 }, .a1 = .{ .value = 254701941 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1288436192 }, .a1 = .{ .value = 533645796 } }, .B1 = .{ .a0 = .{ .value = 1719925430 }, .a1 = .{ .value = 770413010 } }, .B2 = .{ .a0 = .{ .value = 583374167 }, .a1 = .{ .value = 254701941 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1288436191 }, .a1 = .{ .value = 533645796 } }, .B1 = .{ .a0 = .{ .value = 1719925430 }, .a1 = .{ .value = 770413010 } }, .B2 = .{ .a0 = .{ .value = 583374167 }, .a1 = .{ .value = 254701941 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1288436190 }, .a1 = .{ .value = 533645796 } }, .B1 = .{ .a0 = .{ .value = 1719925430 }, .a1 = .{ .value = 770413010 } }, .B2 = .{ .a0 = .{ .value = 583374167 }, .a1 = .{ .value = 254701941 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1288436189 }, .a1 = .{ .value = 533645796 } }, .B1 = .{ .a0 = .{ .value = 1719925430 }, .a1 = .{ .value = 770413010 } }, .B2 = .{ .a0 = .{ .value = 583374167 }, .a1 = .{ .value = 254701941 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 167489515 }, .a1 = .{ .value = 1696132433 } }, .B1 = .{ .a0 = .{ .value = 769114598 }, .a1 = .{ .value = 1566211294 } }, .B2 = .{ .a0 = .{ .value = 1047482930 }, .a1 = .{ .value = 1850480391 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1497872104 }, .a1 = .{ .value = 1482158874 } }, .B1 = .{ .a0 = .{ .value = 1155088711 }, .a1 = .{ .value = 183921341 } }, .B2 = .{ .a0 = .{ .value = 833169085 }, .a1 = .{ .value = 59291059 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 309585772 }, .a1 = .{ .value = 358121085 } }, .B1 = .{ .a0 = .{ .value = 213172943 }, .a1 = .{ .value = 495241510 } }, .B2 = .{ .a0 = .{ .value = 30553848 }, .a1 = .{ .value = 1400018659 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 309585771 }, .a1 = .{ .value = 358121085 } }, .B1 = .{ .a0 = .{ .value = 213172943 }, .a1 = .{ .value = 495241510 } }, .B2 = .{ .a0 = .{ .value = 30553848 }, .a1 = .{ .value = 1400018659 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 309585770 }, .a1 = .{ .value = 358121085 } }, .B1 = .{ .a0 = .{ .value = 213172943 }, .a1 = .{ .value = 495241510 } }, .B2 = .{ .a0 = .{ .value = 30553848 }, .a1 = .{ .value = 1400018659 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 309585769 }, .a1 = .{ .value = 358121085 } }, .B1 = .{ .a0 = .{ .value = 213172943 }, .a1 = .{ .value = 495241510 } }, .B2 = .{ .a0 = .{ .value = 30553848 }, .a1 = .{ .value = 1400018659 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 309585768 }, .a1 = .{ .value = 358121085 } }, .B1 = .{ .a0 = .{ .value = 213172943 }, .a1 = .{ .value = 495241510 } }, .B2 = .{ .a0 = .{ .value = 30553848 }, .a1 = .{ .value = 1400018659 } } },
 };
 
 const verify_case_90_quotient_claims = [_]ext.Ext{
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1947540421 }, .a1 = .{ .value = 1353478170 } }, .B1 = .{ .a0 = .{ .value = 1666900840 }, .a1 = .{ .value = 1764506940 } }, .B2 = .{ .a0 = .{ .value = 1519301126 }, .a1 = .{ .value = 1371081689 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 146312673 }, .a1 = .{ .value = 810891451 } }, .B1 = .{ .a0 = .{ .value = 1442360800 }, .a1 = .{ .value = 152913700 } }, .B2 = .{ .a0 = .{ .value = 1443875636 }, .a1 = .{ .value = 1182731810 } } },
     ext.Ext{ .B0 = .{ .a0 = .{ .value = 1136184628 }, .a1 = .{ .value = 1411739507 } }, .B1 = .{ .a0 = .{ .value = 1812698567 }, .a1 = .{ .value = 924631708 } }, .B2 = .{ .a0 = .{ .value = 793215339 }, .a1 = .{ .value = 1137784980 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 827668815 }, .a1 = .{ .value = 613663025 } }, .B1 = .{ .a0 = .{ .value = 546085564 }, .a1 = .{ .value = 566537271 } }, .B2 = .{ .a0 = .{ .value = 529181554 }, .a1 = .{ .value = 813089799 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1751942881 }, .a1 = .{ .value = 1699284238 } }, .B1 = .{ .a0 = .{ .value = 217604115 }, .a1 = .{ .value = 1163774581 } }, .B2 = .{ .a0 = .{ .value = 1014758695 }, .a1 = .{ .value = 1179509290 } } },
-    ext.Ext{ .B0 = .{ .a0 = .{ .value = 191424595 }, .a1 = .{ .value = 261814409 } }, .B1 = .{ .a0 = .{ .value = 829712141 }, .a1 = .{ .value = 1973282830 } }, .B2 = .{ .a0 = .{ .value = 1663401823 }, .a1 = .{ .value = 1426376065 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 1928845638 }, .a1 = .{ .value = 610412498 } }, .B1 = .{ .a0 = .{ .value = 1005277102 }, .a1 = .{ .value = 1518249630 } }, .B2 = .{ .a0 = .{ .value = 341391762 }, .a1 = .{ .value = 1429023606 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 2115749217 }, .a1 = .{ .value = 1041530516 } }, .B1 = .{ .a0 = .{ .value = 151694912 }, .a1 = .{ .value = 2020039167 } }, .B2 = .{ .a0 = .{ .value = 456574084 }, .a1 = .{ .value = 1666348173 } } },
+    ext.Ext{ .B0 = .{ .a0 = .{ .value = 344902869 }, .a1 = .{ .value = 329558959 } }, .B1 = .{ .a0 = .{ .value = 498918008 }, .a1 = .{ .value = 65291694 } }, .B2 = .{ .a0 = .{ .value = 767578086 }, .a1 = .{ .value = 1121573679 } } },
 };
 
 const verify_case_90_module_sizes = [_]usize{};

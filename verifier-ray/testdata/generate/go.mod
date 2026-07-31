@@ -26,3 +26,5 @@ require (
 )
 
 replace github.com/consensys/linea-monorepo/verifier-ray/codegen => ../../codegen
+
+replace github.com/LFDT-Lineth/lineth-monorepo/prover-ray => ../../../prover-ray
