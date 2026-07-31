@@ -39,7 +39,7 @@ fn addmod_64(lhsL:u64, rhsL:u64, modL:u64) -> (remainder:u64) {
     if modL == 0 {
         fail
     }
-    var lhs:u129
+    var lhs:u65
     if rhsL > lhsL {
         lhs = (lhsL as u65) + (modL as u65)
     } else {
