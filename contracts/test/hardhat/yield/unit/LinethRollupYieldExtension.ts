@@ -250,12 +250,11 @@ describe("Lineth Rollup Yield Extension", () => {
     it("Should successfully emit a synthetic MessageSent event with valid parameters", async () => {
       const yieldManagerSigner = await impersonateYieldManager();
       const amount = ethers.parseEther("1");
-      const linethRollupAddress = await linethRollup.getAddress();
       const nextMessageNumberBefore = await linethRollup.nextMessageNumber();
       const l2YieldRecipient = ethers.Wallet.createRandom().address;
 
       const expectedMessageHash = computeMessageHash(
-        linethRollupAddress,
+        yieldManager,
         l2YieldRecipient,
         0n,
         amount,
@@ -323,7 +322,6 @@ describe("Lineth Rollup Yield Extension", () => {
 
     it("Should correctly update the rolling hash after sendMessage", async () => {
       // ARRANGE STAGE 1 - Perform sendMessage
-      const linethRollupAddress = await linethRollup.getAddress();
       const calldataPayload = ethers.randomBytes(32);
       const calldataHex = ethers.hexlify(calldataPayload);
 
@@ -360,7 +358,7 @@ describe("Lineth Rollup Yield Extension", () => {
       const l2YieldRecipient = operator.address;
 
       const yieldMessageHash = computeMessageHash(
-        linethRollupAddress,
+        yieldManager,
         l2YieldRecipient,
         0n,
         amount,
