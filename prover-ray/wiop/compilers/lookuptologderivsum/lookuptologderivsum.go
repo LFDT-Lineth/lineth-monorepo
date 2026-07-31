@@ -640,7 +640,7 @@ func (a *groupRowLimitAction) overLimitError(side string, rows uint64) error {
 			"reaching %d, which is >= the per-subgroup row limit %d (the row budget shared by the "+
 			"lookups bin-packed into one multiplicity column); the accumulators in the reduced "+
 			"constraints would overflow over a small field",
-		strings.Join(paths, ", "), side, rows, uint64(wiop.MaxLookupRows),
+		strings.Join(paths, ", "), side, rows, wiop.MaxLookupRows,
 	)
 }
 

@@ -42,7 +42,7 @@ func TestGroupRowLimitAction_RuntimeRejectsOverLimitASide(t *testing.T) {
 
 	err := action.Check(rt)
 	require.Error(t, err, "verifier must reject an over-limit subgroup A side")
-	assert.ErrorContains(t, err, "A side")
+	require.ErrorContains(t, err, "A side")
 
 	assert.Panics(t, func() { action.Run(rt) },
 		"prover must panic on an over-limit subgroup A side")
@@ -56,7 +56,7 @@ func TestGroupRowLimitAction_RuntimeRejectsOverLimitBSide(t *testing.T) {
 
 	err := action.Check(rt)
 	require.Error(t, err, "verifier must reject an over-limit subgroup B side")
-	assert.ErrorContains(t, err, "B side")
+	require.ErrorContains(t, err, "B side")
 
 	assert.Panics(t, func() { action.Run(rt) },
 		"prover must panic on an over-limit subgroup B side")
@@ -68,6 +68,6 @@ func TestGroupRowLimitAction_RuntimeAcceptsWithinLimit(t *testing.T) {
 	g, rt := buildRuntimeLimitGroup(t, 4, 4)
 	action := &groupRowLimitAction{group: g}
 
-	assert.NoError(t, action.Check(rt), "an in-budget subgroup must pass the verifier check")
+	require.NoError(t, action.Check(rt), "an in-budget subgroup must pass the verifier check")
 	assert.NotPanics(t, func() { action.Run(rt) }, "an in-budget subgroup must not panic the prover")
 }
