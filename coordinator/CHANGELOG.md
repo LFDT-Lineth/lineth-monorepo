@@ -12,6 +12,7 @@
 ### ⚙️ Miscellaneous Tasks
 
 - *(coordinator)* Remove dead code and apply small cleanups from review (#3627)
+- *(coordinator)* Riscv blob data skeleton (#3609)
 ## [1.1.0] - 2026-07-28
 
 ### 🚀 Features
