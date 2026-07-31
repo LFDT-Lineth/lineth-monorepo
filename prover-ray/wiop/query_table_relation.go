@@ -100,11 +100,12 @@ func (t Table) Width() int { return len(t.Columns) }
 // budget. Exceeding it lets the row-index accumulators in the reduced
 // constraints overflow when the argument is instantiated over a small field.
 //
-// The effective per-side limit is smaller than MaxLookupRows because the
-// compiler shares the same accumulators across several lookups: it is
-// MaxLookupRows divided by the compiler's packing arity and by the number of
-// lookups reduced together (see the lookuptologderivsum compiler, which
-// computes it and passes it to [TableRelationQuery.CheckRowLimit] /
+// The effective per-side limit is the full MaxLookupRows budget for every
+// lookup. Lookups that share a target table are not made to share the budget:
+// the lookuptologderivsum compiler bin-packs them into independent subgroups,
+// each with its own multiplicity column and accumulators, and only requires
+// that a single subgroup's summed side stay below MaxLookupRows (see that
+// compiler, which passes the budget to [TableRelationQuery.CheckRowLimit] /
 // [TableRelationQuery.ValidateRowLimit]).
 //
 // The limit is enforced on both sides: the prover panics

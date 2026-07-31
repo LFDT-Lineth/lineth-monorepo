@@ -22,9 +22,9 @@ func rowLimitVec(vals ...uint64) *wiop.ConcreteVector {
 // soundness companion to the compile-time and unit-level row-limit checks: it
 // drives a real lookup through the full pipeline (including PCS), produces an
 // honest proof, then forges the proof's claimed dynamic-module size to exceed
-// the lookup row budget. The lookup pass's registered verifier action
-// ([wiop.TableRelationQuery.ValidateRowLimit], wired by the lookuptologderivsum
-// pass) must reject the forged proof.
+// the lookup row budget. The lookup pass's registered per-subgroup verifier
+// action (wired by the lookuptologderivsum pass, which re-sums the subgroup's
+// exact per-run row counts) must reject the forged proof.
 //
 // This is the one scenario the compile-time static check cannot catch: at
 // compile time a dynamic module counts as [wiop.ColumnSizeMaxSupported] (2^22),
@@ -86,6 +86,6 @@ func TestFullPipeline_LookupRowLimit_TamperedDynamicSize(t *testing.T) {
 	proof.DynamicSizes[dynIdx] = 1 << 30
 
 	err := sys.Verify(proof, pub)
-	assert.ErrorContains(t, err, "effective per-query row limit",
+	assert.ErrorContains(t, err, "per-subgroup row limit",
 		"the verifier row-limit action must reject a proof claiming an over-budget dynamic domain")
 }

@@ -45,12 +45,16 @@
 // gets its own multiplicity column M and its own −M/(γ+RLC) term; the union
 // semantics are handled at M-assignment time by a fragment-tagged hash join
 // (see [mAssignmentTask]). Multiple A fragments per query and multiple queries
-// per shared B side are also supported. Permutation queries are ignored.
+// per shared B side are also supported: queries sharing a B side are bin-packed
+// into independent subgroups (each with its own M columns) so that no
+// subgroup's summed row count reaches the [wiop.MaxLookupRows] budget, which is
+// what keeps large shared tables (e.g. the byte-range tables) provable. See
+// [collectGroups]. Permutation queries are ignored.
 package lookuptologderivsum
 
 import (
 	"fmt"
-	"sort"
+	"strings"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
@@ -72,14 +76,9 @@ func Compile(sys *wiop.System) {
 		return
 	}
 
-	// Allocate the LogDerivativeSum in a deterministic group order. We sort
-	// by the witness-round ID then by canonical key so the registration order
-	// is independent of map iteration.
-	keys := make([]string, 0, len(groups))
-	for k := range groups {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
+	// collectGroups returns the subgroups in a deterministic order (first
+	// appearance of each B key, then subgroup index), so the LogDerivativeSum is
+	// assembled in a map-iteration-independent order without any extra sort.
 
 	// Determine the latest witness round across every group: this dictates
 	// where the coin and result rounds live. Groups whose only contributing
@@ -88,8 +87,7 @@ func Compile(sys *wiop.System) {
 	// after the loop so the compiler still emits its M / α / γ on an
 	// interactive round.
 	var latestWitness *wiop.Round
-	for _, k := range keys {
-		g := groups[k]
+	for _, g := range groups {
 		if g.witnessRound == nil {
 			continue
 		}
@@ -109,9 +107,9 @@ func Compile(sys *wiop.System) {
 	}
 	// Backfill any group whose witnessRound is still nil so compileGroup can
 	// rely on a non-nil interactive round.
-	for _, k := range keys {
-		if groups[k].witnessRound == nil {
-			groups[k].witnessRound = latestWitness
+	for _, g := range groups {
+		if g.witnessRound == nil {
+			g.witnessRound = latestWitness
 		}
 	}
 
@@ -138,14 +136,13 @@ func Compile(sys *wiop.System) {
 	// panics on an over-limit lookup instead of walking its (billions of) rows
 	// to fill M; the verifier re-runs it and rejects the proof. The check
 	// validates both the query's included (A) and including (B) sides.
-	registerRowLimitChecks(sys, groups)
+	registerRowLimitChecks(groups)
 
 	var (
 		fractions  []wiop.Fraction
 		consumedQs []*wiop.TableRelationQuery
 	)
-	for _, k := range keys {
-		g := groups[k]
+	for _, g := range groups {
 		gFractions := compileGroup(g, gamma, coinRound, compCtx)
 		fractions = append(fractions, gFractions...)
 		for _, inc := range g.included {
@@ -166,86 +163,107 @@ func Compile(sys *wiop.System) {
 	}
 }
 
-// registerRowLimitChecks attaches one [rowLimitAction] per unreduced inclusion
-// query — the natural unit, since the bound is a property of the whole lookup
-// (both its A and B sides), not of any single fragment. Each action is
-// registered on its query's group witness round, which is where compileGroup
-// later places that group's M-assignment task; registering here, ahead of the
-// group loop, guarantees the row-limit check runs before M is filled.
+// registerRowLimitChecks guards the per-side row budget on both the compile and
+// runtime paths. It runs ahead of the group loop that places each subgroup's
+// M-assignment task, so every check it registers is ordered before M is filled.
 //
-// In addition to the runtime prover/verifier actions, each query is checked
-// against the same budget at compile time via
-// [wiop.TableRelationQuery.PrecheckRowLimit], which panics immediately on an
-// over-budget lookup. That compile-time check counts dynamic (or otherwise
-// unsized) modules as their maximum height 2^22, so it is a conservative upper
-// bound that complements the exact runtime checks rather than replacing them.
+// Two layers of enforcement guard the budget:
 //
-// The effective per-side limit for a query is [wiop.MaxLookupRows] divided by
-// the number of lookups reduced into the query's group: queries that share an
-// including (B) table share a single multiplicity column M and one aggregated
-// LogDerivativeSum, so they drain the same budget. Packing fractions into one
-// running-sum Z column shrinks the number of Z columns, not the rows each one
-// walks, so it does not enlarge the budget and plays no part here.
+//   - Compile time: each query is checked against the full budget via
+//     [wiop.TableRelationQuery.PrecheckRowLimit], which panics immediately if a
+//     single query is too big to fit into any subgroup on its own (an A or B
+//     side that already reaches the budget alone). That check counts dynamic
+//     (or otherwise unsized) modules as their maximum height 2^22, so it is a
+//     conservative upper bound.
 //
-// The group lookup supplies both the round and that group's lookup count.
-// canonicalIncludingKeyMulti(q.B) resolves the group the same way collectGroups
-// keyed it, so it always hits a collected group.
-func registerRowLimitChecks(sys *wiop.System, groups map[string]*lookupGroup) {
-	// Number of distinct lookup queries in each group. Queries sharing an
-	// including table are grouped together and drain the same budget.
-	lookupsPerGroup := make(map[string]int, len(groups))
-	for key, g := range groups {
+//   - Runtime: one [groupRowLimitAction] per subgroup re-checks the *exact*
+//     per-run heights, summed across the whole subgroup, on both the prover
+//     (panic) and verifier (error) sides. This is the check that enforces the
+//     shared budget now that a subgroup — not a single query — is the unit that
+//     shares a multiplicity column M and its accumulators: the subgroup's whole
+//     A side (the union of all its A fragments) and its B side (the shared
+//     lookup table) must each stay strictly below [wiop.MaxLookupRows].
+//     Compile-time bin-packing (see collectGroups) keeps every subgroup under
+//     budget using static heights, and this runtime action re-verifies it for
+//     the concrete witness, so a dynamic module that grew unexpectedly cannot
+//     slip an over-budget subgroup past the verifier.
+//
+// The subgroup action is registered on the subgroup's witness round, ahead of
+// the M-assignment task that compileGroup later places on the same round, so an
+// over-budget subgroup fails before M is filled.
+func registerRowLimitChecks(groups []*lookupGroup) {
+	for _, g := range groups {
+		// A query's A fragments all live in the same subgroup (collectGroups
+		// keeps them together), so each query belongs to exactly one subgroup.
+		// De-duplicate the per-fragment included specs down to their queries for
+		// the compile-time per-query precheck.
 		seen := make(map[*wiop.TableRelationQuery]struct{})
 		for _, inc := range g.included {
+			if _, ok := seen[inc.query]; ok {
+				continue
+			}
 			seen[inc.query] = struct{}{}
+			inc.query.PrecheckRowLimit(wiop.MaxLookupRows)
 		}
-		lookupsPerGroup[key] = len(seen)
-	}
 
-	for _, q := range sys.TableRelations {
-		if q.IsReduced() || q.Kind == wiop.KindPermutation {
-			continue
-		}
-		key := canonicalIncludingKeyMulti(q.B)
-		g := groups[key]
-
-		limit := wiop.MaxLookupRows / uint64(lookupsPerGroup[key])
-
-		// Compile-time check: the same per-side row budget, but evaluated from
-		// static module sizes with dynamic (or otherwise unsized) modules
-		// counted as their maximum height 2^22. This surfaces an over-budget
-		// lookup during compilation — before any witness is assigned — on top of
-		// the exact prover/verifier runtime checks registered below. It panics,
-		// matching the compile-time failure convention of this pass.
-		q.PrecheckRowLimit(limit)
-
-		// One instance serves both roles: it panics as a prover action and
-		// returns an error as a verifier action.
-		rowLimit := &rowLimitAction{query: q, limit: limit}
+		// Runtime check on the subgroup aggregate. One instance serves both
+		// roles: it panics as a prover action and returns an error as a verifier
+		// action.
+		rowLimit := &groupRowLimitAction{group: g, limit: wiop.MaxLookupRows}
 		g.witnessRound.RegisterAction(rowLimit)
 		g.witnessRound.RegisterVerifierAction(rowLimit)
 	}
 }
 
 // collectGroups walks sys.TableRelations once, picks out every unreduced
-// inclusion query, and groups them by the canonical identity of their
-// (single) B-side fragment.
+// inclusion query, buckets them by the canonical identity of their B side, and
+// then bin-packs each bucket into one or more subgroups.
 //
-// Two invariants are established here and relied on by [compileGroup]:
+// Bin-packing is the crux of the row-limit fix. Every subgroup carries its own
+// multiplicity column M per B fragment and therefore drains the full
+// [wiop.MaxLookupRows] budget independently — proving S ⊆ T for a subset of the
+// bucket's lookups is a self-contained log-derivative identity. So instead of
+// forcing every lookup that shares a table T into one group (whose shared M made
+// the per-lookup budget shrink as MaxLookupRows / lookupCount, which is what
+// broke lookups against large tables such as the byte-range tables), we greedily
+// accumulate lookups into a subgroup and open a fresh one whenever the next
+// lookup would push the subgroup's static A-side row total to the budget.
 //
-//   - one multiplicity column M per shared B fragment, not per query — this
-//     is what lets the B-side sum cancel the union of A-side sums in the
-//     final log-derivative identity;
+// Three invariants are established here and relied on by [compileGroup]:
 //
-//   - each group's witnessRound is the latest round across every column the
-//     group touches (B and every A fragment of every query in the group), so
-//     M can be allocated on a round where all its inputs are already
-//     committed and *before* the α/γ coin round.
+//   - one multiplicity column M per B fragment *per subgroup* — this is what
+//     lets each subgroup's B-side sum cancel the union of its own A-side sums
+//     in the final log-derivative identity;
 //
-// The returned map is unordered; callers that need a deterministic emission
-// order sort the keys (see [Compile]).
-func collectGroups(sys *wiop.System) map[string]*lookupGroup {
-	groups := make(map[string]*lookupGroup)
+//   - a subgroup's static A-side row total (dynamic modules counted as their
+//     2^22 maximum) stays strictly below [wiop.MaxLookupRows], so at runtime —
+//     where module heights only ever shrink — every multiplicity M fits well
+//     inside the field and the reduced accumulators cannot overflow;
+//
+//   - each subgroup's witnessRound is the latest round across every column it
+//     touches (the shared B fragments and every A fragment of every query in
+//     the subgroup), so M can be allocated on a round where all its inputs are
+//     already committed and *before* the α/γ coin round.
+//
+// A single query is always kept whole inside one subgroup: all of its A
+// fragments land together, which keeps the per-query row-limit check (see
+// [registerRowLimitChecks]) meaningful. A query too big to fit any subgroup on
+// its own is caught there at compile time.
+//
+// The returned slice is in a deterministic order — buckets in first-appearance
+// order of their B key, subgroups in query order within a bucket — so [Compile]
+// needs no further sorting.
+func collectGroups(sys *wiop.System) []*lookupGroup {
+	// bucket gathers every query that targets one canonical B side, together
+	// with the canonical B-fragment descriptors taken from the first query to
+	// hit the key.
+	type bucket struct {
+		includings []includingTable
+		queries    []*wiop.TableRelationQuery
+	}
+	buckets := make(map[string]*bucket)
+	var order []string // first-appearance order of B keys, for deterministic output
+
 	for _, q := range sys.TableRelations {
 		if q.IsReduced() {
 			continue
@@ -260,28 +278,23 @@ func collectGroups(sys *wiop.System) map[string]*lookupGroup {
 				q.Context().Path(),
 			))
 		}
-		// Grouping key: queries that target the same B side — the same
-		// ordered union of lookup-table fragments — fold into the same
-		// lookupGroup and therefore share the group's per-fragment M columns.
-		// Two queries with distinct B descriptors that happen to reference the
-		// same underlying columns *with the same shifts and selectors, in the
-		// same order* are intentionally collapsed; canonicalIncludingKeyMulti
-		// encodes exactly the per-fragment (column pointer, shift, selector)
-		// tuples so equality of key ⇔ equality of B side as seen by the
-		// prover. Without this collapse, the same lookup table referenced by N
-		// queries would yield N independent multiplicity columns and the
-		// B-side terms would no longer cancel the union of A-side terms.
+		// Bucket key: queries that target the same B side — the same ordered
+		// union of lookup-table fragments — share the canonical includingTable
+		// descriptors. Two queries with distinct B descriptors that happen to
+		// reference the same underlying columns *with the same shifts and
+		// selectors, in the same order* are intentionally collapsed;
+		// canonicalIncludingKeyMulti encodes exactly the per-fragment (column
+		// pointer, shift, selector) tuples so equality of key ⇔ equality of B
+		// side as seen by the prover.
 		key := canonicalIncludingKeyMulti(q.B)
-		g, ok := groups[key]
+		b, ok := buckets[key]
 		if !ok {
 			// First query to hit this key supplies the canonical
 			// includingTable descriptors. Subsequent queries with the same
 			// key reuse them as-is — they are guaranteed by the key to
 			// describe identical fragments, so we deliberately skip
 			// re-validating cols/selector/module on later hits.
-			g = &lookupGroup{
-				includings: make([]includingTable, len(q.B)),
-			}
+			b = &bucket{includings: make([]includingTable, len(q.B))}
 			for frag, bTab := range q.B {
 				it := includingTable{
 					cols:     bTab.Columns,
@@ -295,27 +308,70 @@ func collectGroups(sys *wiop.System) map[string]*lookupGroup {
 						q.Context().Path(), frag,
 					))
 				}
-				g.includings[frag] = it
+				b.includings[frag] = it
 			}
-			groups[key] = g
+			buckets[key] = b
+			order = append(order, key)
 		}
-		// Witness round must dominate every column referenced by the group.
-		// Including every B fragment and every A fragment of *this* query keeps
-		// the invariant under incremental merging: when a later query reuses
-		// the same B but supplies an A on a later round, witnessRound advances
-		// accordingly so the M columns (allocated on witnessRound by
-		// [compileGroup]) are still committed before α/γ are sampled in
-		// witnessRound + 1 — the soundness ordering of the log-derivative
-		// argument.
-		for _, bTab := range q.B {
-			g.updateWitnessRound(bTab.Round())
-		}
-		for _, tabA := range q.A {
-			g.updateWitnessRound(tabA.Round())
-			g.addIncluded(q, tabA)
+		b.queries = append(b.queries, q)
+	}
+
+	// Bin-pack each bucket's queries into subgroups whose static A-side row
+	// count stays strictly below the budget.
+	var groups []*lookupGroup
+	for _, key := range order {
+		b := buckets[key]
+		var (
+			current  *lookupGroup
+			curACost uint64
+		)
+		for _, q := range b.queries {
+			qACost := staticTableRows(q.A)
+			// Open a fresh subgroup for the first query, or whenever adding this
+			// query would bring the running A-side total up to the budget. A
+			// query whose own A side already reaches the budget still lands in a
+			// (fresh) subgroup here; the compile-time precheck in
+			// registerRowLimitChecks rejects it before any witness is assigned.
+			if current == nil || curACost+qACost >= wiop.MaxLookupRows {
+				// All subgroups of a bucket share the same read-only B-side
+				// fragments, so they can share the bucket's slice directly.
+				current = &lookupGroup{includings: b.includings}
+				// Witness round must dominate every B fragment (shared across the
+				// whole bucket, so identical for every subgroup).
+				for _, bTab := range q.B {
+					current.updateWitnessRound(bTab.Round())
+				}
+				groups = append(groups, current)
+				curACost = 0
+			}
+			// Every A fragment of this query joins the current subgroup; the
+			// witness round advances to dominate each one.
+			for _, tabA := range q.A {
+				current.updateWitnessRound(tabA.Round())
+				current.addIncluded(q, tabA)
+			}
+			curACost += qACost
 		}
 	}
 	return groups
+}
+
+// staticTableRows sums the compile-time row count of every fragment in tables:
+// a sized module contributes its fixed height, a dynamic (or otherwise unsized)
+// module its maximum possible height [wiop.ColumnSizeMaxSupported] (2^22). It
+// mirrors the A-side accounting of [wiop.TableRelationQuery.PrevalidateRowLimit]
+// so the bin-packing bound and the compile-time precheck agree.
+func staticTableRows(tables []wiop.Table) uint64 {
+	var sum uint64
+	for _, tab := range tables {
+		m := tab.Module()
+		if m.IsSized() {
+			sum += uint64(m.Size())
+		} else {
+			sum += uint64(wiop.ColumnSizeMaxSupported)
+		}
+	}
+	return sum
 }
 
 // compileGroup builds the fraction list for a single B-grouped collection of
@@ -507,28 +563,86 @@ func viewExprs(cols []*wiop.ColumnView) []wiop.Expression {
 	return out
 }
 
-// rowLimitAction enforces the per-lookup row bound for a single source query on
-// both sides of the protocol. As a prover action it panics (the prover is
-// trusted code about to build an unsound witness); as a verifier action it
-// returns an error so the verifier rejects the proof gracefully.
+// groupRowLimitAction enforces, at runtime, that a single subgroup's summed row
+// count stays below the budget on each side. It is the runtime counterpart to
+// the compile-time bin-packing in [collectGroups]: bin-packing keeps every
+// subgroup under limit using static (maximum) module heights, and this action
+// re-checks the exact per-run heights so the bound is enforced for the concrete
+// witness on both the prover (panic — trusted code about to build an unsound
+// witness) and verifier (error — reject the proof gracefully) sides.
 //
-// limit is the effective per-side bound for this query: [wiop.MaxLookupRows]
-// divided by the accumulator budget it shares with the lookups compiled
-// alongside it (see registerRowLimitChecks).
-type rowLimitAction struct {
-	query *wiop.TableRelationQuery
+// A subgroup is the unit that shares a multiplicity column M and its
+// accumulators, so it is the unit the budget applies to. The check sums,
+// independently:
+//
+//   - the A side: the runtime height of every A fragment in the subgroup (the
+//     union whose per-row multiplicities feed the subgroup's M columns), and
+//   - the B side: the runtime height of every shared lookup-table fragment.
+//
+// and fails if either reaches limit. Summing per fragment deliberately
+// double-counts two fragments that live on the same module, because each
+// fragment contributes its own pass over that module's rows to the argument.
+type groupRowLimitAction struct {
+	group *lookupGroup
 	limit uint64
 }
 
-// Run implements [wiop.ProverAction]: it panics on an over-limit lookup.
-func (a *rowLimitAction) Run(rt *wiop.Runtime) {
-	a.query.CheckRowLimit(rt, a.limit)
+// Run implements [wiop.ProverAction]: it panics on an over-limit subgroup.
+func (a *groupRowLimitAction) Run(rt *wiop.Runtime) {
+	if err := a.validate(rt); err != nil {
+		panic(err)
+	}
 }
 
 // Check implements [wiop.VerifierAction]: it returns an error on an over-limit
-// lookup so the verifier rejects the proof.
-func (a *rowLimitAction) Check(rt *wiop.Runtime) error {
-	return a.query.ValidateRowLimit(rt, a.limit)
+// subgroup so the verifier rejects the proof.
+func (a *groupRowLimitAction) Check(rt *wiop.Runtime) error {
+	return a.validate(rt)
+}
+
+// validate sums the subgroup's per-run row counts on each side and returns an
+// error if either side reaches the limit. Mirrors the accounting of
+// [wiop.TableRelationQuery.ValidateRowLimit], extended from a single query to
+// the whole subgroup's union of A fragments against the shared B side.
+func (a *groupRowLimitAction) validate(rt *wiop.Runtime) error {
+	var aRows uint64
+	for _, inc := range a.group.included {
+		aRows += uint64(inc.cols[0].Module().RuntimeSize(rt))
+	}
+	if aRows >= a.limit {
+		return a.overLimitError("A", aRows)
+	}
+
+	var bRows uint64
+	for _, it := range a.group.includings {
+		bRows += uint64(it.module.RuntimeSize(rt))
+	}
+	if bRows >= a.limit {
+		return a.overLimitError("B", bRows)
+	}
+	return nil
+}
+
+// overLimitError builds the shared over-budget message, listing the lookup
+// queries folded into the offending subgroup so the failure is traceable back
+// to source lookups.
+func (a *groupRowLimitAction) overLimitError(side string, rows uint64) error {
+	seen := make(map[*wiop.TableRelationQuery]struct{})
+	var paths []string
+	for _, inc := range a.group.included {
+		if _, ok := seen[inc.query]; ok {
+			continue
+		}
+		seen[inc.query] = struct{}{}
+		paths = append(paths, inc.query.Context().Path())
+	}
+	return fmt.Errorf(
+		"wiop/compilers/lookuptologderivsum: subgroup [%s] has total rows on the %s side "+
+			"reaching %d, which is >= the per-subgroup row limit %d (the row budget shared by the "+
+			"lookups bin-packed into one multiplicity column); the accumulators in the reduced "+
+			"constraints would overflow over a small field",
+		strings.Join(paths, ", "), side, rows, a.limit,
+	)
 }
 
 // ResultIsZeroVerifierAction asserts that the aggregated [wiop.LogDerivativeSum]

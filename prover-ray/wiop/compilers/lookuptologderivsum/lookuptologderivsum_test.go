@@ -278,25 +278,28 @@ func TestCompile_RowLimit_CompilePanics_BSide(t *testing.T) {
 		"Compile must panic when a lookup B side reaches the row limit")
 }
 
-// TestCompile_RowLimit_GroupingTightensBound builds two lookups that share the
-// same including (B) table, so they are reduced together and drain the same
-// accumulator budget. Each has a 2^29-row A side.
+// TestCompile_RowLimit_GroupingSplitsIntoSubgroups builds three lookups that
+// share the same including (B) table, each with a 2^29-row A side.
 //
-// A lone lookup's effective A-side limit is MaxLookupRows = 2^30, which 2^29
-// clears. Grouping the two lookups divides the budget by the group's lookup
-// count (2), giving 2^30/2 = 2^29 — which a 2^29-row side reaches. Compile must
-// therefore panic, proving the divisor is the number of lookups grouped
-// together.
-func TestCompile_RowLimit_GroupingTightensBound(t *testing.T) {
+// Sharing a lookup table no longer tightens the per-lookup budget: instead of
+// dividing MaxLookupRows = 2^30 by the lookup count, the compiler bin-packs the
+// lookups into subgroups whose static A-side total stays strictly below the
+// budget. Two 2^29-row sides already sum to exactly 2^30 (the budget is
+// exclusive), so each lookup lands in its own subgroup — three subgroups, three
+// multiplicity columns M on the shared table module — and Compile must NOT
+// panic. This is the direct counterpart to the removed "grouping tightens the
+// bound" behaviour.
+func TestCompile_RowLimit_GroupingSplitsIntoSubgroups(t *testing.T) {
 	sys := wiop.NewSystemf("ll-limit-group")
 	r0 := sys.NewRound()
-	// One shared B table (same colT pointer ⇒ same canonicalIncludingKey ⇒ both
-	// queries land in one group).
+	// One shared B table (same colT pointer ⇒ same canonicalIncludingKey ⇒ all
+	// queries land in the same bucket, to be split into subgroups).
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionRight)
 	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
 	bTable := wiop.NewTable(colT.View())
 
-	for i := 0; i < 2; i++ {
+	const nLookups = 3
+	for i := 0; i < nLookups; i++ {
 		modS := sys.NewSizedModule(sys.Context.Childf("modS%d", i), 1<<29, wiop.PaddingDirectionRight)
 		colS := modS.NewColumn(sys.Context.Childf("S%d", i), wiop.VisibilityOracle, r0)
 		sys.NewInclusion(
@@ -305,8 +308,16 @@ func TestCompile_RowLimit_GroupingTightensBound(t *testing.T) {
 			[]wiop.Table{bTable},
 		)
 	}
-	assert.Panics(t, func() { lookuptologderivsum.Compile(sys) },
-		"grouping two lookups must halve the budget and make Compile reject a 2^29-row side")
+
+	colsBefore := len(modT.Columns)
+	assert.NotPanics(t, func() { lookuptologderivsum.Compile(sys) },
+		"bin-packing must open a fresh subgroup per over-budget-when-combined lookup instead of panicking")
+	// Each 2^29-row lookup occupies its own subgroup (two would reach 2^30), so
+	// the shared table module gains exactly one M column per lookup.
+	assert.Len(t, modT.Columns, colsBefore+nLookups,
+		"each subgroup must allocate its own multiplicity column M on the shared table")
+	assert.Len(t, sys.LogDerivativeSums, 1,
+		"every subgroup's fractions must still fold into a single aggregated LogDerivativeSum")
 }
 
 // TestCompile_RowLimit_MultipleFragmentsCombine builds a single inclusion whose
