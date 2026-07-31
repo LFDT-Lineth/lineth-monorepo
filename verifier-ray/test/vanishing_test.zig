@@ -239,3 +239,36 @@ fn buildRoundMessage(allocator: std.mem.Allocator, round: fixtures.RuntimeTraceR
 
     return .{ .columns = columns, .cells = cells };
 }
+
+test "vanishing rejects a cell_value ref past the end of the round's cells" {
+    // A size-4 module whose sole vanishing evaluates a `cell_value` at
+    // (round 0, index 3), but the proof's round 0 carries only two cells. The
+    // bounds-checked accessor must reject with CellRefOutOfRange rather than
+    // indexing out of bounds. Mirrors the endpoint-cell binding path where a
+    // malformed proof supplies a short cells slice.
+    const n = 4;
+    const expressions = [_]vanishing.ExprNode{.{ .cell_value = .{ .round = 0, .index = 3 } }};
+    const vanishings = [_]vanishing.Vanishing{.{ .expression = 0 }};
+    const buckets = [_]vanishing.Bucket{.{ .ratio = 1, .vanishings = &vanishings, .quotient_claim_offset = 0 }};
+    const modules = [_]vanishing.Module{.{
+        .size = .{ .static = n },
+        .expressions = &expressions,
+        .buckets = &buckets,
+        .witness_claim_offset = 0,
+        .merge_coin_index = 0,
+        .eval_coin_index = 1,
+    }};
+    const system = vanishing.System{ .modules = &modules, .total_witness_claims = 0, .total_quotient_claims = 1 };
+
+    // Round 0 has only 2 cells; ref index 3 is out of range.
+    const cells = [_]protocol.Scalar{ .{ .base = field.Element.init(1) }, .{ .base = field.Element.init(2) } };
+    const rounds = [_]protocol.RoundMessage{.{ .cells = &cells }};
+    const all_coins = [_]ext.Ext{ ext.Ext.one(), ext.Ext.lift(field.Element.init(2)) };
+    const ctx = protocol.Context{ .all_coins = &all_coins, .rounds = &rounds };
+    const quotient_claims = [_]ext.Ext{ext.Ext.zero()};
+
+    try std.testing.expectError(
+        error.CellRefOutOfRange,
+        vanishing.verify(system, .{ .ctx = ctx, .witness_claims = &.{}, .quotient_claims = &quotient_claims }),
+    );
+}

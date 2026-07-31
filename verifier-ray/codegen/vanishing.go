@@ -173,6 +173,23 @@ func BuildVanishingSystem(sys *wiop.System, routing CoinRouting) (VanishingSyste
 			module.MergeCoinIndex = mergeIdx
 			module.EvalCoinIndex = evalIdx
 
+			// Defence-in-depth, symmetric with logderivativesum's checkNotLastSlot:
+			// a cell_value pointing at the LAST wiop round references a cell that
+			// protocol.replay excludes from ctx.rounds, so the Zig verifier would
+			// reject it at runtime (CellRefOutOfRange). Catch it here for a clear
+			// generation-time error instead. In a correctly assembled system
+			// (global.Compile appends rounds after the witness) this never fires.
+			lastSlot := len(sys.Rounds) - 1
+			for _, node := range module.Expressions {
+				if node.Kind == ExprCellValue && node.Cell.Round == lastSlot {
+					return VanishingSystem{}, fmt.Errorf(
+						"codegen: vanishing cell_value %q is in the last wiop round (slot %d); "+
+							"protocol.replay excludes the last round from ctx.rounds, so this cell "+
+							"would be unreadable — global.Compile must append rounds after it",
+						node.Cell.SourceName, node.Cell.Round)
+				}
+			}
+
 			out.Modules = append(out.Modules, module)
 		}
 	}

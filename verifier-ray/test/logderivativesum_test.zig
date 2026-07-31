@@ -93,3 +93,37 @@ test "logderiv rejects multiple z_final_refs whose sum disagrees with result" {
         logderivativesum.verify(twoRefSystem(), makeCtx(cells)),
     );
 }
+
+test "logderiv rejects a cell ref past the end of a short cells slice" {
+    // The system references (round 0, index 1) for Result, but the proof carries
+    // only one cell. The bounds-checked accessor must reject with
+    // CellRefOutOfRange instead of indexing out of bounds.
+    const cells: []const protocol.Scalar = &[_]protocol.Scalar{five};
+    try std.testing.expectError(
+        error.CellRefOutOfRange,
+        logderivativesum.verify(oneQuerySystem(false), makeCtx(cells)),
+    );
+}
+
+test "logderiv rejects a cell ref into a round with no cells" {
+    // An empty cells slice: even index 0 (z_final) is out of range.
+    const cells: []const protocol.Scalar = &[_]protocol.Scalar{};
+    try std.testing.expectError(
+        error.CellRefOutOfRange,
+        logderivativesum.verify(oneQuerySystem(false), makeCtx(cells)),
+    );
+}
+
+test "logderiv rejects a cell ref into a nonexistent round" {
+    // A system whose refs point at round 1, but the proof has only round 0.
+    const sys = logderivativesum.System{ .queries = &[_]logderivativesum.Query{.{
+        .z_final_refs = &[_]logderivativesum.ScalarRef{.{ .round = 1, .index = 0 }},
+        .result_ref = .{ .round = 1, .index = 1 },
+        .result_is_zero = false,
+    }} };
+    const cells: []const protocol.Scalar = &[_]protocol.Scalar{ five, five };
+    try std.testing.expectError(
+        error.CellRefOutOfRange,
+        logderivativesum.verify(sys, makeCtx(cells)),
+    );
+}

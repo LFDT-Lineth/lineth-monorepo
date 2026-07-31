@@ -35,16 +35,18 @@ pub const System = struct {
     queries: []const Query = &.{},
 };
 
-pub fn verify(comptime system: System, ctx: protocol.Context) Error!void {
+pub fn verify(comptime system: System, ctx: protocol.Context) (Error || protocol.CellError)!void {
     inline for (system.queries) |query| {
-        // Σ_i Z_i[n-1], reading each Z endpoint from the transcript.
+        // Σ_i Z_i[n-1], reading each Z endpoint from the transcript via the
+        // bounds-checked accessor so a malformed proof with a short cells slice
+        // is rejected, not an out-of-bounds access.
         var sum = ext.Ext.zero();
         inline for (query.z_final_refs) |ref| {
-            sum = sum.add(ctx.rounds[ref.round].cells[ref.index].toExt());
+            sum = sum.add((try ctx.cell(ref.round, ref.index)).toExt());
         }
 
         // The result is also read from the transcript, not baked in.
-        const result = ctx.rounds[query.result_ref.round].cells[query.result_ref.index].toExt();
+        const result = (try ctx.cell(query.result_ref.round, query.result_ref.index)).toExt();
 
         // The final-sum identity links the Z endpoints to the claimed result.
         if (!sum.eql(result)) return error.FinalSumMismatch;

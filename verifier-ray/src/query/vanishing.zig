@@ -8,6 +8,11 @@ pub const Error = error{
     InvalidClaimCount,
     QuotientIdentityMismatch,
     LagrangeSelectorInDomain,
+    /// A `cell_value` reference points outside the proof's round messages — a
+    /// malformed proof, rejected here rather than indexing out of bounds. Same
+    /// condition as `protocol.CellError.CellRefOutOfRange`; folded into this set
+    /// so the evaluator's signatures stay on the module `Error`.
+    CellRefOutOfRange,
 };
 
 pub const ModuleSize = union(enum) {
@@ -203,7 +208,11 @@ fn evalExpr(
     const node = module.expressions[expr_index];
     return switch (node) {
         .column_claim => |claim_index| input.witness_claims[module.witness_claim_offset + claim_index],
-        .cell_value => |ref| input.ctx.rounds[ref.round].cells[ref.index].toExt(),
+        // Bounds-checked cell read: a malformed proof whose round messages don't
+        // carry this cell is rejected (CellRefOutOfRange), not indexed OOB. The
+        // accessor's CellError is re-raised as this module's own CellRefOutOfRange.
+        .cell_value => |ref| (input.ctx.cell(ref.round, ref.index) catch
+            return error.CellRefOutOfRange).toExt(),
         .coin_value => |coin_index| input.ctx.all_coins[coin_index],
         .constant => |value| ext.Ext.lift(value),
         .op => |op| try evalOp(module, op, static_n, ctx, input),

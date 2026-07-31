@@ -603,7 +603,7 @@ type vanishingProofView struct {
 
 type assignFn func(rt *wiop.Runtime)
 
-func compileFullPipeline(sys *wiop.System) {
+func compilePipelineWithoutPCS(sys *wiop.System) {
 	rangecheck.Compile(sys)
 	lookuptologderivsum.Compile(sys)
 	logderivativesum.Compile(sys)
@@ -626,7 +626,7 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 	// the mandatory-PCS `verify.zig` fixture. Compiling mutates a system, so the
 	// two copies must be independent (mirrors realpcs.go's probe pattern).
 	add := func(source, name string, sys *wiop.System, honest assignFn, invalid assignFn, pcsBuild func() (*wiop.System, assignFn)) error {
-		compileFullPipeline(sys)
+		compilePipelineWithoutPCS(sys)
 		routing, err := codegen.BuildCoinRouting(sys)
 		if err != nil {
 			return fmt.Errorf("build coin routing %s/%s: %w", source, name, err)

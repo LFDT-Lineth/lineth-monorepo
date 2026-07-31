@@ -3,6 +3,16 @@ const fiat_shamir = @import("../crypto/fiat_shamir.zig");
 
 pub const Error = error{InvalidRoundCount};
 
+/// Raised when a sub-verifier's (comptime) cell reference points outside the
+/// (runtime) round messages a proof actually carries. The `(round, index)`
+/// coordinates come from codegen and are correct for an honest proof, but the
+/// round messages are prover-supplied and their per-round `cells` lengths are
+/// not otherwise pinned by `Spec`; without this check a malformed proof with a
+/// short (or empty) `cells` slice would index out of bounds — a panic in a safe
+/// build, UB in ReleaseFast. Surfacing it as an error makes a malformed proof a
+/// clean rejection instead.
+pub const CellError = error{CellRefOutOfRange};
+
 pub const Visibility = types.Visibility;
 pub const Vector = types.Vector;
 pub const Scalar = types.Scalar;
@@ -31,8 +41,20 @@ pub const Context = struct {
     /// Indexed by the compiled system's `round_coin_offsets`.
     all_coins: []const Coin,
     /// The verifier-visible round messages bound into the shared transcript.
-    /// Sub-verifiers read cell openings directly from `rounds[i].cells`.
+    /// Sub-verifiers read cell openings via `cell(round, index)`.
     rounds: []const RoundMessage,
+
+    /// Bounds-checked read of a cell scalar at `(round, index)`. Returns
+    /// `CellRefOutOfRange` if the proof's round messages do not carry that cell,
+    /// rather than indexing out of bounds. Every sub-verifier that consumes a
+    /// codegen-emitted cell reference (vanishing `cell_value`, logderivativesum
+    /// `z_final`/`result`) MUST route through this instead of raw indexing.
+    pub fn cell(self: Context, round: usize, index: usize) CellError!Scalar {
+        if (round >= self.rounds.len) return CellError.CellRefOutOfRange;
+        const cells = self.rounds[round].cells;
+        if (index >= cells.len) return CellError.CellRefOutOfRange;
+        return cells[index];
+    }
 };
 
 /// Replays the prover–verifier transcript to derive all Fiat-Shamir coins.

@@ -22,24 +22,19 @@ import (
 	"path/filepath"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/localvanishing"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
 	pcscompiler "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/rangecheck"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 )
 
-// compilePipelineWithPCS is compileFullPipeline (main.go) followed by the PCS
-// commitment pass. pcs.Compile MUST run last, after every arithmetization pass
-// has registered its columns and LagrangeEval queries (see the pcs package doc).
+// compilePipelineWithPCS is compilePipelineWithoutPCS (main.go) followed by the
+// PCS commitment pass. pcs.Compile MUST run last, after every arithmetization
+// pass has registered its columns and LagrangeEval queries (see the pcs package
+// doc).
+//
+// It reuses compilePipelineWithoutPCS rather than repeating the arithmetization
+// passes so the two pipelines cannot drift: a pass added to one is added to both.
 func compilePipelineWithPCS(sys *wiop.System) {
-	rangecheck.Compile(sys)
-	lookuptologderivsum.Compile(sys)
-	logderivativesum.Compile(sys)
-	localvanishing.Compile(sys)
-	global.Compile(sys)
+	compilePipelineWithoutPCS(sys)
 	pcscompiler.Compile(sys)
 }
 
