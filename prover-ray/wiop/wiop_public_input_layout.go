@@ -7,46 +7,48 @@ import (
 )
 
 // PublicInputLayout defines the semantic structure of public
-// inputs (mainly used for inter-shard consistancy).
-// The canonical flat cell ordering — used for the [PublicInput] wire format -
-// that [System.Prove] returns and [System.Verify] consumes
+// inputs (mainly used for inter-shard consistency).
+// The canonical flat cell ordering — used for the [PublicInput] wire format —
+// is given by [PublicInputLayout.Cells].
 type PublicInputLayout struct {
-	// MessageBusMemory holds cells for the "memory" message-bus grand-product
-	// endpoint.
-	MessageBusMemory []*Cell
-	// MessageBusRegister holds cells for the "register" message-bus
-	// grand-product endpoint.
-	MessageBusRegister []*Cell
-	// more MessageBuses might be add later.
+	// MessageBus holds one cell per registered message-bus handle, in
+	// alphabetical handle order (messagebus.Compile sorts handles before
+	// processing them, so the ordering is deterministic across all shards).
+	MessageBus []*Cell
 	// ProgramVK holds cells encoding the program verification key.
 	ProgramVK []*Cell
 	// SharedRandomness holds cells encoding the shared initial Fiat-Shamir state.
 	SharedRandomness []*Cell
 	// SharedRandomnessContribution holds cells encoding this shard's additive
-	// contribution to the sharedRandomness
+	// contribution to the sharedRandomness.
 	SharedRandomnessContribution []*Cell
 	// GuestPublicOutputs holds cells encoding the guest program's public outputs.
 	GuestPublicOutputs []*Cell
 	// IsLastShard is a cell whose runtime value is field.One for the last
-	// shard and field.Zero otherwise.
+	// shard and field.Zero otherwise. Nil if not used.
 	IsLastShard *Cell
 }
 
+// RegisterMessageBus appends a cell to [MessageBus]. Each call corresponds to
+// one handle; messagebus.Compile calls this once per handle in alphabetical
+// order, so positions are deterministic across shards.
+func (l *PublicInputLayout) RegisterMessageBus(_ string, cell *Cell) {
+	l.MessageBus = append(l.MessageBus, cell)
+}
+
 // Cells returns all cells in a canonical, deterministic order:
-//  1. MessageBusMemory
-//  2. MessageBusRegister
-//  3. ProgramVK
-//  4. SharedRandomness
-//  5. SharedRandomnessContribution
-//  6. GuestPublicOutputs
-//  7. IsLastShard (if non-nil)
+//  1. MessageBus (in registration order)
+//  2. ProgramVK
+//  3. SharedRandomness
+//  4. SharedRandomnessContribution
+//  5. GuestPublicOutputs
+//  6. IsLastShard (if non-nil)
 //
 // This ordering defines the index-to-cell mapping in the flat [PublicInput]
 // wire format produced by [System.Prove].
 func (l *PublicInputLayout) Cells() []*Cell {
 	var cells []*Cell
-	cells = append(cells, l.MessageBusMemory...)
-	cells = append(cells, l.MessageBusRegister...)
+	cells = append(cells, l.MessageBus...)
 	cells = append(cells, l.ProgramVK...)
 	cells = append(cells, l.SharedRandomness...)
 	cells = append(cells, l.SharedRandomnessContribution...)
@@ -80,16 +82,19 @@ func (l *PublicInputLayout) Register(sys *System) {
 // [PublicInputLayout.Unpack] from the flat [PublicInput] returned by
 // [System.Prove].
 type PublicInputValues struct {
-	MessageBusMemory             []field.Gen
-	MessageBusRegister           []field.Gen
+	// MessageBus is indexed identically to [PublicInputLayout.MessageBus].
+	// Use [PublicInputLayout.MessageBusHandleIndex] to resolve a handle to its index.
+	MessageBus                   []field.Gen
 	ProgramVK                    []field.Gen
 	SharedRandomness             []field.Gen
 	SharedRandomnessContribution []field.Gen
 	GuestPublicOutputs           []field.Gen
-	IsLastShard                  field.Gen
+	// IsLastShard is the zero value of field.Gen when
+	// [PublicInputLayout.IsLastShard] was nil.
+	IsLastShard field.Gen
 }
 
-// Unpack splits the flat wire-format pub into  the layout formate.
+// Unpack splits the flat wire-format pub into the layout format.
 func (l *PublicInputLayout) Unpack(pub PublicInput) (*PublicInputValues, error) {
 	cells := l.Cells()
 	if len(pub) != len(cells) {
@@ -107,8 +112,7 @@ func (l *PublicInputLayout) Unpack(pub PublicInput) (*PublicInputValues, error) 
 
 	v := &PublicInputValues{}
 	i := 0
-	v.MessageBusMemory, i = unpackSlice(len(l.MessageBusMemory), i)
-	v.MessageBusRegister, i = unpackSlice(len(l.MessageBusRegister), i)
+	v.MessageBus, i = unpackSlice(len(l.MessageBus), i)
 	v.ProgramVK, i = unpackSlice(len(l.ProgramVK), i)
 	v.SharedRandomness, i = unpackSlice(len(l.SharedRandomness), i)
 	v.SharedRandomnessContribution, i = unpackSlice(len(l.SharedRandomnessContribution), i)
