@@ -216,3 +216,6 @@ docker/config/linea-besu-sequencer/deny-list.txt
 docker/config/linea-besu-sequencer/deny-list.txt.lock
 
 **/.venv
+
+.claude/worktrees/
+fixtures/
