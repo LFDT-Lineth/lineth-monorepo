@@ -975,3 +975,108 @@ func TestCompile_MultiColumn_FilterOnIncluding_InvalidColumnsFails(t *testing.T)
 	assert.Panics(t, func() { runRound(rt) },
 		"multi-column lookup with B-filter must reject an S tuple absent from T")
 }
+
+// ---- Canonical column ordering (query deduplication) ----
+
+// TestCompile_ScrambledColumnOrder_SharesGroup builds two inclusion queries
+// against the same two-column table T, the second one listing the columns in
+// the opposite order (and its A columns permuted conjointly). The compiler
+// must canonicalize the column order before bucketing so both queries share
+// one group — a single M column on the table module and a single α — and the
+// end-to-end protocol must still accept an honest witness.
+func TestCompile_ScrambledColumnOrder_SharesGroup(t *testing.T) {
+	sys := wiop.NewSystemf("ll-scrambled")
+	r0 := sys.NewRound()
+
+	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
+	modSa := sys.NewSizedModule(sys.Context.Childf("modSa"), 4, wiop.PaddingDirectionNone)
+	modSb := sys.NewSizedModule(sys.Context.Childf("modSb"), 4, wiop.PaddingDirectionNone)
+
+	tx := modT.NewColumn(sys.Context.Childf("Tx"), wiop.VisibilityOracle, r0)
+	ty := modT.NewColumn(sys.Context.Childf("Ty"), wiop.VisibilityOracle, r0)
+	sax := modSa.NewColumn(sys.Context.Childf("Sax"), wiop.VisibilityOracle, r0)
+	say := modSa.NewColumn(sys.Context.Childf("Say"), wiop.VisibilityOracle, r0)
+	sbx := modSb.NewColumn(sys.Context.Childf("Sbx"), wiop.VisibilityOracle, r0)
+	sby := modSb.NewColumn(sys.Context.Childf("Sby"), wiop.VisibilityOracle, r0)
+
+	// Query 1: (Sax, Say) ⊆ (Tx, Ty).
+	sys.NewInclusion(
+		sys.Context.Childf("incA"),
+		[]wiop.Table{wiop.NewTable(sax.View(), say.View())},
+		[]wiop.Table{wiop.NewTable(tx.View(), ty.View())},
+	)
+	// Query 2: same table, columns scrambled — (Sby, Sbx) ⊆ (Ty, Tx).
+	sys.NewInclusion(
+		sys.Context.Childf("incB"),
+		[]wiop.Table{wiop.NewTable(sby.View(), sbx.View())},
+		[]wiop.Table{wiop.NewTable(ty.View(), tx.View())},
+	)
+
+	colsBefore := len(modT.Columns)
+	lookuptologderivsum.Compile(sys)
+	assert.Len(t, modT.Columns, colsBefore+1,
+		"queries over the same table with scrambled column order must share one M column")
+
+	logderivativesum.Compile(sys)
+
+	rt := wiop.NewRuntime(sys)
+	// T pairs: (1,10), (2,20), (3,30), (4,40).
+	rt.AssignColumn(tx, makeVec(1, 2, 3, 4))
+	rt.AssignColumn(ty, makeVec(10, 20, 30, 40))
+	// Query 1 pairs: (1,10), (2,20), (1,10), (3,30) — all in T.
+	rt.AssignColumn(sax, makeVec(1, 2, 1, 3))
+	rt.AssignColumn(say, makeVec(10, 20, 10, 30))
+	// Query 2 pairs (as (x,y)): (2,20), (4,40), (2,20), (2,20) — all in T.
+	rt.AssignColumn(sbx, makeVec(2, 4, 2, 2))
+	rt.AssignColumn(sby, makeVec(20, 40, 20, 20))
+
+	driveProtocol(rt)
+	require.NoError(t, checkAllVerifierActions(rt))
+}
+
+// TestCompile_ScrambledColumnOrder_StillSound scrambles the column order the
+// same way but assigns query 2 an S tuple whose components are swapped
+// relative to T's pairing — (10, 1) instead of (1, 10). If canonicalization
+// mis-paired the A columns against the reordered B columns this witness would
+// pass; instead M-assignment must reject it.
+func TestCompile_ScrambledColumnOrder_StillSound(t *testing.T) {
+	sys := wiop.NewSystemf("ll-scrambled-sound")
+	r0 := sys.NewRound()
+
+	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
+	modSa := sys.NewSizedModule(sys.Context.Childf("modSa"), 2, wiop.PaddingDirectionNone)
+	modSb := sys.NewSizedModule(sys.Context.Childf("modSb"), 2, wiop.PaddingDirectionNone)
+
+	tx := modT.NewColumn(sys.Context.Childf("Tx"), wiop.VisibilityOracle, r0)
+	ty := modT.NewColumn(sys.Context.Childf("Ty"), wiop.VisibilityOracle, r0)
+	sax := modSa.NewColumn(sys.Context.Childf("Sax"), wiop.VisibilityOracle, r0)
+	say := modSa.NewColumn(sys.Context.Childf("Say"), wiop.VisibilityOracle, r0)
+	sbx := modSb.NewColumn(sys.Context.Childf("Sbx"), wiop.VisibilityOracle, r0)
+	sby := modSb.NewColumn(sys.Context.Childf("Sby"), wiop.VisibilityOracle, r0)
+
+	sys.NewInclusion(
+		sys.Context.Childf("incA"),
+		[]wiop.Table{wiop.NewTable(sax.View(), say.View())},
+		[]wiop.Table{wiop.NewTable(tx.View(), ty.View())},
+	)
+	sys.NewInclusion(
+		sys.Context.Childf("incB"),
+		[]wiop.Table{wiop.NewTable(sby.View(), sbx.View())},
+		[]wiop.Table{wiop.NewTable(ty.View(), tx.View())},
+	)
+
+	lookuptologderivsum.Compile(sys)
+	logderivativesum.Compile(sys)
+
+	rt := wiop.NewRuntime(sys)
+	rt.AssignColumn(tx, makeVec(1, 2, 3, 4))
+	rt.AssignColumn(ty, makeVec(10, 20, 30, 40))
+	rt.AssignColumn(sax, makeVec(1, 2))
+	rt.AssignColumn(say, makeVec(10, 20))
+	// (x,y) = (10,1): the components of a valid pair, swapped. Not in T.
+	rt.AssignColumn(sbx, makeVec(10, 2))
+	rt.AssignColumn(sby, makeVec(1, 20))
+
+	assert.Panics(t, func() { runRound(rt) },
+		"a swapped-component S tuple must still be rejected after canonicalization")
+}

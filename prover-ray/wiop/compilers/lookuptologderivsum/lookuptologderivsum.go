@@ -245,12 +245,19 @@ func registerRowLimitChecks(groups []*lookupGroup) {
 // order of their B key, subgroups in query order within a bucket — so [Compile]
 // needs no further sorting.
 func collectGroups(sys *wiop.System) []*lookupGroup {
+	// bucketQuery pairs a query with its A fragments re-expressed in the
+	// bucket's canonical column order, so the bin-packing phase below adds the
+	// A columns in the order matching the canonicalized B descriptors.
+	type bucketQuery struct {
+		q *wiop.TableRelationQuery
+		a []wiop.Table
+	}
 	// bucket gathers every query that targets one canonical B side, together
 	// with the canonical B-fragment descriptors taken from the first query to
 	// hit the key.
 	type bucket struct {
 		includings []includingTable
-		queries    []*wiop.TableRelationQuery
+		queries    []bucketQuery
 	}
 	buckets := make(map[string]*bucket)
 	var order []string // first-appearance order of B keys, for deterministic output
@@ -269,15 +276,23 @@ func collectGroups(sys *wiop.System) []*lookupGroup {
 				q.Context().Path(),
 			))
 		}
+		// Canonicalize the column order before keying: the permutation sorting
+		// the first B fragment's columns is applied uniformly to every B and A
+		// fragment, so queries over the same table with the columns listed in
+		// a different order collapse into the same bucket (and thus share M
+		// columns) instead of duplicating the table's fractions.
+		perm := canonicalColumnOrder(q.B[0])
+		bTabs := permuteTables(q.B, perm)
+		aTabs := permuteTables(q.A, perm)
 		// Bucket key: queries that target the same B side — the same ordered
 		// union of lookup-table fragments — share the canonical includingTable
 		// descriptors. Two queries with distinct B descriptors that happen to
 		// reference the same underlying columns *with the same shifts and
-		// selectors, in the same order* are intentionally collapsed;
-		// canonicalIncludingKeyMulti encodes exactly the per-fragment (column
-		// pointer, shift, selector) tuples so equality of key ⇔ equality of B
-		// side as seen by the prover.
-		key := canonicalIncludingKeyMulti(q.B)
+		// selectors* are intentionally collapsed; canonicalIncludingKeyMulti
+		// encodes exactly the per-fragment (column pointer, shift, selector)
+		// tuples in canonical order, so equality of key ⇔ equality of B side
+		// as seen by the prover.
+		key := canonicalIncludingKeyMulti(bTabs)
 		b, ok := buckets[key]
 		if !ok {
 			// First query to hit this key supplies the canonical
@@ -285,8 +300,8 @@ func collectGroups(sys *wiop.System) []*lookupGroup {
 			// key reuse them as-is — they are guaranteed by the key to
 			// describe identical fragments, so we deliberately skip
 			// re-validating cols/selector/module on later hits.
-			b = &bucket{includings: make([]includingTable, len(q.B))}
-			for frag, bTab := range q.B {
+			b = &bucket{includings: make([]includingTable, len(bTabs))}
+			for frag, bTab := range bTabs {
 				it := includingTable{
 					cols:     bTab.Columns,
 					selector: bTab.Selector,
@@ -304,7 +319,7 @@ func collectGroups(sys *wiop.System) []*lookupGroup {
 			buckets[key] = b
 			order = append(order, key)
 		}
-		b.queries = append(b.queries, q)
+		b.queries = append(b.queries, bucketQuery{q: q, a: aTabs})
 	}
 
 	// Bin-pack each bucket's queries into subgroups whose static A-side row
@@ -316,8 +331,8 @@ func collectGroups(sys *wiop.System) []*lookupGroup {
 			current  *lookupGroup
 			curACost uint64
 		)
-		for _, q := range b.queries {
-			qACost := staticTableRows(q.A)
+		for _, bq := range b.queries {
+			qACost := staticTableRows(bq.a)
 			// Open a fresh subgroup for the first query, or whenever adding this
 			// query would bring the running A-side total up to the budget. A
 			// query whose own A side already reaches the budget still lands in a
@@ -329,16 +344,17 @@ func collectGroups(sys *wiop.System) []*lookupGroup {
 				current = &lookupGroup{includings: b.includings}
 				// Witness round must dominate every B fragment (shared across the
 				// whole bucket, so identical for every subgroup).
-				for _, bTab := range q.B {
+				for _, bTab := range bq.q.B {
 					current.updateWitnessRound(bTab.Round())
 				}
 				groups = append(groups, current)
 				curACost = 0
 			}
-			// Every A fragment of this query joins the current subgroup; the
-			// witness round advances to dominate each one.
-			current.queries = append(current.queries, q)
-			for _, tabA := range q.A {
+			// Every A fragment of this query joins the current subgroup, in the
+			// bucket's canonical column order; the witness round advances to
+			// dominate each one.
+			current.queries = append(current.queries, bq.q)
+			for _, tabA := range bq.a {
 				current.updateWitnessRound(tabA.Round())
 				current.addIncluded(tabA)
 			}

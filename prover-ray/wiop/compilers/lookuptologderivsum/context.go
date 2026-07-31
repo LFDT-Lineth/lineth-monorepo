@@ -2,6 +2,7 @@ package lookuptologderivsum
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
@@ -41,7 +42,10 @@ func (t includingTable) width() int { return len(t.cols) }
 // B side, i.e. the ordered union of lookup-table fragments of a single
 // Inclusion query. Two queries that target the same ordered set of fragments
 // (each with the same columns, shifts and selector) produce the same key and
-// therefore share the group's per-fragment multiplicity columns.
+// therefore share the group's per-fragment multiplicity columns. Callers pass
+// fragments whose columns were already put into canonical order (see
+// [canonicalColumnOrder]), so two queries over the same table with the columns
+// listed in a different order also collapse to the same key.
 //
 // The fragment order is significant: it fixes the fragment index each M column
 // is bound to, so [F1,F2] and [F2,F1] are deliberately distinct keys. This
@@ -71,6 +75,55 @@ func writeFragmentKey(sb *strings.Builder, tab wiop.Table) {
 	} else {
 		sb.WriteString("sel=nil")
 	}
+}
+
+// canonicalColumnOrder returns the permutation that sorts the columns of the
+// given B fragment by their canonical identity: context path first, shifting
+// offset as tie-break. Applying the same permutation to every fragment of a
+// query — all B fragments and all A fragments, which share their width by
+// construction — reorders the lookup tuple uniformly on both sides, so the
+// query's semantics are preserved while queries over the same table with the
+// columns listed in a different order become key-identical and share one
+// group (and thus one set of M columns and one α). This is the prover-ray
+// analogue of linea/logderivativesum's GetTableCanonicalOrder, which sorts
+// the T column IDs alphabetically and permutes the S columns conjointly.
+//
+// The permutation is derived from the first B fragment only: two queries with
+// the same fragments necessarily derive the same permutation, and the other
+// fragments follow it positionally.
+func canonicalColumnOrder(tab wiop.Table) []int {
+	keys := make([]string, len(tab.Columns))
+	for i, cv := range tab.Columns {
+		keys[i] = fmt.Sprintf("%s@%d", cv.Column.Context.Path(), cv.ShiftingOffset)
+	}
+	perm := make([]int, len(tab.Columns))
+	for i := range perm {
+		perm[i] = i
+	}
+	sort.SliceStable(perm, func(a, b int) bool { return keys[perm[a]] < keys[perm[b]] })
+	return perm
+}
+
+// permuteTables returns copies of tables with each fragment's columns
+// reordered by perm. Selectors and modules are untouched. A fragment whose
+// width does not match len(perm) is returned unchanged: the width mismatch is
+// reported later by compileGroup's dedicated panic rather than an index error
+// here.
+func permuteTables(tables []wiop.Table, perm []int) []wiop.Table {
+	out := make([]wiop.Table, len(tables))
+	for i, tab := range tables {
+		if len(tab.Columns) != len(perm) {
+			out[i] = tab
+			continue
+		}
+		cols := make([]*wiop.ColumnView, len(perm))
+		for j, p := range perm {
+			cols[j] = tab.Columns[p]
+		}
+		tab.Columns = cols
+		out[i] = tab
+	}
+	return out
 }
 
 // lookupGroup collects every Inclusion query that targets the same B side
