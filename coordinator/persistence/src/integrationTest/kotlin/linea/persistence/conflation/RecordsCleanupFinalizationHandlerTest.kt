@@ -81,7 +81,7 @@ class RecordsCleanupFinalizationHandlerTest : CleanDbTestSuiteParallel() {
     sqlClient.preparedQuery("select * from ${BatchesPostgresDao.batchesTableName}")
 
   private fun blobsContentQuery(): PreparedQuery<RowSet<Row>> =
-    sqlClient.preparedQuery("select * from ${BlobsPostgresDao.TableName}")
+    sqlClient.preparedQuery("select * from ${BlobsPostgresDaoG.TableName}")
 
   private fun aggregationsContentQuery(): PreparedQuery<RowSet<Row>> =
     sqlClient.preparedQuery("select * from ${PostgresAggregationsDao.aggregationsTable}")
@@ -172,10 +172,9 @@ class RecordsCleanupFinalizationHandlerTest : CleanDbTestSuiteParallel() {
     Assertions.assertThat(batchesAfterCleanup.size()).isEqualTo(0)
 
     val blobsAfterCleanup = blobsContentQuery().execute().get()
-      .map { BlobsPostgresDao.parseRecord(it) }
-      .sortedBy { it.startBlockNumber }
-    Assertions.assertThat(blobsAfterCleanup.size).isEqualTo(1)
-    Assertions.assertThat(blobsAfterCleanup[0]).isEqualTo(blob3)
+    Assertions.assertThat(blobsAfterCleanup.size()).isEqualTo(1)
+    val remainingBlob = blobsRepository.findBlobByStartBlockNumber(blob3.startBlockNumber.toLong()).get()
+    Assertions.assertThat(remainingBlob).isEqualTo(blob3)
 
     val aggregationsAfterCleanup = aggregationsContentQuery().execute().get()
     Assertions.assertThat(aggregationsAfterCleanup.size()).isEqualTo(1)
