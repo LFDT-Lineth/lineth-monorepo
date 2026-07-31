@@ -975,8 +975,8 @@ func EncodeStatelessInput(payload []byte) ([]byte, error) {
 		return nil, fmt.Errorf("EncodeStatelessInput: %w", err)
 	}
 
-	framed := make([]byte, 0, len(statelessInputSchemaID)+len(raw))
-	framed = append(framed, statelessInputSchemaID...)
+	// Mirrors the Python reference's schema_id_bytes + raw framing.
+	framed := append([]byte(nil), statelessInputSchemaID...)
 	framed = append(framed, raw...)
 	return framed, nil
 }
