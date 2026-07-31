@@ -169,8 +169,18 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
                     fail
                 }
             }
-            //
-            registers[rd] = tmpDWord1
+        }
+        case I_ORI: {
+            printf "ORI "
+            print_i_operands(rd, rs1, signext_imm12_64)
+            tmpDWord1 = registers[rs1] | signext_imm12_64
+            new_pc = (pc + 4) as Address
+        }
+        case I_ANDI: {
+            printf "ANDI "
+            print_i_operands(rd, rs1, signext_imm12_64)
+            tmpDWord1 = registers[rs1] & signext_imm12_64
+            new_pc = (pc + 4) as Address
         }
         case I_ORI: {
             printf "ORI "
@@ -228,12 +238,7 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
                 default: {
                     fail
                 }
-                default: {
-                    fail
-                }
             }
-            //
-            registers[rd] = tmpDWord1
         }
 
         // =================
