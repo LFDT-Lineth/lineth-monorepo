@@ -1,6 +1,6 @@
 include "./lib/nonnative/u128.zkc"
 
-type tAddr       = u8
+type tAddr = u8
 
 pub input in_base(address:tAddr) -> (val:u128)
 pub input in_exp(address:tAddr) -> (val:u128)

@@ -1,19 +1,18 @@
 include "./lib/secp256k1/secp256k1.zkc"
 
-type tAddr       = u8
+type tAddr = u8
 
 // Batched test vectors: in_n[0] cases, each a triple (P1, P2, P3 = P1 + P2).
 // in_is_double[i] = 1 marks a doubling case (P1 == P2), which the second loop
 // additionally checks against the dedicated projective doubling formula.
-pub input in_n(address:u1)             -> (count:u8)
-pub input in_x1(address:tAddr)         -> (val:u256)
-pub input in_y1(address:tAddr)         -> (val:u256)
-pub input in_x2(address:tAddr)         -> (val:u256)
-pub input in_y2(address:tAddr)         -> (val:u256)
-pub input in_x3(address:tAddr)         -> (val:u256)
-pub input in_y3(address:tAddr)         -> (val:u256)
-pub input in_is_double(address:tAddr)  -> (flag:u8)
-
+pub input in_n(address:u1) -> (count:u8)
+pub input in_x1(address:tAddr) -> (val:u256)
+pub input in_y1(address:tAddr) -> (val:u256)
+pub input in_x2(address:tAddr) -> (val:u256)
+pub input in_y2(address:tAddr) -> (val:u256)
+pub input in_x3(address:tAddr) -> (val:u256)
+pub input in_y3(address:tAddr) -> (val:u256)
+pub input in_is_double(address:tAddr) -> (flag:u8)
 
 fn main() {
 
@@ -21,7 +20,7 @@ fn main() {
 
     // Loop 1: every case is validated with both the affine group law
     // (secp_add_affine) and the complete projective addition round-trip.
-    for i:tAddr = 0; i < n; i = i + 1 {
+    for i:tAddr = 0; i<n; i = i + 1 {
         // Reduce inputs to canonical form up front, so downstream raw comparisons
         // (ec_add's `x1 != x2`, the x3/y3 result check) operate on residues, not
         // on non-canonical u256 encodings that alias the same field element.
@@ -57,7 +56,7 @@ fn main() {
 
     // Loop 2: doubling cases (P1 == P2) also exercise the dedicated projective
     // doubling formula. 2*P1 must match the claimed result (x3, y3).
-    for i:tAddr = 0; i < n; i = i + 1 {
+    for i:tAddr = 0; i<n; i = i + 1 {
         if in_is_double[i] != 0 {
             var x1:u256 = reduce_256(in_x1[i], p)
             var y1:u256 = reduce_256(in_y1[i], p)

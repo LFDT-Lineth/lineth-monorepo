@@ -28,7 +28,7 @@ fn mulmod_256(lhsL:u256, rhsL:u256, modL:u256) -> (remainder:u256) {
 // values. Implemented as addmod with 0, which reduces its inputs.
 fn reduce_256(val:u256, modL:u256) -> (remainder:u256) {
     remainder = mulmod_256(1, val, modL)
-    if remainder > modL {
+    if remainder>modL {
         fail
     }
 }
@@ -40,7 +40,7 @@ fn addmod_256(lhsL:u256, rhsL:u256, modL:u256) -> (remainder:u256) {
         fail
     }
     var sum:u257 = (lhsL as u257) + (rhsL as u257)
-    if sum > (modL as u257) {
+    if sum>(modL as u257) {
         sum = sum - (modL as u257)
     }
     var overflow:u1
@@ -56,7 +56,7 @@ fn submod_256(lhsL:u256, rhsL:u256, modL:u256) -> (remainder:u256) {
         fail
     }
     var lhs:u257
-    if rhsL > lhsL {
+    if rhsL>lhsL {
         lhs = (lhsL as u257) + (modL as u257)
     } else {
         lhs = (lhsL as u257)
@@ -69,7 +69,7 @@ fn submod_256(lhsL:u256, rhsL:u256, modL:u256) -> (remainder:u256) {
 }
 
 #[native]
-fn expmod_unconstrained_256(base: u256, exp: u256, mod: u256) -> (res: u256) {
+fn expmod_unconstrained_256(base:u256, exp:u256, mod:u256) -> (res:u256) {
     if exp == 0 {
         res = 1 % mod
     } else {
@@ -86,9 +86,9 @@ fn expmod_unconstrained_256(base: u256, exp: u256, mod: u256) -> (res: u256) {
     }
 }
 
-fn invmod_256(inp: u256, modL: u256) -> (inv: u256) {
+fn invmod_256(inp:u256, modL:u256) -> (inv:u256) {
     // we first hint the inversion
-    inv = expmod_unconstrained_256(inp, modL-2, modL)
+    inv = expmod_unconstrained_256(inp, modL - 2, modL)
     // compute the product using the native product
     var prod:u256 = mulmod_256(inv, inp, modL)
     // now we check that the hinted inversion result is correct

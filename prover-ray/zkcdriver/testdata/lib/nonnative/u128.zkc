@@ -28,7 +28,7 @@ fn mulmod_128(lhsL:u128, rhsL:u128, modL:u128) -> (remainder:u128) {
 // values. Implemented as addmod with 0, which reduces its inputs.
 fn reduce_128(val:u128, modL:u128) -> (remainder:u128) {
     remainder = mulmod_128(1, val, modL)
-    if remainder > modL {
+    if remainder>modL {
         fail
     }
 }
@@ -41,7 +41,7 @@ fn addmod_128(lhsL:u128, rhsL:u128, modL:u128) -> (remainder:u128) {
     }
 
     var sum:u129 = (lhsL as u129) + (rhsL as u129)
-    if sum > (modL as u129) {
+    if sum>(modL as u129) {
         sum = sum - (modL as u129)
     }
     var overflow:u1
@@ -57,7 +57,7 @@ fn submod_128(lhsL:u128, rhsL:u128, modL:u128) -> (remainder:u128) {
         fail
     }
     var lhs:u129
-    if rhsL > lhsL {
+    if rhsL>lhsL {
         lhs = (lhsL as u129) + (modL as u129)
     } else {
         lhs = (lhsL as u129)
@@ -70,7 +70,7 @@ fn submod_128(lhsL:u128, rhsL:u128, modL:u128) -> (remainder:u128) {
 }
 
 #[native]
-fn expmod_unconstrained_128(base: u128, exp: u128, mod: u128) -> (res: u128) {
+fn expmod_unconstrained_128(base:u128, exp:u128, mod:u128) -> (res:u128) {
     if exp == 0 {
         res = 1 % mod
     } else {
@@ -87,9 +87,9 @@ fn expmod_unconstrained_128(base: u128, exp: u128, mod: u128) -> (res: u128) {
     }
 }
 
-fn invmod_128(inp: u128, modL: u128) -> (inv: u128) {
+fn invmod_128(inp:u128, modL:u128) -> (inv:u128) {
     // we first hint the inversion
-    inv = expmod_unconstrained_128(inp, modL-2, modL)
+    inv = expmod_unconstrained_128(inp, modL - 2, modL)
     // compute the product using the native product
     var prod:u128 = mulmod_128(inv, inp, modL)
     // now we check that the hinted inversion result is correct

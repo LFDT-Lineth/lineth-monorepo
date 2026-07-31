@@ -28,7 +28,7 @@ fn mulmod_64(lhsL:u64, rhsL:u64, modL:u64) -> (remainder:u64) {
 // values. Implemented as addmod with 0, which reduces its inputs.
 fn reduce_64(val:u64, modL:u64) -> (remainder:u64) {
     remainder = mulmod_64(1, val, modL)
-    if remainder > modL {
+    if remainder>modL {
         fail
     }
 }
@@ -40,7 +40,7 @@ fn addmod_64(lhsL:u64, rhsL:u64, modL:u64) -> (remainder:u64) {
         fail
     }
     var lhs:u65
-    if rhsL > lhsL {
+    if rhsL>lhsL {
         lhs = (lhsL as u65) + (modL as u65)
     } else {
         lhs = (lhsL as u65)
@@ -58,7 +58,7 @@ fn submod_64(lhsL:u64, rhsL:u64, modL:u64) -> (remainder:u64) {
         fail
     }
     var lhs:u64
-    if rhsL > lhsL {
+    if rhsL>lhsL {
         lhs = lhsL + modL
     } else {
         lhs = lhsL
@@ -67,7 +67,7 @@ fn submod_64(lhsL:u64, rhsL:u64, modL:u64) -> (remainder:u64) {
 }
 
 #[native]
-fn expmod_unconstrained_64(base: u64, exp: u64, mod: u64) -> (res: u64) {
+fn expmod_unconstrained_64(base:u64, exp:u64, mod:u64) -> (res:u64) {
     if exp == 0 {
         res = 1 % mod
     } else {
@@ -84,9 +84,9 @@ fn expmod_unconstrained_64(base: u64, exp: u64, mod: u64) -> (res: u64) {
     }
 }
 
-fn invmod_64(inp: u64, modL: u64) -> (inv: u64) {
+fn invmod_64(inp:u64, modL:u64) -> (inv:u64) {
     // we first hint the inversion
-    inv = expmod_unconstrained_64(inp, modL-2, modL)
+    inv = expmod_unconstrained_64(inp, modL - 2, modL)
     // compute the product using the native product
     var prod:u64 = mulmod_64(inv, inp, modL)
     // now we check that the hinted inversion result is correct
