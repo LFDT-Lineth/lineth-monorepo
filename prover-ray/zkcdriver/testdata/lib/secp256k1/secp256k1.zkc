@@ -50,9 +50,15 @@ fn is_equal_affine_secp256k1(Px:u256, Py:u256, Qx:u256, Qy:u256) -> (res:u1) {
 // ------ conversion methods -------
 
 fn affine_to_projective_secp256k1(x:u256, y:u256) -> (X:u256, Y:u256, Z:u256) {
-    X = x
-    Y = y
-    Z = 1
+    if is_infinity_affine_secp256k1(x, y) == 1 {
+        X = 0
+        Y = 1
+        Z = 0
+    } else {
+        X = x
+        Y = y
+        Z = 1
+    }
 }
 
 fn projective_to_affine_secp256k1(X:u256, Y:u256, Z:u256) -> (x:u256, y:u256) {
