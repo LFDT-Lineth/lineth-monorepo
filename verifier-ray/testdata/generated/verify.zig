@@ -98,6 +98,7 @@ const verify_case_0 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{.{ .entry = 0, .shift = 0 }};
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -105,11 +106,11 @@ const verify_case_0 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(695916253), field.Element.init(1058046793), field.Element.init(1426017357), field.Element.init(1836372481), field.Element.init(2101794601), field.Element.init(1985765184), field.Element.init(486446091), field.Element.init(1178524667) }, tree.Octuplet{ field.Element.init(1403994921), field.Element.init(332016449), field.Element.init(213454705), field.Element.init(2076378349), field.Element.init(2097287789), field.Element.init(1458577511), field.Element.init(1858197035), field.Element.init(1974691290) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 736852620, 1103819055, 684096876, 1524501987, 1244131115, 1008173224 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1598029825, 0, 0, 0, 0, 0 })};
     pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -173,7 +174,7 @@ const verify_case_0 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -247,6 +248,7 @@ const verify_case_1 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 0, .shift = 1 }, .{ .entry = 0, .shift = 2 } };
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -254,11 +256,11 @@ const verify_case_1 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1650738889), field.Element.init(1518531020), field.Element.init(1125119617), field.Element.init(808540625), field.Element.init(480078054), field.Element.init(1552175686), field.Element.init(1163511500), field.Element.init(1122613155) }, tree.Octuplet{ field.Element.init(727574021), field.Element.init(1893941574), field.Element.init(1982595181), field.Element.init(1420710699), field.Element.init(1542008528), field.Element.init(601744884), field.Element.init(234401250), field.Element.init(736228299) } };
     const entry_col_0 = [_]ext.Ext{ ext.Ext.fromUints(.{ 729116987, 164515525, 174064826, 772882510, 585414618, 1528291706 }), ext.Ext.fromUints(.{ 53332270, 962264592, 617085810, 635733558, 1866765524, 124810049 }), ext.Ext.fromUints(.{ 1395949883, 1516988754, 1865912802, 52282168, 943155078, 336718351 }) };
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1034108327, 1770270463, 1897633379, 736210160, 437757535, 689999839 })};
     pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -326,7 +328,7 @@ const verify_case_1 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -400,6 +402,7 @@ const verify_case_2 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 0, .shift = 1 } };
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -407,11 +410,11 @@ const verify_case_2 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(2103118419), field.Element.init(839179576), field.Element.init(1188245383), field.Element.init(1465560410), field.Element.init(615563347), field.Element.init(388759482), field.Element.init(2068336611), field.Element.init(1470947858) }, tree.Octuplet{ field.Element.init(748289344), field.Element.init(1572392888), field.Element.init(1423077713), field.Element.init(1625408052), field.Element.init(1202146054), field.Element.init(1352575786), field.Element.init(409625730), field.Element.init(1049945802) } };
     const entry_col_0 = [_]ext.Ext{ ext.Ext.fromUints(.{ 796696491, 415094753, 185571498, 931264600, 1143935484, 301693829 }), ext.Ext.fromUints(.{ 2129487710, 2031252056, 2016949049, 1637600398, 976400867, 197698653 }) };
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1864368097, 0, 0, 0, 0, 0 })};
     pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -479,7 +482,7 @@ const verify_case_2 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -554,6 +557,7 @@ const verify_case_3 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 0, .shift = 1 }, .{ .entry = 1, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 2, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -561,11 +565,11 @@ const verify_case_3 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1629458503), field.Element.init(915797259), field.Element.init(2059790560), field.Element.init(714448004), field.Element.init(749424443), field.Element.init(1493469940), field.Element.init(732514375), field.Element.init(1269489680) }, tree.Octuplet{ field.Element.init(1081258249), field.Element.init(356138733), field.Element.init(1820759620), field.Element.init(386908357), field.Element.init(19824126), field.Element.init(802833991), field.Element.init(1542808653), field.Element.init(968097929) } };
     const entry_col_0 = [_]ext.Ext{ ext.Ext.fromUints(.{ 2115691270, 124360963, 1464010536, 548997708, 222606086, 814032681 }), ext.Ext.fromUints(.{ 1499249117, 366666132, 482708077, 1972571949, 697699884, 1260815153 }) };
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 966435553, 925101571, 1534659143, 493292134, 2011580230, 719401866 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 799014912, 0, 0, 0, 0, 0 })};
@@ -634,7 +638,7 @@ const verify_case_3 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -713,6 +717,7 @@ const verify_case_4 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 1, .shift = 0 }, .{ .entry = 2, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 3, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -720,11 +725,11 @@ const verify_case_4 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(566373099), field.Element.init(1895356916), field.Element.init(1428242350), field.Element.init(1198765513), field.Element.init(1015110081), field.Element.init(712427469), field.Element.init(1576822947), field.Element.init(422967004) }, tree.Octuplet{ field.Element.init(1711996334), field.Element.init(1633055134), field.Element.init(1242188744), field.Element.init(1712459071), field.Element.init(365240256), field.Element.init(779168583), field.Element.init(20947141), field.Element.init(1208898645) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 37195105, 1248955388, 1795062210, 1307821549, 1444163176, 519768354 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 499976134, 1286537441, 2052779959, 978596984, 2073481174, 1785376164 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 1085369134, 1415181900, 742063888, 823763918, 1424651198, 2043973683 })};
@@ -794,7 +799,7 @@ const verify_case_4 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -868,6 +873,7 @@ const verify_case_5 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 0, .shift = 1 }, .{ .entry = 0, .shift = 2 } };
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -875,11 +881,11 @@ const verify_case_5 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1650738889), field.Element.init(1518531020), field.Element.init(1125119617), field.Element.init(808540625), field.Element.init(480078054), field.Element.init(1552175686), field.Element.init(1163511500), field.Element.init(1122613155) }, tree.Octuplet{ field.Element.init(727574021), field.Element.init(1893941574), field.Element.init(1982595181), field.Element.init(1420710699), field.Element.init(1542008528), field.Element.init(601744884), field.Element.init(234401250), field.Element.init(736228299) } };
     const entry_col_0 = [_]ext.Ext{ ext.Ext.fromUints(.{ 1124538395, 2072734480, 897453127, 1854360928, 614990895, 617577981 }), ext.Ext.fromUints(.{ 1240183399, 1264086509, 1285173879, 1856550839, 1771244906, 606671399 }), ext.Ext.fromUints(.{ 1322954077, 1477902336, 407275706, 139775299, 135857976, 1517666973 }) };
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1186149660, 1736203084, 1636191561, 371066790, 266289612, 1727564727 })};
     pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -947,7 +953,7 @@ const verify_case_5 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -1015,6 +1021,7 @@ const verify_case_6 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{.{ .entry = 0, .shift = 0 }};
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -1022,11 +1029,11 @@ const verify_case_6 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1412119341), field.Element.init(15847598), field.Element.init(1219953836), field.Element.init(1565570895), field.Element.init(2041763132), field.Element.init(1343038036), field.Element.init(439118673), field.Element.init(601078971) }, tree.Octuplet{ field.Element.init(1509928159), field.Element.init(1022636522), field.Element.init(1305278804), field.Element.init(2031476728), field.Element.init(1362609465), field.Element.init(930316236), field.Element.init(283521955), field.Element.init(21146661) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 7, 0, 0, 0, 0, 0 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 })};
     pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -1090,7 +1097,7 @@ const verify_case_6 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -1162,6 +1169,7 @@ const verify_case_7 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 0, .shift = 1 } };
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -1169,11 +1177,11 @@ const verify_case_7 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1077551278), field.Element.init(1817218015), field.Element.init(607427571), field.Element.init(1371978849), field.Element.init(1947737968), field.Element.init(1368000750), field.Element.init(834979855), field.Element.init(1133720454) }, tree.Octuplet{ field.Element.init(189036795), field.Element.init(1071247459), field.Element.init(1439070151), field.Element.init(1228733349), field.Element.init(1855205606), field.Element.init(699505250), field.Element.init(471010310), field.Element.init(1535870852) } };
     const entry_col_0 = [_]ext.Ext{ ext.Ext.fromUints(.{ 5, 0, 0, 0, 0, 0 }), ext.Ext.fromUints(.{ 5, 0, 0, 0, 0, 0 }) };
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 })};
     pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -1241,7 +1249,7 @@ const verify_case_7 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -1314,6 +1322,7 @@ const verify_case_8 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{.{ .entry = 0, .shift = 0 }};
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 1, .shift = 0 }, .{ .entry = 2, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -1321,11 +1330,11 @@ const verify_case_8 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(695916253), field.Element.init(1058046793), field.Element.init(1426017357), field.Element.init(1836372481), field.Element.init(2101794601), field.Element.init(1985765184), field.Element.init(486446091), field.Element.init(1178524667) }, tree.Octuplet{ field.Element.init(866526238), field.Element.init(2080437051), field.Element.init(1518571164), field.Element.init(721429618), field.Element.init(575956087), field.Element.init(1565608249), field.Element.init(1207100586), field.Element.init(195523352) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1776110136, 241085466, 2016194903, 1792924531, 1980581301, 1907072491 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 2042057359, 1125624583, 1036725334, 980907741, 2093175150, 1009444731 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 })};
@@ -1390,7 +1399,7 @@ const verify_case_8 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -1466,6 +1475,7 @@ const verify_case_9 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 1, .shift = 0 }, .{ .entry = 2, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 3, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -1473,11 +1483,11 @@ const verify_case_9 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(742354538), field.Element.init(1771532056), field.Element.init(1807443152), field.Element.init(1197395697), field.Element.init(792042928), field.Element.init(1485449744), field.Element.init(712829822), field.Element.init(1839541019) }, tree.Octuplet{ field.Element.init(1509928159), field.Element.init(1022636522), field.Element.init(1305278804), field.Element.init(2031476728), field.Element.init(1362609465), field.Element.init(930316236), field.Element.init(283521955), field.Element.init(21146661) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 659867830, 886468229, 368428109, 468210183, 1215833002, 117736813 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1315866530, 1437159788, 811489075, 1767311106, 1975150465, 946627024 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 1473418023, 47618362, 1712523086, 1108569090, 508981646, 828631877 })};
@@ -1543,7 +1553,7 @@ const verify_case_9 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -1621,6 +1631,7 @@ const verify_case_10 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 0, .shift = 1 }, .{ .entry = 0, .shift = 2 } };
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -1628,11 +1639,11 @@ const verify_case_10 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1902593494), field.Element.init(746319221), field.Element.init(2000388164), field.Element.init(1605118644), field.Element.init(1706458012), field.Element.init(1930081294), field.Element.init(1484381233), field.Element.init(1867751197) }, tree.Octuplet{ field.Element.init(1582154348), field.Element.init(1288183359), field.Element.init(696672272), field.Element.init(1904756035), field.Element.init(649559), field.Element.init(1509181284), field.Element.init(1513510701), field.Element.init(366554338) } };
     const entry_col_0 = [_]ext.Ext{ ext.Ext.fromUints(.{ 1512027582, 617352498, 80570140, 1042453664, 1463780725, 2024626740 }), ext.Ext.fromUints(.{ 1460379392, 723969880, 840324341, 176288977, 1832230040, 1230326813 }), ext.Ext.fromUints(.{ 604900533, 1060360138, 681751338, 1847287799, 1800818111, 331836299 }) };
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 978905820, 1486136621, 1009715380, 673701621, 377291412, 1287756138 })};
     pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -1704,7 +1715,7 @@ const verify_case_10 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -1777,6 +1788,7 @@ const verify_case_11 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 1, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 2, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -1784,11 +1796,11 @@ const verify_case_11 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1480970943), field.Element.init(1921251513), field.Element.init(1963234098), field.Element.init(797123209), field.Element.init(1866640612), field.Element.init(231591065), field.Element.init(225809986), field.Element.init(1751363393) }, tree.Octuplet{ field.Element.init(1509928159), field.Element.init(1022636522), field.Element.init(1305278804), field.Element.init(2031476728), field.Element.init(1362609465), field.Element.init(930316236), field.Element.init(283521955), field.Element.init(21146661) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 4, 0, 0, 0, 0, 0 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 4, 0, 0, 0, 0, 0 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 })};
@@ -1853,7 +1865,7 @@ const verify_case_11 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -1927,6 +1939,7 @@ const verify_case_12 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 0, .shift = 1 } };
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -1934,11 +1947,11 @@ const verify_case_12 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1791314263), field.Element.init(1516570492), field.Element.init(282831395), field.Element.init(1582945019), field.Element.init(490636064), field.Element.init(1189294453), field.Element.init(696709609), field.Element.init(1338993129) }, tree.Octuplet{ field.Element.init(1509928159), field.Element.init(1022636522), field.Element.init(1305278804), field.Element.init(2031476728), field.Element.init(1362609465), field.Element.init(930316236), field.Element.init(283521955), field.Element.init(21146661) } };
     const entry_col_0 = [_]ext.Ext{ ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }), ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }) };
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 })};
     pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -2002,7 +2015,7 @@ const verify_case_12 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -2096,6 +2109,7 @@ const verify_case_13 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 2, .shift = 0 }, .{ .entry = 0, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 3, .shift = 0 }, .{ .entry = 1, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -2103,11 +2117,11 @@ const verify_case_13 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 2,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1250383661), field.Element.init(1942951179), field.Element.init(707243439), field.Element.init(1151568068), field.Element.init(37012129), field.Element.init(2070739901), field.Element.init(841218861), field.Element.init(2052630707) }, tree.Octuplet{ field.Element.init(427124621), field.Element.init(449979274), field.Element.init(1986777291), field.Element.init(441913930), field.Element.init(1475095869), field.Element.init(2097867101), field.Element.init(174865188), field.Element.init(504159728) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 7, 0, 0, 0, 0, 0 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 1227484097, 463289394, 1235157364, 2094700346, 478471862, 2043441451 })};
@@ -2187,7 +2201,7 @@ const verify_case_13 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -2257,6 +2271,7 @@ const verify_case_14 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 0, .shift = 1 } };
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -2264,11 +2279,11 @@ const verify_case_14 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(420397062), field.Element.init(535137466), field.Element.init(1830725463), field.Element.init(769470585), field.Element.init(1258570620), field.Element.init(838169295), field.Element.init(1302226105), field.Element.init(331040612) }, tree.Octuplet{ field.Element.init(1273104877), field.Element.init(546455971), field.Element.init(658068253), field.Element.init(314661357), field.Element.init(2119069101), field.Element.init(1257849336), field.Element.init(578116217), field.Element.init(3655682) } };
     const entry_col_0 = [_]ext.Ext{ ext.Ext.fromUints(.{ 969324969, 1956961662, 1547172743, 1123585610, 1146297564, 594401715 }), ext.Ext.fromUints(.{ 76078728, 1679935962, 265611735, 744138887, 1474745847, 1801077345 }) };
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 2130706432, 0, 0, 0, 0, 0 })};
     pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -2332,7 +2347,7 @@ const verify_case_14 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -2413,6 +2428,7 @@ const verify_case_15 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 2, .shift = 0 }, .{ .entry = 0, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 }, .{ .precomputed = tree.Octuplet{ field.Element.init(99929030), field.Element.init(1429397361), field.Element.init(1076237802), field.Element.init(1989756093), field.Element.init(318192499), field.Element.init(1663055389), field.Element.init(1410501545), field.Element.init(1751042557) } } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -2420,11 +2436,11 @@ const verify_case_15 = struct {
         .num_batches = 3,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(523631757), field.Element.init(997099379), field.Element.init(396753692), field.Element.init(962850235), field.Element.init(1120133210), field.Element.init(2070237921), field.Element.init(943746848), field.Element.init(1231528865) }, tree.Octuplet{ field.Element.init(277358636), field.Element.init(643371364), field.Element.init(659742354), field.Element.init(991156466), field.Element.init(2045254600), field.Element.init(274117820), field.Element.init(140406641), field.Element.init(1614799681) }, tree.Octuplet{ field.Element.init(99929030), field.Element.init(1429397361), field.Element.init(1076237802), field.Element.init(1989756093), field.Element.init(318192499), field.Element.init(1663055389), field.Element.init(1410501545), field.Element.init(1751042557) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1093550051, 299080021, 82398161, 1955187268, 1357790177, 378387156 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1009728425, 386546599, 1079154979, 642854573, 408482360, 712026746 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 1356793964, 1464187275, 1280179426, 489878226, 1845890532, 909619229 })};
@@ -2497,7 +2513,7 @@ const verify_case_15 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -2565,6 +2581,7 @@ const verify_case_16 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{.{ .entry = 0, .shift = 0 }};
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -2572,11 +2589,11 @@ const verify_case_16 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1412379297), field.Element.init(422810929), field.Element.init(1830646596), field.Element.init(2120140166), field.Element.init(247046497), field.Element.init(505863710), field.Element.init(1676278692), field.Element.init(415852882) }, tree.Octuplet{ field.Element.init(1509928159), field.Element.init(1022636522), field.Element.init(1305278804), field.Element.init(2031476728), field.Element.init(1362609465), field.Element.init(930316236), field.Element.init(283521955), field.Element.init(21146661) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 11, 0, 0, 0, 0, 0 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 })};
     pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -2642,7 +2659,7 @@ const verify_case_16 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -2712,6 +2729,7 @@ const verify_case_17 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 0, .shift = 1 } };
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 2 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -2719,11 +2737,11 @@ const verify_case_17 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 2,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(63787721), field.Element.init(355200726), field.Element.init(1913157217), field.Element.init(903891670), field.Element.init(1729041715), field.Element.init(708974811), field.Element.init(1438412405), field.Element.init(7515634) }, tree.Octuplet{ field.Element.init(1509928159), field.Element.init(1022636522), field.Element.init(1305278804), field.Element.init(2031476728), field.Element.init(1362609465), field.Element.init(930316236), field.Element.init(283521955), field.Element.init(21146661) } };
     const entry_col_0 = [_]ext.Ext{ ext.Ext.fromUints(.{ 8, 0, 0, 0, 0, 0 }), ext.Ext.fromUints(.{ 8, 0, 0, 0, 0, 0 }) };
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 })};
     pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -2788,7 +2806,7 @@ const verify_case_17 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -2862,6 +2880,7 @@ const verify_case_18 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 0, .shift = 1 }, .{ .entry = 0, .shift = 2 } };
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -2869,11 +2888,11 @@ const verify_case_18 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1557446771), field.Element.init(784853070), field.Element.init(631947353), field.Element.init(752815935), field.Element.init(270228135), field.Element.init(76886749), field.Element.init(1902353228), field.Element.init(1962389971) }, tree.Octuplet{ field.Element.init(1275561031), field.Element.init(985258462), field.Element.init(1511129866), field.Element.init(1557475831), field.Element.init(734762594), field.Element.init(530815672), field.Element.init(1648396286), field.Element.init(1862539768) } };
     const entry_col_0 = [_]ext.Ext{ ext.Ext.fromUints(.{ 1262858131, 1373977172, 252519299, 1363850700, 224049239, 314200752 }), ext.Ext.fromUints(.{ 1612833830, 984442407, 1930779881, 1269163998, 1093483042, 502105802 }), ext.Ext.fromUints(.{ 1021042579, 1253582918, 179036719, 1233842484, 417771343, 1489669875 }) };
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1740242408, 222332546, 749547058, 765604109, 724079137, 1783081841 })};
     pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -2941,7 +2960,7 @@ const verify_case_18 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -3018,6 +3037,7 @@ const verify_case_19 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{.{ .entry = 0, .shift = 0 }};
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 1, .shift = 0 }, .{ .entry = 2, .shift = 0 }, .{ .entry = 3, .shift = 0 }, .{ .entry = 4, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -3025,11 +3045,11 @@ const verify_case_19 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(695916253), field.Element.init(1058046793), field.Element.init(1426017357), field.Element.init(1836372481), field.Element.init(2101794601), field.Element.init(1985765184), field.Element.init(486446091), field.Element.init(1178524667) }, tree.Octuplet{ field.Element.init(1345308973), field.Element.init(549878846), field.Element.init(1780843358), field.Element.init(280062440), field.Element.init(2011490589), field.Element.init(761086271), field.Element.init(972397182), field.Element.init(2111651981) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 2046076595, 1145984493, 1095254741, 1426660117, 2068492036, 74123316 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1688884058, 1638345463, 1612980587, 1778683275, 1034246018, 37061658 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 1997537281, 0, 0, 0, 0, 0 })};
@@ -3096,7 +3116,7 @@ const verify_case_19 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -3168,6 +3188,7 @@ const verify_case_20 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 0, .shift = 1 } };
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -3175,11 +3196,11 @@ const verify_case_20 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(972120987), field.Element.init(940307717), field.Element.init(1793158084), field.Element.init(738196239), field.Element.init(257136070), field.Element.init(1005906038), field.Element.init(1421253514), field.Element.init(1354127316) }, tree.Octuplet{ field.Element.init(189036795), field.Element.init(1071247459), field.Element.init(1439070151), field.Element.init(1228733349), field.Element.init(1855205606), field.Element.init(699505250), field.Element.init(471010310), field.Element.init(1535870852) } };
     const entry_col_0 = [_]ext.Ext{ ext.Ext.fromUints(.{ 9, 0, 0, 0, 0, 0 }), ext.Ext.fromUints(.{ 9, 0, 0, 0, 0, 0 }) };
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 })};
     pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -3247,7 +3268,7 @@ const verify_case_20 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -3324,6 +3345,7 @@ const verify_case_21 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 0, .shift = 1 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 1, .shift = 0 }, .{ .entry = 2, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -3331,11 +3353,11 @@ const verify_case_21 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(161281801), field.Element.init(1957534155), field.Element.init(569954710), field.Element.init(1759866507), field.Element.init(829370867), field.Element.init(2090866589), field.Element.init(427855284), field.Element.init(1130787885) }, tree.Octuplet{ field.Element.init(1968261315), field.Element.init(1376768046), field.Element.init(781874447), field.Element.init(851494170), field.Element.init(1066841758), field.Element.init(503886942), field.Element.init(1642303602), field.Element.init(1369298609) } };
     const entry_col_0 = [_]ext.Ext{ ext.Ext.fromUints(.{ 1, 0, 0, 0, 0, 0 }), ext.Ext.fromUints(.{ 1, 0, 0, 0, 0, 0 }) };
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 })};
@@ -3404,7 +3426,7 @@ const verify_case_21 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -3499,6 +3521,7 @@ const verify_case_22 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{.{ .entry = 0, .shift = 0 }};
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 1, .shift = 0 }, .{ .entry = 2, .shift = 0 }, .{ .entry = 3, .shift = 0 }, .{ .entry = 4, .shift = 0 }, .{ .entry = 5, .shift = 0 }, .{ .entry = 6, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -3506,11 +3529,11 @@ const verify_case_22 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(731447180), field.Element.init(1635754238), field.Element.init(1922710562), field.Element.init(1380116406), field.Element.init(85979652), field.Element.init(1783706996), field.Element.init(783073819), field.Element.init(113976882) }, tree.Octuplet{ field.Element.init(1316296199), field.Element.init(257675405), field.Element.init(1123157309), field.Element.init(1331367194), field.Element.init(326952724), field.Element.init(1816336391), field.Element.init(1022919772), field.Element.init(448437660) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1867428425, 497089938, 266023751, 352523630, 69671142, 2067557062 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1532210323, 1189625701, 599182546, 1153484124, 1082771002, 1582242482 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 })};
@@ -3583,7 +3606,7 @@ const verify_case_22 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -3685,6 +3708,7 @@ const verify_case_23 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 3, .shift = 0 }, .{ .entry = 0, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 4, .shift = 0 }, .{ .entry = 5, .shift = 0 }, .{ .entry = 1, .shift = 0 }, .{ .entry = 2, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -3692,11 +3716,11 @@ const verify_case_23 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 2,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(347358104), field.Element.init(396539886), field.Element.init(651738703), field.Element.init(1885640729), field.Element.init(359067266), field.Element.init(445641317), field.Element.init(2066965874), field.Element.init(73299056) }, tree.Octuplet{ field.Element.init(1776117796), field.Element.init(1709285043), field.Element.init(1265052230), field.Element.init(148709365), field.Element.init(710996247), field.Element.init(1038120778), field.Element.init(1450914180), field.Element.init(277689783) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 983050736, 952470045, 693499323, 802558187, 948508075, 2104681137 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1843792509, 1836147336, 706051439, 733316155, 769803627, 2124200109 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 })};
@@ -3778,7 +3802,7 @@ const verify_case_23 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -3863,6 +3887,7 @@ const verify_case_24 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{.{ .entry = 0, .shift = 0 }};
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 1, .shift = 0 }, .{ .entry = 2, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -3870,11 +3895,11 @@ const verify_case_24 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(563917590), field.Element.init(251469084), field.Element.init(537195601), field.Element.init(316770932), field.Element.init(1819943179), field.Element.init(1090608542), field.Element.init(537333048), field.Element.init(532523322) }, tree.Octuplet{ field.Element.init(604488282), field.Element.init(2123561776), field.Element.init(1585273052), field.Element.init(825574020), field.Element.init(15669815), field.Element.init(2101624837), field.Element.init(525420544), field.Element.init(566123022) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 893887110, 982901958, 614069117, 679516702, 688339215, 500050886 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 756148386, 1311078706, 1751547104, 1235232392, 704761412, 1190365938 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 })};
@@ -3951,7 +3976,7 @@ const verify_case_24 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -4023,6 +4048,7 @@ const verify_case_25 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 0, .shift = 1 } };
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -4030,11 +4056,11 @@ const verify_case_25 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1871929558), field.Element.init(1658019241), field.Element.init(1498426579), field.Element.init(1595919023), field.Element.init(66325578), field.Element.init(1961128268), field.Element.init(774631202), field.Element.init(1532521376) }, tree.Octuplet{ field.Element.init(189036795), field.Element.init(1071247459), field.Element.init(1439070151), field.Element.init(1228733349), field.Element.init(1855205606), field.Element.init(699505250), field.Element.init(471010310), field.Element.init(1535870852) } };
     const entry_col_0 = [_]ext.Ext{ ext.Ext.fromUints(.{ 4, 0, 0, 0, 0, 0 }), ext.Ext.fromUints(.{ 4, 0, 0, 0, 0, 0 }) };
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 })};
     pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -4102,7 +4128,7 @@ const verify_case_25 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -4178,6 +4204,7 @@ const verify_case_26 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 0, .shift = 1 }, .{ .entry = 0, .shift = 2 } };
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -4185,11 +4212,11 @@ const verify_case_26 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(892714457), field.Element.init(822938271), field.Element.init(142692781), field.Element.init(1883766912), field.Element.init(711057463), field.Element.init(50470440), field.Element.init(335825306), field.Element.init(1963455928) }, tree.Octuplet{ field.Element.init(189036795), field.Element.init(1071247459), field.Element.init(1439070151), field.Element.init(1228733349), field.Element.init(1855205606), field.Element.init(699505250), field.Element.init(471010310), field.Element.init(1535870852) } };
     const entry_col_0 = [_]ext.Ext{ ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }), ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }), ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }) };
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 })};
     pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -4257,7 +4284,7 @@ const verify_case_26 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -4331,6 +4358,7 @@ const verify_case_27 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{.{ .entry = 0, .shift = 0 }};
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -4338,11 +4366,11 @@ const verify_case_27 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(731447180), field.Element.init(1635754238), field.Element.init(1922710562), field.Element.init(1380116406), field.Element.init(85979652), field.Element.init(1783706996), field.Element.init(783073819), field.Element.init(113976882) }, tree.Octuplet{ field.Element.init(222995646), field.Element.init(1676899220), field.Element.init(1681733255), field.Element.init(1100873752), field.Element.init(1307377938), field.Element.init(1581546495), field.Element.init(703658657), field.Element.init(1121448010) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1354609250, 928410592, 456165971, 1159743429, 772872398, 483232104 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1598029825, 0, 0, 0, 0, 0 })};
     pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -4410,7 +4438,7 @@ const verify_case_27 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -4493,6 +4521,7 @@ const verify_case_28 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 0, .shift = 1 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 1, .shift = 0 }, .{ .entry = 2, .shift = 0 }, .{ .entry = 3, .shift = 0 }, .{ .entry = 4, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -4500,11 +4529,11 @@ const verify_case_28 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(161281801), field.Element.init(1957534155), field.Element.init(569954710), field.Element.init(1759866507), field.Element.init(829370867), field.Element.init(2090866589), field.Element.init(427855284), field.Element.init(1130787885) }, tree.Octuplet{ field.Element.init(431367539), field.Element.init(1354396557), field.Element.init(283616214), field.Element.init(629717593), field.Element.init(1852447696), field.Element.init(47833214), field.Element.init(324420378), field.Element.init(1852462147) } };
     const entry_col_0 = [_]ext.Ext{ ext.Ext.fromUints(.{ 1, 0, 0, 0, 0, 0 }), ext.Ext.fromUints(.{ 1, 0, 0, 0, 0, 0 }) };
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 })};
@@ -4575,7 +4604,7 @@ const verify_case_28 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -4643,6 +4672,7 @@ const verify_case_29 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{.{ .entry = 0, .shift = 0 }};
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -4650,11 +4680,11 @@ const verify_case_29 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1709614835), field.Element.init(175887383), field.Element.init(410806188), field.Element.init(1549408239), field.Element.init(519405172), field.Element.init(484353060), field.Element.init(2081288538), field.Element.init(113233697) }, tree.Octuplet{ field.Element.init(523481635), field.Element.init(1071727489), field.Element.init(1636636943), field.Element.init(872409478), field.Element.init(830708136), field.Element.init(1646274619), field.Element.init(926964360), field.Element.init(229395698) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 58063312, 1576110327, 888948137, 1283498141, 10893326, 1406807078 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 56366938, 1875575568, 1961986950, 563687096, 1295193683, 1853211951 })};
     pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -4718,7 +4748,7 @@ const verify_case_29 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -4786,6 +4816,7 @@ const verify_case_30 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{.{ .entry = 0, .shift = 0 }};
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -4793,11 +4824,11 @@ const verify_case_30 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(741094769), field.Element.init(1147489710), field.Element.init(225785630), field.Element.init(1917238909), field.Element.init(1922146721), field.Element.init(362924261), field.Element.init(2080945919), field.Element.init(1104781115) }, tree.Octuplet{ field.Element.init(41510413), field.Element.init(510934023), field.Element.init(803942056), field.Element.init(1612735918), field.Element.init(321461078), field.Element.init(1617544096), field.Element.init(120445277), field.Element.init(55751362) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 196917219, 1863695432, 764020076, 1760758029, 551041135, 1486598085 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 350493541, 735020923, 322672765, 372411060, 1085318705, 134248199 })};
     pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -4861,7 +4892,7 @@ const verify_case_30 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -4929,6 +4960,7 @@ const verify_case_31 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{.{ .entry = 0, .shift = 0 }};
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -4936,11 +4968,11 @@ const verify_case_31 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1627687525), field.Element.init(541661662), field.Element.init(1110747781), field.Element.init(904608373), field.Element.init(1349293196), field.Element.init(1108517147), field.Element.init(73000470), field.Element.init(639517575) }, tree.Octuplet{ field.Element.init(1851983887), field.Element.init(1914127312), field.Element.init(1456380269), field.Element.init(2010833217), field.Element.init(1438920063), field.Element.init(1519623824), field.Element.init(1099944432), field.Element.init(1394600974) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1265853037, 393414699, 1341649847, 1509017917, 546134713, 424537526 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1875448110, 1270916098, 1567046057, 2020137950, 1648335585, 1628642798 })};
     pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -5004,7 +5036,7 @@ const verify_case_31 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -5075,6 +5107,7 @@ const verify_case_32 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 1, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 2, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -5082,11 +5115,11 @@ const verify_case_32 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1616860352), field.Element.init(1896849443), field.Element.init(209811305), field.Element.init(1982057100), field.Element.init(2109820494), field.Element.init(212271345), field.Element.init(402690050), field.Element.init(1813388281) }, tree.Octuplet{ field.Element.init(1509928159), field.Element.init(1022636522), field.Element.init(1305278804), field.Element.init(2031476728), field.Element.init(1362609465), field.Element.init(930316236), field.Element.init(283521955), field.Element.init(21146661) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 510345607, 1409913938, 1628483193, 2030964536, 607796330, 1324885620 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 510345607, 1409913938, 1628483193, 2030964536, 607796330, 1324885620 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 })};
@@ -5151,7 +5184,7 @@ const verify_case_32 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -5223,6 +5256,7 @@ const verify_case_33 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{.{ .entry = 0, .shift = 0 }};
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -5230,11 +5264,11 @@ const verify_case_33 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1134716624), field.Element.init(866360624), field.Element.init(2105978078), field.Element.init(1705939323), field.Element.init(2059868426), field.Element.init(47505088), field.Element.init(926464397), field.Element.init(349635307) }, tree.Octuplet{ field.Element.init(792580936), field.Element.init(1284952871), field.Element.init(903498458), field.Element.init(1394411457), field.Element.init(16410333), field.Element.init(460836446), field.Element.init(1242167611), field.Element.init(539470118) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1944200596, 5540633, 1868767215, 1516853032, 1733753731, 1484588376 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1346977502, 1723853473, 1242629154, 630322034, 1156252800, 1563033370 })};
     pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -5298,7 +5332,7 @@ const verify_case_33 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -5368,6 +5402,7 @@ const verify_case_34 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{.{ .entry = 0, .shift = 0 }};
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -5375,11 +5410,11 @@ const verify_case_34 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1644532348), field.Element.init(103657425), field.Element.init(1561498216), field.Element.init(43614247), field.Element.init(2096614156), field.Element.init(1706495757), field.Element.init(961651486), field.Element.init(1509497499) }, tree.Octuplet{ field.Element.init(1613324002), field.Element.init(1770418615), field.Element.init(1403227645), field.Element.init(1536470768), field.Element.init(1581956049), field.Element.init(1795429424), field.Element.init(2046827847), field.Element.init(378312543) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1653854422, 974180870, 558951439, 195549123, 19166460, 101682259 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1083130064, 892435294, 1396348352, 1505016859, 1377269626, 1293497727 })};
     pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -5443,7 +5478,7 @@ const verify_case_34 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -5513,6 +5548,7 @@ const verify_case_35 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{.{ .entry = 0, .shift = 0 }};
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -5520,11 +5556,11 @@ const verify_case_35 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1637741886), field.Element.init(739917436), field.Element.init(798207243), field.Element.init(129528849), field.Element.init(1822724845), field.Element.init(322366814), field.Element.init(429838845), field.Element.init(1505056017) }, tree.Octuplet{ field.Element.init(1487068558), field.Element.init(1300546550), field.Element.init(456908004), field.Element.init(242414930), field.Element.init(505203267), field.Element.init(1640750442), field.Element.init(424253386), field.Element.init(887105939) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 839589088, 218849947, 1496257355, 1839027571, 123535772, 1624248042 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1979505782, 1352348932, 310265168, 2020370752, 454275185, 2043933617 })};
     pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -5590,7 +5626,7 @@ const verify_case_35 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -5662,6 +5698,7 @@ const verify_case_36 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{.{ .entry = 0, .shift = 0 }};
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 2 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -5669,11 +5706,11 @@ const verify_case_36 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 2,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1637741886), field.Element.init(739917436), field.Element.init(798207243), field.Element.init(129528849), field.Element.init(1822724845), field.Element.init(322366814), field.Element.init(429838845), field.Element.init(1505056017) }, tree.Octuplet{ field.Element.init(1501535901), field.Element.init(1098897954), field.Element.init(1896561822), field.Element.init(1065716141), field.Element.init(463559444), field.Element.init(1327687751), field.Element.init(725400545), field.Element.init(13565609) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 318724989, 557722080, 1163274175, 523715537, 96938204, 20200012 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 2096102697, 228389081, 1234947744, 1640373203, 179645043, 375032916 })};
     pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -5738,7 +5775,7 @@ const verify_case_36 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -5821,6 +5858,7 @@ const verify_case_37 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{.{ .entry = 0, .shift = 0 }};
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -5828,11 +5866,11 @@ const verify_case_37 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1725907656), field.Element.init(1261442012), field.Element.init(1400142039), field.Element.init(236677171), field.Element.init(990790148), field.Element.init(741074528), field.Element.init(1249147997), field.Element.init(942045251) }, tree.Octuplet{ field.Element.init(1228453699), field.Element.init(291675959), field.Element.init(202807108), field.Element.init(1703938307), field.Element.init(1730814076), field.Element.init(493764467), field.Element.init(629794119), field.Element.init(1594453398) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1222650643, 69610016, 989307431, 580034800, 183465917, 2076827359 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 305750261, 2015996873, 1007440251, 742358138, 539164596, 1216659418 })};
     pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -5896,7 +5934,7 @@ const verify_case_37 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -5966,6 +6004,7 @@ const verify_case_38 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{.{ .entry = 0, .shift = 0 }};
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -5973,11 +6012,11 @@ const verify_case_38 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(805940778), field.Element.init(1841253061), field.Element.init(1509271970), field.Element.init(163517666), field.Element.init(231501436), field.Element.init(1430299148), field.Element.init(80426414), field.Element.init(1235523392) }, tree.Octuplet{ field.Element.init(530351409), field.Element.init(1834372195), field.Element.init(865150796), field.Element.init(956712675), field.Element.init(787394129), field.Element.init(963283000), field.Element.init(1997592193), field.Element.init(172825694) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 2045054746, 353864217, 1493578542, 1955879211, 1375297222, 301364341 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 72501702, 1754665569, 305365251, 1006768304, 1754996603, 1169968254 })};
     pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -6041,7 +6080,7 @@ const verify_case_38 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -6109,6 +6148,7 @@ const verify_case_39 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{.{ .entry = 0, .shift = 0 }};
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -6116,11 +6156,11 @@ const verify_case_39 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1527279288), field.Element.init(261062662), field.Element.init(36507958), field.Element.init(1948060471), field.Element.init(1498385848), field.Element.init(223230140), field.Element.init(1046613133), field.Element.init(1575627857) }, tree.Octuplet{ field.Element.init(419864371), field.Element.init(412094375), field.Element.init(1689832381), field.Element.init(942384149), field.Element.init(1943911658), field.Element.init(665572570), field.Element.init(1215197692), field.Element.init(435293792) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1530894713, 723119143, 9908589, 1964342486, 813700062, 429022848 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 280748458, 526164461, 1524101183, 493146538, 895358130, 1164058740 })};
     pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -6184,7 +6224,7 @@ const verify_case_39 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -6256,6 +6296,7 @@ const verify_case_40 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 1, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 2, .shift = 0 }, .{ .entry = 3, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -6263,11 +6304,11 @@ const verify_case_40 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1901469432), field.Element.init(133327557), field.Element.init(1005140435), field.Element.init(1635163642), field.Element.init(1474233190), field.Element.init(98696300), field.Element.init(387886202), field.Element.init(207850165) }, tree.Octuplet{ field.Element.init(1685871489), field.Element.init(1462899289), field.Element.init(771945870), field.Element.init(2111726353), field.Element.init(2126452392), field.Element.init(536555373), field.Element.init(737027121), field.Element.init(1016134483) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 133181999, 482779788, 290415280, 991401606, 647720930, 1809384714 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 532682323, 1635039750, 365818617, 440622936, 1471601765, 804170984 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 1117978167, 1175278096, 1794177472, 1997860973, 1928982783, 1209100335 })};
@@ -6333,7 +6374,7 @@ const verify_case_40 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -6405,6 +6446,7 @@ const verify_case_41 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{.{ .entry = 0, .shift = 0 }};
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 2 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -6412,11 +6454,11 @@ const verify_case_41 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 2,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1831059074), field.Element.init(1096129054), field.Element.init(1736138139), field.Element.init(223329871), field.Element.init(630836055), field.Element.init(32497805), field.Element.init(1043745839), field.Element.init(683627937) }, tree.Octuplet{ field.Element.init(1248692561), field.Element.init(1335517186), field.Element.init(397014521), field.Element.init(1479356305), field.Element.init(49484531), field.Element.init(665774809), field.Element.init(1092727474), field.Element.init(1234279758) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 569103991, 2086001964, 209658243, 561982384, 1649072431, 325187557 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 907204468, 376796600, 871684857, 939236933, 954874854, 1322322753 })};
     pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -6483,7 +6525,7 @@ const verify_case_41 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -6557,6 +6599,7 @@ const verify_case_42 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 1, .shift = 0 }, .{ .entry = 2, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 3, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -6564,11 +6607,11 @@ const verify_case_42 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1221340723), field.Element.init(231011393), field.Element.init(146458222), field.Element.init(1986425057), field.Element.init(344119748), field.Element.init(268903899), field.Element.init(1569242042), field.Element.init(1669805478) }, tree.Octuplet{ field.Element.init(523481635), field.Element.init(1071727489), field.Element.init(1636636943), field.Element.init(872409478), field.Element.init(830708136), field.Element.init(1646274619), field.Element.init(926964360), field.Element.init(229395698) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1856539317, 1765527085, 1448198275, 1023734, 944886472, 1015235301 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1237692881, 466782579, 255230039, 710917967, 2050395270, 676823534 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 309423227, 649372253, 596484118, 710406100, 1577952034, 1234559100 })};
@@ -6634,7 +6677,7 @@ const verify_case_42 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -6709,6 +6752,7 @@ const verify_case_43 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 1, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 2, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -6716,11 +6760,11 @@ const verify_case_43 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1656246044), field.Element.init(537765479), field.Element.init(1198378722), field.Element.init(357428442), field.Element.init(2073465216), field.Element.init(309519640), field.Element.init(733703170), field.Element.init(900836158) }, tree.Octuplet{ field.Element.init(2076673515), field.Element.init(409244412), field.Element.init(793552917), field.Element.init(1113249496), field.Element.init(1462691998), field.Element.init(60947757), field.Element.init(1057063432), field.Element.init(143365431) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 19007704, 989363515, 1845690423, 322549135, 593907467, 1546389420 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1307280823, 1647870394, 1421699798, 1198052113, 466219625, 1529360 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 413934324, 1724477619, 654429173, 1271630734, 1181461526, 1600313417 })};
@@ -6785,7 +6829,7 @@ const verify_case_43 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -6862,6 +6906,7 @@ const verify_case_44 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{.{ .entry = 0, .shift = 0 }};
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 1, .shift = 0 }, .{ .entry = 2, .shift = 0 }, .{ .entry = 3, .shift = 0 }, .{ .entry = 4, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -6869,11 +6914,11 @@ const verify_case_44 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(48177939), field.Element.init(1758497348), field.Element.init(733433113), field.Element.init(1420199806), field.Element.init(424047152), field.Element.init(1773728206), field.Element.init(410512684), field.Element.init(567024221) }, tree.Octuplet{ field.Element.init(752413097), field.Element.init(814433518), field.Element.init(115173117), field.Element.init(1991895345), field.Element.init(507499478), field.Element.init(166719635), field.Element.init(560807082), field.Element.init(1746145347) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1961732209, 979941551, 168019260, 334594648, 745610055, 1074964856 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1107012238, 1954073398, 2072402012, 878410481, 1177857868, 1585196975 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 842080023, 1558000992, 393948838, 265290791, 1663827292, 1403283713 })};
@@ -6940,7 +6985,7 @@ const verify_case_44 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -7028,6 +7073,7 @@ const verify_case_45 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 1, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 2, .shift = 0 }, .{ .entry = 3, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -7035,11 +7081,11 @@ const verify_case_45 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 2,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(843317625), field.Element.init(994487911), field.Element.init(917843522), field.Element.init(1137693052), field.Element.init(88104742), field.Element.init(491099890), field.Element.init(1521713114), field.Element.init(56475567) }, tree.Octuplet{ field.Element.init(1663063876), field.Element.init(620013625), field.Element.init(1503954723), field.Element.init(696442570), field.Element.init(136181927), field.Element.init(1124260), field.Element.init(248307826), field.Element.init(279010319) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 977963370, 2088164577, 1355856054, 521311811, 981568697, 2054270574 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1596060675, 613723054, 901110688, 674737844, 769407534, 726332944 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 2074908080, 883540183, 947371596, 453167470, 1187184586, 2101966516 })};
@@ -7105,7 +7151,7 @@ const verify_case_45 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -7177,6 +7223,7 @@ const verify_case_46 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{.{ .entry = 0, .shift = 0 }};
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -7184,11 +7231,11 @@ const verify_case_46 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1478147579), field.Element.init(1171883927), field.Element.init(994623913), field.Element.init(1267138955), field.Element.init(1203980881), field.Element.init(1206929960), field.Element.init(1637181806), field.Element.init(588856146) }, tree.Octuplet{ field.Element.init(1468529147), field.Element.init(1947938089), field.Element.init(1425329455), field.Element.init(1424743492), field.Element.init(1029615787), field.Element.init(2040370091), field.Element.init(795064988), field.Element.init(1927194469) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1242070071, 636955112, 758976672, 1737709846, 410839513, 992063960 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 149432332, 682420074, 1649017218, 488539963, 1447485441, 432554047 })};
     pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -7256,7 +7303,7 @@ const verify_case_46 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -7328,6 +7375,7 @@ const verify_case_47 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{.{ .entry = 0, .shift = 0 }};
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -7335,11 +7383,11 @@ const verify_case_47 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(113255940), field.Element.init(1484569183), field.Element.init(605766196), field.Element.init(1587231109), field.Element.init(1836892509), field.Element.init(925948137), field.Element.init(1376676788), field.Element.init(1042401073) }, tree.Octuplet{ field.Element.init(113291598), field.Element.init(25327541), field.Element.init(1657801483), field.Element.init(1627012237), field.Element.init(1519299686), field.Element.init(1442892113), field.Element.init(467645775), field.Element.init(1242647913) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1512017787, 234634327, 1833447553, 803891086, 1071278625, 1596989756 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 102938636, 1115432158, 1283652446, 793858833, 908785936, 127237639 })};
     pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -7407,7 +7455,7 @@ const verify_case_47 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -7483,6 +7531,7 @@ const verify_case_48 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 1, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 2, .shift = 0 }, .{ .entry = 3, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -7490,11 +7539,11 @@ const verify_case_48 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1547985761), field.Element.init(1252595609), field.Element.init(1045545091), field.Element.init(1206736767), field.Element.init(213331313), field.Element.init(499940598), field.Element.init(590897573), field.Element.init(887481422) }, tree.Octuplet{ field.Element.init(578452134), field.Element.init(1302228301), field.Element.init(1977075243), field.Element.init(1002780464), field.Element.init(1804739853), field.Element.init(1205387351), field.Element.init(1827499847), field.Element.init(351657889) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 2072040383, 884632400, 1626125970, 42289884, 2033966989, 719082862 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 2104632638, 866660274, 1432958131, 18795504, 430495010, 1266573020 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 786975651, 220842114, 687661798, 785684383, 2064390763, 492202462 })};
@@ -7564,7 +7613,7 @@ const verify_case_48 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -7673,6 +7722,7 @@ const verify_case_49 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 1, .shift = 0 }, .{ .entry = 1, .shift = 1 } };
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 2, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 }, .{ .round = 2 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -7680,11 +7730,11 @@ const verify_case_49 = struct {
         .num_batches = 3,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1896832532), field.Element.init(1653359162), field.Element.init(1478003325), field.Element.init(414831515), field.Element.init(382187101), field.Element.init(1503885880), field.Element.init(239692559), field.Element.init(1048659245) }, tree.Octuplet{ field.Element.init(2043210751), field.Element.init(804906967), field.Element.init(1747227206), field.Element.init(1169678018), field.Element.init(1637362480), field.Element.init(524154119), field.Element.init(1087046834), field.Element.init(1019337203) }, tree.Octuplet{ field.Element.init(1717173546), field.Element.init(959786261), field.Element.init(391027267), field.Element.init(1232895076), field.Element.init(868790578), field.Element.init(464207371), field.Element.init(1680597768), field.Element.init(949418289) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 886310765, 465309578, 45142629, 1262875839, 1104242035, 1189952283 })};
     const entry_col_1 = [_]ext.Ext{ ext.Ext.fromUints(.{ 1142876965, 2034405946, 1308127126, 927074310, 769676435, 1840753224 }), ext.Ext.fromUints(.{ 230524319, 1108710316, 983435470, 1305395818, 350758840, 352790359 }) };
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 893527632, 947167772, 1788710, 525049503, 1116263087, 1213338905 })};
@@ -7763,7 +7813,7 @@ const verify_case_49 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -7883,6 +7933,7 @@ const verify_case_50 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 1, .shift = 0 }, .{ .entry = 0, .shift = 0 }, .{ .entry = 2, .shift = 0 }, .{ .entry = 2, .shift = 1 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 3, .shift = 0 }, .{ .entry = 4, .shift = 0 }, .{ .entry = 5, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 }, .{ .round = 2 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -7890,11 +7941,11 @@ const verify_case_50 = struct {
         .num_batches = 3,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(445090229), field.Element.init(1085449794), field.Element.init(1590428487), field.Element.init(2086035906), field.Element.init(2037733518), field.Element.init(790913118), field.Element.init(1290831969), field.Element.init(1036148351) }, tree.Octuplet{ field.Element.init(1553722914), field.Element.init(1328012185), field.Element.init(1153601217), field.Element.init(745957868), field.Element.init(1099095511), field.Element.init(1220870108), field.Element.init(189490451), field.Element.init(1368210208) }, tree.Octuplet{ field.Element.init(1068449255), field.Element.init(2058934590), field.Element.init(1295897612), field.Element.init(1389205251), field.Element.init(1504200757), field.Element.init(399668561), field.Element.init(1909173606), field.Element.init(191674487) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1990923999, 535850773, 521932899, 1676993041, 924067286, 1077941933 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 665404326, 1779028058, 1944007944, 14262252, 1737473354, 546270197 })};
     const entry_col_2 = [_]ext.Ext{ ext.Ext.fromUints(.{ 486266051, 1304894365, 792614470, 1386625879, 240801974, 1134961031 }), ext.Ext.fromUints(.{ 2047385052, 230376114, 701410930, 1945479669, 1483903200, 421090777 }) };
@@ -7976,7 +8027,7 @@ const verify_case_50 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -8096,6 +8147,7 @@ const verify_case_51 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 1, .shift = 0 }, .{ .entry = 0, .shift = 0 }, .{ .entry = 2, .shift = 0 }, .{ .entry = 2, .shift = 1 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 3, .shift = 0 }, .{ .entry = 4, .shift = 0 }, .{ .entry = 5, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 }, .{ .round = 2 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -8103,11 +8155,11 @@ const verify_case_51 = struct {
         .num_batches = 3,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1821722367), field.Element.init(1705260624), field.Element.init(2094493806), field.Element.init(1340682580), field.Element.init(310796252), field.Element.init(1832098018), field.Element.init(791462389), field.Element.init(751555453) }, tree.Octuplet{ field.Element.init(1509928159), field.Element.init(1022636522), field.Element.init(1305278804), field.Element.init(2031476728), field.Element.init(1362609465), field.Element.init(930316236), field.Element.init(283521955), field.Element.init(21146661) }, tree.Octuplet{ field.Element.init(1219906262), field.Element.init(1296022819), field.Element.init(874473536), field.Element.init(635992103), field.Element.init(182916754), field.Element.init(1330779629), field.Element.init(1210886432), field.Element.init(170744220) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 574993704, 1562830638, 272881507, 1035103704, 131946164, 222487151 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 })};
     const entry_col_2 = [_]ext.Ext{ ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }), ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 }) };
@@ -8189,7 +8241,7 @@ const verify_case_51 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -8310,6 +8362,7 @@ const verify_case_52 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 2, .shift = 0 }, .{ .entry = 0, .shift = 0 }, .{ .entry = 3, .shift = 0 }, .{ .entry = 3, .shift = 1 }, .{ .entry = 1, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 4, .shift = 0 }, .{ .entry = 5, .shift = 0 }, .{ .entry = 6, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 }, .{ .round = 2 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -8317,11 +8370,11 @@ const verify_case_52 = struct {
         .num_batches = 3,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1528824912), field.Element.init(1787190259), field.Element.init(931997605), field.Element.init(1907166231), field.Element.init(1549332545), field.Element.init(1636560623), field.Element.init(1491900334), field.Element.init(923162034) }, tree.Octuplet{ field.Element.init(1412435407), field.Element.init(331198873), field.Element.init(1458652304), field.Element.init(243035214), field.Element.init(652590045), field.Element.init(400344593), field.Element.init(543245367), field.Element.init(467143527) }, tree.Octuplet{ field.Element.init(1128289572), field.Element.init(1398152486), field.Element.init(2056542092), field.Element.init(60537707), field.Element.init(1428076593), field.Element.init(663237934), field.Element.init(1592888167), field.Element.init(1262295458) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 636446655, 1638430388, 1562128444, 1957126141, 1445895085, 2279330 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 999298007, 1984667344, 1788306615, 1724591171, 290964714, 1840989788 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 1778586636, 1314881720, 321660352, 467039306, 292585095, 532181295 })};
@@ -8404,7 +8457,7 @@ const verify_case_52 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -8591,6 +8644,7 @@ const verify_case_53 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 1, .shift = 0 }, .{ .entry = 2, .shift = 0 }, .{ .entry = 4, .shift = 0 }, .{ .entry = 4, .shift = 1 }, .{ .entry = 3, .shift = 0 }, .{ .entry = 5, .shift = 0 }, .{ .entry = 5, .shift = 1 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 6, .shift = 0 }, .{ .entry = 7, .shift = 0 }, .{ .entry = 8, .shift = 0 }, .{ .entry = 9, .shift = 0 }, .{ .entry = 10, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 }, .{ .round = 2 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -8598,11 +8652,11 @@ const verify_case_53 = struct {
         .num_batches = 3,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1794539254), field.Element.init(133593870), field.Element.init(312204929), field.Element.init(61281864), field.Element.init(313658686), field.Element.init(226986741), field.Element.init(1591722373), field.Element.init(549500772) }, tree.Octuplet{ field.Element.init(66455112), field.Element.init(1696003579), field.Element.init(1266887373), field.Element.init(684595540), field.Element.init(1591969680), field.Element.init(1670861546), field.Element.init(1969548069), field.Element.init(1098481858) }, tree.Octuplet{ field.Element.init(1073710433), field.Element.init(2105309791), field.Element.init(1042911125), field.Element.init(906235032), field.Element.init(2003159639), field.Element.init(1063695022), field.Element.init(756950591), field.Element.init(935345429) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1289066929, 1838025011, 469383378, 243638989, 1813848307, 1092536045 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1289066933, 1838025011, 469383378, 243638989, 1813848307, 1092536045 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 1289066937, 1838025011, 469383378, 243638989, 1813848307, 1092536045 })};
@@ -8689,7 +8743,7 @@ const verify_case_53 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -8850,6 +8904,7 @@ const verify_case_54 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 3, .shift = 0 }, .{ .entry = 3, .shift = 1 }, .{ .entry = 2, .shift = 0 }, .{ .entry = 1, .shift = 0 }, .{ .entry = 4, .shift = 0 }, .{ .entry = 4, .shift = 1 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 5, .shift = 0 }, .{ .entry = 6, .shift = 0 }, .{ .entry = 7, .shift = 0 }, .{ .entry = 8, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 }, .{ .round = 2 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -8857,11 +8912,11 @@ const verify_case_54 = struct {
         .num_batches = 3,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 2,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(999495467), field.Element.init(1411717801), field.Element.init(14614882), field.Element.init(28057662), field.Element.init(274069065), field.Element.init(160118130), field.Element.init(1553902817), field.Element.init(1332088436) }, tree.Octuplet{ field.Element.init(779032667), field.Element.init(18416623), field.Element.init(1904956879), field.Element.init(1669453497), field.Element.init(1232684285), field.Element.init(273400425), field.Element.init(532845581), field.Element.init(939119185) }, tree.Octuplet{ field.Element.init(1082895064), field.Element.init(1360523521), field.Element.init(550286215), field.Element.init(971508102), field.Element.init(603520259), field.Element.init(1726167179), field.Element.init(1151194201), field.Element.init(596541664) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1745993643, 1127357737, 1034483562, 1737797018, 1299915012, 1651998613 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1745993647, 1127357737, 1034483562, 1737797018, 1299915012, 1651998613 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 71944637, 1882856141, 18337313, 1687192591, 695901657, 428441244 })};
@@ -8946,7 +9001,7 @@ const verify_case_54 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -9034,6 +9089,7 @@ const verify_case_55 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 1, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 2, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 }, .{ .round = 2 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -9041,11 +9097,11 @@ const verify_case_55 = struct {
         .num_batches = 3,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1597588544), field.Element.init(2104037653), field.Element.init(1198734211), field.Element.init(407142399), field.Element.init(1177783315), field.Element.init(1344118118), field.Element.init(2084022778), field.Element.init(1632235005) }, tree.Octuplet{ field.Element.init(796203622), field.Element.init(231908022), field.Element.init(731191397), field.Element.init(571402934), field.Element.init(1193763995), field.Element.init(1284513177), field.Element.init(393998546), field.Element.init(370635376) }, tree.Octuplet{ field.Element.init(2066816440), field.Element.init(1251002353), field.Element.init(1739592788), field.Element.init(365120622), field.Element.init(445688483), field.Element.init(1162635539), field.Element.init(2126865213), field.Element.init(1891784736) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 17, 0, 0, 0, 0, 0 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 17, 0, 0, 0, 0, 0 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 })};
@@ -9120,7 +9176,7 @@ const verify_case_55 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -9298,6 +9354,7 @@ const verify_case_56 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 1, .shift = 0 }, .{ .entry = 2, .shift = 0 }, .{ .entry = 2, .shift = 1 }, .{ .entry = 0, .shift = 0 }, .{ .entry = 7, .shift = 0 }, .{ .entry = 8, .shift = 0 }, .{ .entry = 8, .shift = 1 }, .{ .entry = 6, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 3, .shift = 0 }, .{ .entry = 4, .shift = 0 }, .{ .entry = 5, .shift = 0 }, .{ .entry = 9, .shift = 0 }, .{ .entry = 10, .shift = 0 }, .{ .entry = 11, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 }, .{ .round = 2 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -9305,11 +9362,11 @@ const verify_case_56 = struct {
         .num_batches = 3,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 2,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1579872075), field.Element.init(1356959854), field.Element.init(939782486), field.Element.init(1440093865), field.Element.init(31626134), field.Element.init(1364832696), field.Element.init(1881222248), field.Element.init(49712263) }, tree.Octuplet{ field.Element.init(1620439460), field.Element.init(50151641), field.Element.init(1230539567), field.Element.init(711658894), field.Element.init(1521065063), field.Element.init(736180395), field.Element.init(234886043), field.Element.init(303154389) }, tree.Octuplet{ field.Element.init(901577884), field.Element.init(595702854), field.Element.init(1363832549), field.Element.init(160783694), field.Element.init(1598934320), field.Element.init(1107538826), field.Element.init(2035117709), field.Element.init(1098287592) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 793782814, 1928536707, 252988384, 998131846, 7110939, 657810740 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1192535677, 865129810, 458734227, 1510754345, 1074033492, 719158207 })};
     const entry_col_2 = [_]ext.Ext{ ext.Ext.fromUints(.{ 996374960, 1164808734, 186805230, 577111167, 345485003, 1362646543 }), ext.Ext.fromUints(.{ 1116222420, 26132939, 512332546, 130828452, 1990380817, 2098790539 }) };
@@ -9412,7 +9469,7 @@ const verify_case_56 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -9669,6 +9726,7 @@ const verify_case_57 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 1, .shift = 0 }, .{ .entry = 2, .shift = 0 }, .{ .entry = 7, .shift = 0 }, .{ .entry = 7, .shift = 1 }, .{ .entry = 3, .shift = 0 }, .{ .entry = 4, .shift = 0 }, .{ .entry = 5, .shift = 0 }, .{ .entry = 8, .shift = 0 }, .{ .entry = 8, .shift = 1 }, .{ .entry = 6, .shift = 0 }, .{ .entry = 9, .shift = 0 }, .{ .entry = 9, .shift = 1 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 10, .shift = 0 }, .{ .entry = 11, .shift = 0 }, .{ .entry = 12, .shift = 0 }, .{ .entry = 13, .shift = 0 }, .{ .entry = 14, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 }, .{ .round = 2 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -9676,11 +9734,11 @@ const verify_case_57 = struct {
         .num_batches = 3,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(413334012), field.Element.init(1967921103), field.Element.init(346026650), field.Element.init(251054303), field.Element.init(1070489712), field.Element.init(1546475517), field.Element.init(1166138886), field.Element.init(121427478) }, tree.Octuplet{ field.Element.init(468853463), field.Element.init(1685932007), field.Element.init(247975507), field.Element.init(441121697), field.Element.init(287196473), field.Element.init(2103165145), field.Element.init(1744193763), field.Element.init(1501331290) }, tree.Octuplet{ field.Element.init(659995142), field.Element.init(1221929695), field.Element.init(1646696978), field.Element.init(1304522914), field.Element.init(334032414), field.Element.init(1683017525), field.Element.init(536107246), field.Element.init(1644605167) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1364474989, 1820322492, 291695985, 519576465, 1266995291, 164392656 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1364474989, 1820322492, 291695985, 519576465, 1266995291, 164392656 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 1364474989, 1820322492, 291695985, 519576465, 1266995291, 164392656 })};
@@ -9771,7 +9829,7 @@ const verify_case_57 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -9874,6 +9932,7 @@ const verify_case_58 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 1, .shift = 0 }, .{ .entry = 1, .shift = 1 } };
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 2, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 }, .{ .round = 2 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -9881,11 +9940,11 @@ const verify_case_58 = struct {
         .num_batches = 3,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(983404193), field.Element.init(48087116), field.Element.init(112585615), field.Element.init(1097811214), field.Element.init(860001870), field.Element.init(1286519842), field.Element.init(728265366), field.Element.init(703556860) }, tree.Octuplet{ field.Element.init(599880932), field.Element.init(1074001546), field.Element.init(2014446895), field.Element.init(2084936580), field.Element.init(420210980), field.Element.init(1537079255), field.Element.init(1741485814), field.Element.init(1434565311) }, tree.Octuplet{ field.Element.init(83166891), field.Element.init(1628871067), field.Element.init(1115021973), field.Element.init(70884705), field.Element.init(2024356336), field.Element.init(1787633767), field.Element.init(1024056049), field.Element.init(1245360994) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1978506937, 796715134, 707846070, 955853229, 129434597, 1219205204 })};
     const entry_col_1 = [_]ext.Ext{ ext.Ext.fromUints(.{ 684854472, 1991787835, 1769615175, 1324279856, 1388939709, 917306577 }), ext.Ext.fromUints(.{ 1445851972, 138918598, 361091258, 806426577, 741766724, 1213399856 }) };
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 1269568873, 228772093, 1827414922, 649268601, 1113429498, 1479033890 })};
@@ -9960,7 +10019,7 @@ const verify_case_58 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -10101,6 +10160,7 @@ const verify_case_59 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 2, .shift = 0 }, .{ .entry = 2, .shift = 1 }, .{ .entry = 1, .shift = 0 }, .{ .entry = 3, .shift = 0 }, .{ .entry = 3, .shift = 1 } };
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 4, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 }, .{ .round = 2 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -10108,11 +10168,11 @@ const verify_case_59 = struct {
         .num_batches = 3,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(292185806), field.Element.init(1937688299), field.Element.init(208451655), field.Element.init(1949117491), field.Element.init(1253250681), field.Element.init(1306706524), field.Element.init(873221655), field.Element.init(2044018250) }, tree.Octuplet{ field.Element.init(1388883595), field.Element.init(1157309717), field.Element.init(670696032), field.Element.init(817741175), field.Element.init(1229889826), field.Element.init(241484620), field.Element.init(383663478), field.Element.init(1736256976) }, tree.Octuplet{ field.Element.init(1223588587), field.Element.init(793862754), field.Element.init(1763872137), field.Element.init(1923077364), field.Element.init(355423670), field.Element.init(82028563), field.Element.init(992883326), field.Element.init(2049425407) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1467167099, 1961588743, 57302362, 1285353475, 1676260070, 1626781247 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1467167103, 1961588743, 57302362, 1285353475, 1676260070, 1626781247 })};
     const entry_col_2 = [_]ext.Ext{ ext.Ext.fromUints(.{ 1152170929, 993411282, 384865253, 1422381914, 395592521, 474395592 }), ext.Ext.fromUints(.{ 1780816111, 149339813, 77014099, 1505175821, 963754766, 400331489 }) };
@@ -10193,7 +10253,7 @@ const verify_case_59 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -10309,6 +10369,7 @@ const verify_case_60 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 0, .shift = 0 }, .{ .entry = 2, .shift = 0 }, .{ .entry = 2, .shift = 1 }, .{ .entry = 1, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 3, .shift = 0 }, .{ .entry = 4, .shift = 0 }, .{ .entry = 5, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 }, .{ .round = 2 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -10316,11 +10377,11 @@ const verify_case_60 = struct {
         .num_batches = 3,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(597282739), field.Element.init(186365509), field.Element.init(760735176), field.Element.init(660825597), field.Element.init(846296408), field.Element.init(1000055770), field.Element.init(386732866), field.Element.init(1031333927) }, tree.Octuplet{ field.Element.init(1156884836), field.Element.init(2088254499), field.Element.init(1957196611), field.Element.init(1015910099), field.Element.init(1430645806), field.Element.init(244992375), field.Element.init(1849978790), field.Element.init(813250143) }, tree.Octuplet{ field.Element.init(1719464708), field.Element.init(1403767144), field.Element.init(969115578), field.Element.init(733585478), field.Element.init(1586775484), field.Element.init(605712953), field.Element.init(336102139), field.Element.init(760740396) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1617239437, 970698788, 312992683, 1755378019, 1678309870, 433185064 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 266736632, 286687042, 238581130, 794378841, 819263480, 1057259372 })};
     const entry_col_2 = [_]ext.Ext{ ext.Ext.fromUints(.{ 970236162, 201131906, 1766692653, 990924834, 2094600323, 1396151704 }), ext.Ext.fromUints(.{ 1549206412, 947425375, 39473536, 2049259658, 1471520551, 1752577746 }) };
@@ -10402,7 +10463,7 @@ const verify_case_60 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -10580,6 +10641,7 @@ const verify_case_61 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 3, .shift = 0 }, .{ .entry = 0, .shift = 0 }, .{ .entry = 1, .shift = 0 }, .{ .entry = 2, .shift = 0 }, .{ .entry = 4, .shift = 0 }, .{ .entry = 4, .shift = 1 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 5, .shift = 0 }, .{ .entry = 6, .shift = 0 }, .{ .entry = 7, .shift = 0 }, .{ .entry = 8, .shift = 0 }, .{ .entry = 9, .shift = 0 }, .{ .entry = 10, .shift = 0 }, .{ .entry = 11, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 }, .{ .round = 2 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -10587,11 +10649,11 @@ const verify_case_61 = struct {
         .num_batches = 3,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(992248826), field.Element.init(112849144), field.Element.init(389105081), field.Element.init(1502093501), field.Element.init(744967386), field.Element.init(78584529), field.Element.init(1915394723), field.Element.init(189574401) }, tree.Octuplet{ field.Element.init(736056928), field.Element.init(305438335), field.Element.init(2024721446), field.Element.init(1515121095), field.Element.init(1164155865), field.Element.init(1442797537), field.Element.init(1364537031), field.Element.init(1776957385) }, tree.Octuplet{ field.Element.init(1441644487), field.Element.init(1352105051), field.Element.init(543997256), field.Element.init(332407652), field.Element.init(1421148955), field.Element.init(1382649459), field.Element.init(1372846713), field.Element.init(1017024469) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1, 0, 0, 0, 0, 0 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 2, 0, 0, 0, 0, 0 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 3, 0, 0, 0, 0, 0 })};
@@ -10679,7 +10741,7 @@ const verify_case_61 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -10852,6 +10914,7 @@ const verify_case_62 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 2, .shift = 0 }, .{ .entry = 3, .shift = 0 }, .{ .entry = 3, .shift = 1 }, .{ .entry = 0, .shift = 0 }, .{ .entry = 4, .shift = 0 }, .{ .entry = 4, .shift = 1 }, .{ .entry = 1, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 5, .shift = 0 }, .{ .entry = 6, .shift = 0 }, .{ .entry = 7, .shift = 0 }, .{ .entry = 8, .shift = 0 }, .{ .entry = 9, .shift = 0 }, .{ .entry = 10, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 2 }, .{ .round = 3 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -10859,11 +10922,11 @@ const verify_case_62 = struct {
         .num_batches = 3,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 3,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1110409010), field.Element.init(453615639), field.Element.init(580278665), field.Element.init(494085302), field.Element.init(1228400388), field.Element.init(565039873), field.Element.init(1007141117), field.Element.init(477422501) }, tree.Octuplet{ field.Element.init(70267145), field.Element.init(288496070), field.Element.init(102266437), field.Element.init(684587185), field.Element.init(1626421662), field.Element.init(181065343), field.Element.init(305236536), field.Element.init(1764116067) }, tree.Octuplet{ field.Element.init(376660204), field.Element.init(1654482749), field.Element.init(1855119448), field.Element.init(1339550412), field.Element.init(1660888837), field.Element.init(586233329), field.Element.init(472497234), field.Element.init(385777274) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 28401498, 1731355870, 498170405, 150874728, 1874545255, 412000710 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 803220384, 473609115, 1832885686, 69170973, 1374132582, 1736449031 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 827612349, 854401199, 533604203, 284207191, 1179802098, 215685024 })};
@@ -10951,7 +11014,7 @@ const verify_case_62 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -11129,6 +11192,7 @@ const verify_case_63 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 7, .shift = 0 }, .{ .entry = 8, .shift = 0 }, .{ .entry = 8, .shift = 1 }, .{ .entry = 6, .shift = 0 }, .{ .entry = 1, .shift = 0 }, .{ .entry = 2, .shift = 0 }, .{ .entry = 2, .shift = 1 }, .{ .entry = 0, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 9, .shift = 0 }, .{ .entry = 10, .shift = 0 }, .{ .entry = 11, .shift = 0 }, .{ .entry = 3, .shift = 0 }, .{ .entry = 4, .shift = 0 }, .{ .entry = 5, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 2 }, .{ .round = 3 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -11136,11 +11200,11 @@ const verify_case_63 = struct {
         .num_batches = 3,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 3,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1874445620), field.Element.init(181089059), field.Element.init(453256046), field.Element.init(1526246754), field.Element.init(1535749113), field.Element.init(2046190989), field.Element.init(703131220), field.Element.init(1255412865) }, tree.Octuplet{ field.Element.init(630079104), field.Element.init(1693220973), field.Element.init(950593247), field.Element.init(793055870), field.Element.init(1180184218), field.Element.init(478430276), field.Element.init(1085671210), field.Element.init(715102795) }, tree.Octuplet{ field.Element.init(1194585468), field.Element.init(1646393257), field.Element.init(135010263), field.Element.init(1511982665), field.Element.init(360249416), field.Element.init(234092897), field.Element.init(2090773084), field.Element.init(1495413661) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1012685131, 359892896, 211226728, 1065602053, 2060785054, 300215679 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1918443083, 1017316597, 1722803661, 1022209918, 1261916605, 1875299427 })};
     const entry_col_2 = [_]ext.Ext{ ext.Ext.fromUints(.{ 2098471626, 1722739413, 1834606504, 36547422, 1249524550, 153905299 }), ext.Ext.fromUints(.{ 355728996, 1054410134, 124012841, 858328880, 341261151, 599426095 }) };
@@ -11244,7 +11308,7 @@ const verify_case_63 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -11434,6 +11498,7 @@ const verify_case_64 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 3, .shift = 0 }, .{ .entry = 4, .shift = 0 }, .{ .entry = 4, .shift = 1 }, .{ .entry = 0, .shift = 0 }, .{ .entry = 1, .shift = 0 }, .{ .entry = 5, .shift = 0 }, .{ .entry = 5, .shift = 1 }, .{ .entry = 2, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 6, .shift = 0 }, .{ .entry = 7, .shift = 0 }, .{ .entry = 8, .shift = 0 }, .{ .entry = 9, .shift = 0 }, .{ .entry = 10, .shift = 0 }, .{ .entry = 11, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 2 }, .{ .round = 3 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -11441,11 +11506,11 @@ const verify_case_64 = struct {
         .num_batches = 3,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 4,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(974935480), field.Element.init(141442035), field.Element.init(539653970), field.Element.init(1738391857), field.Element.init(204662794), field.Element.init(242811238), field.Element.init(1215908651), field.Element.init(663544649) }, tree.Octuplet{ field.Element.init(1454063220), field.Element.init(702731278), field.Element.init(624406890), field.Element.init(1151715847), field.Element.init(680247638), field.Element.init(1491282548), field.Element.init(646594890), field.Element.init(97201693) }, tree.Octuplet{ field.Element.init(1407231337), field.Element.init(1936262434), field.Element.init(56158773), field.Element.init(1175411934), field.Element.init(1561091574), field.Element.init(1622828396), field.Element.init(1274222316), field.Element.init(1601177746) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 392857865, 1043462355, 397649732, 701030661, 1202883332, 1126549913 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 2002512418, 595479692, 1479709415, 787910059, 890471151, 280646312 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 1281940170, 437322379, 117850881, 643725142, 1748820655, 1454949746 })};
@@ -11534,7 +11599,7 @@ const verify_case_64 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -11729,6 +11794,7 @@ const verify_case_65 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 4, .shift = 0 }, .{ .entry = 5, .shift = 0 }, .{ .entry = 5, .shift = 1 }, .{ .entry = 0, .shift = 0 }, .{ .entry = 1, .shift = 0 }, .{ .entry = 3, .shift = 0 }, .{ .entry = 6, .shift = 0 }, .{ .entry = 6, .shift = 1 }, .{ .entry = 2, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 7, .shift = 0 }, .{ .entry = 8, .shift = 0 }, .{ .entry = 9, .shift = 0 }, .{ .entry = 10, .shift = 0 }, .{ .entry = 11, .shift = 0 }, .{ .entry = 12, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 2 }, .{ .round = 3 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -11736,11 +11802,11 @@ const verify_case_65 = struct {
         .num_batches = 3,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 4,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1704291796), field.Element.init(739533932), field.Element.init(62619361), field.Element.init(1318628009), field.Element.init(557016774), field.Element.init(266494561), field.Element.init(299011082), field.Element.init(1301963715) }, tree.Octuplet{ field.Element.init(1624934392), field.Element.init(412031120), field.Element.init(1504504453), field.Element.init(224723835), field.Element.init(2034145739), field.Element.init(1408270232), field.Element.init(216751019), field.Element.init(1509908590) }, tree.Octuplet{ field.Element.init(2040293567), field.Element.init(1903192753), field.Element.init(1987372673), field.Element.init(1749683506), field.Element.init(1134005868), field.Element.init(2022971486), field.Element.init(200415069), field.Element.init(1678599366) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1327386342, 2118015722, 843804963, 1069206984, 90987078, 64260661 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 502263658, 452615452, 130680445, 786711272, 15510368, 888459867 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 1598339721, 752949387, 400184883, 2009666938, 944877659, 2074580858 })};
@@ -11830,7 +11896,7 @@ const verify_case_65 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -12021,6 +12087,7 @@ const verify_case_66 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 4, .shift = 0 }, .{ .entry = 5, .shift = 0 }, .{ .entry = 5, .shift = 1 }, .{ .entry = 1, .shift = 0 }, .{ .entry = 0, .shift = 0 }, .{ .entry = 6, .shift = 0 }, .{ .entry = 6, .shift = 1 }, .{ .entry = 3, .shift = 0 }, .{ .entry = 2, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 7, .shift = 0 }, .{ .entry = 8, .shift = 0 }, .{ .entry = 9, .shift = 0 }, .{ .entry = 10, .shift = 0 }, .{ .entry = 11, .shift = 0 }, .{ .entry = 12, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 2 }, .{ .round = 3 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -12028,11 +12095,11 @@ const verify_case_66 = struct {
         .num_batches = 3,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 4,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(331402263), field.Element.init(248506287), field.Element.init(1112461178), field.Element.init(169683057), field.Element.init(1904602348), field.Element.init(893141740), field.Element.init(1886738478), field.Element.init(1458694164) }, tree.Octuplet{ field.Element.init(1577008473), field.Element.init(968650251), field.Element.init(476193329), field.Element.init(57662742), field.Element.init(1877944734), field.Element.init(1538994880), field.Element.init(1066670882), field.Element.init(491822260) }, tree.Octuplet{ field.Element.init(1889283188), field.Element.init(516639020), field.Element.init(540719334), field.Element.init(933459670), field.Element.init(1328442120), field.Element.init(2044633423), field.Element.init(300859713), field.Element.init(2049271818) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 139869030, 859262706, 373755642, 694346846, 1327587403, 151691091 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1398690300, 69801328, 1606849987, 551349161, 491635432, 1516910910 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 1577509404, 702118490, 421757111, 1414029033, 1424443351, 1465203511 })};
@@ -12122,7 +12189,7 @@ const verify_case_66 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -12346,6 +12413,7 @@ const verify_case_67 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 2, .shift = 0 }, .{ .entry = 3, .shift = 0 }, .{ .entry = 3, .shift = 1 }, .{ .entry = 0, .shift = 0 }, .{ .entry = 4, .shift = 0 }, .{ .entry = 4, .shift = 1 }, .{ .entry = 1, .shift = 0 }, .{ .entry = 12, .shift = 0 }, .{ .entry = 12, .shift = 1 }, .{ .entry = 11, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 5, .shift = 0 }, .{ .entry = 6, .shift = 0 }, .{ .entry = 7, .shift = 0 }, .{ .entry = 8, .shift = 0 }, .{ .entry = 9, .shift = 0 }, .{ .entry = 10, .shift = 0 }, .{ .entry = 13, .shift = 0 }, .{ .entry = 14, .shift = 0 }, .{ .entry = 15, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 2 }, .{ .round = 3 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -12353,11 +12421,11 @@ const verify_case_67 = struct {
         .num_batches = 3,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 4,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1857029523), field.Element.init(878932300), field.Element.init(1252620072), field.Element.init(1895358582), field.Element.init(1743154538), field.Element.init(860842355), field.Element.init(544432422), field.Element.init(110779442) }, tree.Octuplet{ field.Element.init(1881050068), field.Element.init(2110888385), field.Element.init(788661323), field.Element.init(497944269), field.Element.init(1902771382), field.Element.init(1127971659), field.Element.init(577208368), field.Element.init(1512936920) }, tree.Octuplet{ field.Element.init(1457552359), field.Element.init(912636501), field.Element.init(373321760), field.Element.init(1367386269), field.Element.init(522200140), field.Element.init(75081092), field.Element.init(1723482060), field.Element.init(568875050) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 500172177, 133863607, 1829174891, 370388749, 2039779745, 1057725155 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 128177797, 111495423, 1706195850, 1544772926, 1153115414, 1558801777 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 700302197, 306367743, 195051480, 916711835, 1055185390, 643664492 })};
@@ -12465,7 +12533,7 @@ const verify_case_67 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -12743,6 +12811,7 @@ const verify_case_68 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 1, .shift = 0 }, .{ .entry = 2, .shift = 0 }, .{ .entry = 2, .shift = 1 }, .{ .entry = 0, .shift = 0 }, .{ .entry = 9, .shift = 0 }, .{ .entry = 11, .shift = 0 }, .{ .entry = 11, .shift = 1 }, .{ .entry = 6, .shift = 0 }, .{ .entry = 10, .shift = 0 }, .{ .entry = 10, .shift = 1 }, .{ .entry = 7, .shift = 0 }, .{ .entry = 12, .shift = 0 }, .{ .entry = 12, .shift = 1 }, .{ .entry = 8, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 3, .shift = 0 }, .{ .entry = 4, .shift = 0 }, .{ .entry = 5, .shift = 0 }, .{ .entry = 13, .shift = 0 }, .{ .entry = 14, .shift = 0 }, .{ .entry = 15, .shift = 0 }, .{ .entry = 16, .shift = 0 }, .{ .entry = 17, .shift = 0 }, .{ .entry = 18, .shift = 0 }, .{ .entry = 19, .shift = 0 }, .{ .entry = 20, .shift = 0 }, .{ .entry = 21, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 2 }, .{ .round = 3 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -12750,11 +12819,11 @@ const verify_case_68 = struct {
         .num_batches = 3,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 5,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1754147886), field.Element.init(1941086424), field.Element.init(1829369810), field.Element.init(469818490), field.Element.init(940355173), field.Element.init(841647506), field.Element.init(1397444639), field.Element.init(1200537460) }, tree.Octuplet{ field.Element.init(27249925), field.Element.init(590536161), field.Element.init(1870876473), field.Element.init(1954108601), field.Element.init(26204842), field.Element.init(1580873923), field.Element.init(1948692482), field.Element.init(708813887) }, tree.Octuplet{ field.Element.init(808602497), field.Element.init(5986247), field.Element.init(419564757), field.Element.init(1560043363), field.Element.init(921147019), field.Element.init(854452459), field.Element.init(1620403431), field.Element.init(966006769) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1472391416, 1065235957, 1626256587, 72977285, 1652583385, 1999370726 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 853838755, 288753684, 1388564275, 1273503464, 1060028956, 521445631 })};
     const entry_col_2 = [_]ext.Ext{ ext.Ext.fromUints(.{ 940823689, 353354664, 686593712, 1247844415, 984750213, 965170317 }), ext.Ext.fromUints(.{ 1992420846, 1660174654, 308474315, 1881820710, 1127830387, 1459534071 }) };
@@ -12868,7 +12937,7 @@ const verify_case_68 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -13076,6 +13145,7 @@ const verify_case_69 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 5, .shift = 0 }, .{ .entry = 6, .shift = 0 }, .{ .entry = 6, .shift = 1 }, .{ .entry = 1, .shift = 0 }, .{ .entry = 0, .shift = 0 }, .{ .entry = 2, .shift = 0 }, .{ .entry = 7, .shift = 0 }, .{ .entry = 7, .shift = 1 }, .{ .entry = 4, .shift = 0 }, .{ .entry = 3, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 8, .shift = 0 }, .{ .entry = 9, .shift = 0 }, .{ .entry = 10, .shift = 0 }, .{ .entry = 11, .shift = 0 }, .{ .entry = 12, .shift = 0 }, .{ .entry = 13, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 2 }, .{ .round = 3 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -13083,11 +13153,11 @@ const verify_case_69 = struct {
         .num_batches = 3,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 4,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(915365738), field.Element.init(1342117513), field.Element.init(134341478), field.Element.init(1411363858), field.Element.init(1147311305), field.Element.init(1306682621), field.Element.init(2114221330), field.Element.init(333351511) }, tree.Octuplet{ field.Element.init(1912748558), field.Element.init(389041178), field.Element.init(59864233), field.Element.init(243520391), field.Element.init(256135887), field.Element.init(2075278253), field.Element.init(1507150989), field.Element.init(1963691079) }, tree.Octuplet{ field.Element.init(1973952603), field.Element.init(12689923), field.Element.init(1868704713), field.Element.init(1514767711), field.Element.init(720197423), field.Element.init(550340454), field.Element.init(920564692), field.Element.init(57780778) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 115552159, 1966810743, 1911610623, 1564138212, 687914657, 270917619 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1532218481, 2120489549, 67220419, 1335081315, 694481458, 426032947 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 1301325474, 1477300347, 1150389749, 622438066, 665032371, 186355404 })};
@@ -13178,7 +13248,7 @@ const verify_case_69 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -13351,6 +13421,7 @@ const verify_case_70 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 2, .shift = 0 }, .{ .entry = 3, .shift = 0 }, .{ .entry = 3, .shift = 1 }, .{ .entry = 0, .shift = 0 }, .{ .entry = 4, .shift = 0 }, .{ .entry = 4, .shift = 1 }, .{ .entry = 1, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 5, .shift = 0 }, .{ .entry = 6, .shift = 0 }, .{ .entry = 7, .shift = 0 }, .{ .entry = 8, .shift = 0 }, .{ .entry = 9, .shift = 0 }, .{ .entry = 10, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 2 }, .{ .round = 3 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -13358,11 +13429,11 @@ const verify_case_70 = struct {
         .num_batches = 3,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 3,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(27575202), field.Element.init(489261812), field.Element.init(399988726), field.Element.init(1763253494), field.Element.init(1287175670), field.Element.init(81190769), field.Element.init(1260047582), field.Element.init(1955985077) }, tree.Octuplet{ field.Element.init(616853399), field.Element.init(1618448643), field.Element.init(1708434369), field.Element.init(1986299654), field.Element.init(1027308773), field.Element.init(653188733), field.Element.init(1566848758), field.Element.init(450807523) }, tree.Octuplet{ field.Element.init(1745278213), field.Element.init(1867515822), field.Element.init(1172979823), field.Element.init(1113424598), field.Element.init(865372446), field.Element.init(834137352), field.Element.init(2001866317), field.Element.init(1716308919) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 258398264, 683365157, 1406743847, 1439555764, 157854969, 518442153 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 258398264, 683365157, 1406743847, 1439555764, 157854969, 518442153 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 437194143, 712878, 68574746, 402048832, 510158002, 1540608308 })};
@@ -13450,7 +13521,7 @@ const verify_case_70 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -13623,6 +13694,7 @@ const verify_case_71 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 2, .shift = 0 }, .{ .entry = 3, .shift = 0 }, .{ .entry = 3, .shift = 1 }, .{ .entry = 0, .shift = 0 }, .{ .entry = 4, .shift = 0 }, .{ .entry = 4, .shift = 1 }, .{ .entry = 1, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 5, .shift = 0 }, .{ .entry = 6, .shift = 0 }, .{ .entry = 7, .shift = 0 }, .{ .entry = 8, .shift = 0 }, .{ .entry = 9, .shift = 0 }, .{ .entry = 10, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 2 }, .{ .round = 3 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -13630,11 +13702,11 @@ const verify_case_71 = struct {
         .num_batches = 3,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 3,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1282214853), field.Element.init(256869070), field.Element.init(390649992), field.Element.init(1859250556), field.Element.init(539379833), field.Element.init(549554320), field.Element.init(1624747323), field.Element.init(2045219158) }, tree.Octuplet{ field.Element.init(571352374), field.Element.init(633098386), field.Element.init(433643719), field.Element.init(1987088152), field.Element.init(1497655609), field.Element.init(337855672), field.Element.init(1046641467), field.Element.init(329887944) }, tree.Octuplet{ field.Element.init(1519974273), field.Element.init(437478119), field.Element.init(1428614974), field.Element.init(1902182137), field.Element.init(1385565645), field.Element.init(144357124), field.Element.init(1094657109), field.Element.init(1844053100) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 580617295, 1774276984, 1080238583, 602795318, 1330591760, 1734745493 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 580617295, 1774276984, 1080238583, 602795318, 1330591760, 1734745493 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 1, 0, 0, 0, 0, 0 })};
@@ -13722,7 +13794,7 @@ const verify_case_71 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -13895,6 +13967,7 @@ const verify_case_72 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 2, .shift = 0 }, .{ .entry = 3, .shift = 0 }, .{ .entry = 3, .shift = 1 }, .{ .entry = 0, .shift = 0 }, .{ .entry = 0, .shift = 0 }, .{ .entry = 4, .shift = 0 }, .{ .entry = 4, .shift = 1 }, .{ .entry = 1, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 5, .shift = 0 }, .{ .entry = 6, .shift = 0 }, .{ .entry = 7, .shift = 0 }, .{ .entry = 8, .shift = 0 }, .{ .entry = 9, .shift = 0 }, .{ .entry = 10, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 2 }, .{ .round = 3 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -13902,11 +13975,11 @@ const verify_case_72 = struct {
         .num_batches = 3,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 3,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(659142081), field.Element.init(1857605022), field.Element.init(1022172682), field.Element.init(1620058792), field.Element.init(1679112747), field.Element.init(624866888), field.Element.init(682989302), field.Element.init(613362805) }, tree.Octuplet{ field.Element.init(1386510324), field.Element.init(2009369133), field.Element.init(678245327), field.Element.init(1535751322), field.Element.init(928455435), field.Element.init(83824924), field.Element.init(858287420), field.Element.init(167342910) }, tree.Octuplet{ field.Element.init(1607142874), field.Element.init(2077757205), field.Element.init(2033335690), field.Element.init(1660629945), field.Element.init(130098693), field.Element.init(409159999), field.Element.init(155311056), field.Element.init(388186278) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1957606860, 72749750, 137783964, 737023207, 1336218803, 1284478551 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1957606860, 72749750, 137783964, 737023207, 1336218803, 1284478551 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 1, 0, 0, 0, 0, 0 })};
@@ -13994,7 +14067,7 @@ const verify_case_72 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -14218,6 +14291,7 @@ const verify_case_73 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 2, .shift = 0 }, .{ .entry = 3, .shift = 0 }, .{ .entry = 3, .shift = 1 }, .{ .entry = 0, .shift = 0 }, .{ .entry = 4, .shift = 0 }, .{ .entry = 4, .shift = 1 }, .{ .entry = 1, .shift = 0 }, .{ .entry = 12, .shift = 0 }, .{ .entry = 12, .shift = 1 }, .{ .entry = 11, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 5, .shift = 0 }, .{ .entry = 6, .shift = 0 }, .{ .entry = 7, .shift = 0 }, .{ .entry = 8, .shift = 0 }, .{ .entry = 9, .shift = 0 }, .{ .entry = 10, .shift = 0 }, .{ .entry = 13, .shift = 0 }, .{ .entry = 14, .shift = 0 }, .{ .entry = 15, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 2 }, .{ .round = 3 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -14225,11 +14299,11 @@ const verify_case_73 = struct {
         .num_batches = 3,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 4,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(443910081), field.Element.init(1075621915), field.Element.init(1196665618), field.Element.init(1130489531), field.Element.init(1035391213), field.Element.init(279333716), field.Element.init(1162308483), field.Element.init(88729182) }, tree.Octuplet{ field.Element.init(1614172280), field.Element.init(1520455701), field.Element.init(778898181), field.Element.init(318861110), field.Element.init(2074104298), field.Element.init(1727636141), field.Element.init(165926308), field.Element.init(1308468238) }, tree.Octuplet{ field.Element.init(260119965), field.Element.init(1382610826), field.Element.init(1904897468), field.Element.init(780266129), field.Element.init(619319025), field.Element.init(82180564), field.Element.init(1245858684), field.Element.init(1419246169) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 126874407, 1396960382, 37232971, 1724191699, 295145731, 1915485041 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 141453251, 775674333, 1621497306, 736920160, 324832300, 1586436890 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 1531547478, 1954341219, 562186006, 1836485829, 1982300772, 445611711 })};
@@ -14337,7 +14411,7 @@ const verify_case_73 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -14546,6 +14620,7 @@ const verify_case_74 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 3, .shift = 0 }, .{ .entry = 4, .shift = 0 }, .{ .entry = 4, .shift = 1 }, .{ .entry = 2, .shift = 0 }, .{ .entry = 1, .shift = 0 }, .{ .entry = 0, .shift = 0 }, .{ .entry = 11, .shift = 0 }, .{ .entry = 11, .shift = 1 }, .{ .entry = 10, .shift = 0 }, .{ .entry = 9, .shift = 0 }, .{ .entry = 8, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 5, .shift = 0 }, .{ .entry = 6, .shift = 0 }, .{ .entry = 7, .shift = 0 }, .{ .entry = 12, .shift = 0 }, .{ .entry = 13, .shift = 0 }, .{ .entry = 14, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 2 }, .{ .round = 3 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -14553,11 +14628,11 @@ const verify_case_74 = struct {
         .num_batches = 3,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 4,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(572381029), field.Element.init(611582988), field.Element.init(1801147826), field.Element.init(450030008), field.Element.init(504966040), field.Element.init(1999764886), field.Element.init(1326328114), field.Element.init(686655497) }, tree.Octuplet{ field.Element.init(1245702943), field.Element.init(2052113461), field.Element.init(1468073333), field.Element.init(353577206), field.Element.init(1617652722), field.Element.init(194596010), field.Element.init(1541883483), field.Element.init(479285546) }, tree.Octuplet{ field.Element.init(1398430521), field.Element.init(90553654), field.Element.init(1298657634), field.Element.init(1906484091), field.Element.init(1056644665), field.Element.init(197002243), field.Element.init(1831298118), field.Element.init(1840552528) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1490630060, 1056984750, 364009413, 689647884, 773105558, 2063430970 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 2122062002, 2047021768, 1509387697, 504359541, 1338936281, 1457951803 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 2044262123, 1293859783, 178931939, 782182544, 605124212, 1795279432 })};
@@ -14664,7 +14739,7 @@ const verify_case_74 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -14802,6 +14877,7 @@ const verify_case_75 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 2, .shift = 0 }, .{ .entry = 3, .shift = 0 }, .{ .entry = 0, .shift = 0 }, .{ .entry = 4, .shift = 0 }, .{ .entry = 1, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 5, .shift = 0 }, .{ .entry = 6, .shift = 0 }, .{ .entry = 7, .shift = 0 }, .{ .entry = 8, .shift = 0 }, .{ .entry = 9, .shift = 0 }, .{ .entry = 10, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 2 }, .{ .round = 3 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -14809,11 +14885,11 @@ const verify_case_75 = struct {
         .num_batches = 3,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 3,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1618405036), field.Element.init(2045748274), field.Element.init(6044757), field.Element.init(2114225103), field.Element.init(323102844), field.Element.init(280039477), field.Element.init(1287444758), field.Element.init(1127427102) }, tree.Octuplet{ field.Element.init(595638293), field.Element.init(1790496759), field.Element.init(75646573), field.Element.init(615340811), field.Element.init(592378045), field.Element.init(134000107), field.Element.init(811218034), field.Element.init(988547643) }, tree.Octuplet{ field.Element.init(1023247518), field.Element.init(526330834), field.Element.init(1769760236), field.Element.init(595444561), field.Element.init(1194316689), field.Element.init(80430405), field.Element.init(236816139), field.Element.init(1003443707) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 42, 0, 0, 0, 0, 0 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 42, 0, 0, 0, 0, 0 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 1, 0, 0, 0, 0, 0 })};
@@ -14897,7 +14973,7 @@ const verify_case_75 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -15080,6 +15156,7 @@ const verify_case_76 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts, &batch3_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 1, .shift = 0 }, .{ .entry = 2, .shift = 0 }, .{ .entry = 2, .shift = 1 }, .{ .entry = 10, .shift = 0 }, .{ .entry = 3, .shift = 0 }, .{ .entry = 3, .shift = 1 }, .{ .entry = 0, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 4, .shift = 0 }, .{ .entry = 5, .shift = 0 }, .{ .entry = 6, .shift = 0 }, .{ .entry = 7, .shift = 0 }, .{ .entry = 8, .shift = 0 }, .{ .entry = 9, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 2 }, .{ .round = 3 }, .{ .precomputed = tree.Octuplet{ field.Element.init(1284087301), field.Element.init(2104130085), field.Element.init(1597477735), field.Element.init(797176699), field.Element.init(452943547), field.Element.init(844011610), field.Element.init(336115017), field.Element.init(934293072) } } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -15087,11 +15164,11 @@ const verify_case_76 = struct {
         .num_batches = 4,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 3,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(836519016), field.Element.init(1384104849), field.Element.init(243627195), field.Element.init(1694681239), field.Element.init(1585091956), field.Element.init(1912410125), field.Element.init(274848526), field.Element.init(1298783273) }, tree.Octuplet{ field.Element.init(193490974), field.Element.init(1958942275), field.Element.init(750572041), field.Element.init(256038804), field.Element.init(1207657662), field.Element.init(240661649), field.Element.init(518392121), field.Element.init(518681163) }, tree.Octuplet{ field.Element.init(548403042), field.Element.init(1902410842), field.Element.init(398867437), field.Element.init(234955644), field.Element.init(31918906), field.Element.init(1179799550), field.Element.init(1184223853), field.Element.init(1236642409) }, tree.Octuplet{ field.Element.init(1284087301), field.Element.init(2104130085), field.Element.init(1597477735), field.Element.init(797176699), field.Element.init(452943547), field.Element.init(844011610), field.Element.init(336115017), field.Element.init(934293072) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1049763053, 1457307395, 761992931, 602088271, 909767919, 751239403 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1, 0, 0, 0, 0, 0 })};
     const entry_col_2 = [_]ext.Ext{ ext.Ext.fromUints(.{ 197816550, 1449523348, 1536214480, 1240581682, 1007963476, 1503840246 }), ext.Ext.fromUints(.{ 282979677, 964668758, 1944619980, 1653427597, 286391097, 908625842 }) };
@@ -15187,7 +15264,7 @@ const verify_case_76 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -15360,6 +15437,7 @@ const verify_case_77 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 2, .shift = 0 }, .{ .entry = 3, .shift = 0 }, .{ .entry = 3, .shift = 1 }, .{ .entry = 0, .shift = 0 }, .{ .entry = 4, .shift = 0 }, .{ .entry = 4, .shift = 1 }, .{ .entry = 1, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 5, .shift = 0 }, .{ .entry = 6, .shift = 0 }, .{ .entry = 7, .shift = 0 }, .{ .entry = 8, .shift = 0 }, .{ .entry = 9, .shift = 0 }, .{ .entry = 10, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 2 }, .{ .round = 3 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -15367,11 +15445,11 @@ const verify_case_77 = struct {
         .num_batches = 3,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 3,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(748105540), field.Element.init(664313601), field.Element.init(247794794), field.Element.init(1592830574), field.Element.init(471162647), field.Element.init(1106107359), field.Element.init(249118861), field.Element.init(197286100) }, tree.Octuplet{ field.Element.init(110203750), field.Element.init(627210324), field.Element.init(120264909), field.Element.init(1890572083), field.Element.init(521518222), field.Element.init(1546424954), field.Element.init(289592584), field.Element.init(1314385592) }, tree.Octuplet{ field.Element.init(365800308), field.Element.init(1642803478), field.Element.init(823393924), field.Element.init(1717745985), field.Element.init(1837724780), field.Element.init(1785589663), field.Element.init(2090109632), field.Element.init(162273070) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1726812860, 1680716787, 632270655, 701767922, 478033591, 1780947278 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 10, 0, 0, 0, 0, 0 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 1348147742, 1240951808, 1027705092, 1541653088, 1372573071, 306337616 })};
@@ -15459,7 +15537,7 @@ const verify_case_77 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -15637,6 +15715,7 @@ const verify_case_78 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 3, .shift = 0 }, .{ .entry = 4, .shift = 0 }, .{ .entry = 4, .shift = 1 }, .{ .entry = 0, .shift = 0 }, .{ .entry = 2, .shift = 0 }, .{ .entry = 5, .shift = 0 }, .{ .entry = 5, .shift = 1 }, .{ .entry = 1, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 6, .shift = 0 }, .{ .entry = 7, .shift = 0 }, .{ .entry = 8, .shift = 0 }, .{ .entry = 9, .shift = 0 }, .{ .entry = 10, .shift = 0 }, .{ .entry = 11, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 2 }, .{ .round = 3 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -15644,11 +15723,11 @@ const verify_case_78 = struct {
         .num_batches = 3,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 3,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1062230092), field.Element.init(606144463), field.Element.init(2043202518), field.Element.init(647463255), field.Element.init(1080904118), field.Element.init(784156295), field.Element.init(908353842), field.Element.init(78771534) }, tree.Octuplet{ field.Element.init(1275975592), field.Element.init(71531730), field.Element.init(219058983), field.Element.init(1065229348), field.Element.init(580944419), field.Element.init(1232921032), field.Element.init(683520727), field.Element.init(838936790) }, tree.Octuplet{ field.Element.init(1601043707), field.Element.init(1615724197), field.Element.init(1406858925), field.Element.init(2071990623), field.Element.init(1791306651), field.Element.init(459288849), field.Element.init(1396378191), field.Element.init(621036403) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1859367276, 266045357, 202169275, 76343214, 1880397669, 1212429759 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 809608663, 2009435025, 1088032387, 335052208, 809774166, 1368344849 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 })};
@@ -15737,7 +15816,7 @@ const verify_case_78 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -15928,6 +16007,7 @@ const verify_case_79 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts, &batch3_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 3, .shift = 0 }, .{ .entry = 3, .shift = 1 }, .{ .entry = 0, .shift = 0 }, .{ .entry = 1, .shift = 0 }, .{ .entry = 2, .shift = 0 }, .{ .entry = 2, .shift = 1 }, .{ .entry = 10, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 4, .shift = 0 }, .{ .entry = 5, .shift = 0 }, .{ .entry = 6, .shift = 0 }, .{ .entry = 7, .shift = 0 }, .{ .entry = 8, .shift = 0 }, .{ .entry = 9, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 2 }, .{ .round = 3 }, .{ .precomputed = tree.Octuplet{ field.Element.init(367984025), field.Element.init(121457025), field.Element.init(1989181103), field.Element.init(2001787501), field.Element.init(1478344676), field.Element.init(1165778310), field.Element.init(977836238), field.Element.init(993044628) } } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -15935,11 +16015,11 @@ const verify_case_79 = struct {
         .num_batches = 4,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 3,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1114752314), field.Element.init(1702447900), field.Element.init(1071362877), field.Element.init(1618321088), field.Element.init(2113504513), field.Element.init(2078452774), field.Element.init(488779492), field.Element.init(443207366) }, tree.Octuplet{ field.Element.init(1762512884), field.Element.init(1141491026), field.Element.init(1650301158), field.Element.init(1902897971), field.Element.init(2113340968), field.Element.init(2081413375), field.Element.init(516685064), field.Element.init(1479600018) }, tree.Octuplet{ field.Element.init(1289029775), field.Element.init(237183410), field.Element.init(660902734), field.Element.init(1850407601), field.Element.init(1973824571), field.Element.init(1584884683), field.Element.init(1348206573), field.Element.init(281935367) }, tree.Octuplet{ field.Element.init(367984025), field.Element.init(121457025), field.Element.init(1989181103), field.Element.init(2001787501), field.Element.init(1478344676), field.Element.init(1165778310), field.Element.init(977836238), field.Element.init(993044628) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 826985973, 1230917409, 1834773358, 1448476941, 1971616437, 658220976 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1, 0, 0, 0, 0, 0 })};
     const entry_col_2 = [_]ext.Ext{ ext.Ext.fromUints(.{ 1194134080, 1504949127, 1728178040, 1246964994, 2054526155, 254503986 }), ext.Ext.fromUints(.{ 894543027, 329261766, 813673185, 956147845, 1776344711, 1213040358 }) };
@@ -16039,7 +16119,7 @@ const verify_case_79 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -16259,6 +16339,7 @@ const verify_case_80 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts, &batch3_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 1, .shift = 0 }, .{ .entry = 0, .shift = 0 }, .{ .entry = 4, .shift = 0 }, .{ .entry = 4, .shift = 1 }, .{ .entry = 2, .shift = 0 }, .{ .entry = 3, .shift = 0 }, .{ .entry = 3, .shift = 1 }, .{ .entry = 15, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 5, .shift = 0 }, .{ .entry = 6, .shift = 0 }, .{ .entry = 7, .shift = 0 }, .{ .entry = 8, .shift = 0 }, .{ .entry = 9, .shift = 0 }, .{ .entry = 10, .shift = 0 }, .{ .entry = 11, .shift = 0 }, .{ .entry = 12, .shift = 0 }, .{ .entry = 13, .shift = 0 }, .{ .entry = 14, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 2 }, .{ .round = 3 }, .{ .precomputed = tree.Octuplet{ field.Element.init(801186612), field.Element.init(849199966), field.Element.init(956744927), field.Element.init(1418018601), field.Element.init(1157212533), field.Element.init(787425838), field.Element.init(694468584), field.Element.init(890062840) } } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -16266,11 +16347,11 @@ const verify_case_80 = struct {
         .num_batches = 4,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 3,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(677541007), field.Element.init(1198022312), field.Element.init(2043878434), field.Element.init(777393820), field.Element.init(1132073752), field.Element.init(424944194), field.Element.init(1238808932), field.Element.init(567333894) }, tree.Octuplet{ field.Element.init(1224273014), field.Element.init(1123402431), field.Element.init(1376154519), field.Element.init(1596070593), field.Element.init(1391280018), field.Element.init(1758923589), field.Element.init(259733705), field.Element.init(1491454661) }, tree.Octuplet{ field.Element.init(626901125), field.Element.init(448716930), field.Element.init(301097129), field.Element.init(127904223), field.Element.init(681113285), field.Element.init(1523973452), field.Element.init(206506391), field.Element.init(1347646244) }, tree.Octuplet{ field.Element.init(801186612), field.Element.init(849199966), field.Element.init(956744927), field.Element.init(1418018601), field.Element.init(1157212533), field.Element.init(787425838), field.Element.init(694468584), field.Element.init(890062840) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1462397012, 1555065660, 830947893, 1627714446, 1247836631, 2042013175 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1007568821, 1560123201, 1927594819, 1859903367, 430401996, 1924554690 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 2, 0, 0, 0, 0, 0 })};
@@ -16371,7 +16452,7 @@ const verify_case_80 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -16653,6 +16734,7 @@ const verify_case_81 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts, &batch3_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 7, .shift = 0 }, .{ .entry = 6, .shift = 0 }, .{ .entry = 10, .shift = 0 }, .{ .entry = 10, .shift = 1 }, .{ .entry = 8, .shift = 0 }, .{ .entry = 9, .shift = 0 }, .{ .entry = 9, .shift = 1 }, .{ .entry = 21, .shift = 0 }, .{ .entry = 0, .shift = 0 }, .{ .entry = 1, .shift = 0 }, .{ .entry = 1, .shift = 1 }, .{ .entry = 5, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 11, .shift = 0 }, .{ .entry = 12, .shift = 0 }, .{ .entry = 13, .shift = 0 }, .{ .entry = 14, .shift = 0 }, .{ .entry = 15, .shift = 0 }, .{ .entry = 16, .shift = 0 }, .{ .entry = 17, .shift = 0 }, .{ .entry = 18, .shift = 0 }, .{ .entry = 19, .shift = 0 }, .{ .entry = 20, .shift = 0 }, .{ .entry = 2, .shift = 0 }, .{ .entry = 3, .shift = 0 }, .{ .entry = 4, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 2 }, .{ .round = 3 }, .{ .precomputed = tree.Octuplet{ field.Element.init(835158699), field.Element.init(548244366), field.Element.init(353160657), field.Element.init(100756588), field.Element.init(1467126676), field.Element.init(14288135), field.Element.init(1355061657), field.Element.init(1123976454) } } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -16660,11 +16742,11 @@ const verify_case_81 = struct {
         .num_batches = 4,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 4,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1541026018), field.Element.init(145621090), field.Element.init(741305181), field.Element.init(482203454), field.Element.init(634333725), field.Element.init(203087699), field.Element.init(1694386316), field.Element.init(951273261) }, tree.Octuplet{ field.Element.init(1698092709), field.Element.init(771362883), field.Element.init(1720901134), field.Element.init(1949615407), field.Element.init(353721363), field.Element.init(751221572), field.Element.init(1660037177), field.Element.init(1520696559) }, tree.Octuplet{ field.Element.init(1378824340), field.Element.init(1719688991), field.Element.init(864673499), field.Element.init(1355391040), field.Element.init(905756393), field.Element.init(501755955), field.Element.init(1160437761), field.Element.init(690941074) }, tree.Octuplet{ field.Element.init(835158699), field.Element.init(548244366), field.Element.init(353160657), field.Element.init(100756588), field.Element.init(1467126676), field.Element.init(14288135), field.Element.init(1355061657), field.Element.init(1123976454) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 109635468, 859658700, 1740926791, 625487101, 223757140, 855028638 })};
     const entry_col_1 = [_]ext.Ext{ ext.Ext.fromUints(.{ 1006825568, 1700923147, 1564205001, 1034124729, 1812285708, 559856267 }), ext.Ext.fromUints(.{ 1625915937, 525683966, 1669700341, 226145676, 1297435823, 443528791 }) };
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 1988611897, 1369841088, 541599279, 1294653049, 1014807383, 1285010626 })};
@@ -16795,7 +16877,7 @@ const verify_case_81 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -16994,6 +17076,7 @@ const verify_case_82 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts, &batch3_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 7, .shift = 0 }, .{ .entry = 7, .shift = 1 }, .{ .entry = 6, .shift = 0 }, .{ .entry = 0, .shift = 0 }, .{ .entry = 1, .shift = 0 }, .{ .entry = 1, .shift = 1 }, .{ .entry = 5, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 8, .shift = 0 }, .{ .entry = 9, .shift = 0 }, .{ .entry = 10, .shift = 0 }, .{ .entry = 2, .shift = 0 }, .{ .entry = 3, .shift = 0 }, .{ .entry = 4, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 2 }, .{ .round = 3 }, .{ .precomputed = tree.Octuplet{ field.Element.init(374118637), field.Element.init(998268353), field.Element.init(1643584054), field.Element.init(663783354), field.Element.init(806786059), field.Element.init(398821790), field.Element.init(2052718136), field.Element.init(1349479189) } } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -17001,11 +17084,11 @@ const verify_case_82 = struct {
         .num_batches = 4,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 3,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1193704082), field.Element.init(1903940218), field.Element.init(1416360581), field.Element.init(1035388907), field.Element.init(800628548), field.Element.init(324878558), field.Element.init(1219999597), field.Element.init(290681110) }, tree.Octuplet{ field.Element.init(83788695), field.Element.init(1771442940), field.Element.init(1004649435), field.Element.init(1628001171), field.Element.init(873273962), field.Element.init(1773631885), field.Element.init(590417763), field.Element.init(1534858503) }, tree.Octuplet{ field.Element.init(62755805), field.Element.init(216843132), field.Element.init(1178304786), field.Element.init(1999002438), field.Element.init(152556687), field.Element.init(1543896519), field.Element.init(1090669507), field.Element.init(1573812977) }, tree.Octuplet{ field.Element.init(374118637), field.Element.init(998268353), field.Element.init(1643584054), field.Element.init(663783354), field.Element.init(806786059), field.Element.init(398821790), field.Element.init(2052718136), field.Element.init(1349479189) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1143079408, 520060795, 343760829, 1172552893, 1060172755, 915877731 })};
     const entry_col_1 = [_]ext.Ext{ ext.Ext.fromUints(.{ 1375560466, 1709355460, 1934065564, 831123426, 699154716, 1971119887 }), ext.Ext.fromUints(.{ 1893634284, 14449563, 2086962607, 971922151, 2038611637, 1623253108 }) };
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 892710883, 2039865976, 1696094031, 667937316, 1563467179, 375502755 })};
@@ -17124,7 +17207,7 @@ const verify_case_82 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -17291,6 +17374,7 @@ const verify_case_83 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts, &batch3_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 1, .shift = 0 }, .{ .entry = 1, .shift = 1 }, .{ .entry = 0, .shift = 0 }, .{ .entry = 5, .shift = 0 }, .{ .entry = 6, .shift = 0 }, .{ .entry = 10, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 2, .shift = 0 }, .{ .entry = 3, .shift = 0 }, .{ .entry = 4, .shift = 0 }, .{ .entry = 7, .shift = 0 }, .{ .entry = 8, .shift = 0 }, .{ .entry = 9, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 2 }, .{ .round = 3 }, .{ .precomputed = tree.Octuplet{ field.Element.init(866413611), field.Element.init(1177813961), field.Element.init(463209690), field.Element.init(1813564427), field.Element.init(1751916844), field.Element.init(2077487559), field.Element.init(1448626937), field.Element.init(781066062) } } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -17298,11 +17382,11 @@ const verify_case_83 = struct {
         .num_batches = 4,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 3,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1468650643), field.Element.init(1724996812), field.Element.init(868707769), field.Element.init(235650548), field.Element.init(1084302936), field.Element.init(1894913070), field.Element.init(1474742138), field.Element.init(219278880) }, tree.Octuplet{ field.Element.init(350596302), field.Element.init(105845206), field.Element.init(1506594426), field.Element.init(1473706063), field.Element.init(1503113686), field.Element.init(1626724337), field.Element.init(368338221), field.Element.init(1806775908) }, tree.Octuplet{ field.Element.init(896241999), field.Element.init(2061018802), field.Element.init(1310176124), field.Element.init(1070342462), field.Element.init(501880945), field.Element.init(460960491), field.Element.init(1876675749), field.Element.init(1705634474) }, tree.Octuplet{ field.Element.init(866413611), field.Element.init(1177813961), field.Element.init(463209690), field.Element.init(1813564427), field.Element.init(1751916844), field.Element.init(2077487559), field.Element.init(1448626937), field.Element.init(781066062) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 0, 0, 0, 0, 0, 0 })};
     const entry_col_1 = [_]ext.Ext{ ext.Ext.fromUints(.{ 1013827135, 1291980781, 1885611298, 1815181325, 1097901258, 885209537 }), ext.Ext.fromUints(.{ 842219346, 240422671, 1622157283, 1564474906, 65069537, 915253161 }) };
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 1332583707, 2029839550, 1238314553, 2015079890, 1861814494, 144310553 })};
@@ -17413,7 +17497,7 @@ const verify_case_83 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -17647,6 +17731,7 @@ const verify_case_84 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts, &batch3_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 4, .shift = 0 }, .{ .entry = 4, .shift = 1 }, .{ .entry = 0, .shift = 0 }, .{ .entry = 5, .shift = 0 }, .{ .entry = 5, .shift = 1 }, .{ .entry = 1, .shift = 0 }, .{ .entry = 2, .shift = 0 }, .{ .entry = 3, .shift = 0 }, .{ .entry = 3, .shift = 1 }, .{ .entry = 15, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 6, .shift = 0 }, .{ .entry = 7, .shift = 0 }, .{ .entry = 8, .shift = 0 }, .{ .entry = 9, .shift = 0 }, .{ .entry = 10, .shift = 0 }, .{ .entry = 11, .shift = 0 }, .{ .entry = 12, .shift = 0 }, .{ .entry = 13, .shift = 0 }, .{ .entry = 14, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 2 }, .{ .round = 3 }, .{ .precomputed = tree.Octuplet{ field.Element.init(801186612), field.Element.init(849199966), field.Element.init(956744927), field.Element.init(1418018601), field.Element.init(1157212533), field.Element.init(787425838), field.Element.init(694468584), field.Element.init(890062840) } } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -17654,11 +17739,11 @@ const verify_case_84 = struct {
         .num_batches = 4,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 4,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(114314894), field.Element.init(1721055121), field.Element.init(404787529), field.Element.init(1570302268), field.Element.init(698930418), field.Element.init(265439601), field.Element.init(1726035559), field.Element.init(47551036) }, tree.Octuplet{ field.Element.init(209491585), field.Element.init(709889858), field.Element.init(1658350555), field.Element.init(2052276737), field.Element.init(1246829479), field.Element.init(502095062), field.Element.init(1846153503), field.Element.init(156280985) }, tree.Octuplet{ field.Element.init(1293623415), field.Element.init(46922519), field.Element.init(2085444498), field.Element.init(857404022), field.Element.init(626021649), field.Element.init(1071387475), field.Element.init(1688328516), field.Element.init(1837049081) }, tree.Octuplet{ field.Element.init(801186612), field.Element.init(849199966), field.Element.init(956744927), field.Element.init(1418018601), field.Element.init(1157212533), field.Element.init(787425838), field.Element.init(694468584), field.Element.init(890062840) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 304473270, 260796161, 453525058, 233391549, 2103953264, 1632343206 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1826233166, 1869910272, 1677181375, 1897314884, 26753169, 498363227 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 2, 0, 0, 0, 0, 0 })};
@@ -17759,7 +17844,7 @@ const verify_case_84 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -17982,6 +18067,7 @@ const verify_case_85 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts, &batch3_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 7, .shift = 0 }, .{ .entry = 7, .shift = 1 }, .{ .entry = 6, .shift = 0 }, .{ .entry = 0, .shift = 0 }, .{ .entry = 1, .shift = 0 }, .{ .entry = 1, .shift = 1 }, .{ .entry = 5, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 8, .shift = 0 }, .{ .entry = 9, .shift = 0 }, .{ .entry = 10, .shift = 0 }, .{ .entry = 2, .shift = 0 }, .{ .entry = 3, .shift = 0 }, .{ .entry = 4, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 2 }, .{ .round = 3 }, .{ .precomputed = tree.Octuplet{ field.Element.init(591961672), field.Element.init(863067726), field.Element.init(677455978), field.Element.init(909390603), field.Element.init(966710158), field.Element.init(123207155), field.Element.init(137863010), field.Element.init(1877590350) } } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -17989,11 +18075,11 @@ const verify_case_85 = struct {
         .num_batches = 4,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 3,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(285255431), field.Element.init(615095802), field.Element.init(629997908), field.Element.init(1150095183), field.Element.init(192165552), field.Element.init(557183101), field.Element.init(717335622), field.Element.init(1875390399) }, tree.Octuplet{ field.Element.init(1147639749), field.Element.init(1919923683), field.Element.init(751244915), field.Element.init(1919960650), field.Element.init(101462046), field.Element.init(821314630), field.Element.init(574724334), field.Element.init(491491324) }, tree.Octuplet{ field.Element.init(889250396), field.Element.init(385136644), field.Element.init(1432300144), field.Element.init(1963885797), field.Element.init(651428894), field.Element.init(602617562), field.Element.init(343959723), field.Element.init(677763547) }, tree.Octuplet{ field.Element.init(591961672), field.Element.init(863067726), field.Element.init(677455978), field.Element.init(909390603), field.Element.init(966710158), field.Element.init(123207155), field.Element.init(137863010), field.Element.init(1877590350) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1080000161, 1226095262, 1063482248, 787048414, 482673214, 346648033 })};
     const entry_col_1 = [_]ext.Ext{ ext.Ext.fromUints(.{ 1809878488, 1401321532, 1669535399, 1408029410, 1172387923, 1231718290 }), ext.Ext.fromUints(.{ 1584237494, 1641766598, 1456009959, 875555731, 666841569, 901436845 }) };
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 498400992, 405701432, 334487601, 1123624222, 9905165, 612516076 })};
@@ -18124,7 +18210,7 @@ const verify_case_85 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -18315,6 +18401,7 @@ const verify_case_86 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts, &batch3_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 7, .shift = 0 }, .{ .entry = 7, .shift = 1 }, .{ .entry = 6, .shift = 0 }, .{ .entry = 0, .shift = 0 }, .{ .entry = 1, .shift = 0 }, .{ .entry = 1, .shift = 1 }, .{ .entry = 5, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 8, .shift = 0 }, .{ .entry = 9, .shift = 0 }, .{ .entry = 10, .shift = 0 }, .{ .entry = 2, .shift = 0 }, .{ .entry = 3, .shift = 0 }, .{ .entry = 4, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 2 }, .{ .round = 3 }, .{ .precomputed = tree.Octuplet{ field.Element.init(841062056), field.Element.init(700164854), field.Element.init(990510558), field.Element.init(641666247), field.Element.init(1628298348), field.Element.init(707907115), field.Element.init(1059836112), field.Element.init(860053046) } } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -18322,11 +18409,11 @@ const verify_case_86 = struct {
         .num_batches = 4,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 3,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(124867008), field.Element.init(1444386611), field.Element.init(934315103), field.Element.init(522852306), field.Element.init(1289804536), field.Element.init(1023525849), field.Element.init(1005806643), field.Element.init(1370027248) }, tree.Octuplet{ field.Element.init(1989273324), field.Element.init(1593046918), field.Element.init(326947703), field.Element.init(1110040358), field.Element.init(1462004314), field.Element.init(992601062), field.Element.init(1431705194), field.Element.init(1832718957) }, tree.Octuplet{ field.Element.init(955770641), field.Element.init(1639360373), field.Element.init(1316517677), field.Element.init(296596026), field.Element.init(1718990991), field.Element.init(971105572), field.Element.init(1225245249), field.Element.init(1212477099) }, tree.Octuplet{ field.Element.init(841062056), field.Element.init(700164854), field.Element.init(990510558), field.Element.init(641666247), field.Element.init(1628298348), field.Element.init(707907115), field.Element.init(1059836112), field.Element.init(860053046) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 826952264, 11924108, 650651818, 1144840522, 840966967, 2038736399 })};
     const entry_col_1 = [_]ext.Ext{ ext.Ext.fromUints(.{ 153740336, 437181445, 198445094, 240975399, 930466402, 548921684 }), ext.Ext.fromUints(.{ 352820152, 2060435433, 1194058675, 222536703, 79215497, 174592419 }) };
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 2118094321, 383198397, 415114381, 1395635654, 1918810080, 2093869599 })};
@@ -18441,7 +18528,7 @@ const verify_case_86 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -18632,6 +18719,7 @@ const verify_case_87 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts, &batch3_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 7, .shift = 0 }, .{ .entry = 7, .shift = 1 }, .{ .entry = 6, .shift = 0 }, .{ .entry = 0, .shift = 0 }, .{ .entry = 1, .shift = 0 }, .{ .entry = 1, .shift = 1 }, .{ .entry = 5, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 8, .shift = 0 }, .{ .entry = 9, .shift = 0 }, .{ .entry = 10, .shift = 0 }, .{ .entry = 2, .shift = 0 }, .{ .entry = 3, .shift = 0 }, .{ .entry = 4, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 2 }, .{ .round = 3 }, .{ .precomputed = tree.Octuplet{ field.Element.init(367984025), field.Element.init(121457025), field.Element.init(1989181103), field.Element.init(2001787501), field.Element.init(1478344676), field.Element.init(1165778310), field.Element.init(977836238), field.Element.init(993044628) } } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -18639,11 +18727,11 @@ const verify_case_87 = struct {
         .num_batches = 4,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 3,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(876715137), field.Element.init(764715589), field.Element.init(709771168), field.Element.init(892234298), field.Element.init(1070277216), field.Element.init(1374190891), field.Element.init(124751710), field.Element.init(39289691) }, tree.Octuplet{ field.Element.init(1052673836), field.Element.init(1768106798), field.Element.init(1503104356), field.Element.init(306502764), field.Element.init(1113977367), field.Element.init(510326062), field.Element.init(1494857427), field.Element.init(328184402) }, tree.Octuplet{ field.Element.init(1763211872), field.Element.init(773797107), field.Element.init(1548139261), field.Element.init(405016197), field.Element.init(516040277), field.Element.init(492191840), field.Element.init(843091517), field.Element.init(932021522) }, tree.Octuplet{ field.Element.init(367984025), field.Element.init(121457025), field.Element.init(1989181103), field.Element.init(2001787501), field.Element.init(1478344676), field.Element.init(1165778310), field.Element.init(977836238), field.Element.init(993044628) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1782541293, 808501536, 1941260664, 1039007792, 979512582, 261928045 })};
     const entry_col_1 = [_]ext.Ext{ ext.Ext.fromUints(.{ 1775720372, 1770391813, 166533678, 1082704012, 1532109142, 770290005 }), ext.Ext.fromUints(.{ 1775720372, 1770391813, 166533678, 1082704012, 1532109142, 770290005 }) };
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 1065353216, 0, 0, 0, 0, 0 })};
@@ -18758,7 +18846,7 @@ const verify_case_87 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -18828,6 +18916,7 @@ const verify_case_88 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{.{ .entry = 0, .shift = 0 }};
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -18835,11 +18924,11 @@ const verify_case_88 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(384245973), field.Element.init(1750333870), field.Element.init(1144366501), field.Element.init(207687103), field.Element.init(2121644243), field.Element.init(544988254), field.Element.init(1340069080), field.Element.init(1535280166) }, tree.Octuplet{ field.Element.init(1888775505), field.Element.init(7736986), field.Element.init(926806928), field.Element.init(264011065), field.Element.init(1498548860), field.Element.init(980676532), field.Element.init(1178247900), field.Element.init(1658899573) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1668157509, 1657411026, 669435383, 1971177737, 813458534, 126104960 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 316710214, 2026271773, 2053582425, 1108145756, 446049424, 783808682 })};
     pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -18903,7 +18992,7 @@ const verify_case_88 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -18973,6 +19062,7 @@ const verify_case_89 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
     const witness_map = [_]pcsverify.ClaimRef{.{ .entry = 0, .shift = 0 }};
     const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -18980,11 +19070,11 @@ const verify_case_89 = struct {
         .num_batches = 2,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 1,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(384245973), field.Element.init(1750333870), field.Element.init(1144366501), field.Element.init(207687103), field.Element.init(2121644243), field.Element.init(544988254), field.Element.init(1340069080), field.Element.init(1535280166) }, tree.Octuplet{ field.Element.init(1888775505), field.Element.init(7736986), field.Element.init(926806928), field.Element.init(264011065), field.Element.init(1498548860), field.Element.init(980676532), field.Element.init(1178247900), field.Element.init(1658899573) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 51453353, 468423403, 736838586, 1088623528, 2022263907, 294040827 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 2003637155, 1785115481, 923292968, 1863710667, 187523825, 676375374 })};
     pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -19048,7 +19138,7 @@ const verify_case_89 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };
@@ -19341,6 +19431,7 @@ const verify_case_90 = struct {
     pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts, &batch2_shifts };
     const witness_map = [_]pcsverify.ClaimRef{ .{ .entry = 10, .shift = 0 }, .{ .entry = 11, .shift = 0 }, .{ .entry = 11, .shift = 1 }, .{ .entry = 8, .shift = 0 }, .{ .entry = 6, .shift = 0 }, .{ .entry = 4, .shift = 0 }, .{ .entry = 2, .shift = 0 }, .{ .entry = 0, .shift = 0 }, .{ .entry = 12, .shift = 0 }, .{ .entry = 12, .shift = 1 }, .{ .entry = 9, .shift = 0 }, .{ .entry = 7, .shift = 0 }, .{ .entry = 5, .shift = 0 }, .{ .entry = 3, .shift = 0 }, .{ .entry = 1, .shift = 0 } };
     const quotient_map = [_]pcsverify.ClaimRef{ .{ .entry = 13, .shift = 0 }, .{ .entry = 14, .shift = 0 }, .{ .entry = 15, .shift = 0 }, .{ .entry = 16, .shift = 0 }, .{ .entry = 17, .shift = 0 }, .{ .entry = 18, .shift = 0 } };
+    const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 2 }, .{ .round = 3 } };
     pub const pcs_system = pcsverify.System{
         .params = params,
         .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -19348,11 +19439,11 @@ const verify_case_90 = struct {
         .num_batches = 3,
         .witness_map = &witness_map,
         .quotient_map = &quotient_map,
+        .batch_roots = &batch_roots,
         .zeta_coin_index = 4,
     };
     pub const systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = pcs_system };
 
-    pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(1394786126), field.Element.init(1105150694), field.Element.init(1513987270), field.Element.init(852528472), field.Element.init(687675132), field.Element.init(1984122243), field.Element.init(445667845), field.Element.init(2048728754) }, tree.Octuplet{ field.Element.init(1871815164), field.Element.init(1147780051), field.Element.init(1668414940), field.Element.init(1729682138), field.Element.init(901316470), field.Element.init(1350712246), field.Element.init(569687227), field.Element.init(464296744) }, tree.Octuplet{ field.Element.init(860277430), field.Element.init(1199856879), field.Element.init(659858809), field.Element.init(1405713718), field.Element.init(1858458965), field.Element.init(1743654233), field.Element.init(1211415230), field.Element.init(1241474482) } };
     const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 194671669, 213914338, 1508759332, 965769489, 1931913932, 563845346 })};
     const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1790989978, 792990865, 1029894233, 1986832121, 415338600, 1832893812 })};
     const entry_col_2 = [_]ext.Ext{ext.Ext.fromUints(.{ 194671670, 213914338, 1508759332, 965769489, 1931913932, 563845346 })};
@@ -19480,7 +19571,7 @@ const verify_case_90 = struct {
     pub const proof = verifier.Proof{
         .rounds = &rounds,
         .claims = .{
-            .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+            .entry_claims = &entry_claims,
             .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
         },
     };

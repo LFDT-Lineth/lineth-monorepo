@@ -62,6 +62,28 @@ pub const Error = error{
     RoundZeroSiblingMismatch,
 };
 
+/// Where a committed batch's Merkle root is bound. A batch root MUST be tied to
+/// the Fiat-Shamir transcript that derives zeta — otherwise a prover could open
+/// against a forged root while zeta stays bound to the honest commitment, and
+/// the opening would be authenticated at a point it is not committed to.
+///
+/// There are two provenances, mirroring prover-ray's single-source `collectRoots`
+/// (which reads `rt.Commitments` — the exact octuplets `AdvanceRound` absorbs
+/// into the transcript):
+///   - `.round`: an interactive batch. Its root IS the oracle commitment absorbed
+///     in round message `round_index` (the same one squeezed into zeta), so the
+///     verifier reads it from `rounds[round_index]` rather than from the proof.
+///   - `.precomputed`: the static precomputed batch. Its root is a compile-time
+///     constant (like a verification key), fixed by codegen and trusted by
+///     construction — it is never carried in a round message.
+pub const BatchRoot = union(enum) {
+    /// Index into `proof.rounds`; the batch root is that round's sole oracle
+    /// commitment (`rounds[round_index].columns[0].oracle_commitment`).
+    round: usize,
+    /// Compile-time precomputed-batch root, emitted by codegen.
+    precomputed: Octuplet,
+};
+
 /// Compile-time PCS description shared by prover and verifier codegen. `layout`
 /// is the frozen canonical enumeration (see layout.zig); `params` the FRI
 /// configuration. `num_batches` is the number of committed batches (one root
@@ -85,6 +107,16 @@ pub const System = struct {
     /// System's `total_witness_claims` / `total_quotient_claims`.
     witness_map: []const ClaimRef = &.{},
     quotient_map: []const ClaimRef = &.{},
+
+    /// Per-batch root provenance, in canonical batch order (index == batch
+    /// index). `verifier.verify` builds the authenticated `Inputs.roots` from
+    /// this — reading interactive-batch roots out of the transcript-bound round
+    /// oracle commitments and precomputed roots from the compile-time constant —
+    /// so the root a batch is Merkle-authenticated against is provably the one
+    /// zeta is bound to. Length MUST equal `num_batches`. Empty only for legacy
+    /// callers that still pass `Inputs.roots` directly (deprecated; see
+    /// `verifier.verify`).
+    batch_roots: []const BatchRoot = &.{},
 
     /// Flat `all_coins` index of zeta — the shared LagrangeEval opening point,
     /// which is also the vanishing modules' eval coin. `verifier.verify` reads
@@ -151,7 +183,16 @@ pub const Proof = struct {
 /// positions are likewise not inputs — `verify` derives them from the live
 /// transcript (see `deriveChallenges`), so a prover cannot choose them.
 pub const Inputs = struct {
-    /// One Merkle root per batch (index == batch index).
+    /// One Merkle root per batch (index == batch index) to authenticate against.
+    ///
+    /// SECURITY: these roots MUST be bound to the Fiat-Shamir transcript that
+    /// derived `zeta` — otherwise a prover can open against a forged root while
+    /// zeta stays bound to the honest commitment. The full verifier
+    /// (`verifier.verify`) enforces this by REBUILDING `roots` from
+    /// `System.batch_roots` (the transcript-bound round oracle commitments) and
+    /// ignoring whatever a proof supplies. Callers that invoke `pcs.verify`
+    /// directly (e.g. the standalone FRI-engine tests) are responsible for
+    /// passing transcript-bound roots themselves.
     roots: []const Octuplet,
     /// Claimed evaluations, one inner slice per opened column in canonical
     /// (flat) layout order; inner slice length == that column's shift count.

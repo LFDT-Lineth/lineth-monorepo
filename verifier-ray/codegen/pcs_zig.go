@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 )
 
 // PcsZigOptions configures imports and the constant naming for a generated Zig
@@ -15,6 +17,11 @@ type PcsZigOptions struct {
 	PcsImport    string
 	LayoutImport string
 	VerifyImport string
+	// TreeImport / FieldImport are used only to emit precomputed-batch root
+	// octuplet literals (the rare precomputed-batch path). TreeImport must expose
+	// `.Octuplet`, FieldImport `.Element.init`. Empty → verifier-ray defaults.
+	TreeImport  string
+	FieldImport string
 	// ConstPrefix namespaces the emitted consts (params/shapes/shifts/…), so
 	// several PCS systems can coexist in one file. Empty → the fixture-compatible
 	// unprefixed names (params, shapes, shifts, pcs_system).
@@ -26,6 +33,8 @@ func defaultPcsZigOptions() PcsZigOptions {
 		PcsImport:    `@import("../pcs/root.zig")`,
 		LayoutImport: `@import("../pcs/layout.zig")`,
 		VerifyImport: `@import("../pcs/verify.zig")`,
+		TreeImport:   `@import("../pcs/tree.zig")`,
+		FieldImport:  `@import("../field/koalabear.zig")`,
 	}
 }
 
@@ -46,6 +55,12 @@ func WritePcsSystemZig(w io.Writer, system PcsSystem, opts PcsZigOptions) error 
 	}
 	if opts.VerifyImport == "" {
 		opts.VerifyImport = defaultPcsZigOptions().VerifyImport
+	}
+	if opts.TreeImport == "" {
+		opts.TreeImport = defaultPcsZigOptions().TreeImport
+	}
+	if opts.FieldImport == "" {
+		opts.FieldImport = defaultPcsZigOptions().FieldImport
 	}
 	p := opts.ConstPrefix
 
@@ -124,6 +139,26 @@ func WritePcsSystemZig(w io.Writer, system PcsSystem, opts PcsZigOptions) error 
 	pcsWriteClaimRefs(&b, system.QuotientMap)
 	fmt.Fprintln(&b, " };")
 
+	// Batch roots: each batch's transcript-bound root provenance. The Zig
+	// verifier rebuilds the authenticated roots from these — reading an
+	// interactive batch's root from the named round's oracle commitment and a
+	// precomputed root from the emitted constant — so a batch is never
+	// authenticated against a root that zeta is not bound to.
+	fmt.Fprintf(&b, "const %sbatch_roots = [_]%s.BatchRoot{ ", p, opts.VerifyImport)
+	for i, br := range system.BatchRoots {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		if br.Precomputed {
+			b.WriteString(".{ .precomputed = ")
+			pcsWriteOctuplet(&b, opts.TreeImport, opts.FieldImport, br.Root)
+			b.WriteString(" }")
+		} else {
+			fmt.Fprintf(&b, ".{ .round = %d }", br.RoundIndex)
+		}
+	}
+	fmt.Fprintln(&b, " };")
+
 	// The System literal. `layout` is reconstructed by Zig from shapes+shifts, so
 	// the canonical enumeration lives in exactly one place (buildLayout).
 	fmt.Fprintf(&b, "pub const %spcs_system = %s.System{\n", p, opts.VerifyImport)
@@ -133,6 +168,7 @@ func WritePcsSystemZig(w io.Writer, system PcsSystem, opts PcsZigOptions) error 
 	fmt.Fprintf(&b, "    .num_batches = %d,\n", system.NumBatches)
 	fmt.Fprintf(&b, "    .witness_map = &%switness_map,\n", p)
 	fmt.Fprintf(&b, "    .quotient_map = &%squotient_map,\n", p)
+	fmt.Fprintf(&b, "    .batch_roots = &%sbatch_roots,\n", p)
 	fmt.Fprintf(&b, "    .zeta_coin_index = %d,\n", system.ZetaCoinIndex)
 	fmt.Fprintln(&b, "};")
 
@@ -155,4 +191,19 @@ func pcsIntList(xs []int) string {
 		parts[i] = fmt.Sprintf("%d", x)
 	}
 	return strings.Join(parts, ", ")
+}
+
+// pcsWriteOctuplet emits a tree.Octuplet literal, e.g.
+// `pcs.tree.Octuplet{ field.Element.init(..), .. }`. `treeExpr` is the Octuplet
+// type expression and `fieldExpr` the field module for its elements. Only the
+// (rare) precomputed batch reaches this path.
+func pcsWriteOctuplet(b *strings.Builder, treeExpr, fieldExpr string, o field.Octuplet) {
+	fmt.Fprintf(b, "%s.Octuplet{ ", treeExpr)
+	for i := 0; i < 8; i++ {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		fmt.Fprintf(b, "%s.Element.init(%d)", fieldExpr, uint64(o[i].Bits()[0]))
+	}
+	b.WriteString(" }")
 }

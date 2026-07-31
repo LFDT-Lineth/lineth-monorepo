@@ -124,6 +124,24 @@ func TestBuildPcsSystemShapeAndMaps(t *testing.T) {
 	if pcs.NumBatches < 1 {
 		t.Fatalf("num_batches %d must be >= 1", pcs.NumBatches)
 	}
+
+	// Batch roots: one per batch, each bound to the transcript. This committed-
+	// vanishing protocol has no precomputed batch, so every root is an
+	// interactive round reference whose index is a valid proof.rounds slot.
+	if len(pcs.BatchRoots) != pcs.NumBatches {
+		t.Fatalf("batch_roots has %d entries, want num_batches %d", len(pcs.BatchRoots), pcs.NumBatches)
+	}
+	for i, br := range pcs.BatchRoots {
+		if br.Precomputed {
+			t.Fatalf("batch %d unexpectedly marked precomputed", i)
+		}
+		if br.RoundIndex < 0 || br.RoundIndex >= len(sys.Rounds)-1 {
+			// -1: the trailing opening round carries no message and is not in
+			// proof.rounds, so a batch's round index must be strictly before it.
+			t.Fatalf("batch %d round index %d out of proof.rounds range [0,%d)",
+				i, br.RoundIndex, len(sys.Rounds)-1)
+		}
+	}
 }
 
 func TestWritePcsSystemZigRenders(t *testing.T) {
@@ -156,8 +174,10 @@ func TestWritePcsSystemZigRenders(t *testing.T) {
 		"pub const system_0_shifts = ",
 		"const system_0_witness_map = ",
 		"const system_0_quotient_map = ",
+		"const system_0_batch_roots = [_]pcsverify.BatchRoot{",
 		"pub const system_0_pcs_system = ",
 		".layout = ",
+		".batch_roots = &system_0_batch_roots,",
 		".zeta_coin_index = ",
 	} {
 		if !strings.Contains(got, want) {
@@ -221,5 +241,19 @@ func TestBuildPcsSystemMatchesCoexistFixture(t *testing.T) {
 	// and the quotient-share round (batch 1, entry 1).
 	if pcs.NumBatches != 2 {
 		t.Fatalf("num_batches = %d, want 2 (witness round + quotient-share round)", pcs.NumBatches)
+	}
+	// coexist.zig: batch_roots = { .round = 0 }, { .round = 1 } — batch 0's root is
+	// round 0's oracle commitment, batch 1's is round 1's. Neither is precomputed.
+	want := []PcsBatchRoot{
+		{Precomputed: false, RoundIndex: 0},
+		{Precomputed: false, RoundIndex: 1},
+	}
+	if len(pcs.BatchRoots) != len(want) {
+		t.Fatalf("batch_roots = %+v, want %+v", pcs.BatchRoots, want)
+	}
+	for i, w := range want {
+		if pcs.BatchRoots[i].Precomputed != w.Precomputed || pcs.BatchRoots[i].RoundIndex != w.RoundIndex {
+			t.Fatalf("batch_roots[%d] = %+v, want %+v", i, pcs.BatchRoots[i], w)
+		}
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fri"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
 	pcscompiler "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
@@ -44,6 +45,14 @@ type PcsSystem struct {
 	// ZetaCoinIndex is the flat all_coins index of the shared LagrangeEval eval
 	// coin (zeta), which is also every vanishing module's eval coin.
 	ZetaCoinIndex int
+
+	// BatchRoots gives each batch's root provenance, in canonical batch order.
+	// The Zig verifier rebuilds the authenticated roots from this — reading
+	// interactive-batch roots from the transcript-bound round oracle commitments
+	// and precomputed roots from the emitted constant — so the root a batch is
+	// Merkle-authenticated against is provably the one zeta is bound to (mirrors
+	// prover-ray's single-source collectRoots). Length == NumBatches.
+	BatchRoots []PcsBatchRoot
 }
 
 // PcsClaimRef is the verifier-ray verify.ClaimRef: the flat entry index plus the
@@ -51,6 +60,22 @@ type PcsSystem struct {
 type PcsClaimRef struct {
 	Entry int
 	Shift int
+}
+
+// PcsBatchRoot is one batch's root provenance (verifier-ray verify.BatchRoot).
+// Exactly one of the two forms applies: an interactive batch names the
+// proof.rounds index whose oracle commitment is its root; a precomputed batch
+// carries the compile-time root constant.
+type PcsBatchRoot struct {
+	// Precomputed is true for the static precomputed batch. When true, Root holds
+	// the compile-time commitment and RoundIndex is unused; when false, RoundIndex
+	// names the interactive round and Root is unused.
+	Precomputed bool
+	// RoundIndex is the proof.rounds index (== wiop Round.ID) whose sole oracle
+	// commitment is this batch's root. Valid only when Precomputed is false.
+	RoundIndex int
+	// Root is the precomputed-batch commitment. Valid only when Precomputed is true.
+	Root field.Octuplet
 }
 
 // pcsEntryKey identifies one opened column in the flat canonical entry order.
@@ -88,14 +113,25 @@ func BuildPcsSystem(sys *wiop.System, rt *wiop.Runtime, routing CoinRouting) (Pc
 		return PcsSystem{}, fmt.Errorf("codegen: BuildPcsSystem: no LagrangeEval openings; did global.Compile run before pcs.Compile?")
 	}
 
-	// Per-batch layout + shapes, and a global column->location map (with batch).
+	// Per-batch layout + shapes, a global column->location map (with batch), and
+	// each batch's root provenance. An interactive batch's root is the oracle
+	// commitment absorbed for its round (proof.rounds index == Round.ID, since
+	// rounds are emitted in ID order); the precomputed batch's root is the
+	// compile-time PrecomputedCommitment. This is what lets the Zig verifier bind
+	// the authenticated root to the transcript instead of trusting the proof.
 	colLoc := map[wiop.ObjectID]pcsLocWithBatch{}
 	shapes := make([]fri.Shape, len(batches))
+	batchRoots := make([]PcsBatchRoot, len(batches))
 	for i, b := range batches {
 		locs, shape := pcscompiler.GetLayout(b.Round, rt)
 		shapes[i] = shape
 		for id, l := range locs {
 			colLoc[id] = pcsLocWithBatch{batchIdx: i, loc: l}
+		}
+		if b.IsPrecomp {
+			batchRoots[i] = PcsBatchRoot{Precomputed: true, Root: sys.PrecomputedCommitment}
+		} else {
+			batchRoots[i] = PcsBatchRoot{Precomputed: false, RoundIndex: b.Round.ID}
 		}
 	}
 
@@ -192,6 +228,7 @@ func BuildPcsSystem(sys *wiop.System, rt *wiop.Runtime, routing CoinRouting) (Pc
 		WitnessMap:       witnessMap,
 		QuotientMap:      quotientMap,
 		ZetaCoinIndex:    zetaIdx,
+		BatchRoots:       batchRoots,
 	}, nil
 }
 

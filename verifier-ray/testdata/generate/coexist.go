@@ -205,6 +205,24 @@ func emitCoexistPcsSystem(out *bytes.Buffer, fx coexistFixture) {
 	emitClaimRefs(out, fx.quotientMap)
 	fmt.Fprintln(out, " };")
 
+	// Batch roots: each batch's transcript-bound root provenance, so the Zig
+	// verifier rebinds the authenticated root to the transcript (round oracle
+	// commitment for interactive, constant for precomputed).
+	fmt.Fprint(out, "const batch_roots = [_]pcsverify.BatchRoot{ ")
+	for i, br := range fx.batchRoots {
+		if i > 0 {
+			fmt.Fprint(out, ", ")
+		}
+		if br.Precomputed {
+			fmt.Fprint(out, ".{ .precomputed = ")
+			emitOctuplet(out, br.Root)
+			fmt.Fprint(out, " }")
+		} else {
+			fmt.Fprintf(out, ".{ .round = %d }", br.RoundIndex)
+		}
+	}
+	fmt.Fprintln(out, " };")
+
 	fmt.Fprintln(out, "pub const pcs_system = pcsverify.System{")
 	fmt.Fprintln(out, "    .params = params,")
 	fmt.Fprintln(out, "    .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,")
@@ -212,6 +230,7 @@ func emitCoexistPcsSystem(out *bytes.Buffer, fx coexistFixture) {
 	fmt.Fprintf(out, "    .num_batches = %d,\n", len(fx.shapes))
 	fmt.Fprintln(out, "    .witness_map = &witness_map,")
 	fmt.Fprintln(out, "    .quotient_map = &quotient_map,")
+	fmt.Fprintln(out, "    .batch_roots = &batch_roots,")
 	fmt.Fprintf(out, "    .zeta_coin_index = %d,\n", fx.zetaCoinIdx)
 	fmt.Fprintln(out, "};")
 
@@ -234,17 +253,11 @@ func emitClaimRefs(out *bytes.Buffer, refs []claimRef) {
 	}
 }
 
-// emitCoexistInputs writes roots and entry_claims (flat canonical order).
+// emitCoexistInputs writes entry_claims (flat canonical order). The batch roots
+// are NOT emitted as a standalone const: they live only as the round oracle
+// commitments (which the transcript absorbs and verifier.verify rebinds from),
+// so a separate `roots` array would be dead, duplicated data.
 func emitCoexistInputs(out *bytes.Buffer, fx coexistFixture) {
-	fmt.Fprint(out, "pub const roots = [_]tree.Octuplet{ ")
-	for i, r := range fx.roots {
-		if i > 0 {
-			fmt.Fprint(out, ", ")
-		}
-		emitOctuplet(out, r)
-	}
-	fmt.Fprintln(out, " };")
-
 	for g, col := range fx.entryClaims {
 		fmt.Fprintf(out, "const entry_col_%d = [_]ext.Ext{ ", g)
 		for j, v := range col {
@@ -392,8 +405,11 @@ func emitCoexistRounds(out *bytes.Buffer, rounds []coexistRound) {
 	// The assembled verifier.Proof + PcsClaims for the test to consume.
 	fmt.Fprintln(out, "pub const proof = verifier.Proof{")
 	fmt.Fprintln(out, "    .rounds = &rounds,")
+	// PcsClaims carries ONLY entry_claims + the opening proof. roots and zeta are
+	// not proof-carried: verifier.verify rebuilds roots from the transcript-bound
+	// batch_roots and zeta from the opening coin.
 	fmt.Fprintln(out, "    .claims = .{")
-	fmt.Fprintln(out, "        .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },")
+	fmt.Fprintln(out, "        .entry_claims = &entry_claims,")
 	fmt.Fprintln(out, "        .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },")
 	fmt.Fprintln(out, "    },")
 	fmt.Fprintln(out, "};")
@@ -481,7 +497,8 @@ type coexistFixture struct {
 	shifts      []fri.BatchShifts
 
 	roots       []field.Octuplet
-	entryClaims [][]field.Ext // flat canonical order; inner = per shift
+	batchRoots  []codegen.PcsBatchRoot // per-batch transcript-bound root provenance
+	entryClaims [][]field.Ext          // flat canonical order; inner = per shift
 	zetaCoinIdx int
 
 	witnessMap  []claimRef
@@ -543,6 +560,7 @@ func extractPcsFixture(sys *wiop.System, rt *wiop.Runtime) coexistFixture {
 	colLoc := map[wiop.ObjectID]locWithBatchT{}
 	shapes := make([]fri.Shape, len(batches))
 	roots := make([]field.Octuplet, len(batches))
+	batchRoots := make([]codegen.PcsBatchRoot, len(batches))
 	for i, b := range batches {
 		locs, shape := pcscompiler.GetLayout(b.Round, rt)
 		shapes[i] = shape
@@ -550,9 +568,13 @@ func extractPcsFixture(sys *wiop.System, rt *wiop.Runtime) coexistFixture {
 			colLoc[id] = locWithBatchT{batchIdx: i, loc: l}
 		}
 		// Roots: precomputed batch from the system, interactive batches from the
-		// runtime's per-round commitments (keyed by round ID).
+		// runtime's per-round commitments (keyed by round ID). batchRoots records
+		// the SAME provenance the Zig verifier uses to rebind the root to the
+		// transcript (round oracle commitment for interactive, constant for
+		// precomputed) — see verify.BatchRoot.
 		if b.IsPrecomp {
 			roots[i] = sys.PrecomputedCommitment
+			batchRoots[i] = codegen.PcsBatchRoot{Precomputed: true, Root: sys.PrecomputedCommitment}
 			continue
 		}
 		root, ok := rt.Commitments[b.Round.ID]
@@ -560,6 +582,7 @@ func extractPcsFixture(sys *wiop.System, rt *wiop.Runtime) coexistFixture {
 			panic(fmt.Sprintf("coexist: no commitment for round %d", b.Round.ID))
 		}
 		roots[i] = root
+		batchRoots[i] = codegen.PcsBatchRoot{Precomputed: false, RoundIndex: b.Round.ID}
 	}
 
 	// Shifts: for each opened (column, shift), record shift into the batch's
@@ -661,6 +684,7 @@ func extractPcsFixture(sys *wiop.System, rt *wiop.Runtime) coexistFixture {
 		shapes:      shapes,
 		shifts:      shifts,
 		roots:       roots,
+		batchRoots:  batchRoots,
 		entryClaims: entryClaims,
 		zetaCoinIdx: zetaCoinIdx,
 		witnessMap:  witnessMap,

@@ -82,6 +82,7 @@ const batch1_shifts = [_]layout.SizedShifts{
 pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
 const witness_map = [_]pcsverify.ClaimRef{.{ .entry = 0, .shift = 0 }};
 const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
 pub const pcs_system = pcsverify.System{
     .params = params,
     .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -89,11 +90,11 @@ pub const pcs_system = pcsverify.System{
     .num_batches = 2,
     .witness_map = &witness_map,
     .quotient_map = &quotient_map,
+    .batch_roots = &batch_roots,
     .zeta_coin_index = 1,
 };
 pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(384245973), field.Element.init(1750333870), field.Element.init(1144366501), field.Element.init(207687103), field.Element.init(2121644243), field.Element.init(544988254), field.Element.init(1340069080), field.Element.init(1535280166) }, tree.Octuplet{ field.Element.init(1888775505), field.Element.init(7736986), field.Element.init(926806928), field.Element.init(264011065), field.Element.init(1498548860), field.Element.init(980676532), field.Element.init(1178247900), field.Element.init(1658899573) } };
 const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 1668157509, 1657411026, 669435383, 1971177737, 813458534, 126104960 })};
 const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 316710214, 2026271773, 2053582425, 1108145756, 446049424, 783808682 })};
 pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -157,7 +158,7 @@ pub const rounds = [_]protocol.RoundMessage{
 pub const proof = verifier.Proof{
     .rounds = &rounds,
     .claims = .{
-        .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+        .entry_claims = &entry_claims,
         .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
     },
 };

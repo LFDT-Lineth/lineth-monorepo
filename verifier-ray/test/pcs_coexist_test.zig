@@ -41,9 +41,47 @@ test "coexist: corrupting an authenticated entry_claim is rejected" {
     claims[0] = &bad_col;
 
     var proof = co.proof;
-    proof.claims.inputs.entry_claims = &claims;
+    proof.claims.entry_claims = &claims;
 
     try std.testing.expectError(error.FoldMismatch, verifier.verify(co.spec, co.systems, proof));
+}
+
+// Note: there is no "forged proof roots are ignored" runtime test. The proof
+// (`PcsClaims`) carries NO `roots` field at all — the Merkle trust anchor is
+// rebuilt by `verifier.verify` from the transcript-bound `System.batch_roots`.
+// The old attack surface (open against a forged root while zeta stays bound to
+// the honest commitment) is therefore unrepresentable: a proof has no field to
+// forge, a compile-time property rather than a runtime check. The test below
+// exercises the one remaining way to touch a batch root — the transcript-bound
+// oracle commitment itself — and shows it is rejected.
+
+test "coexist: corrupting a round oracle commitment is rejected" {
+    // The batch root IS the round's oracle commitment (batch_roots[b] = .round b),
+    // and that same commitment is absorbed to derive zeta. Flipping it therefore
+    // (a) changes the transcript → different FRI challenges/positions, and
+    // (b) changes the root PCS authenticates against. Either way the proof must
+    // be rejected — the opening can no longer match a root bound to this zeta.
+    const field = verifier_ray.field.koalabear;
+    const protocol = verifier_ray.protocol;
+
+    // Rebuild round 0's single oracle commitment with one coordinate flipped.
+    const orig_root = switch (co.rounds[0].columns[0]) {
+        .oracle_commitment => |c| c,
+        else => unreachable,
+    };
+    var bad_root = orig_root;
+    bad_root[0] = bad_root[0].add(field.Element.one());
+    const bad_cols = [_]protocol.ColumnMessage{.{ .oracle_commitment = bad_root }};
+    var bad_rounds = [_]protocol.RoundMessage{undefined} ** co.rounds.len;
+    inline for (co.rounds, 0..) |r, i| bad_rounds[i] = r;
+    bad_rounds[0].columns = &bad_cols;
+
+    var proof = co.proof;
+    proof.rounds = &bad_rounds;
+
+    // Rejected (via the root/transcript binding — the exact error depends on
+    // whether the FS divergence or the root mismatch fires first).
+    try std.testing.expect(std.meta.isError(verifier.verify(co.spec, co.systems, proof)));
 }
 
 // Note: there is no "reject a direct-claims proof" test. A proof cannot carry

@@ -74,14 +74,25 @@ pub const Proof = struct {
     // TODO(new-sub-verifier): add claim fields here if needed — step 3 above.
 };
 
-/// The runtime PCS data the verifier feeds to `pcs.verify`: the opening proof
-/// plus the batch commitments and claimed evaluations. `inputs.zeta` is set by
-/// `verify` from the replayed coin `all_coins[system.zeta_coin_index]` (not
-/// taken from here); the fold challenges and query positions are derived by
-/// `pcs.verify` from the live transcript. So the only trusted-from-caller PCS
-/// data is the roots, entry_claims, and the opening proof itself.
+/// The proof-carried PCS data: the claimed evaluations and the opening proof.
+///
+/// It deliberately does NOT carry `roots` or `zeta`. Those are the two values a
+/// prover could otherwise choose to unbind the opening from the transcript:
+///   - `roots` — the Merkle trust anchor — is built by `verify` from the
+///     transcript-bound `System.batch_roots` (the round oracle commitments that
+///     were absorbed to derive the challenges), never supplied here.
+///   - `zeta` — the opening point — is the Fiat-Shamir coin
+///     `all_coins[system.zeta_coin_index]`, likewise built by `verify`.
+/// So the whole malleable-input surface is removed at the type level rather than
+/// checked: a proof simply has no field for either. That leaves `entry_claims`
+/// and the opening proof itself, both authenticated by the FRI opening against
+/// the transcript-bound roots — nothing a prover carries here can make a false
+/// opening verify. (The low-level `pcs.Inputs` still bundles all three, because
+/// the FRI engine is protocol-agnostic; `verify` assembles it below.)
 pub const PcsClaims = struct {
-    inputs: pcs.Inputs,
+    /// Claimed evaluations, one inner slice per opened column in canonical (flat)
+    /// layout order; inner slice length == that column's shift count.
+    entry_claims: []const []const ext.Ext,
     proof: pcs.Proof,
 };
 
@@ -137,9 +148,24 @@ pub fn verify(
     var derived_witness: [systems.vanishing.total_witness_claims]ext.Ext = undefined;
     var derived_quotient: [systems.vanishing.total_quotient_claims]ext.Ext = undefined;
 
-    // zeta is the Fiat-Shamir opening coin, not a value from the proof.
-    var inputs = proof.claims.inputs;
-    inputs.zeta = all_coins[systems.pcs.zeta_coin_index];
+    // Assemble the low-level `pcs.Inputs` from three transcript-bound sources —
+    // none taken from the proof's own copy — so a prover has no field to choose:
+    //   - roots: the batch Merkle roots, rebuilt from `System.batch_roots` (the
+    //     round oracle commitments absorbed to derive the challenges). If a batch
+    //     were authenticated against a proof-supplied root instead, a prover could
+    //     open against a forged root while zeta stays bound to the honest
+    //     commitment. Storage is comptime-bounded by num_batches — no allocation.
+    //   - zeta: the Fiat-Shamir opening coin `all_coins[zeta_coin_index]`.
+    //   - entry_claims: the only proof-carried field, authenticated by the FRI
+    //     opening against those transcript-bound roots.
+    var bound_roots: [systems.pcs.num_batches]pcs.Octuplet = undefined;
+    try resolveRoots(systems.pcs.batch_roots, proof.rounds, &bound_roots);
+    const inputs = pcs.Inputs{
+        .roots = &bound_roots,
+        .entry_claims = proof.claims.entry_claims,
+        .zeta = all_coins[systems.pcs.zeta_coin_index],
+    };
+
     // Derive the FRI challenges by continuing the SAME transcript (PCS owns its
     // squeeze schedule), then check the proof against them. Derivation and
     // checking are separate calls: the first touches the transcript, the second
@@ -184,5 +210,42 @@ fn routeClaims(
         const col = entry_claims[ref.entry];
         if (ref.shift >= col.len) return error.ClaimMapMismatch;
         slot.* = col[ref.shift];
+    }
+}
+
+/// Fills `out[b]` with batch `b`'s authenticated Merkle root, resolved from its
+/// transcript-bound provenance (`batch_roots[b]`) — NOT from the proof. An
+/// interactive batch's root is the sole oracle commitment of the round message
+/// it names (the same octuplet absorbed to derive zeta); a precomputed batch's
+/// root is the compile-time constant. This is the verifier-ray analogue of
+/// prover-ray's `collectRoots` reading `rt.Commitments`, so the root a batch is
+/// authenticated against is provably the one zeta is bound to.
+///
+/// `batch_roots.len` must equal `out.len` (== num_batches). A `.round` entry must
+/// name a round message that exists and carries exactly one oracle commitment;
+/// otherwise the PCS/protocol metadata disagree — surfaced as an error, not an
+/// out-of-bounds panic or a silently mis-bound root.
+fn resolveRoots(
+    batch_roots: []const pcs.BatchRoot,
+    rounds: []const protocol.RoundMessage,
+    out: []pcs.Octuplet,
+) error{BatchRootMismatch}!void {
+    if (batch_roots.len != out.len) return error.BatchRootMismatch;
+    for (batch_roots, out) |br, *slot| {
+        switch (br) {
+            .precomputed => |root| slot.* = root,
+            .round => |round_index| {
+                if (round_index >= rounds.len) return error.BatchRootMismatch;
+                const cols = rounds[round_index].columns;
+                // A committed interactive round carries exactly one oracle
+                // commitment (its batch Merkle root); anything else is a metadata
+                // mismatch, not an honest proof.
+                if (cols.len != 1) return error.BatchRootMismatch;
+                switch (cols[0]) {
+                    .oracle_commitment => |root| slot.* = root,
+                    .public_column => return error.BatchRootMismatch,
+                }
+            },
+        }
     }
 }

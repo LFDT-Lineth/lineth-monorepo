@@ -30,7 +30,7 @@ test "realpcs: corrupting an authenticated entry_claim is rejected" {
     claims[0] = &bad_col;
 
     var proof = rp.proof;
-    proof.claims.inputs.entry_claims = &claims;
+    proof.claims.entry_claims = &claims;
 
     try std.testing.expectError(error.FoldMismatch, verifier.verify(rp.spec, rp.systems, proof));
 }

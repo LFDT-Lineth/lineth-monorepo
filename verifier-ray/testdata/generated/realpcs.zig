@@ -82,6 +82,7 @@ const batch1_shifts = [_]layout.SizedShifts{
 pub const shifts = [_]layout.BatchShifts{ &batch0_shifts, &batch1_shifts };
 const witness_map = [_]pcsverify.ClaimRef{.{ .entry = 0, .shift = 0 }};
 const quotient_map = [_]pcsverify.ClaimRef{.{ .entry = 1, .shift = 0 }};
+const batch_roots = [_]pcsverify.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
 pub const pcs_system = pcsverify.System{
     .params = params,
     .layout = layout.buildLayout(&shapes, &shifts) catch unreachable,
@@ -89,11 +90,11 @@ pub const pcs_system = pcsverify.System{
     .num_batches = 2,
     .witness_map = &witness_map,
     .quotient_map = &quotient_map,
+    .batch_roots = &batch_roots,
     .zeta_coin_index = 1,
 };
 pub const systems = verifier.Systems{ .vanishing = system_0, .pcs = pcs_system };
 
-pub const roots = [_]tree.Octuplet{ tree.Octuplet{ field.Element.init(695916253), field.Element.init(1058046793), field.Element.init(1426017357), field.Element.init(1836372481), field.Element.init(2101794601), field.Element.init(1985765184), field.Element.init(486446091), field.Element.init(1178524667) }, tree.Octuplet{ field.Element.init(1403994921), field.Element.init(332016449), field.Element.init(213454705), field.Element.init(2076378349), field.Element.init(2097287789), field.Element.init(1458577511), field.Element.init(1858197035), field.Element.init(1974691290) } };
 const entry_col_0 = [_]ext.Ext{ext.Ext.fromUints(.{ 736852620, 1103819055, 684096876, 1524501987, 1244131115, 1008173224 })};
 const entry_col_1 = [_]ext.Ext{ext.Ext.fromUints(.{ 1598029825, 0, 0, 0, 0, 0 })};
 pub const entry_claims = [_][]const ext.Ext{ &entry_col_0, &entry_col_1 };
@@ -157,7 +158,7 @@ pub const rounds = [_]protocol.RoundMessage{
 pub const proof = verifier.Proof{
     .rounds = &rounds,
     .claims = .{
-        .inputs = .{ .roots = &roots, .entry_claims = &entry_claims, .zeta = ext.Ext.zero() },
+        .entry_claims = &entry_claims,
         .proof = .{ .input_queries = input_queries, .fri = .{ .round_roots = &round_roots, .final_poly = &final_poly, .running_queries = running_queries } },
     },
 };
