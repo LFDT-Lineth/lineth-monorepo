@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"strings"
+
+	"github.com/consensys/gnark-crypto/field/koalabear/extensions"
 )
 
 // Vec holds a vector of field elements in either the base field 𝔽_p or
@@ -331,13 +333,12 @@ func VecScaleExtBase(res []Ext, s Ext, a []Element) {
 }
 
 // VecScaleExtExt sets res[i] = s * a[i] where s and a are both extension-field.
-// Cost: ~24 base multiplications per element.
+// Cost: ~24 base multiplications per element; AVX-512 vectorized (gnark-crypto
+// VectorE6.ScalarMul).
 // res and a must have equal length.
 func VecScaleExtExt(res []Ext, s Ext, a []Ext) {
 	mustEqualLen2(len(res), len(a))
-	for i := range res {
-		res[i].Mul(&s, &a[i])
-	}
+	extensions.VectorE6(res).ScalarMul(extensions.VectorE6(a), &s)
 }
 
 // VecScaleInto sets res[i] = s * v[i] for all i, dispatching to the typed
