@@ -9,20 +9,28 @@
 //!     (keccak today). We re-export each wrapper under the C name zesu references; HOW a wrapper
 //!     accelerates is the wrapper module's own concern. The *set of wrappers that exist* is what is
 //!     accelerated, and grows as the prover implements more.
-//!   • zesu-zkvm `stdlibs_accel` (`zesu_zkvm_accel`) — every precompile without a wrapper yet, via a
+//!   • zesu-zkvm `stdlibs_accel` (`zesu_zkvm_stdlibs`) — every precompile without a wrapper yet, via a
 //!     thin C-ABI shim (ptr+len → slice/array). Pure rv64im code; we don't maintain our own crypto.
 //!     When a precompile gains a wrapper, move its line to the wrapper export below and delete its shim.
+//!   • zesu's own native crypto backend (`zesu_crypto_backend`) — for modexp/RIPEMD-160, whose
+//!     `zesu_zkvm_stdlibs` implementations are unconditional-failure stubs (see that module's doc
+//!     comment). These two have no C-library dependency, so — unlike the rest of zesu's native
+//!     backend — they cross-compile straight to riscv64 and give a functionally correct (if
+//!     unaccelerated) result instead of a guaranteed rejection. Swap for a real wrapper if/when one
+//!     lands, same as any other precompile above.
 //!
 //! Only the freestanding RISC-V guest references these (pulled in by evm_execution_guest.zig for
 //! `builtin.cpu.arch == .riscv64`); the native host build uses Zesu's C-backed crypto instead.
 
-const zesu_accel = @import("zesu_zkvm_accel"); // zesu-zkvm's pure-Zig precompile backend (stdlibs_accel)
+const zesu_zkvm_stdlibs = @import("zesu_zkvm_stdlibs"); // zesu-zkvm's pure-Zig precompile backend (stdlibs_accel)
 const lineth_accel = @import("lineth_zkvm_accel"); // Lineth accelerator wrappers (source paths wired in build.zig)
+const zesu_crypto_backend = @import("zesu_crypto_backend"); // zesu's own native crypto backend (modexp, RIPEMD-160 — see src/zesu_crypto_backend.zig)
 const build_options = @import("build_options"); // keccak_accel: standard zig keccak vs Lineth wrapper
 
 // The manifest: every `zkvm_*` symbol zesu references, and where each comes from — keccak is either
 // the Lineth wrapper (prover-accelerated) or the standard stdlibs_accel shim, selected at build time
-// by -Dkeccak-accel; the rest come from the stdlibs_accel shims defined below.
+// by -Dkeccak-accel; modexp/ripemd160 come from zesu_crypto_backend; the rest come from the
+// stdlibs_accel shims defined below.
 comptime {
     if (build_options.keccak_accel) {
         @export(&lineth_accel.zkvm_keccak256, .{ .name = "zkvm_keccak256" });
@@ -65,66 +73,68 @@ const Bls12PairingPair = extern struct { g1: [96]u8, g2: [192]u8 };
 
 // Standard zig keccak (std.crypto via stdlibs_accel); used unless -Dkeccak-accel selects the wrapper.
 fn keccak256(data: [*]const u8, len: usize, output: *[32]u8) callconv(.c) i32 {
-    zesu_accel.keccak256(data[0..len], output);
+    zesu_zkvm_stdlibs.keccak256(data[0..len], output);
     return OK;
 }
 fn sha256(data: [*]const u8, len: usize, output: *[32]u8) callconv(.c) i32 {
-    zesu_accel.sha256(data[0..len], output);
+    zesu_zkvm_stdlibs.sha256(data[0..len], output);
     return OK;
 }
 fn ripemd160(data: [*]const u8, len: usize, output: *[32]u8) callconv(.c) i32 {
-    zesu_accel.ripemd160(data[0..len], output);
+    const hash = zesu_crypto_backend.ripemd160(data[0..len]);
+    output.* = [_]u8{0} ** 32;
+    @memcpy(output[12..32], &hash);
     return OK;
 }
 fn secp256k1_ecrecover(msg: *const [32]u8, sig: *const [64]u8, recid: u8, output: *[64]u8) callconv(.c) i32 {
-    return if (zesu_accel.ecrecover(msg, sig, recid, output)) OK else ERR;
+    return if (zesu_zkvm_stdlibs.ecrecover(msg, sig, recid, output)) OK else ERR;
 }
 fn secp256k1_verify(msg: *const [32]u8, sig: *const [64]u8, pubkey: *const [64]u8, verified: *bool) callconv(.c) i32 {
-    zesu_accel.secp256k1_verify(msg, sig, pubkey, verified);
+    zesu_zkvm_stdlibs.secp256k1_verify(msg, sig, pubkey, verified);
     return OK;
 }
 fn secp256r1_verify(msg: *const [32]u8, sig: *const [64]u8, pubkey: *const [64]u8, verified: *bool) callconv(.c) i32 {
-    zesu_accel.secp256r1_verify(msg, sig, pubkey, verified);
+    zesu_zkvm_stdlibs.secp256r1_verify(msg, sig, pubkey, verified);
     return OK;
 }
 fn modexp(base: [*]const u8, base_len: usize, exp: [*]const u8, exp_len: usize, modulus: [*]const u8, mod_len: usize, output: [*]u8) callconv(.c) i32 {
-    return if (zesu_accel.modexp(base[0..base_len], exp[0..exp_len], modulus[0..mod_len], output[0..mod_len])) OK else ERR;
+    return if (zesu_crypto_backend.modexp(base[0..base_len], exp[0..exp_len], modulus[0..mod_len], output[0..mod_len])) OK else ERR;
 }
 fn bn254_g1_add(p1: *const [64]u8, p2: *const [64]u8, result: *[64]u8) callconv(.c) i32 {
-    return if (zesu_accel.bn254_g1_add(p1, p2, result)) OK else ERR;
+    return if (zesu_zkvm_stdlibs.bn254_g1_add(p1, p2, result)) OK else ERR;
 }
 fn bn254_g1_mul(point: *const [64]u8, scalar: *const [32]u8, result: *[64]u8) callconv(.c) i32 {
-    return if (zesu_accel.bn254_g1_mul(point, scalar, result)) OK else ERR;
+    return if (zesu_zkvm_stdlibs.bn254_g1_mul(point, scalar, result)) OK else ERR;
 }
 fn bn254_pairing(pairs: [*]const Bn254PairingPair, num_pairs: usize, verified: *bool) callconv(.c) i32 {
-    return if (zesu_accel.bn254_pairing(pairs[0..num_pairs], verified)) OK else ERR;
+    return if (zesu_zkvm_stdlibs.bn254_pairing(pairs[0..num_pairs], verified)) OK else ERR;
 }
 fn blake2f(rounds: u32, h: *[64]u8, m: *const [128]u8, t: *const [16]u8, f: u8) callconv(.c) i32 {
-    return if (zesu_accel.blake2f(rounds, h, m, t, f)) OK else ERR;
+    return if (zesu_zkvm_stdlibs.blake2f(rounds, h, m, t, f)) OK else ERR;
 }
 fn kzg_point_eval(commitment: *const [48]u8, z: *const [32]u8, y: *const [32]u8, proof: *const [48]u8, verified: *bool) callconv(.c) i32 {
-    return if (zesu_accel.kzg_point_eval(commitment, z, y, proof, verified)) OK else ERR;
+    return if (zesu_zkvm_stdlibs.kzg_point_eval(commitment, z, y, proof, verified)) OK else ERR;
 }
 fn bls12_g1_add(p1: *const [96]u8, p2: *const [96]u8, result: *[96]u8) callconv(.c) i32 {
-    return if (zesu_accel.bls12_g1_add(p1, p2, result)) OK else ERR;
+    return if (zesu_zkvm_stdlibs.bls12_g1_add(p1, p2, result)) OK else ERR;
 }
 fn bls12_g1_msm(pairs: [*]const Bls12G1MsmPair, num_pairs: usize, result: *[96]u8) callconv(.c) i32 {
-    return if (zesu_accel.bls12_g1_msm(pairs[0..num_pairs], result)) OK else ERR;
+    return if (zesu_zkvm_stdlibs.bls12_g1_msm(pairs[0..num_pairs], result)) OK else ERR;
 }
 fn bls12_g2_add(p1: *const [192]u8, p2: *const [192]u8, result: *[192]u8) callconv(.c) i32 {
-    return if (zesu_accel.bls12_g2_add(p1, p2, result)) OK else ERR;
+    return if (zesu_zkvm_stdlibs.bls12_g2_add(p1, p2, result)) OK else ERR;
 }
 fn bls12_g2_msm(pairs: [*]const Bls12G2MsmPair, num_pairs: usize, result: *[192]u8) callconv(.c) i32 {
-    return if (zesu_accel.bls12_g2_msm(pairs[0..num_pairs], result)) OK else ERR;
+    return if (zesu_zkvm_stdlibs.bls12_g2_msm(pairs[0..num_pairs], result)) OK else ERR;
 }
 fn bls12_pairing(pairs: [*]const Bls12PairingPair, num_pairs: usize, verified: *bool) callconv(.c) i32 {
-    return if (zesu_accel.bls12_pairing(pairs[0..num_pairs], verified)) OK else ERR;
+    return if (zesu_zkvm_stdlibs.bls12_pairing(pairs[0..num_pairs], verified)) OK else ERR;
 }
 fn bls12_map_fp_to_g1(field_element: *const [48]u8, result: *[96]u8) callconv(.c) i32 {
-    return if (zesu_accel.bls12_map_fp_to_g1(field_element, result)) OK else ERR;
+    return if (zesu_zkvm_stdlibs.bls12_map_fp_to_g1(field_element, result)) OK else ERR;
 }
 fn bls12_map_fp2_to_g2(field_element: *const [96]u8, result: *[192]u8) callconv(.c) i32 {
-    return if (zesu_accel.bls12_map_fp2_to_g2(field_element, result)) OK else ERR;
+    return if (zesu_zkvm_stdlibs.bls12_map_fp2_to_g2(field_element, result)) OK else ERR;
 }
 
 // ── Runtime: zkvm_log ────────────────────────────────────────────────────────────────────────────

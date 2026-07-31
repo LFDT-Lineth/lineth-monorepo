@@ -65,7 +65,7 @@ func main() {
 	sszDir := flag.String("ssz-dir", filepath.Join(os.TempDir(), "execution-specs-ssz-fixtures"), "directory for selected temporary SSZ inputs")
 	fixturePathsFlag := flag.String("fixture-paths", "blockchain_tests/for_amsterdam/amsterdam,blockchain_tests/for_amsterdam/osaka", "comma-separated fixture paths under fixtures-dir")
 	sszLimit := flag.Int("ssz-limit", 0, "maximum SSZ inputs to run per fixture path; 0 means all")
-	zkcFlags := flag.String("zkc-flags", "--gogen --fast -q", "flags forwarded to zkc exec")
+	zkcFlags := flag.String("zkc-flags", "--gogen --fast", "flags forwarded to zkc exec")
 	flag.Parse()
 
 	if *sszLimit < 0 {
@@ -155,11 +155,14 @@ func main() {
 		runnable = append(runnable, input)
 	}
 
+	runnerBin := filepath.Join(guestDir, "zig-out", "bin", "l2-execution-runner")
+
 	printTableHeader()
 
 	passed := 0
+	seenFailures := make(map[string]string) // tail output -> first test name that showed it
 	for _, input := range runnable {
-		success, userTime := runGuest(guestDir, input.file, *zkcFlags)
+		success, userTime, output := runGuest(guestDir, input.file, *zkcFlags)
 		ok := success == input.expectedValid
 		if ok {
 			passed++
@@ -168,6 +171,15 @@ func main() {
 		}
 		testName := fmt.Sprintf("%s:%s[%d]", filepath.ToSlash(input.jsonFile), input.testName, input.blockIndex)
 		printTableRow(input.fixturePath, testName, input.size, userTime, ok)
+		if !ok {
+			// zkc's own output is just "machine panic: EXIT CODE = 1" — the riscv64 guest ABI has no
+			// room for an error name (see evm_execution_guest.zig's guestMain: `catch exit(1)`
+			// discards it). Re-run the SAME input through the native l2-execution-runner, which calls
+			// the identical runL2Execution and prints the real @errorName(err), to actually explain
+			// the mismatch instead of just restating that it happened.
+			nativeDetail := runNativeRunner(runnerBin, input.file)
+			reportFailure(testName, success, input.expectedValid, output, nativeDetail, seenFailures)
+		}
 	}
 
 	fmt.Fprintf(os.Stderr, "summary: %d/%d passed (%d skipped: execution requests unsupported)\n", passed, len(runnable), skipped)
@@ -395,20 +407,64 @@ func run(w io.Writer, name string, args ...string) error {
 	return cmd.Run()
 }
 
-// Runs the guest.
-func runGuest(guestDir, input, zkcFlags string) (bool, time.Duration) {
+// Runs the guest, capturing combined output so a mismatch (see reportFailure) can show the actual
+// zkc/make diagnostic instead of a bare "fail" — e.g. a rejected-by-guest panic vs. a broken zkc
+// invocation (bad flag, build error) look identical as a pass/fail boolean but very different here.
+func runGuest(guestDir, input, zkcFlags string) (bool, time.Duration, string) {
 	cmd := exec.Command(
 		"make", "--no-print-directory", "-C", guestDir, "exec",
 		"INPUT="+input,
 		"ZKC_EXEC_FLAGS="+zkcFlags,
 	)
-	cmd.Stdout = io.Discard
-	cmd.Stderr = io.Discard
+	var output bytes.Buffer
+	cmd.Stdout = &output
+	cmd.Stderr = &output
 	err := cmd.Run()
 	if cmd.ProcessState == nil {
-		return err == nil, 0
+		return err == nil, 0, output.String()
 	}
-	return err == nil, cmd.ProcessState.UserTime()
+	return err == nil, cmd.ProcessState.UserTime(), output.String()
+}
+
+func runNativeRunner(runnerBin, inputFile string) string {
+	cmd := exec.Command(runnerBin, inputFile, "--json")
+	var output bytes.Buffer
+	cmd.Stdout = &output
+	cmd.Stderr = &output
+	_ = cmd.Run()
+	return strings.TrimSpace(output.String())
+}
+
+func reportFailure(testName string, success, expectedValid bool, output, nativeDetail string, seen map[string]string) {
+	tail := tailLines(output, 20)
+	key := tail + "\x00" + nativeDetail
+	if first, ok := seen[key]; ok {
+		fmt.Fprintf(os.Stderr, "--- %s: same failure as %s ---\n", testName, first)
+		return
+	}
+	seen[key] = testName
+	fmt.Fprintf(os.Stderr, "--- %s (zkc exec %s, expected valid=%v) ---\n", testName, execOutcome(success), expectedValid)
+	if tail != "" {
+		fmt.Fprintf(os.Stderr, "zkc exec output:\n%s\n", tail)
+	} else {
+		fmt.Fprintln(os.Stderr, "zkc exec output: (empty)")
+	}
+	fmt.Fprintf(os.Stderr, "native l2-execution-runner:\n%s\n", nativeDetail)
+}
+
+func execOutcome(success bool) string {
+	if success {
+		return "succeeded"
+	}
+	return "failed"
+}
+
+func tailLines(s string, n int) string {
+	lines := strings.Split(strings.TrimSpace(s), "\n")
+	if len(lines) > n {
+		lines = lines[len(lines)-n:]
+	}
+	return strings.Join(lines, "\n")
 }
 
 // Escapes table cells.
