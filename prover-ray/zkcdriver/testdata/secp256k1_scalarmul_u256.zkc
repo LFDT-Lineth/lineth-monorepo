@@ -1,7 +1,7 @@
 include "./lib/secp256k1/secp256k1.zkc"
 
 // Verifies Q = k*P over secp256k1.
-//   in_k  : the scalar (256-bit integer; used mod n by the group law)
+//   in_k  : a canonical scalar in [0, n); values >= n are rejected
 //   in_px, in_py : the base point P (affine)
 //   in_qx, in_qy : the claimed result Q (affine)
 pub input in_k(address:u1) -> (k:u256)
@@ -11,9 +11,8 @@ pub input in_qx(address:u1) -> (val:u256)
 pub input in_qy(address:u1) -> (val:u256)
 
 fn main() {
-    // The scalar is a raw 256-bit integer. Do NOT reduce it mod p — it is a
-    // ring element mod the group order n, and double-and-add over its bits
-    // computes (k mod n)*P directly.
+    // The scalar must already be canonical in [0, n). Callers with arbitrary
+    // 256-bit scalars must reduce them modulo n before calling this program.
     var k:u256 = in_k[0]
 
     // Point coordinates are Fp elements: reduce to canonical form and validate.

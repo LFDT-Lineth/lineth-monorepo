@@ -25,10 +25,10 @@ fn mulmod_256(lhsL:u256, rhsL:u256, modL:u256) -> (remainder:u256) {
 // Callers that branch on raw (unreduced) equality/inequality of field elements
 // must reduce their inputs through this first, otherwise non-canonical encodings
 // (e.g. val = x + modL) alias the same residue while comparing as distinct u256
-// values. Implemented as addmod with 0, which reduces its inputs.
+// values. Implemented as multiplication by 1 modulo modL.
 fn reduce_256(val:u256, modL:u256) -> (remainder:u256) {
     remainder = mulmod_256(1, val, modL)
-    if remainder>modL {
+    if remainder >= modL {
         fail
     }
 }
@@ -40,7 +40,7 @@ fn addmod_256(lhsL:u256, rhsL:u256, modL:u256) -> (remainder:u256) {
         fail
     }
     var sum:u257 = (lhsL as u257) + (rhsL as u257)
-    if sum>=(modL as u257) {
+    if sum >= (modL as u257) {
         sum = sum - (modL as u257)
     }
     var overflow:u1

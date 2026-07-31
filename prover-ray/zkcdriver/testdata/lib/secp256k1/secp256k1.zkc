@@ -17,7 +17,7 @@ const b:u256 = 7
 // fails if (x, y) is not a finite point on y^2 = x^3 + 7 over Fp,
 // expects canonical inputs (x, y < p); callers reduce via reduce_256.
 fn assert_on_curve_affine_secp256k1(x:u256, y:u256) {
-    // lets handle the special case of (0,0)
+    // let's handle the special case of (0,0)
     if is_infinity_affine_secp256k1(x, y) == 1 {
         return
     }

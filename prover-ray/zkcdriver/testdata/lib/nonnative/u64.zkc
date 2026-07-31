@@ -25,10 +25,10 @@ fn mulmod_64(lhsL:u64, rhsL:u64, modL:u64) -> (remainder:u64) {
 // Callers that branch on raw (unreduced) equality/inequality of field elements
 // must reduce their inputs through this first, otherwise non-canonical encodings
 // (e.g. val = x + modL) alias the same residue while comparing as distinct u64
-// values. Implemented as addmod with 0, which reduces its inputs.
+// values. Implemented as multiplication by 1 modulo modL.
 fn reduce_64(val:u64, modL:u64) -> (remainder:u64) {
     remainder = mulmod_64(1, val, modL)
-    if remainder>modL {
+    if remainder >= modL {
         fail
     }
 }
@@ -40,7 +40,7 @@ fn addmod_64(lhsL:u64, rhsL:u64, modL:u64) -> (remainder:u64) {
         fail
     }
     var sum:u65 = (lhsL as u65) + (rhsL as u65)
-    if sum>=(modL as u65) {
+    if sum >= (modL as u65) {
         sum = sum - (modL as u65)
     }
     var overflow:u1

@@ -18,8 +18,8 @@ fn main() {
 
     var n:u8 = in_n[0]
 
-    // Loop 1: every case is validated with both the affine group law
-    // (secp_add_affine) and the complete projective addition round-trip.
+    // Loop 1: every case is validated with complete projective addition and
+    // conversion back to affine coordinates.
     for i:tAddr = 0; i<n; i = i + 1 {
         // Reduce inputs to canonical form up front, so downstream raw comparisons
         // (ec_add's `x1 != x2`, the x3/y3 result check) operate on residues, not
