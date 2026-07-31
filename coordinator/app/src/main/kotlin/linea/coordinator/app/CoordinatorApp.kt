@@ -52,10 +52,11 @@ import kotlin.time.Duration.Companion.seconds
 class CoordinatorApp(
   private val configs: CoordinatorConfig,
   private val clock: Clock = Clock.System,
-  // Single seam for the enterprise distribution: contributes extra services and JSON-RPC
-  // handlers that share this app's Vertx, metrics and DB. Defaults to no-op so the OSS app
+  // Single seam for downstream distributions: contributes extra services and JSON-RPC
+  // handlers that share this app's Vertx, metrics and DB. Defaults to no-op so the app
   // behaves identically when no extension is supplied.
   extensionsFactory: CoordinatorExtensionFactory = CoordinatorExtensionFactory.NOOP,
+  signerFactory: SignerFactory = DefaultSignerFactory,
 ) {
   private val log: Logger = LogManager.getLogger(this::class.java)
   private val vertx: Vertx =
@@ -232,6 +233,7 @@ class CoordinatorApp(
   private val messageAnchoringApp: LongRunningService = MessageAnchoringAppConfigurator.create(
     vertx = vertx,
     configs = configs,
+    signerFactory = signerFactory,
   )
 
   private val l1RelayingAppV1 = run {
@@ -247,6 +249,7 @@ class CoordinatorApp(
         feeHistoriesDao = feeHistoriesDao,
         blobsRepository = blobsRepository,
         aggregationsRepository = aggregationsRepository,
+        signerFactory = signerFactory,
       )
     } else {
       log.warn("L1 submission disabled for blobs and aggregations")

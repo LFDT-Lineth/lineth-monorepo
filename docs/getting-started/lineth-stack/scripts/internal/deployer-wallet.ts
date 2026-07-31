@@ -45,7 +45,7 @@ export const LOCAL_L1_HOST_RPC_URL = `http://localhost:${DEFAULT_LOCAL_L1_HOST_R
 export const LOCAL_L1_DEPLOYER_PRIVATE_KEY =
   "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
-const DEFAULT_DEPLOYER_KEYSTORE_PASSWORD = "linea-local-dev-deployer";
+const DEFAULT_DEPLOYER_KEYSTORE_PASSWORD = "lineth-local-dev-deployer";
 const DEFAULT_DEPLOYER_KEYSTORE_FILE = "l1-deployer.json";
 const DEFAULT_DEPLOYER_PASSWORD_FILE = "password.txt";
 

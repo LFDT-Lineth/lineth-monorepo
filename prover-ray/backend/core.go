@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 
+	zkc_r5 "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/zkc-r5"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 )
@@ -23,7 +24,7 @@ type Core struct {
 	cfg    Config
 	sys    *wiop.System
 	driver *zkcdriver.ZkCDriver
-	elf    elfInputs // guest ELF sections + entry point, extracted once in New; reused per job
+	elf    zkc_r5.GuestProgramSections // guest ELF sections + entry point, extracted once in New; reused per job
 }
 
 // New loads the circuit binary and the guest ELF, calls [zkcdriver.NewZkCDriver]
@@ -45,7 +46,7 @@ func New(cfg Config) (*Core, error) {
 	}
 	defer elfFile.Close()
 
-	parsedELF, err := loadELFInputs(elfFile)
+	parsedELF, err := zkc_r5.LoadGuestElf(elfFile)
 	if err != nil {
 		return nil, fmt.Errorf("extracting ELF blobs from %q: %w", cfg.GuestELFPath, err)
 	}
@@ -99,14 +100,30 @@ func (c *Core) Prove(ctx context.Context, job Job) Result {
 // [New] and reused across calls; only the per-job StatelessInput blobs
 // (schema id + SSZ body) differ.
 func (c *Core) buildInputs(job Job) (map[string][]byte, error) {
-	sszMemBlobs, err := sszBlobs(c.cfg.inOrigin(), decodePayload(job))
-	if err != nil {
+	if err := sanityCheckJobs(job); err != nil {
 		return nil, err
 	}
-	memBlobs := make([]memoryBlob, 0, len(c.elf.blobs)+2)
-	memBlobs = append(memBlobs, c.elf.blobs...)
-	memBlobs = append(memBlobs, sszMemBlobs...)
-	return encodeInputs(memBlobs, c.elf.entry), nil
+	dataSections, err := zkc_r5.NewDataSection(zkc_r5.DefaultINOrigin, decodePayload(job))
+	if err != nil {
+		return nil, fmt.Errorf("building data section: %w", err)
+	}
+	return zkc_r5.EncodeGuestAndMemoryForZkc(c.elf, dataSections)
+}
+
+func sanityCheckJobs(job Job) error {
+	// Inverted ranges are malformed input.
+	if job.EndBlock < job.StartBlock {
+		return fmt.Errorf("invalid block range [%d, %d]: EndBlock < StartBlock",
+			job.StartBlock, job.EndBlock)
+	}
+
+	// Multi-block SSZ conflation is not implemented yet.
+	if job.EndBlock > job.StartBlock {
+		return fmt.Errorf("multi-block job [%d, %d]: %w",
+			job.StartBlock, job.EndBlock, ErrNotImplemented)
+	}
+
+	return nil
 }
 
 // runProve calls AssignWithPreRead, sys.Prove, and sys.Verify.
