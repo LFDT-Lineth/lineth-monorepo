@@ -27,7 +27,7 @@ fn main() {
     // Compute k*P and check it matches the claimed Q.
     var rx:u256, ry:u256
     rx, ry = scalar_mul_affine_secp256k1(k, px, py)
-    if is_equal_secp256k1(rx, ry, qx, qy) == 0{
+    if is_equal_secp256k1(rx, ry, qx, qy) == 0 {
         fail
     }
 }

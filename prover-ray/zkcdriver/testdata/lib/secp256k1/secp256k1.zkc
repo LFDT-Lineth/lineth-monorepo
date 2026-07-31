@@ -227,7 +227,6 @@ fn scalar_mul_projective_secp256k1(k:u256, PX:u256, PY:u256, PZ:u256) -> (QX:u25
         QY = DY
         QZ = DZ
     }
-    printf "scalar mul %d %d %d %d\n", k, QX, QY, QZ
 }
 
 // ------ affine -------

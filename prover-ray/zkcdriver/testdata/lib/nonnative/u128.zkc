@@ -56,13 +56,17 @@ fn submod_128(lhsL:u128, rhsL:u128, modL:u128) -> (remainder:u128) {
     if modL == 0 {
         fail
     }
-    var lhs:u128
+    var lhs:u129
     if rhsL > lhsL {
-        lhs = lhsL + modL
+        lhs = (lhsL as u129) + (modL as u129)
     } else {
-        lhs = lhsL
+        lhs = (lhsL as u129)
     }
-    remainder = lhs - rhsL
+    var overflow:u1
+    overflow::remainder = lhs - (rhsL as u129)
+    if overflow != 0 {
+        fail
+    }
 }
 
 #[native]
