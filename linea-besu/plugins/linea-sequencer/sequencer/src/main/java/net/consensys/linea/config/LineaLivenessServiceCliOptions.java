@@ -127,15 +127,15 @@ public class LineaLivenessServiceCliOptions implements LineaCliOptions {
       arity = "1")
   private String signerKeyId = null;
 
-  @NotBlank(message = "Web3Signer address must not be blank")
+  @NotBlank(message = "Liveness signer address must not be blank")
   @Pattern(
       regexp = "^0x[a-fA-F0-9]{40}$",
-      message = "Web3Signer address must be a valid Ethereum address")
+      message = "Liveness signer address must be a valid Ethereum address")
   @Option(
       names = {SIGNER_ADDRESS},
       hidden = true,
       paramLabel = "<EOA_ADDRESS>",
-      description = "Ethereum address corresponding to the Web3Signer key ID",
+      description = "Ethereum address of the liveness transaction signer",
       arity = "1")
   private String signerAddress = null;
 
@@ -332,9 +332,9 @@ public class LineaLivenessServiceCliOptions implements LineaCliOptions {
         .add(SIGNER_ADDRESS, signerAddress)
         .add(TLS_ENABLED, tlsEnabled)
         .add(TLS_KEY_STORE_PATH, tlsKeyStorePath)
-        .add(TLS_KEY_STORE_PASSWORD, tlsKeyStorePassword)
+        .add(TLS_KEY_STORE_PASSWORD, redact(tlsKeyStorePassword))
         .add(TLS_TRUST_STORE_PATH, tlsTrustStorePath)
-        .add(TLS_TRUST_STORE_PASSWORD, tlsTrustStorePassword)
+        .add(TLS_TRUST_STORE_PASSWORD, redact(tlsTrustStorePassword))
         .add(GAS_LIMIT, gasLimit)
         .add(GAS_PRICE, gasPrice)
         .toString();
@@ -379,5 +379,9 @@ public class LineaLivenessServiceCliOptions implements LineaCliOptions {
         || tlsKeyStorePassword != null
         || tlsTrustStorePath != null
         || tlsTrustStorePassword != null;
+  }
+
+  private static String redact(final String value) {
+    return value == null ? null : "<redacted>";
   }
 }

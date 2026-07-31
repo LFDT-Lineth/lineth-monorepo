@@ -125,4 +125,17 @@ class LineaLivenessServiceCliOptionsTest {
         .isThrownBy(options::toDomainObject)
         .withMessageContaining("not valid for CUSTOM");
   }
+
+  @Test
+  void redactsTlsPasswordsFromStringRepresentation() {
+    commandLine.parseArgs(
+        "--plugin-linea-liveness-tls-key-store-password",
+        "key-store-secret",
+        "--plugin-linea-liveness-tls-trust-store-password",
+        "trust-store-secret");
+
+    assertThat(options.toString())
+        .doesNotContain("key-store-secret", "trust-store-secret")
+        .contains("<redacted>");
+  }
 }
