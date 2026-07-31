@@ -1,0 +1,251 @@
+include "../nonnative/u256.zkc"
+
+// ----- curve parameters ------
+
+
+// secp256k1 modulus (base field). NOTE: this is the field prime p, NOT the
+// group order n. Scalars are reduced mod n, never mod p.
+const p:u256 = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f
+
+// secp256k1 group order n (number of points in the prime-order subgroup).
+// Scalars must lie in [0, n); secp_scalar_mul rejects k >= n.
+const n:u256 = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141
+
+const b:u256 = 7
+
+// ----- assertion methods ------
+
+// fails if (x, y) is not a finite point on y^2 = x^3 + 7 over Fp,
+// expects canonical inputs (x, y < p); callers reduce via reduce_256.
+fn assert_on_curve_secp256k1(x:u256, y:u256) {
+    // lets handle the special case of (0,0)
+    if is_infinity_secp256k1(x, y) == 1{
+        return
+    }
+    var y2:u256 = mulmod_256(y, y, p)
+    var x2:u256 = mulmod_256(x, x, p)
+    var x3:u256 = mulmod_256(x2, x, p)
+    var rhs:u256 = addmod_256(x3, b, p)
+    if rhs != y2 {
+        fail
+    }
+}
+
+fn is_infinity_secp256k1(x: u256, y: u256) -> (res:u1) {
+    res = 0
+    if (x == 0) && (y == 0) {
+        res = 1
+    }
+}
+
+fn is_equal_secp256k1(Px:u256, Py:u256, Qx:u256, Qy:u256) -> (res:u1) {
+    res = 0
+    if (Px == Qx) && (Py == Qy) {
+        res = 1
+    }
+}
+
+// TODO: we should implement subgroup check as well
+
+// ------ conversion methods -------
+
+fn affine_to_projective_secp256k1(x:u256, y:u256) -> (X:u256, Y:u256, Z:u256) {
+    X = x
+    Y = y
+    Z = 1
+}
+
+fn projective_to_affine_secp256k1(X:u256, Y:u256, Z:u256) -> (x:u256, y:u256) {
+    if Z == 0 {
+        x = 0
+        y = 0
+    } else {
+        var z_inv:u256 = invmod_256(Z, p)
+        x = mulmod_256(X, z_inv, p)
+        y = mulmod_256(Y, z_inv, p)
+    }
+}
+
+// ------ projective ------
+
+// Complete projective addition for secp256k1 (a=0, b3=21).
+// Implements RCB 2015 (https://eprint.iacr.org/2015/1060.pdf) Algorithm 7 — correct for all input pairs with no case analysis.
+fn add_projective_secp256k1(X1:u256, Y1:u256, Z1:u256, X2:u256, Y2:u256, Z2:u256) -> (X3:u256, Y3:u256, Z3:u256) {
+
+    // products of matching coordinates
+    var xx:u256      = mulmod_256(X1, X2, p)
+    var yy:u256      = mulmod_256(Y1, Y2, p)
+    var zz:u256      = mulmod_256(Z1, Z2, p)
+
+    // X1Y2+X2Y1 via Karatsuba
+    var sx1y1:u256   = addmod_256(X1, Y1, p)
+    var sx2y2:u256   = addmod_256(X2, Y2, p)
+    var pxy:u256     = mulmod_256(sx1y1, sx2y2, p)
+    var diag_xy:u256 = addmod_256(xx, yy, p)
+    var cxy:u256     = submod_256(pxy, diag_xy, p)    // X1Y2 + X2Y1
+
+    // Y1Z2+Y2Z1 via Karatsuba
+    var sy1z1:u256   = addmod_256(Y1, Z1, p)
+    var sy2z2:u256   = addmod_256(Y2, Z2, p)
+    var pyz:u256     = mulmod_256(sy1z1, sy2z2, p)
+    var diag_yz:u256 = addmod_256(yy, zz, p)
+    var cyz:u256     = submod_256(pyz, diag_yz, p)    // Y1Z2 + Y2Z1
+
+    // X1Z2+X2Z1 via Karatsuba
+    var sx1z1:u256   = addmod_256(X1, Z1, p)
+    var sx2z2:u256   = addmod_256(X2, Z2, p)
+    var pxz:u256     = mulmod_256(sx1z1, sx2z2, p)
+    var diag_xz:u256 = addmod_256(xx, zz, p)
+    var cxz:u256     = submod_256(pxz, diag_xz, p)   // X1Z2 + X2Z1
+
+    // 3·(X1X2)
+    var xx2:u256     = addmod_256(xx, xx, p)
+    var xx3:u256     = addmod_256(xx2, xx, p)
+
+    // 21·(Z1Z2)  — b3 = 21 = 16+4+1 via 5 addmods
+    var zz2:u256     = addmod_256(zz, zz, p)
+    var zz4:u256     = addmod_256(zz2, zz2, p)
+    var zz8:u256     = addmod_256(zz4, zz4, p)
+    var zz16:u256    = addmod_256(zz8, zz8, p)
+    var zz20:u256    = addmod_256(zz16, zz4, p)
+    var zz21:u256    = addmod_256(zz20, zz, p)
+
+    // 21·(X1Z2+X2Z1)
+    var cxz2:u256    = addmod_256(cxz, cxz, p)
+    var cxz4:u256    = addmod_256(cxz2, cxz2, p)
+    var cxz8:u256    = addmod_256(cxz4, cxz4, p)
+    var cxz16:u256   = addmod_256(cxz8, cxz8, p)
+    var cxz20:u256   = addmod_256(cxz16, cxz4, p)
+    var cxz21:u256   = addmod_256(cxz20, cxz, p)
+
+    // paper steps 22-23
+    var pre_z3:u256  = addmod_256(yy, zz21, p)       // Y1Y2 + 21·Z1Z2
+    var t1:u256      = submod_256(yy, zz21, p)       // Y1Y2 - 21·Z1Z2
+
+    // X3 (paper steps 25-27)
+    var m_a:u256     = mulmod_256(cyz, cxz21, p)
+    var m_b:u256     = mulmod_256(cxy, t1, p)
+    X3               = submod_256(m_b, m_a, p)
+
+    // Y3 (paper steps 28-30)
+    var m_c:u256     = mulmod_256(cxz21, xx3, p)
+    var m_d:u256     = mulmod_256(t1, pre_z3, p)
+    Y3               = addmod_256(m_d, m_c, p)
+
+    // Z3 (paper steps 31-33)
+    var m_e:u256     = mulmod_256(xx3, cxy, p)
+    var m_f:u256     = mulmod_256(pre_z3, cyz, p)
+    Z3               = addmod_256(m_f, m_e, p)
+}
+
+// Dedicated projective doubling for secp256k1 (a=0, b=7).
+// Cheaper than secp_add_projective; use for the doubling step in scalar multiplication.
+// ref: https://hyperelliptic.org/EFD/g1p/auto-shortw-projective.html#doubling-dbl-1998-cmo
+// Precondition: P != O (Z1 != 0, Y1 != 0 — guaranteed for valid secp256k1 subgroup points).
+// Not optimal, the most efficient one is in jacobian coordinates.
+fn double_projective_secp256k1(X1:u256, Y1:u256, Z1:u256) -> (X3:u256, Y3:u256, Z3:u256) {
+
+    // basic products
+    var x1sq:u256    = mulmod_256(X1, X1, p)         // X1²
+    var y1sq:u256    = mulmod_256(Y1, Y1, p)         // Y1²
+    var S:u256       = mulmod_256(Y1, Z1, p)         // Y1·Z1
+
+    // W = 3·X1²  (tangent numerator, a=0)
+    var x1sq2:u256   = addmod_256(x1sq, x1sq, p)
+    var W:u256       = addmod_256(x1sq2, x1sq, p)
+
+    // B = X1·Y1·S
+    var x1y1:u256    = mulmod_256(X1, Y1, p)
+    var B:u256       = mulmod_256(x1y1, S, p)
+
+    // H = W² - 8B
+    var W2:u256      = mulmod_256(W, W, p)
+    var B2:u256      = addmod_256(B, B, p)
+    var B4:u256      = addmod_256(B2, B2, p)
+    var B8:u256      = addmod_256(B4, B4, p)
+    var H:u256       = submod_256(W2, B8, p)
+
+    // X3 = 2·H·S
+    var HS:u256      = mulmod_256(H, S, p)
+    X3                 = addmod_256(HS, HS, p)
+
+    // Y3 = W·(4B - H) - 8·Y1²·S²
+    var S2:u256      = mulmod_256(S, S, p)
+    var y1sqS2:u256  = mulmod_256(y1sq, S2, p)
+    var B4mH:u256    = submod_256(B4, H, p)
+    var WB4mH:u256   = mulmod_256(W, B4mH, p)
+    var y1sqS2_2:u256 = addmod_256(y1sqS2, y1sqS2, p)
+    var y1sqS2_4:u256 = addmod_256(y1sqS2_2, y1sqS2_2, p)
+    var y1sqS2_8:u256 = addmod_256(y1sqS2_4, y1sqS2_4, p)
+    Y3                  = submod_256(WB4mH, y1sqS2_8, p)
+
+    // Z3 = 8·S³
+    var S3:u256      = mulmod_256(S2, S, p)
+    var S3_2:u256    = addmod_256(S3, S3, p)
+    var S3_4:u256    = addmod_256(S3_2, S3_2, p)
+    Z3                 = addmod_256(S3_4, S3_4, p)
+}
+
+// Recursive scalar multiplication over projective coords
+//   k*P = 2*((k >> 1)*P) + (k & 1)*P,   base case 0*P = O = (0 : 1 : 0)
+// Bits are peeled LSB-first on the way down and applied on the way back up, so
+// the unwind is MSB-first double-and-add — the same schedule as the loop version.
+// The loop version's `started` flag is not needed here: O is explicit (Z = 0),
+// doubling O is guarded to return O, and the complete addition absorbs O + P = P
+// at the top set bit.
+fn scalar_mul_projective_secp256k1(k:u256, PX:u256, PY:u256, PZ:u256) -> (QX:u256, QY:u256, QZ:u256) {
+    if k == 0 {
+        // O = (0 : 1 : 0)
+        QX = 0
+        QY = 1
+        QZ = 0
+        return
+    }
+    var half:u255
+    var bit:u1
+    half::bit = k as u256
+
+    var HX:u256, HY:u256, HZ:u256
+    HX, HY, HZ = scalar_mul_projective_secp256k1(half as u256, PX, PY, PZ)
+
+    // D = 2*H. The dedicated doubling requires H != O, so guard on Z:
+    // above k's top set bit H is still O, and 2*O = O.
+    var DX:u256, DY:u256, DZ:u256
+    if HZ == 0 {
+        DX = 0
+        DY = 1
+        DZ = 0
+    } else {
+        DX, DY, DZ = double_projective_secp256k1(HX, HY, HZ)
+    }
+
+    if bit == 1 {
+        // complete addition: also correct when D = O (returns P)
+        QX, QY, QZ = add_projective_secp256k1(DX, DY, DZ, PX, PY, PZ)
+    } else {
+        QX = DX
+        QY = DY
+        QZ = DZ
+    }
+    printf "scalar mul %d %d %d %d\n", k, QX, QY, QZ
+}
+
+// ------ affine -------
+fn scalar_mul_affine_secp256k1(k: u256, Px:u256, Py:u256) -> (Qx:u256, Qy:u256) {
+    if k >= n {
+        fail
+    }
+    Qx = 0
+    Qy = 0
+    if k == 0 {
+        return
+    }
+
+    var PX:u256, PY:u256, PZ:u256
+    PX, PY, PZ = affine_to_projective_secp256k1(Px, Py)
+
+    var QX:u256, QY:u256, QZ:u256
+    QX, QY, QZ = scalar_mul_projective_secp256k1(k, PX, PY, PZ)
+
+    Qx, Qy = projective_to_affine_secp256k1(PX, PY, PZ)
+} 
