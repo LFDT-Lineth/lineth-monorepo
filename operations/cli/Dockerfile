@@ -12,6 +12,7 @@ FROM base AS builder
 WORKDIR /usr/src/app
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
+
 COPY patches/ ./patches/
 COPY ts-libs/eslint-config/ ./ts-libs/eslint-config/
 COPY operations/cli/ ./operations/cli/
