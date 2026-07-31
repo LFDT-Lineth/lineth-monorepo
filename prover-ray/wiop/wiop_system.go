@@ -42,7 +42,7 @@ type System struct {
 	// via [System.NewMessageBusSend] and [System.NewMessageBusReceive], in
 	// declaration order.
 	MessageBuses []*MessageBus
-	// PublicInputs defines the semantic structure of public inputs mainly used for inter-shard consistancy.
+	// PublicInputs defines the semantic structure of public inputs, mainly used for inter-shard consistency.
 	PublicInputs *PublicInputLayout
 	// scratchArena backs the [PlanningContext] used by [Materialize]. It is
 	// nil until Materialize is called.

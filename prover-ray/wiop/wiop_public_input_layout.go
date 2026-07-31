@@ -27,6 +27,11 @@ type PublicInputLayout struct {
 	// IsLastShard is a cell whose runtime value is field.One for the last
 	// shard and field.Zero otherwise. Nil if not used.
 	IsLastShard *Cell
+
+	// cachedCells is set once by Register (which seals the layout) and
+	// returned by Cells on all subsequent calls, avoiding repeated allocation.
+	cachedCells []*Cell
+	sealed      bool
 }
 
 // RegisterMessageBus appends a cell to [MessageBus]. Each call corresponds to
@@ -46,7 +51,13 @@ func (l *PublicInputLayout) RegisterMessageBus(_ string, cell *Cell) {
 //
 // This ordering defines the index-to-cell mapping in the flat [PublicInput]
 // wire format produced by [System.Prove].
+//
+// After [Register] is called the result is cached; all subsequent calls return
+// the same slice.
 func (l *PublicInputLayout) Cells() []*Cell {
+	if l.sealed {
+		return l.cachedCells
+	}
 	var cells []*Cell
 	cells = append(cells, l.MessageBus...)
 	cells = append(cells, l.ProgramVK...)
@@ -60,7 +71,7 @@ func (l *PublicInputLayout) Cells() []*Cell {
 }
 
 // Register sets sys.PublicInputs to this layout. It first validates that no
-// cell appears more than once across all fields. Panics on nil cells or
+// cell appears more than once across all fields. Panics on nil cells,
 // duplicates.
 func (l *PublicInputLayout) Register(sys *System) {
 	cells := l.Cells()
@@ -74,6 +85,8 @@ func (l *PublicInputLayout) Register(sys *System) {
 		}
 		seen[c.Context.ID] = struct{}{}
 	}
+	l.cachedCells = cells
+	l.sealed = true
 	sys.PublicInputs = l
 }
 
@@ -83,7 +96,6 @@ func (l *PublicInputLayout) Register(sys *System) {
 // [System.Prove].
 type PublicInputValues struct {
 	// MessageBus is indexed identically to [PublicInputLayout.MessageBus].
-	// Use [PublicInputLayout.MessageBusHandleIndex] to resolve a handle to its index.
 	MessageBus                   []field.Gen
 	ProgramVK                    []field.Gen
 	SharedRandomness             []field.Gen
@@ -101,13 +113,10 @@ func (l *PublicInputLayout) Unpack(pub PublicInput) (*PublicInputValues, error) 
 		return nil, fmt.Errorf("wiop: PublicInputLayout.Unpack: length mismatch: got %d, want %d", len(pub), len(cells))
 	}
 
-	unpackSlice := func(n int, i int) ([]field.Gen, int) {
+	unpackSlice := func(n, i int) ([]field.Gen, int) {
 		s := make([]field.Gen, n)
-		for j := 0; j < n; j++ {
-			s[j] = pub[i]
-			i++
-		}
-		return s, i
+		copy(s, pub[i:i+n])
+		return s, i + n
 	}
 
 	v := &PublicInputValues{}
@@ -119,6 +128,10 @@ func (l *PublicInputLayout) Unpack(pub PublicInput) (*PublicInputValues, error) 
 	v.GuestPublicOutputs, i = unpackSlice(len(l.GuestPublicOutputs), i)
 	if l.IsLastShard != nil {
 		v.IsLastShard = pub[i]
+		i++
+	}
+	if i != len(pub) {
+		return nil, fmt.Errorf("wiop: PublicInputLayout.Unpack: internal error: consumed %d of %d elements", i, len(pub))
 	}
 
 	return v, nil

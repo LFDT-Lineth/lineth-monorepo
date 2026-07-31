@@ -123,6 +123,33 @@ func TestPublicInputDynamicColumn(t *testing.T) {
 		"tampered public input must be rejected")
 }
 
+// TestPublicInputLayoutUnpack checks that Unpack round-trips through the flat
+// wire format produced by Prove.
+func TestPublicInputLayoutUnpack(t *testing.T) {
+	sys := wiop.NewSystemf("unpack")
+	r0 := sys.NewRound()
+	m := sys.NewSizedModule(sys.Context.Childf("m"), 4, wiop.PaddingDirectionNone)
+	col := m.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	cellA := col.At(0).Open(sys.Context.Childf("a"))
+	cellB := col.At(1).Open(sys.Context.Childf("b"))
+	layout := &wiop.PublicInputLayout{GuestPublicOutputs: []*wiop.Cell{cellA, cellB}}
+	layout.Register(sys)
+	localvanishing.Compile(sys)
+	global.Compile(sys)
+
+	_, pub := sys.Prove(func(rt *wiop.Runtime) {
+		rt.AssignColumn(col, piVec(10, 20, 30, 40))
+	})
+
+	vals, err := layout.Unpack(pub)
+	require.NoError(t, err)
+	require.Equal(t, []field.Gen{piGen(10), piGen(20)}, vals.GuestPublicOutputs)
+
+	// Wrong length is rejected.
+	_, err = layout.Unpack(wiop.PublicInput{})
+	require.Error(t, err)
+}
+
 // TestRegisterDuplicatedPublicInput checks the registration guards:
 // registering the same cell twice is rejected (dedup).
 func TestRegisterDuplicatedPublicInputs(t *testing.T) {
