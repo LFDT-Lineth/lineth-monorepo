@@ -209,7 +209,7 @@ func registerRowLimitChecks(groups []*lookupGroup) {
 		// Runtime check on the subgroup aggregate. One instance serves both
 		// roles: it panics as a prover action and returns an error as a verifier
 		// action.
-		rowLimit := &groupRowLimitAction{group: g, limit: wiop.MaxLookupRows}
+		rowLimit := &groupRowLimitAction{group: g}
 		g.witnessRound.RegisterAction(rowLimit)
 		g.witnessRound.RegisterVerifierAction(rowLimit)
 	}
@@ -584,7 +584,6 @@ func viewExprs(cols []*wiop.ColumnView) []wiop.Expression {
 // fragment contributes its own pass over that module's rows to the argument.
 type groupRowLimitAction struct {
 	group *lookupGroup
-	limit uint64
 }
 
 // Run implements [wiop.ProverAction]: it panics on an over-limit subgroup.
@@ -609,7 +608,7 @@ func (a *groupRowLimitAction) validate(rt *wiop.Runtime) error {
 	for _, inc := range a.group.included {
 		aRows += uint64(inc.cols[0].Module().RuntimeSize(rt))
 	}
-	if aRows >= a.limit {
+	if aRows >= wiop.MaxLookupRows {
 		return a.overLimitError("A", aRows)
 	}
 
@@ -617,7 +616,7 @@ func (a *groupRowLimitAction) validate(rt *wiop.Runtime) error {
 	for _, it := range a.group.includings {
 		bRows += uint64(it.module.RuntimeSize(rt))
 	}
-	if bRows >= a.limit {
+	if bRows >= wiop.MaxLookupRows {
 		return a.overLimitError("B", bRows)
 	}
 	return nil
@@ -641,7 +640,7 @@ func (a *groupRowLimitAction) overLimitError(side string, rows uint64) error {
 			"reaching %d, which is >= the per-subgroup row limit %d (the row budget shared by the "+
 			"lookups bin-packed into one multiplicity column); the accumulators in the reduced "+
 			"constraints would overflow over a small field",
-		strings.Join(paths, ", "), side, rows, a.limit,
+		strings.Join(paths, ", "), side, rows, uint64(wiop.MaxLookupRows),
 	)
 }
 

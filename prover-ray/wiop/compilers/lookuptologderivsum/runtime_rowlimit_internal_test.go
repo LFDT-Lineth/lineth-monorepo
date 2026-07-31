@@ -38,7 +38,7 @@ func buildRuntimeLimitGroup(t *testing.T, aSize, bSize int) (*lookupGroup, *wiop
 // rows so its exact per-run height reaches the budget.
 func TestGroupRowLimitAction_RuntimeRejectsOverLimitASide(t *testing.T) {
 	g, rt := buildRuntimeLimitGroup(t, 1<<30, 2) // A reaches the budget; B tiny.
-	action := &groupRowLimitAction{group: g, limit: wiop.MaxLookupRows}
+	action := &groupRowLimitAction{group: g}
 
 	err := action.Check(rt)
 	require.Error(t, err, "verifier must reject an over-limit subgroup A side")
@@ -52,7 +52,7 @@ func TestGroupRowLimitAction_RuntimeRejectsOverLimitASide(t *testing.T) {
 // the check fails independently on the shared lookup table.
 func TestGroupRowLimitAction_RuntimeRejectsOverLimitBSide(t *testing.T) {
 	g, rt := buildRuntimeLimitGroup(t, 2, 1<<30) // B reaches the budget; A tiny.
-	action := &groupRowLimitAction{group: g, limit: wiop.MaxLookupRows}
+	action := &groupRowLimitAction{group: g}
 
 	err := action.Check(rt)
 	require.Error(t, err, "verifier must reject an over-limit subgroup B side")
@@ -66,7 +66,7 @@ func TestGroupRowLimitAction_RuntimeRejectsOverLimitBSide(t *testing.T) {
 // silent for an in-budget subgroup: Check returns nil and Run does not panic.
 func TestGroupRowLimitAction_RuntimeAcceptsWithinLimit(t *testing.T) {
 	g, rt := buildRuntimeLimitGroup(t, 4, 4)
-	action := &groupRowLimitAction{group: g, limit: wiop.MaxLookupRows}
+	action := &groupRowLimitAction{group: g}
 
 	assert.NoError(t, action.Check(rt), "an in-budget subgroup must pass the verifier check")
 	assert.NotPanics(t, func() { action.Run(rt) }, "an in-budget subgroup must not panic the prover")
