@@ -39,6 +39,22 @@ fn addmod_64(lhsL:u64, rhsL:u64, modL:u64) -> (remainder:u64) {
     if modL == 0 {
         fail
     }
+    var sum:u65 = (lhsL as u65) + (rhsL as u65)
+    if sum>(modL as u65) {
+        sum = sum - (modL as u65)
+    }
+    var overflow:u1
+    overflow::remainder = sum
+    if overflow != 0 {
+        fail
+    }
+}
+
+// submod_64 computes subtraction and mod reduces. It assumes inputs are already reduced
+fn submod_64(lhsL:u64, rhsL:u64, modL:u64) -> (remainder:u64) {
+    if modL == 0 {
+        fail
+    }
     var lhs:u65
     if rhsL>lhsL {
         lhs = (lhsL as u65) + (modL as u65)
@@ -50,20 +66,6 @@ fn addmod_64(lhsL:u64, rhsL:u64, modL:u64) -> (remainder:u64) {
     if overflow != 0 {
         fail
     }
-}
-
-// submod_64 computes subtraction and mod reduces. It assumes inputs are already reduced
-fn submod_64(lhsL:u64, rhsL:u64, modL:u64) -> (remainder:u64) {
-    if modL == 0 {
-        fail
-    }
-    var lhs:u64
-    if rhsL>lhsL {
-        lhs = lhsL + modL
-    } else {
-        lhs = lhsL
-    }
-    remainder = lhs - rhsL
 }
 
 #[native]
