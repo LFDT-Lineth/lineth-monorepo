@@ -47,10 +47,6 @@ func main() {
 			}
 			return
 		}
-		if arg == "-coexist-diagnose" {
-			diagnoseCoexist()
-			return
-		}
 		if arg == "-coexist" {
 			if err := writeCoexistFixture(); err != nil {
 				panic(err)
