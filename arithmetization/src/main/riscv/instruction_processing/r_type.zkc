@@ -345,8 +345,7 @@ output_write_address:OutputAddress) ->
 
         case R_WRITE_OUTPUT: {
             printf "zkvm_io.write_output call "
-            // TODO: rename www to write_output ...
-            new_output_write_address = www(v1 as Address, v2 as OutputSize, output_write_address)
+            new_output_write_address = write_output(v1 as Address, v2 as OutputSize, output_write_address)
             return
         }
 

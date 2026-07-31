@@ -1,6 +1,9 @@
-// new_output_write_address = write_output(v1 as Address, v2 as OutputSize, output_write_address)
+include "../../riscv/memory.zkc"
+include "../../riscv/ram/read.zkc"
 
-fn www<ram>(offset:Address, size:OutputSize, output_write_address:OutputAddress) -> (new_output_write_address:OutputAddress) {
+// Copy `size` bytes of guest RAM starting at byte address `offset` into the public
+// `guest_output` buffer at `output_write_address`, returning the advanced cursor.
+fn write_output<ram>(offset:Address, size:OutputSize, output_write_address:OutputAddress) -> (new_output_write_address:OutputAddress) {
     new_output_write_address = output_write_address + size
 
     for i:OutputAddress = 0; i<size; i = i + 1 {
