@@ -78,9 +78,6 @@ func NewSystemf(msg string, args ...any) *System {
 // publicInputCells returns the flat ordered cell list defined by the layout, or
 // nil if no layout has been registered.
 func (sys *System) publicInputCells() []*Cell {
-	if sys.PublicInputs == nil {
-		return nil
-	}
 	sys.PublicInputs.seal()
 	return sys.PublicInputs.cachedCells
 }
