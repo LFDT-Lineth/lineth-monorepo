@@ -79,11 +79,19 @@ pub const Proof = struct {
     // TODO(new-sub-verifier): add claim fields here if needed — step 3 above.
 };
 
-/// The prover-supplied half of a PCS opening (everything except the
-/// Fiat-Shamir-derived coins). See `Proof.pcs_opening`.
+/// The prover-supplied half of a PCS opening (everything except the values the
+/// verifier reconstructs on its own). See `Proof.pcs_opening`.
+///
+/// It deliberately does NOT carry `roots`: the batch Merkle roots are rebuilt by
+/// `verify` from `pcs.System.batch_roots` — the transcript-bound round oracle
+/// commitments (and compile-time precomputed roots) — never from the proof. If a
+/// prover could supply roots here, it could open against a forged root while zeta
+/// stays bound to the honest commitment. Coins (zeta, fold challenges, query
+/// positions) are likewise absent and derived by `verify`.
 pub const PcsOpening = struct {
-    roots: []const poseidon2.Digest,
-    claimed_values: []const ext.Ext,
+    /// Per-opened-column claimed evaluations, jagged `[entry][shift]` in
+    /// canonical layout order (see `pcs.VerifyInput.entry_claims`).
+    entry_claims: []const []const ext.Ext,
     proof: pcs.OpeningProof,
 };
 
@@ -135,11 +143,25 @@ pub fn verify(
     // the check is pure arithmetic.
     if (comptime systems.pcs) |pcs_system| {
         const opening = proof.pcs_opening orelse return error.MissingPcsOpening;
+
+        // Rebuild the batch Merkle roots from their transcript-bound provenance
+        // (round oracle commitments + compile-time precomputed roots), NOT from
+        // the proof — so the root each batch is authenticated against is provably
+        // the same octuplet zeta is bound to. Mirrors prover-ray's `collectRoots`.
+        var bound_roots: [pcs_system.num_batches]poseidon2.Digest = undefined;
+        try resolveRoots(pcs_system.batch_roots, proof.rounds, &bound_roots);
+
+        // zeta is the Fiat-Shamir opening coin, never proof-supplied. Requiring
+        // the index at comptime turns a mis-configured PCS system into a build
+        // error instead of a silent wrong-coin selection.
+        const zeta_index = comptime pcs_system.zeta_coin_index orelse
+            @compileError("pcs: System.zeta_coin_index must be set when PCS is enabled");
+
         const pcs_challenges = try pcs.deriveChallenges(pcs_system, &transcript, opening.proof.fri_proof);
         try pcs.verify(pcs_system, .{
-            .roots = opening.roots,
-            .claimed_values = opening.claimed_values,
-            .zeta = all_coins[pcs_system.zeta_coin_index],
+            .roots = &bound_roots,
+            .entry_claims = opening.entry_claims,
+            .zeta = all_coins[zeta_index],
             .fold_alphas = &pcs_challenges.fold_alphas,
             .query_positions = &pcs_challenges.query_positions,
             .proof = opening.proof,
@@ -160,4 +182,60 @@ pub fn verify(
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.logderivativesum_done, profiling.snapshot().poseidon2_compress);
     // TODO(new-sub-verifier): dispatch here — step 4 above.
     // TODO(profiling): add a final verify_done marker once more phases run after logderivativesum.
+}
+
+/// Fills `out[b]` with batch `b`'s authenticated Merkle root, resolved from its
+/// transcript-bound provenance (`batch_roots[b]`) — NOT from the proof. An
+/// interactive batch's root is the sole oracle commitment of the round message it
+/// names (the same octuplet absorbed to derive zeta); a precomputed batch's root
+/// is the compile-time constant. This is the verifier-ray analogue of prover-ray's
+/// `collectRoots` reading `rt.Commitments`, so the root a batch is authenticated
+/// against is provably the one zeta is bound to.
+///
+/// `batch_roots.len` must equal `out.len` (== num_batches). A `.round` entry must
+/// name a round message that exists and carries exactly one oracle commitment;
+/// otherwise the PCS/protocol metadata disagree — surfaced as an error rather than
+/// an out-of-bounds panic or a silently mis-bound root.
+/// Fills `out[k]` with the authenticated claim each `map` entry points at:
+/// `out[k] = entry_claims[map[k].entry][map[k].shift]`. `map.len` must equal
+/// `out.len` (the vanishing System's claim total) and every ClaimRef must be in
+/// range, else the PCS/vanishing metadata disagree — a codegen bug, surfaced as
+/// an error rather than an out-of-bounds panic.
+fn routeClaims(
+    map: []const pcs.ClaimRef,
+    entry_claims: []const []const ext.Ext,
+    out: []ext.Ext,
+) error{ClaimMapMismatch}!void {
+    if (map.len != out.len) return error.ClaimMapMismatch;
+    for (map, out) |ref, *slot| {
+        if (ref.entry >= entry_claims.len) return error.ClaimMapMismatch;
+        const col = entry_claims[ref.entry];
+        if (ref.shift >= col.len) return error.ClaimMapMismatch;
+        slot.* = col[ref.shift];
+    }
+}
+
+fn resolveRoots(
+    batch_roots: []const pcs.BatchRoot,
+    rounds: []const protocol.RoundMessage,
+    out: []poseidon2.Digest,
+) error{BatchRootMismatch}!void {
+    if (batch_roots.len != out.len) return error.BatchRootMismatch;
+    for (batch_roots, out) |br, *slot| {
+        switch (br) {
+            .precomputed => |root| slot.* = root,
+            .round => |round_index| {
+                if (round_index >= rounds.len) return error.BatchRootMismatch;
+                const cols = rounds[round_index].columns;
+                // A committed interactive round carries exactly one oracle
+                // commitment (its batch Merkle root); anything else is a metadata
+                // mismatch, not an honest proof.
+                if (cols.len != 1) return error.BatchRootMismatch;
+                switch (cols[0]) {
+                    .oracle_commitment => |root| slot.* = root,
+                    .public_column => return error.BatchRootMismatch,
+                }
+            },
+        }
+    }
 }

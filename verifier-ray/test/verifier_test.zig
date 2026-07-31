@@ -59,6 +59,7 @@ test "verify rejects proof with wrong round count" {
 const challenge_system = pcs.System{
     .params = .{ .log_codeword_size = 4, .log_plaintext_size = 2, .num_queries = 3 },
     .layout = &.{},
+    .num_batches = 0,
 };
 
 fn digest(seed: u32) poseidon2.Digest {

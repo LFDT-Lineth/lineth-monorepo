@@ -42,6 +42,12 @@ fn toExts(allocator: std.mem.Allocator, es: []const [6]u32) ![]ext.Ext {
     return out;
 }
 
+fn toExtsJagged(allocator: std.mem.Allocator, rows: []const []const [6]u32) ![]const []const ext.Ext {
+    const out = try allocator.alloc([]const ext.Ext, rows.len);
+    for (out, rows) |*dst, row| dst.* = try toExts(allocator, row);
+    return out;
+}
+
 fn toRowOpening(allocator: std.mem.Allocator, r: fixtures.RowOpeningData) !merkle.RowOpening {
     const base = try allocator.alloc(field.Element, r.base.len);
     for (base, r.base) |*dst, v| dst.* = field.Element.init(v);
@@ -105,7 +111,7 @@ fn mapPcsError(name: []const u8) pcs.Error {
 fn runPCSCase(allocator: std.mem.Allocator, comptime system: pcs.System, case: fixtures.PcsCase) !void {
     const input = pcs.VerifyInput{
         .roots = try toDigests(allocator, case.roots),
-        .claimed_values = try toExts(allocator, case.claimed_values),
+        .entry_claims = try toExtsJagged(allocator, case.entry_claims),
         .zeta = toExt(case.zeta),
         .fold_alphas = try toExts(allocator, case.fold_alphas),
         .query_positions = try allocator.dupe(usize, case.query_positions),

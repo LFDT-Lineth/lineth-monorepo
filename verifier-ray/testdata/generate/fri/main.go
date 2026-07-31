@@ -77,6 +77,16 @@ func extSlice(values []field.Ext) string {
 	return ".{ " + strings.Join(parts, ", ") + " }"
 }
 
+// extJagged renders a [][]field.Ext as a jagged Zig literal body
+// `.{ &.{...}, &.{...} }` for `[]const []const ext.Ext` (entry_claims).
+func extJagged(rows [][]field.Ext) string {
+	parts := make([]string, len(rows))
+	for i, row := range rows {
+		parts[i] = "&" + extSlice(row)
+	}
+	return ".{ " + strings.Join(parts, ", ") + " }"
+}
+
 func commitmentSlice(values []field.Octuplet) string {
 	parts := make([]string, len(values))
 	for i, value := range values {
@@ -129,11 +139,11 @@ func runZigFmt(data []byte) ([]byte, error) {
 // unexported and off-limits to this separate module).
 
 type pcsDeepEntry struct {
-	BatchIdx    int
-	IsExt       bool
-	RowIdx      int
-	ClaimOffset int
-	Shifts      []int
+	BatchIdx int
+	IsExt    bool
+	RowIdx   int
+	EntryIdx int
+	Shifts   []int
 }
 
 type pcsSizeBundle struct {
@@ -154,7 +164,7 @@ func computeLayout(shapes []fri.Shape, shifts []fri.BatchShifts) []pcsSizeBundle
 	}
 
 	var layout []pcsSizeBundle
-	offset := 0
+	entryIdx := 0
 	for sizeLog2 := maxSizeLog2; sizeLog2 >= 0; sizeLog2-- {
 		bundle := pcsSizeBundle{SizeLog2: uint8(sizeLog2)}
 		for batchIdx := range shapes {
@@ -166,16 +176,16 @@ func computeLayout(shapes []fri.Shape, shifts []fri.BatchShifts) []pcsSizeBundle
 			for rowIdx := 0; rowIdx < shape.BaseWidth; rowIdx++ {
 				bundle.Entries = append(bundle.Entries, pcsDeepEntry{
 					BatchIdx: batchIdx, IsExt: false, RowIdx: rowIdx,
-					ClaimOffset: offset, Shifts: rowShifts.Base[rowIdx],
+					EntryIdx: entryIdx, Shifts: rowShifts.Base[rowIdx],
 				})
-				offset += len(rowShifts.Base[rowIdx])
+				entryIdx++
 			}
 			for rowIdx := 0; rowIdx < shape.ExtWidth; rowIdx++ {
 				bundle.Entries = append(bundle.Entries, pcsDeepEntry{
 					BatchIdx: batchIdx, IsExt: true, RowIdx: rowIdx,
-					ClaimOffset: offset, Shifts: rowShifts.Ext[rowIdx],
+					EntryIdx: entryIdx, Shifts: rowShifts.Ext[rowIdx],
 				})
-				offset += len(rowShifts.Ext[rowIdx])
+				entryIdx++
 			}
 		}
 		if len(bundle.Entries) > 0 {
@@ -185,21 +195,25 @@ func computeLayout(shapes []fri.Shape, shifts []fri.BatchShifts) []pcsSizeBundle
 	return layout
 }
 
-// flattenClaims reads claimed's per-(batch,size,row) values off in exactly
-// layout's order: the flat array verifier_ray's query.pcs.VerifyInput expects.
-func flattenClaims(layout []pcsSizeBundle, claimed []fri.BatchClaimedValues) []field.Ext {
-	var flat []field.Ext
+// entryClaims reads claimed's per-(batch,size,row) values off in exactly
+// layout's order: the jagged [entry][shift] array verifier_ray's
+// query.pcs.VerifyInput.entry_claims expects (one inner slice per opened
+// column, indexed by DeepEntry.EntryIdx which increments in this same order).
+func entryClaims(layout []pcsSizeBundle, claimed []fri.BatchClaimedValues) [][]field.Ext {
+	var out [][]field.Ext
 	for _, bundle := range layout {
 		for _, e := range bundle.Entries {
 			sized := claimed[e.BatchIdx][bundle.SizeLog2]
+			var row []field.Ext
 			if e.IsExt {
-				flat = append(flat, sized.Ext[e.RowIdx]...)
+				row = append(row, sized.Ext[e.RowIdx]...)
 			} else {
-				flat = append(flat, sized.Base[e.RowIdx]...)
+				row = append(row, sized.Base[e.RowIdx]...)
 			}
+			out = append(out, row)
 		}
 	}
-	return flat
+	return out
 }
 
 // pcsMakeEncoders builds n RSEncoders for sizes 2^0..2^(n-1) at a uniform
@@ -277,7 +291,7 @@ type pcsCaseData struct {
 	LogFinalPolySize  uint8
 	Layout            []pcsSizeBundle
 	Roots             []field.Octuplet
-	ClaimedValues     []field.Ext
+	ClaimedValues     [][]field.Ext
 	Zeta              field.Ext
 	FoldAlphas        []field.Ext
 	QueryPositions    []int
@@ -340,7 +354,7 @@ func buildPCSScenarioData(s pcsScenario) pcsCaseData {
 		LogFinalPolySize: s.LogFinalPolySize,
 		Layout:           layout,
 		Roots:            roots,
-		ClaimedValues:    flattenClaims(layout, claimed),
+		ClaimedValues:    entryClaims(layout, claimed),
 		Zeta:             s.Zeta,
 		FoldAlphas:       s.FoldAlphas,
 		QueryPositions:   s.Positions,
@@ -460,8 +474,14 @@ func buildBoundaryPCSScenario() pcsCaseData {
 func corruptBoundaryClaimData(base pcsCaseData) pcsCaseData {
 	c := base
 	c.Name = "boundary_round_corrupted_claim"
-	c.ClaimedValues = append([]field.Ext(nil), base.ClaimedValues...)
-	c.ClaimedValues[len(c.ClaimedValues)-1] = extLift(999_999)
+	// Deep-copy the jagged claims, then tamper the last opened column's last
+	// shift value (the boundary batch's only claimed value).
+	c.ClaimedValues = make([][]field.Ext, len(base.ClaimedValues))
+	for i, row := range base.ClaimedValues {
+		c.ClaimedValues[i] = append([]field.Ext(nil), row...)
+	}
+	last := c.ClaimedValues[len(c.ClaimedValues)-1]
+	last[len(last)-1] = extLift(999_999)
 	c.ExpectVerifyError = "BoundaryAuxNotConstant"
 	return c
 }
@@ -481,13 +501,27 @@ func pcsSystemLiteral(params fri.Params, logFinalPolySize uint8, layout []pcsSiz
 			if j > 0 {
 				b.WriteString(", ")
 			}
-			fmt.Fprintf(&b, ".{ .batch_idx = %d, .is_ext = %t, .row_idx = %d, .claim_offset = %d, .shifts = &[_]usize%s }",
-				e.BatchIdx, e.IsExt, e.RowIdx, e.ClaimOffset, intArrayLiteral(e.Shifts))
+			fmt.Fprintf(&b, ".{ .batch_idx = %d, .is_ext = %t, .row_idx = %d, .entry_idx = %d, .shifts = &[_]usize%s }",
+				e.BatchIdx, e.IsExt, e.RowIdx, e.EntryIdx, intArrayLiteral(e.Shifts))
 		}
 		b.WriteString(" } }")
 	}
-	b.WriteString(" } }")
+	fmt.Fprintf(&b, " }, .num_batches = %d }", numBatches(layout))
 	return b.String()
+}
+
+// numBatches counts the distinct batch indices referenced by the layout — the
+// length of the roots slice the engine authenticates against.
+func numBatches(layout []pcsSizeBundle) int {
+	max := -1
+	for _, bundle := range layout {
+		for _, e := range bundle.Entries {
+			if e.BatchIdx > max {
+				max = e.BatchIdx
+			}
+		}
+	}
+	return max + 1
 }
 
 func rowOpeningLiteral(r fri.RowOpening) string {
@@ -554,7 +588,7 @@ func writePCSCase(out *bytes.Buffer, c pcsCaseData) {
 	fmt.Fprintf(out, "        .name = \"%s\",\n", c.Name)
 	fmt.Fprintf(out, "        .system = %s,\n", pcsSystemLiteral(c.Params, c.LogFinalPolySize, c.Layout))
 	fmt.Fprintf(out, "        .roots = &%s,\n", commitmentSlice(c.Roots))
-	fmt.Fprintf(out, "        .claimed_values = &%s,\n", extSlice(c.ClaimedValues))
+	fmt.Fprintf(out, "        .entry_claims = &%s,\n", extJagged(c.ClaimedValues))
 	fmt.Fprintf(out, "        .zeta = %s,\n", ext6(c.Zeta))
 	fmt.Fprintf(out, "        .fold_alphas = &%s,\n", extSlice(c.FoldAlphas))
 	fmt.Fprintf(out, "        .query_positions = &[_]usize%s,\n", intArrayLiteral(c.QueryPositions))
@@ -579,7 +613,7 @@ func writePCSFixtures() error {
 	fmt.Fprintln(&out, "pub const BranchData = struct { leaf: [8]u32, siblings: []const [8]u32 };")
 	fmt.Fprintln(&out, "pub const FriProofData = struct { round_roots: []const [8]u32, final_poly: []const [6]u32, running_queries: []const []const BranchData };")
 	fmt.Fprintln(&out, "pub const OpeningProofData = struct { input_queries: []const []const InputTreeOpeningData, fri_proof: FriProofData };")
-	fmt.Fprintln(&out, "pub const PcsCase = struct { name: []const u8, system: pcs.System, roots: []const [8]u32, claimed_values: []const [6]u32, zeta: [6]u32, fold_alphas: []const [6]u32, query_positions: []const usize, proof: OpeningProofData, expect_verify_error: []const u8 = \"\" };")
+	fmt.Fprintln(&out, "pub const PcsCase = struct { name: []const u8, system: pcs.System, roots: []const [8]u32, entry_claims: []const []const [6]u32, zeta: [6]u32, fold_alphas: []const [6]u32, query_positions: []const usize, proof: OpeningProofData, expect_verify_error: []const u8 = \"\" };")
 	fmt.Fprintln(&out)
 
 	boundary := buildBoundaryPCSScenario()

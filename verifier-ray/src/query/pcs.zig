@@ -44,9 +44,11 @@ pub const DeepEntry = struct {
     batch_idx: usize,
     is_ext: bool,
     row_idx: usize,
-    /// Offset into `VerifyInput.claimed_values`; this entry owns
-    /// `claimed_values[claim_offset..][0..shifts.len]`.
-    claim_offset: usize,
+    /// Index of this opened column into `VerifyInput.entry_claims`, in canonical
+    /// layout order (bundles high→low size, then entries within a bundle). This
+    /// entry owns the whole inner slice `entry_claims[entry_idx]`, whose length
+    /// equals `shifts.len` (one claimed value per opened rotation).
+    entry_idx: usize,
     /// Shift s means this row is claimed at zeta * omega_N^s, omega_N the
     /// generator of the size-2^size_log2 (bundle) domain.
     shifts: []const usize,
@@ -57,13 +59,80 @@ pub const SizeBundle = struct {
     entries: []const DeepEntry,
 };
 
+/// Locates one vanishing claim inside the flat `entry_claims`: opened column
+/// `entry` (canonical layout order) at its `shift`-th opened rotation. The
+/// vanishing sub-verifier's k-th witness/quotient claim is exactly
+/// `entry_claims[entry][shift]` — the same runtime cell prover-ray's PCS compiler
+/// opens. Emitted by codegen from the LagrangeEval ↔ committed-column binding so
+/// the higher-level verifier can feed PCS-*authenticated* claims into vanishing.
+pub const ClaimRef = struct {
+    entry: usize,
+    shift: usize,
+};
+
+/// Where a committed batch's Merkle root is bound. A batch root MUST be tied to
+/// the Fiat-Shamir transcript that derives zeta — otherwise a prover could open
+/// against a forged root while zeta stays bound to the honest commitment, and
+/// the opening would be authenticated at a point it is not committed to.
+///
+/// Two provenances, mirroring prover-ray's single-source `collectRoots` (which
+/// reads `rt.Commitments` — the exact octuplets the protocol replay absorbs into
+/// the transcript):
+///   - `.round`: an interactive batch. Its root IS the oracle commitment absorbed
+///     in round message `round_index` (the same one squeezed into zeta), read
+///     from `proof.rounds[round_index]` rather than the proof's opening payload.
+///   - `.precomputed`: the static precomputed batch. Its root is a compile-time
+///     constant (like a verification key), fixed by codegen and trusted by
+///     construction — never carried in a round message.
+pub const BatchRoot = union(enum) {
+    /// Index into `proof.rounds`; the batch root is that round's sole oracle
+    /// commitment (`rounds[round_index].columns[0].oracle_commitment`).
+    round: usize,
+    /// Compile-time precomputed-batch root, emitted by codegen.
+    precomputed: poseidon2.Digest,
+};
+
 /// The canonical layout, compiled once by codegen from a protocol's batch
 /// shapes and shift schedules: prover-ray's `layout`. Sizes appear in
 /// descending order, matching `canonicalLayout`.
 pub const System = struct {
     params: fri.Params,
     layout: []const SizeBundle,
-    zeta_coin_index: usize = 0,
+
+    /// Number of distinct committed batches referenced by `layout` — the length
+    /// of the authenticated roots slice `verify` consumes and of `batch_roots`.
+    num_batches: usize,
+
+    /// Per-batch root provenance, in canonical batch order (index == batch
+    /// index). `verifier.verify` builds the authenticated batch roots from this —
+    /// reading interactive-batch roots out of the transcript-bound round oracle
+    /// commitments and precomputed roots from the compile-time constant — so the
+    /// root a batch is Merkle-authenticated against is provably the one zeta is
+    /// bound to. Length MUST equal `num_batches`.
+    ///
+    /// Empty (`&.{}`) only for legacy callers that pass `VerifyInput.roots`
+    /// directly (the standalone engine tests); the full `verifier.verify` path
+    /// requires it.
+    batch_roots: []const BatchRoot = &.{},
+
+    /// Routes each vanishing witness/quotient claim to its authenticated value in
+    /// the flat `entry_claims`. `witness_map[k]` (resp. `quotient_map[k]`) is the
+    /// `ClaimRef` for the vanishing sub-verifier's k-th witness (resp. quotient)
+    /// claim. `verifier.verify` uses these to feed the *PCS-authenticated* claims
+    /// into the vanishing check, so a prover cannot hand the two sub-verifiers
+    /// different values for the same column. Lengths must equal the vanishing
+    /// System's `total_witness_claims` / `total_quotient_claims`. Empty for the
+    /// standalone engine tests (which never route into vanishing).
+    witness_map: []const ClaimRef = &.{},
+    quotient_map: []const ClaimRef = &.{},
+
+    /// Flat `all_coins` index of zeta — the shared opening point, also the
+    /// vanishing modules' eval coin. `verifier.verify` reads
+    /// `all_coins[zeta_coin_index]` and passes it as the opening point, so zeta is
+    /// Fiat-Shamir-derived, never taken from the proof. Required when PCS is
+    /// enabled: `null` makes `verifier.verify` fail at comptime rather than
+    /// silently selecting coin 0 (a mis-binding that would break soundness).
+    zeta_coin_index: ?usize = null,
 };
 
 pub const OpeningProof = struct {
@@ -79,9 +148,13 @@ pub const VerifyInput = struct {
     /// here at comptime instead of at verify time since batch identity is
     /// already static).
     roots: []const poseidon2.Digest,
-    /// Flattened claims; entry e reads
-    /// `claimed_values[e.claim_offset..][0..e.shifts.len]`.
-    claimed_values: []const ext.Ext,
+    /// Per-opened-column claimed evaluations, in canonical layout order:
+    /// `entry_claims[e.entry_idx][k]` is the claim for entry `e`'s `k`-th shift,
+    /// so `entry_claims[e.entry_idx].len == e.shifts.len`. Jagged rather than a
+    /// flat slice so a `ClaimRef{entry, shift}` (used by the higher-level
+    /// verifier to feed PCS-authenticated claims to other sub-verifiers) is a
+    /// direct double-index with no offset arithmetic.
+    entry_claims: []const []const ext.Ext,
     zeta: ext.Ext,
     fold_alphas: []const ext.Ext,
     query_positions: []const usize,
@@ -128,16 +201,26 @@ pub fn deriveChallenges(
     var challenges = PcsChallenges(system){};
 
     // One challenge per intermediate layer root, absorbing the root between
-    // squeezes; then the final round's challenge, with no root after it. When a
-    // protocol never folds (num_rounds == 0) the buffer is empty and this whole
-    // block is elided at comptime rather than indexing into a [0]ext.Ext.
+    // squeezes. When a protocol never folds (num_rounds == 0) `fold_alphas` is a
+    // [0]ext.Ext, so this loop is elided at comptime rather than indexing into an
+    // empty array.
     if (comptime num_rounds > 0) {
         for (fri_proof.round_roots, 0..) |root, i| {
             challenges.fold_alphas[i] = transcript.randomExt();
             transcript.updateElements(&root);
         }
-        challenges.fold_alphas[num_rounds - 1] = transcript.randomExt();
     }
+
+    // The final round's challenge is squeezed with no root after it. prover-ray
+    // (`wiop/compilers/pcs/pcs.go` `verify`) squeezes this UNCONDITIONALLY,
+    // including the D=1 (num_rounds == 0) case where the loop above is empty. The
+    // squeeze mutates the transcript (the safeguard update after every squeeze)
+    // BEFORE `final_poly` is absorbed and the query positions are drawn, so
+    // skipping it for D=1 would desynchronise the positions from the prover.
+    // Squeeze it always; keep it only when a fold slot exists (for D=1 there is
+    // none, so the value is discarded — the transcript side effect is the point).
+    const final_alpha = transcript.randomExt();
+    if (comptime num_rounds > 0) challenges.fold_alphas[num_rounds - 1] = final_alpha;
 
     transcript.updateExt(fri_proof.final_poly);
 
@@ -151,7 +234,15 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
     const info = comptime computeLayoutInfo(system.layout);
 
     if (input.roots.len != info.distinct_count) return Error.RootCountMismatch;
-    if (input.claimed_values.len != info.total_claims) return Error.ClaimedValueCountMismatch;
+    if (input.entry_claims.len != info.total_entries) return Error.ClaimedValueCountMismatch;
+    // Each opened column owns exactly `shifts.len` claimed values. Checking the
+    // per-entry shape up front lets `reconstructQueryValueAt` index
+    // `entry_claims[entry_idx][k]` without a bounds check in the hot loop.
+    inline for (system.layout) |bundle| {
+        inline for (bundle.entries) |entry| {
+            if (input.entry_claims[entry.entry_idx].len != entry.shifts.len) return Error.ClaimedValueCountMismatch;
+        }
+    }
     if (comptime systemHasMultiShiftEntry(system)) {
         if (input.zeta.isZero()) return Error.ZetaZeroWithMultipleShifts;
     }
@@ -212,7 +303,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
                 opening,
                 info,
                 level_size,
-                input.claimed_values,
+                input.entry_claims,
                 input.zeta,
                 alpha_deep,
                 fri.domainPointExt(domain_log_size, level_pos),
@@ -224,7 +315,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
                 opening,
                 info,
                 level_size,
-                input.claimed_values,
+                input.entry_claims,
                 input.zeta,
                 alpha_deep,
                 fri.domainPointExt(domain_log_size, level_pos ^ 1),
@@ -301,6 +392,9 @@ const LayoutInfo = struct {
     index_by_batch: []const usize,
     distinct_count: usize,
     total_claims: usize,
+    /// Number of opened columns across the whole layout — the length of
+    /// `VerifyInput.entry_claims`.
+    total_entries: usize,
 };
 
 fn computeLayoutInfo(comptime layout: []const SizeBundle) LayoutInfo {
@@ -316,6 +410,7 @@ fn computeLayoutInfo(comptime layout: []const SizeBundle) LayoutInfo {
         var assigned: [num_batches]bool = [_]bool{false} ** num_batches;
         var distinct_count: usize = 0;
         var total_claims: usize = 0;
+        var total_entries: usize = 0;
         for (layout) |bundle| {
             for (bundle.entries) |entry| {
                 if (!assigned[entry.batch_idx]) {
@@ -324,10 +419,11 @@ fn computeLayoutInfo(comptime layout: []const SizeBundle) LayoutInfo {
                     distinct_count += 1;
                 }
                 total_claims += entry.shifts.len;
+                total_entries += 1;
             }
         }
         const final_index_by_batch = index_by_batch;
-        return .{ .index_by_batch = &final_index_by_batch, .distinct_count = distinct_count, .total_claims = total_claims };
+        return .{ .index_by_batch = &final_index_by_batch, .distinct_count = distinct_count, .total_claims = total_claims, .total_entries = total_entries };
     }
 }
 
@@ -431,7 +527,7 @@ fn reconstructQueryValueAt(
     opening: []const merkle.InputTreeOpening,
     comptime info: LayoutInfo,
     level_size: usize,
-    claimed_values: []const ext.Ext,
+    entry_claims: []const []const ext.Ext,
     zeta: ext.Ext,
     alpha_deep: ext.Ext,
     x: ext.Ext,
@@ -453,7 +549,7 @@ fn reconstructQueryValueAt(
             const point = shiftedPoint(bundle.size_log2, shift, zeta);
             const denom = x.sub(point);
             if (denom.isZero()) return Error.ClaimPointOnQueryPoint;
-            const numerator = entry_value.sub(claimed_values[entry.claim_offset + k]);
+            const numerator = entry_value.sub(entry_claims[entry.entry_idx][k]);
             term = term.add(numerator.mul(denom.inverse()));
         }
         value = value.mul(alpha_deep).add(term);

@@ -10,14 +10,14 @@ pub const InputTreeOpeningData = struct { siblings: []const [8]u32, leaves: []co
 pub const BranchData = struct { leaf: [8]u32, siblings: []const [8]u32 };
 pub const FriProofData = struct { round_roots: []const [8]u32, final_poly: []const [6]u32, running_queries: []const []const BranchData };
 pub const OpeningProofData = struct { input_queries: []const []const InputTreeOpeningData, fri_proof: FriProofData };
-pub const PcsCase = struct { name: []const u8, system: pcs.System, roots: []const [8]u32, claimed_values: []const [6]u32, zeta: [6]u32, fold_alphas: []const [6]u32, query_positions: []const usize, proof: OpeningProofData, expect_verify_error: []const u8 = "" };
+pub const PcsCase = struct { name: []const u8, system: pcs.System, roots: []const [8]u32, entry_claims: []const []const [6]u32, zeta: [6]u32, fold_alphas: []const [6]u32, query_positions: []const usize, proof: OpeningProofData, expect_verify_error: []const u8 = "" };
 
 pub const pcs_cases = [_]PcsCase{
     .{
         .name = "normal_flow",
-        .system = pcs.System{ .params = fri.Params{ .log_codeword_size = 3, .log_plaintext_size = 2, .log_final_poly_size = 0, .num_queries = 1 }, .layout = &.{ .{ .size_log2 = 2, .entries = &.{ .{ .batch_idx = 0, .is_ext = true, .row_idx = 0, .claim_offset = 0, .shifts = &[_]usize{0} }, .{ .batch_idx = 0, .is_ext = true, .row_idx = 1, .claim_offset = 1, .shifts = &[_]usize{1} } } }, .{ .size_log2 = 1, .entries = &.{.{ .batch_idx = 0, .is_ext = true, .row_idx = 0, .claim_offset = 2, .shifts = &[_]usize{0} }} } } },
+        .system = pcs.System{ .params = fri.Params{ .log_codeword_size = 3, .log_plaintext_size = 2, .log_final_poly_size = 0, .num_queries = 1 }, .layout = &.{ .{ .size_log2 = 2, .entries = &.{ .{ .batch_idx = 0, .is_ext = true, .row_idx = 0, .entry_idx = 0, .shifts = &[_]usize{0} }, .{ .batch_idx = 0, .is_ext = true, .row_idx = 1, .entry_idx = 1, .shifts = &[_]usize{1} } } }, .{ .size_log2 = 1, .entries = &.{.{ .batch_idx = 0, .is_ext = true, .row_idx = 0, .entry_idx = 2, .shifts = &[_]usize{0} }} } }, .num_batches = 1 },
         .roots = &.{.{ 312027950, 1730484510, 1856895395, 720931748, 1414743293, 651794019, 1163441643, 1434337365 }},
-        .claimed_values = &.{ .{ 927204618, 1538709283, 1013103993, 1268331236, 1753230135, 1190885497 }, .{ 1203373308, 591921738, 1117520714, 862323271, 377422270, 939786602 }, .{ 92, 2130706432, 1065353215, 1065353214, 1065353213, 1065353211 } },
+        .entry_claims = &.{ &.{.{ 927204618, 1538709283, 1013103993, 1268331236, 1753230135, 1190885497 }}, &.{.{ 1203373308, 591921738, 1117520714, 862323271, 377422270, 939786602 }}, &.{.{ 92, 2130706432, 1065353215, 1065353214, 1065353213, 1065353211 }} },
         .zeta = .{ 19, 2, 3, 5, 7, 11 },
         .fold_alphas = &.{ .{ 29, 1, 0, 0, 0, 0 }, .{ 31, 0, 1, 0, 0, 0 } },
         .query_positions = &[_]usize{3},
@@ -25,9 +25,9 @@ pub const pcs_cases = [_]PcsCase{
     },
     .{
         .name = "d1_top_level",
-        .system = pcs.System{ .params = fri.Params{ .log_codeword_size = 2, .log_plaintext_size = 0, .log_final_poly_size = 0, .num_queries = 1 }, .layout = &.{.{ .size_log2 = 0, .entries = &.{.{ .batch_idx = 0, .is_ext = true, .row_idx = 0, .claim_offset = 0, .shifts = &[_]usize{0} }} }} },
+        .system = pcs.System{ .params = fri.Params{ .log_codeword_size = 2, .log_plaintext_size = 0, .log_final_poly_size = 0, .num_queries = 1 }, .layout = &.{.{ .size_log2 = 0, .entries = &.{.{ .batch_idx = 0, .is_ext = true, .row_idx = 0, .entry_idx = 0, .shifts = &[_]usize{0} }} }}, .num_batches = 1 },
         .roots = &.{.{ 573566229, 1459539590, 1308481344, 396594145, 789435716, 757393619, 1435553532, 1664127553 }},
-        .claimed_values = &.{.{ 42, 0, 0, 0, 0, 0 }},
+        .entry_claims = &.{&.{.{ 42, 0, 0, 0, 0, 0 }}},
         .zeta = .{ 7, 1, 0, 0, 0, 0 },
         .fold_alphas = &.{},
         .query_positions = &[_]usize{1},
@@ -35,9 +35,9 @@ pub const pcs_cases = [_]PcsCase{
     },
     .{
         .name = "boundary_round",
-        .system = pcs.System{ .params = fri.Params{ .log_codeword_size = 4, .log_plaintext_size = 3, .log_final_poly_size = 1, .num_queries = 1 }, .layout = &.{ .{ .size_log2 = 3, .entries = &.{.{ .batch_idx = 0, .is_ext = true, .row_idx = 0, .claim_offset = 0, .shifts = &[_]usize{0} }} }, .{ .size_log2 = 1, .entries = &.{.{ .batch_idx = 1, .is_ext = true, .row_idx = 0, .claim_offset = 1, .shifts = &[_]usize{0} }} } } },
+        .system = pcs.System{ .params = fri.Params{ .log_codeword_size = 4, .log_plaintext_size = 3, .log_final_poly_size = 1, .num_queries = 1 }, .layout = &.{ .{ .size_log2 = 3, .entries = &.{.{ .batch_idx = 0, .is_ext = true, .row_idx = 0, .entry_idx = 0, .shifts = &[_]usize{0} }} }, .{ .size_log2 = 1, .entries = &.{.{ .batch_idx = 1, .is_ext = true, .row_idx = 0, .entry_idx = 1, .shifts = &[_]usize{0} }} } }, .num_batches = 2 },
         .roots = &.{ .{ 595185922, 1728714114, 1808282941, 1856929070, 524915110, 577220697, 113872727, 1481543617 }, .{ 224704290, 968037185, 1827942646, 1522613021, 973361900, 48385340, 1898120432, 1617795946 } },
-        .claimed_values = &.{ .{ 2065898103, 487331367, 510831121, 345104803, 1285639363, 2086399481 }, .{ 390, 1065353215, 1065353214, 1065353213, 1065353211, 1065353210 } },
+        .entry_claims = &.{ &.{.{ 2065898103, 487331367, 510831121, 345104803, 1285639363, 2086399481 }}, &.{.{ 390, 1065353215, 1065353214, 1065353213, 1065353211, 1065353210 }} },
         .zeta = .{ 23, 3, 5, 7, 11, 13 },
         .fold_alphas = &.{ .{ 29, 1, 0, 0, 0, 0 }, .{ 31, 0, 1, 0, 0, 0 } },
         .query_positions = &[_]usize{5},
@@ -45,9 +45,9 @@ pub const pcs_cases = [_]PcsCase{
     },
     .{
         .name = "boundary_round_corrupted_claim",
-        .system = pcs.System{ .params = fri.Params{ .log_codeword_size = 4, .log_plaintext_size = 3, .log_final_poly_size = 1, .num_queries = 1 }, .layout = &.{ .{ .size_log2 = 3, .entries = &.{.{ .batch_idx = 0, .is_ext = true, .row_idx = 0, .claim_offset = 0, .shifts = &[_]usize{0} }} }, .{ .size_log2 = 1, .entries = &.{.{ .batch_idx = 1, .is_ext = true, .row_idx = 0, .claim_offset = 1, .shifts = &[_]usize{0} }} } } },
+        .system = pcs.System{ .params = fri.Params{ .log_codeword_size = 4, .log_plaintext_size = 3, .log_final_poly_size = 1, .num_queries = 1 }, .layout = &.{ .{ .size_log2 = 3, .entries = &.{.{ .batch_idx = 0, .is_ext = true, .row_idx = 0, .entry_idx = 0, .shifts = &[_]usize{0} }} }, .{ .size_log2 = 1, .entries = &.{.{ .batch_idx = 1, .is_ext = true, .row_idx = 0, .entry_idx = 1, .shifts = &[_]usize{0} }} } }, .num_batches = 2 },
         .roots = &.{ .{ 595185922, 1728714114, 1808282941, 1856929070, 524915110, 577220697, 113872727, 1481543617 }, .{ 224704290, 968037185, 1827942646, 1522613021, 973361900, 48385340, 1898120432, 1617795946 } },
-        .claimed_values = &.{ .{ 2065898103, 487331367, 510831121, 345104803, 1285639363, 2086399481 }, .{ 999999, 0, 0, 0, 0, 0 } },
+        .entry_claims = &.{ &.{.{ 2065898103, 487331367, 510831121, 345104803, 1285639363, 2086399481 }}, &.{.{ 999999, 0, 0, 0, 0, 0 }} },
         .zeta = .{ 23, 3, 5, 7, 11, 13 },
         .fold_alphas = &.{ .{ 29, 1, 0, 0, 0, 0 }, .{ 31, 0, 1, 0, 0, 0 } },
         .query_positions = &[_]usize{5},
