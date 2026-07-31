@@ -46,8 +46,8 @@ func TestPublicInput(t *testing.T) {
 		// Open col[pos] into a cell; Open registers the local constraint
 		// cell == col[pos], which soundly binds the public input into the proof.
 		cell := col.At(pos).Open(sys.Context.Childf("my-public-input"))
-		layout := &wiop.PublicInputLayout{GuestPublicOutputs: []*wiop.Cell{cell}}
-		layout.Register(sys)
+		sys.PublicInputs = &wiop.PublicInputLayout{}
+		sys.PublicInputs.Register(wiop.GuestPublicOutputsPI, cell)
 		localvanishing.Compile(sys)
 		global.Compile(sys)
 		return sys, col, cell
@@ -96,7 +96,8 @@ func TestPublicInputDynamicColumn(t *testing.T) {
 		m := sys.NewDynamicModule(sys.Context.Childf("m"), wiop.PaddingDirectionRight)
 		col := m.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
 		cell := col.At(pos).Open(sys.Context.Childf("open"))
-		(&wiop.PublicInputLayout{GuestPublicOutputs: []*wiop.Cell{cell}}).Register(sys)
+		sys.PublicInputs = &wiop.PublicInputLayout{}
+		sys.PublicInputs.Register(wiop.GuestPublicOutputsPI, cell)
 		localvanishing.Compile(sys)
 		global.Compile(sys)
 		return sys, col, cell
@@ -132,8 +133,9 @@ func TestPublicInputLayoutUnpack(t *testing.T) {
 	col := m.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
 	cellA := col.At(0).Open(sys.Context.Childf("a"))
 	cellB := col.At(1).Open(sys.Context.Childf("b"))
-	layout := &wiop.PublicInputLayout{GuestPublicOutputs: []*wiop.Cell{cellA, cellB}}
-	layout.Register(sys)
+	layout := &wiop.PublicInputLayout{}
+	layout.Register(wiop.GuestPublicOutputsPI, cellA, cellB)
+	sys.PublicInputs = layout
 	localvanishing.Compile(sys)
 	global.Compile(sys)
 
@@ -150,8 +152,9 @@ func TestPublicInputLayoutUnpack(t *testing.T) {
 	require.Error(t, err)
 }
 
-// TestRegisterDuplicatedPublicInput checks the registration guards:
-// registering the same cell twice is rejected (dedup).
+// TestRegisterDuplicatedPublicInputs checks that Register rejects duplicates
+// immediately (not deferred to Prove time), both across calls and within a
+// single variadic call.
 func TestRegisterDuplicatedPublicInputs(t *testing.T) {
 	sys := wiop.NewSystemf("pi-guards")
 	r0 := sys.NewRound()
@@ -159,8 +162,27 @@ func TestRegisterDuplicatedPublicInputs(t *testing.T) {
 	col := m.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
 	cell := col.At(0).Open(sys.Context.Childf("open"))
 
-	// A layout containing the same cell twice is rejected.
+	// Same cell in two separate Register calls.
+	layout := &wiop.PublicInputLayout{}
+	layout.Register(wiop.GuestPublicOutputsPI, cell)
 	require.Panics(t, func() {
-		(&wiop.PublicInputLayout{GuestPublicOutputs: []*wiop.Cell{cell, cell}}).Register(sys)
-	}, "duplicate cell must be rejected")
+		layout.Register(wiop.GuestPublicOutputsPI, cell)
+	}, "duplicate across calls must be rejected")
+
+	// Same cell twice within one variadic call.
+	require.Panics(t, func() {
+		(&wiop.PublicInputLayout{}).Register(wiop.GuestPublicOutputsPI, cell, cell)
+	}, "duplicate within one call must be rejected")
+
+	// Registering the same cell under two different fields is still a duplicate.
+	require.Panics(t, func() {
+		l := &wiop.PublicInputLayout{}
+		l.Register(wiop.ProgramVKPI, cell)
+		l.Register(wiop.GuestPublicOutputsPI, cell)
+	}, "duplicate across fields must be rejected")
+
+	// IsLastShardPI takes exactly one cell.
+	require.Panics(t, func() {
+		(&wiop.PublicInputLayout{}).Register(wiop.IsLastShardPI, cell, cell)
+	}, "IsLastShardPI must reject more than one cell")
 }

@@ -80,7 +80,8 @@ func (sys *System) publicInputCells() []*Cell {
 	if sys.PublicInputs == nil {
 		return nil
 	}
-	return sys.PublicInputs.Cells()
+	sys.PublicInputs.seal()
+	return sys.PublicInputs.cachedCells
 }
 
 // publicInputIndex maps each registered public-input cell's [ObjectID] to its

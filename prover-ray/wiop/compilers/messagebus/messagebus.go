@@ -140,9 +140,9 @@ func Compile(sys *wiop.System) {
 		nums, dens := buildPermutationFactors(alpha, beta, entries)
 		gp := sys.NewGrandProduct(compCtx.Childf("handle-%s", h), nums, dens)
 		cellByHandle[h] = gp.Result
-		if sys.PublicInputs != nil {
-			sys.PublicInputs.RegisterMessageBus(h, gp.Result)
-		}
+
+		sys.PublicInputs.Register(wiop.MessageBusPI, gp.Result)
+
 	}
 
 	// One in-shard verifier action per handle: this shard's product on the
