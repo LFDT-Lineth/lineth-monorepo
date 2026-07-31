@@ -75,6 +75,16 @@ func (table MultiSizeTable) Encode(encoders []*RSEncoder) MultiSizeTable {
 		encoded[i].Base = slabColumns[field.Element](len(table[i].Base), N)
 		encoded[i].Ext = slabColumns[field.Ext](len(table[i].Ext), N)
 	}
+	parallel.Execute(len(work), func(start, end int) {
+		for w := start; w < end; w++ {
+			it := work[w]
+			if it.ext {
+				encoded[it.i].Ext[it.k] = encoders[it.i].EncodeExt(table[it.i].Ext[it.k], fft.WithNbTasks(1))
+			} else {
+				encoded[it.i].Base[it.k] = encoders[it.i].Encode(table[it.i].Base[it.k], fft.WithNbTasks(1))
+			}
+		}
+	})
 
 	// Each row's RS encode is an independent per-row FFT writing a disjoint
 	// output slice, so flatten (size, base/ext, row) into work items and encode
