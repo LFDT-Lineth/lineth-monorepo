@@ -33,9 +33,9 @@ fn main() {
         var y3:u256 = reduce_256(in_y3[i], p)
 
         // Check P1, P2, and P3 are on y^2 = x^3 + 7 over Fp.
-        assert_on_curve_secp256k1(x1, y1)
-        assert_on_curve_secp256k1(x2, y2)
-        assert_on_curve_secp256k1(x3, y3)
+        assert_on_curve_affine_secp256k1(x1, y1)
+        assert_on_curve_affine_secp256k1(x2, y2)
+        assert_on_curve_affine_secp256k1(x3, y3)
 
         // complete projective addition: lift P1, P2, add, convert back to affine
         var X1:u256, Y1:u256, Z1:u256
