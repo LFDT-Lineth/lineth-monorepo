@@ -1,3 +1,17 @@
+## [unreleased]
+
+### 🚀 Features
+
+- *(coordinator)* Support custom transaction signers (#3597)
+
+### 🐛 Bug Fixes
+
+- *(coordinator)* Correct ByteArray equality checks in domain classes (#3625)
+- *(coordinator)* Address error handling issues from review (#3626)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(coordinator)* Remove dead code and apply small cleanups from review (#3627)
 ## [1.1.0] - 2026-07-28
 
 ### 🚀 Features
