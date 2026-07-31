@@ -246,5 +246,5 @@ fn scalar_mul_affine_secp256k1(k: u256, Px:u256, Py:u256) -> (Qx:u256, Qy:u256) 
     var QX:u256, QY:u256, QZ:u256
     QX, QY, QZ = scalar_mul_projective_secp256k1(k, PX, PY, PZ)
 
-    Qx, Qy = projective_to_affine_secp256k1(PX, PY, PZ)
+    Qx, Qy = projective_to_affine_secp256k1(QX, QY, QZ)
 } 
