@@ -95,10 +95,9 @@ func (c *Core) Prove(ctx context.Context, job Job) Result {
 	}
 }
 
-// buildInputs converts a Job's Payload into the three ZkC pub-input values,
-// keyed by name (see [encodeInputs]). ELF memory blobs are pre-extracted in
-// [New] and reused across calls; only the per-job StatelessInput blobs
-// (schema id + SSZ body) differ.
+// buildInputs converts a Job's Payload into the guest and memory inputs ZkC
+// expects. ELF memory blobs are pre-extracted in [New] and reused across calls;
+// only the per-job guest input data section differs.
 func (c *Core) buildInputs(job Job) (map[string][]byte, error) {
 	if err := sanityCheckJobs(job); err != nil {
 		return nil, err
@@ -117,7 +116,7 @@ func sanityCheckJobs(job Job) error {
 			job.StartBlock, job.EndBlock)
 	}
 
-	// Multi-block SSZ conflation is not implemented yet.
+	// Multi-block guest-input conflation is not implemented yet.
 	if job.EndBlock > job.StartBlock {
 		return fmt.Errorf("multi-block job [%d, %d]: %w",
 			job.StartBlock, job.EndBlock, ErrNotImplemented)
@@ -152,9 +151,9 @@ func SerializeProof(_ wiop.Proof, _ wiop.PublicInput) ([]byte, error) {
 	return nil, fmt.Errorf("SerializeProof: %w", ErrNotImplemented)
 }
 
-// decodePayload extracts the raw SSZ bytes from a Job's Payload.
-// Today it is a pass-through; once the coordinator API encoding is finalized
-// this will handle any wrapping (JSON envelope, multi-block conflation, etc.).
+// decodePayload extracts the guest input bytes from a Job's Payload.
+// Today it is a pass-through; request adapters already do protocol-specific
+// encoding before constructing Jobs.
 func decodePayload(job Job) []byte {
 	return job.Payload
 }
