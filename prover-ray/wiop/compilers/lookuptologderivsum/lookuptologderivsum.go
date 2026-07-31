@@ -142,8 +142,8 @@ func Compile(sys *wiop.System) {
 		fractions  []wiop.Fraction
 		consumedQs []*wiop.TableRelationQuery
 	)
-	for _, g := range groups {
-		gFractions := compileGroup(g, gamma, coinRound, compCtx)
+	for i, g := range groups {
+		gFractions := compileGroup(g, i, gamma, coinRound, compCtx)
 		fractions = append(fractions, gFractions...)
 		consumedQs = append(consumedQs, g.queries...)
 	}
@@ -388,11 +388,16 @@ func staticTableRows(tables []wiop.Table) uint64 {
 // there, so M is committed before α and γ are sampled in coinRound.
 func compileGroup(
 	g *lookupGroup,
+	groupIdx int,
 	gamma *wiop.CoinField,
 	coinRound *wiop.Round,
 	compCtx *wiop.ContextFrame,
 ) []wiop.Fraction {
-	gCtx := compCtx.Childf("group-%p", g)
+	// groupIdx is the group's position in collectGroups' deterministic output
+	// order, so the derived names are reproducible across runs (unlike a
+	// pointer-based name, which would break serializing or diffing the
+	// compiled system).
+	gCtx := compCtx.Childf("group-%d", groupIdx)
 
 	// All B fragments share the same column width (enforced at construction by
 	// wiop.NewInclusion). Take the first fragment's width as the reference and
