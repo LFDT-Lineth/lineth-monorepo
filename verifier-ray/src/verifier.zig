@@ -43,12 +43,13 @@ const profiling = @import("profiling.zig");
 pub const Systems = struct {
     vanishing: vanishing.System,
     logderivativesum: logderivativesum.System = .{},
-    /// FRI/PCS opening verifier. Optional: `null` for protocols with no
-    /// polynomial commitment (the pre-PCS shape, still used by many test
-    /// fixtures). When present, `verify` derives the PCS opening coins (zeta,
-    /// fold challenges, query positions) from the shared Fiat-Shamir transcript
-    /// and checks the opening — the coins are never taken from the proof.
-    pcs: ?pcs.System = null,
+    /// FRI/PCS opening verifier. MANDATORY: there is no "PCS-disabled" protocol.
+    /// `verify` runs PCS first — deriving the opening coins (zeta, fold
+    /// challenges, query positions) from the shared Fiat-Shamir transcript and
+    /// authenticating the committed claims — then feeds those *authenticated*
+    /// claims into the vanishing check. So a prover can neither choose the
+    /// challenges nor hand the two sub-verifiers different claim values.
+    pcs: pcs.System,
     // TODO(new-sub-verifier): add compiled system field here — step 2 above.
 };
 
@@ -62,20 +63,18 @@ pub const Systems = struct {
 /// re-derived deterministically by `protocol.replayWithTranscript` from the round messages.
 pub const Proof = struct {
     rounds: []const protocol.RoundMessage,
-    // vanishing claims
-    witness_claims: []const ext.Ext,
-    quotient_claims: []const ext.Ext,
     /// Per-module domain sizes for dynamically-sized vanishing modules.
     /// Must be populated when the compiled system has dynamic modules;
     /// defaults to an empty slice, which produces `MissingDynamicModuleSize`
     /// if any dynamic module is present.
     module_sizes: []const usize = &.{},
-    /// The PCS opening, present iff `Systems.pcs` is set. Carries only the data
-    /// the verifier is entitled to trust from the prover — the batch roots, the
-    /// claimed evaluations, and the opening proof. The opening COINS (zeta, fold
-    /// challenges, query positions) are NOT here: `verify` derives them from the
-    /// transcript so the prover cannot choose them.
-    pcs_opening: ?PcsOpening = null,
+    /// The PCS opening. MANDATORY: the vanishing witness/quotient claims are
+    /// re-sliced from its authenticated `entry_claims` (there is no "raw claims"
+    /// alternative — that is exactly the gap this closes). Carries only the data
+    /// the verifier is entitled to trust: the claimed evaluations and the opening
+    /// proof. The batch roots and the opening COINS (zeta, fold challenges, query
+    /// positions) are NOT here — `verify` rebuilds/derives them.
+    pcs_opening: PcsOpening,
     // TODO(new-sub-verifier): add claim fields here if needed — step 3 above.
 };
 
@@ -132,47 +131,52 @@ pub fn verify(
         .rounds = proof.rounds,
     };
 
-    // Step 3 — dispatch each sub-verifier with ctx + its own claims.
-    // TODO(new-sub-verifier): add dispatch call here — step 4 above.
-
-    // PCS (when present): continue the SAME transcript to derive the opening
+    // Step 3 — PCS first. It continues the SAME transcript to derive the opening
     // challenges — zeta (the shared opening point), the FRI fold challenges, and
-    // the query positions — then check the opening. Deriving them here (not
-    // reading them from the proof) is the whole point: the prover cannot choose
-    // the Fiat-Shamir challenges. Challenge derivation touches the transcript;
-    // the check is pure arithmetic.
-    if (comptime systems.pcs) |pcs_system| {
-        const opening = proof.pcs_opening orelse return error.MissingPcsOpening;
+    // the query positions — then authenticates the committed claims. Deriving the
+    // challenges here (not reading them from the proof) is the whole point: the
+    // prover cannot choose the Fiat-Shamir challenges.
+    const pcs_system = systems.pcs;
+    const opening = proof.pcs_opening;
 
-        // Rebuild the batch Merkle roots from their transcript-bound provenance
-        // (round oracle commitments + compile-time precomputed roots), NOT from
-        // the proof — so the root each batch is authenticated against is provably
-        // the same octuplet zeta is bound to. Mirrors prover-ray's `collectRoots`.
-        var bound_roots: [pcs_system.num_batches]poseidon2.Digest = undefined;
-        try resolveRoots(pcs_system.batch_roots, proof.rounds, &bound_roots);
+    // Rebuild the batch Merkle roots from their transcript-bound provenance
+    // (round oracle commitments + compile-time precomputed roots), NOT from the
+    // proof — so the root each batch is authenticated against is provably the same
+    // octuplet zeta is bound to. Mirrors prover-ray's `collectRoots`.
+    var bound_roots: [pcs_system.num_batches]poseidon2.Digest = undefined;
+    try resolveRoots(pcs_system.batch_roots, proof.rounds, &bound_roots);
 
-        // zeta is the Fiat-Shamir opening coin, never proof-supplied. Requiring
-        // the index at comptime turns a mis-configured PCS system into a build
-        // error instead of a silent wrong-coin selection.
-        const zeta_index = comptime pcs_system.zeta_coin_index orelse
-            @compileError("pcs: System.zeta_coin_index must be set when PCS is enabled");
+    // zeta is the Fiat-Shamir opening coin, never proof-supplied. Requiring the
+    // index at comptime turns a mis-configured PCS system into a build error
+    // instead of a silent wrong-coin selection.
+    const zeta_index = comptime pcs_system.zeta_coin_index orelse
+        @compileError("pcs: System.zeta_coin_index must be set");
 
-        const pcs_challenges = try pcs.deriveChallenges(pcs_system, &transcript, opening.proof.fri_proof);
-        try pcs.verify(pcs_system, .{
-            .roots = &bound_roots,
-            .entry_claims = opening.entry_claims,
-            .zeta = all_coins[zeta_index],
-            .fold_alphas = &pcs_challenges.fold_alphas,
-            .query_positions = &pcs_challenges.query_positions,
-            .proof = opening.proof,
-        });
-    }
+    const pcs_challenges = try pcs.deriveChallenges(pcs_system, &transcript, opening.proof.fri_proof);
+    try pcs.verify(pcs_system, .{
+        .roots = &bound_roots,
+        .entry_claims = opening.entry_claims,
+        .zeta = all_coins[zeta_index],
+        .fold_alphas = &pcs_challenges.fold_alphas,
+        .query_positions = &pcs_challenges.query_positions,
+        .proof = opening.proof,
+    });
+
+    // Route each PCS-authenticated entry_claim to the vanishing claim slot that
+    // consumes it (same committed column at zeta, per the codegen-emitted maps),
+    // so the vanishing check runs on values the FRI opening just proved — never
+    // on raw proof-supplied claims. This closes the "feed the two sub-verifiers
+    // different values for the same column" gap.
+    var derived_witness: [systems.vanishing.total_witness_claims]ext.Ext = undefined;
+    var derived_quotient: [systems.vanishing.total_quotient_claims]ext.Ext = undefined;
+    try routeClaims(pcs_system.witness_map, opening.entry_claims, &derived_witness);
+    try routeClaims(pcs_system.quotient_map, opening.entry_claims, &derived_quotient);
 
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.vanishing_start, 0);
     try vanishing.verify(systems.vanishing, .{
         .ctx = ctx,
-        .witness_claims = proof.witness_claims,
-        .quotient_claims = proof.quotient_claims,
+        .witness_claims = &derived_witness,
+        .quotient_claims = &derived_quotient,
         .module_sizes = proof.module_sizes,
     });
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.vanishing_done, 0);
