@@ -1,5 +1,9 @@
 <<<<<<< HEAD:coordinator/persistence/src/main/kotlin/lineth/persistence/conflation/BlobsPostgresDaoV2.kt
+<<<<<<< HEAD:coordinator/persistence/src/main/kotlin/lineth/persistence/conflation/BlobsPostgresDaoV2.kt
 package lineth.persistence.conflation
+=======
+package linea.persistence.conflation
+>>>>>>> 83adcc937 (chore(coordinator): riscv blob data skeleton (#3609)):coordinator/persistence/src/main/kotlin/linea/persistence/conflation/BlobsPostgresDaoV2.kt
 =======
 package linea.persistence.conflation
 >>>>>>> 83adcc937 (chore(coordinator): riscv blob data skeleton (#3609)):coordinator/persistence/src/main/kotlin/linea/persistence/conflation/BlobsPostgresDaoV2.kt
