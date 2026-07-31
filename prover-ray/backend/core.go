@@ -1,12 +1,12 @@
 package backend
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"os"
 
+	zkc_r5 "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/zkc-r5"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 )
@@ -14,36 +14,46 @@ import (
 // ErrNotImplemented is returned by stubs that are not yet wired up.
 var ErrNotImplemented = errors.New("not yet implemented")
 
+// wiopSystemName names the wiop constraint system built in [New].
+const wiopSystemName = "lineth-riscv"
+
 // Core is the shared proving kernel. Initialize once via [New]; it is
-// safe for concurrent use after that — each [Prove] call gets its own
+// safe for concurrent use after that; each [Prove] call gets its own
 // wiop.Runtime.
 type Core struct {
 	cfg    Config
 	sys    *wiop.System
 	driver *zkcdriver.ZkCDriver
-	elf    []byte
+	elf    zkc_r5.GuestProgramSections // guest ELF sections + entry point, extracted once in New; reused per job
 }
 
 // New loads the circuit binary and the guest ELF, calls [zkcdriver.NewZkCDriver]
 // to define all columns and constraints, and returns a [Core] ready to prove.
 //
 // Compiler passes (rangecheck → lookup → logderiv → localvanishing → global)
-// and wiop.Materialize are not yet wired — they must be added before the
-// system can produce cryptographically sound proofs (see backend-overview.md §4).
+// and wiop.Materialize are not yet wired. They must be added before the
+// system can produce sound proofs (see wiki backend-overview.md §4).
 func New(cfg Config) (*Core, error) {
-	binBytes, err := os.ReadFile(cfg.CircuitBinPath)
+	binFile, err := os.Open(cfg.CircuitBinPath)
 	if err != nil {
-		return nil, fmt.Errorf("reading circuit bin %q: %w", cfg.CircuitBinPath, err)
+		return nil, fmt.Errorf("opening circuit bin %q: %w", cfg.CircuitBinPath, err)
+	}
+	defer binFile.Close()
+
+	elfFile, err := os.Open(cfg.GuestELFPath)
+	if err != nil {
+		return nil, fmt.Errorf("opening guest ELF %q: %w", cfg.GuestELFPath, err)
+	}
+	defer elfFile.Close()
+
+	parsedELF, err := zkc_r5.LoadGuestElf(elfFile)
+	if err != nil {
+		return nil, fmt.Errorf("extracting ELF blobs from %q: %w", cfg.GuestELFPath, err)
 	}
 
-	elfBytes, err := os.ReadFile(cfg.GuestELFPath)
-	if err != nil {
-		return nil, fmt.Errorf("reading guest ELF %q: %w", cfg.GuestELFPath, err)
-	}
-
-	sys := wiop.NewSystemf("linea-riscv")
+	sys := wiop.NewSystemf(wiopSystemName)
 	sys.NewRound()
-	driver := zkcdriver.NewZkCDriver(sys, zkcdriver.Settings{}, bytes.NewReader(binBytes))
+	driver := zkcdriver.NewZkCDriver(sys, zkcdriver.Settings{}, binFile)
 
 	// Compiler passes go here once the real RISC-V .bin is fully supported:
 	//   compilers.RangeCheck(sys)
@@ -57,7 +67,7 @@ func New(cfg Config) (*Core, error) {
 		cfg:    cfg,
 		sys:    sys,
 		driver: driver,
-		elf:    elfBytes,
+		elf:    parsedELF,
 	}, nil
 }
 
@@ -65,7 +75,7 @@ func New(cfg Config) (*Core, error) {
 func (c *Core) Prove(ctx context.Context, job Job) Result {
 	inputs, err := c.buildInputs(job)
 	if err != nil {
-		return failResult(job.ID, err)
+		return failResult(job.ID, fmt.Errorf("building inputs: %w", err))
 	}
 
 	proof, pub, err := c.runProve(ctx, &zkcdriver.PreReadInputs{Inputs: inputs})
@@ -85,9 +95,35 @@ func (c *Core) Prove(ctx context.Context, job Job) Result {
 	}
 }
 
-// buildInputs converts a Job's Payload into the three ZkC pub-input blobs.
+// buildInputs converts a Job's Payload into the three ZkC pub-input values,
+// keyed by name (see [encodeInputs]). ELF memory blobs are pre-extracted in
+// [New] and reused across calls; only the per-job StatelessInput blobs
+// (schema id + SSZ body) differ.
 func (c *Core) buildInputs(job Job) (map[string][]byte, error) {
-	return BuildZkcInputs(c.elf, decodePayload(job), c.cfg.inOrigin())
+	if err := sanityCheckJobs(job); err != nil {
+		return nil, err
+	}
+	dataSections, err := zkc_r5.NewDataSection(zkc_r5.DefaultINOrigin, decodePayload(job))
+	if err != nil {
+		return nil, fmt.Errorf("building data section: %w", err)
+	}
+	return zkc_r5.EncodeGuestAndMemoryForZkc(c.elf, dataSections)
+}
+
+func sanityCheckJobs(job Job) error {
+	// Inverted ranges are malformed input.
+	if job.EndBlock < job.StartBlock {
+		return fmt.Errorf("invalid block range [%d, %d]: EndBlock < StartBlock",
+			job.StartBlock, job.EndBlock)
+	}
+
+	// Multi-block SSZ conflation is not implemented yet.
+	if job.EndBlock > job.StartBlock {
+		return fmt.Errorf("multi-block job [%d, %d]: %w",
+			job.StartBlock, job.EndBlock, ErrNotImplemented)
+	}
+
+	return nil
 }
 
 // runProve calls AssignWithPreRead, sys.Prove, and sys.Verify.
@@ -108,19 +144,10 @@ func (c *Core) runProve(
 	return proof, pub, nil
 }
 
-// EncodeStatelessInput SSZ-encodes the coordinator's per-block payload into
-// the byte slice the guest reads at _in_start. The [u64 LE len] frame is
-// added later by [BuildZkcInputs]; this returns raw SSZ only.
-//
-// Not yet implemented. Reference codec: arithmetization/proof_io_v1.py.
-func EncodeStatelessInput(_ []byte) ([]byte, error) {
-	return nil, fmt.Errorf("EncodeStatelessInput: %w", ErrNotImplemented)
-}
-
 // SerializeProof encodes a wiop.Proof into the wire bytes the coordinator
 // expects in the "proof" field of the response.
 //
-// Wire format not yet decided (backend-overview.md §6).
+// Wire format not yet decided (wiki backend-overview.md §6).
 func SerializeProof(_ wiop.Proof, _ wiop.PublicInput) ([]byte, error) {
 	return nil, fmt.Errorf("SerializeProof: %w", ErrNotImplemented)
 }
