@@ -91,6 +91,16 @@ pub fn build(b: *std.Build) void {
             .{ .name = "verifier_ray", .module = verifier_mod },
         },
     });
+    // The full-pipeline verify fixtures (PCS-enabled), exposed to tests so the
+    // integration tests can drive verifier.verify against real proofs.
+    const test_verify_mod = b.addModule("test_verify", .{
+        .root_source_file = b.path("testdata/generated/verify.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "verifier_ray", .module = verifier_mod },
+        },
+    });
 
     const embedded_data_opts = b.addOptions();
     embedded_data_opts.addOption(usize, "spec_index", embedded_spec);
@@ -145,6 +155,7 @@ pub fn build(b: *std.Build) void {
                     .{ .name = "test_vanishing", .module = test_vanishing_mod },
                     .{ .name = "test_fri_vectors", .module = test_fri_vectors_mod },
                     .{ .name = "test_pcs_vectors", .module = test_pcs_vectors_mod },
+                    .{ .name = "test_verify", .module = test_verify_mod },
                 },
             }),
         });

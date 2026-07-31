@@ -10,21 +10,10 @@ const fiat_shamir = verifier_ray.crypto.fiat_shamir;
 const ext = verifier_ray.field.koalabear_ext;
 const poseidon2 = verifier_ray.crypto.poseidon2;
 
-test "verify completes replay, routing, and dispatch on a minimal proof" {
-    const spec = protocol.Spec{
-        .round_coin_counts = &[_]usize{0},
-        .round_coin_offsets = &[_]usize{0},
-        .total_round_coins = 0,
-    };
-    const systems = verifier.Systems{
-        .vanishing = vanishing.System{ .modules = &.{} },
-    };
-    try verifier.verify(spec, systems, .{
-        .rounds = &.{},
-        .witness_claims = &.{},
-        .quotient_claims = &.{},
-    });
-}
+// Note: there is no "empty protocol" verify test anymore — PCS is mandatory, so
+// `verify` always indexes a zeta coin, which a zero-coin spec cannot provide.
+// replayWithTranscript's own shape checks are covered by transcript_test.zig and
+// the round-count test below (which errors before PCS runs).
 
 test "verify rejects proof with wrong round count" {
     const spec = protocol.Spec{
@@ -34,16 +23,31 @@ test "verify rejects proof with wrong round count" {
     };
     const systems = verifier.Systems{
         .vanishing = vanishing.System{ .modules = &.{} },
+        .pcs = empty_pcs_system,
     };
     try std.testing.expectError(
         error.InvalidRoundCount,
         verifier.verify(spec, systems, .{
             .rounds = &.{},
-            .witness_claims = &.{},
-            .quotient_claims = &.{},
+            .pcs_opening = empty_pcs_opening,
         }),
     );
 }
+
+// A degenerate PCS system/opening for the transcript-shape tests above: no
+// batches, no layout, no claims. `verify` reaches replayWithTranscript (which
+// these tests exercise) before touching PCS, and an empty system authenticates
+// trivially. num_batches == 0 so resolveRoots fills a zero-length roots array.
+const empty_pcs_system = pcs.System{
+    .params = .{ .log_codeword_size = 1, .log_plaintext_size = 0, .num_queries = 1 },
+    .layout = &.{},
+    .num_batches = 0,
+    .zeta_coin_index = 0,
+};
+const empty_pcs_opening = verifier.PcsOpening{
+    .entry_claims = &.{},
+    .proof = .{ .input_queries = &.{}, .fri_proof = .{ .round_roots = &.{}, .final_poly = &.{ext.Ext.zero()}, .running_queries = &.{} } },
+};
 
 // ── PCS challenge derivation ──────────────────────────────────────────────────
 //

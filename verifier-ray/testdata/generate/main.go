@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	fiatshamir "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fiatshamir"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fri"
 	poseidon2 "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
@@ -25,6 +26,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/localvanishing"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
+	pcscompiler "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/rangecheck"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/consensys/linea-monorepo/verifier-ray/codegen"
@@ -33,6 +35,13 @@ import (
 const koalaModulus = uint64(2_130_706_433)
 
 func main() {
+	// Shrink the FRI query count to 1 for fixtures: the production default (229)
+	// would emit ~229 Merkle branches per opening, ballooning verify.zig to
+	// hundreds of MB and making Zig compilation intractable. One query exercises
+	// the same code paths byte-faithfully (the verifier derives the query count
+	// from the emitted System params, which reflect this override).
+	pcscompiler.SetFRINumQueriesForTest(1)
+
 	var out bytes.Buffer
 	writeHeader(&out)
 	writeFieldCases(&out)
@@ -551,6 +560,14 @@ type fixtureCase struct {
 	name    string
 	honest  vanishingProofView
 	invalid *vanishingProofView
+	// pcs is the extracted PCS system for the honest proof (mandatory in the
+	// verify.zig path). honestPcs carries the runtime opening the verifier
+	// authenticates; invalidPcs (when present) is the tampered opening. The
+	// matching FRI opening proofs come from the proving runtime.
+	honestPcs     *codegen.PcsSystem
+	invalidPcs    *codegen.PcsSystem
+	honestOpening fri.OpeningProof
+	invalidOpen   fri.OpeningProof
 }
 
 type vanishingProofView struct {
@@ -568,6 +585,10 @@ func compileFullPipeline(sys *wiop.System) {
 	logderivativesum.Compile(sys)
 	localvanishing.Compile(sys)
 	global.Compile(sys)
+	// PCS runs last, after every arithmetization pass has registered its columns
+	// and LagrangeEval openings: it commits the columns (hiding them behind Merkle
+	// roots) and produces the opening proof the verifier authenticates.
+	pcscompiler.Compile(sys)
 }
 
 func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error) {
@@ -593,13 +614,38 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 			return fmt.Errorf("build logderiv system %s/%s: %w", source, name, err)
 		}
 		honestProof := extractVanishingProofView(sys, honestRt)
-		var invalidProof *vanishingProofView
-		if invalid != nil {
-			proof := extractVanishingProofView(sys, runProver(sys, invalid))
-			invalidProof = &proof
+		honestPcs, err := codegen.BuildPcsSystem(sys, honestRt, routing)
+		if err != nil {
+			return fmt.Errorf("build pcs system %s/%s: %w", source, name, err)
 		}
-		cases = append(cases, fixtureCase{name: name, honest: honestProof, invalid: invalidProof})
-		systems = append(systems, codegen.CompiledSystem{Routing: routing, Vanishing: vanishingSystem, LogDeriv: logDeriv})
+		if honestRt.PCSOpeningProof == nil {
+			return fmt.Errorf("pcs %s/%s: honest runtime has no PCSOpeningProof", source, name)
+		}
+
+		tc := fixtureCase{
+			name: name, honest: honestProof,
+			honestPcs: &honestPcs, honestOpening: *honestRt.PCSOpeningProof,
+		}
+		if invalid != nil {
+			invalidRt := runProver(sys, invalid)
+			proof := extractVanishingProofView(sys, invalidRt)
+			tc.invalid = &proof
+			// The invalid opening carries the tampered claim values (the flipped
+			// witness surfaces in the LagrangeEval openings), so the PCS-routed
+			// claims fed to vanishing are the invalid ones — exactly what must fail
+			// the quotient identity.
+			ip, err := codegen.BuildPcsSystem(sys, invalidRt, routing)
+			if err != nil {
+				return fmt.Errorf("build invalid pcs system %s/%s: %w", source, name, err)
+			}
+			if invalidRt.PCSOpeningProof == nil {
+				return fmt.Errorf("pcs %s/%s: invalid runtime has no PCSOpeningProof", source, name)
+			}
+			tc.invalidPcs = &ip
+			tc.invalidOpen = *invalidRt.PCSOpeningProof
+		}
+		cases = append(cases, tc)
+		systems = append(systems, codegen.CompiledSystem{Routing: routing, Vanishing: vanishingSystem, LogDeriv: logDeriv, Pcs: &honestPcs})
 		return nil
 	}
 
@@ -839,6 +885,17 @@ func dynamicModuleSizes(verifiers []*global.Verifier, rt *wiop.Runtime) []int {
 
 func runtimeTraceRoundFromRuntime(rt *wiop.Runtime, round *wiop.Round) runtimeTraceRound {
 	var trace runtimeTraceRound
+	// A committed (interactive PCS) round carries its Merkle root as a single
+	// oracle commitment, absorbed by the verifier in place of the now-hidden
+	// columns — mirroring prover-ray's AdvanceRound. This is the octuplet the PCS
+	// batch root binds to (see codegen.PcsBatchRoot / verifier.resolveRoots).
+	if round.HasCommitment {
+		root, ok := rt.Commitments[round.ID]
+		if !ok {
+			panic(fmt.Sprintf("round %d HasCommitment but no root in runtime", round.ID))
+		}
+		trace.columns = append(trace.columns, runtimeTraceColumn{commitments: []field.Octuplet{root}})
+	}
 	for _, col := range round.Columns {
 		if col.Visibility < wiop.VisibilityOracle || !rt.HasColumnAssignment(col) {
 			continue
@@ -1021,8 +1078,11 @@ func writeVerifyHeader(out *bytes.Buffer, count int) {
 	fmt.Fprintln(out, "const ext = verifier_ray.field.koalabear_ext;")
 	fmt.Fprintln(out, "const protocol = verifier_ray.protocol;")
 	fmt.Fprintln(out, "const commitment = verifier_ray.crypto.commitment;")
+	fmt.Fprintln(out, "const merkle = verifier_ray.crypto.merkle;")
 	fmt.Fprintln(out, "const vanishing = verifier_ray.query.vanishing;")
 	fmt.Fprintln(out, "const logderivativesum = verifier_ray.query.logderivativesum;")
+	fmt.Fprintln(out, "const pcs = verifier_ray.query.pcs;")
+	fmt.Fprintln(out, "const fri = verifier_ray.query.fri;")
 	fmt.Fprintln(out, "const verifier = verifier_ray.verifier;")
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "pub const VerifyCase = struct {")
@@ -1048,33 +1108,24 @@ func writeVerifyHeader(out *bytes.Buffer, count int) {
 }
 
 func writeVerifyCase(out *bytes.Buffer, idx int, tc fixtureCase) {
-	writeVerifyProof(out, fmt.Sprintf("verify_case_%d", idx), tc.honest)
+	// The compile-time PCS system for this case (mandatory). The honest system's
+	// batch_roots/maps/zeta are what verifier.Systems.pcs points at; the honest
+	// and (optional) failing proofs each carry their own runtime opening.
+	pcsName := writePcsSystemZig(out, fmt.Sprintf("verify_case_%d", idx), tc.honestPcs)
+
+	writeVerifyProof(out, fmt.Sprintf("verify_case_%d", idx), tc.honest, tc.honestPcs, tc.honestOpening)
 	if tc.invalid != nil {
-		writeVerifyProof(out, fmt.Sprintf("verify_case_%d_failing", idx), *tc.invalid)
+		writeVerifyProof(out, fmt.Sprintf("verify_case_%d_failing", idx), *tc.invalid, tc.invalidPcs, tc.invalidOpen)
 	}
 	fmt.Fprintf(
 		out,
-		"const verify_case_%d_systems = verifier.Systems{ .vanishing = system_%d, .logderivativesum = system_%d_logderiv };\n",
-		idx, idx, idx,
+		"const verify_case_%d_systems = verifier.Systems{ .vanishing = system_%d, .logderivativesum = system_%d_logderiv, .pcs = %s };\n",
+		idx, idx, idx, pcsName,
 	)
 	fmt.Fprintln(out)
 }
 
-func writeVerifyProof(out *bytes.Buffer, prefix string, proof vanishingProofView) {
-	fmt.Fprintf(out, "const %s_witness_claims = [_]ext.Ext{\n", prefix)
-	for _, claim := range proof.witnessClaims {
-		fmt.Fprintf(out, "    %s,\n", extValueLiteral(claim))
-	}
-	fmt.Fprintln(out, "};")
-	fmt.Fprintln(out)
-
-	fmt.Fprintf(out, "const %s_quotient_claims = [_]ext.Ext{\n", prefix)
-	for _, claim := range proof.quotientClaims {
-		fmt.Fprintf(out, "    %s,\n", extValueLiteral(claim))
-	}
-	fmt.Fprintln(out, "};")
-	fmt.Fprintln(out)
-
+func writeVerifyProof(out *bytes.Buffer, prefix string, proof vanishingProofView, pcsSys *codegen.PcsSystem, opening fri.OpeningProof) {
 	fmt.Fprintf(out, "const %s_module_sizes = [_]usize%s;\n", prefix, intArrayLiteral(proof.moduleSizes))
 	fmt.Fprintln(out)
 
@@ -1089,11 +1140,16 @@ func writeVerifyProof(out *bytes.Buffer, prefix string, proof vanishingProofView
 	fmt.Fprintln(out, "};")
 	fmt.Fprintln(out)
 
+	// The PCS opening: the authenticated entry_claims (which vanishing is then
+	// re-sliced from) and the FRI opening proof. No witness/quotient_claims —
+	// those are derived by the verifier from entry_claims via the claim maps.
+	fmt.Fprintf(out, "const %s_pcs_opening = %s;\n", prefix, pcsOpeningZigLiteral(pcsSys, opening))
+	fmt.Fprintln(out)
+
 	fmt.Fprintf(out, "const %s_proof = verifier.Proof{\n", prefix)
 	fmt.Fprintf(out, "    .rounds = &%s_rounds,\n", prefix)
-	fmt.Fprintf(out, "    .witness_claims = &%s_witness_claims,\n", prefix)
-	fmt.Fprintf(out, "    .quotient_claims = &%s_quotient_claims,\n", prefix)
 	fmt.Fprintf(out, "    .module_sizes = &%s_module_sizes,\n", prefix)
+	fmt.Fprintf(out, "    .pcs_opening = %s_pcs_opening,\n", prefix)
 	fmt.Fprintln(out, "};")
 	fmt.Fprintln(out)
 }
