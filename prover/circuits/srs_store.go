@@ -164,9 +164,16 @@ func NewSRSStore(rootDir string) (*SRSStore, error) {
 // that a prove-time read can never mutate the SRS directory: an operator can
 // mount it read-only and still be sure the fast path is available, because
 // whether the dump exists was decided at provisioning time, not by whichever
-// process happened to ask first.
+// process happened to ask first. A miss is loud: hitting the derivation at
+// prove time recurs on every start, so the warning names the one command that
+// makes it stop.
 func (store *SRSStore) GetSRS(ctx context.Context, ccs constraint.ConstraintSystem) (kzg.SRS, kzg.SRS, error) {
-	canonicalSRS, lagrangeSRS, _, err := store.resolveSRS(ccs)
+	canonicalSRS, lagrangeSRS, derived, err := store.resolveSRS(ccs)
+	if derived {
+		_, sizeLagrange := plonk.SRSSize(ccs)
+		logrus.Warnf("no loadable lagrange SRS dump of size %d for curve %s in %s — derived it in memory, which recurs on every start; run `prover setup` once to persist it",
+			sizeLagrange, fieldToCurve(ccs.Field()), store.rootDir)
+	}
 	return canonicalSRS, lagrangeSRS, err
 }
 
@@ -268,7 +275,9 @@ func (store *SRSStore) resolveSRS(ccs constraint.ConstraintSystem) (kzg.SRS, kzg
 		if sizeCanonical < sizeLagrange {
 			panic("canonical SRS is smaller than lagrange SRS")
 		}
-		logrus.Debugf("computing lagrange SRS from canonical SRS %d -> %d", sizeCanonical, sizeLagrange)
+		// Warn, not debug: this branch costs hours, and the operator deserves to
+		// know before the wait, not after.
+		logrus.Warnf("computing lagrange SRS from canonical SRS %d -> %d — this can take hours", sizeCanonical, sizeLagrange)
 		lagrangeSRS, err := toLagrange(canonicalSRS, sizeLagrange)
 		if err != nil {
 			return nil, nil, false, err
