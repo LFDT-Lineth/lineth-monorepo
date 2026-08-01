@@ -24,11 +24,11 @@ By default, if the `--force` flag is not provided, the tool will compile the cir
 
 The setup also persists the Lagrange form of the SRS into the `kzgsrs` directory
 (as `kzg_srs_lagrange_<size>_<curve>_derived.memdump`) whenever it is missing, so
-prover starts load it in seconds instead of re-deriving it for hours. It only ever
-adds these `derived`-tagged files — ceremony files are never modified, and nothing
-writes into the directory at prove time. Set `persist_derived_srs = false` in the
-config to keep the SRS directory strictly read-only; `--force` additionally
-re-validates an existing derived dump in full and repairs it if it does not load.
+prover starts load it in seconds instead of re-deriving it for hours. Ceremony
+files are never modified, and nothing writes into the directory at prove time.
+Set `persist_derived_srs = false` in the config to keep the SRS directory
+strictly read-only; `--force` additionally re-validates an existing derived dump
+in full and repairs it if it does not load.
 
 **Run**
 
