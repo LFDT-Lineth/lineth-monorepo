@@ -164,28 +164,63 @@ func NewSRSStore(rootDir string) (*SRSStore, error) {
 // that a prove-time read can never mutate the SRS directory: an operator can
 // mount it read-only and still be sure the fast path is available, because
 // whether the dump exists was decided at provisioning time, not by whichever
-// process happened to ask first. A miss is loud: hitting the derivation at
-// prove time recurs on every start, so the warning names the one command that
-// makes it stop.
+// process happened to ask first. A miss at a real circuit size is loud:
+// hitting the derivation at prove time recurs on every start, so the warning
+// names the command and flag that make it stop.
 func (store *SRSStore) GetSRS(ctx context.Context, ccs constraint.ConstraintSystem) (kzg.SRS, kzg.SRS, error) {
 	canonicalSRS, lagrangeSRS, derived, err := store.resolveSRS(ccs)
 	if derived {
-		_, sizeLagrange := plonk.SRSSize(ccs)
-		logrus.Warnf("no loadable lagrange SRS dump of size %d for curve %s in %s — derived it in memory, which recurs on every start; run `prover setup` once to persist it",
-			sizeLagrange, fieldToCurve(ccs.Field()), store.rootDir)
+		if _, sizeLagrange := plonk.SRSSize(ccs); sizeLagrange >= lagrangeSizeWarnThreshold {
+			logrus.Warnf("no loadable lagrange SRS dump of size %d for curve %s in %s — derived it in memory, which recurs on every start; run `prover setup` with persist_derived_srs on (the default) to persist it, adding --force if a dump was reported unloadable above",
+				sizeLagrange, fieldToCurve(ccs.Field()), store.rootDir)
+		}
 	}
 	return canonicalSRS, lagrangeSRS, err
 }
 
+// lagrangeSizeWarnThreshold separates real circuit sizes from the tiny dummy
+// circuits that pass through GetSRS during setup: below it a derivation costs
+// milliseconds and is not worth an operator-facing warning.
+const lagrangeSizeWarnThreshold = 1 << 20
+
 // DeriveAndPersistLagrange makes the Lagrange basis for ccs available on disk,
-// so later runs load it instead of spending hours re-deriving it. It is a no-op
-// when a loadable dump is already there, and it is the only path in the store
-// that writes.
+// so later runs load it instead of spending hours re-deriving it. It is the
+// only path in the store that writes.
+//
+// Without force, it is as cheap as what there is to do: a dump of the right
+// size already in the index counts as done without loading it (whether it
+// loads is re-checked wherever it is read; repairing one that does not is
+// force's job), and an unwritable directory is detected by a probe before the
+// expensive derivation rather than after it.
 //
 // Best-effort is the caller's choice here rather than the store's: the error is
 // returned so an explicit provisioning step can report it, where a prove-time
 // read had to swallow it.
-func (store *SRSStore) DeriveAndPersistLagrange(ctx context.Context, ccs constraint.ConstraintSystem) error {
+func (store *SRSStore) DeriveAndPersistLagrange(ctx context.Context, ccs constraint.ConstraintSystem, force bool) error {
+	_, sizeLagrange := plonk.SRSSize(ccs)
+	curveID := fieldToCurve(ccs.Field())
+
+	if !force {
+		for _, entry := range store.entriesSnapshot(curveID) {
+			if !entry.isCanonical && entry.size == sizeLagrange {
+				// a dump of the right size is already on disk: done, without
+				// paying a multi-GiB load just to conclude there is nothing to
+				// write
+				return nil
+			}
+		}
+	}
+
+	// probe writability before deriving: failing at the write would waste the
+	// hours-long derivation this call exists to save. The probe name matches
+	// the orphan-temp sweep pattern, so a crash leftover is reclaimed.
+	probe, err := os.CreateTemp(store.rootDir, "kzg_srs_probe.memdump.tmp")
+	if err != nil {
+		return fmt.Errorf("SRS directory %s is not writable, not deriving a basis that could not be persisted: %w", store.rootDir, err)
+	}
+	probe.Close()
+	os.Remove(probe.Name())
+
 	_, lagrangeSRS, derived, err := store.resolveSRS(ccs)
 	if err != nil {
 		return err
@@ -194,8 +229,7 @@ func (store *SRSStore) DeriveAndPersistLagrange(ctx context.Context, ccs constra
 		// a loadable dump is already on disk; nothing to publish
 		return nil
 	}
-	_, sizeLagrange := plonk.SRSSize(ccs)
-	return store.cacheLagrange(lagrangeSRS, sizeLagrange, fieldToCurve(ccs.Field()))
+	return store.cacheLagrange(lagrangeSRS, sizeLagrange, curveID)
 }
 
 // resolveSRS loads the canonical SRS and either loads or derives the matching
@@ -275,9 +309,13 @@ func (store *SRSStore) resolveSRS(ccs constraint.ConstraintSystem) (kzg.SRS, kzg
 		if sizeCanonical < sizeLagrange {
 			panic("canonical SRS is smaller than lagrange SRS")
 		}
-		// Warn, not debug: this branch costs hours, and the operator deserves to
-		// know before the wait, not after.
-		logrus.Warnf("computing lagrange SRS from canonical SRS %d -> %d — this can take hours", sizeCanonical, sizeLagrange)
+		if sizeLagrange >= lagrangeSizeWarnThreshold {
+			// Warn, not debug: at real circuit sizes this branch costs hours, and
+			// the operator deserves to know before the wait, not after.
+			logrus.Warnf("computing lagrange SRS from canonical SRS %d -> %d — this can take hours", sizeCanonical, sizeLagrange)
+		} else {
+			logrus.Debugf("computing lagrange SRS from canonical SRS %d -> %d", sizeCanonical, sizeLagrange)
+		}
 		lagrangeSRS, err := toLagrange(canonicalSRS, sizeLagrange)
 		if err != nil {
 			return nil, nil, false, err

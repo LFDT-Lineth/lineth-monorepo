@@ -153,8 +153,9 @@ type Config struct {
 	// during setup — a deliberate provisioning action — never at prove time. Set
 	// it to false for a deployment that wants its SRS directory strictly
 	// immutable (read-only mount, snapshotted, or verified by hash); on such a
-	// volume the write degrades to a warning anyway. Nothing else in the prover
-	// ever writes there, whatever this is set to.
+	// volume a writability probe fails before any derivation is attempted and
+	// setup carries on with a warning. Nothing else in the prover ever writes
+	// there, whatever this is set to.
 	PersistDerivedSRS bool `mapstructure:"persist_derived_srs"`
 
 	Controller                 Controller

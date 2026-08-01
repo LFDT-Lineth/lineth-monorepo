@@ -19,8 +19,12 @@ type SRSProvider interface {
 // every prove path does, whereas writing into the SRS directory is a
 // provisioning action. Keeping the write off the interface every caller holds
 // is what stops it from happening implicitly.
+//
+// Without force, a dump of the right size already on disk counts as done and
+// the call is cheap; force re-validates an existing dump in full and repairs
+// it if it does not load, mirroring what --force means to `prover setup`.
 type LagrangePersister interface {
-	DeriveAndPersistLagrange(ctx context.Context, ccs constraint.ConstraintSystem) error
+	DeriveAndPersistLagrange(ctx context.Context, ccs constraint.ConstraintSystem, force bool) error
 }
 
 type UnsafeSRSProvider struct {

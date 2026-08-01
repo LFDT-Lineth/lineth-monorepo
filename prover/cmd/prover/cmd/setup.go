@@ -206,11 +206,11 @@ func updateSetup(ctx context.Context, cfg *config.Config, force bool,
 	// SRS directory, so a later prove-time read finds the Lagrange basis already
 	// there instead of spending hours re-deriving it. It runs before the
 	// skip-if-already-setup check so that re-running setup against current
-	// assets still backfills a missing dump, and it is a no-op when a loadable
-	// dump is on disk. Best-effort, since setup derives the basis in memory
-	// either way; persist_derived_srs = false turns it off.
+	// assets still backfills a missing dump; a dump already on disk makes this
+	// free, and --force re-validates it in full. Best-effort: a failed persist
+	// warns and setup carries on; persist_derived_srs = false turns it off.
 	if persister, ok := srsProvider.(circuits.LagrangePersister); ok && cfg.PersistDerivedSRS {
-		if err := persister.DeriveAndPersistLagrange(ctx, ccs); err != nil {
+		if err := persister.DeriveAndPersistLagrange(ctx, ccs, force); err != nil {
 			logrus.Warnf("could not persist derived lagrange SRS for %s (continuing): %v", circuit, err)
 		}
 	}

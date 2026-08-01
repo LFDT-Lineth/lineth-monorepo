@@ -247,7 +247,7 @@ func TestSRSStore_DeriveAndPersistLagrange(t *testing.T) {
 	// provisioning writes, under the derived tag and world-readable
 	store, err := NewSRSStore(dir)
 	assert.NoError(err)
-	assert.NoError(store.DeriveAndPersistLagrange(context.TODO(), cs))
+	assert.NoError(store.DeriveAndPersistLagrange(context.TODO(), cs, false))
 	info, err := os.Stat(cachedPath)
 	assert.NoError(err, "DeriveAndPersistLagrange must publish the derived lagrange SRS")
 	_, err = os.Stat(filepath.Join(dir, fmt.Sprintf("kzg_srs_lagrange_%d_bn254_aleo.memdump", lagrangeSize)))
@@ -261,7 +261,7 @@ func TestSRSStore_DeriveAndPersistLagrange(t *testing.T) {
 	_, lagrangeSRS, err = fresh.GetSRS(context.TODO(), cs)
 	assert.NoError(err)
 	assert.NotNil(lagrangeSRS)
-	assert.NoError(fresh.DeriveAndPersistLagrange(context.TODO(), cs))
+	assert.NoError(fresh.DeriveAndPersistLagrange(context.TODO(), cs, false))
 	after, err := os.Stat(cachedPath)
 	assert.NoError(err)
 	assert.Equal(info.ModTime(), after.ModTime(), "a cache hit must not rewrite the file")
@@ -292,7 +292,16 @@ func TestSRSStore_DeriveAndPersistLagrange(t *testing.T) {
 			_, lagrangeSRS, err := broken.GetSRS(context.TODO(), cs)
 			assert.NoError(err, "an unloadable cached lagrange SRS must not fail GetSRS")
 			assert.NotNil(lagrangeSRS)
-			assert.NoError(broken.DeriveAndPersistLagrange(context.TODO(), cs))
+
+			// without force, a right-size dump in the index counts as done — the
+			// cheap path must not load it, so it cannot know it is bad
+			derivedPath := filepath.Join(subDir, fmt.Sprintf("kzg_srs_lagrange_%d_bn254_derived.memdump", lagrangeSize))
+			assert.NoError(broken.DeriveAndPersistLagrange(context.TODO(), cs, false))
+			_, err = os.Stat(derivedPath)
+			assert.True(os.IsNotExist(err), "without force an indexed dump must be trusted, not repaired")
+
+			// force validates in full and repairs beside the bad file
+			assert.NoError(broken.DeriveAndPersistLagrange(context.TODO(), cs, true))
 
 			// the operator's file is untouched, byte for byte
 			stillBad, err := os.ReadFile(badPath)
@@ -300,7 +309,6 @@ func TestSRSStore_DeriveAndPersistLagrange(t *testing.T) {
 			assert.Equal(bad.content, stillBad, "the rejected dump must not be overwritten")
 
 			// and a loadable, correct-size, same-setup dump exists beside it
-			derivedPath := filepath.Join(subDir, fmt.Sprintf("kzg_srs_lagrange_%d_bn254_derived.memdump", lagrangeSize))
 			reloaded := kzg.NewSRS(ecc.BN254)
 			data, err := os.ReadFile(derivedPath)
 			assert.NoError(err, "a derived dump must have been published")
@@ -336,7 +344,8 @@ func TestSRSStore_DeriveAndPersistLagrange(t *testing.T) {
 		_, lagrangeSRS, err := store.GetSRS(context.TODO(), cs)
 		assert.NoError(err)
 		assert.NotNil(lagrangeSRS)
-		assert.NoError(store.DeriveAndPersistLagrange(context.TODO(), cs))
+		// force: only the full-validation path can tell a foreign dump apart
+		assert.NoError(store.DeriveAndPersistLagrange(context.TODO(), cs, true))
 
 		// the foreign dump is left alone; a matching basis is published beside it
 		foreignAfter, err := os.ReadFile(lagrangePath)
@@ -367,8 +376,9 @@ func TestSRSStore_DeriveAndPersistLagrange(t *testing.T) {
 		assert.NotNil(lagrangeSRS)
 
 		// provisioning returns the failure rather than swallowing it, so an
-		// operator running it deliberately finds out that nothing was written
-		assert.Error(roStore.DeriveAndPersistLagrange(context.TODO(), cs),
+		// operator running it deliberately finds out that nothing was written —
+		// and the writability probe reports it before deriving, not after
+		assert.Error(roStore.DeriveAndPersistLagrange(context.TODO(), cs, false),
 			"provisioning must report that it could not write")
 		_, err = os.Stat(filepath.Join(roDir, fmt.Sprintf("kzg_srs_lagrange_%d_bn254_derived.memdump", lagrangeSize)))
 		assert.True(os.IsNotExist(err), "nothing must be published to a read-only directory")
