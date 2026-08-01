@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -77,32 +78,41 @@ func TestMustFindModuleLimitsReturnsLongestMatch(t *testing.T) {
 	}
 }
 
-func TestPersistDerivedSRSDefaultsOff(t *testing.T) {
+func TestPersistDerivedSRSDefaultsOn(t *testing.T) {
 	assert := require.New(t)
 
-	// writing into the SRS directory must never be something an operator gets by
-	// omission: with the key absent, it stays off
-	v := viper.New()
-	v.SetConfigType("toml")
-	assert.NoError(v.ReadConfig(strings.NewReader("assets_dir = \"/tmp/assets\"\n")))
-	var cfg Config
-	assert.NoError(v.Unmarshal(&cfg))
-	assert.False(cfg.PersistDerivedSRS, "persist_derived_srs must default to false")
+	// a missing lagrange dump is otherwise re-derived silently for hours on
+	// every prover start, so persistence at setup is what an operator gets by
+	// omission; the default is applied by the real loading path
+	// the smallest config the unchecked loading path accepts: the layer2
+	// addresses are parsed unconditionally, even without validation
+	minimal := `assets_dir = "/tmp/assets"
+[layer2]
+message_service_contract = "0x0000000000000000000000000000000000000000"
+coin_base = "0x0000000000000000000000000000000000000000"
+`
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config-test.toml")
+	assert.NoError(os.WriteFile(path, []byte(minimal), 0o600))
+	cfg, err := NewConfigFromFileUnchecked(path)
+	assert.NoError(err)
+	assert.True(cfg.PersistDerivedSRS, "persist_derived_srs must default to true")
 
-	// and it is settable for the self-hoster who wants it
-	v = viper.New()
-	v.SetConfigType("toml")
-	assert.NoError(v.ReadConfig(strings.NewReader("persist_derived_srs = true\n")))
-	var optedIn Config
-	assert.NoError(v.Unmarshal(&optedIn))
-	assert.True(optedIn.PersistDerivedSRS)
+	// and the immutable-SRS-directory deployment can still opt out (the key is
+	// top-level, so it must precede the [layer2] table)
+	assert.NoError(os.WriteFile(path, []byte("persist_derived_srs = false\n"+minimal), 0o600))
+	optedOut, err := NewConfigFromFileUnchecked(path)
+	assert.NoError(err)
+	assert.False(optedOut.PersistDerivedSRS)
 }
 
-func TestShippedConfigsDoNotOptIntoSRSWrites(t *testing.T) {
+func TestShippedConfigsDoNotOptOutOfSRSWrites(t *testing.T) {
 	assert := require.New(t)
 
-	// none of the checked-in configs may turn the write on: a deployment that
-	// wants it has to say so itself
+	// persistence at setup is the default cure for silent hours-long
+	// re-derivation, so a checked-in config must not quietly reintroduce it;
+	// opting out is a per-deployment decision made in that deployment's own
+	// config, not in the repo's
 	files, err := os.ReadDir(".")
 	assert.NoError(err)
 	checked := 0
@@ -113,9 +123,9 @@ func TestShippedConfigsDoNotOptIntoSRSWrites(t *testing.T) {
 		v := viper.New()
 		v.SetConfigFile(f.Name())
 		assert.NoError(v.ReadInConfig(), f.Name())
-		var cfg Config
-		assert.NoError(v.Unmarshal(&cfg), f.Name())
-		assert.False(cfg.PersistDerivedSRS, "%s must not opt into SRS writes", f.Name())
+		if v.IsSet("persist_derived_srs") {
+			assert.True(v.GetBool("persist_derived_srs"), "%s must not opt out of SRS persistence", f.Name())
+		}
 		checked++
 	}
 	assert.Greater(checked, 0, "no config files were checked")

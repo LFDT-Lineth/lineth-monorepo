@@ -147,12 +147,13 @@ type Config struct {
 	AssetsDir string `mapstructure:"assets_dir"`
 
 	// PersistDerivedSRS lets `prover setup` write the Lagrange basis it derives
-	// into the SRS directory, so later runs load it instead of spending hours
-	// re-deriving it. Off by default, because turning it on means the SRS
-	// directory stops being read-only trust-root material and becomes something
-	// a process writes to: worth it for a self-hoster who has no pre-derived
-	// dumps, not worth it for a deployment whose assets volume is mounted
-	// read-only, snapshotted, or verified by hash. Nothing else in the prover
+	// into the SRS directory, so later runs load it in seconds instead of
+	// spending hours re-deriving it. On by default: a missing dump is otherwise
+	// re-derived silently on every prover start, and the write only ever happens
+	// during setup — a deliberate provisioning action — never at prove time. Set
+	// it to false for a deployment that wants its SRS directory strictly
+	// immutable (read-only mount, snapshotted, or verified by hash); on such a
+	// volume the write degrades to a warning anyway. Nothing else in the prover
 	// ever writes there, whatever this is set to.
 	PersistDerivedSRS bool `mapstructure:"persist_derived_srs"`
 
