@@ -195,8 +195,18 @@ func newPermutationSystem(t *testing.T, aSize, bSize int) *wiop.System {
 	t.Helper()
 	sys := wiop.NewSystemf("gp-limit")
 	r0 := sys.NewRound()
-	modA := sys.NewSizedModule(sys.Context.Childf("modA"), aSize, wiop.PaddingDirectionRight)
-	modB := sys.NewSizedModule(sys.Context.Childf("modB"), bSize, wiop.PaddingDirectionRight)
+	// A size of 0 means a dynamic module. The over-limit tests use it for the
+	// small side: NewPermutation's static balance check skips dynamic modules
+	// (their height is only known at runtime), so the deliberately lopsided
+	// query still reaches the compile-time row-limit check under test.
+	newModule := func(name string, size int) *wiop.Module {
+		if size == 0 {
+			return sys.NewDynamicModule(sys.Context.Childf("%s", name), wiop.PaddingDirectionRight)
+		}
+		return sys.NewSizedModule(sys.Context.Childf("%s", name), size, wiop.PaddingDirectionRight)
+	}
+	modA := newModule("modA", aSize)
+	modB := newModule("modB", bSize)
 	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
 	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
 	sys.NewPermutation(
@@ -211,7 +221,7 @@ func newPermutationSystem(t *testing.T, aSize, bSize int) *wiop.System {
 // whose A side has 2^58 rows. The compile-time row-limit check must panic
 // before any witness is assigned.
 func TestCompilePermutation_RowLimit_CompilePanics_ASide(t *testing.T) {
-	sys := newPermutationSystem(t, 1<<58, 2) // A side = 2^58 rows (>= bound); B side tiny.
+	sys := newPermutationSystem(t, 1<<58, 0) // A side = 2^58 rows (>= bound); B side dynamic (tiny at runtime).
 	assert.Panics(t, func() { grandproduct.Compile(sys) },
 		"Compile must panic when a permutation A side reaches the row limit")
 }
@@ -220,7 +230,7 @@ func TestCompilePermutation_RowLimit_CompilePanics_ASide(t *testing.T) {
 // whose B side has 2^58 rows, exercising the B-side branch of the check
 // independently of the A side.
 func TestCompilePermutation_RowLimit_CompilePanics_BSide(t *testing.T) {
-	sys := newPermutationSystem(t, 2, 1<<58) // B side = 2^58 rows (>= bound); A side tiny.
+	sys := newPermutationSystem(t, 0, 1<<58) // B side = 2^58 rows (>= bound); A side dynamic (tiny at runtime).
 	assert.Panics(t, func() { grandproduct.Compile(sys) },
 		"Compile must panic when a permutation B side reaches the row limit")
 }

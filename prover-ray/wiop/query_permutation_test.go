@@ -114,6 +114,61 @@ func TestNewPermutation_SelectorRejectedPanic(t *testing.T) {
 	}, "permutation queries must reject selectors")
 }
 
+// TestNewPermutation_UnbalancedStaticPanic: when every fragment is statically
+// sized, a mismatch in the two sides' total row counts is caught at
+// construction — such a permutation can never hold.
+func TestNewPermutation_UnbalancedStaticPanic(t *testing.T) {
+	sys := wiop.NewSystemf("permUnbalanced")
+	r0 := sys.NewRound()
+	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
+	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 8, wiop.PaddingDirectionNone)
+	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+	assert.PanicsWithValue(t,
+		"wiop: System.NewPermutation: the two sides have different total row counts (4 vs 8); "+
+			"a permutation between multisets of different cardinalities can never hold",
+		func() {
+			sys.NewPermutation(sys.Context.Childf("perm"),
+				[]wiop.Table{wiop.NewTable(colA.View())},
+				[]wiop.Table{wiop.NewTable(colB.View())})
+		})
+}
+
+// TestNewPermutation_BalancedFragmentsAllowed: fragments of different sizes are
+// fine as long as the per-side totals match (4 + 4 == 8).
+func TestNewPermutation_BalancedFragmentsAllowed(t *testing.T) {
+	sys := wiop.NewSystemf("permBalancedFrags")
+	r0 := sys.NewRound()
+	modA0 := sys.NewSizedModule(sys.Context.Childf("modA0"), 4, wiop.PaddingDirectionNone)
+	modA1 := sys.NewSizedModule(sys.Context.Childf("modA1"), 4, wiop.PaddingDirectionNone)
+	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 8, wiop.PaddingDirectionNone)
+	a0 := modA0.NewColumn(sys.Context.Childf("a0"), wiop.VisibilityOracle, r0)
+	a1 := modA1.NewColumn(sys.Context.Childf("a1"), wiop.VisibilityOracle, r0)
+	b := modB.NewColumn(sys.Context.Childf("b"), wiop.VisibilityOracle, r0)
+	assert.NotPanics(t, func() {
+		sys.NewPermutation(sys.Context.Childf("perm"),
+			[]wiop.Table{wiop.NewTable(a0.View()), wiop.NewTable(a1.View())},
+			[]wiop.Table{wiop.NewTable(b.View())})
+	})
+}
+
+// TestNewPermutation_DynamicModuleSkipsBalanceCheck: a dynamic module's height
+// is only known at runtime, so the static balance check must not fire even
+// though the other side's static size cannot match "unknown".
+func TestNewPermutation_DynamicModuleSkipsBalanceCheck(t *testing.T) {
+	sys := wiop.NewSystemf("permDyn")
+	r0 := sys.NewRound()
+	modA := sys.NewDynamicModule(sys.Context.Childf("modA"), wiop.PaddingDirectionRight)
+	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 8, wiop.PaddingDirectionNone)
+	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+	assert.NotPanics(t, func() {
+		sys.NewPermutation(sys.Context.Childf("perm"),
+			[]wiop.Table{wiop.NewTable(colA.View())},
+			[]wiop.Table{wiop.NewTable(colB.View())})
+	})
+}
+
 func TestLookupKind_String(t *testing.T) {
 	assert.Equal(t, "Inclusion", wiop.KindInclusion.String())
 	assert.Equal(t, "Permutation", wiop.KindPermutation.String())

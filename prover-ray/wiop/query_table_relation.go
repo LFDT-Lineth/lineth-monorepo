@@ -561,6 +561,12 @@ func (sys *System) NewInclusion(ctx *ContextFrame, included []Table, including [
 // Invariants enforced at construction:
 //   - a and b are non-empty.
 //   - No fragment carries a selector — permutation has no row filtering.
+//   - When every fragment on both sides lives on a statically sized module,
+//     the total row counts of the two sides must be equal: a permutation
+//     between unequal multiset cardinalities can never hold, so catching it
+//     here gives a dev-time error instead of an unexplained verifier
+//     rejection. The check is skipped as soon as either side touches a
+//     dynamic module, whose height is only known at runtime.
 //
 // Panics on any of the above invariant violations or if ctx is nil.
 func (sys *System) NewPermutation(ctx *ContextFrame, a []Table, b []Table) *TableRelationQuery {
@@ -571,6 +577,7 @@ func (sys *System) NewPermutation(ctx *ContextFrame, a []Table, b []Table) *Tabl
 	validateNonEmpty("NewPermutation", "b", b)
 	validateNoSelector("NewPermutation", a)
 	validateNoSelector("NewPermutation", b)
+	validateBalancedRows("NewPermutation", a, b)
 	return sys.newTableRelation(ctx, KindPermutation, a, b)
 }
 
@@ -608,6 +615,39 @@ func validateNonEmpty(caller, side string, tables []Table) {
 	if len(tables) == 0 {
 		panic(fmt.Sprintf("wiop: System.%s: %s must have at least one fragment", caller, side))
 	}
+}
+
+// validateBalancedRows panics if the total static row counts of the two sides
+// differ. The check only applies when every fragment on both sides lives on a
+// statically sized module; if any fragment's module is dynamic (or otherwise
+// unsized) the balance is only decidable at runtime and the check is skipped —
+// the grand-product identity itself still rejects an unbalanced witness.
+func validateBalancedRows(caller string, a, b []Table) {
+	aRows, aStatic := staticRowTotal(a)
+	bRows, bStatic := staticRowTotal(b)
+	if !aStatic || !bStatic {
+		return
+	}
+	if aRows != bRows {
+		panic(fmt.Sprintf(
+			"wiop: System.%s: the two sides have different total row counts (%d vs %d); "+
+				"a permutation between multisets of different cardinalities can never hold",
+			caller, aRows, bRows,
+		))
+	}
+}
+
+// staticRowTotal sums the static module heights of every fragment in tables.
+// ok is false if any fragment's module is not statically sized.
+func staticRowTotal(tables []Table) (rows uint64, ok bool) {
+	for _, t := range tables {
+		m := t.Module()
+		if !m.IsSized() {
+			return 0, false
+		}
+		rows += uint64(m.Size())
+	}
+	return rows, true
 }
 
 // validateUniformWidth panics if any Table in tables has a Width different from
