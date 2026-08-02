@@ -58,8 +58,10 @@ tasks.register('generateBesuPluginOptionsManifest', JavaExec) {
   def manifestOut = (findProperty('besuPluginOptionsManifest') ?: defaultManifestOutput.absolutePath) as String
   def reportOut = (findProperty('besuPluginOptionsReport') ?: defaultReportOutput.absolutePath) as String
   args = [
-    '--manifest', manifestOut,
-    '--report', reportOut,
+    '--manifest',
+    manifestOut,
+    '--report',
+    reportOut,
   ]
   outputs.files(manifestOut, reportOut)
 }
