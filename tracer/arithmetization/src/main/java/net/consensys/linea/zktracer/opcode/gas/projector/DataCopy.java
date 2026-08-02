@@ -46,7 +46,7 @@ public final class DataCopy extends GasProjection {
 
   @Override
   public long memoryExpansion() {
-    return gc.memoryExpansionGasCost(frame, targetOffset, size);
+    return memoryExpansionGasCost(gc, frame, targetOffset, size);
   }
 
   @Override

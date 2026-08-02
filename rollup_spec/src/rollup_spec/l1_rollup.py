@@ -59,6 +59,13 @@ class LineaRollupState:
     sanctioned_addresses: Set[Address] = field(default_factory=set)
     submitted_shnarf_last_block_hashes: Dict[Hash32, Hash32] = field(default_factory=dict)
     l2_merkle_roots_depths: Dict[Hash32, int] = field(default_factory=dict)
+    # The single, combined security-council-managed approved-VK list
+    # (§ProgramVK anchoring). Exec and rollup VKs are NOT distinguished on L1 —
+    # a finalization's single `public_inputs.program_vks` list is checked against
+    # this one set. On-chain this is managed by an add/remove setter analogous
+    # to `setVerifierAddress` (replace on soundness bug, add on non-soundness
+    # guest update, periodic cleanup); not modelled as a method here.
+    approved_vks: Set[Hash32] = field(default_factory=set)
 
 
 @dataclass
@@ -75,6 +82,11 @@ class FinalizationSubmission:
     placeholder (`b""`) in this reference (see `run_rollup_aggregation_guest`).
     `l2_messaging_blocks_offsets` is carried for the L1 calldata shape but is
     not yet consumed by `finalize_rollup`.
+
+    The single combined program-VK list (§ProgramVK anchoring) lives inside
+    `public_inputs.program_vks` so its order is bound to the proof; it is NOT a
+    separate submission field. `finalize_rollup` checks every entry against the
+    L1 `approved_vks` set.
     """
     public_inputs: RollupPublicInput
     proof: bytes
@@ -145,6 +157,16 @@ def finalize_rollup(state: LineaRollupState, submission: FinalizationSubmission)
     for address in submission.filtered_addresses:
         if address not in state.sanctioned_addresses:
             raise Exception("filtered address is not sanctioned")
+
+    # §ProgramVK anchoring: every guest verified beneath this finalization must
+    # be on the single combined approved-VK list, or L1 rejects the finalization
+    # (e.g. an operator swapping in an unapproved guest). Exec and rollup VKs are
+    # not distinguished — they arrive as one `program_vks` list. `program_vks` is
+    # the canonical sorted-distinct set, so this membership scan is
+    # order-independent (each entry checked against `approved_vks`).
+    for vk in pi.program_vks:
+        if vk not in state.approved_vks:
+            raise Exception("program VK is not approved")
 
     state.current_finalized_shnarf = pi.end_shnarf
     state.current_finalized_last_block_hash = state.submitted_shnarf_last_block_hashes[pi.end_shnarf]

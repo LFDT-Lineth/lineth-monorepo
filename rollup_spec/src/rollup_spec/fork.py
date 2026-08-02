@@ -20,6 +20,15 @@ Downstream gap: a consumer pinned to a pre-prune index reads Amsterdam as 24, no
 20. For example, Zesu is still on tests-zkevm@v0.4.1 (pre-prune), so the spec and
 that build disagree on the wire until it re-syncs. The spec follows
 execution-specs (which such engines mirror), so 20 is intended.
+
+Fork identity and ProgramVK anchoring: the EVM fork is hardcoded into the exec
+guest binary, so fork identity is carried by the **exec program VK**, not by a
+separate fork-schedule public input. One conflation = one fork = one exec guest
+binary = one approved exec VK; a new fork means a new exec guest and a new entry
+on L1's approved-VK list, not a runtime branch here. Different conflations within
+one aggregation may therefore use different forks (aggregation-grained), each
+identified by its own exec VK. This keeps the spec single-fork-per-binary as
+designed above.
 """
 
 from enum import StrEnum
