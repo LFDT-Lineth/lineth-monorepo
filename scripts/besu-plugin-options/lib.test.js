@@ -17,7 +17,7 @@ const {
   isNeutralPartial,
   PLUGIN_FLAG_PREFIX,
 } = require("./lib");
-const { MANIFEST_PATH, REPORT_PATH, GENERATED_DIR, WRAPPER_TEMPLATE_PATH } = require("./paths");
+const { MANIFEST_PATH, REPORT_PATH, OUTPUT_DIR, GENERATED_DIR } = require("./paths");
 
 const HAVE_MANIFEST = fs.existsSync(MANIFEST_PATH) && fs.existsSync(REPORT_PATH);
 const skip = !HAVE_MANIFEST && "Java-extracted manifest not found (run pnpm run generate)";
@@ -32,10 +32,7 @@ test("escapeCell escapes MDX-sensitive characters", () => {
 });
 
 test("stripEmbeddedDefault removes picocli help default parentheticals", () => {
-  assert.equal(
-    stripEmbeddedDefault("Path to the toml file (default: moduleLimitFile.toml)"),
-    "Path to the toml file",
-  );
+  assert.equal(stripEmbeddedDefault("Path to the toml file (default: moduleLimitFile.toml)"), "Path to the toml file");
   assert.equal(stripEmbeddedDefault("Forward endpoints (default: [])"), "Forward endpoints");
   assert.equal(stripEmbeddedDefault("No default here"), "No default here");
 });
@@ -113,7 +110,7 @@ test("completeness check passes for starter wrapper", { skip }, async () => {
 });
 
 test("completeness fails when a partial is missing from the wrapper", () => {
-  const failures = checkCompleteness(`import Sequencer from './_generated/sequencer.mdx';\n\n<Sequencer />\n`, [
+  const failures = checkCompleteness(`import Sequencer from './_generated/besu/sequencer.mdx';\n\n<Sequencer />\n`, [
     "sequencer.mdx",
     "tracer.mdx",
   ]);
@@ -123,8 +120,8 @@ test("completeness fails when a partial is missing from the wrapper", () => {
 test("completeness allows publish-only provenance import", () => {
   const failures = checkCompleteness(
     [
-      "import Provenance from './_generated/provenance.mdx';",
-      "import Sequencer from './_generated/sequencer.mdx';",
+      "import Provenance from './_generated/besu/provenance.mdx';",
+      "import Sequencer from './_generated/besu/sequencer.mdx';",
       "",
       "<Provenance />",
       "<Sequencer />",
@@ -147,20 +144,8 @@ test("generator is idempotent", { skip }, async () => {
   }
 });
 
-test("committed MDX matches freshly rendered output (drift)", { skip }, async () => {
-  const result = await build({});
-  for (const part of result.partials) {
-    const file = path.join(GENERATED_DIR, part.relPath);
-    assert.ok(fs.existsSync(file), part.relPath);
-    assert.equal(fs.readFileSync(file, "utf8"), part.markdown, part.relPath);
-  }
-  if (fs.existsSync(WRAPPER_TEMPLATE_PATH)) {
-    const failures = checkCompleteness(
-      fs.readFileSync(WRAPPER_TEMPLATE_PATH, "utf8"),
-      result.partials.map((p) => p.relPath),
-    );
-    assert.deepEqual(failures, []);
-  }
+test("generated MDX targets the Besu-only namespace", () => {
+  assert.equal(path.relative(OUTPUT_DIR, GENERATED_DIR).replace(/\\/g, "/"), "_generated/besu");
 });
 
 test("renderPartials produces one file per plugin with unique group headings", { skip }, async () => {
@@ -170,8 +155,8 @@ test("renderPartials produces one file per plugin with unique group headings", {
   assert.ok(partials.some((p) => p.markdown.includes("### Sequencer — RPC")));
   assert.ok(partials.some((p) => p.markdown.includes("### Tracer — RPC")));
   const wrapper = renderStarterWrapper(result.manifest, plugins, partials);
-  assert.match(wrapper, /import\s+Sequencer\s+from\s+'\.\/_generated\/sequencer\.mdx'/);
-  assert.match(wrapper, /import\s+Tracer\s+from\s+'\.\/_generated\/tracer\.mdx'/);
+  assert.match(wrapper, /import\s+Sequencer\s+from\s+'\.\/_generated\/besu\/sequencer\.mdx'/);
+  assert.match(wrapper, /import\s+Tracer\s+from\s+'\.\/_generated\/besu\/tracer\.mdx'/);
 });
 
 test("generated partials sanitize MDX-sensitive chars from option text", async () => {

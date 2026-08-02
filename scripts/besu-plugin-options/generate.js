@@ -39,18 +39,14 @@ function runJavaExtractor(monorepoPath) {
     },
   );
   if (result.status !== 0) {
-    throw new Error(
-      `Java extractor failed (exit ${result.status}). Ensure JDK 25+ and go-corset are available.`,
-    );
+    throw new Error(`Java extractor failed (exit ${result.status}). Ensure JDK 25+ and go-corset are available.`);
   }
 }
 
 async function main() {
   const monorepoPath = parseMonorepoArg() || MONOREPO_ROOT;
   if (hasFlag("--seed-wrapper")) {
-    console.warn(
-      `--seed-wrapper is handled by seed-wrapper.js (pnpm run generate:seed-wrapper), not generate.js.`,
-    );
+    console.warn(`--seed-wrapper is handled by seed-wrapper.js (pnpm run generate:seed-wrapper), not generate.js.`);
   }
 
   runJavaExtractor(monorepoPath);
@@ -63,7 +59,7 @@ async function main() {
   emptyDir(GENERATED_DIR);
   fs.mkdirSync(GENERATED_DIR, { recursive: true });
 
-  // Manifest/report are written by the Java extractor; re-canonicalize via Prettier.
+  // Manifest/report are ephemeral extractor output; re-canonicalize via Prettier for this run.
   fs.writeFileSync(MANIFEST_PATH, result.manifestJson);
   fs.writeFileSync(REPORT_PATH, result.reportJson);
 
@@ -93,7 +89,7 @@ async function main() {
   console.log(`  report:   ${path.relative(MONOREPO_ROOT, REPORT_PATH)}`);
   console.log(`  partials: ${result.partials.length} under ${path.relative(MONOREPO_ROOT, GENERATED_DIR)}`);
   for (const p of result.partials) {
-    console.log(`    - _generated/${p.relPath}`);
+    console.log(`    - _generated/besu/${p.relPath}`);
   }
   if (result.report.unresolvedDefaults?.length) {
     console.log(

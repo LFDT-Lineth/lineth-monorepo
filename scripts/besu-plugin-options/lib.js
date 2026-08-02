@@ -3,7 +3,7 @@
  *
  * Extraction is done by the Java Gradle module
  * `:linea-besu:plugins:besu-plugin-options-docgen` (reflection over @Option).
- * This file only turns the committed JSON manifest into MDX partials + wrapper.
+ * This file turns the ephemeral JSON manifest into MDX partials + wrapper.
  */
 
 const fs = require("node:fs");
@@ -178,14 +178,14 @@ function renderStarterWrapper(manifest, plugins, partials) {
   lines.push("---");
   lines.push("");
   lines.push(
-    "{/* Human-owned wrapper. Automation only updates `_generated/` partials. " +
+    "{/* Human-owned wrapper. Automation only updates `_generated/besu/` partials. " +
       "Seeded once by scripts/besu-plugin-options; place new partial imports when plugins appear. */}",
   );
   lines.push("");
 
-  lines.push("import Provenance from './_generated/provenance.mdx';");
+  lines.push("import Provenance from './_generated/besu/provenance.mdx';");
   for (const part of partials) {
-    lines.push(`import ${part.componentName} from './_generated/${part.relPath}';`);
+    lines.push(`import ${part.componentName} from './_generated/besu/${part.relPath}';`);
   }
   lines.push("");
 
@@ -236,7 +236,7 @@ function renderStarterWrapper(manifest, plugins, partials) {
 
 function checkCompleteness(wrapperMarkdown, partialRelPaths) {
   const failures = [];
-  const importRe = /import\s+([A-Za-z_][\w]*)\s+from\s+['"]\.\/_generated\/([^'"]+)['"]/g;
+  const importRe = /import\s+([A-Za-z_][\w]*)\s+from\s+['"]\.\/_generated\/besu\/([^'"]+)['"]/g;
   const imported = new Map();
   let m;
   while ((m = importRe.exec(wrapperMarkdown)) !== null) {
@@ -250,13 +250,13 @@ function checkCompleteness(wrapperMarkdown, partialRelPaths) {
   for (const rel of expected) {
     if (!imported.has(rel)) {
       failures.push(
-        `generated partial _generated/${rel} is not imported by the wrapper (place the import and <Component />)`,
+        `generated partial _generated/besu/${rel} is not imported by the wrapper (place the import and <Component />)`,
       );
     } else {
       const name = imported.get(rel);
       const usage = new RegExp(`<${name}\\s*/>`);
       if (!usage.test(wrapperMarkdown)) {
-        failures.push(`wrapper imports ${name} from _generated/${rel} but never renders <${name} />`);
+        failures.push(`wrapper imports ${name} from _generated/besu/${rel} but never renders <${name} />`);
       }
     }
   }
@@ -266,12 +266,12 @@ function checkCompleteness(wrapperMarkdown, partialRelPaths) {
         const name = imported.get(rel);
         const usage = new RegExp(`<${name}\\s*/>`);
         if (!usage.test(wrapperMarkdown)) {
-          failures.push(`wrapper imports ${name} from _generated/${rel} but never renders <${name} />`);
+          failures.push(`wrapper imports ${name} from _generated/besu/${rel} but never renders <${name} />`);
         }
       }
       continue;
     }
-    failures.push(`wrapper imports _generated/${rel} but that partial was not generated`);
+    failures.push(`wrapper imports _generated/besu/${rel} but that partial was not generated`);
   }
   return failures;
 }
@@ -353,7 +353,7 @@ async function buildFromManifest({ manifest, report, toolRoot } = {}) {
 
   for (const p of formattedPartialsList) {
     if (!isNeutralPartial(p.markdown)) {
-      throw new Error(`Partial _generated/${p.relPath} is not neutral (front matter, import, or custom JSX).`);
+      throw new Error(`Partial _generated/besu/${p.relPath} is not neutral (front matter, import, or custom JSX).`);
     }
   }
 

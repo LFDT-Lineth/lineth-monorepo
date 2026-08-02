@@ -2,7 +2,7 @@
   "name": "besu-plugin-options-docs",
   "version": "0.0.0",
   "private": true,
-  "description": "Generate Linea-Besu plugin CLI option MDX partials from Java @Option sources. Standalone pnpm project — not a workspace package.",
+  "description": "Generate ephemeral Linea-Besu plugin CLI option MDX partials for doc.linea's _generated/besu namespace. Standalone pnpm project — not a workspace package.",
   "scripts": {
     "generate": "node generate.js",
     "generate:seed-wrapper": "node seed-wrapper.js",

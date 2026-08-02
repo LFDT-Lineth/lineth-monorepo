@@ -7,7 +7,7 @@ const TOOL_ROOT = __dirname;
 const MONOREPO_ROOT = path.resolve(__dirname, "..", "..");
 
 const OUTPUT_DIR = path.join(TOOL_ROOT, "output");
-const GENERATED_DIR = path.join(OUTPUT_DIR, "_generated");
+const GENERATED_DIR = path.join(OUTPUT_DIR, "_generated", "besu");
 const TEMPLATES_DIR = path.join(TOOL_ROOT, "templates");
 
 const MANIFEST_PATH = path.join(OUTPUT_DIR, "linea-besu-plugin-options.json");
