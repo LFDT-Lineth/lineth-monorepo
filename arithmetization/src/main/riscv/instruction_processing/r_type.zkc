@@ -353,4 +353,3 @@ output_write_address:OutputAddress) ->
     registers[rd] = tmpDWord1
     new_output_write_address = output_write_address
 }
-
