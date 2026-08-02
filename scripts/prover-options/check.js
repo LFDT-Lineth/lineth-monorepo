@@ -7,8 +7,8 @@ const { listGeneratedPartials, writeOutput } = require("./output");
 const { TOOL_ROOT, MONOREPO_ROOT, WRAPPER_TEMPLATE_PATH, parseMonorepoArg } = require("./paths");
 
 async function check() {
-  const monorepoPath = parseMonorepoArg() || MONOREPO_ROOT;
-  const result = await build({ monorepoRoot: monorepoPath, toolRoot: TOOL_ROOT });
+  const monorepoPath = parseMonorepoArg();
+  const result = await build({ monorepoPath, monorepoRoot: MONOREPO_ROOT, toolRoot: TOOL_ROOT });
   const temporaryOutput = fs.mkdtempSync(path.join(os.tmpdir(), "prover-options-check-"));
 
   try {

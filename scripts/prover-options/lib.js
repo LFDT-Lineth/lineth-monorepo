@@ -217,9 +217,9 @@ async function formatWith(text, ext, toolRoot) {
 /**
  * Extract from Go + render MDX.
  */
-async function build({ monorepoRoot, toolRoot } = {}) {
+async function build({ monorepoPath, monorepoRoot, toolRoot } = {}) {
   const root = toolRoot || __dirname;
-  const mono = resolveMonorepoRoot({ monorepoRoot });
+  const mono = resolveMonorepoRoot({ monorepoPath, monorepoRoot });
   const { manifest, report, tracesLimitsNote } = extract(mono);
   return buildFromExtract({ manifest, report, tracesLimitsNote, toolRoot: root });
 }

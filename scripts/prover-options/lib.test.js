@@ -4,7 +4,14 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 
-const { escapeCell, isNeutralPartial, checkCompleteness, build, partialComponentName } = require("./lib");
+const {
+  escapeCell,
+  isNeutralPartial,
+  checkCompleteness,
+  resolveMonorepoRoot,
+  build,
+  partialComponentName,
+} = require("./lib");
 const { cleanDescription, isDevNoiseComment, extract } = require("./parse-go");
 const { TOOL_ROOT, MONOREPO_ROOT, OUTPUT_DIR, WRAPPER_TEMPLATE_PATH } = require("./paths");
 
@@ -76,6 +83,39 @@ test("check validates fresh temporary output without committed artifacts", () =>
   } finally {
     fs.rmSync(OUTPUT_DIR, { recursive: true, force: true });
     if (hadOutput) fs.renameSync(backupDir, OUTPUT_DIR);
+  }
+});
+
+test("explicit --monorepo path wins over LINEA_MONOREPO_PATH", () => {
+  const result = spawnSync("node", ["check.js", "--monorepo", MONOREPO_ROOT], {
+    cwd: TOOL_ROOT,
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      LINEA_MONOREPO_PATH: path.join(TOOL_ROOT, "missing-env-monorepo"),
+    },
+  });
+
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+});
+
+test("monorepo root resolution uses environment override before default fallback", () => {
+  const previous = process.env.LINEA_MONOREPO_PATH;
+  const environmentRoot = path.join(TOOL_ROOT, "environment-monorepo");
+  const defaultRoot = path.join(TOOL_ROOT, "default-monorepo");
+
+  try {
+    process.env.LINEA_MONOREPO_PATH = environmentRoot;
+    assert.equal(resolveMonorepoRoot({ monorepoRoot: defaultRoot }), path.resolve(environmentRoot));
+
+    delete process.env.LINEA_MONOREPO_PATH;
+    assert.equal(resolveMonorepoRoot({ monorepoRoot: defaultRoot }), path.resolve(defaultRoot));
+  } finally {
+    if (previous === undefined) {
+      delete process.env.LINEA_MONOREPO_PATH;
+    } else {
+      process.env.LINEA_MONOREPO_PATH = previous;
+    }
   }
 });
 

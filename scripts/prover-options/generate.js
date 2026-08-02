@@ -5,13 +5,14 @@ const { writeOutput } = require("./output");
 const { TOOL_ROOT, MONOREPO_ROOT, OUTPUT_DIR, GENERATED_DIR, parseMonorepoArg, hasFlag } = require("./paths");
 
 async function main() {
-  const monorepoPath = parseMonorepoArg() || MONOREPO_ROOT;
+  const monorepoPath = parseMonorepoArg();
   if (hasFlag("--seed-wrapper")) {
     console.warn(`--seed-wrapper is handled by seed-wrapper.js (pnpm run generate:seed-wrapper), not generate.js.`);
   }
 
   const result = await build({
-    monorepoRoot: monorepoPath,
+    monorepoPath,
+    monorepoRoot: MONOREPO_ROOT,
     toolRoot: TOOL_ROOT,
   });
 
