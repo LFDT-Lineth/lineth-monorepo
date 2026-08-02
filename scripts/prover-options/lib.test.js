@@ -12,7 +12,7 @@ const {
   build,
   partialComponentName,
 } = require("./lib");
-const { cleanDescription, isDevNoiseComment, extract } = require("./parse-go");
+const { cleanDescription, isDevNoiseComment, extract, parseSetDefaults } = require("./parse-go");
 const { TOOL_ROOT, MONOREPO_ROOT, OUTPUT_DIR, WRAPPER_TEMPLATE_PATH } = require("./paths");
 
 test("escapeCell escapes MDX-sensitive characters", () => {
@@ -37,6 +37,56 @@ test("dev-noise comments are stripped from descriptions", () => {
     ]),
     "AssetsDir stores the root of the directory where the assets are stored (setup) or accessed (prover).",
   );
+});
+
+test("parseSetDefaults captures literal defaults", () => {
+  const src = `
+    viper.SetDefault("a", 1)
+    viper.SetDefault("b", true)
+    viper.SetDefault("c", "prover-rounds")
+    viper.SetDefault("d", []int{0, 1, 2})
+  `;
+  const { defaults, unresolved } = parseSetDefaults(src, new Map());
+  assert.equal(defaults.get("a"), "1");
+  assert.equal(defaults.get("b"), "true");
+  assert.equal(defaults.get("c"), "prover-rounds");
+  assert.equal(defaults.get("d"), "[0, 1, 2]");
+  assert.deepEqual(unresolved, []);
+});
+
+test("parseSetDefaults handles nested parens in default values", () => {
+  const src = `viper.SetDefault("a", time.Duration(42*time.Second).String())`;
+  const { defaults, unresolved } = parseSetDefaults(src, new Map());
+  assert.equal(defaults.get("a"), null);
+  assert.equal(unresolved.length, 1);
+  assert.equal(unresolved[0].key, "a");
+  assert.equal(unresolved[0].expression, "time.Duration(42*time.Second).String()");
+});
+
+test("parseSetDefaults does not let ')' inside a string end the call", () => {
+  const src = `viper.SetDefault("a", "foo (bar) baz")`;
+  const { defaults, unresolved } = parseSetDefaults(src, new Map());
+  assert.equal(defaults.get("a"), "foo (bar) baz");
+  assert.deepEqual(unresolved, []);
+});
+
+test("parseSetDefaults captures multiple calls with mixed value shapes", () => {
+  const src = `
+    viper.SetDefault("simple", 120)
+    viper.SetDefault("nested", fmt.Sprintf("a (b) c"))
+    viper.SetDefault("unresolved", someFunc(1, 2))
+    viper.SetDefault("last", "ok")
+  `;
+  const { defaults, unresolved } = parseSetDefaults(src, new Map());
+  assert.equal(defaults.get("simple"), "120");
+  assert.equal(defaults.get("nested"), null);
+  assert.equal(defaults.get("unresolved"), null);
+  assert.equal(defaults.get("last"), "ok");
+  assert.equal(unresolved.length, 2);
+  assert.equal(unresolved[0].key, "nested");
+  assert.equal(unresolved[0].expression, 'fmt.Sprintf("a (b) c")');
+  assert.equal(unresolved[1].key, "unresolved");
+  assert.equal(unresolved[1].expression, "someFunc(1, 2)");
 });
 
 test("partialComponentName", () => {

@@ -358,14 +358,75 @@ function formatLiteralValue(expr, packageVars) {
   return { ok: false, raw: e };
 }
 
+function findStringEnd(source, start, quote) {
+  let i = start + 1;
+  while (i < source.length) {
+    const ch = source[i];
+    if (quote === '"' && ch === "\\") {
+      i += 2;
+      continue;
+    }
+    if (ch === quote) return i;
+    i++;
+  }
+  return -1;
+}
+
+function findValueEnd(source, start) {
+  let depth = 0;
+  let i = start;
+  while (i < source.length) {
+    const ch = source[i];
+    if (ch === '"' || ch === "`") {
+      const end = findStringEnd(source, i, ch);
+      if (end === -1) return -1;
+      i = end + 1;
+      continue;
+    }
+    if (ch === "(") {
+      depth++;
+      i++;
+      continue;
+    }
+    if (ch === ")") {
+      if (depth === 0) return i;
+      depth--;
+      i++;
+      continue;
+    }
+    i++;
+  }
+  return -1;
+}
+
 function parseSetDefaults(source, packageVars) {
   const defaults = new Map();
   const unresolved = [];
-  const re = /viper\.SetDefault\(\s*"([^"]+)"\s*,\s*([^)]+)\)/g;
-  let m;
-  while ((m = re.exec(source)) !== null) {
-    const key = m[1];
-    const expr = m[2].trim();
+  const marker = "viper.SetDefault(";
+  let i = 0;
+  while (i < source.length) {
+    const idx = source.indexOf(marker, i);
+    if (idx === -1) break;
+    let j = idx + marker.length;
+    while (j < source.length && /\s/.test(source[j])) j++;
+    if (source[j] !== '"') {
+      i = j;
+      continue;
+    }
+    const keyEnd = findStringEnd(source, j, '"');
+    if (keyEnd === -1) {
+      i = j;
+      continue;
+    }
+    const key = source.slice(j + 1, keyEnd);
+    let k = keyEnd + 1;
+    while (k < source.length && /[\s,]/.test(source[k])) k++;
+    const valueEnd = findValueEnd(source, k);
+    if (valueEnd === -1) {
+      i = k;
+      continue;
+    }
+    const expr = source.slice(k, valueEnd).trim();
     const resolved = formatLiteralValue(expr, packageVars);
     if (resolved.ok) {
       defaults.set(key, String(resolved.value));
@@ -373,6 +434,7 @@ function parseSetDefaults(source, packageVars) {
       defaults.set(key, null);
       unresolved.push({ key, expression: resolved.raw || expr });
     }
+    i = valueEnd + 1;
   }
   return { defaults, unresolved };
 }
