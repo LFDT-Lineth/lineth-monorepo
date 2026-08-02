@@ -391,6 +391,13 @@ public final class CliOptionsManifestGenerator {
       if (description.contains("${DEFAULT-VALUE}") && defaultDisplay != null) {
         description = description.replace("${DEFAULT-VALUE}", defaultDisplay);
       }
+      // picocli normally expands ${COMPLETION-CANDIDATES} itself; strip any residual
+      // literal token so it can't leak into published docs if a future option lacks
+      // completionCandidates or picocli's expansion behavior changes.
+      if (description.contains("${COMPLETION-CANDIDATES}")) {
+        description =
+            description.replace("${COMPLETION-CANDIDATES}", "").replaceAll("\\s{2,}", " ").trim();
+      }
       // Docs have a Default column; drop picocli-help "(default: …)" from the description text.
       description = stripEmbeddedDefault(description);
 

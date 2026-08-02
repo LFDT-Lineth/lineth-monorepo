@@ -89,6 +89,17 @@ async function check() {
       failures.push(...checkCompleteness(wrapper, [...expectedPartials.keys()]).map((f) => `completeness: ${f}`));
     }
 
+    // Defensive: picocli expands ${COMPLETION-CANDIDATES} itself, but if that ever
+    // changes the literal token must not leak into published docs.
+    const COMPLETION_CANDIDATES_TOKEN = "${COMPLETION-CANDIDATES}";
+    for (const o of manifest.options || []) {
+      if (typeof o.description === "string" && o.description.includes(COMPLETION_CANDIDATES_TOKEN)) {
+        failures.push(
+          `description: option ${o.names && o.names[0]} still contains literal ${COMPLETION_CANDIDATES_TOKEN} token`,
+        );
+      }
+    }
+
     return failures;
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
