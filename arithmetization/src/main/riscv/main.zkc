@@ -23,6 +23,7 @@ fn main<registers, ram, state_row0, state_row1, state_row2, state_row3, state_ro
     var blobs_count:u64
     entry_point, blobs_count = entry_point_and_blobs_count[0]
     var pc:Address = entry_point
+    var output_write_address:OutputAddress = 0
 
     // Base address of the pre-decoded instruction tables (lowest executable
     // instruction address). Used to map pc -> instruction index.
@@ -78,7 +79,8 @@ fn main<registers, ram, state_row0, state_row1, state_row2, state_row3, state_ro
         clock_cycle = clock_cycle + 1
         printf "\n----------------------------------------------------------------- PC=%d, clock cycle: %d\n", pc, clock_cycle
 
-        pc = interpreter(index, pc)
+        // update pc and output_write_address
+        pc, output_write_address = interpreter(index, pc, output_write_address)
     }
 }
 

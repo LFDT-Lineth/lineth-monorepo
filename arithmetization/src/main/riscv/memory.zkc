@@ -46,3 +46,6 @@ pub input instruction_base(i:u1) -> (base:Address)
 // 4-byte word of the executable region). Each record holds the unified semantic
 // compute op and operands for direct dispatch in interpreter.zkc.
 pub input decoded(i:u64) -> (compute_op:ComputeOp, imm:DoubleWord, rs1:Register, rs2:Register, rd:Register)
+
+// guest program output
+pub output guest_output(address:OutputAddress) -> (byte:u8)
