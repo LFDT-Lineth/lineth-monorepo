@@ -1,22 +1,26 @@
 package linea.persistence
 
 import linea.domain.BlobRecord
+import linea.domain.BlobRecordV2
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Instant
 
-interface BlobsRepository {
-  fun saveNewBlob(blobRecord: BlobRecord): SafeFuture<Unit>
+interface BlobsRepositoryG<T> {
+  fun saveNewBlob(blobRecord: T): SafeFuture<Unit>
 
   fun getConsecutiveBlobsFromBlockNumber(
     startingBlockNumberInclusive: Long,
     endBlockCreatedBefore: Instant,
-  ): SafeFuture<List<BlobRecord>>
+  ): SafeFuture<List<T>>
 
-  fun findBlobByStartBlockNumber(startBlockNumber: Long): SafeFuture<BlobRecord?>
+  fun findBlobByStartBlockNumber(startBlockNumber: Long): SafeFuture<T?>
 
-  fun findBlobByEndBlockNumber(endBlockNumber: Long): SafeFuture<BlobRecord?>
+  fun findBlobByEndBlockNumber(endBlockNumber: Long): SafeFuture<T?>
 
   fun deleteBlobsUpToEndBlockNumber(endBlockNumberInclusive: ULong): SafeFuture<Int>
 
   fun deleteBlobsAfterBlockNumber(startingBlockNumberInclusive: ULong): SafeFuture<Int>
 }
+
+interface BlobsRepository : BlobsRepositoryG<BlobRecord>
+interface BlobsRepositoryV2 : BlobsRepositoryG<BlobRecordV2>
