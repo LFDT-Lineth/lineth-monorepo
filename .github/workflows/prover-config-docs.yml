@@ -32,8 +32,21 @@ on:
         default: false
 
 concurrency:
-  group: prover-config-docs-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: >-
+    ${{
+      (
+        github.event_name == 'push' ||
+        (github.event_name == 'workflow_dispatch' && inputs.publish)
+      ) && 'prover-config-docs-publish' ||
+      format('prover-config-docs-validation-{0}', github.ref)
+    }}
+  cancel-in-progress: >-
+    ${{
+      !(
+        github.event_name == 'push' ||
+        (github.event_name == 'workflow_dispatch' && inputs.publish)
+      )
+    }}
 
 jobs:
   validate:
