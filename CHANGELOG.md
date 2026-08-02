@@ -12,6 +12,10 @@
 - *(coordinator)* [**breaking**] Web3j upgrade to onboard 7594 support (#3514)
 - *(coordinator)* Add inital block number config for finalized state search (#3534)
 - *(coordinator)* Add extension seam (#3532)
+- *(coordinator)* Wire config-docs via a buildSrc plugin and declarative spec (#3607)
+- *(coordinator)* Document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)
+- *(coordinator)* GasPriceCapProviderV2 and DRY (#3624)
+- *(coordinator)* Support custom transaction signers (#3597)
 
 ### 🐛 Bug Fixes
 
@@ -46,6 +50,11 @@
 - *(coordinator)* L1FinalizationPriorityFeeCalculator feeLowerBound config (#3517)
 - *(misc)* Web3j-solc solidity resolution workaround (#3516)
 - *(linea-besu)* Updating Besu version (#3535)
+- *(coordinator)* Small fix on start/stop handlers (#3621)
+- *(coordinator)* Truncate coefficient-adjusted gas caps (#3644)
+- *(prover)* Fix the bitdecompose.go by removing IsPackedLimbNotZero (#3475)
+- *(coordinator)* Correct ByteArray equality checks in domain classes (#3625)
+- *(coordinator)* Address error handling issues from review (#3626)
 
 ### 🚜 Refactor
 
@@ -53,6 +62,7 @@
 - *(maru)* Relocate Maru JVM libs (#3236)
 - *(misc)* Rename Linea to Lineth across documentation and codebase (#3316)
 - *(prover)* Remove redundant and unsafe utility functions (#3273)
+- *(coordinator)* Decompose L1DependentApp into smaller scoped apps (#3615)
 
 ### ⚡ Performance
 
@@ -93,3 +103,10 @@
 - *(maru)* Reuse hoplite decoders (#3559)
 - *(deps)* Align bouncycastle catalog pin to 1.84 (#3562)
 - *(linea-besu)* Tidy v2.0.0 changelog entries (#3574)
+- *(misc)* Update jackson from 2.19.4 to 2.22.1 (#3595)
+- *(misc)* Cleanup redundant deps (#3596)
+- *(coordinator)* Add riscv enablement config (#3617)
+- *(coordinator)* Adds initial scafold for contract v9 RISC-V (#3618)
+- *(coordinator)* Cleanup replaced apps in PR #3615 (#3622)
+- *(coordinator)* Remove dead code and apply small cleanups from review (#3627)
+- *(coordinator)* Riscv blob data skeleton (#3609)

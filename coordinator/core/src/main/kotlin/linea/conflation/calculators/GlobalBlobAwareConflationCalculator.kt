@@ -223,6 +223,14 @@ class GlobalBlobAwareConflationCalculator(
       blobBatches.toBlockIntervalsString(),
     )
     blobHandler.handleBlob(blob)
+      .whenException { th ->
+        log.error(
+          "Error handling blob: blob={} errorMessage={}",
+          blobInterval.intervalString(),
+          th.message,
+          th,
+        )
+      }
 
     // Record the blob metrics
     recordBlobMetrics(blobInterval, compressedData.size)
