@@ -1,26 +1,8 @@
-const fs = require("node:fs");
 const path = require("node:path");
 
 const { build } = require("./lib");
-const {
-  TOOL_ROOT,
-  MONOREPO_ROOT,
-  OUTPUT_DIR,
-  GENERATED_DIR,
-  MANIFEST_PATH,
-  REPORT_PATH,
-  parseMonorepoArg,
-  hasFlag,
-} = require("./paths");
-
-/** Recursively remove files under dir but keep the directory. */
-function emptyDir(dir) {
-  if (!fs.existsSync(dir)) return;
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    fs.rmSync(full, { recursive: true, force: true });
-  }
-}
+const { writeOutput } = require("./output");
+const { TOOL_ROOT, MONOREPO_ROOT, OUTPUT_DIR, GENERATED_DIR, parseMonorepoArg, hasFlag } = require("./paths");
 
 async function main() {
   const monorepoPath = parseMonorepoArg() || MONOREPO_ROOT;
@@ -33,18 +15,7 @@ async function main() {
     toolRoot: TOOL_ROOT,
   });
 
-  fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-  emptyDir(GENERATED_DIR);
-  fs.mkdirSync(GENERATED_DIR, { recursive: true });
-
-  fs.writeFileSync(MANIFEST_PATH, result.manifestJson);
-  fs.writeFileSync(REPORT_PATH, result.reportJson);
-
-  for (const part of result.partials) {
-    const abs = path.join(GENERATED_DIR, part.relPath);
-    fs.mkdirSync(path.dirname(abs), { recursive: true });
-    fs.writeFileSync(abs, part.markdown);
-  }
+  writeOutput(result, OUTPUT_DIR);
 
   const c = result.manifest.counts;
   console.log(
@@ -59,8 +30,8 @@ async function main() {
     console.log(`  - ${info.title} (${id}): ${info.keyCount} key(s)`);
   }
   console.log(`  total rows: ${result.rowCount}`);
-  console.log(`  manifest: ${path.relative(MONOREPO_ROOT, MANIFEST_PATH)}`);
-  console.log(`  report:   ${path.relative(MONOREPO_ROOT, REPORT_PATH)}`);
+  console.log(`  manifest: ${path.relative(MONOREPO_ROOT, path.join(OUTPUT_DIR, "linea-prover-options.json"))}`);
+  console.log(`  report:   ${path.relative(MONOREPO_ROOT, path.join(OUTPUT_DIR, "report.json"))}`);
   console.log(`  partials: ${result.partials.length} under ${path.relative(MONOREPO_ROOT, GENERATED_DIR)}`);
   for (const p of result.partials) {
     console.log(`    - _generated/prover/${p.relPath}`);

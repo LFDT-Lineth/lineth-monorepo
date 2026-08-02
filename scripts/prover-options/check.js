@@ -1,92 +1,81 @@
 const fs = require("node:fs");
+const os = require("node:os");
 const path = require("node:path");
 
 const { build, checkCompleteness } = require("./lib");
-const {
-  TOOL_ROOT,
-  MONOREPO_ROOT,
-  GENERATED_DIR,
-  MANIFEST_PATH,
-  REPORT_PATH,
-  WRAPPER_TEMPLATE_PATH,
-  parseMonorepoArg,
-} = require("./paths");
-
-function listGeneratedPartials() {
-  const out = [];
-  if (!fs.existsSync(GENERATED_DIR)) return out;
-  function walk(dir, prefix) {
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) walk(full, rel);
-      else if (entry.name.endsWith(".mdx")) out.push(rel.replace(/\\/g, "/"));
-    }
-  }
-  walk(GENERATED_DIR, "");
-  return out.sort();
-}
+const { listGeneratedPartials, writeOutput } = require("./output");
+const { TOOL_ROOT, MONOREPO_ROOT, WRAPPER_TEMPLATE_PATH, parseMonorepoArg } = require("./paths");
 
 async function check() {
   const monorepoPath = parseMonorepoArg() || MONOREPO_ROOT;
   const result = await build({ monorepoRoot: monorepoPath, toolRoot: TOOL_ROOT });
+  const temporaryOutput = fs.mkdtempSync(path.join(os.tmpdir(), "prover-options-check-"));
 
-  const failures = [];
-  const targets = [
-    { label: "manifest", file: MANIFEST_PATH, expected: result.manifestJson },
-    { label: "report", file: REPORT_PATH, expected: result.reportJson },
-  ];
-  for (const t of targets) {
-    if (!fs.existsSync(t.file)) {
-      failures.push(`${t.label}: missing committed output at ${path.relative(MONOREPO_ROOT, t.file)}`);
-      continue;
+  try {
+    const generatedDir = writeOutput(result, temporaryOutput);
+    const failures = [];
+    const targets = [
+      {
+        label: "manifest",
+        file: path.join(temporaryOutput, "linea-prover-options.json"),
+        expected: result.manifestJson,
+      },
+      { label: "report", file: path.join(temporaryOutput, "report.json"), expected: result.reportJson },
+    ];
+    for (const target of targets) {
+      if (!fs.existsSync(target.file)) {
+        failures.push(`${target.label}: missing freshly generated output`);
+        continue;
+      }
+      if (fs.readFileSync(target.file, "utf8") !== target.expected) {
+        failures.push(`${target.label}: freshly generated output does not match the extracted source`);
+      }
     }
-    const actual = fs.readFileSync(t.file, "utf8");
-    if (actual !== t.expected) {
-      failures.push(`${t.label}: ${path.relative(MONOREPO_ROOT, t.file)} is out of date (run pnpm run generate).`);
+
+    const expectedPartials = new Map(result.partials.map((p) => [p.relPath.replace(/\\/g, "/"), p.markdown]));
+    const generatedPartials = listGeneratedPartials(generatedDir);
+
+    for (const relativePath of expectedPartials.keys()) {
+      if (!generatedPartials.includes(relativePath)) {
+        failures.push(`partial: missing freshly generated _generated/prover/${relativePath}`);
+      }
     }
-  }
-
-  const expectedPartials = new Map(result.partials.map((p) => [p.relPath.replace(/\\/g, "/"), p.markdown]));
-  const onDisk = listGeneratedPartials();
-
-  for (const rel of expectedPartials.keys()) {
-    if (!onDisk.includes(rel)) failures.push(`partial: missing _generated/prover/${rel}`);
-  }
-  for (const rel of onDisk) {
-    if (!expectedPartials.has(rel)) {
-      failures.push(`partial: unexpected _generated/prover/${rel} (not produced by current sources)`);
+    for (const relativePath of generatedPartials) {
+      if (!expectedPartials.has(relativePath)) {
+        failures.push(`partial: unexpected freshly generated _generated/prover/${relativePath}`);
+      }
     }
-  }
-  for (const [rel, expected] of expectedPartials) {
-    const file = path.join(GENERATED_DIR, rel);
-    if (!fs.existsSync(file)) continue;
-    if (fs.readFileSync(file, "utf8") !== expected) {
-      failures.push(`partial: _generated/prover/${rel} is out of date (run pnpm run generate).`);
+    for (const [relativePath, expected] of expectedPartials) {
+      const file = path.join(generatedDir, relativePath);
+      if (fs.existsSync(file) && fs.readFileSync(file, "utf8") !== expected) {
+        failures.push(`partial: freshly generated _generated/prover/${relativePath} is invalid`);
+      }
     }
-  }
 
-  if (!fs.existsSync(WRAPPER_TEMPLATE_PATH)) {
-    failures.push(
-      `wrapper: missing template at ${path.relative(MONOREPO_ROOT, WRAPPER_TEMPLATE_PATH)} ` +
-        `(run pnpm run generate:seed-wrapper once).`,
-    );
-  } else {
-    const wrapper = fs.readFileSync(WRAPPER_TEMPLATE_PATH, "utf8");
-    failures.push(...checkCompleteness(wrapper, [...expectedPartials.keys()]).map((f) => `completeness: ${f}`));
-  }
+    if (!fs.existsSync(WRAPPER_TEMPLATE_PATH)) {
+      failures.push(
+        `wrapper: missing template at ${path.relative(MONOREPO_ROOT, WRAPPER_TEMPLATE_PATH)} ` +
+          `(run pnpm run generate:seed-wrapper once).`,
+      );
+    } else {
+      const wrapper = fs.readFileSync(WRAPPER_TEMPLATE_PATH, "utf8");
+      failures.push(...checkCompleteness(wrapper, generatedPartials).map((failure) => `completeness: ${failure}`));
+    }
 
-  return failures;
+    return failures;
+  } finally {
+    fs.rmSync(temporaryOutput, { recursive: true, force: true });
+  }
 }
 
 check()
   .then((failures) => {
     if (failures.length) {
-      console.error("Prover options drift/completeness check failed:");
+      console.error("Prover options generation/completeness check failed:");
       for (const f of failures) console.error(`- ${f}`);
       process.exit(1);
     }
-    console.log("Prover options check passed (committed output matches source; wrapper completeness OK).");
+    console.log("Prover options check passed (fresh generation valid; wrapper completeness OK).");
   })
   .catch((err) => {
     console.error(err.message);

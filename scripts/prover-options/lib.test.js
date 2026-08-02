@@ -6,15 +6,7 @@ const { spawnSync } = require("node:child_process");
 
 const { escapeCell, isNeutralPartial, checkCompleteness, build, partialComponentName } = require("./lib");
 const { cleanDescription, isDevNoiseComment, extract } = require("./parse-go");
-const {
-  TOOL_ROOT,
-  MONOREPO_ROOT,
-  OUTPUT_DIR,
-  GENERATED_DIR,
-  MANIFEST_PATH,
-  REPORT_PATH,
-  WRAPPER_TEMPLATE_PATH,
-} = require("./paths");
+const { TOOL_ROOT, MONOREPO_ROOT, OUTPUT_DIR, WRAPPER_TEMPLATE_PATH } = require("./paths");
 
 test("escapeCell escapes MDX-sensitive characters", () => {
   assert.equal(escapeCell("a|b"), "a\\|b");
@@ -68,9 +60,26 @@ test("isNeutralPartial rejects front matter and imports", () => {
   assert.equal(isNeutralPartial("### Hello\n\n| a | b |\n"), true);
 });
 
-const hasCommittedOutput = fs.existsSync(MANIFEST_PATH);
+test("check validates fresh temporary output without committed artifacts", () => {
+  const backupDir = `${OUTPUT_DIR}.test-backup-${process.pid}`;
+  const hadOutput = fs.existsSync(OUTPUT_DIR);
+  if (hadOutput) fs.renameSync(OUTPUT_DIR, backupDir);
 
-test("extract discovers documentable keys and excludes env-only/-", { skip: !hasCommittedOutput }, () => {
+  try {
+    const result = spawnSync("node", ["check.js"], {
+      cwd: TOOL_ROOT,
+      encoding: "utf8",
+      env: process.env,
+    });
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    assert.equal(fs.existsSync(OUTPUT_DIR), false, "check should not recreate the normal output directory");
+  } finally {
+    fs.rmSync(OUTPUT_DIR, { recursive: true, force: true });
+    if (hadOutput) fs.renameSync(backupDir, OUTPUT_DIR);
+  }
+});
+
+test("extract discovers documentable keys and excludes env-only/-", () => {
   const { manifest, report } = extract(MONOREPO_ROOT);
   assert.ok(manifest.keys.length > 40, `expected many keys, got ${manifest.keys.length}`);
   const keySet = new Set(manifest.keys.map((k) => k.key));
@@ -82,13 +91,13 @@ test("extract discovers documentable keys and excludes env-only/-", { skip: !has
   assert.equal(manifest.perSection["traces-limits"].noteOnly, true);
 });
 
-test("rendered rows match documentable key count", { skip: !hasCommittedOutput }, async () => {
+test("rendered rows match documentable key count", async () => {
   const result = await build({ monorepoRoot: MONOREPO_ROOT, toolRoot: TOOL_ROOT });
   assert.equal(result.rowCount, result.manifest.counts.total);
   assert.equal(result.rowCount, result.manifest.keys.length);
 });
 
-test("spot-check known defaults and allowed values", { skip: !hasCommittedOutput }, () => {
+test("spot-check known defaults and allowed values", () => {
   const { manifest } = extract(MONOREPO_ROOT);
   const byKey = new Map(manifest.keys.map((k) => [k.key, k]));
 
@@ -108,37 +117,35 @@ test("spot-check known defaults and allowed values", { skip: !hasCommittedOutput
   assert.equal(byKey.get("data_availability.max_uncompressed_nb_bytes").default, null);
 });
 
-test("partials are neutral and traces-limits is a note", { skip: !hasCommittedOutput }, () => {
-  assert.ok(fs.existsSync(GENERATED_DIR));
-  const files = fs.readdirSync(GENERATED_DIR).filter((f) => f.endsWith(".mdx"));
-  assert.ok(files.includes("traces-limits.mdx"));
-  for (const f of files) {
-    const md = fs.readFileSync(path.join(GENERATED_DIR, f), "utf8");
-    assert.equal(isNeutralPartial(md), true, `${f} should be neutral`);
+test("partials are neutral and traces-limits is a note", async () => {
+  const result = await build({ monorepoRoot: MONOREPO_ROOT, toolRoot: TOOL_ROOT });
+  const partials = new Map(result.partials.map((partial) => [partial.relPath, partial.markdown]));
+  assert.ok(partials.has("traces-limits.mdx"));
+  for (const [relativePath, markdown] of partials) {
+    assert.equal(isNeutralPartial(markdown), true, `${relativePath} should be neutral`);
   }
-  const note = fs.readFileSync(path.join(GENERATED_DIR, "traces-limits.mdx"), "utf8");
+  const note = partials.get("traces-limits.mdx");
   assert.match(note, /prefix/i);
   assert.doesNotMatch(note, /\| Config key \|/);
 });
 
-test("wrapper completeness against committed partials", { skip: !hasCommittedOutput }, () => {
+test("wrapper completeness against fresh partials", async () => {
   assert.ok(fs.existsSync(WRAPPER_TEMPLATE_PATH));
   const wrapper = fs.readFileSync(WRAPPER_TEMPLATE_PATH, "utf8");
-  const partials = fs
-    .readdirSync(GENERATED_DIR)
-    .filter((f) => f.endsWith(".mdx"))
-    .sort();
+  const result = await build({ monorepoRoot: MONOREPO_ROOT, toolRoot: TOOL_ROOT });
+  const partials = result.partials.map((partial) => partial.relPath);
   const failures = checkCompleteness(wrapper, partials);
   assert.deepEqual(failures, []);
 });
 
-test("output is public-safe: no config-*.toml secrets leaked", { skip: !hasCommittedOutput }, () => {
+test("output is public-safe: no config-*.toml secrets leaked", async () => {
   const configDir = path.join(MONOREPO_ROOT, "prover", "config");
   const tomlFiles = fs.readdirSync(configDir).filter((f) => f.startsWith("config-") && f.endsWith(".toml"));
   assert.ok(tomlFiles.length > 0);
 
   // Intentional defaults from config_default.go (paths, cmds) are allowed.
-  const { manifest } = extract(MONOREPO_ROOT);
+  const result = await build({ monorepoRoot: MONOREPO_ROOT, toolRoot: TOOL_ROOT });
+  const { manifest } = result;
   const allowedDefaults = new Set(manifest.keys.map((k) => k.default).filter((d) => d != null && d !== ""));
 
   const leakedCandidates = new Set();
@@ -148,12 +155,7 @@ test("output is public-safe: no config-*.toml secrets leaked", { skip: !hasCommi
     for (const m of text.matchAll(/https?:\/\/[^\s"'`]+/g)) leakedCandidates.add(m[0]);
   }
 
-  const outputs = [];
-  outputs.push(fs.readFileSync(MANIFEST_PATH, "utf8"));
-  outputs.push(fs.readFileSync(REPORT_PATH, "utf8"));
-  for (const f of fs.readdirSync(GENERATED_DIR)) {
-    if (f.endsWith(".mdx")) outputs.push(fs.readFileSync(path.join(GENERATED_DIR, f), "utf8"));
-  }
+  const outputs = [result.manifestJson, result.reportJson, ...result.partials.map((partial) => partial.markdown)];
   const blob = outputs.join("\n");
 
   for (const v of leakedCandidates) {
@@ -173,7 +175,7 @@ test("output is public-safe: no config-*.toml secrets leaked", { skip: !hasCommi
   }
 });
 
-test("idempotent generate (twice, no diff)", { skip: !hasCommittedOutput }, () => {
+test("idempotent generate (twice, identical ephemeral output)", () => {
   const run = () => spawnSync("node", ["generate.js"], { cwd: TOOL_ROOT, encoding: "utf8", env: process.env });
   const a = run();
   assert.equal(a.status, 0, a.stderr || a.stdout);
