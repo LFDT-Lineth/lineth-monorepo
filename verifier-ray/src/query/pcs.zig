@@ -4,7 +4,6 @@ const ext = @import("../field/koalabear_ext.zig");
 const poseidon2 = @import("../crypto/poseidon2.zig");
 const merkle = @import("../crypto/merkle.zig");
 const canonical = @import("../polynomial/canonical.zig");
-const fiat_shamir = @import("../crypto/fiat_shamir.zig");
 const fri = @import("fri.zig");
 
 /// The PCS/DEEP-quotient layer: input-tree authentication, per-level Horner
@@ -71,8 +70,6 @@ pub const System = struct {
     log_final_poly_size: u8 = 0,
     num_queries: usize,
     layout: []const SizeBundle,
-    /// Index into `protocol.Context.all_coins` of the opening point zeta.
-    zeta_coin_index: usize = 0,
 
     /// The `fri.Params` this system verifies against.
     pub fn params(comptime self: System) fri.Params {
@@ -117,65 +114,6 @@ pub const VerifyInput = struct {
     query_positions: []const usize,
     proof: OpeningProof,
 };
-
-/// The Fiat-Shamir–derived PCS challenges consumed by `verify`: the per-round
-/// fold challenges and the FRI query positions. Both are sized by the System's
-/// comptime `params`, so nothing allocates. Produced by `deriveChallenges` (the
-/// transcript-touching half) and passed to `verify` (pure arithmetic) — this
-/// separation lets the caller thread one transcript through replay → PCS.
-pub fn PcsChallenges(comptime system: System) type {
-    const params = comptime system.params();
-    return struct {
-        fold_alphas: [params.numRounds()]ext.Ext = undefined,
-        query_positions: [params.num_queries]usize = undefined,
-    };
-}
-
-/// Derives the FRI fold challenges and query positions by continuing
-/// `transcript` — the live Fiat-Shamir state `protocol.replayWithTranscript`
-/// left after squeezing the protocol coins (mirroring prover-ray's
-/// `fs := rt.GetFS()`), so the proof cannot dictate them. Only the running-layer
-/// roots and the final polynomial are absorbed; the challenges are pure squeezes
-/// returned as a value. `transcript` is caller-owned and advanced in place.
-///
-/// This is the transcript-touching counterpart of `verify`, which then checks
-/// the proof against these challenges without touching the transcript.
-///
-/// `fri_proof.round_roots` must hold exactly `num_rounds - 1` intermediate-layer
-/// roots (the shape `verify` later re-checks). This is validated up front rather
-/// than trusted: the absorb loop indexes the fixed-size `fold_alphas` buffer by
-/// root position, so an over-long `round_roots` would otherwise write past it —
-/// a stack overflow in release builds, where bounds checks are disabled.
-pub fn deriveChallenges(
-    comptime system: System,
-    transcript: *fiat_shamir.Transcript,
-    fri_proof: fri.Proof,
-) fri.Error!PcsChallenges(system) {
-    const params = comptime system.params();
-    const num_rounds = comptime params.numRounds();
-    const want_round_roots = if (num_rounds > 0) num_rounds - 1 else 0;
-    if (fri_proof.round_roots.len != want_round_roots) return fri.Error.InvalidRoundRootCount;
-
-    var challenges = PcsChallenges(system){};
-
-    // One challenge per intermediate layer root, absorbing the root between
-    // squeezes; then the final round's challenge, with no root after it. When a
-    // protocol never folds (num_rounds == 0) the buffer is empty and this whole
-    // block is elided at comptime rather than indexing into a [0]ext.Ext.
-    if (comptime num_rounds > 0) {
-        for (fri_proof.round_roots, 0..) |root, i| {
-            challenges.fold_alphas[i] = transcript.randomExt();
-            transcript.updateElements(&root);
-        }
-        challenges.fold_alphas[num_rounds - 1] = transcript.randomExt();
-    }
-
-    transcript.updateExt(fri_proof.final_poly);
-
-    const codeword_size = comptime @as(usize, 1) << @intCast(params.log_codeword_size);
-    transcript.randomManyIntegers(&challenges.query_positions, codeword_size);
-    return challenges;
-}
 
 pub fn verify(comptime system: System, input: VerifyInput) Error!void {
     const params = comptime system.params();
