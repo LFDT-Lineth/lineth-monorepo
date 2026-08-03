@@ -36,3 +36,16 @@ jobs:
         env:
           ZKC_REF: ""
         run: make -C riscv-guests/l2-execution run-execution-specs-ssz-fixtures
+
+  # This job is scheduled and had no notification, so it stayed red for weeks without anyone
+  # noticing. Same reusable notifier and channel as the tracer nightly/weekly jobs.
+  notify:
+    needs: [ run-fixtures ]
+    if: ${{ always() && github.ref == 'refs/heads/main' && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) }}
+    uses: ./.github/workflows/slack-notify-failed-jobs.yml
+    with:
+      title: "Arithmetization execution-specs SSZ fixtures workflow Failed"
+      run_id: ${{ github.run_id }}
+    secrets:
+      channel_id: ${{ secrets.SLACK_ARITHMETIZATION_ALERTS_CHANNEL_ID }}
+      slack_bot_token: ${{ secrets.SLACK_GITHUB_ACTIONS_ALERTS_BOT_TOKEN }}
