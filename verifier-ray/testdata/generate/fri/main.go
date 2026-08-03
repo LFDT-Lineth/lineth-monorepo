@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fiatshamir"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fri"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
@@ -36,6 +37,9 @@ func main() {
 		panic(err)
 	}
 	if err := writePCSFixtures(); err != nil {
+		panic(err)
+	}
+	if err := writeIntegrationFixtures(); err != nil {
 		panic(err)
 	}
 }
@@ -476,13 +480,9 @@ func corruptBoundaryClaimData(base pcsCaseData) pcsCaseData {
 
 // ─── Zig literal emission ───────────────────────────────────────────────────
 
-// pcs.System derives log_plaintext_size and log_codeword_size from layout's
-// largest bundle size and log_inverse_rate.
-func pcsSystemLiteral(params fri.Params, logFinalPolySize uint8, layout []pcsSizeBundle) string {
-	logInverseRate := params.LogCodewordSize - layout[0].SizeLog2
+func layoutLiteral(layout []pcsSizeBundle) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "pcs.System{ .log_inverse_rate = %d, .log_final_poly_size = %d, .num_queries = %d, .layout = &.{ ",
-		logInverseRate, logFinalPolySize, params.NumQueries)
+	b.WriteString("&.{ ")
 	for i, bundle := range layout {
 		if i > 0 {
 			b.WriteString(", ")
@@ -497,8 +497,16 @@ func pcsSystemLiteral(params fri.Params, logFinalPolySize uint8, layout []pcsSiz
 		}
 		b.WriteString(" } }")
 	}
-	b.WriteString(" } }")
+	b.WriteString(" }")
 	return b.String()
+}
+
+// pcs.System derives log_plaintext_size and log_codeword_size from layout's
+// largest bundle size and log_inverse_rate.
+func pcsSystemLiteral(params fri.Params, logFinalPolySize uint8, layout []pcsSizeBundle) string {
+	logInverseRate := params.LogCodewordSize - layout[0].SizeLog2
+	return fmt.Sprintf("pcs.System{ .log_inverse_rate = %d, .log_final_poly_size = %d, .num_queries = %d, .layout = %s }",
+		logInverseRate, logFinalPolySize, params.NumQueries, layoutLiteral(layout))
 }
 
 func rowOpeningLiteral(r fri.RowOpening) string {
@@ -724,4 +732,135 @@ func writeMerkleFixtures() error {
 		data = zigfmt
 	}
 	return os.WriteFile(filepath.Join("..", "..", "generated", "fri.zig"), data, 0o644)
+}
+
+// ─── Integration fixture: a real PCS opening bound into Systems.pcs ────────
+//
+// Derives zeta and the query positions from a real prover-ray FiatShamir
+// instance, mirroring protocol.replayWithTranscript's absorb-then-squeeze
+// schedule for one round with a single oracle commitment, then
+// pcs.deriveChallenges' schedule. Exercises System.batch_roots and
+// witness_map through verifier.verify.
+type integrationCaseData struct {
+	Name          string
+	Params        fri.Params
+	Layout        []pcsSizeBundle
+	RoundRoot     field.Octuplet
+	ClaimedValues []field.Ext
+	Proof         fri.OpeningProof
+}
+
+func buildD1RootedScenario() integrationCaseData {
+	params, err := fri.NewParams(2, 0, 1)
+	if err != nil {
+		panic(err)
+	}
+
+	pcsInst, err := fri.NewPCS(params, pcsMakeEncoders(1, 4))
+	if err != nil {
+		panic(fmt.Sprintf("d1_rooted: NewPCS: %v", err))
+	}
+
+	witness := fri.Batch{fri.SizedTable{Ext: [][]field.Ext{{extLift(42)}}}}
+	shifts := fri.BatchShifts{fri.SizedShifts{Ext: [][]int{{0}}}}
+
+	committed := pcsInst.Commit(witness)
+	root := committed.Tree.Root()
+
+	// Mirrors protocol.replayWithTranscript for a single round whose message
+	// carries this root as its sole oracle commitment, followed by a squeeze
+	// of the one protocol coin (zeta).
+	fs := fiatshamir.NewFiatShamir()
+	fs.Update(root[:]...)
+	zeta := fs.RandomFext()
+
+	claimed := computeClaims(witness, shifts, zeta)
+	if err := pcsInst.AddOpening(committed, zeta, shifts, claimed); err != nil {
+		panic(fmt.Sprintf("d1_rooted: AddOpening: %v", err))
+	}
+
+	state, err := pcsInst.NewProverState()
+	if err != nil {
+		panic(fmt.Sprintf("d1_rooted: NewProverState: %v", err))
+	}
+	for state.HasNext() {
+		panic("d1_rooted: expected D=1 (no folding rounds)")
+	}
+
+	// Mirrors pcs.deriveChallenges: the final round's challenge is squeezed
+	// unconditionally (and discarded here, since D=1 has no fold slot), then
+	// final_poly is absorbed, then the query positions are drawn.
+	_ = fs.RandomFext()
+	fs.UpdateExt(state.FinalPoly...)
+	codewordSize := 1 << params.LogCodewordSize
+	positions := fs.RandomManyIntegers(int(params.NumQueries), codewordSize)
+
+	proof := pcsInst.Open(state, positions)
+
+	if err := pcsInst.Verify(fri.VerifyInputs{
+		Roots:         []field.Octuplet{root},
+		Shapes:        []fri.Shape{witness.Shape()},
+		Shifts:        []fri.BatchShifts{shifts},
+		ClaimedValues: []fri.BatchClaimedValues{claimed},
+		Zeta:          zeta,
+		Challenges:    fri.Challenges{FoldAlphas: nil, QueryPositions: positions},
+	}, proof); err != nil {
+		panic(fmt.Sprintf("d1_rooted: self-check via pcs.Verify failed: %v", err))
+	}
+
+	layout := computeLayout([]fri.Shape{witness.Shape()}, []fri.BatchShifts{shifts})
+
+	return integrationCaseData{
+		Name:          "d1_rooted",
+		Params:        params,
+		Layout:        layout,
+		RoundRoot:     root,
+		ClaimedValues: flattenClaims(layout, []fri.BatchClaimedValues{claimed}),
+		Proof:         proof,
+	}
+}
+
+func writeIntegrationCase(out *bytes.Buffer, c integrationCaseData) {
+	system := fmt.Sprintf(
+		"pcs.System{ .log_inverse_rate = %d, .log_final_poly_size = 0, .num_queries = %d, .layout = %s, .batch_roots = &.{.{ .round = 0 }}, .witness_map = &[_]usize{0}, .quotient_map = &.{} }",
+		c.Params.LogCodewordSize-c.Layout[0].SizeLog2, c.Params.NumQueries, layoutLiteral(c.Layout),
+	)
+	fmt.Fprintf(out, "    .{\n")
+	fmt.Fprintf(out, "        .name = \"%s\",\n", c.Name)
+	fmt.Fprintf(out, "        .system = %s,\n", system)
+	fmt.Fprintf(out, "        .round_root = %s,\n", oct8(c.RoundRoot))
+	fmt.Fprintf(out, "        .claimed_values = &%s,\n", extSlice(c.ClaimedValues))
+	fmt.Fprintf(out, "        .proof = %s,\n", pcsProofLiteral(c.Proof))
+	fmt.Fprintf(out, "    },\n")
+}
+
+func writeIntegrationFixtures() error {
+	var out bytes.Buffer
+	fmt.Fprintln(&out, "// Code generated by verifier-ray/testdata/generate/fri; DO NOT EDIT.")
+	fmt.Fprintln(&out)
+	fmt.Fprintln(&out, "const verifier_ray = @import(\"verifier_ray\");")
+	fmt.Fprintln(&out, "const pcs = verifier_ray.query.pcs;")
+	fmt.Fprintln(&out)
+	fmt.Fprintln(&out, "pub const RowOpeningData = struct { base: []const u32, ext: []const [6]u32 };")
+	fmt.Fprintln(&out, "pub const RowPairData = [2]RowOpeningData;")
+	fmt.Fprintln(&out, "pub const InputTreeOpeningData = struct { siblings: []const [8]u32, leaves: []const ?RowPairData };")
+	fmt.Fprintln(&out, "pub const BranchData = struct { leaf: [8]u32, siblings: []const [8]u32 };")
+	fmt.Fprintln(&out, "pub const FriProofData = struct { round_roots: []const [8]u32, final_poly: []const [6]u32, running_queries: []const []const BranchData };")
+	fmt.Fprintln(&out, "pub const OpeningProofData = struct { input_queries: []const []const InputTreeOpeningData, fri_proof: FriProofData };")
+	fmt.Fprintln(&out, "pub const IntegrationCase = struct { name: []const u8, system: pcs.System, round_root: [8]u32, claimed_values: []const [6]u32, proof: OpeningProofData };")
+	fmt.Fprintln(&out)
+
+	cases := []integrationCaseData{buildD1RootedScenario()}
+	fmt.Fprintln(&out, "pub const integration_cases = [_]IntegrationCase{")
+	for _, c := range cases {
+		writeIntegrationCase(&out, c)
+	}
+	fmt.Fprintln(&out, "};")
+
+	data := out.Bytes()
+	zigfmt, err := runZigFmt(data)
+	if err == nil {
+		data = zigfmt
+	}
+	return os.WriteFile(filepath.Join("..", "..", "generated", "pcs_integration.zig"), data, 0o644)
 }
