@@ -1080,3 +1080,432 @@ func TestCompile_ScrambledColumnOrder_StillSound(t *testing.T) {
 	assert.Panics(t, func() { runRound(rt) },
 		"a swapped-component S tuple must still be rejected after canonicalization")
 }
+
+// ---- Fragment counts beyond two ----
+//
+// The multi-fragment tests above all use exactly two fragments, which cannot
+// distinguish "one M per fragment" from "one M per module" nor exercise the
+// three-way tie-break in the hash join. The tests below vary the fragment
+// count on each side independently: the two counts are unrelated, since
+// len(includings) counts B fragments of the union lookup table while
+// len(included) counts A fragments (one per included table).
+
+// readM returns the multiplicity column's assignment as uint64s. It fails the
+// test if the column was never assigned or came back as an extension vector,
+// neither of which the M-assignment task should ever produce.
+func readM(t *testing.T, rt *wiop.Runtime, mCol *wiop.Column) []uint64 {
+	t.Helper()
+	require.True(t, rt.HasColumnAssignment(mCol),
+		"M column %v must be assigned by the M-assignment task", mCol.Context.Path())
+	plain := rt.GetColumnAssignment(mCol).Plain
+	require.True(t, plain.IsBase(), "M must be a base-field column")
+	base := plain.AsBase()
+	out := make([]uint64, len(base))
+	for i := range base {
+		out[i] = base[i].Uint64()
+	}
+	return out
+}
+
+// TestCompile_ThreeFragmentB_SingleFragmentA uses a three-fragment lookup table
+// of three *different* heights against a single included table. Each fragment
+// must receive its own M column, sized to that fragment's module, and the
+// per-fragment multiplicities must be counted independently.
+func TestCompile_ThreeFragmentB_SingleFragmentA(t *testing.T) {
+	sys := wiop.NewSystemf("ll-three-frag-B")
+	r0 := sys.NewRound()
+
+	modT1 := sys.NewSizedModule(sys.Context.Childf("modT1"), 4, wiop.PaddingDirectionNone)
+	modT2 := sys.NewSizedModule(sys.Context.Childf("modT2"), 2, wiop.PaddingDirectionNone)
+	modT3 := sys.NewSizedModule(sys.Context.Childf("modT3"), 3, wiop.PaddingDirectionNone)
+	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 6, wiop.PaddingDirectionNone)
+
+	colT1 := modT1.NewColumn(sys.Context.Childf("T1"), wiop.VisibilityOracle, r0)
+	colT2 := modT2.NewColumn(sys.Context.Childf("T2"), wiop.VisibilityOracle, r0)
+	colT3 := modT3.NewColumn(sys.Context.Childf("T3"), wiop.VisibilityOracle, r0)
+	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+
+	sys.NewInclusion(sys.Context.Childf("inc"),
+		[]wiop.Table{wiop.NewTable(colS.View())},
+		[]wiop.Table{
+			wiop.NewTable(colT1.View()),
+			wiop.NewTable(colT2.View()),
+			wiop.NewTable(colT3.View()),
+		})
+
+	t1Before, t2Before, t3Before := len(modT1.Columns), len(modT2.Columns), len(modT3.Columns)
+	lookuptologderivsum.Compile(sys)
+	require.Len(t, modT1.Columns, t1Before+1, "modT1 must carry exactly one new M column")
+	require.Len(t, modT2.Columns, t2Before+1, "modT2 must carry exactly one new M column")
+	require.Len(t, modT3.Columns, t3Before+1, "modT3 must carry exactly one new M column")
+	m1, m2, m3 := modT1.Columns[t1Before], modT2.Columns[t2Before], modT3.Columns[t3Before]
+	logderivativesum.Compile(sys)
+
+	rt := wiop.NewRuntime(sys)
+	// Union T = {10,20,30,40} ∪ {100,200} ∪ {1000,2000,3000}; all distinct.
+	rt.AssignColumn(colT1, makeVec(10, 20, 30, 40))
+	rt.AssignColumn(colT2, makeVec(100, 200))
+	rt.AssignColumn(colT3, makeVec(1000, 2000, 3000))
+	// S draws from all three fragments, with 10 twice and 3000 twice.
+	rt.AssignColumn(colS, makeVec(10, 10, 200, 3000, 3000, 30))
+
+	driveProtocol(rt)
+	require.NoError(t, checkAllVerifierActions(rt))
+
+	// Every entry is unique across the union, so the counts are unambiguous —
+	// no tie-break is involved here.
+	assert.Equal(t, []uint64{2, 0, 1, 0}, readM(t, rt, m1), "M for fragment 0")
+	assert.Equal(t, []uint64{0, 1}, readM(t, rt, m2), "M for fragment 1")
+	assert.Equal(t, []uint64{0, 0, 2}, readM(t, rt, m3), "M for fragment 2")
+}
+
+// TestCompile_AsymmetricFragmentCounts pairs a three-fragment B side with a
+// two-fragment A side, so len(includings) != len(included). The M-assignment
+// task indexes mValues by B fragment and iterates A fragments separately; a
+// confusion between the two indices would go unnoticed whenever the counts
+// happen to be equal, as they are in every pre-existing multi-fragment test.
+func TestCompile_AsymmetricFragmentCounts(t *testing.T) {
+	sys := wiop.NewSystemf("ll-asym-frag")
+	r0 := sys.NewRound()
+
+	modT1 := sys.NewSizedModule(sys.Context.Childf("modT1"), 2, wiop.PaddingDirectionNone)
+	modT2 := sys.NewSizedModule(sys.Context.Childf("modT2"), 3, wiop.PaddingDirectionNone)
+	modT3 := sys.NewSizedModule(sys.Context.Childf("modT3"), 2, wiop.PaddingDirectionNone)
+	modS1 := sys.NewSizedModule(sys.Context.Childf("modS1"), 3, wiop.PaddingDirectionNone)
+	modS2 := sys.NewSizedModule(sys.Context.Childf("modS2"), 2, wiop.PaddingDirectionNone)
+
+	colT1 := modT1.NewColumn(sys.Context.Childf("T1"), wiop.VisibilityOracle, r0)
+	colT2 := modT2.NewColumn(sys.Context.Childf("T2"), wiop.VisibilityOracle, r0)
+	colT3 := modT3.NewColumn(sys.Context.Childf("T3"), wiop.VisibilityOracle, r0)
+	colS1 := modS1.NewColumn(sys.Context.Childf("S1"), wiop.VisibilityOracle, r0)
+	colS2 := modS2.NewColumn(sys.Context.Childf("S2"), wiop.VisibilityOracle, r0)
+
+	sys.NewInclusion(sys.Context.Childf("inc"),
+		[]wiop.Table{
+			wiop.NewTable(colS1.View()),
+			wiop.NewTable(colS2.View()),
+		},
+		[]wiop.Table{
+			wiop.NewTable(colT1.View()),
+			wiop.NewTable(colT2.View()),
+			wiop.NewTable(colT3.View()),
+		})
+
+	t1Before, t2Before, t3Before := len(modT1.Columns), len(modT2.Columns), len(modT3.Columns)
+	lookuptologderivsum.Compile(sys)
+	require.Len(t, modT1.Columns, t1Before+1)
+	require.Len(t, modT2.Columns, t2Before+1)
+	require.Len(t, modT3.Columns, t3Before+1)
+	m1, m2, m3 := modT1.Columns[t1Before], modT2.Columns[t2Before], modT3.Columns[t3Before]
+	logderivativesum.Compile(sys)
+
+	rt := wiop.NewRuntime(sys)
+	rt.AssignColumn(colT1, makeVec(10, 20))
+	rt.AssignColumn(colT2, makeVec(30, 40, 50))
+	rt.AssignColumn(colT3, makeVec(60, 70))
+	// Both A fragments draw from several B fragments each.
+	rt.AssignColumn(colS1, makeVec(10, 40, 70))
+	rt.AssignColumn(colS2, makeVec(30, 10))
+
+	driveProtocol(rt)
+	require.NoError(t, checkAllVerifierActions(rt))
+
+	assert.Equal(t, []uint64{2, 0}, readM(t, rt, m1), "M for fragment 0")
+	assert.Equal(t, []uint64{1, 1, 0}, readM(t, rt, m2), "M for fragment 1")
+	assert.Equal(t, []uint64{0, 1}, readM(t, rt, m3), "M for fragment 2")
+}
+
+// TestCompile_SingleFragmentB_ThreeFragmentA is the mirror image: one B
+// fragment but three A fragments. The number of M columns tracks the B
+// fragment count only, so exactly one M must be allocated no matter how many
+// included tables feed into it.
+func TestCompile_SingleFragmentB_ThreeFragmentA(t *testing.T) {
+	sys := wiop.NewSystemf("ll-one-B-three-A")
+	r0 := sys.NewRound()
+
+	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
+	modS1 := sys.NewSizedModule(sys.Context.Childf("modS1"), 2, wiop.PaddingDirectionNone)
+	modS2 := sys.NewSizedModule(sys.Context.Childf("modS2"), 3, wiop.PaddingDirectionNone)
+	modS3 := sys.NewSizedModule(sys.Context.Childf("modS3"), 1, wiop.PaddingDirectionNone)
+
+	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
+	colS1 := modS1.NewColumn(sys.Context.Childf("S1"), wiop.VisibilityOracle, r0)
+	colS2 := modS2.NewColumn(sys.Context.Childf("S2"), wiop.VisibilityOracle, r0)
+	colS3 := modS3.NewColumn(sys.Context.Childf("S3"), wiop.VisibilityOracle, r0)
+
+	sys.NewInclusion(sys.Context.Childf("inc"),
+		[]wiop.Table{
+			wiop.NewTable(colS1.View()),
+			wiop.NewTable(colS2.View()),
+			wiop.NewTable(colS3.View()),
+		},
+		[]wiop.Table{wiop.NewTable(colT.View())})
+
+	colsBefore := len(modT.Columns)
+	lookuptologderivsum.Compile(sys)
+	require.Len(t, modT.Columns, colsBefore+1,
+		"the M column count tracks B fragments, not A fragments")
+	mCol := modT.Columns[colsBefore]
+	logderivativesum.Compile(sys)
+
+	rt := wiop.NewRuntime(sys)
+	rt.AssignColumn(colT, makeVec(10, 20, 30, 40))
+	rt.AssignColumn(colS1, makeVec(10, 20))
+	rt.AssignColumn(colS2, makeVec(30, 10, 30))
+	rt.AssignColumn(colS3, makeVec(10))
+
+	driveProtocol(rt)
+	require.NoError(t, checkAllVerifierActions(rt))
+
+	// 10 appears three times across the three A fragments, 20 once, 30 twice.
+	assert.Equal(t, []uint64{3, 1, 2, 0}, readM(t, rt, mCol))
+}
+
+// ---- Repeated entries in the lookup table ----
+//
+// A value may legitimately occur at several rows of the lookup table, within
+// one fragment or across fragments. Those rows produce LogDerivativeSum terms
+// with the *identical* denominator γ + RLC(v), so their numerators simply add:
+// any split of the total count across the duplicate rows satisfies the
+// identity, and the verifier accepts all of them. The prover nevertheless
+// picks one deterministically — the latest occurrence by (fragment, row) — and
+// charges the whole count there, leaving the other copies at zero. The tests
+// below assert that documented convention exactly, so a change to the
+// tie-break shows up as a test failure rather than as a silent difference in
+// prover output; they also check the verifier still accepts, which is the part
+// that actually matters for soundness.
+
+// TestCompile_DuplicateTEntriesWithinFragment has one fragment holding the
+// same value at two rows. The whole multiplicity lands on the higher row.
+func TestCompile_DuplicateTEntriesWithinFragment(t *testing.T) {
+	sys := wiop.NewSystemf("ll-dup-within-frag")
+	r0 := sys.NewRound()
+
+	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
+	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 4, wiop.PaddingDirectionNone)
+	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
+	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+
+	sys.NewInclusion(sys.Context.Childf("inc"),
+		[]wiop.Table{wiop.NewTable(colS.View())},
+		[]wiop.Table{wiop.NewTable(colT.View())})
+
+	colsBefore := len(modT.Columns)
+	lookuptologderivsum.Compile(sys)
+	mCol := modT.Columns[colsBefore]
+	logderivativesum.Compile(sys)
+
+	rt := wiop.NewRuntime(sys)
+	// 10 occurs at rows 0 and 1; 30 occurs at rows 2 and 3.
+	rt.AssignColumn(colT, makeVec(10, 10, 30, 30))
+	rt.AssignColumn(colS, makeVec(10, 30, 10, 10))
+
+	driveProtocol(rt)
+	require.NoError(t, checkAllVerifierActions(rt))
+
+	// 10 was looked up three times and 30 once; each count is charged to the
+	// later of the two duplicate rows, so rows 0 and 2 stay at zero.
+	assert.Equal(t, []uint64{0, 3, 0, 1}, readM(t, rt, mCol))
+}
+
+// TestCompile_DuplicateTEntriesAcrossFragments places the same value in two
+// different fragments. The tie-break compares fragment index first, so the
+// count goes to the higher-indexed fragment — even though its row index is
+// lower than the other copy's.
+func TestCompile_DuplicateTEntriesAcrossFragments(t *testing.T) {
+	sys := wiop.NewSystemf("ll-dup-across-frag")
+	r0 := sys.NewRound()
+
+	modT1 := sys.NewSizedModule(sys.Context.Childf("modT1"), 4, wiop.PaddingDirectionNone)
+	modT2 := sys.NewSizedModule(sys.Context.Childf("modT2"), 2, wiop.PaddingDirectionNone)
+	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 4, wiop.PaddingDirectionNone)
+
+	colT1 := modT1.NewColumn(sys.Context.Childf("T1"), wiop.VisibilityOracle, r0)
+	colT2 := modT2.NewColumn(sys.Context.Childf("T2"), wiop.VisibilityOracle, r0)
+	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+
+	sys.NewInclusion(sys.Context.Childf("inc"),
+		[]wiop.Table{wiop.NewTable(colS.View())},
+		[]wiop.Table{
+			wiop.NewTable(colT1.View()),
+			wiop.NewTable(colT2.View()),
+		})
+
+	t1Before, t2Before := len(modT1.Columns), len(modT2.Columns)
+	lookuptologderivsum.Compile(sys)
+	m1, m2 := modT1.Columns[t1Before], modT2.Columns[t2Before]
+	logderivativesum.Compile(sys)
+
+	rt := wiop.NewRuntime(sys)
+	// 10 lives at (frag 0, row 3) and at (frag 1, row 0).
+	rt.AssignColumn(colT1, makeVec(20, 30, 40, 10))
+	rt.AssignColumn(colT2, makeVec(10, 50))
+	rt.AssignColumn(colS, makeVec(10, 10, 10, 50))
+
+	driveProtocol(rt)
+	require.NoError(t, checkAllVerifierActions(rt))
+
+	// Fragment index dominates the tie-break: all three lookups of 10 are
+	// charged to fragment 1 row 0, and fragment 0 row 3 stays at zero.
+	assert.Equal(t, []uint64{0, 0, 0, 0}, readM(t, rt, m1), "M for fragment 0")
+	assert.Equal(t, []uint64{3, 1}, readM(t, rt, m2), "M for fragment 1")
+}
+
+// TestCompile_DuplicateTEntriesAcrossThreeFragments repeats one value in all
+// three fragments at once. Only the last fragment's copy carries the count,
+// which distinguishes a genuine max over the fragment index from a pairwise
+// comparison that could settle on a middle fragment.
+func TestCompile_DuplicateTEntriesAcrossThreeFragments(t *testing.T) {
+	sys := wiop.NewSystemf("ll-dup-three-frag")
+	r0 := sys.NewRound()
+
+	modT1 := sys.NewSizedModule(sys.Context.Childf("modT1"), 2, wiop.PaddingDirectionNone)
+	modT2 := sys.NewSizedModule(sys.Context.Childf("modT2"), 2, wiop.PaddingDirectionNone)
+	modT3 := sys.NewSizedModule(sys.Context.Childf("modT3"), 2, wiop.PaddingDirectionNone)
+	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 2, wiop.PaddingDirectionNone)
+
+	colT1 := modT1.NewColumn(sys.Context.Childf("T1"), wiop.VisibilityOracle, r0)
+	colT2 := modT2.NewColumn(sys.Context.Childf("T2"), wiop.VisibilityOracle, r0)
+	colT3 := modT3.NewColumn(sys.Context.Childf("T3"), wiop.VisibilityOracle, r0)
+	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+
+	sys.NewInclusion(sys.Context.Childf("inc"),
+		[]wiop.Table{wiop.NewTable(colS.View())},
+		[]wiop.Table{
+			wiop.NewTable(colT1.View()),
+			wiop.NewTable(colT2.View()),
+			wiop.NewTable(colT3.View()),
+		})
+
+	t1Before, t2Before, t3Before := len(modT1.Columns), len(modT2.Columns), len(modT3.Columns)
+	lookuptologderivsum.Compile(sys)
+	m1, m2, m3 := modT1.Columns[t1Before], modT2.Columns[t2Before], modT3.Columns[t3Before]
+	logderivativesum.Compile(sys)
+
+	rt := wiop.NewRuntime(sys)
+	// 7 appears at row 0 of every fragment; the second row differs per fragment.
+	rt.AssignColumn(colT1, makeVec(7, 11))
+	rt.AssignColumn(colT2, makeVec(7, 12))
+	rt.AssignColumn(colT3, makeVec(7, 13))
+	rt.AssignColumn(colS, makeVec(7, 7))
+
+	driveProtocol(rt)
+	require.NoError(t, checkAllVerifierActions(rt))
+
+	assert.Equal(t, []uint64{0, 0}, readM(t, rt, m1), "M for fragment 0")
+	assert.Equal(t, []uint64{0, 0}, readM(t, rt, m2), "M for fragment 1")
+	assert.Equal(t, []uint64{2, 0}, readM(t, rt, m3), "M for fragment 2")
+}
+
+// TestCompile_DuplicateTEntries_Unreferenced covers duplicate table rows that
+// no A row ever looks up. Both copies must stay at zero; a stray increment
+// would make the aggregated sum non-zero and the verifier reject.
+func TestCompile_DuplicateTEntries_Unreferenced(t *testing.T) {
+	sys := wiop.NewSystemf("ll-dup-unref")
+	r0 := sys.NewRound()
+
+	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
+	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 2, wiop.PaddingDirectionNone)
+	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
+	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+
+	sys.NewInclusion(sys.Context.Childf("inc"),
+		[]wiop.Table{wiop.NewTable(colS.View())},
+		[]wiop.Table{wiop.NewTable(colT.View())})
+
+	colsBefore := len(modT.Columns)
+	lookuptologderivsum.Compile(sys)
+	mCol := modT.Columns[colsBefore]
+	logderivativesum.Compile(sys)
+
+	rt := wiop.NewRuntime(sys)
+	// 99 is duplicated at rows 1 and 2 but never looked up.
+	rt.AssignColumn(colT, makeVec(10, 99, 99, 20))
+	rt.AssignColumn(colS, makeVec(10, 20))
+
+	driveProtocol(rt)
+	require.NoError(t, checkAllVerifierActions(rt))
+
+	assert.Equal(t, []uint64{1, 0, 0, 1}, readM(t, rt, mCol))
+}
+
+// TestCompile_DuplicateTEntries_MultiColumn repeats a whole *tuple* rather than
+// a single value, so the duplicate is only visible after the RLC collapse. The
+// same tie-break applies to the collapsed hash.
+func TestCompile_DuplicateTEntries_MultiColumn(t *testing.T) {
+	sys := wiop.NewSystemf("ll-dup-multicol")
+	r0 := sys.NewRound()
+
+	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
+	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 3, wiop.PaddingDirectionNone)
+
+	tx := modT.NewColumn(sys.Context.Childf("Tx"), wiop.VisibilityOracle, r0)
+	ty := modT.NewColumn(sys.Context.Childf("Ty"), wiop.VisibilityOracle, r0)
+	sx := modS.NewColumn(sys.Context.Childf("Sx"), wiop.VisibilityOracle, r0)
+	sy := modS.NewColumn(sys.Context.Childf("Sy"), wiop.VisibilityOracle, r0)
+
+	sys.NewInclusion(sys.Context.Childf("inc"),
+		[]wiop.Table{wiop.NewTable(sx.View(), sy.View())},
+		[]wiop.Table{wiop.NewTable(tx.View(), ty.View())})
+
+	colsBefore := len(modT.Columns)
+	lookuptologderivsum.Compile(sys)
+	mCol := modT.Columns[colsBefore]
+	logderivativesum.Compile(sys)
+
+	rt := wiop.NewRuntime(sys)
+	// Tuples: (1,10), (2,20), (1,10), (3,30) — (1,10) is duplicated at rows
+	// 0 and 2. Note rows 0 and 1 share no *component*, so a per-column
+	// comparison would not see the duplicate; only the collapsed tuple does.
+	rt.AssignColumn(tx, makeVec(1, 2, 1, 3))
+	rt.AssignColumn(ty, makeVec(10, 20, 10, 30))
+	// S tuples: (1,10), (1,10), (3,30).
+	rt.AssignColumn(sx, makeVec(1, 1, 3))
+	rt.AssignColumn(sy, makeVec(10, 10, 30))
+
+	driveProtocol(rt)
+	require.NoError(t, checkAllVerifierActions(rt))
+
+	assert.Equal(t, []uint64{0, 0, 2, 1}, readM(t, rt, mCol))
+}
+
+// TestCompile_DuplicateTEntries_FilteredCopy is the discriminating case for the
+// interaction between duplicates and the IsFilteredOnIncluding trick: the same
+// value sits at two rows and the *later* one is masked out. Because the
+// selector is prepended into the hashed value, the masked row collapses to a
+// different value and never enters the duplicate group at all — so the count
+// must land on the earlier, active row. A tie-break applied before the
+// selector was folded in would instead pick the masked row, leaving the active
+// row at zero and the aggregated sum non-zero.
+func TestCompile_DuplicateTEntries_FilteredCopy(t *testing.T) {
+	sys := wiop.NewSystemf("ll-dup-filtered-copy")
+	r0 := sys.NewRound()
+
+	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
+	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 2, wiop.PaddingDirectionNone)
+
+	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
+	filterT := modT.NewColumn(sys.Context.Childf("filterT"), wiop.VisibilityOracle, r0)
+	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+
+	sys.NewInclusion(sys.Context.Childf("inc"),
+		[]wiop.Table{wiop.NewTable(colS.View())},
+		[]wiop.Table{wiop.NewFilteredTable(filterT.View(), colT.View())})
+
+	colsBefore := len(modT.Columns)
+	lookuptologderivsum.Compile(sys)
+	mCol := modT.Columns[colsBefore]
+	logderivativesum.Compile(sys)
+
+	rt := wiop.NewRuntime(sys)
+	// 10 occurs at rows 0 and 1, but row 1 is masked out by filterT.
+	rt.AssignColumn(colT, makeVec(10, 10, 30, 40))
+	rt.AssignColumn(filterT, makeVec(1, 0, 1, 1))
+	rt.AssignColumn(colS, makeVec(10, 10))
+
+	driveProtocol(rt)
+	require.NoError(t, checkAllVerifierActions(rt))
+
+	assert.Equal(t, []uint64{2, 0, 0, 0}, readM(t, rt, mCol),
+		"the count must go to the active copy, not the later masked one")
+}
