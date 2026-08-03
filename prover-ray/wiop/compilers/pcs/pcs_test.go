@@ -97,6 +97,44 @@ func TestCompileDynamicModule(t *testing.T) {
 	require.NoError(t, sys.Verify(proof, pub), "honest dynamic-module witness must verify")
 }
 
+// TestCompileDynamicModulePaddingLeft checks the full commit→open→verify flow
+// for a dynamic PaddingDirectionLeft module whose column assignment is shorter
+// than the allocated domain size, so that actual padding rows are present.
+//
+// PaddingDirectionLeft places padding at the beginning of the domain and data at
+// the end: [pad…pad | data]. Before the fix, writeDownVectorBase/Ext ignored the
+// padding direction and always produced [data | pad…pad], committing a different
+// polynomial than the one evalLagrangePadded evaluates. The DEEP-quotient
+// numerator then had unintended poles, so FRI folding failed with "final layer
+// has nonzero coefficient, not low-degree enough."
+func TestCompileDynamicModulePaddingLeft(t *testing.T) {
+	sys := wiop.NewSystemf("pcs-left")
+	r0 := sys.NewRound()
+	r1 := sys.NewRound()
+	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionLeft)
+	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	zeta := r1.NewCoinField(sys.Context.Childf("zeta"))
+	le := sys.NewLagrangeEval(sys.Context.Childf("le"), []*wiop.ColumnView{col.View()}, zeta)
+	r1.RegisterAction(&selfAssignLagrange{le: le})
+
+	Compile(sys)
+
+	// 5 non-constant elements → domain rounds to 8, leaving 3 padding rows.
+	// PaddingDirectionLeft commits [0,0,0,1,2,3,4,5]; the old code committed
+	// [1,2,3,4,5,0,0,0] — a distinct degree-7 polynomial — causing FRI failure.
+	elems := make([]field.Element, 5)
+	for i := range elems {
+		elems[i].SetUint64(uint64(i + 1))
+	}
+	data := &wiop.ConcreteVector{Plain: field.VecFromBase(elems)}
+
+	proof, pub := sys.Prove(func(rt *wiop.Runtime) {
+		rt.AssignColumn(col, data)
+	})
+
+	require.NoError(t, sys.Verify(proof, pub), "left-padded column must verify")
+}
+
 // TestCompileRejectsPublicColumn checks that a verifier-visible column in a
 // committed round is rejected: it cannot be replaced by a commitment.
 func TestCompileRejectsPublicColumn(t *testing.T) {

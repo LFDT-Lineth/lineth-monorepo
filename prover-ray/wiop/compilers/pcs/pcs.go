@@ -433,12 +433,12 @@ func commitToRound(inverseRate uint8, round *wiop.Round, rt *wiop.Runtime) *fri.
 		if col.IsExtension {
 			sortedColumns[sizeIndex].Ext = append(
 				sortedColumns[sizeIndex].Ext,
-				writeDownVectorExt(assignment, size),
+				writeDownVectorExt(assignment, size, col.Module.Padding),
 			)
 		} else {
 			sortedColumns[sizeIndex].Base = append(
 				sortedColumns[sizeIndex].Base,
-				writeDownVectorBase(assignment, size),
+				writeDownVectorBase(assignment, size, col.Module.Padding),
 			)
 		}
 	}
@@ -608,8 +608,9 @@ func initializeBatchClaims(shape fri.Shape) fri.BatchClaimedValues {
 }
 
 // writeDownVectorBase materializes a base-field column assignment padded up to
-// size with its constant padding value.
-func writeDownVectorBase(concrete *wiop.ConcreteVector, size int) []field.Element {
+// size, respecting the module's padding direction so the committed polynomial
+// matches the one evalLagrangePadded evaluates.
+func writeDownVectorBase(concrete *wiop.ConcreteVector, size int, padding wiop.PaddingDirection) []field.Element {
 
 	if !concrete.Plain.IsBase() {
 		panic("is not base")
@@ -617,24 +618,43 @@ func writeDownVectorBase(concrete *wiop.ConcreteVector, size int) []field.Elemen
 
 	plainBase := concrete.Plain.AsBase()
 	plain := make([]field.Element, size)
-	copy(plain, plainBase)
-	for i := len(plainBase); i < size; i++ {
-		plain[i] = concrete.Padding
+
+	if padding == wiop.PaddingDirectionLeft {
+		gap := size - len(plainBase)
+		for i := range gap {
+			plain[i] = concrete.Padding
+		}
+		copy(plain[gap:], plainBase)
+	} else {
+		copy(plain, plainBase)
+		for i := len(plainBase); i < size; i++ {
+			plain[i] = concrete.Padding
+		}
 	}
 
 	return plain
 }
 
 // writeDownVectorExt materializes an extension-field column assignment padded up
-// to size with its constant (lifted) padding value.
-func writeDownVectorExt(concrete *wiop.ConcreteVector, size int) []field.Ext {
+// to size, respecting the module's padding direction so the committed polynomial
+// matches the one evalLagrangePadded evaluates.
+func writeDownVectorExt(concrete *wiop.ConcreteVector, size int, padding wiop.PaddingDirection) []field.Ext {
 
 	plainExt := concrete.Plain.AsExt()
 	plain := make([]field.Ext, size)
-	copy(plain, plainExt)
 	padExt := field.Lift(concrete.Padding)
-	for i := len(plainExt); i < size; i++ {
-		plain[i] = padExt
+
+	if padding == wiop.PaddingDirectionLeft {
+		gap := size - len(plainExt)
+		for i := range gap {
+			plain[i] = padExt
+		}
+		copy(plain[gap:], plainExt)
+	} else {
+		copy(plain, plainExt)
+		for i := len(plainExt); i < size; i++ {
+			plain[i] = padExt
+		}
 	}
 
 	return plain
