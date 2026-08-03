@@ -4,7 +4,7 @@ import { readContract } from "viem/actions";
 import { NEXT_MESSAGE_NUMBER_ABI } from "../abis";
 
 export type GetNextMessageNonceParameters = {
-  linethRollupAddress: Address;
+  rollupAddress: Address;
 };
 
 export type GetNextMessageNonceReturnType = bigint;
@@ -15,10 +15,10 @@ export async function getNextMessageNonce<chain extends Chain | undefined, _acco
   client: Client<Transport, chain, _account>,
   parameters: GetNextMessageNonceParameters,
 ): Promise<GetNextMessageNonceReturnType> {
-  const { linethRollupAddress } = parameters;
+  const { rollupAddress } = parameters;
 
   return readContract(client, {
-    address: linethRollupAddress,
+    address: rollupAddress,
     abi: NEXT_MESSAGE_NUMBER_ABI,
     functionName: "nextMessageNumber",
   });

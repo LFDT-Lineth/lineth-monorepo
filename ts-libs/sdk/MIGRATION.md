@@ -12,18 +12,18 @@ The `LineaRollup` L1 contract was renamed to `LinethRollup`. To keep the SDKs al
 
 ## Affected packages
 
-| Package | npm name | Published? |
-|---|---|---|
-| `sdk-core` | `@lfdt-lineth/sdk-core` | Yes |
-| `sdk-ethers` | `@lfdt-lineth/sdk` | No (internal monorepo use only) |
-| `sdk-viem` | `@lfdt-lineth/sdk-viem` | Yes |
+| Package      | npm name                | Published?                      |
+| ------------ | ----------------------- | ------------------------------- |
+| `sdk-core`   | `@lfdt-lineth/sdk-core` | Yes                             |
+| `sdk-ethers` | `@lfdt-lineth/sdk`      | No (internal monorepo use only) |
+| `sdk-viem`   | `@lfdt-lineth/sdk-viem` | Yes                             |
 
 ## `@lfdt-lineth/sdk-core`
 
-No public API changes — `getContractsAddressesByChainId()` keeps the same name, signature, and return shape. Only the *internal* constants it's built from were renamed (not exported from the package's `index.ts`, so this only matters if you deep-import a specific file):
+No public API changes — `getContractsAddressesByChainId()` keeps the same name, signature, and return shape. Only the _internal_ constants it's built from were renamed (not exported from the package's `index.ts`, so this only matters if you deep-import a specific file):
 
-| Old | New |
-|---|---|
+| Old                            | New                             |
+| ------------------------------ | ------------------------------- |
 | `LINEA_ROLLUP_MAINNET_ADDRESS` | `LINETH_ROLLUP_MAINNET_ADDRESS` |
 | `LINEA_ROLLUP_SEPOLIA_ADDRESS` | `LINETH_ROLLUP_SEPOLIA_ADDRESS` |
 
@@ -33,25 +33,26 @@ No public API changes — `getContractsAddressesByChainId()` keeps the same name
 
 ### Renamed exports (from `src/index.ts` / `clients/ethereum` / `core/clients/ethereum`)
 
-| Old | New | Kind |
-|---|---|---|
-| `LineaRollupClient` | `LinethRollupClient` | class |
-| `EthersLineaRollupLogClient` | `EthersLinethRollupLogClient` | class |
-| `LineaRollupMessageRetriever` | `LinethRollupMessageRetriever` | class |
-| `ILineaRollupClient` | `ILinethRollupClient` | interface |
-| `ILineaRollupLogClient` | `ILinethRollupLogClient` | interface |
-| `LineaRollup` | `LinethRollup` | typechain contract type |
-| `LineaRollup__factory` | `LinethRollup__factory` | typechain factory |
-| `testingHelpers.generateLineaRollupClient` | `testingHelpers.generateLinethRollupClient` | test helper |
+| Old                                        | New                                         | Kind                    |
+| ------------------------------------------ | ------------------------------------------- | ----------------------- |
+| `LineaRollupClient`                        | `LinethRollupClient`                        | class                   |
+| `EthersLineaRollupLogClient`               | `EthersLinethRollupLogClient`               | class                   |
+| `LineaRollupMessageRetriever`              | `LinethRollupMessageRetriever`              | class                   |
+| `ILineaRollupClient`                       | `ILinethRollupClient`                       | interface               |
+| `ILineaRollupLogClient`                    | `ILinethRollupLogClient`                    | interface               |
+| `LineaRollup`                              | `LinethRollup`                              | typechain contract type |
+| `LineaRollup__factory`                     | `LinethRollup__factory`                     | typechain factory       |
+| `testingHelpers.generateLineaRollupClient` | `testingHelpers.generateLinethRollupClient` | test helper             |
 
 ### `LineaSDK` class (method names unchanged — only return types renamed)
 
-| Method | Old return type | New return type |
-|---|---|---|
-| `getL1Contract()` | `LineaRollupClient` | `LinethRollupClient` |
+| Method                          | Old return type              | New return type               |
+| ------------------------------- | ---------------------------- | ----------------------------- |
+| `getL1Contract()`               | `LineaRollupClient`          | `LinethRollupClient`          |
 | `getL1ContractEventLogClient()` | `EthersLineaRollupLogClient` | `EthersLinethRollupLogClient` |
 
 **Action required:**
+
 - Update imports of any renamed class/interface/type.
 - Update explicit type annotations, e.g.:
 
@@ -65,9 +66,9 @@ const l1Contract: LinethRollupClient = sdk.getL1Contract();
 
 - If you use `testingHelpers` in tests, rename `generateLineaRollupClient` → `generateLinethRollupClient`. Its returned object's keys were also renamed:
 
-| Old key | New key |
-|---|---|
-| `lineaRollupClient` | `linethRollupClient` |
+| Old key                | New key                 |
+| ---------------------- | ----------------------- |
+| `lineaRollupClient`    | `linethRollupClient`    |
 | `lineaRollupLogClient` | `linethRollupLogClient` |
 
 ```ts
@@ -80,35 +81,34 @@ const { linethRollupClient, linethRollupLogClient } = testingHelpers.generateLin
 
 ## `@lfdt-lineth/sdk-viem`
 
-### Parameter rename: `lineaRollupAddress` → `linethRollupAddress`
+### Parameter rename: `lineaRollupAddress` → `rollupAddress`
 
-Every action/decorator that accepts a custom L1 rollup contract address renamed that field. Everything else about the call (function name, other params) is unchanged.
+Every action/decorator that accepts a custom L1 rollup contract address renamed that field to a generic `rollupAddress` — not tied to `linea`/`lineth` branding, so it won't need to change again if the contract is renamed in the future. Everything else about the call (function name, other params) is unchanged.
 
-| Function / decorator | Parameter type | Field | Required? |
-|---|---|---|---|
-| `publicActionsL1(params)` | `PublicActionsL1Parameters` | `linethRollupAddress` | required |
-| `walletActionsL1(params)` | `WalletActionsL1Parameters` | `linethRollupAddress` | required |
-| `claimOnL1(client, params)` | `ClaimOnL1Parameters` | `linethRollupAddress` | optional |
-| `deposit(client, params)` | `DepositParameters` | `linethRollupAddress` | optional |
-| `getL2ToL1MessageStatus(client, params)` | `GetL2ToL1MessageStatusParameters` | `linethRollupAddress` | optional |
-| `getMessageProof(client, params)` | `GetMessageProofParameters` | `linethRollupAddress` | optional |
-| `getNextMessageNonce(client, params)` | `GetNextMessageNonceParameters` | `linethRollupAddress` | required |
+| Function / decorator                     | Parameter type                     | Field           | Required? |
+| ---------------------------------------- | ---------------------------------- | --------------- | --------- |
+| `publicActionsL1(params)`                | `PublicActionsL1Parameters`        | `rollupAddress` | required  |
+| `walletActionsL1(params)`                | `WalletActionsL1Parameters`        | `rollupAddress` | required  |
+| `claimOnL1(client, params)`              | `ClaimOnL1Parameters`              | `rollupAddress` | optional  |
+| `deposit(client, params)`                | `DepositParameters`                | `rollupAddress` | optional  |
+| `getL2ToL1MessageStatus(client, params)` | `GetL2ToL1MessageStatusParameters` | `rollupAddress` | optional  |
+| `getMessageProof(client, params)`        | `GetMessageProofParameters`        | `rollupAddress` | optional  |
 
-**Action required:** rename `lineaRollupAddress` → `linethRollupAddress` everywhere you pass a custom contract address.
+**Action required:** rename `lineaRollupAddress` → `rollupAddress` everywhere you pass a custom contract address.
 
 ```ts
 // Before
 const l1Client = createPublicClient({ chain: sepolia, transport: http() }).extend(
   publicActionsL1({
-    lineaRollupAddress: '0xYourCustomL1Rollup',
-    l2MessageServiceAddress: '0xYourCustomL2MessageService',
+    lineaRollupAddress: "0xYourCustomL1Rollup",
+    l2MessageServiceAddress: "0xYourCustomL2MessageService",
   }),
 );
 
 const proof = await getMessageProof(client, {
   l2Client,
   messageHash,
-  lineaRollupAddress: '0xYourCustomL1Rollup',
+  lineaRollupAddress: "0xYourCustomL1Rollup",
 });
 ```
 
@@ -116,15 +116,15 @@ const proof = await getMessageProof(client, {
 // After
 const l1Client = createPublicClient({ chain: sepolia, transport: http() }).extend(
   publicActionsL1({
-    linethRollupAddress: '0xYourCustomL1Rollup',
-    l2MessageServiceAddress: '0xYourCustomL2MessageService',
+    rollupAddress: "0xYourCustomL1Rollup",
+    l2MessageServiceAddress: "0xYourCustomL2MessageService",
   }),
 );
 
 const proof = await getMessageProof(client, {
   l2Client,
   messageHash,
-  linethRollupAddress: '0xYourCustomL1Rollup',
+  rollupAddress: "0xYourCustomL1Rollup",
 });
 ```
 
@@ -140,7 +140,7 @@ const proof = await getMessageProof(client, {
 ## Migration checklist
 
 1. Rename imports: `LineaRollupClient`, `EthersLineaRollupLogClient`, `LineaRollupMessageRetriever`, `ILineaRollupClient`, `ILineaRollupLogClient`, `LineaRollup`, `LineaRollup__factory` → their `Lineth*` counterparts.
-2. Rename the `lineaRollupAddress` parameter to `linethRollupAddress` in every call site across `sdk-viem` actions/decorators.
+2. Rename the `lineaRollupAddress` parameter to `rollupAddress` in every call site across `sdk-viem` actions/decorators.
 3. Rename `testingHelpers.generateLineaRollupClient` → `generateLinethRollupClient` in tests.
 4. Search your codebase for `LineaRollup` and `lineaRollupAddress` (case-sensitive) to catch anything missed — do **not** touch plain `linea`/`Linea` references to the network.
 5. Rebuild and re-run your test suite.

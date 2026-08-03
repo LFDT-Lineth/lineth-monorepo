@@ -29,7 +29,7 @@ export class ViemLinethRollupClient implements ILinethRollupClient {
     return getL2ToL1MessageStatus(this.publicClient, {
       l2Client: this.l2PublicClient,
       messageHash: params.messageHash,
-      linethRollupAddress: this.contractAddress,
+      rollupAddress: this.contractAddress,
       l2MessageServiceAddress: this.l2ContractAddress,
       l2LogsBlockRange: params.messageBlockNumber
         ? { fromBlock: BigInt(params.messageBlockNumber), toBlock: BigInt(params.messageBlockNumber) }
@@ -41,7 +41,7 @@ export class ViemLinethRollupClient implements ILinethRollupClient {
     return sdkGetMessageProof(this.publicClient, {
       l2Client: this.l2PublicClient,
       messageHash,
-      linethRollupAddress: this.contractAddress,
+      rollupAddress: this.contractAddress,
       l2MessageServiceAddress: this.l2ContractAddress,
       l2LogsBlockRange: messageBlockNumber
         ? { fromBlock: BigInt(messageBlockNumber), toBlock: BigInt(messageBlockNumber) }
@@ -111,7 +111,7 @@ export class ViemLinethRollupClient implements ILinethRollupClient {
       calldata: message.calldata,
       feeRecipient,
       messageProof: { proof, root, leafIndex },
-      linethRollupAddress: contractAddress,
+      rollupAddress: contractAddress,
       nonce: opts.overrides?.nonce,
       gas: opts.overrides?.gasLimit,
       maxFeePerGas: opts.overrides?.maxFeePerGas ?? gasFees.maxFeePerGas,

@@ -49,7 +49,7 @@ export type ClaimOnL1Parameters<
         messageNonce: bigint;
         feeRecipient?: Address;
         // defaults to the message service address for the L1 chain
-        linethRollupAddress?: Address;
+        rollupAddress?: Address;
         // Defaults to the message service address for the L2 chain
         l2MessageServiceAddress?: Address;
         // Block in which the `MessageSent` event was emitted. When provided, the lookup queries only that
@@ -62,7 +62,7 @@ export type ClaimOnL1Parameters<
         messageProof: MessageProof;
         feeRecipient?: Address;
         // defaults to the message service address for the L1 chain
-        linethRollupAddress?: Address;
+        rollupAddress?: Address;
       }
   >;
 
@@ -199,7 +199,7 @@ export async function claimOnL1<
     feeRecipient,
     l2Client,
     messageProof,
-    linethRollupAddress,
+    rollupAddress,
     l2MessageServiceAddress,
     messageL2BlockNumber,
     ...tx
@@ -228,7 +228,7 @@ export async function claimOnL1<
   if (l2Client) {
     proof = await getMessageProof(client, {
       l2Client,
-      linethRollupAddress,
+      rollupAddress,
       l2MessageServiceAddress,
       messageHash: computeMessageHash({
         from,
@@ -246,10 +246,10 @@ export async function claimOnL1<
     proof = messageProof;
   }
 
-  const linethRollup = parameters.linethRollupAddress ?? getContractsAddressesByChainId(client.chain.id).messageService;
+  const resolvedRollupAddress = rollupAddress ?? getContractsAddressesByChainId(client.chain.id).messageService;
 
   return sendTransaction(client, {
-    to: linethRollup,
+    to: resolvedRollupAddress,
     account,
     data: encodeFunctionData({
       abi: CLAIM_MESSAGE_WITH_PROOF_ABI,

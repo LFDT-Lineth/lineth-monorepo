@@ -29,7 +29,7 @@ describe("publicActionsL1", () => {
 
   describe("with parameters", () => {
     const actions = publicActionsL1({
-      linethRollupAddress: TEST_CONTRACT_ADDRESS_1,
+      rollupAddress: TEST_CONTRACT_ADDRESS_1,
       l2MessageServiceAddress: TEST_CONTRACT_ADDRESS_2,
     })<Chain, Account>(client);
 
@@ -49,7 +49,7 @@ describe("publicActionsL1", () => {
 
       expect(getMessageProof).toHaveBeenCalledWith(client, {
         ...params,
-        linethRollupAddress: TEST_CONTRACT_ADDRESS_1,
+        rollupAddress: TEST_CONTRACT_ADDRESS_1,
         l2MessageServiceAddress: TEST_CONTRACT_ADDRESS_2,
       });
       expect(result).toBe(messageProof);
@@ -68,7 +68,7 @@ describe("publicActionsL1", () => {
 
       expect(getL2ToL1MessageStatus).toHaveBeenCalledWith(client, {
         ...params,
-        linethRollupAddress: TEST_CONTRACT_ADDRESS_1,
+        rollupAddress: TEST_CONTRACT_ADDRESS_1,
         l2MessageServiceAddress: TEST_CONTRACT_ADDRESS_2,
       });
       expect(result).toBe(OnChainMessageStatus.CLAIMED);

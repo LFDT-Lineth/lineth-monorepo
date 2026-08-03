@@ -67,7 +67,7 @@ export type GetMessageProofParameters<
     "fromBlock" | "toBlock"
   >;
   // Defaults to the message service address for the L1 chain
-  linethRollupAddress?: Address | undefined;
+  rollupAddress?: Address | undefined;
   // Defaults to the message service address for the L2 chain
   l2MessageServiceAddress?: Address | undefined;
 };
@@ -147,11 +147,10 @@ export async function getMessageProof<
     throw new MessageNotFoundError({ hash: messageHash });
   }
 
-  const linethRollupAddress =
-    parameters.linethRollupAddress ?? getContractsAddressesByChainId(client.chain.id).messageService;
+  const rollupAddress = parameters.rollupAddress ?? getContractsAddressesByChainId(client.chain.id).messageService;
 
   const l2MessagingBlockAnchoredEvent = await findL2MessagingBlockAnchoredEvent(client, {
-    linethRollupAddress,
+    rollupAddress,
     l2BlockNumber: messageSentEvent.blockNumber!,
   });
 
@@ -161,7 +160,7 @@ export async function getMessageProof<
 
   const finalizationInfo = await getFinalizationMessagingInfo(client, {
     transactionHash: l2MessagingBlockAnchoredEvent.transactionHash,
-    linethRollupAddress,
+    rollupAddress,
   });
 
   const l2MessageHashesInBlockRange = (
@@ -241,19 +240,19 @@ function isNoContractDataError(error: unknown): boolean {
  *
  * @param {Client} client - The settlement-chain (L1 or, for Validium, Linea) client.
  * @param {Object} args - The lookup arguments.
- * @param {Address} args.linethRollupAddress - The LinethRollup/Validium contract address.
+ * @param {Address} args.rollupAddress - The L1 rollup (or Validium) contract address.
  * @param {bigint} args.l2BlockNumber - The L2 block number to locate the finalization for.
  * @returns {Promise<{ fromBlock: bigint; toBlock: bigint } | null>} The block window containing the
  * finalization, or `null` if the L2 block is not finalized yet.
  */
 async function findL1FinalizationRange<chain extends Chain | undefined, account extends Account | undefined>(
   client: Client<Transport, chain, account>,
-  args: { linethRollupAddress: Address; l2BlockNumber: bigint },
+  args: { rollupAddress: Address; l2BlockNumber: bigint },
 ): Promise<{ fromBlock: bigint; toBlock: bigint } | null> {
   const finalizedL2BlockAt = async (blockNumber: bigint): Promise<bigint> => {
     try {
       return await readContract(client, {
-        address: args.linethRollupAddress,
+        address: args.rollupAddress,
         abi: CURRENT_L2_BLOCK_NUMBER_ABI,
         functionName: "currentL2BlockNumber",
         blockNumber,
@@ -307,17 +306,17 @@ async function findL1FinalizationRange<chain extends Chain | undefined, account 
  *
  * @param {Client} client - The settlement-chain client.
  * @param {Object} args - The lookup arguments.
- * @param {Address} args.linethRollupAddress - The LinethRollup/Validium contract address.
+ * @param {Address} args.rollupAddress - The L1 rollup (or Validium) contract address.
  * @param {bigint} args.l2BlockNumber - The L2 block number whose anchoring event is sought.
  * @returns The anchored event, or `undefined` if the L2 block is not finalized yet.
  */
 async function findL2MessagingBlockAnchoredEvent<chain extends Chain | undefined, account extends Account | undefined>(
   client: Client<Transport, chain, account>,
-  args: { linethRollupAddress: Address; l2BlockNumber: bigint },
+  args: { rollupAddress: Address; l2BlockNumber: bigint },
 ) {
   try {
     const [event] = await getContractEvents(client, {
-      address: args.linethRollupAddress,
+      address: args.rollupAddress,
       abi: L2_MESSAGING_BLOCK_ANCHORED_EVENT_ABI,
       eventName: "L2MessagingBlockAnchored",
       args: { l2Block: args.l2BlockNumber },
@@ -337,7 +336,7 @@ async function findL2MessagingBlockAnchoredEvent<chain extends Chain | undefined
   }
 
   const [event] = await getContractEvents(client, {
-    address: args.linethRollupAddress,
+    address: args.rollupAddress,
     abi: L2_MESSAGING_BLOCK_ANCHORED_EVENT_ABI,
     eventName: "L2MessagingBlockAnchored",
     args: { l2Block: args.l2BlockNumber },
@@ -378,7 +377,7 @@ async function getMessageSentEventsInChunks<chain extends Chain | undefined, acc
 async function getFinalizationMessagingInfo<chain extends Chain | undefined, account extends Account | undefined>(
   client: Client<Transport, chain, account>,
   parameters: {
-    linethRollupAddress: Hex;
+    rollupAddress: Hex;
     transactionHash: Hex;
   },
 ) {
@@ -389,7 +388,7 @@ async function getFinalizationMessagingInfo<chain extends Chain | undefined, acc
   const blocksNumber: number[] = [];
 
   const filteredLogs = receipt.logs.filter(
-    (log) => log.address.toLowerCase() === parameters.linethRollupAddress.toLowerCase(),
+    (log) => log.address.toLowerCase() === parameters.rollupAddress.toLowerCase(),
   );
 
   const parsedLogs = parseEventLogs({

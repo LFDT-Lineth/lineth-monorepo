@@ -27,7 +27,7 @@ describe("walletActionsL1", () => {
 
   describe("with parameters", () => {
     const actions = walletActionsL1({
-      linethRollupAddress: TEST_CONTRACT_ADDRESS_1,
+      rollupAddress: TEST_CONTRACT_ADDRESS_1,
       l2MessageServiceAddress: TEST_CONTRACT_ADDRESS_2,
       l1TokenBridgeAddress: TEST_ADDRESS_1,
       l2TokenBridgeAddress: TEST_ADDRESS_2,
@@ -45,7 +45,7 @@ describe("walletActionsL1", () => {
       const result = await actions.deposit(params);
       expect(deposit).toHaveBeenCalledWith(client, {
         ...params,
-        linethRollupAddress: TEST_CONTRACT_ADDRESS_1,
+        rollupAddress: TEST_CONTRACT_ADDRESS_1,
         l2MessageServiceAddress: TEST_CONTRACT_ADDRESS_2,
         l1TokenBridgeAddress: TEST_ADDRESS_1,
         l2TokenBridgeAddress: TEST_ADDRESS_2,
@@ -54,7 +54,7 @@ describe("walletActionsL1", () => {
     });
 
     describe("claimOnL1", () => {
-      it("delegates claimOnL1 to the action with linethRollupAddress when l2Client is not provided", async () => {
+      it("delegates claimOnL1 to the action with rollupAddress when l2Client is not provided", async () => {
         const claimResult = ("0x" + "b".repeat(64)) as Hex;
         const params: Parameters<typeof actions.claimOnL1>[0] = {
           from: "0x0000000000000000000000000000000000000001" as Address,
@@ -71,11 +71,11 @@ describe("walletActionsL1", () => {
         };
         (claimOnL1 as jest.Mock<ReturnType<typeof claimOnL1>>).mockResolvedValue(claimResult);
         const result = await actions.claimOnL1(params);
-        expect(claimOnL1).toHaveBeenCalledWith(client, { ...params, linethRollupAddress: TEST_CONTRACT_ADDRESS_1 });
+        expect(claimOnL1).toHaveBeenCalledWith(client, { ...params, rollupAddress: TEST_CONTRACT_ADDRESS_1 });
         expect(result).toBe(claimResult);
       });
 
-      it("delegates claimOnL1 to the action with linethRollupAddress and l2MessageServiceAddress when l2Client is provided", async () => {
+      it("delegates claimOnL1 to the action with rollupAddress and l2MessageServiceAddress when l2Client is provided", async () => {
         const claimResult = ("0x" + "b".repeat(64)) as Hex;
         const params: Parameters<typeof actions.claimOnL1>[0] = {
           from: "0x0000000000000000000000000000000000000001" as Address,
@@ -90,7 +90,7 @@ describe("walletActionsL1", () => {
         const result = await actions.claimOnL1(params);
         expect(claimOnL1).toHaveBeenCalledWith(client, {
           ...params,
-          linethRollupAddress: TEST_CONTRACT_ADDRESS_1,
+          rollupAddress: TEST_CONTRACT_ADDRESS_1,
           l2MessageServiceAddress: TEST_CONTRACT_ADDRESS_2,
         });
         expect(result).toBe(claimResult);
