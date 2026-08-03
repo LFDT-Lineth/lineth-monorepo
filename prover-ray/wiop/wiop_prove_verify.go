@@ -166,7 +166,9 @@ func (sys *System) Prove(assign func(rt *Runtime), proveOpts ...ProveOptions) (P
 	}
 
 	if proveOpt.CheckUnreducedQueries {
-		sys.checkUnreducedQueries(rt)
+		if err := sys.checkUnreducedQueries(rt); err != nil {
+			panic(fmt.Sprintf("wiop: unreduced query check failed: %v", err))
+		}
 	}
 
 	return proof, pub
