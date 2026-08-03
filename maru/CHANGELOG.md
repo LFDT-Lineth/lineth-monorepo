@@ -1,5 +1,9 @@
 ## [unreleased]
 
+### 🐛 Bug Fixes
+
+- *(maru)* Declare jar task dependency on runtimeClasspath to fix manifest race (#3694)
+
 ### ⚙️ Miscellaneous Tasks
 
 - *(misc)* Update jackson from 2.19.4 to 2.22.1 (#3595)
