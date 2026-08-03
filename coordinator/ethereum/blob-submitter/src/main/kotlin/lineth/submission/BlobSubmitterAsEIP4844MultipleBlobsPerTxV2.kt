@@ -51,7 +51,7 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTxV2(
 
         val blobData = BlobsSubmissionV9(
           blobs = blobRecord.blobsData.map { it.compressedData },
-          blobFinalBlockHashes = emptyList(), // Should be get from blobsData
+          blobFinalBlockHashes = blobRecord.blobsData.map { it.endBlockHash },
           parentShnarf = blobRecord.parentShnarf,
           finalBlobShnarf = blobRecord.endShnarf,
         )
