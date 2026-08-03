@@ -9,9 +9,14 @@
 - *(coordinator)* Correct ByteArray equality checks in domain classes (#3625)
 - *(coordinator)* Address error handling issues from review (#3626)
 
+### 🚜 Refactor
+
+- *(coordinator)* L1RelayingAppV1 to better allow RISC-V extension (#3640)
+
 ### ⚙️ Miscellaneous Tasks
 
 - *(coordinator)* Remove dead code and apply small cleanups from review (#3627)
+- *(coordinator)* Riscv blob data skeleton (#3609)
 ## [1.1.0] - 2026-07-28
 
 ### 🚀 Features

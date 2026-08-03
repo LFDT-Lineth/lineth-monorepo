@@ -3,6 +3,7 @@
 ### 🐛 Bug Fixes
 
 - *(prover)* Fix the bitdecompose.go by removing IsPackedLimbNotZero (#3475)
+- *(prover)* Fix broken loop boundary in csDecomposedLimbs (#3474)
 
 ### 🚜 Refactor
 
