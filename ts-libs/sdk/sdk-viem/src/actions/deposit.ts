@@ -53,6 +53,7 @@ import { AccountNotFoundError, AccountNotFoundErrorType } from "../errors/accoun
 import { GetAccountParameter } from "../types/account";
 import { computeMessageHash } from "../utils/computeMessageHash";
 import { getNextMessageNonce, GetNextMessageNonceErrorType } from "../utils/getNextMessageNonce";
+import { resolveRollupAddress, ResolveRollupAddressErrorType } from "../utils/resolveRollupAddress";
 
 export type DepositParameters<
   chain extends Chain | undefined = Chain | undefined,
@@ -94,7 +95,8 @@ export type DepositErrorType =
   | EncodeAbiParametersErrorType
   | ChainNotFoundErrorType
   | ClientChainNotConfiguredErrorType
-  | AccountNotFoundErrorType;
+  | AccountNotFoundErrorType
+  | ResolveRollupAddressErrorType;
 
 /**
  * Deposits tokens from L1 to L2 or ETH if `token` is set to `zeroAddress`.
@@ -187,7 +189,7 @@ export async function deposit<
   const l1ChainId = client.chain.id;
   const l2ChainId = l2Client.chain.id;
 
-  const rollupAddress = parameters.rollupAddress ?? getContractsAddressesByChainId(l1ChainId).messageService;
+  const rollupAddress = resolveRollupAddress(l1ChainId, parameters.rollupAddress);
   const l2MessageServiceAddress =
     parameters.l2MessageServiceAddress ?? getContractsAddressesByChainId(l2ChainId).messageService;
   const l1TokenBridgeAddress = parameters.l1TokenBridgeAddress ?? getContractsAddressesByChainId(l1ChainId).tokenBridge;
