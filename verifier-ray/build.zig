@@ -79,7 +79,7 @@ pub fn build(b: *std.Build) void {
         },
     });
     const test_fri_vectors_mod = b.addModule("test_fri_vectors", .{
-        .root_source_file = b.path("testdata/generated/fri_vectors_embed.zig"),
+        .root_source_file = b.path("testdata/generated/fri.zig"),
         .target = target,
         .optimize = optimize,
     });
