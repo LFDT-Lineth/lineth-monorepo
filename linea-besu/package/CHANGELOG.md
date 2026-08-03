@@ -1,5 +1,9 @@
 ## [unreleased]
 
+### 🚀 Features
+
+- *(linea-besu)* Update to v26.7.0 (#3623)
+
 ### ⚙️ Miscellaneous Tasks
 
 - *(linea-besu)* Tidy v2.0.0 changelog entries (#3574)
