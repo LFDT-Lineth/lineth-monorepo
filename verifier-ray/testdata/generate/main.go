@@ -616,44 +616,65 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		if len(vanishingSystem.Modules) == 0 {
 			return nil
 		}
+		// Protocols with committed dynamic-module columns cannot be baked into a
+		// single mandatory-PCS System (their PCS bundle layout is a function of the
+		// proof's runtime sizes — BuildPcsSystem rejects them). We still emit them
+		// into vanishing.zig (the direct vanishing.verify path, which handles
+		// dynamic sizing via module_sizes and has no PCS layout), but mark them
+		// pcs=nil so writeVerifyFixtures excludes them from the mandatory-PCS
+		// verify.zig path. This keeps dynamic-module vanishing coverage while not
+		// emitting a size-frozen PCS System. See codegen.HasCommittedDynamicColumn.
+		hasDynCommitted := codegen.HasCommittedDynamicColumn(sys)
 		honestRt := runProver(sys, honest)
 		logDeriv, err := codegen.BuildLogDerivSystem(sys)
 		if err != nil {
 			return fmt.Errorf("build logderiv system %s/%s: %w", source, name, err)
 		}
 		honestProof := extractVanishingProofView(sys, honestRt)
-		honestPcs, err := codegen.BuildPcsSystem(sys, honestRt, routing)
-		if err != nil {
-			return fmt.Errorf("build pcs system %s/%s: %w", source, name, err)
-		}
-		if honestRt.PCSOpeningProof == nil {
-			return fmt.Errorf("pcs %s/%s: honest runtime has no PCSOpeningProof", source, name)
-		}
 
-		tc := fixtureCase{
-			name: name, honest: honestProof,
-			honestPcs: &honestPcs, honestOpening: *honestRt.PCSOpeningProof,
-		}
+		tc := fixtureCase{name: name, honest: honestProof}
 		if invalid != nil {
 			invalidRt := runProver(sys, invalid)
 			proof := extractVanishingProofView(sys, invalidRt)
 			tc.invalid = &proof
-			// The invalid opening carries the tampered claim values (the flipped
-			// witness surfaces in the LagrangeEval openings), so the PCS-routed
-			// claims fed to vanishing are the invalid ones — exactly what must fail
-			// the quotient identity.
-			ip, err := codegen.BuildPcsSystem(sys, invalidRt, routing)
-			if err != nil {
-				return fmt.Errorf("build invalid pcs system %s/%s: %w", source, name, err)
+			if !hasDynCommitted {
+				// The invalid opening carries the tampered claim values (the flipped
+				// witness surfaces in the LagrangeEval openings), so the PCS-routed
+				// claims fed to vanishing are the invalid ones — exactly what must
+				// fail the quotient identity.
+				ip, err := codegen.BuildPcsSystem(sys, invalidRt, routing)
+				if err != nil {
+					return fmt.Errorf("build invalid pcs system %s/%s: %w", source, name, err)
+				}
+				if invalidRt.PCSOpeningProof == nil {
+					return fmt.Errorf("pcs %s/%s: invalid runtime has no PCSOpeningProof", source, name)
+				}
+				tc.invalidPcs = &ip
+				tc.invalidOpen = *invalidRt.PCSOpeningProof
 			}
-			if invalidRt.PCSOpeningProof == nil {
-				return fmt.Errorf("pcs %s/%s: invalid runtime has no PCSOpeningProof", source, name)
-			}
-			tc.invalidPcs = &ip
-			tc.invalidOpen = *invalidRt.PCSOpeningProof
 		}
+
+		// Build the PCS system for the mandatory-PCS (verify.zig) path only when
+		// the protocol has no committed dynamic-module columns (see above). When it
+		// does, honestPcs stays nil: the case is still emitted into vanishing.zig
+		// (direct vanishing.verify), but writeVerifyFixtures excludes pcs==nil
+		// cases from the mandatory-PCS verify.zig path.
+		pcsSys := (*codegen.PcsSystem)(nil)
+		if !hasDynCommitted {
+			honestPcs, err := codegen.BuildPcsSystem(sys, honestRt, routing)
+			if err != nil {
+				return fmt.Errorf("build pcs system %s/%s: %w", source, name, err)
+			}
+			if honestRt.PCSOpeningProof == nil {
+				return fmt.Errorf("pcs %s/%s: honest runtime has no PCSOpeningProof", source, name)
+			}
+			tc.honestPcs = &honestPcs
+			tc.honestOpening = *honestRt.PCSOpeningProof
+			pcsSys = &honestPcs
+		}
+
 		cases = append(cases, tc)
-		systems = append(systems, codegen.CompiledSystem{Routing: routing, Vanishing: vanishingSystem, LogDeriv: logDeriv, Pcs: &honestPcs})
+		systems = append(systems, codegen.CompiledSystem{Routing: routing, Vanishing: vanishingSystem, LogDeriv: logDeriv, Pcs: pcsSys})
 		return nil
 	}
 
@@ -863,7 +884,7 @@ func extractVanishingProofView(sys *wiop.System, rt *wiop.Runtime) vanishingProo
 		rounds:         rounds,
 		witnessClaims:  witnessClaims,
 		quotientClaims: quotientClaims,
-		moduleSizes:    dynamicModuleSizes(verifiers, rt),
+		moduleSizes:    dynamicModuleSizes(sys, rt),
 	}
 }
 
@@ -879,20 +900,16 @@ func globalVerifiers(sys *wiop.System) []*global.Verifier {
 	return verifiers
 }
 
-func dynamicModuleSizes(verifiers []*global.Verifier, rt *wiop.Runtime) []int {
-	indices := map[*wiop.Module]int{}
-	for _, verifier := range verifiers {
-		module := verifier.Module
-		if !module.IsDynamic() {
-			continue
-		}
-		if _, ok := indices[module]; !ok {
-			indices[module] = len(indices)
-		}
-	}
-	out := make([]int, len(indices))
-	for module, idx := range indices {
-		out[idx] = module.RuntimeSize(rt)
+// dynamicModuleSizes builds the proof's `module_sizes` slice in the canonical
+// dynamic-module order (sys.Modules order — see codegen.DynamicModuleOrder),
+// which is the order prover-ray's AdvanceRound absorbs the sizes and the order
+// every DynamicIndex points into. `out[i]` is the runtime size of the i-th
+// dynamic module in that order.
+func dynamicModuleSizes(sys *wiop.System, rt *wiop.Runtime) []int {
+	order := codegen.DynamicModuleOrder(sys)
+	out := make([]int, len(order))
+	for i, module := range order {
+		out[i] = module.RuntimeSize(rt)
 	}
 	return out
 }
@@ -1054,7 +1071,22 @@ func writeTraceCell(out *bytes.Buffer, cell runtimeTraceCell, indent string) {
 	}
 }
 
-func writeVerifyFixtures(cases []fixtureCase, systems []codegen.CompiledSystem) error {
+func writeVerifyFixtures(allCases []fixtureCase, allSystems []codegen.CompiledSystem) error {
+	// verify.zig drives the mandatory-PCS verifier.verify: every case needs a PCS
+	// System. Exclude cases without one (protocols with committed dynamic-module
+	// columns — see the add() closure); they are covered by vanishing.zig's direct
+	// path. Filter to a contiguous slice so all downstream indices (system_i,
+	// verify_case_i, case_count, the switches) stay aligned.
+	var cases []fixtureCase
+	var systems []codegen.CompiledSystem
+	for i := range allCases {
+		if allCases[i].honestPcs == nil {
+			continue
+		}
+		cases = append(cases, allCases[i])
+		systems = append(systems, allSystems[i])
+	}
+
 	var out bytes.Buffer
 	writeVerifyHeader(&out, len(cases))
 	opts := codegen.CompiledSystemZigOptions{

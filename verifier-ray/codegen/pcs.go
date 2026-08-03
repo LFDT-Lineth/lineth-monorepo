@@ -132,6 +132,23 @@ type pcsLocWithBatch struct {
 	loc      pcscompiler.ColumnLocation
 }
 
+// HasCommittedDynamicColumn reports whether any PCS-committed batch contains a
+// column owned by a dynamically-sized module. Such a column's FRI bundle
+// (SizeLog2) is derived from its runtime size, so a comptime pcs.System baked
+// from one proving run cannot verify proofs of other sizes — BuildPcsSystem
+// rejects it. Callers that emit fixtures per protocol can use this to skip such
+// protocols until the engine gains a runtime-size-reconstructed layout.
+func HasCommittedDynamicColumn(sys *wiop.System) bool {
+	for _, b := range pcscompiler.CommittedBatches(sys) {
+		for _, col := range b.Round.Columns {
+			if col.Module != nil && col.Module.IsDynamic() {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // BuildPcsSystem extracts the FRI/PCS System from a compiled, proven protocol.
 //
 // Requires pcs.Compile to have run after global.Compile: the LagrangeEval
@@ -163,6 +180,35 @@ func BuildPcsSystem(sys *wiop.System, rt *wiop.Runtime, routing CoinRouting) (Pc
 	shapes := make([]fri.Shape, len(batches))
 	batchRoots := make([]PcsBatchRoot, len(batches))
 	for i, b := range batches {
+		// SINGLE-SIZE LIMITATION (guard, fail-loud): a committed column's FRI
+		// bundle placement (SizeLog2) is derived by GetLayout from that column's
+		// runtime size (utils.NextPowerOfTwo(col.Module.RuntimeSize(rt))). For a
+		// DYNAMIC module that size varies per proof, so the layout we freeze into
+		// the comptime pcs.System here would only match proofs whose dynamic
+		// module_sizes equal this single proving run — a different valid proof
+		// would place the column in a different bundle and fail verification.
+		//
+		// The verifier engine reconstructs neither the layout nor entry_idx from
+		// runtime module_sizes (size_log2 is comptime), so we cannot emit a
+		// size-independent System. Reject rather than silently emit a System that
+		// only accepts one size. (Static modules, and dynamic modules whose columns
+		// are NOT committed, are unaffected — the transcript-side dynamic-size
+		// absorption in root.zig still handles their annihilator sizing.)
+		//
+		// Lifting this requires a runtime-size-reconstructed layout in the engine
+		// (a larger change); see docs. Until then a protocol with committed dynamic
+		// columns needs one generated System per distinct size.
+		for _, col := range b.Round.Columns {
+			if col.Module != nil && col.Module.IsDynamic() {
+				return PcsSystem{}, fmt.Errorf(
+					"codegen: BuildPcsSystem: committed column %q belongs to dynamic module %q; "+
+						"its PCS bundle size is frozen to this proof's runtime size and would reject "+
+						"other-size proofs. Committed dynamic-module columns are not yet supported "+
+						"(needs a runtime-size-reconstructed layout in the verifier engine)",
+					col.Context.Path(), col.Module.Context.Path(),
+				)
+			}
+		}
 		locs, shape := pcscompiler.GetLayout(b.Round, rt)
 		shapes[i] = shape
 		for id, l := range locs {

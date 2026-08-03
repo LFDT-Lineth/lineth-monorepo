@@ -28,15 +28,19 @@ const verifier = verifier_ray.verifier;
 //
 // The "SingleFractionAllOnes" LogDerivativeSum scenario; its round-1 cells are
 // [result, z_final] and its expression DAG binds the z_final cell to
-// column_claim 1 (the PCS-authenticated Z column) via L_3 (last row). The
-// comptime name assertion below pins the index to that scenario.
-const case_index: usize = 29;
+// column_claim 1 (the PCS-authenticated Z column) via L_3 (last row). Resolve
+// the index by NAME so fixture regeneration (which shifts case ordering) never
+// silently points this test at the wrong scenario; a missing scenario is a
+// comptime error.
+const case_index: usize = caseIndexByName("SingleFractionAllOnes");
 
-// Fail loudly if fixture regeneration shifts the case ordering, rather than
-// silently exercising the wrong scenario.
-comptime {
-    if (!std.mem.eql(u8, vf.get(case_index).name, "SingleFractionAllOnes"))
-        @compileError("pcs_endpoint_binding_test: case_index no longer points at SingleFractionAllOnes; update it");
+fn caseIndexByName(comptime name: []const u8) usize {
+    comptime {
+        for (0..vf.case_count) |i| {
+            if (std.mem.eql(u8, vf.get(i).name, name)) return i;
+        }
+        @compileError("pcs_endpoint_binding_test: fixture case '" ++ name ++ "' not found; regenerate testdata or update the test");
+    }
 }
 
 // spec/systems are comptime protocol descriptions; bind them as comptime
