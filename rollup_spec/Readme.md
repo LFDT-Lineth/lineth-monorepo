@@ -553,7 +553,6 @@ separate from the l2-execution, rollup, and rollup-aggregation guest programs.
 
 3. **Guest-program approval (security-council managed):** maintains `approvedVks`, a single combined set of approved `programVk` hashes covering both exec and rollup guests — exec and rollup VKs are **not** distinguished on-chain, and the proof surfaces them as one combined `programVks` public-input set (§2.4); the exec-vs-rollup split is internal guest bookkeeping only. The security council calls `addApprovedVk` / `removeApprovedVk` to manage membership, the same trust model as `setVerifierAddress`. See §2.6 *Guest Program Anchoring (ProgramVK)* for the management policy.
 
-
 **What is removed:**
 
 - The call to the `0x0A` point evaluation precompile — the KZG binding is now guaranteed by the proof
@@ -717,6 +716,90 @@ event DataFinalizedV4(
 `DataFinalizedV3` is retired and no longer emitted after this upgrade.
 
 **A second migration is needed for the dataRollingHash transition.** This section describes the already-specified state-root-hash → 3-argument-shnarf bridge. Moving from that 3-argument shnarf (`Hash(parentShnarf, lastBlockHash, blobHash)`) to the 2-argument dataRollingHash (`Hash(parentDataRollingHash, chunkHash)`, §3.1) is a second, analogous transition that is not yet designed: it needs its own path-selection rule (e.g., keyed off whether `currentFinalizedPositionCommitment` is set). TBA
+
+### 5.3 Guest Program Verifier Key Registry
+
+The contract maintains an on-chain allowlist of guest-program verifier keys (VKs) — `bytes32` identifiers that uniquely identify a specific RISC-V guest program version. These are distinct from verifier *contract addresses* (which identify the SNARK verifier, e.g. Groth16/Plonk): a VK identifies which guest program the proof was produced for; the verifier contract verifies the SNARK wrapping it.
+
+**Storage and roles.**
+
+```solidity
+mapping(bytes32 verifierKey => bool exists) public verifierKeys;
+
+bytes32 public constant SET_VERIFIER_KEY_ROLE   = keccak256("SET_VERIFIER_KEY_ROLE");
+bytes32 public constant UNSET_VERIFIER_KEY_ROLE = keccak256("UNSET_VERIFIER_KEY_ROLE");
+```
+
+**Management functions.**
+
+```solidity
+function setVerifierKeys(bytes32[] calldata _verifierKeys)   external; // requires SET_VERIFIER_KEY_ROLE
+function unsetVerifierKeys(bytes32[] calldata _verifierKeys) external; // requires UNSET_VERIFIER_KEY_ROLE
+```
+
+Both functions require non-empty arrays and non-zero keys. `setVerifierKeys` reverts if a key is already set; `unsetVerifierKeys` reverts if a key is not found (non-idempotent by design — an attempt to remove an already-absent key is flagged as an error to prevent silent no-ops).
+
+Initial VKs are seeded from `BaseInitializationData.verifierKeys` at contract initialization.
+
+**Inclusion in the public input hash.** The finalization call's `verifierKeys` array — the set of VKs used in the batch being finalized — is hashed and included in `_computePublicInput`:
+
+```
+publicInput = keccak256(
+  lastFinalizedShnarf,
+  finalShnarf,
+  finalTimestamp,
+  endBlockNumber,
+  ...                            // L1/L2 rolling hash fields, FTX fields, Merkle depth
+  keccak256(l2MerkleRoots),
+  verifierChainConfiguration,
+  keccak256(filteredAddresses),
+  keccak256(verifierKeys)        // ← NEW: binds which guest programs produced this proof
+)
+```
+
+Before proof verification, the contract validates that every key in `finalizationData.verifierKeys` is in the allowlist:
+
+```solidity
+function _validateVerifierKeys(bytes32[] calldata _verifierKeysUsed) internal view {
+  for (uint256 i; i < _verifierKeysUsed.length; i++) {
+    require(verifierKeys[_verifierKeysUsed[i]], VerifierKeyNotFound(_verifierKeysUsed[i]));
+  }
+}
+```
+
+This ensures the proof was produced using an operator-approved guest program version and that any future guest upgrades require an explicit governance action to add the new VK before that proof type can be finalized.
+
+### 5.4 Migration: State-Root-Hash to Block-Hash Finalization
+
+The initial deployment of the new contract must transition existing state that was committed under the old 5-argument shnarf formula (`keccak256(parentShnarf, snarkHash, stateRootHash, evaluationPoint, evaluationClaim)`) to the new 3-argument formula (`keccak256(parentShnarf, lastBlockHash, blobHash)`).
+
+**`FinalizationDataV5` parent fields.** The struct places both parent continuity fields together at the top (offsets `0x000` and `0x020`) to make the path-selection intent visible at the calldata level:
+
+```solidity
+bytes32 parentStateRootHash;  // migration path: expected starting state root hash
+bytes32 parentBlockHash;      // new path:       expected starting block hash
+```
+
+**How it works.** The contract stores a `blockHashes` mapping keyed by L2 block number. At initialization, the genesis block hash is written. On each finalization, the contract checks whether `blockHashes[lastFinalizedBlockNumber]` is set:
+
+- **Migration path (empty — no block hash stored):** The parent was committed under the old state-root-hash model. The contract asserts `stateRootHashes[lastFinalizedBlockNumber] == finalizationData.parentStateRootHash` (revert: `StartingRootHashDoesNotMatch`), uses the legacy 5-argument `_computeShnarf`, and writes `stateRootHashes[endBlockNumber]` as before. After this path runs, it writes `blockHashes[endBlockNumber] = finalBlockHash`, which moves the *next* finalization round onto the new path.
+- **New path (non-empty):** The parent was committed under the block-hash model. The contract asserts `blockHashes[lastFinalizedBlockNumber] == finalizationData.parentBlockHash` (revert: `StartingBlockHashDoesNotMatch`) as a soft continuity check — the on-chain mapping is authoritative, but the caller must declare which parent they are building from. The contract then uses the 3-argument `_computeShnarf(shnarfData.parentShnarf, finalBlockHash, finalBlobHash)`.
+
+On the very first post-upgrade finalization the new path is not yet active (migration path runs instead); the `parentBlockHash` in the emitted `DataFinalizedV4` event will be `EMPTY_HASH` — indexers should treat this as the transition marker.
+
+**`DataFinalizedV4` event.** A single finalization event is emitted for all paths (no dual-event emission):
+
+```solidity
+event DataFinalizedV4(
+  uint256 indexed startBlockNumber,
+  uint256 indexed endBlockNumber,
+  bytes32 indexed shnarf,
+  bytes32 parentBlockHash,   // EMPTY_HASH on the first post-upgrade finalization
+  bytes32 finalBlockHash
+);
+```
+
+`DataFinalizedV3` is retired and no longer emitted after this upgrade.
 
 ---
 
