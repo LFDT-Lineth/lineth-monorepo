@@ -141,7 +141,7 @@ services:
       - --datadir=/data
       - --networkid=59141
       - --externalcl
-      - --prune=hrtc
+      - --prune.mode=full
       - --http
       - --http.addr=0.0.0.0
       - --http.port=8545
