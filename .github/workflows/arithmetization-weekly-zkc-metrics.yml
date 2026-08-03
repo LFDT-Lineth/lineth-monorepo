@@ -27,7 +27,11 @@ on:
   workflow_dispatch:
     inputs:
       zkc-ref:
-        description: 'zkc commit/branch/tag to measure with (default: main)'
+        description: 'zkc branch, release tag, or commit hash (short or full). Default: main'
+        required: false
+        type: string
+      monorepo-ref:
+        description: 'monorepo commit/branch/tag to measure (default: main, i.e. the ref this run was started from)'
         required: false
         type: string
       run-heavy:
@@ -76,10 +80,35 @@ jobs:
     outputs:
       row_written: ${{ steps.update.outputs.row_written }}
     steps:
-      - name: Checkout repository
+      # Two checkouts, and the split matters. This one provides the TOOLING — the renderer, this
+      # workflow, and the metrics file that rows are appended to — and is always the ref the run
+      # was started from. The measured tree may be an arbitrary older commit that predates all of
+      # it, so measuring in place would break the renderer and leave nowhere to write.
+      - name: Checkout tooling
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           submodules: false
+
+      # The tree UNDER MEASUREMENT, when a monorepo-ref was given. Checked out beside the tooling
+      # so the two cannot interfere. actions/checkout can fetch a bare SHA at depth 1.
+      - name: Checkout the monorepo commit under measurement
+        if: ${{ inputs.monorepo-ref != '' }}
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ inputs.monorepo-ref }}
+          path: measured
+          submodules: false
+
+      # MEASURE_DIR is what every measurement step reads; the workspace root stays the tooling.
+      # Without a monorepo-ref the two are the same directory and there is no second checkout.
+      - name: Resolve the tree under measurement
+        run: |
+          set -euo pipefail
+          if [ -n "${{ inputs.monorepo-ref }}" ]; then
+            echo "MEASURE_DIR=${GITHUB_WORKSPACE}/measured" >> "$GITHUB_ENV"
+          else
+            echo "MEASURE_DIR=${GITHUB_WORKSPACE}" >> "$GITHUB_ENV"
+          fi
 
       # Installs Go, the pinned Zig, Rust and the riscv toolchain, and resolves the zkc-ref
       # input into $ZKC_REF (falling back to arithmetization/Makefile's pin when empty).
@@ -87,6 +116,43 @@ jobs:
         uses: ./.github/actions/setup-arithmetization-riscv
         with:
           zkc-ref: ${{ inputs.zkc-ref || 'main' }}
+
+      # zkc-ref accepts a branch, a release tag, or a commit hash. The install path is
+      # `git fetch --depth=1 origin <ref>` (arithmetization/Makefile), which handles branches,
+      # tags and FULL 40-character SHAs — but not abbreviated ones, since git cannot fetch a
+      # short SHA. Expand those through the API first so a pasted 8- or 12-character hash works
+      # like everything else; anything non-hex is passed straight through as a branch or tag.
+      - name: Resolve the zkc ref
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          requested="${{ inputs.zkc-ref || 'main' }}"
+          resolved="$requested"
+          if printf '%s' "$requested" | grep -qE '^[0-9a-f]{7,39}$'; then
+            if full=$(gh api "repos/LFDT-Lineth/zkc/commits/${requested}" -q .sha 2>/dev/null) \
+               && [ -n "$full" ]; then
+              resolved="$full"
+              echo "expanded short hash ${requested} -> ${resolved}"
+            else
+              echo "::warning::could not expand '${requested}' to a full zkc SHA; passing it through as-is (a short hash will fail to fetch)"
+            fi
+          fi
+          # Also resolve the ref to a full SHA regardless of its form, as a last-resort source for
+          # the provenance column: a checkout sitting exactly on a release tag produces a clean
+          # module version with no commit in it.
+          sha_hint=""
+          if printf '%s' "$resolved" | grep -qE '^[0-9a-f]{40}$'; then
+            sha_hint="$resolved"
+          else
+            sha_hint=$(gh api "repos/LFDT-Lineth/zkc/commits/${resolved}" -q .sha 2>/dev/null || true)
+          fi
+          {
+            echo "ZKC_REF=${resolved}"
+            echo "ZKC_REF_LABEL=${requested}"
+            echo "ZKC_SHA_HINT=${sha_hint}"
+          } >> "$GITHUB_ENV"
+          echo "zkc ref: requested '${requested}', using '${resolved}', sha '${sha_hint:-unknown}'"
 
       - name: Install zkc
         run: make -C arithmetization install-zkc
@@ -126,7 +192,7 @@ jobs:
           # --order name (not zkc's default --order total) keeps the verbatim table diffable
           # week to week; the Total rows the renderer parses are order-independent.
           /usr/bin/time -v -o "$d/rusage" \
-            zkc compile --stats --order name arithmetization/src/main/riscv/main.zkc \
+            zkc compile --stats --order name "$MEASURE_DIR/arithmetization/src/main/riscv/main.zkc" \
             > "$d/stdout" 2> "$d/stderr"
           rc=$?
           echo "$rc" > "$d/rc"
@@ -147,13 +213,14 @@ jobs:
           # No `make linker-script`: linker_script.ld is tracked and @embedFile'd by the zig
           # build, so regenerating it would only risk dirtying the tree.
           /usr/bin/time -v -o "$d/rusage" \
-            make -C riscv-guests/l2-execution compile KECCAK_ACCEL=true > "$d/stdout" 2> "$d/stderr"
+            make -C "$MEASURE_DIR/riscv-guests/l2-execution" compile KECCAK_ACCEL=true \
+            > "$d/stdout" 2> "$d/stderr"
           rc=$?
           if [ "$rc" -eq 0 ]; then
-            make -C riscv-guests/build_common elf-to-json \
-              BIN_EXT="$PWD/riscv-guests/l2-execution/zig-out/bin/evm_execution_guest" \
+            make -C "$MEASURE_DIR/riscv-guests/build_common" elf-to-json \
+              BIN_EXT="$MEASURE_DIR/riscv-guests/l2-execution/zig-out/bin/evm_execution_guest" \
               JSON_EXT="$RUN/guest.json" \
-              IN_BYTES="@$PWD/riscv-guests/l2-execution/test/testdata/stateless_input.ssz" \
+              IN_BYTES="@$MEASURE_DIR/riscv-guests/l2-execution/test/testdata/stateless_input.ssz" \
               >> "$d/stdout" 2>> "$d/stderr"
             rc=$?
           fi
@@ -179,7 +246,7 @@ jobs:
           t0=$(date +%s)
           /usr/bin/time -v -o "$d/rusage" \
             timeout "${{ inputs.trace-timeout-min || 30 }}m" \
-            zkc trace --stats "$RUN/guest.json" arithmetization/src/main/riscv/main.zkc \
+            zkc trace --stats "$RUN/guest.json" "$MEASURE_DIR/arithmetization/src/main/riscv/main.zkc" \
             > "$d/stdout" 2> "$d/stderr"
           rc=$?
           echo "$rc" > "$d/rc"
@@ -199,7 +266,7 @@ jobs:
           t0=$(date +%s)
           /usr/bin/time -v -o "$d/rusage" \
             timeout "${{ inputs.check-timeout-min || 240 }}m" \
-            zkc trace --stats --check "$RUN/guest.json" arithmetization/src/main/riscv/main.zkc \
+            zkc trace --stats --check "$RUN/guest.json" "$MEASURE_DIR/arithmetization/src/main/riscv/main.zkc" \
             > "$d/stdout" 2> "$d/stderr"
           rc=$?
           echo "$rc" > "$d/rc"
@@ -216,8 +283,24 @@ jobs:
         run: |
           set -euo pipefail
           zkc_bin=$(command -v zkc)
-          zkc_mod=$(go version -m "$zkc_bin" | awk '$1=="mod"{print $3}')
-          zkc_commit=$(printf '%s' "$zkc_mod" | sed -E 's/.*-([0-9a-f]{12})$/\1/')
+          # Three sources, most authoritative first. install-zkc builds from a git checkout, so Go
+          # stamps vcs.revision — but that is absent when the binary came from `go install pkg@ref`
+          # (module mode). The pseudo-version suffix covers that case, except when the checkout sits
+          # exactly on a release tag: then the module version is a clean "v1.2.25" with no commit in
+          # it at all, which is why the tag is resolved to a SHA earlier. Note sed -n/p: without it,
+          # a non-matching version is echoed back and "v1.2.25" masquerades as a commit hash.
+          zkc_commit=$(go version -m "$zkc_bin" \
+            | awk '$1=="build" && $2 ~ /^vcs\.revision=/{print substr($2,14)}')
+          if [ -z "$zkc_commit" ]; then
+            zkc_mod=$(go version -m "$zkc_bin" | awk '$1=="mod"{print $3}')
+            zkc_commit=$(printf '%s' "$zkc_mod" | sed -nE 's/.*-([0-9a-f]{12})$/\1/p')
+          fi
+          [ -n "$zkc_commit" ] || zkc_commit="${ZKC_SHA_HINT:-}"
+          if [ -n "$zkc_commit" ]; then
+            zkc_cell="${ZKC_REF_LABEL}@\`${zkc_commit:0:9}\`"
+          else
+            zkc_cell="${ZKC_REF_LABEL}@–"
+          fi
           cores=$(nproc)
           ram=$(awk '/^MemTotal:/{printf "%.0f GiB", $2/1048576}' /proc/meminfo)
           if [ "${{ github.event_name }}" = "schedule" ]; then
@@ -225,13 +308,22 @@ jobs:
           else
             trigger="manual (@${{ github.actor }})"
           fi
+          # The commit that was MEASURED, which is not the workspace when a monorepo-ref was
+          # given. Record the requested ref alongside the resolved SHA: "abc123def (main)" and
+          # "abc123def (v1.2.0, requested)" are very different provenance.
+          measured_sha=$(git -C "$MEASURE_DIR" rev-parse --short=9 HEAD)
+          if [ -n "${{ inputs.monorepo-ref }}" ]; then
+            measured="\`${measured_sha}\` (${{ inputs.monorepo-ref }}, requested)"
+          else
+            measured="\`${measured_sha}\` (${GITHUB_REF_NAME})"
+          fi
           {
             echo "week=$(date -u +%G-W%V)"
             echo "started=$(date -u '+%Y-%m-%d %H:%M')"
             echo "trigger=$trigger"
             echo "runner=\`${RUNNER_TIER##*amd64-}\` ${cores} cores, ${ram}"
-            echo "arithmetization=\`$(git rev-parse --short=9 HEAD)\` (${GITHUB_REF_NAME})"
-            echo "zkc=${{ inputs.zkc-ref || 'main' }}@\`${zkc_commit:0:9}\`"
+            echo "arithmetization=$measured"
+            echo "zkc=${zkc_cell}"
             echo "run_url=[#${GITHUB_RUN_NUMBER}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})"
           } > "$RUN/meta.env"
           cat "$RUN/meta.env"
@@ -350,7 +442,13 @@ jobs:
             echo "started=$(date -u '+%Y-%m-%d %H:%M')"
             echo "trigger=$trigger"
             echo "runner=**run lost** — \`${RUNNER_TIER##*amd64-}\` job did not complete (evicted, cancelled or out of memory)"
-            echo "arithmetization=\`$(git rev-parse --short=9 HEAD)\` (${GITHUB_REF_NAME})"
+            if [ -n "${{ inputs.monorepo-ref }}" ]; then
+              # This job checked out the tooling ref, not the measured one, so only the request
+              # is known here — never print a SHA that was not the one measured.
+              echo "arithmetization=${{ inputs.monorepo-ref }} (requested)"
+            else
+              echo "arithmetization=\`$(git rev-parse --short=9 HEAD)\` (${GITHUB_REF_NAME})"
+            fi
             echo "zkc=${{ inputs.zkc-ref || 'main' }}@–"
             echo "run_url=[#${GITHUB_RUN_NUMBER}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})"
           } > "$RUN/meta.env"

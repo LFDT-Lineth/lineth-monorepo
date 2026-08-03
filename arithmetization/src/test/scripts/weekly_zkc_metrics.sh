@@ -40,7 +40,8 @@ usage() {
   cat <<'EOF'
 usage: weekly_zkc_metrics.sh [options]
 
-  --zkc-ref <ref>    zkc commit/branch/tag to measure with (default: main)
+  --zkc-ref <ref>    zkc branch, release tag, or commit hash to measure with (default: main).
+                     Go resolves short hashes here; CI needs a full one.
   --zkc-src <dir>    build zkc from a local checkout as-is instead (no fetch, no checkout)
   --timebox <min>    per-heavy-step wall-clock cap (default: 60)
   --compile-only     only `zkc compile --stats`
@@ -89,6 +90,18 @@ mkdir -p "$RUN" "$WORK/.toolchain" || exit 2
 TIMEBOX_S=$(( TIMEBOX_MIN * 60 ))
 log() { printf '\033[1m==>\033[0m %s\n' "$*" >&2; }
 
+# The rusage block comes from a different flag on each platform: BSD/macOS `time -l`, GNU
+# `time -v`. Probe rather than branch on `uname`, so a GNU coreutils time installed on macOS is
+# also handled. The renderer accepts either output format.
+if /usr/bin/time -v true >/dev/null 2>&1; then
+  TIME_FLAG="-v"
+elif /usr/bin/time -l true >/dev/null 2>&1; then
+  TIME_FLAG="-l"
+else
+  echo "FATAL: /usr/bin/time supports neither -v (GNU) nor -l (BSD); cannot measure peak RSS" >&2
+  exit 2
+fi
+
 # ── the zkc under measurement, built privately ──────────────────────────────────
 
 if [ -n "$ZKC_SRC" ]; then
@@ -102,17 +115,19 @@ else
   tmp=$(mktemp -d) || exit 1
   log "installing zkc @ $ZKC_REF (private GOBIN; ~/go/bin untouched)"
   GOBIN="$tmp" GOWORK=off GOFLAGS= go install "github.com/LFDT-Lineth/zkc/cmd/zkc@$ZKC_REF" || exit 1
-  sha=$(go version -m "$tmp/zkc" | awk '$1=="mod"{print $3}' | sed -E 's/.*-([0-9a-f]{12})$/\1/')
-  ZKC="$WORK/.toolchain/zkc-${ZKC_REF//\//_}-${sha:-unknown}"
+  # sed -n/p, so a clean release version ("v1.2.25", no commit suffix) yields empty rather
+  # than being echoed back into the cache filename.
+  sha=$(go version -m "$tmp/zkc" | awk '$1=="mod"{print $3}' | sed -nE 's/.*-([0-9a-f]{12})$/\1/p')
+  ZKC="$WORK/.toolchain/zkc-${ZKC_REF//\//_}-${sha:-nosha}"
   mv -f "$tmp/zkc" "$ZKC"; rmdir "$tmp" 2>/dev/null
 fi
 log "zkc: $ZKC"
 
 # ── time-boxed step runner ──────────────────────────────────────────────────────
 #
-# macOS has no timeout(1) and no GNU time, so the watchdog is hand-rolled. It kills the
-# CHILD rather than /usr/bin/time, which is what lets `time -l` still write its rusage
-# block — so a timed-out step still reports a real peak RSS.
+# macOS has no timeout(1), so the watchdog is hand-rolled. It kills the CHILD rather than
+# /usr/bin/time, which is what lets `time` still write its rusage block — so a timed-out step
+# still reports a real peak RSS.
 # Always returns 0; the outcome lives in files under $d.
 run_step() {           # run_step <name> <timebox_s|0> -- <cmd...>
   local name="$1" box="$2"; shift 2; [ "$1" = "--" ] && shift
@@ -121,7 +136,7 @@ run_step() {           # run_step <name> <timebox_s|0> -- <cmd...>
 
   local t0 t1 rc=0 child="" i=0 wd=""
   t0=$(date +%s)
-  /usr/bin/time -l -o "$d/rusage" \
+  /usr/bin/time "$TIME_FLAG" -o "$d/rusage" \
     /bin/sh -c 'echo $$ > "$1"; shift; exec "$@"' sh "$d/pid" "$@" \
     > "$d/stdout" 2> "$d/stderr" &
   local tpid=$!
@@ -178,7 +193,10 @@ fi
 
 zkc_mod=$(go version -m "$ZKC" | awk '$1=="mod"{print $3}')
 zkc_commit=$(go version -m "$ZKC" | awk '$1=="build" && $2 ~ /^vcs\.revision=/{print substr($2,14)}')
-[ -n "$zkc_commit" ] || zkc_commit=$(printf '%s' "$zkc_mod" | sed -E 's/.*-([0-9a-f]{12})$/\1/')
+# sed -n/p matters: without it a non-matching version is echoed back, so a clean release
+# version like "v1.2.25" would masquerade as a commit hash.
+[ -n "$zkc_commit" ] || zkc_commit=$(printf '%s' "$zkc_mod" | sed -nE 's/.*-([0-9a-f]{12})$/\1/p')
+[ -n "$zkc_commit" ] || zkc_commit="unknown"
 mono_head=$(git rev-parse --short=9 HEAD)
 mono_branch=$(git rev-parse --abbrev-ref HEAD)
 # Scoped: the untracked zkc/ clone and the go-corset submodule keep a naive

@@ -57,11 +57,21 @@ the job cap silently truncate the step.
 
 Weekly by cron, or by hand from the Actions tab. The manual form takes:
 
-- **zkc-ref** — any commit/branch/tag; default `main`. This is how you answer "did a zkc change
-  cost us?" without touching the arithmetization.
+- **zkc-ref** — a branch, a release tag, or a commit hash (short or full); default `main`. This is
+  how you answer "did a zkc change cost us?" without touching the arithmetization. Short hashes are
+  expanded to full SHAs first, because the install path is `git fetch --depth=1 origin <ref>` and
+  git cannot fetch an abbreviated SHA.
+- **monorepo-ref** — a commit, branch or tag of *this* repo to measure; default is the ref the run
+  was started from. The tooling always comes from the ref you dispatched, and the measured tree is
+  checked out separately under `measured/` — so you can measure a commit that predates this
+  tooling entirely, and the row still lands on the branch you dispatched from.
 - **run-heavy** — off to get just the constraint stats in ~2 minutes.
-- **trace-timeout-min** / **check-timeout-min** — raise the caps when chasing a completion.
+- **trace-timeout-min** / **check-timeout-min** — raise the caps when chasing a completion. They
+  are validated against the job's own cap before any measurement starts.
 - **commit-results** — off to measure without writing to the file.
+
+Both refs are recorded in the row, requested form and resolved SHA, so a measurement can always be
+traced back to exactly what was built.
 
 ## Running it locally
 
