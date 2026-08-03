@@ -9,10 +9,10 @@ import {
   ErrorDescription,
 } from "ethers";
 
-import { LineaRollup, LineaRollup__factory } from "../../contracts/typechain";
+import { LinethRollup, LinethRollup__factory } from "../../contracts/typechain";
 import {
-  ILineaRollupClient,
-  ILineaRollupLogClient,
+  ILinethRollupClient,
+  ILinethRollupLogClient,
   FinalizationMessagingInfo,
   IMerkleTreeService,
   Proof,
@@ -33,21 +33,21 @@ import { Message, SDKMode, MessageSent } from "../../core/types";
 import { formatMessageStatus, isString } from "../../core/utils";
 import { BrowserProvider, Provider } from "../providers";
 
-export class LineaRollupClient implements ILineaRollupClient<
+export class LinethRollupClient implements ILinethRollupClient<
   Overrides,
   TransactionReceipt,
   TransactionResponse,
   ContractTransactionResponse,
   ErrorDescription
 > {
-  private readonly contract: LineaRollup;
+  private readonly contract: LinethRollup;
 
   /**
-   * @notice Initializes a new instance of the `LineaRollupClient`.
-   * @dev This constructor sets up the Linea Rollup Client with the necessary dependencies and configurations.
+   * @notice Initializes a new instance of the `LinethRollupClient`.
+   * @dev This constructor sets up the Lineth Rollup Client with the necessary dependencies and configurations.
    * @param {ethers.Provider} provider The provider for interacting with the blockchain.
-   * @param {string} contractAddress The address of the Linea Rollup contract.
-   * @param {ILineaRollupLogClient} lineaRollupLogClient An instance of a class implementing the `ILineaRollupLogClient` interface for fetching events from the blockchain.
+   * @param {string} contractAddress The address of the Lineth Rollup contract.
+   * @param {ILinethRollupLogClient} linethRollupLogClient An instance of a class implementing the `ILinethRollupLogClient` interface for fetching events from the blockchain.
    * @param {IL2MessageServiceLogClient} l2MessageServiceLogClient An instance of a class implementing the `IL2MessageServiceLogClient` interface for fetching events from the blockchain.
    * @param {IEthereumGasProvider} gasProvider An instance of a class implementing the `IEthereumGasProvider` interface for providing gas estimates.
    * @param {IMessageRetriever} messageRetriever An instance of a class implementing the `IMessageRetriever` interface for retrieving messages.
@@ -64,7 +64,7 @@ export class LineaRollupClient implements ILineaRollupClient<
       Provider | BrowserProvider
     >,
     private readonly contractAddress: string,
-    private readonly lineaRollupLogClient: ILineaRollupLogClient,
+    private readonly linethRollupLogClient: ILinethRollupLogClient,
     private readonly l2MessageServiceLogClient: IL2MessageServiceLogClient,
     private readonly gasProvider: IEthereumGasProvider<TransactionRequest>,
     private readonly messageRetriever: IMessageRetriever<TransactionReceipt>,
@@ -151,21 +151,21 @@ export class LineaRollupClient implements ILineaRollupClient<
   }
 
   /**
-   * Retrieves the LineaRollup contract instance.
+   * Retrieves the LinethRollup contract instance.
    * @param {string} contractAddress - Address of the L1 contract.
    * @param {Signer} [signer] - The signer instance.
-   * @returns {LineaRollup} The LineaRollup contract instance.
+   * @returns {LinethRollup} The LinethRollup contract instance.
    */
-  private getContract(contractAddress: string, signer?: Signer): LineaRollup {
+  private getContract(contractAddress: string, signer?: Signer): LinethRollup {
     if (this.mode === "read-only") {
-      return LineaRollup__factory.connect(contractAddress, this.provider);
+      return LinethRollup__factory.connect(contractAddress, this.provider);
     }
 
     if (!signer) {
       throw makeBaseError("Please provide a signer.");
     }
 
-    return LineaRollup__factory.connect(contractAddress, signer);
+    return LinethRollup__factory.connect(contractAddress, signer);
   }
 
   /**
@@ -180,7 +180,7 @@ export class LineaRollupClient implements ILineaRollupClient<
   ): Promise<OnChainMessageStatus> {
     let status = await this.contract.inboxL2L1MessageStatus(messageHash, overrides);
     if (status === BigInt(MESSAGE_UNKNOWN_STATUS)) {
-      const events = await this.lineaRollupLogClient.getMessageClaimedEvents({
+      const events = await this.linethRollupLogClient.getMessageClaimedEvents({
         filters: { messageHash },
         fromBlock: 0,
         toBlock: "latest",
@@ -233,7 +233,7 @@ export class LineaRollupClient implements ILineaRollupClient<
     }
 
     const [[l2MessagingBlockAnchoredEvent], isMessageClaimed] = await Promise.all([
-      this.lineaRollupLogClient.getL2MessagingBlockAnchoredEvents({
+      this.linethRollupLogClient.getL2MessagingBlockAnchoredEvents({
         filters: { l2Block: BigInt(messageEvent.blockNumber) },
       }),
       this.contract.isMessageClaimed(messageEvent.messageNonce, overrides),

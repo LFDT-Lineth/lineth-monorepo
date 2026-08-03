@@ -3,7 +3,7 @@ import { Message } from "../../types";
 import { IMessageServiceContract } from "../IMessageServiceContract";
 import { FinalizationMessagingInfo, Proof } from "./IMerkleTreeService";
 
-export interface ILineaRollupClient<
+export interface ILinethRollupClient<
   Overrides,
   TransactionReceipt,
   TransactionResponse,

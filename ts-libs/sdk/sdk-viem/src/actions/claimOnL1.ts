@@ -1,4 +1,4 @@
-import { getContractsAddressesByChainId, MessageProof, Message } from "@lfdt-lineth/sdk-core";
+import { MessageProof, Message } from "@lfdt-lineth/sdk-core";
 import {
   Account,
   Address,
@@ -31,6 +31,7 @@ import {
 } from "../errors/bridge";
 import { GetAccountParameter } from "../types/account";
 import { computeMessageHash, ComputeMessageHashErrorType } from "../utils/computeMessageHash";
+import { resolveRollupAddress, ResolveRollupAddressErrorType } from "../utils/resolveRollupAddress";
 
 export type ClaimOnL1Parameters<
   chain extends Chain | undefined = Chain | undefined,
@@ -49,7 +50,7 @@ export type ClaimOnL1Parameters<
         messageNonce: bigint;
         feeRecipient?: Address;
         // defaults to the message service address for the L1 chain
-        lineaRollupAddress?: Address;
+        rollupAddress?: Address;
         // Defaults to the message service address for the L2 chain
         l2MessageServiceAddress?: Address;
         // Block in which the `MessageSent` event was emitted. When provided, the lookup queries only that
@@ -62,7 +63,7 @@ export type ClaimOnL1Parameters<
         messageProof: MessageProof;
         feeRecipient?: Address;
         // defaults to the message service address for the L1 chain
-        lineaRollupAddress?: Address;
+        rollupAddress?: Address;
       }
   >;
 
@@ -74,7 +75,8 @@ export type ClaimOnL1ErrorType =
   | ClientChainNotConfiguredErrorType
   | ComputeMessageHashErrorType
   | AccountNotFoundErrorType
-  | MissingMessageProofOrClientForClaimingOnL1ErrorType;
+  | MissingMessageProofOrClientForClaimingOnL1ErrorType
+  | ResolveRollupAddressErrorType;
 
 /**
  * Claim a message on L1.
@@ -199,7 +201,7 @@ export async function claimOnL1<
     feeRecipient,
     l2Client,
     messageProof,
-    lineaRollupAddress,
+    rollupAddress,
     l2MessageServiceAddress,
     messageL2BlockNumber,
     ...tx
@@ -228,7 +230,7 @@ export async function claimOnL1<
   if (l2Client) {
     proof = await getMessageProof(client, {
       l2Client,
-      lineaRollupAddress,
+      rollupAddress,
       l2MessageServiceAddress,
       messageHash: computeMessageHash({
         from,
@@ -246,10 +248,10 @@ export async function claimOnL1<
     proof = messageProof;
   }
 
-  const lineaRollup = parameters.lineaRollupAddress ?? getContractsAddressesByChainId(client.chain.id).messageService;
+  const resolvedRollupAddress = resolveRollupAddress(client.chain.id, rollupAddress);
 
   return sendTransaction(client, {
-    to: lineaRollup,
+    to: resolvedRollupAddress,
     account,
     data: encodeFunctionData({
       abi: CLAIM_MESSAGE_WITH_PROOF_ABI,

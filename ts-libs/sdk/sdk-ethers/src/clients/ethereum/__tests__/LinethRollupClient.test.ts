@@ -2,7 +2,7 @@ import { describe, afterEach, it, expect, beforeEach } from "@jest/globals";
 import { ContractTransactionResponse, Wallet } from "ethers";
 import { MockProxy, mock, mockClear, mockDeep } from "jest-mock-extended";
 
-import { LineaRollup, LineaRollup__factory } from "../../../contracts/typechain";
+import { LinethRollup, LinethRollup__factory } from "../../../contracts/typechain";
 import { ZERO_ADDRESS } from "../../../core/constants";
 import { OnChainMessageStatus } from "../../../core/enums/message";
 import { BaseError, makeBaseError } from "../../../core/errors";
@@ -24,7 +24,7 @@ import {
 import {
   generateL2MerkleTreeAddedLog,
   generateL2MessagingBlockAnchoredLog,
-  generateLineaRollupClient,
+  generateLinethRollupClient,
   generateMessage,
   generateTransactionReceipt,
   generateTransactionReceiptWithLogs,
@@ -34,17 +34,17 @@ import {
 import { DefaultGasProvider } from "../../gas/DefaultGasProvider";
 import { EthersL2MessageServiceLogClient } from "../../linea/EthersL2MessageServiceLogClient";
 import { LineaProvider, Provider } from "../../providers";
-import { EthersLineaRollupLogClient } from "../EthersLineaRollupLogClient";
-import { LineaRollupClient } from "../LineaRollupClient";
+import { EthersLinethRollupLogClient } from "../EthersLinethRollupLogClient";
+import { LinethRollupClient } from "../LinethRollupClient";
 
-describe("TestLineaRollupClient", () => {
+describe("TestLinethRollupClient", () => {
   let providerMock: MockProxy<Provider>;
   let l2ProviderMock: MockProxy<LineaProvider>;
   let walletMock: MockProxy<Wallet>;
-  let lineaRollupMock: MockProxy<LineaRollup>;
+  let linethRollupMock: MockProxy<LinethRollup>;
 
-  let lineaRollupClient: LineaRollupClient;
-  let lineaRollupLogClient: EthersLineaRollupLogClient;
+  let linethRollupClient: LinethRollupClient;
+  let linethRollupLogClient: EthersLinethRollupLogClient;
   let l2MessageServiceLogClient: EthersL2MessageServiceLogClient;
   let gasFeeProvider: DefaultGasProvider;
 
@@ -52,12 +52,12 @@ describe("TestLineaRollupClient", () => {
     providerMock = mock<Provider>();
     l2ProviderMock = mock<LineaProvider>();
     walletMock = mock<Wallet>();
-    lineaRollupMock = mockDeep<LineaRollup>();
-    jest.spyOn(LineaRollup__factory, "connect").mockReturnValue(lineaRollupMock);
+    linethRollupMock = mockDeep<LinethRollup>();
+    jest.spyOn(LinethRollup__factory, "connect").mockReturnValue(linethRollupMock);
     walletMock.getAddress.mockResolvedValue(TEST_ADDRESS_1);
-    lineaRollupMock.getAddress.mockResolvedValue(TEST_CONTRACT_ADDRESS_1);
+    linethRollupMock.getAddress.mockResolvedValue(TEST_CONTRACT_ADDRESS_1);
 
-    const clients = generateLineaRollupClient(
+    const clients = generateLinethRollupClient(
       providerMock,
       l2ProviderMock,
       TEST_CONTRACT_ADDRESS_1,
@@ -65,8 +65,8 @@ describe("TestLineaRollupClient", () => {
       "read-write",
       walletMock,
     );
-    lineaRollupClient = clients.lineaRollupClient;
-    lineaRollupLogClient = clients.lineaRollupLogClient;
+    linethRollupClient = clients.linethRollupClient;
+    linethRollupLogClient = clients.linethRollupLogClient;
     l2MessageServiceLogClient = clients.l2MessageServiceLogClient;
     gasFeeProvider = clients.gasProvider;
   });
@@ -75,7 +75,7 @@ describe("TestLineaRollupClient", () => {
     mockClear(providerMock);
     mockClear(l2ProviderMock);
     mockClear(walletMock);
-    mockClear(lineaRollupMock);
+    mockClear(linethRollupMock);
     jest.clearAllMocks();
   });
 
@@ -83,40 +83,40 @@ describe("TestLineaRollupClient", () => {
     it("should throw an error when mode = 'read-write' and this.signer is undefined", async () => {
       expect(
         () =>
-          generateLineaRollupClient(
+          generateLinethRollupClient(
             providerMock,
             l2ProviderMock,
             TEST_CONTRACT_ADDRESS_1,
             TEST_CONTRACT_ADDRESS_2,
             "read-write",
-          ).lineaRollupClient,
+          ).linethRollupClient,
       ).toThrow(new BaseError("Please provide a signer."));
     });
   });
 
   describe("getMessageStatusUsingMessageHash", () => {
     it("should return UNKNOWN when on chain message status === 0 and no claimed event was found", async () => {
-      jest.spyOn(lineaRollupMock, "inboxL2L1MessageStatus").mockResolvedValue(0n);
-      jest.spyOn(lineaRollupLogClient, "getMessageClaimedEvents").mockResolvedValue([]);
+      jest.spyOn(linethRollupMock, "inboxL2L1MessageStatus").mockResolvedValue(0n);
+      jest.spyOn(linethRollupLogClient, "getMessageClaimedEvents").mockResolvedValue([]);
 
-      const messageStatus = await lineaRollupClient.getMessageStatusUsingMessageHash(TEST_MESSAGE_HASH);
+      const messageStatus = await linethRollupClient.getMessageStatusUsingMessageHash(TEST_MESSAGE_HASH);
 
       expect(messageStatus).toStrictEqual(OnChainMessageStatus.UNKNOWN);
     });
 
     it("should return CLAIMABLE when on chain message status === 1", async () => {
-      jest.spyOn(lineaRollupMock, "inboxL2L1MessageStatus").mockResolvedValue(1n);
+      jest.spyOn(linethRollupMock, "inboxL2L1MessageStatus").mockResolvedValue(1n);
 
-      const messageStatus = await lineaRollupClient.getMessageStatusUsingMessageHash(TEST_MESSAGE_HASH);
+      const messageStatus = await linethRollupClient.getMessageStatusUsingMessageHash(TEST_MESSAGE_HASH);
 
       expect(messageStatus).toStrictEqual(OnChainMessageStatus.CLAIMABLE);
     });
 
     it("should return CLAIMED when on chain message status === 0 and the claimed event was found", async () => {
-      jest.spyOn(lineaRollupMock, "inboxL2L1MessageStatus").mockResolvedValue(0n);
-      jest.spyOn(lineaRollupLogClient, "getMessageClaimedEvents").mockResolvedValue([testMessageClaimedEvent]);
+      jest.spyOn(linethRollupMock, "inboxL2L1MessageStatus").mockResolvedValue(0n);
+      jest.spyOn(linethRollupLogClient, "getMessageClaimedEvents").mockResolvedValue([testMessageClaimedEvent]);
 
-      const messageStatus = await lineaRollupClient.getMessageStatusUsingMessageHash(TEST_MESSAGE_HASH);
+      const messageStatus = await linethRollupClient.getMessageStatusUsingMessageHash(TEST_MESSAGE_HASH);
 
       expect(messageStatus).toStrictEqual(OnChainMessageStatus.CLAIMED);
     });
@@ -127,10 +127,10 @@ describe("TestLineaRollupClient", () => {
       jest
         .spyOn(l2MessageServiceLogClient, "getMessageSentEventsByMessageHash")
         .mockResolvedValue([testMessageSentEvent]);
-      jest.spyOn(lineaRollupLogClient, "getL2MessagingBlockAnchoredEvents").mockResolvedValue([]);
-      jest.spyOn(lineaRollupMock, "isMessageClaimed").mockResolvedValue(false);
+      jest.spyOn(linethRollupLogClient, "getL2MessagingBlockAnchoredEvents").mockResolvedValue([]);
+      jest.spyOn(linethRollupMock, "isMessageClaimed").mockResolvedValue(false);
 
-      const messageStatus = await lineaRollupClient.getMessageStatus({ messageHash: TEST_MESSAGE_HASH });
+      const messageStatus = await linethRollupClient.getMessageStatus({ messageHash: TEST_MESSAGE_HASH });
 
       expect(messageStatus).toStrictEqual(OnChainMessageStatus.UNKNOWN);
     });
@@ -140,11 +140,11 @@ describe("TestLineaRollupClient", () => {
         .spyOn(l2MessageServiceLogClient, "getMessageSentEventsByMessageHash")
         .mockResolvedValue([testMessageSentEvent]);
       jest
-        .spyOn(lineaRollupLogClient, "getL2MessagingBlockAnchoredEvents")
+        .spyOn(linethRollupLogClient, "getL2MessagingBlockAnchoredEvents")
         .mockResolvedValue([testL2MessagingBlockAnchoredEvent]);
-      jest.spyOn(lineaRollupMock, "isMessageClaimed").mockResolvedValue(false);
+      jest.spyOn(linethRollupMock, "isMessageClaimed").mockResolvedValue(false);
 
-      const messageStatus = await lineaRollupClient.getMessageStatus({ messageHash: TEST_MESSAGE_HASH });
+      const messageStatus = await linethRollupClient.getMessageStatus({ messageHash: TEST_MESSAGE_HASH });
 
       expect(messageStatus).toStrictEqual(OnChainMessageStatus.CLAIMABLE);
     });
@@ -153,10 +153,10 @@ describe("TestLineaRollupClient", () => {
       jest
         .spyOn(l2MessageServiceLogClient, "getMessageSentEventsByMessageHash")
         .mockResolvedValue([testMessageSentEvent]);
-      jest.spyOn(lineaRollupLogClient, "getL2MessagingBlockAnchoredEvents").mockResolvedValue([]);
-      jest.spyOn(lineaRollupMock, "isMessageClaimed").mockResolvedValue(true);
+      jest.spyOn(linethRollupLogClient, "getL2MessagingBlockAnchoredEvents").mockResolvedValue([]);
+      jest.spyOn(linethRollupMock, "isMessageClaimed").mockResolvedValue(true);
 
-      const messageStatus = await lineaRollupClient.getMessageStatus({ messageHash: TEST_MESSAGE_HASH });
+      const messageStatus = await linethRollupClient.getMessageStatus({ messageHash: TEST_MESSAGE_HASH });
 
       expect(messageStatus).toStrictEqual(OnChainMessageStatus.CLAIMED);
     });
@@ -167,7 +167,7 @@ describe("TestLineaRollupClient", () => {
       jest.spyOn(l2MessageServiceLogClient, "getMessageSentEventsByMessageHash").mockResolvedValue([]);
 
       await expect(
-        lineaRollupClient.getMessageStatusUsingMerkleTree({ messageHash: TEST_MESSAGE_HASH }),
+        linethRollupClient.getMessageStatusUsingMerkleTree({ messageHash: TEST_MESSAGE_HASH }),
       ).rejects.toThrow(new BaseError(`Message hash does not exist on L2. Message hash: ${TEST_MESSAGE_HASH}`));
     });
 
@@ -175,10 +175,12 @@ describe("TestLineaRollupClient", () => {
       jest
         .spyOn(l2MessageServiceLogClient, "getMessageSentEventsByMessageHash")
         .mockResolvedValue([testMessageSentEvent]);
-      jest.spyOn(lineaRollupLogClient, "getL2MessagingBlockAnchoredEvents").mockResolvedValue([]);
-      jest.spyOn(lineaRollupMock, "isMessageClaimed").mockResolvedValue(false);
+      jest.spyOn(linethRollupLogClient, "getL2MessagingBlockAnchoredEvents").mockResolvedValue([]);
+      jest.spyOn(linethRollupMock, "isMessageClaimed").mockResolvedValue(false);
 
-      const messageStatus = await lineaRollupClient.getMessageStatusUsingMerkleTree({ messageHash: TEST_MESSAGE_HASH });
+      const messageStatus = await linethRollupClient.getMessageStatusUsingMerkleTree({
+        messageHash: TEST_MESSAGE_HASH,
+      });
 
       expect(messageStatus).toStrictEqual(OnChainMessageStatus.UNKNOWN);
     });
@@ -188,11 +190,13 @@ describe("TestLineaRollupClient", () => {
         .spyOn(l2MessageServiceLogClient, "getMessageSentEventsByMessageHash")
         .mockResolvedValue([testMessageSentEvent]);
       jest
-        .spyOn(lineaRollupLogClient, "getL2MessagingBlockAnchoredEvents")
+        .spyOn(linethRollupLogClient, "getL2MessagingBlockAnchoredEvents")
         .mockResolvedValue([testL2MessagingBlockAnchoredEvent]);
-      jest.spyOn(lineaRollupMock, "isMessageClaimed").mockResolvedValue(false);
+      jest.spyOn(linethRollupMock, "isMessageClaimed").mockResolvedValue(false);
 
-      const messageStatus = await lineaRollupClient.getMessageStatusUsingMerkleTree({ messageHash: TEST_MESSAGE_HASH });
+      const messageStatus = await linethRollupClient.getMessageStatusUsingMerkleTree({
+        messageHash: TEST_MESSAGE_HASH,
+      });
 
       expect(messageStatus).toStrictEqual(OnChainMessageStatus.CLAIMABLE);
     });
@@ -201,10 +205,12 @@ describe("TestLineaRollupClient", () => {
       jest
         .spyOn(l2MessageServiceLogClient, "getMessageSentEventsByMessageHash")
         .mockResolvedValue([testMessageSentEvent]);
-      jest.spyOn(lineaRollupLogClient, "getL2MessagingBlockAnchoredEvents").mockResolvedValue([]);
-      jest.spyOn(lineaRollupMock, "isMessageClaimed").mockResolvedValue(true);
+      jest.spyOn(linethRollupLogClient, "getL2MessagingBlockAnchoredEvents").mockResolvedValue([]);
+      jest.spyOn(linethRollupMock, "isMessageClaimed").mockResolvedValue(true);
 
-      const messageStatus = await lineaRollupClient.getMessageStatusUsingMerkleTree({ messageHash: TEST_MESSAGE_HASH });
+      const messageStatus = await linethRollupClient.getMessageStatusUsingMerkleTree({
+        messageHash: TEST_MESSAGE_HASH,
+      });
 
       expect(messageStatus).toStrictEqual(OnChainMessageStatus.CLAIMED);
     });
@@ -212,16 +218,16 @@ describe("TestLineaRollupClient", () => {
 
   describe("estimateClaimWithoutProofGasFees", () => {
     it("should throw an error when mode = 'read-only'", async () => {
-      const lineaRollupClient = generateLineaRollupClient(
+      const linethRollupClient = generateLinethRollupClient(
         providerMock,
         l2ProviderMock,
         TEST_CONTRACT_ADDRESS_1,
         TEST_CONTRACT_ADDRESS_2,
         "read-only",
-      ).lineaRollupClient;
+      ).linethRollupClient;
 
       const message = generateMessage();
-      await expect(lineaRollupClient.estimateClaimWithoutProofGas(message)).rejects.toThrow(
+      await expect(linethRollupClient.estimateClaimWithoutProofGas(message)).rejects.toThrow(
         new BaseError("'EstimateClaimGas' function not callable using readOnly mode."),
       );
     });
@@ -230,7 +236,7 @@ describe("TestLineaRollupClient", () => {
       const message = generateMessage();
       jest.spyOn(gasFeeProvider, "getGasFees").mockRejectedValue(new Error("Gas fees estimation failed").message);
 
-      await expect(lineaRollupClient.estimateClaimWithoutProofGas(message)).rejects.toThrow(
+      await expect(linethRollupClient.estimateClaimWithoutProofGas(message)).rejects.toThrow(
         makeBaseError("Gas fees estimation failed", message),
       );
     });
@@ -238,7 +244,7 @@ describe("TestLineaRollupClient", () => {
     it("should set feeRecipient === ZeroAddress when feeRecipient param is undefined", async () => {
       const message = generateMessage();
       const estimatedGasLimit = 50_000n;
-      mockProperty(lineaRollupMock, "claimMessage", {
+      mockProperty(linethRollupMock, "claimMessage", {
         estimateGas: jest.fn().mockResolvedValueOnce(estimatedGasLimit),
       } as any);
 
@@ -246,9 +252,9 @@ describe("TestLineaRollupClient", () => {
         maxFeePerGas: DEFAULT_MAX_FEE_PER_GAS,
         maxPriorityFeePerGas: DEFAULT_MAX_FEE_PER_GAS,
       });
-      const claimMessageSpy = jest.spyOn(lineaRollupMock.claimMessage, "estimateGas");
+      const claimMessageSpy = jest.spyOn(linethRollupMock.claimMessage, "estimateGas");
 
-      const estimatedGas = await lineaRollupClient.estimateClaimWithoutProofGas(message);
+      const estimatedGas = await linethRollupClient.estimateClaimWithoutProofGas(message);
 
       expect(estimatedGas).toStrictEqual(estimatedGasLimit);
       expect(gasFeesSpy).toHaveBeenCalledTimes(1);
@@ -272,18 +278,18 @@ describe("TestLineaRollupClient", () => {
       const message = generateMessage();
       const estimatedGasLimit = 50_000n;
 
-      mockProperty(lineaRollupMock, "claimMessage", {
+      mockProperty(linethRollupMock, "claimMessage", {
         estimateGas: jest.fn().mockResolvedValueOnce(estimatedGasLimit),
       } as any);
 
-      const claimMessageSpy = jest.spyOn(lineaRollupMock.claimMessage, "estimateGas");
+      const claimMessageSpy = jest.spyOn(linethRollupMock.claimMessage, "estimateGas");
 
       const gasFeesSpy = jest.spyOn(gasFeeProvider, "getGasFees").mockResolvedValue({
         maxFeePerGas: DEFAULT_MAX_FEE_PER_GAS,
         maxPriorityFeePerGas: DEFAULT_MAX_FEE_PER_GAS,
       });
 
-      const estimateClaimGas = await lineaRollupClient.estimateClaimWithoutProofGas({
+      const estimateClaimGas = await linethRollupClient.estimateClaimWithoutProofGas({
         ...message,
         feeRecipient: TEST_ADDRESS_2,
       });
@@ -307,17 +313,17 @@ describe("TestLineaRollupClient", () => {
     });
   });
   //   it("should throw an error when mode = 'read-only'", async () => {
-  //     lineaRollupClient = new LineaRollupClient(
+  //     linethRollupClient = new LinethRollupClient(
   //       providerMock,
   //       TEST_CONTRACT_ADDRESS_1,
-  //       lineaRollupLogClientMock,
+  //       linethRollupLogClientMock,
   //       l2MessageServiceLogClientMock,
   //       "read-only",
   //       walletMock,
   //     );
   //     const message = generateMessage();
   //     await expect(
-  //       lineaRollupClient.estimateClaimWithProofGas({
+  //       linethRollupClient.estimateClaimWithProofGas({
   //         ...message,
   //         leafIndex: 0,
   //         merkleRoot: TEST_MERKLE_ROOT,
@@ -334,15 +340,15 @@ describe("TestLineaRollupClient", () => {
 
   //   it("should throw GasEstimationError if estimateGas throws error", async () => {
   //     const message = generateMessage();
-  //     mockProperty(lineaRollupMock, "claimMessageWithProof", {
+  //     mockProperty(linethRollupMock, "claimMessageWithProof", {
   //       estimateGas: jest.fn().mockRejectedValueOnce(new Error("Failed to estimate gas")),
   //       // eslint-disable-next-line @typescript-eslint/no-explicit-any
   //     } as any);
-  //     jest.spyOn(LineaRollup__factory, "connect").mockReturnValueOnce(lineaRollupMock);
-  //     lineaRollupClient = new LineaRollupClient(
+  //     jest.spyOn(LinethRollup__factory, "connect").mockReturnValueOnce(linethRollupMock);
+  //     linethRollupClient = new LinethRollupClient(
   //       providerMock,
   //       TEST_CONTRACT_ADDRESS_1,
-  //       lineaRollupLogClientMock,
+  //       linethRollupLogClientMock,
   //       l2MessageServiceLogClientMock,
   //       "read-write",
   //       walletMock,
@@ -351,7 +357,7 @@ describe("TestLineaRollupClient", () => {
   //       true,
   //     );
   //     await expect(
-  //       lineaRollupClient.estimateClaimWithProofGas({
+  //       linethRollupClient.estimateClaimWithProofGas({
   //         ...message,
   //         leafIndex: 0,
   //         merkleRoot: TEST_MERKLE_ROOT,
@@ -369,17 +375,17 @@ describe("TestLineaRollupClient", () => {
 
   describe("estimateClaimGas", () => {
     it("should throw an error when mode = 'read-only'", async () => {
-      lineaRollupClient = generateLineaRollupClient(
+      linethRollupClient = generateLinethRollupClient(
         providerMock,
         l2ProviderMock,
         TEST_CONTRACT_ADDRESS_1,
         TEST_CONTRACT_ADDRESS_2,
         "read-only",
         walletMock,
-      ).lineaRollupClient;
+      ).linethRollupClient;
 
       const message = generateMessage();
-      await expect(lineaRollupClient.estimateClaimGas(message)).rejects.toThrow(
+      await expect(linethRollupClient.estimateClaimGas(message)).rejects.toThrow(
         "'EstimateClaimGasFees' function not callable using readOnly mode.",
       );
     });
@@ -388,7 +394,7 @@ describe("TestLineaRollupClient", () => {
       const message = generateMessage();
       jest.spyOn(l2MessageServiceLogClient, "getMessageSentEventsByMessageHash").mockResolvedValue([]);
 
-      await expect(lineaRollupClient.estimateClaimGas(message)).rejects.toThrow(
+      await expect(linethRollupClient.estimateClaimGas(message)).rejects.toThrow(
         `Message hash does not exist on L2. Message hash: ${TEST_MESSAGE_HASH}`,
       );
     });
@@ -398,9 +404,9 @@ describe("TestLineaRollupClient", () => {
       jest
         .spyOn(l2MessageServiceLogClient, "getMessageSentEventsByMessageHash")
         .mockResolvedValue([testMessageSentEvent]);
-      jest.spyOn(lineaRollupLogClient, "getL2MessagingBlockAnchoredEvents").mockResolvedValue([]);
+      jest.spyOn(linethRollupLogClient, "getL2MessagingBlockAnchoredEvents").mockResolvedValue([]);
 
-      await expect(lineaRollupClient.estimateClaimGas(message)).rejects.toThrow(
+      await expect(linethRollupClient.estimateClaimGas(message)).rejects.toThrow(
         "L2 block number 51 has not been finalized on L1",
       );
     });
@@ -411,11 +417,11 @@ describe("TestLineaRollupClient", () => {
         .spyOn(l2MessageServiceLogClient, "getMessageSentEventsByMessageHash")
         .mockResolvedValue([testMessageSentEvent]);
       jest
-        .spyOn(lineaRollupLogClient, "getL2MessagingBlockAnchoredEvents")
+        .spyOn(linethRollupLogClient, "getL2MessagingBlockAnchoredEvents")
         .mockResolvedValue([testL2MessagingBlockAnchoredEvent]);
       jest.spyOn(providerMock, "getTransactionReceipt").mockResolvedValue(null);
 
-      await expect(lineaRollupClient.estimateClaimGas(message)).rejects.toThrow(
+      await expect(linethRollupClient.estimateClaimGas(message)).rejects.toThrow(
         `Transaction does not exist or no logs found in this transaction: ${TEST_TRANSACTION_HASH}.`,
       );
     });
@@ -427,11 +433,11 @@ describe("TestLineaRollupClient", () => {
         .spyOn(l2MessageServiceLogClient, "getMessageSentEventsByMessageHash")
         .mockResolvedValue([testMessageSentEvent]);
       jest
-        .spyOn(lineaRollupLogClient, "getL2MessagingBlockAnchoredEvents")
+        .spyOn(linethRollupLogClient, "getL2MessagingBlockAnchoredEvents")
         .mockResolvedValue([testL2MessagingBlockAnchoredEvent]);
       jest.spyOn(providerMock, "getTransactionReceipt").mockResolvedValue(transactionReceipt);
 
-      await expect(lineaRollupClient.estimateClaimGas(message)).rejects.toThrow(
+      await expect(linethRollupClient.estimateClaimGas(message)).rejects.toThrow(
         "No L2MerkleRootAdded events found in this transaction.",
       );
     });
@@ -445,11 +451,11 @@ describe("TestLineaRollupClient", () => {
         .spyOn(l2MessageServiceLogClient, "getMessageSentEventsByMessageHash")
         .mockResolvedValue([testMessageSentEvent]);
       jest
-        .spyOn(lineaRollupLogClient, "getL2MessagingBlockAnchoredEvents")
+        .spyOn(linethRollupLogClient, "getL2MessagingBlockAnchoredEvents")
         .mockResolvedValue([testL2MessagingBlockAnchoredEvent]);
       jest.spyOn(providerMock, "getTransactionReceipt").mockResolvedValue(transactionReceipt);
 
-      await expect(lineaRollupClient.estimateClaimGas(message)).rejects.toThrow(
+      await expect(linethRollupClient.estimateClaimGas(message)).rejects.toThrow(
         "No L2MessagingBlocksAnchored events found in this transaction.",
       );
     });
@@ -465,11 +471,11 @@ describe("TestLineaRollupClient", () => {
         .mockResolvedValue([testMessageSentEvent]);
       jest.spyOn(l2MessageServiceLogClient, "getMessageSentEventsByBlockRange").mockResolvedValue([]);
       jest
-        .spyOn(lineaRollupLogClient, "getL2MessagingBlockAnchoredEvents")
+        .spyOn(linethRollupLogClient, "getL2MessagingBlockAnchoredEvents")
         .mockResolvedValue([testL2MessagingBlockAnchoredEvent]);
       jest.spyOn(providerMock, "getTransactionReceipt").mockResolvedValue(transactionReceipt);
 
-      await expect(lineaRollupClient.estimateClaimGas(message)).rejects.toThrow();
+      await expect(linethRollupClient.estimateClaimGas(message)).rejects.toThrow();
     });
 
     it("should return estimated gas limit if all the relevant event logs were found", async () => {
@@ -485,11 +491,11 @@ describe("TestLineaRollupClient", () => {
         .spyOn(l2MessageServiceLogClient, "getMessageSentEventsByBlockRange")
         .mockResolvedValue([testMessageSentEvent]);
       jest
-        .spyOn(lineaRollupLogClient, "getL2MessagingBlockAnchoredEvents")
+        .spyOn(linethRollupLogClient, "getL2MessagingBlockAnchoredEvents")
         .mockResolvedValue([testL2MessagingBlockAnchoredEvent]);
       jest.spyOn(providerMock, "getTransactionReceipt").mockResolvedValue(transactionReceipt);
 
-      // const transactionData = LineaRollup__factory.createInterface().encodeFunctionData("claimMessageWithProof", [
+      // const transactionData = LinethRollup__factory.createInterface().encodeFunctionData("claimMessageWithProof", [
       //   {
       //     from: message.messageSender,
       //     to: message.destination,
@@ -511,10 +517,10 @@ describe("TestLineaRollupClient", () => {
       // ]);
 
       const estimatedGasLimit = 50_000n;
-      mockProperty(lineaRollupMock, "claimMessageWithProof", {
+      mockProperty(linethRollupMock, "claimMessageWithProof", {
         estimateGas: jest.fn().mockResolvedValueOnce(estimatedGasLimit),
       } as any);
-      mockProperty(lineaRollupMock, "interface", {
+      mockProperty(linethRollupMock, "interface", {
         parseLog: jest
           .fn()
           .mockReturnValueOnce({
@@ -530,9 +536,9 @@ describe("TestLineaRollupClient", () => {
         maxPriorityFeePerGas: DEFAULT_MAX_FEE_PER_GAS,
       });
 
-      const claimMessageWithProofSpy = jest.spyOn(lineaRollupMock.claimMessageWithProof, "estimateGas");
+      const claimMessageWithProofSpy = jest.spyOn(linethRollupMock.claimMessageWithProof, "estimateGas");
 
-      const estimatedClaimGas = await lineaRollupClient.estimateClaimGas(message);
+      const estimatedClaimGas = await linethRollupClient.estimateClaimGas(message);
 
       expect(estimatedClaimGas).toStrictEqual(estimatedGasLimit);
       expect(gasFeesSpy).toHaveBeenCalledTimes(1);
@@ -566,17 +572,17 @@ describe("TestLineaRollupClient", () => {
 
   describe("claimWithoutProof", () => {
     it("should throw an error when mode = 'read-only'", async () => {
-      lineaRollupClient = generateLineaRollupClient(
+      linethRollupClient = generateLinethRollupClient(
         providerMock,
         l2ProviderMock,
         TEST_CONTRACT_ADDRESS_1,
         TEST_CONTRACT_ADDRESS_2,
         "read-only",
         walletMock,
-      ).lineaRollupClient;
+      ).linethRollupClient;
 
       const message = generateMessage();
-      await expect(lineaRollupClient.claimWithoutProof(message)).rejects.toThrow(
+      await expect(linethRollupClient.claimWithoutProof(message)).rejects.toThrow(
         new Error("'claim' function not callable using readOnly mode."),
       );
     });
@@ -584,8 +590,8 @@ describe("TestLineaRollupClient", () => {
     it("should set feeRecipient === ZeroAddress when feeRecipient param is undefined", async () => {
       const message = generateMessage();
       const txResponse = generateTransactionResponse();
-      jest.spyOn(lineaRollupMock, "claimMessage").mockResolvedValue(txResponse as ContractTransactionResponse);
-      lineaRollupClient = generateLineaRollupClient(
+      jest.spyOn(linethRollupMock, "claimMessage").mockResolvedValue(txResponse as ContractTransactionResponse);
+      linethRollupClient = generateLinethRollupClient(
         providerMock,
         l2ProviderMock,
         TEST_CONTRACT_ADDRESS_1,
@@ -596,11 +602,11 @@ describe("TestLineaRollupClient", () => {
           maxFeePerGasCap: 500000000n,
           enforceMaxGasFee: true,
         },
-      ).lineaRollupClient;
+      ).linethRollupClient;
 
-      const claimMessageSpy = jest.spyOn(lineaRollupMock, "claimMessage");
+      const claimMessageSpy = jest.spyOn(linethRollupMock, "claimMessage");
 
-      await lineaRollupClient.claimWithoutProof(message);
+      await linethRollupClient.claimWithoutProof(message);
 
       expect(txResponse).toStrictEqual(txResponse);
       expect(claimMessageSpy).toHaveBeenCalledTimes(1);
@@ -622,8 +628,8 @@ describe("TestLineaRollupClient", () => {
     it("should return executed claim message transaction", async () => {
       const message = generateMessage();
       const txResponse = generateTransactionResponse();
-      jest.spyOn(lineaRollupMock, "claimMessage").mockResolvedValue(txResponse as ContractTransactionResponse);
-      lineaRollupClient = generateLineaRollupClient(
+      jest.spyOn(linethRollupMock, "claimMessage").mockResolvedValue(txResponse as ContractTransactionResponse);
+      linethRollupClient = generateLinethRollupClient(
         providerMock,
         l2ProviderMock,
         TEST_CONTRACT_ADDRESS_1,
@@ -634,11 +640,11 @@ describe("TestLineaRollupClient", () => {
           maxFeePerGasCap: 500000000n,
           enforceMaxGasFee: true,
         },
-      ).lineaRollupClient;
+      ).linethRollupClient;
 
-      const claimMessageSpy = jest.spyOn(lineaRollupMock, "claimMessage");
+      const claimMessageSpy = jest.spyOn(linethRollupMock, "claimMessage");
 
-      const txResponseReturned = await lineaRollupClient.claimWithoutProof({
+      const txResponseReturned = await linethRollupClient.claimWithoutProof({
         ...message,
         feeRecipient: TEST_ADDRESS_2,
       });
@@ -663,17 +669,17 @@ describe("TestLineaRollupClient", () => {
 
   describe("claim", () => {
     it("should throw an error when mode = 'read-only'", async () => {
-      lineaRollupClient = generateLineaRollupClient(
+      linethRollupClient = generateLinethRollupClient(
         providerMock,
         l2ProviderMock,
         TEST_CONTRACT_ADDRESS_1,
         TEST_CONTRACT_ADDRESS_2,
         "read-only",
         walletMock,
-      ).lineaRollupClient;
+      ).linethRollupClient;
 
       const message = generateMessage();
-      await expect(lineaRollupClient.claim(message)).rejects.toThrow(
+      await expect(linethRollupClient.claim(message)).rejects.toThrow(
         new Error("'claim' function not callable using readOnly mode."),
       );
     });
@@ -692,11 +698,11 @@ describe("TestLineaRollupClient", () => {
         .spyOn(l2MessageServiceLogClient, "getMessageSentEventsByBlockRange")
         .mockResolvedValue([testMessageSentEvent]);
       jest
-        .spyOn(lineaRollupLogClient, "getL2MessagingBlockAnchoredEvents")
+        .spyOn(linethRollupLogClient, "getL2MessagingBlockAnchoredEvents")
         .mockResolvedValue([testL2MessagingBlockAnchoredEvent]);
       jest.spyOn(providerMock, "getTransactionReceipt").mockResolvedValue(transactionReceipt);
 
-      mockProperty(lineaRollupMock, "interface", {
+      mockProperty(linethRollupMock, "interface", {
         parseLog: jest
           .fn()
           .mockReturnValueOnce({
@@ -712,10 +718,10 @@ describe("TestLineaRollupClient", () => {
       });
 
       const claimMessageWithProofSpy = jest
-        .spyOn(lineaRollupMock, "claimMessageWithProof")
+        .spyOn(linethRollupMock, "claimMessageWithProof")
         .mockResolvedValue(txResponse as ContractTransactionResponse);
 
-      const txResponseReturned = await lineaRollupClient.claim(message);
+      const txResponseReturned = await linethRollupClient.claim(message);
 
       expect(txResponseReturned).toStrictEqual(txResponse);
       expect(claimMessageWithProofSpy).toHaveBeenCalledTimes(1);
@@ -748,22 +754,22 @@ describe("TestLineaRollupClient", () => {
 
   describe("retryTransactionWithHigherFee", () => {
     it("should throw an error when mode = 'read-only'", async () => {
-      lineaRollupClient = generateLineaRollupClient(
+      linethRollupClient = generateLinethRollupClient(
         providerMock,
         l2ProviderMock,
         TEST_CONTRACT_ADDRESS_1,
         TEST_CONTRACT_ADDRESS_2,
         "read-only",
         walletMock,
-      ).lineaRollupClient;
+      ).linethRollupClient;
 
-      await expect(lineaRollupClient.retryTransactionWithHigherFee(TEST_TRANSACTION_HASH)).rejects.toThrow(
+      await expect(linethRollupClient.retryTransactionWithHigherFee(TEST_TRANSACTION_HASH)).rejects.toThrow(
         new BaseError("'retryTransactionWithHigherFee' function not callable using readOnly mode."),
       );
     });
 
     it("should throw an error when priceBumpPercent is not an integer", async () => {
-      await expect(lineaRollupClient.retryTransactionWithHigherFee(TEST_TRANSACTION_HASH, 1.1)).rejects.toThrow(
+      await expect(linethRollupClient.retryTransactionWithHigherFee(TEST_TRANSACTION_HASH, 1.1)).rejects.toThrow(
         new BaseError("'priceBumpPercent' must be an integer"),
       );
     });
@@ -771,7 +777,7 @@ describe("TestLineaRollupClient", () => {
     it("should throw an error when getTransaction return null", async () => {
       jest.spyOn(providerMock, "getTransaction").mockResolvedValue(null);
 
-      await expect(lineaRollupClient.retryTransactionWithHigherFee(TEST_TRANSACTION_HASH)).rejects.toThrow(
+      await expect(linethRollupClient.retryTransactionWithHigherFee(TEST_TRANSACTION_HASH)).rejects.toThrow(
         new BaseError(`Transaction with hash ${TEST_TRANSACTION_HASH} not found.`),
       );
     });
@@ -782,7 +788,7 @@ describe("TestLineaRollupClient", () => {
       const signTransactionSpy = jest.spyOn(walletMock, "signTransaction").mockResolvedValue("");
       const sendTransactionSpy = jest.spyOn(providerMock, "broadcastTransaction");
 
-      await lineaRollupClient.retryTransactionWithHigherFee(TEST_TRANSACTION_HASH);
+      await linethRollupClient.retryTransactionWithHigherFee(TEST_TRANSACTION_HASH);
 
       expect(getTransactionSpy).toHaveBeenCalledTimes(1);
       expect(signTransactionSpy).toHaveBeenCalledTimes(1);
@@ -805,7 +811,7 @@ describe("TestLineaRollupClient", () => {
       const getTransactionSpy = jest.spyOn(providerMock, "getTransaction").mockResolvedValue(transactionResponse);
       const signTransactionSpy = jest.spyOn(walletMock, "signTransaction").mockResolvedValue("");
       const sendTransactionSpy = jest.spyOn(providerMock, "broadcastTransaction");
-      lineaRollupClient = generateLineaRollupClient(
+      linethRollupClient = generateLinethRollupClient(
         providerMock,
         l2ProviderMock,
         TEST_CONTRACT_ADDRESS_1,
@@ -815,9 +821,9 @@ describe("TestLineaRollupClient", () => {
         {
           maxFeePerGasCap: 500000000n,
         },
-      ).lineaRollupClient;
+      ).linethRollupClient;
 
-      await lineaRollupClient.retryTransactionWithHigherFee(TEST_TRANSACTION_HASH, 1000);
+      await linethRollupClient.retryTransactionWithHigherFee(TEST_TRANSACTION_HASH, 1000);
 
       expect(getTransactionSpy).toHaveBeenCalledTimes(1);
       expect(signTransactionSpy).toHaveBeenCalledTimes(1);
@@ -843,7 +849,7 @@ describe("TestLineaRollupClient", () => {
       const getTransactionSpy = jest.spyOn(providerMock, "getTransaction").mockResolvedValue(transactionResponse);
       const signTransactionSpy = jest.spyOn(walletMock, "signTransaction").mockResolvedValue("");
       const sendTransactionSpy = jest.spyOn(providerMock, "broadcastTransaction");
-      lineaRollupClient = generateLineaRollupClient(
+      linethRollupClient = generateLinethRollupClient(
         providerMock,
         l2ProviderMock,
         TEST_CONTRACT_ADDRESS_1,
@@ -854,9 +860,9 @@ describe("TestLineaRollupClient", () => {
           maxFeePerGasCap: 500000000n,
           enforceMaxGasFee: true,
         },
-      ).lineaRollupClient;
+      ).linethRollupClient;
 
-      await lineaRollupClient.retryTransactionWithHigherFee(TEST_TRANSACTION_HASH, 1000);
+      await linethRollupClient.retryTransactionWithHigherFee(TEST_TRANSACTION_HASH, 1000);
 
       expect(getTransactionSpy).toHaveBeenCalledTimes(1);
       expect(signTransactionSpy).toHaveBeenCalledTimes(1);
@@ -877,19 +883,19 @@ describe("TestLineaRollupClient", () => {
 
   describe("isRateLimitExceeded", () => {
     it("should return true if exceeded rate limit", async () => {
-      jest.spyOn(lineaRollupMock, "limitInWei").mockResolvedValue(2000000000n);
-      jest.spyOn(lineaRollupMock, "currentPeriodAmountInWei").mockResolvedValue(1000000000n);
+      jest.spyOn(linethRollupMock, "limitInWei").mockResolvedValue(2000000000n);
+      jest.spyOn(linethRollupMock, "currentPeriodAmountInWei").mockResolvedValue(1000000000n);
 
-      const isRateLimitExceeded = await lineaRollupClient.isRateLimitExceeded(1000000000n, 1000000000n);
+      const isRateLimitExceeded = await linethRollupClient.isRateLimitExceeded(1000000000n, 1000000000n);
 
       expect(isRateLimitExceeded).toBeTruthy();
     });
 
     it("should return false if not exceeded rate limit", async () => {
-      jest.spyOn(lineaRollupMock, "limitInWei").mockResolvedValue(2000000000n);
-      jest.spyOn(lineaRollupMock, "currentPeriodAmountInWei").mockResolvedValue(1000000000n);
+      jest.spyOn(linethRollupMock, "limitInWei").mockResolvedValue(2000000000n);
+      jest.spyOn(linethRollupMock, "currentPeriodAmountInWei").mockResolvedValue(1000000000n);
 
-      const isRateLimitExceeded = await lineaRollupClient.isRateLimitExceeded(100000000n, 100000000n);
+      const isRateLimitExceeded = await linethRollupClient.isRateLimitExceeded(100000000n, 100000000n);
 
       expect(isRateLimitExceeded).toBeFalsy();
     });
@@ -899,7 +905,7 @@ describe("TestLineaRollupClient", () => {
     it("should return false when something went wrong (http error etc)", async () => {
       jest.spyOn(providerMock, "getTransaction").mockRejectedValueOnce({});
       expect(
-        await lineaRollupClient.isRateLimitExceededError(
+        await linethRollupClient.isRateLimitExceededError(
           "0x825a7f1aa4453735597ddf7e9062413c906a7ad49bf17ff32c2cf42f41d438d9",
         ),
       ).toStrictEqual(false);
@@ -910,22 +916,22 @@ describe("TestLineaRollupClient", () => {
       jest.spyOn(providerMock, "call").mockResolvedValueOnce("0xa74c1c6d");
 
       expect(
-        await lineaRollupClient.isRateLimitExceededError(
+        await linethRollupClient.isRateLimitExceededError(
           "0x825a7f1aa4453735597ddf7e9062413c906a7ad49bf17ff32c2cf42f41d438d9",
         ),
       ).toStrictEqual(false);
     });
 
     it("should return true when transaction revert reason is RateLimitExceeded", async () => {
-      mockProperty(lineaRollupMock, "interface", {
-        ...lineaRollupMock.interface,
+      mockProperty(linethRollupMock, "interface", {
+        ...linethRollupMock.interface,
         parseError: jest.fn().mockReturnValueOnce({ name: "RateLimitExceeded" }),
       } as any);
       jest.spyOn(providerMock, "getTransaction").mockResolvedValueOnce(generateTransactionResponse());
       jest.spyOn(providerMock, "call").mockResolvedValueOnce("0xa74c1c5f");
 
       expect(
-        await lineaRollupClient.isRateLimitExceededError(
+        await linethRollupClient.isRateLimitExceededError(
           "0x825a7f1aa4453735597ddf7e9062413c906a7ad49bf17ff32c2cf42f41d438d9",
         ),
       ).toStrictEqual(true);

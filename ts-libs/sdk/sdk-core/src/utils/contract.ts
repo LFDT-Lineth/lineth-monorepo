@@ -2,8 +2,8 @@ import { isLineaMainnet, isLineaSepolia, isMainnet, isSepolia } from "./chain";
 import {
   L2_MESSAGE_SERVICE_MAINNET_ADDRESS,
   L2_MESSAGE_SERVICE_SEPOLIA_ADDRESS,
-  LINEA_ROLLUP_MAINNET_ADDRESS,
-  LINEA_ROLLUP_SEPOLIA_ADDRESS,
+  LINETH_ROLLUP_MAINNET_ADDRESS,
+  LINETH_ROLLUP_SEPOLIA_ADDRESS,
   TOKEN_BRIDGE_LINEA_MAINNET_ADDRESS,
   TOKEN_BRIDGE_LINEA_SEPOLIA_ADDRESS,
   TOKEN_BRIDGE_MAINNET_ADDRESS,
@@ -18,7 +18,7 @@ export function getContractsAddressesByChainId(chainId: number): {
 } {
   if (isMainnet(chainId)) {
     return {
-      messageService: LINEA_ROLLUP_MAINNET_ADDRESS,
+      messageService: LINETH_ROLLUP_MAINNET_ADDRESS,
       destinationChainMessageService: L2_MESSAGE_SERVICE_MAINNET_ADDRESS,
       tokenBridge: TOKEN_BRIDGE_MAINNET_ADDRESS,
     };
@@ -26,7 +26,7 @@ export function getContractsAddressesByChainId(chainId: number): {
 
   if (isSepolia(chainId)) {
     return {
-      messageService: LINEA_ROLLUP_SEPOLIA_ADDRESS,
+      messageService: LINETH_ROLLUP_SEPOLIA_ADDRESS,
       destinationChainMessageService: L2_MESSAGE_SERVICE_SEPOLIA_ADDRESS,
       tokenBridge: TOKEN_BRIDGE_SEPOLIA_ADDRESS,
     };
@@ -35,7 +35,7 @@ export function getContractsAddressesByChainId(chainId: number): {
   if (isLineaMainnet(chainId)) {
     return {
       messageService: L2_MESSAGE_SERVICE_MAINNET_ADDRESS,
-      destinationChainMessageService: LINEA_ROLLUP_MAINNET_ADDRESS,
+      destinationChainMessageService: LINETH_ROLLUP_MAINNET_ADDRESS,
       tokenBridge: TOKEN_BRIDGE_LINEA_MAINNET_ADDRESS,
     };
   }
@@ -43,7 +43,7 @@ export function getContractsAddressesByChainId(chainId: number): {
   if (isLineaSepolia(chainId)) {
     return {
       messageService: L2_MESSAGE_SERVICE_SEPOLIA_ADDRESS,
-      destinationChainMessageService: LINEA_ROLLUP_SEPOLIA_ADDRESS,
+      destinationChainMessageService: LINETH_ROLLUP_SEPOLIA_ADDRESS,
       tokenBridge: TOKEN_BRIDGE_LINEA_SEPOLIA_ADDRESS,
     };
   }

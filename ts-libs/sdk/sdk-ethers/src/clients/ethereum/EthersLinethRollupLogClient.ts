@@ -1,13 +1,13 @@
-import { LineaRollup, LineaRollup__factory } from "../../contracts/typechain";
+import { LinethRollup, LinethRollup__factory } from "../../contracts/typechain";
 import { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog } from "../../contracts/typechain/common";
 import {
   L2MessagingBlockAnchoredEvent,
   MessageClaimedEvent,
   MessageSentEvent,
-} from "../../contracts/typechain/LineaRollup";
+} from "../../contracts/typechain/LinethRollup";
 import {
   MessageSentEventFilters,
-  ILineaRollupLogClient,
+  ILinethRollupLogClient,
   L2MessagingBlockAnchoredFilters,
   MessageClaimedFilters,
 } from "../../core/clients/ethereum";
@@ -15,23 +15,23 @@ import { L2MessagingBlockAnchored, MessageClaimed, MessageSent } from "../../cor
 import { isUndefined } from "../../core/utils";
 import { BrowserProvider, Provider } from "../providers";
 
-export class EthersLineaRollupLogClient implements ILineaRollupLogClient {
-  private lineaRollup: LineaRollup;
+export class EthersLinethRollupLogClient implements ILinethRollupLogClient {
+  private linethRollup: LinethRollup;
 
   /**
-   * Initializes a new instance of the `EthersLineaRollupLogClient`.
+   * Initializes a new instance of the `EthersLinethRollupLogClient`.
    *
    * @param {Provider | BrowserProvider} provider - The JSON RPC provider for interacting with the Ethereum network.
-   * @param {string} contractAddress - The address of the Linea Rollup contract.
+   * @param {string} contractAddress - The address of the Lineth Rollup contract.
    */
   constructor(provider: Provider | BrowserProvider, contractAddress: string) {
-    this.lineaRollup = LineaRollup__factory.connect(contractAddress, provider);
+    this.linethRollup = LinethRollup__factory.connect(contractAddress, provider);
   }
 
   /**
-   * Fetches event logs from the Linea Rollup contract based on the provided filters and block range.
+   * Fetches event logs from the Lineth Rollup contract based on the provided filters and block range.
    *
-   * This generic method queries the Ethereum blockchain for events emitted by the Linea Rollup contract that match the given criteria. It filters the events further based on the optional parameters for block range and log index, ensuring that only relevant events are returned.
+   * This generic method queries the Ethereum blockchain for events emitted by the Lineth Rollup contract that match the given criteria. It filters the events further based on the optional parameters for block range and log index, ensuring that only relevant events are returned.
    *
    * @template TCEevent - A type parameter extending `TypedContractEvent`, representing the specific event type to fetch.
    * @param {TypedDeferredTopicFilter<TypedContractEvent>} eventFilter - The filter criteria used to select the events to be fetched. This includes the contract address, event signature, and any additional filter parameters.
@@ -46,7 +46,7 @@ export class EthersLineaRollupLogClient implements ILineaRollupLogClient {
     toBlock?: string | number,
     fromBlockLogIndex?: number,
   ): Promise<TypedEventLog<TCEevent>[]> {
-    const events = await this.lineaRollup.queryFilter(eventFilter, fromBlock, toBlock);
+    const events = await this.linethRollup.queryFilter(eventFilter, fromBlock, toBlock);
     return events
       .filter((event) => {
         if (isUndefined(fromBlockLogIndex) || isUndefined(fromBlock)) {
@@ -77,7 +77,7 @@ export class EthersLineaRollupLogClient implements ILineaRollupLogClient {
     fromBlockLogIndex?: number;
   }): Promise<MessageSent[]> {
     const { filters, fromBlock, toBlock, fromBlockLogIndex } = params;
-    const messageSentEventFilter = this.lineaRollup.filters.MessageSent(
+    const messageSentEventFilter = this.linethRollup.filters.MessageSent(
       filters?.from,
       filters?.to,
       undefined,
@@ -121,7 +121,7 @@ export class EthersLineaRollupLogClient implements ILineaRollupLogClient {
     fromBlockLogIndex?: number;
   }): Promise<L2MessagingBlockAnchored[]> {
     const { filters, fromBlock, toBlock, fromBlockLogIndex } = params;
-    const l2MessagingBlockAnchoredFilter = this.lineaRollup.filters.L2MessagingBlockAnchored(filters?.l2Block);
+    const l2MessagingBlockAnchoredFilter = this.linethRollup.filters.L2MessagingBlockAnchored(filters?.l2Block);
 
     return (
       await this.getEvents<L2MessagingBlockAnchoredEvent.Event>(
@@ -156,7 +156,7 @@ export class EthersLineaRollupLogClient implements ILineaRollupLogClient {
     fromBlockLogIndex?: number;
   }): Promise<MessageClaimed[]> {
     const { filters, fromBlock, toBlock, fromBlockLogIndex } = params;
-    const messageClaimedFilter = this.lineaRollup.filters.MessageClaimed(filters?.messageHash);
+    const messageClaimedFilter = this.linethRollup.filters.MessageClaimed(filters?.messageHash);
 
     return (
       await this.getEvents<MessageClaimedEvent.Event>(messageClaimedFilter, fromBlock, toBlock, fromBlockLogIndex)
