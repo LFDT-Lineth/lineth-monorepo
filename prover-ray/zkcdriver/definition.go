@@ -71,9 +71,9 @@ func (s *schemaScanner) scanColumns() {
 	for _, modDecl := range s.Modules {
 		moduleName := modDecl.Name().String()
 
-		// Skip modules whose every column is dangling to avoid creating empty
+		// Skip non-native modules whose every column is dangling to avoid creating empty
 		// wiop modules whose dynamic size would never be set.
-		if !s.moduleHasReferencedColumn(modDecl, moduleName, referenced) {
+		if !modDecl.IsNative() && !s.moduleHasReferencedColumn(modDecl, moduleName, referenced) {
 			logrus.Warnf("zkcdriver: scanColumns: skipping module %q (no referenced columns)", moduleName)
 			continue
 		}
