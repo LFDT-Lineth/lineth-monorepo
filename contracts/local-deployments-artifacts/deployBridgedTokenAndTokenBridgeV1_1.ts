@@ -41,7 +41,7 @@ import { generateRoleAssignments } from "../common/helpers/roles";
 
 async function main() {
   const ORDERED_NONCE_POST_L2MESSAGESERVICE = 3;
-  const ORDERED_NONCE_POST_LINEAROLLUP = 7;
+  const ORDERED_NONCE_POST_LINETHROLLUP = 7;
   const networkName = getDeploymentNetworkName();
   const deployTokenBridgeOnL1 = getBooleanEnvVarOrDefault("DEPLOY_TOKEN_BRIDGE_ON_L1", false);
 
@@ -58,7 +58,7 @@ async function main() {
     "L2MessageService",
     "L2_MESSAGE_SERVICE_ADDRESS",
   );
-  const lineaRollupAddress = requireAddressFromRegistryOrEnv(networkName, "LineaRollup", "LINEA_ROLLUP_ADDRESS");
+  const linethRollupAddress = requireAddressFromRegistryOrEnv(networkName, "LinethRollup", "LINETH_ROLLUP_ADDRESS");
 
   const remoteChainId = getRequiredEnvVar("REMOTE_CHAIN_ID");
 
@@ -74,11 +74,11 @@ async function main() {
   let fees = {};
 
   if (deployTokenBridgeOnL1) {
-    walletNonce = await getDeployNonceFromEnv(wallet, "L1_NONCE", ORDERED_NONCE_POST_LINEAROLLUP);
+    walletNonce = await getDeployNonceFromEnv(wallet, "L1_NONCE", ORDERED_NONCE_POST_LINETHROLLUP);
     remoteDeployerNonce = await getDeployNonceFromEnv(wallet, "L2_NONCE", ORDERED_NONCE_POST_L2MESSAGESERVICE);
   } else {
     walletNonce = await getDeployNonceFromEnv(wallet, "L2_NONCE", ORDERED_NONCE_POST_L2MESSAGESERVICE);
-    remoteDeployerNonce = await getDeployNonceFromEnv(wallet, "L1_NONCE", ORDERED_NONCE_POST_LINEAROLLUP);
+    remoteDeployerNonce = await getDeployNonceFromEnv(wallet, "L1_NONCE", ORDERED_NONCE_POST_LINETHROLLUP);
     fees = { ...LOCAL_L2_DEPLOY_FEE_OVERRIDES };
   }
 
@@ -129,7 +129,7 @@ async function main() {
     console.log(
       `DEPLOY_TOKEN_BRIDGE_ON_L1=${process.env.DEPLOY_TOKEN_BRIDGE_ON_L1}. Deploying TokenBridge on L1, using L1_RESERVED_TOKEN_ADDRESSES from registry or env and remoteSender=${remoteSender}`,
     );
-    deployingChainMessageService = lineaRollupAddress;
+    deployingChainMessageService = linethRollupAddress;
     reservedAddresses = getAddressesFromRegistryOrEnv(
       networkName,
       "L1_RESERVED_TOKEN_ADDRESSES",

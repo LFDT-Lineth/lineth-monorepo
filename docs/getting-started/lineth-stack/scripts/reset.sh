@@ -78,9 +78,9 @@ if [ "$PURGE_DEPS" = "true" ]; then
   docker volume rm lineth-stack-contracts-pnpm-store >/dev/null 2>&1 || true
   lineth_info "removed pnpm download-cache volume; next boot re-downloads Node dependencies"
 fi
-if docker network inspect lineth-stack_linea >/dev/null 2>&1; then
-  lineth_warn "lineth-stack_linea network still in use by an external container"
-  lineth_info "inspect with: docker network inspect lineth-stack_linea"
+if docker network inspect lineth-stack_lineth >/dev/null 2>&1; then
+  lineth_warn "lineth-stack_lineth network still in use by an external container"
+  lineth_info "inspect with: docker network inspect lineth-stack_lineth"
 fi
 
 lineth_section "host artifacts"

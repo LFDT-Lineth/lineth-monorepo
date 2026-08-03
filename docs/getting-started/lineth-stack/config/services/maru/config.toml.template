@@ -1,10 +1,10 @@
 allow-empty-blocks = false
 
 [linea]
-# __LINEA_ROLLUP_ADDRESS__ is patched in by deploy-contracts.sh after the L1
-# LineaRollup proxy is deployed (Phase 2). __L1_RPC_URL__ is rendered at boot
+# __LINETH_ROLLUP_ADDRESS__ is patched in by deploy-contracts.sh after the L1
+# LinethRollup proxy is deployed (Phase 2). __L1_RPC_URL__ is rendered at boot
 # by the config-render init container from L1_RPC_URL (.env).
-contract-address = "__LINEA_ROLLUP_ADDRESS__"
+contract-address = "__LINETH_ROLLUP_ADDRESS__"
 l1-eth-api = { endpoint = "__L1_RPC_URL__" }
 l1-polling-interval = "1 seconds"
 l2-eth-api-endpoint = { endpoint = "http://sequencer:8545" }

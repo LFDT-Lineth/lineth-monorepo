@@ -47,7 +47,7 @@ Each `PauseType` has independently configurable pause and unpause roles set at i
 ### Contract-Specific Pause Managers
 
 Each major contract has a specialized pause manager in `contracts/src/security/pausing/`:
-- `LineaRollupPauseManager.sol`
+- `LinethRollupPauseManager.sol`
 - `L2MessageServicePauseManager.sol`
 - `TokenBridgePauseManager.sol`
 - `YieldManagerPauseManager.sol`

@@ -201,7 +201,7 @@ The Postman uses a single `message` table in PostgreSQL to track all cross-chain
 | `message_nonce` | `integer` | Message nonce from the contract |
 | `calldata` | `varchar` | Message calldata |
 | `message_hash` | `varchar` | Unique hash identifying the message |
-| `message_contract_address` | `varchar` | Origin contract address (LineaRollup or L2MessageService) |
+| `message_contract_address` | `varchar` | Origin contract address (LinethRollup or L2MessageService) |
 | `sent_block_number` | `integer` | Block number where MessageSent event was emitted |
 | `direction` | `enum` | `L1_TO_L2` or `L2_TO_L1` |
 | `status` | `enum` | Current message status (see Message Lifecycle) |
