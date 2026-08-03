@@ -153,7 +153,7 @@ public class LineaProfitabilityCliOptions implements LineaCliOptions {
       names = {COMPRESSED_TX_CACHE_SIZE},
       hidden = true,
       paramLabel = "<INTEGER>",
-      description = "Variable gas cost in Wei (default: ${DEFAULT-VALUE})")
+      description = "Size of the compressed transaction cache (default: ${DEFAULT-VALUE})")
   private long compressedTxCacheSize = DEFAULT_COMPRESSED_TX_CACHE_SIZE;
 
   private LineaProfitabilityCliOptions() {}

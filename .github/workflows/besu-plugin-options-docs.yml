@@ -1,0 +1,222 @@
+name: "Besu plugin options docs"
+
+# Extracts Linea-Besu plugin options with Java reflection, renders ephemeral MDX,
+# and publishes only docs/stack/reference/_generated/besu/ to Consensys/doc.linea.
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    paths:
+      - ".github/actions/setup-java-and-gradle/**"
+      - ".github/workflows/besu-plugin-options-docs.yml"
+      - "build.gradle"
+      - "gradle.properties"
+      - "gradle/**"
+      - "gradlew"
+      - "gradlew.bat"
+      - "settings.gradle"
+      - "linea-besu/plugins/besu-plugin-options-docgen/**"
+      - "linea-besu/plugins/linea-sequencer/**"
+      - "scripts/besu-plugin-options/**"
+      - "tracer/arithmetization/**"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/actions/setup-java-and-gradle/**"
+      - ".github/workflows/besu-plugin-options-docs.yml"
+      - "build.gradle"
+      - "gradle.properties"
+      - "gradle/**"
+      - "gradlew"
+      - "gradlew.bat"
+      - "settings.gradle"
+      - "linea-besu/plugins/besu-plugin-options-docgen/**"
+      - "linea-besu/plugins/linea-sequencer/**"
+      - "scripts/besu-plugin-options/**"
+      - "tracer/arithmetization/**"
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish generated Besu partials to doc.linea"
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: >-
+    ${{ ((github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+    (github.event_name == 'workflow_dispatch' && inputs.publish == true)) &&
+    'besu-plugin-options-docs-publish' ||
+    format('besu-plugin-options-docs-validate-{0}', github.ref) }}
+  cancel-in-progress: >-
+    ${{ !((github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+    (github.event_name == 'workflow_dispatch' && inputs.publish == true)) }}
+
+jobs:
+  validate:
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+    steps:
+      - name: Checkout monorepo
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup Java and Gradle
+        uses: ./.github/actions/setup-java-and-gradle
+
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version: "1.25.7"
+          cache: false
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+          cache-dependency-path: scripts/besu-plugin-options/pnpm-lock.yaml
+
+      - name: Install generator dependencies
+        working-directory: scripts/besu-plugin-options
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate ephemeral output
+        working-directory: scripts/besu-plugin-options
+        run: pnpm run generate
+
+      - name: Validate fresh output and wrapper completeness
+        working-directory: scripts/besu-plugin-options
+        run: pnpm run check
+
+      - name: Test renderer
+        working-directory: scripts/besu-plugin-options
+        run: pnpm test
+
+      - name: Check generated output formatting
+        working-directory: scripts/besu-plugin-options
+        run: pnpm run prettier:check
+
+      - name: Upload generated output
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: besu-plugin-options-docs-${{ github.sha }}
+          path: scripts/besu-plugin-options/output/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish-doc-linea:
+    if: >-
+      ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && inputs.publish == true) }}
+    needs: validate
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+    steps:
+      - name: Guard manual publish ref
+        if: >-
+          ${{ github.event_name == 'workflow_dispatch' &&
+          github.ref != 'refs/heads/main' &&
+          !startsWith(github.ref, 'refs/tags/linea-besu-') }}
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          echo "::error::Manual publish must use main or a linea-besu-* tag, got $REF"
+          exit 1
+
+      - name: Download validated output
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: besu-plugin-options-docs-${{ github.sha }}
+          path: scripts/besu-plugin-options/output
+
+      - name: Write provenance partial
+        working-directory: scripts/besu-plugin-options
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          SOURCE_REF_NAME: ${{ github.ref_name }}
+          SOURCE_REF_TYPE: ${{ github.ref_type }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${SOURCE_SHA}" ]]; then
+            echo "Refusing to publish: GITHUB_SHA / SOURCE_SHA is empty" >&2
+            exit 1
+          fi
+          SHORT="${SOURCE_SHA:0:7}"
+          OUT="output/_generated/besu/provenance.mdx"
+          mkdir -p "$(dirname "$OUT")"
+          LINE="Generated from [\`LFDT-Lineth/lineth-monorepo@${SHORT}\`](https://github.com/LFDT-Lineth/lineth-monorepo/commit/${SOURCE_SHA})."
+          if [[ "${SOURCE_REF_TYPE}" == "tag" && "${SOURCE_REF_NAME}" == linea-besu-* ]]; then
+            LINE="${LINE} (release \`${SOURCE_REF_NAME}\`)."
+          fi
+          {
+            echo "${LINE}"
+            echo ""
+            echo "Options may differ in other Linea Besu releases."
+            echo ""
+          } > "$OUT"
+          echo "Wrote $OUT"
+
+      - name: Generate App token for Consensys/doc.linea
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.DOC_LINEA_PR_APP_ID }}
+          private-key: ${{ secrets.DOC_LINEA_PR_PRIVATE_KEY }}
+          owner: Consensys
+          repositories: |
+            doc.linea
+
+      - name: Checkout doc.linea
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: Consensys/doc.linea
+          token: ${{ steps.app-token.outputs.token }}
+          path: doc.linea
+
+      - name: Copy only the Besu generated namespace
+        shell: bash
+        run: |
+          set -euo pipefail
+          SRC="scripts/besu-plugin-options/output/_generated/besu"
+          DEST="doc.linea/docs/stack/reference/_generated/besu"
+          if ! compgen -G "$SRC/*.mdx" >/dev/null; then
+            echo "Refusing to publish: no MDX partials under $SRC" >&2
+            exit 1
+          fi
+          rm -rf "$DEST"
+          mkdir -p "$DEST"
+          cp -R "$SRC/." "$DEST/"
+
+          invalid=0
+          while IFS= read -r -d '' entry; do
+            changed_path="${entry:3}"
+            if [[ "$changed_path" != docs/stack/reference/_generated/besu/* ]]; then
+              echo "::error::Refusing to publish changed path outside the Besu namespace: $changed_path"
+              invalid=1
+            fi
+          done < <(git -C doc.linea status --porcelain=v1 -z --untracked-files=all)
+          if [[ "$invalid" -ne 0 ]]; then
+            exit 1
+          fi
+          git -C doc.linea status --short
+
+      - name: Create pull request on doc.linea
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          path: doc.linea
+          commit-message: "docs: update Linea-Besu plugin options partials"
+          branch: ci/besu-plugin-options-docs
+          delete-branch: true
+          base: main
+          title: "docs: update Linea-Besu plugin options partials"
+          body: |
+            Auto-generated Linea-Besu plugin option MDX partials from `LFDT-Lineth/lineth-monorepo`.
+
+            This PR updates **only** `docs/stack/reference/_generated/besu/`.
+            The shared `_generated/` root and human-owned wrapper are intentionally untouched.
+          add-paths: |
+            docs/stack/reference/_generated/besu/**
