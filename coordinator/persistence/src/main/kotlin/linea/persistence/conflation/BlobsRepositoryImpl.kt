@@ -1,15 +1,18 @@
 package linea.persistence.conflation
 
 import linea.domain.BlobRecord
+import linea.domain.BlobRecordV2
 import linea.error.DuplicatedRecordException
 import linea.persistence.BlobsRepository
+import linea.persistence.BlobsRepositoryG
+import linea.persistence.BlobsRepositoryV2
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Instant
 
-class BlobsRepositoryImpl(
-  private val blobsDao: BlobsDao,
-) : BlobsRepository {
-  override fun saveNewBlob(blobRecord: BlobRecord): SafeFuture<Unit> {
+abstract class BlobsRepositoryImplG<T>(
+  private val blobsDao: BlobsDaoG<T>,
+) : BlobsRepositoryG<T> {
+  override fun saveNewBlob(blobRecord: T): SafeFuture<Unit> {
     return blobsDao.saveNewBlob(blobRecord)
       .exceptionallyCompose { error ->
         if (error is DuplicatedRecordException) {
@@ -23,18 +26,18 @@ class BlobsRepositoryImpl(
   override fun getConsecutiveBlobsFromBlockNumber(
     startingBlockNumberInclusive: Long,
     endBlockCreatedBefore: Instant,
-  ): SafeFuture<List<BlobRecord>> {
+  ): SafeFuture<List<T>> {
     return blobsDao.getConsecutiveBlobsFromBlockNumber(
       startingBlockNumberInclusive.toULong(),
       endBlockCreatedBefore,
     )
   }
 
-  override fun findBlobByStartBlockNumber(startBlockNumber: Long): SafeFuture<BlobRecord?> {
+  override fun findBlobByStartBlockNumber(startBlockNumber: Long): SafeFuture<T?> {
     return blobsDao.findBlobByStartBlockNumber(startBlockNumber.toULong())
   }
 
-  override fun findBlobByEndBlockNumber(endBlockNumber: Long): SafeFuture<BlobRecord?> {
+  override fun findBlobByEndBlockNumber(endBlockNumber: Long): SafeFuture<T?> {
     return blobsDao.findBlobByEndBlockNumber(endBlockNumber.toULong())
   }
 
@@ -46,3 +49,11 @@ class BlobsRepositoryImpl(
     return blobsDao.deleteBlobsAfterBlockNumber(startingBlockNumberInclusive)
   }
 }
+
+class BlobsRepositoryImpl(
+  private val blobsDao: BlobsDao,
+) : BlobsRepositoryImplG<BlobRecord>(blobsDao), BlobsRepository
+
+class BlobsRepositoryImplV2(
+  private val blobsDao: BlobsDaoV2,
+) : BlobsRepositoryImplG<BlobRecordV2>(blobsDao), BlobsRepositoryV2

@@ -7,7 +7,7 @@ fn main() {
     var a:u128 = 0
     var b:u128 = 1
 
-    for i:u8 = 0; i < 100; i = i + 1 {
+    for i:u8 = 0; i<100; i = i + 1 {
         t = a + b
         a = b
         b = t
