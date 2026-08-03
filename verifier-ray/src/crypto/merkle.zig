@@ -159,6 +159,9 @@ pub const InputTreeOpening = struct {
     /// other level's pair attaches one depth shallower than its size.
     fn levelIndex(self: InputTreeOpening, level_size: usize) Error!usize {
         if (!isPowerOfTwo(level_size)) return Error.InvalidLevelSize;
+        // leaves.len is proof-controlled: bound it before shl's shift so an
+        // oversized branch errors instead of overflow-trapping the cast.
+        if (self.leaves.len >= @bitSizeOf(usize)) return Error.LevelSizeTooLarge;
 
         const tree_leaves = shl(1, self.leaves.len);
         if (level_size > tree_leaves) return Error.LevelSizeTooLarge;

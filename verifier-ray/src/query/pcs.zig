@@ -3,6 +3,7 @@ const field = @import("../field/koalabear.zig");
 const ext = @import("../field/koalabear_ext.zig");
 const poseidon2 = @import("../crypto/poseidon2.zig");
 const merkle = @import("../crypto/merkle.zig");
+const canonical = @import("../polynomial/canonical.zig");
 const fri = @import("fri.zig");
 
 /// The PCS/DEEP-quotient layer: input-tree authentication, per-level Horner
@@ -59,10 +60,38 @@ pub const SizeBundle = struct {
 /// The canonical layout, compiled once by codegen from a protocol's batch
 /// shapes and shift schedules: prover-ray's `layout`. Sizes appear in
 /// descending order, matching `canonicalLayout`.
+///
+/// Carries no `log_plaintext_size`: it is `layout`'s largest bundle size, so
+/// `params` derives it rather than codegen supplying a field that could
+/// disagree. Mirrors prover-ray's `restrictToOpenings`, which performs the
+/// same shrink at runtime because its `PCS` outlives any one proof.
 pub const System = struct {
-    params: fri.Params,
+    log_codeword_size: u8,
+    log_final_poly_size: u8 = 0,
+    num_queries: usize,
     layout: []const SizeBundle,
+
+    /// The `fri.Params` this system verifies against.
+    pub fn params(comptime self: System) fri.Params {
+        return .{
+            .log_codeword_size = self.log_codeword_size,
+            .log_plaintext_size = comptime maxSizeLog2(self.layout),
+            .log_final_poly_size = self.log_final_poly_size,
+            .num_queries = self.num_queries,
+        };
+    }
 };
+
+fn maxSizeLog2(comptime layout: []const SizeBundle) u8 {
+    comptime {
+        if (layout.len == 0) @compileError("fri: pcs: System.layout must have at least one size bundle");
+        var max_size: u8 = layout[0].size_log2;
+        for (layout[1..]) |bundle| {
+            if (bundle.size_log2 > max_size) max_size = bundle.size_log2;
+        }
+        return max_size;
+    }
+}
 
 pub const OpeningProof = struct {
     /// input_queries[q][i] is query q's opening of the i-th distinct input
@@ -87,7 +116,7 @@ pub const VerifyInput = struct {
 };
 
 pub fn verify(comptime system: System, input: VerifyInput) Error!void {
-    const params = system.params;
+    const params = comptime system.params();
     const info = comptime computeLayoutInfo(system.layout);
 
     if (input.roots.len != info.distinct_count) return Error.RootCountMismatch;
@@ -125,8 +154,8 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
             try fri.resolveRunningLayers(params, input.proof.fri_proof.round_roots, running_query, query_position, rounds_buf[query_idx][0..num_rounds]);
         }
 
-        final_buf[query_idx] = fri.domainPointExt(params.log_codeword_size - num_rounds, query_position >> num_rounds);
-        final_buf[query_idx] = evalFinalPoly(input.proof.fri_proof.final_poly, final_buf[query_idx]);
+        const final_point = fri.domainPointExt(params.log_codeword_size - num_rounds, query_position >> num_rounds);
+        final_buf[query_idx] = canonical.evaluateExtAtExt(input.proof.fri_proof.final_poly, final_point);
 
         inline for (system.layout) |bundle| {
             const round = comptime roundForSize(params, bundle.size_log2);
@@ -177,7 +206,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
         if (comptime num_rounds == 0) {
             const pair = aux_buf[query_idx][0] orelse return Error.MissingTopLevelAux;
             const sib_final = fri.domainPointExt(params.log_codeword_size, query_position ^ 1);
-            const sib_final_value = evalFinalPoly(input.proof.fri_proof.final_poly, sib_final);
+            const sib_final_value = canonical.evaluateExtAtExt(input.proof.fri_proof.final_poly, sib_final);
             if (!pair.self.eql(final_buf[query_idx])) return Error.BoundaryFinalSelfMismatch;
             if (!pair.sibling.eql(sib_final_value)) return Error.BoundaryFinalSiblingMismatch;
         }
@@ -190,20 +219,6 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
     }
 
     try fri.checkFolds(params, &resolved, input.fold_alphas, input.query_positions);
-}
-
-/// Evaluates the revealed final-polynomial coefficients at `x` via Horner's
-/// method, rather than expanding the whole final-domain codeword via FFT
-/// (prover-ray's approach): the verifier only ever needs one or two point
-/// evaluations per query, never the full codeword.
-fn evalFinalPoly(coeffs: []const ext.Ext, x: ext.Ext) ext.Ext {
-    var acc = ext.Ext.zero();
-    var i = coeffs.len;
-    while (i != 0) {
-        i -= 1;
-        acc = acc.mul(x).add(coeffs[i]);
-    }
-    return acc;
 }
 
 /// The running-codeword seed for a level introduced at `round`: zero at
@@ -331,11 +346,14 @@ fn authenticateInputQuery(
     const codeword_size = @as(usize, 1) << params.log_codeword_size;
     for (opening, roots) |branch, root| {
         const num_levels = branch.leaves.len;
-        if (num_levels == 0) return Error.InputTreeShapeMismatch;
+        // num_levels is proof-controlled: bounding it before the shift keeps
+        // an oversized value from overflow-trapping the cast, and makes
+        // num_leaves <= codeword_size follow.
+        if (num_levels == 0 or num_levels > params.log_codeword_size) return Error.InputTreeShapeMismatch;
         const num_leaves = @as(usize, 1) << @as(std.math.Log2Int(usize), @intCast(num_levels));
-        if (num_leaves > codeword_size or codeword_size % num_leaves != 0) return Error.InputTreeShapeMismatch;
+        if (codeword_size % num_leaves != 0) return Error.InputTreeShapeMismatch;
         const recovered = try branch.recoverRoot(query_position / (codeword_size / num_leaves));
-        if (!std.meta.eql(recovered, root)) return Error.MerkleProofInvalid;
+        if (!poseidon2.eql(recovered, root)) return Error.MerkleProofInvalid;
     }
 }
 
@@ -414,10 +432,11 @@ fn shiftedPoint(comptime size_log2: u8, comptime shift: usize, zeta: ext.Ext) ex
 /// Whether `point` lands in the size-2^log_size multiplicative subgroup.
 /// Every domain point is a base-field root of unity, so an extension-valued
 /// point that isn't itself a lifted base element can never coincide with
-/// one. Mirrors prover-ray's `pointInDomain`.
-fn pointInDomain(point: ext.Ext, log_size: u8) bool {
+/// one. Mirrors prover-ray's `pointInDomain`. `log_size` is comptime so the
+/// exponent is too, letting `powComptime` resolve its square-and-multiply
+/// schedule at compile time.
+fn pointInDomain(point: ext.Ext, comptime log_size: u8) bool {
     if (!point.isBase()) return false;
-    const shift: std.math.Log2Int(u64) = @intCast(log_size);
-    const powered = point.B0.a0.pow(@as(u64, 1) << shift);
+    const powered = point.B0.a0.powComptime(@as(usize, 1) << log_size);
     return powered.eql(field.Element.one());
 }
