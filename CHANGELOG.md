@@ -15,6 +15,7 @@
 - *(coordinator)* Wire config-docs via a buildSrc plugin and declarative spec (#3607)
 - *(coordinator)* Document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)
 - *(coordinator)* GasPriceCapProviderV2 and DRY (#3624)
+- *(coordinator)* Support custom transaction signers (#3597)
 
 ### 🐛 Bug Fixes
 
@@ -108,3 +109,4 @@
 - *(coordinator)* Adds initial scafold for contract v9 RISC-V (#3618)
 - *(coordinator)* Cleanup replaced apps in PR #3615 (#3622)
 - *(coordinator)* Remove dead code and apply small cleanups from review (#3627)
+- *(coordinator)* Riscv blob data skeleton (#3609)

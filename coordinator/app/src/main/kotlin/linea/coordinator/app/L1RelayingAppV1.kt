@@ -63,6 +63,7 @@ class L1RelayingAppV1(
   private val feeHistoriesDao: FeeHistoriesDao,
   private val blobsRepository: BlobsRepository,
   private val aggregationsRepository: AggregationsRepository,
+  private val signerFactory: SignerFactory = DefaultSignerFactory,
   private val l1EthApiClient: EthApiClient = createEthApiClient(
     rpcUrl = l1SubmissionConfig.dynamicGasPriceCap.feeHistoryFetcher.l1Endpoint.toString(),
     log = LogManager.getLogger("clients.l1.eth.fees-fetcher"),
@@ -100,6 +101,7 @@ class L1RelayingAppV1(
       feesFetcher = feesFetcher,
       signerConfig = l1SubmissionConfig.blob.signer,
       gasConfig = l1SubmissionConfig.blob.gas,
+      signerFactory = signerFactory,
       useEthEstimateGas = false,
     )
   },
@@ -119,6 +121,7 @@ class L1RelayingAppV1(
       feesFetcher = feesFetcher,
       signerConfig = l1SubmissionConfig.aggregation.signer,
       gasConfig = l1SubmissionConfig.aggregation.gas,
+      signerFactory = signerFactory,
       useEthEstimateGas = true,
     )
   },

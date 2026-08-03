@@ -4,6 +4,7 @@ include "utils/type.zkc"
 // This will act as the program memory space and will contain, amongst other things,
 // the program executable itself and all data coming from loadable sections of the ELF
 // (e.g., .data, .rodata).
+#[paged]
 memory ram(address:Address) -> (word:u32)
 
 // Represents the Register File to use when executing the guest program.  That
@@ -33,3 +34,6 @@ memory b4(address:u3) -> (state:lane)
 memory c(address:u3) -> (state:lane)
 memory d(address:u3) -> (state:lane)
 memory padded_input_block(address:u5) -> (state:lane)
+
+// guest program output
+pub output guest_output(address:OutputAddress) -> (byte:u8)

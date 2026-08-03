@@ -8,7 +8,8 @@ include "instruction_processing/s_type.zkc"
 include "instruction_processing/j_type.zkc"
 include "instruction_processing/u_type.zkc"
 
-fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d, padded_input_block, poseidon2_state>(instruction:u32, pc:Address) -> (new_pc:Address) {
+fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d,
+padded_input_block>(instruction:u32, pc:Address, output_write_address:OutputAddress) -> (new_pc:Address, new_output_write_address:OutputAddress) {
 
     var instruction_parameters:u25
     var instruction_type:Type
@@ -21,8 +22,11 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
 
     switch instruction_type {
         case R_TYPE: {
-            process_R_type_instruction(opcode, instruction_parameters)
+            new_output_write_address = process_R_type_instruction(opcode, instruction_parameters, output_write_address)
             new_pc = pc + 4 as Address
+            // TODO: rm me one handle by RAM itself
+            registers[0] = 0
+            return
         }
         case I_TYPE: {
             new_pc = process_I_type_instruction(opcode, instruction_parameters, pc)
@@ -53,4 +57,7 @@ fn interpreter<registers, ram, state_row0, state_row1, state_row2, state_row3, s
 
     // Forcefully set registers[0] = zero back to 0
     registers[0] = 0
+
+    // true in all cases, except potentially for R_TYPE instructions, for which already returned
+    new_output_write_address = output_write_address
 }

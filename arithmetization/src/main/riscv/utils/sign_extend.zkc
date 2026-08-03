@@ -21,33 +21,73 @@ const SGNEXTMASK_U16:u64 = 0xFFFFFFFF_FFFF0000
 // Shift right extracts the sign bit
 // Use multiply as a switch to set or not upper bits
 
-#[inline]
+//#[inline]
 fn sgn_extension_u32_u64(value:u32) -> (ext_value:u64) {
-    ext_value = (value as u64) | (((value >> 31) as u64) * SGNEXTMASK_U32)
+    var sign:u1, tmp:u31
+    //
+    sign::tmp = value
+    //
+    if sign == 1 {
+        ext_value = (value as u64) + SGNEXTMASK_U32
+    } else {
+        ext_value = (value as u64)
+    }
 }
 
-#[inline]
+//#[inline]
 fn sgn_extension_u21_u64(value:u21) -> (ext_value:u64) {
-    ext_value = (value as u64) | (((value >> 20) as u64) * SGNEXTMASK_U21)
+    var sign:u1, tmp:u20
+    //
+    sign::tmp = value
+    //
+    if sign == 1 {
+        ext_value = (value as u64) + SGNEXTMASK_U21
+    } else {
+        ext_value = (value as u64)
+    }
 }
 
-#[inline]
+//#[inline]
 fn sgn_extension_u16_u64(value:u16) -> (ext_value:u64) {
-    ext_value = (value as u64) | (((value >> 15) as u64) * SGNEXTMASK_U16)
+    var sign:u1, tmp:u15
+    //
+    sign::tmp = value
+    //
+    if sign == 1 {
+        ext_value = (value as u64) + SGNEXTMASK_U16
+    } else {
+        ext_value = (value as u64)
+    }
 }
 
-#[inline]
+//#[inline]
 fn sgn_extension_u12_u64(value:u12) -> (ext_value:u64) {
-    ext_value = (value as u64) | (((value >> 11) as u64) * SGNEXTMASK_U12)
+    var sign:u1, tmp:u11
+    //
+    sign::tmp = value
+    //
+    if sign == 1 {
+        ext_value = (value as u64) + SGNEXTMASK_U12
+    } else {
+        ext_value = (value as u64)
+    }
 }
 
-#[inline]
+//#[inline]
 fn sgn_extension_u8_u64(value:u8) -> (ext_value:u64) {
-    ext_value = (value as u64) | (((value >> 7) as u64) * SGNEXTMASK_U8)
+    var sign:u1, tmp:u7
+    //
+    sign::tmp = value
+    //
+    if sign == 1 {
+        ext_value = (value as u64) + SGNEXTMASK_U8
+    } else {
+        ext_value = (value as u64)
+    }
 }
 
 // 64-bit arithmetic right shift
-#[inline]
+//#[inline]
 fn _ashr_u64(value:DoubleWord, shamt:u6) -> (out:DoubleWord) {
     var sign:SignBit = sign_bit_of_double_word(value)
     var logical:DoubleWord = value >> shamt
@@ -60,7 +100,7 @@ fn _ashr_u64(value:DoubleWord, shamt:u6) -> (out:DoubleWord) {
 }
 
 // 32-bit arithmetic right shift on low 32 bits of value
-#[inline]
+//#[inline]
 fn _ashr_u32(value:DoubleWord, shamt:u5) -> (out:Word) {
     var w:u32 = (value & MAX_UINT_32_AS_U64) as Word
     var sign:SignBit = sign_bit_of_word(w)
@@ -72,3 +112,4 @@ fn _ashr_u32(value:DoubleWord, shamt:u5) -> (out:Word) {
         out = logical | mask
     }
 }
+
