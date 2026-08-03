@@ -58,9 +58,9 @@ func main() {
 	sszDir := flag.String("ssz-dir", filepath.Join(os.TempDir(), "execution-specs-ssz-fixtures"), "directory for selected temporary SSZ inputs")
 	fixturePathsFlag := flag.String("fixture-paths", "blockchain_tests/for_amsterdam/amsterdam,blockchain_tests/for_amsterdam/osaka", "comma-separated fixture paths under fixtures-dir")
 	sszLimit := flag.Int("ssz-limit", 0, "maximum SSZ inputs to run per fixture path; 0 means all")
-	// Empty by default so the guest Makefile's ZKC_EXEC_FLAGS default applies: a competing default
-	// here shadowed it, and went stale when zkc dropped -q.
-	zkcFlags := flag.String("zkc-flags", "", "override ZKC_EXEC_FLAGS for the guest run (default: whatever the guest Makefile sets)")
+	// This runner sweeps hundreds of blocks, so it needs the cheap backend and says so rather than
+	// inheriting the guest Makefile's default, which traces. Pass -zkc-flags="" to inherit instead.
+	zkcFlags := flag.String("zkc-flags", "--gogen --fast", "ZKC_EXEC_FLAGS for each guest run; empty inherits the guest Makefile default (which traces)")
 	flag.Parse()
 
 	if *sszLimit < 0 {

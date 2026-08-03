@@ -98,7 +98,7 @@ make -C l2-execution debug INPUT=path/to/input.ssz
 make -C l2-execution exec INPUT=path/to/input.ssz
 ```
 
-These need `zkc` and `go` on `PATH`. The interpreter loads a finished ELF — `elf_to_json_gen` reads its `PT_LOAD` segments + entry point — so there is no relocatable-`.o` step (a `.o` is not statically linked, and the interpreter does not perform a final link). `exec` forwards `ZKC_EXEC_FLAGS` (default `--fast`) to `zkc exec`; pass `ZKC_EXEC_FLAGS="--gogen --fast"` to execute via zkc's generated-Go backend. Omitting `--fast` makes the interpreter build a trace, which the weekly metrics job measures.
+These need `zkc` and `go` on `PATH`. The interpreter loads a finished ELF — `elf_to_json_gen` reads its `PT_LOAD` segments + entry point — so there is no relocatable-`.o` step (a `.o` is not statically linked, and the interpreter does not perform a final link). `exec` forwards `ZKC_EXEC_FLAGS` (empty by default, so the interpreter traces) to `zkc exec`; pass `ZKC_EXEC_FLAGS="--gogen --fast"` to execute via zkc's generated-Go backend. Omitting `--fast` makes the interpreter build a trace, which the weekly metrics job measures.
 
 ## Guest Packages
 

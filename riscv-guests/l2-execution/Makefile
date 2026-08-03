@@ -33,12 +33,13 @@ BIN      := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
 # Sample fixture input used by exec/debug
 INPUT    ?= $(MAKEFILE_DIR)test/testdata/stateless_input.ssz
 
-# Flags forwarded to `zkc exec` by exec. Quiet needs no flag: zkc's verbosity defaults to NONE and
-# the guest's per-instruction printf only appears at -vvv. Override to pick the backend — e.g.
-# "--gogen --fast" runs the guest via zkc's generated-Go backend. Omitting --fast makes the
-# tree-walking interpreter build a trace, which is minutes and gigabytes on a real block; adding
-# "--check" verifies that trace against the constraints.
-ZKC_EXEC_FLAGS ?=--fast
+# Flags forwarded to `zkc exec` by exec. Empty by default, which means the interpreter builds a
+# trace — the same behaviour as before, since the "-q" this used to carry only suppressed output and
+# zkc's verbosity now defaults to NONE anyway (guest printf appears at -vvv).
+# Override to pick something cheaper or stricter: "--fast" skips tracing and constraints for a
+# runnability check, "--gogen --fast" runs the generated-Go backend, "--check" verifies the trace
+# against the constraints.
+ZKC_EXEC_FLAGS ?=
 
 # Parameters for execution-spec zkevm fixtures and selected temporary SSZ inputs.
 EXECUTION_SPECS_JSON_FIXTURES_DIR   := /tmp/execution-specs-json-fixtures
