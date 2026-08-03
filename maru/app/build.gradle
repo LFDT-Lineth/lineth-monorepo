@@ -104,6 +104,12 @@ jar {
   // jar task actually runs (execution phase), never during configuration. Resolving it eagerly
   // here (e.g. `.collect {}`) would force Besu dependency resolution on every invocation —
   // including `clean` — which is what previously dragged an on-demand Besu build into a clean.
+  // dependsOn(Configuration) wires the tasks that build runtimeClasspath's artifacts (e.g.
+  // :maru:linea-finalization-provider:jar) as task dependencies without resolving it here;
+  // without this, the manifest Provider below can be queried before those tasks finish under
+  // parallel execution, failing with "Querying the mapped value of provider(...) before task
+  // ':maru:linea-finalization-provider:jar' has completed is not supported".
+  dependsOn(configurations.runtimeClasspath)
   def classPathAttribute = configurations.runtimeClasspath.elements.map { locations ->
     locations
         .collect { it.asFile.name }
