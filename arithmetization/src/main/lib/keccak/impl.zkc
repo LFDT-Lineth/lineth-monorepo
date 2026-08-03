@@ -22,7 +22,7 @@ const KECCAK_ROUNDS:u5 = 24
 // Main function
 // ===================================================================
 
-fn keccak<ram, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d, padded_input_block>(msg_address:Address, msg_length:u32, output_address:Address) {
+fn keccak<ram, keccak_state>(msg_address:Address, msg_length:u32, output_address:Address) {
 
     // remove any leftovers from previous keccak computations
     wipe_state()
@@ -41,12 +41,12 @@ fn keccak<ram, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b
 
 // print_hash prints the hash in BIG-ENDIAN convention
 #[debug]
-fn print_hash<state_row0, state_row1, state_row2, state_row3>() {
+fn print_hash<keccak_state>() {
     printf "\nkeccak hash:\t"
-    print_big_endian(state_row0[0])
-    print_big_endian(state_row1[0])
-    print_big_endian(state_row2[0])
-    print_big_endian(state_row3[0])
+    print_big_endian(keccak_state[ROW0])
+    print_big_endian(keccak_state[ROW1])
+    print_big_endian(keccak_state[ROW2])
+    print_big_endian(keccak_state[ROW3])
     printf "\n"
 
 }
@@ -58,13 +58,13 @@ fn print_big_endian(val:u64) {
     printf "%x%x%x%x%x%x%x%x", b0, b1, b2, b3, b4, b5, b6, b7
 }
 
-fn wipe_state<state_row0, state_row1, state_row2, state_row3, state_row4>() {
-    for i:u3 = 0; i<5; i = i + 1 {
-        state_row0[i] = 0
-        state_row1[i] = 0
-        state_row2[i] = 0
-        state_row3[i] = 0
-        state_row4[i] = 0
+fn wipe_state<keccak_state>() {
+    for i:u7 = 0; i<5; i = i + 1 {
+        keccak_state[ROW0 + i] = 0
+        keccak_state[ROW1 + i] = 0
+        keccak_state[ROW2 + i] = 0
+        keccak_state[ROW3 + i] = 0
+        keccak_state[ROW4 + i] = 0
     }
 }
 
@@ -73,7 +73,7 @@ fn wipe_state<state_row0, state_row1, state_row2, state_row3, state_row4>() {
 // ===================================================================
 
 // Xor the input blocks into the state and perform the permutation
-fn absorbing_phase<ram, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d, padded_input_block>(msg_address:Address, msg_length:u32) {
+fn absorbing_phase<ram, keccak_state>(msg_address:Address, msg_length:u32) {
 
     var n_blocks:u32 = (msg_length / BLOCK_BYTE_LENGTH) + 1
     var remainder:u8 = (msg_length % BLOCK_BYTE_LENGTH) as u8
@@ -89,7 +89,7 @@ fn absorbing_phase<ram, state_row0, state_row1, state_row2, state_row3, state_ro
     // NOTE: n_blocks ≥ 1
     for block:u32 = 0; block<(n_blocks - 1); block = block + 1 {
         for limb:u5 = 0; limb<17; limb = limb + 1 {
-            padded_input_block[limb] = read_64(curr_address + (8 * (limb as Address)))
+            keccak_state[PIB + (limb as u7)] = read_64(curr_address + (8 * (limb as Address)))
         }
 
         xor_padded_input_block_into_state()
@@ -116,19 +116,19 @@ fn absorbing_phase<ram, state_row0, state_row1, state_row2, state_row3, state_ro
     }
 
     for limb:u5 = 0; limb<n_full_words; limb = limb + 1 {
-        padded_input_block[limb] = read_64(curr_address + (8 * (limb as Address)))
+        keccak_state[PIB + (limb as u7)] = read_64(curr_address + (8 * (limb as Address)))
     }
     curr_address = curr_address + (8 * (n_full_words as Address))
-    padded_input_block[n_full_words] = read_and_pad_64(curr_address, n_bytes, final_word_in_block)
+    keccak_state[PIB + (n_full_words as u7)] = read_and_pad_64(curr_address, n_bytes, final_word_in_block)
 
     // the code below should only trigger if n_full_words < 16 = 17 - 1
     // the above "read_and_pad_64" call didn't fill the final word, so
     // more padding happens: zero words followed by a terminating 1
     if final_word_in_block != 1 {
         for limb:u5 = n_full_words + 1; limb<16; limb = limb + 1 {
-            padded_input_block[limb] = 0
+            keccak_state[PIB + (limb as u7)] = 0
         }
-        padded_input_block[16] = FINAL_RIGHT_PADDING
+        keccak_state[PIB + 16] = FINAL_RIGHT_PADDING
     }
 
     xor_padded_input_block_into_state()
@@ -136,45 +136,45 @@ fn absorbing_phase<ram, state_row0, state_row1, state_row2, state_row3, state_ro
 }
 
 // xor_padded_input_block_into_state does exactly what its name suggests
-fn xor_padded_input_block_into_state<state_row0, state_row1, state_row2, state_row3, state_row4, padded_input_block>() {
-    state_row0[0] = state_row0[0] ^ padded_input_block[0]
-    state_row1[0] = state_row1[0] ^ padded_input_block[1]
-    state_row2[0] = state_row2[0] ^ padded_input_block[2]
-    state_row3[0] = state_row3[0] ^ padded_input_block[3]
-    state_row4[0] = state_row4[0] ^ padded_input_block[4]
-    state_row0[1] = state_row0[1] ^ padded_input_block[5]
-    state_row1[1] = state_row1[1] ^ padded_input_block[6]
-    state_row2[1] = state_row2[1] ^ padded_input_block[7]
-    state_row3[1] = state_row3[1] ^ padded_input_block[8]
-    state_row4[1] = state_row4[1] ^ padded_input_block[9]
-    state_row0[2] = state_row0[2] ^ padded_input_block[10]
-    state_row1[2] = state_row1[2] ^ padded_input_block[11]
-    state_row2[2] = state_row2[2] ^ padded_input_block[12]
-    state_row3[2] = state_row3[2] ^ padded_input_block[13]
-    state_row4[2] = state_row4[2] ^ padded_input_block[14]
-    state_row0[3] = state_row0[3] ^ padded_input_block[15]
-    state_row1[3] = state_row1[3] ^ padded_input_block[16]
+fn xor_padded_input_block_into_state<keccak_state>() {
+    keccak_state[ROW0] = keccak_state[ROW0] ^ keccak_state[PIB]
+    keccak_state[ROW1] = keccak_state[ROW1] ^ keccak_state[PIB + 1]
+    keccak_state[ROW2] = keccak_state[ROW2] ^ keccak_state[PIB + 2]
+    keccak_state[ROW3] = keccak_state[ROW3] ^ keccak_state[PIB + 3]
+    keccak_state[ROW4] = keccak_state[ROW4] ^ keccak_state[PIB + 4]
+    keccak_state[ROW0 + 1] = keccak_state[ROW0 + 1] ^ keccak_state[PIB + 5]
+    keccak_state[ROW1 + 1] = keccak_state[ROW1 + 1] ^ keccak_state[PIB + 6]
+    keccak_state[ROW2 + 1] = keccak_state[ROW2 + 1] ^ keccak_state[PIB + 7]
+    keccak_state[ROW3 + 1] = keccak_state[ROW3 + 1] ^ keccak_state[PIB + 8]
+    keccak_state[ROW4 + 1] = keccak_state[ROW4 + 1] ^ keccak_state[PIB + 9]
+    keccak_state[ROW0 + 2] = keccak_state[ROW0 + 2] ^ keccak_state[PIB + 10]
+    keccak_state[ROW1 + 2] = keccak_state[ROW1 + 2] ^ keccak_state[PIB + 11]
+    keccak_state[ROW2 + 2] = keccak_state[ROW2 + 2] ^ keccak_state[PIB + 12]
+    keccak_state[ROW3 + 2] = keccak_state[ROW3 + 2] ^ keccak_state[PIB + 13]
+    keccak_state[ROW4 + 2] = keccak_state[ROW4 + 2] ^ keccak_state[PIB + 14]
+    keccak_state[ROW0 + 3] = keccak_state[ROW0 + 3] ^ keccak_state[PIB + 15]
+    keccak_state[ROW1 + 3] = keccak_state[ROW1 + 3] ^ keccak_state[PIB + 16]
 }
 
-fn squeezing_phase<ram, state_row0, state_row1, state_row2, state_row3>(output_address:Address) {
-    write_64(output_address + (0 * 8), state_row0[0] as u64)
-    write_64(output_address + (1 * 8), state_row1[0] as u64)
-    write_64(output_address + (2 * 8), state_row2[0] as u64)
-    write_64(output_address + (3 * 8), state_row3[0] as u64)
+fn squeezing_phase<ram, keccak_state>(output_address:Address) {
+    write_64(output_address + (0 * 8), keccak_state[ROW0] as u64)
+    write_64(output_address + (1 * 8), keccak_state[ROW1] as u64)
+    write_64(output_address + (2 * 8), keccak_state[ROW2] as u64)
+    write_64(output_address + (3 * 8), keccak_state[ROW3] as u64)
 }
 
 // ===================================================================
 // The Keccak-f permutation
 // ===================================================================
 
-fn keccak_f<state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d>() {
+fn keccak_f<keccak_state>() {
     for j:u5 = 0; j<KECCAK_ROUNDS; j = j + 1 {
         var round_constant:u64 = RC[j]
         keccak_f_round(round_constant)
     }
 }
 
-fn keccak_f_round<state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d>(round_constant:u64) {
+fn keccak_f_round<keccak_state>(round_constant:u64) {
     theta()
     rho()
     pi()
@@ -186,92 +186,92 @@ fn keccak_f_round<state_row0, state_row1, state_row2, state_row3, state_row4, b0
 // C[x] = A[x,0] ^ A[x,1] ^ A[x,2] ^ A[x,3] ^ A[x,4]
 // D[x] = C[x-1] ^ rot(C[x+1], 1)
 // A[x,y] = A[x,y] ^ D[x]
-fn theta<state_row0, state_row1, state_row2, state_row3, state_row4, c, d>() {
+fn theta<keccak_state>() {
 
-    c[0] = state_row0[0] ^ state_row0[1] ^ state_row0[2] ^ state_row0[3] ^ state_row0[4]
-    c[1] = state_row1[0] ^ state_row1[1] ^ state_row1[2] ^ state_row1[3] ^ state_row1[4]
-    c[2] = state_row2[0] ^ state_row2[1] ^ state_row2[2] ^ state_row2[3] ^ state_row2[4]
-    c[3] = state_row3[0] ^ state_row3[1] ^ state_row3[2] ^ state_row3[3] ^ state_row3[4]
-    c[4] = state_row4[0] ^ state_row4[1] ^ state_row4[2] ^ state_row4[3] ^ state_row4[4]
+    keccak_state[C] = keccak_state[ROW0] ^ keccak_state[ROW0 + 1] ^ keccak_state[ROW0 + 2] ^ keccak_state[ROW0 + 3] ^ keccak_state[ROW0 + 4]
+    keccak_state[C + 1] = keccak_state[ROW1] ^ keccak_state[ROW1 + 1] ^ keccak_state[ROW1 + 2] ^ keccak_state[ROW1 + 3] ^ keccak_state[ROW1 + 4]
+    keccak_state[C + 2] = keccak_state[ROW2] ^ keccak_state[ROW2 + 1] ^ keccak_state[ROW2 + 2] ^ keccak_state[ROW2 + 3] ^ keccak_state[ROW2 + 4]
+    keccak_state[C + 3] = keccak_state[ROW3] ^ keccak_state[ROW3 + 1] ^ keccak_state[ROW3 + 2] ^ keccak_state[ROW3 + 3] ^ keccak_state[ROW3 + 4]
+    keccak_state[C + 4] = keccak_state[ROW4] ^ keccak_state[ROW4 + 1] ^ keccak_state[ROW4 + 2] ^ keccak_state[ROW4 + 3] ^ keccak_state[ROW4 + 4]
 
     for i_minus_one:u5 = 0; i_minus_one<5; i_minus_one = i_minus_one + 1 {
         var i:u5 = i_minus_one + 1
-        d[mod5(i)] = c[i_minus_one as u3] ^ bit_rotl64(c[mod5(i + 1)], 1)
+        keccak_state[D + (mod5(i) as u7)] = keccak_state[C + (i_minus_one as u7)] ^ bit_rotl64(keccak_state[C + (mod5(i + 1) as u7)], 1)
     }
 
-    for j:u3 = 0; j<5; j = j + 1 {
-        state_row0[j] = state_row0[j] ^ d[0]
-        state_row1[j] = state_row1[j] ^ d[1]
-        state_row2[j] = state_row2[j] ^ d[2]
-        state_row3[j] = state_row3[j] ^ d[3]
-        state_row4[j] = state_row4[j] ^ d[4]
+    for j:u7 = 0; j<5; j = j + 1 {
+        keccak_state[ROW0 + j] = keccak_state[ROW0 + j] ^ keccak_state[D]
+        keccak_state[ROW1 + j] = keccak_state[ROW1 + j] ^ keccak_state[D + 1]
+        keccak_state[ROW2 + j] = keccak_state[ROW2 + j] ^ keccak_state[D + 2]
+        keccak_state[ROW3 + j] = keccak_state[ROW3 + j] ^ keccak_state[D + 3]
+        keccak_state[ROW4 + j] = keccak_state[ROW4 + j] ^ keccak_state[D + 4]
     }
 
 }
 
 // RHO: lane rotations step
 // B[y, (2x+3y) mod 5] = rot(A[x,y], r[x,y])
-fn rho<state_row0, state_row1, state_row2, state_row3, state_row4>() {
+fn rho<keccak_state>() {
 
     for j:u3 = 0; j<5; j = j + 1 {
-        state_row0[j] = bit_rotl64(state_row0[j], rot_offset(0, j))
-        state_row1[j] = bit_rotl64(state_row1[j], rot_offset(1, j))
-        state_row2[j] = bit_rotl64(state_row2[j], rot_offset(2, j))
-        state_row3[j] = bit_rotl64(state_row3[j], rot_offset(3, j))
-        state_row4[j] = bit_rotl64(state_row4[j], rot_offset(4, j))
+        keccak_state[ROW0 + (j as u7)] = bit_rotl64(keccak_state[ROW0 + (j as u7)], rot_offset(0, j))
+        keccak_state[ROW1 + (j as u7)] = bit_rotl64(keccak_state[ROW1 + (j as u7)], rot_offset(1, j))
+        keccak_state[ROW2 + (j as u7)] = bit_rotl64(keccak_state[ROW2 + (j as u7)], rot_offset(2, j))
+        keccak_state[ROW3 + (j as u7)] = bit_rotl64(keccak_state[ROW3 + (j as u7)], rot_offset(3, j))
+        keccak_state[ROW4 + (j as u7)] = bit_rotl64(keccak_state[ROW4 + (j as u7)], rot_offset(4, j))
     }
 }
 
 // PI: lane permutation step
 // A[x,y] → B[y, (2x+3y) mod 5]
-fn pi<state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4>() {
+fn pi<keccak_state>() {
 
     // we apply bY[Z] = state_rowX[Y] with Z = (2*X + 3*Y) mod 5
-    b0[0] = state_row0[0]
-    b1[3] = state_row0[1]
-    b2[1] = state_row0[2]
-    b3[4] = state_row0[3]
-    b4[2] = state_row0[4]
-    b0[2] = state_row1[0]
-    b1[0] = state_row1[1]
-    b2[3] = state_row1[2]
-    b3[1] = state_row1[3]
-    b4[4] = state_row1[4]
-    b0[4] = state_row2[0]
-    b1[2] = state_row2[1]
-    b2[0] = state_row2[2]
-    b3[3] = state_row2[3]
-    b4[1] = state_row2[4]
-    b0[1] = state_row3[0]
-    b1[4] = state_row3[1]
-    b2[2] = state_row3[2]
-    b3[0] = state_row3[3]
-    b4[3] = state_row3[4]
-    b0[3] = state_row4[0]
-    b1[1] = state_row4[1]
-    b2[4] = state_row4[2]
-    b3[2] = state_row4[3]
-    b4[0] = state_row4[4]
+    keccak_state[B0] = keccak_state[ROW0]
+    keccak_state[B1 + 3] = keccak_state[ROW0 + 1]
+    keccak_state[B2 + 1] = keccak_state[ROW0 + 2]
+    keccak_state[B3 + 4] = keccak_state[ROW0 + 3]
+    keccak_state[B4 + 2] = keccak_state[ROW0 + 4]
+    keccak_state[B0 + 2] = keccak_state[ROW1]
+    keccak_state[B1] = keccak_state[ROW1 + 1]
+    keccak_state[B2 + 3] = keccak_state[ROW1 + 2]
+    keccak_state[B3 + 1] = keccak_state[ROW1 + 3]
+    keccak_state[B4 + 4] = keccak_state[ROW1 + 4]
+    keccak_state[B0 + 4] = keccak_state[ROW2]
+    keccak_state[B1 + 2] = keccak_state[ROW2 + 1]
+    keccak_state[B2] = keccak_state[ROW2 + 2]
+    keccak_state[B3 + 3] = keccak_state[ROW2 + 3]
+    keccak_state[B4 + 1] = keccak_state[ROW2 + 4]
+    keccak_state[B0 + 1] = keccak_state[ROW3]
+    keccak_state[B1 + 4] = keccak_state[ROW3 + 1]
+    keccak_state[B2 + 2] = keccak_state[ROW3 + 2]
+    keccak_state[B3] = keccak_state[ROW3 + 3]
+    keccak_state[B4 + 3] = keccak_state[ROW3 + 4]
+    keccak_state[B0 + 3] = keccak_state[ROW4]
+    keccak_state[B1 + 1] = keccak_state[ROW4 + 1]
+    keccak_state[B2 + 4] = keccak_state[ROW4 + 2]
+    keccak_state[B3 + 2] = keccak_state[ROW4 + 3]
+    keccak_state[B4] = keccak_state[ROW4 + 4]
 }
 
 // CHI: non-linear step
 // A[x,y] = B[x,y] ^ ((not B[x+1,y]) and B[x+2,y])
-fn chi<state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4>() {
+fn chi<keccak_state>() {
 
-    for j:u3 = 0; j<5; j = j + 1 {
-        state_row0[j] = b0[j] ^ ((~b1[j]) & b2[j])
-        state_row1[j] = b1[j] ^ ((~b2[j]) & b3[j])
-        state_row2[j] = b2[j] ^ ((~b3[j]) & b4[j])
-        state_row3[j] = b3[j] ^ ((~b4[j]) & b0[j])
-        state_row4[j] = b4[j] ^ ((~b0[j]) & b1[j])
+    for j:u7 = 0; j<5; j = j + 1 {
+        keccak_state[ROW0 + j] = keccak_state[B0 + j] ^ ((~keccak_state[B1 + j]) & keccak_state[B2 + j])
+        keccak_state[ROW1 + j] = keccak_state[B1 + j] ^ ((~keccak_state[B2 + j]) & keccak_state[B3 + j])
+        keccak_state[ROW2 + j] = keccak_state[B2 + j] ^ ((~keccak_state[B3 + j]) & keccak_state[B4 + j])
+        keccak_state[ROW3 + j] = keccak_state[B3 + j] ^ ((~keccak_state[B4 + j]) & keccak_state[B0 + j])
+        keccak_state[ROW4 + j] = keccak_state[B4 + j] ^ ((~keccak_state[B0 + j]) & keccak_state[B1 + j])
     }
 
 }
 
 // IOTA: round constant step
 // A[0,0] = A[0,0] ^ RC
-fn iota<state_row0>(round_constant:u64) {
-    state_row0[0] = state_row0[0] ^ round_constant
+fn iota<keccak_state>(round_constant:u64) {
+    keccak_state[ROW0] = keccak_state[ROW0] ^ round_constant
 }
 
 // ===================================================================
@@ -283,4 +283,3 @@ fn bit_rotl64(word:u64, n:u6) -> (res:u64) {
     var shift:u7 = 64 - (n as u7)
     res = (word << n) | (word >> shift)
 }
-
