@@ -251,7 +251,12 @@ func (s *schemaScanner) addColRef(modID schema.ModuleId, regID register.Id, out 
 
 // moduleHasReferencedColumn reports whether any column in modDecl appears in
 // the referenced set.
-func (s *schemaScanner) moduleHasReferencedColumn(modDecl schema.Module[koalabear.Element], moduleName string, referenced map[string]struct{}) bool {
+func (s *schemaScanner) moduleHasReferencedColumn(
+	modDecl schema.Module[koalabear.Element],
+	moduleName string,
+	referenced map[string]struct{},
+) bool {
+
 	for _, colDecl := range modDecl.Registers() {
 		if _, ok := referenced[qualifiedCorsetName(moduleName, colDecl.Name())]; ok {
 			return true
