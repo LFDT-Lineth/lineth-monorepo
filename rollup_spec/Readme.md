@@ -513,7 +513,8 @@ separate from the l2-execution, rollup, and rollup-aggregation guest programs.
 **What the contract does:**
 
 1. **On blob submission:** compute `endShnarf = keccak256(parentShnarf, lastBlockHash, blobHash)` and anchor it in storage.
-2. **On finalization:** verify the STARK-to-SNARK proof against the sixteen aggregated public inputs (§2.4), then:
+2. **On finalization:** verify the STARK-to-SNARK proof against the sixteen aggregated public inputs (§2.4), including `keccak256(verifierKeys)` (see §5.3), then:
+   - Assert that every VK in `finalizationData.verifierKeys` is in the on-chain allowlist (§5.3)
    - Assert `parentShnarf == currentFinalizedShnarf` (DA and block-hash continuity — the shnarf encodes the last block hash, so this check subsumes a separate `parentBlockHash` check)
    - Assert `endShnarf` was anchored by a prior blob submission (DA anchoring — `l1_rollup.py` rejects an un-anchored `endShnarf` and reads the `lastBlockHash` recorded with the anchored shnarf to update `currentFinalizedLastBlockHash`)
    - Assert `parentL1L2BridgeRollingHash == currentFinalizedL1L2BridgeRollingHash` and `parentL1L2BridgeRollingHashMessageNumber == currentFinalizedL1L2BridgeRollingHashMessageNumber` (deposit bridge continuity)
@@ -523,10 +524,10 @@ separate from the l2-execution, rollup, and rollup-aggregation guest programs.
    - Assert every VK in the proof's combined `programVks` set is a member of `approvedVks` (guest-program anchoring — an order-independent set-membership test that rejects any finalization built from an unapproved exec or rollup guest binary; the two are not distinguished on-chain); revert otherwise. See §2.6 *Guest Program Anchoring (ProgramVK)* for the mechanism and list-management policy.
    - Verify `keccak256(submittedRoots) == l2L1BridgeTransactionTree`; store each root via `l2MerkleRootsDepths[root] = D`
    - Optionally process `l2MessagingBlocksOffsets` calldata to emit `L2MessagingBlockAnchored` discovery events (unchanged from today)
-   - Update storage: `currentFinalizedLastBlockHash`, `currentFinalizedShnarf`, `currentL2BlockNumber`, `currentL2BlockTimestamp`, `currentFinalizedL1L2BridgeRollingHash`, `currentFinalizedL1L2BridgeRollingHashMessageNumber`, `currentFinalizedFtxRollingHash`, `currentFinalizedProcessedFtxNumber`
+   - Update storage: `blockHashes[endBlockNumber] = finalBlockHash`, `currentFinalizedShnarf`, `currentL2BlockNumber`, `currentFinalizedState = keccak256(l1RollingHashMessageNumber, l1RollingHash, finalForcedTransactionNumber, finalForcedTransactionRollingHash, finalTimestamp)`
+   - Emit `DataFinalizedV4(startBlockNumber, endBlockNumber, shnarf, parentBlockHash, finalBlockHash)` — see §5.4
 
 3. **Guest-program approval (security-council managed):** maintains `approvedVks`, a single combined set of approved `programVk` hashes covering both exec and rollup guests — exec and rollup VKs are **not** distinguished on-chain, and the proof surfaces them as one combined `programVks` public-input set (§2.4); the exec-vs-rollup split is internal guest bookkeeping only. The security council calls `addApprovedVk` / `removeApprovedVk` to manage membership, the same trust model as `setVerifierAddress`. See §2.6 *Guest Program Anchoring (ProgramVK)* for the management policy.
-
 
 **What is removed:**
 
@@ -551,6 +552,10 @@ function submitBlobs(
 **Per-blob shnarf computation.** For each blob carried by the calling transaction, the contract reads the blob's versioned hash via the EIP-4844 `blobhash(i)` opcode and folds it into the running shnarf together with the caller-supplied last-block hash for that blob. The hash function is the standard 3-input form from §3.1, applied iteratively:
 
 ```
+K = len(_blobFinalBlockHashes)
+if K == 0: revert BlobSubmissionDataIsMissing()
+if blobhash(K) != EMPTY_HASH: revert BlobSubmissionDataEmpty(K)  // no unaccounted extra blobs
+
 computedShnarf = _parentShnarf
 
 for i in [0, K):
@@ -562,10 +567,10 @@ for i in [0, K):
     currentBlobHash              // blobHash of blob i (from the EIP-4844 opcode)
   )
 
-assert computedShnarf == _finalBlobShnarf
+if computedShnarf != _finalBlobShnarf: revert FinalShnarfWrong(_finalBlobShnarf, computedShnarf)
 ```
 
-After the loop the contract anchors `(_parentShnarf, _finalBlobShnarf, _blobFinalBlockHashes[K-1])` via `_acceptShnarfData` so that a later finalization (§5) can prove `endShnarf` was produced by a prior blob submission and recover the last block hash to update `currentFinalizedLastBlockHash`. The contract never recomputes a KZG commitment, never calls the `0x0A` point-evaluation precompile, and never reads a polynomial evaluation point or claim — those obligations have moved into the compression proof.
+After the loop the contract anchors `(_parentShnarf, _finalBlobShnarf, _blobFinalBlockHashes[K-1])` via `_acceptShnarfData`, which emits `DataSubmittedV4(parentShnarf, shnarf, finalBlockHash)` and marks `_finalBlobShnarf` as existing in the shnarf tracking map so that a later finalization can assert `endShnarf` was anchored by a prior submission. The contract never recomputes a KZG commitment, never calls the `0x0A` point-evaluation precompile, and never reads a polynomial evaluation point or claim — those obligations have moved into the compression proof.
 
 **Removed from the per-blob calldata.** The previous `BlobSubmission` struct carried five fields; all five are deleted from the L1 interface:
 
@@ -608,12 +613,12 @@ computedShnarf = _computeShnarf(
   currentDataHash                      // dataHash (keccak256 of compressedData — plays the role of blobHash on the calldata path)
 )
 
-assert computedShnarf == _expectedShnarf
+if computedShnarf != _expectedShnarf: revert FinalShnarfWrong(_expectedShnarf, computedShnarf)
 ```
 
-After the computation the contract anchors `(_parentShnarf, _expectedShnarf, _submission.blockHash)` via `_acceptShnarfData` so that a later finalization (§5) can prove `endShnarf` was produced by a prior calldata submission and recover the last block hash to update `currentFinalizedLastBlockHash`. The contract never runs the Horner-method polynomial evaluation, never reduces modulo the BLS scalar field, and never reads a `dataEvaluationPoint` or `dataEvaluationClaim` — those obligations have moved into the compression proof.
+After the computation the contract anchors `(_parentShnarf, _expectedShnarf, _submission.blockHash)` via `_acceptShnarfData`, which emits `DataSubmittedV4(parentShnarf, shnarf, finalBlockHash)` and marks `_expectedShnarf` in the shnarf tracking map. The contract never runs the Horner-method polynomial evaluation, never reduces modulo the BLS scalar field, and never reads a `dataEvaluationPoint` or `dataEvaluationClaim` — those obligations have moved into the compression proof.
 
-**Removed from the submission struct.** The previous `CompressedCalldataSubmission` struct carried three fields; two are deleted and one is retained:
+**Removed from the submission struct.** The previous `CompressedCalldataSubmission` struct is replaced by `CompressedCalldataSubmissionV2`; three fields were carried, two are deleted and one is retained:
 
 | Field | Fate |
 |---|---|
@@ -624,6 +629,90 @@ After the computation the contract anchors `(_parentShnarf, _expectedShnarf, _su
 **Removed in-contract computation.** The `_calculateY` Horner-method routine is deleted entirely. It iterated `compressedData` in 32-byte chunks (each required to start with a zero byte, enforced by `FirstByteIsNotZero`), interpreted each chunk as a BLS scalar field element, and computed `Y = Σ chunk_i · z^(n-1-i) mod BLS_CURVE_MODULUS` so the L1 shnarf could bind the polynomial evaluation claim. With the polynomial evaluation now proven inside the compression proof against the in-guest computed commitment, neither `Y` nor the evaluation point `z` ever appears on-chain, and the 32-byte chunk length / zero-first-byte constraints on `compressedData` become proof-internal invariants rather than L1 revert conditions. `BytesLengthNotMultipleOf32` and `FirstByteIsNotZero` are removed from the interface alongside `_calculateY`; `EmptySubmissionData` is retained.
 
 **Binding to the compression proof.** Identical to §5.1: for each calldata submission the prover produces a compression proof attesting to (a) correct decompression of `compressedData` and (b) the polynomial evaluation against `keccak256(compressedData)`, and the proof aggregates its related l2-execution proofs and emits the unified 16-field public-input tuple. The L1 contract only anchors the shnarf at submission time; verification happens at finalization (§5).
+
+### 5.3 Guest Program Verifier Key Registry
+
+The contract maintains an on-chain allowlist of guest-program verifier keys (VKs) — `bytes32` identifiers that uniquely identify a specific RISC-V guest program version. These are distinct from verifier *contract addresses* (which identify the SNARK verifier, e.g. Groth16/Plonk): a VK identifies which guest program the proof was produced for; the verifier contract verifies the SNARK wrapping it.
+
+**Storage and roles.**
+
+```solidity
+mapping(bytes32 verifierKey => bool exists) public verifierKeys;
+
+bytes32 public constant SET_VERIFIER_KEY_ROLE   = keccak256("SET_VERIFIER_KEY_ROLE");
+bytes32 public constant UNSET_VERIFIER_KEY_ROLE = keccak256("UNSET_VERIFIER_KEY_ROLE");
+```
+
+**Management functions.**
+
+```solidity
+function setVerifierKeys(bytes32[] calldata _verifierKeys)   external; // requires SET_VERIFIER_KEY_ROLE
+function unsetVerifierKeys(bytes32[] calldata _verifierKeys) external; // requires UNSET_VERIFIER_KEY_ROLE
+```
+
+Both functions require non-empty arrays and non-zero keys. `setVerifierKeys` reverts if a key is already set; `unsetVerifierKeys` reverts if a key is not found (non-idempotent by design — an attempt to remove an already-absent key is flagged as an error to prevent silent no-ops).
+
+Initial VKs are seeded from `BaseInitializationData.verifierKeys` at contract initialization.
+
+**Inclusion in the public input hash.** The finalization call's `verifierKeys` array — the set of VKs used in the batch being finalized — is hashed and included in `_computePublicInput`:
+
+```
+publicInput = keccak256(
+  lastFinalizedShnarf,
+  finalShnarf,
+  finalTimestamp,
+  endBlockNumber,
+  ...                            // L1/L2 rolling hash fields, FTX fields, Merkle depth
+  keccak256(l2MerkleRoots),
+  verifierChainConfiguration,
+  keccak256(filteredAddresses),
+  keccak256(verifierKeys)        // ← NEW: binds which guest programs produced this proof
+)
+```
+
+Before proof verification, the contract validates that every key in `finalizationData.verifierKeys` is in the allowlist:
+
+```solidity
+function _validateVerifierKeys(bytes32[] calldata _verifierKeysUsed) internal view {
+  for (uint256 i; i < _verifierKeysUsed.length; i++) {
+    require(verifierKeys[_verifierKeysUsed[i]], VerifierKeyNotFound(_verifierKeysUsed[i]));
+  }
+}
+```
+
+This ensures the proof was produced using an operator-approved guest program version and that any future guest upgrades require an explicit governance action to add the new VK before that proof type can be finalized.
+
+### 5.4 Migration: State-Root-Hash to Block-Hash Finalization
+
+The initial deployment of the new contract must transition existing state that was committed under the old 5-argument shnarf formula (`keccak256(parentShnarf, snarkHash, stateRootHash, evaluationPoint, evaluationClaim)`) to the new 3-argument formula (`keccak256(parentShnarf, lastBlockHash, blobHash)`).
+
+**`FinalizationDataV5` parent fields.** The struct places both parent continuity fields together at the top (offsets `0x000` and `0x020`) to make the path-selection intent visible at the calldata level:
+
+```solidity
+bytes32 parentStateRootHash;  // migration path: expected starting state root hash
+bytes32 parentBlockHash;      // new path:       expected starting block hash
+```
+
+**How it works.** The contract stores a `blockHashes` mapping keyed by L2 block number. At initialization, the genesis block hash is written. On each finalization, the contract checks whether `blockHashes[lastFinalizedBlockNumber]` is set:
+
+- **Migration path (empty — no block hash stored):** The parent was committed under the old state-root-hash model. The contract asserts `stateRootHashes[lastFinalizedBlockNumber] == finalizationData.parentStateRootHash` (revert: `StartingRootHashDoesNotMatch`), uses the legacy 5-argument `_computeShnarf`, and writes `stateRootHashes[endBlockNumber]` as before. After this path runs, it writes `blockHashes[endBlockNumber] = finalBlockHash`, which moves the *next* finalization round onto the new path.
+- **New path (non-empty):** The parent was committed under the block-hash model. The contract asserts `blockHashes[lastFinalizedBlockNumber] == finalizationData.parentBlockHash` (revert: `StartingBlockHashDoesNotMatch`) as a soft continuity check — the on-chain mapping is authoritative, but the caller must declare which parent they are building from. The contract then uses the 3-argument `_computeShnarf(shnarfData.parentShnarf, finalBlockHash, finalBlobHash)`.
+
+On the very first post-upgrade finalization the new path is not yet active (migration path runs instead); the `parentBlockHash` in the emitted `DataFinalizedV4` event will be `EMPTY_HASH` — indexers should treat this as the transition marker.
+
+**`DataFinalizedV4` event.** A single finalization event is emitted for all paths (no dual-event emission):
+
+```solidity
+event DataFinalizedV4(
+  uint256 indexed startBlockNumber,
+  uint256 indexed endBlockNumber,
+  bytes32 indexed shnarf,
+  bytes32 parentBlockHash,   // EMPTY_HASH on the first post-upgrade finalization
+  bytes32 finalBlockHash
+);
+```
+
+`DataFinalizedV3` is retired and no longer emitted after this upgrade.
 
 ---
 
@@ -719,7 +808,7 @@ After the loop the guest asserts `rollingHash == endFtxRollingHash` and outputs 
 | **Shnarf formula** | `keccak256(parent, snarkHash, stateRoot, X, Y)` — 5 inputs; `snarkHash` must be computed in-circuit                   | `keccak256(parent, lastBlockHash, blobHash)` — 3 standard inputs |
 | **KZG verification** | L1 contract calls `0x0A` precompile; `X` and `Y` exposed on-chain                                                     | Commitment computed and proof verified inside zkVM guest; `blobKzgCommitment`, `X`, and `Y` never appear on-chain |
 | **Blob submission interface** | `submitBlobs(BlobSubmission[] calldata, bytes32, bytes32)` — per-blob struct carries `kzgCommitment`, `kzgProof`, `dataEvaluationClaim`, `finalStateRootHash`, `snarkHash`; contract calls `0x0A` precompile per blob | `submitBlobs(bytes32[] calldata _blobFinalBlockHashes, bytes32 _parentShnarf, bytes32 _finalBlobShnarf)` — one `bytes32` per blob (its last block hash); KZG verification moved into the compression proof; no precompile call |
-| **Calldata submission interface** | `submitDataAsCalldata(CompressedCalldataSubmission calldata, bytes32, bytes32)` — struct carries `finalStateRootHash`, `snarkHash`, `compressedData`; contract runs in-contract Horner-method polynomial evaluation (`_calculateY`) over 32-byte chunks mod BLS scalar field | `submitDataAsCalldata(CompressedCalldataSubmissionV2 calldata, bytes32, bytes32)` — struct carries `blockHash` + `compressedData`; polynomial evaluation moved into the compression proof; Horner method, `BytesLengthNotMultipleOf32`, and `FirstByteIsNotZero` deleted |
+| **Calldata submission interface** | `submitDataAsCalldata(CompressedCalldataSubmission calldata, bytes32, bytes32)` — struct carries `finalStateRootHash`, `snarkHash`, `compressedData`; contract runs in-contract Horner-method polynomial evaluation (`_calculateY`) over 32-byte chunks mod BLS scalar field | `submitDataAsCalldata(CompressedCalldataSubmissionV2 calldata, bytes32, bytes32)` — new struct `CompressedCalldataSubmissionV2` carries `blockHash` + `compressedData`; polynomial evaluation moved into the compression proof; Horner method, `BytesLengthNotMultipleOf32`, and `FirstByteIsNotZero` deleted |
 | **Compression** | Custom SNARK-friendly LZSS; arithmetization-constrained compression ratio                                             | Standard LZ4/zstd compiled into RISC-V guest; unconstrained ratio |
 | **Proof interconnection** | Bespoke pi-interconnection circuit in Go/Gnark; gate-level array mapping                                              | rollup proof: recursively verifies N l2-execution proofs across K ≥ 1 blobs and chains them with `assert_eq!` in the RISC-V guest. rollup-aggregation proof: flat recursion over M rollup proofs, same continuity assertions across rollup-proof boundaries |
 | **l2-execution public inputs** | ~14 Type-2 parameters (timestamps, batch indices, conflation data, dynamic arrays)                                    | 16 fields — see §2.1. Drops state roots (block-hash chain anchors continuity); keeps `endBlockTimestamp`; adds FTX fields (`parent`/`endFtxRollingHash`, `parent`/`endProcessedFtxNumber`, `filteredAddressesHash`) and `txFromsHash` |
@@ -730,3 +819,6 @@ After the loop the guest asserts `rollingHash == endFtxRollingHash` and outputs 
 | **Final aggregated public inputs** | 13 fields (shnarfs, timestamps, block numbers, rolling hashes ×2, Merkle roots…)                                      | 16 fields — see §2.4 |
 | **ProgramVK anchoring** | Hard-anchored: the aggregation circuit's own verifying key, deployed via `setVerifierAddress`, fixes the whole set of inner-circuit identities it can recursively verify; changing that set means deploying a new verifier | Flexibly anchored: exec and rollup guests each commit a `programVk`, bubbled up as a single combined PI set field `programVks` (§2.2–§2.4; a canonical distinct, sorted-ascending array; exec vs rollup not distinguished — internal guest bookkeeping); L1 runs an order-independent set-membership check of every entry against a mutable, council-managed `approvedVks` set at finalization (§2.6, §5) and reverts otherwise — no verifier redeploy needed; aggregation-grained, so multiple approved exec VKs (i.e. different forks) can finalize together in one call |
 | **rollup-proof granularity** | n/a (no rollup proof existed; compression was a separate proof per blob)                                                | Configurable: one rollup proof can cover `K ≥ 1` blobs (analogous to today's M-block conflation inside an l2-execution proof). `K = 1` is the simplest case; `K > 1` amortizes recursion overhead |
+| **Guest program verifier key registry** | n/a | New on-chain allowlist of `bytes32` guest-program VKs (distinct from verifier contract addresses). Managed by `SET_VERIFIER_KEY_ROLE` / `UNSET_VERIFIER_KEY_ROLE`. The finalization batch declares which VKs it used; the contract validates all are allowed and includes `keccak256(verifierKeys)` in the L1 public input hash — see §5.3 |
+| **Finalization event** | `DataFinalizedV3(startBlockNumber, endBlockNumber, shnarf, parentStateRootHash, finalStateRootHash)` | `DataFinalizedV4(startBlockNumber, endBlockNumber, shnarf, parentBlockHash, finalBlockHash)` — single event for all paths; `parentBlockHash` is `EMPTY_HASH` on the first post-upgrade finalization (migration marker) — see §5.4 |
+| **L1 block hash storage** | n/a | `mapping(uint256 blockNumber => bytes32 blockHash) public blockHashes` — populated at initialization with the genesis block hash and updated on every finalization; drives the migration path selection (§5.4) |
