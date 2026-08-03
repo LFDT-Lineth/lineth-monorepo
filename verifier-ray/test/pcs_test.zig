@@ -188,6 +188,26 @@ fn challengeFriProof(root_seed: u32) fri.Proof {
     return .{ .round_roots = &S.round_roots, .final_poly = &S.final_poly, .running_queries = &.{} };
 }
 
+// D=1 / no-fold case: there are no fold rounds and therefore no running-layer
+// roots, but prover-ray still squeezes one final alpha and uses it as the
+// top-level alpha_DEEP.
+const d1_challenge_system = pcs.System{
+    .envelope_params = .{ .log_codeword_size = 2, .log_plaintext_size = 0, .num_queries = 1 },
+    .columns = &.{
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 0 }, .shifts = &[_]isize{0} },
+    },
+    .num_batches = 1,
+    .max_entries = 1,
+    .max_size_log2 = 0,
+};
+
+fn d1ChallengeFriProof() fri.Proof {
+    const S = struct {
+        var final_poly = [_]ext.Ext{ext.Ext.zero()};
+    };
+    return .{ .round_roots = &.{}, .final_poly = &S.final_poly, .running_queries = &.{} };
+}
+
 test "deriveChallenges produces the comptime-sized shape" {
     const recon = try pcs.reconstruct(challenge_system, &.{});
     var transcript = fiat_shamir.Transcript.init();
@@ -224,6 +244,18 @@ test "deriveChallenges depends on the absorbed transcript state" {
         if (!x.eql(y)) any_alpha_differs = true;
     }
     try std.testing.expect(any_alpha_differs);
+}
+
+test "deriveChallenges retains deep alpha when there are no fold rounds" {
+    const recon = try pcs.reconstruct(d1_challenge_system, &.{});
+    var transcript = fiat_shamir.Transcript.init();
+    var expected_transcript = fiat_shamir.Transcript.init();
+
+    const expected = expected_transcript.randomExt();
+    const challenges = try pcs.deriveChallenges(d1_challenge_system, recon, &transcript, d1ChallengeFriProof());
+
+    try std.testing.expectEqual(@as(usize, 0), challenges.foldAlphas().len);
+    try std.testing.expect(challenges.deep_alpha.eql(expected));
 }
 
 // ── STEP 1 byte-faithfulness anchor: runtime layout reconstruction ────────────

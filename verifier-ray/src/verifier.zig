@@ -168,6 +168,7 @@ pub fn verify(
         .entry_claims = opening.entry_claims,
         .zeta = all_coins[zeta_index],
         .fold_alphas = pcs_challenges.foldAlphas(),
+        .deep_alpha = pcs_challenges.deep_alpha,
         .query_positions = pcs_challenges.query_positions[0..recon.params.num_queries],
         .proof = opening.proof,
         .module_sizes = proof.module_sizes,

@@ -148,6 +148,11 @@ pub const VerifyInput = struct {
     entry_claims: []const []const ext.Ext,
     zeta: ext.Ext,
     fold_alphas: []const ext.Ext,
+    /// The top-level DEEP batching challenge. When FRI has one or more fold
+    /// rounds this equals the last entry of `fold_alphas`; when the largest
+    /// opened size is 1 (num_rounds == 0), prover-ray still squeezes this final
+    /// alpha and uses it as alpha_DEEP even though there are no fold alphas.
+    deep_alpha: ext.Ext = ext.Ext.zero(),
     query_positions: []const usize,
     proof: OpeningProof,
     /// Runtime dynamic-module sizes, in canonical dynamic-module order (the
@@ -339,6 +344,7 @@ pub fn PcsChallenges(comptime system: System) type {
     const max_rounds = comptime @as(usize, system.max_size_log2) - system.envelope_params.log_final_poly_size + 1;
     return struct {
         fold_alphas: [max_rounds]ext.Ext = undefined,
+        deep_alpha: ext.Ext = ext.Ext.zero(),
         query_positions: [system.envelope_params.num_queries]usize = undefined,
         num_rounds: usize = 0,
 
@@ -377,6 +383,7 @@ pub fn deriveChallenges(
     // Final round's challenge: squeezed UNCONDITIONALLY (matches prover-ray),
     // including D=1 where the loop above is empty.
     const final_alpha = transcript.randomExt();
+    challenges.deep_alpha = final_alpha;
     if (num_rounds > 0) challenges.fold_alphas[num_rounds - 1] = final_alpha;
 
     transcript.updateExt(fri_proof.final_poly);
@@ -474,7 +481,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
             else if (num_rounds > 0)
                 input.fold_alphas[num_rounds - 1]
             else
-                ext.Ext.zero();
+                input.deep_alpha;
 
             const level_pos = query_position >> @as(std.math.Log2Int(usize), @intCast(round));
             const seed = seedPair(rounds_buf[query_idx][0..num_rounds], round, num_rounds);
