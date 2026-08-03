@@ -139,10 +139,12 @@ pub fn verify(
     const pcs_system = systems.pcs;
     const opening = proof.pcs_opening;
 
-    // Rebuild the batch Merkle roots from their transcript-bound provenance
-    // (round oracle commitments + compile-time precomputed roots), NOT from the
-    // proof — so the root each batch is authenticated against is provably the same
-    // octuplet zeta is bound to. Mirrors prover-ray's `collectRoots`.
+    // Rebuild the per-batch Merkle roots from their transcript-bound
+    // provenance (round oracle commitments + compile-time precomputed roots),
+    // NOT from the proof. `pcs.verify` will reorder/deduplicate these into the
+    // proof's input-opening order, so the root each batch is authenticated
+    // against is provably the same octuplet zeta is bound to. Mirrors
+    // prover-ray's `collectRoots` + `inputOpeningRoots`.
     var bound_roots: [pcs_system.num_batches]poseidon2.Digest = undefined;
     try resolveRoots(pcs_system.batch_roots, proof.rounds, &bound_roots);
 

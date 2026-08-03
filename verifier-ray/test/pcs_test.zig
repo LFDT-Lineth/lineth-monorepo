@@ -258,7 +258,6 @@ test "reconstruct: dynamic column at size 2^2 (== a static col), canonical order
     const recon = try pcs.reconstruct(recon_system, &[_]usize{4});
     try std.testing.expectEqual(@as(usize, 3), recon.num_entries);
     try std.testing.expectEqual(@as(u8, 3), recon.top_size);
-    try std.testing.expectEqual(@as(usize, 2), recon.distinct_count);
 
     // entry 0: batch1 ext size3 pos0, from col decl 2
     try std.testing.expectEqual(@as(u8, 3), recon.entry_size_log2[0]);
@@ -284,10 +283,6 @@ test "reconstruct: dynamic column at size 2^2 (== a static col), canonical order
     try std.testing.expectEqual(@as(usize, 2), recon.col_to_entry[1]);
     try std.testing.expectEqual(@as(usize, 0), recon.col_to_entry[2]);
 
-    // index_by_batch: first entry is batch1 -> branch 0, then batch0 -> branch 1.
-    try std.testing.expectEqual(@as(usize, 1), recon.index_by_batch[0]);
-    try std.testing.expectEqual(@as(usize, 0), recon.index_by_batch[1]);
-
     // restricted params: top_size=3 -> offset=2, codeword 6-2=4, plaintext 3.
     try std.testing.expectEqual(@as(u8, 4), recon.params.log_codeword_size);
     try std.testing.expectEqual(@as(u8, 3), recon.params.log_plaintext_size);
@@ -312,10 +307,6 @@ test "reconstruct: same System, LARGER dynamic size changes bundle + top_size" {
     // whole point: one baked System, layout is a runtime function of the size.
     try std.testing.expectEqual(@as(usize, 0), recon.col_to_entry[0]);
 
-    // index_by_batch: first entry batch0 -> branch 0, then batch1 -> branch 1.
-    try std.testing.expectEqual(@as(usize, 0), recon.index_by_batch[0]);
-    try std.testing.expectEqual(@as(usize, 1), recon.index_by_batch[1]);
-
     // restricted params: top_size=4 -> offset=1, codeword 6-1=5, plaintext 4.
     try std.testing.expectEqual(@as(u8, 5), recon.params.log_codeword_size);
     try std.testing.expectEqual(@as(u8, 4), recon.params.log_plaintext_size);
@@ -324,4 +315,38 @@ test "reconstruct: same System, LARGER dynamic size changes bundle + top_size" {
 test "reconstruct: rejects non-power-of-two and missing dynamic sizes" {
     try std.testing.expectError(error.NonPowerOfTwoModuleSize, pcs.reconstruct(recon_system, &[_]usize{6}));
     try std.testing.expectError(error.MissingDynamicModuleSize, pcs.reconstruct(recon_system, &.{}));
+}
+
+test "routeInputRoots follows input-opening order as dynamic sizes change" {
+    const roots = [_]poseidon2.Digest{
+        challengeDigest(100),
+        challengeDigest(200),
+    };
+
+    const smaller = try pcs.reconstruct(recon_system, &[_]usize{4});
+    const smaller_routing = try pcs.routeInputRoots(recon_system, smaller, &roots);
+    try std.testing.expectEqual(@as(usize, 2), smaller_routing.distinct_count);
+    try std.testing.expectEqualDeep(roots[1], smaller_routing.distinctRoots()[0]);
+    try std.testing.expectEqualDeep(roots[0], smaller_routing.distinctRoots()[1]);
+    try std.testing.expectEqual(@as(usize, 1), smaller_routing.index_by_batch[0]);
+    try std.testing.expectEqual(@as(usize, 0), smaller_routing.index_by_batch[1]);
+
+    const larger = try pcs.reconstruct(recon_system, &[_]usize{16});
+    const larger_routing = try pcs.routeInputRoots(recon_system, larger, &roots);
+    try std.testing.expectEqual(@as(usize, 2), larger_routing.distinct_count);
+    try std.testing.expectEqualDeep(roots[0], larger_routing.distinctRoots()[0]);
+    try std.testing.expectEqualDeep(roots[1], larger_routing.distinctRoots()[1]);
+    try std.testing.expectEqual(@as(usize, 0), larger_routing.index_by_batch[0]);
+    try std.testing.expectEqual(@as(usize, 1), larger_routing.index_by_batch[1]);
+}
+
+test "routeInputRoots deduplicates equal batch roots" {
+    const recon = try pcs.reconstruct(recon_system, &[_]usize{16});
+    const shared = challengeDigest(300);
+    const routing = try pcs.routeInputRoots(recon_system, recon, &[_]poseidon2.Digest{ shared, shared });
+
+    try std.testing.expectEqual(@as(usize, 1), routing.distinct_count);
+    try std.testing.expectEqualDeep(shared, routing.distinctRoots()[0]);
+    try std.testing.expectEqual(@as(usize, 0), routing.index_by_batch[0]);
+    try std.testing.expectEqual(@as(usize, 0), routing.index_by_batch[1]);
 }

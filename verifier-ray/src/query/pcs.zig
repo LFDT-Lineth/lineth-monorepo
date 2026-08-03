@@ -124,13 +124,17 @@ pub const System = struct {
 
 pub const OpeningProof = struct {
     /// input_queries[q][i] is query q's opening of the i-th distinct input
-    /// tree (first-declaration order among the batches).
+    /// tree (input-opening order: first batch encountered by the canonical
+    /// size-descending layout, with equal Merkle roots deduplicated).
     input_queries: []const []const merkle.InputTreeOpening,
     fri_proof: fri.Proof,
 };
 
 pub const VerifyInput = struct {
-    /// One root per distinct batch index, in first-declaration order.
+    /// One Merkle root per committed batch, in canonical batch order
+    /// (`batch_idx == roots[idx]`). `verify` reorders and deduplicates these
+    /// into the proof's input-opening order, mirroring prover-ray's
+    /// `inputOpeningRoots`.
     roots: []const poseidon2.Digest,
     /// Per-opened-column claimed evaluations, in reconstructed canonical layout
     /// order: `entry_claims[entry_idx][k]` is the claim for that entry's `k`-th
@@ -166,8 +170,6 @@ pub fn Reconstructed(comptime system: System) type {
         num_entries: usize,
         /// runtime max size_log2 across columns (== restricted log_plaintext_size).
         top_size: u8,
-        /// runtime number of distinct batches referenced.
-        distinct_count: usize,
 
         // Per-entry arrays, canonical order, filled [0, num_entries).
         entry_size_log2: [cap]u8 = undefined,
@@ -178,12 +180,27 @@ pub fn Reconstructed(comptime system: System) type {
 
         /// col_to_entry[c] = the canonical entry index of column c (decl order).
         col_to_entry: [cap]usize = undefined,
-        /// index_by_batch[b] = the input-tree branch index for batch b, in
-        /// first-declaration (by canonical entry order) order.
-        index_by_batch: [cap]usize = undefined,
 
         pub fn shiftsFor(self: Self, comptime sys: System, entry_idx: usize) []const usize {
             return sys.columns[self.entry_col_decl_idx[entry_idx]].shifts;
+        }
+    };
+}
+
+/// The proof's input-tree routing derived from the reconstructed layout and the
+/// actual per-batch roots: distinct roots in input-opening order plus the
+/// input-tree branch index each batch maps to.
+pub fn InputRootRouting(comptime system: System) type {
+    return struct {
+        const Self = @This();
+        const batch_cap = @max(system.num_batches, 1);
+
+        distinct_count: usize = 0,
+        roots: [batch_cap]poseidon2.Digest = undefined,
+        index_by_batch: [batch_cap]usize = [_]usize{std.math.maxInt(usize)} ** batch_cap,
+
+        pub fn distinctRoots(self: *const Self) []const poseidon2.Digest {
+            return self.roots[0..self.distinct_count];
         }
     };
 }
@@ -267,23 +284,42 @@ pub fn reconstruct(comptime system: System, module_sizes: []const usize) Error!R
     }
     if (entry_idx != num_cols) return Error.LayoutOverflow;
 
-    // Distinct-batch mapping (prover-ray inputOpeningRoots): first-declaration
-    // order across the canonical entry enumeration. index_by_batch[b] gives the
-    // branch index of batch b.
-    var assigned: [@max(system.max_entries, 1)]bool = [_]bool{false} ** @max(system.max_entries, 1);
-    var distinct: usize = 0;
-    for (0..num_cols) |e| {
-        const b = r.entry_batch[e];
-        if (b < system.max_entries and !assigned[b]) {
-            assigned[b] = true;
-            r.index_by_batch[b] = distinct;
-            distinct += 1;
-        }
-    }
-    r.distinct_count = distinct;
-
     r.params = system.envelope_params.restrictTo(top_size) catch return Error.RestrictOutOfRange;
     return r;
+}
+
+/// Mirrors prover-ray's `inputOpeningRoots`: walk the canonical entry order,
+/// take each batch's root the first time that batch appears, and deduplicate
+/// equal roots by value so batches sharing a Merkle root consume one input-tree
+/// opening.
+pub fn routeInputRoots(
+    comptime system: System,
+    recon: Reconstructed(system),
+    batch_roots: []const poseidon2.Digest,
+) Error!InputRootRouting(system) {
+    if (batch_roots.len != system.num_batches) return Error.RootCountMismatch;
+
+    var routing = InputRootRouting(system){};
+    for (0..recon.num_entries) |entry_idx| {
+        const batch_idx = recon.entry_batch[entry_idx];
+        const root = batch_roots[batch_idx];
+        const branch_idx = findRootIndex(routing.roots[0..routing.distinct_count], root) orelse blk: {
+            if (routing.distinct_count >= system.num_batches) return Error.RootCountMismatch;
+            const next = routing.distinct_count;
+            routing.roots[next] = root;
+            routing.distinct_count = next + 1;
+            break :blk next;
+        };
+        routing.index_by_batch[batch_idx] = branch_idx;
+    }
+    return routing;
+}
+
+fn findRootIndex(roots: []const poseidon2.Digest, want: poseidon2.Digest) ?usize {
+    for (roots, 0..) |root, i| {
+        if (std.meta.eql(root, want)) return i;
+    }
+    return null;
 }
 
 // =============================================================================
@@ -351,11 +387,11 @@ pub fn deriveChallenges(
 
 pub fn verify(comptime system: System, input: VerifyInput) Error!void {
     const recon = try reconstruct(system, input.module_sizes);
+    const routing = try routeInputRoots(system, recon, input.roots);
     const params = recon.params;
     const num_entries = recon.num_entries;
     const num_rounds = params.numRoundsRuntime();
 
-    if (input.roots.len != recon.distinct_count) return Error.RootCountMismatch;
     if (input.entry_claims.len != num_entries) return Error.ClaimedValueCountMismatch;
 
     // Each opened column owns exactly `shifts.len` claimed values. Guarded by a
@@ -400,7 +436,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
 
         const query_position = input.query_positions[query_idx];
         const opening = input.proof.input_queries[query_idx];
-        try authenticateInputQuery(params, opening, input.roots, recon, query_position);
+        try authenticateInputQuery(params, opening, routing, query_position);
 
         if (num_rounds > 0) {
             const running_query = input.proof.fri_proof.running_queries[query_idx];
@@ -426,7 +462,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
             const domain_log_size = params.log_codeword_size - round;
             const level_size = @as(usize, 1) << @as(std.math.Log2Int(usize), @intCast(domain_log_size));
 
-            try bindInputTreeOpenings(system, recon, e0, e1, opening, level_size);
+            try bindInputTreeOpenings(system, recon, routing, e0, e1, opening, level_size);
 
             const alpha_deep: ext.Ext = if (round < num_rounds)
                 input.fold_alphas[round].square()
@@ -441,6 +477,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
             const self_val = try reconstructQueryValueAt(
                 system,
                 recon,
+                routing,
                 e0,
                 e1,
                 size_log2,
@@ -456,6 +493,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
             const sib_val = try reconstructQueryValueAt(
                 system,
                 recon,
+                routing,
                 e0,
                 e1,
                 size_log2,
@@ -524,14 +562,13 @@ fn systemHasMultiShiftEntry(comptime system: System) bool {
 fn authenticateInputQuery(
     params: fri.Params,
     opening: []const merkle.InputTreeOpening,
-    roots: []const poseidon2.Digest,
-    recon: anytype,
+    routing: anytype,
     query_position: usize,
 ) Error!void {
-    if (opening.len != recon.distinct_count or roots.len != recon.distinct_count) return Error.InputTreeCountMismatch;
+    if (opening.len != routing.distinct_count) return Error.InputTreeCountMismatch;
 
     const codeword_size = @as(usize, 1) << @as(std.math.Log2Int(usize), @intCast(params.log_codeword_size));
-    for (opening, roots) |branch, root| {
+    for (opening, routing.distinctRoots()) |branch, root| {
         const num_levels = branch.leaves.len;
         if (num_levels == 0 or num_levels > params.log_codeword_size) return Error.InputTreeShapeMismatch;
         const num_leaves = @as(usize, 1) << @as(std.math.Log2Int(usize), @intCast(num_levels));
@@ -560,6 +597,7 @@ fn bundleBatchWidths(recon: anytype, e0: usize, e1: usize, batch_idx: usize) str
 fn bindInputTreeOpenings(
     comptime system: System,
     recon: anytype,
+    routing: anytype,
     e0: usize,
     e1: usize,
     opening: []const merkle.InputTreeOpening,
@@ -580,7 +618,7 @@ fn bindInputTreeOpenings(
         count += 1;
 
         const widths = bundleBatchWidths(recon, e0, e1, b);
-        const branch_idx = recon.index_by_batch[b];
+        const branch_idx = routing.index_by_batch[b];
         const pair = try opening[branch_idx].pairAtLevel(level_size);
         if (pair[0].base.len != widths.base or pair[0].ext.len != widths.ext) return Error.RowShapeMismatch;
         if (pair[1].base.len != widths.base or pair[1].ext.len != widths.ext) return Error.ConjugateRowShapeMismatch;
@@ -594,6 +632,7 @@ fn bindInputTreeOpenings(
 fn reconstructQueryValueAt(
     comptime system: System,
     recon: anytype,
+    routing: anytype,
     e0: usize,
     e1: usize,
     size_log2: u8,
@@ -611,7 +650,7 @@ fn reconstructQueryValueAt(
     while (i > e0) {
         i -= 1;
         const batch_idx = recon.entry_batch[i];
-        const branch_idx = recon.index_by_batch[batch_idx];
+        const branch_idx = routing.index_by_batch[batch_idx];
         const pair = try opening[branch_idx].pairAtLevel(level_size);
         const row = if (sibling) pair[1] else pair[0];
         const row_idx = recon.entry_row_idx[i];
