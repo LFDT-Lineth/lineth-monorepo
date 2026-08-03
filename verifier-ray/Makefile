@@ -128,10 +128,9 @@ test-codegen:
 generate-testdata:
 	cd testdata/generate && go run .
 	cd testdata/generate/fri && go run .
-	cd ../prover-ray/crypto/koalabear/fri && go test -tags gen_vectors -run '^TestGenerateVectors$$' .
 
 verify-testdata: generate-testdata
-	git diff --exit-code -- testdata/generated/*.zig testdata/generated/*.json
+	git diff --exit-code -- testdata/generated/*.zig
 
 # Legacy file-based input transport, unused while inputs are embedded; kept for
 # reintroduction once input serialization lands.

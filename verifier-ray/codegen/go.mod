@@ -8,7 +8,7 @@ require (
 	github.com/bits-and-blooms/bitset v1.24.4 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/consensys/gnark v0.14.1-0.20260219004710-bbfb2f70a565 // indirect
-	github.com/consensys/gnark-crypto v0.20.2-0.20260521181528-f8db9b5b907d // indirect
+	github.com/consensys/gnark-crypto v0.20.2-0.20260729182318-24876de866b5 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.1 // indirect
 	github.com/google/pprof v0.0.0-20260402051712-545e8a4df936 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
@@ -17,9 +17,9 @@ require (
 	github.com/rs/zerolog v1.35.1 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
-	golang.org/x/crypto v0.50.0 // indirect
+	golang.org/x/crypto v0.52.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/sys v0.43.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
 )
 
 replace github.com/LFDT-Lineth/lineth-monorepo/prover-ray => ../../prover-ray

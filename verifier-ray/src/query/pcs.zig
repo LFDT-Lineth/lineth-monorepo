@@ -3,6 +3,7 @@ const field = @import("../field/koalabear.zig");
 const ext = @import("../field/koalabear_ext.zig");
 const poseidon2 = @import("../crypto/poseidon2.zig");
 const merkle = @import("../crypto/merkle.zig");
+const canonical = @import("../polynomial/canonical.zig");
 const fiat_shamir = @import("../crypto/fiat_shamir.zig");
 const fri = @import("fri.zig");
 
@@ -455,8 +456,8 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
             try fri.resolveRunningLayers(params, input.proof.fri_proof.round_roots, running_query, query_position, rounds_buf[query_idx][0..num_rounds]);
         }
 
-        final_buf[query_idx] = fri.domainPointExt(params.log_codeword_size - num_rounds, query_position >> @as(std.math.Log2Int(usize), @intCast(num_rounds)));
-        final_buf[query_idx] = evalFinalPoly(input.proof.fri_proof.final_poly, final_buf[query_idx]);
+        const final_point = fri.domainPointExt(params.log_codeword_size - num_rounds, query_position >> @as(std.math.Log2Int(usize), @intCast(num_rounds)));
+        final_buf[query_idx] = canonical.evaluateExtAtExt(input.proof.fri_proof.final_poly, final_point);
 
         // Walk entries grouped by bundle (contiguous same-size runs in canonical
         // order). For each distinct size we bind the input-tree openings once and
@@ -526,7 +527,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
         if (num_rounds == 0) {
             const pair = aux_buf[query_idx][0] orelse return Error.MissingTopLevelAux;
             const sib_final = fri.domainPointExt(params.log_codeword_size, query_position ^ 1);
-            const sib_final_value = evalFinalPoly(input.proof.fri_proof.final_poly, sib_final);
+            const sib_final_value = canonical.evaluateExtAtExt(input.proof.fri_proof.final_poly, sib_final);
             if (!pair.self.eql(final_buf[query_idx])) return Error.BoundaryFinalSelfMismatch;
             if (!pair.sibling.eql(sib_final_value)) return Error.BoundaryFinalSiblingMismatch;
         }
@@ -541,20 +542,12 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
     try fri.checkFolds(params, resolved[0..params.num_queries], input.fold_alphas, input.query_positions);
 }
 
-/// Evaluates the revealed final-polynomial coefficients at `x` via Horner.
-fn evalFinalPoly(coeffs: []const ext.Ext, x: ext.Ext) ext.Ext {
-    var acc = ext.Ext.zero();
-    var i = coeffs.len;
-    while (i != 0) {
-        i -= 1;
-        acc = acc.mul(x).add(coeffs[i]);
-    }
-    return acc;
-}
-
-/// The running-codeword seed for a level introduced at `round`: zero at round 0
-/// and at the boundary round `num_rounds`, otherwise the already-authenticated
-/// running pair.
+/// The running-codeword seed for a level introduced at `round`: zero at
+/// round 0 (no round -1 to fold from) and at the boundary round `num_rounds`
+/// (one past the last fold, never itself folded), otherwise the
+/// already-authenticated running pair. Mirrors `rq.Rounds[round]` always
+/// being valid in prover-ray, where `Rounds` carries an explicit zero-seeded
+/// slot at both ends.
 fn seedPair(rounds: []const fri.Pair, round: u8, num_rounds: u8) fri.Pair {
     if (round == 0 or round == num_rounds) return .{ .self = ext.Ext.zero(), .sibling = ext.Ext.zero() };
     return rounds[round];
@@ -582,11 +575,14 @@ fn authenticateInputQuery(
     const codeword_size = @as(usize, 1) << @as(std.math.Log2Int(usize), @intCast(params.log_codeword_size));
     for (opening, routing.distinctRoots()) |branch, root| {
         const num_levels = branch.leaves.len;
+        // num_levels is proof-controlled: bounding it before the shift keeps
+        // an oversized value from overflow-trapping the cast, and makes
+        // num_leaves <= codeword_size follow.
         if (num_levels == 0 or num_levels > params.log_codeword_size) return Error.InputTreeShapeMismatch;
         const num_leaves = @as(usize, 1) << @as(std.math.Log2Int(usize), @intCast(num_levels));
-        if (num_leaves > codeword_size or codeword_size % num_leaves != 0) return Error.InputTreeShapeMismatch;
+        if (codeword_size % num_leaves != 0) return Error.InputTreeShapeMismatch;
         const recovered = try branch.recoverRoot(query_position / (codeword_size / num_leaves));
-        if (!std.meta.eql(recovered, root)) return Error.MerkleProofInvalid;
+        if (!poseidon2.eql(recovered, root)) return Error.MerkleProofInvalid;
     }
 }
 
@@ -699,9 +695,14 @@ fn shiftedPoint(size_log2: u8, offset: isize, zeta: ext.Ext) ext.Ext {
 }
 
 /// Whether `point` lands in the size-2^log_size multiplicative subgroup.
+/// Every domain point is a base-field root of unity, so an extension-valued
+/// point that isn't itself a lifted base element can never coincide with one.
+/// Mirrors prover-ray's `pointInDomain`. `log_size` is a RUNTIME value here
+/// (derived from the reconstructed layout, not the comptime System), so the
+/// exponentiation uses `pow`, not `powComptime`.
 fn pointInDomain(point: ext.Ext, log_size: u8) bool {
     if (!point.isBase()) return false;
-    const shift: std.math.Log2Int(u64) = @intCast(log_size);
-    const powered = point.B0.a0.pow(@as(u64, 1) << shift);
+    const order: u64 = @as(u64, 1) << @as(std.math.Log2Int(u64), @intCast(log_size));
+    const powered = point.B0.a0.pow(order);
     return powered.eql(field.Element.one());
 }

@@ -53,6 +53,9 @@ pub const Params = struct {
             if (self.log_plaintext_size >= self.log_codeword_size) {
                 @compileError("fri: log_plaintext_size must be less than log_codeword_size");
             }
+            if (self.num_queries == 0) {
+                @compileError("fri: num_queries must be nonzero, or every proof verifies");
+            }
         }
         return self.log_plaintext_size - self.log_final_poly_size;
     }
@@ -180,7 +183,7 @@ pub fn resolveRunningLayers(
         if (branch.siblings.len != want_siblings) return Error.InvalidRunningLayerShape;
 
         const recovered = try branch.recoverRoot(shr(position, j));
-        if (!std.meta.eql(recovered, round_roots[j - 1])) return Error.MerkleProofInvalid;
+        if (!poseidon2.eql(recovered, round_roots[j - 1])) return Error.MerkleProofInvalid;
 
         rounds[j] = .{
             .self = try octupletToExt(branch.leaf),
@@ -261,6 +264,8 @@ fn fullDomainGenerator(params: Params) field.Element {
 /// x = g^{bitrev_{log_size}(position)}, where g generates the size-2^log_size
 /// subgroup. Matches prover-ray's `domainPoint`: the codeword is stored
 /// bit-reversed so that FRI conjugate pairs land at adjacent positions.
+/// `log_size` is a RUNTIME value (derived from the reconstructed layout, not
+/// the comptime System), so `bitReverse`'s shift amount is computed at runtime.
 fn domainPoint(log_size: u8, generator: field.Element, position: usize) field.Element {
     return generator.pow(@as(u64, bitReverse(position, log_size)));
 }
