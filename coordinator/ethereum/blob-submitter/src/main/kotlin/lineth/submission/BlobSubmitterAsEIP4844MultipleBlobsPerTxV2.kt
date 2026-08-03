@@ -67,7 +67,7 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTxV2(
           }
           .thenPeek { transactionHash ->
             log.info(
-              "{}blobs submitted: blobs={} transactionHash={}, nonce={} gasPriceCaps={}",
+              "{}: blobs={} transactionHash={}, nonce={} gasPriceCaps={}",
               if (isEthCall) "eth_call blobs submission passed" else "blobs submitted",
               blobRecord.intervalString(),
               transactionHash,
