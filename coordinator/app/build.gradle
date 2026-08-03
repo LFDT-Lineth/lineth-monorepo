@@ -115,7 +115,7 @@ jar {
   doFirst {
     manifest {
       attributes(
-          'Class-Path': configurations.runtimeClasspath.collect { it.getName() }.findAll { it.endsWith('jar') }.join(' '),
+          'Class-Path': configurations.runtimeClasspath.collect { it.getName() }.findAll { it.endsWith('.jar') }.join(' '),
           'Main-Class': 'linea.coordinator.app.CoordinatorAppMain',
           'Multi-Release': 'true',
           // Required for Java 25+: Netty uses restricted System::loadLibrary in unnamed modules
