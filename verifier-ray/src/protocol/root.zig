@@ -2,7 +2,11 @@ const types = @import("types.zig");
 const fiat_shamir = @import("../crypto/fiat_shamir.zig");
 const field = @import("../field/koalabear.zig");
 
-pub const Error = error{ InvalidRoundCount, MissingDynamicModuleSize };
+/// Error from the bounds-checked cell accessor `Context.cell`. Split out so
+/// sub-verifiers can compose it into their own error sets.
+pub const CellError = error{CellRefOutOfRange};
+
+pub const Error = error{ InvalidRoundCount, MissingDynamicModuleSize } || CellError;
 
 pub const Visibility = types.Visibility;
 pub const Vector = types.Vector;
@@ -41,8 +45,22 @@ pub const Context = struct {
     /// Indexed by the compiled system's `round_coin_offsets`.
     all_coins: []const Coin,
     /// The verifier-visible round messages bound into the shared transcript.
-    /// Sub-verifiers read cell openings directly from `rounds[i].cells`.
+    /// Sub-verifiers read cell openings via `cell()`.
     rounds: []const RoundMessage,
+
+    /// Bounds-checked access to a transcript cell by its (round, index) ref.
+    /// `round`/`index` come from the trusted comptime System, but `rounds` and
+    /// each round's `cells` slice length come from the (untrusted) proof, so an
+    /// adversarial proof with a short round/cells slice would otherwise read out
+    /// of bounds — a memory-safety issue in bounds-check-off R5 builds. Returns an
+    /// error rather than trapping/reading garbage. (Soundness does not depend on
+    /// this: PCS runs first and rejects malformed proofs; this is robustness.)
+    pub fn cell(self: Context, round: usize, index: usize) CellError!Scalar {
+        if (round >= self.rounds.len) return error.CellRefOutOfRange;
+        const cells = self.rounds[round].cells;
+        if (index >= cells.len) return error.CellRefOutOfRange;
+        return cells[index];
+    }
 };
 
 /// Replays the prover–verifier transcript to derive all Fiat-Shamir coins,

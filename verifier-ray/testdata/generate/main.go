@@ -597,6 +597,14 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 
 	add := func(source, name string, sys *wiop.System, honest assignFn, invalid assignFn) error {
 		compileFullPipeline(sys)
+		// Fail closed: every verifier action the compiled system registered must be
+		// one the codegen knows how to emit. An unhandled action type would be
+		// silently dropped by the per-pass Build*System filters, producing a Zig
+		// verifier that never enforces that constraint — a soundness hole. This
+		// asserts the guard is actually live rather than dead code.
+		if err := codegen.AssertAllVerifierActionsHandled(sys); err != nil {
+			return fmt.Errorf("verifier actions %s/%s: %w", source, name, err)
+		}
 		routing, err := codegen.BuildCoinRouting(sys)
 		if err != nil {
 			return fmt.Errorf("build coin routing %s/%s: %w", source, name, err)

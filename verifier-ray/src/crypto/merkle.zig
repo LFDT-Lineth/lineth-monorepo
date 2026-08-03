@@ -16,6 +16,7 @@ pub const Error = error{
     InvalidLevelSize,
     LevelSizeTooLarge,
     LevelSizeAbsent,
+    IndexOutOfRange,
 };
 
 /// A Merkle opening for one running-layer leaf. Unlike a conventional Merkle
@@ -46,6 +47,12 @@ pub const Branch = struct {
             ancestor = hashNode(left, right, null);
             curr_pos >>= 1;
         }
+        // All bits of the leaf position must have been consumed by the walk: an
+        // `idx` larger than the tree's leaf count would leave residual high bits,
+        // meaning the branch does not authenticate a leaf that exists in the tree.
+        // Mirrors prover-ray's `tree.go` currPos>0 guard. Redundant when the
+        // caller has already bounded `idx < 2^siblings.len`, but defense-in-depth.
+        if (curr_pos != 0) return Error.IndexOutOfRange;
         return ancestor;
     }
 };
@@ -151,6 +158,8 @@ pub const InputTreeOpening = struct {
             i -= 1;
             step = foldOneLevel(step.ancestor, self.siblings[i], self.leaves[i], step.curr_pos);
         }
+        // Every bit of the leaf position must be consumed (see Branch.recoverRoot).
+        if (step.curr_pos != 0) return Error.IndexOutOfRange;
         return step.ancestor;
     }
 

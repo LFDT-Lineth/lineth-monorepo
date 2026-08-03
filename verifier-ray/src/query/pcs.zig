@@ -391,7 +391,6 @@ fn roundForSize(comptime params: fri.Params, comptime size_log2: u8) u8 {
 const LayoutInfo = struct {
     index_by_batch: []const usize,
     distinct_count: usize,
-    total_claims: usize,
     /// Number of opened columns across the whole layout — the length of
     /// `VerifyInput.entry_claims`.
     total_entries: usize,
@@ -409,7 +408,6 @@ fn computeLayoutInfo(comptime layout: []const SizeBundle) LayoutInfo {
         var index_by_batch: [num_batches]usize = undefined;
         var assigned: [num_batches]bool = [_]bool{false} ** num_batches;
         var distinct_count: usize = 0;
-        var total_claims: usize = 0;
         var total_entries: usize = 0;
         for (layout) |bundle| {
             for (bundle.entries) |entry| {
@@ -418,12 +416,11 @@ fn computeLayoutInfo(comptime layout: []const SizeBundle) LayoutInfo {
                     index_by_batch[entry.batch_idx] = distinct_count;
                     distinct_count += 1;
                 }
-                total_claims += entry.shifts.len;
                 total_entries += 1;
             }
         }
         const final_index_by_batch = index_by_batch;
-        return .{ .index_by_batch = &final_index_by_batch, .distinct_count = distinct_count, .total_claims = total_claims, .total_entries = total_entries };
+        return .{ .index_by_batch = &final_index_by_batch, .distinct_count = distinct_count, .total_entries = total_entries };
     }
 }
 
@@ -487,7 +484,13 @@ fn authenticateInputQuery(
     const codeword_size = @as(usize, 1) << params.log_codeword_size;
     for (opening, roots) |branch, root| {
         const num_levels = branch.leaves.len;
-        if (num_levels == 0) return Error.InputTreeShapeMismatch;
+        // `num_levels` is attacker-controlled (the proof's leaves slice length).
+        // Bound it to the codeword depth BEFORE the shift below: a tree can have
+        // at most `log_codeword_size` levels, and without this guard a
+        // `num_levels >= @bitSizeOf(Log2Int(usize))` value would truncate in the
+        // `@intCast` and yield a bogus `num_leaves` (e.g. 1) that slips past the
+        // divisibility check. In ReleaseSmall/Fast (R5) there is no @intCast trap.
+        if (num_levels == 0 or num_levels > params.log_codeword_size) return Error.InputTreeShapeMismatch;
         const num_leaves = @as(usize, 1) << @as(std.math.Log2Int(usize), @intCast(num_levels));
         if (num_leaves > codeword_size or codeword_size % num_leaves != 0) return Error.InputTreeShapeMismatch;
         const recovered = try branch.recoverRoot(query_position / (codeword_size / num_leaves));

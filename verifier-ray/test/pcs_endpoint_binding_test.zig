@@ -26,9 +26,10 @@ const verifier = verifier_ray.verifier;
 // holds (the cell no longer equals the authenticated column value). Without the
 // binding, the corruption would slip past every check and this test would accept.
 //
-// Case index 49 is the "SingleFractionAllOnes" LogDerivativeSum scenario; its
-// round-1 cells are [result, z_final] and its expression DAG binds the z_final
-// cell to column_claim 1 (the PCS-authenticated Z column) via L_3 (last row).
+// The "SingleFractionAllOnes" LogDerivativeSum scenario; its round-1 cells are
+// [result, z_final] and its expression DAG binds the z_final cell to
+// column_claim 1 (the PCS-authenticated Z column) via L_3 (last row). The
+// comptime name assertion below pins the index to that scenario.
 const case_index: usize = 29;
 
 // Fail loudly if fixture regeneration shifts the case ordering, rather than

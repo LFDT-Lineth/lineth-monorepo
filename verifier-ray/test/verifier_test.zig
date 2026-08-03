@@ -5,8 +5,10 @@ const vf = @import("test_verify");
 const protocol = verifier_ray.protocol;
 const verifier = verifier_ray.verifier;
 const vanishing = verifier_ray.query.vanishing;
+const logderivativesum = verifier_ray.query.logderivativesum;
 const pcs = verifier_ray.query.pcs;
 const ext = verifier_ray.field.koalabear_ext;
+const field = verifier_ray.field.koalabear;
 
 // Tests for `verifier.verify`, the top-level entry point. Two layers:
 //   1. The end-to-end sweep below drives every generated fixture case through
@@ -69,6 +71,36 @@ test "verify rejects proof with wrong round count" {
             .pcs_opening = empty_pcs_opening,
         }),
     );
+}
+
+// Robustness: a sub-verifier reading a transcript cell whose (round, index) ref
+// (trusted, from the compiled System) points past the PROOF's actual rounds/cells
+// slice must return CellRefOutOfRange, not read out of bounds. In R5 ReleaseSmall
+// builds bounds checks are off, so an unbounded proof-driven index would be an OOB
+// read; Context.cell() must guard it. Exercised directly on the logderiv
+// sub-verifier (the same Context.cell path vanishing's cell_value uses).
+test "cell ref past the proof's cells slice is rejected, not read OOB" {
+    // A query whose result_ref points at cell index 3, but the round supplies
+    // only one cell.
+    const query = logderivativesum.Query{
+        .z_final_refs = &.{},
+        .result_ref = .{ .round = 0, .index = 3 },
+    };
+    const system = logderivativesum.System{ .queries = &.{query} };
+
+    const cells = [_]protocol.Scalar{.{ .base = field.Element.init(1) }};
+    const rounds = [_]protocol.RoundMessage{.{ .cells = &cells }};
+    const ctx = protocol.Context{ .all_coins = &.{}, .rounds = &rounds };
+
+    try std.testing.expectError(error.CellRefOutOfRange, logderivativesum.verify(system, ctx));
+
+    // And a ref past the rounds slice entirely.
+    const query2 = logderivativesum.Query{
+        .z_final_refs = &.{},
+        .result_ref = .{ .round = 5, .index = 0 },
+    };
+    const system2 = logderivativesum.System{ .queries = &.{query2} };
+    try std.testing.expectError(error.CellRefOutOfRange, logderivativesum.verify(system2, ctx));
 }
 
 // A degenerate PCS system/opening: no batches, no layout, no claims. `verify`
