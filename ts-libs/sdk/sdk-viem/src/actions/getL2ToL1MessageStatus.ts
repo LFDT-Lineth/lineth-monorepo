@@ -38,8 +38,10 @@ export type GetL2ToL1MessageStatusParameters<
     GetContractEventsParameters<abi, eventName, strict, fromBlock, toBlock>,
     "fromBlock" | "toBlock"
   >;
+  /** @deprecated Use `linethRollupAddress` instead. */
+  lineaRollupAddress?: Address | undefined;
   // Defaults to the message service address for the L1 chain
-  linethRollupAddress?: Address;
+  linethRollupAddress?: Address | undefined;
   // Defaults to the message service address for the L2 chain
   l2MessageServiceAddress?: Address;
 };
@@ -114,7 +116,9 @@ export async function getL2ToL1MessageStatus<
   }
 
   const linethRollupAddress =
-    parameters.linethRollupAddress ?? getContractsAddressesByChainId(client.chain.id).messageService;
+    parameters.linethRollupAddress ??
+    parameters.lineaRollupAddress ??
+    getContractsAddressesByChainId(client.chain.id).messageService;
 
   const [currentL2BlockNumber, isMessageClaimed] = await Promise.all([
     readContract(client, {

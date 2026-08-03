@@ -18,7 +18,7 @@ import { MessageNotFoundError, MessageNotFoundErrorType } from "../errors/bridge
 export type GetMessageByMessageHashParameters = {
   messageHash: Hex;
   // Defaults to the message service address for the chain
-  messageServiceAddress?: Address;
+  messageServiceAddress?: Address | undefined;
   // Block in which the `MessageSent` event was emitted. When provided, the lookup queries only that
   // block instead of the full `earliest`..`latest` range. This is REQUIRED when the RPC provider does
   // not support large block ranges; otherwise the default full-range query will be rejected.

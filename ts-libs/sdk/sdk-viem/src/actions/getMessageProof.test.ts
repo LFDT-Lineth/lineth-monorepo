@@ -244,6 +244,44 @@ describe("getMessageProof", () => {
     expect(result).toEqual({ proof, root: merkleRoot, leafIndex });
   });
 
+  it("falls back to the deprecated lineaRollupAddress when linethRollupAddress is not provided", async () => {
+    const client = mockClient(mainnetId);
+    const l2Client = mockL2Client(lineaId);
+    const customAddress = "0x9999999999999999999999999999999999999999" as Hex;
+    const messageSentLog = generateMessageSentLog({ blockNumber: l2BlockNumber });
+    (getMessageSentEvents as jest.Mock<ReturnType<typeof getMessageSentEvents>>).mockResolvedValue([
+      {
+        messageSender: messageSentLog.args._from!,
+        destination: messageSentLog.args._to!,
+        fee: messageSentLog.args._fee!,
+        value: messageSentLog.args._value!,
+        messageNonce: messageSentLog.args._nonce!,
+        calldata: messageSentLog.args._calldata!,
+        messageHash: messageSentLog.args._messageHash!,
+        blockNumber: messageSentLog.blockNumber,
+        logIndex: messageSentLog.logIndex,
+        contractAddress: messageSentLog.address,
+        transactionHash: messageSentLog.transactionHash,
+      },
+    ]);
+    (getContractEvents as jest.Mock<ReturnType<typeof getContractEvents>>).mockResolvedValue([
+      generateL2MessagingBlockAnchoredLog(l2BlockNumber, { address: customAddress }),
+    ]);
+    (getTransactionReceipt as jest.Mock).mockResolvedValue(
+      generateTransactionReceipt({
+        logs: [
+          generateL2MerkleTreeAddedLog(TEST_MERKLE_ROOT, treeDepth, { address: customAddress }),
+          generateL2MessagingBlockAnchoredLog(l2BlockNumber, { address: customAddress }),
+        ],
+      }),
+    );
+
+    const result = await getMessageProof(client, { l2Client, messageHash, lineaRollupAddress: customAddress });
+
+    expect(result).toEqual({ proof, root: merkleRoot, leafIndex });
+    expect(getContractEvents).toHaveBeenCalledWith(client, expect.objectContaining({ address: customAddress }));
+  });
+
   it("does not fall back to binary search when the full-range query succeeds", async () => {
     const client = mockClient(mainnetId);
     const l2Client = mockL2Client(lineaId);

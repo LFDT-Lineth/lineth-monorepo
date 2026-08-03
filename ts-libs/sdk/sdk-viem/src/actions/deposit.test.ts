@@ -428,6 +428,30 @@ describe("deposit", () => {
     );
   });
 
+  it("falls back to the deprecated lineaRollupAddress when linethRollupAddress is not provided", async () => {
+    const client = mockClient(l1ChainId, mockAccount);
+    const l2Client = mockL2Client(l2ChainId, mockAccount);
+    const customAddress = "0x9999999999999999999999999999999999999999" as Address;
+    await deposit(client, {
+      l2Client,
+      token: zeroAddress,
+      to,
+      amount,
+      data,
+      account: mockAccount,
+      lineaRollupAddress: customAddress,
+      l2MessageServiceAddress: customAddress,
+    });
+    expect(sendTransaction).toHaveBeenCalledTimes(1);
+    expect(sendTransaction).toHaveBeenCalledWith(
+      client,
+      expect.objectContaining({
+        to: customAddress,
+        data: expect.any(String),
+      }),
+    );
+  });
+
   it("uses custom contract addresses if provided (ERC20)", async () => {
     const client = mockClient(l1ChainId, mockAccount);
     const l2Client = mockL2Client(l2ChainId, mockAccount);

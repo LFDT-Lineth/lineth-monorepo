@@ -289,18 +289,10 @@ describe("Lineth Rollup Yield Extension", () => {
       const yieldManagerSigner = await impersonateYieldManager();
 
       const amount = ethers.parseEther("0.5");
-      const linethRollupAddress = await linethRollup.getAddress();
       const messageNumber = await linethRollup.nextMessageNumber();
       const l2YieldRecipient = ethers.Wallet.createRandom().address;
 
-      const messageHash = computeMessageHash(
-        linethRollupAddress,
-        l2YieldRecipient,
-        0n,
-        amount,
-        messageNumber,
-        EMPTY_CALLDATA,
-      );
+      const messageHash = computeMessageHash(yieldManager, l2YieldRecipient, 0n, amount, messageNumber, EMPTY_CALLDATA);
       const expectedRollingHash = calculateRollingHash(ethers.ZeroHash, messageHash);
 
       // ACT

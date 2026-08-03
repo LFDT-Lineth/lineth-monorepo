@@ -164,6 +164,35 @@ describe("publicActionsL1", () => {
     });
   });
 
+  describe("with deprecated lineaRollupAddress parameter", () => {
+    const actions = publicActionsL1({
+      lineaRollupAddress: TEST_CONTRACT_ADDRESS_1,
+      l2MessageServiceAddress: TEST_CONTRACT_ADDRESS_2,
+    })<Chain, Account>(client);
+
+    it("falls back to lineaRollupAddress when linethRollupAddress is not provided", async () => {
+      const messageProof: MessageProof = {
+        proof: [],
+        root: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+        leafIndex: 0,
+      };
+      const params: Parameters<typeof actions.getMessageProof>[0] = {
+        l2Client: client,
+        messageHash: "0xabc" as Hex,
+      };
+      (getMessageProof as jest.Mock<ReturnType<typeof getMessageProof>>).mockResolvedValue(messageProof);
+
+      const result = await actions.getMessageProof(params);
+
+      expect(getMessageProof).toHaveBeenCalledWith(client, {
+        ...params,
+        linethRollupAddress: TEST_CONTRACT_ADDRESS_1,
+        l2MessageServiceAddress: TEST_CONTRACT_ADDRESS_2,
+      });
+      expect(result).toBe(messageProof);
+    });
+  });
+
   describe("without parameters", () => {
     const actions = publicActionsL1()<Chain, Account>(client);
 

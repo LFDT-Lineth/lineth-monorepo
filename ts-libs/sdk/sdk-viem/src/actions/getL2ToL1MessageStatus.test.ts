@@ -99,6 +99,37 @@ describe("getL2ToL1MessageStatus", () => {
     expect(result).toBe(OnChainMessageStatus.CLAIMED);
   });
 
+  it("falls back to the deprecated lineaRollupAddress when linethRollupAddress is not provided", async () => {
+    const client = mockClient(mainnet.id);
+    const l2Client = mockL2Client(linea.id);
+    const customAddress = "0x9999999999999999999999999999999999999999" as `0x${string}`;
+    const messageSentLog = generateMessageSentLog();
+
+    (getMessageSentEvents as jest.Mock<ReturnType<typeof getMessageSentEvents>>).mockResolvedValue([
+      {
+        messageSender: messageSentLog.args._from!,
+        destination: messageSentLog.args._to!,
+        fee: messageSentLog.args._fee!,
+        value: messageSentLog.args._value!,
+        messageNonce: messageSentLog.args._nonce!,
+        calldata: messageSentLog.args._calldata!,
+        messageHash: messageSentLog.args._messageHash!,
+        blockNumber: messageSentLog.blockNumber,
+        logIndex: messageSentLog.logIndex,
+        contractAddress: messageSentLog.address,
+        transactionHash: messageSentLog.transactionHash,
+      },
+    ]);
+    mockReadContract({ currentL2BlockNumber: messageSentLog.blockNumber, isMessageClaimed: true });
+    const result = await getL2ToL1MessageStatus(client, {
+      l2Client,
+      messageHash: TEST_MESSAGE_HASH,
+      lineaRollupAddress: customAddress,
+    });
+    expect(result).toBe(OnChainMessageStatus.CLAIMED);
+    expect(readContract).toHaveBeenCalledWith(client, expect.objectContaining({ address: customAddress }));
+  });
+
   it("returns CLAIMABLE if isMessageClaimed is false but the L2 block is anchored", async () => {
     const client = mockClient(mainnet.id);
     const l2Client = mockL2Client(linea.id);

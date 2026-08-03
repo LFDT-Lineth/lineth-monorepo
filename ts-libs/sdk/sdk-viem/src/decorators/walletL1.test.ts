@@ -98,6 +98,35 @@ describe("walletActionsL1", () => {
     });
   });
 
+  describe("with deprecated lineaRollupAddress parameter", () => {
+    const actions = walletActionsL1({
+      lineaRollupAddress: TEST_CONTRACT_ADDRESS_1,
+      l2MessageServiceAddress: TEST_CONTRACT_ADDRESS_2,
+      l1TokenBridgeAddress: TEST_ADDRESS_1,
+      l2TokenBridgeAddress: TEST_ADDRESS_2,
+    })<Chain, Account>(client);
+
+    it("falls back to lineaRollupAddress when linethRollupAddress is not provided", async () => {
+      const depositResult = ("0x" + "a".repeat(64)) as Hex;
+      const params: Parameters<typeof actions.deposit>[0] = {
+        l2Client: client,
+        token: "0x0000000000000000000000000000000000000000" as Address,
+        to: "0x0000000000000000000000000000000000000001" as Address,
+        amount: 1000n,
+      };
+      (deposit as jest.Mock<ReturnType<typeof deposit>>).mockResolvedValue(depositResult);
+      const result = await actions.deposit(params);
+      expect(deposit).toHaveBeenCalledWith(client, {
+        ...params,
+        linethRollupAddress: TEST_CONTRACT_ADDRESS_1,
+        l2MessageServiceAddress: TEST_CONTRACT_ADDRESS_2,
+        l1TokenBridgeAddress: TEST_ADDRESS_1,
+        l2TokenBridgeAddress: TEST_ADDRESS_2,
+      });
+      expect(result).toBe(depositResult);
+    });
+  });
+
   describe("without parameters", () => {
     const actions = walletActionsL1()<Chain, Account>(client);
 

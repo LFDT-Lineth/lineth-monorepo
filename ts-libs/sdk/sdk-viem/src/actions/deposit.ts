@@ -70,8 +70,10 @@ export type DepositParameters<
     fee?: bigint;
     amount: bigint;
     data?: Hex;
+    /** @deprecated Use `linethRollupAddress` instead. */
+    lineaRollupAddress?: Address | undefined;
     // defaults to the message service address for the chain
-    linethRollupAddress?: Address;
+    linethRollupAddress?: Address | undefined;
     // defaults to the L2 message service address for the chain
     l2MessageServiceAddress?: Address;
     // defaults to the L1 token bridge address for the chain
@@ -188,7 +190,9 @@ export async function deposit<
   const l2ChainId = l2Client.chain.id;
 
   const linethRollupAddress =
-    parameters.linethRollupAddress ?? getContractsAddressesByChainId(l1ChainId).messageService;
+    parameters.linethRollupAddress ??
+    parameters.lineaRollupAddress ??
+    getContractsAddressesByChainId(l1ChainId).messageService;
   const l2MessageServiceAddress =
     parameters.l2MessageServiceAddress ?? getContractsAddressesByChainId(l2ChainId).messageService;
   const l1TokenBridgeAddress = parameters.l1TokenBridgeAddress ?? getContractsAddressesByChainId(l1ChainId).tokenBridge;

@@ -180,11 +180,14 @@ export type PublicActionsL1<
 >;
 
 export type PublicActionsL1Parameters = {
-  linethRollupAddress: Address;
+  /** @deprecated Use `linethRollupAddress` instead. */
+  lineaRollupAddress?: Address | undefined;
+  linethRollupAddress?: Address | undefined;
   l2MessageServiceAddress: Address;
 };
 
 export function publicActionsL1(parameters?: PublicActionsL1Parameters) {
+  const linethRollupAddress = parameters?.linethRollupAddress ?? parameters?.lineaRollupAddress;
   return <
     chain extends Chain | undefined = Chain | undefined,
     account extends Account | undefined = Account | undefined,
@@ -198,7 +201,7 @@ export function publicActionsL1(parameters?: PublicActionsL1Parameters) {
         ...args,
         ...(parameters
           ? {
-              linethRollupAddress: parameters.linethRollupAddress,
+              linethRollupAddress,
               l2MessageServiceAddress: parameters.l2MessageServiceAddress,
             }
           : {}),
@@ -208,7 +211,7 @@ export function publicActionsL1(parameters?: PublicActionsL1Parameters) {
         ...args,
         ...(parameters
           ? {
-              linethRollupAddress: parameters.linethRollupAddress,
+              linethRollupAddress,
               l2MessageServiceAddress: parameters.l2MessageServiceAddress,
             }
           : {}),
@@ -218,7 +221,7 @@ export function publicActionsL1(parameters?: PublicActionsL1Parameters) {
         ...args,
         ...(parameters
           ? {
-              messageServiceAddress: parameters.linethRollupAddress,
+              messageServiceAddress: linethRollupAddress,
             }
           : {}),
       }),
@@ -227,7 +230,7 @@ export function publicActionsL1(parameters?: PublicActionsL1Parameters) {
         ...args,
         ...(parameters
           ? {
-              messageServiceAddress: parameters.linethRollupAddress,
+              messageServiceAddress: linethRollupAddress,
             }
           : {}),
       }),
@@ -236,7 +239,7 @@ export function publicActionsL1(parameters?: PublicActionsL1Parameters) {
         ...args,
         ...(parameters
           ? {
-              messageServiceAddress: parameters.linethRollupAddress,
+              messageServiceAddress: linethRollupAddress,
             }
           : {}),
       }),
