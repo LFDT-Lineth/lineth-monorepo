@@ -11,8 +11,9 @@
 
 SHELL := /bin/bash
 
-# Flags forwarded to `zkc execute`. Quiet needs no flag: zkc's verbosity defaults to NONE, and
-# KOALABEAR_16 is already the default field.
+# Flags forwarded to `zkc execute`. Quiet needs no flag: zkc's verbosity defaults to NONE.
+# The field stays explicit on the commands below, so the test does not silently follow a change
+# of zkc's default.
 ZKC_EXEC_FLAGS ?= --fast
 
 SRC     := permutation.zkc

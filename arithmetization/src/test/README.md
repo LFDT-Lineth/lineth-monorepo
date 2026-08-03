@@ -143,7 +143,7 @@ riscv-test elf-to-json BIN_EXT=asm/bin/test
 riscv-test elf-exec BIN_EXT=path/to/bin
 # Debug an already compiled ELF
 riscv-test elf-debug BIN_EXT=path/to/bin
-# Execute an already compiled ELF in quiet mode
+# Execute an already compiled ELF in fast mode (no tracing; quiet is the default)
 riscv-test elf-exec BIN_EXT=path/to/bin ZKC_EXEC_FLAGS=--fast
 # Execute an existing JSON input (override ZKC / ZKC_MAIN / ZKC_EXEC_FLAGS as needed)
 riscv-test zkc-exec JSON=path/to/input.json
