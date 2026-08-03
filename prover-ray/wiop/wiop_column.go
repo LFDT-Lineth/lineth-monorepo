@@ -396,14 +396,30 @@ func (cv *ColumnView) EvaluateVectorAsExt(rt *Runtime, n int) []field.Ext {
 	return out
 }
 
-// EvaluateVectorsAsExt evaluates each column view as a length-n
-// extension-field vector via [ColumnView.EvaluateVectorAsExt].
-func EvaluateVectorsAsExt(rt *Runtime, cvs []*ColumnView, n int) [][]field.Ext {
-	out := make([][]field.Ext, len(cvs))
-	for i, cv := range cvs {
-		out[i] = cv.EvaluateVectorAsExt(rt, n)
+// EvaluateRLCAsExt computes the random linear combination
+//
+//	out[i] = cvs[0][i] + α·cvs[1][i] + α²·cvs[2][i] + …
+//
+// column-wise with Horner's method, folding from the last column down
+// (acc = acc·α + cvs[k]). Only the initial column is lifted to the extension
+// field; the remaining columns are consumed un-lifted, so a base-field column
+// costs one base addition per row on top of the single extension
+// multiplication per column per row. Panics if cvs is empty.
+func EvaluateRLCAsExt(rt *Runtime, alpha field.Ext, cvs []*ColumnView, n int) []field.Ext {
+	if len(cvs) == 0 {
+		panic("wiop: EvaluateRLCAsExt called with no columns")
 	}
-	return out
+	acc := cvs[len(cvs)-1].EvaluateVectorAsExt(rt, n)
+	for k := len(cvs) - 2; k >= 0; k-- {
+		field.VecScaleExtExt(acc, alpha, acc)
+		plain := cvs[k].EvaluateVector(rt).Plain
+		if plain.IsBase() {
+			field.VecAddExtBase(acc, acc, plain.AsBase())
+		} else {
+			field.VecAddExtExt(acc, acc, plain.AsExt())
+		}
+	}
+	return acc
 }
 
 // EvaluateSingle implements [Expression]. Panics unconditionally: a column

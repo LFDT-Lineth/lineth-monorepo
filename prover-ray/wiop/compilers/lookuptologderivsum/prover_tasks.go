@@ -78,7 +78,7 @@ func (t *mAssignmentTask) Run(rt *wiop.Runtime) {
 	// proof the verifier rejects, never a false acceptance.
 	alpha := field.RandomElementExt()
 
-	// --- Build the B side. For each fragment, evaluate its rows, allocate its
+	// --- Build the B side. For each fragment, hash its rows, allocate its
 	// M vector, and produce one tEntry per row tagged with (fragment, row).
 	mValues := make([][]field.Element, len(t.includings))
 	var tEntries []tEntry
@@ -86,29 +86,36 @@ func (t *mAssignmentTask) Run(rt *wiop.Runtime) {
 		n := it.module.RuntimeSize(rt)
 		mValues[frag] = make([]field.Element, n)
 
-		bColExt := wiop.EvaluateVectorsAsExt(rt, it.cols, n)
-		var bSelectorExt []field.Ext
-		if it.selector != nil {
-			bSelectorExt = it.selector.EvaluateVectorAsExt(rt, n)
+		// hashes[i] = cols[0][i] + α·cols[1][i] + …, then, in prepend mode,
+		// hashes[i] = head[i] + α·hashes[i] where head is the fragment's
+		// selector column (or the constant 1 for an unfiltered fragment).
+		// This matches [rlcExpression]'s convention so the prover-side hash
+		// agrees with the symbolic RLC under the same scalar.
+		hashes := wiop.EvaluateRLCAsExt(rt, alpha, it.cols, n)
+		if t.prependOneOnAOk {
+			field.VecScaleExtExt(hashes, alpha, hashes)
+			if it.selector != nil {
+				addColumnInPlace(rt, hashes, it.selector)
+			} else {
+				addOneInPlace(hashes)
+			}
 		}
 
 		for i := 0; i < n; i++ {
-			head := t.bHead(it, bSelectorExt, i)
-			h := rowHash(alpha, head, t.prependOneOnAOk, bColExt, i)
-			tEntries = append(tEntries, tEntry{val: h, frag: uint32(frag), row: uint32(i)})
+			tEntries = append(tEntries, tEntry{val: hashes[i], frag: uint32(frag), row: uint32(i)})
 		}
 	}
 
 	// --- Build the A side. Only active rows contribute; the A-side head is the
 	// constant 1 whenever the prepend trick is in effect.
 	var sEntries []sEntry
-	var aHead field.Ext
-	if t.prependOneOnAOk {
-		aHead = field.OneExt()
-	}
 	for aFrag, inc := range t.included {
 		an := inc.cols[0].Module().RuntimeSize(rt)
-		aColExt := wiop.EvaluateVectorsAsExt(rt, inc.cols, an)
+		hashes := wiop.EvaluateRLCAsExt(rt, alpha, inc.cols, an)
+		if t.prependOneOnAOk {
+			field.VecScaleExtExt(hashes, alpha, hashes)
+			addOneInPlace(hashes)
+		}
 		var aSelectorExt []field.Ext
 		if inc.selector != nil {
 			aSelectorExt = inc.selector.EvaluateVectorAsExt(rt, an)
@@ -131,8 +138,7 @@ func (t *mAssignmentTask) Run(rt *wiop.Runtime) {
 					))
 				}
 			}
-			h := rowHash(alpha, aHead, t.prependOneOnAOk, aColExt, j)
-			sEntries = append(sEntries, sEntry{val: h, frag: uint32(aFrag), row: uint32(j)})
+			sEntries = append(sEntries, sEntry{val: hashes[j], frag: uint32(aFrag), row: uint32(j)})
 		}
 	}
 
@@ -144,17 +150,23 @@ func (t *mAssignmentTask) Run(rt *wiop.Runtime) {
 	}
 }
 
-// bHead returns the row's prepended head on the B side: the zero element when
-// no prepend is in effect, the fragment's selector value when it carries one,
-// and the constant 1 for an unfiltered fragment inside a filtered group.
-func (t *mAssignmentTask) bHead(it includingTable, bSelectorExt []field.Ext, i int) field.Ext {
-	if !t.prependOneOnAOk {
-		return field.Ext{}
+// addColumnInPlace adds a column's values into hashes element-wise, consuming
+// the column un-lifted: a base-field column costs one base addition per row.
+func addColumnInPlace(rt *wiop.Runtime, hashes []field.Ext, cv *wiop.ColumnView) {
+	plain := cv.EvaluateVector(rt).Plain
+	if plain.IsBase() {
+		field.VecAddExtBase(hashes, hashes, plain.AsBase())
+	} else {
+		field.VecAddExtExt(hashes, hashes, plain.AsExt())
 	}
-	if it.selector != nil {
-		return bSelectorExt[i]
+}
+
+// addOneInPlace adds the constant 1 to every entry of hashes, touching only
+// the first base-field coordinate.
+func addOneInPlace(hashes []field.Ext) {
+	for i := range hashes {
+		hashes[i].B0.A0.Add(&hashes[i].B0.A0, &fieldOne)
 	}
-	return field.OneExt()
 }
 
 // hashJoin performs the fragment-tagged radix-partitioned hash join. It
@@ -233,35 +245,3 @@ func extHash(v *field.Ext) uint32 {
 // fieldOne is the multiplicative identity in the base field, kept as a
 // package-level variable to avoid recomputing it per row.
 var fieldOne = field.One()
-
-// rowHash computes the extension-field hash
-//
-//	head + α·cols[0][i] + α²·cols[1][i] + … + α^k·cols[k-1][i]
-//
-// when usePrepend is true, and
-//
-//	cols[0][i] + α·cols[1][i] + α²·cols[2][i] + …
-//
-// when it is false. Both forms match [rlcExpression]'s convention so the
-// prover-side hash agrees with the symbolic RLC under the same scalar.
-//
-// The sum is evaluated with Horner's method, folding from the highest-degree
-// column down: acc = (…(cols[k-1][i]·α + cols[k-2][i])·α + …)·α + c₀, where
-// c₀ is head (prepend form) or cols[0][i]. This costs one extension
-// multiplication per column instead of two (term and power update).
-func rowHash(alpha field.Ext, head field.Ext, usePrepend bool, cols [][]field.Ext, i int) field.Ext {
-	if len(cols) == 0 {
-		return head
-	}
-	acc := cols[len(cols)-1][i]
-	for k := len(cols) - 2; k >= 0; k-- {
-		acc.Mul(&acc, &alpha)
-		acc.Add(&acc, &cols[k][i])
-	}
-	if usePrepend {
-		// acc = head + α·(cols[0][i] + α·cols[1][i] + …)
-		acc.Mul(&acc, &alpha)
-		acc.Add(&acc, &head)
-	}
-	return acc
-}
