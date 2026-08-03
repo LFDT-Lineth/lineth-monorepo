@@ -53,28 +53,28 @@ dotenv.config();
 
 async function main() {
   const networkName = getDeploymentNetworkName();
-  const lineaRollupInitialBlockHash = getRequiredEnvVar("INITIAL_L2_BLOCK_HASH");
-  const lineaRollupInitialL2BlockNumber = getRequiredEnvVar("INITIAL_L2_BLOCK_NUMBER");
-  const lineaRollupSecurityCouncil = requireAddressFromRegistryOrEnv(
+  const linethRollupInitialBlockHash = getRequiredEnvVar("INITIAL_L2_BLOCK_HASH");
+  const linethRollupInitialL2BlockNumber = getRequiredEnvVar("INITIAL_L2_BLOCK_NUMBER");
+  const linethRollupSecurityCouncil = requireAddressFromRegistryOrEnv(
     networkName,
     "L1_SECURITY_COUNCIL",
     "L1_SECURITY_COUNCIL",
   );
-  const lineaRollupOperators = requireAddressesFromRegistryOrEnv(
+  const linethRollupOperators = requireAddressesFromRegistryOrEnv(
     networkName,
     "LINETH_ROLLUP_OPERATORS",
     "LINETH_ROLLUP_OPERATORS",
   );
-  const lineaRollupRateLimitPeriodInSeconds = getRequiredEnvVar("LINETH_ROLLUP_RATE_LIMIT_PERIOD");
-  const lineaRollupRateLimitAmountInWei = getRequiredEnvVar("LINETH_ROLLUP_RATE_LIMIT_AMOUNT");
-  const lineaRollupGenesisTimestamp = getRequiredEnvVar("L2_GENESIS_TIMESTAMP");
+  const linethRollupRateLimitPeriodInSeconds = getRequiredEnvVar("LINETH_ROLLUP_RATE_LIMIT_PERIOD");
+  const linethRollupRateLimitAmountInWei = getRequiredEnvVar("LINETH_ROLLUP_RATE_LIMIT_AMOUNT");
+  const linethRollupGenesisTimestamp = getRequiredEnvVar("L2_GENESIS_TIMESTAMP");
 
   // The default true preserves existing local deploy behavior; the quickstart opts into false to skip the gateway.
   const deployForcedTransactionGateway = getBooleanEnvVarOrDefault("DEPLOY_FORCED_TRANSACTION_GATEWAY", true);
 
   const multiCallAddress = "0xcA11bde05977b3631167028862bE2a173976CA11";
-  const lineaRollupName = "LinethRollupV9Stub";
-  const lineaRollupImplementationName = "LinethRollupV9StubImplementation";
+  const linethRollupName = "LinethRollupV9Stub";
+  const linethRollupImplementationName = "LinethRollupV9StubImplementation";
   const forcedTransactionGatewayName = "ForcedTransactionGateway";
 
   const pauseTypeRoles = getEnvVarOrDefault("LINETH_ROLLUP_PAUSE_TYPES_ROLES", LINETH_ROLLUP_V8_PAUSE_TYPES_ROLES);
@@ -86,8 +86,8 @@ async function main() {
   // Use random hardcoded address until we introduce YieldManager E2E tests
   const automationServiceAddress = "0x3A9f0c2b8e7D4F6e1b5a9C2e0Fd7a4B6C8e9F1A2";
   const defaultRoleAddresses = [
-    ...generateRoleAssignments(LINETH_ROLLUP_V8_ROLES, lineaRollupSecurityCouncil, [
-      { role: OPERATOR_ROLE, addresses: lineaRollupOperators },
+    ...generateRoleAssignments(LINETH_ROLLUP_V8_ROLES, linethRollupSecurityCouncil, [
+      { role: OPERATOR_ROLE, addresses: linethRollupOperators },
     ]),
     { role: YIELD_PROVIDER_STAKING_ROLE, addressWithRole: automationServiceAddress },
   ];
@@ -109,9 +109,9 @@ async function main() {
 
   const walletNonce = await getDeployNonceFromEnv(wallet, "L1_NONCE");
 
-  const [lineaRollupImplementation, proxyAdmin, addressFilter] = await Promise.all([
+  const [linethRollupImplementation, proxyAdmin, addressFilter] = await Promise.all([
     deployContractFromArtifacts(
-      lineaRollupImplementationName,
+      linethRollupImplementationName,
       LinethRollupV9StubAbi,
       LinethRollupV9StubBytecode,
       wallet,
@@ -129,7 +129,7 @@ async function main() {
       AddressFilterAbi,
       AddressFilterBytecode,
       wallet,
-      lineaRollupSecurityCouncil,
+      linethRollupSecurityCouncil,
       PRECOMPILES_ADDRESSES,
       {
         nonce: walletNonce + 2,
@@ -138,27 +138,27 @@ async function main() {
     ),
   ]);
 
-  const [proxyAdminAddress, lineaRollupImplementationAddress, addressFilterAddress] = await Promise.all([
+  const [proxyAdminAddress, linethRollupImplementationAddress, addressFilterAddress] = await Promise.all([
     proxyAdmin.getAddress(),
-    lineaRollupImplementation.getAddress(),
+    linethRollupImplementation.getAddress(),
     addressFilter.getAddress(),
   ]);
 
   const initializer = getInitializerData(LinethRollupV9StubAbi, "initialize", [
     {
-      initialBlockHash: lineaRollupInitialBlockHash,
-      initialL2BlockNumber: lineaRollupInitialL2BlockNumber,
-      genesisTimestamp: lineaRollupGenesisTimestamp,
+      initialBlockHash: linethRollupInitialBlockHash,
+      initialL2BlockNumber: linethRollupInitialL2BlockNumber,
+      genesisTimestamp: linethRollupGenesisTimestamp,
       // finalizeBlocks is a no-op stub here, so the verifier is never invoked - DEAD_ADDRESS is a
       // non-zero placeholder that satisfies the zero-address check without deploying a real verifier.
       defaultVerifier: DEAD_ADDRESS,
-      rateLimitPeriodInSeconds: lineaRollupRateLimitPeriodInSeconds,
-      rateLimitAmountInWei: lineaRollupRateLimitAmountInWei,
+      rateLimitPeriodInSeconds: linethRollupRateLimitPeriodInSeconds,
+      rateLimitAmountInWei: linethRollupRateLimitAmountInWei,
       roleAddresses,
       pauseTypeRoles,
       unpauseTypeRoles,
       verifierKeys,
-      defaultAdmin: lineaRollupSecurityCouncil,
+      defaultAdmin: linethRollupSecurityCouncil,
       shnarfProvider: ADDRESS_ZERO,
       addressFilter: addressFilterAddress,
     },
@@ -168,12 +168,12 @@ async function main() {
     "0xB7De4A2cf9E1c6a0B5f8d3e7a9C4B1a2e6d0f5C8",
   ]);
 
-  const lineaRollupContract = await deployContractFromArtifacts(
-    lineaRollupName,
+  const linethRollupContract = await deployContractFromArtifacts(
+    linethRollupName,
     TransparentUpgradeableProxyAbi,
     TransparentUpgradeableProxyBytecode,
     wallet,
-    lineaRollupImplementationAddress,
+    linethRollupImplementationAddress,
     proxyAdminAddress,
     initializer,
     {
@@ -182,7 +182,7 @@ async function main() {
     },
   );
 
-  const lineaRollupAddress = await lineaRollupContract.getAddress();
+  const linethRollupAddress = await linethRollupContract.getAddress();
 
   if (deployForcedTransactionGateway) {
     const destinationChainId = getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_L2_CHAIN_ID");
@@ -206,12 +206,12 @@ async function main() {
     const mimcAddress = await mimc.getAddress();
 
     const args = [
-      lineaRollupAddress,
+      linethRollupAddress,
       destinationChainId,
       l2BlockBuffer,
       maxGasLimit,
       maxInputLengthBuffer,
-      lineaRollupSecurityCouncil,
+      linethRollupSecurityCouncil,
       addressFilterAddress,
       l2BlockDurationSeconds,
       blockNumberDeadlineBuffer,
@@ -232,12 +232,12 @@ async function main() {
 
     const forcedTransactionGatewayAddress = await forcedTransactionGateway.getAddress();
     const securityCouncilWallet = new ethers.Wallet(securityCouncilPrivateKey, provider);
-    const lineaRollup = new ethers.Contract(lineaRollupAddress, LinethRollupV9StubAbi, securityCouncilWallet);
+    const linethRollup = new ethers.Contract(linethRollupAddress, LinethRollupV9StubAbi, securityCouncilWallet);
 
     console.log(
       `Granting FORCED_TRANSACTION_SENDER_ROLE to ForcedTransactionGateway at ${forcedTransactionGatewayAddress}...`,
     );
-    const grantRoleTx = await lineaRollup.grantRole(
+    const grantRoleTx = await linethRollup.grantRole(
       FORCED_TRANSACTION_SENDER_ROLE,
       forcedTransactionGatewayAddress,
       feeOverrides,
@@ -247,7 +247,7 @@ async function main() {
   } else {
     console.log(
       "DEPLOY_FORCED_TRANSACTION_GATEWAY=false; skipping Mimc and ForcedTransactionGateway deploy. " +
-        "The next L1 deploy starts after the LineaRollup proxy nonce.",
+        "The next L1 deploy starts after the LinethRollup proxy nonce.",
     );
   }
 }
