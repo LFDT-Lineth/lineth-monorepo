@@ -127,14 +127,14 @@ Output: L2 BridgedToken + L2 TokenBridge addresses.
 
 The internal `make -j7` parallel run is replaced by serial execution. Order matters because:
 
-1. **`deploy-lineth-rollup-v8`** must run before `deploy-token-bridge-l1` so we can forward `LINEA_ROLLUP_ADDRESS`.
+1. **`deploy-lineth-rollup-v8`** must run before `deploy-token-bridge-l1` so we can forward `LINETH_ROLLUP_ADDRESS`.
 2. **`deploy-l2messageservice`** must run before `deploy-token-bridge-l1` and `deploy-token-bridge-l2` so we can forward `L2_MESSAGE_SERVICE_ADDRESS`.
 3. **`deploy-token-bridge-l1`** and **`deploy-token-bridge-l2`** consume both forwarded addresses.
 Order in our serial flow:
 
 ```
 Prelude:  capture L1_NONCE, L2_NONCE
-Step 1:   deploy-lineth-rollup-v8           [L1]   → emits LINEA_ROLLUP_ADDRESS
+Step 1:   deploy-lineth-rollup-v8           [L1]   → emits LINETH_ROLLUP_ADDRESS
 Step 2:   deploy-l2messageservice          [L2]   → emits L2_MESSAGE_SERVICE_ADDRESS
 Step 3:   deploy-token-bridge-l1           [L1]   ← consumes both addresses
 Step 4:   deploy-token-bridge-l2           [L2]   ← consumes both addresses

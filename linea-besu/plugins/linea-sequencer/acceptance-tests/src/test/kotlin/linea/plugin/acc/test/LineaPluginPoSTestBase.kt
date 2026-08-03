@@ -603,7 +603,7 @@ abstract class LineaPluginPoSTestBase : LineaPluginTestBase() {
    * @param expectedValidationError Expected validation error message to check for
    */
   protected fun assertBlockImportRejected(response: Response, expectedValidationError: String) {
-    val result = mapper.readTree(response.body?.string()).get("result")
+    val result = mapper.readTree(response.body.string()).get("result")
     val status = result.get("status").asText()
     val validationError = result.get("validationError").asText()
     assertThat(status).isEqualTo("INVALID")
