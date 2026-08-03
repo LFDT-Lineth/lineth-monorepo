@@ -109,12 +109,16 @@ func WritePcsSystemZig(w io.Writer, index int, system PcsSystem, opts PcsZigOpti
 	}
 	fmt.Fprintln(&b, " };")
 
-	// The System literal, with the explicit canonical layout inline.
+	// The System literal, with the symbolic ColumnDesc list (declaration order)
+	// and envelope params inline. The verifier reconstructs the canonical layout
+	// from these + module_sizes.
 	fmt.Fprintf(&b, "pub const %s%s = pcs.System{\n", p, opts.ConstName)
-	fmt.Fprintf(&b, "    .params = fri.Params{ .log_codeword_size = %d, .log_plaintext_size = %d, .log_final_poly_size = %d, .num_queries = %d },\n",
+	fmt.Fprintf(&b, "    .envelope_params = fri.Params{ .log_codeword_size = %d, .log_plaintext_size = %d, .log_final_poly_size = %d, .num_queries = %d },\n",
 		system.LogCodewordSize, system.LogPlaintextSize, system.LogFinalPolySize, system.NumQueries)
-	fmt.Fprintf(&b, "    .layout = %s,\n", pcsLayoutLiteral(system.Layout))
+	fmt.Fprintf(&b, "    .columns = %s,\n", pcsColumnsLiteral(system.Columns))
 	fmt.Fprintf(&b, "    .num_batches = %d,\n", system.NumBatches)
+	fmt.Fprintf(&b, "    .max_entries = %d,\n", system.MaxEntries)
+	fmt.Fprintf(&b, "    .max_size_log2 = %d,\n", system.MaxSizeLog2)
 	fmt.Fprintf(&b, "    .witness_map = &%switness_map,\n", p)
 	fmt.Fprintf(&b, "    .quotient_map = &%squotient_map,\n", p)
 	fmt.Fprintf(&b, "    .batch_roots = &%sbatch_roots,\n", p)
@@ -125,26 +129,24 @@ func WritePcsSystemZig(w io.Writer, index int, system PcsSystem, opts PcsZigOpti
 	return err
 }
 
-// pcsLayoutLiteral emits the explicit `[]const pcs.SizeBundle` layout literal,
-// mirroring `pcsSystemLiteral` in testdata/generate/fri/main.go: one bundle per
-// opened size (descending), each with its DeepEntry list carrying the flat
-// entry_idx and per-entry shift schedule.
-func pcsLayoutLiteral(layout []PcsSizeBundle) string {
+// pcsColumnsLiteral emits the symbolic `[]const pcs.ColumnDesc` list in prover
+// declaration order: each column's batch, is_ext, size source (static size_log2
+// or dynamic module_sizes index) and shift schedule.
+func pcsColumnsLiteral(columns []PcsColumnDesc) string {
 	var b strings.Builder
 	b.WriteString("&.{ ")
-	for i, bundle := range layout {
+	for i, c := range columns {
 		if i > 0 {
 			b.WriteString(", ")
 		}
-		fmt.Fprintf(&b, ".{ .size_log2 = %d, .entries = &.{ ", bundle.SizeLog2)
-		for j, e := range bundle.Entries {
-			if j > 0 {
-				b.WriteString(", ")
-			}
-			fmt.Fprintf(&b, ".{ .batch_idx = %d, .is_ext = %t, .row_idx = %d, .entry_idx = %d, .shifts = &[_]usize%s }",
-				e.BatchIdx, e.IsExt, e.RowIdx, e.EntryIdx, pcsIntArrayLiteral(e.Shifts))
+		var size string
+		if c.IsDynamic {
+			size = fmt.Sprintf(".{ .dynamic = %d }", c.DynamicIndex)
+		} else {
+			size = fmt.Sprintf(".{ .static = %d }", c.SizeLog2)
 		}
-		b.WriteString(" } }")
+		fmt.Fprintf(&b, ".{ .batch_idx = %d, .is_ext = %t, .size = %s, .shifts = &[_]isize%s }",
+			c.BatchIdx, c.IsExt, size, pcsIntArrayLiteral(c.Shifts))
 	}
 	b.WriteString(" }")
 	return b.String()
@@ -155,7 +157,7 @@ func pcsWriteClaimRefs(b *strings.Builder, refs []PcsClaimRef) {
 		if i > 0 {
 			b.WriteString(", ")
 		}
-		fmt.Fprintf(b, ".{ .entry = %d, .shift = %d }", r.Entry, r.Shift)
+		fmt.Fprintf(b, ".{ .col_decl_idx = %d, .shift = %d }", r.ColDeclIdx, r.Shift)
 	}
 }
 

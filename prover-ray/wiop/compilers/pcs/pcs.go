@@ -102,6 +102,23 @@ const FRILogInverseRate = friLogInverseRate
 // use it to mutate query behaviour.
 func FRINumQueries() int { return friNumQueries }
 
+// FRIMaxCommittableSizeLog2 is the log2 of the largest committed column size the
+// PCS supports — the fixed capacity of the static FRI envelope (2^22). The
+// verifier-ray codegen bakes this as the pcs.System envelope's log_plaintext_size
+// so ONE comptime System can restrict to any per-proof largest opened size via
+// fri.Params.restrictTo. Exported so the codegen never re-derives (and never
+// drifts from) the prover's actual envelope.
+func FRIMaxCommittableSizeLog2() uint8 { return maxCommittableSizeLog2 }
+
+// FRIStaticParams returns the process-wide FRI envelope parameters (sized to
+// FRIMaxCommittableSizeLog2). The verifier-ray codegen reads
+// LogCodewordSize/LogPlainTextSize/NumQueries off these to emit the pcs.System
+// envelope, so the emitted envelope is provably the one the prover commits with.
+func FRIStaticParams() fri.Params {
+	params, _ := staticFRI()
+	return params
+}
+
 // newStaticPCS wraps the shared static parameters in a fresh, per-proof [fri.PCS]
 // (which carries the mutable opening state). Wrapping is cheap — no domains are
 // rebuilt — and each proof restricts the fold schedule to its own witness size.

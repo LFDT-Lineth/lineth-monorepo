@@ -56,6 +56,31 @@ pub const Params = struct {
         }
         return self.log_plaintext_size - self.log_final_poly_size;
     }
+
+    /// Runtime `numRounds` (no comptime shape checks), for restricted params
+    /// whose sizes are only known at verify time.
+    pub fn numRoundsRuntime(self: Params) u8 {
+        return self.log_plaintext_size - self.log_final_poly_size;
+    }
+
+    /// Restricts FRI to the top sub-domain of plaintext size 2^top_log2, mirroring
+    /// prover-ray `Params.restrictTo`: the codeword shrinks by the same offset the
+    /// plaintext does (offset = log_plaintext_size - top_log2), the final-poly size
+    /// is unchanged. This is how the verifier adapts the ENVELOPE params to a
+    /// specific proof's largest opened size, so one baked System covers many sizes.
+    /// Returns an error if top_log2 is outside [log_final_poly_size, log_plaintext_size].
+    pub fn restrictTo(self: Params, top_log2: u8) error{RestrictOutOfRange}!Params {
+        if (top_log2 < self.log_final_poly_size or top_log2 > self.log_plaintext_size) {
+            return error.RestrictOutOfRange;
+        }
+        const offset = self.log_plaintext_size - top_log2;
+        return .{
+            .log_codeword_size = self.log_codeword_size - offset,
+            .log_plaintext_size = top_log2,
+            .log_final_poly_size = self.log_final_poly_size,
+            .num_queries = self.num_queries,
+        };
+    }
 };
 
 /// One fold round's conjugate pair (self, sibling): prover-ray's `inputPair`.
@@ -108,20 +133,20 @@ pub const Proof = struct {
 /// `Challenges.FoldAlphas` contract), never for arithmetic; the fold
 /// challenges themselves are consumed later, by `checkFolds`.
 pub fn checkOpeningProofShape(
-    comptime params: Params,
+    params: Params,
     proof: Proof,
     fold_alphas: []const ext.Ext,
     positions: []const usize,
 ) Error!void {
-    const num_rounds = params.numRounds();
+    const num_rounds = params.numRoundsRuntime();
     const want_round_roots: u8 = if (num_rounds > 0) num_rounds - 1 else 0;
     if (proof.round_roots.len != want_round_roots) return Error.InvalidRoundRootCount;
     if (proof.running_queries.len != params.num_queries) return Error.InvalidRunningQueryCount;
-    if (proof.final_poly.len != (@as(usize, 1) << params.log_final_poly_size)) return Error.InvalidFinalPolyLength;
+    if (proof.final_poly.len != (@as(usize, 1) << @as(std.math.Log2Int(usize), @intCast(params.log_final_poly_size)))) return Error.InvalidFinalPolyLength;
     if (fold_alphas.len != num_rounds) return Error.InvalidFoldAlphaCount;
     if (positions.len < params.num_queries) return Error.InsufficientPositions;
 
-    const codeword_size = @as(usize, 1) << params.log_codeword_size;
+    const codeword_size = @as(usize, 1) << @as(std.math.Log2Int(usize), @intCast(params.log_codeword_size));
     for (proof.running_queries, positions[0..params.num_queries]) |query_branches, position| {
         if (query_branches.len != want_round_roots) return Error.InvalidRunningQueryCount;
         if (position >= codeword_size) return Error.PositionOutOfRange;
@@ -137,13 +162,13 @@ pub fn checkOpeningProofShape(
 /// Validates every input length itself, since `rounds` is a caller-allocated
 /// output buffer `checkOpeningProofShape` never sees.
 pub fn resolveRunningLayers(
-    comptime params: Params,
+    params: Params,
     round_roots: []const poseidon2.Digest,
     query_branches: []const merkle.Branch,
     position: usize,
     rounds: []Pair,
 ) Error!void {
-    const num_rounds = params.numRounds();
+    const num_rounds = params.numRoundsRuntime();
     if (num_rounds == 0) return; // no running layers at all (D=1)
     if (rounds.len != num_rounds) return Error.InvalidRunningLayerShape;
     if (query_branches.len != num_rounds - 1) return Error.InvalidRunningLayerShape;
@@ -175,12 +200,12 @@ pub fn resolveRunningLayers(
 /// domain-halving map, so 1/x_{j+1} = (1/x_j)^2. Only round 0's inverse is
 /// computed directly, from the query position's (bit-reversed) domain point.
 pub fn checkFolds(
-    comptime params: Params,
+    params: Params,
     resolved: []const ResolvedQuery,
     fold_alphas: []const ext.Ext,
     positions: []const usize,
 ) Error!void {
-    const num_rounds = params.numRounds();
+    const num_rounds = params.numRoundsRuntime();
     if (resolved.len != params.num_queries) return Error.InvalidResolvedQueryCount;
     if (fold_alphas.len != num_rounds) return Error.InvalidFoldAlphaCount;
     if (positions.len < resolved.len) return Error.InsufficientPositions;
@@ -229,12 +254,8 @@ pub fn checkFolds(
 // crypto/poseidon2.zig's inv2Exp1, which is private to that module.
 const inv_two: field.Element = .{ .value = 1_065_353_217 };
 
-fn fullDomainGenerator(comptime params: Params) field.Element {
-    comptime {
-        _ = field.rootOfUnityBy(@as(usize, 1) << params.log_codeword_size) catch
-            @compileError("fri: log_codeword_size exceeds the supported KoalaBear root-of-unity order");
-    }
-    return field.rootOfUnityBy(@as(usize, 1) << params.log_codeword_size) catch unreachable;
+fn fullDomainGenerator(params: Params) field.Element {
+    return field.rootOfUnityBy(@as(usize, 1) << @as(std.math.Log2Int(usize), @intCast(params.log_codeword_size))) catch unreachable;
 }
 
 /// x = g^{bitrev_{log_size}(position)}, where g generates the size-2^log_size
@@ -248,9 +269,8 @@ fn domainPoint(log_size: u8, generator: field.Element, position: usize) field.El
 /// size-2^log_size domain: prover-ray's `domainPointExt`. `log_size` is
 /// comptime since callers (the PCS/DEEP layer) only ever evaluate this at a
 /// level's own round, itself derived from the comptime layout.
-pub fn domainPointExt(comptime log_size: u8, position: usize) ext.Ext {
-    const generator = comptime field.rootOfUnityBy(@as(usize, 1) << log_size) catch
-        @compileError("fri: log_size exceeds the supported KoalaBear root-of-unity order");
+pub fn domainPointExt(log_size: u8, position: usize) ext.Ext {
+    const generator = field.rootOfUnityBy(@as(usize, 1) << @as(std.math.Log2Int(usize), @intCast(log_size))) catch unreachable;
     return ext.Ext.lift(domainPoint(log_size, generator, position));
 }
 

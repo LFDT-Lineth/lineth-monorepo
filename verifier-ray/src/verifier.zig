@@ -152,14 +152,23 @@ pub fn verify(
     const zeta_index = comptime pcs_system.zeta_coin_index orelse
         @compileError("pcs: System.zeta_coin_index must be set");
 
-    const pcs_challenges = try pcs.deriveChallenges(pcs_system, &transcript, opening.proof.fri_proof);
+    // Reconstruct the canonical PCS layout for THIS proof's dynamic sizes: one
+    // baked comptime System verifies proofs of different module sizes because the
+    // bundle placement / entry order / restricted params are a runtime function
+    // of `module_sizes` (mirroring prover-ray's GetLayout + canonicalLayout +
+    // restrictTo). deriveChallenges needs the restricted params for the fold /
+    // query-position counts.
+    const recon = try pcs.reconstruct(pcs_system, proof.module_sizes);
+
+    const pcs_challenges = try pcs.deriveChallenges(pcs_system, recon, &transcript, opening.proof.fri_proof);
     try pcs.verify(pcs_system, .{
         .roots = &bound_roots,
         .entry_claims = opening.entry_claims,
         .zeta = all_coins[zeta_index],
-        .fold_alphas = &pcs_challenges.fold_alphas,
-        .query_positions = &pcs_challenges.query_positions,
+        .fold_alphas = pcs_challenges.foldAlphas(),
+        .query_positions = pcs_challenges.query_positions[0..recon.params.num_queries],
         .proof = opening.proof,
+        .module_sizes = proof.module_sizes,
     });
 
     // Route each PCS-authenticated entry_claim to the vanishing claim slot that
@@ -169,8 +178,8 @@ pub fn verify(
     // different values for the same column" gap.
     var derived_witness: [systems.vanishing.total_witness_claims]ext.Ext = undefined;
     var derived_quotient: [systems.vanishing.total_quotient_claims]ext.Ext = undefined;
-    try routeClaims(pcs_system.witness_map, opening.entry_claims, &derived_witness);
-    try routeClaims(pcs_system.quotient_map, opening.entry_claims, &derived_quotient);
+    try routeClaims(pcs_system, recon, pcs_system.witness_map, opening.entry_claims, &derived_witness);
+    try routeClaims(pcs_system, recon, pcs_system.quotient_map, opening.entry_claims, &derived_quotient);
 
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.vanishing_start, 0);
     try vanishing.verify(systems.vanishing, .{
@@ -206,14 +215,21 @@ pub fn verify(
 /// range, else the PCS/vanishing metadata disagree — a codegen bug, surfaced as
 /// an error rather than an out-of-bounds panic.
 fn routeClaims(
+    comptime system: pcs.System,
+    recon: pcs.Reconstructed(system),
     map: []const pcs.ClaimRef,
     entry_claims: []const []const ext.Ext,
     out: []ext.Ext,
 ) error{ClaimMapMismatch}!void {
     if (map.len != out.len) return error.ClaimMapMismatch;
     for (map, out) |ref, *slot| {
-        if (ref.entry >= entry_claims.len) return error.ClaimMapMismatch;
-        const col = entry_claims[ref.entry];
+        // A ClaimRef names a column by its declaration index; the runtime
+        // reconstruction resolves it to the canonical entry that column occupies
+        // for THIS proof's sizes.
+        if (ref.col_decl_idx >= system.columns.len) return error.ClaimMapMismatch;
+        const entry = recon.col_to_entry[ref.col_decl_idx];
+        if (entry >= entry_claims.len) return error.ClaimMapMismatch;
+        const col = entry_claims[entry];
         if (ref.shift >= col.len) return error.ClaimMapMismatch;
         slot.* = col[ref.shift];
     }

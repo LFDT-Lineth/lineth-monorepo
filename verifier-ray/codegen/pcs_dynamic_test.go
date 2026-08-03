@@ -1,9 +1,12 @@
 package codegen
 
 import (
+	"strings"
 	"testing"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
 	pcscompiler "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 )
 
@@ -40,34 +43,57 @@ func TestDynamicModuleOrderFollowsSysModules(t *testing.T) {
 	}
 }
 
-// HasCommittedDynamicColumn must detect a dynamic module whose column is
-// PCS-committed (VisibilityOracle). Such a column's FRI bundle size is a
-// function of the proof's runtime size, so BuildPcsSystem cannot bake a single
-// size-independent System and must reject it. (P1a regression guard.)
-func TestHasCommittedDynamicColumn(t *testing.T) {
-	// Case 1: dynamic module with a committed column → true.
-	{
-		sys := wiop.NewSystemf("dyncommitted")
-		r0 := sys.NewRound()
-		dyn := sys.NewDynamicModule(sys.Context.Childf("dyn"), wiop.PaddingDirectionRight)
-		col := dyn.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
-		dyn.NewVanishing(sys.Context.Childf("bool"), wiop.Sub(wiop.Mul(col.View(), col.View()), col.View()))
-		pcscompiler.Compile(sys)
-		if !HasCommittedDynamicColumn(sys) {
-			t.Fatalf("HasCommittedDynamicColumn = false, want true for a committed dynamic column")
+// (The former TestHasCommittedDynamicColumn was removed: committed dynamic
+// columns are now SUPPORTED via runtime layout reconstruction, so BuildPcsSystem
+// no longer rejects them and the HasCommittedDynamicColumn guard was deleted.)
+
+// BuildPcsSystem must REJECT a dynamic column opened at two shift offsets that
+// alias mod its runtime size. prover-ray dedups such openings (mod the size) to
+// one, but the size-independent ColumnDesc schedule keeps both, so the verifier
+// would expect an extra (unauthenticated) claim and double-count the DEEP
+// quotient. Storing raw offsets is only sound when they don't alias — the guard
+// enforces that.
+func TestBuildPcsSystemRejectsAliasingDynamicShifts(t *testing.T) {
+	sys := wiop.NewSystemf("dyn-alias")
+	r0 := sys.NewRound()
+	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionRight)
+	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	// Open the column at offsets 1 and 9: at the proving size 8 these alias
+	// (1 == 9 mod 8), so prover-ray produces one opening but the raw schedule two.
+	mod.NewVanishing(
+		sys.Context.Childf("alias"),
+		wiop.Sub(col.View().Shift(1), col.View().Shift(9)),
+	)
+
+	global.Compile(sys)
+	pcscompiler.Compile(sys)
+
+	// Prove at size 8 (where offsets 1 and 9 alias).
+	vals := make([]field.Element, 8)
+	for i := range vals {
+		vals[i].SetUint64(uint64(i + 1))
+	}
+	rt := wiop.NewRuntime(sys)
+	rt.AssignColumn(col, &wiop.ConcreteVector{Plain: field.VecFromBase(vals)})
+	for _, action := range rt.CurrentRound().ProverActions {
+		action.Run(rt)
+	}
+	for rt.CurrentRound().ID < len(rt.System.Rounds)-1 {
+		rt.AdvanceRound()
+		for _, action := range rt.CurrentRound().ProverActions {
+			action.Run(rt)
 		}
 	}
 
-	// Case 2: only a static module with a committed column → false.
-	{
-		sys := wiop.NewSystemf("staticonly")
-		r0 := sys.NewRound()
-		mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-		col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
-		mod.NewVanishing(sys.Context.Childf("bool"), wiop.Sub(wiop.Mul(col.View(), col.View()), col.View()))
-		pcscompiler.Compile(sys)
-		if HasCommittedDynamicColumn(sys) {
-			t.Fatalf("HasCommittedDynamicColumn = true, want false for a static-only protocol")
-		}
+	routing, err := BuildCoinRouting(sys)
+	if err != nil {
+		t.Fatalf("BuildCoinRouting() error = %v", err)
+	}
+	_, err = BuildPcsSystem(sys, rt, routing)
+	if err == nil {
+		t.Fatalf("BuildPcsSystem accepted aliasing dynamic-column shifts; want an error")
+	}
+	if !strings.Contains(err.Error(), "alias") {
+		t.Fatalf("BuildPcsSystem error = %q, want an aliasing rejection", err.Error())
 	}
 }

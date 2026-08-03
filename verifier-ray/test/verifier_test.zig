@@ -52,6 +52,34 @@ test "all fixture cases: tampered proofs are rejected" {
     try std.testing.expect(checked > 0);
 }
 
+test "multi-size: one baked System verifies proofs of two dynamic sizes" {
+    // The runtime-size-reconstructed PCS layout: a committed-dynamic-column
+    // protocol is proven at two DIFFERENT dynamic-module sizes, and BOTH proofs
+    // verify against the SAME comptime System (case.systems). The verifier
+    // reconstructs each proof's canonical layout from the shared ColumnDesc list
+    // + the proof's own module_sizes, so the bundle placement / entry order /
+    // restricted FRI params adapt per size. Without the reconstruction, the alt
+    // (larger) size would land in a different bundle and fail.
+    var checked: usize = 0;
+    inline for (0..vf.case_count) |i| {
+        if (comptime vf.hasAlt(i)) {
+            checked += 1;
+            const case = comptime vf.get(i);
+            // Primary size.
+            verifier.verify(case.spec, case.systems, vf.getInput(i)) catch |err| {
+                std.debug.print("multi-size case {d} ({s}) primary failed: {s}\n", .{ i, case.name, @errorName(err) });
+                return err;
+            };
+            // Alternate size — SAME System.
+            verifier.verify(case.spec, case.systems, vf.getInputAlt(i)) catch |err| {
+                std.debug.print("multi-size case {d} ({s}) alt size failed: {s}\n", .{ i, case.name, @errorName(err) });
+                return err;
+            };
+        }
+    }
+    try std.testing.expect(checked > 0);
+}
+
 // Note: there is no "empty protocol" verify test — PCS is mandatory, so `verify`
 // always indexes a zeta coin, which a zero-coin spec cannot provide.
 test "verify rejects proof with wrong round count" {
@@ -108,9 +136,11 @@ test "cell ref past the proof's cells slice is rejected, not read OOB" {
 // touching PCS, so an empty system suffices. num_batches == 0 makes resolveRoots
 // fill a zero-length roots array.
 const empty_pcs_system = pcs.System{
-    .params = .{ .log_codeword_size = 1, .log_plaintext_size = 0, .num_queries = 1 },
-    .layout = &.{},
+    .envelope_params = .{ .log_codeword_size = 1, .log_plaintext_size = 0, .num_queries = 1 },
+    .columns = &.{},
     .num_batches = 0,
+    .max_entries = 0,
+    .max_size_log2 = 0,
     .zeta_coin_index = 0,
 };
 const empty_pcs_opening = verifier.PcsOpening{

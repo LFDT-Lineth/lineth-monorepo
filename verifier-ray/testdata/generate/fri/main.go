@@ -488,25 +488,46 @@ func corruptBoundaryClaimData(base pcsCaseData) pcsCaseData {
 
 // ─── Zig literal emission ───────────────────────────────────────────────────
 
+// pcsSystemLiteral emits the runtime-reconstructed pcs.System: a symbolic
+// ColumnDesc list (in canonical == declaration order here, since these standalone
+// fixtures are single-size — every column's size is static) plus the envelope
+// params. For a single-size fixture the envelope already has
+// log_plaintext_size == the top size, so the verifier's restrictTo is a no-op and
+// reconstruct() reproduces exactly `layout`.
 func pcsSystemLiteral(params fri.Params, logFinalPolySize uint8, layout []pcsSizeBundle) string {
+	// Flatten the canonical layout into ColumnDesc declaration order (canonical
+	// order: size DESC / batch ASC / base-then-ext / position ASC). Emitting in
+	// canonical order makes each column's within-bucket declaration position equal
+	// its RowIdx, which reconstruct() re-derives.
+	type col struct {
+		batchIdx int
+		isExt    bool
+		sizeLog2 uint8
+		shifts   []int
+	}
+	var cols []col
+	maxSize := 0
+	for _, bundle := range layout {
+		if int(bundle.SizeLog2) > maxSize {
+			maxSize = int(bundle.SizeLog2)
+		}
+		for _, e := range bundle.Entries {
+			cols = append(cols, col{batchIdx: e.BatchIdx, isExt: e.IsExt, sizeLog2: bundle.SizeLog2, shifts: e.Shifts})
+		}
+	}
+
 	var b strings.Builder
-	fmt.Fprintf(&b, "pcs.System{ .params = fri.Params{ .log_codeword_size = %d, .log_plaintext_size = %d, .log_final_poly_size = %d, .num_queries = %d }, .layout = &.{ ",
+	fmt.Fprintf(&b, "pcs.System{ .envelope_params = fri.Params{ .log_codeword_size = %d, .log_plaintext_size = %d, .log_final_poly_size = %d, .num_queries = %d }, .columns = &.{ ",
 		params.LogCodewordSize, params.LogPlainTextSize, logFinalPolySize, params.NumQueries)
-	for i, bundle := range layout {
+	for i, c := range cols {
 		if i > 0 {
 			b.WriteString(", ")
 		}
-		fmt.Fprintf(&b, ".{ .size_log2 = %d, .entries = &.{ ", bundle.SizeLog2)
-		for j, e := range bundle.Entries {
-			if j > 0 {
-				b.WriteString(", ")
-			}
-			fmt.Fprintf(&b, ".{ .batch_idx = %d, .is_ext = %t, .row_idx = %d, .entry_idx = %d, .shifts = &[_]usize%s }",
-				e.BatchIdx, e.IsExt, e.RowIdx, e.EntryIdx, intArrayLiteral(e.Shifts))
-		}
-		b.WriteString(" } }")
+		fmt.Fprintf(&b, ".{ .batch_idx = %d, .is_ext = %t, .size = .{ .static = %d }, .shifts = &[_]isize%s }",
+			c.batchIdx, c.isExt, c.sizeLog2, intArrayLiteral(c.shifts))
 	}
-	fmt.Fprintf(&b, " }, .num_batches = %d }", numBatches(layout))
+	fmt.Fprintf(&b, " }, .num_batches = %d, .max_entries = %d, .max_size_log2 = %d }",
+		numBatches(layout), len(cols), maxSize)
 	return b.String()
 }
 

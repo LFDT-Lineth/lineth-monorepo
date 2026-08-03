@@ -568,6 +568,15 @@ type fixtureCase struct {
 	invalidPcs    *codegen.PcsSystem
 	honestOpening fri.OpeningProof
 	invalidOpen   fri.OpeningProof
+	// alt is a SECOND honest proof of the SAME compiled protocol at a DIFFERENT
+	// dynamic-module size, verified against the SAME comptime PcsSystem
+	// (honestPcs). It proves the runtime-size-reconstructed PCS layout: one baked
+	// System verifies proofs of different dynamic sizes. Non-nil only for the
+	// multi-size scenario (see addMultiSize). altPcs is the alt proof's own runtime
+	// opening (its entry_claims/FRI proof differ; the System is identical).
+	alt     *vanishingProofView
+	altPcs  *codegen.PcsSystem
+	altOpen fri.OpeningProof
 }
 
 type vanishingProofView struct {
@@ -616,15 +625,10 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		if len(vanishingSystem.Modules) == 0 {
 			return nil
 		}
-		// Protocols with committed dynamic-module columns cannot be baked into a
-		// single mandatory-PCS System (their PCS bundle layout is a function of the
-		// proof's runtime sizes — BuildPcsSystem rejects them). We still emit them
-		// into vanishing.zig (the direct vanishing.verify path, which handles
-		// dynamic sizing via module_sizes and has no PCS layout), but mark them
-		// pcs=nil so writeVerifyFixtures excludes them from the mandatory-PCS
-		// verify.zig path. This keeps dynamic-module vanishing coverage while not
-		// emitting a size-frozen PCS System. See codegen.HasCommittedDynamicColumn.
-		hasDynCommitted := codegen.HasCommittedDynamicColumn(sys)
+		// The PCS System is now size-independent: the verifier reconstructs the
+		// canonical layout from ColumnDesc + module_sizes at verify time, so ONE
+		// baked System verifies proofs of any dynamic size. Committed dynamic-module
+		// columns flow through the full mandatory-PCS (verify.zig) path.
 		honestRt := runProver(sys, honest)
 		logDeriv, err := codegen.BuildLogDerivSystem(sys)
 		if err != nil {
@@ -637,44 +641,97 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 			invalidRt := runProver(sys, invalid)
 			proof := extractVanishingProofView(sys, invalidRt)
 			tc.invalid = &proof
-			if !hasDynCommitted {
-				// The invalid opening carries the tampered claim values (the flipped
-				// witness surfaces in the LagrangeEval openings), so the PCS-routed
-				// claims fed to vanishing are the invalid ones — exactly what must
-				// fail the quotient identity.
-				ip, err := codegen.BuildPcsSystem(sys, invalidRt, routing)
-				if err != nil {
-					return fmt.Errorf("build invalid pcs system %s/%s: %w", source, name, err)
-				}
-				if invalidRt.PCSOpeningProof == nil {
-					return fmt.Errorf("pcs %s/%s: invalid runtime has no PCSOpeningProof", source, name)
-				}
-				tc.invalidPcs = &ip
-				tc.invalidOpen = *invalidRt.PCSOpeningProof
+			// The invalid opening carries the tampered claim values (the flipped
+			// witness surfaces in the LagrangeEval openings), so the PCS-routed
+			// claims fed to vanishing are the invalid ones — exactly what must
+			// fail the quotient identity.
+			ip, err := codegen.BuildPcsSystem(sys, invalidRt, routing)
+			if err != nil {
+				return fmt.Errorf("build invalid pcs system %s/%s: %w", source, name, err)
 			}
+			if invalidRt.PCSOpeningProof == nil {
+				return fmt.Errorf("pcs %s/%s: invalid runtime has no PCSOpeningProof", source, name)
+			}
+			tc.invalidPcs = &ip
+			tc.invalidOpen = *invalidRt.PCSOpeningProof
 		}
 
-		// Build the PCS system for the mandatory-PCS (verify.zig) path only when
-		// the protocol has no committed dynamic-module columns (see above). When it
-		// does, honestPcs stays nil: the case is still emitted into vanishing.zig
-		// (direct vanishing.verify), but writeVerifyFixtures excludes pcs==nil
-		// cases from the mandatory-PCS verify.zig path.
-		pcsSys := (*codegen.PcsSystem)(nil)
-		if !hasDynCommitted {
-			honestPcs, err := codegen.BuildPcsSystem(sys, honestRt, routing)
-			if err != nil {
-				return fmt.Errorf("build pcs system %s/%s: %w", source, name, err)
-			}
-			if honestRt.PCSOpeningProof == nil {
-				return fmt.Errorf("pcs %s/%s: honest runtime has no PCSOpeningProof", source, name)
-			}
-			tc.honestPcs = &honestPcs
-			tc.honestOpening = *honestRt.PCSOpeningProof
-			pcsSys = &honestPcs
+		honestPcs, err := codegen.BuildPcsSystem(sys, honestRt, routing)
+		if err != nil {
+			return fmt.Errorf("build pcs system %s/%s: %w", source, name, err)
 		}
+		if honestRt.PCSOpeningProof == nil {
+			return fmt.Errorf("pcs %s/%s: honest runtime has no PCSOpeningProof", source, name)
+		}
+		tc.honestPcs = &honestPcs
+		tc.honestOpening = *honestRt.PCSOpeningProof
+		pcsSys := &honestPcs
 
 		cases = append(cases, tc)
 		systems = append(systems, codegen.CompiledSystem{Routing: routing, Vanishing: vanishingSystem, LogDeriv: logDeriv, Pcs: pcsSys})
+		return nil
+	}
+
+	// addMultiSize emits a case whose committed dynamic column is proven at TWO
+	// different runtime sizes against ONE comptime PcsSystem — the whole point of
+	// the runtime-size-reconstructed layout. `honest` proves the primary size
+	// (whose PcsSystem is baked); `alt` proves a second size against that SAME
+	// System. Both must verify: the verifier reconstructs each proof's canonical
+	// layout from the shared ColumnDesc list + the proof's own module_sizes.
+	addMultiSize := func(source, name string, sys *wiop.System, honest, alt assignFn) error {
+		compileFullPipeline(sys)
+		if err := codegen.AssertAllVerifierActionsHandled(sys); err != nil {
+			return fmt.Errorf("verifier actions %s/%s: %w", source, name, err)
+		}
+		routing, err := codegen.BuildCoinRouting(sys)
+		if err != nil {
+			return fmt.Errorf("build coin routing %s/%s: %w", source, name, err)
+		}
+		vanishingSystem, err := codegen.BuildVanishingSystem(sys, routing)
+		if err != nil {
+			return fmt.Errorf("build vanishing system %s/%s: %w", source, name, err)
+		}
+		logDeriv, err := codegen.BuildLogDerivSystem(sys)
+		if err != nil {
+			return fmt.Errorf("build logderiv system %s/%s: %w", source, name, err)
+		}
+
+		honestRt := runProver(sys, honest)
+		honestPcs, err := codegen.BuildPcsSystem(sys, honestRt, routing)
+		if err != nil {
+			return fmt.Errorf("build pcs system %s/%s: %w", source, name, err)
+		}
+		if honestRt.PCSOpeningProof == nil {
+			return fmt.Errorf("pcs %s/%s: honest runtime has no PCSOpeningProof", source, name)
+		}
+
+		altRt := runProver(sys, alt)
+		// The alt PcsSystem is only used to extract the alt proof's EntryClaims (the
+		// runtime opening); its symbolic descriptor (Columns/envelope/maps) is
+		// IDENTICAL to honestPcs — the verifier uses the SAME baked honestPcs to
+		// verify BOTH proofs. We build it separately just to read the alt opening's
+		// authenticated claims in canonical order at the alt size.
+		altPcs, err := codegen.BuildPcsSystem(sys, altRt, routing)
+		if err != nil {
+			return fmt.Errorf("build alt pcs system %s/%s: %w", source, name, err)
+		}
+		if altRt.PCSOpeningProof == nil {
+			return fmt.Errorf("pcs %s/%s: alt runtime has no PCSOpeningProof", source, name)
+		}
+
+		tc := fixtureCase{
+			name:          name,
+			honest:        extractVanishingProofView(sys, honestRt),
+			honestPcs:     &honestPcs,
+			honestOpening: *honestRt.PCSOpeningProof,
+		}
+		altView := extractVanishingProofView(sys, altRt)
+		tc.alt = &altView
+		tc.altPcs = &altPcs
+		tc.altOpen = *altRt.PCSOpeningProof
+
+		cases = append(cases, tc)
+		systems = append(systems, codegen.CompiledSystem{Routing: routing, Vanishing: vanishingSystem, LogDeriv: logDeriv, Pcs: &honestPcs})
 		return nil
 	}
 
@@ -683,6 +740,20 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		if err := add("Vanishing", sc.Name, sc.Sys, sc.AssignHonest, sc.AssignInvalid); err != nil {
 			return nil, nil, err
 		}
+	}
+
+	// Multi-size committed-dynamic coverage: a dyn-fib protocol proven at size 8
+	// AND size 16 against ONE baked PcsSystem. Built here (not from a fixed-size
+	// wioptest scenario) so the two runtimes assign the dynamic column different
+	// lengths.
+	if err := addMultiSizeDynFib(addMultiSize); err != nil {
+		return nil, nil, err
+	}
+	// Two independent committed dynamic modules of different sizes against one
+	// baked PcsSystem — exercises per-module module_sizes indexing and the
+	// sys.Modules absorption order that single-module scenarios cannot.
+	if err := addMultiSizeTwoDynModules(addMultiSize); err != nil {
+		return nil, nil, err
 	}
 	// LocalVanishing is intentionally NOT generated: at the verifier level every
 	// LocalVanishing scenario reduces to a vanishing System whose shape (module
@@ -886,6 +957,85 @@ func extractVanishingProofView(sys *wiop.System, rt *wiop.Runtime) vanishingProo
 		quotientClaims: quotientClaims,
 		moduleSizes:    dynamicModuleSizes(sys, rt),
 	}
+}
+
+// addMultiSizeDynFib constructs the dyn-fib protocol (a single committed dynamic
+// column with the Fibonacci recurrence A[i] − A[i−1] − A[i−2] = 0) and registers
+// it via `reg` (addMultiSize) with two honest witnesses of DIFFERENT lengths
+// (8 and 16). Rows 0 and 1 are auto-cancelled by the back-shifts, so any
+// Fibonacci prefix is valid. This exercises verifying two dynamic sizes against
+// one baked PcsSystem.
+func addMultiSizeDynFib(reg func(source, name string, sys *wiop.System, honest, alt assignFn) error) error {
+	sys := wiop.NewSystemf("dyn-fib-multisize")
+	r0 := sys.NewRound()
+	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionRight)
+	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	mod.NewVanishing(
+		sys.Context.Childf("fib"),
+		wiop.Sub(
+			wiop.Sub(col.View(), col.View().Shift(-1)),
+			col.View().Shift(-2),
+		),
+	)
+
+	honest := func(rt *wiop.Runtime) { rt.AssignColumn(col, fibVector(8)) }
+	alt := func(rt *wiop.Runtime) { rt.AssignColumn(col, fibVector(16)) }
+	return reg("MultiSize", "DynamicFibonacciMultiSize", sys, honest, alt)
+}
+
+// fibVector builds a length-n Fibonacci column (rows 0 and 1 = 1), used as an
+// honest witness for the committed-dynamic Fibonacci recurrence.
+func fibVector(n int) *wiop.ConcreteVector {
+	vals := make([]uint64, n)
+	vals[0], vals[1] = 1, 1
+	for i := 2; i < n; i++ {
+		vals[i] = vals[i-1] + vals[i-2]
+	}
+	elems := make([]field.Element, n)
+	for i, v := range vals {
+		elems[i].SetUint64(v)
+	}
+	return &wiop.ConcreteVector{Plain: field.VecFromBase(elems)}
+}
+
+// addMultiSizeTwoDynModules builds a protocol with TWO independent committed
+// dynamic modules (each a Fibonacci column), proven at two size configurations
+// against ONE baked PcsSystem. The alt witness resizes BOTH modules to different
+// lengths than honest, so the verifier must (a) absorb each module's size into
+// the transcript in sys.Modules order, (b) index module_sizes[i] per dynamic
+// module correctly, and (c) reconstruct two independently-sized layouts that
+// coexist in the shared column schedule. Single-module scenarios cannot catch a
+// swapped module index or a cross-module absorption-order bug — this one does.
+func addMultiSizeTwoDynModules(reg func(source, name string, sys *wiop.System, honest, alt assignFn) error) error {
+	sys := wiop.NewSystemf("dyn-fib-two-modules")
+	r0 := sys.NewRound()
+
+	modA := sys.NewDynamicModule(sys.Context.Childf("modA"), wiop.PaddingDirectionRight)
+	colA := modA.NewColumn(sys.Context.Childf("colA"), wiop.VisibilityOracle, r0)
+	modA.NewVanishing(
+		sys.Context.Childf("fibA"),
+		wiop.Sub(wiop.Sub(colA.View(), colA.View().Shift(-1)), colA.View().Shift(-2)),
+	)
+
+	modB := sys.NewDynamicModule(sys.Context.Childf("modB"), wiop.PaddingDirectionRight)
+	colB := modB.NewColumn(sys.Context.Childf("colB"), wiop.VisibilityOracle, r0)
+	modB.NewVanishing(
+		sys.Context.Childf("fibB"),
+		wiop.Sub(wiop.Sub(colB.View(), colB.View().Shift(-1)), colB.View().Shift(-2)),
+	)
+
+	// honest: A at 8, B at 16. alt: A at 16, B at 8 — both modules change size AND
+	// their relative sizes swap, so an off-by-one module index would derive wrong
+	// coins and reject an honest proof.
+	honest := func(rt *wiop.Runtime) {
+		rt.AssignColumn(colA, fibVector(8))
+		rt.AssignColumn(colB, fibVector(16))
+	}
+	alt := func(rt *wiop.Runtime) {
+		rt.AssignColumn(colA, fibVector(16))
+		rt.AssignColumn(colB, fibVector(8))
+	}
+	return reg("MultiSize", "DynamicFibonacciTwoModules", sys, honest, alt)
 }
 
 func globalVerifiers(sys *wiop.System) []*global.Verifier {
@@ -1163,6 +1313,10 @@ func writeVerifyCase(out *bytes.Buffer, idx int, tc fixtureCase) {
 	if tc.invalid != nil {
 		writeVerifyProof(out, fmt.Sprintf("verify_case_%d_failing", idx), *tc.invalid, tc.invalidPcs, tc.invalidOpen)
 	}
+	// The alt (second-size) honest proof, verified against the SAME System's .pcs.
+	if tc.alt != nil {
+		writeVerifyProof(out, fmt.Sprintf("verify_case_%d_alt", idx), *tc.alt, tc.altPcs, tc.altOpen)
+	}
 	fmt.Fprintf(
 		out,
 		"const verify_case_%d_systems = verifier.Systems{ .vanishing = system_%d, .logderivativesum = system_%d_logderiv, .pcs = %s };\n",
@@ -1331,6 +1485,34 @@ func writeVerifyFailingInputSwitch(out *bytes.Buffer, cases []fixtureCase) {
 	fmt.Fprintln(out, "    return switch (index) {")
 	for i, tc := range cases {
 		fmt.Fprintf(out, "        %d => %t,\n", i, tc.invalid != nil)
+	}
+	fmt.Fprintln(out, "        else => false,")
+	fmt.Fprintln(out, "    };")
+	fmt.Fprintln(out, "}")
+	fmt.Fprintln(out)
+
+	// getInputAlt returns a case's SECOND-size honest proof (multi-size cases
+	// only); hasAlt gates it. The alt proof is verified against the SAME case
+	// systems (verify_case_i_systems.pcs) as the primary proof — the
+	// runtime-size-reconstructed-layout property: one baked System, two sizes.
+	fmt.Fprintln(out, "pub fn getInputAlt(comptime index: usize) verifier.Proof {")
+	fmt.Fprintln(out, "    return switch (index) {")
+	for i, tc := range cases {
+		if tc.alt != nil {
+			fmt.Fprintf(out, "        %d => verify_case_%d_alt_proof,\n", i, i)
+		} else {
+			fmt.Fprintf(out, "        %d => @compileError(\"verifier fixture case %d (%s) has no alt input\"),\n", i, i, codegen.ZigString(tc.name))
+		}
+	}
+	fmt.Fprintln(out, "        else => @compileError(\"unknown verifier fixture case index\"),")
+	fmt.Fprintln(out, "    };")
+	fmt.Fprintln(out, "}")
+	fmt.Fprintln(out)
+
+	fmt.Fprintln(out, "pub fn hasAlt(comptime index: usize) bool {")
+	fmt.Fprintln(out, "    return switch (index) {")
+	for i, tc := range cases {
+		fmt.Fprintf(out, "        %d => %t,\n", i, tc.alt != nil)
 	}
 	fmt.Fprintln(out, "        else => false,")
 	fmt.Fprintln(out, "    };")

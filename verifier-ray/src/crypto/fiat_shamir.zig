@@ -74,6 +74,14 @@ pub const Transcript = struct {
             if (upper_bound == 0 or (upper_bound & (upper_bound - 1)) != 0)
                 @compileError("fiat_shamir.randomManyIntegers: upper_bound must be a non-zero power of two");
         }
+        self.randomManyIntegersRuntime(out, upper_bound);
+    }
+
+    /// Runtime `upper_bound` variant, for the PCS layer whose codeword size is a
+    /// runtime function of the restricted FRI params. `upper_bound` must still be
+    /// a non-zero power of two (the FRI codeword size always is; the reconstructed
+    /// params guarantee it). Byte-identical squeeze order to the comptime form.
+    pub fn randomManyIntegersRuntime(self: *Transcript, out: []usize, upper_bound: usize) void {
         var i: usize = 0;
         while (i < out.len) {
             const digest = self.randomDigest();
