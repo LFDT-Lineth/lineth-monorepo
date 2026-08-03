@@ -249,8 +249,6 @@ func appendExpr(module *VanishingModule, views map[viewKey]int, routing CoinRout
 		module.Expressions = append(module.Expressions, ExprNode{
 			Kind: ExprCoinValue,
 			Coin: ScalarRef{
-				Round:      e.Context.ID.Slot(),
-				Index:      e.Context.ID.Position(),
 				FlatIndex:  flatIdx,
 				SourceName: e.Context.Label,
 			},

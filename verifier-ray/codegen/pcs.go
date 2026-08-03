@@ -12,24 +12,23 @@ import (
 )
 
 // PcsSystem is the compile-time FRI/PCS description the Zig verifier consumes:
-// the FRI params, the EXPLICIT canonical layout (the already-compiled
-// prover-ray `canonicalLayout` output, one SizeBundle per opened size with each
-// opened column carrying its flat EntryIdx), the claim maps that re-slice the
-// PCS-authenticated entry_claims into the vanishing witness/quotient claims, and
-// the flat all_coins index of the shared opening point zeta.
+// the FRI envelope params, the SYMBOLIC committed-column descriptors (Columns)
+// the verifier reconstructs its canonical layout from at verify time, the claim
+// maps that re-slice the PCS-authenticated entry_claims into the vanishing
+// witness/quotient claims, and the flat all_coins index of the shared opening
+// point zeta.
 //
 // It is extracted from an ALREADY-compiled (global.Compile + pcs.Compile) and
 // proven (sys, rt) protocol, so it can never drift from the prover's committed
 // column ordering: batch order, per-batch layout, and the LagrangeEval openings
 // all come from the prover-ray PCS compiler's own exported helpers.
 //
-// Adaptation vs the fri-pcs branch: that branch emitted per-batch Shapes/Shifts
-// and let the Zig `pcs.layout.buildLayout` reconstruct the canonical layout at
-// runtime. The current-branch engine (`src/query/pcs.zig`) has NO buildLayout;
-// its `pcs.System` carries the layout as an explicit literal `[]const
-// SizeBundle` whose entries reference a flat `entry_idx`. So the layout is fully
-// materialized here (Layout []PcsSizeBundle, with EntryIdx assigned in the same
-// canonical order the engine's entry_claims indexing uses).
+// Unlike a design that freezes the canonical layout at codegen time for one
+// proving size, Columns carries only the size-independent invariants (batch,
+// base/ext, raw shift schedule); the Zig engine (`src/query/pcs.zig`)
+// reconstructs the size-dependent bundle placement, entry order, and restricted
+// FRI params from Columns + the proof's own runtime `module_sizes`, so ONE baked
+// System verifies proofs of different dynamic sizes.
 type PcsSystem struct {
 	SourceName string
 
@@ -47,7 +46,7 @@ type PcsSystem struct {
 	// Columns is the symbolic committed-column descriptor list in prover
 	// DECLARATION order (batch-major, then round.Columns order). The Zig verifier
 	// reconstructs the canonical layout (bundles / entry order / positions) from
-	// these + the proof's runtime module_sizes. Replaces the frozen Layout.
+	// these + the proof's runtime module_sizes.
 	Columns []PcsColumnDesc
 
 	// MaxEntries == len(Columns) and MaxSizeLog2 == the envelope log_plaintext_size:
@@ -76,11 +75,11 @@ type PcsSystem struct {
 	BatchRoots []PcsBatchRoot
 
 	// EntryClaims are the runtime claimed evaluations captured from the proving
-	// runtime, jagged `[entry][shift]` in the SAME canonical order EntryIdx uses
-	// (so EntryClaims[g] belongs to the entry whose EntryIdx == g, and its length
-	// equals that entry's shift count). This is the prover-supplied
-	// `verifier.PcsOpening.entry_claims` — extracted here, in the one place that
-	// owns the canonical ordering, so it can never drift from Layout/WitnessMap.
+	// runtime, jagged `[entry][shift]` in the canonical entry order the codegen
+	// proving size produces (entry g's row has length == that entry's shift
+	// count). This is the prover-supplied `verifier.PcsOpening.entry_claims` —
+	// extracted here, in the one place that owns the canonical ordering, so it
+	// can never drift from Columns/WitnessMap.
 	EntryClaims [][]field.Ext
 }
 
@@ -339,7 +338,7 @@ func BuildPcsSystem(sys *wiop.System, rt *wiop.Runtime, routing CoinRouting) (Pc
 	// Canonical entry order at the codegen size: size DESC, batch ASC,
 	// base-then-ext, position ASC — the SAME order the verifier's runtime
 	// reconstruction produces at this size, so EntryClaims lines up entry-for-entry.
-	entries, entryIndex := computePcsLayout(batches, shapes, shifts)
+	entries := computePcsLayout(batches, shapes, shifts)
 
 	// Materialize entry_claims in canonical entry order: each entry's shiftOrder
 	// fixes its per-shift slots, so entryClaims[e][slot] ==
@@ -357,8 +356,6 @@ func BuildPcsSystem(sys *wiop.System, rt *wiop.Runtime, routing CoinRouting) (Pc
 		}
 		entryClaims = append(entryClaims, row)
 	}
-
-	_ = entryIndex
 
 	// Envelope params: the prover's process-wide static FRI schedule. The Zig
 	// verifier restricts these to each proof's largest opened size, so ONE baked
@@ -456,11 +453,9 @@ type pcsLayoutEntry struct {
 
 // computePcsLayout enumerates the canonical entry order at the codegen proving
 // size, mirroring prover-ray's canonicalLayout (and the verifier's reconstruct).
-// The returned entries drive EntryClaims materialization; the returned
-// entryIndex (pcsEntryKey -> flat idx) lets internal cross-checks align a claim
-// cell to its entry. Both MUST agree with the verifier's runtime reconstruction
-// at this same size.
-func computePcsLayout(batches []pcscompiler.BatchRef, shapes []fri.Shape, shifts []fri.BatchShifts) ([]pcsLayoutEntry, map[pcsEntryKey]int) {
+// The returned entries drive EntryClaims materialization; they MUST agree with
+// the verifier's runtime reconstruction at this same size.
+func computePcsLayout(batches []pcscompiler.BatchRef, shapes []fri.Shape, shifts []fri.BatchShifts) []pcsLayoutEntry {
 	maxSizeLog2 := -1
 	for _, s := range shapes {
 		if len(s) > maxSizeLog2+1 {
@@ -469,8 +464,6 @@ func computePcsLayout(batches []pcscompiler.BatchRef, shapes []fri.Shape, shifts
 	}
 
 	var entries []pcsLayoutEntry
-	entryIndex := map[pcsEntryKey]int{}
-	entryIdx := 0
 	for sizeLog2 := maxSizeLog2; sizeLog2 >= 0; sizeLog2-- {
 		for batchIdx := range batches {
 			if sizeLog2 >= len(shapes[batchIdx]) {
@@ -483,20 +476,16 @@ func computePcsLayout(batches []pcscompiler.BatchRef, shapes []fri.Shape, shifts
 					batchIdx: batchIdx, sizeLog2: sizeLog2, isExt: false, rowIdx: rowIdx,
 					shifts: append([]int(nil), rowShifts.Base[rowIdx]...),
 				})
-				entryIndex[pcsEntryKey{batchIdx: batchIdx, sizeLog2: sizeLog2, isExt: false, position: rowIdx}] = entryIdx
-				entryIdx++
 			}
 			for rowIdx := 0; rowIdx < shape.ExtWidth; rowIdx++ {
 				entries = append(entries, pcsLayoutEntry{
 					batchIdx: batchIdx, sizeLog2: sizeLog2, isExt: true, rowIdx: rowIdx,
 					shifts: append([]int(nil), rowShifts.Ext[rowIdx]...),
 				})
-				entryIndex[pcsEntryKey{batchIdx: batchIdx, sizeLog2: sizeLog2, isExt: true, position: rowIdx}] = entryIdx
-				entryIdx++
 			}
 		}
 	}
-	return entries, entryIndex
+	return entries
 }
 
 func initPcsShifts(shape fri.Shape) fri.BatchShifts {

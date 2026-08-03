@@ -13,10 +13,9 @@ import (
 // assume the standard verifier-ray source layout; multi-system files set
 // EmitHeader=false and provide qualified imports.
 type PcsZigOptions struct {
-	// PcsImport is the Zig module exposing `System` / `SizeBundle` / `DeepEntry`
-	// / `ClaimRef` / `BatchRoot` (the current engine, `src/query/pcs.zig`).
-	// FriImport exposes `Params`. When empty, verifier-ray-relative defaults are
-	// used.
+	// PcsImport is the Zig module exposing `System` / `ColumnDesc` / `ClaimRef`
+	// / `BatchRoot` (the current engine, `src/query/pcs.zig`). FriImport
+	// exposes `Params`. When empty, verifier-ray-relative defaults are used.
 	PcsImport string
 	FriImport string
 	// FieldImport is used only to emit a precomputed-batch root octuplet literal
@@ -44,14 +43,14 @@ func defaultPcsZigOptions() PcsZigOptions {
 }
 
 // WritePcsSystemZig writes the Zig source for one PcsSystem as a literal
-// `pcs.System` for the current-branch engine: FRI params, the EXPLICIT canonical
-// layout (`[]const SizeBundle` with per-entry `entry_idx`), the witness/quotient
-// claim maps, the batch-root provenances, and the zeta coin index.
+// `pcs.System` for the current-branch engine: FRI envelope params, the SYMBOLIC
+// `[]const ColumnDesc` list (declaration order), the witness/quotient claim
+// maps, the batch-root provenances, and the zeta coin index.
 //
-// Unlike the fri-pcs branch (which emitted per-batch shapes/shifts and let Zig's
-// buildLayout reconstruct the layout), this engine has no buildLayout: the layout
-// is materialized here from PcsSystem.Layout, with each DeepEntry's flat
-// entry_idx already assigned by computePcsLayout.
+// The engine has no buildLayout step: the canonical layout (bundle placement,
+// entry order, restricted FRI params) is reconstructed by the Zig verifier at
+// verify time from ColumnDesc + the proof's runtime module_sizes, so ONE emitted
+// System verifies proofs of different dynamic sizes.
 //
 // The emitted `<ConstName>` const is a `pcs.System` ready to drop into a
 // `verifier.Systems{ .pcs = ... }`.

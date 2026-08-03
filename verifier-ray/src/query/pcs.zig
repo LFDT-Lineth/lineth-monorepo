@@ -166,7 +166,6 @@ pub const VerifyInput = struct {
 /// canonical order (size DESC / batch ASC / base-then-ext / position ASC).
 pub fn Reconstructed(comptime system: System) type {
     return struct {
-        const Self = @This();
         // At least 1 so a batch-free System (max_entries == 0, used only to reach
         // the transcript replay before PCS) still yields indexable buffers; the
         // runtime lengths (num_entries == 0) keep every loop empty.
@@ -188,10 +187,6 @@ pub fn Reconstructed(comptime system: System) type {
 
         /// col_to_entry[c] = the canonical entry index of column c (decl order).
         col_to_entry: [cap]usize = undefined,
-
-        pub fn shiftsFor(self: Self, comptime sys: System, entry_idx: usize) []const usize {
-            return sys.columns[self.entry_col_decl_idx[entry_idx]].shifts;
-        }
     };
 }
 
