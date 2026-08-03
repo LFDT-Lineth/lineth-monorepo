@@ -1,5 +1,7 @@
 const std = @import("std");
 const verifier_ray = @import("verifier_ray");
+const merkle_fixtures = @import("test_fri_vectors");
+const fold_fixtures = @import("fri_fold_cases.zig");
 
 const field = verifier_ray.field.koalabear;
 const ext = verifier_ray.field.koalabear_ext;
@@ -7,151 +9,44 @@ const poseidon2 = verifier_ray.crypto.poseidon2;
 const merkle = verifier_ray.crypto.merkle;
 const fri = verifier_ray.query.fri;
 
-// Test vectors generated from prover-ray: crypto.merkle's tree-walk is
-// checked against roots and branches from prover-ray's own
-// newCompleteBinaryTree and Poseidon2, and query.fri's fold arithmetic is
-// checked against a real multi-round, multi-level FRI proof at non-trivial
-// (bit-reversed, mixed-parity) query positions. Regenerate via
-// `make generate-testdata`; see
-// prover-ray/crypto/koalabear/fri/vectors_gen_test.go.
-const fixtures_json = @import("test_fri_vectors").raw;
-
-// ─── JSON wire types ─────────────────────────────────────────────────────────
+// Merkle cases are generated live from prover-ray's exported Tree/Branch API
+// (see testdata/generate/fri/main.go); regenerate via `make generate-testdata`.
 //
-// Field/Ext elements travel as their canonical uint64 representation;
-// Octuplets and Exts are fixed-length arrays in the same coordinate order
-// prover-ray's generator emits (Ext: [B0.a0, B0.a1, B1.a0, B1.a1, B2.a0,
-// B2.a1]).
+// Fold cases are FROZEN (test/fri_fold_cases.zig), not generated: prover-ray's
+// FRI internals (Level/quotientColumn/EvalsAt) changed shape in a way that
+// broke the previous hand-built-Level generator, and none of the exported
+// surface can currently rebuild an equivalent "pure fold, zero DEEP quotient"
+// scenario. The two honest cases here are a mechanical (scripted) conversion
+// of the last-known-good generated vectors; the three rejection cases are
+// derived from them at test time by corrupting one field, mirroring exactly
+// what the old generator did (corruptRunningSibling/corruptAux/corruptFinal
+// in the now-deleted prover-ray/crypto/koalabear/fri/vectors_gen_test.go).
+//
+// This means these two cases catch Zig regressions but not prover-ray
+// drift -- see the file header of fri_fold_cases.zig. Follow-up: restore
+// real generation once quotientColumn/Level's construction is exported.
 
-const JsonOctuplet = [8]u64;
-const JsonExt = [6]u64;
+// ─── crypto.merkle: vectors from prover-ray's exported Tree API ────────────
 
-const JsonBranch = struct {
-    leaf: JsonOctuplet,
-    siblings: []JsonOctuplet,
-};
-
-const JsonPair = struct {
-    self: JsonExt,
-    sibling: JsonExt,
-};
-
-const JsonMerkleCase = struct {
-    name: []const u8,
-    leaf: JsonOctuplet,
-    siblings: []JsonOctuplet,
-    index: usize,
-    root: JsonOctuplet,
-    expect_match: bool,
-    expect_error: []const u8 = "",
-};
-
-// log_codeword_size/num_rounds/log_final_poly_size/num_queries record the
-// Params a case was generated under; runFoldCase checks them against the
-// hardcoded comptime fri.Params it runs the case with.
-const JsonFoldCase = struct {
-    name: []const u8,
-    log_codeword_size: u8,
-    num_rounds: u8,
-    log_final_poly_size: u8,
-    num_queries: usize,
-    fold_alphas: []JsonExt,
-    round_roots: []JsonOctuplet,
-    final_poly: []JsonExt,
-    position: usize,
-    running_branches: []JsonBranch,
-    expected_rounds: []JsonPair,
-    aux: []?JsonPair,
-    expect_running_error: []const u8 = "",
-    expect_fold_error: []const u8 = "",
-};
-
-const Fixtures = struct {
-    merkle_cases: []JsonMerkleCase,
-    fold_cases: []JsonFoldCase,
-};
-
-fn loadFixtures(allocator: std.mem.Allocator) !Fixtures {
-    return std.json.parseFromSliceLeaky(Fixtures, allocator, fixtures_json, .{});
-}
-
-// ─── JSON -> verifier_ray value conversions ──────────────────────────────────
-
-fn toDigest(o: JsonOctuplet) poseidon2.Digest {
+fn toDigest(o: [8]u32) poseidon2.Digest {
     var out: poseidon2.Digest = undefined;
     for (&out, o) |*dst, v| dst.* = field.Element.init(v);
     return out;
 }
 
-fn toDigests(allocator: std.mem.Allocator, os: []JsonOctuplet) ![]poseidon2.Digest {
+fn toDigests(allocator: std.mem.Allocator, os: []const [8]u32) ![]poseidon2.Digest {
     const out = try allocator.alloc(poseidon2.Digest, os.len);
     for (out, os) |*dst, o| dst.* = toDigest(o);
     return out;
 }
 
-fn toExt(e: JsonExt) ext.Ext {
-    return .{
-        .B0 = .{ .a0 = field.Element.init(e[0]), .a1 = field.Element.init(e[1]) },
-        .B1 = .{ .a0 = field.Element.init(e[2]), .a1 = field.Element.init(e[3]) },
-        .B2 = .{ .a0 = field.Element.init(e[4]), .a1 = field.Element.init(e[5]) },
-    };
-}
-
-fn toExts(allocator: std.mem.Allocator, es: []JsonExt) ![]ext.Ext {
-    const out = try allocator.alloc(ext.Ext, es.len);
-    for (out, es) |*dst, e| dst.* = toExt(e);
-    return out;
-}
-
-fn toPair(p: JsonPair) fri.Pair {
-    return .{ .self = toExt(p.self), .sibling = toExt(p.sibling) };
-}
-
-fn toOptPairs(allocator: std.mem.Allocator, ps: []?JsonPair) ![]?fri.Pair {
-    const out = try allocator.alloc(?fri.Pair, ps.len);
-    for (out, ps) |*dst, p| dst.* = if (p) |v| toPair(v) else null;
-    return out;
-}
-
-fn toBranch(allocator: std.mem.Allocator, b: JsonBranch) !merkle.Branch {
-    return .{ .leaf = toDigest(b.leaf), .siblings = try toDigests(allocator, b.siblings) };
-}
-
-fn toBranches(allocator: std.mem.Allocator, bs: []JsonBranch) ![]merkle.Branch {
-    const out = try allocator.alloc(merkle.Branch, bs.len);
-    for (out, bs) |*dst, b| dst.* = try toBranch(allocator, b);
-    return out;
-}
-
-// Maps a fixture's error-name string to the corresponding error value.
-fn mapError(name: []const u8) fri.Error {
-    if (std.mem.eql(u8, name, "MerkleProofInvalid")) return error.MerkleProofInvalid;
-    if (std.mem.eql(u8, name, "FoldMismatch")) return error.FoldMismatch;
-    if (std.mem.eql(u8, name, "FinalPolyMismatch")) return error.FinalPolyMismatch;
-    if (std.mem.eql(u8, name, "InvalidRunningLayerShape")) return error.InvalidRunningLayerShape;
-    std.debug.panic("fri_test: unrecognized expected error name '{s}'", .{name});
-}
-
-fn mapMerkleError(name: []const u8) merkle.Error {
-    if (std.mem.eql(u8, name, "EmptyBranch")) return error.EmptyBranch;
-    std.debug.panic("fri_test: unrecognized expected merkle error name '{s}'", .{name});
-}
-
-// ─── crypto.merkle: vectors from prover-ray's newCompleteBinaryTree ─────────
-
-fn runMerkleCase(allocator: std.mem.Allocator, case: JsonMerkleCase) !void {
+fn runMerkleCase(allocator: std.mem.Allocator, case: merkle_fixtures.MerkleCase) !void {
     const branch = merkle.Branch{
         .leaf = toDigest(case.leaf),
         .siblings = try toDigests(allocator, case.siblings),
     };
-
-    if (case.expect_error.len > 0) {
-        try std.testing.expectError(mapMerkleError(case.expect_error), branch.recoverRoot(case.index));
-        return;
-    }
-
     const recovered = try branch.recoverRoot(case.index);
-    const matches = std.meta.eql(recovered, toDigest(case.root));
+    const matches = poseidon2.eql(recovered, toDigest(case.root));
     try std.testing.expectEqual(case.expect_match, matches);
 }
 
@@ -160,9 +55,8 @@ test "merkle branches from prover-ray vectors" {
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    const fixtures = try loadFixtures(allocator);
-    try std.testing.expect(fixtures.merkle_cases.len > 0);
-    for (fixtures.merkle_cases) |case| {
+    try std.testing.expect(merkle_fixtures.merkle_cases.len > 0);
+    for (merkle_fixtures.merkle_cases) |case| {
         runMerkleCase(allocator, case) catch |err| {
             std.debug.print("merkle case '{s}' failed: {}\n", .{ case.name, err });
             return err;
@@ -170,28 +64,81 @@ test "merkle branches from prover-ray vectors" {
     }
 }
 
-// ─── query.fri: vectors from a real multi-round, multi-level FRI proof ─────
-//
-// Every fold case shares this shape: domain size 16 (log_codeword_size = 4),
-// 3 folding rounds.
-const fold_params: fri.Params = .{
-    .log_codeword_size = 4,
-    .log_plaintext_size = 3, // numRounds() = 3 - 0 = 3
-    .log_final_poly_size = 0,
-    .num_queries = 1,
-};
+test "merkle branch with no siblings is rejected before any hashing" {
+    // A pure shape check: no tree needed, so hand-written rather than
+    // generated (unlike the other merkle cases, which come from a real tree).
+    const branch = merkle.Branch{ .leaf = poseidon2.zeroDigest(), .siblings = &.{} };
+    try std.testing.expectError(error.EmptyBranch, branch.recoverRoot(0));
+}
 
-fn runFoldCase(allocator: std.mem.Allocator, comptime params: fri.Params, case: JsonFoldCase) !void {
-    try std.testing.expectEqual(case.log_codeword_size, params.log_codeword_size);
-    try std.testing.expectEqual(case.num_rounds, params.numRounds());
-    try std.testing.expectEqual(case.log_final_poly_size, params.log_final_poly_size);
-    try std.testing.expectEqual(case.num_queries, params.num_queries);
+// ─── query.fri: frozen vectors from a real multi-round, multi-level proof ──
 
+fn toExt(e: [6]u32) ext.Ext {
+    return .{
+        .B0 = .{ .a0 = field.Element.init(e[0]), .a1 = field.Element.init(e[1]) },
+        .B1 = .{ .a0 = field.Element.init(e[2]), .a1 = field.Element.init(e[3]) },
+        .B2 = .{ .a0 = field.Element.init(e[4]), .a1 = field.Element.init(e[5]) },
+    };
+}
+
+fn toExts(allocator: std.mem.Allocator, es: []const [6]u32) ![]ext.Ext {
+    const out = try allocator.alloc(ext.Ext, es.len);
+    for (out, es) |*dst, e| dst.* = toExt(e);
+    return out;
+}
+
+fn toPair(p: fold_fixtures.RawPair) fri.Pair {
+    return .{ .self = toExt(p.self), .sibling = toExt(p.sibling) };
+}
+
+fn toOptPairs(allocator: std.mem.Allocator, ps: []const ?fold_fixtures.RawPair) ![]?fri.Pair {
+    const out = try allocator.alloc(?fri.Pair, ps.len);
+    for (out, ps) |*dst, p| dst.* = if (p) |v| toPair(v) else null;
+    return out;
+}
+
+fn toBranch(allocator: std.mem.Allocator, b: fold_fixtures.RawBranch) !merkle.Branch {
+    return .{ .leaf = toDigest(b.leaf), .siblings = try toDigests(allocator, b.siblings) };
+}
+
+fn toBranches(allocator: std.mem.Allocator, bs: []const fold_fixtures.RawBranch) ![]merkle.Branch {
+    const out = try allocator.alloc(merkle.Branch, bs.len);
+    for (out, bs) |*dst, b| dst.* = try toBranch(allocator, b);
+    return out;
+}
+
+// wrongExt/wrongDigest stand in for "some value that must not match the
+// honest one"; the exact value is immaterial as long as it differs (every
+// honest value corrupted below happens to be all-zero).
+fn wrongExt() ext.Ext {
+    return ext.Ext.lift(field.Element.init(999_999));
+}
+
+fn wrongDigest() poseidon2.Digest {
+    var out = poseidon2.zeroDigest();
+    out[0] = field.Element.init(999_999);
+    return out;
+}
+
+const Corruption = enum { none, running_sibling, aux, final };
+
+fn runFoldCase(allocator: std.mem.Allocator, comptime params: fri.Params, case: fold_fixtures.FoldCase, corrupt: Corruption) !void {
     const fold_alphas = try toExts(allocator, case.fold_alphas);
     const round_roots = try toDigests(allocator, case.round_roots);
     const final_poly = try toExts(allocator, case.final_poly);
     const running_branches = try toBranches(allocator, case.running_branches);
     const positions = try allocator.dupe(usize, &.{case.position});
+
+    if (corrupt == .running_sibling) {
+        // running_branches[0].siblings is []const Digest (Branch's own field
+        // type), so mutating it in place isn't legal; duplicate first.
+        const siblings = try allocator.dupe(poseidon2.Digest, running_branches[0].siblings);
+        siblings[siblings.len - 1] = wrongDigest();
+        running_branches[0] = .{ .leaf = running_branches[0].leaf, .siblings = siblings };
+    }
+    if (corrupt == .final) {
+        final_poly[0] = wrongExt();
+    }
 
     const proof = fri.Proof{
         .round_roots = round_roots,
@@ -207,8 +154,8 @@ fn runFoldCase(allocator: std.mem.Allocator, comptime params: fri.Params, case: 
     @memset(rounds, .{ .self = ext.Ext.zero(), .sibling = ext.Ext.zero() });
     const running_result = fri.resolveRunningLayers(params, round_roots, running_branches, case.position, rounds);
 
-    if (case.expect_running_error.len > 0) {
-        try std.testing.expectError(mapError(case.expect_running_error), running_result);
+    if (corrupt == .running_sibling) {
+        try std.testing.expectError(error.MerkleProofInvalid, running_result);
         return;
     }
     try running_result;
@@ -222,38 +169,60 @@ fn runFoldCase(allocator: std.mem.Allocator, comptime params: fri.Params, case: 
     }
 
     const aux = try toOptPairs(allocator, case.aux);
+    if (corrupt == .aux) {
+        aux[0].?.self = wrongExt();
+    }
+
     const resolved = [_]fri.ResolvedQuery{.{ .rounds = rounds, .aux = aux, .final = final_poly[0] }};
     const fold_result = fri.checkFolds(params, &resolved, fold_alphas, positions);
 
-    if (case.expect_fold_error.len > 0) {
-        try std.testing.expectError(mapError(case.expect_fold_error), fold_result);
-        return;
+    switch (corrupt) {
+        .aux => try std.testing.expectError(error.FoldMismatch, fold_result),
+        .final => try std.testing.expectError(error.FinalPolyMismatch, fold_result),
+        .running_sibling => unreachable, // returned above
+        .none => try fold_result,
     }
-    try fold_result;
 }
 
-test "fri fold cases from prover-ray vectors" {
+test "fri fold cases from frozen prover-ray vectors" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    const fixtures = try loadFixtures(allocator);
-    try std.testing.expect(fixtures.fold_cases.len > 0);
-    for (fixtures.fold_cases) |case| {
-        runFoldCase(allocator, fold_params, case) catch |err| {
+    try std.testing.expect(fold_fixtures.fold_cases.len > 0);
+    inline for (fold_fixtures.fold_cases) |case| {
+        runFoldCase(allocator, case.params, case, .none) catch |err| {
             std.debug.print("fold case '{s}' failed: {}\n", .{ case.name, err });
             return err;
         };
     }
 }
 
+// The three rejection paths, derived by corrupting the first honest case
+// (mirrors the deleted generator's corruptRunningSibling/corruptAux/
+// corruptFinal, which only ever derived from "single_level_3rounds").
+test "fri fold cases reject a corrupted running sibling, aux, or final poly" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const base = fold_fixtures.fold_cases[0];
+    inline for (.{ Corruption.running_sibling, Corruption.aux, Corruption.final }) |corrupt| {
+        runFoldCase(allocator, base.params, base, corrupt) catch |err| {
+            std.debug.print("corrupted case '{s}' failed: {}\n", .{ @tagName(corrupt), err });
+            return err;
+        };
+    }
+}
+
 test "resolveRunningLayers and checkFolds reject undersized buffers" {
+    const params = fold_fixtures.fold_cases[0].params;
     var rounds: [1]fri.Pair = undefined;
     const branches: [0]merkle.Branch = .{};
     const roots: [0]poseidon2.Digest = .{};
     try std.testing.expectError(
         error.InvalidRunningLayerShape,
-        fri.resolveRunningLayers(fold_params, &roots, &branches, 0, &rounds),
+        fri.resolveRunningLayers(params, &roots, &branches, 0, &rounds),
     );
 
     var aux: [1]?fri.Pair = .{null};
@@ -262,16 +231,17 @@ test "resolveRunningLayers and checkFolds reject undersized buffers" {
     const positions: [1]usize = .{0};
     try std.testing.expectError(
         error.InvalidRunningLayerShape,
-        fri.checkFolds(fold_params, &resolved, &fold_alphas, &positions),
+        fri.checkFolds(params, &resolved, &fold_alphas, &positions),
     );
 }
 
 test "checkFolds rejects a resolved-query count under params.num_queries" {
+    const params = fold_fixtures.fold_cases[0].params;
     const empty: [0]fri.ResolvedQuery = .{};
     const fold_alphas: [3]ext.Ext = .{ ext.Ext.zero(), ext.Ext.zero(), ext.Ext.zero() };
     const positions: [0]usize = .{};
     try std.testing.expectError(
         error.InvalidResolvedQueryCount,
-        fri.checkFolds(fold_params, &empty, &fold_alphas, &positions),
+        fri.checkFolds(params, &empty, &fold_alphas, &positions),
     );
 }
