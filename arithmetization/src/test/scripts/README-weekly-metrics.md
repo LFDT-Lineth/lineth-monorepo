@@ -93,6 +93,19 @@ comparable week to week (thermals, other load). The CI rows are the ones to quot
 The script never touches `~/go/bin/zkc` and never runs `make install-zkc`, which would overwrite
 it — the zkc under measurement is built into a private cache and passed explicitly.
 
+## Shared plumbing
+
+The zkc invocation is owned by `arithmetization/src/test/Makefile`, and this job goes through it
+rather than shelling out to `zkc` itself:
+
+| target | what it does |
+|---|---|
+| `make -C arithmetization install-zkc-to ZKC_BIN=<path> [ZKC_REF=<ref>]` | builds zkc to an explicit path instead of GOBIN, leaving the `zkc` on your PATH alone |
+| `make -f arithmetization/src/test/Makefile zkc-trace JSON=<json> [ZKC=<bin>] [ZKC_TRACE_FLAGS=…]` | runs `zkc trace`; the counterpart to the existing `zkc-exec` |
+
+`ZKC_TRACE_FLAGS` defaults to `--stats`; the weekly job passes `--stats --check` for the second
+heavy step. Both targets are usable from any other workflow that needs a pinned zkc or a trace.
+
 ## Doing it by hand
 
 ```bash

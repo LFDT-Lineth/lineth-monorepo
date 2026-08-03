@@ -174,6 +174,9 @@ if $RUN_GUEST; then
   fi
 fi
 
+# CI routes these through src/test/Makefile's zkc-trace target; here the watchdog has to be able
+# to kill the measured process itself, and reaping a stray zkc by name on a development machine
+# would risk killing one you started. So invoke zkc directly and keep the flags identical.
 if [ -s "$GUEST_JSON" ]; then
   $RUN_TRACE && run_step trace "$TIMEBOX_S" -- "$ZKC" trace --stats "$GUEST_JSON" "$ZKC_MAIN"
   $RUN_CHECK && run_step check "$TIMEBOX_S" -- "$ZKC" trace --stats --check "$GUEST_JSON" "$ZKC_MAIN"

@@ -137,8 +137,14 @@ jobs:
           } >> "$GITHUB_ENV"
           echo "zkc ref: requested '${requested}', using '${resolved}', sha '${sha_hint:-unknown}'"
 
+      # Build to an explicit path rather than GOBIN, so the measured binary is pinned and named
+      # rather than implicit on PATH, and pass it on with ZKC= (the override src/test/Makefile
+      # documents). Building from the checkout also gets vcs.revision stamped in for provenance.
       - name: Install zkc
-        run: make -C arithmetization install-zkc
+        run: |
+          set -euo pipefail
+          make -C arithmetization install-zkc-to ZKC_BIN="${RUNNER_TEMP}/zkc-under-test"
+          echo "ZKC=${RUNNER_TEMP}/zkc-under-test" >> "$GITHUB_ENV"
 
       - name: Prepare run directory and validate the timeout budget
         run: |
@@ -170,7 +176,7 @@ jobs:
           t0=$(date +%s)
           # --order name (not zkc's default --order total) keeps the table diffable week to week.
           /usr/bin/time -v -o "$d/rusage" \
-            zkc compile --stats --order name "$MEASURE_DIR/arithmetization/src/main/riscv/main.zkc" \
+            "$ZKC" compile --stats --order name "$MEASURE_DIR/arithmetization/src/main/riscv/main.zkc" \
             > "$d/stdout" 2> "$d/stderr"
           rc=$?
           echo "$rc" > "$d/rc"
@@ -219,14 +225,22 @@ jobs:
           [ -s "$RUN/guest.json" ] || { echo "no guest JSON; skipping"; exit 0; }
           d="$RUN/trace"; mkdir -p "$d"
           t0=$(date +%s)
+          # Routed through src/test/Makefile's zkc-trace, the repo's single source of truth for
+          # invoking zkc on a guest JSON; ZKC= is the documented override. `time` still sees the
+          # whole subtree, so peak RSS covers zkc itself.
           /usr/bin/time -v -o "$d/rusage" \
-            timeout "${{ inputs.trace-timeout-min || 30 }}m" \
-            zkc trace --stats "$RUN/guest.json" "$MEASURE_DIR/arithmetization/src/main/riscv/main.zkc" \
+            timeout -k 30s "${{ inputs.trace-timeout-min || 30 }}m" \
+            make -f "$GITHUB_WORKSPACE/arithmetization/src/test/Makefile" --no-print-directory zkc-trace \
+              JSON="$RUN/guest.json" \
+              ZKC_MAIN="$MEASURE_DIR/arithmetization/src/main/riscv/main.zkc" \
+              ZKC_TRACE_FLAGS="--stats" \
             > "$d/stdout" 2> "$d/stderr"
           rc=$?
           echo "$rc" > "$d/rc"
           echo $(( $(date +%s) - t0 )) > "$d/wall_s"
-          [ "$rc" -eq 124 ] && : > "$d/timedout"
+          # timeout signals make, which may not take its recipe's child with it. Reap any zkc left
+          # holding memory, or it contends with the check step that follows.
+          if [ "$rc" -eq 124 ]; then : > "$d/timedout"; pkill -TERM -f 'zkc trace' || true; sleep 5; fi
           head -30 "$d/stdout"
           exit 0
 
@@ -240,13 +254,16 @@ jobs:
           d="$RUN/check"; mkdir -p "$d"
           t0=$(date +%s)
           /usr/bin/time -v -o "$d/rusage" \
-            timeout "${{ inputs.check-timeout-min || 240 }}m" \
-            zkc trace --stats --check "$RUN/guest.json" "$MEASURE_DIR/arithmetization/src/main/riscv/main.zkc" \
+            timeout -k 30s "${{ inputs.check-timeout-min || 240 }}m" \
+            make -f "$GITHUB_WORKSPACE/arithmetization/src/test/Makefile" --no-print-directory zkc-trace \
+              JSON="$RUN/guest.json" \
+              ZKC_MAIN="$MEASURE_DIR/arithmetization/src/main/riscv/main.zkc" \
+              ZKC_TRACE_FLAGS="--stats --check" \
             > "$d/stdout" 2> "$d/stderr"
           rc=$?
           echo "$rc" > "$d/rc"
           echo $(( $(date +%s) - t0 )) > "$d/wall_s"
-          [ "$rc" -eq 124 ] && : > "$d/timedout"
+          if [ "$rc" -eq 124 ]; then : > "$d/timedout"; pkill -TERM -f 'zkc trace' || true; sleep 5; fi
           # A constraint failure does not change zkc's exit code, so the renderer greps for the
           # reported lines. Surface the count here too.
           grep -c '^failing ' "$d/stdout" || true
@@ -257,7 +274,7 @@ jobs:
         if: always()
         run: |
           set -euo pipefail
-          zkc_bin=$(command -v zkc)
+          zkc_bin="$ZKC"
           # Three sources, most authoritative first: vcs.revision (stamped when install-zkc builds
           # from the checkout), the module pseudo-version suffix (for `go install pkg@ref`), then the
           # API-resolved SHA (for a clean release tag, whose version carries no commit).
