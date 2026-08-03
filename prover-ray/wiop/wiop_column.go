@@ -327,6 +327,10 @@ func (cv *ColumnView) DegreeFactor() int { return 1 }
 // EvaluateVector implements [Expression]. Returns a full-sized concrete vector
 // (length == module size) where logical row i holds the column value at
 // physical row (i + ShiftingOffset) mod n, accounting for the module's padding.
+//
+// The padded column is materialized with bulk copies and fills rather than
+// per-row [ConcreteVector.ElementAtN] indexing, and a non-zero shift is
+// applied as a two-piece rotation.
 func (cv *ColumnView) EvaluateVector(rt *Runtime) ConcreteVector {
 	concrete := rt.GetColumnAssignment(cv.Column)
 	m := cv.Column.Module
@@ -335,17 +339,13 @@ func (cv *ColumnView) EvaluateVector(rt *Runtime) ConcreteVector {
 	var result field.Vec
 	if cv.Column.IsExtension {
 		dst := make([]field.Ext, n)
-		for i := range n {
-			phys := ((i+cv.ShiftingOffset)%n + n) % n
-			dst[i] = concrete.ElementAtN(m.Padding, n, phys).Ext
-		}
+		materializeExt(dst, concrete, m.Padding, n)
+		rotateLeft(dst, cv.ShiftingOffset, n)
 		result = field.VecFromExt(dst)
 	} else {
 		dst := make([]field.Element, n)
-		for i := range n {
-			phys := ((i+cv.ShiftingOffset)%n + n) % n
-			dst[i] = concrete.ElementAtN(m.Padding, n, phys).AsBase()
-		}
+		materializeBase(dst, concrete, m.Padding, n)
+		rotateLeft(dst, cv.ShiftingOffset, n)
 		result = field.VecFromBase(dst)
 	}
 
@@ -354,6 +354,83 @@ func (cv *ColumnView) EvaluateVector(rt *Runtime) ConcreteVector {
 		Padding: concrete.Padding,
 		promise: cv,
 	}
+}
+
+// materializeBase writes the padding-expanded base-field column into dst
+// (length n): the plain assignment placed per the padding direction, with the
+// gap filled by the padding constant. Follows the same index mapping as
+// [ConcreteVector.ElementAtN].
+func materializeBase(dst []field.Element, cv *ConcreteVector, padding PaddingDirection, n int) {
+	plain := cv.Plain.AsBase()
+	switch {
+	case padding == PaddingDirectionLeft && len(plain) < n:
+		gap := n - len(plain)
+		field.VecFillBase(dst[:gap], cv.Padding)
+		copy(dst[gap:], plain)
+	case padding == PaddingDirectionLeft: // plain over-full: keep the tail
+		copy(dst, plain[len(plain)-n:])
+	default: // None or Right: plain-first, fill any tail gap
+		copied := copy(dst, plain)
+		field.VecFillBase(dst[copied:], cv.Padding)
+	}
+}
+
+// materializeExt is the extension-field variant of [materializeBase]. The
+// plain assignment may still be base-typed (a base-assigned column declared as
+// extension); its values and the padding constant are lifted on copy.
+func materializeExt(dst []field.Ext, cv *ConcreteVector, padding PaddingDirection, n int) {
+	if cv.Plain.IsBase() {
+		plain := cv.Plain.AsBase()
+		pad := field.Lift(cv.Padding)
+		switch {
+		case padding == PaddingDirectionLeft && len(plain) < n:
+			gap := n - len(plain)
+			field.VecFillExt(dst[:gap], pad)
+			for i, x := range plain {
+				dst[gap+i] = field.Lift(x)
+			}
+		case padding == PaddingDirectionLeft:
+			for i, x := range plain[len(plain)-n:] {
+				dst[i] = field.Lift(x)
+			}
+		default:
+			copied := len(plain)
+			if copied > n {
+				copied = n
+			}
+			for i, x := range plain[:copied] {
+				dst[i] = field.Lift(x)
+			}
+			field.VecFillExt(dst[copied:], pad)
+		}
+		return
+	}
+	plain := cv.Plain.AsExt()
+	switch {
+	case padding == PaddingDirectionLeft && len(plain) < n:
+		gap := n - len(plain)
+		field.VecFillExt(dst[:gap], field.Lift(cv.Padding))
+		copy(dst[gap:], plain)
+	case padding == PaddingDirectionLeft:
+		copy(dst, plain[len(plain)-n:])
+	default:
+		copied := copy(dst, plain)
+		field.VecFillExt(dst[copied:], field.Lift(cv.Padding))
+	}
+}
+
+// rotateLeft rotates v in place so that v[i] takes the value previously at
+// (i + offset) mod n. offset may be negative or exceed n. No-op when the
+// normalized offset is zero.
+func rotateLeft[E any](v []E, offset, n int) {
+	s := ((offset % n) + n) % n
+	if s == 0 {
+		return
+	}
+	tmp := make([]E, s)
+	copy(tmp, v[:s])
+	copy(v, v[s:])
+	copy(v[n-s:], tmp)
 }
 
 // EvaluateVectorAsExt is like EvaluateVector but always returns a length-n
