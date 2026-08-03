@@ -1,0 +1,21 @@
+{
+  "name": "prover-options-docs",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Generate ephemeral Linea prover TOML config MDX partials from Go sources and validate fresh temporary output.",
+  "scripts": {
+    "generate": "node generate.js",
+    "generate:seed-wrapper": "node seed-wrapper.js",
+    "check": "node check.js",
+    "test": "node --test lib.test.js",
+    "prettier:check": "prettier --check \"*.js\" \"output/**/*.mdx\" \"templates/**/*.mdx\" \"output/**/*.json\""
+  },
+  "engines": {
+    "node": ">=24.18.0",
+    "pnpm": ">=11.9.0"
+  },
+  "packageManager": "pnpm@11.9.0",
+  "devDependencies": {
+    "prettier": "3.8.4"
+  }
+}
