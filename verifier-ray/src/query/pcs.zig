@@ -62,27 +62,54 @@ pub const SizeBundle = struct {
 /// shapes and shift schedules: prover-ray's `layout`. Sizes appear in
 /// descending order, matching `canonicalLayout`.
 ///
-/// Carries no `log_plaintext_size`: it is `layout`'s largest bundle size, so
-/// `params` derives it rather than codegen supplying a field that could
-/// disagree. Mirrors prover-ray's `restrictToOpenings`, which performs the
-/// same shrink at runtime because its `PCS` outlives any one proof.
+/// Carries neither `log_plaintext_size` nor `log_codeword_size` directly:
+/// `log_plaintext_size` is `layout`'s largest bundle size; `log_codeword_size`
+/// is that plus `log_inverse_rate` (prover-ray's `effectiveN` convention).
+/// `params` derives both.
 pub const System = struct {
-    log_codeword_size: u8,
+    log_inverse_rate: u8,
     log_final_poly_size: u8 = 0,
     num_queries: usize,
     layout: []const SizeBundle,
     /// Index into `protocol.Context.all_coins` of the opening point zeta.
     zeta_coin_index: usize = 0,
+    /// Per-batch root provenance, in canonical batch order (index ==
+    /// `numBatches()`'s index_by_batch order). The caller builds
+    /// `VerifyInput.roots` from this, so the root a batch is authenticated
+    /// against is provably the one the transcript bound zeta to.
+    batch_roots: []const BatchRoot = &.{},
+    /// witness_map[k] (resp. quotient_map[k]) is the index into
+    /// `VerifyInput.claimed_values` of the vanishing sub-verifier's k-th
+    /// witness (resp. quotient) claim. The caller re-slices vanishing's claims
+    /// through these after a PCS opening verifies, so PCS and vanishing get
+    /// the same value for the same column.
+    witness_map: []const usize = &.{},
+    quotient_map: []const usize = &.{},
 
     /// The `fri.Params` this system verifies against.
     pub fn params(comptime self: System) fri.Params {
+        const log_plaintext_size = comptime maxSizeLog2(self.layout);
         return .{
-            .log_codeword_size = self.log_codeword_size,
-            .log_plaintext_size = comptime maxSizeLog2(self.layout),
+            .log_codeword_size = log_plaintext_size + self.log_inverse_rate,
+            .log_plaintext_size = log_plaintext_size,
             .log_final_poly_size = self.log_final_poly_size,
             .num_queries = self.num_queries,
         };
     }
+
+    /// Number of distinct batches referenced in `layout`; the required length
+    /// of `batch_roots` and of `VerifyInput.roots`.
+    pub fn numBatches(comptime self: System) usize {
+        return comptime computeLayoutInfo(self.layout).distinct_count;
+    }
+};
+
+/// One batch's root provenance: either read from a round's oracle commitment
+/// (an interactively committed batch) or a compile-time constant (a batch
+/// precomputed outside the protocol's own rounds). See `System.batch_roots`.
+pub const BatchRoot = union(enum) {
+    round: usize,
+    precomputed: poseidon2.Digest,
 };
 
 fn maxSizeLog2(comptime layout: []const SizeBundle) u8 {

@@ -476,12 +476,13 @@ func corruptBoundaryClaimData(base pcsCaseData) pcsCaseData {
 
 // ─── Zig literal emission ───────────────────────────────────────────────────
 
-// log_plaintext_size is not emitted: pcs.System derives it from layout's
-// largest bundle size, so the two cannot disagree.
+// pcs.System derives log_plaintext_size and log_codeword_size from layout's
+// largest bundle size and log_inverse_rate.
 func pcsSystemLiteral(params fri.Params, logFinalPolySize uint8, layout []pcsSizeBundle) string {
+	logInverseRate := params.LogCodewordSize - layout[0].SizeLog2
 	var b strings.Builder
-	fmt.Fprintf(&b, "pcs.System{ .log_codeword_size = %d, .log_final_poly_size = %d, .num_queries = %d, .layout = &.{ ",
-		params.LogCodewordSize, logFinalPolySize, params.NumQueries)
+	fmt.Fprintf(&b, "pcs.System{ .log_inverse_rate = %d, .log_final_poly_size = %d, .num_queries = %d, .layout = &.{ ",
+		logInverseRate, logFinalPolySize, params.NumQueries)
 	for i, bundle := range layout {
 		if i > 0 {
 			b.WriteString(", ")

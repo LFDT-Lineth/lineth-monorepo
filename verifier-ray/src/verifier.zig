@@ -79,13 +79,52 @@ pub const Proof = struct {
     // TODO(new-sub-verifier): add claim fields here if needed — step 3 above.
 };
 
-/// The prover-supplied half of a PCS opening (everything except the
-/// Fiat-Shamir-derived coins). See `Proof.pcs_opening`.
+/// The prover-supplied half of a PCS opening: the Fiat-Shamir-derived coins
+/// and the batch roots are excluded, since `verify` builds those itself (see
+/// `resolveRoots`). See `Proof.pcs_opening`.
 pub const PcsOpening = struct {
-    roots: []const poseidon2.Digest,
     claimed_values: []const ext.Ext,
     proof: pcs.OpeningProof,
 };
+
+/// Resolves `batch_roots` into `out`, one digest per batch: a `.precomputed`
+/// entry is a compile-time constant, and a `.round` entry is read from that
+/// round's sole oracle commitment.
+fn resolveRoots(
+    batch_roots: []const pcs.BatchRoot,
+    rounds: []const protocol.RoundMessage,
+    out: []poseidon2.Digest,
+) error{BatchRootMismatch}!void {
+    if (batch_roots.len != out.len) return error.BatchRootMismatch;
+    for (batch_roots, out) |br, *slot| {
+        switch (br) {
+            .precomputed => |root| slot.* = root,
+            .round => |round_index| {
+                if (round_index >= rounds.len) return error.BatchRootMismatch;
+                const cols = rounds[round_index].columns;
+                if (cols.len != 1) return error.BatchRootMismatch;
+                switch (cols[0]) {
+                    .oracle_commitment => |root| slot.* = root,
+                    .public_column => return error.BatchRootMismatch,
+                }
+            },
+        }
+    }
+}
+
+/// Fills `out[k]` from `claimed_values[map[k]]`. See `pcs.System.witness_map`
+/// / `quotient_map`.
+fn routeClaims(
+    map: []const usize,
+    claimed_values: []const ext.Ext,
+    out: []ext.Ext,
+) error{ClaimMapMismatch}!void {
+    if (map.len != out.len) return error.ClaimMapMismatch;
+    for (map, out) |idx, *slot| {
+        if (idx >= claimed_values.len) return error.ClaimMapMismatch;
+        slot.* = claimed_values[idx];
+    }
+}
 
 /// Verifies a proof against the compiled protocol in three steps:
 ///
@@ -133,24 +172,38 @@ pub fn verify(
     // reading them from the proof) is the whole point: the prover cannot choose
     // the Fiat-Shamir challenges. Challenge derivation touches the transcript;
     // the check is pure arithmetic.
+    var derived_witness: [systems.vanishing.total_witness_claims]ext.Ext = undefined;
+    var derived_quotient: [systems.vanishing.total_quotient_claims]ext.Ext = undefined;
+    var witness_claims: []const ext.Ext = proof.witness_claims;
+    var quotient_claims: []const ext.Ext = proof.quotient_claims;
+
     if (comptime systems.pcs) |pcs_system| {
         const opening = proof.pcs_opening orelse return error.MissingPcsOpening;
+
+        var bound_roots: [pcs_system.numBatches()]poseidon2.Digest = undefined;
+        try resolveRoots(pcs_system.batch_roots, proof.rounds, &bound_roots);
+
         const pcs_challenges = try pcs.deriveChallenges(pcs_system, &transcript, opening.proof.fri_proof);
         try pcs.verify(pcs_system, .{
-            .roots = opening.roots,
+            .roots = &bound_roots,
             .claimed_values = opening.claimed_values,
             .zeta = all_coins[pcs_system.zeta_coin_index],
             .fold_alphas = &pcs_challenges.fold_alphas,
             .query_positions = &pcs_challenges.query_positions,
             .proof = opening.proof,
         });
+
+        try routeClaims(pcs_system.witness_map, opening.claimed_values, &derived_witness);
+        try routeClaims(pcs_system.quotient_map, opening.claimed_values, &derived_quotient);
+        witness_claims = &derived_witness;
+        quotient_claims = &derived_quotient;
     }
 
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.vanishing_start, 0);
     try vanishing.verify(systems.vanishing, .{
         .ctx = ctx,
-        .witness_claims = proof.witness_claims,
-        .quotient_claims = proof.quotient_claims,
+        .witness_claims = witness_claims,
+        .quotient_claims = quotient_claims,
         .module_sizes = proof.module_sizes,
     });
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.vanishing_done, 0);

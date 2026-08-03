@@ -60,7 +60,7 @@ test "verify rejects proof with wrong round count" {
 // bundle carries no entries: these tests only exercise challenge derivation,
 // which never reads the layout beyond that size.
 const challenge_system = pcs.System{
-    .log_codeword_size = 4,
+    .log_inverse_rate = 2,
     .num_queries = 3,
     .layout = &.{.{ .size_log2 = 2, .entries = &.{} }},
 };
@@ -121,7 +121,7 @@ test "deriveChallenges depends on the absorbed transcript state" {
 // challenge before absorbing final_poly. final_poly needs 2 coefficients
 // here: with only 1, a missing squeeze is masked by MDHasher's zero-padding.
 const d1_system = pcs.System{
-    .log_codeword_size = 4,
+    .log_inverse_rate = 3,
     .log_final_poly_size = 1,
     .num_queries = 2,
     .layout = &.{.{ .size_log2 = 1, .entries = &.{} }},
