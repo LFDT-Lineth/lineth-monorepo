@@ -1,37 +1,33 @@
-type tWidth      = u128
-type tWidthOf    = u129
-type tWidthLarge = u256
-type tAddr       = u8
+include "./lib/nonnative/u128.zkc"
 
-pub input in_base(address:tAddr) -> (val:tWidth)
-pub input in_exp(address:tAddr) -> (val:tWidth)
-pub input in_mod(address:tAddr) -> (val:tWidth)
-pub input in_res(address:tAddr) -> (val:tWidth)
+type tAddr = u8
+
+pub input in_base(address:tAddr) -> (val:u128)
+pub input in_exp(address:tAddr) -> (val:u128)
+pub input in_mod(address:tAddr) -> (val:u128)
+pub input in_res(address:tAddr) -> (val:u128)
 
 fn main() {
-    var base:tWidth = in_base[0]
-    var exp:tWidth = in_exp[0]
-    var mod:tWidth = in_mod[0]
-    var expected:tWidth = in_res[0]
-    var res:tWidth = modexp_recursion(base, exp, mod)
+    var base:u128 = in_base[0]
+    var exp:u128 = in_exp[0]
+    var mod:u128 = in_mod[0]
+    var expected:u128 = in_res[0]
+    var res:u128 = modexp_recursion(base, exp, mod)
     if res != in_res[0] {
         fail
     }
-    //var res_loop:tWidth = modexp_loop(base, exp, mod)
-    //if res_loop != in_res[0] {
-    //    fail
-    //}
 }
 
-fn modexp_recursion(base:tWidth, exp:tWidth, mod:tWidth) -> (res:tWidth) {
+// recursive modexp seems to be better than the loop
+fn modexp_recursion(base:u128, exp:u128, mod:u128) -> (res:u128) {
     if exp == 0 {
         res = 1 % mod
     } else {
-        var half:tWidth
+        var half:u128
         var bit:u1
-        half::bit = exp as tWidthOf
-        var half_res:tWidth = modexp_recursion(base, half, mod)
-        var sq:tWidth = mulmod_128(half_res, half_res, mod)
+        half::bit = exp as u129
+        var half_res:u128 = modexp_recursion(base, half, mod)
+        var sq:u128 = mulmod_128(half_res, half_res, mod)
         if bit == 1 {
             res = mulmod_128(sq, base, mod)
         } else {
@@ -40,38 +36,18 @@ fn modexp_recursion(base:tWidth, exp:tWidth, mod:tWidth) -> (res:tWidth) {
     }
 }
 
-fn modexp_loop(base:tWidth, exp:tWidth, mod:tWidth) -> (res:tWidth) {
-    var acc:tWidth = base
-    var e:tWidth = exp
-    var half:tWidth
+fn modexp_loop(base:u128, exp:u128, mod:u128) -> (res:u128) {
+    var acc:u128 = base
+    var e:u128 = exp
+    var half:u128
     var bit:u1
     res = 1 % mod
     while e != 0 {
-        half::bit = e as tWidthOf
+        half::bit = e as u129
         if bit == 1 {
             res = mulmod_128(res, acc, mod)
         }
         acc = mulmod_128(acc, acc, mod)
         e = half
-    }
-}
-
-#[native]
-fn mulmod_128(lhsL:tWidth, rhsL:tWidth, modL:tWidth) -> (remainder:tWidth) {
-    // integer product result `product = lhsL * rhsL`
-    var product:tWidthLarge = (lhsL as tWidthLarge) * (rhsL as tWidthLarge)
-
-    var overflow:tWidth
-    var quotient:tWidth
-    overflow::quotient = product / (modL as tWidthLarge)
-    if overflow != 0 {
-        fail
-    }
-    var overflow2:tWidth
-    // XXX(ivo): two ways of computing the remainder. First one is approx 20% faster
-    overflow2::remainder = product - ((quotient as tWidthLarge) * (modL as tWidthLarge))
-    //overflow2::remainder = product % (modL as tWidthLarge)
-    if overflow2 != 0 {
-        fail
     }
 }
