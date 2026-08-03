@@ -50,6 +50,7 @@ import {
   MessagesNotFoundInBlockRangeError,
   MessagesNotFoundInBlockRangeErrorType,
 } from "../errors/bridge";
+import { resolveRollupAddress, ResolveRollupAddressErrorType } from "../utils/resolveRollupAddress";
 
 export type GetMessageProofParameters<
   chain extends Chain | undefined,
@@ -85,7 +86,8 @@ export type GetMessageProofErrorType =
   | EventNotFoundInFinalizationDataErrorType
   | MessageNotFoundErrorType
   | ChainNotFoundErrorType
-  | ClientChainNotConfiguredErrorType;
+  | ClientChainNotConfiguredErrorType
+  | ResolveRollupAddressErrorType;
 
 /**
  * Returns the proof of a message sent from L2 to L1.
@@ -147,7 +149,7 @@ export async function getMessageProof<
     throw new MessageNotFoundError({ hash: messageHash });
   }
 
-  const rollupAddress = parameters.rollupAddress ?? getContractsAddressesByChainId(client.chain.id).messageService;
+  const rollupAddress = resolveRollupAddress(client.chain.id, parameters.rollupAddress);
 
   const l2MessagingBlockAnchoredEvent = await findL2MessagingBlockAnchoredEvent(client, {
     rollupAddress,

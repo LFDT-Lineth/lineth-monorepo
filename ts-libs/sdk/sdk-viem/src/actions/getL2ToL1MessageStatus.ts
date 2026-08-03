@@ -22,6 +22,7 @@ import { readContract } from "viem/actions";
 import { getMessageSentEvents, GetMessageSentEventsErrorType } from "./getMessageSentEvents";
 import { CURRENT_L2_BLOCK_NUMBER_ABI, IS_MESSAGE_CLAIMED_ABI } from "../abis";
 import { MessageNotFoundError, MessageNotFoundErrorType } from "../errors/bridge";
+import { resolveRollupAddress, ResolveRollupAddressErrorType } from "../utils/resolveRollupAddress";
 
 export type GetL2ToL1MessageStatusParameters<
   chain extends Chain | undefined,
@@ -51,7 +52,8 @@ export type GetL2ToL1MessageStatusErrorType =
   | ReadContractErrorType
   | MessageNotFoundErrorType
   | ChainNotFoundErrorType
-  | ClientChainNotConfiguredErrorType;
+  | ClientChainNotConfiguredErrorType
+  | ResolveRollupAddressErrorType;
 
 /**
  * Returns the status of an L2 to L1 message on Linea.
@@ -113,7 +115,7 @@ export async function getL2ToL1MessageStatus<
     throw new MessageNotFoundError({ hash: messageHash });
   }
 
-  const rollupAddress = parameters.rollupAddress ?? getContractsAddressesByChainId(client.chain.id).messageService;
+  const rollupAddress = resolveRollupAddress(client.chain.id, parameters.rollupAddress);
 
   const [currentL2BlockNumber, isMessageClaimed] = await Promise.all([
     readContract(client, {

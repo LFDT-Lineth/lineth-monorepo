@@ -12,7 +12,7 @@ import {
   ClientChainNotConfiguredError,
 } from "viem";
 import { sendTransaction } from "viem/actions";
-import { mainnet } from "viem/chains";
+import { linea, mainnet } from "viem/chains";
 
 import { claimOnL1, ClaimOnL1Parameters } from "./claimOnL1";
 import { getMessageProof } from "./getMessageProof";
@@ -399,6 +399,24 @@ describe("claimOnL1", () => {
       }),
     );
     expect(result).toBe(TEST_TRANSACTION_HASH);
+  });
+
+  it("throws if the settlement client chain has no default rollup address and rollupAddress is not provided", async () => {
+    const client = mockClient(linea.id, mockAccount);
+
+    await expect(
+      claimOnL1(client, {
+        from,
+        to,
+        fee,
+        value,
+        calldata,
+        messageNonce,
+        feeRecipient,
+        messageProof,
+        account: mockAccount,
+      }),
+    ).rejects.toThrow(`Cannot resolve a default rollup contract address for chain ID ${linea.id}.`);
   });
 
   it("defaults feeRecipient to zeroAddress if not provided", async () => {

@@ -1,4 +1,4 @@
-import { getContractsAddressesByChainId, MessageProof, Message } from "@lfdt-lineth/sdk-core";
+import { MessageProof, Message } from "@lfdt-lineth/sdk-core";
 import {
   Account,
   Address,
@@ -31,6 +31,7 @@ import {
 } from "../errors/bridge";
 import { GetAccountParameter } from "../types/account";
 import { computeMessageHash, ComputeMessageHashErrorType } from "../utils/computeMessageHash";
+import { resolveRollupAddress, ResolveRollupAddressErrorType } from "../utils/resolveRollupAddress";
 
 export type ClaimOnL1Parameters<
   chain extends Chain | undefined = Chain | undefined,
@@ -74,7 +75,8 @@ export type ClaimOnL1ErrorType =
   | ClientChainNotConfiguredErrorType
   | ComputeMessageHashErrorType
   | AccountNotFoundErrorType
-  | MissingMessageProofOrClientForClaimingOnL1ErrorType;
+  | MissingMessageProofOrClientForClaimingOnL1ErrorType
+  | ResolveRollupAddressErrorType;
 
 /**
  * Claim a message on L1.
@@ -246,7 +248,7 @@ export async function claimOnL1<
     proof = messageProof;
   }
 
-  const resolvedRollupAddress = rollupAddress ?? getContractsAddressesByChainId(client.chain.id).messageService;
+  const resolvedRollupAddress = resolveRollupAddress(client.chain.id, rollupAddress);
 
   return sendTransaction(client, {
     to: resolvedRollupAddress,
