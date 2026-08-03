@@ -55,6 +55,7 @@
 - *(prover)* Fix the bitdecompose.go by removing IsPackedLimbNotZero (#3475)
 - *(coordinator)* Correct ByteArray equality checks in domain classes (#3625)
 - *(coordinator)* Address error handling issues from review (#3626)
+- *(prover)* Fix broken loop boundary in csDecomposedLimbs (#3474)
 
 ### 🚜 Refactor
 
