@@ -4,6 +4,8 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
+	"github.com/consensys/gnark-crypto/field/koalabear/fft"
 )
 
 // leafDomainTag domain-separates Merkle leaves so a table with the same row
@@ -65,19 +67,39 @@ func (table MultiSizeTable) Encode(encoders []*RSEncoder) MultiSizeTable {
 
 	assertValidMultiEncoder(encoders)
 	encoded := make([]SizedTable, len(table))
-
 	for i := range table {
-
 		encoded[i].Base = make([][]field.Element, len(table[i].Base))
-		for k, base := range table[i].Base {
-			encoded[i].Base[k] = encoders[i].Encode(base)
-		}
-
 		encoded[i].Ext = make([][]field.Ext, len(table[i].Ext))
-		for k, ext := range table[i].Ext {
-			encoded[i].Ext[k] = encoders[i].EncodeExt(ext)
+	}
+
+	// Each row's RS encode is an independent per-row FFT writing a disjoint
+	// output slice, so flatten (size, base/ext, row) into work items and encode
+	// them in parallel. gnark's FFT barely parallelizes at these row sizes, so
+	// the parallelism must be across rows; fft.WithNbTasks(1) keeps each FFT
+	// single-threaded so the outer parallelism isn't nested.
+	type encodeItem struct {
+		i, k int
+		ext  bool
+	}
+	var work []encodeItem
+	for i := range table {
+		for k := range table[i].Base {
+			work = append(work, encodeItem{i: i, k: k})
+		}
+		for k := range table[i].Ext {
+			work = append(work, encodeItem{i: i, k: k, ext: true})
 		}
 	}
+	parallel.Execute(len(work), func(start, end int) {
+		for w := start; w < end; w++ {
+			it := work[w]
+			if it.ext {
+				encoded[it.i].Ext[it.k] = encoders[it.i].EncodeExt(table[it.i].Ext[it.k], fft.WithNbTasks(1))
+			} else {
+				encoded[it.i].Base[it.k] = encoders[it.i].Encode(table[it.i].Base[it.k], fft.WithNbTasks(1))
+			}
+		}
+	})
 
 	return encoded
 }
@@ -92,17 +114,13 @@ func (table MultiSizeTable) Merkleize() *Tree {
 	// One slot wider than table: shallowest slot (index 0's shifted pair)
 	// would otherwise be a negative index.
 	leaves := make([][]field.Octuplet, len(table)+1)
-	hasher := poseidon2.NewMDHasher()
 
+	// Leaf hashing dominates Commit; it is parallel over leaf index and
+	// vectorizes 16-wide with AVX-512, so hashSizedLeaves handles each size.
 	if table[bottom].NumRows() > 0 {
 		size := table[bottom].Size()
 		leaves[len(leaves)-1] = make([]field.Octuplet, size)
-		for j := range size {
-			hasher.Reset()
-			absorbLeafHeader(hasher, len(table[bottom].Base), len(table[bottom].Ext))
-			writeRowElements(hasher, table[bottom], j)
-			leaves[len(leaves)-1][j] = hasher.SumDigest()
-		}
+		hashSizedLeaves(table[bottom], false, leaves[len(leaves)-1])
 	}
 
 	for i := range bottom {
@@ -111,13 +129,7 @@ func (table MultiSizeTable) Merkleize() *Tree {
 		}
 		size := table[i].Size()
 		leaves[i] = make([]field.Octuplet, size/2)
-		for j := range size / 2 {
-			hasher.Reset()
-			absorbLeafHeader(hasher, len(table[i].Base), len(table[i].Ext))
-			writeRowElements(hasher, table[i], 2*j)
-			writeRowElements(hasher, table[i], 2*j+1)
-			leaves[i][j] = hasher.SumDigest()
-		}
+		hashSizedLeaves(table[i], true, leaves[i])
 	}
 
 	// NewTree expects the levels in increasing-size order, from the top of the
@@ -143,11 +155,8 @@ func writeRowElements(hasher *poseidon2.MDHasher, t SizedTable, row int) {
 		hasher.WriteElements(t.Base[k][row])
 	}
 	for k := range t.Ext {
-		ext := t.Ext[k][row]
-		hasher.WriteElements(
-			ext.B0.A0, ext.B0.A1,
-			ext.B1.A0, ext.B1.A1,
-			ext.B2.A0, ext.B2.A1)
+		limbs := extLimbs(t.Ext[k][row])
+		hasher.WriteElements(limbs[:]...)
 	}
 }
 
