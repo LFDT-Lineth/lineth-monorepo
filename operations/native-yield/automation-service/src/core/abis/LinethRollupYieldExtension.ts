@@ -1,4 +1,4 @@
-export const LineaRollupYieldExtensionABI = [
+export const LinethRollupYieldExtensionABI = [
   {
     inputs: [
       {

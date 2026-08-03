@@ -11,10 +11,10 @@ import {
 } from "viem";
 import { type PrivateKeyAccount } from "viem/accounts";
 
-import { getLineaRollupContract } from "../../config/contracts/contracts";
+import { getLinethRollupContract } from "../../config/contracts/contracts";
 import { createTestLogger } from "../../config/logger";
 import { TestContext } from "../../config/setup/index";
-import { LineaRollupV8Abi } from "../../generated";
+import { LinethRollupV8Abi } from "../../generated";
 import { GENESIS_TIMESTAMP_FILE_PATH } from "../constants";
 import { getRawTransactionHex, waitForEvents } from "../utils";
 
@@ -83,11 +83,11 @@ export function computeFinalizedStateHash(state: LastFinalizedState): Hex {
 }
 
 export async function resolveLastFinalizedState(
-  lineaRollup: ReturnType<typeof getLineaRollupContract>,
+  linethRollup: ReturnType<typeof getLinethRollupContract>,
   l1PublicClient: Client,
   genesisTimestamp: bigint,
 ): Promise<LastFinalizedState> {
-  const onChainStateHash: Hex = await lineaRollup.read.currentFinalizedState();
+  const onChainStateHash: Hex = await linethRollup.read.currentFinalizedState();
 
   const defaultState: LastFinalizedState = {
     timestamp: genesisTimestamp,
@@ -106,11 +106,11 @@ export async function resolveLastFinalizedState(
 
   logger.debug("Finalized state differs from default — reconstructing from on-chain events...");
 
-  const currentL2BlockNumber: bigint = await lineaRollup.read.currentL2BlockNumber();
+  const currentL2BlockNumber: bigint = await linethRollup.read.currentL2BlockNumber();
 
   const events = await waitForEvents(l1PublicClient, {
-    abi: LineaRollupV8Abi,
-    address: lineaRollup.address as Address,
+    abi: LinethRollupV8Abi,
+    address: linethRollup.address as Address,
     eventName: "FinalizedStateUpdated",
     fromBlock: 0n,
     toBlock: "latest",
@@ -126,8 +126,8 @@ export async function resolveLastFinalizedState(
   const forcedTransactionNumber = latestEvent.args.forcedTransactionNumber;
 
   const [messageRollingHash, forcedTransactionRollingHash] = await Promise.all([
-    lineaRollup.read.rollingHashes([messageNumber]),
-    lineaRollup.read.forcedTransactionRollingHashes([forcedTransactionNumber]),
+    linethRollup.read.rollingHashes([messageNumber]),
+    linethRollup.read.forcedTransactionRollingHashes([forcedTransactionNumber]),
   ]);
 
   const reconstructed: LastFinalizedState = {
