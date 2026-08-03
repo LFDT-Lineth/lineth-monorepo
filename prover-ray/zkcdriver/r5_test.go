@@ -18,7 +18,7 @@ func TestRisc5Arithmetization(t *testing.T) {
 		t.Skipf("skipping integration test: verifier ELF not found at %s (%v)", verifPath, err)
 	}
 	payload := []byte("foobar")
-	inputsMap, err := zkc_r5.PrepareInput(verifElf, payload, zkc_r5.DefaultINOrigin)
+	inputsMap, err := zkc_r5.PrepareInput(verifElf, payload)
 	if err != nil {
 		t.Fatalf("failed to prepare inputs: %v", err)
 	}
