@@ -97,11 +97,10 @@ func (t *mAssignmentTask) Run(rt *wiop.Runtime) {
 		// agrees with the symbolic RLC under the same scalar.
 		hashes := wiop.EvaluateRLCAsExt(rt, alpha, it.cols, n)
 		if t.prependOneOnAOk {
-			field.VecScaleExtExt(hashes, alpha, hashes)
 			if it.selector != nil {
-				addColumnInPlace(rt, hashes, it.selector)
+				scaleAddColumnInPlace(rt, hashes, alpha, it.selector)
 			} else {
-				addOneInPlace(hashes)
+				scaleAddOneInPlace(hashes, alpha)
 			}
 		}
 
@@ -122,8 +121,7 @@ func (t *mAssignmentTask) Run(rt *wiop.Runtime) {
 		an := inc.cols[0].Module().RuntimeSize(rt)
 		hashes := wiop.EvaluateRLCAsExt(rt, alpha, inc.cols, an)
 		if t.prependOneOnAOk {
-			field.VecScaleExtExt(hashes, alpha, hashes)
-			addOneInPlace(hashes)
+			scaleAddOneInPlace(hashes, alpha)
 		}
 		var aSelectorExt []field.Ext
 		if inc.selector != nil {
@@ -159,21 +157,23 @@ func (t *mAssignmentTask) Run(rt *wiop.Runtime) {
 	}
 }
 
-// addColumnInPlace adds a column's values into hashes element-wise, consuming
-// the column un-lifted: a base-field column costs one base addition per row.
-func addColumnInPlace(rt *wiop.Runtime, hashes []field.Ext, cv *wiop.ColumnView) {
+// scaleAddColumnInPlace sets hashes[i] = α·hashes[i] + cv[i] in a single pass,
+// consuming the column un-lifted: a base-field column costs one base addition
+// per row on top of the scalar multiplication.
+func scaleAddColumnInPlace(rt *wiop.Runtime, hashes []field.Ext, alpha field.Ext, cv *wiop.ColumnView) {
 	plain := cv.EvaluateVector(rt).Plain
 	if plain.IsBase() {
-		field.VecAddExtBase(hashes, hashes, plain.AsBase())
+		field.VecScaleAddExtBase(hashes, alpha, plain.AsBase())
 	} else {
-		field.VecAddExtExt(hashes, hashes, plain.AsExt())
+		field.VecScaleAddExtExt(hashes, alpha, plain.AsExt())
 	}
 }
 
-// addOneInPlace adds the constant 1 to every entry of hashes, touching only
-// the first base-field coordinate.
-func addOneInPlace(hashes []field.Ext) {
+// scaleAddOneInPlace sets hashes[i] = α·hashes[i] + 1 in a single pass; the
+// addition touches only the first base-field coordinate.
+func scaleAddOneInPlace(hashes []field.Ext, alpha field.Ext) {
 	for i := range hashes {
+		hashes[i].Mul(&hashes[i], &alpha)
 		hashes[i].B0.A0.Add(&hashes[i].B0.A0, &fieldOne)
 	}
 }

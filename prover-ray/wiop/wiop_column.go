@@ -488,12 +488,11 @@ func EvaluateRLCAsExt(rt *Runtime, alpha field.Ext, cvs []*ColumnView, n int) []
 	}
 	acc := cvs[len(cvs)-1].EvaluateVectorAsExt(rt, n)
 	for k := len(cvs) - 2; k >= 0; k-- {
-		field.VecScaleExtExt(acc, alpha, acc)
 		plain := cvs[k].EvaluateVector(rt).Plain
 		if plain.IsBase() {
-			field.VecAddExtBase(acc, acc, plain.AsBase())
+			field.VecScaleAddExtBase(acc, alpha, plain.AsBase())
 		} else {
-			field.VecAddExtExt(acc, acc, plain.AsExt())
+			field.VecScaleAddExtExt(acc, alpha, plain.AsExt())
 		}
 	}
 	return acc
