@@ -57,6 +57,7 @@
 - *(coordinator)* Correct ByteArray equality checks in domain classes (#3625)
 - *(coordinator)* Address error handling issues from review (#3626)
 - *(prover)* Fix broken loop boundary in csDecomposedLimbs (#3474)
+- *(postman)* Use lineaRollupAddress and remove duplicate LineaRollup sources (#3456)
 
 ### 🚜 Refactor
 
