@@ -159,16 +159,20 @@ pub fn deriveChallenges(
     var challenges = PcsChallenges(system){};
 
     // One challenge per intermediate layer root, absorbing the root between
-    // squeezes; then the final round's challenge, with no root after it. When a
-    // protocol never folds (num_rounds == 0) the buffer is empty and this whole
-    // block is elided at comptime rather than indexing into a [0]ext.Ext.
+    // squeezes. fold_alphas is a [0]ext.Ext at D=1, so the loop stays behind
+    // a comptime guard.
     if (comptime num_rounds > 0) {
         for (fri_proof.round_roots, 0..) |root, i| {
             challenges.fold_alphas[i] = transcript.randomExt();
             transcript.updateElements(&root);
         }
-        challenges.fold_alphas[num_rounds - 1] = transcript.randomExt();
     }
+
+    // The final round's challenge is squeezed unconditionally, even at D=1:
+    // prover-ray's pcs.go verify does the same, and every squeeze advances the
+    // transcript regardless of whether the result is stored.
+    const final_alpha = transcript.randomExt();
+    if (comptime num_rounds > 0) challenges.fold_alphas[num_rounds - 1] = final_alpha;
 
     transcript.updateExt(fri_proof.final_poly);
 

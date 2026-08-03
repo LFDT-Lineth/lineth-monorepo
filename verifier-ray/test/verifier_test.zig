@@ -116,3 +116,36 @@ test "deriveChallenges depends on the absorbed transcript state" {
     }
     try std.testing.expect(any_alpha_differs);
 }
+
+// At D=1 (numRounds() == 0), prover-ray still squeezes the final round's fold
+// challenge before absorbing final_poly. final_poly needs 2 coefficients
+// here: with only 1, a missing squeeze is masked by MDHasher's zero-padding.
+const d1_system = pcs.System{
+    .log_codeword_size = 4,
+    .log_final_poly_size = 1,
+    .num_queries = 2,
+    .layout = &.{.{ .size_log2 = 1, .entries = &.{} }},
+};
+
+fn d1FriProof() fri.Proof {
+    const S = struct {
+        var final_poly = [_]ext.Ext{
+            ext.Ext.fromUints(.{ 11, 12, 13, 14, 15, 16 }),
+            ext.Ext.fromUints(.{ 21, 22, 23, 24, 25, 26 }),
+        };
+    };
+    return .{ .round_roots = &.{}, .final_poly = &S.final_poly, .running_queries = &.{} };
+}
+
+test "deriveChallenges squeezes the final fold challenge even at D=1" {
+    var actual = fiat_shamir.Transcript.init();
+    const challenges = try pcs.deriveChallenges(d1_system, &actual, d1FriProof());
+
+    var expected = fiat_shamir.Transcript.init();
+    _ = expected.randomExt();
+    expected.updateExt(d1FriProof().final_poly);
+    var expected_positions: [2]usize = undefined;
+    expected.randomManyIntegers(&expected_positions, 1 << 4);
+
+    try std.testing.expectEqualSlices(usize, &expected_positions, &challenges.query_positions);
+}
