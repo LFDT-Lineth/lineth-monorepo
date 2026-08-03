@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 
+	zkc_r5 "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/backend/zkc-r5"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/zkcdriver"
 )
@@ -23,7 +24,7 @@ type Core struct {
 	cfg    Config
 	sys    *wiop.System
 	driver *zkcdriver.ZkCDriver
-	elf    elfInputs // guest ELF sections + entry point, extracted once in New; reused per job
+	elf    zkc_r5.GuestProgramSections // guest ELF sections + entry point, extracted once in New; reused per job
 }
 
 // New loads the circuit binary and the guest ELF, calls [zkcdriver.NewZkCDriver]
@@ -45,7 +46,7 @@ func New(cfg Config) (*Core, error) {
 	}
 	defer elfFile.Close()
 
-	parsedELF, err := loadELFInputs(elfFile)
+	parsedELF, err := zkc_r5.LoadGuestElf(elfFile)
 	if err != nil {
 		return nil, fmt.Errorf("extracting ELF blobs from %q: %w", cfg.GuestELFPath, err)
 	}
@@ -72,7 +73,10 @@ func New(cfg Config) (*Core, error) {
 
 // Prove runs a single [Job] end-to-end and returns its [Result].
 func (c *Core) Prove(ctx context.Context, job Job) Result {
-	inputs := c.buildInputs(job)
+	inputs, err := c.buildInputs(job)
+	if err != nil {
+		return failResult(job.ID, fmt.Errorf("building inputs: %w", err))
+	}
 
 	proof, pub, err := c.runProve(ctx, &zkcdriver.PreReadInputs{Inputs: inputs})
 	if err != nil {
@@ -91,15 +95,34 @@ func (c *Core) Prove(ctx context.Context, job Job) Result {
 	}
 }
 
-// buildInputs converts a Job's Payload into the three ZkC pub-input values,
-// keyed by name (see [encodeInputs]). ELF memory blobs are pre-extracted in
-// [New] and reused across calls; only the per-job StatelessInput blobs
-// (schema id + SSZ body) differ.
-func (c *Core) buildInputs(job Job) map[string][]byte {
-	memBlobs := make([]memoryBlob, 0, len(c.elf.blobs)+2)
-	memBlobs = append(memBlobs, c.elf.blobs...)
-	memBlobs = append(memBlobs, sszBlobs(c.cfg.inOrigin(), decodePayload(job))...)
-	return encodeInputs(memBlobs, c.elf.entry)
+// buildInputs converts a Job's Payload into the guest and memory inputs ZkC
+// expects. ELF memory blobs are pre-extracted in [New] and reused across calls;
+// only the per-job guest input data section differs.
+func (c *Core) buildInputs(job Job) (map[string][]byte, error) {
+	if err := sanityCheckJobs(job); err != nil {
+		return nil, err
+	}
+	dataSections, err := zkc_r5.NewDataSection(zkc_r5.DefaultINOrigin, decodePayload(job))
+	if err != nil {
+		return nil, fmt.Errorf("building data section: %w", err)
+	}
+	return zkc_r5.EncodeGuestAndMemoryForZkc(c.elf, dataSections)
+}
+
+func sanityCheckJobs(job Job) error {
+	// Inverted ranges are malformed input.
+	if job.EndBlock < job.StartBlock {
+		return fmt.Errorf("invalid block range [%d, %d]: EndBlock < StartBlock",
+			job.StartBlock, job.EndBlock)
+	}
+
+	// Multi-block guest-input conflation is not implemented yet.
+	if job.EndBlock > job.StartBlock {
+		return fmt.Errorf("multi-block job [%d, %d]: %w",
+			job.StartBlock, job.EndBlock, ErrNotImplemented)
+	}
+
+	return nil
 }
 
 // runProve calls AssignWithPreRead, sys.Prove, and sys.Verify.
@@ -120,15 +143,6 @@ func (c *Core) runProve(
 	return proof, pub, nil
 }
 
-// EncodeStatelessInput encodes the coordinator's per-block payload into the
-// framed StatelessInput the guest consumes: the 0x0001 schema id followed by
-// the SSZ body. The proving backend later prepends the [u64 LE len] prefix.
-//
-// Not yet implemented. Reference codec: arithmetization/proof_io_v1.py.
-func EncodeStatelessInput(_ []byte) ([]byte, error) {
-	return nil, fmt.Errorf("EncodeStatelessInput: %w", ErrNotImplemented)
-}
-
 // SerializeProof encodes a wiop.Proof into the wire bytes the coordinator
 // expects in the "proof" field of the response.
 //
@@ -137,9 +151,9 @@ func SerializeProof(_ wiop.Proof, _ wiop.PublicInput) ([]byte, error) {
 	return nil, fmt.Errorf("SerializeProof: %w", ErrNotImplemented)
 }
 
-// decodePayload extracts the raw SSZ bytes from a Job's Payload.
-// Today it is a pass-through; once the coordinator API encoding is finalized
-// this will handle any wrapping (JSON envelope, multi-block conflation, etc.).
+// decodePayload extracts the guest input bytes from a Job's Payload.
+// Today it is a pass-through; request adapters already do protocol-specific
+// encoding before constructing Jobs.
 func decodePayload(job Job) []byte {
 	return job.Payload
 }
