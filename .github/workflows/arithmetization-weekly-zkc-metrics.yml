@@ -1,0 +1,265 @@
+# Weekly metrics for the RISC-V arithmetization.
+#
+# Measures four things against the small committed reference block and appends one row to each
+# markdown table in arithmetization/docs/metrics/zkc-weekly-metrics.md:
+#
+#   1. zkc compile --stats on main.zkc      — max degree, constraints by degree, complexity
+#   2. guest ELF + zkc JSON                 — the l2-execution guest, KECCAK_ACCEL=true
+#   3. zkc trace --stats                    — trace size and cost
+#   4. zkc trace --stats --check            — same, plus constraint checking
+#
+# Everything runs in ONE job on ONE runner tier, deliberately: the point is week-over-week
+# comparability, which splitting across runners would destroy.
+#
+# Steps 3 and 4 are best-effort. Each has its own timeout; a timeout is recorded as that week's
+# data point ("TIMEOUT 4h00m / 12.14 GiB") rather than failing the workflow, because knowing the
+# ceiling is itself the measurement. Step 1 is cheap and must succeed.
+#
+# The markdown file is the ledger — there is no separate data store. Rows go in newest-first.
+name: arithmetization weekly zkc metrics
+
+on:
+  schedule:
+    # Wednesday 03:00 UTC = 05:00 Paris in summer (CEST), 04:00 in winter (CET): GitHub cron is
+    # UTC and does not follow DST. Early enough that the numbers are waiting before the 09:30
+    # daily, leaving the morning to re-run or fix by hand before the afternoon delivery meeting.
+    - cron: '0 3 * * 3'
+  workflow_dispatch:
+    inputs:
+      zkc-ref:
+        description: 'zkc commit/branch/tag to measure with (default: main)'
+        required: false
+        type: string
+      run-heavy:
+        description: 'Run the trace and trace+check steps'
+        required: false
+        type: boolean
+        default: true
+      trace-timeout-min:
+        description: 'Cap for the trace step, minutes'
+        required: false
+        type: number
+        default: 30
+      check-timeout-min:
+        description: 'Cap for the trace+check step, minutes'
+        required: false
+        type: number
+        default: 240
+      commit-results:
+        description: 'Commit the updated markdown back to the branch'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  METRICS_FILE: arithmetization/docs/metrics/zkc-weekly-metrics.md
+  RUNNER_TIER: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
+
+jobs:
+  weekly-metrics:
+    name: weekly zkc metrics
+    # The heaviest tier: trace+check peaked at ~12 GiB locally and is the step most likely to
+    # grow. Keep this stable — changing tiers breaks comparability with earlier rows.
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
+    timeout-minutes: 360
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          submodules: false
+
+      # Installs Go, the pinned Zig, Rust and the riscv toolchain, and resolves the zkc-ref
+      # input into $ZKC_REF (falling back to arithmetization/Makefile's pin when empty).
+      - name: Setup Environment
+        uses: ./.github/actions/setup-arithmetization-riscv
+        with:
+          zkc-ref: ${{ inputs.zkc-ref || 'main' }}
+
+      - name: Install zkc
+        run: make -C arithmetization install-zkc
+
+      - name: Prepare run directory
+        run: |
+          set -euo pipefail
+          echo "RUN=${RUNNER_TEMP}/wzm" >> "$GITHUB_ENV"
+          mkdir -p "${RUNNER_TEMP}/wzm"
+
+      # ── 1. constraint stats (cheap, must succeed) ──
+      - name: zkc compile --stats
+        run: |
+          set -euo pipefail
+          d="$RUN/compile"; mkdir -p "$d"
+          t0=$(date +%s)
+          # --order name (not zkc's default --order total) keeps the verbatim table diffable
+          # week to week; the Total rows the renderer parses are order-independent.
+          /usr/bin/time -v -o "$d/rusage" \
+            zkc compile --stats --order name arithmetization/src/main/riscv/main.zkc \
+            > "$d/stdout" 2> "$d/stderr"
+          echo 0 > "$d/rc"
+          echo $(( $(date +%s) - t0 )) > "$d/wall_s"
+          tail -20 "$d/stdout"
+
+      # ── 2. guest ELF -> zkc JSON ──
+      - name: Build l2-execution guest and convert to zkc JSON
+        if: ${{ inputs.run-heavy != false }}
+        run: |
+          set -euo pipefail
+          d="$RUN/guest"; mkdir -p "$d"
+          t0=$(date +%s)
+          # No `make linker-script`: linker_script.ld is tracked and @embedFile'd by the zig
+          # build, so regenerating it would only risk dirtying the tree.
+          /usr/bin/time -v -o "$d/rusage" \
+            make -C riscv-guests/l2-execution compile KECCAK_ACCEL=true > "$d/stdout" 2> "$d/stderr"
+          make -C riscv-guests/build_common elf-to-json \
+            BIN_EXT="$PWD/riscv-guests/l2-execution/zig-out/bin/evm_execution_guest" \
+            JSON_EXT="$RUN/guest.json" \
+            IN_BYTES="@$PWD/riscv-guests/l2-execution/test/testdata/stateless_input.ssz" \
+            >> "$d/stdout" 2>> "$d/stderr"
+          echo 0 > "$d/rc"
+          echo $(( $(date +%s) - t0 )) > "$d/wall_s"
+          ls -l "$RUN/guest.json"
+
+      # ── 3. trace (best effort) ──
+      # `time` wraps `timeout` so the rusage block is written even when the cap fires: timeout
+      # exits 124, and time still reports the peak RSS of the whole subtree. Reversing the two
+      # would lose the measurement precisely in the case we most want to record.
+      - name: zkc trace --stats
+        if: ${{ inputs.run-heavy != false }}
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          d="$RUN/trace"; mkdir -p "$d"
+          t0=$(date +%s)
+          /usr/bin/time -v -o "$d/rusage" \
+            timeout "${{ inputs.trace-timeout-min || 30 }}m" \
+            zkc trace --stats "$RUN/guest.json" arithmetization/src/main/riscv/main.zkc \
+            > "$d/stdout" 2> "$d/stderr"
+          rc=$?
+          echo "$rc" > "$d/rc"
+          echo $(( $(date +%s) - t0 )) > "$d/wall_s"
+          [ "$rc" -eq 124 ] && : > "$d/timedout"
+          head -30 "$d/stdout"
+          exit 0
+
+      # ── 4. trace + constraint check (best effort, the expensive one) ──
+      - name: zkc trace --stats --check
+        if: ${{ inputs.run-heavy != false }}
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          d="$RUN/check"; mkdir -p "$d"
+          t0=$(date +%s)
+          /usr/bin/time -v -o "$d/rusage" \
+            timeout "${{ inputs.check-timeout-min || 240 }}m" \
+            zkc trace --stats --check "$RUN/guest.json" arithmetization/src/main/riscv/main.zkc \
+            > "$d/stdout" 2> "$d/stderr"
+          rc=$?
+          echo "$rc" > "$d/rc"
+          echo $(( $(date +%s) - t0 )) > "$d/wall_s"
+          [ "$rc" -eq 124 ] && : > "$d/timedout"
+          # A constraint failure does NOT change zkc's exit code — it reports the failing
+          # constraints and still exits 0 — so the renderer greps for them. Surface any here too.
+          grep -c '^failing ' "$d/stdout" || true
+          exit 0
+
+      # ── provenance ──
+      - name: Record run metadata
+        if: always()
+        run: |
+          set -euo pipefail
+          zkc_bin=$(command -v zkc)
+          zkc_mod=$(go version -m "$zkc_bin" | awk '$1=="mod"{print $3}')
+          zkc_commit=$(printf '%s' "$zkc_mod" | sed -E 's/.*-([0-9a-f]{12})$/\1/')
+          cores=$(nproc)
+          ram=$(awk '/^MemTotal:/{printf "%.0f GiB", $2/1048576}' /proc/meminfo)
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            trigger="weekly"
+          else
+            trigger="manual (@${{ github.actor }})"
+          fi
+          {
+            echo "week=$(date -u +%G-W%V)"
+            echo "started=$(date -u '+%Y-%m-%d %H:%M')"
+            echo "trigger=$trigger"
+            echo "runner=\`${RUNNER_TIER##*amd64-}\` ${cores} cores, ${ram}"
+            echo "arithmetization=\`$(git rev-parse --short=9 HEAD)\` (${GITHUB_REF_NAME})"
+            echo "zkc=${{ inputs.zkc-ref || 'main' }}@\`${zkc_commit:0:9}\`"
+            echo "run_url=[#${GITHUB_RUN_NUMBER}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})"
+          } > "$RUN/meta.env"
+          cat "$RUN/meta.env"
+
+      - name: Update metrics tables
+        if: always()
+        run: |
+          set -euo pipefail
+          GO111MODULE=off go run ./arithmetization/src/test/scripts/weekly_metrics \
+            -run-dir "$RUN" -out "$METRICS_FILE" | tee "$RUN/added-rows.txt"
+          {
+            echo "### Weekly zkc metrics — rows added"
+            echo
+            echo '```'
+            cat "$RUN/added-rows.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload raw measurement logs
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: zkc-weekly-metrics-logs
+          path: |
+            ${{ env.RUN }}/*/stdout
+            ${{ env.RUN }}/*/stderr
+            ${{ env.RUN }}/*/rusage
+            ${{ env.RUN }}/meta.env
+
+      # ── commit the updated markdown back ──
+      # Mints a GitHub App token so the push is not blocked by branch protection, mirroring
+      # .github/workflows/component-changelog-commit.yml. [skip ci] keeps it from re-triggering.
+      - name: Generate release bot App token
+        if: ${{ always() && inputs.commit-results != false }}
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
+          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
+
+      - name: Commit and push metrics
+        if: ${{ always() && inputs.commit-results != false }}
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- "$METRICS_FILE"; then
+            echo "No change to $METRICS_FILE — nothing to commit."
+            exit 0
+          fi
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "$(gh api "/users/${APP_SLUG}[bot]" -q .id)+${APP_SLUG}[bot]@users.noreply.github.com"
+          git remote set-url origin \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git add "$METRICS_FILE"
+          git commit -m "chore(arithmetization): weekly zkc metrics $(date -u +%G-W%V) [skip ci]"
+          for attempt in 1 2 3; do
+            git fetch origin "$GITHUB_REF_NAME"
+            if ! git rebase "origin/${GITHUB_REF_NAME}"; then
+              git rebase --abort
+              echo "Rebase conflict on attempt ${attempt}; aborting." >&2
+              exit 1
+            fi
+            if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              exit 0
+            fi
+            echo "Push rejected on attempt ${attempt}; retrying..."
+          done
+          echo "Failed to push metrics after 3 attempts." >&2
+          exit 1
