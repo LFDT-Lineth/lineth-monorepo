@@ -266,9 +266,9 @@ func (k LookupKind) String() string {
 //   - Inclusion: every selected row of A appears in the union of selected rows
 //     across all B fragments. Reduced via the log-derivative argument (see the
 //     lookuptologderivsum compiler).
-//   - Permutation: A and B, treated as multisets of rows, are equal. No
-//     selectors are permitted. Reduced via the grand-product argument (see the
-//     grandproduct compiler).
+//   - Permutation: the selected rows of A and B, treated as multisets, are
+//     equal. A fragment without a selector participates with all its rows.
+//     Reduced via the grand-product argument (see the grandproduct compiler).
 //
 // TableRelationQuery does not implement [GnarkCheckableQuery]: neither predicate can
 // be verified inside a gnark circuit. A compiler pass must reduce it before
@@ -314,22 +314,36 @@ func (tr *TableRelationQuery) Check(rt *Runtime) error {
 // collision yields a false accept with probability at most
 // (total rows) / |field|, negligible for realistic table sizes.
 //
-// Every row of every fragment participates, padding rows included, because the
-// grand-product argument the verifier ultimately runs holds over the padded
-// domains. Permutation queries carry no selectors (enforced by
-// [System.NewPermutation]).
+// Every row of every unfiltered fragment participates, padding rows included,
+// because the grand-product argument the verifier ultimately runs holds over
+// the padded domains. A fragment with a selector contributes only the rows
+// whose selector value is non-zero, mirroring the neutral-factor reduction in
+// the grandproduct compiler. Selectors are assumed {0,1}-valued (a caller
+// obligation, see [System.NewPermutation]); this check does not verify that —
+// any non-zero value simply counts as selected, so it may accept a witness the
+// caller's own binarity constraint would reject.
 func (tr *TableRelationQuery) checkPermutation(rt *Runtime) error {
 	alpha := field.RandomElemExt()
 	counts := make(map[field.Ext]int)
 	for _, tab := range tr.A {
 		n := tab.Module().RuntimeSize(rt)
 		for row := range n {
+			if tab.Selector != nil {
+				if sel := tableElemAt(rt, tab.Selector, row, n); sel.IsZero() {
+					continue
+				}
+			}
 			counts[tableRowHash(alpha, rt, tab.Columns, row, n)]++
 		}
 	}
 	for _, tab := range tr.B {
 		n := tab.Module().RuntimeSize(rt)
 		for row := range n {
+			if tab.Selector != nil {
+				if sel := tableElemAt(rt, tab.Selector, row, n); sel.IsZero() {
+					continue
+				}
+			}
 			counts[tableRowHash(alpha, rt, tab.Columns, row, n)]--
 		}
 	}
@@ -558,15 +572,34 @@ func (sys *System) NewInclusion(ctx *ContextFrame, included []Table, including [
 // permutation between mixed-width fragments therefore holds iff the multisets
 // of (width, row) pairs coincide.
 //
+// A fragment may carry a selector, turning the query into a conditional
+// permutation: only rows whose selector is 1 participate in the multiset, so
+// the predicate becomes "the selected rows of A are a permutation of the
+// selected rows of B". The grandproduct compiler gives unselected rows the
+// neutral grand-product factor 1.
+//
+// CALLER OBLIGATION: every selector passed here must be constrained to {0,1}
+// by the caller (a sel·(sel−1) = 0 vanishing constraint, or by construction as
+// a precomputed column). Neither this constructor nor the grandproduct
+// compiler emits that constraint — selectors are typically already constrained
+// where they are built and shared across several queries, so emitting it here
+// would duplicate an existing constraint. The obligation is load-bearing for
+// soundness, not a nicety: the reduction folds each row to
+// 1 + sel·(β + RLC(row) − 1), so a selector free to take any field value lets
+// a prover scale rows arbitrarily and prove a permutation between unrelated
+// multisets. [TableRelationQuery.Check] treats any non-zero selector value as
+// selected and will not catch a non-binary one either.
+//
 // Invariants enforced at construction:
 //   - a and b are non-empty.
-//   - No fragment carries a selector — permutation has no row filtering.
-//   - When every fragment on both sides lives on a statically sized module,
-//     the total row counts of the two sides must be equal: a permutation
-//     between unequal multiset cardinalities can never hold, so catching it
-//     here gives a dev-time error instead of an unexplained verifier
-//     rejection. The check is skipped as soon as either side touches a
-//     dynamic module, whose height is only known at runtime.
+//   - When every fragment on both sides lives on a statically sized module
+//     and no fragment carries a selector, the total row counts of the two
+//     sides must be equal: an unfiltered permutation between unequal multiset
+//     cardinalities can never hold, so catching it here gives a dev-time
+//     error instead of an unexplained verifier rejection. The check is
+//     skipped as soon as either side touches a dynamic module (height only
+//     known at runtime) or carries a selector (filtered sides are
+//     legitimately unbalanced in raw rows).
 //
 // Panics on any of the above invariant violations or if ctx is nil.
 func (sys *System) NewPermutation(ctx *ContextFrame, a []Table, b []Table) *TableRelationQuery {
@@ -575,8 +608,6 @@ func (sys *System) NewPermutation(ctx *ContextFrame, a []Table, b []Table) *Tabl
 	}
 	validateNonEmpty("NewPermutation", "a", a)
 	validateNonEmpty("NewPermutation", "b", b)
-	validateNoSelector("NewPermutation", a)
-	validateNoSelector("NewPermutation", b)
 	validateBalancedRows("NewPermutation", a, b)
 	return sys.newTableRelation(ctx, KindPermutation, a, b)
 }
@@ -598,18 +629,6 @@ func (sys *System) newTableRelation(ctx *ContextFrame, kind LookupKind, A, B []T
 	return tr
 }
 
-// validateNoSelector panics if any Table in tables carries a selector.
-func validateNoSelector(caller string, tables []Table) {
-	for i, t := range tables {
-		if t.Selector != nil {
-			panic(fmt.Sprintf(
-				"wiop: System.%s: fragment %d carries a selector; permutation queries do not support selectors",
-				caller, i,
-			))
-		}
-	}
-}
-
 // validateNonEmpty panics if tables is empty.
 func validateNonEmpty(caller, side string, tables []Table) {
 	if len(tables) == 0 {
@@ -619,10 +638,19 @@ func validateNonEmpty(caller, side string, tables []Table) {
 
 // validateBalancedRows panics if the total static row counts of the two sides
 // differ. The check only applies when every fragment on both sides lives on a
-// statically sized module; if any fragment's module is dynamic (or otherwise
-// unsized) the balance is only decidable at runtime and the check is skipped —
-// the grand-product identity itself still rejects an unbalanced witness.
+// statically sized module and carries no selector; if any fragment's module
+// is dynamic (or otherwise unsized) the balance is only decidable at runtime,
+// and with a selector the participating row count is a witness property — in
+// both cases the check is skipped and the grand-product identity itself
+// rejects an unbalanced witness.
 func validateBalancedRows(caller string, a, b []Table) {
+	for _, tables := range [2][]Table{a, b} {
+		for _, t := range tables {
+			if t.Selector != nil {
+				return
+			}
+		}
+	}
 	aRows, aStatic := staticRowTotal(a)
 	bRows, bStatic := staticRowTotal(b)
 	if !aStatic || !bStatic {
