@@ -2,26 +2,21 @@
 #
 # weekly_zkc_metrics.sh — run the weekly arithmetization measurements locally.
 #
-# This is the hand-run counterpart to .github/workflows/arithmetization-weekly-zkc-metrics.yml:
-# same four measurements, same weekly_metrics renderer, so a local run is a cheap way to test a
-# change without waiting for Wednesday. The CI job is the source of truth for the numbers that
-# go in the delivery report — a laptop's wall clocks are not comparable week to week.
+# Hand-run counterpart to .github/workflows/arithmetization-weekly-zkc-metrics.yml: same four
+# measurements (compile stats, guest build, trace, trace+check), same weekly_metrics renderer, so
+# a local run is a cheap way to test a change. CI remains the source of truth for the numbers —
+# a laptop's wall clocks are not comparable week to week.
 #
-#   1. zkc compile --stats  on main.zkc                (seconds)
-#   2. guest ELF + zkc JSON from the reference block   (a minute or so)
-#   3. zkc trace --stats                               (minutes, GBs)
-#   4. zkc trace --stats --check                       (the expensive one)
-#
-# By default it writes to a LOCAL copy of the metrics file, so a test run never dirties the
-# tracked one. Pass --out to target the real file.
+# Writes to a LOCAL copy of the metrics file by default, so a test run never dirties the tracked
+# one; pass --out to target the real file.
 #
 # Examples, from the repository root:
 #   arithmetization/src/test/scripts/weekly_zkc_metrics.sh --compile-only
 #   arithmetization/src/test/scripts/weekly_zkc_metrics.sh --zkc-ref main --timebox 120
 #   arithmetization/src/test/scripts/weekly_zkc_metrics.sh --zkc-src ~/dev/go/go-corset --skip-check
 #
-# It never touches ~/go/bin/zkc and never runs `make install-zkc` (which would overwrite it),
-# and it invokes no Makefile target that rewrites a tracked file.
+# It never touches ~/go/bin/zkc, never runs `make install-zkc` (which would overwrite it), and
+# invokes no Makefile target that rewrites a tracked file.
 
 set -uo pipefail   # NOT -e: a step that fails or times out is data, not a reason to abort.
 export LC_ALL=C    # /usr/bin/time prints "0,21 real" under a French locale otherwise.
@@ -90,9 +85,8 @@ mkdir -p "$RUN" "$WORK/.toolchain" || exit 2
 TIMEBOX_S=$(( TIMEBOX_MIN * 60 ))
 log() { printf '\033[1m==>\033[0m %s\n' "$*" >&2; }
 
-# The rusage block comes from a different flag on each platform: BSD/macOS `time -l`, GNU
-# `time -v`. Probe rather than branch on `uname`, so a GNU coreutils time installed on macOS is
-# also handled. The renderer accepts either output format.
+# BSD/macOS `time -l` vs GNU `time -v`. Probe rather than branch on `uname`, so a GNU time
+# installed on macOS is also handled; the renderer accepts either format.
 if /usr/bin/time -v true >/dev/null 2>&1; then
   TIME_FLAG="-v"
 elif /usr/bin/time -l true >/dev/null 2>&1; then
@@ -115,8 +109,7 @@ else
   tmp=$(mktemp -d) || exit 1
   log "installing zkc @ $ZKC_REF (private GOBIN; ~/go/bin untouched)"
   GOBIN="$tmp" GOWORK=off GOFLAGS= go install "github.com/LFDT-Lineth/zkc/cmd/zkc@$ZKC_REF" || exit 1
-  # sed -n/p, so a clean release version ("v1.2.25", no commit suffix) yields empty rather
-  # than being echoed back into the cache filename.
+  # sed -n/p, so a release version with no commit suffix does not end up in the filename.
   sha=$(go version -m "$tmp/zkc" | awk '$1=="mod"{print $3}' | sed -nE 's/.*-([0-9a-f]{12})$/\1/p')
   ZKC="$WORK/.toolchain/zkc-${ZKC_REF//\//_}-${sha:-nosha}"
   mv -f "$tmp/zkc" "$ZKC"; rmdir "$tmp" 2>/dev/null
@@ -126,9 +119,8 @@ log "zkc: $ZKC"
 # ── time-boxed step runner ──────────────────────────────────────────────────────
 #
 # macOS has no timeout(1), so the watchdog is hand-rolled. It kills the CHILD rather than
-# /usr/bin/time, which is what lets `time` still write its rusage block — so a timed-out step
-# still reports a real peak RSS.
-# Always returns 0; the outcome lives in files under $d.
+# /usr/bin/time, so the rusage block still gets written and a timed-out step reports a real peak
+# RSS. Always returns 0; the outcome lives in files under $d.
 run_step() {           # run_step <name> <timebox_s|0> -- <cmd...>
   local name="$1" box="$2"; shift 2; [ "$1" = "--" ] && shift
   local d="$RUN/$name"; mkdir -p "$d"
@@ -164,8 +156,7 @@ run_step() {           # run_step <name> <timebox_s|0> -- <cmd...>
 
 # ── the measurements ────────────────────────────────────────────────────────────
 
-# --order name (not zkc's default --order total) keeps the table diffable week to week;
-# the Total rows the renderer parses are order-independent.
+# --order name (not zkc's default --order total) keeps the table diffable week to week.
 run_step compile 0 -- "$ZKC" compile --stats --order name "$ZKC_MAIN"
 
 if $RUN_GUEST; then
@@ -173,8 +164,7 @@ if $RUN_GUEST; then
     log "reusing $GUEST_JSON"
     mkdir -p "$RUN/guest"; echo 0 > "$RUN/guest/rc"; echo 0 > "$RUN/guest/wall_s"
   else
-    # NB: no `make linker-script` — linker_script.ld is tracked and @embedFile'd by the
-    # zig build, so regenerating it would only risk dirtying the tree.
+    # No `make linker-script`: linker_script.ld is tracked and @embedFile'd by the zig build.
     run_step guest 0 -- make -C "$GUEST_DIR" compile KECCAK_ACCEL="$KECCAK_ACCEL"
     if [ "$(cat "$RUN/guest/rc")" = "0" ]; then
       make -C riscv-guests/build_common elf-to-json \
@@ -193,14 +183,13 @@ fi
 
 zkc_mod=$(go version -m "$ZKC" | awk '$1=="mod"{print $3}')
 zkc_commit=$(go version -m "$ZKC" | awk '$1=="build" && $2 ~ /^vcs\.revision=/{print substr($2,14)}')
-# sed -n/p matters: without it a non-matching version is echoed back, so a clean release
-# version like "v1.2.25" would masquerade as a commit hash.
+# sed -n/p: without it a clean release version is echoed back and masquerades as a hash.
 [ -n "$zkc_commit" ] || zkc_commit=$(printf '%s' "$zkc_mod" | sed -nE 's/.*-([0-9a-f]{12})$/\1/p')
 [ -n "$zkc_commit" ] || zkc_commit="unknown"
 mono_head=$(git rev-parse --short=9 HEAD)
 mono_branch=$(git rev-parse --abbrev-ref HEAD)
-# Scoped: the untracked zkc/ clone and the go-corset submodule keep a naive
-# `git status` permanently dirty, which would make the flag meaningless.
+# Scoped: the untracked zkc/ clone and the go-corset submodule would otherwise make this
+# permanently dirty.
 git diff --quiet --ignore-submodules=all HEAD -- && dirty="" || dirty=" (dirty)"
 
 {

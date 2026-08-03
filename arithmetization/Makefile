@@ -62,10 +62,8 @@ zkc-compile: $(ZKC_FILES)
 	zkc compile -o $(ZKC_BINDIR)/$(ZKC_BINARY) --bci $(ZKC_MAIN)
 
 # Check execution of the compiled zkc binary against an input JSON.
-# Only practical for small zkc programs: constraint checking, not tracing, is the expensive
-# half. Tracing the l2-execution guest on the committed reference block takes ~3m42s at
-# 7.7 GiB, while the same run with --check had not finished after an hour. See
-# arithmetization/src/test/scripts/README-weekly-metrics.md.
+# Only practical for small zkc programs: constraint checking, not tracing, is the expensive half.
+# Measured weekly for the l2-execution guest — see arithmetization/src/test/scripts/README-weekly-metrics.md.
 zkc-check:
 	zkc exec --check $(ZKC_INPUT) $(ZKC_BINDIR)/$(ZKC_BINARY)
 

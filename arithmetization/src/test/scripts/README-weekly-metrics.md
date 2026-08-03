@@ -14,12 +14,14 @@ measures four things and appends one row to each markdown table in
 
 ## What is measured
 
-| # | command | cost (observed) |
-|---|---|---|
-| 1 | `zkc compile --stats --order name arithmetization/src/main/riscv/main.zkc` | 2 s |
-| 2 | guest ELF + zkc JSON (`KECCAK_ACCEL=true`) | ~1 min |
-| 3 | `zkc trace --stats <guest>.json main.zkc` | 3m42s, 7.70 GiB, 7.9 G cells |
-| 4 | `zkc trace --stats --check <guest>.json main.zkc` | > 1 h (has not yet completed) |
+| # | command |
+|---|---|
+| 1 | `zkc compile --stats --order name arithmetization/src/main/riscv/main.zkc` |
+| 2 | guest ELF + zkc JSON (`KECCAK_ACCEL=true`) |
+| 3 | `zkc trace --stats <guest>.json main.zkc` |
+| 4 | `zkc trace --stats --check <guest>.json main.zkc` |
+
+Costs are not documented here — they are what the tables record.
 
 The workload is the l2-execution guest against
 `riscv-guests/l2-execution/test/testdata/stateless_input.ssz` — the small committed reference
@@ -35,11 +37,11 @@ happened earlier. Cells read:
 
 | situation | cell |
 |---|---|
-| step succeeded | `ok 3m42s / 7.70 GiB` |
-| hit its cap | `**TIMEOUT** 1h00m / 12.14 GiB` |
-| killed, almost always the OOM killer | `**OOM/killed** (SIGKILL) 30m00s / 60.00 GiB` |
+| step succeeded | `ok <wall> / <peak RSS>` |
+| hit its cap | `**TIMEOUT** <wall> / <peak RSS>` |
+| killed, almost always the OOM killer | `**OOM/killed** (SIGKILL) …` |
 | segfaulted | `**CRASH** (SIGSEGV) …` |
-| constraints actually failed | `**FAIL** (3 failing)` — grepped, since zkc still exits 0 |
+| constraints actually failed | `**FAIL** (N failing)` — grepped, since zkc still exits 0 |
 | prerequisite missing, e.g. the guest build failed | `skipped` |
 | other non-zero exit | `**FAIL** (rc N)` |
 
@@ -127,5 +129,5 @@ zkc trace --stats --check /tmp/guest.json arithmetization/src/main/riscv/main.zk
 - **`time` must wrap `timeout`, not the reverse.** Otherwise the cap kills `time` and the peak-RSS
   measurement is lost in exactly the case worth recording. On macOS there is no `timeout` and no
   GNU `time`, so the local script hand-rolls a watchdog that kills the child rather than `time`.
-- **macOS "peak memory footprint" is not a peak RSS.** It is cumulative allocation — a run whose
-  true peak was 12 GiB reported 154 GiB. Use "maximum resident set size".
+- **macOS "peak memory footprint" is not a peak RSS.** It is a cumulative allocation figure; use
+  "maximum resident set size".

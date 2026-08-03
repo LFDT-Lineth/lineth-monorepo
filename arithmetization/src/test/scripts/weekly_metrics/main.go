@@ -1,11 +1,9 @@
 package main
 
 // weekly_metrics turns one run directory into one new row in each markdown table of the
-// weekly metrics file. The markdown file IS the ledger — there is no second store.
-//
-// Rows are inserted directly under each table's header separator, so the newest run is
-// always at the top. Tables are located by their `<!-- table:<name> -->` marker, which
-// means the surrounding prose can be edited freely without breaking the tool.
+// weekly metrics file, which IS the ledger — there is no second store. Rows go in under the
+// header separator, newest first. Tables are located by their `<!-- table:<name> -->` marker,
+// so the surrounding prose can be edited freely.
 //
 // Examples, from the repository root:
 //   GO111MODULE=off go run ./arithmetization/src/test/scripts/weekly_metrics \
@@ -52,8 +50,8 @@ func main() {
 	if csErr != nil {
 		fmt.Fprintln(os.Stderr, "weekly_metrics: warning: compile stats:", csErr)
 	}
-	// The trace stats table is printed before constraint checking starts, so the check
-	// step's stdout also carries it — use whichever run got that far.
+	// zkc prints the trace stats before checking starts, so the check step's stdout carries
+	// them too — use whichever run got that far.
 	ts := parseTraceStats(steps["trace"].stdout)
 	if ts.cellsRaw == 0 {
 		ts = parseTraceStats(steps["check"].stdout)
@@ -65,8 +63,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Echo what was added, so a workflow step summary or a local run shows the numbers
-	// without opening the file.
+	// Echo the rows so a step summary or a local run shows them without opening the file.
 	for _, t := range tableOrder {
 		fmt.Printf("%-12s %s\n", t, rows[t])
 	}
@@ -76,8 +73,7 @@ func main() {
 
 var tableOrder = []string{"runs", "cost", "stats", "modules", "tracemodules"}
 
-// tableHeaders defines each table's columns. Changing a header here does NOT rewrite
-// existing rows, so add columns at the END and accept that older rows render short.
+// Changing a header does not rewrite existing rows: add columns at the END only.
 var tableHeaders = map[string][]string{
 	"runs":         {"week", "started (UTC)", "trigger", "runner", "arithmetization", "zkc", "run"},
 	"cost":         {"week", "compile", "guest build", "trace", "trace + check", "trace cells"},
@@ -133,7 +129,7 @@ func buildRows(meta map[string]string, steps map[string]step, cs *compileStats, 
 	return rows
 }
 
-// topCells renders the N heaviest modules as "name (value)" cells, padding with "–".
+// topCells renders the N heaviest modules, padded with "–".
 func topCells(mods []module, n int) []string {
 	sort.SliceStable(mods, func(i, j int) bool { return mods[i].weight > mods[j].weight })
 	out := make([]string, 0, n)
@@ -149,8 +145,7 @@ func topCells(mods []module, n int) []string {
 
 // ── markdown insertion ──────────────────────────────────────────────────────────
 
-// insertRows adds one row to every table, immediately after that table's header
-// separator, so the newest run appears first.
+// insertRows adds one row per table, directly after its header separator.
 func insertRows(path string, rows map[string]string) error {
 	body, err := os.ReadFile(path)
 	if err != nil {
@@ -180,9 +175,8 @@ func insertRows(path string, rows map[string]string) error {
 
 var sepLine = regexp.MustCompile(`^\s*\|[\s\-:|]+\|\s*$`)
 
-// separatorIndex finds the `|---|---|` line belonging to the table tagged with
-// `<!-- table:<name> -->`. Anchoring on the marker rather than on a heading means the
-// prose around the tables can be reworded without breaking insertion.
+// separatorIndex finds the `|---|---|` line under `<!-- table:<name> -->`. Anchoring on the
+// marker rather than a heading keeps the prose around the tables editable.
 func separatorIndex(lines []string, name string) (int, error) {
 	marker := "<!-- table:" + name + " -->"
 	for i, l := range lines {
@@ -265,8 +259,8 @@ func readStep(runDir, name string) step {
 	}
 	s.timedout = exists(filepath.Join(dir, "timedout"))
 	s.rssBytes = parsePeakRSS(readText(filepath.Join(dir, "rusage")))
-	// A constraint failure does NOT change zkc's exit code: checkConstraints reports the
-	// failures and returns, leaving rc at 0. The reported lines are the only signal.
+	// A constraint failure does not change zkc's exit code, so the reported lines are the
+	// only signal.
 	s.failures = len(failingLine.FindAllString(s.stdout, -1)) +
 		len(failingLine.FindAllString(stripANSI(readText(filepath.Join(dir, "stderr"))), -1))
 	return s
@@ -287,9 +281,8 @@ func (s step) cell() string {
 		outcome = fmt.Sprintf("**FAIL** (%d failing)", s.failures)
 	case s.haveRC && s.rc == 0:
 		outcome = "ok"
-	// 128+signal. SIGKILL on a memory-hungry step is almost always the kernel's OOM
-	// killer, and it is worth distinguishing from an ordinary non-zero exit: the peak RSS
-	// in the same cell then tells you what it died wanting.
+	// 128+signal. SIGKILL on a memory-hungry step is almost always the OOM killer, worth
+	// distinguishing from an ordinary non-zero exit.
 	case s.haveRC && s.rc == 137:
 		outcome = "**OOM/killed** (SIGKILL)"
 	case s.haveRC && s.rc == 139:
@@ -310,11 +303,10 @@ func (s step) cell() string {
 }
 
 var (
-	// macOS `time -l`: "          8264237056  maximum resident set size" (bytes).
-	// Deliberately NOT "peak memory footprint": despite the name that is a cumulative
-	// allocation figure — a run whose true peak was 12 GiB reported 154 GiB.
+	// BSD/macOS `time -l`, in bytes. Deliberately NOT "peak memory footprint": despite the
+	// name that is a cumulative allocation figure, not a resident peak.
 	bsdMaxRSS = regexp.MustCompile(`(?m)^\s*(\d+)\s+maximum resident set size`)
-	// GNU `time -v`: "\tMaximum resident set size (kbytes): 4677872"
+	// GNU `time -v`, in kbytes.
 	gnuMaxRSSkb = regexp.MustCompile(`(?m)^\s*Maximum resident set size \(kbytes\):\s*(\d+)`)
 )
 
@@ -347,13 +339,12 @@ type compileStats struct {
 	modules     []module // by complexity
 }
 
-// degreeLabel matches "d1"…"d7", the open final bucket "d8+", and the closed final
-// bucket "d8-d8" / "d8-d11".
+// Matches "d1"…"d7", the open final bucket "d8+", and a closed one such as "d8-d11".
 var degreeLabel = regexp.MustCompile(`^d(\d+)(?:\+|-d(\d+))?$`)
 
-// parseCompileStats reads the wide `--stats` table. Column indices come from the
-// sub-header row starting "Module | type" — never hard-coded, and never from the row
-// above it, which uses spanning cells and so has fewer fields than the data rows.
+// parseCompileStats reads the wide `--stats` table. Column indices come from the sub-header
+// row starting "Module | type" — never from the row above it, which uses spanning cells and so
+// has fewer fields than the data rows.
 func parseCompileStats(text string) (*compileStats, error) {
 	if strings.TrimSpace(text) == "" {
 		return nil, fmt.Errorf("no stats output captured")
@@ -390,8 +381,7 @@ func parseCompileStats(text string) (*compileStats, error) {
 						colCells = i
 					}
 				}
-				// The lookups column's sub-header cell is blank; it always sits
-				// immediately before the complexity column.
+				// The lookups sub-header cell is blank; it sits just before complexity.
 				colLook = colCx - 1
 				haveHdr = true
 			}
@@ -434,9 +424,8 @@ func parseCompileStats(text string) (*compileStats, error) {
 	for _, c := range st.byDegree {
 		st.constraints += c
 	}
-	// zkc closes the final bucket to "d<lo>-d<max>" as soon as any module reaches degree
-	// lo; while it still reads "d<lo>+", nothing got there and the true maximum is the
-	// last non-empty single-degree bucket.
+	// zkc closes the final bucket to "d<lo>-d<max>" once any module reaches degree lo; while
+	// it still reads "d<lo>+" the true maximum is the last non-empty single-degree bucket.
 	if last := degLabels[len(degLabels)-1]; strings.Contains(last, "-d") {
 		st.maxDegree = degMax[len(degMax)-1]
 	} else {
@@ -447,8 +436,8 @@ func parseCompileStats(text string) (*compileStats, error) {
 			}
 		}
 	}
-	// Σ cₖ·k² must equal the reported complexity while every bucket spans one degree.
-	// It is a free check that the columns were mapped correctly.
+	// Σ cₖ·k² must equal the reported complexity while every bucket spans one degree — a free
+	// check that the columns were mapped correctly.
 	if sum, ok := sumOfSquares(st.byDegree, degLabels, degMax); ok && sum != st.complexity {
 		return st, fmt.Errorf("column mapping suspect: Σ cₖ·k² = %d but the table reports complexity %d", sum, st.complexity)
 	}
@@ -477,8 +466,7 @@ type traceStats struct {
 	modules  []module // by cells
 }
 
-// "Cells (raw) | 7908271799 |" — the plain-integer field. The neighbouring "Cells" row
-// is human-formatted ("7.9G") and deliberately ignored.
+// The plain-integer field. The neighbouring "Cells" row is human-formatted and ignored.
 var traceCellsRaw = regexp.MustCompile(`(?m)^\s*Cells \(raw\)\s*\|\s*(\d+)`)
 
 func parseTraceStats(text string) traceStats {
@@ -489,7 +477,7 @@ func parseTraceStats(text string) traceStats {
 	if m := traceCellsRaw.FindStringSubmatch(text); m != nil {
 		ts.cellsRaw, _ = strconv.Atoi(m[1])
 	}
-	// Per-module table: "<name> | columns | lines | bitwidth | cells | nonzero | bytes |"
+	// Per-module table, keyed off its "cells" column.
 	inTable, cellsCol := false, -1
 	for _, line := range strings.Split(text, "\n") {
 		f := strings.Split(line, "|")
@@ -584,7 +572,7 @@ func fmtBytes(n int64) string {
 	return fmt.Sprintf("%.2f %s", f, units[i])
 }
 
-// grouped renders 12627 as "12 627" — readable in a table without commas.
+// Groups digits in threes: readable in a table, and no commas to fight the markdown.
 func grouped(n int64) string {
 	if n == 0 {
 		return "–"

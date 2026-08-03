@@ -4,9 +4,8 @@
 # custom keccak op, the production proving config), converts it to zkc's JSON input, and executes it
 # under zkc via the existing `exec` entry point. Execution uses zkc's generated-Go backend in fast
 # mode (--gogen --fast): this gate only needs to prove the guest runs, and skipping tracing keeps it
-# cheap. Tracing itself does work — `zkc trace` on this same input measures 3m42s at 7.7 GiB — and is
-# covered weekly by arithmetization-weekly-zkc-metrics.yml; constraint *checking* is the expensive
-# part. This is the RISC-V/ZKC counterpart to the host-machine guest tests, which run the
+# cheap. Tracing and constraint checking are measured by arithmetization-weekly-zkc-metrics.yml.
+# This is the RISC-V/ZKC counterpart to the host-machine guest tests, which run the
 # guest logic natively (no RISC-V, no zkc). It bridges the riscv-guests/ and arithmetization/ trees —
 # depending on both the guest source AND the interpreter program + ELF->JSON tooling — so it triggers
 # on changes to either.
@@ -65,8 +64,6 @@ jobs:
     name: l2-execution guest in ZKC interpreter (accel)
     # gogen+fast execution is light (~tens of MB, seconds), so this job is build-bound, not
     # memory-bound and the mid tier (16 GB) covers the zig/zesu build and the run comfortably.
-    # For reference, the tracing path measures ~7.7 GiB peak on this input, so it would fit here
-    # too — it is skipped for time, not for memory.
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     steps:
       - name: Checkout repository
@@ -99,12 +96,10 @@ jobs:
           ZKC_REF: ${{ inputs.zkc-ref || 'main' }}
 
         run: make -C arithmetization install-zkc
-      # Execute the guest via zkc's generated-Go backend (--gogen) in fast mode (--fast): this is a
-      # runnability check, so it skips tracing to stay in the seconds range (tens of MB) rather than
-      # the tree-walking interpreter's minutes and ~7.7 GiB. Tracing and constraint checking are
-      # measured weekly instead — see arithmetization-weekly-zkc-metrics.yml. Uses
-      # exec's default INPUT (the committed sample stateless input). A trap/failure still exits
-      # non-zero under these flags.
+      # Execute the guest via zkc's generated-Go backend (--gogen) in fast mode (--fast): a
+      # runnability check, so it skips tracing to stay light. Tracing and constraint checking are
+      # measured weekly instead — see arithmetization-weekly-zkc-metrics.yml. Uses exec's default
+      # INPUT (the committed sample stateless input). A trap/failure still exits non-zero here.
       # ZKC_REF= (empty) ensures the install-zkc prereq inside elf-exec is a guaranteed no-op
       # (zkc is already on PATH from the step above; an empty ZKC_REF triggers the skip path).
       #
