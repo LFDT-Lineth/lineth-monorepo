@@ -1,0 +1,98 @@
+#[native]
+fn mulmod_128(lhsL:u128, rhsL:u128, modL:u128) -> (remainder:u128) {
+    if modL == 0 {
+        fail
+    }
+    // integer product result `product = lhsL * rhsL`
+    var product:u256 = (lhsL as u256) * (rhsL as u256)
+
+    var overflow:u128
+    var quotient:u128
+    overflow::quotient = product / (modL as u256)
+    if overflow != 0 {
+        fail
+    }
+    var overflow2:u128
+    // XXX(ivo): two ways of computing the remainder. First one is approx 20% faster
+    overflow2::remainder = product - ((quotient as u256) * (modL as u256))
+    //overflow2::remainder = product % (modL as u256)
+    if overflow2 != 0 {
+        fail
+    }
+}
+
+// Returns the canonical representative of `val` in [0, modL), i.e. val mod modL.
+// Callers that branch on raw (unreduced) equality/inequality of field elements
+// must reduce their inputs through this first, otherwise non-canonical encodings
+// (e.g. val = x + modL) alias the same residue while comparing as distinct u128
+// values. Implemented as multiplication by 1 modulo modL.
+fn reduce_128(val:u128, modL:u128) -> (remainder:u128) {
+    remainder = mulmod_128(1, val, modL)
+    if remainder >= modL {
+        fail
+    }
+}
+
+// addmod_128 adds two values and reduces modulo modL. Assumes inputs are already
+// reduced
+fn addmod_128(lhsL:u128, rhsL:u128, modL:u128) -> (remainder:u128) {
+    if modL == 0 {
+        fail
+    }
+    var sum:u129 = (lhsL as u129) + (rhsL as u129)
+    if sum >= (modL as u129) {
+        sum = sum - (modL as u129)
+    }
+    var overflow:u1
+    overflow::remainder = sum
+    if overflow != 0 {
+        fail
+    }
+}
+
+// submod_128 computes subtraction and mod reduces. It assumes inputs are already reduced
+fn submod_128(lhsL:u128, rhsL:u128, modL:u128) -> (remainder:u128) {
+    if modL == 0 {
+        fail
+    }
+    var lhs:u129
+    if rhsL>lhsL {
+        lhs = (lhsL as u129) + (modL as u129)
+    } else {
+        lhs = (lhsL as u129)
+    }
+    var overflow:u1
+    overflow::remainder = lhs - (rhsL as u129)
+    if overflow != 0 {
+        fail
+    }
+}
+
+#[native]
+fn expmod_unconstrained_128(base:u128, exp:u128, mod:u128) -> (res:u128) {
+    if exp == 0 {
+        res = 1 % mod
+    } else {
+        var half:u128
+        var bit:u1
+        half::bit = exp as u129
+        var half_res:u128 = expmod_unconstrained_128(base, half, mod)
+        var sq:u128 = mulmod_128(half_res, half_res, mod)
+        if bit == 1 {
+            res = mulmod_128(sq, base, mod)
+        } else {
+            res = sq
+        }
+    }
+}
+
+fn invmod_128(inp:u128, modL:u128) -> (inv:u128) {
+    // we first hint the inversion
+    inv = expmod_unconstrained_128(inp, modL - 2, modL)
+    // compute the product using the native product
+    var prod:u128 = mulmod_128(inv, inp, modL)
+    // now we check that the hinted inversion result is correct
+    if prod != 1 {
+        fail
+    }
+}
