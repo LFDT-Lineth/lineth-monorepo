@@ -593,16 +593,16 @@ cd e2e
 pnpm install
 
 # Run all tests (except fleet and liveness)
-pnpm run test:e2e:local
+pnpm run test:local
 
 # Run specific test file
-pnpm run test:e2e:local -- bridge-tokens.spec.ts
+pnpm run test:local -- bridge-tokens.spec.ts
 
 # Run fleet tests
-pnpm run test:e2e:fleet:local
+pnpm run test:fleet:local
 
 # Run liveness tests
-pnpm run test:e2e:liveness:local
+pnpm run test:liveness:local
 ```
 
 ## Jest Configuration

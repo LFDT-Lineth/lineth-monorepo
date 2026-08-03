@@ -250,7 +250,7 @@ It then calculates its shnarf using the go calculate shnarf library.
 
 Finally it creates a proof request file for a KZG and a compression proof. This request file contains all the required data to generate the proof. The coordinator is responsible for ensuring that all data required by the prover is available before creating the request.
 
-Once the KZG proof is generated, the coordinator sends a transaction to L1 LineaService with the blob and this proof as described in
+Once the KZG proof is generated, the coordinator sends a transaction to L1 LineaRollup with the blob and this proof as described in
 [L1 finalization](#L1_finalization). In addition, it sends merkle tree roots of merkle trees storing L1L2 and L2L1 messages.
 
 
@@ -271,7 +271,7 @@ The coordinator ensures that all data required by the prover is available before
 
 ### Finalization
 
-Once an aggregation proof is available and after some delay, the coordinator sends a finalization transaction to the L1 LineaService smart contract as described in
+Once an aggregation proof is available and after some delay, the coordinator sends a finalization transaction to the L1 LineaRollup smart contract as described in
 [L1 finalization](#L1_finalization). The smart contract verifies the caller entitlement, its solvability, the proof validity and then executes the L2 root hash state change.
 
 
@@ -796,7 +796,7 @@ BlobSubmissionData
 
 ### Aggregation
 
-L1 finalization is triggered by the coordinator once an aggregation proof has been generated. This is done by triggering a transaction to execute `LineaService.finalizeBlocks` method on L1. In the process, the aggregation
+L1 finalization is triggered by the coordinator once an aggregation proof has been generated. This is done by triggering a transaction to execute `LineaRollup.finalizeBlocks` method on L1. In the process, the aggregation
 proof is sent to L1. Once the transaction is completed on L1, all the blocks are finalized on L2.
 
 The interface use is described below labeled with their respective Lineth release version.

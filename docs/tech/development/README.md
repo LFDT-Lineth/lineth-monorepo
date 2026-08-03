@@ -35,7 +35,7 @@ make pnpm-install
 make start-env-with-tracing-v2
 
 # 4. Run E2E tests
-cd e2e && pnpm run test:e2e:local
+cd e2e && pnpm run test:local
 
 # 5. Clean up
 make clean-environment
@@ -417,16 +417,16 @@ cd contracts && pnpm exec hardhat test
 make start-env-with-tracing-v2-ci
 
 # Run E2E tests
-cd e2e && pnpm run test:e2e:local
+cd e2e && pnpm run test:local
 
 # Specific test
-cd e2e && pnpm run test:e2e:local -- messaging.spec.ts
+cd e2e && pnpm run test:local -- messaging.spec.ts
 
 # Fleet tests
-cd e2e && pnpm run test:e2e:fleet:local
+cd e2e && pnpm run test:fleet:local
 
 # Liveness tests
-cd e2e && pnpm run test:e2e:liveness:local
+cd e2e && pnpm run test:liveness:local
 ```
 
 ## Troubleshooting
