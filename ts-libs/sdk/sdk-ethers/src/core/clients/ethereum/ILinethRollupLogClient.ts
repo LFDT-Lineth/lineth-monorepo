@@ -14,7 +14,7 @@ export type MessageClaimedFilters = {
   messageHash: string;
 };
 
-export interface ILineaRollupLogClient {
+export interface ILinethRollupLogClient {
   getMessageSentEvents(params: {
     filters?: MessageSentEventFilters;
     fromBlock?: number;

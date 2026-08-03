@@ -1,7 +1,7 @@
 import { describe, afterEach, it, expect, beforeEach } from "@jest/globals";
 import { MockProxy, mock, mockClear } from "jest-mock-extended";
 
-import { LineaRollup, LineaRollup__factory } from "../../../contracts/typechain";
+import { LinethRollup, LinethRollup__factory } from "../../../contracts/typechain";
 import { TEST_CONTRACT_ADDRESS_1 } from "../../../utils/testing/constants/common";
 import {
   testL2MessagingBlockAnchoredEvent,
@@ -13,37 +13,37 @@ import {
 } from "../../../utils/testing/constants/events";
 import { mockProperty } from "../../../utils/testing/helpers";
 import { Provider } from "../../providers";
-import { EthersLineaRollupLogClient } from "../EthersLineaRollupLogClient";
+import { EthersLinethRollupLogClient } from "../EthersLinethRollupLogClient";
 
-describe("TestEthersLineaRollupLogClient", () => {
+describe("TestEthersLinethRollupLogClient", () => {
   let providerMock: MockProxy<Provider>;
-  let lineaRollupMock: MockProxy<LineaRollup>;
-  let lineaRollupLogClient: EthersLineaRollupLogClient;
+  let linethRollupMock: MockProxy<LinethRollup>;
+  let linethRollupLogClient: EthersLinethRollupLogClient;
 
   beforeEach(() => {
     providerMock = mock<Provider>();
-    lineaRollupMock = mock<LineaRollup>();
-    mockProperty(lineaRollupMock, "filters", {
-      ...lineaRollupMock.filters,
+    linethRollupMock = mock<LinethRollup>();
+    mockProperty(linethRollupMock, "filters", {
+      ...linethRollupMock.filters,
       MessageSent: jest.fn(),
       L2MessagingBlockAnchored: jest.fn(),
       MessageClaimed: jest.fn(),
     } as any);
-    jest.spyOn(LineaRollup__factory, "connect").mockReturnValue(lineaRollupMock);
+    jest.spyOn(LinethRollup__factory, "connect").mockReturnValue(linethRollupMock);
 
-    lineaRollupLogClient = new EthersLineaRollupLogClient(providerMock, TEST_CONTRACT_ADDRESS_1);
+    linethRollupLogClient = new EthersLinethRollupLogClient(providerMock, TEST_CONTRACT_ADDRESS_1);
   });
 
   afterEach(() => {
     mockClear(providerMock);
-    mockClear(lineaRollupMock);
+    mockClear(linethRollupMock);
   });
 
   describe("getMessageSentEvents", () => {
     it("should return a MessageSentEvent", async () => {
-      jest.spyOn(lineaRollupMock, "queryFilter").mockResolvedValue([testMessageSentEventLog]);
+      jest.spyOn(linethRollupMock, "queryFilter").mockResolvedValue([testMessageSentEventLog]);
 
-      const messageSentEvents = await lineaRollupLogClient.getMessageSentEvents({
+      const messageSentEvents = await linethRollupLogClient.getMessageSentEvents({
         fromBlock: 51,
         fromBlockLogIndex: 1,
       });
@@ -52,9 +52,9 @@ describe("TestEthersLineaRollupLogClient", () => {
     });
 
     it("should return empty MessageSentEvent as event index is less than fromBlockLogIndex", async () => {
-      jest.spyOn(lineaRollupMock, "queryFilter").mockResolvedValue([testMessageSentEventLog]);
+      jest.spyOn(linethRollupMock, "queryFilter").mockResolvedValue([testMessageSentEventLog]);
 
-      const messageSentEvents = await lineaRollupLogClient.getMessageSentEvents({
+      const messageSentEvents = await linethRollupLogClient.getMessageSentEvents({
         fromBlock: 51,
         fromBlockLogIndex: 10,
       });
@@ -65,9 +65,9 @@ describe("TestEthersLineaRollupLogClient", () => {
 
   describe("getL2MessagingBlockAnchoredEvents", () => {
     it("should return a L2MessagingBlockAnchoredEvent", async () => {
-      jest.spyOn(lineaRollupMock, "queryFilter").mockResolvedValue([testL2MessagingBlockAnchoredEventLog]);
+      jest.spyOn(linethRollupMock, "queryFilter").mockResolvedValue([testL2MessagingBlockAnchoredEventLog]);
 
-      const l2MessagingBlockAnchoredEvents = await lineaRollupLogClient.getL2MessagingBlockAnchoredEvents({});
+      const l2MessagingBlockAnchoredEvents = await linethRollupLogClient.getL2MessagingBlockAnchoredEvents({});
 
       expect(l2MessagingBlockAnchoredEvents).toStrictEqual([testL2MessagingBlockAnchoredEvent]);
     });
@@ -75,9 +75,9 @@ describe("TestEthersLineaRollupLogClient", () => {
 
   describe("getMessageClaimedEvents", () => {
     it("should return a MessageClaimedEvent", async () => {
-      jest.spyOn(lineaRollupMock, "queryFilter").mockResolvedValue([testMessageClaimedEventLog]);
+      jest.spyOn(linethRollupMock, "queryFilter").mockResolvedValue([testMessageClaimedEventLog]);
 
-      const messageClaimedEvents = await lineaRollupLogClient.getMessageClaimedEvents({});
+      const messageClaimedEvents = await linethRollupLogClient.getMessageClaimedEvents({});
 
       expect(messageClaimedEvents).toStrictEqual([testMessageClaimedEvent]);
     });

@@ -1,7 +1,7 @@
 import { Block, TransactionReceipt, TransactionRequest, TransactionResponse } from "ethers";
 
-import { LineaRollup, LineaRollup__factory } from "../../contracts/typechain";
-import { ILineaRollupLogClient } from "../../core/clients/ethereum";
+import { LinethRollup, LinethRollup__factory } from "../../contracts/typechain";
+import { ILinethRollupLogClient } from "../../core/clients/ethereum";
 import { IMessageRetriever } from "../../core/clients/IMessageRetriever";
 import { IProvider } from "../../core/clients/IProvider";
 import { MESSAGE_SENT_EVENT_SIGNATURE } from "../../core/constants";
@@ -9,15 +9,15 @@ import { MessageSent } from "../../core/types";
 import { isNull } from "../../core/utils";
 import { BrowserProvider, Provider } from "../providers";
 
-export class LineaRollupMessageRetriever implements IMessageRetriever<TransactionReceipt> {
-  private readonly contract: LineaRollup;
+export class LinethRollupMessageRetriever implements IMessageRetriever<TransactionReceipt> {
+  private readonly contract: LinethRollup;
 
   /**
-   * Initializes a new instance of the `LineaRollupMessageRetriever`.
+   * Initializes a new instance of the `LinethRollupMessageRetriever`.
    *
    * @param {IProvider} provider - The provider for interacting with the blockchain.
-   * @param {ILineaRollupLogClient} lineaRollupLogClient - An instance of a class implementing the `ILineaRollupLogClient` interface for fetching events from the blockchain.
-   * @param {string} contractAddress - The address of the Linea Rollup contract.
+   * @param {ILinethRollupLogClient} linethRollupLogClient - An instance of a class implementing the `ILinethRollupLogClient` interface for fetching events from the blockchain.
+   * @param {string} contractAddress - The address of the Lineth Rollup contract.
    */
   constructor(
     private readonly provider: IProvider<
@@ -27,10 +27,10 @@ export class LineaRollupMessageRetriever implements IMessageRetriever<Transactio
       TransactionResponse,
       Provider | BrowserProvider
     >,
-    private readonly lineaRollupLogClient: ILineaRollupLogClient,
+    private readonly linethRollupLogClient: ILinethRollupLogClient,
     private readonly contractAddress: string,
   ) {
-    this.contract = LineaRollup__factory.connect(contractAddress, this.provider);
+    this.contract = LinethRollup__factory.connect(contractAddress, this.provider);
   }
 
   /**
@@ -39,7 +39,7 @@ export class LineaRollupMessageRetriever implements IMessageRetriever<Transactio
    * @returns {Promise<MessageSent | null>} The message information or null if not found.
    */
   public async getMessageByMessageHash(messageHash: string): Promise<MessageSent | null> {
-    const [event] = await this.lineaRollupLogClient.getMessageSentEvents({
+    const [event] = await this.linethRollupLogClient.getMessageSentEvents({
       filters: { messageHash },
       fromBlock: 0,
       toBlock: "latest",
@@ -74,7 +74,7 @@ export class LineaRollupMessageRetriever implements IMessageRetriever<Transactio
    * @returns {Promise<TransactionReceipt | null>} The transaction receipt or null if not found.
    */
   public async getTransactionReceiptByMessageHash(messageHash: string): Promise<TransactionReceipt | null> {
-    const [event] = await this.lineaRollupLogClient.getMessageSentEvents({
+    const [event] = await this.linethRollupLogClient.getMessageSentEvents({
       filters: { messageHash },
       fromBlock: 0,
       toBlock: "latest",

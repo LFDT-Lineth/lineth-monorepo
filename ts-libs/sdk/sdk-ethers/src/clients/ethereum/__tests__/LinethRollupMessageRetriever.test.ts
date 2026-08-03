@@ -9,25 +9,25 @@ import {
   TEST_TRANSACTION_HASH,
 } from "../../../utils/testing/constants/common";
 import { testMessageSentEvent } from "../../../utils/testing/constants/events";
-import { generateLineaRollupClient, generateTransactionReceipt } from "../../../utils/testing/helpers";
+import { generateLinethRollupClient, generateTransactionReceipt } from "../../../utils/testing/helpers";
 import { LineaProvider, Provider } from "../../providers";
-import { EthersLineaRollupLogClient } from "../EthersLineaRollupLogClient";
-import { LineaRollupMessageRetriever } from "../LineaRollupMessageRetriever";
+import { EthersLinethRollupLogClient } from "../EthersLinethRollupLogClient";
+import { LinethRollupMessageRetriever } from "../LinethRollupMessageRetriever";
 
-describe("LineaRollupMessageRetriever", () => {
+describe("LinethRollupMessageRetriever", () => {
   let providerMock: MockProxy<Provider>;
   let l2ProviderMock: MockProxy<LineaProvider>;
   let walletMock: MockProxy<Wallet>;
 
-  let messageRetriever: LineaRollupMessageRetriever;
-  let lineaRollupLogClient: EthersLineaRollupLogClient;
+  let messageRetriever: LinethRollupMessageRetriever;
+  let linethRollupLogClient: EthersLinethRollupLogClient;
 
   beforeEach(() => {
     providerMock = mock<Provider>();
     l2ProviderMock = mock<LineaProvider>();
     walletMock = mock<Wallet>();
 
-    const clients = generateLineaRollupClient(
+    const clients = generateLinethRollupClient(
       providerMock,
       l2ProviderMock,
       TEST_CONTRACT_ADDRESS_1,
@@ -36,7 +36,7 @@ describe("LineaRollupMessageRetriever", () => {
       walletMock,
     );
     messageRetriever = clients.messageRetriever;
-    lineaRollupLogClient = clients.lineaRollupLogClient;
+    linethRollupLogClient = clients.linethRollupLogClient;
   });
 
   afterEach(() => {
@@ -45,7 +45,7 @@ describe("LineaRollupMessageRetriever", () => {
 
   describe("getMessageByMessageHash", () => {
     it("should return a MessageSent", async () => {
-      jest.spyOn(lineaRollupLogClient, "getMessageSentEvents").mockResolvedValue([testMessageSentEvent]);
+      jest.spyOn(linethRollupLogClient, "getMessageSentEvents").mockResolvedValue([testMessageSentEvent]);
 
       const messageSentEvent = await messageRetriever.getMessageByMessageHash(TEST_MESSAGE_HASH);
 
@@ -53,7 +53,7 @@ describe("LineaRollupMessageRetriever", () => {
     });
 
     it("should return null if empty events returned", async () => {
-      jest.spyOn(lineaRollupLogClient, "getMessageSentEvents").mockResolvedValue([]);
+      jest.spyOn(linethRollupLogClient, "getMessageSentEvents").mockResolvedValue([]);
 
       const messageSentEvent = await messageRetriever.getMessageByMessageHash(TEST_MESSAGE_HASH);
 
@@ -73,7 +73,7 @@ describe("LineaRollupMessageRetriever", () => {
     it("should return an array of messages when transaction hash exists and contains MessageSent events", async () => {
       const transactionReceipt = generateTransactionReceipt();
       jest.spyOn(providerMock, "getTransactionReceipt").mockResolvedValue(transactionReceipt);
-      jest.spyOn(lineaRollupLogClient, "getMessageSentEvents").mockResolvedValue([testMessageSentEvent]);
+      jest.spyOn(linethRollupLogClient, "getMessageSentEvents").mockResolvedValue([testMessageSentEvent]);
 
       const messageSentEvents = await messageRetriever.getMessagesByTransactionHash(TEST_MESSAGE_HASH);
 
@@ -83,7 +83,7 @@ describe("LineaRollupMessageRetriever", () => {
 
   describe("getTransactionReceiptByMessageHash", () => {
     it("should return null when message hash does not exist", async () => {
-      jest.spyOn(lineaRollupLogClient, "getMessageSentEvents").mockResolvedValue([]);
+      jest.spyOn(linethRollupLogClient, "getMessageSentEvents").mockResolvedValue([]);
 
       const messageSentTxReceipt = await messageRetriever.getTransactionReceiptByMessageHash(TEST_MESSAGE_HASH);
 
@@ -91,7 +91,7 @@ describe("LineaRollupMessageRetriever", () => {
     });
 
     it("should return null when transaction receipt does not exist", async () => {
-      jest.spyOn(lineaRollupLogClient, "getMessageSentEvents").mockResolvedValue([testMessageSentEvent]);
+      jest.spyOn(linethRollupLogClient, "getMessageSentEvents").mockResolvedValue([testMessageSentEvent]);
       jest.spyOn(providerMock, "getTransactionReceipt").mockResolvedValue(null);
 
       const messageSentTxReceipt = await messageRetriever.getTransactionReceiptByMessageHash(TEST_MESSAGE_HASH);
@@ -101,7 +101,7 @@ describe("LineaRollupMessageRetriever", () => {
 
     it("should return an array of messages when transaction hash exists and contains MessageSent events", async () => {
       const transactionReceipt = generateTransactionReceipt();
-      jest.spyOn(lineaRollupLogClient, "getMessageSentEvents").mockResolvedValue([testMessageSentEvent]);
+      jest.spyOn(linethRollupLogClient, "getMessageSentEvents").mockResolvedValue([testMessageSentEvent]);
       jest.spyOn(providerMock, "getTransactionReceipt").mockResolvedValue(transactionReceipt);
 
       const messageSentTxReceipt = await messageRetriever.getTransactionReceiptByMessageHash(TEST_MESSAGE_HASH);

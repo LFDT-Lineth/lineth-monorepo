@@ -1,5 +1,5 @@
 /**
- * ABI fragments specific to the L1 `LineaRollup` (settlement, anchoring and the L1 claim path).
+ * ABI fragments specific to the L1 `LinethRollup` (settlement, anchoring and the L1 claim path).
  *
  * The `as const` assertions are required for viem to infer argument and return types from the ABI.
  */
