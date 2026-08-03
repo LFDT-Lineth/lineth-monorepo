@@ -13,7 +13,7 @@ const (
 // ValidSectionData is a valid RISC-V auipc x5, 0 instruction encoding.
 var ValidSectionData = []byte{0x97, 0x02, 0x00, 0x00}
 
-// MinimalElfPrograms is a minimal valid ELF64 RISC-V binary for testing.
+// MinimalElfProgram is a minimal valid ELF64 RISC-V binary for testing.
 // It has one PT_LOAD segment containing exactly one .text section at
 // sectionAddr with sectionData bytes, and an entry point of entryPoint.
 //
