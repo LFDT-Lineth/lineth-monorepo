@@ -7,6 +7,7 @@ package main
 //   make -C riscv-guests/l2-execution run-execution-specs-ssz-fixtures EXECUTION_SPECS_RUN_SSZ_LIMIT=0
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"flag"
@@ -57,7 +58,9 @@ func main() {
 	sszDir := flag.String("ssz-dir", filepath.Join(os.TempDir(), "execution-specs-ssz-fixtures"), "directory for selected temporary SSZ inputs")
 	fixturePathsFlag := flag.String("fixture-paths", "blockchain_tests/for_amsterdam/amsterdam,blockchain_tests/for_amsterdam/osaka", "comma-separated fixture paths under fixtures-dir")
 	sszLimit := flag.Int("ssz-limit", 0, "maximum SSZ inputs to run per fixture path; 0 means all")
-	zkcFlags := flag.String("zkc-flags", "--gogen --fast -q", "flags forwarded to zkc exec")
+	// Empty by default so the guest Makefile's ZKC_EXEC_FLAGS default applies: a competing default
+	// here shadowed it, and went stale when zkc dropped -q.
+	zkcFlags := flag.String("zkc-flags", "", "override ZKC_EXEC_FLAGS for the guest run (default: whatever the guest Makefile sets)")
 	flag.Parse()
 
 	if *sszLimit < 0 {
@@ -124,13 +127,20 @@ func main() {
 	printTableHeader()
 
 	passed := 0
+	reportedFailure := false
 	for _, input := range inputs {
-		success, userTime := runGuest(guestDir, input.file, *zkcFlags)
+		success, userTime, detail := runGuest(guestDir, input.file, *zkcFlags)
 		ok := success == input.expectedValid
 		if ok {
 			passed++
 		} else {
 			hadError = true
+			// Report the first failure's output. Without this the run is silent about WHY every
+			// fixture failed, which is how a stale zkc flag went unnoticed for three weeks.
+			if !reportedFailure && detail != "" {
+				reportedFailure = true
+				fmt.Fprintf(os.Stderr, "\nfirst failing guest run (%s):\n%s\n\n", input.file, detail)
+			}
 		}
 		testName := fmt.Sprintf("%s:%s[%d]", filepath.ToSlash(input.jsonFile), input.testName, input.blockIndex)
 		printTableRow(input.fixturePath, testName, input.size, userTime, ok)
@@ -341,20 +351,42 @@ func run(w io.Writer, name string, args ...string) error {
 	return cmd.Run()
 }
 
-// Runs the guest.
-func runGuest(guestDir, input, zkcFlags string) (bool, time.Duration) {
-	cmd := exec.Command(
-		"make", "--no-print-directory", "-C", guestDir, "exec",
-		"INPUT="+input,
-		"ZKC_EXEC_FLAGS="+zkcFlags,
-	)
-	cmd.Stdout = io.Discard
-	cmd.Stderr = io.Discard
-	err := cmd.Run()
-	if cmd.ProcessState == nil {
-		return err == nil, 0
+// Runs the guest. Returns whether it exited cleanly, how long it took, and — on failure — the tail
+// of its output, so a broken invocation says why instead of just reporting every fixture as invalid.
+func runGuest(guestDir, input, zkcFlags string) (bool, time.Duration, string) {
+	args := []string{"--no-print-directory", "-C", guestDir, "exec", "INPUT=" + input}
+	// Only forward the variable when overridden, so the guest Makefile stays the single place
+	// defining the default.
+	if zkcFlags != "" {
+		args = append(args, "ZKC_EXEC_FLAGS="+zkcFlags)
 	}
-	return err == nil, cmd.ProcessState.UserTime()
+	cmd := exec.Command("make", args...)
+	var output bytes.Buffer
+	cmd.Stdout = io.Discard
+	cmd.Stderr = &output
+	err := cmd.Run()
+	detail := ""
+	if err != nil {
+		detail = tail(output.String(), 15)
+	}
+	if cmd.ProcessState == nil {
+		return err == nil, 0, detail
+	}
+	return err == nil, cmd.ProcessState.UserTime(), detail
+}
+
+// tail returns the last n non-empty lines of s.
+func tail(s string, n int) string {
+	var lines []string
+	for _, l := range strings.Split(s, "\n") {
+		if strings.TrimSpace(l) != "" {
+			lines = append(lines, l)
+		}
+	}
+	if len(lines) > n {
+		lines = lines[len(lines)-n:]
+	}
+	return strings.Join(lines, "\n")
 }
 
 // Escapes table cells.

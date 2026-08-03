@@ -40,8 +40,8 @@ ZKC             ?= zkc
 TEST ?=
 
 # Flags to use when invoking zkc exec via zkc-exec / elf-exec:
-# 	-q for quiet mode
 # 	--fast for fast mode (else tracing mode by default)
+# Quiet needs no flag: zkc's verbosity defaults to NONE, and guest printf appears only at -vvv.
 ZKC_EXEC_FLAGS ?=--fast
 
 # If TEST=src_optional_subfolder/your_test(.s|.zig|.rs), the variables below are set as follows:
