@@ -401,35 +401,6 @@ describe("claimOnL1", () => {
     expect(result).toBe(TEST_TRANSACTION_HASH);
   });
 
-  it("falls back to the deprecated lineaRollupAddress when linethRollupAddress is not provided", async () => {
-    const client = mockClient(chainId, mockAccount);
-    const l2Client = mockClient(chainId, mockAccount);
-
-    (getMessageProof as jest.Mock<ReturnType<typeof getMessageProof>>).mockResolvedValue(messageProof);
-
-    const result = await claimOnL1(client, {
-      from,
-      to,
-      fee,
-      value,
-      calldata,
-      messageNonce,
-      feeRecipient,
-      l2Client,
-      lineaRollupAddress: TEST_CONTRACT_ADDRESS_1,
-      account: mockAccount,
-    });
-
-    expect(getMessageProof).toHaveBeenCalledWith(
-      client,
-      expect.objectContaining({
-        linethRollupAddress: TEST_CONTRACT_ADDRESS_1,
-      }),
-    );
-    expect(sendTransaction).toHaveBeenCalledWith(client, expect.objectContaining({ to: TEST_CONTRACT_ADDRESS_1 }));
-    expect(result).toBe(TEST_TRANSACTION_HASH);
-  });
-
   it("defaults feeRecipient to zeroAddress if not provided", async () => {
     const client = mockClient(chainId, mockAccount);
     await claimOnL1(client, {

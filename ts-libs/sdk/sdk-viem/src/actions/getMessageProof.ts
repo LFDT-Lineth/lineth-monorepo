@@ -66,8 +66,6 @@ export type GetMessageProofParameters<
     GetContractEventsParameters<abi, eventName, strict, fromBlock, toBlock>,
     "fromBlock" | "toBlock"
   >;
-  /** @deprecated Use `linethRollupAddress` instead. */
-  lineaRollupAddress?: Address | undefined;
   // Defaults to the message service address for the L1 chain
   linethRollupAddress?: Address | undefined;
   // Defaults to the message service address for the L2 chain
@@ -150,9 +148,7 @@ export async function getMessageProof<
   }
 
   const linethRollupAddress =
-    parameters.linethRollupAddress ??
-    parameters.lineaRollupAddress ??
-    getContractsAddressesByChainId(client.chain.id).messageService;
+    parameters.linethRollupAddress ?? getContractsAddressesByChainId(client.chain.id).messageService;
 
   const l2MessagingBlockAnchoredEvent = await findL2MessagingBlockAnchoredEvent(client, {
     linethRollupAddress,

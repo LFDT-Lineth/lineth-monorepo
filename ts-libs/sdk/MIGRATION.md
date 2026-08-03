@@ -1,6 +1,6 @@
 # SDK Migration Guide: `LineaRollup` → `LinethRollup`
 
-This renames every SDK type, class, interface, constant, and parameter that refers to the **`LineaRollup` smart contract** to **`LinethRollup`**, matching the on-chain contract rename (`contracts/src/rollup/LinethRollupBase.sol` etc.). It is a **breaking change** for `@lfdt-lineth/sdk` (sdk-ethers, unpublished/internal-only). For the published `@lfdt-lineth/sdk-viem` package, the old `lineaRollupAddress` parameter still works — see below.
+This is a **breaking change** across all three SDK packages (`@lfdt-lineth/sdk-core`, `@lfdt-lineth/sdk`, `@lfdt-lineth/sdk-viem`). It renames every SDK type, class, interface, constant, and parameter that refers to the **`LineaRollup` smart contract** to **`LinethRollup`**, matching the on-chain contract rename (`contracts/src/rollup/LinethRollupBase.sol` etc.).
 
 > **Not renamed:** the "Linea" **network/chain** name itself. Anything referring to the Linea network (e.g. `linea` / `lineaSepolia` chain imports from `viem/chains`, "Linea Mainnet", "message on Linea" in docs/JSDoc) is unaffected — only the rollup **contract** name changed.
 
@@ -80,23 +80,24 @@ const { linethRollupClient, linethRollupLogClient } = testingHelpers.generateLin
 
 ## `@lfdt-lineth/sdk-viem`
 
-### Parameter rename (non-breaking): `lineaRollupAddress` → `linethRollupAddress`
+### Parameter rename: `lineaRollupAddress` → `linethRollupAddress`
 
-Every action/decorator that accepts a custom L1 rollup contract address gained a new `linethRollupAddress` field. The old `lineaRollupAddress` field is **deprecated but still fully functional** — existing code keeps working unchanged. If both are provided, `linethRollupAddress` takes precedence.
+Every action/decorator that accepts a custom L1 rollup contract address renamed that field. Everything else about the call (function name, other params) is unchanged.
 
 | Function / decorator | Parameter type | Field | Required? |
 |---|---|---|---|
-| `publicActionsL1(params)` | `PublicActionsL1Parameters` | `linethRollupAddress` (new) / `lineaRollupAddress` (deprecated) | optional |
-| `walletActionsL1(params)` | `WalletActionsL1Parameters` | `linethRollupAddress` (new) / `lineaRollupAddress` (deprecated) | optional |
-| `claimOnL1(client, params)` | `ClaimOnL1Parameters` | `linethRollupAddress` (new) / `lineaRollupAddress` (deprecated) | optional |
-| `deposit(client, params)` | `DepositParameters` | `linethRollupAddress` (new) / `lineaRollupAddress` (deprecated) | optional |
-| `getL2ToL1MessageStatus(client, params)` | `GetL2ToL1MessageStatusParameters` | `linethRollupAddress` (new) / `lineaRollupAddress` (deprecated) | optional |
-| `getMessageProof(client, params)` | `GetMessageProofParameters` | `linethRollupAddress` (new) / `lineaRollupAddress` (deprecated) | optional |
+| `publicActionsL1(params)` | `PublicActionsL1Parameters` | `linethRollupAddress` | required |
+| `walletActionsL1(params)` | `WalletActionsL1Parameters` | `linethRollupAddress` | required |
+| `claimOnL1(client, params)` | `ClaimOnL1Parameters` | `linethRollupAddress` | optional |
+| `deposit(client, params)` | `DepositParameters` | `linethRollupAddress` | optional |
+| `getL2ToL1MessageStatus(client, params)` | `GetL2ToL1MessageStatusParameters` | `linethRollupAddress` | optional |
+| `getMessageProof(client, params)` | `GetMessageProofParameters` | `linethRollupAddress` | optional |
+| `getNextMessageNonce(client, params)` | `GetNextMessageNonceParameters` | `linethRollupAddress` | required |
 
-**Action required:** none — `lineaRollupAddress` keeps working. We recommend migrating to `linethRollupAddress` at your own pace; `lineaRollupAddress` will be removed in a future major version.
+**Action required:** rename `lineaRollupAddress` → `linethRollupAddress` everywhere you pass a custom contract address.
 
 ```ts
-// Still works (deprecated)
+// Before
 const l1Client = createPublicClient({ chain: sepolia, transport: http() }).extend(
   publicActionsL1({
     lineaRollupAddress: '0xYourCustomL1Rollup',
@@ -112,7 +113,7 @@ const proof = await getMessageProof(client, {
 ```
 
 ```ts
-// Recommended going forward
+// After
 const l1Client = createPublicClient({ chain: sepolia, transport: http() }).extend(
   publicActionsL1({
     linethRollupAddress: '0xYourCustomL1Rollup',
@@ -132,13 +133,14 @@ const proof = await getMessageProof(client, {
 ## What did NOT change
 
 - Package names and npm scopes (`@lfdt-lineth/sdk-core`, `@lfdt-lineth/sdk`, `@lfdt-lineth/sdk-viem`).
-- Function/method names — only types were renamed in `sdk-ethers`.
-- `sdk-viem`'s `lineaRollupAddress` parameter — deprecated, not removed.
+- Function/method names — only types and the `lineaRollupAddress`/`LineaRollup*` identifiers changed.
 - `L2MessageService`-related names (unaffected by this rename).
 - Any reference to the Linea network/chain itself (`linea`, `lineaSepolia` from `viem/chains`; "Linea Mainnet/Sepolia" in docs).
 
 ## Migration checklist
 
-1. `sdk-ethers` (`@lfdt-lineth/sdk`, internal-only): rename imports `LineaRollupClient`, `EthersLineaRollupLogClient`, `LineaRollupMessageRetriever`, `ILineaRollupClient`, `ILineaRollupLogClient`, `LineaRollup`, `LineaRollup__factory` → their `Lineth*` counterparts, and `testingHelpers.generateLineaRollupClient` → `generateLinethRollupClient` in tests.
-2. `sdk-viem` (`@lfdt-lineth/sdk-viem`, published): no action required. Optionally rename `lineaRollupAddress` → `linethRollupAddress` at your own pace across actions/decorators.
-3. Rebuild and re-run your test suite.
+1. Rename imports: `LineaRollupClient`, `EthersLineaRollupLogClient`, `LineaRollupMessageRetriever`, `ILineaRollupClient`, `ILineaRollupLogClient`, `LineaRollup`, `LineaRollup__factory` → their `Lineth*` counterparts.
+2. Rename the `lineaRollupAddress` parameter to `linethRollupAddress` in every call site across `sdk-viem` actions/decorators.
+3. Rename `testingHelpers.generateLineaRollupClient` → `generateLinethRollupClient` in tests.
+4. Search your codebase for `LineaRollup` and `lineaRollupAddress` (case-sensitive) to catch anything missed — do **not** touch plain `linea`/`Linea` references to the network.
+5. Rebuild and re-run your test suite.

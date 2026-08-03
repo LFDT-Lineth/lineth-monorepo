@@ -158,16 +158,13 @@ export type WalletActionsL1<
 >;
 
 export type WalletActionsL1Parameters = {
-  /** @deprecated Use `linethRollupAddress` instead. */
-  lineaRollupAddress?: Address | undefined;
-  linethRollupAddress?: Address | undefined;
+  linethRollupAddress: Address;
   l2MessageServiceAddress: Address;
   l1TokenBridgeAddress: Address;
   l2TokenBridgeAddress: Address;
 };
 
 export function walletActionsL1(parameters?: WalletActionsL1Parameters) {
-  const linethRollupAddress = parameters?.linethRollupAddress ?? parameters?.lineaRollupAddress;
   return <
     TChain extends Chain | undefined = Chain | undefined,
     TAccount extends Account | undefined = Account | undefined,
@@ -179,7 +176,7 @@ export function walletActionsL1(parameters?: WalletActionsL1Parameters) {
         ...args,
         ...(parameters
           ? {
-              linethRollupAddress,
+              linethRollupAddress: parameters.linethRollupAddress,
               l2MessageServiceAddress: parameters.l2MessageServiceAddress,
               l1TokenBridgeAddress: parameters.l1TokenBridgeAddress,
               l2TokenBridgeAddress: parameters.l2TokenBridgeAddress,
@@ -192,7 +189,7 @@ export function walletActionsL1(parameters?: WalletActionsL1Parameters) {
           ...args,
           ...(parameters
             ? {
-                linethRollupAddress,
+                linethRollupAddress: parameters.linethRollupAddress,
                 l2MessageServiceAddress: parameters.l2MessageServiceAddress,
               }
             : {}),
@@ -202,7 +199,7 @@ export function walletActionsL1(parameters?: WalletActionsL1Parameters) {
         ...args,
         ...(parameters
           ? {
-              linethRollupAddress,
+              linethRollupAddress: parameters.linethRollupAddress,
             }
           : {}),
       });

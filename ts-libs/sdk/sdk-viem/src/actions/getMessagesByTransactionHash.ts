@@ -20,7 +20,7 @@ import { MESSAGE_SENT_EVENT_ABI } from "../abis";
 export type GetMessagesByTransactionHashParameters = {
   transactionHash: Hex;
   // Defaults to the message service address for the chain
-  messageServiceAddress?: Address | undefined;
+  messageServiceAddress?: Address;
 };
 
 export type GetMessagesByTransactionHashReturnType = ExtendedMessage[];

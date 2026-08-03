@@ -48,10 +48,8 @@ export type ClaimOnL1Parameters<
         l2Client: Client<Transport, chainL2, accountL2>;
         messageNonce: bigint;
         feeRecipient?: Address;
-        /** @deprecated Use `linethRollupAddress` instead. */
-        lineaRollupAddress?: Address | undefined;
         // defaults to the message service address for the L1 chain
-        linethRollupAddress?: Address | undefined;
+        linethRollupAddress?: Address;
         // Defaults to the message service address for the L2 chain
         l2MessageServiceAddress?: Address;
         // Block in which the `MessageSent` event was emitted. When provided, the lookup queries only that
@@ -63,10 +61,8 @@ export type ClaimOnL1Parameters<
         messageNonce: bigint;
         messageProof: MessageProof;
         feeRecipient?: Address;
-        /** @deprecated Use `linethRollupAddress` instead. */
-        lineaRollupAddress?: Address | undefined;
         // defaults to the message service address for the L1 chain
-        linethRollupAddress?: Address | undefined;
+        linethRollupAddress?: Address;
       }
   >;
 
@@ -203,14 +199,11 @@ export async function claimOnL1<
     feeRecipient,
     l2Client,
     messageProof,
-    linethRollupAddress: linethRollupAddressParam,
-    lineaRollupAddress,
+    linethRollupAddress,
     l2MessageServiceAddress,
     messageL2BlockNumber,
     ...tx
   } = parameters;
-
-  const linethRollupAddress = linethRollupAddressParam ?? lineaRollupAddress;
 
   const account = account_ ? parseAccount(account_) : client.account;
   if (!account) {
@@ -253,7 +246,7 @@ export async function claimOnL1<
     proof = messageProof;
   }
 
-  const linethRollup = linethRollupAddress ?? getContractsAddressesByChainId(client.chain.id).messageService;
+  const linethRollup = parameters.linethRollupAddress ?? getContractsAddressesByChainId(client.chain.id).messageService;
 
   return sendTransaction(client, {
     to: linethRollup,
