@@ -121,8 +121,8 @@ func Compile(sys *wiop.System) {
 	//     own witness round (see compileGroup), matching the layout of
 	//     linea/prover/protocol/compiler/logderivativesum's lookup pass.
 	//   - latestWitness + 2: where the LogDerivativeSum result cell lives.
-	coinRound := ensureNextRound(sys, latestWitness)
-	ensureNextRound(sys, coinRound) // result round; the LogDerivativeSum constructor finds it on its own.
+	coinRound := latestWitness.EnsureNext()
+	coinRound.EnsureNext() // result round; the LogDerivativeSum constructor finds it on its own.
 
 	compCtx := sys.Context.Childf("lookuptologderiv")
 
@@ -332,7 +332,7 @@ func collectGroups(sys *wiop.System) []*lookupGroup {
 			curACost uint64
 		)
 		for _, bq := range b.queries {
-			qACost := staticTableRows(bq.a)
+			qACost := wiop.StaticTableRows(bq.a)
 			// Open a fresh subgroup for the first query, or whenever adding this
 			// query would bring the running A-side total up to the budget. A
 			// query whose own A side already reaches the budget still lands in a
@@ -362,24 +362,6 @@ func collectGroups(sys *wiop.System) []*lookupGroup {
 		}
 	}
 	return groups
-}
-
-// staticTableRows sums the compile-time row count of every fragment in tables:
-// a sized module contributes its fixed height, a dynamic (or otherwise unsized)
-// module its maximum possible height [wiop.ColumnSizeMaxSupported] (2^22). It
-// mirrors the A-side accounting of [wiop.TableRelationQuery.PrevalidateRowLimit]
-// so the bin-packing bound and the compile-time precheck agree.
-func staticTableRows(tables []wiop.Table) uint64 {
-	var sum uint64
-	for _, tab := range tables {
-		m := tab.Module()
-		if m.IsSized() {
-			sum += uint64(m.Size())
-		} else {
-			sum += uint64(wiop.ColumnSizeMaxSupported)
-		}
-	}
-	return sum
 }
 
 // compileGroup builds the fraction list for a single B-grouped collection of
@@ -506,15 +488,6 @@ func compileGroup(
 	})
 
 	return fractions
-}
-
-// ensureNextRound returns the round immediately following r, allocating one
-// via [wiop.System.NewRound] if necessary.
-func ensureNextRound(sys *wiop.System, r *wiop.Round) *wiop.Round {
-	if next, ok := r.Next(); ok {
-		return next
-	}
-	return sys.NewRound()
 }
 
 // groupRowLimitAction enforces, at runtime, that a single subgroup's summed row

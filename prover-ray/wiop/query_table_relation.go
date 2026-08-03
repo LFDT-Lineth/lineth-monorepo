@@ -206,12 +206,13 @@ func (tr *TableRelationQuery) PrecheckRowLimit(limit uint64) {
 	}
 }
 
-// precheckTablesRowLimit sums the static row counts of every fragment in tables
-// and returns an error if the total reaches limit. It is the compile-time
-// helper behind [TableRelationQuery.PrevalidateRowLimit]: sized modules
-// contribute their fixed height; dynamic or unsized modules contribute the
-// maximum possible height [ColumnSizeMaxSupported] (2^22).
-func precheckTablesRowLimit(path, side string, tables []Table, limit uint64) error {
+// StaticTableRows sums the compile-time row count of every fragment in tables:
+// a sized module contributes its fixed height, a dynamic (or otherwise unsized)
+// module its maximum possible height [ColumnSizeMaxSupported] (2^22). It is the
+// accounting behind [TableRelationQuery.PrevalidateRowLimit], exported so
+// compiler passes can bin-pack against the same bound as the compile-time
+// precheck.
+func StaticTableRows(tables []Table) uint64 {
 	var sum uint64
 	for _, tab := range tables {
 		m := tab.Module()
@@ -221,7 +222,14 @@ func precheckTablesRowLimit(path, side string, tables []Table, limit uint64) err
 			sum += uint64(ColumnSizeMaxSupported)
 		}
 	}
-	if sum >= limit {
+	return sum
+}
+
+// precheckTablesRowLimit returns an error if [StaticTableRows] of tables
+// reaches limit. It is the compile-time helper behind
+// [TableRelationQuery.PrevalidateRowLimit].
+func precheckTablesRowLimit(path, side string, tables []Table, limit uint64) error {
+	if sum := StaticTableRows(tables); sum >= limit {
 		return fmt.Errorf(
 			"wiop: TableRelationQuery(%s): total rows on the %s side reach %d "+
 				"(dynamic/unsized modules counted as their maximum height %d), which is >= the "+

@@ -81,8 +81,8 @@ func compilePermutations(sys *wiop.System) {
 
 	// β/α live one round after the witness columns; the GrandProduct Result one
 	// round after that. Both rounds must exist before NewGrandProduct runs.
-	coinRound := ensureNextRound(sys, maxRound)
-	ensureNextRound(sys, coinRound)
+	coinRound := maxRound.EnsureNext()
+	coinRound.EnsureNext()
 
 	compCtx := sys.Context.Childf("grandproduct-perm")
 
@@ -119,15 +119,6 @@ func compilePermutations(sys *wiop.System) {
 	for _, q := range perms {
 		q.MarkAsReduced()
 	}
-}
-
-// ensureNextRound returns the round immediately following r, allocating one via
-// [wiop.System.NewRound] if necessary.
-func ensureNextRound(sys *wiop.System, r *wiop.Round) *wiop.Round {
-	if next, ok := r.Next(); ok {
-		return next
-	}
-	return sys.NewRound()
 }
 
 // permutationFactor builds the grand-product factor a single permutation
