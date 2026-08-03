@@ -28,6 +28,31 @@ block, and the guest Makefile's default input.
 Steps 3 and 4 are best-effort with their own timeouts. A timeout is recorded as that week's data
 point rather than failing the job: knowing the ceiling is the measurement.
 
+## What a failure looks like
+
+Every step from "Record run metadata" onwards carries `if: always()`, so the row lands whatever
+happened earlier. Cells read:
+
+| situation | cell |
+|---|---|
+| step succeeded | `ok 3m42s / 7.70 GiB` |
+| hit its cap | `**TIMEOUT** 1h00m / 12.14 GiB` |
+| killed, almost always the OOM killer | `**OOM/killed** (SIGKILL) 30m00s / 60.00 GiB` |
+| segfaulted | `**CRASH** (SIGSEGV) …` |
+| constraints actually failed | `**FAIL** (3 failing)` — grepped, since zkc still exits 0 |
+| prerequisite missing, e.g. the guest build failed | `skipped` |
+| other non-zero exit | `**FAIL** (rc N)` |
+
+The peak RSS survives a kill, which is the point: it tells you what the step died wanting.
+
+If the **runner itself** is lost (eviction, infrastructure fault, job timeout) nothing downstream
+runs, so a second small job appends a placeholder row whose runner cell reads **run lost**. It is
+gated on the main job's `row_written` output, so a red-but-recorded run never gets a duplicate.
+
+The per-step caps are validated against the job's `timeout-minutes` before any measurement starts:
+raising `check-timeout-min` beyond the job budget fails fast with a clear message instead of having
+the job cap silently truncate the step.
+
 ## Triggering it
 
 Weekly by cron, or by hand from the Actions tab. The manual form takes:

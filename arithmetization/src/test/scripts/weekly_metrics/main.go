@@ -287,10 +287,17 @@ func (s step) cell() string {
 		outcome = fmt.Sprintf("**FAIL** (%d failing)", s.failures)
 	case s.haveRC && s.rc == 0:
 		outcome = "ok"
+	// 128+signal. SIGKILL on a memory-hungry step is almost always the kernel's OOM
+	// killer, and it is worth distinguishing from an ordinary non-zero exit: the peak RSS
+	// in the same cell then tells you what it died wanting.
+	case s.haveRC && s.rc == 137:
+		outcome = "**OOM/killed** (SIGKILL)"
+	case s.haveRC && s.rc == 139:
+		outcome = "**CRASH** (SIGSEGV)"
 	case s.haveRC:
 		outcome = fmt.Sprintf("**FAIL** (rc %d)", s.rc)
 	default:
-		outcome = "unknown"
+		outcome = "**FAIL** (no exit code recorded)"
 	}
 	parts := outcome
 	if s.haveWall {

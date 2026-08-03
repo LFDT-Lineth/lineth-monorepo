@@ -62,6 +62,9 @@ concurrency:
 env:
   METRICS_FILE: arithmetization/docs/metrics/zkc-weekly-metrics.md
   RUNNER_TIER: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
+  # Keep in sync with the job's timeout-minutes below (Actions does not let a job read its
+  # own timeout). The prepare step validates the step caps against this.
+  JOB_TIMEOUT_MIN: 360
 
 jobs:
   weekly-metrics:
@@ -69,7 +72,9 @@ jobs:
     # The heaviest tier: trace+check peaked at ~12 GiB locally and is the step most likely to
     # grow. Keep this stable — changing tiers breaks comparability with earlier rows.
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
-    timeout-minutes: 360
+    timeout-minutes: 360   # keep in sync with JOB_TIMEOUT_MIN above
+    outputs:
+      row_written: ${{ steps.update.outputs.row_written }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -86,16 +91,36 @@ jobs:
       - name: Install zkc
         run: make -C arithmetization install-zkc
 
-      - name: Prepare run directory
+      - name: Prepare run directory and validate the timeout budget
         run: |
           set -euo pipefail
           echo "RUN=${RUNNER_TEMP}/wzm" >> "$GITHUB_ENV"
           mkdir -p "${RUNNER_TEMP}/wzm"
 
-      # ── 1. constraint stats (cheap, must succeed) ──
+          # The per-step caps must fit inside the job's timeout-minutes, plus room for
+          # checkout, toolchain setup, the guest build and the commit. Without this guard the
+          # job cap silently truncates a raised check-timeout-min, which looks like the check
+          # timing out at a value nobody asked for.
+          trace_cap=${{ inputs.trace-timeout-min || 30 }}
+          check_cap=${{ inputs.check-timeout-min || 240 }}
+          job_cap=${{ env.JOB_TIMEOUT_MIN }}
+          overhead=40
+          budget=$(( trace_cap + check_cap + overhead ))
+          if [ "$budget" -gt "$job_cap" ]; then
+            echo "::error::trace ${trace_cap}m + check ${check_cap}m + ${overhead}m overhead = ${budget}m exceeds the job cap of ${job_cap}m. Lower the step caps or raise JOB_TIMEOUT_MIN in the workflow." >&2
+            exit 1
+          fi
+          echo "timeout budget: ${budget}m of ${job_cap}m"
+
+      # ── 1. constraint stats (cheap; the one step expected to always work) ──
+      # Note the `set +e` / explicit rc capture: with `set -e` a failure would abort before
+      # writing rc and wall_s, and the table would read "no exit code recorded" instead of
+      # naming the failure. A broken main.zkc is the likeliest thing to go wrong here, so it
+      # is exactly the case that must render clearly. The step still exits non-zero, so the
+      # job goes red — the later steps carry `if: always()` and record the row anyway.
       - name: zkc compile --stats
         run: |
-          set -euo pipefail
+          set -uo pipefail
           d="$RUN/compile"; mkdir -p "$d"
           t0=$(date +%s)
           # --order name (not zkc's default --order total) keeps the verbatim table diffable
@@ -103,39 +128,53 @@ jobs:
           /usr/bin/time -v -o "$d/rusage" \
             zkc compile --stats --order name arithmetization/src/main/riscv/main.zkc \
             > "$d/stdout" 2> "$d/stderr"
-          echo 0 > "$d/rc"
+          rc=$?
+          echo "$rc" > "$d/rc"
           echo $(( $(date +%s) - t0 )) > "$d/wall_s"
           tail -20 "$d/stdout"
+          [ "$rc" -eq 0 ] || { echo "::error::zkc compile --stats failed (rc $rc)"; tail -30 "$d/stderr"; }
+          exit "$rc"
 
       # ── 2. guest ELF -> zkc JSON ──
       - name: Build l2-execution guest and convert to zkc JSON
-        if: ${{ inputs.run-heavy != false }}
+        if: ${{ always() && inputs.run-heavy != false }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
           d="$RUN/guest"; mkdir -p "$d"
           t0=$(date +%s)
+          # Both halves are timed as one task: the ELF build and the ELF->JSON conversion are
+          # a single prerequisite from the metrics' point of view.
           # No `make linker-script`: linker_script.ld is tracked and @embedFile'd by the zig
           # build, so regenerating it would only risk dirtying the tree.
           /usr/bin/time -v -o "$d/rusage" \
             make -C riscv-guests/l2-execution compile KECCAK_ACCEL=true > "$d/stdout" 2> "$d/stderr"
-          make -C riscv-guests/build_common elf-to-json \
-            BIN_EXT="$PWD/riscv-guests/l2-execution/zig-out/bin/evm_execution_guest" \
-            JSON_EXT="$RUN/guest.json" \
-            IN_BYTES="@$PWD/riscv-guests/l2-execution/test/testdata/stateless_input.ssz" \
-            >> "$d/stdout" 2>> "$d/stderr"
-          echo 0 > "$d/rc"
+          rc=$?
+          if [ "$rc" -eq 0 ]; then
+            make -C riscv-guests/build_common elf-to-json \
+              BIN_EXT="$PWD/riscv-guests/l2-execution/zig-out/bin/evm_execution_guest" \
+              JSON_EXT="$RUN/guest.json" \
+              IN_BYTES="@$PWD/riscv-guests/l2-execution/test/testdata/stateless_input.ssz" \
+              >> "$d/stdout" 2>> "$d/stderr"
+            rc=$?
+          fi
+          echo "$rc" > "$d/rc"
           echo $(( $(date +%s) - t0 )) > "$d/wall_s"
-          ls -l "$RUN/guest.json"
+          [ "$rc" -eq 0 ] && ls -l "$RUN/guest.json"
+          [ "$rc" -eq 0 ] || { echo "::error::guest build/conversion failed (rc $rc)"; tail -30 "$d/stderr"; }
+          exit "$rc"
 
       # ── 3. trace (best effort) ──
       # `time` wraps `timeout` so the rusage block is written even when the cap fires: timeout
       # exits 124, and time still reports the peak RSS of the whole subtree. Reversing the two
       # would lose the measurement precisely in the case we most want to record.
       - name: zkc trace --stats
-        if: ${{ inputs.run-heavy != false }}
+        if: ${{ always() && inputs.run-heavy != false }}
         continue-on-error: true
         run: |
           set -uo pipefail
+          # No JSON means the guest step failed. Leave the step directory absent so the table
+          # reads "skipped" rather than inventing a failure for a task that never ran.
+          [ -s "$RUN/guest.json" ] || { echo "no guest JSON; skipping"; exit 0; }
           d="$RUN/trace"; mkdir -p "$d"
           t0=$(date +%s)
           /usr/bin/time -v -o "$d/rusage" \
@@ -151,10 +190,11 @@ jobs:
 
       # ── 4. trace + constraint check (best effort, the expensive one) ──
       - name: zkc trace --stats --check
-        if: ${{ inputs.run-heavy != false }}
+        if: ${{ always() && inputs.run-heavy != false }}
         continue-on-error: true
         run: |
           set -uo pipefail
+          [ -s "$RUN/guest.json" ] || { echo "no guest JSON; skipping"; exit 0; }
           d="$RUN/check"; mkdir -p "$d"
           t0=$(date +%s)
           /usr/bin/time -v -o "$d/rusage" \
@@ -197,11 +237,15 @@ jobs:
           cat "$RUN/meta.env"
 
       - name: Update metrics tables
+        id: update
         if: always()
         run: |
           set -euo pipefail
           GO111MODULE=off go run ./arithmetization/src/test/scripts/weekly_metrics \
             -run-dir "$RUN" -out "$METRICS_FILE" | tee "$RUN/added-rows.txt"
+          # Consumed by the record-lost-run job: if this never gets set, the job died before
+          # recording anything and that week needs a placeholder row.
+          echo "row_written=true" >> "$GITHUB_OUTPUT"
           {
             echo "### Weekly zkc metrics — rows added"
             echo
@@ -262,4 +306,98 @@ jobs:
             echo "Push rejected on attempt ${attempt}; retrying..."
           done
           echo "Failed to push metrics after 3 attempts." >&2
+          exit 1
+
+  # A step that fails still records its row: every step above from "Record run metadata"
+  # onwards carries `if: always()`. What that cannot survive is losing the runner itself —
+  # eviction, an infrastructure fault, the OOM killer taking the runner agent, or the job
+  # timeout — because then nothing downstream executes at all and the week vanishes silently.
+  # An absent week would be indistinguishable from a week nobody ran, so record a placeholder.
+  #
+  # The gate is the row_written output rather than the job result: a red job that DID write its
+  # row must not get a duplicate.
+  record-lost-run:
+    name: record lost run
+    needs: [weekly-metrics]
+    if: ${{ always() && needs.weekly-metrics.outputs.row_written != 'true' && inputs.commit-results != false }}
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          submodules: false
+
+      - name: Install Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version: '1.24.6'
+          cache-dependency-path: "**/*.sum"
+
+      # No measurement artifacts exist, so every task cell renders as "skipped" and the stats
+      # row as "–". The runner cell carries the explanation.
+      - name: Append a placeholder row
+        run: |
+          set -euo pipefail
+          RUN="${RUNNER_TEMP}/wzm-lost"; mkdir -p "$RUN"
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            trigger="weekly"
+          else
+            trigger="manual (@${{ github.actor }})"
+          fi
+          {
+            echo "week=$(date -u +%G-W%V)"
+            echo "started=$(date -u '+%Y-%m-%d %H:%M')"
+            echo "trigger=$trigger"
+            echo "runner=**run lost** — \`${RUNNER_TIER##*amd64-}\` job did not complete (evicted, cancelled or out of memory)"
+            echo "arithmetization=\`$(git rev-parse --short=9 HEAD)\` (${GITHUB_REF_NAME})"
+            echo "zkc=${{ inputs.zkc-ref || 'main' }}@–"
+            echo "run_url=[#${GITHUB_RUN_NUMBER}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})"
+          } > "$RUN/meta.env"
+          GO111MODULE=off go run ./arithmetization/src/test/scripts/weekly_metrics \
+            -run-dir "$RUN" -out "$METRICS_FILE" | tee "$RUN/added-rows.txt"
+          {
+            echo "### Weekly zkc metrics — run lost, placeholder row added"
+            echo
+            echo '```'
+            cat "$RUN/added-rows.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Generate release bot App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
+          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
+
+      - name: Commit and push the placeholder
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- "$METRICS_FILE"; then
+            echo "No change to $METRICS_FILE — nothing to commit."
+            exit 0
+          fi
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "$(gh api "/users/${APP_SLUG}[bot]" -q .id)+${APP_SLUG}[bot]@users.noreply.github.com"
+          git remote set-url origin \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git add "$METRICS_FILE"
+          git commit -m "chore(arithmetization): weekly zkc metrics $(date -u +%G-W%V) — run lost [skip ci]"
+          for attempt in 1 2 3; do
+            git fetch origin "$GITHUB_REF_NAME"
+            if ! git rebase "origin/${GITHUB_REF_NAME}"; then
+              git rebase --abort
+              echo "Rebase conflict on attempt ${attempt}; aborting." >&2
+              exit 1
+            fi
+            if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              exit 0
+            fi
+            echo "Push rejected on attempt ${attempt}; retrying..."
+          done
+          echo "Failed to push the placeholder after 3 attempts." >&2
           exit 1

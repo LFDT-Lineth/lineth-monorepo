@@ -13,6 +13,10 @@ while nothing has reached degree 8 and closes to `d8-d<max>` once something does
 `max degree` column for the actual maximum. The trace and trace+check steps are best-effort and
 capped, so a `TIMEOUT` cell is a genuine data point — the cost exceeded the cap that week.
 
+A row whose runner cell reads **run lost** means the job never completed — evicted, cancelled or
+out of memory — so no measurement exists for that week. It is recorded deliberately: a missing week
+would otherwise be indistinguishable from a week nobody ran.
+
 The first row was harvested by hand on a laptop, which is why its runner differs; every later row
 comes from the fixed CI tier.
 
