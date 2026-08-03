@@ -244,31 +244,24 @@ var fieldOne = field.One()
 //
 // when it is false. Both forms match [rlcExpression]'s convention so the
 // prover-side hash agrees with the symbolic RLC under the same scalar.
+//
+// The sum is evaluated with Horner's method, folding from the highest-degree
+// column down: acc = (…(cols[k-1][i]·α + cols[k-2][i])·α + …)·α + c₀, where
+// c₀ is head (prepend form) or cols[0][i]. This costs one extension
+// multiplication per column instead of two (term and power update).
 func rowHash(alpha field.Ext, head field.Ext, usePrepend bool, cols [][]field.Ext, i int) field.Ext {
-	if !usePrepend {
-		// acc = cols[0][i] + α·cols[1][i] + α²·cols[2][i] + …
-		acc := cols[0][i]
-		pow := alpha
-		for k := 1; k < len(cols); k++ {
-			var term field.Ext
-			term.Mul(&pow, &cols[k][i])
-			acc.Add(&acc, &term)
-			if k+1 < len(cols) {
-				pow.Mul(&pow, &alpha)
-			}
-		}
-		return acc
+	if len(cols) == 0 {
+		return head
 	}
-	// acc = head + α·cols[0][i] + α²·cols[1][i] + …
-	acc := head
-	pow := alpha
-	for k := 0; k < len(cols); k++ {
-		var term field.Ext
-		term.Mul(&pow, &cols[k][i])
-		acc.Add(&acc, &term)
-		if k+1 < len(cols) {
-			pow.Mul(&pow, &alpha)
-		}
+	acc := cols[len(cols)-1][i]
+	for k := len(cols) - 2; k >= 0; k-- {
+		acc.Mul(&acc, &alpha)
+		acc.Add(&acc, &cols[k][i])
+	}
+	if usePrepend {
+		// acc = head + α·(cols[0][i] + α·cols[1][i] + …)
+		acc.Mul(&acc, &alpha)
+		acc.Add(&acc, &head)
 	}
 	return acc
 }
