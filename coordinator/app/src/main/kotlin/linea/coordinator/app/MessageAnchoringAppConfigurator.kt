@@ -6,12 +6,17 @@ import linea.anchoring.MessageAnchoringApp
 import linea.contract.l2.Web3JL2MessageServiceSmartContractClient
 import linea.coordinator.config.v2.CoordinatorConfig
 import linea.coordinator.config.v2.isDisabled
+import linea.ethapi.EthLogsSearcherImpl
 import linea.web3j.createWeb3jHttpClient
 import linea.web3j.ethapi.createEthApiClient
 import org.apache.logging.log4j.LogManager
 
 object MessageAnchoringAppConfigurator {
-  fun create(vertx: Vertx, configs: CoordinatorConfig): LongRunningService {
+  fun create(
+    vertx: Vertx,
+    configs: CoordinatorConfig,
+    signerFactory: SignerFactory = DefaultSignerFactory,
+  ): LongRunningService {
     if (configs.messageAnchoring.isDisabled()) {
       LogManager.getLogger(MessageAnchoringApp::class.java).warn("Message anchoring is disabled")
       return DisabledLongRunningService
@@ -38,6 +43,7 @@ object MessageAnchoringAppConfigurator {
         vertx = vertx,
         signerConfig = configs.messageAnchoring.signer,
         client = l2Web3jClient,
+        signerFactory = signerFactory,
       )
     val messageAnchoringApp =
       MessageAnchoringApp(
@@ -50,6 +56,7 @@ object MessageAnchoringAppConfigurator {
           l1ContractAddress = configs.protocol.l1.contractAddress,
           l1EventPollingTimeout = configs.messageAnchoring.l1EventScrapping.pollingTimeout,
           l1EventSearchBlockChunk = configs.messageAnchoring.l1EventScrapping.ethLogsSearchBlockChunkSize,
+          l1EventSearchMaxBlockRange = configs.messageAnchoring.l1EventScrapping.ethLogsSearchMaxBlockRange,
           l1HighestBlockTag = configs.messageAnchoring.l1HighestBlockTag,
           l2HighestBlockTag = configs.messageAnchoring.l2HighestBlockTag,
           anchoringTickInterval = configs.messageAnchoring.anchoringTickInterval,
@@ -61,6 +68,7 @@ object MessageAnchoringAppConfigurator {
         Web3JL2MessageServiceSmartContractClient.create(
           web3jClient = l2Web3jClient,
           ethApiClient = l2EthApiClient,
+          ethLogsSearcher = EthLogsSearcherImpl(vertx = vertx, ethApiClient = l2EthApiClient),
           contractAddress = configs.protocol.l2.contractAddress,
           gasLimit = configs.messageAnchoring.gas.gasLimit,
           maxFeePerGasCap = configs.messageAnchoring.gas.maxFeePerGasCap,
@@ -68,7 +76,7 @@ object MessageAnchoringAppConfigurator {
           feeHistoryRewardPercentile = configs.messageAnchoring.gas.feeHistoryRewardPercentile.toDouble(),
           transactionManager = l2TransactionManager,
           smartContractErrors = configs.smartContractErrors,
-          smartContractDeploymentBlockNumber = configs.protocol.l2.contractDeploymentBlockNumber?.getNumber(),
+          smartContractDeploymentBlockNumber = configs.protocol.l2.contractDeploymentBlockNumber?.number,
         ),
       )
     return messageAnchoringApp

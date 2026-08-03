@@ -9,9 +9,11 @@
 package linea.teku
 
 import linea.web3j.okhttp.okHttpClientBuilder
+import okhttp3.OkHttpClient
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
+import org.web3j.protocol.Web3j
 import org.web3j.protocol.Web3jService
 import org.web3j.protocol.http.HttpService
 import tech.pegasys.teku.ethereum.executionclient.auth.JwtAuthHttpInterceptor
@@ -44,7 +46,7 @@ object JwtHelper {
 object TekuWeb3JClientFactory {
   val defaultRequestResponseLogLevel: Level = Level.TRACE
   val defaultFailedRequestResponseLogLevel: Level = Level.DEBUG
-  val eventLogger = EventLogger.EVENT_LOG // "teku-event-log"
+  val eventLogger: EventLogger = EventLogger.EVENT_LOG // "teku-event-log"
 
   fun create(
     endpoint: URL,
@@ -55,7 +57,7 @@ object TekuWeb3JClientFactory {
     failuresLogLevel: Level = defaultFailedRequestResponseLogLevel,
     nonCriticalMethods: Set<String> = emptySet(),
   ): Web3JClient {
-    val okHttpClient =
+    val okHttpClient: OkHttpClient =
       okHttpClientBuilder(
         logger = log,
         requestResponseLogLevel = requestResponseLogLevel,
@@ -75,7 +77,11 @@ object TekuWeb3JClientFactory {
           }
         }.build()
 
-    val httpService: Web3jService = HttpService(endpoint.toString(), okHttpClient)
+    val httpService: Web3jService = Jackson2HttpService(endpoint.toString(), okHttpClient)
+    // Same transport/auth (shares okHttpClient) as httpService above, but web3j's own vanilla
+    // HttpService, so its default Jackson 3 mapper resolves web3j-native response types (e.g.
+    // EthBlock) correctly. See Web3jClient's doc for why httpService alone can't do this.
+    val eth1Web3j: Web3j = Web3j.build(HttpService(endpoint.toString(), okHttpClient))
     val web3jClient =
       Web3jClient(
         eventLogger,
@@ -84,6 +90,7 @@ object TekuWeb3JClientFactory {
         executionClientEventsPublisher = { elIsUp ->
           log.info("client {} is {}", endpoint, if (elIsUp) "up" else "down")
         },
+        eth1Web3j = eth1Web3j,
         nonCriticalMethods = nonCriticalMethods,
       )
     return web3jClient

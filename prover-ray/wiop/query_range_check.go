@@ -21,7 +21,7 @@ type RangeCheck struct {
 func (rc *RangeCheck) Round() *Round { return rc.Handle.Round() }
 
 // Check implements [Query]. Verifies that every row of Handle lies in [0, B).
-func (rc *RangeCheck) Check(rt Runtime) error {
+func (rc *RangeCheck) Check(rt *Runtime) error {
 	m := rc.Handle.Module
 	n := m.Size()
 	cv := rt.GetColumnAssignment(rc.Handle)

@@ -2,8 +2,8 @@ package column
 
 import (
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/protocol/ifaces"
-	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak/prover/utils/collection"
+	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/google/uuid"
 )
 

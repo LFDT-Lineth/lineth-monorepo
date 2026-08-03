@@ -10,10 +10,10 @@ dependencies {
   implementation(project(":coordinator:clients:smart-contract-client"))
   implementation(project(':coordinator:ethereum:gas-pricing'))
   implementation(project(":coordinator:persistence"))
-  implementation("com.fasterxml.jackson.core:jackson-databind:${libs.versions.jackson.get()}")
-  implementation("com.fasterxml.jackson.core:jackson-annotations:${libs.versions.jackson.get()}")
-  implementation("com.fasterxml.jackson.module:jackson-module-kotlin:${libs.versions.jackson.get()}")
-  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${libs.versions.jackson.get()}")
+  implementation("com.fasterxml.jackson.core:jackson-databind")
+  implementation("com.fasterxml.jackson.core:jackson-annotations")
+  implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+  implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
   implementation("io.vertx:vertx-core")
   implementation("org.web3j:core:${libs.versions.web3j.get()}") {
     exclude group: "org.slf4j", module: "slf4j-nop"
@@ -21,16 +21,11 @@ dependencies {
 
   testImplementation(project(":jvm-libs:linea:testing:l1-blob-and-proof-submission"))
   testImplementation(project(':coordinator:ethereum:test-utils'))
-  testImplementation(project(":coordinator:persistence"))
   testImplementation(testFixtures(project(":coordinator:ethereum:gas-pricing")))
   testImplementation(testFixtures(project(":coordinator:core-interfaces")))
   testImplementation(testFixtures(project(":jvm-libs:generic:extensions:kotlin")))
   testImplementation(testFixtures(project(":jvm-libs:generic:persistence:db")))
   testImplementation("io.vertx:vertx-junit5")
-  testImplementation("com.fasterxml.jackson.core:jackson-databind:${libs.versions.jackson.get()}")
-  testImplementation("com.fasterxml.jackson.core:jackson-annotations:${libs.versions.jackson.get()}")
-  testImplementation("com.fasterxml.jackson.module:jackson-module-kotlin:${libs.versions.jackson.get()}")
-  testImplementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${libs.versions.jackson.get()}")
   testImplementation("org.apache.logging.log4j:log4j-slf4j2-impl:2.20.0")
 }
 

@@ -43,7 +43,7 @@ public final class Create extends GasProjection {
 
   @Override
   public long memoryExpansion() {
-    return gc.memoryExpansionGasCost(frame, initCodeOffset, initCodeLength);
+    return memoryExpansionGasCost(gc, frame, initCodeOffset, initCodeLength);
   }
 
   @Override

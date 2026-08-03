@@ -42,15 +42,7 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
     var imm_4_1:u4
     var rs1:Register
     var rs2:Register
-    var funct7:Funct7
-    var rd:Register
     var imm:DoubleWord
-    var comparison:Boolean
-    var raw_comparison:Boolean
-    var reg_val_1:DoubleWord
-    var reg_val_2:DoubleWord
-    var rem_1:u63
-    var rem_2:u63
 
     imm_sign::imm_10_5::rs2::rs1::funct3::imm_4_1::imm_11 = instruction_parameters
 
@@ -60,64 +52,48 @@ fn process_B_type_instruction<registers>(instruction_parameters:u25, pc:Address)
         imm = (imm_11::imm_10_5::imm_4_1::(0 as u1)) as DoubleWord
     }
 
-    // "no branching" value of pc_new;
-    // gets overwritten if branching occurs
-    pc_new = pc + 4
+    var match_case:u1
 
     switch funct3 {
         case FUNCT3_BEQ: {
             printf "BEQ "
             print_b_operands(rs1, rs2, imm)
-            if registers[rs1] == registers[rs2] {
-                // the branch case
-                pc_new = signed_sum_of_double_word(pc, imm)
-            }
+            match_case = registers[rs1] == registers[rs2] ? 1:0
         }
         case FUNCT3_BNE: {
             printf "BNE "
             print_b_operands(rs1, rs2, imm)
-            if registers[rs1] != registers[rs2] {
-                // the branch case
-                pc_new = signed_sum_of_double_word(pc, imm)
-            }
+            match_case = registers[rs1] == registers[rs2] ? 0:1
         }
         case FUNCT3_BLT: {
             printf "BLT "
             print_b_operands(rs1, rs2, imm)
-            comparison = signed_LT(registers[rs1], registers[rs2])
-            if comparison == 1 {
-                // the branch case
-                pc_new = signed_sum_of_double_word(pc, imm)
-            }
+            match_case = signed_LT(registers[rs1], registers[rs2])
         }
         case FUNCT3_BGE: {
             printf "BGE "
             print_b_operands(rs1, rs2, imm)
-            comparison = signed_LT(registers[rs1], registers[rs2])
-            if comparison == 0 {
-                // the branch case
-                pc_new = signed_sum_of_double_word(pc, imm)
-            }
+            match_case = 1 - signed_LT(registers[rs1], registers[rs2])
         }
         case FUNCT3_BLTU: {
             printf "BLTU "
             print_b_operands(rs1, rs2, imm)
-            if registers[rs1]<registers[rs2] {
-                // the branch case
-                pc_new = signed_sum_of_double_word(pc, imm)
-            }
+            match_case = registers[rs1]<registers[rs2] ? 1:0
         }
         case FUNCT3_BGEU: {
             printf "BGEU "
             print_b_operands(rs1, rs2, imm)
-            if registers[rs1] >= registers[rs2] {
-                // the branch case
-                pc_new = signed_sum_of_double_word(pc, imm)
-            }
+            match_case = registers[rs1]<registers[rs2] ? 0:1
         }
         default: {
             printf "[ERROR] Unsupported B-Type instruction with funct3 ≡ %x ≡ %b", funct3, funct3
             fail
         }
+    }
+
+    if (match_case == 1) {
+        pc_new = signed_sum_of_double_word(pc, imm)
+    } else {
+        pc_new = pc + 4
     }
 }

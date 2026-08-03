@@ -2,6 +2,7 @@ package linea.ftx
 
 import io.vertx.core.Vertx
 import linea.DisabledService
+import linea.EthLogsSearcher
 import linea.LongRunningService
 import linea.clients.InvalidityProverClientV1
 import linea.clients.StateManagerAccountProofClient
@@ -20,6 +21,7 @@ import linea.domain.BlockParameter
 import linea.domain.ConflationTrigger
 import linea.ethapi.EthApiClient
 import linea.ethapi.EthLogsFilterSubscriptionFactoryPollingBased
+import linea.ethapi.EthLogsSearcherImpl
 import linea.forcedtx.ForcedTransactionsClient
 import linea.ftx.conflation.ConflationCalculatorByForcedTransaction
 import linea.ftx.conflation.ForcedTransactionConflationSafeBlockNumberProvider
@@ -56,6 +58,7 @@ interface ForcedTransactionsApp : LongRunningService {
     val l1ContractAddress: String,
     val l1HighestBlockTag: BlockParameter,
     val l1EventSearchBlockChunk: UInt = 1000u,
+    val l1EventSearchMaxBlockRange: UInt = 10_000u,
     val ftxSequencerSendingInterval: Duration = 12.seconds,
     val maxFtxToSendToSequencer: UInt = 10u,
     val ftxProcessingDelay: Duration = Duration.ZERO,
@@ -127,6 +130,10 @@ internal class ForcedTransactionsAppImpl(
     ForcedTransactionConflationSafeBlockNumberProvider(),
 ) : ForcedTransactionsApp {
   private val log = LogManager.getLogger(ForcedTransactionsAppImpl::class.java)
+  private val l1EthLogsSearcher: EthLogsSearcher = EthLogsSearcherImpl(
+    vertx = vertx,
+    ethApiClient = l1EthApiClient,
+  )
   internal val ftxQueue: Queue<ForcedTransactionWithTimestamp> = LinkedBlockingQueue(10_000)
 
   // Separate queues per calculator: prevents the aggregation calculator (which consumes via poll())
@@ -140,7 +147,7 @@ internal class ForcedTransactionsAppImpl(
   private lateinit var ftxStatusUpdater: ForcedTransactionsStatusUpdater
   private lateinit var ftxFetcher: ForcedTransactionsL1EventsFetcher
   private lateinit var ftxSender: ForcedTransactionsSenderForExecution
-  private var safeBlockNumberManager = ForcedTransactionsSafeBlockNumberManager(listener = safeBlockNumberProvider)
+  private val safeBlockNumberManager = ForcedTransactionsSafeBlockNumberManager(listener = safeBlockNumberProvider)
   override val conflationSafeBlockNumberProvider: ConflationSafeBlockNumberProvider = safeBlockNumberProvider
   override val conflationCalculator: ConflationTriggerCalculator = ConflationCalculatorByForcedTransaction(
     processedFtxQueue = conflationFtxQueue,
@@ -151,9 +158,11 @@ internal class ForcedTransactionsAppImpl(
       invalidityProofClient = invalidityProofClient,
       stateManagerClient = stateManagerClient,
       accountProofClient = accountProofClient,
-      ethApiLogsClient = l1EthApiClient,
+      ethApiLogsSearcher = l1EthLogsSearcher,
+      ftxDao = ftxDao,
       tracesClient = tracesClient,
       contractAddress = config.l1ContractAddress,
+      l1EventSearchMaxBlockRange = config.l1EventSearchMaxBlockRange,
     ),
     vertx = vertx,
     pollingInterval = config.invalidityProofProcessingInterval,
@@ -226,6 +235,8 @@ internal class ForcedTransactionsAppImpl(
           address = config.l1ContractAddress,
           resumePointProvider = lastProcessedFtxProvider,
           ethLogsClient = l1EthApiClient,
+          ethLogsSearcher = l1EthLogsSearcher,
+          l1EventSearchMaxBlockRange = config.l1EventSearchMaxBlockRange,
           ethLogsFilterSubscriptionFactory = EthLogsFilterSubscriptionFactoryPollingBased(
             vertx = vertx,
             ethApiClient = l1EthApiClient,

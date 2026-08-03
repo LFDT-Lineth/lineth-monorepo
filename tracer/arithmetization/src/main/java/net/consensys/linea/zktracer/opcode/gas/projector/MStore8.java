@@ -40,7 +40,7 @@ public final class MStore8 extends GasProjection {
 
   @Override
   public long memoryExpansion() {
-    return gc.memoryExpansionGasCost(this.frame, this.offset, 1);
+    return memoryExpansionGasCost(gc, this.frame, this.offset, 1);
   }
 
   @Override

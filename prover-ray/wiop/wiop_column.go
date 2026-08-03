@@ -30,6 +30,9 @@ type Module struct {
 	// RangeChecks holds all [RangeCheck] queries registered on this module
 	// via [Module.NewRangeCheck], in declaration order.
 	RangeChecks []*RangeCheck
+	// NonNatives holds all [NonNative] queries registered on this module via
+	// [Module.NewNonNative], in declaration order.
+	NonNatives []*NonNative
 	// size is zero when the module has not yet been sized. Use [Module.Size]
 	// and [Module.SetSize] rather than accessing this field directly.
 	size int
@@ -66,7 +69,7 @@ func (m *Module) IsSized() bool { return m.size > 0 }
 // For static modules it delegates to [Module.Size] (panics if not yet sized).
 // For dynamic modules it reads the size registered via [WithModuleSize]
 // (panics if no size was provided for this Runtime).
-func (m *Module) RuntimeSize(rt Runtime) int {
+func (m *Module) RuntimeSize(rt *Runtime) int {
 	if !m.isDynamic {
 		return m.Size()
 	}
@@ -324,7 +327,7 @@ func (cv *ColumnView) DegreeFactor() int { return 1 }
 // EvaluateVector implements [Expression]. Returns a full-sized concrete vector
 // (length == module size) where logical row i holds the column value at
 // physical row (i + ShiftingOffset) mod n, accounting for the module's padding.
-func (cv *ColumnView) EvaluateVector(rt Runtime) ConcreteVector {
+func (cv *ColumnView) EvaluateVector(rt *Runtime) ConcreteVector {
 	concrete := rt.GetColumnAssignment(cv.Column)
 	m := cv.Column.Module
 	n := m.RuntimeSize(rt)
@@ -356,7 +359,7 @@ func (cv *ColumnView) EvaluateVector(rt Runtime) ConcreteVector {
 // EvaluateSingle implements [Expression]. Panics unconditionally: a column
 // view is vector-valued and produces no scalar. Check IsMultiValued() before
 // calling EvaluateSingle.
-func (cv *ColumnView) EvaluateSingle(_ Runtime) ConcreteField {
+func (cv *ColumnView) EvaluateSingle(_ *Runtime) ConcreteField {
 	panic("wiop: EvaluateSingle() cannot be called on a VectorPromise")
 }
 
@@ -455,14 +458,14 @@ func (cp *ColumnPosition) Visibility() Visibility { return cp.Column.Visibility 
 // EvaluateVector implements [Expression]. Panics unconditionally: a column
 // position is scalar and produces no vector. Check IsMultiValued() before
 // calling.
-func (cp *ColumnPosition) EvaluateVector(_ Runtime) ConcreteVector {
+func (cp *ColumnPosition) EvaluateVector(_ *Runtime) ConcreteVector {
 	panic("wiop: EvaluateVector() cannot be called on a FieldPromise")
 }
 
 // EvaluateSingle implements [Expression]. Returns the value of the parent
 // column at Position in the given runtime. Negative Position values are
 // resolved from the end of the domain (see [ColumnPosition.Position]).
-func (cp *ColumnPosition) EvaluateSingle(rt Runtime) ConcreteField {
+func (cp *ColumnPosition) EvaluateSingle(rt *Runtime) ConcreteField {
 	m := cp.Column.Module
 	n := m.RuntimeSize(rt)
 	elem := rt.GetColumnAssignment(cp.Column).ElementAtN(m.Padding, n, cp.resolvedRow(n))
@@ -503,7 +506,7 @@ func (cp *ColumnPosition) Open(ctx *ContextFrame) *Cell {
 	result := col.Round().NewLazyCell(
 		ctx.Childf("result"),
 		col.IsExtension,
-		func(rt Runtime) field.Gen {
+		func(rt *Runtime) field.Gen {
 			m := col.Module
 			n := m.RuntimeSize(rt)
 			// Negative Position values are resolved from the end at runtime;

@@ -3,41 +3,77 @@ package compilers_test
 import (
 	"testing"
 
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/grandproduct"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/localvanishing"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/nonnative"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/rangecheck"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+func init() {
+	// Full-pipeline tests exercise the PCS end-to-end; keep the query count
+	// tiny so the suite stays fast. Production callers never touch this
+	// variable (see pcs.SetFRINumQueriesForTest).
+	pcs.SetFRINumQueriesForTest(2)
+}
+
 // compileFullPipeline runs every wiop compilation pass in the canonical
 // order so that each pass can consume the previous one's output:
 //
-//  1. rangecheck:           RangeCheck → Inclusion TableRelation
-//  2. lookuptologderivsum:  Inclusion → LogDerivativeSum
-//  3. logderivativesum:     LogDerivativeSum → recurrence Vanishings + endpoint openings
-//  4. localvanishing:       scalar Vanishings → multi-valued Vanishings via the Lagrange lift
-//  5. global:               multi-valued Vanishings → quotient shares + LagrangeEval claims
+//  1. nonnative:            NonNative → Vanishing
+//  2. rangecheck:           RangeCheck → Inclusion TableRelation
+//  3. lookuptologderivsum:  Inclusion → LogDerivativeSum
+//  4. messagebus:           MessageBus → GrandProduct
+//  5. grandproduct:         TableRelationQuery -> GrandProduct; GrandProduct → Z columns + Vanishing + endpoint openings
+//  6. logderivativesum:     LogDerivativeSum → recurrence Vanishings + endpoint openings
+//  7. localvanishing:       scalar Vanishings → multi-valued Vanishings via the Lagrange lift
+//  8. global:               multi-valued Vanishings → quotient shares + LagrangeEval claims
+//  9. pcs:                  commit every committed round, open every LagrangeEval claim
 //
 // Each pass is a no-op when its input queries are absent, so this ordering
 // is safe to apply uniformly to every wioptest scenario regardless of which
 // pass the scenario is primarily exercising.
 func compileFullPipeline(sys *wiop.System) {
+	compilePipelineBeforePCS(sys)
+	compilePCS(sys)
+}
+
+// compilePipelineBeforePCS runs every pass up to (but excluding) the PCS pass:
+// range check → lookup → grand-product → log-derivative → local vanishing →
+// global quotient. After it, the Z columns and quotient shares exist and every
+// constraint is reduced to LagrangeEval claims, but the columns are still
+// transported in the clear. Split out from [compileFullPipeline] so a test can
+// inject a prover-side tamper on a compiled column before the PCS pass hides
+// and commits it.
+func compilePipelineBeforePCS(sys *wiop.System) {
+	nonnative.Compile(sys)
 	rangecheck.Compile(sys)
 	lookuptologderivsum.Compile(sys)
+	messagebus.Compile(sys)
+	grandproduct.Compile(sys)
 	logderivativesum.Compile(sys)
 	localvanishing.Compile(sys)
 	global.Compile(sys)
 }
 
+// compilePCS runs the PCS pass.
+func compilePCS(sys *wiop.System) {
+	pcs.Compile(sys)
+}
+
 // These tests drive every scenario through the full
 // range → lookup → logderivative → local → global pipeline using the explicit
 // prover/verifier split: sys.Prove(assign) produces a strict, public-only
-// [wiop.Proof], and sys.Verify(proof) re-checks it without access to the oracle
+// [wiop.Proof], and sys.Verify(proof, pub) re-checks it without access to the oracle
 // witness columns. Because the Proof carries only public columns, cells, and
 // coins, these tests fail loudly if any verifier action reads an oracle or
 // internal column.
@@ -51,8 +87,8 @@ func TestFullPipeline_VanishingScenarios(t *testing.T) {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
 			compileFullPipeline(sc.Sys)
-			proof := sc.Sys.Prove(sc.AssignHonest)
-			require.NoError(t, sc.Sys.Verify(proof),
+			proof, pub := sc.Sys.Prove(sc.AssignHonest)
+			require.NoError(t, sc.Sys.Verify(proof, pub),
 				"full pipeline must accept an honest witness")
 		})
 
@@ -61,8 +97,8 @@ func TestFullPipeline_VanishingScenarios(t *testing.T) {
 		t.Run(sc.Name+"/Soundness", func(t *testing.T) {
 			sc := build()
 			compileFullPipeline(sc.Sys)
-			proof := sc.Sys.Prove(sc.AssignInvalid)
-			assert.Error(t, sc.Sys.Verify(proof),
+			proof, pub := sc.Sys.Prove(sc.AssignInvalid)
+			assert.Error(t, sc.Sys.Verify(proof, pub),
 				"full pipeline must reject an invalid witness")
 		})
 	}
@@ -77,16 +113,16 @@ func TestFullPipeline_LocalVanishingScenarios(t *testing.T) {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
 			compileFullPipeline(sc.Sys)
-			proof := sc.Sys.Prove(sc.AssignHonest)
-			require.NoError(t, sc.Sys.Verify(proof),
+			proof, pub := sc.Sys.Prove(sc.AssignHonest)
+			require.NoError(t, sc.Sys.Verify(proof, pub),
 				"full pipeline must accept an honest witness")
 		})
 
 		t.Run(sc.Name+"/Soundness", func(t *testing.T) {
 			sc := build()
 			compileFullPipeline(sc.Sys)
-			proof := sc.Sys.Prove(sc.AssignInvalid)
-			assert.Error(t, sc.Sys.Verify(proof),
+			proof, pub := sc.Sys.Prove(sc.AssignInvalid)
+			assert.Error(t, sc.Sys.Verify(proof, pub),
 				"full pipeline must reject an invalid witness")
 		})
 	}
@@ -102,8 +138,8 @@ func TestFullPipeline_LogDerivativeSumScenarios(t *testing.T) {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
 			compileFullPipeline(sc.Sys)
-			proof := sc.Sys.Prove(sc.AssignWitness)
-			require.NoError(t, sc.Sys.Verify(proof),
+			proof, pub := sc.Sys.Prove(sc.AssignWitness)
+			require.NoError(t, sc.Sys.Verify(proof, pub),
 				"full pipeline must accept an honest witness")
 		})
 	}
@@ -118,11 +154,126 @@ func TestFullPipeline_LookupScenarios(t *testing.T) {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
 			compileFullPipeline(sc.Sys)
-			proof := sc.Sys.Prove(sc.AssignWitness)
-			require.NoError(t, sc.Sys.Verify(proof),
+			proof, pub := sc.Sys.Prove(sc.AssignWitness)
+			require.NoError(t, sc.Sys.Verify(proof, pub),
 				"full pipeline must accept an honest witness")
 		})
 	}
+}
+
+// TestFullPipeline_PermutationScenarios runs the full pipeline on every
+// [wioptest.PermutationScenarios] fixture. The grandproduct pass reduces each
+// permutation into a grand product and then into running-product Z columns
+// (recurrence + local + endpoint openings) that the local-vanishing and global
+// passes discharge; the honest witness must verify and the invalid witness
+// (A and B not equal as multisets) must be rejected.
+func TestFullPipeline_PermutationScenarios(t *testing.T) {
+	for _, build := range wioptest.PermutationScenarios() {
+		sc := build()
+		t.Run(sc.Name, func(t *testing.T) {
+			compileFullPipeline(sc.Sys)
+			proof, pub := sc.Sys.Prove(sc.AssignHonest)
+			require.NoError(t, sc.Sys.Verify(proof, pub),
+				"full pipeline must accept an honest permutation witness")
+		})
+
+		t.Run(sc.Name+"/Soundness", func(t *testing.T) {
+			sc := build()
+			compileFullPipeline(sc.Sys)
+			proof, pub := sc.Sys.Prove(sc.AssignInvalid)
+			assert.Error(t, sc.Sys.Verify(proof, pub),
+				"full pipeline must reject a non-permutation witness")
+		})
+	}
+}
+
+// TestFullPipeline_LogDerivativeSumTamperedResult is the running-sum
+// soundness companion to the completeness-only
+// TestFullPipeline_LogDerivativeSumScenarios: an honest proof whose claimed
+// LogDerivativeSum Result cell is then corrupted must be rejected.
+//
+// A bare LogDerivativeSum self-computes its Result from the witness, so no
+// round-0 witness alone is "invalid"; the failure mode is a wrong claimed
+// Result. The Result lives in a round after the witness, so it is corrupted in
+// the produced proof rather than through the round-0 assignment hook. The
+// logderivativesum pass's final-sum verifier action then rejects the proof.
+func TestFullPipeline_LogDerivativeSumTamperedResult(t *testing.T) {
+	sc := wioptest.NewLDSSingleFractionAllOnesScenario()
+	compileFullPipeline(sc.Sys)
+
+	proof, pub := sc.Sys.Prove(sc.AssignWitness)
+	require.NoError(t, sc.Sys.Verify(proof, pub),
+		"sanity: honest log-derivative proof must verify")
+
+	require.NotEmpty(t, sc.Sys.LogDerivativeSums,
+		"scenario must contain a LogDerivativeSum after compilation")
+	result := sc.Sys.LogDerivativeSums[0].Result
+	proof.Cells[result.Context.ID] = field.ElemFromBase(field.NewFromString("123456"))
+
+	assert.Error(t, sc.Sys.Verify(proof, pub),
+		"a tampered LogDerivativeSum Result must be rejected by the full pipeline")
+}
+
+// TestFullPipeline_LogDerivativeSumTamperedZ is the running-sum analogue of
+// TestFullPipeline_PermutationTamperedZ: a Z column corrupted at an interior
+// row — endpoint left intact — is rejected only because the full pipeline
+// discharges the running-sum recurrence.
+//
+// The logderivativesum pass's own final-sum verifier action reads the
+// endpoint-opening cells and the Result cell, all untouched by an interior
+// corruption, so it still accepts. It is the recurrence Vanishing — lifted by
+// local-vanishing and discharged by the global quotient — that pins every
+// interior row of Z, so only the assembled pipeline catches it.
+func TestFullPipeline_LogDerivativeSumTamperedZ(t *testing.T) {
+	sc := wioptest.NewLDSSingleFractionAllOnesScenario()
+
+	// Compile the arithmetization first, identify the Z column, then register a
+	// prover-side tamper on an interior Z row BEFORE the PCS pass. The tamper
+	// runs during Prove after Z is assigned but before PCS commits it, so the
+	// FRI commitment and opening bind the tampered column: the PCS-local checks
+	// pass and only the recurrence — discharged by the global quotient — rejects.
+	before := snapshotModuleColumns(sc.Sys)
+	compilePipelineBeforePCS(sc.Sys)
+	zCols := newExtensionColumns(sc.Sys, before)
+	require.NotEmpty(t, zCols, "logderivativesum must add Z columns")
+
+	wioptest.Mutator{Column: zCols[0], Row: 1, Tweak: wioptest.AddOne}.Compile(sc.Sys)
+	compilePCS(sc.Sys)
+
+	proof, pub := sc.Sys.Prove(sc.AssignWitness)
+	assert.Error(t, sc.Sys.Verify(proof, pub),
+		"the full pipeline must reject a Z column whose interior recurrence is violated")
+}
+
+// TestFullPipeline_PermutationTamperedZ shows that a Z column corrupted at an
+// interior row — but with its endpoint left intact — is rejected only because
+// the full pipeline discharges the running-product recurrence.
+//
+// The grandproduct pass's own verifier actions cannot see this tamper: both
+// CheckResultIsOne (reads the Result cell) and FinalProductCheck (reads the
+// endpoint-opening cells) operate on values that the interior corruption leaves
+// untouched. It is the recurrence Vanishing — lifted by local-vanishing and
+// discharged by the global quotient — that pins every interior row of Z, so
+// only the assembled pipeline catches the corruption.
+func TestFullPipeline_PermutationTamperedZ(t *testing.T) {
+	sc := wioptest.NewPermutationSingleColumnScenario()
+
+	// Compile the arithmetization first, identify the Z column, then register a
+	// prover-side tamper on an interior Z row BEFORE the PCS pass. The endpoint
+	// (last row) and Result cell are left intact, so the grandproduct-local
+	// verifier actions still pass; only the recurrence — discharged by the
+	// global quotient — rejects the tampered interior row.
+	before := snapshotModuleColumns(sc.Sys)
+	compilePipelineBeforePCS(sc.Sys)
+	zCols := newExtensionColumns(sc.Sys, before)
+	require.NotEmpty(t, zCols, "grandproduct must add Z columns")
+
+	wioptest.Mutator{Column: zCols[0], Row: 1, Tweak: wioptest.AddOne}.Compile(sc.Sys)
+	compilePCS(sc.Sys)
+
+	proof, pub := sc.Sys.Prove(sc.AssignHonest)
+	assert.Error(t, sc.Sys.Verify(proof, pub),
+		"the full pipeline must reject a Z column whose interior recurrence is violated")
 }
 
 // TestFullPipeline_RangeCheckScenarios runs the full pipeline on every
@@ -134,9 +285,67 @@ func TestFullPipeline_RangeCheckScenarios(t *testing.T) {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
 			compileFullPipeline(sc.Sys)
-			proof := sc.Sys.Prove(sc.AssignWitness)
-			require.NoError(t, sc.Sys.Verify(proof),
+			proof, pub := sc.Sys.Prove(sc.AssignWitness)
+			require.NoError(t, sc.Sys.Verify(proof, pub),
 				"full pipeline must accept an honest witness")
 		})
 	}
+}
+
+// TestFullPipeline_NonNativeScenarios runs the full pipeline on every
+// [wioptest.NonNativeScenarios] fixture. The nonnative pass reduces each
+// [wiop.NonNative] query to a multi-valued [wiop.Vanishing] identity checked at
+// a shared random point; this is then checked by global compiler using quotient
+// argument.
+func TestFullPipeline_NonNativeScenarios(t *testing.T) {
+	for _, build := range wioptest.NonNativeScenarios() {
+		sc := build()
+		t.Run(sc.Name, func(t *testing.T) {
+			compileFullPipeline(sc.Sys)
+			proof, pub := sc.Sys.Prove(sc.AssignHonest)
+			require.NoError(t, sc.Sys.Verify(proof, pub),
+				"full pipeline must accept an honest witness")
+		})
+
+		t.Run(sc.Name+"/Soundness", func(t *testing.T) {
+			sc := build()
+			compileFullPipeline(sc.Sys)
+			proof, pub := sc.Sys.Prove(sc.AssignInvalid)
+			assert.Error(t, sc.Sys.Verify(proof, pub),
+				"full pipeline must reject an invalid witness")
+		})
+	}
+}
+
+// snapshotModuleColumns records, per module, the set of columns present before
+// a compiler pass runs. Pair with [newExtensionColumns] to identify the
+// extension (Z) columns a pass adds.
+func snapshotModuleColumns(sys *wiop.System) map[*wiop.Module]map[*wiop.Column]struct{} {
+	before := make(map[*wiop.Module]map[*wiop.Column]struct{}, len(sys.Modules))
+	for _, m := range sys.Modules {
+		seen := make(map[*wiop.Column]struct{}, len(m.Columns))
+		for _, c := range m.Columns {
+			seen[c] = struct{}{}
+		}
+		before[m] = seen
+	}
+	return before
+}
+
+// newExtensionColumns returns the extension columns added to any module since
+// the snapshot. These are the running-sum / running-product Z columns emitted
+// by the logderivativesum and grandproduct passes.
+func newExtensionColumns(sys *wiop.System, before map[*wiop.Module]map[*wiop.Column]struct{}) []*wiop.Column {
+	var zCols []*wiop.Column
+	for _, m := range sys.Modules {
+		for _, c := range m.Columns {
+			if _, existed := before[m][c]; existed {
+				continue
+			}
+			if c.IsExtension {
+				zCols = append(zCols, c)
+			}
+		}
+	}
+	return zCols
 }

@@ -1,13 +1,13 @@
 package linea.anchoring.clients
 
 import linea.EthLogsSearcher
+import linea.SearchDirection
 import linea.contract.events.L1RollingHashUpdatedEvent
 import linea.contract.events.MessageSentEvent
 import linea.domain.BlockParameter
-import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.CommonDomainFunctions
 import linea.domain.EthLogEvent
-import linea.kotlin.toHexStringUInt256
+import linea.domain.toBlockParameter
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -25,6 +25,7 @@ internal class L1MessageSentEventsFetcher(
   private val l1SmartContractAddress: String,
   private val l1EventsSearcher: EthLogsSearcher,
   private val l1HighestBlock: BlockParameter,
+  private val l1EventSearchMaxBlockRange: UInt,
   private val log: Logger = LogManager.getLogger(L1MessageSentEventsFetcher::class.java),
 ) {
   private data class LastSearch(
@@ -71,14 +72,16 @@ internal class L1MessageSentEventsFetcher(
       ).thenApply { result ->
         lastSearch.set(LastSearch(result.endBlockNumber, startingMessageNumber))
         val events = result.logs.map(MessageSentEvent::fromEthLog)
-        log.debug(
-          "fetched MessageSent events from L1: messageNumbers={} l1Blocks={}",
-          CommonDomainFunctions.blockIntervalString(
-            events.first().event.messageNumber,
-            events.last().event.messageNumber,
-          ),
-          result.intervalString(),
-        )
+        if (events.isNotEmpty()) {
+          log.debug(
+            "fetched MessageSent events from L1: messageNumbers={} l1Blocks={}",
+            CommonDomainFunctions.blockIntervalString(
+              events.first().event.messageNumber,
+              events.last().event.messageNumber,
+            ),
+            result.intervalString(),
+          )
+        }
         events
       }
     }
@@ -88,16 +91,21 @@ internal class L1MessageSentEventsFetcher(
     fromBlock: ULong,
     messageNumber: ULong,
   ): SafeFuture<EthLogEvent<L1RollingHashUpdatedEvent>?> {
-    return l1EventsSearcher.getLogs(
+    return l1EventsSearcher.findLog(
       fromBlock = fromBlock.toBlockParameter(),
       toBlock = l1HighestBlock,
+      chunkSize = l1EventSearchMaxBlockRange.toInt(),
       address = l1SmartContractAddress,
-      topics = listOf(
-        L1RollingHashUpdatedEvent.topic,
-        messageNumber.toHexStringUInt256(),
-      ),
-    ).thenApply {
-      it.firstOrNull()?.let { log -> L1RollingHashUpdatedEvent.fromEthLog(log) }
+      topics = listOf(L1RollingHashUpdatedEvent.topic),
+    ) { ethLog ->
+      val foundMessageNumber = L1RollingHashUpdatedEvent.fromEthLog(ethLog).event.messageNumber
+      when {
+        foundMessageNumber < messageNumber -> SearchDirection.FORWARD
+        foundMessageNumber > messageNumber -> SearchDirection.BACKWARD
+        else -> null
+      }
+    }.thenApply { ethLog ->
+      ethLog?.let { L1RollingHashUpdatedEvent.fromEthLog(it) }
     }
   }
 }

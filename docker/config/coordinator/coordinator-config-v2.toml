@@ -27,7 +27,8 @@ conflation-deadline-last-block-confirmation-delay = "PT2S" # recommended: at lea
 l2-fetch-blocks-limit = 4000
 backtesting-directory = "/data/conflation-backtesting"
 force-stop-conflation-at-block-inclusive=100_000_000
-#force-stop-conflation-at-block-timestamp-inclusive=2000000000
+# force-stop-conflation-at-block-timestamp-inclusive=2000000000
+# riscv-starting-block-timestamp-inclusive=2000000000
 
 # This is to prevent inflight trasactions that may change Smart contract state while coordinator is restarted.
 # Queries SMC for last finalised block, and keeps polling until this number of blocks observe the same state.
@@ -152,7 +153,7 @@ disabled = false
 submission-delay = "PT1S"
 submission-tick-interval = "PT1S"
 max-submission-transactions-per-tick = 10
-target-blobs-per-transaction=9
+target-blobs-per-transaction=6
 db-max-blobs-to-return = 100
 [l1-submission.blob.gas]
 gas-limit = 10000000
@@ -268,6 +269,9 @@ polling-interval = "PT0.2S"
 polling-timeout = "PT10S"
 eth-logs-search-success-backoff-delay = "PT0.5S"
 eth-logs-search-block-chunk-size = 1000
+# Widest block span for binary-search point lookups (e.g. ForcedTransactionAdded by ftx number).
+# Bound to the provider's eth_getLogs cap (e.g. Infura rejects spans > 10000 blocks).
+eth-logs-search-max-block-range = 10000
 
 [l2-network-gas-pricing] # old [dynamic-gas-price-service]
 disabled = false

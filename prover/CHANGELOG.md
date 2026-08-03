@@ -2,6 +2,19 @@
 
 ### 🐛 Bug Fixes
 
+- *(prover)* Fix the bitdecompose.go by removing IsPackedLimbNotZero (#3475)
+
+### 🚜 Refactor
+
+- *(prover)* Remove redundant and unsafe utility functions (#3273)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(deps)* Bump golang.org/x/net (#3500)
+## [1.0.5] - 2026-06-30
+
+### 🐛 Bug Fixes
+
 - *(prover)* Reserve a padding row in the state-manager modules (#3470)
 ## [1.0.4] - 2026-06-29
 

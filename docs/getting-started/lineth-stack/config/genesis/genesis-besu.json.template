@@ -56,7 +56,7 @@
       "code": "0x3373fffffffffffffffffffffffffffffffffffffffe14604d57602036146024575f5ffd5b5f35801560495762001fff810690815414603c575f5ffd5b62001fff01545f5260205ff35b5f5ffd5b62001fff42064281555f359062001fff015500"
     },
     "__L2_MESSAGE_SERVICE_ADDRESS__": {
-      "comment": "L2MessageService — pre-funded at 1,000,000,000 ETH (1e27 wei) on the L2 to pay out L1->L2 messages. Per Victorien Gauch's review for the Sepolia migration. The placeholder is substituted at render time by init.sh from /accounts/addresses-precomputed.json.l2.L2MessageService (CREATE from L2 deployer at nonce 2 — impl + ProxyAdmin + proxy).",
+      "comment": "L2MessageService — pre-funded at 1,000,000,000 ETH (1e27 wei) on the L2 to pay out L1->L2 messages, required for the Sepolia-backed finality path. The placeholder is substituted at render time by init.sh from /accounts/addresses-precomputed.json.l2.L2MessageService (CREATE from L2 deployer at nonce 2 — impl + ProxyAdmin + proxy).",
       "balance": "1000000000000000000000000000"
     }
   }

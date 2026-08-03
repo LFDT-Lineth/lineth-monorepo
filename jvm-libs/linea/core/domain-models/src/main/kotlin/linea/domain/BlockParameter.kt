@@ -4,12 +4,6 @@ import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
 
 sealed interface BlockParameter {
-  fun getTag(): String
-
-  fun getNumber(): ULong
-
-  fun getHash(): String
-
   companion object {
     private const val BLOCK_HASH_HEX_LENGTH = 64
 
@@ -20,7 +14,7 @@ sealed interface BlockParameter {
 
     fun fromNumber(blockNumber: ULong): BlockNumber = BlockNumber(blockNumber)
 
-    fun fromHash(blockHash: ByteArray): BlockHash = BlockHash(blockHash.copyOf())
+    fun fromHash(blockHash: ByteArray): BlockHash = BlockHash(blockHash)
 
     fun fromHash(blockHashHex: String): BlockHash = BlockHash(blockHashHex.decodeHex())
 
@@ -28,7 +22,7 @@ sealed interface BlockParameter {
       return try {
         // Try to parse the input as a tag
         Tag.fromString(input)
-      } catch (e: IllegalArgumentException) {
+      } catch (_: IllegalArgumentException) {
         // If it's not a valid tag, try to parse it as a block hash or block number
         if (input.startsWith("0x")) {
           val hexBody = input.drop(2)
@@ -47,28 +41,15 @@ sealed interface BlockParameter {
         }
       }
     }
-
-    // Handy extensions
-    fun Number.toBlockParameter(): BlockParameter = fromNumber(this)
-    fun UInt.toBlockParameter(): BlockParameter = BlockNumber(this.toULong())
-    fun ULong.toBlockParameter(): BlockParameter = BlockNumber(this)
   }
 
-  enum class Tag(val value: String) : BlockParameter {
+  enum class Tag(val tag: String) : BlockParameter {
     PENDING("pending"),
     LATEST("latest"),
     EARLIEST("earliest"),
     SAFE("safe"),
     FINALIZED("finalized"),
     ;
-
-    override fun getTag(): String = value
-    override fun getNumber(): ULong = throw UnsupportedOperationException(
-      "getNumber isn't supposed to be called on a block tag!",
-    )
-    override fun getHash(): String = throw UnsupportedOperationException(
-      "getHash isn't supposed to be called on a block tag!",
-    )
 
     companion object {
       @JvmStatic
@@ -82,50 +63,35 @@ sealed interface BlockParameter {
   }
 
   @JvmInline
-  value class BlockNumber(private val parameter: ULong) : BlockParameter {
-
-    override fun getTag(): String {
-      throw UnsupportedOperationException("getTag isn't supported on BlockNumber!")
-    }
-
-    override fun getNumber(): ULong {
-      return parameter
-    }
-
-    override fun getHash(): String {
-      throw UnsupportedOperationException("getHash isn't supported on BlockNumber!")
-    }
-
-    override fun toString(): String {
-      return parameter.toString()
-    }
+  value class BlockNumber(val number: ULong) : BlockParameter {
+    override fun toString(): String = number.toString()
   }
 
-  data class BlockHash(private val hash: ByteArray) : BlockParameter {
+  class BlockHash(hashBytes: ByteArray) : BlockParameter {
+    private val _hashBytes: ByteArray
+
     init {
-      require(hash.size == 32) { "block hash must be 32 bytes, got ${hash.size}" }
+      require(hashBytes.size == 32) { "block hash must be 32 bytes, got ${hashBytes.size}" }
+      _hashBytes = hashBytes.copyOf()
     }
 
-    override fun getHash(): String = hash.encodeHex(prefix = true)
-
-    override fun getTag(): String {
-      throw UnsupportedOperationException("getTag isn't supported on BlockHash!")
-    }
-
-    override fun getNumber(): ULong {
-      throw UnsupportedOperationException("getNumber isn't supported on BlockHash!")
-    }
+    val hashBytes: ByteArray get() = _hashBytes.copyOf()
+    val hashHex: String get() = _hashBytes.encodeHex(prefix = true)
 
     override fun equals(other: Any?): Boolean {
       if (this === other) return true
       if (other !is BlockHash) return false
-      return hash.contentEquals(other.hash)
+      return _hashBytes.contentEquals(other._hashBytes)
     }
 
-    override fun hashCode(): Int = hash.contentHashCode()
+    override fun hashCode(): Int = _hashBytes.contentHashCode()
 
-    override fun toString(): String {
-      return hash.encodeHex(prefix = true)
-    }
+    override fun toString(): String = hashHex
   }
 }
+
+fun ULong.toBlockParameter(): BlockParameter.BlockNumber = BlockParameter.BlockNumber(this)
+fun UInt.toBlockParameter(): BlockParameter.BlockNumber = BlockParameter.BlockNumber(this.toULong())
+fun String.toBlockParameter(): BlockParameter = BlockParameter.parse(this)
+fun java.math.BigInteger.toBlockParameter(): BlockParameter.BlockNumber = BlockParameter.fromNumber(this)
+fun Long.toBlockParameter(): BlockParameter.BlockNumber = this.toULong().toBlockParameter()

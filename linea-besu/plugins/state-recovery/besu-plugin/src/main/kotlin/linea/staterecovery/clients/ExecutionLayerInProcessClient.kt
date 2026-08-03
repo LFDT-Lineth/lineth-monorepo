@@ -66,13 +66,13 @@ class ExecutionLayerInProcessClient(
 
         is BlockParameter.BlockNumber ->
           blockchainService
-            .getBlockByNumber(blockParameter.getNumber().toLong())
+            .getBlockByNumber(blockParameter.number.toLong())
             .map { it.blockHeader }
             .getOrNull()
 
         is BlockParameter.BlockHash ->
           blockchainService
-            .getBlockHeaderByHash(Hash.wrap(Bytes32.fromHexString(blockParameter.getHash())))
+            .getBlockHeaderByHash(Hash.wrap(Bytes32.wrap(blockParameter.hashBytes)))
             .getOrNull()
       }
 

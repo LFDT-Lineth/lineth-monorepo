@@ -35,6 +35,7 @@ dependencies {
   implementation(project(':jvm-libs:linea:web3j-extensions')) {
     exclude group: "build.linea", module: "besu-libs"
   }
+  implementation project(':jvm-libs:linea:clients:eth-logs-searcher')
   implementation project(':jvm-libs:generic:extensions:kotlin')
   implementation project(':jvm-libs:generic:extensions:futures')
   implementation project(':jvm-libs:linea:core:long-running-service')
@@ -123,13 +124,15 @@ task integrationTest(type: Test) {
   classpath = sourceSets.integrationTest.runtimeClasspath
   testClassesDirs = sourceSets.integrationTest.output.classesDirs
 
+  jvmArgs '-XX:+UseZGC'
+  maxHeapSize = "2048m"
   // Limit concurrency to max(2, nCpu/4) and run one test class per JVM (forkEvery = 1) so each class is
   // fully isolated (own statics, singletons, ForkJoinPool, log4j2 context). This overrides the root
   // build.gradle default. The concurrency cap lives at the process
   // level, so methods within a fork run sequentially (same_thread), overriding the root's concurrent mode.
   // nCpu/4 (rather than nCpu/2) leaves headroom: each class spins up several Besu+Maru nodes with real
   // P2P, and over-subscribing the host makes timing-sensitive peer-discovery awaits flake.
-  maxParallelForks = Math.max(2, Runtime.runtime.availableProcessors().intdiv(4))
+  maxParallelForks = Math.max(2, Runtime.runtime.availableProcessors().intdiv(2))
   forkEvery = 1
   systemProperties["junit.jupiter.execution.parallel.mode.default"] = "same_thread"
   systemProperties["junit.jupiter.execution.parallel.mode.classes.default"] = "same_thread"

@@ -49,22 +49,23 @@ jobs:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           submodules: false
 
       # Keep this aligned with .github/actions/setup-arithmetization-riscv, but use
       # newer Go because verifier-ray/prover-ray modules declare go 1.25.7.
       - name: Install Go
-        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: "**/*.sum"
 
       - name: Install Zig
-        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        uses: ./.github/actions/setup-zig
         with:
           version: ${{ env.ZIG_VERSION }}
+          dependency-hash-paths: verifier-ray/**/build.zig.zon
 
       - name: Install native tools
         run: sudo apt-get update && sudo apt-get install -y binutils-riscv64-unknown-elf xxd
@@ -107,3 +108,4 @@ jobs:
       - name: ZKC verifier failing smoke test
         working-directory: verifier-ray
         run: make zkc-verify-failing-expected
+

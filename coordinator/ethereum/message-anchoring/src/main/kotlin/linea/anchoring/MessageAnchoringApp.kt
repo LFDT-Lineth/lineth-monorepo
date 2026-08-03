@@ -34,6 +34,7 @@ class MessageAnchoringApp(
     val anchoringTickInterval: Duration,
     val l1EventPollingTimeout: Duration = 5.seconds,
     val l1EventSearchBlockChunk: UInt = 1000u,
+    val l1EventSearchMaxBlockRange: UInt = 10_000u,
     val messageQueueCapacity: UInt = 10_000u,
     val maxMessagesToAnchorPerL2Transaction: UInt = 100u,
   )
@@ -62,6 +63,7 @@ class MessageAnchoringApp(
       l1MessagesSentFetchLimit = config.maxMessagesToAnchorPerL2Transaction * 2u,
       l1MessagesSentFetchTimeout = config.l1EventPollingTimeout,
       l1BlockSearchChuck = config.l1EventSearchBlockChunk,
+      l1EventSearchMaxBlockRange = config.l1EventSearchMaxBlockRange,
       l1HighestBlock = config.l1HighestBlockTag,
       l2HighestBlock = config.l2HighestBlockTag,
     )
@@ -70,11 +72,12 @@ class MessageAnchoringApp(
     MessageAnchoringService(
       vertx = vertx,
       l1ContractAddress = config.l1ContractAddress,
-      l1EthLogsClient = l1EthApiClient,
+      l1EthLogsSearcher = l1EthLogsSearcher,
       l2MessageService = l2MessageService,
       eventsQueue = eventsQueue,
       maxMessagesToAnchorPerL2Transaction = config.maxMessagesToAnchorPerL2Transaction,
       l2HighestBlockTag = config.l2HighestBlockTag,
+      l1EventSearchMaxBlockRange = config.l1EventSearchMaxBlockRange,
       anchoringTickInterval = config.anchoringTickInterval,
     )
 

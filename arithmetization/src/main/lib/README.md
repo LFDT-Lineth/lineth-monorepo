@@ -26,12 +26,13 @@ This folder contains the zkvm library: zkc implementations of EVM precompiles an
 
 Note. We use '.' to represent '0'.
 
-|-------------------|--------|----------|--------|-----------|
-| Other precompiles | status | opc      | funct3 | funct7    |
-|-------------------|:------:|----------|--------|-----------|
-| keccak            |   🟢   | custom-1 | 0b000  | 0b0000000 |
-| poseidon1         |   🟡   | custom-1 | 0b111  | 0b1111111 |
-| ecrecover         |   🔴   | custom-1 |        |           |
-| poly_eval         |   🔴   | custom-1 |        |           |
-| ...               |   🔴   | custom-1 |        |           |
-|-------------------|--------|----------|--------|-----------|
+|---------------------|--------|----------|--------|-----------|
+| Other 'precompiles' | status | opc      | funct3 | funct7    |
+|---------------------|:------:|----------|--------|-----------|
+| keccak              |   🟢   | custom-1 | 0b000  | 0b0000000 |
+| poseidon2           |   🟢   | custom-1 | 0b001  | 0b0000000 |
+| write_output        |   🟡   | custom-1 | 0b010  | 0b0000000 |
+| ecrecover           |   🔴   | custom-1 |        |           |
+| poly_eval           |   🔴   | custom-1 |        |           |
+| ...                 |   🔴   | custom-1 |        |           |
+|---------------------|--------|----------|--------|-----------|

@@ -1,8 +1,9 @@
 package net.consensys.linea.ethereum.gaspricing.dynamiccap
 
 import io.vertx.junit5.VertxExtension
-import linea.domain.BlockWithTxHashes
+import linea.domain.createBlock
 import linea.domain.gas.GasPriceCaps
+import linea.domain.toBlockWithRandomTxHashes
 import linea.ethapi.EthApiBlockClient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -32,7 +33,7 @@ class GasPriceCapProviderImplTest {
   )
   private val p10BaseFeeGas = 1000000000uL // 1GWei
   private val p10BaseFeeBlobGas = 100000000uL // 0.1GWei
-  private val avgP10Reward = 200000000uL // 2GWei
+  private val avgP10Reward = 200000000uL // 0.2GWei
   private val storedFeeHistoriesNum = 100
   private val adjustmentConstant = 25U
   private val finalizationTargetMaxDelay = 6.hours
@@ -81,9 +82,10 @@ class GasPriceCapProviderImplTest {
   @BeforeEach
   fun beforeEach() {
     targetBlockTime = currentTime - 1.hours
-    val mockBlock = mock<BlockWithTxHashes> {
-      on { timestamp } doReturn targetBlockTime.epochSeconds.toULong()
-    }
+    val mockBlock = createBlock(
+      timestamp = targetBlockTime,
+    ).toBlockWithRandomTxHashes()
+
     mockedL2EthApiBlockClient = mock<EthApiBlockClient> {
       on { ethGetBlockByNumberTxHashes(any()) } doReturn SafeFuture.completedFuture(
         mockBlock,
