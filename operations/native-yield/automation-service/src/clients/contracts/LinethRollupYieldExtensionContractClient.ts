@@ -8,22 +8,22 @@ import {
   TransactionReceipt,
 } from "viem";
 
-import { LineaRollupYieldExtensionABI } from "../../core/abis/LineaRollupYieldExtension.js";
-import { ILineaRollupYieldExtension } from "../../core/clients/contracts/ILineaRollupYieldExtension.js";
+import { LinethRollupYieldExtensionABI } from "../../core/abis/LinethRollupYieldExtension.js";
+import { ILinethRollupYieldExtension } from "../../core/clients/contracts/ILinethRollupYieldExtension.js";
 
 /**
- * Client for interacting with LineaRollupYieldExtension smart contracts.
+ * Client for interacting with LinethRollupYieldExtension smart contracts.
  * Provides methods for transferring funds for native yield operations on the Linea rollup.
  */
-export class LineaRollupYieldExtensionContractClient implements ILineaRollupYieldExtension<TransactionReceipt> {
-  private readonly contract: GetContractReturnType<typeof LineaRollupYieldExtensionABI, PublicClient, Address>;
+export class LinethRollupYieldExtensionContractClient implements ILinethRollupYieldExtension<TransactionReceipt> {
+  private readonly contract: GetContractReturnType<typeof LinethRollupYieldExtensionABI, PublicClient, Address>;
 
   /**
-   * Creates a new LineaRollupYieldExtensionContractClient instance.
+   * Creates a new LinethRollupYieldExtensionContractClient instance.
    *
    * @param {ILogger} logger - Logger instance for logging operations.
    * @param {IBlockchainClient<PublicClient, TransactionReceipt>} contractClientLibrary - Blockchain client for sending transactions.
-   * @param {Address} contractAddress - The address of the LineaRollupYieldExtension contract.
+   * @param {Address} contractAddress - The address of the LinethRollupYieldExtension contract.
    */
   constructor(
     private readonly logger: ILogger,
@@ -31,14 +31,14 @@ export class LineaRollupYieldExtensionContractClient implements ILineaRollupYiel
     private readonly contractAddress: Address,
   ) {
     this.contract = getContract({
-      abi: LineaRollupYieldExtensionABI,
+      abi: LinethRollupYieldExtensionABI,
       address: contractAddress,
       client: contractClientLibrary.getBlockchainClient(),
     });
   }
 
   /**
-   * Gets the address of the LineaRollupYieldExtension contract.
+   * Gets the address of the LinethRollupYieldExtension contract.
    *
    * @returns {Address} The contract address.
    */
@@ -56,7 +56,7 @@ export class LineaRollupYieldExtensionContractClient implements ILineaRollupYiel
   }
 
   /**
-   * Gets the balance of the LineaRollupYieldExtension contract.
+   * Gets the balance of the LinethRollupYieldExtension contract.
    *
    * @returns {Promise<bigint>} The contract balance in wei.
    */
@@ -83,7 +83,7 @@ export class LineaRollupYieldExtensionContractClient implements ILineaRollupYiel
       this.contractAddress,
       calldata,
       undefined,
-      LineaRollupYieldExtensionABI,
+      LinethRollupYieldExtensionABI,
     );
     this.logger.info(
       `transferFundsForNativeYield succeeded, amount=${amount.toString()}, txHash=${txReceipt.transactionHash}`,

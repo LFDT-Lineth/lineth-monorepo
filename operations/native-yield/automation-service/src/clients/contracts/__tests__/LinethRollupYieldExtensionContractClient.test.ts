@@ -1,8 +1,8 @@
 import { mock, MockProxy } from "jest-mock-extended";
 import { encodeFunctionData, getContract } from "viem";
 
-import { LineaRollupYieldExtensionABI } from "../../../core/abis/LineaRollupYieldExtension.js";
-import { LineaRollupYieldExtensionContractClient } from "../LineaRollupYieldExtensionContractClient.js";
+import { LinethRollupYieldExtensionABI } from "../../../core/abis/LinethRollupYieldExtension.js";
+import { LinethRollupYieldExtensionContractClient } from "../LinethRollupYieldExtensionContractClient.js";
 
 import type { ILogger, IBlockchainClient } from "@lfdt-lineth/shared-utils";
 import type { PublicClient, TransactionReceipt, Address, Hex } from "viem";
@@ -18,7 +18,7 @@ jest.mock("viem", () => {
 
 const mockedGetContract = getContract as jest.MockedFunction<typeof getContract>;
 const mockedEncodeFunctionData = encodeFunctionData as jest.MockedFunction<typeof encodeFunctionData>;
-describe("LineaRollupYieldExtensionContractClient", () => {
+describe("LinethRollupYieldExtensionContractClient", () => {
   // Semantic constants
   const CONTRACT_ADDRESS = "0x1111111111111111111111111111111111111111" as Address;
   const ONE_ETH = 1_000_000_000_000_000_000n;
@@ -29,7 +29,7 @@ describe("LineaRollupYieldExtensionContractClient", () => {
   let logger: MockProxy<ILogger>;
   let blockchainClient: MockProxy<IBlockchainClient<PublicClient, TransactionReceipt>>;
   let publicClient: PublicClient;
-  const contractStub = { abi: LineaRollupYieldExtensionABI } as any;
+  const contractStub = { abi: LinethRollupYieldExtensionABI } as any;
 
   // Factory function for transaction receipt
   const createTransactionReceipt = (transactionHash: string): TransactionReceipt =>
@@ -52,11 +52,11 @@ describe("LineaRollupYieldExtensionContractClient", () => {
       // (no additional setup needed)
 
       // Act
-      const client = new LineaRollupYieldExtensionContractClient(logger, blockchainClient, CONTRACT_ADDRESS);
+      const client = new LinethRollupYieldExtensionContractClient(logger, blockchainClient, CONTRACT_ADDRESS);
 
       // Assert
       expect(mockedGetContract).toHaveBeenCalledWith({
-        abi: LineaRollupYieldExtensionABI,
+        abi: LinethRollupYieldExtensionABI,
         address: CONTRACT_ADDRESS,
         client: publicClient,
       });
@@ -67,7 +67,7 @@ describe("LineaRollupYieldExtensionContractClient", () => {
   describe("getAddress", () => {
     it("returns the configured contract address", () => {
       // Arrange
-      const client = new LineaRollupYieldExtensionContractClient(logger, blockchainClient, CONTRACT_ADDRESS);
+      const client = new LinethRollupYieldExtensionContractClient(logger, blockchainClient, CONTRACT_ADDRESS);
 
       // Act
       const address = client.getAddress();
@@ -81,7 +81,7 @@ describe("LineaRollupYieldExtensionContractClient", () => {
     it("retrieves contract balance from blockchain client", async () => {
       // Arrange
       blockchainClient.getBalance.mockResolvedValue(ONE_ETH);
-      const client = new LineaRollupYieldExtensionContractClient(logger, blockchainClient, CONTRACT_ADDRESS);
+      const client = new LinethRollupYieldExtensionContractClient(logger, blockchainClient, CONTRACT_ADDRESS);
 
       // Act
       const balance = await client.getBalance();
@@ -98,7 +98,7 @@ describe("LineaRollupYieldExtensionContractClient", () => {
       const txReceipt = createTransactionReceipt(TX_HASH);
       mockedEncodeFunctionData.mockReturnValue(ENCODED_CALLDATA);
       blockchainClient.sendSignedTransaction.mockResolvedValue(txReceipt);
-      const client = new LineaRollupYieldExtensionContractClient(logger, blockchainClient, CONTRACT_ADDRESS);
+      const client = new LinethRollupYieldExtensionContractClient(logger, blockchainClient, CONTRACT_ADDRESS);
 
       // Act
       const receipt = await client.transferFundsForNativeYield(TRANSFER_AMOUNT);
@@ -114,7 +114,7 @@ describe("LineaRollupYieldExtensionContractClient", () => {
         CONTRACT_ADDRESS,
         ENCODED_CALLDATA,
         undefined,
-        LineaRollupYieldExtensionABI,
+        LinethRollupYieldExtensionABI,
       );
     });
 
@@ -123,7 +123,7 @@ describe("LineaRollupYieldExtensionContractClient", () => {
       const txReceipt = createTransactionReceipt(TX_HASH);
       mockedEncodeFunctionData.mockReturnValue(ENCODED_CALLDATA);
       blockchainClient.sendSignedTransaction.mockResolvedValue(txReceipt);
-      const client = new LineaRollupYieldExtensionContractClient(logger, blockchainClient, CONTRACT_ADDRESS);
+      const client = new LinethRollupYieldExtensionContractClient(logger, blockchainClient, CONTRACT_ADDRESS);
 
       // Act
       await client.transferFundsForNativeYield(TRANSFER_AMOUNT);
@@ -137,7 +137,7 @@ describe("LineaRollupYieldExtensionContractClient", () => {
       const txReceipt = createTransactionReceipt(TX_HASH);
       mockedEncodeFunctionData.mockReturnValue(ENCODED_CALLDATA);
       blockchainClient.sendSignedTransaction.mockResolvedValue(txReceipt);
-      const client = new LineaRollupYieldExtensionContractClient(logger, blockchainClient, CONTRACT_ADDRESS);
+      const client = new LinethRollupYieldExtensionContractClient(logger, blockchainClient, CONTRACT_ADDRESS);
 
       // Act
       await client.transferFundsForNativeYield(TRANSFER_AMOUNT);

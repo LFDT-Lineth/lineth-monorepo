@@ -37,7 +37,7 @@ export const toClientConfig = (env: FlattenedConfigSchema) => ({
     audience: env.CONSENSYS_STAKING_OAUTH2_AUDIENCE,
   },
   contractAddresses: {
-    lineaRollupContractAddress: env.LINEA_ROLLUP_ADDRESS,
+    linethRollupContractAddress: env.LINETH_ROLLUP_ADDRESS,
     lazyOracleAddress: env.LAZY_ORACLE_ADDRESS,
     vaultHubAddress: env.VAULT_HUB_ADDRESS,
     yieldManagerAddress: env.YIELD_MANAGER_ADDRESS,
