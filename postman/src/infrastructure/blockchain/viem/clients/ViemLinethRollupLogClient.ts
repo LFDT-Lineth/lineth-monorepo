@@ -2,11 +2,11 @@ import { BlockNumber, BlockTag, type PublicClient } from "viem";
 import { getContractEvents } from "viem/actions";
 
 import {
-  ILineaRollupLogClient,
+  ILinethRollupLogClient,
   MessageSentEventFilters,
-} from "../../../../core/clients/blockchain/ethereum/ILineaRollupLogClient";
+} from "../../../../core/clients/blockchain/ethereum/ILinethRollupLogClient";
 import { Address, Hash, Hex, MessageSent } from "../../../../core/types";
-import { LineaRollupAbi } from "../../abis/LineaRollupAbi";
+import { LinethRollupAbi } from "../../abis/LinethRollupAbi";
 
 type BlockParam = bigint | "latest" | "earliest" | "pending" | "safe" | "finalized";
 
@@ -16,7 +16,7 @@ function toBlockParam(block: BlockNumber | BlockTag | undefined, fallback: Block
   return block as BlockParam;
 }
 
-export class ViemLineaRollupLogClient implements ILineaRollupLogClient {
+export class ViemLinethRollupLogClient implements ILinethRollupLogClient {
   constructor(
     private readonly client: PublicClient,
     private readonly contractAddress: Address,
@@ -30,7 +30,7 @@ export class ViemLineaRollupLogClient implements ILineaRollupLogClient {
   }): Promise<MessageSent[]> {
     const events = await getContractEvents(this.client, {
       address: this.contractAddress,
-      abi: LineaRollupAbi,
+      abi: LinethRollupAbi,
       eventName: "MessageSent",
       args: {
         _from: params.filters?.from,

@@ -2,7 +2,7 @@ import { claimOnL1, getL2ToL1MessageStatus, getMessageProof as sdkGetMessageProo
 import { type PublicClient, type WalletClient, decodeErrorResult } from "viem";
 import { estimateContractGas, readContract } from "viem/actions";
 
-import { ILineaRollupClient } from "../../../../core/clients/blockchain/ethereum/ILineaRollupClient";
+import { ILinethRollupClient } from "../../../../core/clients/blockchain/ethereum/ILinethRollupClient";
 import { Proof } from "../../../../core/clients/blockchain/ethereum/IMerkleTreeService";
 import { IEthereumGasProvider } from "../../../../core/clients/blockchain/IGasProvider";
 import { ZERO_ADDRESS } from "../../../../core/constants/blockchain";
@@ -10,9 +10,9 @@ import { DEFAULT_RATE_LIMIT_MARGIN } from "../../../../core/constants/common";
 import { MessageProps } from "../../../../core/entities/Message";
 import { OnChainMessageStatus } from "../../../../core/enums";
 import { Address, Hash, ErrorDescription, MessageSent, Overrides, TransactionSubmission } from "../../../../core/types";
-import { LineaRollupAbi } from "../../abis/LineaRollupAbi";
+import { LinethRollupAbi } from "../../abis/LinethRollupAbi";
 
-export class ViemLineaRollupClient implements ILineaRollupClient {
+export class ViemLinethRollupClient implements ILinethRollupClient {
   constructor(
     private readonly publicClient: PublicClient,
     private readonly walletClient: WalletClient,
@@ -66,7 +66,7 @@ export class ViemLineaRollupClient implements ILineaRollupClient {
 
     return estimateContractGas(this.publicClient, {
       address: contractAddress,
-      abi: LineaRollupAbi,
+      abi: LinethRollupAbi,
       functionName: "claimMessageWithProof",
       args: [
         {
@@ -131,12 +131,12 @@ export class ViemLineaRollupClient implements ILineaRollupClient {
     const [limitInWei, currentPeriodAmountInWei] = await Promise.all([
       readContract(this.publicClient, {
         address: this.contractAddress,
-        abi: LineaRollupAbi,
+        abi: LinethRollupAbi,
         functionName: "limitInWei",
       }),
       readContract(this.publicClient, {
         address: this.contractAddress,
-        abi: LineaRollupAbi,
+        abi: LinethRollupAbi,
         functionName: "currentPeriodAmountInWei",
       }),
     ]);
@@ -183,7 +183,7 @@ export class ViemLineaRollupClient implements ILineaRollupClient {
       if (errorEncodedData === "0x") return errorEncodedData;
 
       const decoded = decodeErrorResult({
-        abi: LineaRollupAbi,
+        abi: LinethRollupAbi,
         data: errorEncodedData,
       });
 

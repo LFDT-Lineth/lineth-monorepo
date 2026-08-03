@@ -17,7 +17,7 @@ import {
   TEST_TRANSACTION_HASH,
   testMessageSentEvent,
 } from "../../../../../utils/testing/constants";
-import { ViemLineaRollupClient } from "../ViemLineaRollupClient";
+import { ViemLinethRollupClient } from "../ViemLinethRollupClient";
 
 jest.mock("@lfdt-lineth/sdk-viem", () => ({
   claimOnL1: jest.fn(),
@@ -36,12 +36,12 @@ jest.mock("viem/actions", () => ({
   readContract: jest.fn(),
 }));
 
-describe("ViemLineaRollupClient", () => {
+describe("ViemLinethRollupClient", () => {
   let publicClient: ReturnType<typeof mock<PublicClient>>;
   let walletClient: ReturnType<typeof mock<WalletClient>>;
   let l2PublicClient: ReturnType<typeof mock<PublicClient>>;
   let gasProvider: ReturnType<typeof mock<IEthereumGasProvider>>;
-  let client: ViemLineaRollupClient;
+  let client: ViemLinethRollupClient;
 
   beforeEach(() => {
     publicClient = mock<PublicClient>();
@@ -49,7 +49,7 @@ describe("ViemLineaRollupClient", () => {
     l2PublicClient = mock<PublicClient>();
     gasProvider = mock<IEthereumGasProvider>();
 
-    client = new ViemLineaRollupClient(
+    client = new ViemLinethRollupClient(
       publicClient,
       walletClient,
       TEST_CONTRACT_ADDRESS_1,
