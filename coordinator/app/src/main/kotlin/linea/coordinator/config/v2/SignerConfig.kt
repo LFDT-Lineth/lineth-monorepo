@@ -10,6 +10,7 @@ data class SignerConfig(
   val type: SignerType,
   val web3j: Web3jConfig?,
   val web3signer: Web3SignerConfig?,
+  val custom: CustomConfig? = null,
 ) {
   init {
     when (type) {
@@ -41,12 +42,25 @@ data class SignerConfig(
           }
         }
       }
+
+      SignerType.CUSTOM -> {
+        requireNotNull(custom) {
+          "signerType=$type requires custom config"
+        }
+      }
     }
   }
 
-  enum class SignerType() {
+  enum class SignerType {
     WEB3J,
     WEB3SIGNER,
+    CUSTOM,
+  }
+
+  data class CustomConfig(val name: String) {
+    init {
+      require(name.isNotBlank()) { "custom signer name must not be blank" }
+    }
   }
 
   data class Web3jConfig(

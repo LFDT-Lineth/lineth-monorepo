@@ -109,6 +109,42 @@ staterecovery-replay-from-block:
 	docker compose -f docker/compose-tracing-v2-staterecovery-extension.yml down zkbesu-shomei-sr shomei-sr
 	L1_ROLLUP_CONTRACT_ADDRESS=$(L1_ROLLUP_CONTRACT_ADDRESS) STATERECOVERY_OVERRIDE_START_BLOCK_NUMBER=$(STATERECOVERY_OVERRIDE_START_BLOCK_NUMBER) docker compose -f docker/compose-tracing-v2-staterecovery-extension.yml up zkbesu-shomei-sr shomei-sr -d
 
+# Retries TARGET up to RETRY_LIMIT times, aborting each attempt after
+# RETRY_TIMEOUT. Uses perl's alarm+exec instead of GNU coreutils `timeout`,
+# which isn't installed by default on macOS. Optionally runs
+# RETRY_CLEANUP_TARGET between failed attempts (e.g. to reset docker state).
+retry: RETRY_LIMIT:=5
+retry: RETRY_TIMEOUT:=10m
+retry: RETRY_BACKOFF:=10s
+retry:
+	@if [ -z "$(TARGET)" ]; then \
+		echo "Usage: make retry TARGET=<target> [RETRY_LIMIT=n] [RETRY_TIMEOUT=Xm] [RETRY_BACKOFF=Xs] [RETRY_CLEANUP_TARGET=<target>]"; \
+		exit 1; \
+	fi; \
+	to_seconds() { \
+		case "$$1" in \
+			*h) echo $$(( $${1%h} * 3600 )) ;; \
+			*m) echo $$(( $${1%m} * 60 )) ;; \
+			*s) echo $${1%s} ;; \
+			*) echo "$$1" ;; \
+		esac; \
+	}; \
+	timeout_secs=$$(to_seconds $(RETRY_TIMEOUT)); \
+	backoff_secs=$$(to_seconds $(RETRY_BACKOFF)); \
+	attempt=1; \
+	until perl -e 'alarm shift; exec @ARGV' $$timeout_secs $(MAKE) $(TARGET); do \
+		if [ $$attempt -ge $(RETRY_LIMIT) ]; then \
+			echo "Retry limit ($(RETRY_LIMIT)) reached for target: $(TARGET)"; \
+			exit 1; \
+		fi; \
+		echo "Attempt $$attempt of '$(TARGET)' failed. Retrying in $(RETRY_BACKOFF)..."; \
+		if [ -n "$(RETRY_CLEANUP_TARGET)" ]; then \
+			$(MAKE) $(RETRY_CLEANUP_TARGET) || true; \
+		fi; \
+		attempt=$$((attempt + 1)); \
+		sleep $$backoff_secs; \
+	done
+
 stop_pid:
 		if [ -f $(PID_FILE) ]; then \
 			kill `cat $(PID_FILE)`; \

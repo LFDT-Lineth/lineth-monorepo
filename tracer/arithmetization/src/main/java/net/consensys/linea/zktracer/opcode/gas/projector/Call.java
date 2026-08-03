@@ -17,6 +17,7 @@ package net.consensys.linea.zktracer.opcode.gas.projector;
 
 import static net.consensys.linea.zktracer.Trace.*;
 import static net.consensys.linea.zktracer.types.AddressUtils.isAddressWarm;
+import static org.hyperledger.besu.evm.internal.Words.clampedAdd;
 
 import lombok.RequiredArgsConstructor;
 import net.consensys.linea.zktracer.Fork;
@@ -54,8 +55,8 @@ public class Call extends GasProjection {
       return 0;
     }
     return Math.max(
-        gc.memoryExpansionGasCost(frame, callDataRange.offset(), callDataRange.size()),
-        gc.memoryExpansionGasCost(frame, returnAtRange.offset(), returnAtRange.size()));
+        memoryExpansionGasCost(gc, frame, callDataRange.offset(), callDataRange.size()),
+        memoryExpansionGasCost(gc, frame, returnAtRange.offset(), returnAtRange.size()));
   }
 
   @Override
@@ -144,7 +145,9 @@ public class Call extends GasProjection {
     }
 
     final long upfrontGasCost =
-        memoryExpansion() + accountAccess() + accountCreation() + transferValue();
+        clampedAdd(
+            clampedAdd(clampedAdd(memoryExpansion(), accountAccess()), accountCreation()),
+            transferValue());
     if (upfrontGasCost > frame.getRemainingGas()) {
       return 0L;
     }

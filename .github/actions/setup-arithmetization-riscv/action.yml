@@ -5,6 +5,10 @@ inputs:
     description: 'Enable ability to ssh into session'
     required: false
     default: 'false'
+  zkc-ref:
+    description: 'Optional zkc commit/branch/tag override (default: arithmetization/Makefile ZKC_REF)'
+    required: false
+    default: ''
 
 runs:
   using: 'composite'
@@ -14,15 +18,16 @@ runs:
         uses: lhotari/action-upterm@b0357f23233f5ea6d58947c0c402e0631bab7334 #v1
 
       - name: Install Go
-        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version: '1.24.6'
           cache-dependency-path: "**/*.sum"
 
       - name: Install Zig
-        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        uses: ./.github/actions/setup-zig
         with:
           version: '0.16.0'
+          dependency-hash-paths: arithmetization/src/test/zig/build.zig.zon
 
       - name: Install Rust nightly
         shell: bash
@@ -54,5 +59,19 @@ runs:
             | tar xz --directory="${XPACK_GCC_DIR}" --strip-components=1
           ln -sf "${XPACK_GCC_DIR}/bin/riscv-none-elf-gcc" "${XPACK_GCC_DIR}/bin/riscv64-unknown-elf-gcc"
           echo "${XPACK_GCC_DIR}/bin" >> "${GITHUB_PATH}"
+
+      - name: Set zkc version
+        shell: bash
+        run: |
+          zkc_ref="${{ inputs.zkc-ref }}"
+          if [ -z "$zkc_ref" ]; then
+            zkc_ref="$(make -C arithmetization -s --no-print-directory echo-zkc-version)"
+          fi
+          {
+            echo "ZKC_REF<<EOF"
+            echo "$zkc_ref"
+            echo "EOF"
+          } >> "$GITHUB_ENV"
+
 
 

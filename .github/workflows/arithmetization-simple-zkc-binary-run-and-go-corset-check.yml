@@ -1,4 +1,4 @@
-name: Tracer simple zkc binary run and check
+name: Tracer simple zkc binary runs and checks
 
 on:
   pull_request:
@@ -16,10 +16,15 @@ on:
      - '.github/actions/setup-arithmetization-riscv/**'
      - '.github/workflows/arithmetization-*.yml'
   workflow_call:
+    inputs:
+      zkc-ref:
+        description: 'Optional zkc commit/branch/tag (default: arithmetization/Makefile ZKC_REF)'
+        required: false
+        type: string
   workflow_dispatch:
     inputs:
       zkc-ref:
-        description: 'zkc commit/branch/tag (defaults to pinned ref below)'
+        description: 'Optional zkc commit/branch/tag (default: arithmetization/Makefile ZKC_REF)'
         required: false
         type: string
 
@@ -29,20 +34,31 @@ permissions:
 
 jobs:
   binary-run-and-zkc-check:
-    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-large
     steps:
       - name: Checkout repository
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           submodules: false
 
       - name: Setup Environment
         uses: ./.github/actions/setup-arithmetization-riscv
+        with:
+          zkc-ref: ${{ inputs.zkc-ref }}
 
       - name: Install zkc, compile risc binary for simple zkc test program and check it
         run: make -C arithmetization zkc-compile-and-check
         env:
-          ZKC_REF: ${{ inputs.zkc-ref || 'v1.2.20' }}
           ZKC_MAIN: src/test/zkc/simple_add.zkc
           ZKC_FILES: src/test/zkc/simple_add.zkc
           ZKC_INPUT: src/test/zkc/simple_add.json
+
+      - name: Trace Keccak rust and check it
+        run: make keccak-rust-exec
+        working-directory: arithmetization/src/test
+        timeout-minutes: 15
+        env:
+          ZKC_REF: "" # Empty to avoid installing zkc again
+          KECCAK_N_VECTORS: 1
+          KECCAK_JSON_FILE: common_inputs/keccak_check.json
+          ZKC_EXEC_FLAGS: "--check"

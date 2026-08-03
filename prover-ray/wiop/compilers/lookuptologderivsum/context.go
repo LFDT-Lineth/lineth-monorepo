@@ -15,7 +15,7 @@ type includedSpec struct {
 	// query is the source [wiop.TableRelation] this fragment came from. The
 	// compiler keeps it around to mark every contributing query as reduced
 	// once the group has been compiled.
-	query *wiop.LookupQuery
+	query *wiop.TableRelationQuery
 	// cols is the ordered list of columns forming the A fragment.
 	cols []*wiop.ColumnView
 	// selector is the optional A-side filter; nil means the fragment is fully
@@ -78,7 +78,7 @@ type lookupGroup struct {
 
 // addIncluded appends a single A-side fragment to the group, taken from the
 // given query.
-func (g *lookupGroup) addIncluded(q *wiop.LookupQuery, tab wiop.Table) {
+func (g *lookupGroup) addIncluded(q *wiop.TableRelationQuery, tab wiop.Table) {
 	g.included = append(g.included, includedSpec{
 		query:    q,
 		cols:     tab.Columns,

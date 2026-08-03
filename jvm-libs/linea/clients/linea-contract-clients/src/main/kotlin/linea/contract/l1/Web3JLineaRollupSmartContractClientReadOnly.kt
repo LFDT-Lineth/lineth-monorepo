@@ -1,13 +1,16 @@
 package linea.contract.l1
 
+import linea.EthLogsSearcher
+import linea.SearchDirection
 import linea.contract.FAKE_READ_ONLY_CREDENTIALS
 import linea.contract.LineaRollupV6
 import linea.contract.LineaRollupV8
+import linea.contract.LinethRollupV9
 import linea.contract.events.FinalizedStateUpdatedEvent
 import linea.domain.BlockParameter
-import linea.ethapi.EthLogsClient
+import linea.domain.EthLogEvent
+import linea.domain.toBlockParameter
 import linea.kotlin.toBigInteger
-import linea.kotlin.toHexStringUInt256
 import linea.kotlin.toULong
 import linea.web3j.domain.toWeb3j
 import net.consensys.linea.async.toSafeFuture
@@ -19,11 +22,19 @@ import org.web3j.tx.gas.StaticGasProvider
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.math.BigInteger
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.time.Clock
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 open class Web3JLineaRollupSmartContractClientReadOnly(
   val web3j: Web3j,
   val contractAddress: String,
-  private val ethLogsClient: EthLogsClient,
+  private val ethLogsSearcher: EthLogsSearcher,
+  private val l1EventSearchMaxBlockRange: UInt = 10_000u,
+  private val finalizedStateSearchInitialBlockParameter: BlockParameter = BlockParameter.Tag.EARLIEST,
+  private val versionRefreshInterval: Duration = 6.seconds,
+  private val clock: Clock = Clock.System,
   private val log: Logger = LogManager.getLogger(Web3JLineaRollupSmartContractClientReadOnly::class.java),
 ) : LineaRollupSmartContractClientReadOnly,
   LineaRollupSmartContractClientReadOnlyFinalizedStateProvider,
@@ -31,6 +42,10 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
 
   protected fun contractClientV8AtBlock(blockParameter: BlockParameter): LineaRollupV8 {
     return contractClientAtBlock(blockParameter, LineaRollupV8::class.java)
+  }
+
+  protected fun contractClientV9AtBlock(blockParameter: BlockParameter): LinethRollupV9 {
+    return contractClientAtBlock(blockParameter, LinethRollupV9::class.java)
   }
 
   protected fun <T : Contract> loadContractClient(contract: Class<T>): T {
@@ -50,7 +65,14 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
         StaticGasProvider(BigInteger.ZERO, BigInteger.ZERO),
       )
 
-      else -> throw IllegalArgumentException("Unsupported contract type: ${contract::class.java}")
+      LinethRollupV9::class.java.isAssignableFrom(contract) -> LinethRollupV9.load(
+        contractAddress,
+        web3j,
+        FAKE_READ_ONLY_CREDENTIALS,
+        StaticGasProvider(BigInteger.ZERO, BigInteger.ZERO),
+      )
+
+      else -> throw IllegalArgumentException("Unsupported contract type: ${contract.name}")
     } as T
   }
 
@@ -61,30 +83,46 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
     }
   }
 
-  private val smartContractVersionCache = AtomicReference<LineaRollupContractVersion>(null)
+  private data class CachedVersion(
+    val version: LineaRollupContractVersion,
+    val fetchedAt: Instant,
+  )
+
+  private val smartContractVersionCache = AtomicReference<CachedVersion>(null)
 
   private fun getSmartContractVersion(): SafeFuture<LineaRollupContractVersion> {
-    return if (smartContractVersionCache.get() == LineaRollupContractVersion.V8) {
+    val cached = smartContractVersionCache.get()
+    return when {
       // once upgraded, it's not downgraded
-      SafeFuture.completedFuture(LineaRollupContractVersion.V8)
-    } else {
-      fetchSmartContractVersion()
-        .thenPeek { contractLatestVersion ->
-          if (smartContractVersionCache.get() != null &&
-            contractLatestVersion != smartContractVersionCache.get()
-          ) {
-            log.info(
-              "Smart contract upgraded: prevVersion={} upgradedVersion={}",
-              smartContractVersionCache.get(),
-              contractLatestVersion,
-            )
+      cached?.version == LineaRollupContractVersion.latest ->
+        SafeFuture.completedFuture(LineaRollupContractVersion.latest)
+
+      // below latest: serve from cache within the refresh interval so repeated getVersion calls
+      // don't refetch on every call, while still detecting an upgrade within versionRefreshInterval
+      cached != null && clock.now() < cached.fetchedAt + versionRefreshInterval ->
+        SafeFuture.completedFuture(cached.version)
+
+      else ->
+        fetchSmartContractVersion()
+          .thenPeek { fetchedVersion ->
+            val current = smartContractVersionCache.get()
+            // prevent inflight request to override and rollback
+            if (current == null || fetchedVersion >= current.version) {
+              smartContractVersionCache.set(CachedVersion(fetchedVersion, clock.now()))
+
+              if (current != null && fetchedVersion != current.version) {
+                log.info(
+                  "Smart contract upgraded: prevVersion={} upgradedVersion={}",
+                  current.version,
+                  fetchedVersion,
+                )
+              }
+            }
           }
-          smartContractVersionCache.set(contractLatestVersion)
-        }
     }
   }
 
-  private fun fetchSmartContractVersion(
+  internal open fun fetchSmartContractVersion(
     blockParameter: BlockParameter = BlockParameter.Tag.LATEST,
   ): SafeFuture<LineaRollupContractVersion> {
     return contractClientAtBlock(blockParameter, LineaRollupV6::class.java)
@@ -94,11 +132,12 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
       .thenApply(::parseContractVersion)
   }
 
-  private fun parseContractVersion(version: String): LineaRollupContractVersion {
+  internal fun parseContractVersion(version: String): LineaRollupContractVersion {
     return when {
       version.startsWith("6") -> LineaRollupContractVersion.V6
       version.startsWith("7") -> LineaRollupContractVersion.V7
       version.startsWith("8") -> LineaRollupContractVersion.V8
+      version.startsWith("9") -> LineaRollupContractVersion.V9
       else -> throw IllegalStateException("Unsupported contract version: $version")
     }
   }
@@ -136,6 +175,8 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
           LineaRollupContractVersion.V7,
           LineaRollupContractVersion.V8,
           -> contractClientV8AtBlock(blockParameter).blobShnarfExists(shnarf)
+          LineaRollupContractVersion.V9 -> // just ensure not regression while WIP
+            contractClientV9AtBlock(blockParameter).blobShnarfExists(shnarf)
         }
           .sendAsync()
           .thenApply { it != BigInteger.ZERO }
@@ -197,7 +238,9 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
               ),
             )
 
-          LineaRollupContractVersion.V8 ->
+          LineaRollupContractVersion.V8,
+          LineaRollupContractVersion.V9,
+          ->
             findFinalizedStateEvent(blockParameter, finalizedBlockNumber)
               .thenApply { finalizedState ->
                 val forcedTransactionNumber = finalizedState?.forcedTransactionNumber ?: 0UL
@@ -210,23 +253,67 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
       }
   }
 
-  private fun findFinalizedStateEvent(
+  // The finalized L2 block number increases monotonically, so each FinalizedStateUpdated event is at
+  // an L1 block >= the previous one. We remember the last found L1 block and start the next search
+  // there, turning the repeated finalization-monitor lookups (polled every ~500ms) into a small
+  // forward search instead of a full-chain binary search. A full-range fallback covers the rare case
+  // where the cached window overshoots (e.g. an L1 reorg moved the event earlier, or a caller queries
+  // a historical block).
+  private val finalizedStateSearchFromBlock = AtomicReference<BlockParameter>(
+    finalizedStateSearchInitialBlockParameter,
+  )
+
+  internal fun findFinalizedStateEvent(
     upToBlock: BlockParameter,
-    finalisedBlockNumber: ULong,
+    finalizedBlockNumber: ULong,
   ): SafeFuture<FinalizedStateUpdatedEvent?> {
-    return ethLogsClient.getLogs(
-      fromBlock = BlockParameter.Tag.EARLIEST,
-      toBlock = upToBlock,
-      address = contractAddress,
-      topics = listOf(
-        FinalizedStateUpdatedEvent.topic,
-        finalisedBlockNumber.toHexStringUInt256(),
-      ),
-    ).thenApply { logs ->
-      // only one log expected because we use indexed finalized block number
-      logs.firstOrNull()
-        ?.let(FinalizedStateUpdatedEvent::fromEthLog)
+    val fromBlock = finalizedStateSearchFromBlock.get()
+    val search =
+      if (fromBlock == BlockParameter.Tag.EARLIEST) {
+        searchFinalizedStateEvent(BlockParameter.Tag.EARLIEST, upToBlock, finalizedBlockNumber)
+      } else {
+        searchFinalizedStateEvent(fromBlock, upToBlock, finalizedBlockNumber)
+          // The cached forward window is only an optimization: on a miss OR any failure (e.g. it sits
+          // after a historical upToBlock, which EthLogsSearcher rejects as an invalid range) fall back
+          // to the authoritative full-range search, which re-surfaces any genuine (e.g. RPC) error.
+          .exceptionally { null }
+          .thenCompose { event ->
+            if (event != null) {
+              SafeFuture.completedFuture(event)
+            } else {
+              searchFinalizedStateEvent(finalizedStateSearchInitialBlockParameter, upToBlock, finalizedBlockNumber)
+            }
+          }
+      }
+    return search.thenApply { event ->
+      event?.also { finalizedStateSearchFromBlock.set(it.log.blockNumber.toBlockParameter()) }
         ?.event
+    }
+  }
+
+  private fun searchFinalizedStateEvent(
+    fromBlock: BlockParameter,
+    upToBlock: BlockParameter,
+    finalizedBlockNumber: ULong,
+  ): SafeFuture<EthLogEvent<FinalizedStateUpdatedEvent>?> {
+    // FinalizedStateUpdated has a unique, monotonically-increasing indexed blockNumber, so we binary
+    // search for it in bounded chunks instead of an unbounded getLogs(EARLIEST..upToBlock) query,
+    // which rate-limited providers (e.g. Infura) reject for spans > 10_000 blocks.
+    return ethLogsSearcher.findLog(
+      fromBlock = fromBlock,
+      toBlock = upToBlock,
+      chunkSize = l1EventSearchMaxBlockRange.toInt(),
+      address = contractAddress,
+      topics = listOf(FinalizedStateUpdatedEvent.topic),
+    ) { ethLog ->
+      val foundBlockNumber = FinalizedStateUpdatedEvent.fromEthLog(ethLog).event.blockNumber
+      when {
+        foundBlockNumber < finalizedBlockNumber -> SearchDirection.FORWARD
+        foundBlockNumber > finalizedBlockNumber -> SearchDirection.BACKWARD
+        else -> null
+      }
+    }.thenApply { ethLog ->
+      ethLog?.let(FinalizedStateUpdatedEvent::fromEthLog)
     }
   }
 
@@ -234,7 +321,7 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
     upToBlock: BlockParameter,
     finalisedBlockNumber: ULong,
   ): SafeFuture<FinalizedStateUpdatedEvent> {
-    return findFinalizedStateEvent(upToBlock = upToBlock, finalisedBlockNumber = finalisedBlockNumber)
+    return findFinalizedStateEvent(upToBlock = upToBlock, finalizedBlockNumber = finalisedBlockNumber)
       .thenApply { event ->
         // it means contract was just upgraded but no event published yet,
         // we cannot deterministically get the finalized fields

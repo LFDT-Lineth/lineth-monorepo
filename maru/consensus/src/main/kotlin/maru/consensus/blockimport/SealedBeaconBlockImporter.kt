@@ -59,9 +59,10 @@ class NewSealedBeaconBlockHandlerMultiplexer<T>(
     input: SealedBeaconBlock,
     ex: Exception,
   ) {
+    val beaconBlockHeader = input.beaconBlock.beaconBlockHeader
     this.error(
       "New sealed block handler $handlerName failed processing" +
-        "blockHash=${input.beaconBlock.beaconBlockHeader.hash}, number=${input.beaconBlock.beaconBlockHeader.number} " +
+        "blockHash=${beaconBlockHeader.beaconBlockIdHash}, number=${beaconBlockHeader.number} " +
         "executionPayloadBlockNumber=${input.beaconBlock.beaconBlockBody.executionPayload.blockNumber}!",
       ex,
     )
@@ -174,7 +175,7 @@ class ValidatingSealedBeaconBlockImporter(
         log::info,
         "block received: clBlockNumber=${beaconBlockHeader.number} " +
           "elBlockNumber=${beaconBlock.beaconBlockBody.executionPayload.blockNumber} " +
-          "clBlockHash=${beaconBlockHeader.hash.encodeHex()}",
+          "clBlockHash=${beaconBlockHeader.beaconBlockIdHash.encodeHex()}",
         shouldLog,
         30,
       )
@@ -194,7 +195,7 @@ class ValidatingSealedBeaconBlockImporter(
                 "block validated: clBlockNumber={} elBlockNumber={} clBlockHash={}",
                 beaconBlockHeader.number,
                 sealedBeaconBlock.beaconBlock.beaconBlockBody.executionPayload.blockNumber,
-                beaconBlockHeader.hash.encodeHex(),
+                beaconBlockHeader.beaconBlockIdHash.encodeHex(),
               )
               beaconBlockImporter.importBlock(sealedBeaconBlock).thenApply { it }
             }
@@ -204,7 +205,7 @@ class ValidatingSealedBeaconBlockImporter(
                 "validation failed: clBlockNumber={} elBlockNumber={} clBlockHash={} error={}",
                 sealedBeaconBlock.beaconBlock.beaconBlockHeader.number,
                 sealedBeaconBlock.beaconBlock.beaconBlockBody.executionPayload.blockNumber,
-                sealedBeaconBlock.beaconBlock.beaconBlockHeader.hash
+                sealedBeaconBlock.beaconBlock.beaconBlockHeader.beaconBlockIdHash
                   .encodeHex(),
                 combinedValidationResult.error,
               )
@@ -216,7 +217,7 @@ class ValidatingSealedBeaconBlockImporter(
             "exception during block import: clBlockNumber={} elBlockNumber={}  clBlockHash={} errorMessage={}",
             sealedBeaconBlock.beaconBlock.beaconBlockHeader.number,
             sealedBeaconBlock.beaconBlock.beaconBlockBody.executionPayload.blockNumber,
-            sealedBeaconBlock.beaconBlock.beaconBlockHeader.hash
+            sealedBeaconBlock.beaconBlock.beaconBlockHeader.beaconBlockIdHash
               .encodeHex(),
             it.message,
             it,
@@ -227,7 +228,7 @@ class ValidatingSealedBeaconBlockImporter(
         "exception during block import: clBlockNumber={} elBlockNumber={} clBlockHash={} errorMessage={}",
         sealedBeaconBlock.beaconBlock.beaconBlockHeader.number,
         sealedBeaconBlock.beaconBlock.beaconBlockBody.executionPayload.blockNumber,
-        sealedBeaconBlock.beaconBlock.beaconBlockHeader.hash
+        sealedBeaconBlock.beaconBlock.beaconBlockHeader.beaconBlockIdHash
           .encodeHex(),
         ex.message,
         ex,

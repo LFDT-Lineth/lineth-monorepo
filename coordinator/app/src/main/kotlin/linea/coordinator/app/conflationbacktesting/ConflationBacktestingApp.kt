@@ -35,12 +35,12 @@ import linea.coordinator.clients.prover.ProverConfig
 import linea.coordinator.config.toJsonRpcRetry
 import linea.coordinator.config.v2.CoordinatorConfig
 import linea.coordinator.config.v2.TracesConfig.ClientApiConfig
-import linea.domain.Aggregation
 import linea.domain.Block
 import linea.domain.BlockInterval
 import linea.domain.toBlockParameter
 import linea.encoding.BlockRLPEncoder
 import linea.ethapi.EthApiClient
+import linea.ethapi.EthLogsSearcherImpl
 import linea.kotlin.decodeHex
 import linea.persistence.DisabledForcedTransactionsDao
 import linea.timer.VertxTimerFactory
@@ -328,6 +328,7 @@ class ConflationBacktestingApp(
       log = log,
     ),
     ethApiClient = l2EthClient,
+    ethLogsSearcher = EthLogsSearcherImpl(vertx = vertx, ethApiClient = l2EthClient),
     contractAddress = backtestingCoordinatorConfig.protocol.l2.contractAddress,
     smartContractErrors = backtestingCoordinatorConfig.smartContractErrors,
     smartContractDeploymentBlockNumber = backtestingCoordinatorConfig.protocol.l2.contractDeploymentBlockNumber
@@ -340,9 +341,7 @@ class ConflationBacktestingApp(
     aggregationCoordinatorPollingInterval =
     backtestingCoordinatorConfig.conflation.proofAggregation.coordinatorPollingInterval,
     startBlockNumberInclusive = conflationBacktestingAppConfig.startBlockNumber,
-    aggregationProofHandler = { aggregation: Aggregation ->
-      SafeFuture.completedFuture(Unit)
-    },
+    aggregationProofHandler = { _ -> SafeFuture.completedFuture(Unit) },
     aggregationProofRequestHandler = { proofIndex, unProvenAggregation ->
       log.info(
         "Backtesting aggregation proof request produced: aggregation={}",

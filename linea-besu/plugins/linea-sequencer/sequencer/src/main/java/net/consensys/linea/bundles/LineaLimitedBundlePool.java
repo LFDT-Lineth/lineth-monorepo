@@ -320,6 +320,7 @@ public class LineaLimitedBundlePool implements BundlePoolService, BesuEvents.Blo
 
   private void configureObjectMapperV1(final ObjectMapper objectMapper) {
     final var module = new SimpleModule();
+    module.addKeyDeserializer(Hash.class, new TransactionBundle.HashKeyDeserializer());
     module.addDeserializer(
         TransactionBundle.class, new TransactionBundle.TransactionBundleDeserializerV1());
     objectMapper.registerModule(module);

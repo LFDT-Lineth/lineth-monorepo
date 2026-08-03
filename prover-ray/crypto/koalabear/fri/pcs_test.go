@@ -97,9 +97,32 @@ func TestCanonicalLayout_RejectsShiftInvariants(t *testing.T) {
 	}
 }
 
-func TestProverStateOpenAlignsMultiSizeLevelLeaf(t *testing.T) {
+// TestAddOpeningZeta covers the shared-zeta invariant: zeta=0 is a valid
+// out-of-domain point and is accepted (its zero value is not a sentinel), but
+// a later opening carrying a different zeta is rejected.
+func TestAddOpeningZeta(t *testing.T) {
+	params, err := NewParams(3, 2, 1)
+	require.NoError(t, err)
+	pcs, err := NewPCS(params, makeEncoders(int(params.numRounds()+1), 2))
+	require.NoError(t, err)
+
+	witness := make(Batch, 3)
+	witness[2] = SizedTable{Ext: [][]field.Ext{field.VecPseudoRandExt(rand.New(utils.NewRandSource(1)), 4)}}
+	committed := pcs.Commit(witness)
+	shifts := make(BatchShifts, 3)
+	shifts[2] = SizedShifts{Ext: [][]int{{0}}}
+	claimed := make(BatchClaimedValues, 3)
+	claimed[2] = SizedClaimedValues{Ext: [][]field.Ext{{{}}}}
+
+	require.NoError(t, pcs.AddOpening(committed, field.Ext{}, shifts, claimed))
+	require.ErrorContains(t,
+		pcs.AddOpening(committed, field.UintsToExt(1, 0, 0, 0, 0, 0), shifts, claimed),
+		"zeta mismatch")
+}
+
+func TestOpenInputTreeOpeningAlignsMultiSizeRows(t *testing.T) {
 	prng := rand.New(utils.NewRandSource(20260625))
-	params, err := NewParams(16, 8, 1)
+	params, err := NewParams(4, 3, 1)
 	require.NoError(t, err)
 
 	levelEncoder := NewEncoder(8, 4)
@@ -116,96 +139,183 @@ func TestProverStateOpenAlignsMultiSizeLevelLeaf(t *testing.T) {
 	const query = 11
 	base := query >> 1
 
-	topBranch := openLevelTreesAt([]*Tree{tree}, len(fullEvals), query)[0]
+	topBranch := tree.OpenBranch(query)
 	assert.Equal(t, digestSizedRow(encoded[3], query), topBranch.Leaf)
 	assert.Equal(t, digestSizedRow(encoded[3], query^1), topBranch.Siblings[len(topBranch.Siblings)-1])
 
-	levels := []Level{
-		newRandomLevel(prng, params, params.D),
-		{D: 4, Evals: levelEvals, Trees: []*Tree{tree, otherTree}},
-	}
-	alphas := []field.Ext{
-		field.UintsToExt(41, 1, 0, 0, 0, 0),
-		field.UintsToExt(43, 0, 1, 0, 0, 0),
-		field.UintsToExt(47, 0, 0, 1, 0, 0),
-	}
-	proof := proverForTest(params, levels, alphas, []int{query})
-
-	require.Len(t, proof.LevelQueries, 1)
-	opening := proof.LevelQueries[0][0]
-	require.Len(t, opening, 2)
-
-	checkLevelBranch := func(name string, branch Branch, tree *Tree, encoded MultiSizeTable) {
+	checkInputTreeOpening := func(name string, branch InputTreeOpening, tree *Tree, encoded MultiSizeTable) {
 		t.Helper()
 
-		lifted := levelTreeLeafIndex(tree, len(levelEvals), base)
-		root, err := branch.RecoverRoot(lifted)
+		root, err := branch.RecoverRoot(query)
 		require.NoError(t, err, name)
 		assert.Equal(t, tree.Root(), root, name)
 
-		leaf, err := branchLeafAtLevel(branch, len(levelEvals))
+		leaf, err := branch.rowAtLevel(len(levelEvals))
 		require.NoError(t, err, name)
-		assert.Equal(t, digestSizedRow(encoded[2], base), leaf, name)
+		assert.Equal(t, digestSizedRow(encoded[2], base), hashRowOpening(leaf), name)
+
+		// The aux level's conjugate row (base^1) is carried alongside the
+		// on-path row, one tree depth shallower than the level's own size.
+		pair := branch.Leaves[2]
+		require.NotNil(t, pair, name)
+		assert.Equal(t, digestSizedRow(encoded[2], base), hashRowOpening(pair[0]), name)
+		assert.Equal(t, digestSizedRow(encoded[2], base^1), hashRowOpening(pair[1]), name)
 	}
-	checkLevelBranch("first tree", opening[0], tree, encoded)
-	checkLevelBranch("second tree", opening[1], otherTree, otherEncoded)
+	checkInputTreeOpening("first tree", openInputTreeOpening(params, CommitterState{Tree: tree, EncodedTable: encoded}, query), tree, encoded)
+	checkInputTreeOpening("second tree", openInputTreeOpening(params, CommitterState{Tree: otherTree, EncodedTable: otherEncoded}, query), otherTree, otherEncoded)
 }
 
 type pcsOpenVerifyFixture struct {
-	pcs   *PCS
-	input VerifyInputs
-	proof OpeningProof
+	pcs       *PCS
+	input     VerifyInputs
+	proof     OpeningProof
+	committed []CommitterState
 }
 
 type openInputs struct {
 	Witnesses []Batch
 	Committed []CommitterState
 	Shifts    []BatchShifts
-	Zetas     []field.Ext
+	Zeta      field.Ext
 
 	Challenges Challenges
 }
 
-func openForTest(t *testing.T, pcs *PCS, in openInputs) OpeningProof {
+// openForTest runs the full prover-side opening flow and returns the proof
+// together with the per-batch claimed values it computed. The PCS no longer
+// derives the claims itself, so the caller computes them here (mirroring the
+// outer protocol) and feeds them both into AddOpening and into VerifyInputs.
+func openForTest(t *testing.T, pcs *PCS, in openInputs) (OpeningProof, []BatchClaimedValues) {
 	t.Helper()
 
 	pcs.Reset()
 	defer pcs.Reset()
-	claimed := make([]BatchClaimedValues, 0, len(in.Witnesses))
+	batchClaims := make([]BatchClaimedValues, len(in.Witnesses))
 	for i := range in.Witnesses {
-		batchClaims, err := pcs.AddOpening(in.Witnesses[i], in.Committed[i], in.Zetas[i], in.Shifts[i])
+		batchClaims[i] = claimedValuesForTest(t, pcs, in.Witnesses[i], in.Shifts[i], in.Zeta)
+		err := pcs.AddOpening(in.Committed[i], in.Zeta, in.Shifts[i], batchClaims[i])
 		require.NoError(t, err)
-		claimed = append(claimed, batchClaims)
 	}
-	started, err := pcs.NewProverState(in.Challenges.AlphaDeep)
+	started, err := pcs.NewProverState()
 	require.NoError(t, err)
-	require.GreaterOrEqual(t, len(in.Challenges.FoldAlphas), pcs.Params.numRounds)
-	require.GreaterOrEqual(t, len(in.Challenges.QueryPositions), pcs.Params.NumQueries)
+	require.GreaterOrEqual(t, len(in.Challenges.QueryPositions), int(pcs.Params.NumQueries))
 	queryPositions := in.Challenges.QueryPositions[:pcs.Params.NumQueries]
 
-	for round := range pcs.Params.numRounds {
+	// Fold until the (possibly restricted) prover state is exhausted, so this
+	// works whether or not pcs.Params was larger than the witness.
+	for round := 0; started.HasNext(); round++ {
 		started.Fold(in.Challenges.FoldAlphas[round])
 	}
-	friProof := started.Open(queryPositions)
-	rowOpenings := pcs.openedRows(queryPositions)
+	return pcs.Open(started, queryPositions), batchClaims
+}
 
-	return OpeningProof{
-		ClaimedValues: claimed,
-		RowOpenings:   rowOpenings,
-		FRIProof:      friProof,
+// claimedValuesForTest evaluates every opened (size, row, shift) of a witness
+// batch at zeta * omega_N^shift, producing the BatchClaimedValues the caller
+// now supplies to AddOpening and echoes into VerifyInputs. In production the
+// outer protocol performs this evaluation; the PCS itself no longer does.
+func claimedValuesForTest(t *testing.T, pcs *PCS, witness Batch, shifts BatchShifts, zeta field.Ext) BatchClaimedValues {
+	t.Helper()
+
+	evalRow := func(poly field.Vec, sizeLog2 uint8, rowShifts []int) []field.Ext {
+		values := make([]field.Ext, len(rowShifts))
+		for i, shift := range rowShifts {
+			point, err := pcs.shiftedPoint(sizeLog2, shift, zeta)
+			require.NoError(t, err)
+			values[i] = polynomials.EvalLagrange(poly, field.ElemFromExt(point)).AsExt()
+		}
+		return values
 	}
+
+	claimed := make(BatchClaimedValues, len(shifts))
+	for sizeLog2, sizedShifts := range shifts {
+		sizedWitness := witness[sizeLog2]
+		sized := SizedClaimedValues{
+			Base: make([][]field.Ext, len(sizedShifts.Base)),
+			Ext:  make([][]field.Ext, len(sizedShifts.Ext)),
+		}
+		for rowIdx, rowShifts := range sizedShifts.Base {
+			row := sizedWitness.Base[rowIdx]
+			require.Len(t, row, 1<<sizeLog2)
+			sized.Base[rowIdx] = evalRow(field.VecFromBase(row), uint8(sizeLog2), rowShifts)
+		}
+		for rowIdx, rowShifts := range sizedShifts.Ext {
+			row := sizedWitness.Ext[rowIdx]
+			require.Len(t, row, 1<<sizeLog2)
+			sized.Ext[rowIdx] = evalRow(field.VecFromExt(row), uint8(sizeLog2), rowShifts)
+		}
+		claimed[sizeLog2] = sized
+	}
+	return claimed
 }
 
 func newPCSOpenVerifyFixture(t *testing.T) pcsOpenVerifyFixture {
 	t.Helper()
 
-	params, err := NewParams(8, 4, 1)
+	params, err := NewParams(3, 2, 1)
 	require.NoError(t, err)
-	encoders := makeEncoders(params.numRounds+1, 2)
+	encoders := makeEncoders(int(params.numRounds()+1), 2)
 	pcs, err := NewPCS(params, encoders)
 	require.NoError(t, err)
 
 	prng := rand.New(utils.NewRandSource(20260626))
+	witness := make(Batch, 3)
+	witness[1] = SizedTable{Ext: [][]field.Ext{field.VecPseudoRandExt(prng, 2)}}
+	witness[2] = SizedTable{Ext: [][]field.Ext{
+		field.VecPseudoRandExt(prng, 4),
+		field.VecPseudoRandExt(prng, 4),
+	}}
+	witnesses := []Batch{witness}
+	committed := []CommitterState{pcs.Commit(witness)}
+
+	batchShifts := make(BatchShifts, 3)
+	batchShifts[1] = SizedShifts{Ext: [][]int{{0}}}
+	batchShifts[2] = SizedShifts{Ext: [][]int{{0}, {1}}}
+	shifts := []BatchShifts{batchShifts}
+	zeta := field.UintsToExt(19, 2, 3, 5, 7, 11)
+	challenges := Challenges{
+		FoldAlphas:     []field.Ext{field.UintsToExt(29, 1, 0, 0, 0, 0), field.UintsToExt(31, 0, 1, 0, 0, 0)},
+		QueryPositions: []int{3},
+	}
+	proof, claimed := openForTest(t, pcs, openInputs{
+		Witnesses:  witnesses,
+		Committed:  committed,
+		Shifts:     shifts,
+		Zeta:       zeta,
+		Challenges: challenges,
+	})
+
+	return pcsOpenVerifyFixture{
+		pcs:       pcs,
+		committed: committed,
+		input: VerifyInputs{
+			Roots:         []field.Octuplet{committed[0].Tree.Root()},
+			Shapes:        utils.Map(Batch.Shape, witnesses),
+			Shifts:        shifts,
+			ClaimedValues: claimed,
+			Zeta:          zeta,
+			Challenges:    challenges,
+		},
+		proof: proof,
+	}
+}
+
+func TestPCSOpenVerifyNormalFlow(t *testing.T) {
+	fx := newPCSOpenVerifyFixture(t)
+	require.NoError(t, fx.pcs.Verify(fx.input, fx.proof))
+}
+
+// TestPCSStaticParamsLargerThanWitness exercises a static PCS whose Params are
+// sized well above the witness: D=16 (numRounds=4) with only size-4 columns.
+// The FRI schedule must restrict to the witness (2 folds), not fold 4 times.
+func TestPCSStaticParamsLargerThanWitness(t *testing.T) {
+	// D=16 static capacity, witness columns are size 4 (sizeLog2=2).
+	params, err := NewParams(5, 4, 1)
+	require.NoError(t, err)
+	encoders := makeEncoders(int(params.numRounds()+1), 2) // sizes 2^0..2^4
+	pcs, err := NewPCS(params, encoders)
+	require.NoError(t, err)
+
+	prng := rand.New(utils.NewRandSource(20260701))
 	witness := make(Batch, 3)
 	witness[2] = SizedTable{Ext: [][]field.Ext{
 		field.VecPseudoRandExt(prng, 4),
@@ -217,42 +327,41 @@ func newPCSOpenVerifyFixture(t *testing.T) pcsOpenVerifyFixture {
 	batchShifts := make(BatchShifts, 3)
 	batchShifts[2] = SizedShifts{Ext: [][]int{{0}, {1}}}
 	shifts := []BatchShifts{batchShifts}
-	zetas := []field.Ext{field.UintsToExt(19, 2, 3, 5, 7, 11)}
+	zeta := field.UintsToExt(19, 2, 3, 5, 7, 11)
 	challenges := Challenges{
-		AlphaDeep:      field.UintsToExt(23, 3, 5, 7, 11, 13),
-		FoldAlphas:     []field.Ext{field.UintsToExt(29, 1, 0, 0, 0, 0), field.UintsToExt(31, 0, 1, 0, 0, 0)},
+		FoldAlphas: []field.Ext{
+			field.UintsToExt(29, 1, 0, 0, 0, 0),
+			field.UintsToExt(31, 0, 1, 0, 0, 0),
+		},
 		QueryPositions: []int{3},
 	}
-	proof := openForTest(t, pcs, openInputs{
+
+	proof, claimed := openForTest(t, pcs, openInputs{
 		Witnesses:  witnesses,
 		Committed:  committed,
 		Shifts:     shifts,
-		Zetas:      zetas,
+		Zeta:       zeta,
 		Challenges: challenges,
 	})
 
-	return pcsOpenVerifyFixture{
-		pcs: pcs,
-		input: VerifyInputs{
-			Roots:      []field.Octuplet{committed[0].Tree.Root()},
-			Shapes:     shapesFromBatches(witnesses),
-			Shifts:     shifts,
-			Zetas:      zetas,
-			Challenges: challenges,
-		},
-		proof: proof,
-	}
-}
+	// The witness top is size 4 → exactly 2 folds → a single final coefficient
+	// (logFinalPolySize=0), not the 4 folds Params.LogPlainTextSize=4 would dictate.
+	require.Len(t, proof.FRIProof.FinalPoly, 1)
 
-func TestPCSOpenVerifyNormalFlow(t *testing.T) {
-	fx := newPCSOpenVerifyFixture(t)
-	require.NoError(t, fx.pcs.Verify(fx.input, fx.proof))
+	require.NoError(t, pcs.Verify(VerifyInputs{
+		Roots:         []field.Octuplet{committed[0].Tree.Root()},
+		Shapes:        utils.Map(Batch.Shape, witnesses),
+		Shifts:        shifts,
+		ClaimedValues: claimed,
+		Zeta:          zeta,
+		Challenges:    challenges,
+	}, proof))
 }
 
 func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
-	params, err := NewParams(16, 8, 2)
+	params, err := NewParams(4, 3, 2)
 	require.NoError(t, err)
-	encoders := makeEncoders(params.numRounds+1, 2)
+	encoders := makeEncoders(int(params.numRounds()+1), 2)
 	pcs, err := NewPCS(params, encoders)
 	require.NoError(t, err)
 
@@ -275,16 +384,16 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	shifts := []BatchShifts{batchShifts, otherBatchShifts}
 
 	zeta := field.UintsToExt(19, 2, 3, 5, 7, 11)
-	otherZeta := field.UintsToExt(41, 0, 1, 2, 3, 5)
-	alphaDeepChallenge := field.UintsToExt(23, 3, 5, 7, 11, 13)
-	firstClaims, err := pcs.AddOpening(witness, committed[0], zeta, batchShifts)
+	firstClaims := claimedValuesForTest(t, pcs, witness, batchShifts, zeta)
+	otherClaims := claimedValuesForTest(t, pcs, otherWitness, otherBatchShifts, zeta)
+	err = pcs.AddOpening(committed[0], zeta, batchShifts, firstClaims)
 	require.NoError(t, err)
-	_, err = pcs.AddOpening(otherWitness, committed[1], otherZeta, otherBatchShifts)
+	err = pcs.AddOpening(committed[1], zeta, otherBatchShifts, otherClaims)
 	require.NoError(t, err)
-	started, err := pcs.NewProverState(alphaDeepChallenge)
+	started, err := pcs.NewProverState()
 	require.NoError(t, err)
 	require.Len(t, started.levels, 2)
-	levelRoots, _ := verifierInputsForLevels(started.levels)
+	levelRoots := verifierInputsForLevels(started.levels)
 	require.Len(t, levelRoots, 2)
 	require.Len(t, levelRoots[0], 2)
 	require.Len(t, levelRoots[1], 2)
@@ -302,14 +411,12 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	gotClaim := firstClaims[3].Ext[0][1]
 	assert.Equal(t, wantClaim, gotClaim)
 
-	referenceLevels := make([]Level, len(started.levels))
-	for i, level := range started.levels {
-		referenceLevels[i] = Level{
-			D:     level.D,
-			Evals: append([]field.Ext(nil), level.Evals...),
-			Trees: []*Tree{buildTreeExt(level.Evals)},
-		}
-	}
+	// referenceLevels reuses started's own level data directly: Level is
+	// immutable (per-column DEEP-quotient data plus EvalsAt), so an
+	// independent prover state built from the same levels and fed the same
+	// fold challenges must derive the identical alphaDeep at each level's own
+	// round and so produce the identical roots.
+	referenceLevels := started.levels
 
 	foldAlphas := []field.Ext{
 		field.UintsToExt(29, 1, 0, 0, 0, 0),
@@ -319,33 +426,31 @@ func TestPCSNewProverStateFoldsLikeReferenceVirtualLevels(t *testing.T) {
 	positions := []int{3, 11}
 	referenceProof := proverForTest(params, referenceLevels, foldAlphas, positions)
 
-	for round := range params.numRounds {
+	for round := range params.numRounds() {
 		started.Fold(foldAlphas[round])
 	}
 	gotProof := started.Open(positions)
-	assert.Equal(t, referenceProof.FRIRoots, gotProof.FRIRoots)
-	assert.Equal(t, referenceProof.FinalPolyExt, gotProof.FinalPolyExt)
+	assert.Equal(t, referenceProof.RoundRoots, gotProof.RoundRoots)
+	assert.Equal(t, referenceProof.FinalPoly, gotProof.FinalPoly)
 
-	zetas := []field.Ext{zeta, otherZeta}
-	oneShot := openForTest(t, pcs, openInputs{
+	oneShot, oneShotClaims := openForTest(t, pcs, openInputs{
 		Witnesses: witnesses,
 		Committed: committed,
 		Shifts:    shifts,
-		Zetas:     zetas,
+		Zeta:      zeta,
 		Challenges: Challenges{
-			AlphaDeep:      alphaDeepChallenge,
 			FoldAlphas:     foldAlphas,
 			QueryPositions: positions,
 		},
 	})
 	roots := []field.Octuplet{committed[0].Tree.Root(), committed[1].Tree.Root()}
 	require.NoError(t, pcs.Verify(VerifyInputs{
-		Roots:  roots,
-		Shapes: shapesFromBatches(witnesses),
-		Shifts: shifts,
-		Zetas:  zetas,
+		Roots:         roots,
+		Shapes:        utils.Map(Batch.Shape, witnesses),
+		Shifts:        shifts,
+		ClaimedValues: oneShotClaims,
+		Zeta:          zeta,
 		Challenges: Challenges{
-			AlphaDeep:      alphaDeepChallenge,
 			FoldAlphas:     foldAlphas,
 			QueryPositions: positions,
 		},

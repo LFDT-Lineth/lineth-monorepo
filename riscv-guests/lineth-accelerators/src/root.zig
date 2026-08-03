@@ -7,6 +7,8 @@
 const lineth_std = @import("std.zig");
 const zkvm_types = @import("zkvm_types.zig");
 const keccak = @import("keccak.zig");
+const poseidon2 = @import("poseidon2.zig");
+const io = @import("io.zig");
 
 // ── zkVM standard runtime (include/zkvm_std.h) ──────────────────────────────
 pub const zkvm_exit = lineth_std.zkvm_exit;
@@ -25,3 +27,9 @@ pub const zkvm_bytes_192 = zkvm_types.zkvm_bytes_192;
 // ── Keccak accelerator (include/zkvm_accelerators.h) ────────────────────────
 pub const zkvm_keccak256_hash = keccak.zkvm_keccak256_hash;
 pub const zkvm_keccak256 = keccak.zkvm_keccak256;
+
+// ── io accelerator (zkvm-standards io-interface, include/zkvm_io.h) ──────────
+pub const write_output = io.write_output;
+
+// ── Poseidon2 accelerator (include/lineth_accelerators.h) ───────────────────
+pub const lineth_zkvm_poseidon2_permutation = poseidon2.lineth_zkvm_poseidon2_permutation;

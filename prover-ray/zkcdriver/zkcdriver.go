@@ -6,9 +6,10 @@ import (
 	"time"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
-	"github.com/consensys/go-corset/pkg/util/collection/typed"
-	"github.com/consensys/go-corset/pkg/util/field/koalabear"
-	"github.com/consensys/go-corset/pkg/zkc/constraints"
+	"github.com/LFDT-Lineth/zkc/pkg/util/collection/typed"
+	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
+	"github.com/LFDT-Lineth/zkc/pkg/zkc/constraints"
+	"github.com/LFDT-Lineth/zkc/pkg/zkc/vm"
 	"github.com/sirupsen/logrus"
 )
 
@@ -92,21 +93,23 @@ type PreReadInputs struct {
 
 // ReadZkcInputs reads and parses a zkc inputs file, returning the "pre-read"
 // input data. This can be called early to overlap I/O with other work.
-func ReadZkcInputs(inputsFile string) PreReadInputs {
+func ReadZkcInputs(inputsFile string) *PreReadInputs {
 	traceF, err := ReadMaybeCompressedFile(inputsFile)
 	if err != nil {
-		return PreReadInputs{Err: err, InputsFile: inputsFile}
+		return &PreReadInputs{Err: err, InputsFile: inputsFile}
 	}
 	inputs, err := ReadZkcInputFile(traceF)
-	return PreReadInputs{Inputs: inputs, Err: err, InputsFile: inputsFile}
+	return &PreReadInputs{Inputs: inputs, Err: err, InputsFile: inputsFile}
 }
 
 // AssignWithPreRead assigns arithmetization columns using a pre-read trace.
-func (a *ZkCDriver) AssignWithPreRead(run *wiop.Runtime, preRead PreReadInputs) {
+func (a *ZkCDriver) AssignWithPreRead(run *wiop.Runtime, preRead *PreReadInputs) {
 	assignStart := time.Now()
 	var (
-		errs   []error
-		inputs = preRead.Inputs
+		errs []error
+		// filter the inputs so that we only pass the inputs that are actually
+		// used by the zkc program.
+		inputs = vm.FilterInputs(a.BinaryFile.Program(), preRead.Inputs)
 		errT   = preRead.Err
 	)
 	logrus.Infof("[bootstrapper] trace available (pre-read): %v", time.Since(assignStart))
@@ -126,7 +129,7 @@ func (a *ZkCDriver) AssignWithPreRead(run *wiop.Runtime, preRead PreReadInputs) 
 	// Attempt to trace the ZkC program using the provided inputs, generating a
 	// fully expanded AIR-compatible trace.
 	tracingStart := time.Now()
-	expandedTrace, errs := a.BinaryFile.Trace(inputs, a.TracingConfig)
+	_, _, expandedTrace, errs := a.BinaryFile.Trace(inputs, a.TracingConfig)
 
 	if len(errs) > 0 {
 		logrus.Panicf("tracing failed: %v", errors.Join(errs...).Error())

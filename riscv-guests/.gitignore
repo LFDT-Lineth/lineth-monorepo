@@ -1,8 +1,9 @@
 # Zig build artifacts and local dependency/package caches. Unanchored on purpose:
 # each guest package (l2-execution/, future rollup/, rollup-aggregation/, …) produces
-# its own zig-out/, zig-pkg/ and .zig-cache/ — these patterns cover them all.
+# its own zig-out/, zig-pkg/, .zig-cache/, and .cache/ (e.g. l2-execution's
+# .cache/large-ssz-fixtures/go-mod, a GOMODCACHE-style Go module cache) — these patterns cover them all.
 .zig-cache/
 zig-out/
 zig-pkg/
+.cache/
 *.objdump
-

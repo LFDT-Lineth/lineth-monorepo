@@ -4,14 +4,9 @@ import linea.domain.gas.GasPriceCaps
 import linea.domain.toBlockParameter
 import linea.ethapi.EthApiBlockClient
 import linea.gaspricing.GasPriceCapProvider
-import linea.kotlin.toGWei
-import linea.kotlin.toULong
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
-import java.math.BigInteger
-import java.time.LocalDateTime
-import java.time.ZoneOffset
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Instant
@@ -19,9 +14,27 @@ import kotlin.time.Instant
 class GasPriceCapProviderImpl(
   private val config: Config,
   private val l2EthApiBlockClient: EthApiBlockClient,
-  private val feeHistoriesRepository: FeeHistoriesRepositoryWithCache,
-  private val gasPriceCapCalculator: GasPriceCapCalculator,
-  private val clock: Clock = Clock.System,
+  feeHistoriesRepository: FeeHistoriesRepositoryWithCache,
+  gasPriceCapCalculator: GasPriceCapCalculator,
+  clock: Clock = Clock.System,
+  private val log: Logger = LogManager.getLogger(GasPriceCapProviderImpl::class.java),
+  private val delegate: GasPriceCapProviderImplV2 = GasPriceCapProviderImplV2(
+    gasPriceCapCalculator = gasPriceCapCalculator,
+    feeHistoriesRepository = feeHistoriesRepository,
+    clock = clock,
+    log = log,
+    config = GasPriceCapProviderImplV2.Config(
+      enabled = config.enabled,
+      gasFeePercentile = config.gasFeePercentile,
+      gasFeePercentileWindowInBlocks = config.gasFeePercentileWindowInBlocks,
+      gasFeePercentileWindowLeewayInBlocks = config.gasFeePercentileWindowLeewayInBlocks,
+      timeOfDayMultipliers = config.timeOfDayMultipliers,
+      adjustmentConstant = config.adjustmentConstant,
+      blobAdjustmentConstant = config.blobAdjustmentConstant,
+      finalizationTargetMaxDelay = config.finalizationTargetMaxDelay,
+      gasPriceCapsCoefficient = config.gasPriceCapsCoefficient,
+    ),
+  ),
 ) : GasPriceCapProvider {
   data class Config(
     val enabled: Boolean,
@@ -34,8 +47,6 @@ class GasPriceCapProviderImpl(
     val finalizationTargetMaxDelay: Duration,
     val gasPriceCapsCoefficient: Double,
   )
-
-  private val log: Logger = LogManager.getLogger(this::class.java)
 
   init {
     require(config.gasFeePercentile >= 0.0) {
@@ -54,121 +65,33 @@ class GasPriceCapProviderImpl(
     }
   }
 
-  private fun isEnoughDataForGasPriceCapCalculation(): Boolean {
-    val minNumOfFeeHistoriesNeeded = BigInteger.valueOf(config.gasFeePercentileWindowInBlocks.toLong())
-      .minus(BigInteger.valueOf(config.gasFeePercentileWindowLeewayInBlocks.toLong()))
-      .coerceAtLeast(BigInteger.ZERO).toULong()
-
-    val numOfValidFeeHistories = feeHistoriesRepository.getCachedNumOfFeeHistoriesFromBlockNumber()
-    val isEnoughData = numOfValidFeeHistories.toULong() >= minNumOfFeeHistoriesNeeded
-    if (!isEnoughData) {
-      log.warn(
-        "Not enough fee history data for gas price cap update: numOfValidFeeHistoriesInDb={}, " +
-          "minNumOfFeeHistoriesNeeded={}",
-        numOfValidFeeHistories,
-        minNumOfFeeHistoriesNeeded,
-      )
+  private fun getGasPriceCaps(
+    targetL2BlockNumber: Long,
+    capsProvider: (Instant) -> SafeFuture<GasPriceCaps?>,
+  ): SafeFuture<GasPriceCaps?> {
+    if (!config.enabled || !delegate.hasEnoughDataForGasPriceCapCalculation()) {
+      return SafeFuture.completedFuture(null)
     }
-    return isEnoughData
-  }
 
-  private fun getElapsedTimeSinceBlockTimestamp(blockTimestamp: Instant): Duration {
-    return (clock.now() - blockTimestamp).coerceAtLeast(Duration.ZERO)
-  }
-
-  private fun getTimeOfDayMultiplierForNow(timeOfDayMultipliers: TimeOfDayMultipliers): Double {
-    val dateTime = LocalDateTime.ofEpochSecond(clock.now().epochSeconds, 0, ZoneOffset.UTC)
-    val tdmKey = getTimeOfDayKey(dateTime.dayOfWeek, dateTime.hour)
-    return timeOfDayMultipliers[tdmKey]!!
-  }
-
-  private fun calculateGasPriceCapsHelper(targetL2BlockNumber: Long): SafeFuture<GasPriceCaps?> {
-    return if (isEnoughDataForGasPriceCapCalculation()) {
-      l2EthApiBlockClient.ethGetBlockByNumberTxHashes(targetL2BlockNumber.toBlockParameter())
-        .thenApply { it.timestamp }
-        .thenApply {
-          val targetL2BlockTimestamp = Instant.fromEpochSeconds(it.toLong())
-          val elapsedTimeSinceBlockTimestamp = getElapsedTimeSinceBlockTimestamp(targetL2BlockTimestamp)
-          val percentileGasFees = feeHistoriesRepository.getCachedPercentileGasFees()
-          val maxPriorityFeePerGasCap = gasPriceCapCalculator.calculateGasPriceCap(
-            adjustmentConstant = config.adjustmentConstant,
-            finalizationTargetMaxDelay = config.finalizationTargetMaxDelay,
-            historicGasPriceCap = percentileGasFees.percentileAvgReward,
-            elapsedTimeSinceBlockTimestamp = elapsedTimeSinceBlockTimestamp,
-            timeOfDayMultiplier = getTimeOfDayMultiplierForNow(config.timeOfDayMultipliers),
-          )
-          val maxBaseFeePerGasCap = gasPriceCapCalculator.calculateGasPriceCap(
-            adjustmentConstant = config.adjustmentConstant,
-            finalizationTargetMaxDelay = config.finalizationTargetMaxDelay,
-            historicGasPriceCap = percentileGasFees.percentileBaseFeePerGas,
-            elapsedTimeSinceBlockTimestamp = elapsedTimeSinceBlockTimestamp,
-            timeOfDayMultiplier = getTimeOfDayMultiplierForNow(config.timeOfDayMultipliers),
-          )
-          val maxFeePerBlobGasCap = gasPriceCapCalculator.calculateGasPriceCap(
-            adjustmentConstant = config.blobAdjustmentConstant,
-            finalizationTargetMaxDelay = config.finalizationTargetMaxDelay,
-            historicGasPriceCap = percentileGasFees.percentileBaseFeePerBlobGas,
-            elapsedTimeSinceBlockTimestamp = elapsedTimeSinceBlockTimestamp,
-          )
-          GasPriceCaps(
-            maxBaseFeePerGasCap = maxBaseFeePerGasCap,
-            maxPriorityFeePerGasCap = maxPriorityFeePerGasCap,
-            maxFeePerGasCap = maxPriorityFeePerGasCap + maxBaseFeePerGasCap,
-            maxFeePerBlobGasCap = maxFeePerBlobGasCap,
-          )
-        }.thenPeek { gasPriceCaps ->
-          log.debug(
-            "Calculated raw gas price caps: " +
-              "maxBaseFeePerGasCap={} GWei, maxPriorityFeePerGasCap={} GWei, " +
-              "maxFeePerGasCap={} GWei, maxFeePerBlobGasCap={} GWei, percentile={}",
-            gasPriceCaps.maxBaseFeePerGasCap?.toGWei(),
-            gasPriceCaps.maxPriorityFeePerGasCap.toGWei(),
-            gasPriceCaps.maxFeePerGasCap.toGWei(),
-            gasPriceCaps.maxFeePerBlobGasCap.toGWei(),
-            config.gasFeePercentile,
-          )
-        }.exceptionallyCompose { th ->
-          log.error(
-            "Gas price caps returned as null due to failure occurred: " +
-              "errorMessage={}",
-            th.message,
-            th,
-          )
-          SafeFuture.completedFuture(null)
-        }
-    } else {
-      SafeFuture.completedFuture(null)
-    }
-  }
-
-  private fun calculateGasPriceCaps(targetL2BlockNumber: Long): SafeFuture<GasPriceCaps?> {
-    return if (config.enabled) {
-      calculateGasPriceCapsHelper(
-        targetL2BlockNumber = targetL2BlockNumber,
-      )
-    } else {
-      SafeFuture.completedFuture(null)
-    }
+    return l2EthApiBlockClient
+      .ethGetBlockByNumberTxHashes(targetL2BlockNumber.toBlockParameter())
+      .thenCompose { block -> capsProvider(Instant.fromEpochSeconds(block.timestamp.toLong())) }
+      .exceptionally { th ->
+        log.warn(
+          "Gas price caps will default to null because it could not fetch block={}, errorMessage={}",
+          targetL2BlockNumber,
+          th.message,
+          th,
+        )
+        null
+      }
   }
 
   override fun getGasPriceCaps(targetL2BlockNumber: Long): SafeFuture<GasPriceCaps?> {
-    return calculateGasPriceCaps(targetL2BlockNumber)
+    return getGasPriceCaps(targetL2BlockNumber, delegate::getGasPriceCaps)
   }
 
   override fun getGasPriceCapsWithCoefficient(targetL2BlockNumber: Long): SafeFuture<GasPriceCaps?> {
-    return calculateGasPriceCaps(targetL2BlockNumber).thenApply {
-      it?.run {
-        val multipliedMaxBaseFeePerGasCap = it.maxBaseFeePerGasCap!!.toDouble() * config.gasPriceCapsCoefficient
-        val multipliedMaxPriorityFeePerGas = it.maxPriorityFeePerGasCap.toDouble() * config.gasPriceCapsCoefficient
-        val multipliedMaxFeePerBlobGasCap = (it.maxFeePerBlobGasCap.toDouble() * config.gasPriceCapsCoefficient)
-          .coerceAtLeast(1.0)
-        GasPriceCaps(
-          maxBaseFeePerGasCap = multipliedMaxBaseFeePerGasCap.toULong(),
-          maxPriorityFeePerGasCap = multipliedMaxPriorityFeePerGas.toULong(),
-          maxFeePerGasCap = (multipliedMaxBaseFeePerGasCap + multipliedMaxPriorityFeePerGas).toULong(),
-          maxFeePerBlobGasCap = multipliedMaxFeePerBlobGasCap.toULong(),
-        )
-      }
-    }
+    return getGasPriceCaps(targetL2BlockNumber, delegate::getGasPriceCapsWithCoefficient)
   }
 }

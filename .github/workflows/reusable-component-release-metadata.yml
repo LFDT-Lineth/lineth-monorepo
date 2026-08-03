@@ -10,6 +10,10 @@ on:
       include-path:
         description: 'newline-separated string to represent the "git-cliff --include-path filter"'
         type: string
+      scopes:
+        description: "Regex alternation of conventional-commit scopes to gate on (e.g. 'coordinator' or 'linea-besu|tracer|sequencer|deps|misc')"
+        required: true
+        type: string
       release_tag_suffix:
         description: "Custom release tag suffix, i.e. release tag would be releases/[component]/v[semver]-[suffix]"
         required: false
@@ -40,14 +44,14 @@ jobs:
       changelog: ${{ steps.changelog.outputs.changelog_content }}
     steps:
       - name: Checkout
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
           fetch-tags: true
           submodules: false
 
       - name: Install git-cliff
-        uses: taiki-e/install-action@5f57d6cb7cd20b14a8a27f522884c4bc8a187458 #(v2.75.19)
+        uses: taiki-e/install-action@bffeee26d4db9be238a4ea78d8826604ebcb594d #v2.82.5
         with:
           tool: git-cliff
 
@@ -57,5 +61,7 @@ jobs:
         with:
           component-name: ${{ inputs.component-name }}
           include-path: ${{ inputs.include-path }}
+          scopes: ${{ inputs.scopes }}
           release_tag_suffix: ${{ inputs.release_tag_suffix }}
           generate-changelog-with-next-tag-version: 'true'
+
