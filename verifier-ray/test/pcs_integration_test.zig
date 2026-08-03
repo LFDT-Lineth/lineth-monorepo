@@ -80,10 +80,29 @@ const spec = protocol.Spec{
     .total_round_coins = 1,
 };
 
+const stub_vanishing = vanishing.System{ .modules = &.{}, .total_witness_claims = 1 };
+
+// A single-vanishing, zero-quotient-share module: the PLONK identity
+// aggregate == Z_H(r) * Q(r) collapses to witness_claims[0] == 0 (ratio = 0
+// makes Q(r) = 0 regardless of r). Routes the same PCS-authenticated claim
+// `stub_vanishing` ignores, through a real quotient-identity check.
+const trivial_vanishing = vanishing.System{
+    .modules = &.{.{
+        .size = .{ .static = 1 },
+        .expressions = &.{.{ .column_claim = 0 }},
+        .buckets = &.{.{ .ratio = 0, .vanishings = &.{.{ .expression = 0 }}, .quotient_claim_offset = 0 }},
+        .witness_claim_offset = 0,
+        .merge_coin_index = 0,
+        .eval_coin_index = 0,
+    }},
+    .total_witness_claims = 1,
+};
+
 const Corruption = enum { none, round_root, claimed_value };
 
 fn runCase(
     allocator: std.mem.Allocator,
+    comptime vanishing_system: vanishing.System,
     comptime system: pcs.System,
     case: fixtures.IntegrationCase,
     corrupt: Corruption,
@@ -100,7 +119,7 @@ fn runCase(
     if (corrupt == .claimed_value) claimed_values[0] = claimed_values[0].add(ext.Ext.lift(field.Element.one()));
 
     const systems = verifier.Systems{
-        .vanishing = vanishing.System{ .modules = &.{}, .total_witness_claims = 1 },
+        .vanishing = vanishing_system,
         .pcs = system,
     };
 
@@ -121,7 +140,7 @@ test "verifier.verify authenticates a real PCS opening bound to a round commitme
     const allocator = arena.allocator();
 
     inline for (fixtures.integration_cases) |case| {
-        try runCase(allocator, case.system, case, .none);
+        try runCase(allocator, stub_vanishing, case.system, case, .none);
     }
 }
 
@@ -131,7 +150,7 @@ test "verifier.verify rejects a round commitment that does not match the PCS roo
     const allocator = arena.allocator();
 
     inline for (fixtures.integration_cases) |case| {
-        try std.testing.expectError(error.MerkleProofInvalid, runCase(allocator, case.system, case, .round_root));
+        try std.testing.expectError(error.MerkleProofInvalid, runCase(allocator, stub_vanishing, case.system, case, .round_root));
     }
 }
 
@@ -141,6 +160,21 @@ test "verifier.verify rejects a claimed value that does not match the opening" {
     const allocator = arena.allocator();
 
     inline for (fixtures.integration_cases) |case| {
-        try std.testing.expectError(error.BoundaryFinalSelfMismatch, runCase(allocator, case.system, case, .claimed_value));
+        try std.testing.expectError(error.BoundaryFinalSelfMismatch, runCase(allocator, stub_vanishing, case.system, case, .claimed_value));
+    }
+}
+
+test "vanishing checks a real identity against the PCS-authenticated claim, not a copy" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    inline for (fixtures.integration_cases) |case| {
+        if (std.mem.eql(u8, case.name, "d1_coexist_honest")) {
+            try runCase(allocator, trivial_vanishing, case.system, case, .none);
+        }
+        if (std.mem.eql(u8, case.name, "d1_coexist_bad_identity")) {
+            try std.testing.expectError(error.QuotientIdentityMismatch, runCase(allocator, trivial_vanishing, case.system, case, .none));
+        }
     }
 }

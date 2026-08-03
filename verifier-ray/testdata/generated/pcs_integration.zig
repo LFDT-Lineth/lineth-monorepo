@@ -19,4 +19,18 @@ pub const integration_cases = [_]IntegrationCase{
         .claimed_values = &.{.{ 42, 0, 0, 0, 0, 0 }},
         .proof = OpeningProofData{ .input_queries = &.{&.{InputTreeOpeningData{ .siblings = &.{.{ 1776363635, 1562328991, 1937913019, 892628523, 1834510746, 1476849768, 1757317129, 235973531 }}, .leaves = &.{ null, RowPairData{ RowOpeningData{ .base = &.{}, .ext = &.{.{ 42, 0, 0, 0, 0, 0 }} }, RowOpeningData{ .base = &.{}, .ext = &.{.{ 42, 0, 0, 0, 0, 0 }} } } } }}}, .fri_proof = FriProofData{ .round_roots = &.{}, .final_poly = &.{.{ 0, 0, 0, 0, 0, 0 }}, .running_queries = &.{&.{}} } },
     },
+    .{
+        .name = "d1_coexist_honest",
+        .system = pcs.System{ .log_inverse_rate = 2, .log_final_poly_size = 0, .num_queries = 1, .layout = &.{.{ .size_log2 = 0, .entries = &.{.{ .batch_idx = 0, .is_ext = true, .row_idx = 0, .claim_offset = 0, .shifts = &[_]usize{0} }} }}, .batch_roots = &.{.{ .round = 0 }}, .witness_map = &[_]usize{0}, .quotient_map = &.{} },
+        .round_root = .{ 1890487238, 325457829, 2108008314, 1359227396, 1984289192, 335995508, 1903042652, 629632950 },
+        .claimed_values = &.{.{ 0, 0, 0, 0, 0, 0 }},
+        .proof = OpeningProofData{ .input_queries = &.{&.{InputTreeOpeningData{ .siblings = &.{.{ 2066816440, 1251002353, 1739592788, 365120622, 445688483, 1162635539, 2126865213, 1891784736 }}, .leaves = &.{ null, RowPairData{ RowOpeningData{ .base = &.{}, .ext = &.{.{ 0, 0, 0, 0, 0, 0 }} }, RowOpeningData{ .base = &.{}, .ext = &.{.{ 0, 0, 0, 0, 0, 0 }} } } } }}}, .fri_proof = FriProofData{ .round_roots = &.{}, .final_poly = &.{.{ 0, 0, 0, 0, 0, 0 }}, .running_queries = &.{&.{}} } },
+    },
+    .{
+        .name = "d1_coexist_bad_identity",
+        .system = pcs.System{ .log_inverse_rate = 2, .log_final_poly_size = 0, .num_queries = 1, .layout = &.{.{ .size_log2 = 0, .entries = &.{.{ .batch_idx = 0, .is_ext = true, .row_idx = 0, .claim_offset = 0, .shifts = &[_]usize{0} }} }}, .batch_roots = &.{.{ .round = 0 }}, .witness_map = &[_]usize{0}, .quotient_map = &.{} },
+        .round_root = .{ 1359356923, 1343961434, 1716195209, 1611421885, 1097275288, 1339817559, 1269528399, 2053586652 },
+        .claimed_values = &.{.{ 1, 0, 0, 0, 0, 0 }},
+        .proof = OpeningProofData{ .input_queries = &.{&.{InputTreeOpeningData{ .siblings = &.{.{ 1105389298, 1507246482, 147444043, 279025887, 902331181, 1099171332, 786896050, 612199034 }}, .leaves = &.{ null, RowPairData{ RowOpeningData{ .base = &.{}, .ext = &.{.{ 1, 0, 0, 0, 0, 0 }} }, RowOpeningData{ .base = &.{}, .ext = &.{.{ 1, 0, 0, 0, 0, 0 }} } } } }}}, .fri_proof = FriProofData{ .round_roots = &.{}, .final_poly = &.{.{ 0, 0, 0, 0, 0, 0 }}, .running_queries = &.{&.{}} } },
+    },
 };

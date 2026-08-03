@@ -750,7 +750,7 @@ type integrationCaseData struct {
 	Proof         fri.OpeningProof
 }
 
-func buildD1RootedScenario() integrationCaseData {
+func buildD1RootedScenario(name string, witnessVal uint64) integrationCaseData {
 	params, err := fri.NewParams(2, 0, 1)
 	if err != nil {
 		panic(err)
@@ -758,10 +758,10 @@ func buildD1RootedScenario() integrationCaseData {
 
 	pcsInst, err := fri.NewPCS(params, pcsMakeEncoders(1, 4))
 	if err != nil {
-		panic(fmt.Sprintf("d1_rooted: NewPCS: %v", err))
+		panic(fmt.Sprintf("%s: NewPCS: %v", name, err))
 	}
 
-	witness := fri.Batch{fri.SizedTable{Ext: [][]field.Ext{{extLift(42)}}}}
+	witness := fri.Batch{fri.SizedTable{Ext: [][]field.Ext{{extLift(witnessVal)}}}}
 	shifts := fri.BatchShifts{fri.SizedShifts{Ext: [][]int{{0}}}}
 
 	committed := pcsInst.Commit(witness)
@@ -776,15 +776,15 @@ func buildD1RootedScenario() integrationCaseData {
 
 	claimed := computeClaims(witness, shifts, zeta)
 	if err := pcsInst.AddOpening(committed, zeta, shifts, claimed); err != nil {
-		panic(fmt.Sprintf("d1_rooted: AddOpening: %v", err))
+		panic(fmt.Sprintf("%s: AddOpening: %v", name, err))
 	}
 
 	state, err := pcsInst.NewProverState()
 	if err != nil {
-		panic(fmt.Sprintf("d1_rooted: NewProverState: %v", err))
+		panic(fmt.Sprintf("%s: NewProverState: %v", name, err))
 	}
 	for state.HasNext() {
-		panic("d1_rooted: expected D=1 (no folding rounds)")
+		panic(fmt.Sprintf("%s: expected D=1 (no folding rounds)", name))
 	}
 
 	// Mirrors pcs.deriveChallenges: the final round's challenge is squeezed
@@ -805,13 +805,13 @@ func buildD1RootedScenario() integrationCaseData {
 		Zeta:          zeta,
 		Challenges:    fri.Challenges{FoldAlphas: nil, QueryPositions: positions},
 	}, proof); err != nil {
-		panic(fmt.Sprintf("d1_rooted: self-check via pcs.Verify failed: %v", err))
+		panic(fmt.Sprintf("%s: self-check via pcs.Verify failed: %v", name, err))
 	}
 
 	layout := computeLayout([]fri.Shape{witness.Shape()}, []fri.BatchShifts{shifts})
 
 	return integrationCaseData{
-		Name:          "d1_rooted",
+		Name:          name,
 		Params:        params,
 		Layout:        layout,
 		RoundRoot:     root,
@@ -850,7 +850,16 @@ func writeIntegrationFixtures() error {
 	fmt.Fprintln(&out, "pub const IntegrationCase = struct { name: []const u8, system: pcs.System, round_root: [8]u32, claimed_values: []const [6]u32, proof: OpeningProofData };")
 	fmt.Fprintln(&out)
 
-	cases := []integrationCaseData{buildD1RootedScenario()}
+	// d1_coexist_honest / d1_coexist_bad_identity share a witness value of 0
+	// (resp. 1) so a trivial single-vanishing, zero-quotient-share vanishing
+	// module (aggregate == 0) accepts (resp. rejects): both are valid PCS
+	// openings for their own committed value, so only vanishing's own
+	// identity check tells them apart.
+	cases := []integrationCaseData{
+		buildD1RootedScenario("d1_rooted", 42),
+		buildD1RootedScenario("d1_coexist_honest", 0),
+		buildD1RootedScenario("d1_coexist_bad_identity", 1),
+	}
 	fmt.Fprintln(&out, "pub const integration_cases = [_]IntegrationCase{")
 	for _, c := range cases {
 		writeIntegrationCase(&out, c)
