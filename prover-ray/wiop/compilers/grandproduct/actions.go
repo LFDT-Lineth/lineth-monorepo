@@ -72,8 +72,8 @@ func (a *proverAction) Run(rt *wiop.Runtime) {
 // once. Panics on a zero denominator, since the β-randomisation is supposed to
 // make every denominator non-zero.
 func computePrefixProduct(rt *wiop.Runtime, zNum, zDen wiop.Expression, n int) []field.Ext {
-	num := evaluateAsExtVec(rt, zNum, n)
-	den := evaluateAsExtVec(rt, zDen, n)
+	num := wiop.EvaluateAsExtVec(rt, zNum, n)
+	den := wiop.EvaluateAsExtVec(rt, zDen, n)
 	invDen := field.BatchInvertExt(den)
 
 	z := make([]field.Ext, n)
@@ -89,52 +89,6 @@ func computePrefixProduct(rt *wiop.Runtime, zNum, zDen wiop.Expression, n int) [
 		z[i] = running
 	}
 	return z
-}
-
-// evaluateAsExtVec evaluates expr against the runtime and returns a length-n
-// extension-field slice. Scalar expressions are broadcast to every position.
-func evaluateAsExtVec(rt *wiop.Runtime, expr wiop.Expression, n int) []field.Ext {
-	out := make([]field.Ext, n)
-
-	if !expr.IsMultiValued() {
-		ext := genToExt(expr.EvaluateSingle(rt).Value)
-		for i := range out {
-			out[i] = ext
-		}
-		return out
-	}
-
-	cv := expr.EvaluateVector(rt)
-	plain := cv.Plain
-	if plain.IsBase() {
-		base := plain.AsBase()
-		copyLen := min(len(base), n)
-		for i := 0; i < copyLen; i++ {
-			out[i] = field.Lift(base[i])
-		}
-		pad := field.Lift(cv.Padding)
-		for i := copyLen; i < n; i++ {
-			out[i] = pad
-		}
-		return out
-	}
-
-	ext := plain.AsExt()
-	copyLen := min(len(ext), n)
-	copy(out[:copyLen], ext[:copyLen])
-	pad := field.Lift(cv.Padding)
-	for i := copyLen; i < n; i++ {
-		out[i] = pad
-	}
-	return out
-}
-
-// genToExt projects a [field.Gen] onto its extension representation.
-func genToExt(v field.Gen) field.Ext {
-	if v.IsBase() {
-		return field.Lift(v.AsBase())
-	}
-	return v.AsExt()
 }
 
 // FinalProductCheck asserts that the product of all Z endpoint openings equals
@@ -155,11 +109,11 @@ func (f *FinalProductCheck) Check(rt *wiop.Runtime) error {
 	var prod field.Ext
 	prod.SetOne()
 	for _, e := range f.Entries {
-		zFinal := genToExt(rt.GetCellValue(e.ZFinal))
+		zFinal := rt.GetCellValue(e.ZFinal).AsExt()
 		prod.Mul(&prod, &zFinal)
 	}
 
-	claimed := genToExt(rt.GetCellValue(f.GrandProduct.Result))
+	claimed := rt.GetCellValue(f.GrandProduct.Result).AsExt()
 	var diff field.Ext
 	diff.Sub(&prod, &claimed)
 	if !diff.IsZero() {

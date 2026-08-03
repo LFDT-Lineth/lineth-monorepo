@@ -93,7 +93,7 @@ func (t *mAssignmentTask) Run(rt *wiop.Runtime) {
 		// hashes[i] = cols[0][i] + α·cols[1][i] + …, then, in prepend mode,
 		// hashes[i] = head[i] + α·hashes[i] where head is the fragment's
 		// selector column (or the constant 1 for an unfiltered fragment).
-		// This matches [rlcExpression]'s convention so the prover-side hash
+		// This matches [wiop.RLCExpression]'s convention so the prover-side hash
 		// agrees with the symbolic RLC under the same scalar.
 		hashes := wiop.EvaluateRLCAsExt(rt, alpha, it.cols, n)
 		if t.prependOneOnAOk {

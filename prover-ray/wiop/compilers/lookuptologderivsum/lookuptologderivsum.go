@@ -458,7 +458,7 @@ func compileGroup(
 				bHead = wiop.NewConstantVector(it.module, field.One())
 			}
 		}
-		bRLC := rlcOfViews(alpha, bHead, it.cols)
+		bRLC := wiop.RLCOfViews(alpha, bHead, it.cols)
 
 		mCol := it.module.NewColumn(
 			gCtx.Childf("M-%d", frag),
@@ -479,7 +479,7 @@ func compileGroup(
 		if prependOnesToA {
 			sHead = wiop.NewConstantVector(inc.cols[0].Module(), field.One())
 		}
-		sRLC := rlcOfViews(alpha, sHead, inc.cols)
+		sRLC := wiop.RLCOfViews(alpha, sHead, inc.cols)
 		sDen := wiop.Add(gamma, sRLC)
 		// Numerator is the constant 1 broadcast over the A fragment's module
 		// so the fraction is vector-valued on the A side.
@@ -515,65 +515,6 @@ func ensureNextRound(sys *wiop.System, r *wiop.Round) *wiop.Round {
 		return next
 	}
 	return sys.NewRound()
-}
-
-// rlcOfViews builds the symbolic random linear combination
-//
-//	head + α·cols[0] + α²·cols[1] + …
-//
-// when head != nil, and
-//
-//	cols[0] + α·cols[1] + α²·cols[2] + …
-//
-// when head == nil. The effective width is len(cols) plus one when a head is
-// provided; when that effective width is 1, alpha must be nil and the single
-// term is returned directly.
-func rlcOfViews(alpha *wiop.CoinField, head wiop.Expression, cols []*wiop.ColumnView) wiop.Expression {
-	exprs := viewExprs(cols)
-	if head != nil {
-		exprs = append([]wiop.Expression{head}, exprs...)
-	}
-	return rlcExpression(alpha, exprs)
-}
-
-// rlcExpression returns exprs[0] + α·exprs[1] + α²·exprs[2] + … built as a
-// Horner-form chain
-//
-//	((…((exprs[n-1]·α + exprs[n-2])·α + exprs[n-3])·α + …)·α + exprs[0])
-//
-// so the resulting symbolic tree contains no explicit α² / α³ / … sub-trees
-// and uses n-1 multiplications instead of 2n-3. Matches the convention of
-// linea/prover/protocol/wizardutils.RandLinCombColSymbolic
-// (symbolic.NewPolyEval).
-//
-// When alpha is nil the slice must have exactly one element, in which case
-// that element is returned directly. Requires len(exprs) >= 1.
-func rlcExpression(alpha *wiop.CoinField, exprs []wiop.Expression) wiop.Expression {
-	if len(exprs) == 0 {
-		panic("wiop/compilers/lookuptologderivsum: rlcExpression requires at least one term")
-	}
-	if alpha == nil {
-		if len(exprs) != 1 {
-			panic("wiop/compilers/lookuptologderivsum: alpha is nil but width > 1")
-		}
-		return exprs[0]
-	}
-	alphaExpr := wiop.Expression(alpha)
-	acc := exprs[len(exprs)-1]
-	for i := len(exprs) - 2; i >= 0; i-- {
-		acc = wiop.Add(wiop.Mul(alphaExpr, acc), exprs[i])
-	}
-	return acc
-}
-
-// viewExprs lifts a slice of *ColumnView into the equivalent slice of
-// wiop.Expression so it can be passed to [rlcExpression].
-func viewExprs(cols []*wiop.ColumnView) []wiop.Expression {
-	out := make([]wiop.Expression, len(cols))
-	for i, cv := range cols {
-		out[i] = cv
-	}
-	return out
 }
 
 // groupRowLimitAction enforces, at runtime, that a single subgroup's summed row
