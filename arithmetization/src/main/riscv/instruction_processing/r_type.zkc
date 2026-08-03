@@ -42,7 +42,10 @@ include "../../lib/io/write_output.zkc"
 // treat register values as two's-complement integers.  Division and remainder
 // follow RISC-V semantics: division by zero returns −1 (or the dividend for REM),
 // and signed overflow (INT_MIN / −1) returns INT_MIN (or 0 for REM).
-fn process_R_type_instruction<registers, ram, keccak_state, poseidon2_state>(opcode:Opcode, instruction_parameters:u25) {
+fn process_R_type_instruction<registers, ram, keccak_state>(opcode:Opcode, instruction_parameters:u25,
+output_write_address:OutputAddress) ->
+(new_output_write_address:OutputAddress) {
+
     var funct7:Funct7
     var rs2:Register
     var rs1:Register

@@ -37,3 +37,6 @@ const B4:u7 = 72
 const C:u7 = 80
 const D:u7 = 88
 const PIB:u7 = 96
+
+// guest program output
+pub output guest_output(address:OutputAddress) -> (byte:u8)

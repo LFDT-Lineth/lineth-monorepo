@@ -13,7 +13,7 @@ include "utils/register_utils.zkc"
 include "memory.zkc"
 
 // TODO @Ghost
-fn main<registers, ram, keccak_state, poseidon2_state>() {
+fn main<registers, ram, keccak_state>() {
     var instruction:Instruction
     var clock_cycle:u32 = 0
     var entry_point:Address
