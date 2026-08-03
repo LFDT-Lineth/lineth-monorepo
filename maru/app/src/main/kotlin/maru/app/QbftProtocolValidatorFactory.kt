@@ -28,13 +28,14 @@ import maru.p2p.SealedBeaconBlockBroadcaster
 import maru.serialization.rlp.ForkAwareBlockHashing
 import maru.syncing.SyncStatusProvider
 import net.consensys.linea.metrics.MetricsFacade
+import org.hyperledger.besu.cryptoservices.NodeKey
 import org.hyperledger.besu.plugin.services.MetricsSystem
 import tech.pegasys.teku.ethereum.executionclient.web3j.Web3JClient
 import java.time.Clock
 
 class QbftProtocolValidatorFactory(
   private val qbftOptions: QbftConfig,
-  private val privateKeyBytes: ByteArray,
+  private val nodeKey: NodeKey,
   private val validatorELNodeEngineApiWeb3JClient: Web3JClient,
   private val followerELNodeEngineApiWeb3JClients: Map<String, Web3JClient>,
   private val metricsSystem: MetricsSystem,
@@ -90,7 +91,7 @@ class QbftProtocolValidatorFactory(
     val qbftValidatorFactory =
       QbftValidatorFactory(
         beaconChain = beaconChain,
-        privateKeyBytes = privateKeyBytes,
+        nodeKey = nodeKey,
         qbftOptions = qbftOptions,
         metricsSystem = metricsSystem,
         finalizationStateProvider = finalizationStateProvider,

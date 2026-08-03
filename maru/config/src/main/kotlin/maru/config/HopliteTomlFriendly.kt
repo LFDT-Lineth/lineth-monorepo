@@ -115,6 +115,8 @@ data class QbftOptionsDtoToml(
     example = "0x0000000000000000000000000000000000000000",
   )
   val feeRecipient: ByteArray,
+  val signerType: String = "local",
+  val signerName: String? = null,
 ) {
   fun toDomain(): QbftConfig =
     QbftConfig(
@@ -126,6 +128,7 @@ data class QbftOptionsDtoToml(
       futureMessageMaxDistance = futureMessageMaxDistance,
       futureMessagesLimit = futureMessagesLimit,
       feeRecipient = feeRecipient,
+      validatorSigner = ValidatorSignerConfig.fromConfig(signerType, signerName),
     )
 
   override fun equals(other: Any?): Boolean {
@@ -142,6 +145,8 @@ data class QbftOptionsDtoToml(
     if (roundExpiry != other.roundExpiry) return false
     if (roundExpiryCoefficient != other.roundExpiryCoefficient) return false
     if (!feeRecipient.contentEquals(other.feeRecipient)) return false
+    if (signerType != other.signerType) return false
+    if (signerName != other.signerName) return false
 
     return true
   }
@@ -155,6 +160,8 @@ data class QbftOptionsDtoToml(
     result = 31 * result + (roundExpiry?.hashCode() ?: 0)
     result = 31 * result + roundExpiryCoefficient.hashCode()
     result = 31 * result + feeRecipient.contentHashCode()
+    result = 31 * result + signerType.hashCode()
+    result = 31 * result + (signerName?.hashCode() ?: 0)
     return result
   }
 }

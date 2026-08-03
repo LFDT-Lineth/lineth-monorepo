@@ -50,7 +50,6 @@ import maru.p2p.SealedBeaconBlockHandler
 import maru.p2p.ValidationResult
 import maru.serialization.rlp.ForkAwareBlockHashing
 import maru.syncing.SyncStatusProvider
-import org.apache.tuweni.bytes.Bytes32
 import org.hyperledger.besu.consensus.common.bft.BftEventQueue
 import org.hyperledger.besu.consensus.common.bft.BftExecutors
 import org.hyperledger.besu.consensus.common.bft.BlockTimer
@@ -66,7 +65,6 @@ import org.hyperledger.besu.consensus.qbft.core.types.QbftMessage
 import org.hyperledger.besu.consensus.qbft.core.types.QbftMinedBlockObserver
 import org.hyperledger.besu.consensus.qbft.core.types.QbftNewChainHead
 import org.hyperledger.besu.consensus.qbft.core.validation.MessageValidatorFactory
-import org.hyperledger.besu.cryptoservices.KeyPairSecurityModule
 import org.hyperledger.besu.cryptoservices.NodeKey
 import org.hyperledger.besu.ethereum.core.Util
 import org.hyperledger.besu.plugin.services.MetricsSystem
@@ -77,7 +75,7 @@ import kotlin.time.Duration.Companion.seconds
 
 class QbftValidatorFactory(
   private val beaconChain: BeaconChain,
-  private val privateKeyBytes: ByteArray,
+  private val nodeKey: NodeKey,
   private val qbftOptions: QbftConfig,
   private val metricsSystem: MetricsSystem,
   private val finalizationStateProvider: FinalizationProvider,
@@ -104,14 +102,9 @@ class QbftValidatorFactory(
 ) : ProtocolFactory {
   override fun create(forkSpec: ForkSpec): Protocol {
     val protocolConfig = forkSpec.configuration as QbftConsensusConfig
-    val signatureAlgorithm = SecpCrypto.signatureAlgorithm
-    val privateKey = signatureAlgorithm.createPrivateKey(Bytes32.wrap(privateKeyBytes))
-    val keyPair = signatureAlgorithm.createKeyPair(privateKey)
-    val securityModule = KeyPairSecurityModule(keyPair)
-    val nodeKey = NodeKey(securityModule)
     val blockChain = QbftBlockchainAdapter(beaconChain)
 
-    val localAddress = Util.publicKeyToAddress(keyPair.publicKey)
+    val localAddress = Util.publicKeyToAddress(nodeKey.publicKey)
     val qbftProposerSelector = ProposerSelectorAdapter(beaconChain, ProposerSelectorImpl)
 
     val validatorProvider = StaticValidatorProvider(protocolConfig.validatorSet)

@@ -29,6 +29,7 @@ import maru.api.ChainDataProviderImpl
 import maru.config.MaruConfig
 import maru.config.P2PConfig
 import maru.config.SyncingConfig
+import maru.config.ValidatorSignerType
 import maru.consensus.DifficultyAwareQbftConfig
 import maru.consensus.ElFork
 import maru.consensus.ForksSchedule
@@ -37,6 +38,9 @@ import maru.consensus.StaticValidatorProvider
 import maru.consensus.blockimport.ElForkAwareBlockImporter
 import maru.consensus.state.FinalizationProvider
 import maru.consensus.state.InstantFinalizationProvider
+import maru.crypto.LocalValidatorSigner
+import maru.crypto.SecpCrypto
+import maru.crypto.toNodeKey
 import maru.database.BeaconChain
 import maru.database.P2PState
 import maru.database.kv.KvDatabaseFactory
@@ -110,7 +114,9 @@ interface MaruAppFactoryCreator {
   ): LongRunningCloseable
 }
 
-class MaruAppFactory : MaruAppFactoryCreator {
+class MaruAppFactory(
+  private val validatorSignerFactory: ValidatorSignerFactory = DefaultValidatorSignerFactory,
+) : MaruAppFactoryCreator {
   private val log = LogManager.getLogger(this.javaClass)
 
   override fun create(
@@ -327,12 +333,29 @@ class MaruAppFactory : MaruAppFactoryCreator {
           },
         )
 
+    val managedValidatorSigner =
+      config.qbft?.let {
+        when (it.validatorSigner.type) {
+          ValidatorSignerType.LOCAL ->
+            ManagedValidatorSigner(
+              LocalValidatorSigner(SecpCrypto.privateKeyBytesWithoutPrefix(privateKey)),
+            )
+
+          ValidatorSignerType.CUSTOM ->
+            validatorSignerFactory.create(it.validatorSigner)
+        }
+      }
+
+    val validatorNodeKey =
+      managedValidatorSigner?.signer?.toNodeKey()
+
     return MaruApp(
       config = config,
       beaconGenesisConfig = beaconGenesisConfig,
       clock = clock,
       p2pNetwork = p2pNetwork,
-      privateKeyProvider = { privateKey },
+      validatorNodeKey = validatorNodeKey,
+      managedValidatorSigner = managedValidatorSigner,
       finalizationProvider = finalizationProvider,
       metricsFacade = metricsFacade,
       vertx = vertx,

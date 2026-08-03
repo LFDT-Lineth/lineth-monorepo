@@ -13,6 +13,7 @@ import linea.kotlin.encodeHex
 import linea.timer.TimerFactory
 import maru.api.ApiServer
 import maru.config.MaruConfig
+import maru.config.ValidatorSignerType
 import maru.consensus.DifficultyAwareQbftConfig
 import maru.consensus.ForkSpec
 import maru.consensus.ForksSchedule
@@ -25,7 +26,6 @@ import maru.consensus.state.FinalizationProvider
 import maru.core.Protocol
 import maru.core.SealedBeaconBlock
 import maru.core.Validator
-import maru.crypto.SecpCrypto
 import maru.database.BeaconChain
 import maru.finalization.LineaFinalizationProvider
 import maru.metrics.MaruMetricsCategory
@@ -39,6 +39,8 @@ import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.vertx.ObservabilityServer
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
+import org.hyperledger.besu.cryptoservices.NodeKey
+import org.hyperledger.besu.ethereum.core.Util
 import org.hyperledger.besu.plugin.services.MetricsSystem
 import org.web3j.protocol.Web3j
 import tech.pegasys.teku.ethereum.executionclient.web3j.Web3JClient
@@ -56,7 +58,8 @@ class MaruApp(
   // This will only be used if config.p2pConfig is undefined
   val p2pNetwork: P2PNetwork,
   val beaconChain: BeaconChain,
-  private val privateKeyProvider: () -> ByteArray,
+  private val validatorNodeKey: NodeKey?,
+  private val managedValidatorSigner: ManagedValidatorSigner?,
   private val finalizationProvider: FinalizationProvider,
   private val vertx: Vertx,
   private val metricsFacade: MetricsFacade,
@@ -69,8 +72,6 @@ class MaruApp(
   private val blockHashing: ForkAwareBlockHashing,
 ) : LongRunningCloseable {
   private val log: Logger = LogManager.getLogger(this.javaClass)
-
-  private fun getPrivateKeyWithoutPrefix() = SecpCrypto.privateKeyBytesWithoutPrefix(privateKeyProvider())
 
   /**
    * Micrometer-based consensus metrics. Non-null when this node is a validator (config.qbft != null).
@@ -95,10 +96,21 @@ class MaruApp(
     if (config.qbft == null) {
       log.info("Qbft options are not defined. nodeRole=follower")
     } else {
-      val localValidator = SecpCrypto.privateKeyToValidator(getPrivateKeyWithoutPrefix())
-      log.info("Qbft options are defined. nodeRole=validator with address={}", localValidator.address.encodeHex())
-      // TODO: This may be not needed when we use dynamic validator set from a smart contract
-      warnIfValidatorIsNotInTheGenesis(localValidator)
+      checkNotNull(validatorNodeKey) { "Validator NodeKey is required when QBFT is configured" }
+      val validator =
+        Validator(
+          Util
+            .publicKeyToAddress(validatorNodeKey.publicKey)
+            .bytes
+            .toArray(),
+        )
+      log.info(
+        "Qbft options are defined. nodeRole=validator signerType={} signerName={} validatorAddress={}",
+        config.qbft!!.validatorSigner.type.name.lowercase(),
+        config.qbft!!.validatorSigner.name,
+        validator.address.encodeHex(),
+      )
+      validateValidatorIdentity(validator)
     }
 
     metricsFacade.createGauge(
@@ -157,7 +169,7 @@ class MaruApp(
       beaconGenesisConfig = beaconGenesisConfig,
       clock = clock,
       beaconChain = beaconChain,
-      privateKeyWithoutPrefix = getPrivateKeyWithoutPrefix(),
+      validatorNodeKey = validatorNodeKey,
       timerFactory = timerFactory,
     )
 
@@ -209,6 +221,7 @@ class MaruApp(
     p2pNetwork.close()
     vertx.close()
     protocolStarter.close()
+    managedValidatorSigner?.close()
     // close db last, otherwise other components may fail trying to save data
     beaconChain.close()
   }
@@ -239,14 +252,14 @@ class MaruApp(
     beaconGenesisConfig: ForksSchedule,
     clock: Clock,
     beaconChain: BeaconChain,
-    privateKeyWithoutPrefix: ByteArray,
+    validatorNodeKey: NodeKey?,
     timerFactory: TimerFactory,
   ): Protocol {
     val qbftFactory =
       if (config.qbft != null) {
         QbftProtocolValidatorFactory(
           qbftOptions = config.qbft!!,
-          privateKeyBytes = privateKeyWithoutPrefix,
+          nodeKey = checkNotNull(validatorNodeKey),
           validatorELNodeEngineApiWeb3JClient = validatorELNodeEngineApiWeb3JClient!!,
           followerELNodeEngineApiWeb3JClients = followerELNodeEngineApiWeb3JClients,
           metricsSystem = metricsSystem,
@@ -306,7 +319,7 @@ class MaruApp(
     return protocolStarter
   }
 
-  private fun warnIfValidatorIsNotInTheGenesis(localValidator: Validator) {
+  private fun validateValidatorIdentity(validator: Validator) {
     val validatorsFromAllForks: Set<Validator> =
       beaconGenesisConfig.forks
         .flatMap<ForkSpec, Validator> {
@@ -316,11 +329,18 @@ class MaruApp(
             else -> throw IllegalArgumentException("")
           }
         }.toSet()
-    if (!validatorsFromAllForks.contains(localValidator)) {
-      log.warn(
-        "localValidator={} isn't found in any of validatorSet-s in any of the Forks in the Genesis file!",
-        localValidator,
-      )
+    if (!validatorsFromAllForks.contains(validator)) {
+      if (config.qbft!!.validatorSigner.type == ValidatorSignerType.CUSTOM) {
+        throw IllegalArgumentException(
+          "Custom validator signer '${config.qbft!!.validatorSigner.name}' address " +
+            "${validator.address.encodeHex()} is not present in any configured validator set",
+        )
+      } else {
+        log.warn(
+          "localValidator={} isn't found in any of validatorSet-s in any of the Forks in the Genesis file!",
+          validator,
+        )
+      }
     }
   }
 }

@@ -18,7 +18,7 @@ sourceSets {
 
 dependencies {
   implementation(project(':maru:api'))
-  implementation(project(':maru:config'))
+  api(project(':maru:config'))
   implementation(project(':maru:consensus'))
   implementation(project(':maru:core'))
   implementation(project(':maru:executionlayer'))
@@ -39,6 +39,7 @@ dependencies {
   implementation project(':jvm-libs:generic:extensions:kotlin')
   implementation project(':jvm-libs:generic:extensions:futures')
   implementation project(':jvm-libs:linea:core:long-running-service')
+  api project(':jvm-libs:linea:core:signer-interfaces')
 
   // Previously inherited from maru's `maru.kotlin-application-conventions` plugin (which the
   // import dropped in favor of zkevm's lighter `lineth.kotlin-application-conventions`).
@@ -60,6 +61,8 @@ dependencies {
   implementation("org.hyperledger.besu.internal:besu-consensus-qbft-core")
   implementation("org.hyperledger.besu.internal:besu-metrics-core")
   implementation("org.hyperledger.besu.internal:besu-crypto-algorithms")
+  implementation("org.hyperledger.besu.internal:besu-crypto-services")
+  implementation("org.hyperledger.besu.internal:besu-ethereum-core")
   implementation("tech.pegasys.teku.internal:p2p:${libs.versions.teku.get()}")
   implementation("tech.pegasys.teku.internal:eth2:${libs.versions.teku.get()}")
   implementation ("io.consensys.protocols:discovery:${libs.versions.discovery.get()}")
