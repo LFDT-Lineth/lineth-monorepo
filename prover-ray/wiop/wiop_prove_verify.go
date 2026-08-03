@@ -55,6 +55,15 @@ type ProveOptions struct {
 	CheckUnreducedQueries bool
 }
 
+// ProveOptions are options for [System.Prove].
+type ProveOptions struct {
+	// CheckUnreducedQueries prompt the prover to run [Query.Check] on every
+	// query that has not yet been consumed by a compiler pass (i.e.
+	// [Query.IsReduced] returns false). This is helpful when debugging. Not
+	// needed in production.
+	CheckUnreducedQueries bool
+}
+
 // Prove runs the prover over every interactive round of sys and returns the
 // resulting [Proof].
 //
