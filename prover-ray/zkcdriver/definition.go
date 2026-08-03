@@ -213,7 +213,11 @@ func (s *schemaScanner) collectReferencedColumns() map[string]struct{} {
 
 // collectFromTerm recursively walks a constraint term and adds every column
 // access it finds to out. It mirrors the structure of castExpression.
-func (s *schemaScanner) collectFromTerm(modID schema.ModuleId, term air.Term[koalabear.Element], out map[string]struct{}) {
+func (s *schemaScanner) collectFromTerm(
+	modID schema.ModuleId,
+	term air.Term[koalabear.Element],
+	out map[string]struct{}) {
+
 	switch e := term.(type) {
 	case *air.Add[koalabear.Element]:
 		for _, arg := range e.Args {
