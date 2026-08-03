@@ -6,5 +6,3 @@ package zkcr5
 //
 // Source: riscv-guests/build_common/Makefile, IN_ORIGIN = 0x08800000.
 const DefaultINOrigin uint64 = 0x08800000
-
-// XXX: add test where we grep the source
