@@ -346,28 +346,37 @@ class MaruAppFactory(
         }
       }
 
-    val validatorNodeKey =
-      managedValidatorSigner?.signer?.toNodeKey()
+    try {
+      val validatorNodeKey =
+        managedValidatorSigner?.signer?.toNodeKey()
 
-    return MaruApp(
-      config = config,
-      beaconGenesisConfig = beaconGenesisConfig,
-      clock = clock,
-      p2pNetwork = p2pNetwork,
-      validatorNodeKey = validatorNodeKey,
-      managedValidatorSigner = managedValidatorSigner,
-      finalizationProvider = finalizationProvider,
-      metricsFacade = metricsFacade,
-      vertx = vertx,
-      beaconChain = kvDatabase,
-      metricsSystem = besuMetricsSystemAdapter,
-      l2EthWeb3j = l2EthWeb3j,
-      validatorELNodeEngineApiWeb3JClient = engineApiWeb3jClient,
-      apiServer = apiServer,
-      syncControllerManager = syncControllerImpl,
-      timerFactory = timerFactory,
-      blockHashing = blockHashing,
-    )
+      return MaruApp(
+        config = config,
+        beaconGenesisConfig = beaconGenesisConfig,
+        clock = clock,
+        p2pNetwork = p2pNetwork,
+        validatorNodeKey = validatorNodeKey,
+        managedValidatorSigner = managedValidatorSigner,
+        finalizationProvider = finalizationProvider,
+        metricsFacade = metricsFacade,
+        vertx = vertx,
+        beaconChain = kvDatabase,
+        metricsSystem = besuMetricsSystemAdapter,
+        l2EthWeb3j = l2EthWeb3j,
+        validatorELNodeEngineApiWeb3JClient = engineApiWeb3jClient,
+        apiServer = apiServer,
+        syncControllerManager = syncControllerImpl,
+        timerFactory = timerFactory,
+        blockHashing = blockHashing,
+      )
+    } catch (error: Throwable) {
+      try {
+        managedValidatorSigner?.close()
+      } catch (closeError: Throwable) {
+        error.addSuppressed(closeError)
+      }
+      throw error
+    }
   }
 
   companion object {
