@@ -33,7 +33,7 @@ For contract-level workflow diagrams see [`contracts/docs/workflows/`](../../con
 
 | Feature | Document | Key Contracts / Services |
 |---------|----------|--------------------------|
-| [Rollup](rollup.md) | Data submission, shnarf chaining, ZK finalization | `LineaRollup.sol`, `Validium.sol`, `PlonkVerifier*.sol` |
+| [Rollup](rollup.md) | Data submission, shnarf chaining, ZK finalization | `LinethRollup.sol`, `Validium.sol`, `PlonkVerifier*.sol` |
 | [Messaging](messaging.md) | L1/L2 message send, anchor, claim | `L1MessageService.sol`, `L2MessageService.sol`, Postman |
 | [Token Bridge](token-bridge.md) | ERC20 bridging, BridgedToken | `TokenBridge.sol`, `BridgedToken.sol` |
 

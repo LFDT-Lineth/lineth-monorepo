@@ -30,7 +30,7 @@ Liveness properties - must eventually hold, though timing is not guaranteed:
 | LidoStVaultYieldProviderFactory | `contracts/src/yield/LidoStVaultYieldProviderFactory.sol` | Factory for deploying yield providers |
 | YieldProviderBase | `contracts/src/yield/YieldProviderBase.sol` | Abstract yield provider interface |
 | ValidatorContainerProofVerifier | `contracts/src/yield/ValidatorContainerProofVerifier.sol` | Beacon chain validator proof verification |
-| LineaRollupYieldExtension | `contracts/src/rollup/LineaRollupYieldExtension.sol` | Integrates YieldManager into LineaRollup |
+| LinethRollupYieldExtension | `contracts/src/rollup/LinethRollupYieldExtension.sol` | Integrates YieldManager into LinethRollup |
 | SSZ/GIndex libs | `contracts/src/yield/libs/` | Beacon chain SSZ proof helpers |
 
 ## Architecture
@@ -110,7 +110,7 @@ Each `YIELD_REPORTING_MODE` cycle follows this sequence:
 5. **Resume staking** — Unpause staking if no deficit detected
 6. **Beacon chain withdrawals** — Queue validator withdrawal requests for any remaining deficit (fulfillment is asynchronous)
 
-The service interacts with: `YieldManager`, `LineaRollupYieldExtension`, `VaultHub`, `StakingVault`, `LazyOracle`, and the Lido accounting report API. Cycle-based yield reporting triggers every N cycles regardless of thresholds.
+The service interacts with: `YieldManager`, `LinethRollupYieldExtension`, `VaultHub`, `StakingVault`, `LazyOracle`, and the Lido accounting report API. Cycle-based yield reporting triggers every N cycles regardless of thresholds.
 
 ### Components
 
@@ -164,8 +164,8 @@ A standalone TypeScript service (`operations/native-yield/lido-governance-monito
 | `contracts/test/hardhat/yield/unit/LidoStVaultYieldProvider.yield.ts` | Hardhat | Staking, unstaking, yield reporting |
 | `contracts/test/hardhat/yield/unit/LidoStVaultYieldProviderFactory.ts` | Hardhat | Factory deployment |
 | `contracts/test/hardhat/yield/unit/ValidatorContainerProofVerifier.ts` | Hardhat | Beacon chain proof verification |
-| `contracts/test/hardhat/yield/unit/LineaRollupYieldExtension.ts` | Hardhat | Rollup↔YieldManager integration |
-| `contracts/test/hardhat/yield/integration/YieldManager.integration.ts` | Hardhat | Full stack: LineaRollup + YieldManager + LidoProvider |
+| `contracts/test/hardhat/yield/unit/LinethRollupYieldExtension.ts` | Hardhat | Rollup↔YieldManager integration |
+| `contracts/test/hardhat/yield/integration/YieldManager.integration.ts` | Hardhat | Full stack: LinethRollup + YieldManager + LidoProvider |
 | `operations/native-yield/automation-service/` unit tests | Jest | Operation mode processors, rebalance logic, metrics |
 | `operations/native-yield/lido-governance-monitor/` unit tests | Jest | Proposal lifecycle, fetchers, notification, AI analysis |
 

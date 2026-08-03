@@ -10,7 +10,7 @@ Linea is a zkEVM Layer 2 rollup that inherits Ethereum's security through zero-k
 ┌────────────────────────────────────────────────────────────────────────┐
 │                              ETHEREUM L1                               │
 │  ┌──────────────────┐  ┌─────────────────┐  ┌───────────────────────┐  │
-│  │   LineaRollup    │  │  PlonkVerifier  │  │   TokenBridge (L1)    │  │
+│  │   LinethRollup    │  │  PlonkVerifier  │  │   TokenBridge (L1)    │  │
 │  │  - Submit blobs  │  │  - Verify ZK    │  │  - Bridge ERC20       │  │
 │  │  - Finalize      │  │    proofs       │  │  - L1 → L2 deposits   │  │
 │  │  - Anchor msgs   │  │                 │  │  - L2 → L1 withdraws  │  │
@@ -104,7 +104,7 @@ Linea is a zkEVM Layer 2 rollup that inherits Ethereum's security through zero-k
 │  USER/CONTRACT            L1                    L2                     │
 │       │                    │                     │                     │
 │       │  1. sendMessage()  │                     │                     │
-│       │───────────────────▶│ LineaRollup        │                      │
+│       │───────────────────▶│ LinethRollup        │                      │
 │       │                    │    │                │                     │
 │       │                    │    │ 2. MessageSent │                     │
 │       │                    │    │    event       │                     │
@@ -152,7 +152,7 @@ Linea is a zkEVM Layer 2 rollup that inherits Ethereum's security through zero-k
 │       │                    │ │ updated      │    │                     │
 │       │                    │ └──────────────┘    │                     │
 │       │                    │        │            │                     │
-│       │                    │        │ 3. Coord.  │ LineaRollup         │
+│       │                    │        │ 3. Coord.  │ LinethRollup         │
 │       │                    │        │ submits    │    │                │
 │       │                    │        │ finalization                     │
 │       │                    │        └───────────▶│    │                │
@@ -181,7 +181,7 @@ Linea is a zkEVM Layer 2 rollup that inherits Ethereum's security through zero-k
 │                                                                        │
 │  USER LAYER             SDK LAYER             L1 CONTRACTS             │
 │  ┌─────────────┐       ┌─────────────┐       ┌──────────────┐          │
-│  │   dApps     │──────▶│  SDK Viem   │──────▶│ LineaRollup  │          │
+│  │   dApps     │──────▶│  SDK Viem   │──────▶│ LinethRollup  │          │
 │  │   Wallets   │──────▶│  SDK Ethers │──────▶│ PlonkVerifier│          │
 │  └─────────────┘              │              │ TokenBridge  │          │
 │                               │              └──────┬───────┘          │
@@ -361,7 +361,7 @@ State recovery allows rebuilding L2 state from L1 data:
 │  │ Plugin      │        │             │       │             │          │
 │  │             │        │ Fetch blob  │       │ Decompress  │          │
 │  │ Watch       │        │ data from   │       │ blob data   │          │
-│  │ LineaRollup │        │ L1/BlobScan │       │             │          │
+│  │ LinethRollup │        │ L1/BlobScan │       │             │          │
 │  │ events      │        │             │       │ Rebuild     │          │
 │  │             │        │             │       │ blocks      │          │
 │  └─────────────┘        └─────────────┘       │             │          │
@@ -380,8 +380,8 @@ Several terms appear throughout the diagrams and docs with distinct meanings:
 
 | Context | Meaning |
 |---------|---------|
-| **Coordinator: "Finalization"** | The coordinator submitting an aggregated ZK proof to `LineaRollup.finalizeBlocksWithProof()` on L1 |
-| **L1 contract: "Finalize"** | `LineaRollup` verifying the proof on-chain via `PlonkVerifier` and updating `currentFinalizedShnarf` |
+| **Coordinator: "Finalization"** | The coordinator submitting an aggregated ZK proof to `LinethRollup.finalizeBlocksWithProof()` on L1 |
+| **L1 contract: "Finalize"** | `LinethRollup` verifying the proof on-chain via `PlonkVerifier` and updating `currentFinalizedShnarf` |
 | **L2 block tag: "finalized"** | The Ethereum `finalized` block tag on L2, updated after L1 finalization is confirmed |
 
 ### "Anchoring"
@@ -389,7 +389,7 @@ Several terms appear throughout the diagrams and docs with distinct meanings:
 | Context | Meaning |
 |---------|---------|
 | **Coordinator: "Anchor msgs"** | The coordinator calling `L2MessageService.anchorL1L2MessageHashes()` on L2 to store L1→L2 message hashes, making them claimable on L2 |
-| **LineaRollup: "Anchor msgs"** | `LineaRollup` storing L2→L1 Merkle roots (`l2MerkleRoots`) during finalization, enabling L2 messages to be claimed on L1 |
+| **LinethRollup: "Anchor msgs"** | `LinethRollup` storing L2→L1 Merkle roots (`l2MerkleRoots`) during finalization, enabling L2 messages to be claimed on L1 |
 
 These two anchoring operations flow in opposite directions and should not be confused.
 

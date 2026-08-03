@@ -12,7 +12,7 @@
  *   L1_RPC_URL                          L1 JSON-RPC endpoint
  *   PRIVATE_KEY                         Private key for the L1 sender wallet
  *   FORCED_TRANSACTION_GATEWAY_ADDRESS  Deployed ForcedTransactionGateway address
- *   LINEA_ROLLUP_ADDRESS               Deployed LineaRollup proxy address
+ *   LINETH_ROLLUP_ADDRESS               Deployed LinethRollup proxy address
  *
  * ──────────────────────────────────────────────────────────────────────────────
  * OPTIONAL ENVIRONMENT VARIABLES
@@ -47,7 +47,7 @@
  *   L1_RPC_URL=http://localhost:8445 \
  *   PRIVATE_KEY=0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6 \
  *   FORCED_TRANSACTION_GATEWAY_ADDRESS=0x0165878A594ca255338adfa4d48449f69242Eb8F \
- *   LINEA_ROLLUP_ADDRESS=0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9 \
+ *   LINETH_ROLLUP_ADDRESS=0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9 \
  *   TX_TO=0x70997970C51812dc3A010C7d01b50e0d17dc79C8 \
  *   TX_GAS_LIMIT=21000 \
  *   TX_MAX_FEE_PER_GAS=1000000000 \
@@ -59,7 +59,7 @@
  *   L1_RPC_URL=http://localhost:8445 \
  *   PRIVATE_KEY=0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6 \
  *   FORCED_TRANSACTION_GATEWAY_ADDRESS=0x0165878A594ca255338adfa4d48449f69242Eb8F \
- *   LINEA_ROLLUP_ADDRESS=0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9 \
+ *   LINETH_ROLLUP_ADDRESS=0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9 \
  *   TX_DATA_FILE=./my-signed-tx.json \
  *   npx ts-node scripts/operational/forcedTransactions/sendForcedTransaction.ts
  */
@@ -70,7 +70,7 @@ import fs from "fs";
 import path from "path";
 
 import { getRequiredEnvVar } from "../../../common/helpers/environment";
-import { abi as LineaRollupV8Abi } from "../../../local-deployments-artifacts/dynamic-artifacts/LineaRollupV8.json";
+import { abi as LinethRollupV8Abi } from "../../../local-deployments-artifacts/dynamic-artifacts/LinethRollupV8.json";
 import { abi as ForcedTransactionGatewayAbi } from "../../../local-deployments-artifacts/static-artifacts/ForcedTransactionGateway.json";
 
 dotenv.config();
@@ -173,7 +173,7 @@ async function resolveLastFinalizedState(
   }
 
   const latestLog = logs[logs.length - 1];
-  const iface = new ethers.Interface(LineaRollupV8Abi);
+  const iface = new ethers.Interface(LinethRollupV8Abi);
   const parsed = iface.parseLog({ topics: latestLog.topics as string[], data: latestLog.data });
 
   if (!parsed) {
@@ -301,7 +301,7 @@ async function main() {
   const l1RpcUrl = getRequiredEnvVar("L1_RPC_URL");
   const privateKey = getRequiredEnvVar("PRIVATE_KEY");
   const gatewayAddress = getRequiredEnvVar("FORCED_TRANSACTION_GATEWAY_ADDRESS");
-  const rollupAddress = getRequiredEnvVar("LINEA_ROLLUP_ADDRESS");
+  const rollupAddress = getRequiredEnvVar("LINETH_ROLLUP_ADDRESS");
 
   const l2PrivateKey = process.env.L2_PRIVATE_KEY ?? privateKey;
   const txDataFile = process.env.TX_DATA_FILE;
@@ -313,7 +313,7 @@ async function main() {
   console.log(`Connected — l1RpcUrl=${l1RpcUrl}, chainId=${chainId}, l1Sender=${l1Wallet.address}`);
 
   // --- Contract Instances ---
-  const rollup = new ethers.Contract(rollupAddress, LineaRollupV8Abi, l1Wallet);
+  const rollup = new ethers.Contract(rollupAddress, LinethRollupV8Abi, l1Wallet);
   const gateway = new ethers.Contract(gatewayAddress, ForcedTransactionGatewayAbi, l1Wallet);
 
   // --- Resolve Last Finalized State ---
@@ -375,7 +375,7 @@ async function main() {
   console.log(`Transaction confirmed — block=${receipt!.blockNumber}, gasUsed=${receipt!.gasUsed}`);
 
   // Decode ForcedTransactionAdded events from the rollup
-  const rollupInterface = new ethers.Interface(LineaRollupV8Abi);
+  const rollupInterface = new ethers.Interface(LinethRollupV8Abi);
   for (const log of receipt!.logs) {
     try {
       const parsed = rollupInterface.parseLog({ topics: log.topics as string[], data: log.data });

@@ -1,8 +1,8 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { PRECOMPILES_ADDRESSES } from "contracts/common/constants";
 import {
-  LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES,
-  LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
+  LINETH_ROLLUP_V8_PAUSE_TYPES_ROLES,
+  LINETH_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
   VALIDIUM_PAUSE_TYPES_ROLES,
   VALIDIUM_UNPAUSE_TYPES_ROLES,
 } from "contracts/common/constants/pauseTypes";
@@ -11,7 +11,7 @@ import {
   CallForwardingProxy,
   ForcedTransactionGateway,
   Mimc,
-  TestLineaRollup,
+  TestLinethRollup,
   TestValidium,
 } from "contracts/typechain-types";
 import { toBeHex } from "ethers";
@@ -27,7 +27,7 @@ import {
   INITIAL_WITHDRAW_LIMIT,
   L2_BLOCK_DURATION_SECONDS,
   LINEA_MAINNET_CHAIN_ID,
-  LINEA_ROLLUP_INITIALIZE_SIGNATURE,
+  LINETH_ROLLUP_INITIALIZE_SIGNATURE,
   MAX_FORCED_TRANSACTION_GAS_LIMIT,
   MAX_INPUT_LENGTH_LIMIT,
   ONE_DAY_IN_SECONDS,
@@ -35,7 +35,7 @@ import {
   VALIDIUM_INITIALIZE_SIGNATURE,
 } from "../../common/constants";
 import { deployFromFactory, deployUpgradableFromFactory } from "../../common/deployment";
-import { LineaRollupInitializationData, PauseTypeRole } from "../../common/types";
+import { LinethRollupInitializationData, PauseTypeRole } from "../../common/types";
 
 export async function deployRevertingVerifier(scenario: bigint): Promise<string> {
   const revertingVerifierFactory = await ethers.getContractFactory("RevertingVerifier");
@@ -89,7 +89,7 @@ export async function deployMockYieldManager(): Promise<string> {
   return await mockYieldManager.getAddress();
 }
 
-export async function deployLineaRollupFixture() {
+export async function deployLinethRollupFixture() {
   const { securityCouncil, nonAuthorizedAccount } = await loadFixture(getAccountsFixture);
   const roleAddresses = await loadFixture(getRoleAddressesFixture);
 
@@ -100,7 +100,7 @@ export async function deployLineaRollupFixture() {
 
   const yieldManager = await deployMockYieldManager();
 
-  const initializationData: LineaRollupInitializationData = {
+  const initializationData: LinethRollupInitializationData = {
     initialStateRootHash: parentStateRootHash,
     initialL2BlockNumber: 0n,
     genesisTimestamp: DEFAULT_LAST_FINALIZED_TIMESTAMP,
@@ -108,23 +108,23 @@ export async function deployLineaRollupFixture() {
     rateLimitPeriodInSeconds: BigInt(ONE_DAY_IN_SECONDS),
     rateLimitAmountInWei: BigInt(INITIAL_WITHDRAW_LIMIT),
     roleAddresses,
-    pauseTypeRoles: LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES as unknown as PauseTypeRole[],
-    unpauseTypeRoles: LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES as unknown as PauseTypeRole[],
+    pauseTypeRoles: LINETH_ROLLUP_V8_PAUSE_TYPES_ROLES as unknown as PauseTypeRole[],
+    unpauseTypeRoles: LINETH_ROLLUP_V8_UNPAUSE_TYPES_ROLES as unknown as PauseTypeRole[],
     defaultAdmin: securityCouncil.address,
     shnarfProvider: ADDRESS_ZERO,
     addressFilter: await addressFilter.getAddress(),
   };
 
-  const lineaRollup = (await deployUpgradableFromFactory(
-    "TestLineaRollup",
+  const linethRollup = (await deployUpgradableFromFactory(
+    "TestLinethRollup",
     [initializationData, FALLBACK_OPERATOR_ADDRESS, yieldManager],
     {
-      initializer: LINEA_ROLLUP_INITIALIZE_SIGNATURE,
+      initializer: LINETH_ROLLUP_INITIALIZE_SIGNATURE,
       unsafeAllow: ["constructor", "incorrect-initializer-order"],
     },
-  )) as unknown as TestLineaRollup;
+  )) as unknown as TestLinethRollup;
 
-  return { verifier, lineaRollup, addressFilter, yieldManager, lineaRollupInitializationData: initializationData };
+  return { verifier, linethRollup, addressFilter, yieldManager, linethRollupInitializationData: initializationData };
 }
 
 export async function deployAddressFilter(securityCouncil: string, nonAuthorizedAccount: string[]) {
@@ -148,8 +148,8 @@ export async function deployMimcFixture() {
 
 export async function deployForcedTransactionGatewayFixture() {
   const { securityCouncil } = await loadFixture(getAccountsFixture);
-  const { lineaRollup, addressFilter, verifier, yieldManager, lineaRollupInitializationData } =
-    await loadFixture(deployLineaRollupFixture);
+  const { linethRollup, addressFilter, verifier, yieldManager, linethRollupInitializationData } =
+    await loadFixture(deployLinethRollupFixture);
   const { mimc } = await loadFixture(deployMimcFixture);
 
   const forcedTransactionGatewayFactory = await ethers.getContractFactory("ForcedTransactionGateway", {
@@ -157,7 +157,7 @@ export async function deployForcedTransactionGatewayFixture() {
   });
 
   const forcedTransactionGateway = (await forcedTransactionGatewayFactory.deploy(
-    await lineaRollup.getAddress(),
+    await linethRollup.getAddress(),
     LINEA_MAINNET_CHAIN_ID,
     THREE_DAYS_IN_SECONDS,
     MAX_FORCED_TRANSACTION_GAS_LIMIT,
@@ -171,13 +171,13 @@ export async function deployForcedTransactionGatewayFixture() {
   await forcedTransactionGateway.waitForDeployment();
 
   return {
-    lineaRollup,
+    linethRollup,
     forcedTransactionGateway,
     addressFilter,
     mimc,
     verifier,
     yieldManager,
-    lineaRollupInitializationData,
+    linethRollupInitializationData,
   };
 }
 

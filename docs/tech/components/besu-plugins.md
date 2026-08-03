@@ -50,7 +50,7 @@ Two main plugin groups:
 │  │  │ │ Monitor     │  │ Client      │  │                     │  │  │  │
 │  │  │ │             │  │             │  │ - Decompress blob   │  │  │  │
 │  │  │ │ Watch       │  │ Fetch blob  │  │ - Import blocks     │  │  │  │
-│  │  │ │ LineaRollup │  │ data        │  │ - Verify state      │  │  │  │
+│  │  │ │ LinethRollup │  │ data        │  │ - Verify state      │  │  │  │
 │  │  │ └─────────────┘  └─────────────┘  └─────────────────────┘  │  │  │
 │  │  │                                                            │  │  │
 │  │  └────────────────────────────────────────────────────────────┘  │  │
@@ -237,7 +237,7 @@ Rebuild L2 state by replaying L1 submission data.
 │  1. Monitor L1              2. Fetch Blobs           3. Import         │
 │  ┌─────────────────┐        ┌─────────────────┐      ┌──────────────┐  │
 │  │ Watch           │        │ BlobScan        │      │ Decompress   │  │
-│  │ LineaRollup     │───────▶│ Client          │─────▶│ & Deserialize│  │
+│  │ LinethRollup     │───────▶│ Client          │─────▶│ & Deserialize│  │
 │  │ DataSubmittedV3 │        │                 │      │              │  │
 │  │ events          │        │ GET /blobs/{id} │      │ Import via   │  │
 │  └─────────────────┘        └─────────────────┘      │ BlockImporter│  │

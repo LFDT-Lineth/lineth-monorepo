@@ -14,8 +14,8 @@ l2-endpoint = "http://sequencer:8545"
 genesis-state-root-hash = "__GENESIS_STATE_ROOT_HASH__"
 genesis-shnarf = "__GENESIS_SHNARF__"
 [protocol.l1]
-# Patched by deploy-contracts.sh after the L1 LineaRollup proxy is deployed.
-contract-address = "__LINEA_ROLLUP_ADDRESS__"
+# Patched by deploy-contracts.sh after the L1 LinethRollup proxy is deployed.
+contract-address = "__LINETH_ROLLUP_ADDRESS__"
 # Sepolia L1 block time. Phase-4 timing tuning may revisit.
 block-time = "PT12S"
 [protocol.l2]
@@ -23,7 +23,7 @@ block-time = "PT12S"
 # at nonce 0); the placeholder still gets patched at deploy time so any future
 # change to the L2 deployer key auto-propagates.
 contract-address = "__L2_MESSAGE_SERVICE_ADDRESS__"
-contract-deployment-block-number = __LINEA_ROLLUP_DEPLOY_BLOCK__
+contract-deployment-block-number = __LINETH_ROLLUP_DEPLOY_BLOCK__
 
 [conflation]
 disabled = false
