@@ -1,4 +1,4 @@
-export const LineaRollupAbi = [
+export const LinethRollupAbi = [
   {
     inputs: [
       { name: "_from", type: "address" },

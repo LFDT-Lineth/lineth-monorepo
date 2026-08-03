@@ -9,7 +9,7 @@ import {
   TEST_MESSAGE_HASH,
   TEST_TRANSACTION_HASH,
 } from "../../../../../utils/testing/constants";
-import { ViemLineaRollupLogClient } from "../ViemLineaRollupLogClient";
+import { ViemLinethRollupLogClient } from "../ViemLinethRollupLogClient";
 
 import type { PublicClient } from "viem";
 
@@ -17,16 +17,16 @@ jest.mock("viem/actions", () => ({
   getContractEvents: jest.fn(),
 }));
 
-describe("ViemLineaRollupLogClient", () => {
+describe("ViemLinethRollupLogClient", () => {
   let publicClient: ReturnType<typeof mock<PublicClient>>;
-  let logClient: ViemLineaRollupLogClient;
+  let logClient: ViemLinethRollupLogClient;
   const getContractEventsMock = viemActions.getContractEvents as jest.MockedFunction<
     typeof viemActions.getContractEvents
   >;
 
   beforeEach(() => {
     publicClient = mock<PublicClient>();
-    logClient = new ViemLineaRollupLogClient(publicClient, TEST_CONTRACT_ADDRESS_1);
+    logClient = new ViemLinethRollupLogClient(publicClient, TEST_CONTRACT_ADDRESS_1);
     getContractEventsMock.mockReset();
   });
 

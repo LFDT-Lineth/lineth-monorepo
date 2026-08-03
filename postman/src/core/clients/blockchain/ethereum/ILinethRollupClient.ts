@@ -8,7 +8,7 @@ import {
 } from "../../../services/contracts/IMessageServiceContract";
 import { Address, Hash, MessageSent, Overrides } from "../../../types";
 
-export interface ILineaRollupClient
+export interface ILinethRollupClient
   extends IMessageStatusReader, IMessageClaimer, IRateLimitChecker, IContractTransactionErrorParser {
   getMessageProof(messageHash: Hash): Promise<Proof>;
   estimateClaimGas(
