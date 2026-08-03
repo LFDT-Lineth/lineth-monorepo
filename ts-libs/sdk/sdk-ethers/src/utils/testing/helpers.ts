@@ -179,7 +179,7 @@ export function generateLinethRollupClient(
   l1Provider: Provider,
   l2Provider: LineaProvider,
   l1ContractAddress: string,
-  l2ContractAddres: string,
+  l2ContractAddress: string,
   mode: SDKMode,
   signer?: Signer,
   gasFeesOptions?: {
@@ -196,7 +196,7 @@ export function generateLinethRollupClient(
   merkleTreeService: MerkleTreeService;
 } {
   const linethRollupLogClient = new EthersLinethRollupLogClient(l1Provider, l1ContractAddress);
-  const l2MessageServiceLogClient = new EthersL2MessageServiceLogClient(l2Provider, l2ContractAddres);
+  const l2MessageServiceLogClient = new EthersL2MessageServiceLogClient(l2Provider, l2ContractAddress);
   const gasProvider = new DefaultGasProvider(l1Provider, {
     maxFeePerGasCap: gasFeesOptions?.maxFeePerGasCap ?? DEFAULT_MAX_FEE_PER_GAS_CAP,
     gasEstimationPercentile: gasFeesOptions?.gasEstimationPercentile ?? DEFAULT_GAS_ESTIMATION_PERCENTILE,
