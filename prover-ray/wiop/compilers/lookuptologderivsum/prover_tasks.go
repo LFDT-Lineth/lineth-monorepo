@@ -162,20 +162,24 @@ func (t *mAssignmentTask) Run(rt *wiop.Runtime) {
 // per row on top of the scalar multiplication.
 func scaleAddColumnInPlace(rt *wiop.Runtime, hashes []field.Ext, alpha field.Ext, cv *wiop.ColumnView) {
 	plain := cv.EvaluateVector(rt).Plain
-	if plain.IsBase() {
-		field.VecScaleAddExtBase(hashes, alpha, plain.AsBase())
-	} else {
-		field.VecScaleAddExtExt(hashes, alpha, plain.AsExt())
-	}
+	parallel.Execute(len(hashes), func(start, stop int) {
+		if plain.IsBase() {
+			field.VecScaleAddExtBase(hashes[start:stop], alpha, plain.AsBase()[start:stop])
+		} else {
+			field.VecScaleAddExtExt(hashes[start:stop], alpha, plain.AsExt()[start:stop])
+		}
+	})
 }
 
 // scaleAddOneInPlace sets hashes[i] = α·hashes[i] + 1 in a single pass; the
 // addition touches only the first base-field coordinate.
 func scaleAddOneInPlace(hashes []field.Ext, alpha field.Ext) {
-	for i := range hashes {
-		hashes[i].Mul(&hashes[i], &alpha)
-		hashes[i].B0.A0.Add(&hashes[i].B0.A0, &fieldOne)
-	}
+	parallel.Execute(len(hashes), func(start, stop int) {
+		for i := start; i < stop; i++ {
+			hashes[i].Mul(&hashes[i], &alpha)
+			hashes[i].B0.A0.Add(&hashes[i].B0.A0, &fieldOne)
+		}
+	})
 }
 
 // hashJoin performs the fragment-tagged radix-partitioned hash join. It

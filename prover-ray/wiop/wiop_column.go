@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 )
 
 // Module is a group of columns sharing the same domain size and padding
@@ -482,19 +483,40 @@ func (cv *ColumnView) EvaluateVectorAsExt(rt *Runtime, n int) []field.Ext {
 // field; the remaining columns are consumed un-lifted, so a base-field column
 // costs one base addition per row on top of the single extension
 // multiplication per column per row. Panics if cvs is empty.
+//
+// The fold is parallelized over row chunks: rows are independent, and each
+// worker runs the full per-column fold on its own range, so the accumulator
+// chunk stays cache-resident across columns.
 func EvaluateRLCAsExt(rt *Runtime, alpha field.Ext, cvs []*ColumnView, n int) []field.Ext {
 	if len(cvs) == 0 {
 		panic("wiop: EvaluateRLCAsExt called with no columns")
 	}
-	acc := cvs[len(cvs)-1].EvaluateVectorAsExt(rt, n)
-	for k := len(cvs) - 2; k >= 0; k-- {
-		plain := cvs[k].EvaluateVector(rt).Plain
-		if plain.IsBase() {
-			field.VecScaleAddExtBase(acc, alpha, plain.AsBase())
-		} else {
-			field.VecScaleAddExtExt(acc, alpha, plain.AsExt())
-		}
+
+	// Evaluate every column once, up front: EvaluateVector may touch shared
+	// runtime state, so it stays out of the parallel section.
+	plains := make([]field.Vec, len(cvs))
+	for k, cv := range cvs {
+		plains[k] = cv.EvaluateVector(rt).Plain
 	}
+
+	acc := make([]field.Ext, n)
+	parallel.Execute(n, func(start, stop int) {
+		last := plains[len(plains)-1]
+		if last.IsBase() {
+			for i, x := range last.AsBase()[start:stop] {
+				acc[start+i] = field.Lift(x)
+			}
+		} else {
+			copy(acc[start:stop], last.AsExt()[start:stop])
+		}
+		for k := len(plains) - 2; k >= 0; k-- {
+			if plains[k].IsBase() {
+				field.VecScaleAddExtBase(acc[start:stop], alpha, plains[k].AsBase()[start:stop])
+			} else {
+				field.VecScaleAddExtExt(acc[start:stop], alpha, plains[k].AsExt()[start:stop])
+			}
+		}
+	})
 	return acc
 }
 
