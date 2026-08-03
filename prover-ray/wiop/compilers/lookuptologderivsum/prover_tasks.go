@@ -86,10 +86,10 @@ func (t *mAssignmentTask) Run(rt *wiop.Runtime) {
 		n := it.module.RuntimeSize(rt)
 		mValues[frag] = make([]field.Element, n)
 
-		bColExt := evaluateVecsAsExt(rt, it.cols, n)
+		bColExt := wiop.EvaluateVectorsAsExt(rt, it.cols, n)
 		var bSelectorExt []field.Ext
 		if it.selector != nil {
-			bSelectorExt = evaluateColumnViewAsExt(rt, it.selector, n)
+			bSelectorExt = it.selector.EvaluateVectorAsExt(rt, n)
 		}
 
 		for i := 0; i < n; i++ {
@@ -108,10 +108,10 @@ func (t *mAssignmentTask) Run(rt *wiop.Runtime) {
 	}
 	for aFrag, inc := range t.included {
 		an := inc.cols[0].Module().RuntimeSize(rt)
-		aColExt := evaluateVecsAsExt(rt, inc.cols, an)
+		aColExt := wiop.EvaluateVectorsAsExt(rt, inc.cols, an)
 		var aSelectorExt []field.Ext
 		if inc.selector != nil {
-			aSelectorExt = evaluateColumnViewAsExt(rt, inc.selector, an)
+			aSelectorExt = inc.selector.EvaluateVectorAsExt(rt, an)
 		}
 
 		for j := 0; j < an; j++ {
@@ -271,53 +271,4 @@ func rowHash(alpha field.Ext, head field.Ext, usePrepend bool, cols [][]field.Ex
 		}
 	}
 	return acc
-}
-
-// evaluateVecsAsExt evaluates each column view as a length-n extension-field
-// vector, lifting base-field columns when necessary.
-func evaluateVecsAsExt(rt *wiop.Runtime, cvs []*wiop.ColumnView, n int) [][]field.Ext {
-	out := make([][]field.Ext, len(cvs))
-	for i, cv := range cvs {
-		out[i] = evaluateColumnViewAsExt(rt, cv, n)
-	}
-	return out
-}
-
-// evaluateColumnViewAsExt is like cv.EvaluateVector but always returns a
-// length-n []field.Ext. Base-field columns are lifted; extension columns
-// are copied as-is.
-func evaluateColumnViewAsExt(rt *wiop.Runtime, cv *wiop.ColumnView, n int) []field.Ext {
-	cvData := cv.EvaluateVector(rt)
-	out := make([]field.Ext, n)
-	plain := cvData.Plain
-	if plain.IsBase() {
-		base := plain.AsBase()
-		copyLen := len(base)
-		if copyLen > n {
-			copyLen = n
-		}
-		for i := 0; i < copyLen; i++ {
-			out[i] = field.Lift(base[i])
-		}
-		if copyLen < n {
-			pad := field.Lift(cvData.Padding)
-			for i := copyLen; i < n; i++ {
-				out[i] = pad
-			}
-		}
-		return out
-	}
-	ext := plain.AsExt()
-	copyLen := len(ext)
-	if copyLen > n {
-		copyLen = n
-	}
-	copy(out[:copyLen], ext[:copyLen])
-	if copyLen < n {
-		pad := field.Lift(cvData.Padding)
-		for i := copyLen; i < n; i++ {
-			out[i] = pad
-		}
-	}
-	return out
 }

@@ -356,6 +356,56 @@ func (cv *ColumnView) EvaluateVector(rt *Runtime) ConcreteVector {
 	}
 }
 
+// EvaluateVectorAsExt is like EvaluateVector but always returns a length-n
+// []field.Ext. Base-field columns are lifted; extension columns are copied
+// as-is. If the evaluated vector is shorter than n, the remainder is filled
+// with the lifted padding value.
+func (cv *ColumnView) EvaluateVectorAsExt(rt *Runtime, n int) []field.Ext {
+	cvData := cv.EvaluateVector(rt)
+	out := make([]field.Ext, n)
+	plain := cvData.Plain
+	if plain.IsBase() {
+		base := plain.AsBase()
+		copyLen := len(base)
+		if copyLen > n {
+			copyLen = n
+		}
+		for i := 0; i < copyLen; i++ {
+			out[i] = field.Lift(base[i])
+		}
+		if copyLen < n {
+			pad := field.Lift(cvData.Padding)
+			for i := copyLen; i < n; i++ {
+				out[i] = pad
+			}
+		}
+		return out
+	}
+	ext := plain.AsExt()
+	copyLen := len(ext)
+	if copyLen > n {
+		copyLen = n
+	}
+	copy(out[:copyLen], ext[:copyLen])
+	if copyLen < n {
+		pad := field.Lift(cvData.Padding)
+		for i := copyLen; i < n; i++ {
+			out[i] = pad
+		}
+	}
+	return out
+}
+
+// EvaluateVectorsAsExt evaluates each column view as a length-n
+// extension-field vector via [ColumnView.EvaluateVectorAsExt].
+func EvaluateVectorsAsExt(rt *Runtime, cvs []*ColumnView, n int) [][]field.Ext {
+	out := make([][]field.Ext, len(cvs))
+	for i, cv := range cvs {
+		out[i] = cv.EvaluateVectorAsExt(rt, n)
+	}
+	return out
+}
+
 // EvaluateSingle implements [Expression]. Panics unconditionally: a column
 // view is vector-valued and produces no scalar. Check IsMultiValued() before
 // calling EvaluateSingle.
