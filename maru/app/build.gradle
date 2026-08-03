@@ -100,16 +100,19 @@ application {
 
 jar {
   archiveBaseName = 'maru'
+  // Compute Class-Path lazily via a Provider so runtimeClasspath is resolved only when the
+  // jar task actually runs (execution phase), never during configuration. Resolving it eagerly
+  // here (e.g. `.collect {}`) would force Besu dependency resolution on every invocation —
+  // including `clean` — which is what previously dragged an on-demand Besu build into a clean.
+  def classPathAttribute = configurations.runtimeClasspath.elements.map { locations ->
+    locations
+        .collect { it.asFile.name }
+        .findAll { it.endsWith('.jar') }
+        .join(' ')
+  }
   manifest {
     attributes(
-        'Class-Path': project.configurations.runtimeClasspath
-        .collect {
-          it.getName()
-        }
-        .findAll {
-          it.endsWith('jar')
-        }
-        .join(' '),
+        'Class-Path': classPathAttribute,
         'Main-Class': 'maru.app.CliEntrypoint',
         'Multi-Release': 'true'
         )
