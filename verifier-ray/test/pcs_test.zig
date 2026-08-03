@@ -239,7 +239,7 @@ test "deriveChallenges depends on the absorbed transcript state" {
 const recon_system = pcs.System{
     .envelope_params = .{ .log_codeword_size = 6, .log_plaintext_size = 5, .num_queries = 1 },
     .columns = &.{
-        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = 0 }, .shifts = &[_]isize{0} },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 2 } }, .shifts = &[_]isize{0} },
         .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 1 } },
         .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0} },
     },
@@ -315,6 +315,7 @@ test "reconstruct: same System, LARGER dynamic size changes bundle + top_size" {
 test "reconstruct: rejects non-power-of-two and missing dynamic sizes" {
     try std.testing.expectError(error.NonPowerOfTwoModuleSize, pcs.reconstruct(recon_system, &[_]usize{6}));
     try std.testing.expectError(error.MissingDynamicModuleSize, pcs.reconstruct(recon_system, &.{}));
+    try std.testing.expectError(error.DynamicModuleSizeBelowMinimum, pcs.reconstruct(recon_system, &[_]usize{2}));
 }
 
 test "routeInputRoots follows input-opening order as dynamic sizes change" {

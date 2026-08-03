@@ -748,7 +748,7 @@ const verify_case_5_pcs_quotient_map = [_]pcs.ClaimRef{.{ .col_decl_idx = 1, .sh
 const verify_case_5_pcs_batch_roots = [_]pcs.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
 pub const verify_case_5_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 1 },
-    .columns = &.{ .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = 0 }, .shifts = &[_]isize{ 0, -1, -2 } }, .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = 0 }, .shifts = &[_]isize{0} } },
+    .columns = &.{ .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 2 } }, .shifts = &[_]isize{ 0, -1, -2 } }, .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts = &[_]isize{0} } },
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -2778,7 +2778,7 @@ const verify_case_20_pcs_quotient_map = [_]pcs.ClaimRef{.{ .col_decl_idx = 1, .s
 const verify_case_20_pcs_batch_roots = [_]pcs.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
 pub const verify_case_20_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 1 },
-    .columns = &.{ .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = 0 }, .shifts = &[_]isize{ 0, -1 } }, .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = 0 }, .shifts = &[_]isize{0} } },
+    .columns = &.{ .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 1 } }, .shifts = &[_]isize{ 0, -1 } }, .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts = &[_]isize{0} } },
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -3764,7 +3764,7 @@ const verify_case_27_pcs_quotient_map = [_]pcs.ClaimRef{.{ .col_decl_idx = 1, .s
 const verify_case_27_pcs_batch_roots = [_]pcs.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
 pub const verify_case_27_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 1 },
-    .columns = &.{ .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = 0 }, .shifts = &[_]isize{0} }, .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = 0 }, .shifts = &[_]isize{0} } },
+    .columns = &.{ .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts = &[_]isize{0} }, .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts = &[_]isize{0} } },
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -4038,7 +4038,7 @@ const verify_case_29_pcs_quotient_map = [_]pcs.ClaimRef{.{ .col_decl_idx = 1, .s
 const verify_case_29_pcs_batch_roots = [_]pcs.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
 pub const verify_case_29_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 1 },
-    .columns = &.{ .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = 0 }, .shifts = &[_]isize{ 0, -1, -2 } }, .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = 0 }, .shifts = &[_]isize{0} } },
+    .columns = &.{ .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 2 } }, .shifts = &[_]isize{ 0, -1, -2 } }, .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts = &[_]isize{0} } },
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,
@@ -4192,7 +4192,7 @@ const verify_case_30_pcs_quotient_map = [_]pcs.ClaimRef{ .{ .col_decl_idx = 2, .
 const verify_case_30_pcs_batch_roots = [_]pcs.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
 pub const verify_case_30_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 1 },
-    .columns = &.{ .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = 0 }, .shifts = &[_]isize{ 0, -1, -2 } }, .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = 1 }, .shifts = &[_]isize{ 0, -1, -2 } }, .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = 0 }, .shifts = &[_]isize{0} }, .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = 1 }, .shifts = &[_]isize{0} } },
+    .columns = &.{ .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 2 } }, .shifts = &[_]isize{ 0, -1, -2 } }, .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 1, .min_size_log2 = 2 } }, .shifts = &[_]isize{ 0, -1, -2 } }, .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts = &[_]isize{0} }, .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 1, .min_size_log2 = 0 } }, .shifts = &[_]isize{0} } },
     .num_batches = 2,
     .max_entries = 4,
     .max_size_log2 = 22,
@@ -10686,7 +10686,7 @@ const verify_case_63_pcs_quotient_map = [_]pcs.ClaimRef{.{ .col_decl_idx = 1, .s
 const verify_case_63_pcs_batch_roots = [_]pcs.BatchRoot{ .{ .round = 0 }, .{ .round = 1 } };
 pub const verify_case_63_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 1 },
-    .columns = &.{ .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = 0 }, .shifts = &[_]isize{0} }, .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = 0 }, .shifts = &[_]isize{0} } },
+    .columns = &.{ .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts = &[_]isize{0} }, .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts = &[_]isize{0} } },
     .num_batches = 2,
     .max_entries = 2,
     .max_size_log2 = 22,

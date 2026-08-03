@@ -2,6 +2,7 @@ package codegen
 
 import (
 	"fmt"
+	"math/bits"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fri"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
@@ -86,16 +87,21 @@ type PcsSystem struct {
 // PcsColumnDesc is one committed column in prover DECLARATION order (the engine's
 // `pcs.ColumnDesc`). Its Size is either a static comptime size_log2 (a
 // static-module column) or a DynamicIndex into module_sizes (a dynamic-module
-// column, whose size varies per proof). The verifier reconstructs each column's
-// bundle / position / entry index from these + module_sizes.
+// column, whose size varies per proof). Dynamic columns also carry the minimum
+// runtime size_log2 the raw shift schedule is valid for. The verifier
+// reconstructs each column's bundle / position / entry index from these +
+// module_sizes.
 type PcsColumnDesc struct {
 	BatchIdx int
 	IsExt    bool
 	// IsDynamic selects the Size source: when true, DynamicIndex names the
-	// module_sizes slot; when false, SizeLog2 is the fixed static size.
-	IsDynamic    bool
-	SizeLog2     int
-	DynamicIndex int
+	// module_sizes slot and DynamicMinSizeLog2 is the smallest runtime size_log2
+	// this raw shift schedule is valid for; when false, SizeLog2 is the fixed
+	// static size.
+	IsDynamic          bool
+	SizeLog2           int
+	DynamicIndex       int
+	DynamicMinSizeLog2 int
 	// Shifts is the size-independent opening schedule of this column (normalized
 	// shifts, in the slot order the claim maps' Shift references).
 	Shifts []int
@@ -150,18 +156,66 @@ type pcsLocWithBatch struct {
 //     RAW offset and lets the verifier normalize it mod the RUNTIME size.
 //     omega_N^(offset mod N) == omega_N^offset, so the reconstructed point
 //     matches the prover's at every size.
-//
-// Returns isDynamic, the shift the schedule stores, and the normalized shift
-// (equal to shift when isDynamic is false; callers use it to detect aliasing
-// dynamic offsets, since dedup by raw offset can't reproduce prover-ray's
-// dedup-by-normalized-shift).
-func pcsShiftFor(cv *wiop.ColumnView, loc pcscompiler.ColumnLocation) (isDynamic bool, shift, normShift int) {
-	size := 1 << loc.SizeID
-	normShift = ((cv.ShiftingOffset % size) + size) % size
+func pcsShiftFor(cv *wiop.ColumnView, loc pcscompiler.ColumnLocation) (isDynamic bool, shift int) {
 	if cv.Column.Module != nil && cv.Column.Module.IsDynamic() {
-		return true, cv.ShiftingOffset, normShift
+		return true, cv.ShiftingOffset
 	}
-	return false, normShift, normShift
+	size := 1 << loc.SizeID
+	return false, ((cv.ShiftingOffset % size) + size) % size
+}
+
+// pcsDynamicMinSizeLog2 returns the smallest runtime size_log2 a dynamic
+// column's RAW shift schedule is valid for. If two distinct offsets differ by a
+// multiple of 2^s, they alias at every size <= 2^s, so the minimum safe size is
+// one bit larger than the largest shared power-of-two divisor across all offset
+// pairs. Size 1 (s=0) is included because the verifier currently accepts
+// module_sizes[idx] == 1: on that one-row domain the prover deduplicates every
+// raw shift to the same opening, so a baked schedule with multiple distinct raw
+// shifts would still diverge from an honest proof there.
+//
+// This must be checked over the FULL size range, not just the size the codegen
+// happened to prove at: shifts that are distinct at one size can collide at a
+// smaller one the SAME module is free to take in production. Aliasing is not
+// merely a completeness gap — reconstructQueryValueAt's DEEP-quotient sum walks
+// every shift in a column's schedule and adds one term per shift; if two raw
+// shifts alias mod the runtime size, shiftedPoint(size_log2, shift, zeta) is
+// IDENTICAL for both (since omega_N^a == omega_N^b whenever a == b mod N), so
+// the sum double-counts that term. prover-ray's own pipeline never observes
+// this: it dedups by normalized shift before opening (recoverBatchClaims),
+// producing exactly one claim, so the two claims baked here can never both be
+// supplied correctly by an honest prover at an aliasing size — there is no
+// valid completion, only rejection.
+func pcsDynamicMinSizeLog2(colPath string, shifts []int, maxSizeLog2 int) (int, error) {
+	minSizeLog2 := 0
+	var (
+		worstA int
+		worstB int
+	)
+	for i := 0; i < len(shifts); i++ {
+		for j := i + 1; j < len(shifts); j++ {
+			a, b := shifts[i], shifts[j]
+			if a == b {
+				continue // exact duplicates are deduplicated earlier, not aliases
+			}
+			diff := a - b
+			if diff < 0 {
+				diff = -diff
+			}
+			required := bits.TrailingZeros(uint(diff)) + 1
+			if required > minSizeLog2 {
+				minSizeLog2 = required
+				worstA, worstB = a, b
+			}
+		}
+	}
+	if minSizeLog2 > maxSizeLog2 {
+		return 0, fmt.Errorf(
+			"codegen: BuildPcsSystem: dynamic column %q opens at offsets %d and %d that require "+
+				"runtime size >= %d, but the verifier envelope only supports sizes up to %d; no "+
+				"supported dynamic size can represent this raw shift schedule",
+			colPath, worstA, worstB, 1<<minSizeLog2, 1<<maxSizeLog2)
+	}
+	return minSizeLog2, nil
 }
 
 // BuildPcsSystem extracts the FRI/PCS System from a compiled, proven protocol.
@@ -223,8 +277,9 @@ func BuildPcsSystem(sys *wiop.System, rt *wiop.Runtime, routing CoinRouting) (Pc
 	shiftOrder := map[pcsEntryKey][]int{}
 	seen := map[pcsEntryKey]map[int]bool{}
 	// normSeen[key][normalizedShift] = the raw offset that produced it, used to
-	// detect dynamic-column shift aliasing (two raw offsets congruent mod the
-	// size) that prover-ray dedups but the size-independent schedule cannot.
+	// detect dynamic-column shift aliasing at the CODEGEN runtime size. Even with
+	// min-size metadata, the proof we are extracting from must itself be
+	// representable by the baked raw schedule.
 	normSeen := map[pcsEntryKey]map[int]int{}
 	// claimValues[key][shift] is the runtime claimed evaluation for that opened
 	// (column, shift) — captured in the same dedup pass so EntryClaims can be
@@ -237,17 +292,9 @@ func BuildPcsSystem(sys *wiop.System, rt *wiop.Runtime, routing CoinRouting) (Pc
 			return fmt.Errorf("codegen: BuildPcsSystem: opened column %q not in any committed batch",
 				cv.Column.Context.Path())
 		}
-		// SOUNDNESS/COMPLETENESS GUARD (dynamic columns): prover-ray dedups openings
-		// by NORMALIZED shift (mod the runtime size), but a dynamic column's
-		// schedule here is deduped by RAW offset (see pcsShiftFor). If two of a
-		// dynamic column's raw offsets alias — i.e. are congruent mod the size —
-		// the prover collapses them to one opening while the raw schedule would
-		// keep two slots, so the verifier would expect one more claim than the
-		// prover produced and double-count the DEEP quotient. We CANNOT reproduce
-		// the prover's per-proof (runtime-size) dedup from a size-independent
-		// schedule, so we reject it at codegen rather than emit a System that
-		// silently diverges.
-		isDynamic, shift, normShift := pcsShiftFor(cv, lb.loc)
+		isDynamic, shift := pcsShiftFor(cv, lb.loc)
+		size := 1 << lb.loc.SizeID
+		normShift := ((cv.ShiftingOffset % size) + size) % size
 		key := pcsEntryKey{batchIdx: lb.batchIdx, sizeLog2: lb.loc.SizeID, isExt: lb.loc.IsExt, position: lb.loc.Position}
 		if seen[key] == nil {
 			seen[key] = map[int]bool{}
@@ -255,15 +302,13 @@ func BuildPcsSystem(sys *wiop.System, rt *wiop.Runtime, routing CoinRouting) (Pc
 			normSeen[key] = map[int]int{}
 		}
 		if isDynamic {
-			// Reject aliasing: a previously-recorded raw offset for this column that
-			// normalizes to the same value would be the prover's single opening.
 			if prevRaw, aliased := normSeen[key][normShift]; aliased && prevRaw != cv.ShiftingOffset {
 				return fmt.Errorf(
 					"codegen: BuildPcsSystem: dynamic column %q opens at offsets %d and %d that alias "+
 						"(both %d mod %d); prover-ray dedups them to one opening but the size-independent "+
-						"schedule cannot, so one baked System would diverge. Aliasing dynamic-column shifts "+
-						"are not supported",
-					cv.Column.Context.Path(), prevRaw, cv.ShiftingOffset, normShift, 1<<lb.loc.SizeID)
+						"schedule cannot represent this proof. Aliasing dynamic-column shifts are not supported "+
+						"at the codegen runtime size",
+					cv.Column.Context.Path(), prevRaw, cv.ShiftingOffset, normShift, size)
 			}
 			normSeen[key][normShift] = cv.ShiftingOffset
 		}
@@ -315,6 +360,13 @@ func BuildPcsSystem(sys *wiop.System, rt *wiop.Runtime, routing CoinRouting) (Pc
 
 	_ = entryIndex
 
+	// Envelope params: the prover's process-wide static FRI schedule. The Zig
+	// verifier restricts these to each proof's largest opened size, so ONE baked
+	// System covers every dynamic size. Emitted from the prover's own exported
+	// envelope so it can never drift from what the prover commits with.
+	envelope := pcscompiler.FRIStaticParams()
+	maxSizeLog2 := int(pcscompiler.FRIMaxCommittableSizeLog2())
+
 	// Columns: every committed column in prover DECLARATION order (batch-major,
 	// then round.Columns order). Each column carries its batch, is_ext, size
 	// source (static size_log2 from the module's fixed size, or a DynamicIndex
@@ -341,6 +393,15 @@ func BuildPcsSystem(sys *wiop.System, rt *wiop.Runtime, routing CoinRouting) (Pc
 				}
 				desc.IsDynamic = true
 				desc.DynamicIndex = idx
+				// See pcsDynamicMinSizeLog2: a dynamic column's raw shift schedule is
+				// valid only above some minimum runtime size. The verifier enforces
+				// that lower bound for future proofs; the codegen-runtime proof has
+				// already been checked by recordClaim's normSeen guard above.
+				minSizeLog2, err := pcsDynamicMinSizeLog2(col.Context.Path(), desc.Shifts, maxSizeLog2)
+				if err != nil {
+					return PcsSystem{}, err
+				}
+				desc.DynamicMinSizeLog2 = minSizeLog2
 			} else {
 				// Static column: size_log2 is the padded, fixed module size —
 				// the SAME value GetLayout used (loc.SizeID) at this proving run,
@@ -351,13 +412,6 @@ func BuildPcsSystem(sys *wiop.System, rt *wiop.Runtime, routing CoinRouting) (Pc
 			columns = append(columns, desc)
 		}
 	}
-
-	// Envelope params: the prover's process-wide static FRI schedule. The Zig
-	// verifier restricts these to each proof's largest opened size, so ONE baked
-	// System covers every dynamic size. Emitted from the prover's own exported
-	// envelope so it can never drift from what the prover commits with.
-	envelope := pcscompiler.FRIStaticParams()
-	maxSizeLog2 := int(pcscompiler.FRIMaxCommittableSizeLog2())
 
 	witnessMap, quotientMap, err := buildPcsClaimMaps(sys, colLoc, colDeclByID)
 	if err != nil {
@@ -485,7 +539,7 @@ func buildPcsClaimMaps(
 	// the LagrangeEvals in declaration order with the same pcsShiftFor + dedup as
 	// recordClaim, so slot indices match EntryClaims exactly.
 	shiftFor := func(cv *wiop.ColumnView) int {
-		_, shift, _ := pcsShiftFor(cv, colLoc[cv.Column.Context.ID].loc)
+		_, shift := pcsShiftFor(cv, colLoc[cv.Column.Context.ID].loc)
 		return shift
 	}
 

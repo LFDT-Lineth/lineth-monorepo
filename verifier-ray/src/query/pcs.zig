@@ -36,19 +36,25 @@ pub const Error = merkle.Error || fri.Error || error{
     BoundaryFinalSiblingMismatch,
     MissingDynamicModuleSize,
     NonPowerOfTwoModuleSize,
+    DynamicModuleSizeBelowMinimum,
     RestrictOutOfRange,
     LayoutOverflow,
 };
 
 /// A committed column's size source. `.static` bakes a comptime size_log2 (a
 /// static-module column, whose padded size is fixed at compile time).
-/// `.dynamic` names an index into the runtime `module_sizes` slice (a
-/// dynamic-module column, whose size_log2 = log2(module_sizes[idx]) varies per
-/// proof). Mirrors how prover-ray's `GetLayout` derives size_log2 from
-/// `col.Module.RuntimeSize(rt)`.
+/// `.dynamic` names an index into the runtime `module_sizes` slice plus the
+/// minimum runtime size_log2 this raw shift schedule is valid for. The
+/// dynamic-module column's size_log2 = log2(module_sizes[idx]) varies per
+/// proof, but proofs below `min_size_log2` are rejected because the baked raw
+/// shift schedule would alias there. Mirrors how prover-ray's `GetLayout`
+/// derives size_log2 from `col.Module.RuntimeSize(rt)`.
 pub const SizeSource = union(enum) {
     static: u8,
-    dynamic: usize,
+    dynamic: struct {
+        index: usize,
+        min_size_log2: u8,
+    },
 };
 
 /// One committed column, in prover DECLARATION order (batch-major, then
@@ -145,7 +151,9 @@ pub const VerifyInput = struct {
     query_positions: []const usize,
     proof: OpeningProof,
     /// Runtime dynamic-module sizes, in canonical dynamic-module order (the
-    /// same order `SizeSource.dynamic` indices into). Powers of two.
+    /// same order `SizeSource.dynamic.index` indices into). Powers of two, and
+    /// each one must satisfy the emitted `min_size_log2` bound for every column
+    /// that references it.
     module_sizes: []const usize = &.{},
 };
 
@@ -228,11 +236,13 @@ pub fn reconstruct(comptime system: System, module_sizes: []const usize) Error!R
     for (system.columns, 0..) |col, c| {
         const sz: u8 = switch (col.size) {
             .static => |s| s,
-            .dynamic => |idx| blk: {
-                if (idx >= module_sizes.len) return Error.MissingDynamicModuleSize;
-                const n = module_sizes[idx];
+            .dynamic => |dyn| blk: {
+                if (dyn.index >= module_sizes.len) return Error.MissingDynamicModuleSize;
+                const n = module_sizes[dyn.index];
                 if (n == 0 or (n & (n - 1)) != 0) return Error.NonPowerOfTwoModuleSize;
-                break :blk @intCast(std.math.log2_int(usize, n));
+                const sz: u8 = @intCast(std.math.log2_int(usize, n));
+                if (sz < dyn.min_size_log2) return Error.DynamicModuleSizeBelowMinimum;
+                break :blk sz;
             },
         };
         if (sz > system.max_size_log2) return Error.LayoutOverflow;

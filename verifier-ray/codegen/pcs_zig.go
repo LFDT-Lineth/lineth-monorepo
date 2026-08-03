@@ -141,7 +141,8 @@ func pcsColumnsLiteral(columns []PcsColumnDesc) string {
 		}
 		var size string
 		if c.IsDynamic {
-			size = fmt.Sprintf(".{ .dynamic = %d }", c.DynamicIndex)
+			size = fmt.Sprintf(".{ .dynamic = .{ .index = %d, .min_size_log2 = %d } }",
+				c.DynamicIndex, c.DynamicMinSizeLog2)
 		} else {
 			size = fmt.Sprintf(".{ .static = %d }", c.SizeLog2)
 		}

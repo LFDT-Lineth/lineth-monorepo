@@ -51,8 +51,9 @@ func TestDynamicModuleOrderFollowsSysModules(t *testing.T) {
 // alias mod its runtime size. prover-ray dedups such openings (mod the size) to
 // one, but the size-independent ColumnDesc schedule keeps both, so the verifier
 // would expect an extra (unauthenticated) claim and double-count the DEEP
-// quotient. Storing raw offsets is only sound when they don't alias — the guard
-// enforces that.
+// quotient for THAT proof. The codegen-time proof must itself be representable,
+// even though the baked System may still enforce a stricter minimum runtime size
+// for future proofs.
 func TestBuildPcsSystemRejectsAliasingDynamicShifts(t *testing.T) {
 	sys := wiop.NewSystemf("dyn-alias")
 	r0 := sys.NewRound()
@@ -95,5 +96,108 @@ func TestBuildPcsSystemRejectsAliasingDynamicShifts(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "alias") {
 		t.Fatalf("BuildPcsSystem error = %q, want an aliasing rejection", err.Error())
+	}
+}
+
+// BuildPcsSystem now supports dynamic multi-shift columns across a RANGE of
+// runtime sizes by baking the minimum safe size_log2 into the column metadata.
+// Offsets 1 and 5 are distinct at size 8, but collide at size 4; the baked
+// System must therefore ACCEPT the size-8 proof while recording min_size_log2=3
+// so the verifier rejects proofs below size 8 for that column.
+func TestBuildPcsSystemRecordsMinimumSafeDynamicSize(t *testing.T) {
+	sys := wiop.NewSystemf("dyn-alias-crosssize")
+	r0 := sys.NewRound()
+	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionRight)
+	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	mod.NewVanishing(
+		sys.Context.Childf("alias"),
+		wiop.Sub(col.View().Shift(1), col.View().Shift(5)),
+	)
+
+	global.Compile(sys)
+	pcscompiler.Compile(sys)
+
+	// Prove at size 8, where 1 and 5 do NOT alias.
+	vals := make([]field.Element, 8)
+	for i := range vals {
+		vals[i].SetUint64(uint64(i + 1))
+	}
+	rt := wiop.NewRuntime(sys)
+	rt.AssignColumn(col, &wiop.ConcreteVector{Plain: field.VecFromBase(vals)})
+	for _, action := range rt.CurrentRound().ProverActions {
+		action.Run(rt)
+	}
+	for rt.CurrentRound().ID < len(rt.System.Rounds)-1 {
+		rt.AdvanceRound()
+		for _, action := range rt.CurrentRound().ProverActions {
+			action.Run(rt)
+		}
+	}
+
+	routing, err := BuildCoinRouting(sys)
+	if err != nil {
+		t.Fatalf("BuildCoinRouting() error = %v", err)
+	}
+	pcs, err := BuildPcsSystem(sys, rt, routing)
+	if err != nil {
+		t.Fatalf("BuildPcsSystem() error = %v", err)
+	}
+	if len(pcs.Columns) == 0 {
+		t.Fatalf("BuildPcsSystem returned no columns")
+	}
+	if !pcs.Columns[0].IsDynamic {
+		t.Fatalf("pcs.Columns[0] is not dynamic")
+	}
+	if pcs.Columns[0].DynamicMinSizeLog2 != 3 {
+		t.Fatalf("pcs.Columns[0].DynamicMinSizeLog2 = %d, want 3", pcs.Columns[0].DynamicMinSizeLog2)
+	}
+}
+
+// Size 1 is handled through that same minimum-size metadata. Offsets 0 and 1
+// are distinct at size 8 and size 2, but both normalize to the only row at size
+// 1, so the baked dynamic column must carry min_size_log2=1 instead of being
+// rejected outright.
+func TestBuildPcsSystemRecordsMinimumSafeSizeAboveOne(t *testing.T) {
+	sys := wiop.NewSystemf("dyn-alias-size-one")
+	r0 := sys.NewRound()
+	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionRight)
+	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	mod.NewVanishing(
+		sys.Context.Childf("alias"),
+		wiop.Sub(col.View(), col.View().Shift(1)),
+	)
+
+	global.Compile(sys)
+	pcscompiler.Compile(sys)
+
+	vals := make([]field.Element, 8)
+	for i := range vals {
+		vals[i].SetUint64(uint64(i + 1))
+	}
+	rt := wiop.NewRuntime(sys)
+	rt.AssignColumn(col, &wiop.ConcreteVector{Plain: field.VecFromBase(vals)})
+	for _, action := range rt.CurrentRound().ProverActions {
+		action.Run(rt)
+	}
+	for rt.CurrentRound().ID < len(rt.System.Rounds)-1 {
+		rt.AdvanceRound()
+		for _, action := range rt.CurrentRound().ProverActions {
+			action.Run(rt)
+		}
+	}
+
+	routing, err := BuildCoinRouting(sys)
+	if err != nil {
+		t.Fatalf("BuildCoinRouting() error = %v", err)
+	}
+	pcs, err := BuildPcsSystem(sys, rt, routing)
+	if err != nil {
+		t.Fatalf("BuildPcsSystem() error = %v", err)
+	}
+	if len(pcs.Columns) == 0 {
+		t.Fatalf("BuildPcsSystem returned no columns")
+	}
+	if pcs.Columns[0].DynamicMinSizeLog2 != 1 {
+		t.Fatalf("pcs.Columns[0].DynamicMinSizeLog2 = %d, want 1", pcs.Columns[0].DynamicMinSizeLog2)
 	}
 }
