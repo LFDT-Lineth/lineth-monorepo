@@ -16,6 +16,7 @@
 - *(coordinator)* Document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)
 - *(coordinator)* GasPriceCapProviderV2 and DRY (#3624)
 - *(coordinator)* Support custom transaction signers (#3597)
+- *(linea-besu)* Update to v26.7.0 (#3623)
 
 ### 🐛 Bug Fixes
 
@@ -64,6 +65,7 @@
 - *(misc)* Rename Linea to Lineth across documentation and codebase (#3316)
 - *(prover)* Remove redundant and unsafe utility functions (#3273)
 - *(coordinator)* Decompose L1DependentApp into smaller scoped apps (#3615)
+- *(coordinator)* L1RelayingAppV1 to better allow RISC-V extension (#3640)
 
 ### ⚡ Performance
 
