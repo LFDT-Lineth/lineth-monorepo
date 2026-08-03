@@ -139,6 +139,31 @@ type pcsLocWithBatch struct {
 	loc      pcscompiler.ColumnLocation
 }
 
+// pcsShiftFor computes the shift-schedule key for one opening of a column
+// located at loc:
+//   - STATIC column: its size never changes, so the schedule stores the
+//     NORMALIZED shift ((offset % size) + size) % size. This matches
+//     prover-ray's own per-proof dedup (two raw offsets that alias mod the
+//     fixed size ARE the same opening — e.g. -1 and 3 both -> 3 at size 4), so
+//     the point set and entry_claims line up exactly.
+//   - DYNAMIC column: the size varies per proof, so the schedule stores the
+//     RAW offset and lets the verifier normalize it mod the RUNTIME size.
+//     omega_N^(offset mod N) == omega_N^offset, so the reconstructed point
+//     matches the prover's at every size.
+//
+// Returns isDynamic, the shift the schedule stores, and the normalized shift
+// (equal to shift when isDynamic is false; callers use it to detect aliasing
+// dynamic offsets, since dedup by raw offset can't reproduce prover-ray's
+// dedup-by-normalized-shift).
+func pcsShiftFor(cv *wiop.ColumnView, loc pcscompiler.ColumnLocation) (isDynamic bool, shift, normShift int) {
+	size := 1 << loc.SizeID
+	normShift = ((cv.ShiftingOffset % size) + size) % size
+	if cv.Column.Module != nil && cv.Column.Module.IsDynamic() {
+		return true, cv.ShiftingOffset, normShift
+	}
+	return false, normShift, normShift
+}
+
 // BuildPcsSystem extracts the FRI/PCS System from a compiled, proven protocol.
 //
 // Requires pcs.Compile to have run after global.Compile: the LagrangeEval
@@ -212,36 +237,17 @@ func BuildPcsSystem(sys *wiop.System, rt *wiop.Runtime, routing CoinRouting) (Pc
 			return fmt.Errorf("codegen: BuildPcsSystem: opened column %q not in any committed batch",
 				cv.Column.Context.Path())
 		}
-		// The shift the schedule stores depends on the column's size source:
-		//   - STATIC column: its size never changes, so we store the NORMALIZED
-		//     shift ((offset % size) + size) % size. This matches prover-ray's own
-		//     per-proof dedup (two raw offsets that alias mod the fixed size ARE the
-		//     same opening — e.g. -1 and 3 both -> 3 at size 4), so the point set
-		//     and entry_claims line up exactly.
-		//   - DYNAMIC column: the size varies per proof, so we store the RAW offset
-		//     and let the verifier normalize it mod the RUNTIME size. omega_N^(offset
-		//     mod N) == omega_N^offset, so the reconstructed point matches the
-		//     prover's at every size.
-		//
 		// SOUNDNESS/COMPLETENESS GUARD (dynamic columns): prover-ray dedups openings
-		// by NORMALIZED shift (mod the runtime size), but here we dedup a dynamic
-		// column's schedule by RAW offset. If two of a dynamic column's raw offsets
-		// alias — i.e. are congruent mod the size — the prover collapses them to one
-		// opening while the raw schedule would keep two slots. The verifier then
-		// expects one more claim than the prover produced and double-counts the DEEP
-		// quotient (honest proof rejected; and the extra slot is an unauthenticated
-		// claim value). We CANNOT reproduce the prover's per-proof (runtime-size)
-		// dedup from a size-independent schedule, so we reject it at codegen rather
-		// than emit a System that silently diverges. (Detected at the codegen size;
-		// aliasing there is a necessary condition — the observed proof already
-		// exhibits the collapse the raw schedule cannot represent.)
-		size := 1 << lb.loc.SizeID
-		isDynamic := cv.Column.Module != nil && cv.Column.Module.IsDynamic()
-		normShift := ((cv.ShiftingOffset % size) + size) % size
-		shift := normShift
-		if isDynamic {
-			shift = cv.ShiftingOffset
-		}
+		// by NORMALIZED shift (mod the runtime size), but a dynamic column's
+		// schedule here is deduped by RAW offset (see pcsShiftFor). If two of a
+		// dynamic column's raw offsets alias — i.e. are congruent mod the size —
+		// the prover collapses them to one opening while the raw schedule would
+		// keep two slots, so the verifier would expect one more claim than the
+		// prover produced and double-count the DEEP quotient. We CANNOT reproduce
+		// the prover's per-proof (runtime-size) dedup from a size-independent
+		// schedule, so we reject it at codegen rather than emit a System that
+		// silently diverges.
+		isDynamic, shift, normShift := pcsShiftFor(cv, lb.loc)
 		key := pcsEntryKey{batchIdx: lb.batchIdx, sizeLog2: lb.loc.SizeID, isExt: lb.loc.IsExt, position: lb.loc.Position}
 		if seen[key] == nil {
 			seen[key] = map[int]bool{}
@@ -257,7 +263,7 @@ func BuildPcsSystem(sys *wiop.System, rt *wiop.Runtime, routing CoinRouting) (Pc
 						"(both %d mod %d); prover-ray dedups them to one opening but the size-independent "+
 						"schedule cannot, so one baked System would diverge. Aliasing dynamic-column shifts "+
 						"are not supported",
-					cv.Column.Context.Path(), prevRaw, cv.ShiftingOffset, normShift, size)
+					cv.Column.Context.Path(), prevRaw, cv.ShiftingOffset, normShift, 1<<lb.loc.SizeID)
 			}
 			normSeen[key][normShift] = cv.ShiftingOffset
 		}
@@ -476,17 +482,11 @@ func buildPcsClaimMaps(
 	}
 
 	// The per-column shift order, keyed by column ObjectID: recovered by replaying
-	// the LagrangeEvals in declaration order with the same normalization + dedup as
+	// the LagrangeEvals in declaration order with the same pcsShiftFor + dedup as
 	// recordClaim, so slot indices match EntryClaims exactly.
-	// shiftFor computes the schedule key for one opening: normalized for a static
-	// column, raw offset for a dynamic one — matching recordClaim exactly.
 	shiftFor := func(cv *wiop.ColumnView) int {
-		lb := colLoc[cv.Column.Context.ID]
-		size := 1 << lb.loc.SizeID
-		if cv.Column.Module != nil && cv.Column.Module.IsDynamic() {
-			return cv.ShiftingOffset
-		}
-		return ((cv.ShiftingOffset % size) + size) % size
+		_, shift, _ := pcsShiftFor(cv, colLoc[cv.Column.Context.ID].loc)
+		return shift
 	}
 
 	shiftSlots := map[wiop.ObjectID][]int{}

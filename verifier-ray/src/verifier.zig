@@ -199,18 +199,6 @@ pub fn verify(
     // TODO(profiling): add a final verify_done marker once more phases run after logderivativesum.
 }
 
-/// Fills `out[b]` with batch `b`'s authenticated Merkle root, resolved from its
-/// transcript-bound provenance (`batch_roots[b]`) — NOT from the proof. An
-/// interactive batch's root is the sole oracle commitment of the round message it
-/// names (the same octuplet absorbed to derive zeta); a precomputed batch's root
-/// is the compile-time constant. This is the verifier-ray analogue of prover-ray's
-/// `collectRoots` reading `rt.Commitments`, so the root a batch is authenticated
-/// against is provably the one zeta is bound to.
-///
-/// `batch_roots.len` must equal `out.len` (== num_batches). A `.round` entry must
-/// name a round message that exists and carries exactly one oracle commitment;
-/// otherwise the PCS/protocol metadata disagree — surfaced as an error rather than
-/// an out-of-bounds panic or a silently mis-bound root.
 /// Fills `out[k]` with the authenticated claim each `map` entry points at:
 /// `out[k] = entry_claims[map[k].entry][map[k].shift]`. `map.len` must equal
 /// `out.len` (the vanishing System's claim total) and every ClaimRef must be in
@@ -237,6 +225,18 @@ fn routeClaims(
     }
 }
 
+/// Fills `out[b]` with batch `b`'s authenticated Merkle root, resolved from its
+/// transcript-bound provenance (`batch_roots[b]`) — NOT from the proof. An
+/// interactive batch's root is the sole oracle commitment of the round message it
+/// names (the same octuplet absorbed to derive zeta); a precomputed batch's root
+/// is the compile-time constant. This is the verifier-ray analogue of prover-ray's
+/// `collectRoots` reading `rt.Commitments`, so the root a batch is authenticated
+/// against is provably the one zeta is bound to.
+///
+/// `batch_roots.len` must equal `out.len` (== num_batches). A `.round` entry must
+/// name a round message that exists and carries exactly one oracle commitment;
+/// otherwise the PCS/protocol metadata disagree — surfaced as an error rather than
+/// an out-of-bounds panic or a silently mis-bound root.
 fn resolveRoots(
     batch_roots: []const pcs.BatchRoot,
     rounds: []const protocol.RoundMessage,
