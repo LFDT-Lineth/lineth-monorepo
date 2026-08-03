@@ -48,12 +48,12 @@ test("renderDefault uses em dash when unset", () => {
   assert.equal(renderDefault({ default: "1000" }), "`1000`");
 });
 
-test("rendered row count equals in-scope option count (63 = 51 + 12)", { skip }, async () => {
+test("rendered row count equals in-scope option count (65 = 53 + 12)", { skip }, async () => {
   const result = await build({});
   assert.equal(result.rowCount, result.manifest.counts.rendered);
-  assert.equal(result.manifest.counts.total, 63);
+  assert.equal(result.manifest.counts.total, 65);
   const byPlugin = Object.fromEntries(result.manifest.perPlugin.map((p) => [p.plugin, p.total]));
-  assert.equal(byPlugin.sequencer, 51);
+  assert.equal(byPlugin.sequencer, 53);
   assert.equal(byPlugin.tracer, 12);
   assert.equal(result.manifest.counts.standard + result.manifest.counts.advanced, result.manifest.counts.rendered);
 });
