@@ -231,23 +231,27 @@ type Controller struct {
 	// The number of seconds the controller should wait before killing a worker after receiving a SIGTERM
 	TerminationGracePeriod int `mapstructure:"termination_grace_period_seconds"`
 
-	// defaults to true; the controller will not pick associated jobs if false.
-	EnableExecution        bool `mapstructure:"enable_execution"`
+	// EnableExecution controls whether execution jobs are picked up.
+	EnableExecution bool `mapstructure:"enable_execution"`
+	// EnableDataAvailability controls whether data-availability jobs are picked up.
 	EnableDataAvailability bool `mapstructure:"enable_data_availability"`
-	EnableAggregation      bool `mapstructure:"enable_aggregation"`
-	EnableInvalidity       bool `mapstructure:"enable_invalidity"`
+	// EnableAggregation controls whether aggregation jobs are picked up.
+	EnableAggregation bool `mapstructure:"enable_aggregation"`
+	// EnableInvalidity controls whether invalidity jobs are picked up.
+	EnableInvalidity bool `mapstructure:"enable_invalidity"`
 
-	// TODO @gbotrel the only reason we keep these is for test purposes; default value is fine,
-	// we should remove them from here for readability.
-	WorkerCmd          string             `mapstructure:"worker_cmd_tmpl"`
+	// WorkerCmd is the template string for spawning a standard worker process.
+	WorkerCmd string `mapstructure:"worker_cmd_tmpl"`
+	// WorkerCmdLarge is the template string for spawning a large-mode worker process.
 	WorkerCmdLarge     string             `mapstructure:"worker_cmd_large_tmpl"`
 	WorkerCmdTmpl      *template.Template `mapstructure:"-"`
 	WorkerCmdLargeTmpl *template.Template `mapstructure:"-"`
 }
 
 type Prometheus struct {
+	// Enabled toggles the Prometheus metrics endpoint on or off.
 	Enabled bool
-	// The underlying implementation defaults to :9090.
+	// Port for the metrics endpoint; defaults to 9090 (Prometheus library default, not set by the prover).
 	Port int
 	// The default implementation default to /metrics. The route should be
 	// prefixed with a "/". If it is not, the underlying implementation will
@@ -270,7 +274,7 @@ type Execution struct {
 	// IgnoreCompatiblityCheck indicates whether to ignore constaints version checking between
 	// trace files and zkevm.bin constraint files. Specifically, this check ensures that the zkevm.bin file
 	// used within the prover was generated from the same commit of linea-constraints as the generated lt trace file.
-	// Set this to true to disable compatibility checks (default: false).
+	// Set this to true to disable compatibility checks.
 	IgnoreCompatibilityCheck bool `mapstructure:"ignore_compatibility_check"`
 
 	// LimitlessWithDebug is only looked at when the limitless prover is
@@ -307,7 +311,7 @@ type DataAvailability struct {
 	// DictPaths points to dictionaries used for decompressing executions data stored in the DA layer.
 	DictPaths []string `mapstructure:"dict_paths"`
 
-	// DictNbBytes number of bytes in the prover dictionary
+	// DictNbBytes is the number of bytes in the prover dictionary.
 	DictNbBytes int `mapstructure:"dict_nb_bytes" validate:"number,gt=0"`
 }
 
@@ -338,7 +342,7 @@ type Aggregation struct {
 	// ProverMode stores the kind of prover to use.
 	ProverMode ProverMode `mapstructure:"prover_mode" validate:"required,oneof=dev full"`
 
-	// Number of proofs that are supported by the aggregation circuit.
+	// NumProofs is the list of supported aggregation batch sizes (circuit variants), e.g. [10, 20, 50, 100].
 	NumProofs []int `mapstructure:"num_proofs" validate:"required,dive,gt=0,number"`
 
 	// IsAllowedCircuitID is a bitmask encoding which circuit IDs are allowed.
@@ -347,15 +351,12 @@ type Aggregation struct {
 	// Use circuits.GlobalCircuitIDMapping to set the appropriate bits.
 	IsAllowedCircuitID uint64 `mapstructure:"is_allowed_circuit_id" validate:"required"`
 
-	// note @gbotrel keeping that around in case we need to support two emulation contract
-	// during a migration.
-	// Verifier ID to assign to the proof once generated. It will be used
-	// by the L1 contracts to determine which solidity Plonk verifier
-	// contract should be used to verify the proof.
+	// VerifierID is assigned to the proof and used by L1 contracts to select the Solidity Plonk verifier contract.
 	VerifierID int `mapstructure:"verifier_id" validate:"gte=0,number"`
 }
 
 type WithRequestDir struct {
+	// RequestsRootDir is the root directory for incoming job requests and completed results.
 	RequestsRootDir string `mapstructure:"requests_root_dir" validate:"required"`
 }
 
@@ -372,13 +373,20 @@ func (cfg *WithRequestDir) DirDone() string {
 }
 
 type PublicInput struct {
+	// MaxNbDataAvailability is the max number of DA proofs per aggregation.
 	MaxNbDataAvailability int `mapstructure:"max_nb_data_availability" validate:"gte=0"`
-	MaxNbExecution        int `mapstructure:"max_nb_execution" validate:"gte=0"`
-	MaxNbInvalidity       int `mapstructure:"max_nb_invalidity" validate:"gte=0"`
-	MaxNbCircuits         int `mapstructure:"max_nb_circuits" validate:"gte=0"` // if not set, will be set to MaxNbDA + MaxNbExecution +maxNbInvalidity
-	ExecutionMaxNbMsg     int `mapstructure:"execution_max_nb_msg" validate:"gte=0"`
-	L2MsgMerkleDepth      int `mapstructure:"l2_msg_merkle_depth" validate:"gte=0"`
-	L2MsgMaxNbMerkle      int `mapstructure:"l2_msg_max_nb_merkle" validate:"gte=0"` // if not explicitly provided (i.e. non-positive) it will be set to maximum
+	// MaxNbExecution is the max number of execution proofs per aggregation.
+	MaxNbExecution int `mapstructure:"max_nb_execution" validate:"gte=0"`
+	// MaxNbInvalidity is the max number of invalidity proofs per aggregation.
+	MaxNbInvalidity int `mapstructure:"max_nb_invalidity" validate:"gte=0"`
+	// MaxNbCircuits is an optional combined cap across all proof types; zero disables the check.
+	MaxNbCircuits int `mapstructure:"max_nb_circuits" validate:"gte=0"`
+	// ExecutionMaxNbMsg is the max number of L2-to-L1 messages per execution proof.
+	ExecutionMaxNbMsg int `mapstructure:"execution_max_nb_msg" validate:"gte=0"`
+	// L2MsgMerkleDepth is the depth of each L2-to-L1 message Merkle tree.
+	L2MsgMerkleDepth int `mapstructure:"l2_msg_merkle_depth" validate:"gte=0"`
+	// L2MsgMaxNbMerkle is the max number of L2-to-L1 Merkle trees per aggregation; auto-computed when zero.
+	L2MsgMaxNbMerkle int `mapstructure:"l2_msg_max_nb_merkle" validate:"gte=0"`
 
 	// not serialized
 
@@ -405,10 +413,14 @@ type Debug struct {
 }
 
 type PerformanceMonitor struct {
-	Active         bool          `mapstructure:"active"`
+	// Active enables granular per-step or per-round CPU profiling of the prover.
+	Active bool `mapstructure:"active"`
+	// SampleDuration is the sampling interval used when collecting performance profiles.
 	SampleDuration time.Duration `mapstructure:"sample_duration"`
-	ProfileDir     string        `mapstructure:"profile_dir"`
-	Profile        string        `mapstructure:"profile" validate:"oneof=prover-steps prover-rounds all"`
+	// ProfileDir is the directory where performance profile files are written.
+	ProfileDir string `mapstructure:"profile_dir"`
+	// Profile selects the profiling scope: "prover-steps", "prover-rounds", or "all".
+	Profile string `mapstructure:"profile" validate:"oneof=prover-steps prover-rounds all"`
 }
 
 // BlobDecompressionDictStore returns a decompression dictionary store
