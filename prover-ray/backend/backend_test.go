@@ -31,8 +31,10 @@ func TestCore_BuildInputs_UsesPrecomputedELFBlobs(t *testing.T) {
 	payload1 := []byte{0x01, 0x02}
 	payload2 := []byte{0xFF, 0xFE}
 
-	inputs1 := c.buildInputs(Job{Payload: payload1})
-	inputs2 := c.buildInputs(Job{Payload: payload2})
+	inputs1, err := c.buildInputs(Job{Payload: payload1})
+	require.NoError(t, err)
+	inputs2, err := c.buildInputs(Job{Payload: payload2})
+	require.NoError(t, err)
 
 	assert.NotEqual(t, inputs1["blobs_data"], inputs2["blobs_data"], "different payloads must produce different blobs_data")
 	assert.Equal(t, inputs1["entry_point_and_blobs_count"], inputs2["entry_point_and_blobs_count"], "same ELF must produce identical entry_point_and_blobs_count")
@@ -51,9 +53,10 @@ func TestCore_BuildInputs_MatchesBuildZkcInputs(t *testing.T) {
 
 	// Core.buildInputs (precomputed path) must produce identical output to
 	// buildZkcInputs (parse-every-call helper).
-	fromCore := c.buildInputs(Job{Payload: ssz})
+	fromCore, err := c.buildInputs(Job{Payload: ssz})
+	require.NoError(t, err)
 
-	fromFull, err := zkc_r5.PrepareInput(minimal_elf.MinimalElfProgram, ssz, zkc_r5.DefaultINOrigin)
+	fromFull, err := zkc_r5.PrepareInput(minimal_elf.MinimalElfProgram, ssz)
 	require.NoError(t, err)
 
 	assert.Equal(t, fromFull, fromCore, "precomputed path must produce identical output to buildZkcInputs")
@@ -116,8 +119,9 @@ func TestNew(t *testing.T) {
 	assert.Equal(t, uint64(minimal_elf.DefaultEntryPoint), c.elf.EntryPoint, "entry point must be precomputed")
 
 	ssz := []byte{0xAA, 0xBB}
-	fromCore := c.buildInputs(Job{Payload: ssz})
-	fromFull, err := zkc_r5.PrepareInput(minimal_elf.MinimalElfProgram, ssz, zkc_r5.DefaultINOrigin)
+	fromCore, err := c.buildInputs(Job{Payload: ssz})
+	require.NoError(t, err)
+	fromFull, err := zkc_r5.PrepareInput(minimal_elf.MinimalElfProgram, ssz)
 	require.NoError(t, err)
 	assert.Equal(t, fromFull, fromCore)
 }

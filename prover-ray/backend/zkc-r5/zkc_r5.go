@@ -1,4 +1,4 @@
-package zkc_r5
+package zkcr5
 
 import (
 	"bytes"
@@ -7,6 +7,12 @@ import (
 	"fmt"
 	"io"
 	"sort"
+)
+
+const (
+	entryPointAndBlobsCountKey = "entry_point_and_blobs_count"
+	blobsOffsetAndSizeKey      = "blobs_offset_and_size"
+	blobsDataKey               = "blobs_data"
 )
 
 // ElfSection is an in-memory guest RAM region: a contiguous byte slice mapped
@@ -25,15 +31,17 @@ type ElfSection struct {
 //   - "blobs_data"
 //
 // guestElfBytes is the raw guest ELF. guestInputData is the input data the
-// guest reads at _in_start. guestInputDataOrigin is the guest RAM address where
-// the input is placed (use [DefaultINOrigin]).
-func PrepareInput(guestElfBytes, guestInputData []byte, guestInputDataOrigin uint64) (map[string][]byte, error) {
+// guest reads at _in_start, placed at [DefaultINOrigin].
+func PrepareInput(guestElfBytes, guestInputData []byte) (map[string][]byte, error) {
 	programSections, err := LoadGuestElf(bytes.NewReader(guestElfBytes))
 	if err != nil {
 		return nil, err
 	}
-	dataSections := NewDataSection(guestInputDataOrigin, guestInputData)
-	return EncodeGuestAndMemoryForZkc(programSections, dataSections), nil
+	dataSections, err := NewDataSection(DefaultINOrigin, guestInputData)
+	if err != nil {
+		return nil, err
+	}
+	return EncodeGuestAndMemoryForZkc(programSections, dataSections)
 }
 
 // GuestProgramSections is the ELF's precomputed contribution to the ZkC inputs: its
@@ -70,28 +78,40 @@ func extractElfSections(ef *elf.File) ([]ElfSection, error) {
 		if p.Type != elf.PT_LOAD || p.Memsz == 0 {
 			continue
 		}
+		if p.Filesz > p.Memsz {
+			return nil, fmt.Errorf("loadable segment at %#x has file size larger than memory size", p.Vaddr)
+		}
 		progEnd := p.Vaddr + p.Memsz
+		if progEnd < p.Vaddr {
+			return nil, fmt.Errorf("loadable segment address overflow at %#x", p.Vaddr)
+		}
 
-		var segmentSections []ElfSection
+		var segBlobs []ElfSection
 		for _, s := range ef.Sections {
 			if s.Size == 0 || s.Type == elf.SHT_NOBITS || s.Flags&elf.SHF_ALLOC == 0 {
 				continue
 			}
 			sectionEnd := s.Addr + s.Size
+			if sectionEnd < s.Addr {
+				return nil, fmt.Errorf("section %s address overflow at %#x", s.Name, s.Addr)
+			}
 			if s.Addr < p.Vaddr || sectionEnd > progEnd {
 				continue
 			}
-			data, err := s.Data()
+			data, err := io.ReadAll(s.Open())
 			if err != nil {
 				return nil, fmt.Errorf("reading ELF section %s: %w", s.Name, err)
 			}
-			segmentSections = append(segmentSections, ElfSection{Offset: s.Addr, Data: data})
+			if uint64(len(data)) != s.Size {
+				return nil, fmt.Errorf("short read for section %s: got %d bytes, expected %d", s.Name, len(data), s.Size)
+			}
+			segBlobs = append(segBlobs, ElfSection{Offset: s.Addr, Data: data})
 		}
 
-		sort.Slice(segmentSections, func(i, j int) bool {
-			return segmentSections[i].Offset < segmentSections[j].Offset
+		sort.Slice(segBlobs, func(i, j int) bool {
+			return segBlobs[i].Offset < segBlobs[j].Offset
 		})
-		result = append(result, segmentSections...)
+		result = append(result, segBlobs...)
 	}
 
 	if len(result) == 0 {
@@ -103,14 +123,18 @@ func extractElfSections(ef *elf.File) ([]ElfSection, error) {
 // NewDataSection splits data into the two memory blobs that linea_zkvm_io expects at
 // _in_start: an 8-byte LE length prefix followed by the payload bytes. It does
 // not interpret the payload.
-func NewDataSection(inOrigin uint64, data []byte) []ElfSection {
+func NewDataSection(inOrigin uint64, data []byte) ([]ElfSection, error) {
+	payloadOffset := inOrigin + 8
+	if payloadOffset < inOrigin {
+		return nil, fmt.Errorf("data input offset overflow: in_origin=%#x", inOrigin)
+	}
 	prefix := make([]byte, 8)
 	binary.LittleEndian.PutUint64(prefix, uint64(len(data)))
 	memBlobs := []ElfSection{{Offset: inOrigin, Data: prefix}}
 	if len(data) > 0 {
-		memBlobs = append(memBlobs, ElfSection{Offset: inOrigin + 8, Data: data})
+		memBlobs = append(memBlobs, ElfSection{Offset: payloadOffset, Data: data})
 	}
-	return memBlobs
+	return memBlobs, nil
 }
 
 // EncodeGuestAndMemoryForZkc builds the keyed byte map that
@@ -123,15 +147,23 @@ func NewDataSection(inOrigin uint64, data []byte) []ElfSection {
 // guestSections is the ELF's loadable sections, and memory is any additional
 // memory blobs (e.g. the framed StatelessInput).
 //
-// The caller must ensure that the guestSections and memory slices are sorted by
-// offset and that the blobs do not overlap. It is ensured by calling
-// [PrepareInput] directly on the guest ELF and raw input data.
-func EncodeGuestAndMemoryForZkc(guestSections GuestProgramSections, memory []ElfSection) map[string][]byte {
+// It sorts the combined sections by offset without mutating either input slice,
+// and rejects overlapping or overflowing address ranges.
+func EncodeGuestAndMemoryForZkc(guestSections GuestProgramSections, memory []ElfSection) (map[string][]byte, error) {
 	entryAndCount := binary.BigEndian.AppendUint64(make([]byte, 0, 16), guestSections.EntryPoint)
 	entryAndCount = binary.BigEndian.AppendUint64(entryAndCount, uint64(len(guestSections.Sections)+len(memory)))
 
+	allSections := make([]ElfSection, 0, len(guestSections.Sections)+len(memory))
+	allSections = append(allSections, guestSections.Sections...)
+	allSections = append(allSections, memory...)
+	sort.SliceStable(allSections, func(i, j int) bool {
+		return allSections[i].Offset < allSections[j].Offset
+	})
+	if err := validateNonOverlappingSections(allSections); err != nil {
+		return nil, err
+	}
+
 	var dataLen int
-	allSections := append(guestSections.Sections, memory...)
 	for _, b := range allSections {
 		dataLen += len(b.Data)
 	}
@@ -144,8 +176,32 @@ func EncodeGuestAndMemoryForZkc(guestSections GuestProgramSections, memory []Elf
 	}
 
 	return map[string][]byte{
-		"entry_point_and_blobs_count": entryAndCount,
-		"blobs_offset_and_size":       offsetAndSize,
-		"blobs_data":                  data,
+		entryPointAndBlobsCountKey: entryAndCount,
+		blobsOffsetAndSizeKey:      offsetAndSize,
+		blobsDataKey:               data,
+	}, nil
+}
+
+func validateNonOverlappingSections(sections []ElfSection) error {
+	var previousOffset, previousEnd uint64
+	hasPrevious := false
+	for _, section := range sections {
+		if len(section.Data) == 0 {
+			continue
+		}
+		end := section.Offset + uint64(len(section.Data))
+		if end < section.Offset {
+			return fmt.Errorf("memory section at %#x with %d bytes overflows address space", section.Offset, len(section.Data))
+		}
+		if hasPrevious && section.Offset < previousEnd {
+			return fmt.Errorf(
+				"memory section at %#x overlaps section at %#x ending at %#x",
+				section.Offset,
+				previousOffset,
+				previousEnd,
+			)
+		}
+		previousOffset, previousEnd, hasPrevious = section.Offset, end, true
 	}
+	return nil
 }

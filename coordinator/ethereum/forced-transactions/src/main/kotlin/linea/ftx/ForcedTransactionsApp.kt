@@ -147,7 +147,7 @@ internal class ForcedTransactionsAppImpl(
   private lateinit var ftxStatusUpdater: ForcedTransactionsStatusUpdater
   private lateinit var ftxFetcher: ForcedTransactionsL1EventsFetcher
   private lateinit var ftxSender: ForcedTransactionsSenderForExecution
-  private var safeBlockNumberManager = ForcedTransactionsSafeBlockNumberManager(listener = safeBlockNumberProvider)
+  private val safeBlockNumberManager = ForcedTransactionsSafeBlockNumberManager(listener = safeBlockNumberProvider)
   override val conflationSafeBlockNumberProvider: ConflationSafeBlockNumberProvider = safeBlockNumberProvider
   override val conflationCalculator: ConflationTriggerCalculator = ConflationCalculatorByForcedTransaction(
     processedFtxQueue = conflationFtxQueue,
