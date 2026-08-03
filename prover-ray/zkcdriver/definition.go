@@ -306,7 +306,7 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 			// @alex Technically, this should be a panic but for now the
 			// arithmetization may give us lookup tables with 0 columns. We
 			// just skip those.
-			logrus.Warnf("[WARNING] inclusion constraint %q has zero columns", name)
+			logrus.Warnf("zkcdriver: inclusion constraint %q has zero columns; skipping", name)
 			return
 		}
 
