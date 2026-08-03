@@ -81,7 +81,11 @@ func (t *mAssignmentTask) Run(rt *wiop.Runtime) {
 	// --- Build the B side. For each fragment, hash its rows, allocate its
 	// M vector, and produce one tEntry per row tagged with (fragment, row).
 	mValues := make([][]field.Element, len(t.includings))
-	var tEntries []tEntry
+	tTotal := 0
+	for _, it := range t.includings {
+		tTotal += it.module.RuntimeSize(rt)
+	}
+	tEntries := make([]tEntry, 0, tTotal)
 	for frag, it := range t.includings {
 		n := it.module.RuntimeSize(rt)
 		mValues[frag] = make([]field.Element, n)
@@ -107,8 +111,13 @@ func (t *mAssignmentTask) Run(rt *wiop.Runtime) {
 	}
 
 	// --- Build the A side. Only active rows contribute; the A-side head is the
-	// constant 1 whenever the prepend trick is in effect.
-	var sEntries []sEntry
+	// constant 1 whenever the prepend trick is in effect. The capacity is an
+	// upper bound: filtered-out rows are skipped.
+	sTotal := 0
+	for _, inc := range t.included {
+		sTotal += inc.cols[0].Module().RuntimeSize(rt)
+	}
+	sEntries := make([]sEntry, 0, sTotal)
 	for aFrag, inc := range t.included {
 		an := inc.cols[0].Module().RuntimeSize(rt)
 		hashes := wiop.EvaluateRLCAsExt(rt, alpha, inc.cols, an)
