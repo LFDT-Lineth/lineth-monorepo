@@ -2,4 +2,4 @@ plugins {
   id 'net.consensys.zkevm.kotlin-library-conventions'
 }
 
-description="Linea metrics facade"
+description="Lineth metrics facade"

@@ -14,8 +14,8 @@ import kotlin.time.Clock
 
 interface AggregationSubmitter {
   /**
-   * Validates if the aggregation proof is valid and submits it to the Linea contract.
-   * If eth_call is successful, the aggregation is submitted to the Linea contract
+   * Validates if the aggregation proof is valid and submits it to the Lineth contract.
+   * If eth_call is successful, the aggregation is submitted to the Lineth contract
    * and the transaction hash is returned.
    */
   fun submitAggregationAfterEthCall(

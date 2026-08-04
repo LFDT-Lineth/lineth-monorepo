@@ -2,7 +2,7 @@
  * In-process address handoff for chained deploy scripts.
  *
  * When a deploy script produces an address that a subsequent script in the same
- * `hardhat deploy` run needs (e.g. PlonkVerifier → LineaRollup, BridgedToken → TokenBridge),
+ * `hardhat deploy` run needs (e.g. PlonkVerifier → LinethRollup, BridgedToken → TokenBridge),
  * the producer calls setHandoffAddress instead of writing to process.env. This prevents
  * requireAddressFromRegistryOrEnv from treating the freshly deployed address as an operator
  * override and conflicting with a stale registry entry for the same key on stable networks.

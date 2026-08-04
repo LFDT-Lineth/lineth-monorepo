@@ -3,7 +3,7 @@
 //
 // 1. Every deploy is serialized via sequential `await` with no explicit nonce
 //    overrides, so ethers manages nonces from live wallet state. This drops the
-//    upstream `ORDERED_NONCE_POST_LINEAROLLUP` offset, which was stale for this
+//    upstream `ORDERED_NONCE_POST_LINETHROLLUP` offset, which was stale for this
 //    quickstart's deploy order and broke against any non-fresh deployer.
 //
 // 2. remoteSender is supplied directly via REMOTE_TOKEN_BRIDGE_ADDRESS env
@@ -66,7 +66,7 @@ async function main() {
   }
 
   const l2MessageServiceAddress = process.env.L2_MESSAGE_SERVICE_ADDRESS;
-  const lineaRollupAddress = process.env.LINEA_ROLLUP_ADDRESS;
+  const linethRollupAddress = process.env.LINETH_ROLLUP_ADDRESS;
 
   const remoteChainId = getRequiredEnvVar("REMOTE_CHAIN_ID");
   // Forked: deploy-contracts.sh passes the remote TokenBridge proxy address
@@ -149,7 +149,7 @@ async function main() {
     console.log(
       `TOKEN_BRIDGE_L1=${process.env.TOKEN_BRIDGE_L1}. Deploying TokenBridge on L1, using L1_RESERVED_TOKEN_ADDRESSES environment variable and remoteSender=${remoteSender}`,
     );
-    deployingChainMessageService = lineaRollupAddress;
+    deployingChainMessageService = linethRollupAddress;
     reservedAddresses = process.env.L1_RESERVED_TOKEN_ADDRESSES
       ? process.env.L1_RESERVED_TOKEN_ADDRESSES.split(",")
       : [];

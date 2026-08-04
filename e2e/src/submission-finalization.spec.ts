@@ -11,14 +11,14 @@ describe("Submission and finalization test suite", () => {
     it.concurrent(
       "Check L1 data submission and finalization",
       async () => {
-        const lineaRollup = context.l1Contracts.lineaRollup(context.l1PublicClient());
+        const linethRollup = context.l1Contracts.linethRollup(context.l1PublicClient());
         const l1PublicClient = context.l1PublicClient();
-        const currentL2BlockNumber = await lineaRollup.read.currentL2BlockNumber();
+        const currentL2BlockNumber = await linethRollup.read.currentL2BlockNumber();
 
         logger.debug("Waiting for DataSubmittedV3 used to finalize with proof...");
         const [dataSubmittedEvent] = await waitForEvents(l1PublicClient, {
-          abi: lineaRollup.abi,
-          address: lineaRollup.address,
+          abi: linethRollup.abi,
+          address: linethRollup.address,
           eventName: "DataSubmittedV3",
           fromBlock: 0n,
           toBlock: "latest",
@@ -30,8 +30,8 @@ describe("Submission and finalization test suite", () => {
 
         logger.debug("Waiting for DataFinalizedV3 event with proof...");
         const [dataFinalizedEvent] = await waitForEvents(l1PublicClient, {
-          abi: lineaRollup.abi,
-          address: lineaRollup.address,
+          abi: linethRollup.abi,
+          address: linethRollup.address,
           eventName: "DataFinalizedV3",
           fromBlock: 0n,
           toBlock: "latest",
@@ -45,8 +45,8 @@ describe("Submission and finalization test suite", () => {
         expect(dataFinalizedEvent).toBeDefined();
 
         const [lastBlockFinalized, newStateRootHash] = await Promise.all([
-          lineaRollup.read.currentL2BlockNumber(),
-          lineaRollup.read.stateRootHashes([dataFinalizedEvent.args.endBlockNumber]),
+          linethRollup.read.currentL2BlockNumber(),
+          linethRollup.read.stateRootHashes([dataFinalizedEvent.args.endBlockNumber]),
         ]);
 
         expect(lastBlockFinalized).toBeGreaterThanOrEqual(dataFinalizedEvent.args.endBlockNumber);

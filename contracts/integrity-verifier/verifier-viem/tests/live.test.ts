@@ -19,8 +19,8 @@ import {
   Verifier,
   loadArtifact,
   compareBytecode,
-  SEPOLIA_LINEA_ROLLUP_PROXY,
-  SEPOLIA_LINEA_ROLLUP_IMPLEMENTATION,
+  SEPOLIA_LINETH_ROLLUP_PROXY,
+  SEPOLIA_LINETH_ROLLUP_IMPLEMENTATION,
   EIP1967_IMPLEMENTATION_SLOT,
   CONTRACT_VERSIONS,
   RPC_ENV_VARS,
@@ -128,20 +128,20 @@ async function testViemAdapterWithRealRpc(): Promise<void> {
   const adapter = new ViemAdapter(RPC_URL);
 
   // Test getCode on a known contract
-  const bytecode = await adapter.getCode(SEPOLIA_LINEA_ROLLUP_PROXY);
+  const bytecode = await adapter.getCode(SEPOLIA_LINETH_ROLLUP_PROXY);
 
   assert(bytecode.length > 10, `Fetched bytecode for proxy (${bytecode.length} chars)`);
   assert(bytecode.startsWith("0x"), "Bytecode starts with 0x");
 
   // Test getStorageAt
-  const slot0 = await adapter.getStorageAt(SEPOLIA_LINEA_ROLLUP_PROXY, "0x0");
+  const slot0 = await adapter.getStorageAt(SEPOLIA_LINETH_ROLLUP_PROXY, "0x0");
   assert(slot0.length === 66, "Storage slot 0 is 32 bytes");
 
   // Test EIP-1967 implementation slot
-  const implValue = await adapter.getStorageAt(SEPOLIA_LINEA_ROLLUP_PROXY, EIP1967_IMPLEMENTATION_SLOT);
+  const implValue = await adapter.getStorageAt(SEPOLIA_LINETH_ROLLUP_PROXY, EIP1967_IMPLEMENTATION_SLOT);
   assertContains(
     implValue,
-    SEPOLIA_LINEA_ROLLUP_IMPLEMENTATION.toLowerCase().slice(2),
+    SEPOLIA_LINETH_ROLLUP_IMPLEMENTATION.toLowerCase().slice(2),
     "Implementation address found in EIP-1967 slot",
   );
 }
@@ -189,7 +189,7 @@ async function testFullVerificationFlow(): Promise<void> {
   const verifier = new Verifier(adapter);
 
   // Test implementation contract verification
-  const implContract = config.contracts.find((c) => c.name === "LineaRollup-Implementation");
+  const implContract = config.contracts.find((c) => c.name === "LinethRollup-Implementation");
   assert(implContract !== undefined, "Found implementation contract in config");
 
   if (implContract) {
@@ -234,7 +234,7 @@ async function testViewCallVerification(): Promise<void> {
   const adapter = new ViemAdapter(RPC_URL);
 
   // Load the artifact to get the ABI
-  const artifactPath = resolve(__dirname, "fixtures/artifacts/hardhat/LineaRollup.json");
+  const artifactPath = resolve(__dirname, "fixtures/artifacts/hardhat/LinethRollup.json");
   const artifact = loadArtifact(artifactPath);
 
   if (!artifact) {
@@ -244,14 +244,14 @@ async function testViewCallVerification(): Promise<void> {
 
   // Test CONTRACT_VERSION view call
   const callData = adapter.encodeFunctionData(artifact.abi, "CONTRACT_VERSION", []);
-  const result = await adapter.call(SEPOLIA_LINEA_ROLLUP_PROXY, callData);
+  const result = await adapter.call(SEPOLIA_LINETH_ROLLUP_PROXY, callData);
   const decoded = adapter.decodeFunctionResult(artifact.abi, "CONTRACT_VERSION", result);
 
   console.log(`    CONTRACT_VERSION result: ${decoded[0]}`);
   assertEqual(
     decoded[0],
-    CONTRACT_VERSIONS.LINEA_ROLLUP_V7,
-    `CONTRACT_VERSION returns ${CONTRACT_VERSIONS.LINEA_ROLLUP_V7}`,
+    CONTRACT_VERSIONS.LINETH_ROLLUP_V7,
+    `CONTRACT_VERSION returns ${CONTRACT_VERSIONS.LINETH_ROLLUP_V7}`,
   );
 }
 
@@ -267,7 +267,7 @@ async function testStorageSlotVerification(): Promise<void> {
   const verifier = new Verifier(adapter);
 
   // Read _initialized slot (slot 0, uint8)
-  const slot0 = await adapter.getStorageAt(SEPOLIA_LINEA_ROLLUP_PROXY, "0x0");
+  const slot0 = await adapter.getStorageAt(SEPOLIA_LINETH_ROLLUP_PROXY, "0x0");
   console.log(`    Slot 0 raw: ${slot0}`);
 
   // Decode uint8 from rightmost byte
@@ -277,7 +277,7 @@ async function testStorageSlotVerification(): Promise<void> {
   assertEqual(initializedValue, 7, "_initialized is 7 (version 7)");
 
   // Test ERC-7201 slot calculation
-  const yieldExtSlot = verifier.calculateErc7201Slot(KNOWN_NAMESPACES.LINEA_ROLLUP_YIELD_EXTENSION);
+  const yieldExtSlot = verifier.calculateErc7201Slot(KNOWN_NAMESPACES.LINETH_ROLLUP_YIELD_EXTENSION);
   console.log(`    ERC-7201 slot for YieldExtension: ${yieldExtSlot}`);
   assert(yieldExtSlot.startsWith("0x"), "ERC-7201 slot calculated");
 }

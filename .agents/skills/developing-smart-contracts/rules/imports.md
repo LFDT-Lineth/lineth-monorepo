@@ -33,15 +33,15 @@ When a contract has key ancestors that are inherited transitively through interm
 ### Correct
 
 ```solidity
-// LineaRollup.sol
-import { LineaRollupBase } from "./LineaRollupBase.sol";
+// LinethRollup.sol
+import { LinethRollupBase } from "./LinethRollupBase.sol";
 import { Eip4844BlobAcceptor } from "./dataAvailability/Eip4844BlobAcceptor.sol";
 import { ClaimMessageV1 } from "../messaging/l1/v1/ClaimMessageV1.sol";
 
-// LineaRollupBase is listed explicitly even though
+// LinethRollupBase is listed explicitly even though
 // Eip4844BlobAcceptor already inherits it.
-contract LineaRollup is
-  LineaRollupBase,
+contract LinethRollup is
+  LinethRollupBase,
   Eip4844BlobAcceptor,
   ClaimMessageV1
 {
@@ -50,13 +50,13 @@ contract LineaRollup is
 ### Incorrect
 
 ```solidity
-// LineaRollup.sol
+// LinethRollup.sol
 import { Eip4844BlobAcceptor } from "./dataAvailability/Eip4844BlobAcceptor.sol";
 import { ClaimMessageV1 } from "../messaging/l1/v1/ClaimMessageV1.sol";
 
 // A reader must open Eip4844BlobAcceptor.sol to discover
-// LineaRollupBase is part of the inheritance tree.
-contract LineaRollup is
+// LinethRollupBase is part of the inheritance tree.
+contract LinethRollup is
   Eip4844BlobAcceptor,
   ClaimMessageV1
 {

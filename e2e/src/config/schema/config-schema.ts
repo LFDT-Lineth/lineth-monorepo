@@ -25,8 +25,8 @@ export const BaseConfigSchema = z.object({
 });
 
 export const L1ConfigSchema = BaseConfigSchema.extend({
-  lineaRollupAddress: addressSchema,
-  lineaRollupProxyAdminAddress: addressSchema,
+  linethRollupAddress: addressSchema,
+  linethRollupProxyAdminAddress: addressSchema,
   tokenBridgeAddress: addressSchema,
   l1TokenAddress: addressSchema,
   forcedTransactionGatewayAddress: addressSchema,
