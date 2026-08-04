@@ -233,6 +233,13 @@ pub fn reconstruct(comptime system: System, module_sizes: []const usize) Error!R
     // during enumeration instead (see below), but we still need per-column
     // size_log2 first.
     var col_size_log2: [@max(system.max_entries, 1)]u8 = undefined;
+    // col_position[c] = number of earlier declaration-order columns sharing c's
+    // (batch, size_log2, is_ext) bucket, computed via running per-bucket
+    // counters in a single O(columns) pass (replaces an O(columns^2) rescan).
+    var col_position: [@max(system.max_entries, 1)]usize = undefined;
+    const num_batches_cap = @max(system.num_batches, 1);
+    var bucket_count: [num_batches_cap][system.max_size_log2 + 1][2]usize =
+        [_][system.max_size_log2 + 1][2]usize{[_][2]usize{[_]usize{ 0, 0 }} ** (system.max_size_log2 + 1)} ** num_batches_cap;
     var top_size: u8 = 0;
     for (system.columns, 0..) |col, c| {
         const sz: u8 = switch (col.size) {
@@ -249,15 +256,20 @@ pub fn reconstruct(comptime system: System, module_sizes: []const usize) Error!R
         if (sz > system.max_size_log2) return Error.LayoutOverflow;
         col_size_log2[c] = sz;
         if (sz > top_size) top_size = sz;
+
+        const ext_idx: usize = if (col.is_ext) 1 else 0;
+        const count = &bucket_count[col.batch_idx][sz][ext_idx];
+        col_position[c] = count.*;
+        count.* += 1;
     }
     r.top_size = top_size;
 
     // Canonical enumeration: size DESC, batch ASC (0..num_batches), base rows
     // then ext rows, position ASC (declaration order within a bucket). We assign
     // entry_idx as a running counter and record each entry's origin column.
-    // Positions restart at 0 per (batch, size_log2, is_ext); we recover a
-    // column's position by counting earlier same-bucket columns in declaration
-    // order — exactly prover GetLayout's running counter, restricted to one batch.
+    // Positions restart at 0 per (batch, size_log2, is_ext); col_position[c] was
+    // precomputed above in a single O(columns) pass — exactly prover GetLayout's
+    // running counter, restricted to one batch.
     var entry_idx: usize = 0;
     var size: i32 = @intCast(system.max_size_log2);
     while (size >= 0) : (size -= 1) {
@@ -271,21 +283,11 @@ pub fn reconstruct(comptime system: System, module_sizes: []const usize) Error!R
                     if (col.is_ext != want_ext) continue;
                     if (col_size_log2[c] != size_u8) continue;
 
-                    // position = number of earlier declaration-order columns in the
-                    // same (batch, size_log2, is_ext) bucket.
-                    var position: usize = 0;
-                    for (system.columns, 0..) |c2, c2i| {
-                        if (c2i >= c) break;
-                        if (c2.batch_idx == batch and c2.is_ext == want_ext and col_size_log2[c2i] == size_u8) {
-                            position += 1;
-                        }
-                    }
-
                     if (entry_idx >= system.max_entries) return Error.LayoutOverflow;
                     r.entry_size_log2[entry_idx] = size_u8;
                     r.entry_batch[entry_idx] = batch;
                     r.entry_is_ext[entry_idx] = want_ext;
-                    r.entry_row_idx[entry_idx] = position;
+                    r.entry_row_idx[entry_idx] = col_position[c];
                     r.entry_col_decl_idx[entry_idx] = c;
                     r.col_to_entry[c] = entry_idx;
                     entry_idx += 1;
@@ -612,9 +614,8 @@ fn bindInputTreeOpenings(
     level_size: usize,
 ) Error!void {
     // Distinct batches within the bundle, in first-declaration (entry) order.
-    // Entries for one batch are contiguous within a bundle (canonicalLayout
-    // walks batches in order), so a seen-set the size of the bundle suffices.
-    var seen: [@max(system.max_entries, 1)]usize = undefined;
+    // At most system.num_batches distinct batches can ever appear.
+    var seen: [@max(system.num_batches, 1)]usize = undefined;
     var count: usize = 0;
     var e = e0;
     outer: while (e < e1) : (e += 1) {
