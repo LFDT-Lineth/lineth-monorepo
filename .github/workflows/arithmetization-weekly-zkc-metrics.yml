@@ -1,0 +1,481 @@
+# Weekly metrics for the RISC-V arithmetization. Measures compile stats, the guest build, trace,
+# and trace+check against the committed reference block, then appends one row to each table in
+# arithmetization/docs/metrics/zkc-weekly-metrics.md — which is the ledger; there is no other store.
+#
+# One job on one runner tier, deliberately: comparability across weeks is the point.
+# The two heavy steps are best-effort and individually capped; a timeout is recorded as that week's
+# data point rather than failing the workflow.
+#
+# See arithmetization/src/test/scripts/README-weekly-metrics.md.
+name: arithmetization weekly zkc metrics
+
+on:
+  schedule:
+    # Wednesday 03:00 UTC = 05:00 Paris in summer (CEST), 04:00 in winter (CET): GitHub cron is
+    # UTC and does not follow DST. Early enough that the numbers are waiting before the 09:30
+    # daily, leaving the morning to re-run or fix by hand before the afternoon delivery meeting.
+    - cron: '0 3 * * 3'
+  workflow_dispatch:
+    inputs:
+      zkc-ref:
+        description: 'zkc branch, release tag, or commit hash (short or full). Default: main'
+        required: false
+        type: string
+      monorepo-ref:
+        description: 'monorepo commit/branch/tag to measure (default: main, i.e. the ref this run was started from)'
+        required: false
+        type: string
+      run-heavy:
+        description: 'Run the trace and trace+check steps'
+        required: false
+        type: boolean
+        default: true
+      trace-timeout-min:
+        description: 'Cap for the trace step, minutes'
+        required: false
+        type: number
+        default: 30
+      check-timeout-min:
+        description: 'Cap for the trace+check step, minutes'
+        required: false
+        type: number
+        default: 240
+      commit-results:
+        description: 'Commit the updated markdown back to the branch'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  METRICS_FILE: arithmetization/docs/metrics/zkc-weekly-metrics.md
+  RUNNER_TIER: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
+  # Keep in sync with the job's timeout-minutes below (Actions does not let a job read its
+  # own timeout). The prepare step validates the step caps against this.
+  JOB_TIMEOUT_MIN: 360
+
+jobs:
+  weekly-metrics:
+    name: weekly zkc metrics
+    # Keep this tier stable: changing it breaks comparability with earlier rows.
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
+    timeout-minutes: 360   # keep in sync with JOB_TIMEOUT_MIN above
+    outputs:
+      row_written: ${{ steps.update.outputs.row_written }}
+    steps:
+      # Two checkouts: this one is the TOOLING (renderer, workflow, metrics file), always from the
+      # ref the run was started from. The measured tree may predate all of it, so measuring in place
+      # would leave no renderer and nowhere to write.
+      - name: Checkout tooling
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          submodules: false
+
+      # The tree UNDER MEASUREMENT, when a monorepo-ref was given.
+      - name: Checkout the monorepo commit under measurement
+        if: ${{ inputs.monorepo-ref != '' }}
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ inputs.monorepo-ref }}
+          path: measured
+          submodules: false
+
+      # Every measurement step reads MEASURE_DIR. Without a monorepo-ref it is the workspace itself.
+      - name: Resolve the tree under measurement
+        run: |
+          set -euo pipefail
+          if [ -n "${{ inputs.monorepo-ref }}" ]; then
+            echo "MEASURE_DIR=${GITHUB_WORKSPACE}/measured" >> "$GITHUB_ENV"
+          else
+            echo "MEASURE_DIR=${GITHUB_WORKSPACE}" >> "$GITHUB_ENV"
+          fi
+
+      # Installs Go, the pinned Zig, Rust and the riscv toolchain, and resolves the zkc-ref
+      # input into $ZKC_REF (falling back to arithmetization/Makefile's pin when empty).
+      - name: Setup Environment
+        uses: ./.github/actions/setup-arithmetization-riscv
+        with:
+          zkc-ref: ${{ inputs.zkc-ref || 'main' }}
+
+      # install-zkc does `git fetch --depth=1 origin <ref>`, which cannot fetch an abbreviated SHA,
+      # so expand short hashes through the API. Branches and tags pass through untouched.
+      - name: Resolve the zkc ref
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          requested="${{ inputs.zkc-ref || 'main' }}"
+          resolved="$requested"
+          if printf '%s' "$requested" | grep -qE '^[0-9a-f]{7,39}$'; then
+            if full=$(gh api "repos/LFDT-Lineth/zkc/commits/${requested}" -q .sha 2>/dev/null) \
+               && [ -n "$full" ]; then
+              resolved="$full"
+              echo "expanded short hash ${requested} -> ${resolved}"
+            else
+              echo "::warning::could not expand '${requested}' to a full zkc SHA; passing it through as-is (a short hash will fail to fetch)"
+            fi
+          fi
+          # Resolve to a full SHA whatever the form: a checkout on a release tag yields a clean
+          # module version with no commit in it, so provenance needs another source.
+          sha_hint=""
+          if printf '%s' "$resolved" | grep -qE '^[0-9a-f]{40}$'; then
+            sha_hint="$resolved"
+          else
+            sha_hint=$(gh api "repos/LFDT-Lineth/zkc/commits/${resolved}" -q .sha 2>/dev/null || true)
+          fi
+          {
+            echo "ZKC_REF=${resolved}"
+            echo "ZKC_REF_LABEL=${requested}"
+            echo "ZKC_SHA_HINT=${sha_hint}"
+          } >> "$GITHUB_ENV"
+          echo "zkc ref: requested '${requested}', using '${resolved}', sha '${sha_hint:-unknown}'"
+
+      # Build to an explicit path rather than GOBIN, so the measured binary is pinned and named
+      # rather than implicit on PATH, and pass it on with ZKC= (the override src/test/Makefile
+      # documents). Building from the checkout also gets vcs.revision stamped in for provenance.
+      - name: Install zkc
+        run: |
+          set -euo pipefail
+          make -C arithmetization install-zkc-to ZKC_BIN="${RUNNER_TEMP}/zkc-under-test"
+          echo "ZKC=${RUNNER_TEMP}/zkc-under-test" >> "$GITHUB_ENV"
+
+      - name: Prepare run directory and validate the timeout budget
+        run: |
+          set -euo pipefail
+          echo "RUN=${RUNNER_TEMP}/wzm" >> "$GITHUB_ENV"
+          mkdir -p "${RUNNER_TEMP}/wzm"
+
+          # The step caps must fit inside the job cap, or the job cap silently truncates them and
+          # the check appears to time out at a value nobody configured.
+          trace_cap=${{ inputs.trace-timeout-min || 30 }}
+          check_cap=${{ inputs.check-timeout-min || 240 }}
+          job_cap=${{ env.JOB_TIMEOUT_MIN }}
+          overhead=40
+          budget=$(( trace_cap + check_cap + overhead ))
+          if [ "$budget" -gt "$job_cap" ]; then
+            echo "::error::trace ${trace_cap}m + check ${check_cap}m + ${overhead}m overhead = ${budget}m exceeds the job cap of ${job_cap}m. Lower the step caps or raise JOB_TIMEOUT_MIN in the workflow." >&2
+            exit 1
+          fi
+          echo "timeout budget: ${budget}m of ${job_cap}m"
+
+      # ── 1. constraint stats ──
+      # rc is captured explicitly rather than relying on `set -e`, which would abort before rc and
+      # wall_s were written and leave the table unable to name the failure. The step still exits
+      # non-zero; the later steps carry `if: always()` and record the row regardless.
+      - name: zkc compile --stats
+        run: |
+          set -uo pipefail
+          d="$RUN/compile"; mkdir -p "$d"
+          t0=$(date +%s)
+          # --order name (not zkc's default --order total) keeps the table diffable week to week.
+          /usr/bin/time -v -o "$d/rusage" \
+            "$ZKC" compile --stats --order name "$MEASURE_DIR/arithmetization/src/main/riscv/main.zkc" \
+            > "$d/stdout" 2> "$d/stderr"
+          rc=$?
+          echo "$rc" > "$d/rc"
+          echo $(( $(date +%s) - t0 )) > "$d/wall_s"
+          tail -20 "$d/stdout"
+          [ "$rc" -eq 0 ] || { echo "::error::zkc compile --stats failed (rc $rc)"; tail -30 "$d/stderr"; }
+          exit "$rc"
+
+      # ── 2. guest ELF -> zkc JSON ──
+      - name: Build l2-execution guest and convert to zkc JSON
+        if: ${{ always() && inputs.run-heavy != false }}
+        run: |
+          set -uo pipefail
+          d="$RUN/guest"; mkdir -p "$d"
+          t0=$(date +%s)
+          # Both halves timed as one task. No `make linker-script`: linker_script.ld is tracked
+          # and @embedFile'd by the zig build, so regenerating it risks dirtying the tree.
+          /usr/bin/time -v -o "$d/rusage" \
+            make -C "$MEASURE_DIR/riscv-guests/l2-execution" compile KECCAK_ACCEL=true \
+            > "$d/stdout" 2> "$d/stderr"
+          rc=$?
+          if [ "$rc" -eq 0 ]; then
+            make -C "$MEASURE_DIR/riscv-guests/build_common" elf-to-json \
+              BIN_EXT="$MEASURE_DIR/riscv-guests/l2-execution/zig-out/bin/evm_execution_guest" \
+              JSON_EXT="$RUN/guest.json" \
+              IN_BYTES="@$MEASURE_DIR/riscv-guests/l2-execution/test/testdata/stateless_input.ssz" \
+              >> "$d/stdout" 2>> "$d/stderr"
+            rc=$?
+          fi
+          echo "$rc" > "$d/rc"
+          echo $(( $(date +%s) - t0 )) > "$d/wall_s"
+          [ "$rc" -eq 0 ] && ls -l "$RUN/guest.json"
+          [ "$rc" -eq 0 ] || { echo "::error::guest build/conversion failed (rc $rc)"; tail -30 "$d/stderr"; }
+          exit "$rc"
+
+      # ── 3. trace (best effort) ──
+      # `time` wraps `timeout`, not the reverse: the cap must not kill `time`, or the peak RSS is
+      # lost in exactly the case worth recording. timeout exits 124.
+      - name: zkc trace --stats
+        if: ${{ always() && inputs.run-heavy != false }}
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          # No JSON means the guest step failed; leave the directory absent so this reads
+          # "skipped" rather than inventing a failure for a task that never ran.
+          [ -s "$RUN/guest.json" ] || { echo "no guest JSON; skipping"; exit 0; }
+          d="$RUN/trace"; mkdir -p "$d"
+          t0=$(date +%s)
+          # Routed through src/test/Makefile's zkc-trace, the repo's single source of truth for
+          # invoking zkc on a guest JSON; ZKC= is the documented override. `time` still sees the
+          # whole subtree, so peak RSS covers zkc itself.
+          /usr/bin/time -v -o "$d/rusage" \
+            timeout -k 30s "${{ inputs.trace-timeout-min || 30 }}m" \
+            make -f "$GITHUB_WORKSPACE/arithmetization/src/test/Makefile" --no-print-directory zkc-trace \
+              JSON="$RUN/guest.json" \
+              ZKC_MAIN="$MEASURE_DIR/arithmetization/src/main/riscv/main.zkc" \
+              ZKC_TRACE_FLAGS="--stats" \
+            > "$d/stdout" 2> "$d/stderr"
+          rc=$?
+          echo "$rc" > "$d/rc"
+          echo $(( $(date +%s) - t0 )) > "$d/wall_s"
+          # timeout signals make, which may not take its recipe's child with it. Reap any zkc left
+          # holding memory, or it contends with the check step that follows.
+          if [ "$rc" -eq 124 ]; then : > "$d/timedout"; pkill -TERM -f 'zkc trace' || true; sleep 5; fi
+          head -30 "$d/stdout"
+          exit 0
+
+      # ── 4. trace + constraint check (best effort, the expensive one) ──
+      - name: zkc trace --stats --check
+        if: ${{ always() && inputs.run-heavy != false }}
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          [ -s "$RUN/guest.json" ] || { echo "no guest JSON; skipping"; exit 0; }
+          d="$RUN/check"; mkdir -p "$d"
+          t0=$(date +%s)
+          /usr/bin/time -v -o "$d/rusage" \
+            timeout -k 30s "${{ inputs.check-timeout-min || 240 }}m" \
+            make -f "$GITHUB_WORKSPACE/arithmetization/src/test/Makefile" --no-print-directory zkc-trace \
+              JSON="$RUN/guest.json" \
+              ZKC_MAIN="$MEASURE_DIR/arithmetization/src/main/riscv/main.zkc" \
+              ZKC_TRACE_FLAGS="--stats --check" \
+            > "$d/stdout" 2> "$d/stderr"
+          rc=$?
+          echo "$rc" > "$d/rc"
+          echo $(( $(date +%s) - t0 )) > "$d/wall_s"
+          if [ "$rc" -eq 124 ]; then : > "$d/timedout"; pkill -TERM -f 'zkc trace' || true; sleep 5; fi
+          # A constraint failure does not change zkc's exit code, so the renderer greps for the
+          # reported lines. Surface the count here too.
+          grep -c '^failing ' "$d/stdout" || true
+          exit 0
+
+      # ── provenance ──
+      - name: Record run metadata
+        if: always()
+        run: |
+          set -euo pipefail
+          zkc_bin="$ZKC"
+          # Three sources, most authoritative first: vcs.revision (stamped when install-zkc builds
+          # from the checkout), the module pseudo-version suffix (for `go install pkg@ref`), then the
+          # API-resolved SHA (for a clean release tag, whose version carries no commit).
+          # sed -n/p matters: without it a non-matching version is echoed back and masquerades as a hash.
+          zkc_commit=$(go version -m "$zkc_bin" \
+            | awk '$1=="build" && $2 ~ /^vcs\.revision=/{print substr($2,14)}')
+          if [ -z "$zkc_commit" ]; then
+            zkc_mod=$(go version -m "$zkc_bin" | awk '$1=="mod"{print $3}')
+            zkc_commit=$(printf '%s' "$zkc_mod" | sed -nE 's/.*-([0-9a-f]{12})$/\1/p')
+          fi
+          [ -n "$zkc_commit" ] || zkc_commit="${ZKC_SHA_HINT:-}"
+          if [ -n "$zkc_commit" ]; then
+            zkc_cell="${ZKC_REF_LABEL}@\`${zkc_commit:0:9}\`"
+          else
+            zkc_cell="${ZKC_REF_LABEL}@–"
+          fi
+          cores=$(nproc)
+          ram=$(awk '/^MemTotal:/{printf "%.0f GiB", $2/1048576}' /proc/meminfo)
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            trigger="weekly"
+          else
+            trigger="manual (@${{ github.actor }})"
+          fi
+          # The commit MEASURED, which is not the workspace when a monorepo-ref was given.
+          measured_sha=$(git -C "$MEASURE_DIR" rev-parse --short=9 HEAD)
+          if [ -n "${{ inputs.monorepo-ref }}" ]; then
+            measured="\`${measured_sha}\` (${{ inputs.monorepo-ref }}, requested)"
+          else
+            measured="\`${measured_sha}\` (${GITHUB_REF_NAME})"
+          fi
+          {
+            echo "week=$(date -u +%G-W%V)"
+            echo "started=$(date -u '+%Y-%m-%d %H:%M')"
+            echo "trigger=$trigger"
+            echo "runner=\`${RUNNER_TIER##*amd64-}\` ${cores} cores, ${ram}"
+            echo "arithmetization=$measured"
+            echo "zkc=${zkc_cell}"
+            echo "run_url=[#${GITHUB_RUN_NUMBER}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})"
+          } > "$RUN/meta.env"
+          cat "$RUN/meta.env"
+
+      - name: Update metrics tables
+        id: update
+        if: always()
+        run: |
+          set -euo pipefail
+          GO111MODULE=off go run ./arithmetization/src/test/scripts/weekly_metrics \
+            -run-dir "$RUN" -out "$METRICS_FILE" | tee "$RUN/added-rows.txt"
+          # Consumed by record-lost-run: unset means the job died before recording anything.
+          echo "row_written=true" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Weekly zkc metrics — rows added"
+            echo
+            echo '```'
+            cat "$RUN/added-rows.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload raw measurement logs
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: zkc-weekly-metrics-logs
+          path: |
+            ${{ env.RUN }}/*/stdout
+            ${{ env.RUN }}/*/stderr
+            ${{ env.RUN }}/*/rusage
+            ${{ env.RUN }}/meta.env
+
+      # App token so the push is not blocked by branch protection, mirroring
+      # component-changelog-commit.yml. [skip ci] keeps it from re-triggering.
+      - name: Generate release bot App token
+        if: ${{ always() && inputs.commit-results != false }}
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
+          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
+
+      - name: Commit and push metrics
+        if: ${{ always() && inputs.commit-results != false }}
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- "$METRICS_FILE"; then
+            echo "No change to $METRICS_FILE — nothing to commit."
+            exit 0
+          fi
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "$(gh api "/users/${APP_SLUG}[bot]" -q .id)+${APP_SLUG}[bot]@users.noreply.github.com"
+          git remote set-url origin \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git add "$METRICS_FILE"
+          git commit -m "chore(arithmetization): weekly zkc metrics $(date -u +%G-W%V) [skip ci]"
+          for attempt in 1 2 3; do
+            git fetch origin "$GITHUB_REF_NAME"
+            if ! git rebase "origin/${GITHUB_REF_NAME}"; then
+              git rebase --abort
+              echo "Rebase conflict on attempt ${attempt}; aborting." >&2
+              exit 1
+            fi
+            if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              exit 0
+            fi
+            echo "Push rejected on attempt ${attempt}; retrying..."
+          done
+          echo "Failed to push metrics after 3 attempts." >&2
+          exit 1
+
+  # `if: always()` survives a failing step but not losing the runner itself (eviction, an
+  # infrastructure fault, the job timeout), where nothing downstream runs and the week would vanish
+  # — indistinguishable from a week nobody ran. Gated on row_written rather than the job result, so
+  # a red-but-recorded run gets no duplicate.
+  record-lost-run:
+    name: record lost run
+    needs: [weekly-metrics]
+    if: ${{ always() && needs.weekly-metrics.outputs.row_written != 'true' && inputs.commit-results != false }}
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-small
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          submodules: false
+
+      - name: Install Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version: '1.24.6'
+          cache-dependency-path: "**/*.sum"
+
+      # No artifacts exist, so task cells render "skipped"; the runner cell carries the reason.
+      - name: Append a placeholder row
+        run: |
+          set -euo pipefail
+          RUN="${RUNNER_TEMP}/wzm-lost"; mkdir -p "$RUN"
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            trigger="weekly"
+          else
+            trigger="manual (@${{ github.actor }})"
+          fi
+          {
+            echo "week=$(date -u +%G-W%V)"
+            echo "started=$(date -u '+%Y-%m-%d %H:%M')"
+            echo "trigger=$trigger"
+            echo "runner=**run lost** — \`${RUNNER_TIER##*amd64-}\` job did not complete (evicted, cancelled or out of memory)"
+            if [ -n "${{ inputs.monorepo-ref }}" ]; then
+              # Only the request is known here, never a SHA that was not the one measured.
+              echo "arithmetization=${{ inputs.monorepo-ref }} (requested)"
+            else
+              echo "arithmetization=\`$(git rev-parse --short=9 HEAD)\` (${GITHUB_REF_NAME})"
+            fi
+            echo "zkc=${{ inputs.zkc-ref || 'main' }}@–"
+            echo "run_url=[#${GITHUB_RUN_NUMBER}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})"
+          } > "$RUN/meta.env"
+          GO111MODULE=off go run ./arithmetization/src/test/scripts/weekly_metrics \
+            -run-dir "$RUN" -out "$METRICS_FILE" | tee "$RUN/added-rows.txt"
+          {
+            echo "### Weekly zkc metrics — run lost, placeholder row added"
+            echo
+            echo '```'
+            cat "$RUN/added-rows.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Generate release bot App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
+          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
+
+      - name: Commit and push the placeholder
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- "$METRICS_FILE"; then
+            echo "No change to $METRICS_FILE — nothing to commit."
+            exit 0
+          fi
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "$(gh api "/users/${APP_SLUG}[bot]" -q .id)+${APP_SLUG}[bot]@users.noreply.github.com"
+          git remote set-url origin \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git add "$METRICS_FILE"
+          git commit -m "chore(arithmetization): weekly zkc metrics $(date -u +%G-W%V) — run lost [skip ci]"
+          for attempt in 1 2 3; do
+            git fetch origin "$GITHUB_REF_NAME"
+            if ! git rebase "origin/${GITHUB_REF_NAME}"; then
+              git rebase --abort
+              echo "Rebase conflict on attempt ${attempt}; aborting." >&2
+              exit 1
+            fi
+            if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              exit 0
+            fi
+            echo "Push rejected on attempt ${attempt}; retrying..."
+          done
+          echo "Failed to push the placeholder after 3 attempts." >&2
+          exit 1
