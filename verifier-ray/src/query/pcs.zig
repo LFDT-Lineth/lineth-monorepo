@@ -223,6 +223,7 @@ pub fn reconstruct(comptime system: System, module_sizes: []const usize) Error!R
     const R = Reconstructed(system);
     var r: R = undefined;
     const num_cols = system.columns.len;
+    if (num_cols > system.max_entries) return Error.LayoutOverflow;
     r.num_entries = num_cols;
 
     // Per-column size_log2, and per-column position within its
@@ -257,6 +258,7 @@ pub fn reconstruct(comptime system: System, module_sizes: []const usize) Error!R
         col_size_log2[c] = sz;
         if (sz > top_size) top_size = sz;
 
+        if (col.batch_idx >= system.num_batches) return Error.LayoutOverflow;
         const ext_idx: usize = if (col.is_ext) 1 else 0;
         const count = &bucket_count[col.batch_idx][sz][ext_idx];
         col_position[c] = count.*;
