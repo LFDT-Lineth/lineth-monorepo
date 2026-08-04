@@ -42,7 +42,7 @@ object CoordinatorConfigDocsSpec : ConfigDocsSpec {
     ),
     ConfigFileRoot(
       label = "smart-contract-errors",
-      description = "Mapping of Linea smart-contract revert error codes to messages.",
+      description = "Mapping of Lineth smart-contract revert error codes to messages.",
       rootClass = SmartContractErrorCodesConfigFileToml::class,
     ),
   )
