@@ -13,7 +13,7 @@ pub fn build(b: *std.Build) void {
     common.requireZigVersion();
 
     const r5 = b.option(bool, "r5", "Build for the Lineth R5 zkVM target") orelse false;
-    // Allow disabling the Lineth zkVM accelerators wrappers for testing purposes. However, we only have them for the R5 target, so it is disabled by default.
+    // Allow disabling the Lineth zkVM accelerator wrappers for testing purposes. We only have them for the R5 target, so they are disabled by default unless the r5 option is set.
     const disable_accelerators = (b.option(bool, "disable-accelerators", "Disable Lineth zkVM accelerator wrappers") orelse false) or !r5;
     const verifier_profiling = b.option(
         bool,

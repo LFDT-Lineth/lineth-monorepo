@@ -6,7 +6,7 @@ const ssz_decode = @import("zesu_ssz_decode");
 const ssz_output = @import("zesu_ssz_output");
 const zesu_allocator = @import("zesu_allocator");
 
-// Heap start from the linker script (canonical Lineth layout: `_heap_start` = 0x48800000, grows up).
+// Heap starts at the address defined by the linker script (canonical Lineth layout: `_heap_start` = 0x48800000, grows up).
 extern var _heap_start: u8;
 // Linker script does not actually constraint the heap to 256 MiB, but this is a reasonable upper bound
 const GUEST_HEAP_SIZE: usize = 256 * 1024 * 1024;
