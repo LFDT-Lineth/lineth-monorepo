@@ -1,6 +1,7 @@
 package codegen
 
 import (
+	"bytes"
 	"strings"
 	"testing"
 
@@ -9,6 +10,104 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
 	pcscompiler "github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 )
+
+func TestWritePcsSystemZig(t *testing.T) {
+	system := PcsSystem{
+		LogCodewordSize:  23,
+		LogPlaintextSize: 22,
+		LogFinalPolySize: 0,
+		NumQueries:       2,
+		NumBatches:       2,
+		Columns: []PcsColumnDesc{
+			{BatchIdx: 0, IsExt: false, SizeLog2: 3, Shifts: []int{0, 7}},
+			{BatchIdx: 1, IsExt: true, IsDynamic: true, DynamicIndex: 1, DynamicMinSizeLog2: 3, Shifts: []int{1}},
+		},
+		MaxEntries:    2,
+		MaxSizeLog2:   22,
+		WitnessMap:    []PcsClaimRef{{ColDeclIdx: 0, Shift: 0}},
+		QuotientMap:   []PcsClaimRef{{ColDeclIdx: 1, Shift: 0}},
+		ZetaCoinIndex: 5,
+		BatchRoots: []PcsBatchRoot{
+			{RoundIndex: 0},
+			{Precomputed: true, Root: octupletForTest(1, 2, 3, 4, 5, 6, 7, 8)},
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := WritePcsSystemZig(&buf, 7, system); err != nil {
+		t.Fatalf("WritePcsSystemZig() error = %v", err)
+	}
+
+	out := buf.String()
+	for _, want := range []string{
+		`const pcs = @import("../query/pcs.zig");`,
+		`const fri = @import("../query/fri.zig");`,
+		`const witness_map = [_]pcs.ClaimRef{`,
+		`const quotient_map = [_]pcs.ClaimRef{`,
+		`const batch_roots = [_]pcs.BatchRoot{`,
+		`pub const pcs_system_7 = pcs.System{`,
+		`.{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 3 }, .shifts = &[_]isize{ 0, 7 } },`,
+		`.{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 1, .min_size_log2 = 3 } }, .shifts = &[_]isize{ 1 } },`,
+		`.zeta_coin_index = 5,`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("generated pcs missing %q\n--- got ---\n%s", want, out)
+		}
+	}
+}
+
+func TestWritePcsSystemZigWithOptions(t *testing.T) {
+	system := PcsSystem{
+		LogCodewordSize:  1,
+		LogPlaintextSize: 0,
+		Columns:          []PcsColumnDesc{},
+		WitnessMap:       []PcsClaimRef{},
+		QuotientMap:      []PcsClaimRef{},
+		BatchRoots:       []PcsBatchRoot{},
+	}
+
+	var buf bytes.Buffer
+	if err := WritePcsSystemZigWithOptions(&buf, 0, system, PcsZigOptions{
+		PcsImport:   "pcs",
+		FriImport:   "fri",
+		ConstName:   "system",
+		ConstPrefix: "case_0_",
+		EmitHeader:  false,
+	}); err != nil {
+		t.Fatalf("WritePcsSystemZigWithOptions() error = %v", err)
+	}
+
+	out := buf.String()
+	for _, unwanted := range []string{
+		`const pcs = `,
+		`const fri = `,
+	} {
+		if strings.Contains(out, unwanted) {
+			t.Fatalf("generated pcs unexpectedly contains %q\n--- got ---\n%s", unwanted, out)
+		}
+	}
+	for _, want := range []string{
+		`const case_0_witness_map = [_]pcs.ClaimRef{`,
+		`const case_0_quotient_map = [_]pcs.ClaimRef{`,
+		`const case_0_batch_roots = [_]pcs.BatchRoot{`,
+		`pub const case_0_system = pcs.System{`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("generated pcs missing %q\n--- got ---\n%s", want, out)
+		}
+	}
+}
+
+func octupletForTest(values ...uint64) field.Octuplet {
+	if len(values) != 8 {
+		panic("octupletForTest requires 8 values")
+	}
+	var out field.Octuplet
+	for i, value := range values {
+		out[i].SetUint64(value)
+	}
+	return out
+}
 
 // DynamicModuleOrder must follow sys.Modules order (module-index order), matching
 // prover-ray Runtime.AdvanceRound's dynamic-size absorption. If it followed
@@ -42,10 +141,6 @@ func TestDynamicModuleOrderFollowsSysModules(t *testing.T) {
 		t.Fatalf("DynamicModuleIndex = {dynA:%d dynB:%d}, want {0,1}", idx[dynA], idx[dynB])
 	}
 }
-
-// (The former TestHasCommittedDynamicColumn was removed: committed dynamic
-// columns are now SUPPORTED via runtime layout reconstruction, so BuildPcsSystem
-// no longer rejects them and the HasCommittedDynamicColumn guard was deleted.)
 
 // BuildPcsSystem must REJECT a dynamic column opened at two shift offsets that
 // alias mod its runtime size. prover-ray dedups such openings (mod the size) to

@@ -150,7 +150,7 @@ func writePcsSystemZig(out *bytes.Buffer, prefix string, sys *codegen.PcsSystem)
 	// namespaces its supporting consts with ConstPrefix, so the System const is
 	// `<prefix>_pcs_system` and it is what the caller references as `.pcs = ...`.
 	constPrefix := prefix + "_pcs_"
-	_ = codegen.WritePcsSystemZig(out, 0, *sys, codegen.PcsZigOptions{
+	_ = codegen.WritePcsSystemZigWithOptions(out, 0, *sys, codegen.PcsZigOptions{
 		PcsImport:   "pcs",
 		FriImport:   "fri",
 		FieldImport: "field",
