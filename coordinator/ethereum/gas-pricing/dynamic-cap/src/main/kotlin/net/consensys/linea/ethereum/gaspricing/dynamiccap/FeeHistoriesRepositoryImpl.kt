@@ -30,8 +30,8 @@ class FeeHistoriesRepositoryImpl(
     }
   }
 
-  private var lastNumOfFeeHistoriesFromBlockNumber: AtomicInteger = AtomicInteger(0)
-  private var lastPercentileGasFees: AtomicReference<PercentileGasFees> =
+  private val lastNumOfFeeHistoriesFromBlockNumber: AtomicInteger = AtomicInteger(0)
+  private val lastPercentileGasFees: AtomicReference<PercentileGasFees> =
     AtomicReference(
       PercentileGasFees(
         percentileBaseFeePerGas = 0uL,

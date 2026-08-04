@@ -40,7 +40,7 @@ internal class ForcedTransactionsL1EventsFetcher(
   private val log: Logger = LogManager.getLogger(ForcedTransactionsL1EventsFetcher::class.java),
 ) : LongRunningService {
   private lateinit var eventsSubscription: EthLogsFilterSubscriptionManager
-  private var nextExpectedFtx = AtomicLong(0)
+  private val nextExpectedFtx = AtomicLong(0)
 
   private fun getStartBlockNumberToListenForLogs(): SafeFuture<BlockParameter> {
     return resumePointProvider
