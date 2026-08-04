@@ -58,8 +58,7 @@ func main() {
 	sszDir := flag.String("ssz-dir", filepath.Join(os.TempDir(), "execution-specs-ssz-fixtures"), "directory for selected temporary SSZ inputs")
 	fixturePathsFlag := flag.String("fixture-paths", "blockchain_tests/for_amsterdam/amsterdam,blockchain_tests/for_amsterdam/osaka", "comma-separated fixture paths under fixtures-dir")
 	sszLimit := flag.Int("ssz-limit", 0, "maximum SSZ inputs to run per fixture path; 0 means all")
-	// This runner sweeps hundreds of blocks, so it needs the cheap backend and says so rather than
-	// inheriting the guest Makefile's default, which traces. Pass -zkc-flags="" to inherit instead.
+	// Sweeping hundreds of blocks needs the cheap backend, not the Makefile default, which traces.
 	zkcFlags := flag.String("zkc-flags", "--gogen --fast", "ZKC_EXEC_FLAGS for each guest run; empty inherits the guest Makefile default (which traces)")
 	flag.Parse()
 
@@ -135,8 +134,6 @@ func main() {
 			passed++
 		} else {
 			hadError = true
-			// Report the first failure's output. Without this the run is silent about WHY every
-			// fixture failed, which is how a stale zkc flag went unnoticed for three weeks.
 			if !reportedFailure && detail != "" {
 				reportedFailure = true
 				fmt.Fprintf(os.Stderr, "\nfirst failing guest run (%s):\n%s\n\n", input.file, detail)
@@ -351,12 +348,10 @@ func run(w io.Writer, name string, args ...string) error {
 	return cmd.Run()
 }
 
-// Runs the guest. Returns whether it exited cleanly, how long it took, and — on failure — the tail
-// of its output, so a broken invocation says why instead of just reporting every fixture as invalid.
+// Runs the guest. Returns whether it exited cleanly, how long it took, and, on failure, the tail of
+// its output for diagnosis.
 func runGuest(guestDir, input, zkcFlags string) (bool, time.Duration, string) {
 	args := []string{"--no-print-directory", "-C", guestDir, "exec", "INPUT=" + input}
-	// Only forward the variable when overridden, so the guest Makefile stays the single place
-	// defining the default.
 	if zkcFlags != "" {
 		args = append(args, "ZKC_EXEC_FLAGS="+zkcFlags)
 	}
@@ -367,7 +362,10 @@ func runGuest(guestDir, input, zkcFlags string) (bool, time.Duration, string) {
 	err := cmd.Run()
 	detail := ""
 	if err != nil {
-		detail = tail(output.String(), 15)
+		// Fall back to the error itself: a command that cannot start produces no output.
+		if detail = tail(output.String(), 15); detail == "" {
+			detail = err.Error()
+		}
 	}
 	if cmd.ProcessState == nil {
 		return err == nil, 0, detail

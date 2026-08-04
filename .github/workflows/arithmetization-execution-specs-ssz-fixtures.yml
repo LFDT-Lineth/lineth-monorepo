@@ -37,8 +37,6 @@ jobs:
           ZKC_REF: ""
         run: make -C riscv-guests/l2-execution run-execution-specs-ssz-fixtures
 
-  # This job is scheduled and had no notification, so it stayed red for weeks without anyone
-  # noticing. Same reusable notifier and channel as the tracer nightly/weekly jobs.
   notify:
     needs: [ run-fixtures ]
     if: ${{ always() && github.ref == 'refs/heads/main' && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) }}

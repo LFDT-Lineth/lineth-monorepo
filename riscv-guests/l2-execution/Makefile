@@ -33,12 +33,8 @@ BIN      := $(MAKEFILE_DIR)zig-out/bin/$(NAME)
 # Sample fixture input used by exec/debug
 INPUT    ?= $(MAKEFILE_DIR)test/testdata/stateless_input.ssz
 
-# Flags forwarded to `zkc exec` by exec. Empty by default, which means the interpreter builds a
-# trace — the same behaviour as before, since the "-q" this used to carry only suppressed output and
-# zkc's verbosity now defaults to NONE anyway (guest printf appears at -vvv).
-# Override to pick something cheaper or stricter: "--fast" skips tracing and constraints for a
-# runnability check, "--gogen --fast" runs the generated-Go backend, "--check" verifies the trace
-# against the constraints.
+# Flags forwarded to `zkc exec` by exec. Empty means tracing; "--fast" skips tracing and
+# constraints, "--gogen --fast" uses the generated-Go backend, "--check" also checks the trace.
 ZKC_EXEC_FLAGS ?=
 
 # Parameters for execution-spec zkevm fixtures and selected temporary SSZ inputs.
