@@ -1,0 +1,107 @@
+name: 'Validate config docs'
+description: >-
+  Reusable validation for any component using the shared `config-docs` engine.
+  Runs the component's `checkConfigDocs` and `generateConfigDocs` Gradle tasks,
+  asserts the committed Markdown/JSON snapshots are still synchronized, validates
+  the generated MDX partial is safe to import into Docusaurus, writes a
+  provenance partial next to the MDX partial, and uploads an immutable artifact.
+
+  Caller MUST set up Java + Gradle first (e.g. via
+  `LFDT-Lineth/lineth-monorepo/.github/actions/setup-java-and-gradle`).
+
+inputs:
+  gradle-check-task:
+    description: 'Gradle task that fails if any config key is undocumented (e.g. :coordinator:app:checkConfigDocs).'
+    required: true
+  gradle-generate-task:
+    description: 'Gradle task that regenerates committed snapshots + the ephemeral MDX partial (e.g. :coordinator:app:generateConfigDocs).'
+    required: true
+  mdx-partial-path:
+    description: 'Repo-relative path to the generated MDX partial to validate. Provenance is written next to it as provenance.mdx.'
+    required: true
+  committed-snapshot-paths:
+    description: >-
+      Whitespace-separated list of repo-relative committed snapshot paths that must
+      stay byte-identical after `gradle-generate-task` (e.g. Markdown + JSON).
+    required: true
+  component-name:
+    description: 'Human-readable component name used in error messages and logs (e.g. coordinator).'
+    required: true
+  artifact-name:
+    description: 'Name of the artifact to upload (must be unique per workflow run, e.g. `coordinator-config-docs-${{ github.sha }}`).'
+    required: true
+  artifact-upload-path:
+    description: 'Repo-relative directory whose contents are uploaded as the artifact (e.g. coordinator/app/build/config-docs-mdx/).'
+    required: true
+  provenance-release-tag-prefix:
+    description: >-
+      Tag prefix used to detect release tags so the provenance partial can append
+      the release tag (e.g. `releases/coordinator/`). Empty string disables the
+      release-tag suffix.
+    required: false
+    default: ''
+  source-sha:
+    description: 'Source SHA to embed in the provenance partial. Defaults to github.sha.'
+    required: false
+    default: ${{ github.sha }}
+  source-ref-name:
+    description: 'Source ref name to embed in the provenance partial. Defaults to github.ref_name.'
+    required: false
+    default: ${{ github.ref_name }}
+  source-ref-type:
+    description: 'Source ref type to embed in the provenance partial. Defaults to github.ref_type.'
+    required: false
+    default: ${{ github.ref_type }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Verify every config key is documented
+      shell: bash
+      run: ./gradlew -V ${{ inputs.gradle-check-task }}
+
+    - name: Generate committed outputs and ephemeral MDX partial
+      shell: bash
+      run: ./gradlew -V ${{ inputs.gradle-generate-task }}
+
+    - name: Assert committed snapshots are synchronized
+      shell: bash
+      env:
+        COMMITTED_SNAPSHOT_PATHS: ${{ inputs.committed-snapshot-paths }}
+        GRADLE_GENERATE_TASK: ${{ inputs.gradle-generate-task }}
+        COMPONENT_NAME: ${{ inputs.component-name }}
+      run: |
+        set -euo pipefail
+        # shellcheck source=scripts/assert-snapshots-synced.sh
+        bash "${{ github.action_path }}/scripts/assert-snapshots-synced.sh"
+
+    - name: Validate ephemeral MDX partial
+      shell: bash
+      env:
+        MDX_PARTIAL_PATH: ${{ inputs.mdx-partial-path }}
+      run: |
+        set -euo pipefail
+        # shellcheck source=scripts/validate-mdx-partial.sh
+        bash "${{ github.action_path }}/scripts/validate-mdx-partial.sh"
+
+    - name: Write provenance partial
+      shell: bash
+      env:
+        SOURCE_SHA: ${{ inputs.source-sha }}
+        SOURCE_REF_NAME: ${{ inputs.source-ref-name }}
+        SOURCE_REF_TYPE: ${{ inputs.source-ref-type }}
+        PROVENANCE_RELEASE_TAG_PREFIX: ${{ inputs.provenance-release-tag-prefix }}
+        MDX_PARTIAL_PATH: ${{ inputs.mdx-partial-path }}
+        COMPONENT_NAME: ${{ inputs.component-name }}
+      run: |
+        set -euo pipefail
+        # shellcheck source=scripts/write-provenance.sh
+        bash "${{ github.action_path }}/scripts/write-provenance.sh"
+
+    - name: Upload generated config docs
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ inputs.artifact-upload-path }}
+        if-no-files-found: error
+        retention-days: 7
