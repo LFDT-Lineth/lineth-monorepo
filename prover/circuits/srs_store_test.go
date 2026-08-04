@@ -206,12 +206,16 @@ func TestSRSStore_PersistsDerivedLagrange(t *testing.T) {
 		assert.NoError(err)
 		dumpToFile(t, canonical, filepath.Join(dir, fmt.Sprintf("kzg_srs_canonical_%d_bn254_aztec.memdump", canonicalSize)))
 
-		// a crash-orphaned temp (old) and a concurrent writer's temp (fresh)
+		// a crash-orphaned temp (old), a crashed probe's leftover (old) and a
+		// concurrent writer's temp (fresh)
 		aged := filepath.Join(dir, "kzg_srs_lagrange_8_bn254_aztec.memdump.tmp111")
+		agedProbe := filepath.Join(dir, "kzg_srs_probe.memdump.tmp123")
 		fresh := filepath.Join(dir, "kzg_srs_lagrange_8_bn254_aztec.memdump.tmp222")
 		assert.NoError(os.WriteFile(aged, []byte("dead"), 0o600))
+		assert.NoError(os.WriteFile(agedProbe, []byte("dead"), 0o600))
 		assert.NoError(os.WriteFile(fresh, []byte("live"), 0o600))
 		assert.NoError(os.Chtimes(aged, time.Now().Add(-2*time.Hour), time.Now().Add(-2*time.Hour)))
+		assert.NoError(os.Chtimes(agedProbe, time.Now().Add(-2*time.Hour), time.Now().Add(-2*time.Hour)))
 
 		store, err := NewSRSStore(dir)
 		assert.NoError(err)
@@ -222,6 +226,8 @@ func TestSRSStore_PersistsDerivedLagrange(t *testing.T) {
 		assert.NoError(store.DeriveAndPersistLagrange(context.TODO(), cs, false))
 		_, err = os.Stat(aged)
 		assert.True(os.IsNotExist(err), "an aged orphan temp must be swept")
+		_, err = os.Stat(agedProbe)
+		assert.True(os.IsNotExist(err), "a crashed probe's leftover must be swept")
 		_, err = os.Stat(fresh)
 		assert.NoError(err, "a fresh temp must be spared")
 		for _, entry := range store.entriesSnapshot(ecc.BN254) {
@@ -370,7 +376,7 @@ func TestSRSStore_DeriveAndPersistLagrange(t *testing.T) {
 		assertSameVk(t, canonical, reloaded)
 	})
 
-	t.Run("read_only_store_dir_is_best_effort", func(t *testing.T) {
+	t.Run("read_only_dir_reads_fine_but_provisioning_reports", func(t *testing.T) {
 		assert := require.New(t)
 		if os.Geteuid() == 0 {
 			t.Skip("directory permissions are not enforced for root")
@@ -388,9 +394,10 @@ func TestSRSStore_DeriveAndPersistLagrange(t *testing.T) {
 
 		// provisioning returns the failure rather than swallowing it, so an
 		// operator running it deliberately finds out that nothing was written —
-		// and the writability probe reports it before deriving, not after
-		assert.Error(roStore.DeriveAndPersistLagrange(context.TODO(), cs, false),
-			"provisioning must report that it could not write")
+		// and the wording pins that the probe reported it before deriving,
+		// not cacheLagrange after
+		assert.ErrorContains(roStore.DeriveAndPersistLagrange(context.TODO(), cs, false),
+			"not deriving a basis", "provisioning must report that it could not write, from the probe")
 		_, err = os.Stat(filepath.Join(roDir, fmt.Sprintf("kzg_srs_lagrange_%d_bn254_derived.memdump", lagrangeSize)))
 		assert.True(os.IsNotExist(err), "nothing must be published to a read-only directory")
 	})
