@@ -18,6 +18,8 @@ import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/scs"
 	"github.com/consensys/gnark/test/unsafekzg"
+	"github.com/sirupsen/logrus"
+	logtest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/require"
 
 	kzg377 "github.com/consensys/gnark-crypto/ecc/bls12-377/kzg"
@@ -448,6 +450,76 @@ func TestSRSStore_DerivedDumpsNeverClaimACeremony(t *testing.T) {
 		assert.Len(entries, 1, "a derived-tagged canonical must not be indexed")
 		assert.Contains(entries[0].path, "aztec")
 	})
+}
+
+// TestSRSStore_DerivationWarning pins the miss warning's gate and content: a
+// dummy-size derivation stays quiet, a real-size prove-time miss warns once
+// and names the remedy, provisioning is not told to run the command it
+// already is, and once the dump is persisted the same read is silent.
+// It lowers lagrangeSizeWarnThreshold and captures the global logger, so it
+// must not run in parallel.
+func TestSRSStore_DerivationWarning(t *testing.T) {
+	assert := require.New(t)
+	dir := t.TempDir()
+
+	cs, err := frontend.Compile(ecc.BN254.ScalarField(), scs.NewBuilder, &circuit{make([]frontend.Variable, 1)})
+	assert.NoError(err)
+	canonicalSize, _ := plonk.SRSSize(cs)
+	canonical, _, err := unsafekzg.NewSRS(cs)
+	assert.NoError(err)
+	dumpToFile(t, canonical, filepath.Join(dir, fmt.Sprintf("kzg_srs_canonical_%d_bn254_aleo.memdump", canonicalSize)))
+
+	store, err := NewSRSStore(dir)
+	assert.NoError(err)
+	hook := logtest.NewGlobal()
+	defer hook.Reset()
+
+	// below the threshold a derivation is routine: no operator-facing warning
+	_, lagrangeSRS, err := store.GetSRS(context.TODO(), cs)
+	assert.NoError(err)
+	assert.NotNil(lagrangeSRS)
+	for _, e := range hook.AllEntries() {
+		assert.Greater(e.Level, logrus.WarnLevel, "a dummy-size derivation must not warn: %s", e.Message)
+	}
+
+	oldThreshold := lagrangeSizeWarnThreshold
+	lagrangeSizeWarnThreshold = 1
+	t.Cleanup(func() { lagrangeSizeWarnThreshold = oldThreshold })
+
+	// at a real size a prove-time miss is loud, once, and names the remedy
+	hook.Reset()
+	_, _, err = store.GetSRS(context.TODO(), cs)
+	assert.NoError(err)
+	warnings := 0
+	for _, e := range hook.AllEntries() {
+		if e.Level == logrus.WarnLevel {
+			warnings++
+			assert.Contains(e.Message, "prover setup", "the warning must name the command that stops the recurrence")
+			assert.Contains(e.Message, "persist_derived_srs", "the warning must name the flag that gates the persist")
+		}
+	}
+	assert.Equal(1, warnings, "a real-size prove-time miss must warn exactly once")
+
+	// provisioning announces the wait but is not told to run itself
+	hook.Reset()
+	assert.NoError(store.DeriveAndPersistLagrange(context.TODO(), cs, false))
+	warned := false
+	for _, e := range hook.AllEntries() {
+		if e.Level == logrus.WarnLevel {
+			warned = true
+			assert.NotContains(e.Message, "prover setup", "provisioning must not be told to run the command it already is")
+		}
+	}
+	assert.True(warned, "a real-size provisioning derivation must still announce the wait")
+
+	// the named remedy works: with the dump persisted, the same read is silent
+	hook.Reset()
+	_, lagrangeSRS, err = store.GetSRS(context.TODO(), cs)
+	assert.NoError(err)
+	assert.NotNil(lagrangeSRS)
+	for _, e := range hook.AllEntries() {
+		assert.Greater(e.Level, logrus.WarnLevel, "after setup persisted the dump a read must be quiet: %s", e.Message)
+	}
 }
 
 // dirNames lists the entry names in dir, sorted.

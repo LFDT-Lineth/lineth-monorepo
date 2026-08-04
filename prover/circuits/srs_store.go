@@ -171,8 +171,10 @@ func (store *SRSStore) GetSRS(ctx context.Context, ccs constraint.ConstraintSyst
 
 // lagrangeSizeWarnThreshold separates real circuit sizes from the tiny dummy
 // circuits that pass through GetSRS during setup: below it a derivation costs
-// milliseconds and is not worth an operator-facing warning.
-const lagrangeSizeWarnThreshold = 1 << 20
+// milliseconds and is not worth an operator-facing warning. A var rather than
+// a const only so tests can lower it to reach the warning path without a
+// million-point derivation; production code never writes it.
+var lagrangeSizeWarnThreshold = 1 << 20
 
 // DeriveAndPersistLagrange makes the Lagrange basis for ccs available on disk,
 // so later runs load it instead of spending hours re-deriving it. It is the
