@@ -289,6 +289,14 @@ fn validateForcedTransactions(
 /// conflation-level linking, the empty-`executionRequests` policy, forced transactions, L2->L1
 /// messages, and the L1->L2 bridge rolling-hash reads.
 pub fn runL2Execution(alloc: std.mem.Allocator, in: l2_execution_ssz.L2ExecutionProofPrivateInput) !l2_execution_ssz.L2ExecutionProofOutput {
+    return runL2ExecutionWithEngine(execution, alloc, in);
+}
+
+/// Same as `runL2Execution`, but with the per-block execution step taken as a comptime `Engine`
+/// parameter instead of being fixed to the `execution` module. This is the seam at which a test DSL
+/// binds a stub engine, driving the conflation logic below end to end with declared per-block
+/// results in place of real EVM execution.
+pub fn runL2ExecutionWithEngine(comptime Engine: type, alloc: std.mem.Allocator, in: l2_execution_ssz.L2ExecutionProofPrivateInput) !l2_execution_ssz.L2ExecutionProofOutput {
     zesu_allocator.set(alloc);
 
     if (in.payloads.len == 0) return error.EmptyPayloads;
@@ -396,7 +404,7 @@ pub fn runL2Execution(alloc: std.mem.Allocator, in: l2_execution_ssz.L2Execution
         // Reuses the SAME combined `node_index` built above (not a fresh per-payload one — see
         // `executeStatelessInputWithLogs`'s doc comment): it's a superset of `si.witness.nodes`
         // alone, so every proof this payload's execution needs is already indexed.
-        const result = try execution.executeStatelessInputWithLogs(alloc, si, GUEST_FORK, &node_index);
+        const result = try Engine.executeStatelessInputWithLogs(alloc, si, GUEST_FORK, &node_index);
         if (idx == 0) range_pre_state_root = result.pre_state_root;
         range_post_state_root = result.post_state_root;
         last_payload = payload;
@@ -468,7 +476,7 @@ pub fn runL2Execution(alloc: std.mem.Allocator, in: l2_execution_ssz.L2Execution
     };
 }
 
-// ─── Exposed for unit tests only (test/l2_execution_test.zig) ─────────────────────────────────────
+// ─── Exposed for unit tests only ───────────────────────────────────────────────────────────────
 
 pub const test_api = struct {
     pub const u64ToSlot32Fn = u64ToSlot32;
@@ -484,4 +492,8 @@ pub const test_api = struct {
     pub const validateForcedTransactionsFn = validateForcedTransactions;
     pub const recoverSenderFn = tx_signing.recoverSender;
     pub const Acceptance = ForcedTransactionAcceptance;
+    /// The real per-block execution seam, exposed so test code can run it directly against the
+    /// same inputs a stub engine receives — this module's own import of it is the only reachable
+    /// path without a build-graph module double-claim.
+    pub const executeStatelessInputWithLogsFn = execution.executeStatelessInputWithLogs;
 };
