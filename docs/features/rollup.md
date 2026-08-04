@@ -1,10 +1,10 @@
 # Rollup
 
-> LineaRollup contracts, data submission, and ZK finalization — the full L1 settlement pipeline.
+> LinethRollup contracts, data submission, and ZK finalization — the full L1 settlement pipeline.
 
 ## Overview
 
-Linea operates as a zk-rollup where L2 state transitions are posted to and verified on Ethereum L1. The pipeline has three phases:
+Lineth operates as a zk-rollup where L2 state transitions are posted to and verified on Ethereum L1. The pipeline has three phases:
 
 1. **Submission** — Compressed L2 block data posted to L1 via EIP-4844 blobs or calldata.
 2. **Shnarf chaining** — Each submission extends a rolling commitment (`shnarf`) linking all prior submissions.
@@ -12,17 +12,17 @@ Linea operates as a zk-rollup where L2 state transitions are posted to and verif
 
 Two contract variants exist:
 
-- **LineaRollup** — Full rollup with EIP-4844 blob DA. Inherits L1 messaging, yield management, and liveness recovery.
+- **LinethRollup** — Full rollup with EIP-4844 blob DA. Inherits L1 messaging, yield management, and liveness recovery.
 - **Validium** — Calldata-only shnarf submission. Lighter footprint, weaker DA guarantees.
 
-Both share `LineaRollupBase` for finalization logic, verifier management, and shnarf computation.
+Both share `LinethRollupBase` for finalization logic, verifier management, and shnarf computation.
 
 ## Components
 
 | Component | Path | Role |
 |-----------|------|------|
-| LineaRollup | `contracts/src/rollup/LineaRollup.sol` | Main L1 rollup contract |
-| LineaRollupBase | `contracts/src/rollup/LineaRollupBase.sol` | Shared finalization, verifier, shnarf logic |
+| LinethRollup | `contracts/src/rollup/LinethRollup.sol` | Main L1 rollup contract |
+| LinethRollupBase | `contracts/src/rollup/LinethRollupBase.sol` | Shared finalization, verifier, shnarf logic |
 | Validium | `contracts/src/rollup/Validium.sol` | Calldata-only DA variant |
 | LivenessRecovery | `contracts/src/rollup/LivenessRecovery.sol` | Emergency operator recovery after 6-month inactivity |
 | Eip4844BlobAcceptor | `contracts/src/rollup/dataAvailability/Eip4844BlobAcceptor.sol` | EIP-4844 blob verification on-chain |
@@ -36,17 +36,17 @@ Both share `LineaRollupBase` for finalization logic, verifier management, and sh
 ## Inheritance
 
 ```
-LineaRollup
-  ├── LineaRollupBase
+LinethRollup
+  ├── LinethRollupBase
   │     ├── PauseManager, RateLimiter, PermissionsManager
   │     └── L1MessageService
-  ├── LineaRollupYieldExtension
+  ├── LinethRollupYieldExtension
   ├── LivenessRecovery
   ├── Eip4844BlobAcceptor
   └── ClaimMessageV1
 
 Validium
-  ├── LineaRollupBase
+  ├── LinethRollupBase
   ├── LocalShnarfProvider
   └── ShnarfDataAcceptor
 ```
@@ -69,7 +69,7 @@ Validium
 
 ## Data Submission
 
-The coordinator compresses batches of L2 blocks into blobs and submits them to LineaRollup on L1.
+The coordinator compresses batches of L2 blocks into blobs and submits them to LinethRollup on L1.
 
 ### Submission Flow
 
@@ -78,7 +78,7 @@ sequenceDiagram
     participant Coord as Coordinator
     participant Comp as BlobCompressor
     participant Shnarf as ShnarfCalculator
-    participant L1 as LineaRollup (L1)
+    participant L1 as LinethRollup (L1)
 
     Coord->>Comp: Compress batches into blob
     Comp-->>Coord: compressedData (≤127KB)
@@ -143,7 +143,7 @@ Padding uses `0xFF000000...` to fill to exactly 127 KB (130,047 bytes usable).
 
 ## Finalization
 
-Finalization posts an aggregated ZK proof to LineaRollup, proving that a range of L2 blocks were executed correctly.
+Finalization posts an aggregated ZK proof to LinethRollup, proving that a range of L2 blocks were executed correctly.
 
 ### Finalization Flow
 
@@ -151,7 +151,7 @@ Finalization posts an aggregated ZK proof to LineaRollup, proving that a range o
 sequenceDiagram
     participant Prover
     participant Coord as Coordinator
-    participant L1 as LineaRollup (L1)
+    participant L1 as LinethRollup (L1)
     participant Verifier as PlonkVerifier
 
     Prover-->>Coord: Aggregation proof response (file system)
@@ -192,7 +192,7 @@ struct FinalizationDataV3 {
 
 ### Public Input Computation
 
-The verifier receives a single `uint256` public input derived from `_computePublicInput` in `LineaRollupBase`:
+The verifier receives a single `uint256` public input derived from `_computePublicInput` in `LinethRollupBase`:
 
 ```
 keccak256(
@@ -248,12 +248,12 @@ If no finalization occurs for `SIX_MONTHS_IN_SECONDS` (182 days, due to Solidity
 
 | Test File | Runner | Validates |
 |-----------|--------|-----------|
-| `contracts/test/hardhat/rollup/LineaRollup.ts` | Hardhat | Initialization, roles, pause, operator actions |
-| `contracts/test/hardhat/rollup/LineaRollup/BlobSubmission.ts` | Hardhat | EIP-4844 blob submission, KZG proofs, calldata |
-| `contracts/test/hardhat/rollup/LineaRollup/Finalization.ts` | Hardhat | Proof verification, state updates, error cases |
+| `contracts/test/hardhat/rollup/LinethRollup.ts` | Hardhat | Initialization, roles, pause, operator actions |
+| `contracts/test/hardhat/rollup/LinethRollup/BlobSubmission.ts` | Hardhat | EIP-4844 blob submission, KZG proofs, calldata |
+| `contracts/test/hardhat/rollup/LinethRollup/Finalization.ts` | Hardhat | Proof verification, state updates, error cases |
 | `contracts/test/hardhat/rollup/Validium.ts` | Hardhat | Validium-specific behavior |
 | `contracts/test/hardhat/verifiers/PlonkVerifierForDataAggregation.ts` | Hardhat | Verifier contract correctness |
-| `contracts/test/foundry/LineaRollup.t.sol` | Foundry | Shnarf calculation, `_calculateY` |
+| `contracts/test/foundry/LinethRollup.t.sol` | Foundry | Shnarf calculation, `_calculateY` |
 | `e2e/src/submission-finalization.spec.ts` | Jest | End-to-end submission and finalization |
 | `e2e/src/restart.spec.ts` | Jest | Finalization resumes after coordinator restart |
 
@@ -263,7 +263,7 @@ If no finalization occurs for `SIX_MONTHS_IN_SECONDS` (182 days, due to Solidity
 - [Architecture: Blob Compressor](../architecture-description.md#blob-compressor)
 - [Architecture: Provers](../architecture-description.md#provers)
 - [Tech: Contracts Component](../tech/components/contracts.md) — Contract addresses, directory structure, deployment details
-- [Workflow: LineaRollup](../../contracts/docs/workflows/LineaRollup.md)
+- [Workflow: LinethRollup](../../contracts/docs/workflows/LinethRollup.md)
 - [Workflow: Blob Submission and Finalization](../../contracts/docs/workflows/operations/blobSubmissionAndFinalization.md)
 - [Official docs: Smart Contracts](https://docs.linea.build/protocol/architecture/smart-contracts)
 - [Official docs: Transaction Lifecycle](https://docs.linea.build/technology/transaction-lifecycle)

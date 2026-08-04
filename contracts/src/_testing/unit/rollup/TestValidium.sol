@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.33;
 
-import { LineaRollupBase } from "../../../rollup/LineaRollupBase.sol";
+import { LinethRollupBase } from "../../../rollup/LinethRollupBase.sol";
 import { Validium } from "../../../rollup/Validium.sol";
 import { FinalizedStateHashing } from "../../../libraries/FinalizedStateHashing.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";

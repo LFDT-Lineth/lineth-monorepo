@@ -1,7 +1,7 @@
 package linea.submission
 
 import linea.contract.l1.ContractVersionProvider
-import linea.contract.l1.LineaRollupContractVersion
+import linea.contract.l1.LinethRollupContractVersion
 import linea.domain.BlockInterval
 import net.consensys.linea.async.AsyncFilter
 import org.apache.logging.log4j.LogManager
@@ -10,9 +10,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 class ContractUpgradeSubmissionLatchFilter<T : BlockInterval>(
   private val l2SwitchBlockNumber: ULong? = null,
-  private val contractVersionProvider: ContractVersionProvider<LineaRollupContractVersion>,
-  private val currentContractVersion: LineaRollupContractVersion,
-  private val expectedNewContractVersion: LineaRollupContractVersion,
+  private val contractVersionProvider: ContractVersionProvider<LinethRollupContractVersion>,
+  private val currentContractVersion: LinethRollupContractVersion,
+  private val expectedNewContractVersion: LinethRollupContractVersion,
 ) : AsyncFilter<T> {
   private val log = LogManager.getLogger(this::class.java)
   private val latchEnabled = AtomicBoolean(false)

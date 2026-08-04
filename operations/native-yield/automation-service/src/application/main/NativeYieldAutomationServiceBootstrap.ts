@@ -26,14 +26,14 @@ import { BeaconChainStakingClient } from "../../clients/BeaconChainStakingClient
 import { ConsensysStakingApiClient } from "../../clients/ConsensysStakingApiClient.js";
 import { DashboardContractClient } from "../../clients/contracts/DashboardContractClient.js";
 import { LazyOracleContractClient } from "../../clients/contracts/LazyOracleContractClient.js";
-import { LineaRollupYieldExtensionContractClient } from "../../clients/contracts/LineaRollupYieldExtensionContractClient.js";
+import { LinethRollupYieldExtensionContractClient } from "../../clients/contracts/LinethRollupYieldExtensionContractClient.js";
 import { StakingVaultContractClient } from "../../clients/contracts/StakingVaultContractClient.js";
 import { STETHContractClient } from "../../clients/contracts/STETHContractClient.js";
 import { VaultHubContractClient } from "../../clients/contracts/VaultHubContractClient.js";
 import { YieldManagerContractClient } from "../../clients/contracts/YieldManagerContractClient.js";
 import { LidoAccountingReportClient } from "../../clients/LidoAccountingReportClient.js";
 import { ILazyOracle } from "../../core/clients/contracts/ILazyOracle.js";
-import { ILineaRollupYieldExtension } from "../../core/clients/contracts/ILineaRollupYieldExtension.js";
+import { ILinethRollupYieldExtension } from "../../core/clients/contracts/ILinethRollupYieldExtension.js";
 import { ISTETH } from "../../core/clients/contracts/ISTETH.js";
 import { IVaultHub } from "../../core/clients/contracts/IVaultHub.js";
 import { IYieldManager } from "../../core/clients/contracts/IYieldManager.js";
@@ -76,7 +76,7 @@ export class NativeYieldAutomationServiceBootstrap {
   private yieldManagerContractClient: IYieldManager<TransactionReceipt>;
   private lazyOracleContractClient: ILazyOracle<TransactionReceipt>;
   private vaultHubContractClient: IVaultHub<TransactionReceipt>;
-  private lineaRollupYieldExtensionContractClient: ILineaRollupYieldExtension<TransactionReceipt>;
+  private linethRollupYieldExtensionContractClient: ILinethRollupYieldExtension<TransactionReceipt>;
   private stethContractClient: ISTETH;
 
   private exponentialBackoffRetryService: IRetryService;
@@ -183,10 +183,10 @@ export class NativeYieldAutomationServiceBootstrap {
       config.contractAddresses.vaultHubAddress,
       new WinstonLogger(VaultHubContractClient.name, config.loggerOptions),
     );
-    this.lineaRollupYieldExtensionContractClient = new LineaRollupYieldExtensionContractClient(
-      new WinstonLogger(LineaRollupYieldExtensionContractClient.name, config.loggerOptions),
+    this.linethRollupYieldExtensionContractClient = new LinethRollupYieldExtensionContractClient(
+      new WinstonLogger(LinethRollupYieldExtensionContractClient.name, config.loggerOptions),
       this.viemBlockchainClientAdapter,
-      config.contractAddresses.lineaRollupContractAddress,
+      config.contractAddresses.linethRollupContractAddress,
     );
     this.stethContractClient = new STETHContractClient(
       this.viemBlockchainClientAdapter,
@@ -262,7 +262,7 @@ export class NativeYieldAutomationServiceBootstrap {
       this.operationModeMetricsRecorder,
       this.yieldManagerContractClient,
       this.lazyOracleContractClient,
-      this.lineaRollupYieldExtensionContractClient,
+      this.linethRollupYieldExtensionContractClient,
       this.lidoAccountingReportClient,
       this.beaconChainStakingClient,
       this.vaultHubContractClient,

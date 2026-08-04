@@ -48,7 +48,7 @@ export const UNPAUSE_FINALIZATION_ROLE = generateKeccak256(["string"], ["UNPAUSE
 export const VERIFIER_UNSETTER_ROLE = generateKeccak256(["string"], ["VERIFIER_UNSETTER_ROLE"], true);
 export const USED_RATE_LIMIT_RESETTER_ROLE = generateKeccak256(["string"], ["USED_RATE_LIMIT_RESETTER_ROLE"], true);
 
-export const LINEA_ROLLUP_V6_ROLES = [
+export const LINETH_ROLLUP_V6_ROLES = [
   PAUSE_ALL_ROLE,
   PAUSE_L1_L2_ROLE,
   PAUSE_L2_L1_ROLE,
@@ -74,7 +74,7 @@ export const STATE_DATA_SUBMISSION_PAUSE_TYPE = 9;
 export const BASE_PAUSE_TYPES_ROLES = [{ pauseType: GENERAL_PAUSE_TYPE, role: PAUSE_ALL_ROLE }];
 export const BASE_UNPAUSE_TYPES_ROLES = [{ pauseType: GENERAL_PAUSE_TYPE, role: UNPAUSE_ALL_ROLE }];
 
-export const LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES = [
+export const LINETH_ROLLUP_V8_PAUSE_TYPES_ROLES = [
   ...BASE_PAUSE_TYPES_ROLES,
   { pauseType: L1_L2_PAUSE_TYPE, role: PAUSE_L1_L2_ROLE },
   { pauseType: L2_L1_PAUSE_TYPE, role: PAUSE_L2_L1_ROLE },
@@ -84,7 +84,7 @@ export const LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES = [
   { pauseType: FINALIZATION_PAUSE_TYPE, role: PAUSE_FINALIZATION_ROLE },
 ];
 
-export const LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES = [
+export const LINETH_ROLLUP_V8_UNPAUSE_TYPES_ROLES = [
   ...BASE_UNPAUSE_TYPES_ROLES,
   { pauseType: L1_L2_PAUSE_TYPE, role: UNPAUSE_L1_L2_ROLE },
   { pauseType: L2_L1_PAUSE_TYPE, role: UNPAUSE_L2_L1_ROLE },

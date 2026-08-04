@@ -27,7 +27,7 @@
       "address": "0x41A4d93d09f4718fe899D12A4aD2C8a09104bdc7",
       "notes": "Plonk Verifier Mainnet Full"
     },
-    "LINEA_ROLLUP_OPERATORS": {
+    "LINETH_ROLLUP_OPERATORS": {
       "addresses": [
         {
           "address": "0x52FF08F313A00A54e3Beffb5C4a7F7446eFb6754",
@@ -39,9 +39,9 @@
         }
       ]
     },
-    "LINEA_ROLLUP_ADDRESS": {
+    "LINETH_ROLLUP_ADDRESS": {
       "address": "0xd19d4B5d358258f05D7B411E21A1460D11B0876F",
-      "notes": "LineaRollup proxy (L1 message service)"
+      "notes": "LinethRollup proxy (L1 message service)"
     },
     "L1_SECURITY_COUNCIL": {
       "address": "0x892bb7EeD71efB060ab90140e7825d8127991DD3",

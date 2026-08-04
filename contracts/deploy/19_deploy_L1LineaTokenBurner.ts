@@ -15,7 +15,7 @@ const func: DeployFunction = withSignerUiSession(
     const contractName = "L1LineaTokenBurner";
     const signer = await getUiSigner(hre);
 
-    const messageService = requireAddressFromRegistryOrEnv(hre.network.name, "LineaRollup", "LINEA_ROLLUP_ADDRESS");
+    const messageService = requireAddressFromRegistryOrEnv(hre.network.name, "LinethRollup", "LINETH_ROLLUP_ADDRESS");
     const lineaToken = requireAddressFromRegistryOrEnv(hre.network.name, "LINEA_TOKEN", "LINEA_TOKEN");
 
     const factory = await ethers.getContractFactory(contractName, signer);
