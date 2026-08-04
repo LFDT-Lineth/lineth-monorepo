@@ -151,10 +151,11 @@ class GasPriceCapProviderImplV2(
         caps?.let {
           val coeff = config.gasPriceCapsCoefficient.toBigDecimal()
           // Coefficient application historically truncates fractional wei.
+          val maxBaseFeePerGasCap = requireNotNull(it.maxBaseFeePerGasCap) {
+            "maxBaseFeePerGasCap must be defined before applying the gas price caps coefficient"
+          }
           val multipliedMaxBaseFeePerGasCap =
-            // NOTE: at this stage maxBaseFeePerGasCap is always defined
-            // on upper classes (e.g GasPriceCapProviderForDataSubmission) may be nullified
-            (it.maxBaseFeePerGasCap!!.toBigDecimal() * coeff).toBigInteger().toULong()
+            (maxBaseFeePerGasCap.toBigDecimal() * coeff).toBigInteger().toULong()
           val multipliedMaxPriorityFeePerGas =
             (it.maxPriorityFeePerGasCap.toBigDecimal() * coeff).toBigInteger().toULong()
           val multipliedMaxFeePerBlobGasCap =

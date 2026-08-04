@@ -29,13 +29,17 @@ internal class FileBasedRollupAggregationProofRequestDtoMapper(
         FileBasedRollupAggregationProofRequestDto(
           guestProgramId = guestProgramId,
           proofRequest = FileBasedRollupAggregationProofRequestParamsDto(
-            rollupProofs = rollupResponseDtos.map { it ->
+            rollupProofs = rollupResponseDtos.mapIndexed { index, response ->
+              val proofIndex = request.rollupProofs[index]
+              val proofResponse = requireNotNull(response) {
+                "Rollup proof response was not found for proofIndex=$proofIndex"
+              }
               RollupProofDto(
-                proof = it!!.proof,
-                startBlockNumber = it.startBlockNumber,
-                publicInputs = it.publicInputs,
-                l2L1Roots = it.l2L1Roots,
-                filteredAddresses = it.filteredAddresses,
+                proof = proofResponse.proof,
+                startBlockNumber = proofResponse.startBlockNumber,
+                publicInputs = proofResponse.publicInputs,
+                l2L1Roots = proofResponse.l2L1Roots,
+                filteredAddresses = proofResponse.filteredAddresses,
               )
             },
           ),
