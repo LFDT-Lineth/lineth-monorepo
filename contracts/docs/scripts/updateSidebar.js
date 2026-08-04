@@ -43,6 +43,8 @@ class FolderSidebar {
  */
 const SIDEBAR_FILE_PATH = "sidebars.js";
 const SMART_CONTRACT_SIDEBAR_LABEL = "Lineth smart contracts";
+// Retained so a sidebars.js generated before the Linea->Lineth rename still gets its old section removed.
+const LEGACY_SMART_CONTRACT_SIDEBAR_LABEL = "Linea smart contracts";
 
 // Import the sidebar JS object from sidebars.js
 const sidebarObject = require(path.join(__dirname, SIDEBAR_FILE_PATH));
@@ -71,7 +73,9 @@ function main() {
 function removeExistingSmartContractSidebar(sidebarObject) {
   if (sidebarObject?.apiSidebar) {
     sidebarObject.apiSidebar = sidebarObject?.apiSidebar.filter(
-      (sidebarSection) => sidebarSection?.label !== SMART_CONTRACT_SIDEBAR_LABEL,
+      (sidebarSection) =>
+        sidebarSection?.label !== SMART_CONTRACT_SIDEBAR_LABEL &&
+        sidebarSection?.label !== LEGACY_SMART_CONTRACT_SIDEBAR_LABEL,
     );
   }
 }
