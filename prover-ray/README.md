@@ -1,6 +1,6 @@
 # linea-monorepo/prover
 
-This directory contains the implementation of the prover of Linea. As part of it,
+This directory contains the implementation of the prover of Lineth. As part of it,
 it contains an implementation of the Vortex polynomial commitment, of the
 Arcane compiler, the instantiation of the zkEVM using the arithmetization and
 the server implementation.
@@ -15,7 +15,7 @@ The prover has the following build dependencies
 The repository counts 2 main binaries:
 
 - `bin/prover` : `bin/prover setup` generate the assets (setup / preprocessing) `bin/prover prove` run process a request, create a proof and outputs a response.
-- `bin/controller` : a file-system based server to run Linea's prover
+- `bin/controller` : a file-system based server to run Lineth's prover
 
 ### Building and running the setup generator
 

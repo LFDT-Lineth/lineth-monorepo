@@ -12,9 +12,9 @@ const EmbeddedInputType = enum {
 pub fn build(b: *std.Build) void {
     common.requireZigVersion();
 
-    const r5 = b.option(bool, "r5", "Build for the Linea R5 zkVM target") orelse false;
-    // Allow disabling the Linea zkVM accelerators wrappers for testing purposes. However, we only have them for the R5 target, so it is disabled by default.
-    const disable_accelerators = (b.option(bool, "disable-accelerators", "Disable Linea zkVM accelerator wrappers") orelse false) or !r5;
+    const r5 = b.option(bool, "r5", "Build for the Lineth R5 zkVM target") orelse false;
+    // Allow disabling the Lineth zkVM accelerators wrappers for testing purposes. However, we only have them for the R5 target, so it is disabled by default.
+    const disable_accelerators = (b.option(bool, "disable-accelerators", "Disable Lineth zkVM accelerator wrappers") orelse false) or !r5;
     const verifier_profiling = b.option(
         bool,
         "verifier-profiling",
@@ -42,7 +42,7 @@ pub fn build(b: *std.Build) void {
         b.standardOptimizeOption(.{});
     const strip = b.option(bool, "strip", "Omit debug symbols") orelse (r5 or optimize == .ReleaseSmall);
 
-    // Linea zkVM accelerator - zkvm_exit and precompile accelerators etc.
+    // Lineth zkVM accelerator - zkvm_exit and precompile accelerators etc.
     const lineth_mod = b.dependency("lineth_accelerators", .{ .target = target, .optimize = optimize }).module("lineth_accelerators");
 
     const verifier_mod = b.addModule("verifier_ray", .{
@@ -51,7 +51,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .strip = strip,
     });
-    // conditionally import the Linea zkVM accelerator module for supported target and when requested
+    // conditionally import the Lineth zkVM accelerator module for supported target and when requested
     if (!disable_accelerators) {
         verifier_mod.addImport("lineth_accelerators", lineth_mod);
     }
