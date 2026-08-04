@@ -1,6 +1,6 @@
 # Lineth Blob Format Specification
 
-This document provides a detailed explanation of the structure of a blob in the context of Lineth prover. A blob contains essential information that allows the Lineth prover to validate the execution of several blocks of transactions. The blob's content is compressed and structured to facilitate cryptographic operations within zkSNARK circuits.
+This document provides a detailed explanation of the structure of a blob in the context of the Lineth prover. A blob contains essential information that allows the Lineth prover to validate the execution of several blocks of transactions. The blob's content is compressed and structured to facilitate cryptographic operations within zkSNARK circuits.
 
 ## Content
 
