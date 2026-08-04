@@ -39,11 +39,11 @@ test "all fixture cases: tampered proofs are rejected" {
             checked += 1;
             const case = comptime vf.get(i);
             const proof = vf.getInputFailing(i);
-            const err = verifier.verify(case.spec, case.systems, proof);
-            if (!std.meta.isError(err)) {
+            const res = verifier.verify(case.spec, case.systems, proof);
+            if (res) |_| {
                 std.debug.print("case {d} ({s}) accepted a tampered proof\n", .{ i, case.name });
                 return error.TamperedProofAccepted;
-            }
+            } else |_| {}
         }
     }
     // Guard against the sweep silently checking nothing (e.g. if hasFailing
