@@ -2,6 +2,15 @@ package lineth.staterecovery.datafetching
 
 import io.vertx.core.Vertx
 import linea.domain.BlockParameter
+<<<<<<< HEAD:linea-besu/plugins/state-recovery/appcore/logic/src/main/kotlin/lineth/staterecovery/datafetching/SubmissionsFetchingTask.kt
+=======
+import linea.staterecovery.BlobDecompressorAndDeserializer
+import linea.staterecovery.BlobFetcher
+import linea.staterecovery.BlockFromL1RecoveredData
+import linea.staterecovery.FinalizationAndDataEventsV3
+import linea.staterecovery.LinethRollupSubmissionEventsClient
+import linea.staterecovery.TransactionDetailsClient
+>>>>>>> 53054e4e0 (chore(coordinator): rename LineaRollup to LinethRollup in JVM components (#3421)):linea-besu/plugins/state-recovery/appcore/logic/src/main/kotlin/linea/staterecovery/datafetching/SubmissionsFetchingTask.kt
 import linea.timer.TimerSchedule
 import linea.timer.VertxPeriodicPollingService
 import lineth.staterecovery.BlobDecompressorAndDeserializer

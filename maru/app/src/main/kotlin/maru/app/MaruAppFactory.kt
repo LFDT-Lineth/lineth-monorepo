@@ -16,8 +16,11 @@ import io.vertx.micrometer.MicrometerMetricsOptions
 import io.vertx.micrometer.backends.BackendRegistries
 import linea.contract.l1.LinethRollupSmartContractClientReadOnly
 import linea.contract.l1.Web3JLinethRollupSmartContractClientReadOnly
+<<<<<<< HEAD
 import linea.crypto.CloseableSigner
 import linea.crypto.Secp256k1Signature
+=======
+>>>>>>> 53054e4e0 (chore(coordinator): rename LineaRollup to LinethRollup in JVM components (#3421))
 import linea.ethapi.EthLogsSearcherImpl
 import linea.kotlin.encodeHex
 import linea.timer.JvmTimerFactory

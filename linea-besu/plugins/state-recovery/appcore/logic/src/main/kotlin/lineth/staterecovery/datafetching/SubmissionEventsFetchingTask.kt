@@ -5,6 +5,11 @@ import linea.contract.events.DataFinalizedV3
 import linea.domain.BlockParameter
 import linea.domain.EthLogEvent
 import linea.domain.toBlockParameter
+<<<<<<< HEAD:linea-besu/plugins/state-recovery/appcore/logic/src/main/kotlin/lineth/staterecovery/datafetching/SubmissionEventsFetchingTask.kt
+=======
+import linea.staterecovery.FinalizationAndDataEventsV3
+import linea.staterecovery.LinethRollupSubmissionEventsClient
+>>>>>>> 53054e4e0 (chore(coordinator): rename LineaRollup to LinethRollup in JVM components (#3421)):linea-besu/plugins/state-recovery/appcore/logic/src/main/kotlin/linea/staterecovery/datafetching/SubmissionEventsFetchingTask.kt
 import linea.timer.TimerSchedule
 import linea.timer.VertxPeriodicPollingService
 import lineth.staterecovery.FinalizationAndDataEventsV3

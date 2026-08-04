@@ -171,6 +171,17 @@ interface LineaSmartContractClient : LineaSmartContractClientReadOnly {
    */
   fun updateNonceAndReferenceBlockToLastL1Block(): SafeFuture<BlockAndNonce>
 
+<<<<<<< HEAD
+=======
+  // TODO: not used, shall be removed
+  fun finalizeBlocksEthCall(
+    aggregation: ProofToFinalize,
+    aggregationLastBlob: BlobRecord,
+    parentL1RollingHash: ByteArray,
+    parentL1RollingHashMessageNumber: Long,
+  ): SafeFuture<String?>
+
+>>>>>>> 53054e4e0 (chore(coordinator): rename LineaRollup to LinethRollup in JVM components (#3421))
   fun finalizeBlocks(
     aggregation: ProofToFinalize,
     aggregationLastBlob: BlobRecord,

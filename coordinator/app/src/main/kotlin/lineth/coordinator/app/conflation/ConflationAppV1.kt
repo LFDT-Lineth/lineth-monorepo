@@ -4,6 +4,13 @@ import io.vertx.core.Vertx
 import linea.LongRunningService
 import linea.clients.ExecutionProverClientV2
 import linea.clients.StateManagerV1JsonRpcClient
+<<<<<<< HEAD:coordinator/app/src/main/kotlin/lineth/coordinator/app/conflation/ConflationAppV1.kt
+=======
+import linea.conflation.ConflationService
+import linea.conflation.FixedLaggingHeadSafeBlockProvider
+import linea.conflation.calculators.CalculatorsFactory
+import linea.conflation.calculators.ConflationCalculators
+>>>>>>> 53054e4e0 (chore(coordinator): rename LineaRollup to LinethRollup in JVM components (#3421)):coordinator/app/src/main/kotlin/linea/coordinator/app/conflation/ConflationAppV1.kt
 import linea.contract.l1.Web3JLinethRollupSmartContractClientReadOnly
 import linea.contract.l2.L2MessageServiceSmartContractClientReadOnly
 import linea.contract.l2.Web3JL2MessageServiceSmartContractClient

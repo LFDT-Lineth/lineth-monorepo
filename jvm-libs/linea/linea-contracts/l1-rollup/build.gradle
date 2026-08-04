@@ -20,6 +20,7 @@ dependencies {
 web3jContractWrappers {
   def contractsDir = layout.buildDirectory.dir("${rootProject.projectDir}/contracts/abi").get()
 <<<<<<< HEAD
+<<<<<<< HEAD
   def contractV6Abi = contractsDir.file("LinethRollupV6.0.abi").asFile.absolutePath
   def contractV8Abi = contractsDir.file("LinethRollupV8.0.abi").asFile.absolutePath
 =======
@@ -29,10 +30,15 @@ web3jContractWrappers {
 >>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618))
 =======
 >>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618))
+=======
+  def contractV6Abi = contractsDir.file("LinethRollupV6.0.abi").asFile.absolutePath
+  def contractV8Abi = contractsDir.file("LinethRollupV8.0.abi").asFile.absolutePath
+>>>>>>> 53054e4e0 (chore(coordinator): rename LineaRollup to LinethRollup in JVM components (#3421))
   def contractV9Abi = contractsDir.file("LinethRollupV9-rc.abi").asFile.absolutePath
 
   contractsPackage = "linea.contract"
   contracts = [
+<<<<<<< HEAD
 <<<<<<< HEAD
     "$contractV6Abi": "LinethRollupV6",
     "$contractV8Abi": "LinethRollupV8",
@@ -43,6 +49,10 @@ web3jContractWrappers {
 >>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618))
 =======
 >>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618))
+=======
+    "$contractV6Abi": "LinethRollupV6",
+    "$contractV8Abi": "LinethRollupV8",
+>>>>>>> 53054e4e0 (chore(coordinator): rename LineaRollup to LinethRollup in JVM components (#3421))
     "$contractV9Abi": "LinethRollupV9",
   ]
 }

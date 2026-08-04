@@ -8,6 +8,18 @@ import io.vertx.sqlclient.SqlClient
 import linea.DisabledService
 import linea.LongRunningService
 import linea.contract.l1.Web3JLinethRollupSmartContractClientReadOnly
+<<<<<<< HEAD:coordinator/app/src/main/kotlin/lineth/coordinator/app/CoordinatorApp.kt
+=======
+import linea.coordinator.api.Api
+import linea.coordinator.app.conflation.ConflationAppV1
+import linea.coordinator.app.conflationbacktesting.ConflationBacktestingService
+import linea.coordinator.config.v2.CoordinatorConfig
+import linea.coordinator.config.v2.DatabaseConfig
+import linea.coordinator.config.v2.isEnabled
+import linea.coordinator.config.v2.logPretty
+import linea.coordinator.extensions.CoordinatorContext
+import linea.coordinator.extensions.CoordinatorExtensionFactory
+>>>>>>> 53054e4e0 (chore(coordinator): rename LineaRollup to LinethRollup in JVM components (#3421)):coordinator/app/src/main/kotlin/linea/coordinator/app/CoordinatorApp.kt
 import linea.domain.BlockParameter
 import linea.domain.RetryConfig
 import linea.ethapi.EthLogsSearcherImpl

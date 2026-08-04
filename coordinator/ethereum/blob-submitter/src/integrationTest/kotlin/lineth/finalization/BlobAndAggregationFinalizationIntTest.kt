@@ -9,6 +9,10 @@ import linea.ContractsManager
 import linea.MakeFileDelegatedContractsManager
 import linea.contract.l1.LinethRollupContractVersion
 import linea.contract.l1.LinethRollupSmartContractClient
+<<<<<<< HEAD:coordinator/ethereum/blob-submitter/src/integrationTest/kotlin/lineth/finalization/BlobAndAggregationFinalizationIntTest.kt
+=======
+import linea.coordination.EventDispatcher
+>>>>>>> 53054e4e0 (chore(coordinator): rename LineaRollup to LinethRollup in JVM components (#3421)):coordinator/ethereum/blob-submitter/src/integrationTest/kotlin/linea/finalization/BlobAndAggregationFinalizationIntTest.kt
 import linea.domain.Aggregation
 import linea.domain.BlobRecord
 import linea.domain.BlobSubmittedEvent

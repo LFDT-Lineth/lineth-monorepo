@@ -43,12 +43,16 @@ class Web3JLinethRollupSmartContractClientReadOnlyTest {
 
   @Test
   fun `parseContractVersion maps major version prefixes and rejects unsupported versions`() {
+<<<<<<< HEAD
 <<<<<<< HEAD:jvm-libs/linea/clients/linea-contract-clients/src/test/kotlin/linea/contract/l1/Web3JLinethRollupSmartContractClientReadOnlyTest.kt
+=======
+>>>>>>> 53054e4e0 (chore(coordinator): rename LineaRollup to LinethRollup in JVM components (#3421))
     assertThat(client.parseContractVersion("6.0")).isEqualTo(LinethRollupContractVersion.V6)
     assertThat(client.parseContractVersion("7.1")).isEqualTo(LinethRollupContractVersion.V7)
     assertThat(client.parseContractVersion("8.0")).isEqualTo(LinethRollupContractVersion.V8)
     assertThat(client.parseContractVersion("9.0")).isEqualTo(LinethRollupContractVersion.V9)
     assertThat(client.parseContractVersion("9.0.0-rc.1")).isEqualTo(LinethRollupContractVersion.V9)
+<<<<<<< HEAD
 =======
     assertThat(client.parseContractVersion("6.0")).isEqualTo(LineaRollupContractVersion.V6)
     assertThat(client.parseContractVersion("7.1")).isEqualTo(LineaRollupContractVersion.V7)
@@ -56,6 +60,8 @@ class Web3JLinethRollupSmartContractClientReadOnlyTest {
     assertThat(client.parseContractVersion("9.0")).isEqualTo(LineaRollupContractVersion.V9)
     assertThat(client.parseContractVersion("9.0.0-rc.1")).isEqualTo(LineaRollupContractVersion.V9)
 >>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618)):jvm-libs/linea/clients/linea-contract-clients/src/test/kotlin/linea/contract/l1/Web3JLineaRollupSmartContractClientReadOnlyTest.kt
+=======
+>>>>>>> 53054e4e0 (chore(coordinator): rename LineaRollup to LinethRollup in JVM components (#3421))
 
     assertThatThrownBy { client.parseContractVersion("5.0") }
       .isInstanceOf(IllegalStateException::class.java)
@@ -65,6 +71,7 @@ class Web3JLinethRollupSmartContractClientReadOnlyTest {
   @Test
   fun `getVersion caches below-latest versions for the refresh interval and short-circuits at latest`() {
     val fakeClock = FakeFixedClock()
+<<<<<<< HEAD
 <<<<<<< HEAD:jvm-libs/linea/clients/linea-contract-clients/src/test/kotlin/linea/contract/l1/Web3JLinethRollupSmartContractClientReadOnlyTest.kt
     var onChainVersion = LinethRollupContractVersion.V8
     var fetchCount = 0
@@ -74,6 +81,11 @@ class Web3JLinethRollupSmartContractClientReadOnlyTest {
     var fetchCount = 0
     val fakeClient = object : Web3JLineaRollupSmartContractClientReadOnly(
 >>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618)):jvm-libs/linea/clients/linea-contract-clients/src/test/kotlin/linea/contract/l1/Web3JLineaRollupSmartContractClientReadOnlyTest.kt
+=======
+    var onChainVersion = LinethRollupContractVersion.V8
+    var fetchCount = 0
+    val fakeClient = object : Web3JLinethRollupSmartContractClientReadOnly(
+>>>>>>> 53054e4e0 (chore(coordinator): rename LineaRollup to LinethRollup in JVM components (#3421))
       web3j = mock<Web3j>(),
       contractAddress = contractAddress,
       ethLogsSearcher = EthLogsSearcherImpl(vertx = vertx, ethApiClient = l1Client),
@@ -82,35 +94,48 @@ class Web3JLinethRollupSmartContractClientReadOnlyTest {
     ) {
       override fun fetchSmartContractVersion(
         blockParameter: BlockParameter,
+<<<<<<< HEAD
 <<<<<<< HEAD:jvm-libs/linea/clients/linea-contract-clients/src/test/kotlin/linea/contract/l1/Web3JLinethRollupSmartContractClientReadOnlyTest.kt
       ): SafeFuture<LinethRollupContractVersion> {
 =======
       ): SafeFuture<LineaRollupContractVersion> {
 >>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618)):jvm-libs/linea/clients/linea-contract-clients/src/test/kotlin/linea/contract/l1/Web3JLineaRollupSmartContractClientReadOnlyTest.kt
+=======
+      ): SafeFuture<LinethRollupContractVersion> {
+>>>>>>> 53054e4e0 (chore(coordinator): rename LineaRollup to LinethRollup in JVM components (#3421))
         fetchCount++
         return SafeFuture.completedFuture(onChainVersion)
       }
     }
 
     // first call fetches and caches
+<<<<<<< HEAD
 <<<<<<< HEAD:jvm-libs/linea/clients/linea-contract-clients/src/test/kotlin/linea/contract/l1/Web3JLinethRollupSmartContractClientReadOnlyTest.kt
     assertThat(fakeClient.getVersion().get()).isEqualTo(LinethRollupContractVersion.V8)
 =======
     assertThat(fakeClient.getVersion().get()).isEqualTo(LineaRollupContractVersion.V8)
 >>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618)):jvm-libs/linea/clients/linea-contract-clients/src/test/kotlin/linea/contract/l1/Web3JLineaRollupSmartContractClientReadOnlyTest.kt
+=======
+    assertThat(fakeClient.getVersion().get()).isEqualTo(LinethRollupContractVersion.V8)
+>>>>>>> 53054e4e0 (chore(coordinator): rename LineaRollup to LinethRollup in JVM components (#3421))
     assertThat(fetchCount).isEqualTo(1)
 
     // within the refresh interval: served from cache, no RPC
     fakeClock.advanceBy(29.seconds)
+<<<<<<< HEAD
 <<<<<<< HEAD:jvm-libs/linea/clients/linea-contract-clients/src/test/kotlin/linea/contract/l1/Web3JLinethRollupSmartContractClientReadOnlyTest.kt
     assertThat(fakeClient.getVersion().get()).isEqualTo(LinethRollupContractVersion.V8)
 =======
     assertThat(fakeClient.getVersion().get()).isEqualTo(LineaRollupContractVersion.V8)
 >>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618)):jvm-libs/linea/clients/linea-contract-clients/src/test/kotlin/linea/contract/l1/Web3JLineaRollupSmartContractClientReadOnlyTest.kt
+=======
+    assertThat(fakeClient.getVersion().get()).isEqualTo(LinethRollupContractVersion.V8)
+>>>>>>> 53054e4e0 (chore(coordinator): rename LineaRollup to LinethRollup in JVM components (#3421))
     assertThat(fetchCount).isEqualTo(1)
 
     // after the refresh interval: refetches and detects the upgrade
     fakeClock.advanceBy(2.seconds)
+<<<<<<< HEAD
 <<<<<<< HEAD:jvm-libs/linea/clients/linea-contract-clients/src/test/kotlin/linea/contract/l1/Web3JLinethRollupSmartContractClientReadOnlyTest.kt
     onChainVersion = LinethRollupContractVersion.V9
     assertThat(fakeClient.getVersion().get()).isEqualTo(LinethRollupContractVersion.V9)
@@ -118,15 +143,23 @@ class Web3JLinethRollupSmartContractClientReadOnlyTest {
     onChainVersion = LineaRollupContractVersion.V9
     assertThat(fakeClient.getVersion().get()).isEqualTo(LineaRollupContractVersion.V9)
 >>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618)):jvm-libs/linea/clients/linea-contract-clients/src/test/kotlin/linea/contract/l1/Web3JLineaRollupSmartContractClientReadOnlyTest.kt
+=======
+    onChainVersion = LinethRollupContractVersion.V9
+    assertThat(fakeClient.getVersion().get()).isEqualTo(LinethRollupContractVersion.V9)
+>>>>>>> 53054e4e0 (chore(coordinator): rename LineaRollup to LinethRollup in JVM components (#3421))
     assertThat(fetchCount).isEqualTo(2)
 
     // at the latest known version: short-circuits forever, even after the interval elapses
     fakeClock.advanceBy(300.seconds)
+<<<<<<< HEAD
 <<<<<<< HEAD:jvm-libs/linea/clients/linea-contract-clients/src/test/kotlin/linea/contract/l1/Web3JLinethRollupSmartContractClientReadOnlyTest.kt
     assertThat(fakeClient.getVersion().get()).isEqualTo(LinethRollupContractVersion.V9)
 =======
     assertThat(fakeClient.getVersion().get()).isEqualTo(LineaRollupContractVersion.V9)
 >>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618)):jvm-libs/linea/clients/linea-contract-clients/src/test/kotlin/linea/contract/l1/Web3JLineaRollupSmartContractClientReadOnlyTest.kt
+=======
+    assertThat(fakeClient.getVersion().get()).isEqualTo(LinethRollupContractVersion.V9)
+>>>>>>> 53054e4e0 (chore(coordinator): rename LineaRollup to LinethRollup in JVM components (#3421))
     assertThat(fetchCount).isEqualTo(2)
   }
 

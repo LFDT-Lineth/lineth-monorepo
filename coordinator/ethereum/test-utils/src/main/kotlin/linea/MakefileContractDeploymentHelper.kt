@@ -1,8 +1,13 @@
 package linea
 
 import linea.contract.l1.LinethRollupContractVersion
+<<<<<<< HEAD
 import lineth.testing.CommandResult
 import lineth.testing.Runner
+=======
+import linea.testing.CommandResult
+import linea.testing.Runner
+>>>>>>> 53054e4e0 (chore(coordinator): rename LineaRollup to LinethRollup in JVM components (#3421))
 import org.hyperledger.besu.datatypes.Address
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.regex.Matcher
@@ -79,10 +84,14 @@ fun makeDeployLinethRollup(
   deploymentPrivateKey?.let { env["DEPLOYMENT_PRIVATE_KEY"] = it }
   val command = when (contractVersion) {
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 53054e4e0 (chore(coordinator): rename LineaRollup to LinethRollup in JVM components (#3421))
     LinethRollupContractVersion.V6 -> "make deploy-lineth-rollup-v6"
     LinethRollupContractVersion.V7 -> "make deploy-lineth-rollup-v7"
     LinethRollupContractVersion.V8 -> "make deploy-lineth-rollup-v8"
     LinethRollupContractVersion.V9 -> "make deploy-lineth-rollup-v9-stub"
+<<<<<<< HEAD
 =======
     LineaRollupContractVersion.V6 -> "make deploy-linea-rollup-v6"
     LineaRollupContractVersion.V7 -> "make deploy-linea-rollup-v7"
@@ -92,6 +101,8 @@ fun makeDeployLinethRollup(
 >>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618))
 =======
 >>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618))
+=======
+>>>>>>> 53054e4e0 (chore(coordinator): rename LineaRollup to LinethRollup in JVM components (#3421))
     // else -> throw IllegalArgumentException("Unsupported contract version: $contractVersion")
   }
 

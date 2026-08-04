@@ -15,6 +15,7 @@ enum class LinethRollupContractVersion : Comparable<LinethRollupContractVersion>
   companion object {
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     val latest: LinethRollupContractVersion = entries.last()
 =======
     val latest: LineaRollupContractVersion = entries.last()
@@ -22,6 +23,9 @@ enum class LinethRollupContractVersion : Comparable<LinethRollupContractVersion>
 =======
     val latest: LineaRollupContractVersion = entries.last()
 >>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618))
+=======
+    val latest: LinethRollupContractVersion = entries.last()
+>>>>>>> 53054e4e0 (chore(coordinator): rename LineaRollup to LinethRollup in JVM components (#3421))
   }
 }
 
