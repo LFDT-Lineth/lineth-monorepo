@@ -136,7 +136,10 @@ jobs:
         id: guest
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.run-heavy }}
         run: |
-          set -uo pipefail
+          # GitHub's default shell is `bash -e`; `set -uo pipefail` does NOT clear errexit, so
+          # without `set +e` the rc/wall_s/timedout capture below never runs on a failure or
+          # timeout — which is precisely the outcome this workflow exists to record.
+          set +e -uo pipefail
           d="$RUN/guest"; mkdir -p "$d"
           t0=$(date +%s)
           # Both halves timed as one task. No `make linker-script`: linker_script.ld is tracked
@@ -244,7 +247,10 @@ jobs:
       # wall_s were written and leave the table unable to name the failure.
       - name: zkc compile --stats
         run: |
-          set -uo pipefail
+          # GitHub's default shell is `bash -e`; `set -uo pipefail` does NOT clear errexit, so
+          # without `set +e` the rc/wall_s/timedout capture below never runs on a failure or
+          # timeout — which is precisely the outcome this workflow exists to record.
+          set +e -uo pipefail
           d="$RUN/compile"; mkdir -p "$d"
           t0=$(date +%s)
           # --order name (not zkc's default --order total) keeps the table diffable week to week.
@@ -300,7 +306,10 @@ jobs:
       # lost in exactly the case worth recording. timeout exits 124.
       - name: zkc trace --stats
         run: |
-          set -uo pipefail
+          # GitHub's default shell is `bash -e`; `set -uo pipefail` does NOT clear errexit, so
+          # without `set +e` the rc/wall_s/timedout capture below never runs on a failure or
+          # timeout — which is precisely the outcome this workflow exists to record.
+          set +e -uo pipefail
           # Clamped below the job's timeout-minutes so the cap fires here and the measurement is
           # recorded, instead of the job being killed with nothing to show.
           [ -s "$RUN/guest.json" ] || { echo "::warning::no guest JSON; recording nothing"; exit 0; }
@@ -363,7 +372,10 @@ jobs:
 
       - name: zkc trace --stats --check
         run: |
-          set -uo pipefail
+          # GitHub's default shell is `bash -e`; `set -uo pipefail` does NOT clear errexit, so
+          # without `set +e` the rc/wall_s/timedout capture below never runs on a failure or
+          # timeout — which is precisely the outcome this workflow exists to record.
+          set +e -uo pipefail
           [ -s "$RUN/guest.json" ] || { echo "::warning::no guest JSON; recording nothing"; exit 0; }
           cap=${{ inputs.check-timeout-min || 90 }}
           if [ "$cap" -gt 110 ]; then cap=110; fi

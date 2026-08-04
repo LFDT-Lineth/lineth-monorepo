@@ -52,8 +52,23 @@ runs:
         echo "RUN=${RUNNER_TEMP}/wzm" >> "$GITHUB_ENV"
         mkdir -p "${RUNNER_TEMP}/wzm"
 
-    # Only Go is needed here: building zkc and, in the report job, running the renderer. The guest ELF
-    # needs Zig and the riscv toolchain, which is why only `prepare` uses setup-arithmetization-riscv.
+    # GNU time is NOT on the runner image: setup-arithmetization-riscv apt-installs it (its line 53),
+    # and these jobs deliberately skip that heavy action. Every measurement wraps its command in
+    # `/usr/bin/time -v` to capture peak RSS, so without this the step dies with exit 127.
+    - name: Install GNU time
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ -x /usr/bin/time ]; then
+          echo "/usr/bin/time already present"
+        else
+          sudo apt-get update && sudo apt-get install -y time
+        fi
+        /usr/bin/time -v true 2>&1 | tail -1
+
+    # Only Go is needed beyond that: building zkc and, in the report job, running the renderer. The
+    # guest ELF needs Zig and the riscv toolchain, which is why only `prepare` uses
+    # setup-arithmetization-riscv.
     - name: Install Go
       uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
       with:
