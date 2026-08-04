@@ -28,7 +28,7 @@ inputs:
     description: 'Human-readable component name used in error messages and logs (e.g. coordinator).'
     required: true
   artifact-name:
-    description: 'Name of the artifact to upload (must be unique per workflow run, e.g. `coordinator-config-docs-${{ github.sha }}`).'
+    description: 'Name of the artifact to upload (must be unique per workflow run, e.g. `coordinator-config-docs-<github-sha>`).'
     required: true
   artifact-upload-path:
     description: 'Repo-relative directory whose contents are uploaded as the artifact (e.g. coordinator/app/build/config-docs-mdx/).'

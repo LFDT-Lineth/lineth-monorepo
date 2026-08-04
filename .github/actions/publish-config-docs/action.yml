@@ -22,7 +22,7 @@ inputs:
     description: 'Repo-relative directory under the docs checkout that this action is allowed to mutate (e.g. docs/stack/reference/_generated/coordinator).'
     required: true
   artifact-name:
-    description: 'Name of the artifact produced by validate-config-docs (e.g. `coordinator-config-docs-${{ github.sha }}`).'
+    description: 'Name of the artifact produced by validate-config-docs (e.g. `coordinator-config-docs-<github-sha>`).'
     required: true
   artifact-namespace:
     description: 'Directory inside the artifact that contains the generated MDX partials (e.g. _generated/coordinator). Defaults to the basename of docs-namespace.'
