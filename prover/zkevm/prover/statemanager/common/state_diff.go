@@ -11,7 +11,7 @@ import (
 )
 
 // StateDiff is a collection of column that appears in several of the modules
-// of the state-manager of Linea.
+// of the state-manager of Lineth.
 //
 // In state summary, we have a unique tuple of (hKey, initialHVal, finalHVal,
 // initialRoot, finalRoot) for each of the state operations (e.g. INSERT,

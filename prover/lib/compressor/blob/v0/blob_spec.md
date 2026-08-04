@@ -1,6 +1,6 @@
-# Linea Blob Format Specification
+# Lineth Blob Format Specification
 
-This document provides a detailed explanation of the structure of a blob in the context of Linea prover. A blob contains essential information that allows the Linea prover to validate the execution of several blocks of transactions. The blob's content is compressed and structured to facilitate cryptographic operations within zkSNARK circuits.
+This document provides a detailed explanation of the structure of a blob in the context of Lineth prover. A blob contains essential information that allows the Lineth prover to validate the execution of several blocks of transactions. The blob's content is compressed and structured to facilitate cryptographic operations within zkSNARK circuits.
 
 ## Content
 
@@ -39,12 +39,12 @@ The header contains the following elements:
 
 ### Body
 
-The body contains a list of "~RLP encoded" Linea blocks. For each block, the raw data includes:
+The body contains a list of "~RLP encoded" Lineth blocks. For each block, the raw data includes:
 
 - Block Timestamp (uint64, little endian)
 - List of RLP encoded Transactions (refer to EncodeTxForCompression for more details)
 
-The raw data is compressed using [compress/lzss](https://github.com/consensys/compress), a snark-friendly compression algorithm. This allows the Linea prover to "prove correct decompression of the blob".
+The raw data is compressed using [compress/lzss](https://github.com/consensys/compress), a snark-friendly compression algorithm. This allows the Lineth prover to "prove correct decompression of the blob".
 
 ### Final Blob: Byte Alignment
 

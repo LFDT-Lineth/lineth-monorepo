@@ -24,7 +24,7 @@ These were the original parameters of the original pre-print of Vortex
 
 ## Current parameters
 
-The current parameters that are used in Linea
+The current parameters that are used in Lineth
 
 |$log_2(q)$        |$log_2(beta)$     |$n$               |SVP (L2)          |SVP (Loo)         |BKZ attack        |CPW attack        |#limbs            |pi                |
 |------------------|------------------|------------------|------------------|------------------|------------------|------------------|------------------|------------------|

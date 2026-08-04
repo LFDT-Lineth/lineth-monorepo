@@ -155,7 +155,7 @@ type Config struct {
 	Debug                      Debug       `mapstructure:"debug"`
 
 	Layer2 struct {
-		// ChainID stores the ID of the Linea L2 network to consider.
+		// ChainID stores the ID of the Lineth L2 network to consider.
 		ChainID uint `mapstructure:"chain_id" validate:"required"`
 		// No validator tag: presence is enforced in newConfigFromFile via
 		// viper.IsSet. `required` would reject 0, which is valid on gasless
@@ -171,7 +171,7 @@ type Config struct {
 		// MsgSvcContract stores the unique ID of the Service Contract (SC), as a common.Address.
 		MsgSvcContract common.Address `mapstructure:"-"`
 
-		// CoinBaseStr stores the coinbase address of Linea as a string.
+		// CoinBaseStr stores the coinbase address of Lineth as a string.
 		CoinBaseStr string         `mapstructure:"coin_base" validate:"required,eth_addr"`
 		CoinBase    common.Address `mapstructure:"-"`
 	}

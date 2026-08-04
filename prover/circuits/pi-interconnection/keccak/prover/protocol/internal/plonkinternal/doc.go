@@ -15,7 +15,7 @@ circuit's satisfiability within the currently compiled IOP.
 
 This comes in handy in situation where we wish to prove complex relations that
 are difficult to express directly in the form of a Wizard-IOP but easier to
-express in a language that is more expressive. In the case, of Linea's zkEVM,
+express in a language that is more expressive. In the case, of Lineth's zkEVM,
 this is used for the ECDSA verification and the precompiles.
 
 The package optionally offers optimization when,

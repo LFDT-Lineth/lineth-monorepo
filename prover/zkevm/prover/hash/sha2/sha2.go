@@ -1,5 +1,5 @@
 // The sha2 package provides all the necessary tools to verify the calls to the
-// sha2 precompiles in the Linea's zkevm.
+// sha2 precompiles in the Lineth's zkevm.
 package sha2
 
 import (
@@ -41,7 +41,7 @@ type Sha2SingleProvider struct {
 	Pa_cSha2     *sha2BlockModule
 }
 
-// NewSha2ZkEvm constructs the Sha2 module as used in Linea's zkEVM.
+// NewSha2ZkEvm constructs the Sha2 module as used in Lineth's zkEVM.
 func NewSha2ZkEvm(comp *wizard.CompiledIOP, s Settings, arith *arithmetization.Arithmetization) *Sha2SingleProvider {
 
 	sha2ProviderInput := Sha2SingleProviderInput{
