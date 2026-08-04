@@ -5,7 +5,7 @@ import io.vertx.core.Vertx
 import io.vertx.micrometer.backends.BackendRegistries
 import linea.clients.StateManagerClientV1
 import linea.clients.StateManagerV1JsonRpcClient
-import linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
+import linea.contract.l1.Web3JLinethRollupSmartContractClientReadOnly
 import linea.domain.RetryConfig
 import linea.ethapi.EthLogsSearcherImpl
 import linea.staterecovery.BlockHeaderStaticFields
@@ -68,7 +68,7 @@ fun createAppAllInProcess(
 }
 
 data class AppClients(
-  val lineaContractClient: Web3JLineaRollupSmartContractClientReadOnly,
+  val lineaContractClient: Web3JLinethRollupSmartContractClientReadOnly,
   val ethLogsSearcher: EthLogsSearcherImpl,
   val blobScanClient: BlobScanClient,
   val stateManagerClient: StateManagerClientV1,
@@ -118,7 +118,7 @@ fun createAppClients(
       )
     }
   val lineaContractClient =
-    Web3JLineaRollupSmartContractClientReadOnly(
+    Web3JLinethRollupSmartContractClientReadOnly(
       contractAddress = smartContractAddress,
       web3j =
       createWeb3jHttpClient(

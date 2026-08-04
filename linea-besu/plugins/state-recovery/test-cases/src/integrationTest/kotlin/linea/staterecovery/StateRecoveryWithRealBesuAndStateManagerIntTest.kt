@@ -5,13 +5,13 @@ import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.ContractsManager
 import linea.EthApiClientManager
-import linea.LineaRollupDeploymentResult
-import linea.MakeFileDelegatedContractsManager.connectToLineaRollupContract
-import linea.MakeFileDelegatedContractsManager.lineaRollupContractErrors
+import linea.LinethRollupDeploymentResult
+import linea.MakeFileDelegatedContractsManager.connectToLinethRollupContract
+import linea.MakeFileDelegatedContractsManager.linethRollupContractErrors
 import linea.clients.StateManagerClientV1
 import linea.clients.StateManagerV1JsonRpcClient
-import linea.contract.l1.LineaRollupContractVersion
-import linea.contract.l1.LineaRollupSmartContractClient
+import linea.contract.l1.LinethRollupContractVersion
+import linea.contract.l1.LinethRollupSmartContractClient
 import linea.log4j.configureLoggers
 import linea.staterecovery.test.assertBesuAndShomeiRecoveredAsExpected
 import linea.staterecovery.test.execCommandAndAssertSuccess
@@ -44,9 +44,9 @@ class StateRecoveryWithRealBesuAndStateManagerIntTest {
     blobsResponsesDir = "$testDataDir/compression/responses",
     aggregationsResponsesDir = "$testDataDir/aggregation/responses",
   )
-  private lateinit var rollupDeploymentResult: LineaRollupDeploymentResult
-  private lateinit var contractClientForBlobSubmission: LineaRollupSmartContractClient
-  private lateinit var contractClientForAggregationSubmission: LineaRollupSmartContractClient
+  private lateinit var rollupDeploymentResult: LinethRollupDeploymentResult
+  private lateinit var contractClientForBlobSubmission: LinethRollupSmartContractClient
+  private lateinit var contractClientForAggregationSubmission: LinethRollupSmartContractClient
   private val executionLayerUrl = "http://localhost:9145"
   private val stateManagerUrl = "http://localhost:8890"
 
@@ -81,15 +81,15 @@ class StateRecoveryWithRealBesuAndStateManagerIntTest {
   @Order(1)
   fun `should recover status from genesis - seed data replay`() {
     this.rollupDeploymentResult = ContractsManager.get()
-      .deployLineaRollup(numberOfOperators = 2, contractVersion = LineaRollupContractVersion.V6)
+      .deployLinethRollup(numberOfOperators = 2, contractVersion = LinethRollupContractVersion.V6)
       .get()
-    log.info("LineaRollup address={}", rollupDeploymentResult.contractAddress)
+    log.info("LinethRollup address={}", rollupDeploymentResult.contractAddress)
     contractClientForBlobSubmission = rollupDeploymentResult.rollupOperatorClient
-    contractClientForAggregationSubmission = connectToLineaRollupContract(
+    contractClientForAggregationSubmission = connectToLinethRollupContract(
       rollupDeploymentResult.contractAddress,
       // index 0 is the first operator in rollupOperatorClient
       rollupDeploymentResult.rollupOperators[1].txManager,
-      smartContractErrors = lineaRollupContractErrors,
+      smartContractErrors = linethRollupContractErrors,
     )
     log.info("starting stack for recovery of state pushed to L1")
     val staterecoveryNodesStartFuture = execCommandAndAssertSuccess(

@@ -3,10 +3,10 @@ package linea.staterecovery
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.ContractsManager
-import linea.MakeFileDelegatedContractsManager.connectToLineaRollupContract
-import linea.MakeFileDelegatedContractsManager.lineaRollupContractErrors
-import linea.contract.l1.LineaRollupContractVersion
-import linea.contract.l1.LineaRollupSmartContractClient
+import linea.MakeFileDelegatedContractsManager.connectToLinethRollupContract
+import linea.MakeFileDelegatedContractsManager.linethRollupContractErrors
+import linea.contract.l1.LinethRollupContractVersion
+import linea.contract.l1.LinethRollupSmartContractClient
 import linea.domain.BlockNumberAndHash
 import linea.domain.BlockParameter
 import linea.domain.RetryConfig
@@ -44,8 +44,8 @@ class StateRecoveryAppWithFakeExecutionClientIntTest {
   private lateinit var aggregationsAndBlobs: List<AggregationAndBlobs>
   private lateinit var fakeExecutionLayerClient: FakeExecutionLayerClient
   private lateinit var fakeStateManagerClient: FakeStateManagerClient
-  private lateinit var contractClientForBlobSubmissions: LineaRollupSmartContractClient
-  private lateinit var contractClientForAggregationSubmissions: LineaRollupSmartContractClient
+  private lateinit var contractClientForBlobSubmissions: LinethRollupSmartContractClient
+  private lateinit var contractClientForAggregationSubmissions: LinethRollupSmartContractClient
   private lateinit var vertx: Vertx
   private lateinit var appClients: AppClients
 
@@ -77,7 +77,7 @@ class StateRecoveryAppWithFakeExecutionClientIntTest {
       FakeStateManagerClientBasedOnBlobsRecords(blobRecords = aggregationsAndBlobs.flatMap { it.blobs })
 
     val rollupDeploymentResult = ContractsManager.get()
-      .deployLineaRollup(numberOfOperators = 2, contractVersion = LineaRollupContractVersion.V6).get()
+      .deployLinethRollup(numberOfOperators = 2, contractVersion = LinethRollupContractVersion.V6).get()
 
     this.appConfigs = StateRecoveryApp.Config(
       l1EarliestSearchBlock = BlockParameter.Tag.EARLIEST,
@@ -98,10 +98,10 @@ class StateRecoveryAppWithFakeExecutionClientIntTest {
     )
 
     contractClientForBlobSubmissions = rollupDeploymentResult.rollupOperatorClient
-    contractClientForAggregationSubmissions = connectToLineaRollupContract(
+    contractClientForAggregationSubmissions = connectToLinethRollupContract(
       rollupDeploymentResult.contractAddress,
       rollupDeploymentResult.rollupOperators[1].txManager,
-      smartContractErrors = lineaRollupContractErrors,
+      smartContractErrors = linethRollupContractErrors,
     )
 
     configureLoggers(

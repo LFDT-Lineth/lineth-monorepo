@@ -1,6 +1,6 @@
 package net.consensys.linea.contract.l1
 
-import linea.contract.LineaRollupV6
+import linea.contract.LinethRollupV6
 import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
 import net.consensys.linea.contract.Web3JContractAsyncHelper
 import org.web3j.abi.datatypes.Function
@@ -10,13 +10,13 @@ import org.web3j.protocol.core.methods.response.TransactionReceipt
 import org.web3j.tx.gas.ContractGasProvider
 import java.math.BigInteger
 
-internal class LineaRollupEnhancedWrapper(
+internal class LinethRollupEnhancedWrapper(
   contractAddress: String,
   web3j: Web3j,
   transactionManager: AsyncFriendlyTransactionManager,
   contractGasProvider: ContractGasProvider,
   private val web3jContractHelper: Web3JContractAsyncHelper,
-) : LineaRollupV6(
+) : LinethRollupV6(
   contractAddress,
   web3j,
   transactionManager,
