@@ -11,7 +11,7 @@ data class FinalizationAndDataEventsV3(
   val dataFinalizedEvent: EthLogEvent<DataFinalizedV3>,
 )
 
-interface LineaRollupSubmissionEventsClient {
+interface LinethRollupSubmissionEventsClient {
   fun findFinalizationAndDataSubmissionV3Events(
     fromL1BlockNumber: BlockParameter,
     finalizationStartBlockNumber: ULong,

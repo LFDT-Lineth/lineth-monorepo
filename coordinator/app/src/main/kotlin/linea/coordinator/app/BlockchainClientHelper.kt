@@ -9,8 +9,8 @@ import linea.web3j.ECKeypairSignerAdapter
 import linea.web3j.SmartContractErrors
 import linea.web3j.ethapi.createEthApiClient
 import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
-import net.consensys.linea.contract.l1.Web3JLineaRollupSmartContractClient
 import net.consensys.linea.contract.l1.Web3JLineaValidiumSmartContractClient
+import net.consensys.linea.contract.l1.Web3JLinethRollupSmartContractClient
 import net.consensys.linea.ethereum.gaspricing.BoundableFeeCalculator
 import net.consensys.linea.ethereum.gaspricing.FeesCalculator
 import net.consensys.linea.ethereum.gaspricing.FeesFetcher
@@ -47,7 +47,7 @@ fun createLineaContractClient(
 ): LineaSmartContractClient {
   return when (dataAvailabilityType) {
     L1SubmissionConfig.DataAvailability.ROLLUP ->
-      Web3JLineaRollupSmartContractClient.load(
+      Web3JLinethRollupSmartContractClient.load(
         contractAddress = contractAddress,
         web3j = web3jClient,
         transactionManager = transactionManager,

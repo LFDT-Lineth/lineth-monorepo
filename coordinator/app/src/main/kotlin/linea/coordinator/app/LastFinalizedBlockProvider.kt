@@ -1,7 +1,7 @@
 package linea.coordinator.app
 
 import io.vertx.core.Vertx
-import linea.contract.l1.LineaRollupSmartContractClientReadOnly
+import linea.contract.l1.LinethRollupSmartContractClientReadOnly
 import linea.domain.BlockParameter
 import net.consensys.linea.async.AsyncRetryer
 import org.apache.logging.log4j.LogManager
@@ -24,7 +24,7 @@ interface LastFinalizedBlockProvider {
  */
 class L1BasedLastFinalizedBlockProvider(
   private val vertx: Vertx,
-  private val lineaRollupSmartContractClient: LineaRollupSmartContractClientReadOnly,
+  private val linethRollupSmartContractClient: LinethRollupSmartContractClientReadOnly,
   private val consistentNumberOfBlocksOnL1: UInt,
   private val numberOfRetries: UInt = Int.MAX_VALUE.toUInt(),
   private val pollingInterval: Duration = 2.seconds,
@@ -56,7 +56,7 @@ class L1BasedLastFinalizedBlockProvider(
       backoffDelay = pollingInterval,
       stopRetriesPredicate = isConsistentEnough,
     ) {
-      lineaRollupSmartContractClient.finalizedL2BlockNumber(
+      linethRollupSmartContractClient.finalizedL2BlockNumber(
         blockParameter = BlockParameter.Tag.LATEST,
       )
     }

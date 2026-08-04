@@ -8,7 +8,7 @@
  */
 package maru.app
 
-import linea.contract.l1.LineaRollupSmartContractClientReadOnly
+import linea.contract.l1.LinethRollupSmartContractClientReadOnly
 import linea.timer.TimerFactory
 import maru.api.ApiServer
 import maru.config.MaruConfig
@@ -152,7 +152,7 @@ class MaruAppCliTest {
         clock: Clock,
         overridingP2PNetwork: P2PNetwork?,
         overridingFinalizationProvider: FinalizationProvider?,
-        overridingLineaContractClient: LineaRollupSmartContractClientReadOnly?,
+        overridingLineaContractClient: LinethRollupSmartContractClientReadOnly?,
         overridingApiServer: ApiServer?,
         p2pNetworkFactory: (
           ByteArray,
