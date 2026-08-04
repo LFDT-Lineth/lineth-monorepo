@@ -226,7 +226,7 @@ func (store *SRSStore) DeriveAndPersistLagrange(ctx context.Context, ccs constra
 		// a loadable dump is already on disk; nothing to publish
 		return nil
 	}
-	return store.cacheLagrange(lagrangeSRS, sizeLagrange, curveID)
+	return store.persistLagrange(lagrangeSRS, sizeLagrange, curveID)
 }
 
 // sweepOrphanTemps deletes temp files orphaned by a crash mid-write (e.g. an
@@ -382,7 +382,7 @@ func (store *SRSStore) register(curveID ecc.ID, newEntry fsEntry) {
 	})
 }
 
-// cacheLagrange writes a derived Lagrange SRS into the store's directory using
+// persistLagrange writes a derived Lagrange SRS into the store's directory using
 // the naming scheme NewSRSStore parses, and registers it in the index. The dump
 // is fsync'd and renamed into place atomically, so a torn write cannot appear
 // under a trusted name. On load, framing, size, setup-identity (Vk) and
@@ -392,7 +392,7 @@ func (store *SRSStore) register(curveID ecc.ID, newEntry fsEntry) {
 // The published name always carries derivedSourceTag, so the only file this can
 // ever replace is one it wrote itself: a ceremony dump on the same path is
 // impossible by construction, and a stale derived dump is safe to supersede.
-func (store *SRSStore) cacheLagrange(lagrangeSRS kzg.SRS, sizeLagrange int, curveID ecc.ID) error {
+func (store *SRSStore) persistLagrange(lagrangeSRS kzg.SRS, sizeLagrange int, curveID ecc.ID) error {
 	curveName, ok := curveFileNames[curveID]
 	if !ok {
 		return fmt.Errorf("curve not supported: %s", curveID)
@@ -405,30 +405,34 @@ func (store *SRSStore) cacheLagrange(lagrangeSRS kzg.SRS, sizeLagrange int, curv
 	if err != nil {
 		return err
 	}
+	// one cleanup for every failure path: until the rename publishes the dump,
+	// returning is what removes the temp
+	published := false
+	defer func() {
+		if !published {
+			f.Close()
+			os.Remove(f.Name())
+		}
+	}()
+
 	if err := lagrangeSRS.WriteDump(f); err != nil {
-		f.Close()
-		os.Remove(f.Name())
 		return fmt.Errorf("writing srs dump: %w", err)
 	}
 	if err := f.Sync(); err != nil {
-		f.Close()
-		os.Remove(f.Name())
 		return err
 	}
 	if err := f.Close(); err != nil {
-		os.Remove(f.Name())
 		return err
 	}
 	// ceremony files in the store are world-readable; match them so the cache
 	// stays loadable when a later run uses a different uid
 	if err := os.Chmod(f.Name(), 0o644); err != nil {
-		os.Remove(f.Name())
 		return err
 	}
 	if err := os.Rename(f.Name(), finalPath); err != nil {
-		os.Remove(f.Name())
 		return err
 	}
+	published = true
 	syncDir(store.rootDir)
 
 	store.register(curveID, fsEntry{isCanonical: false, size: sizeLagrange, path: finalPath, source: derivedSourceTag})

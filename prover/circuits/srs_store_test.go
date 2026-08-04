@@ -104,7 +104,7 @@ func TestSRSStore_PersistsDerivedLagrange(t *testing.T) {
 
 			lagrange, err := toLagrange(canonical, 8)
 			assert.NoError(err)
-			assert.NoError(store.cacheLagrange(lagrange, 8, tc.curveID))
+			assert.NoError(store.persistLagrange(lagrange, 8, tc.curveID))
 
 			// a fresh store must pick the cached file up and be able to load it
 			fresh, err := NewSRSStore(dir)
@@ -143,13 +143,13 @@ func TestSRSStore_PersistsDerivedLagrange(t *testing.T) {
 			go func() {
 				defer wg.Done()
 				_ = store.entriesSnapshot(ecc.BN254)
-				errs <- store.cacheLagrange(lagrange, 8, ecc.BN254)
+				errs <- store.persistLagrange(lagrange, 8, ecc.BN254)
 			}()
 		}
 		wg.Wait()
 		close(errs)
 		for err := range errs {
-			assert.NoError(err, "concurrent cacheLagrange calls must all succeed")
+			assert.NoError(err, "concurrent persistLagrange calls must all succeed")
 		}
 		count := 0
 		for _, entry := range store.entriesSnapshot(ecc.BN254) {
@@ -169,11 +169,11 @@ func TestSRSStore_PersistsDerivedLagrange(t *testing.T) {
 		assert.NoError(err)
 		lagrange, err := toLagrange(canonical, 8)
 		assert.NoError(err)
-		assert.NoError(store.cacheLagrange(lagrange, 8, ecc.BN254))
+		assert.NoError(store.persistLagrange(lagrange, 8, ecc.BN254))
 
 		leftovers, err := filepath.Glob(filepath.Join(dir, "*.tmp*"))
 		assert.NoError(err)
-		assert.Empty(leftovers, "cacheLagrange must not leave temp files behind")
+		assert.Empty(leftovers, "persistLagrange must not leave temp files behind")
 	})
 
 	t.Run("failed_publish_cleans_up_its_temp", func(t *testing.T) {
@@ -188,7 +188,7 @@ func TestSRSStore_PersistsDerivedLagrange(t *testing.T) {
 
 		// a directory squatting on the final name makes the rename fail
 		assert.NoError(os.Mkdir(filepath.Join(dir, "kzg_srs_lagrange_8_bn254_derived.memdump"), 0o700))
-		assert.Error(store.cacheLagrange(lagrange, 8, ecc.BN254), "publish must fail when the final name is taken by a directory")
+		assert.Error(store.persistLagrange(lagrange, 8, ecc.BN254), "publish must fail when the final name is taken by a directory")
 
 		leftovers, err := filepath.Glob(filepath.Join(dir, "*.tmp*"))
 		assert.NoError(err)
@@ -395,7 +395,7 @@ func TestSRSStore_DeriveAndPersistLagrange(t *testing.T) {
 		// provisioning returns the failure rather than swallowing it, so an
 		// operator running it deliberately finds out that nothing was written —
 		// and the wording pins that the probe reported it before deriving,
-		// not cacheLagrange after
+		// not persistLagrange after
 		assert.ErrorContains(roStore.DeriveAndPersistLagrange(context.TODO(), cs, false),
 			"not deriving a basis", "provisioning must report that it could not write, from the probe")
 		_, err = os.Stat(filepath.Join(roDir, fmt.Sprintf("kzg_srs_lagrange_%d_bn254_derived.memdump", lagrangeSize)))
@@ -421,7 +421,7 @@ func TestSRSStore_DerivedDumpsNeverClaimACeremony(t *testing.T) {
 			assert.NoError(err)
 			lagrange, err := toLagrange(canonical, 8)
 			assert.NoError(err)
-			assert.NoError(store.cacheLagrange(lagrange, 8, ecc.BN254))
+			assert.NoError(store.persistLagrange(lagrange, 8, ecc.BN254))
 
 			assert.FileExists(filepath.Join(dir, "kzg_srs_lagrange_8_bn254_derived.memdump"))
 			_, err = os.Stat(filepath.Join(dir, fmt.Sprintf("kzg_srs_lagrange_8_bn254_%s.memdump", ceremony)))
