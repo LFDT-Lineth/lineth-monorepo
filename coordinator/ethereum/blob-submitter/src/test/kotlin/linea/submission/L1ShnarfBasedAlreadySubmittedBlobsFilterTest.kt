@@ -1,6 +1,6 @@
 package linea.submission
 
-import linea.contract.l1.LineaRollupSmartContractClient
+import linea.contract.l1.LinethRollupSmartContractClient
 import linea.domain.createBlobRecord
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -26,7 +26,7 @@ class L1ShnarfBasedAlreadySubmittedBlobsFilterTest {
     val blob7 = createBlobRecord(70UL, 79UL)
     val blobs = listOf(blob1, blob2, blob3, blob4, blob5, blob6, blob7)
 
-    val l1SmcClient = mock<LineaRollupSmartContractClient>()
+    val l1SmcClient = mock<LinethRollupSmartContractClient>()
     whenever(l1SmcClient.isBlobShnarfPresent(any(), any()))
       .thenAnswer { invocation ->
         val shnarfQueried = invocation.getArgument<ByteArray>(1)

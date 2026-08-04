@@ -16,7 +16,7 @@ class LineaSubmissionEventsClientImpl(
   private val smartContractAddress: String,
   private val l1LatestSearchBlock: BlockParameter = BlockParameter.Tag.FINALIZED,
   private val logsBlockChunkSize: Int,
-) : LineaRollupSubmissionEventsClient {
+) : LinethRollupSubmissionEventsClient {
   init {
     require(logsBlockChunkSize > 0) { "logsBlockChunkSize=$logsBlockChunkSize must be greater than 0" }
   }

@@ -1,13 +1,13 @@
 package net.consensys.linea.contract.l1
 
 import linea.EthLogsSearcher
-import linea.contract.LineaRollupV6
+import linea.contract.LinethRollupV6
 import linea.contract.l1.BlobsSubmissionV9
 import linea.contract.l1.BlockAndNonce
 import linea.contract.l1.FinalizationDataV9
-import linea.contract.l1.LineaRollupContractVersion
-import linea.contract.l1.LineaRollupSmartContractClient
-import linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
+import linea.contract.l1.LinethRollupContractVersion
+import linea.contract.l1.LinethRollupSmartContractClient
+import linea.contract.l1.Web3JLinethRollupSmartContractClientReadOnly
 import linea.domain.BlobRecord
 import linea.domain.ProofToFinalize
 import linea.domain.gas.GasPriceCaps
@@ -25,23 +25,23 @@ import org.web3j.tx.gas.ContractGasProvider
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.math.BigInteger
 
-class Web3JLineaRollupSmartContractClient internal constructor(
+class Web3JLinethRollupSmartContractClient internal constructor(
   contractAddress: String,
   web3j: Web3j,
   private val transactionManager: AsyncFriendlyTransactionManager,
   private val web3jContractHelper: Web3JContractAsyncHelper,
-  private val web3jLineaClient: LineaRollupV6,
+  private val web3jLineaClient: LinethRollupV6,
   ethLogsSearcher: EthLogsSearcher,
   l1EventSearchMaxBlockRange: UInt = 10_000u,
-  private val log: Logger = LogManager.getLogger(Web3JLineaRollupSmartContractClient::class.java),
-) : Web3JLineaRollupSmartContractClientReadOnly(
+  private val log: Logger = LogManager.getLogger(Web3JLinethRollupSmartContractClient::class.java),
+) : Web3JLinethRollupSmartContractClientReadOnly(
   contractAddress = contractAddress,
   web3j = web3j,
   ethLogsSearcher = ethLogsSearcher,
   l1EventSearchMaxBlockRange = l1EventSearchMaxBlockRange,
   log = log,
 ),
-  LineaRollupSmartContractClient {
+  LinethRollupSmartContractClient {
   companion object {
     fun load(
       contractAddress: String,
@@ -51,7 +51,7 @@ class Web3JLineaRollupSmartContractClient internal constructor(
       smartContractErrors: SmartContractErrors,
       ethLogsSearcher: EthLogsSearcher,
       useEthEstimateGas: Boolean = false,
-    ): Web3JLineaRollupSmartContractClient {
+    ): Web3JLinethRollupSmartContractClient {
       val web3JContractAsyncHelper =
         Web3JContractAsyncHelper(
           contractAddress = contractAddress,
@@ -61,20 +61,20 @@ class Web3JLineaRollupSmartContractClient internal constructor(
           smartContractErrors = smartContractErrors,
           useEthEstimateGas = useEthEstimateGas,
         )
-      val lineaRollupEnhancedWrapper =
-        LineaRollupEnhancedWrapper(
+      val linethRollupEnhancedWrapper =
+        LinethRollupEnhancedWrapper(
           contractAddress = contractAddress,
           web3j = web3j,
           transactionManager = transactionManager,
           contractGasProvider = contractGasProvider,
           web3jContractHelper = web3JContractAsyncHelper,
         )
-      return Web3JLineaRollupSmartContractClient(
+      return Web3JLinethRollupSmartContractClient(
         contractAddress = contractAddress,
         web3j = web3j,
         transactionManager = transactionManager,
         web3jContractHelper = web3JContractAsyncHelper,
-        web3jLineaClient = lineaRollupEnhancedWrapper,
+        web3jLineaClient = linethRollupEnhancedWrapper,
         ethLogsSearcher = ethLogsSearcher,
       )
     }
@@ -87,7 +87,7 @@ class Web3JLineaRollupSmartContractClient internal constructor(
       smartContractErrors: SmartContractErrors,
       ethLogsSearcher: EthLogsSearcher,
       useEthEstimateGas: Boolean,
-    ): Web3JLineaRollupSmartContractClient {
+    ): Web3JLinethRollupSmartContractClient {
       return load(
         contractAddress,
         web3j,
@@ -127,7 +127,7 @@ class Web3JLineaRollupSmartContractClient internal constructor(
   override fun submitBlobs(blobs: List<BlobRecord>, gasPriceCaps: GasPriceCaps?): SafeFuture<String> {
     return getVersion()
       .thenCompose { version ->
-        val function = Web3JLineaRollupFunctionBuilders.buildSubmitBlobsFunction(version, blobs)
+        val function = Web3JLinethRollupFunctionBuilders.buildSubmitBlobsFunction(version, blobs)
         web3jContractHelper.sendBlobCarryingTransactionAndGetTxHash(
           function = function,
           blobs = blobs.map { it.blobCompressionProof!!.compressedData },
@@ -139,7 +139,7 @@ class Web3JLineaRollupSmartContractClient internal constructor(
   override fun submitBlobsEthCall(blobs: List<BlobRecord>, gasPriceCaps: GasPriceCaps?): SafeFuture<String?> {
     return getVersion()
       .thenCompose { version ->
-        val function = Web3JLineaRollupFunctionBuilders.buildSubmitBlobsFunction(version, blobs)
+        val function = Web3JLinethRollupFunctionBuilders.buildSubmitBlobsFunction(version, blobs)
         web3jContractHelper.executeBlobEthCall(
           function = function,
           blobs = blobs.map { it.blobCompressionProof!!.compressedData },
@@ -158,7 +158,7 @@ class Web3JLineaRollupSmartContractClient internal constructor(
     return getVersion()
       .thenCompose { version ->
         val function =
-          Web3JLineaRollupFunctionBuilders.buildFinalizeBlocksFunction(
+          Web3JLinethRollupFunctionBuilders.buildFinalizeBlocksFunction(
             version,
             aggregation,
             aggregationLastBlob,
@@ -180,7 +180,7 @@ class Web3JLineaRollupSmartContractClient internal constructor(
     return getVersion()
       .thenCompose { version ->
         val function =
-          Web3JLineaRollupFunctionBuilders.buildFinalizeBlocksFunction(
+          Web3JLinethRollupFunctionBuilders.buildFinalizeBlocksFunction(
             version,
             aggregation,
             aggregationLastBlob,
@@ -201,7 +201,7 @@ class Web3JLineaRollupSmartContractClient internal constructor(
     return getVersion()
       .thenCompose { version ->
         val function =
-          Web3JLineaRollupFunctionBuilders.buildFinalizeBlocksFunction(
+          Web3JLinethRollupFunctionBuilders.buildFinalizeBlocksFunction(
             version,
             aggregation,
             aggregationLastBlob,
@@ -214,8 +214,8 @@ class Web3JLineaRollupSmartContractClient internal constructor(
   }
 
   private fun ensureMinVersion(
-    minVersion: LineaRollupContractVersion,
-  ): SafeFuture<LineaRollupContractVersion> {
+    minVersion: LinethRollupContractVersion,
+  ): SafeFuture<LinethRollupContractVersion> {
     return getVersion()
       .thenCompose { version ->
         if (version < minVersion) {
@@ -233,7 +233,7 @@ class Web3JLineaRollupSmartContractClient internal constructor(
     gasPriceCaps: GasPriceCaps?,
     preflightWithEthCall: Boolean,
   ): SafeFuture<String> {
-    return ensureMinVersion(LineaRollupContractVersion.V9)
+    return ensureMinVersion(LinethRollupContractVersion.V9)
       .thenApply {
         FunctionBuildersV9.buildSubmitBlobsFunctionV9(blobData)
       }
@@ -261,7 +261,7 @@ class Web3JLineaRollupSmartContractClient internal constructor(
     gasPriceCaps: GasPriceCaps?,
     preflightWithEthCall: Boolean,
   ): SafeFuture<String> {
-    return ensureMinVersion(LineaRollupContractVersion.V9)
+    return ensureMinVersion(LinethRollupContractVersion.V9)
       .thenApply {
         FunctionBuildersV9.buildFinalizeBlocksFunctionV9(data)
       }

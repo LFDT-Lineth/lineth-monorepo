@@ -1,7 +1,7 @@
 package net.consensys.linea.contract.l1
 
-import linea.contract.LineaRollupV6
-import linea.contract.l1.LineaRollupContractVersion
+import linea.contract.LinethRollupV6
+import linea.contract.l1.LinethRollupContractVersion
 import linea.domain.BlobRecord
 import linea.domain.ProofToFinalize
 import linea.kotlin.toBigInteger
@@ -14,15 +14,15 @@ import org.web3j.abi.datatypes.generated.Bytes32
 import org.web3j.abi.datatypes.generated.Uint256
 import java.math.BigInteger
 
-internal object Web3JLineaRollupFunctionBuilders {
-  fun buildSubmitBlobsFunction(version: LineaRollupContractVersion, blobs: List<BlobRecord>): Function {
+internal object Web3JLinethRollupFunctionBuilders {
+  fun buildSubmitBlobsFunction(version: LinethRollupContractVersion, blobs: List<BlobRecord>): Function {
     return when (version) {
-      LineaRollupContractVersion.V6,
-      LineaRollupContractVersion.V7,
-      LineaRollupContractVersion.V8,
+      LinethRollupContractVersion.V6,
+      LinethRollupContractVersion.V7,
+      LinethRollupContractVersion.V8,
       -> buildSubmitBlobsFunctionV6(blobs)
 
-      LineaRollupContractVersion.V9 ->
+      LinethRollupContractVersion.V9 ->
         throw UnsupportedOperationException("version=$version not supported, please use submitBlobsV9 instead")
     }
   }
@@ -33,7 +33,7 @@ internal object Web3JLineaRollupFunctionBuilders {
         val blobCompressionProof = blob.blobCompressionProof!!
         // BlobSubmission(BigInteger dataEvaluationClaim, byte[] kzgCommitment, byte[] kzgProof,
         //                byte[] finalStateRootHash, byte[] snarkHash)
-        LineaRollupV6.BlobSubmission(
+        LinethRollupV6.BlobSubmission(
           // dataEvaluationClaim
           BigInteger(blobCompressionProof.expectedY),
           // kzgCommitment
@@ -55,9 +55,9 @@ internal object Web3JLineaRollupFunctionBuilders {
      )
      */
     return Function(
-      LineaRollupV6.FUNC_SUBMITBLOBS,
+      LinethRollupV6.FUNC_SUBMITBLOBS,
       listOf(
-        DynamicArray(LineaRollupV6.BlobSubmission::class.java, blobsSubmissionData),
+        DynamicArray(LinethRollupV6.BlobSubmission::class.java, blobsSubmissionData),
         Bytes32(blobs.first().blobCompressionProof!!.prevShnarf),
         Bytes32(blobs.last().blobCompressionProof!!.expectedShnarf),
       ),
@@ -66,15 +66,15 @@ internal object Web3JLineaRollupFunctionBuilders {
   }
 
   fun buildFinalizeBlocksFunction(
-    version: LineaRollupContractVersion,
+    version: LinethRollupContractVersion,
     aggregationProof: ProofToFinalize,
     aggregationLastBlob: BlobRecord,
     parentL1RollingHash: ByteArray,
     parentL1RollingHashMessageNumber: Long,
   ): Function {
     return when (version) {
-      LineaRollupContractVersion.V6,
-      LineaRollupContractVersion.V7,
+      LinethRollupContractVersion.V6,
+      LinethRollupContractVersion.V7,
       -> {
         buildFinalizeBlockFunctionV6(
           aggregationProof,
@@ -84,14 +84,14 @@ internal object Web3JLineaRollupFunctionBuilders {
         )
       }
 
-      LineaRollupContractVersion.V8 -> buildFinalizeBlocksFunctionV8(
+      LinethRollupContractVersion.V8 -> buildFinalizeBlocksFunctionV8(
         aggregationProof,
         aggregationLastBlob,
         parentL1RollingHash,
         parentL1RollingHashMessageNumber,
       )
 
-      LineaRollupContractVersion.V9 ->
+      LinethRollupContractVersion.V9 ->
         throw UnsupportedOperationException("version=$version not supported, please use finalizeBlocksV9 instead")
     }
   }
@@ -103,7 +103,7 @@ internal object Web3JLineaRollupFunctionBuilders {
     parentL1RollingHashMessageNumber: Long,
   ): Function {
     val aggregationEndBlobInfo =
-      LineaRollupV6.ShnarfData(
+      LinethRollupV6.ShnarfData(
         // parentShnarf
         aggregationLastBlob.blobCompressionProof!!.prevShnarf,
         // snarkHash
@@ -132,7 +132,7 @@ internal object Web3JLineaRollupFunctionBuilders {
 //    )
 
     val finalizationData =
-      LineaRollupV6.FinalizationDataV3(
+      LinethRollupV6.FinalizationDataV3(
         // parentStateRootHash
         aggregationProof.parentStateRootHash,
         // endBlockNumber
@@ -168,7 +168,7 @@ internal object Web3JLineaRollupFunctionBuilders {
      */
     val function =
       Function(
-        LineaRollupV6.FUNC_FINALIZEBLOCKS,
+        LinethRollupV6.FUNC_FINALIZEBLOCKS,
         listOf(
           DynamicBytes(aggregationProof.aggregatedProof),
           Uint256(aggregationProof.aggregatedVerifierIndex.toLong()),

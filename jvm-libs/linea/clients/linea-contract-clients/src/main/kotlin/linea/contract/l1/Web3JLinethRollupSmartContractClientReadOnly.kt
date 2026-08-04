@@ -3,8 +3,8 @@ package linea.contract.l1
 import linea.EthLogsSearcher
 import linea.SearchDirection
 import linea.contract.FAKE_READ_ONLY_CREDENTIALS
-import linea.contract.LineaRollupV6
-import linea.contract.LineaRollupV8
+import linea.contract.LinethRollupV6
+import linea.contract.LinethRollupV8
 import linea.contract.LinethRollupV9
 import linea.contract.events.FinalizedStateUpdatedEvent
 import linea.domain.BlockParameter
@@ -27,7 +27,7 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
-open class Web3JLineaRollupSmartContractClientReadOnly(
+open class Web3JLinethRollupSmartContractClientReadOnly(
   val web3j: Web3j,
   val contractAddress: String,
   private val ethLogsSearcher: EthLogsSearcher,
@@ -35,13 +35,13 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
   private val finalizedStateSearchInitialBlockParameter: BlockParameter = BlockParameter.Tag.EARLIEST,
   private val versionRefreshInterval: Duration = 6.seconds,
   private val clock: Clock = Clock.System,
-  private val log: Logger = LogManager.getLogger(Web3JLineaRollupSmartContractClientReadOnly::class.java),
-) : LineaRollupSmartContractClientReadOnly,
-  LineaRollupSmartContractClientReadOnlyFinalizedStateProvider,
+  private val log: Logger = LogManager.getLogger(Web3JLinethRollupSmartContractClientReadOnly::class.java),
+) : LinethRollupSmartContractClientReadOnly,
+  LinethRollupSmartContractClientReadOnlyFinalizedStateProvider,
   FinalizedStateDataProvider {
 
-  protected fun contractClientV8AtBlock(blockParameter: BlockParameter): LineaRollupV8 {
-    return contractClientAtBlock(blockParameter, LineaRollupV8::class.java)
+  protected fun contractClientV8AtBlock(blockParameter: BlockParameter): LinethRollupV8 {
+    return contractClientAtBlock(blockParameter, LinethRollupV8::class.java)
   }
 
   protected fun contractClientV9AtBlock(blockParameter: BlockParameter): LinethRollupV9 {
@@ -51,14 +51,14 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
   protected fun <T : Contract> loadContractClient(contract: Class<T>): T {
     @Suppress("UNCHECKED_CAST")
     return when {
-      LineaRollupV6::class.java.isAssignableFrom(contract) -> LineaRollupV6.load(
+      LinethRollupV6::class.java.isAssignableFrom(contract) -> LinethRollupV6.load(
         contractAddress,
         web3j,
         FAKE_READ_ONLY_CREDENTIALS,
         StaticGasProvider(BigInteger.ZERO, BigInteger.ZERO),
       )
 
-      LineaRollupV8::class.java.isAssignableFrom(contract) -> LineaRollupV8.load(
+      LinethRollupV8::class.java.isAssignableFrom(contract) -> LinethRollupV8.load(
         contractAddress,
         web3j,
         FAKE_READ_ONLY_CREDENTIALS,
@@ -84,18 +84,18 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
   }
 
   private data class CachedVersion(
-    val version: LineaRollupContractVersion,
+    val version: LinethRollupContractVersion,
     val fetchedAt: Instant,
   )
 
   private val smartContractVersionCache = AtomicReference<CachedVersion>(null)
 
-  private fun getSmartContractVersion(): SafeFuture<LineaRollupContractVersion> {
+  private fun getSmartContractVersion(): SafeFuture<LinethRollupContractVersion> {
     val cached = smartContractVersionCache.get()
     return when {
       // once upgraded, it's not downgraded
-      cached?.version == LineaRollupContractVersion.latest ->
-        SafeFuture.completedFuture(LineaRollupContractVersion.latest)
+      cached?.version == LinethRollupContractVersion.latest ->
+        SafeFuture.completedFuture(LinethRollupContractVersion.latest)
 
       // below latest: serve from cache within the refresh interval so repeated getVersion calls
       // don't refetch on every call, while still detecting an upgrade within versionRefreshInterval
@@ -124,27 +124,27 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
 
   internal open fun fetchSmartContractVersion(
     blockParameter: BlockParameter = BlockParameter.Tag.LATEST,
-  ): SafeFuture<LineaRollupContractVersion> {
-    return contractClientAtBlock(blockParameter, LineaRollupV6::class.java)
+  ): SafeFuture<LinethRollupContractVersion> {
+    return contractClientAtBlock(blockParameter, LinethRollupV6::class.java)
       .CONTRACT_VERSION()
       .sendAsync()
       .toSafeFuture()
       .thenApply(::parseContractVersion)
   }
 
-  internal fun parseContractVersion(version: String): LineaRollupContractVersion {
+  internal fun parseContractVersion(version: String): LinethRollupContractVersion {
     return when {
-      version.startsWith("6") -> LineaRollupContractVersion.V6
-      version.startsWith("7") -> LineaRollupContractVersion.V7
-      version.startsWith("8") -> LineaRollupContractVersion.V8
-      version.startsWith("9") -> LineaRollupContractVersion.V9
+      version.startsWith("6") -> LinethRollupContractVersion.V6
+      version.startsWith("7") -> LinethRollupContractVersion.V7
+      version.startsWith("8") -> LinethRollupContractVersion.V8
+      version.startsWith("9") -> LinethRollupContractVersion.V9
       else -> throw IllegalStateException("Unsupported contract version: $version")
     }
   }
 
   override fun getAddress(): String = contractAddress
 
-  override fun getVersion(blockParameter: BlockParameter): SafeFuture<LineaRollupContractVersion> {
+  override fun getVersion(blockParameter: BlockParameter): SafeFuture<LinethRollupContractVersion> {
     return if (blockParameter == BlockParameter.Tag.LATEST) {
       getSmartContractVersion()
     } else {
@@ -171,11 +171,11 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
     return getVersion()
       .thenCompose { version ->
         when (version) {
-          LineaRollupContractVersion.V6,
-          LineaRollupContractVersion.V7,
-          LineaRollupContractVersion.V8,
+          LinethRollupContractVersion.V6,
+          LinethRollupContractVersion.V7,
+          LinethRollupContractVersion.V8,
           -> contractClientV8AtBlock(blockParameter).blobShnarfExists(shnarf)
-          LineaRollupContractVersion.V9 -> // just ensure not regression while WIP
+          LinethRollupContractVersion.V9 -> // just ensure not regression while WIP
             contractClientV9AtBlock(blockParameter).blobShnarfExists(shnarf)
         }
           .sendAsync()
@@ -190,10 +190,10 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
       .toSafeFuture()
   }
 
-  override fun getLatestFinalizedState(blockParameter: BlockParameter): SafeFuture<LineaRollupFinalizedState> {
+  override fun getLatestFinalizedState(blockParameter: BlockParameter): SafeFuture<LinethRollupFinalizedState> {
     return getVersion()
       .thenApply { contractVersion ->
-        if (contractVersion != LineaRollupContractVersion.V8) {
+        if (contractVersion != LinethRollupContractVersion.V8) {
           throw UnsupportedOperationException("Contract $contractVersion does not support getLatestFinalizedState")
         }
         contractClientV8AtBlock(blockParameter)
@@ -208,7 +208,7 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
               finalisedBlockNumber = finalizedBlockNumber.toULong(),
             )
               .thenApply { finalState ->
-                LineaRollupFinalizedState(
+                LinethRollupFinalizedState(
                   blockNumber = finalState.blockNumber,
                   blockTimestamp = finalState.timestamp,
                   messageNumber = finalState.messageNumber,
@@ -228,8 +228,8 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
       ) { version, finalizedBlockNumber -> version to finalizedBlockNumber }
       .thenCompose { (version, finalizedBlockNumber) ->
         when (version) {
-          LineaRollupContractVersion.V6,
-          LineaRollupContractVersion.V7,
+          LinethRollupContractVersion.V6,
+          LinethRollupContractVersion.V7,
           ->
             SafeFuture.completedFuture(
               FinalizedStateDataProvider.FinalizedStateData(
@@ -238,8 +238,8 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
               ),
             )
 
-          LineaRollupContractVersion.V8,
-          LineaRollupContractVersion.V9,
+          LinethRollupContractVersion.V8,
+          LinethRollupContractVersion.V9,
           ->
             findFinalizedStateEvent(blockParameter, finalizedBlockNumber)
               .thenApply { finalizedState ->

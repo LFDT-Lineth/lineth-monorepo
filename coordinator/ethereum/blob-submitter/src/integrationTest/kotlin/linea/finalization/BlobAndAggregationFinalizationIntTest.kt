@@ -7,8 +7,8 @@ import io.vertx.junit5.VertxTestContext
 import linea.Account
 import linea.ContractsManager
 import linea.MakeFileDelegatedContractsManager
-import linea.contract.l1.LineaRollupContractVersion
-import linea.contract.l1.LineaRollupSmartContractClient
+import linea.contract.l1.LinethRollupContractVersion
+import linea.contract.l1.LinethRollupSmartContractClient
 import linea.coordination.EventDispatcher
 import linea.domain.Aggregation
 import linea.domain.BlobRecord
@@ -48,7 +48,7 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
 
   override val databaseName = DbHelper.generateUniqueDbName("coordinator-tests-submission-int-test")
   private val fakeClock = FakeFixedClock()
-  private lateinit var lineaRollupContractForAggregationSubmission: LineaRollupSmartContractClient
+  private lateinit var linethRollupContractForAggregationSubmission: LinethRollupSmartContractClient
   private lateinit var contractDeploymentAccount: Account
   private lateinit var aggregationsRepository: AggregationsRepository
   private lateinit var blobsRepository: BlobsRepository
@@ -65,13 +65,13 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
   private lateinit var aggregations: List<Aggregation>
   private lateinit var blobs: List<BlobRecord>
 
-  private fun setupTest(vertx: Vertx, smartContractVersion: LineaRollupContractVersion) {
+  private fun setupTest(vertx: Vertx, smartContractVersion: LinethRollupContractVersion) {
     // V6 is always used, this is left for when V7 is implemented.
-    if (listOf(LineaRollupContractVersion.V6).contains(smartContractVersion).not()) {
+    if (listOf(LinethRollupContractVersion.V6).contains(smartContractVersion).not()) {
       throw IllegalArgumentException("unsupported contract version=$smartContractVersion!")
     }
     val rollupDeploymentFuture = ContractsManager.get()
-      .deployLineaRollup(numberOfOperators = 2, contractVersion = smartContractVersion)
+      .deployLinethRollup(numberOfOperators = 2, contractVersion = smartContractVersion)
     // load files from FS while smc deploy
     loadBlobsAndAggregations(
       blobsResponsesDir = "$testDataDir/compression/responses",
@@ -95,13 +95,13 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
     )
     aggregationsRepository = AggregationsRepositoryImpl(PostgresAggregationsDao(sqlClient, fakeClock))
 
-    val lineaRollupContractForDataSubmissionV6 = rollupDeploymentResult.rollupOperatorClient
+    val linethRollupContractForDataSubmissionV6 = rollupDeploymentResult.rollupOperatorClient
 
     val acceptedBlobEndBlockNumberConsumer = Consumer<ULong> { acceptedBlob = it }
 
     @Suppress("DEPRECATION")
     val alreadySubmittedBlobFilter = L1ShnarfBasedAlreadySubmittedBlobsFilter(
-      lineaSmartContractClientReadOnly = lineaRollupContractForDataSubmissionV6,
+      lineaSmartContractClientReadOnly = linethRollupContractForDataSubmissionV6,
       acceptedBlobEndBlockNumberConsumer = acceptedBlobEndBlockNumberConsumer,
     )
     val blobSubmittedEventConsumers = mapOf(
@@ -119,7 +119,7 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
         ),
         blobsRepository = blobsRepository,
         aggregationsRepository = aggregationsRepository,
-        lineaSmartContractClient = lineaRollupContractForDataSubmissionV6,
+        lineaSmartContractClient = linethRollupContractForDataSubmissionV6,
         alreadySubmittedBlobsFilter = alreadySubmittedBlobFilter,
         gasPriceCapProvider = FakeGasPriceCapProvider(),
         blobSubmittedEventDispatcher = EventDispatcher(blobSubmittedEventConsumers),
@@ -129,8 +129,8 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
     }
 
     aggregationFinalizationCoordinator = run {
-      lineaRollupContractForAggregationSubmission = MakeFileDelegatedContractsManager
-        .connectToLineaRollupContract(
+      linethRollupContractForAggregationSubmission = MakeFileDelegatedContractsManager
+        .connectToLinethRollupContract(
           rollupDeploymentResult.contractAddress,
           rollupDeploymentResult.rollupOperators[1].txManager,
 
@@ -143,7 +143,7 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
       )
 
       val aggregationSubmitter = AggregationSubmitterImpl(
-        lineaSmartContractClient = lineaRollupContractForAggregationSubmission,
+        lineaSmartContractClient = linethRollupContractForAggregationSubmission,
         gasPriceCapProvider = FakeGasPriceCapProvider(),
         aggregationSubmittedEventConsumer = EventDispatcher(submittedFinalizationConsumers),
         clock = fakeClock,
@@ -157,7 +157,7 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
         aggregationSubmitter = aggregationSubmitter,
         aggregationsRepository = aggregationsRepository,
         blobsRepository = blobsRepository,
-        lineaSmartContractClient = lineaRollupContractForAggregationSubmission,
+        lineaSmartContractClient = linethRollupContractForAggregationSubmission,
         alreadySubmittedBlobsFilter = alreadySubmittedBlobFilter,
         vertx = vertx,
         clock = fakeClock,
@@ -168,7 +168,7 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
   private fun testSubmission(
     vertx: Vertx,
     testContext: VertxTestContext,
-    smartContractVersion: LineaRollupContractVersion,
+    smartContractVersion: LinethRollupContractVersion,
   ) {
     setupTest(vertx, smartContractVersion)
 
@@ -190,7 +190,7 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
         waitAtMost(2.minutes.toJavaDuration())
           .pollInterval(1.seconds.toJavaDuration())
           .untilAsserted {
-            val finalizedBlockNumber = lineaRollupContractForAggregationSubmission.finalizedL2BlockNumber().get()
+            val finalizedBlockNumber = linethRollupContractForAggregationSubmission.finalizedL2BlockNumber().get()
             assertThat(finalizedBlockNumber).isEqualTo(aggregations.last().endBlockNumber)
             assertThat(blobSubmittedEvent.blobs.last().endBlockNumber).isEqualTo(blobs[12].endBlockNumber)
             assertThat(acceptedBlob).isEqualTo(blobs[12].endBlockNumber)
@@ -207,6 +207,6 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
   @Test
   @Timeout(3, timeUnit = TimeUnit.MINUTES)
   fun `submission works with contract V6`(vertx: Vertx, testContext: VertxTestContext) {
-    testSubmission(vertx, testContext, LineaRollupContractVersion.V6)
+    testSubmission(vertx, testContext, LinethRollupContractVersion.V6)
   }
 }
