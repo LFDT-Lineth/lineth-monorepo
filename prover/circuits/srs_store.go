@@ -101,9 +101,17 @@ func NewSRSStore(rootDir string) (*SRSStore, error) {
 	srsStore.entries[ecc.BN254] = []fsEntry{}
 	srsStore.entries[ecc.BW6_761] = []fsEntry{}
 
-	// the trailing group is the provenance tag: one of the three ceremonies the
-	// store may be seeded from, or derivedSourceTag for a locally computed basis
-	srsRegexp := regexp.MustCompile(`^(kzg_srs)_(canonical|lagrange)_(\d+)_(bls12377|bn254|bw6761)_(aleo|aztec|celo|` + derivedSourceTag + `)\.memdump$`)
+	// the curve alternation comes from curveFileNames, the same map the write
+	// path names files with, so a new curve is added in one place; the trailing
+	// group is the provenance tag: one of the three ceremonies the store may be
+	// seeded from, or derivedSourceTag for a locally computed basis
+	curveTokens := make([]string, 0, len(curveFileNames))
+	for _, name := range curveFileNames {
+		curveTokens = append(curveTokens, name)
+	}
+	sort.Strings(curveTokens)
+	srsRegexp := regexp.MustCompile(`^(kzg_srs)_(canonical|lagrange)_(\d+)_(` +
+		strings.Join(curveTokens, "|") + `)_(aleo|aztec|celo|` + derivedSourceTag + `)\.memdump$`)
 
 	for _, entry := range dir {
 		if entry.IsDir() {
