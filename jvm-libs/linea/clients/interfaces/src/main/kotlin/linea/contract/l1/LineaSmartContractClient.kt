@@ -46,7 +46,7 @@ interface LineaSmartContractClientReadOnly {
   ): SafeFuture<Boolean>
 
   /**
-   * Gets Type 2 StateRootHash for Linea Block
+   * Gets Type 2 StateRootHash for Lineth Block
    */
   fun blockStateRootHash(blockParameter: BlockParameter, lineaL2BlockNumber: ULong): SafeFuture<ByteArray>
 }
@@ -65,7 +65,7 @@ data class LinethRollupFinalizedState(
 interface LinethRollupSmartContractClientReadOnlyFinalizedStateProvider {
   /**
    * Provides the latest finalized state.
-   * It relies on Linea contract V8 FinalizedStateUpdated event
+   * It relies on Lineth contract V8 FinalizedStateUpdated event
    *
    * @throws UnsupportedOperationException when contract is not yet upgraded to V8 or when 1st event was not emitted yet
    */

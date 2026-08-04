@@ -8,8 +8,8 @@ enum class TransactionType(private val typeValue: Int) {
   FRONTIER(248),
   ACCESS_LIST(1),
   EIP1559(2),
-  BLOB(3), // Not supported by Linea atm, but here for completeness
-  DELEGATE_CODE(4), // Not supported by Linea atm, but here for completeness
+  BLOB(3), // Not supported by Lineth atm, but here for completeness
+  DELEGATE_CODE(4), // Not supported by Lineth atm, but here for completeness
   ;
 
   val serializedType: Byte

@@ -3,7 +3,7 @@ plugins {
   id 'java-test-fixtures'
 }
 
-description="Linea long running service implementation"
+description="Lineth long running service implementation"
 
 dependencies {
   implementation "io.vertx:vertx-core"

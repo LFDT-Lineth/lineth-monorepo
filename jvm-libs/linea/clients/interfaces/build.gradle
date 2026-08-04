@@ -3,7 +3,7 @@ plugins {
   id 'java-test-fixtures'
 }
 
-description="Interfaces for interaction with Linea Smart Contract"
+description="Interfaces for interaction with Lineth Smart Contract"
 
 dependencies {
   api project(':jvm-libs:linea:core:domain-models')
