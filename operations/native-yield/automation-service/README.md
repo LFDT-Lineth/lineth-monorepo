@@ -1,4 +1,4 @@
-# Linea Native Yield Automation Service
+# Lineth Native Yield Automation Service
 
 ## Overview
 
