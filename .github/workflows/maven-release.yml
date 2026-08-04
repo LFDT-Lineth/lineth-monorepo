@@ -59,6 +59,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets._GITHUB_TOKEN_RELEASE_ACCESS }}
         run: |
           if [[ "$LIB_TO_RELEASE" == ':linea-besu:plugins:sequencer-interfaces' ]]; then
+            # The project dependency provides the signer JAR transitively, but does not run its
+            # full verification lifecycle. Keep this explicit release gate because signer-interfaces
+            # and sequencer-interfaces are both published below.
             ./gradlew \
               ':jvm-libs:linea:core:signer-interfaces:build' \
               "${LIB_TO_RELEASE}:build"
