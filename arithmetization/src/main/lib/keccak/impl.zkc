@@ -32,9 +32,12 @@ fn keccak<ram, keccak_state>(msg_address:Address, msg_length:u32, output_address
     printf "msg_length: %x\n", msg_length
     printf "output_address: %x\n", output_address
 
-    absorbing_phase(msg_address, msg_length)
+    var n_blocks:u32 = (msg_length / BLOCK_BYTE_LENGTH)
+    var remainder:u8 = (msg_length % BLOCK_BYTE_LENGTH) as u8
 
-    squeezing_phase(output_address)
+    kec_absorbing_phase(n_blocks, remainder, msg_address, msg_length)
+
+    kec_squeezing_phase(output_address)
 
     print_hash()
 }
@@ -73,10 +76,7 @@ fn wipe_state<keccak_state>() {
 // ===================================================================
 
 // Xor the input blocks into the state and perform the permutation
-fn absorbing_phase<ram, keccak_state>(msg_address:Address, msg_length:u32) {
-
-    var n_blocks:u32 = (msg_length / BLOCK_BYTE_LENGTH) + 1
-    var remainder:u8 = (msg_length % BLOCK_BYTE_LENGTH) as u8
+fn kec_absorbing_phase<ram, keccak_state>(n_blocks:u32, remainder:u8, msg_address:Address, msg_length:u32) {
 
     var curr_address:Address = msg_address
 
@@ -86,13 +86,13 @@ fn absorbing_phase<ram, keccak_state>(msg_address:Address, msg_length:u32) {
     // =======================================================================================
 
     // we build the blocks that DO NOT require padding and call keccak_f on them
-    // NOTE: n_blocks ≥ 1
-    for block:u32 = 0; block<(n_blocks - 1); block = block + 1 {
+    // NOTE: n_blocks ≥ 0
+    for block:u32 = 0; block<(n_blocks); block = block + 1 {
         for limb:u5 = 0; limb<17; limb = limb + 1 {
             keccak_state[PIB + (limb as u7)] = read_64(curr_address + (8 * (limb as Address)))
         }
 
-        xor_padded_input_block_into_state()
+        kec_xor_padded_input_block_into_state()
         keccak_f()
 
         curr_address = curr_address + (BLOCK_BYTE_LENGTH as Address)
@@ -108,12 +108,7 @@ fn absorbing_phase<ram, keccak_state>(msg_address:Address, msg_length:u32) {
     var n_full_words:u5 = (remainder / 8) as u5
     var n_bytes:u3 = (remainder % 8) as u3
 
-    var final_word_in_block:u1
-    if n_full_words == 16 {
-        final_word_in_block = 1
-    } else {
-        final_word_in_block = 0
-    }
+    var final_word_in_block:u1 = n_full_words == 16 ? 1:0
 
     for limb:u5 = 0; limb<n_full_words; limb = limb + 1 {
         keccak_state[PIB + (limb as u7)] = read_64(curr_address + (8 * (limb as Address)))
@@ -131,12 +126,12 @@ fn absorbing_phase<ram, keccak_state>(msg_address:Address, msg_length:u32) {
         keccak_state[PIB + 16] = FINAL_RIGHT_PADDING
     }
 
-    xor_padded_input_block_into_state()
+    kec_xor_padded_input_block_into_state()
     keccak_f()
 }
 
-// xor_padded_input_block_into_state does exactly what its name suggests
-fn xor_padded_input_block_into_state<keccak_state>() {
+// kec_xor_padded_input_block_into_state does exactly what its name suggests
+fn kec_xor_padded_input_block_into_state<keccak_state>() {
     keccak_state[ROW0] = keccak_state[ROW0] ^ keccak_state[PIB]
     keccak_state[ROW1] = keccak_state[ROW1] ^ keccak_state[PIB + 1]
     keccak_state[ROW2] = keccak_state[ROW2] ^ keccak_state[PIB + 2]
@@ -156,7 +151,7 @@ fn xor_padded_input_block_into_state<keccak_state>() {
     keccak_state[ROW1 + 3] = keccak_state[ROW1 + 3] ^ keccak_state[PIB + 16]
 }
 
-fn squeezing_phase<ram, keccak_state>(output_address:Address) {
+fn kec_squeezing_phase<ram, keccak_state>(output_address:Address) {
     write_64(output_address + (0 * 8), keccak_state[ROW0] as u64)
     write_64(output_address + (1 * 8), keccak_state[ROW1] as u64)
     write_64(output_address + (2 * 8), keccak_state[ROW2] as u64)
@@ -175,18 +170,18 @@ fn keccak_f<keccak_state>() {
 }
 
 fn keccak_f_round<keccak_state>(round_constant:u64) {
-    theta()
-    rho()
-    pi()
-    chi()
-    iota(round_constant)
+    kec_theta()
+    kec_rho()
+    kec_pi()
+    kec_chi()
+    kec_iota(round_constant)
 }
 
 // THETA: column parity mixing step
 // C[x] = A[x,0] ^ A[x,1] ^ A[x,2] ^ A[x,3] ^ A[x,4]
 // D[x] = C[x-1] ^ rot(C[x+1], 1)
 // A[x,y] = A[x,y] ^ D[x]
-fn theta<keccak_state>() {
+fn kec_theta<keccak_state>() {
 
     keccak_state[C] = keccak_state[ROW0] ^ keccak_state[ROW0 + 1] ^ keccak_state[ROW0 + 2] ^ keccak_state[ROW0 + 3] ^ keccak_state[ROW0 + 4]
     keccak_state[C + 1] = keccak_state[ROW1] ^ keccak_state[ROW1 + 1] ^ keccak_state[ROW1 + 2] ^ keccak_state[ROW1 + 3] ^ keccak_state[ROW1 + 4]
@@ -211,7 +206,7 @@ fn theta<keccak_state>() {
 
 // RHO: lane rotations step
 // B[y, (2x+3y) mod 5] = rot(A[x,y], r[x,y])
-fn rho<keccak_state>() {
+fn kec_rho<keccak_state>() {
 
     for j:u3 = 0; j<5; j = j + 1 {
         keccak_state[ROW0 + (j as u7)] = bit_rotl64(keccak_state[ROW0 + (j as u7)], rot_offset(0, j))
@@ -224,7 +219,7 @@ fn rho<keccak_state>() {
 
 // PI: lane permutation step
 // A[x,y] → B[y, (2x+3y) mod 5]
-fn pi<keccak_state>() {
+fn kec_pi<keccak_state>() {
 
     // we apply bY[Z] = state_rowX[Y] with Z = (2*X + 3*Y) mod 5
     keccak_state[B0] = keccak_state[ROW0]
@@ -256,7 +251,7 @@ fn pi<keccak_state>() {
 
 // CHI: non-linear step
 // A[x,y] = B[x,y] ^ ((not B[x+1,y]) and B[x+2,y])
-fn chi<keccak_state>() {
+fn kec_chi<keccak_state>() {
 
     for j:u7 = 0; j<5; j = j + 1 {
         keccak_state[ROW0 + j] = keccak_state[B0 + j] ^ ((~keccak_state[B1 + j]) & keccak_state[B2 + j])
@@ -270,16 +265,6 @@ fn chi<keccak_state>() {
 
 // IOTA: round constant step
 // A[0,0] = A[0,0] ^ RC
-fn iota<keccak_state>(round_constant:u64) {
+fn kec_iota<keccak_state>(round_constant:u64) {
     keccak_state[ROW0] = keccak_state[ROW0] ^ round_constant
-}
-
-// ===================================================================
-// Helper functions
-// ===================================================================
-
-// rotate left by n bits
-fn bit_rotl64(word:u64, n:u6) -> (res:u64) {
-    var shift:u7 = 64 - (n as u7)
-    res = (word << n) | (word >> shift)
 }
