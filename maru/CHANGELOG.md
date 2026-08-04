@@ -1,5 +1,9 @@
 ## [unreleased]
 
+### 🚀 Features
+
+- *(maru)* Support custom QBFT validator signers without exposing the P2P private key (#3700)
+
 ### 🐛 Bug Fixes
 
 - *(maru)* Declare jar task dependency on runtimeClasspath to fix manifest race (#3694)

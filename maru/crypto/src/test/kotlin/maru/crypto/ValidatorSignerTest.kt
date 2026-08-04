@@ -19,6 +19,7 @@ import org.hyperledger.besu.ethereum.core.Util
 import org.hyperledger.besu.plugin.services.securitymodule.SecurityModuleException
 import org.junit.jupiter.api.Test
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import java.util.concurrent.TimeUnit
 
 class ValidatorSignerTest {
   private val privateKey = ByteArray(32).also { it[it.lastIndex] = 1 }
@@ -67,6 +68,17 @@ class ValidatorSignerTest {
   }
 
   @Test
+  fun `adapter rejects invalid secp256k1 points`() {
+    val signer =
+      FakeValidatorSigner(ByteArray(SignerSecurityModule.PUBLIC_KEY_SIZE)) {
+        error("must not be called")
+      }
+
+    assertThatThrownBy { SignerSecurityModule(signer) }
+      .isInstanceOf(SecurityModuleException::class.java)
+  }
+
+  @Test
   fun `adapter wraps provider failures`() {
     val localSigner = LocalValidatorSigner(privateKey)
     val providerError = IllegalStateException("provider unavailable")
@@ -101,13 +113,14 @@ class ValidatorSignerTest {
           signingError = caught
           interruptPreserved = Thread.currentThread().isInterrupted
         }
-      }
+      }.apply { isDaemon = true }
 
     thread.start()
-    signingStarted.get()
+    signingStarted.get(5, TimeUnit.SECONDS)
     thread.interrupt()
-    thread.join()
+    thread.join(TimeUnit.SECONDS.toMillis(5))
 
+    assertThat(thread.isAlive).isFalse()
     assertThat(signingError).isInstanceOf(SecurityModuleException::class.java)
     assertThat(interruptPreserved).isTrue()
   }

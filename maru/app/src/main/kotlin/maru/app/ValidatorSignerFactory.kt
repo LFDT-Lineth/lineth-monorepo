@@ -12,6 +12,7 @@ import linea.crypto.Secp256k1Signature
 import linea.crypto.Signer
 import maru.config.ValidatorSignerConfig
 import maru.config.ValidatorSignerType
+import org.hyperledger.besu.cryptoservices.NodeKey
 import java.util.concurrent.atomic.AtomicBoolean
 
 fun interface ValidatorSignerFactory {
@@ -29,6 +30,13 @@ class ManagedValidatorSigner(
       closeAction()
     }
   }
+}
+
+internal class ValidatorSignerResource(
+  val nodeKey: NodeKey,
+  val managedSigner: ManagedValidatorSigner,
+) : AutoCloseable {
+  override fun close() = managedSigner.close()
 }
 
 object DefaultValidatorSignerFactory : ValidatorSignerFactory {

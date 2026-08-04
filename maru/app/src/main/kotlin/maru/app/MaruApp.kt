@@ -13,14 +13,11 @@ import linea.kotlin.encodeHex
 import linea.timer.TimerFactory
 import maru.api.ApiServer
 import maru.config.MaruConfig
-import maru.config.ValidatorSignerType
-import maru.consensus.DifficultyAwareQbftConfig
 import maru.consensus.ForkSpec
 import maru.consensus.ForksSchedule
 import maru.consensus.NextBlockTimestampProviderImpl
 import maru.consensus.OmniProtocolFactory
 import maru.consensus.ProtocolStarter
-import maru.consensus.QbftConsensusConfig
 import maru.consensus.qbft.DifficultyAwareQbftFactory
 import maru.consensus.state.FinalizationProvider
 import maru.core.Protocol
@@ -51,7 +48,7 @@ interface LongRunningCloseable :
   LongRunningService,
   AutoCloseable
 
-class MaruApp(
+class MaruApp internal constructor(
   val config: MaruConfig,
   val beaconGenesisConfig: ForksSchedule,
   clock: Clock = Clock.systemUTC(),
@@ -110,7 +107,6 @@ class MaruApp(
         config.qbft!!.validatorSigner.name,
         validator.address.encodeHex(),
       )
-      validateValidatorIdentity(validator)
     }
 
     metricsFacade.createGauge(
@@ -215,15 +211,20 @@ class MaruApp(
   }
 
   override fun close() {
-    validatorELNodeEngineApiWeb3JClient?.eth1Web3j?.shutdown()
-    l2EthWeb3j?.shutdown()
-    followerELNodeEngineApiWeb3JClients.forEach { (_, web3jClient) -> web3jClient.eth1Web3j.shutdown() }
-    p2pNetwork.close()
-    vertx.close()
-    protocolStarter.close()
-    managedValidatorSigner?.close()
-    // close db last, otherwise other components may fail trying to save data
-    beaconChain.close()
+    closeAll(
+      { validatorELNodeEngineApiWeb3JClient?.eth1Web3j?.shutdown() },
+      { l2EthWeb3j?.shutdown() },
+      {
+        followerELNodeEngineApiWeb3JClients.forEach { (_, web3jClient) ->
+          web3jClient.eth1Web3j.shutdown()
+        }
+      },
+      p2pNetwork::close,
+      { vertx.close() },
+      protocolStarter::close,
+      { managedValidatorSigner?.close() },
+      beaconChain::close,
+    )
   }
 
   private fun start(
@@ -318,29 +319,21 @@ class MaruApp(
 
     return protocolStarter
   }
+}
 
-  private fun validateValidatorIdentity(validator: Validator) {
-    val validatorsFromAllForks: Set<Validator> =
-      beaconGenesisConfig.forks
-        .flatMap<ForkSpec, Validator> {
-          when (val configuration = it.configuration) {
-            is DifficultyAwareQbftConfig -> configuration.postTtdConfig.validatorSet
-            is QbftConsensusConfig -> configuration.validatorSet
-            else -> throw IllegalArgumentException("")
-          }
-        }.toSet()
-    if (!validatorsFromAllForks.contains(validator)) {
-      if (config.qbft!!.validatorSigner.type == ValidatorSignerType.CUSTOM) {
-        throw IllegalArgumentException(
-          "Custom validator signer '${config.qbft!!.validatorSigner.name}' address " +
-            "${validator.address.encodeHex()} is not present in any configured validator set",
-        )
-      } else {
-        log.warn(
-          "localValidator={} isn't found in any of validatorSet-s in any of the Forks in the Genesis file!",
-          validator,
-        )
+internal fun closeAll(vararg closeActions: () -> Unit) {
+  var firstFailure: Throwable? = null
+  closeActions.forEach { closeAction ->
+    try {
+      closeAction()
+    } catch (error: Throwable) {
+      val failure = firstFailure
+      if (failure == null) {
+        firstFailure = error
+      } else if (failure !== error) {
+        failure.addSuppressed(error)
       }
     }
   }
+  firstFailure?.let { throw it }
 }

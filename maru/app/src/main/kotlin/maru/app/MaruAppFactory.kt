@@ -28,16 +28,19 @@ import maru.api.ApiServerImpl
 import maru.api.ChainDataProviderImpl
 import maru.config.MaruConfig
 import maru.config.P2PConfig
+import maru.config.QbftConfig
 import maru.config.SyncingConfig
 import maru.config.ValidatorSignerType
 import maru.consensus.DifficultyAwareQbftConfig
 import maru.consensus.ElFork
+import maru.consensus.ForkSpec
 import maru.consensus.ForksSchedule
 import maru.consensus.QbftConsensusConfig
 import maru.consensus.StaticValidatorProvider
 import maru.consensus.blockimport.ElForkAwareBlockImporter
 import maru.consensus.state.FinalizationProvider
 import maru.consensus.state.InstantFinalizationProvider
+import maru.core.Validator
 import maru.crypto.LocalValidatorSigner
 import maru.crypto.SecpCrypto
 import maru.crypto.toNodeKey
@@ -77,6 +80,8 @@ import net.consensys.linea.metrics.Tag
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.linea.vertx.VertxFactory
 import org.apache.logging.log4j.LogManager
+import org.hyperledger.besu.cryptoservices.NodeKey
+import org.hyperledger.besu.ethereum.core.Util
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.http.HttpService
 import tech.pegasys.teku.ethereum.executionclient.web3j.Web3JClient
@@ -145,6 +150,67 @@ class MaruAppFactory(
     log.info("configs={}", config)
     log.info("beaconGenesisConfig={}", beaconGenesisConfig)
 
+    val blockHashing = ForkAwareBlockHashing(beaconGenesisConfig)
+
+    config.persistence.dataPath.createDirectories()
+    val privateKey = getOrGeneratePrivateKey(config.persistence.privateKeyPath)
+    val validatorSignerResource =
+      createValidatorSignerResource(
+        qbftConfig = config.qbft,
+        beaconGenesisConfig = beaconGenesisConfig,
+        privateKey = privateKey,
+      )
+
+    return try {
+      createMaruApp(
+        config = config,
+        beaconGenesisConfig = beaconGenesisConfig,
+        clock = clock,
+        privateKey = privateKey,
+        blockHashing = blockHashing,
+        validatorSignerResource = validatorSignerResource,
+        overridingP2PNetwork = overridingP2PNetwork,
+        overridingFinalizationProvider = overridingFinalizationProvider,
+        overridingLineaContractClient = overridingLineaContractClient,
+        overridingApiServer = overridingApiServer,
+        p2pNetworkFactory = p2pNetworkFactory,
+      )
+    } catch (error: Throwable) {
+      try {
+        validatorSignerResource?.close()
+      } catch (closeError: Throwable) {
+        error.addSuppressed(closeError)
+      }
+      throw error
+    }
+  }
+
+  private fun createMaruApp(
+    config: MaruConfig,
+    beaconGenesisConfig: ForksSchedule,
+    clock: Clock,
+    privateKey: ByteArray,
+    blockHashing: ForkAwareBlockHashing,
+    validatorSignerResource: ValidatorSignerResource?,
+    overridingP2PNetwork: P2PNetwork?,
+    overridingFinalizationProvider: FinalizationProvider?,
+    overridingLineaContractClient: LineaRollupSmartContractClientReadOnly?,
+    overridingApiServer: ApiServer?,
+    p2pNetworkFactory: (
+      ByteArray,
+      P2PConfig,
+      UInt,
+      ForkAwareBlockHashing,
+      MetricsFacade,
+      BesuMetricsSystem,
+      StatusManager,
+      BeaconChain,
+      ForkPeeringManager,
+      () -> Boolean,
+      P2PState,
+      TimerFactory,
+    ) -> P2PNetworkImpl,
+  ): MaruApp {
     val l2EthWeb3j: Web3j? =
       config.forkTransition.l2EthApiEndpoint?.let {
         Web3j.build(HttpService(it.endpoint.toString()))
@@ -152,10 +218,6 @@ class MaruAppFactory(
 
     checkL2EthApiEndpointAndForks(clock, beaconGenesisConfig, l2EthWeb3j)
 
-    val blockHashing = ForkAwareBlockHashing(beaconGenesisConfig)
-
-    config.persistence.dataPath.createDirectories()
-    val privateKey = getOrGeneratePrivateKey(config.persistence.privateKeyPath)
     val nodeId = PeerId.fromPubKey(unmarshalPrivateKey(privateKey).publicKey())
     val vertx =
       VertxFactory.createVertx(
@@ -333,49 +395,97 @@ class MaruAppFactory(
           },
         )
 
-    val managedValidatorSigner =
-      config.qbft?.let {
-        when (it.validatorSigner.type) {
-          ValidatorSignerType.LOCAL ->
-            ManagedValidatorSigner(
-              LocalValidatorSigner(SecpCrypto.privateKeyBytesWithoutPrefix(privateKey)),
-            )
+    return MaruApp(
+      config = config,
+      beaconGenesisConfig = beaconGenesisConfig,
+      clock = clock,
+      p2pNetwork = p2pNetwork,
+      validatorNodeKey = validatorSignerResource?.nodeKey,
+      managedValidatorSigner = validatorSignerResource?.managedSigner,
+      finalizationProvider = finalizationProvider,
+      metricsFacade = metricsFacade,
+      vertx = vertx,
+      beaconChain = kvDatabase,
+      metricsSystem = besuMetricsSystemAdapter,
+      l2EthWeb3j = l2EthWeb3j,
+      validatorELNodeEngineApiWeb3JClient = engineApiWeb3jClient,
+      apiServer = apiServer,
+      syncControllerManager = syncControllerImpl,
+      timerFactory = timerFactory,
+      blockHashing = blockHashing,
+    )
+  }
 
-          ValidatorSignerType.CUSTOM ->
-            validatorSignerFactory.create(it.validatorSigner)
-        }
+  internal fun createValidatorSignerResource(
+    qbftConfig: QbftConfig?,
+    beaconGenesisConfig: ForksSchedule,
+    privateKey: ByteArray,
+  ): ValidatorSignerResource? {
+    if (qbftConfig == null) {
+      return null
+    }
+
+    val managedValidatorSigner =
+      when (qbftConfig.validatorSigner.type) {
+        ValidatorSignerType.LOCAL ->
+          ManagedValidatorSigner(
+            LocalValidatorSigner(SecpCrypto.privateKeyBytesWithoutPrefix(privateKey)),
+          )
+
+        ValidatorSignerType.CUSTOM ->
+          validatorSignerFactory.create(qbftConfig.validatorSigner)
       }
 
     try {
-      val validatorNodeKey =
-        managedValidatorSigner?.signer?.toNodeKey()
-
-      return MaruApp(
-        config = config,
-        beaconGenesisConfig = beaconGenesisConfig,
-        clock = clock,
-        p2pNetwork = p2pNetwork,
-        validatorNodeKey = validatorNodeKey,
-        managedValidatorSigner = managedValidatorSigner,
-        finalizationProvider = finalizationProvider,
-        metricsFacade = metricsFacade,
-        vertx = vertx,
-        beaconChain = kvDatabase,
-        metricsSystem = besuMetricsSystemAdapter,
-        l2EthWeb3j = l2EthWeb3j,
-        validatorELNodeEngineApiWeb3JClient = engineApiWeb3jClient,
-        apiServer = apiServer,
-        syncControllerManager = syncControllerImpl,
-        timerFactory = timerFactory,
-        blockHashing = blockHashing,
-      )
+      val nodeKey = managedValidatorSigner.signer.toNodeKey()
+      validateValidatorIdentity(qbftConfig, beaconGenesisConfig, nodeKey)
+      return ValidatorSignerResource(nodeKey, managedValidatorSigner)
     } catch (error: Throwable) {
       try {
-        managedValidatorSigner?.close()
+        managedValidatorSigner.close()
       } catch (closeError: Throwable) {
         error.addSuppressed(closeError)
       }
       throw error
+    }
+  }
+
+  private fun validateValidatorIdentity(
+    qbftConfig: QbftConfig,
+    beaconGenesisConfig: ForksSchedule,
+    validatorNodeKey: NodeKey,
+  ) {
+    val validator =
+      Validator(
+        Util
+          .publicKeyToAddress(validatorNodeKey.publicKey)
+          .bytes
+          .toArray(),
+      )
+    val validatorsFromAllForks: Set<Validator> =
+      beaconGenesisConfig.forks
+        .flatMap<ForkSpec, Validator> {
+          when (val configuration = it.configuration) {
+            is DifficultyAwareQbftConfig -> configuration.postTtdConfig.validatorSet
+            is QbftConsensusConfig -> configuration.validatorSet
+            else ->
+              throw IllegalArgumentException(
+                "Unsupported consensus configuration: ${configuration::class.qualifiedName}",
+              )
+          }
+        }.toSet()
+
+    if (validator !in validatorsFromAllForks) {
+      if (qbftConfig.validatorSigner.type == ValidatorSignerType.CUSTOM) {
+        throw IllegalArgumentException(
+          "Custom validator signer '${qbftConfig.validatorSigner.name}' address " +
+            "${validator.address.encodeHex()} is not present in any configured validator set",
+        )
+      }
+      log.warn(
+        "localValidator={} isn't found in any of validatorSet-s in any of the Forks in the Genesis file!",
+        validator,
+      )
     }
   }
 

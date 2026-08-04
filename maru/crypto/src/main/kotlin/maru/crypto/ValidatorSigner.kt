@@ -13,7 +13,6 @@ import linea.crypto.Signer
 import org.apache.tuweni.bytes.Bytes
 import org.apache.tuweni.bytes.Bytes32
 import org.hyperledger.besu.crypto.ECPointUtil
-import org.hyperledger.besu.crypto.SECPPublicKey
 import org.hyperledger.besu.cryptoservices.NodeKey
 import org.hyperledger.besu.plugin.services.securitymodule.SecurityModule
 import org.hyperledger.besu.plugin.services.securitymodule.SecurityModuleException
@@ -43,10 +42,9 @@ class LocalValidatorSigner(
   }
 }
 
-class SignerSecurityModule(
+internal class SignerSecurityModule(
   private val signer: Signer<Secp256k1Signature>,
 ) : SecurityModule {
-  private val secpPublicKey: SECPPublicKey
   private val publicKey: PublicKey
 
   init {
@@ -57,7 +55,7 @@ class SignerSecurityModule(
       )
     }
     try {
-      secpPublicKey = SecpCrypto.signatureAlgorithm.createPublicKey(Bytes.wrap(encodedPublicKey))
+      val secpPublicKey = SecpCrypto.signatureAlgorithm.createPublicKey(Bytes.wrap(encodedPublicKey))
       if (!SecpCrypto.signatureAlgorithm.isValidPublicKey(secpPublicKey)) {
         throw SecurityModuleException("Validator signer public key is not a valid secp256k1 point")
       }
@@ -68,7 +66,7 @@ class SignerSecurityModule(
       publicKey = PublicKey { point }
     } catch (error: SecurityModuleException) {
       throw error
-    } catch (error: Throwable) {
+    } catch (error: Exception) {
       throw SecurityModuleException("Invalid validator signer public key", error)
     }
   }
@@ -80,7 +78,7 @@ class SignerSecurityModule(
       } catch (error: InterruptedException) {
         Thread.currentThread().interrupt()
         throw SecurityModuleException("Interrupted while waiting for validator signature", error)
-      } catch (error: Throwable) {
+      } catch (error: Exception) {
         throw SecurityModuleException("Validator signing failed", unwrapCompletionError(error))
       }
     return object : Signature {
