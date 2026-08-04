@@ -59,8 +59,8 @@ type fsEntry struct {
 const derivedSourceTag = "derived"
 
 // orphanTempMaxAge is how long a temp file's last write must lie in the past
-// before store construction deletes it; a live writer keeps refreshing its
-// temp's mtime while streaming the dump.
+// before provisioning deletes it; a live writer keeps refreshing its temp's
+// mtime while streaming the dump.
 const orphanTempMaxAge = time.Hour
 
 // curveFileNames maps a curve ID to the token naming it in SRS file names.
@@ -113,19 +113,6 @@ func NewSRSStore(rootDir string) (*SRSStore, error) {
 		fileName := entry.Name()
 		matches := srsRegexp.FindStringSubmatch(fileName)
 		if matches == nil {
-			// a crash mid-write (e.g. an OOM-kill during a multi-GiB dump)
-			// orphans a temp file that nothing indexes or reclaims; delete it
-			// once its last write is more than an hour old — a live writer's
-			// temp is always newer than that
-			if strings.HasPrefix(fileName, "kzg_srs_") && strings.Contains(fileName, ".memdump.tmp") {
-				if info, err := entry.Info(); err == nil && time.Since(info.ModTime()) > orphanTempMaxAge {
-					if err := os.Remove(filepath.Join(rootDir, fileName)); err != nil {
-						logrus.Warnf("could not remove orphaned srs temp file %s: %v", fileName, err)
-					} else {
-						logrus.Infof("removed orphaned srs temp file %s", fileName)
-					}
-				}
-			}
 			continue
 		}
 
@@ -197,6 +184,10 @@ const lagrangeSizeWarnThreshold = 1 << 20
 // returned so an explicit provisioning step can report it, where a prove-time
 // read had to swallow it.
 func (store *SRSStore) DeriveAndPersistLagrange(ctx context.Context, ccs constraint.ConstraintSystem, force bool) error {
+	// reclaim crash leftovers before the cheap-skip: after a crashed --force
+	// re-write a valid dump still exists, so no later step would ever run
+	store.sweepOrphanTemps()
+
 	_, sizeLagrange := plonk.SRSSize(ccs)
 	curveID := fieldToCurve(ccs.Field())
 
@@ -230,6 +221,31 @@ func (store *SRSStore) DeriveAndPersistLagrange(ctx context.Context, ccs constra
 		return nil
 	}
 	return store.cacheLagrange(lagrangeSRS, sizeLagrange, curveID)
+}
+
+// sweepOrphanTemps deletes temp files orphaned by a crash mid-write (e.g. an
+// OOM-kill during a multi-GiB dump) once their last write is more than an
+// hour old — a live writer's temp is always newer than that. Only the
+// provisioning path calls it: constructing or reading the store never mutates
+// the directory.
+func (store *SRSStore) sweepOrphanTemps() {
+	dir, err := os.ReadDir(store.rootDir)
+	if err != nil {
+		return
+	}
+	for _, entry := range dir {
+		fileName := entry.Name()
+		if entry.IsDir() || !strings.HasPrefix(fileName, "kzg_srs_") || !strings.Contains(fileName, ".memdump.tmp") {
+			continue
+		}
+		if info, err := entry.Info(); err == nil && time.Since(info.ModTime()) > orphanTempMaxAge {
+			if err := os.Remove(filepath.Join(store.rootDir, fileName)); err != nil {
+				logrus.Warnf("could not remove orphaned srs temp file %s: %v", fileName, err)
+			} else {
+				logrus.Infof("removed orphaned srs temp file %s", fileName)
+			}
+		}
+	}
 }
 
 // resolveSRS loads the canonical SRS and either loads or derives the matching

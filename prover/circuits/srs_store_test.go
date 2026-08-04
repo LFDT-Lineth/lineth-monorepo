@@ -196,8 +196,13 @@ func TestSRSStore_PersistsDerivedLagrange(t *testing.T) {
 	t.Run("sweeps_only_aged_orphan_temps", func(t *testing.T) {
 		assert := require.New(t)
 		dir := t.TempDir()
-		canonical := newTestCanonicalSRS(t, ecc.BN254, 16)
-		dumpToFile(t, canonical, filepath.Join(dir, "kzg_srs_canonical_16_bn254_aztec.memdump"))
+
+		cs, err := frontend.Compile(ecc.BN254.ScalarField(), scs.NewBuilder, &circuit{make([]frontend.Variable, 1)})
+		assert.NoError(err)
+		canonicalSize, _ := plonk.SRSSize(cs)
+		canonical, _, err := unsafekzg.NewSRS(cs)
+		assert.NoError(err)
+		dumpToFile(t, canonical, filepath.Join(dir, fmt.Sprintf("kzg_srs_canonical_%d_bn254_aztec.memdump", canonicalSize)))
 
 		// a crash-orphaned temp (old) and a concurrent writer's temp (fresh)
 		aged := filepath.Join(dir, "kzg_srs_lagrange_8_bn254_aztec.memdump.tmp111")
@@ -208,13 +213,17 @@ func TestSRSStore_PersistsDerivedLagrange(t *testing.T) {
 
 		store, err := NewSRSStore(dir)
 		assert.NoError(err)
+		_, err = os.Stat(aged)
+		assert.NoError(err, "constructing the store must not mutate the directory")
 
+		// provisioning sweeps the aged orphan and spares the live writer's temp
+		assert.NoError(store.DeriveAndPersistLagrange(context.TODO(), cs, false))
 		_, err = os.Stat(aged)
 		assert.True(os.IsNotExist(err), "an aged orphan temp must be swept")
 		_, err = os.Stat(fresh)
 		assert.NoError(err, "a fresh temp must be spared")
 		for _, entry := range store.entriesSnapshot(ecc.BN254) {
-			assert.True(entry.isCanonical, "temp files must never be indexed")
+			assert.NotContains(entry.path, ".memdump.tmp", "temp files must never be indexed")
 		}
 	})
 }
