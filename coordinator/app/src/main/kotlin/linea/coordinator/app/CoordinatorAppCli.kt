@@ -18,7 +18,7 @@ import java.util.concurrent.Callable
   name = CoordinatorAppCli.COMMAND_NAME,
   showDefaultValues = true,
   abbreviateSynopsis = true,
-  description = ["Runs Linea Coordinator"],
+  description = ["Runs Lineth Coordinator"],
   version = ["0.0.1"],
   synopsisHeading = "%n",
   descriptionHeading = "%nDescription:%n%n",
