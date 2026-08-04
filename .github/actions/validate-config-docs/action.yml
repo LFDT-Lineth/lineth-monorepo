@@ -40,18 +40,6 @@ inputs:
       release-tag suffix.
     required: false
     default: ''
-  source-sha:
-    description: 'Source SHA to embed in the provenance partial. Defaults to github.sha.'
-    required: false
-    default: ${{ github.sha }}
-  source-ref-name:
-    description: 'Source ref name to embed in the provenance partial. Defaults to github.ref_name.'
-    required: false
-    default: ${{ github.ref_name }}
-  source-ref-type:
-    description: 'Source ref type to embed in the provenance partial. Defaults to github.ref_type.'
-    required: false
-    default: ${{ github.ref_type }}
 
 runs:
   using: 'composite'
@@ -87,9 +75,9 @@ runs:
     - name: Write provenance partial
       shell: bash
       env:
-        SOURCE_SHA: ${{ inputs.source-sha }}
-        SOURCE_REF_NAME: ${{ inputs.source-ref-name }}
-        SOURCE_REF_TYPE: ${{ inputs.source-ref-type }}
+        SOURCE_SHA: ${{ github.sha }}
+        SOURCE_REF_NAME: ${{ github.ref_name }}
+        SOURCE_REF_TYPE: ${{ github.ref_type }}
         PROVENANCE_RELEASE_TAG_PREFIX: ${{ inputs.provenance-release-tag-prefix }}
         MDX_PARTIAL_PATH: ${{ inputs.mdx-partial-path }}
         COMPONENT_NAME: ${{ inputs.component-name }}
