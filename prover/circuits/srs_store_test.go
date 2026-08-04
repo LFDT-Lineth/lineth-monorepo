@@ -553,6 +553,10 @@ func TestSRSStore_CanonicalLoadFailuresStayFatal(t *testing.T) {
 		assert.NoError(err)
 		_, _, err = store.GetSRS(context.TODO(), cs)
 		assert.Error(err, "a corrupt canonical dump must fail GetSRS, not fall back to deriving")
+		// distinguish the load error from the not-found fallback: a lenient
+		// skip-and-continue regression would surface as the latter
+		assert.NotContains(err.Error(), "could not find canonical SRS",
+			"the failure must be the load error itself")
 	})
 
 	t.Run("missing", func(t *testing.T) {

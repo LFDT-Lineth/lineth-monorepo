@@ -186,7 +186,9 @@ var lagrangeSizeWarnThreshold = 1 << 20
 
 // DeriveAndPersistLagrange makes the Lagrange basis for ccs available on disk,
 // so later runs load it instead of spending hours re-deriving it. It is the
-// only path in the store that writes.
+// only path in the store that writes. Its first act, even when there is
+// nothing to persist, is reclaiming temp files orphaned by a crashed earlier
+// run.
 //
 // Without force, it is as cheap as what there is to do: a dump of the right
 // size already in the index counts as done without loading it (whether it
