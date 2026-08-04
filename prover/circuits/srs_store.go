@@ -56,6 +56,9 @@ type fsEntry struct {
 // the only signal they get. Nothing in the store validates that a file tagged
 // "aztec" descends from that ceremony, so a tag written by code is a
 // provenance claim the code cannot support: never write one.
+//
+// The tag is only meaningful on a lagrange basis: the store never computes
+// canonical material, so a canonical name claiming it is ignored.
 const derivedSourceTag = "derived"
 
 // orphanTempMaxAge is how long a temp file's last write must lie in the past
@@ -119,6 +122,13 @@ func NewSRSStore(rootDir string) (*SRSStore, error) {
 		isCanonical := matches[2] == "canonical"
 		size, _ := strconv.Atoi(matches[3])
 		source := matches[5]
+		// only a lagrange basis can be locally computed: a canonical dump
+		// carrying the derived tag is not a name anything writes, so treat
+		// it as noise rather than trusted, fatal-if-bad ceremony material
+		if isCanonical && source == derivedSourceTag {
+			logrus.Warnf("ignoring %s: a canonical SRS cannot carry the %q tag", fileName, derivedSourceTag)
+			continue
+		}
 		curveID, ok := curveIDsByFileName[matches[4]]
 		if !ok {
 			return nil, errors.New("curve not supported")

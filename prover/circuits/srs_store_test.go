@@ -397,7 +397,8 @@ func TestSRSStore_DeriveAndPersistLagrange(t *testing.T) {
 // TestSRSStore_DerivedDumpsNeverClaimACeremony pins the provenance rule: a
 // locally computed basis is published under derivedSourceTag whatever ceremony
 // the canonical SRS it came from was tagged with, and is loadable again from
-// that name.
+// that name. The mirror also holds: a canonical dump claiming the derived tag
+// is ignored, never indexed as ceremony material.
 func TestSRSStore_DerivedDumpsNeverClaimACeremony(t *testing.T) {
 	for _, ceremony := range []string{"aleo", "aztec", "celo"} {
 		t.Run("canonical_"+ceremony, func(t *testing.T) {
@@ -430,6 +431,23 @@ func TestSRSStore_DerivedDumpsNeverClaimACeremony(t *testing.T) {
 			assert.True(indexed, "a derived dump must be indexed on the next construction")
 		})
 	}
+
+	t.Run("canonical_never_carries_derived", func(t *testing.T) {
+		assert := require.New(t)
+		dir := t.TempDir()
+
+		canonical := newTestCanonicalSRS(t, ecc.BN254, 16)
+		dumpToFile(t, canonical, filepath.Join(dir, "kzg_srs_canonical_16_bn254_aztec.memdump"))
+		// a name nothing writes: a canonical claiming to be locally computed
+		// must be ignored, not indexed as trusted ceremony material
+		dumpToFile(t, canonical, filepath.Join(dir, "kzg_srs_canonical_16_bn254_derived.memdump"))
+
+		store, err := NewSRSStore(dir)
+		assert.NoError(err)
+		entries := store.entriesSnapshot(ecc.BN254)
+		assert.Len(entries, 1, "a derived-tagged canonical must not be indexed")
+		assert.Contains(entries[0].path, "aztec")
+	})
 }
 
 // dirNames lists the entry names in dir, sorted.
