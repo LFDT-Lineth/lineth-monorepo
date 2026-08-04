@@ -1,6 +1,6 @@
 # Sequencer
 
-> Lineth's block-producing Besu plugin with transaction selection, validation, and gas estimation.
+> The block-producing Besu plugin with transaction selection, validation, and gas estimation.
 
 ## Overview
 

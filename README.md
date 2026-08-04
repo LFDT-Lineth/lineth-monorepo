@@ -142,7 +142,7 @@ The milestone workflow defaults to running a **dry run on a temporary branch for
 
 ## Looking for the Lineth code?
 
-Lineth's stack is made up of multiple repositories, these include:
+Lineth's stack is made up of multiple repositories. These include:
 
 - This repo, [lineth-monorepo](https://github.com/LFDT-Lineth/lineth-monorepo): The main repository for the Lineth stack & Linea network
 > Also maintains a set of Linea-Besu plugins for the sequencer and RPC nodes.
