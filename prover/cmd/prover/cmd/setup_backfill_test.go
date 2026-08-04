@@ -2,13 +2,16 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark-crypto/kzg"
 	"github.com/consensys/gnark/backend/plonk"
+	"github.com/consensys/gnark/constraint"
 	"github.com/consensys/gnark/test/unsafekzg"
 	"github.com/consensys/linea-monorepo/prover/circuits"
 	"github.com/consensys/linea-monorepo/prover/circuits/dummy"
@@ -19,9 +22,10 @@ import (
 // TestUpdateSetupBackfillsMissingLagrangeDump pins the persist hook's placement
 // and gate in updateSetup: the hook runs before the skip-if-already-setup
 // check, so a setup re-run against current assets still backfills a missing
-// derived dump, and persist_derived_srs = false keeps setup from writing at
-// all. Nothing else exercises updateSetup, so a regression here only surfaces
-// as an hours-long re-derivation at prover start.
+// derived dump, persist_derived_srs = false keeps setup from writing at all,
+// and a failed persist warns without failing setup. Nothing else exercises
+// updateSetup, so a regression here only surfaces as an hours-long
+// re-derivation at prover start.
 func TestUpdateSetupBackfillsMissingLagrangeDump(t *testing.T) {
 	assert := require.New(t)
 
@@ -65,4 +69,24 @@ func TestUpdateSetupBackfillsMissingLagrangeDump(t *testing.T) {
 	assert.NoError(updateSetup(context.TODO(), cfg, false, newStore(), circuitID, builder, nil))
 	_, err = os.Stat(derived)
 	assert.True(os.IsNotExist(err), "persist_derived_srs = false must keep setup from writing")
+
+	// a failed persist must warn and carry on, as the config doc promises
+	// immutable-SRS deployments — with assets current, a returned error can
+	// only be the hook's warn-and-continue regressing
+	cfg.PersistDerivedSRS = true
+	assert.NoError(updateSetup(context.TODO(), cfg, false, failingPersister{newStore()}, circuitID, builder, nil),
+		"a persist failure must never fail setup")
+	assert.NoFileExists(derived)
+}
+
+// a persister whose provisioning always fails: setup must log a warning and
+// carry on, never fail, when the dump cannot be written
+type failingPersister struct{ inner *circuits.SRSStore }
+
+func (p failingPersister) GetSRS(ctx context.Context, ccs constraint.ConstraintSystem) (kzg.SRS, kzg.SRS, error) {
+	return p.inner.GetSRS(ctx, ccs)
+}
+
+func (p failingPersister) DeriveAndPersistLagrange(context.Context, constraint.ConstraintSystem, bool) error {
+	return errors.New("srs directory unwritable")
 }
