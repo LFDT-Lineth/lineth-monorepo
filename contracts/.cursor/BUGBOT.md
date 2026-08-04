@@ -4,7 +4,7 @@
 
 ## Core Mission
 
-Automated code quality enforcement, documentation validation, and security review for Linea smart contracts. **ALWAYS** load and reference [smart-contract-guidelines](../../.cursor/rules/smart-contract-guidelines/RULE.md).
+Automated code quality enforcement, documentation validation, and security review for Lineth smart contracts. **ALWAYS** load and reference [smart-contract-guidelines](../../.cursor/rules/smart-contract-guidelines/RULE.md).
 
 ## Scope
 

@@ -1,4 +1,4 @@
-# Linea Deployment Scripts
+# Lineth Deployment Scripts
 
 ## Address Registry
 
@@ -40,7 +40,7 @@ Environment variables follow a consistent naming pattern:
 | Prefix | Usage |
 |--------|-------|
 | `L1_` | Ethereum L1 (e.g. `L1_SECURITY_COUNCIL`, `L1_RPC_URL`) |
-| `L2_` | Linea L2 (e.g. `L2_SECURITY_COUNCIL`, `L2_RPC_URL`, `L2_MESSAGE_SERVICE_ADDRESS`) |
+| `L2_` | Lineth L2 (e.g. `L2_SECURITY_COUNCIL`, `L2_RPC_URL`, `L2_MESSAGE_SERVICE_ADDRESS`) |
 | `LINETH_ROLLUP_*` | LinethRollup contract (L1), using the Lineth env namespace |
 
 **Shared per layer:**
@@ -56,7 +56,7 @@ Environment variables follow a consistent naming pattern:
 
 <br />
 
-This document aims to explain how to get started with deploying the Linea deployment scripts. There are several ways the scripts can be executed dependent on: 
+This document aims to explain how to get started with deploying the Lineth deployment scripts. There are several ways the scripts can be executed dependent on: 
 - If you're storing deployment variables in an environment file (.env)
 - If you plan to deploy an individual script which will deploy a single contract.
 - If you plan to deploy a chained deployment script that will include multiple contracts.
@@ -177,7 +177,7 @@ Verifier deployments require chain-configuration inputs in addition to the contr
 | AddressFilter | [address-filter.md](l1/address-filter.md) | `AddressFilter` |
 | ForcedTransactionGateway | [forced-transaction-gateway.md](l1/forced-transaction-gateway.md) | `ForcedTransactionGateway` |
 
-### L2 Contracts (Linea)
+### L2 Contracts (Lineth)
 
 | Contract | Doc | Tags |
 |----------|-----|------|

@@ -1,7 +1,7 @@
-# Linea Operational Scripts
+# Lineth Operational Scripts
 <br />
 
-This document aims to explain how to run the Linea operational scripts. There are several ways the scripts can be executed dependent if you have an environment file (.env) or not. 
+This document aims to explain how to run the Lineth operational scripts. There are several ways the scripts can be executed dependent if you have an environment file (.env) or not. 
 
 Running the script with an .env file set, you will need to make sure that the correct variables are set in the .env file, considering the network that you're deploying on. In this way, when the script is being run, it will take the variables it needs to execute the script from that .env file. 
 

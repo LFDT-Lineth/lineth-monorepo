@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://linea.build/contracts/deployments/addresses/schema.json",
-  "title": "Linea Contract Address Registry",
+  "title": "Lineth Contract Address Registry",
   "description": "Per-network registry of stable deployed contract addresses. Update via PR.",
   "type": "object",
   "required": ["network", "chainId", "contracts"],

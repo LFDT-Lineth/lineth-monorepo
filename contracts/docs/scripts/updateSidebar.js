@@ -42,7 +42,7 @@ class FolderSidebar {
  * CONSTANTS
  */
 const SIDEBAR_FILE_PATH = "sidebars.js";
-const SMART_CONTRACT_SIDEBAR_LABEL = "Linea smart contracts";
+const SMART_CONTRACT_SIDEBAR_LABEL = "Lineth smart contracts";
 
 // Import the sidebar JS object from sidebars.js
 const sidebarObject = require(path.join(__dirname, SIDEBAR_FILE_PATH));
