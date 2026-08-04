@@ -137,7 +137,7 @@ arithmetization source for the exact per-opcode constraint definitions (§2.9).
 ## 2.5 Relationship to ZkC and the Proving Boundary
 
 The arithmetization is written in **ZkC**, a small imperative language for
-programs whose executions can be proved, maintained by the Linea arithmetization
+programs whose executions can be proved, maintained by the Lineth arithmetization
 team. ZkC's relevant characteristics:
 
 - **Fixed-width unsigned integers of arbitrary bitwidth** (`u1`, `u25`, `u160`,

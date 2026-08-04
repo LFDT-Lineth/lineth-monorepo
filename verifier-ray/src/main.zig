@@ -144,6 +144,6 @@ fn exitR5(code: u8) noreturn {
     if (comptime !is_r5_zkvm) {
         @compileError("R5 exit currently supports only R5 zkVM target");
     }
-    // Delegate to the Linea accelerator package's standard zkVM exit (zkvm_std.h).
+    // Delegate to the Lineth accelerator package's standard zkVM exit (zkvm_std.h).
     lineth_accel.zkvm_exit(@intCast(code));
 }
