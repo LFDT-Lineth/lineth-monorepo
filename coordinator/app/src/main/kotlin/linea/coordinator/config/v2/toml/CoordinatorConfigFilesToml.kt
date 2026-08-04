@@ -13,7 +13,7 @@ import net.consensys.linea.traces.TracingModuleV5
 data class CoordinatorConfigFileToml(
   @param:ConfigSection("Shared defaults (L1/L2 endpoints and retry policies) reused by coordinator services.")
   val defaults: DefaultsToml = DefaultsToml(),
-  @param:ConfigSection("Linea protocol contract addresses and genesis settings.")
+  @param:ConfigSection("Lineth protocol contract addresses and genesis settings.")
   val protocol: ProtocolToml,
   @param:ConfigSection("Block conflation, blob compression, and proof aggregation settings.")
   val conflation: ConflationToml = ConflationToml(),
@@ -67,7 +67,7 @@ data class GasPriceCapTimeOfDayMultipliersConfigFileToml(
 
 data class SmartContractErrorCodesConfigFileToml(
   @param:ConfigDoc(
-    description = "Mapping of Linea smart-contract revert error codes to human-readable messages, " +
+    description = "Mapping of Lineth smart-contract revert error codes to human-readable messages, " +
       "used to decode on-chain rejection reasons.",
   )
   val smartContractErrors: SmartContractErrors,
