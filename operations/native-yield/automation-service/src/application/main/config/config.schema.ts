@@ -67,7 +67,7 @@ export const configSchema = z
     LAZY_ORACLE_ADDRESS: Address,
     // Address of the Lido VaultHub contract.
     VAULT_HUB_ADDRESS: Address,
-    // Address of the Linea YieldManager contract.
+    // Address of the Lineth YieldManager contract.
     YIELD_MANAGER_ADDRESS: Address,
     // Address of the LidoStVaultYieldProvider contract.
     LIDO_YIELD_PROVIDER_ADDRESS: Address,
