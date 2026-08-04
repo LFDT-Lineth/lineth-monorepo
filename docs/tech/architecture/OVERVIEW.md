@@ -4,7 +4,7 @@
 
 ## System Architecture
 
-Linea is a zkEVM Layer 2 rollup that inherits Ethereum's security through zero-knowledge proofs.
+Lineth is a zkEVM Layer 2 rollup that inherits Ethereum's security through zero-knowledge proofs.
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -308,7 +308,7 @@ Linea is a zkEVM Layer 2 rollup that inherits Ethereum's security through zero-k
 
 ## Data Availability Modes
 
-Linea supports two data availability modes:
+Lineth supports two data availability modes:
 
 ### Rollup Mode (Default)
 - Data submitted via EIP-4844 blobs
