@@ -529,6 +529,38 @@ func TestSRSStore_DerivationWarning(t *testing.T) {
 	}
 }
 
+// TestSRSStore_CanonicalLoadFailuresStayFatal pins the boundary of the
+// lenient-load behaviour: a lagrange dump that fails to load is re-derived,
+// but ceremony (canonical) material is not reconstructible, so a corrupt or
+// missing canonical dump must fail GetSRS, never fall back.
+func TestSRSStore_CanonicalLoadFailuresStayFatal(t *testing.T) {
+	assert := require.New(t)
+
+	cs, err := frontend.Compile(ecc.BN254.ScalarField(), scs.NewBuilder, &circuit{make([]frontend.Variable, 1)})
+	assert.NoError(err)
+	canonicalSize, _ := plonk.SRSSize(cs)
+
+	t.Run("corrupt", func(t *testing.T) {
+		assert := require.New(t)
+		dir := t.TempDir()
+		assert.NoError(os.WriteFile(
+			filepath.Join(dir, fmt.Sprintf("kzg_srs_canonical_%d_bn254_aleo.memdump", canonicalSize)),
+			[]byte("garbage"), 0o644))
+		store, err := NewSRSStore(dir)
+		assert.NoError(err)
+		_, _, err = store.GetSRS(context.TODO(), cs)
+		assert.Error(err, "a corrupt canonical dump must fail GetSRS, not fall back to deriving")
+	})
+
+	t.Run("missing", func(t *testing.T) {
+		assert := require.New(t)
+		store, err := NewSRSStore(t.TempDir())
+		assert.NoError(err)
+		_, _, err = store.GetSRS(context.TODO(), cs)
+		assert.ErrorContains(err, "could not find canonical SRS")
+	})
+}
+
 // dirNames lists the entry names in dir, sorted.
 func dirNames(t *testing.T, dir string) []string {
 	t.Helper()
