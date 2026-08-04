@@ -25,6 +25,13 @@ runs:
   steps:
     # The measured tree may predate this tooling entirely, so it is checked out beside it rather than
     # over it: the renderer and the metrics file must stay at the ref the run was started from.
+    #
+    # CodeQL flags this as "checkout of untrusted code in a non-privileged context". It does not apply
+    # here: the workflow has no pull_request trigger, so there is no fork head to check out —
+    # monorepo-ref can only be set by someone dispatching the workflow, which already requires write
+    # access. The mitigation that matters is kept structural: the jobs that build and run the measured
+    # tree never mint the GitHub App token. Only the report job holds it, and it checks out the tooling
+    # ref alone. Do not add a measured checkout to that job.
     - name: Checkout the monorepo commit under measurement
       if: ${{ inputs.monorepo-ref != '' }}
       uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0

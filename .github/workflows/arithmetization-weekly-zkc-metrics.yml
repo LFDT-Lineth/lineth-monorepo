@@ -129,8 +129,12 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           echo "zkc ref: requested '${requested}', using '${resolved}'"
 
+      # Schedule-safe reading of run-heavy. On a cron run the inputs context is empty, and GitHub
+      # coerces null and false both to 0, so `inputs.run-heavy != false` would be FALSE every
+      # Wednesday — skipping the heavy work on exactly the run that matters. Gate on the event.
       - name: Build l2-execution guest and convert to zkc JSON
-        if: ${{ inputs.run-heavy != false }}
+        id: guest
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.run-heavy }}
         run: |
           set -uo pipefail
           d="$RUN/guest"; mkdir -p "$d"
@@ -197,7 +201,7 @@ jobs:
           retention-days: 7
 
       - name: Upload guest build measurement
-        if: ${{ !cancelled() && inputs.run-heavy != false }}
+        if: ${{ !cancelled() && steps.guest.conclusion != 'skipped' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: zkc-metrics-guest
@@ -207,7 +211,7 @@ jobs:
       # The guest JSON is the input the two heavy measurements share. Data only — the zkc binary is
       # deliberately not shipped this way, since upload-artifact drops the executable bit.
       - name: Upload guest JSON
-        if: ${{ !cancelled() && inputs.run-heavy != false }}
+        if: ${{ !cancelled() && steps.guest.outcome == 'success' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: zkc-metrics-guest-json
@@ -219,6 +223,9 @@ jobs:
   stats:
     name: stats (compile --stats)
     needs: prepare
+    # Runs as long as prepare got far enough to pin the compiler: a guest-build failure must not cost
+    # us the cheapest and most-trended measurement.
+    if: ${{ !cancelled() && needs.prepare.outputs.zkc_ref != '' }}
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
     timeout-minutes: 15
     steps:
@@ -263,7 +270,9 @@ jobs:
   trace:
     name: trace (trace --stats)
     needs: prepare
-    if: ${{ inputs.run-heavy != false }}
+    # Needs the guest JSON, so prepare must have completed. Without the explicit result check this
+    # would still start (an `if:` overrides the implicit skip-on-failed-need) and die on the download.
+    if: ${{ !cancelled() && needs.prepare.result == 'success' && (github.event_name != 'workflow_dispatch' || inputs.run-heavy) }}
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
     timeout-minutes: 45
     steps:
@@ -278,7 +287,10 @@ jobs:
           monorepo-ref: ${{ inputs.monorepo-ref }}
           zkc-ref: ${{ needs.prepare.outputs.zkc_ref }}
 
+      # Best-effort: if the artifact is missing the measurement step below leaves its directory
+      # absent, which the renderer reads as "skipped" — better than failing with nothing recorded.
       - name: Download guest JSON
+        continue-on-error: true
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: zkc-metrics-guest-json
@@ -291,6 +303,7 @@ jobs:
           set -uo pipefail
           # Clamped below the job's timeout-minutes so the cap fires here and the measurement is
           # recorded, instead of the job being killed with nothing to show.
+          [ -s "$RUN/guest.json" ] || { echo "::warning::no guest JSON; recording nothing"; exit 0; }
           cap=${{ inputs.trace-timeout-min || 30 }}
           if [ "$cap" -gt 40 ]; then cap=40; fi
           d="$RUN/trace"; mkdir -p "$d"
@@ -324,7 +337,7 @@ jobs:
   trace-check:
     name: trace-check (trace --stats --check)
     needs: prepare
-    if: ${{ inputs.run-heavy != false }}
+    if: ${{ !cancelled() && needs.prepare.result == 'success' && (github.event_name != 'workflow_dispatch' || inputs.run-heavy) }}
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
     timeout-minutes: 120
     steps:
@@ -339,7 +352,10 @@ jobs:
           monorepo-ref: ${{ inputs.monorepo-ref }}
           zkc-ref: ${{ needs.prepare.outputs.zkc_ref }}
 
+      # Best-effort: if the artifact is missing the measurement step below leaves its directory
+      # absent, which the renderer reads as "skipped" — better than failing with nothing recorded.
       - name: Download guest JSON
+        continue-on-error: true
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: zkc-metrics-guest-json
@@ -348,6 +364,7 @@ jobs:
       - name: zkc trace --stats --check
         run: |
           set -uo pipefail
+          [ -s "$RUN/guest.json" ] || { echo "::warning::no guest JSON; recording nothing"; exit 0; }
           cap=${{ inputs.check-timeout-min || 90 }}
           if [ "$cap" -gt 110 ]; then cap=110; fi
           d="$RUN/check"; mkdir -p "$d"
@@ -381,15 +398,18 @@ jobs:
     name: report
     needs: [prepare, stats, trace, trace-check]
     # Not always(): a cancelled run should not commit a row. Runs after a FAILED measurement, which is
-    # the point — a failure or timeout is itself the week's data point.
-    if: ${{ !cancelled() }}
+    # the point — a failure or timeout is itself the week's data point. Gated on prepare having
+    # produced provenance, so a run that died before recording anything writes no row of dashes.
+    if: ${{ !cancelled() && needs.prepare.outputs.zkc_ref != '' }}
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
     timeout-minutes: 20
     steps:
+      # fetch-depth: 0 because the commit step rebases onto origin/<branch>; a shallow clone cannot.
       - name: Checkout tooling
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           submodules: false
+          fetch-depth: 0
 
       - name: Install Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
@@ -472,7 +492,7 @@ jobs:
       # App token so the push is not blocked by branch protection, mirroring
       # component-changelog-commit.yml. [skip ci] keeps it from re-triggering.
       - name: Generate release bot App token
-        if: ${{ inputs.commit-results != false }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.commit-results }}
         id: app-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
@@ -480,7 +500,7 @@ jobs:
           private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
 
       - name: Commit and push metrics
-        if: ${{ inputs.commit-results != false }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.commit-results }}
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
           APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
