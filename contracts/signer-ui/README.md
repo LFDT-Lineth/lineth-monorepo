@@ -105,7 +105,7 @@ A full signing round-trip still requires the bridge from a running `hardhat depl
 
 ## Further reading
 
-- [Linea deployment scripts overview](../docs/deployment/README.md) — env vars, tags, verification, upgradeable / `.openzeppelin` reuse.
+- [Lineth deployment scripts overview](../docs/deployment/README.md) — env vars, tags, verification, upgradeable / `.openzeppelin` reuse.
 - [Chained deployments](../docs/deployment/chained-deployments.md) — one UI session for the whole tag batch.
 - [Removing the signer UI](../docs/deployment/signer-ui-removal.md) — maintainers only.
 

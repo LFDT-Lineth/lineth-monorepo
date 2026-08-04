@@ -5,7 +5,7 @@ Contains Ethereum smart contract code for the Lineth Rollup and Message Service.
 ## LinethRollup (L1MessageService)
 The Lineth Rollup, which contains the L1MessageService, is the smart contract that is responsible for:
 
-- Submitting messages to be sent to Linea (L2) for later claiming.
+- Submitting messages to be sent to Lineth (L2) for later claiming.
 - Anchoring of L2 message Merkle roots to allow later claiming.
 - Claiming of messages sent from L2 to Ethereum mainnet (L1).
 - Submission of L2 compressed data using EIP-4844 blobs or via calldata.
@@ -29,9 +29,9 @@ The L2MessageService is the L2 smart contract that is responsible for:
 
 Workflow Documentation [L2MessageService Workflows](./docs/workflows/L2MessageService.md)
 
-## Linea Canonical Token Bridge
+## Lineth Canonical Token Bridge
 
-The Canonical Token Bridge (TokenBridge) is a canonical ERC20 token brige between Ethereum and Linea networks.
+The Canonical Token Bridge (TokenBridge) is a canonical ERC20 token bridge between Ethereum and Lineth networks.
 
 The TokenBridge utilises the L1MessageService and the L2MessageService for the transmission of messages between each layer's TokenBridge.
 

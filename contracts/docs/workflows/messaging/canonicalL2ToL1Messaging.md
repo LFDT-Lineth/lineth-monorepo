@@ -1,7 +1,7 @@
 
 # 📩 Interaction Flow: Canonical Message Sending (L2 → L1)
 
-This document describes the step-by-step flow of how a canonical message is sent from L2 to L1 in the Linea network.
+This document describes the step-by-step flow of how a canonical message is sent from L2 to L1 in the Lineth network.
 
 ---
 

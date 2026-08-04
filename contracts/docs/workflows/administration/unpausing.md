@@ -1,7 +1,7 @@
 
 # ▶️ Unpausing Features on the LinethRollup, TokenBridge, and L2MessageService (with Pause Types)
 
-This document outlines how a Safe Member can unpause previously paused features on key Linea ecosystem contracts using the specified pause types.
+This document outlines how a Safe Member can unpause previously paused features on key Lineth ecosystem contracts using the specified pause types.
 
 **Note**: These contracts are governed by the [Security Council Charter](../../security-council-charter.md).
 
