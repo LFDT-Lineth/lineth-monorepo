@@ -25,7 +25,7 @@ class MessageAnchoringConfigParsingTest {
       l1-endpoint = "http://l1-el-node:8545"
       l2-endpoint = "http://sequencer:8545"
       l1-highest-block-tag="FINALIZED"
-      l2-highest-block-tag="LATEST" # optional, default to LATEST it shall not be necessary as Lineth has instant finality
+      l2-highest-block-tag="LATEST" # optional, defaults to LATEST; not strictly necessary since Lineth has instant finality
 
       [message-anchoring.l1-request-retries]
       max-retries = 4

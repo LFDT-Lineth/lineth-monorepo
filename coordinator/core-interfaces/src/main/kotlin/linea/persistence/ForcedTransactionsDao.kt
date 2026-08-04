@@ -36,7 +36,7 @@ interface ForcedTransactionsDao {
 }
 
 /**
- * Forced transactions are an Opt-in feature in Lineth stack,
+ * Forced transactions are an opt-in feature in the Lineth stack,
  * so we provide a no-op implementation of the DAO that can be used when the feature is disabled.
  *
  * Also, until this feature is fully implemented and integrated, this no-op implementation can be used
