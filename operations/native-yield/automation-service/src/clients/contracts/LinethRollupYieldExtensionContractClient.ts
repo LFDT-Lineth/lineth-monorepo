@@ -13,7 +13,7 @@ import { ILinethRollupYieldExtension } from "../../core/clients/contracts/ILinet
 
 /**
  * Client for interacting with LinethRollupYieldExtension smart contracts.
- * Provides methods for transferring funds for native yield operations on the Linea rollup.
+ * Provides methods for transferring funds for native yield operations on the Lineth rollup.
  */
 export class LinethRollupYieldExtensionContractClient implements ILinethRollupYieldExtension<TransactionReceipt> {
   private readonly contract: GetContractReturnType<typeof LinethRollupYieldExtensionABI, PublicClient, Address>;
@@ -65,7 +65,7 @@ export class LinethRollupYieldExtensionContractClient implements ILinethRollupYi
   }
 
   /**
-   * Transfers funds for native yield operations on the Linea rollup.
+   * Transfers funds for native yield operations on the Lineth rollup.
    * Encodes the function call and sends a signed transaction via the blockchain client.
    *
    * @param {bigint} amount - The amount to transfer in wei.
