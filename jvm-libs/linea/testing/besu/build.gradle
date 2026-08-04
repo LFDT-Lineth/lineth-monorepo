@@ -2,7 +2,7 @@ plugins {
   id 'net.consensys.zkevm.kotlin-library-conventions'
 }
 
-description = "Linea test utilities for Besu"
+description = "Lineth test utilities for Besu"
 
 dependencies {
   implementation project(':jvm-libs:generic:extensions:kotlin')

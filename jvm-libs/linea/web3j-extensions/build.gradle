@@ -4,7 +4,7 @@ plugins {
   id 'java-test-fixtures'
 }
 
-description="Web3j extensions for Linea"
+description="Web3j extensions for Lineth"
 
 dependencies {
   api "org.web3j:core:${libs.versions.web3j.get()}"
