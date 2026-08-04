@@ -165,13 +165,7 @@ func NewSRSStore(rootDir string) (*SRSStore, error) {
 // hitting the derivation at prove time recurs on every start, so the warning
 // names the command and flag that make it stop.
 func (store *SRSStore) GetSRS(ctx context.Context, ccs constraint.ConstraintSystem) (kzg.SRS, kzg.SRS, error) {
-	canonicalSRS, lagrangeSRS, derived, err := store.resolveSRS(ccs)
-	if derived {
-		if _, sizeLagrange := plonk.SRSSize(ccs); sizeLagrange >= lagrangeSizeWarnThreshold {
-			logrus.Warnf("no loadable lagrange SRS dump of size %d for curve %s in %s — derived it in memory, which recurs on every start; run `prover setup` with persist_derived_srs on (the default) to persist it, adding --force if a dump was reported unloadable above",
-				sizeLagrange, fieldToCurve(ccs.Field()), store.rootDir)
-		}
-	}
+	canonicalSRS, lagrangeSRS, _, err := store.resolveSRS(ccs, false)
 	return canonicalSRS, lagrangeSRS, err
 }
 
@@ -222,7 +216,7 @@ func (store *SRSStore) DeriveAndPersistLagrange(ctx context.Context, ccs constra
 	probe.Close()
 	os.Remove(probe.Name())
 
-	_, lagrangeSRS, derived, err := store.resolveSRS(ccs)
+	_, lagrangeSRS, derived, err := store.resolveSRS(ccs, true)
 	if err != nil {
 		return err
 	}
@@ -260,11 +254,14 @@ func (store *SRSStore) sweepOrphanTemps() {
 
 // resolveSRS loads the canonical SRS and either loads or derives the matching
 // Lagrange basis, reporting whether it had to derive. It never writes.
+// provisioning tells it who is asking, for the derivation warning's sake: a
+// prove-time caller is told the setup command that makes the derivation stop
+// recurring, a provisioning caller is already running it.
 //
 // Concurrent callers requesting the same missing size each derive independently
 // (the store is race-safe but does not deduplicate the work); every in-repo
 // caller is sequential today.
-func (store *SRSStore) resolveSRS(ccs constraint.ConstraintSystem) (kzg.SRS, kzg.SRS, bool, error) {
+func (store *SRSStore) resolveSRS(ccs constraint.ConstraintSystem, provisioning bool) (kzg.SRS, kzg.SRS, bool, error) {
 	sizeCanonical, sizeLagrange := plonk.SRSSize(ccs)
 	curveID := fieldToCurve(ccs.Field())
 
@@ -336,9 +333,18 @@ func (store *SRSStore) resolveSRS(ccs constraint.ConstraintSystem) (kzg.SRS, kzg
 			panic("canonical SRS is smaller than lagrange SRS")
 		}
 		if sizeLagrange >= lagrangeSizeWarnThreshold {
-			// Warn, not debug: at real circuit sizes this branch costs hours, and
-			// the operator deserves to know before the wait, not after.
-			logrus.Warnf("computing lagrange SRS from canonical SRS %d -> %d — this can take hours", sizeCanonical, sizeLagrange)
+			// warn, not debug: at real circuit sizes this branch costs hours, and
+			// the operator deserves to know before the wait, not after — remedy
+			// included, because a killed process never reaches a post-hoc hint
+			if provisioning {
+				logrus.Warnf("computing lagrange SRS from canonical SRS %d -> %d — this can take hours",
+					sizeCanonical, sizeLagrange)
+			} else {
+				logrus.Warnf("computing lagrange SRS from canonical SRS %d -> %d in memory — this can take hours "+
+					"and recurs on every start; run `prover setup` with persist_derived_srs on (the default) to "+
+					"persist it, adding --force if a dump was reported unloadable above",
+					sizeCanonical, sizeLagrange)
+			}
 		} else {
 			logrus.Debugf("computing lagrange SRS from canonical SRS %d -> %d", sizeCanonical, sizeLagrange)
 		}
