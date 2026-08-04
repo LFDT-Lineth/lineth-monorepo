@@ -116,3 +116,4 @@
 - *(coordinator)* Cleanup replaced apps in PR #3615 (#3622)
 - *(coordinator)* Remove dead code and apply small cleanups from review (#3627)
 - *(coordinator)* Riscv blob data skeleton (#3609)
+- *(coordinator)* Rename LineaRollup to LinethRollup in JVM components (#3421)
