@@ -548,7 +548,7 @@ func TestSRSStore_CanonicalLoadFailuresStayFatal(t *testing.T) {
 		dir := t.TempDir()
 		assert.NoError(os.WriteFile(
 			filepath.Join(dir, fmt.Sprintf("kzg_srs_canonical_%d_bn254_aleo.memdump", canonicalSize)),
-			[]byte("garbage"), 0o644))
+			[]byte("garbage"), 0o600))
 		store, err := NewSRSStore(dir)
 		assert.NoError(err)
 		_, _, err = store.GetSRS(context.TODO(), cs)
