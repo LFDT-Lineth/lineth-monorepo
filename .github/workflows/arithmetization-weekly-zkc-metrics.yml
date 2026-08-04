@@ -225,7 +225,7 @@ jobs:
     needs: prepare
     # Runs as long as prepare got far enough to pin the compiler: a guest-build failure must not cost
     # us the cheapest and most-trended measurement.
-    if: ${{ !cancelled() && needs.prepare.outputs.zkc_ref != '' }}
+    if: ${{ always() && !cancelled() && needs.prepare.outputs.zkc_ref != '' }}
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
     timeout-minutes: 15
     steps:
@@ -272,7 +272,7 @@ jobs:
     needs: prepare
     # Needs the guest JSON, so prepare must have completed. Without the explicit result check this
     # would still start (an `if:` overrides the implicit skip-on-failed-need) and die on the download.
-    if: ${{ !cancelled() && needs.prepare.result == 'success' && (github.event_name != 'workflow_dispatch' || inputs.run-heavy) }}
+    if: ${{ always() && !cancelled() && needs.prepare.result == 'success' && (github.event_name != 'workflow_dispatch' || inputs.run-heavy) }}
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
     timeout-minutes: 45
     steps:
@@ -337,7 +337,7 @@ jobs:
   trace-check:
     name: trace-check (trace --stats --check)
     needs: prepare
-    if: ${{ !cancelled() && needs.prepare.result == 'success' && (github.event_name != 'workflow_dispatch' || inputs.run-heavy) }}
+    if: ${{ always() && !cancelled() && needs.prepare.result == 'success' && (github.event_name != 'workflow_dispatch' || inputs.run-heavy) }}
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
     timeout-minutes: 120
     steps:
@@ -400,7 +400,7 @@ jobs:
     # Not always(): a cancelled run should not commit a row. Runs after a FAILED measurement, which is
     # the point — a failure or timeout is itself the week's data point. Gated on prepare having
     # produced provenance, so a run that died before recording anything writes no row of dashes.
-    if: ${{ !cancelled() && needs.prepare.outputs.zkc_ref != '' }}
+    if: ${{ always() && !cancelled() && needs.prepare.outputs.zkc_ref != '' }}
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-xxl
     timeout-minutes: 20
     steps:
