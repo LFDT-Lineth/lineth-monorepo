@@ -197,7 +197,9 @@ var lagrangeSizeWarnThreshold = 1 << 20
 // Best-effort is the caller's choice here rather than the store's: the error is
 // returned so an explicit provisioning step can report it, where a prove-time
 // read had to swallow it.
-func (store *SRSStore) DeriveAndPersistLagrange(ctx context.Context, ccs constraint.ConstraintSystem, force bool) error {
+func (store *SRSStore) DeriveAndPersistLagrange(
+	ctx context.Context, ccs constraint.ConstraintSystem, force bool,
+) error {
 	// reclaim crash leftovers before the cheap-skip: after a crashed --force
 	// re-write a valid dump still exists, so no later step would ever run
 	store.sweepOrphanTemps()
@@ -221,7 +223,8 @@ func (store *SRSStore) DeriveAndPersistLagrange(ctx context.Context, ccs constra
 	// the orphan-temp sweep pattern, so a crash leftover is reclaimed.
 	probe, err := os.CreateTemp(store.rootDir, "kzg_srs_probe.memdump.tmp")
 	if err != nil {
-		return fmt.Errorf("SRS directory %s is not writable, not deriving a basis that could not be persisted: %w", store.rootDir, err)
+		return fmt.Errorf("SRS directory %s is not writable, not deriving a basis that could not be persisted: %w",
+			store.rootDir, err)
 	}
 	probe.Close()
 	os.Remove(probe.Name())

@@ -188,7 +188,8 @@ func TestSRSStore_PersistsDerivedLagrange(t *testing.T) {
 
 		// a directory squatting on the final name makes the rename fail
 		assert.NoError(os.Mkdir(filepath.Join(dir, "kzg_srs_lagrange_8_bn254_derived.memdump"), 0o700))
-		assert.Error(store.persistLagrange(lagrange, 8, ecc.BN254), "publish must fail when the final name is taken by a directory")
+		assert.Error(store.persistLagrange(lagrange, 8, ecc.BN254),
+			"publish must fail when the final name is taken by a directory")
 
 		leftovers, err := filepath.Glob(filepath.Join(dir, "*.tmp*"))
 		assert.NoError(err)
@@ -300,7 +301,8 @@ func TestSRSStore_DeriveAndPersistLagrange(t *testing.T) {
 			// warn, re-derive, and publish under the derived tag while leaving
 			// the ceremony-tagged file it did not write completely alone
 			subDir := t.TempDir()
-			dumpToFile(t, canonical, filepath.Join(subDir, fmt.Sprintf("kzg_srs_canonical_%d_bn254_aleo.memdump", canonicalSize)))
+			dumpToFile(t, canonical,
+				filepath.Join(subDir, fmt.Sprintf("kzg_srs_canonical_%d_bn254_aleo.memdump", canonicalSize)))
 			badPath := filepath.Join(subDir, fmt.Sprintf("kzg_srs_lagrange_%d_bn254_aleo.memdump", lagrangeSize))
 			assert.NoError(os.WriteFile(badPath, bad.content, 0o600))
 
@@ -370,7 +372,8 @@ func TestSRSStore_DeriveAndPersistLagrange(t *testing.T) {
 		assert.Equal(foreignBefore, foreignAfter, "a dump from another setup must not be overwritten")
 
 		reloaded := kzg.NewSRS(ecc.BN254)
-		data, err := os.ReadFile(filepath.Join(subDir, fmt.Sprintf("kzg_srs_lagrange_%d_bn254_derived.memdump", lagrangeSize)))
+		data, err := os.ReadFile(
+			filepath.Join(subDir, fmt.Sprintf("kzg_srs_lagrange_%d_bn254_derived.memdump", lagrangeSize)))
 		assert.NoError(err, "a derived dump matching this canonical must have been published")
 		assert.NoError(reloaded.ReadDump(bytes.NewReader(data)))
 		assertSameVk(t, canonical, reloaded)

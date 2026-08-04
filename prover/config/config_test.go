@@ -84,6 +84,7 @@ func TestPersistDerivedSRSDefaultsOn(t *testing.T) {
 	// a missing lagrange dump is otherwise re-derived silently for hours on
 	// every prover start, so persistence at setup is what an operator gets by
 	// omission; the default is applied by the real loading path
+
 	// the smallest config the unchecked loading path accepts: the layer2
 	// addresses are parsed unconditionally, even without validation
 	minimal := `assets_dir = "/tmp/assets"
