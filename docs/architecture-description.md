@@ -1,4 +1,4 @@
-# Linea architecture alpha v3
+# Lineth architecture alpha v3
 
 > For per-feature documentation covering contracts, backend services, test coverage, and configuration, see the [Feature Documentation](features/README.md).
 
@@ -9,7 +9,7 @@ B) IntelliJ - https://www.jetbrains.com/help/idea/markdown.html#table-of-content
 -->
 
 <!-- TOC -->
-* [Linea architecture - alpha v3](#linea-architecture---alpha-v3)
+* [Lineth architecture - alpha v3](#lineth-architecture---alpha-v3)
 * [Transaction execution and management](#transaction-execution-and-management)
   * [File system](#file-system)
   * [Sequencer](#sequencer)
@@ -46,14 +46,14 @@ B) IntelliJ - https://www.jetbrains.com/help/idea/markdown.html#table-of-content
 
 # Transaction execution and management
 
-The objective of the Linea network is to provide the functionality of Ethereum network at a fraction of the cost of Ethereum mainnet while providing guarantees on the correctness of its state.
+The objective of the Lineth network is to provide the functionality of Ethereum network at a fraction of the cost of Ethereum mainnet while providing guarantees on the correctness of its state.
 
 Transaction execution is done using the [Clique consensus protocol](https://besu.hyperledger.org/23.4.0/private-networks/how-to/configure/consensus/clique) and correctness is guaranteed by providing proof of validity using zk-proofs.
 
-The main components of Linea are:
+The main components of Lineth are:
 
 * The sequencer which plays the role of the signer of the Clique protocol and creates blocks.
-* The state manager for all L2 states which is used to store Linea state in a way that makes it easy to generate data used as inputs for zk-proof creation.
+* The state manager for all L2 states which is used to store Lineth state in a way that makes it easy to generate data used as inputs for zk-proof creation.
 * The coordinator which orchestrates the different steps to create zk-proofs and persists them in the L1 Ethereum network. In particular, it's responsible for conflated batch creation, blob creation and aggregation
 * The traces-APIs which provide trace counts and generate conflated trace files to be used for zk-proof creation
 * The provers which generate zk-proof for conflated blocks, kzg commitment and compression proof of the blobs, as well as aggregated proof for multiple conflation and compression proofs.
@@ -111,7 +111,7 @@ Blocks produced by the sequencer, in addition to common verifications, must fulf
 
 Transactions exceeding trace limits are added to an unexecutableTxList in-memory to avoid reconsidering them. Similarly transactions that take too long to be processed by the sequencer are added to the unexecutable list. Transactions from the unexecutable lists are removed from the pool.
 
-Priority transactions are prioritized over normal ones. Priority transactions are those sent by a user whose address is in a predefined list. It typically corresponds to transactions triggered by the Linea system.
+Priority transactions are prioritized over normal ones. Priority transactions are those sent by a user whose address is in a predefined list. It typically corresponds to transactions triggered by the Lineth system.
 
 Note that if no transactions are received within the block window, no block is generated. This behavior differs from Ethereum mainnet, where empty blocks are still produced to maintain chain continuity and prevent certain attacks.
 
@@ -141,12 +141,12 @@ The state manager is configured differently based on the role it serves. The nod
 
 The publicly exposed method linea_getProof is served by the state manager. We have a single instance of state manager.
 
-The state manager keeps its representation of the Linea state by applying the block transactions computed by the sequencer, which it receives through P2P. It is composed of two parts:
+The state manager keeps its representation of the Lineth state by applying the block transactions computed by the sequencer, which it receives through P2P. It is composed of two parts:
 
 1. a Besu node with a Shomei plugin
 2. and a Shomei node.
 
-The Besu node is connected to the other Ethereum nodes using P2P, and from the blocks it receives, it generates a trielog which it sends to the Shomei node. The trielog is a list of state modifications that occurred during the execution of the block. As soon as Shomei receives this trielog it will apply these changes to his state. The Shomei nodes use Sparse Merkle trees to represent Linea’s state.
+The Besu node is connected to the other Ethereum nodes using P2P, and from the blocks it receives, it generates a trielog which it sends to the Shomei node. The trielog is a list of state modifications that occurred during the execution of the block. As soon as Shomei receives this trielog it will apply these changes to his state. The Shomei nodes use Sparse Merkle trees to represent Lineth’s state.
 
 Besu and Shomei nodes know each other's IP and port for direct communication.
 
@@ -450,7 +450,7 @@ There are three types of proofs: execution, compression and aggregation. The pro
 
 The number of instances of prover is dynamic and driven by the number of proof requests in the file system. There is also one instance of a large prover running to handle requests that could not be handled by the regular prover instance.
 
-In testnet, but not in the main Linea Layer, there are instances of provers that generate shorter proofs. The regular provers generate full proofs with standard memory settings. The large prover also generates full proof, the difference is that it is configured to have 1TB of memory. They are used to deal with proofs that unexpectedly cannot be handled by the default full prover (oom, too many constraints, …).
+In testnet, but not in the main Lineth Layer, there are instances of provers that generate shorter proofs. The regular provers generate full proofs with standard memory settings. The large prover also generates full proof, the difference is that it is configured to have 1TB of memory. They are used to deal with proofs that unexpectedly cannot be handled by the default full prover (oom, too many constraints, …).
 
 The proof sizes are estimated to be in the order of 2MB to 15MB.
 
@@ -620,7 +620,7 @@ BlobCompressionProofJsonResponse
 
 ### Aggregation proof
 
-Serves as the cornerstone of Linea's proof system, recursively verifying proofs from N execution circuits and M compression circuit instances. This circuit encapsulates the primary statement of Linea's prover and is the sole circuit subjected to external verification. The proof system used is a combination of several PLONK circuits on BW6, BLS12-377 and BN254 which tactically profits from the 2-chained curves BLS12-377 and BW6 to efficiently recurse the proofs. The final proof takes the form of a BN254 curve that can be efficiently verified on Ethereum thanks to the available precompiles.
+Serves as the cornerstone of Lineth's proof system, recursively verifying proofs from N execution circuits and M compression circuit instances. This circuit encapsulates the primary statement of Lineth's prover and is the sole circuit subjected to external verification. The proof system used is a combination of several PLONK circuits on BW6, BLS12-377 and BN254 which tactically profits from the 2-chained curves BLS12-377 and BW6 to efficiently recurse the proofs. The final proof takes the form of a BN254 curve that can be efficiently verified on Ethereum thanks to the available precompiles.
 
 File name
 
@@ -714,17 +714,17 @@ l1RollingHashes(
 
 # Gas price setting
 
-Gas pricing on Linea is designed to ensure the following three properties:
-* Sequencer's inclusion logic is aligned to the L1 fee market. This is to avoid exploiting Linea to execute
+Gas pricing on Lineth is designed to ensure the following three properties:
+* Sequencer's inclusion logic is aligned to the L1 fee market. This is to avoid exploiting Lineth to execute
 transactions for unsustainably low fees
-* The fees charged to Linea's user represent their fair usage of the network. Unlike the vanilla Ethereum
-protocol, the gas price on Linea and other rollups is not 2-dimensional (base fee, priority fee). There are at least L1 fees
+* The fees charged to Lineth's user represent their fair usage of the network. Unlike the vanilla Ethereum
+protocol, the gas price on Lineth and other rollups is not 2-dimensional (base fee, priority fee). There are at least L1 fees
 (execution fees and blob fees), infrastructural costs (mostly proving, but not only), and a potential priority fee
 (only when there is high congestion and competition for L2 block space). This is an issue for interoperability,
 because vanilla Ethreum API isn't tailored for this. That's why there is a Besu plugin addressing this issue and
 providing gas price depending on input transaction
-* Linea remains compatible with users running vanilla nodes. Namely, `eth_gasPrice` returns fees guaranteeing that
-99.9% of transactions are includable on Linea.
+* Lineth remains compatible with users running vanilla nodes. Namely, `eth_gasPrice` returns fees guaranteeing that
+99.9% of transactions are includable on Lineth.
 
 This is how these challenges were solved technically:
 
@@ -733,7 +733,7 @@ This is how these challenges were solved technically:
 The Coordinator fetches L1 fees data, based on which it will compute gas pricing components. There are 3 of them:
 * Fixed cost. Represents infrastructural cost per unit of L2 gas. Doesn't really depend on the L1, and it's just a
 configuration in the Coordinator
-* Variable cost. Cost of 1 byte of compressed data on L2, which is finalized on L1 contract. Depends on the fees Linea
+* Variable cost. Cost of 1 byte of compressed data on L2, which is finalized on L1 contract. Depends on the fees Lineth
 pays for finalization, which in turn depends on the L1 blob and execution fee market
 * Legacy cost. Recommended gas price for the vanilla Ethereum API (`eth_gasPrice`)
 
@@ -743,7 +743,7 @@ This information is delivered to nodes in 2 ways:
 * via RPC calls (only Geth and Besu are supported and tested)
 
 ### ExtraData
-The Coordinator sends extraData to the Sequencer via `miner_setExtraData`. ExtraData contains all 3 fields mentioned above (fixed cost, variable cost and legacy cost). The Sequencer in turn uses this information for inclusion logic, to include only profitable transactions, and it adds the last received extraData to the next block it seals. This ensures that pricing information is propagated to all the nodes on Linea via P2P as a block header's field. And since this info is on all the nodes, they can use this information to figure out, what the gas price is for a given transaction that would make it includable on Linea. This currently is possible with Besu + Linea plugin with a custom `linea_estimateGas` method.
+The Coordinator sends extraData to the Sequencer via `miner_setExtraData`. ExtraData contains all 3 fields mentioned above (fixed cost, variable cost and legacy cost). The Sequencer in turn uses this information for inclusion logic, to include only profitable transactions, and it adds the last received extraData to the next block it seals. This ensures that pricing information is propagated to all the nodes on Lineth via P2P as a block header's field. And since this info is on all the nodes, they can use this information to figure out, what the gas price is for a given transaction that would make it includable on Lineth. This currently is possible with Besu + Linea plugin with a custom `linea_estimateGas` method.
 
 ### Direct RPC calls
 For nodes that are reachable from the Coordinator directly, it's possible to set legacy cost via `miner_setGasPrice` (Geth) and `miner_setMinGasPrice` (Besu). Later isn't really used, because extraData driven approach is superior and is supported by Besu nodes with Linea plugin
@@ -751,13 +751,13 @@ For nodes that are reachable from the Coordinator directly, it's possible to set
 ### Ways to compute Legacy cost
 In the Coordinator 2 ways are supported:
 * So called "naive" way. Based on raw L1 fees processed by some formula
-* So called "sample transaction" way. The idea is to take some relatively unprofitable transaction, and estimate its profitable gas price in the same way the Sequencer would. The resulting value would be used as a legacy cost. This is configured by 2 arguments to a profitability function: execution gas and tx compressed size and it may be changed depending on what load is there on Linea.
+* So called "sample transaction" way. The idea is to take some relatively unprofitable transaction, and estimate its profitable gas price in the same way the Sequencer would. The resulting value would be used as a legacy cost. This is configured by 2 arguments to a profitability function: execution gas and tx compressed size and it may be changed depending on what load is there on Lineth.
 
 # L1 &lt;-> L2 interactions
 
 There are three types of integration:
 
-* Block finalization, specific to Linea, is used to persist on L1 the state changes happening on L2. This happens in two steps, first blob data and KZG proofs are persisted on L1, and then aggregation proofs are sent to L1
+* Block finalization, specific to Lineth, is used to persist on L1 the state changes happening on L2. This happens in two steps, first blob data and KZG proofs are persisted on L1, and then aggregation proofs are sent to L1
 * L1 -> L2, typically used to transfer funds from L1 to L2.
 * L2 -> L1, to retrieve funds from L2 back to L1.
 
@@ -843,7 +843,7 @@ When such a transaction is executed on L1, it triggers the publication of a mess
 
 Internally, the message service computes a rolling hash. It’s computed recursively as the hash of the previous rolling hash and the new message hash.
 
-Linea’s coordinator, which is subscribing to L1 events, detects the L1 finalized (2 epochs to avoid reorgs) cross-chain MessageSent event and anchors it on L2. The coordinator anchors the messages by batches.
+Lineth’s coordinator, which is subscribing to L1 events, detects the L1 finalized (2 epochs to avoid reorgs) cross-chain MessageSent event and anchors it on L2. The coordinator anchors the messages by batches.
 
 Anchoring (Anchoring is the process for placing a "cross-chain validity reference", that must exist for any message to be claimed) of messages is done through the executed via [anchorL1L2MessageHashes](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/contracts/src/messaging/l2/L2MessageManager.sol#L41) which is inherited by the [L2MessageService](https://github.com/LFDT-Lineth/lineth-monorepo/blob/main/contracts/src/messaging/l2/L2MessageService.sol) smart contract.
 

@@ -1,6 +1,6 @@
 # Smart Contracts
 
-> Solidity contracts for the Linea rollup, messaging, and bridging protocols.
+> Solidity contracts for the Lineth rollup, messaging, and bridging protocols.
 
 > **Diagram:** [Contracts Architecture](../diagrams/contracts-architecture.mmd) (Mermaid source)
 

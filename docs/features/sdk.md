@@ -1,10 +1,10 @@
 # SDK
 
-> TypeScript SDKs for programmatic interaction with Linea messaging and bridging.
+> TypeScript SDKs for programmatic interaction with Lineth messaging and bridging.
 
 ## Overview
 
-The Linea SDK is split into three packages providing different integration paths:
+The Lineth SDK is split into three packages providing different integration paths:
 
 | Package | npm | Dependency |
 |---------|-----|------------|
@@ -21,7 +21,7 @@ Provides framework-agnostic types, utilities, and the sparse Merkle tree impleme
 | Export | Description |
 |--------|-------------|
 | `SparseMerkleTree` | SMT implementation for Merkle proof construction |
-| `parseBlockExtraData` | Parse Linea gas pricing from block `extraData` |
+| `parseBlockExtraData` | Parse Lineth gas pricing from block `extraData` |
 | `formatMessageStatus` | Human-readable message status |
 | `getContractsAddressesByChainId` | Contract address lookup by chain ID |
 | `isLineaMainnet`, `isLineaSepolia`, `isMainnet`, `isSepolia` | Chain identification helpers |

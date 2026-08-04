@@ -1,6 +1,6 @@
-# Linea Forced Transactions Architecture
+# Lineth Forced Transactions Architecture
 
-This document provides a comprehensive view of the Forced Transaction system in the Linea rollup, including contract architecture, data flows, and the processing guarantee mechanism.
+This document provides a comprehensive view of the Forced Transaction system in the Lineth rollup, including contract architecture, data flows, and the processing guarantee mechanism.
 
 ## Table of Contents
 
@@ -18,7 +18,7 @@ This document provides a comprehensive view of the Forced Transaction system in 
 
 ## System Overview
 
-The Forced Transaction system provides **processing guarantees** for Linea L2. It allows users to submit transactions directly to L1 that **must** be processed (attempted) by the sequencer **by** a specified block deadline. The sequencer will typically process the transaction well before the deadline - the deadline represents the **latest acceptable block**, not the target block. If the sequencer fails to process a forced transaction by its deadline, finalization will revert.
+The Forced Transaction system provides **processing guarantees** for Lineth L2. It allows users to submit transactions directly to L1 that **must** be processed (attempted) by the sequencer **by** a specified block deadline. The sequencer will typically process the transaction well before the deadline - the deadline represents the **latest acceptable block**, not the target block. If the sequencer fails to process a forced transaction by its deadline, finalization will revert.
 
 **Important:** A processing guarantee means the transaction will be **attempted** by the deadline. It does NOT guarantee successful execution - the transaction may still fail on L2 due to invalid nonce, insufficient gas, insufficient balance. See [Processing vs Successful Execution](#important-processing-vs-successful-execution) for details.
 
