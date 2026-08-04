@@ -4,7 +4,7 @@
 
 ## Overview
 
-Linea provides a canonical messaging protocol between Ethereum L1 and L2. Messages are sent on the origin chain and claimed on the destination chain after anchoring. Two directions with distinct mechanics:
+Lineth provides a canonical messaging protocol between Ethereum L1 and L2. Messages are sent on the origin chain and claimed on the destination chain after anchoring. Two directions with distinct mechanics:
 
 - **L1→L2**: Messages anchored on L2 via rolling hash; claimed using hash lookup.
 - **L2→L1**: Message hashes grouped into Merkle trees during finalization; claimed on L1 with Merkle proofs.
@@ -110,7 +110,7 @@ The Postman automates claiming for users who prepay a fee. It monitors anchored 
 
 Key behaviors:
 - **Sponsorship**: When enabled, the Postman pays gas from its own funds for zero-fee or underpriced messages (up to `MAX_POSTMAN_SPONSOR_GAS_LIMIT`)
-- **L1→L2 difference**: Includes an extra transaction-size computation step for Linea's variable gas pricing model
+- **L1→L2 difference**: Includes an extra transaction-size computation step for Lineth's variable gas pricing model
 - **Retry logic**: Rate-limited claims reset to `SENT`; timed-out transactions retry with gas escalation
 
 See [Postman Feature](postman.md) for the full message lifecycle, sponsorship model, and retry details.

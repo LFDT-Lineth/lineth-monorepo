@@ -1,8 +1,8 @@
-# Linea Feature Documentation
+# Lineth Feature Documentation
 
 > Last updated: 2026-02-19
 
-This directory contains per-feature documentation for all major Linea system components. Each document covers architecture, key contracts/services, interfaces, test coverage, and configuration.
+This directory contains per-feature documentation for all major Lineth system components. Each document covers architecture, key contracts/services, interfaces, test coverage, and configuration.
 
 For high-level system architecture see [`docs/architecture-description.md`](../architecture-description.md).
 For technical deep dives by component see [`docs/tech/`](../tech/README.md).
