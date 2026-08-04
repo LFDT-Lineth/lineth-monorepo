@@ -194,7 +194,7 @@ class GoNativeBlobDecompressorTest {
   }
 
   fun CodeDelegation.toLinaDomain(): AuthorizationTuple {
-    // Besu does CodeDelegation class not implement equals/hashcode so we convert to Lineth Domain model to compare
+    // Besu's CodeDelegation class does not implement equals/hashCode, so we convert to the Lineth domain model to compare
     return AuthorizationTuple(
       address = this.address().bytes.toArray(),
       chainId = this.chainId().toULong(),

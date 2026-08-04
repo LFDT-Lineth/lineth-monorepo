@@ -50,7 +50,7 @@ class PluginCliOptions {
 
   @CommandLine.Option(
     names = ["--$cliOptionsPrefix-linea-block-gas-limit"],
-    description = ["Lineth Block gas limit. Default 2B (2_000_000_000)"],
+    description = ["Lineth block gas limit. Default 2B (2_000_000_000)"],
     required = false,
     defaultValue = "\${env:LINEA_BLOCK_GAS_LIMIT}",
   )
@@ -58,7 +58,7 @@ class PluginCliOptions {
 
   @CommandLine.Option(
     names = ["--$cliOptionsPrefix-linea-block-difficulty"],
-    description = ["Lineth Block difficulty. Default 2"],
+    description = ["Lineth block difficulty. Default 2"],
     required = false,
     defaultValue = "\${env:LINEA_BLOCK_DIFFICULTY}",
   )
