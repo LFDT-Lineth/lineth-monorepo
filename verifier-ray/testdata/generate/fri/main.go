@@ -160,9 +160,9 @@ type pcsSizeBundle struct {
 }
 
 // computeLayout re-derives fri's frozen canonical layout: for each size in
-// descending order, batches in declaration order, base rows then ext rows,
-// row declaration order, with the claim offset accumulating across the
-// whole layout (verifier_ray's flat claimed_values array).
+// descending order, batches in declaration order, base rows then ext rows, row
+// declaration order, with EntryIdx increasing across the whole layout. That is
+// the order verifier-ray uses for jagged entry_claims and DEEP reconstruction.
 func computeLayout(shapes []fri.Shape, shifts []fri.BatchShifts) []pcsSizeBundle {
 	maxSizeLog2 := -1
 	for _, s := range shapes {

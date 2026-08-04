@@ -201,10 +201,10 @@ pub fn verify(
 }
 
 /// Fills `out[k]` with the authenticated claim each `map` entry points at:
-/// `out[k] = entry_claims[map[k].entry][map[k].shift]`. `map.len` must equal
-/// `out.len` (the vanishing System's claim total) and every ClaimRef must be in
-/// range, else the PCS/vanishing metadata disagree — a codegen bug, surfaced as
-/// an error rather than an out-of-bounds panic.
+/// `out[k] = entry_claims[recon.col_to_entry[map[k].col_decl_idx]][map[k].shift]`.
+/// `map.len` must equal `out.len` (the vanishing System's claim total) and every
+/// ClaimRef must be in range, else the PCS/vanishing metadata disagree — a
+/// codegen bug, surfaced as an error rather than an out-of-bounds panic.
 fn routeClaims(
     comptime system: pcs.System,
     recon: pcs.Reconstructed(system),
@@ -238,6 +238,14 @@ fn routeClaims(
 /// name a round message that exists and carries exactly one oracle commitment;
 /// otherwise the PCS/protocol metadata disagree — surfaced as an error rather than
 /// an out-of-bounds panic or a silently mis-bound root.
+///
+/// A committed round can never carry public columns alongside its commitment:
+/// prover-ray's `hideCommittedColumns` (wiop/compilers/pcs/pcs.go) panics at
+/// compile time if a committed round holds a `VisibilityPublic` column, and
+/// otherwise rewrites all of that round's columns to `VisibilityInternal`
+/// before the transcript ever absorbs them. So a committed round's message is
+/// provably root-only — `cols.len != 1` below is asserting that invariant, not
+/// over-rejecting a legal mixed-visibility round.
 fn resolveRoots(
     batch_roots: []const pcs.BatchRoot,
     rounds: []const protocol.RoundMessage,
