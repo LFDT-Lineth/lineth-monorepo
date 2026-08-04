@@ -163,6 +163,11 @@ zkc-trace: require-json
 zkc-trace: require-json
 	$(ZKC) trace $(ZKC_TRACE_FLAGS) $(JSON) $(ZKC_MAIN)
 
+# Run zkc trace (set TEST=... or JSON=path/to/input.json; override ZKC / ZKC_MAIN / ZKC_TRACE_FLAGS).
+# Unlike zkc-exec this always traces: `trace` supports neither fast mode nor checkpointing.
+zkc-trace: require-json
+	$(ZKC) trace $(ZKC_TRACE_FLAGS) $(JSON) $(ZKC_MAIN)
+
 zkc-debug: require-json
 	$(ZKC) debug $(JSON) $(ZKC_MAIN)
 
