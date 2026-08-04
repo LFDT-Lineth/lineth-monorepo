@@ -140,7 +140,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
       expectedError: string;
     }> = [
       {
-        description: "Linea rollup is set as address(0)",
+        description: "Lineth rollup is set as address(0)",
         override: { linethRollupAddr: ADDRESS_ZERO },
         expectedError: "ZeroAddressNotAllowed",
       },
@@ -911,7 +911,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
       );
     });
 
-    it("Updates the next message number on the Linea Rollup", async () => {
+    it("Updates the next message number on the Lineth Rollup", async () => {
       expect(await linethRollup.nextForcedTransactionNumber()).equal(1);
 
       await forcedTransactionGateway.submitForcedTransaction(
@@ -922,7 +922,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
       expect(await linethRollup.nextForcedTransactionNumber()).equal(2);
     });
 
-    it("Updates the forcedTransactionL2BlockNumbers on the Linea Rollup", async () => {
+    it("Updates the forcedTransactionL2BlockNumbers on the Lineth Rollup", async () => {
       expect(await linethRollup.forcedTransactionL2BlockNumbers(1)).equal(0);
 
       await forcedTransactionGateway.submitForcedTransaction(
@@ -989,7 +989,7 @@ describe("Lineth Rollup contract: Forced Transactions", () => {
       expect(await linethRollup.forcedTransactionL2BlockNumbers(1)).greaterThan(0);
     });
 
-    it("Updates the forcedTransactionRollingHashes on the Linea Rollup", async () => {
+    it("Updates the forcedTransactionRollingHashes on the Lineth Rollup", async () => {
       expect(await linethRollup.forcedTransactionRollingHashes(1)).equal(HASH_ZERO);
       const blockNumberDeadline = await setNextExpectedL2BlockNumberForForcedTx(
         linethRollup,

@@ -1,7 +1,7 @@
 
 # 🛡️ Granting or Revoking Roles
 
-This document outlines the procedure for assigning or removing specific roles on various components of the Linea ecosystem: **LinethRollup**, **L2MessageService**, and **TokenBridge**.
+This document outlines the procedure for assigning or removing specific roles on various components of the Lineth ecosystem: **LinethRollup**, **L2MessageService**, and **TokenBridge**.
 
 **Note**: These contracts are governed by the [Security Council Charter](../../security-council-charter.md).
 
