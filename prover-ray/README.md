@@ -1,6 +1,6 @@
-# linea-monorepo/prover
+# lineth-monorepo/prover
 
-This directory contains the implementation of the prover of Lineth. As part of it,
+This directory contains the implementation of the Lineth prover. As part of it,
 it contains an implementation of the Vortex polynomial commitment, of the
 Arcane compiler, the instantiation of the zkEVM using the arithmetization and
 the server implementation.
