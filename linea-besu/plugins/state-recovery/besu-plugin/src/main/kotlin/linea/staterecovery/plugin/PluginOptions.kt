@@ -41,7 +41,7 @@ class PluginCliOptions {
 
   @CommandLine.Option(
     names = ["--$cliOptionsPrefix-linea-sequencer-beneficiary-address"],
-    description = ["Linea sequencer beneficiary address"],
+    description = ["Lineth sequencer beneficiary address"],
     required = true,
     converter = [AddressConverter::class],
     defaultValue = "\${env:LINEA_SEQUENCER_BENEFICIARY_ADDRESS}",
@@ -50,7 +50,7 @@ class PluginCliOptions {
 
   @CommandLine.Option(
     names = ["--$cliOptionsPrefix-linea-block-gas-limit"],
-    description = ["Linea Block gas limit. Default 2B (2_000_000_000)"],
+    description = ["Lineth block gas limit. Default 2B (2_000_000_000)"],
     required = false,
     defaultValue = "\${env:LINEA_BLOCK_GAS_LIMIT}",
   )
@@ -58,7 +58,7 @@ class PluginCliOptions {
 
   @CommandLine.Option(
     names = ["--$cliOptionsPrefix-linea-block-difficulty"],
-    description = ["Linea Block difficulty. Default 2"],
+    description = ["Lineth block difficulty. Default 2"],
     required = false,
     defaultValue = "\${env:LINEA_BLOCK_DIFFICULTY}",
   )
