@@ -21,7 +21,7 @@ Provides framework-agnostic types, utilities, and the sparse Merkle tree impleme
 | Export | Description |
 |--------|-------------|
 | `SparseMerkleTree` | SMT implementation for Merkle proof construction |
-| `parseBlockExtraData` | Parse Lineth gas pricing from block `extraData` |
+| `parseBlockExtraData` | Parse Linea-specific block extra data |
 | `formatMessageStatus` | Human-readable message status |
 | `getContractsAddressesByChainId` | Contract address lookup by chain ID |
 | `isLineaMainnet`, `isLineaSepolia`, `isMainnet`, `isSepolia` | Chain identification helpers |

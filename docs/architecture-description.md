@@ -9,7 +9,7 @@ B) IntelliJ - https://www.jetbrains.com/help/idea/markdown.html#table-of-content
 -->
 
 <!-- TOC -->
-* [Lineth architecture - alpha v3](#lineth-architecture---alpha-v3)
+* [Lineth architecture alpha v3](#lineth-architecture-alpha-v3)
 * [Transaction execution and management](#transaction-execution-and-management)
   * [File system](#file-system)
   * [Sequencer](#sequencer)
