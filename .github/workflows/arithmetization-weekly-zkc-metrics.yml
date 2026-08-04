@@ -467,6 +467,14 @@ jobs:
         run: |
           set -euo pipefail
           ls -R "$RUN" || true
+          # prepare sets its zkc_ref output before it records metadata, so an eviction in between
+          # satisfies this job's condition while leaving no meta.env. Rendering then would append a row
+          # with no week, runner or refs — a permanent, meaningless line in the ledger. Fail instead:
+          # notify reports it, and the table stays clean.
+          if [ ! -s "$RUN/meta.env" ]; then
+            echo "::error::no run metadata (prepare did not get far enough); refusing to append a row without provenance" >&2
+            exit 1
+          fi
           GO111MODULE=off go run ./arithmetization/src/test/scripts/weekly_metrics \
             -run-dir "$RUN" -out "$METRICS_FILE" | tee "$RUN/added-rows.txt"
           {

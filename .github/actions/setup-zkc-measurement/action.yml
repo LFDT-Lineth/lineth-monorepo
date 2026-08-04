@@ -73,3 +73,22 @@ runs:
         make -C arithmetization install-zkc-to ZKC_BIN="${RUNNER_TEMP}/zkc-under-test"
         echo "ZKC=${RUNNER_TEMP}/zkc-under-test" >> "$GITHUB_ENV"
         go version -m "${RUNNER_TEMP}/zkc-under-test" | awk '$1=="mod" || $2 ~ /^vcs\./'
+
+        # Verify what actually got built. arithmetization/Makefile's checkout-zkc-repo ends its
+        # fetch/checkout with `|| true`, so a failed fetch leaves the clone on the default branch and
+        # the build silently measures a different compiler than the one reported — the exact confusion
+        # this whole workflow exists to prevent. Only checkable when the ref is a full SHA, which is
+        # what prepare resolves it to.
+        built=$(go version -m "${RUNNER_TEMP}/zkc-under-test" \
+          | awk '$1=="build" && $2 ~ /^vcs\.revision=/{print substr($2,14)}')
+        want='${{ inputs.zkc-ref }}'
+        if printf '%s' "$want" | grep -qE '^[0-9a-f]{40}$'; then
+          if [ -z "$built" ]; then
+            echo "::warning::cannot verify the zkc revision (no vcs.revision stamped); proceeding"
+          elif [ "$built" != "$want" ]; then
+            echo "::error::zkc build is ${built} but ${want} was requested — checkout-zkc-repo ignores fetch failures, so this run would measure the wrong compiler" >&2
+            exit 1
+          else
+            echo "zkc revision verified: ${built}"
+          fi
+        fi
