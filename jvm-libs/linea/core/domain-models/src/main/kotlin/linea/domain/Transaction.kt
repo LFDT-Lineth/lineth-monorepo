@@ -9,7 +9,7 @@ enum class TransactionType(private val typeValue: Int) {
   ACCESS_LIST(1),
   EIP1559(2),
   BLOB(3), // Not supported by Lineth at the moment, but here for completeness
-  DELEGATE_CODE(4), // Not supported by Lineth at the moment, but here for completeness
+  DELEGATE_CODE(4),
   ;
 
   val serializedType: Byte
