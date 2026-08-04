@@ -233,7 +233,7 @@ trust-store-password = "changeit"
 [message-anchoring]
 disabled = false
 l1-highest-block-tag="LATEST"
-l2-highest-block-tag="LATEST" # optional, default to LATEST it shall not be necessary as Linea has instant finality
+l2-highest-block-tag="LATEST" # optional, default to LATEST it shall not be necessary as Lineth has instant finality
 anchoring-tick-interval = "PT2S"
 
 [message-anchoring.l1-event-scraping]

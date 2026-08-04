@@ -8,7 +8,7 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 data class ProtocolToml(
-  @param:ConfigSection("Linea genesis state root and shnarf.")
+  @param:ConfigSection("Lineth genesis state root and shnarf.")
   val genesis: Genesis,
   @param:ConfigSection("L1 rollup contract and timing settings.")
   val l1: Layer1Config,
@@ -17,12 +17,12 @@ data class ProtocolToml(
 ) {
   data class Genesis(
     @param:ConfigDoc(
-      description = "Genesis state root hash of the Linea chain (hex).",
+      description = "Genesis state root hash of the Lineth chain (hex).",
       example = "0x01d9afcd495c870f3ae9d8362cd0257a7de2057055058183596719285cae6101",
     )
     val genesisStateRootHash: ByteArray,
     @param:ConfigDoc(
-      description = "Genesis shnarf (starting shnarf) of the Linea chain (hex).",
+      description = "Genesis shnarf (starting shnarf) of the Lineth chain (hex).",
       example = "0xc286ff42414401ccdc23ea8e738775378e8f6c6f7b2966eb2747798d45571b79",
     )
     val genesisShnarf: ByteArray,
@@ -48,7 +48,7 @@ data class ProtocolToml(
 
   data class Layer1Config(
     @param:ConfigDoc(
-      description = "Address of the Linea rollup contract on L1.",
+      description = "Address of the Lineth rollup contract on L1.",
       example = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
     )
     val contractAddress: String,
@@ -63,7 +63,7 @@ data class ProtocolToml(
 
   data class Layer2Config(
     @param:ConfigDoc(
-      description = "Address of the Linea contract on L2.",
+      description = "Address of the Lineth contract on L2.",
       example = "0xe537D669CA013d86EBeF1D64e40fC74CADC91987",
     )
     val contractAddress: String,
