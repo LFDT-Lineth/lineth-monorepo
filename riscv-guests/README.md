@@ -1,6 +1,6 @@
 # RISC-V Guest Programs
 
-This directory holds the RISC-V guest programs that target the Linea ZKC interpreter. Each guest is a **self-contained Zig package** — its own `build.zig`, `build.zig.zon` (its dependencies), `Makefile` (its compile/test lifecycle) and `src/`. A thin top-level `Makefile` orchestrates them all, and shared build logic lives in `build_common/`. They share one Zig toolchain (`.zigversion`).
+This directory holds the RISC-V guest programs that target the Lineth ZKC interpreter. Each guest is a **self-contained Zig package** — its own `build.zig`, `build.zig.zon` (its dependencies), `Makefile` (its compile/test lifecycle) and `src/`. A thin top-level `Makefile` orchestrates them all, and shared build logic lives in `build_common/`. They share one Zig toolchain (`.zigversion`).
 
 ## Layout
 
