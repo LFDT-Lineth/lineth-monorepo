@@ -1,5 +1,5 @@
 // The sha2 package provides all the necessary tools to verify the calls to the
-// sha2 precompiles in the Lineth's zkevm.
+// sha2 precompiles in Lineth's zkEVM.
 package sha2
 
 import (

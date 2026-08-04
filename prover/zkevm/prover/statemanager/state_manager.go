@@ -14,7 +14,7 @@ import (
 )
 
 // StateManager is a collection of modules responsible for attesting the
-// correctness of the state-transitions occuring in Lineth w.r.t. to the
+// correctness of the state transitions occurring in Lineth with respect to the
 // arithmetization.
 type StateManager struct {
 	Accumulator                 accumulator.Module
