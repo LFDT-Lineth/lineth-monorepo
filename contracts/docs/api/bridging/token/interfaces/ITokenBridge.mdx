@@ -455,7 +455,7 @@ function setReserved(address _token) external
 Make sure that _token is native to the current chain
   where you are calling this function from
 
-_Linea can reserve tokens. In this case, the token cannot be bridged.
+_Lineth can reserve tokens. In this case, the token cannot be bridged.
   Lineth can only reserve tokens that have not been bridged before._
 
 #### Parameters
@@ -484,7 +484,7 @@ _Removes a token from the reserved list._
 function setCustomContract(address _nativeToken, address _targetContract) external
 ```
 
-_Linea can set a custom ERC-20 contract for specific ERC-20.
+_Lineth can set a custom ERC-20 contract for specific ERC-20.
   For security purposes, Lineth can only call this function if the token has
   not been bridged yet._
 

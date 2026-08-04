@@ -31,7 +31,7 @@ Workflow Documentation [L2MessageService Workflows](./docs/workflows/L2MessageSe
 
 ## Lineth Canonical Token Bridge
 
-The Canonical Token Bridge (TokenBridge) is a canonical ERC20 token brige between Ethereum and Lineth networks.
+The Canonical Token Bridge (TokenBridge) is a canonical ERC20 token bridge between Ethereum and Lineth networks.
 
 The TokenBridge utilises the L1MessageService and the L2MessageService for the transmission of messages between each layer's TokenBridge.
 
