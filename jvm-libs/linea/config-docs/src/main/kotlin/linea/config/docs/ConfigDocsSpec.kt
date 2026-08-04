@@ -15,6 +15,11 @@ package linea.config.docs
  * @property markdownPath committed Markdown reference output path, relative to the repository root.
  * @property markdownTitle the Markdown document's top-level title.
  * @property regenerateCommand the command shown in the Markdown "do not edit" banner.
+ * @property mdxPartialPath optional ephemeral MDX partial output path, relative to the repository
+ *   root. When non-null, the runner also writes a single MDX-safe reference partial there (in
+ *   addition to the committed Markdown/JSON, which are unchanged). Intended to point at a
+ *   gitignored build directory so the partial can be picked up by a publishing workflow without
+ *   being committed. `null` for specs that do not participate in MDX publishing.
  */
 interface ConfigDocsSpec {
   val files: List<ConfigFileRoot>
@@ -23,4 +28,5 @@ interface ConfigDocsSpec {
   val markdownPath: String
   val markdownTitle: String
   val regenerateCommand: String
+  val mdxPartialPath: String? get() = null
 }
