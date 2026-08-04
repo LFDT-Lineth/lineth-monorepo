@@ -120,10 +120,12 @@ services:
   # Erigon initialization
   erigon-init:
     image: linea-erigon:v3.3.0-linea-patched
+    # Run init as root so it can chown the chain-data volume for the non-root
+    # erigon user (UID 1000) that erigon-node runs as.
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-c"]
     command:
-      - init
-      - /genesis.json
-      - --datadir=/data
+      - "erigon --datadir=/data init /genesis.json && chown -R 1000:1000 /data"
     volumes:
       - ./geth/geth-genesis.json:/genesis.json:ro
       - linea-sepolia-erigon:/data
