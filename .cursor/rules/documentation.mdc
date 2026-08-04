@@ -1,5 +1,5 @@
 ---
-description: Documentation discovery index for Linea monorepo
+description: Documentation discovery index for Lineth monorepo
 globs: ["**/*"]
 alwaysApply: true
 ---

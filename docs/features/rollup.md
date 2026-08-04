@@ -4,7 +4,7 @@
 
 ## Overview
 
-Linea operates as a zk-rollup where L2 state transitions are posted to and verified on Ethereum L1. The pipeline has three phases:
+Lineth operates as a zk-rollup where L2 state transitions are posted to and verified on Ethereum L1. The pipeline has three phases:
 
 1. **Submission** — Compressed L2 block data posted to L1 via EIP-4844 blobs or calldata.
 2. **Shnarf chaining** — Each submission extends a rolling commitment (`shnarf`) linking all prior submissions.

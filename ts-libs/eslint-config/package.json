@@ -1,7 +1,7 @@
 {
   "name": "@lfdt-lineth/eslint-config",
   "version": "1.0.0",
-  "description": "Shared ESLint v9 flat config for Linea monorepo",
+  "description": "Shared ESLint v9 flat config for Lineth monorepo",
   "author": "Consensys Software Inc.",
   "license": "(MIT OR Apache-2.0)",
   "type": "module",

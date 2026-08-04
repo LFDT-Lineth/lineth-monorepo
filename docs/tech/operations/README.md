@@ -2,7 +2,7 @@
 
 ## Operational Tools
 
-The monorepo includes several operational utilities for managing the Linea network.
+The monorepo includes several operational utilities for managing the Lineth network.
 
 ## Operations CLI (`operations/cli/`)
 
