@@ -35,7 +35,7 @@ fn keccak<ram, keccak_state>(msg_address:Address, msg_length:u32, output_address
     var n_blocks:u32 = (msg_length / BLOCK_BYTE_LENGTH)
     var remainder:u8 = (msg_length % BLOCK_BYTE_LENGTH) as u8
 
-    kec_absorbing_phase(n_blocks, remainder, msg_address, msg_length)
+    kec_absorbing_phase(n_blocks, remainder, msg_address)
 
     kec_squeezing_phase(output_address)
 
@@ -76,7 +76,7 @@ fn wipe_state<keccak_state>() {
 // ===================================================================
 
 // Xor the input blocks into the state and perform the permutation
-fn kec_absorbing_phase<ram, keccak_state>(n_blocks:u32, remainder:u8, msg_address:Address, msg_length:u32) {
+fn kec_absorbing_phase<ram, keccak_state>(n_blocks:u32, remainder:u8, msg_address:Address) {
 
     var curr_address:Address = msg_address
 
