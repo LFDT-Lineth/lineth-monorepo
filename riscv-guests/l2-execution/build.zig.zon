@@ -28,7 +28,7 @@
         },
         // Shared build helpers for all riscv-guests packages (sibling path dependency).
         .build_common = .{ .path = "../build_common" },
-        // Linea zkVM accelerator wrappers (sibling path dependency).
+        // Lineth zkVM accelerator wrappers (sibling path dependency).
         .lineth_accelerators = .{ .path = "../lineth-accelerators" },
     },
     .paths = .{
