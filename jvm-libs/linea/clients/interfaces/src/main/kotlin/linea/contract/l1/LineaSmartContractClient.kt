@@ -46,7 +46,8 @@ interface LineaSmartContractClientReadOnly {
   ): SafeFuture<Boolean>
 
   /**
-   * Gets Type 2 StateRootHash for Lineth Block
+   * Gets Type 2 StateRootHash for a Lineth block.
+   * The [lineaL2BlockNumber] parameter name is kept for backwards compatibility.
    */
   fun blockStateRootHash(blockParameter: BlockParameter, lineaL2BlockNumber: ULong): SafeFuture<ByteArray>
 }
