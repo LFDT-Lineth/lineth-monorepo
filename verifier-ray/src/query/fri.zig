@@ -144,11 +144,11 @@ pub fn checkOpeningProofShape(
     const want_round_roots: u8 = if (num_rounds > 0) num_rounds - 1 else 0;
     if (proof.round_roots.len != want_round_roots) return Error.InvalidRoundRootCount;
     if (proof.running_queries.len != params.num_queries) return Error.InvalidRunningQueryCount;
-    if (proof.final_poly.len != (@as(usize, 1) << @as(std.math.Log2Int(usize), @intCast(params.log_final_poly_size)))) return Error.InvalidFinalPolyLength;
+    if (proof.final_poly.len != (@as(usize, 1) << @intCast(params.log_final_poly_size))) return Error.InvalidFinalPolyLength;
     if (fold_alphas.len != num_rounds) return Error.InvalidFoldAlphaCount;
     if (positions.len < params.num_queries) return Error.InsufficientPositions;
 
-    const codeword_size = @as(usize, 1) << @as(std.math.Log2Int(usize), @intCast(params.log_codeword_size));
+    const codeword_size = @as(usize, 1) << @intCast(params.log_codeword_size);
     for (proof.running_queries, positions[0..params.num_queries]) |query_branches, position| {
         if (query_branches.len != want_round_roots) return Error.InvalidRunningQueryCount;
         if (position >= codeword_size) return Error.PositionOutOfRange;
@@ -181,7 +181,7 @@ pub fn resolveRunningLayers(
         const want_siblings = params.log_codeword_size - j;
         if (branch.siblings.len != want_siblings) return Error.InvalidRunningLayerShape;
 
-        const recovered = try branch.recoverRoot(position >> @as(u6, @intCast(j)));
+        const recovered = try branch.recoverRoot(position >> @intCast(j));
         if (!poseidon2.eql(recovered, round_roots[j - 1])) return Error.MerkleProofInvalid;
 
         rounds[j] = .{
@@ -257,7 +257,7 @@ pub fn checkFolds(
 const inv_two: field.Element = .{ .value = 1_065_353_217 };
 
 fn fullDomainGenerator(params: Params) field.Element {
-    return field.rootOfUnityBy(@as(usize, 1) << @as(std.math.Log2Int(usize), @intCast(params.log_codeword_size))) catch unreachable;
+    return field.rootOfUnityBy(@as(usize, 1) << @intCast(params.log_codeword_size)) catch unreachable;
 }
 
 /// x = g^{bitrev_{log_size}(position)}, where g generates the size-2^log_size
@@ -274,7 +274,7 @@ fn domainPoint(log_size: u8, generator: field.Element, position: usize) field.El
 /// comptime since callers (the PCS/DEEP layer) only ever evaluate this at a
 /// level's own round, itself derived from the comptime layout.
 pub fn domainPointExt(log_size: u8, position: usize) ext.Ext {
-    const generator = field.rootOfUnityBy(@as(usize, 1) << @as(std.math.Log2Int(usize), @intCast(log_size))) catch unreachable;
+    const generator = field.rootOfUnityBy(@as(usize, 1) << @intCast(log_size)) catch unreachable;
     return ext.Ext.lift(domainPoint(log_size, generator, position));
 }
 
@@ -285,8 +285,7 @@ fn bitReverse(value: usize, width: u8) usize {
     // to spare.
     const v: u32 = @intCast(value);
     const reversed: u32 = @bitReverse(v);
-    const shift: std.math.Log2Int(u32) = @intCast(32 - width);
-    return reversed >> shift;
+    return reversed >> @intCast(32 - width);
 }
 
 /// Converts a Poseidon2 digest into an extension element. Expects
