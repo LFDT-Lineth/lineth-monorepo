@@ -81,7 +81,7 @@ traced back to exactly what was built.
 
 ```bash
 arithmetization/src/test/scripts/weekly_zkc_metrics.sh --compile-only        # seconds
-arithmetization/src/test/scripts/weekly_zkc_metrics.sh --zkc-ref v1.2.25     # a specific zkc
+arithmetization/src/test/scripts/weekly_zkc_metrics.sh --zkc-ref v1.2.26     # a specific zkc
 arithmetization/src/test/scripts/weekly_zkc_metrics.sh --zkc-src ~/dev/go/go-corset
 ```
 

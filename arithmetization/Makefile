@@ -11,7 +11,7 @@ REPO_ROOT := $(abspath $(MAKEFILE_DIR)/..)
 ZKC ?= $(REPO_ROOT)/zkc
 ZKC_REPO ?= https://github.com/LFDT-Lineth/zkc.git
 # Optional: pin a commit or branch (e.g. 763f30878e5fc260f0d88863c9883c904f8fc056). Leave empty for default branch.
-ZKC_REF ?= v1.2.25
+ZKC_REF ?= v1.2.26
 
 # Used to install Sail for ACT4 host builds.
 ACT4_RISCV_DIR ?= $(HOME)/riscv
@@ -60,7 +60,7 @@ install-zkc:
 # disturbing the zkc already on PATH. Pass the result on with ZKC=... (see src/test/Makefile).
 # Building from the checkout also makes Go stamp vcs.revision into the binary, which `go version -m`
 # can then report as provenance.
-#   make install-zkc-to ZKC_BIN=/tmp/zkc-under-test ZKC_REF=v1.2.25
+#   make install-zkc-to ZKC_BIN=/tmp/zkc-under-test ZKC_REF=v1.2.26
 install-zkc-to:
 	@[ -n "$(ZKC_BIN)" ] || { echo "ZKC_BIN is mandatory: make install-zkc-to ZKC_BIN=path/to/zkc [ZKC_REF=ref]"; exit 1; }
 	$(MAKE) checkout-zkc-repo
