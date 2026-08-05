@@ -76,43 +76,68 @@ fn wipe_state<keccak_state>() {
 // ===================================================================
 
 // Xor the input blocks into the state and perform the permutation
+//
+// NOTE: this phase is deliberately split so that no function holds more than one
+// loop.  Loops are the only construct that survives the compiler's vectorisation
+// pass as a distinct PC value, and each extra PC value makes the vectoriser
+// duplicate the surrounding code into every block that can reach it; nested loop
+// conditions also multiply into the guard of every constraint they enclose,
+// raising its degree.  Keeping one loop per function cuts the constraint
+// complexity of this phase by roughly 5x.
 fn kec_absorbing_phase<ram, keccak_state>(n_blocks:u32, remainder:u8, msg_address:Address) {
 
-    var curr_address:Address = msg_address
+    var curr_address:Address = kec_absorb_full_blocks(n_blocks, msg_address)
 
-    // =======================================================================================
-    // building full blocks (no padding), XORing them into the state,
-    // and calling keccak_f
-    // =======================================================================================
+    kec_absorb_final_block(remainder, curr_address)
+}
 
-    // we build the blocks that DO NOT require padding and call keccak_f on them
-    // NOTE: n_blocks ≥ 0
+// =======================================================================================
+// building full blocks (no padding), XORing them into the state,
+// and calling keccak_f
+// =======================================================================================
+
+// kec_absorb_full_blocks absorbs the blocks that DO NOT require padding,
+// returning the address just past the last full block consumed.
+// NOTE: n_blocks ≥ 0
+fn kec_absorb_full_blocks<ram, keccak_state>(n_blocks:u32, msg_address:Address) -> (curr_address:Address) {
+
+    curr_address = msg_address
+
     for block:u32 = 0; block<(n_blocks); block = block + 1 {
-        for limb:u5 = 0; limb<17; limb = limb + 1 {
-            keccak_state[PIB + (limb as u7)] = read_64(curr_address + (8 * (limb as Address)))
-        }
+        kec_load_full_block(curr_address)
 
         kec_xor_padded_input_block_into_state()
         keccak_f()
 
         curr_address = curr_address + (BLOCK_BYTE_LENGTH as Address)
     }
+}
 
-    // =======================================================================================
-    // building the final padded block, XORing it into the state,
-    // and calling keccak_f
-    // =======================================================================================
+// kec_load_full_block reads the 17 u64's of a complete (unpadded) block
+fn kec_load_full_block<ram, keccak_state>(curr_address:Address) {
+    for limb:u5 = 0; limb<17; limb = limb + 1 {
+        keccak_state[PIB + (limb as u7)] = read_64(curr_address + (8 * (limb as Address)))
+    }
+}
 
-    // final block, DOES require padding --- always
+// =======================================================================================
+// building the final padded block, XORing it into the state,
+// and calling keccak_f
+// =======================================================================================
+
+// kec_absorb_final_block absorbs the final block, which DOES require padding --- always
+fn kec_absorb_final_block<ram, keccak_state>(remainder:u8, msg_address:Address) {
+
+    var curr_address:Address = msg_address
+
     // n_full_words ∈ {0, 1, ..., 16}
     var n_full_words:u5 = (remainder / 8) as u5
     var n_bytes:u3 = (remainder % 8) as u3
 
     var final_word_in_block:u1 = n_full_words == 16 ? 1:0
 
-    for limb:u5 = 0; limb<n_full_words; limb = limb + 1 {
-        keccak_state[PIB + (limb as u7)] = read_64(curr_address + (8 * (limb as Address)))
-    }
+    kec_load_partial_words(curr_address, n_full_words)
+
     curr_address = curr_address + (8 * (n_full_words as Address))
     keccak_state[PIB + (n_full_words as u7)] = read_and_pad_64(curr_address, n_bytes, final_word_in_block)
 
@@ -120,14 +145,26 @@ fn kec_absorbing_phase<ram, keccak_state>(n_blocks:u32, remainder:u8, msg_addres
     // the above "read_and_pad_64" call didn't fill the final word, so
     // more padding happens: zero words followed by a terminating 1
     if final_word_in_block != 1 {
-        for limb:u5 = n_full_words + 1; limb<16; limb = limb + 1 {
-            keccak_state[PIB + (limb as u7)] = 0
-        }
+        kec_zero_fill(n_full_words)
         keccak_state[PIB + 16] = FINAL_RIGHT_PADDING
     }
 
     kec_xor_padded_input_block_into_state()
     keccak_f()
+}
+
+// kec_load_partial_words reads the n_full_words complete u64's of the final block
+fn kec_load_partial_words<ram, keccak_state>(curr_address:Address, n_full_words:u5) {
+    for limb:u5 = 0; limb<n_full_words; limb = limb + 1 {
+        keccak_state[PIB + (limb as u7)] = read_64(curr_address + (8 * (limb as Address)))
+    }
+}
+
+// kec_zero_fill zeroes the words of the final block that follow the padded word
+fn kec_zero_fill<keccak_state>(n_full_words:u5) {
+    for limb:u5 = n_full_words + 1; limb<16; limb = limb + 1 {
+        keccak_state[PIB + (limb as u7)] = 0
+    }
 }
 
 // kec_xor_padded_input_block_into_state does exactly what its name suggests
