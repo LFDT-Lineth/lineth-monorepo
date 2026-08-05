@@ -22,7 +22,7 @@
   },
   {
     "chainId": 31648428,
-    "chainName": "Linea Local L1 (Docker)",
+    "chainName": "Lineth Local L1 (Docker)",
     "rpcUrls": ["http://127.0.0.1:8445"],
     "blockExplorerUrls": [],
     "nativeCurrency": { "name": "Ether", "symbol": "ETH", "decimals": 18 }

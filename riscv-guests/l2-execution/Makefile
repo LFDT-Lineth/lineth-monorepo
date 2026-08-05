@@ -35,8 +35,9 @@ INPUT    ?= $(MAKEFILE_DIR)test/testdata/stateless_input.ssz
 
 # Flags forwarded to `zkc exec` by exec. Default -q (quiet: suppress the guest's per-instruction
 # printf). Override to pick the execution backend — e.g. "--quiet --gogen --fast" runs the guest via
-# zkc's generated-Go backend in fast mode, the runnability path used while the interpreter does not
-# implement tracing yet. "--quiet --check" runs the guest via the interpreter with tracing enabled.
+# zkc's generated-Go backend in fast mode, the runnability path CI uses to stay cheap. Omitting
+# --fast traces; "--check" adds constraint checking. Both are measured weekly by
+# arithmetization-weekly-zkc-metrics.yml.
 ZKC_EXEC_FLAGS ?=-q 
 
 # Parameters for execution-spec zkevm fixtures and selected temporary SSZ inputs.

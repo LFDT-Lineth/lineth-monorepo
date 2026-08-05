@@ -2,7 +2,7 @@ plugins {
   id 'net.consensys.zkevm.kotlin-library-conventions'
 }
 
-description="Linea state manager client"
+description="Lineth state manager client"
 
 dependencies {
   api project(':jvm-libs:linea:core:domain-models')

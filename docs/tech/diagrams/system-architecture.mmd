@@ -1,7 +1,7 @@
-%% Linea System Architecture
+%% Lineth System Architecture
 flowchart TB
     subgraph L1["ETHEREUM L1"]
-        LineaRollup["LineaRollup<br/>- Submit blobs<br/>- Finalize<br/>- Anchor msgs"]
+        LinethRollup["LinethRollup<br/>- Submit blobs<br/>- Finalize<br/>- Anchor msgs"]
         PlonkVerifier["PlonkVerifier<br/>- Verify ZK proofs"]
         TokenBridgeL1["TokenBridge (L1)<br/>- Bridge ERC20<br/>- L1 → L2 deposits<br/>- L2 → L1 withdraws"]
     end
@@ -25,7 +25,7 @@ flowchart TB
         Prover["Prover<br/>(Go)<br/>- Execution<br/>- Compression<br/>- Aggregation"]
     end
 
-    LineaRollup -->|"Submit/Finalize"| Coordinator
+    LinethRollup -->|"Submit/Finalize"| Coordinator
     PlonkVerifier -->|"Verify"| Prover
     TokenBridgeL1 -->|"Bridge"| L2MessageService
     

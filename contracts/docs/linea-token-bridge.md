@@ -1,8 +1,8 @@
-# Linea Token Bridge
+# Lineth Token Bridge
 
 ## Documentation
 
-Token Bridge is a canonical brige between Ethereum and Linea networks.
+Token Bridge is a canonical bridge between Ethereum and Lineth networks.
 
 ## Install
 

@@ -39,7 +39,7 @@ public class LineaL1L2BridgeSharedCliOptions implements LineaCliOptions {
 
   @CommandLine.Option(
       names = {L1L2_BRIDGE_TOPIC},
-      paramLabel = "<HEX_STRING>",
+      paramLabel = "<BYTES_32>",
       converter = BytesConverter.class,
       description = "The log topic of the L1 L2 bridge (default: ${DEFAULT-VALUE})")
   private Bytes32 l1l2BridgeTopic = Bytes32.ZERO;

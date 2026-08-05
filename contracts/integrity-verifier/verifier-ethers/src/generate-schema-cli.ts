@@ -14,7 +14,7 @@
  *   pnpx generate-schema-ethers Storage.sol schema.json
  *
  *   # Multiple files (recommended for inherited storage)
- *   pnpx generate-schema-ethers LineaRollupYieldExtension.sol YieldManager.sol -o schema.json
+ *   pnpx generate-schema-ethers LinethRollupYieldExtension.sol YieldManager.sol -o schema.json
  *
  *   # With verbose output
  *   pnpx generate-schema-ethers *.sol -o schema.json --verbose
@@ -45,7 +45,7 @@ function printUsage(): void {
   console.log("  generate-schema-ethers Storage.sol schema.json");
   console.log("");
   console.log("  # Multiple files (recommended for inherited storage)");
-  console.log("  generate-schema-ethers LineaRollupYieldExtension.sol YieldManager.sol -o schema.json");
+  console.log("  generate-schema-ethers LinethRollupYieldExtension.sol YieldManager.sol -o schema.json");
   console.log("");
   console.log("  # Process all .sol files in a directory");
   console.log("  generate-schema-ethers ./contracts/storage/ -o schema.json");

@@ -4,12 +4,12 @@ import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.ContractsManager
 import linea.EthApiClientManager
-import linea.LineaRollupDeploymentResult
-import linea.MakeFileDelegatedContractsManager.connectToLineaRollupContract
-import linea.MakeFileDelegatedContractsManager.lineaRollupContractErrors
+import linea.LinethRollupDeploymentResult
+import linea.MakeFileDelegatedContractsManager.connectToLinethRollupContract
+import linea.MakeFileDelegatedContractsManager.linethRollupContractErrors
 import linea.contract.events.DataFinalizedV3
 import linea.contract.events.DataSubmittedV3
-import linea.contract.l1.LineaRollupContractVersion
+import linea.contract.l1.LinethRollupContractVersion
 import linea.domain.Aggregation
 import linea.domain.BlockParameter
 import linea.ethapi.EthLogsSearcherImpl
@@ -32,11 +32,11 @@ import kotlin.time.toJavaDuration
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class LineaSubmissionEventsClientIntTest {
   private val testDataDir = "testdata/coordinator/prover/v3/submissionAndFinalization/"
-  private lateinit var rollupDeploymentResult: LineaRollupDeploymentResult
+  private lateinit var rollupDeploymentResult: LinethRollupDeploymentResult
 
   // 1-block-per-blob test data has 2 aggregations: 1..10, 11..20 with 1 more than the max blob submission
   private lateinit var aggregationsAndBlobs: List<AggregationAndBlobs>
-  private lateinit var submissionEventsFetcher: LineaRollupSubmissionEventsClient
+  private lateinit var submissionEventsFetcher: LinethRollupSubmissionEventsClient
 
   private fun setupTest(vertx: Vertx) {
     configureLoggers(
@@ -49,7 +49,7 @@ class LineaSubmissionEventsClientIntTest {
     )
 
     val rollupDeploymentFuture = ContractsManager.get()
-      .deployLineaRollup(numberOfOperators = 2, contractVersion = LineaRollupContractVersion.V6)
+      .deployLinethRollup(numberOfOperators = 2, contractVersion = LinethRollupContractVersion.V6)
     // load files from FS while smc deploy
     aggregationsAndBlobs = loadBlobsAndAggregationsSortedAndGrouped(
       blobsResponsesDir = "$testDataDir/compression/responses",
@@ -66,10 +66,10 @@ class LineaSubmissionEventsClientIntTest {
 
     submitBlobsAndAggregationsAndWaitExecution(
       contractClientForBlobSubmission = rollupDeploymentResult.rollupOperatorClient,
-      contractClientForAggregationSubmission = connectToLineaRollupContract(
+      contractClientForAggregationSubmission = connectToLinethRollupContract(
         contractAddress = rollupDeploymentResult.contractAddress,
         transactionManager = rollupDeploymentResult.rollupOperators[1].txManager,
-        smartContractErrors = lineaRollupContractErrors,
+        smartContractErrors = linethRollupContractErrors,
       ),
       aggregationsAndBlobs = aggregationsAndBlobs,
       blobChunksMaxSize = 9,
@@ -78,7 +78,7 @@ class LineaSubmissionEventsClientIntTest {
     )
   }
 
-  private fun createSubmissionEventsClient(vertx: Vertx, contractAddress: String): LineaRollupSubmissionEventsClient {
+  private fun createSubmissionEventsClient(vertx: Vertx, contractAddress: String): LinethRollupSubmissionEventsClient {
     val log = LogManager.getLogger("test.clients.l1.events-fetcher")
     val eventsFetcherEthApiClient = EthApiClientManager.buildL1Client(
       log = log,

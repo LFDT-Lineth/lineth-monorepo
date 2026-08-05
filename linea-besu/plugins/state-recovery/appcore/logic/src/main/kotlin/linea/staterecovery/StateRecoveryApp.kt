@@ -4,7 +4,7 @@ import io.vertx.core.Vertx
 import linea.EthLogsSearcher
 import linea.LongRunningService
 import linea.clients.StateManagerClientV1
-import linea.contract.l1.LineaRollupSmartContractClientReadOnly
+import linea.contract.l1.LinethRollupSmartContractClientReadOnly
 import linea.domain.BlockParameter
 import linea.domain.toBlockParameter
 import net.consensys.linea.async.AsyncRetryer
@@ -19,7 +19,7 @@ import kotlin.time.Duration.Companion.seconds
 class StateRecoveryApp(
   private val vertx: Vertx,
   // Driving Ports
-  private val lineaContractClient: LineaRollupSmartContractClientReadOnly,
+  private val lineaContractClient: LinethRollupSmartContractClientReadOnly,
   private val ethLogsSearcher: EthLogsSearcher,
   // Driven Ports
   private val blobFetcher: BlobFetcher,

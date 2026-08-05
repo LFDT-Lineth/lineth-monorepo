@@ -9,7 +9,7 @@ Each section below links to a dedicated Markdown document detailing that categor
 ## 📑 Workflows
 
 ### 1. 🔐 [Role Management](./administration/roleManagement.md)
-Granting or revoking operational roles on core contracts like LineaRollup, L2MessageService, and TokenBridge.
+Granting or revoking operational roles on core contracts like LinethRollup, L2MessageService, and TokenBridge.
 
 ### 2. ⏸️ [Pausing Features](./administration/pausing.md)
 How to pause contract functionality using well-defined pause types.
