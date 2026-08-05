@@ -40,7 +40,7 @@ ARG VCS_REF
 ARG VERSION
 LABEL org.label-schema.build-date=$BUILD_DATE \
 	org.label-schema.name="coordinator" \
-	org.label-schema.description="Coordinator for Linea" \
+	org.label-schema.description="Coordinator for Lineth" \
 	org.label-schema.url="https://consensys.io/" \
 	org.label-schema.vcs-ref=$VCS_REF \
 	org.label-schema.vcs-url="https://github.com/LFDT-Lineth/lineth-monorepo" \

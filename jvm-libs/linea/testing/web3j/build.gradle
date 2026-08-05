@@ -2,7 +2,7 @@ plugins {
   id 'net.consensys.zkevm.kotlin-library-conventions'
 }
 
-description = "Linea test utilities for Web3j"
+description = "Lineth test utilities for Web3j"
 
 dependencies {
   implementation "org.web3j:core:${libs.versions.web3j.get()}"

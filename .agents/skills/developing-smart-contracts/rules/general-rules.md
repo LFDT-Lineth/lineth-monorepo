@@ -4,7 +4,7 @@
 
 ## Inheritance & Customization
 
-When extending Linea contracts:
+When extending Lineth contracts:
 
 - Use `virtual`/`override` keywords
 - Override `CONTRACT_VERSION()` for custom versions

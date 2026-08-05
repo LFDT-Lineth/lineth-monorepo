@@ -3,7 +3,7 @@ plugins {
   id 'java-test-fixtures'
 }
 
-description="Linea Tracing utilities"
+description="Lineth Tracing utilities"
 
 dependencies {
   implementation "io.consensys.tuweni:tuweni-units:${libs.versions.tuweni.get()}"

@@ -3157,7 +3157,7 @@
         "section": true,
         "required": true,
         "default": null,
-        "description": "Linea protocol contract addresses and genesis settings.",
+        "description": "Lineth protocol contract addresses and genesis settings.",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -3167,7 +3167,7 @@
         "section": true,
         "required": true,
         "default": null,
-        "description": "Linea genesis state root and shnarf.",
+        "description": "Lineth genesis state root and shnarf.",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -3177,7 +3177,7 @@
         "section": false,
         "required": true,
         "default": null,
-        "description": "Genesis shnarf (starting shnarf) of the Linea chain (hex).",
+        "description": "Genesis shnarf (starting shnarf) of the Lineth chain (hex).",
         "example": "0xc286ff42414401ccdc23ea8e738775378e8f6c6f7b2966eb2747798d45571b79",
         "deprecated": false,
         "replacement": null
@@ -3187,7 +3187,7 @@
         "section": false,
         "required": true,
         "default": null,
-        "description": "Genesis state root hash of the Linea chain (hex).",
+        "description": "Genesis state root hash of the Lineth chain (hex).",
         "example": "0x01d9afcd495c870f3ae9d8362cd0257a7de2057055058183596719285cae6101",
         "deprecated": false,
         "replacement": null
@@ -3217,7 +3217,7 @@
         "section": false,
         "required": true,
         "default": null,
-        "description": "Address of the Linea rollup contract on L1.",
+        "description": "Address of the Lineth rollup contract on L1.",
         "example": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
         "deprecated": false,
         "replacement": null
@@ -3247,7 +3247,7 @@
         "section": false,
         "required": true,
         "default": null,
-        "description": "Address of the Linea contract on L2.",
+        "description": "Address of the Lineth contract on L2.",
         "example": "0xe537D669CA013d86EBeF1D64e40fC74CADC91987",
         "deprecated": false,
         "replacement": null
@@ -4580,14 +4580,14 @@
     }
   },
   "smart-contract-errors": {
-    "description": "Mapping of Linea smart-contract revert error codes to messages.",
+    "description": "Mapping of Lineth smart-contract revert error codes to messages.",
     "keys": {
       "smart-contract-errors": {
         "type": "Map<String, String>",
         "section": false,
         "required": true,
         "default": null,
-        "description": "Mapping of Linea smart-contract revert error codes to human-readable messages, used to decode on-chain rejection reasons.",
+        "description": "Mapping of Lineth smart-contract revert error codes to human-readable messages, used to decode on-chain rejection reasons.",
         "example": null,
         "deprecated": false,
         "replacement": null

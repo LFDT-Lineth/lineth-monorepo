@@ -4,7 +4,7 @@
 
 ## Overview
 
-The coordinator is the central backend service that drives the Linea proving and submission pipeline. It is a Kotlin/Vert.x application that:
+The coordinator is the central backend service that drives the Lineth proving and submission pipeline. It is a Kotlin/Vert.x application that:
 
 1. Pulls blocks from the sequencer
 2. Decides batch boundaries (conflation)

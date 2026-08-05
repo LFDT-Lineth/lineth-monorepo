@@ -1,5 +1,5 @@
 /**
- * Linea prover config MDX renderer.
+ * Lineth prover config MDX renderer.
  * Extraction is done by parse-go.js; this file turns the extract into MDX partials + wrapper.
  */
 
@@ -113,9 +113,9 @@ function renderPartials(manifest, tracesNote) {
 function renderStarterWrapper(partials) {
   const lines = [];
   lines.push("---");
-  lines.push("title: Linea prover configuration");
+  lines.push("title: Lineth prover configuration");
   lines.push("slug: /stack/reference/linea-prover-options");
-  lines.push("description: Auto-generated reference of Linea prover TOML configuration keys, grouped by section.");
+  lines.push("description: Auto-generated reference of Lineth prover TOML configuration keys, grouped by section.");
   lines.push("draft: false");
   lines.push("---");
   lines.push("");
@@ -132,7 +132,7 @@ function renderStarterWrapper(partials) {
   lines.push("");
 
   lines.push(
-    "This reference lists Linea prover TOML configuration keys, grouped by section. " +
+    "This reference lists Lineth prover TOML configuration keys, grouped by section. " +
       "Descriptions come from Go doc comments on the config structs; defaults come from " +
       "`config_default.go` (never from sample `config-*.toml` files).",
   );

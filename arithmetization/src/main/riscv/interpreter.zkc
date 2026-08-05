@@ -8,7 +8,7 @@ include "instruction_processing/s_type.zkc"
 include "instruction_processing/j_type.zkc"
 include "instruction_processing/u_type.zkc"
 
-fn interpreter<registers, ram, keccak_state>(instruction:u32, pc:Address, output_write_address:OutputAddress) -> (new_pc:Address, new_output_write_address:OutputAddress) {
+fn interpreter<registers, ram, keccak_state, poseidon2_state>(instruction:u32, pc:Address, output_write_address:OutputAddress) -> (new_pc:Address, new_output_write_address:OutputAddress) {
 
     var instruction_parameters:u25
     var instruction_type:Type

@@ -7,7 +7,7 @@ java {
     languageVersion = JavaLanguageVersion.of(25)
   }
 }
-description = 'Web3J Java client for Linea L1 Rollup Smart Contract'
+description = 'Web3J Java client for Lineth L1 Rollup Smart Contract'
 ext.artifactId = 'l1-rollup-contract-client'
 
 dependencies {

@@ -1,6 +1,6 @@
 package zkcr5
 
-// DefaultINOrigin is the canonical _in_start RAM address for all Linea guest
+// DefaultINOrigin is the canonical _in_start RAM address for all Lineth guest
 // programs: the address where the input data is mapped before the VM starts
 // executing.
 //
