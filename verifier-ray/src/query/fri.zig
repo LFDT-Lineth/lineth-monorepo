@@ -155,7 +155,7 @@ pub fn resolveRunningLayers(
         const want_siblings = params.log_codeword_size - j;
         if (branch.siblings.len != want_siblings) return Error.InvalidRunningLayerShape;
 
-        const recovered = try branch.recoverRoot(position >> j);
+        const recovered = try branch.recoverRoot(position >> @as(u6, @intCast(j)));
         if (!poseidon2.eql(recovered, round_roots[j - 1])) return Error.MerkleProofInvalid;
 
         rounds[j] = .{
