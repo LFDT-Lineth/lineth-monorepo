@@ -695,7 +695,7 @@ func TestCompile_MultiFragmentBothSides(t *testing.T) {
 
 	modT1 := sys.NewSizedModule(sys.Context.Childf("modT1"), 4, wiop.PaddingDirectionNone)
 	modT2 := sys.NewSizedModule(sys.Context.Childf("modT2"), 2, wiop.PaddingDirectionNone)
-	modS1 := sys.NewSizedModule(sys.Context.Childf("modS1"), 3, wiop.PaddingDirectionNone)
+	modS1 := sys.NewSizedModule(sys.Context.Childf("modS1"), 4, wiop.PaddingDirectionNone)
 	modS2 := sys.NewSizedModule(sys.Context.Childf("modS2"), 2, wiop.PaddingDirectionNone)
 
 	colT1 := modT1.NewColumn(sys.Context.Childf("T1"), wiop.VisibilityOracle, r0)
@@ -727,8 +727,8 @@ func TestCompile_MultiFragmentBothSides(t *testing.T) {
 	rt.AssignColumn(colT1, makeVec(10, 20, 30, 40))
 	rt.AssignColumn(colT2, makeVec(100, 200))
 	// Each S fragment draws from both B fragments; every value is in the union.
-	// Honest M: modT1 → [1,0,1,1], modT2 → [1,1].
-	rt.AssignColumn(colS1, makeVec(10, 30, 100))
+	// Honest M: modT1 → [1,1,1,1], modT2 → [1,1].
+	rt.AssignColumn(colS1, makeVec(10, 30, 100, 20))
 	rt.AssignColumn(colS2, makeVec(200, 40))
 
 	driveProtocol(rt)
@@ -867,7 +867,7 @@ func TestCompile_MultiColumn_FilterOnIncluding(t *testing.T) {
 	sys := wiop.NewSystemf("ll-multi-filterT")
 	r0 := sys.NewRound()
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
-	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 3, wiop.PaddingDirectionNone)
+	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 4, wiop.PaddingDirectionNone)
 
 	tx := modT.NewColumn(sys.Context.Childf("Tx"), wiop.VisibilityOracle, r0)
 	ty := modT.NewColumn(sys.Context.Childf("Ty"), wiop.VisibilityOracle, r0)
@@ -885,12 +885,12 @@ func TestCompile_MultiColumn_FilterOnIncluding(t *testing.T) {
 
 	rt := wiop.NewRuntime(sys)
 	// Table rows: (1,10) selected, (99,99) masked, (2,20) selected, (3,30) selected.
-	// S references only the three selected rows.
+	// S references only the three selected rows, with (1,10) drawn twice.
 	rt.AssignColumn(tx, makeVec(1, 99, 2, 3))
 	rt.AssignColumn(ty, makeVec(10, 99, 20, 30))
 	rt.AssignColumn(filterT, makeVec(1, 0, 1, 1))
-	rt.AssignColumn(sx, makeVec(1, 2, 3))
-	rt.AssignColumn(sy, makeVec(10, 20, 30))
+	rt.AssignColumn(sx, makeVec(1, 2, 3, 1))
+	rt.AssignColumn(sy, makeVec(10, 20, 30, 10))
 
 	driveProtocol(rt)
 	require.NoError(t, checkAllVerifierActions(rt))
@@ -945,7 +945,7 @@ func TestCompile_MultiColumn_FilterOnIncluding_InvalidColumnsFails(t *testing.T)
 	sys := wiop.NewSystemf("ll-multi-filterT-invalid")
 	r0 := sys.NewRound()
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
-	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 3, wiop.PaddingDirectionNone)
+	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 4, wiop.PaddingDirectionNone)
 
 	tx := modT.NewColumn(sys.Context.Childf("Tx"), wiop.VisibilityOracle, r0)
 	ty := modT.NewColumn(sys.Context.Childf("Ty"), wiop.VisibilityOracle, r0)
@@ -967,10 +967,10 @@ func TestCompile_MultiColumn_FilterOnIncluding_InvalidColumnsFails(t *testing.T)
 	rt.AssignColumn(tx, makeVec(1, 99, 2, 3))
 	rt.AssignColumn(ty, makeVec(10, 99, 20, 30))
 	rt.AssignColumn(filterT, makeVec(1, 0, 1, 1))
-	// First two S tuples are valid; row 2 = (7, 70) is not in T (neither
+	// All S tuples but one are valid; row 2 = (7, 70) is not in T (neither
 	// selected nor masked) so no B-row hash can match it.
-	rt.AssignColumn(sx, makeVec(1, 2, 7))
-	rt.AssignColumn(sy, makeVec(10, 20, 70))
+	rt.AssignColumn(sx, makeVec(1, 2, 7, 3))
+	rt.AssignColumn(sy, makeVec(10, 20, 70, 30))
 
 	assert.Panics(t, func() { runRound(rt) },
 		"multi-column lookup with B-filter must reject an S tuple absent from T")
@@ -1117,8 +1117,8 @@ func TestCompile_ThreeFragmentB_SingleFragmentA(t *testing.T) {
 
 	modT1 := sys.NewSizedModule(sys.Context.Childf("modT1"), 4, wiop.PaddingDirectionNone)
 	modT2 := sys.NewSizedModule(sys.Context.Childf("modT2"), 2, wiop.PaddingDirectionNone)
-	modT3 := sys.NewSizedModule(sys.Context.Childf("modT3"), 3, wiop.PaddingDirectionNone)
-	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 6, wiop.PaddingDirectionNone)
+	modT3 := sys.NewSizedModule(sys.Context.Childf("modT3"), 4, wiop.PaddingDirectionNone)
+	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 8, wiop.PaddingDirectionNone)
 
 	colT1 := modT1.NewColumn(sys.Context.Childf("T1"), wiop.VisibilityOracle, r0)
 	colT2 := modT2.NewColumn(sys.Context.Childf("T2"), wiop.VisibilityOracle, r0)
@@ -1142,12 +1142,12 @@ func TestCompile_ThreeFragmentB_SingleFragmentA(t *testing.T) {
 	logderivativesum.Compile(sys)
 
 	rt := wiop.NewRuntime(sys)
-	// Union T = {10,20,30,40} ∪ {100,200} ∪ {1000,2000,3000}; all distinct.
+	// Union T = {10,20,30,40} ∪ {100,200} ∪ {1000,2000,3000,4000}; all distinct.
 	rt.AssignColumn(colT1, makeVec(10, 20, 30, 40))
 	rt.AssignColumn(colT2, makeVec(100, 200))
-	rt.AssignColumn(colT3, makeVec(1000, 2000, 3000))
+	rt.AssignColumn(colT3, makeVec(1000, 2000, 3000, 4000))
 	// S draws from all three fragments, with 10 twice and 3000 twice.
-	rt.AssignColumn(colS, makeVec(10, 10, 200, 3000, 3000, 30))
+	rt.AssignColumn(colS, makeVec(10, 10, 200, 3000, 3000, 30, 4000, 100))
 
 	driveProtocol(rt)
 	require.NoError(t, checkAllVerifierActions(rt))
@@ -1155,8 +1155,8 @@ func TestCompile_ThreeFragmentB_SingleFragmentA(t *testing.T) {
 	// Every entry is unique across the union, so the counts are unambiguous —
 	// no tie-break is involved here.
 	assert.Equal(t, []uint64{2, 0, 1, 0}, readM(t, rt, m1), "M for fragment 0")
-	assert.Equal(t, []uint64{0, 1}, readM(t, rt, m2), "M for fragment 1")
-	assert.Equal(t, []uint64{0, 0, 2}, readM(t, rt, m3), "M for fragment 2")
+	assert.Equal(t, []uint64{1, 1}, readM(t, rt, m2), "M for fragment 1")
+	assert.Equal(t, []uint64{0, 0, 2, 1}, readM(t, rt, m3), "M for fragment 2")
 }
 
 // TestCompile_AsymmetricFragmentCounts pairs a three-fragment B side with a
@@ -1169,9 +1169,9 @@ func TestCompile_AsymmetricFragmentCounts(t *testing.T) {
 	r0 := sys.NewRound()
 
 	modT1 := sys.NewSizedModule(sys.Context.Childf("modT1"), 2, wiop.PaddingDirectionNone)
-	modT2 := sys.NewSizedModule(sys.Context.Childf("modT2"), 3, wiop.PaddingDirectionNone)
+	modT2 := sys.NewSizedModule(sys.Context.Childf("modT2"), 4, wiop.PaddingDirectionNone)
 	modT3 := sys.NewSizedModule(sys.Context.Childf("modT3"), 2, wiop.PaddingDirectionNone)
-	modS1 := sys.NewSizedModule(sys.Context.Childf("modS1"), 3, wiop.PaddingDirectionNone)
+	modS1 := sys.NewSizedModule(sys.Context.Childf("modS1"), 4, wiop.PaddingDirectionNone)
 	modS2 := sys.NewSizedModule(sys.Context.Childf("modS2"), 2, wiop.PaddingDirectionNone)
 
 	colT1 := modT1.NewColumn(sys.Context.Childf("T1"), wiop.VisibilityOracle, r0)
@@ -1201,17 +1201,17 @@ func TestCompile_AsymmetricFragmentCounts(t *testing.T) {
 
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(colT1, makeVec(10, 20))
-	rt.AssignColumn(colT2, makeVec(30, 40, 50))
+	rt.AssignColumn(colT2, makeVec(30, 40, 50, 80))
 	rt.AssignColumn(colT3, makeVec(60, 70))
 	// Both A fragments draw from several B fragments each.
-	rt.AssignColumn(colS1, makeVec(10, 40, 70))
+	rt.AssignColumn(colS1, makeVec(10, 40, 70, 50))
 	rt.AssignColumn(colS2, makeVec(30, 10))
 
 	driveProtocol(rt)
 	require.NoError(t, checkAllVerifierActions(rt))
 
 	assert.Equal(t, []uint64{2, 0}, readM(t, rt, m1), "M for fragment 0")
-	assert.Equal(t, []uint64{1, 1, 0}, readM(t, rt, m2), "M for fragment 1")
+	assert.Equal(t, []uint64{1, 1, 1, 0}, readM(t, rt, m2), "M for fragment 1")
 	assert.Equal(t, []uint64{0, 1}, readM(t, rt, m3), "M for fragment 2")
 }
 
@@ -1225,7 +1225,7 @@ func TestCompile_SingleFragmentB_ThreeFragmentA(t *testing.T) {
 
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
 	modS1 := sys.NewSizedModule(sys.Context.Childf("modS1"), 2, wiop.PaddingDirectionNone)
-	modS2 := sys.NewSizedModule(sys.Context.Childf("modS2"), 3, wiop.PaddingDirectionNone)
+	modS2 := sys.NewSizedModule(sys.Context.Childf("modS2"), 4, wiop.PaddingDirectionNone)
 	modS3 := sys.NewSizedModule(sys.Context.Childf("modS3"), 1, wiop.PaddingDirectionNone)
 
 	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
@@ -1251,14 +1251,15 @@ func TestCompile_SingleFragmentB_ThreeFragmentA(t *testing.T) {
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(colT, makeVec(10, 20, 30, 40))
 	rt.AssignColumn(colS1, makeVec(10, 20))
-	rt.AssignColumn(colS2, makeVec(30, 10, 30))
+	rt.AssignColumn(colS2, makeVec(30, 10, 30, 40))
 	rt.AssignColumn(colS3, makeVec(10))
 
 	driveProtocol(rt)
 	require.NoError(t, checkAllVerifierActions(rt))
 
-	// 10 appears three times across the three A fragments, 20 once, 30 twice.
-	assert.Equal(t, []uint64{3, 1, 2, 0}, readM(t, rt, mCol))
+	// 10 appears three times across the three A fragments, 20 once, 30 twice,
+	// 40 once.
+	assert.Equal(t, []uint64{3, 1, 2, 1}, readM(t, rt, mCol))
 }
 
 // ---- Repeated entries in the lookup table ----
@@ -1437,7 +1438,7 @@ func TestCompile_DuplicateTEntries_MultiColumn(t *testing.T) {
 	r0 := sys.NewRound()
 
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 4, wiop.PaddingDirectionNone)
-	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 3, wiop.PaddingDirectionNone)
+	modS := sys.NewSizedModule(sys.Context.Childf("modS"), 4, wiop.PaddingDirectionNone)
 
 	tx := modT.NewColumn(sys.Context.Childf("Tx"), wiop.VisibilityOracle, r0)
 	ty := modT.NewColumn(sys.Context.Childf("Ty"), wiop.VisibilityOracle, r0)
@@ -1459,14 +1460,14 @@ func TestCompile_DuplicateTEntries_MultiColumn(t *testing.T) {
 	// comparison would not see the duplicate; only the collapsed tuple does.
 	rt.AssignColumn(tx, makeVec(1, 2, 1, 3))
 	rt.AssignColumn(ty, makeVec(10, 20, 10, 30))
-	// S tuples: (1,10), (1,10), (3,30).
-	rt.AssignColumn(sx, makeVec(1, 1, 3))
-	rt.AssignColumn(sy, makeVec(10, 10, 30))
+	// S tuples: (1,10), (1,10), (3,30), (2,20).
+	rt.AssignColumn(sx, makeVec(1, 1, 3, 2))
+	rt.AssignColumn(sy, makeVec(10, 10, 30, 20))
 
 	driveProtocol(rt)
 	require.NoError(t, checkAllVerifierActions(rt))
 
-	assert.Equal(t, []uint64{0, 0, 2, 1}, readM(t, rt, mCol))
+	assert.Equal(t, []uint64{0, 1, 2, 1}, readM(t, rt, mCol))
 }
 
 // TestCompile_DuplicateTEntries_FilteredCopy is the discriminating case for the

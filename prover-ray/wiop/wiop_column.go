@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 	"github.com/sirupsen/logrus"
 )
 
