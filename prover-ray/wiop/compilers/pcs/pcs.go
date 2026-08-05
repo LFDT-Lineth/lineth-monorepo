@@ -213,7 +213,7 @@ func Compile(sys *wiop.System) {
 	// before the opening squeezes alpha_DEEP.
 	openingRound := sys.NewRound()
 	openingRound.RegisterAction(&openingProverAction{c: c})
-	openingRound.RegisterVerifierAction(&openingVerifierAction{c: c})
+	openingRound.RegisterVerifierAction(&OpeningVerifierAction{c: c})
 }
 
 // committedBatches returns the canonical batch ordering: every interactive round
@@ -277,10 +277,10 @@ func (a *openingProverAction) Run(rt *wiop.Runtime) {
 	rt.PCSOpeningProof = &proof
 }
 
-// openingVerifierAction replays the opening transcript and checks the proof.
-type openingVerifierAction struct{ c *compiled }
+// OpeningVerifierAction replays the opening transcript and checks the proof.
+type OpeningVerifierAction struct{ c *compiled }
 
-func (a *openingVerifierAction) Check(rt *wiop.Runtime) error {
+func (a *OpeningVerifierAction) Check(rt *wiop.Runtime) error {
 	return a.c.verify(rt, *rt.PCSOpeningProof)
 }
 

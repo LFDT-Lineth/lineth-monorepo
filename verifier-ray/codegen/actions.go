@@ -9,6 +9,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 )
 
 // UnhandledVerifierActionError reports a registered wiop verifier action that
@@ -30,13 +31,6 @@ func (e *UnhandledVerifierActionError) Error() string {
 		e.Round, e.Type)
 }
 
-// handledOpeningActionTypeName is the (unexported, so unassertable) prover-ray
-// PCS opening verifier action. It performs no boundary check the Zig side must
-// re-emit — the whole PCS opening is reconstructed by BuildPcsSystem from the
-// committed batches and LagrangeEvals — so it is handled implicitly. Matched by
-// type name because the concrete type is not exported for a direct assertion.
-const handledOpeningActionTypeName = "pcs.openingVerifierAction"
-
 // AssertAllVerifierActionsHandled fails CLOSED: it walks every verifier action
 // registered on `sys` and returns an UnhandledVerifierActionError for any action
 // whose enforced check the verifier-ray codegen does not translate into a Zig
@@ -57,7 +51,10 @@ const handledOpeningActionTypeName = "pcs.openingVerifierAction"
 //   - global.Verifier                          → vanishing (+ PCS claim link)
 //   - logderivativesum.VerifierAction          → logderivativesum boundary sum
 //   - lookuptologderivsum.ResultIsZeroVerifierAction → logderivativesum result-is-zero
-//   - the pcs opening action (by type name)    → BuildPcsSystem
+//   - pcs.OpeningVerifierAction                 → BuildPcsSystem (performs no
+//     boundary check the Zig side must re-emit — the whole PCS opening is
+//     reconstructed by BuildPcsSystem from the committed batches and
+//     LagrangeEvals — so it is handled implicitly)
 //
 // Any other action type — including new ones added to prover-ray later — trips
 // the error, forcing an explicit decision rather than a silent drop.
@@ -84,17 +81,17 @@ func verifierActionIsHandled(action wiop.VerifierAction) bool {
 		return true
 	case *lookuptologderivsum.ResultIsZeroVerifierAction:
 		return true
+	case *pcs.OpeningVerifierAction:
+		return true
 	}
-	// The PCS opening action's concrete type is unexported, so it cannot be named
-	// in a type switch; match it by its fully-qualified type name instead.
-	return actionTypeName(action) == handledOpeningActionTypeName
+	return false
 }
 
 // actionTypeName returns a "package.Type" name for an action, dereferencing a
-// pointer so it reads "pcs.openingVerifierAction" rather than "*pcs...".
+// pointer so it reads "pcs.OpeningVerifierAction" rather than "*pcs...".
 func actionTypeName(action wiop.VerifierAction) string {
 	t := reflect.TypeOf(action)
-	for t != nil && t.Kind() == reflect.Ptr {
+	for t != nil && t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 	if t == nil {

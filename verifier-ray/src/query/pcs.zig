@@ -1,4 +1,3 @@
-const std = @import("std");
 const field = @import("../field/koalabear.zig");
 const ext = @import("../field/koalabear_ext.zig");
 const poseidon2 = @import("../crypto/poseidon2.zig");
@@ -206,7 +205,9 @@ pub fn InputRootRouting(comptime system: System) type {
 
         distinct_count: usize = 0,
         roots: [batch_cap]poseidon2.Digest = undefined,
-        index_by_batch: [batch_cap]usize = [_]usize{std.math.maxInt(usize)} ** batch_cap,
+        // Every entry is overwritten by routeInputRoots before any read, so this
+        // default is unused filler, not a sentinel that's ever checked.
+        index_by_batch: [batch_cap]usize = [_]usize{0} ** batch_cap,
 
         pub fn distinctRoots(self: *const Self) []const poseidon2.Digest {
             return self.roots[0..self.distinct_count];
@@ -248,8 +249,8 @@ pub fn reconstruct(comptime system: System, module_sizes: []const usize) Error!R
             .dynamic => |dyn| blk: {
                 if (dyn.index >= module_sizes.len) return Error.MissingDynamicModuleSize;
                 const n = module_sizes[dyn.index];
-                if (n == 0 or (n & (n - 1)) != 0) return Error.NonPowerOfTwoModuleSize;
-                const sz: u8 = @intCast(std.math.log2_int(usize, n));
+                if (!field.isPowerOfTwo(n)) return Error.NonPowerOfTwoModuleSize;
+                const sz: u8 = @intCast(field.log2PowerOfTwo(n));
                 if (sz < dyn.min_size_log2) return Error.DynamicModuleSizeBelowMinimum;
                 break :blk sz;
             },
@@ -332,7 +333,7 @@ pub fn routeInputRoots(
 
 fn findRootIndex(roots: []const poseidon2.Digest, want: poseidon2.Digest) ?usize {
     for (roots, 0..) |root, i| {
-        if (std.meta.eql(root, want)) return i;
+        if (poseidon2.eql(root, want)) return i;
     }
     return null;
 }
@@ -393,7 +394,7 @@ pub fn deriveChallenges(
 
     transcript.updateExt(fri_proof.final_poly);
 
-    const codeword_size = @as(usize, 1) << @as(std.math.Log2Int(usize), @intCast(params.log_codeword_size));
+    const codeword_size = @as(usize, 1) << @intCast(params.log_codeword_size);
     transcript.randomManyIntegersRuntime(challenges.query_positions[0..params.num_queries], codeword_size);
     return challenges;
 }
@@ -460,7 +461,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
             try fri.resolveRunningLayers(params, input.proof.fri_proof.round_roots, running_query, query_position, rounds_buf[query_idx][0..num_rounds]);
         }
 
-        const final_point = fri.domainPointExt(params.log_codeword_size - num_rounds, query_position >> @as(std.math.Log2Int(usize), @intCast(num_rounds)));
+        const final_point = fri.domainPointExt(params.log_codeword_size - num_rounds, query_position >> @intCast(num_rounds));
         final_buf[query_idx] = canonical.evaluateExtAtExt(input.proof.fri_proof.final_poly, final_point);
 
         // Walk entries grouped by bundle (contiguous same-size runs in canonical
@@ -477,7 +478,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
 
             const round = recon.top_size - size_log2;
             const domain_log_size = params.log_codeword_size - round;
-            const level_size = @as(usize, 1) << @as(std.math.Log2Int(usize), @intCast(domain_log_size));
+            const level_size = @as(usize, 1) << @intCast(domain_log_size);
 
             try bindInputTreeOpenings(system, recon, routing, e0, e1, opening, level_size);
 
@@ -488,7 +489,7 @@ pub fn verify(comptime system: System, input: VerifyInput) Error!void {
             else
                 input.deep_alpha;
 
-            const level_pos = query_position >> @as(std.math.Log2Int(usize), @intCast(round));
+            const level_pos = query_position >> @intCast(round);
             const seed = seedPair(rounds_buf[query_idx][0..num_rounds], round, num_rounds);
 
             const self_val = try reconstructQueryValueAt(
@@ -576,14 +577,14 @@ fn authenticateInputQuery(
 ) Error!void {
     if (opening.len != routing.distinct_count) return Error.InputTreeCountMismatch;
 
-    const codeword_size = @as(usize, 1) << @as(std.math.Log2Int(usize), @intCast(params.log_codeword_size));
+    const codeword_size = @as(usize, 1) << @intCast(params.log_codeword_size);
     for (opening, routing.distinctRoots()) |branch, root| {
         const num_levels = branch.leaves.len;
         // num_levels is proof-controlled: bounding it before the shift keeps
         // an oversized value from overflow-trapping the cast, and makes
         // num_leaves <= codeword_size follow.
         if (num_levels == 0 or num_levels > params.log_codeword_size) return Error.InputTreeShapeMismatch;
-        const num_leaves = @as(usize, 1) << @as(std.math.Log2Int(usize), @intCast(num_levels));
+        const num_leaves = @as(usize, 1) << @intCast(num_levels);
         if (codeword_size % num_leaves != 0) return Error.InputTreeShapeMismatch;
         const recovered = try branch.recoverRoot(query_position / (codeword_size / num_leaves));
         if (!poseidon2.eql(recovered, root)) return Error.MerkleProofInvalid;
@@ -689,7 +690,7 @@ fn reconstructQueryValueAt(
 /// but the exponent must be reduced with the runtime N, which is exactly why the
 /// raw offset (not a size-frozen normalization) is stored.
 fn shiftedPoint(size_log2: u8, offset: isize, zeta: ext.Ext) ext.Ext {
-    const order = @as(usize, 1) << @as(std.math.Log2Int(usize), @intCast(size_log2));
+    const order = @as(usize, 1) << @intCast(size_log2);
     const n: isize = @intCast(order);
     const shift: usize = @intCast(@mod(offset, n)); // @mod is always in [0, n)
     const base = field.rootOfUnityBy(order) catch unreachable;
@@ -705,7 +706,7 @@ fn shiftedPoint(size_log2: u8, offset: isize, zeta: ext.Ext) ext.Ext {
 /// exponentiation uses `pow`, not `powComptime`.
 fn pointInDomain(point: ext.Ext, log_size: u8) bool {
     if (!point.isBase()) return false;
-    const order: u64 = @as(u64, 1) << @as(std.math.Log2Int(u64), @intCast(log_size));
+    const order: u64 = @as(u64, 1) << @intCast(log_size);
     const powered = point.B0.a0.pow(order);
     return powered.eql(field.Element.one());
 }

@@ -49,7 +49,7 @@ func WritePcsSystemZigWithOptions(w io.Writer, index int, system PcsSystem, opts
 	data := newPcsTemplateData(index, system, opts)
 	tmpl, err := template.New("pcs").Funcs(template.FuncMap{
 		"octuplet": pcsOctupletLiteral,
-		"shifts":   pcsIntArrayLiteral,
+		"shifts":   intArray,
 	}).Parse(pcsZigTemplate)
 	if err != nil {
 		return err
@@ -124,16 +124,6 @@ pub const {{.ConstName}} = pcs.System{
     .zeta_coin_index = {{.System.ZetaCoinIndex}},
 };
 `
-
-// pcsIntArrayLiteral renders an int slice as a Zig array body `{ a, b, c }`
-// for one opened column's shift schedule.
-func pcsIntArrayLiteral(xs []int) string {
-	parts := make([]string, len(xs))
-	for i, x := range xs {
-		parts[i] = fmt.Sprintf("%d", x)
-	}
-	return "{ " + strings.Join(parts, ", ") + " }"
-}
 
 // pcsOctupletLiteral emits a precomputed-batch root as an `[8]field.Element`
 // literal `.{ .{ .value = v0 }, ... }`.
