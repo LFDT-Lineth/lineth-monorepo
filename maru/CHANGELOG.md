@@ -1,4 +1,4 @@
-## [unreleased]
+## [1.3.1-rc1] - 2026-08-05
 
 ### 🐛 Bug Fixes
 
