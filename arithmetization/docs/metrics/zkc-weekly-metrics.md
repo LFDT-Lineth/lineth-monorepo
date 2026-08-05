@@ -24,6 +24,7 @@ comes from the fixed CI tier.
 <!-- table:runs -->
 | week | started (UTC) | trigger | runner | arithmetization | zkc | run |
 |---|---|---|---|---|---|---|
+| 2026-W32 | 2026-08-05 09:32 | manual (@OlivierBBB) | `xxl` 384 cores, 1488 GiB | `33b459e2e` (3698-weekly-metrics-runner-fixes, requested) | main@`9d844de0f` | [#7](https://github.com/LFDT-Lineth/lineth-monorepo/actions/runs/30993600507) |
 | 2026-W32 | 2026-08-03 14:55 | local (first harvest) | laptop arm64 12 cores, 36 GiB | `a2f9d079d` (3693-feat-weekly-zkc-metrics) | main@`49737ebb2275` | – |
 
 ## Cost per task — outcome, wall clock, peak RSS
@@ -31,6 +32,7 @@ comes from the fixed CI tier.
 <!-- table:cost -->
 | week | compile | guest build | trace | trace + check | trace cells |
 |---|---|---|---|---|---|
+| 2026-W32 | ok 1s / 111.08 MiB | ok 20s / 277.99 MiB | ok 6m21s / 42.10 GiB | skipped | 8 828 822 732 |
 | 2026-W32 | ok 2s / 118.73 MiB | ok 1m10s | ok 3m42s / 7.70 GiB | **TIMEOUT** 1h00m / 12.14 GiB | 7 908 271 799 |
 
 ## Constraint system (`zkc compile --stats`, `Total | function` row)
@@ -38,6 +40,7 @@ comes from the fixed CI tier.
 <!-- table:stats -->
 | week | max degree | constraints | d1 | d2 | d3 | d4 | d5 | d6 | d7 | d8+ | lookups | complexity | static cells |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 2026-W32 | 8 | 13 061 | 17 | 6 974 | 4 620 | 1 064 | 277 | 106 | 2 | 1 | 6 840 | 97 420 | 722 684 |
 | 2026-W32 | 8 | 12 627 | 10 | 7 422 | 3 954 | 875 | 257 | 106 | 2 | 1 | 6 387 | 89 687 | 721 628 |
 
 ## Most expensive modules by constraint complexity (Σ d²)
@@ -45,6 +48,7 @@ comes from the fixed CI tier.
 <!-- table:modules -->
 | week | 1 | 2 | 3 | 4 | 5 |
 |---|---|---|---|---|---|
+| 2026-W32 | `kec_absorbing_phase` 19 987 | `main` 9 181 | `kec_theta` 9 032 | `rem64_ss` 6 034 | `kec_chi` 4 431 |
 | 2026-W32 | `absorbing_phase` 24 695 | `theta` 8 991 | `main` 8 674 | `rem64_ss` 6 034 | `process_I_type_instruction` 4 447 |
 
 ## Most expensive modules by trace cells
@@ -52,4 +56,5 @@ comes from the fixed CI tier.
 <!-- table:tracemodules -->
 | week | 1 | 2 | 3 | 4 | 5 |
 |---|---|---|---|---|---|
+| 2026-W32 | `main` 2 459 123 849 | `process_I_type_instruction` 1 318 463 432 | `interpreter` 1 027 928 880 | `process_R_type_instruction` 856 086 132 | `registers` 673 691 160 |
 | 2026-W32 | `main` 2 339 652 245 | `process_I_type_instruction` 1 429 103 720 | `interpreter` 1 037 273 688 | `process_R_type_instruction` 919 761 960 | `$bit_shl_u64` 512 115 600 |
