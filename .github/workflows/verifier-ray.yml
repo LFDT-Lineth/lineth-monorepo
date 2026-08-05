@@ -36,8 +36,7 @@ permissions:
 
 env:
   GO_VERSION: '1.25.7'
-  GO_CORSET_VERSION: 'v1.2.26'
-  GO_CORSET_REF_FOR_ZKC: 'v1.2.26'
+  ZKC_VERSION: 'v1.2.26'
   ZIG_VERSION: '0.16.0'
 
 concurrency:
@@ -70,11 +69,9 @@ jobs:
       - name: Install native tools
         run: sudo apt-get update && sudo apt-get install -y binutils-riscv64-unknown-elf xxd
 
-      - name: Install go-corset and zkc
+      - name: Install zkc
         run: |
-          go install github.com/consensys/go-corset/cmd/go-corset@${GO_CORSET_VERSION}
-          go install github.com/LFDT-Lineth/zkc/cmd/zkc@${GO_CORSET_REF_FOR_ZKC}
-          go-corset --version
+          go install github.com/LFDT-Lineth/zkc/cmd/zkc@${ZKC_VERSION}
           go version -m "$(which zkc)"
 
       - name: Verifier-ray format check
