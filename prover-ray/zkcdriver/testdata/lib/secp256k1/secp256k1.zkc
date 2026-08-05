@@ -12,6 +12,19 @@ const n:u256 = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd036414
 
 const b:u256 = 7
 
+// Base point (generator) G of the prime-order subgroup.
+const Gx:u256 = 0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798
+const Gy:u256 = 0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8
+
+// Square-root exponent: since p = 3 (mod 4), sqrt(a) = a^((p+1)/4) mod p.
+const p_plus_1_over_4:u256 = 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffbfffff0c
+
+// Returns the curve generator G = (Gx, Gy).
+fn generator_secp256k1() -> (x:u256, y:u256) {
+    x = Gx
+    y = Gy
+}
+
 // ----- assertion methods ------
 
 // fails if (x, y) is not a finite point on y^2 = x^3 + 7 over Fp,
@@ -66,6 +79,36 @@ fn projective_to_affine_secp256k1(X:u256, Y:u256, Z:u256) -> (x:u256, y:u256) {
         var z_inv:u256 = invmod_256(Z, p)
         x = mulmod_256(X, z_inv, p)
         y = mulmod_256(Y, z_inv, p)
+    }
+}
+
+// ------ square root / quadratic residue ------
+
+// Modular square root over Fp for secp256k1 (p = 3 mod 4).
+//
+// Returns (y, is_qr):
+//   is_qr = 1  => a is a quadratic residue and y*y = a mod p (y is a root)
+//   is_qr = 0  => a is a non-residue; y*y = -a mod p (a witness that a has no root)
+//
+// The candidate `y = a^((p+1)/4) mod p` is a hint (unconstrained), verified here:
+//   y^2 = a^((p+1)/2) = a * a^((p-1)/2) = a * legendre(a)
+// so y^2 = a when a is a QR, and y^2 = -a when a is a QNR (since -1 is a QNR).
+// Constraining BOTH branches makes the result deterministic: a QR cannot be
+// passed off as a QNR (no root of -a exists) and vice versa.
+// Note: a = 0 cannot occur for a = x^3 + 7, as secp256k1 has no 2-torsion.
+fn sqrt_secp256k1(a:u256) -> (y:u256, is_qr:u1) {
+    // hint: candidate root (or root of -a) via Fermat-style exponentiation
+    y = expmod_unconstrained_256(a, p_plus_1_over_4, p)
+    var y2:u256 = mulmod_256(y, y, p)
+    if y2 == a {
+        is_qr = 1
+    } else {
+        is_qr = 0
+        // soundness: a is a genuine non-residue iff -a is a residue; y must root it
+        var neg_a:u256 = submod_256(0, a, p)
+        if y2 != neg_a {
+            fail
+        }
     }
 }
 
