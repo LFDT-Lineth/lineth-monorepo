@@ -1,4 +1,3 @@
-const std = @import("std");
 const field = @import("../field/koalabear.zig");
 const ext = @import("../field/koalabear_ext.zig");
 const poseidon2 = @import("../crypto/poseidon2.zig");
