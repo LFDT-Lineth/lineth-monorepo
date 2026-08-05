@@ -5,7 +5,7 @@ buildscript {
 }
 
 plugins {
-  id 'net.consensys.zkevm.kotlin-library-minimal-conventions'
+  id 'lineth.kotlin-library-minimal-conventions'
 }
 
 // These libs are public, so we're commited on their artifactIds and `build.linea` group id, unlike the internal ones

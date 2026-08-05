@@ -1,5 +1,5 @@
 plugins {
-  id 'net.consensys.zkevm.kotlin-library-conventions'
+  id 'lineth.kotlin-library-conventions'
 }
 
 description = "Lineth test utilities for Web3j"
