@@ -7,7 +7,7 @@ import io.vertx.micrometer.backends.NoopBackendRegistry
 import io.vertx.sqlclient.SqlClient
 import linea.DisabledService
 import linea.LongRunningService
-import linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
+import linea.contract.l1.Web3JLinethRollupSmartContractClientReadOnly
 import linea.coordinator.api.Api
 import linea.coordinator.app.conflation.ConflationAppV1
 import linea.coordinator.app.conflationbacktesting.ConflationBacktestingService
@@ -176,12 +176,12 @@ class CoordinatorApp(
     ),
   ).ethChainId().get()
 
-  private val lineaRollupClientForFinalizationMonitor = run {
+  private val linethRollupClientForFinalizationMonitor = run {
     val web3j = createWeb3jHttpClient(
       rpcUrl = configs.l1FinalizationMonitor.l1Endpoint.toString(),
       log = LogManager.getLogger("clients.l1.eth.finalization-monitor"),
     )
-    Web3JLineaRollupSmartContractClientReadOnly(
+    Web3JLinethRollupSmartContractClientReadOnly(
       contractAddress = configs.protocol.l1.contractAddress,
       web3j = web3j,
       ethLogsSearcher = EthLogsSearcherImpl(
@@ -199,7 +199,7 @@ class CoordinatorApp(
 
   private val lastFinalizedBlock: ULong = L1BasedLastFinalizedBlockProvider(
     vertx,
-    lineaRollupSmartContractClient = lineaRollupClientForFinalizationMonitor,
+    linethRollupSmartContractClient = linethRollupClientForFinalizationMonitor,
     consistentNumberOfBlocksOnL1 = configs.conflation.consistentNumberOfBlocksOnL1ToWait,
   ).getLastFinalizedBlock().get()
 
@@ -220,7 +220,7 @@ class CoordinatorApp(
     configs = configs,
     vertx = vertx,
     httpJsonRpcClientFactory = httpJsonRpcClientFactory,
-    finalizedStateDataProvider = lineaRollupClientForFinalizationMonitor,
+    finalizedStateDataProvider = linethRollupClientForFinalizationMonitor,
     lastFinalizedBlock = lastFinalizedBlock,
     batchesRepository = batchesRepository,
     blobsRepository = blobsRepository,

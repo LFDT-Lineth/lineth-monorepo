@@ -3,6 +3,7 @@
 ### 🚀 Features
 
 - *(linea-besu)* Update to v26.7.0 (#3623)
+- *(linea-besu)* Update to 26.7.1 (#3699)
 
 ### ⚙️ Miscellaneous Tasks
 

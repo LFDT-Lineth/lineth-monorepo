@@ -175,7 +175,7 @@ fn permutationNative(comptime width: usize, state: *[width]field.Element) void {
     }
 }
 
-// Delegate the width-16 permutation to the Linea Poseidon2 accelerator opcode.
+// Delegate the width-16 permutation to the Lineth Poseidon2 accelerator opcode.
 //
 // `field.Element` is `extern struct { value: u32 }`, so `[16]Element` is exactly
 // 16 little-endian canonical 32-bit words — the same layout the accelerator

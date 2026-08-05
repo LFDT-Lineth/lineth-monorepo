@@ -1,7 +1,7 @@
 package linea.contract.l1
 
 import linea.domain.BlockParameter
-import linea.ftx.FakeLineaRollupSmartContractClientReadOnlyFinalizedStateProvider
+import linea.ftx.FakeLinethRollupSmartContractClientReadOnlyFinalizedStateProvider
 import linea.kotlin.encodeHex
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.ConcurrentHashMap
@@ -39,23 +39,23 @@ data class FinalizedBlock(
   }
 }
 
-class FakeLineaRollupSmartContractClient(
+class FakeLinethRollupSmartContractClient(
   val contractAddress: String = Random.nextBytes(20).encodeHex(),
   @get:Synchronized @set:Synchronized
-  var contractVersion: LineaRollupContractVersion = LineaRollupContractVersion.V6,
+  var contractVersion: LinethRollupContractVersion = LinethRollupContractVersion.V6,
   _finalizedBlocks: List<FinalizedBlock> = listOf(FinalizedBlock(0uL, Clock.System.now(), Random.nextBytes(32))),
   _messageRollingHashes: Map<ULong, ByteArray> = emptyMap(),
-  _l1FinalizedState: LineaRollupFinalizedState = LineaRollupFinalizedState(
+  _l1FinalizedState: LinethRollupFinalizedState = LinethRollupFinalizedState(
     blockNumber = 0UL,
     blockTimestamp = kotlin.time.Clock.System.now(),
     messageNumber = 0UL,
     forcedTransactionNumber = 0UL,
   ),
-  val finalizedStateProvider: FakeLineaRollupSmartContractClientReadOnlyFinalizedStateProvider =
-    FakeLineaRollupSmartContractClientReadOnlyFinalizedStateProvider(_l1FinalizedState),
+  val finalizedStateProvider: FakeLinethRollupSmartContractClientReadOnlyFinalizedStateProvider =
+    FakeLinethRollupSmartContractClientReadOnlyFinalizedStateProvider(_l1FinalizedState),
 ) :
-  LineaRollupSmartContractClientReadOnly,
-  LineaRollupSmartContractClientReadOnlyFinalizedStateProvider by finalizedStateProvider {
+  LinethRollupSmartContractClientReadOnly,
+  LinethRollupSmartContractClientReadOnlyFinalizedStateProvider by finalizedStateProvider {
 
   val messageRollingHashes: MutableMap<ULong, ByteArray> = ConcurrentHashMap(_messageRollingHashes)
   val finalizedBlocks: MutableMap<ULong, FinalizedBlock> = ConcurrentHashMap()
@@ -88,7 +88,7 @@ class FakeLineaRollupSmartContractClient(
 
   override fun getAddress(): String = contractAddress
 
-  override fun getVersion(blockParameter: BlockParameter): SafeFuture<LineaRollupContractVersion> {
+  override fun getVersion(blockParameter: BlockParameter): SafeFuture<LinethRollupContractVersion> {
     if (blockParameter != BlockParameter.Tag.LATEST) {
       return SafeFuture.failedFuture(
         IllegalArgumentException("Only LATEST is supported, blockParameter=$blockParameter{}"),

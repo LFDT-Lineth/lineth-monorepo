@@ -206,8 +206,8 @@ class GlobalBlobAwareConflationCalculator(
     val triggerName =
       if (numberOfBatches >= batchesLimit) {
         // we must trigger an alert when BATCHES_LIMIT is reached because blobs
-        // won't be used to max capacity and affects Linea profitability
-        // please do not change the name of this trigger, it is used in the log's based alert
+        // won't be used to max capacity and affects Lineth's profitability
+        // please do not change the name of this trigger, it is used in the logs-based alert
         "BATCHES_LIMIT"
       } else {
         trigger.name

@@ -17,6 +17,7 @@
 - *(coordinator)* GasPriceCapProviderV2 and DRY (#3624)
 - *(coordinator)* Support custom transaction signers (#3597)
 - *(linea-besu)* Update to v26.7.0 (#3623)
+- *(linea-besu)* Update to 26.7.1 (#3699)
 
 ### 🐛 Bug Fixes
 
@@ -115,3 +116,5 @@
 - *(coordinator)* Cleanup replaced apps in PR #3615 (#3622)
 - *(coordinator)* Remove dead code and apply small cleanups from review (#3627)
 - *(coordinator)* Riscv blob data skeleton (#3609)
+- *(coordinator)* Rename LineaRollup to LinethRollup in JVM components (#3421)
+- *(coordinator)* Rename Linea to Lineth in app and config (#3707)

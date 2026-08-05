@@ -196,8 +196,8 @@ interface LineaSmartContractClient : LineaSmartContractClientReadOnly {
   ): SafeFuture<String>
 }
 
-interface LineaRollupSmartContractClient :
-  LineaRollupSmartContractClientReadOnly,
+interface LinethRollupSmartContractClient :
+  LinethRollupSmartContractClientReadOnly,
   LineaSmartContractClient {
   /**
    *  Simulates the sending of a list of blobs to the smart contract, with EIP4844 transaction.

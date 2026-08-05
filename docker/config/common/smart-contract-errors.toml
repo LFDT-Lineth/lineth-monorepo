@@ -4,7 +4,7 @@
 ##
 
 [smart-contract-errors]
-# L1 Linea Rollup
+# L1 Lineth Rollup
 # Generated from `pnpm exec ts-node contracts/scripts/operational/getSmartContractErrorsFromABI.ts contracts/local-deployments-artifacts/deployed-artifacts/LinethRollupV6-Deployed-2024-12-03.json`
 "0f06cd15" = "DataAlreadySubmitted"
 "c01eab56" = "EmptySubmissionData"

@@ -6,7 +6,7 @@ import linea.staterecovery.BlobDecompressorAndDeserializer
 import linea.staterecovery.BlobFetcher
 import linea.staterecovery.BlockFromL1RecoveredData
 import linea.staterecovery.FinalizationAndDataEventsV3
-import linea.staterecovery.LineaRollupSubmissionEventsClient
+import linea.staterecovery.LinethRollupSubmissionEventsClient
 import linea.staterecovery.TransactionDetailsClient
 import linea.timer.TimerSchedule
 import linea.timer.VertxPeriodicPollingService
@@ -37,7 +37,7 @@ class SubmissionsFetchingTask(
   private val l1EarliestBlockWithFinalizationThatSupportRecovery: BlockParameter,
   private val l1PollingInterval: Duration,
   private val l2StartBlockNumberToFetchInclusive: ULong,
-  private val submissionEventsClient: LineaRollupSubmissionEventsClient,
+  private val submissionEventsClient: LinethRollupSubmissionEventsClient,
   private val blobsFetcher: BlobFetcher,
   private val transactionDetailsClient: TransactionDetailsClient,
   private val blobDecompressor: BlobDecompressorAndDeserializer,

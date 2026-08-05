@@ -3,7 +3,7 @@ package linea.contract
 import io.vertx.core.Vertx
 import linea.contract.l1.ContractVersionAwaiter
 import linea.contract.l1.ContractVersionProvider
-import linea.contract.l1.LineaRollupContractVersion
+import linea.contract.l1.LinethRollupContractVersion
 import linea.domain.BlockParameter
 import net.consensys.linea.async.AsyncRetryer
 import org.apache.logging.log4j.LogManager
@@ -53,10 +53,10 @@ class Web3JContractVersionAwaiter<VersionType : Comparable<VersionType>>(
   }
 
   companion object {
-    fun lineaRollupVersionWaiter(
+    fun linethRollupVersionWaiter(
       vertx: Vertx,
-      lineaVersionProvider: ContractVersionProvider<LineaRollupContractVersion>,
-    ): Web3JContractVersionAwaiter<LineaRollupContractVersion> =
+      lineaVersionProvider: ContractVersionProvider<LinethRollupContractVersion>,
+    ): Web3JContractVersionAwaiter<LinethRollupContractVersion> =
       Web3JContractVersionAwaiter(vertx, lineaVersionProvider)
   }
 }
