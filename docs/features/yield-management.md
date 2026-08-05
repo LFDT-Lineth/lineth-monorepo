@@ -6,7 +6,7 @@
 
 ## Overview
 
-Users bridge ETH from Ethereum L1 into Linea. Instead of letting it sit idle, Linea stakes the surplus in Lido V3 stVaults and reports the earned yield to L2 for distribution. The ETH kept on L1 - held by the `L1MessageService` contract - is the withdrawal reserve that pays out bridge redemptions. Under normal operation an automation service rebalances the reserve between configured minimum and target levels; if it falls into deficit, anyone can permissionlessly trigger replenishment, and a last-resort LST withdrawal path remains available to users.
+Users bridge ETH from Ethereum L1 into Lineth. Instead of letting it sit idle, Lineth stakes the surplus in Lido V3 stVaults and reports the earned yield to L2 for distribution. The ETH kept on L1 - held by the `L1MessageService` contract - is the withdrawal reserve that pays out bridge redemptions. Under normal operation an automation service rebalances the reserve between configured minimum and target levels; if it falls into deficit, anyone can permissionlessly trigger replenishment, and a last-resort LST withdrawal path remains available to users.
 
 ### Safety and liveness
 
@@ -129,7 +129,7 @@ The service interacts with: `YieldManager`, `LinethRollupYieldExtension`, `Vault
 
 ### Overview
 
-A standalone TypeScript service (`operations/native-yield/lido-governance-monitor/`) that monitors Lido governance activity and alerts on proposals that may affect Linea's yield infrastructure.
+A standalone TypeScript service (`operations/native-yield/lido-governance-monitor/`) that monitors Lido governance activity and alerts on proposals that may affect Lineth's yield infrastructure.
 
 ### Pipeline
 

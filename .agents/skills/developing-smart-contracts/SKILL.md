@@ -1,24 +1,24 @@
 ---
 name: developing-smart-contracts
-description: Solidity smart contract development guidelines for Linea blockchain. Use when writing, reviewing, or refactoring Solidity contracts, or when the user asks about Solidity best practices, contract structure, or NatSpec docstrings. Covers NatSpec documentation, naming conventions, file layout, and code style.
+description: Solidity smart contract development guidelines for Lineth blockchain. Use when writing, reviewing, or refactoring Solidity contracts, or when the user asks about Solidity best practices, contract structure, or NatSpec docstrings. Covers NatSpec documentation, naming conventions, file layout, and code style.
 license: AGPL-3.0
 metadata:
   author: linea
   version: '1.0.0'
 ---
 
-# Linea Smart Contract Development
+# Lineth Smart Contract Development
 
-Best practices for developing Solidity smart contracts on Linea blockchain. Contains
+Best practices for developing Solidity smart contracts on Lineth blockchain. Contains
 rules covering documentation, naming, structure, and code style.
 
-Reference: [Linea Contract Style Guide](../../../contracts/docs/contract-style-guide.md)
+Reference: [Lineth Contract Style Guide](../../../contracts/docs/contract-style-guide.md)
 
 ## When to Apply
 
 Reference these guidelines when:
 
-- Writing new Solidity contracts for Linea
+- Writing new Solidity contracts for Lineth
 - Reviewing smart contract code
 - Refactoring existing contracts
 - Adding NatSpec docstring documentation
@@ -51,7 +51,7 @@ Read individual rule files for detailed explanations and code examples (correct 
 
 ### 1. Gas Optimization (CRITICAL)
 
-**Gas efficiency is critical for Linea contracts.** Apply these rules unless there is a documented safety, audit, or readability reason to deviate.
+**Gas efficiency is critical for Lineth contracts.** Apply these rules unless there is a documented safety, audit, or readability reason to deviate.
 
 ```solidity
 // Correct: external + calldata, cache storage reads

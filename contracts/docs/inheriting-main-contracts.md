@@ -43,6 +43,6 @@ These sample files serve as a foundation for creating fully custom Ether bridgin
 
 ---
 
-By leveraging inheritance and Solidity's `virtual`/`override` keywords, you can safely extend and adapt Linea's modular bridge and rollup system.
+By leveraging inheritance and Solidity's `virtual`/`override` keywords, you can safely extend and adapt Lineth's modular bridge and rollup system.
 
-Additionally, it is worth noting that all the inherited contracts now contain an additional 50 storage slots of padded space for future Linea expansion without breaking the underlying inheritors layouts.
+Additionally, it is worth noting that all the inherited contracts now contain an additional 50 storage slots of padded space for future Lineth expansion without breaking the underlying inheritors layouts.

@@ -6,7 +6,7 @@
 
 ## Overview
 
-Corset is the constraint compilation toolchain for Linea's zkEVM. It:
+Corset is the constraint compilation toolchain for Lineth's zkEVM. It:
 
 - Parses arithmetic constraint definitions written in the Corset DSL (a Lisp-like language)
 - Compiles them into binary formats for the prover

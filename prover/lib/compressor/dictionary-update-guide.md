@@ -3,7 +3,7 @@
 The process is simple. The only subtle point is that support for new dictionaries should be added downstream-first (i.e. first in the prover and the decompressor, and then in the blob compressor,) and that conversely retiring a dictionary should be done upstream-first (i.e. first in the blob compressor, and then in the prover, and never in a decompressor used for state reconstruction.)
 
 ## Updating the Prover
-Download the dictionary file on the machine running the prover. Add its path relative to the prover root, to the prover configuration `.toml` file, in the `dict_paths` property, under `blob_decompression`. Normally the dictionary would already be available in the Linea repository, its path looking like `"lib/compressor/dict/yy-mm-dd.bin"`.
+Download the dictionary file on the machine running the prover. Add its path relative to the prover root, to the prover configuration `.toml` file, in the `dict_paths` property, under `blob_decompression`. Normally the dictionary would already be available in the Lineth repository, its path looking like `"lib/compressor/dict/yy-mm-dd.bin"`.
 The next time the prover is started, it will (also) load the new dictionary. Note that there is no need to recompile the decompression circuit.
 
 Example:

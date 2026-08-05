@@ -1,6 +1,6 @@
 # Smart Contract Testing Guidelines
 
-The following document serves to be a guide on the best practices for the Linea smart contract testing codebase.
+The following document serves to be a guide on the best practices for the Lineth smart contract testing codebase.
 
 **Note:** some areas might not conform to the practices - feel free to open a PR to have them comply. Work is constantly being done to improve.
 

@@ -6,7 +6,7 @@ const ssz_decode = @import("zesu_ssz_decode");
 const ssz_output = @import("zesu_ssz_output");
 const zesu_allocator = @import("zesu_allocator");
 
-// Heap start from the linker script (canonical Linea layout: `_heap_start` = 0x48800000, grows up).
+// Heap starts at the address defined by the linker script (canonical Lineth layout: `_heap_start` = 0x48800000, grows up).
 extern var _heap_start: u8;
 // Linker script does not actually constraint the heap to 256 MiB, but this is a reasonable upper bound
 const GUEST_HEAP_SIZE: usize = 256 * 1024 * 1024;
@@ -76,7 +76,7 @@ comptime {
     if (builtin.cpu.arch == .riscv64) {
         @export(&guestMain, .{ .name = "main" });
         // Pull in the precompile providers (zkvm_provide.zig): it DEFINES every zkvm_* symbol zesu
-        // references — keccak from the Linea wrapper, the rest from zesu-zkvm's stdlibs_accel.
+        // references — keccak from the Lineth wrapper, the rest from zesu-zkvm's stdlibs_accel.
         // Freestanding only — the native build uses Zesu's C backend and never references zkvm_*.
         _ = @import("zkvm_provide.zig");
     }

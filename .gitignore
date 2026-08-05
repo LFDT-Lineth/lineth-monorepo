@@ -218,3 +218,5 @@ docker/config/linea-besu-sequencer/deny-list.txt.lock
 **/.venv
 
 .claude/worktrees/
+# Local output of arithmetization/src/test/scripts/weekly_zkc_metrics.sh
+.claude/reports/
