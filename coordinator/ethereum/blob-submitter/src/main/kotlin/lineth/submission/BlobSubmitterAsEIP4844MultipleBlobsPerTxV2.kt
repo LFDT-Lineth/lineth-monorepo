@@ -1,7 +1,7 @@
 package lineth.submission
 
 import linea.contract.l1.BlobsSubmissionV9
-import linea.contract.l1.LineaRollupSmartContractClient
+import linea.contract.l1.LinethRollupSmartContractClient
 import linea.domain.BlobRecordV2
 import linea.domain.BlobSubmittedEvent
 import linea.gaspricing.GasPriceCapProviderV2
@@ -12,7 +12,7 @@ import java.util.function.Consumer
 import kotlin.time.Clock
 
 class BlobSubmitterAsEIP4844MultipleBlobsPerTxV2(
-  private val contract: LineaRollupSmartContractClient,
+  private val contract: LinethRollupSmartContractClient,
   private val gasPriceCapProvider: GasPriceCapProviderV2?,
   private val blobSubmittedEventConsumer: Consumer<BlobSubmittedEvent> = Consumer<BlobSubmittedEvent> { },
   private val clock: Clock = Clock.System,
