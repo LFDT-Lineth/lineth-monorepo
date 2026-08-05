@@ -28,6 +28,8 @@ pub fn build(b: *std.Build) void {
     // The `embedded-input` option is used to embed the input file into the binary to avoid needing to pass it in at runtime as we don't have
     // input serialization yet. This is only used for execution target, not for any test fixtures or library.
     const embedded_input = b.option(EmbeddedInputType, "embedded-input", "Embed the input file into the binary") orelse EmbeddedInputType.none;
+    const test_filter = b.option([]const u8, "test-filter", "Skip tests that do not match this filter");
+    const test_filters: []const []const u8 = if (test_filter) |f| &.{f} else &.{};
 
     const target = if (r5)
         common.standardGuestTarget(b)
@@ -158,6 +160,7 @@ pub fn build(b: *std.Build) void {
                     .{ .name = "test_verify", .module = test_verify_mod },
                 },
             }),
+            .filters = test_filters,
         });
 
         const run_unit_tests = b.addRunArtifact(unit_tests);
