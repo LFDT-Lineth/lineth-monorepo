@@ -5,8 +5,8 @@ import linea.contract.l1.LinethRollupContractVersion
 import linea.domain.createBlobRecord
 import linea.domain.createProofToFinalize
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class FinalizationFunctionBuildersTest {
   private val blob = createBlobRecord(startBlockNumber = 1UL, endBlockNumber = 2UL)
@@ -82,8 +82,8 @@ class FinalizationFunctionBuildersTest {
         )
       },
     ).forEach { buildFunction ->
-      assertThatThrownBy(buildFunction)
-        .isInstanceOf(IllegalArgumentException::class.java)
+      val exception = assertThrows<IllegalArgumentException> { buildFunction() }
+      assertThat(exception)
         .hasMessage(
           "aggregationLastBlob.blobCompressionProof must be set when building the finalization function",
         )

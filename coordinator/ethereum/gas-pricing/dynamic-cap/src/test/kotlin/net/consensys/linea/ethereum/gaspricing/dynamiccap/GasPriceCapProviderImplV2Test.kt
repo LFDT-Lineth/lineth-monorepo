@@ -3,7 +3,6 @@ package net.consensys.linea.ethereum.gaspricing.dynamiccap
 import io.vertx.junit5.VertxExtension
 import linea.domain.gas.GasPriceCaps
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -11,8 +10,6 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.spy
-import org.mockito.kotlin.whenever
 import java.math.BigDecimal
 import kotlin.time.Clock
 import kotlin.time.Duration
@@ -172,23 +169,21 @@ class GasPriceCapProviderImplV2Test {
 
   @Test
   fun `gas price coefficient requires a base fee cap`() {
-    val gasPriceCapProvider = spy(createGasPriceCapProvider())
-    whenever(gasPriceCapProvider.getGasPriceCaps(targetBlockTime)).thenReturn(
-      tech.pegasys.teku.infrastructure.async.SafeFuture.completedFuture(
-        GasPriceCaps(
-          maxBaseFeePerGasCap = null,
-          maxPriorityFeePerGasCap = 1UL,
-          maxFeePerGasCap = 1UL,
-          maxFeePerBlobGasCap = 1UL,
-        ),
-      ),
+    val gasPriceCaps = GasPriceCaps(
+      maxBaseFeePerGasCap = null,
+      maxPriorityFeePerGasCap = 1UL,
+      maxFeePerGasCap = 1UL,
+      maxFeePerBlobGasCap = 1UL,
     )
 
-    assertThatThrownBy {
-      gasPriceCapProvider.getGasPriceCapsWithCoefficient(targetBlockTime).get()
+    val exception = assertThrows<IllegalArgumentException> {
+      gasPriceCaps.withCoefficient(2.0)
     }
-      .hasRootCauseInstanceOf(IllegalArgumentException::class.java)
-      .hasRootCauseMessage("maxBaseFeePerGasCap must be defined before applying the gas price caps coefficient")
+
+    assertThat(exception)
+      .hasMessage(
+        "maxBaseFeePerGasCap must be defined before applying the gas price caps coefficient",
+      )
   }
 
   @Test
