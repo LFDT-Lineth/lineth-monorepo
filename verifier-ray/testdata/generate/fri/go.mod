@@ -2,7 +2,7 @@ module github.com/consensys/linea-monorepo/verifier-ray/testdata/generate/fri
 
 go 1.25.7
 
-require github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260802202552-44452c8d0cdf
+require github.com/LFDT-Lineth/lineth-monorepo/prover-ray v0.0.0-20260805140308-d7137fe881bf
 
 require (
 	github.com/bits-and-blooms/bitset v1.24.4 // indirect
