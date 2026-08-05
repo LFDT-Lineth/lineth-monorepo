@@ -156,7 +156,7 @@ pub fn resolveRunningLayers(
         const want_siblings = params.log_codeword_size - j;
         if (branch.siblings.len != want_siblings) return Error.InvalidRunningLayerShape;
 
-        const recovered = try branch.recoverRoot(shr(position, j));
+        const recovered = try branch.recoverRoot(position >> j);
         if (!poseidon2.eql(recovered, round_roots[j - 1])) return Error.MerkleProofInvalid;
 
         rounds[j] = .{
@@ -254,11 +254,6 @@ fn bitReverse(value: usize, comptime width: u8) usize {
     const v: u32 = @intCast(value);
     const reversed: u32 = @bitReverse(v);
     return reversed >> (32 - width);
-}
-
-fn shr(value: usize, amount: usize) usize {
-    const shift: std.math.Log2Int(usize) = @intCast(amount);
-    return value >> shift;
 }
 
 /// Converts a Poseidon2 digest into an extension element. Expects
