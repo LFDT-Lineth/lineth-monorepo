@@ -10,18 +10,10 @@ import (
 	"github.com/consensys/linea-monorepo/verifier-ray/codegen"
 )
 
-// Emits the runtime half of a full-pipeline PCS fixture into verify.zig: the
-// `verifier.PcsOpening` (jagged entry_claims + the FRI opening proof), against
-// the real verifier-ray types (`merkle.InputTreeOpening`/`RowPair`/`RowOpening`,
-// `merkle.Branch`, `fri.Proof`, `pcs.OpeningProof`). The compile-time
-// `pcs.System` itself is emitted by `codegen.WritePcsSystemZig`. The opening
-// carries NO roots/zeta/fold-alphas/query-positions — the verifier rebuilds
-// roots from `batch_roots`, derives zeta from `all_coins`, and squeezes the FRI
-// challenges from the transcript.
+// Emits the runtime PCS opening fixture for verify.zig. The compile-time
+// `pcs.System` is emitted separately by `codegen.WritePcsSystemZig`.
 
-// pcsOpeningZigLiteral renders `verifier.PcsOpening{ .entry_claims = ..., .proof
-// = ... }`. entry_claims come from the codegen-extracted PcsSystem.EntryClaims
-// (canonical EntryIdx order); the opening proof is the runtime PCSOpeningProof.
+// pcsOpeningZigLiteral renders `verifier.PcsOpening{ .entry_claims = ..., .proof = ... }`.
 func pcsOpeningZigLiteral(sys *codegen.PcsSystem, proof fri.OpeningProof) string {
 	var b strings.Builder
 	b.WriteString("verifier.PcsOpening{ .entry_claims = &")
@@ -94,9 +86,8 @@ func rowOpeningZigLiteral(r fri.RowOpening) string {
 	return fmt.Sprintf("merkle.RowOpening{ .base = &%s, .ext = &%s }", elemArrayLiteral(r.Base), extArrayLiteral(r.Ext))
 }
 
-// commitmentSliceZig renders `[_]commitment.Commitment{ ... }` for a slice of
-// octuplets (Merkle roots / siblings). commitment.Commitment == poseidon2.Digest
-// == [8]field.Element, so the literal is assignable wherever a Digest is wanted.
+// commitmentSliceZig renders `[_]commitment.Commitment{ ... }` for Merkle roots
+// or siblings.
 func commitmentSliceZig(values []field.Octuplet) string {
 	if len(values) == 0 {
 		return "[_]commitment.Commitment{}"
@@ -119,8 +110,7 @@ func extArrayLiteral(values []field.Ext) string {
 	return "[_]ext.Ext{ " + strings.Join(parts, ", ") + " }"
 }
 
-// extJaggedLiteral renders a `[][]field.Ext` as `.{ &[_]ext.Ext{...}, ... }` for
-// `[]const []const ext.Ext` (entry_claims).
+// extJaggedLiteral renders `[][]field.Ext` for `[]const []const ext.Ext`.
 func extJaggedLiteral(rows [][]field.Ext) string {
 	if len(rows) == 0 {
 		return ".{}"
@@ -143,12 +133,9 @@ func elemArrayLiteral(values []field.Element) string {
 	return "[_]field.Element{ " + strings.Join(parts, ", ") + " }"
 }
 
-// writePcsSystemZig emits the compile-time `const <prefix>_pcs = pcs.System{...}`
-// for a scenario, via the shared codegen emitter, and returns the const name.
+// writePcsSystemZig emits the compile-time PCS system for a scenario and
+// returns the const name.
 func writePcsSystemZig(out *bytes.Buffer, prefix string, sys *codegen.PcsSystem) string {
-	// WritePcsSystemZig names the emitted System const `ConstPrefix+ConstName` and
-	// namespaces its supporting consts with ConstPrefix, so the System const is
-	// `<prefix>_pcs_system` and it is what the caller references as `.pcs = ...`.
 	constPrefix := prefix + "_pcs_"
 	_ = codegen.WritePcsSystemZigWithOptions(out, 0, *sys, codegen.PcsZigOptions{
 		PcsImport:   "pcs",

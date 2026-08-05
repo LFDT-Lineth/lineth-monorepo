@@ -560,20 +560,16 @@ type fixtureCase struct {
 	name    string
 	honest  vanishingProofView
 	invalid *vanishingProofView
-	// pcs is the extracted PCS system for the honest proof (mandatory in the
-	// verify.zig path). honestPcs carries the runtime opening the verifier
-	// authenticates; invalidPcs (when present) is the tampered opening. The
-	// matching FRI opening proofs come from the proving runtime.
+	// honestPcs and invalidPcs carry the runtime PCS openings for the honest and
+	// invalid proofs. The matching FRI opening proofs come from the proving
+	// runtime.
 	honestPcs     *codegen.PcsSystem
 	invalidPcs    *codegen.PcsSystem
 	honestOpening fri.OpeningProof
 	invalidOpen   fri.OpeningProof
-	// alt is a SECOND honest proof of the SAME compiled protocol at a DIFFERENT
-	// dynamic-module size, verified against the SAME comptime PcsSystem
-	// (honestPcs). It proves the runtime-size-reconstructed PCS layout: one baked
-	// System verifies proofs of different dynamic sizes. Non-nil only for the
-	// multi-size scenario (see addMultiSize). altPcs is the alt proof's own runtime
-	// opening (its entry_claims/FRI proof differ; the System is identical).
+	// alt is a second honest proof of the same compiled protocol at a different
+	// dynamic-module size, verified against the same baked PcsSystem. altPcs is
+	// the alt proof's runtime opening.
 	alt     *vanishingProofView
 	altPcs  *codegen.PcsSystem
 	altOpen fri.OpeningProof
@@ -594,9 +590,8 @@ func compileFullPipeline(sys *wiop.System) {
 	logderivativesum.Compile(sys)
 	localvanishing.Compile(sys)
 	global.Compile(sys)
-	// PCS runs last, after every arithmetization pass has registered its columns
-	// and LagrangeEval openings: it commits the columns (hiding them behind Merkle
-	// roots) and produces the opening proof the verifier authenticates.
+	// PCS runs last, after the earlier passes have registered their columns and
+	// LagrangeEval openings.
 	pcscompiler.Compile(sys)
 }
 
@@ -606,11 +601,7 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 
 	add := func(source, name string, sys *wiop.System, honest assignFn, invalid assignFn) error {
 		compileFullPipeline(sys)
-		// Fail closed: every verifier action the compiled system registered must be
-		// one the codegen knows how to emit. An unhandled action type would be
-		// silently dropped by the per-pass Build*System filters, producing a Zig
-		// verifier that never enforces that constraint — a soundness hole. This
-		// asserts the guard is actually live rather than dead code.
+		// Fail closed on any verifier action the codegen does not know how to emit.
 		if err := codegen.AssertAllVerifierActionsHandled(sys); err != nil {
 			return fmt.Errorf("verifier actions %s/%s: %w", source, name, err)
 		}
@@ -625,10 +616,6 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		if len(vanishingSystem.Modules) == 0 {
 			return nil
 		}
-		// The PCS System is now size-independent: the verifier reconstructs the
-		// canonical layout from ColumnDesc + module_sizes at verify time, so ONE
-		// baked System verifies proofs of any dynamic size. Committed dynamic-module
-		// columns flow through the full mandatory-PCS (verify.zig) path.
 		honestRt := runProver(sys, honest)
 		logDeriv, err := codegen.BuildLogDerivSystem(sys)
 		if err != nil {
@@ -641,10 +628,6 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 			invalidRt := runProver(sys, invalid)
 			proof := extractVanishingProofView(sys, invalidRt)
 			tc.invalid = &proof
-			// The invalid opening carries the tampered claim values (the flipped
-			// witness surfaces in the LagrangeEval openings), so the PCS-routed
-			// claims fed to vanishing are the invalid ones — exactly what must
-			// fail the quotient identity.
 			ip, err := codegen.BuildPcsSystem(sys, invalidRt, routing)
 			if err != nil {
 				return fmt.Errorf("build invalid pcs system %s/%s: %w", source, name, err)
@@ -672,12 +655,8 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		return nil
 	}
 
-	// addMultiSize emits a case whose committed dynamic column is proven at TWO
-	// different runtime sizes against ONE comptime PcsSystem — the whole point of
-	// the runtime-size-reconstructed layout. `honest` proves the primary size
-	// (whose PcsSystem is baked); `alt` proves a second size against that SAME
-	// System. Both must verify: the verifier reconstructs each proof's canonical
-	// layout from the shared ColumnDesc list + the proof's own module_sizes.
+	// addMultiSize emits one baked PcsSystem plus two honest proofs at different
+	// runtime sizes.
 	addMultiSize := func(source, name string, sys *wiop.System, honest, alt assignFn) error {
 		compileFullPipeline(sys)
 		if err := codegen.AssertAllVerifierActionsHandled(sys); err != nil {
@@ -706,11 +685,7 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		}
 
 		altRt := runProver(sys, alt)
-		// The alt PcsSystem is only used to extract the alt proof's EntryClaims (the
-		// runtime opening); its symbolic descriptor (Columns/envelope/maps) is
-		// IDENTICAL to honestPcs — the verifier uses the SAME baked honestPcs to
-		// verify BOTH proofs. We build it separately just to read the alt opening's
-		// authenticated claims in canonical order at the alt size.
+		// altPcs is used only to extract the alt proof's runtime opening.
 		altPcs, err := codegen.BuildPcsSystem(sys, altRt, routing)
 		if err != nil {
 			return fmt.Errorf("build alt pcs system %s/%s: %w", source, name, err)
@@ -742,16 +717,11 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		}
 	}
 
-	// Multi-size committed-dynamic coverage: a dyn-fib protocol proven at size 8
-	// AND size 16 against ONE baked PcsSystem. Built here (not from a fixed-size
-	// wioptest scenario) so the two runtimes assign the dynamic column different
-	// lengths.
+	// Multi-size committed-dynamic coverage for one baked PcsSystem.
 	if err := addMultiSizeDynFib(addMultiSize); err != nil {
 		return nil, nil, err
 	}
-	// Two independent committed dynamic modules of different sizes against one
-	// baked PcsSystem — exercises per-module module_sizes indexing and the
-	// sys.Modules absorption order that single-module scenarios cannot.
+	// Two independent committed dynamic modules against one baked PcsSystem.
 	if err := addMultiSizeTwoDynModules(addMultiSize); err != nil {
 		return nil, nil, err
 	}
@@ -772,10 +742,8 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 			return nil, nil, err
 		}
 	}
-	// RangeCheck reduces to the same verifier shapes as Lookup (logderiv + ≥2
-	// modules + a precomputed batch), except for a 3-module / 4-batch layout that
-	// Lookup does not produce. Keep exactly one scenario (DistinctBounds) to cover
-	// that unique shape and drop the rest as verifier-redundant.
+	// Keep one RangeCheck scenario for the 3-module / 4-batch verifier shape
+	// that Lookup does not produce.
 	for _, factory := range wioptest.RangeCheckCompilerScenarios() {
 		sc := factory()
 		if sc.Name != "DistinctBounds" {
