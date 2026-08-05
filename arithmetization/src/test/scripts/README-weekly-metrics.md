@@ -8,7 +8,8 @@ measures four things and appends one row to each markdown table in
 
 | piece | what it is |
 |---|---|
-| `.github/workflows/arithmetization-weekly-zkc-metrics.yml` | the job: Wednesday 03:00 UTC (05:00 Paris CEST), or on demand |
+| `.github/workflows/arithmetization-weekly-zkc-metrics.yml` | the workflow: Wednesday 03:00 UTC (05:00 Paris CEST), or on demand |
+| `.github/actions/setup-zkc-measurement/` | shared preamble for the measurement jobs |
 | `weekly_metrics/` | parses zkc's output and inserts one row per table |
 | `weekly_zkc_metrics.sh` | run the same measurements locally, for testing or an ad-hoc harvest |
 
@@ -32,8 +33,8 @@ point rather than failing the job: knowing the ceiling is the measurement.
 
 ## What a failure looks like
 
-Every step from "Record run metadata" onwards carries `if: always()`, so the row lands whatever
-happened earlier. Cells read:
+The report job runs unless the workflow was cancelled, so a failed or timed-out measurement still
+produces the week's row — that outcome *is* the data point. Cells read:
 
 | situation | cell |
 |---|---|
@@ -47,13 +48,13 @@ happened earlier. Cells read:
 
 The peak RSS survives a kill, which is the point: it tells you what the step died wanting.
 
-If the **runner itself** is lost (eviction, infrastructure fault, job timeout) nothing downstream
-runs, so a second small job appends a placeholder row whose runner cell reads **run lost**. It is
-gated on the main job's `row_written` output, so a red-but-recorded run never gets a duplicate.
+Each measurement runs in its own job and uploads its result as soon as it finishes, so losing one
+runner cannot destroy work that already completed: the report assembles whatever artifacts exist and
+the rest reads `skipped`. The Actions UI shows which job failed and why.
 
-The per-step caps are validated against the job's `timeout-minutes` before any measurement starts:
-raising `check-timeout-min` beyond the job budget fails fast with a clear message instead of having
-the job cap silently truncate the step.
+Per-measurement caps come from the dispatch inputs and are clamped in-step to stay below the job's
+`timeout-minutes`, so the cap always fires where it can be recorded rather than the job being killed
+with nothing to show.
 
 ## Triggering it
 
@@ -68,8 +69,9 @@ Weekly by cron, or by hand from the Actions tab. The manual form takes:
   checked out separately under `measured/` — so you can measure a commit that predates this
   tooling entirely, and the row still lands on the branch you dispatched from.
 - **run-heavy** — off to get just the constraint stats in ~2 minutes.
-- **trace-timeout-min** / **check-timeout-min** — raise the caps when chasing a completion. They
-  are validated against the job's own cap before any measurement starts.
+- **trace-timeout-min** / **check-timeout-min** — raise the caps when chasing a completion; they are
+  clamped to their job's cap (40m and 110m). The check defaults to 90m: these runners get disrupted,
+  and "did not finish in 90m" is a more reliable weekly datum than an occasional heroic completion.
 - **commit-results** — off to measure without writing to the file.
 
 Both refs are recorded in the row, requested form and resolved SHA, so a measurement can always be
@@ -79,7 +81,7 @@ traced back to exactly what was built.
 
 ```bash
 arithmetization/src/test/scripts/weekly_zkc_metrics.sh --compile-only        # seconds
-arithmetization/src/test/scripts/weekly_zkc_metrics.sh --zkc-ref v1.2.25     # a specific zkc
+arithmetization/src/test/scripts/weekly_zkc_metrics.sh --zkc-ref v1.2.26     # a specific zkc
 arithmetization/src/test/scripts/weekly_zkc_metrics.sh --zkc-src ~/dev/go/go-corset
 ```
 
