@@ -218,6 +218,9 @@ fn keccak_f_round<keccak_state>(round_constant:u64) {
 // C[x] = A[x,0] ^ A[x,1] ^ A[x,2] ^ A[x,3] ^ A[x,4]
 // D[x] = C[x-1] ^ rot(C[x+1], 1)
 // A[x,y] = A[x,y] ^ D[x]
+// NOTE: as with kec_absorbing_phase, the two loops live in their own functions
+// so that each module holds at most one loop; see the note on
+// kec_absorbing_phase for why that matters.
 fn kec_theta<keccak_state>() {
 
     keccak_state[C] = keccak_state[ROW0] ^ keccak_state[ROW0 + 1] ^ keccak_state[ROW0 + 2] ^ keccak_state[ROW0 + 3] ^ keccak_state[ROW0 + 4]
@@ -226,11 +229,21 @@ fn kec_theta<keccak_state>() {
     keccak_state[C + 3] = keccak_state[ROW3] ^ keccak_state[ROW3 + 1] ^ keccak_state[ROW3 + 2] ^ keccak_state[ROW3 + 3] ^ keccak_state[ROW3 + 4]
     keccak_state[C + 4] = keccak_state[ROW4] ^ keccak_state[ROW4 + 1] ^ keccak_state[ROW4 + 2] ^ keccak_state[ROW4 + 3] ^ keccak_state[ROW4 + 4]
 
+    kec_theta_d()
+
+    kec_theta_mix_rows()
+}
+
+// kec_theta_d computes D[x] = C[x-1] ^ rot(C[x+1], 1)
+fn kec_theta_d<keccak_state>() {
     for i_minus_one:u5 = 0; i_minus_one<5; i_minus_one = i_minus_one + 1 {
         var i:u5 = i_minus_one + 1
         keccak_state[D + (mod5(i) as u7)] = keccak_state[C + (i_minus_one as u7)] ^ bit_rotl64(keccak_state[C + (mod5(i + 1) as u7)], 1)
     }
+}
 
+// kec_theta_mix_rows applies A[x,y] = A[x,y] ^ D[x]
+fn kec_theta_mix_rows<keccak_state>() {
     for j:u7 = 0; j<5; j = j + 1 {
         keccak_state[ROW0 + j] = keccak_state[ROW0 + j] ^ keccak_state[D]
         keccak_state[ROW1 + j] = keccak_state[ROW1 + j] ^ keccak_state[D + 1]
@@ -238,7 +251,6 @@ fn kec_theta<keccak_state>() {
         keccak_state[ROW3 + j] = keccak_state[ROW3 + j] ^ keccak_state[D + 3]
         keccak_state[ROW4 + j] = keccak_state[ROW4 + j] ^ keccak_state[D + 4]
     }
-
 }
 
 // RHO: lane rotations step
