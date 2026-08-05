@@ -49,7 +49,7 @@ lineth_kv "Coordinator observability" "http://localhost:$HOST_PORT_COORDINATOR"
 
 if [ -s "$PRE" ]; then
   section "pre-boot contract links"
-  print_l1 "LineaRollupV8" "$(lineth_json_section_addr "$PRE" l1 LineaRollupV8)"
+  print_l1 "LinethRollupV8" "$(lineth_json_section_addr "$PRE" l1 LinethRollupV8)"
   print_l2 "L2MessageService" "$(lineth_json_section_addr "$PRE" l2 L2MessageService)"
 
   section "runtime signer addresses"
@@ -66,7 +66,7 @@ fi
 
 if [ -s "$ADDR" ]; then
   section "deployed L1 contracts"
-  print_l1 "LineaRollupV8" "$(lineth_json_section_addr "$ADDR" l1 LineaRollupV8)"
+  print_l1 "LinethRollupV8" "$(lineth_json_section_addr "$ADDR" l1 LinethRollupV8)"
   print_l1 "TokenBridge" "$(lineth_json_section_addr "$ADDR" l1 TokenBridge)"
   print_l1 "ERC20Example" "$(lineth_json_section_addr "$ADDR" l1 ERC20Example)"
   print_l1 "ForcedTransactionGateway" "$(lineth_json_section_addr "$ADDR" l1 ForcedTransactionGateway)"

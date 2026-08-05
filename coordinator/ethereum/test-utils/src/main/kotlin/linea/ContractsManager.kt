@@ -4,25 +4,25 @@ import com.sksamuel.hoplite.ConfigLoaderBuilder
 import com.sksamuel.hoplite.ExperimentalHoplite
 import com.sksamuel.hoplite.addFileSource
 import io.vertx.core.Vertx
-import linea.contract.l1.LineaRollupContractVersion
-import linea.contract.l1.LineaRollupSmartContractClient
+import linea.contract.l1.LinethRollupContractVersion
+import linea.contract.l1.LinethRollupSmartContractClient
 import linea.ethapi.EthLogsSearcherImpl
 import linea.kotlin.gwei
 import linea.web3j.SmartContractErrors
 import linea.web3j.gas.StaticGasProvider
 import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
-import net.consensys.linea.contract.l1.Web3JLineaRollupSmartContractClient
+import net.consensys.linea.contract.l1.Web3JLinethRollupSmartContractClient
 import net.consensys.linea.testing.filesystem.findPathTo
 import org.slf4j.LoggerFactory
 import org.web3j.tx.gas.ContractEIP1559GasProvider
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
-data class LineaRollupDeploymentResult(
+data class LinethRollupDeploymentResult(
   val contractAddress: String,
   val contractDeploymentAccount: Account,
   val contractDeploymentBlockNumber: ULong,
   val rollupOperators: List<AccountTransactionManager>,
-  val rollupOperatorClient: LineaRollupSmartContractClient,
+  val rollupOperatorClient: LinethRollupSmartContractClient,
 ) {
   val rollupOperator: AccountTransactionManager
     get() = rollupOperators.first()
@@ -35,7 +35,7 @@ data class L2MessageServiceDeploymentResult(
 )
 
 data class ContactsDeploymentResult(
-  val lineaRollup: LineaRollupDeploymentResult,
+  val linethRollup: LinethRollupDeploymentResult,
   val l2MessageService: L2MessageServiceDeploymentResult,
 )
 
@@ -44,20 +44,20 @@ interface ContractsManager {
    * Deploys a linea rollup contract with specified number of operators.
    * Operator accounts are generated on the fly and funded from whale account in genesis file.
    */
-  fun deployLineaRollup(
+  fun deployLinethRollup(
     numberOfOperators: Int = 1,
-    contractVersion: LineaRollupContractVersion,
-  ): SafeFuture<LineaRollupDeploymentResult>
+    contractVersion: LinethRollupContractVersion,
+  ): SafeFuture<LinethRollupDeploymentResult>
 
   fun deployL2MessageService(): SafeFuture<L2MessageServiceDeploymentResult>
 
   fun deployRollupAndL2MessageService(
     dataCompressionAndProofAggregationMigrationBlock: ULong = 1000UL,
     numberOfOperators: Int = 1,
-    l1ContractVersion: LineaRollupContractVersion = LineaRollupContractVersion.V6,
+    l1ContractVersion: LinethRollupContractVersion = LinethRollupContractVersion.V6,
   ): SafeFuture<ContactsDeploymentResult>
 
-  fun connectToLineaRollupContract(
+  fun connectToLinethRollupContract(
     contractAddress: String,
     transactionManager: AsyncFriendlyTransactionManager,
     gasProvider: ContractEIP1559GasProvider = StaticGasProvider(
@@ -68,7 +68,7 @@ interface ContractsManager {
       gasLimit = 1_000_000uL,
     ),
     smartContractErrors: SmartContractErrors? = null,
-  ): LineaRollupSmartContractClient
+  ): LinethRollupSmartContractClient
 
   companion object {
     fun get(): ContractsManager = MakeFileDelegatedContractsManager
@@ -80,7 +80,7 @@ object MakeFileDelegatedContractsManager : ContractsManager {
   private val vertx: Vertx = Vertx.vertx()
 
   @OptIn(ExperimentalHoplite::class)
-  val lineaRollupContractErrors = findPathTo("config")!!
+  val linethRollupContractErrors = findPathTo("config")!!
     .resolve("common/smart-contract-errors.toml")
     .let { filePath ->
       data class ErrorsFile(val smartContractErrors: Map<String, String>)
@@ -93,26 +93,26 @@ object MakeFileDelegatedContractsManager : ContractsManager {
         .smartContractErrors
     }
 
-  override fun deployLineaRollup(
+  override fun deployLinethRollup(
     numberOfOperators: Int,
-    contractVersion: LineaRollupContractVersion,
-  ): SafeFuture<LineaRollupDeploymentResult> {
+    contractVersion: LinethRollupContractVersion,
+  ): SafeFuture<LinethRollupDeploymentResult> {
     val newAccounts = L1AccountManager.generateAccounts(numberOfOperators)
     val contractDeploymentAccount = newAccounts.first()
     val operatorsAccounts = newAccounts.drop(1)
     log.debug(
-      "going deploy LineaRollup: deployerAccount={} rollupOperators={}",
+      "going deploy LinethRollup: deployerAccount={} rollupOperators={}",
       contractDeploymentAccount.address,
       operatorsAccounts.map { it.address },
     )
-    val future = makeDeployLineaRollup(
+    val future = makeDeployLinethRollup(
       deploymentPrivateKey = contractDeploymentAccount.privateKey,
       operatorsAddresses = operatorsAccounts.map { it.address },
       contractVersion = contractVersion,
     )
       .thenApply { deploymentResult ->
         log.debug(
-          "LineaRollup deployed: address={} blockNumber={} deployerAccount={} " +
+          "LinethRollup deployed: address={} blockNumber={} deployerAccount={} " +
             "rollupOperators={}",
           deploymentResult.address,
           deploymentResult.blockNumber,
@@ -123,12 +123,12 @@ object MakeFileDelegatedContractsManager : ContractsManager {
           AccountTransactionManager(it, L1AccountManager.getTransactionManager(it))
         }
 
-        val rollupOperatorClient = connectToLineaRollupContract(
+        val rollupOperatorClient = connectToLinethRollupContract(
           deploymentResult.address,
           accountsTxManagers.first().txManager,
-          smartContractErrors = lineaRollupContractErrors,
+          smartContractErrors = linethRollupContractErrors,
         )
-        LineaRollupDeploymentResult(
+        LinethRollupDeploymentResult(
           contractAddress = deploymentResult.address,
           contractDeploymentAccount = contractDeploymentAccount,
           contractDeploymentBlockNumber = deploymentResult.blockNumber.toULong(),
@@ -160,29 +160,29 @@ object MakeFileDelegatedContractsManager : ContractsManager {
   override fun deployRollupAndL2MessageService(
     dataCompressionAndProofAggregationMigrationBlock: ULong,
     numberOfOperators: Int,
-    l1ContractVersion: LineaRollupContractVersion,
+    l1ContractVersion: LinethRollupContractVersion,
   ): SafeFuture<ContactsDeploymentResult> {
-    return deployLineaRollup(numberOfOperators, l1ContractVersion)
-      .thenCombine(deployL2MessageService()) { lineaRollupDeploymentResult, l2MessageServiceDeploymentResult ->
+    return deployLinethRollup(numberOfOperators, l1ContractVersion)
+      .thenCombine(deployL2MessageService()) { linethRollupDeploymentResult, l2MessageServiceDeploymentResult ->
         ContactsDeploymentResult(
-          lineaRollup = lineaRollupDeploymentResult,
+          linethRollup = linethRollupDeploymentResult,
           l2MessageService = l2MessageServiceDeploymentResult,
         )
       }
   }
 
-  override fun connectToLineaRollupContract(
+  override fun connectToLinethRollupContract(
     contractAddress: String,
     transactionManager: AsyncFriendlyTransactionManager,
     gasProvider: ContractEIP1559GasProvider,
     smartContractErrors: SmartContractErrors?,
-  ): LineaRollupSmartContractClient {
-    return Web3JLineaRollupSmartContractClient.load(
+  ): LinethRollupSmartContractClient {
+    return Web3JLinethRollupSmartContractClient.load(
       contractAddress = contractAddress,
       web3j = Web3jClientManager.l1Client,
       transactionManager = transactionManager,
       contractGasProvider = gasProvider,
-      smartContractErrors = smartContractErrors ?: lineaRollupContractErrors,
+      smartContractErrors = smartContractErrors ?: linethRollupContractErrors,
       ethLogsSearcher = EthLogsSearcherImpl(vertx = vertx, ethApiClient = EthApiClientManager.l1Client),
     )
   }
@@ -191,7 +191,7 @@ object MakeFileDelegatedContractsManager : ContractsManager {
 fun main() {
   data class SmartContractErrors(val smartContractErrors: Map<String, String>)
 
-  val lineaRollupContractErrors = findPathTo("config")!!
+  val linethRollupContractErrors = findPathTo("config")!!
     .resolve("common/smart-contract-errors.toml")
     .let { filePath ->
       ConfigLoaderBuilder.default()
@@ -199,5 +199,5 @@ fun main() {
         .build()
         .loadConfigOrThrow<SmartContractErrors>()
     }
-  println(lineaRollupContractErrors)
+  println(linethRollupContractErrors)
 }

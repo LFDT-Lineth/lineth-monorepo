@@ -12,7 +12,7 @@ import (
 // FuncInput are all the relevant fields parsed by the prover that
 // are functionally useful to contextualize what the proof is proving. This
 // is used by the aggregation circuit to ensure that the invalidity proofs
-// relate to consecutive Linea forced transactions.
+// relate to consecutive Lineth forced transactions.
 func FuncInput(req *Request, cfg *config.Config) *public_input.Invalidity {
 
 	tx, err := ethereum.RlpDecodeWithSignature(req.RlpEncodedTx)

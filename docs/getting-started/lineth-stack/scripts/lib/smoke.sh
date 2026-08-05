@@ -40,7 +40,7 @@ lineth_cast_run() {
   rpc_url="$1"
   shift
   docker run --rm \
-    --network lineth-stack_linea \
+    --network lineth-stack_lineth \
     --entrypoint cast \
     "$(lineth_foundry_image)" "$@" --rpc-url "$rpc_url"
 }
@@ -80,7 +80,7 @@ lineth_claim_l2_to_l1() {
     -e L1_SIGNER_PRIVATE_KEY="$l1_postman_private_key" \
     -e SMOKE_L1_CHAIN_ID="$L1_CHAIN_ID" \
     -e SMOKE_L2_CHAIN_ID="$L2_CHAIN_ID" \
-    -e SMOKE_LINEA_ROLLUP_ADDRESS="$LINEA_ROLLUP" \
+    -e SMOKE_LINETH_ROLLUP_ADDRESS="$LINETH_ROLLUP" \
     -e SMOKE_L2_MESSAGE_SERVICE_ADDRESS="$L2_MESSAGE_SERVICE" \
     -e SMOKE_MESSAGE_HASH="$MESSAGE_HASH" \
     -e SMOKE_MESSAGE_SENDER="$MESSAGE_SENDER" \

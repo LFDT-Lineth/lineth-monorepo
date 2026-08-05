@@ -19,8 +19,8 @@
  *   pnpm exec ts-node tools/enrich-hardhat-artifact.ts <artifact.json> [output.json] --contract contracts/MyContract.sol:MyContract
  *
  * Examples:
- *   pnpm exec ts-node tools/enrich-hardhat-artifact.ts artifacts/contracts/LineaRollup.sol/LineaRollup.json
- *   pnpm exec ts-node tools/enrich-hardhat-artifact.ts LineaRollup.json enriched/LineaRollup.json --build-info build-info/abc.json
+ *   pnpm exec ts-node tools/enrich-hardhat-artifact.ts artifacts/contracts/LinethRollup.sol/LinethRollup.json
+ *   pnpm exec ts-node tools/enrich-hardhat-artifact.ts LinethRollup.json enriched/LinethRollup.json --build-info build-info/abc.json
  */
 
 import { readFileSync, writeFileSync, readdirSync, existsSync } from "fs";
@@ -144,13 +144,13 @@ Options:
 
 Examples:
   # Auto-find build-info (searches artifacts/build-info/)
-  pnpm exec ts-node tools/enrich-hardhat-artifact.ts artifacts/contracts/LineaRollup.sol/LineaRollup.json
+  pnpm exec ts-node tools/enrich-hardhat-artifact.ts artifacts/contracts/LinethRollup.sol/LinethRollup.json
 
   # Specify build-info explicitly
-  pnpm exec ts-node tools/enrich-hardhat-artifact.ts LineaRollup.json --build-info build-info/abc.json
+  pnpm exec ts-node tools/enrich-hardhat-artifact.ts LinethRollup.json --build-info build-info/abc.json
 
   # Output to different file
-  pnpm exec ts-node tools/enrich-hardhat-artifact.ts LineaRollup.json enriched/LineaRollup.json
+  pnpm exec ts-node tools/enrich-hardhat-artifact.ts LinethRollup.json enriched/LinethRollup.json
 `);
 }
 

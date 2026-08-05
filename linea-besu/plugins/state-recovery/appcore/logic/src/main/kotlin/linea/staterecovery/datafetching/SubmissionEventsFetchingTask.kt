@@ -6,7 +6,7 @@ import linea.domain.BlockParameter
 import linea.domain.EthLogEvent
 import linea.domain.toBlockParameter
 import linea.staterecovery.FinalizationAndDataEventsV3
-import linea.staterecovery.LineaRollupSubmissionEventsClient
+import linea.staterecovery.LinethRollupSubmissionEventsClient
 import linea.timer.TimerSchedule
 import linea.timer.VertxPeriodicPollingService
 import org.apache.logging.log4j.LogManager
@@ -21,7 +21,7 @@ internal class SubmissionEventsFetchingTask(
   private val l1PollingInterval: Duration,
   private val l1EarliestBlockWithFinalizationThatSupportRecovery: BlockParameter,
   private val l2StartBlockNumber: ULong,
-  private val submissionEventsClient: LineaRollupSubmissionEventsClient,
+  private val submissionEventsClient: LinethRollupSubmissionEventsClient,
   private val submissionEventsQueue: ConcurrentLinkedQueue<FinalizationAndDataEventsV3>,
   private val queueLimit: Int,
   private val debugForceSyncStopBlockNumber: ULong?,

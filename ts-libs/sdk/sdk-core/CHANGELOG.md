@@ -1,5 +1,7 @@
 # @lfdt-lineth/sdk-core
 
+> Upgrading from `LineaRollup` to `LinethRollup`? See the [SDK Migration Guide](../MIGRATION.md).
+
 ## 1.0.0 (2026-06-10)
 
 Initial release of `@lfdt-lineth/sdk-core`, the framework-agnostic foundation for Linea bridge SDKs.
@@ -9,7 +11,7 @@ Initial release of `@lfdt-lineth/sdk-core`, the framework-agnostic foundation fo
 - **Sparse Merkle Tree** -- `SparseMerkleTree` class with configurable depth and hash function; leaf management, root computation, and Merkle proof generation returning `MessageProof`
 - **Block extra data parsing** -- `parseBlockExtraData` to decode Linea block `extraData` into version and fee parameters
 - **Message status formatting** -- `formatMessageStatus` mapping on-chain numeric statuses to `OnChainMessageStatus` enum (`UNKNOWN`, `CLAIMABLE`, `CLAIMED`)
-- **Contract address resolution** -- `getContractsAddressesByChainId` returning canonical addresses (Linea Rollup, Message Service, Token Bridge) for Ethereum Mainnet, Sepolia, Linea Mainnet, and Linea Sepolia
+- **Contract address resolution** -- `getContractsAddressesByChainId` returning canonical addresses (Lineth Rollup, Message Service, Token Bridge) for Ethereum Mainnet, Sepolia, Linea Mainnet, and Linea Sepolia
 - **Chain identification** -- `isMainnet`, `isSepolia`, `isLineaMainnet`, `isLineaSepolia` predicates
 
 ### Types

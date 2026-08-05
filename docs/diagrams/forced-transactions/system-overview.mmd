@@ -9,13 +9,13 @@ graph TB
     
     subgraph "Data Sources"
         L1Events[L1 FinalizedStateUpdated Events]
-        L1State[LineaRollup State]
+        L1State[LinethRollup State]
         Indexer[Indexer/Explorer]
     end
     
     subgraph "L1 Contracts"
         Gateway[ForcedTransactionGateway]
-        Rollup[LineaRollup]
+        Rollup[LinethRollup]
         Filter[AddressFilter]
     end
     

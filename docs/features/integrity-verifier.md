@@ -53,7 +53,7 @@ Four methods for checking on-chain state, each suited to different use cases:
 | `viewCalls` | Values exposed via getters (roles, version, addresses) | `hasRole(ADMIN_ROLE, addr)` |
 | `slots` | Internal state not exposed via getters, packed storage, OZ `_initialized` | Slot `0x0`, type `uint8` |
 | `storagePaths` | ERC-7201 namespaced storage, struct fields, mapping values | `YieldManagerStorage:_yieldManager` |
-| `namespaces` | Batch verification of related variables in a single namespace | `linea.storage.YieldManager` |
+| `namespaces` | Batch verification of related variables in a single namespace | `linea.storage.YieldManagerStorage` |
 
 Comparison operators: `eq` (default), `gt`, `gte`, `lt`, `lte`, `contains`. Address comparisons are case-insensitive.
 
@@ -71,10 +71,10 @@ Supports JSON and Markdown configuration formats. Environment variables are inje
   },
   "contracts": [
     {
-      "name": "LineaRollup-Proxy",
+      "name": "LinethRollup-Proxy",
       "chain": "ethereum-sepolia",
       "address": "0x...",
-      "artifactFile": "../path/to/LineaRollup.json",
+      "artifactFile": "../path/to/LinethRollup.json",
       "isProxy": true,
       "stateVerification": {
         "viewCalls": [{ "function": "CONTRACT_VERSION", "expected": "7.1" }],

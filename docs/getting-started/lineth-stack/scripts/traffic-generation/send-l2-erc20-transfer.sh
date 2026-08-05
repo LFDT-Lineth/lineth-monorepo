@@ -79,7 +79,7 @@ section "sending L2 ERC20Example transfer"
 if ! lineth_run_stream docker run --rm \
   --user 0:0 \
   --entrypoint sh \
-  --network lineth-stack_linea \
+  --network lineth-stack_lineth \
   -v "$LINETH_ACCOUNTS_DIR:/accounts:ro" \
   -v "$LINETH_DEPLOYMENTS_DIR:/deployments:ro" \
   -e AMOUNT_WEI="${AMOUNT_WEI:-1}" \

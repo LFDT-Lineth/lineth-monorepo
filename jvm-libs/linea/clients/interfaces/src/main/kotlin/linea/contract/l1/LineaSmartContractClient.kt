@@ -5,7 +5,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Duration
 import kotlin.time.Instant
 
-enum class LineaRollupContractVersion : Comparable<LineaRollupContractVersion> {
+enum class LinethRollupContractVersion : Comparable<LinethRollupContractVersion> {
   V6, // more efficient data submission and new events for state recovery
   V7, // Native Yield (no practical changes for the coordinator)
   V8, // Forced Transactions
@@ -13,7 +13,7 @@ enum class LineaRollupContractVersion : Comparable<LineaRollupContractVersion> {
   ;
 
   companion object {
-    val latest: LineaRollupContractVersion = entries.last()
+    val latest: LinethRollupContractVersion = entries.last()
   }
 }
 
@@ -46,30 +46,31 @@ interface LineaSmartContractClientReadOnly {
   ): SafeFuture<Boolean>
 
   /**
-   * Gets Type 2 StateRootHash for Linea Block
+   * Gets Type 2 StateRootHash for a Lineth block.
+   * The [lineaL2BlockNumber] parameter name is kept for backwards compatibility.
    */
   fun blockStateRootHash(blockParameter: BlockParameter, lineaL2BlockNumber: ULong): SafeFuture<ByteArray>
 }
 
-interface LineaRollupSmartContractClientReadOnly :
+interface LinethRollupSmartContractClientReadOnly :
   LineaSmartContractClientReadOnly,
-  ContractVersionProvider<LineaRollupContractVersion>
+  ContractVersionProvider<LinethRollupContractVersion>
 
-data class LineaRollupFinalizedState(
+data class LinethRollupFinalizedState(
   val blockNumber: ULong,
   val blockTimestamp: Instant,
   val messageNumber: ULong,
   val forcedTransactionNumber: ULong,
 )
 
-interface LineaRollupSmartContractClientReadOnlyFinalizedStateProvider {
+interface LinethRollupSmartContractClientReadOnlyFinalizedStateProvider {
   /**
    * Provides the latest finalized state.
-   * It relies on Linea contract V8 FinalizedStateUpdated event
+   * It relies on Lineth contract V8 FinalizedStateUpdated event
    *
    * @throws UnsupportedOperationException when contract is not yet upgraded to V8 or when 1st event was not emitted yet
    */
-  fun getLatestFinalizedState(blockParameter: BlockParameter): SafeFuture<LineaRollupFinalizedState>
+  fun getLatestFinalizedState(blockParameter: BlockParameter): SafeFuture<LinethRollupFinalizedState>
 }
 
 interface LineaValidiumSmartContractClientReadOnly :

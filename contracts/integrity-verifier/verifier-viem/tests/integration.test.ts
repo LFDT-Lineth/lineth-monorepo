@@ -183,16 +183,16 @@ async function testArtifactLoading(): Promise<void> {
 
   const fixturesDir = resolve(__dirname, "fixtures");
   const yieldManagerPath = resolve(fixturesDir, "artifacts/YieldManager.json");
-  const lineaRollupPath = resolve(fixturesDir, "artifacts/LineaRollup.json");
+  const linethRollupPath = resolve(fixturesDir, "artifacts/LinethRollup.json");
 
   const yieldManager = loadArtifact(yieldManagerPath);
   assert(yieldManager !== null, "YieldManager artifact loaded");
   assertEqual(yieldManager.format, "foundry", "YieldManager detected as Foundry format");
   assert(yieldManager.abi.length > 0, "YieldManager ABI has entries");
 
-  const lineaRollup = loadArtifact(lineaRollupPath);
-  assert(lineaRollup !== null, "LineaRollup artifact loaded");
-  assertEqual(lineaRollup.format, "foundry", "LineaRollup detected as Foundry format");
+  const linethRollup = loadArtifact(linethRollupPath);
+  assert(linethRollup !== null, "LinethRollup artifact loaded");
+  assertEqual(linethRollup.format, "foundry", "LinethRollup detected as Foundry format");
 
   // Test selector extraction with real viem adapter
   const adapter = new MockViemAdapter();

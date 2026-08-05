@@ -16,6 +16,8 @@
 - *(coordinator)* Document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)
 - *(coordinator)* GasPriceCapProviderV2 and DRY (#3624)
 - *(coordinator)* Support custom transaction signers (#3597)
+- *(linea-besu)* Update to v26.7.0 (#3623)
+- *(linea-besu)* Update to 26.7.1 (#3699)
 
 ### 🐛 Bug Fixes
 
@@ -56,6 +58,8 @@
 - *(coordinator)* Correct ByteArray equality checks in domain classes (#3625)
 - *(coordinator)* Address error handling issues from review (#3626)
 - *(prover)* Fix broken loop boundary in csDecomposedLimbs (#3474)
+- *(postman)* Use lineaRollupAddress and remove duplicate LineaRollup sources (#3456)
+- *(maru)* Declare jar task dependency on runtimeClasspath to fix manifest race (#3694)
 
 ### 🚜 Refactor
 
@@ -64,6 +68,7 @@
 - *(misc)* Rename Linea to Lineth across documentation and codebase (#3316)
 - *(prover)* Remove redundant and unsafe utility functions (#3273)
 - *(coordinator)* Decompose L1DependentApp into smaller scoped apps (#3615)
+- *(coordinator)* L1RelayingAppV1 to better allow RISC-V extension (#3640)
 
 ### ⚡ Performance
 
@@ -111,3 +116,5 @@
 - *(coordinator)* Cleanup replaced apps in PR #3615 (#3622)
 - *(coordinator)* Remove dead code and apply small cleanups from review (#3627)
 - *(coordinator)* Riscv blob data skeleton (#3609)
+- *(coordinator)* Rename LineaRollup to LinethRollup in JVM components (#3421)
+- *(coordinator)* Rename Linea to Lineth in app and config (#3707)

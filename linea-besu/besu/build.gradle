@@ -65,6 +65,17 @@ def mavenLocalBase = providers.systemProperty('maven.repo.local')
     .orElse(providers.systemProperty('user.home').map { it + '/.m2/repository' })
     .get()
 
+// True when the invocation requests only `clean` task(s), e.g. `./gradlew :linea-besu:besu:clean`
+// (the leaf task name of every requested task is `clean`). In that case the on-demand Besu
+// build below is skipped: a clean must never trigger a multi-minute source build of the very
+// artifacts it is about to delete. Version resolution still runs so the root
+// resolutionStrategy can align versionless Besu deps during configuration.
+def requestedTaskNames = gradle.startParameter.taskNames
+def onlyCleanRequested = !requestedTaskNames.isEmpty() && requestedTaskNames.every { String tn ->
+  def leaf = tn.contains(':') ? tn.substring(tn.lastIndexOf(':') + 1) : tn
+  leaf.equalsIgnoreCase('clean')
+}
+
 // Expose Besu version/materialization helper for other modules that need a Besu version
 // during dependency resolution.
 //
@@ -84,19 +95,23 @@ rootProject.ext.resolveBesuVersion = {
     def resolvedVersion = resolveBesuVersionCached(providers, besuCommit, rootDirFile, cachedResolvedFile)
     if (!isBesuAvailableInMavenLocal(logger, resolvedVersion, mavenLocalBase)
         && !isBesuAvailableInMaven(logger, resolvedVersion)) {
-      logger.lifecycle("Besu BOM ${resolvedVersion} missing in both remote and local maven; building/publishing Besu to maven local on-demand")
-      buildAndPublishBesuAction(
-          logger,
-          providers,
-          besuCommit,
-          rootDirFile,
-          false,
-          skipDownloadBesuDist,
-          resolvedVersion,
-          cloudsmithUser,
-          cloudsmithApiKey,
-          mavenLocalBase
-          )
+      if (onlyCleanRequested) {
+        logger.lifecycle("Besu BOM ${resolvedVersion} missing in both remote and local maven, but only clean task(s) were requested; skipping on-demand Besu build.")
+      } else {
+        logger.lifecycle("Besu BOM ${resolvedVersion} missing in both remote and local maven; building/publishing Besu to maven local on-demand")
+        buildAndPublishBesuAction(
+            logger,
+            providers,
+            besuCommit,
+            rootDirFile,
+            false,
+            skipDownloadBesuDist,
+            resolvedVersion,
+            cloudsmithUser,
+            cloudsmithApiKey,
+            mavenLocalBase
+            )
+      }
     }
 
     resolvedVersionMemo.set(resolvedVersion)

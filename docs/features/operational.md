@@ -4,7 +4,7 @@
 
 ## Overview
 
-Linea includes several operational contracts that support protocol revenue capture, token management, and monitoring. These are ancillary to the core rollup protocol but essential for production operations.
+Lineth includes several operational contracts that support protocol revenue capture, token management, and monitoring. These are ancillary to the core rollup protocol but essential for production operations.
 
 ## Components
 

@@ -1,6 +1,6 @@
 # Token Bridge
 
-> Canonical ERC20 bridging between Ethereum L1 and Linea L2.
+> Canonical ERC20 bridging between Ethereum L1 and Lineth L2.
 
 ## Overview
 

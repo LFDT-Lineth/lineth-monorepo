@@ -2,7 +2,7 @@
   "name": "prover-options-docs",
   "version": "0.0.0",
   "private": true,
-  "description": "Generate ephemeral Linea prover TOML config MDX partials from Go sources and validate fresh temporary output.",
+  "description": "Generate ephemeral Lineth prover TOML config MDX partials from Go sources and validate fresh temporary output.",
   "scripts": {
     "generate": "node generate.js",
     "generate:seed-wrapper": "node seed-wrapper.js",
