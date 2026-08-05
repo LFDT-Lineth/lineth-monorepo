@@ -1,5 +1,4 @@
 plugins {
   id 'lineth.kotlin-common-conventions'
+  id 'java-library'
 }
-
-description = "Utilities related to errors"
