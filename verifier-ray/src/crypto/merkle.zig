@@ -1,4 +1,3 @@
-const std = @import("std");
 const field = @import("../field/koalabear.zig");
 const ext = @import("../field/koalabear_ext.zig");
 const poseidon2 = @import("poseidon2.zig");
@@ -163,7 +162,7 @@ pub const InputTreeOpening = struct {
         // oversized branch errors instead of overflow-trapping the cast.
         if (self.leaves.len >= @bitSizeOf(usize)) return Error.LevelSizeTooLarge;
 
-        const tree_leaves = shl(1, self.leaves.len);
+        const tree_leaves = @as(usize, 1) << @as(u6, @intCast(self.leaves.len));
         if (level_size > tree_leaves) return Error.LevelSizeTooLarge;
         if (level_size == tree_leaves) return self.leaves.len - 1;
 
@@ -197,9 +196,4 @@ fn foldOneLevel(ancestor: poseidon2.Digest, sibling: poseidon2.Digest, aux: ?Row
 
 fn isPowerOfTwo(value: usize) bool {
     return value != 0 and (value & (value - 1)) == 0;
-}
-
-fn shl(base_val: usize, amount: usize) usize {
-    const shift: std.math.Log2Int(usize) = @intCast(amount);
-    return base_val << shift;
 }
