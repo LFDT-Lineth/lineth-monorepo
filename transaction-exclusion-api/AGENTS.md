@@ -35,7 +35,7 @@ Kotlin-based JSON-RPC API for tracking and querying rejected transactions in the
 
 ## API-Specific Conventions
 
-- **Build plugin:** `net.consensys.zkevm.kotlin-application-conventions`
+- **Build plugin:** `lineth.kotlin-application-conventions`
 - **Main class:** `net.consensys.linea.transactionexclusion.app.TransactionExclusionAppMain`
 - **API protocol:** JSON-RPC 2.0
 - **Test HTTP assertions:** REST-assured + JSON Unit
