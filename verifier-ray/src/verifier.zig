@@ -6,37 +6,6 @@ const fiat_shamir = @import("crypto/fiat_shamir.zig");
 const poseidon2 = @import("crypto/poseidon2.zig");
 const ext = @import("field/koalabear_ext.zig");
 const profiling = @import("profiling.zig");
-// TODO(new-sub-verifier): add import here — step 1 below.
-
-// ── Adding a new sub-verifier ─────────────────────────────────────────────────
-//
-//  This file is the only place that needs to change. Steps, in order:
-//
-//  1. Import the new query module at the top of this file:
-//       const sub_verifier = @import("query/sub_verifier.zig");
-//
-//  2. Add its compiled system to `Systems`:
-//       pub const Systems = struct {
-//           vanishing:   vanishing.System,
-//           sub_verifier: sub_verifier.System,   // ← add
-//       };
-//
-//  3. Add its proof claims to `Proof`:
-//       pub const Proof = struct {
-//           ...
-//           sub_verifier_claims: []const ext.Ext,   // ← add
-//       };
-//     Some sub-verifiers need no extra proof data and can omit this step.
-//
-//  4. Add a dispatch call in `verify` step 3 — ctx is already built:
-//       try sub_verifier.verify(systems.sub_verifier, .{
-//           .ctx    = ctx,
-//           .claims = proof.sub_verifier_claims,
-//       });
-//
-//  Nothing else changes: protocol.Spec, protocol.replayWithTranscript, and all existing
-//  sub-verifiers are untouched.
-// ─────────────────────────────────────────────────────────────────────────────
 
 /// Compiled systems for every sub-verifier in the protocol.
 /// One field per sub-verifier; each holds the comptime metadata for that query.
@@ -50,7 +19,6 @@ pub const Systems = struct {
     /// claims into the vanishing check. So a prover can neither choose the
     /// challenges nor hand the two sub-verifiers different claim values.
     pcs: pcs.System,
-    // TODO(new-sub-verifier): add compiled system field here — step 2 above.
 };
 
 /// Proof is the verifier-visible transcript consumed by `verify` in one pass.
@@ -75,7 +43,6 @@ pub const Proof = struct {
     /// proof. The batch roots and the opening COINS (zeta, fold challenges, query
     /// positions) are NOT here — `verify` rebuilds/derives them.
     pcs_opening: PcsOpening,
-    // TODO(new-sub-verifier): add claim fields here if needed — step 3 above.
 };
 
 /// The prover-supplied half of a PCS opening (everything except the values the
@@ -196,7 +163,6 @@ pub fn verify(
     try logderivativesum.verify(systems.logderivativesum, ctx);
 
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.logderivativesum_done, profiling.snapshot().poseidon2_compress);
-    // TODO(new-sub-verifier): dispatch here — step 4 above.
     // TODO(profiling): add a final verify_done marker once more phases run after logderivativesum.
 }
 

@@ -12,12 +12,12 @@ const fri = @import("fri.zig");
 /// ported from prover-ray's `pcs.go` `PCS.Verify`. Produces the
 /// `fri.ResolvedQuery` records `fri.checkFolds` needs.
 ///
-/// The canonical layout is NOT frozen at codegen time from one proving run:
-/// it is RECONSTRUCTED at verify time from the comptime `System.columns`
-/// (prover declaration order) plus the runtime `module_sizes`. This mirrors
-/// prover-ray's own `GetLayout` (per-column size_log2 + running position) +
-/// `canonicalLayout` (size DESC / batch ASC / base-then-ext / position ASC)
-/// so ONE baked System verifies proofs of DIFFERENT dynamic-module sizes.
+/// The canonical layout is reconstructed at verify time from the comptime
+/// `System.columns` (prover declaration order) plus the runtime
+/// `module_sizes`. This mirrors prover-ray's own `GetLayout` (per-column
+/// size_log2 + running position) + `canonicalLayout` (size DESC / batch ASC /
+/// base-then-ext / position ASC) so one baked System verifies proofs of
+/// different dynamic-module sizes.
 /// Stack-only: buffers are sized by the comptime envelope maxima
 /// (`max_entries`, `max_size_log2`), with runtime lengths from the proof.
 pub const Error = merkle.Error || fri.Error || error{

@@ -23,12 +23,11 @@ import (
 // column ordering: batch order, per-batch layout, and the LagrangeEval openings
 // all come from the prover-ray PCS compiler's own exported helpers.
 //
-// Unlike a design that freezes the canonical layout at codegen time for one
-// proving size, Columns carries only the size-independent invariants (batch,
-// base/ext, raw shift schedule); the Zig engine (`src/query/pcs.zig`)
-// reconstructs the size-dependent bundle placement, entry order, and restricted
-// FRI params from Columns + the proof's own runtime `module_sizes`, so ONE baked
-// System verifies proofs of different dynamic sizes.
+// Columns carries only the size-independent invariants (batch, base/ext, raw
+// shift schedule); the Zig engine (`src/query/pcs.zig`) reconstructs the
+// size-dependent bundle placement, entry order, and restricted FRI params from
+// Columns + the proof's own runtime `module_sizes`, so one baked System
+// verifies proofs of different dynamic sizes.
 type PcsSystem struct {
 	SourceName string
 
