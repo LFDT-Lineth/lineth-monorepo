@@ -4,18 +4,16 @@ import com.sun.net.httpserver.HttpServer
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.anchoring.MessageAnchoringApp
-import linea.coordinator.config.v2.CoordinatorConfig
 import linea.coordinator.config.v2.MessageAnchoringConfig
 import linea.coordinator.config.v2.ProtocolConfig
 import linea.coordinator.config.v2.SignerConfig
-import linea.web3j.SmartContractErrors
+import linea.coordinator.config.v2.toml.loadConfigs
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.mock
 import java.net.InetSocketAddress
 import java.net.URI
+import java.nio.file.Path
 import kotlin.time.Duration.Companion.seconds
 
 @ExtendWith(VertxExtension::class)
@@ -54,11 +52,22 @@ class MessageAnchoringAppConfiguratorTest {
           contractDeploymentBlockNumber = null,
         ),
       )
-      val config = mock<CoordinatorConfig> {
-        on { this.messageAnchoring } doReturn messageAnchoring
-        on { this.protocol } doReturn protocol
-        on { smartContractErrors } doReturn mock<SmartContractErrors>()
-      }
+      val config = loadConfigs(
+        coordinatorConfigFiles = listOf(
+          Path.of("../../docker/config/coordinator/coordinator-config-v2.toml"),
+          Path.of("../../docker/config/coordinator/coordinator-config-v2-override-local-dev.toml"),
+        ),
+        tracesLimitsFileV4 = Path.of("../../docker/config/common/traces-limits-v4.4.toml"),
+        tracesLimitsFileV5 = Path.of("../../docker/config/common/traces-limits-v5.toml"),
+        gasPriceCapTimeOfDayMultipliersFile = Path.of(
+          "../../docker/config/common/gas-price-cap-time-of-day-multipliers.toml",
+        ),
+        smartContractErrorsFile = Path.of("../../docker/config/common/smart-contract-errors.toml"),
+        enforceStrict = true,
+      ).copy(
+        messageAnchoring = messageAnchoring,
+        protocol = protocol,
+      )
 
       assertThat(MessageAnchoringAppConfigurator.create(vertx, config))
         .isInstanceOf(MessageAnchoringApp::class.java)
