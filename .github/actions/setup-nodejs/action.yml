@@ -52,11 +52,15 @@ runs:
 
     - name: pnpm install
       working-directory: ${{ inputs.working-directory }}
-      run: pnpm i ${{ inputs.pnpm-install-options }}
+      env:
+        PNPM_INSTALL_OPTIONS: ${{ inputs.pnpm-install-options }}
+      run: pnpm i $PNPM_INSTALL_OPTIONS
       shell: bash
 
     - name: Run post-install commands
       if: inputs.commands != ''
       working-directory: ${{ inputs.working-directory }}
       shell: bash
-      run: ${{ inputs.commands }}
+      env:
+        POST_INSTALL_COMMANDS: ${{ inputs.commands }}
+      run: bash -c "$POST_INSTALL_COMMANDS"

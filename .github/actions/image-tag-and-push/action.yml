@@ -62,9 +62,13 @@ runs:
     - name: Save Docker image as artifact for later use in e2e test
       if: ${{ github.ref == 'refs/heads/main' && inputs.last_commit_tag_exists == '0' }}
       shell: bash
+      env:
+        IMAGE_NAME: ${{ inputs.image_name }}
+        COMMIT_TAG: ${{ inputs.commit_tag }}
+        IMAGE_NAME_SUFFIX: ${{ steps.split.outputs.image_name_suffix }}
       run: |
-        docker pull ${{ inputs.image_name }}:${{ inputs.commit_tag }}
-        docker save ${{ inputs.image_name }}:${{ inputs.commit_tag }} | gzip > ${{ steps.split.outputs.image_name_suffix }}-docker-image.tar.gz
+        docker pull "${IMAGE_NAME}:${COMMIT_TAG}"
+        docker save "${IMAGE_NAME}:${COMMIT_TAG}" | gzip > "${IMAGE_NAME_SUFFIX}-docker-image.tar.gz"
     - name: Upload Docker image artifact for later use in e2e test
       if: ${{ github.ref == 'refs/heads/main' && inputs.last_commit_tag_exists == '0' }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
