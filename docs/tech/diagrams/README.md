@@ -1,6 +1,6 @@
 # Diagrams
 
-This directory contains Mermaid diagram source files (`.mmd`) for the Linea architecture documentation.
+This directory contains Mermaid diagram source files (`.mmd`) for the Lineth architecture documentation.
 
 ## Files
 

@@ -23,7 +23,7 @@ Every contract and interface MUST include `@author` and `@custom:security-contac
 
 ```solidity
 /**
- * @title Native yield extension module for the Linea L1MessageService.
+ * @title Native yield extension module for the Lineth L1MessageService.
  * @author Consensys Software Inc.
  * @custom:security-contact security-report@linea.build
  */

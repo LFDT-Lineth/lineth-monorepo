@@ -3,7 +3,7 @@ plugins {
   id 'java-test-fixtures'
 }
 
-description="Linea domain models"
+description="Lineth domain models"
 
 dependencies {
   implementation project(":jvm-libs:generic:extensions:kotlin")
