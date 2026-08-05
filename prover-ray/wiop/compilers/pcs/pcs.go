@@ -43,9 +43,9 @@ import (
 )
 
 const (
-	// friLogInverseRate is the log2 of the FRI blow-up factor (codeword size /
+	// FRILogInverseRate is the log2 of the FRI blow-up factor (codeword size /
 	// plaintext size).
-	friLogInverseRate = 1
+	FRILogInverseRate = 1
 )
 
 // friNumQueries is the number of FRI query openings. This is obtained from
@@ -79,41 +79,27 @@ var (
 // fixed maximum capacity.
 func staticFRI() (fri.Params, []*fri.RSEncoder) {
 	staticFRIOnce.Do(func() {
-		params, err := fri.NewParams(friLogInverseRate+maxCommittableSizeLog2, maxCommittableSizeLog2, uint(friNumQueries))
+		params, err := fri.NewParams(FRILogInverseRate+maxCommittableSizeLog2, maxCommittableSizeLog2, uint(friNumQueries))
 		if err != nil {
 			panic(fmt.Errorf("pcs: staticFRI: %w", err))
 		}
 		staticFRIParams = params
-		staticFRIEncoders = buildEncoders(1<<friLogInverseRate, maxCommittableSizeLog2)
+		staticFRIEncoders = buildEncoders(1<<FRILogInverseRate, maxCommittableSizeLog2)
 	})
 	return staticFRIParams, staticFRIEncoders
 }
 
-// FRILogInverseRate is the log2 of the FRI blow-up factor (codeword size /
-// plaintext size). Exported so out-of-package consumers — notably the
-// verifier-ray codegen — can reconstruct the per-proof FRI params from a
-// protocol's largest opened size (log_codeword = maxSize + FRILogInverseRate)
-// without duplicating the constant.
-const FRILogInverseRate = friLogInverseRate
-
 // FRINumQueries returns the number of FRI query openings currently configured.
-// It tracks [SetFRINumQueriesForTest], so the verifier-ray codegen emits the
-// same query count the prover committed to. Exported for that codegen; do not
-// use it to mutate query behaviour.
+// It tracks [SetFRINumQueriesForTest]; production callers must never use it to
+// mutate query behaviour.
 func FRINumQueries() int { return friNumQueries }
 
 // FRIMaxCommittableSizeLog2 is the log2 of the largest committed column size the
-// PCS supports — the fixed capacity of the static FRI envelope (2^22). The
-// verifier-ray codegen bakes this as the pcs.System envelope's log_plaintext_size
-// so ONE comptime System can restrict to any per-proof largest opened size via
-// fri.Params.restrictTo. Exported so the codegen never re-derives (and never
-// drifts from) the prover's actual envelope.
+// PCS supports — the fixed capacity of the static FRI envelope (2^22).
 func FRIMaxCommittableSizeLog2() uint8 { return maxCommittableSizeLog2 }
 
 // FRIStaticParams returns the process-wide FRI envelope parameters (sized to
-// FRIMaxCommittableSizeLog2). The verifier-ray codegen reads
-// LogCodewordSize/LogPlainTextSize/NumQueries off these to emit the pcs.System
-// envelope, so the emitted envelope is provably the one the prover commits with.
+// FRIMaxCommittableSizeLog2).
 func FRIStaticParams() fri.Params {
 	params, _ := staticFRI()
 	return params
@@ -142,7 +128,7 @@ func effectiveN(rt *wiop.Runtime, batches []BatchRef) int {
 			maxSizeIndex = idx
 		}
 	}
-	return 1 << (maxSizeIndex + friLogInverseRate)
+	return 1 << (maxSizeIndex + FRILogInverseRate)
 }
 
 // ColumnLocation records where a column sits inside its round's committed batch:
@@ -168,8 +154,7 @@ type compiled struct {
 }
 
 // BatchRef identifies one FRI batch: an interactive round, or the precomputed
-// round when IsPrecomp is set. Exported so verifier-side codegen can enumerate
-// the canonical batch ordering via [CommittedBatches] without re-deriving it.
+// round when IsPrecomp is set.
 type BatchRef struct {
 	Round     *wiop.Round
 	IsPrecomp bool
@@ -190,7 +175,7 @@ func Compile(sys *wiop.System) {
 	// runtime exposes the (static) precomputed assignments; its encoders are a
 	// prefix of the static schedule so the root is stable across proof runs.
 	if len(sys.PrecomputedRound.Columns) > 0 {
-		st := commitToRound(1<<friLogInverseRate, &sys.PrecomputedRound.Round, wiop.NewRuntime(sys))
+		st := commitToRound(1<<FRILogInverseRate, &sys.PrecomputedRound.Round, wiop.NewRuntime(sys))
 		c.precomputed = st
 		c.precomputedRoot = st.Tree.Root()
 		sys.PrecomputedCommitment = c.precomputedRoot
@@ -263,7 +248,7 @@ type commitRoundAction struct {
 }
 
 func (a *commitRoundAction) Run(rt *wiop.Runtime) {
-	st := commitToRound(1<<friLogInverseRate, a.round, rt)
+	st := commitToRound(1<<FRILogInverseRate, a.round, rt)
 	rt.Commitments[a.round.ID] = st.Tree.Root()
 	rt.SetState(committedStateKey(a.round.ID), st)
 }
