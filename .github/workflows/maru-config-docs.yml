@@ -1,0 +1,144 @@
+name: "Maru config docs"
+
+# Generates the committed Maru config reference (Markdown + JSON) and an ephemeral
+# MDX partial, validates they stay in sync, and publishes only
+# docs/stack/reference/_generated/maru/ to Consensys/doc.linea.
+#
+# Publishing is release-gated: automatic publishing fires only when a
+# `releases/maru/*` tag is cut, so doc.linea always reflects a released
+# Maru version (not in-flight main changes). Pushes to main run validation
+# only. Manual dispatch with `publish: true` is available as an explicit override
+# (gated to main or a `releases/maru/*` tag).
+#
+# The reusable step bodies live in two composite actions under .github/actions/:
+#   - validate-config-docs: gradle check + generate, snapshot sync assertion,
+#     MDX partial validation, provenance writer, artifact upload.
+#   - publish-config-docs: artifact download, doc.linea checkout, atomic
+#     namespace swap, boundary enforcement, PR creation.
+# Both are parameterized by component so Maru can consume them with different inputs.
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    paths:
+      - ".github/actions/setup-java-and-gradle/**"
+      - ".github/actions/validate-config-docs/**"
+      - ".github/actions/publish-config-docs/**"
+      - "buildSrc/src/main/groovy/ConfigDocsExtension.groovy"
+      - "buildSrc/src/main/groovy/ConfigDocsPlugin.groovy"
+      - "buildSrc/build.gradle"
+      - "maru/config/build.gradle"
+      - "maru/config/src/configDocs/**"
+      - "maru/config/src/main/kotlin/maru/config/**"
+      - "jvm-libs/linea/config-docs/**"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/actions/setup-java-and-gradle/**"
+      - ".github/actions/validate-config-docs/**"
+      - ".github/actions/publish-config-docs/**"
+      - "buildSrc/src/main/groovy/ConfigDocsExtension.groovy"
+      - "buildSrc/src/main/groovy/ConfigDocsPlugin.groovy"
+      - "buildSrc/build.gradle"
+      - "maru/config/build.gradle"
+      - "maru/config/src/configDocs/**"
+      - "maru/config/src/main/kotlin/maru/config/**"
+      - "jvm-libs/linea/config-docs/**"
+    # Automatic publishing fires only when a Maru release tag is cut, so docs on
+    # doc.linea always describe a released version (not in-flight main changes).
+    tags:
+      - "releases/maru/*"
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish generated Maru config docs to Consensys/doc.linea"
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: >-
+    ${{
+      (
+        (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/releases/maru/')) ||
+        (github.event_name == 'workflow_dispatch' && inputs.publish)
+      ) && 'maru-config-docs-publish' ||
+      format('maru-config-docs-validation-{0}', github.ref)
+    }}
+  cancel-in-progress: >-
+    ${{
+      !(
+        (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/releases/maru/')) ||
+        (github.event_name == 'workflow_dispatch' && inputs.publish)
+      )
+    }}
+
+jobs:
+  validate:
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout monorepo
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup Java and Gradle
+        uses: ./.github/actions/setup-java-and-gradle
+
+      - name: Validate Maru config docs
+        uses: ./.github/actions/validate-config-docs
+        with:
+          gradle-check-task: ":maru:config:checkConfigDocs"
+          gradle-generate-task: ":maru:config:generateConfigDocs"
+          mdx-partial-path: "maru/config/build/config-docs-mdx/_generated/maru/reference.mdx"
+          committed-snapshot-paths: >-
+            docs/tech/components/maru-config-reference.md
+            docs/tech/components/maru-config-schema.json
+          component-name: "maru"
+          artifact-name: "maru-config-docs-${{ github.sha }}"
+          artifact-upload-path: "maru/config/build/config-docs-mdx/"
+          provenance-release-tag-prefix: "releases/maru/"
+
+  publish-doc-linea:
+    if: >-
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/releases/maru/')) ||
+      (github.event_name == 'workflow_dispatch' && inputs.publish)
+    needs: validate
+    runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+    permissions:
+      contents: read
+    steps:
+      - name: Restrict manual publishing refs
+        if: >-
+          github.event_name == 'workflow_dispatch' &&
+          github.ref != 'refs/heads/main' &&
+          !startsWith(github.ref, 'refs/tags/releases/maru/')
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          echo "::error::Manual Maru config docs publishing requires main or a releases/maru/* tag, got $REF"
+          exit 1
+
+      - name: Checkout monorepo
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Publish Maru config docs to doc.linea
+        uses: ./.github/actions/publish-config-docs
+        with:
+          docs-namespace: "docs/stack/reference/_generated/maru"
+          artifact-name: "maru-config-docs-${{ github.sha }}"
+          artifact-namespace: "_generated/maru"
+          pr-branch: "ci/maru-config-docs"
+          pr-title: "docs: update Linea Maru config partials"
+          pr-commit-message: "docs: update Linea Maru config partials"
+          pr-body: |
+            Auto-generated Linea Maru TOML config MDX partials from `LFDT-Lineth/lineth-monorepo`.
+
+            This PR updates **only** `docs/stack/reference/_generated/maru/`.
+            The shared `_generated/` root and human-owned wrapper are intentionally untouched.
+        env:
+          DOC_LINEA_PR_APP_ID: ${{ secrets.DOC_LINEA_PR_APP_ID }}
+          DOC_LINEA_PR_PRIVATE_KEY: ${{ secrets.DOC_LINEA_PR_PRIVATE_KEY }}

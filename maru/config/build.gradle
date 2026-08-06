@@ -15,9 +15,20 @@
 
 plugins {
   id 'lineth.kotlin-library-conventions'
+  id 'linea.config-docs'
+}
+
+// Config documentation tooling: creates the `configDocs` source set and the
+// checkConfigDocs/generateConfigDocs tasks, driven by the spec below.
+configDocs {
+  spec = 'maru.config.docs.MaruConfigDocsSpec'
 }
 
 dependencies {
+  // @ConfigDoc/@ConfigSection annotations applied to the config data classes. Compile-time only
+  // (read by the config-docs tooling, never at app runtime) so it stays out of the production jar.
+  compileOnly project(':jvm-libs:linea:config-docs')
+
   implementation(project(':maru:core'))
   api(project(':jvm-libs:linea:core:domain-models'))
   api(project(':jvm-libs:generic:extensions:kotlin'))

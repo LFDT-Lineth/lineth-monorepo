@@ -1,0 +1,1037 @@
+{
+  "maru": {
+    "description": "Main Maru configuration.",
+    "keys": {
+      "allow-empty-blocks": {
+        "type": "Boolean",
+        "section": false,
+        "required": false,
+        "default": "false",
+        "description": "Whether the node is allowed to propose empty blocks.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "api": {
+        "type": "ApiConfig",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Maru JSON-RPC API settings.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "api.port": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "5060",
+        "description": "Port serving the Maru JSON-RPC API.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "followers": {
+        "type": "FollowersConfig",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Named map of follower execution-layer endpoints.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "followers.followers": {
+        "type": "Map<String, ApiEndpointConfig>",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Named map of follower execution-layer endpoints. Each entry maps a follower name to its engine API endpoint settings.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "fork-transition": {
+        "type": "ForkTransition",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Protocol fork transition monitoring settings.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "fork-transition.l2-eth-api-endpoint": {
+        "type": "ApiEndpointConfig?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Optional L2 endpoint used to observe the protocol fork transition. Omit when not transitioning.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "fork-transition.l2-eth-api-endpoint.endpoint": {
+        "type": "URL",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Engine API endpoint URL of the execution-layer node.",
+        "example": "http://el-node:8551",
+        "deprecated": false,
+        "replacement": null
+      },
+      "fork-transition.l2-eth-api-endpoint.jwt-secret-path": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Optional path to the JWT secret file used for authenticated Engine API calls. Omit to disable JWT authentication.",
+        "example": "/jwt.hex",
+        "deprecated": false,
+        "replacement": null
+      },
+      "fork-transition.l2-eth-api-endpoint.request-retries": {
+        "type": "RetryConfig",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Retry policy for requests to this endpoint. Defaults to no retries.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "fork-transition.l2-eth-api-endpoint.timeout": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1M",
+        "description": "Overall timeout for a single request to this endpoint.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "fork-transition.protocol-transition-polling-interval": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1S",
+        "description": "Interval between polls for the protocol fork transition.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "linea": {
+        "type": "LineaConfig?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Linea-specific settings (L1/L2 endpoints, contract address). Omit on non-Linea networks.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "linea.contract-address": {
+        "type": "ByteArray",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Address of the Linea rollup contract on L1 (20-byte hex).",
+        "example": "0x0000000000000000000000000000000000000000",
+        "deprecated": false,
+        "replacement": null
+      },
+      "linea.l1-eth-api-endpoint": {
+        "type": "ApiEndpointConfig",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "L1 execution-layer API endpoint used to monitor the rollup contract.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "linea.l1-eth-api-endpoint.endpoint": {
+        "type": "URL",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Engine API endpoint URL of the execution-layer node.",
+        "example": "http://el-node:8551",
+        "deprecated": false,
+        "replacement": null
+      },
+      "linea.l1-eth-api-endpoint.jwt-secret-path": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Optional path to the JWT secret file used for authenticated Engine API calls. Omit to disable JWT authentication.",
+        "example": "/jwt.hex",
+        "deprecated": false,
+        "replacement": null
+      },
+      "linea.l1-eth-api-endpoint.request-retries": {
+        "type": "RetryConfig",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Retry policy for requests to this endpoint. Defaults to no retries.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "linea.l1-eth-api-endpoint.timeout": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1M",
+        "description": "Overall timeout for a single request to this endpoint.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "linea.l1-highest-block-tag": {
+        "type": "BlockParameter",
+        "section": false,
+        "required": false,
+        "default": "FINALIZED",
+        "description": "L1 block tag treated as the highest finalized block (e.g. FINALIZED, SAFE, LATEST).",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "linea.l1-polling-interval": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT6S",
+        "description": "Interval between L1 polls for rollup contract events.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "linea.l2-eth-api-endpoint": {
+        "type": "ApiEndpointConfig",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "L2 execution-layer API endpoint used to set the chain head via the Engine API.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "linea.l2-eth-api-endpoint.endpoint": {
+        "type": "URL",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Engine API endpoint URL of the execution-layer node.",
+        "example": "http://el-node:8551",
+        "deprecated": false,
+        "replacement": null
+      },
+      "linea.l2-eth-api-endpoint.jwt-secret-path": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Optional path to the JWT secret file used for authenticated Engine API calls. Omit to disable JWT authentication.",
+        "example": "/jwt.hex",
+        "deprecated": false,
+        "replacement": null
+      },
+      "linea.l2-eth-api-endpoint.request-retries": {
+        "type": "RetryConfig",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Retry policy for requests to this endpoint. Defaults to no retries.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "linea.l2-eth-api-endpoint.timeout": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1M",
+        "description": "Overall timeout for a single request to this endpoint.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "observability": {
+        "type": "ObservabilityConfig",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Observability (metrics, health) settings.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "observability.jvm-metrics-enabled": {
+        "type": "Boolean",
+        "section": false,
+        "required": false,
+        "default": "true",
+        "description": "Whether JVM-level metrics are exposed in addition to application metrics.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "observability.port": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "9545",
+        "description": "Port serving observability endpoints (metrics, health).",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "observability.prometheus-metrics-enabled": {
+        "type": "Boolean",
+        "section": false,
+        "required": false,
+        "default": "true",
+        "description": "Whether Prometheus metrics are exposed on the observability port.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p": {
+        "type": "P2PConfig?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "P2P networking settings. Omit to disable P2P.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.discovery": {
+        "type": "Discovery?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Discovery (node lookup) settings. Omit to disable discovery.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.discovery.advertised-ip": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "IP address advertised to peers for discovery. Omit to use the listen IP address.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.discovery.bootnodes": {
+        "type": "List<String>",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Bootnode addresses (enodes) used to bootstrap discovery.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.discovery.port": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "9000",
+        "description": "UDP port used for discovery.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.discovery.refresh-interval": {
+        "type": "Duration",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Interval between discovery table refresh cycles.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.discovery.retry-timeout": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT10S",
+        "description": "Timeout before retrying a failed discovery request.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.discovery.search-interval": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1S",
+        "description": "Interval between discovery search runs.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.discovery.search-timeout": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT30S",
+        "description": "Timeout for a single discovery search run.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.gossiping": {
+        "type": "Gossiping",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Gossipsub parameters. Wraps Teku's GossipConfig per the Ethereum consensus p2p spec.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.gossiping.consider-peers-as-direct": {
+        "type": "Boolean",
+        "section": false,
+        "required": false,
+        "default": "false",
+        "description": "Whether to treat all peers as direct (mesh-only) peers.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.gossiping.d": {
+        "type": "Int",
+        "section": false,
+        "required": false,
+        "default": "8",
+        "description": "Target mesh degree (number of peers each topic is gossiped to).",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.gossiping.d-high": {
+        "type": "Int",
+        "section": false,
+        "required": false,
+        "default": "16",
+        "description": "Upper bound on the mesh degree; peers are pruned when the mesh exceeds this. Defaults to 2 * d.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.gossiping.d-lazy": {
+        "type": "Int",
+        "section": false,
+        "required": false,
+        "default": "6",
+        "description": "Degree of lazy (non-mesh) peers used for gossip amplification.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.gossiping.d-low": {
+        "type": "Int",
+        "section": false,
+        "required": false,
+        "default": "6",
+        "description": "Lower bound on the mesh degree; peers are added when the mesh drops below this.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.gossiping.fanout-t-t-l": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1M",
+        "description": "Time-to-live for gossip fanout messages sent to peers outside the mesh.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.gossiping.flood-publish-max-message-size-threshold": {
+        "type": "Int",
+        "section": false,
+        "required": false,
+        "default": "16384",
+        "description": "Maximum message size above which flood publishing is skipped. Defaults to 16KiB.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.gossiping.gossip-factor": {
+        "type": "Double",
+        "section": false,
+        "required": false,
+        "default": "0.25",
+        "description": "Fraction of the mesh used as the target degree when adjusting mesh size.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.gossiping.gossip-size": {
+        "type": "Int",
+        "section": false,
+        "required": false,
+        "default": "3",
+        "description": "Number of peers each gossip message is forwarded to.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.gossiping.heartbeat-interval": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT0.7S",
+        "description": "Interval between gossipsub heartbeat rounds.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.gossiping.history": {
+        "type": "Int",
+        "section": false,
+        "required": false,
+        "default": "6",
+        "description": "Number of recent message IDs remembered for deduplication.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.gossiping.seen-t-t-l": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT780.5S",
+        "description": "Time-to-live for the seen-message cache. Defaults to 700ms * 1115.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.ip-address": {
+        "type": "String",
+        "section": false,
+        "required": false,
+        "default": "127.0.0.1",
+        "description": "IP address the node listens on for P2P traffic. Defaults to localhost for security.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.max-peers": {
+        "type": "Int",
+        "section": false,
+        "required": false,
+        "default": "25",
+        "description": "Maximum number of peers the node maintains.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.max-unsynced-peers": {
+        "type": "Int",
+        "section": false,
+        "required": false,
+        "default": "2",
+        "description": "Maximum number of peers that may be out of sync before the node stops syncing from them. Defaults to max(1, max-peers / 10).",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.peering-fork-mismatch-leeway-time": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT20S",
+        "description": "Leeway time during which a peer is tolerated despite a fork mismatch before being penalized.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.port": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "9000",
+        "description": "TCP/UDP port the node listens on for P2P traffic.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.reconnect-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT5S",
+        "description": "Delay before reconnecting to a dropped peer.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.reputation": {
+        "type": "Reputation",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Peer reputation scoring settings.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.reputation.ban-period": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1H",
+        "description": "Duration a peer is banned after dropping below the disconnect threshold.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.reputation.capacity": {
+        "type": "Int",
+        "section": false,
+        "required": false,
+        "default": "1024",
+        "description": "Maximum number of peers tracked in the reputation table.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.reputation.cooldown-period": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT2M",
+        "description": "Duration a peer's reputation is held before decaying after a change.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.reputation.disconnect-score-threshold": {
+        "type": "Int",
+        "section": false,
+        "required": false,
+        "default": "-10",
+        "description": "Reputation score below which a peer is disconnected. Defaults to -large-change.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.reputation.large-change": {
+        "type": "Int",
+        "section": false,
+        "required": false,
+        "default": "10",
+        "description": "Reputation score delta applied for a large positive/negative event.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.reputation.max-reputation": {
+        "type": "Int",
+        "section": false,
+        "required": false,
+        "default": "20",
+        "description": "Maximum reputation score a peer can reach. Defaults to 2 * large-change.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.reputation.small-change": {
+        "type": "Int",
+        "section": false,
+        "required": false,
+        "default": "3",
+        "description": "Reputation score delta applied for a small positive/negative event.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.static-peers": {
+        "type": "List<String>",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Static peer addresses (enodes) the node stays connected to.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.status-update": {
+        "type": "StatusUpdate",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Peer status update polling settings.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.status-update.refresh-interval": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT30S",
+        "description": "Interval between peer status refreshes.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.status-update.refresh-interval-leeway": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT5S",
+        "description": "Leeway applied to the peer status refresh interval.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "p2p.status-update.timeout": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT10S",
+        "description": "Timeout for a single peer status update request.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "persistence": {
+        "type": "Persistence",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Persistent on-disk state settings.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "persistence.data-path": {
+        "type": "Path",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Directory where Maru stores its persistent on-disk state (database, keystore).",
+        "example": "/data/maru",
+        "deprecated": false,
+        "replacement": null
+      },
+      "persistence.private-key-path": {
+        "type": "Path",
+        "section": false,
+        "required": false,
+        "default": "data-path/private-key",
+        "description": "Path to the node private key file. Defaults to a 'private-key' file under data-path.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "qbft": {
+        "type": "QbftConfig?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "QBFT consensus settings. Omit on follower (non-validator) nodes.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "qbft.duplicate-message-limit": {
+        "type": "Int",
+        "section": false,
+        "required": false,
+        "default": "100",
+        "description": "Maximum number of duplicate QBFT messages kept per round.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "qbft.fee-recipient": {
+        "type": "ByteArray",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Fee recipient address for blocks proposed by this validator (20-byte hex).",
+        "example": "0x0000000000000000000000000000000000000000",
+        "deprecated": false,
+        "replacement": null
+      },
+      "qbft.future-message-max-distance": {
+        "type": "Long",
+        "section": false,
+        "required": false,
+        "default": "10",
+        "description": "Maximum number of blocks a future-dated QBFT message may be ahead of the current height.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "qbft.future-messages-limit": {
+        "type": "Long",
+        "section": false,
+        "required": false,
+        "default": "1000",
+        "description": "Maximum number of future-dated QBFT messages queued.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "qbft.message-queue-limit": {
+        "type": "Int",
+        "section": false,
+        "required": false,
+        "default": "1000",
+        "description": "Maximum number of QBFT messages queued per round.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "qbft.min-block-build-time": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT0.5S",
+        "description": "Minimum time spent building a block before proposing it.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "qbft.round-expiry": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Optional fixed expiry duration for a QBFT round. Omit to derive it from round-expiry-coefficient.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "qbft.round-expiry-coefficient": {
+        "type": "Double",
+        "section": false,
+        "required": false,
+        "default": "2.0",
+        "description": "Multiplier used to derive each subsequent round's expiry from the previous one.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "syncing": {
+        "type": "SyncingConfig",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Sync settings used while catching up to the chain head.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "syncing.desync-tolerance": {
+        "type": "ULong",
+        "section": false,
+        "required": false,
+        "default": "5",
+        "description": "Tolerance for how far a peer may be out of sync before being considered desynced.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "syncing.download": {
+        "type": "Download",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Block download settings used while syncing.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "syncing.download.backoff-delay": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1S",
+        "description": "Backoff delay between download retries.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "syncing.download.block-range-request-timeout": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT5S",
+        "description": "Timeout for a single block-range download request.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "syncing.download.blocks-batch-size": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "100",
+        "description": "Number of blocks requested in a single download batch.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "syncing.download.blocks-parallelism": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "1",
+        "description": "Number of block-range download requests issued in parallel.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "syncing.download.max-retries": {
+        "type": "UInt",
+        "section": false,
+        "required": false,
+        "default": "5",
+        "description": "Maximum number of retries for a failed download request.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "syncing.download.use-unconditional-random-download-peer": {
+        "type": "Boolean",
+        "section": false,
+        "required": false,
+        "default": "false",
+        "description": "Whether to pick a random download peer unconditionally on each request.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "syncing.el-sync-status-refresh-interval": {
+        "type": "Duration?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Optional interval to refresh the execution-layer sync status. Omit to disable.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "syncing.peer-chain-height-polling-interval": {
+        "type": "Duration",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Interval between polls for peer chain height updates.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "syncing.sync-target-selection": {
+        "type": "SyncTargetSelection",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Sync target selection strategy. Use 'Highest' to sync to the highest common block, or 'MostFrequent' to sync to the most frequent peer chain height.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "use-vertx-timers": {
+        "type": "Boolean",
+        "section": false,
+        "required": false,
+        "default": "false",
+        "description": "Whether to use Vert.x timers instead of the default scheduler.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "validator-el-node": {
+        "type": "ValidatorElNode?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Validator execution-layer node settings. Required when qbft is set.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "validator-el-node.engine-api-endpoint": {
+        "type": "ApiEndpointConfig",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Engine API endpoint of the validator's execution-layer node.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "validator-el-node.engine-api-endpoint.endpoint": {
+        "type": "URL",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Engine API endpoint URL of the execution-layer node.",
+        "example": "http://el-node:8551",
+        "deprecated": false,
+        "replacement": null
+      },
+      "validator-el-node.engine-api-endpoint.jwt-secret-path": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Optional path to the JWT secret file used for authenticated Engine API calls. Omit to disable JWT authentication.",
+        "example": "/jwt.hex",
+        "deprecated": false,
+        "replacement": null
+      },
+      "validator-el-node.engine-api-endpoint.request-retries": {
+        "type": "RetryConfig",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Retry policy for requests to this endpoint. Defaults to no retries.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "validator-el-node.engine-api-endpoint.timeout": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1M",
+        "description": "Overall timeout for a single request to this endpoint.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "validator-el-node.payload-validation-enabled": {
+        "type": "Boolean",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Whether to validate execution payloads received via the Engine API.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      }
+    }
+  }
+}

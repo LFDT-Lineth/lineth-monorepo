@@ -1,5 +1,9 @@
 ## [unreleased]
 
+### 🚀 Features
+
+- *(maru)* Auto-generate the Maru TOML configuration reference and publish it to the Linea docs site (#NNNN)
+
 ### 🐛 Bug Fixes
 
 - *(maru)* Declare jar task dependency on runtimeClasspath to fix manifest race (#3694)
