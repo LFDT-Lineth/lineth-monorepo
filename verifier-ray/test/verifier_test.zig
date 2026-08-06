@@ -1,31 +1,87 @@
 const std = @import("std");
 const verifier_ray = @import("verifier_ray");
+const vf = @import("test_verify");
 
 const protocol = verifier_ray.protocol;
 const verifier = verifier_ray.verifier;
 const vanishing = verifier_ray.query.vanishing;
+const logderivativesum = verifier_ray.query.logderivativesum;
 const pcs = verifier_ray.query.pcs;
-const fri = verifier_ray.query.fri;
-const fiat_shamir = verifier_ray.crypto.fiat_shamir;
 const ext = verifier_ray.field.koalabear_ext;
-const poseidon2 = verifier_ray.crypto.poseidon2;
+const field = verifier_ray.field.koalabear;
 
-test "verify completes replay, routing, and dispatch on a minimal proof" {
-    const spec = protocol.Spec{
-        .round_coin_counts = &[_]usize{0},
-        .round_coin_offsets = &[_]usize{0},
-        .total_round_coins = 0,
-    };
-    const systems = verifier.Systems{
-        .vanishing = vanishing.System{ .modules = &.{} },
-    };
-    try verifier.verify(spec, systems, .{
-        .rounds = &.{},
-        .witness_claims = &.{},
-        .quotient_claims = &.{},
-    });
+// Tests for `verifier.verify`, the top-level entry point. Two layers:
+//   1. The end-to-end sweep below drives every generated fixture case through
+//      the full compileFullPipeline (Go, gen-time) → real proof → serialized
+//      verify.zig → verifier.verify chain. Honest proofs must verify; tampered
+//      ones must be rejected.
+//   2. The round-count guard needs no fixture: `verify` must reject a proof
+//      whose round count disagrees with the compiled spec, during transcript
+//      replay (before PCS runs).
+//
+// (The PCS-authenticated challenge derivation `verify` relies on is pinned
+// separately in pcs_test.zig.)
+
+test "all fixture cases: honest proofs verify end-to-end" {
+    inline for (0..vf.case_count) |i| {
+        const case = comptime vf.get(i);
+        verifier.verify(case.spec, case.systems, vf.getInput(i)) catch |err| {
+            std.debug.print("case {d} ({s}) unexpectedly failed: {s}\n", .{ i, case.name, @errorName(err) });
+            return err;
+        };
+    }
 }
 
+test "all fixture cases: tampered proofs are rejected" {
+    var checked: usize = 0;
+    inline for (0..vf.case_count) |i| {
+        if (comptime vf.hasFailing(i)) {
+            checked += 1;
+            const case = comptime vf.get(i);
+            const proof = vf.getInputFailing(i);
+            const res = verifier.verify(case.spec, case.systems, proof);
+            if (res) |_| {
+                std.debug.print("case {d} ({s}) accepted a tampered proof\n", .{ i, case.name });
+                return error.TamperedProofAccepted;
+            } else |_| {}
+        }
+    }
+    // Guard against the sweep silently checking nothing (e.g. if hasFailing
+    // regressed to all-false): at least the vanishing scenarios carry failing
+    // inputs.
+    try std.testing.expect(checked > 0);
+}
+
+test "multi-size: one baked System verifies proofs of two dynamic sizes" {
+    // The runtime-size-reconstructed PCS layout: a committed-dynamic-column
+    // protocol is proven at two DIFFERENT dynamic-module sizes, and BOTH proofs
+    // verify against the SAME comptime System (case.systems). The verifier
+    // reconstructs each proof's canonical layout from the shared ColumnDesc list
+    // + the proof's own module_sizes, so the bundle placement / entry order /
+    // restricted FRI params adapt per size. Without the reconstruction, the alt
+    // (larger) size would land in a different bundle and fail.
+    var checked: usize = 0;
+    inline for (0..vf.case_count) |i| {
+        if (comptime vf.hasAlt(i)) {
+            checked += 1;
+            const case = comptime vf.get(i);
+            // Primary size.
+            verifier.verify(case.spec, case.systems, vf.getInput(i)) catch |err| {
+                std.debug.print("multi-size case {d} ({s}) primary failed: {s}\n", .{ i, case.name, @errorName(err) });
+                return err;
+            };
+            // Alternate size — SAME System.
+            verifier.verify(case.spec, case.systems, vf.getInputAlt(i)) catch |err| {
+                std.debug.print("multi-size case {d} ({s}) alt size failed: {s}\n", .{ i, case.name, @errorName(err) });
+                return err;
+            };
+        }
+    }
+    try std.testing.expect(checked > 0);
+}
+
+// Note: there is no "empty protocol" verify test — PCS is mandatory, so `verify`
+// always indexes a zeta coin, which a zero-coin spec cannot provide.
 test "verify rejects proof with wrong round count" {
     const spec = protocol.Spec{
         .round_coin_counts = &[_]usize{ 0, 1 },
@@ -34,118 +90,60 @@ test "verify rejects proof with wrong round count" {
     };
     const systems = verifier.Systems{
         .vanishing = vanishing.System{ .modules = &.{} },
+        .pcs = empty_pcs_system,
     };
     try std.testing.expectError(
         error.InvalidRoundCount,
         verifier.verify(spec, systems, .{
             .rounds = &.{},
-            .witness_claims = &.{},
-            .quotient_claims = &.{},
+            .pcs_opening = empty_pcs_opening,
         }),
     );
 }
 
-// ── PCS challenge derivation ──────────────────────────────────────────────────
-//
-// `deriveChallenges` squeezes the FRI fold challenges + query positions from a
-// caller-owned transcript. There is no golden vector for these on this branch
-// (the pcs.zig fixtures carry synthetic challenges, not transcript-derived
-// ones), so these tests pin the properties that must hold regardless of the
-// exact values: correct shape, determinism, and sensitivity to the absorbed
-// transcript state.
-
-// log_plaintext_size is derived from the layout's largest bundle, so the single
-// size-4 bundle below fixes it at 2; numRounds = 2 - log_final_poly_size = 2,
-// giving fold_alphas length 2 and numRounds-1 = 1 running-layer root. The
-// bundle carries no entries: these tests only exercise challenge derivation,
-// which never reads the layout beyond that size.
-const challenge_system = pcs.System{
-    .log_codeword_size = 4,
-    .num_queries = 3,
-    .layout = &.{.{ .size_log2 = 2, .entries = &.{} }},
-};
-
-fn digest(seed: u32) poseidon2.Digest {
-    var d: poseidon2.Digest = undefined;
-    for (&d, 0..) |*limb, i| limb.* = verifier_ray.field.koalabear.Element.init(seed +% @as(u32, @intCast(i)));
-    return d;
-}
-
-// A well-shaped FRI proof for `challenge_system`: exactly num_rounds-1 == 1
-// running-layer root.
-fn challengeFriProof(root_seed: u32) fri.Proof {
-    const S = struct {
-        var round_roots: [1]poseidon2.Digest = undefined;
-        var final_poly = [_]ext.Ext{ext.Ext.zero()};
+// Robustness: a sub-verifier reading a transcript cell whose (round, index) ref
+// (trusted, from the compiled System) points past the PROOF's actual rounds/cells
+// slice must return CellRefOutOfRange, not read out of bounds. In R5 ReleaseSmall
+// builds bounds checks are off, so an unbounded proof-driven index would be an OOB
+// read; Context.cell() must guard it. Exercised directly on the logderiv
+// sub-verifier (the same Context.cell path vanishing's cell_value uses).
+test "cell ref past the proof's cells slice is rejected, not read OOB" {
+    // A query whose result_ref points at cell index 3, but the round supplies
+    // only one cell.
+    const query = logderivativesum.Query{
+        .z_final_refs = &.{},
+        .result_ref = .{ .round = 0, .index = 3 },
     };
-    S.round_roots[0] = digest(root_seed);
-    return .{ .round_roots = &S.round_roots, .final_poly = &S.final_poly, .running_queries = &.{} };
-}
+    const system = logderivativesum.System{ .queries = &.{query} };
 
-test "deriveChallenges produces the comptime-sized shape" {
-    var transcript = fiat_shamir.Transcript.init();
-    const challenges = try pcs.deriveChallenges(challenge_system, &transcript, challengeFriProof(1));
-    try std.testing.expectEqual(@as(usize, 2), challenges.fold_alphas.len);
-    try std.testing.expectEqual(@as(usize, 3), challenges.query_positions.len);
-    // Query positions are reduced into the codeword domain (2^4 = 16).
-    for (challenges.query_positions) |p| try std.testing.expect(p < 16);
-}
+    const cells = [_]protocol.Scalar{.{ .base = field.Element.init(1) }};
+    const rounds = [_]protocol.RoundMessage{.{ .cells = &cells }};
+    const ctx = protocol.Context{ .all_coins = &.{}, .rounds = &rounds };
 
-test "deriveChallenges is deterministic for the same transcript and proof" {
-    var t1 = fiat_shamir.Transcript.init();
-    var t2 = fiat_shamir.Transcript.init();
-    const a = try pcs.deriveChallenges(challenge_system, &t1, challengeFriProof(7));
-    const b = try pcs.deriveChallenges(challenge_system, &t2, challengeFriProof(7));
-    for (a.fold_alphas, b.fold_alphas) |x, y| try std.testing.expect(x.eql(y));
-    try std.testing.expectEqualSlices(usize, &a.query_positions, &b.query_positions);
-}
+    try std.testing.expectError(error.CellRefOutOfRange, logderivativesum.verify(system, ctx));
 
-test "deriveChallenges depends on the absorbed transcript state" {
-    // Two transcripts diverging before derivation must yield different
-    // challenges: they are a function of the live Fiat-Shamir state, not just
-    // the proof. (Absorb one differing element up front.)
-    var t1 = fiat_shamir.Transcript.init();
-    var t2 = fiat_shamir.Transcript.init();
-    t1.updateExt(&.{ext.Ext.fromUints(.{ 1, 0, 0, 0, 0, 0 })});
-    t2.updateExt(&.{ext.Ext.fromUints(.{ 2, 0, 0, 0, 0, 0 })});
-    const a = try pcs.deriveChallenges(challenge_system, &t1, challengeFriProof(9));
-    const b = try pcs.deriveChallenges(challenge_system, &t2, challengeFriProof(9));
-    var any_alpha_differs = false;
-    for (a.fold_alphas, b.fold_alphas) |x, y| {
-        if (!x.eql(y)) any_alpha_differs = true;
-    }
-    try std.testing.expect(any_alpha_differs);
-}
-
-// At D=1 (numRounds() == 0), prover-ray still squeezes the final round's fold
-// challenge before absorbing final_poly. final_poly needs 2 coefficients
-// here: with only 1, a missing squeeze is masked by MDHasher's zero-padding.
-const d1_system = pcs.System{
-    .log_codeword_size = 4,
-    .log_final_poly_size = 1,
-    .num_queries = 2,
-    .layout = &.{.{ .size_log2 = 1, .entries = &.{} }},
-};
-
-fn d1FriProof() fri.Proof {
-    const S = struct {
-        var final_poly = [_]ext.Ext{
-            ext.Ext.fromUints(.{ 11, 12, 13, 14, 15, 16 }),
-            ext.Ext.fromUints(.{ 21, 22, 23, 24, 25, 26 }),
-        };
+    // And a ref past the rounds slice entirely.
+    const query2 = logderivativesum.Query{
+        .z_final_refs = &.{},
+        .result_ref = .{ .round = 5, .index = 0 },
     };
-    return .{ .round_roots = &.{}, .final_poly = &S.final_poly, .running_queries = &.{} };
+    const system2 = logderivativesum.System{ .queries = &.{query2} };
+    try std.testing.expectError(error.CellRefOutOfRange, logderivativesum.verify(system2, ctx));
 }
 
-test "deriveChallenges squeezes the final fold challenge even at D=1" {
-    var actual = fiat_shamir.Transcript.init();
-    const challenges = try pcs.deriveChallenges(d1_system, &actual, d1FriProof());
-
-    var expected = fiat_shamir.Transcript.init();
-    _ = expected.randomExt();
-    expected.updateExt(d1FriProof().final_poly);
-    var expected_positions: [2]usize = undefined;
-    expected.randomManyIntegers(&expected_positions, 1 << 4);
-
-    try std.testing.expectEqualSlices(usize, &expected_positions, &challenges.query_positions);
-}
+// A degenerate PCS system/opening: no batches, no layout, no claims. `verify`
+// reaches replayWithTranscript (which errors here on the bad round count) before
+// touching PCS, so an empty system suffices. num_batches == 0 makes resolveRoots
+// fill a zero-length roots array.
+const empty_pcs_system = pcs.System{
+    .envelope_params = .{ .log_codeword_size = 1, .log_plaintext_size = 0, .num_queries = 1 },
+    .columns = &.{},
+    .num_batches = 0,
+    .max_entries = 0,
+    .max_size_log2 = 0,
+    .zeta_coin_index = 0,
+};
+const empty_pcs_opening = verifier.PcsOpening{
+    .entry_claims = &.{},
+    .proof = .{ .input_queries = &.{}, .fri_proof = .{ .round_roots = &.{}, .final_poly = &.{ext.Ext.zero()}, .running_queries = &.{} } },
+};
