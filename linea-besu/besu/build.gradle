@@ -41,6 +41,21 @@ dependencies {
   api("${besuArtifactGroup}:besu-plugin-api") {
     transitive = false
   }
+  api("${besuArtifactGroup}:besu-plugin-api-core") {
+    transitive = false
+  }
+  api("${besuArtifactGroup}:besu-plugin-api-metrics") {
+    transitive = false
+  }
+  api("${besuArtifactGroup}:besu-plugin-api-security") {
+    transitive = false
+  }
+  api("${besuArtifactGroup}:besu-plugin-api-permissioning") {
+    transitive = false
+  }
+  api("${besuArtifactGroup}:besu-plugin-api-storage") {
+    transitive = false
+  }
   api("${besuArtifactGroup}.internal:besu-ethereum-rlp") {
     transitive = false
   }
