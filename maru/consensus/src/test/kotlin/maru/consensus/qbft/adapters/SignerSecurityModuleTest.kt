@@ -6,10 +6,12 @@
  *
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
-package maru.crypto
+package maru.consensus.qbft.adapters
 
 import linea.crypto.Secp256k1Signature
 import linea.crypto.Signer
+import maru.crypto.LocalValidatorSigner
+import maru.crypto.SecpCrypto
 import org.apache.tuweni.bytes.Bytes32
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -21,7 +23,7 @@ import org.junit.jupiter.api.Test
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.TimeUnit
 
-class ValidatorSignerTest {
+class SignerSecurityModuleTest {
   private val privateKey = ByteArray(32).also { it[it.lastIndex] = 1 }
   private val digest = Bytes32.fromHexString("0x01").toArray()
 

@@ -8,39 +8,17 @@
  */
 package maru.app
 
+import linea.crypto.CloseableSigner
 import linea.crypto.Secp256k1Signature
-import linea.crypto.Signer
 import maru.config.ValidatorSignerConfig
 import maru.config.ValidatorSignerType
-import org.hyperledger.besu.cryptoservices.NodeKey
-import java.util.concurrent.atomic.AtomicBoolean
 
 fun interface ValidatorSignerFactory {
-  fun create(config: ValidatorSignerConfig): ManagedValidatorSigner
-}
-
-class ManagedValidatorSigner(
-  val signer: Signer<Secp256k1Signature>,
-  private val closeAction: () -> Unit = {},
-) : AutoCloseable {
-  private val closed = AtomicBoolean()
-
-  override fun close() {
-    if (closed.compareAndSet(false, true)) {
-      closeAction()
-    }
-  }
-}
-
-internal class ValidatorSignerResource(
-  val nodeKey: NodeKey,
-  val managedSigner: ManagedValidatorSigner,
-) : AutoCloseable {
-  override fun close() = managedSigner.close()
+  fun create(config: ValidatorSignerConfig): CloseableSigner<Secp256k1Signature>
 }
 
 object DefaultValidatorSignerFactory : ValidatorSignerFactory {
-  override fun create(config: ValidatorSignerConfig): ManagedValidatorSigner {
+  override fun create(config: ValidatorSignerConfig): CloseableSigner<Secp256k1Signature> {
     require(config.type == ValidatorSignerType.CUSTOM) {
       "ValidatorSignerFactory is only used for custom validator signers"
     }

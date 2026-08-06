@@ -12,7 +12,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 
-class MaruAppResourcesTest {
+class HelpersTest {
   @Test
   fun `close attempts every resource and preserves failures`() {
     val firstFailure = IllegalStateException("p2p close failed")
@@ -20,7 +20,7 @@ class MaruAppResourcesTest {
     val closedResources = mutableListOf<String>()
 
     assertThatThrownBy {
-      closeAll(
+      Helpers.closeAll(
         { throw firstFailure },
         { closedResources += "vertx" },
         { throw secondFailure },

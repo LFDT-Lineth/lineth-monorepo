@@ -47,8 +47,8 @@ fee-recipient = "0x0000000000000000000000000000000000000000"
 signer-type = "local"
 ```
 
-An application embedding Maru can inject a custom `ValidatorSignerFactory` and select a backend-neutral signer by
-logical name:
+An application embedding Maru can inject a custom `ValidatorSignerFactory` that resolves a backend-neutral
+`CloseableSigner` by logical name:
 
 ```toml
 [qbft]
@@ -60,6 +60,7 @@ signer-name = "maru-validator"
 With a custom signer, `persistence.private-key-path` remains the P2P and discovery identity only. The custom public key
 determines the QBFT validator address, and startup fails if that address is absent from every configured validator set.
 Maru never passes the P2P private key to the custom signer factory and never falls back to the local validator key.
+The app owns the returned signer and closes it during shutdown or when startup fails.
 
 ### Build Docker Image Locally
 
@@ -91,5 +92,4 @@ Dockerhub. `-<date>-<commit-hash>` suffix is added to the actual docker image an
   `v2.0.1-betav4-20251027155452-cd25bfd`
 * Changelog will be pulled automatically into the release description. Review it and publish the release
 * Make a PR to clean up the changelog
-
 

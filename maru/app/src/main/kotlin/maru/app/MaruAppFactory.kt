@@ -16,6 +16,9 @@ import io.vertx.micrometer.MicrometerMetricsOptions
 import io.vertx.micrometer.backends.BackendRegistries
 import linea.contract.l1.LinethRollupSmartContractClientReadOnly
 import linea.contract.l1.Web3JLinethRollupSmartContractClientReadOnly
+import linea.crypto.CloseableSigner
+import linea.crypto.Secp256k1Signature
+import linea.crypto.withCloseAction
 import linea.ethapi.EthLogsSearcherImpl
 import linea.kotlin.encodeHex
 import linea.timer.JvmTimerFactory
@@ -33,17 +36,14 @@ import maru.config.SyncingConfig
 import maru.config.ValidatorSignerType
 import maru.consensus.DifficultyAwareQbftConfig
 import maru.consensus.ElFork
-import maru.consensus.ForkSpec
 import maru.consensus.ForksSchedule
 import maru.consensus.QbftConsensusConfig
 import maru.consensus.StaticValidatorProvider
 import maru.consensus.blockimport.ElForkAwareBlockImporter
 import maru.consensus.state.FinalizationProvider
 import maru.consensus.state.InstantFinalizationProvider
-import maru.core.Validator
 import maru.crypto.LocalValidatorSigner
 import maru.crypto.SecpCrypto
-import maru.crypto.toNodeKey
 import maru.database.BeaconChain
 import maru.database.P2PState
 import maru.database.kv.KvDatabaseFactory
@@ -80,8 +80,6 @@ import net.consensys.linea.metrics.Tag
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.linea.vertx.VertxFactory
 import org.apache.logging.log4j.LogManager
-import org.hyperledger.besu.cryptoservices.NodeKey
-import org.hyperledger.besu.ethereum.core.Util
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.http.HttpService
 import tech.pegasys.teku.ethereum.executionclient.web3j.Web3JClient
@@ -154,8 +152,8 @@ class MaruAppFactory(
 
     config.persistence.dataPath.createDirectories()
     val privateKey = getOrGeneratePrivateKey(config.persistence.privateKeyPath)
-    val validatorSignerResource =
-      createValidatorSignerResource(
+    val validatorSigner =
+      createValidatorSigner(
         qbftConfig = config.qbft,
         beaconGenesisConfig = beaconGenesisConfig,
         privateKey = privateKey,
@@ -168,7 +166,7 @@ class MaruAppFactory(
         clock = clock,
         privateKey = privateKey,
         blockHashing = blockHashing,
-        validatorSignerResource = validatorSignerResource,
+        validatorSigner = validatorSigner,
         overridingP2PNetwork = overridingP2PNetwork,
         overridingFinalizationProvider = overridingFinalizationProvider,
         overridingLineaContractClient = overridingLineaContractClient,
@@ -177,7 +175,7 @@ class MaruAppFactory(
       )
     } catch (error: Throwable) {
       try {
-        validatorSignerResource?.close()
+        validatorSigner?.close()
       } catch (closeError: Throwable) {
         error.addSuppressed(closeError)
       }
@@ -191,10 +189,10 @@ class MaruAppFactory(
     clock: Clock,
     privateKey: ByteArray,
     blockHashing: ForkAwareBlockHashing,
-    validatorSignerResource: ValidatorSignerResource?,
+    validatorSigner: CloseableSigner<Secp256k1Signature>?,
     overridingP2PNetwork: P2PNetwork?,
     overridingFinalizationProvider: FinalizationProvider?,
-    overridingLineaContractClient: LineaRollupSmartContractClientReadOnly?,
+    overridingLineaContractClient: LinethRollupSmartContractClientReadOnly?,
     overridingApiServer: ApiServer?,
     p2pNetworkFactory: (
       ByteArray,
@@ -400,8 +398,7 @@ class MaruAppFactory(
       beaconGenesisConfig = beaconGenesisConfig,
       clock = clock,
       p2pNetwork = p2pNetwork,
-      validatorNodeKey = validatorSignerResource?.nodeKey,
-      managedValidatorSigner = validatorSignerResource?.managedSigner,
+      validatorSigner = validatorSigner,
       finalizationProvider = finalizationProvider,
       metricsFacade = metricsFacade,
       vertx = vertx,
@@ -416,76 +413,36 @@ class MaruAppFactory(
     )
   }
 
-  internal fun createValidatorSignerResource(
+  internal fun createValidatorSigner(
     qbftConfig: QbftConfig?,
     beaconGenesisConfig: ForksSchedule,
     privateKey: ByteArray,
-  ): ValidatorSignerResource? {
+  ): CloseableSigner<Secp256k1Signature>? {
     if (qbftConfig == null) {
       return null
     }
 
-    val managedValidatorSigner =
+    val validatorSigner =
       when (qbftConfig.validatorSigner.type) {
         ValidatorSignerType.LOCAL ->
-          ManagedValidatorSigner(
-            LocalValidatorSigner(SecpCrypto.privateKeyBytesWithoutPrefix(privateKey)),
-          )
+          LocalValidatorSigner(
+            SecpCrypto.privateKeyBytesWithoutPrefix(privateKey),
+          ).withCloseAction()
 
         ValidatorSignerType.CUSTOM ->
           validatorSignerFactory.create(qbftConfig.validatorSigner)
       }
 
     try {
-      val nodeKey = managedValidatorSigner.signer.toNodeKey()
-      validateValidatorIdentity(qbftConfig, beaconGenesisConfig, nodeKey)
-      return ValidatorSignerResource(nodeKey, managedValidatorSigner)
+      ValidatorIdentityValidator.validate(qbftConfig, beaconGenesisConfig, validatorSigner)
+      return validatorSigner
     } catch (error: Throwable) {
       try {
-        managedValidatorSigner.close()
+        validatorSigner.close()
       } catch (closeError: Throwable) {
         error.addSuppressed(closeError)
       }
       throw error
-    }
-  }
-
-  private fun validateValidatorIdentity(
-    qbftConfig: QbftConfig,
-    beaconGenesisConfig: ForksSchedule,
-    validatorNodeKey: NodeKey,
-  ) {
-    val validator =
-      Validator(
-        Util
-          .publicKeyToAddress(validatorNodeKey.publicKey)
-          .bytes
-          .toArray(),
-      )
-    val validatorsFromAllForks: Set<Validator> =
-      beaconGenesisConfig.forks
-        .flatMap<ForkSpec, Validator> {
-          when (val configuration = it.configuration) {
-            is DifficultyAwareQbftConfig -> configuration.postTtdConfig.validatorSet
-            is QbftConsensusConfig -> configuration.validatorSet
-            else ->
-              throw IllegalArgumentException(
-                "Unsupported consensus configuration: ${configuration::class.qualifiedName}",
-              )
-          }
-        }.toSet()
-
-    if (validator !in validatorsFromAllForks) {
-      if (qbftConfig.validatorSigner.type == ValidatorSignerType.CUSTOM) {
-        throw IllegalArgumentException(
-          "Custom validator signer '${qbftConfig.validatorSigner.name}' address " +
-            "${validator.address.encodeHex()} is not present in any configured validator set",
-        )
-      }
-      log.warn(
-        "localValidator={} isn't found in any of validatorSet-s in any of the Forks in the Genesis file!",
-        validator,
-      )
     }
   }
 

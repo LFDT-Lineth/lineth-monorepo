@@ -9,6 +9,9 @@
 package maru.app
 
 import io.vertx.core.Vertx
+import linea.crypto.CloseableSigner
+import linea.crypto.Secp256k1Signature
+import linea.crypto.Signer
 import linea.kotlin.encodeHex
 import linea.timer.TimerFactory
 import maru.api.ApiServer
@@ -22,7 +25,6 @@ import maru.consensus.qbft.DifficultyAwareQbftFactory
 import maru.consensus.state.FinalizationProvider
 import maru.core.Protocol
 import maru.core.SealedBeaconBlock
-import maru.core.Validator
 import maru.database.BeaconChain
 import maru.finalization.LineaFinalizationProvider
 import maru.metrics.MaruMetricsCategory
@@ -36,8 +38,6 @@ import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.vertx.ObservabilityServer
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
-import org.hyperledger.besu.cryptoservices.NodeKey
-import org.hyperledger.besu.ethereum.core.Util
 import org.hyperledger.besu.plugin.services.MetricsSystem
 import org.web3j.protocol.Web3j
 import tech.pegasys.teku.ethereum.executionclient.web3j.Web3JClient
@@ -55,8 +55,7 @@ class MaruApp internal constructor(
   // This will only be used if config.p2pConfig is undefined
   val p2pNetwork: P2PNetwork,
   val beaconChain: BeaconChain,
-  private val validatorNodeKey: NodeKey?,
-  private val managedValidatorSigner: ManagedValidatorSigner?,
+  private val validatorSigner: CloseableSigner<Secp256k1Signature>?,
   private val finalizationProvider: FinalizationProvider,
   private val vertx: Vertx,
   private val metricsFacade: MetricsFacade,
@@ -93,14 +92,8 @@ class MaruApp internal constructor(
     if (config.qbft == null) {
       log.info("Qbft options are not defined. nodeRole=follower")
     } else {
-      checkNotNull(validatorNodeKey) { "Validator NodeKey is required when QBFT is configured" }
-      val validator =
-        Validator(
-          Util
-            .publicKeyToAddress(validatorNodeKey.publicKey)
-            .bytes
-            .toArray(),
-        )
+      checkNotNull(validatorSigner) { "Validator signer is required when QBFT is configured" }
+      val validator = ValidatorIdentityValidator.validatorFor(validatorSigner)
       log.info(
         "Qbft options are defined. nodeRole=validator signerType={} signerName={} validatorAddress={}",
         config.qbft!!.validatorSigner.type.name.lowercase(),
@@ -165,7 +158,7 @@ class MaruApp internal constructor(
       beaconGenesisConfig = beaconGenesisConfig,
       clock = clock,
       beaconChain = beaconChain,
-      validatorNodeKey = validatorNodeKey,
+      validatorSigner = validatorSigner,
       timerFactory = timerFactory,
     )
 
@@ -211,7 +204,7 @@ class MaruApp internal constructor(
   }
 
   override fun close() {
-    closeAll(
+    Helpers.closeAll(
       { validatorELNodeEngineApiWeb3JClient?.eth1Web3j?.shutdown() },
       { l2EthWeb3j?.shutdown() },
       {
@@ -222,7 +215,7 @@ class MaruApp internal constructor(
       p2pNetwork::close,
       { vertx.close() },
       protocolStarter::close,
-      { managedValidatorSigner?.close() },
+      { validatorSigner?.close() },
       beaconChain::close,
     )
   }
@@ -253,14 +246,14 @@ class MaruApp internal constructor(
     beaconGenesisConfig: ForksSchedule,
     clock: Clock,
     beaconChain: BeaconChain,
-    validatorNodeKey: NodeKey?,
+    validatorSigner: Signer<Secp256k1Signature>?,
     timerFactory: TimerFactory,
   ): Protocol {
     val qbftFactory =
       if (config.qbft != null) {
         QbftProtocolValidatorFactory(
           qbftOptions = config.qbft!!,
-          nodeKey = checkNotNull(validatorNodeKey),
+          validatorSigner = checkNotNull(validatorSigner),
           validatorELNodeEngineApiWeb3JClient = validatorELNodeEngineApiWeb3JClient!!,
           followerELNodeEngineApiWeb3JClients = followerELNodeEngineApiWeb3JClients,
           metricsSystem = metricsSystem,
@@ -319,21 +312,4 @@ class MaruApp internal constructor(
 
     return protocolStarter
   }
-}
-
-internal fun closeAll(vararg closeActions: () -> Unit) {
-  var firstFailure: Throwable? = null
-  closeActions.forEach { closeAction ->
-    try {
-      closeAction()
-    } catch (error: Throwable) {
-      val failure = firstFailure
-      if (failure == null) {
-        firstFailure = error
-      } else if (failure !== error) {
-        failure.addSuppressed(error)
-      }
-    }
-  }
-  firstFailure?.let { throw it }
 }

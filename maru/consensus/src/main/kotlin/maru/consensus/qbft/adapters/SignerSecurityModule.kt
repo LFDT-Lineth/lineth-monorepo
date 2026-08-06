@@ -6,10 +6,11 @@
  *
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
-package maru.crypto
+package maru.consensus.qbft.adapters
 
 import linea.crypto.Secp256k1Signature
 import linea.crypto.Signer
+import maru.crypto.SecpCrypto
 import org.apache.tuweni.bytes.Bytes
 import org.apache.tuweni.bytes.Bytes32
 import org.hyperledger.besu.crypto.ECPointUtil
@@ -18,29 +19,8 @@ import org.hyperledger.besu.plugin.services.securitymodule.SecurityModule
 import org.hyperledger.besu.plugin.services.securitymodule.SecurityModuleException
 import org.hyperledger.besu.plugin.services.securitymodule.data.PublicKey
 import org.hyperledger.besu.plugin.services.securitymodule.data.Signature
-import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.CompletionException
 import java.util.concurrent.ExecutionException
-
-class LocalValidatorSigner(
-  privateKeyBytes: ByteArray,
-) : Signer<Secp256k1Signature> {
-  private val keyPair =
-    SecpCrypto.signatureAlgorithm.createKeyPair(
-      SecpCrypto.signatureAlgorithm.createPrivateKey(Bytes32.wrap(privateKeyBytes.copyOf())),
-    )
-  private val publicKey = keyPair.publicKey.encodedBytes.toArray()
-
-  override fun publicKey(): ByteArray = publicKey.copyOf()
-
-  override fun sign(bytes: ByteArray): SafeFuture<Secp256k1Signature> {
-    require(bytes.size == Bytes32.SIZE) {
-      "Validator signer input must be ${Bytes32.SIZE} bytes, got ${bytes.size}"
-    }
-    val signature = SecpCrypto.signatureAlgorithm.sign(Bytes32.wrap(bytes.copyOf()), keyPair)
-    return SafeFuture.completedFuture(Secp256k1Signature(signature.r, signature.s))
-  }
-}
 
 internal class SignerSecurityModule(
   private val signer: Signer<Secp256k1Signature>,
@@ -109,4 +89,4 @@ internal class SignerSecurityModule(
   }
 }
 
-fun Signer<Secp256k1Signature>.toNodeKey(): NodeKey = NodeKey(SignerSecurityModule(this))
+internal fun Signer<Secp256k1Signature>.toNodeKey(): NodeKey = NodeKey(SignerSecurityModule(this))

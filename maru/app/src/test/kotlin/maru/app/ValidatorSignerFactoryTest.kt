@@ -8,6 +8,7 @@
  */
 package maru.app
 
+import linea.crypto.withCloseAction
 import maru.config.ApiConfig
 import maru.config.ApiEndpointConfig
 import maru.config.FollowersConfig
@@ -33,7 +34,6 @@ import maru.crypto.SecpCrypto
 import org.apache.tuweni.bytes.Bytes32
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.hyperledger.besu.ethereum.core.Util
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.net.URI
@@ -62,18 +62,6 @@ class ValidatorSignerFactoryTest {
   }
 
   @Test
-  fun `managed signer closes its resource once`() {
-    var closeCalls = 0
-    val localSigner = LocalValidatorSigner(privateKey)
-    val managedSigner = ManagedValidatorSigner(localSigner) { closeCalls++ }
-
-    managedSigner.close()
-    managedSigner.close()
-
-    assertThat(closeCalls).isEqualTo(1)
-  }
-
-  @Test
   fun `app factory composes a custom signer matching the validator set`() {
     var receivedConfig: ValidatorSignerConfig? = null
     var closeCalls = 0
@@ -82,29 +70,23 @@ class ValidatorSignerFactoryTest {
       MaruAppFactory(
         ValidatorSignerFactory { config ->
           receivedConfig = config
-          ManagedValidatorSigner(localSigner) { closeCalls++ }
+          localSigner.withCloseAction { closeCalls++ }
         },
       )
 
-    val resource =
-      factory.createValidatorSignerResource(
+    val signer =
+      factory.createValidatorSigner(
         qbftConfig = customQbftConfig(),
         beaconGenesisConfig = forkSchedule(setOf(SecpCrypto.privateKeyToValidator(privateKey))),
         privateKey = ByteArray(0),
       )
 
     assertThat(receivedConfig).isEqualTo(customSignerConfig)
-    assertThat(
-      Validator(
-        Util
-          .publicKeyToAddress(resource!!.nodeKey.publicKey)
-          .bytes
-          .toArray(),
-      ),
-    ).isEqualTo(SecpCrypto.privateKeyToValidator(privateKey))
+    assertThat(ValidatorIdentityValidator.validatorFor(signer!!))
+      .isEqualTo(SecpCrypto.privateKeyToValidator(privateKey))
 
-    resource.close()
-    resource.close()
+    signer.close()
+    signer.close()
     assertThat(closeCalls).isEqualTo(1)
   }
 
@@ -114,7 +96,7 @@ class ValidatorSignerFactoryTest {
     val factory =
       MaruAppFactory(
         ValidatorSignerFactory {
-          ManagedValidatorSigner(LocalValidatorSigner(privateKey)) { closeCalls++ }
+          LocalValidatorSigner(privateKey).withCloseAction { closeCalls++ }
         },
       )
     val differentValidator =
@@ -125,7 +107,7 @@ class ValidatorSignerFactoryTest {
       )
 
     assertThatThrownBy {
-      factory.createValidatorSignerResource(
+      factory.createValidatorSigner(
         qbftConfig = customQbftConfig(),
         beaconGenesisConfig = forkSchedule(setOf(differentValidator)),
         privateKey = ByteArray(0),
@@ -145,7 +127,7 @@ class ValidatorSignerFactoryTest {
     val factory =
       MaruAppFactory(
         ValidatorSignerFactory {
-          ManagedValidatorSigner(localSigner) { closeCalls++ }
+          localSigner.withCloseAction { closeCalls++ }
         },
       )
     val now = 1_000_000L
