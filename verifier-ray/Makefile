@@ -127,6 +127,7 @@ test-codegen:
 
 generate-testdata:
 	cd testdata/generate && go run .
+	cd testdata/generate/fri && go run .
 
 verify-testdata: generate-testdata
 	git diff --exit-code -- testdata/generated/*.zig
