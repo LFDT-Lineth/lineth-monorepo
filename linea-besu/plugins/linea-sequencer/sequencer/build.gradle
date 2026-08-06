@@ -8,6 +8,7 @@
  */
 
 plugins {
+  id 'lineth.kotlin-common-minimal-conventions'
   alias(libs.plugins.besuPluginDistribution)
   alias(libs.plugins.lombok)
   alias(libs.plugins.gradleVersions)

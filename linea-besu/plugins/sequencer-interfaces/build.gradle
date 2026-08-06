@@ -8,25 +8,8 @@ buildscript {
   }
 }
 
+apply plugin: 'lineth.kotlin-common-minimal-conventions'
 apply plugin: 'java-library'
-
-repositories {
-  mavenCentral()
-  maven {
-    url 'https://artifacts.consensys.net/public/teku/maven/'
-    content { includeGroupAndSubgroups('tech.pegasys') }
-  }
-  maven {
-    name = 'linea-besu'
-    url = "https://artifacts.consensys.net/public/linea-besu/maven/"
-  }
-}
-
-java {
-  toolchain {
-    languageVersion = JavaLanguageVersion.of(25)
-  }
-}
 
 group = 'build.linea'
 description = 'Lineth chain security interfaces'
@@ -45,6 +28,16 @@ dependencies {
 }
 
 apply from: rootProject.file("gradle/publishing.gradle")
+
+// This API exposes signer-interfaces types, so both artifacts must pass verification and be
+// staged together when sequencer-interfaces is released.
+tasks.named('build') {
+  dependsOn ':jvm-libs:linea:core:signer-interfaces:build'
+}
+
+tasks.named('publish') {
+  dependsOn ':jvm-libs:linea:core:signer-interfaces:publish'
+}
 
 tasks.withType(GenerateModuleMetadata).configureEach {
   suppressedValidationErrors.add('enforced-platform')
