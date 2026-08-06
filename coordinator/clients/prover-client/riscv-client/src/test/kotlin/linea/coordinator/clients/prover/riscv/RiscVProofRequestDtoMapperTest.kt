@@ -16,10 +16,6 @@ import linea.kotlin.encodeHex
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.any
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.mock
-import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.math.BigInteger
 import kotlin.time.Instant
 
@@ -238,9 +234,7 @@ class RiscVProofRequestDtoMapperTest {
       endShnarf = ByteArray(32),
       l2Executions = listOf(proofIndex),
     )
-    val transport = mock<L2ExecutionProofTransport> {
-      on { findResponse(any()) } doReturn SafeFuture.completedFuture(null)
-    }
+    val transport = FakeL2ExecutionProofTransport(responseProvider = { null })
 
     assertThatThrownBy {
       FileBasedRollupProofRequestDtoMapper(guestProgramId, chainId, transport).invoke(request).get()
@@ -285,9 +279,7 @@ class RiscVProofRequestDtoMapperTest {
   fun `FileBasedRollupAggregationProofRequestDtoMapper reports a missing rollup proof`() {
     val proofIndex = blockIntervalProofIndex(1000501UL, 1000520UL)
     val request = RollupAggregationProofRequestV1(rollupProofs = listOf(proofIndex))
-    val transport = mock<FileBasedRollupProofTransport> {
-      on { findResponse(any()) } doReturn SafeFuture.completedFuture(null)
-    }
+    val transport = FakeRollupProofTransport(responseProvider = { null })
 
     assertThatThrownBy {
       FileBasedRollupAggregationProofRequestDtoMapper(guestProgramId, transport).invoke(request).get()

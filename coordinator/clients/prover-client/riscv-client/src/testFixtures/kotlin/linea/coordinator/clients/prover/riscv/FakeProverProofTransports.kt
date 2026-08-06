@@ -9,7 +9,9 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
  * [L2ExecutionProofResponseDto]. Used to drive `FileBasedRollupProverClient`'s request mapper without a real
  * l2-execution proof transport.
  */
-class FakeL2ExecutionProofTransport : L2ExecutionProofTransport {
+class FakeL2ExecutionProofTransport(
+  private val responseProvider: ((BlockIntervalProofIndex) -> L2ExecutionProofResponseDto?)? = null,
+) : L2ExecutionProofTransport {
   private val l2ExecutionProofResponseDto = L2ExecutionProofResponseDto(
     startBlockNumber = 1L,
     proverVersion = RiscVProverClientTestFixtures.PROVER_VERSION,
@@ -28,14 +30,13 @@ class FakeL2ExecutionProofTransport : L2ExecutionProofTransport {
   ): SafeFuture<Unit> = SafeFuture.completedFuture(Unit)
 
   override fun findResponse(proofIndex: BlockIntervalProofIndex): SafeFuture<L2ExecutionProofResponseDto?> =
-    SafeFuture.completedFuture(
-      l2ExecutionProofResponseDto(proofIndex),
-    )
+    SafeFuture.completedFuture(response(proofIndex))
 
   override fun awaitResponse(proofIndex: BlockIntervalProofIndex): SafeFuture<L2ExecutionProofResponseDto> =
-    SafeFuture.completedFuture(
-      l2ExecutionProofResponseDto(proofIndex),
-    )
+    SafeFuture.completedFuture(requireNotNull(response(proofIndex)))
+
+  private fun response(proofIndex: BlockIntervalProofIndex): L2ExecutionProofResponseDto? =
+    if (responseProvider != null) responseProvider(proofIndex) else l2ExecutionProofResponseDto(proofIndex)
 
   private fun l2ExecutionProofResponseDto(
     proofIndex: BlockIntervalProofIndex,
@@ -54,7 +55,9 @@ class FakeL2ExecutionProofTransport : L2ExecutionProofTransport {
  * [RollupProofResponseDto]. Used to drive `FileBasedRollupAggregationProverClient`'s request mapper without a real
  * rollup proof transport.
  */
-class FakeRollupProofTransport : FileBasedRollupProofTransport {
+class FakeRollupProofTransport(
+  private val responseProvider: ((BlockIntervalProofIndex) -> RollupProofResponseDto?)? = null,
+) : FileBasedRollupProofTransport {
   private val rollupProofResponseDto = RollupProofResponseDto(
     startBlockNumber = 1L,
     proverVersion = RiscVProverClientTestFixtures.PROVER_VERSION,
@@ -72,10 +75,13 @@ class FakeRollupProofTransport : FileBasedRollupProofTransport {
   ): SafeFuture<Unit> = SafeFuture.completedFuture(Unit)
 
   override fun findResponse(proofIndex: BlockIntervalProofIndex): SafeFuture<RollupProofResponseDto?> =
-    SafeFuture.completedFuture(rollupProofResponseDto(proofIndex))
+    SafeFuture.completedFuture(response(proofIndex))
 
   override fun awaitResponse(proofIndex: BlockIntervalProofIndex): SafeFuture<RollupProofResponseDto> =
-    SafeFuture.completedFuture(rollupProofResponseDto(proofIndex))
+    SafeFuture.completedFuture(requireNotNull(response(proofIndex)))
+
+  private fun response(proofIndex: BlockIntervalProofIndex): RollupProofResponseDto? =
+    if (responseProvider != null) responseProvider(proofIndex) else rollupProofResponseDto(proofIndex)
 
   private fun rollupProofResponseDto(
     proofIndex: BlockIntervalProofIndex,
