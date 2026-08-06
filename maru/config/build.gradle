@@ -37,4 +37,10 @@ dependencies {
   implementation "com.sksamuel.hoplite:hoplite-toml:${libs.versions.hoplite.get()}"
   implementation "com.sksamuel.hoplite:hoplite-json:${libs.versions.hoplite.get()}"
   implementation "com.sksamuel.hoplite:hoplite-core:${libs.versions.hoplite.get()}"
+
+  // Guard test (MaruConfigDocsSpecGuardTest) asserts the config-docs spec roots at the Hoplite
+  // TOML DTO. It needs the spec (configDocs source set) and the config-docs engine on the test
+  // classpath; both are build-time only and stay out of the production jar.
+  testImplementation project(':jvm-libs:linea:config-docs')
+  testImplementation sourceSets.configDocs.output
 }

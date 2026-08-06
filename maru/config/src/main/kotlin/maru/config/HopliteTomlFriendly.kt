@@ -8,6 +8,8 @@
  */
 package maru.config
 
+import linea.config.docs.ConfigDoc
+import linea.config.docs.ConfigSection
 import linea.domain.RetryConfig
 import linea.domain.toBlockParameter
 import linea.kotlin.assertIs20Bytes
@@ -18,7 +20,12 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 data class PayloadValidatorDto(
+  @param:ConfigSection("Engine API endpoint of the validator's execution-layer node.")
   val engineApiEndpoint: ApiEndpointDto,
+  @param:ConfigDoc(
+    description = "Whether to validate execution payloads received via the Engine API.",
+    default = "true",
+  )
   val payloadValidationEnabled: Boolean = true,
 ) {
   fun domainFriendly(): ValidatorElNode =
@@ -29,8 +36,21 @@ data class PayloadValidatorDto(
 }
 
 data class ApiEndpointDto(
+  @param:ConfigDoc(
+    description = "Engine API endpoint URL of the execution-layer node.",
+    example = "http://el-node:8551",
+  )
   val endpoint: URL,
+  @param:ConfigDoc(
+    description = "Optional path to the JWT secret file used for authenticated Engine API calls. " +
+      "Omit to disable JWT authentication.",
+    example = "/jwt.hex",
+  )
   val jwtSecretPath: String? = null,
+  @param:ConfigDoc(
+    description = "Overall timeout for a single request to this endpoint.",
+    default = "PT1M",
+  )
   val timeout: Duration = 1.minutes,
 ) {
   fun domainFriendly(endlessRetries: Boolean = false): ApiEndpointConfig {
@@ -53,13 +73,45 @@ data class ApiEndpointDto(
 }
 
 data class QbftOptionsDtoToml(
+  @param:ConfigDoc(
+    description = "Minimum time spent building a block before proposing it.",
+    default = "PT0.5S",
+  )
   val minBlockBuildTime: Duration = 500.milliseconds,
+  @param:ConfigDoc(
+    description = "Maximum number of QBFT messages queued per round.",
+    default = "1000",
+  )
   val messageQueueLimit: Int = 1000,
+  @param:ConfigDoc(
+    description = "Optional fixed expiry duration for a QBFT round. Omit to derive it from " +
+      "round-expiry-coefficient.",
+  )
   val roundExpiry: Duration? = null,
+  @param:ConfigDoc(
+    description = "Multiplier used to derive each subsequent round's expiry from the previous one.",
+    default = "2.0",
+  )
   val roundExpiryCoefficient: Double = 2.0,
+  @param:ConfigDoc(
+    description = "Maximum number of duplicate QBFT messages kept per round.",
+    default = "100",
+  )
   val duplicateMessageLimit: Int = 100,
+  @param:ConfigDoc(
+    description = "Maximum number of blocks a future-dated QBFT message may be ahead of the current height.",
+    default = "10",
+  )
   val futureMessageMaxDistance: Long = 10L,
+  @param:ConfigDoc(
+    description = "Maximum number of future-dated QBFT messages queued.",
+    default = "1000",
+  )
   val futureMessagesLimit: Long = 1000L,
+  @param:ConfigDoc(
+    description = "Fee recipient address for blocks proposed by this validator (20-byte hex).",
+    example = "0x0000000000000000000000000000000000000000",
+  )
   val feeRecipient: ByteArray,
 ) {
   fun toDomain(): QbftConfig =
@@ -106,16 +158,42 @@ data class QbftOptionsDtoToml(
 }
 
 data class DefaultsDtoToml(
+  @param:ConfigSection(
+    "Fallback L2 endpoint reused by linea.l2-eth-api-endpoint and fork-transition.l2-eth-api-endpoint.",
+  )
   val l2EthEndpoint: ApiEndpointDto,
 )
 
 data class LineaConfigDtoToml(
+  @param:ConfigDoc(
+    description = "Address of the Linea rollup contract on L1 (20-byte hex).",
+    example = "0x0000000000000000000000000000000000000000",
+  )
   val contractAddress: ByteArray,
+  @param:ConfigSection(
+    "Legacy L1 endpoint; alias for l1-eth-api-endpoint kept for backwards compatibility. " +
+      "Deprecated, use l1-eth-api-endpoint.",
+    deprecated = true,
+    replacement = "l1-eth-api-endpoint",
+  )
   val l1EthApi: ApiEndpointDto? = null, // TODO: This is a fallback for backwards compatibility.
   // Remove in the next major release
+  @param:ConfigSection("L1 execution-layer API endpoint used to monitor the rollup contract.")
   val l1EthApiEndpoint: ApiEndpointDto? = l1EthApi,
+  @param:ConfigDoc(
+    description = "Interval between L1 polls for rollup contract events.",
+    default = "PT6S",
+  )
   val l1PollingInterval: Duration = 6.seconds,
+  @param:ConfigDoc(
+    description = "L1 block tag treated as the highest finalized block (e.g. finalized, safe, latest).",
+    default = "finalized",
+  )
   val l1HighestBlockTag: String = "finalized",
+  @param:ConfigSection(
+    "L2 execution-layer API endpoint used to set the chain head via the Engine API. " +
+      "Falls back to defaults.l2-eth-endpoint when omitted.",
+  )
   val l2EthApiEndpoint: ApiEndpointDto? = null,
 ) {
   init {
@@ -166,7 +244,15 @@ data class LineaConfigDtoToml(
 }
 
 data class ForkTransitionDtoToml(
+  @param:ConfigSection(
+    "Optional L2 endpoint used to observe the protocol fork transition. Falls back to " +
+      "defaults.l2-eth-endpoint when omitted.",
+  )
   val l2EthApiEndpoint: ApiEndpointDto? = null,
+  @param:ConfigDoc(
+    description = "Interval between polls for the protocol fork transition.",
+    default = "PT1S",
+  )
   val protocolTransitionPollingInterval: Duration = 1.seconds,
 ) {
   fun domainFriendly(defaultL2EthApi: ApiEndpointDto?): ForkTransition {
@@ -179,17 +265,35 @@ data class ForkTransitionDtoToml(
 }
 
 data class MaruConfigDtoToml(
+  @param:ConfigDoc(
+    description = "Whether the node is allowed to propose empty blocks.",
+    default = "false",
+  )
   private val allowEmptyBlocks: Boolean = false,
+  @param:ConfigSection("Shared defaults reused by linea and fork-transition; currently provides the L2 endpoint.")
   private val defaults: DefaultsDtoToml? = null,
+  @param:ConfigSection("Linea-specific settings (L1/L2 endpoints, contract address). Omit on non-Linea networks.")
   private val linea: LineaConfigDtoToml? = null,
+  @param:ConfigSection("Persistent on-disk state settings.")
   private val persistence: Persistence,
+  @param:ConfigSection("QBFT consensus settings. Omit on follower (non-validator) nodes.")
   private val qbft: QbftOptionsDtoToml?,
+  @param:ConfigSection("P2P networking settings. Omit to disable P2P.")
   private val p2p: P2PConfig?,
+  @param:ConfigSection("Validator execution-layer node settings. Required when qbft is set.")
   private val payloadValidator: PayloadValidatorDto?,
+  @param:ConfigDoc(
+    description = "Named map of follower execution-layer endpoints. Each entry maps a follower name " +
+      "to its engine API endpoint settings.",
+  )
   private val followerEngineApis: Map<String, ApiEndpointDto>?,
+  @param:ConfigSection("Observability (metrics, health) settings.")
   private val observability: ObservabilityConfig,
+  @param:ConfigSection("Maru JSON-RPC API settings.")
   private val api: ApiConfig,
+  @param:ConfigSection("Sync settings used while catching up to the chain head.")
   private val syncing: SyncingConfig,
+  @param:ConfigSection("Protocol fork transition monitoring settings. Has defaults so the section may be omitted.")
   private val forkTransition: ForkTransitionDtoToml = ForkTransitionDtoToml(),
 ) {
   fun domainFriendly(): MaruConfig =

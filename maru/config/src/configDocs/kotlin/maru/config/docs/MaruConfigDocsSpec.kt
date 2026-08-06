@@ -11,12 +11,16 @@ package maru.config.docs
 import linea.config.docs.ConfigDocsSpec
 import linea.config.docs.ConfigFileRoot
 import linea.config.docs.sectionByPackagePrefix
-import maru.config.MaruConfig
+import maru.config.MaruConfigDtoToml
 
 /**
  * Maru-specific configuration for the generic `config-docs` tooling. Lives in the
  * `configDocs` source set (compiled against the config classes but kept out of the production
  * jar) and is named from `maru/config/build.gradle` via `configDocs { spec = "…" }`.
+ *
+ * The root class is `MaruConfigDtoToml` — the Hoplite TOML schema `MaruConfigLoader.loadAppConfigs`
+ * returns — not the domain `MaruConfig`, so the generated reference matches the keys operators
+ * can actually set in `*.toml` files.
  */
 object MaruConfigDocsSpec : ConfigDocsSpec {
   /** Config data classes live in this package; used to distinguish nested sections from leaves. */
@@ -27,7 +31,7 @@ object MaruConfigDocsSpec : ConfigDocsSpec {
     ConfigFileRoot(
       label = "maru",
       description = "Main Maru configuration.",
-      rootClass = MaruConfig::class,
+      rootClass = MaruConfigDtoToml::class,
     ),
   )
 

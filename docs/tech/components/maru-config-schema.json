@@ -32,20 +32,60 @@
         "deprecated": false,
         "replacement": null
       },
-      "followers": {
-        "type": "FollowersConfig",
+      "defaults": {
+        "type": "DefaultsDtoToml?",
         "section": true,
-        "required": true,
+        "required": false,
         "default": null,
-        "description": "Named map of follower execution-layer endpoints.",
+        "description": "Shared defaults reused by linea and fork-transition; currently provides the L2 endpoint.",
         "example": null,
         "deprecated": false,
         "replacement": null
       },
-      "followers.followers": {
-        "type": "Map<String, ApiEndpointConfig>",
+      "defaults.l2-eth-endpoint": {
+        "type": "ApiEndpointDto",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Fallback L2 endpoint reused by linea.l2-eth-api-endpoint and fork-transition.l2-eth-api-endpoint.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "defaults.l2-eth-endpoint.endpoint": {
+        "type": "URL",
         "section": false,
         "required": true,
+        "default": null,
+        "description": "Engine API endpoint URL of the execution-layer node.",
+        "example": "http://el-node:8551",
+        "deprecated": false,
+        "replacement": null
+      },
+      "defaults.l2-eth-endpoint.jwt-secret-path": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Optional path to the JWT secret file used for authenticated Engine API calls. Omit to disable JWT authentication.",
+        "example": "/jwt.hex",
+        "deprecated": false,
+        "replacement": null
+      },
+      "defaults.l2-eth-endpoint.timeout": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1M",
+        "description": "Overall timeout for a single request to this endpoint.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "follower-engine-apis": {
+        "type": "Map<String, ApiEndpointDto>?",
+        "section": false,
+        "required": false,
         "default": null,
         "description": "Named map of follower execution-layer endpoints. Each entry maps a follower name to its engine API endpoint settings.",
         "example": null,
@@ -53,21 +93,21 @@
         "replacement": null
       },
       "fork-transition": {
-        "type": "ForkTransition",
+        "type": "ForkTransitionDtoToml",
         "section": true,
-        "required": true,
+        "required": false,
         "default": null,
-        "description": "Protocol fork transition monitoring settings.",
+        "description": "Protocol fork transition monitoring settings. Has defaults so the section may be omitted.",
         "example": null,
         "deprecated": false,
         "replacement": null
       },
       "fork-transition.l2-eth-api-endpoint": {
-        "type": "ApiEndpointConfig?",
+        "type": "ApiEndpointDto?",
         "section": true,
         "required": false,
         "default": null,
-        "description": "Optional L2 endpoint used to observe the protocol fork transition. Omit when not transitioning.",
+        "description": "Optional L2 endpoint used to observe the protocol fork transition. Falls back to defaults.l2-eth-endpoint when omitted.",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -92,16 +132,6 @@
         "deprecated": false,
         "replacement": null
       },
-      "fork-transition.l2-eth-api-endpoint.request-retries": {
-        "type": "RetryConfig",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "Retry policy for requests to this endpoint. Defaults to no retries.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
       "fork-transition.l2-eth-api-endpoint.timeout": {
         "type": "Duration",
         "section": false,
@@ -123,7 +153,7 @@
         "replacement": null
       },
       "linea": {
-        "type": "LineaConfig?",
+        "type": "LineaConfigDtoToml?",
         "section": true,
         "required": false,
         "default": null,
@@ -142,10 +172,20 @@
         "deprecated": false,
         "replacement": null
       },
-      "linea.l1-eth-api-endpoint": {
-        "type": "ApiEndpointConfig",
+      "linea.l1-eth-api": {
+        "type": "ApiEndpointDto?",
         "section": true,
-        "required": true,
+        "required": false,
+        "default": null,
+        "description": "Legacy L1 endpoint; alias for l1-eth-api-endpoint kept for backwards compatibility. Deprecated, use l1-eth-api-endpoint.",
+        "example": null,
+        "deprecated": true,
+        "replacement": "l1-eth-api-endpoint"
+      },
+      "linea.l1-eth-api-endpoint": {
+        "type": "ApiEndpointDto?",
+        "section": true,
+        "required": false,
         "default": null,
         "description": "L1 execution-layer API endpoint used to monitor the rollup contract.",
         "example": null,
@@ -172,16 +212,6 @@
         "deprecated": false,
         "replacement": null
       },
-      "linea.l1-eth-api-endpoint.request-retries": {
-        "type": "RetryConfig",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "Retry policy for requests to this endpoint. Defaults to no retries.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
       "linea.l1-eth-api-endpoint.timeout": {
         "type": "Duration",
         "section": false,
@@ -192,12 +222,42 @@
         "deprecated": false,
         "replacement": null
       },
-      "linea.l1-highest-block-tag": {
-        "type": "BlockParameter",
+      "linea.l1-eth-api.endpoint": {
+        "type": "URL",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Engine API endpoint URL of the execution-layer node.",
+        "example": "http://el-node:8551",
+        "deprecated": false,
+        "replacement": null
+      },
+      "linea.l1-eth-api.jwt-secret-path": {
+        "type": "String?",
         "section": false,
         "required": false,
-        "default": "FINALIZED",
-        "description": "L1 block tag treated as the highest finalized block (e.g. FINALIZED, SAFE, LATEST).",
+        "default": null,
+        "description": "Optional path to the JWT secret file used for authenticated Engine API calls. Omit to disable JWT authentication.",
+        "example": "/jwt.hex",
+        "deprecated": false,
+        "replacement": null
+      },
+      "linea.l1-eth-api.timeout": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1M",
+        "description": "Overall timeout for a single request to this endpoint.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "linea.l1-highest-block-tag": {
+        "type": "String",
+        "section": false,
+        "required": false,
+        "default": "finalized",
+        "description": "L1 block tag treated as the highest finalized block (e.g. finalized, safe, latest).",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -213,11 +273,11 @@
         "replacement": null
       },
       "linea.l2-eth-api-endpoint": {
-        "type": "ApiEndpointConfig",
+        "type": "ApiEndpointDto?",
         "section": true,
-        "required": true,
+        "required": false,
         "default": null,
-        "description": "L2 execution-layer API endpoint used to set the chain head via the Engine API.",
+        "description": "L2 execution-layer API endpoint used to set the chain head via the Engine API. Falls back to defaults.l2-eth-endpoint when omitted.",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -239,16 +299,6 @@
         "default": null,
         "description": "Optional path to the JWT secret file used for authenticated Engine API calls. Omit to disable JWT authentication.",
         "example": "/jwt.hex",
-        "deprecated": false,
-        "replacement": null
-      },
-      "linea.l2-eth-api-endpoint.request-retries": {
-        "type": "RetryConfig",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "Retry policy for requests to this endpoint. Defaults to no retries.",
-        "example": null,
         "deprecated": false,
         "replacement": null
       },
@@ -407,7 +457,7 @@
         "section": false,
         "required": false,
         "default": "false",
-        "description": "Whether to treat all peers as direct (mesh-only) peers.",
+        "description": "Whether all peers are scored as direct peers in gossip peer scoring (libp2p GossipPeerScoreParams.isDirect).",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -477,7 +527,7 @@
         "section": false,
         "required": false,
         "default": "0.25",
-        "description": "Fraction of the mesh used as the target degree when adjusting mesh size.",
+        "description": "Fraction of non-mesh peers that receive gossip messages (libp2p gossipFactor).",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -487,7 +537,7 @@
         "section": false,
         "required": false,
         "default": "3",
-        "description": "Number of peers each gossip message is forwarded to.",
+        "description": "Number of history windows advertised via IHAVE messages (libp2p gossipSize).",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -507,7 +557,7 @@
         "section": false,
         "required": false,
         "default": "6",
-        "description": "Number of recent message IDs remembered for deduplication.",
+        "description": "Number of gossip history windows retained in the message cache (libp2p gossipHistoryLength).",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -547,7 +597,7 @@
         "section": false,
         "required": false,
         "default": "2",
-        "description": "Maximum number of peers that may be out of sync before the node stops syncing from them. Defaults to max(1, max-peers / 10).",
+        "description": "Maximum number of out-of-sync peers tolerated before throttling sync from them. Reserved; not currently enforced by the node.",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -567,7 +617,7 @@
         "section": false,
         "required": false,
         "default": "9000",
-        "description": "TCP/UDP port the node listens on for P2P traffic.",
+        "description": "TCP port the node listens on for P2P traffic. UDP discovery uses p2p.discovery.port.",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -712,6 +762,66 @@
         "deprecated": false,
         "replacement": null
       },
+      "payload-validator": {
+        "type": "PayloadValidatorDto?",
+        "section": true,
+        "required": false,
+        "default": null,
+        "description": "Validator execution-layer node settings. Required when qbft is set.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "payload-validator.engine-api-endpoint": {
+        "type": "ApiEndpointDto",
+        "section": true,
+        "required": true,
+        "default": null,
+        "description": "Engine API endpoint of the validator's execution-layer node.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "payload-validator.engine-api-endpoint.endpoint": {
+        "type": "URL",
+        "section": false,
+        "required": true,
+        "default": null,
+        "description": "Engine API endpoint URL of the execution-layer node.",
+        "example": "http://el-node:8551",
+        "deprecated": false,
+        "replacement": null
+      },
+      "payload-validator.engine-api-endpoint.jwt-secret-path": {
+        "type": "String?",
+        "section": false,
+        "required": false,
+        "default": null,
+        "description": "Optional path to the JWT secret file used for authenticated Engine API calls. Omit to disable JWT authentication.",
+        "example": "/jwt.hex",
+        "deprecated": false,
+        "replacement": null
+      },
+      "payload-validator.engine-api-endpoint.timeout": {
+        "type": "Duration",
+        "section": false,
+        "required": false,
+        "default": "PT1M",
+        "description": "Overall timeout for a single request to this endpoint.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
+      "payload-validator.payload-validation-enabled": {
+        "type": "Boolean",
+        "section": false,
+        "required": false,
+        "default": "true",
+        "description": "Whether to validate execution payloads received via the Engine API.",
+        "example": null,
+        "deprecated": false,
+        "replacement": null
+      },
       "persistence": {
         "type": "Persistence",
         "section": true,
@@ -743,7 +853,7 @@
         "replacement": null
       },
       "qbft": {
-        "type": "QbftConfig?",
+        "type": "QbftOptionsDtoToml?",
         "section": true,
         "required": false,
         "default": null,
@@ -847,7 +957,7 @@
         "section": false,
         "required": false,
         "default": "5",
-        "description": "Tolerance for how far a peer may be out of sync before being considered desynced.",
+        "description": "How far the sync target may be ahead of this node's head before the node is considered desynced.",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -947,87 +1057,7 @@
         "section": false,
         "required": true,
         "default": null,
-        "description": "Sync target selection strategy. Use 'Highest' to sync to the highest common block, or 'MostFrequent' to sync to the most frequent peer chain height.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "use-vertx-timers": {
-        "type": "Boolean",
-        "section": false,
-        "required": false,
-        "default": "false",
-        "description": "Whether to use Vert.x timers instead of the default scheduler.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "validator-el-node": {
-        "type": "ValidatorElNode?",
-        "section": true,
-        "required": false,
-        "default": null,
-        "description": "Validator execution-layer node settings. Required when qbft is set.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "validator-el-node.engine-api-endpoint": {
-        "type": "ApiEndpointConfig",
-        "section": true,
-        "required": true,
-        "default": null,
-        "description": "Engine API endpoint of the validator's execution-layer node.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "validator-el-node.engine-api-endpoint.endpoint": {
-        "type": "URL",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Engine API endpoint URL of the execution-layer node.",
-        "example": "http://el-node:8551",
-        "deprecated": false,
-        "replacement": null
-      },
-      "validator-el-node.engine-api-endpoint.jwt-secret-path": {
-        "type": "String?",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "Optional path to the JWT secret file used for authenticated Engine API calls. Omit to disable JWT authentication.",
-        "example": "/jwt.hex",
-        "deprecated": false,
-        "replacement": null
-      },
-      "validator-el-node.engine-api-endpoint.request-retries": {
-        "type": "RetryConfig",
-        "section": false,
-        "required": false,
-        "default": null,
-        "description": "Retry policy for requests to this endpoint. Defaults to no retries.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "validator-el-node.engine-api-endpoint.timeout": {
-        "type": "Duration",
-        "section": false,
-        "required": false,
-        "default": "PT1M",
-        "description": "Overall timeout for a single request to this endpoint.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "validator-el-node.payload-validation-enabled": {
-        "type": "Boolean",
-        "section": false,
-        "required": true,
-        "default": null,
-        "description": "Whether to validate execution payloads received via the Engine API.",
+        "description": "Sync target selection strategy. Use a bare string 'Highest' to sync to the highest peer head, or an inline table { _type = 'MostFrequent', peer-chain-height-granularity = <n> } to sync to the most frequent peer chain height. Sealed-type dispatch is enabled by the loader.",
         "example": null,
         "deprecated": false,
         "replacement": null

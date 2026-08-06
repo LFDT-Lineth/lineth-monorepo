@@ -38,33 +38,13 @@ data class Persistence(
 )
 
 data class ApiEndpointConfig(
-  @param:ConfigDoc(
-    description = "Engine API endpoint URL of the execution-layer node.",
-    example = "http://el-node:8551",
-  )
   val endpoint: URL,
-  @param:ConfigDoc(
-    description = "Optional path to the JWT secret file used for authenticated Engine API calls. " +
-      "Omit to disable JWT authentication.",
-    example = "/jwt.hex",
-  )
   val jwtSecretPath: String? = null,
-  @param:ConfigDoc(
-    description = "Retry policy for requests to this endpoint. Defaults to no retries.",
-  )
   val requestRetries: RetryConfig = RetryConfig.noRetries,
-  @param:ConfigDoc(
-    description = "Overall timeout for a single request to this endpoint.",
-    default = "PT1M",
-  )
   val timeout: Duration = 1.minutes,
 )
 
 data class FollowersConfig(
-  @param:ConfigDoc(
-    description = "Named map of follower execution-layer endpoints. Each entry maps a follower name " +
-      "to its engine API endpoint settings.",
-  )
   val followers: Map<String, ApiEndpointConfig>,
 )
 
@@ -75,7 +55,7 @@ data class P2PConfig(
   )
   val ipAddress: String = "127.0.0.1", // default to localhost for security
   @param:ConfigDoc(
-    description = "TCP/UDP port the node listens on for P2P traffic.",
+    description = "TCP port the node listens on for P2P traffic. UDP discovery uses p2p.discovery.port.",
     default = "9000",
   )
   val port: UInt = 9000u,
@@ -94,8 +74,8 @@ data class P2PConfig(
   )
   val maxPeers: Int = 25,
   @param:ConfigDoc(
-    description = "Maximum number of peers that may be out of sync before the node stops syncing from them. " +
-      "Defaults to max(1, max-peers / 10).",
+    description = "Maximum number of out-of-sync peers tolerated before throttling sync from them. " +
+      "Reserved; not currently enforced by the node.",
     default = "2",
   )
   val maxUnsyncedPeers: Int = max(1, maxPeers / 10),
@@ -265,12 +245,12 @@ data class P2PConfig(
     )
     val fanoutTTL: Duration = 60.seconds,
     @param:ConfigDoc(
-      description = "Number of peers each gossip message is forwarded to.",
+      description = "Number of history windows advertised via IHAVE messages (libp2p gossipSize).",
       default = "3",
     )
     val gossipSize: Int = 3,
     @param:ConfigDoc(
-      description = "Number of recent message IDs remembered for deduplication.",
+      description = "Number of gossip history windows retained in the message cache (libp2p gossipHistoryLength).",
       default = "6",
     )
     val history: Int = 6,
@@ -290,12 +270,13 @@ data class P2PConfig(
     )
     val floodPublishMaxMessageSizeThreshold: Int = 1 shl 14, // 16KiB
     @param:ConfigDoc(
-      description = "Fraction of the mesh used as the target degree when adjusting mesh size.",
+      description = "Fraction of non-mesh peers that receive gossip messages (libp2p gossipFactor).",
       default = "0.25",
     )
     val gossipFactor: Double = 0.25,
     @param:ConfigDoc(
-      description = "Whether to treat all peers as direct (mesh-only) peers.",
+      description = "Whether all peers are scored as direct peers in gossip peer scoring " +
+        "(libp2p GossipPeerScoreParams.isDirect).",
       default = "false",
     )
     val considerPeersAsDirect: Boolean = false,
@@ -303,54 +284,18 @@ data class P2PConfig(
 }
 
 data class ValidatorElNode(
-  @param:ConfigSection("Engine API endpoint of the validator's execution-layer node.")
   val engineApiEndpoint: ApiEndpointConfig,
-  @param:ConfigDoc(
-    description = "Whether to validate execution payloads received via the Engine API.",
-  )
   val payloadValidationEnabled: Boolean,
 )
 
 data class QbftConfig(
-  @param:ConfigDoc(
-    description = "Minimum time spent building a block before proposing it.",
-    default = "PT0.5S",
-  )
   val minBlockBuildTime: Duration = 500.milliseconds,
-  @param:ConfigDoc(
-    description = "Maximum number of QBFT messages queued per round.",
-    default = "1000",
-  )
   val messageQueueLimit: Int = 1000,
-  @param:ConfigDoc(
-    description = "Optional fixed expiry duration for a QBFT round. Omit to derive it from " +
-      "round-expiry-coefficient.",
-  )
   val roundExpiry: Duration? = null,
-  @param:ConfigDoc(
-    description = "Multiplier used to derive each subsequent round's expiry from the previous one.",
-    default = "2.0",
-  )
   val roundExpiryCoefficient: Double = 2.0,
-  @param:ConfigDoc(
-    description = "Maximum number of duplicate QBFT messages kept per round.",
-    default = "100",
-  )
   val duplicateMessageLimit: Int = 100,
-  @param:ConfigDoc(
-    description = "Maximum number of blocks a future-dated QBFT message may be ahead of the current height.",
-    default = "10",
-  )
   val futureMessageMaxDistance: Long = 10L,
-  @param:ConfigDoc(
-    description = "Maximum number of future-dated QBFT messages queued.",
-    default = "1000",
-  )
   val futureMessagesLimit: Long = 1000L,
-  @param:ConfigDoc(
-    description = "Fee recipient address for blocks proposed by this validator (20-byte hex).",
-    example = "0x0000000000000000000000000000000000000000",
-  )
   val feeRecipient: ByteArray,
 ) {
   init {
@@ -419,24 +364,10 @@ data class ObservabilityConfig(
 )
 
 data class LineaConfig(
-  @param:ConfigDoc(
-    description = "Address of the Linea rollup contract on L1 (20-byte hex).",
-    example = "0x0000000000000000000000000000000000000000",
-  )
   val contractAddress: ByteArray,
-  @param:ConfigSection("L1 execution-layer API endpoint used to monitor the rollup contract.")
   val l1EthApiEndpoint: ApiEndpointConfig,
-  @param:ConfigDoc(
-    description = "Interval between L1 polls for rollup contract events.",
-    default = "PT6S",
-  )
   val l1PollingInterval: Duration = 6.seconds,
-  @param:ConfigDoc(
-    description = "L1 block tag treated as the highest finalized block (e.g. FINALIZED, SAFE, LATEST).",
-    default = "FINALIZED",
-  )
   val l1HighestBlockTag: BlockParameter = BlockParameter.Tag.FINALIZED,
-  @param:ConfigSection("L2 execution-layer API endpoint used to set the chain head via the Engine API.")
   val l2EthApiEndpoint: ApiEndpointConfig,
 ) {
   init {
@@ -482,8 +413,10 @@ data class SyncingConfig(
   )
   val peerChainHeightPollingInterval: Duration,
   @param:ConfigDoc(
-    description = "Sync target selection strategy. Use 'Highest' to sync to the highest common block, " +
-      "or 'MostFrequent' to sync to the most frequent peer chain height.",
+    description = "Sync target selection strategy. Use a bare string 'Highest' to sync to the " +
+      "highest peer head, or an inline table " +
+      "{ _type = 'MostFrequent', peer-chain-height-granularity = <n> } to sync to the most " +
+      "frequent peer chain height. Sealed-type dispatch is enabled by the loader.",
   )
   val syncTargetSelection: SyncTargetSelection,
   @param:ConfigDoc(
@@ -491,7 +424,8 @@ data class SyncingConfig(
   )
   val elSyncStatusRefreshInterval: Duration? = null,
   @param:ConfigDoc(
-    description = "Tolerance for how far a peer may be out of sync before being considered desynced.",
+    description = "How far the sync target may be ahead of this node's head before the node is " +
+      "considered desynced.",
     default = "5",
   )
   val desyncTolerance: ULong = 5UL,
@@ -547,47 +481,22 @@ data class SyncingConfig(
 }
 
 data class ForkTransition(
-  @param:ConfigSection(
-    "Optional L2 endpoint used to observe the protocol fork transition. Omit when not transitioning.",
-  )
   val l2EthApiEndpoint: ApiEndpointConfig? = null,
-  @param:ConfigDoc(
-    description = "Interval between polls for the protocol fork transition.",
-    default = "PT1S",
-  )
   val protocolTransitionPollingInterval: Duration = 1.seconds,
 )
 
 data class MaruConfig(
-  @param:ConfigDoc(
-    description = "Whether the node is allowed to propose empty blocks.",
-    default = "false",
-  )
   val allowEmptyBlocks: Boolean = false,
-  @param:ConfigSection("Persistent on-disk state settings.")
   val persistence: Persistence,
-  @param:ConfigSection("QBFT consensus settings. Omit on follower (non-validator) nodes.")
   val qbft: QbftConfig?,
-  @param:ConfigSection("P2P networking settings. Omit to disable P2P.")
   val p2p: P2PConfig?,
-  @param:ConfigSection("Validator execution-layer node settings. Required when qbft is set.")
   val validatorElNode: ValidatorElNode?,
-  @param:ConfigSection("Named map of follower execution-layer endpoints.")
   val followers: FollowersConfig,
-  @param:ConfigSection("Observability (metrics, health) settings.")
   val observability: ObservabilityConfig,
-  @param:ConfigSection("Linea-specific settings (L1/L2 endpoints, contract address). Omit on non-Linea networks.")
   val linea: LineaConfig? = null,
-  @param:ConfigSection("Maru JSON-RPC API settings.")
   val api: ApiConfig,
-  @param:ConfigSection("Sync settings used while catching up to the chain head.")
   val syncing: SyncingConfig,
-  @param:ConfigSection("Protocol fork transition monitoring settings.")
   val forkTransition: ForkTransition,
-  @param:ConfigDoc(
-    description = "Whether to use Vert.x timers instead of the default scheduler.",
-    default = "false",
-  )
   val useVertxTimers: Boolean = false,
 ) {
   init {
