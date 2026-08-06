@@ -146,7 +146,6 @@ runs:
         LINEA_COORDINATOR_IMAGE_NAME: ${{ inputs.linea_coordinator_image_name }}
         LINEA_COORDINATOR_JAR: ${{ inputs.linea_coordinator_jar }}
         LINEA_COORDINATOR_TAG: ${{ inputs.coordinator_tag }}
-        LINEA_BESU_PACKAGE_TAG: ${{ inputs.linea_besu_package_tag }}
         LINEA_POSTMAN_TAG: ${{ inputs.postman_tag }}
         LINEA_PROVER_TAG: ${{ inputs.prover_tag }}
         LINEA_TRANSACTION_EXCLUSION_API_TAG: ${{ inputs.tx_exclusion_api_tag }}
@@ -179,11 +178,14 @@ runs:
       if: ${{ inputs.linea_besu_package_tag != '' }}
       shell: bash
       working-directory: ${{ inputs.working-directory }}
+      env:
+        LINEA_BESU_PACKAGE_TAG: ${{ inputs.linea_besu_package_tag }}
       run: |
         set -euo pipefail
         artifact_path="$GITHUB_WORKSPACE/${{ inputs.working-directory }}/tmp/artifacts/linea-besu-package-images.tar.gz"
         if [ -f "$artifact_path" ]; then
           gunzip -c "$artifact_path" | docker load
+          echo "LINEA_BESU_PACKAGE_TAG=${LINEA_BESU_PACKAGE_TAG}" >> "$GITHUB_ENV"
         else
           echo "No artifact at ${artifact_path}; skipping docker load."
         fi
