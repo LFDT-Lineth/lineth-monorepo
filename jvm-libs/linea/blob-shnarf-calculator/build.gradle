@@ -1,5 +1,5 @@
 plugins {
-  id 'net.consensys.zkevm.kotlin-common-minimal-conventions'
+  id 'lineth.kotlin-common-minimal-conventions'
   id 'linea.download-native-libs'
 }
 
