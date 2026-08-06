@@ -116,6 +116,13 @@ func TestWriterstoEqual(t *testing.T) {
 	}
 }
 
+// TestWriterstoEqual_Regression_SameLengthDifferentContent pins the aliasing
+// bug where both operands were serialized into one reused bytes.Buffer, so
+// any two encodings of the same length compared equal.
+func TestWriterstoEqual_Regression_SameLengthDifferentContent(t *testing.T) {
+	require.Error(t, utils.WriterstoEqual(constWriterTo("abcd"), constWriterTo("wxyz")))
+}
+
 func TestWriterstoEqualPropagatesWriteErrors(t *testing.T) {
 	boom := errors.New("boom")
 	require.ErrorIs(t, utils.WriterstoEqual(failingWriterTo{boom}, constWriterTo("a")), boom)

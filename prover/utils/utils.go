@@ -271,13 +271,14 @@ func FillRange[T constraints.Integer](dst []T, start T) {
 	}
 }
 
-// WriterstoEqual reports whether two io.WriterTo produce identical encodings.
+// WriterstoEqual returns nil if the two io.WriterTo produce identical
+// encodings; otherwise an error describing the difference, or the first
+// WriteTo failure.
 //
-// Each operand gets its own buffer. Serializing both into one buffer does not
-// work: bytes.Buffer.Bytes() aliases the buffer's array and Reset() keeps that
-// array, so the second WriteTo overwrites the first operand's bytes in place
-// and the comparison ends up matching a slice against itself, reporting
-// equality for any two encodings of the same length.
+// Each operand must get its own buffer: bytes.Buffer.Bytes() aliases the
+// buffer's array across Reset(), so serializing both into one reused buffer
+// compares a slice against itself and reports equality for any two encodings
+// of the same length.
 func WriterstoEqual(expected, actual io.WriterTo) error {
 	var expectedBuf, actualBuf bytes.Buffer
 	if _, err := expected.WriteTo(&expectedBuf); err != nil {
