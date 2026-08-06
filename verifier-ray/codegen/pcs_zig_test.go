@@ -120,9 +120,8 @@ func TestDynamicModuleOrderFollowsSysModules(t *testing.T) {
 	r0 := sys.NewRound()
 	// Create modules in a known order: dynA, static, dynB.
 	dynA := sys.NewDynamicModule(sys.Context.Childf("dynA"), wiop.PaddingDirectionRight)
-	staticMod := sys.NewSizedModule(sys.Context.Childf("static"), 4, wiop.PaddingDirectionNone)
+	sys.NewSizedModule(sys.Context.Childf("static"), 4, wiop.PaddingDirectionNone)
 	dynB := sys.NewDynamicModule(sys.Context.Childf("dynB"), wiop.PaddingDirectionRight)
-	_ = staticMod
 	_ = dynA.NewColumn(sys.Context.Childf("colA"), wiop.VisibilityOracle, r0)
 	_ = dynB.NewColumn(sys.Context.Childf("colB"), wiop.VisibilityOracle, r0)
 

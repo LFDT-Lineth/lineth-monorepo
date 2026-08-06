@@ -2,8 +2,6 @@ package codegen
 
 import (
 	"fmt"
-	"reflect"
-	"strings"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
@@ -65,7 +63,7 @@ func AssertAllVerifierActionsHandled(sys *wiop.System) error {
 				continue
 			}
 			return &UnhandledVerifierActionError{
-				Type:  actionTypeName(action),
+				Type:  fmt.Sprintf("%T", action),
 				Round: round.ID,
 			}
 		}
@@ -85,24 +83,4 @@ func verifierActionIsHandled(action wiop.VerifierAction) bool {
 		return true
 	}
 	return false
-}
-
-// actionTypeName returns a "package.Type" name for an action, dereferencing a
-// pointer so it reads "pcs.OpeningVerifierAction" rather than "*pcs...".
-func actionTypeName(action wiop.VerifierAction) string {
-	t := reflect.TypeOf(action)
-	for t != nil && t.Kind() == reflect.Pointer {
-		t = t.Elem()
-	}
-	if t == nil {
-		return "<nil>"
-	}
-	pkg := t.PkgPath()
-	if i := strings.LastIndex(pkg, "/"); i >= 0 {
-		pkg = pkg[i+1:]
-	}
-	if pkg == "" {
-		return t.Name()
-	}
-	return pkg + "." + t.Name()
 }
