@@ -2,7 +2,7 @@ import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
 
 plugins {
-  id 'net.consensys.zkevm.kotlin-application-conventions'
+  id 'lineth.kotlin-application-conventions'
 }
 
 sourceSets {
@@ -41,7 +41,7 @@ dependencies {
   implementation project(':jvm-libs:linea:core:long-running-service')
 
   // Previously inherited from maru's `maru.kotlin-application-conventions` plugin (which the
-  // import dropped in favor of zkevm's lighter `net.consensys.zkevm.kotlin-application-conventions`).
+  // import dropped in favor of zkevm's lighter `lineth.kotlin-application-conventions`).
   implementation project(':jvm-libs:linea:core:metrics')
   implementation project(':jvm-libs:linea:metrics:micrometer')
   // Pinned to the published Vert.x 4-era artifact rather than the local

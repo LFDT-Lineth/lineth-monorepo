@@ -13,7 +13,7 @@ import org.gradle.api.tasks.SourceSetContainer
  *
  * Apply after the Kotlin/application conventions plugin and configure the spec:
  * <pre>
- * plugins { id 'net.consensys.zkevm.kotlin-application-conventions'; id 'linea.config-docs' }
+ * plugins { id 'lineth.kotlin-application-conventions'; id 'linea.config-docs' }
  * configDocs { spec = "com.example.MyConfigDocsSpec" }
  * </pre>
  */
