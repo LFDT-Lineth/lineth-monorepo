@@ -1,0 +1,108 @@
+// invariants:
+// - 0 < r < n
+//    - fail if not satisfied
+// - v \in {27, 28}
+//    - fail if not satisfied
+// - 0 < s < n/2 + 1 (gnark <= n-1/2) (for txn validation, strictRange = 1),
+//    - fail if not satisfied
+// - 0 < s < n (for precompile, strictRange = 0)
+//    - fail if not satisfied
+// - residue check (in step 1): if r^3+7 is a QNR (sqrt_secp256k1 is_qr==0)
+//    - assign PKX = 0, PKY = 0, return
+//
+// steps:
+// 1. Compute R from r (use curve equation, sqrt function, and parity bit)
+// 2. Compute u1 = -r^{-1}*z, u2 = r^{-1}*s
+//      - if u1G = -u2R, assign PKX = 0, PKY = 0, return
+//      - if u1 = 0 (z being 0), (PKX, PKY) = u2*R
+// 3. Compute PKX, PKY = u1*G + u2*R
+// 4. Return PKX, PKY (public key, not the ecrecover-precompile address)
+include "./secp256k1.zkc"
+
+// (n-1)/2 — the low-s malleability bound (EIP-2); s must be <= n_half when strictRange = 1.
+const n_half:u256 = 0x7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0
+
+fn ecrecover_generic(msg:u256, r:u256, s:u256, v: u5, strictRange: u1) -> (PKX: u256, PKY:u256) {
+    // ---- invariants ----
+    // 0 < r < n
+    if r == 0 || r >= n {
+        fail
+    }
+    // v in {27, 28}; parity bit = v - 27
+    if v != 27 && v != 28 {
+        fail
+    }
+    var par:u1 = (v - 27) as u1
+    // 0 < s, with upper bound depending on strictRange:
+    //   strictRange = 1 (tx validation): s <= (n-1)/2   [EIP-2 low-s]
+    //   strictRange = 0 (precompile):    s <  n
+    if s == 0 {
+        fail
+    }
+    if strictRange == 1 {
+        if s > n_half {
+            fail
+        }
+    } else {
+        if s >= n {
+            fail
+        }
+    }
+
+    // ---- step 1: recover R = (Rx, Ry) from r ----
+    // r < n < p, so r is already a canonical Fp element; use it as Rx.
+    var Rx:u256 = r
+    // a = Rx^3 + 7 mod p
+    var Rx2:u256 = mulmod_256(Rx, Rx, p)
+    var Rx3:u256 = mulmod_256(Rx2, Rx, p)
+    var a:u256 = addmod_256(Rx3, b, p)
+
+    // y = sqrt(a); is_qr = 0 means r has no curve point -> recovery fails.
+    var y:u256, is_qr:u1
+    y, is_qr = sqrt_secp256k1(a)
+    if is_qr == 0 {
+        PKX = 0
+        PKY = 0
+        return
+    }
+
+    // pick the root whose low bit matches the parity `par`; the other root is p - y.
+    var y_hi:u255, y_lsb:u1
+    y_hi::y_lsb = y
+    var Ry:u256 = y
+    if y_lsb != par {
+        Ry = submod_256(0, y, p)
+    }
+
+    // ---- step 2: scalar coefficients (mod n) ----
+    // Q = r^{-1}(s*R - z*G) = u2*R + u1*G, with u2 = r^{-1}*s, u1 = -r^{-1}*z.
+    var rinv:u256 = invmod_256(r, n)
+    var u2:u256 = mulmod_256(rinv, s, n)          // r^{-1}*s  (always != 0 since s >= 1)
+    var rz:u256 = mulmod_256(rinv, msg, n)        // r^{-1}*z  (msg = z, reduced mod n by mulmod)
+    var u1:u256 = submod_256(0, rz, n)            // -r^{-1}*z  (may be 0 if z == 0 mod n)
+
+    // ---- step 3: Q = u1*G + u2*R ----
+    // scalar_mul_affine returns (0,0)=O for k=0, so u1=0 gives u1*G = O; the
+    // complete projective addition then yields Q = u2*R. If u1*G = -(u2*R), the
+    // sum is O and projective_to_affine returns (0,0) — the failure sentinel.
+    var Gx_:u256, Gy_:u256
+    Gx_, Gy_ = generator_secp256k1()
+
+    var Ax:u256, Ay:u256
+    Ax, Ay = scalar_mul_affine_secp256k1(u1, Gx_, Gy_)   // u1*G  (O when u1 == 0)
+
+    var Bx:u256, By:u256
+    Bx, By = scalar_mul_affine_secp256k1(u2, Rx, Ry)     // u2*R
+
+    var AX:u256, AY:u256, AZ:u256
+    AX, AY, AZ = affine_to_projective_secp256k1(Ax, Ay)
+    var BX:u256, BY:u256, BZ:u256
+    BX, BY, BZ = affine_to_projective_secp256k1(Bx, By)
+
+    var QX:u256, QY:u256, QZ:u256
+    QX, QY, QZ = add_projective_secp256k1(AX, AY, AZ, BX, BY, BZ)
+
+    PKX, PKY = projective_to_affine_secp256k1(QX, QY, QZ)
+}
+
+
