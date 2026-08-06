@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test
 class MaruConfigDocsSpecGuardTest {
   @Test
   fun `spec roots at the Hoplite TOML DTO, not the domain config`() {
-    val rootClass = MaruConfigDocsSpec.files.map { it.rootClass }
-    assertThat(rootClass).contains(MaruConfigDtoToml::class)
+    val rootClasses = MaruConfigDocsSpec.files.map { it.rootClass }
+    assertThat(rootClasses).containsExactly(MaruConfigDtoToml::class)
   }
 }

@@ -42,7 +42,7 @@ Protocol fork transition monitoring settings. Has defaults so the section may be
 
 ### `linea`
 
-Linea-specific settings (L1/L2 endpoints, contract address). Omit on non-Linea networks.
+Linea-specific settings (L1/L2 endpoints, contract address). Omit on non-Linea networks. l1-eth-api is a deprecated alias of l1-eth-api-endpoint; set one of the two. l2-eth-api-endpoint falls back to defaults.l2-eth-endpoint when omitted.
 
 | Key | Type | Required | Default | Status | Description |
 | --- | --- | --- | --- | --- | --- |
@@ -121,7 +121,7 @@ Validator execution-layer node settings. Required when qbft is set.
 | `payload-validator.engine-api-endpoint.endpoint` | `URL` | yes | - | active | Engine API endpoint URL of the execution-layer node. Example: `http://el-node:8551`. |
 | `payload-validator.engine-api-endpoint.jwt-secret-path` | `String?` | no | - | active | Optional path to the JWT secret file used for authenticated Engine API calls. Omit to disable JWT authentication. Example: `/jwt.hex`. |
 | `payload-validator.engine-api-endpoint.timeout` | `Duration` | no | `PT1M` | active | Overall timeout for a single request to this endpoint. |
-| `payload-validator.payload-validation-enabled` | `Boolean` | no | `true` | active | Whether to validate execution payloads received via the Engine API. |
+| `payload-validator.payload-validation-enabled` | `Boolean` | no | `true` | active | Whether to validate execution payloads received via the Engine API. Must stay true when the qbft section is set: a validator fails to start with payload validation disabled. Only followers may set it to false. |
 
 ### `persistence`
 
@@ -168,5 +168,5 @@ Sync settings used while catching up to the chain head.
 
 | File | Key | Replacement | Description |
 | --- | --- | --- | --- |
-| maru | `linea.l1-eth-api` | `l1-eth-api-endpoint` | Legacy L1 endpoint; alias for l1-eth-api-endpoint kept for backwards compatibility. Deprecated, use l1-eth-api-endpoint. |
+| maru | `linea.l1-eth-api` | `linea.l1-eth-api-endpoint` | Legacy L1 endpoint; alias for l1-eth-api-endpoint kept for backwards compatibility. Deprecated, use l1-eth-api-endpoint. |
 

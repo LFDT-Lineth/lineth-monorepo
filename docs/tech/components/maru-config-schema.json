@@ -157,7 +157,7 @@
         "section": true,
         "required": false,
         "default": null,
-        "description": "Linea-specific settings (L1/L2 endpoints, contract address). Omit on non-Linea networks.",
+        "description": "Linea-specific settings (L1/L2 endpoints, contract address). Omit on non-Linea networks. l1-eth-api is a deprecated alias of l1-eth-api-endpoint; set one of the two. l2-eth-api-endpoint falls back to defaults.l2-eth-endpoint when omitted.",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -180,7 +180,7 @@
         "description": "Legacy L1 endpoint; alias for l1-eth-api-endpoint kept for backwards compatibility. Deprecated, use l1-eth-api-endpoint.",
         "example": null,
         "deprecated": true,
-        "replacement": "l1-eth-api-endpoint"
+        "replacement": "linea.l1-eth-api-endpoint"
       },
       "linea.l1-eth-api-endpoint": {
         "type": "ApiEndpointDto?",
@@ -817,7 +817,7 @@
         "section": false,
         "required": false,
         "default": "true",
-        "description": "Whether to validate execution payloads received via the Engine API.",
+        "description": "Whether to validate execution payloads received via the Engine API. Must stay true when the qbft section is set: a validator fails to start with payload validation disabled. Only followers may set it to false.",
         "example": null,
         "deprecated": false,
         "replacement": null

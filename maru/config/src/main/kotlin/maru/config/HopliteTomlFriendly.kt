@@ -23,7 +23,9 @@ data class PayloadValidatorDto(
   @param:ConfigSection("Engine API endpoint of the validator's execution-layer node.")
   val engineApiEndpoint: ApiEndpointDto,
   @param:ConfigDoc(
-    description = "Whether to validate execution payloads received via the Engine API.",
+    description = "Whether to validate execution payloads received via the Engine API. Must stay true " +
+      "when the qbft section is set: a validator fails to start with payload validation disabled. " +
+      "Only followers may set it to false.",
     default = "true",
   )
   val payloadValidationEnabled: Boolean = true,
@@ -174,7 +176,7 @@ data class LineaConfigDtoToml(
     "Legacy L1 endpoint; alias for l1-eth-api-endpoint kept for backwards compatibility. " +
       "Deprecated, use l1-eth-api-endpoint.",
     deprecated = true,
-    replacement = "l1-eth-api-endpoint",
+    replacement = "linea.l1-eth-api-endpoint",
   )
   val l1EthApi: ApiEndpointDto? = null, // TODO: This is a fallback for backwards compatibility.
   // Remove in the next major release
@@ -272,7 +274,11 @@ data class MaruConfigDtoToml(
   private val allowEmptyBlocks: Boolean = false,
   @param:ConfigSection("Shared defaults reused by linea and fork-transition; currently provides the L2 endpoint.")
   private val defaults: DefaultsDtoToml? = null,
-  @param:ConfigSection("Linea-specific settings (L1/L2 endpoints, contract address). Omit on non-Linea networks.")
+  @param:ConfigSection(
+    "Linea-specific settings (L1/L2 endpoints, contract address). Omit on non-Linea networks. " +
+      "l1-eth-api is a deprecated alias of l1-eth-api-endpoint; set one of the two. " +
+      "l2-eth-api-endpoint falls back to defaults.l2-eth-endpoint when omitted.",
+  )
   private val linea: LineaConfigDtoToml? = null,
   @param:ConfigSection("Persistent on-disk state settings.")
   private val persistence: Persistence,
