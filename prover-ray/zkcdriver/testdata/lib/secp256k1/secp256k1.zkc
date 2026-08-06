@@ -89,7 +89,7 @@ fn projective_to_affine_secp256k1(X:u256, Y:u256, Z:u256) -> (x:u256, y:u256) {
 // Returns (y, is_qr):
 //   is_qr = 1  => a is a quadratic residue and y*y = a mod p (y is a root)
 //   is_qr = 0  => a is a non-residue; y*y = -a mod p (a witness that a has no root)
-// Assumtion: a is already reduced mod p. 
+// Assumption: a is already reduced mod p. 
 // The candidate `y = a^((p+1)/4) mod p` is a hint (unconstrained), verified here:
 //   y^2 = a^((p+1)/2) = a * a^((p-1)/2) = a * legendre(a)
 // so y^2 = a when a is a QR, and y^2 = -a when a is a QNR (since -1 is a QNR).
