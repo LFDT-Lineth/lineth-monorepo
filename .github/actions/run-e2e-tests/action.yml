@@ -146,6 +146,7 @@ runs:
         LINEA_COORDINATOR_IMAGE_NAME: ${{ inputs.linea_coordinator_image_name }}
         LINEA_COORDINATOR_JAR: ${{ inputs.linea_coordinator_jar }}
         LINEA_COORDINATOR_TAG: ${{ inputs.coordinator_tag }}
+        LINEA_BESU_PACKAGE_TAG: ${{ inputs.linea_besu_package_tag }}
         LINEA_POSTMAN_TAG: ${{ inputs.postman_tag }}
         LINEA_PROVER_TAG: ${{ inputs.prover_tag }}
         LINEA_TRANSACTION_EXCLUSION_API_TAG: ${{ inputs.tx_exclusion_api_tag }}
