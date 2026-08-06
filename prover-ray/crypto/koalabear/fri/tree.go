@@ -6,6 +6,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
 )
 
 // Tree is a Merkle tree for multi-size FRI. The tree is 3-ary, each node may
@@ -101,27 +102,32 @@ func NewTree(leaves [][]field.Octuplet) *Tree {
 			levelStartPos = n - 1
 		)
 
-		for j := range n {
+		// Within a level every node only reads the (already computed) level
+		// below and writes its own nodes[k]/aux[k] slot, so the level is
+		// hashed in parallel.
+		parallel.Execute(n, func(start, end int) {
+			for j := start; j < end; j++ {
 
-			k := levelStartPos + j
+				k := levelStartPos + j
 
-			if aux[k] != nil {
-				panic("indices on aux are wrong and we are overlapping values")
+				if aux[k] != nil {
+					panic("indices on aux are wrong and we are overlapping values")
+				}
+
+				if len(leaves[i]) > 0 {
+					// we already asserted that len(leaves[i]) == n. So this
+					// will not go OOB.
+					aux[k] = &leaves[i][j]
+				}
+
+				left, right := nodes[2*k+1], nodes[2*k+2]
+				if (nodes[k] != field.Octuplet{}) {
+					panic("already computed node; the indexing must be wrong")
+				}
+
+				nodes[k] = hashNode(left, right, aux[k])
 			}
-
-			if len(leaves[i]) > 0 {
-				// we already asserted that len(leaves[i]) == n. So this
-				// will not go OOB.
-				aux[k] = &leaves[i][j]
-			}
-
-			left, right := nodes[2*k+1], nodes[2*k+2]
-			if (nodes[k] != field.Octuplet{}) {
-				panic("already computed node; the indexing must be wrong")
-			}
-
-			nodes[k] = hashNode(left, right, aux[k])
-		}
+		})
 	}
 
 	// as the tree cannot be empty (as per our sanity-checks), the root cannot
