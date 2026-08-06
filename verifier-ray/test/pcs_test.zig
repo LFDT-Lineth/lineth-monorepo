@@ -7,6 +7,8 @@ const ext = verifier_ray.field.koalabear_ext;
 const poseidon2 = verifier_ray.crypto.poseidon2;
 const merkle = verifier_ray.crypto.merkle;
 const pcs = verifier_ray.query.pcs;
+const fri = verifier_ray.query.fri;
+const fiat_shamir = verifier_ray.crypto.fiat_shamir;
 
 // Test vectors generated from prover-ray's real PCS.Commit/AddOpening/
 // NewProverState/Open/Verify pipeline, called through prover-ray's exported
@@ -39,6 +41,12 @@ fn toExt(e: [6]u32) ext.Ext {
 fn toExts(allocator: std.mem.Allocator, es: []const [6]u32) ![]ext.Ext {
     const out = try allocator.alloc(ext.Ext, es.len);
     for (out, es) |*dst, e| dst.* = toExt(e);
+    return out;
+}
+
+fn toExtsJagged(allocator: std.mem.Allocator, rows: []const []const [6]u32) ![]const []const ext.Ext {
+    const out = try allocator.alloc([]const ext.Ext, rows.len);
+    for (out, rows) |*dst, row| dst.* = try toExts(allocator, row);
     return out;
 }
 
@@ -105,7 +113,7 @@ fn mapPcsError(name: []const u8) pcs.Error {
 fn runPCSCase(allocator: std.mem.Allocator, comptime system: pcs.System, case: fixtures.PcsCase) !void {
     const input = pcs.VerifyInput{
         .roots = try toDigests(allocator, case.roots),
-        .claimed_values = try toExts(allocator, case.claimed_values),
+        .entry_claims = try toExtsJagged(allocator, case.entry_claims),
         .zeta = toExt(case.zeta),
         .fold_alphas = try toExts(allocator, case.fold_alphas),
         .query_positions = try allocator.dupe(usize, case.query_positions),
@@ -137,4 +145,241 @@ test "pcs verify cases from prover-ray vectors" {
             return err;
         };
     }
+}
+
+// ── PCS challenge derivation ──────────────────────────────────────────────────
+//
+// `pcs.deriveChallenges` squeezes the FRI fold challenges + query positions from
+// a caller-owned transcript. There is no golden vector for these (the pcs.zig
+// fixtures carry synthetic challenges, not transcript-derived ones), so these
+// tests pin the properties that must hold regardless of the exact values:
+// correct shape, determinism, and sensitivity to the absorbed transcript state.
+
+// numRounds = log_plaintext_size - log_final_poly_size = 2, so fold_alphas has
+// length 2 and the FRI proof carries numRounds-1 = 1 running-layer root.
+// A single static column at size 2^2 makes reconstruct()'s top_size == 2, so the
+// restricted params match the intended { log_codeword_size = 4,
+// log_plaintext_size = 2, num_queries = 3 } (numRounds = 2, one running-layer
+// root). The envelope is that same params (restrictTo is a no-op).
+const challenge_system = pcs.System{
+    .envelope_params = .{ .log_codeword_size = 4, .log_plaintext_size = 2, .num_queries = 3 },
+    .columns = &.{
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0} },
+    },
+    .num_batches = 1,
+    .max_entries = 1,
+    .max_size_log2 = 2,
+};
+
+fn challengeDigest(seed: u32) poseidon2.Digest {
+    var d: poseidon2.Digest = undefined;
+    for (&d, 0..) |*limb, i| limb.* = field.Element.init(seed +% @as(u32, @intCast(i)));
+    return d;
+}
+
+// A well-shaped FRI proof for `challenge_system`: exactly num_rounds-1 == 1
+// running-layer root.
+fn challengeFriProof(root_seed: u32) fri.Proof {
+    const S = struct {
+        var round_roots: [1]poseidon2.Digest = undefined;
+        var final_poly = [_]ext.Ext{ext.Ext.zero()};
+    };
+    S.round_roots[0] = challengeDigest(root_seed);
+    return .{ .round_roots = &S.round_roots, .final_poly = &S.final_poly, .running_queries = &.{} };
+}
+
+// D=1 / no-fold case: there are no fold rounds and therefore no running-layer
+// roots, but prover-ray still squeezes one final alpha and uses it as the
+// top-level alpha_DEEP.
+const d1_challenge_system = pcs.System{
+    .envelope_params = .{ .log_codeword_size = 2, .log_plaintext_size = 0, .num_queries = 1 },
+    .columns = &.{
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 0 }, .shifts = &[_]isize{0} },
+    },
+    .num_batches = 1,
+    .max_entries = 1,
+    .max_size_log2 = 0,
+};
+
+fn d1ChallengeFriProof() fri.Proof {
+    const S = struct {
+        var final_poly = [_]ext.Ext{ext.Ext.zero()};
+    };
+    return .{ .round_roots = &.{}, .final_poly = &S.final_poly, .running_queries = &.{} };
+}
+
+test "deriveChallenges produces the comptime-sized shape" {
+    const recon = try pcs.reconstruct(challenge_system, &.{});
+    var transcript = fiat_shamir.Transcript.init();
+    const challenges = try pcs.deriveChallenges(challenge_system, recon, &transcript, challengeFriProof(1));
+    try std.testing.expectEqual(@as(usize, 2), challenges.foldAlphas().len);
+    try std.testing.expectEqual(@as(usize, 3), challenges.query_positions.len);
+    // Query positions are reduced into the codeword domain (2^4 = 16).
+    for (challenges.query_positions) |p| try std.testing.expect(p < 16);
+}
+
+test "deriveChallenges is deterministic for the same transcript and proof" {
+    const recon = try pcs.reconstruct(challenge_system, &.{});
+    var t1 = fiat_shamir.Transcript.init();
+    var t2 = fiat_shamir.Transcript.init();
+    const a = try pcs.deriveChallenges(challenge_system, recon, &t1, challengeFriProof(7));
+    const b = try pcs.deriveChallenges(challenge_system, recon, &t2, challengeFriProof(7));
+    for (a.foldAlphas(), b.foldAlphas()) |x, y| try std.testing.expect(x.eql(y));
+    try std.testing.expectEqualSlices(usize, &a.query_positions, &b.query_positions);
+}
+
+test "deriveChallenges depends on the absorbed transcript state" {
+    // Two transcripts diverging before derivation must yield different
+    // challenges: they are a function of the live Fiat-Shamir state, not just
+    // the proof. (Absorb one differing element up front.)
+    const recon = try pcs.reconstruct(challenge_system, &.{});
+    var t1 = fiat_shamir.Transcript.init();
+    var t2 = fiat_shamir.Transcript.init();
+    t1.updateExt(&.{ext.Ext.fromUints(.{ 1, 0, 0, 0, 0, 0 })});
+    t2.updateExt(&.{ext.Ext.fromUints(.{ 2, 0, 0, 0, 0, 0 })});
+    const a = try pcs.deriveChallenges(challenge_system, recon, &t1, challengeFriProof(9));
+    const b = try pcs.deriveChallenges(challenge_system, recon, &t2, challengeFriProof(9));
+    var any_alpha_differs = false;
+    for (a.foldAlphas(), b.foldAlphas()) |x, y| {
+        if (!x.eql(y)) any_alpha_differs = true;
+    }
+    try std.testing.expect(any_alpha_differs);
+}
+
+test "deriveChallenges retains deep alpha when there are no fold rounds" {
+    const recon = try pcs.reconstruct(d1_challenge_system, &.{});
+    var transcript = fiat_shamir.Transcript.init();
+    var expected_transcript = fiat_shamir.Transcript.init();
+
+    const expected = expected_transcript.randomExt();
+    const challenges = try pcs.deriveChallenges(d1_challenge_system, recon, &transcript, d1ChallengeFriProof());
+
+    try std.testing.expectEqual(@as(usize, 0), challenges.foldAlphas().len);
+    try std.testing.expect(challenges.deep_alpha.eql(expected));
+}
+
+// ── STEP 1 byte-faithfulness anchor: runtime layout reconstruction ────────────
+//
+// These pin `pcs.reconstruct` against a HAND-COMPUTED expected canonical layout,
+// exercising the varying-size property (one comptime System, two runtime sizes)
+// and the static-column case (whose reconstruction must equal the old frozen
+// layout the codegen emits at that single size).
+
+// 2 batches. Batch 0 owns one DYNAMIC base column (module_sizes[0]) and one
+// STATIC base column at size 2^2. Batch 1 owns one STATIC ext column at size 2^3.
+// Declaration order: [dyn(b0), static2(b0), static3ext(b1)].
+const recon_system = pcs.System{
+    .envelope_params = .{ .log_codeword_size = 6, .log_plaintext_size = 5, .num_queries = 1 },
+    .columns = &.{
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 2 } }, .shifts = &[_]isize{0} },
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{ 0, 1 } },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 3 }, .shifts = &[_]isize{0} },
+    },
+    .num_batches = 2,
+    .max_entries = 3,
+    .max_size_log2 = 5,
+};
+
+test "reconstruct: dynamic column at size 2^2 (== a static col), canonical order" {
+    // module_sizes[0] = 4 -> dyn col size_log2 = 2. Sizes present: {3 (b1 ext),
+    // 2 (b0 dyn base, b0 static base)}. top_size = 3.
+    // Canonical order (size DESC / batch ASC / base-then-ext / pos ASC):
+    //   size 3: batch1 ext pos0  -> entry 0  (col decl 2)
+    //   size 2: batch0 base pos0 -> entry 1  (col decl 0, the dyn col)
+    //   size 2: batch0 base pos1 -> entry 2  (col decl 1, the static-2 col)
+    const recon = try pcs.reconstruct(recon_system, &[_]usize{4});
+    try std.testing.expectEqual(@as(usize, 3), recon.num_entries);
+    try std.testing.expectEqual(@as(u8, 3), recon.top_size);
+
+    // entry 0: batch1 ext size3 pos0, from col decl 2
+    try std.testing.expectEqual(@as(u8, 3), recon.entry_size_log2[0]);
+    try std.testing.expectEqual(@as(usize, 1), recon.entry_batch[0]);
+    try std.testing.expect(recon.entry_is_ext[0]);
+    try std.testing.expectEqual(@as(usize, 0), recon.entry_row_idx[0]);
+    try std.testing.expectEqual(@as(usize, 2), recon.entry_col_decl_idx[0]);
+
+    // entry 1: batch0 base size2 pos0, from col decl 0 (dyn)
+    try std.testing.expectEqual(@as(u8, 2), recon.entry_size_log2[1]);
+    try std.testing.expectEqual(@as(usize, 0), recon.entry_batch[1]);
+    try std.testing.expect(!recon.entry_is_ext[1]);
+    try std.testing.expectEqual(@as(usize, 0), recon.entry_row_idx[1]);
+    try std.testing.expectEqual(@as(usize, 0), recon.entry_col_decl_idx[1]);
+
+    // entry 2: batch0 base size2 pos1, from col decl 1 (static-2)
+    try std.testing.expectEqual(@as(u8, 2), recon.entry_size_log2[2]);
+    try std.testing.expectEqual(@as(usize, 1), recon.entry_row_idx[2]);
+    try std.testing.expectEqual(@as(usize, 1), recon.entry_col_decl_idx[2]);
+
+    // reverse map
+    try std.testing.expectEqual(@as(usize, 1), recon.col_to_entry[0]);
+    try std.testing.expectEqual(@as(usize, 2), recon.col_to_entry[1]);
+    try std.testing.expectEqual(@as(usize, 0), recon.col_to_entry[2]);
+
+    // restricted params: top_size=3 -> offset=2, codeword 6-2=4, plaintext 3.
+    try std.testing.expectEqual(@as(u8, 4), recon.params.log_codeword_size);
+    try std.testing.expectEqual(@as(u8, 3), recon.params.log_plaintext_size);
+}
+
+test "reconstruct: same System, LARGER dynamic size changes bundle + top_size" {
+    // module_sizes[0] = 16 -> dyn col size_log2 = 4, now the LARGEST size.
+    // Sizes present: {4 (b0 dyn base), 3 (b1 ext), 2 (b0 static base)}. top_size=4.
+    // Canonical order:
+    //   size 4: batch0 base pos0 -> entry 0 (col decl 0, dyn)
+    //   size 3: batch1 ext  pos0 -> entry 1 (col decl 2)
+    //   size 2: batch0 base pos0 -> entry 2 (col decl 1, static-2)
+    const recon = try pcs.reconstruct(recon_system, &[_]usize{16});
+    try std.testing.expectEqual(@as(u8, 4), recon.top_size);
+
+    try std.testing.expectEqual(@as(usize, 0), recon.entry_col_decl_idx[0]);
+    try std.testing.expectEqual(@as(u8, 4), recon.entry_size_log2[0]);
+    try std.testing.expectEqual(@as(usize, 2), recon.entry_col_decl_idx[1]);
+    try std.testing.expectEqual(@as(usize, 1), recon.entry_col_decl_idx[2]);
+
+    // The dyn column now occupies entry 0 (was entry 1 at the smaller size) — the
+    // whole point: one baked System, layout is a runtime function of the size.
+    try std.testing.expectEqual(@as(usize, 0), recon.col_to_entry[0]);
+
+    // restricted params: top_size=4 -> offset=1, codeword 6-1=5, plaintext 4.
+    try std.testing.expectEqual(@as(u8, 5), recon.params.log_codeword_size);
+    try std.testing.expectEqual(@as(u8, 4), recon.params.log_plaintext_size);
+}
+
+test "reconstruct: rejects non-power-of-two and missing dynamic sizes" {
+    try std.testing.expectError(error.NonPowerOfTwoModuleSize, pcs.reconstruct(recon_system, &[_]usize{6}));
+    try std.testing.expectError(error.MissingDynamicModuleSize, pcs.reconstruct(recon_system, &.{}));
+    try std.testing.expectError(error.DynamicModuleSizeBelowMinimum, pcs.reconstruct(recon_system, &[_]usize{2}));
+}
+
+test "routeInputRoots follows input-opening order as dynamic sizes change" {
+    const roots = [_]poseidon2.Digest{
+        challengeDigest(100),
+        challengeDigest(200),
+    };
+
+    const smaller = try pcs.reconstruct(recon_system, &[_]usize{4});
+    const smaller_routing = try pcs.routeInputRoots(recon_system, smaller, &roots);
+    try std.testing.expectEqual(@as(usize, 2), smaller_routing.distinct_count);
+    try std.testing.expectEqualDeep(roots[1], smaller_routing.distinctRoots()[0]);
+    try std.testing.expectEqualDeep(roots[0], smaller_routing.distinctRoots()[1]);
+    try std.testing.expectEqual(@as(usize, 1), smaller_routing.index_by_batch[0]);
+    try std.testing.expectEqual(@as(usize, 0), smaller_routing.index_by_batch[1]);
+
+    const larger = try pcs.reconstruct(recon_system, &[_]usize{16});
+    const larger_routing = try pcs.routeInputRoots(recon_system, larger, &roots);
+    try std.testing.expectEqual(@as(usize, 2), larger_routing.distinct_count);
+    try std.testing.expectEqualDeep(roots[0], larger_routing.distinctRoots()[0]);
+    try std.testing.expectEqualDeep(roots[1], larger_routing.distinctRoots()[1]);
+    try std.testing.expectEqual(@as(usize, 0), larger_routing.index_by_batch[0]);
+    try std.testing.expectEqual(@as(usize, 1), larger_routing.index_by_batch[1]);
+}
+
+test "routeInputRoots deduplicates equal batch roots" {
+    const recon = try pcs.reconstruct(recon_system, &[_]usize{16});
+    const shared = challengeDigest(300);
+    const routing = try pcs.routeInputRoots(recon_system, recon, &[_]poseidon2.Digest{ shared, shared });
+
+    try std.testing.expectEqual(@as(usize, 1), routing.distinct_count);
+    try std.testing.expectEqualDeep(shared, routing.distinctRoots()[0]);
+    try std.testing.expectEqual(@as(usize, 0), routing.index_by_batch[0]);
+    try std.testing.expectEqual(@as(usize, 0), routing.index_by_batch[1]);
 }
