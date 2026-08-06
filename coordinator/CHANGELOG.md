@@ -8,6 +8,7 @@
 
 - *(coordinator)* Correct ByteArray equality checks in domain classes (#3625)
 - *(coordinator)* Address error handling issues from review (#3626)
+- *(coordinator)* Apply message anchoring L1 retries (#3715)
 
 ### 🚜 Refactor
 
@@ -19,6 +20,7 @@
 - *(coordinator)* Riscv blob data skeleton (#3609)
 - *(coordinator)* Rename LineaRollup to LinethRollup in JVM components (#3421)
 - *(coordinator)* Rename Linea to Lineth in app and config (#3707)
+- *(misc)* Rename gradle plugins (#3729)
 ## [1.1.0] - 2026-07-28
 
 ### 🚀 Features

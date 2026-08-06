@@ -60,6 +60,7 @@
 - *(prover)* Fix broken loop boundary in csDecomposedLimbs (#3474)
 - *(postman)* Use lineaRollupAddress and remove duplicate LineaRollup sources (#3456)
 - *(maru)* Declare jar task dependency on runtimeClasspath to fix manifest race (#3694)
+- *(coordinator)* Apply message anchoring L1 retries (#3715)
 
 ### 🚜 Refactor
 
@@ -118,3 +119,5 @@
 - *(coordinator)* Riscv blob data skeleton (#3609)
 - *(coordinator)* Rename LineaRollup to LinethRollup in JVM components (#3421)
 - *(coordinator)* Rename Linea to Lineth in app and config (#3707)
+- *(prover)* Rename Linea to Lineth in prover (#3709)
+- *(misc)* Rename gradle plugins (#3729)
