@@ -563,6 +563,44 @@ func TestVecScaleIntoDispatch(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// ScaleAdd
+// ---------------------------------------------------------------------------
+
+// TestVecScaleAddExtBase verifies VecScaleAddExtBase against an unfused
+// scale-then-add reference with a lifted base operand, including in-place
+// aliasing of the accumulator.
+func TestVecScaleAddExtBase(t *testing.T) {
+	acc, b := randomExts(testN), randomElems(testN)
+	s := PseudoRandExt(newRng())
+
+	want := make([]Ext, testN)
+	for i := range want {
+		bLift := Lift(b[i])
+		want[i].Mul(&acc[i], &s)
+		want[i].Add(&want[i], &bLift)
+	}
+
+	VecScaleAddExtBase(acc, s, b)
+	checkExtSlice(t, want, acc)
+}
+
+// TestVecScaleAddExtExt verifies VecScaleAddExtExt against an unfused
+// scale-then-add reference, including in-place aliasing of the accumulator.
+func TestVecScaleAddExtExt(t *testing.T) {
+	acc, b := randomExts(testN), randomExts(testN)
+	s := PseudoRandExt(newRng())
+
+	want := make([]Ext, testN)
+	for i := range want {
+		want[i].Mul(&acc[i], &s)
+		want[i].Add(&want[i], &b[i])
+	}
+
+	VecScaleAddExtExt(acc, s, b)
+	checkExtSlice(t, want, acc)
+}
+
+// ---------------------------------------------------------------------------
 // BatchInv
 // ---------------------------------------------------------------------------
 

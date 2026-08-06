@@ -499,3 +499,42 @@ func (c *Constant) EvaluateSingle(_ *Runtime) ConcreteField {
 		promise: c,
 	}
 }
+
+// EvaluateAsExtVec evaluates expr against the runtime and returns a length-n
+// extension-field slice. Scalar expressions are broadcast to every position;
+// vector results shorter than n are extended with the padding value.
+func EvaluateAsExtVec(rt *Runtime, expr Expression, n int) []field.Ext {
+	out := make([]field.Ext, n)
+
+	if !expr.IsMultiValued() {
+		ext := expr.EvaluateSingle(rt).Value.AsExt()
+		for i := range out {
+			out[i] = ext
+		}
+		return out
+	}
+
+	cv := expr.EvaluateVector(rt)
+	plain := cv.Plain
+	if plain.IsBase() {
+		base := plain.AsBase()
+		copyLen := min(len(base), n)
+		for i := 0; i < copyLen; i++ {
+			out[i] = field.Lift(base[i])
+		}
+		pad := field.Lift(cv.Padding)
+		for i := copyLen; i < n; i++ {
+			out[i] = pad
+		}
+		return out
+	}
+
+	ext := plain.AsExt()
+	copyLen := min(len(ext), n)
+	copy(out[:copyLen], ext[:copyLen])
+	pad := field.Lift(cv.Padding)
+	for i := copyLen; i < n; i++ {
+		out[i] = pad
+	}
+	return out
+}

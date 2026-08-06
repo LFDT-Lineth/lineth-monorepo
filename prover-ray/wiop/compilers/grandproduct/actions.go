@@ -7,6 +7,30 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
+// rowLimitAction enforces the per-permutation row bound for a single
+// permutation query on both sides of the protocol. As a prover action it panics
+// (the prover is trusted code about to build an unsound witness); as a verifier
+// action it returns an error so the verifier rejects the proof gracefully.
+//
+// limit is the effective per-side bound for this query: [wiop.MaxPermutationRows]
+// divided by the accumulator budget it shares with the permutations compiled
+// alongside it (see compilePermutations).
+type rowLimitAction struct {
+	query *wiop.TableRelationQuery
+	limit uint64
+}
+
+// Run implements [wiop.ProverAction]: it panics on an over-limit permutation.
+func (a *rowLimitAction) Run(rt *wiop.Runtime) {
+	a.query.CheckRowLimit(rt, a.limit)
+}
+
+// Check implements [wiop.VerifierAction]: it returns an error on an over-limit
+// permutation so the verifier rejects the proof.
+func (a *rowLimitAction) Check(rt *wiop.Runtime) error {
+	return a.query.ValidateRowLimit(rt, a.limit)
+}
+
 // assignResultAction assigns the grand-product Result cell to the value the
 // prover computes from the committed factor expressions (one for an honest
 // permutation). It is registered by the discharge pass for every GrandProduct,
@@ -48,8 +72,8 @@ func (a *proverAction) Run(rt *wiop.Runtime) {
 // once. Panics on a zero denominator, since the β-randomisation is supposed to
 // make every denominator non-zero.
 func computePrefixProduct(rt *wiop.Runtime, zNum, zDen wiop.Expression, n int) []field.Ext {
-	num := evaluateAsExtVec(rt, zNum, n)
-	den := evaluateAsExtVec(rt, zDen, n)
+	num := wiop.EvaluateAsExtVec(rt, zNum, n)
+	den := wiop.EvaluateAsExtVec(rt, zDen, n)
 	invDen := field.BatchInvertExt(den)
 
 	z := make([]field.Ext, n)
@@ -65,52 +89,6 @@ func computePrefixProduct(rt *wiop.Runtime, zNum, zDen wiop.Expression, n int) [
 		z[i] = running
 	}
 	return z
-}
-
-// evaluateAsExtVec evaluates expr against the runtime and returns a length-n
-// extension-field slice. Scalar expressions are broadcast to every position.
-func evaluateAsExtVec(rt *wiop.Runtime, expr wiop.Expression, n int) []field.Ext {
-	out := make([]field.Ext, n)
-
-	if !expr.IsMultiValued() {
-		ext := genToExt(expr.EvaluateSingle(rt).Value)
-		for i := range out {
-			out[i] = ext
-		}
-		return out
-	}
-
-	cv := expr.EvaluateVector(rt)
-	plain := cv.Plain
-	if plain.IsBase() {
-		base := plain.AsBase()
-		copyLen := min(len(base), n)
-		for i := 0; i < copyLen; i++ {
-			out[i] = field.Lift(base[i])
-		}
-		pad := field.Lift(cv.Padding)
-		for i := copyLen; i < n; i++ {
-			out[i] = pad
-		}
-		return out
-	}
-
-	ext := plain.AsExt()
-	copyLen := min(len(ext), n)
-	copy(out[:copyLen], ext[:copyLen])
-	pad := field.Lift(cv.Padding)
-	for i := copyLen; i < n; i++ {
-		out[i] = pad
-	}
-	return out
-}
-
-// genToExt projects a [field.Gen] onto its extension representation.
-func genToExt(v field.Gen) field.Ext {
-	if v.IsBase() {
-		return field.Lift(v.AsBase())
-	}
-	return v.AsExt()
 }
 
 // FinalProductCheck asserts that the product of all Z endpoint openings equals
@@ -131,11 +109,11 @@ func (f *FinalProductCheck) Check(rt *wiop.Runtime) error {
 	var prod field.Ext
 	prod.SetOne()
 	for _, e := range f.Entries {
-		zFinal := genToExt(rt.GetCellValue(e.ZFinal))
+		zFinal := rt.GetCellValue(e.ZFinal).AsExt()
 		prod.Mul(&prod, &zFinal)
 	}
 
-	claimed := genToExt(rt.GetCellValue(f.GrandProduct.Result))
+	claimed := rt.GetCellValue(f.GrandProduct.Result).AsExt()
 	var diff field.Ext
 	diff.Sub(&prod, &claimed)
 	if !diff.IsZero() {
