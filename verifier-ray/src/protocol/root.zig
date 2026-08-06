@@ -25,7 +25,7 @@ pub const Spec = struct {
 };
 
 /// All protocol-level data derived from a proof by the higher-level verifier.
-/// Produced by `replay`; consumed by sub-verifiers.
+/// Produced by `replayWithTranscript`; consumed by sub-verifiers.
 pub const Context = struct {
     /// All Fiat-Shamir coins derived across every round, laid out flat.
     /// Indexed by the compiled system's `round_coin_offsets`.
@@ -35,18 +35,26 @@ pub const Context = struct {
     rounds: []const RoundMessage,
 };
 
-/// Replays the prover–verifier transcript to derive all Fiat-Shamir coins.
+/// Replays the prover–verifier transcript to derive all Fiat-Shamir coins,
+/// using a *caller-owned* `transcript`.
 ///
 /// For each message round, absorbs the round's oracle commitments, public
 /// columns, and cell scalars into the Poseidon2 Merkle-Damgård transcript, then
 /// squeezes that round's coins into `all_coins` at the position fixed by `spec`.
-/// This is the only function that touches the Fiat-Shamir transcript.
+///
+/// The transcript is passed in by pointer and left in place after the last
+/// protocol coin is squeezed, so a transcript-continuing sub-verifier (e.g. PCS,
+/// which derives its own FRI challenges from the same Fiat-Shamir state) can
+/// resume from exactly here. The protocol layer stays sub-verifier-agnostic: it
+/// only knows about round messages and protocol coins, never the FRI squeeze
+/// schedule.
 ///
 /// `spec.round_coin_counts[0]` is the pre-round-1 phase and is always 0, so the
 /// message rounds are `round_coin_counts[1..]`; `rounds` must have that length.
 /// `spec` is comptime-validated for internal consistency, so its callers — both
 /// `verifier.verify` and direct test callers — get the same guarantees.
-pub fn replay(
+pub fn replayWithTranscript(
+    transcript: *fiat_shamir.Transcript,
     comptime spec: Spec,
     rounds: []const RoundMessage,
 ) Error![spec.total_round_coins]Coin {
@@ -71,7 +79,6 @@ pub fn replay(
     // round per remaining entry.
     if (rounds.len != spec.round_coin_counts.len - 1) return error.InvalidRoundCount;
 
-    var transcript = fiat_shamir.Transcript.init();
     var all_coins: [spec.total_round_coins]Coin = undefined;
 
     inline for (1..spec.round_coin_counts.len) |round_index| {

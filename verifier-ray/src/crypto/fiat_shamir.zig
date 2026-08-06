@@ -60,4 +60,28 @@ pub const Transcript = struct {
             .B2 = .{ .a0 = challenge[4], .a1 = challenge[5] },
         };
     }
+
+    /// Fills `out` with integers reduced into `[0, upper_bound)`, consuming one
+    /// Poseidon2 digest at a time and taking its eight base limbs in order.
+    /// `upper_bound` must be a power of two, so `% upper_bound` is uniform and
+    /// (being a comptime power-of-two divisor) lowers to a single mask — this
+    /// mirrors prover-ray's `RandomManyIntegers` expression line-for-line. We
+    /// derive FRI query positions and must reproduce the prover's transcript
+    /// exactly. Squeezing continues from the current transcript state, so callers
+    /// must have absorbed everything up to the query-derivation point.
+    pub fn randomManyIntegers(self: *Transcript, out: []usize, comptime upper_bound: usize) void {
+        comptime {
+            if (upper_bound == 0 or (upper_bound & (upper_bound - 1)) != 0)
+                @compileError("fiat_shamir.randomManyIntegers: upper_bound must be a non-zero power of two");
+        }
+        var i: usize = 0;
+        while (i < out.len) {
+            const digest = self.randomDigest();
+            for (digest) |element| {
+                out[i] = @as(usize, element.value) % upper_bound;
+                i += 1;
+                if (i >= out.len) break;
+            }
+        }
+    }
 };
