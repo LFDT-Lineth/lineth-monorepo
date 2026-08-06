@@ -360,6 +360,35 @@ func VecScaleInto(res Vec, s Gen, v Vec) {
 }
 
 // ---------------------------------------------------------------------------
+// ScaleAdd (fused Horner step: acc = acc·s + b)
+// ---------------------------------------------------------------------------
+
+// VecScaleAddExtBase sets acc[i] = acc[i]·s + b[i] where b is a base vector,
+// in a single pass over memory (one fused Horner fold step instead of a
+// scale pass followed by an add pass).
+// Cost: ~24 base multiplications + 1 base addition per element.
+// acc and b must have equal length.
+func VecScaleAddExtBase(acc []Ext, s Ext, b []Element) {
+	mustEqualLen2(len(acc), len(b))
+	for i := range acc {
+		acc[i].Mul(&acc[i], &s)
+		acc[i].B0.A0.Add(&acc[i].B0.A0, &b[i])
+	}
+}
+
+// VecScaleAddExtExt sets acc[i] = acc[i]·s + b[i] over the extension field,
+// in a single pass over memory.
+// Cost: ~24 base multiplications + 6 base additions per element.
+// acc and b must have equal length.
+func VecScaleAddExtExt(acc []Ext, s Ext, b []Ext) {
+	mustEqualLen2(len(acc), len(b))
+	for i := range acc {
+		acc[i].Mul(&acc[i], &s)
+		acc[i].Add(&acc[i], &b[i])
+	}
+}
+
+// ---------------------------------------------------------------------------
 // BatchInv
 // ---------------------------------------------------------------------------
 

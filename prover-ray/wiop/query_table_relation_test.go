@@ -23,7 +23,7 @@ func TestInclusion_Soundness_InvalidWitness(t *testing.T) {
 	sc := wioptest.NewInclusionScenario()
 	rt := wiop.NewRuntime(sc.Sys)
 	sc.RunInvalid(rt)
-	assert.Error(t, sc.Query.Check(rt), "invalid witness must be rejected by Check")
+	require.Error(t, sc.Query.Check(rt), "invalid witness must be rejected by Check")
 }
 
 // ---- Table constructors ----
@@ -109,7 +109,7 @@ func TestInclusion_Check_Mismatch(t *testing.T) {
 	rt.AssignColumn(colB, baseVec(4, 2)) // A not in B
 
 	err := inc.Check(rt)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestInclusion_NewInclusion_NilCtxPanic(t *testing.T) {
@@ -247,7 +247,7 @@ func TestInclusion_PaddingLeft_Mismatch(t *testing.T) {
 	rt.AssignColumn(colB, vB)
 
 	err := inc.Check(rt)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 // ---- Inclusion with selector + padding (covers the selector path in inclusionBuildSet) ----
@@ -309,7 +309,7 @@ func TestInclusion_PaddingRight_Mismatch(t *testing.T) {
 	rt.AssignColumn(colB, vB)
 
 	err := inc.Check(rt)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 // TestInclusion_PaddingRight_WithSelector_Mismatch exercises the selector path
@@ -343,5 +343,96 @@ func TestInclusion_PaddingRight_WithSelector_Mismatch(t *testing.T) {
 	rt.AssignColumn(selA, selVec)
 
 	err := inc.Check(rt)
-	assert.Error(t, err)
+	require.Error(t, err)
+}
+
+// ---- Row limit (runtime + compile-time static forms) ----
+
+// newRowLimitInclusion builds a single-column inclusion S ⊆ T whose A and B
+// sides live on static modules of the given sizes, and returns the query and a
+// fresh runtime. Static modules report their size via RuntimeSize without any
+// assignment, so the runtime is usable by the row-limit checks as-is.
+func newRowLimitInclusion(t *testing.T, aSize, bSize int) (*wiop.TableRelationQuery, *wiop.Runtime) {
+	t.Helper()
+	sys := wiop.NewSystemf("rowlimit")
+	r0 := sys.NewRound()
+	modT := sys.NewSizedModule(sys.Context.Childf("modT"), bSize, wiop.PaddingDirectionRight)
+	modS := sys.NewSizedModule(sys.Context.Childf("modS"), aSize, wiop.PaddingDirectionRight)
+	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
+	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+	inc := sys.NewInclusion(
+		sys.Context.Childf("inc"),
+		[]wiop.Table{wiop.NewTable(colS.View())},
+		[]wiop.Table{wiop.NewTable(colT.View())},
+	)
+	return inc, wiop.NewRuntime(sys)
+}
+
+// TestValidateRowLimit_UnderLimit confirms the runtime check accepts a lookup
+// whose per-side totals stay strictly below the limit.
+func TestValidateRowLimit_UnderLimit(t *testing.T) {
+	inc, rt := newRowLimitInclusion(t, 4, 8)
+	require.NoError(t, inc.ValidateRowLimit(rt, wiop.MaxLookupRows))
+	assert.NotPanics(t, func() { inc.CheckRowLimit(rt, wiop.MaxLookupRows) })
+}
+
+// TestValidateRowLimit_OverLimit confirms the runtime check rejects (error) and
+// CheckRowLimit panics when a side reaches the limit.
+func TestValidateRowLimit_OverLimit(t *testing.T) {
+	incA, rtA := newRowLimitInclusion(t, 1<<30, 2) // A side reaches the 2^30 bound.
+	require.ErrorContains(t, incA.ValidateRowLimit(rtA, wiop.MaxLookupRows), "effective per-query row limit")
+	assert.Panics(t, func() { incA.CheckRowLimit(rtA, wiop.MaxLookupRows) })
+
+	incB, rtB := newRowLimitInclusion(t, 2, 1<<30) // B side reaches the bound.
+	require.ErrorContains(t, incB.ValidateRowLimit(rtB, wiop.MaxLookupRows), "effective per-query row limit")
+}
+
+// TestPrevalidateRowLimit_SizedModules confirms the compile-time check matches
+// the runtime form for static modules (their static size == runtime size).
+func TestPrevalidateRowLimit_SizedModules(t *testing.T) {
+	incOK, _ := newRowLimitInclusion(t, 4, 8)
+	require.NoError(t, incOK.PrevalidateRowLimit(wiop.MaxLookupRows))
+	assert.NotPanics(t, func() { incOK.PrecheckRowLimit(wiop.MaxLookupRows) })
+
+	incBad, _ := newRowLimitInclusion(t, 1<<30, 2)
+	require.ErrorContains(t, incBad.PrevalidateRowLimit(wiop.MaxLookupRows), "effective per-query row limit")
+	assert.Panics(t, func() { incBad.PrecheckRowLimit(wiop.MaxLookupRows) })
+}
+
+// TestPrevalidateRowLimit_DynamicCountsAsMax confirms a dynamic module is
+// counted as its maximum height ColumnSizeMaxSupported (2^22) by the
+// compile-time check, so a single dynamic fragment stays under MaxLookupRows
+// (2^30) while enough dynamic fragments to exceed it are rejected at compile
+// time even though no runtime sizes are known.
+func TestPrevalidateRowLimit_DynamicCountsAsMax(t *testing.T) {
+	sys := wiop.NewSystemf("rowlimit-dyn")
+	r0 := sys.NewRound()
+	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 2, wiop.PaddingDirectionRight)
+	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
+
+	// A single dynamic A fragment: counted as 2^22, well under 2^30 → passes.
+	dynMod := sys.NewDynamicModule(sys.Context.Childf("dynS"), wiop.PaddingDirectionRight)
+	dynCol := dynMod.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+	inc := sys.NewInclusion(
+		sys.Context.Childf("inc"),
+		[]wiop.Table{wiop.NewTable(dynCol.View())},
+		[]wiop.Table{wiop.NewTable(colT.View())},
+	)
+	require.NoError(t, inc.PrevalidateRowLimit(wiop.MaxLookupRows),
+		"one dynamic fragment (counted as 2^22) is under the 2^30 budget")
+
+	// 2^30 / 2^22 = 256 dynamic fragments on the A side reach the budget.
+	aFrags := make([]wiop.Table, 256)
+	for i := range aFrags {
+		m := sys.NewDynamicModule(sys.Context.Childf("dynA%d", i), wiop.PaddingDirectionRight)
+		c := m.NewColumn(sys.Context.Childf("A%d", i), wiop.VisibilityOracle, r0)
+		aFrags[i] = wiop.NewTable(c.View())
+	}
+	incMany := sys.NewInclusion(
+		sys.Context.Childf("incMany"),
+		aFrags,
+		[]wiop.Table{wiop.NewTable(colT.View())},
+	)
+	require.ErrorContains(t, incMany.PrevalidateRowLimit(wiop.MaxLookupRows), "effective per-query row limit",
+		"256 dynamic fragments counted as 2^22 each reach the 2^30 budget")
 }
