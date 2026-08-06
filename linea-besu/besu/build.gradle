@@ -290,8 +290,8 @@ static void buildAndPublishBesuAction(
     logger.lifecycle('Skipping buildAndPublishBesu: no resolved Besu version (run a non-clean-only build first)')
     return
   }
-  def bomAvailableInMaven = isBesuAvailableInMavenLocal(logger, resolvedBesuVer, mavenLocalBase) &&
-      isBesuAvailableInMaven(logger, resolvedBesuVer)
+  def bomAvailableInMavenLocal = isBesuAvailableInMavenLocal(logger, resolvedBesuVer, mavenLocalBase)
+  def bomAvailableInMaven = isBesuAvailableInMaven(logger, resolvedBesuVer)
   def publishGradleTaskName = publishToMaven ? "publish" : "publishToMavenLocal"
   def shouldSkip = false
   if (publishToMaven) {
@@ -324,7 +324,7 @@ static void buildAndPublishBesuAction(
     return
   }
 
-  logger.lifecycle("Running buildAndPublishBesu as Besu ${resolvedBesuVer} was not found in remote/local maven")
+  logger.lifecycle("Running buildAndPublishBesu as Besu ${resolvedBesuVer} was not found in remote maven")
   runBuildDistAndPublishScript(logger, providers, rootDir, resolvedBesuVer, publishGradleTaskName, cloudsmithUser, cloudsmithApiKey)
 }
 
