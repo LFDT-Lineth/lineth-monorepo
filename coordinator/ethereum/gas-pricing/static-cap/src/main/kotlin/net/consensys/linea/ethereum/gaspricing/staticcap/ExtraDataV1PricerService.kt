@@ -32,7 +32,7 @@ class ExtraDataV1PricerService(
   name = "ExtraDataV1PricerService",
   timerSchedule = TimerSchedule.FIXED_DELAY,
 ) {
-  private var lastExtraData: AtomicReference<MinerExtraDataV1?> = AtomicReference(null)
+  private val lastExtraData: AtomicReference<MinerExtraDataV1?> = AtomicReference(null)
 
   init {
     metricsFacade.createGauge(

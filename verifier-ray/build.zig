@@ -78,6 +78,19 @@ pub fn build(b: *std.Build) void {
             .{ .name = "verifier_ray", .module = verifier_mod },
         },
     });
+    const test_fri_vectors_mod = b.addModule("test_fri_vectors", .{
+        .root_source_file = b.path("testdata/generated/fri.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const test_pcs_vectors_mod = b.addModule("test_pcs_vectors", .{
+        .root_source_file = b.path("testdata/generated/pcs.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "verifier_ray", .module = verifier_mod },
+        },
+    });
 
     const embedded_data_opts = b.addOptions();
     embedded_data_opts.addOption(usize, "spec_index", embedded_spec);
@@ -130,6 +143,8 @@ pub fn build(b: *std.Build) void {
                     .{ .name = "verifier_ray", .module = verifier_mod },
                     .{ .name = "test_vectors", .module = test_vectors_mod },
                     .{ .name = "test_vanishing", .module = test_vanishing_mod },
+                    .{ .name = "test_fri_vectors", .module = test_fri_vectors_mod },
+                    .{ .name = "test_pcs_vectors", .module = test_pcs_vectors_mod },
                 },
             }),
         });
