@@ -121,3 +121,4 @@
 - *(coordinator)* Rename Linea to Lineth in app and config (#3707)
 - *(prover)* Rename Linea to Lineth in prover (#3709)
 - *(misc)* Rename gradle plugins (#3729)
+- *(coordinator)* Apply review cleanups (#3717)

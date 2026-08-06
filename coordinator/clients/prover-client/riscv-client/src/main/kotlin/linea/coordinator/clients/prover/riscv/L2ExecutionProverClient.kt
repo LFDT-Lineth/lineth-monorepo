@@ -88,20 +88,6 @@ internal object L2ExecutionProofResponseDtoMapper : (
   }
 }
 
-internal class L2ExecutionProofIndexProvider(
-  private val hashFunction: HashFunction,
-) : (L2ExecutionProofRequestV1) -> BlockIntervalProofIndex {
-  override fun invoke(request: L2ExecutionProofRequestV1): BlockIntervalProofIndex {
-    val content = request.toString().toByteArray()
-    return BlockIntervalProofIndex(
-      startBlockNumber = request.startBlockNumber,
-      endBlockNumber = request.endBlockNumber,
-      hash = hashFunction.hash(content),
-      startBlockTimestamp = request.startBlockTimestamp,
-    )
-  }
-}
-
 typealias L2ExecutionProofTransport =
   ProverProofTransport<L2ExecutionProofRequestDto, L2ExecutionProofResponseDto, BlockIntervalProofIndex>
 
@@ -128,7 +114,7 @@ class L2ExecutionProverClient(
   BlockIntervalProofIndex,
   >(
   transport = transport,
-  proofIndexProvider = L2ExecutionProofIndexProvider(hashFunction),
+  proofIndexProvider = BlockIntervalProofIndexProvider<L2ExecutionProofRequestV1>(hashFunction),
   requestMapper = proofRequestDtoMapper,
   responseMapper = proofResponseDtoMapper,
   proofTypeLabel = "l2-execution",

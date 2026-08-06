@@ -16,7 +16,7 @@ class HistoricVariableCostProviderImpl(
   private val ethApiBlockClient: EthApiBlockClient,
 ) : HistoricVariableCostProvider {
   private val log: Logger = LogManager.getLogger(this::class.java)
-  private var lastVariableCost: AtomicReference<Pair<ULong, Double>> =
+  private val lastVariableCost: AtomicReference<Pair<ULong, Double>> =
     AtomicReference(0UL to 0.0)
 
   private fun getHistoricVariableCostInWei(blockParameter: BlockParameter.BlockNumber): SafeFuture<Double> {

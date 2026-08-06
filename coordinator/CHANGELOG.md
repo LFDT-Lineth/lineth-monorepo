@@ -21,6 +21,7 @@
 - *(coordinator)* Rename LineaRollup to LinethRollup in JVM components (#3421)
 - *(coordinator)* Rename Linea to Lineth in app and config (#3707)
 - *(misc)* Rename gradle plugins (#3729)
+- *(coordinator)* Apply review cleanups (#3717)
 ## [1.1.0] - 2026-07-28
 
 ### 🚀 Features

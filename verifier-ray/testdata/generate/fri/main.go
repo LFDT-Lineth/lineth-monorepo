@@ -1,8 +1,19 @@
 // Package main generates verifier-ray's FRI/PCS Zig test vectors from
 // prover-ray.
 //
-// It stays separate from testdata/generate so its prover-ray dependency can be
-// bumped independently. This generator uses exported prover-ray APIs only.
+// This is a separate Go module from testdata/generate (the wiop/vanishing
+// fixture generator) specifically so its prover-ray dependency can be
+// bumped independently: FRI/PCS support and the wiop-based vanishing
+// pipeline evolve on different schedules in prover-ray, and coupling them
+// to one pin means bumping for one can break the other for unrelated
+// reasons.
+//
+// Only exported prover-ray symbols are used here: the PCS scenarios go
+// through Commit/AddOpening/NewProverState/Fold/Open and self-check against
+// the exported pcs.Verify before ever writing a Zig literal, and the Merkle
+// fixtures go through fri.NewTree / Tree.Root / Tree.OpenBranch /
+// poseidon2.NewMDHasher. This generator has no white-box access to
+// prover-ray internals.
 package main
 
 import (
@@ -30,6 +41,10 @@ func main() {
 }
 
 // ─── Zig-literal helpers ─────────────────────────────────────────────────
+//
+// Mirrors testdata/generate/main.go's own helpers of the same name and
+// behavior; duplicated rather than shared because the two are separate Go
+// modules with independently-pinned dependencies.
 
 func elem(v uint64) field.Element {
 	var e field.Element
@@ -120,7 +135,16 @@ func runZigFmt(data []byte) ([]byte, error) {
 	return os.ReadFile(tmp.Name())
 }
 
-// ─── PCS fixtures: real proofs through prover-ray's exported API ───────────
+// ─── PCS fixtures: real end-to-end proofs through prover-ray's exported API ─
+//
+// Every scenario runs NewPCS/Commit/AddOpening/NewProverState/Fold/Open
+// through prover-ray's exported surface only, computes its own claims (not
+// via the unexported pcs.shiftedPoint, which only a caller inside package
+// fri could reach), and self-checks the result with the exported pcs.Verify
+// before ever writing a Zig literal. The canonical (batch,size,row) layout
+// and its per-entry claims are re-derived from the frozen, documented
+// ordering in prover-ray's pcs.go package doc (canonicalLayout itself is
+// unexported and off-limits to this separate module).
 
 type pcsDeepEntry struct {
 	BatchIdx int
@@ -136,7 +160,8 @@ type pcsSizeBundle struct {
 }
 
 // computeLayout re-derives the canonical entry order used for entry_claims and
-// DEEP reconstruction.
+// DEEP reconstruction: for each size in descending order, batches in
+// declaration order, base rows then ext rows, row declaration order.
 func computeLayout(shapes []fri.Shape, shifts []fri.BatchShifts) []pcsSizeBundle {
 	maxSizeLog2 := -1
 	for _, s := range shapes {
@@ -177,7 +202,8 @@ func computeLayout(shapes []fri.Shape, shifts []fri.BatchShifts) []pcsSizeBundle
 	return layout
 }
 
-// entryClaims reads claimed values in layout order.
+// entryClaims reads claimed values off in exactly layout's order: the jagged
+// `[entry][shift]` array verifier_ray's query.pcs.VerifyInput expects.
 func entryClaims(layout []pcsSizeBundle, claimed []fri.BatchClaimedValues) [][]field.Ext {
 	var out [][]field.Ext
 	for _, bundle := range layout {
@@ -195,7 +221,10 @@ func entryClaims(layout []pcsSizeBundle, claimed []fri.BatchClaimedValues) [][]f
 	return out
 }
 
-// pcsMakeEncoders builds n RSEncoders from exported fri.NewEncoder.
+// pcsMakeEncoders builds n RSEncoders for sizes 2^0..2^(n-1) at a uniform
+// inverse rate from exported fri.NewEncoder: the same construction
+// prover-ray's own unexported test helper makeEncoders performs, done here
+// with exported API since this generator cannot reach that helper.
 func pcsMakeEncoders(n, invRate int) []*fri.RSEncoder {
 	encoders := make([]*fri.RSEncoder, n)
 	for i := range n {
@@ -206,6 +235,9 @@ func pcsMakeEncoders(n, invRate int) []*fri.RSEncoder {
 }
 
 // shiftedPointExported computes zeta*omega_N^shift from exported API only.
+// prover-ray's pcs.shiftedPoint is unexported, but this is exactly what the
+// outer protocol (any real caller of AddOpening) computes independently to
+// evaluate its own claims -- so this mirrors that caller, not an internal.
 func shiftedPointExported(sizeLog2 uint8, shift int, zeta field.Ext) field.Ext {
 	omega := field.RootOfUnityBy(1 << sizeLog2)
 	var rotation field.Element
