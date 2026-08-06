@@ -13,6 +13,7 @@ pub const crypto = struct {
     pub const commitment = @import("crypto/commitment.zig");
     pub const fiat_shamir = @import("crypto/fiat_shamir.zig");
     pub const poseidon2 = @import("crypto/poseidon2.zig");
+    pub const merkle = @import("crypto/merkle.zig");
 };
 
 pub const polynomial = struct {
@@ -23,4 +24,5 @@ pub const polynomial = struct {
 pub const query = struct {
     pub const vanishing = @import("query/vanishing.zig");
     pub const logderivativesum = @import("query/logderivativesum.zig");
+    pub const fri = @import("query/fri.zig");
 };
