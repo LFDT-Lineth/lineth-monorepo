@@ -66,7 +66,7 @@ setup: bin/prover
 ## Copy the prover assets to the S3 bucket (zkuat)
 ##
 copy-prover-assets:
-	aws s3 sync --exclude "*prover/dev*" --exclude "*05b9ef1*" --exclude "*05b9ef1*" --exclude "*96e3a19*" --exclude "*a9e4681*" prover-assets s3://zk-uat-prover/prover-assets/ --profile=zk-uat-s3-access
+	aws s3 sync --exclude "*prover/dev*" --exclude "*05b9ef1*" --exclude "*05b9ef1*" --exclude "*96e3a19*" --exclude "*a9e4681*" --exclude "*_derived*" prover-assets s3://zk-uat-prover/prover-assets/ --profile=zk-uat-s3-access
 
 download-srs:
 	aws s3 sync s3://prover-assets/kzgsrs/ ./prover-assets/kzgsrs --exclude "*" --include "*.memdump"
