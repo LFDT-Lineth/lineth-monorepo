@@ -95,6 +95,14 @@ pub const VerifyInput = struct {
     public_inputs: PublicInput = &.{},
 };
 
+/// The prover-supplied half of a PCS opening (everything except the
+/// Fiat-Shamir-derived coins). See `Proof.pcs_opening`.
+pub const PcsOpening = struct {
+    roots: []const poseidon2.Digest,
+    claimed_values: []const ext.Ext,
+    proof: pcs.OpeningProof,
+};
+
 /// Verifies a proof against the compiled protocol in three steps:
 ///
 ///   1. Replay   — absorb every round message into the shared Fiat-Shamir
