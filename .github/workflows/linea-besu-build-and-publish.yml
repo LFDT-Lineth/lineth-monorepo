@@ -29,9 +29,11 @@ jobs:
           target_file_path: gradle/libs.versions.toml
 
       - name: Setup Java and Gradle
+        if: ${{ steps.check_besu_commit.outputs.version_changed == 'true' }}
         uses: ./.github/actions/setup-java-and-gradle
 
       - name: Build besu from source and publish to maven including Cloudsmith
+        if: ${{ steps.check_besu_commit.outputs.version_changed == 'true' }}
         run: ./gradlew :linea-besu:besu:build -PpublishToMaven=true
         env:
           JAVA_OPTS: -Xmx2g -Dorg.gradle.daemon=false
