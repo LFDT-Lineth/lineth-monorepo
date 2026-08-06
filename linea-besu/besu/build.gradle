@@ -287,7 +287,6 @@ static void buildAndPublishBesuAction(
     logger.lifecycle('Skipping buildAndPublishBesu: no resolved Besu version (run a non-clean-only build first)')
     return
   }
-  def bomAvailableInMavenLocal = isBesuAvailableInMavenLocal(logger, resolvedBesuVer, mavenLocalBase)
   def bomAvailableInMaven = isBesuAvailableInMaven(logger, resolvedBesuVer)
   def publishGradleTaskName = publishToMaven ? "publish" : "publishToMavenLocal"
   def shouldSkip = false
@@ -317,12 +316,12 @@ static void buildAndPublishBesuAction(
   // build distTar alone instead of re-running the full checkout+build+publish pipeline.
   if (bomAvailableInMaven) {
     logger.lifecycle("Besu ${resolvedBesuVer} jars/BOM already published; building distTar only to materialize the missing distribution")
-    runBuildDistAndPublishScript(logger, providers, rootDir, resolvedBesuVer, 'none', cloudsmithUser, cloudsmithApiKey)
+    runBuildDistAndPublishScript(providers, rootDir, resolvedBesuVer, 'none', cloudsmithUser, cloudsmithApiKey)
     return
   }
 
   logger.lifecycle("Running buildAndPublishBesu as Besu ${resolvedBesuVer} was not found in remote maven")
-  runBuildDistAndPublishScript(logger, providers, rootDir, resolvedBesuVer, publishGradleTaskName, cloudsmithUser, cloudsmithApiKey)
+  runBuildDistAndPublishScript(providers, rootDir, resolvedBesuVer, publishGradleTaskName, cloudsmithUser, cloudsmithApiKey)
 }
 
 /**
@@ -330,7 +329,7 @@ static void buildAndPublishBesuAction(
  * ('publish', 'publishToMavenLocal', or 'none' to build distTar only). Cloudsmith
  * credentials are only wired in when an actual remote publish is requested.
  */
-static void runBuildDistAndPublishScript(logger, providers, File rootDir, String resolvedBesuVer, String publishTask, String cloudsmithUser, String cloudsmithApiKey) {
+static void runBuildDistAndPublishScript(providers, File rootDir, String resolvedBesuVer, String publishTask, String cloudsmithUser, String cloudsmithApiKey) {
   def rootPath = rootDir.absolutePath
   def env = [BESU_DIR: "${rootPath}/tmp/besu-eth", RESOLVED_BESU_VERSION: resolvedBesuVer]
   if (publishTask == 'publish') {
