@@ -104,20 +104,6 @@ internal object RollupProofResponseDtoMapper : (
   }
 }
 
-internal class RollupProofIndexProvider(
-  private val hashFunction: HashFunction,
-) : (RollupProofRequestV1) -> BlockIntervalProofIndex {
-  override fun invoke(request: RollupProofRequestV1): BlockIntervalProofIndex {
-    val content = request.toString().toByteArray()
-    return BlockIntervalProofIndex(
-      startBlockNumber = request.startBlockNumber,
-      endBlockNumber = request.endBlockNumber,
-      hash = hashFunction.hash(content),
-      startBlockTimestamp = request.startBlockTimestamp,
-    )
-  }
-}
-
 typealias FileBasedRollupProofTransport =
   ProverProofTransport<FileBasedRollupProofRequestDto, RollupProofResponseDto, BlockIntervalProofIndex>
 
@@ -147,7 +133,7 @@ class FileBasedRollupProverClient(
   BlockIntervalProofIndex,
   >(
   transport = transport,
-  proofIndexProvider = RollupProofIndexProvider(hashFunction),
+  proofIndexProvider = BlockIntervalProofIndexProvider<RollupProofRequestV1>(hashFunction),
   requestMapper = proofRequestDtoMapper,
   responseMapper = proofResponseDtoMapper,
   proofTypeLabel = "rollup",
@@ -182,7 +168,7 @@ class RestfulRollupProverClient(
   BlockIntervalProofIndex,
   >(
   transport = transport,
-  proofIndexProvider = RollupProofIndexProvider(hashFunction),
+  proofIndexProvider = BlockIntervalProofIndexProvider<RollupProofRequestV1>(hashFunction),
   requestMapper = proofRequestDtoMapper,
   responseMapper = proofResponseDtoMapper,
   proofTypeLabel = "rollup",

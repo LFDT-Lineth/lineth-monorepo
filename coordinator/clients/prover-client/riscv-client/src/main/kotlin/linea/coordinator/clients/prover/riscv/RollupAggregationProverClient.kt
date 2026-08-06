@@ -95,27 +95,6 @@ internal object RollupAggregationProofResponseDtoMapper :
   }
 }
 
-/**
- * Builds the proof-index provider. The aggregation proof index requires a content hash; this draft hashes a
- * deterministic projection of the request (block range) so that identical requests map to the same index.
- *
- * TODO: extend the hashed content to cover the full inlined rollup-proof set once those fields are available, so
- *  the index is collision-resistant across aggregations sharing a block range.
- */
-internal class RollupAggregationProofIndexProvider(
-  private val hashFunction: HashFunction,
-) : (RollupAggregationProofRequestV1) -> BlockIntervalProofIndex {
-  override fun invoke(request: RollupAggregationProofRequestV1): BlockIntervalProofIndex {
-    val content = request.toString().toByteArray()
-    return BlockIntervalProofIndex(
-      startBlockNumber = request.startBlockNumber,
-      endBlockNumber = request.endBlockNumber,
-      hash = hashFunction.hash(content),
-      startBlockTimestamp = request.startBlockTimestamp,
-    )
-  }
-}
-
 private typealias FileBasedRollupAggregationProofTransport =
   ProverProofTransport<
     FileBasedRollupAggregationProofRequestDto,
@@ -155,7 +134,7 @@ class FileBasedRollupAggregationProverClient(
   BlockIntervalProofIndex,
   >(
   transport = transport,
-  proofIndexProvider = RollupAggregationProofIndexProvider(hashFunction),
+  proofIndexProvider = BlockIntervalProofIndexProvider<RollupAggregationProofRequestV1>(hashFunction),
   requestMapper = proofRequestDtoMapper,
   responseMapper = proofResponseDtoMapper,
   proofTypeLabel = "rollup-aggregation",
@@ -189,7 +168,7 @@ class RestfulRollupAggregationProverClient(
   BlockIntervalProofIndex,
   >(
   transport = transport,
-  proofIndexProvider = RollupAggregationProofIndexProvider(hashFunction),
+  proofIndexProvider = BlockIntervalProofIndexProvider<RollupAggregationProofRequestV1>(hashFunction),
   requestMapper = proofRequestDtoMapper,
   responseMapper = proofResponseDtoMapper,
   proofTypeLabel = "rollup-aggregation",

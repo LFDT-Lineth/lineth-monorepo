@@ -76,14 +76,6 @@ data class BlobCounters(
   val endBlockTimestamp: Instant,
   val expectedShnarf: ByteArray,
 ) : BlockInterval {
-  companion object {
-    fun areAllConsecutive(blobs: List<BlobCounters>): Boolean {
-      return blobs.foldIndexed(true) { i, acc, next ->
-        acc && (i == 0 || next.startBlockNumber == blobs[i - 1].endBlockNumber + 1UL)
-      }
-    }
-  }
-
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (javaClass != other?.javaClass) return false
