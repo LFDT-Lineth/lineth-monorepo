@@ -343,6 +343,8 @@ const R_REMUW:u17 = ((OP_32 as u17) << 10) | ((FUNCT3_REMUW as u17) << 7) | (FUN
 const R_KECCAK:u17 = ((CUSTOM_1 as u17) << 10) | ((FUNCT3_KECCAK as u17) << 7) | (FUNCT7_KECCAK as u17)
 const R_POSEIDON2:u17 = ((CUSTOM_1 as u17) << 10) | ((FUNCT3_POSEIDON2 as u17) << 7) | (FUNCT7_POSEIDON2 as u17)
 const R_WRITE_OUTPUT:u17 = ((CUSTOM_1 as u17) << 10) | ((FUNCT3_WRITE_OUTPUT as u17) << 7) | (FUNCT7_WRITE_OUTPUT as u17)
+const R_EVM_ECRECOVER:u17 = ((CUSTOM_0 as u17) << 10) | ((FUNCT3_EVM_ECRECOVER as u17) << 7) | (FUNCT7_EVM_ECRECOVER as u17)
+const R_ECRECOVER:u17 = ((CUSTOM_1 as u17) << 10) | ((FUNCT3_ECRECOVER as u17) << 7) | (FUNCT7_ECRECOVER as u17)
 
 // Concatenate constant to flatten the I_switch table
 const I_LB:u10 = (((LOAD as u10) << 3) | (FUNCT3_LB as u10))

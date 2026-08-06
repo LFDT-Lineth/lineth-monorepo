@@ -326,6 +326,18 @@ output_write_address:OutputAddress) ->
         //
         // case CUSTOM_1
         //
+        case R_EVM_ECRECOVER: {
+            printf "EVM ECRECOVER precompile "
+            evm_ecrecover(v1 as Address, v2 as Address, registers[rd] as Address)
+            new_output_write_address = output_write_address
+            return
+        }
+        case R_ECRECOVER: {
+            printf "ECRECOVER precompile "
+            ecrecover(v1 as Address, v2 as Address, registers[rd] as Address)
+            new_output_write_address = output_write_address
+            return
+        }
         case R_KECCAK: {
             printf "KECCAK precompile "
             keccak(v1 as Address, v2 as u32, registers[rd] as Address)
