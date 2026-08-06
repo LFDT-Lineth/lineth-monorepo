@@ -147,9 +147,6 @@ class GlobalBlockConflationCalculator(
   }
 
   @Synchronized
-  internal fun getConflationInProgress(): InflightConflation = inflightConflation
-
-  @Synchronized
   fun reset() {
     calculators.forEach(ConflationTriggerCalculator::reset)
     inflightConflation = InflightConflation.empty(emptyTracesCounters)
