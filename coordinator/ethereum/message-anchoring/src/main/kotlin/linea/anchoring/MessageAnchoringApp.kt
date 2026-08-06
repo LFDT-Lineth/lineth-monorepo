@@ -7,7 +7,6 @@ import linea.anchoring.clients.L1MessageSentEventsPoller
 import linea.contract.events.MessageSentEvent
 import linea.contract.l2.L2MessageServiceSmartContractClient
 import linea.domain.BlockParameter
-import linea.domain.RetryConfig
 import linea.ethapi.EthApiClient
 import linea.ethapi.EthLogsSearcherImpl
 import org.apache.logging.log4j.LogManager
@@ -25,7 +24,6 @@ class MessageAnchoringApp(
   private val l2MessageService: L2MessageServiceSmartContractClient,
 ) : LongRunningService {
   data class Config(
-    val l1RequestRetryConfig: RetryConfig,
     val l1PollingInterval: Duration = 12.seconds,
     val l1SuccessBackoffDelay: Duration = 1.milliseconds, // is configurable mostly for testing purposes
     val l1ContractAddress: String,

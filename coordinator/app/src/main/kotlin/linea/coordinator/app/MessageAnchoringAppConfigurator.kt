@@ -27,6 +27,8 @@ object MessageAnchoringAppConfigurator {
       createEthApiClient(
         rpcUrl = configs.messageAnchoring.l1Endpoint.toString(),
         log = LogManager.getLogger("clients.l1.eth.message-anchoring"),
+        requestRetryConfig = configs.messageAnchoring.l1RequestRetries,
+        vertx = vertx,
       )
     val l2Web3jClient =
       createWeb3jHttpClient(
@@ -50,7 +52,6 @@ object MessageAnchoringAppConfigurator {
         vertx = vertx,
         config =
         MessageAnchoringApp.Config(
-          l1RequestRetryConfig = configs.messageAnchoring.l1RequestRetries,
           l1PollingInterval = configs.messageAnchoring.l1EventScrapping.pollingInterval,
           l1SuccessBackoffDelay = configs.messageAnchoring.l1EventScrapping.ethLogsSearchSuccessBackoffDelay,
           l1ContractAddress = configs.protocol.l1.contractAddress,
