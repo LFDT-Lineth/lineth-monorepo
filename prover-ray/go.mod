@@ -5,7 +5,7 @@ go 1.25.7
 require (
 	github.com/LFDT-Lineth/zkc v1.2.25-0.20260727081733-2599d25d9227
 	github.com/consensys/gnark v0.14.1-0.20260219004710-bbfb2f70a565
-	github.com/consensys/gnark-crypto v0.20.2-0.20260729182318-24876de866b5
+	github.com/consensys/gnark-crypto v0.20.2-0.20260806172022-e2a02f711389
 	github.com/ethereum/go-ethereum v1.17.0
 	github.com/go-playground/assert/v2 v2.2.0
 	github.com/holiman/uint256 v1.3.2
