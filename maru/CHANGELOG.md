@@ -2,7 +2,7 @@
 
 ### 🚀 Features
 
-- *(maru)* Auto-generate the Maru TOML configuration reference and publish it to the Linea docs site (#NNNN)
+- *(maru)* Auto-generate the Maru TOML configuration reference and publish it to the Linea docs site (#3735)
 
 ### 🐛 Bug Fixes
 
