@@ -1,0 +1,51 @@
+// Single-case driver for ecrecover.accepts / ecrecover.rejects.
+// Each line of those files is one JSON object with exactly these inputs;
+// run it with:  go tool zkc exec -c <case.json> ecrecover_run.zkc
+// The shell command would be:
+//
+// # ACCEPTS — every line must exit 0
+// i=0; grep '^{' ecrecover.accepts | while IFS= read -r line; do
+// printf '%s\n' "$line" > /tmp/case.json
+// if go tool zkc exec -c /tmp/case.json ecrecover_run.zkc >/dev/null 2>&1; then
+//   echo "accept[$i] ok" 
+// else 
+//   echo "accept[$i] FAIL"
+// fi
+// i=$((i+1))
+// done
+
+// # REJECTS — every line must exit NON-zero
+// i=0; grep '^{' ecrecover.rejects | while IFS= read -r line; do
+// printf '%s\n' "$line" > /tmp/case.json
+// if go tool zkc exec -c /tmp/case.json ecrecover_run.zkc >/dev/null 2>&1; then
+//   echo "reject[$i] FAIL (accepted)"
+// else
+//   echo "reject[$i] ok"
+// fi
+// i=$((i+1))
+// done
+
+
+include "./lib/secp256k1/ecrecover.zkc"
+
+pub input in_msg(address:u1)    -> (val:u256)
+pub input in_r(address:u1)      -> (val:u256)
+pub input in_s(address:u1)      -> (val:u256)
+pub input in_v(address:u1)      -> (val:u8)
+pub input in_strict(address:u1) -> (val:u8)
+pub input in_pkx(address:u1)    -> (val:u256)
+pub input in_pky(address:u1)    -> (val:u256)
+
+fn main() {
+    var v:u5 = in_v[0] as u5
+    var st:u1 = in_strict[0] as u1
+
+    var pkx:u256, pky:u256
+    pkx, pky = ecrecover_generic(in_msg[0], in_r[0], in_s[0], v, st)
+
+    // accepts: must equal the expected pubkey ((0,0) for soft-fail cases).
+    // rejects: ecrecover_generic hard-fails before reaching here.
+    if (pkx != in_pkx[0]) || (pky != in_pky[0]) {
+        fail
+    }
+}
