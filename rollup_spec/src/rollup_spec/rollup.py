@@ -44,6 +44,11 @@ ZERO_HASH32 = Hash32(b"\x00" * 32)
 # be exactly `BLOB_BYTES_LENGTH` bytes — shorter compressed output is zero-padded.
 BLOB_BYTES_LENGTH = 4096 * 32
 
+# Big-endian width of the per-conflation segment length prefix within the DA
+# stream (§3.1): `[len][lz4(rlp(conflation))]`. 4 bytes comfortably bounds any
+# realistic compressed conflation size well under 2**32.
+SEGMENT_LENGTH_PREFIX_BYTES = 4
+
 # EIP-4844 trusted setup (4096 G1 + 65 G2 monomial points from the Ethereum
 # KZG ceremony). The `ckzg` wheel does not bundle a setup file, so we reuse
 # the one already vendored in this repo for the hardhat contract tests. All
@@ -94,144 +99,183 @@ class TruncatedEthereumBlock:
 
 
 @dataclass
-class ShnarfWitness:
+class DrhWitness:
     """
-    ShnarfWitness is the preimage of a shnarf (§3.1):
-    `Hash(parentShnarf, lastBlockHash, blobHash)`.
+    DrhWitness is the preimage of a Data Rolling Hash (DRH) fold step (§3.1):
+    `keccak256(parentDrh || chunkHash)`.
+
+    The DRH is a pure DA accumulator over the ordered sequence of published
+    chunks. Execution continuity — the role the old 3-input shnarf's
+    `lastBlockHash` used to play — lives in the explicit `parentBlockHash` /
+    `endBlockHash` public-input fields instead (§2.4): under shared chunks,
+    "the last block completing in chunk i" depends on two adjacent proofs'
+    witnesses, so a 1-input accumulator is the shape a single proof can
+    recompute alone.
     """
-    parent_shnarf: Hash32
-    last_block_hash: Hash32
-    blob_hash: Hash32
+    parent_drh: Hash32
+    chunk_hash: Hash32
 
     def hash(self) -> Hash32:
-        return keccak256(self.parent_shnarf + self.last_block_hash + self.blob_hash)
+        return keccak256(self.parent_drh + self.chunk_hash)
 
 
 @dataclass
-class BlobWitness:
+class ConflationWitness:
     """
-    Per-blob witness for the rollup proof.
+    Per-conflation witness for the rollup proof (§2.2, §3.1). A conflation is
+    exactly one l2-execution proof's block range; `block_rlps` are the
+    canonical full block RLPs published through the DA path (header + tx list
+    [+ withdrawals], EIP-2718 typed transactions in full signed form), one per
+    block, paired 1:1 and in order with `RollupProofPrivateInput.l2_execution_proofs`.
+    The l2-execution proof receives Engine API `NewPayloadRequest` inputs
+    instead; the rollup proof cross-checks this DA material against
+    l2-execution public block hashes and `txFromsHash`. Truncation per §3.2
+    happens *inside* the guest from these full RLPs; there is no separately-
+    witnessed truncated form.
 
-    Fields:
-      - `block_number_range`: `(startBlockNumber, endBlockNumber)` of the
-        L2 blocks contained in this blob.
-      - `block_rlps`: the canonical full block RLPs published through the DA
-        blob path (header + tx list [+ withdrawals], EIP-2718 typed
-        transactions in full signed form), one per block in
-        `block_number_range`. The l2-execution proof receives Engine API
-        `NewPayloadRequest` inputs instead; the rollup proof cross-checks this
-        DA material against l2-execution public block hashes and `txFromsHash`.
-        Truncation per §3.2 happens *inside* the guest from these full RLPs;
-        there is no separately-witnessed truncated form.
-      - `blob_hash`: the L1-anchored versioned hash of the DA blob. The
-        rollup guest computes the KZG commitment from the computed padded
-        blob bytes and checks its versioned hash against this value.
-      - `blob_kzg_proof`: KZG proof for the computed blob bytes and computed
-        commitment.
-
-    The proof statement (§2.2 step 1) is: the guest computes the
-    blob bytes from `block_rlps` (truncate → RLP-encode → LZ4-compress →
-    zero-pad), computes the KZG commitment from those bytes, checks
-    `kzg_commitment_to_versioned_hash(computed_commitment) == blob_hash`,
-    then runs `ckzg.verify_blob_kzg_proof` on the computed tuple. If the
-    sequencer committed to anything other than this exact byte sequence,
-    the versioned-hash or KZG checks reject — so there is no separate
-    byte-equality check. The truncated blocks themselves are an internal-only
-    intermediate; downstream consumers (block-hash boundary checks in
-    §2.2 step 5, sender-list cross-checks in step 3) take the computed
-    truncated form, not a witnessed copy.
+    Each conflation is compressed INDEPENDENTLY — truncate → RLP-encode →
+    LZ4-compress, one segment per conflation, length-prefixed — and the
+    resulting segments are concatenated in order to form the DA byte stream
+    (§3.1). LZ4 back-references never cross a segment boundary, so this proof
+    can recompress its own conflations without any foreign witness data.
     """
-    block_number_range: tuple[int, int]
     block_rlps: List[bytes]
-    blob_hash: Hash32
-    blob_kzg_proof: Bytes48
 
-    def verify_blob(
-        self,
-        chain_id: U64,
-    ) -> Tuple[Hash32, List["TruncatedEthereumBlock"], List[Hash32]]:
-        """
-        Recompute the blob payload from `block_rlps`, compute its KZG
-        commitment, and verify that it binds the bytes to the declared
-        `blob_hash`
-        (§2.2 step 1). This single check subsumes the older
-        compression-equality assertion: the KZG verifier accepts iff the
-        bytes the guest computed are identical to the bytes the sequencer
-        committed to on L1.
 
-        Steps:
-          1. Decode each `block_rlps[i]` and apply the canonical DA
-             truncation rule (§3.2), capturing the header's `parent_hash`
-             alongside.
-          2. Serialize the truncated list via `rlp_encode_truncated_blocks`,
-             LZ4-compress (raw block format, no length header) via
-             `compress_lz4`, and zero-pad to `BLOB_BYTES_LENGTH`.
-          3. Compute the KZG commitment from the padded bytes, derive its
-             versioned hash, and assert it equals the L1-anchored `blob_hash`.
-          4. Delegate the full EIP-4844 verification (Fiat-Shamir challenge
-             derivation, polynomial evaluation in Lagrange form, pairing
-             check) to `ckzg.verify_blob_kzg_proof` with the computed
-             commitment — the same canonical entry point consensus-level
-             clients call. The production guest runs the equivalent in-zkVM
-             primitive or deterministic linked implementation with fixed
-             trusted-setup semantics; this reference defers to the c-kzg-4844
-             binding rather than re-deriving its internals.
+def _truncate_conflation(
+    block_rlps: Sequence[bytes],
+    chain_id: U64,
+) -> Tuple[List["TruncatedEthereumBlock"], List[Hash32]]:
+    """
+    Decode and truncate one conflation's block RLPs (§3.2), capturing each
+    block's header `parent_hash` alongside.
 
-        Returns `(blob_hash, truncated, parent_hashes)`:
-          - `blob_hash`: the versioned hash committed to on L1.
-          - `truncated`: the computed `TruncatedEthereumBlock` per block,
-            consumed by downstream steps (block-hash boundary alignment,
-            sender-list cross-check).
-          - `parent_hashes`: each block's `header.parent_hash`. Exposed
-            so `run_rollup_guest` can verify the full block-hash chain
-            (§2.2 step 5): every block's claimed parent must match the
-            previous block's computed hash, anchored at the first
-            l2-execution proof's `parentBlockHash` and at each l2-execution
-            proof's `endBlockHash` boundary. Without this, intermediate
-            blocks inside an l2-execution range would only be bound
-            transitively, leaving room for a malicious prover to swap a
-            non-boundary block as long as its successor's `parent_hash`
-            still pointed to the *original* (un-swapped) block.
+    Returns `(truncated, parent_hashes)`:
+      - `truncated`: the computed `TruncatedEthereumBlock` per block,
+        consumed by downstream steps (block-hash boundary alignment,
+        sender-list cross-check).
+      - `parent_hashes`: each block's `header.parent_hash`. Exposed so
+        `run_rollup_guest` can verify the full block-hash chain (§2.2 step 5):
+        every block's claimed parent must match the previous block's computed
+        hash, anchored at the first l2-execution proof's `parentBlockHash`
+        and at each l2-execution proof's `endBlockHash` boundary. Without
+        this, intermediate blocks inside an l2-execution range would only be
+        bound transitively, leaving room for a malicious prover to swap a
+        non-boundary block as long as its successor's `parent_hash` still
+        pointed to the *original* (un-swapped) block.
+    """
+    truncated: List["TruncatedEthereumBlock"] = []
+    parent_hashes: List[Hash32] = []
+    for rlp_bytes in block_rlps:
+        # Decode once to capture the header's parent_hash; the downstream
+        # `truncate_block_rlp` redoes the decode — small redundancy that
+        # keeps the reference implementation simple.
+        header = decode_block_rlp(rlp_bytes).header
+        parent_hashes.append(Hash32(header.parent_hash))
+        truncated.append(truncate_block_rlp(rlp_bytes, chain_id))
+    return truncated, parent_hashes
 
-        `chain_id` is required to recover transaction senders during the
-        truncation.
-        """
-        truncated: List["TruncatedEthereumBlock"] = []
-        parent_hashes: List[Hash32] = []
-        for rlp_bytes in self.block_rlps:
-            # Decode once to capture the header's parent_hash; the
-            # downstream `truncate_block_rlp` redoes the decode — small
-            # redundancy that keeps the reference implementation simple.
-            header = decode_block_rlp(rlp_bytes).header
-            parent_hashes.append(Hash32(header.parent_hash))
-            truncated.append(truncate_block_rlp(rlp_bytes, chain_id))
 
-        serialized = rlp_encode_truncated_blocks(truncated)
-        compressed = compress_lz4(serialized)
-        if len(compressed) > BLOB_BYTES_LENGTH:
-            raise Exception(
-                f"compressed blob payload {len(compressed)} bytes exceeds "
-                f"EIP-4844 blob size {BLOB_BYTES_LENGTH}"
-            )
-        # Pad with zero bytes to fill the full EIP-4844 blob payload. The
-        # KZG commitment is taken over a polynomial of exactly
-        # FIELD_ELEMENTS_PER_BLOB evaluations; the sequencer pads with
-        # zeros and so must the guest for the commitment to match.
-        padded = compressed + b"\x00" * (BLOB_BYTES_LENGTH - len(compressed))
+def _compress_conflation_segment(truncated: Sequence["TruncatedEthereumBlock"]) -> bytes:
+    """
+    Independently RLP-encode and LZ4-compress one conflation's truncated
+    blocks, and prefix the result with its compressed length (§3.1):
+    `[len][lz4(rlp(conflation))]`. The sequencer and the rollup guest must
+    agree byte-for-byte on this framing for the KZG verifier to accept.
+    """
+    segment = compress_lz4(rlp_encode_truncated_blocks(truncated))
+    return len(segment).to_bytes(SEGMENT_LENGTH_PREFIX_BYTES, "big") + segment
 
-        setup = _trusted_setup()
+
+@dataclass
+class ChunkCommitment:
+    """
+    Per-chunk KZG commitment witness for the rollup proof (§3.1, §3.4):
+    `chunk_hash` is the chunk's L1-anchored versioned hash; `chunk_kzg_proof`
+    is the KZG proof for its reconstructed bytes. Kept as one paired object
+    per chunk (rather than two parallel lists) so index `i`'s hash and proof
+    can never drift out of sync.
+    """
+    chunk_hash: Hash32
+    chunk_kzg_proof: Bytes48
+
+
+def _verify_and_fold_chunks(
+    own_stream_bytes: bytes,
+    start_offset: int,
+    chunks: Sequence[ChunkCommitment],
+    opaque_prefix_bytes: bytes,
+    opaque_suffix_bytes: bytes,
+    parent_drh: Hash32,
+    boundary_prev_drh: Optional[Hash32],
+) -> Tuple[Hash32, int]:
+    """
+    Slice `own_stream_bytes` (this proof's own concatenated conflation
+    segments) across the chunks it touches, reconstruct each chunk's full
+    published bytes, verify each chunk's KZG commitment against its anchored
+    hash (`chunks[k].chunk_hash`), and fold the DRH chain across them (§3.1, §3.4).
+
+    `opaque_prefix_bytes` / `opaque_suffix_bytes` are foreign bytes not owned
+    by this proof — relevant only at the two ends of the touched range, never
+    per-chunk: `opaque_prefix_bytes` fills the start of the FIRST touched
+    chunk when `start_offset > 0`; `opaque_suffix_bytes` fills the end of the
+    LAST touched chunk when this proof's data doesn't reach `chunkSize`. Both
+    default to empty. The guest witnesses them as opaque bytes purely to
+    reconstruct each boundary chunk's full published content for KZG
+    verification — their content is never interpreted, only reproduced
+    (§2.2: "opaque boundary bytes").
+
+    Mid-chunk starts (`start_offset > 0`): `parent_drh` is already the DRH
+    value *after* folding the first touched chunk, so instead of folding
+    forward the guest opens its preimage — `boundary_prev_drh` plus the
+    recomputed hash of the first chunk must reproduce `parent_drh` — which
+    binds the witnessed chunk to the chain position without requiring the
+    guest to have derived `parent_drh` itself.
+
+    Returns `(end_drh, end_offset)`.
+    """
+    chunk_count = len(chunks)
+    if chunk_count == 0:
+        raise Exception("rollup proof must touch at least one chunk")
+    if not (0 <= start_offset < BLOB_BYTES_LENGTH):
+        raise Exception("startOffset must be within [0, chunkSize)")
+
+    end_offset = len(own_stream_bytes) - (chunk_count - 1) * BLOB_BYTES_LENGTH + start_offset
+    if not (0 < end_offset <= BLOB_BYTES_LENGTH):
+        raise Exception("chunk witness count is inconsistent with the reconstructed segment length")
+    if len(opaque_prefix_bytes) != start_offset:
+        raise Exception("opaquePrefixBytes length does not match startOffset")
+    if len(opaque_suffix_bytes) != BLOB_BYTES_LENGTH - end_offset:
+        raise Exception("opaqueSuffixBytes length does not match endOffset")
+
+    setup = _trusted_setup()
+    cursor = 0
+    drh = parent_drh
+    for i in range(chunk_count):
+        is_first = i == 0
+        is_last = i == chunk_count - 1
+        prefix = opaque_prefix_bytes if is_first else b""
+        suffix = opaque_suffix_bytes if is_last else b""
+        own_slice_len = BLOB_BYTES_LENGTH - len(prefix) - len(suffix)
+
+        own_slice = own_stream_bytes[cursor:cursor + own_slice_len]
+        cursor += own_slice_len
+        full_chunk_bytes = prefix + own_slice + suffix
+        if len(full_chunk_bytes) != BLOB_BYTES_LENGTH:
+            raise Exception(f"chunk {i} reconstructed bytes do not fill the chunk")
+
         try:
             # The commitment is not witnessed. It is recomputed inside the
-            # rollup guest from the exact padded payload the guest derived.
-            blob_kzg_commitment = KZGCommitment(
-                ckzg.blob_to_kzg_commitment(padded, setup),
+            # rollup guest from the reconstructed chunk bytes.
+            chunk_kzg_commitment = KZGCommitment(
+                ckzg.blob_to_kzg_commitment(full_chunk_bytes, setup),
             )
         except Exception as exc:
-            raise Exception("invalid blob KZG commitment computation") from exc
+            raise Exception("invalid chunk KZG commitment computation") from exc
 
-        blob_hash = Hash32(kzg_commitment_to_versioned_hash(blob_kzg_commitment))
-        if blob_hash != self.blob_hash:
-            raise Exception("computed blob KZG commitment does not match blobHash")
+        computed_chunk_hash = Hash32(kzg_commitment_to_versioned_hash(chunk_kzg_commitment))
+        if computed_chunk_hash != chunks[i].chunk_hash:
+            raise Exception(f"chunk {i} computed KZG commitment does not match chunkHash")
 
         try:
             # ┌─ PRECOMPILE (production guest): BLS12-381 / KZG verifier ─────┐
@@ -240,32 +284,46 @@ class BlobWitness:
             # │ These calls hide BLS12-381 multi-scalar multiplication,       │
             # │ polynomial evaluation in Lagrange form, and pairing checks.   │
             # │                                                               │
-            # │ Soundness of the compression statement comes from computing   │
-            # │ the commitment from `padded`, matching its versioned hash to  │
-            # │ L1's `blobHash`, and verifying the proof against that         │
+            # │ Soundness for this chunk comes from computing the commitment  │
+            # │ from `full_chunk_bytes`, matching its versioned hash to the   │
+            # │ chunk's anchored hash, and verifying the proof against that   │
             # │ computed commitment.                                          │
             # └───────────────────────────────────────────────────────────────┘
             ok = ckzg.verify_blob_kzg_proof(
-                padded,
-                blob_kzg_commitment,
-                self.blob_kzg_proof,
-                setup,
+                full_chunk_bytes, chunk_kzg_commitment, chunks[i].chunk_kzg_proof, setup,
             )
         except Exception as exc:
-            # Malformed witness bytes (invalid G1 encoding, blob length
-            # mismatch, field-element overflow, …) raise from ckzg; surface
-            # them as a proof-verification failure with the original cause.
-            raise Exception("invalid KZG proof") from exc
+            raise Exception("invalid chunk KZG proof") from exc
         if not ok:
-            raise Exception("invalid KZG proof")
+            raise Exception("invalid chunk KZG proof")
 
-        return blob_hash, truncated, parent_hashes
+        if is_first and start_offset > 0:
+            if boundary_prev_drh is None:
+                raise Exception("mid-chunk start requires boundaryPrevDrh")
+            if DrhWitness(boundary_prev_drh, chunks[i].chunk_hash).hash() != parent_drh:
+                raise Exception("boundary chunk DRH preimage does not open parentDrh")
+            drh = parent_drh
+        else:
+            drh = DrhWitness(drh, chunks[i].chunk_hash).hash()
+
+    if cursor != len(own_stream_bytes):
+        raise Exception("chunk witnesses do not cover the reconstructed segment length")
+
+    return drh, end_offset
 
 
 @dataclass
 class RollupPublicInput:
     """
     The rollup / rollup-aggregation public input tuple from Readme.md section 2.4.
+
+    `parent_block_hash` / `end_block_hash` are execution continuity — the role
+    the old 3-input shnarf's `lastBlockHash` used to play — now explicit
+    public-input fields rather than folded into the DA accumulator (§3.1).
+    `start_offset` / `end_offset` are the byte positions (§3.4) that pair with
+    `parent_drh` / `end_drh` to form this proof's start and end stream
+    positions; `end_offset` is a derived output (computed from the guest's own
+    recompression), not trusted witness input.
 
     `program_vks` is the set of ALL guest program VKs verified beneath this proof
     (§ProgramVK anchoring), checked against L1's single combined `approvedVks`
@@ -293,16 +351,31 @@ class RollupPublicInput:
     end_ftx_rolling_hash: Hash32
     end_processed_ftx_number: U64
     filtered_addresses_hash: Hash32
-    parent_shnarf: Hash32
-    end_shnarf: Hash32
+    parent_drh: Hash32
+    end_drh: Hash32
+    parent_block_hash: Hash32
+    end_block_hash: Hash32
+    start_offset: int
+    end_offset: int
     program_vks: List[Hash32] = field(default_factory=list)
 
 
 @dataclass
 class RollupProofPrivateInput:
     """
-    Logical rollup request. One rollup proof folds K >= 1 DA blobs and N >= 1
-    l2-execution proofs tiling the combined block range.
+    Logical rollup request. One rollup proof covers >=1 consecutive whole
+    conflations (each conflation = one l2-execution proof's block range,
+    paired 1:1 with `l2_execution_proofs`), transported across >=1 chunks
+    (§3.1).
+
+    `parent_drh` / `start_offset` give this proof's start stream position
+    (§3.4). `opaque_prefix_bytes` / `opaque_suffix_bytes` are foreign bytes
+    not owned by this proof, relevant only at the two ends of the touched
+    chunk range (not per-chunk) — see `_verify_and_fold_chunks`.
+    `boundary_prev_drh` is required only for a mid-chunk start
+    (`start_offset > 0`) — the DRH value before the first touched chunk, used
+    to open its preimage. `end_drh` and `end_offset` are not request inputs:
+    the guest derives them from its own recompression.
 
     `chain_id` is needed for sender recovery during DA truncation (§2.2
     step 2). It is committed transitively via the l2-execution proofs'
@@ -311,17 +384,22 @@ class RollupProofPrivateInput:
     the rollup range, so the rollup proof inherits chain-config integrity
     from the l2-execution proofs it recursively verifies.
     """
-    parent_shnarf: Hash32
+    parent_drh: Hash32
+    start_offset: int
     chain_id: U64
-    blobs: List[BlobWitness]
+    conflations: List[ConflationWitness]
+    chunks: List[ChunkCommitment]
     l2_execution_proofs: List[VerifiableL2ExecutionProof]
+    opaque_prefix_bytes: bytes = b""
+    opaque_suffix_bytes: bytes = b""
+    boundary_prev_drh: Optional[Hash32] = None
 
 
 @dataclass
 class RollupProof:
     """
     A rollup proof as the rollup guest emits it: the guest *output* (the
-    14-field `public_inputs` tuple + the root/address preimages) plus the
+    20-field `public_inputs` tuple + the root/address preimages) plus the
     `proof` bytes the aggregation guest recursively verifies.
 
     Guest/prover boundary: the guest emits `public_inputs` and the preimage
@@ -363,59 +441,71 @@ class VerifiableRollupProof:
 
 def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     """
-    rollup: per blob, computes the canonical compressed payload from
-    `block_rlps` (truncate → RLP-encode → LZ4-compress → zero-pad to
-    BLOB_BYTES_LENGTH), computes the KZG commitment from those bytes, checks
-    it against the L1-anchored `blobHash`, and runs `ckzg.verify_blob_kzg_proof`
-    on the computed commitment. Recursively verifies the N l2-execution proofs,
-    checks continuity, builds the L2->L1 Merkle-root commitment, collects FTX
-    outputs, and emits the 14-field rollup PI tuple (§2.4).
+    rollup: for each conflation, independently computes the canonical
+    compressed segment from `block_rlps` (truncate → RLP-encode →
+    LZ4-compress, length-prefixed, §3.1) and concatenates the segments into
+    this proof's own byte stream. Slices that stream across the chunks it
+    touches, reconstructing each chunk's full published bytes together with
+    any witnessed opaque boundary bytes, computes the KZG commitment for each,
+    checks it against the L1-anchored `chunkHash`, and runs
+    `ckzg.verify_blob_kzg_proof` on the computed commitment — folding the DRH
+    chain across the touched chunks as it goes (§3.4). Recursively verifies
+    the N l2-execution proofs, checks continuity, builds the L2->L1
+    Merkle-root commitment, collects FTX outputs, and emits the 20-field
+    rollup PI tuple (§2.4).
     """
-    if len(rollup_input.blobs) == 0:
-        raise Exception("rollup proof must cover at least one blob")
+    if len(rollup_input.conflations) == 0:
+        raise Exception("rollup proof must cover at least one conflation")
     if len(rollup_input.l2_execution_proofs) == 0:
         raise Exception("rollup proof must consume at least one l2-execution proof")
+    if len(rollup_input.conflations) != len(rollup_input.l2_execution_proofs):
+        raise Exception("conflations must pair 1:1 with l2-execution proofs")
 
-    current_shnarf = rollup_input.parent_shnarf
     truncated_blocks: List[TruncatedEthereumBlock] = []
     parent_hashes: List[Hash32] = []
-    expected_blob_start: Optional[int] = None
+    segments: List[bytes] = []
 
-    for blob in rollup_input.blobs:
-        # KZG binding on the *computed* payload (§2.2 step 1): the guest
-        # recomputes the compressed blob bytes from the witnessed full
-        # block RLPs, computes the KZG commitment, matches the derived
-        # versioned hash to L1's `blobHash`, and verifies the KZG proof
-        # against the computed commitment. Downstream
-        # cross-checks anchor the truncated content to the l2-execution proofs.
-        blob_hash, blob_blocks, blob_parent_hashes = blob.verify_blob(rollup_input.chain_id)
-        start_block_number, end_block_number = blob.block_number_range
-        expected_block_count = end_block_number + 1 - start_block_number
-        if len(blob_blocks) != expected_block_count:
-            raise Exception("blob block range is inconsistent with witnessed truncated blocks")
-        if len(blob_blocks) == 0:
-            raise Exception("rollup proof cannot include an empty blob block range")
-        if expected_blob_start is not None and start_block_number != expected_blob_start:
-            raise Exception("blob ranges must be contiguous")
+    for conflation, verifiable_proof in zip(
+        rollup_input.conflations, rollup_input.l2_execution_proofs,
+    ):
+        proof = verifiable_proof.proof
+        expected_block_count = (
+            int(proof.public_inputs.end_block_number) - int(proof.start_block_number) + 1
+        )
+        conflation_truncated, conflation_parent_hashes = _truncate_conflation(
+            conflation.block_rlps, rollup_input.chain_id,
+        )
+        if len(conflation_truncated) != expected_block_count:
+            raise Exception("conflation block count is inconsistent with its l2-execution proof range")
+        if len(conflation_truncated) == 0:
+            raise Exception("rollup proof cannot include an empty conflation")
 
-        truncated_blocks.extend(blob_blocks)
-        parent_hashes.extend(blob_parent_hashes)
-        current_shnarf = ShnarfWitness(
-            current_shnarf,
-            blob_blocks[-1].block_hash,
-            blob_hash,
-        ).hash()
-        expected_blob_start = end_block_number + 1
+        truncated_blocks.extend(conflation_truncated)
+        parent_hashes.extend(conflation_parent_hashes)
+        segments.append(_compress_conflation_segment(conflation_truncated))
 
-    blob_start_block_number = rollup_input.blobs[0].block_number_range[0]
-    blob_end_block_number = rollup_input.blobs[-1].block_number_range[1]
+    own_stream_bytes = b"".join(segments)
+    end_drh, end_offset = _verify_and_fold_chunks(
+        own_stream_bytes,
+        rollup_input.start_offset,
+        rollup_input.chunks,
+        rollup_input.opaque_prefix_bytes,
+        rollup_input.opaque_suffix_bytes,
+        rollup_input.parent_drh,
+        rollup_input.boundary_prev_drh,
+    )
+
+    rollup_start_block_number = int(rollup_input.l2_execution_proofs[0].proof.start_block_number)
+    rollup_end_block_number = int(
+        rollup_input.l2_execution_proofs[-1].proof.public_inputs.end_block_number
+    )
     # Unwrap once: everything below except the recursive-verify loop only needs
     # the guest-emitted `L2ExecutionProof`, not the coordinator-attached VK.
     l2_execution_proofs = [vp.proof for vp in rollup_input.l2_execution_proofs]
     verify_l2_execution_proof_tiling(
         l2_execution_proofs,
-        blob_start_block_number,
-        blob_end_block_number,
+        rollup_start_block_number,
+        rollup_end_block_number,
     )
 
     concatenated_froms: List[Address] = []
@@ -445,9 +535,9 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     first_proof = l2_execution_proofs[0]
     last_proof = l2_execution_proofs[-1]
     for proof in l2_execution_proofs:
-        boundary_index = int(proof.public_inputs.end_block_number) - blob_start_block_number
+        boundary_index = int(proof.public_inputs.end_block_number) - rollup_start_block_number
         if boundary_index < 0 or boundary_index >= len(truncated_block_hashes):
-            raise Exception("l2-execution proof boundary falls outside the blob block range")
+            raise Exception("l2-execution proof boundary falls outside the conflation block range")
         if proof.public_inputs.end_block_hash != truncated_block_hashes[boundary_index]:
             raise Exception("l2-execution proof end block hash does not match blob data at its boundary")
 
@@ -497,14 +587,18 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
         end_ftx_rolling_hash=last_proof.public_inputs.end_ftx_rolling_hash,
         end_processed_ftx_number=last_proof.public_inputs.end_processed_ftx_number,
         filtered_addresses_hash=hash_address_list(concatenated_filtered_addresses),
-        parent_shnarf=rollup_input.parent_shnarf,
-        end_shnarf=current_shnarf,
+        parent_drh=rollup_input.parent_drh,
+        end_drh=end_drh,
+        parent_block_hash=first_proof.public_inputs.parent_block_hash,
+        end_block_hash=last_proof.public_inputs.end_block_hash,
+        start_offset=rollup_input.start_offset,
+        end_offset=end_offset,
         program_vks=program_vks,
     )
 
     return RollupProof(
         public_inputs=public_inputs,
-        start_block_number=blob_start_block_number,
+        start_block_number=U64(rollup_start_block_number),
         l2_l1_roots=l2_l1_roots,
         filtered_addresses=concatenated_filtered_addresses,
     )

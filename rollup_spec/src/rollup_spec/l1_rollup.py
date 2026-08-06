@@ -1,12 +1,18 @@
 from dataclasses import dataclass, field
 from typing import Dict, List, Set
 
-from ethereum.crypto.hash import Hash32
+from ethereum.crypto.hash import Hash32, keccak256
 from ethereum.state import Address
 from ethereum_types.numeric import U64
 
 from .l2_execution import hash_address_list, hash_hash_list
-from .rollup import L2_L1_TREE_DEPTH, RollupPublicInput, ShnarfWitness
+from .rollup import L2_L1_TREE_DEPTH, DrhWitness, RollupPublicInput
+
+
+def _encode_offset(offset: int) -> bytes:
+    """32-byte big-endian encoding of a stream byte offset, matching how the
+    L1 contract ABI-packs a `uint256` into a keccak256 preimage."""
+    return offset.to_bytes(32, "big")
 
 
 @dataclass
@@ -43,8 +49,16 @@ class LinethRollupState:
     lives in the verifier as an immutable bytes32, and is read via
     `verifier.get_chain_configuration()` (modelled by the `PlonkVerifier`
     field below).
+
+    `current_finalized_position_commitment` is the enforced-offset variant
+    (§3.6, §8 Q2): `keccak256(endDrh || encode_offset(endOffset))`, sealed
+    into the same slot that used to hold a plain shnarf — zero additional
+    storage. The next finalization supplies the previous `(drh, offset)` pair
+    as calldata (`finalize_rollup`'s `prev_drh`/`prev_offset` params); the
+    contract verifies the preimage against this commitment before applying
+    the continuity disjunction.
     """
-    current_finalized_shnarf: Hash32
+    current_finalized_position_commitment: Hash32
     current_finalized_last_block_hash: Hash32
     current_l2_block_number: U64
     current_l2_block_timestamp: U64
@@ -57,7 +71,10 @@ class LinethRollupState:
     ftx_rolling_hashes: Dict[U64, Hash32] = field(default_factory=dict)
     ftx_deadlines: Dict[U64, U64] = field(default_factory=dict)
     sanctioned_addresses: Set[Address] = field(default_factory=set)
-    submitted_shnarf_last_block_hashes: Dict[Hash32, Hash32] = field(default_factory=dict)
+    # Anchor storage (§3.6): a plain set of anchored DRH values. Execution
+    # continuity no longer travels with the DA accumulator (§2.4), so there
+    # is no per-DRH lastBlockHash to track anymore — just membership.
+    anchored_drhs: Set[Hash32] = field(default_factory=set)
     l2_merkle_roots_depths: Dict[Hash32, int] = field(default_factory=dict)
     # The single, combined security-council-managed approved-VK list
     # (§ProgramVK anchoring). Exec and rollup VKs are NOT distinguished on L1 —
@@ -72,7 +89,7 @@ class LinethRollupState:
 class FinalizationSubmission:
     """
     The rollup-aggregation guest output as submitted to the L1 finalization
-    call. It is the guest output plus the `proof` bytes: the 14-field
+    call. It is the guest output plus the `proof` bytes: the 20-field
     `public_inputs` tuple and the revealed preimages L1 needs as calldata —
     `l2_l1_roots` (preimage of `l2L1BridgeTransactionTree`) and
     `filtered_addresses` (preimage of `filteredAddressesHash`).
@@ -95,26 +112,50 @@ class FinalizationSubmission:
     l2_messaging_blocks_offsets: List[int] = field(default_factory=list)
 
 
-def anchor_blob_submission(
+def anchor_chunk_submission(
     state: LinethRollupState,
-    parent_shnarf: Hash32,
-    last_block_hash: Hash32,
-    blob_hash: Hash32,
+    parent_drh: Hash32,
+    chunk_hash: Hash32,
 ) -> Hash32:
-    end_shnarf = ShnarfWitness(parent_shnarf, last_block_hash, blob_hash).hash()
-    state.submitted_shnarf_last_block_hashes[end_shnarf] = last_block_hash
-    return end_shnarf
+    """
+    Anchor one submitted chunk (§3.6): fold `chunk_hash` into the DRH chain
+    and record the result as anchored. Called once per chunk in a submission
+    transaction (`submitBlobs(bytes32 _parentDrh, bytes32 _finalDrh)` folds
+    `blobhash(i)` for each `i` this same way on-chain; the caller loops over
+    multiple chunks in one submission itself).
+    """
+    end_drh = DrhWitness(parent_drh, chunk_hash).hash()
+    state.anchored_drhs.add(end_drh)
+    return end_drh
 
 
-def finalize_rollup(state: LinethRollupState, submission: FinalizationSubmission) -> None:
+def finalize_rollup(
+    state: LinethRollupState,
+    submission: FinalizationSubmission,
+    prev_drh: Hash32,
+    prev_offset: int,
+) -> None:
+    """
+    `prev_drh` / `prev_offset` are the previously-finalized end position,
+    supplied as calldata so the contract can open the stored position
+    commitment (§3.6, enforced variant) — the caller reads them from the
+    prior finalization's event/return value rather than the contract storing
+    them in the clear.
+    """
     pi = submission.public_inputs
 
     if not verify_rollup_aggregation_snark(submission.proof, pi):
         raise Exception("invalid rollup-aggregation proof")
-    if pi.parent_shnarf != state.current_finalized_shnarf:
-        raise Exception("parentShnarf does not match current finalized shnarf")
-    if pi.end_shnarf not in state.submitted_shnarf_last_block_hashes:
-        raise Exception("endShnarf was not anchored by a blob submission")
+    if keccak256(prev_drh + _encode_offset(prev_offset)) != state.current_finalized_position_commitment:
+        raise Exception("prevDrh/prevOffset do not match the finalized position commitment")
+    if pi.parent_drh != prev_drh:
+        raise Exception("parentDrh does not match the finalized position")
+    if not (pi.start_offset == prev_offset or pi.start_offset == 0):
+        raise Exception("startOffset neither continues the finalized position nor is a fresh start")
+    if pi.end_drh not in state.anchored_drhs:
+        raise Exception("endDrh was not anchored by a chunk submission")
+    if pi.parent_block_hash != state.current_finalized_last_block_hash:
+        raise Exception("parentBlockHash does not match the currently finalized block hash")
     if pi.parent_l1_l2_bridge_rolling_hash != state.current_finalized_l1_l2_bridge_rolling_hash:
         raise Exception("L1-to-L2 rolling hash continuity mismatch")
     if (
@@ -168,8 +209,10 @@ def finalize_rollup(state: LinethRollupState, submission: FinalizationSubmission
         if vk not in state.approved_vks:
             raise Exception("program VK is not approved")
 
-    state.current_finalized_shnarf = pi.end_shnarf
-    state.current_finalized_last_block_hash = state.submitted_shnarf_last_block_hashes[pi.end_shnarf]
+    state.current_finalized_position_commitment = keccak256(
+        pi.end_drh + _encode_offset(pi.end_offset)
+    )
+    state.current_finalized_last_block_hash = pi.end_block_hash
     state.current_l2_block_number = pi.end_block_number
     state.current_l2_block_timestamp = pi.end_block_timestamp
     state.current_finalized_l1_l2_bridge_rolling_hash = pi.end_l1_l2_bridge_rolling_hash

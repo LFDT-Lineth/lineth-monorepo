@@ -68,7 +68,8 @@ from .l2_execution import (
     run_l2_execution_guest,
 )
 from .rollup import (
-    BlobWitness,
+    ChunkCommitment,
+    ConflationWitness,
     RollupProof,
     RollupProofPrivateInput,
     RollupPublicInput,
@@ -392,22 +393,22 @@ def _decode_l2_execution_proof(obj: dict, ctx: str) -> VerifiableL2ExecutionProo
 # ── rollup request: JSON dict -> guest dataclass ──────────────────────────────
 
 
-def _decode_blob_witness(obj: dict, ctx: str) -> BlobWitness:
-    # The blob is flat: `startBlockNumber`/`endBlockNumber` give the range and
-    # `blobHash`/`blobKzgProof`/`blockRlps` the DA witness (no nested wrappers).
-    start = _u64(_require(obj, "startBlockNumber", ctx), f"{ctx}startBlockNumber")
-    end = _u64(_require(obj, "endBlockNumber", ctx), f"{ctx}endBlockNumber")
+def _decode_conflation_witness(obj: dict, ctx: str) -> ConflationWitness:
     block_rlps = _require_list(obj, "blockRlps", ctx)
-    return BlobWitness(
-        block_number_range=(int(start), int(end)),
+    return ConflationWitness(
         block_rlps=[
             _bytes_from_hex(r, f"{ctx}blockRlps[{i}]") for i, r in enumerate(block_rlps)
         ],
-        blob_hash=Hash32(
-            _bytes_from_hex(_require(obj, "blobHash", ctx), f"{ctx}blobHash")
+    )
+
+
+def _decode_chunk_commitment(obj: dict, ctx: str) -> ChunkCommitment:
+    return ChunkCommitment(
+        chunk_hash=Hash32(
+            _bytes_from_hex(_require(obj, "chunkHash", ctx), f"{ctx}chunkHash")
         ),
-        blob_kzg_proof=Bytes48(
-            _bytes_from_hex(_require(obj, "blobKzgProof", ctx), f"{ctx}blobKzgProof")
+        chunk_kzg_proof=Bytes48(
+            _bytes_from_hex(_require(obj, "chunkKzgProof", ctx), f"{ctx}chunkKzgProof")
         ),
     )
 
@@ -418,30 +419,59 @@ def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
     guest input dataclass.
 
     The request is a `{guestProgramId, proofRequest}` envelope: `guestProgramId`
-    is routing metadata and the block range is implied by the blobs. `parentShnarf`
-    is a guest input; the outbound `endShnarf` is recomputed by the guest and
-    returned in the response PI, so it is not echoed in the request.
+    is routing metadata and the block range is implied by `conflations` (paired
+    1:1 with `l2ExecutionProofs`). `chunks` is one `{chunkHash, chunkKzgProof}`
+    entry per touched chunk. `opaquePrefixBytes`/`opaqueSuffixBytes`
+    are top-level (not per-chunk): relevant only to the first/last touched
+    chunk respectively, and empty (`0x`) when absent. `parentDrh`/`startOffset`
+    are guest inputs; the outbound `endDrh`/`endOffset` are recomputed by the
+    guest and returned in the response PI, so they are not echoed in the
+    request. `boundaryPrevDrh` is present only for a mid-chunk start
+    (`startOffset > 0`, §3.4).
     """
     proof_request = _require(obj, "proofRequest", "")
-    blobs = _require_list(proof_request, "blobs", "proofRequest.")
-    if not blobs:
-        raise ProofIoError("'proofRequest.blobs' must be a non-empty array")
+    conflations = _require_list(proof_request, "conflations", "proofRequest.")
+    if not conflations:
+        raise ProofIoError("'proofRequest.conflations' must be a non-empty array")
+    chunks = _require_list(proof_request, "chunks", "proofRequest.")
+    if not chunks:
+        raise ProofIoError("'proofRequest.chunks' must be a non-empty array")
     l2_execution_proofs = _require_list(proof_request, "l2ExecutionProofs", "proofRequest.")
     if not l2_execution_proofs:
         raise ProofIoError("'proofRequest.l2ExecutionProofs' must be a non-empty array")
+    start_offset = int(_u64(_require(proof_request, "startOffset", "proofRequest."), "proofRequest.startOffset"))
+    boundary_prev_drh_hex = proof_request.get("boundaryPrevDrh")
     return RollupProofPrivateInput(
-        parent_shnarf=Hash32(
+        parent_drh=Hash32(
             _bytes_from_hex(
-                _require(proof_request, "parentShnarf", "proofRequest."),
-                "proofRequest.parentShnarf",
+                _require(proof_request, "parentDrh", "proofRequest."),
+                "proofRequest.parentDrh",
             )
         ),
+        start_offset=start_offset,
         chain_id=_u64(_require(proof_request, "chainId", "proofRequest."), "proofRequest.chainId"),
-        blobs=[_decode_blob_witness(b, f"proofRequest.blobs[{i}].") for i, b in enumerate(blobs)],
+        conflations=[
+            _decode_conflation_witness(c, f"proofRequest.conflations[{i}].")
+            for i, c in enumerate(conflations)
+        ],
+        chunks=[
+            _decode_chunk_commitment(c, f"proofRequest.chunks[{i}].") for i, c in enumerate(chunks)
+        ],
         l2_execution_proofs=[
             _decode_l2_execution_proof(p, f"proofRequest.l2ExecutionProofs[{i}].")
             for i, p in enumerate(l2_execution_proofs)
         ],
+        opaque_prefix_bytes=_bytes_from_hex(
+            proof_request.get("opaquePrefixBytes", "0x"), "proofRequest.opaquePrefixBytes"
+        ),
+        opaque_suffix_bytes=_bytes_from_hex(
+            proof_request.get("opaqueSuffixBytes", "0x"), "proofRequest.opaqueSuffixBytes"
+        ),
+        boundary_prev_drh=(
+            Hash32(_bytes_from_hex(boundary_prev_drh_hex, "proofRequest.boundaryPrevDrh"))
+            if boundary_prev_drh_hex is not None
+            else None
+        ),
     )
 
 
@@ -453,7 +483,7 @@ def decode_rollup_request_json(text: str | bytes) -> RollupProofPrivateInput:
 
 
 def _encode_rollup_public_inputs(pi: RollupPublicInput) -> dict:
-    """The 14-field rollup PI tuple (§2.4) as JSON — shared by the rollup and
+    """The 20-field rollup PI tuple (§2.4) as JSON — shared by the rollup and
     rollup-aggregation responses, which expose the identical PI structure."""
     return {
         "endBlockNumber": int(pi.end_block_number),
@@ -473,8 +503,12 @@ def _encode_rollup_public_inputs(pi: RollupPublicInput) -> dict:
         "endFtxRollingHash": _hx(pi.end_ftx_rolling_hash),
         "endProcessedFtxNumber": int(pi.end_processed_ftx_number),
         "filteredAddressesHash": _hx(pi.filtered_addresses_hash),
-        "parentShnarf": _hx(pi.parent_shnarf),
-        "endShnarf": _hx(pi.end_shnarf),
+        "parentDrh": _hx(pi.parent_drh),
+        "endDrh": _hx(pi.end_drh),
+        "parentBlockHash": _hx(pi.parent_block_hash),
+        "endBlockHash": _hx(pi.end_block_hash),
+        "startOffset": int(pi.start_offset),
+        "endOffset": int(pi.end_offset),
         # §ProgramVK anchoring: canonical sorted, distinct list of ALL guest
         # program VKs verified beneath this proof, checked against L1's single
         # combined approved-VK set (exec vs rollup not distinguished).
@@ -548,8 +582,12 @@ def _decode_rollup_public_input(obj: dict, ctx: str) -> RollupPublicInput:
         end_ftx_rolling_hash=h("endFtxRollingHash"),
         end_processed_ftx_number=n("endProcessedFtxNumber"),
         filtered_addresses_hash=h("filteredAddressesHash"),
-        parent_shnarf=h("parentShnarf"),
-        end_shnarf=h("endShnarf"),
+        parent_drh=h("parentDrh"),
+        end_drh=h("endDrh"),
+        parent_block_hash=h("parentBlockHash"),
+        end_block_hash=h("endBlockHash"),
+        start_offset=int(n("startOffset")),
+        end_offset=int(n("endOffset")),
         program_vks=[
             Hash32(_bytes_from_hex(v, f"{ctx}programVks[{i}]"))
             for i, v in enumerate(program_vks)

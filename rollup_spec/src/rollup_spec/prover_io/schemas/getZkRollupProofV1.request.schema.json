@@ -17,18 +17,43 @@
       "additionalProperties": false,
       "required": [
         "chainId",
-        "blobs",
-        "parentShnarf",
+        "conflations",
+        "chunks",
+        "parentDrh",
+        "startOffset",
         "l2ExecutionProofs"
       ],
       "properties": {
         "chainId": { "$ref": "#/$defs/uint" },
-        "blobs": {
+        "conflations": {
+          "description": "One conflation per l2ExecutionProof, paired 1:1 in order (§2.2, §3.1).",
           "type": "array",
           "minItems": 1,
-          "items": { "$ref": "#/$defs/blob" }
+          "items": { "$ref": "#/$defs/conflation" }
         },
-        "parentShnarf": { "$ref": "#/$defs/hash32" },
+        "chunks": {
+          "description": "Every chunk this proof touches, in stream order (§3.1, §3.4).",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/chunk" }
+        },
+        "opaquePrefixBytes": {
+          "description": "Foreign bytes before startOffset in the FIRST touched chunk only (§3.1); empty (0x) or absent otherwise.",
+          "$ref": "#/$defs/hex"
+        },
+        "opaqueSuffixBytes": {
+          "description": "Foreign bytes after endOffset in the LAST touched chunk only (§3.1); empty (0x) or absent otherwise.",
+          "$ref": "#/$defs/hex"
+        },
+        "parentDrh": { "$ref": "#/$defs/hash32" },
+        "startOffset": {
+          "description": "This proof's start position within the first touched chunk (§3.4). 0 means a fresh chunk start; a value in (0, chunkSize) means a mid-chunk start requiring boundaryPrevDrh.",
+          "$ref": "#/$defs/uint"
+        },
+        "boundaryPrevDrh": {
+          "description": "Required only when startOffset > 0 (§3.4): the DRH value before the first touched chunk, opening its preimage against parentDrh.",
+          "$ref": "#/$defs/hash32"
+        },
         "l2ExecutionProofs": {
           "type": "array",
           "minItems": 1,
@@ -52,19 +77,25 @@
         "endBlockNumber": { "$ref": "#/$defs/uint" }
       }
     },
-    "blob": {
+    "conflation": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["startBlockNumber", "endBlockNumber", "blobHash", "blobKzgProof", "blockRlps"],
+      "required": ["blockRlps"],
       "properties": {
-        "startBlockNumber": { "$ref": "#/$defs/uint" },
-        "endBlockNumber": { "$ref": "#/$defs/uint" },
-        "blobHash": { "$ref": "#/$defs/hash32" },
-        "blobKzgProof": { "$ref": "#/$defs/kzgProof" },
         "blockRlps": {
           "type": "array",
+          "minItems": 1,
           "items": { "$ref": "#/$defs/hex" }
         }
+      }
+    },
+    "chunk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["chunkHash", "chunkKzgProof"],
+      "properties": {
+        "chunkHash": { "$ref": "#/$defs/hash32" },
+        "chunkKzgProof": { "$ref": "#/$defs/kzgProof" }
       }
     },
     "l2ExecutionPublicInputs": {

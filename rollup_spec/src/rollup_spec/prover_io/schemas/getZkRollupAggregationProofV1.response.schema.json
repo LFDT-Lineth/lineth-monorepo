@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://linea.build/schemas/getZkRollupAggregationProofV1.response.schema.json",
   "title": "getZkRollupAggregationProof V1 response",
-  "description": "Prover -> coordinator rollup-aggregation proof response (the final proof). The shared, versioned contract for the rollup-aggregation guest output (a FinalizationSubmission) and the coordinator's Jackson mapper. The publicInputs are the 14-field rollup PI tuple; the response additionally carries the revealed preimages L1 finalize_rollup consumes as calldata (l2L1Roots, filteredAddresses, l2MessagingBlocksOffsets), so it is sufficient for L1 finalization.",
+  "description": "Prover -> coordinator rollup-aggregation proof response (the final proof). The shared, versioned contract for the rollup-aggregation guest output (a FinalizationSubmission) and the coordinator's Jackson mapper. The publicInputs are the 20-field rollup PI tuple; the response additionally carries the revealed preimages L1 finalize_rollup consumes as calldata (l2L1Roots, filteredAddresses, l2MessagingBlocksOffsets), so it is sufficient for L1 finalization together with the prevDrh/prevOffset calldata finalize_rollup also requires (§3.6).",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -35,8 +35,12 @@
         "endFtxRollingHash",
         "endProcessedFtxNumber",
         "filteredAddressesHash",
-        "parentShnarf",
-        "endShnarf",
+        "parentDrh",
+        "endDrh",
+        "parentBlockHash",
+        "endBlockHash",
+        "startOffset",
+        "endOffset",
         "programVks"
       ],
       "properties": {
@@ -53,8 +57,12 @@
         "endFtxRollingHash": { "$ref": "#/$defs/hash32" },
         "endProcessedFtxNumber": { "$ref": "#/$defs/uint" },
         "filteredAddressesHash": { "$ref": "#/$defs/hash32" },
-        "parentShnarf": { "$ref": "#/$defs/hash32" },
-        "endShnarf": { "$ref": "#/$defs/hash32" },
+        "parentDrh": { "$ref": "#/$defs/hash32" },
+        "endDrh": { "$ref": "#/$defs/hash32" },
+        "parentBlockHash": { "$ref": "#/$defs/hash32" },
+        "endBlockHash": { "$ref": "#/$defs/hash32" },
+        "startOffset": { "$ref": "#/$defs/uint" },
+        "endOffset": { "$ref": "#/$defs/uint" },
         "programVks": {
           "description": "Distinct, sorted ascending by byte value: the canonical encoding of the set of guest program VKs verified beneath this proof (order carries no meaning).",
           "type": "array",
