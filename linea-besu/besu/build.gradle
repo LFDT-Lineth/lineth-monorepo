@@ -228,12 +228,9 @@ static String execCapturing(providers, File workingDir, Map<String, Object> env,
     spec.setIgnoreExitValue(true)
   }
   def stdout = output.standardOutput.asText.get()
-  def stderr = output.standardError.asText.get()
   def exitValue = output.result.get().exitValue
-  // surface both streams even on success
-  System.out.println("--- ${commandLine.join(' ')} (exit ${exitValue}) stdout ---\n${stdout}")
-  System.out.println("--- ${commandLine.join(' ')} (exit ${exitValue}) stderr ---\n${stderr}")
   if (exitValue != 0) {
+    def stderr = output.standardError.asText.get()
     throw new GradleException(
     "Command '${commandLine.join(' ')}' failed with exit code ${exitValue}\n" +
     "--- stdout ---\n${stdout}\n--- stderr ---\n${stderr}")
@@ -340,8 +337,6 @@ static void runBuildDistAndPublishScript(logger, providers, File rootDir, String
     env.CLOUDSMITH_USER = cloudsmithUser
     env.CLOUDSMITH_API_KEY = cloudsmithApiKey
   }
-  // DEBUG (temporary): confirm we got here and with which publish task
-  logger.lifecycle(">>> runBuildDistAndPublishScript: publishTask=${publishTask} besuVer=${resolvedBesuVer}")
   execCapturing(providers, rootDir, env, [
     'bash',
     "${rootPath}/linea-besu/besu/scripts/build-dist-and-publish.sh",
