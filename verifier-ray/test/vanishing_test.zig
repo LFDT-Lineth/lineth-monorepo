@@ -8,6 +8,7 @@ const protocol = verifier_ray.protocol;
 const vanishing = verifier_ray.query.vanishing;
 const logderivativesum = verifier_ray.query.logderivativesum;
 const commitment_mod = verifier_ray.crypto.commitment;
+const fiat_shamir = verifier_ray.crypto.fiat_shamir;
 
 test "vanishing quotient honest scenarios match prover-ray" {
     try std.testing.expect(fixtures.scenarios.len > 0);
@@ -17,7 +18,8 @@ test "vanishing quotient honest scenarios match prover-ray" {
         var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
         defer arena.deinit();
         const proof = try buildProofData(arena.allocator(), case.honest);
-        const coins = try protocol.replay(spec, proof.rounds);
+        var transcript = fiat_shamir.Transcript.init();
+        const coins = try protocol.replayWithTranscript(&transcript, spec, proof.rounds);
         const ctx = protocol.Context{ .all_coins = &coins, .rounds = proof.rounds };
         try vanishing.verify(system, .{
             .ctx = ctx,
@@ -41,7 +43,8 @@ test "vanishing quotient invalid scenarios fail identity" {
         var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
         defer arena.deinit();
         const proof = try buildProofData(arena.allocator(), invalid);
-        const coins = try protocol.replay(spec, proof.rounds);
+        var transcript = fiat_shamir.Transcript.init();
+        const coins = try protocol.replayWithTranscript(&transcript, spec, proof.rounds);
         const ctx = protocol.Context{ .all_coins = &coins, .rounds = proof.rounds };
         try std.testing.expectError(
             error.QuotientIdentityMismatch,
@@ -69,7 +72,8 @@ test "dynamic vanishing module sizes are required and validated" {
         defer arena.deinit();
 
         const valid = try buildProofData(arena.allocator(), case.honest);
-        const coins = try protocol.replay(spec, valid.rounds);
+        var transcript = fiat_shamir.Transcript.init();
+        const coins = try protocol.replayWithTranscript(&transcript, spec, valid.rounds);
         const ctx = protocol.Context{ .all_coins = &coins, .rounds = valid.rounds };
 
         try vanishing.verify(system, .{ .ctx = ctx, .witness_claims = valid.witness_claims, .quotient_claims = valid.quotient_claims, .module_sizes = valid.module_sizes });

@@ -1,6 +1,9 @@
 const protocol = @import("protocol/root.zig");
 const vanishing = @import("query/vanishing.zig");
 const logderivativesum = @import("query/logderivativesum.zig");
+const pcs = @import("query/pcs.zig");
+const fiat_shamir = @import("crypto/fiat_shamir.zig");
+const poseidon2 = @import("crypto/poseidon2.zig");
 const ext = @import("field/koalabear_ext.zig");
 const profiling = @import("profiling.zig");
 // TODO(new-sub-verifier): add import here — step 1 below.
@@ -31,7 +34,7 @@ const profiling = @import("profiling.zig");
 //           .claims = proof.sub_verifier_claims,
 //       });
 //
-//  Nothing else changes: protocol.Spec, protocol.replay, and all existing
+//  Nothing else changes: protocol.Spec, protocol.replayWithTranscript, and all existing
 //  sub-verifiers are untouched.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -40,6 +43,12 @@ const profiling = @import("profiling.zig");
 pub const Systems = struct {
     vanishing: vanishing.System,
     logderivativesum: logderivativesum.System = .{},
+    /// FRI/PCS opening verifier. Optional: `null` for protocols with no
+    /// polynomial commitment (the pre-PCS shape, still used by many test
+    /// fixtures). When present, `verify` derives the PCS opening coins (zeta,
+    /// fold challenges, query positions) from the shared Fiat-Shamir transcript
+    /// and checks the opening — the coins are never taken from the proof.
+    pcs: ?pcs.System = null,
     // TODO(new-sub-verifier): add compiled system field here — step 2 above.
 };
 
@@ -50,7 +59,7 @@ pub const Systems = struct {
 /// Protocol-level round messages (public columns + cells) are shared across
 /// every sub-verifier. Sub-verifier-specific claim slices are routed only to
 /// the verifier that registered them. Coins are not stored here — they are
-/// re-derived deterministically by `protocol.replay` from the round messages.
+/// re-derived deterministically by `protocol.replayWithTranscript` from the round messages.
 pub const Proof = struct {
     rounds: []const protocol.RoundMessage,
     // vanishing claims
@@ -61,7 +70,21 @@ pub const Proof = struct {
     /// defaults to an empty slice, which produces `MissingDynamicModuleSize`
     /// if any dynamic module is present.
     module_sizes: []const usize = &.{},
+    /// The PCS opening, present iff `Systems.pcs` is set. Carries only the data
+    /// the verifier is entitled to trust from the prover — the batch roots, the
+    /// claimed evaluations, and the opening proof. The opening COINS (zeta, fold
+    /// challenges, query positions) are NOT here: `verify` derives them from the
+    /// transcript so the prover cannot choose them.
+    pcs_opening: ?PcsOpening = null,
     // TODO(new-sub-verifier): add claim fields here if needed — step 3 above.
+};
+
+/// The prover-supplied half of a PCS opening (everything except the
+/// Fiat-Shamir-derived coins). See `Proof.pcs_opening`.
+pub const PcsOpening = struct {
+    roots: []const poseidon2.Digest,
+    claimed_values: []const ext.Ext,
+    proof: pcs.OpeningProof,
 };
 
 /// Verifies a proof against the compiled protocol in three steps:
@@ -85,9 +108,14 @@ pub fn verify(
     profiling.reset();
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.verify_start, 0);
 
-    // Step 1 — replay transcript, derive all coins. `replay` comptime-validates
-    // `spec` internal consistency and returns the stack-allocated coin array.
-    const all_coins = try protocol.replay(spec, proof.rounds);
+    // Step 1 — replay transcript, derive all coins. The transcript is owned here
+    // and threaded by pointer: `protocol` absorbs the round messages + squeezes
+    // the protocol coins, leaving it at the state a transcript-continuing
+    // sub-verifier (PCS, below) resumes from. `replayWithTranscript`
+    // comptime-validates `spec` internal consistency and returns the
+    // stack-allocated coin array.
+    var transcript = fiat_shamir.Transcript.init();
+    const all_coins = try protocol.replayWithTranscript(&transcript, spec, proof.rounds);
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.transcript_done, 0);
 
     // Step 2 — assemble the shared context routed to every sub-verifier.
@@ -98,6 +126,26 @@ pub fn verify(
 
     // Step 3 — dispatch each sub-verifier with ctx + its own claims.
     // TODO(new-sub-verifier): add dispatch call here — step 4 above.
+
+    // PCS (when present): continue the SAME transcript to derive the opening
+    // challenges — zeta (the shared opening point), the FRI fold challenges, and
+    // the query positions — then check the opening. Deriving them here (not
+    // reading them from the proof) is the whole point: the prover cannot choose
+    // the Fiat-Shamir challenges. Challenge derivation touches the transcript;
+    // the check is pure arithmetic.
+    if (comptime systems.pcs) |pcs_system| {
+        const opening = proof.pcs_opening orelse return error.MissingPcsOpening;
+        const pcs_challenges = try pcs.deriveChallenges(pcs_system, &transcript, opening.proof.fri_proof);
+        try pcs.verify(pcs_system, .{
+            .roots = opening.roots,
+            .claimed_values = opening.claimed_values,
+            .zeta = all_coins[pcs_system.zeta_coin_index],
+            .fold_alphas = &pcs_challenges.fold_alphas,
+            .query_positions = &pcs_challenges.query_positions,
+            .proof = opening.proof,
+        });
+    }
+
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.vanishing_start, 0);
     try vanishing.verify(systems.vanishing, .{
         .ctx = ctx,
