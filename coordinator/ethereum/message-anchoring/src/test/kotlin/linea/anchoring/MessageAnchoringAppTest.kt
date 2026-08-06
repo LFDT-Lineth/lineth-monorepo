@@ -8,7 +8,6 @@ import linea.contract.events.L2RollingHashUpdatedEvent
 import linea.contract.events.MessageSentEvent
 import linea.contract.l2.FakeL2MessageService
 import linea.domain.BlockParameter
-import linea.domain.RetryConfig
 import linea.ethapi.FakeEthApiClient
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
@@ -74,7 +73,6 @@ class MessageAnchoringAppTest {
         l1HighestBlockTag = l1HighestBlockTag,
         l2HighestBlockTag = BlockParameter.Tag.LATEST,
         anchoringTickInterval = anchoringTickInterval,
-        l1RequestRetryConfig = RetryConfig.noRetries,
         l1EventPollingTimeout = l1EventPollingTimeout,
         l1EventSearchBlockChunk = l1EventSearchBlockChunk,
         messageQueueCapacity = messageQueueCapacity,

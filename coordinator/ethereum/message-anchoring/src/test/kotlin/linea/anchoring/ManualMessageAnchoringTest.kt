@@ -3,7 +3,6 @@ package linea.anchoring
 import io.vertx.core.Vertx
 import linea.contract.l2.FakeL2MessageService
 import linea.domain.BlockParameter
-import linea.domain.RetryConfig
 import linea.log4j.configureLoggers
 import linea.web3j.ethapi.createEthApiClient
 import org.apache.logging.log4j.Level
@@ -30,7 +29,6 @@ class ManualMessageAnchoringTest {
     val anchoringApp = MessageAnchoringApp(
       vertx = vertx,
       config = MessageAnchoringApp.Config(
-        l1RequestRetryConfig = RetryConfig.noRetries,
         l1ContractAddress = "0xB218f8A4Bc926cF1cA7b3423c154a0D627Bdb7E5", // Sepolia Contract address
         l1HighestBlockTag = BlockParameter.Tag.FINALIZED,
         l2HighestBlockTag = BlockParameter.Tag.LATEST,
