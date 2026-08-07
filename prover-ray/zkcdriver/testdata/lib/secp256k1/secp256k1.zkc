@@ -99,6 +99,8 @@ fn projective_to_affine_secp256k1(X:u256, Y:u256, Z:u256) -> (x:u256, y:u256) {
 fn sqrt_secp256k1(a:u256) -> (y:u256, is_qr:u1) {
     // hint: candidate root (or root of -a) via Fermat-style exponentiation
     y = expmod_unconstrained_256(a, p_plus_1_over_4, p)
+     // canonicalize hinted value so bit decomposition / comparisons are sound
+    y = reduce_256(y, p)
     var y2:u256 = mulmod_256(y, y, p)
     if y2 == a {
         is_qr = 1

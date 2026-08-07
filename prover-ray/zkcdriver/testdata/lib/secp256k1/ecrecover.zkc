@@ -24,7 +24,7 @@ include "./secp256k1.zkc"
 // (n-1)/2 — the low-s malleability bound (EIP-2); s must be <= n_half when strictRange = 1.
 const n_half:u256 = 0x7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0
 
-fn ecrecover_generic(msg:u256, r:u256, s:u256, v: u5, strictRange: u1) -> (PKX: u256, PKY:u256, isSuccess:u1) {
+fn ecrecover_generic(msg:u256, r:u256, s:u256, v:u5, strictRange:u1) -> (PKX: u256, PKY:u256, isSuccess:u1) {
     // Default to the failure sentinel; only the success path overwrites it.
     PKX = 0
     PKY = 0
