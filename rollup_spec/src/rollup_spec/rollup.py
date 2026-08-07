@@ -539,7 +539,7 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
         if boundary_index < 0 or boundary_index >= len(truncated_block_hashes):
             raise Exception("l2-execution proof boundary falls outside the conflation block range")
         if proof.public_inputs.end_block_hash != truncated_block_hashes[boundary_index]:
-            raise Exception("l2-execution proof end block hash does not match blob data at its boundary")
+            raise Exception("l2-execution proof end block hash does not match conflation data at its boundary")
 
     # Parent-hash continuity across the *entire* block range (§2.2 step 5):
     # without this every block strictly between l2-execution-proof boundaries

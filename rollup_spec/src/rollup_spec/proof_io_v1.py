@@ -395,6 +395,8 @@ def _decode_l2_execution_proof(obj: dict, ctx: str) -> VerifiableL2ExecutionProo
 
 def _decode_conflation_witness(obj: dict, ctx: str) -> ConflationWitness:
     block_rlps = _require_list(obj, "blockRlps", ctx)
+    if not block_rlps:
+        raise ProofIoError(f"'{ctx}blockRlps' must be a non-empty array")
     return ConflationWitness(
         block_rlps=[
             _bytes_from_hex(r, f"{ctx}blockRlps[{i}]") for i, r in enumerate(block_rlps)
@@ -439,8 +441,19 @@ def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
     l2_execution_proofs = _require_list(proof_request, "l2ExecutionProofs", "proofRequest.")
     if not l2_execution_proofs:
         raise ProofIoError("'proofRequest.l2ExecutionProofs' must be a non-empty array")
+    if len(conflations) != len(l2_execution_proofs):
+        raise ProofIoError(
+            "'proofRequest.conflations' and 'proofRequest.l2ExecutionProofs' must have the same length"
+        )
     start_offset = int(_u64(_require(proof_request, "startOffset", "proofRequest."), "proofRequest.startOffset"))
     boundary_prev_drh_hex = proof_request.get("boundaryPrevDrh")
+    if start_offset > 0 and boundary_prev_drh_hex is None:
+        raise ProofIoError("'proofRequest.boundaryPrevDrh' is required when startOffset > 0")
+    opaque_prefix_bytes = _bytes_from_hex(
+        proof_request.get("opaquePrefixBytes", "0x"), "proofRequest.opaquePrefixBytes"
+    )
+    if len(opaque_prefix_bytes) != start_offset:
+        raise ProofIoError("'proofRequest.opaquePrefixBytes' length must equal startOffset")
     return RollupProofPrivateInput(
         parent_drh=Hash32(
             _bytes_from_hex(
@@ -461,9 +474,7 @@ def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
             _decode_l2_execution_proof(p, f"proofRequest.l2ExecutionProofs[{i}].")
             for i, p in enumerate(l2_execution_proofs)
         ],
-        opaque_prefix_bytes=_bytes_from_hex(
-            proof_request.get("opaquePrefixBytes", "0x"), "proofRequest.opaquePrefixBytes"
-        ),
+        opaque_prefix_bytes=opaque_prefix_bytes,
         opaque_suffix_bytes=_bytes_from_hex(
             proof_request.get("opaqueSuffixBytes", "0x"), "proofRequest.opaqueSuffixBytes"
         ),

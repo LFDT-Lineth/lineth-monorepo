@@ -285,7 +285,7 @@ def _sample_rollup_public_input() -> RollupPublicInput:
         end_drh=Hash32(bytes([0x8D]) * 32),
         parent_block_hash=Hash32(bytes([0x0A]) * 32),
         end_block_hash=Hash32(bytes([0x0B]) * 32),
-        start_offset=0,
+        start_offset=4,
         end_offset=131072,
         program_vks=[_EXEC_VK],
     )
@@ -311,8 +311,8 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     # parentDrh (top-level) -> parent_drh; the outbound endDrh/endOffset are
     # recomputed by the guest and not echoed in the request.
     assert bytes(req.parent_drh) == bytes([0x47]) * 32
-    assert req.start_offset == 0
-    assert req.boundary_prev_drh is None
+    assert req.start_offset == 4
+    assert bytes(req.boundary_prev_drh) == bytes([0x39]) * 32
 
     assert len(req.conflations) == 1
     conflation = req.conflations[0]
@@ -322,7 +322,7 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     assert bytes(req.chunks[0].chunk_hash) == bytes([0x1A]) * 32
     assert bytes(req.chunks[0].chunk_kzg_proof) == bytes([0x94]) * 48
     assert len(bytes(req.chunks[0].chunk_kzg_proof)) == 48
-    assert req.opaque_prefix_bytes == b""
+    assert req.opaque_prefix_bytes == bytes([0xAB]) * 4
     assert req.opaque_suffix_bytes == b""
 
     assert len(req.l2_execution_proofs) == 1
@@ -416,7 +416,7 @@ def test_encode_rollup_response_shape_and_values() -> None:
     assert pi["endDrh"] == "0x" + ("8d" * 32)
     assert pi["parentBlockHash"] == "0x" + ("0a" * 32)
     assert pi["endBlockHash"] == "0x" + ("0b" * 32)
-    assert pi["startOffset"] == 0
+    assert pi["startOffset"] == 4
     assert pi["endOffset"] == 131072
     assert pi["parentProcessedFtxNumber"] == 7
     assert pi["endProcessedFtxNumber"] == 9
@@ -461,6 +461,7 @@ def _sample_finalization_submission() -> FinalizationSubmission:
     return FinalizationSubmission(
         public_inputs=replace(
             _sample_rollup_public_input(),
+            start_offset=0,
             program_vks=[_EXEC_VK, _ROLLUP_VK],
         ),
         proof=b"\xde\xad\xbe\xef",
