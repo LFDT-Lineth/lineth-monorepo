@@ -124,3 +124,4 @@
 - *(prover)* Rename Linea to Lineth in prover (#3709)
 - *(misc)* Rename gradle plugins (#3729)
 - *(coordinator)* Apply review cleanups (#3717)
+- *(coordinator)* Update to vertx 5.1.5 (#3744)
