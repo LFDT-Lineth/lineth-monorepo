@@ -1,13 +1,13 @@
 package linea.coordinator.config.v2.docs
 
-import linea.config.docs.ConfigDocsSpec
-import linea.config.docs.ConfigFileRoot
-import linea.config.docs.sectionByPackagePrefix
 import linea.coordinator.config.v2.toml.CoordinatorConfigFileToml
 import linea.coordinator.config.v2.toml.GasPriceCapTimeOfDayMultipliersConfigFileToml
 import linea.coordinator.config.v2.toml.SmartContractErrorCodesConfigFileToml
 import linea.coordinator.config.v2.toml.TracesLimitsConfigFileV4Toml
 import linea.coordinator.config.v2.toml.TracesLimitsConfigFileV5Toml
+import lineth.config.docs.ConfigDocsSpec
+import lineth.config.docs.ConfigFileRoot
+import lineth.config.docs.sectionByPackagePrefix
 
 /**
  * Coordinator-specific configuration for the generic `config-docs` tooling. Lives in the

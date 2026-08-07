@@ -1,7 +1,7 @@
 package linea.submission
 
-import linea.domain.BlobRecord
-import linea.domain.BlockIntervals
+import lineth.domain.BlobRecord
+import lineth.domain.BlockIntervals
 
 fun interface BlobsGrouperForSubmission {
   fun chunkBlobs(blobsIntervals: List<BlobRecord>, aggregations: BlockIntervals): List<List<BlobRecord>>

@@ -2,8 +2,8 @@ package linea.ftx.conflation
 
 import linea.conflation.calculators.ConflationCounters
 import linea.conflation.calculators.ConflationTriggerCalculator
-import linea.domain.BlockCounters
-import linea.domain.ConflationTrigger
+import lineth.domain.BlockCounters
+import lineth.domain.ConflationTrigger
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import java.util.Queue

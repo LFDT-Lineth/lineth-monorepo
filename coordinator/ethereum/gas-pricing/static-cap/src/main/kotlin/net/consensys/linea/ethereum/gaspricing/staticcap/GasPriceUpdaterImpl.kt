@@ -1,8 +1,8 @@
 package net.consensys.linea.ethereum.gaspricing.staticcap
 
+import lineth.jsonrpc.client.RequestRetryConfig
+import lineth.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import net.consensys.linea.ethereum.gaspricing.GasPriceUpdater
-import net.consensys.linea.jsonrpc.client.RequestRetryConfig
-import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.net.URL
 

@@ -8,7 +8,8 @@
  */
 package maru.syncing.beaconchain
 
-import linea.kotlin.minusCoercingUnderflow
+import lineth.kotlin.minusCoercingUnderflow
+import lineth.metrics.MetricsFacade
 import maru.consensus.ValidatorProvider
 import maru.database.BeaconChain
 import maru.metrics.MaruMetricsCategory
@@ -20,7 +21,6 @@ import maru.subscription.SubscriptionManager
 import maru.syncing.CLSyncService
 import maru.syncing.beaconchain.pipeline.BeaconChainDownloadPipelineFactory
 import maru.syncing.beaconchain.pipeline.BeaconChainPipeline
-import net.consensys.linea.metrics.MetricsFacade
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.hyperledger.besu.plugin.services.MetricsSystem

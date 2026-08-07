@@ -1,10 +1,10 @@
 package linea.coordinator.app.conflation
 
-import linea.domain.toBlockParameter
-import linea.ethapi.EthApiClient
 import linea.persistence.AggregationsRepository
 import linea.persistence.BatchesRepository
 import linea.persistence.BlobsRepository
+import lineth.domain.toBlockParameter
+import lineth.ethapi.EthApiClient
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 object ConflationAppHelper {

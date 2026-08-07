@@ -1,10 +1,10 @@
 package linea.coordinator.config.v2.toml
 
 import com.sksamuel.hoplite.Masked
-import linea.config.docs.ConfigDoc
-import linea.config.docs.ConfigSection
 import linea.coordinator.config.v2.DatabaseConfig
 import linea.coordinator.config.v2.DatabaseConfig.Companion.supportedSchemas
+import lineth.config.docs.ConfigDoc
+import lineth.config.docs.ConfigSection
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 

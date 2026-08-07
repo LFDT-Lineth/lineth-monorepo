@@ -12,7 +12,7 @@ import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.mapError
-import linea.kotlin.encodeHex
+import lineth.kotlin.encodeHex
 import maru.consensus.qbft.ProposerSelector
 import maru.consensus.qbft.toConsensusRoundIdentifier
 import maru.consensus.state.StateTransition

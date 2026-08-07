@@ -1,14 +1,14 @@
 package linea.coordinator.config.v2.toml
 
-import linea.config.docs.ConfigDoc
-import linea.config.docs.ConfigSection
 import linea.coordinator.config.v2.CoordinatorConfig
-import linea.web3j.SmartContractErrors
+import lineth.config.docs.ConfigDoc
+import lineth.config.docs.ConfigSection
+import lineth.traces.TracesCountersV4
+import lineth.traces.TracesCountersV5
+import lineth.traces.TracingModuleV4
+import lineth.traces.TracingModuleV5
+import lineth.web3j.SmartContractErrors
 import net.consensys.linea.ethereum.gaspricing.dynamiccap.TimeOfDayMultipliers
-import net.consensys.linea.traces.TracesCountersV4
-import net.consensys.linea.traces.TracesCountersV5
-import net.consensys.linea.traces.TracingModuleV4
-import net.consensys.linea.traces.TracingModuleV5
 
 data class CoordinatorConfigFileToml(
   @param:ConfigSection("Shared defaults (L1/L2 endpoints and retry policies) reused by coordinator services.")

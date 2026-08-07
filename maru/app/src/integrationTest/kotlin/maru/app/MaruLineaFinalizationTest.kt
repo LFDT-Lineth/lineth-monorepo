@@ -8,12 +8,12 @@
  */
 package maru.app
 
-import linea.domain.BlockParameter
-import linea.ethapi.EthApiClient
-import linea.testing.besu.BesuFactory
-import linea.testing.besu.BesuTransactionsHelper
-import linea.testing.besu.ethGetBlockByNumber
-import linea.web3j.ethapi.createEthApiClient
+import lineth.domain.BlockParameter
+import lineth.ethapi.EthApiClient
+import lineth.testing.besu.BesuFactory
+import lineth.testing.besu.BesuTransactionsHelper
+import lineth.testing.besu.ethGetBlockByNumber
+import lineth.web3j.ethapi.createEthApiClient
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.kotlin.await

@@ -1,10 +1,10 @@
 package linea.persistence.conflation
 
-import linea.domain.Aggregation
-import linea.domain.BlobAndBatchCounters
-import linea.domain.ProofToFinalize
 import linea.persistence.AggregationsDao
-import linea.persistence.db.PersistenceRetryer
+import lineth.domain.Aggregation
+import lineth.domain.BlobAndBatchCounters
+import lineth.domain.ProofToFinalize
+import lineth.persistence.db.PersistenceRetryer
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Instant
 

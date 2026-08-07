@@ -8,7 +8,7 @@
  */
 package maru.p2p.fork
 
-import linea.kotlin.encodeHex
+import lineth.kotlin.encodeHex
 import maru.core.Hasher
 import maru.core.ObjHasher
 import maru.crypto.Keccak256Hasher

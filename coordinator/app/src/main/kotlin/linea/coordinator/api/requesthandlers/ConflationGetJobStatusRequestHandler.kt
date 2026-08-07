@@ -7,10 +7,10 @@ import io.vertx.core.Future
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.auth.User
 import linea.coordinator.app.conflationbacktesting.ConflationBacktestingService
-import net.consensys.linea.jsonrpc.JsonRpcErrorResponse
-import net.consensys.linea.jsonrpc.JsonRpcRequest
-import net.consensys.linea.jsonrpc.JsonRpcRequestHandler
-import net.consensys.linea.jsonrpc.JsonRpcSuccessResponse
+import lineth.jsonrpc.JsonRpcErrorResponse
+import lineth.jsonrpc.JsonRpcRequest
+import lineth.jsonrpc.JsonRpcRequestHandler
+import lineth.jsonrpc.JsonRpcSuccessResponse
 
 class ConflationGetJobStatusRequestHandler(private val conflationBacktestingService: ConflationBacktestingService) :
   JsonRpcRequestHandler {

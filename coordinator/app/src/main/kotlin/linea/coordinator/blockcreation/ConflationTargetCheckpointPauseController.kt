@@ -1,6 +1,6 @@
 package linea.coordinator.blockcreation
 
-import linea.domain.Block
+import lineth.domain.Block
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import java.util.concurrent.atomic.AtomicBoolean

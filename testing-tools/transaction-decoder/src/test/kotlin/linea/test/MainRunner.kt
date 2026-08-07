@@ -1,7 +1,7 @@
 package linea.test
 
 import io.vertx.core.Vertx
-import net.consensys.linea.async.get
+import lineth.async.get
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.core.config.Configurator

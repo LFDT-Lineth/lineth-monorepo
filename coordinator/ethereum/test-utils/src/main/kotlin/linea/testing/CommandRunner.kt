@@ -1,7 +1,7 @@
 package linea.testing
 
-import net.consensys.linea.async.toSafeFuture
-import net.consensys.linea.testing.filesystem.getPathTo
+import lineth.async.toSafeFuture
+import lineth.testing.filesystem.getPathTo
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

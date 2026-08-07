@@ -1,13 +1,13 @@
 package linea.coordination.blob
 
 import io.vertx.core.Vertx
-import linea.clients.BlobCompressionProverClientV2
-import linea.domain.BlobRecord
-import linea.domain.CompressionProofIndex
 import linea.metrics.LineaMetricsCategory
-import linea.timer.TimerSchedule
-import linea.timer.VertxPeriodicPollingService
-import net.consensys.linea.metrics.MetricsFacade
+import lineth.clients.BlobCompressionProverClientV2
+import lineth.domain.BlobRecord
+import lineth.domain.CompressionProofIndex
+import lineth.metrics.MetricsFacade
+import lineth.timer.TimerSchedule
+import lineth.timer.VertxPeriodicPollingService
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.ConcurrentLinkedDeque

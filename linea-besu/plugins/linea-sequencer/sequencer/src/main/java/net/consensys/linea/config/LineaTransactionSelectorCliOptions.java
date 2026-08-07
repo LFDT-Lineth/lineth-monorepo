@@ -26,7 +26,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 import kotlin.time.Instant;
-import linea.blob.BlobCompressorVersion;
+import lineth.blob.BlobCompressorVersion;
 import net.consensys.linea.plugins.LineaCliOptions;
 import net.consensys.linea.sequencer.txselection.selectors.TransactionEventFilter;
 import org.apache.tuweni.bytes.Bytes32;

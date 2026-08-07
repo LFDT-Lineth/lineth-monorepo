@@ -1,6 +1,6 @@
 package linea.coordinator.app
 
-import linea.LongRunningService
+import lineth.LongRunningService
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.CompletableFuture
 

@@ -6,8 +6,8 @@ import io.vertx.sqlclient.Row
 import io.vertx.sqlclient.RowSet
 import io.vertx.sqlclient.SqlClient
 import io.vertx.sqlclient.Tuple
-import linea.domain.Batch
-import net.consensys.linea.async.get
+import lineth.async.get
+import lineth.domain.Batch
 
 object DbQueries {
 

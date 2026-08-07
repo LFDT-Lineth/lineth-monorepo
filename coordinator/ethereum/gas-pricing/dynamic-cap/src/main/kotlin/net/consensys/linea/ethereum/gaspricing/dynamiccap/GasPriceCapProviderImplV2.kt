@@ -1,11 +1,11 @@
 package net.consensys.linea.ethereum.gaspricing.dynamiccap
 
-import linea.domain.gas.GasPriceCaps
 import linea.gaspricing.GasPriceCapProviderV2
-import linea.kotlin.minusCoercingUnderflow
-import linea.kotlin.toBigDecimal
-import linea.kotlin.toGWei
-import linea.kotlin.toULong
+import lineth.domain.gas.GasPriceCaps
+import lineth.kotlin.minusCoercingUnderflow
+import lineth.kotlin.toBigDecimal
+import lineth.kotlin.toGWei
+import lineth.kotlin.toULong
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

@@ -1,6 +1,6 @@
 package linea.coordinator.config.v2.toml
 
-import linea.config.docs.ConfigDoc
+import lineth.config.docs.ConfigDoc
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -55,8 +55,8 @@ data class RequestRetriesToml(
     }
   }
 
-  internal val asDomain: linea.domain.RetryConfig =
-    linea.domain.RetryConfig(
+  internal val asDomain: lineth.domain.RetryConfig =
+    lineth.domain.RetryConfig(
       maxRetries = maxRetries,
       timeout = timeout,
       ignoreFirstExceptionsUntilTimeElapsed = ignoreFirstExceptionsUntilTimeElapsed,

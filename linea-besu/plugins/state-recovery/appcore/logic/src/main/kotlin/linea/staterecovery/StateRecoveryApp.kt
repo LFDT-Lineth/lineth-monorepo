@@ -1,15 +1,15 @@
 package linea.staterecovery
 
 import io.vertx.core.Vertx
-import linea.EthLogsSearcher
-import linea.LongRunningService
-import linea.clients.StateManagerClientV1
-import linea.contract.l1.LinethRollupSmartContractClientReadOnly
-import linea.domain.BlockParameter
-import linea.domain.toBlockParameter
-import net.consensys.linea.async.AsyncRetryer
-import net.consensys.linea.blob.BlobDecompressorVersion
-import net.consensys.linea.blob.GoNativeBlobDecompressorFactory
+import lineth.EthLogsSearcher
+import lineth.LongRunningService
+import lineth.async.AsyncRetryer
+import lineth.blob.BlobDecompressorVersion
+import lineth.blob.GoNativeBlobDecompressorFactory
+import lineth.clients.StateManagerClientV1
+import lineth.contract.l1.LinethRollupSmartContractClientReadOnly
+import lineth.domain.BlockParameter
+import lineth.domain.toBlockParameter
 import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.CompletableFuture

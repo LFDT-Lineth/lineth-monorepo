@@ -14,7 +14,7 @@ import io.libp2p.core.crypto.generateKeyPair
 import io.libp2p.core.crypto.marshalPrivateKey
 import io.libp2p.core.crypto.unmarshalPrivateKey
 import io.libp2p.crypto.keys.unmarshalSecp256k1PrivateKey
-import linea.kotlin.encodeHex
+import lineth.kotlin.encodeHex
 import org.apache.tuweni.bytes.Bytes32
 import org.hyperledger.besu.crypto.SignatureAlgorithmFactory
 import org.hyperledger.besu.cryptoservices.KeyPairSecurityModule

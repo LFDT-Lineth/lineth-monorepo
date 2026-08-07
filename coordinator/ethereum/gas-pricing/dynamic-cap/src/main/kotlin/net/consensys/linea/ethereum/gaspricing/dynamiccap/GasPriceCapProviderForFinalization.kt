@@ -1,7 +1,7 @@
 package net.consensys.linea.ethereum.gaspricing.dynamiccap
 
 import linea.gaspricing.GasPriceCapProvider
-import net.consensys.linea.metrics.MetricsFacade
+import lineth.metrics.MetricsFacade
 
 class GasPriceCapProviderForFinalization(
   config: Config,

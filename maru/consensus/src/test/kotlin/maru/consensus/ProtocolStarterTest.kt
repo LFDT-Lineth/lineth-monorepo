@@ -8,8 +8,8 @@
  */
 package maru.consensus
 
-import linea.timer.TestablePeriodicTimerFactory
-import linea.timer.TimerFactory
+import lineth.timer.TestablePeriodicTimerFactory
+import lineth.timer.TimerFactory
 import maru.core.Protocol
 import maru.subscription.InOrderFanoutSubscriptionManager
 import maru.subscription.SubscriptionNotifier

@@ -1,7 +1,7 @@
 package linea.staterecovery
 
-import linea.domain.BlockNumberAndHash
-import linea.domain.BlockParameter
+import lineth.domain.BlockNumberAndHash
+import lineth.domain.BlockParameter
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 data class StateRecoveryStatus(

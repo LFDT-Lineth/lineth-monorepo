@@ -1,11 +1,11 @@
 package linea.coordination
 
-import linea.domain.Batch
-import linea.domain.Blob
-import linea.domain.BlobRecord
-import linea.domain.BlobSubmittedEvent
-import linea.domain.BlocksConflation
-import linea.domain.FinalizationSubmittedEvent
+import lineth.domain.Batch
+import lineth.domain.Blob
+import lineth.domain.BlobRecord
+import lineth.domain.BlobSubmittedEvent
+import lineth.domain.BlocksConflation
+import lineth.domain.FinalizationSubmittedEvent
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.function.Supplier
 

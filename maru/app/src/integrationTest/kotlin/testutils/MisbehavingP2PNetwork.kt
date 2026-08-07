@@ -8,7 +8,8 @@
  */
 package testutils
 
-import linea.timer.TimerFactory
+import lineth.metrics.MetricsFacade
+import lineth.timer.TimerFactory
 import maru.config.P2PConfig
 import maru.core.SealedBeaconBlock
 import maru.database.BeaconChain
@@ -20,7 +21,6 @@ import maru.p2p.messages.BeaconBlocksByRangeRequest
 import maru.p2p.messages.BlockRetrievalStrategy
 import maru.p2p.messages.StatusManager
 import maru.serialization.rlp.ForkAwareBlockHashing
-import net.consensys.linea.metrics.MetricsFacade
 import kotlin.time.Duration
 import org.hyperledger.besu.plugin.services.MetricsSystem as BesuMetricsSystem
 

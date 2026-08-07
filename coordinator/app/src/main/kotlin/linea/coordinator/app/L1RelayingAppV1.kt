@@ -1,8 +1,6 @@
 package linea.coordinator.app
 
 import io.vertx.core.Vertx
-import linea.LongRunningService
-import linea.contract.l1.LineaSmartContractClient
 import linea.coordination.EventDispatcher
 import linea.coordination.HighestULongTracker
 import linea.coordination.LatestBlobSubmittedBlockNumberTracker
@@ -11,9 +9,6 @@ import linea.coordinator.config.v2.CoordinatorConfig
 import linea.coordinator.config.v2.L1SubmissionConfig
 import linea.coordinator.config.v2.isDisabled
 import linea.coordinator.config.v2.isEnabled
-import linea.domain.BlobSubmittedEvent
-import linea.domain.FinalizationSubmittedEvent
-import linea.ethapi.EthApiClient
 import linea.finalization.AggregationFinalizationCoordinator
 import linea.finalization.AggregationSubmitterImpl
 import linea.metrics.LineaMetricsCategory
@@ -22,9 +17,15 @@ import linea.persistence.BlobsRepository
 import linea.persistence.FeeHistoriesDao
 import linea.submission.BlobSubmissionCoordinator
 import linea.submission.L1ShnarfBasedAlreadySubmittedBlobsFilter
-import linea.web3j.SmartContractErrors
-import linea.web3j.createWeb3jHttpClient
-import linea.web3j.ethapi.createEthApiClient
+import lineth.LongRunningService
+import lineth.contract.l1.LineaSmartContractClient
+import lineth.domain.BlobSubmittedEvent
+import lineth.domain.FinalizationSubmittedEvent
+import lineth.ethapi.EthApiClient
+import lineth.metrics.MetricsFacade
+import lineth.web3j.SmartContractErrors
+import lineth.web3j.createWeb3jHttpClient
+import lineth.web3j.ethapi.createEthApiClient
 import net.consensys.linea.ethereum.gaspricing.FeesCalculator
 import net.consensys.linea.ethereum.gaspricing.FeesFetcher
 import net.consensys.linea.ethereum.gaspricing.WMAFeesCalculator
@@ -37,7 +38,6 @@ import net.consensys.linea.ethereum.gaspricing.dynamiccap.GasPriceCapProviderFor
 import net.consensys.linea.ethereum.gaspricing.dynamiccap.GasPriceCapProviderForFinalization
 import net.consensys.linea.ethereum.gaspricing.dynamiccap.GasPriceCapProviderImpl
 import net.consensys.linea.ethereum.gaspricing.staticcap.FeeHistoryFetcherImpl
-import net.consensys.linea.metrics.MetricsFacade
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

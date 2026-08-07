@@ -1,7 +1,7 @@
 package linea.coordinator.config.v2
 
 import com.sksamuel.hoplite.Masked
-import linea.domain.RetryConfig
+import lineth.domain.RetryConfig
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 

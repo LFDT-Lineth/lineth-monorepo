@@ -9,7 +9,7 @@
 package maru.config.consensus
 
 import com.sksamuel.hoplite.ConfigException
-import linea.kotlin.decodeHex
+import lineth.kotlin.decodeHex
 import maru.config.MaruConfigLoader.parseBeaconChainConfig
 import maru.consensus.ChainFork
 import maru.consensus.ClFork

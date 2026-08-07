@@ -1,13 +1,13 @@
 package linea.coordinator.clients.prover.riscv
 
-import linea.clients.ProverProofTransport
-import linea.clients.RollupAggregationProofRequestV1
-import linea.clients.RollupAggregationProofResponseV1
-import linea.clients.RollupAggregationProverClientV1
-import linea.crypto.HashFunction
-import linea.crypto.Sha256HashFunction
-import linea.domain.BlockIntervalProofIndex
-import linea.kotlin.decodeHex
+import lineth.clients.ProverProofTransport
+import lineth.clients.RollupAggregationProofRequestV1
+import lineth.clients.RollupAggregationProofResponseV1
+import lineth.clients.RollupAggregationProverClientV1
+import lineth.crypto.HashFunction
+import lineth.crypto.Sha256HashFunction
+import lineth.domain.BlockIntervalProofIndex
+import lineth.kotlin.decodeHex
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

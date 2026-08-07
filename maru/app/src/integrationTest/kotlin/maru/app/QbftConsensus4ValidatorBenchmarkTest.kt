@@ -13,7 +13,7 @@ import io.micrometer.core.instrument.DistributionSummary
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.distribution.HistogramSnapshot
 import io.vertx.micrometer.backends.BackendRegistries
-import linea.testing.besu.BesuFactory
+import lineth.testing.besu.BesuFactory
 import maru.crypto.SecpCrypto
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat

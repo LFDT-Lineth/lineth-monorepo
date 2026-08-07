@@ -1,7 +1,7 @@
 package net.consensys.linea.ethereum.gaspricing
 
-import linea.domain.FeeHistory
-import linea.kotlin.toIntervalString
+import lineth.domain.FeeHistory
+import lineth.kotlin.toIntervalString
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 

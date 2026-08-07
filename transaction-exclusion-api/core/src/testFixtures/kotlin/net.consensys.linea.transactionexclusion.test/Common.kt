@@ -1,6 +1,6 @@
 package net.consensys.linea.transactionexclusion.test
 
-import linea.kotlin.decodeHex
+import lineth.kotlin.decodeHex
 import net.consensys.linea.transactionexclusion.ModuleOverflow
 import net.consensys.linea.transactionexclusion.RejectedTransaction
 import net.consensys.linea.transactionexclusion.TransactionInfo

@@ -1,10 +1,10 @@
 package linea.conflation.calculators
 
 import linea.conflation.BlobCreationHandler
-import linea.domain.BlockCounters
-import linea.domain.ConflationCalculationResult
-import linea.domain.ConflationTrigger
-import net.consensys.linea.traces.TracesCounters
+import lineth.domain.BlockCounters
+import lineth.domain.ConflationCalculationResult
+import lineth.domain.ConflationTrigger
+import lineth.traces.TracesCounters
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 data class ConflationCounters(

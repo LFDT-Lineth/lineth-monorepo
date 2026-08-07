@@ -1,11 +1,11 @@
 package linea.staterecovery.test
 
-import linea.clients.StateManagerClientV1
-import linea.domain.BlockInterval
-import linea.ethapi.EthApiBlockClient
 import linea.testing.CommandResult
 import linea.testing.Runner
-import linea.web3j.ethapi.createEthApiClient
+import lineth.clients.StateManagerClientV1
+import lineth.domain.BlockInterval
+import lineth.ethapi.EthApiBlockClient
+import lineth.web3j.ethapi.createEthApiClient
 import org.apache.logging.log4j.Logger
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await

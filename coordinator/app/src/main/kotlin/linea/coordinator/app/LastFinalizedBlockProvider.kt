@@ -1,9 +1,9 @@
 package linea.coordinator.app
 
 import io.vertx.core.Vertx
-import linea.contract.l1.LinethRollupSmartContractClientReadOnly
-import linea.domain.BlockParameter
-import net.consensys.linea.async.AsyncRetryer
+import lineth.async.AsyncRetryer
+import lineth.contract.l1.LinethRollupSmartContractClientReadOnly
+import lineth.domain.BlockParameter
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

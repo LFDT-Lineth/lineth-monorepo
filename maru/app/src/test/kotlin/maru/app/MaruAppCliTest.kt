@@ -8,8 +8,9 @@
  */
 package maru.app
 
-import linea.contract.l1.LinethRollupSmartContractClientReadOnly
-import linea.timer.TimerFactory
+import lineth.contract.l1.LinethRollupSmartContractClientReadOnly
+import lineth.metrics.MetricsFacade
+import lineth.timer.TimerFactory
 import maru.api.ApiServer
 import maru.config.MaruConfig
 import maru.config.MaruConfigDtoToml
@@ -26,7 +27,6 @@ import maru.p2p.messages.StatusManager
 import maru.serialization.rlp.ForkAwareBlockHashing
 import maru.services.LongRunningService
 import maru.services.NoOpLongRunningService
-import net.consensys.linea.metrics.MetricsFacade
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll

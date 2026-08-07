@@ -1,16 +1,16 @@
 package net.consensys.linea.ethereum.gaspricing.staticcap
 
 import io.vertx.core.Vertx
-import linea.OneKWei
-import linea.kotlin.toIntervalString
 import linea.metrics.LineaMetricsCategory
-import linea.timer.TimerSchedule
-import linea.timer.VertxPeriodicPollingService
+import lineth.OneKWei
+import lineth.kotlin.toIntervalString
+import lineth.metrics.MetricsFacade
+import lineth.timer.TimerSchedule
+import lineth.timer.VertxPeriodicPollingService
 import net.consensys.linea.ethereum.gaspricing.ExtraDataUpdater
 import net.consensys.linea.ethereum.gaspricing.FeesFetcher
 import net.consensys.linea.ethereum.gaspricing.MinerExtraDataCalculator
 import net.consensys.linea.ethereum.gaspricing.MinerExtraDataV1
-import net.consensys.linea.metrics.MetricsFacade
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

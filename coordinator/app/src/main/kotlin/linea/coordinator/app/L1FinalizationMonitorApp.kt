@@ -1,8 +1,6 @@
 package linea.coordinator.app
 
 import io.vertx.core.Vertx
-import linea.LongRunningService
-import linea.contract.l1.FinalizedStateDataProvider
 import linea.coordination.HighestULongTracker
 import linea.coordination.blockcreation.ForkChoiceUpdaterImpl
 import linea.coordinator.clients.ShomeiClient
@@ -10,8 +8,6 @@ import linea.coordinator.config.toJsonRpcRetry
 import linea.coordinator.config.v2.CoordinatorConfig
 import linea.coordinator.config.v2.Type2StateProofManagerConfig
 import linea.coordinator.config.v2.isDisabled
-import linea.domain.BlockNumberAndHash
-import linea.ethapi.EthApiClient
 import linea.finalization.FinalizationHandler
 import linea.finalization.FinalizationMonitor
 import linea.finalization.FinalizationMonitorImpl
@@ -21,9 +17,13 @@ import linea.persistence.BatchesRepository
 import linea.persistence.BlobsRepository
 import linea.persistence.ForcedTransactionsDao
 import linea.persistence.conflation.RecordsCleanupFinalizationHandler
-import linea.web3j.ethapi.createEthApiClient
-import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
-import net.consensys.linea.metrics.MetricsFacade
+import lineth.LongRunningService
+import lineth.contract.l1.FinalizedStateDataProvider
+import lineth.domain.BlockNumberAndHash
+import lineth.ethapi.EthApiClient
+import lineth.jsonrpc.client.VertxHttpJsonRpcClientFactory
+import lineth.metrics.MetricsFacade
+import lineth.web3j.ethapi.createEthApiClient
 import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.CompletableFuture

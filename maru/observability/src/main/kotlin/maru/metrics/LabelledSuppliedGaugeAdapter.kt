@@ -8,11 +8,11 @@
  */
 package maru.metrics
 
-import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.linea.metrics.Tag
+import lineth.metrics.MetricsFacade
+import lineth.metrics.Tag
 import org.hyperledger.besu.plugin.services.metrics.LabelledSuppliedMetric
 import java.util.function.DoubleSupplier
-import net.consensys.linea.metrics.MetricsCategory as LineaMetricsCategory
+import lineth.metrics.MetricsCategory as LineaMetricsCategory
 
 class LabelledSuppliedGaugeAdapter(
   val metricsFacade: MetricsFacade,

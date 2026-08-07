@@ -1,9 +1,9 @@
 package net.consensys.linea.ethereum.gaspricing.staticcap
 
-import linea.domain.BlockParameter
-import linea.domain.BlockWithTxHashes
-import linea.domain.toBlockParameter
-import linea.ethapi.EthApiBlockClient
+import lineth.domain.BlockParameter
+import lineth.domain.BlockWithTxHashes
+import lineth.domain.toBlockParameter
+import lineth.ethapi.EthApiBlockClient
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test

@@ -4,8 +4,8 @@ import com.sksamuel.hoplite.Masked
 import linea.coordinator.config.v2.toml.L1SubmissionConfigToml
 import linea.coordinator.config.v2.toml.SignerConfigToml
 import linea.coordinator.config.v2.toml.parseConfig
-import linea.kotlin.decodeHex
-import linea.kotlin.toURL
+import lineth.kotlin.decodeHex
+import lineth.kotlin.toURL
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.nio.file.Path

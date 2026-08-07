@@ -1,6 +1,6 @@
 package linea.ftx.conflation
 
-import linea.forcedtx.ForcedTransactionInclusionResult
+import lineth.forcedtx.ForcedTransactionInclusionResult
 
 data class FtxConflationInfo(
   val ftxNumber: ULong,

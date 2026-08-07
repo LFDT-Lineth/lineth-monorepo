@@ -1,8 +1,8 @@
 package linea.staterecovery.plugin
 
-import linea.domain.BlockParameter
-import linea.domain.RetryConfig
-import linea.domain.toBlockParameter
+import lineth.domain.BlockParameter
+import lineth.domain.RetryConfig
+import lineth.domain.toBlockParameter
 import org.hyperledger.besu.datatypes.Address
 import picocli.CommandLine
 import java.net.URI

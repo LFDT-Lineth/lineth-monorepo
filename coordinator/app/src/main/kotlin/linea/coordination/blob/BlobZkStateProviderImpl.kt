@@ -1,8 +1,8 @@
 package linea.coordination.blob
 
-import linea.clients.GetStateMerkleProofRequest
-import linea.clients.StateManagerClientV1
-import linea.domain.BlockInterval
+import lineth.clients.GetStateMerkleProofRequest
+import lineth.clients.StateManagerClientV1
+import lineth.domain.BlockInterval
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 class BlobZkStateProviderImpl(

@@ -1,0 +1,62 @@
+package lineth.contract
+
+import io.vertx.core.Vertx
+import lineth.async.AsyncRetryer
+import lineth.contract.l1.ContractVersionAwaiter
+import lineth.contract.l1.ContractVersionProvider
+import lineth.contract.l1.LinethRollupContractVersion
+import lineth.domain.BlockParameter
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
+import tech.pegasys.teku.infrastructure.async.SafeFuture
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
+
+class Web3JContractVersionAwaiter<VersionType : Comparable<VersionType>>(
+  val vertx: Vertx,
+  val versionProvider: ContractVersionProvider<VersionType>,
+  val log: Logger = LogManager.getLogger(Web3JContractVersionAwaiter::class.java.name),
+) : ContractVersionAwaiter<VersionType> {
+  override fun awaitVersion(
+    minTargetVersion: VersionType,
+    highestBlockTag: BlockParameter,
+    timeout: Duration?,
+  ): SafeFuture<VersionType> {
+    return versionProvider
+      .getVersion(highestBlockTag)
+      .thenCompose { contractVersion ->
+        if (contractVersion >= minTargetVersion) {
+          log.info(
+            "contract version reached: minTargetVersion={}, currentVersion={}",
+            minTargetVersion,
+            contractVersion,
+          )
+          SafeFuture.completedFuture(contractVersion)
+        } else {
+          log.info(
+            "waiting for contract version: minTargetVersion={}, currentVersion={}",
+            minTargetVersion,
+            contractVersion,
+          )
+
+          AsyncRetryer.retry(
+            vertx = vertx,
+            backoffDelay = 1.seconds,
+            timeout = timeout,
+            stopRetriesPredicate = { contractVersion ->
+              contractVersion >= minTargetVersion
+            },
+            action = { versionProvider.getVersion(highestBlockTag) },
+          )
+        }
+      }
+  }
+
+  companion object {
+    fun linethRollupVersionWaiter(
+      vertx: Vertx,
+      lineaVersionProvider: ContractVersionProvider<LinethRollupContractVersion>,
+    ): Web3JContractVersionAwaiter<LinethRollupContractVersion> =
+      Web3JContractVersionAwaiter(vertx, lineaVersionProvider)
+  }
+}

@@ -4,12 +4,12 @@ import linea.conflation.ConflationHandler
 import linea.conflation.ConflationSafeBlockNumberProvider
 import linea.conflation.ConflationService
 import linea.conflation.calculators.BlockConflationCalculator
-import linea.domain.Block
-import linea.domain.BlockCounters
-import linea.domain.BlocksConflation
-import linea.domain.ConflationCalculationResult
 import linea.metrics.LineaMetricsCategory
-import net.consensys.linea.metrics.MetricsFacade
+import lineth.domain.Block
+import lineth.domain.BlockCounters
+import lineth.domain.BlocksConflation
+import lineth.domain.ConflationCalculationResult
+import lineth.metrics.MetricsFacade
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

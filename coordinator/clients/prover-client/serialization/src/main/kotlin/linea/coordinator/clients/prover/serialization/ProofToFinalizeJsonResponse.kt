@@ -2,9 +2,9 @@ package linea.coordinator.clients.prover.serialization
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import linea.domain.ProofToFinalize
-import linea.kotlin.byteArrayListEquals
-import linea.kotlin.byteArrayListHashCode
+import lineth.domain.ProofToFinalize
+import lineth.kotlin.byteArrayListEquals
+import lineth.kotlin.byteArrayListHashCode
 import kotlin.time.Instant
 
 data class ProofToFinalizeJsonResponse(

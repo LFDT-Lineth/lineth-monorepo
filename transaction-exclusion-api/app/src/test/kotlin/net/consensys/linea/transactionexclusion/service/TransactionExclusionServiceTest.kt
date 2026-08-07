@@ -2,8 +2,8 @@ package net.consensys.linea.transactionexclusion.service
 
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
-import linea.error.DuplicatedRecordException
-import net.consensys.linea.metrics.MetricsFacade
+import lineth.error.DuplicatedRecordException
+import lineth.metrics.MetricsFacade
 import net.consensys.linea.transactionexclusion.ErrorType
 import net.consensys.linea.transactionexclusion.TransactionExclusionError
 import net.consensys.linea.transactionexclusion.TransactionExclusionServiceV1

@@ -1,7 +1,7 @@
 package linea.coordination.conflation
 
-import linea.clients.GenerateTracesResponse
-import linea.clients.GetZkEVMStateMerkleProofResponse
+import lineth.clients.GenerateTracesResponse
+import lineth.clients.GetZkEVMStateMerkleProofResponse
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 data class BlocksTracesConflated(

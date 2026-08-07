@@ -1,6 +1,6 @@
 package linea.submission
 
-import linea.domain.BlobRecord
+import lineth.domain.BlobRecord
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 interface BlobSubmitter {

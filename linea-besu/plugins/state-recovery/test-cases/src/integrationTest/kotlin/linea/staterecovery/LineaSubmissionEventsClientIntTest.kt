@@ -2,21 +2,21 @@ package linea.staterecovery
 
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import linea.ContractsManager
-import linea.EthApiClientManager
-import linea.LinethRollupDeploymentResult
-import linea.MakeFileDelegatedContractsManager.connectToLinethRollupContract
-import linea.MakeFileDelegatedContractsManager.linethRollupContractErrors
-import linea.contract.events.DataFinalizedV3
-import linea.contract.events.DataSubmittedV3
-import linea.contract.l1.LinethRollupContractVersion
-import linea.domain.Aggregation
-import linea.domain.BlockParameter
-import linea.ethapi.EthLogsSearcherImpl
-import linea.log4j.configureLoggers
-import net.consensys.linea.testing.submission.AggregationAndBlobs
-import net.consensys.linea.testing.submission.loadBlobsAndAggregationsSortedAndGrouped
-import net.consensys.linea.testing.submission.submitBlobsAndAggregationsAndWaitExecution
+import lineth.ContractsManager
+import lineth.EthApiClientManager
+import lineth.LinethRollupDeploymentResult
+import lineth.MakeFileDelegatedContractsManager.connectToLinethRollupContract
+import lineth.MakeFileDelegatedContractsManager.linethRollupContractErrors
+import lineth.contract.events.DataFinalizedV3
+import lineth.contract.events.DataSubmittedV3
+import lineth.contract.l1.LinethRollupContractVersion
+import lineth.domain.Aggregation
+import lineth.domain.BlockParameter
+import lineth.ethapi.EthLogsSearcherImpl
+import lineth.log4j.configureLoggers
+import lineth.testing.submission.AggregationAndBlobs
+import lineth.testing.submission.loadBlobsAndAggregationsSortedAndGrouped
+import lineth.testing.submission.submitBlobsAndAggregationsAndWaitExecution
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
@@ -41,7 +41,7 @@ class LineaSubmissionEventsClientIntTest {
   private fun setupTest(vertx: Vertx) {
     configureLoggers(
       rootLevel = Level.INFO,
-      "net.consensys.linea.contract.Web3JContractAsyncHelper" to Level.WARN, // silence noisy gasPrice Caps logs
+      "lineth.contract.Web3JContractAsyncHelper" to Level.WARN, // silence noisy gasPrice Caps logs
       "test.clients.l1.executionlayer" to Level.INFO,
       "test.clients.l1.web3j-default" to Level.INFO,
       "test.clients.l1.linea-contract" to Level.INFO,

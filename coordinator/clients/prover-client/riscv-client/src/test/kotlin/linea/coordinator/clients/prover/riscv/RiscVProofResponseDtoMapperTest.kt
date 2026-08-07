@@ -1,12 +1,12 @@
 package linea.coordinator.clients.prover.riscv
 
-import linea.clients.L2ExecutionProofPublicInputs
-import linea.clients.L2ExecutionProofResponseV1
-import linea.clients.RollupAggregationProofResponseV1
-import linea.clients.RollupProofPublicInputs
-import linea.clients.RollupProofResponseV1
 import linea.coordinator.clients.prover.serialization.JsonSerialization
-import linea.kotlin.decodeHex
+import lineth.clients.L2ExecutionProofPublicInputs
+import lineth.clients.L2ExecutionProofResponseV1
+import lineth.clients.RollupAggregationProofResponseV1
+import lineth.clients.RollupProofPublicInputs
+import lineth.clients.RollupProofResponseV1
+import lineth.kotlin.decodeHex
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import kotlin.time.Instant

@@ -8,11 +8,11 @@
  */
 package maru.executionlayer.client
 
+import lineth.async.toSafeFuture
+import lineth.metrics.MetricsFacade
 import maru.consensus.ElFork
 import maru.core.ExecutionPayload
 import maru.executionlayer.mappers.Mappers.toDomainExecutionPayload
-import net.consensys.linea.async.toSafeFuture
-import net.consensys.linea.metrics.MetricsFacade
 import tech.pegasys.teku.ethereum.executionclient.schema.Response
 import tech.pegasys.teku.ethereum.executionclient.web3j.Web3JClient
 import tech.pegasys.teku.infrastructure.async.SafeFuture

@@ -4,10 +4,10 @@ plugins {
 }
 
 dependencies {
-  api "build.linea:blob-compressor:${libs.versions.blobCompressor.get()}"
-  //  api project(':jvm-libs:linea:blob-compressor')
-  api "build.linea:blob-shnarf-calculator:${libs.versions.blobShnarfCalculator.get()}"
-  // api project(':jvm-libs:linea:blob-shnarf-calculator')
+  //  api "build.linea:blob-compressor:${libs.versions.blobCompressor.get()}"
+  api project(':jvm-libs:linea:blob-compressor')
+  //  api "build.linea:blob-shnarf-calculator:${libs.versions.blobShnarfCalculator.get()}"
+  api project(':jvm-libs:linea:blob-shnarf-calculator')
   implementation "net.java.dev.jna:jna:${libs.versions.jna.get()}"
   api project(':coordinator:core-interfaces')
   api project(':jvm-libs:linea:core:domain-models')

@@ -9,8 +9,11 @@
 package maru.app
 
 import io.vertx.core.Vertx
-import linea.kotlin.encodeHex
-import linea.timer.TimerFactory
+import lineth.async.get
+import lineth.kotlin.encodeHex
+import lineth.metrics.MetricsFacade
+import lineth.timer.TimerFactory
+import lineth.vertx.ObservabilityServer
 import maru.api.ApiServer
 import maru.config.MaruConfig
 import maru.consensus.DifficultyAwareQbftConfig
@@ -34,9 +37,6 @@ import maru.serialization.rlp.ForkAwareBlockHashing
 import maru.services.LongRunningService
 import maru.subscription.InOrderFanoutSubscriptionManager
 import maru.syncing.SyncController
-import net.consensys.linea.async.get
-import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.linea.vertx.ObservabilityServer
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.hyperledger.besu.plugin.services.MetricsSystem

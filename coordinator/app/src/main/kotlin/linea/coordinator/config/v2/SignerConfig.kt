@@ -1,7 +1,7 @@
 package linea.coordinator.config.v2
 
 import com.sksamuel.hoplite.Masked
-import linea.kotlin.encodeHex
+import lineth.kotlin.encodeHex
 import java.net.URL
 import java.nio.file.Path
 import kotlin.io.path.exists

@@ -8,9 +8,9 @@
  */
 package maru.app
 
-import linea.testing.besu.BesuFactory
-import linea.testing.besu.BesuTransactionsHelper
-import linea.testing.besu.ethGetBlockByNumber
+import lineth.testing.besu.BesuFactory
+import lineth.testing.besu.BesuTransactionsHelper
+import lineth.testing.besu.ethGetBlockByNumber
 import maru.config.SyncingConfig
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat

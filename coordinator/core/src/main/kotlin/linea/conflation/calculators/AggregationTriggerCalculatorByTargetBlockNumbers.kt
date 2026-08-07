@@ -1,8 +1,8 @@
 package linea.conflation.calculators
 
-import linea.domain.BlobCounters
-import linea.domain.BlobsToAggregate
-import linea.domain.BlockInterval
+import lineth.domain.BlobCounters
+import lineth.domain.BlobsToAggregate
+import lineth.domain.BlockInterval
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 

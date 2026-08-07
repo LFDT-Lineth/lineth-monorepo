@@ -1,7 +1,7 @@
 package net.consensys.linea.ethereum.gaspricing.dynamiccap
 
 import io.vertx.junit5.VertxExtension
-import linea.domain.gas.GasPriceCaps
+import lineth.domain.gas.GasPriceCaps
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

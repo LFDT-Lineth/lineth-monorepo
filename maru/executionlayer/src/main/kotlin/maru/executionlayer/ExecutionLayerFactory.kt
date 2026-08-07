@@ -8,6 +8,7 @@
  */
 package maru.executionlayer
 
+import lineth.metrics.MetricsFacade
 import maru.consensus.ElFork
 import maru.executionlayer.client.CancunWeb3JJsonRpcExecutionLayerEngineApiClient
 import maru.executionlayer.client.ExecutionLayerEngineApiClient
@@ -17,7 +18,6 @@ import maru.executionlayer.client.PragueWeb3JJsonRpcExecutionLayerEngineApiClien
 import maru.executionlayer.client.ShanghaiWeb3JJsonRpcExecutionLayerEngineApiClient
 import maru.executionlayer.manager.ExecutionLayerManager
 import maru.executionlayer.manager.JsonRpcExecutionLayerManager
-import net.consensys.linea.metrics.MetricsFacade
 import tech.pegasys.teku.ethereum.executionclient.web3j.Web3JClient
 
 object ExecutionLayerFactory {

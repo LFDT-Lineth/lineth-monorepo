@@ -1,8 +1,8 @@
 package linea.conflation.calculators
 
-import linea.domain.BlockCounters
-import linea.domain.ConflationTrigger
-import net.consensys.linea.traces.fakeTracesCountersV2
+import lineth.domain.BlockCounters
+import lineth.domain.ConflationTrigger
+import lineth.traces.fakeTracesCountersV2
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

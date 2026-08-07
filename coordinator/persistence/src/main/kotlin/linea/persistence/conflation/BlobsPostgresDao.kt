@@ -3,11 +3,11 @@ package linea.persistence.conflation
 import io.vertx.sqlclient.Row
 import io.vertx.sqlclient.SqlClient
 import linea.coordinator.clients.prover.serialization.BlobCompressionProofJsonResponse
-import linea.domain.BlobCompressionProof
-import linea.domain.BlobRecord
-import linea.domain.BlobStatus
-import linea.kotlin.decodeHex
-import linea.kotlin.encodeHex
+import lineth.domain.BlobCompressionProof
+import lineth.domain.BlobRecord
+import lineth.domain.BlobStatus
+import lineth.kotlin.decodeHex
+import lineth.kotlin.encodeHex
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import kotlin.time.Clock

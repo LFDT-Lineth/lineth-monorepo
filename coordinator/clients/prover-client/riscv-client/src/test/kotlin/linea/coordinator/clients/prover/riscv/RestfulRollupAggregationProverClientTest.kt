@@ -12,7 +12,7 @@ import linea.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.prov
 import linea.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.restClient
 import linea.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.rollupAggregationProofRequestV1
 import linea.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.rollupAggregationProofResponseDto
-import linea.domain.BlockIntervalProofIndex
+import lineth.domain.BlockIntervalProofIndex
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach

@@ -1,9 +1,9 @@
 package linea.coordinator.config.v2.toml
 
-import linea.config.docs.ConfigDoc
-import linea.config.docs.ConfigSection
 import linea.coordinator.config.v2.L1SubmissionConfig
 import linea.coordinator.config.v2.L1SubmissionConfig.DynamicGasPriceCapConfig.GasPriceCapCalculationConfig
+import lineth.config.docs.ConfigDoc
+import lineth.config.docs.ConfigSection
 import net.consensys.linea.ethereum.gaspricing.dynamiccap.TimeOfDayMultipliers
 import java.net.URL
 import kotlin.ULong

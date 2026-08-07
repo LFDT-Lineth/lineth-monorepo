@@ -1,6 +1,6 @@
 package net.consensys.linea.ethereum.gaspricing.dynamiccap
 
-import linea.kotlin.toGWei
+import lineth.kotlin.toGWei
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import kotlin.math.pow

@@ -3,8 +3,8 @@ package linea.staterecovery.datafetching
 import io.vertx.core.Vertx
 import linea.staterecovery.BlobDecompressorAndDeserializer
 import linea.staterecovery.BlockFromL1RecoveredData
-import linea.timer.TimerSchedule
-import linea.timer.VertxPeriodicPollingService
+import lineth.timer.TimerSchedule
+import lineth.timer.VertxPeriodicPollingService
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

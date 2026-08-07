@@ -1,7 +1,7 @@
 package net.consensys.linea.ethereum.gaspricing.staticcap
 
-import linea.domain.FeeHistory
-import linea.kotlin.tokWeiUInt
+import lineth.domain.FeeHistory
+import lineth.kotlin.tokWeiUInt
 import net.consensys.linea.ethereum.gaspricing.FeesCalculator
 import net.consensys.linea.ethereum.gaspricing.MinerExtraDataCalculator
 import net.consensys.linea.ethereum.gaspricing.MinerExtraDataV1

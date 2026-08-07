@@ -8,7 +8,7 @@
  */
 package maru.crypto
 
-import linea.kotlin.toBytes32
+import lineth.kotlin.toBytes32
 import maru.core.Signer
 import org.apache.tuweni.bytes.Bytes32
 import org.hyperledger.besu.cryptoservices.NodeKey

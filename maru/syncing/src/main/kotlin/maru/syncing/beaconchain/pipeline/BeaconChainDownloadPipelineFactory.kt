@@ -8,7 +8,7 @@
  */
 package maru.syncing.beaconchain.pipeline
 
-import linea.kotlin.clampedAdd
+import lineth.kotlin.clampedAdd
 import maru.consensus.blockimport.SealedBeaconBlockImporter
 import maru.p2p.PeerLookup
 import maru.p2p.ValidationResult

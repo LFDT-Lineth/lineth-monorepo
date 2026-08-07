@@ -1,12 +1,12 @@
 package linea.anchoring.clients
 
 import io.vertx.core.Vertx
-import linea.EthLogsSearcher
-import linea.contract.events.MessageSentEvent
-import linea.contract.l2.L2MessageServiceSmartContractClient
-import linea.domain.BlockParameter
-import linea.timer.TimerSchedule
-import linea.timer.VertxPeriodicPollingService
+import lineth.EthLogsSearcher
+import lineth.contract.events.MessageSentEvent
+import lineth.contract.l2.L2MessageServiceSmartContractClient
+import lineth.domain.BlockParameter
+import lineth.timer.TimerSchedule
+import lineth.timer.VertxPeriodicPollingService
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

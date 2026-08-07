@@ -1,8 +1,8 @@
 package net.consensys.linea.contract.l1
 
-import linea.contract.ValidiumV1
-import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
-import net.consensys.linea.contract.Web3JContractAsyncHelper
+import lineth.contract.ValidiumV1
+import lineth.contract.Web3JContractAsyncHelper
+import lineth.web3j.transactionmanager.AsyncFriendlyTransactionManager
 import org.web3j.abi.datatypes.Function
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.RemoteFunctionCall

@@ -3,29 +3,29 @@ package linea.staterecovery
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import linea.EthApiClientManager
-import linea.L2AccountManager
-import linea.clients.StateManagerClientV1
-import linea.clients.StateManagerV1JsonRpcClient
-import linea.contract.events.DataFinalizedV3
-import linea.domain.EthLogEvent
-import linea.ethapi.EthLogsSearcherImpl
-import linea.kotlin.decodeHex
-import linea.kotlin.gwei
-import linea.kotlin.toBigInteger
-import linea.log4j.configureLoggers
 import linea.staterecovery.test.assertBesuAndShomeiRecoveredAsExpected
 import linea.staterecovery.test.execCommandAndAssertSuccess
 import linea.staterecovery.test.getFinalizationsOnL1
 import linea.staterecovery.test.getLastFinalizationOnL1
 import linea.staterecovery.test.waitExecutionLayerToBeUpAndRunning
 import linea.testing.Runner
-import linea.web3j.ethapi.createEthApiClient
-import linea.web3j.waitForTxReceipt
-import net.consensys.linea.jsonrpc.client.RequestRetryConfig
-import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
-import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
-import net.consensys.linea.testing.filesystem.getPathTo
+import lineth.EthApiClientManager
+import lineth.L2AccountManager
+import lineth.clients.StateManagerClientV1
+import lineth.clients.StateManagerV1JsonRpcClient
+import lineth.contract.events.DataFinalizedV3
+import lineth.domain.EthLogEvent
+import lineth.ethapi.EthLogsSearcherImpl
+import lineth.jsonrpc.client.RequestRetryConfig
+import lineth.jsonrpc.client.VertxHttpJsonRpcClientFactory
+import lineth.kotlin.decodeHex
+import lineth.kotlin.gwei
+import lineth.kotlin.toBigInteger
+import lineth.log4j.configureLoggers
+import lineth.metrics.micrometer.MicrometerMetricsFacade
+import lineth.testing.filesystem.getPathTo
+import lineth.web3j.ethapi.createEthApiClient
+import lineth.web3j.waitForTxReceipt
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
@@ -70,7 +70,7 @@ class StateRecoveryE2ETest {
     configureLoggers(
       rootLevel = Level.INFO,
       log.name to Level.DEBUG,
-      "net.consensys.linea.contract.Web3JContractAsyncHelper" to Level.WARN,
+      "lineth.contract.Web3JContractAsyncHelper" to Level.WARN,
       "test.clients.l1.executionlayer" to Level.INFO,
       "test.clients.l1.web3j-default" to Level.INFO,
       "test.clients.l1.state-manager" to Level.DEBUG,

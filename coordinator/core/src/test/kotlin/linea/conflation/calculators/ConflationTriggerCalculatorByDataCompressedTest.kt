@@ -1,10 +1,10 @@
 package linea.conflation.calculators
 
-import linea.blob.BlobCompressionException
-import linea.blob.BlobCompressor
-import linea.domain.BlockCounters
-import linea.domain.ConflationTrigger
-import net.consensys.linea.traces.fakeTracesCountersV2
+import lineth.blob.BlobCompressionException
+import lineth.blob.BlobCompressor
+import lineth.domain.BlockCounters
+import lineth.domain.ConflationTrigger
+import lineth.traces.fakeTracesCountersV2
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach

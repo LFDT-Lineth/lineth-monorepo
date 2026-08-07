@@ -14,11 +14,11 @@ import io.vertx.core.json.JsonObject
 import io.vertx.junit5.Timeout
 import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
+import lineth.jsonrpc.client.RequestRetryConfig
+import lineth.jsonrpc.client.VertxHttpJsonRpcClientFactory
+import lineth.metrics.MetricsFacade
+import lineth.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.linea.ethereum.gaspricing.MinerExtraDataV1
-import net.consensys.linea.jsonrpc.client.RequestRetryConfig
-import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
-import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

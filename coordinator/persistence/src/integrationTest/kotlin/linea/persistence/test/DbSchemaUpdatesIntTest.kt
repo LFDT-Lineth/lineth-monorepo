@@ -4,10 +4,10 @@ import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import io.vertx.sqlclient.Pool
 import io.vertx.sqlclient.SqlClient
-import linea.kotlin.encodeHex
-import linea.persistence.db.Db
-import linea.persistence.db.DbHelper
-import net.consensys.linea.async.get
+import lineth.async.get
+import lineth.kotlin.encodeHex
+import lineth.persistence.db.Db
+import lineth.persistence.db.DbHelper
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach

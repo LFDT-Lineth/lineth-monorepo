@@ -12,7 +12,7 @@ package net.consensys.linea.config;
 import java.util.Map;
 import java.util.Set;
 import kotlin.time.Instant;
-import linea.blob.BlobCompressorVersion;
+import lineth.blob.BlobCompressorVersion;
 import lombok.Builder;
 import net.consensys.linea.plugins.LineaOptionsConfiguration;
 import net.consensys.linea.sequencer.txselection.selectors.TransactionEventFilter;

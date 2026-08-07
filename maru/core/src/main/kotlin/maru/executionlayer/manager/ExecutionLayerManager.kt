@@ -8,7 +8,7 @@
  */
 package maru.executionlayer.manager
 
-import linea.kotlin.encodeHex
+import lineth.kotlin.encodeHex
 import maru.core.EMPTY_HASH
 import maru.core.ExecutionPayload
 import tech.pegasys.teku.infrastructure.async.SafeFuture

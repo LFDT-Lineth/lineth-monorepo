@@ -1,8 +1,8 @@
 package linea.coordinator.app
 
 import io.vertx.core.Vertx
-import linea.contract.l1.LinethRollupSmartContractClientReadOnly
-import linea.domain.BlockParameter
+import lineth.contract.l1.LinethRollupSmartContractClientReadOnly
+import lineth.domain.BlockParameter
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

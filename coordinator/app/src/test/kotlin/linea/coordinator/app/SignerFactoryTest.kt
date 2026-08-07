@@ -4,8 +4,8 @@ import com.sksamuel.hoplite.Masked
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.coordinator.config.v2.SignerConfig
-import linea.crypto.Web3SignerRestClient
-import linea.kotlin.toURL
+import lineth.crypto.Web3SignerRestClient
+import lineth.kotlin.toURL
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test

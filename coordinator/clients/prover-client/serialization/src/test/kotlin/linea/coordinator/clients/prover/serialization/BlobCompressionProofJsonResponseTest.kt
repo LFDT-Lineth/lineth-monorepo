@@ -1,7 +1,7 @@
 package linea.coordinator.clients.prover.serialization
 
 import linea.coordinator.clients.prover.serialization.JsonSerialization.proofResponseMapperV1
-import linea.domain.BlockIntervals
+import lineth.domain.BlockIntervals
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest

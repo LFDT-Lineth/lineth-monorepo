@@ -8,6 +8,7 @@
  */
 package maru.app
 
+import lineth.metrics.MetricsFacade
 import maru.consensus.ForkSpec
 import maru.consensus.ProtocolFactory
 import maru.consensus.QbftConsensusConfig
@@ -27,7 +28,6 @@ import maru.database.BeaconChain
 import maru.executionlayer.ExecutionLayerFactory.buildExecutionLayerManager
 import maru.p2p.P2PNetwork
 import maru.serialization.rlp.ForkAwareBlockHashing
-import net.consensys.linea.metrics.MetricsFacade
 import tech.pegasys.teku.ethereum.executionclient.web3j.Web3JClient
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 

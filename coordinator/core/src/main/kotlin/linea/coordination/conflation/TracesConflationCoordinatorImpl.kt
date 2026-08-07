@@ -2,14 +2,14 @@ package linea.coordination.conflation
 
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.mapBoth
-import linea.clients.GenerateTracesResponse
-import linea.clients.GetStateMerkleProofRequest
-import linea.clients.GetZkEVMStateMerkleProofResponse
-import linea.clients.StateManagerClientV1
-import linea.clients.TracesConflationClientV2
-import linea.clients.TracesServiceErrorType
-import linea.domain.BlockInterval
-import linea.error.ErrorResponse
+import lineth.clients.GenerateTracesResponse
+import lineth.clients.GetStateMerkleProofRequest
+import lineth.clients.GetZkEVMStateMerkleProofResponse
+import lineth.clients.StateManagerClientV1
+import lineth.clients.TracesConflationClientV2
+import lineth.clients.TracesServiceErrorType
+import lineth.domain.BlockInterval
+import lineth.error.ErrorResponse
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

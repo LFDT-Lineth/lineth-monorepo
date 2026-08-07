@@ -1,9 +1,9 @@
 package linea.coordinator.clients.prover
 
-import linea.domain.AggregationProofIndex
-import linea.domain.CompressionProofIndex
-import linea.domain.ExecutionProofIndex
-import linea.kotlin.decodeHex
+import lineth.domain.AggregationProofIndex
+import lineth.domain.CompressionProofIndex
+import lineth.domain.ExecutionProofIndex
+import lineth.kotlin.decodeHex
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import kotlin.time.Instant

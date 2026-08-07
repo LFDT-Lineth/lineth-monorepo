@@ -2,10 +2,10 @@ package linea.coordinator.app.conflationbacktesting
 
 import io.vertx.core.Vertx
 import linea.coordinator.config.v2.CoordinatorConfig
-import linea.timer.TimerSchedule
-import linea.timer.VertxPeriodicPollingService
-import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
-import net.consensys.linea.metrics.MetricsFacade
+import lineth.jsonrpc.client.VertxHttpJsonRpcClientFactory
+import lineth.metrics.MetricsFacade
+import lineth.timer.TimerSchedule
+import lineth.timer.VertxPeriodicPollingService
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

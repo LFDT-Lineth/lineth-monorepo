@@ -9,7 +9,7 @@
 package chaos
 
 import chaos.SetupHelper.getNodesUrlsFromFile
-import net.consensys.linea.testing.filesystem.getPathTo
+import lineth.testing.filesystem.getPathTo
 import org.apache.logging.log4j.LogManager
 import org.http4k.client.OkHttp
 import org.http4k.core.Method

@@ -1,7 +1,7 @@
 package linea.persistence
 
-import linea.forcedtx.ForcedTransactionInclusionResult
-import linea.kotlin.encodeHex
+import lineth.forcedtx.ForcedTransactionInclusionResult
+import lineth.kotlin.encodeHex
 import kotlin.time.Instant
 
 /**

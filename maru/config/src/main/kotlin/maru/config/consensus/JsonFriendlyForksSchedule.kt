@@ -19,7 +19,7 @@ import com.sksamuel.hoplite.fp.NonEmptyList
 import com.sksamuel.hoplite.fp.invalid
 import com.sksamuel.hoplite.fp.valid
 import com.sksamuel.hoplite.valueOrNull
-import linea.kotlin.decodeHex
+import lineth.kotlin.decodeHex
 import maru.consensus.ChainFork
 import maru.consensus.ClFork
 import maru.consensus.ConsensusConfig

@@ -4,12 +4,12 @@ import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import linea.domain.BlockIntervals
-import linea.domain.CompressionProofIndex
-import linea.domain.ProofsToAggregate
-import linea.kotlin.ByteArrayExt
-import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
+import lineth.domain.BlockIntervals
+import lineth.domain.CompressionProofIndex
+import lineth.domain.ProofsToAggregate
+import lineth.kotlin.ByteArrayExt
+import lineth.metrics.MetricsFacade
+import lineth.metrics.micrometer.MicrometerMetricsFacade
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.awaitility.Awaitility.await
@@ -242,11 +242,11 @@ class ProverClientFactoryTest {
     kotlin.runCatching { proverClientI1.requestProof(request3).get() }
 
     assertThat(meterRegistry.find("linea.batch.prover.waiting").gauge()).isNotNull
-    assertThat(meterRegistry.find("linea.blob.prover.waiting").gauge()).isNotNull
+    assertThat(meterRegistry.find("lineth.blob.prover.waiting").gauge()).isNotNull
     assertThat(meterRegistry.find("linea.aggregation.prover.waiting").gauge()).isNotNull
 
     assertThat(meterRegistry.find("linea.batch.prover.waiting").gauge()!!.value()).isEqualTo(0.0)
-    assertThat(meterRegistry.find("linea.blob.prover.waiting").gauge()!!.value()).isEqualTo(0.0)
+    assertThat(meterRegistry.find("lineth.blob.prover.waiting").gauge()!!.value()).isEqualTo(0.0)
     assertThat(meterRegistry.find("linea.aggregation.prover.waiting").gauge()!!.value()).isEqualTo(3.0)
   }
 }

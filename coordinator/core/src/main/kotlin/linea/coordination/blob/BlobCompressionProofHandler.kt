@@ -1,7 +1,7 @@
 package linea.coordination.blob
 
-import linea.domain.BlobRecord
-import linea.domain.CompressionProofIndex
+import lineth.domain.BlobRecord
+import lineth.domain.CompressionProofIndex
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 fun interface BlobCompressionProofHandler {

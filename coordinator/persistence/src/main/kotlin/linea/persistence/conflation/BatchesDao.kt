@@ -1,6 +1,6 @@
 package linea.persistence.conflation
 
-import linea.domain.Batch
+import lineth.domain.Batch
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 interface BatchesDao {

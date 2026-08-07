@@ -8,7 +8,7 @@
  */
 package maru.test.cluster
 
-import linea.kotlin.encodeHex
+import lineth.kotlin.encodeHex
 import maru.app.MaruApp
 import maru.config.MaruConfig
 import maru.consensus.ChainFork

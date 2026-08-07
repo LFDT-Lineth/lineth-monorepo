@@ -1,8 +1,8 @@
 package net.consensys.linea.ethereum.gaspricing.dynamiccap
 
-import linea.domain.FeeHistory
-import linea.error.DuplicatedRecordException
 import linea.persistence.FeeHistoriesDao
+import lineth.domain.FeeHistory
+import lineth.error.DuplicatedRecordException
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference

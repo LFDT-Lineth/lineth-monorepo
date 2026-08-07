@@ -8,10 +8,10 @@
  */
 package maru.app
 
+import lineth.metrics.MetricsFacade
+import lineth.metrics.Tag
 import maru.core.SealedBeaconBlock
 import maru.metrics.MaruMetricsCategory
-import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.linea.metrics.Tag
 import org.hyperledger.besu.consensus.qbft.core.messagedata.QbftV1
 import java.util.concurrent.ConcurrentHashMap
 

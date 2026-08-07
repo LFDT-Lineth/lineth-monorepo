@@ -2,11 +2,11 @@ package linea.staterecovery.clients
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.github.michaelbull.result.Err
-import linea.kotlin.decodeHex
 import linea.staterecovery.TransactionDetailsClient
-import net.consensys.linea.jsonrpc.client.JsonRpcClientFactory
-import net.consensys.linea.jsonrpc.client.JsonRpcV2Client
-import net.consensys.linea.jsonrpc.client.RequestRetryConfig
+import lineth.jsonrpc.client.JsonRpcClientFactory
+import lineth.jsonrpc.client.JsonRpcV2Client
+import lineth.jsonrpc.client.RequestRetryConfig
+import lineth.kotlin.decodeHex
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

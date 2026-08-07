@@ -1,14 +1,14 @@
 package linea.coordination.blob
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
-import linea.blob.CalculateShnarfResult
-import linea.blob.GoNativeBlobShnarfCalculator
-import linea.domain.BlockIntervals
-import linea.domain.ShnarfResult
-import linea.kotlin.decodeHex
-import linea.kotlin.encodeHex
-import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
+import lineth.blob.CalculateShnarfResult
+import lineth.blob.GoNativeBlobShnarfCalculator
+import lineth.domain.BlockIntervals
+import lineth.domain.ShnarfResult
+import lineth.kotlin.decodeHex
+import lineth.kotlin.encodeHex
+import lineth.metrics.MetricsFacade
+import lineth.metrics.micrometer.MicrometerMetricsFacade
 import org.apache.tuweni.bytes.Bytes32
 import org.apache.tuweni.bytes.Bytes48
 import org.assertj.core.api.Assertions.assertThat

@@ -9,12 +9,12 @@
 package maru.metrics
 
 import io.micrometer.core.instrument.Clock
-import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.linea.metrics.Tag
+import lineth.metrics.MetricsFacade
+import lineth.metrics.Tag
 import org.hyperledger.besu.plugin.services.metrics.LabelledMetric
 import java.util.concurrent.CompletableFuture
-import net.consensys.linea.metrics.MetricsCategory as LineaMetricsCategory
-import net.consensys.linea.metrics.Timer as LineaTimer
+import lineth.metrics.MetricsCategory as LineaMetricsCategory
+import lineth.metrics.Timer as LineaTimer
 import org.hyperledger.besu.plugin.services.metrics.OperationTimer as BesuTimer
 
 class TimerAdapter(

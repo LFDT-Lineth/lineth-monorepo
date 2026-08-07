@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Map;
 import kotlin.time.Instant;
-import linea.blob.BlobCompressorVersion;
+import lineth.blob.BlobCompressorVersion;
 import org.junit.jupiter.api.Test;
 
 class LineaTransactionSelectorCliOptionsTest {

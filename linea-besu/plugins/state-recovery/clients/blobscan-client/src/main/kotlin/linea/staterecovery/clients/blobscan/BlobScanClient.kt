@@ -4,13 +4,13 @@ import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.client.WebClient
 import io.vertx.ext.web.client.WebClientOptions
-import linea.domain.RetryConfig
 import linea.http.vertx.VertxHttpRequestSenderFactory
 import linea.http.vertx.VertxRestLoggingFormatter
-import linea.kotlin.decodeHex
-import linea.kotlin.encodeHex
 import linea.staterecovery.BlobFetcher
-import net.consensys.linea.vertx.setDefaultsFrom
+import lineth.domain.RetryConfig
+import lineth.kotlin.decodeHex
+import lineth.kotlin.encodeHex
+import lineth.vertx.setDefaultsFrom
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger

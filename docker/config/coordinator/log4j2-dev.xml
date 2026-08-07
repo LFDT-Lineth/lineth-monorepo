@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration status="warn" shutdownHook="disable" monitorInterval="2" packages="net.consensys.linea.logging">
+<Configuration status="warn" shutdownHook="disable" monitorInterval="2" packages="lineth.logging">
   <Properties>
     <Property name="logPath">tmp/logs/coordinator</Property>
     <Property name="logPathJson">tmp/logs/coordinator-json</Property>
@@ -109,7 +109,7 @@
       <DebouncingFilter/>
       <appender-ref ref="rewrite"/>
     </Logger>
-    <Logger name="linea.persistence.db.PersistenceRetryer" level="WARN" additivity="false">
+    <Logger name="lineth.persistence.db.PersistenceRetryer" level="WARN" additivity="false">
       <DebouncingFilter/>
       <appender-ref ref="console"/>
     </Logger>

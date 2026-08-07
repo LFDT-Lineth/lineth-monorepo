@@ -8,8 +8,8 @@
  */
 package maru.app
 
-import linea.testing.besu.BesuFactory
-import linea.testing.besu.BesuTransactionsHelper
+import lineth.testing.besu.BesuFactory
+import lineth.testing.besu.BesuTransactionsHelper
 import maru.core.Seal
 import maru.p2p.NoOpP2PNetwork
 import maru.p2p.ValidationResult

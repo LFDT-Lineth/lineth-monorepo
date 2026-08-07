@@ -2,9 +2,9 @@ package linea.persistence.conflation
 
 import io.vertx.sqlclient.Row
 import io.vertx.sqlclient.SqlClient
-import linea.domain.BlobRecordV2
-import linea.domain.createBlobRecordV2
-import linea.persistence.db.DbHelper
+import lineth.domain.BlobRecordV2
+import lineth.domain.createBlobRecordV2
+import lineth.persistence.db.DbHelper
 import org.assertj.core.api.Assertions.assertThat
 import kotlin.time.Clock
 import kotlin.time.Instant

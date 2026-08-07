@@ -1,6 +1,6 @@
 package linea.coordinator.app.conflationbacktesting
 
-import linea.blob.BlobCompressorVersion
+import lineth.blob.BlobCompressorVersion
 import java.net.URL
 
 data class ConflationBacktestingConfig(

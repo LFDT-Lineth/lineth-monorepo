@@ -8,7 +8,7 @@
  */
 package maru.test
 
-import linea.kotlin.toULong
+import lineth.kotlin.toULong
 import maru.consensus.ChainFork
 import maru.consensus.ClFork
 import maru.consensus.ElFork

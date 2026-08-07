@@ -9,7 +9,7 @@
 package maru.api
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import linea.kotlin.encodeHex
+import lineth.kotlin.encodeHex
 import maru.VersionProvider
 import maru.api.beacon.GetBlock
 import maru.api.beacon.GetBlockHeader

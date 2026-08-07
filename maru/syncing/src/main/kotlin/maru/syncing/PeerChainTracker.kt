@@ -8,9 +8,9 @@
  */
 package maru.syncing
 
-import linea.timer.PeriodicPollingService
-import linea.timer.TimerFactory
-import linea.timer.TimerSchedule
+import lineth.timer.PeriodicPollingService
+import lineth.timer.TimerFactory
+import lineth.timer.TimerSchedule
 import maru.database.BeaconChain
 import maru.p2p.PeersHeadBlockProvider
 import org.apache.logging.log4j.LogManager

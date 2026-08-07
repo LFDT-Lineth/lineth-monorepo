@@ -4,9 +4,9 @@ import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import io.vertx.core.Vertx
-import net.consensys.linea.async.AsyncRetryer
-import net.consensys.linea.async.RetriedExecutionException
-import net.consensys.linea.async.toSafeFuture
+import lineth.async.AsyncRetryer
+import lineth.async.RetriedExecutionException
+import lineth.async.toSafeFuture
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.nio.file.Path
 import kotlin.time.Duration

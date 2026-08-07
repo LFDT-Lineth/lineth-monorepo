@@ -1,9 +1,11 @@
 package linea.coordinator.app
 
 import io.vertx.core.Vertx
-import linea.LongRunningService
-import linea.ethapi.EthApiBlockClient
-import linea.ethapi.EthApiClient
+import lineth.LongRunningService
+import lineth.ethapi.EthApiBlockClient
+import lineth.ethapi.EthApiClient
+import lineth.jsonrpc.client.VertxHttpJsonRpcClientFactory
+import lineth.metrics.MetricsFacade
 import net.consensys.linea.ethereum.gaspricing.BoundableFeeCalculator
 import net.consensys.linea.ethereum.gaspricing.FeesFetcher
 import net.consensys.linea.ethereum.gaspricing.GasPriceUpdater
@@ -19,8 +21,6 @@ import net.consensys.linea.ethereum.gaspricing.staticcap.MinMineableFeesPricerSe
 import net.consensys.linea.ethereum.gaspricing.staticcap.MinerExtraDataV1CalculatorImpl
 import net.consensys.linea.ethereum.gaspricing.staticcap.TransactionCostCalculator
 import net.consensys.linea.ethereum.gaspricing.staticcap.VariableFeesCalculator
-import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
-import net.consensys.linea.metrics.MetricsFacade
 import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.CompletableFuture

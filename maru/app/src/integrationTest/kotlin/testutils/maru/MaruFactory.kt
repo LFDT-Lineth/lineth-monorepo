@@ -13,10 +13,11 @@ import io.libp2p.core.crypto.KeyType
 import io.libp2p.core.crypto.generateKeyPair
 import io.libp2p.core.crypto.marshalPrivateKey
 import io.libp2p.core.crypto.unmarshalPrivateKey
-import linea.contract.l1.LinethRollupSmartContractClientReadOnly
-import linea.kotlin.decodeHex
-import linea.kotlin.encodeHex
-import linea.timer.TimerFactory
+import lineth.contract.l1.LinethRollupSmartContractClientReadOnly
+import lineth.kotlin.decodeHex
+import lineth.kotlin.encodeHex
+import lineth.metrics.MetricsFacade
+import lineth.timer.TimerFactory
 import maru.api.ApiServer
 import maru.app.MaruApp
 import maru.app.MaruAppFactory
@@ -52,7 +53,6 @@ import maru.p2p.fork.ForkPeeringManager
 import maru.p2p.messages.StatusManager
 import maru.serialization.rlp.ForkAwareBlockHashing
 import maru.services.NoOpLongRunningService
-import net.consensys.linea.metrics.MetricsFacade
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path

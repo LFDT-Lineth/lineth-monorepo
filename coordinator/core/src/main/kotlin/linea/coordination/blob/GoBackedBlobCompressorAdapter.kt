@@ -1,11 +1,11 @@
 package linea.coordination.blob
 
-import linea.blob.BlobCompressor
-import linea.blob.BlobCompressorFactory
-import linea.blob.BlobCompressorVersion
 import linea.metrics.LineaMetricsCategory
-import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.linea.metrics.Timer
+import lineth.blob.BlobCompressor
+import lineth.blob.BlobCompressorFactory
+import lineth.blob.BlobCompressorVersion
+import lineth.metrics.MetricsFacade
+import lineth.metrics.Timer
 import org.apache.logging.log4j.LogManager
 
 class GoBackedBlobCompressorAdapter private constructor(

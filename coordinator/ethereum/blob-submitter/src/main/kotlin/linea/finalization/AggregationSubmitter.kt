@@ -1,11 +1,11 @@
 package linea.finalization
 
-import linea.contract.l1.LineaSmartContractClient
-import linea.domain.BlobRecord
-import linea.domain.FinalizationSubmittedEvent
-import linea.domain.ProofToFinalize
 import linea.gaspricing.GasPriceCapProvider
 import linea.submission.logSubmissionError
+import lineth.contract.l1.LineaSmartContractClient
+import lineth.domain.BlobRecord
+import lineth.domain.FinalizationSubmittedEvent
+import lineth.domain.ProofToFinalize
 import org.apache.logging.log4j.LogManager
 import org.web3j.tx.exceptions.ContractCallException
 import tech.pegasys.teku.infrastructure.async.SafeFuture

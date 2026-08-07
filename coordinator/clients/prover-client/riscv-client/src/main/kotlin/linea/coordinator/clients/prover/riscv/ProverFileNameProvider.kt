@@ -1,8 +1,8 @@
 package linea.coordinator.clients.prover.riscv
 
-import linea.clients.ProverFileNameProvider
-import linea.domain.BlockIntervalProofIndex
-import linea.kotlin.encodeHex
+import lineth.clients.ProverFileNameProvider
+import lineth.domain.BlockIntervalProofIndex
+import lineth.kotlin.encodeHex
 
 object FileNameSuffixes {
   const val L2_EXECUTION_PROOF_SUFFIX = "getZkL2ExecutionProof.json"

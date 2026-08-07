@@ -6,11 +6,11 @@ import io.vertx.core.http.PoolOptions
 import io.vertx.core.net.PfxOptions
 import io.vertx.ext.web.client.WebClientOptions
 import linea.coordinator.config.v2.SignerConfig
-import linea.crypto.Secp256k1Signature
-import linea.crypto.Signer
-import linea.crypto.Web3SignerRestClient
-import linea.kotlin.encodeHex
-import net.consensys.linea.httprest.client.VertxHttpRestClient
+import lineth.crypto.Secp256k1Signature
+import lineth.crypto.Signer
+import lineth.crypto.Web3SignerRestClient
+import lineth.httprest.client.VertxHttpRestClient
+import lineth.kotlin.encodeHex
 import org.apache.logging.log4j.LogManager
 import org.web3j.crypto.Credentials
 import org.web3j.utils.Numeric

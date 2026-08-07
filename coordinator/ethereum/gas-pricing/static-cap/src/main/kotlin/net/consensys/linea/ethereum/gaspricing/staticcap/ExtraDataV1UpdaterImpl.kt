@@ -2,13 +2,13 @@ package net.consensys.linea.ethereum.gaspricing.staticcap
 
 import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
-import net.consensys.linea.async.toSafeFuture
+import lineth.async.toSafeFuture
+import lineth.jsonrpc.JsonRpcRequestListParams
+import lineth.jsonrpc.client.JsonRpcClient
+import lineth.jsonrpc.client.RequestRetryConfig
+import lineth.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import net.consensys.linea.ethereum.gaspricing.ExtraDataUpdater
 import net.consensys.linea.ethereum.gaspricing.MinerExtraDataV1
-import net.consensys.linea.jsonrpc.JsonRpcRequestListParams
-import net.consensys.linea.jsonrpc.client.JsonRpcClient
-import net.consensys.linea.jsonrpc.client.RequestRetryConfig
-import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

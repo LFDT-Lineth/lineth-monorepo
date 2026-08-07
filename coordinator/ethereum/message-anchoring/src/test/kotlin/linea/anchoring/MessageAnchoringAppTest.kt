@@ -2,17 +2,17 @@ package linea.anchoring
 
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import linea.contract.events.L1MessageSentV1EthLogs
-import linea.contract.events.L1RollingHashUpdatedEvent
-import linea.contract.events.L2RollingHashUpdatedEvent
-import linea.contract.events.MessageSentEvent
-import linea.contract.l2.FakeL2MessageService
-import linea.domain.BlockParameter
-import linea.ethapi.FakeEthApiClient
-import linea.kotlin.decodeHex
-import linea.kotlin.encodeHex
-import linea.kotlin.toHexStringUInt256
-import linea.log4j.configureLoggers
+import lineth.contract.events.L1MessageSentV1EthLogs
+import lineth.contract.events.L1RollingHashUpdatedEvent
+import lineth.contract.events.L2RollingHashUpdatedEvent
+import lineth.contract.events.MessageSentEvent
+import lineth.contract.l2.FakeL2MessageService
+import lineth.domain.BlockParameter
+import lineth.ethapi.FakeEthApiClient
+import lineth.kotlin.decodeHex
+import lineth.kotlin.encodeHex
+import lineth.kotlin.toHexStringUInt256
+import lineth.log4j.configureLoggers
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
@@ -321,7 +321,7 @@ class MessageAnchoringAppTest {
     l1BlocksWithMessages.forEach { blockNumber ->
       repeat(numberOfMessagesPerBlock) {
         ethLogs.add(
-          linea.contract.events.createL1MessageSentV1Logs(
+          lineth.contract.events.createL1MessageSentV1Logs(
             blockNumber = blockNumber,
             contractAddress = L1_CONTRACT_ADDRESS,
             messageNumber = messageNumber,

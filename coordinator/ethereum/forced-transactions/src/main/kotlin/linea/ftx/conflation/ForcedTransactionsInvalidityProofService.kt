@@ -3,8 +3,8 @@ package linea.ftx.conflation
 import io.vertx.core.Vertx
 import linea.persistence.ForcedTransactionRecord
 import linea.persistence.ForcedTransactionsDao
-import linea.timer.TimerSchedule
-import linea.timer.VertxPeriodicPollingService
+import lineth.timer.TimerSchedule
+import lineth.timer.VertxPeriodicPollingService
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

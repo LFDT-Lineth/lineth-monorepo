@@ -8,7 +8,7 @@
  */
 package maru.consensus
 
-import linea.kotlin.encodeHex
+import lineth.kotlin.encodeHex
 import maru.core.BeaconBlock
 import maru.core.SealedBeaconBlock
 import maru.p2p.SealedBeaconBlockHandler

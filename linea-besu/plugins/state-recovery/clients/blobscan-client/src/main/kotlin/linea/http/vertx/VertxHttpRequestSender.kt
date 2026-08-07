@@ -3,7 +3,7 @@ package linea.http.vertx
 import io.vertx.core.buffer.Buffer
 import io.vertx.ext.web.client.HttpRequest
 import io.vertx.ext.web.client.HttpResponse
-import net.consensys.linea.async.toSafeFuture
+import lineth.async.toSafeFuture
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 interface VertxHttpRequestSender {

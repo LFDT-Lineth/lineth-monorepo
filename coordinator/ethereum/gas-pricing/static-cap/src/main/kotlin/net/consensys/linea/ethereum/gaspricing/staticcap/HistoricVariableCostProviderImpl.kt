@@ -1,10 +1,10 @@
 package net.consensys.linea.ethereum.gaspricing.staticcap
 
-import linea.OneKWei
-import linea.domain.BlockParameter
-import linea.domain.toBlockParameter
-import linea.ethapi.EthApiBlockClient
-import linea.kotlin.encodeHex
+import lineth.OneKWei
+import lineth.domain.BlockParameter
+import lineth.domain.toBlockParameter
+import lineth.ethapi.EthApiBlockClient
+import lineth.kotlin.encodeHex
 import net.consensys.linea.ethereum.gaspricing.HistoricVariableCostProvider
 import net.consensys.linea.ethereum.gaspricing.MinerExtraDataV1
 import org.apache.logging.log4j.LogManager

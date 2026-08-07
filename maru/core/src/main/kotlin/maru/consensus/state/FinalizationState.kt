@@ -8,7 +8,7 @@
  */
 package maru.consensus.state
 
-import linea.kotlin.encodeHex
+import lineth.kotlin.encodeHex
 import maru.core.BeaconBlockBody
 import org.apache.logging.log4j.LogManager
 

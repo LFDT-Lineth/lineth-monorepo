@@ -8,9 +8,9 @@
  */
 package maru.p2p.discovery
 
-import linea.kotlin.decodeHex
-import linea.kotlin.toULong
-import linea.timer.JvmTimerFactory
+import lineth.kotlin.decodeHex
+import lineth.kotlin.toULong
+import lineth.timer.JvmTimerFactory
 import maru.config.P2PConfig
 import maru.consensus.ElFork
 import maru.consensus.ForkIdManagerFactory.createForkIdHashManager

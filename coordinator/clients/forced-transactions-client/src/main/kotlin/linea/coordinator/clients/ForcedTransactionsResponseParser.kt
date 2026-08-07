@@ -3,11 +3,11 @@ package linea.coordinator.clients
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.NullNode
 import com.fasterxml.jackson.databind.node.ObjectNode
-import linea.forcedtx.ForcedTransactionInclusionResult
-import linea.forcedtx.ForcedTransactionInclusionStatus
-import linea.forcedtx.ForcedTransactionResponse
-import linea.kotlin.decodeHex
-import linea.kotlin.toULongFromHex
+import lineth.forcedtx.ForcedTransactionInclusionResult
+import lineth.forcedtx.ForcedTransactionInclusionStatus
+import lineth.forcedtx.ForcedTransactionResponse
+import lineth.kotlin.decodeHex
+import lineth.kotlin.toULongFromHex
 
 object ForcedTransactionsResponseParser {
 

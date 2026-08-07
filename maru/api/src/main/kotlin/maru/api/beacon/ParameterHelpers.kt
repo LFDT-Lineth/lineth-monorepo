@@ -8,8 +8,8 @@
  */
 package maru.api.beacon
 
-import linea.kotlin.decodeHex
-import linea.kotlin.isPositiveNumber
+import lineth.kotlin.decodeHex
+import lineth.kotlin.isPositiveNumber
 import maru.api.BeaconStateNotFoundException
 import maru.api.BlockNotFoundException
 import maru.api.ChainDataProvider

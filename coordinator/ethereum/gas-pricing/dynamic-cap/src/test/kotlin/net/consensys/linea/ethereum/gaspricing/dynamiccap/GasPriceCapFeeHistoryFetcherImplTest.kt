@@ -3,8 +3,8 @@ package net.consensys.linea.ethereum.gaspricing.dynamiccap
 import io.vertx.junit5.Timeout
 import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
-import linea.domain.FeeHistory
-import linea.ethapi.EthApiFeeClient
+import lineth.domain.FeeHistory
+import lineth.ethapi.EthApiFeeClient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows

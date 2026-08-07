@@ -1,6 +1,6 @@
 package linea.metrics
 
-import net.consensys.linea.metrics.MetricsCategory
+import lineth.metrics.MetricsCategory
 
 enum class LineaMetricsCategory : MetricsCategory {
   AGGREGATION,

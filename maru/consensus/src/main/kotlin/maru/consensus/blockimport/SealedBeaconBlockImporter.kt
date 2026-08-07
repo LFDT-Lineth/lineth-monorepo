@@ -13,7 +13,7 @@ import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.flatMap
 import com.github.michaelbull.result.mapError
-import linea.kotlin.encodeHex
+import lineth.kotlin.encodeHex
 import maru.consensus.AsyncFunction
 import maru.consensus.CallAndForgetFutureMultiplexer
 import maru.consensus.state.StateTransition

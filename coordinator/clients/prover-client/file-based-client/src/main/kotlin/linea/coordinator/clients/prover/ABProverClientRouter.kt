@@ -1,16 +1,16 @@
 package linea.coordinator.clients.prover
 
-import linea.clients.BatchExecutionProofRequestV1
-import linea.clients.InvalidityProofRequest
-import linea.clients.ProverClient
-import linea.domain.AggregationProofIndex
-import linea.domain.BlobCompressionProofRequest
-import linea.domain.CompressionProofIndex
-import linea.domain.ExecutionProofIndex
-import linea.domain.InvalidityProofIndex
-import linea.domain.ProofIndex
-import linea.domain.ProofsToAggregate
-import linea.domain.StartBlockTimestampProvider
+import lineth.clients.BatchExecutionProofRequestV1
+import lineth.clients.InvalidityProofRequest
+import lineth.clients.ProverClient
+import lineth.domain.AggregationProofIndex
+import lineth.domain.BlobCompressionProofRequest
+import lineth.domain.CompressionProofIndex
+import lineth.domain.ExecutionProofIndex
+import lineth.domain.InvalidityProofIndex
+import lineth.domain.ProofIndex
+import lineth.domain.ProofsToAggregate
+import lineth.domain.StartBlockTimestampProvider
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Instant
 

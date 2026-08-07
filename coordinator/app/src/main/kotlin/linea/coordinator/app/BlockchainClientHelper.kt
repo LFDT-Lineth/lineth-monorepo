@@ -1,14 +1,14 @@
 package linea.coordinator.app
 
 import io.vertx.core.Vertx
-import linea.contract.l1.LineaSmartContractClient
 import linea.coordinator.config.v2.L1SubmissionConfig
 import linea.coordinator.config.v2.SignerConfig
-import linea.ethapi.EthLogsSearcherImpl
-import linea.web3j.ECKeypairSignerAdapter
-import linea.web3j.SmartContractErrors
-import linea.web3j.ethapi.createEthApiClient
-import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
+import lineth.contract.l1.LineaSmartContractClient
+import lineth.ethapi.EthLogsSearcherImpl
+import lineth.web3j.ECKeypairSignerAdapter
+import lineth.web3j.SmartContractErrors
+import lineth.web3j.ethapi.createEthApiClient
+import lineth.web3j.transactionmanager.AsyncFriendlyTransactionManager
 import net.consensys.linea.contract.l1.Web3JLineaValidiumSmartContractClient
 import net.consensys.linea.contract.l1.Web3JLinethRollupSmartContractClient
 import net.consensys.linea.ethereum.gaspricing.BoundableFeeCalculator

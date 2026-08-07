@@ -12,9 +12,9 @@ import io.micrometer.core.instrument.ImmutableTag
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
-import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.linea.metrics.Tag
-import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
+import lineth.metrics.MetricsFacade
+import lineth.metrics.Tag
+import lineth.metrics.micrometer.MicrometerMetricsFacade
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.data.Offset
 import org.awaitility.kotlin.await
@@ -25,7 +25,7 @@ import java.util.Optional
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
-import net.consensys.linea.metrics.MetricsCategory as LineaMetricsCategory
+import lineth.metrics.MetricsCategory as LineaMetricsCategory
 import org.hyperledger.besu.plugin.services.metrics.MetricCategory as BesuMetricsCategory
 
 class BesuMetricsSystemAdapterTest {

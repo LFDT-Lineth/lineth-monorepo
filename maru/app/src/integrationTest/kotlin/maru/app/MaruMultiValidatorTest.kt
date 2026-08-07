@@ -9,8 +9,8 @@
 package maru.app
 
 import io.libp2p.etc.types.fromHex
-import linea.kotlin.encodeHex
-import linea.testing.besu.BesuFactory
+import lineth.kotlin.encodeHex
+import lineth.testing.besu.BesuFactory
 import maru.consensus.ClFork
 import maru.consensus.qbft.ProposerSelectorImpl
 import maru.core.SealedBeaconBlock

@@ -1,14 +1,14 @@
 package linea.coordinator.app
 
 import io.vertx.core.Vertx
-import linea.LongRunningService
 import linea.anchoring.MessageAnchoringApp
-import linea.contract.l2.Web3JL2MessageServiceSmartContractClient
 import linea.coordinator.config.v2.CoordinatorConfig
 import linea.coordinator.config.v2.isDisabled
-import linea.ethapi.EthLogsSearcherImpl
-import linea.web3j.createWeb3jHttpClient
-import linea.web3j.ethapi.createEthApiClient
+import lineth.LongRunningService
+import lineth.contract.l2.Web3JL2MessageServiceSmartContractClient
+import lineth.ethapi.EthLogsSearcherImpl
+import lineth.web3j.createWeb3jHttpClient
+import lineth.web3j.ethapi.createEthApiClient
 import org.apache.logging.log4j.LogManager
 
 object MessageAnchoringAppConfigurator {

@@ -1,7 +1,7 @@
 package net.consensys.linea.ethereum.gaspricing.dynamiccap
 
-import linea.domain.FeeHistory
-import linea.kotlin.toGWei
+import lineth.domain.FeeHistory
+import lineth.kotlin.toGWei
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.time.DayOfWeek
 import kotlin.time.Duration

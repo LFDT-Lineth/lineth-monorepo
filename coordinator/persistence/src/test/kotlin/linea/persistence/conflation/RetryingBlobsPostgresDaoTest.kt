@@ -2,13 +2,13 @@ package linea.persistence.conflation
 
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import linea.domain.BlobCompressionProof
-import linea.domain.BlockIntervals
-import linea.domain.createBlobRecord
-import linea.kotlin.setFirstByteToZero
-import linea.kotlin.trimToSecondPrecision
-import linea.persistence.db.PersistenceRetryer
-import net.consensys.FakeFixedClock
+import lineth.FakeFixedClock
+import lineth.domain.BlobCompressionProof
+import lineth.domain.BlockIntervals
+import lineth.domain.createBlobRecord
+import lineth.kotlin.setFirstByteToZero
+import lineth.kotlin.trimToSecondPrecision
+import lineth.persistence.db.PersistenceRetryer
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith

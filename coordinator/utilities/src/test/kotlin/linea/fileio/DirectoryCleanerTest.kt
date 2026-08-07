@@ -2,8 +2,8 @@ package linea.fileio
 
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import net.consensys.linea.async.get
-import net.consensys.linea.async.toSafeFuture
+import lineth.async.get
+import lineth.async.toSafeFuture
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith

@@ -1,12 +1,12 @@
 package net.consensys.linea.ethereum.gaspricing.staticcap
 
-import linea.OneKWei
-import linea.domain.BlockWithTxHashes
-import linea.domain.createBlock
-import linea.domain.toBlockParameter
-import linea.domain.toBlockWithRandomTxHashes
-import linea.ethapi.EthApiBlockClient
-import linea.kotlin.decodeHex
+import lineth.OneKWei
+import lineth.domain.BlockWithTxHashes
+import lineth.domain.createBlock
+import lineth.domain.toBlockParameter
+import lineth.domain.toBlockWithRandomTxHashes
+import lineth.ethapi.EthApiBlockClient
+import lineth.kotlin.decodeHex
 import net.consensys.linea.ethereum.gaspricing.MinerExtraDataV1
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy

@@ -1,11 +1,11 @@
 package linea.coordinator.clients.prover
 
-import linea.clients.ProverFileNameProvider
-import linea.domain.AggregationProofIndex
-import linea.domain.CompressionProofIndex
-import linea.domain.ExecutionProofIndex
-import linea.domain.InvalidityProofIndex
-import linea.kotlin.encodeHex
+import lineth.clients.ProverFileNameProvider
+import lineth.domain.AggregationProofIndex
+import lineth.domain.CompressionProofIndex
+import lineth.domain.ExecutionProofIndex
+import lineth.domain.InvalidityProofIndex
+import lineth.kotlin.encodeHex
 
 object FileNameSuffixes {
   const val EXECUTION_PROOF_SUFFIX = "getZkProof.json"

@@ -1,9 +1,9 @@
 package linea.coordinator.clients.prover.riscv
 
-import linea.crypto.HashFunction
-import linea.domain.BlockInterval
-import linea.domain.BlockIntervalProofIndex
-import linea.domain.StartBlockTimestampProvider
+import lineth.crypto.HashFunction
+import lineth.domain.BlockInterval
+import lineth.domain.BlockIntervalProofIndex
+import lineth.domain.StartBlockTimestampProvider
 
 internal class BlockIntervalProofIndexProvider<Request>(
   private val hashFunction: HashFunction,

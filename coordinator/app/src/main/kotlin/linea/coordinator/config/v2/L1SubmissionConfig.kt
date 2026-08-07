@@ -1,6 +1,6 @@
 package linea.coordinator.config.v2
 
-import linea.domain.RetryConfig
+import lineth.domain.RetryConfig
 import net.consensys.linea.ethereum.gaspricing.dynamiccap.TimeOfDayMultipliers
 import java.net.URL
 import kotlin.time.Duration

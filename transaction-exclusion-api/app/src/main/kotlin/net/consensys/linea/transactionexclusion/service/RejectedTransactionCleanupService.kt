@@ -1,8 +1,8 @@
 package net.consensys.linea.transactionexclusion.service
 
 import io.vertx.core.Vertx
-import linea.timer.TimerSchedule
-import linea.timer.VertxPeriodicPollingService
+import lineth.timer.TimerSchedule
+import lineth.timer.VertxPeriodicPollingService
 import net.consensys.zkevm.persistence.dao.rejectedtransaction.RejectedTransactionsDao
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger

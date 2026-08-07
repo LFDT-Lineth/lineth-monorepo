@@ -1,9 +1,9 @@
 package linea.coordination.proofcreation
 
-import linea.domain.Batch
-import linea.domain.ExecutionProofIndex
-import linea.error.DuplicatedRecordException
 import linea.persistence.BatchesRepository
+import lineth.domain.Batch
+import lineth.domain.ExecutionProofIndex
+import lineth.error.DuplicatedRecordException
 import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 

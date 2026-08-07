@@ -3,7 +3,7 @@ package linea.coordinator.config.v2
 import linea.coordinator.config.v2.toml.RequestRetriesToml
 import linea.coordinator.config.v2.toml.StateManagerToml
 import linea.coordinator.config.v2.toml.parseConfig
-import linea.kotlin.toURL
+import lineth.kotlin.toURL
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import kotlin.time.Duration.Companion.seconds

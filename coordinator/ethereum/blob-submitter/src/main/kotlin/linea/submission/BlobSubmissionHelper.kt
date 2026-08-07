@@ -1,9 +1,9 @@
 package linea.submission
 
-import linea.domain.BlockInterval
-import linea.domain.BlockIntervals
-import linea.domain.assertConsecutiveIntervals
-import linea.domain.toBlockIntervalsString
+import lineth.domain.BlockInterval
+import lineth.domain.BlockIntervals
+import lineth.domain.assertConsecutiveIntervals
+import lineth.domain.toBlockIntervalsString
 import org.apache.logging.log4j.Logger
 import kotlin.math.min
 

@@ -8,9 +8,11 @@
  */
 package maru.syncing.beaconchain
 
-import linea.kotlin.decodeHex
-import linea.timer.JvmTimerFactory
-import linea.timer.TimerFactory
+import lineth.kotlin.decodeHex
+import lineth.metrics.Counter
+import lineth.metrics.MetricsFacade
+import lineth.timer.JvmTimerFactory
+import lineth.timer.TimerFactory
 import maru.config.P2PConfig
 import maru.consensus.ChainFork
 import maru.consensus.ClFork
@@ -38,8 +40,6 @@ import maru.p2p.PeerLookup
 import maru.p2p.fork.ForkPeeringManager
 import maru.p2p.messages.StatusManager
 import maru.syncing.beaconchain.pipeline.BeaconChainDownloadPipelineFactory.Config
-import net.consensys.linea.metrics.Counter
-import net.consensys.linea.metrics.MetricsFacade
 import org.apache.tuweni.bytes.Bytes32
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await

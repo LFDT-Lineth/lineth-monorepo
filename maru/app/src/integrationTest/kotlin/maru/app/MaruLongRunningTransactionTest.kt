@@ -8,7 +8,7 @@
  */
 package maru.app
 
-import linea.testing.besu.BesuTransactionsHelper
+import lineth.testing.besu.BesuTransactionsHelper
 import maru.config.QbftConfig
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat

@@ -8,12 +8,12 @@
  */
 package maru.executionlayer.client
 
+import lineth.async.toSafeFuture
+import lineth.metrics.MetricsFacade
 import maru.consensus.ElFork
 import maru.core.ExecutionPayload
 import maru.executionlayer.mappers.Mappers.toDomainExecutionPayload
 import maru.executionlayer.mappers.Mappers.toExecutionPayloadV2
-import net.consensys.linea.async.toSafeFuture
-import net.consensys.linea.metrics.MetricsFacade
 import tech.pegasys.teku.ethereum.executionclient.schema.ForkChoiceStateV1
 import tech.pegasys.teku.ethereum.executionclient.schema.ForkChoiceUpdatedResult
 import tech.pegasys.teku.ethereum.executionclient.schema.PayloadAttributesV1

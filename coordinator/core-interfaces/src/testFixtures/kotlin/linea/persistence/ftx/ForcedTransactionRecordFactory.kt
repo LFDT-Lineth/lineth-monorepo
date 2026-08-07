@@ -1,7 +1,7 @@
 package linea.persistence.ftx
 
-import linea.forcedtx.ForcedTransactionInclusionResult
 import linea.persistence.ForcedTransactionRecord
+import lineth.forcedtx.ForcedTransactionInclusionResult
 import kotlin.time.Instant
 
 object ForcedTransactionRecordFactory {

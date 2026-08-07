@@ -3,11 +3,11 @@ package linea.persistence.conflation
 import io.vertx.core.Future
 import io.vertx.sqlclient.SqlClient
 import io.vertx.sqlclient.Tuple
-import linea.domain.Batch
-import linea.error.DuplicatedRecordException
-import linea.persistence.db.SQLQueryLogger
-import linea.persistence.db.isDuplicateKeyException
-import net.consensys.linea.async.toSafeFuture
+import lineth.async.toSafeFuture
+import lineth.domain.Batch
+import lineth.error.DuplicatedRecordException
+import lineth.persistence.db.SQLQueryLogger
+import lineth.persistence.db.isDuplicateKeyException
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture

@@ -46,7 +46,7 @@ class ConfigDocsPlugin implements Plugin<Project> {
       it.group = 'verification'
       it.description = 'Verifies that every config key is documented.'
       it.classpath = configDocs.runtimeClasspath
-      it.mainClass.set('linea.config.docs.ConfigDocsCheckMain')
+      it.mainClass.set('lineth.config.docs.ConfigDocsCheckMain')
       it.argumentProviders.add({ [specProvider.get()] } as org.gradle.process.CommandLineArgumentProvider)
     }
 
@@ -57,7 +57,7 @@ class ConfigDocsPlugin implements Plugin<Project> {
       it.group = 'documentation'
       it.description = 'Generates the config JSON schema snapshot and Markdown reference.'
       it.classpath = configDocs.runtimeClasspath
-      it.mainClass.set('linea.config.docs.ConfigDocsGenerateMain')
+      it.mainClass.set('lineth.config.docs.ConfigDocsGenerateMain')
       it.workingDir = project.rootProject.projectDir
       it.argumentProviders.add({ [specProvider.get()] } as org.gradle.process.CommandLineArgumentProvider)
     }

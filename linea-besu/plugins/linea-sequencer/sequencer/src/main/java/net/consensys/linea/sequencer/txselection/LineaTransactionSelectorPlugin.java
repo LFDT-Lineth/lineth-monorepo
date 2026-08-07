@@ -16,7 +16,7 @@ import static net.consensys.linea.metrics.LineaMetricCategory.SEQUENCER_PROFITAB
 import com.google.auto.service.AutoService;
 import java.math.BigInteger;
 import java.util.Optional;
-import linea.blob.BlobCompressorSelectorByTimestamp;
+import lineth.blob.BlobCompressorSelectorByTimestamp;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
 import net.consensys.linea.config.LineaRejectedTxReportingConfiguration;

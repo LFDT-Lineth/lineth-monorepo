@@ -5,10 +5,10 @@ import com.github.michaelbull.result.Result
 import io.vertx.core.Future
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.auth.User
-import net.consensys.linea.jsonrpc.JsonRpcErrorResponse
-import net.consensys.linea.jsonrpc.JsonRpcRequest
-import net.consensys.linea.jsonrpc.JsonRpcRequestHandler
-import net.consensys.linea.jsonrpc.JsonRpcSuccessResponse
+import lineth.jsonrpc.JsonRpcErrorResponse
+import lineth.jsonrpc.JsonRpcRequest
+import lineth.jsonrpc.JsonRpcRequestHandler
+import lineth.jsonrpc.JsonRpcSuccessResponse
 
 /**
  * JSON-RPC: signals that target checkpoint pause may resume when [linea.coordinator.config.v2.ConflationConfig.ProofAggregation.waitApiResumeAfterTargetBlock] is enabled.

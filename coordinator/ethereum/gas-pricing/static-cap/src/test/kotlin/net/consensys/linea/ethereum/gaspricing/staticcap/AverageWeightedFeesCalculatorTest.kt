@@ -1,6 +1,6 @@
 package net.consensys.linea.ethereum.gaspricing.staticcap
 
-import linea.domain.FeeHistory
+import lineth.domain.FeeHistory
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test

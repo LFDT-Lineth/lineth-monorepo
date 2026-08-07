@@ -8,7 +8,7 @@
  */
 package maru.core
 
-import linea.kotlin.encodeHex
+import lineth.kotlin.encodeHex
 import org.apache.tuweni.bytes.Bytes
 
 data class Validator(

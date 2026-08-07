@@ -6,8 +6,8 @@ import linea.staterecovery.FileBasedRecoveryStatusPersistence
 import linea.staterecovery.RecoveryStatusPersistence
 import linea.staterecovery.StateRecoveryApp
 import linea.staterecovery.clients.ExecutionLayerInProcessClient
-import net.consensys.linea.async.get
-import net.consensys.linea.vertx.VertxFactory.createVertx
+import lineth.async.get
+import lineth.vertx.VertxFactory.createVertx
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.hyperledger.besu.plugin.BesuPlugin

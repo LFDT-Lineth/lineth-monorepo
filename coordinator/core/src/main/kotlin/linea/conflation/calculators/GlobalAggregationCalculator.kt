@@ -1,10 +1,10 @@
 package linea.conflation.calculators
 
-import linea.domain.BlobCounters
-import linea.domain.BlobsToAggregate
 import linea.metrics.LineaMetricsCategory
-import net.consensys.linea.metrics.Counter
-import net.consensys.linea.metrics.MetricsFacade
+import lineth.domain.BlobCounters
+import lineth.domain.BlobsToAggregate
+import lineth.metrics.Counter
+import lineth.metrics.MetricsFacade
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import java.util.PriorityQueue

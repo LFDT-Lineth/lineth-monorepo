@@ -1,12 +1,14 @@
 package linea.coordinator.app
 
 import io.vertx.core.Vertx
-import linea.LongRunningService
 import linea.coordinator.config.toJsonRpcRetry
 import linea.coordinator.config.v2.L2NetworkGasPricingConfig
-import linea.ethapi.EthApiClient
-import linea.kotlin.toKWeiUInt
-import linea.web3j.ethapi.createEthApiClient
+import lineth.LongRunningService
+import lineth.ethapi.EthApiClient
+import lineth.jsonrpc.client.VertxHttpJsonRpcClientFactory
+import lineth.kotlin.toKWeiUInt
+import lineth.metrics.MetricsFacade
+import lineth.web3j.ethapi.createEthApiClient
 import net.consensys.linea.ethereum.gaspricing.BoundableFeeCalculator
 import net.consensys.linea.ethereum.gaspricing.staticcap.ExtraDataV1UpdaterImpl
 import net.consensys.linea.ethereum.gaspricing.staticcap.FeeHistoryFetcherImpl
@@ -15,8 +17,6 @@ import net.consensys.linea.ethereum.gaspricing.staticcap.L2CalldataSizeAccumulat
 import net.consensys.linea.ethereum.gaspricing.staticcap.MinerExtraDataV1CalculatorImpl
 import net.consensys.linea.ethereum.gaspricing.staticcap.TransactionCostCalculator
 import net.consensys.linea.ethereum.gaspricing.staticcap.VariableFeesCalculator
-import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
-import net.consensys.linea.metrics.MetricsFacade
 import org.apache.logging.log4j.LogManager
 import java.util.concurrent.CompletableFuture
 import kotlin.time.Duration

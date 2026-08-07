@@ -10,9 +10,9 @@ package maru.config
 
 import com.sksamuel.hoplite.ConfigException
 import com.sksamuel.hoplite.ExperimentalHoplite
-import linea.domain.BlockParameter
-import linea.domain.RetryConfig
-import linea.kotlin.decodeHex
+import lineth.domain.BlockParameter
+import lineth.domain.RetryConfig
+import lineth.kotlin.decodeHex
 import maru.config.MaruConfigLoader.parseConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy

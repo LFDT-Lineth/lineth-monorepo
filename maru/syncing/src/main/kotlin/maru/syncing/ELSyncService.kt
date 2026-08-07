@@ -8,10 +8,10 @@
  */
 package maru.syncing
 
-import linea.kotlin.encodeHex
-import linea.timer.PeriodicPollingService
-import linea.timer.TimerFactory
-import linea.timer.TimerSchedule
+import lineth.kotlin.encodeHex
+import lineth.timer.PeriodicPollingService
+import lineth.timer.TimerFactory
+import lineth.timer.TimerSchedule
 import maru.consensus.NewBlockHandler
 import maru.core.GENESIS_EXECUTION_PAYLOAD
 import maru.database.BeaconChain

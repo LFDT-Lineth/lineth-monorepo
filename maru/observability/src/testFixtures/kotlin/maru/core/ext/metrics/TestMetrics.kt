@@ -11,9 +11,9 @@ package maru.core.ext.metrics
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
+import lineth.metrics.MetricsFacade
+import lineth.metrics.micrometer.MicrometerMetricsFacade
 import maru.metrics.BesuMetricsSystemAdapter
-import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import org.hyperledger.besu.plugin.services.MetricsSystem
 
 object TestMetrics {

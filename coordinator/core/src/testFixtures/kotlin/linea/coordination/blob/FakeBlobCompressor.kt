@@ -1,7 +1,7 @@
 package linea.coordination.blob
 
-import linea.blob.BlobCompressor
-import linea.blob.BlobCompressorVersion
+import lineth.blob.BlobCompressor
+import lineth.blob.BlobCompressorVersion
 import org.apache.logging.log4j.LogManager
 import kotlin.random.Random
 

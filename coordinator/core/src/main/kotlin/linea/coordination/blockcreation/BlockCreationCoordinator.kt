@@ -1,6 +1,6 @@
 package linea.coordination.blockcreation
 
-import linea.domain.Block
+import lineth.domain.Block
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 data class BlockCreated(

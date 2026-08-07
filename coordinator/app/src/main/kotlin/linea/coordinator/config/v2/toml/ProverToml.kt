@@ -1,10 +1,10 @@
 package linea.coordinator.config.v2.toml
 
-import linea.config.docs.ConfigDoc
-import linea.config.docs.ConfigSection
 import linea.coordinator.clients.prover.FileBasedProverConfig
 import linea.coordinator.clients.prover.ProverConfig
 import linea.coordinator.clients.prover.ProversConfig
+import lineth.config.docs.ConfigDoc
+import lineth.config.docs.ConfigSection
 import java.nio.file.Path
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds

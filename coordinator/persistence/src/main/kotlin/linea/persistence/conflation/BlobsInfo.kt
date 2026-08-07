@@ -2,10 +2,10 @@ package linea.persistence.conflation
 
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
-import linea.domain.BlobData
-import linea.domain.BlobRecordV2
-import linea.kotlin.decodeHex
-import linea.kotlin.encodeHex
+import lineth.domain.BlobData
+import lineth.domain.BlobRecordV2
+import lineth.kotlin.decodeHex
+import lineth.kotlin.encodeHex
 
 data class BlobsInfo(
   val parentShnarf: ByteArray,

@@ -1,9 +1,9 @@
 package linea.test
 
 import io.vertx.core.Vertx
-import linea.domain.CommonDomainFunctions
-import linea.ethapi.EthApiClient
-import linea.web3j.ethapi.createEthApiClient
+import lineth.domain.CommonDomainFunctions
+import lineth.ethapi.EthApiClient
+import lineth.web3j.ethapi.createEthApiClient
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger

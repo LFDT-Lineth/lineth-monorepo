@@ -2,12 +2,12 @@ package linea.coordinator.clients.prover
 
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import linea.clients.ProverFileNameProvider
 import linea.coordinator.clients.prover.serialization.JsonSerialization
-import linea.domain.BlockInterval
-import linea.domain.ProofIndex
 import linea.fileio.FileReader
 import linea.fileio.FileWriter
+import lineth.clients.ProverFileNameProvider
+import lineth.domain.BlockInterval
+import lineth.domain.ProofIndex
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.BeforeEach

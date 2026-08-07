@@ -1,7 +1,7 @@
 package linea.fileio
 
 import io.vertx.core.Vertx
-import net.consensys.linea.async.toSafeFuture
+import lineth.async.toSafeFuture
 import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.io.File

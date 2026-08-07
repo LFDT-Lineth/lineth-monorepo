@@ -1,7 +1,7 @@
 package linea.conflation.calculators
 
-import linea.domain.BlockCounters
-import linea.domain.ConflationTrigger
+import lineth.domain.BlockCounters
+import lineth.domain.ConflationTrigger
 
 class ConflationTriggerCalculatorByBlockLimit(
   private val blockLimit: UInt,

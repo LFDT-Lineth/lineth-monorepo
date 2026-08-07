@@ -1,10 +1,10 @@
 package linea.coordination.blob
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
-import linea.blob.BlobCompressionException
-import linea.blob.BlobCompressorVersion
-import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
+import lineth.blob.BlobCompressionException
+import lineth.blob.BlobCompressorVersion
+import lineth.metrics.MetricsFacade
+import lineth.metrics.micrometer.MicrometerMetricsFacade
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

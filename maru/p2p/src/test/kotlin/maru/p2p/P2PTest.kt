@@ -10,7 +10,7 @@ package maru.p2p
 
 import io.libp2p.core.PeerId
 import io.libp2p.etc.types.fromHex
-import linea.timer.JvmTimerFactory
+import lineth.timer.JvmTimerFactory
 import maru.config.P2PConfig
 import maru.consensus.ForkIdManagerFactory.createForkIdHashManager
 import maru.core.BeaconBlockHeader

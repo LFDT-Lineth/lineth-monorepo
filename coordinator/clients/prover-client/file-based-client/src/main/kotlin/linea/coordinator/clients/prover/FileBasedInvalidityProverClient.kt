@@ -5,14 +5,14 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.vertx.core.Vertx
-import linea.clients.InvalidityProofRequest
-import linea.clients.InvalidityProofResponse
-import linea.clients.InvalidityProverClientV1
 import linea.coordinator.clients.prover.serialization.JsonSerialization
-import linea.domain.InvalidityProofIndex
 import linea.fileio.FileReader
 import linea.fileio.FileWriter
-import linea.kotlin.encodeHex
+import lineth.clients.InvalidityProofRequest
+import lineth.clients.InvalidityProofResponse
+import lineth.clients.InvalidityProverClientV1
+import lineth.domain.InvalidityProofIndex
+import lineth.kotlin.encodeHex
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.nio.file.Path
 

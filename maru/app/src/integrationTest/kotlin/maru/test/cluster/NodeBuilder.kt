@@ -8,7 +8,7 @@
  */
 package maru.test.cluster
 
-import linea.testing.besu.BesuFactory
+import lineth.testing.besu.BesuFactory
 import maru.config.MaruConfig
 import maru.crypto.PrivateKeyGenerator
 import java.nio.file.Path

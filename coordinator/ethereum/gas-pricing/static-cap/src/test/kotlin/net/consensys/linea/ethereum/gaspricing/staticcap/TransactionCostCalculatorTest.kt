@@ -1,6 +1,6 @@
 package net.consensys.linea.ethereum.gaspricing.staticcap
 
-import linea.domain.FeeHistory
+import lineth.domain.FeeHistory
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import kotlin.math.abs

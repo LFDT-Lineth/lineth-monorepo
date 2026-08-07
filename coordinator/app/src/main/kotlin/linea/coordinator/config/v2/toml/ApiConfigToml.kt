@@ -1,7 +1,7 @@
 package linea.coordinator.config.v2.toml
 
-import linea.config.docs.ConfigDoc
 import linea.coordinator.config.v2.ApiConfig
+import lineth.config.docs.ConfigDoc
 
 data class ApiConfigToml(
   @param:ConfigDoc(description = "Port serving observability endpoints (metrics/health).", default = "9545")

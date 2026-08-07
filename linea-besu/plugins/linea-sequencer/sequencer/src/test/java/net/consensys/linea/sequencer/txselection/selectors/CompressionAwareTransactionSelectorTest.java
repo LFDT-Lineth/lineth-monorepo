@@ -19,9 +19,9 @@ import static org.mockito.Mockito.when;
 
 import java.util.Map;
 import kotlin.time.Instant;
-import linea.blob.BlobCompressor;
-import linea.blob.BlobCompressorSelectorByTimestamp;
-import linea.blob.BlobCompressorVersion;
+import lineth.blob.BlobCompressor;
+import lineth.blob.BlobCompressorSelectorByTimestamp;
+import lineth.blob.BlobCompressorVersion;
 import net.consensys.linea.utils.CachingTransactionCompressor;
 import net.consensys.linea.utils.TestTransactionFactory;
 import net.consensys.linea.utils.TransactionCompressor;

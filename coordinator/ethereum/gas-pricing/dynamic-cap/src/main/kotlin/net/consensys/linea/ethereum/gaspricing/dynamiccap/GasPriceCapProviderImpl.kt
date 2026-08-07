@@ -1,9 +1,9 @@
 package net.consensys.linea.ethereum.gaspricing.dynamiccap
 
-import linea.domain.gas.GasPriceCaps
-import linea.domain.toBlockParameter
-import linea.ethapi.EthApiBlockClient
 import linea.gaspricing.GasPriceCapProvider
+import lineth.domain.gas.GasPriceCaps
+import lineth.domain.toBlockParameter
+import lineth.ethapi.EthApiBlockClient
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

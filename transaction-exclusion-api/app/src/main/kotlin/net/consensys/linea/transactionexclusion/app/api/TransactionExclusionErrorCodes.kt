@@ -1,6 +1,6 @@
 package net.consensys.linea.transactionexclusion.app.api
 
-import net.consensys.linea.jsonrpc.JsonRpcError
+import lineth.jsonrpc.JsonRpcError
 import net.consensys.linea.transactionexclusion.ErrorType
 import net.consensys.linea.transactionexclusion.TransactionExclusionError
 

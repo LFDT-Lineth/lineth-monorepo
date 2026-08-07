@@ -8,8 +8,9 @@
  */
 package maru.syncing
 
-import linea.kotlin.minusCoercingUnderflow
-import linea.timer.TimerFactory
+import lineth.kotlin.minusCoercingUnderflow
+import lineth.metrics.MetricsFacade
+import lineth.timer.TimerFactory
 import maru.consensus.ValidatorProvider
 import maru.database.BeaconChain
 import maru.p2p.PeerLookup
@@ -19,7 +20,6 @@ import maru.services.LongRunningService
 import maru.subscription.InOrderFanoutSubscriptionManager
 import maru.syncing.beaconchain.CLSyncServiceImpl
 import maru.syncing.beaconchain.pipeline.BeaconChainDownloadPipelineFactory
-import net.consensys.linea.metrics.MetricsFacade
 import org.apache.logging.log4j.LogManager
 import org.hyperledger.besu.plugin.services.MetricsSystem
 import java.util.concurrent.CompletableFuture

@@ -1,7 +1,7 @@
 package linea.coordinator.api.requesthandlers
 
-import net.consensys.linea.jsonrpc.JsonRpcRequestListParams
-import net.consensys.linea.jsonrpc.JsonRpcRequestMapParams
+import lineth.jsonrpc.JsonRpcRequestListParams
+import lineth.jsonrpc.JsonRpcRequestMapParams
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test

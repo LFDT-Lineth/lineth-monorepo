@@ -9,8 +9,8 @@ import com.sksamuel.hoplite.StringNode
 import com.sksamuel.hoplite.decoder.Decoder
 import com.sksamuel.hoplite.fp.invalid
 import com.sksamuel.hoplite.fp.valid
-import linea.domain.BlockParameter
-import linea.domain.toBlockParameter
+import lineth.domain.BlockParameter
+import lineth.domain.toBlockParameter
 import kotlin.reflect.KType
 
 @Suppress("UNCHECKED_CAST")

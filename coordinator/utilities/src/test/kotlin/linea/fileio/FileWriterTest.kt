@@ -3,7 +3,7 @@ package linea.fileio
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import net.consensys.linea.async.get
+import lineth.async.get
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test

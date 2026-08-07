@@ -1,9 +1,9 @@
 package linea.coordination.aggregation
 
-import linea.domain.BlobAndBatchCounters
-import linea.domain.BlobCounters
-import linea.domain.BlockIntervals
 import linea.persistence.AggregationsRepository
+import lineth.domain.BlobAndBatchCounters
+import lineth.domain.BlobCounters
+import lineth.domain.BlockIntervals
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any

@@ -19,9 +19,9 @@ import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.client.WebClientOptions
 import io.vertx.ext.web.client.impl.HttpResponseImpl
 import io.vertx.junit5.VertxExtension
-import linea.error.ErrorResponse
-import net.consensys.linea.httprest.client.RestErrorType
-import net.consensys.linea.httprest.client.VertxHttpRestClient
+import lineth.error.ErrorResponse
+import lineth.httprest.client.RestErrorType
+import lineth.httprest.client.VertxHttpRestClient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach

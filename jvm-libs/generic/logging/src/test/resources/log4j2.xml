@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration status="warn" packages="net.consensys.linea.logging">
+<Configuration status="warn" packages="lineth.logging">
   <Appenders>
     <Console name="console" target="SYSTEM_OUT" immediateFlush="true">
       <PatternLayout pattern="[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{20} - %msg%n"/>
@@ -18,7 +18,7 @@
     </Rewrite>
   </Appenders>
   <Loggers>
-    <Logger name="net.consensys.linea.logging" level="debug" additivity="false">
+    <Logger name="lineth.logging" level="debug" additivity="false">
       <DebouncingFilter/>
       <appender-ref ref="rewrite"/>
     </Logger>

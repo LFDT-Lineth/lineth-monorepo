@@ -1,14 +1,14 @@
 package linea.staterecovery.clients
 
-import linea.domain.BlockNumberAndHash
-import linea.domain.BlockParameter
-import linea.domain.CommonDomainFunctions
 import linea.staterecovery.BlockFromL1RecoveredData
 import linea.staterecovery.ExecutionLayerClient
 import linea.staterecovery.RecoveryStatusPersistence
 import linea.staterecovery.StateRecoveryStatus
 import linea.staterecovery.plugin.BlockImporter
 import linea.staterecovery.plugin.RecoveryModeManager
+import lineth.domain.BlockNumberAndHash
+import lineth.domain.BlockParameter
+import lineth.domain.CommonDomainFunctions
 import org.apache.logging.log4j.LogManager
 import org.apache.tuweni.bytes.Bytes32
 import org.hyperledger.besu.datatypes.Hash

@@ -1,11 +1,11 @@
 package linea.persistence.conflation
 
-import linea.domain.BlobRecord
-import linea.domain.BlobRecordV2
-import linea.error.DuplicatedRecordException
 import linea.persistence.BlobsRepository
 import linea.persistence.BlobsRepositoryG
 import linea.persistence.BlobsRepositoryV2
+import lineth.domain.BlobRecord
+import lineth.domain.BlobRecordV2
+import lineth.error.DuplicatedRecordException
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Instant
 

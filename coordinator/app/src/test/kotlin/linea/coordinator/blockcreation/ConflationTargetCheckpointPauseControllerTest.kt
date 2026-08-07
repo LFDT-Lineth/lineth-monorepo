@@ -1,6 +1,6 @@
 package linea.coordinator.blockcreation
 
-import linea.domain.createBlock
+import lineth.domain.createBlock
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.util.concurrent.atomic.AtomicLong

@@ -1,7 +1,7 @@
 package linea.persistence.conflation
 
-import linea.domain.Batch
 import linea.persistence.BatchesRepository
+import lineth.domain.Batch
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 class PostgresBatchesRepository(

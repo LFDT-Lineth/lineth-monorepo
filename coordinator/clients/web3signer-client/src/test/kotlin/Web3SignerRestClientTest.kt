@@ -6,9 +6,9 @@ import io.vertx.core.http.HttpVersion
 import io.vertx.core.http.PoolOptions
 import io.vertx.ext.web.client.WebClientOptions
 import io.vertx.junit5.VertxExtension
-import linea.crypto.Web3SignerRestClient
-import linea.kotlin.encodeHex
-import net.consensys.linea.httprest.client.VertxHttpRestClient
+import lineth.crypto.Web3SignerRestClient
+import lineth.httprest.client.VertxHttpRestClient
+import lineth.kotlin.encodeHex
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.util.encoders.Hex
 import org.junit.jupiter.api.AfterEach

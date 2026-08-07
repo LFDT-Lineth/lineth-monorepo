@@ -8,8 +8,8 @@
  */
 package maru.consensus
 
-import linea.timer.Timer
-import linea.timer.TimerFactory
+import lineth.timer.Timer
+import lineth.timer.TimerFactory
 import maru.core.Protocol
 import maru.subscription.SubscriptionNotifier
 import org.apache.logging.log4j.LogManager
@@ -43,7 +43,7 @@ class ProtocolStarter(
       name = "ProtocolStarterPoller",
       initialDelay = forkTransitionCheckInterval,
       period = forkTransitionCheckInterval,
-      timerSchedule = linea.timer.TimerSchedule.FIXED_RATE,
+      timerSchedule = lineth.timer.TimerSchedule.FIXED_RATE,
       errorHandler = {},
       task = { pollTask() },
     )

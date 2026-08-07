@@ -1,13 +1,13 @@
 package linea.coordinator.config.v2
 
 import com.sksamuel.hoplite.ConfigException
-import linea.blob.BlobCompressorVersion
-import linea.blob.ShnarfCalculatorVersion
 import linea.coordinator.config.v2.toml.ConflationToml
 import linea.coordinator.config.v2.toml.DefaultsToml
 import linea.coordinator.config.v2.toml.parseConfig
-import linea.kotlin.toURL
-import net.consensys.linea.traces.TracesCountersV5
+import lineth.blob.BlobCompressorVersion
+import lineth.blob.ShnarfCalculatorVersion
+import lineth.kotlin.toURL
+import lineth.traces.TracesCountersV5
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -142,7 +142,6 @@ class ConflationParsingTest {
 
     @JvmStatic
     fun blobCompressionVersionTestCases(): Stream<Arguments> = Stream.of(
-      Arguments.of(BlobCompressorVersion.V2, ShnarfCalculatorVersion.V1_2),
       Arguments.of(BlobCompressorVersion.V3, ShnarfCalculatorVersion.V3),
       Arguments.of(BlobCompressorVersion.V4, ShnarfCalculatorVersion.V3),
     )

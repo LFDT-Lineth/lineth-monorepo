@@ -36,8 +36,8 @@ configurations.all {
 dependencies {
   api project(":linea-besu:plugins:sequencer-interfaces")
   implementation project(":tracer:arithmetization")
-  implementation "build.linea:blob-compressor:${libs.versions.blobCompressor.get()}"
-  implementation "build.linea.internal:kotlin:${libs.versions.lineaKotlin.get()}"
+  implementation project(":jvm-libs:linea:blob-compressor")
+  implementation project(":jvm-libs:generic:extensions:kotlin")
   implementation "org.jetbrains.kotlin:kotlin-stdlib:${libs.versions.kotlin.get()}"
 
   testImplementation 'org.assertj:assertj-core'

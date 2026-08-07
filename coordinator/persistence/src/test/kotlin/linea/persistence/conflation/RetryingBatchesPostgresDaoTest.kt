@@ -2,8 +2,8 @@ package linea.persistence.conflation
 
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import linea.domain.createBatch
-import linea.persistence.db.PersistenceRetryer
+import lineth.domain.createBatch
+import lineth.persistence.db.PersistenceRetryer
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith

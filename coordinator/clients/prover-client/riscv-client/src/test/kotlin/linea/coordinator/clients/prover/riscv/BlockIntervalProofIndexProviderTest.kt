@@ -1,8 +1,8 @@
 package linea.coordinator.clients.prover.riscv
 
-import linea.crypto.HashFunction
-import linea.domain.BlockInterval
-import linea.domain.StartBlockTimestampProvider
+import lineth.crypto.HashFunction
+import lineth.domain.BlockInterval
+import lineth.domain.StartBlockTimestampProvider
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import kotlin.time.Instant

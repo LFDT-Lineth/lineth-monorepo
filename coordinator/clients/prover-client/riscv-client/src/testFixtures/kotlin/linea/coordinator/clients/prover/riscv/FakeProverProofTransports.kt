@@ -1,7 +1,7 @@
 package linea.coordinator.clients.prover.riscv
 
-import linea.domain.BlockIntervalProofIndex
-import linea.kotlin.encodeHex
+import lineth.domain.BlockIntervalProofIndex
+import lineth.kotlin.encodeHex
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 /**

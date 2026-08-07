@@ -1,11 +1,11 @@
 package linea.coordinator.config.v2.toml
 
-import linea.blob.BlobCompressorVersion
-import linea.config.docs.ConfigDoc
-import linea.config.docs.ConfigSection
 import linea.coordinator.config.v2.ConflationConfig
-import net.consensys.linea.traces.TracesCountersV4
-import net.consensys.linea.traces.TracesCountersV5
+import lineth.blob.BlobCompressorVersion
+import lineth.config.docs.ConfigDoc
+import lineth.config.docs.ConfigSection
+import lineth.traces.TracesCountersV4
+import lineth.traces.TracesCountersV5
 import java.net.URL
 import java.nio.file.Path
 import kotlin.time.Duration

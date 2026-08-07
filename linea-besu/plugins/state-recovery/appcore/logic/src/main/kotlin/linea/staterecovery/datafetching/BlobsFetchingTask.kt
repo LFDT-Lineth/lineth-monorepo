@@ -4,8 +4,8 @@ import io.vertx.core.Vertx
 import linea.staterecovery.BlobFetcher
 import linea.staterecovery.FinalizationAndDataEventsV3
 import linea.staterecovery.TransactionDetailsClient
-import linea.timer.TimerSchedule
-import linea.timer.VertxPeriodicPollingService
+import lineth.timer.TimerSchedule
+import lineth.timer.VertxPeriodicPollingService
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

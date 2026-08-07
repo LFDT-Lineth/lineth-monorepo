@@ -8,7 +8,7 @@
  */
 package maru.metrics
 
-import net.consensys.linea.metrics.MetricsCategory
+import lineth.metrics.MetricsCategory
 
 enum class MaruMetricsCategory : MetricsCategory {
   ENGINE_API,

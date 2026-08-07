@@ -1,6 +1,6 @@
 package linea.coordinator.app.conflation
 
-import linea.domain.BlockWithTxHashes
+import lineth.domain.BlockWithTxHashes
 
 data class LastProcessedBlocks(
   val lastConflatedBlock: BlockWithTxHashes,

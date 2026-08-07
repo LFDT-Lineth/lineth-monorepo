@@ -14,7 +14,7 @@ import linea.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.l2Ex
 import linea.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.l2ExecutionProofResponseDto
 import linea.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.proverJobResponseBody
 import linea.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.restClient
-import linea.domain.BlockIntervalProofIndex
+import lineth.domain.BlockIntervalProofIndex
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach

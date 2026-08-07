@@ -1,7 +1,7 @@
 package linea.persistence.conflation
 
-import linea.domain.BlobRecord
-import linea.domain.BlobRecordV2
+import lineth.domain.BlobRecord
+import lineth.domain.BlobRecordV2
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Instant
 

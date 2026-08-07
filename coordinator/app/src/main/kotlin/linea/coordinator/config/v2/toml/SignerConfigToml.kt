@@ -1,10 +1,10 @@
 package linea.coordinator.config.v2.toml
 
 import com.sksamuel.hoplite.Masked
-import linea.config.docs.ConfigDoc
-import linea.config.docs.ConfigSection
 import linea.coordinator.config.v2.SignerConfig
-import linea.kotlin.decodeHex
+import lineth.config.docs.ConfigDoc
+import lineth.config.docs.ConfigSection
+import lineth.kotlin.decodeHex
 import java.net.URL
 import java.nio.file.Path
 

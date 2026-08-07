@@ -1,6 +1,6 @@
 package linea.coordination.blob
 
-import linea.blob.BlobCompressor
+import lineth.blob.BlobCompressor
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test

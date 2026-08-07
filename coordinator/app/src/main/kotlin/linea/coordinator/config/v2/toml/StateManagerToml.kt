@@ -1,8 +1,8 @@
 package linea.coordinator.config.v2.toml
 
-import linea.config.docs.ConfigDoc
-import linea.config.docs.ConfigSection
 import linea.coordinator.config.v2.StateManagerConfig
+import lineth.config.docs.ConfigDoc
+import lineth.config.docs.ConfigSection
 import java.net.URL
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds

@@ -11,7 +11,7 @@ package maru.test.genesis
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import linea.kotlin.isSortedBy
+import lineth.kotlin.isSortedBy
 import maru.consensus.DifficultyAwareQbftConfig
 import maru.consensus.ElFork
 import maru.consensus.ForkSpec

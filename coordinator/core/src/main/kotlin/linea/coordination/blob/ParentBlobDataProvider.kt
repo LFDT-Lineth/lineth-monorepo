@@ -1,6 +1,6 @@
 package linea.coordination.blob
 
-import linea.domain.BlockInterval
+import lineth.domain.BlockInterval
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 data class BlobShnarfMetaData(

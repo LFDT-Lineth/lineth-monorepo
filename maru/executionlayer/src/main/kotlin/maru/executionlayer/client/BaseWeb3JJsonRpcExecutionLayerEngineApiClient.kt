@@ -8,12 +8,12 @@
  */
 package maru.executionlayer.client
 
-import linea.teku.getEndpoint
+import lineth.metrics.DynamicTagTimer
+import lineth.metrics.MetricsFacade
+import lineth.metrics.Tag
+import lineth.teku.getEndpoint
 import maru.executionlayer.manager.LatestBlockMetadata
 import maru.metrics.MaruMetricsCategory
-import net.consensys.linea.metrics.DynamicTagTimer
-import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.linea.metrics.Tag
 import tech.pegasys.teku.ethereum.executionclient.schema.Response
 import tech.pegasys.teku.ethereum.executionclient.web3j.Web3JClient
 import tech.pegasys.teku.ethereum.executionclient.web3j.Web3JExecutionEngineClient

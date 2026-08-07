@@ -9,13 +9,13 @@
 package chaos
 
 import chaos.SetupHelper.getNodesUrlsFromFile
-import linea.kotlin.toULong
-import linea.log4j.configureLoggers
-import linea.web3j.createWeb3jHttpClient
+import lineth.async.toSafeFuture
+import lineth.kotlin.toULong
+import lineth.log4j.configureLoggers
+import lineth.testing.filesystem.getPathTo
+import lineth.web3j.createWeb3jHttpClient
 import maru.api.beacon.SignedBeaconBlock
 import maru.clients.beacon.Http4kBeaconChainClient
-import net.consensys.linea.async.toSafeFuture
-import net.consensys.linea.testing.filesystem.getPathTo
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat

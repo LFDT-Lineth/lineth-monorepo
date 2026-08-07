@@ -1,10 +1,10 @@
 package linea.test
 
 import io.vertx.core.Vertx
-import linea.domain.Block
-import linea.domain.toBlockParameter
-import linea.ethapi.EthApiBlockClient
-import net.consensys.linea.async.AsyncRetryer
+import lineth.async.AsyncRetryer
+import lineth.domain.Block
+import lineth.domain.toBlockParameter
+import lineth.ethapi.EthApiBlockClient
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

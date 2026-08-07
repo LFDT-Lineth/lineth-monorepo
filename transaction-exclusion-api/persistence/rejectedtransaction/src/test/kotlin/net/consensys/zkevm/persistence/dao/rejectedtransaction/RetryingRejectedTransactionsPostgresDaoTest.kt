@@ -2,7 +2,7 @@ package net.consensys.zkevm.persistence.dao.rejectedtransaction
 
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import linea.persistence.db.PersistenceRetryer
+import lineth.persistence.db.PersistenceRetryer
 import net.consensys.linea.transactionexclusion.test.defaultRejectedTransaction
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

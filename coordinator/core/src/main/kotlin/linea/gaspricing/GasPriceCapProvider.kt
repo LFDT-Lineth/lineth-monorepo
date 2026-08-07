@@ -1,6 +1,6 @@
 package linea.gaspricing
 
-import linea.domain.gas.GasPriceCaps
+import lineth.domain.gas.GasPriceCaps
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Instant
 

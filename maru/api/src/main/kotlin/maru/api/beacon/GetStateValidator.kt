@@ -11,7 +11,7 @@ package maru.api.beacon
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.javalin.http.Context
 import io.javalin.http.Handler
-import linea.kotlin.encodeHex
+import lineth.kotlin.encodeHex
 import maru.api.ChainDataProvider
 
 data class GetStateValidatorResponse(

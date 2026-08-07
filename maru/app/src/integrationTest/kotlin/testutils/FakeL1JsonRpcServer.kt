@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicReference
 /**
  * Minimal fake L1 JSON-RPC server for integration tests.
  *
- * Serves the real [linea.contract.l1.Web3JLinethRollupSmartContractClientReadOnly]
+ * Serves the real [lineth.contract.l1.Web3JLinethRollupSmartContractClientReadOnly]
  *
  * Only [maru.finalization.LineaFinalizationProvider] contract call is supported: [finalizedL2BlockNumber] via
  * eth_call returning an ABI-encoded uint256. All other methods return safe no-op values.

@@ -1,9 +1,9 @@
 package net.consensys.linea.ethereum.gaspricing.staticcap
 
-import linea.domain.BlockParameter
-import linea.domain.FeeHistory
-import linea.ethapi.EthApiClient
-import linea.kotlin.toIntervalString
+import lineth.domain.BlockParameter
+import lineth.domain.FeeHistory
+import lineth.ethapi.EthApiClient
+import lineth.kotlin.toIntervalString
 import net.consensys.linea.ethereum.gaspricing.FeesFetcher
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger

@@ -1,14 +1,14 @@
 package linea.staterecovery
 
 import io.vertx.core.Vertx
-import linea.blob.BlobCompressor
-import linea.blob.BlobCompressorFactory
-import linea.blob.BlobCompressorVersion
-import linea.kotlin.encodeHex
-import linea.rlp.RLP
-import net.consensys.linea.blob.BlobDecompressorVersion
-import net.consensys.linea.blob.GoNativeBlobDecompressorFactory
-import net.consensys.linea.nativecompressor.CompressorTestData
+import lineth.blob.BlobCompressor
+import lineth.blob.BlobCompressorFactory
+import lineth.blob.BlobCompressorVersion
+import lineth.blob.BlobDecompressorVersion
+import lineth.blob.GoNativeBlobDecompressorFactory
+import lineth.kotlin.encodeHex
+import lineth.nativecompressor.CompressorTestData
+import lineth.rlp.RLP
 import org.apache.tuweni.bytes.Bytes32
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.fail

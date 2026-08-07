@@ -8,9 +8,9 @@
  */
 package maru.consensus.qbft
 
-import linea.teku.TekuWeb3JClientFactory
-import linea.testing.besu.BesuFactory
-import linea.testing.besu.BesuTransactionsHelper
+import lineth.teku.TekuWeb3JClientFactory
+import lineth.testing.besu.BesuFactory
+import lineth.testing.besu.BesuTransactionsHelper
 import maru.consensus.ValidatorProvider
 import maru.consensus.qbft.adapters.QbftBlockHeaderAdapter
 import maru.consensus.qbft.adapters.toBeaconBlock

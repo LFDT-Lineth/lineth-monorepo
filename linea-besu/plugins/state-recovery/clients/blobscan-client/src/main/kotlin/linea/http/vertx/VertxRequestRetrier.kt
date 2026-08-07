@@ -4,8 +4,8 @@ import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
 import io.vertx.ext.web.client.HttpRequest
 import io.vertx.ext.web.client.HttpResponse
-import linea.domain.RetryConfig
-import net.consensys.linea.async.AsyncRetryer
+import lineth.async.AsyncRetryer
+import lineth.domain.RetryConfig
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 class VertxRequestRetrier(

@@ -8,10 +8,10 @@
  */
 package maru.clients.beacon
 
+import lineth.async.toSafeFuture
 import maru.api.beacon.GetBlockResponse
 import maru.api.beacon.GetStateValidatorsResponse
 import maru.api.node.SyncingStatusData
-import net.consensys.linea.async.toSafeFuture
 import org.http4k.client.DualSyncAsyncHttpHandler
 import org.http4k.client.OkHttp
 import org.http4k.core.Body

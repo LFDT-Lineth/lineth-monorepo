@@ -1,6 +1,6 @@
 package linea.coordinator.api.dto
 
-import net.consensys.linea.jsonrpc.JsonRpcRequestListParams
+import lineth.jsonrpc.JsonRpcRequestListParams
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows

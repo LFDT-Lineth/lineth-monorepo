@@ -1,7 +1,7 @@
 package linea.conflation.calculators
 
-import linea.domain.BlobCounters
-import linea.domain.BlobsToAggregate
+import lineth.domain.BlobCounters
+import lineth.domain.BlobsToAggregate
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow

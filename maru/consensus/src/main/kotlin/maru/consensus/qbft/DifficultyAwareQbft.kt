@@ -8,9 +8,9 @@
  */
 package maru.consensus.qbft
 
-import linea.timer.Timer
-import linea.timer.TimerFactory
-import linea.timer.VertxTimerFactory
+import lineth.timer.Timer
+import lineth.timer.TimerFactory
+import lineth.timer.VertxTimerFactory
 import maru.consensus.DifficultyAwareQbftConfig
 import maru.consensus.ForkSpec
 import maru.consensus.ProtocolFactory
@@ -124,7 +124,7 @@ class DifficultyAwareQbft(
         name = "DifficultyAwareQbft",
         period = forkSpec.blockTimeSeconds.toInt().seconds,
         initialDelay = if (timerFactory is VertxTimerFactory) 1.milliseconds else Duration.ZERO,
-        timerSchedule = linea.timer.TimerSchedule.FIXED_RATE,
+        timerSchedule = lineth.timer.TimerSchedule.FIXED_RATE,
         errorHandler = { e -> log.warn("DifficultyAwareQbft poll task exception", e) },
         task = Runnable { pollTask() },
       )

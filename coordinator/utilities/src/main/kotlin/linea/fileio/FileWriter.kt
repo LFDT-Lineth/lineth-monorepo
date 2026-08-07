@@ -2,7 +2,7 @@ package linea.fileio
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.vertx.core.Vertx
-import net.consensys.linea.async.toSafeFutureNonNull
+import lineth.async.toSafeFutureNonNull
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.nio.file.Path
 import java.util.concurrent.Callable

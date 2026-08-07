@@ -5,9 +5,9 @@ import linea.coordinator.config.v2.toml.MessageAnchoringConfigToml
 import linea.coordinator.config.v2.toml.RequestRetriesToml
 import linea.coordinator.config.v2.toml.SignerConfigToml
 import linea.coordinator.config.v2.toml.parseConfig
-import linea.domain.BlockParameter
-import linea.kotlin.decodeHex
-import linea.kotlin.toURL
+import lineth.domain.BlockParameter
+import lineth.kotlin.decodeHex
+import lineth.kotlin.toURL
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import kotlin.time.Duration.Companion.milliseconds

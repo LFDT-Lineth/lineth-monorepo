@@ -2,15 +2,15 @@ package linea.conflation.calculators
 
 import linea.conflation.SafeBlockProvider
 import linea.coordination.blob.FakeBlobCompressor
-import linea.domain.BlockCounters
-import linea.domain.BlockHeaderSummary
-import linea.domain.ConflationCalculationResult
-import linea.domain.ConflationTrigger
-import linea.kotlin.ByteArrayExt
-import net.consensys.FakeFixedClock
-import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.linea.traces.TracesCountersV2
-import net.consensys.linea.traces.fakeTracesCountersV2
+import lineth.FakeFixedClock
+import lineth.domain.BlockCounters
+import lineth.domain.BlockHeaderSummary
+import lineth.domain.ConflationCalculationResult
+import lineth.domain.ConflationTrigger
+import lineth.kotlin.ByteArrayExt
+import lineth.metrics.MetricsFacade
+import lineth.traces.TracesCountersV2
+import lineth.traces.fakeTracesCountersV2
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

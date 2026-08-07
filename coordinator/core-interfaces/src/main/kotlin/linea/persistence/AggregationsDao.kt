@@ -1,8 +1,8 @@
 package linea.persistence
 
-import linea.domain.Aggregation
-import linea.domain.BlobAndBatchCounters
-import linea.domain.ProofToFinalize
+import lineth.domain.Aggregation
+import lineth.domain.BlobAndBatchCounters
+import lineth.domain.ProofToFinalize
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Instant
 

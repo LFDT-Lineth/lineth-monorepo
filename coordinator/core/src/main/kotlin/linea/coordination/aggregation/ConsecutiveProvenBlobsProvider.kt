@@ -1,6 +1,6 @@
 package linea.coordination.aggregation
 
-import linea.domain.BlobAndBatchCounters
+import lineth.domain.BlobAndBatchCounters
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 fun interface ConsecutiveProvenBlobsProvider {

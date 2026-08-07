@@ -3,7 +3,7 @@ package net.consensys.linea.ethereum.gaspricing.staticcap
 import io.vertx.core.Vertx
 import io.vertx.junit5.Timeout
 import io.vertx.junit5.VertxExtension
-import linea.domain.FeeHistory
+import lineth.domain.FeeHistory
 import net.consensys.linea.ethereum.gaspricing.BoundableFeeCalculator
 import net.consensys.linea.ethereum.gaspricing.FeesCalculator
 import net.consensys.linea.ethereum.gaspricing.FeesFetcher

@@ -1,7 +1,7 @@
 package linea.http.vertx
 
 import io.vertx.core.Vertx
-import linea.domain.RetryConfig
+import lineth.domain.RetryConfig
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.Logger
 import kotlin.time.Duration

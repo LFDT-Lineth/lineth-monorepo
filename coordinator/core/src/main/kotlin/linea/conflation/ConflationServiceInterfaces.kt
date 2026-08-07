@@ -1,9 +1,9 @@
 package linea.conflation
 
-import linea.domain.Blob
-import linea.domain.Block
-import linea.domain.BlockCounters
-import linea.domain.BlocksConflation
+import lineth.domain.Blob
+import lineth.domain.Block
+import lineth.domain.BlockCounters
+import lineth.domain.BlocksConflation
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 fun interface BlobCreationHandler {

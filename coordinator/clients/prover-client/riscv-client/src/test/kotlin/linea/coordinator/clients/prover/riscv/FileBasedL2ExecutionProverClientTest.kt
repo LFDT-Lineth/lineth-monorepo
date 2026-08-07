@@ -10,9 +10,9 @@ import linea.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.file
 import linea.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.jsonMapper
 import linea.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.l2ExecutionProofRequestV1
 import linea.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.l2ExecutionProofResponseDto
-import linea.domain.BlockIntervalProofIndex
 import linea.fileio.FileReader
 import linea.fileio.FileWriter
+import lineth.domain.BlockIntervalProofIndex
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

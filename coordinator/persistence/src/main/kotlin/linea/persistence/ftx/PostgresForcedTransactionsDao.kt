@@ -5,9 +5,9 @@ import io.vertx.sqlclient.SqlClient
 import io.vertx.sqlclient.Tuple
 import linea.persistence.ForcedTransactionRecord
 import linea.persistence.ForcedTransactionsDao
-import linea.persistence.db.PersistenceRetryer
-import linea.persistence.db.SQLQueryLogger
-import net.consensys.linea.async.toSafeFuture
+import lineth.async.toSafeFuture
+import lineth.persistence.db.PersistenceRetryer
+import lineth.persistence.db.SQLQueryLogger
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -25,29 +25,29 @@ class PostgresForcedTransactionsDao(
     /**
      * WARNING: Existing mappings should not change. Otherwise, can break production, new ones can be added though.
      */
-    fun inclusionResultToDbValue(result: linea.forcedtx.ForcedTransactionInclusionResult): Int {
+    fun inclusionResultToDbValue(result: lineth.forcedtx.ForcedTransactionInclusionResult): Int {
       return when (result) {
-        linea.forcedtx.ForcedTransactionInclusionResult.Included -> 1
-        linea.forcedtx.ForcedTransactionInclusionResult.BadNonce -> 2
-        linea.forcedtx.ForcedTransactionInclusionResult.BadBalance -> 3
-        linea.forcedtx.ForcedTransactionInclusionResult.BadPrecompile -> 4
-        linea.forcedtx.ForcedTransactionInclusionResult.TooManyLogs -> 5
-        linea.forcedtx.ForcedTransactionInclusionResult.FilteredAddressFrom -> 6
-        linea.forcedtx.ForcedTransactionInclusionResult.FilteredAddressTo -> 7
-        linea.forcedtx.ForcedTransactionInclusionResult.ChainSecurityRuleViolation -> 8
+        lineth.forcedtx.ForcedTransactionInclusionResult.Included -> 1
+        lineth.forcedtx.ForcedTransactionInclusionResult.BadNonce -> 2
+        lineth.forcedtx.ForcedTransactionInclusionResult.BadBalance -> 3
+        lineth.forcedtx.ForcedTransactionInclusionResult.BadPrecompile -> 4
+        lineth.forcedtx.ForcedTransactionInclusionResult.TooManyLogs -> 5
+        lineth.forcedtx.ForcedTransactionInclusionResult.FilteredAddressFrom -> 6
+        lineth.forcedtx.ForcedTransactionInclusionResult.FilteredAddressTo -> 7
+        lineth.forcedtx.ForcedTransactionInclusionResult.ChainSecurityRuleViolation -> 8
       }
     }
 
-    fun dbValueToInclusionResult(value: Short): linea.forcedtx.ForcedTransactionInclusionResult {
+    fun dbValueToInclusionResult(value: Short): lineth.forcedtx.ForcedTransactionInclusionResult {
       return when (value.toInt()) {
-        1 -> linea.forcedtx.ForcedTransactionInclusionResult.Included
-        2 -> linea.forcedtx.ForcedTransactionInclusionResult.BadNonce
-        3 -> linea.forcedtx.ForcedTransactionInclusionResult.BadBalance
-        4 -> linea.forcedtx.ForcedTransactionInclusionResult.BadPrecompile
-        5 -> linea.forcedtx.ForcedTransactionInclusionResult.TooManyLogs
-        6 -> linea.forcedtx.ForcedTransactionInclusionResult.FilteredAddressFrom
-        7 -> linea.forcedtx.ForcedTransactionInclusionResult.FilteredAddressTo
-        8 -> linea.forcedtx.ForcedTransactionInclusionResult.ChainSecurityRuleViolation
+        1 -> lineth.forcedtx.ForcedTransactionInclusionResult.Included
+        2 -> lineth.forcedtx.ForcedTransactionInclusionResult.BadNonce
+        3 -> lineth.forcedtx.ForcedTransactionInclusionResult.BadBalance
+        4 -> lineth.forcedtx.ForcedTransactionInclusionResult.BadPrecompile
+        5 -> lineth.forcedtx.ForcedTransactionInclusionResult.TooManyLogs
+        6 -> lineth.forcedtx.ForcedTransactionInclusionResult.FilteredAddressFrom
+        7 -> lineth.forcedtx.ForcedTransactionInclusionResult.FilteredAddressTo
+        8 -> lineth.forcedtx.ForcedTransactionInclusionResult.ChainSecurityRuleViolation
         else -> throw IllegalArgumentException("Unknown inclusion_result value: $value")
       }
     }

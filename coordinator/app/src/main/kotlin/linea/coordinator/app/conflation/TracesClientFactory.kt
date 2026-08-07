@@ -4,8 +4,8 @@ import linea.coordinator.clients.TracesGeneratorJsonRpcClientV2
 import linea.coordinator.config.toJsonRpcRetry
 import linea.coordinator.config.v2.TracesConfig
 import linea.coordinator.config.v2.TracesConfig.ClientApiConfig
-import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
-import net.consensys.linea.traces.TracesCounters
+import lineth.jsonrpc.client.VertxHttpJsonRpcClientFactory
+import lineth.traces.TracesCounters
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 

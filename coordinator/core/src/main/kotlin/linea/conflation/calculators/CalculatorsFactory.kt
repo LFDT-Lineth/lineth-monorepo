@@ -1,12 +1,12 @@
 package linea.conflation.calculators
 
-import linea.DisabledService
-import linea.LongRunningService
-import linea.blob.BlobCompressor
 import linea.conflation.SafeBlockProvider
-import linea.timer.TimerFactory
-import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.linea.traces.TracesCounters
+import lineth.DisabledService
+import lineth.LongRunningService
+import lineth.blob.BlobCompressor
+import lineth.metrics.MetricsFacade
+import lineth.timer.TimerFactory
+import lineth.traces.TracesCounters
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import java.util.concurrent.ConcurrentSkipListSet

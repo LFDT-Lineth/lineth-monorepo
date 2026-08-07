@@ -3,8 +3,8 @@ package linea.coordination.proofcreation
 import io.vertx.junit5.Timeout
 import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
-import linea.domain.Batch
 import linea.persistence.BatchesRepository
+import lineth.domain.Batch
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.kotlin.eq

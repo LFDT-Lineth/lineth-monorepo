@@ -12,10 +12,10 @@ import io.vertx.core.json.JsonObject
 import io.vertx.junit5.Timeout
 import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
-import net.consensys.linea.jsonrpc.client.RequestRetryConfig
-import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
-import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
+import lineth.jsonrpc.client.RequestRetryConfig
+import lineth.jsonrpc.client.VertxHttpJsonRpcClientFactory
+import lineth.metrics.MetricsFacade
+import lineth.metrics.micrometer.MicrometerMetricsFacade
 import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach

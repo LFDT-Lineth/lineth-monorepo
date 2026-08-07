@@ -1,8 +1,8 @@
 package net.consensys.linea.ethereum.gaspricing
 
-import linea.domain.FeeHistory
-import linea.kotlin.decodeHex
-import linea.kotlin.encodeHex
+import lineth.domain.FeeHistory
+import lineth.kotlin.decodeHex
+import lineth.kotlin.encodeHex
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.nio.ByteBuffer
 

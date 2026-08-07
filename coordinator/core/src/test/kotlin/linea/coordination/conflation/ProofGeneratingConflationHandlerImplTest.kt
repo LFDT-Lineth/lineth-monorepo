@@ -3,7 +3,7 @@ package linea.coordination.conflation
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.getError
-import linea.domain.createBlock
+import lineth.domain.createBlock
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 

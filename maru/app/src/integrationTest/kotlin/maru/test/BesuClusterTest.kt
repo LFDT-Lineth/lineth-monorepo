@@ -8,7 +8,7 @@
  */
 package maru.test
 
-import linea.testing.besu.BesuFactory
+import lineth.testing.besu.BesuFactory
 import maru.consensus.ChainFork
 import maru.consensus.ClFork
 import maru.consensus.DifficultyAwareQbftConfig

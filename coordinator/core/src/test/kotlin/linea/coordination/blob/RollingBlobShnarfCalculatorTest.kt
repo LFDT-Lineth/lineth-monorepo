@@ -1,10 +1,10 @@
 package linea.coordination.blob
 
-import linea.domain.BlobRecord
-import linea.domain.BlobShnarfCalculator
-import linea.domain.BlockIntervals
-import linea.domain.ShnarfResult
 import linea.persistence.BlobsRepository
+import lineth.domain.BlobRecord
+import lineth.domain.BlobShnarfCalculator
+import lineth.domain.BlockIntervals
+import lineth.domain.ShnarfResult
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

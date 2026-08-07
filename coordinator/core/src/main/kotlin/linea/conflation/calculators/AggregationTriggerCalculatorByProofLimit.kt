@@ -1,7 +1,7 @@
 package linea.conflation.calculators
 
-import linea.domain.BlobCounters
-import linea.domain.BlobsToAggregate
+import lineth.domain.BlobCounters
+import lineth.domain.BlobsToAggregate
 
 class AggregationTriggerCalculatorByProofLimit(private val maxProofsPerAggregation: UInt) :
   SyncAggregationTriggerCalculator {

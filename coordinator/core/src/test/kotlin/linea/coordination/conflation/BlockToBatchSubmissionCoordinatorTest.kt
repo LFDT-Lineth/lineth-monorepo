@@ -3,13 +3,13 @@ package linea.coordination.conflation
 import com.github.michaelbull.result.Ok
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import linea.clients.GetTracesCountersResponse
-import linea.clients.TracesCountersClientV2
 import linea.conflation.AlwaysSafeBlockNumberProvider
 import linea.conflation.ConflationService
 import linea.coordination.blockcreation.BlockCreated
-import linea.domain.createBlock
-import net.consensys.linea.traces.TracesCountersV2
+import lineth.clients.GetTracesCountersResponse
+import lineth.clients.TracesCountersClientV2
+import lineth.domain.createBlock
+import lineth.traces.TracesCountersV2
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.assertj.core.api.Assertions

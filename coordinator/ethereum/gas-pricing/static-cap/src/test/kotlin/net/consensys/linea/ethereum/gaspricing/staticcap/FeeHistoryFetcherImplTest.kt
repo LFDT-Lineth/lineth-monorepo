@@ -3,9 +3,9 @@ package net.consensys.linea.ethereum.gaspricing.staticcap
 import io.vertx.junit5.Timeout
 import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
-import linea.domain.BlockParameter
-import linea.domain.FeeHistory
-import linea.ethapi.EthApiClient
+import lineth.domain.BlockParameter
+import lineth.domain.FeeHistory
+import lineth.ethapi.EthApiClient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith

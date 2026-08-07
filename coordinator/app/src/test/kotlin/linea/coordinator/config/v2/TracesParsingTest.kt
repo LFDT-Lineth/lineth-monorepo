@@ -4,8 +4,8 @@ import linea.coordinator.config.v2.TracesConfig.ClientApiConfig
 import linea.coordinator.config.v2.toml.RequestRetriesToml
 import linea.coordinator.config.v2.toml.TracesToml
 import linea.coordinator.config.v2.toml.parseConfig
-import linea.domain.RetryConfig
-import linea.kotlin.toURL
+import lineth.domain.RetryConfig
+import lineth.kotlin.toURL
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.net.URI

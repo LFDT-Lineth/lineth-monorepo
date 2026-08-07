@@ -1,9 +1,9 @@
 package linea.coordinator.config.v2
 
-import linea.blob.BlobCompressorVersion
-import linea.blob.ShnarfCalculatorVersion
-import linea.domain.RetryConfig
-import net.consensys.linea.traces.TracesCounters
+import lineth.blob.BlobCompressorVersion
+import lineth.blob.ShnarfCalculatorVersion
+import lineth.domain.RetryConfig
+import lineth.traces.TracesCounters
 import java.net.URL
 import java.nio.file.Path
 import kotlin.time.Duration
@@ -42,9 +42,9 @@ data class ConflationConfig(
   ) {
     val shnarfCalculatorVersion: ShnarfCalculatorVersion
       get() = when (blobCompressorVersion) {
-        BlobCompressorVersion.V2 -> ShnarfCalculatorVersion.V1_2
         BlobCompressorVersion.V3 -> ShnarfCalculatorVersion.V3
         BlobCompressorVersion.V4 -> ShnarfCalculatorVersion.V3
+        else -> throw IllegalStateException("Unsupported blob compressor version: $blobCompressorVersion")
       }
   }
 

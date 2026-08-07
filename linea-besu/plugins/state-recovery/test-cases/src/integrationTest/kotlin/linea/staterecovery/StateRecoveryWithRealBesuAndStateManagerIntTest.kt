@@ -3,26 +3,26 @@ package linea.staterecovery
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import linea.ContractsManager
-import linea.EthApiClientManager
-import linea.LinethRollupDeploymentResult
-import linea.MakeFileDelegatedContractsManager.connectToLinethRollupContract
-import linea.MakeFileDelegatedContractsManager.linethRollupContractErrors
-import linea.clients.StateManagerClientV1
-import linea.clients.StateManagerV1JsonRpcClient
-import linea.contract.l1.LinethRollupContractVersion
-import linea.contract.l1.LinethRollupSmartContractClient
-import linea.log4j.configureLoggers
 import linea.staterecovery.test.assertBesuAndShomeiRecoveredAsExpected
 import linea.staterecovery.test.execCommandAndAssertSuccess
 import linea.staterecovery.test.waitExecutionLayerToBeUpAndRunning
-import linea.web3j.ethapi.createEthApiClient
-import net.consensys.linea.jsonrpc.client.RequestRetryConfig
-import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
-import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
-import net.consensys.linea.testing.submission.AggregationAndBlobs
-import net.consensys.linea.testing.submission.loadBlobsAndAggregationsSortedAndGrouped
-import net.consensys.linea.testing.submission.submitBlobsAndAggregationsAndWaitExecution
+import lineth.ContractsManager
+import lineth.EthApiClientManager
+import lineth.LinethRollupDeploymentResult
+import lineth.MakeFileDelegatedContractsManager.connectToLinethRollupContract
+import lineth.MakeFileDelegatedContractsManager.linethRollupContractErrors
+import lineth.clients.StateManagerClientV1
+import lineth.clients.StateManagerV1JsonRpcClient
+import lineth.contract.l1.LinethRollupContractVersion
+import lineth.contract.l1.LinethRollupSmartContractClient
+import lineth.jsonrpc.client.RequestRetryConfig
+import lineth.jsonrpc.client.VertxHttpJsonRpcClientFactory
+import lineth.log4j.configureLoggers
+import lineth.metrics.micrometer.MicrometerMetricsFacade
+import lineth.testing.submission.AggregationAndBlobs
+import lineth.testing.submission.loadBlobsAndAggregationsSortedAndGrouped
+import lineth.testing.submission.submitBlobsAndAggregationsAndWaitExecution
+import lineth.web3j.ethapi.createEthApiClient
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.junit.jupiter.api.BeforeEach
@@ -71,7 +71,7 @@ class StateRecoveryWithRealBesuAndStateManagerIntTest {
     configureLoggers(
       rootLevel = Level.INFO,
       log.name to Level.DEBUG,
-      "net.consensys.linea.contract.Web3JContractAsyncHelper" to Level.WARN, // silence noisy gasPrice Caps logs
+      "lineth.contract.Web3JContractAsyncHelper" to Level.WARN, // silence noisy gasPrice Caps logs
       "test.clients.l1.state-manager" to Level.DEBUG,
       "test.clients.l1.web3j-default" to Level.DEBUG,
     )

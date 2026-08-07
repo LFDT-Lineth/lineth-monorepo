@@ -8,18 +8,18 @@
  */
 package maru.p2p.discovery
 
-import linea.kotlin.encodeHex
-import linea.kotlin.toBigInteger
-import linea.kotlin.toULong
-import linea.timer.Timer
-import linea.timer.TimerFactory
-import linea.timer.TimerSchedule
-import linea.timer.VertxTimerFactory
+import lineth.async.toSafeFuture
+import lineth.kotlin.encodeHex
+import lineth.kotlin.toBigInteger
+import lineth.kotlin.toULong
+import lineth.timer.Timer
+import lineth.timer.TimerFactory
+import lineth.timer.TimerSchedule
+import lineth.timer.VertxTimerFactory
 import maru.config.P2PConfig
 import maru.database.P2PState
 import maru.p2p.fork.ForkPeeringManager
 import maru.services.LongRunningService
-import net.consensys.linea.async.toSafeFuture
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.apache.tuweni.bytes.Bytes

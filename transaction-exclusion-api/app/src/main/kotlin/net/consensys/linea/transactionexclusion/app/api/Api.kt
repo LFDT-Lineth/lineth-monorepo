@@ -4,14 +4,14 @@ import io.vertx.core.Deployable
 import io.vertx.core.DeploymentOptions
 import io.vertx.core.Future
 import io.vertx.core.Vertx
-import net.consensys.linea.jsonrpc.HttpRequestHandler
-import net.consensys.linea.jsonrpc.JsonRpcMessageHandler
-import net.consensys.linea.jsonrpc.JsonRpcMessageProcessor
-import net.consensys.linea.jsonrpc.JsonRpcRequestRouter
-import net.consensys.linea.jsonrpc.httpserver.HttpJsonRpcServer
-import net.consensys.linea.metrics.MetricsFacade
+import lineth.jsonrpc.HttpRequestHandler
+import lineth.jsonrpc.JsonRpcMessageHandler
+import lineth.jsonrpc.JsonRpcMessageProcessor
+import lineth.jsonrpc.JsonRpcRequestRouter
+import lineth.jsonrpc.httpserver.HttpJsonRpcServer
+import lineth.metrics.MetricsFacade
+import lineth.vertx.ObservabilityServer
 import net.consensys.linea.transactionexclusion.TransactionExclusionServiceV1
-import net.consensys.linea.vertx.ObservabilityServer
 import java.util.function.Supplier
 
 data class ApiConfig(

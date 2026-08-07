@@ -1,7 +1,7 @@
 package linea.submission
 
-import linea.contract.l1.LinethRollupSmartContractClient
-import linea.domain.createBlobRecord
+import lineth.contract.l1.LinethRollupSmartContractClient
+import lineth.domain.createBlobRecord
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any

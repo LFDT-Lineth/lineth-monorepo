@@ -1,7 +1,7 @@
 package linea.coordinator.config.v2
 
 import com.sksamuel.hoplite.Masked
-import linea.kotlin.encodeHex
+import lineth.kotlin.encodeHex
 import org.apache.logging.log4j.Logger
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.primaryConstructor

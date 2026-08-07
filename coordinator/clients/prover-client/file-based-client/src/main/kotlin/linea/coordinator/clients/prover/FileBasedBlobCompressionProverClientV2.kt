@@ -2,15 +2,15 @@ package linea.coordinator.clients.prover
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.vertx.core.Vertx
-import linea.clients.BlobCompressionProverClientV2
 import linea.coordinator.clients.prover.serialization.BlobCompressionProofJsonRequest
 import linea.coordinator.clients.prover.serialization.BlobCompressionProofJsonResponse
 import linea.coordinator.clients.prover.serialization.JsonSerialization
-import linea.domain.BlobCompressionProof
-import linea.domain.BlobCompressionProofRequest
-import linea.domain.CompressionProofIndex
 import linea.fileio.FileReader
 import linea.fileio.FileWriter
+import lineth.clients.BlobCompressionProverClientV2
+import lineth.domain.BlobCompressionProof
+import lineth.domain.BlobCompressionProofRequest
+import lineth.domain.CompressionProofIndex
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

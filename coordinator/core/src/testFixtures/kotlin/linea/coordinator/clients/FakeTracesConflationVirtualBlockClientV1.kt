@@ -1,10 +1,10 @@
 package linea.coordinator.clients
 
 import com.github.michaelbull.result.Result
-import linea.clients.GenerateTracesResponse
-import linea.clients.TracesConflationVirtualBlockClientV1
-import linea.clients.TracesServiceErrorType
-import linea.error.ErrorResponse
+import lineth.clients.GenerateTracesResponse
+import lineth.clients.TracesConflationVirtualBlockClientV1
+import lineth.clients.TracesServiceErrorType
+import lineth.error.ErrorResponse
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 class FakeTracesConflationVirtualBlockClientV1 : TracesConflationVirtualBlockClientV1 {

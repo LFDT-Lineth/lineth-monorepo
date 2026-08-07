@@ -1,7 +1,7 @@
 package linea.coordinator.config.v2
 
-import linea.domain.BlockParameter
-import linea.kotlin.encodeHex
+import lineth.domain.BlockParameter
+import lineth.kotlin.encodeHex
 import kotlin.time.Duration
 
 data class ProtocolConfig(

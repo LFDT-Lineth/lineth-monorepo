@@ -1,11 +1,11 @@
 package linea.persistence.conflation
 
-import linea.domain.Aggregation
-import linea.domain.BlobAndBatchCounters
-import linea.domain.ProofToFinalize
-import linea.error.DuplicatedRecordException
 import linea.persistence.AggregationsDao
 import linea.persistence.AggregationsRepository
+import lineth.domain.Aggregation
+import lineth.domain.BlobAndBatchCounters
+import lineth.domain.ProofToFinalize
+import lineth.error.DuplicatedRecordException
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Instant
 

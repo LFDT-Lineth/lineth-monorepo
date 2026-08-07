@@ -1,6 +1,6 @@
 package net.consensys.linea.transactionexclusion
 
-import linea.kotlin.encodeHex
+import lineth.kotlin.encodeHex
 import kotlin.time.Instant
 
 data class ModuleOverflow(

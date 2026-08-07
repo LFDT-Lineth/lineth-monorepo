@@ -8,10 +8,10 @@
  */
 package maru.app
 
-import linea.testing.besu.BesuFactory
-import linea.testing.besu.BesuTransactionsHelper
-import linea.testing.besu.ethGetBlockByNumber
-import linea.testing.besu.startWithRetry
+import lineth.testing.besu.BesuFactory
+import lineth.testing.besu.BesuTransactionsHelper
+import lineth.testing.besu.ethGetBlockByNumber
+import lineth.testing.besu.startWithRetry
 import maru.config.SyncingConfig
 import maru.p2p.testutils.NetworkUtil.findStablePort
 import org.apache.logging.log4j.LogManager

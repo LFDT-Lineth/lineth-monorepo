@@ -1,6 +1,6 @@
 package linea.persistence
 
-import linea.domain.Batch
+import lineth.domain.Batch
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 interface BatchesRepository {

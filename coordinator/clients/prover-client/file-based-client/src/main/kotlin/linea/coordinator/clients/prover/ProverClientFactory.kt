@@ -1,15 +1,15 @@
 package linea.coordinator.clients.prover
 
 import io.vertx.core.Vertx
-import linea.clients.BlobCompressionProverClientV2
-import linea.clients.ExecutionProverClientV2
-import linea.clients.InvalidityProverClientV1
-import linea.clients.ProofAggregationProverClientV2
-import linea.clients.ProverClient
-import linea.domain.ProofIndex
 import linea.metrics.LineaMetricsCategory
-import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.linea.metrics.micrometer.GaugeAggregator
+import lineth.clients.BlobCompressionProverClientV2
+import lineth.clients.ExecutionProverClientV2
+import lineth.clients.InvalidityProverClientV1
+import lineth.clients.ProofAggregationProverClientV2
+import lineth.clients.ProverClient
+import lineth.domain.ProofIndex
+import lineth.metrics.MetricsFacade
+import lineth.metrics.micrometer.GaugeAggregator
 import org.apache.logging.log4j.Logger
 import kotlin.time.Instant
 

@@ -1,11 +1,11 @@
 package linea.coordination.aggregation
 
 import io.vertx.core.Vertx
-import linea.clients.ProofAggregationProverClientV2
-import linea.domain.Aggregation
-import linea.domain.AggregationProofIndex
-import linea.timer.TimerSchedule
-import linea.timer.VertxPeriodicPollingService
+import lineth.clients.ProofAggregationProverClientV2
+import lineth.domain.Aggregation
+import lineth.domain.AggregationProofIndex
+import lineth.timer.TimerSchedule
+import lineth.timer.VertxPeriodicPollingService
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.ConcurrentLinkedDeque

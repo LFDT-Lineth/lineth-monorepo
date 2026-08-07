@@ -1,7 +1,7 @@
 package linea.coordinator.config
 
-import linea.domain.RetryConfig
-import net.consensys.linea.jsonrpc.client.RequestRetryConfig
+import lineth.domain.RetryConfig
+import lineth.jsonrpc.client.RequestRetryConfig
 
 fun RetryConfig.toJsonRpcRetry(): RequestRetryConfig {
   return RequestRetryConfig(

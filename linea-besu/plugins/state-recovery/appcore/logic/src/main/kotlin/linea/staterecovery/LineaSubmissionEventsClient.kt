@@ -1,9 +1,9 @@
 package linea.staterecovery
 
-import linea.contract.events.DataFinalizedV3
-import linea.contract.events.DataSubmittedV3
-import linea.domain.BlockParameter
-import linea.domain.EthLogEvent
+import lineth.contract.events.DataFinalizedV3
+import lineth.contract.events.DataSubmittedV3
+import lineth.domain.BlockParameter
+import lineth.domain.EthLogEvent
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 data class FinalizationAndDataEventsV3(

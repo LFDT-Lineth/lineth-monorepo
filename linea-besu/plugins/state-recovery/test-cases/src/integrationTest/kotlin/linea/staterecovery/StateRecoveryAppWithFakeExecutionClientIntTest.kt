@@ -2,24 +2,24 @@ package linea.staterecovery
 
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import linea.ContractsManager
-import linea.MakeFileDelegatedContractsManager.connectToLinethRollupContract
-import linea.MakeFileDelegatedContractsManager.linethRollupContractErrors
-import linea.contract.l1.LinethRollupContractVersion
-import linea.contract.l1.LinethRollupSmartContractClient
-import linea.domain.BlockNumberAndHash
-import linea.domain.BlockParameter
-import linea.domain.RetryConfig
-import linea.log4j.configureLoggers
 import linea.staterecovery.plugin.AppClients
 import linea.staterecovery.plugin.createAppClients
 import linea.staterecovery.test.FakeExecutionLayerClient
 import linea.staterecovery.test.FakeStateManagerClient
 import linea.staterecovery.test.FakeStateManagerClientBasedOnBlobsRecords
-import linea.web3j.ethapi.createEthApiClient
-import net.consensys.linea.testing.submission.AggregationAndBlobs
-import net.consensys.linea.testing.submission.loadBlobsAndAggregationsSortedAndGrouped
-import net.consensys.linea.testing.submission.submitBlobsAndAggregationsAndWaitExecution
+import lineth.ContractsManager
+import lineth.MakeFileDelegatedContractsManager.connectToLinethRollupContract
+import lineth.MakeFileDelegatedContractsManager.linethRollupContractErrors
+import lineth.contract.l1.LinethRollupContractVersion
+import lineth.contract.l1.LinethRollupSmartContractClient
+import lineth.domain.BlockNumberAndHash
+import lineth.domain.BlockParameter
+import lineth.domain.RetryConfig
+import lineth.log4j.configureLoggers
+import lineth.testing.submission.AggregationAndBlobs
+import lineth.testing.submission.loadBlobsAndAggregationsSortedAndGrouped
+import lineth.testing.submission.submitBlobsAndAggregationsAndWaitExecution
+import lineth.web3j.ethapi.createEthApiClient
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
@@ -108,7 +108,7 @@ class StateRecoveryAppWithFakeExecutionClientIntTest {
       rootLevel = Level.INFO,
       log.name to Level.DEBUG,
       "linea.testing.submission" to Level.INFO,
-      "net.consensys.linea.contract.Web3JContractAsyncHelper" to Level.WARN, // silence noisy gasPrice Caps logs
+      "lineth.contract.Web3JContractAsyncHelper" to Level.WARN, // silence noisy gasPrice Caps logs
       "linea.staterecovery.BlobDecompressorToDomainV1" to Level.DEBUG,
       "linea.plugin.staterecovery.clients" to Level.INFO,
       "test.fake.clients.l1.fake-execution-layer" to Level.DEBUG,

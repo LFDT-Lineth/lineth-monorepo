@@ -2,12 +2,12 @@ package linea.coordination.blockcreation
 
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
-import linea.clients.RollupForkChoiceUpdatedClient
-import linea.clients.RollupForkChoiceUpdatedError
-import linea.clients.RollupForkChoiceUpdatedResponse
-import linea.domain.BlockNumberAndHash
-import linea.error.ErrorResponse
-import linea.kotlin.ByteArrayExt
+import lineth.clients.RollupForkChoiceUpdatedClient
+import lineth.clients.RollupForkChoiceUpdatedError
+import lineth.clients.RollupForkChoiceUpdatedResponse
+import lineth.domain.BlockNumberAndHash
+import lineth.error.ErrorResponse
+import lineth.kotlin.ByteArrayExt
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any

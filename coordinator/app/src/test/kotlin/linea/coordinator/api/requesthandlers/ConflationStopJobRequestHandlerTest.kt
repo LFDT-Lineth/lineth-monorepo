@@ -4,8 +4,8 @@ import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import io.vertx.core.json.JsonObject
 import linea.coordinator.app.conflationbacktesting.ConflationBacktestingService
-import net.consensys.linea.jsonrpc.JsonRpcRequestListParams
-import net.consensys.linea.jsonrpc.JsonRpcRequestMapParams
+import lineth.jsonrpc.JsonRpcRequestListParams
+import lineth.jsonrpc.JsonRpcRequestMapParams
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock

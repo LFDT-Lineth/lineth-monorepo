@@ -1,12 +1,12 @@
 package linea.ftx.conflation
 
-import linea.contract.events.ForcedTransactionAddedEvent
-import linea.forcedtx.ForcedTransactionInclusionResult
-import linea.ftx.FakeForcedTransactionsClient
-import linea.ftx.ForcedTransactionWithTimestamp
-import linea.ftx.ForcedTransactionsStatusUpdater
 import linea.persistence.ftx.FakeForcedTransactionsDao
-import net.consensys.FakeFixedClock
+import lineth.FakeFixedClock
+import lineth.contract.events.ForcedTransactionAddedEvent
+import lineth.forcedtx.ForcedTransactionInclusionResult
+import lineth.ftx.FakeForcedTransactionsClient
+import lineth.ftx.ForcedTransactionWithTimestamp
+import lineth.ftx.ForcedTransactionsStatusUpdater
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested

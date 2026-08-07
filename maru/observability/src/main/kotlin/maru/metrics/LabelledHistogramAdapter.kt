@@ -8,11 +8,11 @@
  */
 package maru.metrics
 
-import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.linea.metrics.Tag
+import lineth.metrics.MetricsFacade
+import lineth.metrics.Tag
 import org.hyperledger.besu.plugin.services.metrics.LabelledMetric
-import net.consensys.linea.metrics.Histogram as LineaHistogram
-import net.consensys.linea.metrics.MetricsCategory as LineaMetricsCategory
+import lineth.metrics.Histogram as LineaHistogram
+import lineth.metrics.MetricsCategory as LineaMetricsCategory
 import org.hyperledger.besu.plugin.services.metrics.Histogram as BesuHistogram
 
 class HistogramAdapter(

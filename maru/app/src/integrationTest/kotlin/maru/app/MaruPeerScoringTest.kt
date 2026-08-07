@@ -8,14 +8,15 @@
  */
 package maru.app
 
-import linea.domain.BlockParameter
-import linea.ethapi.EthApiClient
-import linea.testing.besu.BesuFactory
-import linea.testing.besu.BesuTransactionsHelper
-import linea.testing.besu.ethGetBlockByNumber
-import linea.timer.JvmTimerFactory
-import linea.timer.TimerFactory
-import linea.web3j.ethapi.createEthApiClient
+import lineth.domain.BlockParameter
+import lineth.ethapi.EthApiClient
+import lineth.metrics.MetricsFacade
+import lineth.testing.besu.BesuFactory
+import lineth.testing.besu.BesuTransactionsHelper
+import lineth.testing.besu.ethGetBlockByNumber
+import lineth.timer.JvmTimerFactory
+import lineth.timer.TimerFactory
+import lineth.web3j.ethapi.createEthApiClient
 import maru.config.P2PConfig
 import maru.database.BeaconChain
 import maru.database.P2PState
@@ -24,7 +25,6 @@ import maru.p2p.messages.BlockRetrievalStrategy
 import maru.p2p.messages.DefaultBlockRetrievalStrategy
 import maru.p2p.messages.StatusManager
 import maru.serialization.rlp.ForkAwareBlockHashing
-import net.consensys.linea.metrics.MetricsFacade
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.kotlin.await

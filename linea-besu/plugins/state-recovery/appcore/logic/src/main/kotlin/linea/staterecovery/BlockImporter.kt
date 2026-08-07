@@ -1,9 +1,9 @@
 package linea.staterecovery
 
 import io.vertx.core.Vertx
-import linea.clients.StateManagerClientV1
-import linea.domain.BlockInterval
-import net.consensys.linea.async.AsyncRetryer
+import lineth.async.AsyncRetryer
+import lineth.clients.StateManagerClientV1
+import lineth.domain.BlockInterval
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds

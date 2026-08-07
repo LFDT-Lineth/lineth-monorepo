@@ -1,7 +1,7 @@
 package linea.coordinator.config.v2.toml.decoder
 
 import linea.coordinator.config.v2.toml.parseConfig
-import linea.domain.BlockParameter
+import lineth.domain.BlockParameter
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
@@ -34,7 +34,7 @@ class BlockParameterDecoderTest {
       .isEqualTo(ConfigTomTag(BlockParameter.BlockNumber(2_000UL)))
   }
 
-  @Disabled("fails with Cannot cast java.lang.Long to linea.domain.BlockParameter.BlockNumber")
+  @Disabled("fails with Cannot cast java.lang.Long to lineth.domain.BlockParameter.BlockNumber")
   fun `should decode block parameter number nullable`() {
     data class ConfigTomTag(val blockParameter: BlockParameter.BlockNumber? = null)
 

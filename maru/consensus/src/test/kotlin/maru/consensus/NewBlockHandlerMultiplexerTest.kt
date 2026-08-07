@@ -8,7 +8,7 @@
  */
 package maru.consensus
 
-import linea.kotlin.encodeHex
+import lineth.kotlin.encodeHex
 import maru.core.ext.DataGenerators
 import org.apache.logging.log4j.Logger
 import org.assertj.core.api.Assertions.assertThat

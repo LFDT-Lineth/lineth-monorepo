@@ -8,7 +8,7 @@
  */
 package testutils
 
-import linea.testing.besu.BesuFactory
+import lineth.testing.besu.BesuFactory
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.kotlin.await

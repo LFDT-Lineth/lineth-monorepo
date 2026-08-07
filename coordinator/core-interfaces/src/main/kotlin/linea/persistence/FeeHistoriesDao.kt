@@ -1,6 +1,6 @@
 package linea.persistence
 
-import linea.domain.FeeHistory
+import lineth.domain.FeeHistory
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 interface FeeHistoriesDao {

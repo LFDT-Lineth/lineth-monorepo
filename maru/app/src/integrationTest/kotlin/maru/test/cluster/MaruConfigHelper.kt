@@ -8,7 +8,7 @@
  */
 package maru.test.cluster
 
-import linea.kotlin.encodeHex
+import lineth.kotlin.encodeHex
 import maru.config.ApiConfig
 import maru.config.ApiEndpointConfig
 import maru.config.FollowersConfig

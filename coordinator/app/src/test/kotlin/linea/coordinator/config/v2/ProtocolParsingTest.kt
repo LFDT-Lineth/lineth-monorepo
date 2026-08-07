@@ -2,7 +2,7 @@ package linea.coordinator.config.v2
 
 import linea.coordinator.config.v2.toml.ProtocolToml
 import linea.coordinator.config.v2.toml.parseConfig
-import linea.kotlin.decodeHex
+import lineth.kotlin.decodeHex
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import kotlin.time.Duration.Companion.seconds

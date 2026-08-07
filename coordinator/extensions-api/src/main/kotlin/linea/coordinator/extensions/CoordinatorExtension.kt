@@ -2,9 +2,9 @@ package linea.coordinator.extensions
 
 import io.vertx.core.Vertx
 import io.vertx.sqlclient.SqlClient
-import linea.LongRunningService
-import net.consensys.linea.jsonrpc.JsonRpcRequestHandler
-import net.consensys.linea.metrics.MetricsFacade
+import lineth.LongRunningService
+import lineth.jsonrpc.JsonRpcRequestHandler
+import lineth.metrics.MetricsFacade
 
 /**
  * Read-only handle to the shared infrastructure the [CoordinatorApp] has already built.

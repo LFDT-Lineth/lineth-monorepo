@@ -1,7 +1,7 @@
 package net.consensys.linea.transactionexclusion.app.api
 
-import linea.kotlin.assertIs32Bytes
-import linea.kotlin.decodeHex
+import lineth.kotlin.assertIs32Bytes
+import lineth.kotlin.decodeHex
 import net.consensys.linea.transactionexclusion.ModuleOverflow
 import net.consensys.linea.transactionexclusion.RejectedTransaction
 import net.consensys.linea.transactionexclusion.TransactionInfo

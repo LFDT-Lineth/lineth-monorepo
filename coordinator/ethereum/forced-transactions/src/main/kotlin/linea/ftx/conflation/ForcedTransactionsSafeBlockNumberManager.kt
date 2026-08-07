@@ -1,6 +1,6 @@
 package linea.ftx.conflation
 
-import linea.contract.events.ForcedTransactionAddedEvent
+import lineth.contract.events.ForcedTransactionAddedEvent
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 

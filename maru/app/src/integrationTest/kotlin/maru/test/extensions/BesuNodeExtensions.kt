@@ -8,7 +8,7 @@
  */
 package maru.test.extensions
 
-import linea.kotlin.toULong
+import lineth.kotlin.toULong
 import maru.test.cluster.BesuCluster
 import org.hyperledger.besu.tests.acceptance.dsl.node.BesuNode
 import org.web3j.protocol.core.DefaultBlockParameter

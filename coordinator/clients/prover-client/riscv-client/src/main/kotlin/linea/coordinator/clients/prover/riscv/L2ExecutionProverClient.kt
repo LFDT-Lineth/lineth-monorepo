@@ -1,14 +1,14 @@
 package linea.coordinator.clients.prover.riscv
 
-import linea.clients.L2ExecutionProofRequestV1
-import linea.clients.L2ExecutionProofResponseV1
-import linea.clients.L2ExecutionProverClientV1
-import linea.clients.ProverProofTransport
-import linea.crypto.HashFunction
-import linea.crypto.Sha256HashFunction
-import linea.domain.BlockIntervalProofIndex
-import linea.kotlin.decodeHex
-import linea.kotlin.encodeHex
+import lineth.clients.L2ExecutionProofRequestV1
+import lineth.clients.L2ExecutionProofResponseV1
+import lineth.clients.L2ExecutionProverClientV1
+import lineth.clients.ProverProofTransport
+import lineth.crypto.HashFunction
+import lineth.crypto.Sha256HashFunction
+import lineth.domain.BlockIntervalProofIndex
+import lineth.kotlin.decodeHex
+import lineth.kotlin.encodeHex
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

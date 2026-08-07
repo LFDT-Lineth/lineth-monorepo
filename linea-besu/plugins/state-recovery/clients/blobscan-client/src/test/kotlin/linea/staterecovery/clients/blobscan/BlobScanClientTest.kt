@@ -7,9 +7,9 @@ import com.github.tomakehurst.wiremock.http.RequestListener
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import linea.domain.RetryConfig
-import linea.kotlin.encodeHex
-import net.consensys.linea.async.get
+import lineth.async.get
+import lineth.domain.RetryConfig
+import lineth.kotlin.encodeHex
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach

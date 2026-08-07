@@ -8,7 +8,7 @@
  */
 package maru.p2p.fork
 
-import linea.kotlin.encodeHex
+import lineth.kotlin.encodeHex
 import maru.consensus.DifficultyAwareQbftConfig
 import maru.consensus.ForkSpec
 import maru.consensus.QbftConsensusConfig

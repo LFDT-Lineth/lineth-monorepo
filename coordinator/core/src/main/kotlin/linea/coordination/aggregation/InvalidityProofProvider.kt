@@ -1,7 +1,7 @@
 package linea.coordination.aggregation
 
-import linea.domain.InvalidityProofIndex
 import linea.persistence.ForcedTransactionsDao
+import lineth.domain.InvalidityProofIndex
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 fun interface InvalidityProofProvider {

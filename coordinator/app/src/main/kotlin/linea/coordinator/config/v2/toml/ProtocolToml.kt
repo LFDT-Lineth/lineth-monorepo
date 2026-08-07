@@ -1,9 +1,9 @@
 package linea.coordinator.config.v2.toml
 
-import linea.config.docs.ConfigDoc
-import linea.config.docs.ConfigSection
 import linea.coordinator.config.v2.ProtocolConfig
-import linea.domain.BlockParameter
+import lineth.config.docs.ConfigDoc
+import lineth.config.docs.ConfigSection
+import lineth.domain.BlockParameter
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 

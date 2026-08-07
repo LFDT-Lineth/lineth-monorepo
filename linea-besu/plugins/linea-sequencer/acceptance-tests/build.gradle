@@ -111,7 +111,7 @@ dependencies {
   implementation project("${lineaSequencerProjectPath}:sequencer")
   implementation "org.jetbrains.kotlin:kotlin-stdlib:${libs.versions.kotlin.get()}"
 
-  testImplementation "build.linea:blob-compressor:${libs.versions.blobCompressor.get()}"
+  testImplementation project(":jvm-libs:linea:blob-compressor")
   testImplementation project(":tracer:arithmetization")
   testImplementation project(":jvm-libs:generic:serialization:jackson")
   testImplementation project(":jvm-libs:generic:extensions:kotlin")

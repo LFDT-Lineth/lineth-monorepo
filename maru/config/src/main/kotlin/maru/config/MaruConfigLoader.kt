@@ -12,7 +12,7 @@ import com.sksamuel.hoplite.ConfigLoaderBuilder
 import com.sksamuel.hoplite.ExperimentalHoplite
 import com.sksamuel.hoplite.json.JsonPropertySource
 import com.sksamuel.hoplite.toml.TomlPropertySource
-import linea.hoplite.toml.TomlByteArrayHexDecoder
+import lineth.hoplite.toml.TomlByteArrayHexDecoder
 import maru.config.consensus.ForkConfigDecoder
 import maru.config.consensus.JsonFriendlyForksSchedule
 import java.io.File

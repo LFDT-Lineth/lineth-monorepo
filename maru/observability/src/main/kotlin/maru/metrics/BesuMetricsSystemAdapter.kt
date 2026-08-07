@@ -10,7 +10,7 @@ package maru.metrics
 
 import com.google.common.cache.Cache
 import io.vertx.core.Vertx
-import net.consensys.linea.metrics.MetricsFacade
+import lineth.metrics.MetricsFacade
 import org.apache.logging.log4j.LogManager
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem
 import org.hyperledger.besu.plugin.services.metrics.Counter

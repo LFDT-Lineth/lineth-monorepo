@@ -1,12 +1,12 @@
 package linea.conflation
 
-import linea.domain.Block
-import linea.domain.BlockHeaderSummary
-import linea.domain.BlockParameter
-import linea.domain.toBlockParameter
-import linea.ethapi.EthApiBlockClient
-import linea.kotlin.minusCoercingUnderflow
-import net.consensys.linea.async.toSafeFuture
+import lineth.async.toSafeFuture
+import lineth.domain.Block
+import lineth.domain.BlockHeaderSummary
+import lineth.domain.BlockParameter
+import lineth.domain.toBlockParameter
+import lineth.ethapi.EthApiBlockClient
+import lineth.kotlin.minusCoercingUnderflow
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 interface SafeBlockProvider {

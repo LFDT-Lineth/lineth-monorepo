@@ -4,7 +4,7 @@ import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import net.consensys.linea.async.get
+import lineth.async.get
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach

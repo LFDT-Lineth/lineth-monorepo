@@ -1,7 +1,7 @@
 package linea.submission
 
-import linea.domain.BlockIntervalData
-import linea.domain.BlockIntervals
+import lineth.domain.BlockIntervalData
+import lineth.domain.BlockIntervals
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows

@@ -2,12 +2,12 @@ package linea.coordinator.api.dto
 
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import linea.blob.BlobCompressorVersion
 import linea.coordinator.app.conflationbacktesting.ConflationBacktestingConfig
 import linea.coordinator.app.conflationbacktesting.ShomeiApiConfig
 import linea.coordinator.app.conflationbacktesting.TracesApiConfig
-import linea.kotlin.toURL
-import net.consensys.linea.jsonrpc.JsonRpcRequest
+import lineth.blob.BlobCompressorVersion
+import lineth.jsonrpc.JsonRpcRequest
+import lineth.kotlin.toURL
 
 data class ConflationCreateProverRequestJsonDto(
   val startBlockNumber: Long,

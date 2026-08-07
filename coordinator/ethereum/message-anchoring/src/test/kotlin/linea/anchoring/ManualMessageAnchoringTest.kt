@@ -1,10 +1,10 @@
 package linea.anchoring
 
 import io.vertx.core.Vertx
-import linea.contract.l2.FakeL2MessageService
-import linea.domain.BlockParameter
-import linea.log4j.configureLoggers
-import linea.web3j.ethapi.createEthApiClient
+import lineth.contract.l2.FakeL2MessageService
+import lineth.domain.BlockParameter
+import lineth.log4j.configureLoggers
+import lineth.web3j.ethapi.createEthApiClient
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import java.lang.IllegalStateException

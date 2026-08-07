@@ -9,7 +9,7 @@
 package maru.services
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.CompletableFuture
-import linea.LongRunningService as LineaLongRunningService
+import lineth.LongRunningService as LineaLongRunningService
 
 typealias LongRunningService = LineaLongRunningService
 

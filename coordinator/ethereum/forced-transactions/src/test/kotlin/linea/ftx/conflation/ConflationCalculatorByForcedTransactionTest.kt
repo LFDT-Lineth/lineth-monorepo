@@ -2,10 +2,10 @@ package linea.ftx.conflation
 
 import linea.conflation.calculators.ConflationCounters
 import linea.conflation.calculators.ConflationTriggerCalculator
-import linea.domain.BlockCounters
-import linea.domain.ConflationTrigger
-import linea.forcedtx.ForcedTransactionInclusionResult
-import net.consensys.linea.traces.TracesCountersV4
+import lineth.domain.BlockCounters
+import lineth.domain.ConflationTrigger
+import lineth.forcedtx.ForcedTransactionInclusionResult
+import lineth.traces.TracesCountersV4
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested

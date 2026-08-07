@@ -1,8 +1,8 @@
 package net.consensys.linea.ethereum.gaspricing.staticcap
 
-import linea.domain.BlockInterval
-import linea.domain.toBlockParameter
-import linea.ethapi.EthApiBlockClient
+import lineth.domain.BlockInterval
+import lineth.domain.toBlockParameter
+import lineth.ethapi.EthApiBlockClient
 import net.consensys.linea.ethereum.gaspricing.L2CalldataSizeAccumulator
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger

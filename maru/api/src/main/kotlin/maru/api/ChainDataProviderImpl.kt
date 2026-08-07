@@ -8,7 +8,7 @@
  */
 package maru.api
 
-import linea.kotlin.decodeHex
+import lineth.kotlin.decodeHex
 import maru.core.BeaconState
 import maru.core.SealedBeaconBlock
 import maru.database.BeaconChain

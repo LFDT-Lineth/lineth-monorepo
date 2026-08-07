@@ -8,15 +8,15 @@
  */
 package maru.finalization
 
-import linea.contract.l1.LinethRollupSmartContractClientReadOnly
-import linea.domain.BlockData
-import linea.domain.BlockParameter
-import linea.domain.toBlockParameter
-import linea.ethapi.EthApiClient
-import linea.kotlin.encodeHex
-import linea.timer.PeriodicPollingService
-import linea.timer.TimerFactory
-import linea.timer.TimerSchedule
+import lineth.contract.l1.LinethRollupSmartContractClientReadOnly
+import lineth.domain.BlockData
+import lineth.domain.BlockParameter
+import lineth.domain.toBlockParameter
+import lineth.ethapi.EthApiClient
+import lineth.kotlin.encodeHex
+import lineth.timer.PeriodicPollingService
+import lineth.timer.TimerFactory
+import lineth.timer.TimerSchedule
 import maru.consensus.state.FinalizationProvider
 import maru.consensus.state.FinalizationState
 import maru.core.BeaconBlockBody

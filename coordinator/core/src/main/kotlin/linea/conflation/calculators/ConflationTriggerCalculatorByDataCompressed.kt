@@ -1,8 +1,8 @@
 package linea.conflation.calculators
 
-import linea.blob.BlobCompressor
-import linea.domain.BlockCounters
-import linea.domain.ConflationTrigger
+import lineth.blob.BlobCompressor
+import lineth.domain.BlockCounters
+import lineth.domain.ConflationTrigger
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 

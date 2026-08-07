@@ -3,10 +3,10 @@ package linea.finalization
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
-import linea.contract.l1.FakeFinalizedStateDataProvider
-import linea.domain.BlockWithTxHashes
-import linea.domain.toBlockParameter
-import linea.ethapi.EthApiBlockClient
+import lineth.contract.l1.FakeFinalizedStateDataProvider
+import lineth.domain.BlockWithTxHashes
+import lineth.domain.toBlockParameter
+import lineth.ethapi.EthApiBlockClient
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.BeforeEach

@@ -1,12 +1,12 @@
 package linea.coordinator.app.conflationbacktesting
 
 import linea.coordination.aggregation.ConsecutiveProvenBlobsProvider
-import linea.domain.Blob
-import linea.domain.BlobAndBatchCounters
-import linea.domain.BlobCounters
-import linea.domain.BlobRecord
-import linea.domain.BlockIntervals
-import linea.domain.CompressionProofIndex
+import lineth.domain.Blob
+import lineth.domain.BlobAndBatchCounters
+import lineth.domain.BlobCounters
+import lineth.domain.BlobRecord
+import lineth.domain.BlockIntervals
+import lineth.domain.CompressionProofIndex
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentSkipListMap

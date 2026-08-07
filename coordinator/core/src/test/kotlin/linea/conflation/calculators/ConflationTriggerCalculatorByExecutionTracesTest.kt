@@ -1,13 +1,13 @@
 package linea.conflation.calculators
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
-import linea.domain.BlockCounters
-import linea.domain.ConflationTrigger
-import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
-import net.consensys.linea.traces.TracesCounters
-import net.consensys.linea.traces.TracesCountersV2
-import net.consensys.linea.traces.TracingModuleV2
-import net.consensys.linea.traces.fakeTracesCountersV2
+import lineth.domain.BlockCounters
+import lineth.domain.ConflationTrigger
+import lineth.metrics.micrometer.MicrometerMetricsFacade
+import lineth.traces.TracesCounters
+import lineth.traces.TracesCountersV2
+import lineth.traces.TracingModuleV2
+import lineth.traces.fakeTracesCountersV2
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach

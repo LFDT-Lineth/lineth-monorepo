@@ -1,7 +1,7 @@
 package net.consensys.linea.ethereum.gaspricing.staticcap
 
-import linea.domain.FeeHistory
-import linea.ethapi.EthApiBlockClient
+import lineth.domain.FeeHistory
+import lineth.ethapi.EthApiBlockClient
 import net.consensys.linea.ethereum.gaspricing.FeesCalculator
 import net.consensys.linea.ethereum.gaspricing.HistoricVariableCostProvider
 import net.consensys.linea.ethereum.gaspricing.L2CalldataSizeAccumulator

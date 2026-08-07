@@ -10,7 +10,10 @@ package maru.p2p
 
 import io.libp2p.core.PeerId
 import io.libp2p.core.crypto.unmarshalPrivateKey
-import linea.timer.TimerFactory
+import lineth.async.toSafeFuture
+import lineth.metrics.MetricsFacade
+import lineth.metrics.Tag
+import lineth.timer.TimerFactory
 import maru.config.P2PConfig
 import maru.consensus.ForkSpec
 import maru.core.SealedBeaconBlock
@@ -28,9 +31,6 @@ import maru.p2p.topics.TopicHandlerWithInOrderDelivering
 import maru.serialization.SerDe
 import maru.serialization.rlp.ForkAwareBlockHashing
 import maru.serialization.rlp.MaruCompressorRLPSerDe
-import net.consensys.linea.async.toSafeFuture
-import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.linea.metrics.Tag
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.apache.tuweni.bytes.Bytes

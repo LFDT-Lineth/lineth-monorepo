@@ -8,7 +8,7 @@
  */
 package linea.maru
 
-import linea.kotlin.decodeHex
+import lineth.kotlin.decodeHex
 import maru.crypto.PrivateKeyGenerator
 import maru.crypto.PrivateKeyGenerator.getKeyData
 import maru.crypto.PrivateKeyGenerator.getKeyDataByPrefixedKey

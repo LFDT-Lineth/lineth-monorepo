@@ -1,10 +1,10 @@
 package net.consensys.linea.ethereum.gaspricing.staticcap
 
 import io.vertx.core.Vertx
-import linea.kotlin.toGWei
-import linea.kotlin.toIntervalString
-import linea.timer.TimerSchedule
-import linea.timer.VertxPeriodicPollingService
+import lineth.kotlin.toGWei
+import lineth.kotlin.toIntervalString
+import lineth.timer.TimerSchedule
+import lineth.timer.VertxPeriodicPollingService
 import net.consensys.linea.ethereum.gaspricing.FeesCalculator
 import net.consensys.linea.ethereum.gaspricing.FeesFetcher
 import net.consensys.linea.ethereum.gaspricing.GasPriceUpdater

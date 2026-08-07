@@ -8,7 +8,7 @@
  */
 package maru.syncing
 
-import linea.timer.TestablePeriodicTimerFactory
+import lineth.timer.TestablePeriodicTimerFactory
 import maru.core.ext.DataGenerators
 import maru.database.BeaconChain
 import maru.database.InMemoryBeaconChain

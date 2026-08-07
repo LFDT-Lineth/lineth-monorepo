@@ -1,10 +1,10 @@
 package net.consensys.linea.ethereum.gaspricing.dynamiccap
 
 import io.vertx.junit5.VertxExtension
-import linea.domain.createBlock
-import linea.domain.gas.GasPriceCaps
-import linea.domain.toBlockWithRandomTxHashes
-import linea.ethapi.EthApiBlockClient
+import lineth.domain.createBlock
+import lineth.domain.gas.GasPriceCaps
+import lineth.domain.toBlockWithRandomTxHashes
+import lineth.ethapi.EthApiBlockClient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

@@ -12,10 +12,10 @@ import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL
 import com.fasterxml.jackson.annotation.JsonProperty
-import linea.blob.BlobCompressorSelectorByTimestamp
-import linea.blob.BlobCompressorVersion
 import linea.plugin.acc.test.LineaPluginPoSTestBase
 import linea.plugin.acc.test.TestCommandLineOptionsBuilder
+import lineth.blob.BlobCompressorSelectorByTimestamp
+import lineth.blob.BlobCompressorVersion
 import net.consensys.linea.bl.TransactionProfitabilityCalculator
 import net.consensys.linea.config.LineaProfitabilityCliOptions
 import net.consensys.linea.rpc.methods.LineaEstimateGas

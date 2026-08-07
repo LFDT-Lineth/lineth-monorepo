@@ -1,12 +1,12 @@
 package linea.finalization
 
 import io.vertx.core.Vertx
-import linea.contract.l1.FinalizedStateDataProvider
-import linea.domain.BlockParameter
-import linea.domain.toBlockParameter
-import linea.ethapi.EthApiBlockClient
-import linea.timer.TimerSchedule
-import linea.timer.VertxPeriodicPollingService
+import lineth.contract.l1.FinalizedStateDataProvider
+import lineth.domain.BlockParameter
+import lineth.domain.toBlockParameter
+import lineth.ethapi.EthApiBlockClient
+import lineth.timer.TimerSchedule
+import lineth.timer.VertxPeriodicPollingService
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.apache.tuweni.bytes.Bytes32

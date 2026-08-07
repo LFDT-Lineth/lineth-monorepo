@@ -8,10 +8,10 @@
  */
 package maru.config
 
-import linea.domain.BlockParameter
-import linea.domain.RetryConfig
-import linea.kotlin.assertIs20Bytes
-import linea.kotlin.encodeHex
+import lineth.domain.BlockParameter
+import lineth.domain.RetryConfig
+import lineth.kotlin.assertIs20Bytes
+import lineth.kotlin.encodeHex
 import java.net.InetAddress
 import java.net.URL
 import java.nio.file.Path

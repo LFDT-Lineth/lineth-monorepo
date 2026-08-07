@@ -3,13 +3,13 @@ package net.consensys.linea.ethereum.gaspricing.staticcap
 import io.vertx.core.Vertx
 import io.vertx.junit5.Timeout
 import io.vertx.junit5.VertxExtension
-import linea.domain.FeeHistory
-import linea.kotlin.toKWei
+import lineth.domain.FeeHistory
+import lineth.kotlin.toKWei
+import lineth.metrics.MetricsFacade
 import net.consensys.linea.ethereum.gaspricing.ExtraDataUpdater
 import net.consensys.linea.ethereum.gaspricing.FeesCalculator
 import net.consensys.linea.ethereum.gaspricing.FeesFetcher
 import net.consensys.linea.ethereum.gaspricing.MinerExtraDataV1
-import net.consensys.linea.metrics.MetricsFacade
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance

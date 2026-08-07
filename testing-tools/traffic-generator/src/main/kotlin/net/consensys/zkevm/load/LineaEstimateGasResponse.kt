@@ -2,7 +2,7 @@ package net.consensys.zkevm.load
 
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonProperty
-import linea.domain.bigIntFromPrefixedHex
+import lineth.domain.bigIntFromPrefixedHex
 import org.web3j.protocol.ObjectMapperFactory
 import org.web3j.protocol.core.Response
 import tools.jackson.core.JsonParser

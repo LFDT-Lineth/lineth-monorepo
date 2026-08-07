@@ -2,13 +2,13 @@ package linea.persistence.conflation
 
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import linea.domain.BlobAndBatchCounters
-import linea.domain.BlockIntervals
-import linea.domain.blobCounters
-import linea.domain.createAggregation
-import linea.domain.createProofToFinalize
-import linea.persistence.db.PersistenceRetryer
-import net.consensys.FakeFixedClock
+import lineth.FakeFixedClock
+import lineth.domain.BlobAndBatchCounters
+import lineth.domain.BlockIntervals
+import lineth.domain.blobCounters
+import lineth.domain.createAggregation
+import lineth.domain.createProofToFinalize
+import lineth.persistence.db.PersistenceRetryer
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith

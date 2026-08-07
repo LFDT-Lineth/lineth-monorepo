@@ -1,9 +1,9 @@
 package linea.coordinator.clients.prover.riscv
 
-import linea.clients.ProverProofRequestCreator
-import linea.clients.ProverProofResponseChecker
-import linea.clients.ProverProofTransport
-import linea.domain.ProofIndex
+import lineth.clients.ProverProofRequestCreator
+import lineth.clients.ProverProofResponseChecker
+import lineth.clients.ProverProofTransport
+import lineth.domain.ProofIndex
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

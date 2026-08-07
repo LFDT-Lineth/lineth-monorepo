@@ -1,9 +1,9 @@
 package linea.submission
 
-import linea.contract.l1.ContractVersionProvider
-import linea.contract.l1.LinethRollupContractVersion
-import linea.domain.BlockInterval
-import net.consensys.linea.async.AsyncFilter
+import lineth.async.AsyncFilter
+import lineth.contract.l1.ContractVersionProvider
+import lineth.contract.l1.LinethRollupContractVersion
+import lineth.domain.BlockInterval
 import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.atomic.AtomicBoolean
