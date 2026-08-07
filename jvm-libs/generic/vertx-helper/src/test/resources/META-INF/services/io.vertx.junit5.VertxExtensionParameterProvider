@@ -1,2 +1,1 @@
 io.vertx.junit5.VertxParameterProvider
-net.consensys.linea.vertx.ResourcesConfigurableVertxParameterProvider
