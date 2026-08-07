@@ -11,10 +11,10 @@ package lineth.sequencer.txpoolvalidation.metrics;
 import static lineth.metrics.LineaMetricCategory.TX_POOL_PROFITABILITY;
 
 import java.util.stream.Collectors;
-import lombok.extern.slf4j.Slf4j;
 import lineth.bl.TransactionProfitabilityCalculator;
 import lineth.config.LineaProfitabilityConfiguration;
 import lineth.metrics.HistogramMetrics;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.tuweni.units.bigints.UInt256s;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.datatypes.Transaction;

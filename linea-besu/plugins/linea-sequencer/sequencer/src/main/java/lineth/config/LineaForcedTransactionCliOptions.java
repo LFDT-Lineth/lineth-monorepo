@@ -10,8 +10,8 @@ package lineth.config;
 
 import com.google.common.base.MoreObjects;
 import jakarta.validation.constraints.Positive;
-import net.consensys.linea.plugins.LineaCliOptions;
 import lineth.sequencer.forced.LineaForcedTransactionPool;
+import net.consensys.linea.plugins.LineaCliOptions;
 import picocli.CommandLine;
 
 /** CLI options for the forced transaction pool configuration. */

@@ -12,6 +12,11 @@ package lineth.plugin.acc.test
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
+import lineth.metrics.LineaMetricCategory.PRICING_CONF
+import lineth.metrics.LineaMetricCategory.SEQUENCER_FORCED_TX
+import lineth.metrics.LineaMetricCategory.SEQUENCER_LIVENESS
+import lineth.metrics.LineaMetricCategory.SEQUENCER_PROFITABILITY
+import lineth.metrics.LineaMetricCategory.TX_POOL_PROFITABILITY
 import lineth.plugin.acc.test.tests.web3j.generated.AcceptanceTestToken
 import lineth.plugin.acc.test.tests.web3j.generated.BLS12_MAP_FP_TO_G1
 import lineth.plugin.acc.test.tests.web3j.generated.DummyAdder
@@ -26,11 +31,6 @@ import lineth.plugin.acc.test.tests.web3j.generated.MulmodExecutor
 import lineth.plugin.acc.test.tests.web3j.generated.RevertExample
 import lineth.plugin.acc.test.tests.web3j.generated.SimpleStorage
 import lineth.plugin.acc.test.utils.MemoryAppender
-import lineth.metrics.LineaMetricCategory.PRICING_CONF
-import lineth.metrics.LineaMetricCategory.SEQUENCER_FORCED_TX
-import lineth.metrics.LineaMetricCategory.SEQUENCER_LIVENESS
-import lineth.metrics.LineaMetricCategory.SEQUENCER_PROFITABILITY
-import lineth.metrics.LineaMetricCategory.TX_POOL_PROFITABILITY
 import org.apache.commons.lang3.RandomStringUtils
 import org.apache.tuweni.bytes.Bytes
 import org.apache.tuweni.bytes.Bytes32

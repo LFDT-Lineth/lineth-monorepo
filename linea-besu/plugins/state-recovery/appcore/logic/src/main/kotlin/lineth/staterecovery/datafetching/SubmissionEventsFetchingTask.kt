@@ -5,10 +5,10 @@ import linea.contract.events.DataFinalizedV3
 import linea.domain.BlockParameter
 import linea.domain.EthLogEvent
 import linea.domain.toBlockParameter
-import lineth.staterecovery.FinalizationAndDataEventsV3
-import lineth.staterecovery.LinethRollupSubmissionEventsClient
 import linea.timer.TimerSchedule
 import linea.timer.VertxPeriodicPollingService
+import lineth.staterecovery.FinalizationAndDataEventsV3
+import lineth.staterecovery.LinethRollupSubmissionEventsClient
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

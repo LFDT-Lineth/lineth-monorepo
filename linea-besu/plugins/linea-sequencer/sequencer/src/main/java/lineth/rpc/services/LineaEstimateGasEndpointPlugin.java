@@ -10,10 +10,10 @@
 package lineth.rpc.services;
 
 import com.google.auto.service.AutoService;
-import lombok.extern.slf4j.Slf4j;
 import lineth.AbstractLineaRequiredPlugin;
-import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import lineth.rpc.methods.LineaEstimateGas;
+import lombok.extern.slf4j.Slf4j;
+import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.services.TransactionSimulationService;

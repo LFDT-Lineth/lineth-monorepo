@@ -11,8 +11,8 @@ package lineth.extradata;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
-import lombok.extern.slf4j.Slf4j;
 import lineth.config.LineaProfitabilityConfiguration;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.units.bigints.UInt32;

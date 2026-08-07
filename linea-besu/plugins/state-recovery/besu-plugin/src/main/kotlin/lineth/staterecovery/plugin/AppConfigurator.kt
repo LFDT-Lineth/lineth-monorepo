@@ -8,14 +8,14 @@ import linea.clients.StateManagerV1JsonRpcClient
 import linea.contract.l1.Web3JLinethRollupSmartContractClientReadOnly
 import linea.domain.RetryConfig
 import linea.ethapi.EthLogsSearcherImpl
+import linea.web3j.createWeb3jHttpClient
+import linea.web3j.ethapi.createEthApiClient
 import lineth.staterecovery.BlockHeaderStaticFields
 import lineth.staterecovery.ExecutionLayerClient
 import lineth.staterecovery.StateRecoveryApp
 import lineth.staterecovery.TransactionDetailsClient
 import lineth.staterecovery.clients.VertxTransactionDetailsClient
 import lineth.staterecovery.clients.blobscan.BlobScanClient
-import linea.web3j.createWeb3jHttpClient
-import linea.web3j.ethapi.createEthApiClient
 import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade

@@ -11,9 +11,9 @@ package lineth.sequencer.txvalidation;
 
 import com.google.auto.service.AutoService;
 import java.util.concurrent.atomic.AtomicBoolean;
-import lombok.extern.slf4j.Slf4j;
 import lineth.AbstractLineaRequiredPlugin;
 import lineth.config.LineaTransactionValidatorConfiguration;
+import lombok.extern.slf4j.Slf4j;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.services.TransactionValidatorService;
@@ -25,11 +25,11 @@ import org.hyperledger.besu.plugin.services.TransactionValidatorService;
  *
  * <p>Note: Besu's {@link TransactionValidatorService} rules also run during transaction pool
  * admission (RPC/P2P), so the type checks here overlap with the pool-level type validation in
- * {@link lineth.sequencer.txpoolvalidation.LineaTransactionPoolValidatorPlugin}. The
- * two plugins may be enabled together; to avoid validating transaction types twice at pool
- * admission, the pool plugin skips its own type validator when this plugin is registered (detected
- * via {@link #registered}). This plugin remains the source of type enforcement during block import
- * and block production.
+ * {@link lineth.sequencer.txpoolvalidation.LineaTransactionPoolValidatorPlugin}. The two plugins
+ * may be enabled together; to avoid validating transaction types twice at pool admission, the pool
+ * plugin skips its own type validator when this plugin is registered (detected via {@link
+ * #registered}). This plugin remains the source of type enforcement during block import and block
+ * production.
  */
 @Slf4j
 @AutoService(BesuPlugin.class)
@@ -39,10 +39,9 @@ public class LineaBlockTransactionValidatorPlugin extends AbstractLineaRequiredP
    * {@code true} while this plugin is registered and running; reset to {@code false} in {@link
    * #stop()} so that a plugin restart cycle leaves the flag in the correct state.
    *
-   * <p>Used by {@link
-   * lineth.sequencer.txpoolvalidation.LineaTransactionPoolValidatorPlugin} to detect
-   * that protocol-level transaction-type validation is active and skip its own redundant pool-level
-   * type validator, since this plugin's rule already runs at pool admission.
+   * <p>Used by {@link lineth.sequencer.txpoolvalidation.LineaTransactionPoolValidatorPlugin} to
+   * detect that protocol-level transaction-type validation is active and skip its own redundant
+   * pool-level type validator, since this plugin's rule already runs at pool admission.
    */
   public static final AtomicBoolean registered = new AtomicBoolean(false);
 

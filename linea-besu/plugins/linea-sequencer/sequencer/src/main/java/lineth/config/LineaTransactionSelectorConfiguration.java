@@ -13,9 +13,9 @@ import java.util.Map;
 import java.util.Set;
 import kotlin.time.Instant;
 import linea.blob.BlobCompressorVersion;
+import lineth.sequencer.txselection.selectors.TransactionEventFilter;
 import lombok.Builder;
 import net.consensys.linea.plugins.LineaOptionsConfiguration;
-import lineth.sequencer.txselection.selectors.TransactionEventFilter;
 import org.hyperledger.besu.datatypes.Address;
 
 /** The Linea transaction selectors configuration. */

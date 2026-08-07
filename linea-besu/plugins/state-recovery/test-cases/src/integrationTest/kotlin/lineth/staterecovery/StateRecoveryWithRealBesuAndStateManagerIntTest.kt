@@ -13,10 +13,10 @@ import linea.clients.StateManagerV1JsonRpcClient
 import linea.contract.l1.LinethRollupContractVersion
 import linea.contract.l1.LinethRollupSmartContractClient
 import linea.log4j.configureLoggers
+import linea.web3j.ethapi.createEthApiClient
 import lineth.staterecovery.test.assertBesuAndShomeiRecoveredAsExpected
 import lineth.staterecovery.test.execCommandAndAssertSuccess
 import lineth.staterecovery.test.waitExecutionLayerToBeUpAndRunning
-import linea.web3j.ethapi.createEthApiClient
 import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade

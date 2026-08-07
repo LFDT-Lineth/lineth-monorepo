@@ -9,10 +9,10 @@
 package lineth.plugin.acc.test.rpc.linea
 
 import com.google.common.base.Strings
-import lineth.plugin.acc.test.LineaPluginPoSTestBase
-import lineth.plugin.acc.test.TestCommandLineOptionsBuilder
 import lineth.config.LineaProfitabilityCliOptions
 import lineth.config.LineaProfitabilityConfiguration
+import lineth.plugin.acc.test.LineaPluginPoSTestBase
+import lineth.plugin.acc.test.TestCommandLineOptionsBuilder
 import org.apache.tuweni.bytes.Bytes
 import org.apache.tuweni.bytes.Bytes32
 import org.assertj.core.api.Assertions.assertThat

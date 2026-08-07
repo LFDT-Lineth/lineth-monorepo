@@ -13,13 +13,13 @@ import static lineth.metrics.LineaMetricCategory.TX_POOL_PROFITABILITY;
 
 import com.google.auto.service.AutoService;
 import java.util.Optional;
-import lombok.extern.slf4j.Slf4j;
 import lineth.AbstractLineaRequiredPlugin;
 import lineth.config.LineaRejectedTxReportingConfiguration;
 import lineth.jsonrpc.JsonRpcManager;
-import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import lineth.sequencer.txpoolvalidation.metrics.TransactionPoolProfitabilityMetrics;
 import lineth.sequencer.txvalidation.LineaBlockTransactionValidatorPlugin;
+import lombok.extern.slf4j.Slf4j;
+import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.services.BesuEvents;

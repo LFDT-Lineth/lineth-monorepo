@@ -9,8 +9,8 @@
 package lineth.sequencer.txpoolvalidation.validators;
 
 import java.util.Optional;
-import lombok.extern.slf4j.Slf4j;
 import lineth.sequencer.txselection.InvalidTransactionByLineCountCache;
+import lombok.extern.slf4j.Slf4j;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.plugin.services.txvalidator.PluginTransactionPoolValidator;
 

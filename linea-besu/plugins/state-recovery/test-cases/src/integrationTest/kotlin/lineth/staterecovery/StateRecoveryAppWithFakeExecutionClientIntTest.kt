@@ -11,12 +11,12 @@ import linea.domain.BlockNumberAndHash
 import linea.domain.BlockParameter
 import linea.domain.RetryConfig
 import linea.log4j.configureLoggers
+import linea.web3j.ethapi.createEthApiClient
 import lineth.staterecovery.plugin.AppClients
 import lineth.staterecovery.plugin.createAppClients
 import lineth.staterecovery.test.FakeExecutionLayerClient
 import lineth.staterecovery.test.FakeStateManagerClient
 import lineth.staterecovery.test.FakeStateManagerClientBasedOnBlobsRecords
-import linea.web3j.ethapi.createEthApiClient
 import net.consensys.linea.testing.submission.AggregationAndBlobs
 import net.consensys.linea.testing.submission.loadBlobsAndAggregationsSortedAndGrouped
 import net.consensys.linea.testing.submission.submitBlobsAndAggregationsAndWaitExecution

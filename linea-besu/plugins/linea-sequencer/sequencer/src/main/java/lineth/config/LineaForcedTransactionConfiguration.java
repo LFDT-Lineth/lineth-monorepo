@@ -8,9 +8,9 @@
  */
 package lineth.config;
 
+import lineth.sequencer.forced.LineaForcedTransactionPool;
 import lombok.Builder;
 import net.consensys.linea.plugins.LineaOptionsConfiguration;
-import lineth.sequencer.forced.LineaForcedTransactionPool;
 
 /** Configuration for the forced transaction pool. */
 @Builder

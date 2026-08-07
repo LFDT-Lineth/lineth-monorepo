@@ -12,6 +12,7 @@ import linea.domain.Aggregation
 import linea.domain.BlockParameter
 import linea.domain.RetryConfig
 import linea.log4j.configureLoggers
+import linea.web3j.ethapi.createEthApiClient
 import lineth.staterecovery.BlobDecompressorAndDeserializer
 import lineth.staterecovery.BlobDecompressorToDomainV1
 import lineth.staterecovery.BlockFromL1RecoveredData
@@ -19,7 +20,6 @@ import lineth.staterecovery.BlockHeaderStaticFields
 import lineth.staterecovery.LineaSubmissionEventsClientImpl
 import lineth.staterecovery.plugin.AppClients
 import lineth.staterecovery.plugin.createAppClients
-import linea.web3j.ethapi.createEthApiClient
 import net.consensys.linea.blob.BlobDecompressorVersion
 import net.consensys.linea.blob.GoNativeBlobDecompressorFactory
 import net.consensys.linea.testing.submission.AggregationAndBlobs

@@ -13,9 +13,9 @@ import static lineth.extradata.LineaExtraDataException.ErrorType.FAILED_CALLING_
 import static lineth.extradata.LineaExtraDataException.ErrorType.INVALID_ARGUMENT;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import lombok.extern.slf4j.Slf4j;
 import lineth.extradata.LineaExtraDataException;
 import lineth.extradata.LineaExtraDataHandler;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.parameters.JsonRpcParameter;

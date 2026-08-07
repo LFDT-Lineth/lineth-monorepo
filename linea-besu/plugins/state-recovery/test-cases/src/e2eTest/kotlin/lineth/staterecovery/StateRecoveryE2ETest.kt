@@ -14,13 +14,13 @@ import linea.kotlin.decodeHex
 import linea.kotlin.gwei
 import linea.kotlin.toBigInteger
 import linea.log4j.configureLoggers
+import linea.web3j.ethapi.createEthApiClient
+import linea.web3j.waitForTxReceipt
 import lineth.staterecovery.test.assertBesuAndShomeiRecoveredAsExpected
 import lineth.staterecovery.test.execCommandAndAssertSuccess
 import lineth.staterecovery.test.getFinalizationsOnL1
 import lineth.staterecovery.test.getLastFinalizationOnL1
 import lineth.staterecovery.test.waitExecutionLayerToBeUpAndRunning
-import linea.web3j.ethapi.createEthApiClient
-import linea.web3j.waitForTxReceipt
 import lineth.testing.Runner
 import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory

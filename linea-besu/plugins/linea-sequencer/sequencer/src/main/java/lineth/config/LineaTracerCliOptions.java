@@ -9,8 +9,8 @@
 package lineth.config;
 
 import com.google.common.base.MoreObjects;
-import net.consensys.linea.plugins.LineaCliOptions;
 import lineth.sequencer.modulelimit.ModuleLineCountValidator;
+import net.consensys.linea.plugins.LineaCliOptions;
 import picocli.CommandLine;
 
 public class LineaTracerCliOptions implements LineaCliOptions {

@@ -1,10 +1,10 @@
 package lineth.staterecovery.datafetching
 
 import io.vertx.core.Vertx
-import lineth.staterecovery.BlobDecompressorAndDeserializer
-import lineth.staterecovery.BlockFromL1RecoveredData
 import linea.timer.TimerSchedule
 import linea.timer.VertxPeriodicPollingService
+import lineth.staterecovery.BlobDecompressorAndDeserializer
+import lineth.staterecovery.BlockFromL1RecoveredData
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

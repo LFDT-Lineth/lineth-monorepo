@@ -2,14 +2,14 @@ package lineth.staterecovery.datafetching
 
 import io.vertx.core.Vertx
 import linea.domain.BlockParameter
+import linea.timer.TimerSchedule
+import linea.timer.VertxPeriodicPollingService
 import lineth.staterecovery.BlobDecompressorAndDeserializer
 import lineth.staterecovery.BlobFetcher
 import lineth.staterecovery.BlockFromL1RecoveredData
 import lineth.staterecovery.FinalizationAndDataEventsV3
 import lineth.staterecovery.LinethRollupSubmissionEventsClient
 import lineth.staterecovery.TransactionDetailsClient
-import linea.timer.TimerSchedule
-import linea.timer.VertxPeriodicPollingService
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
