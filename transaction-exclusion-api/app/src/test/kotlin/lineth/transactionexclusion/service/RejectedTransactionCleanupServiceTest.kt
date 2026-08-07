@@ -5,7 +5,7 @@ import io.vertx.junit5.Timeout
 import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
 import lineth.FakeFixedClock
-import lineth.zkevm.persistence.dao.rejectedtransaction.RejectedTransactionsDao
+import lineth.persistence.dao.rejectedtransaction.RejectedTransactionsDao
 import org.awaitility.Awaitility
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

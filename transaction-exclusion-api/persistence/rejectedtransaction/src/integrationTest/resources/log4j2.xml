@@ -6,7 +6,7 @@
         </Console>
     </Appenders>
     <Loggers>
-        <Logger name="lineth.zkevm.persistence.dao.rejectedtransaction" level="trace" additivity="false">
+        <Logger name="lineth.persistence.dao.rejectedtransaction" level="trace" additivity="false">
           <AppenderRef ref="console"/>
         </Logger>
         <Root level="info" additivity="false">

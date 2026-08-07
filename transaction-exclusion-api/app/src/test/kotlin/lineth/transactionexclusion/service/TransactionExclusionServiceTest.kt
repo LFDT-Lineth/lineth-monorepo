@@ -8,7 +8,7 @@ import lineth.transactionexclusion.ErrorType
 import lineth.transactionexclusion.TransactionExclusionError
 import lineth.transactionexclusion.TransactionExclusionServiceV1
 import lineth.transactionexclusion.test.defaultRejectedTransaction
-import lineth.zkevm.persistence.dao.rejectedtransaction.RejectedTransactionsDao
+import lineth.persistence.dao.rejectedtransaction.RejectedTransactionsDao
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

@@ -9,14 +9,14 @@ openApiGenerate {
   generatorName.set("java")
   inputSpec.set("$rootDir/testing-tools/traffic-generator/src/main/specs/swagger.yaml")
   outputDir.set("$buildDir/generated")
-  modelPackage.set("lineth.zkevm.load.model.swagger")
+  modelPackage.set("lineth.load.model.swagger")
   configOptions.set([
     dateLibrary: "java8"
   ])
 }
 
 application {
-  mainClass = 'lineth.zkevm.load.ManualLoadTest'
+  mainClass = 'lineth.load.ManualLoadTest'
 }
 
 dependencies {

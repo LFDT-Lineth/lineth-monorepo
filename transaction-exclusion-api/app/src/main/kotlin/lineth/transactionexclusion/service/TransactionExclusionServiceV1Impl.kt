@@ -11,7 +11,7 @@ import lineth.transactionexclusion.TransactionExclusionError
 import lineth.transactionexclusion.TransactionExclusionServiceV1
 import lineth.transactionexclusion.TransactionExclusionServiceV1.SaveRejectedTransactionStatus
 import lineth.transactionexclusion.metrics.LineaMetricsCategory
-import lineth.zkevm.persistence.dao.rejectedtransaction.RejectedTransactionsDao
+import lineth.persistence.dao.rejectedtransaction.RejectedTransactionsDao
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Clock
 import kotlin.time.Duration

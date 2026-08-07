@@ -6,9 +6,6 @@
     </Console>
   </Appenders>
   <Loggers>
-    <Logger name="lineth.zkevm" level="debug" additivity="false">
-      <AppenderRef ref="console"/>
-    </Logger>
     <Logger name="lineth" level="debug" additivity="false">
       <AppenderRef ref="console"/>
     </Logger>

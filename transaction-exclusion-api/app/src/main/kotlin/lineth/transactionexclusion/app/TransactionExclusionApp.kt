@@ -17,9 +17,9 @@ import lineth.transactionexclusion.app.api.Api
 import lineth.transactionexclusion.app.api.ApiConfig
 import lineth.transactionexclusion.service.RejectedTransactionCleanupService
 import lineth.transactionexclusion.service.TransactionExclusionServiceV1Impl
-import lineth.zkevm.persistence.dao.rejectedtransaction.RejectedTransactionsDao
-import lineth.zkevm.persistence.dao.rejectedtransaction.RejectedTransactionsPostgresDao
-import lineth.zkevm.persistence.dao.rejectedtransaction.RetryingRejectedTransactionsPostgresDao
+import lineth.persistence.dao.rejectedtransaction.RejectedTransactionsDao
+import lineth.persistence.dao.rejectedtransaction.RejectedTransactionsPostgresDao
+import lineth.persistence.dao.rejectedtransaction.RetryingRejectedTransactionsPostgresDao
 import org.apache.logging.log4j.LogManager
 import java.time.Duration
 import kotlin.time.Duration.Companion.seconds
