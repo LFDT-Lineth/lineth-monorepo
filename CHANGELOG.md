@@ -62,6 +62,7 @@
 - *(maru)* Declare jar task dependency on runtimeClasspath to fix manifest race (#3694)
 - *(coordinator)* Apply message anchoring L1 retries (#3715)
 - *(linea-besu)* Align Besu Kotlin runtime (#3734)
+- *(linea-besu)* Add the missing web3j crypto jar in dist and fix ci … (#3737)
 
 ### 🚜 Refactor
 
