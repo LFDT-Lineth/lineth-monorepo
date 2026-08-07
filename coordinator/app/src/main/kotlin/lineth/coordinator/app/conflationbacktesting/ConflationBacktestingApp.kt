@@ -21,7 +21,10 @@ import lineth.conflation.AlwaysSafeBlockNumberProvider
 import lineth.conflation.ConflationService
 import lineth.conflation.FixedLaggingHeadSafeBlockProvider
 import lineth.conflation.calculators.CalculatorsFactory
+<<<<<<< HEAD
 import lineth.coordination.FtxRollingInfoProviderImpl
+=======
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
 import lineth.coordination.aggregation.AggregationL2StateProviderImpl
 import lineth.coordination.aggregation.InvalidityProofProviderImpl
 import lineth.coordination.aggregation.ProofAggregationCoordinatorService

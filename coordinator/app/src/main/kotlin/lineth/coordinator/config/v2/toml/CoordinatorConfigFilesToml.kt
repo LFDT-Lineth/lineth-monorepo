@@ -2,10 +2,13 @@ package lineth.coordinator.config.v2.toml
 
 import linea.config.docs.ConfigDoc
 import linea.config.docs.ConfigSection
+<<<<<<< HEAD
 <<<<<<< HEAD:coordinator/app/src/main/kotlin/lineth/coordinator/config/v2/toml/CoordinatorConfigFilesToml.kt
 =======
 import linea.coordinator.config.v2.CoordinatorConfig
 >>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)):coordinator/app/src/main/kotlin/linea/coordinator/config/v2/toml/CoordinatorConfigFilesToml.kt
+=======
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
 import linea.web3j.SmartContractErrors
 import lineth.coordinator.config.v2.CoordinatorConfig
 import lineth.ethereum.gaspricing.dynamiccap.TimeOfDayMultipliers
@@ -17,21 +20,28 @@ import net.consensys.linea.traces.TracingModuleV5
 data class CoordinatorConfigFileToml(
   @param:ConfigSection("Shared defaults (L1/L2 endpoints and retry policies) reused by coordinator services.")
   val defaults: DefaultsToml = DefaultsToml(),
+<<<<<<< HEAD
 <<<<<<< HEAD:coordinator/app/src/main/kotlin/lineth/coordinator/config/v2/toml/CoordinatorConfigFilesToml.kt
   @param:ConfigSection("Lineth protocol contract addresses and genesis settings.")
 =======
   @param:ConfigSection("Linea protocol contract addresses and genesis settings.")
 >>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)):coordinator/app/src/main/kotlin/linea/coordinator/config/v2/toml/CoordinatorConfigFilesToml.kt
+=======
+  @param:ConfigSection("Lineth protocol contract addresses and genesis settings.")
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
   val protocol: ProtocolToml,
   @param:ConfigSection("Block conflation, blob compression, and proof aggregation settings.")
   val conflation: ConflationToml = ConflationToml(),
   @param:ConfigSection("File-based prover request/response directories and switch-over settings.")
   val prover: ProverToml,
+<<<<<<< HEAD
 <<<<<<< HEAD:coordinator/app/src/main/kotlin/lineth/coordinator/config/v2/toml/CoordinatorConfigFilesToml.kt
   @param:ConfigSection("RISC-V prover request/response directories for execution, rollup, and aggregation proofs.")
   val riscvProver: ProverToml? = null,
 =======
 >>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)):coordinator/app/src/main/kotlin/linea/coordinator/config/v2/toml/CoordinatorConfigFilesToml.kt
+=======
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
   @param:ConfigSection("Trace generation (traces API / conflation counters) client settings.")
   val traces: TracesToml,
   @param:ConfigSection("Shomei state manager client settings.")
@@ -80,11 +90,15 @@ data class GasPriceCapTimeOfDayMultipliersConfigFileToml(
 
 data class SmartContractErrorCodesConfigFileToml(
   @param:ConfigDoc(
+<<<<<<< HEAD
 <<<<<<< HEAD:coordinator/app/src/main/kotlin/lineth/coordinator/config/v2/toml/CoordinatorConfigFilesToml.kt
     description = "Mapping of Lineth smart-contract revert error codes to human-readable messages, " +
 =======
     description = "Mapping of Linea smart-contract revert error codes to human-readable messages, " +
 >>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)):coordinator/app/src/main/kotlin/linea/coordinator/config/v2/toml/CoordinatorConfigFilesToml.kt
+=======
+    description = "Mapping of Lineth smart-contract revert error codes to human-readable messages, " +
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
       "used to decode on-chain rejection reasons.",
   )
   val smartContractErrors: SmartContractErrors,
@@ -107,7 +121,10 @@ data class CoordinatorConfigToml(
         tracesCountersLimitsV5 = tracesLimitsV5?.let { TracesCountersV5(it.tracesLimits) },
       ),
       proversConfig = this.configs.prover.reified(),
+<<<<<<< HEAD
       riscvProversConfig = this.configs.riscvProver?.reified(),
+=======
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
       traces = this.configs.traces.reified(),
       stateManager = this.configs.stateManager.reified(),
       type2StateProofProvider = this.configs.type2StateProofProvider.reified(),

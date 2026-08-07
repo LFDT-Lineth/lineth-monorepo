@@ -5,9 +5,15 @@ import io.vertx.junit5.VertxExtension
 import linea.domain.BlockIntervalProofIndex
 import lineth.coordinator.clients.prover.FileBasedProverConfig
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.CHAIN_ID
+<<<<<<< HEAD
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.ROLLUP_PROGRAM_VK
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.blockIntervalProofIndex
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.conflationWitness
+=======
+import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.ROLLUP_GUEST_PROGRAM_ID
+import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.blobWitness
+import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.blockIntervalProofIndex
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.fileBasedProverConfig
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.jsonMapper
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.rollupProofRequestV1

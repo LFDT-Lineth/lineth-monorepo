@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <<<<<<< HEAD:coordinator/persistence/src/main/kotlin/lineth/persistence/conflation/BlobsPostgresDaoG.kt
 <<<<<<< HEAD:coordinator/persistence/src/main/kotlin/lineth/persistence/conflation/BlobsPostgresDaoG.kt
 package lineth.persistence.conflation
@@ -19,6 +20,13 @@ import io.vertx.core.Future
 import io.vertx.sqlclient.Row
 import io.vertx.sqlclient.SqlClient
 >>>>>>> 83adcc937 (chore(coordinator): riscv blob data skeleton (#3609)):coordinator/persistence/src/main/kotlin/linea/persistence/conflation/BlobsPostgresDaoG.kt
+=======
+package lineth.persistence.conflation
+
+import io.vertx.core.Future
+import io.vertx.sqlclient.Row
+import io.vertx.sqlclient.SqlClient
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
 import io.vertx.sqlclient.Tuple
 import linea.domain.BlobStatus
 import linea.domain.BlockInterval
@@ -27,6 +35,7 @@ import linea.persistence.db.SQLQueryLogger
 import linea.persistence.db.isDuplicateKeyException
 import net.consensys.linea.async.toSafeFuture
 import org.apache.logging.log4j.Level
+<<<<<<< HEAD
 <<<<<<< HEAD:coordinator/persistence/src/main/kotlin/lineth/persistence/conflation/BlobsPostgresDaoG.kt
 <<<<<<< HEAD:coordinator/persistence/src/main/kotlin/lineth/persistence/conflation/BlobsPostgresDaoG.kt
 ========
@@ -56,12 +65,17 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 >>>>>>> 83adcc937 (chore(coordinator): riscv blob data skeleton (#3609)):coordinator/persistence/src/main/kotlin/linea/persistence/conflation/BlobsPostgresDaoG.kt
+=======
+import org.apache.logging.log4j.Logger
+import tech.pegasys.teku.infrastructure.async.SafeFuture
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
 import kotlin.time.Clock
 import kotlin.time.Instant
 
 abstract class BlobsPostgresDaoG<T : BlockInterval>(
   private val maxBlobsToReturn: UInt,
   connection: SqlClient,
+<<<<<<< HEAD
 <<<<<<< HEAD:coordinator/persistence/src/main/kotlin/lineth/persistence/conflation/BlobsPostgresDaoG.kt
 <<<<<<<< HEAD:coordinator/persistence/src/main/kotlin/lineth/persistence/conflation/BlobsPostgresDaoG.kt
 <<<<<<< HEAD:coordinator/persistence/src/main/kotlin/lineth/persistence/conflation/BlobsPostgresDaoG.kt
@@ -70,6 +84,8 @@ abstract class BlobsPostgresDaoG<T : BlockInterval>(
 >>>>>>> 83adcc937 (chore(coordinator): riscv blob data skeleton (#3609)):coordinator/persistence/src/main/kotlin/linea/persistence/conflation/BlobsPostgresDaoG.kt
 =======
 >>>>>>> 83adcc937 (chore(coordinator): riscv blob data skeleton (#3609)):coordinator/persistence/src/main/kotlin/linea/persistence/conflation/BlobsPostgresDaoG.kt
+=======
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
   protected val log: Logger,
   protected val clock: Clock,
 ) : BlobsDaoG<T> {
@@ -108,6 +124,7 @@ abstract class BlobsPostgresDaoG<T : BlockInterval>(
       limit $maxBlobsToReturn
     """
       .trimIndent()
+<<<<<<< HEAD
 <<<<<<< HEAD:coordinator/persistence/src/main/kotlin/lineth/persistence/conflation/BlobsPostgresDaoG.kt
 <<<<<<< HEAD:coordinator/persistence/src/main/kotlin/lineth/persistence/conflation/BlobsPostgresDaoG.kt
 ========
@@ -181,6 +198,8 @@ abstract class BlobsPostgresDaoG<T : BlockInterval>(
 <<<<<<<< HEAD:coordinator/persistence/src/main/kotlin/lineth/persistence/conflation/BlobsPostgresDaoG.kt
 >>>>>>> 83adcc937 (chore(coordinator): riscv blob data skeleton (#3609)):coordinator/persistence/src/main/kotlin/linea/persistence/conflation/BlobsPostgresDaoG.kt
 =======
+=======
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
 
   private val selectBlobByEndBlockNumberSql =
     """
@@ -191,7 +210,10 @@ abstract class BlobsPostgresDaoG<T : BlockInterval>(
     """
       .trimIndent()
 
+<<<<<<< HEAD
 >>>>>>> 83adcc937 (chore(coordinator): riscv blob data skeleton (#3609)):coordinator/persistence/src/main/kotlin/linea/persistence/conflation/BlobsPostgresDaoG.kt
+=======
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
   private val selectBlobByStartBlockNumberSql =
     """
       select *
@@ -306,6 +328,7 @@ abstract class BlobsPostgresDaoG<T : BlockInterval>(
       .map { rowSet -> rowSet.rowCount() }
       .toSafeFuture()
   }
+<<<<<<< HEAD
 <<<<<<< HEAD:coordinator/persistence/src/main/kotlin/lineth/persistence/conflation/BlobsPostgresDaoG.kt
 <<<<<<< HEAD:coordinator/persistence/src/main/kotlin/lineth/persistence/conflation/BlobsPostgresDaoG.kt
 ========
@@ -332,4 +355,6 @@ abstract class BlobsPostgresDaoG<T : BlockInterval>(
 >>>>>>>> 83adcc937 (chore(coordinator): riscv blob data skeleton (#3609)):coordinator/persistence/src/main/kotlin/linea/persistence/conflation/BlobsPostgresDao.kt
 =======
 >>>>>>> 83adcc937 (chore(coordinator): riscv blob data skeleton (#3609)):coordinator/persistence/src/main/kotlin/linea/persistence/conflation/BlobsPostgresDaoG.kt
+=======
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
 }

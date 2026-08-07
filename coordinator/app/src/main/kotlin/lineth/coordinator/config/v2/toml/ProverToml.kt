@@ -34,6 +34,7 @@ data class ProverToml(
   )
   val fsPollingTimeout: Duration = Duration.INFINITE,
   @param:ConfigSection("Execution (block) prover request/response directories.")
+<<<<<<< HEAD
   val execution: ProverConfigToml,
   @param:ConfigSection("Blob compression prover request/response directories.")
   val blobCompression: ProverConfigToml? = null,
@@ -43,6 +44,15 @@ data class ProverToml(
   val invalidity: ProverConfigToml? = null,
   @param:ConfigSection("Proof aggregation prover request/response directories.")
   val proofAggregation: ProverConfigToml,
+=======
+  val execution: ProverDirectoriesToml,
+  @param:ConfigSection("Blob compression prover request/response directories.")
+  val blobCompression: ProverDirectoriesToml,
+  @param:ConfigSection("Invalidity prover request/response directories; omit to disable.")
+  val invalidity: ProverDirectoriesToml? = null,
+  @param:ConfigSection("Proof aggregation prover request/response directories.")
+  val proofAggregation: ProverDirectoriesToml,
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
   @param:ConfigDoc(
     description = "Inclusive L2 block number at which to switch from this prover to the `new` prover. " +
       "Mutually exclusive with switchBlockTimestamp.",
@@ -63,6 +73,7 @@ data class ProverToml(
   )
   val enableRequestFilesCleanup: Boolean = false,
 ) {
+<<<<<<< HEAD
   init {
     require(blobCompression != null || rollup != null) {
       "Either blobCompression or rollup must be defined in prover config."
@@ -73,6 +84,9 @@ data class ProverToml(
   }
 
   data class ProverConfigToml(
+=======
+  data class ProverDirectoriesToml(
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
     @param:ConfigDoc(
       description = "Directory the coordinator writes prover request files to.",
       example = "/data/prover/v3/execution/requests",
@@ -83,6 +97,7 @@ data class ProverToml(
       example = "/data/prover/v3/execution/responses",
     )
     val fsResponsesDirectory: String,
+<<<<<<< HEAD
     @param:ConfigDoc(
       description = "Guest program verifying key for the RISC-V prover. Required when this config is used " +
         "as the riscvProver; omit for the standard (EVM) prover.",
@@ -118,6 +133,10 @@ data class ProverToml(
       proofAggregation = t.toFileBasedProverConfig(t.proofAggregation),
     )
 
+=======
+  )
+
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
   fun reified(): ProversConfig {
     val mergedSwitchBlockNumberInclusive = switchBlockNumberInclusive ?: new?.switchBlockNumberInclusive
     val mergedSwitchBlockTimestamp = switchBlockTimestamp ?: new?.switchBlockTimestamp
@@ -125,10 +144,97 @@ data class ProverToml(
       "Only one of switchBlockNumberInclusive and switchBlockTimestamp may be set in [prover] config"
     }
     return ProversConfig(
+<<<<<<< HEAD
       proverA = toProverConfig(this),
       switchBlockNumberInclusive = mergedSwitchBlockNumberInclusive,
       switchBlockTimestamp = mergedSwitchBlockTimestamp,
       proverB = this.new?.let { toProverConfig(it) },
+=======
+      proverA =
+      ProverConfig(
+        execution =
+        FileBasedProverConfig(
+          requestsDirectory = Path.of(this.execution.fsRequestsDirectory),
+          responsesDirectory = Path.of(this.execution.fsResponsesDirectory),
+          inprogressProvingSuffixPattern = this.fsInprogressProvingSuffixPattern,
+          inprogressRequestWritingSuffix = this.fsInprogressRequestWritingSuffix,
+          pollingInterval = this.fsPollingInterval,
+          pollingTimeout = this.fsPollingTimeout,
+        ),
+        blobCompression =
+        FileBasedProverConfig(
+          requestsDirectory = Path.of(this.blobCompression.fsRequestsDirectory),
+          responsesDirectory = Path.of(this.blobCompression.fsResponsesDirectory),
+          inprogressProvingSuffixPattern = this.fsInprogressProvingSuffixPattern,
+          inprogressRequestWritingSuffix = this.fsInprogressRequestWritingSuffix,
+          pollingInterval = this.fsPollingInterval,
+          pollingTimeout = this.fsPollingTimeout,
+        ),
+        invalidity = this.invalidity?.let {
+          FileBasedProverConfig(
+            requestsDirectory = Path.of(this.invalidity.fsRequestsDirectory),
+            responsesDirectory = Path.of(this.invalidity.fsResponsesDirectory),
+            inprogressProvingSuffixPattern = this.fsInprogressProvingSuffixPattern,
+            inprogressRequestWritingSuffix = this.fsInprogressRequestWritingSuffix,
+            pollingInterval = this.fsPollingInterval,
+            pollingTimeout = this.fsPollingTimeout,
+          )
+        },
+        proofAggregation =
+        FileBasedProverConfig(
+          requestsDirectory = Path.of(this.proofAggregation.fsRequestsDirectory),
+          responsesDirectory = Path.of(this.proofAggregation.fsResponsesDirectory),
+          inprogressProvingSuffixPattern = this.fsInprogressProvingSuffixPattern,
+          inprogressRequestWritingSuffix = this.fsInprogressRequestWritingSuffix,
+          pollingInterval = this.fsPollingInterval,
+          pollingTimeout = this.fsPollingTimeout,
+        ),
+      ),
+      switchBlockNumberInclusive = mergedSwitchBlockNumberInclusive,
+      switchBlockTimestamp = mergedSwitchBlockTimestamp,
+      proverB =
+      this.new?.let { newProverConfig ->
+        ProverConfig(
+          execution =
+          FileBasedProverConfig(
+            requestsDirectory = Path.of(newProverConfig.execution.fsRequestsDirectory),
+            responsesDirectory = Path.of(newProverConfig.execution.fsResponsesDirectory),
+            inprogressProvingSuffixPattern = newProverConfig.fsInprogressProvingSuffixPattern,
+            inprogressRequestWritingSuffix = newProverConfig.fsInprogressRequestWritingSuffix,
+            pollingInterval = newProverConfig.fsPollingInterval,
+            pollingTimeout = newProverConfig.fsPollingTimeout,
+          ),
+          blobCompression =
+          FileBasedProverConfig(
+            requestsDirectory = Path.of(newProverConfig.blobCompression.fsRequestsDirectory),
+            responsesDirectory = Path.of(newProverConfig.blobCompression.fsResponsesDirectory),
+            inprogressProvingSuffixPattern = newProverConfig.fsInprogressProvingSuffixPattern,
+            inprogressRequestWritingSuffix = newProverConfig.fsInprogressRequestWritingSuffix,
+            pollingInterval = newProverConfig.fsPollingInterval,
+            pollingTimeout = newProverConfig.fsPollingTimeout,
+          ),
+          invalidity = newProverConfig.invalidity?.let {
+            FileBasedProverConfig(
+              requestsDirectory = Path.of(newProverConfig.invalidity.fsRequestsDirectory),
+              responsesDirectory = Path.of(newProverConfig.invalidity.fsResponsesDirectory),
+              inprogressProvingSuffixPattern = newProverConfig.fsInprogressProvingSuffixPattern,
+              inprogressRequestWritingSuffix = newProverConfig.fsInprogressRequestWritingSuffix,
+              pollingInterval = newProverConfig.fsPollingInterval,
+              pollingTimeout = newProverConfig.fsPollingTimeout,
+            )
+          },
+          proofAggregation =
+          FileBasedProverConfig(
+            requestsDirectory = Path.of(newProverConfig.proofAggregation.fsRequestsDirectory),
+            responsesDirectory = Path.of(newProverConfig.proofAggregation.fsResponsesDirectory),
+            inprogressProvingSuffixPattern = newProverConfig.fsInprogressProvingSuffixPattern,
+            inprogressRequestWritingSuffix = newProverConfig.fsInprogressRequestWritingSuffix,
+            pollingInterval = newProverConfig.fsPollingInterval,
+            pollingTimeout = newProverConfig.fsPollingTimeout,
+          ),
+        )
+      },
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
       enableRequestFilesCleanup = this.enableRequestFilesCleanup,
     )
   }

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <<<<<<< HEAD:coordinator/ethereum/gas-pricing/dynamic-cap/src/test/kotlin/lineth/ethereum/gaspricing/dynamiccap/GasPriceCapProviderImplV2Test.kt
 <<<<<<< HEAD:coordinator/ethereum/gas-pricing/dynamic-cap/src/test/kotlin/lineth/ethereum/gaspricing/dynamiccap/GasPriceCapProviderImplV2Test.kt
 package lineth.ethereum.gaspricing.dynamiccap
@@ -7,6 +8,9 @@ package net.consensys.linea.ethereum.gaspricing.dynamiccap
 =======
 package net.consensys.linea.ethereum.gaspricing.dynamiccap
 >>>>>>> 04dab17d5 (feat(coordinator): GasPriceCapProviderV2 and DRY (#3624)):coordinator/ethereum/gas-pricing/dynamic-cap/src/test/kotlin/net/consensys/linea/ethereum/gaspricing/dynamiccap/GasPriceCapProviderImplV2Test.kt
+=======
+package lineth.ethereum.gaspricing.dynamiccap
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
 
 import io.vertx.junit5.VertxExtension
 import linea.domain.gas.GasPriceCaps

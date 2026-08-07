@@ -4,7 +4,11 @@ import linea.contract.l2.L2MessageServiceSmartContractClientReadOnly
 import linea.domain.toBlockParameter
 import linea.ethapi.EthApiClient
 import linea.kotlin.zeroHash32
+<<<<<<< HEAD
 import lineth.coordination.FtxRollingInfoProvider
+=======
+import lineth.persistence.ForcedTransactionsDao
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Instant
 

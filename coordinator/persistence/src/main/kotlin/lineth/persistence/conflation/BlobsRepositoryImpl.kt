@@ -3,6 +3,7 @@ package lineth.persistence.conflation
 import linea.domain.BlobRecord
 import linea.domain.BlobRecordV2
 import linea.error.DuplicatedRecordException
+<<<<<<< HEAD
 <<<<<<< HEAD:coordinator/persistence/src/main/kotlin/lineth/persistence/conflation/BlobsRepositoryImpl.kt
 import lineth.persistence.BlobsRepository
 import lineth.persistence.BlobsRepositoryG
@@ -15,6 +16,11 @@ import linea.persistence.BlobsRepositoryV2
 >>>>>>> 83adcc937 (chore(coordinator): riscv blob data skeleton (#3609)):coordinator/persistence/src/main/kotlin/linea/persistence/conflation/BlobsRepositoryImpl.kt
 =======
 >>>>>>> 83adcc937 (chore(coordinator): riscv blob data skeleton (#3609)):coordinator/persistence/src/main/kotlin/linea/persistence/conflation/BlobsRepositoryImpl.kt
+=======
+import lineth.persistence.BlobsRepository
+import lineth.persistence.BlobsRepositoryG
+import lineth.persistence.BlobsRepositoryV2
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Instant
 

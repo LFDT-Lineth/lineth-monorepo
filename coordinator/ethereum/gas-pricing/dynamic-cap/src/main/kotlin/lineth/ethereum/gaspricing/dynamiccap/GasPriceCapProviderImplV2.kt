@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <<<<<<< HEAD:coordinator/ethereum/gas-pricing/dynamic-cap/src/main/kotlin/lineth/ethereum/gaspricing/dynamiccap/GasPriceCapProviderImplV2.kt
 <<<<<<< HEAD:coordinator/ethereum/gas-pricing/dynamic-cap/src/main/kotlin/lineth/ethereum/gaspricing/dynamiccap/GasPriceCapProviderImplV2.kt
 package lineth.ethereum.gaspricing.dynamiccap
@@ -14,10 +15,16 @@ import linea.gaspricing.GasPriceCapProviderV2
 >>>>>>> 04dab17d5 (feat(coordinator): GasPriceCapProviderV2 and DRY (#3624)):coordinator/ethereum/gas-pricing/dynamic-cap/src/main/kotlin/net/consensys/linea/ethereum/gaspricing/dynamiccap/GasPriceCapProviderImplV2.kt
 =======
 >>>>>>> 04dab17d5 (feat(coordinator): GasPriceCapProviderV2 and DRY (#3624)):coordinator/ethereum/gas-pricing/dynamic-cap/src/main/kotlin/net/consensys/linea/ethereum/gaspricing/dynamiccap/GasPriceCapProviderImplV2.kt
+=======
+package lineth.ethereum.gaspricing.dynamiccap
+
+import linea.domain.gas.GasPriceCaps
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
 import linea.kotlin.minusCoercingUnderflow
 import linea.kotlin.toBigDecimal
 import linea.kotlin.toGWei
 import linea.kotlin.toULong
+<<<<<<< HEAD
 <<<<<<< HEAD:coordinator/ethereum/gas-pricing/dynamic-cap/src/main/kotlin/lineth/ethereum/gaspricing/dynamiccap/GasPriceCapProviderImplV2.kt
 <<<<<<< HEAD:coordinator/ethereum/gas-pricing/dynamic-cap/src/main/kotlin/lineth/ethereum/gaspricing/dynamiccap/GasPriceCapProviderImplV2.kt
 import lineth.gaspricing.GasPriceCapProviderV2
@@ -25,6 +32,9 @@ import lineth.gaspricing.GasPriceCapProviderV2
 >>>>>>> 04dab17d5 (feat(coordinator): GasPriceCapProviderV2 and DRY (#3624)):coordinator/ethereum/gas-pricing/dynamic-cap/src/main/kotlin/net/consensys/linea/ethereum/gaspricing/dynamiccap/GasPriceCapProviderImplV2.kt
 =======
 >>>>>>> 04dab17d5 (feat(coordinator): GasPriceCapProviderV2 and DRY (#3624)):coordinator/ethereum/gas-pricing/dynamic-cap/src/main/kotlin/net/consensys/linea/ethereum/gaspricing/dynamiccap/GasPriceCapProviderImplV2.kt
+=======
+import lineth.gaspricing.GasPriceCapProviderV2
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

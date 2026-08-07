@@ -14,10 +14,13 @@ import linea.contract.l1.FakeLinethRollupSmartContractClient
 import linea.contract.l1.LinethRollupContractVersion
 import linea.contract.l1.LinethRollupFinalizedState
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 import linea.coordination.blob.FakeBlobCompressor
 import linea.coordinator.clients.FakeTracesConflationVirtualBlockClientV1
 >>>>>>> 53054e4e0 (chore(coordinator): rename LineaRollup to LinethRollup in JVM components (#3421))
+=======
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
 import linea.domain.BlobCounters
 import linea.domain.BlockCounters
 import linea.domain.BlockInterval

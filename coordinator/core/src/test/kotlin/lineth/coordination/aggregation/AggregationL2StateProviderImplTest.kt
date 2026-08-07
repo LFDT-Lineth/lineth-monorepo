@@ -3,7 +3,10 @@ package lineth.coordination.aggregation
 import linea.contract.l2.FakeL2MessageService
 import linea.domain.toBlockParameter
 import linea.ethapi.FakeEthApiClient
+<<<<<<< HEAD
 import lineth.coordination.FtxRollingInfoProviderImpl
+=======
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
 import lineth.persistence.ftx.FakeForcedTransactionsDao
 import lineth.persistence.ftx.ForcedTransactionRecordFactory
 import org.assertj.core.api.Assertions.assertThat

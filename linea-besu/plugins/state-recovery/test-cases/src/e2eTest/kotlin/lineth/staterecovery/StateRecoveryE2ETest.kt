@@ -14,6 +14,7 @@ import linea.kotlin.decodeHex
 import linea.kotlin.gwei
 import linea.kotlin.toBigInteger
 import linea.log4j.configureLoggers
+<<<<<<< HEAD:linea-besu/plugins/state-recovery/test-cases/src/e2eTest/kotlin/lineth/staterecovery/StateRecoveryE2ETest.kt
 import linea.web3j.ethapi.createEthApiClient
 import linea.web3j.waitForTxReceipt
 import lineth.staterecovery.test.assertBesuAndShomeiRecoveredAsExpected
@@ -21,6 +22,15 @@ import lineth.staterecovery.test.execCommandAndAssertSuccess
 import lineth.staterecovery.test.getFinalizationsOnL1
 import lineth.staterecovery.test.getLastFinalizationOnL1
 import lineth.staterecovery.test.waitExecutionLayerToBeUpAndRunning
+=======
+import linea.staterecovery.test.assertBesuAndShomeiRecoveredAsExpected
+import linea.staterecovery.test.execCommandAndAssertSuccess
+import linea.staterecovery.test.getFinalizationsOnL1
+import linea.staterecovery.test.getLastFinalizationOnL1
+import linea.staterecovery.test.waitExecutionLayerToBeUpAndRunning
+import linea.web3j.ethapi.createEthApiClient
+import linea.web3j.waitForTxReceipt
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746)):linea-besu/plugins/state-recovery/test-cases/src/e2eTest/kotlin/linea/staterecovery/StateRecoveryE2ETest.kt
 import lineth.testing.Runner
 import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory

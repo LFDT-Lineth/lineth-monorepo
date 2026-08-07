@@ -1,7 +1,10 @@
 package lineth.contract.l1
 
 import linea.EthLogsSearcher
+<<<<<<< HEAD
 <<<<<<< HEAD:coordinator/clients/smart-contract-client/src/main/kotlin/lineth/contract/l1/Web3JLinethRollupSmartContractClient.kt
+=======
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
 import linea.contract.LinethRollupV6
 import linea.contract.l1.BlobsSubmissionV9
 import linea.contract.l1.BlockAndNonce
@@ -9,6 +12,7 @@ import linea.contract.l1.FinalizationDataV9
 import linea.contract.l1.LinethRollupContractVersion
 import linea.contract.l1.LinethRollupSmartContractClient
 import linea.contract.l1.Web3JLinethRollupSmartContractClientReadOnly
+<<<<<<< HEAD
 =======
 import linea.contract.LineaRollupV6
 import linea.contract.l1.BlobsSubmissionV9
@@ -18,6 +22,8 @@ import linea.contract.l1.LineaRollupContractVersion
 import linea.contract.l1.LineaRollupSmartContractClient
 import linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
 >>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618)):coordinator/clients/smart-contract-client/src/main/kotlin/net/consensys/linea/contract/l1/Web3JLineaRollupSmartContractClient.kt
+=======
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
 import linea.domain.BlobRecord
 import linea.domain.ProofToFinalize
 import linea.domain.gas.GasPriceCaps
@@ -135,6 +141,7 @@ class Web3JLinethRollupSmartContractClient internal constructor(
    * Uses SMC `submitBlobs` function that supports multiple blobs per call.
    */
   override fun submitBlobs(blobs: List<BlobRecord>, gasPriceCaps: GasPriceCaps?): SafeFuture<String> {
+<<<<<<< HEAD
     return SafeFuture.completedFuture(Unit)
       .thenApply { blobs.getCompressionProofs("submitBlobs") }
       .thenCompose { compressionProofs ->
@@ -147,10 +154,21 @@ class Web3JLinethRollupSmartContractClient internal constructor(
               gasPriceCaps = gasPriceCaps,
             )
           }
+=======
+    return getVersion()
+      .thenCompose { version ->
+        val function = Web3JLinethRollupFunctionBuilders.buildSubmitBlobsFunction(version, blobs)
+        web3jContractHelper.sendBlobCarryingTransactionAndGetTxHash(
+          function = function,
+          blobs = blobs.map { it.blobCompressionProof!!.compressedData },
+          gasPriceCaps = gasPriceCaps,
+        )
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
       }
   }
 
   override fun submitBlobsEthCall(blobs: List<BlobRecord>, gasPriceCaps: GasPriceCaps?): SafeFuture<String?> {
+<<<<<<< HEAD
     return SafeFuture.completedFuture(Unit)
       .thenApply { blobs.getCompressionProofs("submitBlobsEthCall") }
       .thenCompose { compressionProofs ->
@@ -163,6 +181,16 @@ class Web3JLinethRollupSmartContractClient internal constructor(
               gasPriceCaps = gasPriceCaps,
             )
           }
+=======
+    return getVersion()
+      .thenCompose { version ->
+        val function = Web3JLinethRollupFunctionBuilders.buildSubmitBlobsFunction(version, blobs)
+        web3jContractHelper.executeBlobEthCall(
+          function = function,
+          blobs = blobs.map { it.blobCompressionProof!!.compressedData },
+          gasPriceCaps = gasPriceCaps,
+        )
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
       }
   }
 
@@ -212,6 +240,7 @@ class Web3JLinethRollupSmartContractClient internal constructor(
   }
 
   private fun ensureMinVersion(
+<<<<<<< HEAD
 <<<<<<< HEAD:coordinator/clients/smart-contract-client/src/main/kotlin/lineth/contract/l1/Web3JLinethRollupSmartContractClient.kt
     minVersion: LinethRollupContractVersion,
   ): SafeFuture<LinethRollupContractVersion> {
@@ -219,6 +248,10 @@ class Web3JLinethRollupSmartContractClient internal constructor(
     minVersion: LineaRollupContractVersion,
   ): SafeFuture<LineaRollupContractVersion> {
 >>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618)):coordinator/clients/smart-contract-client/src/main/kotlin/net/consensys/linea/contract/l1/Web3JLineaRollupSmartContractClient.kt
+=======
+    minVersion: LinethRollupContractVersion,
+  ): SafeFuture<LinethRollupContractVersion> {
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
     return getVersion()
       .thenCompose { version ->
         if (version < minVersion) {
@@ -236,11 +269,15 @@ class Web3JLinethRollupSmartContractClient internal constructor(
     gasPriceCaps: GasPriceCaps?,
     preflightWithEthCall: Boolean,
   ): SafeFuture<String> {
+<<<<<<< HEAD
 <<<<<<< HEAD:coordinator/clients/smart-contract-client/src/main/kotlin/lineth/contract/l1/Web3JLinethRollupSmartContractClient.kt
     return ensureMinVersion(LinethRollupContractVersion.V9)
 =======
     return ensureMinVersion(LineaRollupContractVersion.V9)
 >>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618)):coordinator/clients/smart-contract-client/src/main/kotlin/net/consensys/linea/contract/l1/Web3JLineaRollupSmartContractClient.kt
+=======
+    return ensureMinVersion(LinethRollupContractVersion.V9)
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
       .thenApply {
         FunctionBuildersV9.buildSubmitBlobsFunctionV9(blobData)
       }
@@ -268,11 +305,15 @@ class Web3JLinethRollupSmartContractClient internal constructor(
     gasPriceCaps: GasPriceCaps?,
     preflightWithEthCall: Boolean,
   ): SafeFuture<String> {
+<<<<<<< HEAD
 <<<<<<< HEAD:coordinator/clients/smart-contract-client/src/main/kotlin/lineth/contract/l1/Web3JLinethRollupSmartContractClient.kt
     return ensureMinVersion(LinethRollupContractVersion.V9)
 =======
     return ensureMinVersion(LineaRollupContractVersion.V9)
 >>>>>>> 5c0bae8ac (chore(coordinator): adds initial scafold for contract v9 RISC-V (#3618)):coordinator/clients/smart-contract-client/src/main/kotlin/net/consensys/linea/contract/l1/Web3JLineaRollupSmartContractClient.kt
+=======
+    return ensureMinVersion(LinethRollupContractVersion.V9)
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
       .thenApply {
         FunctionBuildersV9.buildFinalizeBlocksFunctionV9(data)
       }
@@ -286,6 +327,7 @@ class Web3JLinethRollupSmartContractClient internal constructor(
       }
   }
 }
+<<<<<<< HEAD
 
 private fun List<BlobRecord>.getCompressionProofs(operation: String) =
   mapIndexed { index, blob ->
@@ -293,3 +335,5 @@ private fun List<BlobRecord>.getCompressionProofs(operation: String) =
       "$operation: blob at index=$index is missing a compression proof"
     }
   }
+=======
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <<<<<<< HEAD:coordinator/ethereum/gas-pricing/dynamic-cap/src/main/kotlin/lineth/ethereum/gaspricing/dynamiccap/GasPriceCapProviderWithHardCaps.kt
 <<<<<<< HEAD:coordinator/ethereum/gas-pricing/dynamic-cap/src/main/kotlin/lineth/ethereum/gaspricing/dynamiccap/GasPriceCapProviderWithHardCaps.kt
 package lineth.ethereum.gaspricing.dynamiccap
@@ -11,16 +12,23 @@ import lineth.metrics.LineaMetricsCategory
 =======
 >>>>>>> 04dab17d5 (feat(coordinator): GasPriceCapProviderV2 and DRY (#3624)):coordinator/ethereum/gas-pricing/dynamic-cap/src/main/kotlin/net/consensys/linea/ethereum/gaspricing/dynamiccap/GasPriceCapProviderWithHardCaps.kt
 package net.consensys.linea.ethereum.gaspricing.dynamiccap
+=======
+package lineth.ethereum.gaspricing.dynamiccap
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
 
 import linea.domain.gas.GasPriceCaps
-import linea.gaspricing.GasPriceCapProvider
 import linea.kotlin.toBigDecimal
 import linea.kotlin.toULong
+<<<<<<< HEAD
 import linea.metrics.LineaMetricsCategory
 <<<<<<< HEAD:coordinator/ethereum/gas-pricing/dynamic-cap/src/main/kotlin/lineth/ethereum/gaspricing/dynamiccap/GasPriceCapProviderWithHardCaps.kt
 >>>>>>> 04dab17d5 (feat(coordinator): GasPriceCapProviderV2 and DRY (#3624)):coordinator/ethereum/gas-pricing/dynamic-cap/src/main/kotlin/net/consensys/linea/ethereum/gaspricing/dynamiccap/GasPriceCapProviderWithHardCaps.kt
 =======
 >>>>>>> 04dab17d5 (feat(coordinator): GasPriceCapProviderV2 and DRY (#3624)):coordinator/ethereum/gas-pricing/dynamic-cap/src/main/kotlin/net/consensys/linea/ethereum/gaspricing/dynamiccap/GasPriceCapProviderWithHardCaps.kt
+=======
+import lineth.gaspricing.GasPriceCapProvider
+import lineth.metrics.LineaMetricsCategory
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
 import net.consensys.linea.metrics.MetricsFacade
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.atomic.AtomicReference

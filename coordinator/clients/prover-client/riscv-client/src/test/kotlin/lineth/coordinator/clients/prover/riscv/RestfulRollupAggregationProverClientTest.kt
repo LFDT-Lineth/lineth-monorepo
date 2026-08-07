@@ -7,7 +7,11 @@ import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.domain.BlockIntervalProofIndex
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.CHAIN_ID
+<<<<<<< HEAD
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.ROLLUP_AGGREGATION_PROGRAM_VK
+=======
+import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.ROLLUP_AGGREGATION_GUEST_PROGRAM_ID
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.jsonMapper
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.proverJobResponseBody
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.restClient

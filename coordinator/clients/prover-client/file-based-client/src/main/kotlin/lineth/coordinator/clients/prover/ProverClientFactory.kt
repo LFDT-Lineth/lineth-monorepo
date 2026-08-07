@@ -5,6 +5,11 @@ import linea.clients.BlobCompressionProverClientV2
 import linea.clients.ExecutionProverClientV2
 import linea.clients.InvalidityProverClientV1
 import linea.clients.ProofAggregationProverClientV2
+<<<<<<< HEAD
+=======
+import linea.clients.ProverClient
+import linea.domain.ProofIndex
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
 import lineth.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.GaugeAggregator

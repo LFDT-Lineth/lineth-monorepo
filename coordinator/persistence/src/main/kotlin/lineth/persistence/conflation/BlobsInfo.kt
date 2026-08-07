@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <<<<<<< HEAD:coordinator/persistence/src/main/kotlin/lineth/persistence/conflation/BlobsInfo.kt
 <<<<<<< HEAD:coordinator/persistence/src/main/kotlin/lineth/persistence/conflation/BlobsInfo.kt
 package lineth.persistence.conflation
@@ -7,6 +8,9 @@ package linea.persistence.conflation
 =======
 package linea.persistence.conflation
 >>>>>>> 83adcc937 (chore(coordinator): riscv blob data skeleton (#3609)):coordinator/persistence/src/main/kotlin/linea/persistence/conflation/BlobsInfo.kt
+=======
+package lineth.persistence.conflation
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
 
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject

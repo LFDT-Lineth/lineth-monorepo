@@ -8,6 +8,7 @@ import io.vertx.sqlclient.SqlClient
 import linea.DisabledService
 import linea.LongRunningService
 import linea.contract.l1.Web3JLinethRollupSmartContractClientReadOnly
+<<<<<<< HEAD
 <<<<<<< HEAD:coordinator/app/src/main/kotlin/lineth/coordinator/app/CoordinatorApp.kt
 =======
 import linea.coordinator.api.Api
@@ -20,6 +21,8 @@ import linea.coordinator.config.v2.logPretty
 import linea.coordinator.extensions.CoordinatorContext
 import linea.coordinator.extensions.CoordinatorExtensionFactory
 >>>>>>> 53054e4e0 (chore(coordinator): rename LineaRollup to LinethRollup in JVM components (#3421)):coordinator/app/src/main/kotlin/linea/coordinator/app/CoordinatorApp.kt
+=======
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
 import linea.domain.BlockParameter
 import linea.domain.RetryConfig
 import linea.ethapi.EthLogsSearcherImpl
@@ -29,7 +32,10 @@ import linea.web3j.createWeb3jHttpClient
 import linea.web3j.ethapi.createEthApiClient
 import lineth.coordinator.api.Api
 import lineth.coordinator.app.conflation.ConflationAppV1
+<<<<<<< HEAD
 import lineth.coordinator.app.conflation.ConflationAppV2
+=======
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
 import lineth.coordinator.app.conflationbacktesting.ConflationBacktestingService
 import lineth.coordinator.config.v2.CoordinatorConfig
 import lineth.coordinator.config.v2.DatabaseConfig

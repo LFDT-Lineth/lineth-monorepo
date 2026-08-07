@@ -3,6 +3,7 @@ package lineth.coordinator.config.v2.toml
 import linea.blob.BlobCompressorVersion
 import linea.config.docs.ConfigDoc
 import linea.config.docs.ConfigSection
+<<<<<<< HEAD
 <<<<<<< HEAD:coordinator/app/src/main/kotlin/lineth/coordinator/config/v2/toml/ConflationToml.kt
 <<<<<<< HEAD:coordinator/app/src/main/kotlin/lineth/coordinator/config/v2/toml/ConflationToml.kt
 import lineth.coordinator.config.v2.ConflationConfig
@@ -11,6 +12,9 @@ import lineth.coordinator.config.v2.ConflationConfig
 >>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)):coordinator/app/src/main/kotlin/linea/coordinator/config/v2/toml/ConflationToml.kt
 import linea.coordinator.config.v2.ConflationConfig
 >>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)):coordinator/app/src/main/kotlin/linea/coordinator/config/v2/toml/ConflationToml.kt
+=======
+import lineth.coordinator.config.v2.ConflationConfig
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
 import net.consensys.linea.traces.TracesCountersV4
 import net.consensys.linea.traces.TracesCountersV5
 import java.net.URL

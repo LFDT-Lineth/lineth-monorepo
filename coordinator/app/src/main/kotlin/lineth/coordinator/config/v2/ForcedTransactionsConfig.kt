@@ -1,11 +1,14 @@
 package lineth.coordinator.config.v2
 
+<<<<<<< HEAD
 <<<<<<< HEAD:coordinator/app/src/main/kotlin/lineth/coordinator/config/v2/ForcedTransactionsConfig.kt
 =======
 import linea.config.docs.ConfigDoc
 import linea.config.docs.ConfigSection
 import linea.coordinator.config.v2.ForcedTransactionsConfig
 >>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)):coordinator/app/src/main/kotlin/linea/coordinator/config/v2/toml/ForcedTransactionsConfigToml.kt
+=======
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
 import linea.domain.BlockParameter
 import linea.domain.RetryConfig
 import java.net.URL
@@ -14,7 +17,10 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
+<<<<<<< HEAD
 <<<<<<< HEAD:coordinator/app/src/main/kotlin/lineth/coordinator/config/v2/ForcedTransactionsConfig.kt
+=======
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
 data class ForcedTransactionsConfig(
   override val disabled: Boolean = false,
   val l1Endpoint: URL,
@@ -28,6 +34,7 @@ data class ForcedTransactionsConfig(
     backoffDelay = 1.seconds,
     failuresWarningThreshold = 3u,
   ),
+<<<<<<< HEAD
 =======
 data class ForcedTransactionsConfigToml(
   @param:ConfigDoc(description = "Whether forced transactions handling is disabled.", default = "false")
@@ -77,6 +84,14 @@ data class ForcedTransactionsConfigToml(
   val l1EventScraping: L1EventScraping = L1EventScraping(),
 ) {
 >>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)):coordinator/app/src/main/kotlin/linea/coordinator/config/v2/toml/ForcedTransactionsConfigToml.kt
+=======
+  val processingTickInterval: Duration = 2.minutes,
+  val processingDelay: Duration = Duration.ZERO,
+  val l1EventScraping: L1EventScraping = L1EventScraping(),
+  val processingBatchSize: UInt = 10u,
+  val invalidityProofCheckInterval: Duration = 2.minutes,
+) : FeatureToggle {
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
   init {
     require(processingTickInterval >= 1.milliseconds) {
       "processingSendTickInterval=$processingTickInterval must be equal or greater than 1ms"
@@ -93,6 +108,7 @@ data class ForcedTransactionsConfigToml(
   }
 
   data class L1EventScraping(
+<<<<<<< HEAD
     @param:ConfigDoc(description = "Interval between L1 log polling attempts.", default = "PT12S")
     val pollingInterval: Duration = 12.seconds,
     @param:ConfigDoc(description = "Timeout for each L1 log polling request.", default = "PT5S")
@@ -108,6 +124,12 @@ data class ForcedTransactionsConfigToml(
       description = "Maximum block range covered by a single eth_getLogs search.",
       default = "10000",
     )
+=======
+    val pollingInterval: Duration = 12.seconds,
+    val pollingTimeout: Duration = 5.seconds,
+    val ethLogsSearchSuccessBackoffDelay: Duration = 1.milliseconds,
+    val ethLogsSearchBlockChunkSize: UInt = 1000u,
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
     val ethLogsSearchMaxBlockRange: UInt = 10_000u,
   ) {
     init {

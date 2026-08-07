@@ -2,6 +2,7 @@ package lineth.coordinator.config.v2.toml
 
 import linea.config.docs.ConfigDoc
 import linea.config.docs.ConfigSection
+<<<<<<< HEAD
 <<<<<<< HEAD:coordinator/app/src/main/kotlin/lineth/coordinator/config/v2/toml/TracesToml.kt
 <<<<<<< HEAD:coordinator/app/src/main/kotlin/lineth/coordinator/config/v2/toml/TracesToml.kt
 import lineth.coordinator.config.v2.TracesConfig
@@ -10,6 +11,9 @@ import lineth.coordinator.config.v2.TracesConfig
 >>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)):coordinator/app/src/main/kotlin/linea/coordinator/config/v2/toml/TracesToml.kt
 import linea.coordinator.config.v2.TracesConfig
 >>>>>>> abc0edd8e (feat(coordinator): document all TOML config keys with @ConfigDoc/@ConfigSection (#3568)):coordinator/app/src/main/kotlin/linea/coordinator/config/v2/toml/TracesToml.kt
+=======
+import lineth.coordinator.config.v2.TracesConfig
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
 import java.net.URL
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds

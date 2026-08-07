@@ -8,7 +8,11 @@ import io.vertx.junit5.VertxExtension
 import linea.domain.BlockIntervalProofIndex
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.CHAIN_ID
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.COINBASE
+<<<<<<< HEAD
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.L2_EXECUTION_PROGRAM_VK
+=======
+import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.L2_EXECUTION_GUEST_PROGRAM_ID
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.L2_MESSAGE_SERVICE_ADDRESS
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.jsonMapper
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.l2ExecutionProofRequestV1

@@ -2,12 +2,17 @@ package linea
 
 import linea.contract.l1.LinethRollupContractVersion
 <<<<<<< HEAD
+<<<<<<< HEAD
 import lineth.testing.CommandResult
 import lineth.testing.Runner
 =======
 import linea.testing.CommandResult
 import linea.testing.Runner
 >>>>>>> 53054e4e0 (chore(coordinator): rename LineaRollup to LinethRollup in JVM components (#3421))
+=======
+import lineth.testing.CommandResult
+import lineth.testing.Runner
+>>>>>>> 5d977f703 (chore(coordinator): package renaming to lineth (#3746))
 import org.hyperledger.besu.datatypes.Address
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.regex.Matcher
