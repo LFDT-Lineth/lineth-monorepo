@@ -16,7 +16,7 @@ import lineth.coordinator.config.v2.toml.TracesLimitsConfigFileV5Toml
  */
 object CoordinatorConfigDocsSpec : ConfigDocsSpec {
   /** Config data classes live in this package; used to distinguish nested sections from leaves. */
-  override val sectionDetector = sectionByPackagePrefix("linea.coordinator.config.v2.toml")
+  override val sectionDetector = sectionByPackagePrefix("lineth.coordinator.config.v2.toml")
 
   /** The Coordinator config files documented by this tooling, keyed by a stable label. */
   override val files: List<ConfigFileRoot> = listOf(

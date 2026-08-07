@@ -75,7 +75,7 @@ fun logErrorIfPresent(configLoadingResult: Result<Any?, String>, logger: Logger,
 
 inline fun <reified T : Any> loadConfigsAndLogErrors(
   configFiles: List<Path>,
-  logger: Logger = LogManager.getLogger("linea.coordinator.config"),
+  logger: Logger = LogManager.getLogger("lineth.coordinator.config"),
   strict: Boolean,
 ): Result<T, String> {
   return loadConfigsOrError<T>(configFiles, strict = strict)
@@ -91,7 +91,7 @@ fun loadConfigsOrError(
   tracesLimitsFileV5: Path?,
   gasPriceCapTimeOfDayMultipliersFile: Path,
   smartContractErrorsFile: Path,
-  logger: Logger = LogManager.getLogger("linea.coordinator.config"),
+  logger: Logger = LogManager.getLogger("lineth.coordinator.config"),
   strict: Boolean = false,
 ): Result<CoordinatorConfigToml, String> {
   val coordinatorBaseConfigs =
@@ -148,7 +148,7 @@ fun loadConfigs(
   tracesLimitsFileV5: Path?,
   gasPriceCapTimeOfDayMultipliersFile: Path,
   smartContractErrorsFile: Path,
-  logger: Logger = LogManager.getLogger("linea.coordinator.config"),
+  logger: Logger = LogManager.getLogger("lineth.coordinator.config"),
   enforceStrict: Boolean = false,
 ): CoordinatorConfig {
   return loadConfigsOrError(
