@@ -96,10 +96,14 @@ func readEcrecoverCases(t *testing.T, path string) []ecrCase {
 }
 
 // TestSecp256k1Ecrecover drives ecrecover_run.zkc against the exhaustive
-// accept/reject vectors. Every case is traced and constraint-checked; accept
-// cases must pass, reject cases must fail. A single representative accept case
-// additionally runs the full prove/verify pipeline (skipped under -short, since
-// an ecrecover proof is very expensive).
+// accept/reject vectors. ecrecover_generic is total (soft-fail sentinel,
+// never aborts), so EVERY case — valid recovery, soft-failure (QNR/infinity),
+// or invalid input — must trace and constraint-check cleanly: the driver checks
+// each case against its expected (pkx, pky, isSuccess) triple and only fails on
+// a mismatch. The two fixtures differ only in intent: `accepts` are recoveries
+// (isSuccess mostly 1), `rejects` are invalid inputs (isSuccess always 0). A
+// single representative case additionally runs the full prove/verify pipeline
+// (skipped under -short, since an ecrecover proof is expensive).
 func TestSecp256k1Ecrecover(t *testing.T) {
 	const program = "testdata/ecrecover_run.zkc"
 	binf, err := compileBinaryConstraints(program)
@@ -107,33 +111,32 @@ func TestSecp256k1Ecrecover(t *testing.T) {
 		t.Fatalf("failed to compile zkc source: %v", err)
 	}
 
-	t.Run("accepts", func(t *testing.T) {
-		for i, c := range readEcrecoverCases(t, "testdata/ecrecover.accepts") {
-			t.Run(c.label, func(t *testing.T) {
-				tc := zkcTestCase{ZkcFilePath: program, InputStr: c.input}
-				inputs, _, err := parseTestCase(tc, binf)
-				if err != nil {
-					t.Fatalf("expected accept, but tracing/constraint-check failed: %v", err)
-				}
-				// Prove exactly one representative accept case; ecrecover proofs
-				// are ~20+ min, so gate behind !-short.
-				if i == 0 && !testing.Short() {
-					if err := runProveVerify(inputs, binf, proverCompilePipeline); err != nil {
-						t.Fatalf("prove/verify failed: %v", err)
+	// (fixture, proveFirst) — prove one representative case from the accepts set only.
+	fixtures := []struct {
+		path       string
+		proveFirst bool
+	}{
+		{"testdata/ecrecover.accepts", true},
+		{"testdata/ecrecover.rejects", false},
+	}
+	for _, fx := range fixtures {
+		t.Run(strings.TrimPrefix(fx.path, "testdata/"), func(t *testing.T) {
+			for i, c := range readEcrecoverCases(t, fx.path) {
+				t.Run(c.label, func(t *testing.T) {
+					tc := zkcTestCase{ZkcFilePath: program, InputStr: c.input}
+					inputs, _, err := parseTestCase(tc, binf)
+					if err != nil {
+						t.Fatalf("expected (pkx, pky, isSuccess) to match; tracing/constraint-check failed: %v", err)
 					}
-				}
-			})
-		}
-	})
-
-	t.Run("rejects", func(t *testing.T) {
-		for _, c := range readEcrecoverCases(t, "testdata/ecrecover.rejects") {
-			t.Run(c.label, func(t *testing.T) {
-				tc := zkcTestCase{ZkcFilePath: program, InputStr: c.input}
-				if _, _, err := parseTestCase(tc, binf); err == nil {
-					t.Fatalf("expected reject, but the case was accepted")
-				}
-			})
-		}
-	})
+					// Prove exactly one representative case; ecrecover proofs
+					// are expensive, so gate behind !-short.
+					if fx.proveFirst && i == 0 && !testing.Short() {
+						if err := runProveVerify(inputs, binf, proverCompilePipeline); err != nil {
+							t.Fatalf("prove/verify failed: %v", err)
+						}
+					}
+				})
+			}
+		})
+	}
 }

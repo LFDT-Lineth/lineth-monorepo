@@ -35,17 +35,21 @@ pub input in_v(address:u1)      -> (val:u8)
 pub input in_strict(address:u1) -> (val:u8)
 pub input in_pkx(address:u1)    -> (val:u256)
 pub input in_pky(address:u1)    -> (val:u256)
+pub input in_success(address:u1) -> (val:u8)
 
 fn main() {
     var v:u5 = in_v[0] as u5
     var st:u1 = in_strict[0] as u1
 
-    var pkx:u256, pky:u256
-    pkx, pky = ecrecover_generic(in_msg[0], in_r[0], in_s[0], v, st)
+    var pkx:u256, pky:u256, ok:u1
+    pkx, pky, ok = ecrecover_generic(in_msg[0], in_r[0], in_s[0], v, st)
 
-    // accepts: must equal the expected pubkey ((0,0) for soft-fail cases).
-    // rejects: ecrecover_generic hard-fails before reaching here.
-    if (pkx != in_pkx[0]) || (pky != in_pky[0]) {
+    // ecrecover_generic is total: valid inputs give (pubkey, isSuccess=1);
+    // invalid/degenerate inputs give ((0,0), isSuccess=0). Every case must match
+    // its expected (pkx, pky, isSuccess) triple — this driver only fails on a
+    // mismatch, never because ecrecover soft-failed.
+    var exp_ok:u1 = in_success[0] as u1
+    if (pkx != in_pkx[0]) || (pky != in_pky[0]) || (ok != exp_ok) {
         fail
     }
 }
