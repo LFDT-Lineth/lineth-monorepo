@@ -1,6 +1,6 @@
 package linea.ftx
 
-import linea.metrics.LineaMetricsCategory
+import lineth.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.Counter
 import net.consensys.linea.metrics.MetricsFacade
 import java.util.concurrent.atomic.AtomicLong

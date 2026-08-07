@@ -1,8 +1,8 @@
 package linea
 
 import linea.contract.l1.LinethRollupContractVersion
-import linea.testing.CommandResult
-import linea.testing.Runner
+import lineth.testing.CommandResult
+import lineth.testing.Runner
 import org.hyperledger.besu.datatypes.Address
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.regex.Matcher
