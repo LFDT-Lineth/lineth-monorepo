@@ -39,6 +39,12 @@ dependencies {
   implementation "build.linea:blob-compressor:${libs.versions.blobCompressor.get()}"
   implementation "build.linea.internal:kotlin:${libs.versions.lineaKotlin.get()}"
   implementation "org.jetbrains.kotlin:kotlin-stdlib:${libs.versions.kotlin.get()}"
+  // Used by LineaLivenessTxBuilder (org.web3j.crypto.*, abi.*, utils.Numeric). Declared
+  // explicitly so the jars are bundled into the plugin distribution; web3j otherwise only
+  // leaked onto the compile classpath transitively and was missing at runtime. 
+  // Version is intentionally omitted: the Besu BOM (on the plugin classpath) strictly pins
+  // web3j, so we align with the exact version Besu ships rather than fighting that constraint.
+  implementation "org.web3j:crypto"
 
   testImplementation 'org.assertj:assertj-core'
 
