@@ -1,9 +1,9 @@
 package lineth.persistence.conflation
 
-import lineth.persistence.AggregationsDao
 import lineth.domain.Aggregation
 import lineth.domain.BlobAndBatchCounters
 import lineth.domain.ProofToFinalize
+import lineth.persistence.AggregationsDao
 import lineth.persistence.db.PersistenceRetryer
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Instant

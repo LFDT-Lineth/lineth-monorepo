@@ -10,8 +10,8 @@
 package lineth.config;
 
 import java.util.Map;
-import lombok.Builder;
 import lineth.plugins.LineaOptionsConfiguration;
+import lombok.Builder;
 
 /** The Linea tracer line limit configuration. */
 @Builder(toBuilder = true)

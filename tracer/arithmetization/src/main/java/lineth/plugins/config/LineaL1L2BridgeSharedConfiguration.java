@@ -15,8 +15,8 @@
 
 package lineth.plugins.config;
 
-import lombok.Builder;
 import lineth.plugins.LineaOptionsConfiguration;
+import lombok.Builder;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.datatypes.Address;
 

@@ -3,12 +3,12 @@ package lineth.ethereum.gaspricing.staticcap
 import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
 import lineth.async.toSafeFuture
+import lineth.ethereum.gaspricing.ExtraDataUpdater
+import lineth.ethereum.gaspricing.MinerExtraDataV1
 import lineth.jsonrpc.JsonRpcRequestListParams
 import lineth.jsonrpc.client.JsonRpcClient
 import lineth.jsonrpc.client.RequestRetryConfig
 import lineth.jsonrpc.client.VertxHttpJsonRpcClientFactory
-import lineth.ethereum.gaspricing.ExtraDataUpdater
-import lineth.ethereum.gaspricing.MinerExtraDataV1
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

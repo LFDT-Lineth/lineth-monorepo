@@ -37,13 +37,13 @@ import static net.consensys.linea.zktracer.types.Utils.BYTES16_ZERO;
 
 import java.util.ArrayList;
 import java.util.List;
+import lineth.zktracer.module.mmu.values.HubToMmuValues;
+import lineth.zktracer.module.mmu.values.MmuToMmioConstantValues;
+import lineth.zktracer.module.mmu.values.MmuToMmioInstruction;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import lineth.zktracer.module.mmu.values.HubToMmuValues;
-import lineth.zktracer.module.mmu.values.MmuToMmioConstantValues;
-import lineth.zktracer.module.mmu.values.MmuToMmioInstruction;
 import org.apache.tuweni.bytes.Bytes;
 
 @Getter

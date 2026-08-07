@@ -18,9 +18,6 @@ package lineth.zktracer.module.rlpAuth;
 import static lineth.zktracer.module.ModuleName.RLP_AUTH;
 
 import java.util.List;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.module.OperationListModule;
 import lineth.zktracer.container.stacked.ModuleOperationStackedList;
@@ -28,6 +25,9 @@ import lineth.zktracer.module.ModuleName;
 import lineth.zktracer.module.ecdata.EcData;
 import lineth.zktracer.module.hub.fragment.AuthorizationFragment;
 import lineth.zktracer.module.shakiradata.ShakiraData;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.Accessors;
 
 @RequiredArgsConstructor
 @Accessors(fluent = true)

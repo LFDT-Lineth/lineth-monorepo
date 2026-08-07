@@ -26,12 +26,12 @@ import static lineth.zktracer.Trace.WCP_INST_LEQ;
 import static net.consensys.linea.zktracer.types.Conversions.reallyToSignedBigInteger;
 
 import java.security.InvalidParameterException;
+import lineth.zktracer.Trace;
+import lineth.zktracer.container.ModuleOperation;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
-import lineth.zktracer.Trace;
-import lineth.zktracer.container.ModuleOperation;
 import net.consensys.linea.zktracer.types.UnsignedByte;
 import org.apache.tuweni.bytes.Bytes32;
 

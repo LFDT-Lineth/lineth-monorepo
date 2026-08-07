@@ -24,13 +24,13 @@ import static lineth.zktracer.Trace.RLP_RCPT_SUBPHASE_ID_TOPIC_DELTA;
 import static lineth.zktracer.module.ModuleName.LOG_INFO;
 
 import java.util.List;
-import lombok.RequiredArgsConstructor;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.module.Module;
 import lineth.zktracer.container.stacked.CountOnlyOperation;
 import lineth.zktracer.module.ModuleName;
 import lineth.zktracer.module.rlptxrcpt.RlpTxnRcpt;
 import lineth.zktracer.module.rlptxrcpt.RlpTxrcptOperation;
+import lombok.RequiredArgsConstructor;
 import net.consensys.linea.zktracer.types.TransactionProcessingMetadata;
 import net.consensys.linea.zktracer.types.UnsignedByte;
 import org.apache.tuweni.bytes.Bytes;

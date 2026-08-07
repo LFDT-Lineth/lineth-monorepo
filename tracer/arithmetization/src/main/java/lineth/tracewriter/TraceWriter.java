@@ -24,9 +24,9 @@ import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Set;
+import lineth.zktracer.ZkTracer;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import lineth.zktracer.ZkTracer;
 
 @Slf4j
 public class TraceWriter {

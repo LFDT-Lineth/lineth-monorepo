@@ -17,11 +17,11 @@ package lineth.zktracer.module.shf;
 
 import java.util.Random;
 import java.util.stream.Stream;
-import lombok.extern.slf4j.Slf4j;
 import lineth.reporting.TracerTestBase;
 import lineth.testing.BytecodeCompiler;
 import lineth.testing.BytecodeRunner;
 import lineth.zktracer.opcode.OpCode;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.junit.jupiter.api.Named;

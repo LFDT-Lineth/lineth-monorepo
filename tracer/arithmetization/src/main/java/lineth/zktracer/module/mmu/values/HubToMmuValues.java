@@ -18,10 +18,10 @@ package lineth.zktracer.module.mmu.values;
 import static net.consensys.linea.zktracer.types.Utils.leftPadToBytes16;
 
 import java.math.BigInteger;
+import lineth.zktracer.module.hub.fragment.imc.mmu.MmuCall;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import lineth.zktracer.module.hub.fragment.imc.mmu.MmuCall;
 import org.apache.tuweni.bytes.Bytes;
 
 @Getter

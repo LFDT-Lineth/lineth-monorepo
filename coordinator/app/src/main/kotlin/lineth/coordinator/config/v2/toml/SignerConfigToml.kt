@@ -1,9 +1,9 @@
 package lineth.coordinator.config.v2.toml
 
 import com.sksamuel.hoplite.Masked
-import lineth.coordinator.config.v2.SignerConfig
 import lineth.config.docs.ConfigDoc
 import lineth.config.docs.ConfigSection
+import lineth.coordinator.config.v2.SignerConfig
 import lineth.kotlin.decodeHex
 import java.net.URL
 import java.nio.file.Path

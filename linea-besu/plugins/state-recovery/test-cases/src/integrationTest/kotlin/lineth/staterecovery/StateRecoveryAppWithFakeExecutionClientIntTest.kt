@@ -2,11 +2,6 @@ package lineth.staterecovery
 
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import lineth.staterecovery.plugin.AppClients
-import lineth.staterecovery.plugin.createAppClients
-import lineth.staterecovery.test.FakeExecutionLayerClient
-import lineth.staterecovery.test.FakeStateManagerClient
-import lineth.staterecovery.test.FakeStateManagerClientBasedOnBlobsRecords
 import lineth.ContractsManager
 import lineth.MakeFileDelegatedContractsManager.connectToLinethRollupContract
 import lineth.MakeFileDelegatedContractsManager.linethRollupContractErrors
@@ -16,6 +11,11 @@ import lineth.domain.BlockNumberAndHash
 import lineth.domain.BlockParameter
 import lineth.domain.RetryConfig
 import lineth.log4j.configureLoggers
+import lineth.staterecovery.plugin.AppClients
+import lineth.staterecovery.plugin.createAppClients
+import lineth.staterecovery.test.FakeExecutionLayerClient
+import lineth.staterecovery.test.FakeStateManagerClient
+import lineth.staterecovery.test.FakeStateManagerClientBasedOnBlobsRecords
 import lineth.testing.submission.AggregationAndBlobs
 import lineth.testing.submission.loadBlobsAndAggregationsSortedAndGrouped
 import lineth.testing.submission.submitBlobsAndAggregationsAndWaitExecution

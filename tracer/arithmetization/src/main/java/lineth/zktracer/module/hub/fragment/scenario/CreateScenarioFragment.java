@@ -14,10 +14,10 @@
  */
 package lineth.zktracer.module.hub.fragment.scenario;
 
-import lombok.Getter;
-import lombok.Setter;
 import lineth.zktracer.Trace;
 import lineth.zktracer.module.hub.fragment.TraceFragment;
+import lombok.Getter;
+import lombok.Setter;
 
 public class CreateScenarioFragment implements TraceFragment {
 

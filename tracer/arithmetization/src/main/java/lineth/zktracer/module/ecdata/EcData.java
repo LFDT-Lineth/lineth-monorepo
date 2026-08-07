@@ -18,9 +18,6 @@ package lineth.zktracer.module.ecdata;
 import static lineth.zktracer.module.ModuleName.EC_DATA;
 
 import java.util.List;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.module.CountingOnlyModule;
 import lineth.zktracer.container.module.IncrementingModule;
@@ -30,6 +27,9 @@ import lineth.zktracer.module.ModuleName;
 import lineth.zktracer.module.ext.Ext;
 import lineth.zktracer.module.hub.fragment.scenario.PrecompileScenarioFragment;
 import lineth.zktracer.module.wcp.Wcp;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.Accessors;
 import org.apache.tuweni.bytes.Bytes;
 
 @RequiredArgsConstructor

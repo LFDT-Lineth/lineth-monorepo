@@ -15,11 +15,11 @@
 
 package lineth.zktracer.module.hub.fragment.transaction.system;
 
+import lineth.zktracer.Trace;
+import lineth.zktracer.module.hub.fragment.TraceFragment;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
-import lineth.zktracer.Trace;
-import lineth.zktracer.module.hub.fragment.TraceFragment;
 
 @RequiredArgsConstructor
 @Getter

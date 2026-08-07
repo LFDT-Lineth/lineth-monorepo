@@ -2,10 +2,9 @@ package lineth.coordination.blob
 
 import io.vertx.core.Handler
 import io.vertx.core.Vertx
-import lineth.conflation.BlobCreationHandler
-import lineth.metrics.LineaMetricsCategory
 import lineth.LongRunningService
 import lineth.clients.BlobCompressionProverClientV2
+import lineth.conflation.BlobCreationHandler
 import lineth.domain.Blob
 import lineth.domain.BlobCompressionProofRequest
 import lineth.domain.BlobRecord
@@ -13,6 +12,7 @@ import lineth.domain.BlockIntervals
 import lineth.domain.ConflationCalculationResult
 import lineth.domain.ShnarfResult
 import lineth.domain.toBlockIntervalsString
+import lineth.metrics.LineaMetricsCategory
 import lineth.metrics.MetricsFacade
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger

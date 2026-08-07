@@ -1,9 +1,9 @@
 package lineth.transactionexclusion.service
 
 import io.vertx.core.Vertx
+import lineth.persistence.dao.rejectedtransaction.RejectedTransactionsDao
 import lineth.timer.TimerSchedule
 import lineth.timer.VertxPeriodicPollingService
-import lineth.persistence.dao.rejectedtransaction.RejectedTransactionsDao
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

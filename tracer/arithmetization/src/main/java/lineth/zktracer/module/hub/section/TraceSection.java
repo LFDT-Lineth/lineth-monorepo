@@ -23,9 +23,6 @@ import static lineth.zktracer.module.hub.HubProcessingPhase.TX_WARM;
 
 import java.util.ArrayList;
 import java.util.List;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Trace;
 import lineth.zktracer.module.hub.Hub;
 import lineth.zktracer.module.hub.HubProcessingPhase;
@@ -37,6 +34,9 @@ import lineth.zktracer.module.hub.fragment.common.CommonFragmentValues;
 import lineth.zktracer.runtime.callstack.CallFrame;
 import lineth.zktracer.runtime.stack.Stack;
 import lineth.zktracer.runtime.stack.StackLine;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.experimental.Accessors;
 import org.apache.tuweni.bytes.Bytes;
 
 @Accessors(fluent = true)

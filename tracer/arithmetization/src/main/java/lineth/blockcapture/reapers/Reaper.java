@@ -22,7 +22,6 @@ import static lineth.zktracer.module.hub.section.systemTransaction.EIP4788Beacon
 import static net.consensys.linea.zktracer.types.PublicInputs.LINEA_BLOB_BASE_FEE_BYTES;
 
 import java.util.*;
-import lombok.extern.slf4j.Slf4j;
 import lineth.blockcapture.snapshots.AccountSnapshot;
 import lineth.blockcapture.snapshots.BlockSnapshot;
 import lineth.blockcapture.snapshots.ConflationSnapshot;
@@ -30,6 +29,7 @@ import lineth.blockcapture.snapshots.StorageSnapshot;
 import lineth.blockcapture.snapshots.TransactionResultSnapshot;
 import lineth.blockcapture.snapshots.TransactionSnapshot;
 import lineth.zktracer.Fork;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.units.bigints.UInt256;
 import org.hyperledger.besu.datatypes.Address;

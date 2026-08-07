@@ -18,15 +18,15 @@ package lineth.zktracer.module.mxp;
 import static lineth.zktracer.module.ModuleName.MXP;
 
 import java.util.List;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.module.Module;
 import lineth.zktracer.container.module.OperationListModule;
 import lineth.zktracer.container.stacked.ModuleOperationStackedList;
 import lineth.zktracer.module.ModuleName;
 import lineth.zktracer.module.hub.fragment.imc.MxpCall;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.Accessors;
 
 /** Abstract class for implementation of a {@link Module} for memory expansion. */
 @Getter

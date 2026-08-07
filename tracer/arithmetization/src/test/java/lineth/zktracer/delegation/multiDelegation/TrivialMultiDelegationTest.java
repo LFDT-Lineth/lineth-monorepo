@@ -20,7 +20,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.math.BigInteger;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
 import lineth.UnitTestWatcher;
 import lineth.reporting.TracerTestBase;
 import lineth.testing.ToyAccount;
@@ -29,6 +28,7 @@ import lineth.testing.ToyTransaction;
 import lineth.zktracer.container.stacked.ModuleOperationStackedList;
 import lineth.zktracer.module.hub.section.TupleAnalysis;
 import lineth.zktracer.module.rlpAuth.RlpAuthOperation;
+import lombok.RequiredArgsConstructor;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.crypto.KeyPair;

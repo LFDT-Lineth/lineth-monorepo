@@ -1,10 +1,10 @@
 package lineth.coordination.aggregation
 
-import lineth.persistence.ftx.FakeForcedTransactionsDao
-import lineth.persistence.ftx.ForcedTransactionRecordFactory
 import lineth.contract.l2.FakeL2MessageService
 import lineth.domain.toBlockParameter
 import lineth.ethapi.FakeEthApiClient
+import lineth.persistence.ftx.FakeForcedTransactionsDao
+import lineth.persistence.ftx.ForcedTransactionRecordFactory
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

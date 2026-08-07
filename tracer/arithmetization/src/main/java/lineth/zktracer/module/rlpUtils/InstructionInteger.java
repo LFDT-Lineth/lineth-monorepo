@@ -20,11 +20,11 @@ import static lineth.zktracer.Trace.Rlptxn.RLP_TXN_CT_MAX_INTEGER;
 import static lineth.zktracer.module.rlpUtils.RlpUtils.BI_PREFIX_SHORT_INT;
 import static net.consensys.linea.zktracer.types.Utils.rightPadToBytes16;
 
+import lineth.zktracer.Trace;
+import lineth.zktracer.module.rlptxn.GenericTracedValue;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.experimental.Accessors;
-import lineth.zktracer.Trace;
-import lineth.zktracer.module.rlptxn.GenericTracedValue;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 

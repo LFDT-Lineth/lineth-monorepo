@@ -33,10 +33,10 @@ import static net.consensys.linea.zktracer.types.Utils.fromDataSizeToLimbCtMax;
 import static net.consensys.linea.zktracer.types.Utils.rightPadTo;
 import static org.hyperledger.besu.crypto.Hash.keccak256;
 
-import lombok.Getter;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.ModuleOperation;
+import lombok.Getter;
+import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.types.UnsignedByte;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;

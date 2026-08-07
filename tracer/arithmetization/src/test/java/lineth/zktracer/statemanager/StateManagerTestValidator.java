@@ -19,14 +19,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 import lineth.testing.ToyAccount;
 import lineth.testing.TransactionProcessingResultValidator;
 import lineth.testing.Web3jUtils;
 import lineth.testing.generated.FrameworkEntrypoint;
 import lineth.testing.generated.StateManagerEvents;
 import lineth.testing.generated.TestSnippet_Events;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import org.hyperledger.besu.datatypes.Log;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.processing.TransactionProcessingResult;

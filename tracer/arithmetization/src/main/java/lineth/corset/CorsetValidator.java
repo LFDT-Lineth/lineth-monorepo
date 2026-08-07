@@ -34,9 +34,9 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import lineth.zktracer.ChainConfig;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import lineth.zktracer.ChainConfig;
 
 /**
  * Responsible for running the command-line <code>go-corset</code> tool to check that a given trace

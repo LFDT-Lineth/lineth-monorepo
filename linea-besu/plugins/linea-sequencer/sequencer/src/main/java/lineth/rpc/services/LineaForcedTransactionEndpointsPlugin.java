@@ -9,10 +9,10 @@
 package lineth.rpc.services;
 
 import com.google.auto.service.AutoService;
-import lombok.extern.slf4j.Slf4j;
 import lineth.AbstractLineaRequiredPlugin;
 import lineth.rpc.methods.LineaGetForcedTransactionInclusionStatus;
 import lineth.rpc.methods.LineaSendForcedRawTransaction;
+import lombok.extern.slf4j.Slf4j;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.ServiceManager;
 

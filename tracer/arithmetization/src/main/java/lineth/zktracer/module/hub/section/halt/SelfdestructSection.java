@@ -21,7 +21,6 @@ import static lineth.zktracer.module.hub.signals.Exceptions.OUT_OF_GAS_EXCEPTION
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import lombok.Getter;
 import lineth.zktracer.module.hub.AccountSnapshot;
 import lineth.zktracer.module.hub.Hub;
 import lineth.zktracer.module.hub.TransactionProcessingType;
@@ -36,6 +35,7 @@ import lineth.zktracer.module.hub.fragment.scenario.SelfdestructScenarioFragment
 import lineth.zktracer.module.hub.section.TraceSection;
 import lineth.zktracer.module.hub.signals.Exceptions;
 import lineth.zktracer.runtime.callstack.CallFrame;
+import lombok.Getter;
 import net.consensys.linea.zktracer.types.Bytecode;
 import net.consensys.linea.zktracer.types.TransactionProcessingMetadata;
 import org.apache.tuweni.bytes.Bytes;

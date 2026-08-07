@@ -31,11 +31,11 @@ import static lineth.zktracer.TraceOsaka.Blake2fmodexpdata.INDEX_MAX_MODEXP_RESU
 import static net.consensys.linea.zktracer.types.Utils.leftPadTo;
 
 import java.util.Optional;
-import lombok.Getter;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.ModuleOperation;
 import lineth.zktracer.module.hub.precompiles.ModexpMetadata;
+import lombok.Getter;
+import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.types.UnsignedByte;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.crypto.Hash;

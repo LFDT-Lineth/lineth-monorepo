@@ -18,14 +18,14 @@ package lineth.zktracer.module.trm;
 import static lineth.zktracer.module.ModuleName.TRM;
 
 import java.util.List;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Fork;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.module.OperationSetModule;
 import lineth.zktracer.container.stacked.ModuleOperationStackedSet;
 import lineth.zktracer.module.ModuleName;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.types.EWord;
 import net.consensys.linea.zktracer.types.TransactionProcessingMetadata;
 import org.apache.tuweni.bytes.Bytes;

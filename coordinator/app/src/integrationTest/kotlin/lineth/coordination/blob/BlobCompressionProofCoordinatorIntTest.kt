@@ -6,9 +6,6 @@ import com.github.michaelbull.result.Ok
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
-import lineth.persistence.BlobsRepository
-import lineth.persistence.conflation.BlobsPostgresDao
-import lineth.persistence.conflation.BlobsRepositoryImpl
 import lineth.clients.BlobCompressionProverClientV2
 import lineth.clients.GetZkEVMStateMerkleProofResponse
 import lineth.clients.StateManagerClientV1
@@ -24,6 +21,9 @@ import lineth.domain.FakeBlobShnarfCalculator
 import lineth.domain.ProofIndex
 import lineth.domain.createBlobRecord
 import lineth.kotlin.ByteArrayExt
+import lineth.persistence.BlobsRepository
+import lineth.persistence.conflation.BlobsPostgresDao
+import lineth.persistence.conflation.BlobsRepositoryImpl
 import lineth.persistence.db.DbHelper
 import lineth.persistence.db.test.CleanDbTestSuiteParallel
 import lineth.traces.TracesCountersV2

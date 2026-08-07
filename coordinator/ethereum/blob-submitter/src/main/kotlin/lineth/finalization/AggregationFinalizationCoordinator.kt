@@ -1,15 +1,15 @@
 package lineth.finalization
 
 import io.vertx.core.Vertx
-import lineth.persistence.AggregationsRepository
-import lineth.persistence.BlobsRepository
-import lineth.submission.logUnhandledError
 import lineth.async.AsyncFilter
 import lineth.contract.l1.LineaSmartContractClient
 import lineth.domain.BlobRecord
 import lineth.domain.ProofToFinalize
 import lineth.kotlin.trimToMinutePrecision
 import lineth.kotlin.zeroHash32
+import lineth.persistence.AggregationsRepository
+import lineth.persistence.BlobsRepository
+import lineth.submission.logUnhandledError
 import lineth.timer.TimerSchedule
 import lineth.timer.VertxPeriodicPollingService
 import org.apache.logging.log4j.LogManager

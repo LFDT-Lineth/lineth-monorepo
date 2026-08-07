@@ -3,8 +3,8 @@ package lineth.ethereum.gaspricing.staticcap
 import lineth.domain.BlockParameter
 import lineth.domain.FeeHistory
 import lineth.ethapi.EthApiClient
-import lineth.kotlin.toIntervalString
 import lineth.ethereum.gaspricing.FeesFetcher
+import lineth.kotlin.toIntervalString
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

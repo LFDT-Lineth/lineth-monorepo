@@ -13,9 +13,9 @@ import static lineth.metrics.LineaMetricCategory.PRICING_CONF;
 
 import com.google.auto.service.AutoService;
 import java.util.concurrent.atomic.AtomicBoolean;
-import lombok.extern.slf4j.Slf4j;
 import lineth.AbstractLineaRequiredPlugin;
 import lineth.config.LineaProfitabilityConfiguration;
+import lombok.extern.slf4j.Slf4j;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.data.AddedBlockContext;

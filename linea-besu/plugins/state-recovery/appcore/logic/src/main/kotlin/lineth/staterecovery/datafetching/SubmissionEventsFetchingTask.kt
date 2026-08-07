@@ -1,12 +1,12 @@
 package lineth.staterecovery.datafetching
 
 import io.vertx.core.Vertx
-import lineth.staterecovery.FinalizationAndDataEventsV3
-import lineth.staterecovery.LinethRollupSubmissionEventsClient
 import lineth.contract.events.DataFinalizedV3
 import lineth.domain.BlockParameter
 import lineth.domain.EthLogEvent
 import lineth.domain.toBlockParameter
+import lineth.staterecovery.FinalizationAndDataEventsV3
+import lineth.staterecovery.LinethRollupSubmissionEventsClient
 import lineth.timer.TimerSchedule
 import lineth.timer.VertxPeriodicPollingService
 import org.apache.logging.log4j.LogManager

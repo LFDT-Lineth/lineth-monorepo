@@ -1,7 +1,7 @@
 package lineth.coordination.aggregation
 
-import lineth.persistence.AggregationsRepository
 import lineth.domain.BlobAndBatchCounters
+import lineth.persistence.AggregationsRepository
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Supplier

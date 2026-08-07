@@ -1,8 +1,8 @@
 package lineth.coordination.aggregation
 
+import lineth.forcedtx.ForcedTransactionInclusionResult
 import lineth.persistence.ftx.FakeForcedTransactionsDao
 import lineth.persistence.ftx.ForcedTransactionRecordFactory.createForcedTransactionRecord
-import lineth.forcedtx.ForcedTransactionInclusionResult
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

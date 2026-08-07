@@ -8,8 +8,6 @@
  */
 package lineth.sequencer.forced;
 
-import static lineth.txselection.LineaTransactionSelectionResult.TX_FILTERED_ADDRESS_FROM;
-import static lineth.txselection.LineaTransactionSelectionResult.TX_FILTERED_ADDRESS_TO;
 import static lineth.sequencer.forced.ForcedTransactionInclusionResult.BadBalance;
 import static lineth.sequencer.forced.ForcedTransactionInclusionResult.BadNonce;
 import static lineth.sequencer.forced.ForcedTransactionInclusionResult.BadPrecompile;
@@ -19,6 +17,8 @@ import static lineth.sequencer.forced.ForcedTransactionInclusionResult.FilteredA
 import static lineth.sequencer.forced.ForcedTransactionInclusionResult.Included;
 import static lineth.sequencer.forced.ForcedTransactionInclusionResult.Other;
 import static lineth.sequencer.forced.ForcedTransactionInclusionResult.TooManyLogs;
+import static lineth.txselection.LineaTransactionSelectionResult.TX_FILTERED_ADDRESS_FROM;
+import static lineth.txselection.LineaTransactionSelectionResult.TX_FILTERED_ADDRESS_TO;
 import static org.hyperledger.besu.plugin.data.AddedBlockContext.EventType.HEAD_ADVANCED;
 
 import com.github.benmanes.caffeine.cache.Cache;
@@ -35,9 +35,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
+import lineth.metrics.LineaMetricCategory;
 import lineth.txselection.LineaTransactionSelectionResult;
 import lombok.extern.slf4j.Slf4j;
-import lineth.metrics.LineaMetricCategory;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.datatypes.Transaction;

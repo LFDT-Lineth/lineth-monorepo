@@ -21,11 +21,11 @@ import static lineth.zktracer.instructionprocessing.utilities.MonoOpCodeSmcs.use
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import lombok.extern.slf4j.Slf4j;
 import lineth.UnitTestWatcher;
 import lineth.reporting.TracerTestBase;
 import lineth.testing.*;
 import lineth.zktracer.instructionprocessing.utilities.SmartContractTestValidator;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.junit.jupiter.api.Test;

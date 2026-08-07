@@ -19,13 +19,13 @@ import static lineth.zktracer.module.ModuleName.SHF;
 import static lineth.zktracer.opcode.OpCode.*;
 
 import java.util.List;
-import lombok.Getter;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.module.OperationSetModule;
 import lineth.zktracer.container.stacked.ModuleOperationStackedSet;
 import lineth.zktracer.module.ModuleName;
 import lineth.zktracer.opcode.OpCode;
+import lombok.Getter;
+import lombok.experimental.Accessors;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 

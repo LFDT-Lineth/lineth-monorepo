@@ -4,8 +4,6 @@ import io.vertx.core.Vertx
 import lineth.LongRunningService
 import lineth.ethapi.EthApiBlockClient
 import lineth.ethapi.EthApiClient
-import lineth.jsonrpc.client.VertxHttpJsonRpcClientFactory
-import lineth.metrics.MetricsFacade
 import lineth.ethereum.gaspricing.BoundableFeeCalculator
 import lineth.ethereum.gaspricing.FeesFetcher
 import lineth.ethereum.gaspricing.GasPriceUpdater
@@ -21,6 +19,8 @@ import lineth.ethereum.gaspricing.staticcap.MinMineableFeesPricerService
 import lineth.ethereum.gaspricing.staticcap.MinerExtraDataV1CalculatorImpl
 import lineth.ethereum.gaspricing.staticcap.TransactionCostCalculator
 import lineth.ethereum.gaspricing.staticcap.VariableFeesCalculator
+import lineth.jsonrpc.client.VertxHttpJsonRpcClientFactory
+import lineth.metrics.MetricsFacade
 import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.CompletableFuture

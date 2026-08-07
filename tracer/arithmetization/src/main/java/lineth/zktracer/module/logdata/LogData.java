@@ -20,13 +20,13 @@ import static net.consensys.linea.zktracer.types.Utils.fromDataSizeToLimbCtMax;
 import static net.consensys.linea.zktracer.types.Utils.rightPadTo;
 
 import java.util.List;
-import lombok.RequiredArgsConstructor;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.module.Module;
 import lineth.zktracer.container.stacked.CountOnlyOperation;
 import lineth.zktracer.module.ModuleName;
 import lineth.zktracer.module.rlptxrcpt.RlpTxnRcpt;
 import lineth.zktracer.module.rlptxrcpt.RlpTxrcptOperation;
+import lombok.RequiredArgsConstructor;
 import net.consensys.linea.zktracer.types.TransactionProcessingMetadata;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Log;

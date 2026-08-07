@@ -1,10 +1,10 @@
 package lineth.coordination.blob
 
-import lineth.persistence.BlobsRepository
 import lineth.domain.BlobRecord
 import lineth.domain.BlobShnarfCalculator
 import lineth.domain.BlockIntervals
 import lineth.domain.ShnarfResult
+import lineth.persistence.BlobsRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

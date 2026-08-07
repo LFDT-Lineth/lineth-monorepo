@@ -6,8 +6,6 @@ import io.vertx.core.Vertx
 import io.vertx.core.http.HttpVersion
 import io.vertx.core.http.PoolOptions
 import io.vertx.ext.web.client.WebClientOptions
-import lineth.coordinator.clients.prover.FileBasedProverConfig
-import lineth.coordinator.clients.prover.serialization.JsonSerialization
 import lineth.clients.BlobWitness
 import lineth.clients.ChainConfig
 import lineth.clients.ExecutionInfo
@@ -16,6 +14,8 @@ import lineth.clients.ForcedTransaction
 import lineth.clients.L2ExecutionProofRequestV1
 import lineth.clients.RollupAggregationProofRequestV1
 import lineth.clients.RollupProofRequestV1
+import lineth.coordinator.clients.prover.FileBasedProverConfig
+import lineth.coordinator.clients.prover.serialization.JsonSerialization
 import lineth.domain.BlockIntervalProofIndex
 import lineth.ethapi.ExecutionWitness
 import lineth.forcedtx.ForcedTransactionInclusionResult

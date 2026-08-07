@@ -15,13 +15,13 @@
 
 package lineth.zktracer.module.mxp;
 
-import lombok.Getter;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.ModuleOperation;
 import lineth.zktracer.module.hub.fragment.imc.MxpCall;
 import lineth.zktracer.module.mxp.moduleCall.CancunMxpCall;
 import lineth.zktracer.opcode.OpCode;
 import lineth.zktracer.opcode.OpCodeData;
+import lombok.Getter;
 import net.consensys.linea.zktracer.types.UnsignedByte;
 import org.apache.tuweni.bytes.Bytes;
 

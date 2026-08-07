@@ -1,9 +1,9 @@
 package lineth.staterecovery.plugin
 
-import lineth.staterecovery.BlockFromL1RecoveredData
 import lineth.kotlin.encodeHex
 import lineth.kotlin.toBigInteger
 import lineth.kotlin.toULong
+import lineth.staterecovery.BlockFromL1RecoveredData
 import org.apache.logging.log4j.LogManager
 import org.apache.tuweni.bytes.Bytes32
 import org.hyperledger.besu.datatypes.Address

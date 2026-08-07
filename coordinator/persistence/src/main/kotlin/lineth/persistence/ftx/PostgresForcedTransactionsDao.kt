@@ -3,9 +3,9 @@ package lineth.persistence.ftx
 import io.vertx.sqlclient.Row
 import io.vertx.sqlclient.SqlClient
 import io.vertx.sqlclient.Tuple
+import lineth.async.toSafeFuture
 import lineth.persistence.ForcedTransactionRecord
 import lineth.persistence.ForcedTransactionsDao
-import lineth.async.toSafeFuture
 import lineth.persistence.db.PersistenceRetryer
 import lineth.persistence.db.SQLQueryLogger
 import org.apache.logging.log4j.Level

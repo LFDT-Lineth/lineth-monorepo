@@ -17,10 +17,10 @@ package lineth.zktracer.opcode.gas.projector;
 
 import static org.hyperledger.besu.evm.internal.Words.clampedToLong;
 
-import lombok.RequiredArgsConstructor;
 import lineth.zktracer.Fork;
 import lineth.zktracer.module.hub.transients.OperationAncillaries;
 import lineth.zktracer.opcode.OpCodeData;
+import lombok.RequiredArgsConstructor;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.evm.account.Account;

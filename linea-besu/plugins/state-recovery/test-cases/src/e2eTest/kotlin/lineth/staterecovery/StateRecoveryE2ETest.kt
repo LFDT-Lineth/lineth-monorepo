@@ -3,12 +3,6 @@ package lineth.staterecovery
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import lineth.staterecovery.test.assertBesuAndShomeiRecoveredAsExpected
-import lineth.staterecovery.test.execCommandAndAssertSuccess
-import lineth.staterecovery.test.getFinalizationsOnL1
-import lineth.staterecovery.test.getLastFinalizationOnL1
-import lineth.staterecovery.test.waitExecutionLayerToBeUpAndRunning
-import lineth.testing.Runner
 import lineth.EthApiClientManager
 import lineth.L2AccountManager
 import lineth.clients.StateManagerClientV1
@@ -23,6 +17,12 @@ import lineth.kotlin.gwei
 import lineth.kotlin.toBigInteger
 import lineth.log4j.configureLoggers
 import lineth.metrics.micrometer.MicrometerMetricsFacade
+import lineth.staterecovery.test.assertBesuAndShomeiRecoveredAsExpected
+import lineth.staterecovery.test.execCommandAndAssertSuccess
+import lineth.staterecovery.test.getFinalizationsOnL1
+import lineth.staterecovery.test.getLastFinalizationOnL1
+import lineth.staterecovery.test.waitExecutionLayerToBeUpAndRunning
+import lineth.testing.Runner
 import lineth.testing.filesystem.getPathTo
 import lineth.web3j.ethapi.createEthApiClient
 import lineth.web3j.waitForTxReceipt

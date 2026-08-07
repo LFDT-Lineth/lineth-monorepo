@@ -1,10 +1,10 @@
 package lineth.coordinator.config.v2.toml
 
 import com.sksamuel.hoplite.Masked
-import lineth.coordinator.config.v2.DatabaseConfig
-import lineth.coordinator.config.v2.DatabaseConfig.Companion.supportedSchemas
 import lineth.config.docs.ConfigDoc
 import lineth.config.docs.ConfigSection
+import lineth.coordinator.config.v2.DatabaseConfig
+import lineth.coordinator.config.v2.DatabaseConfig.Companion.supportedSchemas
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 

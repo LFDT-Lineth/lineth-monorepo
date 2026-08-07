@@ -25,10 +25,6 @@ import static lineth.zktracer.module.hub.signals.TracedException.MAX_CODE_SIZE_E
 import static lineth.zktracer.opcode.InstructionFamily.*;
 
 import java.math.BigInteger;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
-import lombok.experimental.Accessors;
 import lineth.zktracer.module.hub.Hub;
 import lineth.zktracer.module.hub.HubProcessingPhase;
 import lineth.zktracer.module.hub.TransactionProcessingType;
@@ -41,6 +37,10 @@ import lineth.zktracer.opcode.OpCodeData;
 import lineth.zktracer.opcode.gas.projector.GasProjection;
 import lineth.zktracer.runtime.callstack.CallFrame;
 import lineth.zktracer.runtime.callstack.CallStack;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.types.TransactionProcessingMetadata;
 
 @Accessors(fluent = true)

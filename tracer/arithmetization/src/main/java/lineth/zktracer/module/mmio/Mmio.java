@@ -33,7 +33,6 @@ import static lineth.zktracer.module.mmio.MmioData.isFastOperation;
 import static lineth.zktracer.module.mmio.MmioData.lineCountOfMmioInstruction;
 
 import java.util.List;
-import lombok.RequiredArgsConstructor;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.module.Module;
 import lineth.zktracer.container.stacked.CountOnlyOperation;
@@ -41,6 +40,7 @@ import lineth.zktracer.module.ModuleName;
 import lineth.zktracer.module.mmu.Mmu;
 import lineth.zktracer.module.mmu.MmuData;
 import lineth.zktracer.module.mmu.MmuOperation;
+import lombok.RequiredArgsConstructor;
 import net.consensys.linea.zktracer.types.UnsignedByte;
 import org.apache.tuweni.bytes.Bytes;
 

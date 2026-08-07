@@ -1,20 +1,20 @@
 package lineth.coordinator.app
 
 import io.vertx.core.Vertx
-import lineth.coordinator.config.v2.L1SubmissionConfig
-import lineth.coordinator.config.v2.SignerConfig
 import lineth.contract.l1.LineaSmartContractClient
-import lineth.ethapi.EthLogsSearcherImpl
-import lineth.web3j.ECKeypairSignerAdapter
-import lineth.web3j.SmartContractErrors
-import lineth.web3j.ethapi.createEthApiClient
-import lineth.web3j.transactionmanager.AsyncFriendlyTransactionManager
 import lineth.contract.l1.Web3JLineaValidiumSmartContractClient
 import lineth.contract.l1.Web3JLinethRollupSmartContractClient
+import lineth.coordinator.config.v2.L1SubmissionConfig
+import lineth.coordinator.config.v2.SignerConfig
+import lineth.ethapi.EthLogsSearcherImpl
 import lineth.ethereum.gaspricing.BoundableFeeCalculator
 import lineth.ethereum.gaspricing.FeesCalculator
 import lineth.ethereum.gaspricing.FeesFetcher
 import lineth.ethereum.gaspricing.WMAGasProvider
+import lineth.web3j.ECKeypairSignerAdapter
+import lineth.web3j.SmartContractErrors
+import lineth.web3j.ethapi.createEthApiClient
+import lineth.web3j.transactionmanager.AsyncFriendlyTransactionManager
 import org.web3j.crypto.Credentials
 import org.web3j.protocol.Web3j
 import org.web3j.service.TxSignServiceImpl

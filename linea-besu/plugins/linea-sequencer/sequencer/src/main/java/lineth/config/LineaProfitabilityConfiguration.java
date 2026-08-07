@@ -9,11 +9,11 @@
 
 package lineth.config;
 
+import lineth.plugins.LineaOptionsConfiguration;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
-import lineth.plugins.LineaOptionsConfiguration;
 
 /** The Linea profitability calculator configuration. */
 @Builder(toBuilder = true)

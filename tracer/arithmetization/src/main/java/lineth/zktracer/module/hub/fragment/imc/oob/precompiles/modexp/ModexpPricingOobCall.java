@@ -29,14 +29,14 @@ import static org.hyperledger.besu.evm.internal.Words.clampedToInt;
 
 import java.math.BigInteger;
 import java.math.RoundingMode;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.Setter;
 import lineth.zktracer.Trace;
 import lineth.zktracer.module.hub.Hub;
 import lineth.zktracer.module.hub.fragment.imc.oob.OobCall;
 import lineth.zktracer.module.hub.precompiles.ModexpMetadata;
 import lineth.zktracer.opcode.OpCodeData;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import net.consensys.linea.zktracer.types.EWord;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.evm.frame.MessageFrame;

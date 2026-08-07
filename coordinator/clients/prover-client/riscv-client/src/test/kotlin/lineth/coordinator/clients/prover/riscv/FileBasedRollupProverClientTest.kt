@@ -11,9 +11,9 @@ import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.fil
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.jsonMapper
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.rollupProofRequestV1
 import lineth.coordinator.clients.prover.riscv.RiscVProverClientTestFixtures.rollupProofResponseDto
+import lineth.domain.BlockIntervalProofIndex
 import lineth.fileio.FileReader
 import lineth.fileio.FileWriter
-import lineth.domain.BlockIntervalProofIndex
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

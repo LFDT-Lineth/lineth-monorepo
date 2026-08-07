@@ -1,9 +1,9 @@
 package lineth.coordination.aggregation
 
-import lineth.persistence.AggregationsRepository
 import lineth.domain.BlobAndBatchCounters
 import lineth.domain.BlobCounters
 import lineth.domain.BlockIntervals
+import lineth.persistence.AggregationsRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any

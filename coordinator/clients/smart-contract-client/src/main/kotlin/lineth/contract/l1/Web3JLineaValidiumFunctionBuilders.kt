@@ -1,7 +1,6 @@
 package lineth.contract.l1
 
 import lineth.contract.ValidiumV1
-import lineth.contract.l1.LineaValidiumContractVersion
 import lineth.domain.BlobRecord
 import lineth.domain.ProofToFinalize
 import lineth.kotlin.toBigInteger

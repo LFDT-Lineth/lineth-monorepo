@@ -4,7 +4,6 @@ import io.vertx.junit5.VertxExtension
 import io.vertx.sqlclient.Row
 import io.vertx.sqlclient.RowSet
 import io.vertx.sqlclient.Tuple
-import lineth.persistence.test.DbQueries
 import lineth.FakeFixedClock
 import lineth.async.get
 import lineth.domain.Aggregation
@@ -21,6 +20,7 @@ import lineth.domain.createProofToFinalize
 import lineth.error.DuplicatedRecordException
 import lineth.persistence.db.DbHelper
 import lineth.persistence.db.test.CleanDbTestSuiteParallel
+import lineth.persistence.test.DbQueries
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach

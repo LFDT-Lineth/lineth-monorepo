@@ -1,12 +1,12 @@
 package lineth.staterecovery.plugin
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
+import lineth.async.get
 import lineth.staterecovery.BlockHeaderStaticFields
 import lineth.staterecovery.FileBasedRecoveryStatusPersistence
 import lineth.staterecovery.RecoveryStatusPersistence
 import lineth.staterecovery.StateRecoveryApp
 import lineth.staterecovery.clients.ExecutionLayerInProcessClient
-import lineth.async.get
 import lineth.vertx.VertxFactory.createVertx
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger

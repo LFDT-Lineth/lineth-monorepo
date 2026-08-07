@@ -1,10 +1,10 @@
 package lineth.coordinator.app.conflation
 
+import lineth.domain.toBlockParameter
+import lineth.ethapi.EthApiClient
 import lineth.persistence.AggregationsRepository
 import lineth.persistence.BatchesRepository
 import lineth.persistence.BlobsRepository
-import lineth.domain.toBlockParameter
-import lineth.ethapi.EthApiClient
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 object ConflationAppHelper {

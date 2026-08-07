@@ -18,10 +18,10 @@ package lineth.zktracer.module.rlptxrcpt;
 import static net.consensys.linea.zktracer.types.Utils.fromDataSizeToLimbNbRows;
 
 import java.util.List;
+import lineth.zktracer.container.ModuleOperation;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
-import lineth.zktracer.container.ModuleOperation;
 import org.hyperledger.besu.datatypes.Log;
 import org.hyperledger.besu.datatypes.TransactionType;
 

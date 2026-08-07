@@ -1,6 +1,8 @@
 package lineth.coordinator.app
 
 import io.vertx.core.Vertx
+import lineth.LongRunningService
+import lineth.contract.l1.FinalizedStateDataProvider
 import lineth.coordination.HighestULongTracker
 import lineth.coordination.blockcreation.ForkChoiceUpdaterImpl
 import lineth.coordinator.clients.ShomeiClient
@@ -8,21 +10,19 @@ import lineth.coordinator.config.toJsonRpcRetry
 import lineth.coordinator.config.v2.CoordinatorConfig
 import lineth.coordinator.config.v2.Type2StateProofManagerConfig
 import lineth.coordinator.config.v2.isDisabled
+import lineth.domain.BlockNumberAndHash
+import lineth.ethapi.EthApiClient
 import lineth.finalization.FinalizationHandler
 import lineth.finalization.FinalizationMonitor
 import lineth.finalization.FinalizationMonitorImpl
+import lineth.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import lineth.metrics.LineaMetricsCategory
+import lineth.metrics.MetricsFacade
 import lineth.persistence.AggregationsRepository
 import lineth.persistence.BatchesRepository
 import lineth.persistence.BlobsRepository
 import lineth.persistence.ForcedTransactionsDao
 import lineth.persistence.conflation.RecordsCleanupFinalizationHandler
-import lineth.LongRunningService
-import lineth.contract.l1.FinalizedStateDataProvider
-import lineth.domain.BlockNumberAndHash
-import lineth.ethapi.EthApiClient
-import lineth.jsonrpc.client.VertxHttpJsonRpcClientFactory
-import lineth.metrics.MetricsFacade
 import lineth.web3j.ethapi.createEthApiClient
 import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture

@@ -15,9 +15,9 @@
 
 package lineth.zktracer.module.hub;
 
+import lineth.zktracer.module.hub.fragment.account.AccountFragment;
 import lombok.Getter;
 import lombok.experimental.Accessors;
-import lineth.zktracer.module.hub.fragment.account.AccountFragment;
 
 /** Contain factories for modules requiring access to longer-lived data. */
 @Accessors(fluent = true)

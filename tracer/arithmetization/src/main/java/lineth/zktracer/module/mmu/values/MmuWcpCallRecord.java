@@ -15,11 +15,11 @@
 
 package lineth.zktracer.module.mmu.values;
 
+import lineth.zktracer.Trace;
+import lineth.zktracer.opcode.OpCode;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.experimental.Accessors;
-import lineth.zktracer.Trace;
-import lineth.zktracer.opcode.OpCode;
 import net.consensys.linea.zktracer.types.UnsignedByte;
 import org.apache.tuweni.bytes.Bytes;
 

@@ -1,9 +1,9 @@
 package lineth.conflation.calculators
 
-import lineth.conflation.SafeBlockProvider
 import lineth.DisabledService
 import lineth.LongRunningService
 import lineth.blob.BlobCompressor
+import lineth.conflation.SafeBlockProvider
 import lineth.metrics.MetricsFacade
 import lineth.timer.TimerFactory
 import lineth.traces.TracesCounters

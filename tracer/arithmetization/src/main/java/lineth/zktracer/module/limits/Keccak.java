@@ -18,10 +18,10 @@ package lineth.zktracer.module.limits;
 import static com.google.common.base.Preconditions.checkState;
 import static lineth.zktracer.module.ModuleName.BLOCK_KECCAK;
 
-import lombok.Getter;
-import lombok.experimental.Accessors;
 import lineth.zktracer.container.module.CountingOnlyModule;
 import lineth.zktracer.container.module.IncrementingModule;
+import lombok.Getter;
+import lombok.experimental.Accessors;
 
 @Getter
 @Accessors(fluent = true)

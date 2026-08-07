@@ -28,8 +28,6 @@ import static lineth.zktracer.Trace.MMU_INST_RAM_TO_EXO_WITH_PADDING;
 import static lineth.zktracer.Trace.MMU_INST_RAM_TO_RAM_SANS_PADDING;
 import static lineth.zktracer.Trace.MMU_INST_RIGHT_PADDED_WORD_EXTRACTION;
 
-import lombok.Getter;
-import lombok.experimental.Accessors;
 import lineth.zktracer.module.euc.Euc;
 import lineth.zktracer.module.mmu.instructions.AnyToRamWithPadding;
 import lineth.zktracer.module.mmu.instructions.Blake;
@@ -44,6 +42,8 @@ import lineth.zktracer.module.mmu.instructions.RamToExoWithPadding;
 import lineth.zktracer.module.mmu.instructions.RamToRamSansPadding;
 import lineth.zktracer.module.mmu.instructions.RightPaddedWordExtraction;
 import lineth.zktracer.module.wcp.Wcp;
+import lombok.Getter;
+import lombok.experimental.Accessors;
 
 @Accessors(fluent = true)
 class MmuInstructions {

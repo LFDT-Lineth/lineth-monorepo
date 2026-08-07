@@ -1,6 +1,5 @@
 package lineth.ftx
 
-import lineth.ftx.conflation.ForcedTransactionsSafeBlockNumberManager
 import lineth.EthLogsSearcher
 import lineth.LongRunningService
 import lineth.SearchDirection
@@ -14,6 +13,7 @@ import lineth.ethapi.EthLogsFilterOptions
 import lineth.ethapi.extensions.EthLogsFilterState
 import lineth.ethapi.extensions.EthLogsFilterSubscriptionFactory
 import lineth.ethapi.extensions.EthLogsFilterSubscriptionManager
+import lineth.ftx.conflation.ForcedTransactionsSafeBlockNumberManager
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

@@ -1,10 +1,10 @@
 package lineth.staterecovery.test
 
-import lineth.testing.CommandResult
-import lineth.testing.Runner
 import lineth.clients.StateManagerClientV1
 import lineth.domain.BlockInterval
 import lineth.ethapi.EthApiBlockClient
+import lineth.testing.CommandResult
+import lineth.testing.Runner
 import lineth.web3j.ethapi.createEthApiClient
 import org.apache.logging.log4j.Logger
 import org.assertj.core.api.Assertions.assertThat

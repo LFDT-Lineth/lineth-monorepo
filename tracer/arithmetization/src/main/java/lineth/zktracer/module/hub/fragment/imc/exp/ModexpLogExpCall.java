@@ -19,12 +19,12 @@ import static lineth.zktracer.Trace.EXP_INST_MODEXPLOG;
 import static net.consensys.linea.zktracer.types.Conversions.bigIntegerToBytes;
 
 import java.math.BigInteger;
+import lineth.zktracer.Trace;
+import lineth.zktracer.module.hub.precompiles.ModexpMetadata;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import lineth.zktracer.Trace;
-import lineth.zktracer.module.hub.precompiles.ModexpMetadata;
 import net.consensys.linea.zktracer.types.EWord;
 import org.apache.tuweni.bytes.Bytes;
 

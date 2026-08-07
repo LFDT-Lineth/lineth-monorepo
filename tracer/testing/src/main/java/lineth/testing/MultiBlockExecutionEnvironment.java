@@ -22,13 +22,13 @@ import static net.consensys.linea.zktracer.types.PublicInputs.getDefaultBlobBase
 
 import java.math.BigInteger;
 import java.util.*;
-import lombok.Builder;
-import lombok.Singular;
-import lombok.extern.slf4j.Slf4j;
 import lineth.blockcapture.snapshots.*;
 import lineth.zktracer.ChainConfig;
 import lineth.zktracer.ZkTracer;
 import lineth.zktracer.module.hub.Hub;
+import lombok.Builder;
+import lombok.Singular;
+import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.zktracer.types.PublicInputs;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;

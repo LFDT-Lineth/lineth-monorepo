@@ -3,9 +3,8 @@ package lineth.coordination.aggregation
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import lineth.conflation.calculators.AggregationCalculator
-import lineth.persistence.AggregationsRepository
 import lineth.clients.ProofAggregationProverClientV2
+import lineth.conflation.calculators.AggregationCalculator
 import lineth.domain.Aggregation
 import lineth.domain.AggregationProofIndex
 import lineth.domain.BlobAndBatchCounters
@@ -18,6 +17,7 @@ import lineth.domain.ProofsToAggregate
 import lineth.domain.createProofToFinalize
 import lineth.metrics.MetricsFacade
 import lineth.metrics.micrometer.MicrometerMetricsFacade
+import lineth.persistence.AggregationsRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test

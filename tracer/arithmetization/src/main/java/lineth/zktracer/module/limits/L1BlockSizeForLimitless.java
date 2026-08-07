@@ -18,14 +18,14 @@ package lineth.zktracer.module.limits;
 import static lineth.zktracer.module.ModuleName.BLOCK_L1_SIZE;
 
 import java.util.List;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.module.IncrementingModule;
 import lineth.zktracer.container.module.Module;
 import lineth.zktracer.container.stacked.CountOnlyOperation;
 import lineth.zktracer.module.ModuleName;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.Accessors;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Hash;

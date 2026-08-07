@@ -19,11 +19,11 @@ import static graphql.com.google.common.base.Preconditions.checkArgument;
 import static lineth.zktracer.Trace.LLARGE;
 import static lineth.zktracer.Trace.RLP_UTILS_INST_DATA_PRICING;
 
+import lineth.zktracer.Trace;
+import lineth.zktracer.module.rlptxn.GenericTracedValue;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.experimental.Accessors;
-import lineth.zktracer.Trace;
-import lineth.zktracer.module.rlptxn.GenericTracedValue;
 import org.apache.tuweni.bytes.Bytes;
 
 @Accessors(fluent = true)

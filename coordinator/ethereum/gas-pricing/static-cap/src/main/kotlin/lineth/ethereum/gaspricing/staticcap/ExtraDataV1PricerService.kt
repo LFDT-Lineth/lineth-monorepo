@@ -1,16 +1,16 @@
 package lineth.ethereum.gaspricing.staticcap
 
 import io.vertx.core.Vertx
-import lineth.metrics.LineaMetricsCategory
 import lineth.OneKWei
-import lineth.kotlin.toIntervalString
-import lineth.metrics.MetricsFacade
-import lineth.timer.TimerSchedule
-import lineth.timer.VertxPeriodicPollingService
 import lineth.ethereum.gaspricing.ExtraDataUpdater
 import lineth.ethereum.gaspricing.FeesFetcher
 import lineth.ethereum.gaspricing.MinerExtraDataCalculator
 import lineth.ethereum.gaspricing.MinerExtraDataV1
+import lineth.kotlin.toIntervalString
+import lineth.metrics.LineaMetricsCategory
+import lineth.metrics.MetricsFacade
+import lineth.timer.TimerSchedule
+import lineth.timer.VertxPeriodicPollingService
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

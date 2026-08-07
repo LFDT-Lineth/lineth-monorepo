@@ -1,9 +1,9 @@
 package lineth.coordination.blob
 
-import lineth.metrics.LineaMetricsCategory
 import lineth.blob.BlobCompressor
 import lineth.blob.BlobCompressorFactory
 import lineth.blob.BlobCompressorVersion
+import lineth.metrics.LineaMetricsCategory
 import lineth.metrics.MetricsFacade
 import lineth.metrics.Timer
 import org.apache.logging.log4j.LogManager

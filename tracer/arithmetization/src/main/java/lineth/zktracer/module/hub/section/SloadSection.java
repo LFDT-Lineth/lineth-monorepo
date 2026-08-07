@@ -18,7 +18,6 @@ import static lineth.zktracer.module.hub.fragment.storage.StorageFragmentPurpose
 import static lineth.zktracer.module.hub.fragment.storage.StorageFragmentPurpose.SLOAD_UNDOING;
 import static lineth.zktracer.module.hub.section.SstoreSection.NB_ROWS_HUB_STORAGE;
 
-import lombok.Getter;
 import lineth.zktracer.module.hub.Hub;
 import lineth.zktracer.module.hub.defer.PostRollbackDefer;
 import lineth.zktracer.module.hub.fragment.ContextFragment;
@@ -28,6 +27,7 @@ import lineth.zktracer.module.hub.fragment.storage.StorageFragment;
 import lineth.zktracer.module.hub.signals.Exceptions;
 import lineth.zktracer.module.hub.state.State;
 import lineth.zktracer.runtime.callstack.CallFrame;
+import lombok.Getter;
 import net.consensys.linea.zktracer.types.EWord;
 import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.units.bigints.UInt256;

@@ -1,11 +1,11 @@
 package lineth.staterecovery
 
 import io.vertx.core.Vertx
-import lineth.staterecovery.datafetching.SubmissionEventsAndData
-import lineth.staterecovery.datafetching.SubmissionsFetchingTask
 import lineth.async.AsyncRetryer
 import lineth.domain.BlockInterval
 import lineth.domain.toBlockParameter
+import lineth.staterecovery.datafetching.SubmissionEventsAndData
+import lineth.staterecovery.datafetching.SubmissionsFetchingTask
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Duration.Companion.seconds
 

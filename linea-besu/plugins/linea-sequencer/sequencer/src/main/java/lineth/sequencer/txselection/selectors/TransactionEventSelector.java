@@ -13,9 +13,9 @@ import static lineth.txselection.LineaTransactionSelectionResult.DENIED_LOG_TOPI
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import lineth.bundles.TransactionBundle;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import lineth.bundles.TransactionBundle;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Log;
 import org.hyperledger.besu.datatypes.LogTopic;

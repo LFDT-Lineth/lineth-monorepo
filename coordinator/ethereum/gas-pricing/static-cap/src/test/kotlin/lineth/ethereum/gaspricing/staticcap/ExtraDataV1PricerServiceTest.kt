@@ -4,12 +4,12 @@ import io.vertx.core.Vertx
 import io.vertx.junit5.Timeout
 import io.vertx.junit5.VertxExtension
 import lineth.domain.FeeHistory
-import lineth.kotlin.toKWei
-import lineth.metrics.MetricsFacade
 import lineth.ethereum.gaspricing.ExtraDataUpdater
 import lineth.ethereum.gaspricing.FeesCalculator
 import lineth.ethereum.gaspricing.FeesFetcher
 import lineth.ethereum.gaspricing.MinerExtraDataV1
+import lineth.kotlin.toKWei
+import lineth.metrics.MetricsFacade
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance

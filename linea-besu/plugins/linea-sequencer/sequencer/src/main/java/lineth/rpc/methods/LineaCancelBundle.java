@@ -10,8 +10,8 @@ package lineth.rpc.methods;
 
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
-import lombok.extern.slf4j.Slf4j;
 import lineth.bundles.BundlePoolService;
+import lombok.extern.slf4j.Slf4j;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.parameters.JsonRpcParameter;
 import org.hyperledger.besu.plugin.services.exception.PluginRpcEndpointException;
 import org.hyperledger.besu.plugin.services.rpc.PluginRpcRequest;

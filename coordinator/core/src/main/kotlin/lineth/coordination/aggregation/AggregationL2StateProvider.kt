@@ -1,10 +1,10 @@
 package lineth.coordination.aggregation
 
-import lineth.persistence.ForcedTransactionsDao
 import lineth.contract.l2.L2MessageServiceSmartContractClientReadOnly
 import lineth.domain.toBlockParameter
 import lineth.ethapi.EthApiClient
 import lineth.kotlin.zeroHash32
+import lineth.persistence.ForcedTransactionsDao
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Instant
 

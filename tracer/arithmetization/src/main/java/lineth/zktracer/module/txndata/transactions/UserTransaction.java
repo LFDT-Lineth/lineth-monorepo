@@ -21,13 +21,13 @@ import static lineth.zktracer.module.hub.TransactionProcessingType.USER;
 import static net.consensys.linea.zktracer.types.Conversions.bigIntegerToBytes;
 
 import java.math.BigInteger;
-import lombok.Getter;
 import lineth.zktracer.module.txndata.TxnData;
 import lineth.zktracer.module.txndata.TxnDataOperation;
 import lineth.zktracer.module.txndata.rows.RlpRow;
 import lineth.zktracer.module.txndata.rows.computationRows.EucRow;
 import lineth.zktracer.module.txndata.rows.computationRows.WcpRow;
 import lineth.zktracer.module.txndata.rows.hubRows.HubRowForUserTransactions;
+import lombok.Getter;
 import net.consensys.linea.zktracer.types.TransactionProcessingMetadata;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;

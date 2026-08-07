@@ -12,8 +12,8 @@ import static lineth.txselection.LineaTransactionSelectionResult.BUNDLE_GAS_EXCE
 import static lineth.txselection.LineaTransactionSelectionResult.BUNDLE_TOO_LARGE_FOR_REMAINING_BUNDLE_BLOCK_GAS;
 import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTED;
 
-import lombok.extern.slf4j.Slf4j;
 import lineth.bundles.TransactionBundle;
+import lombok.extern.slf4j.Slf4j;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 import org.hyperledger.besu.plugin.services.txselection.AbstractStatefulPluginTransactionSelector;

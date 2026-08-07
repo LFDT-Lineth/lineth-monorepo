@@ -1,12 +1,11 @@
 package lineth.coordination.aggregation
 
 import io.vertx.core.Vertx
-import lineth.conflation.calculators.AggregationCalculator
-import lineth.conflation.calculators.AggregationHandler
-import lineth.metrics.LineaMetricsCategory
 import lineth.LongRunningService
 import lineth.async.AsyncRetryer
 import lineth.clients.ProofAggregationProverClientV2
+import lineth.conflation.calculators.AggregationCalculator
+import lineth.conflation.calculators.AggregationHandler
 import lineth.domain.Aggregation
 import lineth.domain.AggregationProofIndex
 import lineth.domain.BlobAndBatchCounters
@@ -15,6 +14,7 @@ import lineth.domain.BlockIntervals
 import lineth.domain.CompressionProofIndex
 import lineth.domain.ProofsToAggregate
 import lineth.domain.toBlockIntervalsString
+import lineth.metrics.LineaMetricsCategory
 import lineth.metrics.MetricsFacade
 import lineth.timer.TimerSchedule
 import lineth.timer.VertxPeriodicPollingService

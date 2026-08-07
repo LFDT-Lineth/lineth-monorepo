@@ -1,11 +1,10 @@
 package lineth.contract.l1
 
 import lineth.contract.LinethRollupV6
-import lineth.contract.l1.LinethRollupContractVersion
+import lineth.contract.l1.FunctionBuildersV8.buildFinalizeBlocksFunctionV8
 import lineth.domain.BlobRecord
 import lineth.domain.ProofToFinalize
 import lineth.kotlin.toBigInteger
-import lineth.contract.l1.FunctionBuildersV8.buildFinalizeBlocksFunctionV8
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.DynamicArray
 import org.web3j.abi.datatypes.DynamicBytes

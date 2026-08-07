@@ -1,7 +1,7 @@
 package lineth.ethereum.gaspricing.dynamiccap
 
-import lineth.gaspricing.GasPriceCapProviderV2
 import lineth.domain.gas.GasPriceCaps
+import lineth.gaspricing.GasPriceCapProviderV2
 import lineth.kotlin.minusCoercingUnderflow
 import lineth.kotlin.toBigDecimal
 import lineth.kotlin.toGWei

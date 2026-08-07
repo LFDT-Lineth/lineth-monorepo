@@ -1,12 +1,12 @@
 package lineth.ftx.conflation
 
 import io.vertx.core.Vertx
-import lineth.persistence.ForcedTransactionRecord
-import lineth.persistence.ftx.FakeForcedTransactionsDao
 import lineth.contract.events.FactoryForcedTransactionAddedEvent
 import lineth.ethapi.EthLogsSearcherImpl
 import lineth.ethapi.FakeEthApiClient
 import lineth.forcedtx.ForcedTransactionInclusionResult
+import lineth.persistence.ForcedTransactionRecord
+import lineth.persistence.ftx.FakeForcedTransactionsDao
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach

@@ -12,8 +12,8 @@ import com.google.common.base.MoreObjects;
 import jakarta.validation.constraints.*;
 import java.nio.file.Path;
 import java.time.Duration;
-import lombok.Getter;
 import lineth.plugins.LineaCliOptions;
+import lombok.Getter;
 import picocli.CommandLine.Option;
 
 @Getter

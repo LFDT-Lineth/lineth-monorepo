@@ -1,13 +1,13 @@
 package lineth.coordinator.clients.prover
 
 import io.vertx.core.Vertx
-import lineth.metrics.LineaMetricsCategory
 import lineth.clients.BlobCompressionProverClientV2
 import lineth.clients.ExecutionProverClientV2
 import lineth.clients.InvalidityProverClientV1
 import lineth.clients.ProofAggregationProverClientV2
 import lineth.clients.ProverClient
 import lineth.domain.ProofIndex
+import lineth.metrics.LineaMetricsCategory
 import lineth.metrics.MetricsFacade
 import lineth.metrics.micrometer.GaugeAggregator
 import org.apache.logging.log4j.Logger

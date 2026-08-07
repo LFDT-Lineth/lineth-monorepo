@@ -16,10 +16,10 @@
 package lineth.zktracer.module.hub.transients;
 
 import java.util.*;
-import lombok.Getter;
-import lombok.experimental.Accessors;
 import lineth.zktracer.container.stacked.StackedSet;
 import lineth.zktracer.runtime.LogData;
+import lombok.Getter;
+import lombok.experimental.Accessors;
 import org.hyperledger.besu.datatypes.Address;
 
 /** Stores data relative to the conflation. */

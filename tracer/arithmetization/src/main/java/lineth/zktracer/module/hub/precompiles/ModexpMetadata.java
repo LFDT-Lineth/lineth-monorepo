@@ -25,10 +25,10 @@ import static net.consensys.linea.zktracer.types.Conversions.bytesToShort;
 import static net.consensys.linea.zktracer.types.Conversions.safeLongToInt;
 import static net.consensys.linea.zktracer.types.Utils.rightPadTo;
 
+import lineth.zktracer.module.hub.fragment.imc.oob.precompiles.modexp.ModexpXbsCase;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import lineth.zktracer.module.hub.fragment.imc.oob.precompiles.modexp.ModexpXbsCase;
 import net.consensys.linea.zktracer.types.EWord;
 import net.consensys.linea.zktracer.types.MemoryRange;
 import org.apache.tuweni.bytes.Bytes;

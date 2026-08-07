@@ -85,7 +85,6 @@ import static org.hyperledger.besu.evm.frame.MessageFrame.State.COMPLETED_SUCCES
 
 import java.util.*;
 import java.util.stream.Stream;
-import lombok.extern.slf4j.Slf4j;
 import lineth.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import lineth.zktracer.container.module.CountingOnlyModule;
 import lineth.zktracer.container.module.IncrementAndDetectModule;
@@ -105,6 +104,7 @@ import lineth.zktracer.module.wcp.Wcp;
 import lineth.zktracer.opcode.OpCode;
 import lineth.zktracer.opcode.OpCodeData;
 import lineth.zktracer.opcode.OpCodes;
+import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.zktracer.types.MemoryRange;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Address;

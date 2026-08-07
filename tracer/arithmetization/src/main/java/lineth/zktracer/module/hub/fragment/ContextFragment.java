@@ -18,13 +18,13 @@ package lineth.zktracer.module.hub.fragment;
 import static net.consensys.linea.zktracer.types.AddressUtils.hiPart;
 import static net.consensys.linea.zktracer.types.AddressUtils.loPart;
 
+import lineth.zktracer.Trace;
+import lineth.zktracer.module.hub.Hub;
+import lineth.zktracer.runtime.callstack.CallFrame;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import lineth.zktracer.Trace;
-import lineth.zktracer.module.hub.Hub;
-import lineth.zktracer.runtime.callstack.CallFrame;
 import net.consensys.linea.zktracer.types.Either;
 import net.consensys.linea.zktracer.types.MemoryRange;
 import org.hyperledger.besu.datatypes.Address;

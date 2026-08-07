@@ -1,9 +1,9 @@
 package lineth.coordinator.config.v2.toml
 
-import lineth.coordinator.config.v2.ConflationConfig
 import lineth.blob.BlobCompressorVersion
 import lineth.config.docs.ConfigDoc
 import lineth.config.docs.ConfigSection
+import lineth.coordinator.config.v2.ConflationConfig
 import lineth.traces.TracesCountersV4
 import lineth.traces.TracesCountersV5
 import java.net.URL

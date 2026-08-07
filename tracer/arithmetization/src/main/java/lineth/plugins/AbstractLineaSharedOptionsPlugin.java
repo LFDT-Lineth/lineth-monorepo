@@ -16,11 +16,11 @@
 package lineth.plugins;
 
 import java.util.Map;
-import lombok.extern.slf4j.Slf4j;
 import lineth.plugins.config.LineaL1L2BridgeSharedCliOptions;
 import lineth.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import lineth.plugins.config.LineaTracerSharedCliOptions;
 import lineth.plugins.config.LineaTracerSharedConfiguration;
+import lombok.extern.slf4j.Slf4j;
 
 /** In this class we put CLI options that are shared with other plugins not defined here */
 @Slf4j

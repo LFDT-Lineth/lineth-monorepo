@@ -23,13 +23,13 @@ import static lineth.zktracer.module.hub.fragment.scenario.PrecompileScenarioFra
 import static lineth.zktracer.module.mod.ModOperation.NB_ROWS_MOD;
 
 import java.util.Map;
+import lineth.zktracer.Trace;
+import lineth.zktracer.module.hub.fragment.TraceFragment;
+import lineth.zktracer.module.hub.section.call.precompileSubsection.PrecompileSubsection;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import lineth.zktracer.Trace;
-import lineth.zktracer.module.hub.fragment.TraceFragment;
-import lineth.zktracer.module.hub.section.call.precompileSubsection.PrecompileSubsection;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Address;
 

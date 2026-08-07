@@ -19,8 +19,8 @@ import static lineth.zktracer.Trace.PRC_BLS_MULTIPLICATION_MULTIPLIER;
 import static lineth.zktracer.module.tables.BlsRt.getMsmDiscount;
 
 import java.math.BigInteger;
-import lombok.extern.slf4j.Slf4j;
 import lineth.zktracer.module.hub.fragment.imc.oob.precompiles.common.CommonPrecompileOobCall;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.tuweni.bytes.Bytes;
 
 @Slf4j

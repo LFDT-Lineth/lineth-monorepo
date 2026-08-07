@@ -15,8 +15,8 @@
 
 package lineth.zktracer.container.stacked;
 
-import lombok.experimental.Accessors;
 import lineth.zktracer.container.ModuleOperation;
+import lombok.experimental.Accessors;
 
 @Accessors(fluent = true)
 public record ModuleOperationAdder(ModuleOperation op, boolean isNew) {

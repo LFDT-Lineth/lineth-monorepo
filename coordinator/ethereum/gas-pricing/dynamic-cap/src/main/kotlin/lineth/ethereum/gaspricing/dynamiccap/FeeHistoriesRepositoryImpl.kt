@@ -1,8 +1,8 @@
 package lineth.ethereum.gaspricing.dynamiccap
 
-import lineth.persistence.FeeHistoriesDao
 import lineth.domain.FeeHistory
 import lineth.error.DuplicatedRecordException
+import lineth.persistence.FeeHistoriesDao
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference

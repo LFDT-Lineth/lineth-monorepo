@@ -19,9 +19,6 @@ import static com.google.common.base.Preconditions.checkState;
 import static lineth.zktracer.module.ModuleName.MMU;
 
 import java.util.List;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.module.OperationListModule;
 import lineth.zktracer.container.stacked.ModuleOperationStackedList;
@@ -30,6 +27,9 @@ import lineth.zktracer.module.euc.Euc;
 import lineth.zktracer.module.hub.fragment.imc.mmu.MmuCall;
 import lineth.zktracer.module.mmu.values.HubToMmuValues;
 import lineth.zktracer.module.wcp.Wcp;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.Accessors;
 
 @RequiredArgsConstructor
 @Accessors(fluent = true)

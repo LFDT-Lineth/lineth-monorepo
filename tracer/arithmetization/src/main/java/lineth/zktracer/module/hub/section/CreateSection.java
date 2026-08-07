@@ -21,7 +21,6 @@ import static lineth.zktracer.opcode.OpCode.*;
 import static net.consensys.linea.zktracer.types.AddressUtils.getDeploymentAddress;
 
 import java.util.Optional;
-import lombok.Getter;
 import lineth.zktracer.module.hub.AccountSnapshot;
 import lineth.zktracer.module.hub.Hub;
 import lineth.zktracer.module.hub.TransactionProcessingType;
@@ -43,6 +42,7 @@ import lineth.zktracer.module.hub.signals.Exceptions;
 import lineth.zktracer.module.shakiradata.ShakiraDataOperation;
 import lineth.zktracer.opcode.OpCode;
 import lineth.zktracer.runtime.callstack.CallFrame;
+import lombok.Getter;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.units.bigints.UInt256;
 import org.hyperledger.besu.datatypes.Address;

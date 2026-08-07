@@ -18,11 +18,11 @@ package lineth.zktracer.module.gas;
 import static net.consensys.linea.zktracer.types.Conversions.bigIntegerToBytes;
 
 import java.util.Comparator;
+import lineth.zktracer.Trace;
+import lineth.zktracer.container.ModuleOperation;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.experimental.Accessors;
-import lineth.zktracer.Trace;
-import lineth.zktracer.container.ModuleOperation;
 
 @Accessors(fluent = true)
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)

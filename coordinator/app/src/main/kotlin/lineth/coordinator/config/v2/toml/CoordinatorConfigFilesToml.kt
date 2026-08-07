@@ -1,14 +1,14 @@
 package lineth.coordinator.config.v2.toml
 
-import lineth.coordinator.config.v2.CoordinatorConfig
 import lineth.config.docs.ConfigDoc
 import lineth.config.docs.ConfigSection
+import lineth.coordinator.config.v2.CoordinatorConfig
+import lineth.ethereum.gaspricing.dynamiccap.TimeOfDayMultipliers
 import lineth.traces.TracesCountersV4
 import lineth.traces.TracesCountersV5
 import lineth.traces.TracingModuleV4
 import lineth.traces.TracingModuleV5
 import lineth.web3j.SmartContractErrors
-import lineth.ethereum.gaspricing.dynamiccap.TimeOfDayMultipliers
 
 data class CoordinatorConfigFileToml(
   @param:ConfigSection("Shared defaults (L1/L2 endpoints and retry policies) reused by coordinator services.")

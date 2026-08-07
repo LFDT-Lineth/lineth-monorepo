@@ -2,15 +2,15 @@ package lineth.coordinator.clients.prover
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.vertx.core.Vertx
+import lineth.clients.BlobCompressionProverClientV2
 import lineth.coordinator.clients.prover.serialization.BlobCompressionProofJsonRequest
 import lineth.coordinator.clients.prover.serialization.BlobCompressionProofJsonResponse
 import lineth.coordinator.clients.prover.serialization.JsonSerialization
-import lineth.fileio.FileReader
-import lineth.fileio.FileWriter
-import lineth.clients.BlobCompressionProverClientV2
 import lineth.domain.BlobCompressionProof
 import lineth.domain.BlobCompressionProofRequest
 import lineth.domain.CompressionProofIndex
+import lineth.fileio.FileReader
+import lineth.fileio.FileWriter
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

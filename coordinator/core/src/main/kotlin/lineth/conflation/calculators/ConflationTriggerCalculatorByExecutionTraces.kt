@@ -3,10 +3,10 @@ package lineth.conflation.calculators
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
-import lineth.metrics.LineaMetricsCategory
 import lineth.domain.BlockCounters
 import lineth.domain.ConflationTrigger
 import lineth.metrics.Counter
+import lineth.metrics.LineaMetricsCategory
 import lineth.metrics.MetricsFacade
 import lineth.metrics.Tag
 import lineth.traces.TracesCounters

@@ -1,11 +1,11 @@
 package lineth.coordinator.config.v2
 
 import com.sksamuel.hoplite.ConfigException
+import lineth.blob.BlobCompressorVersion
+import lineth.blob.ShnarfCalculatorVersion
 import lineth.coordinator.config.v2.toml.ConflationToml
 import lineth.coordinator.config.v2.toml.DefaultsToml
 import lineth.coordinator.config.v2.toml.parseConfig
-import lineth.blob.BlobCompressorVersion
-import lineth.blob.ShnarfCalculatorVersion
 import lineth.kotlin.toURL
 import lineth.traces.TracesCountersV5
 import org.assertj.core.api.Assertions.assertThat

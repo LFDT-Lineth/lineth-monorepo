@@ -19,8 +19,8 @@ import static lineth.zktracer.Trace.*;
 import static net.consensys.linea.zktracer.types.AddressUtils.isAddressWarm;
 import static org.hyperledger.besu.evm.internal.Words.clampedAdd;
 
-import lombok.RequiredArgsConstructor;
 import lineth.zktracer.Fork;
+import lombok.RequiredArgsConstructor;
 import net.consensys.linea.zktracer.types.Bytecode;
 import net.consensys.linea.zktracer.types.Range;
 import org.hyperledger.besu.datatypes.Address;

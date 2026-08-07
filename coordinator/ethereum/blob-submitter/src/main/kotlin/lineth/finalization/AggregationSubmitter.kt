@@ -1,11 +1,11 @@
 package lineth.finalization
 
-import lineth.gaspricing.GasPriceCapProvider
-import lineth.submission.logSubmissionError
 import lineth.contract.l1.LineaSmartContractClient
 import lineth.domain.BlobRecord
 import lineth.domain.FinalizationSubmittedEvent
 import lineth.domain.ProofToFinalize
+import lineth.gaspricing.GasPriceCapProvider
+import lineth.submission.logSubmissionError
 import org.apache.logging.log4j.LogManager
 import org.web3j.tx.exceptions.ContractCallException
 import tech.pegasys.teku.infrastructure.async.SafeFuture

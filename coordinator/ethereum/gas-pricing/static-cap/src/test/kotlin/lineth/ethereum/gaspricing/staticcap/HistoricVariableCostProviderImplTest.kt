@@ -6,8 +6,8 @@ import lineth.domain.createBlock
 import lineth.domain.toBlockParameter
 import lineth.domain.toBlockWithRandomTxHashes
 import lineth.ethapi.EthApiBlockClient
-import lineth.kotlin.decodeHex
 import lineth.ethereum.gaspricing.MinerExtraDataV1
+import lineth.kotlin.decodeHex
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test

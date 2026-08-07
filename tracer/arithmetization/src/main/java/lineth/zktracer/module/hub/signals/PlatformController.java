@@ -15,9 +15,9 @@
 
 package lineth.zktracer.module.hub.signals;
 
+import lineth.zktracer.module.hub.Hub;
 import lombok.Getter;
 import lombok.experimental.Accessors;
-import lineth.zktracer.module.hub.Hub;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 
 /**

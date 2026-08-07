@@ -6,13 +6,13 @@ import com.sksamuel.hoplite.addFileSource
 import io.vertx.core.Vertx
 import lineth.contract.l1.LinethRollupContractVersion
 import lineth.contract.l1.LinethRollupSmartContractClient
+import lineth.contract.l1.Web3JLinethRollupSmartContractClient
 import lineth.ethapi.EthLogsSearcherImpl
 import lineth.kotlin.gwei
 import lineth.testing.filesystem.findPathTo
 import lineth.web3j.SmartContractErrors
 import lineth.web3j.gas.StaticGasProvider
 import lineth.web3j.transactionmanager.AsyncFriendlyTransactionManager
-import lineth.contract.l1.Web3JLinethRollupSmartContractClient
 import org.slf4j.LoggerFactory
 import org.web3j.tx.gas.ContractEIP1559GasProvider
 import tech.pegasys.teku.infrastructure.async.SafeFuture

@@ -1,8 +1,8 @@
 package lineth.coordinator.config.v2.toml
 
-import lineth.coordinator.config.v2.StateManagerConfig
 import lineth.config.docs.ConfigDoc
 import lineth.config.docs.ConfigSection
+import lineth.coordinator.config.v2.StateManagerConfig
 import java.net.URL
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds

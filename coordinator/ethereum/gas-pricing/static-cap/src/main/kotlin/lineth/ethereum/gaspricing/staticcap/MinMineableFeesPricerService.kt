@@ -1,13 +1,13 @@
 package lineth.ethereum.gaspricing.staticcap
 
 import io.vertx.core.Vertx
+import lineth.ethereum.gaspricing.FeesCalculator
+import lineth.ethereum.gaspricing.FeesFetcher
+import lineth.ethereum.gaspricing.GasPriceUpdater
 import lineth.kotlin.toGWei
 import lineth.kotlin.toIntervalString
 import lineth.timer.TimerSchedule
 import lineth.timer.VertxPeriodicPollingService
-import lineth.ethereum.gaspricing.FeesCalculator
-import lineth.ethereum.gaspricing.FeesFetcher
-import lineth.ethereum.gaspricing.GasPriceUpdater
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

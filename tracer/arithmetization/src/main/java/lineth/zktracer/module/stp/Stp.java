@@ -19,14 +19,14 @@ import static com.google.common.base.Preconditions.*;
 import static lineth.zktracer.module.ModuleName.STP;
 
 import java.util.List;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.module.OperationSetModule;
 import lineth.zktracer.container.stacked.ModuleOperationStackedSet;
 import lineth.zktracer.module.ModuleName;
 import lineth.zktracer.module.hub.fragment.imc.StpCall;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.Accessors;
 
 @RequiredArgsConstructor
 @Accessors(fluent = true)

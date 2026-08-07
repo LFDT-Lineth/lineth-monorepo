@@ -1,10 +1,10 @@
 package lineth.coordination.blob
 
 import io.vertx.core.Vertx
-import lineth.metrics.LineaMetricsCategory
 import lineth.clients.BlobCompressionProverClientV2
 import lineth.domain.BlobRecord
 import lineth.domain.CompressionProofIndex
+import lineth.metrics.LineaMetricsCategory
 import lineth.metrics.MetricsFacade
 import lineth.timer.TimerSchedule
 import lineth.timer.VertxPeriodicPollingService

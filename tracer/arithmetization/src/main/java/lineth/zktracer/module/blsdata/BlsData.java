@@ -18,9 +18,6 @@ package lineth.zktracer.module.blsdata;
 import static lineth.zktracer.module.ModuleName.BLS_DATA;
 
 import java.util.List;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.module.CountingOnlyModule;
 import lineth.zktracer.container.module.IncrementingModule;
@@ -29,6 +26,9 @@ import lineth.zktracer.container.stacked.ModuleOperationStackedList;
 import lineth.zktracer.module.ModuleName;
 import lineth.zktracer.module.hub.fragment.scenario.PrecompileScenarioFragment;
 import lineth.zktracer.module.wcp.Wcp;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.Accessors;
 import org.apache.tuweni.bytes.Bytes;
 
 @RequiredArgsConstructor

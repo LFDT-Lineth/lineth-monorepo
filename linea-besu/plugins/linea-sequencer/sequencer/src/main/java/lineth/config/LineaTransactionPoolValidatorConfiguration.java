@@ -10,8 +10,8 @@
 package lineth.config;
 
 import java.util.Set;
-import lombok.Builder;
 import lineth.plugins.LineaOptionsConfiguration;
+import lombok.Builder;
 import org.hyperledger.besu.datatypes.Address;
 
 /**

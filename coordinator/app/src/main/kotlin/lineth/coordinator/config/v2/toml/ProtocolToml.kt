@@ -1,8 +1,8 @@
 package lineth.coordinator.config.v2.toml
 
-import lineth.coordinator.config.v2.ProtocolConfig
 import lineth.config.docs.ConfigDoc
 import lineth.config.docs.ConfigSection
+import lineth.coordinator.config.v2.ProtocolConfig
 import lineth.domain.BlockParameter
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds

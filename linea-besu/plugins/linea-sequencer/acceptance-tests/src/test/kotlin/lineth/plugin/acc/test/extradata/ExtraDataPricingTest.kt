@@ -8,9 +8,9 @@
  */
 package lineth.plugin.acc.test.extradata
 
+import lineth.metrics.LineaMetricCategory.PRICING_CONF
 import lineth.plugin.acc.test.LineaPluginPoSTestBase
 import lineth.plugin.acc.test.TestCommandLineOptionsBuilder
-import lineth.metrics.LineaMetricCategory.PRICING_CONF
 import org.apache.tuweni.bytes.Bytes32
 import org.assertj.core.api.Assertions.assertThat
 import org.hyperledger.besu.datatypes.Wei

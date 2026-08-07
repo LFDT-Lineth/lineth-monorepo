@@ -1,7 +1,5 @@
 package lineth.metrics
 
-import lineth.metrics.MetricsCategory
-
 enum class LineaMetricsCategory : MetricsCategory {
   AGGREGATION,
   BATCH,

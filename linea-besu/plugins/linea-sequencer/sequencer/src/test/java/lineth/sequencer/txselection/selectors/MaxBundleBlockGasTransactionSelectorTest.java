@@ -8,10 +8,10 @@
  */
 package lineth.sequencer.txselection.selectors;
 
-import static lineth.txselection.LineaTransactionSelectionResult.BUNDLE_GAS_EXCEEDS_MAX_BUNDLE_BLOCK_GAS;
 import static lineth.sequencer.txselection.selectors.MaxBundleBlockGasTransactionSelectorTest.TestParams.concat;
 import static lineth.sequencer.txselection.selectors.MaxBundleBlockGasTransactionSelectorTest.TestParams.notSelected;
 import static lineth.sequencer.txselection.selectors.MaxBundleBlockGasTransactionSelectorTest.TestParams.selected;
+import static lineth.txselection.LineaTransactionSelectionResult.BUNDLE_GAS_EXCEEDS_MAX_BUNDLE_BLOCK_GAS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTED;
 import static org.mockito.Mockito.mock;

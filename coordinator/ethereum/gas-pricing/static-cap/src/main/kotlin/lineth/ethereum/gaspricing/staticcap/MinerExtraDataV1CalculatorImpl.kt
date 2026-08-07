@@ -1,10 +1,10 @@
 package lineth.ethereum.gaspricing.staticcap
 
 import lineth.domain.FeeHistory
-import lineth.kotlin.tokWeiUInt
 import lineth.ethereum.gaspricing.FeesCalculator
 import lineth.ethereum.gaspricing.MinerExtraDataCalculator
 import lineth.ethereum.gaspricing.MinerExtraDataV1
+import lineth.kotlin.tokWeiUInt
 
 class MinerExtraDataV1CalculatorImpl(
   val config: Config,

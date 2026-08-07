@@ -1,9 +1,6 @@
 package lineth.submission
 
 import io.vertx.core.Vertx
-import lineth.gaspricing.GasPriceCapProvider
-import lineth.persistence.AggregationsRepository
-import lineth.persistence.BlobsRepository
 import lineth.async.AsyncFilter
 import lineth.contract.l1.LineaSmartContractClient
 import lineth.contract.l1.LineaValidiumSmartContractClient
@@ -14,7 +11,10 @@ import lineth.domain.ProofToFinalize
 import lineth.domain.filterOutWithEndBlockNumberBefore
 import lineth.domain.toBlockIntervals
 import lineth.domain.toBlockIntervalsString
+import lineth.gaspricing.GasPriceCapProvider
 import lineth.kotlin.trimToMinutePrecision
+import lineth.persistence.AggregationsRepository
+import lineth.persistence.BlobsRepository
 import lineth.timer.TimerSchedule
 import lineth.timer.VertxPeriodicPollingService
 import org.apache.logging.log4j.LogManager

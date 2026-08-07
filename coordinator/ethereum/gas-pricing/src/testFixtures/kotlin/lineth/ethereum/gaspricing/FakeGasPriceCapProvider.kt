@@ -1,7 +1,7 @@
 package lineth.ethereum.gaspricing
 
-import lineth.gaspricing.GasPriceCapProvider
 import lineth.domain.gas.GasPriceCaps
+import lineth.gaspricing.GasPriceCapProvider
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 val defaultGasPriceCaps = GasPriceCaps(

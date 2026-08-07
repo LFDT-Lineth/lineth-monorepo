@@ -1,11 +1,11 @@
 package lineth.coordination.proofcreation
 
-import lineth.coordination.conflation.BlocksTracesConflated
 import lineth.clients.BatchExecutionProofRequestV1
 import lineth.clients.ExecutionProverClientV2
 import lineth.contract.events.L1L2MessageHashesAddedToInboxEvent
 import lineth.contract.events.L2RollingHashUpdatedEvent
 import lineth.contract.events.MessageSentEvent
+import lineth.coordination.conflation.BlocksTracesConflated
 import lineth.domain.BlocksConflation
 import lineth.domain.EthLog
 import lineth.domain.ExecutionProofIndex

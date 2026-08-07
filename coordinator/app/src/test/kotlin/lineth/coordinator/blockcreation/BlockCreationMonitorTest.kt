@@ -2,9 +2,9 @@ package lineth.coordinator.blockcreation
 
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
+import lineth.async.get
 import lineth.coordination.blockcreation.BlockCreated
 import lineth.coordination.blockcreation.BlockCreationListener
-import lineth.async.get
 import lineth.domain.Block
 import lineth.domain.createBlock
 import lineth.domain.toEthGetBlockResponse

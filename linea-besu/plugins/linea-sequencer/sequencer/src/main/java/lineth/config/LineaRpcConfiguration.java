@@ -10,12 +10,12 @@
 package lineth.config;
 
 import java.math.BigDecimal;
+import lineth.plugins.LineaOptionsConfiguration;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
-import lineth.plugins.LineaOptionsConfiguration;
 
 /** The Linea RPC configuration. */
 @Builder(toBuilder = true)

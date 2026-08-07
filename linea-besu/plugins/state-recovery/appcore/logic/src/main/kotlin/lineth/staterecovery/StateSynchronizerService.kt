@@ -1,11 +1,11 @@
 package lineth.staterecovery
 
 import io.vertx.core.Vertx
-import lineth.staterecovery.datafetching.SubmissionsFetchingTask
 import lineth.contract.events.DataFinalizedV3
 import lineth.domain.BlockParameter
 import lineth.domain.CommonDomainFunctions
 import lineth.kotlin.encodeHex
+import lineth.staterecovery.datafetching.SubmissionsFetchingTask
 import lineth.timer.TimerSchedule
 import lineth.timer.VertxPeriodicPollingService
 import org.apache.logging.log4j.LogManager

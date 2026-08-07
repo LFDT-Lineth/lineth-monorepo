@@ -19,12 +19,12 @@ import static lineth.zktracer.Trace.*;
 import static lineth.zktracer.Trace.Blockhash.BLOCKHASH_DEPTH;
 import static lineth.zktracer.Trace.Blockhash.nROWS_PRPRC;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.ModuleOperation;
 import lineth.zktracer.module.wcp.Wcp;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.experimental.Accessors;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.datatypes.Hash;

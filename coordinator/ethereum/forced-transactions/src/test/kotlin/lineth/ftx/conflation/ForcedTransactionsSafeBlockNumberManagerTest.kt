@@ -1,12 +1,12 @@
 package lineth.ftx.conflation
 
-import lineth.persistence.ftx.FakeForcedTransactionsDao
 import lineth.FakeFixedClock
 import lineth.contract.events.ForcedTransactionAddedEvent
 import lineth.forcedtx.ForcedTransactionInclusionResult
 import lineth.ftx.FakeForcedTransactionsClient
 import lineth.ftx.ForcedTransactionWithTimestamp
 import lineth.ftx.ForcedTransactionsStatusUpdater
+import lineth.persistence.ftx.FakeForcedTransactionsDao
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested

@@ -22,11 +22,11 @@ import static lineth.zktracer.instructionprocessing.utilities.MonoOpCodeSmcs.use
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import lombok.extern.slf4j.Slf4j;
 import lineth.reporting.TracerTestBase;
 import lineth.testing.ToyExecutionEnvironmentV2;
 import lineth.testing.TransactionProcessingResultValidator;
 import lineth.zktracer.instructionprocessing.utilities.SmartContractTestValidator;
+import lombok.extern.slf4j.Slf4j;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;

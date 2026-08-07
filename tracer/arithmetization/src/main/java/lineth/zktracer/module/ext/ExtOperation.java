@@ -18,12 +18,12 @@ package lineth.zktracer.module.ext;
 import static net.consensys.linea.zktracer.types.Conversions.bigIntegerToBytes32;
 
 import java.math.BigInteger;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.ModuleOperation;
 import lineth.zktracer.opcode.OpCode;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.types.UnsignedByte;
 import org.apache.tuweni.bytes.Bytes32;
 

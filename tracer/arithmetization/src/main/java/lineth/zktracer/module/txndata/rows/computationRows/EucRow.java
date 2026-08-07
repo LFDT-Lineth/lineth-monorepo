@@ -14,12 +14,12 @@
  */
 package lineth.zktracer.module.txndata.rows.computationRows;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Trace;
 import lineth.zktracer.module.euc.Euc;
 import lineth.zktracer.module.euc.EucOperation;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.Accessors;
 import org.apache.tuweni.bytes.Bytes;
 
 @RequiredArgsConstructor

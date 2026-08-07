@@ -4,9 +4,9 @@ import lineth.OneKWei
 import lineth.domain.BlockParameter
 import lineth.domain.toBlockParameter
 import lineth.ethapi.EthApiBlockClient
-import lineth.kotlin.encodeHex
 import lineth.ethereum.gaspricing.HistoricVariableCostProvider
 import lineth.ethereum.gaspricing.MinerExtraDataV1
+import lineth.kotlin.encodeHex
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

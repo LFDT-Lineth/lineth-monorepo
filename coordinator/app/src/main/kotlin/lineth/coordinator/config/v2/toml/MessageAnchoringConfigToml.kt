@@ -1,8 +1,8 @@
 package lineth.coordinator.config.v2.toml
 
-import lineth.coordinator.config.v2.MessageAnchoringConfig
 import lineth.config.docs.ConfigDoc
 import lineth.config.docs.ConfigSection
+import lineth.coordinator.config.v2.MessageAnchoringConfig
 import lineth.domain.BlockParameter
 import java.net.URL
 import kotlin.time.Duration

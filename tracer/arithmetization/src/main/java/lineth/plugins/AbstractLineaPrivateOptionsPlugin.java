@@ -17,9 +17,9 @@ package lineth.plugins;
 
 import java.util.HashMap;
 import java.util.Map;
-import lombok.extern.slf4j.Slf4j;
 import lineth.plugins.rpc.RpcCliOptions;
 import lineth.plugins.rpc.RpcConfiguration;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * In this class we put CLI options that are shared with other plugins that are only part of the

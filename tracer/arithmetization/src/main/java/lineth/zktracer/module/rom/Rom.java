@@ -18,12 +18,12 @@ package lineth.zktracer.module.rom;
 import static lineth.zktracer.module.ModuleName.ROM;
 
 import java.util.List;
-import lombok.RequiredArgsConstructor;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.module.Module;
 import lineth.zktracer.module.ModuleName;
 import lineth.zktracer.module.romlex.RomLex;
 import lineth.zktracer.module.romlex.RomOperation;
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class Rom implements Module {

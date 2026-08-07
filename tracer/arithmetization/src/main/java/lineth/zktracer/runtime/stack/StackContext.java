@@ -18,12 +18,12 @@ package lineth.zktracer.runtime.stack;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import lombok.Getter;
-import lombok.experimental.Accessors;
 import lineth.zktracer.module.hub.Hub;
 import lineth.zktracer.opcode.OpCode;
 import lineth.zktracer.opcode.OpCodeData;
 import lineth.zktracer.runtime.callstack.CallFrame;
+import lombok.Getter;
+import lombok.experimental.Accessors;
 
 /**
  * A StackContext encode the stack-related information pertaining to the execution of an opcode

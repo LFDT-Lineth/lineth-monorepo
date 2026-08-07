@@ -23,13 +23,13 @@ import static net.consensys.linea.zktracer.types.Conversions.*;
 import static org.hyperledger.besu.evm.internal.Words.clampedToLong;
 
 import java.math.BigInteger;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.Setter;
 import lineth.zktracer.Trace;
 import lineth.zktracer.module.hub.Hub;
 import lineth.zktracer.module.hub.fragment.imc.oob.OobCall;
 import lineth.zktracer.opcode.OpCodeData;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import net.consensys.linea.zktracer.types.EWord;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Address;

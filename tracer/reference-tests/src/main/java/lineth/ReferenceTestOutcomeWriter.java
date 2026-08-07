@@ -16,8 +16,8 @@ package lineth;
 
 import static lineth.ReferenceTestOutcomeRecorderTool.*;
 
-import lombok.extern.slf4j.Slf4j;
 import lineth.reporting.TestOutcomeWriterTool;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.platform.launcher.LauncherSession;
 import org.junit.platform.launcher.LauncherSessionListener;
 

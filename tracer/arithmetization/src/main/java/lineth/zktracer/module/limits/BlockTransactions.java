@@ -17,9 +17,9 @@ package lineth.zktracer.module.limits;
 
 import static lineth.zktracer.module.ModuleName.BLOCK_TRANSACTIONS;
 
+import lineth.zktracer.container.module.IncrementingModule;
 import lombok.Getter;
 import lombok.experimental.Accessors;
-import lineth.zktracer.container.module.IncrementingModule;
 import net.consensys.linea.zktracer.types.TransactionProcessingMetadata;
 import org.hyperledger.besu.evm.worldstate.WorldView;
 

@@ -19,9 +19,9 @@ import static lineth.zktracer.Trace.Hub.DOM_SUB_STAMP_OFFSET___REVERT;
 import static lineth.zktracer.Trace.Hub.DOM_SUB_STAMP_OFFSET___SELFDESTRUCT;
 import static lineth.zktracer.Trace.Hub.MULTIPLIER___DOM_SUB_STAMPS;
 
-import lombok.RequiredArgsConstructor;
 import lineth.zktracer.Trace;
 import lineth.zktracer.module.hub.Hub;
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class DomSubStampsSubFragment implements TraceSubFragment {

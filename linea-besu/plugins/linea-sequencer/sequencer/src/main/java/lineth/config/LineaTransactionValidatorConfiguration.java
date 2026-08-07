@@ -8,8 +8,8 @@
  */
 package lineth.config;
 
-import lombok.Builder;
 import lineth.plugins.LineaOptionsConfiguration;
+import lombok.Builder;
 
 /** The Linea transaction validation configuration. */
 @Builder(toBuilder = true)

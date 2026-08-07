@@ -21,10 +21,10 @@ import static lineth.zktracer.module.blake2fmodexpdata.BlakeModexpDataOperation.
 
 import com.google.common.base.Preconditions;
 import java.math.BigInteger;
+import lineth.zktracer.container.module.CountingOnlyModule;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import lineth.zktracer.container.module.CountingOnlyModule;
 import org.apache.tuweni.bytes.Bytes;
 
 @Getter

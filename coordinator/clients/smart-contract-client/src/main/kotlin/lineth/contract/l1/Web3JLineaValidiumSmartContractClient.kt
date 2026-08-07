@@ -2,9 +2,6 @@ package lineth.contract.l1
 
 import lineth.contract.ValidiumV1
 import lineth.contract.Web3JContractAsyncHelper
-import lineth.contract.l1.BlockAndNonce
-import lineth.contract.l1.LineaValidiumSmartContractClient
-import lineth.contract.l1.Web3JLineaValidiumSmartContractClientReadOnly
 import lineth.domain.BlobRecord
 import lineth.domain.ProofToFinalize
 import lineth.domain.gas.GasPriceCaps

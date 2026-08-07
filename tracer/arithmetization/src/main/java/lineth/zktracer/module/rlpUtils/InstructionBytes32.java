@@ -20,9 +20,9 @@ import static lineth.zktracer.Trace.RLP_UTILS_INST_BYTES32;
 import static lineth.zktracer.Trace.Rlptxn.RLP_TXN_CT_MAX_BYTES32;
 import static lineth.zktracer.module.rlpUtils.RlpUtils.BYTES16_PREFIX_BYTES32;
 
-import lombok.EqualsAndHashCode;
 import lineth.zktracer.Trace;
 import lineth.zktracer.module.rlptxn.GenericTracedValue;
+import lombok.EqualsAndHashCode;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 

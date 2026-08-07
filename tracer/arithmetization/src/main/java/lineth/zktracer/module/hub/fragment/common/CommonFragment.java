@@ -19,12 +19,12 @@ import static lineth.zktracer.module.hub.HubProcessingPhase.*;
 import static lineth.zktracer.module.hub.HubProcessingPhase.TX_EXEC;
 import static lineth.zktracer.module.hub.TransactionProcessingType.*;
 
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Trace;
 import lineth.zktracer.module.hub.fragment.TraceFragment;
 import lineth.zktracer.module.hub.signals.Exceptions;
 import lineth.zktracer.runtime.callstack.CallFrame;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.types.TransactionProcessingMetadata;
 import org.apache.tuweni.bytes.Bytes;
 

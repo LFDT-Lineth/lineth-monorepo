@@ -17,8 +17,6 @@ package lineth.zktracer.module.hub.fragment.imc;
 
 import static lineth.zktracer.module.mxp.MxpUtils.*;
 
-import lombok.Getter;
-import lombok.Setter;
 import lineth.zktracer.Trace;
 import lineth.zktracer.module.hub.Hub;
 import lineth.zktracer.module.hub.fragment.TraceSubFragment;
@@ -27,6 +25,8 @@ import lineth.zktracer.module.mxp.moduleCall.*;
 import lineth.zktracer.opcode.OpCode;
 import lineth.zktracer.opcode.OpCodeData;
 import lineth.zktracer.opcode.gas.BillingRate;
+import lombok.Getter;
+import lombok.Setter;
 import net.consensys.linea.zktracer.types.EWord;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.evm.frame.MessageFrame;

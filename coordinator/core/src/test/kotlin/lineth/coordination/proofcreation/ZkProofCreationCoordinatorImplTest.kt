@@ -1,13 +1,13 @@
 package lineth.coordination.proofcreation
 
 import com.fasterxml.jackson.databind.node.ArrayNode
-import lineth.coordination.conflation.BlocksTracesConflated
 import lineth.clients.BatchExecutionProofRequestV1
 import lineth.clients.ExecutionProverClientV2
 import lineth.clients.GenerateTracesResponse
 import lineth.clients.GetZkEVMStateMerkleProofResponse
 import lineth.contract.events.createL2RollingHashUpdatedEthLogV1
 import lineth.contract.events.createMessageSentEthLogV1
+import lineth.coordination.conflation.BlocksTracesConflated
 import lineth.domain.BlocksConflation
 import lineth.domain.ConflationCalculationResult
 import lineth.domain.ConflationTrigger

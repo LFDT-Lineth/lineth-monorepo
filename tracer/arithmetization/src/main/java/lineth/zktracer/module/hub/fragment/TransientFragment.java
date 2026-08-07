@@ -20,8 +20,8 @@ import static lineth.zktracer.module.hub.fragment.DomSubStampsSubFragment.revert
 import static lineth.zktracer.module.hub.fragment.DomSubStampsSubFragment.standardDomSubStamps;
 import static net.consensys.linea.zktracer.types.Conversions.bytesToLong;
 
-import lombok.RequiredArgsConstructor;
 import lineth.zktracer.Trace;
+import lombok.RequiredArgsConstructor;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.datatypes.Address;
 

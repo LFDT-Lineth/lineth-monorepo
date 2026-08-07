@@ -1,13 +1,13 @@
 package lineth.conflation.calculators
 
 import lineth.conflation.BlobCreationHandler
-import lineth.metrics.LineaMetricsCategory
 import lineth.domain.Blob
 import lineth.domain.BlockCounters
 import lineth.domain.BlockInterval
 import lineth.domain.ConflationCalculationResult
 import lineth.domain.ConflationTrigger
 import lineth.domain.toBlockIntervalsString
+import lineth.metrics.LineaMetricsCategory
 import lineth.metrics.MetricsFacade
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger

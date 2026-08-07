@@ -5,7 +5,6 @@ import com.github.michaelbull.result.map
 import com.github.michaelbull.result.onSuccess
 import com.github.michaelbull.result.recover
 import com.github.michaelbull.result.runCatching
-import lineth.persistence.BlobsRepository
 import lineth.domain.BlobRecord
 import lineth.domain.BlobShnarfCalculator
 import lineth.domain.BlockInterval
@@ -13,6 +12,7 @@ import lineth.domain.BlockIntervals
 import lineth.domain.ShnarfResult
 import lineth.kotlin.encodeHex
 import lineth.kotlin.zeroHash32
+import lineth.persistence.BlobsRepository
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

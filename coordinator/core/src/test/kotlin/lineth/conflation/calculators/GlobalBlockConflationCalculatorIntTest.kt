@@ -1,8 +1,8 @@
 package lineth.conflation.calculators
 
+import lineth.FakeFixedClock
 import lineth.conflation.SafeBlockProvider
 import lineth.coordination.blob.FakeBlobCompressor
-import lineth.FakeFixedClock
 import lineth.domain.BlockCounters
 import lineth.domain.BlockHeaderSummary
 import lineth.domain.ConflationCalculationResult

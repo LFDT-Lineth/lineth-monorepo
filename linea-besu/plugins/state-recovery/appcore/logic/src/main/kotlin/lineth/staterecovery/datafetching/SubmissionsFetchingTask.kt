@@ -1,13 +1,13 @@
 package lineth.staterecovery.datafetching
 
 import io.vertx.core.Vertx
+import lineth.domain.BlockParameter
 import lineth.staterecovery.BlobDecompressorAndDeserializer
 import lineth.staterecovery.BlobFetcher
 import lineth.staterecovery.BlockFromL1RecoveredData
 import lineth.staterecovery.FinalizationAndDataEventsV3
 import lineth.staterecovery.LinethRollupSubmissionEventsClient
 import lineth.staterecovery.TransactionDetailsClient
-import lineth.domain.BlockParameter
 import lineth.timer.TimerSchedule
 import lineth.timer.VertxPeriodicPollingService
 import org.apache.logging.log4j.LogManager

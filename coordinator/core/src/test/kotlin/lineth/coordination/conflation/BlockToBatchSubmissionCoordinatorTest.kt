@@ -3,11 +3,11 @@ package lineth.coordination.conflation
 import com.github.michaelbull.result.Ok
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
+import lineth.clients.GetTracesCountersResponse
+import lineth.clients.TracesCountersClientV2
 import lineth.conflation.AlwaysSafeBlockNumberProvider
 import lineth.conflation.ConflationService
 import lineth.coordination.blockcreation.BlockCreated
-import lineth.clients.GetTracesCountersResponse
-import lineth.clients.TracesCountersClientV2
 import lineth.domain.createBlock
 import lineth.traces.TracesCountersV2
 import org.apache.logging.log4j.LogManager

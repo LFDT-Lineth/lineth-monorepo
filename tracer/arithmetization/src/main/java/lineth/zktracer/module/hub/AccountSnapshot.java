@@ -22,14 +22,14 @@ import static net.consensys.linea.zktracer.types.AddressUtils.isAddressWarm;
 import static net.consensys.linea.zktracer.types.AddressUtils.isPrecompile;
 
 import java.util.Optional;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.experimental.Accessors;
 import lineth.zktracer.module.hub.transients.Conflation;
 import lineth.zktracer.module.hub.transients.DeploymentInfo;
 import lineth.zktracer.module.romlex.ContractMetadata;
 import lineth.zktracer.module.romlex.RomOperation;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.types.Bytecode;
 import net.consensys.linea.zktracer.types.EWord;
 import org.apache.tuweni.bytes.Bytes;

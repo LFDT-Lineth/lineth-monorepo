@@ -1,8 +1,6 @@
 package lineth.contract.l1
 
 import lineth.contract.LinethRollupV9
-import lineth.contract.l1.BlobsSubmissionV9
-import lineth.contract.l1.FinalizationDataV9
 import lineth.kotlin.encodeHex
 import lineth.kotlin.toBigInteger
 import org.web3j.abi.TypeReference

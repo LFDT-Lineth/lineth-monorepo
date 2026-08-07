@@ -15,9 +15,9 @@
 
 package lineth.zktracer.module.ecdata.ecpairing;
 
+import lineth.UnitTestWatcher;
 import lombok.Getter;
 import lombok.Setter;
-import lineth.UnitTestWatcher;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 @Getter

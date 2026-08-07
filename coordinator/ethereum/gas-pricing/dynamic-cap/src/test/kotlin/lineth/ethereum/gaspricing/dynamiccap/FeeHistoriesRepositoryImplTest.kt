@@ -1,7 +1,7 @@
 package lineth.ethereum.gaspricing.dynamiccap
 
-import lineth.persistence.FeeHistoriesDao
 import lineth.domain.FeeHistory
+import lineth.persistence.FeeHistoriesDao
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import tech.pegasys.teku.infrastructure.async.SafeFuture

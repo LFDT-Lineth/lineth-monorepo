@@ -11,11 +11,11 @@ package lineth.config;
 
 import java.net.URL;
 import java.util.Set;
+import lineth.plugins.LineaOptionsConfiguration;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
-import lineth.plugins.LineaOptionsConfiguration;
 
 /** The Linea Bundle configuration. */
 @Builder(toBuilder = true)

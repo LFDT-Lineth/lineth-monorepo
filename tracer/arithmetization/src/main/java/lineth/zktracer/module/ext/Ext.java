@@ -19,15 +19,15 @@ import static lineth.zktracer.module.ModuleName.EXT;
 import static lineth.zktracer.opcode.OpCode.*;
 
 import java.util.List;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.module.OperationSetModule;
 import lineth.zktracer.container.stacked.ModuleOperationAdder;
 import lineth.zktracer.container.stacked.ModuleOperationStackedSet;
 import lineth.zktracer.module.ModuleName;
 import lineth.zktracer.opcode.OpCode;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.Accessors;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.evm.frame.MessageFrame;

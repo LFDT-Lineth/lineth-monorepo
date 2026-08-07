@@ -1,6 +1,5 @@
 package lineth.coordination.blob
 
-import lineth.metrics.LineaMetricsCategory
 import lineth.blob.GoNativeBlobShnarfCalculator
 import lineth.blob.GoNativeShnarfCalculatorFactory
 import lineth.blob.ShnarfCalculatorVersion
@@ -9,6 +8,7 @@ import lineth.domain.BlockIntervals
 import lineth.domain.ShnarfResult
 import lineth.kotlin.decodeHex
 import lineth.kotlin.encodeHex
+import lineth.metrics.LineaMetricsCategory
 import lineth.metrics.MetricsFacade
 import lineth.metrics.Timer
 import org.apache.logging.log4j.LogManager

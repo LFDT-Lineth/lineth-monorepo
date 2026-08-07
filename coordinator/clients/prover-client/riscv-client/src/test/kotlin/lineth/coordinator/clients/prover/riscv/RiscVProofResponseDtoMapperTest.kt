@@ -1,11 +1,11 @@
 package lineth.coordinator.clients.prover.riscv
 
-import lineth.coordinator.clients.prover.serialization.JsonSerialization
 import lineth.clients.L2ExecutionProofPublicInputs
 import lineth.clients.L2ExecutionProofResponseV1
 import lineth.clients.RollupAggregationProofResponseV1
 import lineth.clients.RollupProofPublicInputs
 import lineth.clients.RollupProofResponseV1
+import lineth.coordinator.clients.prover.serialization.JsonSerialization
 import lineth.kotlin.decodeHex
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test

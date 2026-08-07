@@ -2,11 +2,11 @@ package lineth.staterecovery.clients
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.github.michaelbull.result.Err
-import lineth.staterecovery.TransactionDetailsClient
 import lineth.jsonrpc.client.JsonRpcClientFactory
 import lineth.jsonrpc.client.JsonRpcV2Client
 import lineth.jsonrpc.client.RequestRetryConfig
 import lineth.kotlin.decodeHex
+import lineth.staterecovery.TransactionDetailsClient
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

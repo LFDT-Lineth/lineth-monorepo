@@ -21,13 +21,13 @@ import static lineth.zktracer.runtime.callstack.CallFrame.extractContiguousLimbs
 import static org.hyperledger.besu.evm.internal.Words.clampedToLong;
 
 import java.util.Optional;
-import lombok.Getter;
-import lombok.experimental.Accessors;
 import lineth.zktracer.module.hub.Hub;
 import lineth.zktracer.module.hub.fragment.imc.mmu.MmuCall;
 import lineth.zktracer.module.romlex.ContractMetadata;
 import lineth.zktracer.module.shakiradata.ShakiraDataOperation;
 import lineth.zktracer.runtime.callstack.CallFrame;
+import lombok.Getter;
+import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.types.EWord;
 import net.consensys.linea.zktracer.types.Range;
 import org.apache.tuweni.bytes.Bytes;

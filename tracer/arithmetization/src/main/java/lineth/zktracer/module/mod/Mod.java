@@ -19,14 +19,14 @@ import static lineth.zktracer.opcode.OpCode.*;
 
 import java.math.BigInteger;
 import java.util.List;
-import lombok.Getter;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.module.OperationSetWithAdditionalRowsModule;
 import lineth.zktracer.container.stacked.CountOnlyOperation;
 import lineth.zktracer.container.stacked.ModuleOperationStackedSet;
 import lineth.zktracer.module.ModuleName;
 import lineth.zktracer.opcode.OpCode;
+import lombok.Getter;
+import lombok.experimental.Accessors;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 

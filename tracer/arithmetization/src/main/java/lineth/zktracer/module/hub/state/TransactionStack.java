@@ -17,12 +17,12 @@ package lineth.zktracer.module.hub.state;
 
 import static com.google.common.base.Preconditions.checkState;
 
-import lombok.Getter;
-import lombok.Setter;
-import lombok.experimental.Accessors;
 import lineth.zktracer.container.stacked.StackedList;
 import lineth.zktracer.module.hub.Hub;
 import lineth.zktracer.module.hub.section.TxInitializationSection;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.types.TransactionProcessingMetadata;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.evm.worldstate.WorldView;

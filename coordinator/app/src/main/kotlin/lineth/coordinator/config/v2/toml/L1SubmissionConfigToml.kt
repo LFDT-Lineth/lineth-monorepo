@@ -1,9 +1,9 @@
 package lineth.coordinator.config.v2.toml
 
-import lineth.coordinator.config.v2.L1SubmissionConfig
-import lineth.coordinator.config.v2.L1SubmissionConfig.DynamicGasPriceCapConfig.GasPriceCapCalculationConfig
 import lineth.config.docs.ConfigDoc
 import lineth.config.docs.ConfigSection
+import lineth.coordinator.config.v2.L1SubmissionConfig
+import lineth.coordinator.config.v2.L1SubmissionConfig.DynamicGasPriceCapConfig.GasPriceCapCalculationConfig
 import lineth.ethereum.gaspricing.dynamiccap.TimeOfDayMultipliers
 import java.net.URL
 import kotlin.ULong

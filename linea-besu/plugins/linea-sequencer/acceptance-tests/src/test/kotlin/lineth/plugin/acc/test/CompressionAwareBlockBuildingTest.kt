@@ -8,8 +8,8 @@
  */
 package lineth.plugin.acc.test
 
-import lineth.txselection.LineaTransactionSelectionResult
 import lineth.kotlin.encodeHex
+import lineth.txselection.LineaTransactionSelectionResult
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.hyperledger.besu.tests.acceptance.dsl.account.Account

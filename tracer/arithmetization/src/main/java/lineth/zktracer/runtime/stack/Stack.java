@@ -18,12 +18,12 @@ package lineth.zktracer.runtime.stack;
 import static com.google.common.base.Preconditions.checkArgument;
 import static lineth.zktracer.opcode.OpCode.EXTCODECOPY;
 
-import lombok.Getter;
 import lineth.zktracer.module.hub.Hub;
 import lineth.zktracer.module.hub.transients.StackHeightCheck;
 import lineth.zktracer.opcode.OpCode;
 import lineth.zktracer.opcode.OpCodeData;
 import lineth.zktracer.runtime.callstack.CallFrame;
+import lombok.Getter;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 

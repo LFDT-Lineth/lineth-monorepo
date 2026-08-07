@@ -20,9 +20,9 @@ import static lineth.zktracer.runtime.stack.StackItem.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import lineth.zktracer.module.hub.Hub;
 import lombok.Getter;
 import lombok.experimental.Accessors;
-import lineth.zktracer.module.hub.Hub;
 import org.apache.tuweni.bytes.Bytes;
 
 /**

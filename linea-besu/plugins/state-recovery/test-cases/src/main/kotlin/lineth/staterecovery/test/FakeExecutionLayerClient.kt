@@ -1,11 +1,11 @@
 package lineth.staterecovery.test
 
-import lineth.staterecovery.BlockFromL1RecoveredData
-import lineth.staterecovery.ExecutionLayerClient
-import lineth.staterecovery.StateRecoveryStatus
 import lineth.domain.BlockNumberAndHash
 import lineth.domain.BlockParameter
 import lineth.domain.CommonDomainFunctions
+import lineth.staterecovery.BlockFromL1RecoveredData
+import lineth.staterecovery.ExecutionLayerClient
+import lineth.staterecovery.StateRecoveryStatus
 import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 

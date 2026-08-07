@@ -19,14 +19,14 @@ import static lineth.zktracer.Trace.OOB_INST_MODEXP_CDS;
 import static lineth.zktracer.module.hub.precompiles.ModexpMetadata.*;
 import static net.consensys.linea.zktracer.types.Conversions.*;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.Setter;
 import lineth.zktracer.Trace;
 import lineth.zktracer.module.hub.Hub;
 import lineth.zktracer.module.hub.fragment.imc.oob.OobCall;
 import lineth.zktracer.module.hub.precompiles.ModexpMetadata;
 import lineth.zktracer.opcode.OpCodeData;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import net.consensys.linea.zktracer.types.EWord;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 

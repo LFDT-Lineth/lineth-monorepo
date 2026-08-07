@@ -18,15 +18,15 @@ package lineth.zktracer.module.rlptxn;
 import static lineth.zktracer.module.ModuleName.RLP_TXN;
 
 import java.util.List;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.module.OperationListModule;
 import lineth.zktracer.container.stacked.ModuleOperationStackedList;
 import lineth.zktracer.module.ModuleName;
 import lineth.zktracer.module.rlpUtils.RlpUtils;
 import lineth.zktracer.module.trm.Trm;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.types.TransactionProcessingMetadata;
 
 @RequiredArgsConstructor

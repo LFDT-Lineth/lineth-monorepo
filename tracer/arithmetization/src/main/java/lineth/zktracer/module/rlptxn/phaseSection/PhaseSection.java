@@ -18,9 +18,9 @@ package lineth.zktracer.module.rlptxn.phaseSection;
 import static lineth.zktracer.Trace.LLARGE;
 import static net.consensys.linea.zktracer.types.Conversions.bigIntegerToBytes;
 
-import lombok.RequiredArgsConstructor;
 import lineth.zktracer.Trace;
 import lineth.zktracer.module.rlptxn.GenericTracedValue;
+import lombok.RequiredArgsConstructor;
 import net.consensys.linea.zktracer.types.TransactionProcessingMetadata;
 import org.apache.tuweni.bytes.Bytes;
 

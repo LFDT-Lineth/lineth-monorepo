@@ -19,12 +19,12 @@ import static lineth.zktracer.Trace.MAX_CODE_SIZE;
 import static lineth.zktracer.Trace.OOB_INST_DEPLOYMENT;
 import static net.consensys.linea.zktracer.types.Conversions.*;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.Setter;
 import lineth.zktracer.Trace;
 import lineth.zktracer.module.hub.Hub;
 import lineth.zktracer.module.hub.fragment.imc.oob.OobCall;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import net.consensys.linea.zktracer.types.EWord;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.evm.frame.MessageFrame;

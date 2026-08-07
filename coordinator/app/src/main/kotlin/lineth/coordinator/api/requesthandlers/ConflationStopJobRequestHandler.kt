@@ -6,8 +6,8 @@ import com.github.michaelbull.result.Result
 import io.vertx.core.Future
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.auth.User
-import lineth.coordinator.app.conflationbacktesting.ConflationBacktestingService
 import lineth.async.toVertxFuture
+import lineth.coordinator.app.conflationbacktesting.ConflationBacktestingService
 import lineth.jsonrpc.JsonRpcErrorResponse
 import lineth.jsonrpc.JsonRpcRequest
 import lineth.jsonrpc.JsonRpcRequestHandler

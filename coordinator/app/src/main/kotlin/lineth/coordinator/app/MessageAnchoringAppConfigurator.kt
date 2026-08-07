@@ -1,11 +1,11 @@
 package lineth.coordinator.app
 
 import io.vertx.core.Vertx
+import lineth.LongRunningService
 import lineth.anchoring.MessageAnchoringApp
+import lineth.contract.l2.Web3JL2MessageServiceSmartContractClient
 import lineth.coordinator.config.v2.CoordinatorConfig
 import lineth.coordinator.config.v2.isDisabled
-import lineth.LongRunningService
-import lineth.contract.l2.Web3JL2MessageServiceSmartContractClient
 import lineth.ethapi.EthLogsSearcherImpl
 import lineth.web3j.createWeb3jHttpClient
 import lineth.web3j.ethapi.createEthApiClient

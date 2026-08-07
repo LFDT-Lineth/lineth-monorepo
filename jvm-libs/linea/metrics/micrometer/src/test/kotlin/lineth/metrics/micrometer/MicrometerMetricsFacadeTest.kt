@@ -141,7 +141,7 @@ class MicrometerMetricsFacadeTest {
     histogram.record(50.0)
 
     val scrapeOutput = prometheusRegistry.scrape()
-    assertThat(scrapeOutput).contains("linea_test_test_category_hist_buckets_metric_seconds_bucket{le=\"")
+    assertThat(scrapeOutput).contains("lineth_test_test_category_hist_buckets_metric_seconds_bucket{le=\"")
   }
 
   @Test
@@ -162,7 +162,7 @@ class MicrometerMetricsFacadeTest {
     // Without publishPercentileHistogram, Prometheus still produces default buckets
     // but should not have the fine-grained Micrometer percentile histogram buckets
     val bucketLines = scrapeOutput.lines()
-      .filter { it.startsWith("linea_test_test_category_no_hist_buckets_metric_seconds_bucket{") }
+      .filter { it.startsWith("lineth_test_test_category_no_hist_buckets_metric_seconds_bucket{") }
     // Default Prometheus buckets are coarse (typically ~15 buckets)
     // publishPercentileHistogram() generates many more (60+)
     assertThat(bucketLines.size).isLessThan(20)

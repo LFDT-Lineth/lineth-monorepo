@@ -15,11 +15,11 @@
 
 package lineth.zktracer.module.euc;
 
+import lineth.zktracer.Trace;
+import lineth.zktracer.container.ModuleOperation;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.experimental.Accessors;
-import lineth.zktracer.Trace;
-import lineth.zktracer.container.ModuleOperation;
 import org.apache.tuweni.bytes.Bytes;
 
 @Accessors(fluent = true)

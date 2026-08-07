@@ -17,12 +17,12 @@ package lineth.zktracer.module.stp;
 
 import static com.google.common.base.Preconditions.*;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.ModuleOperation;
 import lineth.zktracer.module.hub.fragment.imc.StpCall;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.types.UnsignedByte;
 import org.apache.tuweni.bytes.Bytes;
 

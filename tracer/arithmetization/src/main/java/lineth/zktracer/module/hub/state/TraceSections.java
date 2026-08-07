@@ -18,10 +18,10 @@ package lineth.zktracer.module.hub.state;
 import com.google.common.base.Preconditions;
 import java.util.ArrayList;
 import java.util.List;
-import lombok.Getter;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Trace;
 import lineth.zktracer.module.hub.section.TraceSection;
+import lombok.Getter;
+import lombok.experimental.Accessors;
 
 /**
  * Stores all the trace sections associated to one transaction, stored in chronological order of

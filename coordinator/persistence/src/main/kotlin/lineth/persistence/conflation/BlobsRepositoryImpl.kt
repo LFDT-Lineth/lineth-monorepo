@@ -1,11 +1,11 @@
 package lineth.persistence.conflation
 
-import lineth.persistence.BlobsRepository
-import lineth.persistence.BlobsRepositoryG
-import lineth.persistence.BlobsRepositoryV2
 import lineth.domain.BlobRecord
 import lineth.domain.BlobRecordV2
 import lineth.error.DuplicatedRecordException
+import lineth.persistence.BlobsRepository
+import lineth.persistence.BlobsRepositoryG
+import lineth.persistence.BlobsRepositoryV2
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Instant
 

@@ -19,9 +19,6 @@ import static lineth.zktracer.module.ModuleName.GAS;
 
 import java.math.BigInteger;
 import java.util.List;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.module.OperationSetModule;
 import lineth.zktracer.container.stacked.ModuleOperationStackedSet;
@@ -31,6 +28,9 @@ import lineth.zktracer.module.hub.defer.PostOpcodeDefer;
 import lineth.zktracer.module.hub.fragment.common.CommonFragmentValues;
 import lineth.zktracer.module.hub.signals.Exceptions;
 import lineth.zktracer.module.hub.signals.TracedException;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.Accessors;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.operation.Operation;
 

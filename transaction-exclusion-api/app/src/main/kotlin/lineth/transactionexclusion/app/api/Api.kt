@@ -10,8 +10,8 @@ import lineth.jsonrpc.JsonRpcMessageProcessor
 import lineth.jsonrpc.JsonRpcRequestRouter
 import lineth.jsonrpc.httpserver.HttpJsonRpcServer
 import lineth.metrics.MetricsFacade
-import lineth.vertx.ObservabilityServer
 import lineth.transactionexclusion.TransactionExclusionServiceV1
+import lineth.vertx.ObservabilityServer
 import java.util.function.Supplier
 
 data class ApiConfig(

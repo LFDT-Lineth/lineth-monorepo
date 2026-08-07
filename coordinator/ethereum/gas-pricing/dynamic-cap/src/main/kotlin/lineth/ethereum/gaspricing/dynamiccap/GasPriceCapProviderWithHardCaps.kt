@@ -1,10 +1,10 @@
 package lineth.ethereum.gaspricing.dynamiccap
 
-import lineth.gaspricing.GasPriceCapProvider
-import lineth.metrics.LineaMetricsCategory
 import lineth.domain.gas.GasPriceCaps
+import lineth.gaspricing.GasPriceCapProvider
 import lineth.kotlin.toBigDecimal
 import lineth.kotlin.toULong
+import lineth.metrics.LineaMetricsCategory
 import lineth.metrics.MetricsFacade
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.atomic.AtomicReference

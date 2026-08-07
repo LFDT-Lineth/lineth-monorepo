@@ -1,7 +1,7 @@
 package lineth.conflation.calculators
 
-import lineth.conflation.SafeBlockProvider
 import lineth.LongRunningService
+import lineth.conflation.SafeBlockProvider
 import lineth.domain.BlockCounters
 import lineth.domain.ConflationTrigger
 import org.apache.logging.log4j.LogManager

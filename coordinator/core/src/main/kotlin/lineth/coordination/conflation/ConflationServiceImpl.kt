@@ -4,11 +4,11 @@ import lineth.conflation.ConflationHandler
 import lineth.conflation.ConflationSafeBlockNumberProvider
 import lineth.conflation.ConflationService
 import lineth.conflation.calculators.BlockConflationCalculator
-import lineth.metrics.LineaMetricsCategory
 import lineth.domain.Block
 import lineth.domain.BlockCounters
 import lineth.domain.BlocksConflation
 import lineth.domain.ConflationCalculationResult
+import lineth.metrics.LineaMetricsCategory
 import lineth.metrics.MetricsFacade
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger

@@ -19,7 +19,6 @@ import static lineth.zktracer.module.hub.fragment.storage.StorageFragmentPurpose
 import static net.consensys.linea.zktracer.types.AddressUtils.hiPart;
 import static net.consensys.linea.zktracer.types.AddressUtils.loPart;
 
-import lombok.Getter;
 import lineth.zktracer.Trace;
 import lineth.zktracer.module.hub.Hub;
 import lineth.zktracer.module.hub.defer.PostBlockDefer;
@@ -27,6 +26,7 @@ import lineth.zktracer.module.hub.fragment.DomSubStampsSubFragment;
 import lineth.zktracer.module.hub.fragment.TraceFragment;
 import lineth.zktracer.module.hub.state.Block;
 import lineth.zktracer.module.hub.state.State;
+import lombok.Getter;
 import net.consensys.linea.zktracer.types.EWord;
 import org.hyperledger.besu.datatypes.Address;
 

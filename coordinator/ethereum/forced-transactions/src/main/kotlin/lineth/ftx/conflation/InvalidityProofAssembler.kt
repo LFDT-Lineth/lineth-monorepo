@@ -1,8 +1,6 @@
 package lineth.ftx.conflation
 
 import com.github.michaelbull.result.getOrThrow
-import lineth.persistence.ForcedTransactionRecord
-import lineth.persistence.ForcedTransactionsDao
 import lineth.EthLogsSearcher
 import lineth.SearchDirection
 import lineth.clients.GenerateTracesResponse
@@ -20,6 +18,8 @@ import lineth.domain.BlockInterval
 import lineth.domain.BlockParameter
 import lineth.domain.InvalidityProofIndex
 import lineth.forcedtx.ForcedTransactionInclusionResult
+import lineth.persistence.ForcedTransactionRecord
+import lineth.persistence.ForcedTransactionsDao
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.apache.tuweni.bytes.Bytes

@@ -3,12 +3,6 @@ package lineth.staterecovery.plugin
 import io.micrometer.core.instrument.MeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.micrometer.backends.BackendRegistries
-import lineth.staterecovery.BlockHeaderStaticFields
-import lineth.staterecovery.ExecutionLayerClient
-import lineth.staterecovery.StateRecoveryApp
-import lineth.staterecovery.TransactionDetailsClient
-import lineth.staterecovery.clients.VertxTransactionDetailsClient
-import lineth.staterecovery.clients.blobscan.BlobScanClient
 import lineth.clients.StateManagerClientV1
 import lineth.clients.StateManagerV1JsonRpcClient
 import lineth.contract.l1.Web3JLinethRollupSmartContractClientReadOnly
@@ -17,6 +11,12 @@ import lineth.ethapi.EthLogsSearcherImpl
 import lineth.jsonrpc.client.RequestRetryConfig
 import lineth.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import lineth.metrics.micrometer.MicrometerMetricsFacade
+import lineth.staterecovery.BlockHeaderStaticFields
+import lineth.staterecovery.ExecutionLayerClient
+import lineth.staterecovery.StateRecoveryApp
+import lineth.staterecovery.TransactionDetailsClient
+import lineth.staterecovery.clients.VertxTransactionDetailsClient
+import lineth.staterecovery.clients.blobscan.BlobScanClient
 import lineth.web3j.createWeb3jHttpClient
 import lineth.web3j.ethapi.createEthApiClient
 import org.apache.logging.log4j.LogManager

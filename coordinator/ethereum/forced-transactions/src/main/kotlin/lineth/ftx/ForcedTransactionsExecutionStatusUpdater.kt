@@ -1,12 +1,12 @@
 package lineth.ftx
 
+import lineth.contract.events.ForcedTransactionAddedEvent
+import lineth.forcedtx.ForcedTransactionInclusionResult
+import lineth.forcedtx.ForcedTransactionsClient
 import lineth.ftx.conflation.ForcedTransactionsSafeBlockNumberManager
 import lineth.ftx.conflation.FtxConflationInfo
 import lineth.persistence.ForcedTransactionRecord
 import lineth.persistence.ForcedTransactionsDao
-import lineth.contract.events.ForcedTransactionAddedEvent
-import lineth.forcedtx.ForcedTransactionInclusionResult
-import lineth.forcedtx.ForcedTransactionsClient
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

@@ -19,12 +19,12 @@ import static lineth.zktracer.Trace.LLARGE;
 import static net.consensys.linea.zktracer.types.AddressUtils.hiPart;
 import static net.consensys.linea.zktracer.types.AddressUtils.loPart;
 
-import lombok.RequiredArgsConstructor;
 import lineth.zktracer.Trace;
 import lineth.zktracer.module.hub.Hub;
 import lineth.zktracer.module.hub.fragment.TraceSubFragment;
 import lineth.zktracer.module.hub.transients.OperationAncillaries;
 import lineth.zktracer.opcode.OpCodeData;
+import lombok.RequiredArgsConstructor;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.crypto.Hash;

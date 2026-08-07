@@ -1,8 +1,8 @@
 package lineth.conflation.calculators
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
-import lineth.conflation.SafeBlockProvider
 import lineth.FakeFixedClock
+import lineth.conflation.SafeBlockProvider
 import lineth.domain.BlobCounters
 import lineth.domain.BlobsToAggregate
 import lineth.domain.BlockHeaderSummary

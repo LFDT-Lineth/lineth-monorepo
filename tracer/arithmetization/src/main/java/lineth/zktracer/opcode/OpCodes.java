@@ -26,12 +26,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import lombok.SneakyThrows;
-import lombok.extern.slf4j.Slf4j;
 import lineth.zktracer.Fork;
 import lineth.zktracer.json.JsonConverter;
 import lineth.zktracer.opcode.gas.Billing;
 import lineth.zktracer.opcode.gas.BillingDeserializer;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 /**

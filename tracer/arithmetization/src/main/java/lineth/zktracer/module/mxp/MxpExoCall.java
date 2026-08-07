@@ -18,13 +18,13 @@ package lineth.zktracer.module.mxp;
 import static lineth.zktracer.Trace.*;
 import static net.consensys.linea.zktracer.types.Conversions.*;
 
+import lineth.zktracer.module.euc.Euc;
+import lineth.zktracer.module.euc.EucOperation;
+import lineth.zktracer.module.wcp.Wcp;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import lineth.zktracer.module.euc.Euc;
-import lineth.zktracer.module.euc.EucOperation;
-import lineth.zktracer.module.wcp.Wcp;
 import net.consensys.linea.zktracer.types.EWord;
 import org.apache.tuweni.bytes.Bytes;
 

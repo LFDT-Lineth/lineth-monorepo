@@ -19,9 +19,6 @@ import static lineth.zktracer.Trace.LLARGE;
 import static lineth.zktracer.module.ModuleName.SHAKIRA_DATA;
 
 import java.util.List;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.module.OperationListModule;
 import lineth.zktracer.container.stacked.ModuleOperationStackedList;
@@ -30,6 +27,9 @@ import lineth.zktracer.module.limits.Keccak;
 import lineth.zktracer.module.limits.precompiles.RipemdBlocks;
 import lineth.zktracer.module.limits.precompiles.Sha256Blocks;
 import lineth.zktracer.module.wcp.Wcp;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.Accessors;
 
 @RequiredArgsConstructor
 @Accessors(fluent = true)

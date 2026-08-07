@@ -9,9 +9,9 @@
 package lineth.bl;
 
 import java.math.BigDecimal;
-import lombok.extern.slf4j.Slf4j;
 import lineth.config.LineaProfitabilityConfiguration;
 import lineth.utils.TransactionCompressor;
+import lombok.extern.slf4j.Slf4j;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.datatypes.Wei;
 import org.slf4j.spi.LoggingEventBuilder;

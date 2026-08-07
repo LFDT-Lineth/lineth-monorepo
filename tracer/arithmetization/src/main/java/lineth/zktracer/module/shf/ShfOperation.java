@@ -15,12 +15,12 @@
 
 package lineth.zktracer.module.shf;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.ModuleOperation;
 import lineth.zktracer.opcode.OpCode;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.experimental.Accessors;
 import org.apache.tuweni.bytes.Bytes32;
 
 @Accessors(fluent = true)

@@ -1,11 +1,11 @@
 package lineth.submission
 
-import lineth.gaspricing.GasPriceCapProvider
 import lineth.contract.l1.LinethRollupSmartContractClient
 import lineth.domain.BlobRecord
 import lineth.domain.BlobSubmittedEvent
 import lineth.domain.BlockIntervalData
 import lineth.domain.toBlockIntervalsString
+import lineth.gaspricing.GasPriceCapProvider
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

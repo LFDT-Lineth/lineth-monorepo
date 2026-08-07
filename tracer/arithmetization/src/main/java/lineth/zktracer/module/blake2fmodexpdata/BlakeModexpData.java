@@ -19,9 +19,6 @@ import static com.google.common.base.Preconditions.checkState;
 import static lineth.zktracer.module.ModuleName.BLAKE_MODEXP_DATA;
 
 import java.util.List;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.module.IncrementAndDetectModule;
 import lineth.zktracer.container.module.IncrementingModule;
@@ -30,6 +27,9 @@ import lineth.zktracer.container.stacked.ModuleOperationStackedList;
 import lineth.zktracer.module.ModuleName;
 import lineth.zktracer.module.limits.precompiles.BlakeRounds;
 import lineth.zktracer.module.wcp.Wcp;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.Accessors;
 import org.hyperledger.besu.evm.worldstate.WorldView;
 
 @RequiredArgsConstructor

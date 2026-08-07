@@ -2,10 +2,10 @@ package lineth.coordinator.api.dto
 
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import lineth.blob.BlobCompressorVersion
 import lineth.coordinator.app.conflationbacktesting.ConflationBacktestingConfig
 import lineth.coordinator.app.conflationbacktesting.ShomeiApiConfig
 import lineth.coordinator.app.conflationbacktesting.TracesApiConfig
-import lineth.blob.BlobCompressorVersion
 import lineth.jsonrpc.JsonRpcRequest
 import lineth.kotlin.toURL
 

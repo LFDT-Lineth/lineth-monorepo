@@ -18,10 +18,10 @@ package lineth.zktracer.module.hub;
 import static lineth.testing.AddressCollisions.*;
 import static lineth.testing.ToyExecutionEnvironmentV2.DEFAULT_COINBASE_ADDRESS;
 import static lineth.zktracer.instructionprocessing.callTests.Utilities.randomSampleByCurrentCommitHash;
+import static lineth.zktracer.utilities.AccountDelegationType.getAccountForDelegationTypeWithKeyPair;
 import static net.consensys.linea.zktracer.types.AddressUtils.getCreate2RawAddress;
 import static net.consensys.linea.zktracer.types.Utils.leftPadTo;
 import static net.consensys.linea.zktracer.types.Utils.rightPadTo;
-import static lineth.zktracer.utilities.AccountDelegationType.getAccountForDelegationTypeWithKeyPair;
 import static org.hyperledger.besu.crypto.Hash.keccak256;
 
 import java.util.ArrayList;

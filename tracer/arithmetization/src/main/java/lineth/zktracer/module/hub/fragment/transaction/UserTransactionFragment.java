@@ -19,9 +19,9 @@ import static net.consensys.linea.zktracer.types.AddressUtils.hiPart;
 import static net.consensys.linea.zktracer.types.AddressUtils.loPart;
 import static net.consensys.linea.zktracer.types.Conversions.bigIntegerToBytes;
 
-import lombok.RequiredArgsConstructor;
 import lineth.zktracer.Trace;
 import lineth.zktracer.module.hub.fragment.TraceFragment;
+import lombok.RequiredArgsConstructor;
 import net.consensys.linea.zktracer.types.TransactionProcessingMetadata;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Address;

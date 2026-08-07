@@ -17,11 +17,11 @@ package lineth.zktracer.module.txndata.rows.computationRows;
 import static com.google.common.base.Preconditions.checkState;
 import static lineth.zktracer.Trace.*;
 
+import lineth.zktracer.Trace;
+import lineth.zktracer.module.wcp.Wcp;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
-import lineth.zktracer.Trace;
-import lineth.zktracer.module.wcp.Wcp;
 import org.apache.tuweni.bytes.Bytes;
 
 @RequiredArgsConstructor

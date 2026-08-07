@@ -21,9 +21,9 @@ import static lineth.zktracer.container.stacked.ModuleOperationAdder.newOperatio
 import com.google.common.base.Preconditions;
 import java.util.*;
 import java.util.stream.Stream;
+import lineth.zktracer.container.ModuleOperation;
 import lombok.Getter;
 import lombok.experimental.Accessors;
-import lineth.zktracer.container.ModuleOperation;
 
 /**
  * Implements a system of pseudo-stacked squashed sets where {@link

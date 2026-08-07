@@ -28,8 +28,8 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import lombok.extern.slf4j.Slf4j;
 import lineth.zktracer.json.JsonConverter;
+import lombok.extern.slf4j.Slf4j;
 import org.opentest4j.AssertionFailedError;
 
 @Slf4j

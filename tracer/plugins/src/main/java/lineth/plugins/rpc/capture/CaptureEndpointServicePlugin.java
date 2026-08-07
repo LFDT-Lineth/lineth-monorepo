@@ -17,10 +17,10 @@ package lineth.plugins.rpc.capture;
 
 import com.google.auto.service.AutoService;
 import java.util.Map;
-import lombok.extern.slf4j.Slf4j;
 import lineth.plugins.AbstractLineaRequiredPlugin;
 import lineth.plugins.BesuServiceProvider;
 import lineth.plugins.LineaOptionsPluginConfiguration;
+import lombok.extern.slf4j.Slf4j;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.services.RpcEndpointService;

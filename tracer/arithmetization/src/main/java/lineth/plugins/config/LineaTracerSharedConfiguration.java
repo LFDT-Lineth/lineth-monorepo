@@ -15,8 +15,8 @@
 
 package lineth.plugins.config;
 
-import lombok.Builder;
 import lineth.plugins.LineaOptionsConfiguration;
+import lombok.Builder;
 
 /** The Linea tracer shared configuration. */
 @Builder(toBuilder = true)

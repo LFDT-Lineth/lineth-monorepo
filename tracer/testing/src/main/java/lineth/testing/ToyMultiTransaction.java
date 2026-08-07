@@ -17,8 +17,8 @@ package lineth.testing;
 
 import java.util.ArrayList;
 import java.util.List;
-import lombok.Builder;
 import lineth.testing.ToyTransaction.ToyTransactionBuilder;
+import lombok.Builder;
 import org.hyperledger.besu.ethereum.core.Transaction;
 
 @Builder

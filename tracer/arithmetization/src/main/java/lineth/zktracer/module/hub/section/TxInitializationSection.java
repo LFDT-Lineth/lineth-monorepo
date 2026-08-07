@@ -21,8 +21,6 @@ import static lineth.zktracer.module.hub.HubProcessingPhase.TX_EXEC;
 
 import java.util.Map;
 import java.util.Optional;
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
 import lineth.zktracer.module.hub.AccountSnapshot;
 import lineth.zktracer.module.hub.Hub;
 import lineth.zktracer.module.hub.TransactionProcessingType;
@@ -31,6 +29,8 @@ import lineth.zktracer.module.hub.fragment.ContextFragment;
 import lineth.zktracer.module.hub.fragment.DomSubStampsSubFragment;
 import lineth.zktracer.module.hub.fragment.account.AccountFragment;
 import lineth.zktracer.module.hub.fragment.imc.ImcFragment;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.zktracer.types.Bytecode;
 import net.consensys.linea.zktracer.types.TransactionProcessingMetadata;
 import org.apache.tuweni.bytes.Bytes;

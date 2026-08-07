@@ -24,15 +24,15 @@ import static net.consensys.linea.zktracer.types.Conversions.bigIntegerToBytes;
 
 import java.math.BigInteger;
 import java.math.RoundingMode;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.ModuleOperation;
 import lineth.zktracer.module.hub.fragment.imc.exp.ExpCall;
 import lineth.zktracer.module.hub.fragment.imc.exp.ExplogExpCall;
 import lineth.zktracer.module.hub.fragment.imc.exp.ModexpLogExpCall;
 import lineth.zktracer.module.hub.precompiles.ModexpMetadata;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.types.EWord;
 import org.apache.tuweni.bytes.Bytes;
 

@@ -15,13 +15,13 @@
 
 package lineth.zktracer.module.mmio.instructions;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.Accessors;
 import lineth.zktracer.module.mmio.MmioData;
 import lineth.zktracer.module.mmu.MmuData;
 import lineth.zktracer.module.mmu.values.MmuToMmioConstantValues;
 import lineth.zktracer.module.mmu.values.MmuToMmioInstruction;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.Accessors;
 
 @RequiredArgsConstructor
 @Getter

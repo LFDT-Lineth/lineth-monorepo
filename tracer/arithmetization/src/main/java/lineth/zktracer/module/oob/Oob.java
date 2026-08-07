@@ -18,9 +18,6 @@ package lineth.zktracer.module.oob;
 import static lineth.zktracer.module.ModuleName.OOB;
 
 import java.util.List;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.module.OperationSetModule;
 import lineth.zktracer.container.stacked.ModuleOperationAdder;
@@ -28,6 +25,9 @@ import lineth.zktracer.container.stacked.ModuleOperationStackedSet;
 import lineth.zktracer.module.ModuleName;
 import lineth.zktracer.module.hub.Hub;
 import lineth.zktracer.module.hub.fragment.imc.oob.OobCall;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.Accessors;
 
 /** Implementation of a {@link Module} for out of bounds. */
 @RequiredArgsConstructor

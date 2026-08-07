@@ -1,14 +1,14 @@
 package lineth.staterecovery.clients
 
+import lineth.domain.BlockNumberAndHash
+import lineth.domain.BlockParameter
+import lineth.domain.CommonDomainFunctions
 import lineth.staterecovery.BlockFromL1RecoveredData
 import lineth.staterecovery.ExecutionLayerClient
 import lineth.staterecovery.RecoveryStatusPersistence
 import lineth.staterecovery.StateRecoveryStatus
 import lineth.staterecovery.plugin.BlockImporter
 import lineth.staterecovery.plugin.RecoveryModeManager
-import lineth.domain.BlockNumberAndHash
-import lineth.domain.BlockParameter
-import lineth.domain.CommonDomainFunctions
 import org.apache.logging.log4j.LogManager
 import org.apache.tuweni.bytes.Bytes32
 import org.hyperledger.besu.datatypes.Hash

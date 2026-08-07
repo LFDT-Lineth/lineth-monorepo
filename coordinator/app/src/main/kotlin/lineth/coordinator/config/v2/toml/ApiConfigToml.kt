@@ -1,7 +1,7 @@
 package lineth.coordinator.config.v2.toml
 
-import lineth.coordinator.config.v2.ApiConfig
 import lineth.config.docs.ConfigDoc
+import lineth.coordinator.config.v2.ApiConfig
 
 data class ApiConfigToml(
   @param:ConfigDoc(description = "Port serving observability endpoints (metrics/health).", default = "9545")

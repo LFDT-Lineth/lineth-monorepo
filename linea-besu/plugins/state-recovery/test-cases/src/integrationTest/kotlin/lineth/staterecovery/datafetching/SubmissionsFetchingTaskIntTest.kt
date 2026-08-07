@@ -2,13 +2,6 @@ package lineth.staterecovery.datafetching
 
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import lineth.staterecovery.BlobDecompressorAndDeserializer
-import lineth.staterecovery.BlobDecompressorToDomainV1
-import lineth.staterecovery.BlockFromL1RecoveredData
-import lineth.staterecovery.BlockHeaderStaticFields
-import lineth.staterecovery.LineaSubmissionEventsClientImpl
-import lineth.staterecovery.plugin.AppClients
-import lineth.staterecovery.plugin.createAppClients
 import lineth.ContractsManager
 import lineth.MakeFileDelegatedContractsManager.connectToLinethRollupContract
 import lineth.MakeFileDelegatedContractsManager.linethRollupContractErrors
@@ -21,6 +14,13 @@ import lineth.domain.Aggregation
 import lineth.domain.BlockParameter
 import lineth.domain.RetryConfig
 import lineth.log4j.configureLoggers
+import lineth.staterecovery.BlobDecompressorAndDeserializer
+import lineth.staterecovery.BlobDecompressorToDomainV1
+import lineth.staterecovery.BlockFromL1RecoveredData
+import lineth.staterecovery.BlockHeaderStaticFields
+import lineth.staterecovery.LineaSubmissionEventsClientImpl
+import lineth.staterecovery.plugin.AppClients
+import lineth.staterecovery.plugin.createAppClients
 import lineth.testing.submission.AggregationAndBlobs
 import lineth.testing.submission.loadBlobsAndAggregationsSortedAndGrouped
 import lineth.testing.submission.submitBlobsAndAggregationsAndWaitExecution

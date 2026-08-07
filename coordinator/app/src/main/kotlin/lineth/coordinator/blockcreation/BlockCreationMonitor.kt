@@ -1,9 +1,9 @@
 package lineth.coordinator.blockcreation
 
 import io.vertx.core.Vertx
+import lineth.async.AsyncRetryer
 import lineth.coordination.blockcreation.BlockCreated
 import lineth.coordination.blockcreation.BlockCreationListener
-import lineth.async.AsyncRetryer
 import lineth.domain.Block
 import lineth.domain.BlockParameter
 import lineth.ethapi.EthApiBlockClient

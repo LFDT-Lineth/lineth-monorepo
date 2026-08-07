@@ -1,15 +1,15 @@
 package lineth.staterecovery
 
 import io.vertx.core.Vertx
-import lineth.staterecovery.plugin.createAppClients
-import lineth.staterecovery.test.FakeExecutionLayerClient
-import lineth.staterecovery.test.FakeStateManagerClientReadFromL1
 import lineth.async.get
 import lineth.clients.StateManagerClientV1
 import lineth.domain.BlockNumberAndHash
 import lineth.domain.BlockParameter
 import lineth.domain.RetryConfig
 import lineth.log4j.configureLoggers
+import lineth.staterecovery.plugin.createAppClients
+import lineth.staterecovery.test.FakeExecutionLayerClient
+import lineth.staterecovery.test.FakeStateManagerClientReadFromL1
 import lineth.vertx.VertxFactory
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager

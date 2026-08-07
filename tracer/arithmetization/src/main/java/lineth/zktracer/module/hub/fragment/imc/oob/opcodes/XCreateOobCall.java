@@ -17,12 +17,12 @@ package lineth.zktracer.module.hub.fragment.imc.oob.opcodes;
 
 import static lineth.zktracer.Trace.OOB_INST_XCREATE;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.Setter;
 import lineth.zktracer.Trace;
 import lineth.zktracer.module.hub.Hub;
 import lineth.zktracer.module.hub.fragment.imc.oob.OobCall;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import net.consensys.linea.zktracer.types.EWord;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 

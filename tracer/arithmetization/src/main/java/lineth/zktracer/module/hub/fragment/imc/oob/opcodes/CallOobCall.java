@@ -18,13 +18,13 @@ package lineth.zktracer.module.hub.fragment.imc.oob.opcodes;
 import static lineth.zktracer.Trace.OOB_INST_CALL;
 import static net.consensys.linea.zktracer.types.Conversions.*;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.Setter;
 import lineth.zktracer.Trace;
 import lineth.zktracer.module.hub.Hub;
 import lineth.zktracer.module.hub.fragment.imc.oob.OobCall;
 import lineth.zktracer.opcode.OpCodeData;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import net.consensys.linea.zktracer.types.EWord;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.evm.account.Account;

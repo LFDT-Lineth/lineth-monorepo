@@ -9,9 +9,9 @@
 package lineth.sequencer.txpoolvalidation.validators;
 
 import java.util.Optional;
-import lombok.extern.slf4j.Slf4j;
 import lineth.bl.TransactionProfitabilityCalculator;
 import lineth.config.LineaProfitabilityConfiguration;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.tuweni.units.bigints.UInt256s;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.datatypes.Wei;

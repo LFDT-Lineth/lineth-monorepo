@@ -3,9 +3,6 @@ package lineth.staterecovery
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import lineth.staterecovery.test.assertBesuAndShomeiRecoveredAsExpected
-import lineth.staterecovery.test.execCommandAndAssertSuccess
-import lineth.staterecovery.test.waitExecutionLayerToBeUpAndRunning
 import lineth.ContractsManager
 import lineth.EthApiClientManager
 import lineth.LinethRollupDeploymentResult
@@ -19,6 +16,9 @@ import lineth.jsonrpc.client.RequestRetryConfig
 import lineth.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import lineth.log4j.configureLoggers
 import lineth.metrics.micrometer.MicrometerMetricsFacade
+import lineth.staterecovery.test.assertBesuAndShomeiRecoveredAsExpected
+import lineth.staterecovery.test.execCommandAndAssertSuccess
+import lineth.staterecovery.test.waitExecutionLayerToBeUpAndRunning
 import lineth.testing.submission.AggregationAndBlobs
 import lineth.testing.submission.loadBlobsAndAggregationsSortedAndGrouped
 import lineth.testing.submission.submitBlobsAndAggregationsAndWaitExecution

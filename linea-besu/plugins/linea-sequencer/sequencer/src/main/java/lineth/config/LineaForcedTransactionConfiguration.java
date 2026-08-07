@@ -8,9 +8,9 @@
  */
 package lineth.config;
 
-import lombok.Builder;
 import lineth.plugins.LineaOptionsConfiguration;
 import lineth.sequencer.forced.LineaForcedTransactionPool;
+import lombok.Builder;
 
 /** Configuration for the forced transaction pool. */
 @Builder

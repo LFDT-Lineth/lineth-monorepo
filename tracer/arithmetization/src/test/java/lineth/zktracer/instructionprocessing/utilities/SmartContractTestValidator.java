@@ -19,9 +19,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
 import java.util.Map;
+import lineth.testing.TransactionProcessingResultValidator;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import lineth.testing.TransactionProcessingResultValidator;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.LogTopic;
 import org.hyperledger.besu.ethereum.core.Transaction;

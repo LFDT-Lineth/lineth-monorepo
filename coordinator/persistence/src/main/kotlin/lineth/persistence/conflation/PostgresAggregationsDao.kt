@@ -4,9 +4,8 @@ import io.vertx.core.Future
 import io.vertx.sqlclient.Row
 import io.vertx.sqlclient.SqlClient
 import io.vertx.sqlclient.Tuple
-import lineth.coordinator.clients.prover.serialization.ProofToFinalizeJsonResponse
-import lineth.persistence.AggregationsDao
 import lineth.async.toSafeFuture
+import lineth.coordinator.clients.prover.serialization.ProofToFinalizeJsonResponse
 import lineth.domain.Aggregation
 import lineth.domain.BlobAndBatchCounters
 import lineth.domain.BlobCounters
@@ -15,6 +14,7 @@ import lineth.domain.ProofToFinalize
 import lineth.domain.toBlockIntervalsString
 import lineth.error.DuplicatedRecordException
 import lineth.kotlin.decodeHex
+import lineth.persistence.AggregationsDao
 import lineth.persistence.db.SQLQueryLogger
 import lineth.persistence.db.isDuplicateKeyException
 import org.apache.logging.log4j.Level

@@ -15,10 +15,10 @@
 
 package lineth.zktracer.module.rlpUtils;
 
-import lombok.EqualsAndHashCode;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.ModuleOperation;
 import lineth.zktracer.module.rlptxn.GenericTracedValue;
+import lombok.EqualsAndHashCode;
 
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 public abstract class RlpUtilsCall extends ModuleOperation {

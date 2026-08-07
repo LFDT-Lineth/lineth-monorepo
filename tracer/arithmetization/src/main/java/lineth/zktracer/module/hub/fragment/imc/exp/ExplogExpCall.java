@@ -18,11 +18,11 @@ package lineth.zktracer.module.hub.fragment.imc.exp;
 import static lineth.zktracer.Trace.EXP_INST_EXPLOG;
 import static lineth.zktracer.Trace.GAS_CONST_G_EXP_BYTE;
 
+import lineth.zktracer.Trace;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import lineth.zktracer.Trace;
 import net.consensys.linea.zktracer.types.EWord;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.evm.frame.MessageFrame;

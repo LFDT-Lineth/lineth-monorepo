@@ -19,12 +19,12 @@ import static lineth.zktracer.Trace.GAS_CONST_G_CALL_STIPEND;
 import static lineth.zktracer.Trace.OOB_INST_SSTORE;
 import static net.consensys.linea.zktracer.types.Conversions.*;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.Setter;
 import lineth.zktracer.Trace;
 import lineth.zktracer.module.hub.Hub;
 import lineth.zktracer.module.hub.fragment.imc.oob.OobCall;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 

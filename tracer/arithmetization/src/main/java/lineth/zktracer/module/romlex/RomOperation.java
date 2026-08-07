@@ -18,14 +18,14 @@ package lineth.zktracer.module.romlex;
 import static lineth.zktracer.Trace.*;
 import static net.consensys.linea.zktracer.types.Utils.rightPadTo;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.ModuleOperation;
 import lineth.zktracer.opcode.OpCodeData;
 import lineth.zktracer.opcode.OpCodes;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.types.UnsignedByte;
 import org.apache.tuweni.bytes.Bytes;
 

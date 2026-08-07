@@ -1,8 +1,8 @@
 package lineth.coordination.aggregation
 
-import lineth.persistence.AggregationsRepository
 import lineth.domain.Aggregation
 import lineth.domain.AggregationProofIndex
+import lineth.persistence.AggregationsRepository
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

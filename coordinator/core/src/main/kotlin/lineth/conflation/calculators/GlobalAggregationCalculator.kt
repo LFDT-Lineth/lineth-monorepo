@@ -1,9 +1,9 @@
 package lineth.conflation.calculators
 
-import lineth.metrics.LineaMetricsCategory
 import lineth.domain.BlobCounters
 import lineth.domain.BlobsToAggregate
 import lineth.metrics.Counter
+import lineth.metrics.LineaMetricsCategory
 import lineth.metrics.MetricsFacade
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger

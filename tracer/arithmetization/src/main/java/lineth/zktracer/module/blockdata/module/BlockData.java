@@ -19,8 +19,6 @@ import static lineth.zktracer.module.ModuleName.BLOCK_DATA;
 import static net.consensys.linea.zktracer.types.Conversions.bigIntegerToBytes;
 
 import java.util.*;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lineth.zktracer.ChainConfig;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.module.Module;
@@ -38,6 +36,8 @@ import lineth.zktracer.module.euc.Euc;
 import lineth.zktracer.module.hub.Hub;
 import lineth.zktracer.module.wcp.Wcp;
 import lineth.zktracer.opcode.OpCode;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.evm.worldstate.WorldView;
 import org.hyperledger.besu.plugin.data.BlockBody;

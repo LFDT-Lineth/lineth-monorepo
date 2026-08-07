@@ -19,11 +19,6 @@ import static lineth.zktracer.module.hub.TransactionProcessingType.USER;
 import static lineth.zktracer.module.hub.TransactionProcessingType.isUserTransaction;
 
 import java.util.*;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.stacked.CountOnlyOperation;
 import lineth.zktracer.container.stacked.StackedList;
@@ -31,6 +26,11 @@ import lineth.zktracer.module.hub.HubProcessingPhase;
 import lineth.zktracer.module.hub.TransactionProcessingType;
 import lineth.zktracer.module.hub.fragment.storage.StorageFragment;
 import lineth.zktracer.module.hub.state.State.HubTransactionState.Stamps;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.Accessors;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.datatypes.Address;
 

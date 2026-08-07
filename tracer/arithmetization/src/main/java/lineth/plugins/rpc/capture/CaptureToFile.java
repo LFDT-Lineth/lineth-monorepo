@@ -20,10 +20,10 @@ import static net.consensys.linea.zktracer.types.PublicInputs.retrieveHistorical
 
 import com.google.common.base.Stopwatch;
 import java.util.Map;
-import lombok.extern.slf4j.Slf4j;
 import lineth.blockcapture.BlockCapturer;
 import lineth.plugins.BesuServiceProvider;
 import lineth.zktracer.Fork;
+import lombok.extern.slf4j.Slf4j;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.services.BlockchainService;

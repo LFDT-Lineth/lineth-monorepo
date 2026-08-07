@@ -1,8 +1,8 @@
 package lineth.ethereum.gaspricing.staticcap
 
 import lineth.domain.FeeHistory
-import lineth.kotlin.toIntervalString
 import lineth.ethereum.gaspricing.FeesCalculator
+import lineth.kotlin.toIntervalString
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 

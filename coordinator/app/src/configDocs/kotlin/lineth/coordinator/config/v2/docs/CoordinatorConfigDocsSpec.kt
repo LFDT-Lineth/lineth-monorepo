@@ -1,13 +1,13 @@
 package lineth.coordinator.config.v2.docs
 
+import lineth.config.docs.ConfigDocsSpec
+import lineth.config.docs.ConfigFileRoot
+import lineth.config.docs.sectionByPackagePrefix
 import lineth.coordinator.config.v2.toml.CoordinatorConfigFileToml
 import lineth.coordinator.config.v2.toml.GasPriceCapTimeOfDayMultipliersConfigFileToml
 import lineth.coordinator.config.v2.toml.SmartContractErrorCodesConfigFileToml
 import lineth.coordinator.config.v2.toml.TracesLimitsConfigFileV4Toml
 import lineth.coordinator.config.v2.toml.TracesLimitsConfigFileV5Toml
-import lineth.config.docs.ConfigDocsSpec
-import lineth.config.docs.ConfigFileRoot
-import lineth.config.docs.sectionByPackagePrefix
 
 /**
  * Coordinator-specific configuration for the generic `config-docs` tooling. Lives in the

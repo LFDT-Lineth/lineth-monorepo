@@ -1,7 +1,6 @@
 package lineth.coordinator.clients.prover
 
 import com.fasterxml.jackson.databind.node.ArrayNode
-import lineth.encoding.BlockEncoder
 import lineth.clients.BatchExecutionProofRequestV1
 import lineth.clients.GenerateTracesResponse
 import lineth.clients.GetZkEVMStateMerkleProofResponse
@@ -10,6 +9,7 @@ import lineth.contract.events.createMessageSentEthLogV1
 import lineth.domain.Block
 import lineth.domain.EthLog
 import lineth.domain.createBlock
+import lineth.encoding.BlockEncoder
 import lineth.kotlin.ByteArrayExt
 import lineth.kotlin.decodeHex
 import lineth.kotlin.encodeHex

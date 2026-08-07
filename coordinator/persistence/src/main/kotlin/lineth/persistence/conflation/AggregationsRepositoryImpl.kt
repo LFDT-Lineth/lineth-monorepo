@@ -1,11 +1,11 @@
 package lineth.persistence.conflation
 
-import lineth.persistence.AggregationsDao
-import lineth.persistence.AggregationsRepository
 import lineth.domain.Aggregation
 import lineth.domain.BlobAndBatchCounters
 import lineth.domain.ProofToFinalize
 import lineth.error.DuplicatedRecordException
+import lineth.persistence.AggregationsDao
+import lineth.persistence.AggregationsRepository
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Instant
 

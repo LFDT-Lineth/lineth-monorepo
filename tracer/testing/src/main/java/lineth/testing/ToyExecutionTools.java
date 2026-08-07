@@ -23,10 +23,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.*;
 import java.util.function.Consumer;
-import lombok.SneakyThrows;
-import lombok.extern.slf4j.Slf4j;
 import lineth.corset.CorsetValidator;
 import lineth.zktracer.*;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.datatypes.*;

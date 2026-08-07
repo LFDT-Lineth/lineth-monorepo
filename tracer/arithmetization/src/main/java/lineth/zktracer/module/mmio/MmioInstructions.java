@@ -31,7 +31,6 @@ import static lineth.zktracer.Trace.MMIO_INST_RAM_TO_RAM_TWO_TARGET;
 import static lineth.zktracer.Trace.MMIO_INST_RAM_VANISHES;
 
 import java.util.Map;
-import lombok.experimental.Accessors;
 import lineth.zktracer.module.mmio.instructions.LimbToRamOneTarget;
 import lineth.zktracer.module.mmio.instructions.LimbToRamTransplant;
 import lineth.zktracer.module.mmio.instructions.LimbToRamTwoTarget;
@@ -47,6 +46,7 @@ import lineth.zktracer.module.mmio.instructions.RamToRamTwoSource;
 import lineth.zktracer.module.mmio.instructions.RamToRamTwoTarget;
 import lineth.zktracer.module.mmio.instructions.RamVanishes;
 import lineth.zktracer.module.mmu.MmuData;
+import lombok.experimental.Accessors;
 
 @Accessors(fluent = true)
 public class MmioInstructions {

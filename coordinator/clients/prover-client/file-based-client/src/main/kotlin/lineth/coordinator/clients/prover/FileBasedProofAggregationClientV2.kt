@@ -2,12 +2,10 @@ package lineth.coordinator.clients.prover
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.vertx.core.Vertx
-import lineth.coordinator.clients.prover.serialization.JsonSerialization
-import lineth.coordinator.clients.prover.serialization.ProofToFinalizeJsonResponse
-import lineth.fileio.FileReader
-import lineth.fileio.FileWriter
 import lineth.clients.ProofAggregationProverClientV2
 import lineth.clients.ProverFileNameProvider
+import lineth.coordinator.clients.prover.serialization.JsonSerialization
+import lineth.coordinator.clients.prover.serialization.ProofToFinalizeJsonResponse
 import lineth.crypto.HashFunction
 import lineth.crypto.Sha256HashFunction
 import lineth.domain.AggregationProofIndex
@@ -16,6 +14,8 @@ import lineth.domain.ExecutionProofIndex
 import lineth.domain.InvalidityProofIndex
 import lineth.domain.ProofToFinalize
 import lineth.domain.ProofsToAggregate
+import lineth.fileio.FileReader
+import lineth.fileio.FileWriter
 import lineth.kotlin.encodeHex
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger

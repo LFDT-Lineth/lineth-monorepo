@@ -1,7 +1,7 @@
 package lineth.ethereum.gaspricing.dynamiccap
 
-import lineth.gaspricing.GasPriceCapProvider
 import lineth.domain.gas.GasPriceCaps
+import lineth.gaspricing.GasPriceCapProvider
 import lineth.metrics.MetricsFacade
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach

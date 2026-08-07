@@ -10,8 +10,8 @@
 package lineth.config;
 
 import java.net.URL;
-import lombok.Builder;
 import lineth.plugins.LineaOptionsConfiguration;
+import lombok.Builder;
 
 /** Linea Rejected Transactions Reporting Configuration */
 @Builder(toBuilder = true)

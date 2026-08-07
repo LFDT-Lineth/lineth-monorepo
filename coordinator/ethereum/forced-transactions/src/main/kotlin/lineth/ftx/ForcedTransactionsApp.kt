@@ -1,17 +1,6 @@
 package lineth.ftx
 
 import io.vertx.core.Vertx
-import lineth.conflation.AlwaysSafeBlockNumberProvider
-import lineth.conflation.ConflationSafeBlockNumberProvider
-import lineth.conflation.calculators.ConflationTriggerCalculator
-import lineth.conflation.calculators.ConflationTriggerCalculatorByTargetBlockNumbers
-import lineth.ftx.conflation.ConflationCalculatorByForcedTransaction
-import lineth.ftx.conflation.ForcedTransactionConflationSafeBlockNumberProvider
-import lineth.ftx.conflation.ForcedTransactionsInvalidityProofService
-import lineth.ftx.conflation.ForcedTransactionsSafeBlockNumberManager
-import lineth.ftx.conflation.FtxConflationInfo
-import lineth.ftx.conflation.InvalidityProofAssembler
-import lineth.persistence.ForcedTransactionsDao
 import lineth.DisabledService
 import lineth.EthLogsSearcher
 import lineth.LongRunningService
@@ -19,6 +8,10 @@ import lineth.clients.InvalidityProverClientV1
 import lineth.clients.StateManagerAccountProofClient
 import lineth.clients.StateManagerClientV1
 import lineth.clients.TracesConflationVirtualBlockClientV1
+import lineth.conflation.AlwaysSafeBlockNumberProvider
+import lineth.conflation.ConflationSafeBlockNumberProvider
+import lineth.conflation.calculators.ConflationTriggerCalculator
+import lineth.conflation.calculators.ConflationTriggerCalculatorByTargetBlockNumbers
 import lineth.contract.Web3JContractVersionAwaiter
 import lineth.contract.events.ForcedTransactionAddedEvent
 import lineth.contract.l1.ContractVersionProvider
@@ -30,7 +23,14 @@ import lineth.ethapi.EthApiClient
 import lineth.ethapi.EthLogsFilterSubscriptionFactoryPollingBased
 import lineth.ethapi.EthLogsSearcherImpl
 import lineth.forcedtx.ForcedTransactionsClient
+import lineth.ftx.conflation.ConflationCalculatorByForcedTransaction
+import lineth.ftx.conflation.ForcedTransactionConflationSafeBlockNumberProvider
+import lineth.ftx.conflation.ForcedTransactionsInvalidityProofService
+import lineth.ftx.conflation.ForcedTransactionsSafeBlockNumberManager
+import lineth.ftx.conflation.FtxConflationInfo
+import lineth.ftx.conflation.InvalidityProofAssembler
 import lineth.metrics.MetricsFacade
+import lineth.persistence.ForcedTransactionsDao
 import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.Queue

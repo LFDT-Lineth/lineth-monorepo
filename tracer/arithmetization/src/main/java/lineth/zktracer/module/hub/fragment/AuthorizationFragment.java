@@ -18,11 +18,11 @@ import static graphql.com.google.common.base.Preconditions.checkState;
 import static lineth.zktracer.Trace.*;
 
 import java.math.BigInteger;
+import lineth.zktracer.Trace;
+import lineth.zktracer.module.hub.section.TupleAnalysis;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import lineth.zktracer.Trace;
-import lineth.zktracer.module.hub.section.TupleAnalysis;
 import net.consensys.linea.zktracer.types.Bytecode;
 import net.consensys.linea.zktracer.types.TransactionProcessingMetadata;
 import org.apache.tuweni.bytes.Bytes;
@@ -31,8 +31,8 @@ import org.hyperledger.besu.datatypes.CodeDelegation;
 
 /**
  * The <b>RLP_AUTH</b> module will consume an {@link AuthorizationFragment}. These are created in
- * the main {@link lineth.zktracer.module.hub.section.TxAuthorizationMacroSection}
- * loop. They contain most of the ``outside data'' that is required.
+ * the main {@link lineth.zktracer.module.hub.section.TxAuthorizationMacroSection} loop. They
+ * contain most of the ``outside data'' that is required.
  *
  * <ul>
  *   <li>[x] <b>delegation tuple</b>

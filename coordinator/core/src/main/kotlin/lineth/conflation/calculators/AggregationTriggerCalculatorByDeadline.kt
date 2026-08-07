@@ -1,7 +1,7 @@
 package lineth.conflation.calculators
 
-import lineth.conflation.SafeBlockProvider
 import lineth.LongRunningService
+import lineth.conflation.SafeBlockProvider
 import lineth.domain.BlobCounters
 import lineth.domain.BlobsToAggregate
 import lineth.timer.Timer

@@ -1,9 +1,9 @@
 package lineth.anchoring
 
 import io.vertx.core.Vertx
-import lineth.anchoring.clients.L1MessageSentEventsPoller
 import lineth.EthLogsSearcher
 import lineth.LongRunningService
+import lineth.anchoring.clients.L1MessageSentEventsPoller
 import lineth.contract.events.MessageSentEvent
 import lineth.contract.l2.L2MessageServiceSmartContractClient
 import lineth.domain.BlockParameter

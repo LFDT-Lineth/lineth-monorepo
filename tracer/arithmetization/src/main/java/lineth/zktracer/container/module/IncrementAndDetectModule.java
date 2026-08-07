@@ -15,8 +15,8 @@
 
 package lineth.zktracer.container.module;
 
-import lombok.Setter;
 import lineth.zktracer.module.ModuleName;
+import lombok.Setter;
 
 public class IncrementAndDetectModule extends IncrementingModule {
 

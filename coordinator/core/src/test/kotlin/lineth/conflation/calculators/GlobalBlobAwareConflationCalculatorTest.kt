@@ -1,11 +1,10 @@
 package lineth.conflation.calculators
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
-import lineth.conflation.SafeBlockProvider
-import lineth.coordination.blob.FakeBlobCompressor
-import lineth.metrics.LineaMetricsCategory
 import lineth.FakeFixedClock
 import lineth.blob.BlobCompressor
+import lineth.conflation.SafeBlockProvider
+import lineth.coordination.blob.FakeBlobCompressor
 import lineth.domain.Blob
 import lineth.domain.BlockCounters
 import lineth.domain.BlockHeaderSummary
@@ -13,6 +12,7 @@ import lineth.domain.ConflationCalculationResult
 import lineth.domain.ConflationTrigger
 import lineth.kotlin.ByteArrayExt
 import lineth.metrics.FakeHistogram
+import lineth.metrics.LineaMetricsCategory
 import lineth.metrics.MetricsFacade
 import lineth.metrics.micrometer.MicrometerMetricsFacade
 import lineth.traces.TracesCountersV2

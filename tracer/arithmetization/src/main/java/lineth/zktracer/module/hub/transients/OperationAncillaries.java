@@ -17,10 +17,10 @@ package lineth.zktracer.module.hub.transients;
 
 import static com.google.common.base.Preconditions.*;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import lineth.zktracer.module.hub.Hub;
 import lineth.zktracer.opcode.OpCodeData;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.zktracer.types.Range;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.evm.frame.MessageFrame;

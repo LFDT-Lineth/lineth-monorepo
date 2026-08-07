@@ -68,14 +68,14 @@ import static net.consensys.linea.zktracer.types.EWord.ZERO;
 import static net.consensys.linea.zktracer.types.Utils.leftPadTo;
 
 import java.util.List;
-import lombok.Getter;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.ModuleOperation;
 import lineth.zktracer.module.ext.Ext;
 import lineth.zktracer.module.hub.fragment.scenario.PrecompileScenarioFragment;
 import lineth.zktracer.module.wcp.Wcp;
 import lineth.zktracer.opcode.OpCode;
+import lombok.Getter;
+import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.types.EWord;
 import net.consensys.linea.zktracer.types.UnsignedByte;
 import org.apache.commons.lang3.tuple.Pair;

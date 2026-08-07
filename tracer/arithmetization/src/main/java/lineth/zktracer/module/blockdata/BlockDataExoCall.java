@@ -19,12 +19,12 @@ import static lineth.zktracer.Trace.*;
 import static net.consensys.linea.zktracer.types.Conversions.ZERO;
 import static net.consensys.linea.zktracer.types.Conversions.booleanToBytes;
 
-import lombok.Builder;
-import lombok.Getter;
-import lombok.experimental.Accessors;
 import lineth.zktracer.module.euc.Euc;
 import lineth.zktracer.module.euc.EucOperation;
 import lineth.zktracer.module.wcp.Wcp;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.types.EWord;
 import org.apache.tuweni.bytes.Bytes;
 

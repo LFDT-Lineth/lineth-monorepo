@@ -20,11 +20,11 @@ import static lineth.zktracer.module.rlpUtils.RlpUtils.*;
 import static net.consensys.linea.zktracer.types.Utils.BYTES16_ZERO;
 import static net.consensys.linea.zktracer.types.Utils.rightPadToBytes16;
 
+import lineth.zktracer.Trace;
+import lineth.zktracer.module.rlptxn.GenericTracedValue;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.experimental.Accessors;
-import lineth.zktracer.Trace;
-import lineth.zktracer.module.rlptxn.GenericTracedValue;
 import org.apache.tuweni.bytes.Bytes;
 
 @Accessors(fluent = true)

@@ -3,12 +3,6 @@ package lineth.contract.l1
 import lineth.EthLogsSearcher
 import lineth.contract.LinethRollupV6
 import lineth.contract.Web3JContractAsyncHelper
-import lineth.contract.l1.BlobsSubmissionV9
-import lineth.contract.l1.BlockAndNonce
-import lineth.contract.l1.FinalizationDataV9
-import lineth.contract.l1.LinethRollupContractVersion
-import lineth.contract.l1.LinethRollupSmartContractClient
-import lineth.contract.l1.Web3JLinethRollupSmartContractClientReadOnly
 import lineth.domain.BlobRecord
 import lineth.domain.ProofToFinalize
 import lineth.domain.gas.GasPriceCaps

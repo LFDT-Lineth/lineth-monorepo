@@ -17,10 +17,10 @@ package lineth.zktracer.module.hub.fragment.scenario;
 import static com.google.common.base.Preconditions.*;
 import static lineth.zktracer.module.hub.fragment.scenario.CallScenarioFragment.CallScenario.*;
 
-import lombok.Getter;
-import lombok.Setter;
 import lineth.zktracer.Trace;
 import lineth.zktracer.module.hub.fragment.TraceFragment;
+import lombok.Getter;
+import lombok.Setter;
 
 public class CallScenarioFragment implements TraceFragment {
 

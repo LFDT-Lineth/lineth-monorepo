@@ -15,9 +15,9 @@
 
 package lineth.zktracer.module.hub.transients;
 
+import lineth.zktracer.module.hub.Hub;
 import lombok.Getter;
 import lombok.experimental.Accessors;
-import lineth.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.types.TransactionProcessingMetadata;
 
 /**

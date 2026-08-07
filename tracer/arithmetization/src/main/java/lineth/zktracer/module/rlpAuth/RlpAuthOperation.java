@@ -20,8 +20,6 @@ import static org.hyperledger.besu.crypto.Hash.keccak256;
 import static org.hyperledger.besu.ethereum.core.CodeDelegation.MAGIC;
 
 import java.math.BigInteger;
-import lombok.Getter;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.ModuleOperation;
 import lineth.zktracer.module.ecdata.EcData;
@@ -29,6 +27,8 @@ import lineth.zktracer.module.hub.fragment.AuthorizationFragment;
 import lineth.zktracer.module.hub.fragment.scenario.PrecompileScenarioFragment;
 import lineth.zktracer.module.shakiradata.ShakiraData;
 import lineth.zktracer.module.shakiradata.ShakiraDataOperation;
+import lombok.Getter;
+import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.types.TransactionProcessingMetadata;
 import net.consensys.linea.zktracer.types.UnsignedByte;
 import org.apache.tuweni.bytes.Bytes;

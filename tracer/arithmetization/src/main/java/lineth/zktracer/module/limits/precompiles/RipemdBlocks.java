@@ -18,9 +18,9 @@ package lineth.zktracer.module.limits.precompiles;
 import static com.google.common.base.Preconditions.checkState;
 import static lineth.zktracer.module.ModuleName.PRECOMPILE_RIPEMD_BLOCKS;
 
+import lineth.zktracer.container.module.CountingOnlyModule;
 import lombok.Getter;
 import lombok.experimental.Accessors;
-import lineth.zktracer.container.module.CountingOnlyModule;
 
 @Getter
 @Accessors(fluent = true)

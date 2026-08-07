@@ -4,13 +4,13 @@ import io.vertx.core.Deployable
 import io.vertx.core.DeploymentOptions
 import io.vertx.core.Future
 import io.vertx.core.Vertx
+import lineth.LongRunningService
+import lineth.async.toSafeFuture
 import lineth.coordinator.api.requesthandlers.ConflationCreateProverRequestHandler
 import lineth.coordinator.api.requesthandlers.ConflationGetJobStatusRequestHandler
 import lineth.coordinator.api.requesthandlers.ConflationStopJobRequestHandler
 import lineth.coordinator.api.requesthandlers.ConflationTargetCheckpointResumeRequestHandler
 import lineth.coordinator.app.conflationbacktesting.ConflationBacktestingService
-import lineth.LongRunningService
-import lineth.async.toSafeFuture
 import lineth.jsonrpc.HttpRequestHandler
 import lineth.jsonrpc.JsonRpcMessageHandler
 import lineth.jsonrpc.JsonRpcMessageProcessor

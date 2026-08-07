@@ -1,12 +1,12 @@
 package lineth.ftx
 
 import io.vertx.core.Vertx
-import lineth.ftx.conflation.ForcedTransactionsSafeBlockNumberManager
 import lineth.LongRunningService
 import lineth.contract.events.ForcedTransactionAddedEvent
 import lineth.ethapi.EthApiBlockClient
 import lineth.forcedtx.ForcedTransactionRequest
 import lineth.forcedtx.ForcedTransactionsClient
+import lineth.ftx.conflation.ForcedTransactionsSafeBlockNumberManager
 import lineth.timer.TimerSchedule
 import lineth.timer.VertxPeriodicPollingService
 import org.apache.logging.log4j.LogManager

@@ -16,8 +16,8 @@ package lineth;
 
 import static lineth.reporting.TestState.*;
 
-import lombok.extern.slf4j.Slf4j;
 import lineth.reporting.LineaTestWatcher;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
 @Slf4j

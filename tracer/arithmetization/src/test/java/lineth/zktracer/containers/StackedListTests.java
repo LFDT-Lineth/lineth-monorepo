@@ -18,13 +18,13 @@ package lineth.zktracer.containers;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 import java.math.BigInteger;
-import lombok.RequiredArgsConstructor;
 import lineth.UnitTestWatcher;
 import lineth.reporting.TracerTestBase;
 import lineth.zktracer.container.ModuleOperation;
 import lineth.zktracer.container.stacked.ModuleOperationStackedList;
 import lineth.zktracer.module.add.AddOperation;
 import lineth.zktracer.opcode.OpCode;
+import lombok.RequiredArgsConstructor;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.junit.jupiter.api.Assertions;

@@ -1,9 +1,9 @@
 package lineth.ftx
 
-import lineth.persistence.ForcedTransactionRecord
-import lineth.persistence.ForcedTransactionsDao
 import lineth.contract.l1.LinethRollupSmartContractClientReadOnlyFinalizedStateProvider
 import lineth.domain.BlockParameter
+import lineth.persistence.ForcedTransactionRecord
+import lineth.persistence.ForcedTransactionsDao
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

@@ -15,11 +15,11 @@
 
 package lineth.zktracer.module.hub.signals;
 
+import lineth.zktracer.module.hub.Hub;
+import lineth.zktracer.opcode.OpCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
-import lineth.zktracer.module.hub.Hub;
-import lineth.zktracer.opcode.OpCode;
 import org.apache.tuweni.units.bigints.UInt256;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Wei;

@@ -5,6 +5,7 @@ import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
 import io.vertx.core.Future
 import lineth.async.toSafeFuture
+import lineth.ethereum.gaspricing.GasPriceUpdater
 import lineth.jsonrpc.JsonRpcErrorResponse
 import lineth.jsonrpc.JsonRpcRequestListParams
 import lineth.jsonrpc.JsonRpcSuccessResponse
@@ -12,7 +13,6 @@ import lineth.jsonrpc.client.JsonRpcClient
 import lineth.jsonrpc.client.JsonRpcRequestFanOut
 import lineth.jsonrpc.client.RequestRetryConfig
 import lineth.jsonrpc.client.VertxHttpJsonRpcClientFactory
-import lineth.ethereum.gaspricing.GasPriceUpdater
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

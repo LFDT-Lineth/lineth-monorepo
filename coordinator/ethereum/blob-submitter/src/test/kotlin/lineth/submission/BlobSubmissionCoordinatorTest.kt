@@ -1,8 +1,6 @@
 package lineth.submission
 
 import io.vertx.core.Vertx
-import lineth.persistence.AggregationsRepository
-import lineth.persistence.BlobsRepository
 import lineth.FakeFixedClock
 import lineth.async.AsyncFilter
 import lineth.contract.l1.BlockAndNonce
@@ -12,6 +10,8 @@ import lineth.domain.BlockIntervals
 import lineth.domain.createAggregation
 import lineth.domain.createBlobRecords
 import lineth.domain.toBlockIntervals
+import lineth.persistence.AggregationsRepository
+import lineth.persistence.BlobsRepository
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.junit.jupiter.api.BeforeEach

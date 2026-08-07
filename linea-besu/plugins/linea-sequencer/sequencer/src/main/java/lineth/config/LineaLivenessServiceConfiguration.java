@@ -10,8 +10,8 @@ package lineth.config;
 
 import java.nio.file.Path;
 import java.time.Duration;
-import lombok.Builder;
 import lineth.plugins.LineaOptionsConfiguration;
+import lombok.Builder;
 
 /** The Linea liveness service validation configuration. */
 @Builder(toBuilder = true)

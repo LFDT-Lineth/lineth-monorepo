@@ -24,10 +24,6 @@ import static lineth.zktracer.Trace.MMU_INST_RAM_TO_EXO_WITH_PADDING;
 
 import java.util.ArrayList;
 import java.util.List;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.experimental.Accessors;
 import lineth.zktracer.module.hub.fragment.imc.mmu.MmuCall;
 import lineth.zktracer.module.mmu.values.HubToMmuValues;
 import lineth.zktracer.module.mmu.values.MmuEucCallRecord;
@@ -35,6 +31,10 @@ import lineth.zktracer.module.mmu.values.MmuOutAndBinValues;
 import lineth.zktracer.module.mmu.values.MmuToMmioConstantValues;
 import lineth.zktracer.module.mmu.values.MmuToMmioInstruction;
 import lineth.zktracer.module.mmu.values.MmuWcpCallRecord;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.experimental.Accessors;
 import org.apache.tuweni.bytes.Bytes;
 
 @AllArgsConstructor

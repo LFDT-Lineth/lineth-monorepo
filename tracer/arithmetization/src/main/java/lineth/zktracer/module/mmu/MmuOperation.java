@@ -27,9 +27,6 @@ import static net.consensys.linea.zktracer.types.Conversions.*;
 
 import java.util.ArrayList;
 import java.util.List;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.Accessors;
 import lineth.zktracer.Trace;
 import lineth.zktracer.container.ModuleOperation;
 import lineth.zktracer.module.mmu.values.HubToMmuValues;
@@ -39,6 +36,9 @@ import lineth.zktracer.module.mmu.values.MmuToMmioConstantValues;
 import lineth.zktracer.module.mmu.values.MmuToMmioInstruction;
 import lineth.zktracer.module.mmu.values.MmuWcpCallRecord;
 import lineth.zktracer.module.mmu.values.RowTypeRecord;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.types.UnsignedByte;
 import org.apache.tuweni.bytes.Bytes;
 

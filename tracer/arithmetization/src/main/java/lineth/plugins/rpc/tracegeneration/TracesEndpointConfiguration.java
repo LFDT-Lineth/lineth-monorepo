@@ -15,8 +15,8 @@
 
 package lineth.plugins.rpc.tracegeneration;
 
-import lombok.Builder;
 import lineth.plugins.LineaOptionsConfiguration;
+import lombok.Builder;
 
 /** The Linea tracer configuration private to this repo. */
 @Builder(toBuilder = true)

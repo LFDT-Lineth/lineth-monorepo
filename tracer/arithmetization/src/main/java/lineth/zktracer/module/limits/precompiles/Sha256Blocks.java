@@ -17,9 +17,9 @@ package lineth.zktracer.module.limits.precompiles;
 
 import static lineth.zktracer.module.ModuleName.PRECOMPILE_SHA2_BLOCKS;
 
+import lineth.zktracer.container.module.CountingOnlyModule;
 import lombok.Getter;
 import lombok.experimental.Accessors;
-import lineth.zktracer.container.module.CountingOnlyModule;
 
 @Getter
 @Accessors(fluent = true)

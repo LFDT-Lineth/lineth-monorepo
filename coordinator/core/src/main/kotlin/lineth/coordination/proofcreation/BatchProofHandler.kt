@@ -1,9 +1,9 @@
 package lineth.coordination.proofcreation
 
-import lineth.persistence.BatchesRepository
 import lineth.domain.Batch
 import lineth.domain.ExecutionProofIndex
 import lineth.error.DuplicatedRecordException
+import lineth.persistence.BatchesRepository
 import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 

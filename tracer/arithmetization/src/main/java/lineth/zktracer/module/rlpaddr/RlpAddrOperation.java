@@ -19,13 +19,13 @@ import static lineth.zktracer.Trace.Rlpaddr.MAX_CT_CREATE;
 import static lineth.zktracer.Trace.Rlpaddr.MAX_CT_CREATE2;
 
 import java.math.BigInteger;
+import lineth.zktracer.container.ModuleOperation;
+import lineth.zktracer.module.limits.Keccak;
+import lineth.zktracer.opcode.OpCode;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
-import lineth.zktracer.container.ModuleOperation;
-import lineth.zktracer.module.limits.Keccak;
-import lineth.zktracer.opcode.OpCode;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.datatypes.Address;
 

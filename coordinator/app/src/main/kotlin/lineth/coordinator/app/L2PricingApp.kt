@@ -1,14 +1,10 @@
 package lineth.coordinator.app
 
 import io.vertx.core.Vertx
+import lineth.LongRunningService
 import lineth.coordinator.config.toJsonRpcRetry
 import lineth.coordinator.config.v2.L2NetworkGasPricingConfig
-import lineth.LongRunningService
 import lineth.ethapi.EthApiClient
-import lineth.jsonrpc.client.VertxHttpJsonRpcClientFactory
-import lineth.kotlin.toKWeiUInt
-import lineth.metrics.MetricsFacade
-import lineth.web3j.ethapi.createEthApiClient
 import lineth.ethereum.gaspricing.BoundableFeeCalculator
 import lineth.ethereum.gaspricing.staticcap.ExtraDataV1UpdaterImpl
 import lineth.ethereum.gaspricing.staticcap.FeeHistoryFetcherImpl
@@ -17,6 +13,10 @@ import lineth.ethereum.gaspricing.staticcap.L2CalldataSizeAccumulatorImpl
 import lineth.ethereum.gaspricing.staticcap.MinerExtraDataV1CalculatorImpl
 import lineth.ethereum.gaspricing.staticcap.TransactionCostCalculator
 import lineth.ethereum.gaspricing.staticcap.VariableFeesCalculator
+import lineth.jsonrpc.client.VertxHttpJsonRpcClientFactory
+import lineth.kotlin.toKWeiUInt
+import lineth.metrics.MetricsFacade
+import lineth.web3j.ethapi.createEthApiClient
 import org.apache.logging.log4j.LogManager
 import java.util.concurrent.CompletableFuture
 import kotlin.time.Duration
