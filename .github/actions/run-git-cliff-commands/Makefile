@@ -35,6 +35,13 @@
 MK_DIR      := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 SCRIPTS_DIR := $(MK_DIR)/scripts
 
+# Recipes rely on bash (set -o pipefail, errexit, nounset). /bin/sh is dash on
+# Debian/Ubuntu, which lacks 'pipefail', so pin bash and apply the flags to every
+# recipe here instead of a per-recipe `set -euo pipefail`. bash is already a hard
+# dependency (every scripts/*.sh is a bash script).
+SHELL       := bash
+.SHELLFLAGS := -eu -o pipefail -c
+
 # Overridable inputs (mostly for the *-dry-run targets).
 TEMPLATE               ?= cliff.template.toml
 RELEASE_TAG_SUFFIX     ?=
@@ -86,8 +93,7 @@ version-dry-run:
 	@test -n "$$COMPONENT"    || { echo 'COMPONENT is required (COMPONENT=...)'       >&2; exit 1; }
 	@test -n "$$INCLUDE_PATH" || { echo 'INCLUDE_PATH is required (INCLUDE_PATH=...)' >&2; exit 1; }
 	@test -n "$$SCOPES"       || { echo 'SCOPES is required (SCOPES=...)'             >&2; exit 1; }
-	@set -euo pipefail; \
-	 include_paths="$$($(SCRIPTS_DIR)/paths.sh)"; \
+	@include_paths="$$($(SCRIPTS_DIR)/paths.sh)"; \
 	 config="$$($(SCRIPTS_DIR)/render.sh | sed 's/^config=//')"; \
 	 INCLUDE_PATHS="$$include_paths" CLIFF_CONFIG="$$config" $(SCRIPTS_DIR)/version.sh
 
@@ -95,8 +101,7 @@ changelog-dry-run:
 	@test -n "$$COMPONENT"    || { echo 'COMPONENT is required (COMPONENT=...)'       >&2; exit 1; }
 	@test -n "$$INCLUDE_PATH" || { echo 'INCLUDE_PATH is required (INCLUDE_PATH=...)' >&2; exit 1; }
 	@test -n "$$SCOPES"       || { echo 'SCOPES is required (SCOPES=...)'             >&2; exit 1; }
-	@set -euo pipefail; \
-	 include_paths="$$($(SCRIPTS_DIR)/paths.sh)"; \
+	@include_paths="$$($(SCRIPTS_DIR)/paths.sh)"; \
 	 config="$$($(SCRIPTS_DIR)/render.sh | sed 's/^config=//')"; \
 	 vout="$$(INCLUDE_PATHS="$$include_paths" CLIFF_CONFIG="$$config" $(SCRIPTS_DIR)/version.sh)"; \
 	 changed="$$(printf '%s\n' "$$vout" | sed -n 's/^changed=//p')"; \
@@ -115,8 +120,7 @@ prepend-dry-run:
 	@test -n "$$INCLUDE_PATH" || { echo 'INCLUDE_PATH is required (INCLUDE_PATH=...)' >&2; exit 1; }
 	@test -n "$$SCOPES"       || { echo 'SCOPES is required (SCOPES=...)'             >&2; exit 1; }
 	@test -n "$$FOLDER_NAME"  || { echo 'FOLDER_NAME is required (FOLDER_NAME=...)'   >&2; exit 1; }
-	@set -euo pipefail; \
-	 include_paths="$$($(SCRIPTS_DIR)/paths.sh)"; \
+	@include_paths="$$($(SCRIPTS_DIR)/paths.sh)"; \
 	 config="$$($(SCRIPTS_DIR)/render.sh | sed 's/^config=//')"; \
 	 vout="$$(INCLUDE_PATHS="$$include_paths" CLIFF_CONFIG="$$config" $(SCRIPTS_DIR)/version.sh)"; \
 	 changed="$$(printf '%s\n' "$$vout" | sed -n 's/^changed=//p')"; \
