@@ -1,6 +1,6 @@
 package linea
 
-import linea.contract.l1.LineaRollupContractVersion
+import linea.contract.l1.LinethRollupContractVersion
 import linea.testing.CommandResult
 import linea.testing.Runner
 import org.hyperledger.besu.datatypes.Address
@@ -8,8 +8,8 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 
-internal val lineaRollupAddressPattern = Pattern.compile(
-  "^contract=LineaRollup(?:.*)? deployed: address=(0x[0-9a-fA-F]{40}) blockNumber=(\\d+)",
+internal val linethRollupAddressPattern = Pattern.compile(
+  "^contract=LinethRollup(?:.*)? deployed: address=(0x[0-9a-fA-F]{40}) blockNumber=(\\d+)",
 )
 internal val l2MessageServiceAddressPattern = Pattern.compile(
   "^contract=L2MessageService(?:.*)? deployed: address=(0x[0-9a-fA-F]{40}) blockNumber=(\\d+)",
@@ -67,28 +67,28 @@ private fun deployContract(
     }
 }
 
-fun makeDeployLineaRollup(
+fun makeDeployLinethRollup(
   deploymentPrivateKey: String? = null,
   operatorsAddresses: List<String>,
-  contractVersion: LineaRollupContractVersion,
+  contractVersion: LinethRollupContractVersion,
 ): SafeFuture<DeployedContract> {
   val env = mutableMapOf(
-    "LINEA_ROLLUP_OPERATORS" to operatorsAddresses.joinToString(","),
+    "LINETH_ROLLUP_OPERATORS" to operatorsAddresses.joinToString(","),
     // "HARDHAT_DISABLE_CACHE" to "true"
   )
   deploymentPrivateKey?.let { env["DEPLOYMENT_PRIVATE_KEY"] = it }
   val command = when (contractVersion) {
-    LineaRollupContractVersion.V6 -> "make deploy-linea-rollup-v6"
-    LineaRollupContractVersion.V7 -> "make deploy-linea-rollup-v7"
-    LineaRollupContractVersion.V8 -> "make deploy-linea-rollup-v8"
-    LineaRollupContractVersion.V9 -> "make deploy-lineth-rollup-v9-stub"
+    LinethRollupContractVersion.V6 -> "make deploy-lineth-rollup-v6"
+    LinethRollupContractVersion.V7 -> "make deploy-lineth-rollup-v7"
+    LinethRollupContractVersion.V8 -> "make deploy-lineth-rollup-v8"
+    LinethRollupContractVersion.V9 -> "make deploy-lineth-rollup-v9-stub"
     // else -> throw IllegalArgumentException("Unsupported contract version: $contractVersion")
   }
 
   return deployContract(
     command = command,
     env = env,
-    addressPattern = lineaRollupAddressPattern,
+    addressPattern = linethRollupAddressPattern,
   )
 }
 
@@ -118,17 +118,17 @@ fun logCommand(commandResult: CommandResult) {
 
 fun main() {
   SafeFuture.collectAll(
-    makeDeployLineaRollup(
+    makeDeployLinethRollup(
       L1AccountManager.generateAccount().privateKey,
       listOf("03dfa322A95039BB679771346Ee2dBfEa0e2B773"),
-      LineaRollupContractVersion.V6,
+      LinethRollupContractVersion.V6,
     ),
     makeDeployL2MessageService(
       L2AccountManager.generateAccount().privateKey,
       "03dfa322A95039BB679771346Ee2dBfEa0e2B773",
     ),
   ).thenApply { addresses ->
-    println("LineaRollup address: ${addresses[0]}")
+    println("LinethRollup address: ${addresses[0]}")
     println("L2MessageService address: ${addresses[1]}")
   }.join()
 }

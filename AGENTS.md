@@ -204,8 +204,8 @@ After writing or editing code, check LSP diagnostics and fix any type errors or 
 |---------|-----------|---------|
 | TS/JS files | kebab-case | `message-service.ts` |
 | React components | PascalCase | `ResultsPanel.tsx` |
-| Solidity files | PascalCase | `LineaRollup.sol` |
-| Solidity interfaces | `I` prefix + PascalCase | `ILineaRollup.sol` |
+| Solidity files | PascalCase | `LinethRollup.sol` |
+| Solidity interfaces | `I` prefix + PascalCase | `ILinethRollup.sol` |
 | Kotlin files | PascalCase | `CoordinatorApp.kt` |
 | Go files | snake_case | `blob_compressor.go` |
 | Branch names | `type/issue#-short-description` | `feature/123-add-login-button` |

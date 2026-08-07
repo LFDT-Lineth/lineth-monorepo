@@ -1,7 +1,7 @@
 package linea.coordinator.app
 
 import io.vertx.core.Vertx
-import linea.contract.l1.LineaRollupSmartContractClientReadOnly
+import linea.contract.l1.LinethRollupSmartContractClientReadOnly
 import linea.domain.BlockParameter
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -14,18 +14,18 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Duration.Companion.milliseconds
 
 class L1BasedLastFinalizedBlockProviderTest {
-  private lateinit var lineaRollupClient: LineaRollupSmartContractClientReadOnly
+  private lateinit var linethRollupClient: LinethRollupSmartContractClientReadOnly
 
   @BeforeEach
   fun beforeEach() {
-    lineaRollupClient =
-      mock<LineaRollupSmartContractClientReadOnly>(defaultAnswer = Mockito.RETURNS_DEEP_STUBS)
+    linethRollupClient =
+      mock<LinethRollupSmartContractClientReadOnly>(defaultAnswer = Mockito.RETURNS_DEEP_STUBS)
   }
 
   @Test
   fun `shall wait number of blocks before returning for consistency`() {
     val replies = listOf(100UL, 100UL, 101UL, 101UL, 101UL, 101UL)
-    whenever(lineaRollupClient.finalizedL2BlockNumber(eq(BlockParameter.Tag.LATEST)))
+    whenever(linethRollupClient.finalizedL2BlockNumber(eq(BlockParameter.Tag.LATEST)))
       .thenReturn(
         SafeFuture.completedFuture(replies[0]),
         *replies.subList(1, replies.size).map { SafeFuture.completedFuture(it) }.toTypedArray(),
@@ -34,7 +34,7 @@ class L1BasedLastFinalizedBlockProviderTest {
     val resumerCalculator =
       L1BasedLastFinalizedBlockProvider(
         Vertx.vertx(),
-        lineaRollupClient,
+        linethRollupClient,
         consistentNumberOfBlocksOnL1 = 3u,
         numberOfRetries = 50u,
         pollingInterval = 10.milliseconds,

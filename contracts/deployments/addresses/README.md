@@ -56,11 +56,11 @@ Single address:
 }
 ```
 
-Multiple addresses (for env vars such as `LINEA_ROLLUP_OPERATORS`):
+Multiple addresses (for env vars such as `LINETH_ROLLUP_OPERATORS`):
 
 ```json
 {
-  "LINEA_ROLLUP_OPERATORS": {
+  "LINETH_ROLLUP_OPERATORS": {
     "addresses": [
       { "address": "0x...", "notes": "L1 Finalization Operator EOA" },
       { "address": "0x...", "notes": "L1 Data Submission Operator EOA" }
@@ -94,14 +94,14 @@ Deploy scripts look up `contractKey` first, then `envVarName` when they differ. 
 
 | Key | Env var equivalent | Notes |
 |-----|--------------------|-------|
-| `LineaRollup` | `LINEA_ROLLUP_ADDRESS` | Transparent upgradeable proxy (L1) |
+| `LinethRollup` | `LINETH_ROLLUP_ADDRESS` | Transparent upgradeable proxy (L1) |
 | `Validium` | — | Transparent upgradeable proxy (L1) |
 | `L2MessageService` | `L2_MESSAGE_SERVICE_ADDRESS` | Transparent upgradeable proxy (L2) |
 | `TokenBridge_L1` | `TOKEN_BRIDGE_ADDRESS` (when `DEPLOY_TOKEN_BRIDGE_ON_L1=true`) | L1 token bridge proxy |
 | `TokenBridge_L2` | `TOKEN_BRIDGE_ADDRESS` (when `DEPLOY_TOKEN_BRIDGE_ON_L1` unset) | L2 token bridge proxy |
 | `CallForwardingProxy` | — | CallForwardingProxy (L1) |
 | `YieldManager` | `YIELD_MANAGER_ADDRESS` | YieldManager proxy (L1) |
-| `AddressFilter` | `LINEA_ROLLUP_ADDRESS_FILTER` | AddressFilter (L1) |
+| `AddressFilter` | `LINETH_ROLLUP_ADDRESS_FILTER` | AddressFilter (L1) |
 | `RollupRevenueVault` | `ROLLUP_REVENUE_VAULT_ADDRESS` | RollupRevenueVault proxy (L2) |
 | `L1_SECURITY_COUNCIL` | `L1_SECURITY_COUNCIL` | L1 security council multisig |
 | `L2_SECURITY_COUNCIL` | `L2_SECURITY_COUNCIL` | L2 security council multisig |
@@ -110,7 +110,7 @@ Deploy scripts look up `contractKey` first, then `envVarName` when they differ. 
 | `VAULT_FACTORY` | `VAULT_FACTORY` | Lido Staking Vault Factory (L1) |
 | `STETH` | `STETH` | Lido stETH token proxy (L1) |
 | `LINEA_TOKEN` | `LINEA_TOKEN` | Linea token for the current chain registry |
-| `LINEA_ROLLUP_OPERATORS` | `LINEA_ROLLUP_OPERATORS` | Comma-delimited L1 operator EOAs |
+| `LINETH_ROLLUP_OPERATORS` | `LINETH_ROLLUP_OPERATORS` | Comma-delimited L1 operator EOAs |
 | `VALIDIUM_OPERATORS` | `VALIDIUM_OPERATORS` | Comma-delimited Validium operator EOAs |
 | `L1_RESERVED_TOKEN_ADDRESSES` | `L1_RESERVED_TOKEN_ADDRESSES` | Optional comma-delimited L1 reserved token addresses (defaults to `[]` if absent) |
 | `L2_RESERVED_TOKEN_ADDRESSES` | `L2_RESERVED_TOKEN_ADDRESSES` | Optional comma-delimited L2 reserved token addresses (defaults to `[]` if absent) |

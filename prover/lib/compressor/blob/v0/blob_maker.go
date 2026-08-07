@@ -470,7 +470,7 @@ func (bm *BlobMaker) WorstCompressedBlockSize(rlpBlock []byte) (bool, int, error
 		return false, -1, fmt.Errorf("failed to decode RLP block: %w", err)
 	}
 
-	// encode the block in Linea format.
+	// encode the block in Lineth format.
 	var buf bytes.Buffer
 	if err := EncodeBlockForCompression(&block, &buf); err != nil {
 		return false, -1, fmt.Errorf("failed to encode block: %w", err)
@@ -512,7 +512,7 @@ func (bm *BlobMaker) WorstCompressedTxSize(rlpTx []byte) (int, error) {
 		return -1, err
 	}
 
-	// encode the transaction in Linea format.
+	// encode the transaction in Lineth format.
 	var buf bytes.Buffer
 	if err := EncodeTxForCompression(&tx, &buf); err != nil {
 		return -1, fmt.Errorf("failed to encode transaction: %w", err)

@@ -7,9 +7,8 @@ include "../utils/sign_extend.zkc"
 include "../utils/signed_comparisons.zkc"
 include "../utils/multiplication.zkc"
 include "../../lib/keccak/impl.zkc"
-// TODO: poseidon2 is commented out for now until the "dangling register" issue
-// is resolved.
-//include "../../lib/poseidon2/ram.zkc"
+include "../../lib/io/write_output.zkc"
+include "../../lib/poseidon2/ram.zkc"
 
 // Process a RISC-V R-type instruction, writing the result into the register file.
 //
@@ -41,7 +40,10 @@ include "../../lib/keccak/impl.zkc"
 // treat register values as two's-complement integers.  Division and remainder
 // follow RISC-V semantics: division by zero returns −1 (or the dividend for REM),
 // and signed overflow (INT_MIN / −1) returns INT_MIN (or 0 for REM).
-fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2, state_row3, state_row4, b0, b1, b2, b3, b4, c, d, padded_input_block>(opcode:Opcode, instruction_parameters:u25) {
+fn process_R_type_instruction<registers, ram, keccak_state, poseidon2_state>(opcode:Opcode, instruction_parameters:u25,
+output_write_address:OutputAddress) ->
+(new_output_write_address:OutputAddress) {
+
     var funct7:Funct7
     var rs2:Register
     var rs1:Register
@@ -323,6 +325,7 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
         case R_KECCAK: {
             printf "KECCAK precompile "
             keccak(v1 as Address, v2 as u32, registers[rd] as Address)
+            new_output_write_address = output_write_address
             return
         }
         case R_POSEIDON2: {
@@ -331,8 +334,14 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
             // poseidon2(input_addr, output_addr) applies the permutation to the
             // STATE_WIDTH field elements at input_addr, writing the result to output_addr.
 
-            // TODO: poseidon2 comment out until the "dangling register" issue resolved.
-            //poseidon2(v1 as Address, registers[rd] as Address)
+            poseidon2(v1 as Address, registers[rd] as Address)
+            new_output_write_address = output_write_address
+            return
+        }
+
+        case R_WRITE_OUTPUT: {
+            printf "zkvm_io.write_output call "
+            new_output_write_address = write_output(v1 as Address, v2 as OutputSize, output_write_address)
             return
         }
 
@@ -348,5 +357,5 @@ fn process_R_type_instruction<registers, ram, state_row0, state_row1, state_row2
     // For all operation except custom opcode, write the result in registers[rd]
     // Note that for opcode == CUSTOM_1 we already returned, so nothin is written
     registers[rd] = tmpDWord1
+    new_output_write_address = output_write_address
 }
-

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.33;
 
-import { LineaRollupBase } from "../LineaRollupBase.sol";
+import { LinethRollupBase } from "../LinethRollupBase.sol";
 import { IProvideShnarf } from "./interfaces/IProvideShnarf.sol";
 
 /**
@@ -9,7 +9,7 @@ import { IProvideShnarf } from "./interfaces/IProvideShnarf.sol";
  * @author ConsenSys Software Inc.
  * @custom:security-contact security-report@linea.build
  */
-abstract contract LocalShnarfProvider is IProvideShnarf, LineaRollupBase {
+abstract contract LocalShnarfProvider is IProvideShnarf, LinethRollupBase {
   /**
    * @notice Returns if the shnarf exists.
    * @dev Value > 0 means that it exists. Default is 1.

@@ -23,7 +23,7 @@ java {
 }
 
 group = 'build.linea'
-description = 'Linea chain security interfaces'
+description = 'Lineth chain security interfaces'
 // publishing.gradle uses project.artifactId when set (or else falling back to project.name)
 ext.artifactId = 'sequencer-interfaces'
 

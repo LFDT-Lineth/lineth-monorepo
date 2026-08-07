@@ -42,7 +42,7 @@ object CoordinatorConfigDocsSpec : ConfigDocsSpec {
     ),
     ConfigFileRoot(
       label = "smart-contract-errors",
-      description = "Mapping of Linea smart-contract revert error codes to messages.",
+      description = "Mapping of Lineth smart-contract revert error codes to messages.",
       rootClass = SmartContractErrorCodesConfigFileToml::class,
     ),
   )
@@ -51,4 +51,13 @@ object CoordinatorConfigDocsSpec : ConfigDocsSpec {
   override val markdownPath = "docs/tech/components/coordinator-config-reference.md"
   override val markdownTitle = "Coordinator Configuration Reference"
   override val regenerateCommand = "./gradlew :coordinator:app:generateConfigDocs"
+
+  /**
+   * Ephemeral MDX partial output path, relative to the repository root. Lives under the
+   * `coordinator/app/build/` directory (gitignored) so it is never committed; the
+   * `coordinator-config-docs` workflow uploads it as an immutable artifact and publishes only
+   * `docs/stack/reference/_generated/coordinator/` to Consensys/doc.linea.
+   */
+  override val mdxPartialPath =
+    "coordinator/app/build/config-docs-mdx/_generated/coordinator/reference.mdx"
 }

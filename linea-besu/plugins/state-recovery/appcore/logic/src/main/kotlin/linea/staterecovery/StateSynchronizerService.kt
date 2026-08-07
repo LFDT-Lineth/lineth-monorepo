@@ -17,7 +17,7 @@ class StateSynchronizerService(
   private val vertx: Vertx,
   private val l1EarliestBlockWithFinalizationThatSupportRecovery: BlockParameter,
   private val elClient: ExecutionLayerClient,
-  private val submissionEventsClient: LineaRollupSubmissionEventsClient,
+  private val submissionEventsClient: LinethRollupSubmissionEventsClient,
   private val blobsFetcher: BlobFetcher,
   private val transactionDetailsClient: TransactionDetailsClient,
   private val blobDecompressor: BlobDecompressorAndDeserializer,

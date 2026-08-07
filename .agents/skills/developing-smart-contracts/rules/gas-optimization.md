@@ -2,7 +2,7 @@
 
 **Impact: CRITICAL (performance and user cost)**
 
-Gas efficiency is critical for Linea contracts. Apply these rules unless there is a
+Gas efficiency is critical for Lineth contracts. Apply these rules unless there is a
 documented safety, audit, or readability reason to deviate.
 
 ## Calldata and External Functions

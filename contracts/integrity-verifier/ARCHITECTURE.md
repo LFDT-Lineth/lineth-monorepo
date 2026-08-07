@@ -628,10 +628,10 @@ ERC-7201 defines a standard for computing storage slots in upgradeable contracts
 Base Slot Calculation:
 ┌───────────────────────────────────────────────────────────────────────────────┐
 │                                                                               │
-│   namespace = "linea.storage.YieldManager"                                    │
+│   namespace = "linea.storage.YieldManagerStorage"                             │
 │                                                                               │
 │   Step 1: keccak256(namespace)                                                │
-│           = keccak256("linea.storage.YieldManager")                           │
+│           = keccak256("linea.storage.YieldManagerStorage")                    │
 │           = 0xdc1272075efdca0b85fb2d76cbb5f26d954dc18e040d6d0b67071bd5cbd043a1│
 │                                                                               │
 │   Step 2: Subtract 1                                                          │
@@ -689,7 +689,7 @@ Base Slot Calculation:
 ```solidity
 // YieldManagerStorage.sol
 
-/// @custom:storage-location erc7201:linea.storage.YieldManager
+/// @custom:storage-location erc7201:linea.storage.YieldManagerStorage
 struct YieldManagerStorage {
     uint16 minimumReserveBps;      // slot 0, offset 0
     uint16 targetReserveBps;       // slot 0, offset 2  (packed)
@@ -712,7 +712,7 @@ struct ProviderData {
 {
   "structs": {
     "YieldManagerStorage": {
-      "namespace": "linea.storage.YieldManager",
+      "namespace": "linea.storage.YieldManagerStorage",
       "baseSlot": "0xdc1272075efdca0b85fb2d76cbb5f26d954dc18e040d6d0b67071bd5cbd04300",
       "fields": {
         "minimumReserveBps": { "slot": 0, "type": "uint16", "byteOffset": 0 },

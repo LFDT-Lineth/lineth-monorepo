@@ -3,7 +3,7 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "_lineaRollup",
+          "name": "_rollup",
           "type": "address"
         },
         {

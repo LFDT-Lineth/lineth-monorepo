@@ -53,6 +53,7 @@ import { AccountNotFoundError, AccountNotFoundErrorType } from "../errors/accoun
 import { GetAccountParameter } from "../types/account";
 import { computeMessageHash } from "../utils/computeMessageHash";
 import { getNextMessageNonce, GetNextMessageNonceErrorType } from "../utils/getNextMessageNonce";
+import { resolveRollupAddress, ResolveRollupAddressErrorType } from "../utils/resolveRollupAddress";
 
 export type DepositParameters<
   chain extends Chain | undefined = Chain | undefined,
@@ -71,7 +72,7 @@ export type DepositParameters<
     amount: bigint;
     data?: Hex;
     // defaults to the message service address for the chain
-    lineaRollupAddress?: Address;
+    rollupAddress?: Address;
     // defaults to the L2 message service address for the chain
     l2MessageServiceAddress?: Address;
     // defaults to the L1 token bridge address for the chain
@@ -94,7 +95,8 @@ export type DepositErrorType =
   | EncodeAbiParametersErrorType
   | ChainNotFoundErrorType
   | ClientChainNotConfiguredErrorType
-  | AccountNotFoundErrorType;
+  | AccountNotFoundErrorType
+  | ResolveRollupAddressErrorType;
 
 /**
  * Deposits tokens from L1 to L2 or ETH if `token` is set to `zeroAddress`.
@@ -187,7 +189,7 @@ export async function deposit<
   const l1ChainId = client.chain.id;
   const l2ChainId = l2Client.chain.id;
 
-  const lineaRollupAddress = parameters.lineaRollupAddress ?? getContractsAddressesByChainId(l1ChainId).messageService;
+  const rollupAddress = resolveRollupAddress(l1ChainId, parameters.rollupAddress);
   const l2MessageServiceAddress =
     parameters.l2MessageServiceAddress ?? getContractsAddressesByChainId(l2ChainId).messageService;
   const l1TokenBridgeAddress = parameters.l1TokenBridgeAddress ?? getContractsAddressesByChainId(l1ChainId).tokenBridge;
@@ -197,7 +199,7 @@ export async function deposit<
     return depositETH(client, {
       l2Client,
       account,
-      lineaRollupAddress,
+      rollupAddress,
       l2MessageServiceAddress,
       to: to as Address,
       fee,
@@ -210,7 +212,7 @@ export async function deposit<
   return depositERC20(client, {
     l2Client,
     account,
-    lineaRollupAddress,
+    rollupAddress,
     l2MessageServiceAddress,
     l1TokenBridgeAddress,
     l2TokenBridgeAddress,
@@ -433,7 +435,7 @@ async function depositETH<
   parameters: {
     l2Client: Client<Transport, chainL2, accountL2>;
     account: Account;
-    lineaRollupAddress: Address;
+    rollupAddress: Address;
     l2MessageServiceAddress: Address;
     to: Address;
     fee: bigint | undefined;
@@ -445,24 +447,14 @@ async function depositETH<
     >;
   },
 ): Promise<DepositReturnType> {
-  const {
-    l2Client,
-    account: account_,
-    lineaRollupAddress,
-    l2MessageServiceAddress,
-    amount,
-    to,
-    data,
-    fee,
-    tx,
-  } = parameters;
+  const { l2Client, account: account_, rollupAddress, l2MessageServiceAddress, amount, to, data, fee, tx } = parameters;
 
   let bridgingFee = fee ?? 0n;
 
   if (fee === undefined) {
     const [nextMessageNonce, { baseFeePerGas }, { maxPriorityFeePerGas }] = await Promise.all([
       getNextMessageNonce(client, {
-        lineaRollupAddress,
+        rollupAddress,
       }),
       getBlock(l2Client, { blockTag: "latest" }),
       estimateFeesPerGas(l2Client, { type: "eip1559", chain: l2Client.chain }),
@@ -479,7 +471,7 @@ async function depositETH<
   }
 
   return sendTransaction(client, {
-    to: lineaRollupAddress,
+    to: rollupAddress,
     value: amount + bridgingFee,
     account: account_,
     data: encodeFunctionData({
@@ -503,7 +495,7 @@ async function depositERC20<
   parameters: {
     l2Client: Client<Transport, chainL2, accountL2>;
     account: Account;
-    lineaRollupAddress: Address;
+    rollupAddress: Address;
     l2MessageServiceAddress: Address;
     l1TokenBridgeAddress: Address;
     l2TokenBridgeAddress: Address;
@@ -524,7 +516,7 @@ async function depositERC20<
     account,
     l1TokenBridgeAddress,
     l2TokenBridgeAddress,
-    lineaRollupAddress,
+    rollupAddress,
     l2MessageServiceAddress,
     l1ChainId,
     l2ChainId,
@@ -540,7 +532,7 @@ async function depositERC20<
   if (fee === undefined) {
     const [nextMessageNonce, { baseFeePerGas }, { maxPriorityFeePerGas }] = await Promise.all([
       getNextMessageNonce(client, {
-        lineaRollupAddress,
+        rollupAddress,
       }),
       getBlock(l2Client, { blockTag: "latest" }),
       estimateFeesPerGas(l2Client, { type: "eip1559", chain: l2Client.chain }),

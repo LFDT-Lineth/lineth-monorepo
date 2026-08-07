@@ -127,6 +127,7 @@ test-codegen:
 
 generate-testdata:
 	cd testdata/generate && go run .
+	cd testdata/generate/fri && go run .
 
 verify-testdata: generate-testdata
 	git diff --exit-code -- testdata/generated/*.zig
@@ -143,7 +144,7 @@ zkc-build: build-r5
 	$(call ELF_TO_JSON,$(R5_BIN),$(R5_JSON))
 
 zkc-verify: zkc-build
-	zkc exec -f -q $(R5_JSON) $(ZKC_MAIN)
+	zkc exec $(R5_JSON) $(ZKC_MAIN)
 
 zkc-verify-passing:
 	$(MAKE) zkc-verify EMBEDDED_INPUT=valid

@@ -125,6 +125,15 @@ func (r *Round) Next() (*Round, bool) {
 	return r.system.Rounds[r.ID+1], true
 }
 
+// EnsureNext returns the round immediately following this one, allocating one
+// via [System.NewRound] if this is currently the last round.
+func (r *Round) EnsureNext() *Round {
+	if next, ok := r.Next(); ok {
+		return next
+	}
+	return r.system.NewRound()
+}
+
 // NewCoinField declares a new random-coin challenge in this round, registers
 // it, and returns it. Coins are always extension-field elements.
 //

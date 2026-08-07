@@ -46,6 +46,7 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/grandproduct"
 )
 
 // PublicInputTag is the base tag under which this pass registers each handle's
@@ -294,42 +295,26 @@ func buildPermutationFactors(
 // (β + α^w + α^{w-1}·c_0 + … + c_{w-1}, the α^w sentinel letting participants
 // of a handle differ in width). A selected row contributes β + fold(row) and
 // an unselected row contributes the neutral factor 1 (dropping out of the
-// product). With no selector the factor is simply β + fold(row). The selector
-// is assumed {0,1}-valued and zero on padding rows.
+// product), via [grandproduct.SelectorFold]. With no selector the factor is
+// simply β + fold(row). The selector is assumed {0,1}-valued and zero on
+// padding rows; like the permutation compiler, this pass emits no binarity
+// constraint and the caller must constrain the selector itself.
 func permutationFold(alpha, beta *wiop.CoinField, tab wiop.Table) wiop.Expression {
-	fold := foldDenominator(alpha, beta, tab.Columns)
-	if tab.Selector == nil {
-		return fold
-	}
-	sel := wiop.Expression(tab.Selector)
-	one := wiop.NewConstantField(field.NewFromString("1"))
-	return wiop.Add(wiop.Mul(sel, fold), wiop.Sub(one, sel))
+	return grandproduct.SelectorFold(tab.Selector, foldDenominator(alpha, beta, tab.Columns))
 }
 
 // foldDenominator returns the width-binding row fold
 //
 //	β + α^w + α^{w-1}·c_0 + … + α·c_{w-2} + c_{w-1}
 //
-// where w = len(cols). The α^w "length sentinel" makes the encoding injective
-// across widths: two rows fold to the same polynomial in α only if they have
-// the same width AND the same entries, so participants of a handle may safely
-// differ in width — a shorter tuple can no longer alias a longer one with
-// leading zeros. Same-width participants get the same sentinel, so a balanced
-// bus stays balanced.
-//
-// The sentinel is folded in for free. Evaluating the coefficient sequence
-// [1, c_0, …, c_{w-1}] at α by Horner is exactly α^w + α^{w-1}·c_0 + … +
-// c_{w-1}; seeding acc = α + c_0 collapses the leading 1·α + c_0 step, so the
-// sentinel costs one extra addition and NO extra multiplication over the plain
-// RLC. α is always consulted, including the width-1 case (β + α + c_0).
+// where w = len(cols), via [grandproduct.RLCWithSentinel]. The α^w "length
+// sentinel" makes the encoding injective across widths, so participants of a
+// handle may safely differ in width — a shorter tuple can no longer alias a
+// longer one with leading zeros. Same-width participants get the same
+// sentinel, so a balanced bus stays balanced. α is always consulted, including
+// the width-1 case (β + α + c_0).
 func foldDenominator(alpha, beta *wiop.CoinField, cols []*wiop.ColumnView) wiop.Expression {
-	// acc = α + c_0 fuses the first two Horner steps (1·α + c_0), seeding the
-	// coefficient sequence [1, c_0, …] that carries the α^w length sentinel.
-	acc := wiop.Add(alpha, cols[0])
-	for _, c := range cols[1:] {
-		acc = wiop.Add(wiop.Mul(acc, alpha), c)
-	}
-	return wiop.Add(beta, acc)
+	return wiop.Add(beta, grandproduct.RLCWithSentinel(alpha, cols))
 }
 
 // CheckHandleSumInShard is the verifier action that closes the in-shard half

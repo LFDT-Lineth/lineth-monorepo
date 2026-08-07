@@ -100,10 +100,10 @@ jobs:
           anthropic_api_key: ${{ secrets.anthropic_api_key }}
           settings: '{"permissions":{"allow":["Bash(*)","Read(*)","Edit(./e2e-failure-analysis.md)","Edit(./e2e-failure-summary.txt)"],"deny":[]}}'
           prompt: |
-            You are analyzing a CI failure in the Linea monorepo's E2E test suite.
+            You are analyzing a CI failure in the Lineth monorepo's E2E test suite.
 
             ## Context
-            - Repository: Linea zkEVM monorepo (L2 zero-knowledge rollup)
+            - Repository: Lineth zkEVM monorepo (L2 zero-knowledge rollup)
             - E2E tests: Jest + Viem, run against a local Docker stack (coordinator,
               prover, sequencer, shomei, postman, L1/L2 nodes)
             - Tests cover: bridge tokens, messaging, submission/finalization, transaction

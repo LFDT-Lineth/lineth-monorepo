@@ -10,7 +10,7 @@ const context = createTestContext();
 const l2AccountManager = context.getL2AccountManager();
 
 describe("Linea besu fleet test suite", () => {
-  const lineaRollupV6 = context.l1Contracts.lineaRollup(context.l1PublicClient());
+  const linethRollupV6 = context.l1Contracts.linethRollup(context.l1PublicClient());
   const gasLeaderClient = context.l2PublicClient({ type: L2RpcEndpoint.BesuLeader });
   const gasFollowerClient = context.l2PublicClient({ type: L2RpcEndpoint.BesuFollower });
 
@@ -19,7 +19,7 @@ describe("Linea besu fleet test suite", () => {
     await awaitUntil(
       async () => {
         try {
-          return await lineaRollupV6.read.currentL2BlockNumber({ blockTag: "finalized" });
+          return await linethRollupV6.read.currentL2BlockNumber({ blockTag: "finalized" });
         } catch (err) {
           if (!(err as Error).message.includes("could not decode result data")) {
             throw err;

@@ -328,16 +328,16 @@ L1 to L2 message anchoring settings.
 
 ### `protocol`
 
-Linea protocol contract addresses and genesis settings.
+Lineth protocol contract addresses and genesis settings.
 
 | Key | Type | Required | Default | Status | Description |
 | --- | --- | --- | --- | --- | --- |
-| `protocol.genesis.genesis-shnarf` | `ByteArray` | yes | - | active | Genesis shnarf (starting shnarf) of the Linea chain (hex). Example: `0xc286ff42414401ccdc23ea8e738775378e8f6c6f7b2966eb2747798d45571b79`. |
-| `protocol.genesis.genesis-state-root-hash` | `ByteArray` | yes | - | active | Genesis state root hash of the Linea chain (hex). Example: `0x01d9afcd495c870f3ae9d8362cd0257a7de2057055058183596719285cae6101`. |
+| `protocol.genesis.genesis-shnarf` | `ByteArray` | yes | - | active | Genesis shnarf (starting shnarf) of the Lineth chain (hex). Example: `0xc286ff42414401ccdc23ea8e738775378e8f6c6f7b2966eb2747798d45571b79`. |
+| `protocol.genesis.genesis-state-root-hash` | `ByteArray` | yes | - | active | Genesis state root hash of the Lineth chain (hex). Example: `0x01d9afcd495c870f3ae9d8362cd0257a7de2057055058183596719285cae6101`. |
 | `protocol.l1.block-time` | `Duration` | no | `PT12S` | active | Average L1 block time, used for timing estimates. |
-| `protocol.l1.contract-address` | `String` | yes | - | active | Address of the Linea rollup contract on L1. Example: `0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9`. |
+| `protocol.l1.contract-address` | `String` | yes | - | active | Address of the Lineth rollup contract on L1. Example: `0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9`. |
 | `protocol.l1.contract-deployment-block-number` | `ULong?` | no | - | active | L1 block number at which the rollup contract was deployed. Omit if not applicable. Example: `3`. |
-| `protocol.l2.contract-address` | `String` | yes | - | active | Address of the Linea contract on L2. Example: `0xe537D669CA013d86EBeF1D64e40fC74CADC91987`. |
+| `protocol.l2.contract-address` | `String` | yes | - | active | Address of the Lineth contract on L2. Example: `0xe537D669CA013d86EBeF1D64e40fC74CADC91987`. |
 | `protocol.l2.contract-deployment-block-number` | `ULong?` | no | - | active | L2 block number at which the contract was deployed. Omit if not applicable. Example: `3`. |
 
 ### `prover`
@@ -493,11 +493,11 @@ L1 dynamic gas price cap time-of-day multipliers.
 
 ## smart-contract-errors
 
-Mapping of Linea smart-contract revert error codes to messages.
+Mapping of Lineth smart-contract revert error codes to messages.
 
 | Key | Type | Required | Default | Status | Description |
 | --- | --- | --- | --- | --- | --- |
-| `smart-contract-errors` | `Map<String, String>` | yes | - | active | Mapping of Linea smart-contract revert error codes to human-readable messages, used to decode on-chain rejection reasons. |
+| `smart-contract-errors` | `Map<String, String>` | yes | - | active | Mapping of Lineth smart-contract revert error codes to human-readable messages, used to decode on-chain rejection reasons. |
 
 ## Deprecated Keys
 

@@ -74,13 +74,13 @@ Swap `SCOPES`, the `--tag-pattern` component, and the `--include-path` set per c
 
 | Component | `SCOPES` | `--tag-pattern` component | `--include-path`(s) |
 |---|---|---|---|
-| coordinator | `coordinator\|deps\|misc` | `coordinator` | `coordinator/**` |
-| maru | `maru\|deps\|misc` | `maru` | `maru/**` |
-| postman | `postman\|deps\|misc` | `postman` | `postman/**` |
-| prover | `prover\|deps\|misc` | `prover` | `prover/**` |
-| tx-exclusion-api | `tx-exclusion-api\|deps\|misc` | `tx-exclusion-api` | `transaction-exclusion-api/**` |
-| linea-besu-package | `linea-besu\|tracer\|sequencer\|deps\|misc` | `linea-besu-package` | `tracer/**`, `tracer-constraints/**`, `linea-besu/plugins/linea-sequencer/**`, `linea-besu/besu/**`, `linea-besu/package/**`, `gradle/libs.versions.toml` |
-| linea (milestone) | `coordinator\|linea-besu\|tracer\|sequencer\|maru\|prover\|postman\|tx-exclusion-api\|deps\|misc` | `linea` | the union of every component path above |
+| `coordinator` | `coordinator\|deps\|misc` | `coordinator` | `coordinator/**` |
+| `maru` | `maru\|deps\|misc` | `maru` | `maru/**` |
+| `postman` | `postman\|deps\|misc` | `postman` | `postman/**` |
+| `prover` | `prover\|deps\|misc` | `prover` | `prover/**` |
+| `tx-exclusion-api` | `tx-exclusion-api\|deps\|misc` | `tx-exclusion-api` | `transaction-exclusion-api/**` |
+| `linea-besu-package` | `linea-besu\|tracer\|sequencer\|deps\|misc` | `linea-besu-package` | `tracer/**`, `tracer-constraints/**`, `linea-besu/plugins/linea-sequencer/**`, `linea-besu/besu/**`, `linea-besu/package/**`, `gradle/libs.versions.toml` |
+| `linea` (milestone) | `coordinator\|linea-besu\|tracer\|sequencer\|maru\|prover\|postman\|tx-exclusion-api\|deps\|misc` | `linea` | the union of every component path above |
 
 Notes:
 
@@ -142,7 +142,7 @@ The milestone workflow defaults to running a **dry run on a temporary branch for
 
 ## Looking for the Lineth code?
 
-Linea's stack is made up of multiple repositories, these include:
+Lineth's stack is made up of multiple repositories. These include:
 
 - This repo, [lineth-monorepo](https://github.com/LFDT-Lineth/lineth-monorepo): The main repository for the Lineth stack & Linea network
 > Also maintains a set of Linea-Besu plugins for the sequencer and RPC nodes.

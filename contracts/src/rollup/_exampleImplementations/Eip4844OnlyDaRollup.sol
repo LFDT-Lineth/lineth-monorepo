@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.33;
 import { Eip4844BlobAcceptor } from "../dataAvailability/Eip4844BlobAcceptor.sol";
-import { LineaRollupBase } from "../LineaRollupBase.sol";
+import { LinethRollupBase } from "../LinethRollupBase.sol";
 import { L1MessageService } from "../../messaging/l1/L1MessageService.sol";
 import { IMessageService } from "../../messaging/interfaces/IMessageService.sol";
 
 /// @custom:oz-upgrades-unsafe-allow missing-initializer
-contract Eip4844OnlyDaRollup is LineaRollupBase, Eip4844BlobAcceptor {
+contract Eip4844OnlyDaRollup is LinethRollupBase, Eip4844BlobAcceptor {
   error DirectETHSendingDisallowed();
   error FeeSendingDisallowed();
   error OnlyAllowedSendersToRemoteReceiver();
@@ -42,7 +42,7 @@ contract Eip4844OnlyDaRollup is LineaRollupBase, Eip4844BlobAcceptor {
     );
 
     _blobShnarfExists[genesisShnarf] = SHNARF_EXISTS_DEFAULT_VALUE;
-    __LineaRollup_init(_initializationData, genesisShnarf);
+    __LinethRollup_init(_initializationData, genesisShnarf);
   }
 
   function setAllowedMessageSenderState(
