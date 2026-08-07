@@ -48,6 +48,17 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
+// PublicInputTag is the base tag under which this pass registers each handle's
+// accumulator cell as a public input. Handles are processed in alphabetical
+// order and the tag is suffixed by that index, so the handles of a shard get
+// MessageBus_0, MessageBus_1, … — retrieve one with
+// sys.LookupPublicInputByTag(PublicInputTag, i). The index is the handle's
+// position in [wiop.System.MessageBusHandles]; since every shard sorts its
+// handles the same way, index i denotes the same handle on every shard, which is
+// what lets the cross-shard layer match up by position. This numbering is why
+// [Compile] is single-invocation per system.
+const PublicInputTag wiop.PublicInputTag = "MessageBus"
+
 // Compile reduces every unreduced [wiop.MessageBus] entry in sys to a
 // collection of [wiop.GrandProduct] queries (one per handle) plus one
 // [wiop.VerifierAction] per handle that asserts the shard's product equals
@@ -62,20 +73,30 @@ import (
 // [Round.RegisterPreSamplingHook]); ensureRoundAfter reuses existing tail
 // rounds rather than appending duplicates.
 //
+// Compile must be invoked at most once per system: it tags each handle's
+// accumulator public input with the handle's index in this call's alphabetical
+// order (see [PublicInputTag]), so a second batch of entries would restart that
+// numbering at zero — colliding with the already-registered tags, and breaking
+// the property that index i denotes the same handle on every shard. Declare every
+// message-bus entry before calling Compile. Every consumed entry is marked
+// reduced on return, and a repeat call that finds nothing new is a harmless
+// no-op.
+//
 // Panics if the unreduced entries do not all share the same
 // [wiop.MessageBus.OriginShard] — Compile is a per-shard operation and
-// mixing shards in one call is a misuse.
-//
-// Already-reduced entries are skipped; remaining unreduced entries are marked
-// reduced on return.
+// mixing shards in one call is a misuse — or if it is called a second time with
+// new entries.
 func Compile(sys *wiop.System) {
 	// Collect every unreduced MessageBus entry in declaration order, indexed by
 	// handle. Sort the handles for deterministic round/coin/cell ordering
 	// across runs.
 	byHandle := map[string][]*wiop.MessageBus{}
-	var anyEntry *wiop.MessageBus
+	var anyEntry, anyReduced *wiop.MessageBus
 	for _, mb := range sys.MessageBuses {
 		if mb.IsReduced() {
+			if anyReduced == nil {
+				anyReduced = mb
+			}
 			continue
 		}
 		if anyEntry == nil {
@@ -91,7 +112,26 @@ func Compile(sys *wiop.System) {
 		byHandle[mb.Handle] = append(byHandle[mb.Handle], mb)
 	}
 	if len(byHandle) == 0 {
+		// Nothing left to reduce. A repeat call with no new entries is a
+		// harmless no-op, whether or not a previous call already ran.
 		return
+	}
+
+	// Compile is single-invocation per system: it numbers each handle's
+	// public-input tag by the handle's index in this call's alphabetical order
+	// (MessageBus_0, MessageBus_1, …). A second batch would restart that
+	// numbering at zero and collide with the tags the first batch registered, and
+	// the index would no longer identify the same handle across shards. Reduced
+	// entries alongside unreduced ones are exactly that second batch, so refuse
+	// it here rather than failing later inside RegisterPublicInputs.
+	if anyReduced != nil {
+		panic(fmt.Sprintf(
+			"wiop/compilers/messagebus: Compile must be invoked at most once per system, but it is being "+
+				"called again with new entries: %q (handle %q) is already reduced while %q (handle %q) is not. "+
+				"Declare every message-bus entry before the single Compile call.",
+			anyReduced.Context().Path(), anyReduced.Handle,
+			anyEntry.Context().Path(), anyEntry.Handle,
+		))
 	}
 	handles := make([]string, 0, len(byHandle))
 	for h := range byHandle {
@@ -135,17 +175,17 @@ func Compile(sys *wiop.System) {
 	// accumulator holding this shard's product on that handle (expected 1),
 	// discharged later by grandproduct.Compile.
 	cellByHandle := make(map[string]*wiop.Cell, len(handles))
-	for _, h := range handles {
+	for i, h := range handles {
 		entries := byHandle[h]
 		nums, dens := buildPermutationFactors(alpha, beta, entries)
 		gp := sys.NewGrandProduct(compCtx.Childf("handle-%s", h), nums, dens)
 		cellByHandle[h] = gp.Result
 
-		// Expose this handle's accumulator as a public input, in the sorted
-		// handle order of this loop (fixed at compile time) — so MessageBus[i] refers to the same handle
-		// on every shard, which is what lets the cross-shard layer check by
-		// position.
-		sys.PublicInputs.Register(wiop.MessageBusPI, gp.Result)
+		// Expose this handle's accumulator as a public input, tagged with the
+		// sorted handle index of this loop (fixed at compile time) — so the
+		// public input at that position refers to the same handle on every
+		// shard, which is what lets the cross-shard layer check by position.
+		sys.RegisterPublicInputs(PublicInputTag, gp.Result, i)
 
 	}
 

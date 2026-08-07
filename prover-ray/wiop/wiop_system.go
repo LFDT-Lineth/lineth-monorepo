@@ -42,8 +42,11 @@ type System struct {
 	// via [System.NewMessageBusSend] and [System.NewMessageBusReceive], in
 	// declaration order.
 	MessageBuses []*MessageBus
-	// PublicInputs defines the semantic structure of public inputs, mainly used for inter-shard consistency.
-	PublicInputs *PublicInputLayout
+	// PublicInputs holds the cells promoted to public inputs via
+	// [System.RegisterPublicInputs], in registration order. That order is the
+	// layout of the flat [PublicInput] vector, and each cell carries a
+	// [PublicInputTag] naming its role — mainly used for inter-shard consistency.
+	PublicInputs []*Cell
 	// scratchArena backs the [PlanningContext] used by [Materialize]. It is
 	// nil until Materialize is called.
 	scratchArena *arena.VectorArena
@@ -65,7 +68,7 @@ func NewSystemf(msg string, args ...any) *System {
 	sys := &System{
 		Context:          ctx,
 		PrecomputedRound: &PrecomputedRound{Round: Round{system: nil}},
-		PublicInputs:     &PublicInputLayout{},
+		PublicInputs:     []*Cell{},
 	}
 
 	// Wire the back-reference after the System pointer is stable.
@@ -73,25 +76,6 @@ func NewSystemf(msg string, args ...any) *System {
 	sys.Annotations = make(Annotations)
 
 	return sys
-}
-
-// publicInputCells returns the flat ordered cell list defined by the layout, or
-// nil if no layout has been registered.
-func (sys *System) publicInputCells() []*Cell {
-	sys.PublicInputs.seal()
-	return sys.PublicInputs.cachedCells
-}
-
-// publicInputIndex maps each registered public-input cell's [ObjectID] to its
-// position in the flat [PublicInput] wire format, for fast membership tests
-// during [System.Prove] and [System.Verify].
-func (sys *System) publicInputIndex() map[ObjectID]int {
-	cells := sys.publicInputCells()
-	idx := make(map[ObjectID]int, len(cells))
-	for i, cell := range cells {
-		idx[cell.Context.ID] = i
-	}
-	return idx
 }
 
 // Free releases the scratch memory arena allocated by [Materialize]. Safe to

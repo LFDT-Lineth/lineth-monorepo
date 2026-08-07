@@ -64,7 +64,7 @@ func buildSingleDirectionShard(
 
 	require.Len(t, sys.GrandProducts, 1,
 		"single-handle shard must emit exactly one GrandProduct")
-	return rt, sys.GrandProducts[0].Result, sys.PublicInputs.MessageBus[0]
+	return rt, sys.GrandProducts[0].Result, sys.PublicInputs[0]
 }
 
 // TestCrossShard_SendOnlyAndReceiveOnly_Balanced models the canonical
@@ -200,7 +200,7 @@ func buildBidirectionalShard(
 
 	require.Len(t, sys.GrandProducts, len(handles),
 		"each handle's send and receive must collapse into one GrandProduct")
-	require.Len(t, sys.PublicInputs.MessageBus, len(handles),
+	require.Len(t, sys.PublicInputs, len(handles),
 		"every handle's accumulator must be registered as a MessageBus public input")
 
 	// Compile processes handles in alphabetical order, so GrandProducts[i] is
@@ -214,7 +214,7 @@ func buildBidirectionalShard(
 			"GrandProduct %d must belong to handle %q (alphabetical order)", i, h)
 		resultByHandle[h] = gp.Result
 	}
-	return rt, resultByHandle, sys.PublicInputs.MessageBus
+	return rt, resultByHandle, sys.PublicInputs
 }
 
 // crossShardHandles is the traffic both bidirectional tests below share. Two
