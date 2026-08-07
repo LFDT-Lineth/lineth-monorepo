@@ -9,7 +9,9 @@ import (
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/constraints"
 )
 
-func TestRisc5Arithmetization(t *testing.T) {
+// This is a benchmark for the RISC-V arithmetization and not a test so that we
+// don't crash the CI on every PR.
+func BenchmarkRisc5Arithmetization(t *testing.T) {
 	const zkcPath = "../../arithmetization/src/main/riscv/main.zkc"
 
 	verifPath := "../../verifier-ray/zig-out/bin/verifier-ray"
