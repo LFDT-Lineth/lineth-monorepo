@@ -49,7 +49,6 @@ from typing import Any
 
 from ethereum.crypto.hash import Hash32
 from ethereum.state import Address
-from ethereum_types.bytes import Bytes48
 from ethereum_types.numeric import U64
 
 from .block import (
@@ -68,7 +67,6 @@ from .l2_execution import (
     run_l2_execution_guest,
 )
 from .rollup import (
-    ChunkCommitment,
     ConflationWitness,
     RollupProof,
     RollupProofPrivateInput,
@@ -404,17 +402,6 @@ def _decode_conflation_witness(obj: dict, ctx: str) -> ConflationWitness:
     )
 
 
-def _decode_chunk_commitment(obj: dict, ctx: str) -> ChunkCommitment:
-    return ChunkCommitment(
-        chunk_hash=Hash32(
-            _bytes_from_hex(_require(obj, "chunkHash", ctx), f"{ctx}chunkHash")
-        ),
-        chunk_kzg_proof=Bytes48(
-            _bytes_from_hex(_require(obj, "chunkKzgProof", ctx), f"{ctx}chunkKzgProof")
-        ),
-    )
-
-
 def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
     """
     Convert a parsed `getZkRollupProofV1.request.json` object into the rollup
@@ -422,8 +409,8 @@ def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
 
     The request is a `{guestProgramId, proofRequest}` envelope: `guestProgramId`
     is routing metadata and the block range is implied by `conflations` (paired
-    1:1 with `l2ExecutionProofs`). `chunks` is one `{chunkHash, chunkKzgProof}`
-    entry per touched chunk. `opaquePrefixBytes`/`opaqueSuffixBytes`
+    1:1 with `l2ExecutionProofs`). `chunks` is one anchored versioned hash per
+    touched chunk. `opaquePrefixBytes`/`opaqueSuffixBytes`
     are top-level (not per-chunk): relevant only to the first/last touched
     chunk respectively, and empty (`0x`) when absent. `parentDrh`/`startOffset`
     are guest inputs; the outbound `endDrh`/`endOffset` are recomputed by the
@@ -468,7 +455,7 @@ def decode_rollup_request(obj: dict) -> RollupProofPrivateInput:
             for i, c in enumerate(conflations)
         ],
         chunks=[
-            _decode_chunk_commitment(c, f"proofRequest.chunks[{i}].") for i, c in enumerate(chunks)
+            Hash32(_bytes_from_hex(c, f"proofRequest.chunks[{i}]")) for i, c in enumerate(chunks)
         ],
         l2_execution_proofs=[
             _decode_l2_execution_proof(p, f"proofRequest.l2ExecutionProofs[{i}].")

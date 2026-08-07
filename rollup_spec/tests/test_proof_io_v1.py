@@ -319,9 +319,7 @@ def test_decode_rollup_request_maps_all_fields() -> None:
     assert conflation.block_rlps == [bytes.fromhex("f90215a0"), bytes.fromhex("f90216b1")]
 
     assert len(req.chunks) == 1
-    assert bytes(req.chunks[0].chunk_hash) == bytes([0x1A]) * 32
-    assert bytes(req.chunks[0].chunk_kzg_proof) == bytes([0x94]) * 48
-    assert len(bytes(req.chunks[0].chunk_kzg_proof)) == 48
+    assert bytes(req.chunks[0]) == bytes([0x1A]) * 32
     assert req.opaque_prefix_bytes == bytes([0xAB]) * 4
     assert req.opaque_suffix_bytes == b""
 
@@ -379,10 +377,10 @@ def test_decode_rollup_request_non_array_conflations_is_rejected() -> None:
         decode_rollup_request(req)
 
 
-def test_decode_rollup_request_malformed_kzg_proof_is_rejected() -> None:
+def test_decode_rollup_request_malformed_chunk_hash_is_rejected() -> None:
     req = _valid_rollup_request()
-    req["proofRequest"]["chunks"][0]["chunkKzgProof"] = "0xnothex"
-    with pytest.raises(ProofIoError, match="chunkKzgProof"):
+    req["proofRequest"]["chunks"][0] = "0xnothex"
+    with pytest.raises(ProofIoError, match="chunks"):
         decode_rollup_request(req)
 
 

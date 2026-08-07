@@ -32,10 +32,10 @@
           "items": { "$ref": "#/$defs/conflation" }
         },
         "chunks": {
-          "description": "Every chunk this proof touches, in stream order (§3.1, §3.4).",
+          "description": "Every chunk this proof touches, in stream order (§3.1, §3.4): each entry is the chunk's L1-anchored KZG versioned hash.",
           "type": "array",
           "minItems": 1,
-          "items": { "$ref": "#/$defs/chunk" }
+          "items": { "$ref": "#/$defs/hash32" }
         },
         "opaquePrefixBytes": {
           "description": "Foreign bytes before startOffset in the FIRST touched chunk only (§3.1); empty (0x) or absent otherwise.",
@@ -67,7 +67,6 @@
     "hex": { "type": "string", "pattern": "^0x([0-9a-fA-F]{2})*$" },
     "hash32": { "type": "string", "pattern": "^0x[0-9a-fA-F]{64}$" },
     "address": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" },
-    "kzgProof": { "type": "string", "pattern": "^0x[0-9a-fA-F]{96}$" },
     "metadata": {
       "description": "Non-contractual, debug/ops-only fields. NOT consumed by the guest",
       "type": "object",
@@ -87,15 +86,6 @@
           "minItems": 1,
           "items": { "$ref": "#/$defs/hex" }
         }
-      }
-    },
-    "chunk": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["chunkHash", "chunkKzgProof"],
-      "properties": {
-        "chunkHash": { "$ref": "#/$defs/hash32" },
-        "chunkKzgProof": { "$ref": "#/$defs/kzgProof" }
       }
     },
     "l2ExecutionPublicInputs": {

@@ -23,7 +23,7 @@ from .fork import (
 )
 from ethereum.state import Address
 from ethereum_rlp import rlp
-from ethereum_types.bytes import Bytes, Bytes32, Bytes48
+from ethereum_types.bytes import Bytes, Bytes32
 from ethereum_types.numeric import U64, Uint
 
 from .block import block_hash, decode_block_rlp
@@ -40,7 +40,7 @@ ZERO_HASH32 = Hash32(b"\x00" * 32)
 
 # EIP-4844 blob size: FIELD_ELEMENTS_PER_BLOB (4096) × BYTES_PER_FIELD_ELEMENT (32).
 # The KZG commitment is computed over a polynomial defined by exactly this many
-# evaluations, so the byte payload handed to `ckzg.verify_blob_kzg_proof` must
+# evaluations, so the byte payload handed to `ckzg.blob_to_kzg_commitment` must
 # be exactly `BLOB_BYTES_LENGTH` bytes — shorter compressed output is zero-padded.
 BLOB_BYTES_LENGTH = 4096 * 32
 
@@ -187,23 +187,10 @@ def _compress_conflation_segment(truncated: Sequence["TruncatedEthereumBlock"]) 
     return len(segment).to_bytes(SEGMENT_LENGTH_PREFIX_BYTES, "big") + segment
 
 
-@dataclass
-class ChunkCommitment:
-    """
-    Per-chunk KZG commitment witness for the rollup proof (§3.1, §3.4):
-    `chunk_hash` is the chunk's L1-anchored versioned hash; `chunk_kzg_proof`
-    is the KZG proof for its reconstructed bytes. Kept as one paired object
-    per chunk (rather than two parallel lists) so index `i`'s hash and proof
-    can never drift out of sync.
-    """
-    chunk_hash: Hash32
-    chunk_kzg_proof: Bytes48
-
-
 def _verify_and_fold_chunks(
     own_stream_bytes: bytes,
     start_offset: int,
-    chunks: Sequence[ChunkCommitment],
+    chunks: Sequence[Hash32],
     opaque_prefix_bytes: bytes,
     opaque_suffix_bytes: bytes,
     parent_drh: Hash32,
@@ -213,7 +200,7 @@ def _verify_and_fold_chunks(
     Slice `own_stream_bytes` (this proof's own concatenated conflation
     segments) across the chunks it touches, reconstruct each chunk's full
     published bytes, verify each chunk's KZG commitment against its anchored
-    hash (`chunks[k].chunk_hash`), and fold the DRH chain across them (§3.1, §3.4).
+    hash (`chunks[k]`), and fold the DRH chain across them (§3.1, §3.4).
 
     `opaque_prefix_bytes` / `opaque_suffix_bytes` are foreign bytes not owned
     by this proof — relevant only at the two ends of the touched range, never
@@ -265,8 +252,18 @@ def _verify_and_fold_chunks(
             raise Exception(f"chunk {i} reconstructed bytes do not fill the chunk")
 
         try:
-            # The commitment is not witnessed. It is recomputed inside the
-            # rollup guest from the reconstructed chunk bytes.
+            # ┌─ PRECOMPILE (production guest): BLS12-381 / KZG commitment ───┐
+            # │ The zkVM exposes EIP-4844 blob commitment computation as a    │
+            # │ native primitive or a deterministic linked implementation.    │
+            # │ This call hides the BLS12-381 multi-scalar multiplication     │
+            # │ over the chunk's 4096 field elements.                         │
+            # │                                                               │
+            # │ Soundness for this chunk comes from computing the commitment  │
+            # │ directly from `full_chunk_bytes` and matching its versioned   │
+            # │ hash to the chunk's anchored hash: the commitment scheme's    │
+            # │ binding property means only these exact bytes can produce a   │
+            # │ commitment hashing to that value.                             │
+            # └───────────────────────────────────────────────────────────────┘
             chunk_kzg_commitment = KZGCommitment(
                 ckzg.blob_to_kzg_commitment(full_chunk_bytes, setup),
             )
@@ -274,37 +271,17 @@ def _verify_and_fold_chunks(
             raise Exception("invalid chunk KZG commitment computation") from exc
 
         computed_chunk_hash = Hash32(kzg_commitment_to_versioned_hash(chunk_kzg_commitment))
-        if computed_chunk_hash != chunks[i].chunk_hash:
+        if computed_chunk_hash != chunks[i]:
             raise Exception(f"chunk {i} computed KZG commitment does not match chunkHash")
-
-        try:
-            # ┌─ PRECOMPILE (production guest): BLS12-381 / KZG verifier ─────┐
-            # │ The zkVM exposes EIP-4844 blob commitment / verification as   │
-            # │ native primitives or a deterministic linked implementation.   │
-            # │ These calls hide BLS12-381 multi-scalar multiplication,       │
-            # │ polynomial evaluation in Lagrange form, and pairing checks.   │
-            # │                                                               │
-            # │ Soundness for this chunk comes from computing the commitment  │
-            # │ from `full_chunk_bytes`, matching its versioned hash to the   │
-            # │ chunk's anchored hash, and verifying the proof against that   │
-            # │ computed commitment.                                          │
-            # └───────────────────────────────────────────────────────────────┘
-            ok = ckzg.verify_blob_kzg_proof(
-                full_chunk_bytes, chunk_kzg_commitment, chunks[i].chunk_kzg_proof, setup,
-            )
-        except Exception as exc:
-            raise Exception("invalid chunk KZG proof") from exc
-        if not ok:
-            raise Exception("invalid chunk KZG proof")
 
         if is_first and start_offset > 0:
             if boundary_prev_drh is None:
                 raise Exception("mid-chunk start requires boundaryPrevDrh")
-            if DrhWitness(boundary_prev_drh, chunks[i].chunk_hash).hash() != parent_drh:
+            if DrhWitness(boundary_prev_drh, chunks[i]).hash() != parent_drh:
                 raise Exception("boundary chunk DRH preimage does not open parentDrh")
             drh = parent_drh
         else:
-            drh = DrhWitness(drh, chunks[i].chunk_hash).hash()
+            drh = DrhWitness(drh, chunks[i]).hash()
 
     if cursor != len(own_stream_bytes):
         raise Exception("chunk witnesses do not cover the reconstructed segment length")
@@ -388,7 +365,7 @@ class RollupProofPrivateInput:
     start_offset: int
     chain_id: U64
     conflations: List[ConflationWitness]
-    chunks: List[ChunkCommitment]
+    chunks: List[Hash32]
     l2_execution_proofs: List[VerifiableL2ExecutionProof]
     opaque_prefix_bytes: bytes = b""
     opaque_suffix_bytes: bytes = b""
@@ -447,8 +424,7 @@ def run_rollup_guest(rollup_input: RollupProofPrivateInput) -> RollupProof:
     this proof's own byte stream. Slices that stream across the chunks it
     touches, reconstructing each chunk's full published bytes together with
     any witnessed opaque boundary bytes, computes the KZG commitment for each,
-    checks it against the L1-anchored `chunkHash`, and runs
-    `ckzg.verify_blob_kzg_proof` on the computed commitment — folding the DRH
+    and checks it against the L1-anchored `chunkHash` — folding the DRH
     chain across the touched chunks as it goes (§3.4). Recursively verifies
     the N l2-execution proofs, checks continuity, builds the L2->L1
     Merkle-root commitment, collects FTX outputs, and emits the 20-field
@@ -832,7 +808,7 @@ def compress_lz4(data: bytes) -> bytes:
     LZ4-compress the canonical RLP-encoded truncated-block payload using
     the raw LZ4 block format (no 4-byte uncompressed-size header). The
     rollup guest zero-pads this output to `BLOB_BYTES_LENGTH` and
-    hands the padded result to `ckzg.verify_blob_kzg_proof` (§2.2 step 1).
+    hands the padded result to `ckzg.blob_to_kzg_commitment` (§2.2 step 1).
 
     The sequencer producing the blob must use the same compression mode
     (LZ4 block, `store_size=False`) and compression level — both choices
