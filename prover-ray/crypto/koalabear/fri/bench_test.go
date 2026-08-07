@@ -15,11 +15,138 @@ package fri
 import (
 	"fmt"
 	"math/big"
+	"os"
+	"runtime"
+	"strconv"
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/polynomials"
 )
+
+const defaultCommitShapeCellsLog2 = 22
+
+type commitShape struct {
+	rowsLog2 int
+	columns  int
+}
+
+func (s commitShape) name() string {
+	return fmt.Sprintf("input=%dMiB/rows=2^%d/columns=%d",
+		commitShapeInputBytes(s)>>20, s.rowsLog2, s.columns)
+}
+
+// BenchmarkPCSCommitShapes holds the logical base-field cell count fixed while
+// varying the matrix aspect ratio. Set FRI_COMMIT_BENCH_CELLS_LOG2 to scale all
+// cases without changing their column counts.
+func BenchmarkPCSCommitShapes(b *testing.B) {
+	cellsLog2 := commitShapeCellsLog2(b)
+	for _, shape := range commitShapes(cellsLog2) {
+		b.Run(shape.name(), func(b *testing.B) {
+			benchmarkCommitShape(b, shape)
+		})
+	}
+}
+
+// BenchmarkPCSEncodeShapes isolates rate-four Reed-Solomon encoding for the
+// same fixed-cell matrices as BenchmarkPCSCommitShapes.
+func BenchmarkPCSEncodeShapes(b *testing.B) {
+	const rate = 4
+	cellsLog2 := commitShapeCellsLog2(b)
+	for _, shape := range commitShapes(cellsLog2) {
+		b.Run(shape.name(), func(b *testing.B) {
+			batch := benchSingleSizeBatch(shape.rowsLog2, shape.columns)
+			encoders := benchEncoders(shape.rowsLog2+1, rate)
+			inputBytes := commitShapeInputBytes(shape)
+
+			b.ReportAllocs()
+			b.SetBytes(inputBytes)
+			b.ResetTimer()
+			for b.Loop() {
+				encoded := batch.Encode(encoders)
+				if encoded[shape.rowsLog2].Size() != rate*(1<<shape.rowsLog2) {
+					b.Fatal("unexpected encoded height")
+				}
+				runtime.KeepAlive(encoded)
+			}
+		})
+	}
+}
+
+// BenchmarkPCSMerkleShapes isolates Poseidon2 leaf hashing and tree building.
+func BenchmarkPCSMerkleShapes(b *testing.B) {
+	const rate = 4
+	cellsLog2 := commitShapeCellsLog2(b)
+	for _, shape := range commitShapes(cellsLog2) {
+		b.Run(shape.name(), func(b *testing.B) {
+			batch := benchSingleSizeBatch(shape.rowsLog2, shape.columns)
+			encoded := batch.Encode(benchEncoders(shape.rowsLog2+1, rate))
+			inputBytes := commitShapeInputBytes(shape)
+
+			b.ReportAllocs()
+			b.SetBytes(inputBytes)
+			b.ResetTimer()
+			for b.Loop() {
+				tree := encoded.Merkleize()
+				if tree.NumLeaves() != rate*(1<<shape.rowsLog2) {
+					b.Fatal("unexpected committed tree height")
+				}
+				runtime.KeepAlive(tree)
+			}
+		})
+	}
+}
+
+func commitShapes(cellsLog2 int) []commitShape {
+	return []commitShape{
+		{rowsLog2: cellsLog2 - 4, columns: 1 << 4},
+		{rowsLog2: cellsLog2 - 8, columns: 1 << 8},
+		{rowsLog2: cellsLog2 - 12, columns: 1 << 12},
+	}
+}
+
+func commitShapeCellsLog2(tb testing.TB) int {
+	tb.Helper()
+	value := os.Getenv("FRI_COMMIT_BENCH_CELLS_LOG2")
+	if value == "" {
+		return defaultCommitShapeCellsLog2
+	}
+	result, err := strconv.Atoi(value)
+	if err != nil || result < 16 || result > 26 {
+		tb.Fatalf(
+			"FRI_COMMIT_BENCH_CELLS_LOG2 must be in [16,26], got %q",
+			value,
+		)
+	}
+	return result
+}
+
+func benchmarkCommitShape(b *testing.B, shape commitShape) {
+	b.Helper()
+	const rate = 4
+	batch := benchSingleSizeBatch(shape.rowsLog2, shape.columns)
+	encoders := benchEncoders(shape.rowsLog2+1, rate)
+	inputBytes := commitShapeInputBytes(shape)
+
+	b.ReportAllocs()
+	b.SetBytes(inputBytes)
+	b.ResetTimer()
+	for b.Loop() {
+		committed := Commit(encoders, batch)
+		if committed.Tree.NumLeaves() != rate*(1<<shape.rowsLog2) {
+			b.Fatal("unexpected committed tree height")
+		}
+		runtime.KeepAlive(committed)
+	}
+}
+
+func commitShapeInputBytes(shape commitShape) int64 {
+	return int64(shape.columns) * int64(1<<shape.rowsLog2) * field.Bytes
+}
+
+func benchSingleSizeBatch(rowsLog2, columns int) Batch {
+	return benchBatch(benchConfig{minLog2: rowsLog2, maxLog2: rowsLog2, basePolys: columns, seed: 1})
+}
 
 type benchConfig struct {
 	minLog2    int

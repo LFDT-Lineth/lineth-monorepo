@@ -1,12 +1,14 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"math/big"
 	"os"
 	"runtime"
 	"runtime/metrics"
+	"runtime/pprof"
 	"sync/atomic"
 	"text/tabwriter"
 	"time"
@@ -30,6 +32,18 @@ var (
 	seed         = flag.Uint64("seed", 1, "deterministic synthetic input seed")
 	gomaxprocs   = flag.Int("gomaxprocs", 0, "override GOMAXPROCS (0 = leave default)")
 	sampleMillis = flag.Int("sample-ms", 50, "heap sampling interval (ms)")
+	phase        = flag.String("phase", "all", "phase to run: input, commit, or all")
+	jsonOutput   = flag.Bool("json", false, "emit one machine-readable result")
+	cpuProfile   = flag.String("cpuprofile", "", "write a CPU profile of the timed phases to this file")
+	consumeInput = flag.Bool("consume-input", false,
+		"transfer witness ownership to Commit (frees plaintext columns during encode; commit phase only)")
+)
+
+// phase flag values
+const (
+	phaseInput  = "input"
+	phaseCommit = "commit"
+	phaseAll    = "all"
 )
 
 func main() {
@@ -54,12 +68,33 @@ func main() {
 		fail("NewPCS: %v", err)
 	}
 
-	fmt.Printf(
-		"fri pcs bench  sizes=2^%d..2^%d  base=%d/group  ext=%d/group  rate=%d  queries=%d  GOMAXPROCS=%d  NumCPU=%d\n\n",
-		*minLog2, *maxLog2, *basePolys, *extPolys, *rate, *numQueries, runtime.GOMAXPROCS(0), runtime.NumCPU(),
-	)
-
 	batch := makeSyntheticBatch(*minLog2, *maxLog2, *basePolys, *extPolys, *seed)
+	inputBytes := batchLogicalBytes(batch)
+	var inputMem runtime.MemStats
+	runtime.ReadMemStats(&inputMem)
+
+	if !*jsonOutput {
+		fmt.Printf(
+			"fri pcs bench  sizes=2^%d..2^%d  base=%d/group  ext=%d/group  rate=%d  queries=%d  GOMAXPROCS=%d  NumCPU=%d\n",
+			*minLog2, *maxLog2, *basePolys, *extPolys, *rate, *numQueries, runtime.GOMAXPROCS(0), runtime.NumCPU(),
+		)
+		fmt.Printf(
+			"logical input=%s  expanded field data=%s  input HeapAlloc=%s\n\n",
+			fmtBytes(inputBytes), fmtBytes(inputBytes*uint64(*rate)),
+			fmtBytes(inputMem.HeapAlloc),
+		)
+	}
+	if *phase == phaseInput {
+		if *jsonOutput {
+			writeJSONResult(phaseReport{
+				name:     "Input",
+				heapEnd:  inputMem.HeapAlloc,
+				heapPeak: inputMem.HeapAlloc,
+			}, inputBytes, "input-only")
+		}
+		return
+	}
+
 	shifts := makeSyntheticShifts(batch, *maxShifts, *seed^0x5eed)
 	zeta := sampleChallenge(*seed ^ 0x7e7a)
 	challenges := makeChallenges(int(params.LogCodewordSize), *maxLog2, *numQueries, *seed^0xc0ffee)
@@ -67,11 +102,39 @@ func main() {
 
 	phases := make([]phaseReport, 0, 3)
 
+	if *cpuProfile != "" {
+		f, err := os.Create(*cpuProfile)
+		if err != nil {
+			fail("create cpu profile: %v", err)
+		}
+		defer f.Close()
+		if err := pprof.StartCPUProfile(f); err != nil {
+			fail("start cpu profile: %v", err)
+		}
+		defer pprof.StopCPUProfile()
+	}
+
+	var commitOpts []fri.CommitOption
+	if *consumeInput {
+		commitOpts = append(commitOpts, fri.WithConsumeWitness())
+	}
+
 	tr := newTracker("Commit", *sampleMillis)
-	committed := pcs.Commit(batch)
+	committed := pcs.Commit(batch, commitOpts...)
 	phases = append(phases, tr.stop())
 
 	roots := []field.Octuplet{committed.Tree.Root()}
+	if *phase == phaseCommit {
+		if *jsonOutput {
+			writeJSONResult(
+				phases[0], inputBytes, fmt.Sprintf("%v", roots[0]),
+			)
+		} else {
+			printSummary(phases, runtime.GOMAXPROCS(0))
+			fmt.Printf("\nroot: %v\n", roots[0])
+		}
+		return
+	}
 	committedStates := []fri.CommitterState{committed}
 
 	tr = newTracker("Open", *sampleMillis)
@@ -99,7 +162,63 @@ func main() {
 	fmt.Printf("\nproof: %d FRI roots, %d query openings\n", len(proof.FRIProof.RoundRoots), len(proof.FRIProof.RunningQueries))
 }
 
+type jsonResult struct {
+	Implementation string `json:"implementation"`
+	Phase          string `json:"phase"`
+	Rows           int    `json:"rows"`
+	BaseColumns    int    `json:"base_columns"`
+	ExtColumns     int    `json:"ext_columns"`
+	InputBytes     uint64 `json:"input_bytes"`
+	ExpandedBytes  uint64 `json:"expanded_bytes"`
+	ElapsedNS      int64  `json:"elapsed_ns"`
+	CPUTimeNS      int64  `json:"cpu_time_ns"`
+	GCCPUTimeNS    int64  `json:"gc_cpu_time_ns"`
+	AllocBytes     uint64 `json:"alloc_bytes"`
+	AllocObjects   uint64 `json:"alloc_objects"`
+	HeapStartBytes uint64 `json:"heap_start_bytes"`
+	HeapEndBytes   uint64 `json:"heap_end_bytes"`
+	HeapPeakBytes  uint64 `json:"heap_peak_bytes"`
+	GCCount        uint32 `json:"gc_count"`
+	Threads        int    `json:"threads"`
+	Marker         string `json:"marker"`
+}
+
+func writeJSONResult(report phaseReport, inputBytes uint64, marker string) {
+	result := jsonResult{
+		Implementation: "prover-ray",
+		Phase:          *phase,
+		Rows:           1 << *maxLog2,
+		BaseColumns:    *basePolys,
+		ExtColumns:     *extPolys,
+		InputBytes:     inputBytes,
+		ExpandedBytes:  inputBytes * uint64(*rate),
+		ElapsedNS:      report.wall.Nanoseconds(),
+		CPUTimeNS:      report.cpuBusy.Nanoseconds(),
+		GCCPUTimeNS:    report.cpuGC.Nanoseconds(),
+		AllocBytes:     report.allocBytes,
+		AllocObjects:   report.allocObjects,
+		HeapStartBytes: report.heapStart,
+		HeapEndBytes:   report.heapEnd,
+		HeapPeakBytes:  report.heapPeak,
+		GCCount:        report.gcCount,
+		Threads:        runtime.GOMAXPROCS(0),
+		Marker:         marker,
+	}
+	if err := json.NewEncoder(os.Stdout).Encode(result); err != nil {
+		fail("encode JSON result: %v", err)
+	}
+}
+
 func validateConfig() {
+	if *phase != phaseInput && *phase != phaseCommit && *phase != phaseAll {
+		fail("-phase must be input, commit, or all")
+	}
+	if *consumeInput && *phase != phaseCommit {
+		fail("-consume-input requires -phase=commit (the open phase reads the witness)")
+	}
+	if *jsonOutput && *minLog2 != *maxLog2 {
+		fail("-json requires a single size (-min-log2 must equal -max-log2)")
+	}
 	if *minLog2 < 1 {
 		fail("-min-log2 must be >= 1")
 	}
@@ -121,6 +240,19 @@ func validateConfig() {
 	if *maxShifts <= 0 {
 		fail("-max-shifts must be positive")
 	}
+}
+
+func batchLogicalBytes(batch fri.Batch) uint64 {
+	var elems uint64
+	for i := range batch {
+		for _, column := range batch[i].Base {
+			elems += uint64(len(column))
+		}
+		for _, column := range batch[i].Ext {
+			elems += 6 * uint64(len(column))
+		}
+	}
+	return elems * field.Bytes
 }
 
 func makeEncoders(numSizes, rate int) []*fri.RSEncoder {
