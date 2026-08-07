@@ -74,13 +74,13 @@ Swap `SCOPES`, the `--tag-pattern` component, and the `--include-path` set per c
 
 | Component | `SCOPES` | `--tag-pattern` component | `--include-path`(s) |
 |---|---|---|---|
-| coordinator | `coordinator\|deps\|misc` | `coordinator` | `coordinator/**` |
-| maru | `maru\|deps\|misc` | `maru` | `maru/**` |
-| postman | `postman\|deps\|misc` | `postman` | `postman/**` |
-| prover | `prover\|deps\|misc` | `prover` | `prover/**` |
-| tx-exclusion-api | `tx-exclusion-api\|deps\|misc` | `tx-exclusion-api` | `transaction-exclusion-api/**` |
-| linea-besu-package | `linea-besu\|tracer\|sequencer\|deps\|misc` | `linea-besu-package` | `tracer/**`, `tracer-constraints/**`, `linea-besu/plugins/linea-sequencer/**`, `linea-besu/besu/**`, `linea-besu/package/**`, `gradle/libs.versions.toml` |
-| linea (milestone) | `coordinator\|linea-besu\|tracer\|sequencer\|maru\|prover\|postman\|tx-exclusion-api\|deps\|misc` | `linea` | the union of every component path above |
+| `coordinator` | `coordinator\|deps\|misc` | `coordinator` | `coordinator/**` |
+| `maru` | `maru\|deps\|misc` | `maru` | `maru/**` |
+| `postman` | `postman\|deps\|misc` | `postman` | `postman/**` |
+| `prover` | `prover\|deps\|misc` | `prover` | `prover/**` |
+| `tx-exclusion-api` | `tx-exclusion-api\|deps\|misc` | `tx-exclusion-api` | `transaction-exclusion-api/**` |
+| `linea-besu-package` | `linea-besu\|tracer\|sequencer\|deps\|misc` | `linea-besu-package` | `tracer/**`, `tracer-constraints/**`, `linea-besu/plugins/linea-sequencer/**`, `linea-besu/besu/**`, `linea-besu/package/**`, `gradle/libs.versions.toml` |
+| `linea` (milestone) | `coordinator\|linea-besu\|tracer\|sequencer\|maru\|prover\|postman\|tx-exclusion-api\|deps\|misc` | `linea` | the union of every component path above |
 
 Notes:
 
