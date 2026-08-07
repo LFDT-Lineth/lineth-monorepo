@@ -1,4 +1,4 @@
-## [unreleased]
+## [2.1.0-rc1] - 2026-08-07
 
 ### 🚀 Features
 
@@ -8,6 +8,7 @@
 ### 🐛 Bug Fixes
 
 - *(linea-besu)* Align Besu Kotlin runtime (#3734)
+- *(linea-besu)* Add the missing web3j crypto jar in dist and fix ci to run e2e with locally built linea-besu-package
 
 ### ⚙️ Miscellaneous Tasks
 
