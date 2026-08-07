@@ -12,7 +12,7 @@ import linea.ethapi.EthLogsFilterOptions
 import linea.ethapi.extensions.EthLogsFilterState
 import linea.ethapi.extensions.EthLogsFilterSubscriptionFactory
 import linea.ethapi.extensions.EthLogsFilterSubscriptionManager
-import linea.ftx.conflation.ForcedTransactionsSafeBlockNumberManager
+import lineth.ftx.conflation.ForcedTransactionsSafeBlockNumberManager
 import net.consensys.linea.async.toSafeFuture
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger

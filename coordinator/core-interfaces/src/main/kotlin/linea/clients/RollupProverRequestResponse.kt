@@ -90,7 +90,7 @@ data class BlobWitness(
 /**
  * The 14-field PI tuple emitted by a rollup / rollup-aggregation proof (rollup_spec §2.4).
  *
- * Domain twin of `linea.coordinator.clients.prover.riscv.RollupPublicInputsDto`. Kept here (rather than reusing the
+ * Domain twin of `lineth.coordinator.clients.prover.riscv.RollupPublicInputsDto`. Kept here (rather than reusing the
  * DTO) because this module is depended upon by the prover-client modules, not the other way around. Where the DTO
  * uses `String` (hex) this uses `ByteArray`, and where the DTO uses `Long` this uses `ULong`.
  */
@@ -159,7 +159,7 @@ data class RollupProofPublicInputs(
 /**
  * Response of a rollup proof.
  *
- * Mirrors `linea.coordinator.clients.prover.riscv.RollupProofResponseDto`: the DTO's `String` (hex) fields are
+ * Mirrors `lineth.coordinator.clients.prover.riscv.RollupProofResponseDto`: the DTO's `String` (hex) fields are
  * `ByteArray` here so a proof response — whether read from a JSON file or returned by a REST endpoint — deserializes
  * into the DTO and maps onto this domain type.
  */
