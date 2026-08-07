@@ -25,8 +25,8 @@ github.com/consensys/gnark v0.14.1-0.20260219004710-bbfb2f70a565 h1:NlOAmbLYsVb/
 github.com/consensys/gnark v0.14.1-0.20260219004710-bbfb2f70a565/go.mod h1:EoWWbEboQRydCqJDSA7zrFxucIeoy/5R+MDx04oFpF4=
 github.com/consensys/gnark-crypto v0.20.2-0.20260521181528-f8db9b5b907d h1:BvrCCp3hEQ9eXJYDkuP7chEHeBYqHNbmE8Ag/30Hx3c=
 github.com/consensys/gnark-crypto v0.20.2-0.20260521181528-f8db9b5b907d/go.mod h1:NzeBHSZ49bIM7RtrNTYYR2kymTqwvI/A4eTgQlyQc+Q=
-github.com/consensys/gnark-crypto v0.20.2-0.20260807170039-b45946cb35b8 h1:sTqMuBOQKnLk/ZWgrB28dOLFr+rsot4oWlpghQy0EfQ=
-github.com/consensys/gnark-crypto v0.20.2-0.20260807170039-b45946cb35b8/go.mod h1:aODe15M1eN2z4gLryLOSZ0rx6DgrahcIw8TuzPurR1c=
+github.com/consensys/gnark-crypto v0.20.2-0.20260807170716-000c30b45f17 h1:v+1wDSsSzyaCcxKS3EKggH2nRGaEfc5kq6XxQdVxrY8=
+github.com/consensys/gnark-crypto v0.20.2-0.20260807170716-000c30b45f17/go.mod h1:aODe15M1eN2z4gLryLOSZ0rx6DgrahcIw8TuzPurR1c=
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
 github.com/crate-crypto/go-eth-kzg v1.4.0 h1:WzDGjHk4gFg6YzV0rJOAsTK4z3Qkz5jd4RE3DAvPFkg=
 github.com/crate-crypto/go-eth-kzg v1.4.0/go.mod h1:J9/u5sWfznSObptgfa92Jq8rTswn6ahQWEuiLHOjCUI=
