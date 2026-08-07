@@ -11,7 +11,7 @@ import linea.kotlin.gwei
 import linea.web3j.SmartContractErrors
 import linea.web3j.gas.StaticGasProvider
 import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
-import net.consensys.linea.contract.l1.Web3JLinethRollupSmartContractClient
+import lineth.contract.l1.Web3JLinethRollupSmartContractClient
 import net.consensys.linea.testing.filesystem.findPathTo
 import org.slf4j.LoggerFactory
 import org.web3j.tx.gas.ContractEIP1559GasProvider

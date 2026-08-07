@@ -19,9 +19,9 @@ import linea.staterecovery.test.execCommandAndAssertSuccess
 import linea.staterecovery.test.getFinalizationsOnL1
 import linea.staterecovery.test.getLastFinalizationOnL1
 import linea.staterecovery.test.waitExecutionLayerToBeUpAndRunning
-import linea.testing.Runner
 import linea.web3j.ethapi.createEthApiClient
 import linea.web3j.waitForTxReceipt
+import lineth.testing.Runner
 import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
@@ -78,7 +78,7 @@ class StateRecoveryE2ETest {
       "test.clients.l1.linea-contract" to Level.INFO,
       "test.clients.l1.events-fetcher" to Level.INFO,
       "test.clients.l1.blobscan" to Level.INFO,
-      "net.consensys.linea.contract.l1" to Level.INFO,
+      "lineth.contract.l1" to Level.INFO,
     )
   }
 
