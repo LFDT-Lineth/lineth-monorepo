@@ -1,0 +1,724 @@
+//go:build !purego
+
+// Copyright 2020-2026 Consensys Software Inc.
+// Licensed under the Apache License, Version 2.0. See the LICENSE file for details.
+
+// Derived from gnark-crypto's generated field/koalabear/poseidon2/poseidon2_amd64.s
+// (permutation16x16xN_columns_avx512) with the Merkle-Damgard chain state made
+// an input instead of starting at zero. Candidate for upstreaming to
+// gnark-crypto; regenerate there if the upstream kernel changes.
+
+#include "textflag.h"
+#include "funcdata.h"
+#include "go_asm.h"
+
+#define ADD(in0, in1, in2, in3, in4) \
+	VPADDD  in0, in1, in4 \
+	VPSUBD  in2, in4, in3 \
+	VPMINUD in4, in3, in4 \
+
+
+#define MAT_MUL_M4(in0, in1, in2, in3, in4, in5) \
+	VPSHUFD $0x000000000000004e, in0, in1 \
+	ADD(in1, in0, in4, in5, in1)          \
+	VPSHUFD $0x00000000000000b1, in1, in2 \
+	ADD(in1, in2, in4, in5, in1)          \
+	VPSHUFD $0x0000000000000039, in0, in3 \
+	VPSLLD  $1, in3, in3                  \
+	VPSUBD  in4, in3, in5                 \
+	VPMINUD in3, in5, in3                 \
+	ADD(in0, in1, in4, in5, in0)          \
+	ADD(in0, in3, in4, in5, in0)          \
+
+
+#define MAT_MUL_EXTERNAL() \
+	MAT_MUL_M4(Z2, Z6, Z7, Z8, Z0, Z11) \
+	MAT_MUL_M4(Y3, Y6, Y7, Y8, Y0, Y11) \
+	VEXTRACTI64X4 $1, Z2, Y16           \
+	ADD(Y16, Y2, Y0, Y11, Y16)          \
+	ADD(Y16, Y3, Y0, Y11, Y16)          \
+	VSHUFF64X2    $1, Y16, Y16, Y17     \
+	ADD(Y16, Y17, Y0, Y11, Y16)         \
+	VINSERTI64X4  $1, Y16, Z16, Z16     \
+	ADD(Y3, Y16, Y0, Y9, Y3)            \
+	ADD(Z2, Z16, Z0, Z11, Z2)           \
+
+
+#define MULD(in0, in1, in2, in3, in4, in5, in6, in7, in8, in9, in10) \
+	VMOVSHDUP in0, in2       \
+	VMOVSHDUP in1, in3       \
+	VPMULUDQ  in0, in1, in4  \
+	VPMULUDQ  in2, in3, in5  \
+	VPMULUDQ  in4, in9, in6  \
+	VPMULUDQ  in5, in9, in7  \
+	VPMULUDQ  in6, in8, in6  \
+	VPADDQ    in4, in6, in4  \
+	VPMULUDQ  in7, in8, in7  \
+	VPADDQ    in5, in7, in10 \
+	VMOVSHDUP in4, K3, in10  \
+
+
+#define REDUCE1Q(in0, in1, in2) \
+	VPSUBD  in0, in1, in2 \
+	VPMINUD in1, in2, in1 \
+
+
+#define SBOX_FULL() \
+	MULD(Z2, Z2, Z12, Z13, Z6, Z7, Z14, Z15, Z0, Z1, Z8) \
+	MULD(Z2, Z8, Z12, Z13, Z6, Z7, Z14, Z15, Z0, Z1, Z2) \
+	REDUCE1Q(Z0, Z2, Z15)                                \
+	MULD(Y3, Y3, Y12, Y13, Y6, Y7, Y14, Y15, Y0, Y1, Y7) \
+	MULD(Y3, Y7, Y12, Y13, Y6, Y7, Y14, Y15, Y0, Y1, Y3) \
+	REDUCE1Q(Y0, Y3, Y15)                                \
+
+
+#define SBOX_PARTIAL() \
+	VPMULUDQ X5, X5, X6   \
+	VPMULUDQ X6, X1, X14  \
+	VPMULUDQ X14, X0, X14 \
+	VPADDQ   X6, X14, X6  \
+	VPSRLQ   $32, X6, X8  \
+	VPMULUDQ X5, X8, X6   \
+	VPMULUDQ X6, X1, X14  \
+	VPMULUDQ X14, X0, X14 \
+	VPADDQ   X6, X14, X6  \
+	VPSRLQ   $32, X6, X5  \
+	VPSUBD   X0, X5, X14  \
+	VPMINUD  X5, X14, X5  \
+
+
+#define SUM_STATE() \
+	VEXTRACTI64X4 $1, Z2, Y16                   \
+	ADD(Y16, Y3, Y0, Y11, Y16)                  \
+	ADD(Y16, Y10, Y0, Y11, Y16)                 \
+	VSHUFF64X2    $1, Y16, Y16, Y17             \
+	ADD(Y16, Y17, Y0, Y11, Y16)                 \
+	VPSHUFD       $0x000000000000004e, Y16, Y17 \
+	ADD(Y16, Y17, Y0, Y11, Y16)                 \
+	VPSHUFD       $0x00000000000000b1, Y16, Y17 \
+	ADD(Y16, Y17, Y0, Y11, Y16)                 \
+	VINSERTI64X4  $1, Y16, Z16, Z16             \
+
+
+#define FULL_ROUND() \
+	VMOVDQU32 0(BX), Z4      \
+	VMOVDQU32 64(BX), Y5     \
+	ADD(Z2, Z4, Z0, Z11, Z2) \
+	ADD(Y3, Y5, Y0, Y8, Y3)  \
+	SBOX_FULL()              \
+	MAT_MUL_EXTERNAL()       \
+
+
+#define DOUBLE(in0, in1, in2, in3) \
+	VPSLLD  $1, in0, in3  \
+	VPSUBD  in1, in3, in2 \
+	VPMINUD in3, in2, in3 \
+
+
+#define SBOX3(in0, in1, in2, in3, in4, in5, in6, in7, in8) \
+	VMOVSHDUP in0, in2      \
+	VPMULUDQ  in0, in0, in3 \
+	VPMULUDQ  in2, in2, in4 \
+	VPMULUDQ  in3, in8, in5 \
+	VPMULUDQ  in4, in8, in6 \
+	VPMULUDQ  in5, in7, in5 \
+	VPADDQ    in3, in5, in3 \
+	VPMULUDQ  in6, in7, in6 \
+	VPADDQ    in4, in6, in4 \
+	VMOVSHDUP in3, K3, in4  \
+	VMOVSHDUP in4, in6      \
+	VPMULUDQ  in0, in4, in3 \
+	VPMULUDQ  in2, in6, in5 \
+	VPMULUDQ  in3, in8, in6 \
+	VPMULUDQ  in5, in8, in4 \
+	VPMULUDQ  in6, in7, in6 \
+	VPADDQ    in3, in6, in3 \
+	VPMULUDQ  in4, in7, in4 \
+	VPADDQ    in5, in4, in1 \
+	VMOVSHDUP in3, K3, in1  \
+	VPSUBD    in7, in1, in5 \
+	VPMINUD   in1, in5, in1 \
+
+
+#define HALVE(in0, in1, in2) \
+	MOVD         $1, AX            \
+	VPBROADCASTD AX, in1           \
+	VPTESTMD     in0, in1, K4      \
+	VPADDD       in0, in2, K4, in0 \
+	VPSRLD       $1, in0, in0      \
+
+
+#define MUL_2_EXP_NEG_8(in0, in1, in2, in3, in4, in5) \
+	VPSRLD     $8, in0, in3  \
+	VPMADDUBSW in1, in0, in2 \
+	VPSLLD     in5, in2, in2 \
+	VPSUBD     in2, in3, in2 \
+	VPADDD     in4, in2, in3 \
+	VPMINUD    in2, in3, in2 \
+
+
+#define MUL_2_EXP_NEG_N(in0, in1, in2, in3, in4, in5, in6, in7, in8) \
+	VPSRLD  in5, in0, in2 \
+	VPSLLD  in6, in0, in3 \
+	VPSRLD  in6, in3, in3 \
+	VPSLLD  in8, in3, in1 \
+	VPADDD  in2, in1, in1 \
+	VPSLLD  in7, in3, in3 \
+	VPSUBD  in3, in1, in1 \
+	VPADDD  in4, in1, in2 \
+	VPMINUD in1, in2, in1 \
+
+
+#define MUL_2_EXP_NEG_J(in0, in1, in2, in3, in4, in5, in6, in7) \
+	VPSRLD  in5, in0, in2 \
+	VPSLLD  in6, in0, in3 \
+	VPSRLD  in6, in3, in3 \
+	VPADDD  in2, in3, in1 \
+	VPSLLD  in7, in3, in3 \
+	VPSUBD  in3, in1, in1 \
+	VPADDD  in4, in1, in2 \
+	VPMINUD in1, in2, in1 \
+
+
+#define SUB(in0, in1, in2, in3, in4) \
+	VPSUBD  in1, in0, in4 \
+	VPADDD  in2, in4, in3 \
+	VPMINUD in4, in3, in4 \
+
+
+#define MAT_MUL_EXTERNAL_16() \
+	MAT_MUL_M4(Z2, Z6, Z7, Z8, Z0, Z11) \
+	VEXTRACTI64X4 $1, Z2, Y16           \
+	ADD(Y16, Y2, Y0, Y11, Y16)          \
+	VSHUFF64X2    $1, Y16, Y16, Y17     \
+	ADD(Y16, Y17, Y0, Y11, Y16)         \
+	VINSERTI64X4  $1, Y16, Z16, Z16     \
+	ADD(Z2, Z16, Z0, Z11, Z2)           \
+
+
+#define SBOX_FULL_16() \
+	VMOVSHDUP Z2, Z12      \
+	VPMULUDQ  Z2, Z2, Z6   \
+	VPMULUDQ  Z12, Z12, Z7 \
+	VPMULUDQ  Z6, Z1, Z14  \
+	VPMULUDQ  Z7, Z1, Z15  \
+	VPMULUDQ  Z14, Z0, Z14 \
+	VPADDQ    Z6, Z14, Z6  \
+	VPMULUDQ  Z15, Z0, Z15 \
+	VPADDQ    Z7, Z15, Z8  \
+	VMOVSHDUP Z6, K3, Z8   \
+	VMOVSHDUP Z8, Z13      \
+	VPMULUDQ  Z2, Z8, Z6   \
+	VPMULUDQ  Z12, Z13, Z7 \
+	VPMULUDQ  Z6, Z1, Z14  \
+	VPMULUDQ  Z7, Z1, Z15  \
+	VPMULUDQ  Z14, Z0, Z14 \
+	VPADDQ    Z6, Z14, Z6  \
+	VPMULUDQ  Z15, Z0, Z15 \
+	VPADDQ    Z7, Z15, Z2  \
+	VMOVSHDUP Z6, K3, Z2   \
+	REDUCE1Q(Z0, Z2, Z15)  \
+
+
+#define SUM_STATE_16() \
+	VEXTRACTI64X4 $1, Z2, Y16                   \
+	ADD(Y16, Y10, Y0, Y11, Y16)                 \
+	VSHUFF64X2    $1, Y16, Y16, Y17             \
+	ADD(Y16, Y17, Y0, Y11, Y16)                 \
+	VPSHUFD       $0x000000000000004e, Y16, Y17 \
+	ADD(Y16, Y17, Y0, Y11, Y16)                 \
+	VPSHUFD       $0x00000000000000b1, Y16, Y17 \
+	ADD(Y16, Y17, Y0, Y11, Y16)                 \
+	VINSERTI64X4  $1, Y16, Z16, Z16             \
+
+
+#define FULL_ROUND_16() \
+	VMOVDQU32 0(BX), Z4      \
+	ADD(Z2, Z4, Z0, Z11, Z2) \
+	SBOX_FULL_16()           \
+	MAT_MUL_EXTERNAL_16()    \
+
+
+
+// permutation16x16xNStateAVX512 is gnark-crypto's
+// permutation16x16xN_columns_avx512 with one change: the 16 Merkle-Damgard
+// chain states start from the column-major state buffer instead of zero, so a
+// single call computes state' = C(state, block) chains, i.e. direct Poseidon2
+// compressions without a zero-IV prefix.
+TEXT ·permutation16x16xNStateAVX512(SB), NOSPLIT, $0-56
+	MOVD         $const_q, AX
+	VPBROADCASTD AX, Z16
+	MOVD         $const_qInvNeg, AX
+	VPBROADCASTD AX, Z17
+	MOVQ         $0x0000000000005555, AX
+	KMOVD        AX, K3
+	MOVQ         matrix+0(FP), R14
+	MOVQ         roundKeys+8(FP), CX
+	MOVQ         result+32(FP), R13
+	MOVQ         state+48(FP), R15
+	VMOVDQU32    0(R15), Z0
+	VMOVDQU32    64(R15), Z1
+	VMOVDQU32    128(R15), Z2
+	VMOVDQU32    192(R15), Z3
+	VMOVDQU32    256(R15), Z4
+	VMOVDQU32    320(R15), Z5
+	VMOVDQU32    384(R15), Z6
+	VMOVDQU32    448(R15), Z7
+	MOVQ         nbSteps+40(FP), SI
+	MOVQ         $0xffffffffffffffff, DI
+
+loop_19:
+	TESTQ     SI, SI
+	JEQ       done_20
+	DECQ      SI
+	VMOVDQU32 0(R14), Z8
+	VMOVDQA32 Z8, Z18
+	VMOVDQU32 64(R14), Z9
+	VMOVDQA32 Z9, Z19
+	VMOVDQU32 128(R14), Z10
+	VMOVDQA32 Z10, Z20
+	VMOVDQU32 192(R14), Z11
+	VMOVDQA32 Z11, Z21
+	VMOVDQU32 256(R14), Z12
+	VMOVDQA32 Z12, Z22
+	VMOVDQU32 320(R14), Z13
+	VMOVDQA32 Z13, Z23
+	VMOVDQU32 384(R14), Z14
+	VMOVDQA32 Z14, Z24
+	VMOVDQU32 448(R14), Z15
+	VMOVDQA32 Z15, Z25
+	ADD(Z0, Z1, Z16, Z31, Z26)
+	ADD(Z2, Z3, Z16, Z31, Z27)
+	ADD(Z26, Z27, Z16, Z31, Z28)
+	ADD(Z28, Z1, Z16, Z31, Z29)
+	ADD(Z28, Z3, Z16, Z31, Z30)
+	DOUBLE(Z0, Z16, Z31, Z3)
+	ADD(Z3, Z30, Z16, Z31, Z3)
+	DOUBLE(Z2, Z16, Z31, Z1)
+	ADD(Z1, Z29, Z16, Z31, Z1)
+	ADD(Z26, Z29, Z16, Z31, Z0)
+	ADD(Z27, Z30, Z16, Z31, Z2)
+	ADD(Z4, Z5, Z16, Z31, Z26)
+	ADD(Z6, Z7, Z16, Z31, Z27)
+	ADD(Z26, Z27, Z16, Z31, Z28)
+	ADD(Z28, Z5, Z16, Z31, Z29)
+	ADD(Z28, Z7, Z16, Z31, Z30)
+	DOUBLE(Z4, Z16, Z31, Z7)
+	ADD(Z7, Z30, Z16, Z31, Z7)
+	DOUBLE(Z6, Z16, Z31, Z5)
+	ADD(Z5, Z29, Z16, Z31, Z5)
+	ADD(Z26, Z29, Z16, Z31, Z4)
+	ADD(Z27, Z30, Z16, Z31, Z6)
+	ADD(Z8, Z9, Z16, Z31, Z26)
+	ADD(Z10, Z11, Z16, Z31, Z27)
+	ADD(Z26, Z27, Z16, Z31, Z28)
+	ADD(Z28, Z9, Z16, Z31, Z29)
+	ADD(Z28, Z11, Z16, Z31, Z30)
+	DOUBLE(Z8, Z16, Z31, Z11)
+	ADD(Z11, Z30, Z16, Z31, Z11)
+	DOUBLE(Z10, Z16, Z31, Z9)
+	ADD(Z9, Z29, Z16, Z31, Z9)
+	ADD(Z26, Z29, Z16, Z31, Z8)
+	ADD(Z27, Z30, Z16, Z31, Z10)
+	ADD(Z12, Z13, Z16, Z31, Z26)
+	ADD(Z14, Z15, Z16, Z31, Z27)
+	ADD(Z26, Z27, Z16, Z31, Z28)
+	ADD(Z28, Z13, Z16, Z31, Z29)
+	ADD(Z28, Z15, Z16, Z31, Z30)
+	DOUBLE(Z12, Z16, Z31, Z15)
+	ADD(Z15, Z30, Z16, Z31, Z15)
+	DOUBLE(Z14, Z16, Z31, Z13)
+	ADD(Z13, Z29, Z16, Z31, Z13)
+	ADD(Z26, Z29, Z16, Z31, Z12)
+	ADD(Z27, Z30, Z16, Z31, Z14)
+	ADD(Z0, Z4, Z16, Z29, Z31)
+	ADD(Z1, Z5, Z16, Z30, Z26)
+	ADD(Z2, Z6, Z16, Z29, Z27)
+	ADD(Z3, Z7, Z16, Z30, Z28)
+	ADD(Z31, Z8, Z16, Z29, Z31)
+	ADD(Z26, Z9, Z16, Z30, Z26)
+	ADD(Z27, Z10, Z16, Z29, Z27)
+	ADD(Z28, Z11, Z16, Z30, Z28)
+	ADD(Z31, Z12, Z16, Z29, Z31)
+	ADD(Z26, Z13, Z16, Z30, Z26)
+	ADD(Z27, Z14, Z16, Z29, Z27)
+	ADD(Z28, Z15, Z16, Z30, Z28)
+	ADD(Z0, Z31, Z16, Z29, Z0)
+	ADD(Z1, Z26, Z16, Z30, Z1)
+	ADD(Z2, Z27, Z16, Z29, Z2)
+	ADD(Z3, Z28, Z16, Z30, Z3)
+	ADD(Z4, Z31, Z16, Z29, Z4)
+	ADD(Z5, Z26, Z16, Z30, Z5)
+	ADD(Z6, Z27, Z16, Z29, Z6)
+	ADD(Z7, Z28, Z16, Z30, Z7)
+	ADD(Z8, Z31, Z16, Z29, Z8)
+	ADD(Z9, Z26, Z16, Z30, Z9)
+	ADD(Z10, Z27, Z16, Z29, Z10)
+	ADD(Z11, Z28, Z16, Z30, Z11)
+	ADD(Z12, Z31, Z16, Z29, Z12)
+	ADD(Z13, Z26, Z16, Z30, Z13)
+	ADD(Z14, Z27, Z16, Z29, Z14)
+	ADD(Z15, Z28, Z16, Z30, Z15)
+
+	// loop over the first full rounds
+	MOVQ $0x0000000000000003, R9
+
+loop_21:
+	TESTQ        R9, R9
+	JEQ          done_22
+	DECQ         R9
+	MOVQ         0(CX), BX
+	VPBROADCASTD 0(BX), Z29
+	ADD(Z0, Z29, Z16, Z30, Z0)
+	SBOX3(Z0, Z0, Z31, Z26, Z27, Z28, Z30, Z16, Z17)
+	VPBROADCASTD 4(BX), Z29
+	ADD(Z1, Z29, Z16, Z31, Z1)
+	SBOX3(Z1, Z1, Z26, Z27, Z28, Z30, Z31, Z16, Z17)
+	VPBROADCASTD 8(BX), Z29
+	ADD(Z2, Z29, Z16, Z26, Z2)
+	SBOX3(Z2, Z2, Z27, Z28, Z30, Z31, Z26, Z16, Z17)
+	VPBROADCASTD 12(BX), Z29
+	ADD(Z3, Z29, Z16, Z27, Z3)
+	SBOX3(Z3, Z3, Z28, Z30, Z31, Z26, Z27, Z16, Z17)
+	VPBROADCASTD 16(BX), Z29
+	ADD(Z4, Z29, Z16, Z28, Z4)
+	SBOX3(Z4, Z4, Z30, Z31, Z26, Z27, Z28, Z16, Z17)
+	VPBROADCASTD 20(BX), Z29
+	ADD(Z5, Z29, Z16, Z30, Z5)
+	SBOX3(Z5, Z5, Z31, Z26, Z27, Z28, Z30, Z16, Z17)
+	VPBROADCASTD 24(BX), Z29
+	ADD(Z6, Z29, Z16, Z31, Z6)
+	SBOX3(Z6, Z6, Z26, Z27, Z28, Z30, Z31, Z16, Z17)
+	VPBROADCASTD 28(BX), Z29
+	ADD(Z7, Z29, Z16, Z26, Z7)
+	SBOX3(Z7, Z7, Z27, Z28, Z30, Z31, Z26, Z16, Z17)
+	VPBROADCASTD 32(BX), Z29
+	ADD(Z8, Z29, Z16, Z27, Z8)
+	SBOX3(Z8, Z8, Z28, Z30, Z31, Z26, Z27, Z16, Z17)
+	VPBROADCASTD 36(BX), Z29
+	ADD(Z9, Z29, Z16, Z28, Z9)
+	SBOX3(Z9, Z9, Z30, Z31, Z26, Z27, Z28, Z16, Z17)
+	VPBROADCASTD 40(BX), Z29
+	ADD(Z10, Z29, Z16, Z30, Z10)
+	SBOX3(Z10, Z10, Z31, Z26, Z27, Z28, Z30, Z16, Z17)
+	VPBROADCASTD 44(BX), Z29
+	ADD(Z11, Z29, Z16, Z31, Z11)
+	SBOX3(Z11, Z11, Z26, Z27, Z28, Z30, Z31, Z16, Z17)
+	VPBROADCASTD 48(BX), Z29
+	ADD(Z12, Z29, Z16, Z26, Z12)
+	SBOX3(Z12, Z12, Z27, Z28, Z30, Z31, Z26, Z16, Z17)
+	VPBROADCASTD 52(BX), Z29
+	ADD(Z13, Z29, Z16, Z27, Z13)
+	SBOX3(Z13, Z13, Z28, Z30, Z31, Z26, Z27, Z16, Z17)
+	VPBROADCASTD 56(BX), Z29
+	ADD(Z14, Z29, Z16, Z28, Z14)
+	SBOX3(Z14, Z14, Z30, Z31, Z26, Z27, Z28, Z16, Z17)
+	VPBROADCASTD 60(BX), Z29
+	ADD(Z15, Z29, Z16, Z30, Z15)
+	SBOX3(Z15, Z15, Z31, Z26, Z27, Z28, Z30, Z16, Z17)
+	ADD(Z0, Z1, Z16, Z30, Z29)
+	ADD(Z2, Z3, Z16, Z30, Z31)
+	ADD(Z29, Z31, Z16, Z30, Z26)
+	ADD(Z26, Z1, Z16, Z30, Z27)
+	ADD(Z26, Z3, Z16, Z30, Z28)
+	DOUBLE(Z0, Z16, Z30, Z3)
+	ADD(Z3, Z28, Z16, Z30, Z3)
+	DOUBLE(Z2, Z16, Z30, Z1)
+	ADD(Z1, Z27, Z16, Z30, Z1)
+	ADD(Z29, Z27, Z16, Z30, Z0)
+	ADD(Z31, Z28, Z16, Z30, Z2)
+	ADD(Z4, Z5, Z16, Z30, Z29)
+	ADD(Z6, Z7, Z16, Z30, Z31)
+	ADD(Z29, Z31, Z16, Z30, Z26)
+	ADD(Z26, Z5, Z16, Z30, Z27)
+	ADD(Z26, Z7, Z16, Z30, Z28)
+	DOUBLE(Z4, Z16, Z30, Z7)
+	ADD(Z7, Z28, Z16, Z30, Z7)
+	DOUBLE(Z6, Z16, Z30, Z5)
+	ADD(Z5, Z27, Z16, Z30, Z5)
+	ADD(Z29, Z27, Z16, Z30, Z4)
+	ADD(Z31, Z28, Z16, Z30, Z6)
+	ADD(Z8, Z9, Z16, Z30, Z29)
+	ADD(Z10, Z11, Z16, Z30, Z31)
+	ADD(Z29, Z31, Z16, Z30, Z26)
+	ADD(Z26, Z9, Z16, Z30, Z27)
+	ADD(Z26, Z11, Z16, Z30, Z28)
+	DOUBLE(Z8, Z16, Z30, Z11)
+	ADD(Z11, Z28, Z16, Z30, Z11)
+	DOUBLE(Z10, Z16, Z30, Z9)
+	ADD(Z9, Z27, Z16, Z30, Z9)
+	ADD(Z29, Z27, Z16, Z30, Z8)
+	ADD(Z31, Z28, Z16, Z30, Z10)
+	ADD(Z12, Z13, Z16, Z30, Z29)
+	ADD(Z14, Z15, Z16, Z30, Z31)
+	ADD(Z29, Z31, Z16, Z30, Z26)
+	ADD(Z26, Z13, Z16, Z30, Z27)
+	ADD(Z26, Z15, Z16, Z30, Z28)
+	DOUBLE(Z12, Z16, Z30, Z15)
+	ADD(Z15, Z28, Z16, Z30, Z15)
+	DOUBLE(Z14, Z16, Z30, Z13)
+	ADD(Z13, Z27, Z16, Z30, Z13)
+	ADD(Z29, Z27, Z16, Z30, Z12)
+	ADD(Z31, Z28, Z16, Z30, Z14)
+	ADD(Z0, Z4, Z16, Z27, Z30)
+	ADD(Z1, Z5, Z16, Z28, Z29)
+	ADD(Z2, Z6, Z16, Z27, Z31)
+	ADD(Z3, Z7, Z16, Z28, Z26)
+	ADD(Z30, Z8, Z16, Z27, Z30)
+	ADD(Z29, Z9, Z16, Z28, Z29)
+	ADD(Z31, Z10, Z16, Z27, Z31)
+	ADD(Z26, Z11, Z16, Z28, Z26)
+	ADD(Z30, Z12, Z16, Z27, Z30)
+	ADD(Z29, Z13, Z16, Z28, Z29)
+	ADD(Z31, Z14, Z16, Z27, Z31)
+	ADD(Z26, Z15, Z16, Z28, Z26)
+	ADD(Z0, Z30, Z16, Z27, Z0)
+	ADD(Z1, Z29, Z16, Z28, Z1)
+	ADD(Z2, Z31, Z16, Z27, Z2)
+	ADD(Z3, Z26, Z16, Z28, Z3)
+	ADD(Z4, Z30, Z16, Z27, Z4)
+	ADD(Z5, Z29, Z16, Z28, Z5)
+	ADD(Z6, Z31, Z16, Z27, Z6)
+	ADD(Z7, Z26, Z16, Z28, Z7)
+	ADD(Z8, Z30, Z16, Z27, Z8)
+	ADD(Z9, Z29, Z16, Z28, Z9)
+	ADD(Z10, Z31, Z16, Z27, Z10)
+	ADD(Z11, Z26, Z16, Z28, Z11)
+	ADD(Z12, Z30, Z16, Z27, Z12)
+	ADD(Z13, Z29, Z16, Z28, Z13)
+	ADD(Z14, Z31, Z16, Z27, Z14)
+	ADD(Z15, Z26, Z16, Z28, Z15)
+	ADDQ         $24, CX
+	JMP          loop_21
+
+done_22:
+	// loop over the partial rounds
+	MOVQ $0x0000000000000015, R10
+
+loop_23:
+	TESTQ        R10, R10
+	JEQ          done_24
+	DECQ         R10
+	MOVQ         0(CX), BX
+	VPBROADCASTD 0(BX), Z27
+	ADD(Z0, Z27, Z16, Z28, Z0)
+	SBOX3(Z0, Z0, Z30, Z29, Z31, Z26, Z28, Z16, Z17)
+	ADD(Z1, Z2, Z16, Z28, Z29)
+	ADD(Z3, Z4, Z16, Z28, Z31)
+	ADD(Z5, Z6, Z16, Z28, Z26)
+	ADD(Z7, Z8, Z16, Z28, Z27)
+	ADD(Z9, Z29, Z16, Z28, Z29)
+	ADD(Z10, Z31, Z16, Z28, Z31)
+	ADD(Z11, Z26, Z16, Z28, Z26)
+	ADD(Z12, Z27, Z16, Z28, Z27)
+	ADD(Z13, Z29, Z16, Z28, Z29)
+	ADD(Z14, Z31, Z16, Z28, Z31)
+	ADD(Z15, Z26, Z16, Z28, Z26)
+	ADD(Z29, Z31, Z16, Z28, Z29)
+	ADD(Z26, Z27, Z16, Z28, Z26)
+	ADD(Z29, Z26, Z16, Z28, Z27)
+	DOUBLE(Z2, Z16, Z28, Z2)
+	HALVE(Z3, Z28, Z16)
+	DOUBLE(Z4, Z16, Z28, Z29)
+	ADD(Z4, Z29, Z16, Z28, Z4)
+	DOUBLE(Z5, Z16, Z28, Z5)
+	DOUBLE(Z5, Z16, Z28, Z5)
+	HALVE(Z6, Z28, Z16)
+	DOUBLE(Z7, Z16, Z28, Z30)
+	ADD(Z7, Z30, Z16, Z28, Z7)
+	DOUBLE(Z8, Z16, Z28, Z8)
+	DOUBLE(Z8, Z16, Z28, Z8)
+	MOVD         $127, AX
+	VPBROADCASTD AX, Z28
+	MUL_2_EXP_NEG_8(Z9, Z28, Z9, Z30, Z16, $16)
+	MUL_2_EXP_NEG_N(Z10, Z10, Z29, Z31, Z16, $3, $29, $28, $21)
+	MUL_2_EXP_NEG_J(Z11, Z11, Z26, Z30, Z16, $24, $8, $7)
+	MUL_2_EXP_NEG_8(Z12, Z28, Z12, Z29, Z16, $16)
+	MUL_2_EXP_NEG_N(Z13, Z13, Z31, Z26, Z16, $3, $29, $28, $21)
+	MUL_2_EXP_NEG_N(Z14, Z14, Z30, Z29, Z16, $4, $28, $27, $20)
+	MUL_2_EXP_NEG_J(Z15, Z15, Z31, Z26, Z16, $24, $8, $7)
+	ADD(Z27, Z0, Z16, Z29, Z30)
+	SUB(Z27, Z0, Z16, Z31, Z0)
+	ADD(Z30, Z1, Z16, Z26, Z1)
+	ADD(Z2, Z30, Z16, Z28, Z2)
+	ADD(Z3, Z30, Z16, Z29, Z3)
+	ADD(Z4, Z30, Z16, Z31, Z4)
+	ADD(Z5, Z30, Z16, Z26, Z5)
+	SUB(Z30, Z6, Z16, Z28, Z6)
+	SUB(Z30, Z7, Z16, Z29, Z7)
+	SUB(Z30, Z8, Z16, Z31, Z8)
+	ADD(Z9, Z30, Z16, Z26, Z9)
+	ADD(Z10, Z30, Z16, Z28, Z10)
+	ADD(Z11, Z30, Z16, Z29, Z11)
+	SUB(Z30, Z12, Z16, Z31, Z12)
+	SUB(Z30, Z13, Z16, Z26, Z13)
+	SUB(Z30, Z14, Z16, Z28, Z14)
+	SUB(Z30, Z15, Z16, Z29, Z15)
+	ADDQ         $24, CX
+	JMP          loop_23
+
+done_24:
+	// loop over the final full rounds
+	MOVQ $0x0000000000000003, R11
+
+loop_25:
+	TESTQ        R11, R11
+	JEQ          done_26
+	DECQ         R11
+	MOVQ         0(CX), BX
+	VPBROADCASTD 0(BX), Z31
+	ADD(Z0, Z31, Z16, Z26, Z0)
+	SBOX3(Z0, Z0, Z28, Z29, Z30, Z27, Z26, Z16, Z17)
+	VPBROADCASTD 4(BX), Z31
+	ADD(Z1, Z31, Z16, Z28, Z1)
+	SBOX3(Z1, Z1, Z29, Z30, Z27, Z26, Z28, Z16, Z17)
+	VPBROADCASTD 8(BX), Z31
+	ADD(Z2, Z31, Z16, Z29, Z2)
+	SBOX3(Z2, Z2, Z30, Z27, Z26, Z28, Z29, Z16, Z17)
+	VPBROADCASTD 12(BX), Z31
+	ADD(Z3, Z31, Z16, Z30, Z3)
+	SBOX3(Z3, Z3, Z27, Z26, Z28, Z29, Z30, Z16, Z17)
+	VPBROADCASTD 16(BX), Z31
+	ADD(Z4, Z31, Z16, Z27, Z4)
+	SBOX3(Z4, Z4, Z26, Z28, Z29, Z30, Z27, Z16, Z17)
+	VPBROADCASTD 20(BX), Z31
+	ADD(Z5, Z31, Z16, Z26, Z5)
+	SBOX3(Z5, Z5, Z28, Z29, Z30, Z27, Z26, Z16, Z17)
+	VPBROADCASTD 24(BX), Z31
+	ADD(Z6, Z31, Z16, Z28, Z6)
+	SBOX3(Z6, Z6, Z29, Z30, Z27, Z26, Z28, Z16, Z17)
+	VPBROADCASTD 28(BX), Z31
+	ADD(Z7, Z31, Z16, Z29, Z7)
+	SBOX3(Z7, Z7, Z30, Z27, Z26, Z28, Z29, Z16, Z17)
+	VPBROADCASTD 32(BX), Z31
+	ADD(Z8, Z31, Z16, Z30, Z8)
+	SBOX3(Z8, Z8, Z27, Z26, Z28, Z29, Z30, Z16, Z17)
+	VPBROADCASTD 36(BX), Z31
+	ADD(Z9, Z31, Z16, Z27, Z9)
+	SBOX3(Z9, Z9, Z26, Z28, Z29, Z30, Z27, Z16, Z17)
+	VPBROADCASTD 40(BX), Z31
+	ADD(Z10, Z31, Z16, Z26, Z10)
+	SBOX3(Z10, Z10, Z28, Z29, Z30, Z27, Z26, Z16, Z17)
+	VPBROADCASTD 44(BX), Z31
+	ADD(Z11, Z31, Z16, Z28, Z11)
+	SBOX3(Z11, Z11, Z29, Z30, Z27, Z26, Z28, Z16, Z17)
+	VPBROADCASTD 48(BX), Z31
+	ADD(Z12, Z31, Z16, Z29, Z12)
+	SBOX3(Z12, Z12, Z30, Z27, Z26, Z28, Z29, Z16, Z17)
+	VPBROADCASTD 52(BX), Z31
+	ADD(Z13, Z31, Z16, Z30, Z13)
+	SBOX3(Z13, Z13, Z27, Z26, Z28, Z29, Z30, Z16, Z17)
+	VPBROADCASTD 56(BX), Z31
+	ADD(Z14, Z31, Z16, Z27, Z14)
+	SBOX3(Z14, Z14, Z26, Z28, Z29, Z30, Z27, Z16, Z17)
+	VPBROADCASTD 60(BX), Z31
+	ADD(Z15, Z31, Z16, Z26, Z15)
+	SBOX3(Z15, Z15, Z28, Z29, Z30, Z27, Z26, Z16, Z17)
+	ADD(Z0, Z1, Z16, Z26, Z31)
+	ADD(Z2, Z3, Z16, Z26, Z28)
+	ADD(Z31, Z28, Z16, Z26, Z29)
+	ADD(Z29, Z1, Z16, Z26, Z30)
+	ADD(Z29, Z3, Z16, Z26, Z27)
+	DOUBLE(Z0, Z16, Z26, Z3)
+	ADD(Z3, Z27, Z16, Z26, Z3)
+	DOUBLE(Z2, Z16, Z26, Z1)
+	ADD(Z1, Z30, Z16, Z26, Z1)
+	ADD(Z31, Z30, Z16, Z26, Z0)
+	ADD(Z28, Z27, Z16, Z26, Z2)
+	ADD(Z4, Z5, Z16, Z26, Z31)
+	ADD(Z6, Z7, Z16, Z26, Z28)
+	ADD(Z31, Z28, Z16, Z26, Z29)
+	ADD(Z29, Z5, Z16, Z26, Z30)
+	ADD(Z29, Z7, Z16, Z26, Z27)
+	DOUBLE(Z4, Z16, Z26, Z7)
+	ADD(Z7, Z27, Z16, Z26, Z7)
+	DOUBLE(Z6, Z16, Z26, Z5)
+	ADD(Z5, Z30, Z16, Z26, Z5)
+	ADD(Z31, Z30, Z16, Z26, Z4)
+	ADD(Z28, Z27, Z16, Z26, Z6)
+	ADD(Z8, Z9, Z16, Z26, Z31)
+	ADD(Z10, Z11, Z16, Z26, Z28)
+	ADD(Z31, Z28, Z16, Z26, Z29)
+	ADD(Z29, Z9, Z16, Z26, Z30)
+	ADD(Z29, Z11, Z16, Z26, Z27)
+	DOUBLE(Z8, Z16, Z26, Z11)
+	ADD(Z11, Z27, Z16, Z26, Z11)
+	DOUBLE(Z10, Z16, Z26, Z9)
+	ADD(Z9, Z30, Z16, Z26, Z9)
+	ADD(Z31, Z30, Z16, Z26, Z8)
+	ADD(Z28, Z27, Z16, Z26, Z10)
+	ADD(Z12, Z13, Z16, Z26, Z31)
+	ADD(Z14, Z15, Z16, Z26, Z28)
+	ADD(Z31, Z28, Z16, Z26, Z29)
+	ADD(Z29, Z13, Z16, Z26, Z30)
+	ADD(Z29, Z15, Z16, Z26, Z27)
+	DOUBLE(Z12, Z16, Z26, Z15)
+	ADD(Z15, Z27, Z16, Z26, Z15)
+	DOUBLE(Z14, Z16, Z26, Z13)
+	ADD(Z13, Z30, Z16, Z26, Z13)
+	ADD(Z31, Z30, Z16, Z26, Z12)
+	ADD(Z28, Z27, Z16, Z26, Z14)
+	ADD(Z0, Z4, Z16, Z30, Z26)
+	ADD(Z1, Z5, Z16, Z27, Z31)
+	ADD(Z2, Z6, Z16, Z30, Z28)
+	ADD(Z3, Z7, Z16, Z27, Z29)
+	ADD(Z26, Z8, Z16, Z30, Z26)
+	ADD(Z31, Z9, Z16, Z27, Z31)
+	ADD(Z28, Z10, Z16, Z30, Z28)
+	ADD(Z29, Z11, Z16, Z27, Z29)
+	ADD(Z26, Z12, Z16, Z30, Z26)
+	ADD(Z31, Z13, Z16, Z27, Z31)
+	ADD(Z28, Z14, Z16, Z30, Z28)
+	ADD(Z29, Z15, Z16, Z27, Z29)
+	ADD(Z0, Z26, Z16, Z30, Z0)
+	ADD(Z1, Z31, Z16, Z27, Z1)
+	ADD(Z2, Z28, Z16, Z30, Z2)
+	ADD(Z3, Z29, Z16, Z27, Z3)
+	ADD(Z4, Z26, Z16, Z30, Z4)
+	ADD(Z5, Z31, Z16, Z27, Z5)
+	ADD(Z6, Z28, Z16, Z30, Z6)
+	ADD(Z7, Z29, Z16, Z27, Z7)
+	ADD(Z8, Z26, Z16, Z30, Z8)
+	ADD(Z9, Z31, Z16, Z27, Z9)
+	ADD(Z10, Z28, Z16, Z30, Z10)
+	ADD(Z11, Z29, Z16, Z27, Z11)
+	ADD(Z12, Z26, Z16, Z30, Z12)
+	ADD(Z13, Z31, Z16, Z27, Z13)
+	ADD(Z14, Z28, Z16, Z30, Z14)
+	ADD(Z15, Z29, Z16, Z27, Z15)
+	ADDQ         $24, CX
+	JMP          loop_25
+
+done_26:
+	ADD(Z18, Z8, Z16, Z30, Z0)
+	ADD(Z19, Z9, Z16, Z27, Z1)
+	ADD(Z20, Z10, Z16, Z26, Z2)
+	ADD(Z21, Z11, Z16, Z31, Z3)
+	ADD(Z22, Z12, Z16, Z28, Z4)
+	ADD(Z23, Z13, Z16, Z29, Z5)
+	ADD(Z24, Z14, Z16, Z30, Z6)
+	ADD(Z25, Z15, Z16, Z27, Z7)
+	ADDQ $0x0000000000000200, R14
+	MOVQ roundKeys+8(FP), CX
+	JMP  loop_19
+
+done_20:
+	MOVQ        ·indexScatter8+0(SB), R8
+	VMOVDQU32   0(R8), Z26
+	KMOVD       DI, K1
+	VPSCATTERDD Z0, K1, 0(R13)(Z26*4)
+	KMOVD       DI, K1
+	VPSCATTERDD Z1, K1, 4(R13)(Z26*4)
+	KMOVD       DI, K1
+	VPSCATTERDD Z2, K1, 8(R13)(Z26*4)
+	KMOVD       DI, K1
+	VPSCATTERDD Z3, K1, 12(R13)(Z26*4)
+	KMOVD       DI, K1
+	VPSCATTERDD Z4, K1, 16(R13)(Z26*4)
+	KMOVD       DI, K1
+	VPSCATTERDD Z5, K1, 20(R13)(Z26*4)
+	KMOVD       DI, K1
+	VPSCATTERDD Z6, K1, 24(R13)(Z26*4)
+	KMOVD       DI, K1
+	VPSCATTERDD Z7, K1, 28(R13)(Z26*4)
+	RET
