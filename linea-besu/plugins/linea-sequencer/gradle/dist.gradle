@@ -33,13 +33,4 @@ jar {
       'Implementation-Version': calculateVersion()
     )
   }
-
-  // Include the Kotlin 2.4 core stdlib so classes such as kotlin.time.Instant are available when
-  // Besu loads the plugin. The jdk7/jdk8 compatibility JARs contain duplicate module-info entries,
-  // so unpacking every kotlin-stdlib* artifact would make this JAR fail with duplicate entries.
-  from {
-    configurations.runtimeClasspath
-      .filter { it.name == "kotlin-stdlib-${libs.versions.kotlin.get()}.jar" }
-      .collect { zipTree(it) }
-  }
 }
