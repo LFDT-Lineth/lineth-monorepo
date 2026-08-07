@@ -7,6 +7,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils/parallel"
+	gnarkposeidon2 "github.com/consensys/gnark-crypto/field/koalabear/poseidon2"
 )
 
 // minParallelTreeLevel avoids paying goroutine scheduling costs for the small
@@ -14,9 +15,10 @@ import (
 // from using all available CPUs.
 const minParallelTreeLevel = 512
 
-// batchLanes is the width of the batched Poseidon2 compression used for
-// internal tree levels.
-const batchLanes = poseidon2.BatchLanes
+// batchLanes is the width of the batched Poseidon2 compression.
+const batchLanes = 16
+
+var batchPoseidon2 = gnarkposeidon2.NewPermutation(16, 6, 21)
 
 // Tree is a Merkle tree for multi-size FRI. The tree is 3-ary, each node may
 // have:
@@ -185,8 +187,7 @@ func hashTreeLevel(
 				k0       = levelStart + j
 				children = nodes[2*k0+1 : 2*k0+1+2*batchLanes]
 			)
-			// Fused poseidon2.StageOctuplet loops: one pass per lane over both
-			// buffers measurably beats two helper calls on this hot path.
+			// Stage both buffers in one pass per lane.
 			for lane := range batchLanes {
 				left, right := &children[2*lane], &children[2*lane+1]
 				for pos := range 8 {
@@ -203,7 +204,12 @@ func hashTreeLevel(
 					}
 				}
 			}
-			poseidon2.CompressChain16(state, matrix, nodes[k0:k0+batchLanes])
+			batchPoseidon2.Compressx16ColumnsWithState(
+				state,
+				matrix,
+				nbSteps*8,
+				nodes[k0:k0+batchLanes],
+			)
 		}
 	}
 
