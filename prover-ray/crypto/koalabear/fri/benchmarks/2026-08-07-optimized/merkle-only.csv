@@ -1,0 +1,10 @@
+implementation,phase,rate,rows,columns,workers,median_ms,samples_ms
+prover-ray,merkle,4,1048576,16,96,21.9,"20.5 21.6 21.9 22.3 22.3"
+plonky3-native,merkle,4,1048576,16,96,70.4,"70.0 70.2 70.4 70.4 74.5"
+prover-ray,merkle,4,65536,256,96,11.5,"9.7 11.0 11.5 11.8 11.8"
+plonky3-native,merkle,4,65536,256,96,14.2,"13.4 14.0 14.2 14.2 14.2"
+prover-ray,merkle,4,4096,4096,96,9.2,"8.4 9.2 9.3 9.7 9.2"
+plonky3-native,merkle,4,4096,4096,96,7.8,"7.3 7.5 7.8 7.8 7.8"
+prover-ray,encode,4,1048576,16,96,23.1,"22.1 22.5 23.1 23.7 59.8"
+prover-ray,encode,4,65536,256,96,9.4,"9.1 9.2 9.4 9.8 52.3"
+prover-ray,encode,4,4096,4096,96,8.8,"8.5 8.7 8.8 52.2 53.6"

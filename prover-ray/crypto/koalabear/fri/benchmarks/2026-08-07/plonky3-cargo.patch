@@ -1,0 +1,10 @@
+Add these dev-dependencies to `fri/Cargo.toml` at Plonky3 commit
+`a31a1443a114c58735850daa5b5fc5c43c138d9d`:
+
+```toml
+p3-koala-bear = { path = "../koala-bear" }
+p3-maybe-rayon = { path = "../maybe-rayon", features = ["parallel"] }
+```
+
+The direct `p3-maybe-rayon` dev-dependency enables Rayon consistently for the
+DFT and Merkle crates through Cargo feature unification.
