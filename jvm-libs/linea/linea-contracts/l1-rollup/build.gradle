@@ -1,6 +1,6 @@
 plugins {
   id 'java-library'
-  id 'linea.web3j-codegen'
+  id 'lineth.web3j-codegen'
 }
 java {
   toolchain {

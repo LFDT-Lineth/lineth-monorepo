@@ -2,7 +2,7 @@
   <configuration default="false" name="Coordinator" type="Application" factoryName="Application">
     <option name="ALTERNATIVE_JRE_PATH" value="21" />
     <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
-    <option name="MAIN_CLASS_NAME" value="net.consensys.zkevm.coordinator.app.CoordinatorAppMain" />
+    <option name="MAIN_CLASS_NAME" value="lineth.zkevm.coordinator.app.CoordinatorAppMain" />
     <module name="zkevm.coordinator.app.main" />
     <option name="PROGRAM_PARAMETERS" value="--traces-limits-v2=config/common/traces-limits-v2.toml --smart-contract-errors=config/common/smart-contract-errors.toml --gas-price-cap-time-of-day-multipliers=config/common/gas-price-cap-time-of-day-multipliers.toml config/coordinator/coordinator-config-v2.toml config/coordinator/coordinator-config-v2-override-local-dev.toml" />
     <option name="VM_PARAMETERS" value="-Dvertx.configurationFile=config/coordinator/vertx-options.json -Dlog4j2.configurationFile=config/coordinator/log4j2-dev.xml" />

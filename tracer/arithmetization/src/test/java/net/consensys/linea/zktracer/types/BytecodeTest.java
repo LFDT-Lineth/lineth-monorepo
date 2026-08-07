@@ -17,8 +17,8 @@ package net.consensys.linea.zktracer.types;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import net.consensys.linea.UnitTestWatcher;
-import net.consensys.linea.reporting.TracerTestBase;
+import lineth.UnitTestWatcher;
+import lineth.reporting.TracerTestBase;
 import org.apache.tuweni.bytes.Bytes;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

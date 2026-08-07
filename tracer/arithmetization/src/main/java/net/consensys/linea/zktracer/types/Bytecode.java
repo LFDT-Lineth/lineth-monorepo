@@ -15,8 +15,8 @@
 
 package net.consensys.linea.zktracer.types;
 
-import static net.consensys.linea.zktracer.Trace.EOA_DELEGATED_CODE_LENGTH;
-import static net.consensys.linea.zktracer.module.hub.AccountSnapshot.EIP_7702_DELEGATION_INDICATOR_BYTES;
+import static lineth.zktracer.Trace.EOA_DELEGATED_CODE_LENGTH;
+import static lineth.zktracer.module.hub.AccountSnapshot.EIP_7702_DELEGATION_INDICATOR_BYTES;
 
 import java.util.Objects;
 import java.util.Optional;

@@ -48,7 +48,7 @@ publishing {
   }
   publications {
     mavenJava(MavenPublication) {
-      groupId "net.consensys.linea.zktracer"
+      groupId "lineth.zktracer"
       version "${project.version}"
       from components.java
       artifact sourcesJar

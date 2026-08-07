@@ -28,23 +28,23 @@ dependencies {
 gradlePlugin {
   plugins {
     create("Web3jCodegenPlugin") {
-      id = "linea.web3j-codegen"
+      id = "lineth.web3j-codegen"
       implementationClass = "Web3jCodegenPlugin"
     }
     create ("YulPlugin") {
-      id = "linea.yul-plugin"
+      id = "lineth.yul-plugin"
       implementationClass = "YulPlugin"
     }
     create("DownloadNativeLibsPlugin") {
-      id = "linea.download-native-libs"
+      id = "lineth.download-native-libs"
       implementationClass = "DownloadNativeLibsPlugin"
     }
     create("SolcToolchainPlugin") {
-      id = "linea.solc-toolchain"
+      id = "lineth.solc-toolchain"
       implementationClass = "SolcToolchainPlugin"
     }
     create("ConfigDocsPlugin") {
-      id = "linea.config-docs"
+      id = "lineth.config-docs"
       implementationClass = "ConfigDocsPlugin"
     }
   }

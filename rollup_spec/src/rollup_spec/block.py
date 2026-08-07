@@ -57,7 +57,7 @@ class ForcedTransactionAcceptance(Enum):
     Sequencer's declared outcome for a forced transaction.
 
     Mirrors the canonical Java enum at
-    `linea-besu/plugins/linea-sequencer/sequencer/src/main/java/net/consensys/linea/sequencer/forced/ForcedTransactionInclusionResult.java`
+    `linea-besu/plugins/linea-sequencer/sequencer/src/main/java/lineth/sequencer/forced/ForcedTransactionInclusionResult.java`
     *narrowed to the cases that can actually be observed by the guest
     program under RISC-V proving*. Three variants from the Java enum are
     intentionally absent here:

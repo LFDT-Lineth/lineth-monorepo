@@ -21,7 +21,7 @@ plugins {
   alias(libs.plugins.hierynomusLicense)
 }
 
-group = 'net.consensys.linea.besu.plugin'
+group = 'lineth.besu.plugin'
 
 def lineaTracerProject = project(lineaTracerProjectPath)
 apply from: lineaTracerProject.file("gradle/java.gradle")

@@ -15,7 +15,7 @@ import lineth.web3j.domain.toWeb3j
 import lineth.web3j.gas.EIP1559GasProvider
 import lineth.web3j.requestAsync
 import lineth.web3j.transactionmanager.AsyncFriendlyTransactionManager
-import net.consensys.linea.contract.L2MessageService
+import lineth.contract.L2MessageService
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.web3j.protocol.Web3j

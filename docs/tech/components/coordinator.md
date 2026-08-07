@@ -62,7 +62,7 @@ The Coordinator is the central orchestration service responsible for:
 coordinator/
 ├── app/                    # Application layer
 │   └── src/main/kotlin/
-│       └── net/consensys/zkevm/coordinator/app/
+│       └── lineth/zkevm/coordinator/app/
 │           ├── CoordinatorApp.kt           # Main orchestrator
 │           ├── CoordinatorAppMain.kt       # Entry point
 │           ├── CoordinatorAppCli.kt        # CLI interface
@@ -73,7 +73,7 @@ coordinator/
 │
 ├── core/                   # Business logic
 │   └── src/main/kotlin/
-│       └── net/consensys/zkevm/
+│       └── lineth/zkevm/
 │           ├── ethereum/coordination/
 │           │   ├── conflation/             # Block conflation
 │           │   ├── blob/                   # Blob compression

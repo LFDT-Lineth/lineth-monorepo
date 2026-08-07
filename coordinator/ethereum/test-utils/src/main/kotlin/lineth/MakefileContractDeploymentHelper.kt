@@ -1,7 +1,7 @@
 package lineth
 
-import linea.testing.CommandResult
-import linea.testing.Runner
+import lineth.testing.CommandResult
+import lineth.testing.Runner
 import lineth.contract.l1.LinethRollupContractVersion
 import org.hyperledger.besu.datatypes.Address
 import tech.pegasys.teku.infrastructure.async.SafeFuture

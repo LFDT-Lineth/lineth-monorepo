@@ -13,7 +13,7 @@ plugins {
   alias(libs.plugins.gradleVersions)
 }
 
-group = 'net.consensys.linea.besu.plugin'
+group = 'lineth.besu.plugin'
 
 def lineaSequencerProject = project(lineaSequencerProjectPath)
 apply from: lineaSequencerProject.file("gradle/java.gradle")

@@ -248,7 +248,7 @@ data class ExecutionPayload(
 /**
  * The 15-field PI tuple emitted by an l2-execution proof (rollup_spec §2.1).
  *
- * Domain twin of `linea.coordinator.clients.prover.riscv.ExecutionPublicInputsDto`. Kept here (rather than reusing
+ * Domain twin of `lineth.coordinator.clients.prover.riscv.ExecutionPublicInputsDto`. Kept here (rather than reusing
  * the DTO) because this module is depended upon by the prover-client modules, not the other way around. Field names
  * and types are identical to the DTO so the DTO -> domain mapping is a straight field copy.
  */
@@ -320,7 +320,7 @@ data class L2ExecutionProofPublicInputs(
 /**
  * Response of a l2-execution proof.
  *
- * Mirrors `linea.coordinator.clients.prover.riscv.L2ExecutionProofResponseDto` field-for-field so that a proof
+ * Mirrors `lineth.coordinator.clients.prover.riscv.L2ExecutionProofResponseDto` field-for-field so that a proof
  * response — whether read from a JSON file or returned by a REST endpoint — deserializes into the DTO and maps
  * directly onto this domain type.
  */

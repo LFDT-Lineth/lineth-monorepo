@@ -109,7 +109,7 @@ class LoadBalancingJsonRpcClientTest {
     }
     // Custom logger to help debugging
     val log = LogManager.getLogger(
-      "net.consensys.linea.jsonrpc.LoadBalancingJsonRpcClient-${repetitionInfo.currentRepetition}-",
+      "lineth.jsonrpc.LoadBalancingJsonRpcClient-${repetitionInfo.currentRepetition}-",
     )
     loadBalancer = LoadBalancingJsonRpcClient.create(
       rpcClients = listOf(client1, client2),

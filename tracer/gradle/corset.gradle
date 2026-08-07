@@ -111,7 +111,7 @@ tasks.register('installGoCorset') {
 def ZKEVM_OSAKA_BIN = System.getenv("ZKEVM_OSAKA_BIN") ?: "zkevm_osaka.bin"
 
 // Specify package to use for trace file
-def TRACE_PKG = "net.consensys.linea.zktracer"
+def TRACE_PKG = "lineth.zktracer"
 
 tasks.register('buildZkevmBins', Exec) {
   dependsOn('corsetExists')
@@ -142,7 +142,7 @@ tasks.register('buildAllTracers', Exec) {
   dependsOn 'buildZkevmBins'
   def capturedGoCorsetPath = project.ext.goCorsetPath
   // Specify where the trace files should be generated.
-  def GENERATED_SRC_DIR = "${project.buildDir}/generated/gocorset/main/java/net/consensys/linea/zktracer"
+  def GENERATED_SRC_DIR = "${project.buildDir}/generated/gocorset/main/java/lineth/zktracer"
   def TRACE_FILE = "$GENERATED_SRC_DIR/Trace.java"
   def OSAKA_TRACE_FILE = "$GENERATED_SRC_DIR/TraceOsaka.java"
 

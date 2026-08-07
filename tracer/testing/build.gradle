@@ -9,8 +9,8 @@ buildscript {
 }
 
 plugins {
-  id "linea.yul-plugin"
-  id "linea.solc-toolchain"
+  id "lineth.yul-plugin"
+  id "lineth.solc-toolchain"
   alias(libs.plugins.besuPluginLibrary)
   alias(libs.plugins.web3j)
   alias(libs.plugins.lombok)
@@ -41,7 +41,7 @@ tasks.withType(GenerateContractWrappers.class).configureEach {
 }
 
 web3j {
-  generatedPackageName = "net.consensys.linea.testing.generated"
+  generatedPackageName = "lineth.testing.generated"
 }
 
 solcToolchain {

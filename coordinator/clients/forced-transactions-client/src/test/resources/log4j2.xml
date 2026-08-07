@@ -6,10 +6,10 @@
     </Console>
   </Appenders>
   <Loggers>
-    <Logger name="net.consensys.linea.jsonrpc" level="trace" additivity="false">
+    <Logger name="lineth.jsonrpc" level="trace" additivity="false">
       <AppenderRef ref="console"/>
     </Logger>
-    <Logger name="linea.coordinator.clients" level="trace" additivity="false">
+    <Logger name="lineth.coordinator.clients" level="trace" additivity="false">
       <AppenderRef ref="console"/>
     </Logger>
     <Root level="WARN" additivity="false">

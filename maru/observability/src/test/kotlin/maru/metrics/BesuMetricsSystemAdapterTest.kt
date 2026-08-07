@@ -52,7 +52,7 @@ class BesuMetricsSystemAdapterTest {
     meterRegistry = SimpleMeterRegistry()
     metricsFacade = MicrometerMetricsFacade(
       meterRegistry,
-      metricsPrefix = "linea.test",
+      metricsPrefix = "lineth.test",
       allMetricsCommonTags = listOf(Tag("version", "1.0.1")),
     )
     besuMetricsSystemAdapter = BesuMetricsSystemAdapter(
@@ -72,7 +72,7 @@ class BesuMetricsSystemAdapterTest {
         labelNames = expectedTags.map { it.key }.toList().toTypedArray(),
       )
     val counter = labelledMetric.labels(*expectedTags.map { it.value }.toList().toTypedArray())
-    val createdCounter = meterRegistry.find("linea.test.test.category.some.metric").counter()
+    val createdCounter = meterRegistry.find("lineth.test.test.category.some.metric").counter()
     assertThat(createdCounter!!.count()).isEqualTo(0.0)
     assertThat(createdCounter).isNotNull
     counter.inc(13)
@@ -101,7 +101,7 @@ class BesuMetricsSystemAdapterTest {
         labelNames = expectedTags.map { it.key }.toList().toTypedArray(),
       )
     val counter = labelledMetric.labels(*expectedTags.map { it.value }.toList().toTypedArray())
-    val createdCounter = meterRegistry.find("linea.test.besu.test.category.some.metric").counter()
+    val createdCounter = meterRegistry.find("lineth.test.besu.test.category.some.metric").counter()
     assertThat(createdCounter!!.count()).isEqualTo(0.0)
     assertThat(createdCounter).isNotNull
     counter.inc(13)
@@ -135,7 +135,7 @@ class BesuMetricsSystemAdapterTest {
       *expectedTags.map { it.value }.toList().toTypedArray(),
     )
     metricMeasureValue = 13L
-    val createdGauge = meterRegistry.find("linea.test.test.category.some.metric").gauge()
+    val createdGauge = meterRegistry.find("lineth.test.test.category.some.metric").gauge()
     assertThat(createdGauge).isNotNull
     assertThat(createdGauge!!.value()).isEqualTo(13.0)
     metricMeasureValue = 2L
@@ -163,7 +163,7 @@ class BesuMetricsSystemAdapterTest {
     Thread.sleep(200L)
     val elapsedTime = timerContext.stopTimer()
 
-    val createdTimer = meterRegistry.find("linea.test.test.category.some.timer.metric").timer()
+    val createdTimer = meterRegistry.find("lineth.test.test.category.some.timer.metric").timer()
     assertThat(createdTimer).isNotNull
     assertThat(createdTimer!!.id.description).isEqualTo("This is a test metric")
     assertThat(
@@ -189,7 +189,7 @@ class BesuMetricsSystemAdapterTest {
       )
     val histogram = labelledHistogramAdapter.labels(*expectedTags.map { it.value }.toList().toTypedArray())
 
-    val createdHistogram = meterRegistry.find("linea.test.test.category.some.metric").summary()
+    val createdHistogram = meterRegistry.find("lineth.test.test.category.some.metric").summary()
     assertThat(createdHistogram).isNotNull
     assertThat(createdHistogram!!.id.description).isEqualTo("This is a test metric")
     assertThat(
@@ -231,7 +231,7 @@ class BesuMetricsSystemAdapterTest {
         { 2.0 },
         *expectedTags.map { it.value }.toList().toTypedArray(),
       )
-    val createdCounter = meterRegistry.find("linea.test.test.category.some.metric").counter()
+    val createdCounter = meterRegistry.find("lineth.test.test.category.some.metric").counter()
     assertThat(createdCounter).isNotNull
 
     await

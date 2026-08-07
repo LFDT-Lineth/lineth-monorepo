@@ -56,7 +56,7 @@ tasks.register("generateExecutionSpecBlockchainTests", RefTestGenerationTask) {
   refTestJsonParamsDirectory = "fixtures"
   refTestJsonParamsExcludedPath = "blockchain_tests_engine_x" // exclude test for test filling tool
   refTestNamePrefix = "BlockchainReferenceTest"
-  generatedRefTestsOutput = "src/test/java/net/consensys/linea/generated/blockchain"
+  generatedRefTestsOutput = "src/test/java/lineth/generated/blockchain"
   failedTestsFilePath = System.getenv('FAILED_TEST_JSON_DIRECTORY') ?: "../tmp/local/"
   failedModule = System.getenv('FAILED_MODULE') ?: ""
   failedConstraint = System.getenv('FAILED_CONSTRAINT') ?: ""

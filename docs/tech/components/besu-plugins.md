@@ -67,7 +67,7 @@ linea-besu/plugins/
 ├── linea-sequencer/
 │   ├── sequencer/
 │   │   └── src/main/java/
-│   │       └── net/consensys/linea/sequencer/
+│   │       └── lineth/sequencer/
 │   │           ├── txselection/
 │   │           │   └── LineaTransactionSelectorPlugin.java
 │   │           ├── txpoolvalidation/

@@ -1,7 +1,7 @@
-package net.consensys.zkevm.load.model.swagger
+package lineth.zkevm.load.model.swagger
 
-import net.consensys.zkevm.load.model.JSON
-import net.consensys.zkevm.load.model.Wallet
+import lineth.zkevm.load.model.JSON
+import lineth.zkevm.load.model.Wallet
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue

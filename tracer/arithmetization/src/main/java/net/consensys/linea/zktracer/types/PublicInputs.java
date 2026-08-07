@@ -16,8 +16,8 @@
 package net.consensys.linea.zktracer.types;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static net.consensys.linea.zktracer.Trace.BLOCKHASH_MAX_HISTORY;
-import static net.consensys.linea.zktracer.Trace.LINEA_BLOB_BASE_FEE;
+import static lineth.zktracer.Trace.BLOCKHASH_MAX_HISTORY;
+import static lineth.zktracer.Trace.LINEA_BLOB_BASE_FEE;
 
 import java.util.HashMap;
 import java.util.Map;

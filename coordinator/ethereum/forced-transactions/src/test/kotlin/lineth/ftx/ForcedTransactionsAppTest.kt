@@ -3,16 +3,16 @@ package lineth.ftx
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import linea.conflation.FixedLaggingHeadSafeBlockProvider
-import linea.conflation.calculators.CalculatorsFactory
-import linea.conflation.calculators.ConflationTriggerCalculator
-import linea.coordination.blob.FakeBlobCompressor
-import linea.coordinator.clients.FakeTracesConflationVirtualBlockClientV1
-import linea.ftx.conflation.ForcedTransactionConflationSafeBlockNumberProvider
-import linea.ftx.conflation.SafeBlockNumberUpdateListener
-import linea.persistence.ForcedTransactionRecord
-import linea.persistence.ForcedTransactionsDao
-import linea.persistence.ftx.FakeForcedTransactionsDao
+import lineth.conflation.FixedLaggingHeadSafeBlockProvider
+import lineth.conflation.calculators.CalculatorsFactory
+import lineth.conflation.calculators.ConflationTriggerCalculator
+import lineth.coordination.blob.FakeBlobCompressor
+import lineth.coordinator.clients.FakeTracesConflationVirtualBlockClientV1
+import lineth.ftx.conflation.ForcedTransactionConflationSafeBlockNumberProvider
+import lineth.ftx.conflation.SafeBlockNumberUpdateListener
+import lineth.persistence.ForcedTransactionRecord
+import lineth.persistence.ForcedTransactionsDao
+import lineth.persistence.ftx.FakeForcedTransactionsDao
 import lineth.FakeFixedClock
 import lineth.clients.InvalidityProverClientV1
 import lineth.clients.StateManagerAccountProofClient
@@ -84,8 +84,8 @@ class ForcedTransactionsAppTest {
       "l1.FakeEthApiClient" to Level.INFO,
       "l2.FakeEthApiClient" to Level.INFO,
       "linea.ethapi" to Level.INFO,
-      "linea.ftx" to Level.INFO,
-      "linea.ftx.conflation" to Level.INFO,
+      "lineth.ftx" to Level.INFO,
+      "lineth.ftx.conflation" to Level.INFO,
     )
 
     this.vertx = vertx

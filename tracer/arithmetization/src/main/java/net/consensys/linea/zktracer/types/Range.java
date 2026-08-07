@@ -17,7 +17,7 @@ package net.consensys.linea.zktracer.types;
 
 import static org.hyperledger.besu.evm.internal.Words.clampedToLong;
 
-import net.consensys.linea.zktracer.opcode.OpCodeData;
+import lineth.zktracer.opcode.OpCodeData;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 

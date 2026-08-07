@@ -15,7 +15,7 @@
 
 package net.consensys.linea.zktracer.types;
 
-import static net.consensys.linea.zktracer.Trace.LLARGE;
+import static lineth.zktracer.Trace.LLARGE;
 import static net.consensys.linea.zktracer.types.Utils.*;
 
 import org.apache.tuweni.bytes.Bytes;

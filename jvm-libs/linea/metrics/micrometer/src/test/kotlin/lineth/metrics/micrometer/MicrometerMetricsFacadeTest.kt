@@ -27,7 +27,7 @@ class MicrometerMetricsFacadeTest {
     meterRegistry = SimpleMeterRegistry()
     metricsFacade = MicrometerMetricsFacade(
       meterRegistry,
-      metricsPrefix = "linea.test",
+      metricsPrefix = "lineth.test",
       allMetricsCommonTags = listOf(Tag("version", "1.0.1")),
     )
   }
@@ -44,7 +44,7 @@ class MicrometerMetricsFacadeTest {
       tags = expectedTags,
     )
     metricMeasureValue = 13L
-    val createdGauge = meterRegistry.find("linea.test.test.category.some.metric").gauge()
+    val createdGauge = meterRegistry.find("lineth.test.test.category.some.metric").gauge()
     assertThat(createdGauge).isNotNull
     assertThat(createdGauge!!.value()).isEqualTo(13.0)
     metricMeasureValue = 2L
@@ -66,7 +66,7 @@ class MicrometerMetricsFacadeTest {
       description = "This is a test metric",
       tags = expectedTags,
     )
-    val createdCounter = meterRegistry.find("linea.test.test.category.some.metric").counter()
+    val createdCounter = meterRegistry.find("lineth.test.test.category.some.metric").counter()
     assertThat(createdCounter!!.count()).isEqualTo(0.0)
     assertThat(createdCounter).isNotNull
     counter.increment(13.0)
@@ -97,7 +97,7 @@ class MicrometerMetricsFacadeTest {
       baseUnit = "seconds",
     )
 
-    val createdHistogram = meterRegistry.find("linea.test.test.category.some.metric").summary()
+    val createdHistogram = meterRegistry.find("lineth.test.test.category.some.metric").summary()
     assertThat(createdHistogram).isNotNull
     assertThat(createdHistogram!!.id.description).isEqualTo("This is a test metric")
     assertThat(
@@ -128,7 +128,7 @@ class MicrometerMetricsFacadeTest {
   @Test
   fun `createHistogram with publishPercentileHistogram enables histogram buckets`() {
     val prometheusRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT)
-    val prometheusFacade = MicrometerMetricsFacade(prometheusRegistry, metricsPrefix = "linea.test")
+    val prometheusFacade = MicrometerMetricsFacade(prometheusRegistry, metricsPrefix = "lineth.test")
     val histogram = prometheusFacade.createHistogram(
       category = TestCategory.TEST_CATEGORY,
       name = "hist.buckets.metric",
@@ -147,7 +147,7 @@ class MicrometerMetricsFacadeTest {
   @Test
   fun `createHistogram without publishPercentileHistogram does not enable extra histogram buckets`() {
     val prometheusRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT)
-    val prometheusFacade = MicrometerMetricsFacade(prometheusRegistry, metricsPrefix = "linea.test")
+    val prometheusFacade = MicrometerMetricsFacade(prometheusRegistry, metricsPrefix = "lineth.test")
     val histogram = prometheusFacade.createHistogram(
       category = TestCategory.TEST_CATEGORY,
       name = "no.hist.buckets.metric",
@@ -181,7 +181,7 @@ class MicrometerMetricsFacadeTest {
       histogram.record(i.toDouble())
     }
 
-    val createdHistogram = meterRegistry.find("linea.test.test.category.some.no.percentile.metric").summary()
+    val createdHistogram = meterRegistry.find("lineth.test.test.category.some.no.percentile.metric").summary()
     assertThat(createdHistogram).isNotNull
     assertThat(createdHistogram!!.count()).isEqualTo(100L)
 
@@ -204,7 +204,7 @@ class MicrometerMetricsFacadeTest {
     )
 
     timer.captureTime(::mockTimer)
-    val createdTimer = meterRegistry.find("linea.test.test.category.some.timer.metric").timer()
+    val createdTimer = meterRegistry.find("lineth.test.test.category.some.timer.metric").timer()
     assertThat(createdTimer).isNotNull
     assertThat(createdTimer!!.id.description).isEqualTo("This is a test metric")
     assertThat(
@@ -234,7 +234,7 @@ class MicrometerMetricsFacadeTest {
     )
 
     timer.captureTime(::mockTimer)
-    val createdTimer = meterRegistry.find("linea.test.test.category.some.dynamictag.timer.metric").timer()
+    val createdTimer = meterRegistry.find("lineth.test.test.category.some.dynamictag.timer.metric").timer()
     assertThat(createdTimer).isNotNull
     assertThat(createdTimer!!.id.description).isEqualTo("This is a test metric")
     assertThat(createdTimer.id.tags).containsAll(listOf(ImmutableTag("version", "1.0.1"), ImmutableTag("key", "value")))
@@ -337,12 +337,12 @@ class MicrometerMetricsFacadeTest {
       .increment()
 
     val createdCounter1 = meterRegistry
-      .find("linea.test.test.category.request.counter")
+      .find("lineth.test.test.category.request.counter")
       .tags("method", "getPayload")
       .counter()
 
     val createdCounter2 = meterRegistry
-      .find("linea.test.test.category.request.counter")
+      .find("lineth.test.test.category.request.counter")
       .tags("method", "newPayload")
       .counter()
 
@@ -368,12 +368,12 @@ class MicrometerMetricsFacadeTest {
       .captureTime { Thread.sleep(2) }
 
     val createdTimer1 = meterRegistry
-      .find("linea.test.test.category.request.latency")
+      .find("lineth.test.test.category.request.latency")
       .tags("method", "getPayload")
       .timer()
 
     val createdTimer2 = meterRegistry
-      .find("linea.test.test.category.request.latency")
+      .find("lineth.test.test.category.request.latency")
       .tags("method", "newPayload")
       .timer()
 

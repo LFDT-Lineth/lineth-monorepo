@@ -35,7 +35,7 @@
     "field": "stackTrace",
     "stackTrace": {
       "stringified": true,
-      "filters": ["net.consensys"]
+      "filters": ["lineth"]
     }
   }
 }

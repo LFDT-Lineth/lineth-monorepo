@@ -2,7 +2,7 @@
   <configuration default="false" name="TransactionExclusionApi" type="Application" factoryName="Application">
     <option name="ALTERNATIVE_JRE_PATH" value="21" />
     <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
-    <option name="MAIN_CLASS_NAME" value="net.consensys.linea.transactionexclusion.app.TransactionExclusionAppMain" />
+    <option name="MAIN_CLASS_NAME" value="lineth.transactionexclusion.app.TransactionExclusionAppMain" />
     <module name="zkevm.transaction-exclusion-api.app.main" />
     <option name="PROGRAM_PARAMETERS" value="config/transaction-exclusion-api/transaction-exclusion-app-docker.config.toml config/transaction-exclusion-api/transaction-exclusion-app-local-dev.config.overrides.toml" />
     <option name="VM_PARAMETERS" value="-Dvertx.configurationFile=config/transaction-exclusion-api/vertx-options.json -Dlog4j2.configurationFile=config/transaction-exclusion-api/log4j2-dev.xml" />

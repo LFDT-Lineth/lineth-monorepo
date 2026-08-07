@@ -76,7 +76,7 @@ The Tracer is a Besu plugin that:
 ```
 tracer/
 ├── arithmetization/           # Core trace generation
-│   └── src/main/java/net/consensys/linea/
+│   └── src/main/java/lineth/
 │       ├── zktracer/
 │       │   ├── ZkTracer.java           # Main tracer
 │       │   ├── ConflationAwareOperationTracer.java
@@ -108,7 +108,7 @@ tracer/
 │           └── CorsetValidator.java    # Constraint validation
 │
 ├── plugins/                   # Besu plugin integration
-│   └── src/main/java/net/consensys/linea/plugins/
+│   └── src/main/java/lineth/plugins/
 │       ├── rpc/
 │       │   ├── tracegeneration/
 │       │   │   └── TracesEndpointServicePlugin.java

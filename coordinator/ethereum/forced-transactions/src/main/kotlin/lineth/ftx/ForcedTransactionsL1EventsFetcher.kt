@@ -1,6 +1,6 @@
 package lineth.ftx
 
-import linea.ftx.conflation.ForcedTransactionsSafeBlockNumberManager
+import lineth.ftx.conflation.ForcedTransactionsSafeBlockNumberManager
 import lineth.EthLogsSearcher
 import lineth.LongRunningService
 import lineth.SearchDirection

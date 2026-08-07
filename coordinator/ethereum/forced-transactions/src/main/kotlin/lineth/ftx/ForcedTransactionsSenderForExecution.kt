@@ -1,7 +1,7 @@
 package lineth.ftx
 
 import io.vertx.core.Vertx
-import linea.ftx.conflation.ForcedTransactionsSafeBlockNumberManager
+import lineth.ftx.conflation.ForcedTransactionsSafeBlockNumberManager
 import lineth.LongRunningService
 import lineth.contract.events.ForcedTransactionAddedEvent
 import lineth.ethapi.EthApiBlockClient

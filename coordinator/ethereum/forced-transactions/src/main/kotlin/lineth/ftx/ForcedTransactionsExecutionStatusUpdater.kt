@@ -1,9 +1,9 @@
 package lineth.ftx
 
-import linea.ftx.conflation.ForcedTransactionsSafeBlockNumberManager
-import linea.ftx.conflation.FtxConflationInfo
-import linea.persistence.ForcedTransactionRecord
-import linea.persistence.ForcedTransactionsDao
+import lineth.ftx.conflation.ForcedTransactionsSafeBlockNumberManager
+import lineth.ftx.conflation.FtxConflationInfo
+import lineth.persistence.ForcedTransactionRecord
+import lineth.persistence.ForcedTransactionsDao
 import lineth.contract.events.ForcedTransactionAddedEvent
 import lineth.forcedtx.ForcedTransactionInclusionResult
 import lineth.forcedtx.ForcedTransactionsClient

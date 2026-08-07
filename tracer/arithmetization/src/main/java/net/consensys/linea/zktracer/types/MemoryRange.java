@@ -14,7 +14,7 @@
  */
 package net.consensys.linea.zktracer.types;
 
-import static net.consensys.linea.zktracer.module.Util.rightPaddedSlice;
+import static lineth.zktracer.module.Util.rightPaddedSlice;
 import static net.consensys.linea.zktracer.types.Conversions.safeLongToInt;
 
 import lombok.Getter;

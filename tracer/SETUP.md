@@ -53,8 +53,8 @@ ______________________________________________________________________
 # Run EVM test suite BlockchainTests
 ./gradlew tracer:reference-tests:referenceBlockchainTests
 
-# Run single reference test via gradle, e.g for net.consensys.linea.generated.blockchain.BlockchainReferenceTest_339
-./gradlew tracer:reference-tests:referenceBlockchainTests --tests "net.consensys.linea.generated.blockchain.BlockchainReferenceTest_339"
+# Run single reference test via gradle, e.g for lineth.generated.blockchain.BlockchainReferenceTest_339
+./gradlew tracer:reference-tests:referenceBlockchainTests --tests "lineth.generated.blockchain.BlockchainReferenceTest_339"
 ```
 
 ## IntelliJ IDEA Setup

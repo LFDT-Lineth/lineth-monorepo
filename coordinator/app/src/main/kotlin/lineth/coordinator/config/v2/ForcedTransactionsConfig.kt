@@ -1,0 +1,70 @@
+package lineth.coordinator.config.v2
+
+import lineth.domain.BlockParameter
+import lineth.domain.RetryConfig
+import java.net.URL
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
+
+data class ForcedTransactionsConfig(
+  override val disabled: Boolean = false,
+  val l1Endpoint: URL,
+  val l1HighestBlockTag: BlockParameter = BlockParameter.Tag.FINALIZED,
+  val l1RequestRetries: RetryConfig = RetryConfig.endlessRetry(
+    backoffDelay = 1.seconds,
+    failuresWarningThreshold = 3u,
+  ),
+  val sequencerEndpoint: URL,
+  val sequencerRequestRetries: RetryConfig = RetryConfig.endlessRetry(
+    backoffDelay = 1.seconds,
+    failuresWarningThreshold = 3u,
+  ),
+  val processingTickInterval: Duration = 2.minutes,
+  val processingDelay: Duration = Duration.ZERO,
+  val l1EventScraping: L1EventScraping = L1EventScraping(),
+  val processingBatchSize: UInt = 10u,
+  val invalidityProofCheckInterval: Duration = 2.minutes,
+) : FeatureToggle {
+  init {
+    require(processingTickInterval >= 1.milliseconds) {
+      "processingSendTickInterval=$processingTickInterval must be equal or greater than 1ms"
+    }
+    require(processingDelay >= Duration.ZERO) {
+      "processingDelay=$processingDelay must be equal or greater than 0ms"
+    }
+    require(processingBatchSize >= 1u) {
+      "processingBatchSize=$processingBatchSize must be equal or greater than 1"
+    }
+    require(invalidityProofCheckInterval >= 1.milliseconds) {
+      "invalidityProofCheckInterval=$invalidityProofCheckInterval must be equal or greater than 1ms"
+    }
+  }
+
+  data class L1EventScraping(
+    val pollingInterval: Duration = 12.seconds,
+    val pollingTimeout: Duration = 5.seconds,
+    val ethLogsSearchSuccessBackoffDelay: Duration = 1.milliseconds,
+    val ethLogsSearchBlockChunkSize: UInt = 1000u,
+    val ethLogsSearchMaxBlockRange: UInt = 10_000u,
+  ) {
+    init {
+      require(pollingInterval >= 1.milliseconds) {
+        "pollingInterval=$pollingInterval must be equal or greater than 1ms"
+      }
+      require(pollingTimeout >= 1.milliseconds) {
+        "pollingTimeout=$pollingTimeout must be equal or greater than 1ms"
+      }
+      require(ethLogsSearchSuccessBackoffDelay >= 1.milliseconds) {
+        "ethLogsSearchSuccessBackoffDelay=$ethLogsSearchSuccessBackoffDelay must be equal or greater than 1ms"
+      }
+      require(ethLogsSearchBlockChunkSize >= 1u) {
+        "ethLogsSearchBlockChunkSize=$ethLogsSearchBlockChunkSize must be equal or greater than 1"
+      }
+      require(ethLogsSearchMaxBlockRange >= 1u) {
+        "ethLogsSearchMaxBlockRange=$ethLogsSearchMaxBlockRange must be equal or greater than 1"
+      }
+    }
+  }
+}

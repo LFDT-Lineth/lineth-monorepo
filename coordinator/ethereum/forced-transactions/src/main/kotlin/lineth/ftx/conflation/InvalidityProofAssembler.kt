@@ -1,0 +1,256 @@
+package lineth.ftx.conflation
+
+import com.github.michaelbull.result.getOrThrow
+import lineth.persistence.ForcedTransactionRecord
+import lineth.persistence.ForcedTransactionsDao
+import lineth.EthLogsSearcher
+import lineth.SearchDirection
+import lineth.clients.GenerateTracesResponse
+import lineth.clients.GetZkEVMStateMerkleProofResponse
+import lineth.clients.InvalidityProofRequest
+import lineth.clients.InvalidityProofResponse
+import lineth.clients.InvalidityProverClientV1
+import lineth.clients.InvalidityReason
+import lineth.clients.LineaAccountProof
+import lineth.clients.StateManagerAccountProofClient
+import lineth.clients.StateManagerClientV1
+import lineth.clients.TracesConflationVirtualBlockClientV1
+import lineth.contract.events.ForcedTransactionAddedEvent
+import lineth.domain.BlockInterval
+import lineth.domain.BlockParameter
+import lineth.domain.InvalidityProofIndex
+import lineth.forcedtx.ForcedTransactionInclusionResult
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
+import org.apache.tuweni.bytes.Bytes
+import org.hyperledger.besu.ethereum.core.encoding.EncodingContext
+import org.hyperledger.besu.ethereum.core.encoding.TransactionDecoder
+import tech.pegasys.teku.infrastructure.async.SafeFuture
+
+/**
+ * Responsible for fetching all the necessary data from Shomei and Tracer clients to
+ * assemble forced transactions invalidity proofs request and send it to the prover client.
+ */
+class InvalidityProofAssembler(
+  private val invalidityProofClient: InvalidityProverClientV1,
+  private val stateManagerClient: StateManagerClientV1,
+  private val accountProofClient: StateManagerAccountProofClient,
+  private val ethApiLogsSearcher: EthLogsSearcher,
+  private val ftxDao: ForcedTransactionsDao,
+  private val tracesClient: TracesConflationVirtualBlockClientV1,
+  private val contractAddress: String,
+  private val l1EventSearchMaxBlockRange: UInt,
+  private val log: Logger = LogManager.getLogger(InvalidityProofAssembler::class.java),
+) {
+
+  /**
+   * Requests an invalidity proof for a failed forced transaction.
+   *
+   * @param ftx The forced transaction record containing execution status
+   * @return SafeFuture<InvalidityProofResponse> containing the proof request result
+   */
+  fun requestInvalidityProof(
+    ftx: ForcedTransactionRecord,
+  ): SafeFuture<InvalidityProofResponse> {
+    log.info(
+      "assembling forced transaction invalidity proof: ftx={} with inclusionResult={} at block={}",
+      ftx.ftxNumber,
+      ftx.inclusionResult,
+      ftx.simulatedExecutionBlockNumber,
+    )
+
+    return invalidityProofClient
+      .isProofAlreadyDone(
+        InvalidityProofIndex(
+          simulatedExecutionBlockNumber = ftx.simulatedExecutionBlockNumber,
+          ftxNumber = ftx.ftxNumber,
+          startBlockTimestamp = ftx.simulatedExecutionBlockTimestamp,
+        ),
+      )
+      .thenCompose { alreadyDone ->
+        if (alreadyDone) {
+          SafeFuture.completedFuture(InvalidityProofResponse(ftx.ftxNumber))
+        } else {
+          val invalidityReason = mapInclusionResultToInvalidityReason(ftx.inclusionResult)
+          fetchRequiredDataForInvalidityProof(invalidityReason, ftx)
+            .thenCompose { requiredData ->
+              val request = buildInvalidityProofRequest(
+                invalidityReason = invalidityReason,
+                ftxRecord = ftx,
+                requiredData = requiredData,
+              )
+              invalidityProofClient.requestProof(request)
+            }
+        }
+      }
+  }
+
+  internal fun getPrevFtxRollingHash(ftxNumber: ULong): SafeFuture<ByteArray> {
+    if (ftxNumber == 1uL) {
+      return SafeFuture.completedFuture(ByteArray(32))
+    }
+    val prevFtxNumber = ftxNumber - 1uL
+    // The previous FTX's rolling hash is persisted with its record, so read it from the DB and skip
+    // the eth_getLogs entirely. Records are pruned after finalization, so fall back to a bounded
+    // on-chain binary search when the previous FTX is no longer in the DB.
+    return ftxDao.findByNumber(prevFtxNumber)
+      .thenCompose { record ->
+        if (record != null) {
+          SafeFuture.completedFuture(record.ftxRollingHash)
+        } else {
+          findPrevFtxRollingHashOnChain(prevFtxNumber)
+        }
+      }
+  }
+
+  private fun findPrevFtxRollingHashOnChain(prevFtxNumber: ULong): SafeFuture<ByteArray> {
+    return ethApiLogsSearcher
+      .findLog(
+        fromBlock = BlockParameter.Tag.EARLIEST,
+        toBlock = BlockParameter.Tag.LATEST,
+        chunkSize = l1EventSearchMaxBlockRange.toInt(),
+        address = contractAddress,
+        topics = listOf(ForcedTransactionAddedEvent.topic),
+      ) { ethLog ->
+        val foundFtxNumber = ForcedTransactionAddedEvent.fromEthLog(ethLog).event.forcedTransactionNumber
+        when {
+          foundFtxNumber < prevFtxNumber -> SearchDirection.FORWARD
+          foundFtxNumber > prevFtxNumber -> SearchDirection.BACKWARD
+          else -> null
+        }
+      }.thenApply { ethLog ->
+        if (ethLog == null) {
+          throw IllegalStateException("No ForcedTransactionAdded event found for ftx=$prevFtxNumber")
+        }
+        ForcedTransactionAddedEvent.fromEthLog(ethLog).event.forcedTransactionRollingHash
+      }
+  }
+
+  private fun mapInclusionResultToInvalidityReason(
+    inclusionResult: ForcedTransactionInclusionResult,
+  ): InvalidityReason {
+    return when (inclusionResult) {
+      ForcedTransactionInclusionResult.Included -> InvalidityReason.BadNonce
+      ForcedTransactionInclusionResult.BadNonce -> InvalidityReason.BadNonce
+      ForcedTransactionInclusionResult.BadBalance -> InvalidityReason.BadBalance
+      ForcedTransactionInclusionResult.BadPrecompile -> InvalidityReason.BadPrecompile
+      ForcedTransactionInclusionResult.TooManyLogs -> InvalidityReason.TooManyLogs
+      ForcedTransactionInclusionResult.FilteredAddressFrom -> InvalidityReason.FilteredAddressFrom
+      ForcedTransactionInclusionResult.FilteredAddressTo -> InvalidityReason.FilteredAddressTo
+      ForcedTransactionInclusionResult.ChainSecurityRuleViolation ->
+        throw IllegalStateException("ChainSecurityRuleViolation cannot be mapped to InvalidityReason")
+    }
+  }
+
+  private data class RequiredInvalidityProofData(
+    val prevFtxRollingHash: ByteArray,
+    val zkParentStateRootHash: ByteArray,
+    val tracesFile: String? = null,
+    val accountProof: LineaAccountProof? = null,
+    val zkStateMerkleProof: GetZkEVMStateMerkleProofResponse? = null,
+  ) {
+    override fun equals(other: Any?): Boolean {
+      if (this === other) return true
+      if (javaClass != other?.javaClass) return false
+
+      other as RequiredInvalidityProofData
+
+      if (!prevFtxRollingHash.contentEquals(other.prevFtxRollingHash)) return false
+      if (!zkParentStateRootHash.contentEquals(other.zkParentStateRootHash)) return false
+      if (tracesFile != other.tracesFile) return false
+      if (accountProof != other.accountProof) return false
+      if (zkStateMerkleProof != other.zkStateMerkleProof) return false
+
+      return true
+    }
+
+    override fun hashCode(): Int {
+      var result = prevFtxRollingHash.contentHashCode()
+      result = 31 * result + zkParentStateRootHash.contentHashCode()
+      result = 31 * result + (tracesFile?.hashCode() ?: 0)
+      result = 31 * result + (accountProof?.hashCode() ?: 0)
+      result = 31 * result + (zkStateMerkleProof?.hashCode() ?: 0)
+      return result
+    }
+  }
+
+  private fun fetchRequiredDataForInvalidityProof(
+    invalidityReason: InvalidityReason,
+    ftx: ForcedTransactionRecord,
+  ): SafeFuture<RequiredInvalidityProofData> {
+    val prevFtxRollingHashFuture = getPrevFtxRollingHash(ftx.ftxNumber)
+    val zkParentStateRootHashFuture = stateManagerClient
+      .rollupGetStateMerkleProof(BlockInterval(ftx.simulatedExecutionBlockNumber, ftx.simulatedExecutionBlockNumber))
+    var accountProofFuture: SafeFuture<LineaAccountProof?> = SafeFuture.completedFuture(null)
+    var stateProofFuture: SafeFuture<GetZkEVMStateMerkleProofResponse?> = SafeFuture.completedFuture(null)
+    var tracesFuture: SafeFuture<GenerateTracesResponse?> = SafeFuture.completedFuture(null)
+    val from =
+      TransactionDecoder.decodeOpaqueBytes(
+        Bytes.wrap(ftx.ftxRlp),
+        EncodingContext.POOLED_TRANSACTION,
+      ).sender.bytes.toArray()
+    if (invalidityReason == InvalidityReason.BadNonce || invalidityReason == InvalidityReason.BadBalance) {
+      accountProofFuture = fetchAccountProof(from, ftx.simulatedExecutionBlockNumber - 1UL)
+        .thenApply { it }
+    }
+    if (invalidityReason == InvalidityReason.BadPrecompile || invalidityReason == InvalidityReason.TooManyLogs) {
+      stateProofFuture = stateManagerClient.rollupGetVirtualStateMerkleProof(
+        ftx.simulatedExecutionBlockNumber,
+        ftx.ftxRlp,
+      ).thenApply { it }
+      tracesFuture = tracesClient.generateVirtualBlockConflatedTracesToFile(
+        ftx.simulatedExecutionBlockNumber,
+        ftx.ftxRlp,
+      )
+        .thenApply { it.getOrThrow { errorResponse -> errorResponse.asException() } }
+    }
+    return SafeFuture
+      .allOf(
+        prevFtxRollingHashFuture,
+        zkParentStateRootHashFuture,
+        accountProofFuture,
+        stateProofFuture,
+        tracesFuture,
+      )
+      .thenApply {
+        RequiredInvalidityProofData(
+          prevFtxRollingHash = prevFtxRollingHashFuture.join(),
+          zkParentStateRootHash = zkParentStateRootHashFuture.join().zkParentStateRootHash,
+          tracesFile = tracesFuture.join()?.tracesFileName,
+          accountProof = accountProofFuture.join(),
+          zkStateMerkleProof = stateProofFuture.join(),
+        )
+      }
+  }
+
+  private fun buildInvalidityProofRequest(
+    invalidityReason: InvalidityReason,
+    ftxRecord: ForcedTransactionRecord,
+    requiredData: RequiredInvalidityProofData,
+  ): InvalidityProofRequest {
+    return InvalidityProofRequest(
+      invalidityReason = invalidityReason,
+      simulatedExecutionBlockNumber = ftxRecord.simulatedExecutionBlockNumber,
+      simulatedExecutionBlockTimestamp = ftxRecord.simulatedExecutionBlockTimestamp,
+      ftxNumber = ftxRecord.ftxNumber,
+      ftxBlockNumberDeadline = ftxRecord.ftxBlockNumberDeadline,
+      ftxRlp = ftxRecord.ftxRlp,
+      prevFtxRollingHash = requiredData.prevFtxRollingHash,
+      zkParentStateRootHash = requiredData.zkParentStateRootHash,
+      tracesResponse = requiredData.tracesFile,
+      accountProof = requiredData.accountProof,
+      zkStateMerkleProof = requiredData.zkStateMerkleProof,
+    )
+  }
+
+  private fun fetchAccountProof(
+    address: ByteArray,
+    blockNumber: ULong,
+  ): SafeFuture<LineaAccountProof> {
+    return accountProofClient.lineaGetAccountProof(
+      address = address,
+      storageKeys = emptyList(), // No storage keys needed for nonce/balance proofs
+      blockNumber = blockNumber,
+    )
+  }
+}

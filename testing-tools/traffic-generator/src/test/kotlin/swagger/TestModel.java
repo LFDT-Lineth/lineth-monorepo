@@ -2,9 +2,9 @@ package swagger;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import net.consensys.zkevm.load.model.JSON;
-import net.consensys.zkevm.load.model.swagger.*;
-import net.consensys.zkevm.load.swagger.*;
+import lineth.zkevm.load.model.JSON;
+import lineth.zkevm.load.model.swagger.*;
+import lineth.zkevm.load.swagger.*;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 

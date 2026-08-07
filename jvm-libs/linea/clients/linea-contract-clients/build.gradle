@@ -11,7 +11,7 @@ dependencies {
   api project(':jvm-libs:generic:extensions:futures')
   api project(':jvm-libs:generic:extensions:kotlin')
   api project(':jvm-libs:linea:linea-contracts:l1-rollup')
-  api 'build.linea:l2-message-service-contract-client:0.1.0'
+  api project(':jvm-libs:linea:linea-contracts:l2-message-service')
   api project(':jvm-libs:linea:linea-contracts:l1-validium')
 
   implementation project(':jvm-libs:linea:web3j-extensions')

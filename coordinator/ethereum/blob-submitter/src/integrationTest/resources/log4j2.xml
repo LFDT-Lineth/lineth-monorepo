@@ -9,7 +9,7 @@
     <Logger name="linea" level="debug" additivity="false">
       <AppenderRef ref="console"/>
     </Logger>
-    <Logger name="net.consensys.linea" level="info" additivity="false">
+    <Logger name="lineth" level="info" additivity="false">
       <AppenderRef ref="console"/>
     </Logger>
     <!-- Set level to DEBUG to log Web3J request/responses     -->

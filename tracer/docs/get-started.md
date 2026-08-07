@@ -80,8 +80,8 @@ ______________________________________________________________________
 # Run all EVM test suite reference tests
 ./gradlew clean referenceTests
 
-# Run single reference test via gradle, e.g for net.consensys.linea.generated.blockchain.BlockchainReferenceTest_583
-./gradlew :reference-tests:referenceTests --tests "net.consensys.linea.generated.blockchain.BlockchainReferenceTest_583"
+# Run single reference test via gradle, e.g for lineth.generated.blockchain.BlockchainReferenceTest_583
+./gradlew :reference-tests:referenceTests --tests "lineth.generated.blockchain.BlockchainReferenceTest_583"
 ```
 
 ______________________________________________________________________

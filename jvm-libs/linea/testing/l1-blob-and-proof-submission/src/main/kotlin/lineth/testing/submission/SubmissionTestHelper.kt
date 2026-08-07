@@ -22,7 +22,7 @@ fun assertTxSuccess(
   submissionType: String,
   l1EthApiClient: EthApiClient,
   timeout: Duration = 1.minutes,
-  log: Logger = LogManager.getLogger("linea.testing.submission"),
+  log: Logger = LogManager.getLogger("lineth.testing.submission"),
 ) {
   l1EthApiClient.waitForTxReceipt(
     txHash = txHash.decodeHex(),
@@ -43,7 +43,7 @@ fun assertTxsSuccess(
   submissionType: String,
   l1EthApiClient: EthApiClient,
   timeout: Duration = 1.minutes,
-  log: Logger = LogManager.getLogger("linea.testing.submission"),
+  log: Logger = LogManager.getLogger("lineth.testing.submission"),
 ) {
   SafeFuture.supplyAsync {
     txsAndInterval.forEach { (txHash, interval) ->
@@ -102,7 +102,7 @@ fun submitBlobsAndAggregationsAndWaitExecution(
   blobChunksMaxSize: Int = Transaction4844.MAX_BLOBS_PER_TRANSACTION,
   l1EthApiClient: EthApiClient,
   waitTimeout: Duration = 2.minutes,
-  log: Logger = LogManager.getLogger("linea.testing.submission"),
+  log: Logger = LogManager.getLogger("lineth.testing.submission"),
 ) {
   val blobSubmissions = submitBlobs(
     contractClientForBlobSubmission,

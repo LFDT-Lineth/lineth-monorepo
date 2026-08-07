@@ -1,7 +1,7 @@
 package lineth.testing.submission
 
-import linea.coordinator.clients.prover.serialization.BlobCompressionProofJsonResponse
-import linea.coordinator.clients.prover.serialization.ProofToFinalizeJsonResponse
+import lineth.coordinator.clients.prover.serialization.BlobCompressionProofJsonResponse
+import lineth.coordinator.clients.prover.serialization.ProofToFinalizeJsonResponse
 import lineth.domain.Aggregation
 import lineth.domain.BlobRecord
 import lineth.domain.TestConstants.LINEA_BLOCK_INTERVAL

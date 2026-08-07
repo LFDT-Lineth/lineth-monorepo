@@ -1,6 +1,6 @@
 package lineth.contract.l2
 
-import net.consensys.linea.contract.L2MessageService.FUNC_ANCHORL1L2MESSAGEHASHES
+import lineth.contract.L2MessageService.FUNC_ANCHORL1L2MESSAGEHASHES
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.DynamicArray
 import org.web3j.abi.datatypes.Function

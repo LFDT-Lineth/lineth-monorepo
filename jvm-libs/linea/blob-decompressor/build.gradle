@@ -1,6 +1,6 @@
 plugins {
   id 'lineth.kotlin-common-minimal-conventions'
-  id 'linea.download-native-libs'
+  id 'lineth.download-native-libs'
   id 'java-test-fixtures'
 }
 

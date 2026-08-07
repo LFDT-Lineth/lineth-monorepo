@@ -51,7 +51,7 @@ dependencies {
 }
 
 application {
-  mainClass = 'net.consensys.linea.transactionexclusion.app.TransactionExclusionAppMain'
+  mainClass = 'lineth.transactionexclusion.app.TransactionExclusionAppMain'
 }
 
 jar {
@@ -61,7 +61,7 @@ jar {
     manifest {
       attributes(
           'Class-Path': configurations.runtimeClasspath.collect { it.getName() }.findAll { it.endsWith('.jar') }.join(' '),
-          'Main-Class': 'net.consensys.linea.transactionexclusion.app.TransactionExclusionAppMain',
+          'Main-Class': 'lineth.transactionexclusion.app.TransactionExclusionAppMain',
           'Multi-Release': 'true'
           )
     }

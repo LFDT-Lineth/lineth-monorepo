@@ -6,10 +6,10 @@
     </Console>
   </Appenders>
   <Loggers>
-    <Logger name="net.consensys.zkevm" level="debug" additivity="false">
+    <Logger name="lineth.zkevm" level="debug" additivity="false">
       <AppenderRef ref="console"/>
     </Logger>
-    <Logger name="net.consensys.linea" level="debug" additivity="false">
+    <Logger name="lineth" level="debug" additivity="false">
       <AppenderRef ref="console"/>
     </Logger>
     <!-- Set level to DEBUG to log Web3J request/responses     -->

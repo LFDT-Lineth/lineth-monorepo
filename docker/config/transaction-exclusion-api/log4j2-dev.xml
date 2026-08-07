@@ -7,10 +7,10 @@
   </Appenders>
 
   <Loggers>
-    <Logger name="net.consensys.linea.jsonrpc" level="TRACE" additivity="false">
+    <Logger name="lineth.jsonrpc" level="TRACE" additivity="false">
       <appender-ref ref="console" level="trace"/>
     </Logger>
-    <Logger name="net.consensys.linea" level="DEBUG" additivity="false">
+    <Logger name="lineth" level="DEBUG" additivity="false">
       <appender-ref ref="console" level="trace"/>
     </Logger>
     <Root level="info" additivity="true">

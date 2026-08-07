@@ -32,8 +32,8 @@ out/
 site/
 /.direnv/
 /.envrc
-reference-tests/src/test/java/net/consensys/linea/generated/*
-!reference-tests/src/test/java/net/consensys/linea/generated/.gitkeep
+reference-tests/src/test/java/lineth/generated/*
+!reference-tests/src/test/java/lineth/generated/.gitkeep
 arithmetization/bin/
 acceptance-tests/bin/
 reference-tests/bin/

@@ -1,9 +1,9 @@
-package net.consensys.linea.transactionexclusion.test
+package lineth.transactionexclusion.test
 
 import lineth.kotlin.decodeHex
-import net.consensys.linea.transactionexclusion.ModuleOverflow
-import net.consensys.linea.transactionexclusion.RejectedTransaction
-import net.consensys.linea.transactionexclusion.TransactionInfo
+import lineth.transactionexclusion.ModuleOverflow
+import lineth.transactionexclusion.RejectedTransaction
+import lineth.transactionexclusion.TransactionInfo
 import kotlin.time.Instant
 
 val defaultRejectedTransaction =

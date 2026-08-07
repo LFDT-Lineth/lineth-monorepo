@@ -16,8 +16,8 @@
 package net.consensys.linea.zktracer.types;
 
 import static com.google.common.base.Preconditions.*;
-import static net.consensys.linea.zktracer.Trace.CREATE2_SHIFT;
-import static net.consensys.linea.zktracer.Trace.LLARGE;
+import static lineth.zktracer.Trace.CREATE2_SHIFT;
+import static lineth.zktracer.Trace.LLARGE;
 import static net.consensys.linea.zktracer.types.Utils.leftPadTo;
 import static org.hyperledger.besu.crypto.Hash.keccak256;
 import static org.hyperledger.besu.datatypes.Address.*;
@@ -25,10 +25,10 @@ import static org.hyperledger.besu.evm.internal.Words.clampedToLong;
 
 import java.util.List;
 import java.util.stream.Stream;
-import net.consensys.linea.zktracer.Fork;
-import net.consensys.linea.zktracer.module.hub.transients.OperationAncillaries;
-import net.consensys.linea.zktracer.opcode.OpCode;
-import net.consensys.linea.zktracer.opcode.OpCodeData;
+import lineth.zktracer.Fork;
+import lineth.zktracer.module.hub.transients.OperationAncillaries;
+import lineth.zktracer.opcode.OpCode;
+import lineth.zktracer.opcode.OpCodeData;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.crypto.Hash;
