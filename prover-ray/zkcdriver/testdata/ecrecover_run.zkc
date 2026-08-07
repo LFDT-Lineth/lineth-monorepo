@@ -25,8 +25,7 @@
 // i=$((i+1))
 // done
 
-
-include "./lib/secp256k1/ecrecover.zkc"
+include "../../../arithmetization/src/main/lib/secp256k1/ecrecover.zkc"
 
 pub input in_msg(address:u1)    -> (val:u256)
 pub input in_r(address:u1)      -> (val:u256)

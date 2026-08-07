@@ -1,15 +1,76 @@
 include "../../riscv/utils/type.zkc"
+include "../../riscv/ram/read.zkc"
+include "../../riscv/ram/write.zkc"
+include "../secp256k1/ecrecover.zkc"
 
-fn evm_ecrecover(msg_address:Address, sig_address:Address, output_address:Address) {
-    printf "\nEVM ecrecover skeleton\n"
-    printf "msg_address: %x\n", msg_address
-    printf "sig_address: %x\n", sig_address
-    printf "output_address: %x\n", output_address
+// ============================================================================
+// secp256k1 ecrecover accelerator
+//
+// Both entry points recover the public key from an ECDSA signature and write it
+// to guest memory; they differ only in the low-s policy (strictRange):
+//   - ecrecover_precompile  (strictRange = 0): EVM ecrecover precompile, allows high-s
+//   - ecrecover_transaction (strictRange = 1): EIP-2 low-s (s <= (n-1)/2), tx context
+//
+// Memory ABI (all integers are 32-byte big-endian, MSB at the lowest address):
+//   msg_address    : z          (32 bytes)  — the message hash
+//   sig_address    : r || s || recid         — r (32) ‖ s (32) ‖ recid (1 byte)
+//   output_address : Qx || Qy   (64 bytes)   — recovered public key
+// On failure (invalid input, QNR, or infinity) the output is 64 zero bytes.
+// Output is the PUBLIC KEY (not the EVM address); callers keccak it themselves.
+// ============================================================================
+
+// Read a 32-byte big-endian integer from memory (byte at `address` is the MSB).
+fn read_u256_be<ram>(address:Address) -> (value:u256) {
+    value = 0
+    for i:u8 = 0; i < 32; i = i + 1 {
+        // `value << 8` widens to u264; cast back to u256 (lossless — the running
+        // value is always <= 256 bits) so it fits the u256 result without a
+        // spurious bit-overflow check.
+        value = ((value << 8) as u256) | (read_8(address + (i as Address)) as u256)
+    }
 }
 
-fn ecrecover(msg_address:Address, sig_address:Address, output_address:Address) {
-    printf "\nextraneous ecrecover skeleton\n"
-    printf "msg_address: %x\n", msg_address
-    printf "sig_address: %x\n", sig_address
-    printf "output_address: %x\n", output_address
+// Write a 32-byte big-endian integer to memory (MSB at `address`).
+fn write_u256_be<ram>(address:Address, value:u256) {
+    var v:u256 = value
+    for i:u8 = 0; i < 32; i = i + 1 {
+        // least-significant byte goes to the highest address; MSB to `address`.
+        write_8(address + (31 - (i as Address)), v as u8)
+        v = v >> 8
+    }
+}
+
+// Shared body: read (z, r, s, recid), recover, write the pubkey (zeros on failure).
+fn ecrecover_core<ram>(msg_address:Address, sig_address:Address, output_address:Address, strictRange:u1) {
+    var z:u256   = read_u256_be(msg_address)
+    var r:u256   = read_u256_be(sig_address)
+    var s:u256   = read_u256_be(sig_address + 32)
+    var recid:u8 = read_8(sig_address + 64)
+
+    // map the recovery id (0/1) to the EVM v (27/28); anything else -> invalid v
+    // (0), which ecrecover_generic soft-fails.
+    var v:u5 = 0
+    if recid == 0 {
+        v = 27
+    }
+    if recid == 1 {
+        v = 28
+    }
+
+    var pkx:u256, pky:u256, ok:u1
+    pkx, pky, ok = ecrecover_generic(z, r, s, v, strictRange)
+
+    // ok == 0 => (pkx, pky) == (0, 0), so the output is the 64-byte zero sentinel.
+    write_u256_be(output_address, pkx)
+    write_u256_be(output_address + 32, pky)
+}
+
+// EVM ecrecover precompile (strictRange = 0: high-s permitted).
+fn ecrecover_precompile<ram>(msg_address:Address, sig_address:Address, output_address:Address) {
+    ecrecover_core(msg_address, sig_address, output_address, 0)
+}
+
+// Transaction-context ecrecover (strictRange = 1: EIP-2 low-s enforced).
+fn ecrecover_transaction<ram>(msg_address:Address, sig_address:Address, output_address:Address) {
+    ecrecover_core(msg_address, sig_address, output_address, 1)
 }
