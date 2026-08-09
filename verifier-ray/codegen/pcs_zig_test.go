@@ -141,14 +141,14 @@ func TestDynamicModuleOrderFollowsSysModules(t *testing.T) {
 	}
 }
 
-// BuildPcsSystem must REJECT a dynamic column opened at two shift offsets that
-// alias mod its runtime size. prover-ray dedups such openings (mod the size) to
-// one, but the size-independent ColumnDesc schedule keeps both, so the verifier
-// would expect an extra (unauthenticated) claim and double-count the DEEP
-// quotient for THAT proof. The codegen-time proof must itself be representable,
-// even though the baked System may still enforce a stricter minimum runtime size
-// for future proofs.
-func TestBuildPcsSystemRejectsAliasingDynamicShifts(t *testing.T) {
+// ExtractPcsOpening must REJECT a proof whose dynamic column is opened at two
+// shift offsets that alias mod its runtime size. prover-ray dedups such
+// openings (mod the size) to one, but the size-independent ColumnDesc schedule
+// keeps both, so the verifier would expect an extra (unauthenticated) claim and
+// double-count the DEEP quotient for THAT proof. A proof must itself be
+// representable at the size it was proved at, even though the baked System may
+// still enforce a stricter minimum runtime size for other proofs.
+func TestExtractPcsOpeningRejectsAliasingDynamicShifts(t *testing.T) {
 	sys := wiop.NewSystemf("dyn-alias")
 	r0 := sys.NewRound()
 	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionRight)
@@ -184,12 +184,16 @@ func TestBuildPcsSystemRejectsAliasingDynamicShifts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BuildCoinRouting() error = %v", err)
 	}
-	_, err = BuildPcsSystem(sys, rt, routing)
+	pcs, err := BuildPcsSystem(sys, routing)
+	if err != nil {
+		t.Fatalf("BuildPcsSystem() error = %v", err)
+	}
+	_, err = ExtractPcsOpening(sys, pcs, rt)
 	if err == nil {
-		t.Fatalf("BuildPcsSystem accepted aliasing dynamic-column shifts; want an error")
+		t.Fatalf("ExtractPcsOpening accepted aliasing dynamic-column shifts; want an error")
 	}
 	if !strings.Contains(err.Error(), "alias") {
-		t.Fatalf("BuildPcsSystem error = %q, want an aliasing rejection", err.Error())
+		t.Fatalf("ExtractPcsOpening error = %q, want an aliasing rejection", err.Error())
 	}
 }
 
@@ -211,28 +215,11 @@ func TestBuildPcsSystemRecordsMinimumSafeDynamicSize(t *testing.T) {
 	global.Compile(sys)
 	pcscompiler.Compile(sys)
 
-	// Prove at size 8, where 1 and 5 do NOT alias.
-	vals := make([]field.Element, 8)
-	for i := range vals {
-		vals[i].SetUint64(uint64(i + 1))
-	}
-	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(col, &wiop.ConcreteVector{Plain: field.VecFromBase(vals)})
-	for _, action := range rt.CurrentRound().ProverActions {
-		action.Run(rt)
-	}
-	for rt.CurrentRound().ID < len(rt.System.Rounds)-1 {
-		rt.AdvanceRound()
-		for _, action := range rt.CurrentRound().ProverActions {
-			action.Run(rt)
-		}
-	}
-
 	routing, err := BuildCoinRouting(sys)
 	if err != nil {
 		t.Fatalf("BuildCoinRouting() error = %v", err)
 	}
-	pcs, err := BuildPcsSystem(sys, rt, routing)
+	pcs, err := BuildPcsSystem(sys, routing)
 	if err != nil {
 		t.Fatalf("BuildPcsSystem() error = %v", err)
 	}
@@ -264,27 +251,11 @@ func TestBuildPcsSystemRecordsMinimumSafeSizeAboveOne(t *testing.T) {
 	global.Compile(sys)
 	pcscompiler.Compile(sys)
 
-	vals := make([]field.Element, 8)
-	for i := range vals {
-		vals[i].SetUint64(uint64(i + 1))
-	}
-	rt := wiop.NewRuntime(sys)
-	rt.AssignColumn(col, &wiop.ConcreteVector{Plain: field.VecFromBase(vals)})
-	for _, action := range rt.CurrentRound().ProverActions {
-		action.Run(rt)
-	}
-	for rt.CurrentRound().ID < len(rt.System.Rounds)-1 {
-		rt.AdvanceRound()
-		for _, action := range rt.CurrentRound().ProverActions {
-			action.Run(rt)
-		}
-	}
-
 	routing, err := BuildCoinRouting(sys)
 	if err != nil {
 		t.Fatalf("BuildCoinRouting() error = %v", err)
 	}
-	pcs, err := BuildPcsSystem(sys, rt, routing)
+	pcs, err := BuildPcsSystem(sys, routing)
 	if err != nil {
 		t.Fatalf("BuildPcsSystem() error = %v", err)
 	}
