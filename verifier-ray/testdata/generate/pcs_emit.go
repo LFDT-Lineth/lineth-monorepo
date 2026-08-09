@@ -14,10 +14,10 @@ import (
 // `pcs.System` is emitted separately by `codegen.WritePcsSystemZig`.
 
 // pcsOpeningZigLiteral renders `verifier.PcsOpening{ .entry_claims = ..., .proof = ... }`.
-func pcsOpeningZigLiteral(sys *codegen.PcsSystem, proof fri.OpeningProof) string {
+func pcsOpeningZigLiteral(entryClaims [][]field.Ext, proof fri.OpeningProof) string {
 	var b strings.Builder
 	b.WriteString("verifier.PcsOpening{ .entry_claims = &")
-	b.WriteString(extJaggedLiteral(sys.EntryClaims))
+	b.WriteString(extJaggedLiteral(entryClaims))
 	b.WriteString(", .proof = ")
 	b.WriteString(pcsOpeningProofZigLiteral(proof))
 	b.WriteString(" }")

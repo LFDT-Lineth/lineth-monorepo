@@ -3,8 +3,8 @@ package codegen
 import (
 	"fmt"
 	"math/bits"
+	"slices"
 
-	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/fri"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
@@ -18,10 +18,11 @@ import (
 // witness/quotient claims, and the flat all_coins index of the shared opening
 // point zeta.
 //
-// It is extracted from an ALREADY-compiled (global.Compile + pcs.Compile) and
-// proven (sys, rt) protocol, so it can never drift from the prover's committed
-// column ordering: batch order, per-batch layout, and the LagrangeEval openings
-// all come from the prover-ray PCS compiler's own exported helpers.
+// It is extracted from an ALREADY-compiled (global.Compile + pcs.Compile)
+// protocol, so it can never drift from the prover's committed column ordering:
+// batch order, per-batch layout, and the LagrangeEval openings all come from
+// the prover-ray PCS compiler's own exported helpers. The proof-specific
+// claimed evaluations are extracted separately by ExtractPcsOpening.
 //
 // Columns carries only the size-independent invariants (batch, base/ext, raw
 // shift schedule); the Zig engine (`src/query/pcs.zig`) reconstructs the
@@ -31,8 +32,8 @@ import (
 type PcsSystem struct {
 	SourceName string
 
-	// FRI ENVELOPE params (the prover-ray static maxCommittableSizeLog2 schedule,
-	// NOT restricted to any one proof): LogPlaintextSize == FRIMaxCommittableSizeLog2,
+	// FRI ENVELOPE params (the prover-ray static maxCommittableSizeLog2
+	// schedule, NOT restricted to any one proof): LogPlaintextSize == FRIMaxCommittableSizeLog2,
 	// LogCodewordSize == that + FRILogInverseRate. The Zig verifier reconstructs
 	// the layout and restricts these to each proof's largest opened size, so ONE
 	// baked System verifies proofs of different dynamic sizes.
@@ -72,14 +73,6 @@ type PcsSystem struct {
 	// Merkle-authenticated against is provably the one zeta is bound to (mirrors
 	// prover-ray's single-source collectRoots). Length == NumBatches.
 	BatchRoots []PcsBatchRoot
-
-	// EntryClaims are the runtime claimed evaluations captured from the proving
-	// runtime, jagged `[entry][shift]` in the canonical entry order the codegen
-	// proving size produces (entry g's row has length == that entry's shift
-	// count). This is the prover-supplied `verifier.PcsOpening.entry_claims` —
-	// extracted here, in the one place that owns the canonical ordering, so it
-	// can never drift from Columns/WitnessMap.
-	EntryClaims [][]field.Ext
 }
 
 // PcsColumnDesc is one committed column in prover DECLARATION order (the engine's
@@ -129,22 +122,21 @@ type PcsBatchRoot struct {
 	Root field.Octuplet
 }
 
-// pcsEntryKey identifies one opened column in the flat canonical entry order.
-type pcsEntryKey struct {
-	batchIdx int
-	sizeLog2 int
-	isExt    bool
-	position int
-}
-
-// pcsLocWithBatch is a column location plus the batch index it belongs to.
-type pcsLocWithBatch struct {
-	batchIdx int
-	loc      pcscompiler.ColumnLocation
+// pcsColumnDeclIndex maps each committed column of sys to its prover
+// DECLARATION index (batch-major, then round.Columns order) — the index of the
+// matching PcsSystem.Columns entry.
+func pcsColumnDeclIndex(sys *wiop.System) map[wiop.ObjectID]int {
+	idx := map[wiop.ObjectID]int{}
+	for _, b := range pcscompiler.CommittedBatches(sys) {
+		for _, col := range b.Round.Columns {
+			idx[col.Context.ID] = len(idx)
+		}
+	}
+	return idx
 }
 
 // pcsShiftFor computes the shift-schedule key for one opening of a column
-// located at loc:
+// view cv:
 //   - STATIC column: its size never changes, so the schedule stores the
 //     NORMALIZED shift ((offset % size) + size) % size. This matches
 //     prover-ray's own per-proof dedup (two raw offsets that alias mod the
@@ -154,12 +146,37 @@ type pcsLocWithBatch struct {
 //     RAW offset and lets the verifier normalize it mod the RUNTIME size.
 //     omega_N^(offset mod N) == omega_N^offset, so the reconstructed point
 //     matches the prover's at every size.
-func pcsShiftFor(cv *wiop.ColumnView, loc pcscompiler.ColumnLocation) (isDynamic bool, shift int) {
-	if cv.Column.Module != nil && cv.Column.Module.IsDynamic() {
+func pcsShiftFor(cv *wiop.ColumnView) (isDynamic bool, shift int) {
+	if cv.Column.Module.IsDynamic() {
 		return true, cv.ShiftingOffset
 	}
-	size := 1 << loc.SizeID
+	size := cv.Column.Module.Size()
 	return false, ((cv.ShiftingOffset % size) + size) % size
+}
+
+// pcsShiftSlots returns, for each committed column opened by a LagrangeEval,
+// its distinct opened shifts in first-seen declaration order (the order
+// sys.LagrangeEvals is walked in; see pcsShiftFor for the static/dynamic
+// distinction). ShiftingOffset is fixed when a constraint declares its column
+// view, so this is a property of sys alone — identical for every proof of sys.
+func pcsShiftSlots(sys *wiop.System) map[wiop.ObjectID][]int {
+	slots := map[wiop.ObjectID][]int{}
+	seen := map[wiop.ObjectID]map[int]bool{}
+	for _, le := range sys.LagrangeEvals {
+		for _, cv := range le.Polynomials {
+			id := cv.Column.Context.ID
+			_, shift := pcsShiftFor(cv)
+			if seen[id] == nil {
+				seen[id] = map[int]bool{}
+			}
+			if seen[id][shift] {
+				continue
+			}
+			seen[id][shift] = true
+			slots[id] = append(slots[id], shift)
+		}
+	}
+	return slots
 }
 
 // pcsDynamicMinSizeLog2 returns the smallest runtime size_log2 a dynamic
@@ -171,18 +188,19 @@ func pcsShiftFor(cv *wiop.ColumnView, loc pcscompiler.ColumnLocation) (isDynamic
 // raw shift to the same opening, so a baked schedule with multiple distinct raw
 // shifts would still diverge from an honest proof there.
 //
-// This must be checked over the FULL size range, not just the size the codegen
-// happened to prove at: shifts that are distinct at one size can collide at a
-// smaller one the SAME module is free to take in production. Aliasing is not
-// merely a completeness gap — reconstructQueryValueAt's DEEP-quotient sum walks
-// every shift in a column's schedule and adds one term per shift; if two raw
-// shifts alias mod the runtime size, shiftedPoint(size_log2, shift, zeta) is
-// IDENTICAL for both (since omega_N^a == omega_N^b whenever a == b mod N), so
-// the sum double-counts that term. prover-ray's own pipeline never observes
-// this: it dedups by normalized shift before opening (recoverBatchClaims),
-// producing exactly one claim, so the two claims baked here can never both be
-// supplied correctly by an honest prover at an aliasing size — there is no
-// valid completion, only rejection.
+// This must be checked over the FULL size range, not just the size any one
+// proof happens to use: shifts that are distinct at one size can collide at a
+// smaller one the SAME module is free to take in another proof of this sys.
+// Aliasing is not merely a completeness gap — reconstructQueryValueAt's
+// DEEP-quotient sum walks every shift in a column's schedule and adds one term
+// per shift; if two raw shifts alias mod the runtime size, shiftedPoint(size_log2,
+// shift, zeta) is IDENTICAL for both (since omega_N^a == omega_N^b whenever a ==
+// b mod N), so the sum double-counts that term. prover-ray's own pipeline never
+// observes this: it dedups by normalized shift before opening
+// (recoverBatchClaims), producing exactly one claim, so the two claims baked
+// here can never both be supplied correctly by an honest prover at an aliasing
+// size — there is no valid completion, only rejection (see ExtractPcsOpening,
+// which enforces this bound against each specific proof's actual size).
 func pcsDynamicMinSizeLog2(colPath string, shifts []int, maxSizeLog2 int) (int, error) {
 	minSizeLog2 := 0
 	var (
@@ -216,19 +234,17 @@ func pcsDynamicMinSizeLog2(colPath string, shifts []int, maxSizeLog2 int) (int, 
 	return minSizeLog2, nil
 }
 
-// BuildPcsSystem extracts the FRI/PCS System from a compiled, proven protocol.
+// BuildPcsSystem extracts the FRI/PCS System from a compiled protocol.
 //
 // Requires pcs.Compile to have run after global.Compile: the LagrangeEval
 // openings (witness views + quotient shares) that the claim maps re-slice are
-// registered by global.Compile, and pcs.Compile commits the batches and produces
-// the opening proof. It reads only the committed batches, the LagrangeEvals, the
-// coin routing, and the per-batch layout — nothing scenario-specific — so it
-// works for any real protocol, not just the fixtures.
-//
-// `rt` must be the runtime that proved `sys` (it supplies the per-round layout
-// sizes and the claimed evaluation values). `routing` is the shared coin layout
-// from BuildCoinRouting; it locates the zeta coin in the flat all_coins array.
-func BuildPcsSystem(sys *wiop.System, rt *wiop.Runtime, routing CoinRouting) (PcsSystem, error) {
+// registered by global.Compile, and pcs.Compile commits the batches and
+// registers the opening actions. It reads only the committed batches and the
+// LagrangeEvals — nothing runtime- or scenario-specific — so a single System
+// covers every proof of sys, whatever their dynamic-module sizes. `routing` is
+// the shared coin layout from BuildCoinRouting; it locates the zeta coin in
+// the flat all_coins array.
+func BuildPcsSystem(sys *wiop.System, routing CoinRouting) (PcsSystem, error) {
 	batches := pcscompiler.CommittedBatches(sys)
 	if len(batches) == 0 {
 		return PcsSystem{}, fmt.Errorf("codegen: BuildPcsSystem: no committed batches; did pcs.Compile run?")
@@ -237,123 +253,18 @@ func BuildPcsSystem(sys *wiop.System, rt *wiop.Runtime, routing CoinRouting) (Pc
 		return PcsSystem{}, fmt.Errorf("codegen: BuildPcsSystem: no LagrangeEval openings; did global.Compile run before pcs.Compile?")
 	}
 
-	// Per-batch layout + shapes, a global column->location map (with batch), and
-	// each batch's root provenance. An interactive batch's root is the oracle
+	// Each batch's root provenance. An interactive batch's root is the oracle
 	// commitment absorbed for its round (proof.rounds index == Round.ID, since
 	// rounds are emitted in ID order); the precomputed batch's root is the
 	// compile-time PrecomputedCommitment. This is what lets the Zig verifier bind
 	// the authenticated root to the transcript instead of trusting the proof.
-	colLoc := map[wiop.ObjectID]pcsLocWithBatch{}
-	shapes := make([]fri.Shape, len(batches))
 	batchRoots := make([]PcsBatchRoot, len(batches))
 	for i, b := range batches {
-		// The layout the verifier reconstructs (bundle placement, entry order,
-		// positions) is a RUNTIME function of module_sizes — dynamic-module columns
-		// are fully supported. Codegen still runs GetLayout at the proving runtime
-		// to capture the shift schedules and the claimed values (which ARE
-		// size-independent openings); the verifier re-derives the size-dependent
-		// bundle placement from ColumnDesc + module_sizes.
-		locs, shape := pcscompiler.GetLayout(b.Round, rt)
-		shapes[i] = shape
-		for id, l := range locs {
-			colLoc[id] = pcsLocWithBatch{batchIdx: i, loc: l}
-		}
 		if b.IsPrecomp {
 			batchRoots[i] = PcsBatchRoot{Precomputed: true, Root: sys.PrecomputedCommitment}
 		} else {
 			batchRoots[i] = PcsBatchRoot{Precomputed: false, RoundIndex: b.Round.ID}
 		}
-	}
-
-	// Shifts: for each opened (column, shift), record the normalized shift into
-	// the batch's per-size schedule, keyed to the column's row. shiftOrder keeps
-	// the per-key ordering that fixes each opened value's shift slot.
-	shifts := make([]fri.BatchShifts, len(batches))
-	for i := range batches {
-		shifts[i] = initPcsShifts(shapes[i])
-	}
-	shiftOrder := map[pcsEntryKey][]int{}
-	seen := map[pcsEntryKey]map[int]bool{}
-	// normSeen[key][normalizedShift] = the raw offset that produced it, used to
-	// detect dynamic-column shift aliasing at the CODEGEN runtime size. Even with
-	// min-size metadata, the proof we are extracting from must itself be
-	// representable by the baked raw schedule.
-	normSeen := map[pcsEntryKey]map[int]int{}
-	// claimValues[key][shift] is the runtime claimed evaluation for that opened
-	// (column, shift) — captured in the same dedup pass so EntryClaims can be
-	// materialized in canonical order below.
-	claimValues := map[pcsEntryKey]map[int]field.Ext{}
-
-	recordClaim := func(cv *wiop.ColumnView, value field.Ext) error {
-		lb, ok := colLoc[cv.Column.Context.ID]
-		if !ok {
-			return fmt.Errorf("codegen: BuildPcsSystem: opened column %q not in any committed batch",
-				cv.Column.Context.Path())
-		}
-		isDynamic, shift := pcsShiftFor(cv, lb.loc)
-		size := 1 << lb.loc.SizeID
-		normShift := ((cv.ShiftingOffset % size) + size) % size
-		key := pcsEntryKey{batchIdx: lb.batchIdx, sizeLog2: lb.loc.SizeID, isExt: lb.loc.IsExt, position: lb.loc.Position}
-		if seen[key] == nil {
-			seen[key] = map[int]bool{}
-			claimValues[key] = map[int]field.Ext{}
-			normSeen[key] = map[int]int{}
-		}
-		if isDynamic {
-			if prevRaw, aliased := normSeen[key][normShift]; aliased && prevRaw != cv.ShiftingOffset {
-				return fmt.Errorf(
-					"codegen: BuildPcsSystem: dynamic column %q opens at offsets %d and %d that alias "+
-						"(both %d mod %d); prover-ray dedups them to one opening but the size-independent "+
-						"schedule cannot represent this proof. Aliasing dynamic-column shifts are not supported "+
-						"at the codegen runtime size",
-					cv.Column.Context.Path(), prevRaw, cv.ShiftingOffset, normShift, size)
-			}
-			normSeen[key][normShift] = cv.ShiftingOffset
-		}
-		if seen[key][shift] {
-			return nil // deduplicate repeated (column, shift) openings
-		}
-		seen[key][shift] = true
-		claimValues[key][shift] = value
-		shiftOrder[key] = append(shiftOrder[key], shift)
-		ss := &shifts[key.batchIdx][key.sizeLog2]
-		if key.isExt {
-			ss.Ext[key.position] = append(ss.Ext[key.position], shift)
-		} else {
-			ss.Base[key.position] = append(ss.Base[key.position], shift)
-		}
-		return nil
-	}
-
-	for _, le := range sys.LagrangeEvals {
-		for k, cv := range le.Polynomials {
-			value := rt.GetCellValue(le.EvaluationClaims[k]).AsExt()
-			if err := recordClaim(cv, value); err != nil {
-				return PcsSystem{}, err
-			}
-		}
-	}
-
-	// Canonical entry order at the codegen size: size DESC, batch ASC,
-	// base-then-ext, position ASC — the SAME order the verifier's runtime
-	// reconstruction produces at this size, so EntryClaims lines up entry-for-entry.
-	entries := computePcsLayout(batches, shapes, shifts)
-
-	// Materialize entry_claims in canonical entry order: each entry's shiftOrder
-	// fixes its per-shift slots, so entryClaims[e][slot] ==
-	// claimValues[key][shiftOrder[key][slot]].
-	entryClaims := make([][]field.Ext, 0)
-	for _, e := range entries {
-		key := pcsEntryKey{batchIdx: e.batchIdx, sizeLog2: e.sizeLog2, isExt: e.isExt, position: e.rowIdx}
-		row := make([]field.Ext, len(e.shifts))
-		for slot, shift := range e.shifts {
-			v, ok := claimValues[key][shift]
-			if !ok {
-				return PcsSystem{}, fmt.Errorf("codegen: BuildPcsSystem: no claim value for entry %+v shift %d", key, shift)
-			}
-			row[slot] = v
-		}
-		entryClaims = append(entryClaims, row)
 	}
 
 	// Envelope params: the prover's process-wide static FRI schedule. The Zig
@@ -363,25 +274,26 @@ func BuildPcsSystem(sys *wiop.System, rt *wiop.Runtime, routing CoinRouting) (Pc
 	envelope := pcscompiler.FRIStaticParams()
 	maxSizeLog2 := int(pcscompiler.FRIMaxCommittableSizeLog2())
 
+	shiftSlots := pcsShiftSlots(sys)
+	dynIdx := DynamicModuleIndex(sys)
+	colDeclByID := pcsColumnDeclIndex(sys)
+
 	// Columns: every committed column in prover DECLARATION order (batch-major,
 	// then round.Columns order). Each column carries its batch, is_ext, size
 	// source (static size_log2 from the module's fixed size, or a DynamicIndex
 	// into module_sizes for a dynamic module) and its size-independent shift
-	// schedule. colDeclByID maps a column ObjectID to its declaration index so the
-	// claim maps can reference a column instead of a size-frozen entry index.
-	dynIdx := DynamicModuleIndex(sys)
-	columns := make([]PcsColumnDesc, 0)
-	colDeclByID := map[wiop.ObjectID]int{}
+	// schedule. colDeclByID (built above) maps a column ObjectID to its
+	// declaration index so the claim maps can reference a column instead of a
+	// size-frozen entry index.
+	var columns []PcsColumnDesc
 	for i, b := range batches {
 		for _, col := range b.Round.Columns {
-			lb := colLoc[col.Context.ID]
-			key := pcsEntryKey{batchIdx: lb.batchIdx, sizeLog2: lb.loc.SizeID, isExt: lb.loc.IsExt, position: lb.loc.Position}
 			desc := PcsColumnDesc{
 				BatchIdx: i,
 				IsExt:    col.IsExtension,
-				Shifts:   append([]int(nil), shiftOrder[key]...),
+				Shifts:   append([]int(nil), shiftSlots[col.Context.ID]...),
 			}
-			if col.Module != nil && col.Module.IsDynamic() {
+			if col.Module.IsDynamic() {
 				idx, ok := dynIdx[col.Module]
 				if !ok {
 					return PcsSystem{}, fmt.Errorf("codegen: BuildPcsSystem: dynamic module %q of committed column %q has no module_sizes index",
@@ -390,26 +302,26 @@ func BuildPcsSystem(sys *wiop.System, rt *wiop.Runtime, routing CoinRouting) (Pc
 				desc.IsDynamic = true
 				desc.DynamicIndex = idx
 				// See pcsDynamicMinSizeLog2: a dynamic column's raw shift schedule is
-				// valid only above some minimum runtime size. The verifier enforces
-				// that lower bound for future proofs; the codegen-runtime proof has
-				// already been checked by recordClaim's normSeen guard above.
+				// valid only above some minimum runtime size.
 				minSizeLog2, err := pcsDynamicMinSizeLog2(col.Context.Path(), desc.Shifts, maxSizeLog2)
 				if err != nil {
 					return PcsSystem{}, err
 				}
 				desc.DynamicMinSizeLog2 = minSizeLog2
 			} else {
-				// Static column: size_log2 is the padded, fixed module size —
-				// the SAME value GetLayout used (loc.SizeID) at this proving run,
-				// but for a static module it is proof-independent.
-				desc.SizeLog2 = lb.loc.SizeID
+				// Static column: size_log2 is the padded, fixed module size. SetSize
+				// already rounds it up to a power of two, so log2 is exact.
+				if !col.Module.IsSized() {
+					return PcsSystem{}, fmt.Errorf("codegen: BuildPcsSystem: static module %q of committed column %q has no size set",
+						col.Module.Context.Path(), col.Context.Path())
+				}
+				desc.SizeLog2 = bits.Len(uint(col.Module.Size())) - 1
 			}
-			colDeclByID[col.Context.ID] = len(columns)
 			columns = append(columns, desc)
 		}
 	}
 
-	witnessMap, quotientMap, err := buildPcsClaimMaps(sys, colLoc, colDeclByID)
+	witnessMap, quotientMap, err := buildPcsClaimMaps(sys, colDeclByID, shiftSlots)
 	if err != nil {
 		return PcsSystem{}, err
 	}
@@ -433,69 +345,7 @@ func BuildPcsSystem(sys *wiop.System, rt *wiop.Runtime, routing CoinRouting) (Pc
 		QuotientMap:      quotientMap,
 		ZetaCoinIndex:    zetaIdx,
 		BatchRoots:       batchRoots,
-		EntryClaims:      entryClaims,
 	}, nil
-}
-
-// pcsLayoutEntry is one opened column in the flat canonical entry order (size
-// DESC / batch ASC / base-then-ext / position ASC), used only to materialize
-// EntryClaims in exactly the order the verifier's runtime reconstruction
-// produces AT the codegen size. It is NOT emitted; the verifier reconstructs its
-// own entry order from ColumnDesc + module_sizes.
-type pcsLayoutEntry struct {
-	batchIdx int
-	sizeLog2 int
-	isExt    bool
-	rowIdx   int
-	shifts   []int
-}
-
-// computePcsLayout enumerates the canonical entry order at the codegen proving
-// size, mirroring prover-ray's canonicalLayout (and the verifier's reconstruct).
-// The returned entries drive EntryClaims materialization; they MUST agree with
-// the verifier's runtime reconstruction at this same size.
-func computePcsLayout(batches []pcscompiler.BatchRef, shapes []fri.Shape, shifts []fri.BatchShifts) []pcsLayoutEntry {
-	maxSizeLog2 := -1
-	for _, s := range shapes {
-		if len(s) > maxSizeLog2+1 {
-			maxSizeLog2 = len(s) - 1
-		}
-	}
-
-	var entries []pcsLayoutEntry
-	for sizeLog2 := maxSizeLog2; sizeLog2 >= 0; sizeLog2-- {
-		for batchIdx := range batches {
-			if sizeLog2 >= len(shapes[batchIdx]) {
-				continue
-			}
-			shape := shapes[batchIdx][sizeLog2]
-			rowShifts := shifts[batchIdx][sizeLog2]
-			for rowIdx := 0; rowIdx < shape.BaseWidth; rowIdx++ {
-				entries = append(entries, pcsLayoutEntry{
-					batchIdx: batchIdx, sizeLog2: sizeLog2, isExt: false, rowIdx: rowIdx,
-					shifts: append([]int(nil), rowShifts.Base[rowIdx]...),
-				})
-			}
-			for rowIdx := 0; rowIdx < shape.ExtWidth; rowIdx++ {
-				entries = append(entries, pcsLayoutEntry{
-					batchIdx: batchIdx, sizeLog2: sizeLog2, isExt: true, rowIdx: rowIdx,
-					shifts: append([]int(nil), rowShifts.Ext[rowIdx]...),
-				})
-			}
-		}
-	}
-	return entries
-}
-
-func initPcsShifts(shape fri.Shape) fri.BatchShifts {
-	bs := make(fri.BatchShifts, len(shape))
-	for i, ss := range shape {
-		bs[i] = fri.SizedShifts{
-			Base: make([][]int, ss.BaseWidth),
-			Ext:  make([][]int, ss.ExtWidth),
-		}
-	}
-	return bs
 }
 
 // buildPcsClaimMaps produces the witness/quotient claim maps in the SAME order
@@ -508,43 +358,18 @@ func initPcsShifts(shape fri.Shape) fri.BatchShifts {
 //
 // A ClaimRef names a column by its DECLARATION index (colDeclByID); the verifier
 // resolves that to the runtime canonical entry. The Shift slot indexes into the
-// column's shift schedule (the same shiftOrder that fixes EntryClaims' per-shift
-// slots), so a routed claim lands on the exact authenticated value.
+// column's shift schedule (shiftSlots, the same schedule PcsColumnDesc.Shifts
+// carries), so a routed claim lands on the exact authenticated value.
 func buildPcsClaimMaps(
 	sys *wiop.System,
-	colLoc map[wiop.ObjectID]pcsLocWithBatch,
 	colDeclByID map[wiop.ObjectID]int,
+	shiftSlots map[wiop.ObjectID][]int,
 ) (witnessMap, quotientMap []PcsClaimRef, err error) {
 	// cell ObjectID -> the column view it opens, via the LagrangeEvals.
 	cellView := map[wiop.ObjectID]*wiop.ColumnView{}
 	for _, le := range sys.LagrangeEvals {
 		for k, cv := range le.Polynomials {
 			cellView[le.EvaluationClaims[k].Context.ID] = cv
-		}
-	}
-
-	// The per-column shift order, keyed by column ObjectID: recovered by replaying
-	// the LagrangeEvals in declaration order with the same pcsShiftFor + dedup as
-	// recordClaim, so slot indices match EntryClaims exactly.
-	shiftFor := func(cv *wiop.ColumnView) int {
-		_, shift := pcsShiftFor(cv, colLoc[cv.Column.Context.ID].loc)
-		return shift
-	}
-
-	shiftSlots := map[wiop.ObjectID][]int{}
-	seen := map[wiop.ObjectID]map[int]bool{}
-	for _, le := range sys.LagrangeEvals {
-		for _, cv := range le.Polynomials {
-			id := cv.Column.Context.ID
-			shift := shiftFor(cv)
-			if seen[id] == nil {
-				seen[id] = map[int]bool{}
-			}
-			if seen[id][shift] {
-				continue
-			}
-			seen[id][shift] = true
-			shiftSlots[id] = append(shiftSlots[id], shift)
 		}
 	}
 
@@ -556,18 +381,12 @@ func buildPcsClaimMaps(
 					"the column it opens is not PCS-authenticated", cell.Context.Path())
 		}
 		id := cv.Column.Context.ID
-		shift := shiftFor(cv)
+		_, shift := pcsShiftFor(cv)
 		decl, ok := colDeclByID[id]
 		if !ok {
 			return PcsClaimRef{}, fmt.Errorf("codegen: BuildPcsSystem: opened column %q has no declaration index", cv.Column.Context.Path())
 		}
-		slot := -1
-		for i, s := range shiftSlots[id] {
-			if s == shift {
-				slot = i
-				break
-			}
-		}
+		slot := slices.Index(shiftSlots[id], shift)
 		if slot < 0 {
 			return PcsClaimRef{}, fmt.Errorf("codegen: BuildPcsSystem: shift %d not found for column %q", shift, cv.Column.Context.Path())
 		}

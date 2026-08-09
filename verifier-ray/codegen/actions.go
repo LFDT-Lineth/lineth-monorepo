@@ -49,10 +49,10 @@ func (e *UnhandledVerifierActionError) Error() string {
 //   - global.Verifier                          → vanishing (+ PCS claim link)
 //   - logderivativesum.VerifierAction          → logderivativesum boundary sum
 //   - lookuptologderivsum.ResultIsZeroVerifierAction → logderivativesum result-is-zero
-//   - pcs.OpeningVerifierAction                 → BuildPcsSystem (performs no
-//     boundary check the Zig side must re-emit — the whole PCS opening is
-//     reconstructed by BuildPcsSystem from the committed batches and
-//     LagrangeEvals — so it is handled implicitly)
+//   - pcs.OpeningVerifierAction                 → BuildPcsSystem / ExtractPcsOpening
+//     (performs no boundary check the Zig side must re-emit — the whole PCS
+//     opening is reconstructed from the committed batches and LagrangeEvals —
+//     so it is handled implicitly)
 //
 // Any other action type — including new ones added to prover-ray later — trips
 // the error, forcing an explicit decision rather than a silent drop.
