@@ -4,7 +4,7 @@ import linea.contract.l1.BlobsSubmissionV9
 import linea.contract.l1.LinethRollupSmartContractClient
 import linea.domain.BlobRecordV2
 import linea.domain.BlobSubmittedEvent
-import linea.gaspricing.GasPriceCapProviderV2
+import lineth.gaspricing.GasPriceCapProviderV2
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
