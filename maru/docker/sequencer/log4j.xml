@@ -49,7 +49,7 @@
     <Logger name="org.hyperledger.besu.ethereum.eth.manager.snap" level="DEBUG" additivity="false">
       <AppenderRef ref="Console"/>
     </Logger>
-    <Logger name="net.consensys.linea.sequencer.txselection.selectors" level="DEBUG" />
+    <Logger name="lineth.sequencer.txselection.selectors" level="DEBUG" />
     <Logger name="org.hyperledger.besu.ethereum.blockcreation.txselection.BlockTransactionSelector" level="INFO">
       <Filters>
         <LevelRangeFilter maxLevel="DEBUG" onMatch="ACCEPT" onMismatch="NEUTRAL" />
