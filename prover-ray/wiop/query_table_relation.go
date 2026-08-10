@@ -92,6 +92,156 @@ func (t Table) Round() *Round {
 // Width returns the number of columns in this Table.
 func (t Table) Width() int { return len(t.Columns) }
 
+// MaxLookupRows is the total row budget shared by everything that a lookup is
+// compiled together with. For one lookup with fragmented source tables
+// S_1..S_n (the A side) and target tables T_1..T_k (the B side), the sum of the
+// row counts across all A fragments — and, independently, across all B
+// fragments — must stay strictly below an effective limit derived from this
+// budget. Exceeding it lets the row-index accumulators in the reduced
+// constraints overflow when the argument is instantiated over a small field.
+//
+// The effective per-side limit is the full MaxLookupRows budget for every
+// lookup. Lookups that share a target table are not made to share the budget:
+// the lookuptologderivsum compiler bin-packs them into independent subgroups,
+// each with its own multiplicity column and accumulators, and only requires
+// that a single subgroup's summed side stay below MaxLookupRows (see that
+// compiler, which passes the budget to [TableRelationQuery.CheckRowLimit] /
+// [TableRelationQuery.ValidateRowLimit]).
+//
+// The limit is enforced on both sides: the prover panics
+// ([TableRelationQuery.CheckRowLimit]) since it is trusted code about to build
+// an unsound witness, while the verifier rejects the proof with an error
+// ([TableRelationQuery.ValidateRowLimit]).
+//
+// The bound is a deliberately loose upper bound: it sums whole fragment heights
+// and ignores selectors, so rows that a selector would exclude are still
+// counted.
+const MaxLookupRows uint64 = 1 << 30
+
+// MaxPermutationRows is the row budget for a permutation, the analogue of
+// [MaxLookupRows] for the grand-product argument (see the grandproduct
+// compiler). Permutations tolerate a much larger bound because their running
+// accumulator is a product of β-randomised factors rather than a sum of
+// row-index multiplicities, so the small-field overflow only bites at a far
+// higher row count. The effective per-side limit is this budget itself: the
+// grand-product accumulators are per-module Z columns, so neither the packing
+// arity (which shrinks the number of Z columns, not the rows each walks) nor
+// the number of permutations reduced together tightens it. It is checked via
+// [TableRelationQuery.CheckRowLimit] / [TableRelationQuery.ValidateRowLimit].
+const MaxPermutationRows uint64 = 1 << 58
+
+// ValidateRowLimit returns an error if the total number of rows summed across
+// all A fragments, or independently across all B fragments, reaches limit. Row
+// counts are taken from each fragment's module runtime size; selectors are
+// ignored, so this counts every row of every fragment, not just the selected
+// ones. limit is the effective per-side bound the caller has derived from the
+// relevant budget ([MaxLookupRows] for inclusions, [MaxPermutationRows] for
+// permutations).
+//
+// The two sides are checked independently: each must stay below the bound on
+// its own. The check runs against a [Runtime] because fragment heights are only
+// known per-run for dynamic modules. This is the verifier-facing form; the
+// prover uses [TableRelationQuery.CheckRowLimit], which panics on the
+// same condition.
+func (tr *TableRelationQuery) ValidateRowLimit(rt *Runtime, limit uint64) error {
+	if err := checkTablesRowLimit(tr.context.Path(), "A", tr.A, rt, limit); err != nil {
+		return err
+	}
+	return checkTablesRowLimit(tr.context.Path(), "B", tr.B, rt, limit)
+}
+
+// CheckRowLimit panics if [TableRelationQuery.ValidateRowLimit] would return an
+// error for the given limit. Used on the prover side, where an over-limit
+// lookup is a fatal programming error rather than a proof to reject gracefully.
+func (tr *TableRelationQuery) CheckRowLimit(rt *Runtime, limit uint64) {
+	if err := tr.ValidateRowLimit(rt, limit); err != nil {
+		panic(err)
+	}
+}
+
+// checkTablesRowLimit sums the runtime row counts of every fragment in
+// tables and returns an error if the total reaches limit.
+func checkTablesRowLimit(path, side string, tables []Table, rt *Runtime, limit uint64) error {
+	var sum uint64
+	for _, tab := range tables {
+		sum += uint64(tab.Module().RuntimeSize(rt))
+	}
+	if sum >= limit {
+		return fmt.Errorf(
+			"wiop: TableRelationQuery(%s): total rows on the %s side reach %d, "+
+				"which is >= the effective per-query row limit %d (the row budget shared across the "+
+				"queries compiled together); the accumulators in the reduced constraints would "+
+				"overflow over a small field. Split the query so each side stays below the limit",
+			path, side, sum, limit,
+		)
+	}
+	return nil
+}
+
+// PrevalidateRowLimit is the compile-time analogue of
+// [TableRelationQuery.ValidateRowLimit]: it checks the same per-side row budget
+// but from static module sizes alone, so it runs at compile time, during a
+// compiler pass, with no [Runtime] in hand. A sized module contributes its
+// fixed height; a dynamic (or otherwise unsized) module, whose height is only
+// known per-run, is counted as its maximum possible height
+// [ColumnSizeMaxSupported] (2^22). This makes the check a conservative upper
+// bound: a lookup that passes at compile time cannot overflow the reduced
+// accumulators for any runtime assignment, so it complements — rather than
+// replaces — the exact runtime checks ([TableRelationQuery.CheckRowLimit] /
+// [TableRelationQuery.ValidateRowLimit]).
+func (tr *TableRelationQuery) PrevalidateRowLimit(limit uint64) error {
+	if err := precheckTablesRowLimit(tr.context.Path(), "A", tr.A, limit); err != nil {
+		return err
+	}
+	return precheckTablesRowLimit(tr.context.Path(), "B", tr.B, limit)
+}
+
+// PrecheckRowLimit panics if [TableRelationQuery.PrevalidateRowLimit] would
+// return an error for the given limit. Used at compile time (from a compiler
+// pass), where an over-budget lookup is a programming error worth surfacing
+// before any witness is assigned.
+func (tr *TableRelationQuery) PrecheckRowLimit(limit uint64) {
+	if err := tr.PrevalidateRowLimit(limit); err != nil {
+		panic(err)
+	}
+}
+
+// StaticTableRows sums the compile-time row count of every fragment in tables:
+// a sized module contributes its fixed height, a dynamic (or otherwise unsized)
+// module its maximum possible height [ColumnSizeMaxSupported] (2^22). It is the
+// accounting behind [TableRelationQuery.PrevalidateRowLimit], exported so
+// compiler passes can bin-pack against the same bound as the compile-time
+// precheck.
+func StaticTableRows(tables []Table) uint64 {
+	var sum uint64
+	for _, tab := range tables {
+		m := tab.Module()
+		if m.IsSized() {
+			sum += uint64(m.Size())
+		} else {
+			sum += uint64(ColumnSizeMaxSupported)
+		}
+	}
+	return sum
+}
+
+// precheckTablesRowLimit returns an error if [StaticTableRows] of tables
+// reaches limit. It is the compile-time helper behind
+// [TableRelationQuery.PrevalidateRowLimit].
+func precheckTablesRowLimit(path, side string, tables []Table, limit uint64) error {
+	if sum := StaticTableRows(tables); sum >= limit {
+		return fmt.Errorf(
+			"wiop: TableRelationQuery(%s): total rows on the %s side reach %d "+
+				"(dynamic/unsized modules counted as their maximum height %d), which is >= the "+
+				"effective per-query row limit %d (the row budget shared across the queries "+
+				"compiled together); the accumulators in the reduced constraints would overflow "+
+				"over a small field. Split the query so each side stays below the limit",
+			path, side, sum, ColumnSizeMaxSupported, limit,
+		)
+	}
+	return nil
+}
+
 // LookupKind selects the relational predicate asserted by a [TableRelationQuery].
 type LookupKind uint8
 
@@ -124,9 +274,9 @@ func (k LookupKind) String() string {
 //   - Inclusion: every selected row of A appears in the union of selected rows
 //     across all B fragments. Reduced via the log-derivative argument (see the
 //     lookuptologderivsum compiler).
-//   - Permutation: A and B, treated as multisets of rows, are equal. No
-//     selectors are permitted. Reduced via the grand-product argument (see the
-//     grandproduct compiler).
+//   - Permutation: the selected rows of A and B, treated as multisets, are
+//     equal. A fragment without a selector participates with all its rows.
+//     Reduced via the grand-product argument (see the grandproduct compiler).
 //
 // TableRelationQuery does not implement [GnarkCheckableQuery]: neither predicate can
 // be verified inside a gnark circuit. A compiler pass must reduce it before
@@ -172,22 +322,36 @@ func (tr *TableRelationQuery) Check(rt *Runtime) error {
 // collision yields a false accept with probability at most
 // (total rows) / |field|, negligible for realistic table sizes.
 //
-// Every row of every fragment participates, padding rows included, because the
-// grand-product argument the verifier ultimately runs holds over the padded
-// domains. Permutation queries carry no selectors (enforced by
-// [System.NewPermutation]).
+// Every row of every unfiltered fragment participates, padding rows included,
+// because the grand-product argument the verifier ultimately runs holds over
+// the padded domains. A fragment with a selector contributes only the rows
+// whose selector value is non-zero, mirroring the neutral-factor reduction in
+// the grandproduct compiler. Selectors are assumed {0,1}-valued (a caller
+// obligation, see [System.NewPermutation]); this check does not verify that —
+// any non-zero value simply counts as selected, so it may accept a witness the
+// caller's own binarity constraint would reject.
 func (tr *TableRelationQuery) checkPermutation(rt *Runtime) error {
 	alpha := field.RandomElemExt()
 	counts := make(map[field.Ext]int)
 	for _, tab := range tr.A {
 		n := tab.Module().RuntimeSize(rt)
 		for row := range n {
+			if tab.Selector != nil {
+				if sel := tableElemAt(rt, tab.Selector, row, n); sel.IsZero() {
+					continue
+				}
+			}
 			counts[tableRowHash(alpha, rt, tab.Columns, row, n)]++
 		}
 	}
 	for _, tab := range tr.B {
 		n := tab.Module().RuntimeSize(rt)
 		for row := range n {
+			if tab.Selector != nil {
+				if sel := tableElemAt(rt, tab.Selector, row, n); sel.IsZero() {
+					continue
+				}
+			}
 			counts[tableRowHash(alpha, rt, tab.Columns, row, n)]--
 		}
 	}
@@ -416,9 +580,34 @@ func (sys *System) NewInclusion(ctx *ContextFrame, included []Table, including [
 // permutation between mixed-width fragments therefore holds iff the multisets
 // of (width, row) pairs coincide.
 //
+// A fragment may carry a selector, turning the query into a conditional
+// permutation: only rows whose selector is 1 participate in the multiset, so
+// the predicate becomes "the selected rows of A are a permutation of the
+// selected rows of B". The grandproduct compiler gives unselected rows the
+// neutral grand-product factor 1.
+//
+// CALLER OBLIGATION: every selector passed here must be constrained to {0,1}
+// by the caller (a sel·(sel−1) = 0 vanishing constraint, or by construction as
+// a precomputed column). Neither this constructor nor the grandproduct
+// compiler emits that constraint — selectors are typically already constrained
+// where they are built and shared across several queries, so emitting it here
+// would duplicate an existing constraint. The obligation is load-bearing for
+// soundness, not a nicety: the reduction folds each row to
+// 1 + sel·(β + RLC(row) − 1), so a selector free to take any field value lets
+// a prover scale rows arbitrarily and prove a permutation between unrelated
+// multisets. [TableRelationQuery.Check] treats any non-zero selector value as
+// selected and will not catch a non-binary one either.
+//
 // Invariants enforced at construction:
 //   - a and b are non-empty.
-//   - No fragment carries a selector — permutation has no row filtering.
+//   - When every fragment on both sides lives on a statically sized module
+//     and no fragment carries a selector, the total row counts of the two
+//     sides must be equal: an unfiltered permutation between unequal multiset
+//     cardinalities can never hold, so catching it here gives a dev-time
+//     error instead of an unexplained verifier rejection. The check is
+//     skipped as soon as either side touches a dynamic module (height only
+//     known at runtime) or carries a selector (filtered sides are
+//     legitimately unbalanced in raw rows).
 //
 // Panics on any of the above invariant violations or if ctx is nil.
 func (sys *System) NewPermutation(ctx *ContextFrame, a []Table, b []Table) *TableRelationQuery {
@@ -427,8 +616,7 @@ func (sys *System) NewPermutation(ctx *ContextFrame, a []Table, b []Table) *Tabl
 	}
 	validateNonEmpty("NewPermutation", "a", a)
 	validateNonEmpty("NewPermutation", "b", b)
-	validateNoSelector("NewPermutation", a)
-	validateNoSelector("NewPermutation", b)
+	validateBalancedRows("NewPermutation", a, b)
 	return sys.newTableRelation(ctx, KindPermutation, a, b)
 }
 
@@ -449,23 +637,53 @@ func (sys *System) newTableRelation(ctx *ContextFrame, kind LookupKind, A, B []T
 	return tr
 }
 
-// validateNoSelector panics if any Table in tables carries a selector.
-func validateNoSelector(caller string, tables []Table) {
-	for i, t := range tables {
-		if t.Selector != nil {
-			panic(fmt.Sprintf(
-				"wiop: System.%s: fragment %d carries a selector; permutation queries do not support selectors",
-				caller, i,
-			))
-		}
-	}
-}
-
 // validateNonEmpty panics if tables is empty.
 func validateNonEmpty(caller, side string, tables []Table) {
 	if len(tables) == 0 {
 		panic(fmt.Sprintf("wiop: System.%s: %s must have at least one fragment", caller, side))
 	}
+}
+
+// validateBalancedRows panics if the total static row counts of the two sides
+// differ. The check only applies when every fragment on both sides lives on a
+// statically sized module and carries no selector; if any fragment's module
+// is dynamic (or otherwise unsized) the balance is only decidable at runtime,
+// and with a selector the participating row count is a witness property — in
+// both cases the check is skipped and the grand-product identity itself
+// rejects an unbalanced witness.
+func validateBalancedRows(caller string, a, b []Table) {
+	for _, tables := range [2][]Table{a, b} {
+		for _, t := range tables {
+			if t.Selector != nil {
+				return
+			}
+		}
+	}
+	aRows, aStatic := staticRowTotal(a)
+	bRows, bStatic := staticRowTotal(b)
+	if !aStatic || !bStatic {
+		return
+	}
+	if aRows != bRows {
+		panic(fmt.Sprintf(
+			"wiop: System.%s: the two sides have different total row counts (%d vs %d); "+
+				"a permutation between multisets of different cardinalities can never hold",
+			caller, aRows, bRows,
+		))
+	}
+}
+
+// staticRowTotal sums the static module heights of every fragment in tables.
+// ok is false if any fragment's module is not statically sized.
+func staticRowTotal(tables []Table) (rows uint64, ok bool) {
+	for _, t := range tables {
+		m := t.Module()
+		if !m.IsSized() {
+			return 0, false
+		}
+		rows += uint64(m.Size())
+	}
+	return rows, true
 }
 
 // validateUniformWidth panics if any Table in tables has a Width different from

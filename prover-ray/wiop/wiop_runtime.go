@@ -29,9 +29,8 @@ type Runtime struct {
 	System *System
 	// currentRound is the round currently being processed.
 	currentRound *Round
-	// fs is the Fiat-Shamir state. It is updated with column and cell
-	// assignments at the end of each round and used to derive coin values for
-	// the next round.
+	// fs is the Fiat-Shamir state. It is updated with cell assignments at the
+	// end of each round and used to derive coin values for the next round.
 	fs *fiatshamir.FiatShamir
 	// columns maps each column's [ObjectID] to its concrete vector assignment.
 	columns map[ObjectID]*ConcreteVector
@@ -111,20 +110,18 @@ func (run *Runtime) dynamicModuleSize(m *Module) int {
 func (run *Runtime) CurrentRound() *Round { return run.currentRound }
 
 // AdvanceRound closes the current round and opens the next one:
-//  1. Every oracle or public column assigned in the current round is fed into
-//     the Fiat-Shamir state.
-//  2. Every cell value assigned in the current round is fed into the
-//     Fiat-Shamir state. All cells are always public (see [Cell.Visibility]).
-//  3. The runtime advances to the next round.
-//  4. Every [Round.PreSamplingHooks] entry on the new round runs, in
+//  1. Every cell value assigned in the current round is fed into the
+//     Fiat-Shamir state.
+//  2. The runtime advances to the next round.
+//  3. Every [Round.PreSamplingHooks] entry on the new round runs, in
 //     declaration order. Hooks may mutate the Fiat-Shamir state via
 //     [Runtime.SetFSState] for shared-randomness seeding; any subsequent
 //     coin in this round is derived from the post-hook state.
-//  5. A fresh extension-field coin is derived via [fiatshamir.FiatShamir.RandomFext]
+//  4. A fresh extension-field coin is derived via [fiatshamir.FiatShamir.RandomFext]
 //     for each [CoinField] declared in the new round.
 //
-// Panics if there is no next round, or if any oracle/public column in the
-// current round has not been assigned.
+// Panics if there is no next round, or if any cell in the current round has
+// not been assigned.
 func (run *Runtime) AdvanceRound() {
 	if run.currentRound == nil {
 		panic("wiop: AdvanceRound: system has no interactive rounds")
@@ -162,15 +159,6 @@ func (run *Runtime) AdvanceRound() {
 			))
 		}
 		run.fs.Update(commitment[:]...)
-	}
-
-	// Feed oracle and public column assignments into the Fiat-Shamir state.
-	for _, col := range run.currentRound.Columns {
-		if col.Visibility < VisibilityOracle {
-			continue
-		}
-		cv := run.GetColumnAssignment(col) // panics if unassigned
-		run.fs.UpdateSV(cv.Plain)
 	}
 
 	// Feed all cell values into the Fiat-Shamir state. Lazily-assigned cells

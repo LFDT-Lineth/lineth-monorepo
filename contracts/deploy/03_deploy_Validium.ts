@@ -44,7 +44,7 @@ const func: DeployFunction = withSignerUiSession("03_deploy_Validium.ts", async 
     { role: OPERATOR_ROLE, addresses: validiumOperators },
   ]);
   const roleAddresses = getEnvVarOrDefault("VALIDIUM_ROLE_ADDRESSES", defaultRoleAddresses);
-  const addressFilter = requireAddressFromRegistryOrEnv(network.name, "AddressFilter", "LINEA_ROLLUP_ADDRESS_FILTER");
+  const addressFilter = requireAddressFromRegistryOrEnv(network.name, "AddressFilter", "LINETH_ROLLUP_ADDRESS_FILTER");
 
   const contract = await deployUpgradableFromFactory(
     "Validium",

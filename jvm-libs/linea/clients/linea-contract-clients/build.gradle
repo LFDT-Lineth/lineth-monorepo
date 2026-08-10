@@ -1,9 +1,9 @@
 plugins {
-  id 'net.consensys.zkevm.kotlin-library-conventions'
+  id 'lineth.kotlin-library-conventions'
   id 'java-test-fixtures'
 }
 
-description = "Linea L1 smart contract client"
+description = "Lineth L1 smart contract client"
 
 dependencies {
   api project(':jvm-libs:linea:core:domain-models')

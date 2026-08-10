@@ -3,7 +3,7 @@ import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import {
   LidoStVaultYieldProviderFactory,
-  MockLineaRollup,
+  MockLinethRollup,
   MockSTETH,
   MockVaultHub,
   MockVaultFactory,
@@ -21,7 +21,7 @@ describe("LidoStVaultYieldProviderFactory", () => {
   let mockVaultHub: MockVaultHub;
   let mockVaultFactory: MockVaultFactory;
   let mockSTETH: MockSTETH;
-  let mockLineaRollup: MockLineaRollup;
+  let mockLinethRollup: MockLinethRollup;
   let yieldManager: TestYieldManager;
   let verifier: ValidatorContainerProofVerifier;
 
@@ -43,13 +43,13 @@ describe("LidoStVaultYieldProviderFactory", () => {
       lidoStVaultYieldProviderFactory,
       mockVaultHub,
       mockVaultFactory,
-      mockLineaRollup,
+      mockLinethRollup,
       yieldManager,
       mockSTETH,
       verifier,
       verifierAddress,
     } = await loadFixture(deployLidoStVaultYieldProviderFactory));
-    l1MessageServiceAddress = await mockLineaRollup.getAddress();
+    l1MessageServiceAddress = await mockLinethRollup.getAddress();
     yieldManagerAddress = await yieldManager.getAddress();
     vaultHubAddress = await mockVaultHub.getAddress();
     vaultFactoryAddress = await mockVaultFactory.getAddress();
@@ -142,7 +142,7 @@ describe("LidoStVaultYieldProviderFactory", () => {
       expect(await lidoStVaultYieldProviderFactory.STETH()).eq(await mockSTETH.getAddress());
     });
     it("Should deploy with correct L1MessageService address", async () => {
-      expect(await lidoStVaultYieldProviderFactory.L1_MESSAGE_SERVICE()).eq(await mockLineaRollup.getAddress());
+      expect(await lidoStVaultYieldProviderFactory.L1_MESSAGE_SERVICE()).eq(await mockLinethRollup.getAddress());
     });
     it("Should deploy with correct YieldManager address", async () => {
       expect(await lidoStVaultYieldProviderFactory.YIELD_MANAGER()).eq(await yieldManager.getAddress());

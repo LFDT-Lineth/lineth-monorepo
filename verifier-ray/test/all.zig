@@ -4,5 +4,8 @@ comptime {
     _ = @import("transcript_test.zig");
     _ = @import("vanishing_test.zig");
     _ = @import("logderivativesum_test.zig");
+    _ = @import("fri_test.zig");
+    _ = @import("pcs_test.zig");
     _ = @import("verifier_test.zig");
+    _ = @import("pcs_endpoint_binding_test.zig");
 }

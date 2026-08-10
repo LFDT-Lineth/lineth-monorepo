@@ -33,7 +33,10 @@ object ConfigDocsRunner {
 
   /**
    * Generates the JSON schema snapshot and Markdown reference, writing each only when its content
-   * changes (so repeated runs are idempotent and produce clean diffs).
+   * changes (so repeated runs are idempotent and produce clean diffs). When [mdxPartialPath] is
+   * non-null, also writes an MDX-safe reference partial to that path (intended for a gitignored
+   * build directory consumed by a publishing workflow); the committed Markdown and JSON outputs
+   * are unaffected.
    */
   fun generate(
     files: List<ConfigFileRoot>,
@@ -42,6 +45,7 @@ object ConfigDocsRunner {
     markdownPath: Path,
     markdownTitle: String,
     regenerateCommand: String,
+    mdxPartialPath: Path? = null,
     log: (String) -> Unit = ::println,
   ) {
     writeIfChanged(jsonSchemaPath, ConfigDocJsonGenerator.generate(files, sectionDetector), log)
@@ -50,6 +54,13 @@ object ConfigDocsRunner {
       ConfigDocMarkdownGenerator.generate(files, sectionDetector, markdownTitle, regenerateCommand),
       log,
     )
+    if (mdxPartialPath != null) {
+      writeIfChanged(
+        mdxPartialPath,
+        ConfigDocMdxGenerator.generate(files, sectionDetector, regenerateCommand),
+        log,
+      )
+    }
   }
 
   private fun writeIfChanged(path: Path, content: String, log: (String) -> Unit) {

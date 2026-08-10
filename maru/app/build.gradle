@@ -2,7 +2,7 @@ import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
 
 plugins {
-  id 'net.consensys.zkevm.kotlin-application-conventions'
+  id 'lineth.kotlin-application-conventions'
 }
 
 sourceSets {
@@ -41,7 +41,7 @@ dependencies {
   implementation project(':jvm-libs:linea:core:long-running-service')
 
   // Previously inherited from maru's `maru.kotlin-application-conventions` plugin (which the
-  // import dropped in favor of zkevm's lighter `net.consensys.zkevm.kotlin-application-conventions`).
+  // import dropped in favor of zkevm's lighter `lineth.kotlin-application-conventions`).
   implementation project(':jvm-libs:linea:core:metrics')
   implementation project(':jvm-libs:linea:metrics:micrometer')
   // Pinned to the published Vert.x 4-era artifact rather than the local
@@ -100,16 +100,25 @@ application {
 
 jar {
   archiveBaseName = 'maru'
+  // Compute Class-Path lazily via a Provider so runtimeClasspath is resolved only when the
+  // jar task actually runs (execution phase), never during configuration. Resolving it eagerly
+  // here (e.g. `.collect {}`) would force Besu dependency resolution on every invocation —
+  // including `clean` — which is what previously dragged an on-demand Besu build into a clean.
+  // dependsOn(Configuration) wires the tasks that build runtimeClasspath's artifacts (e.g.
+  // :maru:linea-finalization-provider:jar) as task dependencies without resolving it here;
+  // without this, the manifest Provider below can be queried before those tasks finish under
+  // parallel execution, failing with "Querying the mapped value of provider(...) before task
+  // ':maru:linea-finalization-provider:jar' has completed is not supported".
+  dependsOn(configurations.runtimeClasspath)
+  def classPathAttribute = configurations.runtimeClasspath.elements.map { locations ->
+    locations
+        .collect { it.asFile.name }
+        .findAll { it.endsWith('.jar') }
+        .join(' ')
+  }
   manifest {
     attributes(
-        'Class-Path': project.configurations.runtimeClasspath
-        .collect {
-          it.getName()
-        }
-        .findAll {
-          it.endsWith('jar')
-        }
-        .join(' '),
+        'Class-Path': classPathAttribute,
         'Main-Class': 'maru.app.CliEntrypoint',
         'Multi-Release': 'true'
         )

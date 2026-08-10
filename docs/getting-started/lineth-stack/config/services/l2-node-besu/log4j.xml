@@ -22,7 +22,7 @@
     <Logger name="org.hyperledger.besu.ethereum.api.handlers.AbstractJsonRpcExecutor" level="DEBUG" />
     <Logger name="org.hyperledger.besu.ethereum.api.handlers.JsonRpcArrayExecutor" level="TRACE" />
 
-    <Logger name="net.consensys.linea.rpc.methods.LineaEstimateGas" level="TRACE" />
+    <Logger name="lineth.rpc.methods.LineaEstimateGas" level="TRACE" />
     <!-- eth_simulateV1 method handler -->
     <Logger name="org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.EthSimulateV1" level="TRACE" />
     <!-- Jackson deserialization errors (root cause of INVALID_PARAMS -32602) -->
@@ -31,7 +31,7 @@
     <!-- Block/transaction simulation internals -->
     <Logger name="org.hyperledger.besu.ethereum.blockcreation.BlockTransactionSelector" level="DEBUG" />
     <Logger name="org.hyperledger.besu.ethereum.transaction" level="DEBUG" />
-    <Logger name="net.consensys.linea.plugins.rpc.tracegeneration.GenerateVirtualBlockConflatedTracesV1" level="DEBUG" />
+    <Logger name="lineth.plugins.rpc.tracegeneration.GenerateVirtualBlockConflatedTracesV1" level="DEBUG" />
 
     <!-- Shomei plugin on the Besu side (ZkTrieLog / BesuShomeiRpcPlugin) -->
     <Logger name="net.consensys.shomei" level="DEBUG" />

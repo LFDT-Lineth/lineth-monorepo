@@ -3,7 +3,7 @@ import * as assert from "node:assert/strict";
 process.env.CLAIM_L2_TO_L1_DISABLE_MAIN = "true";
 
 const PRIVATE_KEY = `0x${"11".repeat(32)}`;
-const LINEA_ROLLUP = "0x1111111111111111111111111111111111111111";
+const LINETH_ROLLUP = "0x1111111111111111111111111111111111111111";
 const L2_MESSAGE_SERVICE = "0x2222222222222222222222222222222222222222";
 const MESSAGE_HASH = `0x${"aa".repeat(32)}`;
 const MESSAGE_SENDER = "0x3333333333333333333333333333333333333333";
@@ -25,7 +25,7 @@ function validEnv(overrides: Record<string, string | undefined> = {}) {
     L1_SIGNER_PRIVATE_KEY: PRIVATE_KEY,
     SMOKE_L1_CHAIN_ID: "11155111",
     SMOKE_L2_CHAIN_ID: "1337",
-    SMOKE_LINEA_ROLLUP_ADDRESS: LINEA_ROLLUP,
+    SMOKE_LINETH_ROLLUP_ADDRESS: LINETH_ROLLUP,
     SMOKE_L2_MESSAGE_SERVICE_ADDRESS: L2_MESSAGE_SERVICE,
     SMOKE_MESSAGE_HASH: MESSAGE_HASH,
     SMOKE_MESSAGE_SENDER: MESSAGE_SENDER,
@@ -128,7 +128,7 @@ const tests: TestCase[] = [
 
       const [, common] = calls.statuses[0] as [unknown, Record<string, unknown>];
       assert.equal(common.messageHash, MESSAGE_HASH);
-      assert.equal(common.lineaRollupAddress, LINEA_ROLLUP);
+      assert.equal(common.linethRollupAddress, LINETH_ROLLUP);
       assert.equal(common.l2MessageServiceAddress, L2_MESSAGE_SERVICE);
       assert.deepEqual(common.l2LogsBlockRange, { fromBlock: 40n, toBlock: 40n });
 
@@ -141,7 +141,7 @@ const tests: TestCase[] = [
       assert.equal(claim.calldata, CALLDATA);
       assert.equal(claim.feeRecipient, "0x0000000000000000000000000000000000000000");
       assert.deepEqual(claim.messageProof, { root: PROOF_ROOT, leafIndex: 7, proof: ["0x01", "0x02"] });
-      assert.equal(claim.lineaRollupAddress, LINEA_ROLLUP);
+      assert.equal(claim.linethRollupAddress, LINETH_ROLLUP);
     },
   },
   {

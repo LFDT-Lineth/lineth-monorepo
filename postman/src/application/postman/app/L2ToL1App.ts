@@ -2,7 +2,7 @@ import { WinstonLogger } from "@lfdt-lineth/shared-utils";
 import { type LoggerOptions } from "winston";
 
 import { L1NetworkConfig, L2NetworkConfig } from "./config/config";
-import { ILineaRollupClient } from "../../../core/clients/blockchain/ethereum/ILineaRollupClient";
+import { ILinethRollupClient } from "../../../core/clients/blockchain/ethereum/ILinethRollupClient";
 import { IEthereumGasProvider } from "../../../core/clients/blockchain/IGasProvider";
 import { IProvider } from "../../../core/clients/blockchain/IProvider";
 import { IL2MessageServiceLogClient } from "../../../core/clients/blockchain/linea/IL2MessageServiceLogClient";
@@ -29,7 +29,7 @@ import {
 export type L2ToL1Deps = {
   l2LogClient: IL2MessageServiceLogClient;
   l2Provider: IProvider;
-  lineaRollupClient: ILineaRollupClient;
+  linethRollupClient: ILinethRollupClient;
   l1Provider: IProvider;
   l1NonceManager: INonceManager;
   l1TransactionRetrier: ITransactionRetrier;
@@ -53,7 +53,7 @@ export class L2ToL1App {
     const {
       l2LogClient,
       l2Provider,
-      lineaRollupClient,
+      linethRollupClient,
       l1Provider,
       l1NonceManager,
       l1TransactionRetrier,
@@ -102,7 +102,7 @@ export class L2ToL1App {
     );
 
     const anchoringProcessor = new MessageAnchoringProcessor(
-      lineaRollupClient,
+      linethRollupClient,
       messageRepository,
       {
         direction: Direction.L2_TO_L1,
@@ -131,7 +131,7 @@ export class L2ToL1App {
     };
 
     const claimingProcessor = new MessageClaimingProcessor(
-      lineaRollupClient,
+      linethRollupClient,
       l1NonceManager,
       messageRepository,
       getNextMessageToClaim,
@@ -157,7 +157,7 @@ export class L2ToL1App {
     );
 
     const transactionLifecycleManager = new TransactionLifecycleManager(
-      lineaRollupClient,
+      linethRollupClient,
       l1Provider,
       l1TransactionRetrier,
       l1ReceiptPoller,
@@ -171,7 +171,7 @@ export class L2ToL1App {
 
     const receiptStatusResolver = new ReceiptStatusResolver(
       messageRepository,
-      lineaRollupClient,
+      linethRollupClient,
       l1Provider,
       sponsorshipMetricsUpdater,
       transactionMetricsUpdater,

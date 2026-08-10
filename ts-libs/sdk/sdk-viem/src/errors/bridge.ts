@@ -81,3 +81,19 @@ export class MissingMessageProofOrClientForClaimingOnL1Error extends BaseError {
     });
   }
 }
+
+export type RollupAddressRequiredErrorType = RollupAddressRequiredError & {
+  name: "RollupAddressRequiredError";
+};
+
+export class RollupAddressRequiredError extends BaseError {
+  constructor({ chainId }: { chainId: number }) {
+    super(
+      [
+        `Cannot resolve a default rollup contract address for chain ID ${chainId}.`,
+        "Pass `rollupAddress` explicitly when the settlement client is not Ethereum Mainnet or Sepolia (e.g. a Validium chain settling on Linea).",
+      ].join("\n"),
+      { name: "RollupAddressRequiredError" },
+    );
+  }
+}

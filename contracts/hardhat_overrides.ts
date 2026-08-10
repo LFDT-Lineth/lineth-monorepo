@@ -57,7 +57,7 @@ export const overrides = {
       evmVersion: "osaka",
     },
   },
-  "src/_testing/unit/rollup/TestLineaRollup.sol": {
+  "src/_testing/unit/rollup/TestLinethRollup.sol": {
     version: "0.8.33",
     settings: {
       viaIR: useViaIR,
@@ -79,7 +79,7 @@ export const overrides = {
       evmVersion: "osaka",
     },
   },
-  "src/rollup/LineaRollup.sol": {
+  "src/rollup/LinethRollup.sol": {
     version: "0.8.33",
     settings: {
       viaIR: useViaIR,

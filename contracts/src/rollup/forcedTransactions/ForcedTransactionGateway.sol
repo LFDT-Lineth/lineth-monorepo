@@ -57,7 +57,7 @@ contract ForcedTransactionGateway is AccessControl, IForcedTransactionGateway {
   uint256 public lastSubmissionBlock;
 
   constructor(
-    address _lineaRollup,
+    address _rollup,
     uint256 _destinationChainId,
     uint256 _l2BlockBuffer,
     uint256 _maxGasLimit,
@@ -67,7 +67,7 @@ contract ForcedTransactionGateway is AccessControl, IForcedTransactionGateway {
     uint256 _l2BlockDurationSeconds,
     uint256 _blockNumberDeadlineBuffer
   ) {
-    require(_lineaRollup != address(0), IGenericErrors.ZeroAddressNotAllowed());
+    require(_rollup != address(0), IGenericErrors.ZeroAddressNotAllowed());
     require(_destinationChainId != 0, IGenericErrors.ZeroValueNotAllowed());
     require(_l2BlockBuffer != 0, IGenericErrors.ZeroValueNotAllowed());
     require(_maxGasLimit != 0, IGenericErrors.ZeroValueNotAllowed());
@@ -77,7 +77,7 @@ contract ForcedTransactionGateway is AccessControl, IForcedTransactionGateway {
     require(_l2BlockDurationSeconds != 0, IGenericErrors.ZeroValueNotAllowed());
     require(_blockNumberDeadlineBuffer != 0, IGenericErrors.ZeroValueNotAllowed());
 
-    LINEA_ROLLUP = IAcceptForcedTransactions(_lineaRollup);
+    LINEA_ROLLUP = IAcceptForcedTransactions(_rollup);
     DESTINATION_CHAIN_ID = _destinationChainId;
     L2_BLOCK_BUFFER = _l2BlockBuffer;
     MAX_GAS_LIMIT = _maxGasLimit;

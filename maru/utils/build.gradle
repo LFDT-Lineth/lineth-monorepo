@@ -14,7 +14,7 @@
  */
 
 plugins {
-  id 'net.consensys.zkevm.kotlin-common-minimal-conventions'
+  id 'lineth.kotlin-common-minimal-conventions'
 }
 
 dependencies {
@@ -33,12 +33,12 @@ dependencies {
 
 tasks.register('runDifficultyCalculator', JavaExec) {
   classpath = sourceSets.main.runtimeClasspath
-  mainClass = 'linea.maru.DifficultyCalculator'
+  mainClass = 'lineth.maru.DifficultyCalculator'
   standardOutput = System.out
 }
 
 tasks.register('keytool', JavaExec) {
   classpath = sourceSets.main.runtimeClasspath
-  mainClass = 'linea.maru.KeyTool'
+  mainClass = 'lineth.maru.KeyTool'
   standardOutput = System.out
 }

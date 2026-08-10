@@ -4,7 +4,7 @@
 
 <br />
 
-The Validium contract is a permutation of LineaRollup that uses off-chain data availability. It shares the same base contract (same initial state root, block number, and genesis timestamp) but has its own operators and rate limits.
+The Validium contract is a permutation of LinethRollup that uses off-chain data availability. It shares the same base contract (same initial state root, block number, and genesis timestamp) but has its own operators and rate limits.
 
 Parameters that should be filled either in .env or passed as CLI arguments:
 

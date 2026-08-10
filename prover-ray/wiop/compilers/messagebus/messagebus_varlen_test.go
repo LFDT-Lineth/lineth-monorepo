@@ -27,9 +27,9 @@ func TestCompile_VariableLength_Permutation_Balanced(t *testing.T) {
 		t.Helper()
 		modS := sys.NewSizedModule(sys.Context.Childf("modS"), 4, wiop.PaddingDirectionNone)
 		modR := sys.NewSizedModule(sys.Context.Childf("modR"), 8, wiop.PaddingDirectionNone)
-		colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
-		colR := modR.NewColumn(sys.Context.Childf("R"), wiop.VisibilityOracle, r0)
-		selR := modR.NewColumn(sys.Context.Childf("selR"), wiop.VisibilityOracle, r0)
+		colS := modS.NewColumn(sys.Context.Childf("S"), r0)
+		colR := modR.NewColumn(sys.Context.Childf("R"), r0)
+		selR := modR.NewColumn(sys.Context.Childf("selR"), r0)
 
 		sys.NewMessageBusSend(
 			sys.Context.Childf("send-S"), "shard", "vl",
@@ -64,9 +64,9 @@ func TestCompile_VariableLength_Permutation_Unbalanced(t *testing.T) {
 		t.Helper()
 		modS := sys.NewSizedModule(sys.Context.Childf("modS"), 4, wiop.PaddingDirectionNone)
 		modR := sys.NewSizedModule(sys.Context.Childf("modR"), 8, wiop.PaddingDirectionNone)
-		colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
-		colR := modR.NewColumn(sys.Context.Childf("R"), wiop.VisibilityOracle, r0)
-		selR := modR.NewColumn(sys.Context.Childf("selR"), wiop.VisibilityOracle, r0)
+		colS := modS.NewColumn(sys.Context.Childf("S"), r0)
+		colR := modR.NewColumn(sys.Context.Childf("R"), r0)
+		selR := modR.NewColumn(sys.Context.Childf("selR"), r0)
 
 		sys.NewMessageBusSend(
 			sys.Context.Childf("send-S"), "shard", "vl",
@@ -103,9 +103,9 @@ func TestCompile_MixedWidth_LeadingOneDoesNotAlias(t *testing.T) {
 		t.Helper()
 		modS1 := sys.NewSizedModule(sys.Context.Childf("modS1"), 2, wiop.PaddingDirectionNone)
 		modR2 := sys.NewSizedModule(sys.Context.Childf("modR2"), 2, wiop.PaddingDirectionNone)
-		colS1 := modS1.NewColumn(sys.Context.Childf("S1"), wiop.VisibilityOracle, r0)
-		hiR := modR2.NewColumn(sys.Context.Childf("hiR"), wiop.VisibilityOracle, r0)
-		loR := modR2.NewColumn(sys.Context.Childf("loR"), wiop.VisibilityOracle, r0)
+		colS1 := modS1.NewColumn(sys.Context.Childf("S1"), r0)
+		hiR := modR2.NewColumn(sys.Context.Childf("hiR"), r0)
+		loR := modR2.NewColumn(sys.Context.Childf("loR"), r0)
 
 		sys.NewMessageBusSend(
 			sys.Context.Childf("send-w1"), "shard", "one",

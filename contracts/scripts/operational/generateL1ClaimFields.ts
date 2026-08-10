@@ -2,7 +2,7 @@
  * generateL1ClaimFields.ts
  *
  * Generates the complete `ClaimMessageWithProofParams` struct required to call
- * `claimMessageWithProof()` on the L1 LineaRollup contract, for a given L2->L1
+ * `claimMessageWithProof()` on the L1 LinethRollup contract, for a given L2->L1
  * message hash.
  *
  * This is meant to be used as a standalone script, not as part of a Hardhat task or other build process.
@@ -12,7 +12,7 @@
  *   MESSAGE_HASH=0x... \
  *   L1_RPC_URL=https://... \
  *   L2_RPC_URL=https://... \
- *   LINEA_ROLLUP_ADDRESS=0x... \
+ *   LINETH_ROLLUP_ADDRESS=0x... \
  *   L2_MESSAGE_SERVICE_ADDRESS=0x... \
  *   pnpm exec ts-node scripts/operational/generateL1ClaimFields.ts
  *
@@ -21,7 +21,7 @@
  *     --message-hash 0x... \
  *     --l1-rpc-url https://... \
  *     --l2-rpc-url https://... \
- *     --linea-rollup-address 0x... \
+ *     --lineth-rollup-address 0x... \
  *     --l2-message-service-address 0x... \
  *     --out ./claim-params.json \
  *     --pretty
@@ -53,7 +53,7 @@ interface ScriptConfig {
   messageHash: string;
   l1RpcUrl: string;
   l2RpcUrl: string;
-  lineaRollupAddress: string;
+  linethRollupAddress: string;
   l2MessageServiceAddress: string;
   feeRecipient: string;
   outputPath: string | undefined;
@@ -163,7 +163,7 @@ function loadConfig(): ScriptConfig {
     messageHash: getRequiredCliOrEnvValue("message-hash", "MESSAGE_HASH"),
     l1RpcUrl: getRequiredCliOrEnvValue("l1-rpc-url", "L1_RPC_URL"),
     l2RpcUrl: getRequiredCliOrEnvValue("l2-rpc-url", "L2_RPC_URL"),
-    lineaRollupAddress: getRequiredCliOrEnvValue("linea-rollup-address", "LINEA_ROLLUP_ADDRESS"),
+    linethRollupAddress: getRequiredCliOrEnvValue("lineth-rollup-address", "LINETH_ROLLUP_ADDRESS"),
     l2MessageServiceAddress: getRequiredCliOrEnvValue("l2-message-service-address", "L2_MESSAGE_SERVICE_ADDRESS"),
     feeRecipient: getOptionalCliOrEnvValue("fee-recipient", "FEE_RECIPIENT") ?? ZeroAddress,
     outputPath: getCliValueFromEqualsSyntax("out") ?? getCliOrEnvValue("--out", "CLAIM_PARAMS_OUT"),
@@ -275,14 +275,14 @@ function getMessageSiblings(targetMessageHash: string, messageHashes: string[], 
   return siblings;
 }
 
-function parseFinalizationReceipt(receipt: ethers.TransactionReceipt, lineaRollupAddress: string): FinalizationInfo {
+function parseFinalizationReceipt(receipt: ethers.TransactionReceipt, linethRollupAddress: string): FinalizationInfo {
   const iface = new Interface(FINALIZATION_ABI);
   const l2MerkleRoots: string[] = [];
   const anchoredBlocks: number[] = [];
   let treeDepth = 0;
 
   for (const log of receipt.logs) {
-    if (normalizeHex(log.address) !== normalizeHex(lineaRollupAddress)) {
+    if (normalizeHex(log.address) !== normalizeHex(linethRollupAddress)) {
       continue;
     }
     try {
@@ -372,13 +372,13 @@ function verifyMessageHash(message: MessageSentData, targetMessageHash: string):
 }
 
 async function findFinalizationTxHash(
-  lineaRollup: Contract,
+  linethRollup: Contract,
   l2BlockNumber: number,
   fromBlock: BlockBound,
   toBlock: BlockBound,
 ): Promise<string> {
-  const anchoredEvents = await lineaRollup.queryFilter(
-    lineaRollup.filters.L2MessagingBlockAnchored(l2BlockNumber),
+  const anchoredEvents = await linethRollup.queryFilter(
+    linethRollup.filters.L2MessagingBlockAnchored(l2BlockNumber),
     fromBlock,
     toBlock,
   );
@@ -447,7 +447,7 @@ async function main() {
   const l1Provider = new JsonRpcProvider(config.l1RpcUrl);
   const l2Provider = new JsonRpcProvider(config.l2RpcUrl);
   const l2MessageService = new Contract(config.l2MessageServiceAddress, MESSAGE_SENT_ABI, l2Provider);
-  const lineaRollup = new Contract(config.lineaRollupAddress, L2_BLOCK_ANCHORED_ABI, l1Provider);
+  const linethRollup = new Contract(config.linethRollupAddress, L2_BLOCK_ANCHORED_ABI, l1Provider);
 
   info(1, `Searching L2 MessageSent event for hash ${config.messageHash}...`);
   const message = await findMessageSentEvent(
@@ -466,7 +466,7 @@ async function main() {
 
   info(2, `Searching L1 finalization for L2 block ${message.l2BlockNumber}...`);
   const finalizationTxHash = await findFinalizationTxHash(
-    lineaRollup,
+    linethRollup,
     message.l2BlockNumber,
     config.l1FromBlock,
     config.l1ToBlock,
@@ -478,7 +478,7 @@ async function main() {
   if (!finalizationReceipt) {
     throw new Error(`Could not fetch receipt for finalization tx ${finalizationTxHash}`);
   }
-  const finalization = parseFinalizationReceipt(finalizationReceipt, config.lineaRollupAddress);
+  const finalization = parseFinalizationReceipt(finalizationReceipt, config.linethRollupAddress);
   info(
     3,
     `Finalization range ${finalization.l2BlockRange.start}-${finalization.l2BlockRange.end}, tree depth ${finalization.treeDepth}, roots ${finalization.l2MerkleRoots.length}`,

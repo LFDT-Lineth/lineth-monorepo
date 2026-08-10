@@ -83,7 +83,7 @@ runs:
 
     - name: Login to Docker Hub
       if: ${{ inputs.dockerhub_username != '' && inputs.dockerhub_token != '' }}
-      uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 #v3.7.0
+      uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f #v4.6.0
       with:
         username: ${{ inputs.dockerhub_username }}
         password: ${{ inputs.dockerhub_token }}
@@ -178,11 +178,14 @@ runs:
       if: ${{ inputs.linea_besu_package_tag != '' }}
       shell: bash
       working-directory: ${{ inputs.working-directory }}
+      env:
+        LINEA_BESU_PACKAGE_TAG: ${{ inputs.linea_besu_package_tag }}
       run: |
         set -euo pipefail
         artifact_path="$GITHUB_WORKSPACE/${{ inputs.working-directory }}/tmp/artifacts/linea-besu-package-images.tar.gz"
         if [ -f "$artifact_path" ]; then
           gunzip -c "$artifact_path" | docker load
+          echo "LINEA_BESU_PACKAGE_TAG=${LINEA_BESU_PACKAGE_TAG}" >> "$GITHUB_ENV"
         else
           echo "No artifact at ${artifact_path}; skipping docker load."
         fi

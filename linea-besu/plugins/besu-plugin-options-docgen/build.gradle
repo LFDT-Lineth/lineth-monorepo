@@ -1,0 +1,67 @@
+/*
+ * Copyright Consensys Software Inc.
+ *
+ * This file is dual-licensed under either the MIT license or Apache License 2.0.
+ * See the LICENSE-MIT and LICENSE-APACHE files in the repository root for details.
+ *
+ * SPDX-License-Identifier: MIT OR Apache-2.0
+ */
+
+plugins {
+  id 'java'
+  id 'application'
+}
+
+group = 'net.consensys.linea.besu.plugin'
+
+repositories {
+  mavenCentral()
+  maven {
+    name = 'besu-maven'
+    url = 'https://hyperledger.jfrog.io/artifactory/besu-maven/'
+    content { includeGroupAndSubgroups('org.hyperledger.besu') }
+  }
+  maven {
+    name = 'linea-besu'
+    url = 'https://artifacts.consensys.net/public/linea-besu/maven/'
+  }
+}
+
+java {
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(25)
+  }
+}
+
+application {
+  mainClass = 'lineth.besu.docgen.CliOptionsManifestGenerator'
+}
+
+dependencies {
+  // Sequencer pulls :tracer:arithmetization transitively (Tracer CliOptions + LineaCliOptions).
+  implementation project(':linea-besu:plugins:linea-sequencer:sequencer')
+  // Besu types are compileOnly/provided on the plugin modules; needed at runtime for Field.get / create().
+  implementation "org.hyperledger.besu:besu-datatypes:${rootProject.ext.resolveBesuVersion()}"
+  implementation "org.hyperledger.besu:besu-plugin-api:${rootProject.ext.resolveBesuVersion()}"
+  implementation "info.picocli:picocli:${libs.versions.picoli.get()}"
+  implementation "com.fasterxml.jackson.core:jackson-databind:${libs.versions.jackson.get()}"
+}
+
+def defaultManifestOutput = rootProject.file('scripts/besu-plugin-options/output/linea-besu-plugin-options.json')
+def defaultReportOutput = rootProject.file('scripts/besu-plugin-options/output/report.json')
+
+tasks.register('generateBesuPluginOptionsManifest', JavaExec) {
+  group = 'documentation'
+  description = 'Reflect on Linea-Besu plugin @Option classes and write the docs manifest JSON.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'lineth.besu.docgen.CliOptionsManifestGenerator'
+  def manifestOut = (findProperty('besuPluginOptionsManifest') ?: defaultManifestOutput.absolutePath) as String
+  def reportOut = (findProperty('besuPluginOptionsReport') ?: defaultReportOutput.absolutePath) as String
+  args = [
+    '--manifest',
+    manifestOut,
+    '--report',
+    reportOut,
+  ]
+  outputs.files(manifestOut, reportOut)
+}

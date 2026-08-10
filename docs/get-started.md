@@ -87,6 +87,6 @@ For **target block / timestamp checkpoints**, L1 finalization and API **resume**
 
 ## Next steps
 
-Consider reviewing the [Linea architecture](architecture-description.md) description.
+Consider reviewing the [Lineth architecture](architecture-description.md) description.
 
 For detailed instructions on local development and building services locally, see the [Local Development Guide](local-development-guide.md).

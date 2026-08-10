@@ -20,16 +20,16 @@ func TestCompile_Permutation_MixedWidth_Balanced(t *testing.T) {
 	// Width-2 sub-group.
 	modA2 := sys.NewSizedModule(sys.Context.Childf("modA2"), 2, wiop.PaddingDirectionNone)
 	modB2 := sys.NewSizedModule(sys.Context.Childf("modB2"), 2, wiop.PaddingDirectionNone)
-	keyA := modA2.NewColumn(sys.Context.Childf("keyA"), wiop.VisibilityOracle, r0)
-	valA := modA2.NewColumn(sys.Context.Childf("valA"), wiop.VisibilityOracle, r0)
-	keyB := modB2.NewColumn(sys.Context.Childf("keyB"), wiop.VisibilityOracle, r0)
-	valB := modB2.NewColumn(sys.Context.Childf("valB"), wiop.VisibilityOracle, r0)
+	keyA := modA2.NewColumn(sys.Context.Childf("keyA"), r0)
+	valA := modA2.NewColumn(sys.Context.Childf("valA"), r0)
+	keyB := modB2.NewColumn(sys.Context.Childf("keyB"), r0)
+	valB := modB2.NewColumn(sys.Context.Childf("valB"), r0)
 
 	// Width-1 sub-group.
 	modA1 := sys.NewSizedModule(sys.Context.Childf("modA1"), 2, wiop.PaddingDirectionNone)
 	modB1 := sys.NewSizedModule(sys.Context.Childf("modB1"), 2, wiop.PaddingDirectionNone)
-	colA1 := modA1.NewColumn(sys.Context.Childf("A1"), wiop.VisibilityOracle, r0)
-	colB1 := modB1.NewColumn(sys.Context.Childf("B1"), wiop.VisibilityOracle, r0)
+	colA1 := modA1.NewColumn(sys.Context.Childf("A1"), r0)
+	colB1 := modB1.NewColumn(sys.Context.Childf("B1"), r0)
 
 	sys.NewPermutation(
 		sys.Context.Childf("perm"),
@@ -69,9 +69,9 @@ func TestCompile_Permutation_MixedWidth_SentinelPreventsAliasing(t *testing.T) {
 
 	modA1 := sys.NewSizedModule(sys.Context.Childf("modA1"), 2, wiop.PaddingDirectionNone)
 	modB2 := sys.NewSizedModule(sys.Context.Childf("modB2"), 2, wiop.PaddingDirectionNone)
-	colA1 := modA1.NewColumn(sys.Context.Childf("A1"), wiop.VisibilityOracle, r0)
-	hiB := modB2.NewColumn(sys.Context.Childf("hiB"), wiop.VisibilityOracle, r0)
-	loB := modB2.NewColumn(sys.Context.Childf("loB"), wiop.VisibilityOracle, r0)
+	colA1 := modA1.NewColumn(sys.Context.Childf("A1"), r0)
+	hiB := modB2.NewColumn(sys.Context.Childf("hiB"), r0)
+	loB := modB2.NewColumn(sys.Context.Childf("loB"), r0)
 
 	sys.NewPermutation(
 		sys.Context.Childf("perm"),
