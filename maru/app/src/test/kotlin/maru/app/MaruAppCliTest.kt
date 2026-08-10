@@ -58,7 +58,6 @@ class MaruAppCliTest {
 
       [payload-validator]
       engine-api-endpoint = { endpoint = "http://localhost:8550" }
-      eth-api-endpoint = { endpoint = "http://localhost:8545" }
 
       [syncing]
       peer-chain-height-polling-interval = "5 seconds"
@@ -95,7 +94,6 @@ class MaruAppCliTest {
 
       [payload-validator]
       engine-api-endpoint = { endpoint = "http://OVEERRIDE:8550" }
-      eth-api-endpoint = { endpoint = "http://localhost:8545" }
 
       [syncing]
       peer-chain-height-polling-interval = "10 seconds"

@@ -17,7 +17,6 @@ import linea.kotlin.encodeHex
 import java.net.InetAddress
 import java.net.URL
 import java.nio.file.Path
-import kotlin.math.max
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.milliseconds
@@ -73,12 +72,6 @@ data class P2PConfig(
     default = "25",
   )
   val maxPeers: Int = 25,
-  @param:ConfigDoc(
-    description = "Maximum number of out-of-sync peers tolerated before throttling sync from them. " +
-      "Reserved; not currently enforced by the node.",
-    default = "2",
-  )
-  val maxUnsyncedPeers: Int = max(1, maxPeers / 10),
   @param:ConfigSection("Discovery (node lookup) settings. Omit to disable discovery.")
   val discovery: Discovery? = null,
   @param:ConfigSection("Peer status update polling settings.")
@@ -275,8 +268,8 @@ data class P2PConfig(
     )
     val gossipFactor: Double = 0.25,
     @param:ConfigDoc(
-      description = "Whether all peers are scored as direct peers in gossip peer scoring " +
-        "(libp2p GossipPeerScoreParams.isDirect).",
+      description = "Whether all peers are scored as direct peers (same as static peers) in " +
+        "gossip peer scoring (libp2p GossipPeerScoreParams.isDirect).",
       default = "false",
     )
     val considerPeersAsDirect: Boolean = false,
@@ -473,7 +466,9 @@ data class SyncingConfig(
     )
     val backoffDelay: Duration = 1.seconds,
     @param:ConfigDoc(
-      description = "Whether to pick a random download peer unconditionally on each request.",
+      description = "When false (default), pick a random peer among those whose latest reported " +
+        "block is at least the download range end. When true, skip that end-block filter and pick " +
+        "any peer at random.",
       default = "false",
     )
     val useUnconditionalRandomDownloadPeer: Boolean = false,

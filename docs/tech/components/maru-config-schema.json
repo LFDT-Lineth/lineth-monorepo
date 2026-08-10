@@ -7,7 +7,7 @@
         "section": false,
         "required": false,
         "default": "false",
-        "description": "Whether the node is allowed to propose empty blocks.",
+        "description": "Whether empty blocks are allowed when proposing and when validating blocks (needed in multi-validator networks).",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -229,8 +229,8 @@
         "default": null,
         "description": "Engine API endpoint URL of the execution-layer node.",
         "example": "http://el-node:8551",
-        "deprecated": false,
-        "replacement": null
+        "deprecated": true,
+        "replacement": "linea.l1-eth-api-endpoint"
       },
       "linea.l1-eth-api.jwt-secret-path": {
         "type": "String?",
@@ -239,8 +239,8 @@
         "default": null,
         "description": "Optional path to the JWT secret file used for authenticated Engine API calls. Omit to disable JWT authentication.",
         "example": "/jwt.hex",
-        "deprecated": false,
-        "replacement": null
+        "deprecated": true,
+        "replacement": "linea.l1-eth-api-endpoint"
       },
       "linea.l1-eth-api.timeout": {
         "type": "Duration",
@@ -249,8 +249,8 @@
         "default": "PT1M",
         "description": "Overall timeout for a single request to this endpoint.",
         "example": null,
-        "deprecated": false,
-        "replacement": null
+        "deprecated": true,
+        "replacement": "linea.l1-eth-api-endpoint"
       },
       "linea.l1-highest-block-tag": {
         "type": "String",
@@ -457,7 +457,7 @@
         "section": false,
         "required": false,
         "default": "false",
-        "description": "Whether all peers are scored as direct peers in gossip peer scoring (libp2p GossipPeerScoreParams.isDirect).",
+        "description": "Whether all peers are scored as direct peers (same as static peers) in gossip peer scoring (libp2p GossipPeerScoreParams.isDirect).",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -502,7 +502,7 @@
         "deprecated": false,
         "replacement": null
       },
-      "p2p.gossiping.fanout-t-t-l": {
+      "p2p.gossiping.fanout-ttl": {
         "type": "Duration",
         "section": false,
         "required": false,
@@ -562,7 +562,7 @@
         "deprecated": false,
         "replacement": null
       },
-      "p2p.gossiping.seen-t-t-l": {
+      "p2p.gossiping.seen-ttl": {
         "type": "Duration",
         "section": false,
         "required": false,
@@ -588,16 +588,6 @@
         "required": false,
         "default": "25",
         "description": "Maximum number of peers the node maintains.",
-        "example": null,
-        "deprecated": false,
-        "replacement": null
-      },
-      "p2p.max-unsynced-peers": {
-        "type": "Int",
-        "section": false,
-        "required": false,
-        "default": "2",
-        "description": "Maximum number of out-of-sync peers tolerated before throttling sync from them. Reserved; not currently enforced by the node.",
         "example": null,
         "deprecated": false,
         "replacement": null
@@ -1027,7 +1017,7 @@
         "section": false,
         "required": false,
         "default": "false",
-        "description": "Whether to pick a random download peer unconditionally on each request.",
+        "description": "When false (default), pick a random peer among those whose latest reported block is at least the download range end. When true, skip that end-block filter and pick any peer at random.",
         "example": null,
         "deprecated": false,
         "replacement": null

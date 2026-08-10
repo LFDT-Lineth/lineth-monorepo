@@ -7,7 +7,7 @@ description = "Config documentation annotations, schema walker, and doc/JSON gen
 dependencies {
   // Walks config data classes reflectively.
   implementation "org.jetbrains.kotlin:kotlin-reflect:${libs.versions.kotlin.get()}"
-  // KebabCaseParamMapper (key rendering) and Masked/Secret handling, consistent with the parser.
+  // Masked/Secret type display handling, consistent with the Hoplite parser.
   implementation "com.sksamuel.hoplite:hoplite-core:${libs.versions.hoplite.get()}"
   // JSON schema snapshot serialization.
   implementation "com.fasterxml.jackson.core:jackson-databind:${libs.versions.jackson.get()}"

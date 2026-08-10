@@ -268,7 +268,8 @@ data class ForkTransitionDtoToml(
 
 data class MaruConfigDtoToml(
   @param:ConfigDoc(
-    description = "Whether the node is allowed to propose empty blocks.",
+    description = "Whether empty blocks are allowed when proposing and when validating blocks " +
+      "(needed in multi-validator networks).",
     default = "false",
   )
   private val allowEmptyBlocks: Boolean = false,

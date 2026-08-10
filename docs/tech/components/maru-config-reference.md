@@ -8,7 +8,7 @@ Main Maru configuration.
 
 | Key | Type | Required | Default | Status | Description |
 | --- | --- | --- | --- | --- | --- |
-| `allow-empty-blocks` | `Boolean` | no | `false` | active | Whether the node is allowed to propose empty blocks. |
+| `allow-empty-blocks` | `Boolean` | no | `false` | active | Whether empty blocks are allowed when proposing and when validating blocks (needed in multi-validator networks). |
 | `follower-engine-apis` | `Map<String, ApiEndpointDto>?` | no | - | active | Named map of follower execution-layer endpoints. Each entry maps a follower name to its engine API endpoint settings. |
 
 ### `api`
@@ -50,9 +50,9 @@ Linea-specific settings (L1/L2 endpoints, contract address). Omit on non-Linea n
 | `linea.l1-eth-api-endpoint.endpoint` | `URL` | yes | - | active | Engine API endpoint URL of the execution-layer node. Example: `http://el-node:8551`. |
 | `linea.l1-eth-api-endpoint.jwt-secret-path` | `String?` | no | - | active | Optional path to the JWT secret file used for authenticated Engine API calls. Omit to disable JWT authentication. Example: `/jwt.hex`. |
 | `linea.l1-eth-api-endpoint.timeout` | `Duration` | no | `PT1M` | active | Overall timeout for a single request to this endpoint. |
-| `linea.l1-eth-api.endpoint` | `URL` | yes | - | active | Engine API endpoint URL of the execution-layer node. Example: `http://el-node:8551`. |
-| `linea.l1-eth-api.jwt-secret-path` | `String?` | no | - | active | Optional path to the JWT secret file used for authenticated Engine API calls. Omit to disable JWT authentication. Example: `/jwt.hex`. |
-| `linea.l1-eth-api.timeout` | `Duration` | no | `PT1M` | active | Overall timeout for a single request to this endpoint. |
+| `linea.l1-eth-api.endpoint` | `URL` | yes | - | deprecated | Engine API endpoint URL of the execution-layer node. Example: `http://el-node:8551`. |
+| `linea.l1-eth-api.jwt-secret-path` | `String?` | no | - | deprecated | Optional path to the JWT secret file used for authenticated Engine API calls. Omit to disable JWT authentication. Example: `/jwt.hex`. |
+| `linea.l1-eth-api.timeout` | `Duration` | no | `PT1M` | deprecated | Overall timeout for a single request to this endpoint. |
 | `linea.l1-highest-block-tag` | `String` | no | `finalized` | active | L1 block tag treated as the highest finalized block (e.g. finalized, safe, latest). |
 | `linea.l1-polling-interval` | `Duration` | no | `PT6S` | active | Interval between L1 polls for rollup contract events. |
 | `linea.l2-eth-api-endpoint.endpoint` | `URL` | yes | - | active | Engine API endpoint URL of the execution-layer node. Example: `http://el-node:8551`. |
@@ -82,21 +82,20 @@ P2P networking settings. Omit to disable P2P.
 | `p2p.discovery.retry-timeout` | `Duration` | no | `PT10S` | active | Timeout before retrying a failed discovery request. |
 | `p2p.discovery.search-interval` | `Duration` | no | `PT1S` | active | Interval between discovery search runs. |
 | `p2p.discovery.search-timeout` | `Duration` | no | `PT30S` | active | Timeout for a single discovery search run. |
-| `p2p.gossiping.consider-peers-as-direct` | `Boolean` | no | `false` | active | Whether all peers are scored as direct peers in gossip peer scoring (libp2p GossipPeerScoreParams.isDirect). |
+| `p2p.gossiping.consider-peers-as-direct` | `Boolean` | no | `false` | active | Whether all peers are scored as direct peers (same as static peers) in gossip peer scoring (libp2p GossipPeerScoreParams.isDirect). |
 | `p2p.gossiping.d` | `Int` | no | `8` | active | Target mesh degree (number of peers each topic is gossiped to). |
 | `p2p.gossiping.d-high` | `Int` | no | `16` | active | Upper bound on the mesh degree; peers are pruned when the mesh exceeds this. Defaults to 2 * d. |
 | `p2p.gossiping.d-lazy` | `Int` | no | `6` | active | Degree of lazy (non-mesh) peers used for gossip amplification. |
 | `p2p.gossiping.d-low` | `Int` | no | `6` | active | Lower bound on the mesh degree; peers are added when the mesh drops below this. |
-| `p2p.gossiping.fanout-t-t-l` | `Duration` | no | `PT1M` | active | Time-to-live for gossip fanout messages sent to peers outside the mesh. |
+| `p2p.gossiping.fanout-ttl` | `Duration` | no | `PT1M` | active | Time-to-live for gossip fanout messages sent to peers outside the mesh. |
 | `p2p.gossiping.flood-publish-max-message-size-threshold` | `Int` | no | `16384` | active | Maximum message size above which flood publishing is skipped. Defaults to 16KiB. |
 | `p2p.gossiping.gossip-factor` | `Double` | no | `0.25` | active | Fraction of non-mesh peers that receive gossip messages (libp2p gossipFactor). |
 | `p2p.gossiping.gossip-size` | `Int` | no | `3` | active | Number of history windows advertised via IHAVE messages (libp2p gossipSize). |
 | `p2p.gossiping.heartbeat-interval` | `Duration` | no | `PT0.7S` | active | Interval between gossipsub heartbeat rounds. |
 | `p2p.gossiping.history` | `Int` | no | `6` | active | Number of gossip history windows retained in the message cache (libp2p gossipHistoryLength). |
-| `p2p.gossiping.seen-t-t-l` | `Duration` | no | `PT780.5S` | active | Time-to-live for the seen-message cache. Defaults to 700ms * 1115. |
+| `p2p.gossiping.seen-ttl` | `Duration` | no | `PT780.5S` | active | Time-to-live for the seen-message cache. Defaults to 700ms * 1115. |
 | `p2p.ip-address` | `String` | no | `127.0.0.1` | active | IP address the node listens on for P2P traffic. Defaults to localhost for security. |
 | `p2p.max-peers` | `Int` | no | `25` | active | Maximum number of peers the node maintains. |
-| `p2p.max-unsynced-peers` | `Int` | no | `2` | active | Maximum number of out-of-sync peers tolerated before throttling sync from them. Reserved; not currently enforced by the node. |
 | `p2p.peering-fork-mismatch-leeway-time` | `Duration` | no | `PT20S` | active | Leeway time during which a peer is tolerated despite a fork mismatch before being penalized. |
 | `p2p.port` | `UInt` | no | `9000` | active | TCP port the node listens on for P2P traffic. UDP discovery uses p2p.discovery.port. |
 | `p2p.reconnect-delay` | `Duration` | no | `PT5S` | active | Delay before reconnecting to a dropped peer. |
@@ -159,7 +158,7 @@ Sync settings used while catching up to the chain head.
 | `syncing.download.blocks-batch-size` | `UInt` | no | `100` | active | Number of blocks requested in a single download batch. |
 | `syncing.download.blocks-parallelism` | `UInt` | no | `1` | active | Number of block-range download requests issued in parallel. |
 | `syncing.download.max-retries` | `UInt` | no | `5` | active | Maximum number of retries for a failed download request. |
-| `syncing.download.use-unconditional-random-download-peer` | `Boolean` | no | `false` | active | Whether to pick a random download peer unconditionally on each request. |
+| `syncing.download.use-unconditional-random-download-peer` | `Boolean` | no | `false` | active | When false (default), pick a random peer among those whose latest reported block is at least the download range end. When true, skip that end-block filter and pick any peer at random. |
 | `syncing.el-sync-status-refresh-interval` | `Duration?` | no | - | active | Optional interval to refresh the execution-layer sync status. Omit to disable. |
 | `syncing.peer-chain-height-polling-interval` | `Duration` | yes | - | active | Interval between polls for peer chain height updates. |
 | `syncing.sync-target-selection` | `SyncTargetSelection` | yes | - | active | Sync target selection strategy. Use a bare string 'Highest' to sync to the highest peer head, or an inline table { _type = 'MostFrequent', peer-chain-height-granularity = <n> } to sync to the most frequent peer chain height. Sealed-type dispatch is enabled by the loader. |
@@ -169,4 +168,7 @@ Sync settings used while catching up to the chain head.
 | File | Key | Replacement | Description |
 | --- | --- | --- | --- |
 | maru | `linea.l1-eth-api` | `linea.l1-eth-api-endpoint` | Legacy L1 endpoint; alias for l1-eth-api-endpoint kept for backwards compatibility. Deprecated, use l1-eth-api-endpoint. |
+| maru | `linea.l1-eth-api.endpoint` | `linea.l1-eth-api-endpoint` | Engine API endpoint URL of the execution-layer node. |
+| maru | `linea.l1-eth-api.jwt-secret-path` | `linea.l1-eth-api-endpoint` | Optional path to the JWT secret file used for authenticated Engine API calls. Omit to disable JWT authentication. |
+| maru | `linea.l1-eth-api.timeout` | `linea.l1-eth-api-endpoint` | Overall timeout for a single request to this endpoint. |
 
