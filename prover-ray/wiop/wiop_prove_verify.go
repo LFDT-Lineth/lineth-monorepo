@@ -46,16 +46,6 @@ type Proof struct {
 	PCSOpeningProof *fri.OpeningProof
 }
 
-// PublicInput carries the values of the system's registered public inputs, in
-// the same order as [System.PublicInputs] (registration order): PublicInput[i]
-// is the value of the cell PublicInputs[i]. It is produced by [System.Prove]
-// and consumed by [System.Verify] alongside the [Proof].
-//
-// Public inputs are always cells and are deliberately excluded from the proof's
-// cells (they are carried here instead). The deterministic order lets the
-// statement be hashed/serialised and compared identically on both sides.
-type PublicInput []field.Gen
-
 // ProveOptions are options for [System.Prove].
 type ProveOptions struct {
 	// CheckUnreducedQueries prompt the prover to run [Query.Check] on every
@@ -119,9 +109,9 @@ func (sys *System) Prove(assign func(rt *Runtime), proveOpts ...ProveOptions) (P
 	}
 	proof.PCSOpeningProof = rt.PCSOpeningProof
 
-	// piIdx maps each registered public-input cell to its position in the
-	// statement. Their values are captured into the returned PublicInput, not
-	// into the proof, so the two structures never overlap.
+	// Membership index for the per-cell loop below. Their values are captured
+	// into the returned PublicInput, not into the proof, so the two structures
+	// never overlap.
 	piIdx := sys.publicInputIndex()
 
 	for _, r := range sys.Rounds {
@@ -143,7 +133,7 @@ func (sys *System) Prove(assign func(rt *Runtime), proveOpts ...ProveOptions) (P
 
 		for _, cell := range r.Cells {
 			// Public inputs are carried separately in PublicInput.
-			if _, ok := piIdx[cell.Context.ID]; ok {
+			if _, isPI := piIdx[cell.Context.ID]; isPI {
 				continue
 			}
 
@@ -158,8 +148,8 @@ func (sys *System) Prove(assign func(rt *Runtime), proveOpts ...ProveOptions) (P
 	}
 
 	// Capture the registered public-input cells into a separate PublicInput, in
-	// registration order. GetCellValue resolves lazily-assigned openings, so a
-	// cell opened from a  column resolves to that column's value.
+	// their registration order. GetCellValue resolves lazily-assigned openings,
+	// so a cell opened from a column resolves to that column's value.
 	pub := make(PublicInput, len(sys.PublicInputs))
 	for i, cell := range sys.PublicInputs {
 		pub[i] = rt.GetCellValue(cell)
@@ -236,8 +226,8 @@ func (sys *System) Verify(proof Proof, pub PublicInput) error {
 		}
 
 		for _, cell := range r.Cells {
-			if i, isPI := piIdx[cell.Context.ID]; isPI {
-				rt.AssignCell(cell, pub[i])
+			if pos, isPI := piIdx[cell.Context.ID]; isPI {
+				rt.AssignCell(cell, pub[pos])
 				continue
 			}
 
@@ -287,8 +277,8 @@ func (sys *System) Verify(proof Proof, pub PublicInput) error {
 	}
 
 	for id := range proof.Cells {
-		if _, isPI := piIdx[id]; isPI {
-			return fmt.Errorf("cell %q is a public input and must not appear in the proof", id)
+		if pos, isPI := piIdx[id]; isPI {
+			return fmt.Errorf("cell %q is a public input and must not appear in the proof", sys.PublicInputs[pos].Context.Path())
 		}
 
 		cell := sys.LookupCell(id)
