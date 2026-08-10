@@ -279,6 +279,13 @@ pub fn build(b: *std.Build) void {
         .optimize = host_optimize,
     });
     stateless_input_encode_mod.addImport("zesu_input", native_imports.input);
+    // A generic SSZ serialize/deserialize library over plain Zig structs. Test-only,
+    // native-target-only: the guest never imports this module (it has no relative or named import
+    // path to `stateless_input_encode.zig`), so `.ssz` never enters the freestanding riscv64 compile
+    // graph. The library's own build.zig exposes its module under the name "ssz.zig" (its literal
+    // `b.addModule` argument); "ssz" here is only this file's own local import name for it.
+    const ssz_dep = b.dependency("ssz", .{ .target = native_target, .optimize = host_optimize });
+    stateless_input_encode_mod.addImport("ssz", ssz_dep.module("ssz.zig"));
 
     // ── `l2-execution-wrap` native host tool ────────────────────────────────────────────────────────
     // Wraps a vanilla EF stateless-input .ssz into an extended L2ExecutionProofPrivateInput .ssz
@@ -367,6 +374,16 @@ pub fn build(b: *std.Build) void {
 
         test_step.dependOn(&b.addRunArtifact(tests).step);
 
+        // ── Shared legacy-tx RLP encoder (test/legacy_tx_rlp.zig) ───────────────────────────────────
+        // One RLP encoder for a legacy transaction's fixed field list, shared by every test fixture
+        // that builds one from named fields rather than a byte literal.
+        const legacy_tx_rlp_mod = b.createModule(.{
+            .root_source_file = b.path("test/legacy_tx_rlp.zig"),
+            .target = native_target,
+            .optimize = host_optimize,
+        });
+        legacy_tx_rlp_mod.addImport("zesu_executor", native_imports.executor);
+
         // ── Vanilla StatelessInput SSZ encoder (test/stateless_input_encode.zig) unit tests ────────
         // Test-only SSZ encoder for zesu's vanilla StatelessInput — the byte-level inverse of
         // zesu_ssz_decode's decode, which ships with no matching encoder of its own. A round-trip
@@ -385,6 +402,7 @@ pub fn build(b: *std.Build) void {
         stateless_input_encode_tests.root_module.addImport("zesu_ssz_decode", native_imports.ssz_decode);
         stateless_input_encode_tests.root_module.addImport("evm_execution_fixtures", fixtures_mod);
         stateless_input_encode_tests.root_module.addImport("stateless_input_encode", stateless_input_encode_mod);
+        stateless_input_encode_tests.root_module.addImport("legacy_tx_rlp", legacy_tx_rlp_mod);
         linkNativeZesuCrypto(stateless_input_encode_tests, native_target, native_crypto);
         test_step.dependOn(&b.addRunArtifact(stateless_input_encode_tests).step);
 
@@ -424,6 +442,39 @@ pub fn build(b: *std.Build) void {
         // through `StubEngine` instead of live EVM execution. Needs exactly the import set
         // `conflation_plan.zig` itself needs, since it's pulled in by relative import from the
         // test root, same as the parity test above.
+        //
+        // secp256k1 signing primitive (test-only): the scenario's T1-T4 fixtures are built and
+        // signed live instead of loaded from pre-minted files, using zesu's own real backend.
+        // Cannot be wired by rooting a module directly at zesu's vendored
+        // src/crypto/backends/secp256k1_wrapper.zig the way modexp_impl_mod/ripemd160_impl_mod
+        // above root modules at their own backend files: unlike those two (which nothing else in
+        // the graph reaches), this file is ALSO relatively-imported by zesu's own native
+        // accel_impl root (src/crypto/default.zig, for its ecrecover/verify implementation), and
+        // accel_impl is always in this graph already (accelerators, needed transitively by
+        // zesu_executor/zesu_mpt for real EVM ecrecover). Rooting a second module at the same
+        // path double-claims it — Zig rejects a file belonging to two modules at once — and the
+        // exposed accelerators/accel_impl surface has no path to `sign`/`getContext` themselves
+        // (that surface only exposes verify/ecrecover; zesu itself never signs). A `WriteFile`
+        // step first copies the vendored file byte-for-byte to a fresh path outside zesu's own
+        // module tree, so the copy — the same real code, just reachable from a path nothing else
+        // claims — can root its own module. This file's `sign`/`getContext` reach a real
+        // `@cImport`'d secp256k1.h, and C include paths are per-module and don't cross a
+        // dependency boundary (zesu's own build.zig hits the same constraint wiring its
+        // `accel_impl` module: see its `addIncludePath` call there) — so this module needs its
+        // own include path even though `linkNativeZesuCrypto` below already links libsecp256k1
+        // into this test binary for `recoverFixtureSender`'s ecrecover path.
+        const secp256k1_wrapper_copy = b.addWriteFiles();
+        const secp256k1_wrapper_copy_path = secp256k1_wrapper_copy.addCopyFile(
+            zesu_native.path("src/crypto/backends/secp256k1_wrapper.zig"),
+            "secp256k1_wrapper.zig",
+        );
+        const secp256k1_wrapper_mod = b.createModule(.{
+            .root_source_file = secp256k1_wrapper_copy_path,
+            .target = native_target,
+            .optimize = host_optimize,
+        });
+        secp256k1_wrapper_mod.addIncludePath(.{ .cwd_relative = native_crypto.include_path });
+
         const l2_execution_range_tests = b.addTest(.{
             .root_module = b.createModule(.{
                 .root_source_file = b.path("test/l2_execution_range_test.zig"),
@@ -438,7 +489,9 @@ pub fn build(b: *std.Build) void {
         l2_execution_range_tests.root_module.addImport("zesu_input", native_imports.input);
         l2_execution_range_tests.root_module.addImport("zesu_primitives", native_imports.primitives);
         l2_execution_range_tests.root_module.addImport("zesu_rlp_decode", native_imports.rlp_decode);
+        l2_execution_range_tests.root_module.addImport("zesu_secp256k1", secp256k1_wrapper_mod);
         l2_execution_range_tests.root_module.addImport("stateless_input_encode", stateless_input_encode_mod);
+        l2_execution_range_tests.root_module.addImport("legacy_tx_rlp", legacy_tx_rlp_mod);
         linkNativeZesuCrypto(l2_execution_range_tests, native_target, native_crypto);
         test_step.dependOn(&b.addRunArtifact(l2_execution_range_tests).step);
 

@@ -11,6 +11,7 @@ const input = @import("zesu_input");
 const ssz_decode = @import("zesu_ssz_decode");
 const fixtures = @import("evm_execution_fixtures");
 const stateless_input_encode = @import("stateless_input_encode");
+const legacy_tx_rlp = @import("legacy_tx_rlp");
 
 fn repeat(comptime n: usize, byte: u8) [n]u8 {
     var out: [n]u8 = undefined;
@@ -23,41 +24,28 @@ fn expectByteListListEqual(want: []const []const u8, got: []const []const u8) !v
     for (want, got) |w, g| try std.testing.expectEqualSlices(u8, w, g);
 }
 
-// ─── Hand-crafted legacy transactions ──────────────────────────────────────────────────────────────
-// Two standalone legacy-RLP transactions (`raw[0] >= 0xc0`, the decoder's legacy-tx branch), built and
-// checked field-by-field against the decoder's own parsing formulas before being frozen here as
-// literals. They differ in every field that varies a legacy transaction's RLP shape: presence of a
-// `to` address (tx A) vs. contract creation (tx B), an EIP-155 `chainId`-carrying `v` (tx A) vs. a
-// pre-EIP-155 `v` with no chain id (tx B), and an empty vs. non-empty `data`.
+// ─── Legacy transactions ────────────────────────────────────────────────────────────────────────────
+// Two standalone legacy-RLP transactions (`raw[0] >= 0xc0`, the decoder's legacy-tx branch), generated
+// from the named fields below via `buildLegacyTxRlp` so their bytes are correct by construction. They
+// differ in every field that varies a legacy transaction's RLP shape: presence of a `to` address (tx
+// A) vs. contract creation (tx B), an EIP-155 `chainId`-carrying `v` (tx A) vs. a pre-EIP-155 `v` with
+// no chain id (tx B), and an empty vs. non-empty `data`.
 //
 // Tx A: nonce=7, gasPrice=1e9, gas=21000, to=0xaa*20, value=1000, data=b"", chainId=59144, yParity=1.
-const TX_A_RLP = [_]u8{
-    0xf8, 0x67, 0x07, 0x84, 0x3b, 0x9a, 0xca, 0x00, 0x82, 0x52, 0x08, 0x94, 0xaa, 0xaa, 0xaa, 0xaa,
-    0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa,
-    0x82, 0x03, 0xe8, 0x80, 0x83, 0x01, 0xce, 0x34, 0xa0, 0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd,
-    0xef, 0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef, 0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd,
-    0xef, 0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef, 0x9f, 0xfe, 0xdc, 0xba, 0x09, 0x87, 0x65,
-    0x43, 0x21, 0xfe, 0xdc, 0xba, 0x09, 0x87, 0x65, 0x43, 0x21, 0xfe, 0xdc, 0xba, 0x09, 0x87, 0x65,
-    0x43, 0x21, 0xfe, 0xdc, 0xba, 0x09, 0x87, 0x65, 0x43,
-};
 const TX_A_TO = repeat(20, 0xaa);
 const TX_A_R: u256 = 0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef;
 const TX_A_S: u256 = 0xfedcba0987654321fedcba0987654321fedcba0987654321fedcba09876543;
+// Raw wire-format `v` for an EIP-155-protected legacy tx: chain_id*2 + 35 + y_parity.
+const TX_A_V_RAW: u256 = 59144 * 2 + 35 + 1;
 
 // Tx B: nonce=0, gasPrice=2e9, gas=100000, to=None (creation), value=0, data=6 bytes, v=28 (pre-155).
-const TX_B_RLP = [_]u8{
-    0xf8, 0x55, 0x80, 0x84, 0x77, 0x35, 0x94, 0x00, 0x83, 0x01, 0x86, 0xa0, 0x80, 0x80, 0x86, 0x60,
-    0x80, 0x60, 0x40, 0x52, 0x00, 0x1c, 0xa0, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22,
-    0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22,
-    0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x9f, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33,
-    0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33,
-    0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33,
-};
 const TX_B_DATA = [_]u8{ 0x60, 0x80, 0x60, 0x40, 0x52, 0x00 };
 const TX_B_R: u256 = 0x2222222222222222222222222222222222222222222222222222222222222222;
-// One canonical-encoding byte narrower than TX_B_R: the RLP bytes below strip a leading zero byte
-// off this value, so it decodes to a 31-byte (not 32-byte) big-endian integer.
+// One canonical-encoding byte narrower than TX_B_R: RLP integers drop leading zero bytes, so this
+// value's minimal big-endian encoding is 31 bytes, not 32.
 const TX_B_S: u256 = 90462569716653277674664832038037428010367175520031690655826237506182132531;
+// Raw wire-format `v` for a pre-EIP-155 legacy tx: 27 + y_parity.
+const TX_B_V_RAW: u256 = 27 + 1;
 
 // ─── Other variable-length fixture data ────────────────────────────────────────────────────────────
 
@@ -95,7 +83,7 @@ const BLOCK_ACCESS_LIST_BYTES = repeat(16, 0x99);
 /// transactions, a zero-length witness entry alongside non-empty ones, present public keys, non-empty
 /// withdrawals/versioned-hashes/execution-requests, and the fork-activation optionals in opposite
 /// states from each other (`activation_block` set, `activation_timestamp` unset).
-fn sampleInput() input.StatelessInput {
+fn sampleInput(raw_transactions: []const []const u8) input.StatelessInput {
     return .{
         .new_payload_request = .{
             .execution_payload = .{
@@ -115,7 +103,7 @@ fn sampleInput() input.StatelessInput {
                 // The encoder reads `raw_transactions`, the wire-format field; this decoded
                 // convenience view stays empty here and is repopulated by decode.
                 .transactions = &.{},
-                .raw_transactions = &.{ &TX_A_RLP, &TX_B_RLP },
+                .raw_transactions = raw_transactions,
                 .withdrawals = &WITHDRAWALS,
                 .blob_gas_used = 131_072,
                 .excess_blob_gas = 0,
@@ -152,7 +140,14 @@ test "encode then decode round-trips every field, covering every variable-length
     defer arena.deinit();
     const alloc = arena.allocator();
 
-    const value = sampleInput();
+    const tx_a_rlp = try legacy_tx_rlp.buildLegacyTxRlp(alloc, 7, 1_000_000_000, 21_000, TX_A_TO, 1000, &.{}, TX_A_V_RAW, TX_A_R, TX_A_S);
+    const tx_b_rlp = try legacy_tx_rlp.buildLegacyTxRlp(alloc, 0, 2_000_000_000, 100_000, null, 0, &TX_B_DATA, TX_B_V_RAW, TX_B_R, TX_B_S);
+    // A named local, scoped to this test function, so the array's storage lasts as long as `value`,
+    // `encoded`, and `decoded` below need it: its elements are runtime slices, and this function's own
+    // stack frame is the shortest-lived scope that still covers every later use.
+    const raw_txs = [_][]const u8{ tx_a_rlp, tx_b_rlp };
+
+    const value = sampleInput(&raw_txs);
     const encoded = try stateless_input_encode.encode(alloc, value);
     const decoded = try ssz_decode.decode(alloc, encoded);
 
@@ -180,8 +175,8 @@ test "encode then decode round-trips every field, covering every variable-length
     // transactions this fixture encodes — proof the raw bytes this encoder wrote are the real thing,
     // not opaque filler.
     try std.testing.expectEqual(@as(usize, 2), ep.raw_transactions.len);
-    try std.testing.expectEqualSlices(u8, &TX_A_RLP, ep.raw_transactions[0]);
-    try std.testing.expectEqualSlices(u8, &TX_B_RLP, ep.raw_transactions[1]);
+    try std.testing.expectEqualSlices(u8, tx_a_rlp, ep.raw_transactions[0]);
+    try std.testing.expectEqualSlices(u8, tx_b_rlp, ep.raw_transactions[1]);
 
     try std.testing.expectEqual(@as(usize, 2), ep.transactions.len);
     const tx_a = ep.transactions[0];

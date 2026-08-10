@@ -37,9 +37,11 @@ const ZERO_HASH: [32]u8 = @splat(0);
 /// by default, satisfying the guest's own `FeeRecipientMismatch` check with no per-block effort.
 const DEFAULT_COINBASE: [20]u8 = @splat(0xc0);
 
-/// The address `bridgeStorage` switches on automatically once a plan declares real bridge values
-/// (a declared value is only observable once the guest's own zero-address suppression is off).
-const DEFAULT_L2_MESSAGE_SERVICE_ADDRESS: [20]u8 = @splat(0xee);
+/// A realistic L2MessageService address a caller opts into directly when it wants declared bridge
+/// storage to be observable — a plain field assignment (e.g. `.l2_message_service_address =
+/// conflation_plan.DEFAULT_L2_MESSAGE_SERVICE_ADDRESS`), the same way every other override in this
+/// DSL works (`block.base_fee = ...`, `block.fee_recipient = ...`).
+pub const DEFAULT_L2_MESSAGE_SERVICE_ADDRESS: [20]u8 = @splat(0xee);
 
 /// The vanilla wire schema's Amsterdam fork byte.
 const AMSTERDAM_FORK_BYTE: u8 = 0x15;
@@ -173,7 +175,11 @@ pub const StubEngine = struct {
         const call_index = next_index;
         next_index += 1;
 
-        const pre_state_root = rlp_decode.findPreStateRoot(si.witness.headers, ep.block_number) orelse ep.state_root;
+        const pre_state_root = rlp_decode.findPreStateRoot(si.witness.headers, ep.block_number) orelse blk: {
+            const is_genesis = ep.block_number == 0 and std.mem.allEqual(u8, &ep.parent_hash, 0);
+            if (!is_genesis) return error.MissingParentHeaderWitness;
+            break :blk ep.state_root;
+        };
 
         var receipts = std.ArrayListUnmanaged(types.Receipt).empty;
         if (active) |built| {
@@ -324,7 +330,7 @@ pub const ConflationPlan = struct {
     chain_id: u64 = 59144,
     coinbase: [20]u8 = DEFAULT_COINBASE,
     /// Zero means bridge-suppressed mode: the L1<->L2 bridge rolling-hash reads and the L2->L1
-    /// message scan are both skipped. `bridgeStorage` switches this on automatically.
+    /// message scan are both skipped.
     l2_message_service_address: [20]u8 = ZERO_ADDRESS,
     parent_ftx_rolling_hash: [32]u8 = ZERO_HASH,
     parent_last_processed_ftx_number: u64 = 0,
@@ -352,16 +358,13 @@ pub const ConflationPlan = struct {
 
     /// Declares this range's L1<->L2 bridge storage at the range's pre-state (`.parent`) or
     /// post-state (`.end`) — realized as real storage under the L2MessageService's own layout by
-    /// `build()`. Also switches `l2_message_service_address` on (a fixed test constant) if it is
-    /// still the suppressed zero address, since a declared bridge value is only observable once
-    /// the guest actually reads it.
+    /// `build()`. These declared values are only realized in the trie if
+    /// `l2_message_service_address` is non-zero at build time — a zero address keeps the range
+    /// suppressed and the declared values are simply never observed.
     pub fn bridgeStorage(self: *ConflationPlan, which: enum { parent, end }, value: BridgeValue) void {
         switch (which) {
             .parent => self.bridge_parent = value,
             .end => self.bridge_end = value,
-        }
-        if (isZeroAddress(self.l2_message_service_address)) {
-            self.l2_message_service_address = DEFAULT_L2_MESSAGE_SERVICE_ADDRESS;
         }
     }
 
