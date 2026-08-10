@@ -47,7 +47,7 @@ func TestPublicInput(t *testing.T) {
 		sys := wiop.NewSystemf("pi-cells")
 		r0 := sys.NewRound()
 		m := sys.NewSizedModule(sys.Context.Childf("m"), n, wiop.PaddingDirectionNone)
-		col := m.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+		col := m.NewColumn(sys.Context.Childf("col"), r0)
 		// Open col[pos] into a cell; Open registers the local constraint
 		// cell == col[pos], which soundly binds the public input into the proof.
 		cell := col.At(pos).Open(sys.Context.Childf("my-public-input"))
@@ -98,7 +98,7 @@ func TestPublicInputDynamicColumn(t *testing.T) {
 		sys := wiop.NewSystemf("pi-dyn")
 		r0 := sys.NewRound()
 		m := sys.NewDynamicModule(sys.Context.Childf("m"), wiop.PaddingDirectionRight)
-		col := m.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+		col := m.NewColumn(sys.Context.Childf("col"), r0)
 		cell := col.At(pos).Open(sys.Context.Childf("open"))
 		sys.RegisterPublicInputs(testPITag, cell)
 		localvanishing.Compile(sys)
@@ -133,7 +133,7 @@ func TestPublicInputOrder(t *testing.T) {
 	sys := wiop.NewSystemf("order")
 	r0 := sys.NewRound()
 	m := sys.NewSizedModule(sys.Context.Childf("m"), 4, wiop.PaddingDirectionNone)
-	col := m.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := m.NewColumn(sys.Context.Childf("col"), r0)
 	cellA := col.At(0).Open(sys.Context.Childf("a"))
 	cellB := col.At(1).Open(sys.Context.Childf("b"))
 	// Registered in reverse column order: the statement follows registration
@@ -165,7 +165,7 @@ func TestPublicInputTag(t *testing.T) {
 	sys := wiop.NewSystemf("pi-tag")
 	r0 := sys.NewRound()
 	m := sys.NewSizedModule(sys.Context.Childf("m"), 4, wiop.PaddingDirectionNone)
-	col := m.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := m.NewColumn(sys.Context.Childf("col"), r0)
 
 	// An unregistered cell carries no tag.
 	plain := col.At(3).Open(sys.Context.Childf("plain"))
@@ -195,7 +195,7 @@ func TestLookupPublicInputByTag(t *testing.T) {
 	sys := wiop.NewSystemf("pi-by-tag")
 	r0 := sys.NewRound()
 	m := sys.NewSizedModule(sys.Context.Childf("m"), 4, wiop.PaddingDirectionNone)
-	col := m.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := m.NewColumn(sys.Context.Childf("col"), r0)
 
 	// A three-cell role registered under suffixes, then a single-cell role
 	// registered bare. The scalar goes last so its position differs from any
@@ -249,7 +249,7 @@ func TestPublicInputTagUniqueness(t *testing.T) {
 		sys := wiop.NewSystemf("pi-unique-%s", name)
 		r0 := sys.NewRound()
 		m := sys.NewSizedModule(sys.Context.Childf("m"), 4, wiop.PaddingDirectionNone)
-		return sys, m.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+		return sys, m.NewColumn(sys.Context.Childf("col"), r0)
 	}
 
 	// Two distinct cells cannot share a tag: this is what forces a 32-byte hash
@@ -291,7 +291,7 @@ func TestRegisterPublicInputGuards(t *testing.T) {
 		sys := wiop.NewSystemf("pi-guards-%s", name)
 		r0 := sys.NewRound()
 		m := sys.NewSizedModule(sys.Context.Childf("m"), 4, wiop.PaddingDirectionNone)
-		col := m.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+		col := m.NewColumn(sys.Context.Childf("col"), r0)
 		return sys, col.At(0).Open(sys.Context.Childf("open"))
 	}
 

@@ -7,6 +7,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/localvanishing"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -43,7 +44,7 @@ func scenarios() []scenario {
 				sys := wiop.NewSystemf("lv-p0")
 				r0 := sys.NewRound()
 				mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-				col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+				col := mod.NewColumn(sys.Context.Childf("col"), r0)
 				mod.NewLocalConstraint(sys.Context.Childf("lc"), col.View(), 0)
 				honest := func(rt *wiop.Runtime) { rt.AssignColumn(col, makeVec(0, 9, 9, 9)) }
 				invalid := func(rt *wiop.Runtime) { rt.AssignColumn(col, makeVec(7, 9, 9, 9)) }
@@ -56,7 +57,7 @@ func scenarios() []scenario {
 				sys := wiop.NewSystemf("lv-pNeg1")
 				r0 := sys.NewRound()
 				mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-				col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+				col := mod.NewColumn(sys.Context.Childf("col"), r0)
 				mod.NewLocalConstraint(sys.Context.Childf("lc"), col.View(), -1)
 				honest := func(rt *wiop.Runtime) { rt.AssignColumn(col, makeVec(9, 9, 9, 0)) }
 				invalid := func(rt *wiop.Runtime) { rt.AssignColumn(col, makeVec(9, 9, 9, 7)) }
@@ -69,7 +70,7 @@ func scenarios() []scenario {
 				sys := wiop.NewSystemf("lv-shift")
 				r0 := sys.NewRound()
 				mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-				col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+				col := mod.NewColumn(sys.Context.Childf("col"), r0)
 				// col[0+1] = col[1] must be zero (constraint pinned at position 0,
 				// reading col shifted by +1).
 				mod.NewLocalConstraint(sys.Context.Childf("lc"), col.View().Shift(1), 0)
@@ -84,8 +85,8 @@ func scenarios() []scenario {
 				sys := wiop.NewSystemf("lv-pair")
 				r0 := sys.NewRound()
 				mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-				a := mod.NewColumn(sys.Context.Childf("a"), wiop.VisibilityOracle, r0)
-				b := mod.NewColumn(sys.Context.Childf("b"), wiop.VisibilityOracle, r0)
+				a := mod.NewColumn(sys.Context.Childf("a"), r0)
+				b := mod.NewColumn(sys.Context.Childf("b"), r0)
 				mod.NewLocalConstraint(
 					sys.Context.Childf("lc"),
 					wiop.Sub(a.View(), b.View()),
@@ -108,7 +109,7 @@ func scenarios() []scenario {
 				sys := wiop.NewSystemf("lv-multi")
 				r0 := sys.NewRound()
 				mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-				col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+				col := mod.NewColumn(sys.Context.Childf("col"), r0)
 				mod.NewLocalConstraint(sys.Context.Childf("lc-first"), col.View(), 0)
 				mod.NewLocalConstraint(sys.Context.Childf("lc-last"), col.View(), -1)
 				honest := func(rt *wiop.Runtime) { rt.AssignColumn(col, makeVec(0, 9, 9, 0)) }
@@ -137,6 +138,10 @@ func TestCompile_Soundness(t *testing.T) {
 			sys, _, invalid := sc.build()
 			localvanishing.Compile(sys)
 			global.Compile(sys)
+			// The PCS step is needed otherwise, the change in the transcript
+			// does not impact the FS state and the transcript alteration attack
+			// is not detectable.
+			pcs.Compile(sys)
 			assert.Error(t, proveVerify(sys, invalid),
 				"compiled verifier must reject an invalid witness")
 		})
@@ -167,6 +172,10 @@ func TestCompile_WioptestSoundness(t *testing.T) {
 		t.Run(sc.Name, func(t *testing.T) {
 			localvanishing.Compile(sc.Sys)
 			global.Compile(sc.Sys)
+			// The PCS step is needed otherwise, the change in the transcript
+			// does not impact the FS state and the transcript alteration attack
+			// is not detectable.
+			pcs.Compile(sc.Sys)
 			assert.Error(t, proveVerify(sc.Sys, sc.AssignInvalid),
 				"compiled verifier must reject an invalid witness")
 		})
@@ -177,7 +186,7 @@ func TestCompile_MarksScalarVanishingAsReduced(t *testing.T) {
 	sys := wiop.NewSystemf("lv-reduce")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	v := mod.NewLocalConstraint(sys.Context.Childf("lc"), col.View(), 0)
 
 	assert.False(t, v.IsReduced(), "scalar vanishing should start un-reduced")
@@ -190,7 +199,7 @@ func TestCompile_EmitsMultiValuedReplacement(t *testing.T) {
 	sys := wiop.NewSystemf("lv-emit")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	mod.NewLocalConstraint(sys.Context.Childf("lc"), col.View(), 0)
 
 	before := len(mod.Vanishings)
@@ -208,7 +217,7 @@ func TestCompile_SkipsMultiValuedVanishings(t *testing.T) {
 	sys := wiop.NewSystemf("lv-mv")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	// Vector-valued vanishing; the global compiler — not this one — handles it.
 	v := mod.NewVanishing(sys.Context.Childf("global-v"), col.View())
 
@@ -233,7 +242,7 @@ func TestCompile_IsIdempotent(t *testing.T) {
 	sys := wiop.NewSystemf("lv-idemp")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	mod.NewLocalConstraint(sys.Context.Childf("lc"), col.View(), 0)
 
 	localvanishing.Compile(sys)
@@ -263,8 +272,8 @@ func TestCompile_SharesSelectorsByAnchor(t *testing.T) {
 	sys := wiop.NewSystemf("lv-share")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	a := mod.NewColumn(sys.Context.Childf("a"), wiop.VisibilityOracle, r0)
-	b := mod.NewColumn(sys.Context.Childf("b"), wiop.VisibilityOracle, r0)
+	a := mod.NewColumn(sys.Context.Childf("a"), r0)
+	b := mod.NewColumn(sys.Context.Childf("b"), r0)
 	// Two distinct scalar vanishings, both anchored at position 0.
 	mod.NewLocalConstraint(sys.Context.Childf("lc-a"), a.View(), 0)
 	mod.NewLocalConstraint(sys.Context.Childf("lc-b"), b.View(), 0)
@@ -305,7 +314,7 @@ func TestCompile_PanicsOnOutOfRangePosition(t *testing.T) {
 	sys := wiop.NewSystemf("lv-oob")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 
 	// Hand-built ColumnPosition with Position = 4 (== size, so out of range);
 	// Column.At does no validation, so this slips past the lowerToRow
@@ -338,7 +347,7 @@ func TestCompile_DynamicModule_NegativeAnchor(t *testing.T) {
 		sys := wiop.NewSystemf("lv-dyn-neg")
 		r0 := sys.NewRound()
 		mod := sys.NewDynamicModule(sys.Context.Childf("dyn"), wiop.PaddingDirectionRight)
-		col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+		col := mod.NewColumn(sys.Context.Childf("col"), r0)
 		// Scalar predicate "col[last] == 0".
 		mod.NewVanishing(sys.Context.Childf("lc-last"), col.At(-1))
 		return sys, col
@@ -398,7 +407,7 @@ func TestCompile_BaseCellLeaf_RoundTrip(t *testing.T) {
 		sys := wiop.NewSystemf("lv-basecell")
 		r0 := sys.NewRound()
 		mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-		col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+		col := mod.NewColumn(sys.Context.Childf("col"), r0)
 		cell := r0.NewCell(sys.Context.Childf("c"), false)
 		mod.NewLocalConstraint(
 			sys.Context.Childf("lc"),
@@ -438,7 +447,7 @@ func TestCompile_ExtensionCellLeaf_RoundTrip(t *testing.T) {
 		sys := wiop.NewSystemf("lv-extcell")
 		r0 := sys.NewRound()
 		mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-		col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+		col := mod.NewColumn(sys.Context.Childf("col"), r0)
 		cell := r0.NewCell(sys.Context.Childf("c"), true) // extension cell
 		mod.NewLocalConstraint(
 			sys.Context.Childf("lc"),
@@ -479,7 +488,7 @@ func TestCompile_CoinLeaf_RoundTrip(t *testing.T) {
 		r0 := sys.NewRound()
 		r1 := sys.NewRound()
 		mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-		col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+		col := mod.NewColumn(sys.Context.Childf("col"), r0)
 		coin := r1.NewCoinField(sys.Context.Childf("coin"))
 		five := wiop.NewConstantField(elementFromUint64(5))
 		mod.NewLocalConstraint(
@@ -503,6 +512,10 @@ func TestCompile_CoinLeaf_RoundTrip(t *testing.T) {
 		sys, col := build()
 		localvanishing.Compile(sys)
 		global.Compile(sys)
+		// The PCS step is needed otherwise, the change in the transcript
+		// does not impact the FS state and the transcript alteration attack
+		// is not detectable.
+		pcs.Compile(sys)
 		assert.Error(t, proveVerify(sys, func(rt *wiop.Runtime) {
 			rt.AssignColumn(col, makeVec(7, 9, 9, 9))
 		}))
@@ -519,7 +532,7 @@ func TestCompile_ExtensionCellAndCoin_RoundTrip(t *testing.T) {
 		r0 := sys.NewRound()
 		r1 := sys.NewRound()
 		mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-		col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+		col := mod.NewColumn(sys.Context.Childf("col"), r0)
 		cell := r0.NewCell(sys.Context.Childf("cExt"), true)
 		coin := r1.NewCoinField(sys.Context.Childf("coin"))
 		mod.NewLocalConstraint(

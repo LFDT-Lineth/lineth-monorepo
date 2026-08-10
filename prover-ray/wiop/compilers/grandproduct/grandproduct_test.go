@@ -5,7 +5,10 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/grandproduct"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/localvanishing"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -29,8 +32,8 @@ func newSingleColumnPermutation(t *testing.T) (*wiop.System, *wiop.Column, *wiop
 	r0 := sys.NewRound()
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
 	sys.NewPermutation(
 		sys.Context.Childf("perm"),
 		[]wiop.Table{wiop.NewTable(colA.View())},
@@ -58,11 +61,27 @@ func TestCompile_WioptestCompleteness(t *testing.T) {
 // TestCompile_WioptestSoundness drives every permutation scenario's invalid
 // path: a non-permutation witness makes the grand product differ from one, so
 // CheckResultIsOne (and FinalProductCheck) must reject it.
+//
+// Unlike the completeness test above, this one runs the pipeline all the way
+// through the PCS pass rather than the grandproduct pass alone -- see the
+// comment inside the loop for why that is load-bearing here.
 func TestCompile_WioptestSoundness(t *testing.T) {
 	for _, build := range wioptest.PermutationScenarios() {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
 			grandproduct.Compile(sc.Sys)
+			// The passes below are needed for soundness, not just for coverage.
+			// The PCS step is what puts the witness into the Fiat-Shamir
+			// transcript (as a per-round commitment); without it the transcript is
+			// still empty when β is drawn, so β is a constant -- and the first coin
+			// drawn from an untouched transcript is zero, which collapses a
+			// multi-column tuple onto its first column and lets a tampered value
+			// column through. PCS in turn needs the LagrangeEval claims that only
+			// the local-vanishing and global passes produce, so the whole tail of
+			// the pipeline has to run.
+			localvanishing.Compile(sc.Sys)
+			global.Compile(sc.Sys)
+			pcs.Compile(sc.Sys)
 			proof, pub := sc.Sys.Prove(sc.AssignInvalid)
 			assert.Error(t, sc.Sys.Verify(proof, pub),
 				"compiled verifier must reject a non-permutation witness")
@@ -137,8 +156,8 @@ func TestCompile_PacksFactors(t *testing.T) {
 	aTables := make([]wiop.Table, 4)
 	bTables := make([]wiop.Table, 4)
 	for i := range aTables {
-		a := modA.NewColumn(sys.Context.Childf("a%d", i), wiop.VisibilityOracle, r0)
-		b := modB.NewColumn(sys.Context.Childf("b%d", i), wiop.VisibilityOracle, r0)
+		a := modA.NewColumn(sys.Context.Childf("a%d", i), r0)
+		b := modB.NewColumn(sys.Context.Childf("b%d", i), r0)
 		aTables[i] = wiop.NewTable(a.View())
 		bTables[i] = wiop.NewTable(b.View())
 	}
@@ -207,8 +226,8 @@ func newPermutationSystem(t *testing.T, aSize, bSize int) *wiop.System {
 	}
 	modA := newModule("modA", aSize)
 	modB := newModule("modB", bSize)
-	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
 	sys.NewPermutation(
 		sys.Context.Childf("perm"),
 		[]wiop.Table{wiop.NewTable(colA.View())},
@@ -247,16 +266,16 @@ func TestCompilePermutation_RowLimit_MultipleFragmentsCombine(t *testing.T) {
 
 	// Two A fragments, each 2^57 rows and individually under budget.
 	modA0 := sys.NewSizedModule(sys.Context.Childf("modA0"), 1<<57, wiop.PaddingDirectionRight)
-	colA0 := modA0.NewColumn(sys.Context.Childf("A0"), wiop.VisibilityOracle, r0)
+	colA0 := modA0.NewColumn(sys.Context.Childf("A0"), r0)
 	modA1 := sys.NewSizedModule(sys.Context.Childf("modA1"), 1<<57, wiop.PaddingDirectionRight)
-	colA1 := modA1.NewColumn(sys.Context.Childf("A1"), wiop.VisibilityOracle, r0)
+	colA1 := modA1.NewColumn(sys.Context.Childf("A1"), r0)
 
 	// Two matching B fragments so the permutation is well-formed; the A side
 	// trips the check first.
 	modB0 := sys.NewSizedModule(sys.Context.Childf("modB0"), 1<<57, wiop.PaddingDirectionRight)
-	colB0 := modB0.NewColumn(sys.Context.Childf("B0"), wiop.VisibilityOracle, r0)
+	colB0 := modB0.NewColumn(sys.Context.Childf("B0"), r0)
 	modB1 := sys.NewSizedModule(sys.Context.Childf("modB1"), 1<<57, wiop.PaddingDirectionRight)
-	colB1 := modB1.NewColumn(sys.Context.Childf("B1"), wiop.VisibilityOracle, r0)
+	colB1 := modB1.NewColumn(sys.Context.Childf("B1"), r0)
 
 	sys.NewPermutation(
 		sys.Context.Childf("perm"),
@@ -280,8 +299,8 @@ func TestCompilePermutation_RowLimit_VerifierRejects(t *testing.T) {
 	r0 := sys.NewRound()
 	modA := sys.NewDynamicModule(sys.Context.Childf("modA"), wiop.PaddingDirectionRight)
 	modB := sys.NewDynamicModule(sys.Context.Childf("modB"), wiop.PaddingDirectionRight)
-	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
 	sys.NewPermutation(
 		sys.Context.Childf("perm"),
 		[]wiop.Table{wiop.NewTable(colA.View())},
@@ -335,8 +354,8 @@ func TestCompilePermutation_RowLimit_ManyPermsDoNotTightenBound(t *testing.T) {
 	for i := 0; i < nPerms; i++ {
 		modA := sys.NewSizedModule(sys.Context.Childf("modA%d", i), 4, wiop.PaddingDirectionNone)
 		modB := sys.NewSizedModule(sys.Context.Childf("modB%d", i), 4, wiop.PaddingDirectionNone)
-		aCols[i] = modA.NewColumn(sys.Context.Childf("A%d", i), wiop.VisibilityOracle, r0)
-		bCols[i] = modB.NewColumn(sys.Context.Childf("B%d", i), wiop.VisibilityOracle, r0)
+		aCols[i] = modA.NewColumn(sys.Context.Childf("A%d", i), r0)
+		bCols[i] = modB.NewColumn(sys.Context.Childf("B%d", i), r0)
 		sys.NewPermutation(
 			sys.Context.Childf("perm%d", i),
 			[]wiop.Table{wiop.NewTable(aCols[i].View())},
