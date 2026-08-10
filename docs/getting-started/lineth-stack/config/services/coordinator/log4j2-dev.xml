@@ -99,7 +99,7 @@
       <DebouncingFilter/>
       <appender-ref ref="rewrite"/>
     </Logger>
-    <Logger name="net.consensys.linea.ethereum.gaspricing.staticcap" level="ERROR" additivity="false">
+    <Logger name="lineth.ethereum.gaspricing.staticcap" level="ERROR" additivity="false">
       <DebouncingFilter/>
       <appender-ref ref="rewrite"/>
     </Logger>
@@ -107,7 +107,7 @@
       <DebouncingFilter/>
       <appender-ref ref="rewrite"/>
     </Logger>
-    <Logger name="net.consensys.linea.ethereum.gaspricing.dynamiccap" level="INFO" additivity="false">
+    <Logger name="lineth.ethereum.gaspricing.dynamiccap" level="INFO" additivity="false">
       <DebouncingFilter/>
       <appender-ref ref="rewrite"/>
     </Logger>

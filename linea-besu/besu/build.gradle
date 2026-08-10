@@ -41,6 +41,21 @@ dependencies {
   api("${besuArtifactGroup}:besu-plugin-api") {
     transitive = false
   }
+  api("${besuArtifactGroup}:besu-plugin-api-core") {
+    transitive = false
+  }
+  api("${besuArtifactGroup}:besu-plugin-api-metrics") {
+    transitive = false
+  }
+  api("${besuArtifactGroup}:besu-plugin-api-security") {
+    transitive = false
+  }
+  api("${besuArtifactGroup}:besu-plugin-api-permissioning") {
+    transitive = false
+  }
+  api("${besuArtifactGroup}:besu-plugin-api-storage") {
+    transitive = false
+  }
   api("${besuArtifactGroup}.internal:besu-ethereum-rlp") {
     transitive = false
   }
@@ -287,8 +302,7 @@ static void buildAndPublishBesuAction(
     logger.lifecycle('Skipping buildAndPublishBesu: no resolved Besu version (run a non-clean-only build first)')
     return
   }
-  def bomAvailableInMaven = isBesuAvailableInMavenLocal(logger, resolvedBesuVer, mavenLocalBase) ||
-      isBesuAvailableInMaven(logger, resolvedBesuVer)
+  def bomAvailableInMaven = isBesuAvailableInMaven(logger, resolvedBesuVer)
   def publishGradleTaskName = publishToMaven ? "publish" : "publishToMavenLocal"
   def shouldSkip = false
   if (publishToMaven) {
@@ -321,7 +335,7 @@ static void buildAndPublishBesuAction(
     return
   }
 
-  logger.lifecycle("Running buildAndPublishBesu as Besu ${resolvedBesuVer} was not found in remote/local maven")
+  logger.lifecycle("Running buildAndPublishBesu as Besu ${resolvedBesuVer} was not found in remote maven")
   runBuildDistAndPublishScript(providers, rootDir, resolvedBesuVer, publishGradleTaskName, cloudsmithUser, cloudsmithApiKey)
 }
 

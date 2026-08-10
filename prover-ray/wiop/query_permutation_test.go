@@ -99,19 +99,112 @@ func TestNewPermutation_MixedWidthAllowed(t *testing.T) {
 	})
 }
 
-func TestNewPermutation_SelectorRejectedPanic(t *testing.T) {
+// newFilteredPermutationSystem builds a single-round system for conditional
+// permutation tests: a filtered A side (colA with selA) against an unfiltered
+// B side (colB), with modA twice the size of modB so only the balance-check
+// skip for selectors makes the query constructible.
+func newFilteredPermutationSystem(t *testing.T) (*wiop.System, *wiop.TableRelationQuery, [3]*wiop.Column) {
+	t.Helper()
 	sys := wiop.NewSystemf("permSel")
 	r0 := sys.NewRound()
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
-	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
+	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 2, wiop.PaddingDirectionNone)
 	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
 	selA := modA.NewColumn(sys.Context.Childf("selA"), wiop.VisibilityOracle, r0)
 	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
-	assert.Panics(t, func() {
+	q := sys.NewPermutation(sys.Context.Childf("perm"),
+		[]wiop.Table{wiop.NewFilteredTable(selA.View(), colA.View())},
+		[]wiop.Table{wiop.NewTable(colB.View())})
+	return sys, q, [3]*wiop.Column{colA, selA, colB}
+}
+
+// TestNewPermutation_SelectorAllowed documents that selectors are accepted on
+// permutation fragments (conditional permutations), and that the static
+// balance check is skipped for them: the sides here have 4 vs 2 raw rows.
+func TestNewPermutation_SelectorAllowed(t *testing.T) {
+	assert.NotPanics(t, func() { newFilteredPermutationSystem(t) },
+		"a filtered, statically unbalanced permutation must be constructible")
+}
+
+// TestPermutation_Check_WithSelector_Completeness: the selected rows of A are a
+// reordering of B; masked A rows hold junk that must be ignored.
+func TestPermutation_Check_WithSelector_Completeness(t *testing.T) {
+	sys, q, cols := newFilteredPermutationSystem(t)
+	colA, selA, colB := cols[0], cols[1], cols[2]
+	rt := wiop.NewRuntime(sys)
+	rt.AssignColumn(colA, makeVecU64(10, 99, 20, 98)) // 99, 98 masked out
+	rt.AssignColumn(selA, makeVecU64(1, 0, 1, 0))
+	rt.AssignColumn(colB, makeVecU64(20, 10))
+	require.NoError(t, q.Check(rt),
+		"selected rows of A form a permutation of B; masked junk must be ignored")
+}
+
+// TestPermutation_Check_WithSelector_Failure: a masked A row holds the value B
+// expects; masking must not let it count.
+func TestPermutation_Check_WithSelector_Failure(t *testing.T) {
+	sys, q, cols := newFilteredPermutationSystem(t)
+	colA, selA, colB := cols[0], cols[1], cols[2]
+	rt := wiop.NewRuntime(sys)
+	rt.AssignColumn(colA, makeVecU64(10, 20, 30, 0)) // 20 masked out, 30 selected instead
+	rt.AssignColumn(selA, makeVecU64(1, 0, 1, 0))
+	rt.AssignColumn(colB, makeVecU64(20, 10))
+	assert.Error(t, q.Check(rt),
+		"a masked-out row must not satisfy the multiset equality")
+}
+
+// TestNewPermutation_UnbalancedStaticPanic: when every fragment is statically
+// sized, a mismatch in the two sides' total row counts is caught at
+// construction — such a permutation can never hold.
+func TestNewPermutation_UnbalancedStaticPanic(t *testing.T) {
+	sys := wiop.NewSystemf("permUnbalanced")
+	r0 := sys.NewRound()
+	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
+	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 8, wiop.PaddingDirectionNone)
+	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+	assert.PanicsWithValue(t,
+		"wiop: System.NewPermutation: the two sides have different total row counts (4 vs 8); "+
+			"a permutation between multisets of different cardinalities can never hold",
+		func() {
+			sys.NewPermutation(sys.Context.Childf("perm"),
+				[]wiop.Table{wiop.NewTable(colA.View())},
+				[]wiop.Table{wiop.NewTable(colB.View())})
+		})
+}
+
+// TestNewPermutation_BalancedFragmentsAllowed: fragments of different sizes are
+// fine as long as the per-side totals match (4 + 4 == 8).
+func TestNewPermutation_BalancedFragmentsAllowed(t *testing.T) {
+	sys := wiop.NewSystemf("permBalancedFrags")
+	r0 := sys.NewRound()
+	modA0 := sys.NewSizedModule(sys.Context.Childf("modA0"), 4, wiop.PaddingDirectionNone)
+	modA1 := sys.NewSizedModule(sys.Context.Childf("modA1"), 4, wiop.PaddingDirectionNone)
+	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 8, wiop.PaddingDirectionNone)
+	a0 := modA0.NewColumn(sys.Context.Childf("a0"), wiop.VisibilityOracle, r0)
+	a1 := modA1.NewColumn(sys.Context.Childf("a1"), wiop.VisibilityOracle, r0)
+	b := modB.NewColumn(sys.Context.Childf("b"), wiop.VisibilityOracle, r0)
+	assert.NotPanics(t, func() {
 		sys.NewPermutation(sys.Context.Childf("perm"),
-			[]wiop.Table{wiop.NewFilteredTable(selA.View(), colA.View())},
+			[]wiop.Table{wiop.NewTable(a0.View()), wiop.NewTable(a1.View())},
+			[]wiop.Table{wiop.NewTable(b.View())})
+	})
+}
+
+// TestNewPermutation_DynamicModuleSkipsBalanceCheck: a dynamic module's height
+// is only known at runtime, so the static balance check must not fire even
+// though the other side's static size cannot match "unknown".
+func TestNewPermutation_DynamicModuleSkipsBalanceCheck(t *testing.T) {
+	sys := wiop.NewSystemf("permDyn")
+	r0 := sys.NewRound()
+	modA := sys.NewDynamicModule(sys.Context.Childf("modA"), wiop.PaddingDirectionRight)
+	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 8, wiop.PaddingDirectionNone)
+	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+	assert.NotPanics(t, func() {
+		sys.NewPermutation(sys.Context.Childf("perm"),
+			[]wiop.Table{wiop.NewTable(colA.View())},
 			[]wiop.Table{wiop.NewTable(colB.View())})
-	}, "permutation queries must reject selectors")
+	})
 }
 
 func TestLookupKind_String(t *testing.T) {
