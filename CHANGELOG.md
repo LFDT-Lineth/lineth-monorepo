@@ -129,3 +129,4 @@
 - *(coordinator)* Apply review cleanups (#3717)
 - *(coordinator)* Update to vertx 5.1.5 (#3744)
 - *(coordinator)* Package renaming to lineth (#3746)
+- *(linea-besu)* Package renaming to lineth.* (#3750)
