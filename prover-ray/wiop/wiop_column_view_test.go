@@ -76,7 +76,7 @@ func TestElementAt_OutOfBoundsPanic(t *testing.T) {
 
 func TestColumnView_Properties(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("cvCol"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("cvCol"), r0)
 	cv := col.View()
 
 	assert.Equal(t, col, cv.Column)
@@ -88,7 +88,6 @@ func TestColumnView_Properties(t *testing.T) {
 	assert.True(t, cv.IsSized())
 	assert.Equal(t, 4, cv.Size())
 	assert.Equal(t, 3, cv.Degree())
-	assert.Equal(t, wiop.VisibilityOracle, cv.Visibility())
 }
 
 func TestColumnView_NilPanic(t *testing.T) {
@@ -98,7 +97,7 @@ func TestColumnView_NilPanic(t *testing.T) {
 
 func TestColumnView_Shift(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("shiftCol"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("shiftCol"), r0)
 	cv := col.View().Shift(2)
 	assert.Equal(t, 2, cv.ShiftingOffset)
 
@@ -117,7 +116,7 @@ func TestColumnView_Shift_NilPanic(t *testing.T) {
 
 func TestColumnView_EvaluateSinglePanic(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("cvEvalCol"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("cvEvalCol"), r0)
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(col, baseVec(4, 1))
 	assert.Panics(t, func() { col.View().EvaluateSingle(rt) })
@@ -125,7 +124,7 @@ func TestColumnView_EvaluateSinglePanic(t *testing.T) {
 
 func TestColumnView_EvaluateVector_Identity(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("cvEvCol"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("cvEvCol"), r0)
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(col, baseVec(4, 3))
 
@@ -140,7 +139,7 @@ func TestColumnView_EvaluateVector_Identity(t *testing.T) {
 func TestColumnView_EvaluateVector_Shifted(t *testing.T) {
 	// Assign [0,1,2,3]; shift by 1 → [1,2,3,0]
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("cvShiftEv"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("cvShiftEv"), r0)
 	rt := wiop.NewRuntime(sys)
 
 	elems := make([]field.Element, 4)
@@ -161,7 +160,7 @@ func TestColumnView_EvaluateVector_Shifted(t *testing.T) {
 
 func TestColumnPosition_Properties(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("cpCol"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("cpCol"), r0)
 	cp := col.At(2)
 
 	assert.Equal(t, col, cp.Column)
@@ -171,7 +170,6 @@ func TestColumnPosition_Properties(t *testing.T) {
 	assert.Equal(t, 0, cp.Degree())
 	assert.Equal(t, r0, cp.Round())
 	assert.Nil(t, cp.Module())
-	assert.Equal(t, wiop.VisibilityOracle, cp.Visibility())
 
 	assert.Panics(t, func() { cp.IsSized() })
 	assert.Panics(t, func() { cp.Size() })
@@ -186,7 +184,7 @@ func TestColumnPosition_NilPanic(t *testing.T) {
 func TestColumnPosition_EvaluateSingle(t *testing.T) {
 	// Assign [0,1,2,3]; At(2) → 2
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("cpEvCol"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("cpEvCol"), r0)
 	rt := wiop.NewRuntime(sys)
 
 	elems := make([]field.Element, 4)
@@ -227,7 +225,7 @@ func TestCell_EvaluateVector_Panics(t *testing.T) {
 
 func TestCoinField_EvaluateSingle(t *testing.T) {
 	sys, r0, r1, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("coinEvCol"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("coinEvCol"), r0)
 	coin := r1.NewCoinField(sys.Context.Childf("coinEv"))
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(col, baseVec(4, 1))
@@ -241,7 +239,7 @@ func TestCoinField_EvaluateSingle(t *testing.T) {
 
 func TestCoinField_EvaluateVector_Panics(t *testing.T) {
 	sys, r0, r1, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("coinPanicCol"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("coinPanicCol"), r0)
 	coin := r1.NewCoinField(sys.Context.Childf("coinPanic"))
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(col, baseVec(4, 1))
@@ -257,9 +255,8 @@ func TestModule_NewPrecomputedColumn(t *testing.T) {
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
 
 	assignment := baseVec(4, 5)
-	col := mod.NewPrecomputedColumn(sys.Context.Childf("pre"), wiop.VisibilityPublic, assignment)
+	col := mod.NewPrecomputedColumn(sys.Context.Childf("pre"), assignment)
 	require.NotNil(t, col)
-	assert.Equal(t, wiop.VisibilityPublic, col.Visibility)
 	assert.False(t, col.IsExtension)
 }
 
@@ -267,12 +264,12 @@ func TestModule_NewPrecomputedColumn_NilCtxPanic(t *testing.T) {
 	sys := wiop.NewSystemf("sys")
 	sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	assert.Panics(t, func() { mod.NewPrecomputedColumn(nil, wiop.VisibilityPublic, baseVec(4, 1)) })
+	assert.Panics(t, func() { mod.NewPrecomputedColumn(nil, baseVec(4, 1)) })
 }
 
 func TestColumnView_Degree_UnsizedPanic(t *testing.T) {
 	sys, r0, _, _ := newTestSystem(t)
 	unsized := sys.NewModule(sys.Context.Childf("unsized"), wiop.PaddingDirectionNone)
-	col := unsized.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := unsized.NewColumn(sys.Context.Childf("col"), r0)
 	assert.Panics(t, func() { col.View().Degree() })
 }

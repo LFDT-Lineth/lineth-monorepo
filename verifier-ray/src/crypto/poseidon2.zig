@@ -17,6 +17,18 @@ pub fn zeroDigest() Digest {
     return zeroArray(block_size);
 }
 
+// Digest is a plain [8]field.Element alias (arrays hold no declarations of
+// their own in Zig), so this is a free function rather than a Digest method.
+// Exists so callers needing digest equality (crypto.merkle, query.fri) don't
+// each need std.meta.eql -- see the callers' own reasoning for why avoiding
+// std matters there.
+pub fn eql(a: Digest, b: Digest) bool {
+    for (a, b) |x, y| {
+        if (!x.eql(y)) return false;
+    }
+    return true;
+}
+
 // In-place Merkle–Damgård compression: `state := compress(state, right)`.
 //
 // Both inputs are taken by pointer and the feed-forward result is written back

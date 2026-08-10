@@ -1,0 +1,46 @@
+plugins {
+  id 'lineth.kotlin-common-minimal-conventions'
+}
+
+configurations {
+  testFixturesDeps {
+    extendsFrom implementation // Inherit plugin's dependencies
+    canBeConsumed = false
+    canBeResolved = false
+  }
+}
+
+plugins.withId('java-test-fixtures') {
+  configurations {
+    testFixturesImplementation.extendsFrom testFixturesDeps
+  }
+}
+
+dependencies {
+  api platform("io.vertx:vertx-stack-depchain:${libs.versions.vertx.get()}")
+  // jackson-annotations drops the patch version from 2.20 onwards while every other jackson
+  // artifact keeps one (e.g. jackson-annotations:2.22 vs jackson-databind:2.22.1), so individual
+  // jackson-* dependencies must be declared WITHOUT a version and let this platform resolve it.
+  api platform("com.fasterxml.jackson:jackson-bom:${libs.versions.jackson.get()}")
+  //<utils>
+  implementation "com.michael-bull.kotlin-result:kotlin-result:${libs.versions.kotlinResult.get()}"
+  implementation ("tech.pegasys.teku.internal:async:${libs.versions.teku.get()}") {
+    exclude group: 'org.slf4j'
+    exclude group: 'com.github.jnr'
+    exclude group: 'com.squareup.okhttp3'
+    exclude group: 'org.apache.logging.log4j'
+    exclude group: 'tech.pegasys.teku.internal', module: 'metrics'
+    exclude group: 'tech.pegasys.teku.internal', module: 'time'
+    exclude group: 'com.google.guava', module: 'guava'
+  } because("We are using Teku's SafeFuture, an improved/extension of CompletableFuture.")
+  implementation "com.google.guava:guava:${libs.versions.guava.get()}-jre"
+
+  //<logging>
+  implementation "org.apache.logging.log4j:log4j-api:${libs.versions.log4j.get()}"
+  implementation "org.apache.logging.log4j:log4j-core:${libs.versions.log4j.get()}"
+  //</logging>
+
+  //<testing>
+  testImplementation("io.vertx:vertx-junit5")
+  //</testing>
+}

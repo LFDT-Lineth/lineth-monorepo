@@ -10,7 +10,7 @@ import java.time.LocalTime
  */
 
 plugins {
-  id 'net.consensys.zkevm.kotlin-library-minimal-conventions'
+  id 'lineth.kotlin-library-minimal-conventions'
   alias(libs.plugins.besuPluginLibrary)
   alias(libs.plugins.web3j)
   alias(libs.plugins.web3jSolidity)
@@ -52,7 +52,7 @@ compileJava {
 }
 
 web3j {
-  generatedPackageName = 'linea.plugin.acc.test.tests.web3j.generated'
+  generatedPackageName = 'lineth.plugin.acc.test.tests.web3j.generated'
 }
 
 solcToolchain {

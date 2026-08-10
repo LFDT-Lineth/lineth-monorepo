@@ -2,14 +2,14 @@ import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
 
 plugins {
-  id 'net.consensys.zkevm.kotlin-application-conventions'
+  id 'lineth.kotlin-application-conventions'
   id 'linea.config-docs'
 }
 
 // Config documentation tooling: creates the `configDocs` source set and the
 // checkConfigDocs/generateConfigDocs tasks, driven by the spec below.
 configDocs {
-  spec = 'linea.coordinator.config.v2.docs.CoordinatorConfigDocsSpec'
+  spec = 'lineth.coordinator.config.v2.docs.CoordinatorConfigDocsSpec'
 }
 configurations.configureEach {
   exclude group: "org.rocksdb", module: "rocksdbjni"
@@ -106,7 +106,7 @@ dependencies {
 }
 
 application {
-  mainClass = 'linea.coordinator.app.CoordinatorAppMain'
+  mainClass = 'lineth.coordinator.app.CoordinatorAppMain'
 }
 
 jar {
@@ -116,7 +116,7 @@ jar {
     manifest {
       attributes(
           'Class-Path': configurations.runtimeClasspath.collect { it.getName() }.findAll { it.endsWith('.jar') }.join(' '),
-          'Main-Class': 'linea.coordinator.app.CoordinatorAppMain',
+          'Main-Class': 'lineth.coordinator.app.CoordinatorAppMain',
           'Multi-Release': 'true',
           // Required for Java 25+: Netty uses restricted System::loadLibrary in unnamed modules
           'Enable-Native-Access': 'ALL-UNNAMED'

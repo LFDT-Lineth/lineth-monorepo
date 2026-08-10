@@ -125,3 +125,62 @@ func Product(factors ...Expression) Expression {
 	}
 	return result
 }
+
+// RLCOfViews builds the symbolic random linear combination
+//
+//	head + α·cols[0] + α²·cols[1] + …
+//
+// when head != nil, and
+//
+//	cols[0] + α·cols[1] + α²·cols[2] + …
+//
+// when head == nil. The effective width is len(cols) plus one when a head is
+// provided; when that effective width is 1, alpha must be nil and the single
+// term is returned directly.
+func RLCOfViews(alpha *CoinField, head Expression, cols []*ColumnView) Expression {
+	exprs := ViewExprs(cols)
+	if head != nil {
+		exprs = append([]Expression{head}, exprs...)
+	}
+	return RLCExpression(alpha, exprs)
+}
+
+// RLCExpression returns exprs[0] + α·exprs[1] + α²·exprs[2] + … built as a
+// Horner-form chain
+//
+//	((…((exprs[n-1]·α + exprs[n-2])·α + exprs[n-3])·α + …)·α + exprs[0])
+//
+// so the resulting symbolic tree contains no explicit α² / α³ / … sub-trees
+// and uses n-1 multiplications instead of 2n-3. Matches the convention of
+// linea/prover/protocol/wizardutils.RandLinCombColSymbolic
+// (symbolic.NewPolyEval).
+//
+// When alpha is nil the slice must have exactly one element, in which case
+// that element is returned directly. Requires len(exprs) >= 1.
+func RLCExpression(alpha *CoinField, exprs []Expression) Expression {
+	if len(exprs) == 0 {
+		panic("wiop: RLCExpression requires at least one term")
+	}
+	if alpha == nil {
+		if len(exprs) != 1 {
+			panic("wiop: RLCExpression: alpha is nil but width > 1")
+		}
+		return exprs[0]
+	}
+	alphaExpr := Expression(alpha)
+	acc := exprs[len(exprs)-1]
+	for i := len(exprs) - 2; i >= 0; i-- {
+		acc = Add(Mul(alphaExpr, acc), exprs[i])
+	}
+	return acc
+}
+
+// ViewExprs lifts a slice of *ColumnView into the equivalent slice of
+// [Expression] so it can be passed to [RLCExpression].
+func ViewExprs(cols []*ColumnView) []Expression {
+	out := make([]Expression, len(cols))
+	for i, cv := range cols {
+		out[i] = cv
+	}
+	return out
+}

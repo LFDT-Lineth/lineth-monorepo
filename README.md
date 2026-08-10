@@ -51,42 +51,61 @@ Release tag of each component is in the format of `releases/[component]/v[semver
 
 The workflows do **not** keep a per-component `cliff.toml`. A single [`cliff.template.toml`](cliff.template.toml) is rendered at run time by substituting the component's conventional-commit scopes into its `@@SCOPES@@` placeholder, then git-cliff is run with that component's `--include-path` filter. A commit therefore counts only when it is **both** in-scope **and** touches a component path (scope-and-path gating).
 
-You can reproduce exactly what a workflow computes. Prerequisites: install git-cliff (`brew install git-cliff` or `cargo install git-cliff`) and fetch tags (`git fetch --tags`). Run from the repo root:
+You can reproduce exactly what a workflow computes using the dry-run targets in the [`run-git-cliff-commands`](.github/actions/run-git-cliff-commands/action.yml) action's `Makefile` — these drive the very same scripts CI runs, so the rendering, scope injection, and gating all match. Prerequisites: install git-cliff (`brew install git-cliff` or `cargo install git-cliff`), have GNU `make`, and fetch tags (`git fetch --tags`). Run everything **from the repo root**:
 
 ```bash
-# 1. Render the template with the component's scopes injected.
-#    (see the per-component table below for SCOPES / tag-pattern / include-paths)
-SCOPES='coordinator|deps|misc'
-sed "s#@@SCOPES@@#${SCOPES}#g" cliff.template.toml > /tmp/cliff.rendered.toml
+MK=.github/actions/run-git-cliff-commands/Makefile
 
-# 2. Show the NEXT bumped version tag for the component.
-git cliff --config /tmp/cliff.rendered.toml --unreleased --bumped-version \
-  --tag-pattern 'releases/coordinator/v[0-9]+\.[0-9]+\.[0-9]+$' \
-  --include-path 'coordinator/**'
+# Preview the NEXT bumped version + tag for a component
+# (prints tag=/version=/changed=; logs "nothing to bump" if no release is due).
+make -f "$MK" version-dry-run \
+  COMPONENT=coordinator \
+  SCOPES='coordinator|deps|misc' \
+  INCLUDE_PATH='coordinator/**'
 
-# 3. Show the [unreleased] changelog for the component.
-git cliff --config /tmp/cliff.rendered.toml --unreleased \
-  --tag-pattern 'releases/coordinator/v[0-9]+\.[0-9]+\.[0-9]+$' \
-  --include-path 'coordinator/**'
+# Preview the component's changelog for the next release.
+make -f "$MK" changelog-dry-run \
+  COMPONENT=coordinator \
+  SCOPES='coordinator|deps|misc' \
+  INCLUDE_PATH='coordinator/**'
+
+# Preview the CHANGELOG.md exactly as a release would rewrite it — WITHOUT
+# writing the file or touching the remote (needs FOLDER_NAME, the directory
+# that holds the component's CHANGELOG.md).
+make -f "$MK" prepend-dry-run \
+  COMPONENT=coordinator \
+  SCOPES='coordinator|deps|misc' \
+  INCLUDE_PATH='coordinator/**' \
+  FOLDER_NAME=coordinator
 ```
 
-Swap `SCOPES`, the `--tag-pattern` component, and the `--include-path` set per component:
+`INCLUDE_PATH` is one path per line, so for a component with several paths pass a multi-line value — bash/zsh `$'a\nb'` or a real newline-quoted string both work:
 
-| Component | `SCOPES` | `--tag-pattern` component | `--include-path`(s) |
+```bash
+make -f "$MK" changelog-dry-run \
+  COMPONENT=linea-besu-package \
+  SCOPES='linea-besu|tracer|sequencer|deps|misc' \
+  INCLUDE_PATH=$'tracer/**\ntracer-constraints/**\nlinea-besu/plugins/linea-sequencer/**\nlinea-besu/besu/**\nlinea-besu/package/**\ngradle/libs.versions.toml'
+```
+
+Fill the arguments per component (`COMPONENT` is also the release tag-pattern component; `FOLDER_NAME` is only needed for `prepend-dry-run`):
+
+| `COMPONENT` | `SCOPES` | `INCLUDE_PATH` (one per line) | `FOLDER_NAME` |
 |---|---|---|---|
-| coordinator | `coordinator\|deps\|misc` | `coordinator` | `coordinator/**` |
-| maru | `maru\|deps\|misc` | `maru` | `maru/**` |
-| postman | `postman\|deps\|misc` | `postman` | `postman/**` |
-| prover | `prover\|deps\|misc` | `prover` | `prover/**` |
-| tx-exclusion-api | `tx-exclusion-api\|deps\|misc` | `tx-exclusion-api` | `transaction-exclusion-api/**` |
-| linea-besu-package | `linea-besu\|tracer\|sequencer\|deps\|misc` | `linea-besu-package` | `tracer/**`, `tracer-constraints/**`, `linea-besu/plugins/linea-sequencer/**`, `linea-besu/besu/**`, `linea-besu/package/**`, `gradle/libs.versions.toml` |
-| linea (milestone) | `coordinator\|linea-besu\|tracer\|sequencer\|maru\|prover\|postman\|tx-exclusion-api\|deps\|misc` | `linea` | the union of every component path above |
+| `coordinator` | `coordinator\|deps\|misc` | `coordinator/**` | `coordinator` |
+| `maru` | `maru\|deps\|misc` | `maru/**` | `maru` |
+| `postman` | `postman\|deps\|misc` | `postman/**` | `postman` |
+| `prover` | `prover\|deps\|misc` | `prover/**` | `prover` |
+| `tx-exclusion-api` | `tx-exclusion-api\|deps\|misc` | `transaction-exclusion-api/**` | `transaction-exclusion-api` |
+| `linea-besu-package` | `linea-besu\|tracer\|sequencer\|deps\|misc` | `tracer/**`, `tracer-constraints/**`, `linea-besu/plugins/linea-sequencer/**`, `linea-besu/besu/**`, `linea-besu/package/**`, `gradle/libs.versions.toml` | `linea-besu/package` |
+| `linea` (milestone) | `coordinator\|linea-besu\|tracer\|sequencer\|maru\|prover\|postman\|tx-exclusion-api\|deps\|misc` | the union of every component path above | `.` |
 
 Notes:
 
-- `cliff.template.toml` is not runnable as-is — the `@@SCOPES@@` placeholder must be substituted first. An un-rendered template matches no commits and git-cliff reports "There is nothing to bump".
-- `--bumped-version` prints the full next tag (e.g. `releases/coordinator/v1.2.3`); drop it (as in step 3) to render the changelog instead. If nothing qualifies, git-cliff prints "There is nothing to bump" — meaning no release would be cut.
-- These are the same `scopes` and `include-path` values the workflows pass to the [`run-git-cliff-commands`](.github/actions/run-git-cliff-commands/action.yml) action, so the local result matches CI.
+- The dry-run targets are read-only: they never modify tracked files or the git remote. `prepend-dry-run` renders on a throwaway copy of `CHANGELOG.md` and prints the result to stdout; the real file is left untouched.
+- If a component has no qualifying commits, git-cliff reports "There is nothing to bump" and `changed=false` — meaning no release would be cut. This is the scope-and-path gating in action: a commit counts only when it is **both** in-scope **and** touches a component path.
+- The changelog/prepend previews render under the computed next-version header by default (`GENERATE_WITH_NEXT_TAG=true`); pass `GENERATE_WITH_NEXT_TAG=false` to preview under an `[unreleased]` header instead.
+- These are the same `scopes` and `include-path` values the workflows pass to the action, and the Makefile runs the same scripts, so the local result matches CI. Run `make -f "$MK" help` to list every target.
 
 ### Per-component release
 

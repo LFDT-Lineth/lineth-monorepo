@@ -20,7 +20,7 @@
         </Routing>
     </Appenders>
     <Loggers>
-        <Logger name="net.consensys.linea.sequencer.txselection.selectors.TraceLineLimitTransactionSelector" level="TRACE">
+        <Logger name="lineth.sequencer.txselection.selectors.TraceLineLimitTransactionSelector" level="TRACE">
             <AppenderRef ref="Router" />
         </Logger>
         <Root level="${sys:root.log.level}">

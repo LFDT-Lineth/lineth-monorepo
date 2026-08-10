@@ -2,6 +2,7 @@ package lookuptologderivsum
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
@@ -12,10 +13,6 @@ import (
 // row selector. It is the prover-ray equivalent of the (S, sFilter) pair
 // used by the linea/logderivativesum compiler.
 type includedSpec struct {
-	// query is the source [wiop.TableRelation] this fragment came from. The
-	// compiler keeps it around to mark every contributing query as reduced
-	// once the group has been compiled.
-	query *wiop.TableRelationQuery
 	// cols is the ordered list of columns forming the A fragment.
 	cols []*wiop.ColumnView
 	// selector is the optional A-side filter; nil means the fragment is fully
@@ -23,9 +20,10 @@ type includedSpec struct {
 	selector *wiop.ColumnView
 }
 
-// includingTable captures the lookup-table side (B fragment) of a group of
-// Inclusion queries. Two queries with the same canonicalIncludingKey share an
-// includingTable and therefore share a single multiplicity column M.
+// includingTable captures one lookup-table fragment (B fragment) of a group of
+// Inclusion queries. Two queries with the same canonicalIncludingKeyMulti
+// share the group's includingTables and therefore share its per-fragment
+// multiplicity columns M.
 type includingTable struct {
 	// cols is the ordered list of columns forming the B fragment.
 	cols []*wiop.ColumnView
@@ -40,35 +38,108 @@ type includingTable struct {
 // width reports the number of columns in the lookup-table fragment.
 func (t includingTable) width() int { return len(t.cols) }
 
-// canonicalIncludingKey returns a deterministic identity key for a B-side
-// table fragment so that distinct Inclusion queries that target the same
-// underlying lookup table can be grouped together.
+// canonicalIncludingKeyMulti returns a deterministic identity key for a whole
+// B side, i.e. the ordered union of lookup-table fragments of a single
+// Inclusion query. Two queries that target the same ordered set of fragments
+// (each with the same columns, shifts and selector) produce the same key and
+// therefore share the group's per-fragment multiplicity columns. Callers pass
+// fragments whose columns were already put into canonical order (see
+// [canonicalColumnOrder]), so two queries over the same table with the columns
+// listed in a different order also collapse to the same key.
 //
-// The key combines the underlying [wiop.Column] pointer addresses, the
-// per-view shifting offsets, and the optional selector identity. Two
-// fragments produce the same key iff every component matches; this matches
-// the grouping semantics of the linea/logderivativesum compiler's
-// NameTable-based grouping.
-func canonicalIncludingKey(tab wiop.Table) string {
+// The fragment order is significant: it fixes the fragment index each M column
+// is bound to, so [F1,F2] and [F2,F1] are deliberately distinct keys. This
+// mirrors linea/logderivativesum, where NameTable concatenates the fragments
+// of a lookup table in their declaration order.
+func canonicalIncludingKeyMulti(tables []wiop.Table) string {
 	var sb strings.Builder
-	for _, cv := range tab.Columns {
-		fmt.Fprintf(&sb, "%p@%d|", cv.Column, cv.ShiftingOffset)
-	}
-	sb.WriteByte(';')
-	if tab.Selector != nil {
-		fmt.Fprintf(&sb, "sel=%p@%d", tab.Selector.Column, tab.Selector.ShiftingOffset)
-	} else {
-		sb.WriteString("sel=nil")
+	for _, tab := range tables {
+		writeFragmentKey(&sb, tab)
+		sb.WriteByte('#') // fragment separator
 	}
 	return sb.String()
 }
 
-// lookupGroup collects every Inclusion query that targets the same B-side
-// fragment. Within a group the compiler emits a single multiplicity column
-// (per fragment) and a single fraction set.
+// writeFragmentKey appends the canonical identity of a single fragment to sb:
+// the underlying [wiop.Column] pointer addresses, the per-view shifting
+// offsets, and the optional selector identity. Two fragments emit the same
+// bytes iff every component matches, mirroring the grouping semantics of the
+// linea/logderivativesum compiler's NameTable-based grouping.
+func writeFragmentKey(sb *strings.Builder, tab wiop.Table) {
+	for _, cv := range tab.Columns {
+		fmt.Fprintf(sb, "%p@%d|", cv.Column, cv.ShiftingOffset)
+	}
+	sb.WriteByte(';')
+	if tab.Selector != nil {
+		fmt.Fprintf(sb, "sel=%p@%d", tab.Selector.Column, tab.Selector.ShiftingOffset)
+	} else {
+		sb.WriteString("sel=nil")
+	}
+}
+
+// canonicalColumnOrder returns the permutation that sorts the columns of the
+// given B fragment by their canonical identity: context path first, shifting
+// offset as tie-break. Applying the same permutation to every fragment of a
+// query — all B fragments and all A fragments, which share their width by
+// construction — reorders the lookup tuple uniformly on both sides, so the
+// query's semantics are preserved while queries over the same table with the
+// columns listed in a different order become key-identical and share one
+// group (and thus one set of M columns and one α). This is the prover-ray
+// analogue of linea/logderivativesum's GetTableCanonicalOrder, which sorts
+// the T column IDs alphabetically and permutes the S columns conjointly.
+//
+// The permutation is derived from the first B fragment only: two queries with
+// the same fragments necessarily derive the same permutation, and the other
+// fragments follow it positionally.
+func canonicalColumnOrder(tab wiop.Table) []int {
+	keys := make([]string, len(tab.Columns))
+	for i, cv := range tab.Columns {
+		keys[i] = fmt.Sprintf("%s@%d", cv.Column.Context.Path(), cv.ShiftingOffset)
+	}
+	perm := make([]int, len(tab.Columns))
+	for i := range perm {
+		perm[i] = i
+	}
+	sort.SliceStable(perm, func(a, b int) bool { return keys[perm[a]] < keys[perm[b]] })
+	return perm
+}
+
+// permuteTables returns copies of tables with each fragment's columns
+// reordered by perm. Selectors and modules are untouched. A fragment whose
+// width does not match len(perm) is returned unchanged: the width mismatch is
+// reported later by compileGroup's dedicated panic rather than an index error
+// here.
+func permuteTables(tables []wiop.Table, perm []int) []wiop.Table {
+	out := make([]wiop.Table, len(tables))
+	for i, tab := range tables {
+		if len(tab.Columns) != len(perm) {
+			out[i] = tab
+			continue
+		}
+		cols := make([]*wiop.ColumnView, len(perm))
+		for j, p := range perm {
+			cols[j] = tab.Columns[p]
+		}
+		tab.Columns = cols
+		out[i] = tab
+	}
+	return out
+}
+
+// lookupGroup collects every Inclusion query that targets the same B side
+// (the same ordered union of lookup-table fragments). Within a group the
+// compiler emits one multiplicity column per B fragment and a single fraction
+// set (one −M/(γ+RLC) term per B fragment plus one term per A fragment).
 type lookupGroup struct {
-	including includingTable
-	included  []includedSpec
+	// includings holds the group's B-side fragments in declaration order. The
+	// slice index is the fragment index that each M column is bound to.
+	includings []includingTable
+	included   []includedSpec
+	// queries lists the source Inclusion queries folded into this subgroup, in
+	// declaration order and without duplicates. The compiler uses it to
+	// precheck each query's row limit, to build error messages, and to mark
+	// every contributing query as reduced once the group has been compiled.
+	queries []*wiop.TableRelationQuery
 	// witnessRound is the latest round across every column referenced by the
 	// group's including and included fragments. M, α, γ live in
 	// witnessRound + 1; the LogDerivativeSum result lives in
@@ -76,11 +147,9 @@ type lookupGroup struct {
 	witnessRound *wiop.Round
 }
 
-// addIncluded appends a single A-side fragment to the group, taken from the
-// given query.
-func (g *lookupGroup) addIncluded(q *wiop.TableRelationQuery, tab wiop.Table) {
+// addIncluded appends a single A-side fragment to the group.
+func (g *lookupGroup) addIncluded(tab wiop.Table) {
 	g.included = append(g.included, includedSpec{
-		query:    q,
 		cols:     tab.Columns,
 		selector: tab.Selector,
 	})
