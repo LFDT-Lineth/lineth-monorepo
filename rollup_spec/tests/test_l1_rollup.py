@@ -23,7 +23,7 @@ from ethereum_types.numeric import U64
 
 from rollup_spec.l1_rollup import (
     FinalizationSubmission,
-    LineaRollupState,
+    LinethRollupState,
     PlonkVerifier,
     finalize_rollup,
 )
@@ -45,13 +45,13 @@ _FTX_ROLLING_HASH = Hash32(bytes([0x44]) * 32)
 _CHAIN_CONFIG_HASH = Hash32(bytes([0xC0]) * 32)
 
 
-def _base_state(approved_vks) -> LineaRollupState:
+def _base_state(approved_vks) -> LinethRollupState:
     """
     An L1 state whose continuity anchors exactly match `_base_submission()`'s
     public inputs, so all non-VK finalization checks pass. `approved_vks` is the
     only knob the tests vary.
     """
-    return LineaRollupState(
+    return LinethRollupState(
         current_finalized_shnarf=_PARENT_SHNARF,
         current_finalized_last_block_hash=Hash32(bytes([0x46]) * 32),
         current_l2_block_number=U64(1000500),

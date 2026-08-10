@@ -17,7 +17,7 @@ from ethereum.state import Address
 from ethereum_types.numeric import U64
 
 from rollup_spec import l2_execution
-from rollup_spec.block import ChainConfig, LineaPayloadInput
+from rollup_spec.block import ChainConfig, LinethPayloadInput
 from rollup_spec.fork import Log
 from rollup_spec.l2_execution import (
     BRIDGE_L2L1_MESSAGE_SENT_TOPIC_0,
@@ -55,7 +55,7 @@ def _zero_bridge_input(vanilla: bytes) -> L2ExecutionProofPrivateInput:
     return L2ExecutionProofPrivateInput(
         parent_ftx_rolling_hash=ZERO_HASH,
         parent_last_processed_ftx_number=U64(0),
-        payloads=[LineaPayloadInput(stateless_input_ssz=vanilla)],
+        payloads=[LinethPayloadInput(stateless_input_ssz=vanilla)],
         chain_config=ChainConfig(
             l2_message_service_address=ZERO_ADDRESS,
             coinbase=si.new_payload_request.execution_payload.fee_recipient,
