@@ -52,7 +52,7 @@ compileJava {
 }
 
 web3j {
-  generatedPackageName = 'linea.plugin.acc.test.tests.web3j.generated'
+  generatedPackageName = 'lineth.plugin.acc.test.tests.web3j.generated'
 }
 
 solcToolchain {
