@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
-package linea.maru
+package lineth.maru
 
 import linea.kotlin.decodeHex
 import maru.crypto.PrivateKeyGenerator

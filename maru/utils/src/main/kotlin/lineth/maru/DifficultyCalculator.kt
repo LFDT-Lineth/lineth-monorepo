@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
-package linea.maru
+package lineth.maru
 
 /**
  * Utility tool to compute the expected difficulty at a given time for Clique blocks.
