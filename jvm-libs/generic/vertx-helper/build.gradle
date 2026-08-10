@@ -20,7 +20,3 @@ dependencies {
   testImplementation "io.rest-assured:kotlin-extensions:${libs.versions.restassured.get()}"
   testImplementation "io.rest-assured:json-schema-validator:${libs.versions.restassured.get()}"
 }
-
-test {
-  systemProperty "vertx.parameter.filename", "/vertx-options.json"
-}

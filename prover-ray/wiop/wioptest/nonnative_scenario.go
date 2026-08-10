@@ -26,8 +26,8 @@ func NewNonNativeScenario() *Scenario {
 
 	newLimbs := func(label string) []*wiop.Column {
 		return []*wiop.Column{
-			mod.NewColumn(sys.Context.Childf("%s-limb-0", label), wiop.VisibilityOracle, r0),
-			mod.NewColumn(sys.Context.Childf("%s-limb-1", label), wiop.VisibilityOracle, r0),
+			mod.NewColumn(sys.Context.Childf("%s-limb-0", label), r0),
+			mod.NewColumn(sys.Context.Childf("%s-limb-1", label), r0),
 		}
 	}
 	left := newLimbs("left")

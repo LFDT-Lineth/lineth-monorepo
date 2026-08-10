@@ -45,7 +45,9 @@ jobs:
           pnpm-install-options: '--frozen-lockfile --prefer-offline --filter contracts --ignore-scripts'
       - name: Build coordinator and Unit tests
         run: |
-          ./gradlew -V coordinator:app:buildNeeded
+          ./gradlew -V \
+            coordinator:app:buildNeeded \
+            :coordinator:clients:prover-client:riscv-client:test
       - name: Verify generated coordinator config docs are up to date
         run: |
           ./gradlew -V :coordinator:app:generateConfigDocs
@@ -81,4 +83,3 @@ jobs:
           path: |
             **/build/jacoco/*.exec
           if-no-files-found: ignore
-

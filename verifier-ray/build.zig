@@ -28,6 +28,8 @@ pub fn build(b: *std.Build) void {
     // The `embedded-input` option is used to embed the input file into the binary to avoid needing to pass it in at runtime as we don't have
     // input serialization yet. This is only used for execution target, not for any test fixtures or library.
     const embedded_input = b.option(EmbeddedInputType, "embedded-input", "Embed the input file into the binary") orelse EmbeddedInputType.none;
+    const test_filter = b.option([]const u8, "test-filter", "Skip tests that do not match this filter");
+    const test_filters: []const []const u8 = if (test_filter) |f| &.{f} else &.{};
 
     const target = if (r5)
         common.standardGuestTarget(b)
@@ -72,6 +74,29 @@ pub fn build(b: *std.Build) void {
     });
     const test_vanishing_mod = b.addModule("test_vanishing", .{
         .root_source_file = b.path("testdata/generated/vanishing.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "verifier_ray", .module = verifier_mod },
+        },
+    });
+    const test_fri_vectors_mod = b.addModule("test_fri_vectors", .{
+        .root_source_file = b.path("testdata/generated/fri.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const test_pcs_vectors_mod = b.addModule("test_pcs_vectors", .{
+        .root_source_file = b.path("testdata/generated/pcs.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "verifier_ray", .module = verifier_mod },
+        },
+    });
+    // The full-pipeline verify fixtures (PCS-enabled), exposed to tests so the
+    // integration tests can drive verifier.verify against real proofs.
+    const test_verify_mod = b.addModule("test_verify", .{
+        .root_source_file = b.path("testdata/generated/verify.zig"),
         .target = target,
         .optimize = optimize,
         .imports = &.{
@@ -130,8 +155,12 @@ pub fn build(b: *std.Build) void {
                     .{ .name = "verifier_ray", .module = verifier_mod },
                     .{ .name = "test_vectors", .module = test_vectors_mod },
                     .{ .name = "test_vanishing", .module = test_vanishing_mod },
+                    .{ .name = "test_fri_vectors", .module = test_fri_vectors_mod },
+                    .{ .name = "test_pcs_vectors", .module = test_pcs_vectors_mod },
+                    .{ .name = "test_verify", .module = test_verify_mod },
                 },
             }),
+            .filters = test_filters,
         });
 
         const run_unit_tests = b.addRunArtifact(unit_tests);

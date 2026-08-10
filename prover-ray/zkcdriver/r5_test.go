@@ -9,38 +9,40 @@ import (
 	"github.com/LFDT-Lineth/zkc/pkg/zkc/constraints"
 )
 
-func TestRisc5Arithmetization(t *testing.T) {
+// This is a benchmark for the RISC-V arithmetization and not a test so that we
+// don't crash the CI on every PR.
+func BenchmarkRisc5Arithmetization(b *testing.B) {
 	const zkcPath = "../../arithmetization/src/main/riscv/main.zkc"
 
 	verifPath := "../../verifier-ray/zig-out/bin/verifier-ray"
 	verifElf, err := os.ReadFile(verifPath)
 	if err != nil {
-		t.Skipf("skipping integration test: verifier ELF not found at %s (%v)", verifPath, err)
+		b.Skipf("skipping integration test: verifier ELF not found at %s (%v)", verifPath, err)
 	}
 	payload := []byte("foobar")
 	inputsMap, err := zkc_r5.PrepareInput(verifElf, payload)
 	if err != nil {
-		t.Fatalf("failed to prepare inputs: %v", err)
+		b.Fatalf("failed to prepare inputs: %v", err)
 	}
 
-	t.Logf("compiling zkc source: %s", zkcPath)
+	b.Logf("compiling zkc source: %s", zkcPath)
 	binf, err := compileBinaryConstraints(zkcPath)
 	if err != nil {
-		t.Fatalf("failed to compile zkc source: %v", err)
+		b.Fatalf("failed to compile zkc source: %v", err)
 	}
-	t.Logf("tracing zkc")
+	b.Logf("tracing zkc")
 	outputs, err := traceZkc(binf, constraints.DEFAULT_TRACE_CONFIG, inputsMap)
 	if err != nil {
-		t.Fatalf("failed to parse test case: %v", err)
+		b.Fatalf("failed to parse test case: %v", err)
 	}
 	if len(outputs) != 0 {
-		t.Fatalf("expected no outputs, got: %v", outputs)
+		b.Fatalf("expected no outputs, got: %v", outputs)
 	}
 	driverInputs := &zkcdriver.PreReadInputs{
 		Inputs: inputsMap,
 	}
-	t.Logf("prover/verify")
+	b.Logf("prover/verify")
 	if err := runProveVerify(driverInputs, binf, proverCompilePipeline); err != nil {
-		t.Fatalf("failed to run test case: %v", err)
+		b.Fatalf("failed to run test case: %v", err)
 	}
 }

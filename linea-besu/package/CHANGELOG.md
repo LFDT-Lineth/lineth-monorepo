@@ -1,9 +1,14 @@
-## [unreleased]
+## [2.1.0] - 2026-08-07
 
 ### 🚀 Features
 
 - *(linea-besu)* Update to v26.7.0 (#3623)
 - *(linea-besu)* Update to 26.7.1 (#3699)
+
+### 🐛 Bug Fixes
+
+- *(linea-besu)* Align Besu Kotlin runtime (#3734)
+- *(linea-besu)* Add the missing web3j crypto jar in dist and fix ci … (#3737)
 
 ### ⚙️ Miscellaneous Tasks
 

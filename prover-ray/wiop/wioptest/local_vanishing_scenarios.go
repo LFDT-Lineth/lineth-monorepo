@@ -13,7 +13,7 @@ func NewLocalSingleColumnFirstRowZeroScenario() *LocalVanishingScenario {
 	sys := wiop.NewSystemf("lv-row0")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	mod.NewLocalConstraint(sys.Context.Childf("lc"), col.View(), 0)
 
 	return &LocalVanishingScenario{
@@ -36,7 +36,7 @@ func NewLocalSingleColumnLastRowZeroScenario() *LocalVanishingScenario {
 	sys := wiop.NewSystemf("lv-rowN")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	mod.NewLocalConstraint(sys.Context.Childf("lc"), col.View(), -1)
 
 	return &LocalVanishingScenario{
@@ -60,7 +60,7 @@ func NewLocalShiftedColumnFirstRowZeroScenario() *LocalVanishingScenario {
 	sys := wiop.NewSystemf("lv-shift")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	mod.NewLocalConstraint(sys.Context.Childf("lc"), col.View().Shift(1), 0)
 
 	return &LocalVanishingScenario{
@@ -84,8 +84,8 @@ func NewLocalTwoColumnsEqualAtFirstRowScenario() *LocalVanishingScenario {
 	sys := wiop.NewSystemf("lv-pair")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	a := mod.NewColumn(sys.Context.Childf("a"), wiop.VisibilityOracle, r0)
-	b := mod.NewColumn(sys.Context.Childf("b"), wiop.VisibilityOracle, r0)
+	a := mod.NewColumn(sys.Context.Childf("a"), r0)
+	b := mod.NewColumn(sys.Context.Childf("b"), r0)
 	mod.NewLocalConstraint(sys.Context.Childf("lc"), wiop.Sub(a.View(), b.View()), 0)
 
 	return &LocalVanishingScenario{
@@ -111,7 +111,7 @@ func NewLocalMultipleConstraintsSameModuleScenario() *LocalVanishingScenario {
 	sys := wiop.NewSystemf("lv-multi")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	mod.NewLocalConstraint(sys.Context.Childf("lc-first"), col.View(), 0)
 	mod.NewLocalConstraint(sys.Context.Childf("lc-last"), col.View(), -1)
 
@@ -137,7 +137,7 @@ func NewLocalSecondRowConstraintScenario() *LocalVanishingScenario {
 	sys := wiop.NewSystemf("lv-row1")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	fortyTwo := wiop.NewConstantField(field.NewFromString("42"))
 	mod.NewLocalConstraint(sys.Context.Childf("lc"), wiop.Sub(col.View(), fortyTwo), 1)
 
@@ -163,7 +163,7 @@ func NewLocalCellEqualityScenario() *LocalVanishingScenario {
 	sys := wiop.NewSystemf("lv-cell")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	cell := r0.NewCell(sys.Context.Childf("c"), false)
 	mod.NewLocalConstraint(sys.Context.Childf("lc"), wiop.Sub(col.View(), cell), 0)
 
@@ -197,7 +197,7 @@ func NewLocalCoinScaledScenario() *LocalVanishingScenario {
 	r0 := sys.NewRound()
 	r1 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	coin := r1.NewCoinField(sys.Context.Childf("coin"))
 	five := wiop.NewConstantField(field.NewFromString("5"))
 	mod.NewLocalConstraint(
@@ -229,7 +229,7 @@ func NewLocalMultipleAnchorsSharedColumnScenario() *LocalVanishingScenario {
 	sys := wiop.NewSystemf("lv-anchors")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	ten := wiop.NewConstantField(field.NewFromString("10"))
 	twenty := wiop.NewConstantField(field.NewFromString("20"))
 	thirty := wiop.NewConstantField(field.NewFromString("30"))
@@ -258,7 +258,7 @@ func NewLocalConstantSubtractionScenario() *LocalVanishingScenario {
 	sys := wiop.NewSystemf("lv-const")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	seven := wiop.NewConstantVector(mod, field.NewFromString("7"))
 	mod.NewLocalConstraint(sys.Context.Childf("lc"), wiop.Sub(col.View(), seven), 0)
 
@@ -284,7 +284,7 @@ func NewLocalWrapAroundShiftScenario() *LocalVanishingScenario {
 	sys := wiop.NewSystemf("lv-wrap")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	mod.NewLocalConstraint(sys.Context.Childf("lc"), col.View().Shift(-1), 0)
 
 	return &LocalVanishingScenario{
@@ -311,7 +311,7 @@ func NewLocalCellAndCoinScenario() *LocalVanishingScenario {
 	r0 := sys.NewRound()
 	r1 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	cell := r0.NewCell(sys.Context.Childf("c"), true) // extension cell
 	coin := r1.NewCoinField(sys.Context.Childf("coin"))
 	mod.NewLocalConstraint(
@@ -350,9 +350,9 @@ func NewLocalThreeColumnLinearScenario() *LocalVanishingScenario {
 	sys := wiop.NewSystemf("lv-3col")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	a := mod.NewColumn(sys.Context.Childf("a"), wiop.VisibilityOracle, r0)
-	b := mod.NewColumn(sys.Context.Childf("b"), wiop.VisibilityOracle, r0)
-	c := mod.NewColumn(sys.Context.Childf("c"), wiop.VisibilityOracle, r0)
+	a := mod.NewColumn(sys.Context.Childf("a"), r0)
+	b := mod.NewColumn(sys.Context.Childf("b"), r0)
+	c := mod.NewColumn(sys.Context.Childf("c"), r0)
 	mod.NewLocalConstraint(
 		sys.Context.Childf("lc"),
 		wiop.Sub(wiop.Add(a.View(), b.View()), c.View()),
@@ -385,8 +385,8 @@ func NewLocalMultiAnchorMultiColumnScenario() *LocalVanishingScenario {
 	sys := wiop.NewSystemf("lv-multi-anchor-multi-col")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	a := mod.NewColumn(sys.Context.Childf("a"), wiop.VisibilityOracle, r0)
-	b := mod.NewColumn(sys.Context.Childf("b"), wiop.VisibilityOracle, r0)
+	a := mod.NewColumn(sys.Context.Childf("a"), r0)
+	b := mod.NewColumn(sys.Context.Childf("b"), r0)
 	mod.NewLocalConstraint(sys.Context.Childf("first"), a.View(), 0)
 	mod.NewLocalConstraint(sys.Context.Childf("last-eq"), wiop.Sub(a.View(), b.View()), -1)
 
@@ -415,7 +415,7 @@ func NewLocalCubeAtFirstRowScenario() *LocalVanishingScenario {
 	sys := wiop.NewSystemf("lv-cube")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	cube := wiop.Mul(wiop.Mul(col.View(), col.View()), col.View())
 	mod.NewLocalConstraint(
 		sys.Context.Childf("lc"),
@@ -444,8 +444,8 @@ func NewLocalMultiModuleScenario() *LocalVanishingScenario {
 	r0 := sys.NewRound()
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-	colA := modA.NewColumn(sys.Context.Childf("a"), wiop.VisibilityOracle, r0)
-	colB := modB.NewColumn(sys.Context.Childf("b"), wiop.VisibilityOracle, r0)
+	colA := modA.NewColumn(sys.Context.Childf("a"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("b"), r0)
 	modA.NewLocalConstraint(sys.Context.Childf("a-zero"), colA.View(), 0)
 	modB.NewLocalConstraint(sys.Context.Childf("b-zero"), colB.View(), -1)
 
@@ -474,8 +474,8 @@ func NewLocalProductIsZeroScenario() *LocalVanishingScenario {
 	sys := wiop.NewSystemf("lv-prod")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	a := mod.NewColumn(sys.Context.Childf("a"), wiop.VisibilityOracle, r0)
-	b := mod.NewColumn(sys.Context.Childf("b"), wiop.VisibilityOracle, r0)
+	a := mod.NewColumn(sys.Context.Childf("a"), r0)
+	b := mod.NewColumn(sys.Context.Childf("b"), r0)
 	mod.NewLocalConstraint(sys.Context.Childf("lc"), wiop.Mul(a.View(), b.View()), 0)
 
 	return &LocalVanishingScenario{
@@ -505,7 +505,7 @@ func NewLocalDynamicFirstRowZeroScenario() *LocalVanishingScenario {
 	sys := wiop.NewSystemf("lv-dyn-row0")
 	r0 := sys.NewRound()
 	mod := sys.NewDynamicModule(sys.Context.Childf("dynmod"), wiop.PaddingDirectionRight)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	mod.NewLocalConstraint(sys.Context.Childf("lc"), col.View(), 0)
 
 	return &LocalVanishingScenario{
@@ -529,7 +529,7 @@ func NewLocalDynamicShiftedScenario() *LocalVanishingScenario {
 	sys := wiop.NewSystemf("lv-dyn-shift")
 	r0 := sys.NewRound()
 	mod := sys.NewDynamicModule(sys.Context.Childf("dynmod"), wiop.PaddingDirectionRight)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	mod.NewLocalConstraint(sys.Context.Childf("lc"), col.View().Shift(1), 0)
 
 	return &LocalVanishingScenario{
@@ -555,8 +555,8 @@ func NewLocalDynamicProductIsZeroScenario() *LocalVanishingScenario {
 	sys := wiop.NewSystemf("lv-dyn-prod")
 	r0 := sys.NewRound()
 	mod := sys.NewDynamicModule(sys.Context.Childf("dynmod"), wiop.PaddingDirectionRight)
-	a := mod.NewColumn(sys.Context.Childf("a"), wiop.VisibilityOracle, r0)
-	b := mod.NewColumn(sys.Context.Childf("b"), wiop.VisibilityOracle, r0)
+	a := mod.NewColumn(sys.Context.Childf("a"), r0)
+	b := mod.NewColumn(sys.Context.Childf("b"), r0)
 	mod.NewLocalConstraint(sys.Context.Childf("lc"), wiop.Mul(a.View(), b.View()), 0)
 
 	return &LocalVanishingScenario{

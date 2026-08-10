@@ -173,6 +173,18 @@ test "poseidon2 compression and merkle-damgard match prover-ray golden cases" {
     }
 }
 
+test "poseidon2.eql matches digests limb-for-limb" {
+    const a = digest(.{ 1, 2, 3, 4, 5, 6, 7, 8 });
+    const b = digest(.{ 1, 2, 3, 4, 5, 6, 7, 8 });
+    try std.testing.expect(poseidon2.eql(a, b));
+
+    const wrong_first = digest(.{ 9, 2, 3, 4, 5, 6, 7, 8 });
+    try std.testing.expect(!poseidon2.eql(a, wrong_first));
+
+    const wrong_last = digest(.{ 1, 2, 3, 4, 5, 6, 7, 9 });
+    try std.testing.expect(!poseidon2.eql(a, wrong_last));
+}
+
 test "fiat-shamir transcript matches prover-ray golden cases" {
     for (vectors.fiat_shamir_cases) |case| {
         var transcript = fiat_shamir.Transcript.init();
@@ -192,7 +204,7 @@ test "fiat-shamir transcript matches prover-ray golden cases" {
 
 test "transcript derives round coins matching prover-ray golden vectors" {
     for (vectors.runtime_trace_cases) |case| {
-        // protocol.replay is parametric on a comptime Spec; the golden vectors
+        // protocol.replayWithTranscript is parametric on a comptime Spec; the golden vectors
         // carry runtime coin counts, so drive fiat_shamir.Transcript directly
         // and compare against the prover-ray expected values.
         var transcript = fiat_shamir.Transcript.init();

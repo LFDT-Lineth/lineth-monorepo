@@ -58,7 +58,6 @@ func TestConstant_Scalar(t *testing.T) {
 	assert.False(t, c.IsMultiValued())
 	assert.Equal(t, 0, c.Degree())
 	assert.Nil(t, c.Module())
-	assert.Equal(t, wiop.VisibilityPublic, c.Visibility())
 
 	assert.Panics(t, func() { c.IsSized() })
 	assert.Panics(t, func() { c.Size() })
@@ -91,7 +90,6 @@ func TestConstant_Vector(t *testing.T) {
 	assert.Equal(t, mod, c.Module())
 	assert.True(t, c.IsSized())
 	assert.Equal(t, 4, c.Size())
-	assert.Equal(t, wiop.VisibilityPublic, c.Visibility())
 
 	_, r0, _, _ := newTestSystem(t)
 	rt2 := wiop.NewRuntime(r0.System())
@@ -185,7 +183,7 @@ func TestArithmeticOperation_ScalarEval(t *testing.T) {
 
 func TestArithmeticOperation_EvaluateSingle_WrongModePanic(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(col, baseVec(4, 1))
 
@@ -211,8 +209,8 @@ func TestArithmeticOperation_IsExtension(t *testing.T) {
 	sys := wiop.NewSystemf("sys")
 	r := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	base := mod.NewColumn(sys.Context.Childf("base"), wiop.VisibilityOracle, r)
-	ext := mod.NewExtensionColumn(sys.Context.Childf("ext"), wiop.VisibilityOracle, r)
+	base := mod.NewColumn(sys.Context.Childf("base"), r)
+	ext := mod.NewExtensionColumn(sys.Context.Childf("ext"), r)
 
 	assert.False(t, wiop.Add(base.View(), base.View()).IsExtension())
 	assert.True(t, wiop.Add(base.View(), ext.View()).IsExtension())
@@ -220,7 +218,7 @@ func TestArithmeticOperation_IsExtension(t *testing.T) {
 
 func TestArithmeticOperation_Degree(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("colDeg"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("colDeg"), r0)
 
 	// degree of col.View() == 3 (size 4)
 	// add: max(3,3) = 3
@@ -233,14 +231,14 @@ func TestArithmeticOperation_Degree(t *testing.T) {
 
 func TestArithmeticOperation_Degree_NonPolynomialPanic(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("colDivDeg"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("colDivDeg"), r0)
 	assert.Panics(t, func() { wiop.Div(col.View(), col.View()).Degree() })
 	assert.Panics(t, func() { wiop.Inverse(col.View()).Degree() })
 }
 
 func TestArithmeticOperation_Size_IsSized(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("colSz"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("colSz"), r0)
 	expr := wiop.Add(col.View(), col.View())
 	assert.True(t, expr.IsMultiValued())
 	assert.Equal(t, 4, expr.(interface{ Size() int }).Size())
@@ -256,7 +254,7 @@ func TestArithmeticOperation_Size_ScalarPanic(t *testing.T) {
 
 func TestArithmeticOperation_Module(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("colMod"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("colMod"), r0)
 	k := wiop.NewConstantField(field.NewFromString("1"))
 
 	// vector op → module is the column's module
@@ -265,21 +263,11 @@ func TestArithmeticOperation_Module(t *testing.T) {
 	assert.Nil(t, wiop.Add(k, k).(interface{ Module() *wiop.Module }).Module())
 }
 
-func TestArithmeticOperation_Visibility(t *testing.T) {
-	sys, r0, _, mod := newTestSystem(t)
-	oracle := mod.NewColumn(sys.Context.Childf("oracle"), wiop.VisibilityOracle, r0)
-	internal := mod.NewColumn(sys.Context.Childf("internal"), wiop.VisibilityInternal, r0)
-
-	assert.Equal(t, wiop.VisibilityOracle, wiop.Add(oracle.View(), oracle.View()).(interface{ Visibility() wiop.Visibility }).Visibility())
-	// min(Oracle, Internal) = Internal
-	assert.Equal(t, wiop.VisibilityInternal, wiop.Add(oracle.View(), internal.View()).(interface{ Visibility() wiop.Visibility }).Visibility())
-}
-
 // ---- ArithmeticOperation vector evaluation ----
 
 func TestArithmeticOperation_VectorEval_Add(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("colVAdd"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("colVAdd"), r0)
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(col, baseVec(4, 3))
 

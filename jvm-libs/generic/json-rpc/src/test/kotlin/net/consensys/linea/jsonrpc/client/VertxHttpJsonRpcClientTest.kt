@@ -359,7 +359,7 @@ class VertxHttpJsonRpcClientTest {
     val requestsFutures = (1..100).map {
       client.makeRequest(JsonRpcRequestListParams("2.0", 1, "randomNumber", emptyList()))
     }
-    Future.all<Any>(requestsFutures).get()
+    Future.all(requestsFutures).get()
 
     val timer =
       meterRegistry.timer(

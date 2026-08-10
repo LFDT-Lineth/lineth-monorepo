@@ -44,27 +44,31 @@ PrecomputedRound    │  Round 0     Round 1     …  Round N
 
 `Runtime.AdvanceRound` closes the current round:
 
-1. All oracle/public column assignments are fed into the Fiat-Shamir state.
-2. Public cell values are fed into the Fiat-Shamir state.
-3. The runtime moves to the next round.
-4. One `CoinField` value is derived per coin declared in the new round.
+1. The size of every dynamic module is fed into the Fiat-Shamir state.
+2. If the round carries a commitment, that commitment is fed into the
+   Fiat-Shamir state.
+3. Cell values are fed into the Fiat-Shamir state.
+4. The runtime moves to the next round.
+5. One `CoinField` value is derived per coin declared in the new round.
 
 This makes the interactive protocol non-interactive via the Fiat-Shamir
 transform, with the transcript hash maintained inside `Runtime`.
 
-### Visibility
+### How columns enter the transcript
 
-`Visibility` controls both query eligibility and Fiat-Shamir feeding:
+Columns are never transported in the `Proof` and their raw values are never
+absorbed into Fiat-Shamir. Binding them to the transcript is the commitment
+scheme's job: the `pcs` pass marks each round that owns columns with
+`Round.HasCommitment` and registers a prover action that FRI-commits the
+round's columns, and `AdvanceRound` absorbs that single commitment in place of
+the columns themselves.
 
-| Level      | Usable in active queries | Fed to Fiat-Shamir | Verifier-visible |
-|------------|--------------------------|---------------------|-----------------|
-| Internal   | No                       | No                  | No              |
-| Oracle     | Yes                      | Yes (column hash)   | No              |
-| Public     | Yes                      | Yes (raw values)    | Yes             |
-
-An expression's effective visibility is the minimum of all its leaf
-visibilities. A query containing any Internal leaf cannot remain active; it
-must be reduced (compiled away) before verification.
+A consequence worth keeping in mind: a protocol that has *not* been through the
+`pcs` pass has no witness binding at all. Its coins do not depend on the
+columns, and the verifier — which holds no column data — cannot detect a
+tampered witness. Any soundness test must therefore run the `pcs` pass (or seed
+the transcript through a `PreSamplingHook`); otherwise the challenges are
+constants, and the very first coin drawn from an untouched transcript is zero.
 
 ### Query compilation model
 
