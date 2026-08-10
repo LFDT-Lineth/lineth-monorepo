@@ -50,7 +50,7 @@ class AggregationL2StateProviderImpl(
 
   override fun getAggregationL2State(blockNumber: Long): SafeFuture<AggregationL2State> {
     val anchoredMessageFuture = getLastAnchoredMessage(blockNumber.toULong())
-    val aggregationFtxNumbersFuture = ftxRollingInfoProvider.getParentFtxState(blockNumber.toULong())
+    val aggregationFtxNumbersFuture = ftxRollingInfoProvider.getFtxRollingHashByBlockNumber(blockNumber.toULong())
     val blockFuture = ethApiClient.ethGetBlockByNumberTxHashes(blockNumber.toBlockParameter())
 
     return SafeFuture

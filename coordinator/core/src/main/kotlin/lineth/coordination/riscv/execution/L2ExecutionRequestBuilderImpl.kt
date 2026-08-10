@@ -10,6 +10,7 @@ import linea.domain.toBlockParameter
 import linea.domain.toExecutionPayload
 import linea.ethapi.ExecutionWitness
 import linea.ethapi.ExecutionWitnessClient
+import linea.kotlin.minusCoercingUnderflow
 import lineth.coordination.FtxRollingInfoProvider
 import lineth.coordination.FtxRollingInfoProviderImpl
 import lineth.persistence.ForcedTransactionRecord
@@ -27,8 +28,8 @@ class L2ExecutionRequestBuilderImpl(
     val allFtxsFuture = forcedTransactionsDao.findBySimulatedExecutionBlock(
       conflation.startBlockNumber..conflation.endBlockNumber,
     )
-    val parentBlockNumber = if (conflation.startBlockNumber == 0UL) 0UL else conflation.startBlockNumber - 1UL
-    val ftxStateFuture = ftxRollingInfoProvider.getParentFtxState(parentBlockNumber)
+    val parentBlockNumber = conflation.startBlockNumber.minusCoercingUnderflow(1uL)
+    val ftxStateFuture = ftxRollingInfoProvider.getFtxRollingHashByBlockNumber(parentBlockNumber)
     val allWitnessesListFuture = SafeFuture.collectAll(
       conflation.blocks.map { block ->
         executionWitnessClient.getExecutionWitness(block.number.toBlockParameter())

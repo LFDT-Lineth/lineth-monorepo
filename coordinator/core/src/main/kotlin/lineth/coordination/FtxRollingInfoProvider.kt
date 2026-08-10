@@ -32,13 +32,13 @@ data class FtxRollingInfo(
 }
 
 fun interface FtxRollingInfoProvider {
-  fun getParentFtxState(blockNumber: ULong): SafeFuture<FtxRollingInfo>
+  fun getFtxRollingHashByBlockNumber(blockNumber: ULong): SafeFuture<FtxRollingInfo>
 }
 
 class FtxRollingInfoProviderImpl(
   private val forcedTransactionsDao: ForcedTransactionsDao,
 ) : FtxRollingInfoProvider {
-  override fun getParentFtxState(blockNumber: ULong): SafeFuture<FtxRollingInfo> {
+  override fun getFtxRollingHashByBlockNumber(blockNumber: ULong): SafeFuture<FtxRollingInfo> {
     if (blockNumber == 0uL) {
       // return genesis ftx number and hash
       return SafeFuture.completedFuture(FtxRollingInfo.GENESIS)
