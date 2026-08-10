@@ -63,6 +63,7 @@
 - *(coordinator)* Apply message anchoring L1 retries (#3715)
 - *(linea-besu)* Align Besu Kotlin runtime (#3734)
 - *(linea-besu)* Add the missing web3j crypto jar in dist and fix ci … (#3737)
+- *(coordinator)* Make runtime invariants explicit (#3716)
 
 ### 🚜 Refactor
 
