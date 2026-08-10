@@ -95,11 +95,6 @@ func TestFullPipeline_VanishingScenarios(t *testing.T) {
 		// Each soundness case rebuilds a fresh scenario so it doesn't share
 		// compilation state with the completeness case above.
 		t.Run(sc.Name+"/Soundness", func(t *testing.T) {
-			// TODO(commitment-scheme): columns are no longer materialized in the
-			// proof or absorbed into the Fiat-Shamir transcript, so the verifier
-			// has no column data to catch a tampered witness. Re-enable once the
-			// commitment scheme binds columns into the transcript.
-			t.Skip("pending commitment scheme: verifier cannot yet see committed columns")
 			sc := build()
 			compileFullPipeline(sc.Sys)
 			proof, pub := sc.Sys.Prove(sc.AssignInvalid)
@@ -124,11 +119,6 @@ func TestFullPipeline_LocalVanishingScenarios(t *testing.T) {
 		})
 
 		t.Run(sc.Name+"/Soundness", func(t *testing.T) {
-			// TODO(commitment-scheme): columns are no longer materialized in the
-			// proof or absorbed into the Fiat-Shamir transcript, so the verifier
-			// has no column data to catch a tampered witness. Re-enable once the
-			// commitment scheme binds columns into the transcript.
-			t.Skip("pending commitment scheme: verifier cannot yet see committed columns")
 			sc := build()
 			compileFullPipeline(sc.Sys)
 			proof, pub := sc.Sys.Prove(sc.AssignInvalid)
@@ -291,12 +281,6 @@ func TestFullPipeline_PermutationTamperedZ(t *testing.T) {
 // rangecheck → lookup → log-derivative → recurrence vanishings → global
 // quotient.
 func TestFullPipeline_RangeCheckScenarios(t *testing.T) {
-	// TODO(commitment-scheme): columns are no longer absorbed into the
-	// Fiat-Shamir transcript, so the lookup challenge is no longer bound to the
-	// witness and degenerates in this deterministic test (a zero denominator
-	// trips the logderivativesum prover). Re-enable once the commitment scheme
-	// binds columns into the transcript.
-	t.Skip("pending commitment scheme: lookup challenge not yet bound to committed columns")
 	for _, build := range wioptest.RangeCheckCompilerScenarios() {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {

@@ -7,6 +7,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/localvanishing"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -132,16 +133,15 @@ func TestCompile_Completeness(t *testing.T) {
 }
 
 func TestCompile_Soundness(t *testing.T) {
-	// TODO(commitment-scheme): columns are no longer materialized in the proof
-	// or absorbed into the Fiat-Shamir transcript, so the verifier has no column
-	// data to catch a tampered witness and cannot reject an invalid proof.
-	// Re-enable once the commitment scheme binds columns into the transcript.
-	t.Skip("pending commitment scheme: verifier cannot yet see committed columns")
 	for _, sc := range scenarios() {
 		t.Run(sc.name, func(t *testing.T) {
 			sys, _, invalid := sc.build()
 			localvanishing.Compile(sys)
 			global.Compile(sys)
+			// The PCS step is needed otherwise, the change in the transcript
+			// does not impact the FS state and the transcript alteration attack
+			// is not detectable.
+			pcs.Compile(sys)
 			assert.Error(t, proveVerify(sys, invalid),
 				"compiled verifier must reject an invalid witness")
 		})
@@ -167,16 +167,15 @@ func TestCompile_WioptestCompleteness(t *testing.T) {
 // TestCompile_WioptestSoundness checks every wioptest scalar-vanishing
 // fixture: an invalid witness must be rejected by the compiled verifier.
 func TestCompile_WioptestSoundness(t *testing.T) {
-	// TODO(commitment-scheme): columns are no longer materialized in the proof
-	// or absorbed into the Fiat-Shamir transcript, so the verifier has no column
-	// data to catch a tampered witness and cannot reject an invalid proof.
-	// Re-enable once the commitment scheme binds columns into the transcript.
-	t.Skip("pending commitment scheme: verifier cannot yet see committed columns")
 	for _, build := range wioptest.LocalVanishingScenarios() {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
 			localvanishing.Compile(sc.Sys)
 			global.Compile(sc.Sys)
+			// The PCS step is needed otherwise, the change in the transcript
+			// does not impact the FS state and the transcript alteration attack
+			// is not detectable.
+			pcs.Compile(sc.Sys)
 			assert.Error(t, proveVerify(sc.Sys, sc.AssignInvalid),
 				"compiled verifier must reject an invalid witness")
 		})
@@ -510,13 +509,13 @@ func TestCompile_CoinLeaf_RoundTrip(t *testing.T) {
 	})
 
 	t.Run("invalid", func(t *testing.T) {
-		// TODO(commitment-scheme): without columns in the proof/transcript the
-		// verifier cannot reject a tampered witness; re-enable once the
-		// commitment scheme binds columns into the transcript.
-		t.Skip("pending commitment scheme: verifier cannot yet see committed columns")
 		sys, col := build()
 		localvanishing.Compile(sys)
 		global.Compile(sys)
+		// The PCS step is needed otherwise, the change in the transcript
+		// does not impact the FS state and the transcript alteration attack
+		// is not detectable.
+		pcs.Compile(sys)
 		assert.Error(t, proveVerify(sys, func(rt *wiop.Runtime) {
 			rt.AssignColumn(col, makeVec(7, 9, 9, 9))
 		}))

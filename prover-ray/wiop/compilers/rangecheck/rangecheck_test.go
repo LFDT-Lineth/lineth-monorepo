@@ -5,8 +5,11 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/localvanishing"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/logderivativesum"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/lookuptologderivsum"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/rangecheck"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/assert"
@@ -18,18 +21,21 @@ import (
 // rangecheck → lookuptologderivsum → logderivativesum pipeline. The
 // verifier must accept.
 func TestCompile_WioptestCompleteness(t *testing.T) {
-	// TODO(commitment-scheme): columns are no longer absorbed into the
-	// Fiat-Shamir transcript, so the lookup challenge is no longer bound to the
-	// witness and degenerates in this deterministic test (a zero denominator
-	// trips the logderivativesum prover). Re-enable once the commitment scheme
-	// binds columns into the transcript.
-	t.Skip("pending commitment scheme: lookup challenge not yet bound to committed columns")
+
 	for _, build := range wioptest.RangeCheckCompilerScenarios() {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
 			rangecheck.Compile(sc.Sys)
 			lookuptologderivsum.Compile(sc.Sys)
 			logderivativesum.Compile(sc.Sys)
+
+			// The PCS step is needed otherwise, the change in the transcript
+			// does not impact the FS state and the transcript alteration attack
+			// is not detectable.
+			localvanishing.Compile(sc.Sys)
+			global.Compile(sc.Sys)
+			pcs.Compile(sc.Sys)
+
 			proof, pub := sc.Sys.Prove(sc.AssignWitness)
 			require.NoError(t, sc.Sys.Verify(proof, pub),
 				"compiled verifier must accept an honest witness")

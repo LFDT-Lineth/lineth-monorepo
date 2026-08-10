@@ -6,6 +6,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -30,15 +31,15 @@ func TestCompile_Completeness(t *testing.T) {
 // compiled verifier. This is the core soundness property of the compiler: a
 // cheating prover cannot produce a quotient that satisfies the identity check.
 func TestCompile_Soundness(t *testing.T) {
-	// TODO(commitment-scheme): columns are no longer materialized in the proof
-	// or absorbed into the Fiat-Shamir transcript, so the verifier has no column
-	// data to catch a tampered witness and cannot reject an invalid proof.
-	// Re-enable once the commitment scheme binds columns into the transcript.
-	t.Skip("pending commitment scheme: verifier cannot yet see committed columns")
+
 	for _, build := range wioptest.VanishingScenarios() {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
 			global.Compile(sc.Sys)
+			// The PCS step is needed otherwise, the change in the transcript
+			// does not impact the FS state and the transcript alteration attack
+			// is not detectable.
+			pcs.Compile(sc.Sys)
 			proof, pub := sc.Sys.Prove(sc.AssignInvalid)
 			assert.Error(t, sc.Sys.Verify(proof, pub),
 				"compiled verifier must reject an invalid witness")
