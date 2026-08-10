@@ -64,18 +64,21 @@ internal object Web3JLineaValidiumFunctionBuilders {
     parentL1RollingHash: ByteArray,
     parentL1RollingHashMessageNumber: Long,
   ): Function {
+    val compressionProof = requireNotNull(aggregationLastBlob.blobCompressionProof) {
+      "aggregationLastBlob.blobCompressionProof must be set when building the finalization function"
+    }
     val aggregationEndBlobInfo =
       ValidiumV1.ShnarfData(
         // parentShnarf
-        aggregationLastBlob.blobCompressionProof!!.prevShnarf,
+        compressionProof.prevShnarf,
         // snarkHash
-        aggregationLastBlob.blobCompressionProof!!.snarkHash,
+        compressionProof.snarkHash,
         // finalStateRootHash
-        aggregationLastBlob.blobCompressionProof!!.finalStateRootHash,
+        compressionProof.finalStateRootHash,
         // dataEvaluationPoint
-        aggregationLastBlob.blobCompressionProof!!.expectedX,
+        compressionProof.expectedX,
         // dataEvaluationClaim
-        aggregationLastBlob.blobCompressionProof!!.expectedY,
+        compressionProof.expectedY,
       )
 
     val finalizationData =

@@ -13,4 +13,5 @@ dependencies {
   implementation "io.vertx:vertx-core"
 
   testImplementation "io.vertx:vertx-junit5"
+  testImplementation testFixtures(project(':coordinator:core-interfaces'))
 }

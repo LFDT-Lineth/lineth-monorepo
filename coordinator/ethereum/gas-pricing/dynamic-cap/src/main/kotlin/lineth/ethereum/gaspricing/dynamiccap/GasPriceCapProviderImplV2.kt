@@ -148,25 +148,28 @@ class GasPriceCapProviderImplV2(
   override fun getGasPriceCapsWithCoefficient(timestamp: Instant): SafeFuture<GasPriceCaps?> {
     return getGasPriceCaps(timestamp)
       .thenApply { caps ->
-        caps?.let {
-          val coeff = config.gasPriceCapsCoefficient.toBigDecimal()
-          // Coefficient application historically truncates fractional wei.
-          val multipliedMaxBaseFeePerGasCap =
-            // NOTE: at this stage maxBaseFeePerGasCap is always defined
-            // on upper classes (e.g GasPriceCapProviderForDataSubmission) may be nullified
-            (it.maxBaseFeePerGasCap!!.toBigDecimal() * coeff).toBigInteger().toULong()
-          val multipliedMaxPriorityFeePerGas =
-            (it.maxPriorityFeePerGasCap.toBigDecimal() * coeff).toBigInteger().toULong()
-          val multipliedMaxFeePerBlobGasCap =
-            (it.maxFeePerBlobGasCap.toBigDecimal() * coeff)
-              .coerceAtLeast(BigDecimal.ONE).toBigInteger().toULong()
-          GasPriceCaps(
-            maxBaseFeePerGasCap = multipliedMaxBaseFeePerGasCap,
-            maxPriorityFeePerGasCap = multipliedMaxPriorityFeePerGas,
-            maxFeePerGasCap = multipliedMaxBaseFeePerGasCap + multipliedMaxPriorityFeePerGas,
-            maxFeePerBlobGasCap = multipliedMaxFeePerBlobGasCap,
-          )
-        }
+        caps?.withCoefficient(config.gasPriceCapsCoefficient)
       }
   }
+}
+
+internal fun GasPriceCaps.withCoefficient(coefficient: Double): GasPriceCaps {
+  val coeff = coefficient.toBigDecimal()
+  // Coefficient application historically truncates fractional wei.
+  val baseFeePerGasCap = requireNotNull(maxBaseFeePerGasCap) {
+    "maxBaseFeePerGasCap must be defined before applying the gas price caps coefficient"
+  }
+  val multipliedBaseFeePerGasCap =
+    (baseFeePerGasCap.toBigDecimal() * coeff).toBigInteger().toULong()
+  val multipliedPriorityFeePerGas =
+    (maxPriorityFeePerGasCap.toBigDecimal() * coeff).toBigInteger().toULong()
+  val multipliedFeePerBlobGasCap =
+    (maxFeePerBlobGasCap.toBigDecimal() * coeff)
+      .coerceAtLeast(BigDecimal.ONE).toBigInteger().toULong()
+  return GasPriceCaps(
+    maxBaseFeePerGasCap = multipliedBaseFeePerGasCap,
+    maxPriorityFeePerGasCap = multipliedPriorityFeePerGas,
+    maxFeePerGasCap = multipliedBaseFeePerGasCap + multipliedPriorityFeePerGas,
+    maxFeePerBlobGasCap = multipliedFeePerBlobGasCap,
+  )
 }
