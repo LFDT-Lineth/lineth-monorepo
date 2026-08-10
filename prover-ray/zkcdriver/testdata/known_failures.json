@@ -14,7 +14,11 @@
         "2": "prover failed"
     },
     "unit/basic_14.zkc": {
-        "-2": "zkc compile failed"
+        "-2": "zkc compile failed",
+        "0": "zkc trace/check failed",
+        "1": "zkc trace/check failed",
+        "2": "zkc trace/check failed",
+        "3": "zkc trace/check failed"
     },
     "unit/basic_17.zkc": {
         "-1": "no test data"

@@ -65,7 +65,7 @@ func TestDynamicModule_SetSizePanic(t *testing.T) {
 // to a dynamic module records the data length as the module's domain size.
 func TestDynamicModule_AutoSizeOnFirstAssign(t *testing.T) {
 	sys, r0, _, dyn := newDynamicTestSystem(t)
-	col := dyn.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := dyn.NewColumn(sys.Context.Childf("col"), r0)
 
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(col, makeVec(8, 1))
@@ -78,8 +78,8 @@ func TestDynamicModule_AutoSizeOnFirstAssign(t *testing.T) {
 // whose data length exceeds the module's recorded size causes a panic.
 func TestDynamicModule_GrowOnLargerColumn(t *testing.T) {
 	sys, r0, _, dyn := newDynamicTestSystem(t)
-	colA := dyn.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	colB := dyn.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+	colA := dyn.NewColumn(sys.Context.Childf("A"), r0)
+	colB := dyn.NewColumn(sys.Context.Childf("B"), r0)
 
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(colA, makeVec(4, 1)) // sets domain size = 4
@@ -94,7 +94,7 @@ func TestDynamicModule_StaticOverflowPanic(t *testing.T) {
 	r0 := sys.NewRound()
 	sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 
 	rt := wiop.NewRuntime(sys)
 	assert.Panics(t, func() {
@@ -117,8 +117,8 @@ func TestDynamicModule_MissingSizePanic(t *testing.T) {
 func TestDynamicModule_VanishingCheck(t *testing.T) {
 	sys, r0, _, dyn := newDynamicTestSystem(t)
 
-	colA := dyn.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	colB := dyn.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+	colA := dyn.NewColumn(sys.Context.Childf("A"), r0)
+	colB := dyn.NewColumn(sys.Context.Childf("B"), r0)
 
 	// Constraint: A - B == 0
 	dyn.NewVanishing(sys.Context.Childf("eq"), wiop.Sub(colA.View(), colB.View()))
@@ -140,8 +140,8 @@ func TestDynamicModule_VanishingCheck(t *testing.T) {
 func TestDynamicModule_VanishingCheckFailure(t *testing.T) {
 	sys, r0, _, dyn := newDynamicTestSystem(t)
 
-	colA := dyn.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	colB := dyn.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+	colA := dyn.NewColumn(sys.Context.Childf("A"), r0)
+	colB := dyn.NewColumn(sys.Context.Childf("B"), r0)
 	dyn.NewVanishing(sys.Context.Childf("eq"), wiop.Sub(colA.View(), colB.View()))
 
 	rt := wiop.NewRuntime(sys)

@@ -36,26 +36,6 @@ classDiagram
 
     ContextFrame --() context
 
-    %% Visibility is an enum type representing the visibility of an object in
-    %% the protocol.
-    class Visibility {
-        <<enumeration>>
-        %% VisibilityInternal indicates that the object is purely an internal
-        %% value for the prover. Internal objects may not be part of "active"
-        %% queries (i.e. queries that have not been reduced yet).
-        VisibilityInternal
-        %% VisibilityOracle indicates that the object can be used in "active"
-        %% queries but is not sent to the verifier directly. Implicitly this
-        %% signals an intent to commit to the column. CoinField cannot have
-        %% this visibility.
-        VisibilityOracle
-        %% VisibilityPublic indicates that the object can be part of queries
-        %% and is visible to the verifier. The object is therefore part of
-        %% the transcript and can be accessed by verifier steps.
-        VisibilityPublic
-        + String() string
-    }
-
     %% PaddingDirection contains directives on how a column's assignment is
     %% padded to match the module size when the assignment is shorter.
     class PaddingDirection {
@@ -123,12 +103,12 @@ classDiagram
         + SetSize(size int)
         + System() *System
         %% NewColumn — base-field column.
-        + NewColumn(ctx *ContextFrame, vis Visibility, r *Round) *Column
+        + NewColumn(ctx *ContextFrame, r *Round) *Column
         %% NewExtensionColumn — extension-field column.
-        + NewExtensionColumn(ctx *ContextFrame, vis Visibility, r *Round) *Column
+        + NewExtensionColumn(ctx *ContextFrame, r *Round) *Column
         %% NewPrecomputedColumn — base-field column with a static assignment.
         %% The round is implicit: always System.PrecomputedRound.
-        + NewPrecomputedColumn(ctx *ContextFrame, vis Visibility, assignment *ConcreteVector) *Column
+        + NewPrecomputedColumn(ctx *ContextFrame, assignment *ConcreteVector) *Column
         %% NewVanishing — cancelled positions derived from the expression's shifts.
         + NewVanishing(ctx *ContextFrame, expr Expression) *Vanishing
         %% NewVanishingManual — explicit cancellation set.
@@ -146,7 +126,6 @@ classDiagram
     %% with which the verifier interacts.
     class Column {
         + Context *ContextFrame
-        + Visibility Visibility
         %% IsExtension indicates whether the column is evaluated over the
         %% extension field rather than the base field.
         + IsExtension bool
@@ -164,7 +143,6 @@ classDiagram
     }
 
     Column --() context
-    Column --> "1" Visibility : Visibility
 
     %% ColumnView represents a perspective over a column with an optional cyclic
     %% shift. A zero offset is the unshifted identity view returned by Column.View.
@@ -183,7 +161,6 @@ classDiagram
         + Module() *Module     %% Delegates to Column.Module
         + IsSized() bool       %% Delegates to Column.Module.IsSized()
         + Size() int           %% Delegates to Column.Module.Size()
-        + Visibility() Visibility %% Delegates to Column.Visibility
 
         + EvaluateVector(Runtime) ConcreteVector
         %% EvaluateSingle always panics: a ColumnView is vector-valued.
@@ -207,7 +184,6 @@ classDiagram
         + Module() *Module        %% Always nil — ColumnPosition is scalar
         + IsSized() bool          %% Panics — no meaning for a scalar
         + Size() int              %% Panics — no meaning for a scalar
-        + Visibility() Visibility %% Delegates to Column.Visibility
 
         %% EvaluateVector always panics: ColumnPosition is scalar.
         + EvaluateVector(Runtime) ConcreteVector
@@ -220,7 +196,7 @@ classDiagram
     ColumnPosition --> "1" Column : Column
 
     %% Cell represents a single-valued field element that the prover commits
-    %% to and with which the verifier may interact. Always VisibilityPublic.
+    %% to and with which the verifier may interact.
     class Cell {
         + Context *ContextFrame
         + Annotations Annotations
@@ -243,8 +219,6 @@ classDiagram
         %% EvaluateVector panics: a cell is scalar.
         + EvaluateVector(Runtime) ConcreteVector
         + EvaluateSingle(Runtime) ConcreteField
-        %% Visibility always returns VisibilityPublic.
-        + Visibility() Visibility
     }
 
     Cell --() context
@@ -310,7 +284,6 @@ classDiagram
         + EvaluateSingle(Runtime) ConcreteField
         + Degree() int
         + DegreeFactor() int
-        + Visibility() Visibility
     }
 
     ArithmeticOperation --> "1..n" Expression : Operands
@@ -335,7 +308,6 @@ classDiagram
         + Module() *Module
         %% The following may only be called when IsMultiValued() is false.
         + EvaluateSingle(Runtime) ConcreteField
-        + Visibility() Visibility
     }
 
     Expression <|-- ArithmeticOperation
@@ -344,7 +316,7 @@ classDiagram
 
     %% CoinField represents a random coin challenge drawn by the verifier at
     %% the start of a round. Always extension-field (IsExtension == true) and
-    %% always VisibilityPublic. Declared via Round.NewCoinField.
+    %% Declared via Round.NewCoinField.
     class CoinField {
         + Context *ContextFrame
         + Annotations Annotations
@@ -367,8 +339,6 @@ classDiagram
         %% EvaluateVector panics.
         + EvaluateVector(Runtime) ConcreteVector
         + EvaluateSingle(Runtime) ConcreteField
-        %% Visibility always returns VisibilityPublic.
-        + Visibility() Visibility
     }
 
     CoinField --() context
@@ -384,7 +354,7 @@ classDiagram
     %%     IsMultiValued == true; EvaluateVector returns Value repeated
     %%     Module.Size() times; EvaluateSingle panics.
     %%
-    %% Constant is never extension-field and is always VisibilityPublic.
+    %% Constant is never extension-field.
     %%
     %% Constructors:
     %%   NewConstantField(v field.Element) *Constant          (module = nil)
@@ -396,8 +366,6 @@ classDiagram
         + IsExtension() bool
         %% Returns true iff module is non-nil.
         + IsMultiValued() bool
-        %% Always VisibilityPublic.
-        + Visibility() Visibility
         %% Returns 0 if scalar; Module.Size()-1 if vector (panics if unsized).
         + Degree() int
         %% Returns 0 if scalar; 1 if vector.
@@ -480,6 +448,9 @@ classDiagram
         + LagrangeEvals []*LagrangeEval
         + TableRelations []*TableRelationQuery
         + LogDerivativeSums []*LogDerivativeSum
+        %% PublicInputs holds the cells promoted to public inputs, in
+        %% registration order — the layout of the flat PublicInput vector.
+        + PublicInputs []*Cell
         + Annotations Annotations
         - scratchArena *arena.VectorArena
         %% Free releases the scratch memory arena allocated by Materialize.
@@ -495,6 +466,12 @@ classDiagram
         + LookupColumn(id ObjectID) *Column
         + LookupCell(id ObjectID) *Cell
         + LookupCoinField(id ObjectID) *CoinField
+        %% RegisterPublicInputs promotes an existing cell to a public input,
+        %% tagging it (optionally with a numeric suffix) under the reserved
+        %% PublicInputTagKey annotation.
+        + RegisterPublicInputs(tag PublicInputTag, cell *Cell, numericSuffix ...int)
+        + LookupPublicInput(objID ObjectID) (*Cell, int)
+        + LookupPublicInputByTag(tag PublicInputTag, numericSuffix ...int) (*Cell, int)
     }
 
     System *-- "1" PrecomputedRound : PrecomputedRound

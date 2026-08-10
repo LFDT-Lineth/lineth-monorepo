@@ -44,12 +44,12 @@ func TestFullPipeline_LookupRowLimit_TamperedDynamicSize(t *testing.T) {
 
 	// B (including) side: a tiny static lookup table {7, 7}.
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 2, wiop.PaddingDirectionRight)
-	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
+	colT := modT.NewColumn(sys.Context.Childf("T"), r0)
 
 	// A (included) side: a dynamic module. At compile time it is assumed to be
 	// at most 2^22 rows, so the lookup passes the compile-time budget check.
 	dynMod := sys.NewDynamicModule(sys.Context.Childf("dynS"), wiop.PaddingDirectionRight)
-	colS := dynMod.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+	colS := dynMod.NewColumn(sys.Context.Childf("S"), r0)
 
 	sys.NewInclusion(
 		sys.Context.Childf("inc"),
