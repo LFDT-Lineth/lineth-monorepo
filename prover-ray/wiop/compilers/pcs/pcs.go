@@ -4,18 +4,19 @@
 // After the arithmetization passes (range check, lookup, log-derivative, local
 // vanishing, global quotient) have reduced every constraint to a set of
 // [wiop.LagrangeEval] claims — "column C evaluated at the point zeta equals the
-// value in this cell" — the columns themselves are still transported in the
-// clear inside the [wiop.Proof]. This pass closes that gap: it commits to every
-// committed column with a FRI Merkle commitment, hides the columns
-// ([wiop.VisibilityInternal]), and produces a single FRI opening proof that
-// binds every LagrangeEval claim cell to its committed column at zeta.
+// value in this cell" — nothing yet ties those claims to an actual witness: the
+// columns never travel in the [wiop.Proof] and never enter the Fiat-Shamir
+// transcript on their own. This pass closes that gap: it commits to every
+// committed column with a FRI Merkle commitment and produces a single FRI
+// opening proof that binds every LagrangeEval claim cell to its committed
+// column at zeta.
 //
 // Compile wires three kinds of actions:
 //
 //   - one commit prover-action per interactive round that owns columns: it FRI-
 //     commits that round's columns and records the Merkle root in
 //     [Runtime.Commitments]. [Runtime.AdvanceRound] then absorbs that root into
-//     Fiat-Shamir in place of the (now internal) raw columns.
+//     Fiat-Shamir in place of that round's raw columns.
 //   - one opening prover-action, in a fresh final round, that batches every
 //     committed round (plus the static precomputed round) into the FRI opener,
 //     folds, and stores the resulting opening proof on the runtime.
@@ -181,12 +182,9 @@ func Compile(sys *wiop.System) {
 		sys.PrecomputedCommitment = c.precomputedRoot
 	}
 
-	// For each committed interactive round: hide its columns, flag the round as
-	// carrying a commitment (so AdvanceRound absorbs the root), and register the
-	// commit action that computes that root at prove time.
-	//
-	// In previous version, this loop used to also "hide" the columns so that
-	// they are discounted by the Fiat-Shamir hasher. This is now implicit.
+	// For each committed interactive round: flag the round as carrying a
+	// commitment (so AdvanceRound absorbs the root), and register the commit
+	// action that computes that root at prove time.
 	for _, b := range batches {
 		if b.IsPrecomp {
 			continue

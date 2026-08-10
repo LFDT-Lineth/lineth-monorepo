@@ -42,7 +42,7 @@ type Round struct {
 	VerifierActions []VerifierAction
 	// PreSamplingHooks holds prover-side actions registered to fire BEFORE
 	// any [CoinField] in this round is sampled. They run during
-	// [Runtime.AdvanceRound] *after* the previous round's columns and cells
+	// [Runtime.AdvanceRound] *after* the previous round's commitment and cells
 	// have been absorbed into the Fiat–Shamir state but *before* this
 	// round's coins are derived. Hooks run in declaration order.
 	//

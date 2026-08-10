@@ -134,17 +134,6 @@ func TestCompileDynamicModulePaddingLeft(t *testing.T) {
 	require.NoError(t, sys.Verify(proof, pub), "left-padded column must verify")
 }
 
-// TestCompileRejectsPublicColumn checks that a verifier-visible column in a
-// committed round is rejected: it cannot be replaced by a commitment.
-func TestCompileRejectsPublicColumn(t *testing.T) {
-	sys := wiop.NewSystemf("pcs-pub")
-	r0 := sys.NewRound()
-	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	mod.NewColumn(sys.Context.Childf("pub"), r0)
-
-	require.Panics(t, func() { Compile(sys) }, "a public committed column must be rejected")
-}
-
 // TestCompileRejectsTamperedCommitment checks that corrupting a transported
 // round commitment is rejected.
 func TestCompileRejectsTamperedCommitment(t *testing.T) {

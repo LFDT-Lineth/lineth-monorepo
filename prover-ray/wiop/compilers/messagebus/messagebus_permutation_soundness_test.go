@@ -70,17 +70,26 @@ func TestCompile_Permutation_MultiColumnTuples(t *testing.T) {
 			sys.Context.Childf("recv-B"), "shard", "kv",
 			wiop.NewTable(keyB.View(), valB.View()))
 
-		compilePermutationBus(sys)
+		// Width-2 folding is only meaningful when α is unpredictable, which
+		// requires the PCS pass -- see compilePermutationBusWithPCS. With α = 0
+		// the tuple collapses onto its key column and this test would pass even
+		// if the value column were ignored outright.
+		//
+		// Going through the PCS pass also means going through Prove/Verify rather
+		// than drive + checkAllVerifierActions: the PCS opening verifier replays
+		// the Fiat-Shamir transcript from scratch, which it can only do on a fresh
+		// verifier runtime, not on the prover's already-advanced one.
+		compilePermutationBusWithPCS(sys)
 
-		rt := wiop.NewRuntime(sys)
-		rt.AssignColumn(keyA, makeVec(1, 2, 3, 4))
-		rt.AssignColumn(valA, makeVec(10, 20, 30, 40))
-		// B is a reordering of A's (key, value) tuples.
-		rt.AssignColumn(keyB, makeVec(3, 1, 4, 2))
-		rt.AssignColumn(valB, makeVec(30, 10, 40, 20))
+		proof, pub := sys.Prove(func(rt *wiop.Runtime) {
+			rt.AssignColumn(keyA, makeVec(1, 2, 3, 4))
+			rt.AssignColumn(valA, makeVec(10, 20, 30, 40))
+			// B is a reordering of A's (key, value) tuples.
+			rt.AssignColumn(keyB, makeVec(3, 1, 4, 2))
+			rt.AssignColumn(valB, makeVec(30, 10, 40, 20))
+		})
 
-		drive(rt)
-		require.NoError(t, checkAllVerifierActions(rt),
+		require.NoError(t, sys.Verify(proof, pub),
 			"a balanced width-2 permutation must be accepted")
 	})
 }
@@ -105,16 +114,22 @@ func TestCompile_Permutation_MultiColumnTuples_Unbalanced(t *testing.T) {
 			sys.Context.Childf("recv-B"), "shard", "kv",
 			wiop.NewTable(keyB.View(), valB.View()))
 
-		compilePermutationBus(sys)
+		// The PCS pass is load-bearing here: it is what binds the witness into
+		// Fiat-Shamir and makes α unpredictable. Without it α is 0, the (key,
+		// value) tuple folds down to its key alone -- and the keys below DO
+		// match -- so the tampered value slips through and the verifier accepts.
+		// See the completeness counterpart above for why this goes through
+		// Prove/Verify rather than drive + checkAllVerifierActions.
+		compilePermutationBusWithPCS(sys)
 
-		rt := wiop.NewRuntime(sys)
-		rt.AssignColumn(keyA, makeVec(1, 2, 3, 4))
-		rt.AssignColumn(valA, makeVec(10, 20, 30, 40))
-		rt.AssignColumn(keyB, makeVec(1, 2, 3, 4))
-		rt.AssignColumn(valB, makeVec(10, 21, 30, 40)) // (2,21) is not a sent tuple
+		proof, pub := sys.Prove(func(rt *wiop.Runtime) {
+			rt.AssignColumn(keyA, makeVec(1, 2, 3, 4))
+			rt.AssignColumn(valA, makeVec(10, 20, 30, 40))
+			rt.AssignColumn(keyB, makeVec(1, 2, 3, 4))
+			rt.AssignColumn(valB, makeVec(10, 21, 30, 40)) // (2,21) is not a sent tuple
+		})
 
-		drive(rt)
-		assert.Error(t, checkAllVerifierActions(rt),
+		assert.Error(t, sys.Verify(proof, pub),
 			"a width-2 permutation with a mismatched tuple must be rejected")
 	})
 }

@@ -5,7 +5,10 @@ import (
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/grandproduct"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/localvanishing"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/wioptest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -58,11 +61,27 @@ func TestCompile_WioptestCompleteness(t *testing.T) {
 // TestCompile_WioptestSoundness drives every permutation scenario's invalid
 // path: a non-permutation witness makes the grand product differ from one, so
 // CheckResultIsOne (and FinalProductCheck) must reject it.
+//
+// Unlike the completeness test above, this one runs the pipeline all the way
+// through the PCS pass rather than the grandproduct pass alone -- see the
+// comment inside the loop for why that is load-bearing here.
 func TestCompile_WioptestSoundness(t *testing.T) {
 	for _, build := range wioptest.PermutationScenarios() {
 		sc := build()
 		t.Run(sc.Name, func(t *testing.T) {
 			grandproduct.Compile(sc.Sys)
+			// The passes below are needed for soundness, not just for coverage.
+			// The PCS step is what puts the witness into the Fiat-Shamir
+			// transcript (as a per-round commitment); without it the transcript is
+			// still empty when β is drawn, so β is a constant -- and the first coin
+			// drawn from an untouched transcript is zero, which collapses a
+			// multi-column tuple onto its first column and lets a tampered value
+			// column through. PCS in turn needs the LagrangeEval claims that only
+			// the local-vanishing and global passes produce, so the whole tail of
+			// the pipeline has to run.
+			localvanishing.Compile(sc.Sys)
+			global.Compile(sc.Sys)
+			pcs.Compile(sc.Sys)
 			proof, pub := sc.Sys.Prove(sc.AssignInvalid)
 			assert.Error(t, sc.Sys.Verify(proof, pub),
 				"compiled verifier must reject a non-permutation witness")

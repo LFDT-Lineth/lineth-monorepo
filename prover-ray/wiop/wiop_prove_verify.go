@@ -19,11 +19,14 @@ import (
 // every Fiat-Shamir challenge itself by replaying the transcript, so a prover
 // cannot influence the challenges by supplying forged coin values.
 //
-// Columns are not carried in the proof and are not absorbed into the
-// Fiat-Shamir transcript. Binding the columns into the transcript is the job of
-// the commitment scheme (the verifier will absorb each column's commitment, not
-// its raw values); until that lands, the verifier has no column data and cannot
-// detect a tampered witness.
+// Columns are never carried in the proof, and their raw values are never
+// absorbed into the Fiat-Shamir transcript. Binding them is the commitment
+// scheme's job: a PCS-compiled protocol carries one commitment per committed
+// round in Commitments, and [Runtime.AdvanceRound] absorbs that commitment
+// instead. A protocol that was NOT PCS-compiled therefore has no witness
+// binding at all -- the verifier holds no column data and cannot detect a
+// tampered witness -- so running the PCS pass is what makes a protocol sound,
+// not an optional final optimisation.
 type Proof struct {
 	Cells map[ObjectID]field.Gen
 	// DynamicSizes maps module ID to their runtime size. The module ID
@@ -33,8 +36,8 @@ type Proof struct {
 	// of that round's committed columns, as produced by the PCS compiler. It is
 	// empty for protocols that were not PCS-compiled. The verifier reloads it
 	// into [Runtime.Commitments] so [Runtime.AdvanceRound] can replay the exact
-	// Fiat-Shamir transcript (which absorbs each commitment instead of the raw
-	// oracle columns once they have been made internal).
+	// Fiat-Shamir transcript, which absorbs each round's commitment in place of
+	// that round's columns.
 	Commitments map[int]field.Octuplet
 	// PCSOpeningProof is the FRI opening proof binding every claimed evaluation
 	// to the committed columns. It is a *fri.OpeningProof, held opaquely so the
@@ -110,6 +113,24 @@ func (sys *System) Prove(assign func(rt *Runtime), proveOpts ...ProveOptions) (P
 	// never overlap.
 	piIdx := sys.publicInputIndex()
 
+	// Sanity check: every column declared by the system must have been assigned
+	// by the time the prover is done. Columns no longer take part in the
+	// Fiat-Shamir transcript (binding them is the commitment scheme's job), so
+	// this check has no bearing on the coins; it is kept purely to fail loudly
+	// and precisely. A forgotten assignment is otherwise only discovered by
+	// whichever consumer happens to read the column next -- a commitment action
+	// or a constraint evaluation -- which reports the failure from deep inside
+	// its own code without naming the round that left the hole. The check lives
+	// here rather than in [Runtime.AdvanceRound] because it is prover-only:
+	// [System.Verify] replays the same rounds but assigns no columns at all.
+	for _, r := range sys.Rounds {
+		for _, col := range r.Columns {
+			if !rt.HasColumnAssignment(col) {
+				utils.Panic("wiop: missing column in runtime: %v", col.Context.Path())
+			}
+		}
+	}
+
 	for _, r := range sys.Rounds {
 		for _, cell := range r.Cells {
 			// Public inputs are carried separately in PublicInput.
@@ -153,10 +174,11 @@ func (sys *System) Prove(assign func(rt *Runtime), proveOpts ...ProveOptions) (P
 // from the cells. The prover therefore cannot forge a challenge. Verifier
 // actions read the re-derived coins and the cells.
 //
-// Verify also checks that the provided sizes are non-zero powers of two.
+// Verify also checks that the provided dynamic-module sizes are non-zero powers
+// of two, and that the proof carries exactly one size per dynamic module.
 //
-// The function also panics if the proof contains any unexpected columns or
-// cells. For the column it will check that their visibility is correct.
+// It returns an error if the proof contains a cell that the system does not
+// declare, or that the replay never consumed.
 func (sys *System) Verify(proof Proof, pub PublicInput) error {
 	rt := NewRuntime(sys) // currentRound = r0, preloads precomputed columns
 
@@ -168,11 +190,11 @@ func (sys *System) Verify(proof Proof, pub PublicInput) error {
 	}
 	rt.PCSOpeningProof = proof.PCSOpeningProof
 
-	// Dynamic-module sizes must be known before the transcript replay:
-	// AdvanceRound feeds them into Fiat-Shamir, and a PCS-compiled protocol hides
-	// the oracle columns that would otherwise set them as a side effect of
-	// assignment. Seed them up-front; they are re-validated (power of two,
-	// completeness, consistency with any visible column) after the replay.
+	// Dynamic-module sizes must be known before the transcript replay, because
+	// AdvanceRound feeds them into Fiat-Shamir. The verifier holds no column
+	// data, so it cannot derive them the way the prover does (as a side effect of
+	// assignment) and has to take them from the proof. They are re-validated
+	// (power of two, completeness) after the replay.
 	for k, v := range proof.DynamicSizes {
 		rt.dynamicSizes[k] = v
 	}
@@ -185,9 +207,9 @@ func (sys *System) Verify(proof Proof, pub PublicInput) error {
 		return fmt.Errorf("wiop: public inputs length mismatch: got %d, want %d", len(pub), len(sys.PublicInputs))
 	}
 
-	// assignRound loads the proof's committed columns and cells (and the public
-	// inputs) for r into the runtime. AssignColumn / AssignCell require r to be
-	// the current round, so this is always called on rt.CurrentRound().
+	// assignRound loads the proof's cells (and the public inputs) for r into the
+	// runtime. AssignCell requires r to be the current round, so this is always
+	// called on rt.CurrentRound().
 	assignRound := func(r *Round) error {
 
 		for _, cell := range r.Cells {
@@ -253,8 +275,11 @@ func (sys *System) Verify(proof Proof, pub PublicInput) error {
 	// Restore dynamic-module sizes so Module.RuntimeSize resolves during the
 	// verifier actions and the subsequent verifier checks. We check that the
 	// proof contains all the dynamic module sizes and only module sizes that
-	// exists in the system. Furthermore, we check that the size is a power of
-	//two.
+	// exist in the system. Furthermore, we check that the size is a power of two.
+	//
+	// The sizes themselves are taken on trust: the verifier holds no column data,
+	// so it has nothing to cross-check them against. Binding them to the witness
+	// is the commitment scheme's job.
 	for k := range sys.Modules {
 		if !sys.Modules[k].IsDynamic() {
 			continue
@@ -269,18 +294,14 @@ func (sys *System) Verify(proof Proof, pub PublicInput) error {
 			return fmt.Errorf("wiop: dynamic module %d size must be a power of two: %v", k, v)
 		}
 
-		// If the system contains dynamic-size visible columns, then the column
-		// assignment function will set the dynamic size for the corresponding
-		// modules. We check that these sizes are consistents in that case.
-		if n, ok := rt.dynamicSizes[k]; ok && n != v {
-			return fmt.Errorf("wiop: dynamic module %d size mismatch: %v vs %v", k, n, v)
-		}
-
 		rt.dynamicSizes[k] = v
 	}
 
+	// Reject sizes for modules that are not dynamic modules of the system. This
+	// is checked against sys.Modules and not rt.dynamicSizes, because the latter
+	// was seeded from proof.DynamicSizes above and would accept anything.
 	for k := range proof.DynamicSizes {
-		if _, ok := rt.dynamicSizes[k]; !ok {
+		if k < 0 || k >= len(sys.Modules) || !sys.Modules[k].IsDynamic() {
 			return fmt.Errorf("wiop: dynamic module does not exist in the system: %d", k)
 		}
 	}
