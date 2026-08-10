@@ -180,7 +180,7 @@ After writing or editing code, check LSP diagnostics and fix any type errors or 
 
 - **Formatter:** Prettier 3.8.4 — `prettier.config.mjs`
 - **Linter (TS/JS):** ESLint 9.39.4 flat config — `ts-libs/eslint-config/`
-- **Linter (Solidity):** Solhint 6.2.1 + Prettier plugin
+- **Linter (Solidity):** Solhint 6.2.3 + Prettier plugin
 - **Linter (Kotlin/Java):** Spotless with ktlint + Google Java Format
 - **Linter (Go):** gofmt + golangci-lint
 - **Line length:** 120 characters
