@@ -3,6 +3,7 @@
 ### 🚀 Features
 
 - *(coordinator)* Support custom transaction signers (#3597)
+- *(coordinator)* Implement ExecutionProofGeneratingCoordinator for RISC-V l2-execution proofs (#3684)
 
 ### 🐛 Bug Fixes
 
