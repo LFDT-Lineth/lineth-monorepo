@@ -32,6 +32,7 @@
         .ssz = .{
             .url = "https://github.com/blockblaz/ssz.zig/archive/refs/tags/v0.0.11.tar.gz",
             .hash = "ssz-0.0.9-Lfwd68m_AwAFGpz2g1kHvokWjp_UsvqDb3Z2D46w5s_-",
+            .lazy = true,
         },
     },
     .paths = .{

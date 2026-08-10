@@ -279,13 +279,11 @@ pub fn build(b: *std.Build) void {
         .optimize = host_optimize,
     });
     stateless_input_encode_mod.addImport("zesu_input", native_imports.input);
-    // A generic SSZ serialize/deserialize library over plain Zig structs. Test-only,
-    // native-target-only: the guest never imports this module (it has no relative or named import
-    // path to `stateless_input_encode.zig`), so `.ssz` never enters the freestanding riscv64 compile
-    // graph. The library's own build.zig exposes its module under the name "ssz.zig" (its literal
-    // `b.addModule` argument); "ssz" here is only this file's own local import name for it.
-    const ssz_dep = b.dependency("ssz", .{ .target = native_target, .optimize = host_optimize });
-    stateless_input_encode_mod.addImport("ssz", ssz_dep.module("ssz.zig"));
+    // Lazy: only fetched when a test needing stateless_input_encode is actually built. Module name
+    // is "ssz.zig" (the dependency's own b.addModule argument), not "ssz".
+    if (b.lazyDependency("ssz", .{ .target = native_target, .optimize = host_optimize })) |ssz_dep| {
+        stateless_input_encode_mod.addImport("ssz", ssz_dep.module("ssz.zig"));
+    }
 
     // ── `l2-execution-wrap` native host tool ────────────────────────────────────────────────────────
     // Wraps a vanilla EF stateless-input .ssz into an extended L2ExecutionProofPrivateInput .ssz
@@ -385,12 +383,8 @@ pub fn build(b: *std.Build) void {
         legacy_tx_rlp_mod.addImport("zesu_executor", native_imports.executor);
 
         // ── Vanilla StatelessInput SSZ encoder (test/stateless_input_encode.zig) unit tests ────────
-        // Test-only SSZ encoder for zesu's vanilla StatelessInput — the byte-level inverse of
-        // zesu_ssz_decode's decode, which ships with no matching encoder of its own. A round-trip
-        // test builds a StatelessInput as readable Zig and checks it survives encode-then-decode; a
-        // golden test decodes this same fixture and checks re-encoding it reproduces the original
-        // bytes exactly. Needs the same zesu_input/zesu_ssz_decode imports as the vanilla-wrap
-        // wiring, plus the fixtures module already built for the guest smoke test above.
+        // Reuses the zesu_input/zesu_ssz_decode imports already resolved above for vanilla_wrap_mod,
+        // plus the fixtures module already built for the guest smoke test above.
         const stateless_input_encode_tests = b.addTest(.{
             .root_module = b.createModule(.{
                 .root_source_file = b.path("test/stateless_input_encode_test.zig"),
@@ -407,13 +401,8 @@ pub fn build(b: *std.Build) void {
         test_step.dependOn(&b.addRunArtifact(stateless_input_encode_tests).step);
 
         // ── Conflation-plan test DSL parity guard (test/conflation_plan_parity_test.zig) ────────────
-        // Proves `conflation_plan.zig`'s `StubEngine` (the l2-execution guest's execution-seam stub)
-        // is a faithful stand-in for the real per-block execution seam on real data, and smoke-tests
-        // the `ConflationPlan` DSL itself end to end through the guest's real conflation logic.
-        // `conflation_plan.zig` is pulled in by relative import from the test file, so every import
-        // it needs (the full zesu set its real-MPT/real-header derivation uses, `l2_execution` for
-        // the seam, `l2_execution_ssz` for the envelope codec, and the shared
-        // `stateless_input_encode` module) is wired directly on this root module.
+        // conflation_plan.zig is pulled in by relative import, not its own module, so every import
+        // it needs is wired directly on this root module instead.
         const conflation_plan_parity_tests = b.addTest(.{
             .root_module = b.createModule(.{
                 .root_source_file = b.path("test/conflation_plan_parity_test.zig"),
@@ -436,33 +425,19 @@ pub fn build(b: *std.Build) void {
         test_step.dependOn(&b.addRunArtifact(conflation_plan_parity_tests).step);
 
         // ── Conflation-plan range scenario suite (test/l2_execution_range_test.zig) ───────────────
-        // One rich happy-path scenario asserting the full 16-field public input plus preimages,
-        // and twelve one-mutation rejection scenarios, both built on the `ConflationPlan` DSL —
-        // driving the guest's real conflation logic (`l2_execution.runL2ExecutionWithEngine`)
-        // through `StubEngine` instead of live EVM execution. Needs exactly the import set
-        // `conflation_plan.zig` itself needs, since it's pulled in by relative import from the
-        // test root, same as the parity test above.
+        // Same relative-import reasoning as the parity test above: needs conflation_plan.zig's own
+        // import set wired directly here.
         //
-        // secp256k1 signing primitive (test-only): the scenario's T1-T4 fixtures are built and
-        // signed live instead of loaded from pre-minted files, using zesu's own real backend.
-        // Cannot be wired by rooting a module directly at zesu's vendored
-        // src/crypto/backends/secp256k1_wrapper.zig the way modexp_impl_mod/ripemd160_impl_mod
-        // above root modules at their own backend files: unlike those two (which nothing else in
-        // the graph reaches), this file is ALSO relatively-imported by zesu's own native
-        // accel_impl root (src/crypto/default.zig, for its ecrecover/verify implementation), and
-        // accel_impl is always in this graph already (accelerators, needed transitively by
-        // zesu_executor/zesu_mpt for real EVM ecrecover). Rooting a second module at the same
-        // path double-claims it — Zig rejects a file belonging to two modules at once — and the
-        // exposed accelerators/accel_impl surface has no path to `sign`/`getContext` themselves
-        // (that surface only exposes verify/ecrecover; zesu itself never signs). A `WriteFile`
-        // step first copies the vendored file byte-for-byte to a fresh path outside zesu's own
-        // module tree, so the copy — the same real code, just reachable from a path nothing else
-        // claims — can root its own module. This file's `sign`/`getContext` reach a real
-        // `@cImport`'d secp256k1.h, and C include paths are per-module and don't cross a
-        // dependency boundary (zesu's own build.zig hits the same constraint wiring its
-        // `accel_impl` module: see its `addIncludePath` call there) — so this module needs its
-        // own include path even though `linkNativeZesuCrypto` below already links libsecp256k1
-        // into this test binary for `recoverFixtureSender`'s ecrecover path.
+        // secp256k1_wrapper.zig can't be rooted directly as its own module the way
+        // modexp_impl_mod/ripemd160_impl_mod are: unlike those two, this file is ALSO
+        // relatively-imported by zesu's own accel_impl root (already in this graph via
+        // accelerators), and Zig rejects one file belonging to two modules at once. The exposed
+        // accelerators surface has no path to `sign`/`getContext` either (it only exposes
+        // verify/ecrecover). A WriteFile step copies the file byte-for-byte to a fresh path
+        // nothing else claims, so the copy can root its own module. That module needs its own C
+        // include path for its `@cImport`'d secp256k1.h — C include paths are per-module and don't
+        // inherit from linkNativeZesuCrypto below (zesu's own build.zig hits the same constraint
+        // wiring accel_impl).
         const secp256k1_wrapper_copy = b.addWriteFiles();
         const secp256k1_wrapper_copy_path = secp256k1_wrapper_copy.addCopyFile(
             zesu_native.path("src/crypto/backends/secp256k1_wrapper.zig"),

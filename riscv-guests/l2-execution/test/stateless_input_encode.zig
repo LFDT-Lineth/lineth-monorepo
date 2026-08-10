@@ -144,6 +144,7 @@ pub fn encode(alloc: std.mem.Allocator, si: input.StatelessInput) ![]u8 {
     const ep = si.new_payload_request.execution_payload;
 
     const public_keys = try alloc.alloc([PUBKEY_SIZE]u8, si.public_keys.len);
+    defer alloc.free(public_keys);
     for (si.public_keys, 0..) |key, i| {
         if (key.len != PUBKEY_SIZE) return error.InvalidPublicKeySize;
         @memcpy(&public_keys[i], key);
