@@ -128,3 +128,4 @@
 - *(coordinator)* Update to vertx 5.1.5 (#3744)
 - *(coordinator)* Package renaming to lineth (#3746)
 - *(linea-besu)* Package renaming to lineth.* (#3750)
+- *(maru)* Package renaming to lineth.* from (net.consensys.zkevm.*, net.consensys.linea.*, net.consensys.*, build.linea.*, linea.*) (#3755)
