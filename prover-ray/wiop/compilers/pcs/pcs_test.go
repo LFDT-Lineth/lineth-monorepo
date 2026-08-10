@@ -34,7 +34,7 @@ func newPCSTestSystem() (*wiop.System, *wiop.Column, *wiop.LagrangeEval) {
 	r0 := sys.NewRound()
 	r1 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	zeta := r1.NewCoinField(sys.Context.Childf("zeta"))
 	le := sys.NewLagrangeEval(sys.Context.Childf("le"), []*wiop.ColumnView{col.View()}, zeta)
 	r1.RegisterAction(&selfAssignLagrange{le: le})
@@ -52,7 +52,6 @@ func TestCompileEndToEnd(t *testing.T) {
 	})
 
 	// The committed column must not survive as raw data in the proof.
-	require.Empty(t, proof.Columns, "PCS-compiled proof must not carry oracle columns")
 	require.NotNil(t, proof.PCSOpeningProof, "proof must carry the FRI opening proof")
 	require.NotEmpty(t, proof.Commitments, "proof must carry the round commitments")
 
@@ -83,7 +82,7 @@ func TestCompileDynamicModule(t *testing.T) {
 	r0 := sys.NewRound()
 	r1 := sys.NewRound()
 	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionRight)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	zeta := r1.NewCoinField(sys.Context.Childf("zeta"))
 	le := sys.NewLagrangeEval(sys.Context.Childf("le"), []*wiop.ColumnView{col.View()}, zeta)
 	r1.RegisterAction(&selfAssignLagrange{le: le})
@@ -112,7 +111,7 @@ func TestCompileDynamicModulePaddingLeft(t *testing.T) {
 	r0 := sys.NewRound()
 	r1 := sys.NewRound()
 	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionLeft)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	zeta := r1.NewCoinField(sys.Context.Childf("zeta"))
 	le := sys.NewLagrangeEval(sys.Context.Childf("le"), []*wiop.ColumnView{col.View()}, zeta)
 	r1.RegisterAction(&selfAssignLagrange{le: le})
@@ -133,17 +132,6 @@ func TestCompileDynamicModulePaddingLeft(t *testing.T) {
 	})
 
 	require.NoError(t, sys.Verify(proof, pub), "left-padded column must verify")
-}
-
-// TestCompileRejectsPublicColumn checks that a verifier-visible column in a
-// committed round is rejected: it cannot be replaced by a commitment.
-func TestCompileRejectsPublicColumn(t *testing.T) {
-	sys := wiop.NewSystemf("pcs-pub")
-	r0 := sys.NewRound()
-	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	mod.NewColumn(sys.Context.Childf("pub"), wiop.VisibilityPublic, r0)
-
-	require.Panics(t, func() { Compile(sys) }, "a public committed column must be rejected")
 }
 
 // TestCompileRejectsTamperedCommitment checks that corrupting a transported

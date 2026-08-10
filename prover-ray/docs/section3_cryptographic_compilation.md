@@ -73,25 +73,28 @@ arithmetization are dynamically sized.
 > Size homogenization is deferred to and absorbed by the polynomial commitment
 > scheme (§3.4). The Arcane compiler has **no splitting/sticking passes**.
 
-### 3.2.2 Visibilities
+### 3.2.2 How columns reach the verifier
 
-Every column carries a **visibility** that controls both query eligibility and
-how the object is folded into the Fiat–Shamir transcript:
+Columns are uniform: there is no per-column visibility level, and no column is
+ever transported to the verifier in the clear. Every column declared in an
+interactive round is committed to, and the verifier only ever sees
 
-- **Internal** — purely a prover-side value. An Internal object may not appear in
-  an *active* (not-yet-reduced) query; any query containing an Internal leaf must
-  be compiled away before verification. Not fed to Fiat–Shamir.
-- **Oracle** — usable in active queries; committed to during compilation and fed
-  to Fiat–Shamir as a column commitment. Not directly visible to the verifier.
-- **Public** — usable in active queries and directly visible to the verifier; fed
-  to Fiat–Shamir as raw values, and readable by verifier steps.
+- the **commitment** to each round's columns, absorbed into the Fiat–Shamir
+  transcript in place of the columns themselves (§3.4), and
+- the **scalar openings** (cells) that the arithmetization passes reduce every
+  constraint down to, together with the opening proof binding them to the
+  commitment.
 
-An expression's effective visibility is the minimum over its leaves. Note that
-"precomputed" is **not** a visibility: a precomputed column is one declared in the
-offline precomputation round with a static assignment, and it still carries
-`Oracle` (committed) visibility.
+Note that "precomputed" is not a property of this classification: a precomputed
+column is simply one declared in the offline precomputation round with a static
+assignment. It is committed to like any other, once at compile time rather than
+per proof.
 
-@azam; examples for Internal and public visibility.
+Since the commitment is what ties the challenges to the witness, a protocol
+compiled *without* the polynomial commitment pass has no witness binding: its
+Fiat–Shamir challenges are independent of the columns, and the verifier has no
+column data to check anything against. The commitment pass is what makes the
+protocol sound, not a final size optimisation.
 
 ### 3.2.3 Column Views
 

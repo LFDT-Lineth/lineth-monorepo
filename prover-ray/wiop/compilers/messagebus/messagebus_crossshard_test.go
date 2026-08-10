@@ -39,7 +39,7 @@ func buildSingleDirectionShard(
 	setupMessageBusHook(sys) // shared seed → same α, β as every sibling shard
 
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("c"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("c"), r0)
 
 	var mb *wiop.MessageBus
 	switch dir {
@@ -174,8 +174,8 @@ func buildBidirectionalShard(
 	handles := make([]string, 0, len(traffic))
 
 	for _, tr := range traffic {
-		colA := mod.NewColumn(sys.Context.Childf("a-%s", tr.handle), wiop.VisibilityOracle, r0)
-		colB := mod.NewColumn(sys.Context.Childf("b-%s", tr.handle), wiop.VisibilityOracle, r0)
+		colA := mod.NewColumn(sys.Context.Childf("a-%s", tr.handle), r0)
+		colB := mod.NewColumn(sys.Context.Childf("b-%s", tr.handle), r0)
 
 		send := sys.NewMessageBusSend(
 			sys.Context.Childf("send-%s", tr.handle), originShard, tr.handle,

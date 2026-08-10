@@ -14,10 +14,10 @@ import (
 func newBusPair(sys *wiop.System, mod *wiop.Module, r0 *wiop.Round, handle string) {
 	send := sys.NewMessageBusSend(
 		sys.Context.Childf("send-%s", handle), "shard", handle,
-		wiop.NewTable(mod.NewColumn(sys.Context.Childf("a-%s", handle), wiop.VisibilityOracle, r0).View()))
+		wiop.NewTable(mod.NewColumn(sys.Context.Childf("a-%s", handle), r0).View()))
 	recv := sys.NewMessageBusReceive(
 		sys.Context.Childf("recv-%s", handle), "shard", handle,
-		wiop.NewTable(mod.NewColumn(sys.Context.Childf("b-%s", handle), wiop.VisibilityOracle, r0).View()))
+		wiop.NewTable(mod.NewColumn(sys.Context.Childf("b-%s", handle), r0).View()))
 	send.SkipInShardCheck, recv.SkipInShardCheck = true, true
 }
 
@@ -96,7 +96,7 @@ func TestMessageBusHandles(t *testing.T) {
 	}
 
 	for i, p := range participants {
-		col := mod.NewColumn(sys.Context.Childf("col-%d", i), wiop.VisibilityOracle, r0)
+		col := mod.NewColumn(sys.Context.Childf("col-%d", i), r0)
 		tab := wiop.NewTable(col.View())
 		var mb *wiop.MessageBus
 		if p.send {
