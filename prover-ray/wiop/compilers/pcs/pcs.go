@@ -184,11 +184,13 @@ func Compile(sys *wiop.System) {
 	// For each committed interactive round: hide its columns, flag the round as
 	// carrying a commitment (so AdvanceRound absorbs the root), and register the
 	// commit action that computes that root at prove time.
+	//
+	// In previous version, this loop used to also "hide" the columns so that
+	// they are discounted by the Fiat-Shamir hasher. This is now implicit.
 	for _, b := range batches {
 		if b.IsPrecomp {
 			continue
 		}
-		hideCommittedColumns(b.Round)
 		b.Round.HasCommitment = true
 		b.Round.RegisterAction(&commitRoundAction{c: c, round: b.Round})
 	}
@@ -215,24 +217,6 @@ func CommittedBatches(sys *wiop.System) []BatchRef {
 		refs = append(refs, BatchRef{Round: &sys.PrecomputedRound.Round, IsPrecomp: true})
 	}
 	return refs
-}
-
-// hideCommittedColumns turns every column of a committed round internal so it is
-// neither absorbed as raw data into Fiat-Shamir nor carried in the proof; the
-// commitment stands in for it. Verifier-visible (public) columns cannot be
-// replaced by a commitment, so they are rejected explicitly.
-func hideCommittedColumns(round *wiop.Round) {
-	for i := range round.Columns {
-		col := round.Columns[i]
-		if col.Visibility == wiop.VisibilityPublic {
-			panic(fmt.Sprintf(
-				"pcs: committed round %d holds a verifier-visible (public) column %q; "+
-					"public columns cannot be hidden behind a commitment",
-				round.ID, col.Context.Path(),
-			))
-		}
-		round.Columns[i].Visibility = wiop.VisibilityInternal
-	}
 }
 
 // =============================================================================

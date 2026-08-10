@@ -89,7 +89,7 @@ func newCarryColumns(q *wiop.NonNative, ctx *wiop.ContextFrame) []*wiop.Column {
 	nbCarry := nbMultiplicationResLimbs(len(q.Left), len(q.Right))
 	carry := make([]*wiop.Column, nbCarry)
 	for i := range carry {
-		carry[i] = q.Module.NewColumn(ctx.Childf("limb-%d", i), wiop.VisibilityOracle, q.InputRound)
+		carry[i] = q.Module.NewColumn(ctx.Childf("limb-%d", i), q.InputRound)
 	}
 	return carry
 }

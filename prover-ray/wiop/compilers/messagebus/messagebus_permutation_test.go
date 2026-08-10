@@ -27,8 +27,8 @@ func TestCompile_Permutation_Balanced(t *testing.T) {
 		t.Helper()
 		modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 		modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-		colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-		colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+		colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+		colB := modB.NewColumn(sys.Context.Childf("B"), r0)
 
 		sys.NewMessageBusSend(
 			sys.Context.Childf("send-A"), "shard", "route", wiop.NewTable(colA.View()))
@@ -55,8 +55,8 @@ func TestCompile_Permutation_Unbalanced(t *testing.T) {
 		t.Helper()
 		modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 		modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-		colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-		colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+		colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+		colB := modB.NewColumn(sys.Context.Childf("B"), r0)
 
 		sys.NewMessageBusSend(
 			sys.Context.Childf("send-A"), "shard", "route", wiop.NewTable(colA.View()))
@@ -83,10 +83,10 @@ func TestCompile_Permutation_WithSelectorBalanced(t *testing.T) {
 	r0 := sys.NewRound()
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	selA := modA.NewColumn(sys.Context.Childf("selA"), wiop.VisibilityOracle, r0)
-	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
-	selB := modB.NewColumn(sys.Context.Childf("selB"), wiop.VisibilityOracle, r0)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	selA := modA.NewColumn(sys.Context.Childf("selA"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
+	selB := modB.NewColumn(sys.Context.Childf("selB"), r0)
 
 	sys.NewMessageBusSend(
 		sys.Context.Childf("send-A"), "shard", "route",
@@ -118,10 +118,10 @@ func TestCompile_Permutation_WithSelectorUnbalanced(t *testing.T) {
 	r0 := sys.NewRound()
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	selA := modA.NewColumn(sys.Context.Childf("selA"), wiop.VisibilityOracle, r0)
-	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
-	selB := modB.NewColumn(sys.Context.Childf("selB"), wiop.VisibilityOracle, r0)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	selA := modA.NewColumn(sys.Context.Childf("selA"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
+	selB := modB.NewColumn(sys.Context.Childf("selB"), r0)
 
 	sys.NewMessageBusSend(
 		sys.Context.Childf("send-A"), "shard", "route",
@@ -150,8 +150,8 @@ func TestNewMessageBus_SetsDirectionAndAllowsSelector(t *testing.T) {
 	sys := wiop.NewSystemf("mb-perm-ctor")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("c"), wiop.VisibilityOracle, r0)
-	sel := mod.NewColumn(sys.Context.Childf("sel"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("c"), r0)
+	sel := mod.NewColumn(sys.Context.Childf("sel"), r0)
 
 	send := sys.NewMessageBusSend(
 		sys.Context.Childf("send"), "shard", "route", wiop.NewTable(col.View()))

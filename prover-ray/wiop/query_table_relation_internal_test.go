@@ -30,10 +30,10 @@ func TestValidateRowLimit_DynamicOverLimit(t *testing.T) {
 	r0 := sys.NewRound()
 
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 2, PaddingDirectionRight)
-	colT := modT.NewColumn(sys.Context.Childf("T"), VisibilityOracle, r0)
+	colT := modT.NewColumn(sys.Context.Childf("T"), r0)
 
 	dynMod := sys.NewDynamicModule(sys.Context.Childf("dynS"), PaddingDirectionRight)
-	dynCol := dynMod.NewColumn(sys.Context.Childf("S"), VisibilityOracle, r0)
+	dynCol := dynMod.NewColumn(sys.Context.Childf("S"), r0)
 
 	inc := sys.NewInclusion(
 		sys.Context.Childf("inc"),
@@ -65,10 +65,10 @@ func TestValidateRowLimit_DynamicWithinCap(t *testing.T) {
 	r0 := sys.NewRound()
 
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 2, PaddingDirectionRight)
-	colT := modT.NewColumn(sys.Context.Childf("T"), VisibilityOracle, r0)
+	colT := modT.NewColumn(sys.Context.Childf("T"), r0)
 
 	dynMod := sys.NewDynamicModule(sys.Context.Childf("dynS"), PaddingDirectionRight)
-	dynCol := dynMod.NewColumn(sys.Context.Childf("S"), VisibilityOracle, r0)
+	dynCol := dynMod.NewColumn(sys.Context.Childf("S"), r0)
 
 	inc := sys.NewInclusion(
 		sys.Context.Childf("inc"),
@@ -103,10 +103,10 @@ func TestPermutationRowLimit_DynamicOverLimit(t *testing.T) {
 
 	// A side on a dynamic module; B side a tiny static module.
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 2, PaddingDirectionRight)
-	colB := modB.NewColumn(sys.Context.Childf("B"), VisibilityOracle, r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
 
 	dynA := sys.NewDynamicModule(sys.Context.Childf("dynA"), PaddingDirectionRight)
-	colA := dynA.NewColumn(sys.Context.Childf("A"), VisibilityOracle, r0)
+	colA := dynA.NewColumn(sys.Context.Childf("A"), r0)
 
 	perm := sys.NewPermutation(
 		sys.Context.Childf("perm"),

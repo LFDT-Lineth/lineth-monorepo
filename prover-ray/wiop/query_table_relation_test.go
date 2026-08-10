@@ -358,8 +358,8 @@ func newRowLimitInclusion(t *testing.T, aSize, bSize int) (*wiop.TableRelationQu
 	r0 := sys.NewRound()
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), bSize, wiop.PaddingDirectionRight)
 	modS := sys.NewSizedModule(sys.Context.Childf("modS"), aSize, wiop.PaddingDirectionRight)
-	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
-	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+	colT := modT.NewColumn(sys.Context.Childf("T"), r0)
+	colS := modS.NewColumn(sys.Context.Childf("S"), r0)
 	inc := sys.NewInclusion(
 		sys.Context.Childf("inc"),
 		[]wiop.Table{wiop.NewTable(colS.View())},
@@ -408,11 +408,11 @@ func TestPrevalidateRowLimit_DynamicCountsAsMax(t *testing.T) {
 	sys := wiop.NewSystemf("rowlimit-dyn")
 	r0 := sys.NewRound()
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 2, wiop.PaddingDirectionRight)
-	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
+	colT := modT.NewColumn(sys.Context.Childf("T"), r0)
 
 	// A single dynamic A fragment: counted as 2^22, well under 2^30 → passes.
 	dynMod := sys.NewDynamicModule(sys.Context.Childf("dynS"), wiop.PaddingDirectionRight)
-	dynCol := dynMod.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+	dynCol := dynMod.NewColumn(sys.Context.Childf("S"), r0)
 	inc := sys.NewInclusion(
 		sys.Context.Childf("inc"),
 		[]wiop.Table{wiop.NewTable(dynCol.View())},
@@ -425,7 +425,7 @@ func TestPrevalidateRowLimit_DynamicCountsAsMax(t *testing.T) {
 	aFrags := make([]wiop.Table, 256)
 	for i := range aFrags {
 		m := sys.NewDynamicModule(sys.Context.Childf("dynA%d", i), wiop.PaddingDirectionRight)
-		c := m.NewColumn(sys.Context.Childf("A%d", i), wiop.VisibilityOracle, r0)
+		c := m.NewColumn(sys.Context.Childf("A%d", i), r0)
 		aFrags[i] = wiop.NewTable(c.View())
 	}
 	incMany := sys.NewInclusion(
