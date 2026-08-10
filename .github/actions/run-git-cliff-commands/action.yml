@@ -56,6 +56,12 @@ outputs:
 runs:
   using: 'composite'
   steps:
+    # The step bodies live in scripts/*.sh and are driven through the Makefile
+    # (targets: paths, render, version, changelog) so the same logic backs both
+    # this action and local `make *-dry-run` previews. See ./Makefile.
+    # Steps run from the repo root (GITHUB_WORKSPACE); the scripts append their
+    # step outputs to $GITHUB_OUTPUT.
+
     # Normalize inputs.include-path (newline-separated paths) into one
     # trimmed, non-empty path per line so downstream steps can reconstruct a
     # bash array safely.
@@ -64,36 +70,17 @@ runs:
       shell: bash
       env:
         INCLUDE_PATH: ${{ inputs.include-path }}
-      run: |
-        set -euo pipefail
-        {
-          echo 'include_paths<<__PATHS_EOF__'
-          printf '%s\n' "$INCLUDE_PATH" \
-            | awk '{ sub(/^[[:space:]]+/,""); sub(/[[:space:]]+$/,""); if (length) print }'
-          echo '__PATHS_EOF__'
-        } >> "$GITHUB_OUTPUT"
+      run: make -f "${{ github.action_path }}/Makefile" paths
 
     # Render the shared cliff template into a temp config with the caller's
-    # scopes injected into the @@SCOPES@@ placeholder. git-cliff can't inject
-    # scopes into commit_parsers itself, so we substitute at run time and point
-    # every git cliff invocation below at the rendered file.
+    # scopes injected into the @@SCOPES@@ placeholder.
     - name: Render git-cliff config with injected scopes
       id: render
       shell: bash
       env:
         SCOPES: ${{ inputs.scopes }}
         TEMPLATE: ${{ inputs.cliff-template }}
-      run: |
-        set -euo pipefail
-        if [ -z "${SCOPES}" ]; then
-          echo "scopes input must be non-empty" >&2
-          exit 1
-        fi
-        rendered="${RUNNER_TEMP:-/tmp}/cliff.rendered.toml"
-        # '#' delimiter is safe: neither the placeholder nor scope tokens (which
-        # may contain '|') contain '#'.
-        sed "s#@@SCOPES@@#${SCOPES}#g" "${TEMPLATE}" > "${rendered}"
-        echo "config=${rendered}" >> "$GITHUB_OUTPUT"
+      run: make -f "${{ github.action_path }}/Makefile" render
 
     # Compute the next release version
     - name: Compute next ${{ inputs.component-name }} version (semver)
@@ -103,125 +90,31 @@ runs:
         COMPONENT: ${{ inputs.component-name }}
         CLIFF_CONFIG: ${{ steps.render.outputs.config }}
         RELEASE_TAG_SUFFIX: ${{ inputs.release_tag_suffix }}
-      run: |
-        set -euo pipefail
-
-        # Get the latest tag matching the release pattern (newest by semver).
-        latest_tag=$(git tag --list "releases/${COMPONENT}/v*" \
-          | grep -E "^releases/${COMPONENT}/v[0-9]+\.[0-9]+\.[0-9]+$" \
-          | sort -V \
-          | tail -n 1 \
-          || true)
-
-        mapfile -t paths <<< "${{ steps.paths.outputs.include_paths }}"
-        # --unreleased scopes the bump computation to commits since the last
-        # matching tag. Without it, git-cliff walks the full visible history
-        # and can over-bump (e.g. counting feats from prior release windows).
-        cliff_args=(--config "${CLIFF_CONFIG}" --bumped-version --unreleased)
-        for p in "${paths[@]}"; do
-          cliff_args+=(--include-path "${p}")
-        done
-        cliff_args+=(--tag-pattern "releases/${COMPONENT}/v[0-9]+\.[0-9]+\.[0-9]+$")
-        # Capture stdout and stderr separately so we can both surface git-cliff's
-        # logs and detect the "nothing to bump" warning it writes to stderr.
-        stderr_file=$(mktemp)
-        trap 'rm -f "${stderr_file}"' EXIT
-        next_tag=$(git cliff "${cliff_args[@]}" 2> "${stderr_file}")
-        # Re-emit stderr so it's visible in logs
-        cat "${stderr_file}" >&2
-
-        changed=true
-        # Check if git cliff warned "nothing to bump"
-        if grep -q "There is nothing to bump" "${stderr_file}"; then
-          changed=false
-        elif [ "${next_tag}" = "${latest_tag}" ]; then
-          changed=false
-        fi
-        if [ -z "${next_tag}" ] || [ "${changed}" = "false" ]; then
-          echo "git-cliff reports nothing to bump for ${COMPONENT}; nothing to release."
-          {
-            echo "tag="
-            echo "version="
-            echo "changed=false"
-          } >> "$GITHUB_OUTPUT"
-          exit 0
-        fi
-        next_semver="${next_tag#releases/${COMPONENT}/v}"
-        if [ -n "${RELEASE_TAG_SUFFIX}" ]; then
-          next_tag="${next_tag}-${RELEASE_TAG_SUFFIX}"
-          next_semver="${next_semver}-${RELEASE_TAG_SUFFIX}"
-        fi
-
-        if git rev-parse -q --verify "refs/tags/${next_tag}" > /dev/null; then
-          echo "The next tag ${next_tag} already exists; exit now."
-          exit 1
-        fi
-
-        echo "latest ${COMPONENT} tag:  ${latest_tag}"
-        echo "next ${COMPONENT} tag:    ${next_tag}"
-        echo "next ${COMPONENT} semver: ${next_semver}"
-        echo "tag changed: ${changed}"
-        {
-          echo "tag=${next_tag}"
-          echo "version=${next_semver}"
-          echo "changed=${changed}"
-        } >> "$GITHUB_OUTPUT"
+        INCLUDE_PATHS: ${{ steps.paths.outputs.include_paths }}
+      run: make -f "${{ github.action_path }}/Makefile" version
 
     - name: Generate ${{ inputs.component-name }} unreleased or latest changelog
       id: changelog
       if: steps.version.outputs.changed == 'true'
+      shell: bash
       env:
         COMPONENT: ${{ inputs.component-name }}
         CLIFF_CONFIG: ${{ steps.render.outputs.config }}
-        TAG_CONFIG: ${{ inputs.generate-changelog-with-next-tag-version == 'true' && format(' --tag {0}', steps.version.outputs.version) || '' }}
-      shell: bash
-      run: |
-        set -euo pipefail
-        mapfile -t paths <<< "${{ steps.paths.outputs.include_paths }}"
-        read -ra tag_config_args <<< "--unreleased${TAG_CONFIG}"
-        cliff_args=(--config "${CLIFF_CONFIG}" "${tag_config_args[@]}")
-        for p in "${paths[@]}"; do
-          cliff_args+=(--include-path "${p}")
-        done
-        cliff_args+=(--tag-pattern "releases/${COMPONENT}/v[0-9]+\.[0-9]+\.[0-9]+$")
-        {
-          echo 'content<<__CLIFF_EOF__'
-          git cliff "${cliff_args[@]}"
-          echo '__CLIFF_EOF__'
-        } >> "$GITHUB_OUTPUT"
+        INCLUDE_PATHS: ${{ steps.paths.outputs.include_paths }}
+        GENERATE_WITH_NEXT_TAG: ${{ inputs.generate-changelog-with-next-tag-version == 'true' }}
+        NEXT_VERSION: ${{ steps.version.outputs.version }}
+      run: make -f "${{ github.action_path }}/Makefile" changelog
 
     - name: Generate and prepend release changelog section
       id: prepend-changelog
       if: inputs.prepend-changelog == 'true' && steps.version.outputs.changed == 'true'
+      shell: bash
       env:
         COMPONENT: ${{ inputs.component-name }}
         FOLDER_NAME: ${{ inputs.folder-name }}
         CLIFF_CONFIG: ${{ steps.render.outputs.config }}
-        TAG_CONFIG: ${{ inputs.generate-changelog-with-next-tag-version == 'true' && format(' --tag {0}', steps.version.outputs.version) || '' }}
+        INCLUDE_PATHS: ${{ steps.paths.outputs.include_paths }}
+        GENERATE_WITH_NEXT_TAG: ${{ inputs.generate-changelog-with-next-tag-version == 'true' }}
+        NEXT_VERSION: ${{ steps.version.outputs.version }}
         TARGET_REF: ${{ github.head_ref || github.ref_name }}
-      shell: bash
-      run: |
-        set -euo pipefail
-
-        # retrieve the latest changes of CHANGELOG.md first to avoid chances
-        # of rebase or merge conflicts later from other workflows
-        git pull --ff-only origin "refs/heads/${TARGET_REF}"
-
-        CHANGELOG_FILE="${FOLDER_NAME}/CHANGELOG.md"
-
-        # Drop existing [unreleased] block if any
-        awk '
-          /^## \[unreleased\]/ { skip=1; next }
-          /^## \[/ && skip       { skip=0 }
-          !skip                  { print }
-        ' "${CHANGELOG_FILE}" > "${CHANGELOG_FILE}.tmp" && mv "${CHANGELOG_FILE}.tmp" "${CHANGELOG_FILE}"
-
-        # Prepend a fresh [unreleased/tag-version] section
-        mapfile -t paths <<< "${{ steps.paths.outputs.include_paths }}"
-        read -ra tag_config_args <<< "--unreleased${TAG_CONFIG}"
-        cliff_args=(--config "${CLIFF_CONFIG}" "${tag_config_args[@]}")
-        for p in "${paths[@]}"; do
-          cliff_args+=(--include-path "${p}")
-        done
-        cliff_args+=(--tag-pattern "releases/${COMPONENT}/v[0-9]+\.[0-9]+\.[0-9]+$" --prepend "${CHANGELOG_FILE}")
-        git cliff "${cliff_args[@]}"
+      run: make -f "${{ github.action_path }}/Makefile" prepend
