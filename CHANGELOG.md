@@ -18,6 +18,7 @@
 - *(coordinator)* Support custom transaction signers (#3597)
 - *(linea-besu)* Update to v26.7.0 (#3623)
 - *(linea-besu)* Update to 26.7.1 (#3699)
+- *(coordinator)* Implement ExecutionProofGeneratingCoordinator for RISC-V l2-execution proofs (#3684)
 
 ### 🐛 Bug Fixes
 
