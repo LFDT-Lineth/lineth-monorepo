@@ -42,12 +42,12 @@ type Round struct {
 	VerifierActions []VerifierAction
 	// PreSamplingHooks holds prover-side actions registered to fire BEFORE
 	// any [CoinField] in this round is sampled. They run during
-	// [Runtime.AdvanceRound] *after* the previous round's columns and cells
+	// [Runtime.AdvanceRound] *after* the previous round's commitment and cells
 	// have been absorbed into the Fiat–Shamir state but *before* this
 	// round's coins are derived. Hooks run in declaration order.
 	//
 	// The canonical use is shared-randomness seeding in sharded protocols:
-	// a hook reads a precomputed seed from public columns and calls
+	// a hook reads a precomputed seed and calls
 	// [Runtime.SetFSState] so this round's coins derive deterministically
 	// from that seed instead of from this shard's local transcript. For any
 	// non-seeding use case, prefer [ProverActions] — running before coin

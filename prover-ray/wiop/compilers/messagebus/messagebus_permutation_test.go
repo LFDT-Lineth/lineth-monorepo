@@ -4,8 +4,11 @@ import (
 	"testing"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/global"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/grandproduct"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/localvanishing"
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/messagebus"
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop/compilers/pcs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -14,9 +17,32 @@ import (
 // needs: messagebus lowers each handle into a GrandProduct, and grandproduct
 // discharges it into Z columns, the Result assignment, and the
 // final-product/in-shard verifier actions.
+//
+// It deliberately stops short of the PCS pass, so the columns never make it into
+// the Fiat-Shamir transcript and the α/β coins are constants. That is fine for
+// the completeness tests, and for soundness tests whose rejection does not
+// depend on the coins being unpredictable. Anything that folds several columns
+// into one tuple does depend on it -- with α = 0 a tuple collapses onto its
+// first column -- and must use [compilePermutationBusWithPCS] instead.
 func compilePermutationBus(sys *wiop.System) {
 	messagebus.Compile(sys)
 	grandproduct.Compile(sys)
+}
+
+// compilePermutationBusWithPCS runs the message-bus pipeline all the way through
+// the polynomial commitment pass. The PCS pass is what binds the witness into
+// the Fiat-Shamir transcript (it absorbs one commitment per committed round in
+// place of that round's columns), which is what makes the α/β coins depend on
+// the witness and therefore unpredictable to the prover.
+//
+// The local-vanishing and global passes are not optional here: PCS opens
+// LagrangeEval claims, and those two passes are what turn the grand-product
+// vanishings into such claims.
+func compilePermutationBusWithPCS(sys *wiop.System) {
+	compilePermutationBus(sys)
+	localvanishing.Compile(sys)
+	global.Compile(sys)
+	pcs.Compile(sys)
 }
 
 // TestCompile_Permutation_Balanced: one handle, one permutation Send and one
@@ -27,8 +53,8 @@ func TestCompile_Permutation_Balanced(t *testing.T) {
 		t.Helper()
 		modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 		modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-		colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-		colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+		colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+		colB := modB.NewColumn(sys.Context.Childf("B"), r0)
 
 		sys.NewMessageBusSend(
 			sys.Context.Childf("send-A"), "shard", "route", wiop.NewTable(colA.View()))
@@ -55,8 +81,8 @@ func TestCompile_Permutation_Unbalanced(t *testing.T) {
 		t.Helper()
 		modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 		modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-		colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-		colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+		colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+		colB := modB.NewColumn(sys.Context.Childf("B"), r0)
 
 		sys.NewMessageBusSend(
 			sys.Context.Childf("send-A"), "shard", "route", wiop.NewTable(colA.View()))
@@ -83,10 +109,10 @@ func TestCompile_Permutation_WithSelectorBalanced(t *testing.T) {
 	r0 := sys.NewRound()
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	selA := modA.NewColumn(sys.Context.Childf("selA"), wiop.VisibilityOracle, r0)
-	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
-	selB := modB.NewColumn(sys.Context.Childf("selB"), wiop.VisibilityOracle, r0)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	selA := modA.NewColumn(sys.Context.Childf("selA"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
+	selB := modB.NewColumn(sys.Context.Childf("selB"), r0)
 
 	sys.NewMessageBusSend(
 		sys.Context.Childf("send-A"), "shard", "route",
@@ -118,10 +144,10 @@ func TestCompile_Permutation_WithSelectorUnbalanced(t *testing.T) {
 	r0 := sys.NewRound()
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	selA := modA.NewColumn(sys.Context.Childf("selA"), wiop.VisibilityOracle, r0)
-	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
-	selB := modB.NewColumn(sys.Context.Childf("selB"), wiop.VisibilityOracle, r0)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	selA := modA.NewColumn(sys.Context.Childf("selA"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
+	selB := modB.NewColumn(sys.Context.Childf("selB"), r0)
 
 	sys.NewMessageBusSend(
 		sys.Context.Childf("send-A"), "shard", "route",
@@ -150,8 +176,8 @@ func TestNewMessageBus_SetsDirectionAndAllowsSelector(t *testing.T) {
 	sys := wiop.NewSystemf("mb-perm-ctor")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(sys.Context.Childf("c"), wiop.VisibilityOracle, r0)
-	sel := mod.NewColumn(sys.Context.Childf("sel"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("c"), r0)
+	sel := mod.NewColumn(sys.Context.Childf("sel"), r0)
 
 	send := sys.NewMessageBusSend(
 		sys.Context.Childf("send"), "shard", "route", wiop.NewTable(col.View()))

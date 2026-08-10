@@ -24,7 +24,7 @@ func NewLDSSingleFractionAllOnesScenario() *LogDerivativeSumCompilerScenario {
 	r0 := sys.NewRound()
 	sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	num := mod.NewColumn(sys.Context.Childf("num"), wiop.VisibilityOracle, r0)
+	num := mod.NewColumn(sys.Context.Childf("num"), r0)
 	one := wiop.NewConstantVector(mod, field.NewFromString("1"))
 	ld := sys.NewLogDerivativeSum(
 		sys.Context.Childf("ld"),
@@ -50,8 +50,8 @@ func NewLDSPartialFilterScenario() *LogDerivativeSumCompilerScenario {
 	r0 := sys.NewRound()
 	sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	num := mod.NewColumn(sys.Context.Childf("num"), wiop.VisibilityOracle, r0)
-	flt := mod.NewColumn(sys.Context.Childf("flt"), wiop.VisibilityOracle, r0)
+	num := mod.NewColumn(sys.Context.Childf("num"), r0)
+	flt := mod.NewColumn(sys.Context.Childf("flt"), r0)
 	one := wiop.NewConstantVector(mod, field.NewFromString("1"))
 	ld := sys.NewLogDerivativeSum(
 		sys.Context.Childf("ld"),
@@ -80,8 +80,8 @@ func NewLDSAllZeroFilterScenario() *LogDerivativeSumCompilerScenario {
 	r0 := sys.NewRound()
 	sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	num := mod.NewColumn(sys.Context.Childf("num"), wiop.VisibilityOracle, r0)
-	flt := mod.NewColumn(sys.Context.Childf("flt"), wiop.VisibilityOracle, r0)
+	num := mod.NewColumn(sys.Context.Childf("num"), r0)
+	flt := mod.NewColumn(sys.Context.Childf("flt"), r0)
 	one := wiop.NewConstantVector(mod, field.NewFromString("1"))
 	ld := sys.NewLogDerivativeSum(
 		sys.Context.Childf("ld"),
@@ -110,9 +110,9 @@ func NewLDSFilterMasksZeroDenominatorScenario() *LogDerivativeSumCompilerScenari
 	r0 := sys.NewRound()
 	sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	num := mod.NewColumn(sys.Context.Childf("num"), wiop.VisibilityOracle, r0)
-	den := mod.NewColumn(sys.Context.Childf("den"), wiop.VisibilityOracle, r0)
-	flt := mod.NewColumn(sys.Context.Childf("flt"), wiop.VisibilityOracle, r0)
+	num := mod.NewColumn(sys.Context.Childf("num"), r0)
+	den := mod.NewColumn(sys.Context.Childf("den"), r0)
+	flt := mod.NewColumn(sys.Context.Childf("flt"), r0)
 	ld := sys.NewLogDerivativeSum(
 		sys.Context.Childf("ld"),
 		[]wiop.Fraction{{Filter: flt.View(), Numerator: num.View(), Denominator: den.View()}},
@@ -145,7 +145,7 @@ func NewLDSPackingScenario() *LogDerivativeSumCompilerScenario {
 	cols := make([]*wiop.Column, 4)
 	fractions := make([]wiop.Fraction, 4)
 	for i := range cols {
-		cols[i] = mod.NewColumn(sys.Context.Childf("c%d", i), wiop.VisibilityOracle, r0)
+		cols[i] = mod.NewColumn(sys.Context.Childf("c%d", i), r0)
 		fractions[i] = wiop.Fraction{Numerator: cols[i].View(), Denominator: one}
 	}
 	ld := sys.NewLogDerivativeSum(sys.Context.Childf("ld"), fractions)
@@ -175,9 +175,9 @@ func NewLDSMultiModuleBucketingScenario() *LogDerivativeSumCompilerScenario {
 	sys.NewRound()
 	mA := sys.NewSizedModule(sys.Context.Childf("mA"), 4, wiop.PaddingDirectionNone)
 	mB := sys.NewSizedModule(sys.Context.Childf("mB"), 4, wiop.PaddingDirectionNone)
-	cA := mA.NewColumn(sys.Context.Childf("cA"), wiop.VisibilityOracle, r0)
-	cB := mB.NewColumn(sys.Context.Childf("cB"), wiop.VisibilityOracle, r0)
-	fB := mB.NewColumn(sys.Context.Childf("fB"), wiop.VisibilityOracle, r0)
+	cA := mA.NewColumn(sys.Context.Childf("cA"), r0)
+	cB := mB.NewColumn(sys.Context.Childf("cB"), r0)
+	fB := mB.NewColumn(sys.Context.Childf("fB"), r0)
 	oneA := wiop.NewConstantVector(mA, field.NewFromString("1"))
 	oneB := wiop.NewConstantVector(mB, field.NewFromString("1"))
 	ld := sys.NewLogDerivativeSum(sys.Context.Childf("ld"), []wiop.Fraction{
@@ -208,7 +208,7 @@ func NewLDSSizeOneModuleScenario() *LogDerivativeSumCompilerScenario {
 	r0 := sys.NewRound()
 	sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 1, wiop.PaddingDirectionNone)
-	num := mod.NewColumn(sys.Context.Childf("num"), wiop.VisibilityOracle, r0)
+	num := mod.NewColumn(sys.Context.Childf("num"), r0)
 	one := wiop.NewConstantVector(mod, field.NewFromString("1"))
 	ld := sys.NewLogDerivativeSum(
 		sys.Context.Childf("ld"),
@@ -240,7 +240,7 @@ func NewLDSManyFractionsScenario() *LogDerivativeSumCompilerScenario {
 	cols := make([]*wiop.Column, 7)
 	fractions := make([]wiop.Fraction, 7)
 	for i := range cols {
-		cols[i] = mod.NewColumn(sys.Context.Childf("c%d", i), wiop.VisibilityOracle, r0)
+		cols[i] = mod.NewColumn(sys.Context.Childf("c%d", i), r0)
 		fractions[i] = wiop.Fraction{Numerator: cols[i].View(), Denominator: one}
 	}
 	ld := sys.NewLogDerivativeSum(sys.Context.Childf("ld"), fractions)
@@ -265,7 +265,7 @@ func NewLDSSizeTwoModuleScenario() *LogDerivativeSumCompilerScenario {
 	r0 := sys.NewRound()
 	sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 2, wiop.PaddingDirectionNone)
-	num := mod.NewColumn(sys.Context.Childf("num"), wiop.VisibilityOracle, r0)
+	num := mod.NewColumn(sys.Context.Childf("num"), r0)
 	one := wiop.NewConstantVector(mod, field.NewFromString("1"))
 	ld := sys.NewLogDerivativeSum(
 		sys.Context.Childf("ld"),
@@ -295,8 +295,8 @@ func NewLDSMultipleQueriesScenario() *LogDerivativeSumCompilerScenario {
 	sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
 	one := wiop.NewConstantVector(mod, field.NewFromString("1"))
-	c1 := mod.NewColumn(sys.Context.Childf("c1"), wiop.VisibilityOracle, r0)
-	c2 := mod.NewColumn(sys.Context.Childf("c2"), wiop.VisibilityOracle, r0)
+	c1 := mod.NewColumn(sys.Context.Childf("c1"), r0)
+	c2 := mod.NewColumn(sys.Context.Childf("c2"), r0)
 	ld1 := sys.NewLogDerivativeSum(
 		sys.Context.Childf("ld1"),
 		[]wiop.Fraction{{Numerator: c1.View(), Denominator: one}},
@@ -328,8 +328,8 @@ func NewLDSVectorDenominatorScenario() *LogDerivativeSumCompilerScenario {
 	r0 := sys.NewRound()
 	sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	num := mod.NewColumn(sys.Context.Childf("num"), wiop.VisibilityOracle, r0)
-	den := mod.NewColumn(sys.Context.Childf("den"), wiop.VisibilityOracle, r0)
+	num := mod.NewColumn(sys.Context.Childf("num"), r0)
+	den := mod.NewColumn(sys.Context.Childf("den"), r0)
 	ld := sys.NewLogDerivativeSum(
 		sys.Context.Childf("ld"),
 		[]wiop.Fraction{{Numerator: num.View(), Denominator: den.View()}},
@@ -359,10 +359,10 @@ func NewLDSAllFiltersOnesPackedScenario() *LogDerivativeSumCompilerScenario {
 	r0 := sys.NewRound()
 	sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-	num1 := mod.NewColumn(sys.Context.Childf("n1"), wiop.VisibilityOracle, r0)
-	num2 := mod.NewColumn(sys.Context.Childf("n2"), wiop.VisibilityOracle, r0)
-	num3 := mod.NewColumn(sys.Context.Childf("n3"), wiop.VisibilityOracle, r0)
-	flt := mod.NewColumn(sys.Context.Childf("flt"), wiop.VisibilityOracle, r0)
+	num1 := mod.NewColumn(sys.Context.Childf("n1"), r0)
+	num2 := mod.NewColumn(sys.Context.Childf("n2"), r0)
+	num3 := mod.NewColumn(sys.Context.Childf("n3"), r0)
+	flt := mod.NewColumn(sys.Context.Childf("flt"), r0)
 	one := wiop.NewConstantVector(mod, field.NewFromString("1"))
 	ld := sys.NewLogDerivativeSum(
 		sys.Context.Childf("ld"),
@@ -402,10 +402,10 @@ func NewLDSConditionalLookupShapeScenario() *LogDerivativeSumCompilerScenario {
 	mS := sys.NewSizedModule(sys.Context.Childf("mS"), 4, wiop.PaddingDirectionNone)
 	mT := sys.NewSizedModule(sys.Context.Childf("mT"), 2, wiop.PaddingDirectionNone)
 
-	colS := mS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
-	filterS := mS.NewColumn(sys.Context.Childf("filterS"), wiop.VisibilityOracle, r0)
-	colT := mT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
-	colM := mT.NewColumn(sys.Context.Childf("M"), wiop.VisibilityOracle, r0)
+	colS := mS.NewColumn(sys.Context.Childf("S"), r0)
+	filterS := mS.NewColumn(sys.Context.Childf("filterS"), r0)
+	colT := mT.NewColumn(sys.Context.Childf("T"), r0)
+	colM := mT.NewColumn(sys.Context.Childf("M"), r0)
 
 	gammaS := wiop.NewConstantVector(mS, field.NewFromString("7"))
 	gammaT := wiop.NewConstantVector(mT, field.NewFromString("7"))

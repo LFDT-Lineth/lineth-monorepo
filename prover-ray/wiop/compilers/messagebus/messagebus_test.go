@@ -103,19 +103,22 @@ func runWithAndWithoutHook(t *testing.T, body func(t *testing.T, sys *wiop.Syste
 	}
 }
 
-// drive runs the canonical "assign-witness → advance to coin round → advance
-// to result round → run prover" loop for a message-bus pipeline. After this
-// returns, every prover action has executed and the verifier actions are
-// ready to be checked.
+// drive runs the prover over every round of the compiled system, starting from
+// the round the runtime is currently on. After it returns, every prover action
+// has executed and the verifier actions are ready to be checked.
 //
-// Round structure produced by [messagebus.Compile] + [grandproduct.Compile]:
-//
-//   - Round 0: user-witness columns (selectors, value columns).
-//   - Round 1: shared (α, β) coins; no prover actions.
-//   - Round 2: GrandProduct Result cells + Z columns; one prover action
-//     per GrandProduct query that assigns Z and the result.
+// This mirrors the loop in [wiop.System.Prove] rather than hard-coding a round
+// count, so it works for both the bare message-bus pipeline
+// ([compilePermutationBus]: witness round → α/β coin round → result round) and
+// the PCS-compiled one ([compilePermutationBusWithPCS]), which inserts quotient
+// and opening rounds on the end.
 func drive(rt *wiop.Runtime) {
-	rt.AdvanceRound() // → coin round, samples α and β
-	rt.AdvanceRound() // → result round
-	runRound(rt)      // assigns Z columns + result cells
+	sys := rt.System
+	for {
+		runRound(rt)
+		if rt.CurrentRound().ID == len(sys.Rounds)-1 {
+			return
+		}
+		rt.AdvanceRound()
+	}
 }

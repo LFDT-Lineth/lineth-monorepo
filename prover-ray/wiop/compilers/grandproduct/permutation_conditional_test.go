@@ -19,9 +19,9 @@ func condPermSystem(t *testing.T) (*wiop.System, [3]*wiop.Column) {
 	r0 := sys.NewRound()
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 2, wiop.PaddingDirectionNone)
-	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	selA := modA.NewColumn(sys.Context.Childf("selA"), wiop.VisibilityOracle, r0)
-	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	selA := modA.NewColumn(sys.Context.Childf("selA"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
 	sys.NewPermutation(sys.Context.Childf("perm"),
 		[]wiop.Table{wiop.NewFilteredTable(selA.View(), colA.View())},
 		[]wiop.Table{wiop.NewTable(colB.View())})
@@ -87,9 +87,9 @@ func TestCompile_ConditionalPermutation_CallerBinarityConstraintRejects(t *testi
 	r0 := sys.NewRound()
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 2, wiop.PaddingDirectionNone)
-	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	selA := modA.NewColumn(sys.Context.Childf("selA"), wiop.VisibilityOracle, r0)
-	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	selA := modA.NewColumn(sys.Context.Childf("selA"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
 
 	// The caller's obligation, discharged where the selector is built.
 	sel := wiop.Expression(selA.View())
@@ -144,9 +144,9 @@ func paddedCondPermSystem(t *testing.T) (*wiop.System, [3]*wiop.Column) {
 	r0 := sys.NewRound()
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionRight)
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 2, wiop.PaddingDirectionNone)
-	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	selA := modA.NewColumn(sys.Context.Childf("selA"), wiop.VisibilityOracle, r0)
-	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	selA := modA.NewColumn(sys.Context.Childf("selA"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
 	sys.NewPermutation(sys.Context.Childf("perm"),
 		[]wiop.Table{wiop.NewFilteredTable(selA.View(), colA.View())},
 		[]wiop.Table{wiop.NewTable(colB.View())})
@@ -205,10 +205,10 @@ func TestCompile_ConditionalPermutation_EmptySelectionAccepted(t *testing.T) {
 	r0 := sys.NewRound()
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 2, wiop.PaddingDirectionNone)
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 2, wiop.PaddingDirectionNone)
-	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	selA := modA.NewColumn(sys.Context.Childf("selA"), wiop.VisibilityOracle, r0)
-	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
-	selB := modB.NewColumn(sys.Context.Childf("selB"), wiop.VisibilityOracle, r0)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	selA := modA.NewColumn(sys.Context.Childf("selA"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
+	selB := modB.NewColumn(sys.Context.Childf("selB"), r0)
 	sys.NewPermutation(sys.Context.Childf("perm"),
 		[]wiop.Table{wiop.NewFilteredTable(selA.View(), colA.View())},
 		[]wiop.Table{wiop.NewFilteredTable(selB.View(), colB.View())})
@@ -232,10 +232,10 @@ func TestCompile_ConditionalPermutation_EmptyVsNonEmptyRejected(t *testing.T) {
 	r0 := sys.NewRound()
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 2, wiop.PaddingDirectionNone)
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 2, wiop.PaddingDirectionNone)
-	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	selA := modA.NewColumn(sys.Context.Childf("selA"), wiop.VisibilityOracle, r0)
-	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
-	selB := modB.NewColumn(sys.Context.Childf("selB"), wiop.VisibilityOracle, r0)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	selA := modA.NewColumn(sys.Context.Childf("selA"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
+	selB := modB.NewColumn(sys.Context.Childf("selB"), r0)
 	sys.NewPermutation(sys.Context.Childf("perm"),
 		[]wiop.Table{wiop.NewFilteredTable(selA.View(), colA.View())},
 		[]wiop.Table{wiop.NewFilteredTable(selB.View(), colB.View())})
@@ -259,10 +259,10 @@ func TestCompile_ConditionalPermutation_BothSidesFiltered(t *testing.T) {
 	r0 := sys.NewRound()
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	selA := modA.NewColumn(sys.Context.Childf("selA"), wiop.VisibilityOracle, r0)
-	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
-	selB := modB.NewColumn(sys.Context.Childf("selB"), wiop.VisibilityOracle, r0)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	selA := modA.NewColumn(sys.Context.Childf("selA"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
+	selB := modB.NewColumn(sys.Context.Childf("selB"), r0)
 	sys.NewPermutation(sys.Context.Childf("perm"),
 		[]wiop.Table{wiop.NewFilteredTable(selA.View(), colA.View())},
 		[]wiop.Table{wiop.NewFilteredTable(selB.View(), colB.View())})
@@ -289,13 +289,13 @@ func TestCompile_ConditionalPermutation_MixedFragments(t *testing.T) {
 	modA1 := sys.NewSizedModule(sys.Context.Childf("modA1"), 2, wiop.PaddingDirectionNone)
 	modB2 := sys.NewSizedModule(sys.Context.Childf("modB2"), 2, wiop.PaddingDirectionNone)
 	modB1 := sys.NewSizedModule(sys.Context.Childf("modB1"), 2, wiop.PaddingDirectionNone)
-	keyA := modA2.NewColumn(sys.Context.Childf("keyA"), wiop.VisibilityOracle, r0)
-	valA := modA2.NewColumn(sys.Context.Childf("valA"), wiop.VisibilityOracle, r0)
-	selA := modA2.NewColumn(sys.Context.Childf("selA"), wiop.VisibilityOracle, r0)
-	colA1 := modA1.NewColumn(sys.Context.Childf("A1"), wiop.VisibilityOracle, r0)
-	keyB := modB2.NewColumn(sys.Context.Childf("keyB"), wiop.VisibilityOracle, r0)
-	valB := modB2.NewColumn(sys.Context.Childf("valB"), wiop.VisibilityOracle, r0)
-	colB1 := modB1.NewColumn(sys.Context.Childf("B1"), wiop.VisibilityOracle, r0)
+	keyA := modA2.NewColumn(sys.Context.Childf("keyA"), r0)
+	valA := modA2.NewColumn(sys.Context.Childf("valA"), r0)
+	selA := modA2.NewColumn(sys.Context.Childf("selA"), r0)
+	colA1 := modA1.NewColumn(sys.Context.Childf("A1"), r0)
+	keyB := modB2.NewColumn(sys.Context.Childf("keyB"), r0)
+	valB := modB2.NewColumn(sys.Context.Childf("valB"), r0)
+	colB1 := modB1.NewColumn(sys.Context.Childf("B1"), r0)
 
 	sys.NewPermutation(sys.Context.Childf("perm"),
 		[]wiop.Table{

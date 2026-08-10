@@ -19,8 +19,8 @@ func buildRuntimeLimitGroup(t *testing.T, aSize, bSize int) (*lookupGroup, *wiop
 	r0 := sys.NewRound()
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), bSize, wiop.PaddingDirectionRight)
 	modS := sys.NewSizedModule(sys.Context.Childf("modS"), aSize, wiop.PaddingDirectionRight)
-	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
-	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+	colT := modT.NewColumn(sys.Context.Childf("T"), r0)
+	colS := modS.NewColumn(sys.Context.Childf("S"), r0)
 	sys.NewInclusion(
 		sys.Context.Childf("inc"),
 		[]wiop.Table{wiop.NewTable(colS.View())},

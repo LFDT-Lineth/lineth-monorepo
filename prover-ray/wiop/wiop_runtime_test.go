@@ -41,13 +41,13 @@ func baseVec(n int, val uint64) *wiop.ConcreteVector {
 
 func TestColumn_Round(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	assert.Equal(t, r0, col.Round())
 }
 
 func TestColumn_Degree(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	// module is sized to 4 → degree == 3
 	assert.Equal(t, 3, col.Degree())
 }
@@ -55,32 +55,32 @@ func TestColumn_Degree(t *testing.T) {
 func TestColumn_Degree_UnsizedPanic(t *testing.T) {
 	sys, r0, _, _ := newTestSystem(t)
 	unsized := sys.NewModule(sys.Context.Childf("unsized"), wiop.PaddingDirectionNone)
-	col := unsized.NewColumn(sys.Context.Childf("col2"), wiop.VisibilityOracle, r0)
+	col := unsized.NewColumn(sys.Context.Childf("col2"), r0)
 	assert.Panics(t, func() { col.Degree() })
 }
 
 func TestModule_NewColumn_NilRoundPanic(t *testing.T) {
 	sys, _, _, mod := newTestSystem(t)
-	assert.Panics(t, func() { mod.NewColumn(sys.Context.Childf("c"), wiop.VisibilityOracle, nil) })
+	assert.Panics(t, func() { mod.NewColumn(sys.Context.Childf("c"), nil) })
 }
 
 func TestModule_NewColumn_NilCtxPanic(t *testing.T) {
 	_, r0, _, mod := newTestSystem(t)
-	assert.Panics(t, func() { mod.NewColumn(nil, wiop.VisibilityOracle, r0) })
+	assert.Panics(t, func() { mod.NewColumn(nil, r0) })
 }
 
 func TestModule_NewColumn_ReusedCtxPanic(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
 	ctx := sys.Context.Childf("col")
-	mod.NewColumn(ctx, wiop.VisibilityOracle, r0) // first use is fine
+	mod.NewColumn(ctx, r0) // first use is fine
 	assert.Panics(t, func() {
-		mod.NewColumn(ctx, wiop.VisibilityOracle, r0) // re-using same ctx must panic
+		mod.NewColumn(ctx, r0) // re-using same ctx must panic
 	})
 }
 
 func TestModule_NewExtensionColumn(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewExtensionColumn(sys.Context.Childf("ext"), wiop.VisibilityOracle, r0)
+	col := mod.NewExtensionColumn(sys.Context.Childf("ext"), r0)
 	assert.True(t, col.IsExtension)
 }
 
@@ -97,7 +97,6 @@ func TestCell_Properties(t *testing.T) {
 	assert.False(t, cell.IsMultiValued())
 	assert.Equal(t, 0, cell.Degree())
 	assert.Nil(t, cell.Module())
-	assert.Equal(t, wiop.VisibilityPublic, cell.Visibility())
 
 	// scalar-only panics
 	assert.Panics(t, func() { cell.Size() })
@@ -113,7 +112,6 @@ func TestCoinField_Properties(t *testing.T) {
 	assert.False(t, coin.IsMultiValued())
 	assert.Equal(t, 0, coin.Degree())
 	assert.Nil(t, coin.Module())
-	assert.Equal(t, wiop.VisibilityPublic, coin.Visibility())
 
 	assert.Panics(t, func() { coin.Size() })
 	assert.Panics(t, func() { coin.IsSized() })
@@ -133,7 +131,7 @@ func TestRound_NewCoinField_NilCtxPanic(t *testing.T) {
 
 func TestRuntime_AssignAndGetColumn(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	rt := wiop.NewRuntime(sys)
 
 	assert.False(t, rt.HasColumnAssignment(col))
@@ -149,14 +147,14 @@ func TestRuntime_AssignAndGetColumn(t *testing.T) {
 func TestRuntime_AssignColumn_WrongRoundPanic(t *testing.T) {
 	sys, _, r1, mod := newTestSystem(t)
 	// col belongs to r1 but runtime starts at r0
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r1)
+	col := mod.NewColumn(sys.Context.Childf("col"), r1)
 	rt := wiop.NewRuntime(sys)
 	assert.Panics(t, func() { rt.AssignColumn(col, baseVec(4, 0)) })
 }
 
 func TestRuntime_AssignColumn_DoublePanic(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(col, baseVec(4, 1))
 	assert.Panics(t, func() { rt.AssignColumn(col, baseVec(4, 2)) })
@@ -164,14 +162,14 @@ func TestRuntime_AssignColumn_DoublePanic(t *testing.T) {
 
 func TestRuntime_GetColumnAssignment_UnassignedPanic(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	rt := wiop.NewRuntime(sys)
 	assert.Panics(t, func() { rt.GetColumnAssignment(col) })
 }
 
 func TestRuntime_OverrideColumn(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	rt := wiop.NewRuntime(sys)
 
 	rt.AssignColumn(col, baseVec(4, 7))
@@ -184,7 +182,7 @@ func TestRuntime_OverrideColumn(t *testing.T) {
 
 func TestRuntime_OverrideColumn_UnassignedPanic(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	rt := wiop.NewRuntime(sys)
 	assert.Panics(t, func() { rt.OverrideColumn(col, baseVec(4, 1)) },
 		"overriding an unassigned column must panic")
@@ -269,7 +267,7 @@ func TestRuntime_State(t *testing.T) {
 
 func TestRuntime_AdvanceRound_Basic(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	rt := wiop.NewRuntime(sys)
 	assert.Equal(t, r0, rt.CurrentRound())
 
@@ -280,7 +278,7 @@ func TestRuntime_AdvanceRound_Basic(t *testing.T) {
 
 func TestRuntime_AdvanceRound_WithCoinSampling(t *testing.T) {
 	sys, r0, r1, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	coin := r1.NewCoinField(sys.Context.Childf("coin"))
 	rt := wiop.NewRuntime(sys)
 
@@ -324,7 +322,7 @@ func (h *fixedSeedHook) Run(rt *wiop.Runtime) {
 // took effect.
 func TestRound_PreSamplingHook_SeedsCoin(t *testing.T) {
 	sys, r0, r1, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	coin := r1.NewCoinField(sys.Context.Childf("coin"))
 
 	seed := field.NewOctupletFromStrings([8]string{
@@ -358,7 +356,7 @@ func TestRound_PreSamplingHook_SeedsCoin(t *testing.T) {
 //     SetFSState is the state from which the coins are derived.
 func TestRound_PreSamplingHook_RunsInOrder(t *testing.T) {
 	sys, r0, r1, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	coin := r1.NewCoinField(sys.Context.Childf("coin"))
 
 	seedFirst := field.NewOctupletFromStrings([8]string{"1", "1", "1", "1", "1", "1", "1", "1"})
@@ -406,23 +404,16 @@ func TestRuntime_GetCoinValue_NotSampledPanic(t *testing.T) {
 
 func TestRuntime_AdvanceRound_LastRoundPanic(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(col, baseVec(4, 0))
 	rt.AdvanceRound() // now at r1 (last round)
 	assert.Panics(t, func() { rt.AdvanceRound() })
 }
 
-func TestRuntime_AdvanceRound_UnassignedOraclePanic(t *testing.T) {
-	sys, r0, _, mod := newTestSystem(t)
-	_ = mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0) // not assigned
-	rt := wiop.NewRuntime(sys)
-	assert.Panics(t, func() { rt.AdvanceRound() })
-}
-
 func TestRuntime_AdvanceRound_UnassignedCellPanic(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	_ = r0.NewCell(sys.Context.Childf("cell"), false) // not assigned
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(col, baseVec(4, 0))

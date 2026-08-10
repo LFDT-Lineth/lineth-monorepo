@@ -8,22 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// ---- Visibility & PaddingDirection strings ----
-
-func TestVisibility_String(t *testing.T) {
-	cases := []struct {
-		v    wiop.Visibility
-		want string
-	}{
-		{wiop.VisibilityInternal, "Internal"},
-		{wiop.VisibilityOracle, "Oracle"},
-		{wiop.VisibilityPublic, "Public"},
-		{wiop.Visibility(99), "Visibility(99)"},
-	}
-	for _, tc := range cases {
-		assert.Equal(t, tc.want, tc.v.String(), tc.want)
-	}
-}
+// ---- PaddingDirection strings ----
 
 func TestPaddingDirection_String(t *testing.T) {
 	cases := []struct {
@@ -190,7 +175,7 @@ func TestSystem_Lookup(t *testing.T) {
 	mod := sys.NewSizedModule(modCtx, 4, wiop.PaddingDirectionNone)
 
 	colCtx := modCtx.Childf("col")
-	col := mod.NewColumn(colCtx, wiop.VisibilityOracle, r)
+	col := mod.NewColumn(colCtx, r)
 
 	cellCtx := sys.Context.Childf("cell")
 	cell := r.NewCell(cellCtx, false)
@@ -216,7 +201,7 @@ func TestSystem_Lookup_WrongKindPanic(t *testing.T) {
 	r := sys.NewRound()
 	modCtx := sys.Context.Childf("mod")
 	mod := sys.NewSizedModule(modCtx, 4, wiop.PaddingDirectionNone)
-	col := mod.NewColumn(modCtx.Childf("col"), wiop.VisibilityOracle, r)
+	col := mod.NewColumn(modCtx.Childf("col"), r)
 
 	assert.Panics(t, func() { sys.LookupCell(col.Context.ID) })
 	assert.Panics(t, func() { sys.LookupCoinField(col.Context.ID) })
@@ -230,5 +215,5 @@ func TestSystem_LookupColumn_WrongKindPanic(t *testing.T) {
 
 func TestModule_NewExtensionColumn_NilRoundPanic(t *testing.T) {
 	sys, _, _, mod := newTestSystem(t)
-	assert.Panics(t, func() { mod.NewExtensionColumn(sys.Context.Childf("ext"), wiop.VisibilityOracle, nil) })
+	assert.Panics(t, func() { mod.NewExtensionColumn(sys.Context.Childf("ext"), nil) })
 }

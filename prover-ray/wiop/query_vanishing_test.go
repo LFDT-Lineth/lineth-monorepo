@@ -11,7 +11,7 @@ import (
 
 func TestVanishing_Module_Round(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("vanCol"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("vanCol"), r0)
 	v := mod.NewVanishing(sys.Context.Childf("van"), col.View())
 
 	assert.Equal(t, mod, v.Module())
@@ -20,7 +20,7 @@ func TestVanishing_Module_Round(t *testing.T) {
 
 func TestVanishing_String(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("strCol"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("strCol"), r0)
 	ctx := sys.Context.Childf("strV")
 	v := mod.NewVanishing(ctx, col.View())
 	s := v.String()
@@ -56,7 +56,7 @@ func TestVanishing_Check_Scalar_NonZero(t *testing.T) {
 
 func TestVanishing_Check_Vector_AllZero(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("allZCol"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("allZCol"), r0)
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(col, baseVec(4, 0))
 
@@ -66,7 +66,7 @@ func TestVanishing_Check_Vector_AllZero(t *testing.T) {
 
 func TestVanishing_Check_Vector_NonZero(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("nzVCol"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("nzVCol"), r0)
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(col, baseVec(4, 1))
 
@@ -78,7 +78,7 @@ func TestVanishing_Check_Vector_NonZero(t *testing.T) {
 func TestVanishing_Check_Vector_CancelledPositions(t *testing.T) {
 	// col = [1,1,1,1]; cancel rows 0,1,2,3 → effectively all cancelled → should pass
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("cancelCol"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("cancelCol"), r0)
 	rt := wiop.NewRuntime(sys)
 	rt.AssignColumn(col, baseVec(4, 1))
 
@@ -112,7 +112,7 @@ func TestVanishing_NewVanishingManual_NilExprPanic(t *testing.T) {
 func TestVanishing_AutoCancelledPositions_PositiveShift(t *testing.T) {
 	// shift +2 → last 2 rows cancelled: -2, -1
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("shiftPosCol"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("shiftPosCol"), r0)
 	// col.View().Shift(2) triggers auto-cancel of last 2 rows
 	v := mod.NewVanishing(sys.Context.Childf("shiftPosV"), col.View().Shift(2))
 	assert.Len(t, v.CancelledPositions, 2)
@@ -121,7 +121,7 @@ func TestVanishing_AutoCancelledPositions_PositiveShift(t *testing.T) {
 func TestVanishing_AutoCancelledPositions_NegativeShift(t *testing.T) {
 	// shift -1 → first row cancelled: 0
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("shiftNegCol"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("shiftNegCol"), r0)
 	v := mod.NewVanishing(sys.Context.Childf("shiftNegV"), col.View().Shift(-1))
 	assert.Len(t, v.CancelledPositions, 1)
 	assert.Equal(t, 0, v.CancelledPositions[0])
@@ -129,7 +129,7 @@ func TestVanishing_AutoCancelledPositions_NegativeShift(t *testing.T) {
 
 func TestVanishing_CheckGnark_Panics(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("vgCol"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("vgCol"), r0)
 	v := mod.NewVanishing(sys.Context.Childf("vg"), col.View())
 	assert.Panics(t, func() { v.CheckGnark(nil, nil) })
 }
@@ -142,8 +142,8 @@ func TestMaxRoundInExpr_MultipleRounds(t *testing.T) {
 	r1 := sys.NewRound()
 	mod0 := sys.NewSizedModule(sys.Context.Childf("m0"), 4, wiop.PaddingDirectionNone)
 	mod1 := sys.NewSizedModule(sys.Context.Childf("m1"), 4, wiop.PaddingDirectionNone)
-	col0 := mod0.NewColumn(sys.Context.Childf("c0"), wiop.VisibilityOracle, r0)
-	col1 := mod1.NewColumn(sys.Context.Childf("c1"), wiop.VisibilityOracle, r1)
+	col0 := mod0.NewColumn(sys.Context.Childf("c0"), r0)
+	col1 := mod1.NewColumn(sys.Context.Childf("c1"), r1)
 
 	// Add two vector expressions from different modules is valid structurally;
 	// Vanishing.Round walks the tree and picks the max.
@@ -156,7 +156,7 @@ func TestMaxRoundInExpr_MultipleRounds(t *testing.T) {
 
 func TestVanishing_Check_Vector_ExtZero(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	extCol := mod.NewExtensionColumn(sys.Context.Childf("extZeroCol"), wiop.VisibilityOracle, r0)
+	extCol := mod.NewExtensionColumn(sys.Context.Childf("extZeroCol"), r0)
 	rt := wiop.NewRuntime(sys)
 
 	// All-zero extension vector

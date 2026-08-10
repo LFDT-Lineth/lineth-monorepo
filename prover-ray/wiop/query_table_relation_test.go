@@ -30,7 +30,7 @@ func TestInclusion_Soundness_InvalidWitness(t *testing.T) {
 
 func TestNewTable_Basic(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("tblCol"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("tblCol"), r0)
 	tab := wiop.NewTable(col.View())
 	assert.Equal(t, mod, tab.Module())
 	assert.Equal(t, r0, tab.Round())
@@ -47,22 +47,22 @@ func TestNewTable_MixedModulePanic(t *testing.T) {
 	r := sys.NewRound()
 	mod1 := sys.NewSizedModule(sys.Context.Childf("m1"), 4, wiop.PaddingDirectionNone)
 	mod2 := sys.NewSizedModule(sys.Context.Childf("m2"), 4, wiop.PaddingDirectionNone)
-	c1 := mod1.NewColumn(sys.Context.Childf("c1"), wiop.VisibilityOracle, r)
-	c2 := mod2.NewColumn(sys.Context.Childf("c2"), wiop.VisibilityOracle, r)
+	c1 := mod1.NewColumn(sys.Context.Childf("c1"), r)
+	c2 := mod2.NewColumn(sys.Context.Childf("c2"), r)
 	assert.Panics(t, func() { wiop.NewTable(c1.View(), c2.View()) })
 }
 
 func TestNewFilteredTable_Basic(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("ftCol"), wiop.VisibilityOracle, r0)
-	sel := mod.NewColumn(sys.Context.Childf("ftSel"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("ftCol"), r0)
+	sel := mod.NewColumn(sys.Context.Childf("ftSel"), r0)
 	tab := wiop.NewFilteredTable(sel.View(), col.View())
 	assert.Equal(t, sel.View().Column, tab.Selector.Column)
 }
 
 func TestNewFilteredTable_NilSelectorPanic(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("ftNilCol"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("ftNilCol"), r0)
 	assert.Panics(t, func() { wiop.NewFilteredTable(nil, col.View()) })
 }
 
@@ -71,8 +71,8 @@ func TestNewFilteredTable_SelectorMixedModulePanic(t *testing.T) {
 	r := sys.NewRound()
 	mod1 := sys.NewSizedModule(sys.Context.Childf("m1"), 4, wiop.PaddingDirectionNone)
 	mod2 := sys.NewSizedModule(sys.Context.Childf("m2"), 4, wiop.PaddingDirectionNone)
-	c := mod1.NewColumn(sys.Context.Childf("c"), wiop.VisibilityOracle, r)
-	s := mod2.NewColumn(sys.Context.Childf("s"), wiop.VisibilityOracle, r)
+	c := mod1.NewColumn(sys.Context.Childf("c"), r)
+	s := mod2.NewColumn(sys.Context.Childf("s"), r)
 	assert.Panics(t, func() { wiop.NewFilteredTable(s.View(), c.View()) })
 }
 
@@ -80,8 +80,8 @@ func TestNewFilteredTable_SelectorMixedModulePanic(t *testing.T) {
 
 func TestInclusion_Check_Match(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	colA := mod.NewColumn(sys.Context.Childf("incA"), wiop.VisibilityOracle, r0)
-	colB := mod.NewColumn(sys.Context.Childf("incB"), wiop.VisibilityOracle, r0)
+	colA := mod.NewColumn(sys.Context.Childf("incA"), r0)
+	colB := mod.NewColumn(sys.Context.Childf("incB"), r0)
 
 	tabA := wiop.NewTable(colA.View())
 	tabB := wiop.NewTable(colB.View())
@@ -97,8 +97,8 @@ func TestInclusion_Check_Match(t *testing.T) {
 
 func TestInclusion_Check_Mismatch(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	colA := mod.NewColumn(sys.Context.Childf("incMisA"), wiop.VisibilityOracle, r0)
-	colB := mod.NewColumn(sys.Context.Childf("incMisB"), wiop.VisibilityOracle, r0)
+	colA := mod.NewColumn(sys.Context.Childf("incMisA"), r0)
+	colB := mod.NewColumn(sys.Context.Childf("incMisB"), r0)
 
 	tabA := wiop.NewTable(colA.View())
 	tabB := wiop.NewTable(colB.View())
@@ -114,14 +114,14 @@ func TestInclusion_Check_Mismatch(t *testing.T) {
 
 func TestInclusion_NewInclusion_NilCtxPanic(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("incNilC"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("incNilC"), r0)
 	tab := wiop.NewTable(col.View())
 	assert.Panics(t, func() { sys.NewInclusion(nil, []wiop.Table{tab}, []wiop.Table{tab}) })
 }
 
 func TestInclusion_NewInclusion_EmptyIncludingPanic(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("incEIng"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("incEIng"), r0)
 	tab := wiop.NewTable(col.View())
 	assert.Panics(t, func() {
 		sys.NewInclusion(sys.Context.Childf("q"), []wiop.Table{tab}, nil)
@@ -130,9 +130,9 @@ func TestInclusion_NewInclusion_EmptyIncludingPanic(t *testing.T) {
 
 func TestInclusion_NewInclusion_WidthMismatchPanic(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	c1 := mod.NewColumn(sys.Context.Childf("incWMc1"), wiop.VisibilityOracle, r0)
-	c2 := mod.NewColumn(sys.Context.Childf("incWMc2"), wiop.VisibilityOracle, r0)
-	c3 := mod.NewColumn(sys.Context.Childf("incWMc3"), wiop.VisibilityOracle, r0)
+	c1 := mod.NewColumn(sys.Context.Childf("incWMc1"), r0)
+	c2 := mod.NewColumn(sys.Context.Childf("incWMc2"), r0)
+	c3 := mod.NewColumn(sys.Context.Childf("incWMc3"), r0)
 	included := wiop.NewTable(c1.View())
 	including := wiop.NewTable(c2.View(), c3.View()) // width 2 vs 1
 	assert.Panics(t, func() {
@@ -142,7 +142,7 @@ func TestInclusion_NewInclusion_WidthMismatchPanic(t *testing.T) {
 
 func TestInclusion_NewInclusion_EmptyIncludedPanic(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("incEI"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("incEI"), r0)
 	tab := wiop.NewTable(col.View())
 	assert.Panics(t, func() {
 		sys.NewInclusion(sys.Context.Childf("q"), nil, []wiop.Table{tab})
@@ -153,9 +153,9 @@ func TestInclusion_NewInclusion_EmptyIncludedPanic(t *testing.T) {
 
 func TestInclusion_Check_WithSelector(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	colA := mod.NewColumn(sys.Context.Childf("selA"), wiop.VisibilityOracle, r0)
-	colB := mod.NewColumn(sys.Context.Childf("selB"), wiop.VisibilityOracle, r0)
-	selA := mod.NewColumn(sys.Context.Childf("selAsel"), wiop.VisibilityOracle, r0)
+	colA := mod.NewColumn(sys.Context.Childf("selA"), r0)
+	colB := mod.NewColumn(sys.Context.Childf("selB"), r0)
+	selA := mod.NewColumn(sys.Context.Childf("selAsel"), r0)
 
 	// selA = [1,0,0,0] → only first row of A is selected
 	// A[0] = 1, B is all-1 → first row of A is in B
@@ -182,8 +182,8 @@ func TestInclusion_PaddingLeft_Match(t *testing.T) {
 	sys := wiop.NewSystemf("incPadL")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionLeft)
-	colA := mod.NewColumn(sys.Context.Childf("colA"), wiop.VisibilityOracle, r0)
-	colB := mod.NewColumn(sys.Context.Childf("colB"), wiop.VisibilityOracle, r0)
+	colA := mod.NewColumn(sys.Context.Childf("colA"), r0)
+	colB := mod.NewColumn(sys.Context.Childf("colB"), r0)
 
 	tabA := wiop.NewTable(colA.View())
 	tabB := wiop.NewTable(colB.View())
@@ -205,8 +205,8 @@ func TestInclusion_PaddingRight_Match(t *testing.T) {
 	sys := wiop.NewSystemf("incPadR")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionRight)
-	colA := mod.NewColumn(sys.Context.Childf("colA"), wiop.VisibilityOracle, r0)
-	colB := mod.NewColumn(sys.Context.Childf("colB"), wiop.VisibilityOracle, r0)
+	colA := mod.NewColumn(sys.Context.Childf("colA"), r0)
+	colB := mod.NewColumn(sys.Context.Childf("colB"), r0)
 
 	tabA := wiop.NewTable(colA.View())
 	tabB := wiop.NewTable(colB.View())
@@ -228,8 +228,8 @@ func TestInclusion_PaddingLeft_Mismatch(t *testing.T) {
 	sys := wiop.NewSystemf("incPadMis")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionLeft)
-	colA := mod.NewColumn(sys.Context.Childf("colA"), wiop.VisibilityOracle, r0)
-	colB := mod.NewColumn(sys.Context.Childf("colB"), wiop.VisibilityOracle, r0)
+	colA := mod.NewColumn(sys.Context.Childf("colA"), r0)
+	colB := mod.NewColumn(sys.Context.Childf("colB"), r0)
 
 	tabA := wiop.NewTable(colA.View())
 	tabB := wiop.NewTable(colB.View())
@@ -256,9 +256,9 @@ func TestInclusion_PaddingRight_WithSelector_Match(t *testing.T) {
 	sys := wiop.NewSystemf("incPadSel")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionRight)
-	colA := mod.NewColumn(sys.Context.Childf("colA"), wiop.VisibilityOracle, r0)
-	colB := mod.NewColumn(sys.Context.Childf("colB"), wiop.VisibilityOracle, r0)
-	selA := mod.NewColumn(sys.Context.Childf("selA"), wiop.VisibilityOracle, r0)
+	colA := mod.NewColumn(sys.Context.Childf("colA"), r0)
+	colB := mod.NewColumn(sys.Context.Childf("colB"), r0)
+	selA := mod.NewColumn(sys.Context.Childf("selA"), r0)
 
 	// Selector selects only data rows (index 0,1), not padding rows.
 	var one, zero field.Element
@@ -290,8 +290,8 @@ func TestInclusion_PaddingRight_Mismatch(t *testing.T) {
 	sys := wiop.NewSystemf("incPadRMis")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionRight)
-	colA := mod.NewColumn(sys.Context.Childf("colA"), wiop.VisibilityOracle, r0)
-	colB := mod.NewColumn(sys.Context.Childf("colB"), wiop.VisibilityOracle, r0)
+	colA := mod.NewColumn(sys.Context.Childf("colA"), r0)
+	colB := mod.NewColumn(sys.Context.Childf("colB"), r0)
 
 	tabA := wiop.NewTable(colA.View())
 	tabB := wiop.NewTable(colB.View())
@@ -319,9 +319,9 @@ func TestInclusion_PaddingRight_WithSelector_Mismatch(t *testing.T) {
 	sys := wiop.NewSystemf("incPadSelMis")
 	r0 := sys.NewRound()
 	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionRight)
-	colA := mod.NewColumn(sys.Context.Childf("colA"), wiop.VisibilityOracle, r0)
-	colB := mod.NewColumn(sys.Context.Childf("colB"), wiop.VisibilityOracle, r0)
-	selA := mod.NewColumn(sys.Context.Childf("selA"), wiop.VisibilityOracle, r0)
+	colA := mod.NewColumn(sys.Context.Childf("colA"), r0)
+	colB := mod.NewColumn(sys.Context.Childf("colB"), r0)
+	selA := mod.NewColumn(sys.Context.Childf("selA"), r0)
 
 	tabA := wiop.NewFilteredTable(selA.View(), colA.View())
 	tabB := wiop.NewTable(colB.View())
@@ -358,8 +358,8 @@ func newRowLimitInclusion(t *testing.T, aSize, bSize int) (*wiop.TableRelationQu
 	r0 := sys.NewRound()
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), bSize, wiop.PaddingDirectionRight)
 	modS := sys.NewSizedModule(sys.Context.Childf("modS"), aSize, wiop.PaddingDirectionRight)
-	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
-	colS := modS.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+	colT := modT.NewColumn(sys.Context.Childf("T"), r0)
+	colS := modS.NewColumn(sys.Context.Childf("S"), r0)
 	inc := sys.NewInclusion(
 		sys.Context.Childf("inc"),
 		[]wiop.Table{wiop.NewTable(colS.View())},
@@ -408,11 +408,11 @@ func TestPrevalidateRowLimit_DynamicCountsAsMax(t *testing.T) {
 	sys := wiop.NewSystemf("rowlimit-dyn")
 	r0 := sys.NewRound()
 	modT := sys.NewSizedModule(sys.Context.Childf("modT"), 2, wiop.PaddingDirectionRight)
-	colT := modT.NewColumn(sys.Context.Childf("T"), wiop.VisibilityOracle, r0)
+	colT := modT.NewColumn(sys.Context.Childf("T"), r0)
 
 	// A single dynamic A fragment: counted as 2^22, well under 2^30 → passes.
 	dynMod := sys.NewDynamicModule(sys.Context.Childf("dynS"), wiop.PaddingDirectionRight)
-	dynCol := dynMod.NewColumn(sys.Context.Childf("S"), wiop.VisibilityOracle, r0)
+	dynCol := dynMod.NewColumn(sys.Context.Childf("S"), r0)
 	inc := sys.NewInclusion(
 		sys.Context.Childf("inc"),
 		[]wiop.Table{wiop.NewTable(dynCol.View())},
@@ -425,7 +425,7 @@ func TestPrevalidateRowLimit_DynamicCountsAsMax(t *testing.T) {
 	aFrags := make([]wiop.Table, 256)
 	for i := range aFrags {
 		m := sys.NewDynamicModule(sys.Context.Childf("dynA%d", i), wiop.PaddingDirectionRight)
-		c := m.NewColumn(sys.Context.Childf("A%d", i), wiop.VisibilityOracle, r0)
+		c := m.NewColumn(sys.Context.Childf("A%d", i), r0)
 		aFrags[i] = wiop.NewTable(c.View())
 	}
 	incMany := sys.NewInclusion(

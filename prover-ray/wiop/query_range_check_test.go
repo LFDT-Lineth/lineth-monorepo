@@ -26,8 +26,8 @@ func TestRangeCheck_Soundness_InvalidWitness(t *testing.T) {
 
 func TestRangeCheck_Round(t *testing.T) {
 	sys, r0, r1, mod := newTestSystem(t)
-	col0 := mod.NewColumn(sys.Context.Childf("rc-r0"), wiop.VisibilityOracle, r0)
-	col1 := mod.NewColumn(sys.Context.Childf("rc-r1"), wiop.VisibilityOracle, r1)
+	col0 := mod.NewColumn(sys.Context.Childf("rc-r0"), r0)
+	col1 := mod.NewColumn(sys.Context.Childf("rc-r1"), r1)
 	rc0 := mod.NewRangeCheck(sys.Context.Childf("rc0"), col0, 4)
 	rc1 := mod.NewRangeCheck(sys.Context.Childf("rc1"), col1, 4)
 	assert.Equal(t, r0, rc0.Round())
@@ -36,7 +36,7 @@ func TestRangeCheck_Round(t *testing.T) {
 
 func TestRangeCheck_String(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("rc-col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("rc-col"), r0)
 	rc := mod.NewRangeCheck(sys.Context.Childf("rc"), col, 16)
 	s := rc.String()
 	assert.Contains(t, s, "RangeCheck")
@@ -60,7 +60,7 @@ func TestRangeCheck_Check_BoundaryValues(t *testing.T) {
 			sys := wiop.NewSystemf("rc-bnd")
 			r0 := sys.NewRound()
 			mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
-			col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+			col := mod.NewColumn(sys.Context.Childf("col"), r0)
 			rc := mod.NewRangeCheck(sys.Context.Childf("rc"), col, tc.b)
 			rt := wiop.NewRuntime(sys)
 			rt.AssignColumn(col, makeVecU64(tc.vals...))
@@ -75,7 +75,7 @@ func TestRangeCheck_Check_BoundaryValues(t *testing.T) {
 
 func TestRangeCheck_NewRangeCheck_NilCtxPanic(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("rc-nil-col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("rc-nil-col"), r0)
 	assert.Panics(t, func() { mod.NewRangeCheck(nil, col, 4) })
 }
 
@@ -86,19 +86,19 @@ func TestRangeCheck_NewRangeCheck_NilColPanic(t *testing.T) {
 
 func TestRangeCheck_NewRangeCheck_ZeroBoundPanic(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	assert.Panics(t, func() { mod.NewRangeCheck(sys.Context.Childf("rc"), col, 0) })
 }
 
 func TestRangeCheck_NewRangeCheck_NegativeBoundPanic(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	assert.Panics(t, func() { mod.NewRangeCheck(sys.Context.Childf("rc"), col, -1) })
 }
 
 func TestRangeCheck_IsReduced(t *testing.T) {
 	sys, r0, _, mod := newTestSystem(t)
-	col := mod.NewColumn(sys.Context.Childf("col"), wiop.VisibilityOracle, r0)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
 	rc := mod.NewRangeCheck(sys.Context.Childf("rc"), col, 4)
 	assert.False(t, rc.IsReduced())
 	rc.MarkAsReduced()
