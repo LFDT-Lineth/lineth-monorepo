@@ -854,7 +854,7 @@ check_postman_key_model() {
     pass "sequencer liveness config contains only enabled=false"
   fi
 
-  if grep -q 'net.consensys.linea.sequencer.liveness' "$STACK/config/services/sequencer/log4j.xml"; then
+  if grep -q 'lineth.sequencer.liveness' "$STACK/config/services/sequencer/log4j.xml"; then
     fail "sequencer log4j should not enable liveness-specific logging when liveness is disabled"
   else
     pass "sequencer log4j has no liveness-specific logger"
