@@ -480,6 +480,9 @@ classDiagram
         + LagrangeEvals []*LagrangeEval
         + TableRelations []*TableRelationQuery
         + LogDerivativeSums []*LogDerivativeSum
+        %% PublicInputs holds the cells promoted to public inputs, in
+        %% registration order — the layout of the flat PublicInput vector.
+        + PublicInputs []*Cell
         + Annotations Annotations
         - scratchArena *arena.VectorArena
         %% Free releases the scratch memory arena allocated by Materialize.
@@ -495,6 +498,12 @@ classDiagram
         + LookupColumn(id ObjectID) *Column
         + LookupCell(id ObjectID) *Cell
         + LookupCoinField(id ObjectID) *CoinField
+        %% RegisterPublicInputs promotes an existing cell to a public input,
+        %% tagging it (optionally with a numeric suffix) under the reserved
+        %% PublicInputTagKey annotation.
+        + RegisterPublicInputs(tag PublicInputTag, cell *Cell, numericSuffix ...int)
+        + LookupPublicInput(objID ObjectID) (*Cell, int)
+        + LookupPublicInputByTag(tag PublicInputTag, numericSuffix ...int) (*Cell, int)
     }
 
     System *-- "1" PrecomputedRound : PrecomputedRound
