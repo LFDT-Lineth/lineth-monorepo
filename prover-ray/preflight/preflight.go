@@ -20,10 +20,10 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/maths/koalabear/field"
 )
 
-// CrossShardSet bundles one logical cross-shard column fragment with the RS
-// encoders needed to commit to it. Build one CrossShardSet per shard fragment
+// BusInputSet bundles one logical cross-shard column fragment with the RS
+// encoders needed to commit to it. Build one BusInputSet per shard fragment
 // before calling [Run].
-type CrossShardSet struct {
+type BusInputSet struct {
 	// Table holds the raw (unenecoded) column data for one shard's fragment
 	// of a shared logical column.
 	Table fri.MultiSizeTable
@@ -42,7 +42,7 @@ type CrossShardSet struct {
 //
 // The result is deterministic and order-independent as long as hasher.Combine
 // is commutative and associative, ensuring every shard computes the same seed.
-func Run[P any](sets []CrossShardSet, hasher AdditiveHasher[P]) field.Octuplet {
+func Run[P any](sets []BusInputSet, hasher AdditiveHasher[P]) field.Octuplet {
 	acc := hasher.Identity()
 	for _, s := range sets {
 		cs := fri.Commit(s.Encoders, s.Table)

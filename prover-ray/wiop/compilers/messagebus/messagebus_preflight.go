@@ -25,7 +25,7 @@ import (
 // but it is exposed for inspection or additional hook registration.
 func RegisterPreflightSeed[P any](
 	sys *wiop.System,
-	sets []preflight.CrossShardSet,
+	sets []preflight.BusInputSet,
 	hasher preflight.AdditiveHasher[P],
 ) *wiop.Round {
 	coinRound := ensureRoundAfter(sys, latestUnreducedParticipantRound(sys))
@@ -58,7 +58,7 @@ func latestUnreducedParticipantRound(sys *wiop.System) *wiop.Round {
 // Because [wiop.Runtime.AdvanceRound] runs PreSamplingHooks on both the prover
 // and the verifier, no separate verifier action is needed.
 type preflightSeedHook[P any] struct {
-	sets   []preflight.CrossShardSet
+	sets   []preflight.BusInputSet
 	hasher preflight.AdditiveHasher[P]
 }
 
