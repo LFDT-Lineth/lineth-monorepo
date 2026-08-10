@@ -77,13 +77,7 @@ fn wipe_state<keccak_state>() {
 
 // Xor the input blocks into the state and perform the permutation
 //
-// NOTE: this phase is deliberately split so that no function holds more than one
-// loop.  Loops are the only construct that survives the compiler's vectorisation
-// pass as a distinct PC value, and each extra PC value makes the vectoriser
-// duplicate the surrounding code into every block that can reach it; nested loop
-// conditions also multiply into the guard of every constraint they enclose,
-// raising its degree.  Keeping one loop per function cuts the constraint
-// complexity of this phase by roughly 5x.
+// NOTE: this phase is deliberately split so that no function holds more than one loop
 fn kec_absorbing_phase<ram, keccak_state>(n_blocks:u32, remainder:u8, msg_address:Address) {
 
     var curr_address:Address = kec_absorb_full_blocks(n_blocks, msg_address)
@@ -218,9 +212,7 @@ fn keccak_f_round<keccak_state>(round_constant:u64) {
 // C[x] = A[x,0] ^ A[x,1] ^ A[x,2] ^ A[x,3] ^ A[x,4]
 // D[x] = C[x-1] ^ rot(C[x+1], 1)
 // A[x,y] = A[x,y] ^ D[x]
-// NOTE: as with kec_absorbing_phase, the two loops live in their own functions
-// so that each module holds at most one loop; see the note on
-// kec_absorbing_phase for why that matters.
+// NOTE: deliberately split so that no function holds more than one loop
 fn kec_theta<keccak_state>() {
 
     keccak_state[C] = keccak_state[ROW0] ^ keccak_state[ROW0 + 1] ^ keccak_state[ROW0 + 2] ^ keccak_state[ROW0 + 3] ^ keccak_state[ROW0 + 4]
