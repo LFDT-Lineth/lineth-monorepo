@@ -89,15 +89,16 @@ test "verify rejects proof with wrong round count" {
         .total_round_coins = 1,
     };
     const systems = verifier.Systems{
+        .public_input = .{ .round_cell_counts = &[_]usize{0} },
         .vanishing = vanishing.System{ .modules = &.{} },
         .pcs = empty_pcs_system,
     };
     try std.testing.expectError(
         error.InvalidRoundCount,
-        verifier.verify(spec, systems, .{
+        verifier.verify(spec, systems, .{ .proof = .{
             .rounds = &.{},
             .pcs_opening = empty_pcs_opening,
-        }),
+        } }),
     );
 }
 

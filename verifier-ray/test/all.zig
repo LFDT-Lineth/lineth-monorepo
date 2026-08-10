@@ -1,6 +1,7 @@
 comptime {
     _ = @import("field_test.zig");
     _ = @import("golden_test.zig");
+    _ = @import("public_input_test.zig");
     _ = @import("transcript_test.zig");
     _ = @import("vanishing_test.zig");
     _ = @import("logderivativesum_test.zig");

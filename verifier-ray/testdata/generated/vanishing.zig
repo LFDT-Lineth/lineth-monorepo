@@ -9,14 +9,18 @@ const rowlimit = verifier_ray.query.rowlimit;
 
 pub const RuntimeTraceCell = union(enum) { base: u32, ext: [6]u32 };
 pub const RuntimeTraceRound = struct { commitment: ?[8]u32 = null, cells: []const RuntimeTraceCell };
-pub const VanishingProofView = struct { rounds: []const RuntimeTraceRound, witness_claims: []const [6]u32, quotient_claims: []const [6]u32, module_sizes: []const usize };
-pub const Scenario = struct { name: []const u8, spec: protocol.Spec, system: vanishing.System, logderiv: logderivativesum.System = .{}, honest: VanishingProofView, invalid: ?VanishingProofView = null };
+pub const VanishingProofView = struct { rounds: []const RuntimeTraceRound, public_inputs: []const RuntimeTraceCell, witness_claims: []const [6]u32, quotient_claims: []const [6]u32, module_sizes: []const usize };
+pub const Scenario = struct { name: []const u8, spec: protocol.Spec, public_input: protocol.public_input.Spec, system: vanishing.System, logderiv: logderivativesum.System = .{}, rowlimit: rowlimit.System = .{}, honest: VanishingProofView, invalid: ?VanishingProofView = null };
 
 pub const system_0_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_0_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 2 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "bool-col"
@@ -63,6 +67,7 @@ const system_0_rowlimit = rowlimit.System{ .checks = &system_0_rowlimit_checks }
 const scenario_0 = Scenario{
     .name = "BooleanColumn",
     .spec = system_0_spec,
+    .public_input = system_0_public_input,
     .system = system_0,
     .logderiv = system_0_logderiv,
     .honest = .{
@@ -82,6 +87,7 @@ const scenario_0 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{.{ 736852620, 1103819055, 684096876, 1524501987, 1244131115, 1008173224 }},
         .quotient_claims = &.{.{ 1598029825, 0, 0, 0, 0, 0 }},
         .module_sizes = &.{},
@@ -103,6 +109,7 @@ const scenario_0 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{.{ 1025045363, 899443736, 222307562, 925849645, 2039994848, 1411815050 }},
         .quotient_claims = &.{.{ 1937275418, 20644395, 816818611, 1136693783, 30364783, 751519673 }},
         .module_sizes = &.{},
@@ -114,6 +121,10 @@ pub const system_1_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_1_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 4 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "fib"
@@ -160,6 +171,7 @@ const system_1_rowlimit = rowlimit.System{ .checks = &system_1_rowlimit_checks }
 const scenario_1 = Scenario{
     .name = "Fibonacci",
     .spec = system_1_spec,
+    .public_input = system_1_public_input,
     .system = system_1,
     .logderiv = system_1_logderiv,
     .honest = .{
@@ -181,6 +193,7 @@ const scenario_1 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 729116987, 164515525, 174064826, 772882510, 585414618, 1528291706 }, .{ 53332270, 962264592, 617085810, 635733558, 1866765524, 124810049 }, .{ 1395949883, 1516988754, 1865912802, 52282168, 943155078, 336718351 } },
         .quotient_claims = &.{.{ 1034108327, 1770270463, 1897633379, 736210160, 437757535, 689999839 }},
         .module_sizes = &.{},
@@ -204,6 +217,7 @@ const scenario_1 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 781229650, 1184441139, 1964828062, 1307180938, 353944695, 1904179086 }, .{ 953397220, 163700420, 1528060316, 967455900, 547237204, 1366812718 }, .{ 1600911684, 979418009, 324774461, 564750817, 1891272270, 1003681691 } },
         .quotient_claims = &.{.{ 221904739, 1002546122, 1309399665, 854517437, 1666970096, 1183288703 }},
         .module_sizes = &.{},
@@ -215,6 +229,10 @@ pub const system_2_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_2_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "geo"
@@ -261,6 +279,7 @@ const system_2_rowlimit = rowlimit.System{ .checks = &system_2_rowlimit_checks }
 const scenario_2 = Scenario{
     .name = "GeometricProgression",
     .spec = system_2_spec,
+    .public_input = system_2_public_input,
     .system = system_2,
     .logderiv = system_2_logderiv,
     .honest = .{
@@ -281,6 +300,7 @@ const scenario_2 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 796696491, 415094753, 185571498, 931264600, 1143935484, 301693829 }, .{ 2129487710, 2031252056, 2016949049, 1637600398, 976400867, 197698653 } },
         .quotient_claims = &.{.{ 1864368097, 0, 0, 0, 0, 0 }},
         .module_sizes = &.{},
@@ -303,6 +323,7 @@ const scenario_2 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1214356912, 1027368420, 601071028, 638525440, 2057423203, 2071784575 }, .{ 562112467, 754101386, 1832291888, 635553598, 1246868952, 349433771 } },
         .quotient_claims = &.{.{ 910757609, 1488925020, 1764990561, 456244391, 2072046550, 1436311637 }},
         .module_sizes = &.{},
@@ -314,6 +335,10 @@ pub const system_3_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_3_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 4 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "ctr"
@@ -360,6 +385,7 @@ const system_3_rowlimit = rowlimit.System{ .checks = &system_3_rowlimit_checks }
 const scenario_3 = Scenario{
     .name = "ConditionalCounter",
     .spec = system_3_spec,
+    .public_input = system_3_public_input,
     .system = system_3,
     .logderiv = system_3_logderiv,
     .honest = .{
@@ -381,6 +407,7 @@ const scenario_3 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 2115691270, 124360963, 1464010536, 548997708, 222606086, 814032681 }, .{ 1499249117, 366666132, 482708077, 1972571949, 697699884, 1260815153 }, .{ 966435553, 925101571, 1534659143, 493292134, 2011580230, 719401866 } },
         .quotient_claims = &.{.{ 799014912, 0, 0, 0, 0, 0 }},
         .module_sizes = &.{},
@@ -404,6 +431,7 @@ const scenario_3 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1375198999, 1108628657, 1091290758, 1128231713, 524215907, 615624130 }, .{ 3689367, 224514892, 177390539, 1452181032, 1891480201, 1817555649 }, .{ 1576744189, 2032698407, 540769399, 12337845, 1649816202, 1986923841 } },
         .quotient_claims = &.{.{ 819822635, 1559711554, 922326665, 400408596, 566793604, 958213928 }},
         .module_sizes = &.{},
@@ -415,6 +443,10 @@ pub const system_4_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_4_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 4 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "pyth"
@@ -464,6 +496,7 @@ const system_4_rowlimit = rowlimit.System{ .checks = &system_4_rowlimit_checks }
 const scenario_4 = Scenario{
     .name = "PythagoreanTriplet",
     .spec = system_4_spec,
+    .public_input = system_4_public_input,
     .system = system_4,
     .logderiv = system_4_logderiv,
     .honest = .{
@@ -485,6 +518,7 @@ const scenario_4 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 37195105, 1248955388, 1795062210, 1307821549, 1444163176, 519768354 }, .{ 499976134, 1286537441, 2052779959, 978596984, 2073481174, 1785376164 }, .{ 1085369134, 1415181900, 742063888, 823763918, 1424651198, 2043973683 } },
         .quotient_claims = &.{.{ 1456929593, 1553970853, 1735718635, 828641422, 241516212, 1002827869 }},
         .module_sizes = &.{},
@@ -508,6 +542,7 @@ const scenario_4 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 525539364, 158047105, 1650674297, 2091946604, 1660380630, 30162061 }, .{ 403783894, 1303246359, 1449165775, 1448300201, 2056750167, 1219607887 }, .{ 492962816, 2065968195, 1907813679, 1677925408, 1249170337, 504597077 } },
         .quotient_claims = &.{.{ 1221221142, 385669681, 268057700, 1548510796, 1692621363, 686320054 }},
         .module_sizes = &.{},
@@ -519,6 +554,10 @@ pub const system_5_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 1,
+};
+pub const system_5_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 4 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "dyn-fib"
@@ -565,6 +604,7 @@ const system_5_rowlimit = rowlimit.System{ .checks = &system_5_rowlimit_checks }
 const scenario_5 = Scenario{
     .name = "DynamicFibonacci",
     .spec = system_5_spec,
+    .public_input = system_5_public_input,
     .system = system_5,
     .logderiv = system_5_logderiv,
     .honest = .{
@@ -586,6 +626,7 @@ const scenario_5 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1124538395, 2072734480, 897453127, 1854360928, 614990895, 617577981 }, .{ 1240183399, 1264086509, 1285173879, 1856550839, 1771244906, 606671399 }, .{ 1322954077, 1477902336, 407275706, 139775299, 135857976, 1517666973 } },
         .quotient_claims = &.{.{ 1186149660, 1736203084, 1636191561, 371066790, 266289612, 1727564727 }},
         .module_sizes = &.{8},
@@ -609,6 +650,7 @@ const scenario_5 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 2002948369, 1327439375, 821329518, 410434886, 7740382, 1979946342 }, .{ 1018456193, 560117754, 1969668626, 1938670903, 1215251068, 1640557902 }, .{ 187675478, 1788672403, 1555093961, 836717467, 1939949280, 1496585142 } },
         .quotient_claims = &.{.{ 2117397628, 298757563, 194830958, 502788038, 1292222718, 1343856613 }},
         .module_sizes = &.{8},
@@ -620,6 +662,10 @@ pub const system_6_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_6_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 2 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "const-col"
@@ -664,6 +710,7 @@ const system_6_rowlimit = rowlimit.System{ .checks = &system_6_rowlimit_checks }
 const scenario_6 = Scenario{
     .name = "ConstantColumn",
     .spec = system_6_spec,
+    .public_input = system_6_public_input,
     .system = system_6,
     .logderiv = system_6_logderiv,
     .honest = .{
@@ -683,6 +730,7 @@ const scenario_6 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{.{ 7, 0, 0, 0, 0, 0 }},
         .quotient_claims = &.{.{ 0, 0, 0, 0, 0, 0 }},
         .module_sizes = &.{},
@@ -704,6 +752,7 @@ const scenario_6 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{.{ 1995926139, 198525410, 1017231312, 1103520101, 1102880618, 1926755368 }},
         .quotient_claims = &.{.{ 2049120188, 801496480, 438856678, 1159048709, 1452012850, 663296372 }},
         .module_sizes = &.{},
@@ -715,6 +764,10 @@ pub const system_7_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_7_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "fwd-shift"
@@ -759,6 +812,7 @@ const system_7_rowlimit = rowlimit.System{ .checks = &system_7_rowlimit_checks }
 const scenario_7 = Scenario{
     .name = "ForwardShiftConstant",
     .spec = system_7_spec,
+    .public_input = system_7_public_input,
     .system = system_7,
     .logderiv = system_7_logderiv,
     .honest = .{
@@ -779,6 +833,7 @@ const scenario_7 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 5, 0, 0, 0, 0, 0 }, .{ 5, 0, 0, 0, 0, 0 } },
         .quotient_claims = &.{.{ 0, 0, 0, 0, 0, 0 }},
         .module_sizes = &.{},
@@ -801,6 +856,7 @@ const scenario_7 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 603401816, 77681205, 1159783919, 1599730522, 1387152087, 1676488677 }, .{ 1917735970, 1345264589, 590182890, 844217247, 2107665674, 1341029388 } },
         .quotient_claims = &.{.{ 21115593, 798432207, 1293532810, 1680910978, 1390634289, 1177635332 }},
         .module_sizes = &.{},
@@ -812,6 +868,10 @@ pub const system_8_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_8_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "bool-cube"
@@ -860,6 +920,7 @@ const system_8_rowlimit = rowlimit.System{ .checks = &system_8_rowlimit_checks }
 const scenario_8 = Scenario{
     .name = "BooleanCube",
     .spec = system_8_spec,
+    .public_input = system_8_public_input,
     .system = system_8,
     .logderiv = system_8_logderiv,
     .honest = .{
@@ -880,6 +941,7 @@ const scenario_8 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{.{ 1776110136, 241085466, 2016194903, 1792924531, 1980581301, 1907072491 }},
         .quotient_claims = &.{ .{ 2042057359, 1125624583, 1036725334, 980907741, 2093175150, 1009444731 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
@@ -902,6 +964,7 @@ const scenario_8 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{.{ 570932535, 788408284, 107936920, 1384180510, 363402509, 1702998463 }},
         .quotient_claims = &.{ .{ 829935659, 2053719477, 1455032264, 154352924, 2014776969, 1881702763 }, .{ 846670135, 2113565113, 217316949, 1287355529, 1557337449, 1798341428 } },
         .module_sizes = &.{},
@@ -913,6 +976,10 @@ pub const system_9_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_9_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 4 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lin-comb"
@@ -963,6 +1030,7 @@ const system_9_rowlimit = rowlimit.System{ .checks = &system_9_rowlimit_checks }
 const scenario_9 = Scenario{
     .name = "LinearCombination",
     .spec = system_9_spec,
+    .public_input = system_9_public_input,
     .system = system_9,
     .logderiv = system_9_logderiv,
     .honest = .{
@@ -984,6 +1052,7 @@ const scenario_9 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 659867830, 886468229, 368428109, 468210183, 1215833002, 117736813 }, .{ 1315866530, 1437159788, 811489075, 1767311106, 1975150465, 946627024 }, .{ 1473418023, 47618362, 1712523086, 1108569090, 508981646, 828631877 } },
         .quotient_claims = &.{.{ 0, 0, 0, 0, 0, 0 }},
         .module_sizes = &.{},
@@ -1007,6 +1076,7 @@ const scenario_9 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1110969701, 408953592, 1154389332, 790544710, 1925449326, 1395201989 }, .{ 1719370467, 999657446, 458006014, 1570949925, 924418808, 1988200110 }, .{ 1117797869, 567218921, 718769134, 2087583888, 956710502, 1824238041 } },
         .quotient_claims = &.{.{ 994338656, 784498517, 1733858681, 1703424133, 1350040184, 378735043 }},
         .module_sizes = &.{},
@@ -1018,6 +1088,10 @@ pub const system_10_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_10_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 4 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "fib-16"
@@ -1064,6 +1138,7 @@ const system_10_rowlimit = rowlimit.System{ .checks = &system_10_rowlimit_checks
 const scenario_10 = Scenario{
     .name = "LargeFibonacci",
     .spec = system_10_spec,
+    .public_input = system_10_public_input,
     .system = system_10,
     .logderiv = system_10_logderiv,
     .honest = .{
@@ -1085,6 +1160,7 @@ const scenario_10 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1512027582, 617352498, 80570140, 1042453664, 1463780725, 2024626740 }, .{ 1460379392, 723969880, 840324341, 176288977, 1832230040, 1230326813 }, .{ 604900533, 1060360138, 681751338, 1847287799, 1800818111, 331836299 } },
         .quotient_claims = &.{.{ 978905820, 1486136621, 1009715380, 673701621, 377291412, 1287756138 }},
         .module_sizes = &.{},
@@ -1108,6 +1184,7 @@ const scenario_10 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1803983163, 1981805615, 1778281943, 2029476292, 1015211515, 591008018 }, .{ 1021474100, 1459268880, 455736417, 1926214446, 167571151, 1033741727 }, .{ 1857779261, 1335359953, 1776463768, 1190061662, 21468279, 1724779126 } },
         .quotient_claims = &.{.{ 777223024, 846341069, 148025906, 1783284812, 1043682910, 1511301761 }},
         .module_sizes = &.{},
@@ -1119,6 +1196,10 @@ pub const system_11_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_11_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "same-ratio"
@@ -1167,6 +1248,7 @@ const system_11_rowlimit = rowlimit.System{ .checks = &system_11_rowlimit_checks
 const scenario_11 = Scenario{
     .name = "MultipleVanishingsSameRatio",
     .spec = system_11_spec,
+    .public_input = system_11_public_input,
     .system = system_11,
     .logderiv = system_11_logderiv,
     .honest = .{
@@ -1187,6 +1269,7 @@ const scenario_11 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 4, 0, 0, 0, 0, 0 }, .{ 4, 0, 0, 0, 0, 0 } },
         .quotient_claims = &.{.{ 0, 0, 0, 0, 0, 0 }},
         .module_sizes = &.{},
@@ -1209,6 +1292,7 @@ const scenario_11 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 4, 0, 0, 0, 0, 0 }, .{ 126510753, 735075241, 1217044993, 1470667804, 786664750, 1167021201 } },
         .quotient_claims = &.{.{ 167658378, 1832226203, 200658831, 1818656564, 2002200817, 1427337818 }},
         .module_sizes = &.{},
@@ -1220,6 +1304,10 @@ pub const system_12_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_12_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "mixed-ratio"
@@ -1270,6 +1358,7 @@ const system_12_rowlimit = rowlimit.System{ .checks = &system_12_rowlimit_checks
 const scenario_12 = Scenario{
     .name = "MixedRatioVanishings",
     .spec = system_12_spec,
+    .public_input = system_12_public_input,
     .system = system_12,
     .logderiv = system_12_logderiv,
     .honest = .{
@@ -1290,6 +1379,7 @@ const scenario_12 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 } },
         .quotient_claims = &.{.{ 0, 0, 0, 0, 0, 0 }},
         .module_sizes = &.{},
@@ -1312,6 +1402,7 @@ const scenario_12 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 7, 0, 0, 0, 0, 0 }, .{ 7, 0, 0, 0, 0, 0 } },
         .quotient_claims = &.{.{ 316090728, 1084924622, 540336079, 2056580620, 994950376, 487493029 }},
         .module_sizes = &.{},
@@ -1323,6 +1414,10 @@ pub const system_13_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 3 },
     .total_round_coins = 3,
     .dynamic_module_count = 0,
+};
+pub const system_13_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 4 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "multi-mod"
@@ -1387,6 +1482,7 @@ const system_13_rowlimit = rowlimit.System{ .checks = &system_13_rowlimit_checks
 const scenario_13 = Scenario{
     .name = "MultiModule",
     .spec = system_13_spec,
+    .public_input = system_13_public_input,
     .system = system_13,
     .logderiv = system_13_logderiv,
     .honest = .{
@@ -1408,6 +1504,7 @@ const scenario_13 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1227484097, 463289394, 1235157364, 2094700346, 478471862, 2043441451 }, .{ 7, 0, 0, 0, 0, 0 } },
         .quotient_claims = &.{ .{ 1598029825, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
@@ -1431,6 +1528,7 @@ const scenario_13 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 680064968, 817177242, 1428404878, 1435083963, 1478221257, 3726314 }, .{ 7, 0, 0, 0, 0, 0 } },
         .quotient_claims = &.{ .{ 1089480017, 1944627535, 2040336100, 1034803779, 78760646, 1361079857 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
@@ -1442,6 +1540,10 @@ pub const system_14_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_14_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "manual-cxl"
@@ -1488,6 +1590,7 @@ const system_14_rowlimit = rowlimit.System{ .checks = &system_14_rowlimit_checks
 const scenario_14 = Scenario{
     .name = "ManualCancellation",
     .spec = system_14_spec,
+    .public_input = system_14_public_input,
     .system = system_14,
     .logderiv = system_14_logderiv,
     .honest = .{
@@ -1508,6 +1611,7 @@ const scenario_14 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 969324969, 1956961662, 1547172743, 1123585610, 1146297564, 594401715 }, .{ 76078728, 1679935962, 265611735, 744138887, 1474745847, 1801077345 } },
         .quotient_claims = &.{.{ 2130706432, 0, 0, 0, 0, 0 }},
         .module_sizes = &.{},
@@ -1530,6 +1634,7 @@ const scenario_14 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1560473841, 592541414, 1094574124, 1662443081, 1858851196, 1040418955 }, .{ 1525207365, 2002030919, 69559642, 2036305767, 890598854, 1456630655 } },
         .quotient_claims = &.{.{ 282309534, 431194492, 851935935, 810201343, 103169246, 527352762 }},
         .module_sizes = &.{},
@@ -1541,6 +1646,10 @@ pub const system_15_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_15_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "pre-sel"
@@ -1587,6 +1696,7 @@ const system_15_rowlimit = rowlimit.System{ .checks = &system_15_rowlimit_checks
 const scenario_15 = Scenario{
     .name = "PrecomputedSelector",
     .spec = system_15_spec,
+    .public_input = system_15_public_input,
     .system = system_15,
     .logderiv = system_15_logderiv,
     .honest = .{
@@ -1607,6 +1717,7 @@ const scenario_15 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1356793964, 1464187275, 1280179426, 489878226, 1845890532, 909619229 }, .{ 1093550051, 299080021, 82398161, 1955187268, 1357790177, 378387156 } },
         .quotient_claims = &.{.{ 1009728425, 386546599, 1079154979, 642854573, 408482360, 712026746 }},
         .module_sizes = &.{},
@@ -1629,6 +1740,7 @@ const scenario_15 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 890112116, 2100460498, 2128080241, 1056522944, 1806404444, 2010450469 }, .{ 1939673802, 924650663, 1889032347, 129393364, 807608717, 1543699727 } },
         .quotient_claims = &.{.{ 1703547691, 140363510, 1052075984, 1855037501, 2094261408, 13452583 }},
         .module_sizes = &.{},
@@ -1640,6 +1752,10 @@ pub const system_16_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_16_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 1, 0, 2 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "cell-leaf"
@@ -1684,6 +1800,7 @@ const system_16_rowlimit = rowlimit.System{ .checks = &system_16_rowlimit_checks
 const scenario_16 = Scenario{
     .name = "CellLeaf",
     .spec = system_16_spec,
+    .public_input = system_16_public_input,
     .system = system_16,
     .logderiv = system_16_logderiv,
     .honest = .{
@@ -1705,6 +1822,7 @@ const scenario_16 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{.{ 11, 0, 0, 0, 0, 0 }},
         .quotient_claims = &.{.{ 0, 0, 0, 0, 0, 0 }},
         .module_sizes = &.{},
@@ -1728,6 +1846,7 @@ const scenario_16 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{.{ 861996522, 440668630, 194233075, 279375769, 1435626146, 416577688 }},
         .quotient_claims = &.{.{ 889691360, 271846662, 1200950282, 189929010, 2095384099, 644419151 }},
         .module_sizes = &.{},
@@ -1739,6 +1858,10 @@ pub const system_17_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2, 3 },
     .total_round_coins = 3,
     .dynamic_module_count = 0,
+};
+pub const system_17_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 0, 3 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "coin-scaled"
@@ -1785,6 +1908,7 @@ const system_17_rowlimit = rowlimit.System{ .checks = &system_17_rowlimit_checks
 const scenario_17 = Scenario{
     .name = "CoinScaled",
     .spec = system_17_spec,
+    .public_input = system_17_public_input,
     .system = system_17,
     .logderiv = system_17_logderiv,
     .honest = .{
@@ -1808,6 +1932,7 @@ const scenario_17 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 8, 0, 0, 0, 0, 0 }, .{ 8, 0, 0, 0, 0, 0 } },
         .quotient_claims = &.{.{ 0, 0, 0, 0, 0, 0 }},
         .module_sizes = &.{},
@@ -1833,6 +1958,7 @@ const scenario_17 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1458219687, 1189068150, 1223648764, 268697540, 1152808485, 682779092 }, .{ 713817069, 724721262, 1525222135, 1168542913, 158911759, 758371632 } },
         .quotient_claims = &.{.{ 1569554221, 1250654329, 1326653913, 1009436854, 426294583, 2115093110 }},
         .module_sizes = &.{},
@@ -1844,6 +1970,10 @@ pub const system_18_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_18_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 4 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "step3"
@@ -1890,6 +2020,7 @@ const system_18_rowlimit = rowlimit.System{ .checks = &system_18_rowlimit_checks
 const scenario_18 = Scenario{
     .name = "ThreeStepRecurrence",
     .spec = system_18_spec,
+    .public_input = system_18_public_input,
     .system = system_18,
     .logderiv = system_18_logderiv,
     .honest = .{
@@ -1911,6 +2042,7 @@ const scenario_18 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1262858131, 1373977172, 252519299, 1363850700, 224049239, 314200752 }, .{ 1612833830, 984442407, 1930779881, 1269163998, 1093483042, 502105802 }, .{ 1021042579, 1253582918, 179036719, 1233842484, 417771343, 1489669875 } },
         .quotient_claims = &.{.{ 1740242408, 222332546, 749547058, 765604109, 724079137, 1783081841 }},
         .module_sizes = &.{},
@@ -1934,6 +2066,7 @@ const scenario_18 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1154096987, 1649679141, 1274672473, 332951806, 1343630005, 1937150683 }, .{ 1349672845, 297008072, 865172070, 1717168420, 659675951, 949722880 }, .{ 1991711083, 639932706, 1476248533, 877559960, 760298858, 124882478 } },
         .quotient_claims = &.{.{ 469800180, 1400926255, 1260488738, 76667156, 1957475143, 1512524544 }},
         .module_sizes = &.{},
@@ -1945,6 +2078,10 @@ pub const system_19_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_19_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 5 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "quartic"
@@ -1995,6 +2132,7 @@ const system_19_rowlimit = rowlimit.System{ .checks = &system_19_rowlimit_checks
 const scenario_19 = Scenario{
     .name = "Quartic",
     .spec = system_19_spec,
+    .public_input = system_19_public_input,
     .system = system_19,
     .logderiv = system_19_logderiv,
     .honest = .{
@@ -2017,6 +2155,7 @@ const scenario_19 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{.{ 2046076595, 1145984493, 1095254741, 1426660117, 2068492036, 74123316 }},
         .quotient_claims = &.{ .{ 1688884058, 1638345463, 1612980587, 1778683275, 1034246018, 37061658 }, .{ 1997537281, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
@@ -2041,6 +2180,7 @@ const scenario_19 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{.{ 2110530711, 94641787, 640344719, 600423215, 1115421492, 977877533 }},
         .quotient_claims = &.{ .{ 1463434009, 885438124, 556387745, 2021115876, 1591362729, 843572357 }, .{ 2010754478, 1572445960, 1837989425, 421719145, 418616540, 129284490 }, .{ 1022621516, 1782833730, 692527025, 697892501, 908729805, 505328015 }, .{ 1030944588, 1782833730, 692527025, 697892501, 908729805, 505328015 } },
         .module_sizes = &.{},
@@ -2052,6 +2192,10 @@ pub const system_20_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 1,
+};
+pub const system_20_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "dyn-leftpad"
@@ -2096,6 +2240,7 @@ const system_20_rowlimit = rowlimit.System{ .checks = &system_20_rowlimit_checks
 const scenario_20 = Scenario{
     .name = "LeftPadDynamic",
     .spec = system_20_spec,
+    .public_input = system_20_public_input,
     .system = system_20,
     .logderiv = system_20_logderiv,
     .honest = .{
@@ -2116,6 +2261,7 @@ const scenario_20 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 9, 0, 0, 0, 0, 0 }, .{ 9, 0, 0, 0, 0, 0 } },
         .quotient_claims = &.{.{ 0, 0, 0, 0, 0, 0 }},
         .module_sizes = &.{8},
@@ -2138,6 +2284,7 @@ const scenario_20 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 184462125, 1336407776, 257956670, 464561058, 987875995, 595292110 }, .{ 377695566, 1210562925, 23876256, 1280961434, 931961173, 383995500 } },
         .quotient_claims = &.{.{ 1521369154, 985937018, 824850297, 1097953385, 890961552, 1561772523 }},
         .module_sizes = &.{8},
@@ -2149,6 +2296,10 @@ pub const system_21_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_21_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 4 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "cube-shift"
@@ -2197,6 +2348,7 @@ const system_21_rowlimit = rowlimit.System{ .checks = &system_21_rowlimit_checks
 const scenario_21 = Scenario{
     .name = "CubicWithBackShift",
     .spec = system_21_spec,
+    .public_input = system_21_public_input,
     .system = system_21,
     .logderiv = system_21_logderiv,
     .honest = .{
@@ -2218,6 +2370,7 @@ const scenario_21 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1, 0, 0, 0, 0, 0 }, .{ 1, 0, 0, 0, 0, 0 } },
         .quotient_claims = &.{ .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
@@ -2241,6 +2394,7 @@ const scenario_21 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1929002668, 543539294, 942692510, 582132722, 2023383042, 765829460 }, .{ 1680969742, 1163720585, 608924265, 625611220, 398082859, 1809613895 } },
         .quotient_claims = &.{ .{ 2113729838, 56794216, 721425180, 1609476761, 370432973, 735188529 }, .{ 571816841, 864844122, 363519831, 1975858849, 695914438, 1781611906 } },
         .module_sizes = &.{},
@@ -2252,6 +2406,10 @@ pub const system_22_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_22_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 7 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "mixed-hi-ratio"
@@ -2314,6 +2472,7 @@ const system_22_rowlimit = rowlimit.System{ .checks = &system_22_rowlimit_checks
 const scenario_22 = Scenario{
     .name = "MixedHighRatio",
     .spec = system_22_spec,
+    .public_input = system_22_public_input,
     .system = system_22,
     .logderiv = system_22_logderiv,
     .honest = .{
@@ -2338,6 +2497,7 @@ const scenario_22 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{.{ 1867428425, 497089938, 266023751, 352523630, 69671142, 2067557062 }},
         .quotient_claims = &.{ .{ 1532210323, 1189625701, 599182546, 1153484124, 1082771002, 1582242482 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 1599559973, 248544969, 1198365092, 176261815, 34835571, 1033778531 }, .{ 1997537281, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
@@ -2364,6 +2524,7 @@ const scenario_22 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{.{ 463434812, 844821719, 867696287, 221262626, 375931569, 1382516767 }},
         .quotient_claims = &.{ .{ 2063722827, 1579554417, 950925239, 90561924, 452000261, 1324169245 }, .{ 1921506952, 1181824090, 335636343, 804083731, 593983989, 505745170 }, .{ 1854991205, 1527218991, 643670628, 1195374150, 105805327, 1222322945 }, .{ 1890547844, 582325266, 1416473744, 1998211303, 1553550005, 1710815209 }, .{ 437281014, 596376289, 1786091324, 617904606, 1721051141, 1061895311 }, .{ 239036291, 654360472, 580848131, 797107563, 1520134532, 460212984 } },
         .module_sizes = &.{},
@@ -2375,6 +2536,10 @@ pub const system_23_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 3 },
     .total_round_coins = 3,
     .dynamic_module_count = 0,
+};
+pub const system_23_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 6 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "multi-mod-hi-ratio"
@@ -2445,6 +2610,7 @@ const system_23_rowlimit = rowlimit.System{ .checks = &system_23_rowlimit_checks
 const scenario_23 = Scenario{
     .name = "MultiModuleHighRatio",
     .spec = system_23_spec,
+    .public_input = system_23_public_input,
     .system = system_23,
     .logderiv = system_23_logderiv,
     .honest = .{
@@ -2468,6 +2634,7 @@ const scenario_23 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 361933843, 1748539005, 97552254, 155748440, 260872495, 1212457311 }, .{ 983050736, 952470045, 693499323, 802558187, 948508075, 2104681137 } },
         .quotient_claims = &.{ .{ 90483461, 2035164576, 1089741280, 38937110, 597894732, 835790936 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 1843792509, 1836147336, 706051439, 733316155, 769803627, 2124200109 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
@@ -2493,6 +2660,7 @@ const scenario_23 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 137597660, 1242594103, 701304448, 816714924, 1765720734, 1594685000 }, .{ 137470678, 1276698395, 1271352377, 1387836382, 1471882084, 1555495399 } },
         .quotient_claims = &.{ .{ 1632429240, 843325134, 175326112, 204178731, 1506783400, 398671250 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 741849555, 725478868, 1407053604, 2100384768, 594467818, 1387997677 }, .{ 1771657683, 1436925028, 295948284, 1812709935, 996564580, 353728705 } },
         .module_sizes = &.{},
@@ -2504,6 +2672,10 @@ pub const system_24_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_24_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "cube-32"
@@ -2552,6 +2724,7 @@ const system_24_rowlimit = rowlimit.System{ .checks = &system_24_rowlimit_checks
 const scenario_24 = Scenario{
     .name = "SizeThirtyTwoCubic",
     .spec = system_24_spec,
+    .public_input = system_24_public_input,
     .system = system_24,
     .logderiv = system_24_logderiv,
     .honest = .{
@@ -2572,6 +2745,7 @@ const scenario_24 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{.{ 893887110, 982901958, 614069117, 679516702, 688339215, 500050886 }},
         .quotient_claims = &.{ .{ 756148386, 1311078706, 1751547104, 1235232392, 704761412, 1190365938 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
@@ -2594,6 +2768,7 @@ const scenario_24 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{.{ 1512214497, 346152242, 1599236577, 65854725, 109297787, 1944240936 }},
         .quotient_claims = &.{ .{ 1410175047, 1146261134, 49344079, 608455584, 2040614202, 308766684 }, .{ 196694439, 369317545, 1168008046, 762417359, 424978261, 188637158 } },
         .module_sizes = &.{},
@@ -2605,6 +2780,10 @@ pub const system_25_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_25_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "fwd-shift-3"
@@ -2649,6 +2828,7 @@ const system_25_rowlimit = rowlimit.System{ .checks = &system_25_rowlimit_checks
 const scenario_25 = Scenario{
     .name = "LargeForwardShift",
     .spec = system_25_spec,
+    .public_input = system_25_public_input,
     .system = system_25,
     .logderiv = system_25_logderiv,
     .honest = .{
@@ -2669,6 +2849,7 @@ const scenario_25 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 4, 0, 0, 0, 0, 0 }, .{ 4, 0, 0, 0, 0, 0 } },
         .quotient_claims = &.{.{ 0, 0, 0, 0, 0, 0 }},
         .module_sizes = &.{},
@@ -2691,6 +2872,7 @@ const scenario_25 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 262334600, 1902149801, 325618233, 46475409, 1685088582, 379454456 }, .{ 1493802056, 1372043900, 1141567883, 458431819, 1034473705, 750030325 } },
         .quotient_claims = &.{.{ 115137160, 1150718656, 2100859412, 716418549, 1618288336, 273896156 }},
         .module_sizes = &.{},
@@ -2702,6 +2884,10 @@ pub const system_26_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_26_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 4 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "two-shift"
@@ -2750,6 +2936,7 @@ const system_26_rowlimit = rowlimit.System{ .checks = &system_26_rowlimit_checks
 const scenario_26 = Scenario{
     .name = "BackAndForwardShift",
     .spec = system_26_spec,
+    .public_input = system_26_public_input,
     .system = system_26,
     .logderiv = system_26_logderiv,
     .honest = .{
@@ -2771,6 +2958,7 @@ const scenario_26 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 } },
         .quotient_claims = &.{.{ 0, 0, 0, 0, 0, 0 }},
         .module_sizes = &.{},
@@ -2794,6 +2982,7 @@ const scenario_26 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 361866822, 1618911319, 813041599, 1940944300, 349538446, 269478650 }, .{ 369514325, 164823303, 178188315, 858333284, 871589757, 986251810 }, .{ 1079179038, 1330031271, 1385084812, 2093054829, 1725801126, 645179592 } },
         .quotient_claims = &.{.{ 1691244936, 1625773157, 1557615178, 383230765, 1655710940, 1659381279 }},
         .module_sizes = &.{},
@@ -2805,6 +2994,10 @@ pub const system_27_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 1,
+};
+pub const system_27_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 2 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "dyn-quad"
@@ -2851,6 +3044,7 @@ const system_27_rowlimit = rowlimit.System{ .checks = &system_27_rowlimit_checks
 const scenario_27 = Scenario{
     .name = "DynamicQuadratic",
     .spec = system_27_spec,
+    .public_input = system_27_public_input,
     .system = system_27,
     .logderiv = system_27_logderiv,
     .honest = .{
@@ -2870,6 +3064,7 @@ const scenario_27 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{.{ 1354609250, 928410592, 456165971, 1159743429, 772872398, 483232104 }},
         .quotient_claims = &.{.{ 1598029825, 0, 0, 0, 0, 0 }},
         .module_sizes = &.{8},
@@ -2891,6 +3086,7 @@ const scenario_27 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{.{ 520536174, 525584877, 751082228, 1154008477, 1133972250, 1382880944 }},
         .quotient_claims = &.{.{ 1263294900, 588995271, 1013561528, 695186325, 1870895116, 2034932617 }},
         .module_sizes = &.{8},
@@ -2902,6 +3098,10 @@ pub const system_28_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_28_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 6 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "quartic-shift"
@@ -2954,6 +3154,7 @@ const system_28_rowlimit = rowlimit.System{ .checks = &system_28_rowlimit_checks
 const scenario_28 = Scenario{
     .name = "QuarticWithBackShift",
     .spec = system_28_spec,
+    .public_input = system_28_public_input,
     .system = system_28,
     .logderiv = system_28_logderiv,
     .honest = .{
@@ -2977,6 +3178,7 @@ const scenario_28 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1, 0, 0, 0, 0, 0 }, .{ 1, 0, 0, 0, 0, 0 } },
         .quotient_claims = &.{ .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
@@ -3002,6 +3204,7 @@ const scenario_28 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1868957196, 756707770, 1406510982, 1423286237, 1478884812, 844291702 }, .{ 899841515, 1536979506, 1846104930, 1674798361, 844983121, 482899684 } },
         .quotient_claims = &.{ .{ 1328216832, 1569742046, 201073942, 397665402, 1742090309, 949801552 }, .{ 1277792701, 541248037, 1599072685, 1121079145, 261463106, 1552494652 }, .{ 1601244418, 482116146, 1732652008, 2121539058, 1226318107, 649598654 }, .{ 1801427011, 1896956992, 1453672685, 918201193, 1265128181, 203656212 } },
         .module_sizes = &.{},
@@ -3013,6 +3216,10 @@ pub const system_29_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 1,
+};
+pub const system_29_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 4 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "dyn-fib-multisize"
@@ -3059,6 +3266,7 @@ const system_29_rowlimit = rowlimit.System{ .checks = &system_29_rowlimit_checks
 const scenario_29 = Scenario{
     .name = "DynamicFibonacciMultiSize",
     .spec = system_29_spec,
+    .public_input = system_29_public_input,
     .system = system_29,
     .logderiv = system_29_logderiv,
     .honest = .{
@@ -3080,6 +3288,7 @@ const scenario_29 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1124538395, 2072734480, 897453127, 1854360928, 614990895, 617577981 }, .{ 1240183399, 1264086509, 1285173879, 1856550839, 1771244906, 606671399 }, .{ 1322954077, 1477902336, 407275706, 139775299, 135857976, 1517666973 } },
         .quotient_claims = &.{.{ 1186149660, 1736203084, 1636191561, 371066790, 266289612, 1727564727 }},
         .module_sizes = &.{8},
@@ -3091,6 +3300,10 @@ pub const system_30_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 3 },
     .total_round_coins = 3,
     .dynamic_module_count = 2,
+};
+pub const system_30_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 8 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "dyn-fib-two-modules"
@@ -3157,6 +3370,7 @@ const system_30_rowlimit = rowlimit.System{ .checks = &system_30_rowlimit_checks
 const scenario_30 = Scenario{
     .name = "DynamicFibonacciTwoModules",
     .spec = system_30_spec,
+    .public_input = system_30_public_input,
     .system = system_30,
     .logderiv = system_30_logderiv,
     .honest = .{
@@ -3182,6 +3396,7 @@ const scenario_30 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 2055754013, 1011737398, 1106373725, 927925640, 1547432277, 1847197858 }, .{ 1645454865, 1829559951, 1657561312, 835296652, 166108870, 1770234205 }, .{ 836391009, 864730225, 539505587, 1653442905, 447319194, 83041881 }, .{ 1740684147, 1495374426, 1791935061, 1868678114, 1274732730, 1518551574 }, .{ 525186905, 514970521, 160269745, 1663603990, 695395832, 1492922798 }, .{ 910812347, 162560340, 1771004256, 1886871505, 1610528346, 749169465 } },
         .quotient_claims = &.{ .{ 1340803732, 1920167164, 1474848046, 2099329736, 1653258187, 1652980482 }, .{ 432403531, 233779126, 1006860275, 97323213, 1197028604, 1882832030 } },
         .module_sizes = &.{ 8, 16 },
@@ -3193,6 +3408,10 @@ pub const system_31_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_31_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 2, 0, 4 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-ones"
@@ -3262,6 +3481,7 @@ const system_31_rowlimit = rowlimit.System{ .checks = &system_31_rowlimit_checks
 const scenario_31 = Scenario{
     .name = "SingleFractionAllOnes",
     .spec = system_31_spec,
+    .public_input = system_31_public_input,
     .system = system_31,
     .logderiv = system_31_logderiv,
     .honest = .{
@@ -3290,6 +3510,7 @@ const scenario_31 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 886310765, 465309578, 45142629, 1262875839, 1104242035, 1189952283 }, .{ 1142876965, 2034405946, 1308127126, 927074310, 769676435, 1840753224 }, .{ 230524319, 1108710316, 983435470, 1305395818, 350758840, 352790359 } },
         .quotient_claims = &.{.{ 893527632, 947167772, 1788710, 525049503, 1116263087, 1213338905 }},
         .module_sizes = &.{},
@@ -3301,6 +3522,10 @@ pub const system_32_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_32_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 2, 0, 7 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-partial"
@@ -3378,6 +3603,7 @@ const system_32_rowlimit = rowlimit.System{ .checks = &system_32_rowlimit_checks
 const scenario_32 = Scenario{
     .name = "PartialFilter",
     .spec = system_32_spec,
+    .public_input = system_32_public_input,
     .system = system_32,
     .logderiv = system_32_logderiv,
     .honest = .{
@@ -3409,6 +3635,7 @@ const scenario_32 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 665404326, 1779028058, 1944007944, 14262252, 1737473354, 546270197 }, .{ 1990923999, 535850773, 521932899, 1676993041, 924067286, 1077941933 }, .{ 486266051, 1304894365, 792614470, 1386625879, 240801974, 1134961031 }, .{ 2047385052, 230376114, 701410930, 1945479669, 1483903200, 421090777 } },
         .quotient_claims = &.{ .{ 1621379941, 907562795, 2066167086, 1761718897, 1369463124, 215282178 }, .{ 1193132859, 719914132, 169689670, 1090962013, 2027290835, 112045254 }, .{ 534765568, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
@@ -3420,6 +3647,10 @@ pub const system_33_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_33_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 2, 0, 7 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-zeros"
@@ -3497,6 +3728,7 @@ const system_33_rowlimit = rowlimit.System{ .checks = &system_33_rowlimit_checks
 const scenario_33 = Scenario{
     .name = "AllZeroFilter",
     .spec = system_33_spec,
+    .public_input = system_33_public_input,
     .system = system_33,
     .logderiv = system_33_logderiv,
     .honest = .{
@@ -3528,6 +3760,7 @@ const scenario_33 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 0, 0, 0, 0, 0, 0 }, .{ 574993704, 1562830638, 272881507, 1035103704, 131946164, 222487151 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 } },
         .quotient_claims = &.{ .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
@@ -3539,6 +3772,10 @@ pub const system_34_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_34_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 2, 0, 8 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-maskzero"
@@ -3616,6 +3853,7 @@ const system_34_rowlimit = rowlimit.System{ .checks = &system_34_rowlimit_checks
 const scenario_34 = Scenario{
     .name = "FilterMasksZeroDenominator",
     .spec = system_34_spec,
+    .public_input = system_34_public_input,
     .system = system_34,
     .logderiv = system_34_logderiv,
     .honest = .{
@@ -3648,6 +3886,7 @@ const scenario_34 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1778586636, 1314881720, 321660352, 467039306, 292585095, 532181295 }, .{ 636446655, 1638430388, 1562128444, 1957126141, 1445895085, 2279330 }, .{ 81533234, 1330011539, 282361434, 276719416, 765135012, 2080271857 }, .{ 231631304, 988554305, 766416749, 1760479343, 1938716154, 1591380051 }, .{ 999298007, 1984667344, 1788306615, 1724591171, 290964714, 1840989788 } },
         .quotient_claims = &.{ .{ 132389838, 212614757, 1936899116, 1555467729, 808814251, 79814368 }, .{ 202868055, 797108930, 706764695, 1346058042, 1429463393, 1298706994 }, .{ 766805783, 890816094, 1229593374, 1140755406, 831570507, 747691463 } },
         .module_sizes = &.{},
@@ -3659,6 +3898,10 @@ pub const system_35_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_35_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 3, 0, 13 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-pack"
@@ -3798,6 +4041,7 @@ const system_35_rowlimit = rowlimit.System{ .checks = &system_35_rowlimit_checks
 const scenario_35 = Scenario{
     .name = "Packing4Fractions",
     .spec = system_35_spec,
+    .public_input = system_35_public_input,
     .system = system_35,
     .logderiv = system_35_logderiv,
     .honest = .{
@@ -3836,6 +4080,7 @@ const scenario_35 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1289066929, 1838025011, 469383378, 243638989, 1813848307, 1092536045 }, .{ 1289066933, 1838025011, 469383378, 243638989, 1813848307, 1092536045 }, .{ 1289066937, 1838025011, 469383378, 243638989, 1813848307, 1092536045 }, .{ 52843005, 93061841, 367356404, 587234318, 1303468433, 1036309025 }, .{ 2013555917, 2012513994, 289046976, 806849484, 1802038363, 1891730786 }, .{ 1289066941, 1838025011, 469383378, 243638989, 1813848307, 1092536045 }, .{ 1807324035, 1240746626, 1036577248, 1434621207, 1450801858, 1983369925 }, .{ 972855578, 1597572794, 1829217271, 531950706, 1158386621, 358301634 } },
         .quotient_claims = &.{ .{ 1065353236, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 1388139737, 1933551942, 541789861, 943619868, 1472570234, 1963820703 } },
         .module_sizes = &.{},
@@ -3847,6 +4092,10 @@ pub const system_36_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 2, 3 },
     .total_round_coins = 3,
     .dynamic_module_count = 0,
+};
+pub const system_36_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 3, 0, 11 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-multi-mod"
@@ -3962,6 +4211,7 @@ const system_36_rowlimit = rowlimit.System{ .checks = &system_36_rowlimit_checks
 const scenario_36 = Scenario{
     .name = "MultiModuleBucketing",
     .spec = system_36_spec,
+    .public_input = system_36_public_input,
     .system = system_36,
     .logderiv = system_36_logderiv,
     .honest = .{
@@ -3998,6 +4248,7 @@ const scenario_36 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1745993643, 1127357737, 1034483562, 1737797018, 1299915012, 1651998613 }, .{ 1694878611, 2071274767, 1826437368, 1696017048, 1136611165, 628531383 }, .{ 842865637, 645919750, 1927021439, 1468411316, 1610420649, 1028314133 }, .{ 71944637, 1882856141, 18337313, 1687192591, 695901657, 428441244 }, .{ 1745993647, 1127357737, 1034483562, 1737797018, 1299915012, 1651998613 }, .{ 1168176756, 178798368, 597383280, 1650732948, 1492613022, 47355042 }, .{ 530861877, 1308303384, 1423299275, 1010350104, 724096335, 1643410360 } },
         .quotient_claims = &.{ .{ 718059126, 708166098, 1047260290, 687091614, 1669708388, 1956056619 }, .{ 162377668, 844317760, 1232225528, 1675381147, 445138051, 1766639942 }, .{ 253441090, 766897399, 1859315218, 1140237183, 1196792213, 796168279 }, .{ 1804778804, 701091557, 1693413337, 1932852305, 1233328363, 2073159125 } },
         .module_sizes = &.{},
@@ -4009,6 +4260,10 @@ pub const system_37_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_37_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 2, 0, 3 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-size1"
@@ -4069,6 +4324,7 @@ const system_37_rowlimit = rowlimit.System{ .checks = &system_37_rowlimit_checks
 const scenario_37 = Scenario{
     .name = "SizeOneModule",
     .spec = system_37_spec,
+    .public_input = system_37_public_input,
     .system = system_37,
     .logderiv = system_37_logderiv,
     .honest = .{
@@ -4096,6 +4352,7 @@ const scenario_37 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 17, 0, 0, 0, 0, 0 }, .{ 17, 0, 0, 0, 0, 0 } },
         .quotient_claims = &.{.{ 0, 0, 0, 0, 0, 0 }},
         .module_sizes = &.{},
@@ -4107,6 +4364,10 @@ pub const system_38_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 2, 3 },
     .total_round_coins = 3,
     .dynamic_module_count = 0,
+};
+pub const system_38_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 3, 0, 14 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-cond"
@@ -4236,6 +4497,7 @@ const system_38_rowlimit = rowlimit.System{ .checks = &system_38_rowlimit_checks
 const scenario_38 = Scenario{
     .name = "ConditionalLookupShape",
     .spec = system_38_spec,
+    .public_input = system_38_public_input,
     .system = system_38,
     .logderiv = system_38_logderiv,
     .honest = .{
@@ -4275,6 +4537,7 @@ const scenario_38 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1192535677, 865129810, 458734227, 1510754345, 1074033492, 719158207 }, .{ 996374960, 1164808734, 186805230, 577111167, 345485003, 1362646543 }, .{ 1116222420, 26132939, 512332546, 130828452, 1990380817, 2098790539 }, .{ 793782814, 1928536707, 252988384, 998131846, 7110939, 657810740 }, .{ 2035621083, 1396013114, 947841817, 116036458, 876998321, 2116182524 }, .{ 182160798, 683024614, 587510624, 1503683655, 1847527640, 1656678192 }, .{ 1925335325, 1447681819, 1543195809, 627022778, 283178793, 474028241 }, .{ 950853530, 954813891, 1175113995, 970341853, 1883548955, 145239090 } },
         .quotient_claims = &.{ .{ 1695121554, 2082484159, 1996071162, 758741553, 1558120442, 510762215 }, .{ 422463313, 1068507776, 2087106565, 1807677447, 1422921614, 2119587198 }, .{ 1633141191, 1508429477, 68872089, 563416153, 55884778, 550023664 }, .{ 1874378334, 1567910928, 627969814, 1448227278, 1700822540, 1523846628 }, .{ 1954788003, 1707561535, 1468776560, 563149488, 357406234, 2010989047 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
@@ -4286,6 +4549,10 @@ pub const system_39_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_39_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 4, 0, 18 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-many"
@@ -4491,6 +4758,7 @@ const system_39_rowlimit = rowlimit.System{ .checks = &system_39_rowlimit_checks
 const scenario_39 = Scenario{
     .name = "ManyFractions",
     .spec = system_39_spec,
+    .public_input = system_39_public_input,
     .system = system_39,
     .logderiv = system_39_logderiv,
     .honest = .{
@@ -4535,6 +4803,7 @@ const scenario_39 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1364474989, 1820322492, 291695985, 519576465, 1266995291, 164392656 }, .{ 1364474989, 1820322492, 291695985, 519576465, 1266995291, 164392656 }, .{ 1364474989, 1820322492, 291695985, 519576465, 1266995291, 164392656 }, .{ 1756838549, 428446055, 1006279268, 569037181, 490294195, 1754968859 }, .{ 1799729877, 1128069115, 407343673, 117653346, 2012350242, 818727666 }, .{ 1364474989, 1820322492, 291695985, 519576465, 1266995291, 164392656 }, .{ 1364474989, 1820322492, 291695985, 519576465, 1266995291, 164392656 }, .{ 1364474989, 1820322492, 291695985, 519576465, 1266995291, 164392656 }, .{ 1756838549, 428446055, 1006279268, 569037181, 490294195, 1754968859 }, .{ 1799729877, 1128069115, 407343673, 117653346, 2012350242, 818727666 }, .{ 1364474989, 1820322492, 291695985, 519576465, 1266995291, 164392656 }, .{ 2006083805, 1563286307, 1755897378, 899914538, 873666876, 2005460575 }, .{ 599909959, 1086258516, 846016702, 39217782, 670783414, 272909222 } },
         .quotient_claims = &.{ .{ 1434762613, 483656023, 329831261, 1974891836, 422459891, 1167725913 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 1251115098, 587229581, 1910352284, 394115600, 1168712006, 1391170417 } },
         .module_sizes = &.{},
@@ -4546,6 +4815,10 @@ pub const system_40_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_40_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 2, 0, 4 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-size2"
@@ -4615,6 +4888,7 @@ const system_40_rowlimit = rowlimit.System{ .checks = &system_40_rowlimit_checks
 const scenario_40 = Scenario{
     .name = "SizeTwoModule",
     .spec = system_40_spec,
+    .public_input = system_40_public_input,
     .system = system_40,
     .logderiv = system_40_logderiv,
     .honest = .{
@@ -4643,6 +4917,7 @@ const scenario_40 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1978506937, 796715134, 707846070, 955853229, 129434597, 1219205204 }, .{ 684854472, 1991787835, 1769615175, 1324279856, 1388939709, 917306577 }, .{ 1445851972, 138918598, 361091258, 806426577, 741766724, 1213399856 } },
         .quotient_claims = &.{.{ 1269568873, 228772093, 1827414922, 649268601, 1113429498, 1479033890 }},
         .module_sizes = &.{},
@@ -4654,6 +4929,10 @@ pub const system_41_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_41_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 4, 0, 7 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-multi-q"
@@ -4753,6 +5032,7 @@ const system_41_rowlimit = rowlimit.System{ .checks = &system_41_rowlimit_checks
 const scenario_41 = Scenario{
     .name = "MultipleQueries",
     .spec = system_41_spec,
+    .public_input = system_41_public_input,
     .system = system_41,
     .logderiv = system_41_logderiv,
     .honest = .{
@@ -4786,6 +5066,7 @@ const scenario_41 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1467167099, 1961588743, 57302362, 1285353475, 1676260070, 1626781247 }, .{ 1152170929, 993411282, 384865253, 1422381914, 395592521, 474395592 }, .{ 1780816111, 149339813, 77014099, 1505175821, 963754766, 400331489 }, .{ 1467167103, 1961588743, 57302362, 1285353475, 1676260070, 1626781247 }, .{ 628720026, 316940522, 614074701, 171676515, 708513502, 589401281 }, .{ 2053817134, 1687037978, 757628053, 1591223660, 606338585, 1295119462 } },
         .quotient_claims = &.{.{ 1805787584, 438679076, 1130103693, 1786303205, 1117913661, 758287173 }},
         .module_sizes = &.{},
@@ -4797,6 +5078,10 @@ pub const system_42_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_42_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 2, 0, 7 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-vec-den"
@@ -4870,6 +5155,7 @@ const system_42_rowlimit = rowlimit.System{ .checks = &system_42_rowlimit_checks
 const scenario_42 = Scenario{
     .name = "VectorDenominator",
     .spec = system_42_spec,
+    .public_input = system_42_public_input,
     .system = system_42,
     .logderiv = system_42_logderiv,
     .honest = .{
@@ -4901,6 +5187,7 @@ const scenario_42 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1617239437, 970698788, 312992683, 1755378019, 1678309870, 433185064 }, .{ 970236162, 201131906, 1766692653, 990924834, 2094600323, 1396151704 }, .{ 1549206412, 947425375, 39473536, 2049259658, 1471520551, 1752577746 }, .{ 266736632, 286687042, 238581130, 794378841, 819263480, 1057259372 } },
         .quotient_claims = &.{ .{ 1352353124, 1109910741, 50694122, 122904620, 948879540, 1204212049 }, .{ 67889191, 399057520, 2085733197, 1298581290, 289103961, 1466977361 }, .{ 200034416, 2092633392, 623015641, 31984638, 2042542807, 1403460765 } },
         .module_sizes = &.{},
@@ -4912,6 +5199,10 @@ pub const system_43_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_43_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 2, 0, 13 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-ones-pack"
@@ -5041,6 +5332,7 @@ const system_43_rowlimit = rowlimit.System{ .checks = &system_43_rowlimit_checks
 const scenario_43 = Scenario{
     .name = "AllFiltersOnesPacked",
     .spec = system_43_spec,
+    .public_input = system_43_public_input,
     .system = system_43,
     .logderiv = system_43_logderiv,
     .honest = .{
@@ -5078,6 +5370,7 @@ const scenario_43 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1, 0, 0, 0, 0, 0 }, .{ 1, 0, 0, 0, 0, 0 }, .{ 2, 0, 0, 0, 0, 0 }, .{ 3, 0, 0, 0, 0, 0 }, .{ 353751222, 1898089507, 988379782, 793995256, 1532696878, 1920485846 }, .{ 885262633, 1777456022, 1932890871, 1313009791, 1450861567, 1468959648 } },
         .quotient_claims = &.{ .{ 6, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 1246054006, 1417294985, 920366366, 552308571, 880874493, 502761726 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 1392800244, 1144591048, 751253322, 1421820813, 1401589812, 43398174 } },
         .module_sizes = &.{},
@@ -5089,6 +5382,10 @@ pub const system_44_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3, 4 },
     .total_round_coins = 4,
     .dynamic_module_count = 0,
+};
+pub const system_44_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3, 0, 13 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-simple"
@@ -5224,6 +5521,7 @@ const system_44_rowlimit = rowlimit.System{ .checks = &system_44_rowlimit_checks
 const scenario_44 = Scenario{
     .name = "SingleColumnNoFilters",
     .spec = system_44_spec,
+    .public_input = system_44_public_input,
     .system = system_44,
     .logderiv = system_44_logderiv,
     .honest = .{
@@ -5265,6 +5563,7 @@ const scenario_44 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 827612349, 854401199, 533604203, 284207191, 1179802098, 215685024 }, .{ 295221952, 700974391, 758679356, 1089601774, 1132763170, 548902451 }, .{ 998577000, 755898114, 1826483219, 463696574, 1310338427, 9261958 }, .{ 28401498, 1731355870, 498170405, 150874728, 1874545255, 412000710 }, .{ 1407150255, 251913419, 1980500328, 152536477, 397221767, 2104772560 }, .{ 853167236, 165381470, 982862812, 194109930, 51749064, 1246447206 }, .{ 803220384, 473609115, 1832885686, 69170973, 1374132582, 1736449031 } },
         .quotient_claims = &.{ .{ 2078476872, 231452913, 258820261, 361909153, 1597184475, 719316451 }, .{ 1432514494, 904719105, 1864682684, 1543280282, 868497893, 846310657 }, .{ 1324446746, 1231640783, 1226868926, 1526606330, 1013153746, 773036746 }, .{ 362897261, 601745675, 2053582596, 1022339867, 1906146626, 1766438112 }, .{ 2128153771, 1230320478, 1547123511, 848920807, 565606600, 995857308 }, .{ 1767032488, 850941910, 1118605779, 55340576, 369130130, 1169505583 } },
         .module_sizes = &.{},
@@ -5276,6 +5575,10 @@ pub const system_45_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3, 4 },
     .total_round_coins = 4,
     .dynamic_module_count = 0,
+};
+pub const system_45_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3, 0, 14 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-filterA"
@@ -5415,6 +5718,7 @@ const system_45_rowlimit = rowlimit.System{ .checks = &system_45_rowlimit_checks
 const scenario_45 = Scenario{
     .name = "FilterOnIncluded",
     .spec = system_45_spec,
+    .public_input = system_45_public_input,
     .system = system_45,
     .logderiv = system_45_logderiv,
     .honest = .{
@@ -5457,6 +5761,7 @@ const scenario_45 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1, 0, 0, 0, 0, 0 }, .{ 1828420049, 629216128, 1744911592, 1411346729, 198428072, 991588732 }, .{ 1363973438, 1707438929, 305346481, 173561222, 1536298889, 388263221 }, .{ 294647067, 2100841101, 587568156, 2039789523, 1808982176, 1394835991 }, .{ 1918443083, 1017316597, 1722803661, 1022209918, 1261916605, 1875299427 }, .{ 2098471626, 1722739413, 1834606504, 36547422, 1249524550, 153905299 }, .{ 355728996, 1054410134, 124012841, 858328880, 341261151, 599426095 }, .{ 1012685131, 359892896, 211226728, 1065602053, 2060785054, 300215679 } },
         .quotient_claims = &.{ .{ 2118900147, 213047883, 1677434635, 1807161102, 2033438295, 455527281 }, .{ 949213936, 185052811, 987629032, 1267322742, 967187096, 1009777123 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 528088797, 914519397, 579746814, 1025881195, 273235565, 934780803 }, .{ 219742960, 816826317, 1343390507, 677071584, 1191087895, 1933043551 }, .{ 1356947256, 1979792916, 1274219663, 385641943, 1185956811, 153212527 } },
         .module_sizes = &.{},
@@ -5468,6 +5773,10 @@ pub const system_46_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4, 5 },
     .total_round_coins = 5,
     .dynamic_module_count = 0,
+};
+pub const system_46_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3, 0, 14 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-filterT"
@@ -5619,6 +5928,7 @@ const system_46_rowlimit = rowlimit.System{ .checks = &system_46_rowlimit_checks
 const scenario_46 = Scenario{
     .name = "FilterOnIncluding",
     .spec = system_46_spec,
+    .public_input = system_46_public_input,
     .system = system_46,
     .logderiv = system_46_logderiv,
     .honest = .{
@@ -5661,6 +5971,7 @@ const scenario_46 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1874318403, 1190959384, 828712397, 1575820118, 1780942302, 561292624 }, .{ 1001442451, 1527068152, 439915766, 1469828598, 1348123337, 839316935 }, .{ 1663692217, 1944507737, 172690730, 19867272, 268584976, 97362182 }, .{ 392857865, 1043462355, 397649732, 701030661, 1202883332, 1126549913 }, .{ 2002512418, 595479692, 1479709415, 787910059, 890471151, 280646312 }, .{ 2038670316, 1144945579, 1382492529, 634683330, 1067604198, 1935576080 }, .{ 1960758049, 1285815013, 1108324925, 120450616, 1904948478, 1409596109 }, .{ 1281940170, 437322379, 117850881, 643725142, 1748820655, 1454949746 } },
         .quotient_claims = &.{ .{ 285820081, 19899702, 1464526380, 372583296, 417253962, 1946295935 }, .{ 42512584, 751959912, 734612736, 1911741272, 1559584784, 1955949708 }, .{ 1273419178, 941247589, 1516749156, 1874330098, 1609374651, 991450781 }, .{ 1998359384, 2120563460, 2065625499, 903514825, 854322333, 134733715 }, .{ 240464662, 783402770, 1734756685, 648257034, 1114010569, 1231415236 }, .{ 1507926334, 1041669330, 1618378945, 1508580955, 1479702512, 406049269 } },
         .module_sizes = &.{},
@@ -5672,6 +5983,10 @@ pub const system_47_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4, 5 },
     .total_round_coins = 5,
     .dynamic_module_count = 0,
+};
+pub const system_47_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3, 0, 15 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-double"
@@ -5827,6 +6142,7 @@ const system_47_rowlimit = rowlimit.System{ .checks = &system_47_rowlimit_checks
 const scenario_47 = Scenario{
     .name = "DoubleConditional",
     .spec = system_47_spec,
+    .public_input = system_47_public_input,
     .system = system_47,
     .logderiv = system_47_logderiv,
     .honest = .{
@@ -5870,6 +6186,7 @@ const scenario_47 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 502263658, 452615452, 130680445, 786711272, 15510368, 888459867 }, .{ 1307839158, 254467357, 414297220, 1148022388, 707232790, 1335027862 }, .{ 338024051, 54038730, 1845417662, 1631146993, 1706347766, 1842800742 }, .{ 1327386342, 2118015722, 843804963, 1069206984, 90987078, 64260661 }, .{ 502263658, 452615452, 130680445, 786711272, 15510368, 888459867 }, .{ 502263658, 452615452, 130680445, 786711272, 15510368, 888459867 }, .{ 822867275, 1876239076, 1716409213, 982684045, 1423473643, 795678571 }, .{ 1792682382, 2076667703, 285288771, 499559440, 424358667, 287905691 }, .{ 1598339721, 752949387, 400184883, 2009666938, 944877659, 2074580858 } },
         .quotient_claims = &.{ .{ 429552003, 663394175, 1198787552, 892614831, 250626087, 657604562 }, .{ 173852294, 1568278867, 34922278, 1159806569, 1177815621, 381355413 }, .{ 191275781, 955829522, 1865867394, 2113190619, 1855341849, 1661598947 }, .{ 859933470, 1077269724, 97343334, 540752759, 1409332980, 1931632986 }, .{ 1221577493, 4049783, 2072957605, 698231097, 2043887217, 633407609 }, .{ 989387521, 1119579190, 771443388, 1021873602, 1734831238, 598058687 } },
         .module_sizes = &.{},
@@ -5881,6 +6198,10 @@ pub const system_48_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4, 5 },
     .total_round_coins = 5,
     .dynamic_module_count = 0,
+};
+pub const system_48_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3, 0, 15 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-multi-col"
@@ -6032,6 +6353,7 @@ const system_48_rowlimit = rowlimit.System{ .checks = &system_48_rowlimit_checks
 const scenario_48 = Scenario{
     .name = "MultiColumn",
     .spec = system_48_spec,
+    .public_input = system_48_public_input,
     .system = system_48,
     .logderiv = system_48_logderiv,
     .honest = .{
@@ -6075,6 +6397,7 @@ const scenario_48 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 398109985, 2039763678, 1664971312, 573450607, 1766616760, 1663507713 }, .{ 34349255, 637446392, 1947762286, 868873873, 2097109183, 239293135 }, .{ 1142990354, 2087841572, 2021057622, 1661485210, 755034711, 79361805 }, .{ 1398690300, 69801328, 1606849987, 551349161, 491635432, 1516910910 }, .{ 139869030, 859262706, 373755642, 694346846, 1327587403, 151691091 }, .{ 797732767, 1764096129, 991733126, 1144808313, 39606795, 687878245 }, .{ 334734025, 154622928, 1494361679, 1925580384, 1691966582, 1917060517 }, .{ 860149009, 629065601, 2086864677, 1356051732, 1460194912, 1867796512 }, .{ 1577509404, 702118490, 421757111, 1414029033, 1424443351, 1465203511 } },
         .quotient_claims = &.{ .{ 1619597832, 353341237, 1910938628, 376795572, 1169831442, 1221422505 }, .{ 1653520921, 1985046268, 1586260662, 256819078, 1437869115, 45424482 }, .{ 470554145, 1616938394, 884023913, 1510897986, 1072988838, 1607124730 }, .{ 1638842300, 2090711745, 1911936281, 1836430579, 484487375, 637722116 }, .{ 1741724391, 2126487069, 1884129694, 999032757, 1305139602, 1591000990 }, .{ 1300397978, 1066158433, 1877799958, 1498585463, 1969091177, 1901245118 } },
         .module_sizes = &.{},
@@ -6086,6 +6409,10 @@ pub const system_49_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 4, 5 },
     .total_round_coins = 5,
     .dynamic_module_count = 0,
+};
+pub const system_49_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 4, 0, 19 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-shared"
@@ -6268,6 +6595,7 @@ const system_49_rowlimit = rowlimit.System{ .checks = &system_49_rowlimit_checks
 const scenario_49 = Scenario{
     .name = "SharedTable",
     .spec = system_49_spec,
+    .public_input = system_49_public_input,
     .system = system_49,
     .logderiv = system_49_logderiv,
     .honest = .{
@@ -6316,6 +6644,7 @@ const scenario_49 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 700302197, 306367743, 195051480, 916711835, 1055185390, 643664492 }, .{ 171668460, 1274627771, 220952154, 1492865587, 1144395181, 1098874831 }, .{ 611583174, 585043185, 193651553, 246697420, 583857126, 720091978 }, .{ 500172177, 133863607, 1829174891, 370388749, 2039779745, 1057725155 }, .{ 1329854620, 368239270, 2008099016, 1372257956, 1796838838, 14893733 }, .{ 699301525, 1716339599, 1031838918, 1299513512, 1524878829, 1253312987 }, .{ 128177797, 111495423, 1706195850, 1544772926, 1153115414, 1558801777 }, .{ 1686874238, 2008205626, 1308148373, 1662862470, 141844522, 1754794952 }, .{ 670898065, 1253623210, 21028664, 1621480953, 712023499, 59214717 }, .{ 1521658388, 588340873, 1014950044, 835260067, 1732588929, 1998811666 } },
         .quotient_claims = &.{ .{ 1205381890, 2099092720, 372888604, 2029367086, 1608087712, 226928467 }, .{ 1323335672, 347049310, 1472232475, 1540014557, 1871394556, 930266357 }, .{ 771969487, 215782060, 1281385831, 425214693, 631586472, 1146157275 }, .{ 2025184337, 1041477753, 1469549354, 1244959695, 810983227, 1823114012 }, .{ 582010420, 1567999346, 515507847, 1109142988, 1062155711, 191995639 }, .{ 953513861, 933123006, 2090245030, 1815061342, 315520134, 682413524 }, .{ 39521968, 1964809855, 843251997, 795248824, 1112255215, 507538831 }, .{ 540691024, 389091527, 1744178887, 369135484, 1627110658, 1481987794 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
@@ -6327,6 +6656,10 @@ pub const system_50_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 5, 6 },
     .total_round_coins = 6,
     .dynamic_module_count = 0,
+};
+pub const system_50_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 5, 0, 26 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-distinct"
@@ -6565,6 +6898,7 @@ const system_50_rowlimit = rowlimit.System{ .checks = &system_50_rowlimit_checks
 const scenario_50 = Scenario{
     .name = "DistinctTables",
     .spec = system_50_spec,
+    .public_input = system_50_public_input,
     .system = system_50,
     .logderiv = system_50_logderiv,
     .honest = .{
@@ -6621,6 +6955,7 @@ const scenario_50 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 853838755, 288753684, 1388564275, 1273503464, 1060028956, 521445631 }, .{ 940823689, 353354664, 686593712, 1247844415, 984750213, 965170317 }, .{ 1992420846, 1660174654, 308474315, 1881820710, 1127830387, 1459534071 }, .{ 1472391416, 1065235957, 1626256587, 72977285, 1652583385, 1999370726 }, .{ 1, 0, 0, 0, 0, 0 }, .{ 1396372035, 918424239, 271027758, 1697195958, 996213411, 685684198 }, .{ 1696772678, 1679263791, 1432419629, 1110117215, 903692329, 1778423811 }, .{ 1626739332, 1641292776, 1815350770, 585806294, 249376319, 793445751 }, .{ 632137922, 659756266, 1375794653, 1103778165, 1613957387, 1984674012 }, .{ 570871637, 897177279, 101608869, 1942883309, 1819463835, 2023644408 }, .{ 751489143, 1606682415, 363070154, 969443832, 902157837, 1437113010 }, .{ 734334398, 1212282194, 1859678675, 433510475, 1134493022, 1445022235 }, .{ 433933755, 451442642, 698286804, 1020589218, 1227014104, 352282622 }, .{ 1626739332, 1641292776, 1815350770, 585806294, 249376319, 793445751 } },
         .quotient_claims = &.{ .{ 803650106, 229406590, 1990815792, 272723297, 635505841, 311998906 }, .{ 1299087544, 20248598, 515042007, 707808815, 716581464, 1385391509 }, .{ 333098731, 1030666147, 650499722, 791382924, 26723457, 1793858411 }, .{ 957820606, 842650882, 1632333474, 1837708487, 857160557, 1587001052 }, .{ 219303729, 666421170, 2058588757, 156590977, 1730060286, 1871523107 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 2050673087, 1206500156, 501315729, 1799420056, 1751925541, 2043008271 }, .{ 259503160, 1579143692, 1669919335, 134485605, 678264651, 1018054342 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 408680763, 1018748020, 1705222319, 890349811, 362428439, 1503748767 }, .{ 1911402704, 1464285263, 72117676, 1974115456, 400646147, 259183326 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
@@ -6632,6 +6967,10 @@ pub const system_51_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4, 5 },
     .total_round_coins = 5,
     .dynamic_module_count = 0,
+};
+pub const system_51_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3, 0, 16 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-multi-filterT"
@@ -6799,6 +7138,7 @@ const system_51_rowlimit = rowlimit.System{ .checks = &system_51_rowlimit_checks
 const scenario_51 = Scenario{
     .name = "MultiColumnFilterOnIncluding",
     .spec = system_51_spec,
+    .public_input = system_51_public_input,
     .system = system_51,
     .logderiv = system_51_logderiv,
     .honest = .{
@@ -6843,6 +7183,7 @@ const scenario_51 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1156675739, 1056134670, 1506488103, 874073867, 213618599, 1653238604 }, .{ 394693599, 917535201, 1616719932, 773023353, 361272208, 1746648484 }, .{ 806973887, 805663509, 343276375, 1611442130, 908664792, 1181506040 }, .{ 1532218481, 2120489549, 67220419, 1335081315, 694481458, 426032947 }, .{ 115552159, 1966810743, 1911610623, 1564138212, 687914657, 270917619 }, .{ 1301325474, 1477300347, 1150389749, 622438066, 665032371, 186355404 }, .{ 1216131439, 889067801, 57892688, 1330073977, 806500020, 1547539984 }, .{ 2074486838, 1227645294, 11207403, 2020045871, 492960047, 174174652 }, .{ 855935651, 904566108, 906491919, 2063839347, 692410003, 691403333 }, .{ 724805495, 942739184, 1582143695, 419454578, 1986876790, 1986776123 } },
         .quotient_claims = &.{ .{ 762847413, 1769205480, 1847632517, 1609835716, 610804432, 1452213359 }, .{ 1825437973, 1379609915, 848027527, 1134603178, 510162705, 1648521137 }, .{ 1109908031, 403843609, 636101245, 989371876, 1953565581, 448377749 }, .{ 1714139878, 824698218, 1044012501, 1477474020, 1535849437, 876080096 }, .{ 300462615, 1942350319, 838094687, 1175819660, 185352376, 1966377340 }, .{ 1749816972, 1492540432, 789938166, 1310169777, 1572716115, 902792801 } },
         .module_sizes = &.{},
@@ -6854,6 +7195,10 @@ pub const system_52_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3, 4 },
     .total_round_coins = 4,
     .dynamic_module_count = 0,
+};
+pub const system_52_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3, 0, 13 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-repeated"
@@ -6989,6 +7334,7 @@ const system_52_rowlimit = rowlimit.System{ .checks = &system_52_rowlimit_checks
 const scenario_52 = Scenario{
     .name = "RepeatedValueInTable",
     .spec = system_52_spec,
+    .public_input = system_52_public_input,
     .system = system_52,
     .logderiv = system_52_logderiv,
     .honest = .{
@@ -7030,6 +7376,7 @@ const scenario_52 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 437194143, 712878, 68574746, 402048832, 510158002, 1540608308 }, .{ 1273219960, 1327849231, 2012467352, 272369121, 1901087067, 1972909334 }, .{ 1518703615, 904060488, 1558754163, 450854793, 612570527, 1847839255 }, .{ 258398264, 683365157, 1406743847, 1439555764, 157854969, 518442153 }, .{ 1619844420, 790228909, 673184047, 138831611, 1455586261, 322777145 }, .{ 891393015, 1160308542, 532685955, 1209265564, 410702869, 1692763011 }, .{ 258398264, 683365157, 1406743847, 1439555764, 157854969, 518442153 } },
         .quotient_claims = &.{ .{ 625849400, 1035477274, 1910195520, 1689876704, 1632681910, 1833777141 }, .{ 1907423752, 602712909, 1404022842, 712479242, 16071535, 1402905894 }, .{ 182280423, 529402182, 1979385378, 47767394, 395430950, 174859987 }, .{ 1155625734, 177683923, 622984664, 1185243809, 803480458, 1320181748 }, .{ 332282982, 31970183, 1271137447, 1301508171, 1500499376, 404970736 }, .{ 1503541049, 1525442940, 1769054219, 1759434104, 1246162466, 1137657527 } },
         .module_sizes = &.{},
@@ -7041,6 +7388,10 @@ pub const system_53_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3, 4 },
     .total_round_coins = 4,
     .dynamic_module_count = 0,
+};
+pub const system_53_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3, 0, 13 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-shift-a"
@@ -7176,6 +7527,7 @@ const system_53_rowlimit = rowlimit.System{ .checks = &system_53_rowlimit_checks
 const scenario_53 = Scenario{
     .name = "ShiftedAColumn",
     .spec = system_53_spec,
+    .public_input = system_53_public_input,
     .system = system_53,
     .logderiv = system_53_logderiv,
     .honest = .{
@@ -7217,6 +7569,7 @@ const scenario_53 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1, 0, 0, 0, 0, 0 }, .{ 1473927834, 1699103148, 339860687, 880257743, 449370195, 587116332 }, .{ 338653191, 344434282, 1538000338, 535824696, 1489698986, 904316202 }, .{ 580617295, 1774276984, 1080238583, 602795318, 1330591760, 1734745493 }, .{ 656778599, 431603285, 1790845746, 1250448690, 1681336238, 1543590101 }, .{ 1792053242, 1786272151, 592706095, 1594881737, 641007447, 1226390231 }, .{ 580617295, 1774276984, 1080238583, 602795318, 1330591760, 1734745493 } },
         .quotient_claims = &.{ .{ 486863387, 1247690759, 560672240, 732045627, 598347955, 240794769 }, .{ 1750414334, 1101146565, 1822411464, 2104492930, 1751603813, 1811563702 }, .{ 1289648023, 999197268, 792358132, 792532157, 128538884, 80829387 }, .{ 1861935803, 1316563264, 807695132, 109635901, 540036385, 1712715193 }, .{ 21811529, 752985996, 1525718231, 833730186, 668501176, 183690408 }, .{ 913541571, 275568252, 26136370, 1756845512, 193728566, 1418265784 } },
         .module_sizes = &.{},
@@ -7228,6 +7581,10 @@ pub const system_54_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3, 4 },
     .total_round_coins = 4,
     .dynamic_module_count = 0,
+};
+pub const system_54_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3, 0, 14 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-shift-b"
@@ -7363,6 +7720,7 @@ const system_54_rowlimit = rowlimit.System{ .checks = &system_54_rowlimit_checks
 const scenario_54 = Scenario{
     .name = "ShiftedBColumn",
     .spec = system_54_spec,
+    .public_input = system_54_public_input,
     .system = system_54,
     .logderiv = system_54_logderiv,
     .honest = .{
@@ -7405,6 +7763,7 @@ const scenario_54 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1, 0, 0, 0, 0, 0 }, .{ 2041808122, 5426152, 436046934, 848033306, 1153283574, 770738238 }, .{ 1948677870, 1892203644, 226852491, 115195970, 470625617, 711245357 }, .{ 1957606860, 72749750, 137783964, 737023207, 1336218803, 1284478551 }, .{ 1957606860, 72749750, 137783964, 737023207, 1336218803, 1284478551 }, .{ 88898311, 2125280281, 1694659499, 1282673127, 977422859, 1359968195 }, .{ 182028563, 238502789, 1903853942, 2015510463, 1660080816, 1419461076 }, .{ 1957606860, 72749750, 137783964, 737023207, 1336218803, 1284478551 } },
         .quotient_claims = &.{ .{ 2024331793, 564626163, 184694972, 531085150, 115727729, 2056581226 }, .{ 984679744, 1576474768, 1418977506, 148502099, 508893341, 630524312 }, .{ 1875730865, 685782881, 346039120, 657883586, 1540239038, 1325463544 }, .{ 1728460392, 1195499366, 2109481261, 1625646538, 1613433923, 1306075113 }, .{ 1146026689, 554231665, 711728927, 1982204334, 1621813092, 1500182121 }, .{ 254975568, 1444923552, 1784667313, 1472822847, 590467395, 805242889 } },
         .module_sizes = &.{},
@@ -7416,6 +7775,10 @@ pub const system_55_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 4, 5 },
     .total_round_coins = 5,
     .dynamic_module_count = 0,
+};
+pub const system_55_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 4, 0, 19 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-multi-A"
@@ -7598,6 +7961,7 @@ const system_55_rowlimit = rowlimit.System{ .checks = &system_55_rowlimit_checks
 const scenario_55 = Scenario{
     .name = "MultipleAFragments",
     .spec = system_55_spec,
+    .public_input = system_55_public_input,
     .system = system_55,
     .logderiv = system_55_logderiv,
     .honest = .{
@@ -7646,6 +8010,7 @@ const scenario_55 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1531547478, 1954341219, 562186006, 1836485829, 1982300772, 445611711 }, .{ 1006780000, 1638613907, 1941216316, 2049568664, 1255516423, 660239716 }, .{ 84528298, 1823173784, 229318142, 53541505, 1698858753, 1382295878 }, .{ 126874407, 1396960382, 37232971, 1724191699, 295145731, 1915485041 }, .{ 1707802901, 274517409, 483489723, 951570398, 1704806658, 2011619702 }, .{ 2030320927, 219556436, 2035545649, 629362176, 936768915, 499573836 }, .{ 141453251, 775674333, 1621497306, 736920160, 324832300, 1586436890 }, .{ 379400204, 223204339, 2050254472, 1744489516, 1935903348, 1318142329 }, .{ 1358329467, 817569709, 875717988, 1473839091, 804949255, 1824543216 }, .{ 392928393, 750361143, 463194290, 907726501, 1632701253, 1989162295 } },
         .quotient_claims = &.{ .{ 581611845, 557226535, 420551786, 1789172682, 35486891, 1412457811 }, .{ 293002235, 332235587, 1837567074, 1443371678, 891469285, 1892183103 }, .{ 1451082156, 83572982, 1132783889, 259894533, 732078237, 892236761 }, .{ 1286415999, 2060909568, 2021347212, 1081294979, 428532525, 515752622 }, .{ 17589304, 1725501550, 1906964834, 507357887, 504916293, 1650969225 }, .{ 364482491, 1053301245, 562927618, 551629436, 506771653, 429384099 }, .{ 1834575147, 218763559, 2120455940, 199329956, 1768680502, 1765535927 }, .{ 1738600241, 1207376696, 444562534, 400346854, 1207804922, 848748134 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
@@ -7657,6 +8022,10 @@ pub const system_56_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4, 5 },
     .total_round_coins = 5,
     .dynamic_module_count = 0,
+};
+pub const system_56_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3, 0, 17 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-w3"
@@ -7824,6 +8193,7 @@ const system_56_rowlimit = rowlimit.System{ .checks = &system_56_rowlimit_checks
 const scenario_56 = Scenario{
     .name = "WidthThree",
     .spec = system_56_spec,
+    .public_input = system_56_public_input,
     .system = system_56,
     .logderiv = system_56_logderiv,
     .honest = .{
@@ -7869,6 +8239,7 @@ const scenario_56 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 595711648, 693220717, 70787854, 422402743, 742373229, 1825900119 }, .{ 2110060514, 162992058, 503276908, 785197378, 1875227190, 1368826095 }, .{ 160637815, 221500204, 2042533065, 385963328, 1028585346, 272702778 }, .{ 2044262123, 1293859783, 178931939, 782182544, 605124212, 1795279432 }, .{ 2122062002, 2047021768, 1509387697, 504359541, 1338936281, 1457951803 }, .{ 1490630060, 1056984750, 364009413, 689647884, 773105558, 2063430970 }, .{ 616509, 604539619, 1949445094, 1731048683, 1122300488, 29604636 }, .{ 400713988, 693686224, 1649939860, 1172138147, 1875743060, 970850158 }, .{ 1962602190, 1058001425, 995870605, 1621925843, 784928437, 1051280320 }, .{ 196260219, 1171153359, 1164940277, 2079828374, 291563487, 105128032 }, .{ 1511120525, 1608609839, 329564671, 634124124, 242226992, 1288936663 } },
         .quotient_claims = &.{ .{ 2130697348, 1677610714, 1828682328, 1082790041, 457479445, 1344299903 }, .{ 972801981, 485953746, 992621362, 453276168, 1468666170, 1065898847 }, .{ 2127085948, 1693290840, 806915159, 1447898549, 1191930751, 2060374759 }, .{ 1316954801, 1946518351, 764674952, 1975282023, 1832115517, 1728408968 }, .{ 1766412063, 1565313472, 951533809, 2069008879, 446642637, 133189337 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
@@ -7880,6 +8251,10 @@ pub const system_57_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3, 4 },
     .total_round_coins = 4,
     .dynamic_module_count = 0,
+};
+pub const system_57_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3, 0, 11 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-size1"
@@ -7992,6 +8367,7 @@ const system_57_rowlimit = rowlimit.System{ .checks = &system_57_rowlimit_checks
 const scenario_57 = Scenario{
     .name = "SizeOne",
     .spec = system_57_spec,
+    .public_input = system_57_public_input,
     .system = system_57,
     .logderiv = system_57_logderiv,
     .honest = .{
@@ -8031,6 +8407,7 @@ const scenario_57 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1, 0, 0, 0, 0, 0 }, .{ 1316619920, 772811724, 151591362, 2021784676, 932131488, 1990692329 }, .{ 42, 0, 0, 0, 0, 0 }, .{ 814086513, 1357894709, 1979115071, 108921757, 1198574945, 140014104 }, .{ 42, 0, 0, 0, 0, 0 } },
         .quotient_claims = &.{ .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
@@ -8042,6 +8419,10 @@ pub const system_58_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3, 4 },
     .total_round_coins = 4,
     .dynamic_module_count = 0,
+};
+pub const system_58_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3, 0, 13 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-precomp"
@@ -8177,6 +8558,7 @@ const system_58_rowlimit = rowlimit.System{ .checks = &system_58_rowlimit_checks
 const scenario_58 = Scenario{
     .name = "PrecomputedTable",
     .spec = system_58_spec,
+    .public_input = system_58_public_input,
     .system = system_58,
     .logderiv = system_58_logderiv,
     .honest = .{
@@ -8218,6 +8600,7 @@ const scenario_58 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1, 0, 0, 0, 0, 0 }, .{ 197816550, 1449523348, 1536214480, 1240581682, 1007963476, 1503840246 }, .{ 282979677, 964668758, 1944619980, 1653427597, 286391097, 908625842 }, .{ 1049763053, 1457307395, 761992931, 602088271, 909767919, 751239403 }, .{ 1932889883, 681183085, 594491953, 890124751, 1122742957, 626866187 }, .{ 1847726756, 1166037675, 186086453, 477278836, 1844315336, 1222080591 }, .{ 1049763053, 1457307395, 761992931, 602088271, 909767919, 751239403 } },
         .quotient_claims = &.{ .{ 770413668, 431825500, 750382045, 801861319, 1581734966, 812941094 }, .{ 1465460421, 1340080359, 1393667010, 606416554, 1940198896, 1169887997 }, .{ 520016198, 813443538, 61813246, 1829737306, 280832645, 896719244 }, .{ 663641010, 2022311632, 299515483, 89657595, 773585168, 522863654 }, .{ 665246012, 790626074, 737039423, 1524289879, 190507537, 960818436 }, .{ 1610690235, 1317262895, 2068893187, 300969127, 1849873788, 1233987189 } },
         .module_sizes = &.{},
@@ -8229,6 +8612,10 @@ pub const system_59_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3, 4 },
     .total_round_coins = 4,
     .dynamic_module_count = 0,
+};
+pub const system_59_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3, 0, 13 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-rep-s"
@@ -8364,6 +8751,7 @@ const system_59_rowlimit = rowlimit.System{ .checks = &system_59_rowlimit_checks
 const scenario_59 = Scenario{
     .name = "RepeatedSValues",
     .spec = system_59_spec,
+    .public_input = system_59_public_input,
     .system = system_59,
     .logderiv = system_59_logderiv,
     .honest = .{
@@ -8405,6 +8793,7 @@ const scenario_59 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1348147742, 1240951808, 1027705092, 1541653088, 1372573071, 306337616 }, .{ 1336577005, 1936889917, 1066410121, 916090874, 238690834, 304432154 }, .{ 1336577005, 1936889917, 1066410121, 916090874, 238690834, 304432154 }, .{ 1726812860, 1680716787, 632270655, 701767922, 478033591, 1780947278 }, .{ 184092711, 653287001, 1549814268, 1238637666, 1823886737, 1330080818 }, .{ 970623094, 1377825102, 27569532, 1870018548, 1750618129, 464389079 }, .{ 10, 0, 0, 0, 0, 0 } },
         .quotient_claims = &.{ .{ 2130706432, 0, 0, 0, 0, 0 }, .{ 1093916983, 1394588162, 1636162925, 231629799, 1895651254, 29973417 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 1037673899, 513924630, 815927983, 825149969, 292128895, 2035196573 }, .{ 387602931, 1812117127, 1634053057, 837156923, 1700417249, 1282650636 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
@@ -8416,6 +8805,10 @@ pub const system_60_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3, 4 },
     .total_round_coins = 4,
     .dynamic_module_count = 0,
+};
+pub const system_60_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3, 0, 14 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-empty"
@@ -8555,6 +8948,7 @@ const system_60_rowlimit = rowlimit.System{ .checks = &system_60_rowlimit_checks
 const scenario_60 = Scenario{
     .name = "EmptySelected",
     .spec = system_60_spec,
+    .public_input = system_60_public_input,
     .system = system_60,
     .logderiv = system_60_logderiv,
     .honest = .{
@@ -8597,6 +8991,7 @@ const scenario_60 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 1859367276, 266045357, 202169275, 76343214, 1880397669, 1212429759 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 809608663, 2009435025, 1088032387, 335052208, 809774166, 1368344849 } },
         .quotient_claims = &.{ .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 0, 0, 0, 0, 0, 0 } },
         .module_sizes = &.{},
@@ -8608,6 +9003,10 @@ pub const system_61_spec = protocol.Spec{
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 4, 5 },
     .total_round_coins = 5,
     .dynamic_module_count = 0,
+};
+pub const system_61_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 4, 0, 25 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "rc-distinct"
@@ -8832,6 +9231,7 @@ const system_61_rowlimit = rowlimit.System{ .checks = &system_61_rowlimit_checks
 const scenario_61 = Scenario{
     .name = "DistinctBounds",
     .spec = system_61_spec,
+    .public_input = system_61_public_input,
     .system = system_61,
     .logderiv = system_61_logderiv,
     .honest = .{
@@ -8886,6 +9286,7 @@ const scenario_61 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1566207128, 734402684, 16913841, 763818592, 1215208755, 1596518932 }, .{ 185254097, 1651418415, 570841180, 862101282, 83567905, 1760513593 }, .{ 1841201336, 722259546, 1158902464, 194586946, 1814140304, 1366827403 }, .{ 144434403, 1492647417, 464416057, 29363732, 1815466703, 2098028275 }, .{ 1, 0, 0, 0, 0, 0 }, .{ 75886290, 1918147397, 134745908, 960172287, 159157612, 880468159 }, .{ 711139868, 1435229837, 1648633372, 207185152, 1330285046, 676302024 }, .{ 185254097, 1651418415, 570841180, 862101282, 83567905, 1760513593 }, .{ 109635468, 859658700, 1740926791, 625487101, 223757140, 855028638 }, .{ 1006825568, 1700923147, 1564205001, 1034124729, 1812285708, 559856267 }, .{ 1625915937, 525683966, 1669700341, 226145676, 1297435823, 443528791 }, .{ 962399966, 763635359, 1723763561, 1549467911, 440993607, 624137786 } },
         .quotient_claims = &.{ .{ 167872684, 1262815553, 1701785032, 1979292751, 2110717865, 1297021642 }, .{ 1338923355, 387526655, 1446980879, 776815333, 802145435, 1400397578 }, .{ 2072495396, 639894146, 699442513, 453454333, 463559414, 1891953831 }, .{ 971568656, 2011012971, 2061797904, 609603859, 100709390, 303550779 }, .{ 946103700, 1006726932, 1086315775, 1218072966, 260819107, 2091100849 }, .{ 0, 0, 0, 0, 0, 0 }, .{ 284028724, 1165114052, 1705136733, 1805396284, 1684602729, 1163638210 }, .{ 448394702, 1893177247, 792426784, 1970305250, 865871195, 443965611 }, .{ 1611590171, 1049869557, 1551205517, 801589489, 584426362, 914815030 }, .{ 213483683, 1270107652, 1066393505, 1971893245, 1174654267, 1766598972 }, .{ 1988611897, 1369841088, 541599279, 1294653049, 1014807383, 1285010626 }, .{ 1812870127, 471865888, 466572874, 1963208221, 1508740766, 1631856575 }, .{ 1797988248, 1087312952, 1878113600, 1081411650, 1133779467, 355790477 } },
         .module_sizes = &.{},
@@ -8898,20 +9299,24 @@ pub const system_62_spec = protocol.Spec{
     .total_round_coins = 2,
     .dynamic_module_count = 0,
 };
+pub const system_62_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 1, 0, 2 },
+    .refs = &[_]protocol.public_input.CellRef{.{ .statement_index = 0, .round = 0, .index = 0 }},
+};
 
-// scenario: "lagrange-sel"
+// scenario: "public-input"
 
-// expression: "boundary"
+// expression: "global"
 const system_62_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .lagrange_selector = 1 },
+    .{ .cell_value = .{ .round = 0, .index = 0 } }, // cell: "result"
     .{ .column_claim = 0 }, // col: "col"
-    .{ .constant = field.Element.init(99) },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 3 } } },
+    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .lagrange_selector = 2 },
+    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 3 } } },
 };
 
 const system_62_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
-    // expression: "boundary"
+    // expression: "global"
     .{ .expression = 4, .cancelled_positions = &.{} },
 };
 
@@ -8924,7 +9329,7 @@ const system_62_modules = [_]vanishing.Module{
     .{ .size = .{ .static = 4 }, .expressions = &system_62_module_0_expressions, .buckets = &system_62_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
 
-// system: "lagrange-sel"
+// system: "public-input"
 const system_62 = vanishing.System{
     .modules = &system_62_modules,
     .dynamic_module_count = 0,
@@ -8932,19 +9337,236 @@ const system_62 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
-// logderiv system: "lagrange-sel"
+// logderiv system: "public-input"
 const system_62_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_62_logderiv = logderivativesum.System{ .queries = &system_62_logderiv_queries };
-// rowlimit system: "lagrange-sel"
+// rowlimit system: "public-input"
 const system_62_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_62_rowlimit = rowlimit.System{ .checks = &system_62_rowlimit_checks };
 const scenario_62 = Scenario{
-    .name = "LagrangeSelectorBoundary",
+    .name = "OpenedCellPublicInput",
     .spec = system_62_spec,
+    .public_input = system_62_public_input,
     .system = system_62,
     .logderiv = system_62_logderiv,
+    .honest = .{
+        .rounds = &.{
+            .{
+                .commitment = .{ 1284087301, 2104130085, 1597477735, 797176699, 452943547, 844011610, 336115017, 934293072 },
+                .cells = &.{},
+            },
+            .{
+                .commitment = .{ 1105742475, 208859899, 988346093, 1728215046, 194780628, 876931807, 1826449047, 1303547082 },
+                .cells = &.{},
+            },
+            .{
+                .cells = &.{
+                    .{ .ext = .{ 1486273085, 1293216935, 627250991, 1538961746, 281156601, 1788737194 } },
+                    .{ .ext = .{ 1216444750, 280518797, 1539032301, 266800061, 1126190907, 1538785192 } },
+                },
+            },
+        },
+        .public_inputs = &.{
+            .{ .base = 30 },
+        },
+        .witness_claims = &.{.{ 1486273085, 1293216935, 627250991, 1538961746, 281156601, 1788737194 }},
+        .quotient_claims = &.{.{ 1216444750, 280518797, 1539032301, 266800061, 1126190907, 1538785192 }},
+        .module_sizes = &.{},
+    },
+    .invalid = .{
+        .rounds = &.{
+            .{
+                .commitment = .{ 1284087301, 2104130085, 1597477735, 797176699, 452943547, 844011610, 336115017, 934293072 },
+                .cells = &.{},
+            },
+            .{
+                .commitment = .{ 1105742475, 208859899, 988346093, 1728215046, 194780628, 876931807, 1826449047, 1303547082 },
+                .cells = &.{},
+            },
+            .{
+                .cells = &.{
+                    .{ .ext = .{ 1486273085, 1293216935, 627250991, 1538961746, 281156601, 1788737194 } },
+                    .{ .ext = .{ 1216444750, 280518797, 1539032301, 266800061, 1126190907, 1538785192 } },
+                },
+            },
+        },
+        .public_inputs = &.{
+            .{ .base = 99 },
+        },
+        .witness_claims = &.{.{ 1486273085, 1293216935, 627250991, 1538961746, 281156601, 1788737194 }},
+        .quotient_claims = &.{.{ 1216444750, 280518797, 1539032301, 266800061, 1126190907, 1538785192 }},
+        .module_sizes = &.{},
+    },
+};
+
+pub const system_63_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
+    .total_round_coins = 2,
+    .dynamic_module_count = 1,
+};
+pub const system_63_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 1, 0, 2 },
+    .refs = &[_]protocol.public_input.CellRef{.{ .statement_index = 0, .round = 0, .index = 0 }},
+};
+
+// scenario: "public-input-dyn"
+
+// expression: "global"
+const system_63_module_0_expressions = [_]vanishing.ExprNode{
+    .{ .cell_value = .{ .round = 0, .index = 0 } }, // cell: "result"
+    .{ .column_claim = 0 }, // col: "col"
+    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .lagrange_selector = 0 },
+    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 3 } } },
+};
+
+const system_63_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
+    // expression: "global"
+    .{ .expression = 4, .cancelled_positions = &.{} },
+};
+
+const system_63_module_0_buckets = [_]vanishing.Bucket{
+    .{ .ratio = 1, .vanishings = &system_63_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
+};
+
+const system_63_modules = [_]vanishing.Module{
+    // module: "mod"
+    .{ .size = .{ .dynamic = 0 }, .expressions = &system_63_module_0_expressions, .buckets = &system_63_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
+};
+
+// system: "public-input-dyn"
+const system_63 = vanishing.System{
+    .modules = &system_63_modules,
+    .dynamic_module_count = 1,
+    .total_witness_claims = 1,
+    .total_quotient_claims = 1,
+};
+
+// logderiv system: "public-input-dyn"
+const system_63_logderiv_queries = [_]logderivativesum.Query{};
+
+const system_63_logderiv = logderivativesum.System{ .queries = &system_63_logderiv_queries };
+// rowlimit system: "public-input-dyn"
+const system_63_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_63_rowlimit = rowlimit.System{ .checks = &system_63_rowlimit_checks };
+const scenario_63 = Scenario{
+    .name = "OpenedCellPublicInputDynamic",
+    .spec = system_63_spec,
+    .public_input = system_63_public_input,
+    .system = system_63,
+    .logderiv = system_63_logderiv,
+    .honest = .{
+        .rounds = &.{
+            .{
+                .commitment = .{ 126312721, 860899276, 787843834, 1406698392, 437636424, 1222337496, 643066739, 803380079 },
+                .cells = &.{},
+            },
+            .{
+                .commitment = .{ 787451913, 729825956, 1784513104, 1878313003, 1262227168, 472808875, 2071067297, 1183890080 },
+                .cells = &.{},
+            },
+            .{
+                .cells = &.{
+                    .{ .ext = .{ 747698725, 1031344127, 1835788919, 781195155, 1917545644, 1392794629 } },
+                    .{ .ext = .{ 1022777110, 1170924384, 1431591653, 1212908920, 537677915, 1705589347 } },
+                },
+            },
+        },
+        .public_inputs = &.{
+            .{ .base = 30 },
+        },
+        .witness_claims = &.{.{ 747698725, 1031344127, 1835788919, 781195155, 1917545644, 1392794629 }},
+        .quotient_claims = &.{.{ 1022777110, 1170924384, 1431591653, 1212908920, 537677915, 1705589347 }},
+        .module_sizes = &.{4},
+    },
+    .invalid = .{
+        .rounds = &.{
+            .{
+                .commitment = .{ 126312721, 860899276, 787843834, 1406698392, 437636424, 1222337496, 643066739, 803380079 },
+                .cells = &.{},
+            },
+            .{
+                .commitment = .{ 787451913, 729825956, 1784513104, 1878313003, 1262227168, 472808875, 2071067297, 1183890080 },
+                .cells = &.{},
+            },
+            .{
+                .cells = &.{
+                    .{ .ext = .{ 747698725, 1031344127, 1835788919, 781195155, 1917545644, 1392794629 } },
+                    .{ .ext = .{ 1022777110, 1170924384, 1431591653, 1212908920, 537677915, 1705589347 } },
+                },
+            },
+        },
+        .public_inputs = &.{
+            .{ .base = 99 },
+        },
+        .witness_claims = &.{.{ 747698725, 1031344127, 1835788919, 781195155, 1917545644, 1392794629 }},
+        .quotient_claims = &.{.{ 1022777110, 1170924384, 1431591653, 1212908920, 537677915, 1705589347 }},
+        .module_sizes = &.{4},
+    },
+};
+
+pub const system_64_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
+    .total_round_coins = 2,
+    .dynamic_module_count = 0,
+};
+pub const system_64_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 2 },
+    .refs = &[_]protocol.public_input.CellRef{},
+};
+
+// scenario: "lagrange-sel"
+
+// expression: "boundary"
+const system_64_module_0_expressions = [_]vanishing.ExprNode{
+    .{ .lagrange_selector = 1 },
+    .{ .column_claim = 0 }, // col: "col"
+    .{ .constant = field.Element.init(99) },
+    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 3 } } },
+};
+
+const system_64_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
+    // expression: "boundary"
+    .{ .expression = 4, .cancelled_positions = &.{} },
+};
+
+const system_64_module_0_buckets = [_]vanishing.Bucket{
+    .{ .ratio = 1, .vanishings = &system_64_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
+};
+
+const system_64_modules = [_]vanishing.Module{
+    // module: "mod"
+    .{ .size = .{ .static = 4 }, .expressions = &system_64_module_0_expressions, .buckets = &system_64_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
+};
+
+// system: "lagrange-sel"
+const system_64 = vanishing.System{
+    .modules = &system_64_modules,
+    .dynamic_module_count = 0,
+    .total_witness_claims = 1,
+    .total_quotient_claims = 1,
+};
+
+// logderiv system: "lagrange-sel"
+const system_64_logderiv_queries = [_]logderivativesum.Query{};
+
+const system_64_logderiv = logderivativesum.System{ .queries = &system_64_logderiv_queries };
+// rowlimit system: "lagrange-sel"
+const system_64_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_64_rowlimit = rowlimit.System{ .checks = &system_64_rowlimit_checks };
+const scenario_64 = Scenario{
+    .name = "LagrangeSelectorBoundary",
+    .spec = system_64_spec,
+    .public_input = system_64_public_input,
+    .system = system_64,
+    .logderiv = system_64_logderiv,
     .honest = .{
         .rounds = &.{
             .{
@@ -8962,6 +9584,7 @@ const scenario_62 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{.{ 1668157509, 1657411026, 669435383, 1971177737, 813458534, 126104960 }},
         .quotient_claims = &.{.{ 316710214, 2026271773, 2053582425, 1108145756, 446049424, 783808682 }},
         .module_sizes = &.{},
@@ -8983,23 +9606,28 @@ const scenario_62 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{.{ 2095366691, 1204019039, 329846865, 619663266, 723883801, 2027416210 }},
         .quotient_claims = &.{.{ 692363039, 1578528658, 1179858044, 125499083, 352934268, 605207799 }},
         .module_sizes = &.{},
     },
 };
 
-pub const system_63_spec = protocol.Spec{
+pub const system_65_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 1,
 };
+pub const system_65_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 2 },
+    .refs = &[_]protocol.public_input.CellRef{},
+};
 
 // scenario: "lagrange-sel-dyn"
 
 // expression: "boundary"
-const system_63_module_0_expressions = [_]vanishing.ExprNode{
+const system_65_module_0_expressions = [_]vanishing.ExprNode{
     .{ .lagrange_selector = 1 },
     .{ .column_claim = 0 }, // col: "col"
     .{ .constant = field.Element.init(99) },
@@ -9007,41 +9635,42 @@ const system_63_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .mul, .operands = &.{ 0, 3 } } },
 };
 
-const system_63_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
+const system_65_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "boundary"
     .{ .expression = 4, .cancelled_positions = &.{} },
 };
 
-const system_63_module_0_buckets = [_]vanishing.Bucket{
-    .{ .ratio = 1, .vanishings = &system_63_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
+const system_65_module_0_buckets = [_]vanishing.Bucket{
+    .{ .ratio = 1, .vanishings = &system_65_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
 };
 
-const system_63_modules = [_]vanishing.Module{
+const system_65_modules = [_]vanishing.Module{
     // module: "mod"
-    .{ .size = .{ .dynamic = 0 }, .expressions = &system_63_module_0_expressions, .buckets = &system_63_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
+    .{ .size = .{ .dynamic = 0 }, .expressions = &system_65_module_0_expressions, .buckets = &system_65_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
 
 // system: "lagrange-sel-dyn"
-const system_63 = vanishing.System{
-    .modules = &system_63_modules,
+const system_65 = vanishing.System{
+    .modules = &system_65_modules,
     .dynamic_module_count = 1,
     .total_witness_claims = 1,
     .total_quotient_claims = 1,
 };
 
 // logderiv system: "lagrange-sel-dyn"
-const system_63_logderiv_queries = [_]logderivativesum.Query{};
+const system_65_logderiv_queries = [_]logderivativesum.Query{};
 
-const system_63_logderiv = logderivativesum.System{ .queries = &system_63_logderiv_queries };
+const system_65_logderiv = logderivativesum.System{ .queries = &system_65_logderiv_queries };
 // rowlimit system: "lagrange-sel-dyn"
-const system_63_rowlimit_checks = [_]rowlimit.Check{};
+const system_65_rowlimit_checks = [_]rowlimit.Check{};
 
-const system_63_rowlimit = rowlimit.System{ .checks = &system_63_rowlimit_checks };
-const scenario_63 = Scenario{
+const system_65_rowlimit = rowlimit.System{ .checks = &system_65_rowlimit_checks };
+const scenario_65 = Scenario{
     .name = "DynamicLagrangeSelectorBoundary",
-    .spec = system_63_spec,
-    .system = system_63,
-    .logderiv = system_63_logderiv,
+    .spec = system_65_spec,
+    .public_input = system_65_public_input,
+    .system = system_65,
+    .logderiv = system_65_logderiv,
     .honest = .{
         .rounds = &.{
             .{
@@ -9059,6 +9688,7 @@ const scenario_63 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{.{ 51453353, 468423403, 736838586, 1088623528, 2022263907, 294040827 }},
         .quotient_claims = &.{.{ 2003637155, 1785115481, 923292968, 1863710667, 187523825, 676375374 }},
         .module_sizes = &.{4},
@@ -9080,22 +9710,27 @@ const scenario_63 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{.{ 969687231, 650001449, 1330845296, 1837974629, 668715247, 406611711 }},
         .quotient_claims = &.{.{ 236242309, 213296253, 841566489, 1203754865, 404549995, 1190020053 }},
         .module_sizes = &.{4},
     },
 };
 
-pub const system_64_spec = protocol.Spec{
+pub const system_66_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4, 5 },
     .total_round_coins = 5,
     .dynamic_module_count = 0,
 };
+pub const system_66_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3, 0, 21 },
+    .refs = &[_]protocol.public_input.CellRef{},
+};
 
 // scenario: "lk-multi-col-bench"
 
-const system_64_module_0_expressions = [_]vanishing.ExprNode{
+const system_66_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
@@ -9155,24 +9790,24 @@ const system_64_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .mul, .operands = &.{ 54, 55 } } },
 };
 
-const system_64_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
+const system_66_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 25, .cancelled_positions = &.{0} },
     // expression: "global"
     .{ .expression = 30, .cancelled_positions = &.{} },
 };
 
-const system_64_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
+const system_66_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
     .{ .expression = 56, .cancelled_positions = &.{} },
 };
 
-const system_64_module_0_buckets = [_]vanishing.Bucket{
-    .{ .ratio = 1, .vanishings = &system_64_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
-    .{ .ratio = 2, .vanishings = &system_64_module_0_bucket_1_vanishings, .quotient_claim_offset = 1 },
+const system_66_module_0_buckets = [_]vanishing.Bucket{
+    .{ .ratio = 1, .vanishings = &system_66_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
+    .{ .ratio = 2, .vanishings = &system_66_module_0_bucket_1_vanishings, .quotient_claim_offset = 1 },
 };
 
-const system_64_module_1_expressions = [_]vanishing.ExprNode{
+const system_66_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = field.Element.init(1) },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
@@ -9230,68 +9865,69 @@ const system_64_module_1_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .mul, .operands = &.{ 52, 53 } } },
 };
 
-const system_64_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
+const system_66_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
     .{ .expression = 24, .cancelled_positions = &.{0} },
     // expression: "global"
     .{ .expression = 29, .cancelled_positions = &.{} },
 };
 
-const system_64_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
+const system_66_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
     .{ .expression = 54, .cancelled_positions = &.{} },
 };
 
-const system_64_module_1_buckets = [_]vanishing.Bucket{
-    .{ .ratio = 1, .vanishings = &system_64_module_1_bucket_0_vanishings, .quotient_claim_offset = 3 },
-    .{ .ratio = 2, .vanishings = &system_64_module_1_bucket_1_vanishings, .quotient_claim_offset = 4 },
+const system_66_module_1_buckets = [_]vanishing.Bucket{
+    .{ .ratio = 1, .vanishings = &system_66_module_1_bucket_0_vanishings, .quotient_claim_offset = 3 },
+    .{ .ratio = 2, .vanishings = &system_66_module_1_bucket_1_vanishings, .quotient_claim_offset = 4 },
 };
 
-const system_64_modules = [_]vanishing.Module{
+const system_66_modules = [_]vanishing.Module{
     // module: "modT"
-    .{ .size = .{ .static = 1024 }, .expressions = &system_64_module_0_expressions, .buckets = &system_64_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 1024 }, .expressions = &system_66_module_0_expressions, .buckets = &system_66_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 2, .eval_coin_index = 4 },
     // module: "modS"
-    .{ .size = .{ .static = 1024 }, .expressions = &system_64_module_1_expressions, .buckets = &system_64_module_1_buckets, .witness_claim_offset = 8, .merge_coin_index = 3, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 1024 }, .expressions = &system_66_module_1_expressions, .buckets = &system_66_module_1_buckets, .witness_claim_offset = 8, .merge_coin_index = 3, .eval_coin_index = 4 },
 };
 
 // system: "lk-multi-col-bench"
-const system_64 = vanishing.System{
-    .modules = &system_64_modules,
+const system_66 = vanishing.System{
+    .modules = &system_66_modules,
     .dynamic_module_count = 0,
     .total_witness_claims = 15,
     .total_quotient_claims = 6,
 };
 
-const system_64_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
+const system_66_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 2, .index = 1 },
     .{ .round = 2, .index = 2 },
 };
 
 // logderiv system: "lk-multi-col-bench"
-const system_64_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_64_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-multi-col-bench/lookuptologderiv/aggregated"
+const system_66_logderiv_queries = [_]logderivativesum.Query{
+    .{ .z_final_refs = &system_66_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-multi-col-bench/lookuptologderiv/aggregated"
 };
 
-const system_64_logderiv = logderivativesum.System{ .queries = &system_64_logderiv_queries };
-const system_64_rowlimit_check_0_included_modules = [_]rowlimit.ModuleSize{
+const system_66_logderiv = logderivativesum.System{ .queries = &system_66_logderiv_queries };
+const system_66_rowlimit_check_0_included_modules = [_]rowlimit.ModuleSize{
     .{ .static = 1024 },
 };
 
-const system_64_rowlimit_check_0_includings_modules = [_]rowlimit.ModuleSize{
+const system_66_rowlimit_check_0_includings_modules = [_]rowlimit.ModuleSize{
     .{ .static = 1024 },
 };
 
 // rowlimit system: "lk-multi-col-bench"
-const system_64_rowlimit_checks = [_]rowlimit.Check{
-    .{ .included_modules = &system_64_rowlimit_check_0_included_modules, .includings_modules = &system_64_rowlimit_check_0_includings_modules, .limit = 1073741824 },
+const system_66_rowlimit_checks = [_]rowlimit.Check{
+    .{ .included_modules = &system_66_rowlimit_check_0_included_modules, .includings_modules = &system_66_rowlimit_check_0_includings_modules, .limit = 1073741824 },
 };
 
-const system_64_rowlimit = rowlimit.System{ .checks = &system_64_rowlimit_checks };
-const scenario_64 = Scenario{
+const system_66_rowlimit = rowlimit.System{ .checks = &system_66_rowlimit_checks };
+const scenario_66 = Scenario{
     .name = "MultiColumnBench",
-    .spec = system_64_spec,
-    .system = system_64,
-    .logderiv = system_64_logderiv,
+    .spec = system_66_spec,
+    .public_input = system_66_public_input,
+    .system = system_66,
+    .logderiv = system_66_logderiv,
     .honest = .{
         .rounds = &.{
             .{
@@ -9339,6 +9975,7 @@ const scenario_64 = Scenario{
                 },
             },
         },
+        .public_inputs = &.{},
         .witness_claims = &.{ .{ 1296311781, 676430850, 1687713050, 203742254, 826383078, 920495141 }, .{ 871994390, 1822043361, 1982402357, 1624036200, 329224840, 1108185838 }, .{ 1161677615, 263107718, 1404812741, 1986336195, 1529334544, 1455360755 }, .{ 194671673, 213914338, 1508759332, 965769489, 1931913932, 563845346 }, .{ 194671672, 213914338, 1508759332, 965769489, 1931913932, 563845346 }, .{ 194671671, 213914338, 1508759332, 965769489, 1931913932, 563845346 }, .{ 194671670, 213914338, 1508759332, 965769489, 1931913932, 563845346 }, .{ 194671669, 213914338, 1508759332, 965769489, 1931913932, 563845346 }, .{ 1010482806, 649401391, 1508456076, 911212973, 542119637, 1759917171 }, .{ 637299434, 1983741326, 1725548912, 2051553773, 879127401, 1927722620 }, .{ 1790989982, 792990865, 1029894233, 1986832121, 415338600, 1832893812 }, .{ 1790989981, 792990865, 1029894233, 1986832121, 415338600, 1832893812 }, .{ 1790989980, 792990865, 1029894233, 1986832121, 415338600, 1832893812 }, .{ 1790989979, 792990865, 1029894233, 1986832121, 415338600, 1832893812 }, .{ 1790989978, 792990865, 1029894233, 1986832121, 415338600, 1832893812 } },
         .quotient_claims = &.{ .{ 621033513, 816364487, 647064473, 331573856, 1267240217, 940154769 }, .{ 1448519472, 1143477877, 1472279815, 1471858844, 1138552499, 1968000071 }, .{ 2015168907, 255019859, 881885277, 228781509, 1947152615, 1518150093 }, .{ 1325218285, 562596705, 1204892860, 970711971, 1926692972, 559769562 }, .{ 1585733805, 852713048, 2003486700, 667550282, 1925386065, 340700650 }, .{ 276243485, 1785199062, 2017419026, 2046610604, 102257827, 1932165356 } },
         .module_sizes = &.{},
@@ -9411,4 +10048,6 @@ pub const scenarios = [_]Scenario{
     scenario_62,
     scenario_63,
     scenario_64,
+    scenario_65,
+    scenario_66,
 };

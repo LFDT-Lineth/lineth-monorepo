@@ -31,13 +31,17 @@ pub const VerifyCaseMetadata = struct {
     total_quotient_claims: usize,
 };
 
-pub const case_count: usize = 65;
+pub const case_count: usize = 67;
 
 pub const system_0_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_0_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 2 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "bool-col"
@@ -131,6 +135,13 @@ const verify_case_0_proof = verifier.Proof{
     .pcs_opening = verify_case_0_pcs_opening,
 };
 
+const verify_case_0_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_0_input = verifier.VerifyInput{
+    .proof = verify_case_0_proof,
+    .public_inputs = &verify_case_0_public_inputs,
+};
+
 const verify_case_0_failing_module_sizes = [_]usize{};
 
 const verify_case_0_failing_round_0_cells = [_]protocol.Scalar{};
@@ -156,13 +167,24 @@ const verify_case_0_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_0_failing_pcs_opening,
 };
 
-const verify_case_0_systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .rowlimit = system_0_rowlimit, .pcs = verify_case_0_pcs_system };
+const verify_case_0_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_0_failing_input = verifier.VerifyInput{
+    .proof = verify_case_0_failing_proof,
+    .public_inputs = &verify_case_0_failing_public_inputs,
+};
+
+const verify_case_0_systems = verifier.Systems{ .public_input = system_0_public_input, .vanishing = system_0, .logderivativesum = system_0_logderiv, .rowlimit = system_0_rowlimit, .pcs = verify_case_0_pcs_system };
 
 pub const system_1_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_1_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 4 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "fib"
@@ -260,6 +282,13 @@ const verify_case_1_proof = verifier.Proof{
     .pcs_opening = verify_case_1_pcs_opening,
 };
 
+const verify_case_1_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_1_input = verifier.VerifyInput{
+    .proof = verify_case_1_proof,
+    .public_inputs = &verify_case_1_public_inputs,
+};
+
 const verify_case_1_failing_module_sizes = [_]usize{};
 
 const verify_case_1_failing_round_0_cells = [_]protocol.Scalar{};
@@ -287,13 +316,24 @@ const verify_case_1_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_1_failing_pcs_opening,
 };
 
-const verify_case_1_systems = verifier.Systems{ .vanishing = system_1, .logderivativesum = system_1_logderiv, .rowlimit = system_1_rowlimit, .pcs = verify_case_1_pcs_system };
+const verify_case_1_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_1_failing_input = verifier.VerifyInput{
+    .proof = verify_case_1_failing_proof,
+    .public_inputs = &verify_case_1_failing_public_inputs,
+};
+
+const verify_case_1_systems = verifier.Systems{ .public_input = system_1_public_input, .vanishing = system_1, .logderivativesum = system_1_logderiv, .rowlimit = system_1_rowlimit, .pcs = verify_case_1_pcs_system };
 
 pub const system_2_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_2_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "geo"
@@ -389,6 +429,13 @@ const verify_case_2_proof = verifier.Proof{
     .pcs_opening = verify_case_2_pcs_opening,
 };
 
+const verify_case_2_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_2_input = verifier.VerifyInput{
+    .proof = verify_case_2_proof,
+    .public_inputs = &verify_case_2_public_inputs,
+};
+
 const verify_case_2_failing_module_sizes = [_]usize{};
 
 const verify_case_2_failing_round_0_cells = [_]protocol.Scalar{};
@@ -415,13 +462,24 @@ const verify_case_2_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_2_failing_pcs_opening,
 };
 
-const verify_case_2_systems = verifier.Systems{ .vanishing = system_2, .logderivativesum = system_2_logderiv, .rowlimit = system_2_rowlimit, .pcs = verify_case_2_pcs_system };
+const verify_case_2_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_2_failing_input = verifier.VerifyInput{
+    .proof = verify_case_2_failing_proof,
+    .public_inputs = &verify_case_2_failing_public_inputs,
+};
+
+const verify_case_2_systems = verifier.Systems{ .public_input = system_2_public_input, .vanishing = system_2, .logderivativesum = system_2_logderiv, .rowlimit = system_2_rowlimit, .pcs = verify_case_2_pcs_system };
 
 pub const system_3_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_3_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 4 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "ctr"
@@ -520,6 +578,13 @@ const verify_case_3_proof = verifier.Proof{
     .pcs_opening = verify_case_3_pcs_opening,
 };
 
+const verify_case_3_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_3_input = verifier.VerifyInput{
+    .proof = verify_case_3_proof,
+    .public_inputs = &verify_case_3_public_inputs,
+};
+
 const verify_case_3_failing_module_sizes = [_]usize{};
 
 const verify_case_3_failing_round_0_cells = [_]protocol.Scalar{};
@@ -547,13 +612,24 @@ const verify_case_3_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_3_failing_pcs_opening,
 };
 
-const verify_case_3_systems = verifier.Systems{ .vanishing = system_3, .logderivativesum = system_3_logderiv, .rowlimit = system_3_rowlimit, .pcs = verify_case_3_pcs_system };
+const verify_case_3_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_3_failing_input = verifier.VerifyInput{
+    .proof = verify_case_3_failing_proof,
+    .public_inputs = &verify_case_3_failing_public_inputs,
+};
+
+const verify_case_3_systems = verifier.Systems{ .public_input = system_3_public_input, .vanishing = system_3, .logderivativesum = system_3_logderiv, .rowlimit = system_3_rowlimit, .pcs = verify_case_3_pcs_system };
 
 pub const system_4_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_4_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 4 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "pyth"
@@ -656,6 +732,13 @@ const verify_case_4_proof = verifier.Proof{
     .pcs_opening = verify_case_4_pcs_opening,
 };
 
+const verify_case_4_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_4_input = verifier.VerifyInput{
+    .proof = verify_case_4_proof,
+    .public_inputs = &verify_case_4_public_inputs,
+};
+
 const verify_case_4_failing_module_sizes = [_]usize{};
 
 const verify_case_4_failing_round_0_cells = [_]protocol.Scalar{};
@@ -683,13 +766,24 @@ const verify_case_4_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_4_failing_pcs_opening,
 };
 
-const verify_case_4_systems = verifier.Systems{ .vanishing = system_4, .logderivativesum = system_4_logderiv, .rowlimit = system_4_rowlimit, .pcs = verify_case_4_pcs_system };
+const verify_case_4_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_4_failing_input = verifier.VerifyInput{
+    .proof = verify_case_4_failing_proof,
+    .public_inputs = &verify_case_4_failing_public_inputs,
+};
+
+const verify_case_4_systems = verifier.Systems{ .public_input = system_4_public_input, .vanishing = system_4, .logderivativesum = system_4_logderiv, .rowlimit = system_4_rowlimit, .pcs = verify_case_4_pcs_system };
 
 pub const system_5_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 1,
+};
+pub const system_5_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 4 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "dyn-fib"
@@ -787,6 +881,13 @@ const verify_case_5_proof = verifier.Proof{
     .pcs_opening = verify_case_5_pcs_opening,
 };
 
+const verify_case_5_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_5_input = verifier.VerifyInput{
+    .proof = verify_case_5_proof,
+    .public_inputs = &verify_case_5_public_inputs,
+};
+
 const verify_case_5_failing_module_sizes = [_]usize{8};
 
 const verify_case_5_failing_round_0_cells = [_]protocol.Scalar{};
@@ -814,13 +915,24 @@ const verify_case_5_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_5_failing_pcs_opening,
 };
 
-const verify_case_5_systems = verifier.Systems{ .vanishing = system_5, .logderivativesum = system_5_logderiv, .rowlimit = system_5_rowlimit, .pcs = verify_case_5_pcs_system };
+const verify_case_5_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_5_failing_input = verifier.VerifyInput{
+    .proof = verify_case_5_failing_proof,
+    .public_inputs = &verify_case_5_failing_public_inputs,
+};
+
+const verify_case_5_systems = verifier.Systems{ .public_input = system_5_public_input, .vanishing = system_5, .logderivativesum = system_5_logderiv, .rowlimit = system_5_rowlimit, .pcs = verify_case_5_pcs_system };
 
 pub const system_6_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_6_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 2 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "const-col"
@@ -912,6 +1024,13 @@ const verify_case_6_proof = verifier.Proof{
     .pcs_opening = verify_case_6_pcs_opening,
 };
 
+const verify_case_6_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_6_input = verifier.VerifyInput{
+    .proof = verify_case_6_proof,
+    .public_inputs = &verify_case_6_public_inputs,
+};
+
 const verify_case_6_failing_module_sizes = [_]usize{};
 
 const verify_case_6_failing_round_0_cells = [_]protocol.Scalar{};
@@ -937,13 +1056,24 @@ const verify_case_6_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_6_failing_pcs_opening,
 };
 
-const verify_case_6_systems = verifier.Systems{ .vanishing = system_6, .logderivativesum = system_6_logderiv, .rowlimit = system_6_rowlimit, .pcs = verify_case_6_pcs_system };
+const verify_case_6_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_6_failing_input = verifier.VerifyInput{
+    .proof = verify_case_6_failing_proof,
+    .public_inputs = &verify_case_6_failing_public_inputs,
+};
+
+const verify_case_6_systems = verifier.Systems{ .public_input = system_6_public_input, .vanishing = system_6, .logderivativesum = system_6_logderiv, .rowlimit = system_6_rowlimit, .pcs = verify_case_6_pcs_system };
 
 pub const system_7_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_7_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "fwd-shift"
@@ -1037,6 +1167,13 @@ const verify_case_7_proof = verifier.Proof{
     .pcs_opening = verify_case_7_pcs_opening,
 };
 
+const verify_case_7_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_7_input = verifier.VerifyInput{
+    .proof = verify_case_7_proof,
+    .public_inputs = &verify_case_7_public_inputs,
+};
+
 const verify_case_7_failing_module_sizes = [_]usize{};
 
 const verify_case_7_failing_round_0_cells = [_]protocol.Scalar{};
@@ -1063,13 +1200,24 @@ const verify_case_7_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_7_failing_pcs_opening,
 };
 
-const verify_case_7_systems = verifier.Systems{ .vanishing = system_7, .logderivativesum = system_7_logderiv, .rowlimit = system_7_rowlimit, .pcs = verify_case_7_pcs_system };
+const verify_case_7_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_7_failing_input = verifier.VerifyInput{
+    .proof = verify_case_7_failing_proof,
+    .public_inputs = &verify_case_7_failing_public_inputs,
+};
+
+const verify_case_7_systems = verifier.Systems{ .public_input = system_7_public_input, .vanishing = system_7, .logderivativesum = system_7_logderiv, .rowlimit = system_7_rowlimit, .pcs = verify_case_7_pcs_system };
 
 pub const system_8_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_8_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "bool-cube"
@@ -1168,6 +1316,13 @@ const verify_case_8_proof = verifier.Proof{
     .pcs_opening = verify_case_8_pcs_opening,
 };
 
+const verify_case_8_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_8_input = verifier.VerifyInput{
+    .proof = verify_case_8_proof,
+    .public_inputs = &verify_case_8_public_inputs,
+};
+
 const verify_case_8_failing_module_sizes = [_]usize{};
 
 const verify_case_8_failing_round_0_cells = [_]protocol.Scalar{};
@@ -1194,13 +1349,24 @@ const verify_case_8_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_8_failing_pcs_opening,
 };
 
-const verify_case_8_systems = verifier.Systems{ .vanishing = system_8, .logderivativesum = system_8_logderiv, .rowlimit = system_8_rowlimit, .pcs = verify_case_8_pcs_system };
+const verify_case_8_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_8_failing_input = verifier.VerifyInput{
+    .proof = verify_case_8_failing_proof,
+    .public_inputs = &verify_case_8_failing_public_inputs,
+};
+
+const verify_case_8_systems = verifier.Systems{ .public_input = system_8_public_input, .vanishing = system_8, .logderivativesum = system_8_logderiv, .rowlimit = system_8_rowlimit, .pcs = verify_case_8_pcs_system };
 
 pub const system_9_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_9_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 4 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lin-comb"
@@ -1304,6 +1470,13 @@ const verify_case_9_proof = verifier.Proof{
     .pcs_opening = verify_case_9_pcs_opening,
 };
 
+const verify_case_9_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_9_input = verifier.VerifyInput{
+    .proof = verify_case_9_proof,
+    .public_inputs = &verify_case_9_public_inputs,
+};
+
 const verify_case_9_failing_module_sizes = [_]usize{};
 
 const verify_case_9_failing_round_0_cells = [_]protocol.Scalar{};
@@ -1331,13 +1504,24 @@ const verify_case_9_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_9_failing_pcs_opening,
 };
 
-const verify_case_9_systems = verifier.Systems{ .vanishing = system_9, .logderivativesum = system_9_logderiv, .rowlimit = system_9_rowlimit, .pcs = verify_case_9_pcs_system };
+const verify_case_9_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_9_failing_input = verifier.VerifyInput{
+    .proof = verify_case_9_failing_proof,
+    .public_inputs = &verify_case_9_failing_public_inputs,
+};
+
+const verify_case_9_systems = verifier.Systems{ .public_input = system_9_public_input, .vanishing = system_9, .logderivativesum = system_9_logderiv, .rowlimit = system_9_rowlimit, .pcs = verify_case_9_pcs_system };
 
 pub const system_10_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_10_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 4 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "fib-16"
@@ -1435,6 +1619,13 @@ const verify_case_10_proof = verifier.Proof{
     .pcs_opening = verify_case_10_pcs_opening,
 };
 
+const verify_case_10_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_10_input = verifier.VerifyInput{
+    .proof = verify_case_10_proof,
+    .public_inputs = &verify_case_10_public_inputs,
+};
+
 const verify_case_10_failing_module_sizes = [_]usize{};
 
 const verify_case_10_failing_round_0_cells = [_]protocol.Scalar{};
@@ -1462,13 +1653,24 @@ const verify_case_10_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_10_failing_pcs_opening,
 };
 
-const verify_case_10_systems = verifier.Systems{ .vanishing = system_10, .logderivativesum = system_10_logderiv, .rowlimit = system_10_rowlimit, .pcs = verify_case_10_pcs_system };
+const verify_case_10_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_10_failing_input = verifier.VerifyInput{
+    .proof = verify_case_10_failing_proof,
+    .public_inputs = &verify_case_10_failing_public_inputs,
+};
+
+const verify_case_10_systems = verifier.Systems{ .public_input = system_10_public_input, .vanishing = system_10, .logderivativesum = system_10_logderiv, .rowlimit = system_10_rowlimit, .pcs = verify_case_10_pcs_system };
 
 pub const system_11_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_11_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "same-ratio"
@@ -1567,6 +1769,13 @@ const verify_case_11_proof = verifier.Proof{
     .pcs_opening = verify_case_11_pcs_opening,
 };
 
+const verify_case_11_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_11_input = verifier.VerifyInput{
+    .proof = verify_case_11_proof,
+    .public_inputs = &verify_case_11_public_inputs,
+};
+
 const verify_case_11_failing_module_sizes = [_]usize{};
 
 const verify_case_11_failing_round_0_cells = [_]protocol.Scalar{};
@@ -1593,13 +1802,24 @@ const verify_case_11_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_11_failing_pcs_opening,
 };
 
-const verify_case_11_systems = verifier.Systems{ .vanishing = system_11, .logderivativesum = system_11_logderiv, .rowlimit = system_11_rowlimit, .pcs = verify_case_11_pcs_system };
+const verify_case_11_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_11_failing_input = verifier.VerifyInput{
+    .proof = verify_case_11_failing_proof,
+    .public_inputs = &verify_case_11_failing_public_inputs,
+};
+
+const verify_case_11_systems = verifier.Systems{ .public_input = system_11_public_input, .vanishing = system_11, .logderivativesum = system_11_logderiv, .rowlimit = system_11_rowlimit, .pcs = verify_case_11_pcs_system };
 
 pub const system_12_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_12_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "mixed-ratio"
@@ -1699,6 +1919,13 @@ const verify_case_12_proof = verifier.Proof{
     .pcs_opening = verify_case_12_pcs_opening,
 };
 
+const verify_case_12_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_12_input = verifier.VerifyInput{
+    .proof = verify_case_12_proof,
+    .public_inputs = &verify_case_12_public_inputs,
+};
+
 const verify_case_12_failing_module_sizes = [_]usize{};
 
 const verify_case_12_failing_round_0_cells = [_]protocol.Scalar{};
@@ -1725,13 +1952,24 @@ const verify_case_12_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_12_failing_pcs_opening,
 };
 
-const verify_case_12_systems = verifier.Systems{ .vanishing = system_12, .logderivativesum = system_12_logderiv, .rowlimit = system_12_rowlimit, .pcs = verify_case_12_pcs_system };
+const verify_case_12_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_12_failing_input = verifier.VerifyInput{
+    .proof = verify_case_12_failing_proof,
+    .public_inputs = &verify_case_12_failing_public_inputs,
+};
+
+const verify_case_12_systems = verifier.Systems{ .public_input = system_12_public_input, .vanishing = system_12, .logderivativesum = system_12_logderiv, .rowlimit = system_12_rowlimit, .pcs = verify_case_12_pcs_system };
 
 pub const system_13_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 2, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 3 },
     .total_round_coins = 3,
     .dynamic_module_count = 0,
+};
+pub const system_13_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 4 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "multi-mod"
@@ -1849,6 +2087,13 @@ const verify_case_13_proof = verifier.Proof{
     .pcs_opening = verify_case_13_pcs_opening,
 };
 
+const verify_case_13_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_13_input = verifier.VerifyInput{
+    .proof = verify_case_13_proof,
+    .public_inputs = &verify_case_13_public_inputs,
+};
+
 const verify_case_13_failing_module_sizes = [_]usize{};
 
 const verify_case_13_failing_round_0_cells = [_]protocol.Scalar{};
@@ -1876,13 +2121,24 @@ const verify_case_13_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_13_failing_pcs_opening,
 };
 
-const verify_case_13_systems = verifier.Systems{ .vanishing = system_13, .logderivativesum = system_13_logderiv, .rowlimit = system_13_rowlimit, .pcs = verify_case_13_pcs_system };
+const verify_case_13_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_13_failing_input = verifier.VerifyInput{
+    .proof = verify_case_13_failing_proof,
+    .public_inputs = &verify_case_13_failing_public_inputs,
+};
+
+const verify_case_13_systems = verifier.Systems{ .public_input = system_13_public_input, .vanishing = system_13, .logderivativesum = system_13_logderiv, .rowlimit = system_13_rowlimit, .pcs = verify_case_13_pcs_system };
 
 pub const system_14_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_14_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "manual-cxl"
@@ -1978,6 +2234,13 @@ const verify_case_14_proof = verifier.Proof{
     .pcs_opening = verify_case_14_pcs_opening,
 };
 
+const verify_case_14_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_14_input = verifier.VerifyInput{
+    .proof = verify_case_14_proof,
+    .public_inputs = &verify_case_14_public_inputs,
+};
+
 const verify_case_14_failing_module_sizes = [_]usize{};
 
 const verify_case_14_failing_round_0_cells = [_]protocol.Scalar{};
@@ -2004,13 +2267,24 @@ const verify_case_14_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_14_failing_pcs_opening,
 };
 
-const verify_case_14_systems = verifier.Systems{ .vanishing = system_14, .logderivativesum = system_14_logderiv, .rowlimit = system_14_rowlimit, .pcs = verify_case_14_pcs_system };
+const verify_case_14_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_14_failing_input = verifier.VerifyInput{
+    .proof = verify_case_14_failing_proof,
+    .public_inputs = &verify_case_14_failing_public_inputs,
+};
+
+const verify_case_14_systems = verifier.Systems{ .public_input = system_14_public_input, .vanishing = system_14, .logderivativesum = system_14_logderiv, .rowlimit = system_14_rowlimit, .pcs = verify_case_14_pcs_system };
 
 pub const system_15_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_15_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "pre-sel"
@@ -2108,6 +2382,13 @@ const verify_case_15_proof = verifier.Proof{
     .pcs_opening = verify_case_15_pcs_opening,
 };
 
+const verify_case_15_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_15_input = verifier.VerifyInput{
+    .proof = verify_case_15_proof,
+    .public_inputs = &verify_case_15_public_inputs,
+};
+
 const verify_case_15_failing_module_sizes = [_]usize{};
 
 const verify_case_15_failing_round_0_cells = [_]protocol.Scalar{};
@@ -2134,13 +2415,24 @@ const verify_case_15_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_15_failing_pcs_opening,
 };
 
-const verify_case_15_systems = verifier.Systems{ .vanishing = system_15, .logderivativesum = system_15_logderiv, .rowlimit = system_15_rowlimit, .pcs = verify_case_15_pcs_system };
+const verify_case_15_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_15_failing_input = verifier.VerifyInput{
+    .proof = verify_case_15_failing_proof,
+    .public_inputs = &verify_case_15_failing_public_inputs,
+};
+
+const verify_case_15_systems = verifier.Systems{ .public_input = system_15_public_input, .vanishing = system_15, .logderivativesum = system_15_logderiv, .rowlimit = system_15_rowlimit, .pcs = verify_case_15_pcs_system };
 
 pub const system_16_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_16_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 1, 0, 2 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "cell-leaf"
@@ -2234,6 +2526,13 @@ const verify_case_16_proof = verifier.Proof{
     .pcs_opening = verify_case_16_pcs_opening,
 };
 
+const verify_case_16_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_16_input = verifier.VerifyInput{
+    .proof = verify_case_16_proof,
+    .public_inputs = &verify_case_16_public_inputs,
+};
+
 const verify_case_16_failing_module_sizes = [_]usize{};
 
 const verify_case_16_failing_round_0_cells = [_]protocol.Scalar{
@@ -2261,13 +2560,24 @@ const verify_case_16_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_16_failing_pcs_opening,
 };
 
-const verify_case_16_systems = verifier.Systems{ .vanishing = system_16, .logderivativesum = system_16_logderiv, .rowlimit = system_16_rowlimit, .pcs = verify_case_16_pcs_system };
+const verify_case_16_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_16_failing_input = verifier.VerifyInput{
+    .proof = verify_case_16_failing_proof,
+    .public_inputs = &verify_case_16_failing_public_inputs,
+};
+
+const verify_case_16_systems = verifier.Systems{ .public_input = system_16_public_input, .vanishing = system_16, .logderivativesum = system_16_logderiv, .rowlimit = system_16_rowlimit, .pcs = verify_case_16_pcs_system };
 
 pub const system_17_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2, 3 },
     .total_round_coins = 3,
     .dynamic_module_count = 0,
+};
+pub const system_17_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 0, 3 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "coin-scaled"
@@ -2366,6 +2676,13 @@ const verify_case_17_proof = verifier.Proof{
     .pcs_opening = verify_case_17_pcs_opening,
 };
 
+const verify_case_17_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_17_input = verifier.VerifyInput{
+    .proof = verify_case_17_proof,
+    .public_inputs = &verify_case_17_public_inputs,
+};
+
 const verify_case_17_failing_module_sizes = [_]usize{};
 
 const verify_case_17_failing_round_0_cells = [_]protocol.Scalar{};
@@ -2395,13 +2712,24 @@ const verify_case_17_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_17_failing_pcs_opening,
 };
 
-const verify_case_17_systems = verifier.Systems{ .vanishing = system_17, .logderivativesum = system_17_logderiv, .rowlimit = system_17_rowlimit, .pcs = verify_case_17_pcs_system };
+const verify_case_17_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_17_failing_input = verifier.VerifyInput{
+    .proof = verify_case_17_failing_proof,
+    .public_inputs = &verify_case_17_failing_public_inputs,
+};
+
+const verify_case_17_systems = verifier.Systems{ .public_input = system_17_public_input, .vanishing = system_17, .logderivativesum = system_17_logderiv, .rowlimit = system_17_rowlimit, .pcs = verify_case_17_pcs_system };
 
 pub const system_18_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_18_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 4 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "step3"
@@ -2499,6 +2827,13 @@ const verify_case_18_proof = verifier.Proof{
     .pcs_opening = verify_case_18_pcs_opening,
 };
 
+const verify_case_18_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_18_input = verifier.VerifyInput{
+    .proof = verify_case_18_proof,
+    .public_inputs = &verify_case_18_public_inputs,
+};
+
 const verify_case_18_failing_module_sizes = [_]usize{};
 
 const verify_case_18_failing_round_0_cells = [_]protocol.Scalar{};
@@ -2526,13 +2861,24 @@ const verify_case_18_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_18_failing_pcs_opening,
 };
 
-const verify_case_18_systems = verifier.Systems{ .vanishing = system_18, .logderivativesum = system_18_logderiv, .rowlimit = system_18_rowlimit, .pcs = verify_case_18_pcs_system };
+const verify_case_18_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_18_failing_input = verifier.VerifyInput{
+    .proof = verify_case_18_failing_proof,
+    .public_inputs = &verify_case_18_failing_public_inputs,
+};
+
+const verify_case_18_systems = verifier.Systems{ .public_input = system_18_public_input, .vanishing = system_18, .logderivativesum = system_18_logderiv, .rowlimit = system_18_rowlimit, .pcs = verify_case_18_pcs_system };
 
 pub const system_19_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_19_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 5 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "quartic"
@@ -2639,6 +2985,13 @@ const verify_case_19_proof = verifier.Proof{
     .pcs_opening = verify_case_19_pcs_opening,
 };
 
+const verify_case_19_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_19_input = verifier.VerifyInput{
+    .proof = verify_case_19_proof,
+    .public_inputs = &verify_case_19_public_inputs,
+};
+
 const verify_case_19_failing_module_sizes = [_]usize{};
 
 const verify_case_19_failing_round_0_cells = [_]protocol.Scalar{};
@@ -2667,13 +3020,24 @@ const verify_case_19_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_19_failing_pcs_opening,
 };
 
-const verify_case_19_systems = verifier.Systems{ .vanishing = system_19, .logderivativesum = system_19_logderiv, .rowlimit = system_19_rowlimit, .pcs = verify_case_19_pcs_system };
+const verify_case_19_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_19_failing_input = verifier.VerifyInput{
+    .proof = verify_case_19_failing_proof,
+    .public_inputs = &verify_case_19_failing_public_inputs,
+};
+
+const verify_case_19_systems = verifier.Systems{ .public_input = system_19_public_input, .vanishing = system_19, .logderivativesum = system_19_logderiv, .rowlimit = system_19_rowlimit, .pcs = verify_case_19_pcs_system };
 
 pub const system_20_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 1,
+};
+pub const system_20_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "dyn-leftpad"
@@ -2767,6 +3131,13 @@ const verify_case_20_proof = verifier.Proof{
     .pcs_opening = verify_case_20_pcs_opening,
 };
 
+const verify_case_20_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_20_input = verifier.VerifyInput{
+    .proof = verify_case_20_proof,
+    .public_inputs = &verify_case_20_public_inputs,
+};
+
 const verify_case_20_failing_module_sizes = [_]usize{8};
 
 const verify_case_20_failing_round_0_cells = [_]protocol.Scalar{};
@@ -2793,13 +3164,24 @@ const verify_case_20_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_20_failing_pcs_opening,
 };
 
-const verify_case_20_systems = verifier.Systems{ .vanishing = system_20, .logderivativesum = system_20_logderiv, .rowlimit = system_20_rowlimit, .pcs = verify_case_20_pcs_system };
+const verify_case_20_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_20_failing_input = verifier.VerifyInput{
+    .proof = verify_case_20_failing_proof,
+    .public_inputs = &verify_case_20_failing_public_inputs,
+};
+
+const verify_case_20_systems = verifier.Systems{ .public_input = system_20_public_input, .vanishing = system_20, .logderivativesum = system_20_logderiv, .rowlimit = system_20_rowlimit, .pcs = verify_case_20_pcs_system };
 
 pub const system_21_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_21_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 4 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "cube-shift"
@@ -2900,6 +3282,13 @@ const verify_case_21_proof = verifier.Proof{
     .pcs_opening = verify_case_21_pcs_opening,
 };
 
+const verify_case_21_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_21_input = verifier.VerifyInput{
+    .proof = verify_case_21_proof,
+    .public_inputs = &verify_case_21_public_inputs,
+};
+
 const verify_case_21_failing_module_sizes = [_]usize{};
 
 const verify_case_21_failing_round_0_cells = [_]protocol.Scalar{};
@@ -2927,13 +3316,24 @@ const verify_case_21_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_21_failing_pcs_opening,
 };
 
-const verify_case_21_systems = verifier.Systems{ .vanishing = system_21, .logderivativesum = system_21_logderiv, .rowlimit = system_21_rowlimit, .pcs = verify_case_21_pcs_system };
+const verify_case_21_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_21_failing_input = verifier.VerifyInput{
+    .proof = verify_case_21_failing_proof,
+    .public_inputs = &verify_case_21_failing_public_inputs,
+};
+
+const verify_case_21_systems = verifier.Systems{ .public_input = system_21_public_input, .vanishing = system_21, .logderivativesum = system_21_logderiv, .rowlimit = system_21_rowlimit, .pcs = verify_case_21_pcs_system };
 
 pub const system_22_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_22_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 7 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "mixed-hi-ratio"
@@ -3058,6 +3458,13 @@ const verify_case_22_proof = verifier.Proof{
     .pcs_opening = verify_case_22_pcs_opening,
 };
 
+const verify_case_22_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_22_input = verifier.VerifyInput{
+    .proof = verify_case_22_proof,
+    .public_inputs = &verify_case_22_public_inputs,
+};
+
 const verify_case_22_failing_module_sizes = [_]usize{};
 
 const verify_case_22_failing_round_0_cells = [_]protocol.Scalar{};
@@ -3088,13 +3495,24 @@ const verify_case_22_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_22_failing_pcs_opening,
 };
 
-const verify_case_22_systems = verifier.Systems{ .vanishing = system_22, .logderivativesum = system_22_logderiv, .rowlimit = system_22_rowlimit, .pcs = verify_case_22_pcs_system };
+const verify_case_22_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_22_failing_input = verifier.VerifyInput{
+    .proof = verify_case_22_failing_proof,
+    .public_inputs = &verify_case_22_failing_public_inputs,
+};
+
+const verify_case_22_systems = verifier.Systems{ .public_input = system_22_public_input, .vanishing = system_22, .logderivativesum = system_22_logderiv, .rowlimit = system_22_rowlimit, .pcs = verify_case_22_pcs_system };
 
 pub const system_23_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 2, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 3 },
     .total_round_coins = 3,
     .dynamic_module_count = 0,
+};
+pub const system_23_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 6 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "multi-mod-hi-ratio"
@@ -3224,6 +3642,13 @@ const verify_case_23_proof = verifier.Proof{
     .pcs_opening = verify_case_23_pcs_opening,
 };
 
+const verify_case_23_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_23_input = verifier.VerifyInput{
+    .proof = verify_case_23_proof,
+    .public_inputs = &verify_case_23_public_inputs,
+};
+
 const verify_case_23_failing_module_sizes = [_]usize{};
 
 const verify_case_23_failing_round_0_cells = [_]protocol.Scalar{};
@@ -3253,13 +3678,24 @@ const verify_case_23_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_23_failing_pcs_opening,
 };
 
-const verify_case_23_systems = verifier.Systems{ .vanishing = system_23, .logderivativesum = system_23_logderiv, .rowlimit = system_23_rowlimit, .pcs = verify_case_23_pcs_system };
+const verify_case_23_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_23_failing_input = verifier.VerifyInput{
+    .proof = verify_case_23_failing_proof,
+    .public_inputs = &verify_case_23_failing_public_inputs,
+};
+
+const verify_case_23_systems = verifier.Systems{ .public_input = system_23_public_input, .vanishing = system_23, .logderivativesum = system_23_logderiv, .rowlimit = system_23_rowlimit, .pcs = verify_case_23_pcs_system };
 
 pub const system_24_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_24_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "cube-32"
@@ -3358,6 +3794,13 @@ const verify_case_24_proof = verifier.Proof{
     .pcs_opening = verify_case_24_pcs_opening,
 };
 
+const verify_case_24_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_24_input = verifier.VerifyInput{
+    .proof = verify_case_24_proof,
+    .public_inputs = &verify_case_24_public_inputs,
+};
+
 const verify_case_24_failing_module_sizes = [_]usize{};
 
 const verify_case_24_failing_round_0_cells = [_]protocol.Scalar{};
@@ -3384,13 +3827,24 @@ const verify_case_24_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_24_failing_pcs_opening,
 };
 
-const verify_case_24_systems = verifier.Systems{ .vanishing = system_24, .logderivativesum = system_24_logderiv, .rowlimit = system_24_rowlimit, .pcs = verify_case_24_pcs_system };
+const verify_case_24_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_24_failing_input = verifier.VerifyInput{
+    .proof = verify_case_24_failing_proof,
+    .public_inputs = &verify_case_24_failing_public_inputs,
+};
+
+const verify_case_24_systems = verifier.Systems{ .public_input = system_24_public_input, .vanishing = system_24, .logderivativesum = system_24_logderiv, .rowlimit = system_24_rowlimit, .pcs = verify_case_24_pcs_system };
 
 pub const system_25_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_25_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "fwd-shift-3"
@@ -3484,6 +3938,13 @@ const verify_case_25_proof = verifier.Proof{
     .pcs_opening = verify_case_25_pcs_opening,
 };
 
+const verify_case_25_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_25_input = verifier.VerifyInput{
+    .proof = verify_case_25_proof,
+    .public_inputs = &verify_case_25_public_inputs,
+};
+
 const verify_case_25_failing_module_sizes = [_]usize{};
 
 const verify_case_25_failing_round_0_cells = [_]protocol.Scalar{};
@@ -3510,13 +3971,24 @@ const verify_case_25_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_25_failing_pcs_opening,
 };
 
-const verify_case_25_systems = verifier.Systems{ .vanishing = system_25, .logderivativesum = system_25_logderiv, .rowlimit = system_25_rowlimit, .pcs = verify_case_25_pcs_system };
+const verify_case_25_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_25_failing_input = verifier.VerifyInput{
+    .proof = verify_case_25_failing_proof,
+    .public_inputs = &verify_case_25_failing_public_inputs,
+};
+
+const verify_case_25_systems = verifier.Systems{ .public_input = system_25_public_input, .vanishing = system_25, .logderivativesum = system_25_logderiv, .rowlimit = system_25_rowlimit, .pcs = verify_case_25_pcs_system };
 
 pub const system_26_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_26_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 4 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "two-shift"
@@ -3616,6 +4088,13 @@ const verify_case_26_proof = verifier.Proof{
     .pcs_opening = verify_case_26_pcs_opening,
 };
 
+const verify_case_26_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_26_input = verifier.VerifyInput{
+    .proof = verify_case_26_proof,
+    .public_inputs = &verify_case_26_public_inputs,
+};
+
 const verify_case_26_failing_module_sizes = [_]usize{};
 
 const verify_case_26_failing_round_0_cells = [_]protocol.Scalar{};
@@ -3643,13 +4122,24 @@ const verify_case_26_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_26_failing_pcs_opening,
 };
 
-const verify_case_26_systems = verifier.Systems{ .vanishing = system_26, .logderivativesum = system_26_logderiv, .rowlimit = system_26_rowlimit, .pcs = verify_case_26_pcs_system };
+const verify_case_26_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_26_failing_input = verifier.VerifyInput{
+    .proof = verify_case_26_failing_proof,
+    .public_inputs = &verify_case_26_failing_public_inputs,
+};
+
+const verify_case_26_systems = verifier.Systems{ .public_input = system_26_public_input, .vanishing = system_26, .logderivativesum = system_26_logderiv, .rowlimit = system_26_rowlimit, .pcs = verify_case_26_pcs_system };
 
 pub const system_27_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 1,
+};
+pub const system_27_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 2 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "dyn-quad"
@@ -3743,6 +4233,13 @@ const verify_case_27_proof = verifier.Proof{
     .pcs_opening = verify_case_27_pcs_opening,
 };
 
+const verify_case_27_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_27_input = verifier.VerifyInput{
+    .proof = verify_case_27_proof,
+    .public_inputs = &verify_case_27_public_inputs,
+};
+
 const verify_case_27_failing_module_sizes = [_]usize{8};
 
 const verify_case_27_failing_round_0_cells = [_]protocol.Scalar{};
@@ -3768,13 +4265,24 @@ const verify_case_27_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_27_failing_pcs_opening,
 };
 
-const verify_case_27_systems = verifier.Systems{ .vanishing = system_27, .logderivativesum = system_27_logderiv, .rowlimit = system_27_rowlimit, .pcs = verify_case_27_pcs_system };
+const verify_case_27_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_27_failing_input = verifier.VerifyInput{
+    .proof = verify_case_27_failing_proof,
+    .public_inputs = &verify_case_27_failing_public_inputs,
+};
+
+const verify_case_27_systems = verifier.Systems{ .public_input = system_27_public_input, .vanishing = system_27, .logderivativesum = system_27_logderiv, .rowlimit = system_27_rowlimit, .pcs = verify_case_27_pcs_system };
 
 pub const system_28_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_28_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 6 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "quartic-shift"
@@ -3885,6 +4393,13 @@ const verify_case_28_proof = verifier.Proof{
     .pcs_opening = verify_case_28_pcs_opening,
 };
 
+const verify_case_28_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_28_input = verifier.VerifyInput{
+    .proof = verify_case_28_proof,
+    .public_inputs = &verify_case_28_public_inputs,
+};
+
 const verify_case_28_failing_module_sizes = [_]usize{};
 
 const verify_case_28_failing_round_0_cells = [_]protocol.Scalar{};
@@ -3914,13 +4429,24 @@ const verify_case_28_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_28_failing_pcs_opening,
 };
 
-const verify_case_28_systems = verifier.Systems{ .vanishing = system_28, .logderivativesum = system_28_logderiv, .rowlimit = system_28_rowlimit, .pcs = verify_case_28_pcs_system };
+const verify_case_28_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_28_failing_input = verifier.VerifyInput{
+    .proof = verify_case_28_failing_proof,
+    .public_inputs = &verify_case_28_failing_public_inputs,
+};
+
+const verify_case_28_systems = verifier.Systems{ .public_input = system_28_public_input, .vanishing = system_28, .logderivativesum = system_28_logderiv, .rowlimit = system_28_rowlimit, .pcs = verify_case_28_pcs_system };
 
 pub const system_29_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 1,
+};
+pub const system_29_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 4 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "dyn-fib-multisize"
@@ -4018,6 +4544,13 @@ const verify_case_29_proof = verifier.Proof{
     .pcs_opening = verify_case_29_pcs_opening,
 };
 
+const verify_case_29_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_29_input = verifier.VerifyInput{
+    .proof = verify_case_29_proof,
+    .public_inputs = &verify_case_29_public_inputs,
+};
+
 const verify_case_29_alt_module_sizes = [_]usize{16};
 
 const verify_case_29_alt_round_0_cells = [_]protocol.Scalar{};
@@ -4045,13 +4578,24 @@ const verify_case_29_alt_proof = verifier.Proof{
     .pcs_opening = verify_case_29_alt_pcs_opening,
 };
 
-const verify_case_29_systems = verifier.Systems{ .vanishing = system_29, .logderivativesum = system_29_logderiv, .rowlimit = system_29_rowlimit, .pcs = verify_case_29_pcs_system };
+const verify_case_29_alt_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_29_alt_input = verifier.VerifyInput{
+    .proof = verify_case_29_alt_proof,
+    .public_inputs = &verify_case_29_alt_public_inputs,
+};
+
+const verify_case_29_systems = verifier.Systems{ .public_input = system_29_public_input, .vanishing = system_29, .logderivativesum = system_29_logderiv, .rowlimit = system_29_rowlimit, .pcs = verify_case_29_pcs_system };
 
 pub const system_30_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 2, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 3 },
     .total_round_coins = 3,
     .dynamic_module_count = 2,
+};
+pub const system_30_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 8 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "dyn-fib-two-modules"
@@ -4179,6 +4723,13 @@ const verify_case_30_proof = verifier.Proof{
     .pcs_opening = verify_case_30_pcs_opening,
 };
 
+const verify_case_30_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_30_input = verifier.VerifyInput{
+    .proof = verify_case_30_proof,
+    .public_inputs = &verify_case_30_public_inputs,
+};
+
 const verify_case_30_alt_module_sizes = [_]usize{ 16, 8 };
 
 const verify_case_30_alt_round_0_cells = [_]protocol.Scalar{};
@@ -4210,13 +4761,24 @@ const verify_case_30_alt_proof = verifier.Proof{
     .pcs_opening = verify_case_30_alt_pcs_opening,
 };
 
-const verify_case_30_systems = verifier.Systems{ .vanishing = system_30, .logderivativesum = system_30_logderiv, .rowlimit = system_30_rowlimit, .pcs = verify_case_30_pcs_system };
+const verify_case_30_alt_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_30_alt_input = verifier.VerifyInput{
+    .proof = verify_case_30_alt_proof,
+    .public_inputs = &verify_case_30_alt_public_inputs,
+};
+
+const verify_case_30_systems = verifier.Systems{ .public_input = system_30_public_input, .vanishing = system_30, .logderivativesum = system_30_logderiv, .rowlimit = system_30_rowlimit, .pcs = verify_case_30_pcs_system };
 
 pub const system_31_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_31_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 2, 0, 4 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-ones"
@@ -4345,13 +4907,24 @@ const verify_case_31_proof = verifier.Proof{
     .pcs_opening = verify_case_31_pcs_opening,
 };
 
-const verify_case_31_systems = verifier.Systems{ .vanishing = system_31, .logderivativesum = system_31_logderiv, .rowlimit = system_31_rowlimit, .pcs = verify_case_31_pcs_system };
+const verify_case_31_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_31_input = verifier.VerifyInput{
+    .proof = verify_case_31_proof,
+    .public_inputs = &verify_case_31_public_inputs,
+};
+
+const verify_case_31_systems = verifier.Systems{ .public_input = system_31_public_input, .vanishing = system_31, .logderivativesum = system_31_logderiv, .rowlimit = system_31_rowlimit, .pcs = verify_case_31_pcs_system };
 
 pub const system_32_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_32_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 2, 0, 7 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-partial"
@@ -4497,13 +5070,24 @@ const verify_case_32_proof = verifier.Proof{
     .pcs_opening = verify_case_32_pcs_opening,
 };
 
-const verify_case_32_systems = verifier.Systems{ .vanishing = system_32, .logderivativesum = system_32_logderiv, .rowlimit = system_32_rowlimit, .pcs = verify_case_32_pcs_system };
+const verify_case_32_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_32_input = verifier.VerifyInput{
+    .proof = verify_case_32_proof,
+    .public_inputs = &verify_case_32_public_inputs,
+};
+
+const verify_case_32_systems = verifier.Systems{ .public_input = system_32_public_input, .vanishing = system_32, .logderivativesum = system_32_logderiv, .rowlimit = system_32_rowlimit, .pcs = verify_case_32_pcs_system };
 
 pub const system_33_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_33_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 2, 0, 7 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-zeros"
@@ -4649,13 +5233,24 @@ const verify_case_33_proof = verifier.Proof{
     .pcs_opening = verify_case_33_pcs_opening,
 };
 
-const verify_case_33_systems = verifier.Systems{ .vanishing = system_33, .logderivativesum = system_33_logderiv, .rowlimit = system_33_rowlimit, .pcs = verify_case_33_pcs_system };
+const verify_case_33_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_33_input = verifier.VerifyInput{
+    .proof = verify_case_33_proof,
+    .public_inputs = &verify_case_33_public_inputs,
+};
+
+const verify_case_33_systems = verifier.Systems{ .public_input = system_33_public_input, .vanishing = system_33, .logderivativesum = system_33_logderiv, .rowlimit = system_33_rowlimit, .pcs = verify_case_33_pcs_system };
 
 pub const system_34_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_34_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 2, 0, 8 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-maskzero"
@@ -4804,13 +5399,24 @@ const verify_case_34_proof = verifier.Proof{
     .pcs_opening = verify_case_34_pcs_opening,
 };
 
-const verify_case_34_systems = verifier.Systems{ .vanishing = system_34, .logderivativesum = system_34_logderiv, .rowlimit = system_34_rowlimit, .pcs = verify_case_34_pcs_system };
+const verify_case_34_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_34_input = verifier.VerifyInput{
+    .proof = verify_case_34_proof,
+    .public_inputs = &verify_case_34_public_inputs,
+};
+
+const verify_case_34_systems = verifier.Systems{ .public_input = system_34_public_input, .vanishing = system_34, .logderivativesum = system_34_logderiv, .rowlimit = system_34_rowlimit, .pcs = verify_case_34_pcs_system };
 
 pub const system_35_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_35_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 3, 0, 13 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-pack"
@@ -5036,13 +5642,24 @@ const verify_case_35_proof = verifier.Proof{
     .pcs_opening = verify_case_35_pcs_opening,
 };
 
-const verify_case_35_systems = verifier.Systems{ .vanishing = system_35, .logderivativesum = system_35_logderiv, .rowlimit = system_35_rowlimit, .pcs = verify_case_35_pcs_system };
+const verify_case_35_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_35_input = verifier.VerifyInput{
+    .proof = verify_case_35_proof,
+    .public_inputs = &verify_case_35_public_inputs,
+};
+
+const verify_case_35_systems = verifier.Systems{ .public_input = system_35_public_input, .vanishing = system_35, .logderivativesum = system_35_logderiv, .rowlimit = system_35_rowlimit, .pcs = verify_case_35_pcs_system };
 
 pub const system_36_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 2, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 2, 3 },
     .total_round_coins = 3,
     .dynamic_module_count = 0,
+};
+pub const system_36_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 3, 0, 11 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-multi-mod"
@@ -5238,13 +5855,24 @@ const verify_case_36_proof = verifier.Proof{
     .pcs_opening = verify_case_36_pcs_opening,
 };
 
-const verify_case_36_systems = verifier.Systems{ .vanishing = system_36, .logderivativesum = system_36_logderiv, .rowlimit = system_36_rowlimit, .pcs = verify_case_36_pcs_system };
+const verify_case_36_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_36_input = verifier.VerifyInput{
+    .proof = verify_case_36_proof,
+    .public_inputs = &verify_case_36_public_inputs,
+};
+
+const verify_case_36_systems = verifier.Systems{ .public_input = system_36_public_input, .vanishing = system_36, .logderivativesum = system_36_logderiv, .rowlimit = system_36_rowlimit, .pcs = verify_case_36_pcs_system };
 
 pub const system_37_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_37_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 2, 0, 3 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-size1"
@@ -5362,13 +5990,24 @@ const verify_case_37_proof = verifier.Proof{
     .pcs_opening = verify_case_37_pcs_opening,
 };
 
-const verify_case_37_systems = verifier.Systems{ .vanishing = system_37, .logderivativesum = system_37_logderiv, .rowlimit = system_37_rowlimit, .pcs = verify_case_37_pcs_system };
+const verify_case_37_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_37_input = verifier.VerifyInput{
+    .proof = verify_case_37_proof,
+    .public_inputs = &verify_case_37_public_inputs,
+};
+
+const verify_case_37_systems = verifier.Systems{ .public_input = system_37_public_input, .vanishing = system_37, .logderivativesum = system_37_logderiv, .rowlimit = system_37_rowlimit, .pcs = verify_case_37_pcs_system };
 
 pub const system_38_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 2, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 2, 3 },
     .total_round_coins = 3,
     .dynamic_module_count = 0,
+};
+pub const system_38_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 3, 0, 14 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-cond"
@@ -5587,13 +6226,24 @@ const verify_case_38_proof = verifier.Proof{
     .pcs_opening = verify_case_38_pcs_opening,
 };
 
-const verify_case_38_systems = verifier.Systems{ .vanishing = system_38, .logderivativesum = system_38_logderiv, .rowlimit = system_38_rowlimit, .pcs = verify_case_38_pcs_system };
+const verify_case_38_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_38_input = verifier.VerifyInput{
+    .proof = verify_case_38_proof,
+    .public_inputs = &verify_case_38_public_inputs,
+};
+
+const verify_case_38_systems = verifier.Systems{ .public_input = system_38_public_input, .vanishing = system_38, .logderivativesum = system_38_logderiv, .rowlimit = system_38_rowlimit, .pcs = verify_case_38_pcs_system };
 
 pub const system_39_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_39_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 4, 0, 18 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-many"
@@ -5900,13 +6550,24 @@ const verify_case_39_proof = verifier.Proof{
     .pcs_opening = verify_case_39_pcs_opening,
 };
 
-const verify_case_39_systems = verifier.Systems{ .vanishing = system_39, .logderivativesum = system_39_logderiv, .rowlimit = system_39_rowlimit, .pcs = verify_case_39_pcs_system };
+const verify_case_39_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_39_input = verifier.VerifyInput{
+    .proof = verify_case_39_proof,
+    .public_inputs = &verify_case_39_public_inputs,
+};
+
+const verify_case_39_systems = verifier.Systems{ .public_input = system_39_public_input, .vanishing = system_39, .logderivativesum = system_39_logderiv, .rowlimit = system_39_rowlimit, .pcs = verify_case_39_pcs_system };
 
 pub const system_40_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_40_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 2, 0, 4 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-size2"
@@ -6035,13 +6696,24 @@ const verify_case_40_proof = verifier.Proof{
     .pcs_opening = verify_case_40_pcs_opening,
 };
 
-const verify_case_40_systems = verifier.Systems{ .vanishing = system_40, .logderivativesum = system_40_logderiv, .rowlimit = system_40_rowlimit, .pcs = verify_case_40_pcs_system };
+const verify_case_40_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_40_input = verifier.VerifyInput{
+    .proof = verify_case_40_proof,
+    .public_inputs = &verify_case_40_public_inputs,
+};
+
+const verify_case_40_systems = verifier.Systems{ .public_input = system_40_public_input, .vanishing = system_40, .logderivativesum = system_40_logderiv, .rowlimit = system_40_rowlimit, .pcs = verify_case_40_pcs_system };
 
 pub const system_41_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_41_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 4, 0, 7 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-multi-q"
@@ -6210,13 +6882,24 @@ const verify_case_41_proof = verifier.Proof{
     .pcs_opening = verify_case_41_pcs_opening,
 };
 
-const verify_case_41_systems = verifier.Systems{ .vanishing = system_41, .logderivativesum = system_41_logderiv, .rowlimit = system_41_rowlimit, .pcs = verify_case_41_pcs_system };
+const verify_case_41_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_41_input = verifier.VerifyInput{
+    .proof = verify_case_41_proof,
+    .public_inputs = &verify_case_41_public_inputs,
+};
+
+const verify_case_41_systems = verifier.Systems{ .public_input = system_41_public_input, .vanishing = system_41, .logderivativesum = system_41_logderiv, .rowlimit = system_41_rowlimit, .pcs = verify_case_41_pcs_system };
 
 pub const system_42_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_42_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 2, 0, 7 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-vec-den"
@@ -6358,13 +7041,24 @@ const verify_case_42_proof = verifier.Proof{
     .pcs_opening = verify_case_42_pcs_opening,
 };
 
-const verify_case_42_systems = verifier.Systems{ .vanishing = system_42, .logderivativesum = system_42_logderiv, .rowlimit = system_42_rowlimit, .pcs = verify_case_42_pcs_system };
+const verify_case_42_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_42_input = verifier.VerifyInput{
+    .proof = verify_case_42_proof,
+    .public_inputs = &verify_case_42_public_inputs,
+};
+
+const verify_case_42_systems = verifier.Systems{ .public_input = system_42_public_input, .vanishing = system_42, .logderivativesum = system_42_logderiv, .rowlimit = system_42_rowlimit, .pcs = verify_case_42_pcs_system };
 
 pub const system_43_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 0, 1, 2 },
     .total_round_coins = 2,
     .dynamic_module_count = 0,
+};
+pub const system_43_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 2, 0, 13 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lds-ones-pack"
@@ -6580,13 +7274,24 @@ const verify_case_43_proof = verifier.Proof{
     .pcs_opening = verify_case_43_pcs_opening,
 };
 
-const verify_case_43_systems = verifier.Systems{ .vanishing = system_43, .logderivativesum = system_43_logderiv, .rowlimit = system_43_rowlimit, .pcs = verify_case_43_pcs_system };
+const verify_case_43_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_43_input = verifier.VerifyInput{
+    .proof = verify_case_43_proof,
+    .public_inputs = &verify_case_43_public_inputs,
+};
+
+const verify_case_43_systems = verifier.Systems{ .public_input = system_43_public_input, .vanishing = system_43, .logderivativesum = system_43_logderiv, .rowlimit = system_43_rowlimit, .pcs = verify_case_43_pcs_system };
 
 pub const system_44_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3, 4 },
     .total_round_coins = 4,
     .dynamic_module_count = 0,
+};
+pub const system_44_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3, 0, 13 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-simple"
@@ -6811,13 +7516,24 @@ const verify_case_44_proof = verifier.Proof{
     .pcs_opening = verify_case_44_pcs_opening,
 };
 
-const verify_case_44_systems = verifier.Systems{ .vanishing = system_44, .logderivativesum = system_44_logderiv, .rowlimit = system_44_rowlimit, .pcs = verify_case_44_pcs_system };
+const verify_case_44_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_44_input = verifier.VerifyInput{
+    .proof = verify_case_44_proof,
+    .public_inputs = &verify_case_44_public_inputs,
+};
+
+const verify_case_44_systems = verifier.Systems{ .public_input = system_44_public_input, .vanishing = system_44, .logderivativesum = system_44_logderiv, .rowlimit = system_44_rowlimit, .pcs = verify_case_44_pcs_system };
 
 pub const system_45_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3, 4 },
     .total_round_coins = 4,
     .dynamic_module_count = 0,
+};
+pub const system_45_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3, 0, 14 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-filterA"
@@ -7049,13 +7765,24 @@ const verify_case_45_proof = verifier.Proof{
     .pcs_opening = verify_case_45_pcs_opening,
 };
 
-const verify_case_45_systems = verifier.Systems{ .vanishing = system_45, .logderivativesum = system_45_logderiv, .rowlimit = system_45_rowlimit, .pcs = verify_case_45_pcs_system };
+const verify_case_45_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_45_input = verifier.VerifyInput{
+    .proof = verify_case_45_proof,
+    .public_inputs = &verify_case_45_public_inputs,
+};
+
+const verify_case_45_systems = verifier.Systems{ .public_input = system_45_public_input, .vanishing = system_45, .logderivativesum = system_45_logderiv, .rowlimit = system_45_rowlimit, .pcs = verify_case_45_pcs_system };
 
 pub const system_46_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4, 5 },
     .total_round_coins = 5,
     .dynamic_module_count = 0,
+};
+pub const system_46_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3, 0, 14 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-filterT"
@@ -7299,13 +8026,24 @@ const verify_case_46_proof = verifier.Proof{
     .pcs_opening = verify_case_46_pcs_opening,
 };
 
-const verify_case_46_systems = verifier.Systems{ .vanishing = system_46, .logderivativesum = system_46_logderiv, .rowlimit = system_46_rowlimit, .pcs = verify_case_46_pcs_system };
+const verify_case_46_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_46_input = verifier.VerifyInput{
+    .proof = verify_case_46_proof,
+    .public_inputs = &verify_case_46_public_inputs,
+};
+
+const verify_case_46_systems = verifier.Systems{ .public_input = system_46_public_input, .vanishing = system_46, .logderivativesum = system_46_logderiv, .rowlimit = system_46_rowlimit, .pcs = verify_case_46_pcs_system };
 
 pub const system_47_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4, 5 },
     .total_round_coins = 5,
     .dynamic_module_count = 0,
+};
+pub const system_47_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3, 0, 15 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-double"
@@ -7556,13 +8294,24 @@ const verify_case_47_proof = verifier.Proof{
     .pcs_opening = verify_case_47_pcs_opening,
 };
 
-const verify_case_47_systems = verifier.Systems{ .vanishing = system_47, .logderivativesum = system_47_logderiv, .rowlimit = system_47_rowlimit, .pcs = verify_case_47_pcs_system };
+const verify_case_47_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_47_input = verifier.VerifyInput{
+    .proof = verify_case_47_proof,
+    .public_inputs = &verify_case_47_public_inputs,
+};
+
+const verify_case_47_systems = verifier.Systems{ .public_input = system_47_public_input, .vanishing = system_47, .logderivativesum = system_47_logderiv, .rowlimit = system_47_rowlimit, .pcs = verify_case_47_pcs_system };
 
 pub const system_48_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4, 5 },
     .total_round_coins = 5,
     .dynamic_module_count = 0,
+};
+pub const system_48_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3, 0, 15 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-multi-col"
@@ -7809,13 +8558,24 @@ const verify_case_48_proof = verifier.Proof{
     .pcs_opening = verify_case_48_pcs_opening,
 };
 
-const verify_case_48_systems = verifier.Systems{ .vanishing = system_48, .logderivativesum = system_48_logderiv, .rowlimit = system_48_rowlimit, .pcs = verify_case_48_pcs_system };
+const verify_case_48_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_48_input = verifier.VerifyInput{
+    .proof = verify_case_48_proof,
+    .public_inputs = &verify_case_48_public_inputs,
+};
+
+const verify_case_48_systems = verifier.Systems{ .public_input = system_48_public_input, .vanishing = system_48, .logderivativesum = system_48_logderiv, .rowlimit = system_48_rowlimit, .pcs = verify_case_48_pcs_system };
 
 pub const system_49_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 3, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 4, 5 },
     .total_round_coins = 5,
     .dynamic_module_count = 0,
+};
+pub const system_49_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 4, 0, 19 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-shared"
@@ -8105,13 +8865,24 @@ const verify_case_49_proof = verifier.Proof{
     .pcs_opening = verify_case_49_pcs_opening,
 };
 
-const verify_case_49_systems = verifier.Systems{ .vanishing = system_49, .logderivativesum = system_49_logderiv, .rowlimit = system_49_rowlimit, .pcs = verify_case_49_pcs_system };
+const verify_case_49_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_49_input = verifier.VerifyInput{
+    .proof = verify_case_49_proof,
+    .public_inputs = &verify_case_49_public_inputs,
+};
+
+const verify_case_49_systems = verifier.Systems{ .public_input = system_49_public_input, .vanishing = system_49, .logderivativesum = system_49_logderiv, .rowlimit = system_49_rowlimit, .pcs = verify_case_49_pcs_system };
 
 pub const system_50_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 4, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 5, 6 },
     .total_round_coins = 6,
     .dynamic_module_count = 0,
+};
+pub const system_50_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 5, 0, 26 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-distinct"
@@ -8478,13 +9249,24 @@ const verify_case_50_proof = verifier.Proof{
     .pcs_opening = verify_case_50_pcs_opening,
 };
 
-const verify_case_50_systems = verifier.Systems{ .vanishing = system_50, .logderivativesum = system_50_logderiv, .rowlimit = system_50_rowlimit, .pcs = verify_case_50_pcs_system };
+const verify_case_50_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_50_input = verifier.VerifyInput{
+    .proof = verify_case_50_proof,
+    .public_inputs = &verify_case_50_public_inputs,
+};
+
+const verify_case_50_systems = verifier.Systems{ .public_input = system_50_public_input, .vanishing = system_50, .logderivativesum = system_50_logderiv, .rowlimit = system_50_rowlimit, .pcs = verify_case_50_pcs_system };
 
 pub const system_51_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4, 5 },
     .total_round_coins = 5,
     .dynamic_module_count = 0,
+};
+pub const system_51_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3, 0, 16 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-multi-filterT"
@@ -8750,13 +9532,24 @@ const verify_case_51_proof = verifier.Proof{
     .pcs_opening = verify_case_51_pcs_opening,
 };
 
-const verify_case_51_systems = verifier.Systems{ .vanishing = system_51, .logderivativesum = system_51_logderiv, .rowlimit = system_51_rowlimit, .pcs = verify_case_51_pcs_system };
+const verify_case_51_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_51_input = verifier.VerifyInput{
+    .proof = verify_case_51_proof,
+    .public_inputs = &verify_case_51_public_inputs,
+};
+
+const verify_case_51_systems = verifier.Systems{ .public_input = system_51_public_input, .vanishing = system_51, .logderivativesum = system_51_logderiv, .rowlimit = system_51_rowlimit, .pcs = verify_case_51_pcs_system };
 
 pub const system_52_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3, 4 },
     .total_round_coins = 4,
     .dynamic_module_count = 0,
+};
+pub const system_52_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3, 0, 13 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-repeated"
@@ -8981,13 +9774,24 @@ const verify_case_52_proof = verifier.Proof{
     .pcs_opening = verify_case_52_pcs_opening,
 };
 
-const verify_case_52_systems = verifier.Systems{ .vanishing = system_52, .logderivativesum = system_52_logderiv, .rowlimit = system_52_rowlimit, .pcs = verify_case_52_pcs_system };
+const verify_case_52_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_52_input = verifier.VerifyInput{
+    .proof = verify_case_52_proof,
+    .public_inputs = &verify_case_52_public_inputs,
+};
+
+const verify_case_52_systems = verifier.Systems{ .public_input = system_52_public_input, .vanishing = system_52, .logderivativesum = system_52_logderiv, .rowlimit = system_52_rowlimit, .pcs = verify_case_52_pcs_system };
 
 pub const system_53_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3, 4 },
     .total_round_coins = 4,
     .dynamic_module_count = 0,
+};
+pub const system_53_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3, 0, 13 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-shift-a"
@@ -9212,13 +10016,24 @@ const verify_case_53_proof = verifier.Proof{
     .pcs_opening = verify_case_53_pcs_opening,
 };
 
-const verify_case_53_systems = verifier.Systems{ .vanishing = system_53, .logderivativesum = system_53_logderiv, .rowlimit = system_53_rowlimit, .pcs = verify_case_53_pcs_system };
+const verify_case_53_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_53_input = verifier.VerifyInput{
+    .proof = verify_case_53_proof,
+    .public_inputs = &verify_case_53_public_inputs,
+};
+
+const verify_case_53_systems = verifier.Systems{ .public_input = system_53_public_input, .vanishing = system_53, .logderivativesum = system_53_logderiv, .rowlimit = system_53_rowlimit, .pcs = verify_case_53_pcs_system };
 
 pub const system_54_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3, 4 },
     .total_round_coins = 4,
     .dynamic_module_count = 0,
+};
+pub const system_54_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3, 0, 14 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-shift-b"
@@ -9445,13 +10260,24 @@ const verify_case_54_proof = verifier.Proof{
     .pcs_opening = verify_case_54_pcs_opening,
 };
 
-const verify_case_54_systems = verifier.Systems{ .vanishing = system_54, .logderivativesum = system_54_logderiv, .rowlimit = system_54_rowlimit, .pcs = verify_case_54_pcs_system };
+const verify_case_54_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_54_input = verifier.VerifyInput{
+    .proof = verify_case_54_proof,
+    .public_inputs = &verify_case_54_public_inputs,
+};
+
+const verify_case_54_systems = verifier.Systems{ .public_input = system_54_public_input, .vanishing = system_54, .logderivativesum = system_54_logderiv, .rowlimit = system_54_rowlimit, .pcs = verify_case_54_pcs_system };
 
 pub const system_55_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 3, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 4, 5 },
     .total_round_coins = 5,
     .dynamic_module_count = 0,
+};
+pub const system_55_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 4, 0, 19 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-multi-A"
@@ -9741,13 +10567,24 @@ const verify_case_55_proof = verifier.Proof{
     .pcs_opening = verify_case_55_pcs_opening,
 };
 
-const verify_case_55_systems = verifier.Systems{ .vanishing = system_55, .logderivativesum = system_55_logderiv, .rowlimit = system_55_rowlimit, .pcs = verify_case_55_pcs_system };
+const verify_case_55_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_55_input = verifier.VerifyInput{
+    .proof = verify_case_55_proof,
+    .public_inputs = &verify_case_55_public_inputs,
+};
+
+const verify_case_55_systems = verifier.Systems{ .public_input = system_55_public_input, .vanishing = system_55, .logderivativesum = system_55_logderiv, .rowlimit = system_55_rowlimit, .pcs = verify_case_55_pcs_system };
 
 pub const system_56_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4, 5 },
     .total_round_coins = 5,
     .dynamic_module_count = 0,
+};
+pub const system_56_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3, 0, 17 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-w3"
@@ -10016,13 +10853,24 @@ const verify_case_56_proof = verifier.Proof{
     .pcs_opening = verify_case_56_pcs_opening,
 };
 
-const verify_case_56_systems = verifier.Systems{ .vanishing = system_56, .logderivativesum = system_56_logderiv, .rowlimit = system_56_rowlimit, .pcs = verify_case_56_pcs_system };
+const verify_case_56_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_56_input = verifier.VerifyInput{
+    .proof = verify_case_56_proof,
+    .public_inputs = &verify_case_56_public_inputs,
+};
+
+const verify_case_56_systems = verifier.Systems{ .public_input = system_56_public_input, .vanishing = system_56, .logderivativesum = system_56_logderiv, .rowlimit = system_56_rowlimit, .pcs = verify_case_56_pcs_system };
 
 pub const system_57_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3, 4 },
     .total_round_coins = 4,
     .dynamic_module_count = 0,
+};
+pub const system_57_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3, 0, 11 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-size1"
@@ -10220,13 +11068,24 @@ const verify_case_57_proof = verifier.Proof{
     .pcs_opening = verify_case_57_pcs_opening,
 };
 
-const verify_case_57_systems = verifier.Systems{ .vanishing = system_57, .logderivativesum = system_57_logderiv, .rowlimit = system_57_rowlimit, .pcs = verify_case_57_pcs_system };
+const verify_case_57_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_57_input = verifier.VerifyInput{
+    .proof = verify_case_57_proof,
+    .public_inputs = &verify_case_57_public_inputs,
+};
+
+const verify_case_57_systems = verifier.Systems{ .public_input = system_57_public_input, .vanishing = system_57, .logderivativesum = system_57_logderiv, .rowlimit = system_57_rowlimit, .pcs = verify_case_57_pcs_system };
 
 pub const system_58_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3, 4 },
     .total_round_coins = 4,
     .dynamic_module_count = 0,
+};
+pub const system_58_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3, 0, 13 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-precomp"
@@ -10452,13 +11311,24 @@ const verify_case_58_proof = verifier.Proof{
     .pcs_opening = verify_case_58_pcs_opening,
 };
 
-const verify_case_58_systems = verifier.Systems{ .vanishing = system_58, .logderivativesum = system_58_logderiv, .rowlimit = system_58_rowlimit, .pcs = verify_case_58_pcs_system };
+const verify_case_58_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_58_input = verifier.VerifyInput{
+    .proof = verify_case_58_proof,
+    .public_inputs = &verify_case_58_public_inputs,
+};
+
+const verify_case_58_systems = verifier.Systems{ .public_input = system_58_public_input, .vanishing = system_58, .logderivativesum = system_58_logderiv, .rowlimit = system_58_rowlimit, .pcs = verify_case_58_pcs_system };
 
 pub const system_59_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3, 4 },
     .total_round_coins = 4,
     .dynamic_module_count = 0,
+};
+pub const system_59_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3, 0, 13 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-rep-s"
@@ -10683,13 +11553,24 @@ const verify_case_59_proof = verifier.Proof{
     .pcs_opening = verify_case_59_pcs_opening,
 };
 
-const verify_case_59_systems = verifier.Systems{ .vanishing = system_59, .logderivativesum = system_59_logderiv, .rowlimit = system_59_rowlimit, .pcs = verify_case_59_pcs_system };
+const verify_case_59_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_59_input = verifier.VerifyInput{
+    .proof = verify_case_59_proof,
+    .public_inputs = &verify_case_59_public_inputs,
+};
+
+const verify_case_59_systems = verifier.Systems{ .public_input = system_59_public_input, .vanishing = system_59, .logderivativesum = system_59_logderiv, .rowlimit = system_59_rowlimit, .pcs = verify_case_59_pcs_system };
 
 pub const system_60_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 3, 4 },
     .total_round_coins = 4,
     .dynamic_module_count = 0,
+};
+pub const system_60_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3, 0, 14 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "lk-empty"
@@ -10921,13 +11802,24 @@ const verify_case_60_proof = verifier.Proof{
     .pcs_opening = verify_case_60_pcs_opening,
 };
 
-const verify_case_60_systems = verifier.Systems{ .vanishing = system_60, .logderivativesum = system_60_logderiv, .rowlimit = system_60_rowlimit, .pcs = verify_case_60_pcs_system };
+const verify_case_60_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_60_input = verifier.VerifyInput{
+    .proof = verify_case_60_proof,
+    .public_inputs = &verify_case_60_public_inputs,
+};
+
+const verify_case_60_systems = verifier.Systems{ .public_input = system_60_public_input, .vanishing = system_60, .logderivativesum = system_60_logderiv, .rowlimit = system_60_rowlimit, .pcs = verify_case_60_pcs_system };
 
 pub const system_61_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 3, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 1, 1, 4, 5 },
     .total_round_coins = 5,
     .dynamic_module_count = 0,
+};
+pub const system_61_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 4, 0, 25 },
+    .refs = &[_]protocol.public_input.CellRef{},
 };
 
 // scenario: "rc-distinct"
@@ -11278,7 +12170,14 @@ const verify_case_61_proof = verifier.Proof{
     .pcs_opening = verify_case_61_pcs_opening,
 };
 
-const verify_case_61_systems = verifier.Systems{ .vanishing = system_61, .logderivativesum = system_61_logderiv, .rowlimit = system_61_rowlimit, .pcs = verify_case_61_pcs_system };
+const verify_case_61_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_61_input = verifier.VerifyInput{
+    .proof = verify_case_61_proof,
+    .public_inputs = &verify_case_61_public_inputs,
+};
+
+const verify_case_61_systems = verifier.Systems{ .public_input = system_61_public_input, .vanishing = system_61, .logderivativesum = system_61_logderiv, .rowlimit = system_61_rowlimit, .pcs = verify_case_61_pcs_system };
 
 pub const system_62_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -11286,20 +12185,24 @@ pub const system_62_spec = protocol.Spec{
     .total_round_coins = 2,
     .dynamic_module_count = 0,
 };
+pub const system_62_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 1, 0, 2 },
+    .refs = &[_]protocol.public_input.CellRef{.{ .statement_index = 0, .round = 0, .index = 0 }},
+};
 
-// scenario: "lagrange-sel"
+// scenario: "public-input"
 
-// expression: "boundary"
+// expression: "global"
 const system_62_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .lagrange_selector = 1 },
+    .{ .cell_value = .{ .round = 0, .index = 0 } }, // cell: "result"
     .{ .column_claim = 0 }, // col: "col"
-    .{ .constant = field.Element.init(99) },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 3 } } },
+    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .lagrange_selector = 2 },
+    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 3 } } },
 };
 
 const system_62_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
-    // expression: "boundary"
+    // expression: "global"
     .{ .expression = 4, .cancelled_positions = &.{} },
 };
 
@@ -11312,7 +12215,7 @@ const system_62_modules = [_]vanishing.Module{
     .{ .size = .{ .static = 4 }, .expressions = &system_62_module_0_expressions, .buckets = &system_62_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
 
-// system: "lagrange-sel"
+// system: "public-input"
 const system_62 = vanishing.System{
     .modules = &system_62_modules,
     .dynamic_module_count = 0,
@@ -11320,11 +12223,11 @@ const system_62 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
-// logderiv system: "lagrange-sel"
+// logderiv system: "public-input"
 const system_62_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_62_logderiv = logderivativesum.System{ .queries = &system_62_logderiv_queries };
-// rowlimit system: "lagrange-sel"
+// rowlimit system: "public-input"
 const system_62_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_62_rowlimit = rowlimit.System{ .checks = &system_62_rowlimit_checks };
@@ -11360,22 +12263,31 @@ const verify_case_62_round_0_cells = [_]protocol.Scalar{};
 const verify_case_62_round_1_cells = [_]protocol.Scalar{};
 
 const verify_case_62_round_2_cells = [_]protocol.Scalar{
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1668157509 }, .a1 = .{ .value = 1657411026 } }, .B1 = .{ .a0 = .{ .value = 669435383 }, .a1 = .{ .value = 1971177737 } }, .B2 = .{ .a0 = .{ .value = 813458534 }, .a1 = .{ .value = 126104960 } } } },
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 316710214 }, .a1 = .{ .value = 2026271773 } }, .B1 = .{ .a0 = .{ .value = 2053582425 }, .a1 = .{ .value = 1108145756 } }, .B2 = .{ .a0 = .{ .value = 446049424 }, .a1 = .{ .value = 783808682 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1486273085 }, .a1 = .{ .value = 1293216935 } }, .B1 = .{ .a0 = .{ .value = 627250991 }, .a1 = .{ .value = 1538961746 } }, .B2 = .{ .a0 = .{ .value = 281156601 }, .a1 = .{ .value = 1788737194 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1216444750 }, .a1 = .{ .value = 280518797 } }, .B1 = .{ .a0 = .{ .value = 1539032301 }, .a1 = .{ .value = 266800061 } }, .B2 = .{ .a0 = .{ .value = 1126190907 }, .a1 = .{ .value = 1538785192 } } } },
 };
 
 const verify_case_62_rounds = [_]protocol.RoundMessage{
-    .{ .commitment = commitment.Commitment{ .{ .value = 384245973 }, .{ .value = 1750333870 }, .{ .value = 1144366501 }, .{ .value = 207687103 }, .{ .value = 2121644243 }, .{ .value = 544988254 }, .{ .value = 1340069080 }, .{ .value = 1535280166 } }, .cells = &verify_case_62_round_0_cells },
-    .{ .commitment = commitment.Commitment{ .{ .value = 1888775505 }, .{ .value = 7736986 }, .{ .value = 926806928 }, .{ .value = 264011065 }, .{ .value = 1498548860 }, .{ .value = 980676532 }, .{ .value = 1178247900 }, .{ .value = 1658899573 } }, .cells = &verify_case_62_round_1_cells },
+    .{ .commitment = commitment.Commitment{ .{ .value = 1284087301 }, .{ .value = 2104130085 }, .{ .value = 1597477735 }, .{ .value = 797176699 }, .{ .value = 452943547 }, .{ .value = 844011610 }, .{ .value = 336115017 }, .{ .value = 934293072 } }, .cells = &verify_case_62_round_0_cells },
+    .{ .commitment = commitment.Commitment{ .{ .value = 1105742475 }, .{ .value = 208859899 }, .{ .value = 988346093 }, .{ .value = 1728215046 }, .{ .value = 194780628 }, .{ .value = 876931807 }, .{ .value = 1826449047 }, .{ .value = 1303547082 } }, .cells = &verify_case_62_round_1_cells },
     .{ .cells = &verify_case_62_round_2_cells },
 };
 
-const verify_case_62_pcs_opening = verifier.PcsOpening{ .entry_claims = &.{ &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1668157509 }, .a1 = .{ .value = 1657411026 } }, .B1 = .{ .a0 = .{ .value = 669435383 }, .a1 = .{ .value = 1971177737 } }, .B2 = .{ .a0 = .{ .value = 813458534 }, .a1 = .{ .value = 126104960 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 316710214 }, .a1 = .{ .value = 2026271773 } }, .B1 = .{ .a0 = .{ .value = 2053582425 }, .a1 = .{ .value = 1108145756 } }, .B2 = .{ .a0 = .{ .value = 446049424 }, .a1 = .{ .value = 783808682 } } }} }, .proof = pcs.OpeningProof{ .input_queries = &.{&.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1445274483 }, .{ .value = 878299463 }, .{ .value = 361534516 }, .{ .value = 1413726660 }, .{ .value = 1954508011 }, .{ .value = 595375704 }, .{ .value = 468787438 }, .{ .value = 667013859 } }, commitment.Commitment{ .{ .value = 1928039703 }, .{ .value = 1065918651 }, .{ .value = 1859365374 }, .{ .value = 554169610 }, .{ .value = 1448225947 }, .{ .value = 1646070296 }, .{ .value = 58709612 }, .{ .value = 1534724907 } } }, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{.{ .value = 7 }}, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{.{ .value = 7 }}, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 407602889 }, .{ .value = 1848509800 }, .{ .value = 473476196 }, .{ .value = 1672351799 }, .{ .value = 1944117973 }, .{ .value = 391138150 }, .{ .value = 732756081 }, .{ .value = 11110137 } }, commitment.Commitment{ .{ .value = 2127181707 }, .{ .value = 1881937014 }, .{ .value = 1443491632 }, .{ .value = 1093788593 }, .{ .value = 290119691 }, .{ .value = 1483383186 }, .{ .value = 751471163 }, .{ .value = 1995994757 } } }, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 192184320 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1938522136 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} } } } } }}, .fri_proof = fri.Proof{ .round_roots = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 498278260 }, .{ .value = 222892745 }, .{ .value = 1019580907 }, .{ .value = 757743189 }, .{ .value = 604777773 }, .{ .value = 628099366 }, .{ .value = 1627853258 }, .{ .value = 1445758414 } }}, .final_poly = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 80339502 }, .a1 = .{ .value = 1977007213 } }, .B1 = .{ .a0 = .{ .value = 1033366738 }, .a1 = .{ .value = 646549935 } }, .B2 = .{ .a0 = .{ .value = 1561400186 }, .a1 = .{ .value = 1945769450 } } }}, .running_queries = &.{&.{merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 427695473 }, .{ .value = 405357109 }, .{ .value = 969165772 }, .{ .value = 1526501330 }, .{ .value = 746565078 }, .{ .value = 2069952448 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 770694713 }, .{ .value = 1909527024 }, .{ .value = 963739407 }, .{ .value = 1940224907 }, .{ .value = 755100854 }, .{ .value = 1987381702 }, .{ .value = 1974519417 }, .{ .value = 1712872612 } }, commitment.Commitment{ .{ .value = 1196432707 }, .{ .value = 405357109 }, .{ .value = 969165772 }, .{ .value = 1526501330 }, .{ .value = 746565078 }, .{ .value = 2069952448 }, .{ .value = 0 }, .{ .value = 0 } } } }}} } } };
+const verify_case_62_pcs_opening = verifier.PcsOpening{ .entry_claims = &.{ &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1486273085 }, .a1 = .{ .value = 1293216935 } }, .B1 = .{ .a0 = .{ .value = 627250991 }, .a1 = .{ .value = 1538961746 } }, .B2 = .{ .a0 = .{ .value = 281156601 }, .a1 = .{ .value = 1788737194 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1216444750 }, .a1 = .{ .value = 280518797 } }, .B1 = .{ .a0 = .{ .value = 1539032301 }, .a1 = .{ .value = 266800061 } }, .B2 = .{ .a0 = .{ .value = 1126190907 }, .a1 = .{ .value = 1538785192 } } }} }, .proof = pcs.OpeningProof{ .input_queries = &.{&.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1796980645 }, .{ .value = 870031289 }, .{ .value = 89000779 }, .{ .value = 1797361568 }, .{ .value = 506343443 }, .{ .value = 1561757042 }, .{ .value = 2032502888 }, .{ .value = 692070763 } }, commitment.Commitment{ .{ .value = 1425811540 }, .{ .value = 1195405391 }, .{ .value = 526407054 }, .{ .value = 1200373953 }, .{ .value = 1913472706 }, .{ .value = 736368931 }, .{ .value = 739685860 }, .{ .value = 830146485 } } }, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{.{ .value = 40 }}, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{.{ .value = 20 }}, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 217903601 }, .{ .value = 1571399788 }, .{ .value = 1321891386 }, .{ .value = 1649102917 }, .{ .value = 1662700866 }, .{ .value = 1677032183 }, .{ .value = 910700943 }, .{ .value = 1206311916 } }, commitment.Commitment{ .{ .value = 744812892 }, .{ .value = 1454549050 }, .{ .value = 901700247 }, .{ .value = 1870948472 }, .{ .value = 1986962564 }, .{ .value = 1613224397 }, .{ .value = 1180964425 }, .{ .value = 320312478 } } }, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1044463619 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 2109816833 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} } } } } }}, .fri_proof = fri.Proof{ .round_roots = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 1880196836 }, .{ .value = 446191805 }, .{ .value = 518258785 }, .{ .value = 679341739 }, .{ .value = 211458017 }, .{ .value = 355872067 }, .{ .value = 1362979181 }, .{ .value = 1839151591 } }}, .final_poly = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1187232954 }, .a1 = .{ .value = 1978902797 } }, .B1 = .{ .a0 = .{ .value = 893365035 }, .a1 = .{ .value = 1259960012 } }, .B2 = .{ .a0 = .{ .value = 1502284725 }, .a1 = .{ .value = 1264547996 } } }}, .running_queries = &.{&.{merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 428270099 }, .{ .value = 1560174603 }, .{ .value = 545767468 }, .{ .value = 1564806844 }, .{ .value = 1753386625 }, .{ .value = 452484914 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1274044923 }, .{ .value = 1558285410 }, .{ .value = 893841999 }, .{ .value = 1068463747 }, .{ .value = 1884469137 }, .{ .value = 874073747 }, .{ .value = 1452363630 }, .{ .value = 1793279832 } }, commitment.Commitment{ .{ .value = 595386879 }, .{ .value = 1560174603 }, .{ .value = 545767468 }, .{ .value = 1564806844 }, .{ .value = 1753386625 }, .{ .value = 452484914 }, .{ .value = 0 }, .{ .value = 0 } } } }}} } } };
 
 const verify_case_62_proof = verifier.Proof{
     .rounds = &verify_case_62_rounds,
     .module_sizes = &verify_case_62_module_sizes,
     .pcs_opening = verify_case_62_pcs_opening,
+};
+
+const verify_case_62_public_inputs = [_]protocol.Scalar{
+    .{ .base = .{ .value = 30 } },
+};
+
+const verify_case_62_input = verifier.VerifyInput{
+    .proof = verify_case_62_proof,
+    .public_inputs = &verify_case_62_public_inputs,
 };
 
 const verify_case_62_failing_module_sizes = [_]usize{};
@@ -11385,17 +12297,17 @@ const verify_case_62_failing_round_0_cells = [_]protocol.Scalar{};
 const verify_case_62_failing_round_1_cells = [_]protocol.Scalar{};
 
 const verify_case_62_failing_round_2_cells = [_]protocol.Scalar{
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 2095366691 }, .a1 = .{ .value = 1204019039 } }, .B1 = .{ .a0 = .{ .value = 329846865 }, .a1 = .{ .value = 619663266 } }, .B2 = .{ .a0 = .{ .value = 723883801 }, .a1 = .{ .value = 2027416210 } } } },
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 692363039 }, .a1 = .{ .value = 1578528658 } }, .B1 = .{ .a0 = .{ .value = 1179858044 }, .a1 = .{ .value = 125499083 } }, .B2 = .{ .a0 = .{ .value = 352934268 }, .a1 = .{ .value = 605207799 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1486273085 }, .a1 = .{ .value = 1293216935 } }, .B1 = .{ .a0 = .{ .value = 627250991 }, .a1 = .{ .value = 1538961746 } }, .B2 = .{ .a0 = .{ .value = 281156601 }, .a1 = .{ .value = 1788737194 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1216444750 }, .a1 = .{ .value = 280518797 } }, .B1 = .{ .a0 = .{ .value = 1539032301 }, .a1 = .{ .value = 266800061 } }, .B2 = .{ .a0 = .{ .value = 1126190907 }, .a1 = .{ .value = 1538785192 } } } },
 };
 
 const verify_case_62_failing_rounds = [_]protocol.RoundMessage{
-    .{ .commitment = commitment.Commitment{ .{ .value = 2105697045 }, .{ .value = 268550042 }, .{ .value = 2085985480 }, .{ .value = 1029676627 }, .{ .value = 1426761719 }, .{ .value = 370317748 }, .{ .value = 252565774 }, .{ .value = 139484695 } }, .cells = &verify_case_62_failing_round_0_cells },
-    .{ .commitment = commitment.Commitment{ .{ .value = 956288079 }, .{ .value = 397437094 }, .{ .value = 1962813533 }, .{ .value = 739094621 }, .{ .value = 1322649982 }, .{ .value = 1137852462 }, .{ .value = 1862443710 }, .{ .value = 1752921074 } }, .cells = &verify_case_62_failing_round_1_cells },
+    .{ .commitment = commitment.Commitment{ .{ .value = 1284087301 }, .{ .value = 2104130085 }, .{ .value = 1597477735 }, .{ .value = 797176699 }, .{ .value = 452943547 }, .{ .value = 844011610 }, .{ .value = 336115017 }, .{ .value = 934293072 } }, .cells = &verify_case_62_failing_round_0_cells },
+    .{ .commitment = commitment.Commitment{ .{ .value = 1105742475 }, .{ .value = 208859899 }, .{ .value = 988346093 }, .{ .value = 1728215046 }, .{ .value = 194780628 }, .{ .value = 876931807 }, .{ .value = 1826449047 }, .{ .value = 1303547082 } }, .cells = &verify_case_62_failing_round_1_cells },
     .{ .cells = &verify_case_62_failing_round_2_cells },
 };
 
-const verify_case_62_failing_pcs_opening = verifier.PcsOpening{ .entry_claims = &.{ &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 2095366691 }, .a1 = .{ .value = 1204019039 } }, .B1 = .{ .a0 = .{ .value = 329846865 }, .a1 = .{ .value = 619663266 } }, .B2 = .{ .a0 = .{ .value = 723883801 }, .a1 = .{ .value = 2027416210 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 692363039 }, .a1 = .{ .value = 1578528658 } }, .B1 = .{ .a0 = .{ .value = 1179858044 }, .a1 = .{ .value = 125499083 } }, .B2 = .{ .a0 = .{ .value = 352934268 }, .a1 = .{ .value = 605207799 } } }} }, .proof = pcs.OpeningProof{ .input_queries = &.{&.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 877072844 }, .{ .value = 1897002136 }, .{ .value = 1100902540 }, .{ .value = 2028413641 }, .{ .value = 944711808 }, .{ .value = 2100988245 }, .{ .value = 1239983494 }, .{ .value = 255072204 } }, commitment.Commitment{ .{ .value = 1436093731 }, .{ .value = 845437060 }, .{ .value = 1871026680 }, .{ .value = 438325177 }, .{ .value = 1309201759 }, .{ .value = 724188914 }, .{ .value = 1898500284 }, .{ .value = 429866436 } } }, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{.{ .value = 7 }}, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{.{ .value = 7 }}, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 426912368 }, .{ .value = 1238439083 }, .{ .value = 548193470 }, .{ .value = 1196726038 }, .{ .value = 1723969764 }, .{ .value = 674630509 }, .{ .value = 1431904712 }, .{ .value = 473166337 } }, commitment.Commitment{ .{ .value = 2114814211 }, .{ .value = 543773166 }, .{ .value = 249407728 }, .{ .value = 519222515 }, .{ .value = 2068516579 }, .{ .value = 1257080046 }, .{ .value = 1839630474 }, .{ .value = 684707353 } } }, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 190095360 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 342581271 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} } } } } }}, .fri_proof = fri.Proof{ .round_roots = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 1864912229 }, .{ .value = 1739116916 }, .{ .value = 1390732954 }, .{ .value = 795110809 }, .{ .value = 749464226 }, .{ .value = 773990933 }, .{ .value = 1179825408 }, .{ .value = 1572729299 } }}, .final_poly = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1405370446 }, .a1 = .{ .value = 1278375728 } }, .B1 = .{ .a0 = .{ .value = 252426103 }, .a1 = .{ .value = 522346771 } }, .B2 = .{ .a0 = .{ .value = 1082911221 }, .a1 = .{ .value = 752732400 } } }}, .running_queries = &.{&.{merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 221814954 }, .{ .value = 119838335 }, .{ .value = 1373950630 }, .{ .value = 337611992 }, .{ .value = 309578566 }, .{ .value = 1993080925 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 774785489 }, .{ .value = 1450722840 }, .{ .value = 1091782099 }, .{ .value = 1493079099 }, .{ .value = 1417604982 }, .{ .value = 884042127 }, .{ .value = 1315948943 }, .{ .value = 811566028 } }, commitment.Commitment{ .{ .value = 1745993436 }, .{ .value = 1916812246 }, .{ .value = 1079957237 }, .{ .value = 2086846718 }, .{ .value = 1174418460 }, .{ .value = 2102295572 }, .{ .value = 0 }, .{ .value = 0 } } } }}} } } };
+const verify_case_62_failing_pcs_opening = verifier.PcsOpening{ .entry_claims = &.{ &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1486273085 }, .a1 = .{ .value = 1293216935 } }, .B1 = .{ .a0 = .{ .value = 627250991 }, .a1 = .{ .value = 1538961746 } }, .B2 = .{ .a0 = .{ .value = 281156601 }, .a1 = .{ .value = 1788737194 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1216444750 }, .a1 = .{ .value = 280518797 } }, .B1 = .{ .a0 = .{ .value = 1539032301 }, .a1 = .{ .value = 266800061 } }, .B2 = .{ .a0 = .{ .value = 1126190907 }, .a1 = .{ .value = 1538785192 } } }} }, .proof = pcs.OpeningProof{ .input_queries = &.{&.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1796980645 }, .{ .value = 870031289 }, .{ .value = 89000779 }, .{ .value = 1797361568 }, .{ .value = 506343443 }, .{ .value = 1561757042 }, .{ .value = 2032502888 }, .{ .value = 692070763 } }, commitment.Commitment{ .{ .value = 1425811540 }, .{ .value = 1195405391 }, .{ .value = 526407054 }, .{ .value = 1200373953 }, .{ .value = 1913472706 }, .{ .value = 736368931 }, .{ .value = 739685860 }, .{ .value = 830146485 } } }, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{.{ .value = 40 }}, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{.{ .value = 20 }}, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 217903601 }, .{ .value = 1571399788 }, .{ .value = 1321891386 }, .{ .value = 1649102917 }, .{ .value = 1662700866 }, .{ .value = 1677032183 }, .{ .value = 910700943 }, .{ .value = 1206311916 } }, commitment.Commitment{ .{ .value = 744812892 }, .{ .value = 1454549050 }, .{ .value = 901700247 }, .{ .value = 1870948472 }, .{ .value = 1986962564 }, .{ .value = 1613224397 }, .{ .value = 1180964425 }, .{ .value = 320312478 } } }, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1044463619 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 2109816833 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} } } } } }}, .fri_proof = fri.Proof{ .round_roots = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 1880196836 }, .{ .value = 446191805 }, .{ .value = 518258785 }, .{ .value = 679341739 }, .{ .value = 211458017 }, .{ .value = 355872067 }, .{ .value = 1362979181 }, .{ .value = 1839151591 } }}, .final_poly = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1187232954 }, .a1 = .{ .value = 1978902797 } }, .B1 = .{ .a0 = .{ .value = 893365035 }, .a1 = .{ .value = 1259960012 } }, .B2 = .{ .a0 = .{ .value = 1502284725 }, .a1 = .{ .value = 1264547996 } } }}, .running_queries = &.{&.{merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 428270099 }, .{ .value = 1560174603 }, .{ .value = 545767468 }, .{ .value = 1564806844 }, .{ .value = 1753386625 }, .{ .value = 452484914 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1274044923 }, .{ .value = 1558285410 }, .{ .value = 893841999 }, .{ .value = 1068463747 }, .{ .value = 1884469137 }, .{ .value = 874073747 }, .{ .value = 1452363630 }, .{ .value = 1793279832 } }, commitment.Commitment{ .{ .value = 595386879 }, .{ .value = 1560174603 }, .{ .value = 545767468 }, .{ .value = 1564806844 }, .{ .value = 1753386625 }, .{ .value = 452484914 }, .{ .value = 0 }, .{ .value = 0 } } } }}} } } };
 
 const verify_case_62_failing_proof = verifier.Proof{
     .rounds = &verify_case_62_failing_rounds,
@@ -11403,7 +12315,16 @@ const verify_case_62_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_62_failing_pcs_opening,
 };
 
-const verify_case_62_systems = verifier.Systems{ .vanishing = system_62, .logderivativesum = system_62_logderiv, .rowlimit = system_62_rowlimit, .pcs = verify_case_62_pcs_system };
+const verify_case_62_failing_public_inputs = [_]protocol.Scalar{
+    .{ .base = .{ .value = 99 } },
+};
+
+const verify_case_62_failing_input = verifier.VerifyInput{
+    .proof = verify_case_62_failing_proof,
+    .public_inputs = &verify_case_62_failing_public_inputs,
+};
+
+const verify_case_62_systems = verifier.Systems{ .public_input = system_62_public_input, .vanishing = system_62, .logderivativesum = system_62_logderiv, .rowlimit = system_62_rowlimit, .pcs = verify_case_62_pcs_system };
 
 pub const system_63_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -11411,20 +12332,24 @@ pub const system_63_spec = protocol.Spec{
     .total_round_coins = 2,
     .dynamic_module_count = 1,
 };
+pub const system_63_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 1, 0, 2 },
+    .refs = &[_]protocol.public_input.CellRef{.{ .statement_index = 0, .round = 0, .index = 0 }},
+};
 
-// scenario: "lagrange-sel-dyn"
+// scenario: "public-input-dyn"
 
-// expression: "boundary"
+// expression: "global"
 const system_63_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .lagrange_selector = 1 },
+    .{ .cell_value = .{ .round = 0, .index = 0 } }, // cell: "result"
     .{ .column_claim = 0 }, // col: "col"
-    .{ .constant = field.Element.init(99) },
-    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
-    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 3 } } },
+    .{ .op = .{ .operator = .sub, .operands = &.{ 0, 1 } } },
+    .{ .lagrange_selector = 0 },
+    .{ .op = .{ .operator = .mul, .operands = &.{ 2, 3 } } },
 };
 
 const system_63_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
-    // expression: "boundary"
+    // expression: "global"
     .{ .expression = 4, .cancelled_positions = &.{} },
 };
 
@@ -11437,7 +12362,7 @@ const system_63_modules = [_]vanishing.Module{
     .{ .size = .{ .dynamic = 0 }, .expressions = &system_63_module_0_expressions, .buckets = &system_63_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
 };
 
-// system: "lagrange-sel-dyn"
+// system: "public-input-dyn"
 const system_63 = vanishing.System{
     .modules = &system_63_modules,
     .dynamic_module_count = 1,
@@ -11445,11 +12370,11 @@ const system_63 = vanishing.System{
     .total_quotient_claims = 1,
 };
 
-// logderiv system: "lagrange-sel-dyn"
+// logderiv system: "public-input-dyn"
 const system_63_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_63_logderiv = logderivativesum.System{ .queries = &system_63_logderiv_queries };
-// rowlimit system: "lagrange-sel-dyn"
+// rowlimit system: "public-input-dyn"
 const system_63_rowlimit_checks = [_]rowlimit.Check{};
 
 const system_63_rowlimit = rowlimit.System{ .checks = &system_63_rowlimit_checks };
@@ -11485,22 +12410,31 @@ const verify_case_63_round_0_cells = [_]protocol.Scalar{};
 const verify_case_63_round_1_cells = [_]protocol.Scalar{};
 
 const verify_case_63_round_2_cells = [_]protocol.Scalar{
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 51453353 }, .a1 = .{ .value = 468423403 } }, .B1 = .{ .a0 = .{ .value = 736838586 }, .a1 = .{ .value = 1088623528 } }, .B2 = .{ .a0 = .{ .value = 2022263907 }, .a1 = .{ .value = 294040827 } } } },
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 2003637155 }, .a1 = .{ .value = 1785115481 } }, .B1 = .{ .a0 = .{ .value = 923292968 }, .a1 = .{ .value = 1863710667 } }, .B2 = .{ .a0 = .{ .value = 187523825 }, .a1 = .{ .value = 676375374 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 747698725 }, .a1 = .{ .value = 1031344127 } }, .B1 = .{ .a0 = .{ .value = 1835788919 }, .a1 = .{ .value = 781195155 } }, .B2 = .{ .a0 = .{ .value = 1917545644 }, .a1 = .{ .value = 1392794629 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1022777110 }, .a1 = .{ .value = 1170924384 } }, .B1 = .{ .a0 = .{ .value = 1431591653 }, .a1 = .{ .value = 1212908920 } }, .B2 = .{ .a0 = .{ .value = 537677915 }, .a1 = .{ .value = 1705589347 } } } },
 };
 
 const verify_case_63_rounds = [_]protocol.RoundMessage{
-    .{ .commitment = commitment.Commitment{ .{ .value = 384245973 }, .{ .value = 1750333870 }, .{ .value = 1144366501 }, .{ .value = 207687103 }, .{ .value = 2121644243 }, .{ .value = 544988254 }, .{ .value = 1340069080 }, .{ .value = 1535280166 } }, .cells = &verify_case_63_round_0_cells },
-    .{ .commitment = commitment.Commitment{ .{ .value = 1888775505 }, .{ .value = 7736986 }, .{ .value = 926806928 }, .{ .value = 264011065 }, .{ .value = 1498548860 }, .{ .value = 980676532 }, .{ .value = 1178247900 }, .{ .value = 1658899573 } }, .cells = &verify_case_63_round_1_cells },
+    .{ .commitment = commitment.Commitment{ .{ .value = 126312721 }, .{ .value = 860899276 }, .{ .value = 787843834 }, .{ .value = 1406698392 }, .{ .value = 437636424 }, .{ .value = 1222337496 }, .{ .value = 643066739 }, .{ .value = 803380079 } }, .cells = &verify_case_63_round_0_cells },
+    .{ .commitment = commitment.Commitment{ .{ .value = 787451913 }, .{ .value = 729825956 }, .{ .value = 1784513104 }, .{ .value = 1878313003 }, .{ .value = 1262227168 }, .{ .value = 472808875 }, .{ .value = 2071067297 }, .{ .value = 1183890080 } }, .cells = &verify_case_63_round_1_cells },
     .{ .cells = &verify_case_63_round_2_cells },
 };
 
-const verify_case_63_pcs_opening = verifier.PcsOpening{ .entry_claims = &.{ &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 51453353 }, .a1 = .{ .value = 468423403 } }, .B1 = .{ .a0 = .{ .value = 736838586 }, .a1 = .{ .value = 1088623528 } }, .B2 = .{ .a0 = .{ .value = 2022263907 }, .a1 = .{ .value = 294040827 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 2003637155 }, .a1 = .{ .value = 1785115481 } }, .B1 = .{ .a0 = .{ .value = 923292968 }, .a1 = .{ .value = 1863710667 } }, .B2 = .{ .a0 = .{ .value = 187523825 }, .a1 = .{ .value = 676375374 } } }} }, .proof = pcs.OpeningProof{ .input_queries = &.{&.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1723568860 }, .{ .value = 252124735 }, .{ .value = 2002581456 }, .{ .value = 1249780961 }, .{ .value = 407126701 }, .{ .value = 188087330 }, .{ .value = 986362846 }, .{ .value = 288635176 } }, commitment.Commitment{ .{ .value = 1763395994 }, .{ .value = 1874417983 }, .{ .value = 626257608 }, .{ .value = 794180427 }, .{ .value = 1910470961 }, .{ .value = 771073755 }, .{ .value = 1941702423 }, .{ .value = 492053874 } } }, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{.{ .value = 189613640 }}, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{.{ .value = 579123654 }}, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1774506601 }, .{ .value = 651204616 }, .{ .value = 293426138 }, .{ .value = 1186285179 }, .{ .value = 1408401096 }, .{ .value = 38557803 }, .{ .value = 1736087799 }, .{ .value = 407749412 } }, commitment.Commitment{ .{ .value = 1307241902 }, .{ .value = 1676395534 }, .{ .value = 1533181239 }, .{ .value = 683533863 }, .{ .value = 746933067 }, .{ .value = 1170673796 }, .{ .value = 1845722434 }, .{ .value = 2077331624 } } }, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 926338934 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1396551842 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} } } } } }}, .fri_proof = fri.Proof{ .round_roots = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 92199719 }, .{ .value = 6335898 }, .{ .value = 1855359992 }, .{ .value = 1270583593 }, .{ .value = 612826081 }, .{ .value = 1945022568 }, .{ .value = 689208052 }, .{ .value = 840545958 } }}, .final_poly = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 210198832 }, .a1 = .{ .value = 1174878213 } }, .B1 = .{ .a0 = .{ .value = 1841653754 }, .a1 = .{ .value = 2018000430 } }, .B2 = .{ .a0 = .{ .value = 524113708 }, .a1 = .{ .value = 1326927240 } } }}, .running_queries = &.{&.{merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 1860587092 }, .{ .value = 1900481630 }, .{ .value = 1990942366 }, .{ .value = 1229115099 }, .{ .value = 18688667 }, .{ .value = 1998491852 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1065013393 }, .{ .value = 1553300028 }, .{ .value = 318193397 }, .{ .value = 982597412 }, .{ .value = 811512271 }, .{ .value = 486802742 }, .{ .value = 1204243489 }, .{ .value = 745053327 } }, commitment.Commitment{ .{ .value = 1860587138 }, .{ .value = 1900481630 }, .{ .value = 1990942366 }, .{ .value = 1229115099 }, .{ .value = 18688667 }, .{ .value = 1998491852 }, .{ .value = 0 }, .{ .value = 0 } } } }}} } } };
+const verify_case_63_pcs_opening = verifier.PcsOpening{ .entry_claims = &.{ &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 747698725 }, .a1 = .{ .value = 1031344127 } }, .B1 = .{ .a0 = .{ .value = 1835788919 }, .a1 = .{ .value = 781195155 } }, .B2 = .{ .a0 = .{ .value = 1917545644 }, .a1 = .{ .value = 1392794629 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1022777110 }, .a1 = .{ .value = 1170924384 } }, .B1 = .{ .a0 = .{ .value = 1431591653 }, .a1 = .{ .value = 1212908920 } }, .B2 = .{ .a0 = .{ .value = 537677915 }, .a1 = .{ .value = 1705589347 } } }} }, .proof = pcs.OpeningProof{ .input_queries = &.{&.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1258095970 }, .{ .value = 950573653 }, .{ .value = 660524605 }, .{ .value = 328602036 }, .{ .value = 473851711 }, .{ .value = 1752214971 }, .{ .value = 1052279783 }, .{ .value = 1212994161 } }, commitment.Commitment{ .{ .value = 466354455 }, .{ .value = 2058112439 }, .{ .value = 1641575898 }, .{ .value = 1057134454 }, .{ .value = 80809283 }, .{ .value = 432903582 }, .{ .value = 439289842 }, .{ .value = 41066760 } } }, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{.{ .value = 2047148063 }}, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{.{ .value = 2047148063 }}, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1733769073 }, .{ .value = 1910853982 }, .{ .value = 1790073901 }, .{ .value = 1016620847 }, .{ .value = 175166352 }, .{ .value = 1987088017 }, .{ .value = 1754928720 }, .{ .value = 1156273001 } }, commitment.Commitment{ .{ .value = 1835931401 }, .{ .value = 1228488574 }, .{ .value = 625500456 }, .{ .value = 1395136119 }, .{ .value = 1206894217 }, .{ .value = 1256718746 }, .{ .value = 2083948279 }, .{ .value = 1563572927 } } }, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 566296029 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 457277990 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} } } } } }}, .fri_proof = fri.Proof{ .round_roots = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 111080614 }, .{ .value = 267700025 }, .{ .value = 1108491536 }, .{ .value = 793385054 }, .{ .value = 90830754 }, .{ .value = 13458914 }, .{ .value = 1972398195 }, .{ .value = 1318884083 } }}, .final_poly = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1654458559 }, .a1 = .{ .value = 2121027023 } }, .B1 = .{ .a0 = .{ .value = 1153849304 }, .a1 = .{ .value = 873953533 } }, .B2 = .{ .a0 = .{ .value = 73607152 }, .a1 = .{ .value = 438458733 } } }}, .running_queries = &.{&.{merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 1073241376 }, .{ .value = 1463696858 }, .{ .value = 1314253065 }, .{ .value = 1339362285 }, .{ .value = 1001848183 }, .{ .value = 107579192 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1711241232 }, .{ .value = 1790810970 }, .{ .value = 282579572 }, .{ .value = 1896228706 }, .{ .value = 401358245 }, .{ .value = 2022526665 }, .{ .value = 1905778022 }, .{ .value = 1173680402 } }, commitment.Commitment{ .{ .value = 906124596 }, .{ .value = 1463696858 }, .{ .value = 1314253065 }, .{ .value = 1339362285 }, .{ .value = 1001848183 }, .{ .value = 107579192 }, .{ .value = 0 }, .{ .value = 0 } } } }}} } } };
 
 const verify_case_63_proof = verifier.Proof{
     .rounds = &verify_case_63_rounds,
     .module_sizes = &verify_case_63_module_sizes,
     .pcs_opening = verify_case_63_pcs_opening,
+};
+
+const verify_case_63_public_inputs = [_]protocol.Scalar{
+    .{ .base = .{ .value = 30 } },
+};
+
+const verify_case_63_input = verifier.VerifyInput{
+    .proof = verify_case_63_proof,
+    .public_inputs = &verify_case_63_public_inputs,
 };
 
 const verify_case_63_failing_module_sizes = [_]usize{4};
@@ -11510,17 +12444,17 @@ const verify_case_63_failing_round_0_cells = [_]protocol.Scalar{};
 const verify_case_63_failing_round_1_cells = [_]protocol.Scalar{};
 
 const verify_case_63_failing_round_2_cells = [_]protocol.Scalar{
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 969687231 }, .a1 = .{ .value = 650001449 } }, .B1 = .{ .a0 = .{ .value = 1330845296 }, .a1 = .{ .value = 1837974629 } }, .B2 = .{ .a0 = .{ .value = 668715247 }, .a1 = .{ .value = 406611711 } } } },
-    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 236242309 }, .a1 = .{ .value = 213296253 } }, .B1 = .{ .a0 = .{ .value = 841566489 }, .a1 = .{ .value = 1203754865 } }, .B2 = .{ .a0 = .{ .value = 404549995 }, .a1 = .{ .value = 1190020053 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 747698725 }, .a1 = .{ .value = 1031344127 } }, .B1 = .{ .a0 = .{ .value = 1835788919 }, .a1 = .{ .value = 781195155 } }, .B2 = .{ .a0 = .{ .value = 1917545644 }, .a1 = .{ .value = 1392794629 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1022777110 }, .a1 = .{ .value = 1170924384 } }, .B1 = .{ .a0 = .{ .value = 1431591653 }, .a1 = .{ .value = 1212908920 } }, .B2 = .{ .a0 = .{ .value = 537677915 }, .a1 = .{ .value = 1705589347 } } } },
 };
 
 const verify_case_63_failing_rounds = [_]protocol.RoundMessage{
-    .{ .commitment = commitment.Commitment{ .{ .value = 2105697045 }, .{ .value = 268550042 }, .{ .value = 2085985480 }, .{ .value = 1029676627 }, .{ .value = 1426761719 }, .{ .value = 370317748 }, .{ .value = 252565774 }, .{ .value = 139484695 } }, .cells = &verify_case_63_failing_round_0_cells },
-    .{ .commitment = commitment.Commitment{ .{ .value = 956288079 }, .{ .value = 397437094 }, .{ .value = 1962813533 }, .{ .value = 739094621 }, .{ .value = 1322649982 }, .{ .value = 1137852462 }, .{ .value = 1862443710 }, .{ .value = 1752921074 } }, .cells = &verify_case_63_failing_round_1_cells },
+    .{ .commitment = commitment.Commitment{ .{ .value = 126312721 }, .{ .value = 860899276 }, .{ .value = 787843834 }, .{ .value = 1406698392 }, .{ .value = 437636424 }, .{ .value = 1222337496 }, .{ .value = 643066739 }, .{ .value = 803380079 } }, .cells = &verify_case_63_failing_round_0_cells },
+    .{ .commitment = commitment.Commitment{ .{ .value = 787451913 }, .{ .value = 729825956 }, .{ .value = 1784513104 }, .{ .value = 1878313003 }, .{ .value = 1262227168 }, .{ .value = 472808875 }, .{ .value = 2071067297 }, .{ .value = 1183890080 } }, .cells = &verify_case_63_failing_round_1_cells },
     .{ .cells = &verify_case_63_failing_round_2_cells },
 };
 
-const verify_case_63_failing_pcs_opening = verifier.PcsOpening{ .entry_claims = &.{ &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 969687231 }, .a1 = .{ .value = 650001449 } }, .B1 = .{ .a0 = .{ .value = 1330845296 }, .a1 = .{ .value = 1837974629 } }, .B2 = .{ .a0 = .{ .value = 668715247 }, .a1 = .{ .value = 406611711 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 236242309 }, .a1 = .{ .value = 213296253 } }, .B1 = .{ .a0 = .{ .value = 841566489 }, .a1 = .{ .value = 1203754865 } }, .B2 = .{ .a0 = .{ .value = 404549995 }, .a1 = .{ .value = 1190020053 } } }} }, .proof = pcs.OpeningProof{ .input_queries = &.{&.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 482740896 }, .{ .value = 1379501482 }, .{ .value = 252578076 }, .{ .value = 689757026 }, .{ .value = 1687130295 }, .{ .value = 482213853 }, .{ .value = 1144784946 }, .{ .value = 1953872 } }, commitment.Commitment{ .{ .value = 574448861 }, .{ .value = 1930652014 }, .{ .value = 237304209 }, .{ .value = 332349899 }, .{ .value = 1251291267 }, .{ .value = 280739133 }, .{ .value = 1385793280 }, .{ .value = 626136868 } } }, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{.{ .value = 1785582447 }}, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{.{ .value = 1105505440 }}, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1863664056 }, .{ .value = 1382689898 }, .{ .value = 321136189 }, .{ .value = 1951812293 }, .{ .value = 496840374 }, .{ .value = 640813575 }, .{ .value = 1382864552 }, .{ .value = 1577050634 } }, commitment.Commitment{ .{ .value = 551793198 }, .{ .value = 1341590964 }, .{ .value = 1208846287 }, .{ .value = 1695942395 }, .{ .value = 1873646678 }, .{ .value = 2101916218 }, .{ .value = 1430997699 }, .{ .value = 1340059163 } } }, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 221738192 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 500929351 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} } } } } }}, .fri_proof = fri.Proof{ .round_roots = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 440020940 }, .{ .value = 1618990238 }, .{ .value = 1241775030 }, .{ .value = 694304239 }, .{ .value = 1126770329 }, .{ .value = 184167897 }, .{ .value = 921101333 }, .{ .value = 684748868 } }}, .final_poly = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 608416271 }, .a1 = .{ .value = 1389378233 } }, .B1 = .{ .a0 = .{ .value = 1449932867 }, .a1 = .{ .value = 1335967712 } }, .B2 = .{ .a0 = .{ .value = 1933766984 }, .a1 = .{ .value = 1993026969 } } }}, .running_queries = &.{&.{merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 602253625 }, .{ .value = 1823255396 }, .{ .value = 415459290 }, .{ .value = 274770260 }, .{ .value = 1277679634 }, .{ .value = 437831349 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 704562581 }, .{ .value = 260450509 }, .{ .value = 49849627 }, .{ .value = 1821682784 }, .{ .value = 320357568 }, .{ .value = 280262292 }, .{ .value = 1077307431 }, .{ .value = 120501204 } }, commitment.Commitment{ .{ .value = 637342097 }, .{ .value = 89543823 }, .{ .value = 1811378745 }, .{ .value = 1457275943 }, .{ .value = 1726801347 }, .{ .value = 1705943328 }, .{ .value = 0 }, .{ .value = 0 } } } }}} } } };
+const verify_case_63_failing_pcs_opening = verifier.PcsOpening{ .entry_claims = &.{ &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 747698725 }, .a1 = .{ .value = 1031344127 } }, .B1 = .{ .a0 = .{ .value = 1835788919 }, .a1 = .{ .value = 781195155 } }, .B2 = .{ .a0 = .{ .value = 1917545644 }, .a1 = .{ .value = 1392794629 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1022777110 }, .a1 = .{ .value = 1170924384 } }, .B1 = .{ .a0 = .{ .value = 1431591653 }, .a1 = .{ .value = 1212908920 } }, .B2 = .{ .a0 = .{ .value = 537677915 }, .a1 = .{ .value = 1705589347 } } }} }, .proof = pcs.OpeningProof{ .input_queries = &.{&.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1258095970 }, .{ .value = 950573653 }, .{ .value = 660524605 }, .{ .value = 328602036 }, .{ .value = 473851711 }, .{ .value = 1752214971 }, .{ .value = 1052279783 }, .{ .value = 1212994161 } }, commitment.Commitment{ .{ .value = 466354455 }, .{ .value = 2058112439 }, .{ .value = 1641575898 }, .{ .value = 1057134454 }, .{ .value = 80809283 }, .{ .value = 432903582 }, .{ .value = 439289842 }, .{ .value = 41066760 } } }, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{.{ .value = 2047148063 }}, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{.{ .value = 2047148063 }}, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1733769073 }, .{ .value = 1910853982 }, .{ .value = 1790073901 }, .{ .value = 1016620847 }, .{ .value = 175166352 }, .{ .value = 1987088017 }, .{ .value = 1754928720 }, .{ .value = 1156273001 } }, commitment.Commitment{ .{ .value = 1835931401 }, .{ .value = 1228488574 }, .{ .value = 625500456 }, .{ .value = 1395136119 }, .{ .value = 1206894217 }, .{ .value = 1256718746 }, .{ .value = 2083948279 }, .{ .value = 1563572927 } } }, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 566296029 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 457277990 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} } } } } }}, .fri_proof = fri.Proof{ .round_roots = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 111080614 }, .{ .value = 267700025 }, .{ .value = 1108491536 }, .{ .value = 793385054 }, .{ .value = 90830754 }, .{ .value = 13458914 }, .{ .value = 1972398195 }, .{ .value = 1318884083 } }}, .final_poly = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1654458559 }, .a1 = .{ .value = 2121027023 } }, .B1 = .{ .a0 = .{ .value = 1153849304 }, .a1 = .{ .value = 873953533 } }, .B2 = .{ .a0 = .{ .value = 73607152 }, .a1 = .{ .value = 438458733 } } }}, .running_queries = &.{&.{merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 1073241376 }, .{ .value = 1463696858 }, .{ .value = 1314253065 }, .{ .value = 1339362285 }, .{ .value = 1001848183 }, .{ .value = 107579192 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1711241232 }, .{ .value = 1790810970 }, .{ .value = 282579572 }, .{ .value = 1896228706 }, .{ .value = 401358245 }, .{ .value = 2022526665 }, .{ .value = 1905778022 }, .{ .value = 1173680402 } }, commitment.Commitment{ .{ .value = 906124596 }, .{ .value = 1463696858 }, .{ .value = 1314253065 }, .{ .value = 1339362285 }, .{ .value = 1001848183 }, .{ .value = 107579192 }, .{ .value = 0 }, .{ .value = 0 } } } }}} } } };
 
 const verify_case_63_failing_proof = verifier.Proof{
     .rounds = &verify_case_63_failing_rounds,
@@ -11528,18 +12462,317 @@ const verify_case_63_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_63_failing_pcs_opening,
 };
 
-const verify_case_63_systems = verifier.Systems{ .vanishing = system_63, .logderivativesum = system_63_logderiv, .rowlimit = system_63_rowlimit, .pcs = verify_case_63_pcs_system };
+const verify_case_63_failing_public_inputs = [_]protocol.Scalar{
+    .{ .base = .{ .value = 99 } },
+};
+
+const verify_case_63_failing_input = verifier.VerifyInput{
+    .proof = verify_case_63_failing_proof,
+    .public_inputs = &verify_case_63_failing_public_inputs,
+};
+
+const verify_case_63_systems = verifier.Systems{ .public_input = system_63_public_input, .vanishing = system_63, .logderivativesum = system_63_logderiv, .rowlimit = system_63_rowlimit, .pcs = verify_case_63_pcs_system };
 
 pub const system_64_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
+    .total_round_coins = 2,
+    .dynamic_module_count = 0,
+};
+pub const system_64_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 2 },
+    .refs = &[_]protocol.public_input.CellRef{},
+};
+
+// scenario: "lagrange-sel"
+
+// expression: "boundary"
+const system_64_module_0_expressions = [_]vanishing.ExprNode{
+    .{ .lagrange_selector = 1 },
+    .{ .column_claim = 0 }, // col: "col"
+    .{ .constant = field.Element.init(99) },
+    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 3 } } },
+};
+
+const system_64_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
+    // expression: "boundary"
+    .{ .expression = 4, .cancelled_positions = &.{} },
+};
+
+const system_64_module_0_buckets = [_]vanishing.Bucket{
+    .{ .ratio = 1, .vanishings = &system_64_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
+};
+
+const system_64_modules = [_]vanishing.Module{
+    // module: "mod"
+    .{ .size = .{ .static = 4 }, .expressions = &system_64_module_0_expressions, .buckets = &system_64_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
+};
+
+// system: "lagrange-sel"
+const system_64 = vanishing.System{
+    .modules = &system_64_modules,
+    .dynamic_module_count = 0,
+    .total_witness_claims = 1,
+    .total_quotient_claims = 1,
+};
+
+// logderiv system: "lagrange-sel"
+const system_64_logderiv_queries = [_]logderivativesum.Query{};
+
+const system_64_logderiv = logderivativesum.System{ .queries = &system_64_logderiv_queries };
+// rowlimit system: "lagrange-sel"
+const system_64_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_64_rowlimit = rowlimit.System{ .checks = &system_64_rowlimit_checks };
+const verify_case_64_pcs_witness_map = [_]pcs.ClaimRef{
+    .{ .col_decl_idx = 0, .shift = 0 },
+};
+const verify_case_64_pcs_quotient_map = [_]pcs.ClaimRef{
+    .{ .col_decl_idx = 1, .shift = 0 },
+};
+const verify_case_64_pcs_batch_roots = [_]pcs.BatchRoot{
+    .{ .round = 0 },
+    .{ .round = 1 },
+};
+
+pub const verify_case_64_pcs_system = pcs.System{
+    .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 1 },
+    .columns = &.{
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 2 }, .shifts = &[_]isize{0} },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .static = 2 }, .shifts = &[_]isize{0} },
+    },
+    .num_batches = 2,
+    .max_entries = 2,
+    .max_size_log2 = 22,
+    .witness_map = &verify_case_64_pcs_witness_map,
+    .quotient_map = &verify_case_64_pcs_quotient_map,
+    .batch_roots = &verify_case_64_pcs_batch_roots,
+    .zeta_coin_index = 1,
+};
+const verify_case_64_module_sizes = [_]usize{};
+
+const verify_case_64_round_0_cells = [_]protocol.Scalar{};
+
+const verify_case_64_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_64_round_2_cells = [_]protocol.Scalar{
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1668157509 }, .a1 = .{ .value = 1657411026 } }, .B1 = .{ .a0 = .{ .value = 669435383 }, .a1 = .{ .value = 1971177737 } }, .B2 = .{ .a0 = .{ .value = 813458534 }, .a1 = .{ .value = 126104960 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 316710214 }, .a1 = .{ .value = 2026271773 } }, .B1 = .{ .a0 = .{ .value = 2053582425 }, .a1 = .{ .value = 1108145756 } }, .B2 = .{ .a0 = .{ .value = 446049424 }, .a1 = .{ .value = 783808682 } } } },
+};
+
+const verify_case_64_rounds = [_]protocol.RoundMessage{
+    .{ .commitment = commitment.Commitment{ .{ .value = 384245973 }, .{ .value = 1750333870 }, .{ .value = 1144366501 }, .{ .value = 207687103 }, .{ .value = 2121644243 }, .{ .value = 544988254 }, .{ .value = 1340069080 }, .{ .value = 1535280166 } }, .cells = &verify_case_64_round_0_cells },
+    .{ .commitment = commitment.Commitment{ .{ .value = 1888775505 }, .{ .value = 7736986 }, .{ .value = 926806928 }, .{ .value = 264011065 }, .{ .value = 1498548860 }, .{ .value = 980676532 }, .{ .value = 1178247900 }, .{ .value = 1658899573 } }, .cells = &verify_case_64_round_1_cells },
+    .{ .cells = &verify_case_64_round_2_cells },
+};
+
+const verify_case_64_pcs_opening = verifier.PcsOpening{ .entry_claims = &.{ &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1668157509 }, .a1 = .{ .value = 1657411026 } }, .B1 = .{ .a0 = .{ .value = 669435383 }, .a1 = .{ .value = 1971177737 } }, .B2 = .{ .a0 = .{ .value = 813458534 }, .a1 = .{ .value = 126104960 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 316710214 }, .a1 = .{ .value = 2026271773 } }, .B1 = .{ .a0 = .{ .value = 2053582425 }, .a1 = .{ .value = 1108145756 } }, .B2 = .{ .a0 = .{ .value = 446049424 }, .a1 = .{ .value = 783808682 } } }} }, .proof = pcs.OpeningProof{ .input_queries = &.{&.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1445274483 }, .{ .value = 878299463 }, .{ .value = 361534516 }, .{ .value = 1413726660 }, .{ .value = 1954508011 }, .{ .value = 595375704 }, .{ .value = 468787438 }, .{ .value = 667013859 } }, commitment.Commitment{ .{ .value = 1928039703 }, .{ .value = 1065918651 }, .{ .value = 1859365374 }, .{ .value = 554169610 }, .{ .value = 1448225947 }, .{ .value = 1646070296 }, .{ .value = 58709612 }, .{ .value = 1534724907 } } }, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{.{ .value = 7 }}, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{.{ .value = 7 }}, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 407602889 }, .{ .value = 1848509800 }, .{ .value = 473476196 }, .{ .value = 1672351799 }, .{ .value = 1944117973 }, .{ .value = 391138150 }, .{ .value = 732756081 }, .{ .value = 11110137 } }, commitment.Commitment{ .{ .value = 2127181707 }, .{ .value = 1881937014 }, .{ .value = 1443491632 }, .{ .value = 1093788593 }, .{ .value = 290119691 }, .{ .value = 1483383186 }, .{ .value = 751471163 }, .{ .value = 1995994757 } } }, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 192184320 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1938522136 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} } } } } }}, .fri_proof = fri.Proof{ .round_roots = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 498278260 }, .{ .value = 222892745 }, .{ .value = 1019580907 }, .{ .value = 757743189 }, .{ .value = 604777773 }, .{ .value = 628099366 }, .{ .value = 1627853258 }, .{ .value = 1445758414 } }}, .final_poly = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 80339502 }, .a1 = .{ .value = 1977007213 } }, .B1 = .{ .a0 = .{ .value = 1033366738 }, .a1 = .{ .value = 646549935 } }, .B2 = .{ .a0 = .{ .value = 1561400186 }, .a1 = .{ .value = 1945769450 } } }}, .running_queries = &.{&.{merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 427695473 }, .{ .value = 405357109 }, .{ .value = 969165772 }, .{ .value = 1526501330 }, .{ .value = 746565078 }, .{ .value = 2069952448 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 770694713 }, .{ .value = 1909527024 }, .{ .value = 963739407 }, .{ .value = 1940224907 }, .{ .value = 755100854 }, .{ .value = 1987381702 }, .{ .value = 1974519417 }, .{ .value = 1712872612 } }, commitment.Commitment{ .{ .value = 1196432707 }, .{ .value = 405357109 }, .{ .value = 969165772 }, .{ .value = 1526501330 }, .{ .value = 746565078 }, .{ .value = 2069952448 }, .{ .value = 0 }, .{ .value = 0 } } } }}} } } };
+
+const verify_case_64_proof = verifier.Proof{
+    .rounds = &verify_case_64_rounds,
+    .module_sizes = &verify_case_64_module_sizes,
+    .pcs_opening = verify_case_64_pcs_opening,
+};
+
+const verify_case_64_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_64_input = verifier.VerifyInput{
+    .proof = verify_case_64_proof,
+    .public_inputs = &verify_case_64_public_inputs,
+};
+
+const verify_case_64_failing_module_sizes = [_]usize{};
+
+const verify_case_64_failing_round_0_cells = [_]protocol.Scalar{};
+
+const verify_case_64_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_64_failing_round_2_cells = [_]protocol.Scalar{
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 2095366691 }, .a1 = .{ .value = 1204019039 } }, .B1 = .{ .a0 = .{ .value = 329846865 }, .a1 = .{ .value = 619663266 } }, .B2 = .{ .a0 = .{ .value = 723883801 }, .a1 = .{ .value = 2027416210 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 692363039 }, .a1 = .{ .value = 1578528658 } }, .B1 = .{ .a0 = .{ .value = 1179858044 }, .a1 = .{ .value = 125499083 } }, .B2 = .{ .a0 = .{ .value = 352934268 }, .a1 = .{ .value = 605207799 } } } },
+};
+
+const verify_case_64_failing_rounds = [_]protocol.RoundMessage{
+    .{ .commitment = commitment.Commitment{ .{ .value = 2105697045 }, .{ .value = 268550042 }, .{ .value = 2085985480 }, .{ .value = 1029676627 }, .{ .value = 1426761719 }, .{ .value = 370317748 }, .{ .value = 252565774 }, .{ .value = 139484695 } }, .cells = &verify_case_64_failing_round_0_cells },
+    .{ .commitment = commitment.Commitment{ .{ .value = 956288079 }, .{ .value = 397437094 }, .{ .value = 1962813533 }, .{ .value = 739094621 }, .{ .value = 1322649982 }, .{ .value = 1137852462 }, .{ .value = 1862443710 }, .{ .value = 1752921074 } }, .cells = &verify_case_64_failing_round_1_cells },
+    .{ .cells = &verify_case_64_failing_round_2_cells },
+};
+
+const verify_case_64_failing_pcs_opening = verifier.PcsOpening{ .entry_claims = &.{ &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 2095366691 }, .a1 = .{ .value = 1204019039 } }, .B1 = .{ .a0 = .{ .value = 329846865 }, .a1 = .{ .value = 619663266 } }, .B2 = .{ .a0 = .{ .value = 723883801 }, .a1 = .{ .value = 2027416210 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 692363039 }, .a1 = .{ .value = 1578528658 } }, .B1 = .{ .a0 = .{ .value = 1179858044 }, .a1 = .{ .value = 125499083 } }, .B2 = .{ .a0 = .{ .value = 352934268 }, .a1 = .{ .value = 605207799 } } }} }, .proof = pcs.OpeningProof{ .input_queries = &.{&.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 877072844 }, .{ .value = 1897002136 }, .{ .value = 1100902540 }, .{ .value = 2028413641 }, .{ .value = 944711808 }, .{ .value = 2100988245 }, .{ .value = 1239983494 }, .{ .value = 255072204 } }, commitment.Commitment{ .{ .value = 1436093731 }, .{ .value = 845437060 }, .{ .value = 1871026680 }, .{ .value = 438325177 }, .{ .value = 1309201759 }, .{ .value = 724188914 }, .{ .value = 1898500284 }, .{ .value = 429866436 } } }, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{.{ .value = 7 }}, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{.{ .value = 7 }}, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 426912368 }, .{ .value = 1238439083 }, .{ .value = 548193470 }, .{ .value = 1196726038 }, .{ .value = 1723969764 }, .{ .value = 674630509 }, .{ .value = 1431904712 }, .{ .value = 473166337 } }, commitment.Commitment{ .{ .value = 2114814211 }, .{ .value = 543773166 }, .{ .value = 249407728 }, .{ .value = 519222515 }, .{ .value = 2068516579 }, .{ .value = 1257080046 }, .{ .value = 1839630474 }, .{ .value = 684707353 } } }, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 190095360 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 342581271 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} } } } } }}, .fri_proof = fri.Proof{ .round_roots = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 1864912229 }, .{ .value = 1739116916 }, .{ .value = 1390732954 }, .{ .value = 795110809 }, .{ .value = 749464226 }, .{ .value = 773990933 }, .{ .value = 1179825408 }, .{ .value = 1572729299 } }}, .final_poly = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1405370446 }, .a1 = .{ .value = 1278375728 } }, .B1 = .{ .a0 = .{ .value = 252426103 }, .a1 = .{ .value = 522346771 } }, .B2 = .{ .a0 = .{ .value = 1082911221 }, .a1 = .{ .value = 752732400 } } }}, .running_queries = &.{&.{merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 221814954 }, .{ .value = 119838335 }, .{ .value = 1373950630 }, .{ .value = 337611992 }, .{ .value = 309578566 }, .{ .value = 1993080925 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 774785489 }, .{ .value = 1450722840 }, .{ .value = 1091782099 }, .{ .value = 1493079099 }, .{ .value = 1417604982 }, .{ .value = 884042127 }, .{ .value = 1315948943 }, .{ .value = 811566028 } }, commitment.Commitment{ .{ .value = 1745993436 }, .{ .value = 1916812246 }, .{ .value = 1079957237 }, .{ .value = 2086846718 }, .{ .value = 1174418460 }, .{ .value = 2102295572 }, .{ .value = 0 }, .{ .value = 0 } } } }}} } } };
+
+const verify_case_64_failing_proof = verifier.Proof{
+    .rounds = &verify_case_64_failing_rounds,
+    .module_sizes = &verify_case_64_failing_module_sizes,
+    .pcs_opening = verify_case_64_failing_pcs_opening,
+};
+
+const verify_case_64_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_64_failing_input = verifier.VerifyInput{
+    .proof = verify_case_64_failing_proof,
+    .public_inputs = &verify_case_64_failing_public_inputs,
+};
+
+const verify_case_64_systems = verifier.Systems{ .public_input = system_64_public_input, .vanishing = system_64, .logderivativesum = system_64_logderiv, .rowlimit = system_64_rowlimit, .pcs = verify_case_64_pcs_system };
+
+pub const system_65_spec = protocol.Spec{
+    .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
+    .round_coin_offsets = &[_]usize{ 0, 0, 1, 2 },
+    .total_round_coins = 2,
+    .dynamic_module_count = 1,
+};
+pub const system_65_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 2 },
+    .refs = &[_]protocol.public_input.CellRef{},
+};
+
+// scenario: "lagrange-sel-dyn"
+
+// expression: "boundary"
+const system_65_module_0_expressions = [_]vanishing.ExprNode{
+    .{ .lagrange_selector = 1 },
+    .{ .column_claim = 0 }, // col: "col"
+    .{ .constant = field.Element.init(99) },
+    .{ .op = .{ .operator = .sub, .operands = &.{ 1, 2 } } },
+    .{ .op = .{ .operator = .mul, .operands = &.{ 0, 3 } } },
+};
+
+const system_65_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
+    // expression: "boundary"
+    .{ .expression = 4, .cancelled_positions = &.{} },
+};
+
+const system_65_module_0_buckets = [_]vanishing.Bucket{
+    .{ .ratio = 1, .vanishings = &system_65_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
+};
+
+const system_65_modules = [_]vanishing.Module{
+    // module: "mod"
+    .{ .size = .{ .dynamic = 0 }, .expressions = &system_65_module_0_expressions, .buckets = &system_65_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 0, .eval_coin_index = 1 },
+};
+
+// system: "lagrange-sel-dyn"
+const system_65 = vanishing.System{
+    .modules = &system_65_modules,
+    .dynamic_module_count = 1,
+    .total_witness_claims = 1,
+    .total_quotient_claims = 1,
+};
+
+// logderiv system: "lagrange-sel-dyn"
+const system_65_logderiv_queries = [_]logderivativesum.Query{};
+
+const system_65_logderiv = logderivativesum.System{ .queries = &system_65_logderiv_queries };
+// rowlimit system: "lagrange-sel-dyn"
+const system_65_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_65_rowlimit = rowlimit.System{ .checks = &system_65_rowlimit_checks };
+const verify_case_65_pcs_witness_map = [_]pcs.ClaimRef{
+    .{ .col_decl_idx = 0, .shift = 0 },
+};
+const verify_case_65_pcs_quotient_map = [_]pcs.ClaimRef{
+    .{ .col_decl_idx = 1, .shift = 0 },
+};
+const verify_case_65_pcs_batch_roots = [_]pcs.BatchRoot{
+    .{ .round = 0 },
+    .{ .round = 1 },
+};
+
+pub const verify_case_65_pcs_system = pcs.System{
+    .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 1 },
+    .columns = &.{
+        .{ .batch_idx = 0, .is_ext = false, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts = &[_]isize{0} },
+        .{ .batch_idx = 1, .is_ext = true, .size = .{ .dynamic = .{ .index = 0, .min_size_log2 = 0 } }, .shifts = &[_]isize{0} },
+    },
+    .num_batches = 2,
+    .max_entries = 2,
+    .max_size_log2 = 22,
+    .witness_map = &verify_case_65_pcs_witness_map,
+    .quotient_map = &verify_case_65_pcs_quotient_map,
+    .batch_roots = &verify_case_65_pcs_batch_roots,
+    .zeta_coin_index = 1,
+};
+const verify_case_65_module_sizes = [_]usize{4};
+
+const verify_case_65_round_0_cells = [_]protocol.Scalar{};
+
+const verify_case_65_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_65_round_2_cells = [_]protocol.Scalar{
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 51453353 }, .a1 = .{ .value = 468423403 } }, .B1 = .{ .a0 = .{ .value = 736838586 }, .a1 = .{ .value = 1088623528 } }, .B2 = .{ .a0 = .{ .value = 2022263907 }, .a1 = .{ .value = 294040827 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 2003637155 }, .a1 = .{ .value = 1785115481 } }, .B1 = .{ .a0 = .{ .value = 923292968 }, .a1 = .{ .value = 1863710667 } }, .B2 = .{ .a0 = .{ .value = 187523825 }, .a1 = .{ .value = 676375374 } } } },
+};
+
+const verify_case_65_rounds = [_]protocol.RoundMessage{
+    .{ .commitment = commitment.Commitment{ .{ .value = 384245973 }, .{ .value = 1750333870 }, .{ .value = 1144366501 }, .{ .value = 207687103 }, .{ .value = 2121644243 }, .{ .value = 544988254 }, .{ .value = 1340069080 }, .{ .value = 1535280166 } }, .cells = &verify_case_65_round_0_cells },
+    .{ .commitment = commitment.Commitment{ .{ .value = 1888775505 }, .{ .value = 7736986 }, .{ .value = 926806928 }, .{ .value = 264011065 }, .{ .value = 1498548860 }, .{ .value = 980676532 }, .{ .value = 1178247900 }, .{ .value = 1658899573 } }, .cells = &verify_case_65_round_1_cells },
+    .{ .cells = &verify_case_65_round_2_cells },
+};
+
+const verify_case_65_pcs_opening = verifier.PcsOpening{ .entry_claims = &.{ &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 51453353 }, .a1 = .{ .value = 468423403 } }, .B1 = .{ .a0 = .{ .value = 736838586 }, .a1 = .{ .value = 1088623528 } }, .B2 = .{ .a0 = .{ .value = 2022263907 }, .a1 = .{ .value = 294040827 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 2003637155 }, .a1 = .{ .value = 1785115481 } }, .B1 = .{ .a0 = .{ .value = 923292968 }, .a1 = .{ .value = 1863710667 } }, .B2 = .{ .a0 = .{ .value = 187523825 }, .a1 = .{ .value = 676375374 } } }} }, .proof = pcs.OpeningProof{ .input_queries = &.{&.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1723568860 }, .{ .value = 252124735 }, .{ .value = 2002581456 }, .{ .value = 1249780961 }, .{ .value = 407126701 }, .{ .value = 188087330 }, .{ .value = 986362846 }, .{ .value = 288635176 } }, commitment.Commitment{ .{ .value = 1763395994 }, .{ .value = 1874417983 }, .{ .value = 626257608 }, .{ .value = 794180427 }, .{ .value = 1910470961 }, .{ .value = 771073755 }, .{ .value = 1941702423 }, .{ .value = 492053874 } } }, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{.{ .value = 189613640 }}, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{.{ .value = 579123654 }}, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1774506601 }, .{ .value = 651204616 }, .{ .value = 293426138 }, .{ .value = 1186285179 }, .{ .value = 1408401096 }, .{ .value = 38557803 }, .{ .value = 1736087799 }, .{ .value = 407749412 } }, commitment.Commitment{ .{ .value = 1307241902 }, .{ .value = 1676395534 }, .{ .value = 1533181239 }, .{ .value = 683533863 }, .{ .value = 746933067 }, .{ .value = 1170673796 }, .{ .value = 1845722434 }, .{ .value = 2077331624 } } }, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 926338934 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1396551842 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} } } } } }}, .fri_proof = fri.Proof{ .round_roots = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 92199719 }, .{ .value = 6335898 }, .{ .value = 1855359992 }, .{ .value = 1270583593 }, .{ .value = 612826081 }, .{ .value = 1945022568 }, .{ .value = 689208052 }, .{ .value = 840545958 } }}, .final_poly = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 210198832 }, .a1 = .{ .value = 1174878213 } }, .B1 = .{ .a0 = .{ .value = 1841653754 }, .a1 = .{ .value = 2018000430 } }, .B2 = .{ .a0 = .{ .value = 524113708 }, .a1 = .{ .value = 1326927240 } } }}, .running_queries = &.{&.{merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 1860587092 }, .{ .value = 1900481630 }, .{ .value = 1990942366 }, .{ .value = 1229115099 }, .{ .value = 18688667 }, .{ .value = 1998491852 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1065013393 }, .{ .value = 1553300028 }, .{ .value = 318193397 }, .{ .value = 982597412 }, .{ .value = 811512271 }, .{ .value = 486802742 }, .{ .value = 1204243489 }, .{ .value = 745053327 } }, commitment.Commitment{ .{ .value = 1860587138 }, .{ .value = 1900481630 }, .{ .value = 1990942366 }, .{ .value = 1229115099 }, .{ .value = 18688667 }, .{ .value = 1998491852 }, .{ .value = 0 }, .{ .value = 0 } } } }}} } } };
+
+const verify_case_65_proof = verifier.Proof{
+    .rounds = &verify_case_65_rounds,
+    .module_sizes = &verify_case_65_module_sizes,
+    .pcs_opening = verify_case_65_pcs_opening,
+};
+
+const verify_case_65_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_65_input = verifier.VerifyInput{
+    .proof = verify_case_65_proof,
+    .public_inputs = &verify_case_65_public_inputs,
+};
+
+const verify_case_65_failing_module_sizes = [_]usize{4};
+
+const verify_case_65_failing_round_0_cells = [_]protocol.Scalar{};
+
+const verify_case_65_failing_round_1_cells = [_]protocol.Scalar{};
+
+const verify_case_65_failing_round_2_cells = [_]protocol.Scalar{
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 969687231 }, .a1 = .{ .value = 650001449 } }, .B1 = .{ .a0 = .{ .value = 1330845296 }, .a1 = .{ .value = 1837974629 } }, .B2 = .{ .a0 = .{ .value = 668715247 }, .a1 = .{ .value = 406611711 } } } },
+    .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 236242309 }, .a1 = .{ .value = 213296253 } }, .B1 = .{ .a0 = .{ .value = 841566489 }, .a1 = .{ .value = 1203754865 } }, .B2 = .{ .a0 = .{ .value = 404549995 }, .a1 = .{ .value = 1190020053 } } } },
+};
+
+const verify_case_65_failing_rounds = [_]protocol.RoundMessage{
+    .{ .commitment = commitment.Commitment{ .{ .value = 2105697045 }, .{ .value = 268550042 }, .{ .value = 2085985480 }, .{ .value = 1029676627 }, .{ .value = 1426761719 }, .{ .value = 370317748 }, .{ .value = 252565774 }, .{ .value = 139484695 } }, .cells = &verify_case_65_failing_round_0_cells },
+    .{ .commitment = commitment.Commitment{ .{ .value = 956288079 }, .{ .value = 397437094 }, .{ .value = 1962813533 }, .{ .value = 739094621 }, .{ .value = 1322649982 }, .{ .value = 1137852462 }, .{ .value = 1862443710 }, .{ .value = 1752921074 } }, .cells = &verify_case_65_failing_round_1_cells },
+    .{ .cells = &verify_case_65_failing_round_2_cells },
+};
+
+const verify_case_65_failing_pcs_opening = verifier.PcsOpening{ .entry_claims = &.{ &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 969687231 }, .a1 = .{ .value = 650001449 } }, .B1 = .{ .a0 = .{ .value = 1330845296 }, .a1 = .{ .value = 1837974629 } }, .B2 = .{ .a0 = .{ .value = 668715247 }, .a1 = .{ .value = 406611711 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 236242309 }, .a1 = .{ .value = 213296253 } }, .B1 = .{ .a0 = .{ .value = 841566489 }, .a1 = .{ .value = 1203754865 } }, .B2 = .{ .a0 = .{ .value = 404549995 }, .a1 = .{ .value = 1190020053 } } }} }, .proof = pcs.OpeningProof{ .input_queries = &.{&.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 482740896 }, .{ .value = 1379501482 }, .{ .value = 252578076 }, .{ .value = 689757026 }, .{ .value = 1687130295 }, .{ .value = 482213853 }, .{ .value = 1144784946 }, .{ .value = 1953872 } }, commitment.Commitment{ .{ .value = 574448861 }, .{ .value = 1930652014 }, .{ .value = 237304209 }, .{ .value = 332349899 }, .{ .value = 1251291267 }, .{ .value = 280739133 }, .{ .value = 1385793280 }, .{ .value = 626136868 } } }, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{.{ .value = 1785582447 }}, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{.{ .value = 1105505440 }}, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1863664056 }, .{ .value = 1382689898 }, .{ .value = 321136189 }, .{ .value = 1951812293 }, .{ .value = 496840374 }, .{ .value = 640813575 }, .{ .value = 1382864552 }, .{ .value = 1577050634 } }, commitment.Commitment{ .{ .value = 551793198 }, .{ .value = 1341590964 }, .{ .value = 1208846287 }, .{ .value = 1695942395 }, .{ .value = 1873646678 }, .{ .value = 2101916218 }, .{ .value = 1430997699 }, .{ .value = 1340059163 } } }, .leaves = &.{ null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 221738192 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 500929351 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } }} } } } } }}, .fri_proof = fri.Proof{ .round_roots = &[_]commitment.Commitment{commitment.Commitment{ .{ .value = 440020940 }, .{ .value = 1618990238 }, .{ .value = 1241775030 }, .{ .value = 694304239 }, .{ .value = 1126770329 }, .{ .value = 184167897 }, .{ .value = 921101333 }, .{ .value = 684748868 } }}, .final_poly = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 608416271 }, .a1 = .{ .value = 1389378233 } }, .B1 = .{ .a0 = .{ .value = 1449932867 }, .a1 = .{ .value = 1335967712 } }, .B2 = .{ .a0 = .{ .value = 1933766984 }, .a1 = .{ .value = 1993026969 } } }}, .running_queries = &.{&.{merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 602253625 }, .{ .value = 1823255396 }, .{ .value = 415459290 }, .{ .value = 274770260 }, .{ .value = 1277679634 }, .{ .value = 437831349 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 704562581 }, .{ .value = 260450509 }, .{ .value = 49849627 }, .{ .value = 1821682784 }, .{ .value = 320357568 }, .{ .value = 280262292 }, .{ .value = 1077307431 }, .{ .value = 120501204 } }, commitment.Commitment{ .{ .value = 637342097 }, .{ .value = 89543823 }, .{ .value = 1811378745 }, .{ .value = 1457275943 }, .{ .value = 1726801347 }, .{ .value = 1705943328 }, .{ .value = 0 }, .{ .value = 0 } } } }}} } } };
+
+const verify_case_65_failing_proof = verifier.Proof{
+    .rounds = &verify_case_65_failing_rounds,
+    .module_sizes = &verify_case_65_failing_module_sizes,
+    .pcs_opening = verify_case_65_failing_pcs_opening,
+};
+
+const verify_case_65_failing_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_65_failing_input = verifier.VerifyInput{
+    .proof = verify_case_65_failing_proof,
+    .public_inputs = &verify_case_65_failing_public_inputs,
+};
+
+const verify_case_65_systems = verifier.Systems{ .public_input = system_65_public_input, .vanishing = system_65, .logderivativesum = system_65_logderiv, .rowlimit = system_65_rowlimit, .pcs = verify_case_65_pcs_system };
+
+pub const system_66_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 1, 0 },
     .round_coin_offsets = &[_]usize{ 0, 0, 2, 2, 4, 5 },
     .total_round_coins = 5,
     .dynamic_module_count = 0,
 };
+pub const system_66_public_input = protocol.public_input.Spec{
+    .round_cell_counts = &[_]usize{ 0, 0, 3, 0, 21 },
+    .refs = &[_]protocol.public_input.CellRef{},
+};
 
 // scenario: "lk-multi-col-bench"
 
-const system_64_module_0_expressions = [_]vanishing.ExprNode{
+const system_66_module_0_expressions = [_]vanishing.ExprNode{
     .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
@@ -11599,24 +12832,24 @@ const system_64_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .mul, .operands = &.{ 54, 55 } } },
 };
 
-const system_64_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
+const system_66_module_0_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b0-k0"
     .{ .expression = 25, .cancelled_positions = &.{0} },
     // expression: "global"
     .{ .expression = 30, .cancelled_positions = &.{} },
 };
 
-const system_64_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
+const system_66_module_0_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
     .{ .expression = 56, .cancelled_positions = &.{} },
 };
 
-const system_64_module_0_buckets = [_]vanishing.Bucket{
-    .{ .ratio = 1, .vanishings = &system_64_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
-    .{ .ratio = 2, .vanishings = &system_64_module_0_bucket_1_vanishings, .quotient_claim_offset = 1 },
+const system_66_module_0_buckets = [_]vanishing.Bucket{
+    .{ .ratio = 1, .vanishings = &system_66_module_0_bucket_0_vanishings, .quotient_claim_offset = 0 },
+    .{ .ratio = 2, .vanishings = &system_66_module_0_bucket_1_vanishings, .quotient_claim_offset = 1 },
 };
 
-const system_64_module_1_expressions = [_]vanishing.ExprNode{
+const system_66_module_1_expressions = [_]vanishing.ExprNode{
     .{ .constant = field.Element.init(1) },
     .{ .column_claim = 0 }, // col: "z-b1-k0"
     .{ .column_claim = 1 }, // col: "z-b1-k0"
@@ -11674,64 +12907,64 @@ const system_64_module_1_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .mul, .operands = &.{ 52, 53 } } },
 };
 
-const system_64_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
+const system_66_module_1_bucket_0_vanishings = [_]vanishing.Vanishing{
     // expression: "z-recurrence-b1-k0"
     .{ .expression = 24, .cancelled_positions = &.{0} },
     // expression: "global"
     .{ .expression = 29, .cancelled_positions = &.{} },
 };
 
-const system_64_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
+const system_66_module_1_bucket_1_vanishings = [_]vanishing.Vanishing{
     // expression: "global"
     .{ .expression = 54, .cancelled_positions = &.{} },
 };
 
-const system_64_module_1_buckets = [_]vanishing.Bucket{
-    .{ .ratio = 1, .vanishings = &system_64_module_1_bucket_0_vanishings, .quotient_claim_offset = 3 },
-    .{ .ratio = 2, .vanishings = &system_64_module_1_bucket_1_vanishings, .quotient_claim_offset = 4 },
+const system_66_module_1_buckets = [_]vanishing.Bucket{
+    .{ .ratio = 1, .vanishings = &system_66_module_1_bucket_0_vanishings, .quotient_claim_offset = 3 },
+    .{ .ratio = 2, .vanishings = &system_66_module_1_bucket_1_vanishings, .quotient_claim_offset = 4 },
 };
 
-const system_64_modules = [_]vanishing.Module{
+const system_66_modules = [_]vanishing.Module{
     // module: "modT"
-    .{ .size = .{ .static = 1024 }, .expressions = &system_64_module_0_expressions, .buckets = &system_64_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 2, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 1024 }, .expressions = &system_66_module_0_expressions, .buckets = &system_66_module_0_buckets, .witness_claim_offset = 0, .merge_coin_index = 2, .eval_coin_index = 4 },
     // module: "modS"
-    .{ .size = .{ .static = 1024 }, .expressions = &system_64_module_1_expressions, .buckets = &system_64_module_1_buckets, .witness_claim_offset = 8, .merge_coin_index = 3, .eval_coin_index = 4 },
+    .{ .size = .{ .static = 1024 }, .expressions = &system_66_module_1_expressions, .buckets = &system_66_module_1_buckets, .witness_claim_offset = 8, .merge_coin_index = 3, .eval_coin_index = 4 },
 };
 
 // system: "lk-multi-col-bench"
-const system_64 = vanishing.System{
-    .modules = &system_64_modules,
+const system_66 = vanishing.System{
+    .modules = &system_66_modules,
     .dynamic_module_count = 0,
     .total_witness_claims = 15,
     .total_quotient_claims = 6,
 };
 
-const system_64_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
+const system_66_logderiv_query_0_zfinal_refs = [_]logderivativesum.ScalarRef{
     .{ .round = 2, .index = 1 },
     .{ .round = 2, .index = 2 },
 };
 
 // logderiv system: "lk-multi-col-bench"
-const system_64_logderiv_queries = [_]logderivativesum.Query{
-    .{ .z_final_refs = &system_64_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-multi-col-bench/lookuptologderiv/aggregated"
+const system_66_logderiv_queries = [_]logderivativesum.Query{
+    .{ .z_final_refs = &system_66_logderiv_query_0_zfinal_refs, .result_ref = .{ .round = 2, .index = 0 }, .result_is_zero = true }, // query: "lk-multi-col-bench/lookuptologderiv/aggregated"
 };
 
-const system_64_logderiv = logderivativesum.System{ .queries = &system_64_logderiv_queries };
-const system_64_rowlimit_check_0_included_modules = [_]rowlimit.ModuleSize{
+const system_66_logderiv = logderivativesum.System{ .queries = &system_66_logderiv_queries };
+const system_66_rowlimit_check_0_included_modules = [_]rowlimit.ModuleSize{
     .{ .static = 1024 },
 };
 
-const system_64_rowlimit_check_0_includings_modules = [_]rowlimit.ModuleSize{
+const system_66_rowlimit_check_0_includings_modules = [_]rowlimit.ModuleSize{
     .{ .static = 1024 },
 };
 
 // rowlimit system: "lk-multi-col-bench"
-const system_64_rowlimit_checks = [_]rowlimit.Check{
-    .{ .included_modules = &system_64_rowlimit_check_0_included_modules, .includings_modules = &system_64_rowlimit_check_0_includings_modules, .limit = 1073741824 },
+const system_66_rowlimit_checks = [_]rowlimit.Check{
+    .{ .included_modules = &system_66_rowlimit_check_0_included_modules, .includings_modules = &system_66_rowlimit_check_0_includings_modules, .limit = 1073741824 },
 };
 
-const system_64_rowlimit = rowlimit.System{ .checks = &system_64_rowlimit_checks };
-const verify_case_64_pcs_witness_map = [_]pcs.ClaimRef{
+const system_66_rowlimit = rowlimit.System{ .checks = &system_66_rowlimit_checks };
+const verify_case_66_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 10, .shift = 0 },
     .{ .col_decl_idx = 11, .shift = 0 },
     .{ .col_decl_idx = 11, .shift = 1 },
@@ -11748,7 +12981,7 @@ const verify_case_64_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 3, .shift = 0 },
     .{ .col_decl_idx = 1, .shift = 0 },
 };
-const verify_case_64_pcs_quotient_map = [_]pcs.ClaimRef{
+const verify_case_66_pcs_quotient_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 13, .shift = 0 },
     .{ .col_decl_idx = 14, .shift = 0 },
     .{ .col_decl_idx = 15, .shift = 0 },
@@ -11756,13 +12989,13 @@ const verify_case_64_pcs_quotient_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 17, .shift = 0 },
     .{ .col_decl_idx = 18, .shift = 0 },
 };
-const verify_case_64_pcs_batch_roots = [_]pcs.BatchRoot{
+const verify_case_66_pcs_batch_roots = [_]pcs.BatchRoot{
     .{ .round = 0 },
     .{ .round = 2 },
     .{ .round = 3 },
 };
 
-pub const verify_case_64_pcs_system = pcs.System{
+pub const verify_case_66_pcs_system = pcs.System{
     .envelope_params = fri.Params{ .log_codeword_size = 23, .log_plaintext_size = 22, .log_final_poly_size = 0, .num_queries = 1 },
     .columns = &.{
         .{ .batch_idx = 0, .is_ext = false, .size = .{ .static = 10 }, .shifts = &[_]isize{0} },
@@ -11788,26 +13021,26 @@ pub const verify_case_64_pcs_system = pcs.System{
     .num_batches = 3,
     .max_entries = 19,
     .max_size_log2 = 22,
-    .witness_map = &verify_case_64_pcs_witness_map,
-    .quotient_map = &verify_case_64_pcs_quotient_map,
-    .batch_roots = &verify_case_64_pcs_batch_roots,
+    .witness_map = &verify_case_66_pcs_witness_map,
+    .quotient_map = &verify_case_66_pcs_quotient_map,
+    .batch_roots = &verify_case_66_pcs_batch_roots,
     .zeta_coin_index = 4,
 };
-const verify_case_64_module_sizes = [_]usize{};
+const verify_case_66_module_sizes = [_]usize{};
 
-const verify_case_64_round_0_cells = [_]protocol.Scalar{};
+const verify_case_66_round_0_cells = [_]protocol.Scalar{};
 
-const verify_case_64_round_1_cells = [_]protocol.Scalar{};
+const verify_case_66_round_1_cells = [_]protocol.Scalar{};
 
-const verify_case_64_round_2_cells = [_]protocol.Scalar{
+const verify_case_66_round_2_cells = [_]protocol.Scalar{
     .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B1 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } }, .B2 = .{ .a0 = .{ .value = 0 }, .a1 = .{ .value = 0 } } } },
     .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1687642325 }, .a1 = .{ .value = 1256697355 } }, .B1 = .{ .a0 = .{ .value = 2105160424 }, .a1 = .{ .value = 1111543593 } }, .B2 = .{ .a0 = .{ .value = 2055038394 }, .a1 = .{ .value = 486990369 } } } },
     .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 443064108 }, .a1 = .{ .value = 874009078 } }, .B1 = .{ .a0 = .{ .value = 25546009 }, .a1 = .{ .value = 1019162840 } }, .B2 = .{ .a0 = .{ .value = 75668039 }, .a1 = .{ .value = 1643716064 } } } },
 };
 
-const verify_case_64_round_3_cells = [_]protocol.Scalar{};
+const verify_case_66_round_3_cells = [_]protocol.Scalar{};
 
-const verify_case_64_round_4_cells = [_]protocol.Scalar{
+const verify_case_66_round_4_cells = [_]protocol.Scalar{
     .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1296311781 }, .a1 = .{ .value = 676430850 } }, .B1 = .{ .a0 = .{ .value = 1687713050 }, .a1 = .{ .value = 203742254 } }, .B2 = .{ .a0 = .{ .value = 826383078 }, .a1 = .{ .value = 920495141 } } } },
     .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 871994390 }, .a1 = .{ .value = 1822043361 } }, .B1 = .{ .a0 = .{ .value = 1982402357 }, .a1 = .{ .value = 1624036200 } }, .B2 = .{ .a0 = .{ .value = 329224840 }, .a1 = .{ .value = 1108185838 } } } },
     .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 1161677615 }, .a1 = .{ .value = 263107718 } }, .B1 = .{ .a0 = .{ .value = 1404812741 }, .a1 = .{ .value = 1986336195 } }, .B2 = .{ .a0 = .{ .value = 1529334544 }, .a1 = .{ .value = 1455360755 } } } },
@@ -11831,23 +13064,30 @@ const verify_case_64_round_4_cells = [_]protocol.Scalar{
     .{ .ext = ext.Ext{ .B0 = .{ .a0 = .{ .value = 276243485 }, .a1 = .{ .value = 1785199062 } }, .B1 = .{ .a0 = .{ .value = 2017419026 }, .a1 = .{ .value = 2046610604 } }, .B2 = .{ .a0 = .{ .value = 102257827 }, .a1 = .{ .value = 1932165356 } } } },
 };
 
-const verify_case_64_rounds = [_]protocol.RoundMessage{
-    .{ .commitment = commitment.Commitment{ .{ .value = 1394786126 }, .{ .value = 1105150694 }, .{ .value = 1513987270 }, .{ .value = 852528472 }, .{ .value = 687675132 }, .{ .value = 1984122243 }, .{ .value = 445667845 }, .{ .value = 2048728754 } }, .cells = &verify_case_64_round_0_cells },
-    .{ .cells = &verify_case_64_round_1_cells },
-    .{ .commitment = commitment.Commitment{ .{ .value = 1871815164 }, .{ .value = 1147780051 }, .{ .value = 1668414940 }, .{ .value = 1729682138 }, .{ .value = 901316470 }, .{ .value = 1350712246 }, .{ .value = 569687227 }, .{ .value = 464296744 } }, .cells = &verify_case_64_round_2_cells },
-    .{ .commitment = commitment.Commitment{ .{ .value = 860277430 }, .{ .value = 1199856879 }, .{ .value = 659858809 }, .{ .value = 1405713718 }, .{ .value = 1858458965 }, .{ .value = 1743654233 }, .{ .value = 1211415230 }, .{ .value = 1241474482 } }, .cells = &verify_case_64_round_3_cells },
-    .{ .cells = &verify_case_64_round_4_cells },
+const verify_case_66_rounds = [_]protocol.RoundMessage{
+    .{ .commitment = commitment.Commitment{ .{ .value = 1394786126 }, .{ .value = 1105150694 }, .{ .value = 1513987270 }, .{ .value = 852528472 }, .{ .value = 687675132 }, .{ .value = 1984122243 }, .{ .value = 445667845 }, .{ .value = 2048728754 } }, .cells = &verify_case_66_round_0_cells },
+    .{ .cells = &verify_case_66_round_1_cells },
+    .{ .commitment = commitment.Commitment{ .{ .value = 1871815164 }, .{ .value = 1147780051 }, .{ .value = 1668414940 }, .{ .value = 1729682138 }, .{ .value = 901316470 }, .{ .value = 1350712246 }, .{ .value = 569687227 }, .{ .value = 464296744 } }, .cells = &verify_case_66_round_2_cells },
+    .{ .commitment = commitment.Commitment{ .{ .value = 860277430 }, .{ .value = 1199856879 }, .{ .value = 659858809 }, .{ .value = 1405713718 }, .{ .value = 1858458965 }, .{ .value = 1743654233 }, .{ .value = 1211415230 }, .{ .value = 1241474482 } }, .cells = &verify_case_66_round_3_cells },
+    .{ .cells = &verify_case_66_round_4_cells },
 };
 
-const verify_case_64_pcs_opening = verifier.PcsOpening{ .entry_claims = &.{ &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 194671669 }, .a1 = .{ .value = 213914338 } }, .B1 = .{ .a0 = .{ .value = 1508759332 }, .a1 = .{ .value = 965769489 } }, .B2 = .{ .a0 = .{ .value = 1931913932 }, .a1 = .{ .value = 563845346 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1790989978 }, .a1 = .{ .value = 792990865 } }, .B1 = .{ .a0 = .{ .value = 1029894233 }, .a1 = .{ .value = 1986832121 } }, .B2 = .{ .a0 = .{ .value = 415338600 }, .a1 = .{ .value = 1832893812 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 194671670 }, .a1 = .{ .value = 213914338 } }, .B1 = .{ .a0 = .{ .value = 1508759332 }, .a1 = .{ .value = 965769489 } }, .B2 = .{ .a0 = .{ .value = 1931913932 }, .a1 = .{ .value = 563845346 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1790989979 }, .a1 = .{ .value = 792990865 } }, .B1 = .{ .a0 = .{ .value = 1029894233 }, .a1 = .{ .value = 1986832121 } }, .B2 = .{ .a0 = .{ .value = 415338600 }, .a1 = .{ .value = 1832893812 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 194671671 }, .a1 = .{ .value = 213914338 } }, .B1 = .{ .a0 = .{ .value = 1508759332 }, .a1 = .{ .value = 965769489 } }, .B2 = .{ .a0 = .{ .value = 1931913932 }, .a1 = .{ .value = 563845346 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1790989980 }, .a1 = .{ .value = 792990865 } }, .B1 = .{ .a0 = .{ .value = 1029894233 }, .a1 = .{ .value = 1986832121 } }, .B2 = .{ .a0 = .{ .value = 415338600 }, .a1 = .{ .value = 1832893812 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 194671672 }, .a1 = .{ .value = 213914338 } }, .B1 = .{ .a0 = .{ .value = 1508759332 }, .a1 = .{ .value = 965769489 } }, .B2 = .{ .a0 = .{ .value = 1931913932 }, .a1 = .{ .value = 563845346 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1790989981 }, .a1 = .{ .value = 792990865 } }, .B1 = .{ .a0 = .{ .value = 1029894233 }, .a1 = .{ .value = 1986832121 } }, .B2 = .{ .a0 = .{ .value = 415338600 }, .a1 = .{ .value = 1832893812 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 194671673 }, .a1 = .{ .value = 213914338 } }, .B1 = .{ .a0 = .{ .value = 1508759332 }, .a1 = .{ .value = 965769489 } }, .B2 = .{ .a0 = .{ .value = 1931913932 }, .a1 = .{ .value = 563845346 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1790989982 }, .a1 = .{ .value = 792990865 } }, .B1 = .{ .a0 = .{ .value = 1029894233 }, .a1 = .{ .value = 1986832121 } }, .B2 = .{ .a0 = .{ .value = 415338600 }, .a1 = .{ .value = 1832893812 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1296311781 }, .a1 = .{ .value = 676430850 } }, .B1 = .{ .a0 = .{ .value = 1687713050 }, .a1 = .{ .value = 203742254 } }, .B2 = .{ .a0 = .{ .value = 826383078 }, .a1 = .{ .value = 920495141 } } }}, &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 871994390 }, .a1 = .{ .value = 1822043361 } }, .B1 = .{ .a0 = .{ .value = 1982402357 }, .a1 = .{ .value = 1624036200 } }, .B2 = .{ .a0 = .{ .value = 329224840 }, .a1 = .{ .value = 1108185838 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1161677615 }, .a1 = .{ .value = 263107718 } }, .B1 = .{ .a0 = .{ .value = 1404812741 }, .a1 = .{ .value = 1986336195 } }, .B2 = .{ .a0 = .{ .value = 1529334544 }, .a1 = .{ .value = 1455360755 } } } }, &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1010482806 }, .a1 = .{ .value = 649401391 } }, .B1 = .{ .a0 = .{ .value = 1508456076 }, .a1 = .{ .value = 911212973 } }, .B2 = .{ .a0 = .{ .value = 542119637 }, .a1 = .{ .value = 1759917171 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 637299434 }, .a1 = .{ .value = 1983741326 } }, .B1 = .{ .a0 = .{ .value = 1725548912 }, .a1 = .{ .value = 2051553773 } }, .B2 = .{ .a0 = .{ .value = 879127401 }, .a1 = .{ .value = 1927722620 } } } }, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 621033513 }, .a1 = .{ .value = 816364487 } }, .B1 = .{ .a0 = .{ .value = 647064473 }, .a1 = .{ .value = 331573856 } }, .B2 = .{ .a0 = .{ .value = 1267240217 }, .a1 = .{ .value = 940154769 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1448519472 }, .a1 = .{ .value = 1143477877 } }, .B1 = .{ .a0 = .{ .value = 1472279815 }, .a1 = .{ .value = 1471858844 } }, .B2 = .{ .a0 = .{ .value = 1138552499 }, .a1 = .{ .value = 1968000071 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 2015168907 }, .a1 = .{ .value = 255019859 } }, .B1 = .{ .a0 = .{ .value = 881885277 }, .a1 = .{ .value = 228781509 } }, .B2 = .{ .a0 = .{ .value = 1947152615 }, .a1 = .{ .value = 1518150093 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1325218285 }, .a1 = .{ .value = 562596705 } }, .B1 = .{ .a0 = .{ .value = 1204892860 }, .a1 = .{ .value = 970711971 } }, .B2 = .{ .a0 = .{ .value = 1926692972 }, .a1 = .{ .value = 559769562 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1585733805 }, .a1 = .{ .value = 852713048 } }, .B1 = .{ .a0 = .{ .value = 2003486700 }, .a1 = .{ .value = 667550282 } }, .B2 = .{ .a0 = .{ .value = 1925386065 }, .a1 = .{ .value = 340700650 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 276243485 }, .a1 = .{ .value = 1785199062 } }, .B1 = .{ .a0 = .{ .value = 2017419026 }, .a1 = .{ .value = 2046610604 } }, .B2 = .{ .a0 = .{ .value = 102257827 }, .a1 = .{ .value = 1932165356 } } }} }, .proof = pcs.OpeningProof{ .input_queries = &.{&.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 382778008 }, .{ .value = 131321635 }, .{ .value = 1967407178 }, .{ .value = 1311498203 }, .{ .value = 1879026775 }, .{ .value = 1487168492 }, .{ .value = 665587993 }, .{ .value = 138008358 } }, commitment.Commitment{ .{ .value = 459567273 }, .{ .value = 1766127806 }, .{ .value = 734031883 }, .{ .value = 1482698546 }, .{ .value = 906606014 }, .{ .value = 25389146 }, .{ .value = 2054025295 }, .{ .value = 2044938717 } }, commitment.Commitment{ .{ .value = 917486219 }, .{ .value = 1429538252 }, .{ .value = 1912881222 }, .{ .value = 737157307 }, .{ .value = 390180662 }, .{ .value = 1220731329 }, .{ .value = 1045377220 }, .{ .value = 1495875125 } }, commitment.Commitment{ .{ .value = 180375991 }, .{ .value = 347511238 }, .{ .value = 1860068047 }, .{ .value = 1690725487 }, .{ .value = 779122164 }, .{ .value = 910285790 }, .{ .value = 1772889017 }, .{ .value = 66605155 } }, commitment.Commitment{ .{ .value = 1669486728 }, .{ .value = 1745518218 }, .{ .value = 905287571 }, .{ .value = 408144085 }, .{ .value = 1605582077 }, .{ .value = 1121352348 }, .{ .value = 435477696 }, .{ .value = 253246699 } }, commitment.Commitment{ .{ .value = 1588585321 }, .{ .value = 1762937771 }, .{ .value = 142757031 }, .{ .value = 1088847531 }, .{ .value = 1347917866 }, .{ .value = 978413208 }, .{ .value = 1875545727 }, .{ .value = 1314885916 } }, commitment.Commitment{ .{ .value = 1296626154 }, .{ .value = 1025189463 }, .{ .value = 1301331805 }, .{ .value = 1514309606 }, .{ .value = 1094965797 }, .{ .value = 1143704085 }, .{ .value = 128975655 }, .{ .value = 796159911 } }, commitment.Commitment{ .{ .value = 201497204 }, .{ .value = 564610601 }, .{ .value = 467786500 }, .{ .value = 777628461 }, .{ .value = 1750054368 }, .{ .value = 1242236053 }, .{ .value = 342881411 }, .{ .value = 431893700 } }, commitment.Commitment{ .{ .value = 2069320981 }, .{ .value = 660900182 }, .{ .value = 1074547277 }, .{ .value = 717565548 }, .{ .value = 1237122860 }, .{ .value = 1779420279 }, .{ .value = 267973603 }, .{ .value = 792739316 } }, commitment.Commitment{ .{ .value = 1908446555 }, .{ .value = 962415453 }, .{ .value = 1730343726 }, .{ .value = 1716023256 }, .{ .value = 266641995 }, .{ .value = 1400661672 }, .{ .value = 633485037 }, .{ .value = 1601453313 } } }, .leaves = &.{ null, null, null, null, null, null, null, null, null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 1554811610 }, .{ .value = 1373675383 }, .{ .value = 1554811611 }, .{ .value = 1373675384 }, .{ .value = 1554811612 }, .{ .value = 1373675385 }, .{ .value = 1554811613 }, .{ .value = 1373675386 }, .{ .value = 1554811614 }, .{ .value = 1373675387 }, .{ .value = 823276567 } }, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 1192539668 }, .{ .value = 1373675383 }, .{ .value = 1192539669 }, .{ .value = 1373675384 }, .{ .value = 1192539670 }, .{ .value = 1373675385 }, .{ .value = 1192539671 }, .{ .value = 1373675386 }, .{ .value = 1192539672 }, .{ .value = 1373675387 }, .{ .value = 1307429868 } }, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 270139275 }, .{ .value = 611512760 }, .{ .value = 396862328 }, .{ .value = 1790981207 }, .{ .value = 1905829074 }, .{ .value = 302483790 }, .{ .value = 1175625940 }, .{ .value = 2110472881 } }, commitment.Commitment{ .{ .value = 1255044822 }, .{ .value = 1402439381 }, .{ .value = 621402076 }, .{ .value = 1203938064 }, .{ .value = 507270043 }, .{ .value = 1575610975 }, .{ .value = 327100236 }, .{ .value = 1979694361 } }, commitment.Commitment{ .{ .value = 681735683 }, .{ .value = 290470439 }, .{ .value = 1366914092 }, .{ .value = 417028970 }, .{ .value = 405499869 }, .{ .value = 800691063 }, .{ .value = 1326788831 }, .{ .value = 362935927 } }, commitment.Commitment{ .{ .value = 800713876 }, .{ .value = 1589857792 }, .{ .value = 821398633 }, .{ .value = 807053376 }, .{ .value = 1459048320 }, .{ .value = 154899184 }, .{ .value = 700265164 }, .{ .value = 1237761643 } }, commitment.Commitment{ .{ .value = 1967491600 }, .{ .value = 1013563894 }, .{ .value = 1591221741 }, .{ .value = 268461877 }, .{ .value = 408615914 }, .{ .value = 1759802881 }, .{ .value = 1097538125 }, .{ .value = 413652118 } }, commitment.Commitment{ .{ .value = 51968592 }, .{ .value = 1862453139 }, .{ .value = 1833205496 }, .{ .value = 780625258 }, .{ .value = 43771919 }, .{ .value = 200945375 }, .{ .value = 1912169074 }, .{ .value = 1436968212 } }, commitment.Commitment{ .{ .value = 75055402 }, .{ .value = 231141641 }, .{ .value = 1054777673 }, .{ .value = 128286315 }, .{ .value = 1979518357 }, .{ .value = 853882788 }, .{ .value = 1884336522 }, .{ .value = 459593589 } }, commitment.Commitment{ .{ .value = 673199914 }, .{ .value = 901092483 }, .{ .value = 1454788196 }, .{ .value = 1626056933 }, .{ .value = 1883387443 }, .{ .value = 136242916 }, .{ .value = 937062463 }, .{ .value = 1649413559 } }, commitment.Commitment{ .{ .value = 1951617177 }, .{ .value = 1370781377 }, .{ .value = 155952200 }, .{ .value = 1695603724 }, .{ .value = 200264977 }, .{ .value = 1015878177 }, .{ .value = 2020989723 }, .{ .value = 1203103756 } }, commitment.Commitment{ .{ .value = 45395612 }, .{ .value = 1579602723 }, .{ .value = 210435201 }, .{ .value = 106691511 }, .{ .value = 60958700 }, .{ .value = 529192085 }, .{ .value = 932359986 }, .{ .value = 1793875212 } } }, .leaves = &.{ null, null, null, null, null, null, null, null, null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1085288264 }, .a1 = .{ .value = 559459984 } }, .B1 = .{ .a0 = .{ .value = 2064559832 }, .a1 = .{ .value = 1848909491 } }, .B2 = .{ .a0 = .{ .value = 340068670 }, .a1 = .{ .value = 2064267110 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1377001471 }, .a1 = .{ .value = 1153195892 } }, .B1 = .{ .a0 = .{ .value = 1509558789 }, .a1 = .{ .value = 726830655 } }, .B2 = .{ .a0 = .{ .value = 2127043044 }, .a1 = .{ .value = 1763685852 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 383356331 }, .a1 = .{ .value = 674129142 } }, .B1 = .{ .a0 = .{ .value = 890260248 }, .a1 = .{ .value = 1321109002 } }, .B2 = .{ .a0 = .{ .value = 1006743181 }, .a1 = .{ .value = 1678395011 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1194234746 }, .a1 = .{ .value = 1437623309 } }, .B1 = .{ .a0 = .{ .value = 849614209 }, .a1 = .{ .value = 1985688731 } }, .B2 = .{ .a0 = .{ .value = 1815077168 }, .a1 = .{ .value = 63913294 } } } } } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1979221755 }, .{ .value = 1549012819 }, .{ .value = 489787169 }, .{ .value = 1560755763 }, .{ .value = 64605152 }, .{ .value = 1949619994 }, .{ .value = 398586437 }, .{ .value = 2123205739 } }, commitment.Commitment{ .{ .value = 1062128166 }, .{ .value = 1029048920 }, .{ .value = 1284406430 }, .{ .value = 1061209435 }, .{ .value = 537703781 }, .{ .value = 58858551 }, .{ .value = 1743114497 }, .{ .value = 1862131423 } }, commitment.Commitment{ .{ .value = 1829185815 }, .{ .value = 175710785 }, .{ .value = 1050679246 }, .{ .value = 313517957 }, .{ .value = 616823243 }, .{ .value = 1359484870 }, .{ .value = 590213008 }, .{ .value = 1721616623 } }, commitment.Commitment{ .{ .value = 617480792 }, .{ .value = 953568776 }, .{ .value = 725845981 }, .{ .value = 1563911786 }, .{ .value = 1144989645 }, .{ .value = 373271750 }, .{ .value = 484736319 }, .{ .value = 1478410038 } }, commitment.Commitment{ .{ .value = 835388330 }, .{ .value = 1643310907 }, .{ .value = 1559872352 }, .{ .value = 788016249 }, .{ .value = 1118218621 }, .{ .value = 390958529 }, .{ .value = 603862210 }, .{ .value = 432441217 } }, commitment.Commitment{ .{ .value = 942991557 }, .{ .value = 1536436719 }, .{ .value = 842110386 }, .{ .value = 1130714847 }, .{ .value = 731513738 }, .{ .value = 1986473646 }, .{ .value = 1698544464 }, .{ .value = 181359289 } }, commitment.Commitment{ .{ .value = 1084885000 }, .{ .value = 731749591 }, .{ .value = 1660851032 }, .{ .value = 414347473 }, .{ .value = 391691677 }, .{ .value = 1222013238 }, .{ .value = 1929471535 }, .{ .value = 1451058478 } }, commitment.Commitment{ .{ .value = 1518052619 }, .{ .value = 496529044 }, .{ .value = 33920154 }, .{ .value = 1360690382 }, .{ .value = 1117264426 }, .{ .value = 123446535 }, .{ .value = 516226535 }, .{ .value = 1484662114 } }, commitment.Commitment{ .{ .value = 1286752344 }, .{ .value = 1349422857 }, .{ .value = 708004394 }, .{ .value = 434170299 }, .{ .value = 2092386413 }, .{ .value = 418633899 }, .{ .value = 505713768 }, .{ .value = 552438305 } }, commitment.Commitment{ .{ .value = 1109667446 }, .{ .value = 667144955 }, .{ .value = 212824671 }, .{ .value = 1192413663 }, .{ .value = 1778457782 }, .{ .value = 158357458 }, .{ .value = 1088760830 }, .{ .value = 1818986580 } } }, .leaves = &.{ null, null, null, null, null, null, null, null, null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1695364958 }, .a1 = .{ .value = 1585755212 } }, .B1 = .{ .a0 = .{ .value = 28869432 }, .a1 = .{ .value = 1843927652 } }, .B2 = .{ .a0 = .{ .value = 72937041 }, .a1 = .{ .value = 812754660 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 722866982 }, .a1 = .{ .value = 608203725 } }, .B1 = .{ .a0 = .{ .value = 1738808766 }, .a1 = .{ .value = 2083901118 } }, .B2 = .{ .a0 = .{ .value = 925470842 }, .a1 = .{ .value = 48678183 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 554084463 }, .a1 = .{ .value = 995718911 } }, .B1 = .{ .a0 = .{ .value = 1844061527 }, .a1 = .{ .value = 383007700 } }, .B2 = .{ .a0 = .{ .value = 386421052 }, .a1 = .{ .value = 1881864400 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1590408882 }, .a1 = .{ .value = 1785948402 } }, .B1 = .{ .a0 = .{ .value = 119284574 }, .a1 = .{ .value = 716557473 } }, .B2 = .{ .a0 = .{ .value = 527375299 }, .a1 = .{ .value = 1266990675 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 808158639 }, .a1 = .{ .value = 2093079766 } }, .B1 = .{ .a0 = .{ .value = 1365781418 }, .a1 = .{ .value = 875802390 } }, .B2 = .{ .a0 = .{ .value = 1396517195 }, .a1 = .{ .value = 1114039582 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1450381555 }, .a1 = .{ .value = 871349431 } }, .B1 = .{ .a0 = .{ .value = 450656704 }, .a1 = .{ .value = 2120598365 } }, .B2 = .{ .a0 = .{ .value = 589386852 }, .a1 = .{ .value = 439665133 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 524843731 }, .a1 = .{ .value = 1066469241 } }, .B1 = .{ .a0 = .{ .value = 1871418857 }, .a1 = .{ .value = 362936851 } }, .B2 = .{ .a0 = .{ .value = 1049798217 }, .a1 = .{ .value = 1455153622 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 2124213386 }, .a1 = .{ .value = 137855890 } }, .B1 = .{ .a0 = .{ .value = 542109468 }, .a1 = .{ .value = 2058708782 } }, .B2 = .{ .a0 = .{ .value = 1068993083 }, .a1 = .{ .value = 319476321 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 922911494 }, .a1 = .{ .value = 1105360400 } }, .B1 = .{ .a0 = .{ .value = 582254057 }, .a1 = .{ .value = 2083450243 } }, .B2 = .{ .a0 = .{ .value = 912992754 }, .a1 = .{ .value = 2128460619 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1243019522 }, .a1 = .{ .value = 1926034171 } }, .B1 = .{ .a0 = .{ .value = 1375625056 }, .a1 = .{ .value = 748762502 } }, .B2 = .{ .a0 = .{ .value = 917569862 }, .a1 = .{ .value = 946470517 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 997216079 }, .a1 = .{ .value = 904615957 } }, .B1 = .{ .a0 = .{ .value = 989289206 }, .a1 = .{ .value = 889031167 } }, .B2 = .{ .a0 = .{ .value = 292879584 }, .a1 = .{ .value = 1337260841 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 54960487 }, .a1 = .{ .value = 1434455007 } }, .B1 = .{ .a0 = .{ .value = 585349506 }, .a1 = .{ .value = 2061257756 } }, .B2 = .{ .a0 = .{ .value = 162285177 }, .a1 = .{ .value = 1341824388 } } } } } } } } }}, .fri_proof = fri.Proof{ .round_roots = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 889971009 }, .{ .value = 2038499989 }, .{ .value = 2042373240 }, .{ .value = 1090948915 }, .{ .value = 191700545 }, .{ .value = 1090634395 }, .{ .value = 496423721 }, .{ .value = 548897066 } }, commitment.Commitment{ .{ .value = 792600762 }, .{ .value = 182963395 }, .{ .value = 158419857 }, .{ .value = 1854591266 }, .{ .value = 947637130 }, .{ .value = 193128686 }, .{ .value = 1503741155 }, .{ .value = 983847580 } }, commitment.Commitment{ .{ .value = 1926725098 }, .{ .value = 325080183 }, .{ .value = 1211323706 }, .{ .value = 1887472702 }, .{ .value = 2012288904 }, .{ .value = 1570724266 }, .{ .value = 1453214887 }, .{ .value = 1838518957 } }, commitment.Commitment{ .{ .value = 323849918 }, .{ .value = 1836015327 }, .{ .value = 349780667 }, .{ .value = 419026978 }, .{ .value = 252166242 }, .{ .value = 1943434709 }, .{ .value = 399322737 }, .{ .value = 1780668994 } }, commitment.Commitment{ .{ .value = 1550005888 }, .{ .value = 620670279 }, .{ .value = 533984125 }, .{ .value = 730995980 }, .{ .value = 854710251 }, .{ .value = 1883349945 }, .{ .value = 1991400260 }, .{ .value = 1647152136 } }, commitment.Commitment{ .{ .value = 2002373289 }, .{ .value = 74434318 }, .{ .value = 2042442766 }, .{ .value = 1808379691 }, .{ .value = 598031411 }, .{ .value = 957163439 }, .{ .value = 777789838 }, .{ .value = 686412437 } }, commitment.Commitment{ .{ .value = 588105729 }, .{ .value = 1053873507 }, .{ .value = 498188285 }, .{ .value = 2059183752 }, .{ .value = 1146303460 }, .{ .value = 1301046177 }, .{ .value = 815904318 }, .{ .value = 1227800224 } }, commitment.Commitment{ .{ .value = 194467482 }, .{ .value = 986900253 }, .{ .value = 2005373280 }, .{ .value = 63032948 }, .{ .value = 1706915186 }, .{ .value = 1529309883 }, .{ .value = 1832703013 }, .{ .value = 652825719 } }, commitment.Commitment{ .{ .value = 2050170223 }, .{ .value = 2085465113 }, .{ .value = 1293468514 }, .{ .value = 1424377558 }, .{ .value = 622925351 }, .{ .value = 1184458603 }, .{ .value = 1769489812 }, .{ .value = 1153823573 } } }, .final_poly = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 64964797 }, .a1 = .{ .value = 1275684726 } }, .B1 = .{ .a0 = .{ .value = 369423871 }, .a1 = .{ .value = 1601072501 } }, .B2 = .{ .a0 = .{ .value = 1474952949 }, .a1 = .{ .value = 1854991758 } } }}, .running_queries = &.{&.{ merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 1546271244 }, .{ .value = 1869851698 }, .{ .value = 625897332 }, .{ .value = 1367423196 }, .{ .value = 937088556 }, .{ .value = 1737228557 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 2021278303 }, .{ .value = 1046117687 }, .{ .value = 2039336277 }, .{ .value = 1286419334 }, .{ .value = 1356388445 }, .{ .value = 1090557200 }, .{ .value = 205206007 }, .{ .value = 1262339295 } }, commitment.Commitment{ .{ .value = 516841201 }, .{ .value = 644131105 }, .{ .value = 544951178 }, .{ .value = 243167906 }, .{ .value = 1099125386 }, .{ .value = 1683378606 }, .{ .value = 95677124 }, .{ .value = 1073908097 } }, commitment.Commitment{ .{ .value = 1595172157 }, .{ .value = 102913616 }, .{ .value = 1091460220 }, .{ .value = 1408517524 }, .{ .value = 2080127 }, .{ .value = 758673261 }, .{ .value = 583245233 }, .{ .value = 1028068307 } }, commitment.Commitment{ .{ .value = 1013668815 }, .{ .value = 701311613 }, .{ .value = 1370668189 }, .{ .value = 304641480 }, .{ .value = 2097895534 }, .{ .value = 1777126078 }, .{ .value = 274473627 }, .{ .value = 1009770860 } }, commitment.Commitment{ .{ .value = 823868185 }, .{ .value = 1610560966 }, .{ .value = 1849472641 }, .{ .value = 331965558 }, .{ .value = 646704552 }, .{ .value = 584149252 }, .{ .value = 2108118047 }, .{ .value = 371064476 } }, commitment.Commitment{ .{ .value = 1240397467 }, .{ .value = 1425479643 }, .{ .value = 907863028 }, .{ .value = 47982217 }, .{ .value = 70576779 }, .{ .value = 1852561882 }, .{ .value = 1912928368 }, .{ .value = 1084030867 } }, commitment.Commitment{ .{ .value = 70642538 }, .{ .value = 1235614575 }, .{ .value = 949144066 }, .{ .value = 2112335782 }, .{ .value = 1889580535 }, .{ .value = 1011609143 }, .{ .value = 334765344 }, .{ .value = 482318684 } }, commitment.Commitment{ .{ .value = 1418557328 }, .{ .value = 1324690114 }, .{ .value = 348467341 }, .{ .value = 1356211330 }, .{ .value = 1580328842 }, .{ .value = 1216544649 }, .{ .value = 699792993 }, .{ .value = 1494190554 } }, commitment.Commitment{ .{ .value = 669445577 }, .{ .value = 1055698929 }, .{ .value = 318864080 }, .{ .value = 404319509 }, .{ .value = 213239663 }, .{ .value = 2059479637 }, .{ .value = 209011156 }, .{ .value = 1295777808 } }, commitment.Commitment{ .{ .value = 65563649 }, .{ .value = 1376243844 }, .{ .value = 1833009870 }, .{ .value = 1493653074 }, .{ .value = 241543881 }, .{ .value = 567871580 }, .{ .value = 0 }, .{ .value = 0 } } } }, merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 448428206 }, .{ .value = 1485241823 }, .{ .value = 272039712 }, .{ .value = 935865604 }, .{ .value = 1482922949 }, .{ .value = 2030686277 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 191823027 }, .{ .value = 79938253 }, .{ .value = 737132285 }, .{ .value = 1005528561 }, .{ .value = 1886207104 }, .{ .value = 2084711711 }, .{ .value = 882785898 }, .{ .value = 103863006 } }, commitment.Commitment{ .{ .value = 1090405006 }, .{ .value = 1129690951 }, .{ .value = 809599994 }, .{ .value = 1200379924 }, .{ .value = 793197872 }, .{ .value = 159030741 }, .{ .value = 997329558 }, .{ .value = 1206185596 } }, commitment.Commitment{ .{ .value = 1747811818 }, .{ .value = 543455672 }, .{ .value = 13824145 }, .{ .value = 1906637887 }, .{ .value = 1494496974 }, .{ .value = 842553205 }, .{ .value = 1736529491 }, .{ .value = 678832926 } }, commitment.Commitment{ .{ .value = 1873219141 }, .{ .value = 571189956 }, .{ .value = 364536955 }, .{ .value = 1075753373 }, .{ .value = 354351207 }, .{ .value = 1720673592 }, .{ .value = 839933717 }, .{ .value = 1732276046 } }, commitment.Commitment{ .{ .value = 454400291 }, .{ .value = 1896091413 }, .{ .value = 516357584 }, .{ .value = 1994230189 }, .{ .value = 1055837862 }, .{ .value = 1313621738 }, .{ .value = 1582460515 }, .{ .value = 1681963138 } }, commitment.Commitment{ .{ .value = 1304620453 }, .{ .value = 468010162 }, .{ .value = 1265591888 }, .{ .value = 2022563869 }, .{ .value = 1458248632 }, .{ .value = 1500355360 }, .{ .value = 243257814 }, .{ .value = 503700855 } }, commitment.Commitment{ .{ .value = 489045282 }, .{ .value = 530818152 }, .{ .value = 665748967 }, .{ .value = 266120896 }, .{ .value = 641456401 }, .{ .value = 1785356996 }, .{ .value = 2127353089 }, .{ .value = 1704474128 } }, commitment.Commitment{ .{ .value = 519193803 }, .{ .value = 1937236898 }, .{ .value = 704240542 }, .{ .value = 609034582 }, .{ .value = 1467635772 }, .{ .value = 58972655 }, .{ .value = 17637260 }, .{ .value = 110489609 } }, commitment.Commitment{ .{ .value = 1640126924 }, .{ .value = 1648046707 }, .{ .value = 737504178 }, .{ .value = 224979631 }, .{ .value = 1901866398 }, .{ .value = 895366091 }, .{ .value = 0 }, .{ .value = 0 } } } }, merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 1312295178 }, .{ .value = 1729042038 }, .{ .value = 1465668382 }, .{ .value = 576158476 }, .{ .value = 36467823 }, .{ .value = 392729567 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1414350941 }, .{ .value = 1183636266 }, .{ .value = 1245159302 }, .{ .value = 2095894918 }, .{ .value = 1409140738 }, .{ .value = 1566544459 }, .{ .value = 285354091 }, .{ .value = 35751634 } }, commitment.Commitment{ .{ .value = 606110217 }, .{ .value = 1530308708 }, .{ .value = 1933554597 }, .{ .value = 568503321 }, .{ .value = 1970132601 }, .{ .value = 1629818333 }, .{ .value = 969356817 }, .{ .value = 233689845 } }, commitment.Commitment{ .{ .value = 118710771 }, .{ .value = 136985423 }, .{ .value = 81618806 }, .{ .value = 1922313392 }, .{ .value = 1244977437 }, .{ .value = 396954372 }, .{ .value = 1360136041 }, .{ .value = 1383687544 } }, commitment.Commitment{ .{ .value = 151883377 }, .{ .value = 1915469383 }, .{ .value = 856712537 }, .{ .value = 765476179 }, .{ .value = 1691545444 }, .{ .value = 764733654 }, .{ .value = 840455344 }, .{ .value = 863214496 } }, commitment.Commitment{ .{ .value = 827965339 }, .{ .value = 1846133663 }, .{ .value = 1071851847 }, .{ .value = 1628077548 }, .{ .value = 1564594134 }, .{ .value = 801249826 }, .{ .value = 1376563739 }, .{ .value = 1804557595 } }, commitment.Commitment{ .{ .value = 1949410300 }, .{ .value = 196055610 }, .{ .value = 1668499395 }, .{ .value = 1412217637 }, .{ .value = 1901501267 }, .{ .value = 1742102150 }, .{ .value = 2002571492 }, .{ .value = 2062823549 } }, commitment.Commitment{ .{ .value = 94385881 }, .{ .value = 2027834871 }, .{ .value = 180015387 }, .{ .value = 894463168 }, .{ .value = 232554635 }, .{ .value = 1223297569 }, .{ .value = 1977879364 }, .{ .value = 324379118 } }, commitment.Commitment{ .{ .value = 2004360016 }, .{ .value = 122810418 }, .{ .value = 1687078130 }, .{ .value = 1308804223 }, .{ .value = 2054264010 }, .{ .value = 1952590227 }, .{ .value = 0 }, .{ .value = 0 } } } }, merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 2006288882 }, .{ .value = 2009199060 }, .{ .value = 236444144 }, .{ .value = 151442569 }, .{ .value = 1202215658 }, .{ .value = 1182458891 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1291600926 }, .{ .value = 800331489 }, .{ .value = 2006998258 }, .{ .value = 592059995 }, .{ .value = 1058336196 }, .{ .value = 1477831884 }, .{ .value = 1708081636 }, .{ .value = 550709183 } }, commitment.Commitment{ .{ .value = 1246478357 }, .{ .value = 528408957 }, .{ .value = 285862753 }, .{ .value = 508450659 }, .{ .value = 867989612 }, .{ .value = 278447299 }, .{ .value = 124314899 }, .{ .value = 1702932966 } }, commitment.Commitment{ .{ .value = 631920505 }, .{ .value = 732483510 }, .{ .value = 587181680 }, .{ .value = 451083363 }, .{ .value = 1155692975 }, .{ .value = 845708938 }, .{ .value = 1254937431 }, .{ .value = 1834473537 } }, commitment.Commitment{ .{ .value = 1343904055 }, .{ .value = 524882755 }, .{ .value = 1596927410 }, .{ .value = 1301803040 }, .{ .value = 1306590160 }, .{ .value = 784753704 }, .{ .value = 825815574 }, .{ .value = 1351543419 } }, commitment.Commitment{ .{ .value = 349281501 }, .{ .value = 1437136914 }, .{ .value = 1379132451 }, .{ .value = 123140493 }, .{ .value = 311297015 }, .{ .value = 1227629477 }, .{ .value = 781101416 }, .{ .value = 1743660905 } }, commitment.Commitment{ .{ .value = 1445045060 }, .{ .value = 496579118 }, .{ .value = 1449308145 }, .{ .value = 2073335435 }, .{ .value = 1254177822 }, .{ .value = 1581546298 }, .{ .value = 890480694 }, .{ .value = 642035807 } }, commitment.Commitment{ .{ .value = 1595640520 }, .{ .value = 1395248110 }, .{ .value = 298034348 }, .{ .value = 711349541 }, .{ .value = 293557250 }, .{ .value = 780470250 }, .{ .value = 0 }, .{ .value = 0 } } } }, merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 1233884609 }, .{ .value = 547228646 }, .{ .value = 2071342336 }, .{ .value = 1358356347 }, .{ .value = 1046061227 }, .{ .value = 69539072 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 540805523 }, .{ .value = 1546690489 }, .{ .value = 707836523 }, .{ .value = 1942561485 }, .{ .value = 1733709955 }, .{ .value = 1862146211 }, .{ .value = 1347594250 }, .{ .value = 1219196273 } }, commitment.Commitment{ .{ .value = 655709723 }, .{ .value = 1099213998 }, .{ .value = 1390936509 }, .{ .value = 835757336 }, .{ .value = 1237844900 }, .{ .value = 1972260144 }, .{ .value = 2082184867 }, .{ .value = 1336977686 } }, commitment.Commitment{ .{ .value = 458169306 }, .{ .value = 614700558 }, .{ .value = 1563059488 }, .{ .value = 2122366080 }, .{ .value = 76476817 }, .{ .value = 1380921077 }, .{ .value = 2047191629 }, .{ .value = 1804004355 } }, commitment.Commitment{ .{ .value = 560778098 }, .{ .value = 1158125935 }, .{ .value = 439003198 }, .{ .value = 781869009 }, .{ .value = 1456581878 }, .{ .value = 1614926695 }, .{ .value = 1193744201 }, .{ .value = 933075675 } }, commitment.Commitment{ .{ .value = 1424463783 }, .{ .value = 51615852 }, .{ .value = 1831805372 }, .{ .value = 316971663 }, .{ .value = 1656536185 }, .{ .value = 2032469274 }, .{ .value = 700467649 }, .{ .value = 241728185 } }, commitment.Commitment{ .{ .value = 1369559706 }, .{ .value = 370543407 }, .{ .value = 1249680779 }, .{ .value = 1181267117 }, .{ .value = 577641328 }, .{ .value = 217381315 }, .{ .value = 0 }, .{ .value = 0 } } } }, merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 1350134240 }, .{ .value = 1549447247 }, .{ .value = 709717946 }, .{ .value = 939108836 }, .{ .value = 1705777073 }, .{ .value = 1969572427 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 783954057 }, .{ .value = 685364225 }, .{ .value = 1376725612 }, .{ .value = 1685073468 }, .{ .value = 1478053957 }, .{ .value = 1690084378 }, .{ .value = 1328858086 }, .{ .value = 1040975751 } }, commitment.Commitment{ .{ .value = 434240108 }, .{ .value = 261472327 }, .{ .value = 265296166 }, .{ .value = 915978740 }, .{ .value = 174518111 }, .{ .value = 838098406 }, .{ .value = 463226854 }, .{ .value = 739778601 } }, commitment.Commitment{ .{ .value = 445531536 }, .{ .value = 1103679321 }, .{ .value = 1725566118 }, .{ .value = 1581398925 }, .{ .value = 1528396197 }, .{ .value = 2003438900 }, .{ .value = 1333690759 }, .{ .value = 901023882 } }, commitment.Commitment{ .{ .value = 599720729 }, .{ .value = 1451630669 }, .{ .value = 280495775 }, .{ .value = 1286062351 }, .{ .value = 1998437271 }, .{ .value = 2105541887 }, .{ .value = 1430152479 }, .{ .value = 525269625 } }, commitment.Commitment{ .{ .value = 1939271123 }, .{ .value = 1285325213 }, .{ .value = 188522912 }, .{ .value = 235739598 }, .{ .value = 151970272 }, .{ .value = 1114056665 }, .{ .value = 0 }, .{ .value = 0 } } } }, merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 1010720278 }, .{ .value = 371322697 }, .{ .value = 1187727638 }, .{ .value = 2114974261 }, .{ .value = 448983275 }, .{ .value = 2028360121 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 301965717 }, .{ .value = 1586600222 }, .{ .value = 453482013 }, .{ .value = 138051636 }, .{ .value = 1102603200 }, .{ .value = 1964302867 }, .{ .value = 2081485910 }, .{ .value = 1190387394 } }, commitment.Commitment{ .{ .value = 1491014583 }, .{ .value = 914497624 }, .{ .value = 2122285904 }, .{ .value = 1779363688 }, .{ .value = 1713254166 }, .{ .value = 1716354191 }, .{ .value = 289561568 }, .{ .value = 1166348009 } }, commitment.Commitment{ .{ .value = 1038493246 }, .{ .value = 224919783 }, .{ .value = 1798066113 }, .{ .value = 811525872 }, .{ .value = 251529975 }, .{ .value = 743558002 }, .{ .value = 2043173290 }, .{ .value = 90214913 } }, commitment.Commitment{ .{ .value = 1051844652 }, .{ .value = 768529981 }, .{ .value = 1494738252 }, .{ .value = 215188844 }, .{ .value = 701684057 }, .{ .value = 1392396741 }, .{ .value = 0 }, .{ .value = 0 } } } }, merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 1858932879 }, .{ .value = 2117140654 }, .{ .value = 1057925471 }, .{ .value = 594297234 }, .{ .value = 300861745 }, .{ .value = 461612590 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 438938626 }, .{ .value = 428145163 }, .{ .value = 676476409 }, .{ .value = 711768940 }, .{ .value = 2108389116 }, .{ .value = 579943562 }, .{ .value = 1146667336 }, .{ .value = 426095082 } }, commitment.Commitment{ .{ .value = 706135793 }, .{ .value = 1360016616 }, .{ .value = 1740569720 }, .{ .value = 1074066394 }, .{ .value = 586569040 }, .{ .value = 407404979 }, .{ .value = 235869206 }, .{ .value = 1204722340 } }, commitment.Commitment{ .{ .value = 548021773 }, .{ .value = 609054094 }, .{ .value = 439456452 }, .{ .value = 1388973354 }, .{ .value = 370509345 }, .{ .value = 890635817 }, .{ .value = 0 }, .{ .value = 0 } } } }, merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 417330446 }, .{ .value = 1276400319 }, .{ .value = 1789083054 }, .{ .value = 1494544737 }, .{ .value = 619579548 }, .{ .value = 865883192 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 2117928334 }, .{ .value = 1208182386 }, .{ .value = 2025480130 }, .{ .value = 258199272 }, .{ .value = 261369024 }, .{ .value = 1802888476 }, .{ .value = 341080095 }, .{ .value = 19200094 } }, commitment.Commitment{ .{ .value = 505897921 }, .{ .value = 182092984 }, .{ .value = 2022443037 }, .{ .value = 488891854 }, .{ .value = 1864620691 }, .{ .value = 1512069024 }, .{ .value = 0 }, .{ .value = 0 } } } } }} } } };
+const verify_case_66_pcs_opening = verifier.PcsOpening{ .entry_claims = &.{ &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 194671669 }, .a1 = .{ .value = 213914338 } }, .B1 = .{ .a0 = .{ .value = 1508759332 }, .a1 = .{ .value = 965769489 } }, .B2 = .{ .a0 = .{ .value = 1931913932 }, .a1 = .{ .value = 563845346 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1790989978 }, .a1 = .{ .value = 792990865 } }, .B1 = .{ .a0 = .{ .value = 1029894233 }, .a1 = .{ .value = 1986832121 } }, .B2 = .{ .a0 = .{ .value = 415338600 }, .a1 = .{ .value = 1832893812 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 194671670 }, .a1 = .{ .value = 213914338 } }, .B1 = .{ .a0 = .{ .value = 1508759332 }, .a1 = .{ .value = 965769489 } }, .B2 = .{ .a0 = .{ .value = 1931913932 }, .a1 = .{ .value = 563845346 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1790989979 }, .a1 = .{ .value = 792990865 } }, .B1 = .{ .a0 = .{ .value = 1029894233 }, .a1 = .{ .value = 1986832121 } }, .B2 = .{ .a0 = .{ .value = 415338600 }, .a1 = .{ .value = 1832893812 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 194671671 }, .a1 = .{ .value = 213914338 } }, .B1 = .{ .a0 = .{ .value = 1508759332 }, .a1 = .{ .value = 965769489 } }, .B2 = .{ .a0 = .{ .value = 1931913932 }, .a1 = .{ .value = 563845346 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1790989980 }, .a1 = .{ .value = 792990865 } }, .B1 = .{ .a0 = .{ .value = 1029894233 }, .a1 = .{ .value = 1986832121 } }, .B2 = .{ .a0 = .{ .value = 415338600 }, .a1 = .{ .value = 1832893812 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 194671672 }, .a1 = .{ .value = 213914338 } }, .B1 = .{ .a0 = .{ .value = 1508759332 }, .a1 = .{ .value = 965769489 } }, .B2 = .{ .a0 = .{ .value = 1931913932 }, .a1 = .{ .value = 563845346 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1790989981 }, .a1 = .{ .value = 792990865 } }, .B1 = .{ .a0 = .{ .value = 1029894233 }, .a1 = .{ .value = 1986832121 } }, .B2 = .{ .a0 = .{ .value = 415338600 }, .a1 = .{ .value = 1832893812 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 194671673 }, .a1 = .{ .value = 213914338 } }, .B1 = .{ .a0 = .{ .value = 1508759332 }, .a1 = .{ .value = 965769489 } }, .B2 = .{ .a0 = .{ .value = 1931913932 }, .a1 = .{ .value = 563845346 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1790989982 }, .a1 = .{ .value = 792990865 } }, .B1 = .{ .a0 = .{ .value = 1029894233 }, .a1 = .{ .value = 1986832121 } }, .B2 = .{ .a0 = .{ .value = 415338600 }, .a1 = .{ .value = 1832893812 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1296311781 }, .a1 = .{ .value = 676430850 } }, .B1 = .{ .a0 = .{ .value = 1687713050 }, .a1 = .{ .value = 203742254 } }, .B2 = .{ .a0 = .{ .value = 826383078 }, .a1 = .{ .value = 920495141 } } }}, &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 871994390 }, .a1 = .{ .value = 1822043361 } }, .B1 = .{ .a0 = .{ .value = 1982402357 }, .a1 = .{ .value = 1624036200 } }, .B2 = .{ .a0 = .{ .value = 329224840 }, .a1 = .{ .value = 1108185838 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1161677615 }, .a1 = .{ .value = 263107718 } }, .B1 = .{ .a0 = .{ .value = 1404812741 }, .a1 = .{ .value = 1986336195 } }, .B2 = .{ .a0 = .{ .value = 1529334544 }, .a1 = .{ .value = 1455360755 } } } }, &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1010482806 }, .a1 = .{ .value = 649401391 } }, .B1 = .{ .a0 = .{ .value = 1508456076 }, .a1 = .{ .value = 911212973 } }, .B2 = .{ .a0 = .{ .value = 542119637 }, .a1 = .{ .value = 1759917171 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 637299434 }, .a1 = .{ .value = 1983741326 } }, .B1 = .{ .a0 = .{ .value = 1725548912 }, .a1 = .{ .value = 2051553773 } }, .B2 = .{ .a0 = .{ .value = 879127401 }, .a1 = .{ .value = 1927722620 } } } }, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 621033513 }, .a1 = .{ .value = 816364487 } }, .B1 = .{ .a0 = .{ .value = 647064473 }, .a1 = .{ .value = 331573856 } }, .B2 = .{ .a0 = .{ .value = 1267240217 }, .a1 = .{ .value = 940154769 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1448519472 }, .a1 = .{ .value = 1143477877 } }, .B1 = .{ .a0 = .{ .value = 1472279815 }, .a1 = .{ .value = 1471858844 } }, .B2 = .{ .a0 = .{ .value = 1138552499 }, .a1 = .{ .value = 1968000071 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 2015168907 }, .a1 = .{ .value = 255019859 } }, .B1 = .{ .a0 = .{ .value = 881885277 }, .a1 = .{ .value = 228781509 } }, .B2 = .{ .a0 = .{ .value = 1947152615 }, .a1 = .{ .value = 1518150093 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1325218285 }, .a1 = .{ .value = 562596705 } }, .B1 = .{ .a0 = .{ .value = 1204892860 }, .a1 = .{ .value = 970711971 } }, .B2 = .{ .a0 = .{ .value = 1926692972 }, .a1 = .{ .value = 559769562 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 1585733805 }, .a1 = .{ .value = 852713048 } }, .B1 = .{ .a0 = .{ .value = 2003486700 }, .a1 = .{ .value = 667550282 } }, .B2 = .{ .a0 = .{ .value = 1925386065 }, .a1 = .{ .value = 340700650 } } }}, &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 276243485 }, .a1 = .{ .value = 1785199062 } }, .B1 = .{ .a0 = .{ .value = 2017419026 }, .a1 = .{ .value = 2046610604 } }, .B2 = .{ .a0 = .{ .value = 102257827 }, .a1 = .{ .value = 1932165356 } } }} }, .proof = pcs.OpeningProof{ .input_queries = &.{&.{ merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 382778008 }, .{ .value = 131321635 }, .{ .value = 1967407178 }, .{ .value = 1311498203 }, .{ .value = 1879026775 }, .{ .value = 1487168492 }, .{ .value = 665587993 }, .{ .value = 138008358 } }, commitment.Commitment{ .{ .value = 459567273 }, .{ .value = 1766127806 }, .{ .value = 734031883 }, .{ .value = 1482698546 }, .{ .value = 906606014 }, .{ .value = 25389146 }, .{ .value = 2054025295 }, .{ .value = 2044938717 } }, commitment.Commitment{ .{ .value = 917486219 }, .{ .value = 1429538252 }, .{ .value = 1912881222 }, .{ .value = 737157307 }, .{ .value = 390180662 }, .{ .value = 1220731329 }, .{ .value = 1045377220 }, .{ .value = 1495875125 } }, commitment.Commitment{ .{ .value = 180375991 }, .{ .value = 347511238 }, .{ .value = 1860068047 }, .{ .value = 1690725487 }, .{ .value = 779122164 }, .{ .value = 910285790 }, .{ .value = 1772889017 }, .{ .value = 66605155 } }, commitment.Commitment{ .{ .value = 1669486728 }, .{ .value = 1745518218 }, .{ .value = 905287571 }, .{ .value = 408144085 }, .{ .value = 1605582077 }, .{ .value = 1121352348 }, .{ .value = 435477696 }, .{ .value = 253246699 } }, commitment.Commitment{ .{ .value = 1588585321 }, .{ .value = 1762937771 }, .{ .value = 142757031 }, .{ .value = 1088847531 }, .{ .value = 1347917866 }, .{ .value = 978413208 }, .{ .value = 1875545727 }, .{ .value = 1314885916 } }, commitment.Commitment{ .{ .value = 1296626154 }, .{ .value = 1025189463 }, .{ .value = 1301331805 }, .{ .value = 1514309606 }, .{ .value = 1094965797 }, .{ .value = 1143704085 }, .{ .value = 128975655 }, .{ .value = 796159911 } }, commitment.Commitment{ .{ .value = 201497204 }, .{ .value = 564610601 }, .{ .value = 467786500 }, .{ .value = 777628461 }, .{ .value = 1750054368 }, .{ .value = 1242236053 }, .{ .value = 342881411 }, .{ .value = 431893700 } }, commitment.Commitment{ .{ .value = 2069320981 }, .{ .value = 660900182 }, .{ .value = 1074547277 }, .{ .value = 717565548 }, .{ .value = 1237122860 }, .{ .value = 1779420279 }, .{ .value = 267973603 }, .{ .value = 792739316 } }, commitment.Commitment{ .{ .value = 1908446555 }, .{ .value = 962415453 }, .{ .value = 1730343726 }, .{ .value = 1716023256 }, .{ .value = 266641995 }, .{ .value = 1400661672 }, .{ .value = 633485037 }, .{ .value = 1601453313 } } }, .leaves = &.{ null, null, null, null, null, null, null, null, null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 1554811610 }, .{ .value = 1373675383 }, .{ .value = 1554811611 }, .{ .value = 1373675384 }, .{ .value = 1554811612 }, .{ .value = 1373675385 }, .{ .value = 1554811613 }, .{ .value = 1373675386 }, .{ .value = 1554811614 }, .{ .value = 1373675387 }, .{ .value = 823276567 } }, .ext = &[_]ext.Ext{} }, merkle.RowOpening{ .base = &[_]field.Element{ .{ .value = 1192539668 }, .{ .value = 1373675383 }, .{ .value = 1192539669 }, .{ .value = 1373675384 }, .{ .value = 1192539670 }, .{ .value = 1373675385 }, .{ .value = 1192539671 }, .{ .value = 1373675386 }, .{ .value = 1192539672 }, .{ .value = 1373675387 }, .{ .value = 1307429868 } }, .ext = &[_]ext.Ext{} } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 270139275 }, .{ .value = 611512760 }, .{ .value = 396862328 }, .{ .value = 1790981207 }, .{ .value = 1905829074 }, .{ .value = 302483790 }, .{ .value = 1175625940 }, .{ .value = 2110472881 } }, commitment.Commitment{ .{ .value = 1255044822 }, .{ .value = 1402439381 }, .{ .value = 621402076 }, .{ .value = 1203938064 }, .{ .value = 507270043 }, .{ .value = 1575610975 }, .{ .value = 327100236 }, .{ .value = 1979694361 } }, commitment.Commitment{ .{ .value = 681735683 }, .{ .value = 290470439 }, .{ .value = 1366914092 }, .{ .value = 417028970 }, .{ .value = 405499869 }, .{ .value = 800691063 }, .{ .value = 1326788831 }, .{ .value = 362935927 } }, commitment.Commitment{ .{ .value = 800713876 }, .{ .value = 1589857792 }, .{ .value = 821398633 }, .{ .value = 807053376 }, .{ .value = 1459048320 }, .{ .value = 154899184 }, .{ .value = 700265164 }, .{ .value = 1237761643 } }, commitment.Commitment{ .{ .value = 1967491600 }, .{ .value = 1013563894 }, .{ .value = 1591221741 }, .{ .value = 268461877 }, .{ .value = 408615914 }, .{ .value = 1759802881 }, .{ .value = 1097538125 }, .{ .value = 413652118 } }, commitment.Commitment{ .{ .value = 51968592 }, .{ .value = 1862453139 }, .{ .value = 1833205496 }, .{ .value = 780625258 }, .{ .value = 43771919 }, .{ .value = 200945375 }, .{ .value = 1912169074 }, .{ .value = 1436968212 } }, commitment.Commitment{ .{ .value = 75055402 }, .{ .value = 231141641 }, .{ .value = 1054777673 }, .{ .value = 128286315 }, .{ .value = 1979518357 }, .{ .value = 853882788 }, .{ .value = 1884336522 }, .{ .value = 459593589 } }, commitment.Commitment{ .{ .value = 673199914 }, .{ .value = 901092483 }, .{ .value = 1454788196 }, .{ .value = 1626056933 }, .{ .value = 1883387443 }, .{ .value = 136242916 }, .{ .value = 937062463 }, .{ .value = 1649413559 } }, commitment.Commitment{ .{ .value = 1951617177 }, .{ .value = 1370781377 }, .{ .value = 155952200 }, .{ .value = 1695603724 }, .{ .value = 200264977 }, .{ .value = 1015878177 }, .{ .value = 2020989723 }, .{ .value = 1203103756 } }, commitment.Commitment{ .{ .value = 45395612 }, .{ .value = 1579602723 }, .{ .value = 210435201 }, .{ .value = 106691511 }, .{ .value = 60958700 }, .{ .value = 529192085 }, .{ .value = 932359986 }, .{ .value = 1793875212 } } }, .leaves = &.{ null, null, null, null, null, null, null, null, null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1085288264 }, .a1 = .{ .value = 559459984 } }, .B1 = .{ .a0 = .{ .value = 2064559832 }, .a1 = .{ .value = 1848909491 } }, .B2 = .{ .a0 = .{ .value = 340068670 }, .a1 = .{ .value = 2064267110 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1377001471 }, .a1 = .{ .value = 1153195892 } }, .B1 = .{ .a0 = .{ .value = 1509558789 }, .a1 = .{ .value = 726830655 } }, .B2 = .{ .a0 = .{ .value = 2127043044 }, .a1 = .{ .value = 1763685852 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 383356331 }, .a1 = .{ .value = 674129142 } }, .B1 = .{ .a0 = .{ .value = 890260248 }, .a1 = .{ .value = 1321109002 } }, .B2 = .{ .a0 = .{ .value = 1006743181 }, .a1 = .{ .value = 1678395011 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1194234746 }, .a1 = .{ .value = 1437623309 } }, .B1 = .{ .a0 = .{ .value = 849614209 }, .a1 = .{ .value = 1985688731 } }, .B2 = .{ .a0 = .{ .value = 1815077168 }, .a1 = .{ .value = 63913294 } } } } } } } }, merkle.InputTreeOpening{ .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1979221755 }, .{ .value = 1549012819 }, .{ .value = 489787169 }, .{ .value = 1560755763 }, .{ .value = 64605152 }, .{ .value = 1949619994 }, .{ .value = 398586437 }, .{ .value = 2123205739 } }, commitment.Commitment{ .{ .value = 1062128166 }, .{ .value = 1029048920 }, .{ .value = 1284406430 }, .{ .value = 1061209435 }, .{ .value = 537703781 }, .{ .value = 58858551 }, .{ .value = 1743114497 }, .{ .value = 1862131423 } }, commitment.Commitment{ .{ .value = 1829185815 }, .{ .value = 175710785 }, .{ .value = 1050679246 }, .{ .value = 313517957 }, .{ .value = 616823243 }, .{ .value = 1359484870 }, .{ .value = 590213008 }, .{ .value = 1721616623 } }, commitment.Commitment{ .{ .value = 617480792 }, .{ .value = 953568776 }, .{ .value = 725845981 }, .{ .value = 1563911786 }, .{ .value = 1144989645 }, .{ .value = 373271750 }, .{ .value = 484736319 }, .{ .value = 1478410038 } }, commitment.Commitment{ .{ .value = 835388330 }, .{ .value = 1643310907 }, .{ .value = 1559872352 }, .{ .value = 788016249 }, .{ .value = 1118218621 }, .{ .value = 390958529 }, .{ .value = 603862210 }, .{ .value = 432441217 } }, commitment.Commitment{ .{ .value = 942991557 }, .{ .value = 1536436719 }, .{ .value = 842110386 }, .{ .value = 1130714847 }, .{ .value = 731513738 }, .{ .value = 1986473646 }, .{ .value = 1698544464 }, .{ .value = 181359289 } }, commitment.Commitment{ .{ .value = 1084885000 }, .{ .value = 731749591 }, .{ .value = 1660851032 }, .{ .value = 414347473 }, .{ .value = 391691677 }, .{ .value = 1222013238 }, .{ .value = 1929471535 }, .{ .value = 1451058478 } }, commitment.Commitment{ .{ .value = 1518052619 }, .{ .value = 496529044 }, .{ .value = 33920154 }, .{ .value = 1360690382 }, .{ .value = 1117264426 }, .{ .value = 123446535 }, .{ .value = 516226535 }, .{ .value = 1484662114 } }, commitment.Commitment{ .{ .value = 1286752344 }, .{ .value = 1349422857 }, .{ .value = 708004394 }, .{ .value = 434170299 }, .{ .value = 2092386413 }, .{ .value = 418633899 }, .{ .value = 505713768 }, .{ .value = 552438305 } }, commitment.Commitment{ .{ .value = 1109667446 }, .{ .value = 667144955 }, .{ .value = 212824671 }, .{ .value = 1192413663 }, .{ .value = 1778457782 }, .{ .value = 158357458 }, .{ .value = 1088760830 }, .{ .value = 1818986580 } } }, .leaves = &.{ null, null, null, null, null, null, null, null, null, null, merkle.RowPair{ merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 1695364958 }, .a1 = .{ .value = 1585755212 } }, .B1 = .{ .a0 = .{ .value = 28869432 }, .a1 = .{ .value = 1843927652 } }, .B2 = .{ .a0 = .{ .value = 72937041 }, .a1 = .{ .value = 812754660 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 722866982 }, .a1 = .{ .value = 608203725 } }, .B1 = .{ .a0 = .{ .value = 1738808766 }, .a1 = .{ .value = 2083901118 } }, .B2 = .{ .a0 = .{ .value = 925470842 }, .a1 = .{ .value = 48678183 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 554084463 }, .a1 = .{ .value = 995718911 } }, .B1 = .{ .a0 = .{ .value = 1844061527 }, .a1 = .{ .value = 383007700 } }, .B2 = .{ .a0 = .{ .value = 386421052 }, .a1 = .{ .value = 1881864400 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1590408882 }, .a1 = .{ .value = 1785948402 } }, .B1 = .{ .a0 = .{ .value = 119284574 }, .a1 = .{ .value = 716557473 } }, .B2 = .{ .a0 = .{ .value = 527375299 }, .a1 = .{ .value = 1266990675 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 808158639 }, .a1 = .{ .value = 2093079766 } }, .B1 = .{ .a0 = .{ .value = 1365781418 }, .a1 = .{ .value = 875802390 } }, .B2 = .{ .a0 = .{ .value = 1396517195 }, .a1 = .{ .value = 1114039582 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1450381555 }, .a1 = .{ .value = 871349431 } }, .B1 = .{ .a0 = .{ .value = 450656704 }, .a1 = .{ .value = 2120598365 } }, .B2 = .{ .a0 = .{ .value = 589386852 }, .a1 = .{ .value = 439665133 } } } } }, merkle.RowOpening{ .base = &[_]field.Element{}, .ext = &[_]ext.Ext{ ext.Ext{ .B0 = .{ .a0 = .{ .value = 524843731 }, .a1 = .{ .value = 1066469241 } }, .B1 = .{ .a0 = .{ .value = 1871418857 }, .a1 = .{ .value = 362936851 } }, .B2 = .{ .a0 = .{ .value = 1049798217 }, .a1 = .{ .value = 1455153622 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 2124213386 }, .a1 = .{ .value = 137855890 } }, .B1 = .{ .a0 = .{ .value = 542109468 }, .a1 = .{ .value = 2058708782 } }, .B2 = .{ .a0 = .{ .value = 1068993083 }, .a1 = .{ .value = 319476321 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 922911494 }, .a1 = .{ .value = 1105360400 } }, .B1 = .{ .a0 = .{ .value = 582254057 }, .a1 = .{ .value = 2083450243 } }, .B2 = .{ .a0 = .{ .value = 912992754 }, .a1 = .{ .value = 2128460619 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 1243019522 }, .a1 = .{ .value = 1926034171 } }, .B1 = .{ .a0 = .{ .value = 1375625056 }, .a1 = .{ .value = 748762502 } }, .B2 = .{ .a0 = .{ .value = 917569862 }, .a1 = .{ .value = 946470517 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 997216079 }, .a1 = .{ .value = 904615957 } }, .B1 = .{ .a0 = .{ .value = 989289206 }, .a1 = .{ .value = 889031167 } }, .B2 = .{ .a0 = .{ .value = 292879584 }, .a1 = .{ .value = 1337260841 } } }, ext.Ext{ .B0 = .{ .a0 = .{ .value = 54960487 }, .a1 = .{ .value = 1434455007 } }, .B1 = .{ .a0 = .{ .value = 585349506 }, .a1 = .{ .value = 2061257756 } }, .B2 = .{ .a0 = .{ .value = 162285177 }, .a1 = .{ .value = 1341824388 } } } } } } } } }}, .fri_proof = fri.Proof{ .round_roots = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 889971009 }, .{ .value = 2038499989 }, .{ .value = 2042373240 }, .{ .value = 1090948915 }, .{ .value = 191700545 }, .{ .value = 1090634395 }, .{ .value = 496423721 }, .{ .value = 548897066 } }, commitment.Commitment{ .{ .value = 792600762 }, .{ .value = 182963395 }, .{ .value = 158419857 }, .{ .value = 1854591266 }, .{ .value = 947637130 }, .{ .value = 193128686 }, .{ .value = 1503741155 }, .{ .value = 983847580 } }, commitment.Commitment{ .{ .value = 1926725098 }, .{ .value = 325080183 }, .{ .value = 1211323706 }, .{ .value = 1887472702 }, .{ .value = 2012288904 }, .{ .value = 1570724266 }, .{ .value = 1453214887 }, .{ .value = 1838518957 } }, commitment.Commitment{ .{ .value = 323849918 }, .{ .value = 1836015327 }, .{ .value = 349780667 }, .{ .value = 419026978 }, .{ .value = 252166242 }, .{ .value = 1943434709 }, .{ .value = 399322737 }, .{ .value = 1780668994 } }, commitment.Commitment{ .{ .value = 1550005888 }, .{ .value = 620670279 }, .{ .value = 533984125 }, .{ .value = 730995980 }, .{ .value = 854710251 }, .{ .value = 1883349945 }, .{ .value = 1991400260 }, .{ .value = 1647152136 } }, commitment.Commitment{ .{ .value = 2002373289 }, .{ .value = 74434318 }, .{ .value = 2042442766 }, .{ .value = 1808379691 }, .{ .value = 598031411 }, .{ .value = 957163439 }, .{ .value = 777789838 }, .{ .value = 686412437 } }, commitment.Commitment{ .{ .value = 588105729 }, .{ .value = 1053873507 }, .{ .value = 498188285 }, .{ .value = 2059183752 }, .{ .value = 1146303460 }, .{ .value = 1301046177 }, .{ .value = 815904318 }, .{ .value = 1227800224 } }, commitment.Commitment{ .{ .value = 194467482 }, .{ .value = 986900253 }, .{ .value = 2005373280 }, .{ .value = 63032948 }, .{ .value = 1706915186 }, .{ .value = 1529309883 }, .{ .value = 1832703013 }, .{ .value = 652825719 } }, commitment.Commitment{ .{ .value = 2050170223 }, .{ .value = 2085465113 }, .{ .value = 1293468514 }, .{ .value = 1424377558 }, .{ .value = 622925351 }, .{ .value = 1184458603 }, .{ .value = 1769489812 }, .{ .value = 1153823573 } } }, .final_poly = &[_]ext.Ext{ext.Ext{ .B0 = .{ .a0 = .{ .value = 64964797 }, .a1 = .{ .value = 1275684726 } }, .B1 = .{ .a0 = .{ .value = 369423871 }, .a1 = .{ .value = 1601072501 } }, .B2 = .{ .a0 = .{ .value = 1474952949 }, .a1 = .{ .value = 1854991758 } } }}, .running_queries = &.{&.{ merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 1546271244 }, .{ .value = 1869851698 }, .{ .value = 625897332 }, .{ .value = 1367423196 }, .{ .value = 937088556 }, .{ .value = 1737228557 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 2021278303 }, .{ .value = 1046117687 }, .{ .value = 2039336277 }, .{ .value = 1286419334 }, .{ .value = 1356388445 }, .{ .value = 1090557200 }, .{ .value = 205206007 }, .{ .value = 1262339295 } }, commitment.Commitment{ .{ .value = 516841201 }, .{ .value = 644131105 }, .{ .value = 544951178 }, .{ .value = 243167906 }, .{ .value = 1099125386 }, .{ .value = 1683378606 }, .{ .value = 95677124 }, .{ .value = 1073908097 } }, commitment.Commitment{ .{ .value = 1595172157 }, .{ .value = 102913616 }, .{ .value = 1091460220 }, .{ .value = 1408517524 }, .{ .value = 2080127 }, .{ .value = 758673261 }, .{ .value = 583245233 }, .{ .value = 1028068307 } }, commitment.Commitment{ .{ .value = 1013668815 }, .{ .value = 701311613 }, .{ .value = 1370668189 }, .{ .value = 304641480 }, .{ .value = 2097895534 }, .{ .value = 1777126078 }, .{ .value = 274473627 }, .{ .value = 1009770860 } }, commitment.Commitment{ .{ .value = 823868185 }, .{ .value = 1610560966 }, .{ .value = 1849472641 }, .{ .value = 331965558 }, .{ .value = 646704552 }, .{ .value = 584149252 }, .{ .value = 2108118047 }, .{ .value = 371064476 } }, commitment.Commitment{ .{ .value = 1240397467 }, .{ .value = 1425479643 }, .{ .value = 907863028 }, .{ .value = 47982217 }, .{ .value = 70576779 }, .{ .value = 1852561882 }, .{ .value = 1912928368 }, .{ .value = 1084030867 } }, commitment.Commitment{ .{ .value = 70642538 }, .{ .value = 1235614575 }, .{ .value = 949144066 }, .{ .value = 2112335782 }, .{ .value = 1889580535 }, .{ .value = 1011609143 }, .{ .value = 334765344 }, .{ .value = 482318684 } }, commitment.Commitment{ .{ .value = 1418557328 }, .{ .value = 1324690114 }, .{ .value = 348467341 }, .{ .value = 1356211330 }, .{ .value = 1580328842 }, .{ .value = 1216544649 }, .{ .value = 699792993 }, .{ .value = 1494190554 } }, commitment.Commitment{ .{ .value = 669445577 }, .{ .value = 1055698929 }, .{ .value = 318864080 }, .{ .value = 404319509 }, .{ .value = 213239663 }, .{ .value = 2059479637 }, .{ .value = 209011156 }, .{ .value = 1295777808 } }, commitment.Commitment{ .{ .value = 65563649 }, .{ .value = 1376243844 }, .{ .value = 1833009870 }, .{ .value = 1493653074 }, .{ .value = 241543881 }, .{ .value = 567871580 }, .{ .value = 0 }, .{ .value = 0 } } } }, merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 448428206 }, .{ .value = 1485241823 }, .{ .value = 272039712 }, .{ .value = 935865604 }, .{ .value = 1482922949 }, .{ .value = 2030686277 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 191823027 }, .{ .value = 79938253 }, .{ .value = 737132285 }, .{ .value = 1005528561 }, .{ .value = 1886207104 }, .{ .value = 2084711711 }, .{ .value = 882785898 }, .{ .value = 103863006 } }, commitment.Commitment{ .{ .value = 1090405006 }, .{ .value = 1129690951 }, .{ .value = 809599994 }, .{ .value = 1200379924 }, .{ .value = 793197872 }, .{ .value = 159030741 }, .{ .value = 997329558 }, .{ .value = 1206185596 } }, commitment.Commitment{ .{ .value = 1747811818 }, .{ .value = 543455672 }, .{ .value = 13824145 }, .{ .value = 1906637887 }, .{ .value = 1494496974 }, .{ .value = 842553205 }, .{ .value = 1736529491 }, .{ .value = 678832926 } }, commitment.Commitment{ .{ .value = 1873219141 }, .{ .value = 571189956 }, .{ .value = 364536955 }, .{ .value = 1075753373 }, .{ .value = 354351207 }, .{ .value = 1720673592 }, .{ .value = 839933717 }, .{ .value = 1732276046 } }, commitment.Commitment{ .{ .value = 454400291 }, .{ .value = 1896091413 }, .{ .value = 516357584 }, .{ .value = 1994230189 }, .{ .value = 1055837862 }, .{ .value = 1313621738 }, .{ .value = 1582460515 }, .{ .value = 1681963138 } }, commitment.Commitment{ .{ .value = 1304620453 }, .{ .value = 468010162 }, .{ .value = 1265591888 }, .{ .value = 2022563869 }, .{ .value = 1458248632 }, .{ .value = 1500355360 }, .{ .value = 243257814 }, .{ .value = 503700855 } }, commitment.Commitment{ .{ .value = 489045282 }, .{ .value = 530818152 }, .{ .value = 665748967 }, .{ .value = 266120896 }, .{ .value = 641456401 }, .{ .value = 1785356996 }, .{ .value = 2127353089 }, .{ .value = 1704474128 } }, commitment.Commitment{ .{ .value = 519193803 }, .{ .value = 1937236898 }, .{ .value = 704240542 }, .{ .value = 609034582 }, .{ .value = 1467635772 }, .{ .value = 58972655 }, .{ .value = 17637260 }, .{ .value = 110489609 } }, commitment.Commitment{ .{ .value = 1640126924 }, .{ .value = 1648046707 }, .{ .value = 737504178 }, .{ .value = 224979631 }, .{ .value = 1901866398 }, .{ .value = 895366091 }, .{ .value = 0 }, .{ .value = 0 } } } }, merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 1312295178 }, .{ .value = 1729042038 }, .{ .value = 1465668382 }, .{ .value = 576158476 }, .{ .value = 36467823 }, .{ .value = 392729567 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1414350941 }, .{ .value = 1183636266 }, .{ .value = 1245159302 }, .{ .value = 2095894918 }, .{ .value = 1409140738 }, .{ .value = 1566544459 }, .{ .value = 285354091 }, .{ .value = 35751634 } }, commitment.Commitment{ .{ .value = 606110217 }, .{ .value = 1530308708 }, .{ .value = 1933554597 }, .{ .value = 568503321 }, .{ .value = 1970132601 }, .{ .value = 1629818333 }, .{ .value = 969356817 }, .{ .value = 233689845 } }, commitment.Commitment{ .{ .value = 118710771 }, .{ .value = 136985423 }, .{ .value = 81618806 }, .{ .value = 1922313392 }, .{ .value = 1244977437 }, .{ .value = 396954372 }, .{ .value = 1360136041 }, .{ .value = 1383687544 } }, commitment.Commitment{ .{ .value = 151883377 }, .{ .value = 1915469383 }, .{ .value = 856712537 }, .{ .value = 765476179 }, .{ .value = 1691545444 }, .{ .value = 764733654 }, .{ .value = 840455344 }, .{ .value = 863214496 } }, commitment.Commitment{ .{ .value = 827965339 }, .{ .value = 1846133663 }, .{ .value = 1071851847 }, .{ .value = 1628077548 }, .{ .value = 1564594134 }, .{ .value = 801249826 }, .{ .value = 1376563739 }, .{ .value = 1804557595 } }, commitment.Commitment{ .{ .value = 1949410300 }, .{ .value = 196055610 }, .{ .value = 1668499395 }, .{ .value = 1412217637 }, .{ .value = 1901501267 }, .{ .value = 1742102150 }, .{ .value = 2002571492 }, .{ .value = 2062823549 } }, commitment.Commitment{ .{ .value = 94385881 }, .{ .value = 2027834871 }, .{ .value = 180015387 }, .{ .value = 894463168 }, .{ .value = 232554635 }, .{ .value = 1223297569 }, .{ .value = 1977879364 }, .{ .value = 324379118 } }, commitment.Commitment{ .{ .value = 2004360016 }, .{ .value = 122810418 }, .{ .value = 1687078130 }, .{ .value = 1308804223 }, .{ .value = 2054264010 }, .{ .value = 1952590227 }, .{ .value = 0 }, .{ .value = 0 } } } }, merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 2006288882 }, .{ .value = 2009199060 }, .{ .value = 236444144 }, .{ .value = 151442569 }, .{ .value = 1202215658 }, .{ .value = 1182458891 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 1291600926 }, .{ .value = 800331489 }, .{ .value = 2006998258 }, .{ .value = 592059995 }, .{ .value = 1058336196 }, .{ .value = 1477831884 }, .{ .value = 1708081636 }, .{ .value = 550709183 } }, commitment.Commitment{ .{ .value = 1246478357 }, .{ .value = 528408957 }, .{ .value = 285862753 }, .{ .value = 508450659 }, .{ .value = 867989612 }, .{ .value = 278447299 }, .{ .value = 124314899 }, .{ .value = 1702932966 } }, commitment.Commitment{ .{ .value = 631920505 }, .{ .value = 732483510 }, .{ .value = 587181680 }, .{ .value = 451083363 }, .{ .value = 1155692975 }, .{ .value = 845708938 }, .{ .value = 1254937431 }, .{ .value = 1834473537 } }, commitment.Commitment{ .{ .value = 1343904055 }, .{ .value = 524882755 }, .{ .value = 1596927410 }, .{ .value = 1301803040 }, .{ .value = 1306590160 }, .{ .value = 784753704 }, .{ .value = 825815574 }, .{ .value = 1351543419 } }, commitment.Commitment{ .{ .value = 349281501 }, .{ .value = 1437136914 }, .{ .value = 1379132451 }, .{ .value = 123140493 }, .{ .value = 311297015 }, .{ .value = 1227629477 }, .{ .value = 781101416 }, .{ .value = 1743660905 } }, commitment.Commitment{ .{ .value = 1445045060 }, .{ .value = 496579118 }, .{ .value = 1449308145 }, .{ .value = 2073335435 }, .{ .value = 1254177822 }, .{ .value = 1581546298 }, .{ .value = 890480694 }, .{ .value = 642035807 } }, commitment.Commitment{ .{ .value = 1595640520 }, .{ .value = 1395248110 }, .{ .value = 298034348 }, .{ .value = 711349541 }, .{ .value = 293557250 }, .{ .value = 780470250 }, .{ .value = 0 }, .{ .value = 0 } } } }, merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 1233884609 }, .{ .value = 547228646 }, .{ .value = 2071342336 }, .{ .value = 1358356347 }, .{ .value = 1046061227 }, .{ .value = 69539072 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 540805523 }, .{ .value = 1546690489 }, .{ .value = 707836523 }, .{ .value = 1942561485 }, .{ .value = 1733709955 }, .{ .value = 1862146211 }, .{ .value = 1347594250 }, .{ .value = 1219196273 } }, commitment.Commitment{ .{ .value = 655709723 }, .{ .value = 1099213998 }, .{ .value = 1390936509 }, .{ .value = 835757336 }, .{ .value = 1237844900 }, .{ .value = 1972260144 }, .{ .value = 2082184867 }, .{ .value = 1336977686 } }, commitment.Commitment{ .{ .value = 458169306 }, .{ .value = 614700558 }, .{ .value = 1563059488 }, .{ .value = 2122366080 }, .{ .value = 76476817 }, .{ .value = 1380921077 }, .{ .value = 2047191629 }, .{ .value = 1804004355 } }, commitment.Commitment{ .{ .value = 560778098 }, .{ .value = 1158125935 }, .{ .value = 439003198 }, .{ .value = 781869009 }, .{ .value = 1456581878 }, .{ .value = 1614926695 }, .{ .value = 1193744201 }, .{ .value = 933075675 } }, commitment.Commitment{ .{ .value = 1424463783 }, .{ .value = 51615852 }, .{ .value = 1831805372 }, .{ .value = 316971663 }, .{ .value = 1656536185 }, .{ .value = 2032469274 }, .{ .value = 700467649 }, .{ .value = 241728185 } }, commitment.Commitment{ .{ .value = 1369559706 }, .{ .value = 370543407 }, .{ .value = 1249680779 }, .{ .value = 1181267117 }, .{ .value = 577641328 }, .{ .value = 217381315 }, .{ .value = 0 }, .{ .value = 0 } } } }, merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 1350134240 }, .{ .value = 1549447247 }, .{ .value = 709717946 }, .{ .value = 939108836 }, .{ .value = 1705777073 }, .{ .value = 1969572427 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 783954057 }, .{ .value = 685364225 }, .{ .value = 1376725612 }, .{ .value = 1685073468 }, .{ .value = 1478053957 }, .{ .value = 1690084378 }, .{ .value = 1328858086 }, .{ .value = 1040975751 } }, commitment.Commitment{ .{ .value = 434240108 }, .{ .value = 261472327 }, .{ .value = 265296166 }, .{ .value = 915978740 }, .{ .value = 174518111 }, .{ .value = 838098406 }, .{ .value = 463226854 }, .{ .value = 739778601 } }, commitment.Commitment{ .{ .value = 445531536 }, .{ .value = 1103679321 }, .{ .value = 1725566118 }, .{ .value = 1581398925 }, .{ .value = 1528396197 }, .{ .value = 2003438900 }, .{ .value = 1333690759 }, .{ .value = 901023882 } }, commitment.Commitment{ .{ .value = 599720729 }, .{ .value = 1451630669 }, .{ .value = 280495775 }, .{ .value = 1286062351 }, .{ .value = 1998437271 }, .{ .value = 2105541887 }, .{ .value = 1430152479 }, .{ .value = 525269625 } }, commitment.Commitment{ .{ .value = 1939271123 }, .{ .value = 1285325213 }, .{ .value = 188522912 }, .{ .value = 235739598 }, .{ .value = 151970272 }, .{ .value = 1114056665 }, .{ .value = 0 }, .{ .value = 0 } } } }, merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 1010720278 }, .{ .value = 371322697 }, .{ .value = 1187727638 }, .{ .value = 2114974261 }, .{ .value = 448983275 }, .{ .value = 2028360121 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 301965717 }, .{ .value = 1586600222 }, .{ .value = 453482013 }, .{ .value = 138051636 }, .{ .value = 1102603200 }, .{ .value = 1964302867 }, .{ .value = 2081485910 }, .{ .value = 1190387394 } }, commitment.Commitment{ .{ .value = 1491014583 }, .{ .value = 914497624 }, .{ .value = 2122285904 }, .{ .value = 1779363688 }, .{ .value = 1713254166 }, .{ .value = 1716354191 }, .{ .value = 289561568 }, .{ .value = 1166348009 } }, commitment.Commitment{ .{ .value = 1038493246 }, .{ .value = 224919783 }, .{ .value = 1798066113 }, .{ .value = 811525872 }, .{ .value = 251529975 }, .{ .value = 743558002 }, .{ .value = 2043173290 }, .{ .value = 90214913 } }, commitment.Commitment{ .{ .value = 1051844652 }, .{ .value = 768529981 }, .{ .value = 1494738252 }, .{ .value = 215188844 }, .{ .value = 701684057 }, .{ .value = 1392396741 }, .{ .value = 0 }, .{ .value = 0 } } } }, merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 1858932879 }, .{ .value = 2117140654 }, .{ .value = 1057925471 }, .{ .value = 594297234 }, .{ .value = 300861745 }, .{ .value = 461612590 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 438938626 }, .{ .value = 428145163 }, .{ .value = 676476409 }, .{ .value = 711768940 }, .{ .value = 2108389116 }, .{ .value = 579943562 }, .{ .value = 1146667336 }, .{ .value = 426095082 } }, commitment.Commitment{ .{ .value = 706135793 }, .{ .value = 1360016616 }, .{ .value = 1740569720 }, .{ .value = 1074066394 }, .{ .value = 586569040 }, .{ .value = 407404979 }, .{ .value = 235869206 }, .{ .value = 1204722340 } }, commitment.Commitment{ .{ .value = 548021773 }, .{ .value = 609054094 }, .{ .value = 439456452 }, .{ .value = 1388973354 }, .{ .value = 370509345 }, .{ .value = 890635817 }, .{ .value = 0 }, .{ .value = 0 } } } }, merkle.Branch{ .leaf = commitment.Commitment{ .{ .value = 417330446 }, .{ .value = 1276400319 }, .{ .value = 1789083054 }, .{ .value = 1494544737 }, .{ .value = 619579548 }, .{ .value = 865883192 }, .{ .value = 0 }, .{ .value = 0 } }, .siblings = &[_]commitment.Commitment{ commitment.Commitment{ .{ .value = 2117928334 }, .{ .value = 1208182386 }, .{ .value = 2025480130 }, .{ .value = 258199272 }, .{ .value = 261369024 }, .{ .value = 1802888476 }, .{ .value = 341080095 }, .{ .value = 19200094 } }, commitment.Commitment{ .{ .value = 505897921 }, .{ .value = 182092984 }, .{ .value = 2022443037 }, .{ .value = 488891854 }, .{ .value = 1864620691 }, .{ .value = 1512069024 }, .{ .value = 0 }, .{ .value = 0 } } } } }} } } };
 
-const verify_case_64_proof = verifier.Proof{
-    .rounds = &verify_case_64_rounds,
-    .module_sizes = &verify_case_64_module_sizes,
-    .pcs_opening = verify_case_64_pcs_opening,
+const verify_case_66_proof = verifier.Proof{
+    .rounds = &verify_case_66_rounds,
+    .module_sizes = &verify_case_66_module_sizes,
+    .pcs_opening = verify_case_66_pcs_opening,
 };
 
-const verify_case_64_systems = verifier.Systems{ .vanishing = system_64, .logderivativesum = system_64_logderiv, .rowlimit = system_64_rowlimit, .pcs = verify_case_64_pcs_system };
+const verify_case_66_public_inputs = [_]protocol.Scalar{};
+
+const verify_case_66_input = verifier.VerifyInput{
+    .proof = verify_case_66_proof,
+    .public_inputs = &verify_case_66_public_inputs,
+};
+
+const verify_case_66_systems = verifier.Systems{ .public_input = system_66_public_input, .vanishing = system_66, .logderivativesum = system_66_logderiv, .rowlimit = system_66_rowlimit, .pcs = verify_case_66_pcs_system };
 
 pub const metadata = [_]VerifyCaseMetadata{
     .{ .name = "BooleanColumn", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 5, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 1, .total_quotient_claims = 1 },
@@ -11912,6 +13152,8 @@ pub const metadata = [_]VerifyCaseMetadata{
     .{ .name = "RepeatedSValues", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 48, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 7, .total_quotient_claims = 6 },
     .{ .name = "EmptySelected", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 52, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 8, .total_quotient_claims = 6 },
     .{ .name = "DistinctBounds", .module_count = 3, .dynamic_module_count = 0, .round_count = 6, .expression_count = 101, .bucket_count = 7, .vanishing_count = 9, .total_witness_claims = 12, .total_quotient_claims = 13 },
+    .{ .name = "OpenedCellPublicInput", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 5, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 1, .total_quotient_claims = 1 },
+    .{ .name = "OpenedCellPublicInputDynamic", .module_count = 1, .dynamic_module_count = 1, .round_count = 4, .expression_count = 5, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 1, .total_quotient_claims = 1 },
     .{ .name = "LagrangeSelectorBoundary", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 5, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 1, .total_quotient_claims = 1 },
     .{ .name = "DynamicLagrangeSelectorBoundary", .module_count = 1, .dynamic_module_count = 1, .round_count = 4, .expression_count = 5, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 1, .total_quotient_claims = 1 },
     .{ .name = "MultiColumnBench", .module_count = 2, .dynamic_module_count = 0, .round_count = 6, .expression_count = 112, .bucket_count = 4, .vanishing_count = 6, .total_witness_claims = 15, .total_quotient_claims = 6 },
@@ -11981,113 +13223,117 @@ pub fn get(comptime index: usize) VerifyCase {
         59 => .{ .name = "RepeatedSValues", .spec = system_59_spec, .systems = verify_case_59_systems },
         60 => .{ .name = "EmptySelected", .spec = system_60_spec, .systems = verify_case_60_systems },
         61 => .{ .name = "DistinctBounds", .spec = system_61_spec, .systems = verify_case_61_systems },
-        62 => .{ .name = "LagrangeSelectorBoundary", .spec = system_62_spec, .systems = verify_case_62_systems },
-        63 => .{ .name = "DynamicLagrangeSelectorBoundary", .spec = system_63_spec, .systems = verify_case_63_systems },
-        64 => .{ .name = "MultiColumnBench", .spec = system_64_spec, .systems = verify_case_64_systems },
+        62 => .{ .name = "OpenedCellPublicInput", .spec = system_62_spec, .systems = verify_case_62_systems },
+        63 => .{ .name = "OpenedCellPublicInputDynamic", .spec = system_63_spec, .systems = verify_case_63_systems },
+        64 => .{ .name = "LagrangeSelectorBoundary", .spec = system_64_spec, .systems = verify_case_64_systems },
+        65 => .{ .name = "DynamicLagrangeSelectorBoundary", .spec = system_65_spec, .systems = verify_case_65_systems },
+        66 => .{ .name = "MultiColumnBench", .spec = system_66_spec, .systems = verify_case_66_systems },
         else => @compileError("unknown verifier fixture case index"),
     };
 }
-pub fn getInput(comptime index: usize) verifier.Proof {
+pub fn getInput(comptime index: usize) verifier.VerifyInput {
     return switch (index) {
-        0 => verify_case_0_proof,
-        1 => verify_case_1_proof,
-        2 => verify_case_2_proof,
-        3 => verify_case_3_proof,
-        4 => verify_case_4_proof,
-        5 => verify_case_5_proof,
-        6 => verify_case_6_proof,
-        7 => verify_case_7_proof,
-        8 => verify_case_8_proof,
-        9 => verify_case_9_proof,
-        10 => verify_case_10_proof,
-        11 => verify_case_11_proof,
-        12 => verify_case_12_proof,
-        13 => verify_case_13_proof,
-        14 => verify_case_14_proof,
-        15 => verify_case_15_proof,
-        16 => verify_case_16_proof,
-        17 => verify_case_17_proof,
-        18 => verify_case_18_proof,
-        19 => verify_case_19_proof,
-        20 => verify_case_20_proof,
-        21 => verify_case_21_proof,
-        22 => verify_case_22_proof,
-        23 => verify_case_23_proof,
-        24 => verify_case_24_proof,
-        25 => verify_case_25_proof,
-        26 => verify_case_26_proof,
-        27 => verify_case_27_proof,
-        28 => verify_case_28_proof,
-        29 => verify_case_29_proof,
-        30 => verify_case_30_proof,
-        31 => verify_case_31_proof,
-        32 => verify_case_32_proof,
-        33 => verify_case_33_proof,
-        34 => verify_case_34_proof,
-        35 => verify_case_35_proof,
-        36 => verify_case_36_proof,
-        37 => verify_case_37_proof,
-        38 => verify_case_38_proof,
-        39 => verify_case_39_proof,
-        40 => verify_case_40_proof,
-        41 => verify_case_41_proof,
-        42 => verify_case_42_proof,
-        43 => verify_case_43_proof,
-        44 => verify_case_44_proof,
-        45 => verify_case_45_proof,
-        46 => verify_case_46_proof,
-        47 => verify_case_47_proof,
-        48 => verify_case_48_proof,
-        49 => verify_case_49_proof,
-        50 => verify_case_50_proof,
-        51 => verify_case_51_proof,
-        52 => verify_case_52_proof,
-        53 => verify_case_53_proof,
-        54 => verify_case_54_proof,
-        55 => verify_case_55_proof,
-        56 => verify_case_56_proof,
-        57 => verify_case_57_proof,
-        58 => verify_case_58_proof,
-        59 => verify_case_59_proof,
-        60 => verify_case_60_proof,
-        61 => verify_case_61_proof,
-        62 => verify_case_62_proof,
-        63 => verify_case_63_proof,
-        64 => verify_case_64_proof,
+        0 => verify_case_0_input,
+        1 => verify_case_1_input,
+        2 => verify_case_2_input,
+        3 => verify_case_3_input,
+        4 => verify_case_4_input,
+        5 => verify_case_5_input,
+        6 => verify_case_6_input,
+        7 => verify_case_7_input,
+        8 => verify_case_8_input,
+        9 => verify_case_9_input,
+        10 => verify_case_10_input,
+        11 => verify_case_11_input,
+        12 => verify_case_12_input,
+        13 => verify_case_13_input,
+        14 => verify_case_14_input,
+        15 => verify_case_15_input,
+        16 => verify_case_16_input,
+        17 => verify_case_17_input,
+        18 => verify_case_18_input,
+        19 => verify_case_19_input,
+        20 => verify_case_20_input,
+        21 => verify_case_21_input,
+        22 => verify_case_22_input,
+        23 => verify_case_23_input,
+        24 => verify_case_24_input,
+        25 => verify_case_25_input,
+        26 => verify_case_26_input,
+        27 => verify_case_27_input,
+        28 => verify_case_28_input,
+        29 => verify_case_29_input,
+        30 => verify_case_30_input,
+        31 => verify_case_31_input,
+        32 => verify_case_32_input,
+        33 => verify_case_33_input,
+        34 => verify_case_34_input,
+        35 => verify_case_35_input,
+        36 => verify_case_36_input,
+        37 => verify_case_37_input,
+        38 => verify_case_38_input,
+        39 => verify_case_39_input,
+        40 => verify_case_40_input,
+        41 => verify_case_41_input,
+        42 => verify_case_42_input,
+        43 => verify_case_43_input,
+        44 => verify_case_44_input,
+        45 => verify_case_45_input,
+        46 => verify_case_46_input,
+        47 => verify_case_47_input,
+        48 => verify_case_48_input,
+        49 => verify_case_49_input,
+        50 => verify_case_50_input,
+        51 => verify_case_51_input,
+        52 => verify_case_52_input,
+        53 => verify_case_53_input,
+        54 => verify_case_54_input,
+        55 => verify_case_55_input,
+        56 => verify_case_56_input,
+        57 => verify_case_57_input,
+        58 => verify_case_58_input,
+        59 => verify_case_59_input,
+        60 => verify_case_60_input,
+        61 => verify_case_61_input,
+        62 => verify_case_62_input,
+        63 => verify_case_63_input,
+        64 => verify_case_64_input,
+        65 => verify_case_65_input,
+        66 => verify_case_66_input,
         else => @compileError("unknown verifier fixture case index"),
     };
 }
-pub fn getInputFailing(comptime index: usize) verifier.Proof {
+pub fn getInputFailing(comptime index: usize) verifier.VerifyInput {
     return switch (index) {
-        0 => verify_case_0_failing_proof,
-        1 => verify_case_1_failing_proof,
-        2 => verify_case_2_failing_proof,
-        3 => verify_case_3_failing_proof,
-        4 => verify_case_4_failing_proof,
-        5 => verify_case_5_failing_proof,
-        6 => verify_case_6_failing_proof,
-        7 => verify_case_7_failing_proof,
-        8 => verify_case_8_failing_proof,
-        9 => verify_case_9_failing_proof,
-        10 => verify_case_10_failing_proof,
-        11 => verify_case_11_failing_proof,
-        12 => verify_case_12_failing_proof,
-        13 => verify_case_13_failing_proof,
-        14 => verify_case_14_failing_proof,
-        15 => verify_case_15_failing_proof,
-        16 => verify_case_16_failing_proof,
-        17 => verify_case_17_failing_proof,
-        18 => verify_case_18_failing_proof,
-        19 => verify_case_19_failing_proof,
-        20 => verify_case_20_failing_proof,
-        21 => verify_case_21_failing_proof,
-        22 => verify_case_22_failing_proof,
-        23 => verify_case_23_failing_proof,
-        24 => verify_case_24_failing_proof,
-        25 => verify_case_25_failing_proof,
-        26 => verify_case_26_failing_proof,
-        27 => verify_case_27_failing_proof,
-        28 => verify_case_28_failing_proof,
+        0 => verify_case_0_failing_input,
+        1 => verify_case_1_failing_input,
+        2 => verify_case_2_failing_input,
+        3 => verify_case_3_failing_input,
+        4 => verify_case_4_failing_input,
+        5 => verify_case_5_failing_input,
+        6 => verify_case_6_failing_input,
+        7 => verify_case_7_failing_input,
+        8 => verify_case_8_failing_input,
+        9 => verify_case_9_failing_input,
+        10 => verify_case_10_failing_input,
+        11 => verify_case_11_failing_input,
+        12 => verify_case_12_failing_input,
+        13 => verify_case_13_failing_input,
+        14 => verify_case_14_failing_input,
+        15 => verify_case_15_failing_input,
+        16 => verify_case_16_failing_input,
+        17 => verify_case_17_failing_input,
+        18 => verify_case_18_failing_input,
+        19 => verify_case_19_failing_input,
+        20 => verify_case_20_failing_input,
+        21 => verify_case_21_failing_input,
+        22 => verify_case_22_failing_input,
+        23 => verify_case_23_failing_input,
+        24 => verify_case_24_failing_input,
+        25 => verify_case_25_failing_input,
+        26 => verify_case_26_failing_input,
+        27 => verify_case_27_failing_input,
+        28 => verify_case_28_failing_input,
         29 => @compileError("verifier fixture case 29 (DynamicFibonacciMultiSize) has no failing input"),
         30 => @compileError("verifier fixture case 30 (DynamicFibonacciTwoModules) has no failing input"),
         31 => @compileError("verifier fixture case 31 (SingleFractionAllOnes) has no failing input"),
@@ -12121,9 +13367,11 @@ pub fn getInputFailing(comptime index: usize) verifier.Proof {
         59 => @compileError("verifier fixture case 59 (RepeatedSValues) has no failing input"),
         60 => @compileError("verifier fixture case 60 (EmptySelected) has no failing input"),
         61 => @compileError("verifier fixture case 61 (DistinctBounds) has no failing input"),
-        62 => verify_case_62_failing_proof,
-        63 => verify_case_63_failing_proof,
-        64 => @compileError("verifier fixture case 64 (MultiColumnBench) has no failing input"),
+        62 => verify_case_62_failing_input,
+        63 => verify_case_63_failing_input,
+        64 => verify_case_64_failing_input,
+        65 => verify_case_65_failing_input,
+        66 => @compileError("verifier fixture case 66 (MultiColumnBench) has no failing input"),
         else => @compileError("unknown verifier fixture case index"),
     };
 }
@@ -12194,12 +13442,14 @@ pub fn hasFailing(comptime index: usize) bool {
         61 => false,
         62 => true,
         63 => true,
-        64 => false,
+        64 => true,
+        65 => true,
+        66 => false,
         else => false,
     };
 }
 
-pub fn getInputAlt(comptime index: usize) verifier.Proof {
+pub fn getInputAlt(comptime index: usize) verifier.VerifyInput {
     return switch (index) {
         0 => @compileError("verifier fixture case 0 (BooleanColumn) has no alt input"),
         1 => @compileError("verifier fixture case 1 (Fibonacci) has no alt input"),
@@ -12230,8 +13480,8 @@ pub fn getInputAlt(comptime index: usize) verifier.Proof {
         26 => @compileError("verifier fixture case 26 (BackAndForwardShift) has no alt input"),
         27 => @compileError("verifier fixture case 27 (DynamicQuadratic) has no alt input"),
         28 => @compileError("verifier fixture case 28 (QuarticWithBackShift) has no alt input"),
-        29 => verify_case_29_alt_proof,
-        30 => verify_case_30_alt_proof,
+        29 => verify_case_29_alt_input,
+        30 => verify_case_30_alt_input,
         31 => @compileError("verifier fixture case 31 (SingleFractionAllOnes) has no alt input"),
         32 => @compileError("verifier fixture case 32 (PartialFilter) has no alt input"),
         33 => @compileError("verifier fixture case 33 (AllZeroFilter) has no alt input"),
@@ -12263,9 +13513,11 @@ pub fn getInputAlt(comptime index: usize) verifier.Proof {
         59 => @compileError("verifier fixture case 59 (RepeatedSValues) has no alt input"),
         60 => @compileError("verifier fixture case 60 (EmptySelected) has no alt input"),
         61 => @compileError("verifier fixture case 61 (DistinctBounds) has no alt input"),
-        62 => @compileError("verifier fixture case 62 (LagrangeSelectorBoundary) has no alt input"),
-        63 => @compileError("verifier fixture case 63 (DynamicLagrangeSelectorBoundary) has no alt input"),
-        64 => @compileError("verifier fixture case 64 (MultiColumnBench) has no alt input"),
+        62 => @compileError("verifier fixture case 62 (OpenedCellPublicInput) has no alt input"),
+        63 => @compileError("verifier fixture case 63 (OpenedCellPublicInputDynamic) has no alt input"),
+        64 => @compileError("verifier fixture case 64 (LagrangeSelectorBoundary) has no alt input"),
+        65 => @compileError("verifier fixture case 65 (DynamicLagrangeSelectorBoundary) has no alt input"),
+        66 => @compileError("verifier fixture case 66 (MultiColumnBench) has no alt input"),
         else => @compileError("unknown verifier fixture case index"),
     };
 }
@@ -12337,6 +13589,8 @@ pub fn hasAlt(comptime index: usize) bool {
         62 => false,
         63 => false,
         64 => false,
+        65 => false,
+        66 => false,
         else => false,
     };
 }

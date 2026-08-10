@@ -543,6 +543,7 @@ type fixtureCase struct {
 
 type vanishingProofView struct {
 	rounds         []runtimeTraceRound
+	publicInputs   []runtimeTraceCell
 	witnessClaims  []field.Ext
 	quotientClaims []field.Ext
 	moduleSizes    []int
@@ -574,6 +575,10 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		routing, err := codegen.BuildCoinRouting(sys)
 		if err != nil {
 			return fmt.Errorf("build coin routing %s/%s: %w", source, name, err)
+		}
+		publicInput, err := codegen.BuildPublicInputSystem(sys)
+		if err != nil {
+			return fmt.Errorf("build public-input system %s/%s: %w", source, name, err)
 		}
 		vanishingSystem, err := codegen.BuildVanishingSystem(sys, routing)
 		if err != nil {
@@ -621,7 +626,7 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		pcsSys := &honestPcs
 
 		cases = append(cases, tc)
-		systems = append(systems, codegen.CompiledSystem{Routing: routing, Vanishing: vanishingSystem, LogDeriv: logDeriv, RowLimit: rowLimit, Pcs: pcsSys})
+		systems = append(systems, codegen.CompiledSystem{Routing: routing, PublicInput: publicInput, Vanishing: vanishingSystem, LogDeriv: logDeriv, RowLimit: rowLimit, Pcs: pcsSys})
 		return nil
 	}
 
@@ -635,6 +640,10 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		routing, err := codegen.BuildCoinRouting(sys)
 		if err != nil {
 			return fmt.Errorf("build coin routing %s/%s: %w", source, name, err)
+		}
+		publicInput, err := codegen.BuildPublicInputSystem(sys)
+		if err != nil {
+			return fmt.Errorf("build public-input system %s/%s: %w", source, name, err)
 		}
 		vanishingSystem, err := codegen.BuildVanishingSystem(sys, routing)
 		if err != nil {
@@ -680,7 +689,7 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		tc.altOpen = *altRt.PCSOpeningProof
 
 		cases = append(cases, tc)
-		systems = append(systems, codegen.CompiledSystem{Routing: routing, Vanishing: vanishingSystem, LogDeriv: logDeriv, RowLimit: rowLimit, Pcs: &honestPcs})
+		systems = append(systems, codegen.CompiledSystem{Routing: routing, PublicInput: publicInput, Vanishing: vanishingSystem, LogDeriv: logDeriv, RowLimit: rowLimit, Pcs: &honestPcs})
 		return nil
 	}
 
@@ -726,6 +735,51 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		if err := add("RangeCheckCompiler", sc.Name, sc.Sys, sc.AssignWitness, nil); err != nil {
 			return nil, nil, err
 		}
+	}
+
+	// Public-input end-to-end coverage. The honest fixture carries the opened cell
+	// only in `public_inputs`, never in the proof rounds; the failing fixture
+	// keeps the proof identical and tampers JUST the public-input statement.
+	{
+		sys, col := buildPublicInputSystem()
+		honest := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(10, 20, 30, 40))) }
+		if err := add("PublicInput", "OpenedCellPublicInput", sys, honest, nil); err != nil {
+			return nil, nil, err
+		}
+
+		last := len(cases) - 1
+		if len(cases[last].honest.publicInputs) == 0 {
+			return nil, nil, fmt.Errorf("public input fixture produced no public inputs")
+		}
+
+		invalid := cases[last].honest
+		invalid.publicInputs = append([]runtimeTraceCell(nil), invalid.publicInputs...)
+		invalid.publicInputs[0] = baseTraceCell(elem(99))
+		cases[last].invalid = &invalid
+		cases[last].invalidPcs = cases[last].honestPcs
+		cases[last].invalidOpen = cases[last].honestOpening
+	}
+	// Dynamic-module twin of the public-input scenario. The opened cell is still
+	// carried only in `public_inputs`, but the module size now round-trips
+	// through the proof at runtime (4, from the witness column length).
+	{
+		sys, col := buildDynamicPublicInputSystem()
+		honest := func(rt *wiop.Runtime) { rt.AssignColumn(col, concreteBase(elems(30, 20, 10, 40))) }
+		if err := add("PublicInput", "OpenedCellPublicInputDynamic", sys, honest, nil); err != nil {
+			return nil, nil, err
+		}
+
+		last := len(cases) - 1
+		if len(cases[last].honest.publicInputs) == 0 {
+			return nil, nil, fmt.Errorf("dynamic public input fixture produced no public inputs")
+		}
+
+		invalid := cases[last].honest
+		invalid.publicInputs = append([]runtimeTraceCell(nil), invalid.publicInputs...)
+		invalid.publicInputs[0] = baseTraceCell(elem(99))
+		cases[last].invalid = &invalid
+		cases[last].invalidPcs = cases[last].honestPcs
+		cases[last].invalidOpen = cases[last].honestOpening
 	}
 
 	// LagrangeSelector boundary scenario. It is constructed here rather than in
@@ -853,6 +907,37 @@ func buildDynamicLagrangeSelectorBoundarySystem() (*wiop.System, *wiop.Column) {
 	return sys, col
 }
 
+// buildPublicInputSystem mirrors prover-ray's basic public-input flow: open one
+// oracle column position into a cell, register that cell as a public input, and
+// let the local-vanishing compiler turn the opening equality into a verifier
+// check. The verifier fixture then proves two properties end-to-end:
+//  1. the opened cell is omitted from the proof rounds and carried separately in
+//     the flat public-input vector;
+//  2. tampering only that public-input vector is rejected.
+func buildPublicInputSystem() (*wiop.System, *wiop.Column) {
+	sys := wiop.NewSystemf("public-input")
+	r0 := sys.NewRound()
+	mod := sys.NewSizedModule(sys.Context.Childf("mod"), 4, wiop.PaddingDirectionNone)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
+	cell := col.At(2).Open(sys.Context.Childf("public"))
+	sys.RegisterPublicInputs("PublicInput", cell)
+	return sys, col
+}
+
+// buildDynamicPublicInputSystem is the dynamic-module twin of
+// buildPublicInputSystem: same opened-cell-as-public-input flow, but the
+// containing module size is inferred from the runtime witness assignment and
+// round-trips through the proof's module_sizes.
+func buildDynamicPublicInputSystem() (*wiop.System, *wiop.Column) {
+	sys := wiop.NewSystemf("public-input-dyn")
+	r0 := sys.NewRound()
+	mod := sys.NewDynamicModule(sys.Context.Childf("mod"), wiop.PaddingDirectionRight)
+	col := mod.NewColumn(sys.Context.Childf("col"), r0)
+	cell := col.At(0).Open(sys.Context.Childf("public"))
+	sys.RegisterPublicInputs("PublicInput", cell)
+	return sys, col
+}
+
 // runProver creates a runtime for sys, applies assign, advances all rounds
 // running every prover action, and returns the completed runtime.
 func runProver(sys *wiop.System, assign assignFn) *wiop.Runtime {
@@ -874,6 +959,8 @@ func runProver(sys *wiop.System, assign assignFn) *wiop.Runtime {
 // from an already-completed runtime.
 func extractVanishingProofView(sys *wiop.System, rt *wiop.Runtime) vanishingProofView {
 	verifiers := globalVerifiers(sys)
+	publicInputs := extractPublicInputs(sys, rt)
+	publicInputByID := publicInputIndex(sys)
 
 	var witnessClaims []field.Ext
 	var quotientClaims []field.Ext
@@ -890,11 +977,12 @@ func extractVanishingProofView(sys *wiop.System, rt *wiop.Runtime) vanishingProo
 
 	rounds := make([]runtimeTraceRound, 0, len(sys.Rounds)-1)
 	for i := 0; i < len(sys.Rounds)-1; i++ {
-		rounds = append(rounds, runtimeTraceRoundFromRuntime(rt, sys.Rounds[i]))
+		rounds = append(rounds, runtimeTraceRoundFromRuntime(rt, sys.Rounds[i], publicInputByID))
 	}
 
 	return vanishingProofView{
 		rounds:         rounds,
+		publicInputs:   publicInputs,
 		witnessClaims:  witnessClaims,
 		quotientClaims: quotientClaims,
 		moduleSizes:    dynamicModuleSizes(sys, rt),
@@ -1006,7 +1094,28 @@ func dynamicModuleSizes(sys *wiop.System, rt *wiop.Runtime) []int {
 	return out
 }
 
-func runtimeTraceRoundFromRuntime(rt *wiop.Runtime, round *wiop.Round) runtimeTraceRound {
+func publicInputIndex(sys *wiop.System) map[wiop.ObjectID]int {
+	out := make(map[wiop.ObjectID]int, len(sys.PublicInputs))
+	for i, cell := range sys.PublicInputs {
+		out[cell.Context.ID] = i
+	}
+	return out
+}
+
+func extractPublicInputs(sys *wiop.System, rt *wiop.Runtime) []runtimeTraceCell {
+	out := make([]runtimeTraceCell, len(sys.PublicInputs))
+	for i, cell := range sys.PublicInputs {
+		value := rt.GetCellValue(cell)
+		if value.IsBase() {
+			out[i] = baseTraceCell(value.AsBase())
+		} else {
+			out[i] = extTraceCell(value.AsExt())
+		}
+	}
+	return out
+}
+
+func runtimeTraceRoundFromRuntime(rt *wiop.Runtime, round *wiop.Round, publicInputByID map[wiop.ObjectID]int) runtimeTraceRound {
 	var trace runtimeTraceRound
 	// A committed (interactive PCS) round carries its Merkle root as the sole
 	// verifier-visible message for that round, absorbed by AdvanceRound in place
@@ -1022,6 +1131,9 @@ func runtimeTraceRoundFromRuntime(rt *wiop.Runtime, round *wiop.Round) runtimeTr
 	}
 	for _, cell := range round.Cells {
 		if !rt.HasCellValue(cell) {
+			continue
+		}
+		if _, isPI := publicInputByID[cell.Context.ID]; isPI {
 			continue
 		}
 		value := rt.GetCellValue(cell)
@@ -1073,8 +1185,8 @@ func writeCompiledHeader(out *bytes.Buffer) {
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "pub const RuntimeTraceCell = union(enum) { base: u32, ext: [6]u32 };")
 	fmt.Fprintln(out, "pub const RuntimeTraceRound = struct { commitment: ?[8]u32 = null, cells: []const RuntimeTraceCell };")
-	fmt.Fprintln(out, "pub const VanishingProofView = struct { rounds: []const RuntimeTraceRound, witness_claims: []const [6]u32, quotient_claims: []const [6]u32, module_sizes: []const usize };")
-	fmt.Fprintln(out, "pub const Scenario = struct { name: []const u8, spec: protocol.Spec, system: vanishing.System, logderiv: logderivativesum.System = .{}, honest: VanishingProofView, invalid: ?VanishingProofView = null };")
+	fmt.Fprintln(out, "pub const VanishingProofView = struct { rounds: []const RuntimeTraceRound, public_inputs: []const RuntimeTraceCell, witness_claims: []const [6]u32, quotient_claims: []const [6]u32, module_sizes: []const usize };")
+	fmt.Fprintln(out, "pub const Scenario = struct { name: []const u8, spec: protocol.Spec, public_input: protocol.public_input.Spec, system: vanishing.System, logderiv: logderivativesum.System = .{}, rowlimit: rowlimit.System = .{}, honest: VanishingProofView, invalid: ?VanishingProofView = null };")
 	fmt.Fprintln(out)
 }
 
@@ -1082,6 +1194,7 @@ func writeCompiledScenario(out *bytes.Buffer, idx int, tc fixtureCase) {
 	fmt.Fprintf(out, "const scenario_%d = Scenario{\n", idx)
 	fmt.Fprintf(out, "    .name = \"%s\",\n", codegen.ZigString(tc.name))
 	fmt.Fprintf(out, "    .spec = system_%d_spec,\n", idx)
+	fmt.Fprintf(out, "    .public_input = system_%d_public_input,\n", idx)
 	fmt.Fprintf(out, "    .system = system_%d,\n", idx)
 	fmt.Fprintf(out, "    .logderiv = system_%d_logderiv,\n", idx)
 	fmt.Fprintln(out, "    .honest =")
@@ -1107,6 +1220,11 @@ func writeVanishingProofView(out *bytes.Buffer, proof vanishingProofView, indent
 	fmt.Fprintf(out, "%s    .rounds = &.{\n", indent)
 	for _, round := range proof.rounds {
 		writeTraceRound(out, round, indent+"        ")
+	}
+	fmt.Fprintf(out, "%s    },\n", indent)
+	fmt.Fprintf(out, "%s    .public_inputs = &.{\n", indent)
+	for _, input := range proof.publicInputs {
+		writeTraceCell(out, input, indent+"        ")
 	}
 	fmt.Fprintf(out, "%s    },\n", indent)
 	fmt.Fprintf(out, "%s    .witness_claims = &%s,\n", indent, extSlice(proof.witnessClaims))
@@ -1239,8 +1357,8 @@ func writeVerifyCase(out *bytes.Buffer, idx int, tc fixtureCase) {
 	}
 	fmt.Fprintf(
 		out,
-		"const verify_case_%d_systems = verifier.Systems{ .vanishing = system_%d, .logderivativesum = system_%d_logderiv, .rowlimit = system_%d_rowlimit, .pcs = %s };\n",
-		idx, idx, idx, idx, pcsName,
+		"const verify_case_%d_systems = verifier.Systems{ .public_input = system_%d_public_input, .vanishing = system_%d, .logderivativesum = system_%d_logderiv, .rowlimit = system_%d_rowlimit, .pcs = %s };\n",
+		idx, idx, idx, idx, idx, pcsName,
 	)
 	fmt.Fprintln(out)
 }
@@ -1274,6 +1392,26 @@ func writeVerifyProof(out *bytes.Buffer, prefix string, proof vanishingProofView
 	fmt.Fprintf(out, "    .rounds = &%s_rounds,\n", prefix)
 	fmt.Fprintf(out, "    .module_sizes = &%s_module_sizes,\n", prefix)
 	fmt.Fprintf(out, "    .pcs_opening = %s_pcs_opening,\n", prefix)
+	fmt.Fprintln(out, "};")
+	fmt.Fprintln(out)
+
+	fmt.Fprintf(out, "const %s_public_inputs = [_]protocol.Scalar{\n", prefix)
+	for _, cell := range proof.publicInputs {
+		switch {
+		case cell.baseValue != nil:
+			fmt.Fprintf(out, "    .{ .base = %s },\n", fieldValueLiteral(*cell.baseValue))
+		case cell.extValue != nil:
+			fmt.Fprintf(out, "    .{ .ext = %s },\n", extValueLiteral(*cell.extValue))
+		default:
+			panic("runtime trace cell has no data variant")
+		}
+	}
+	fmt.Fprintln(out, "};")
+	fmt.Fprintln(out)
+
+	fmt.Fprintf(out, "const %s_input = verifier.VerifyInput{\n", prefix)
+	fmt.Fprintf(out, "    .proof = %s_proof,\n", prefix)
+	fmt.Fprintf(out, "    .public_inputs = &%s_public_inputs,\n", prefix)
 	fmt.Fprintln(out, "};")
 	fmt.Fprintln(out)
 }
@@ -1333,15 +1471,16 @@ func writeVerifyCaseSwitch(out *bytes.Buffer, cases []fixtureCase) {
 	fmt.Fprintln(out, "}")
 }
 
-// writeVerifyInputSwitch emits the getInput accessor, which returns the proof
-// data for a fixture case. The proof is kept separate from VerifyCase (see
-// writeVerifyHeader) so callers that only need the spec/systems don't pull in
-// the proof, and so the input can be supplied independently at runtime.
+// writeVerifyInputSwitch emits the getInput accessor, which returns the full
+// verifier input (proof + separate public-input vector) for a fixture case. The
+// input is kept separate from VerifyCase (see writeVerifyHeader) so callers that
+// only need the spec/systems don't pull it in, and so it can be supplied
+// independently at runtime.
 func writeVerifyInputSwitch(out *bytes.Buffer, cases []fixtureCase) {
-	fmt.Fprintln(out, "pub fn getInput(comptime index: usize) verifier.Proof {")
+	fmt.Fprintln(out, "pub fn getInput(comptime index: usize) verifier.VerifyInput {")
 	fmt.Fprintln(out, "    return switch (index) {")
 	for i := range cases {
-		fmt.Fprintf(out, "        %d => verify_case_%d_proof,\n", i, i)
+		fmt.Fprintf(out, "        %d => verify_case_%d_input,\n", i, i)
 	}
 	fmt.Fprintln(out, "        else => @compileError(\"unknown verifier fixture case index\"),")
 	fmt.Fprintln(out, "    };")
@@ -1349,14 +1488,14 @@ func writeVerifyInputSwitch(out *bytes.Buffer, cases []fixtureCase) {
 }
 
 // writeVerifyFailingInputSwitch emits the getInputFailing accessor, returning
-// the failing (invalid) proof data for a fixture case. Not every case defines a
-// failing input, so cases without one produce a comptime error when requested.
+// the failing verifier input for a fixture case. Not every case defines one, so
+// cases without one produce a comptime error when requested.
 func writeVerifyFailingInputSwitch(out *bytes.Buffer, cases []fixtureCase) {
-	fmt.Fprintln(out, "pub fn getInputFailing(comptime index: usize) verifier.Proof {")
+	fmt.Fprintln(out, "pub fn getInputFailing(comptime index: usize) verifier.VerifyInput {")
 	fmt.Fprintln(out, "    return switch (index) {")
 	for i, tc := range cases {
 		if tc.invalid != nil {
-			fmt.Fprintf(out, "        %d => verify_case_%d_failing_proof,\n", i, i)
+			fmt.Fprintf(out, "        %d => verify_case_%d_failing_input,\n", i, i)
 		} else {
 			fmt.Fprintf(out, "        %d => @compileError(\"verifier fixture case %d (%s) has no failing input\"),\n", i, i, codegen.ZigString(tc.name))
 		}
@@ -1378,15 +1517,16 @@ func writeVerifyFailingInputSwitch(out *bytes.Buffer, cases []fixtureCase) {
 	fmt.Fprintln(out, "}")
 	fmt.Fprintln(out)
 
-	// getInputAlt returns a case's SECOND-size honest proof (multi-size cases
-	// only); hasAlt gates it. The alt proof is verified against the SAME case
-	// systems (verify_case_i_systems.pcs) as the primary proof — the
+	// getInputAlt returns a case's SECOND-size honest verifier input (multi-size
+	// cases
+	// only); hasAlt gates it. The alt verifier input is checked against the SAME
+	// case systems (verify_case_i_systems.pcs) as the primary proof — the
 	// runtime-size-reconstructed-layout property: one baked System, two sizes.
-	fmt.Fprintln(out, "pub fn getInputAlt(comptime index: usize) verifier.Proof {")
+	fmt.Fprintln(out, "pub fn getInputAlt(comptime index: usize) verifier.VerifyInput {")
 	fmt.Fprintln(out, "    return switch (index) {")
 	for i, tc := range cases {
 		if tc.alt != nil {
-			fmt.Fprintf(out, "        %d => verify_case_%d_alt_proof,\n", i, i)
+			fmt.Fprintf(out, "        %d => verify_case_%d_alt_input,\n", i, i)
 		} else {
 			fmt.Fprintf(out, "        %d => @compileError(\"verifier fixture case %d (%s) has no alt input\"),\n", i, i, codegen.ZigString(tc.name))
 		}

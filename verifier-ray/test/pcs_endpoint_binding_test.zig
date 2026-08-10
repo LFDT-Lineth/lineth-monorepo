@@ -50,12 +50,12 @@ const spec = vf.get(case_index).spec;
 const systems = vf.get(case_index).systems;
 
 test "endpoint cell binding: honest proof verifies" {
-    const proof = vf.getInput(case_index);
-    try verifier.verify(spec, systems, proof);
+    const input = vf.getInput(case_index);
+    try verifier.verify(spec, systems, input);
 }
 
 test "endpoint cell binding: corrupting the raw z_final cell is rejected" {
-    const proof = vf.getInput(case_index);
+    const input = vf.getInput(case_index);
 
     // Locate the z_final endpoint cell from the logderiv system's ref, so this
     // test tracks the fixture even if the round/index shifts on regeneration.
@@ -68,8 +68,8 @@ test "endpoint cell binding: corrupting the raw z_final cell is rejected" {
     // Copy the round messages so we can mutate one cell without touching the
     // (const) fixture data. Only the target round's cells slice needs its own
     // backing array; the rest alias the originals.
-    const rounds_buf = try a.dupe(protocol.RoundMessage, proof.rounds);
-    const cells_buf = try a.dupe(protocol.Scalar, proof.rounds[ref.round].cells);
+    const rounds_buf = try a.dupe(protocol.RoundMessage, input.proof.rounds);
+    const cells_buf = try a.dupe(protocol.Scalar, input.proof.rounds[ref.round].cells);
 
     // Flip the endpoint cell to a value that is NOT the authenticated Z[n-1].
     // entry_claims stay honest, so PCS still authenticates; only the vanishing
@@ -77,8 +77,8 @@ test "endpoint cell binding: corrupting the raw z_final cell is rejected" {
     cells_buf[ref.index] = .{ .ext = cells_buf[ref.index].toExt().add(ext.Ext.one()) };
     rounds_buf[ref.round].cells = cells_buf;
 
-    var bad = proof;
-    bad.rounds = rounds_buf;
+    var bad = input;
+    bad.proof.rounds = rounds_buf;
 
     // The endpoint cell is defended in TWO layers, and corrupting it trips the
     // first one reached:
