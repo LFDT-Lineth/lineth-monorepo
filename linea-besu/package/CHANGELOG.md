@@ -1,3 +1,8 @@
+## [unreleased]
+
+### ⚙️ Miscellaneous Tasks
+
+- *(linea-besu)* Package renaming to lineth.* (#3750)
 ## [2.1.0] - 2026-08-07
 
 ### 🚀 Features
