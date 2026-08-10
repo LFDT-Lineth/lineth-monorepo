@@ -102,18 +102,21 @@ internal object Web3JLinethRollupFunctionBuilders {
     parentL1RollingHash: ByteArray,
     parentL1RollingHashMessageNumber: Long,
   ): Function {
+    val compressionProof = requireNotNull(aggregationLastBlob.blobCompressionProof) {
+      "aggregationLastBlob.blobCompressionProof must be set when building the finalization function"
+    }
     val aggregationEndBlobInfo =
       LinethRollupV6.ShnarfData(
         // parentShnarf
-        aggregationLastBlob.blobCompressionProof!!.prevShnarf,
+        compressionProof.prevShnarf,
         // snarkHash
-        aggregationLastBlob.blobCompressionProof!!.snarkHash,
+        compressionProof.snarkHash,
         // finalStateRootHash
-        aggregationLastBlob.blobCompressionProof!!.finalStateRootHash,
+        compressionProof.finalStateRootHash,
         // dataEvaluationPoint
-        aggregationLastBlob.blobCompressionProof!!.expectedX,
+        compressionProof.expectedX,
         // dataEvaluationClaim
-        aggregationLastBlob.blobCompressionProof!!.expectedY,
+        compressionProof.expectedY,
       )
 
 //  FinalizationDataV3(

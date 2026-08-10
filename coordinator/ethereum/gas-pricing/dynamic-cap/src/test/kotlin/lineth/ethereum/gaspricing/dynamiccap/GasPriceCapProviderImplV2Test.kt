@@ -168,6 +168,25 @@ class GasPriceCapProviderImplV2Test {
   }
 
   @Test
+  fun `gas price coefficient requires a base fee cap`() {
+    val gasPriceCaps = GasPriceCaps(
+      maxBaseFeePerGasCap = null,
+      maxPriorityFeePerGasCap = 1UL,
+      maxFeePerGasCap = 1UL,
+      maxFeePerBlobGasCap = 1UL,
+    )
+
+    val exception = assertThrows<IllegalArgumentException> {
+      gasPriceCaps.withCoefficient(2.0)
+    }
+
+    assertThat(exception)
+      .hasMessage(
+        "maxBaseFeePerGasCap must be defined before applying the gas price caps coefficient",
+      )
+  }
+
+  @Test
   fun `gas price caps should be null if disabled`() {
     val gasPriceCapProvider = createGasPriceCapProvider(
       enabled = false,

@@ -125,26 +125,34 @@ class Web3JLinethRollupSmartContractClient internal constructor(
    * Uses SMC `submitBlobs` function that supports multiple blobs per call.
    */
   override fun submitBlobs(blobs: List<BlobRecord>, gasPriceCaps: GasPriceCaps?): SafeFuture<String> {
-    return getVersion()
-      .thenCompose { version ->
-        val function = Web3JLinethRollupFunctionBuilders.buildSubmitBlobsFunction(version, blobs)
-        web3jContractHelper.sendBlobCarryingTransactionAndGetTxHash(
-          function = function,
-          blobs = blobs.map { it.blobCompressionProof!!.compressedData },
-          gasPriceCaps = gasPriceCaps,
-        )
+    return SafeFuture.completedFuture(Unit)
+      .thenApply { blobs.getCompressionProofs("submitBlobs") }
+      .thenCompose { compressionProofs ->
+        getVersion()
+          .thenCompose { version ->
+            val function = Web3JLinethRollupFunctionBuilders.buildSubmitBlobsFunction(version, blobs)
+            web3jContractHelper.sendBlobCarryingTransactionAndGetTxHash(
+              function = function,
+              blobs = compressionProofs.map { it.compressedData },
+              gasPriceCaps = gasPriceCaps,
+            )
+          }
       }
   }
 
   override fun submitBlobsEthCall(blobs: List<BlobRecord>, gasPriceCaps: GasPriceCaps?): SafeFuture<String?> {
-    return getVersion()
-      .thenCompose { version ->
-        val function = Web3JLinethRollupFunctionBuilders.buildSubmitBlobsFunction(version, blobs)
-        web3jContractHelper.executeBlobEthCall(
-          function = function,
-          blobs = blobs.map { it.blobCompressionProof!!.compressedData },
-          gasPriceCaps = gasPriceCaps,
-        )
+    return SafeFuture.completedFuture(Unit)
+      .thenApply { blobs.getCompressionProofs("submitBlobsEthCall") }
+      .thenCompose { compressionProofs ->
+        getVersion()
+          .thenCompose { version ->
+            val function = Web3JLinethRollupFunctionBuilders.buildSubmitBlobsFunction(version, blobs)
+            web3jContractHelper.executeBlobEthCall(
+              function = function,
+              blobs = compressionProofs.map { it.compressedData },
+              gasPriceCaps = gasPriceCaps,
+            )
+          }
       }
   }
 
@@ -255,3 +263,10 @@ class Web3JLinethRollupSmartContractClient internal constructor(
       }
   }
 }
+
+private fun List<BlobRecord>.getCompressionProofs(operation: String) =
+  mapIndexed { index, blob ->
+    requireNotNull(blob.blobCompressionProof) {
+      "$operation: blob at index=$index is missing a compression proof"
+    }
+  }
