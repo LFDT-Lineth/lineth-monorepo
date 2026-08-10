@@ -18,6 +18,7 @@
 - *(coordinator)* Support custom transaction signers (#3597)
 - *(linea-besu)* Update to v26.7.0 (#3623)
 - *(linea-besu)* Update to 26.7.1 (#3699)
+- *(coordinator)* Implement ExecutionProofGeneratingCoordinator for RISC-V l2-execution proofs (#3684)
 
 ### 🐛 Bug Fixes
 
@@ -63,6 +64,7 @@
 - *(coordinator)* Apply message anchoring L1 retries (#3715)
 - *(linea-besu)* Align Besu Kotlin runtime (#3734)
 - *(linea-besu)* Add the missing web3j crypto jar in dist and fix ci … (#3737)
+- *(coordinator)* Make runtime invariants explicit (#3716)
 
 ### 🚜 Refactor
 
@@ -126,3 +128,5 @@
 - *(coordinator)* Apply review cleanups (#3717)
 - *(coordinator)* Update to vertx 5.1.5 (#3744)
 - *(coordinator)* Package renaming to lineth (#3746)
+- *(linea-besu)* Package renaming to lineth.* (#3750)
+- *(maru)* Package renaming to lineth.* from (net.consensys.zkevm.*, net.consensys.linea.*, net.consensys.*, build.linea.*, linea.*) (#3755)

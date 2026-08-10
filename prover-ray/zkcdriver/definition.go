@@ -105,7 +105,6 @@ func (s *schemaScanner) scanColumns() {
 
 				col := moduleWIOP.NewPrecomputedColumn(
 					moduleWIOP.Context.Childf("column-%v", colDecl.Name()),
-					wiop.VisibilityOracle,
 					&wiop.ConcreteVector{Plain: field.VecFromBase(vec)},
 				)
 
@@ -155,7 +154,6 @@ func (s *schemaScanner) scanColumns() {
 
 			col := moduleWIOP.NewColumn(
 				moduleWIOP.Context.Childf("column-%v", colDecl.Name()),
-				wiop.VisibilityOracle,
 				s.Sys.Rounds[0],
 			)
 
