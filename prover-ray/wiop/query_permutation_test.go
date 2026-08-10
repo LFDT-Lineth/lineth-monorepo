@@ -16,8 +16,8 @@ func newPermutationSystem(t *testing.T) (*wiop.System, *wiop.Column, *wiop.Colum
 	r0 := sys.NewRound()
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
 	return sys, colA, colB
 }
 
@@ -89,9 +89,9 @@ func TestNewPermutation_MixedWidthAllowed(t *testing.T) {
 	r0 := sys.NewRound()
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 4, wiop.PaddingDirectionNone)
-	a0 := modA.NewColumn(sys.Context.Childf("a0"), wiop.VisibilityOracle, r0)
-	a1 := modA.NewColumn(sys.Context.Childf("a1"), wiop.VisibilityOracle, r0)
-	b0 := modB.NewColumn(sys.Context.Childf("b0"), wiop.VisibilityOracle, r0)
+	a0 := modA.NewColumn(sys.Context.Childf("a0"), r0)
+	a1 := modA.NewColumn(sys.Context.Childf("a1"), r0)
+	b0 := modB.NewColumn(sys.Context.Childf("b0"), r0)
 	assert.NotPanics(t, func() {
 		sys.NewPermutation(sys.Context.Childf("perm"),
 			[]wiop.Table{wiop.NewTable(a0.View(), a1.View())}, // width 2
@@ -109,9 +109,9 @@ func newFilteredPermutationSystem(t *testing.T) (*wiop.System, *wiop.TableRelati
 	r0 := sys.NewRound()
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 2, wiop.PaddingDirectionNone)
-	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	selA := modA.NewColumn(sys.Context.Childf("selA"), wiop.VisibilityOracle, r0)
-	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	selA := modA.NewColumn(sys.Context.Childf("selA"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
 	q := sys.NewPermutation(sys.Context.Childf("perm"),
 		[]wiop.Table{wiop.NewFilteredTable(selA.View(), colA.View())},
 		[]wiop.Table{wiop.NewTable(colB.View())})
@@ -160,8 +160,8 @@ func TestNewPermutation_UnbalancedStaticPanic(t *testing.T) {
 	r0 := sys.NewRound()
 	modA := sys.NewSizedModule(sys.Context.Childf("modA"), 4, wiop.PaddingDirectionNone)
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 8, wiop.PaddingDirectionNone)
-	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
 	assert.PanicsWithValue(t,
 		"wiop: System.NewPermutation: the two sides have different total row counts (4 vs 8); "+
 			"a permutation between multisets of different cardinalities can never hold",
@@ -180,9 +180,9 @@ func TestNewPermutation_BalancedFragmentsAllowed(t *testing.T) {
 	modA0 := sys.NewSizedModule(sys.Context.Childf("modA0"), 4, wiop.PaddingDirectionNone)
 	modA1 := sys.NewSizedModule(sys.Context.Childf("modA1"), 4, wiop.PaddingDirectionNone)
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 8, wiop.PaddingDirectionNone)
-	a0 := modA0.NewColumn(sys.Context.Childf("a0"), wiop.VisibilityOracle, r0)
-	a1 := modA1.NewColumn(sys.Context.Childf("a1"), wiop.VisibilityOracle, r0)
-	b := modB.NewColumn(sys.Context.Childf("b"), wiop.VisibilityOracle, r0)
+	a0 := modA0.NewColumn(sys.Context.Childf("a0"), r0)
+	a1 := modA1.NewColumn(sys.Context.Childf("a1"), r0)
+	b := modB.NewColumn(sys.Context.Childf("b"), r0)
 	assert.NotPanics(t, func() {
 		sys.NewPermutation(sys.Context.Childf("perm"),
 			[]wiop.Table{wiop.NewTable(a0.View()), wiop.NewTable(a1.View())},
@@ -198,8 +198,8 @@ func TestNewPermutation_DynamicModuleSkipsBalanceCheck(t *testing.T) {
 	r0 := sys.NewRound()
 	modA := sys.NewDynamicModule(sys.Context.Childf("modA"), wiop.PaddingDirectionRight)
 	modB := sys.NewSizedModule(sys.Context.Childf("modB"), 8, wiop.PaddingDirectionNone)
-	colA := modA.NewColumn(sys.Context.Childf("A"), wiop.VisibilityOracle, r0)
-	colB := modB.NewColumn(sys.Context.Childf("B"), wiop.VisibilityOracle, r0)
+	colA := modA.NewColumn(sys.Context.Childf("A"), r0)
+	colB := modB.NewColumn(sys.Context.Childf("B"), r0)
 	assert.NotPanics(t, func() {
 		sys.NewPermutation(sys.Context.Childf("perm"),
 			[]wiop.Table{wiop.NewTable(colA.View())},

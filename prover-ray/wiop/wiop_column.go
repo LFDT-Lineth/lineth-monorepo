@@ -107,7 +107,7 @@ func (m *Module) SetSize(size int) {
 // newColumn is the shared constructor used by [Module.NewColumn] and
 // [Module.NewExtensionColumn]. It creates the column, appends it to both the
 // module's and the round's column lists, and returns it.
-func (m *Module) newColumn(ctx *ContextFrame, vis Visibility, isExt bool, r *Round) *Column {
+func (m *Module) newColumn(ctx *ContextFrame, isExt bool, r *Round) *Column {
 	if ctx == nil {
 		panic("wiop: NewColumn requires a non-nil ContextFrame")
 	}
@@ -117,7 +117,6 @@ func (m *Module) newColumn(ctx *ContextFrame, vis Visibility, isExt bool, r *Rou
 	ctx.ID = newColumnID(m.index, len(m.Columns))
 	col := &Column{
 		Context:     ctx,
-		Visibility:  vis,
 		IsExtension: isExt,
 		Annotations: make(Annotations),
 		Module:      m,
@@ -132,11 +131,11 @@ func (m *Module) newColumn(ctx *ContextFrame, vis Visibility, isExt bool, r *Rou
 // round, registers it with both the module and the round, and returns it.
 //
 // Panics if ctx or r is nil.
-func (m *Module) NewColumn(ctx *ContextFrame, vis Visibility, r *Round) *Column {
+func (m *Module) NewColumn(ctx *ContextFrame, r *Round) *Column {
 	if r == nil {
 		panic("wiop: Module.NewColumn requires a non-nil Round")
 	}
-	return m.newColumn(ctx, vis, false, r)
+	return m.newColumn(ctx, false, r)
 }
 
 // NewExtensionColumn declares a new extension-field column in this module for
@@ -145,11 +144,11 @@ func (m *Module) NewColumn(ctx *ContextFrame, vis Visibility, r *Round) *Column 
 // coset) rather than the standard domain.
 //
 // Panics if ctx or r is nil.
-func (m *Module) NewExtensionColumn(ctx *ContextFrame, vis Visibility, r *Round) *Column {
+func (m *Module) NewExtensionColumn(ctx *ContextFrame, r *Round) *Column {
 	if r == nil {
 		panic("wiop: Module.NewExtensionColumn requires a non-nil Round")
 	}
-	return m.newColumn(ctx, vis, true, r)
+	return m.newColumn(ctx, true, r)
 }
 
 // NewPrecomputedColumn declares a new precomputed column in this module,
@@ -161,7 +160,7 @@ func (m *Module) NewExtensionColumn(ctx *ContextFrame, vis Visibility, r *Round)
 // base-field columns.
 //
 // Panics if ctx or assignment is nil, or if the module has no owning System.
-func (m *Module) NewPrecomputedColumn(ctx *ContextFrame, vis Visibility, assignment *ConcreteVector) *Column {
+func (m *Module) NewPrecomputedColumn(ctx *ContextFrame, assignment *ConcreteVector) *Column {
 	if ctx == nil {
 		panic("wiop: Module.NewPrecomputedColumn requires a non-nil ContextFrame")
 	}
@@ -187,7 +186,6 @@ func (m *Module) NewPrecomputedColumn(ctx *ContextFrame, vis Visibility, assignm
 	pr := m.system.PrecomputedRound
 	col := &Column{
 		Context:     ctx,
-		Visibility:  vis,
 		IsExtension: false,
 		Annotations: make(Annotations),
 		Module:      m,
@@ -210,9 +208,6 @@ func (m *Module) NewPrecomputedColumn(ctx *ContextFrame, vis Visibility, assignm
 type Column struct {
 	// Context identifies this column in the protocol hierarchy.
 	Context *ContextFrame
-	// Visibility controls how this column participates in queries and whether
-	// the verifier can observe it.
-	Visibility Visibility
 	// IsExtension indicates that this column is evaluated over an extended
 	// domain rather than the standard domain.
 	IsExtension bool
@@ -534,10 +529,6 @@ func (cv *ColumnView) EvaluateSingle(_ *Runtime) ConcreteField {
 	panic("wiop: EvaluateSingle() cannot be called on a VectorPromise")
 }
 
-// Visibility implements [Expression]. Delegates to the parent column's
-// declared visibility.
-func (cv *ColumnView) Visibility() Visibility { return cv.Column.Visibility }
-
 // ColumnPosition represents the evaluation of a [Column] at a single fixed
 // row index. It implements [FieldPromise] (and thereby [Expression]),
 // producing the scalar value Column[Position] when assigned.
@@ -621,10 +612,6 @@ func (cp *ColumnPosition) IsSized() bool {
 func (cp *ColumnPosition) Size() int {
 	panic("wiop: Size() cannot be called on a FieldPromise")
 }
-
-// Visibility implements [Expression]. Delegates to the parent column's
-// declared visibility.
-func (cp *ColumnPosition) Visibility() Visibility { return cp.Column.Visibility }
 
 // EvaluateVector implements [Expression]. Panics unconditionally: a column
 // position is scalar and produces no vector. Check IsMultiValued() before

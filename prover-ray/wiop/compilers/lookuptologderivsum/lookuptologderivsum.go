@@ -444,7 +444,6 @@ func compileGroup(
 
 		mCol := it.module.NewColumn(
 			gCtx.Childf("M-%d", frag),
-			wiop.VisibilityOracle,
 			g.witnessRound,
 		)
 		mCols[frag] = mCol
