@@ -12,7 +12,7 @@
 // equals Insert(B); Insert(A). The security parameters follow the SIS analysis
 // in the linea-monorepo reference implementation (≥128 bits for at most 2^16
 // insertions/removals).
-package multiset_hashing
+package multisethashing
 
 import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/crypto/koalabear/poseidon2"
