@@ -23,7 +23,7 @@ import kotlin.time.Instant
 class BlockCreationMonitor(
   private val vertx: Vertx,
   private val ethApi: EthApiBlockClient,
-  private val startingBlockNumberExclusive: Long,
+  private val startingPoint: StartingPoint,
   private val blockCreationListener: BlockCreationListener,
   private val lastProvenBlockNumberProviderSync: LastProvenBlockNumberProviderSync,
   private val config: Config,
@@ -36,6 +36,11 @@ class BlockCreationMonitor(
   name = "BlockCreationMonitor",
   timerSchedule = TimerSchedule.FIXED_DELAY,
 ) {
+  sealed class StartingPoint {
+    data class ByBlockNumberExclusive(val blockNumberExclusive: Long) : StartingPoint()
+    data class ByTimestampInclusive(val timestampInclusive: Instant) : StartingPoint()
+  }
+
   data class Config(
     val pollingInterval: Duration,
     val blocksToFinalization: Long,
@@ -45,7 +50,12 @@ class BlockCreationMonitor(
     val lastL2BlockTimestampToProcessInclusive: Instant? = null,
   )
 
-  private val _nexBlockNumberToFetch: AtomicLong = AtomicLong(startingBlockNumberExclusive + 1)
+  private val _nexBlockNumberToFetch: AtomicLong = AtomicLong(
+    when (startingPoint) {
+      is StartingPoint.ByBlockNumberExclusive -> startingPoint.blockNumberExclusive + 1
+      is StartingPoint.ByTimestampInclusive -> -1L
+    },
+  )
   private val expectedParentBlockHash: AtomicReference<ByteArray> = AtomicReference(null)
   private val reorgDetected: AtomicBoolean = AtomicBoolean(false)
   private var statingBlockAvailabilityFuture: SafeFuture<*>? = null
@@ -72,32 +82,98 @@ class BlockCreationMonitor(
   @Synchronized
   fun awaitStartingBlockToBePresent(): SafeFuture<*> {
     if (statingBlockAvailabilityFuture == null) {
-      log.info("Awaiting for block {} to be present", startingBlockNumberExclusive)
-      statingBlockAvailabilityFuture =
-        AsyncRetryer.retry(
-          vertx,
-          backoffDelay = config.pollingInterval,
-          timeout = config.startingBlockWaitTimeout,
-          stopRetriesPredicate = { block: Block? ->
-            if (block == null) {
-              log.warn(
-                "block={} not found yet. Retrying in {}",
-                startingBlockNumberExclusive,
-                config.pollingInterval,
-              )
-              false
-            } else {
-              log.info("Block {} found. Resuming block monitor", startingBlockNumberExclusive)
-              expectedParentBlockHash.set(block.hash)
-              true
-            }
-          },
-        ) {
-          ethApi.ethGetBlockByNumberFullTxs(BlockParameter.fromNumber(startingBlockNumberExclusive))
+      statingBlockAvailabilityFuture = when (startingPoint) {
+        is StartingPoint.ByBlockNumberExclusive -> awaitBlockByNumber(startingPoint.blockNumberExclusive)
+        is StartingPoint.ByTimestampInclusive -> awaitBlockByTimestamp(startingPoint.timestampInclusive)
+      }
+    }
+    return statingBlockAvailabilityFuture!!
+  }
+
+  private fun awaitBlockByNumber(blockNumberExclusive: Long): SafeFuture<*> {
+    log.info("Awaiting for block {} to be present", blockNumberExclusive)
+    return AsyncRetryer.retry(
+      vertx,
+      backoffDelay = config.pollingInterval,
+      timeout = config.startingBlockWaitTimeout,
+      stopRetriesPredicate = { block: Block? ->
+        if (block == null) {
+          log.warn(
+            "block={} not found yet. Retrying in {}",
+            blockNumberExclusive,
+            config.pollingInterval,
+          )
+          false
+        } else {
+          log.info("Block {} found. Resuming block monitor", blockNumberExclusive)
+          expectedParentBlockHash.set(block.hash)
+          true
+        }
+      },
+    ) {
+      ethApi.ethGetBlockByNumberFullTxs(BlockParameter.fromNumber(blockNumberExclusive))
+    }
+  }
+
+  private fun awaitBlockByTimestamp(targetTimestamp: Instant): SafeFuture<*> {
+    log.info("Waiting for cutover timestamp to be reached on L2, timestamp={}", targetTimestamp)
+    return AsyncRetryer.retry(
+      vertx,
+      backoffDelay = config.pollingInterval,
+      timeout = config.startingBlockWaitTimeout,
+      stopRetriesPredicate = { block: Block? ->
+        val reached = block != null && block.timestamp >= targetTimestamp.epochSeconds.toULong()
+        if (!reached) {
+          log.debug(
+            "Latest block hasn't reached cutover. latestBlockTimestamp={} target={}",
+            block?.let { Instant.fromEpochSeconds(it.timestamp.toLong()) },
+            targetTimestamp,
+          )
+        }
+        reached
+      },
+    ) {
+      ethApi.ethBlockNumber()
+        .thenCompose { n -> ethApi.ethGetBlockByNumberFullTxs(BlockParameter.fromNumber(n.toLong())) }
+    }.thenCompose { latestBlock ->
+      log.info(
+        "Cutover timestamp reached. Binary searching for exact first block in 0..{}. targetTimestamp={}, " +
+          "latestBlockNumber={}, " +
+          "latestBlockTimestamp={}",
+        latestBlock.number,
+        targetTimestamp,
+        latestBlock.number,
+        Instant.fromEpochSeconds(latestBlock.timestamp.toLong()),
+      )
+      binarySearchFirstBlockAtOrAfterTimestamp(0L, latestBlock.number.toLong(), targetTimestamp)
+    }.thenCompose { firstBlockNumber ->
+      _nexBlockNumberToFetch.set(firstBlockNumber)
+      log.info(
+        "Block creation monitor ready. Starting from block number={}",
+        firstBlockNumber,
+      )
+      ethApi.ethGetBlockByNumberFullTxs(BlockParameter.fromNumber(firstBlockNumber - 1))
+        .thenApply { parentBlock ->
+          expectedParentBlockHash.set(parentBlock.hash)
         }
     }
+  }
 
-    return statingBlockAvailabilityFuture!!
+  private fun binarySearchFirstBlockAtOrAfterTimestamp(
+    low: Long,
+    high: Long,
+    targetTimestamp: Instant,
+  ): SafeFuture<Long> {
+    if (low == high) return SafeFuture.completedFuture(low)
+    val mid = low + (high - low) / 2
+    return ethApi.ethFindBlockByNumberFullTxs(BlockParameter.fromNumber(mid))
+      .thenCompose { block ->
+        if (block == null || block.timestamp < targetTimestamp.epochSeconds.toULong()) {
+          binarySearchFirstBlockAtOrAfterTimestamp(mid + 1, high, targetTimestamp)
+        } else {
+          binarySearchFirstBlockAtOrAfterTimestamp(low, mid, targetTimestamp)
+        }
+      }
   }
 
   override fun action(): SafeFuture<*> {
