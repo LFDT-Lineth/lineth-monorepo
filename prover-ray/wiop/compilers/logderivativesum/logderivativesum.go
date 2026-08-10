@@ -158,7 +158,6 @@ func buildZ(
 
 	zCol := m.NewExtensionColumn(
 		ctx.Childf("z-b%d-k%d", bIdx, kIdx),
-
 		round)
 
 	// The recurrence zNum − (Z − Z<<−1)·zDen carries a −1 shift on Z, so
