@@ -4,7 +4,7 @@ import linea.contract.l2.L2MessageServiceSmartContractClientReadOnly
 import linea.domain.toBlockParameter
 import linea.ethapi.EthApiClient
 import linea.kotlin.zeroHash32
-import lineth.persistence.ForcedTransactionsDao
+import lineth.coordination.FtxRollingInfoProvider
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Instant
 
@@ -15,7 +15,7 @@ interface AggregationL2StateProvider {
 class AggregationL2StateProviderImpl(
   private val ethApiClient: EthApiClient,
   private val messageService: L2MessageServiceSmartContractClientReadOnly,
-  private val forcedTransactionsDao: ForcedTransactionsDao,
+  private val ftxRollingInfoProvider: FtxRollingInfoProvider,
 ) : AggregationL2StateProvider {
   private data class AnchoredMessage(
     val messageNumber: ULong,
@@ -23,15 +23,6 @@ class AggregationL2StateProviderImpl(
   ) {
     companion object {
       val GENESIS = AnchoredMessage(0uL, GENESIS_ZERO_HASH.copyOf())
-    }
-  }
-
-  private data class FtxRollingInfo(
-    val ftxNumber: ULong,
-    val ftxRollingHash: ByteArray,
-  ) {
-    companion object {
-      val GENESIS = FtxRollingInfo(0uL, GENESIS_ZERO_HASH.copyOf())
     }
   }
 
@@ -57,24 +48,9 @@ class AggregationL2StateProviderImpl(
       }
   }
 
-  private fun getAggregationFtxRollingInfo(aggEndBlockNumber: ULong): SafeFuture<FtxRollingInfo> {
-    if (aggEndBlockNumber == 0uL) {
-      // return genesis ftx number and hash
-      return SafeFuture.completedFuture(FtxRollingInfo.GENESIS)
-    }
-
-    return forcedTransactionsDao
-      .findHighestForcedTransaction(upToSimulatedExecutionBlockNumberInclusive = aggEndBlockNumber)
-      .thenApply { highestFtx ->
-        highestFtx
-          ?.let { FtxRollingInfo(it.ftxNumber, it.ftxRollingHash) }
-          ?: FtxRollingInfo.GENESIS
-      }
-  }
-
   override fun getAggregationL2State(blockNumber: Long): SafeFuture<AggregationL2State> {
     val anchoredMessageFuture = getLastAnchoredMessage(blockNumber.toULong())
-    val aggregationFtxNumbersFuture = getAggregationFtxRollingInfo(blockNumber.toULong())
+    val aggregationFtxNumbersFuture = ftxRollingInfoProvider.getParentFtxState(blockNumber.toULong())
     val blockFuture = ethApiClient.ethGetBlockByNumberTxHashes(blockNumber.toBlockParameter())
 
     return SafeFuture

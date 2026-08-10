@@ -302,6 +302,44 @@ class PostgresForcedTransactionsDaoTest : CleanDbTestSuiteParallel() {
   }
 
   @Test
+  fun `findBySimulatedExecutionBlock returns empty list when no records match`() {
+    val ftx = createForcedTransactionRecord(ftxNumber = 1UL, simulatedExecutionBlockNumber = 100UL)
+    forcedTransactionsDao.save(ftx).get()
+
+    val result = forcedTransactionsDao.findBySimulatedExecutionBlock(200UL..300UL).get()
+    assertThat(result).isEmpty()
+  }
+
+  @Test
+  fun `findBySimulatedExecutionBlock returns only records within the block range`() {
+    val ftxBlock100 = createForcedTransactionRecord(ftxNumber = 1UL, simulatedExecutionBlockNumber = 100UL)
+    val ftxBlock200 = createForcedTransactionRecord(ftxNumber = 2UL, simulatedExecutionBlockNumber = 200UL)
+    val ftxBlock300 = createForcedTransactionRecord(ftxNumber = 3UL, simulatedExecutionBlockNumber = 300UL)
+    SafeFuture.collectAll(
+      listOf(ftxBlock100, ftxBlock200, ftxBlock300).map { forcedTransactionsDao.save(it) }.stream(),
+    ).get()
+
+    // query for range 100..200 — must NOT return the record at block 300
+    val result = forcedTransactionsDao.findBySimulatedExecutionBlock(100UL..200UL).get()
+
+    assertThat(result.map { it.ftxNumber }).containsExactlyInAnyOrder(1UL, 2UL)
+  }
+
+  @Test
+  fun `findBySimulatedExecutionBlock returns multiple FTXs for the same block`() {
+    val ftx1 = createForcedTransactionRecord(ftxNumber = 1UL, simulatedExecutionBlockNumber = 100UL)
+    val ftx2 = createForcedTransactionRecord(ftxNumber = 2UL, simulatedExecutionBlockNumber = 100UL)
+    val ftx3 = createForcedTransactionRecord(ftxNumber = 3UL, simulatedExecutionBlockNumber = 200UL)
+    SafeFuture.collectAll(
+      listOf(ftx1, ftx2, ftx3).map { forcedTransactionsDao.save(it) }.stream(),
+    ).get()
+
+    val result = forcedTransactionsDao.findBySimulatedExecutionBlock(100UL..100UL).get()
+
+    assertThat(result.map { it.ftxNumber }).containsExactly(1UL, 2UL)
+  }
+
+  @Test
   fun `enum mapping functions correctly convert between enum and db values`() {
     // Test inclusion result mappings
     assertThat(inclusionResultToDbValue(ForcedTransactionInclusionResult.Included)).isEqualTo(1)
