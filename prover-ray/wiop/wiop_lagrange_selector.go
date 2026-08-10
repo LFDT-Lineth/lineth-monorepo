@@ -111,12 +111,12 @@ func (ls *LagrangeSelector) IsSized() bool { return ls.module.IsSized() }
 func (ls *LagrangeSelector) Module() *Module { return ls.module }
 
 // EvaluateSingle is a placeholder implementation of [VectorPromise].
-func (ls *LagrangeSelector) EvaluateSingle(_ Runtime) ConcreteField {
+func (ls *LagrangeSelector) EvaluateSingle(_ *Runtime) ConcreteField {
 	panic("wiop: EvaluateSingle() cannot be called on a VectorPromise")
 }
 
 // EvaluateVector returns the evaluation of the Lagrange selector.
-func (ls *LagrangeSelector) EvaluateVector(rt Runtime) ConcreteVector {
+func (ls *LagrangeSelector) EvaluateVector(rt *Runtime) ConcreteVector {
 
 	size := ls.module.RuntimeSize(rt)
 
@@ -147,7 +147,7 @@ func (ls *LagrangeSelector) EvaluateVector(rt Runtime) ConcreteVector {
 // Panics if x equals ω^Position (i.e. the point is in the domain at the
 // selector's own row): the denominator X−ω^Position vanishes there, so the
 // out-of-domain contract is violated.
-func (ls *LagrangeSelector) EvaluateOutOfDomain(rt Runtime, x field.Gen) field.Gen {
+func (ls *LagrangeSelector) EvaluateOutOfDomain(rt *Runtime, x field.Gen) field.Gen {
 
 	n := ls.module.RuntimeSize(rt)
 	// Resolve any end-relative (negative) Position against the runtime size

@@ -261,7 +261,7 @@ type proverAction struct {
 }
 
 // Run implements [wiop.ProverAction].
-func (a *proverAction) Run(rt wiop.Runtime) {
+func (a *proverAction) Run(rt *wiop.Runtime) {
 	var total field.Ext
 
 	for _, e := range a.entries {
@@ -293,7 +293,7 @@ func (a *proverAction) Run(rt wiop.Runtime) {
 //
 // Panics if a fraction's denominator is zero on a row where its filter is
 // non-zero, since that input is malformed.
-func computeFilteredPrefixSum(rt wiop.Runtime, packed []wiop.Fraction, n int) []field.Ext {
+func computeFilteredPrefixSum(rt *wiop.Runtime, packed []wiop.Fraction, n int) []field.Ext {
 	type evalFrac struct {
 		filter []field.Ext // nil ⇒ filter is the constant 1 on every row
 		num    []field.Ext
@@ -302,13 +302,13 @@ func computeFilteredPrefixSum(rt wiop.Runtime, packed []wiop.Fraction, n int) []
 	}
 	fracs := make([]evalFrac, len(packed))
 	for j, p := range packed {
-		fracs[j].num = evaluateAsExtVec(rt, p.Numerator, n)
-		fracs[j].den = evaluateAsExtVec(rt, p.Denominator, n)
+		fracs[j].num = wiop.EvaluateAsExtVec(rt, p.Numerator, n)
+		fracs[j].den = wiop.EvaluateAsExtVec(rt, p.Denominator, n)
 		// BatchInvertExt silently leaves zero entries as zero; safe to call on
 		// vectors that contain zeros at filtered-out rows.
 		fracs[j].invDen = field.BatchInvertExt(fracs[j].den)
 		if p.Filter != nil {
-			fracs[j].filter = evaluateAsExtVec(rt, p.Filter, n)
+			fracs[j].filter = wiop.EvaluateAsExtVec(rt, p.Filter, n)
 		}
 	}
 
@@ -337,62 +337,6 @@ func computeFilteredPrefixSum(rt wiop.Runtime, packed []wiop.Fraction, n int) []
 	return z
 }
 
-// evaluateAsExtVec evaluates expr against the runtime and returns a length-n
-// extension-field slice. Scalar expressions are broadcast to every position.
-func evaluateAsExtVec(rt wiop.Runtime, expr wiop.Expression, n int) []field.Ext {
-	out := make([]field.Ext, n)
-
-	if !expr.IsMultiValued() {
-		ext := genToExt(expr.EvaluateSingle(rt).Value)
-		for i := range out {
-			out[i] = ext
-		}
-		return out
-	}
-
-	cv := expr.EvaluateVector(rt)
-	plain := cv.Plain
-	if plain.IsBase() {
-		base := plain.AsBase()
-		copyLen := len(base)
-		if copyLen > n {
-			copyLen = n
-		}
-		for i := 0; i < copyLen; i++ {
-			out[i] = field.Lift(base[i])
-		}
-		if copyLen < n {
-			pad := field.Lift(cv.Padding)
-			for i := copyLen; i < n; i++ {
-				out[i] = pad
-			}
-		}
-		return out
-	}
-
-	ext := plain.AsExt()
-	copyLen := len(ext)
-	if copyLen > n {
-		copyLen = n
-	}
-	copy(out[:copyLen], ext[:copyLen])
-	if copyLen < n {
-		pad := field.Lift(cv.Padding)
-		for i := copyLen; i < n; i++ {
-			out[i] = pad
-		}
-	}
-	return out
-}
-
-// genToExt projects a [field.Gen] onto its extension representation.
-func genToExt(v field.Gen) field.Ext {
-	if v.IsBase() {
-		return field.Lift(v.AsBase())
-	}
-	return v.AsExt()
-}
-
 // VerifierAction enforces the only boundary identity that is not already
 // pinned in-circuit: the sum of all Z[n-1] endpoint openings equals the
 // claimed Result cell value. The per-Z initial condition is enforced by the
@@ -407,15 +351,15 @@ type VerifierAction struct {
 }
 
 // Check implements [wiop.VerifierAction].
-func (a *VerifierAction) Check(rt wiop.Runtime) error {
+func (a *VerifierAction) Check(rt *wiop.Runtime) error {
 	var sum field.Ext
 
 	for _, e := range a.Entries {
-		zFinal := genToExt(rt.GetCellValue(e.ZFinal))
+		zFinal := rt.GetCellValue(e.ZFinal).AsExt()
 		sum.Add(&sum, &zFinal)
 	}
 
-	claimed := genToExt(rt.GetCellValue(a.LogDerivativeSum.Result))
+	claimed := rt.GetCellValue(a.LogDerivativeSum.Result).AsExt()
 	var diff field.Ext
 	diff.Sub(&sum, &claimed)
 	if !diff.IsZero() {

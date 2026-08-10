@@ -1,5 +1,5 @@
 plugins {
-  id 'net.consensys.zkevm.kotlin-library-conventions'
+  id 'lineth.kotlin-library-conventions'
 }
 
 description = "HTTP REST utilities"
@@ -15,5 +15,4 @@ dependencies {
 
   testImplementation "io.vertx:vertx-junit5"
   testImplementation "org.wiremock:wiremock:${libs.versions.wiremock.get()}"
-  testImplementation "io.vertx:vertx-micrometer-metrics"
 }

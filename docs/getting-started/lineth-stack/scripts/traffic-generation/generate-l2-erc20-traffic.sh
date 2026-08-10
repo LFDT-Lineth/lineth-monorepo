@@ -8,6 +8,8 @@ LINETH_LOG_CONTEXT="l2-erc20-traffic"
 . "$SCRIPT_DIR/../lib/logging.sh"
 # shellcheck disable=SC1091
 . "$SCRIPT_DIR/../lib/runtime.sh"
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/../lib/smoke.sh"
 lineth_runtime_init "$SCRIPT_DIR"
 STACK_DIR="$LINETH_STACK_DIR"
 
@@ -24,13 +26,11 @@ container_running() {
 }
 
 command="${1:-start}"
-CONTAINER_NAME="${TRAFFIC_CONTAINER_NAME:-linea-l2-erc20-traffic}"
+CONTAINER_NAME="${TRAFFIC_CONTAINER_NAME:-lineth-l2-erc20-traffic}"
 
 lineth_banner "ERC20 traffic · start/logs/stop"
 
-if ! docker info >/dev/null 2>&1; then
-  die "Docker daemon is not reachable"
-fi
+lineth_require_docker
 
 case "$command" in
   start|stop|status|logs) ;;
@@ -101,7 +101,6 @@ if [ -f versions.env ]; then
   . ./versions.env
 fi
 
-FOUNDRY_IMAGE="${FOUNDRY_IMAGE:-ghcr.io/foundry-rs/foundry:${FOUNDRY_TAG:-latest}}"
 L2_RPC_URL="${L2_RPC_URL:-http://sequencer:8545}"
 L2_GAS_PRICE_WEI="${L2_GAS_PRICE_WEI:-100000000}"
 HOST_PORT_L2_BLOCKSCOUT_FRONTEND="$(lineth_host_port HOST_PORT_L2_BLOCKSCOUT_FRONTEND 4001)"
@@ -149,7 +148,7 @@ container_id="$(docker run -d \
   --name "$CONTAINER_NAME" \
   --user 0:0 \
   --entrypoint sh \
-  --network lineth-stack_linea \
+  --network lineth-stack_lineth \
   -v "$LINETH_ACCOUNTS_DIR:/accounts:ro" \
   -v "$LINETH_DEPLOYMENTS_DIR:/deployments:ro" \
   -e AMOUNT_WEI="${AMOUNT_WEI:-1}" \
@@ -161,7 +160,7 @@ container_id="$(docker run -d \
   -e L2_RPC_URL="$L2_RPC_URL" \
   -e L2_GAS_PRICE_WEI="$L2_GAS_PRICE_WEI" \
   -e BLOCKSCOUT_BASE_URL="$BLOCKSCOUT_BASE_URL" \
-  "$FOUNDRY_IMAGE" \
+  "$(lineth_foundry_image)" \
   -lc '
     set -eu
 

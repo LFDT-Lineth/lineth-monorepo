@@ -30,11 +30,11 @@ func TestQueryMutationSoundness(t *testing.T) {
 		t.Run(sc.Name, func(t *testing.T) {
 			// Completeness sanity: the honest witness must pass.
 			rt := wiop.NewRuntime(sc.Sys)
-			sc.RunHonest(&rt)
+			sc.RunHonest(rt)
 			require.NoError(t, sc.Query.Check(rt),
 				"honest witness must pass Check")
 
-			verify := func(rt wiop.Runtime) error { return sc.Query.Check(rt) }
+			verify := func(rt *wiop.Runtime) error { return sc.Query.Check(rt) }
 			caught := false
 			for _, tw := range tweaks {
 				if wioptest.SweepMutations(sc.Sys, sc.RunHonest, verify, tw, 0).AnyCaught() {

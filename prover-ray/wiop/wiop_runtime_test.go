@@ -301,7 +301,7 @@ type fixedSeedHook struct {
 	seed field.Octuplet
 }
 
-func (h *fixedSeedHook) Run(rt wiop.Runtime) {
+func (h *fixedSeedHook) Run(rt *wiop.Runtime) {
 	rt.SetFSState(h.seed)
 }
 

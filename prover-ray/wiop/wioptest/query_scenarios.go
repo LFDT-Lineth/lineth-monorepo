@@ -26,7 +26,7 @@ func NewLagrangeEvalScenario() *Scenario {
 		RunHonest: func(rt *wiop.Runtime) {
 			rt.AssignColumn(col, baseVec(4, 3))
 			rt.AdvanceRound() // sample coin
-			le.SelfAssign(*rt)
+			le.SelfAssign(rt)
 		},
 		RunInvalid: func(rt *wiop.Runtime) {
 			rt.AssignColumn(col, baseVec(4, 3))
@@ -61,7 +61,7 @@ func NewLogDerivativeSumScenario() *Scenario {
 		RunHonest: func(rt *wiop.Runtime) {
 			rt.AssignColumn(col, baseVec(4, 2))
 			rt.AdvanceRound()
-			rr.SelfAssign(*rt)
+			rr.SelfAssign(rt)
 		},
 		RunInvalid: func(rt *wiop.Runtime) {
 			rt.AssignColumn(col, baseVec(4, 2))

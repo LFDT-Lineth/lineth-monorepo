@@ -71,7 +71,7 @@ postman/
 │   │   └── types/                       Shared types (hex, log, receipt)
 │   ├── infrastructure/                  Implementations
 │   │   ├── blockchain/viem/             Viem-based blockchain clients
-│   │   │   ├── clients/                 LineaRollup, L2MessageService clients
+│   │   │   ├── clients/                 LinethRollup, L2MessageService clients
 │   │   │   ├── providers/               Viem/Linea providers
 │   │   │   ├── gas/                     Gas estimation (Ethereum + Linea)
 │   │   │   ├── signers/                 Private key + Web3Signer support
@@ -104,7 +104,7 @@ postman/
 
 ### Testing
 
-- Framework: Jest 30.3.0 with ts-jest preset
+- Framework: Jest 30.4.2 with ts-jest preset
 - Uses `jest-mock-extended` for mock generation
 - `--forceExit` and `--detectOpenHandles` flags enabled
 - Test files: `**/__tests__/*.test.ts` pattern

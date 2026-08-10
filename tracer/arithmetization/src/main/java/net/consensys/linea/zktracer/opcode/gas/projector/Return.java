@@ -39,7 +39,7 @@ public final class Return extends GasProjection {
 
   @Override
   public long memoryExpansion() {
-    return gc.memoryExpansionGasCost(this.frame, this.offset, this.size);
+    return memoryExpansionGasCost(gc, this.frame, this.offset, this.size);
   }
 
   @Override

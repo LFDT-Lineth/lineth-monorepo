@@ -10,13 +10,14 @@ import java.time.LocalTime
  */
 
 plugins {
-  id 'net.consensys.zkevm.kotlin-library-minimal-conventions'
+  id 'lineth.kotlin-library-minimal-conventions'
   alias(libs.plugins.besuPluginLibrary)
   alias(libs.plugins.web3j)
   alias(libs.plugins.web3jSolidity)
   alias(libs.plugins.lombok)
   alias(libs.plugins.gradleVersions)
   id "org.jetbrains.kotlin.kapt"
+  id "linea.solc-toolchain"
 }
 
 def lineaSequencerProject = project(lineaSequencerProjectPath)
@@ -54,8 +55,13 @@ web3j {
   generatedPackageName = 'linea.plugin.acc.test.tests.web3j.generated'
 }
 
+solcToolchain {
+  version = '0.8.30'
+}
+
 solidity {
   resolvePackages = false
+  version = solcToolchain.version
   optimizeRuns = 1
 }
 
@@ -65,8 +71,10 @@ sourceSets.test.solidity.srcDirs = [
 ]
 sourceSets.test.solidity.exclude("IntegrationTestTrueVerifier.sol")
 
-tasks.matching { it.name == "kaptGenerateStubsKotlin" || it.name == "kaptGenerateStubsTestKotlin" }.configureEach {
+tasks.matching { it.name == "kaptGenerateStubsKotlin" }.configureEach {
   dependsOn("${lineaSequencerProjectPath}:acceptance-tests:generateContractWrappers")
+}
+tasks.matching { it.name == "kaptGenerateStubsTestKotlin" }.configureEach {
   dependsOn("${lineaSequencerProjectPath}:acceptance-tests:generateTestContractWrappers")
 }
 

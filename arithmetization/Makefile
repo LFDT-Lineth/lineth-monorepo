@@ -11,7 +11,7 @@ REPO_ROOT := $(abspath $(MAKEFILE_DIR)/..)
 ZKC ?= $(REPO_ROOT)/zkc
 ZKC_REPO ?= https://github.com/LFDT-Lineth/zkc.git
 # Optional: pin a commit or branch (e.g. 763f30878e5fc260f0d88863c9883c904f8fc056). Leave empty for default branch.
-ZKC_REF ?=v1.2.20
+ZKC_REF ?= v1.2.26
 
 # Used to install Sail for ACT4 host builds.
 ACT4_RISCV_DIR ?= $(HOME)/riscv
@@ -25,7 +25,11 @@ ZKC_BINDIR ?= $(MAKEFILE_DIR)bin
 ZKC_BINARY ?= riscv.bin
 ZKC_INPUT ?= input.json
 
-.PHONY: checkout-zkc-repo install-zkc install-sail zkc-compile zkc-check zkc-compile-and-check check
+.PHONY: checkout-zkc-repo echo-zkc-version install-zkc install-zkc-to install-sail zkc-compile zkc-check zkc-compile-and-check check
+
+# Print the pinned zkc ref (used by CI setup to populate $GITHUB_ENV).
+echo-zkc-version:
+	@echo $(ZKC_REF)
 
 # Fetch zkc repository if missing (no-op when CI already checked it out into ZKC).
 checkout-zkc-repo:
@@ -52,13 +56,26 @@ install-zkc:
 	echo "Installing zkc from $(ZKC)..."; \
 	cd "$(ZKC)" && go install ./cmd/zkc
 
+# Build the zkc CLI to an explicit path instead of GOBIN, so a caller can pin one build without
+# disturbing the zkc already on PATH. Pass the result on with ZKC=... (see src/test/Makefile).
+# Building from the checkout also makes Go stamp vcs.revision into the binary, which `go version -m`
+# can then report as provenance.
+#   make install-zkc-to ZKC_BIN=/tmp/zkc-under-test ZKC_REF=v1.2.26
+install-zkc-to:
+	@[ -n "$(ZKC_BIN)" ] || { echo "ZKC_BIN is mandatory: make install-zkc-to ZKC_BIN=path/to/zkc [ZKC_REF=ref]"; exit 1; }
+	$(MAKE) checkout-zkc-repo
+	@echo "Building zkc from $(ZKC) -> $(ZKC_BIN)..."
+	@mkdir -p "$(dir $(ZKC_BIN))"
+	cd "$(ZKC)" && go build -o "$(abspath $(ZKC_BIN))" ./cmd/zkc
+
 # Compile zkc program in a binary file
 zkc-compile: $(ZKC_FILES)
 	mkdir -p $(ZKC_BINDIR)
-	zkc compile -o $(ZKC_BINDIR)/$(ZKC_BINARY) --wir $(ZKC_MAIN)
+	zkc compile -o $(ZKC_BINDIR)/$(ZKC_BINARY) --bci $(ZKC_MAIN)
 
-# Check execution of the compiled zkc binary against an input JSON
-# Only works for small zkc programs for now
+# Check execution of the compiled zkc binary against an input JSON.
+# Only practical for small zkc programs: constraint checking, not tracing, is the expensive half.
+# Measured weekly for the l2-execution guest — see arithmetization/src/test/scripts/README-weekly-metrics.md.
 zkc-check:
 	zkc exec --check $(ZKC_INPUT) $(ZKC_BINDIR)/$(ZKC_BINARY)
 

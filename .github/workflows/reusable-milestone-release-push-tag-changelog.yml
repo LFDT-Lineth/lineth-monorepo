@@ -59,11 +59,11 @@ jobs:
       LINEA_TAG_PATTERN: 'releases/linea/v[0-9]+\.[0-9]+\.[0-9]+$'
       TMP_CHANGELOG: CHANGELOG.linea-milestone.tmp.md
     steps:
-      # Mint a short-lived token either for the release bot GitHub App to commit the changelog changes 
+      # Mint a short-lived token either for the release bot GitHub App to commit the changelog changes
       # directly bypassin the branch-protection or for PR bot GitHub App to create PR with the changelog changes.
       - name: Generate release or PR bot App token
         id: app-token
-        uses: actions/create-github-app-token@v2
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           app-id: ${{ !inputs.create_pull_request && secrets.RELEASE_BOT_APP_ID || secrets.CREATE_GITHUB_PR_APP_ID }}
           private-key: ${{ !inputs.create_pull_request && secrets.RELEASE_BOT_PRIVATE_KEY || secrets.CREATE_GITHUB_PR_PRIVATE_KEY }}
@@ -81,7 +81,7 @@ jobs:
           echo "user-id=${user_id}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           # Use the App token so subsequent `git push` is authenticated as the App.
           token: ${{ steps.app-token.outputs.token }}
@@ -99,7 +99,7 @@ jobs:
           git config user.email "${USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
 
       - name: Install git-cliff
-        uses: taiki-e/install-action@5f57d6cb7cd20b14a8a27f522884c4bc8a187458 #(v2.75.19)
+        uses: taiki-e/install-action@bffeee26d4db9be238a4ea78d8826604ebcb594d #v2.82.5
         with:
           tool: git-cliff
 
@@ -127,25 +127,38 @@ jobs:
 
           # Entries are listed in the user-facing top-to-bottom order; we
           # iterate them in reverse below so coordinator ends up on top.
-          # Format per entry: <tag>|<version>|<json-array-of-include-paths>
+          # Field delimiter is '#' (not '|') because the <scopes> field is a
+          # regex alternation that itself contains '|'.
+          # Format per entry: <tag>#<version>#<scopes>#<json-array-of-include-paths>
+          # Every component is scope-and-path gated: <scopes> is injected into
+          # the shared cliff.template.toml (keeping only commits carrying one of
+          # those scopes) AND the include-paths restrict to that component's
+          # paths — a commit must satisfy both.
+          TEMPLATE="cliff.template.toml"
           components=(
-            "coordinator|${COORDINATOR_VERSION}|[\"coordinator/**\"]"
-            "maru|${MARU_VERSION}|[\"maru/**\"]"
-            "postman|${POSTMAN_VERSION}|[\"postman/**\"]"
-            "prover|${PROVER_VERSION}|[\"prover/**\"]"
-            "tx-exclusion-api|${TX_EXCLUSION_API_VERSION}|[\"transaction-exclusion-api/**\"]"
-            "linea-besu-package|${LINEA_BESU_VERSION}|[\"tracer/**\",\"tracer-constraints/**\",\"linea-besu/plugins/linea-sequencer/**\",\"linea-besu/besu/**\",\"linea-besu/package/**\",\"gradle/libs.versions.toml\"]"
+            "coordinator#${COORDINATOR_VERSION}#coordinator|deps|misc#[\"coordinator/**\"]"
+            "maru#${MARU_VERSION}#maru|deps|misc#[\"maru/**\"]"
+            "postman#${POSTMAN_VERSION}#postman|deps|misc#[\"postman/**\"]"
+            "prover#${PROVER_VERSION}#prover|deps|misc#[\"prover/**\"]"
+            "tx-exclusion-api#${TX_EXCLUSION_API_VERSION}#tx-exclusion-api|deps|misc#[\"transaction-exclusion-api/**\"]"
+            "linea-besu-package#${LINEA_BESU_VERSION}#linea-besu|tracer|sequencer|deps|misc#[\"tracer/**\",\"tracer-constraints/**\",\"linea-besu/plugins/linea-sequencer/**\",\"linea-besu/besu/**\",\"linea-besu/package/**\",\"gradle/libs.versions.toml\"]"
           )
 
           for (( i=${#components[@]}-1; i>=0; i-- )); do
             entry="${components[i]}"
-            tag="${entry%%|*}"
-            rest="${entry#*|}"
-            version="${rest%%|*}"
-            paths_json="${rest#*|}"
+            tag="${entry%%#*}"
+            rest="${entry#*#}"
+            version="${rest%%#*}"
+            rest="${rest#*#}"
+            scopes="${rest%%#*}"
+            paths_json="${rest#*#}"
             mapfile -t paths < <(echo "$paths_json" | jq -r '.[]')
 
-            args=(--unreleased --tag "$tag" --tag-pattern "$LINEA_TAG_PATTERN" --prepend "${TMP_CHANGELOG}")
+            # Render the shared template with this component's scopes injected.
+            rendered="${RUNNER_TEMP:-/tmp}/cliff.${tag}.toml"
+            sed "s#@@SCOPES@@#${scopes}#g" "$TEMPLATE" > "$rendered"
+
+            args=(--config "$rendered" --unreleased --tag "$tag" --tag-pattern "$LINEA_TAG_PATTERN" --prepend "${TMP_CHANGELOG}")
             for p in "${paths[@]}"; do
               args+=(--include-path "$p")
             done
@@ -250,7 +263,7 @@ jobs:
 
       - name: Create pull request
         if: ${{ inputs.create_pull_request }}
-        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         env:
           RELEASE_VERSION: ${{ inputs.release_version }}
         with:
@@ -272,7 +285,7 @@ jobs:
           add-paths: |
             CHANGELOG.md
             **/CHANGELOG.md
-      
+
       - name: Create and push Linea milestone release tag
         env:
           COMPONENT: "Linea Milestone"
@@ -290,3 +303,4 @@ jobs:
           git tag -a "${TAG}" -m "${COMPONENT^} release ${TAG}"
           git push origin "${TAG}"
           echo "Pushed ${TAG} pointing at $(git rev-parse HEAD)"
+

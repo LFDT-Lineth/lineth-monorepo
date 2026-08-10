@@ -9,8 +9,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/consensys/go-corset/pkg/util/collection/typed"
-	zkc_util "github.com/consensys/go-corset/pkg/zkc/util"
+	"github.com/LFDT-Lineth/zkc/pkg/util/collection/typed"
+	zkc_util "github.com/LFDT-Lineth/zkc/pkg/zkc/util"
 	"github.com/sirupsen/logrus"
 )
 

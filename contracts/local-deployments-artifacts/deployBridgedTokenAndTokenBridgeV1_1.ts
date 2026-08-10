@@ -29,8 +29,9 @@ import {
   abi as UpgradeableBeaconAbi,
   bytecode as UpgradeableBeaconBytecode,
 } from "./static-artifacts/UpgradeableBeacon.json";
-import { deployContractFromArtifacts, getInitializerData } from "../common/helpers/deployments";
-import { getEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment";
+import { deployContractFromArtifacts, getDeployNonceFromEnv, getInitializerData } from "../common/helpers/deployments";
+import { getBooleanEnvVarOrDefault, getEnvVarOrDefault, getRequiredEnvVar } from "../common/helpers/environment";
+import { LOCAL_L2_DEPLOY_FEE_OVERRIDES } from "../common/helpers/feeOverrides";
 import {
   getAddressesFromRegistryOrEnv,
   getDeploymentNetworkName,
@@ -40,12 +41,13 @@ import { generateRoleAssignments } from "../common/helpers/roles";
 
 async function main() {
   const ORDERED_NONCE_POST_L2MESSAGESERVICE = 3;
-  const ORDERED_NONCE_POST_LINEAROLLUP = 7;
+  const ORDERED_NONCE_POST_LINETHROLLUP = 7;
   const networkName = getDeploymentNetworkName();
+  const deployTokenBridgeOnL1 = getBooleanEnvVarOrDefault("DEPLOY_TOKEN_BRIDGE_ON_L1", false);
 
   let securityCouncilAddress: string;
 
-  if (process.env.DEPLOY_TOKEN_BRIDGE_ON_L1 === "true") {
+  if (deployTokenBridgeOnL1) {
     securityCouncilAddress = requireAddressFromRegistryOrEnv(networkName, "L1_SECURITY_COUNCIL", "L1_SECURITY_COUNCIL");
   } else {
     securityCouncilAddress = requireAddressFromRegistryOrEnv(networkName, "L2_SECURITY_COUNCIL", "L2_SECURITY_COUNCIL");
@@ -56,7 +58,7 @@ async function main() {
     "L2MessageService",
     "L2_MESSAGE_SERVICE_ADDRESS",
   );
-  const lineaRollupAddress = requireAddressFromRegistryOrEnv(networkName, "LineaRollup", "LINEA_ROLLUP_ADDRESS");
+  const linethRollupAddress = requireAddressFromRegistryOrEnv(networkName, "LinethRollup", "LINETH_ROLLUP_ADDRESS");
 
   const remoteChainId = getRequiredEnvVar("REMOTE_CHAIN_ID");
 
@@ -71,32 +73,13 @@ async function main() {
   let remoteDeployerNonce;
   let fees = {};
 
-  if (process.env.DEPLOY_TOKEN_BRIDGE_ON_L1 === "true") {
-    walletNonce = await getL1DeployerNonce();
-    remoteDeployerNonce = await getL2DeployerNonce();
+  if (deployTokenBridgeOnL1) {
+    walletNonce = await getDeployNonceFromEnv(wallet, "L1_NONCE", ORDERED_NONCE_POST_LINETHROLLUP);
+    remoteDeployerNonce = await getDeployNonceFromEnv(wallet, "L2_NONCE", ORDERED_NONCE_POST_L2MESSAGESERVICE);
   } else {
-    walletNonce = await getL2DeployerNonce();
-    remoteDeployerNonce = await getL1DeployerNonce();
-    fees = {
-      maxFeePerGas: 7_200_000_000_000n,
-      maxPriorityFeePerGas: 7_000_000_000_000n,
-    };
-  }
-
-  async function getL1DeployerNonce(): Promise<number> {
-    if (!process.env.L1_NONCE) {
-      return await wallet.getNonce();
-    } else {
-      return parseInt(process.env.L1_NONCE) + ORDERED_NONCE_POST_LINEAROLLUP;
-    }
-  }
-
-  async function getL2DeployerNonce(): Promise<number> {
-    if (!process.env.L2_NONCE) {
-      return await wallet.getNonce();
-    } else {
-      return parseInt(process.env.L2_NONCE) + ORDERED_NONCE_POST_L2MESSAGESERVICE;
-    }
+    walletNonce = await getDeployNonceFromEnv(wallet, "L2_NONCE", ORDERED_NONCE_POST_L2MESSAGESERVICE);
+    remoteDeployerNonce = await getDeployNonceFromEnv(wallet, "L1_NONCE", ORDERED_NONCE_POST_LINETHROLLUP);
+    fees = { ...LOCAL_L2_DEPLOY_FEE_OVERRIDES };
   }
 
   const tokenBridgeContractImplementationName = "tokenBridgeContractImplementation";
@@ -142,11 +125,11 @@ async function main() {
     nonce: remoteDeployerNonce + 4,
   });
 
-  if (process.env.DEPLOY_TOKEN_BRIDGE_ON_L1 === "true") {
+  if (deployTokenBridgeOnL1) {
     console.log(
       `DEPLOY_TOKEN_BRIDGE_ON_L1=${process.env.DEPLOY_TOKEN_BRIDGE_ON_L1}. Deploying TokenBridge on L1, using L1_RESERVED_TOKEN_ADDRESSES from registry or env and remoteSender=${remoteSender}`,
     );
-    deployingChainMessageService = lineaRollupAddress;
+    deployingChainMessageService = linethRollupAddress;
     reservedAddresses = getAddressesFromRegistryOrEnv(
       networkName,
       "L1_RESERVED_TOKEN_ADDRESSES",

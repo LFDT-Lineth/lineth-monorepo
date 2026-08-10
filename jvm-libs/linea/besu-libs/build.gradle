@@ -1,5 +1,5 @@
 plugins {
-  id 'net.consensys.zkevm.kotlin-library-minimal-conventions'
+  id 'lineth.kotlin-library-minimal-conventions'
   id 'java-library'
 }
 
@@ -19,5 +19,8 @@ dependencies {
   }
   implementation("org.bouncycastle:bcprov-jdk18on:${libs.versions.bouncycastle.get()}") {
     because "necessary for besu Transaction object that verifies signatures"
+  }
+  implementation("com.github.ben-manes.caffeine:caffeine:${libs.versions.caffeine.get()}") {
+    because "besu's Address static initializer caches with Caffeine as of besu 26.6.1"
   }
 }

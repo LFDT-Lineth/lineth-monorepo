@@ -44,12 +44,17 @@ func Compile(sys *wiop.System) {
 	evalRound := sys.NewRound()
 	compCtx := sys.Context.Childf("global-quotient")
 
+	// The evaluation coin is shared across the entire compilation: every module
+	// is opened at the same random point r. It lives in evalRound (after all
+	// quotient share columns have been committed in quotientRound).
+	evalCoin := evalRound.NewCoinField(compCtx.Childf("eval-coin"))
+
 	for i, m := range sys.Modules {
 		if len(m.Vanishings) == 0 {
 			continue
 		}
 		mCtx := compCtx.Childf("m%d", i)
-		compileModule(sys, m, mCtx, quotientRound, evalRound)
+		compileModule(sys, m, mCtx, quotientRound, evalRound, evalCoin)
 	}
 }
 
@@ -117,6 +122,7 @@ func compileModule(
 	m *wiop.Module,
 	ctx *wiop.ContextFrame,
 	quotientRound, evalRound *wiop.Round,
+	evalCoin *wiop.CoinField,
 ) {
 	// Static modules must be sized before compilation.
 	if !m.IsDynamic() && !m.IsSized() {
@@ -157,8 +163,9 @@ func compileModule(
 		rawBuckets = append(rawBuckets, rawBucket{ratio: ratio, vanishings: vs, shares: shares})
 	}
 
-	// --- Step 4: eval coin in evalRound ---
-	evalCoin := evalRound.NewCoinField(ctx.Childf("eval-coin"))
+	// --- Step 4: eval coin ---
+	// The eval coin is shared across the whole compilation (created in Compile);
+	// every module is opened at the same random evaluation point.
 
 	// --- Step 5: collect all unique column views across all vanishings ---
 	viewKeyToIdx := make(map[colViewKey]int)
@@ -476,7 +483,7 @@ func (a *QuotientProverAction) Plan(ctx *wiop.PlanningContext) {
 // Run executes the quotient polynomial computation and assigns quotient share columns.
 // For static modules, uses precomputed domains and scratch buffers. For dynamic
 // modules, computes size-dependent data at runtime using RuntimeSize.
-func (a *QuotientProverAction) Run(rt wiop.Runtime) {
+func (a *QuotientProverAction) Run(rt *wiop.Runtime) {
 	n := a.m.RuntimeSize(rt)
 
 	if !a.m.IsDynamic() && n != a.m.Size() {
@@ -624,7 +631,7 @@ func (a *QuotientProverAction) Run(rt wiop.Runtime) {
 // reevalOnLargeCoset evaluates the column col in Lagrange basis on the large
 // coset {g · ω_N^j : j = 0…N-1} using the iFFT → zero-pad → FFT(coset) route.
 func reevalOnLargeCoset(
-	rt wiop.Runtime,
+	rt *wiop.Runtime,
 	col *wiop.Column,
 	m *wiop.Module,
 	n, N int,
@@ -679,7 +686,7 @@ func reevalOnLargeCoset(
 // the two FFTs, so we BitReverse twice to normalise the polynomial layout
 // before feeding it to the large FFT(DIT, OnCoset).
 func reevalOnLargeCosetExt(
-	rt wiop.Runtime,
+	rt *wiop.Runtime,
 	col *wiop.Column,
 	m *wiop.Module,
 	n, N int,
@@ -713,7 +720,7 @@ type EvalProverAction struct {
 }
 
 // Run self-assigns all LagrangeEval queries registered for this module.
-func (a *EvalProverAction) Run(rt wiop.Runtime) {
+func (a *EvalProverAction) Run(rt *wiop.Runtime) {
 	for _, le := range a.lagrangeEvals {
 		le.SelfAssign(rt)
 	}
@@ -736,7 +743,7 @@ type Verifier struct {
 }
 
 // Check verifies the PLONK quotient identity for the module using the runtime's claimed values.
-func (gv *Verifier) Check(rt wiop.Runtime) error {
+func (gv *Verifier) Check(rt *wiop.Runtime) error {
 	n := gv.Module.RuntimeSize(rt)
 
 	if !gv.Module.IsDynamic() && n != gv.Module.Size() {
@@ -854,7 +861,7 @@ func evalExprAtPoint(
 	expr wiop.Expression,
 	viewEvals map[colViewKey]field.Gen,
 	r field.Gen,
-	rt wiop.Runtime,
+	rt *wiop.Runtime,
 ) field.Gen {
 	switch e := expr.(type) {
 	case *wiop.ColumnView:
@@ -921,7 +928,7 @@ func evalExprAtPoint(
 // cancellationCoset may be nil, in which case the cancellation factor is
 // implicitly 1 and skipped.
 func accumulateOnCoset(
-	rt wiop.Runtime,
+	rt *wiop.Runtime,
 	expr wiop.Expression,
 	cosetEvals map[wiop.ObjectID][]field.Element,
 	cosetEvalsExt map[wiop.ObjectID][]field.Ext,
@@ -1002,7 +1009,7 @@ func isBaseExpr(expr wiop.Expression) bool {
 // For expressions containing extension-typed leaves, use [evalExprOnCosetExt]
 // instead.
 func evalExprOnCoset(
-	rt wiop.Runtime,
+	rt *wiop.Runtime,
 	expr wiop.Expression,
 	cosetEvals map[wiop.ObjectID][]field.Element,
 	selectorCosets map[int][]field.Element,
@@ -1089,7 +1096,7 @@ func evalExprOnCoset(
 // extension witness columns referenced by the expression. ColumnView leaves
 // dispatch on their underlying column's IsExtension flag.
 func evalExprOnCosetExt(
-	rt wiop.Runtime,
+	rt *wiop.Runtime,
 	expr wiop.Expression,
 	cosetEvals map[wiop.ObjectID][]field.Element,
 	cosetEvalsExt map[wiop.ObjectID][]field.Ext,

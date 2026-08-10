@@ -7,35 +7,35 @@ import linea.clients.InvalidityProverClientV1
 import linea.clients.StateManagerAccountProofClient
 import linea.clients.StateManagerClientV1
 import linea.clients.TracesConflationVirtualBlockClientV1
-import linea.conflation.FixedLaggingHeadSafeBlockProvider
-import linea.conflation.calculators.CalculatorsFactory
-import linea.conflation.calculators.ConflationTriggerCalculator
 import linea.contract.events.FactoryForcedTransactionAddedEvent
 import linea.contract.events.FinalizedStateUpdatedEvent
 import linea.contract.events.ForcedTransactionAddedEvent
-import linea.contract.l1.FakeLineaRollupSmartContractClient
-import linea.contract.l1.LineaRollupContractVersion
-import linea.contract.l1.LineaRollupFinalizedState
-import linea.coordination.blob.FakeBlobCompressor
-import linea.coordinator.clients.FakeTracesConflationVirtualBlockClientV1
+import linea.contract.l1.FakeLinethRollupSmartContractClient
+import linea.contract.l1.LinethRollupContractVersion
+import linea.contract.l1.LinethRollupFinalizedState
 import linea.domain.BlobCounters
 import linea.domain.BlockCounters
 import linea.domain.BlockInterval
 import linea.domain.BlockParameter
-import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.ConflationCalculationResult
 import linea.domain.ConflationTrigger
 import linea.domain.EthLog
+import linea.domain.toBlockParameter
 import linea.ethapi.EthApiBlockClient
 import linea.ethapi.FakeEthApiClient
 import linea.forcedtx.ForcedTransactionInclusionResult
-import linea.ftx.conflation.ForcedTransactionConflationSafeBlockNumberProvider
-import linea.ftx.conflation.SafeBlockNumberUpdateListener
 import linea.log4j.configureLoggers
-import linea.persistence.ForcedTransactionRecord
-import linea.persistence.ForcedTransactionsDao
-import linea.persistence.ftx.FakeForcedTransactionsDao
 import linea.timer.VertxTimerFactory
+import lineth.conflation.FixedLaggingHeadSafeBlockProvider
+import lineth.conflation.calculators.CalculatorsFactory
+import lineth.conflation.calculators.ConflationTriggerCalculator
+import lineth.coordination.blob.FakeBlobCompressor
+import lineth.coordinator.clients.FakeTracesConflationVirtualBlockClientV1
+import lineth.ftx.conflation.ForcedTransactionConflationSafeBlockNumberProvider
+import lineth.ftx.conflation.SafeBlockNumberUpdateListener
+import lineth.persistence.ForcedTransactionRecord
+import lineth.persistence.ForcedTransactionsDao
+import lineth.persistence.ftx.FakeForcedTransactionsDao
 import net.consensys.FakeFixedClock
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
@@ -70,7 +70,7 @@ class ForcedTransactionsAppTest {
   private lateinit var vertx: Vertx
   private lateinit var ftxClient: FakeForcedTransactionsClient
   private lateinit var fxtDao: ForcedTransactionsDao
-  private lateinit var fakeContractClient: FakeLineaRollupSmartContractClient
+  private lateinit var fakeContractClient: FakeLinethRollupSmartContractClient
   private val fakeClock = FakeFixedClock(Instant.parse("2025-01-01T00:00:00Z"))
   private lateinit var invalidityProofClient: InvalidityProverClientV1
   private lateinit var stateManagerClient: StateManagerClientV1
@@ -101,8 +101,8 @@ class ForcedTransactionsAppTest {
     this.l2Client = FakeEthApiClient(
       log = LogManager.getLogger("l2.FakeEthApiClient"),
     )
-    this.fakeContractClient = FakeLineaRollupSmartContractClient(
-      contractVersion = LineaRollupContractVersion.V8,
+    this.fakeContractClient = FakeLinethRollupSmartContractClient(
+      contractVersion = LinethRollupContractVersion.V8,
     )
     this.fxtDao = FakeForcedTransactionsDao()
     this.tracesClient = FakeTracesConflationVirtualBlockClientV1()
@@ -199,7 +199,7 @@ class ForcedTransactionsAppTest {
       ),
     )
     this.l1Client.setLogs(ftxAddedEvents)
-    this.fakeContractClient.finalizedStateProvider.l1FinalizedState = LineaRollupFinalizedState(
+    this.fakeContractClient.finalizedStateProvider.l1FinalizedState = LinethRollupFinalizedState(
       blockNumber = 100UL,
       blockTimestamp = Clock.System.now(),
       messageNumber = 0UL,
@@ -287,7 +287,7 @@ class ForcedTransactionsAppTest {
       ),
     )
     this.l1Client.setLogs(ftxAddedEvents)
-    this.fakeContractClient.finalizedStateProvider.l1FinalizedState = LineaRollupFinalizedState(
+    this.fakeContractClient.finalizedStateProvider.l1FinalizedState = LinethRollupFinalizedState(
       blockNumber = 100UL,
       blockTimestamp = Clock.System.now(),
       messageNumber = 0UL,
@@ -327,7 +327,7 @@ class ForcedTransactionsAppTest {
     l1Client.setLogs(listOf(ftx10AddedEvent))
 
     // Configure the fake contract client to return the correct finalized state
-    fakeContractClient.finalizedStateProvider.l1FinalizedState = LineaRollupFinalizedState(
+    fakeContractClient.finalizedStateProvider.l1FinalizedState = LinethRollupFinalizedState(
       blockNumber = 100UL,
       blockTimestamp = Clock.System.now(),
       messageNumber = 0UL,
@@ -372,7 +372,7 @@ class ForcedTransactionsAppTest {
     // and confirm there are no pending FTXs before releasing the lock.
     // Only after catching up should it release the lock
     // Configure the fake contract client to return the correct finalized state
-    fakeContractClient.finalizedStateProvider.l1FinalizedState = LineaRollupFinalizedState(
+    fakeContractClient.finalizedStateProvider.l1FinalizedState = LinethRollupFinalizedState(
       blockNumber = 100UL,
       blockTimestamp = Clock.System.now(),
       messageNumber = 0UL,
@@ -461,7 +461,7 @@ class ForcedTransactionsAppTest {
     // scenario: sequencer restarts and loses the in-memory state of already processed ftx
     // Coordinator should resend FTXs until sequencer confirms processing
     // Configure the fake contract client to return the correct finalized state
-    fakeContractClient.finalizedStateProvider.l1FinalizedState = LineaRollupFinalizedState(
+    fakeContractClient.finalizedStateProvider.l1FinalizedState = LinethRollupFinalizedState(
       blockNumber = 100UL,
       blockTimestamp = Clock.System.now(),
       messageNumber = 0UL,
@@ -572,7 +572,7 @@ class ForcedTransactionsAppTest {
     // After awaitVersion() returns, the startup scan resumes.
     // The safe block number should be re-locked at 0 to prevent unrestricted conflation
     // while forced transactions are being discovered and sent to the sequencer.
-    this.fakeContractClient.contractVersion = LineaRollupContractVersion.V7
+    this.fakeContractClient.contractVersion = LinethRollupContractVersion.V7
 
     // FTX events already on L1 (submitted right after V8 upgrade)
     val ftxAddedEvents = listOf(
@@ -590,7 +590,7 @@ class ForcedTransactionsAppTest {
     l1Client.setLogs(ftxAddedEvents)
 
     // No prior finalized FTX (fresh V8 upgrade)
-    fakeContractClient.finalizedStateProvider.l1FinalizedState = LineaRollupFinalizedState(
+    fakeContractClient.finalizedStateProvider.l1FinalizedState = LinethRollupFinalizedState(
       blockNumber = 100UL,
       blockTimestamp = Clock.System.now(),
       messageNumber = 0UL,
@@ -616,7 +616,7 @@ class ForcedTransactionsAppTest {
 
     val startFuture = app.start()
     // Upgrade to V8 so awaitVersion completes
-    this.fakeContractClient.contractVersion = LineaRollupContractVersion.V8
+    this.fakeContractClient.contractVersion = LinethRollupContractVersion.V8
     startFuture.get(5, TimeUnit.SECONDS)
 
     // it should lock safe block number with l2 chain head
@@ -656,7 +656,7 @@ class ForcedTransactionsAppTest {
 
   @Test
   fun `should not hold the conflation while smart contract is not upgraded`() {
-    this.fakeContractClient.contractVersion = LineaRollupContractVersion.V7
+    this.fakeContractClient.contractVersion = LinethRollupContractVersion.V7
     val safeBlockTracker = SafeBlockTracker()
     val app = createApp(
       l1PollingInterval = 10.milliseconds,
@@ -668,7 +668,7 @@ class ForcedTransactionsAppTest {
 
     // simulate upgrade, app start should complete after the upgrade
     // Wait for the app to start
-    this.fakeContractClient.contractVersion = LineaRollupContractVersion.V8
+    this.fakeContractClient.contractVersion = LinethRollupContractVersion.V8
     startFuture.get(3, TimeUnit.SECONDS)
     // it should still not hold the conflation
     assertThat(app.conflationSafeBlockNumberProvider.getHighestSafeBlockNumber()).isNull()
@@ -733,7 +733,7 @@ class ForcedTransactionsAppTest {
     this.l1Client.setLogs(ftxAddedEvents)
 
     // Configure the fake contract client
-    fakeContractClient.finalizedStateProvider.l1FinalizedState = LineaRollupFinalizedState(
+    fakeContractClient.finalizedStateProvider.l1FinalizedState = LinethRollupFinalizedState(
       blockNumber = 100UL,
       blockTimestamp = Clock.System.now(),
       messageNumber = 0UL,
@@ -817,7 +817,7 @@ class ForcedTransactionsAppTest {
       ),
     )
     this.l1Client.setLogs(ftxAddedEvents)
-    this.fakeContractClient.finalizedStateProvider.l1FinalizedState = LineaRollupFinalizedState(
+    this.fakeContractClient.finalizedStateProvider.l1FinalizedState = LinethRollupFinalizedState(
       blockNumber = 10UL,
       blockTimestamp = Clock.System.now(),
       messageNumber = 0UL,
@@ -968,7 +968,7 @@ class ForcedTransactionsAppTest {
     // FTX#3 was processed by the sequencer pre-restart and persisted to the DAO,
     // but the in-memory conflationFtxQueue was reset by the restart. Rehydration must
     // replay it so the conflation calculator cuts at its execution block.
-    fakeContractClient.finalizedStateProvider.l1FinalizedState = LineaRollupFinalizedState(
+    fakeContractClient.finalizedStateProvider.l1FinalizedState = LinethRollupFinalizedState(
       blockNumber = 0UL,
       blockTimestamp = Clock.System.now(),
       messageNumber = 0UL,
@@ -989,7 +989,7 @@ class ForcedTransactionsAppTest {
   fun `should not rehydrate FTXs at or below L1 finalized number on start`() {
     // FTX#3 is at the L1 finalized boundary: it has already been finalised, so no
     // trigger should be replayed for it.
-    fakeContractClient.finalizedStateProvider.l1FinalizedState = LineaRollupFinalizedState(
+    fakeContractClient.finalizedStateProvider.l1FinalizedState = LinethRollupFinalizedState(
       blockNumber = 0UL,
       blockTimestamp = Clock.System.now(),
       messageNumber = 0UL,
@@ -1012,7 +1012,7 @@ class ForcedTransactionsAppTest {
     // dropped. Without rehydration, the conflation calculator would no longer cut at any
     // FTX-execution block and the resulting aggregation would later revert on L1 with
     // FinalizationStateIncorrect.
-    fakeContractClient.finalizedStateProvider.l1FinalizedState = LineaRollupFinalizedState(
+    fakeContractClient.finalizedStateProvider.l1FinalizedState = LinethRollupFinalizedState(
       blockNumber = 0UL,
       blockTimestamp = Clock.System.now(),
       messageNumber = 0UL,
@@ -1050,7 +1050,7 @@ class ForcedTransactionsAppTest {
 
   @Test
   fun `should be a no-op when the DAO is empty`() {
-    fakeContractClient.finalizedStateProvider.l1FinalizedState = LineaRollupFinalizedState(
+    fakeContractClient.finalizedStateProvider.l1FinalizedState = LinethRollupFinalizedState(
       blockNumber = 0UL,
       blockTimestamp = Clock.System.now(),
       messageNumber = 0UL,

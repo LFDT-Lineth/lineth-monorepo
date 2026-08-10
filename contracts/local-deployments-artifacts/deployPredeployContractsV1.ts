@@ -25,7 +25,7 @@ import {
   abi as TransparentUpgradeableProxyAbi,
   bytecode as TransparentUpgradeableProxyBytecode,
 } from "./static-artifacts/TransparentUpgradeableProxy.json";
-import { deployContractFromArtifacts, getInitializerData } from "../common/helpers/deployments";
+import { deployContractFromArtifacts, getDeployNonceFromEnv, getInitializerData } from "../common/helpers/deployments";
 
 dotenv.config();
 
@@ -34,13 +34,7 @@ async function main() {
 
   const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
   const wallet = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY!, provider);
-  let walletNonce;
-
-  if (!process.env.L2_NONCE) {
-    walletNonce = await wallet.getNonce();
-  } else {
-    walletNonce = parseInt(process.env.L2_NONCE);
-  }
+  const walletNonce = await getDeployNonceFromEnv(wallet, "L2_NONCE");
   console.log("walletNonce:", walletNonce);
 
   // Contract implementation names

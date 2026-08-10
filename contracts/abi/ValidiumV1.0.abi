@@ -641,7 +641,7 @@
             }
           ],
           "indexed": false,
-          "internalType": "struct ILineaRollupBase.BaseInitializationData",
+          "internalType": "struct ILinethRollupBase.BaseInitializationData",
           "name": "InitializationData",
           "type": "tuple"
         }
@@ -1574,7 +1574,7 @@
                   "type": "bytes32"
                 }
               ],
-              "internalType": "struct ILineaRollupBase.ShnarfData",
+              "internalType": "struct ILinethRollupBase.ShnarfData",
               "name": "shnarfData",
               "type": "tuple"
             },
@@ -1624,7 +1624,7 @@
               "type": "bytes"
             }
           ],
-          "internalType": "struct ILineaRollupBase.FinalizationDataV3",
+          "internalType": "struct ILinethRollupBase.FinalizationDataV3",
           "name": "_finalizationData",
           "type": "tuple"
         }
@@ -1810,7 +1810,7 @@
               "type": "address"
             }
           ],
-          "internalType": "struct ILineaRollupBase.BaseInitializationData",
+          "internalType": "struct ILinethRollupBase.BaseInitializationData",
           "name": "_initializationData",
           "type": "tuple"
         }

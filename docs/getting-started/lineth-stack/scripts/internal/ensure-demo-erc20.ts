@@ -3,13 +3,10 @@ import * as fs from "node:fs";
 import { ContractFactory, JsonRpcProvider, Wallet, type InterfaceAbi } from "ethers";
 
 import { resolveL1DeployerConfig } from "./deployer-wallet";
-import {
-  envValue,
-  LOCAL_L2_POLICY_DEFAULTS,
-  parseDecimalWei,
-  sanitizeExternalError,
-  SEPOLIA_POLICY_DEFAULTS,
-} from "./sepolia-policy";
+import { envValue, parseDecimalWei, requiredProcessEnv } from "./lib/env";
+import { sanitizeExternalError } from "./lib/errors";
+import { writeFileAtomic } from "./lib/fs";
+import { LOCAL_L2_POLICY_DEFAULTS, SEPOLIA_POLICY_DEFAULTS } from "./sepolia-policy";
 
 type Lane = "l1" | "l2";
 
@@ -23,14 +20,6 @@ const lane = laneArg as Lane;
 
 if (lane !== "l1" && lane !== "l2") {
   throw new Error("usage: ensure-demo-erc20.ts <l1|l2>");
-}
-
-function requiredEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`${name} must be set`);
-  }
-  return value;
 }
 
 function log(message: string) {
@@ -52,8 +41,8 @@ async function main() {
   addressBook.l2 ??= {};
 
   const l1Config = lane === "l1" ? await resolveL1DeployerConfig(process.env, "container") : undefined;
-  const rpcUrl = lane === "l1" ? l1Config!.rpcUrl : requiredEnv("L2_RPC_URL");
-  const privateKey = lane === "l1" ? l1Config!.privateKey : requiredEnv("L2_DEPLOYER_PRIVATE_KEY");
+  const rpcUrl = lane === "l1" ? l1Config!.rpcUrl : requiredProcessEnv("L2_RPC_URL");
+  const privateKey = lane === "l1" ? l1Config!.privateKey : requiredProcessEnv("L2_DEPLOYER_PRIVATE_KEY");
   const provider = new JsonRpcProvider(rpcUrl);
   const wallet = new Wallet(privateKey, provider);
   const artifactPath =
@@ -103,9 +92,7 @@ async function main() {
 
   addressBook[lane]!.ERC20Example = address;
   addressBook[lane]!.TestERC20 = address;
-  const tmpPath = `${addressesPath}.tmp-${process.pid}`;
-  fs.writeFileSync(tmpPath, `${JSON.stringify(addressBook, null, 2)}\n`, { mode: 0o644 });
-  fs.renameSync(tmpPath, addressesPath);
+  writeFileAtomic(addressesPath, `${JSON.stringify(addressBook, null, 2)}\n`, 0o644);
   log(`wrote ${lane.toUpperCase()} ERC20Example to ${addressesPath}`);
   provider.destroy();
 }

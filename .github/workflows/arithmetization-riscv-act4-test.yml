@@ -16,7 +16,17 @@ on:
      - '.github/actions/setup-arithmetization-riscv/**'
      - '.github/workflows/arithmetization-*.yml'
   workflow_call:
+    inputs:
+      zkc-ref:
+        description: 'Optional zkc commit/branch/tag (default: arithmetization/Makefile ZKC_REF)'
+        required: false
+        type: string
   workflow_dispatch:
+    inputs:
+      zkc-ref:
+        description: 'Optional zkc commit/branch/tag (default: arithmetization/Makefile ZKC_REF)'
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -25,14 +35,18 @@ permissions:
 jobs:
   act4-reference-tests:
     runs-on: gha-lfdt-lineth-ss-ubuntu-24-amd64-med
+    env:
+      ZKC_EXEC_FLAGS: "--fast --gogen"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           submodules: false
 
       - name: Setup Environment
         uses: ./.github/actions/setup-arithmetization-riscv
+        with:
+          zkc-ref: ${{ inputs.zkc-ref }}
 
       - name: Install Sail
         run: make -C arithmetization install-sail
@@ -44,5 +58,4 @@ jobs:
       - name: Run ACT4 tests
         run: make act4-exec
         working-directory: arithmetization/src/test
-        env:
-          ZKC_REF: ${{ inputs.zkc-ref || 'v1.2.20' }}
+

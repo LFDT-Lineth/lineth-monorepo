@@ -1,3 +1,29 @@
+## [2.1.0] - 2026-08-07
+
+### 🚀 Features
+
+- *(linea-besu)* Update to v26.7.0 (#3623)
+- *(linea-besu)* Update to 26.7.1 (#3699)
+
+### 🐛 Bug Fixes
+
+- *(linea-besu)* Align Besu Kotlin runtime (#3734)
+- *(linea-besu)* Add the missing web3j crypto jar in dist and fix ci … (#3737)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(linea-besu)* Tidy v2.0.0 changelog entries (#3574)
+- *(misc)* Update jackson from 2.19.4 to 2.22.1 (#3595)
+- *(misc)* Rename gradle plugins (#3729)
+## [2.0.0] - 2026-07-14
+
+### 🐛 Bug Fixes
+
+- *(linea-besu)* Updating Besu version (#3535)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(deps)* Align bouncycastle catalog pin to 1.84 (#3562)
 ## [1.1.1] - 2026-06-26
 
 ### 🐛 Bug Fixes

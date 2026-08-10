@@ -13,6 +13,10 @@ type CompiledSystem struct {
 	Routing   CoinRouting
 	Vanishing VanishingSystem
 	LogDeriv  LogDerivSystem
+	// Pcs is the extracted PCS descriptor. Mandatory in the full verifier.verify
+	// path (every protocol commits columns); nil only for callers that emit the
+	// vanishing/logderiv systems standalone.
+	Pcs *PcsSystem
 }
 
 // CompiledSystemZigOptions configures WriteCompiledSystemZig.

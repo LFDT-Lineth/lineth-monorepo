@@ -1,8 +1,8 @@
 import {
   getDummyContract,
   getForcedTransactionGatewayContract,
-  getLineaRollupContract,
-  getLineaRollupProxyAdminContract,
+  getLinethRollupContract,
+  getLinethRollupProxyAdminContract,
   getTestERC20Contract,
   getTokenBridgeContract,
 } from "./contracts";
@@ -12,13 +12,13 @@ import type { Client, Transport, Chain, Account } from "viem";
 
 export function createL1ContractRegistry(cfg: L1Config) {
   return {
-    lineaRollup: <T extends Transport, C extends Chain | undefined, A extends Account | undefined>(
+    linethRollup: <T extends Transport, C extends Chain | undefined, A extends Account | undefined>(
       client: Client<T, C, A>,
-    ) => getLineaRollupContract(client, cfg.lineaRollupAddress),
+    ) => getLinethRollupContract(client, cfg.linethRollupAddress),
 
-    lineaRollupProxyAdmin: <T extends Transport, C extends Chain | undefined, A extends Account | undefined>(
+    linethRollupProxyAdmin: <T extends Transport, C extends Chain | undefined, A extends Account | undefined>(
       client: Client<T, C, A>,
-    ) => getLineaRollupProxyAdminContract(client, cfg.lineaRollupProxyAdminAddress),
+    ) => getLinethRollupProxyAdminContract(client, cfg.linethRollupProxyAdminAddress),
 
     testERC20: <T extends Transport, C extends Chain | undefined, A extends Account | undefined>(
       client: Client<T, C, A>,

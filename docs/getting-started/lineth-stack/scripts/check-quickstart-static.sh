@@ -15,6 +15,10 @@ pass() {
   printf '[quickstart-static] OK: %s\n' "$*"
 }
 
+warn() {
+  printf '[quickstart-static] WARN: %s\n' "$*" >&2
+}
+
 check_no_tracked_generated_genesis() {
   tracked=$(git -C "$ROOT" ls-files "$STACK_REL/config" \
     | grep -E '/(genesis-(besu|maru)\.json|fork-timestamp\.txt)$' || true)
@@ -103,6 +107,58 @@ smoke-test/smoke-bridge-erc20-l2-to-l1.sh
       fail "scripts/$script redefines runtime helper(s) near top-level: $(printf '%s' "$duplicate_helpers" | tr '\n' ' ')"
     else
       pass "scripts/$script does not redefine shared runtime helpers at top-level"
+    fi
+  done
+
+  smoke_lib="$STACK/scripts/lib/smoke.sh"
+  if [ -f "$smoke_lib" ] \
+    && grep -q 'lineth_require_docker()' "$smoke_lib" \
+    && grep -q 'lineth_foundry_image()' "$smoke_lib" \
+    && grep -q 'lineth_psql_value()' "$smoke_lib" \
+    && grep -q 'lineth_cast_wallet_address()' "$smoke_lib" \
+    && grep -q 'lineth_cast_run()' "$smoke_lib" \
+    && grep -q 'lineth_wait_postman_claim_tx()' "$smoke_lib" \
+    && grep -q 'lineth_claim_l2_to_l1()' "$smoke_lib"; then
+    pass "scripts/lib/smoke.sh centralizes shared host-side smoke/traffic helpers"
+  else
+    fail "scripts/lib/smoke.sh must define the shared host-side smoke/traffic helpers"
+  fi
+
+  smoke_scripts="
+smoke-test/smoke-bridge-message.sh
+smoke-test/smoke-bridge-message-l2-to-l1.sh
+smoke-test/smoke-bridge-erc20-l1-to-l2.sh
+smoke-test/smoke-bridge-erc20-l2-to-l1.sh
+"
+  traffic_scripts="
+traffic-generation/send-l2-test-tx.sh
+traffic-generation/send-l2-erc20-transfer.sh
+traffic-generation/generate-l2-erc20-traffic.sh
+"
+
+  for script in $smoke_scripts $traffic_scripts; do
+    script_path="$STACK/scripts/$script"
+    if grep -q 'lib/smoke.sh' "$script_path"; then
+      pass "scripts/$script sources shared smoke helper lib/smoke.sh"
+    else
+      fail "scripts/$script must source scripts/lib/smoke.sh"
+    fi
+
+    shared_smoke_helpers="$(grep -nE '^(psql_value|claim_l2_to_l1|wait_for_postman_claim_tx|cast_wallet_address)\(\)|^FOUNDRY_IMAGE=' "$script_path" || true)"
+    if [ -n "$shared_smoke_helpers" ]; then
+      fail "scripts/$script redefines shared smoke helper(s); use lineth_* from lib/smoke.sh: $(printf '%s' "$shared_smoke_helpers" | tr '\n' ' ')"
+    else
+      pass "scripts/$script does not redefine shared smoke helpers"
+    fi
+  done
+
+  for script in $smoke_scripts; do
+    script_path="$STACK/scripts/$script"
+    local_require_helpers="$(grep -nE '^(require_address|require_hash|require_uint)\(\)' "$script_path" || true)"
+    if [ -n "$local_require_helpers" ]; then
+      fail "scripts/$script redefines require_* validator(s); use lineth_require_*: $(printf '%s' "$local_require_helpers" | tr '\n' ' ')"
+    else
+      pass "scripts/$script uses shared lineth_require_* validators"
     fi
   done
 }
@@ -237,6 +293,12 @@ check_init_scripts_and_compose_shell() {
     fi
   else
     pass "shellcheck not installed; skipped implementation shellcheck"
+  fi
+
+  if grep -nE 'eval[[:space:]]+"?\$resolver_''env' "$phases_dir/04-deploy-contracts.sh" >/tmp/lineth-resolver-env-eval.txt 2>/dev/null; then
+    fail "deploy-contracts must source resolver env from a file, not eval resolver stdout: $(tr '\n' ' ' </tmp/lineth-resolver-env-eval.txt)"
+  else
+    pass "deploy-contracts does not eval resolver stdout"
   fi
 
   for file in $expected_internal_files; do
@@ -406,7 +468,7 @@ check_account_setup_key_model() {
     fi
   done
 
-  for contract in LineaRollupV8 L2MessageService; do
+  for contract in LinethRollupV8 L2MessageService; do
     if grep -Eq "\"?$contract\"?[[:space:]]*:" "$account_setup_ts"; then
       pass "addresses-precomputed.json includes boot-critical $contract"
     else
@@ -454,7 +516,7 @@ check_account_setup_key_model() {
     && grep -q 'Wallet.createRandom' "$account_setup_ts" \
     && grep -q 'encryptKeystoreJson' "$account_setup_ts" \
     && grep -q 'LINETH_KEYSTORE_PASSWORD' "$account_setup_ts" \
-    && grep -q 'DEFAULT_RUNTIME_PASSWORD = "linea-local-dev"' "$account_setup_ts"; then
+    && grep -q 'DEFAULT_RUNTIME_PASSWORD = "lineth-local-dev"' "$account_setup_ts"; then
     pass "account-setup persists generated private keys for retry-safe consumers"
   else
     fail "account-setup must use ethers to generate encrypted runtime keystores with a non-empty Web3Signer-compatible password"
@@ -481,6 +543,29 @@ check_account_setup_key_model() {
     pass "web3signer loads generated runtime signers from encrypted keystores"
   else
     fail "account-setup must generate Web3Signer file-keystore configs, not file-raw private-key configs"
+  fi
+}
+
+check_internal_typescript_typecheck() {
+  # Named tsconfig.typecheck.json on purpose: a plain tsconfig.json here would be
+  # auto-discovered by ts-node in the deploy containers, where its extends path
+  # (repo-root tsconfig.json) does not exist under the /scripts mount.
+  internal_tsconfig="$STACK/scripts/internal/tsconfig.typecheck.json"
+
+  if [ -f "$STACK/scripts/internal/tsconfig.json" ]; then
+    fail "scripts/internal must not contain tsconfig.json; ts-node auto-discovers it inside containers where its extends target is missing"
+    return
+  fi
+
+  if [ ! -f "$internal_tsconfig" ]; then
+    warn "scripts/internal/tsconfig.typecheck.json not found; skipped quickstart TypeScript typecheck"
+    return
+  fi
+
+  if (cd "$ROOT/contracts" && pnpm -w --config.verify-deps-before-run=false exec tsc --noEmit --project "$internal_tsconfig"); then
+    pass "scripts/internal TypeScript files pass tsc --noEmit"
+  else
+    fail "scripts/internal TypeScript files must pass tsc --noEmit"
   fi
 }
 
@@ -580,6 +665,8 @@ check_typescript_quickstart_helpers() {
   if grep -q -- '--forget-deployer' "$STACK/scripts/reset.sh" \
     && grep -q 'PRESERVED_DEPLOYER_DIR' "$STACK/scripts/reset.sh" \
     && grep -q 'deployer-keystore' "$STACK/scripts/reset.sh" \
+    && grep -q 'lineth_subtitle "reset · clean quickstart state"' "$STACK/scripts/reset.sh" \
+    && ! grep -q 'lineth_banner' "$STACK/scripts/reset.sh" \
     && ! grep -q '^L1_DEPLOYER_PRIVATE_KEY=' "$STACK/.env.example" \
     && ! grep -q '^# L1_DEPLOYER_PRIVATE_KEY=' "$STACK/.env.example"; then
     pass "reset preserves generated Sepolia deployer by default and .env.example omits raw deployer key"
@@ -643,7 +730,8 @@ check_typescript_quickstart_helpers() {
 
   if grep -q 'deploy-timing.ts' "$deploy_contracts" \
     && grep -q 'DEPLOY_TIMING_PATH' "$deploy_contracts" \
-    && grep -q 'appendFileSync' "$deploy_timing_ts" \
+    && grep -q 'appendDeployTimingRecord' "$deploy_timing_ts" \
+    && grep -q 'appendFileSync' "$STACK/scripts/internal/lib/timing.ts" \
     && grep -q 'deploy-timing.jsonl' "$deploy_timing_ts"; then
     pass "deploy-contracts emits a TypeScript-backed deploy timing report"
   else
@@ -713,7 +801,7 @@ check_postman_key_model() {
 
   if grep -q 'addresses-precomputed.json' "$render_postman_env" \
     && grep -q 'l1PostmanListenerStartBlock' "$render_postman_env" \
-    && ! grep -q 'deploy-runtime.env\|addresses.json\|deploy-logs\|step1-linea-rollup' "$render_postman_env"; then
+    && ! grep -q 'deploy-runtime.env\|addresses.json\|deploy-logs\|step1-lineth-rollup' "$render_postman_env"; then
     pass "postman config renders from early precomputed artifacts only"
   else
     fail "render-postman-config.sh must use addresses-precomputed.json only for deploy facts"
@@ -866,7 +954,7 @@ check_runtime_config_and_validium_guardrails() {
     && grep -q 'GENESIS_STATE_ROOT_HASH' "$deploy_contracts" \
     && grep -q 'GENESIS_SHNARF' "$deploy_contracts" \
     && grep -q 'L2_MESSAGE_SERVICE_DEPLOY_BLOCK' "$deploy_contracts" \
-    && grep -q 'LINEA_ROLLUP_L1_DEPLOY_BLOCK' "$deploy_contracts" \
+    && grep -q 'LINETH_ROLLUP_L1_DEPLOY_BLOCK' "$deploy_contracts" \
     && ! grep -q 'Patched coordinator-config.toml\|coordinator-config.toml.new' "$deploy_contracts"; then
     pass "deploy-contracts writes deploy-runtime.env without patching rendered coordinator config"
   else
@@ -892,7 +980,7 @@ check_reuse_guardrails() {
   account_setup_ts="$STACK/scripts/internal/account-setup.ts"
   compose="$STACK/docker-compose.yml"
   deploy_contracts="$STACK/scripts/phases/04-deploy-contracts.sh"
-  rollup_deploy_script="$ROOT/contracts/local-deployments-artifacts/deployPlonkVerifierAndLineaRollupV8.ts"
+  rollup_deploy_script="$ROOT/contracts/local-deployments-artifacts/deployPlonkVerifierAndLinethRollupV8.ts"
   ensure_demo_erc20="$STACK/scripts/internal/ensure-demo-erc20.ts"
   ensure_demo_erc20_sh="$STACK/scripts/internal/ensure-demo-erc20.sh"
   traffic_account_sh="$STACK/scripts/internal/traffic-account.sh"
@@ -904,7 +992,7 @@ check_reuse_guardrails() {
     && grep -q 'cast code' "$deploy_contracts" \
     && grep -q 'verify_address "$address" "$expected_address" "$label"' "$deploy_contracts" \
     && grep -q 'present but no code' "$deploy_contracts" \
-    && grep -q 'step_already_done_with_code "$logfile" "$primary_contract" "$L1_RPC_URL" "L1" "$PRECOMPUTED_LINEA_ROLLUP"' "$deploy_contracts" \
+    && grep -q 'step_already_done_with_code "$logfile" "$primary_contract" "$L1_RPC_URL" "L1" "$PRECOMPUTED_LINETH_ROLLUP"' "$deploy_contracts" \
     && grep -q 'step_already_done_with_code "$logfile" "L2MessageService" "$L2_RPC_URL" "L2" "$PRECOMPUTED_L2_MS"' "$deploy_contracts" \
     && grep -q 'step_already_done_with_code "$logfile" "TokenBridge" "$L1_RPC_URL" "L1" "$EXPECTED_L1_TOKEN_BRIDGE"' "$deploy_contracts" \
     && grep -q 'step_already_done_with_code "$logfile" "TokenBridge" "$L2_RPC_URL" "L2" "$EXPECTED_L2_TOKEN_BRIDGE"' "$deploy_contracts" \
@@ -1110,7 +1198,7 @@ check_smoke_and_traffic_scripts() {
     && grep -q 'Deploy contracts' "$STACK/scripts/watch.sh" \
     && grep -q 'Wait for finality' "$STACK/scripts/watch.sh" \
     && grep -q 'Show links' "$STACK/scripts/watch.sh" \
-    && grep -q 'Step 1 reused: L1 Verifier + LineaRollup' "$STACK/scripts/watch.sh" \
+    && grep -q 'Step 1 reused: L1 Verifier + LinethRollup' "$STACK/scripts/watch.sh" \
     && grep -q 'Step 2 reused: L2 MessageService' "$STACK/scripts/watch.sh" \
     && grep -q 'Step 3 reused: L1 TokenBridge' "$STACK/scripts/watch.sh" \
     && grep -q 'Step 4 reused: L2 TokenBridge' "$STACK/scripts/watch.sh" \
@@ -1148,6 +1236,7 @@ check_smoke_and_traffic_scripts() {
   fi
 
   if grep -q 'mode                          ' "$STACK/scripts/internal/quickstart-preflight.ts" \
+    && ! grep -q 'lineth_kv "mode" "Sepolia"' "$STACK/scripts/start.sh" \
     && grep -q 'local dev mode; Sepolia gas/blob gates skipped' "$STACK/scripts/internal/quickstart-preflight.ts" \
     && grep -q 'gas                           execution' "$STACK/scripts/internal/quickstart-preflight.ts" \
     && grep -q 'blob fee                      blob base' "$STACK/scripts/internal/quickstart-preflight.ts" \
@@ -1213,10 +1302,10 @@ check_smoke_and_traffic_scripts() {
     fail "deploy-contracts must mount ./scripts/lib:/scripts/lib:ro when deploy output uses shared L1 link helpers"
   fi
 
-  if grep -q 'verify_address "$LINEA_ROLLUP_ADDRESS" "$PRECOMPUTED_LINEA_ROLLUP"' "$STACK/scripts/phases/04-deploy-contracts.sh" \
+  if grep -q 'verify_address "$LINETH_ROLLUP_ADDRESS" "$PRECOMPUTED_LINETH_ROLLUP"' "$STACK/scripts/phases/04-deploy-contracts.sh" \
     && grep -q 'verify_address "$L2_MESSAGE_SERVICE_ADDRESS" "$PRECOMPUTED_L2_MS"' "$STACK/scripts/phases/04-deploy-contracts.sh" \
     && grep -q 'verify_bridge_step_addresses' "$STACK/scripts/phases/04-deploy-contracts.sh" \
-    && grep -q 'step_already_done_with_code "$logfile" "$primary_contract" "$L1_RPC_URL" "L1" "$PRECOMPUTED_LINEA_ROLLUP"' "$STACK/scripts/phases/04-deploy-contracts.sh" \
+    && grep -q 'step_already_done_with_code "$logfile" "$primary_contract" "$L1_RPC_URL" "L1" "$PRECOMPUTED_LINETH_ROLLUP"' "$STACK/scripts/phases/04-deploy-contracts.sh" \
     && grep -q 'step_already_done_with_code "$logfile" "L2MessageService" "$L2_RPC_URL" "L2" "$PRECOMPUTED_L2_MS"' "$STACK/scripts/phases/04-deploy-contracts.sh" \
     && grep -q 'step_already_done_with_code "$logfile" "TokenBridge" "$L1_RPC_URL" "L1" "$EXPECTED_L1_TOKEN_BRIDGE"' "$STACK/scripts/phases/04-deploy-contracts.sh" \
     && grep -q 'step_already_done_with_code "$logfile" "TokenBridge" "$L2_RPC_URL" "L2" "$EXPECTED_L2_TOKEN_BRIDGE"' "$STACK/scripts/phases/04-deploy-contracts.sh"; then
@@ -1232,6 +1321,26 @@ check_smoke_and_traffic_scripts() {
     pass "start.sh waits for local L1 EL, CL, and block production before preflight"
   else
     fail "start.sh must wait for local L1 EL, CL, and advancing eth_blockNumber before preflight"
+  fi
+
+  if [ -f "$STACK/scripts/internal/deploy-rpc-error.ts" ] \
+    && grep -q 'formatQuickstartDeployRpcError' "$STACK/scripts/internal/deployBridgedTokenAndTokenBridgeV1_1.ts" \
+    && grep -q 'require("/scripts/internal/deploy-rpc-error")' "$STACK/scripts/internal/deployBridgedTokenAndTokenBridgeV1_1.ts" \
+    && grep -q './scripts/internal:/scripts/internal:ro' "$STACK/docker-compose.yml" \
+    && ! grep -q 'deploy-rpc-error.ts:/workspace/contracts/local-deployments-artifacts' "$STACK/docker-compose.yml" \
+    && grep -q 'free or overloaded Sepolia RPC endpoint' "$STACK/scripts/internal/deploy-rpc-error.ts" \
+    && grep -q 'explain_l1_rpc_submission_error "$logfile"' "$STACK/scripts/phases/04-deploy-contracts.sh" \
+    && grep -q 'L1 contract deployment hit an RPC submission error from L1_RPC_URL' "$STACK/scripts/phases/04-deploy-contracts.sh" \
+    && grep -q 'pipeline_status=("${PIPESTATUS\[@\]}")' "$STACK/scripts/phases/04-deploy-contracts.sh" \
+    && grep -q 'tee_status="${pipeline_status\[1\]}"' "$STACK/scripts/phases/04-deploy-contracts.sh" \
+    && grep -q 'could not coalesce error' "$STACK/scripts/watch.sh" \
+    && grep -q 'already known' "$STACK/scripts/status.sh" \
+    && grep -q 'L1_RPC_URL' "$STACK/scripts/internal/deploy-rpc-error.ts" \
+    && grep -q './scripts/reset.sh' "$STACK/scripts/internal/deploy-rpc-error.ts" \
+    && grep -q 'assert.doesNotMatch(formatted.message' "$STACK/scripts/internal/deploy-rpc-error.test.ts"; then
+    pass "deploy TokenBridge surfaces actionable Sepolia RPC submission guidance without echoing raw tx payloads"
+  else
+    fail "deploy TokenBridge must turn noisy Sepolia RPC submission errors into actionable L1_RPC_URL guidance"
   fi
 
   if grep -q 'HOST_PORT_L1_RPC' "$STACK/scripts/check-ports.sh" \
@@ -1269,7 +1378,7 @@ check_smoke_and_traffic_scripts() {
   if [ -f "$STACK/scripts/phases/04-deploy-contracts.sh" ] \
     && grep -q 'useful links:' "$STACK/scripts/phases/04-deploy-contracts.sh" \
     && grep -q 'L2 Blockscout UI' "$STACK/scripts/phases/04-deploy-contracts.sh" \
-    && grep -q 'L1 LineaRollupV8' "$STACK/scripts/phases/04-deploy-contracts.sh"; then
+    && grep -q 'L1 LinethRollupV8' "$STACK/scripts/phases/04-deploy-contracts.sh"; then
     pass "deploy-contracts prints useful links after addresses.json is written"
   else
     fail "deploy-contracts must print useful links after addresses.json is written"
@@ -1358,20 +1467,30 @@ check_smoke_and_traffic_scripts() {
     fail "claim-l2-to-l1.ts and its test must centralize L2-to-L1 SDK proof and claim logic"
   fi
 
+  smoke_lib="$STACK/scripts/lib/smoke.sh"
+  if [ -f "$smoke_lib" ] \
+    && grep -q 'lineth_claim_l2_to_l1()' "$smoke_lib" \
+    && grep -q 'claim-l2-to-l1.ts' "$smoke_lib" \
+    && grep -q 'docker exec -i' "$smoke_lib" \
+    && grep -q '. "$runtime_keys_env"' "$smoke_lib"; then
+    pass "lib/smoke.sh centralizes the manual L1 claim helper"
+  else
+    fail "lib/smoke.sh must centralize the manual L1 claim via lineth_claim_l2_to_l1"
+  fi
+
   for script in smoke-bridge-message-l2-to-l1.sh smoke-bridge-erc20-l2-to-l1.sh; do
     script_path="$STACK/scripts/smoke-test/$script"
-	  if [ -f "$script_path" ] \
-	    && grep -q 'claim_l2_to_l1()' "$script_path" \
-	    && grep -q 'claim-l2-to-l1.ts' "$script_path" \
-	    && grep -q 'docker exec -i' "$script_path" \
-	    && grep -q '. "$runtime_keys_env"' "$script_path" \
-	    && ! grep -q 'sed -nE .*L1_POSTMAN_PRIVATE_KEY' "$script_path" \
-	    && ! grep -q 'getMessageProof' "$script_path" \
+    if [ -f "$script_path" ] \
+      && grep -q 'lineth_claim_l2_to_l1' "$script_path" \
+      && grep -q 'lib/smoke.sh' "$script_path" \
+      && ! grep -q 'claim_l2_to_l1()' "$script_path" \
+      && ! grep -q 'sed -nE .*L1_POSTMAN_PRIVATE_KEY' "$script_path" \
+      && ! grep -q 'getMessageProof' "$script_path" \
       && ! grep -q 'claimOnL1' "$script_path" \
       && ! grep -q "node --input-type=module.*<<'NODE'" "$script_path"; then
-      pass "$script delegates manual L1 claims to claim-l2-to-l1.ts"
+      pass "$script delegates manual L1 claims to lineth_claim_l2_to_l1"
     else
-      fail "$script must delegate manual L1 claims to claim-l2-to-l1.ts without embedded SDK heredocs"
+      fail "$script must delegate manual L1 claims to lineth_claim_l2_to_l1 without embedded SDK heredocs"
     fi
   done
 
@@ -1494,12 +1613,116 @@ check_pinned_utility_images_and_docs() {
   fi
 }
 
+check_wizard_cli() {
+  start_script="$STACK/scripts/start.sh"
+  wizard_lib="$STACK/scripts/lib/wizard.sh"
+  wizard_tests="$STACK/scripts/tests/wizard/run.sh"
+  quickstart_preflight="$STACK/scripts/internal/quickstart-preflight.ts"
+  readme="$STACK/README.md"
+  scripts_readme="$STACK/scripts/README.md"
+  stack_gitignore="$STACK/.gitignore"
+
+  if [ -f "$wizard_lib" ] \
+    && grep -q 'lineth_wizard_main' "$wizard_lib" \
+    && grep -q 'lineth_wizard_set_env_key()' "$wizard_lib" \
+    && grep -q 'lineth_banner "wizard · guided .env setup"' "$wizard_lib" \
+    && grep -q 'LINETH_WIZARD_MANAGED_KEYS="L1_MODE L1_RPC_URL PROVER_DEV_OVERRIDE PROVER_GOMEMLIMIT"' "$wizard_lib"; then
+    pass "wizard shell library owns the managed .env key flow"
+  else
+    fail "scripts/lib/wizard.sh must define the wizard managed-key flow"
+  fi
+
+  set_env_body="$(awk '
+    /^lineth_wizard_set_env_key\(\)/ { in_function = 1 }
+    in_function { print }
+    in_function && /^}/ { exit }
+  ' "$wizard_lib")"
+  if printf '%s\n' "$set_env_body" | grep -q 'sed'; then
+    fail "lineth_wizard_set_env_key must not use sed for value replacement"
+  else
+    pass "lineth_wizard_set_env_key avoids sed-based value replacement"
+  fi
+
+  if grep -q 'lib/wizard.sh' "$start_script" \
+    && grep -q 'LINETH_WIZARD_FLAG_L1_MODE' "$start_script" \
+    && grep -q 'lineth_wizard_main "$STACK" "$SCRIPT_DIR"' "$start_script"; then
+    pass "start.sh sources and invokes the wizard before normal boot"
+  else
+    fail "start.sh must source scripts/lib/wizard.sh and invoke lineth_wizard_main"
+  fi
+
+  if grep -q -- '--then-start requires --wizard; to just boot, run ./scripts/start.sh --tail' "$start_script" \
+    && grep -q 'exec "$SCRIPT_DIR/start.sh" --tail' "$start_script"; then
+    pass "start.sh guards --then-start and hands off with exec"
+  else
+    fail "start.sh must reject --then-start without --wizard and exec start.sh --tail after wizard success"
+  fi
+
+  if grep -q '^run_ts_preflight$' "$start_script" \
+    && ! grep -q 'LINETH_PRECHECKED' "$start_script"; then
+    pass "start.sh still runs full preflight after wizard handoff"
+  else
+    fail "start.sh must not skip full preflight after --wizard --then-start"
+  fi
+
+  if grep -q 'LINETH_PREFLIGHT_RPC_ONLY' "$wizard_lib" \
+    && grep -q 'LINETH_PREFLIGHT_RPC_ONLY' "$quickstart_preflight" \
+    && grep -q 'runRpcOnlyCheck' "$quickstart_preflight"; then
+    pass "wizard uses quickstart-preflight RPC-only mode before .env exists"
+  else
+    fail "wizard Sepolia validation must use quickstart-preflight RPC-only mode"
+  fi
+
+  if [ -f "$stack_gitignore" ] && grep -q '^\.env\.\*\.tmp$' "$stack_gitignore" \
+    && git -C "$ROOT" check-ignore -q "$STACK_REL/.env.123.456.tmp"; then
+    pass "lineth-stack .gitignore ignores wizard .env.*.tmp candidates"
+  else
+    fail "docs/getting-started/lineth-stack/.gitignore must ignore .env.*.tmp"
+  fi
+
+  if [ -f "$wizard_tests" ] \
+    && grep -q 'lineth_wizard_set_env_key preserves comments and URL-like values literally' "$wizard_tests" \
+    && grep -q 'assert_fixture local-dev' "$wizard_tests" \
+    && grep -q 'WIZARD_L1_MODE env var configures non-interactive mode' "$wizard_tests" \
+    && grep -q 'L1 prompt uses numbered choice header' "$wizard_tests" \
+    && grep -q 'backup collision keeps both backups' "$wizard_tests" \
+    && grep -q 'mode-switch guard points at reset' "$wizard_tests" \
+    && grep -q 'save-only writes .env without checking ports' "$wizard_tests" \
+    && grep -q 'RPC preflight failure leaves no .env' "$wizard_tests" \
+    && grep -q 'LINETH_WIZARD_STACK_OVERRIDE' "$wizard_tests" \
+    && [ -f "$STACK/scripts/tests/wizard/fixtures/local-dev.env" ] \
+    && [ -f "$STACK/scripts/tests/wizard/fixtures/local-partial.env" ] \
+    && [ -f "$STACK/scripts/tests/wizard/fixtures/sepolia-dev.env" ] \
+    && [ -f "$STACK/scripts/tests/wizard/fixtures/sepolia-partial.env" ]; then
+    pass "wizard deterministic test runner covers key safety behaviors"
+  else
+    fail "scripts/tests/wizard/run.sh must cover fixture outputs, URL-safe env writes, mode guard, and busy-port ordering"
+  fi
+
+  wizard_test_log="/tmp/lineth-wizard-tests-static.$$"
+  if sh "$wizard_tests" > "$wizard_test_log" 2>&1; then
+    pass "wizard deterministic test runner passes"
+  else
+    fail "wizard deterministic test runner must pass: $(tr '\n' ' ' < "$wizard_test_log")"
+  fi
+  rm -f "$wizard_test_log"
+
+  if grep -q './scripts/start.sh --wizard --then-start' "$readme" \
+    && grep -q 'WIZARD_L1_MODE' "$readme" \
+    && grep -q 'artifacts/env-backups/.env.<timestamp>' "$readme" \
+    && grep -q -- '--wizard' "$scripts_readme"; then
+    pass "README files document wizard usage, non-interactive env vars, and backups"
+  else
+    fail "README files must document the wizard, non-interactive env vars, and backup location"
+  fi
+}
+
 check_quickstart_review_fixes() {
   deploy_contracts="$STACK/scripts/phases/04-deploy-contracts.sh"
   account_setup_ts="$STACK/scripts/internal/account-setup.ts"
   token_bridge_ts="$STACK/scripts/internal/deployBridgedTokenAndTokenBridgeV1_1.ts"
   fund_runtime_accounts="$STACK/scripts/internal/fund-runtime-accounts.ts"
-  rollup_deploy_script="$ROOT/contracts/local-deployments-artifacts/deployPlonkVerifierAndLineaRollupV8.ts"
+  rollup_deploy_script="$ROOT/contracts/local-deployments-artifacts/deployPlonkVerifierAndLinethRollupV8.ts"
   fee_overrides_ts="$ROOT/contracts/common/helpers/feeOverrides.ts"
   fee_overrides_test="$ROOT/contracts/common/helpers/feeOverrides.test.ts"
   readme="$STACK/README.md"
@@ -1508,7 +1731,7 @@ check_quickstart_review_fixes() {
   if grep -q 'guard_redeploy_nonce_window()' "$deploy_contracts" \
     && grep -q 'This artifact set is partial or stale; run ./scripts/reset.sh before redeploying.' "$deploy_contracts" \
     && grep -q 'guard_redeploy_nonce_window "L1" "$L1_RPC_URL" "$L1_DEPLOYER_ADDRESS" \\' "$deploy_contracts" \
-    && grep -q 'EXPECTED_LINEA_ROLLUP_NONCE' "$deploy_contracts" \
+    && grep -q 'EXPECTED_LINETH_ROLLUP_NONCE' "$deploy_contracts" \
     && grep -q 'EXPECTED_L2_MESSAGE_SERVICE_NONCE' "$deploy_contracts" \
     && [ "$(grep -c 'guard_redeploy_nonce_window ' "$deploy_contracts")" -ge 4 ] \
     && grep -q 'current_nonce > expected_nonce' "$deploy_contracts"; then
@@ -1566,6 +1789,71 @@ check_quickstart_review_fixes() {
   fi
 }
 
+check_quickstart_lib_consolidation() {
+  internal_dir="$STACK/scripts/internal"
+  lib_dir="$internal_dir/lib"
+
+  for lib_file in errors.ts fs.ts env.ts timing.ts errors.test.ts fs.test.ts env.test.ts timing.test.ts; do
+    if [ -f "$lib_dir/$lib_file" ]; then
+      pass "scripts/internal/lib/$lib_file exists"
+    else
+      fail "scripts/internal/lib/$lib_file must exist"
+    fi
+  done
+
+  # Moved INFRA helpers must not be redefined outside scripts/internal/lib/.
+  for fn in sanitizeExternalError ensureDir writeFileMode; do
+    dupes="$(grep -Rn "function ${fn}(" "$internal_dir" 2>/dev/null | grep -v '/lib/' || true)"
+    if [ -n "$dupes" ]; then
+      fail "INFRA helper '$fn' must only be defined under scripts/internal/lib/: $(printf '%s' "$dupes" | tr '\n' ' ')"
+    else
+      pass "INFRA helper '$fn' is not redefined outside scripts/internal/lib/"
+    fi
+  done
+
+  if grep -q 'function sanitizeExternalError' "$lib_dir/errors.ts" \
+    && grep -q 'function sanitizeSecrets' "$lib_dir/errors.ts" \
+    && grep -q 'sanitizeSecrets' "$internal_dir/claim-l2-to-l1.ts" \
+    && ! grep -q 'function sanitizeError' "$internal_dir/claim-l2-to-l1.ts"; then
+    pass "lib/errors.ts is the single redaction source and claim-l2-to-l1 uses sanitizeSecrets"
+  else
+    fail "lib/errors.ts must own sanitizeExternalError/sanitizeSecrets and claim-l2-to-l1 must use sanitizeSecrets"
+  fi
+
+  if grep -q 'function ensureDir' "$lib_dir/fs.ts" \
+    && grep -q 'function writeFileAtomic' "$lib_dir/fs.ts" \
+    && grep -q '0o600' "$internal_dir/deployer-wallet.ts" \
+    && grep -q '0o600' "$internal_dir/traffic-account.ts" \
+    && grep -q 'CONTAINER_READABLE_FILE_MODE = 0o644' "$internal_dir/account-setup.ts"; then
+    pass "lib/fs.ts owns the atomic write and the 0o600 vs 0o644 distinction is preserved"
+  else
+    fail "lib/fs.ts must own ensureDir/writeFileAtomic while callers preserve the 0o600 vs 0o644 distinction"
+  fi
+
+  if grep -q 'requiredProcessEnv' "$lib_dir/env.ts" \
+    && grep -q 'parseDecimalWei' "$lib_dir/env.ts" \
+    && grep -q 'parseBoolean' "$lib_dir/env.ts"; then
+    pass "lib/env.ts owns the shared env helpers"
+  else
+    fail "lib/env.ts must own parseDecimalWei/parseBoolean and requiredProcessEnv"
+  fi
+
+  # sepolia-policy.ts must own policy only and stop acting as an env-helper barrel.
+  if grep -qE 'readDotEnvFile|readDotEnvContents|requiredEnvValue' "$internal_dir/sepolia-policy.ts"; then
+    fail "sepolia-policy.ts must not re-export env helpers (readDotEnv*/requiredEnvValue)"
+  else
+    pass "sepolia-policy.ts no longer re-exports env helpers"
+  fi
+
+  if grep -q 'appendDeployTimingRecord' "$lib_dir/timing.ts" \
+    && grep -q 'appendDeployTimingRecord' "$internal_dir/deploy-timing.ts" \
+    && grep -q 'appendDeployTimingRecord' "$internal_dir/fund-runtime-accounts.ts"; then
+    pass "deploy-timing JSONL writer is shared from lib/timing.ts"
+  else
+    fail "deploy-timing.ts and fund-runtime-accounts.ts must share lib/timing.ts appendDeployTimingRecord"
+  fi
+}
+
 check_no_tracked_generated_genesis
 check_restructured_layout_paths
 check_runtime_helper_usage
@@ -1574,6 +1862,7 @@ check_init_scripts_and_compose_shell
 check_generated_l2_deployer_genesis
 check_l2_chain_id_wiring
 check_account_setup_key_model
+check_internal_typescript_typecheck
 check_typescript_quickstart_helpers
 check_postman_key_model
 check_incremental_typescript_helpers
@@ -1582,7 +1871,9 @@ check_runtime_config_and_validium_guardrails
 check_reuse_guardrails
 check_smoke_and_traffic_scripts
 check_pinned_utility_images_and_docs
+check_wizard_cli
 check_quickstart_review_fixes
+check_quickstart_lib_consolidation
 
 if [ "$FAILURES" -ne 0 ]; then
   printf '[quickstart-static] %s failure(s)\n' "$FAILURES" >&2

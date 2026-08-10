@@ -14,7 +14,7 @@ import (
 )
 
 // StateManager is a collection of modules responsible for attesting the
-// correctness of the state-transitions occuring in Linea w.r.t. to the
+// correctness of the state transitions occurring in Lineth with respect to the
 // arithmetization.
 type StateManager struct {
 	Accumulator                 accumulator.Module
@@ -74,9 +74,10 @@ func (sm *StateManager) Assign(run *wizard.ProverRuntime, arith *arithmetization
 }
 
 // stateSummarySize returns the number of rows to give to the state-summary
-// module.
+// module. The +1 matches the accumulator and reserves a trailing padding row so
+// the module is never fully packed (see [accumulator.Settings.NumRows]).
 func (s *Settings) stateSummarySize() int {
-	return utils.NextPowerOfTwo(s.AccSettings.MaxNumProofs)
+	return utils.NextPowerOfTwo(s.AccSettings.MaxNumProofs + 1)
 }
 
 func removeSystemTransactions(shomeiTraces [][]statemanager.DecodedTrace) [][]statemanager.DecodedTrace {

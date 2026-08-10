@@ -1,7 +1,7 @@
 import { Writable } from "node:stream";
 import { format, transports } from "winston";
 
-import { WinstonLogger, WinstonLoggerOptions } from "../WinstonLogger";
+import { WinstonLogger, WinstonLoggerOptions, MAX_LOG_LINE_LENGTH } from "../WinstonLogger";
 
 // eslint-disable-next-line no-control-regex
 const stripAnsi = (str: string) => str.replace(/\x1B\[[0-9;]*m/g, "");
@@ -225,7 +225,7 @@ describe("WinstonLogger", () => {
       makeLogger("Test").error("oops", { error });
 
       // Stackless Errors render as `${name}: ${message}` (no stack frames to append).
-      expect(getLogOutput()).toContain("error=\"Error: no stack\"");
+      expect(getLogOutput()).toContain('error="Error: no stack"');
     });
 
     it("does not produce an error.stack key", () => {
@@ -746,6 +746,47 @@ describe("WinstonLogger", () => {
       const output = getLogOutput();
       expect(output).not.toContain("code=ECONNREFUSED");
       expect(output).not.toContain("errno=-61");
+    });
+  });
+
+  describe("log line truncation (defense-in-depth)", () => {
+    it("leaves lines under the cap unchanged", () => {
+      makeLogger("Test").info("small message", { field: "short value" });
+      const output = getLogOutput();
+      expect(output).not.toContain("[truncated,");
+      expect(output).toContain('msg="small message"');
+      expect(output).toContain('field="short value"');
+    });
+
+    it("truncates lines over the cap to exactly MAX_LOG_LINE_LENGTH and appends a marker", () => {
+      // Build a metadata value large enough to push the formatted line well over the cap.
+      const hugeValue = "x".repeat(MAX_LOG_LINE_LENGTH + 5000);
+      makeLogger("Test").info("oversized", { payload: hugeValue });
+
+      // truncateLine caps the raw formatted string (which includes the colorized
+      // level's ANSI codes), so the length assertion must run on the raw output.
+      const rawLine = getRawOutput().replace(/\n$/, "");
+      expect(rawLine.length).toBe(MAX_LOG_LINE_LENGTH);
+      expect(rawLine).toContain("[truncated, +");
+      expect(rawLine).toContain("chars over cap]");
+    });
+
+    it("reports the correct overage in the marker", () => {
+      // The formatted line is `time=<ts> level=<ANSI>INFO<ANSI> logger=Test msg="oversized" payload=<value>`.
+      // The timestamp is a fixed-length ISO string, so the raw prefix length is stable
+      // across calls. Measure it with a 1-char payload, then build a payload whose
+      // original (pre-truncation) raw line length is exactly MAX_LOG_LINE_LENGTH + desiredOverage.
+      makeLogger("Test").info("oversized", { payload: "x" });
+      const rawPrefixLen = getRawOutput().replace(/\n$/, "").length - 1;
+      buffer = "";
+
+      const overage = 123456;
+      const hugeValue = "x".repeat(MAX_LOG_LINE_LENGTH + overage - rawPrefixLen);
+      makeLogger("Test").info("oversized", { payload: hugeValue });
+
+      const rawLine = getRawOutput().replace(/\n$/, "");
+      expect(rawLine.length).toBe(MAX_LOG_LINE_LENGTH);
+      expect(rawLine).toContain(`[truncated, +${overage} chars over cap]`);
     });
   });
 });

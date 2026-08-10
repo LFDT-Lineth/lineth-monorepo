@@ -470,7 +470,7 @@ classDiagram
     %% NewSystemf(msg string, args ...any) *System — package-level constructor.
     %%
     %% Note: TableRelations is the in-memory slice that holds every registered
-    %% *LookupQuery (the only remaining TableRelation kind after Permutations
+    %% *TableRelationQuery (the only remaining TableRelation kind after Permutations
     %% were removed).
     class System {
         + Context *ContextFrame
@@ -478,8 +478,11 @@ classDiagram
         + Rounds []*Round
         + Modules []*Module
         + LagrangeEvals []*LagrangeEval
-        + TableRelations []*LookupQuery
+        + TableRelations []*TableRelationQuery
         + LogDerivativeSums []*LogDerivativeSum
+        %% PublicInputs holds the cells promoted to public inputs, in
+        %% registration order — the layout of the flat PublicInput vector.
+        + PublicInputs []*Cell
         + Annotations Annotations
         - scratchArena *arena.VectorArena
         %% Free releases the scratch memory arena allocated by Materialize.
@@ -490,18 +493,24 @@ classDiagram
         + NewDynamicModule(ctx *ContextFrame, pd PaddingDirection) *Module
         + NewLagrangeEval(ctx *ContextFrame, polys []*ColumnView, x FieldPromise) *LagrangeEval
         + NewLagrangeEvalFrom(ctx *ContextFrame, polys []*ColumnView, x FieldPromise, claims []*Cell) *LagrangeEval
-        + NewInclusion(ctx *ContextFrame, included []Table, including []Table) *LookupQuery
+        + NewInclusion(ctx *ContextFrame, included []Table, including []Table) *TableRelationQuery
         + NewLogDerivativeSum(ctx *ContextFrame, fractions []Fraction) *LogDerivativeSum
         + LookupColumn(id ObjectID) *Column
         + LookupCell(id ObjectID) *Cell
         + LookupCoinField(id ObjectID) *CoinField
+        %% RegisterPublicInputs promotes an existing cell to a public input,
+        %% tagging it (optionally with a numeric suffix) under the reserved
+        %% PublicInputTagKey annotation.
+        + RegisterPublicInputs(tag PublicInputTag, cell *Cell, numericSuffix ...int)
+        + LookupPublicInput(objID ObjectID) (*Cell, int)
+        + LookupPublicInputByTag(tag PublicInputTag, numericSuffix ...int) (*Cell, int)
     }
 
     System *-- "1" PrecomputedRound : PrecomputedRound
     System *-- "1..*" Round : Rounds
     System *-- "1..*" Module : Modules
     System *-- "*" LagrangeEval : LagrangeEvals
-    System *-- "*" LookupQuery : TableRelations
+    System *-- "*" TableRelationQuery : TableRelations
     System *-- "*" LogDerivativeSum : LogDerivativeSums
 
     %% Materialize is a top-level pass that pre-allocates scratch buffers used
@@ -655,17 +664,17 @@ classDiagram
     Table --> "1..*" ColumnView : Columns
     Table --> "0..1" ColumnView : Selector
 
-    %% LookupQuery is a Query asserting that every selected row of A appears
+    %% TableRelationQuery is a Query asserting that every selected row of A appears
     %% in the union of selected rows across all B fragments.
     %%
     %% Permutations are NOT supported (removed from the framework); the only
     %% remaining semantics is the inclusion predicate. NewInclusion is the
     %% sole constructor.
     %%
-    %% LookupQuery does NOT implement GnarkCheckableQuery: the predicate
+    %% TableRelationQuery does NOT implement GnarkCheckableQuery: the predicate
     %% cannot be verified in-circuit and a compiler pass (lookuptologderivsum)
     %% must reduce it first.
-    class LookupQuery {
+    class TableRelationQuery {
         + A []Table
         + B []Table
         %% Round returns the max Round across all columns in A and B incl. selectors.
@@ -673,9 +682,9 @@ classDiagram
         + Check(Runtime) error
     }
 
-    LookupQuery *-- "1..*" Table : A
-    LookupQuery *-- "1..*" Table : B
-    LookupQuery <|-- baseQuery
+    TableRelationQuery *-- "1..*" Table : A
+    TableRelationQuery *-- "1..*" Table : B
+    TableRelationQuery <|-- baseQuery
 
     %% Fraction is a filter-aware fraction triple. The semantic contribution
     %% of a Fraction to its enclosing LogDerivativeSum at row i is

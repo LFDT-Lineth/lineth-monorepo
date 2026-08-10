@@ -2,10 +2,11 @@ const builtin = @import("builtin");
 const verifier_ray = @import("verifier_ray");
 const embedded_data = @import("embedded_data");
 const embedded_data_conf = @import("embedded_data_config");
+const lineth_accel = @import("lineth_accelerators");
 
 const verifier = verifier_ray.verifier;
 
-const is_r5_zkvm = builtin.target.cpu.arch == .riscv64 and builtin.target.os.tag == .freestanding;
+const is_r5_zkvm = verifier_ray.r5_config.is_r5_zkvm;
 const is_native_os = builtin.target.os.tag == .linux or builtin.target.os.tag == .macos;
 const is_native_arch = builtin.target.cpu.arch == .x86_64 or builtin.target.cpu.arch == .aarch64;
 const is_supported_native = is_native_os and is_native_arch;
@@ -48,7 +49,7 @@ pub fn main() noreturn {
 // and exiting in the R5 zkVM environment. The actual verifier logic being tested
 // is still in `verifier.zig`, and this main function just serves as a thin wrapper
 // around it to handle R5-specific details.
-pub export fn r5_main() noreturn {
+fn r5_main() callconv(.c) noreturn {
     if (comptime !is_r5_zkvm) {
         // this entry point should only be called from R5 zkVM build (`make build-r5` or `make build-r5-release`)
         unreachable;
@@ -60,6 +61,13 @@ pub export fn r5_main() noreturn {
     // run the verifier smoke test with the loaded input
     const res = runVerifier(input);
     exitR5(res);
+}
+
+// We have standard entry point convention for R5 zkvm. Export the symbol so that the linker can find it.
+comptime {
+    if (is_r5_zkvm) {
+        @export(&r5_main, .{ .name = "main" });
+    }
 }
 
 fn runVerifier(input: *const verifier.Proof) u8 {
@@ -136,26 +144,6 @@ fn exitR5(code: u8) noreturn {
     if (comptime !is_r5_zkvm) {
         @compileError("R5 exit currently supports only R5 zkVM target");
     }
-    switch (code) {
-        0 => exitR5Success(),
-        else => exitR5Failure(),
-    }
-}
-
-fn exitR5Success() noreturn {
-    asm volatile (
-        \\li a0, 0
-        \\li a7, 93
-        \\ecall
-    );
-    unreachable;
-}
-
-fn exitR5Failure() noreturn {
-    asm volatile (
-        \\li a0, 1
-        \\li a7, 93
-        \\ecall
-    );
-    unreachable;
+    // Delegate to the Lineth accelerator package's standard zkVM exit (zkvm_std.h).
+    lineth_accel.zkvm_exit(@intCast(code));
 }

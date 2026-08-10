@@ -39,5 +39,13 @@ gradlePlugin {
       id = "linea.download-native-libs"
       implementationClass = "DownloadNativeLibsPlugin"
     }
+    create("SolcToolchainPlugin") {
+      id = "linea.solc-toolchain"
+      implementationClass = "SolcToolchainPlugin"
+    }
+    create("ConfigDocsPlugin") {
+      id = "linea.config-docs"
+      implementationClass = "ConfigDocsPlugin"
+    }
   }
 }

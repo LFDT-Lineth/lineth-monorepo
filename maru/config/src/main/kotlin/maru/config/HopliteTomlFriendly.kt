@@ -8,8 +8,8 @@
  */
 package maru.config
 
-import linea.domain.BlockParameter
 import linea.domain.RetryConfig
+import linea.domain.toBlockParameter
 import linea.kotlin.assertIs20Bytes
 import java.net.URL
 import kotlin.time.Duration
@@ -133,7 +133,7 @@ data class LineaConfigDtoToml(
       contractAddress = contractAddress,
       l1EthApiEndpoint = l1EthApiEndpoint!!.domainFriendly(),
       l1PollingInterval = l1PollingInterval,
-      l1HighestBlockTag = BlockParameter.parse(l1HighestBlockTag),
+      l1HighestBlockTag = l1HighestBlockTag.toBlockParameter(),
       l2EthApiEndpoint = (l2EthApiEndpoint ?: defaultL2EthApi!!).domainFriendly(),
     )
   }

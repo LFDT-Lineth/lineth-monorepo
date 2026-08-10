@@ -14,7 +14,7 @@
  */
 
 plugins {
-  id 'net.consensys.zkevm.kotlin-library-conventions'
+  id 'lineth.kotlin-library-conventions'
 }
 
 dependencies {
@@ -26,4 +26,8 @@ dependencies {
   implementation project(':jvm-libs:linea:web3j-extensions')
   implementation project(':jvm-libs:generic:logging')
   implementation project(':jvm-libs:generic:json-rpc')
+
+  testImplementation "tech.pegasys.teku.internal:unsigned:${libs.versions.teku.get()}"
+  testImplementation "tech.pegasys.teku.internal:bytes:${libs.versions.teku.get()}"
+  testImplementation "io.consensys.tuweni:tuweni-bytes:${libs.versions.tuweni.get()}"
 }

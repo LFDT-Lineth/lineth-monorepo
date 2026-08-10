@@ -61,11 +61,11 @@ func (cf *CoinField) IsSized() bool {
 // EvaluateVector implements [Expression]. Panics unconditionally: a coin is
 // scalar and produces no vector. Check IsMultiValued() before calling
 // EvaluateVector.
-func (cf *CoinField) EvaluateVector(_ Runtime) ConcreteVector {
+func (cf *CoinField) EvaluateVector(_ *Runtime) ConcreteVector {
 	panic("wiop: EvaluateVector() cannot be called on a FieldPromise")
 }
 
 // EvaluateSingle implements [Expression].
-func (cf *CoinField) EvaluateSingle(rt Runtime) ConcreteField {
+func (cf *CoinField) EvaluateSingle(rt *Runtime) ConcreteField {
 	return ConcreteField{Value: rt.GetCoinValue(cf), promise: cf}
 }

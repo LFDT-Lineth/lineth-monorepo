@@ -11,9 +11,7 @@ package maru.p2p.messages
 import maru.core.SealedBeaconBlock
 import maru.database.BeaconChain
 import maru.serialization.MAX_COMPRESSED_MESSAGE_SIZE
-import maru.serialization.rlp.MaruCompressorRLPSerDe
-import maru.serialization.rlp.RLPSerDe
-import maru.serialization.rlp.RLPSerializers
+import maru.serialization.Serializer
 
 /**
  * Strategy interface for block retrieval logic.
@@ -46,8 +44,7 @@ class DefaultBlockRetrievalStrategy : BlockRetrievalStrategy {
  * would not exceed the given size limit
  */
 class SizeLimitBlockRetrievalStrategy(
-  private val sealedBeaconBlockSerDe: RLPSerDe<SealedBeaconBlock> =
-    MaruCompressorRLPSerDe(RLPSerializers.SealedBeaconBlockSerializer),
+  private val sealedBeaconBlockSerializer: Serializer<SealedBeaconBlock>,
   private val sizeLimit: Int = MAX_COMPRESSED_MESSAGE_SIZE - 4, // first 4 bytes of message is for length prefix
 ) : BlockRetrievalStrategy {
   override fun getBlocks(
@@ -65,7 +62,7 @@ class SizeLimitBlockRetrievalStrategy(
         beaconChain.getSealedBeaconBlock(blockNumber)
           ?: throw IllegalStateException("Missing sealed beacon block $blockNumber")
 
-      sumOfSerializedBlockSize += sealedBeaconBlockSerDe.serialize(sealedBlock).size
+      sumOfSerializedBlockSize += sealedBeaconBlockSerializer.serialize(sealedBlock).size
 
       if (sumOfSerializedBlockSize <= sizeLimit) {
         sealedBeaconBlocks.add(sealedBlock)

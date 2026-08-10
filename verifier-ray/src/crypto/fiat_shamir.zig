@@ -20,7 +20,15 @@ pub const Transcript = struct {
 
     pub fn updateExt(self: *Transcript, values: field_value.ExtSlice) void {
         for (values) |ext_value| {
-            self.hasher.writeElements(&.{ ext_value.B0.a0, ext_value.B0.a1, ext_value.B1.a0, ext_value.B1.a1, ext_value.B2.a0, ext_value.B2.a1 });
+            // Absorb the six base limbs directly. Routing through writeElements
+            // (even by reinterpreting the slice) de-inlines these stores and
+            // measured slower; building a throwaway 6-element array is also waste.
+            self.hasher.writeElement(ext_value.B0.a0);
+            self.hasher.writeElement(ext_value.B0.a1);
+            self.hasher.writeElement(ext_value.B1.a0);
+            self.hasher.writeElement(ext_value.B1.a1);
+            self.hasher.writeElement(ext_value.B2.a0);
+            self.hasher.writeElement(ext_value.B2.a1);
         }
     }
 
@@ -51,5 +59,37 @@ pub const Transcript = struct {
             .B1 = .{ .a0 = challenge[2], .a1 = challenge[3] },
             .B2 = .{ .a0 = challenge[4], .a1 = challenge[5] },
         };
+    }
+
+    /// Fills `out` with integers reduced into `[0, upper_bound)`, consuming one
+    /// Poseidon2 digest at a time and taking its eight base limbs in order.
+    /// `upper_bound` must be a power of two, so masking with `upper_bound - 1`
+    /// is uniform and equivalent to `% upper_bound` — this mirrors prover-ray's
+    /// `RandomManyIntegers` expression line-for-line. We
+    /// derive FRI query positions and must reproduce the prover's transcript
+    /// exactly. Squeezing continues from the current transcript state, so callers
+    /// must have absorbed everything up to the query-derivation point.
+    pub fn randomManyIntegers(self: *Transcript, out: []usize, comptime upper_bound: usize) void {
+        comptime {
+            if (upper_bound == 0 or (upper_bound & (upper_bound - 1)) != 0)
+                @compileError("fiat_shamir.randomManyIntegers: upper_bound must be a non-zero power of two");
+        }
+        self.randomManyIntegersRuntime(out, upper_bound);
+    }
+
+    /// Runtime `upper_bound` variant, for the PCS layer whose codeword size is a
+    /// runtime function of the restricted FRI params. `upper_bound` must still be
+    /// a non-zero power of two (the FRI codeword size always is; the reconstructed
+    /// params guarantee it). Byte-identical squeeze order to the comptime form.
+    pub fn randomManyIntegersRuntime(self: *Transcript, out: []usize, upper_bound: usize) void {
+        var i: usize = 0;
+        while (i < out.len) {
+            const digest = self.randomDigest();
+            for (digest) |element| {
+                out[i] = @as(usize, element.value) & (upper_bound - 1);
+                i += 1;
+                if (i >= out.len) break;
+            }
+        }
     }
 };

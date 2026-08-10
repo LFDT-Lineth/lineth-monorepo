@@ -6,9 +6,9 @@ import linea.contract.events.ForcedTransactionAddedEvent
 import linea.ethapi.EthApiBlockClient
 import linea.forcedtx.ForcedTransactionRequest
 import linea.forcedtx.ForcedTransactionsClient
-import linea.ftx.conflation.ForcedTransactionsSafeBlockNumberManager
 import linea.timer.TimerSchedule
 import linea.timer.VertxPeriodicPollingService
+import lineth.ftx.conflation.ForcedTransactionsSafeBlockNumberManager
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

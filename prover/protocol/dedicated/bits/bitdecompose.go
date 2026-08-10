@@ -17,8 +17,7 @@ type BitDecomposed struct {
 	Packed []ifaces.Column
 	// Bits lists the decomposed bits of the "packed" column in LSbit
 	// order.
-	Bits                []ifaces.Column
-	IsPackedLimbNotZero []ifaces.Column
+	Bits []ifaces.Column
 }
 
 // BitDecompose generates a bit decomposition of a column and returns
@@ -43,11 +42,10 @@ func BitDecompose(comp *wizard.CompiledIOP, packed []ifaces.Column, numBits int)
 	}
 
 	// This constraint ensures that the recombined bits are equal to the
-	// original column.
-	for i := 0; i*16 < numBits; i++ {
-		bd.IsPackedLimbNotZero = append(bd.IsPackedLimbNotZero, comp.InsertCommit(round, ifaces.ColIDf("IS_PACKED_NOT_ZERO_%v", i), packed[0].Size(), true))
-	}
-
+	// original column. It is enforced unconditionally on every limb that
+	// carries position bits: binding the committed packed limbs to the
+	// decomposed bits is what ties an accumulator position to the Merkle path
+	// actually walked, so it must not be gated by a prover-controlled column.
 	for i := len(packed) - 1; i >= 0; i-- {
 		ind := len(packed) - i - 1
 
@@ -63,12 +61,9 @@ func BitDecompose(comp *wizard.CompiledIOP, packed []ifaces.Column, numBits int)
 		comp.InsertGlobal(
 			round,
 			ifaces.QueryIDf("%v_BIT_RECOMBINATION", packed[i].GetColID()),
-			symbolic.Mul(
-				bd.IsPackedLimbNotZero[ind],
-				symbolic.Sub(
-					packed[i],
-					symbolic.NewPolyEval(symbolic.NewConstant(2), s),
-				),
+			symbolic.Sub(
+				packed[i],
+				symbolic.NewPolyEval(symbolic.NewConstant(2), s),
 			),
 		)
 	}
@@ -79,43 +74,25 @@ func BitDecompose(comp *wizard.CompiledIOP, packed []ifaces.Column, numBits int)
 // Run implements the [wizard.ProverAction] interface and assigns the bits
 // columns
 func (bd *BitDecomposed) Run(run *wizard.ProverRuntime) {
-	bits := make([][]field.Element, len(bd.Bits))
 
-	// Obtain packed elements from
-	elements := make([][]field.Element, 0, len(bd.Packed))
+	size := bd.Packed[0].Size()
+
+	// Limbs are compacted independently, so combine them by absolute row over a
+	// shared range rather than by per-limb compact position.
+	assignments := make([]smartvectors.SmartVector, len(bd.Packed))
 	for i, packed := range bd.Packed {
-		// ind mirrors the mapping in BitDecompose's constraint loop:
-		// packed[len-1] (LSB limb) → IsPackedLimbNotZero[0], etc.
-		ind := len(bd.Packed) - 1 - i
-
-		v := packed.GetColAssignment(run)
-		var packedElements []field.Element
-		var packedElementsIsZero []field.Element
-
-		for colElement := range v.IterateCompact() {
-			packedElements = append(packedElements, colElement)
-
-			isPackedLimbNotZero := field.One()
-			if colElement.IsZero() {
-				isPackedLimbNotZero = field.Zero()
-			}
-
-			packedElementsIsZero = append(packedElementsIsZero, isPackedLimbNotZero)
-		}
-
-		// Guard mirrors the `if ind*16 >= numBits { continue }` in BitDecompose:
-		// packed limbs beyond numBits have no corresponding IsPackedLimbNotZero entry.
-		if ind < len(bd.IsPackedLimbNotZero) {
-			run.AssignColumn(bd.IsPackedLimbNotZero[ind].GetColID(), smartvectors.RightZeroPadded(packedElementsIsZero, bd.Packed[0].Size()))
-		}
-
-		elements = append(elements, packedElements)
+		assignments[i] = packed.GetColAssignment(run)
 	}
 
-	for i := range elements[0] {
-		var el []field.Element
-		for j := range elements {
-			el = append(el, elements[j][i])
+	start, stop := smartvectors.CoCompactRange(assignments...)
+
+	bits := make([][]field.Element, len(bd.Bits))
+
+	el := make([]field.Element, len(assignments))
+	for row := start; row < stop; row++ {
+
+		for j := range assignments {
+			el[j] = assignments[j].Get(row)
 		}
 
 		x := combineElements(el)
@@ -125,7 +102,7 @@ func (bd *BitDecomposed) Run(run *wizard.ProverRuntime) {
 		}
 
 		xNum := x.Uint64()
-		for j := range len(bd.Bits) {
+		for j := range bd.Bits {
 			if xNum>>j&1 == 1 {
 				bits[j] = append(bits[j], field.One())
 			} else {
@@ -134,8 +111,11 @@ func (bd *BitDecomposed) Run(run *wizard.ProverRuntime) {
 		}
 	}
 
-	for i, bitCol := range bd.Bits {
-		run.AssignColumn(bitCol.GetColID(), smartvectors.FromCompactWithShape(bd.Packed[0].GetColAssignment(run), bits[i]))
+	for j, bitCol := range bd.Bits {
+		run.AssignColumn(
+			bitCol.GetColID(),
+			smartvectors.FromCompactWithRange(bits[j], start, stop, size),
+		)
 	}
 }
 

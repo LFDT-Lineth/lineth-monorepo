@@ -5,7 +5,7 @@ import {
   MockVaultHub,
   MockVaultFactory,
   MockSTETH,
-  MockLineaRollup,
+  MockLinethRollup,
   TestYieldManager,
   MockDashboard,
   MockStakingVault,
@@ -56,7 +56,7 @@ describe("LidoStVaultYieldProvider contract - basic operations", () => {
   let mockVaultHub: MockVaultHub;
   let mockVaultFactory: MockVaultFactory;
   let mockSTETH: MockSTETH;
-  let mockLineaRollup: MockLineaRollup;
+  let mockLinethRollup: MockLinethRollup;
   let yieldManager: TestYieldManager;
   let mockDashboard: MockDashboard;
   let mockStakingVault: MockStakingVault;
@@ -88,13 +88,13 @@ describe("LidoStVaultYieldProvider contract - basic operations", () => {
       mockVaultHub,
       mockVaultFactory,
       mockSTETH,
-      mockLineaRollup,
+      mockLinethRollup,
       sszMerkleTree,
       verifier,
       testVerifier,
     } = await loadFixture(deployAndAddSingleLidoStVaultYieldProvider));
 
-    l1MessageServiceAddress = await mockLineaRollup.getAddress();
+    l1MessageServiceAddress = await mockLinethRollup.getAddress();
     yieldManagerAddress = await yieldManager.getAddress();
     vaultHubAddress = await mockVaultHub.getAddress();
     vaultFactoryAddress = await mockVaultFactory.getAddress();
@@ -189,7 +189,7 @@ describe("LidoStVaultYieldProvider contract - basic operations", () => {
       expect(await yieldProvider.STETH()).eq(await mockSTETH.getAddress());
     });
     it("Should deploy with correct L1MessageService address", async () => {
-      expect(await yieldProvider.L1_MESSAGE_SERVICE()).eq(await mockLineaRollup.getAddress());
+      expect(await yieldProvider.L1_MESSAGE_SERVICE()).eq(await mockLinethRollup.getAddress());
     });
     it("Should deploy with correct YieldManager address", async () => {
       expect(await yieldProvider.YIELD_MANAGER()).eq(await yieldManager.getAddress());
@@ -414,7 +414,7 @@ describe("LidoStVaultYieldProvider contract - basic operations", () => {
       const lstPrincipalLiabilityBefore =
         await yieldManager.getYieldProviderLstLiabilityPrincipal(yieldProviderAddress);
       const call = getWithdrawLSTCall(
-        mockLineaRollup,
+        mockLinethRollup,
         yieldManager,
         yieldProvider,
         nativeYieldOperator,
@@ -435,7 +435,7 @@ describe("LidoStVaultYieldProvider contract - basic operations", () => {
       const l1MessageService = await yieldManager.L1_MESSAGE_SERVICE();
       await ethers.provider.send("hardhat_setBalance", [l1MessageService, ethers.toBeHex(ONE_ETHER)]);
       const l1Signer = await ethers.getImpersonatedSigner(l1MessageService);
-      await mockLineaRollup.setWithdrawLSTAllowed(true);
+      await mockLinethRollup.setWithdrawLSTAllowed(true);
 
       // Initiate ossification
       await yieldManager.connect(securityCouncil).initiateOssification(yieldProviderAddress);
@@ -454,7 +454,7 @@ describe("LidoStVaultYieldProvider contract - basic operations", () => {
       const l1MessageService = await yieldManager.L1_MESSAGE_SERVICE();
       await ethers.provider.send("hardhat_setBalance", [l1MessageService, ethers.toBeHex(ONE_ETHER)]);
       const l1Signer = await ethers.getImpersonatedSigner(l1MessageService);
-      await mockLineaRollup.setWithdrawLSTAllowed(true);
+      await mockLinethRollup.setWithdrawLSTAllowed(true);
 
       await yieldManager.connect(securityCouncil).setYieldProviderIsOssified(yieldProviderAddress, true);
 

@@ -4,7 +4,7 @@
 
 ## Overview
 
-Linea's security model combines three independent mechanisms enforced at the smart contract layer:
+Lineth's security model combines three independent mechanisms enforced at the smart contract layer:
 
 1. **Type-based pausing** — Granular pause/unpause per operation type with time-based expiry and security council override.
 2. **Rate limiting** — Period-based ETH throughput caps on messaging operations.
@@ -47,7 +47,7 @@ Each `PauseType` has independently configurable pause and unpause roles set at i
 ### Contract-Specific Pause Managers
 
 Each major contract has a specialized pause manager in `contracts/src/security/pausing/`:
-- `LineaRollupPauseManager.sol`
+- `LinethRollupPauseManager.sol`
 - `L2MessageServicePauseManager.sol`
 - `TokenBridgePauseManager.sol`
 - `YieldManagerPauseManager.sol`

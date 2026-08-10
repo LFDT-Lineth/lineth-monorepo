@@ -1,0 +1,18 @@
+plugins {
+  id 'lineth.kotlin-library-conventions'
+  id 'java-test-fixtures'
+}
+
+dependencies {
+  implementation project(':coordinator:core-interfaces')
+  // Reused for GenericFileBasedProverClient and FileBasedProverConfig used by the file-based transport.
+  implementation project(':coordinator:clients:prover-client:file-based-client')
+  implementation project(':coordinator:utilities')
+  implementation project(':jvm-libs:generic:http-rest')
+  implementation "io.vertx:vertx-web-client"
+
+  // Shared test fixtures (builders, fakes, WireMock helpers) reused across the test suites.
+  testFixturesImplementation "org.wiremock:wiremock:${libs.versions.wiremock.get()}"
+
+  testImplementation "org.wiremock:wiremock:${libs.versions.wiremock.get()}"
+}

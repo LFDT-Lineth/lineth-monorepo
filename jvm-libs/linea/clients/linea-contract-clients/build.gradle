@@ -1,16 +1,15 @@
 plugins {
-  id 'net.consensys.zkevm.kotlin-library-conventions'
+  id 'lineth.kotlin-library-conventions'
   id 'java-test-fixtures'
 }
 
-description = "Linea L1 smart contract client"
+description = "Lineth L1 smart contract client"
 
 dependencies {
   api project(':jvm-libs:linea:core:domain-models')
   api project(':jvm-libs:linea:clients:interfaces')
   api project(':jvm-libs:generic:extensions:futures')
   api project(':jvm-libs:generic:extensions:kotlin')
-  // api 'build.linea:l1-rollup-contract-client:6.0.0-rc2'
   api project(':jvm-libs:linea:linea-contracts:l1-rollup')
   api 'build.linea:l2-message-service-contract-client:0.1.0'
   api project(':jvm-libs:linea:linea-contracts:l1-validium')
@@ -23,4 +22,7 @@ dependencies {
 
   testImplementation "io.vertx:vertx-junit5"
   testImplementation "org.wiremock:wiremock:${libs.versions.wiremock.get()}"
+  testImplementation project(':jvm-libs:linea:clients:eth-logs-searcher')
+  testImplementation testFixtures(project(':jvm-libs:linea:clients:interfaces'))
+  testImplementation testFixtures(project(':jvm-libs:generic:extensions:kotlin'))
 }

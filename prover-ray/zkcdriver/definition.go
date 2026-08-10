@@ -9,10 +9,10 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/utils"
-	"github.com/consensys/go-corset/pkg/ir/air"
-	"github.com/consensys/go-corset/pkg/schema"
-	"github.com/consensys/go-corset/pkg/schema/register"
-	"github.com/consensys/go-corset/pkg/util/field/koalabear"
+	"github.com/LFDT-Lineth/zkc/pkg/ir/air"
+	"github.com/LFDT-Lineth/zkc/pkg/schema"
+	"github.com/LFDT-Lineth/zkc/pkg/schema/register"
+	"github.com/LFDT-Lineth/zkc/pkg/util/field/koalabear"
 )
 
 const (
@@ -59,17 +59,29 @@ func Define(sys *wiop.System, schema *air.Schema[koalabear.Element]) {
 }
 
 // scanColumns scans the column declaration of the corset [air.Schema] into the
-// [wiop.System] object.
+// [wiop.System] object. Only columns referenced by at least one constraint are
+// registered; dangling columns (present in the schema but absent from every
+// constraint) are silently skipped.
 func (s *schemaScanner) scanColumns() {
+
+	referenced := s.collectReferencedColumns()
 
 	// Use the pre-sorted modules from the scanner to ensure deterministic ordering
 	// Iterate each declared module
 	for _, modDecl := range s.Modules {
+		moduleName := modDecl.Name().String()
+
+		// Skip non-native modules whose every column is dangling to avoid creating empty
+		// wiop modules whose dynamic size would never be set.
+		if !modDecl.IsNative() && !s.moduleHasReferencedColumn(modDecl, moduleName, referenced) {
+			logrus.Warnf("zkcdriver: scanColumns: skipping module %q (no referenced columns)", moduleName)
+			continue
+		}
+
 		// Check for special cases
 		if modDecl.IsStatic() {
 
 			content := modDecl.StaticContents()
-			moduleName := modDecl.Name().String()
 			moduleWIOP := s.Sys.NewSizedModule(
 				s.Sys.Context.Childf("module-%v", moduleName),
 				len(content),
@@ -80,19 +92,20 @@ func (s *schemaScanner) scanColumns() {
 			s.ModulesIDsWiop[moduleName] = len(s.Sys.Modules) - 1
 
 			for i, colDecl := range modDecl.Registers() {
+				colQualifiedName := qualifiedCorsetName(moduleName, colDecl.Name())
+				if _, ok := referenced[colQualifiedName]; !ok {
+					logrus.Warnf("zkcdriver: scanColumns: skipping dangling column %q", colQualifiedName)
+					continue
+				}
 
 				vec := make([]field.Element, len(content))
 				for j := range content {
 					vec[j] = field.Element(content[j][i])
 				}
 
-				var (
-					colName          = colDecl.Name()
-					colQualifiedName = qualifiedCorsetName(moduleName, colName)
-					col              = moduleWIOP.NewPrecomputedColumn(
-						moduleWIOP.Context.Childf("column-%v", colName),
-
-						&wiop.ConcreteVector{Plain: field.VecFromBase(vec)})
+				col := moduleWIOP.NewPrecomputedColumn(
+					moduleWIOP.Context.Childf("column-%v", colDecl.Name()),
+					&wiop.ConcreteVector{Plain: field.VecFromBase(vec)},
 				)
 
 				s.ColumnIDs[colQualifiedName] = col.Context.ID
@@ -117,11 +130,13 @@ func (s *schemaScanner) scanColumns() {
 			// issue, care must be taken to ensure it really happens (e.g.
 			// through testing negative cases which should cause constraint
 			// failures).
-			logrus.Panic("zkcdriver: add support for native modules!")
+
+			if err := s.defineNativeModule(modDecl); err != nil {
+				logrus.Panicf("zkcdriver: failed to define native module %s: %v", modDecl.Name(), err)
+			}
+			continue
 		}
 
-		// moduleName is the name of the module as given by the arithmetization
-		moduleName := modDecl.Name().String()
 		moduleWIOP := s.Sys.NewDynamicModule(
 			s.Sys.Context.Childf("module-%v", moduleName),
 			wiop.PaddingDirectionLeft)
@@ -131,19 +146,121 @@ func (s *schemaScanner) scanColumns() {
 
 		// Iterate each register (i.e. column) in that module
 		for _, colDecl := range modDecl.Registers() {
+			colQualifiedName := qualifiedCorsetName(moduleName, colDecl.Name())
+			if _, ok := referenced[colQualifiedName]; !ok {
+				logrus.Warnf("zkcdriver: scanColumns: skipping dangling column %q", colQualifiedName)
+				continue
+			}
 
-			var (
-				colName          = colDecl.Name()
-				colQualifiedName = qualifiedCorsetName(moduleName, colName)
-				col              = moduleWIOP.NewColumn(
-					moduleWIOP.Context.Childf("column-%v", colName),
-
-					s.Sys.Rounds[0])
+			col := moduleWIOP.NewColumn(
+				moduleWIOP.Context.Childf("column-%v", colDecl.Name()),
+				s.Sys.Rounds[0],
 			)
 
 			s.ColumnIDs[colQualifiedName] = col.Context.ID
 		}
 	}
+}
+
+// collectReferencedColumns does a read-only pass over every constraint and
+// returns the set of qualified column names (module.column) that appear in at
+// least one constraint expression. Columns absent from this set are dangling
+// and can be safely omitted from the wiop System.
+func (s *schemaScanner) collectReferencedColumns() map[string]struct{} {
+	referenced := make(map[string]struct{})
+
+	for _, cs := range s.Schema.Constraints().Collect() {
+		switch cs := cs.(type) {
+
+		case air.VanishingConstraint[koalabear.Element]:
+			vc := cs.Unwrap()
+			s.collectFromTerm(vc.Context, vc.Constraint.Term, referenced)
+
+		case air.LookupConstraint[koalabear.Element]:
+			lc := cs.Unwrap()
+			for _, frag := range lc.Sources {
+				for _, term := range frag.Terms {
+					s.addColRef(frag.Module, term.Register(), referenced)
+				}
+				if frag.HasSelector() {
+					s.addColRef(frag.Module, frag.Selector.Unwrap().Register(), referenced)
+				}
+			}
+			for _, frag := range lc.Targets {
+				for _, term := range frag.Terms {
+					s.addColRef(frag.Module, term.Register(), referenced)
+				}
+				if frag.HasSelector() {
+					s.addColRef(frag.Module, frag.Selector.Unwrap().Register(), referenced)
+				}
+			}
+
+		case air.RangeConstraint[koalabear.Element]:
+			rc := cs.Unwrap()
+			for i := range rc.Bitwidths {
+				s.addColRef(rc.Context, rc.Sources[i].Register(), referenced)
+			}
+
+		case air.Assertion[koalabear.Element]:
+			// Assertions are debug-only and not part of the proof; ignore.
+		}
+	}
+
+	return referenced
+}
+
+// collectFromTerm recursively walks a constraint term and adds every column
+// access it finds to out. It mirrors the structure of castExpression.
+func (s *schemaScanner) collectFromTerm(
+	modID schema.ModuleId,
+	term air.Term[koalabear.Element],
+	out map[string]struct{}) {
+
+	switch e := term.(type) {
+	case *air.Add[koalabear.Element]:
+		for _, arg := range e.Args {
+			s.collectFromTerm(modID, arg, out)
+		}
+	case *air.Sub[koalabear.Element]:
+		for _, arg := range e.Args {
+			s.collectFromTerm(modID, arg, out)
+		}
+	case *air.Mul[koalabear.Element]:
+		for _, arg := range e.Args {
+			s.collectFromTerm(modID, arg, out)
+		}
+	case *air.Constant[koalabear.Element]:
+		// no column reference
+	case *air.ColumnAccess[koalabear.Element]:
+		s.addColRef(modID, e.Register(), out)
+	default:
+		utils.Panic("zkcdriver: collectFromTerm: unsupported term type %T", term)
+	}
+}
+
+// addColRef resolves a (moduleID, registerID) pair to its qualified column name
+// and records it in out.
+func (s *schemaScanner) addColRef(modID schema.ModuleId, regID register.Id, out map[string]struct{}) {
+	ref := register.NewRef(modID, regID)
+	cCol := s.Schema.Register(ref)
+	moduleName := s.Schema.Module(modID).Name().String()
+	out[qualifiedCorsetName(moduleName, cCol.Name())] = struct{}{}
+}
+
+// moduleHasReferencedColumn reports whether any column in modDecl appears in
+// the referenced set.
+func (s *schemaScanner) moduleHasReferencedColumn(
+	modDecl schema.Module[koalabear.Element],
+	moduleName string,
+	referenced map[string]struct{},
+) bool {
+
+	for _, colDecl := range modDecl.Registers() {
+		if _, ok := referenced[qualifiedCorsetName(moduleName, colDecl.Name())]; ok {
+			return true
+		}
+	}
+	return false
 }
 
 // scanConstraints scans the constraint declaration from a corset schema into
@@ -191,6 +308,14 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 			wTargets                 = make([]*wiop.ColumnView, numCol)
 			tableSource, tableTarget wiop.Table
 		)
+
+		if numCol == 0 {
+			// @alex Technically, this should be a panic but for now the
+			// arithmetization may give us lookup tables with 0 columns. We
+			// just skip those.
+			logrus.Warnf("zkcdriver: inclusion constraint %q has zero columns; skipping", name)
+			return
+		}
 
 		// Sanity check for fragment lookup
 		if len(cs.Unwrap().Sources) != 1 {

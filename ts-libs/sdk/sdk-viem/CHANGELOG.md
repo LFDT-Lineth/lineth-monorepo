@@ -1,5 +1,12 @@
 # @lfdt-lineth/sdk-viem
 
+> Upgrading from `LineaRollup` to `LinethRollup`? See the [SDK Migration Guide](../MIGRATION.md).
+
+## 1.1.0 (2026-06-29)
+
+- refactor(sdk-viem): extract inlined contract ABIs into shared module (#3460) (1be49d027)
+- fix(sdk-viem): bound eth_getLogs queries to avoid provider block-range limits issue (#3450) (a47dc30c2)
+
 ## 1.0.0 (2026-06-10)
 
 Initial release of `@lfdt-lineth/sdk-viem`, a TypeScript SDK for interacting with the Linea bridge and messaging system built on [Viem](https://viem.sh/).

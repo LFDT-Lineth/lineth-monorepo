@@ -16,7 +16,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY     | true     | key | Infura API Key. |
-| LINEA_ROLLUP_ADDRESS | registry\|env | address | LineaRollup contract address. Read from registry on stable networks; env var used as fallback. |
+| LINETH_ROLLUP_ADDRESS | registry\|env | address | LinethRollup contract address. Read from registry on stable networks; env var used as fallback. |
 | L1_SECURITY_COUNCIL  | registry\|env | address | L1 Security Council Address. Read from registry on stable networks; env var used as fallback. |
 | NATIVE_YIELD_AUTOMATION_SERVICE_ADDRESS | registry\|env | address | Automation service address. Read from registry if present; env var used as fallback. |
 | VAULT_HUB | registry\|env | address | Lido Vault Hub address. Read from registry if present; env var used as fallback. |
@@ -49,7 +49,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | --------------------- | -------- | -------------- | ----------- |
 | \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | INFURA_API_KEY     | true     | key | Infura API Key. |
-| LINEA_ROLLUP_ADDRESS | registry\|env | address | LineaRollup contract address. Read from registry on stable networks; env var used as fallback. |
+| LINETH_ROLLUP_ADDRESS | registry\|env | address | LinethRollup contract address. Read from registry on stable networks; env var used as fallback. |
 | L1_SECURITY_COUNCIL  | registry\|env | address | L1 Security Council Address. Read from registry on stable networks; env var used as fallback. |
 | NATIVE_YIELD_AUTOMATION_SERVICE_ADDRESS | registry\|env | address | Automation service address. Read from registry if present; env var used as fallback. |
 | VAULT_HUB | registry\|env | address | Lido Vault Hub address. Read from registry if present; env var used as fallback. |
@@ -83,7 +83,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | \**DEPLOYER_PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY     | true     | key | Infura API Key. |
-| LINEA_ROLLUP_ADDRESS | registry\|env | address | LineaRollup contract address (constructor argument). Read from registry on stable networks; env var used as fallback. |
+| LINETH_ROLLUP_ADDRESS | registry\|env | address | LinethRollup contract address (constructor argument). Read from registry on stable networks; env var used as fallback. |
 
 <br />
 

@@ -1,0 +1,14 @@
+plugins {
+  id 'lineth.kotlin-library-conventions'
+}
+
+description = "Config documentation annotations, schema walker, and doc/JSON generators for Hoplite TOML configs"
+
+dependencies {
+  // Walks config data classes reflectively.
+  implementation "org.jetbrains.kotlin:kotlin-reflect:${libs.versions.kotlin.get()}"
+  // KebabCaseParamMapper (key rendering) and Masked/Secret handling, consistent with the parser.
+  implementation "com.sksamuel.hoplite:hoplite-core:${libs.versions.hoplite.get()}"
+  // JSON schema snapshot serialization.
+  implementation "com.fasterxml.jackson.core:jackson-databind:${libs.versions.jackson.get()}"
+}

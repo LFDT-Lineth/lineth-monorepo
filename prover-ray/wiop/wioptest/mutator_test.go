@@ -12,7 +12,7 @@ import (
 
 // runRoundActions runs every prover action registered on rt's current round,
 // mimicking what RunAndVerify does for the first round.
-func runRoundActions(rt wiop.Runtime) {
+func runRoundActions(rt *wiop.Runtime) {
 	for _, a := range rt.CurrentRound().ProverActions {
 		a.Run(rt)
 	}

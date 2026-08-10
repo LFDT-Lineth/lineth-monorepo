@@ -2,7 +2,12 @@ import { ethers, upgrades } from "hardhat";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 
-import { getRequiredEnvVar, requireAddressFromRegistryOrEnv, tryVerifyContract } from "../common/helpers";
+import {
+  getBooleanEnvVarOrDefault,
+  getRequiredEnvVar,
+  requireAddressFromRegistryOrEnv,
+  tryVerifyContract,
+} from "../common/helpers";
 import { getUiSigner, withSignerUiSession } from "../scripts/hardhat/signer-ui-bridge";
 
 /**
@@ -24,11 +29,11 @@ import { getUiSigner, withSignerUiSession } from "../scripts/hardhat/signer-ui-b
  * so they use the generic PROXY_ADDRESS fallback.
  */
 const CONTRACT_PROXY_MAP: Record<string, { registryKey: string; envVar: string }> = {
-  LineaRollup: { registryKey: "LineaRollup", envVar: "LINEA_ROLLUP_ADDRESS" },
+  LinethRollup: { registryKey: "LinethRollup", envVar: "LINETH_ROLLUP_ADDRESS" },
   Validium: { registryKey: "Validium", envVar: "PROXY_ADDRESS" },
   L2MessageService: { registryKey: "L2MessageService", envVar: "L2_MESSAGE_SERVICE_ADDRESS" },
   TokenBridge: {
-    registryKey: process.env.DEPLOY_TOKEN_BRIDGE_ON_L1 === "true" ? "TokenBridge_L1" : "TokenBridge_L2",
+    registryKey: getBooleanEnvVarOrDefault("DEPLOY_TOKEN_BRIDGE_ON_L1", false) ? "TokenBridge_L1" : "TokenBridge_L2",
     envVar: "TOKEN_BRIDGE_ADDRESS",
   },
   CallForwardingProxy: { registryKey: "CallForwardingProxy", envVar: "PROXY_ADDRESS" },

@@ -1,7 +1,7 @@
 // Package rangecheck implements the RangeCheck compiler pass for the wiop
 // protocol framework.
 //
-// It reduces every [wiop.RangeCheck] query to an [wiop.LookupQuery] inclusion:
+// It reduces every [wiop.RangeCheck] query to an [wiop.TableRelationQuery] inclusion:
 // the checked column must be a subset of a precomputed column that enumerates
 // [0, B). A single precomputed range column is shared across all RangeChecks
 // with the same bound B, keeping the number of precomputed columns minimal.
@@ -13,7 +13,7 @@ import (
 	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
-// Compile reduces all [wiop.RangeCheck] queries in sys to [wiop.LookupQuery]
+// Compile reduces all [wiop.RangeCheck] queries in sys to [wiop.TableRelationQuery]
 // inclusion constraints against precomputed range tables.
 //
 // For each unique bound B, one new module of size NextPowerOfTwo(B) is created

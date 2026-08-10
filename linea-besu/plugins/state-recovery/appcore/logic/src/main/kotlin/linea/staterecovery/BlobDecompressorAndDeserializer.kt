@@ -7,7 +7,7 @@ import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
 import linea.rlp.BesuRlpBlobDecoder
 import linea.rlp.RLP
-import net.consensys.linea.async.toSafeFuture
+import net.consensys.linea.async.toSafeFutureNonNull
 import net.consensys.linea.blob.BlobDecompressor
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -133,6 +133,6 @@ class BlobDecompressorToDomainV1(
       false,
     )
       .onFailure(logger::error)
-      .toSafeFuture()
+      .toSafeFutureNonNull()
   }
 }

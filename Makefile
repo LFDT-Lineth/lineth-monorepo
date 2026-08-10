@@ -33,8 +33,8 @@ start-env: COMPOSE_FILE:=docker/compose-tracing-v2.yml
 start-env: L1_CONTRACT_VERSION:=8
 start-env: SKIP_CONTRACTS_DEPLOYMENT:=false
 start-env: SKIP_L1_L2_NODE_HEALTH_CHECK:=false
-start-env: LINEA_PROTOCOL_CONTRACTS_ONLY:=false
-start-env: LINEA_L1_CONTRACT_DEPLOYMENT_TARGET:=deploy-linea-rollup-v$(L1_CONTRACT_VERSION)
+start-env: LINETH_PROTOCOL_CONTRACTS_ONLY:=false
+start-env: LINETH_L1_CONTRACT_DEPLOYMENT_TARGET:=deploy-lineth-rollup-v$(L1_CONTRACT_VERSION)
 start-env:
 	@if [ "$(CLEAN_PREVIOUS_ENV)" = "true" ]; then \
 		$(MAKE) clean-environment; \
@@ -54,11 +54,11 @@ start-env:
 	if [ "$(SKIP_CONTRACTS_DEPLOYMENT)" = "true" ]; then \
 		echo "Skipping contracts deployment"; \
 	else \
-		$(MAKE) deploy-contracts L1_CONTRACT_VERSION=$(L1_CONTRACT_VERSION) LINEA_PROTOCOL_CONTRACTS_ONLY=$(LINEA_PROTOCOL_CONTRACTS_ONLY) LINEA_L1_CONTRACT_DEPLOYMENT_TARGET=$(LINEA_L1_CONTRACT_DEPLOYMENT_TARGET); \
+		$(MAKE) deploy-contracts L1_CONTRACT_VERSION=$(L1_CONTRACT_VERSION) LINETH_PROTOCOL_CONTRACTS_ONLY=$(LINETH_PROTOCOL_CONTRACTS_ONLY) LINETH_L1_CONTRACT_DEPLOYMENT_TARGET=$(LINETH_L1_CONTRACT_DEPLOYMENT_TARGET); \
 	fi
 
 start-env-with-validium:
-	$(MAKE) start-env L1_CONTRACT_VERSION=2 LINEA_COORDINATOR_DATA_AVAILABILITY=VALIDIUM LINEA_L1_CONTRACT_DEPLOYMENT_TARGET=deploy-validium
+	$(MAKE) start-env L1_CONTRACT_VERSION=2 LINETH_COORDINATOR_DATA_AVAILABILITY=VALIDIUM LINETH_L1_CONTRACT_DEPLOYMENT_TARGET=deploy-validium
 
 start-l1:
 	$(MAKE) start-env COMPOSE_PROFILES:=l1 COMPOSE_FILE:=docker/compose-tracing-v2.yml SKIP_CONTRACTS_DEPLOYMENT:=true SKIP_L1_L2_NODE_HEALTH_CHECK:=true
@@ -78,7 +78,7 @@ fresh-start-l2-blockchain-only:
 ## Redundant targets above will cleanup once this gets merged
 ##
 start-env-with-tracing-v2:
-	$(MAKE) start-env COMPOSE_FILE=docker/compose-tracing-v2.yml LINEA_PROTOCOL_CONTRACTS_ONLY=true
+	$(MAKE) start-env COMPOSE_FILE=docker/compose-tracing-v2.yml LINETH_PROTOCOL_CONTRACTS_ONLY=true
 
 ## Run with tracing-v2 with partial prover
 start-env-with-tracing-v2-partialprover:
@@ -86,28 +86,64 @@ start-env-with-tracing-v2-partialprover:
 
 ## Enable L2 geth node
 start-env-with-tracing-v2-extra:
-	$(MAKE) start-env COMPOSE_PROFILES:=l1,l2 COMPOSE_FILE:=docker/compose-tracing-v2-extra-extension.yml LINEA_PROTOCOL_CONTRACTS_ONLY=true LINEA_COORDINATOR_DISABLE_TYPE2_STATE_PROOF_PROVIDER=false LINEA_COORDINATOR_SIGNER_TYPE=web3signer
+	$(MAKE) start-env COMPOSE_PROFILES:=l1,l2 COMPOSE_FILE:=docker/compose-tracing-v2-extra-extension.yml LINETH_PROTOCOL_CONTRACTS_ONLY=true LINETH_COORDINATOR_DISABLE_TYPE2_STATE_PROOF_PROVIDER=false LINETH_COORDINATOR_SIGNER_TYPE=web3signer
 
 start-env-with-tracing-v2-ci:
-	$(MAKE) start-env COMPOSE_FILE=docker/compose-tracing-v2-ci-extension.yml LINEA_COORDINATOR_DISABLE_TYPE2_STATE_PROOF_PROVIDER=false LINEA_COORDINATOR_SIGNER_TYPE=web3signer
+	$(MAKE) start-env COMPOSE_FILE=docker/compose-tracing-v2-ci-extension.yml LINETH_COORDINATOR_DISABLE_TYPE2_STATE_PROOF_PROVIDER=false LINETH_COORDINATOR_SIGNER_TYPE=web3signer
 
 start-env-with-validium-and-tracing-v2-ci:
-	$(MAKE) start-env-with-validium COMPOSE_FILE=docker/compose-tracing-v2-ci-extension.yml LINEA_COORDINATOR_DISABLE_TYPE2_STATE_PROOF_PROVIDER=false LINEA_COORDINATOR_SIGNER_TYPE=web3signer
+	$(MAKE) start-env-with-validium COMPOSE_FILE=docker/compose-tracing-v2-ci-extension.yml LINETH_COORDINATOR_DISABLE_TYPE2_STATE_PROOF_PROVIDER=false LINETH_COORDINATOR_SIGNER_TYPE=web3signer
 
 ## Enable Fleet leader and follower besu nodes
 start-env-with-tracing-v2-ci-fleet:
-	$(MAKE) start-env COMPOSE_FILE=docker/compose-tracing-v2-ci-fleet-extension.yml LINEA_USE_MARU_OVERRIDE_CONFIG=true LINEA_COORDINATOR_DISABLE_TYPE2_STATE_PROOF_PROVIDER=false LINEA_COORDINATOR_SIGNER_TYPE=web3signer
+	$(MAKE) start-env COMPOSE_FILE=docker/compose-tracing-v2-ci-fleet-extension.yml LINETH_USE_MARU_OVERRIDE_CONFIG=true LINETH_COORDINATOR_DISABLE_TYPE2_STATE_PROOF_PROVIDER=false LINETH_COORDINATOR_SIGNER_TYPE=web3signer
 
 start-env-with-staterecovery: COMPOSE_PROFILES:=l1,l2,staterecovery
 start-env-with-staterecovery: L1_CONTRACT_VERSION:=6
 start-env-with-staterecovery:
-	$(MAKE) start-env COMPOSE_FILE=docker/compose-tracing-v2-staterecovery-extension.yml LINEA_PROTOCOL_CONTRACTS_ONLY=true L1_CONTRACT_VERSION=$(L1_CONTRACT_VERSION) COMPOSE_PROFILES=$(COMPOSE_PROFILES)
+	$(MAKE) start-env COMPOSE_FILE=docker/compose-tracing-v2-staterecovery-extension.yml LINETH_PROTOCOL_CONTRACTS_ONLY=true L1_CONTRACT_VERSION=$(L1_CONTRACT_VERSION) COMPOSE_PROFILES=$(COMPOSE_PROFILES)
 
 staterecovery-replay-from-block: L1_ROLLUP_CONTRACT_ADDRESS:=0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9
 staterecovery-replay-from-block: STATERECOVERY_OVERRIDE_START_BLOCK_NUMBER:=1
 staterecovery-replay-from-block:
 	docker compose -f docker/compose-tracing-v2-staterecovery-extension.yml down zkbesu-shomei-sr shomei-sr
 	L1_ROLLUP_CONTRACT_ADDRESS=$(L1_ROLLUP_CONTRACT_ADDRESS) STATERECOVERY_OVERRIDE_START_BLOCK_NUMBER=$(STATERECOVERY_OVERRIDE_START_BLOCK_NUMBER) docker compose -f docker/compose-tracing-v2-staterecovery-extension.yml up zkbesu-shomei-sr shomei-sr -d
+
+# Retries TARGET up to RETRY_LIMIT times, aborting each attempt after
+# RETRY_TIMEOUT. Uses perl's alarm+exec instead of GNU coreutils `timeout`,
+# which isn't installed by default on macOS. Optionally runs
+# RETRY_CLEANUP_TARGET between failed attempts (e.g. to reset docker state).
+retry: RETRY_LIMIT:=5
+retry: RETRY_TIMEOUT:=10m
+retry: RETRY_BACKOFF:=10s
+retry:
+	@if [ -z "$(TARGET)" ]; then \
+		echo "Usage: make retry TARGET=<target> [RETRY_LIMIT=n] [RETRY_TIMEOUT=Xm] [RETRY_BACKOFF=Xs] [RETRY_CLEANUP_TARGET=<target>]"; \
+		exit 1; \
+	fi; \
+	to_seconds() { \
+		case "$$1" in \
+			*h) echo $$(( $${1%h} * 3600 )) ;; \
+			*m) echo $$(( $${1%m} * 60 )) ;; \
+			*s) echo $${1%s} ;; \
+			*) echo "$$1" ;; \
+		esac; \
+	}; \
+	timeout_secs=$$(to_seconds $(RETRY_TIMEOUT)); \
+	backoff_secs=$$(to_seconds $(RETRY_BACKOFF)); \
+	attempt=1; \
+	until perl -e 'alarm shift; exec @ARGV' $$timeout_secs $(MAKE) $(TARGET); do \
+		if [ $$attempt -ge $(RETRY_LIMIT) ]; then \
+			echo "Retry limit ($(RETRY_LIMIT)) reached for target: $(TARGET)"; \
+			exit 1; \
+		fi; \
+		echo "Attempt $$attempt of '$(TARGET)' failed. Retrying in $(RETRY_BACKOFF)..."; \
+		if [ -n "$(RETRY_CLEANUP_TARGET)" ]; then \
+			$(MAKE) $(RETRY_CLEANUP_TARGET) || true; \
+		fi; \
+		attempt=$$((attempt + 1)); \
+		sleep $$backoff_secs; \
+	done
 
 stop_pid:
 		if [ -f $(PID_FILE) ]; then \

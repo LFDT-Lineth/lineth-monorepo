@@ -22,12 +22,12 @@ import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.hyperledger.besu.crypto.SECP256K1
 import org.hyperledger.besu.datatypes.Address
-import org.hyperledger.besu.datatypes.BlobGas
 import org.hyperledger.besu.datatypes.Hash
 import org.hyperledger.besu.datatypes.RequestType
 import org.hyperledger.besu.datatypes.TransactionType
 import org.hyperledger.besu.datatypes.Wei
-import org.hyperledger.besu.ethereum.api.jsonrpc.internal.parameters.EnginePayloadParameter
+import org.hyperledger.besu.ethereum.api.jsonrpc.JsonRpcObjectMapperFactory
+import org.hyperledger.besu.ethereum.api.jsonrpc.internal.parameters.ExecutionPayloadV3
 import org.hyperledger.besu.ethereum.core.BlockHeader
 import org.hyperledger.besu.ethereum.core.BlockHeaderBuilder
 import org.hyperledger.besu.ethereum.core.Difficulty
@@ -117,7 +117,10 @@ abstract class LineaPluginPoSTestBase : LineaPluginTestBase() {
       .noLocalPriority(true)
       .build()
     cluster.start(minerNode)
-    mapper = ObjectMapper()
+    // Besu's Hash/Bytes32 types are only deserializable via the BesuJsonModule-backed mapper
+    // (their @JsonCreator now takes a Bytes32, not a raw hex String); a bare ObjectMapper()
+    // can't construct them. Reuse the same mapper Besu's own JSON-RPC dispatch uses internally.
+    mapper = JsonRpcObjectMapperFactory.getBaseMapper()
     engineApiService = EngineAPIService(minerNode, ethTransactions, mapper)
     blockTimeSeconds = getDefaultSlotTimeSeconds()
     buildNewBlocksInBackground()
@@ -539,7 +542,7 @@ abstract class LineaPluginPoSTestBase : LineaPluginTestBase() {
     mapper: ObjectMapper,
     blockParams: Map<String, String>,
   ): BlockHeader {
-    val blockParam = mapper.readValue(executionPayload.toString(), EnginePayloadParameter::class.java)
+    val blockParam = mapper.readValue(executionPayload.toString(), ExecutionPayloadV3::class.java)
 
     val transactionsRoot = Hash.fromHexString(blockParams[BlockParams.TRANSACTIONS_ROOT])
     val withdrawalsRoot = Hash.fromHexString(blockParams[BlockParams.WITHDRAWALS_ROOT])
@@ -566,13 +569,13 @@ abstract class LineaPluginPoSTestBase : LineaPluginTestBase() {
       .gasLimit(blockParam.gasLimit)
       .gasUsed(blockParam.gasUsed)
       .timestamp(blockParam.timestamp)
-      .extraData(Bytes.fromHexString(blockParam.extraData))
+      .extraData(blockParam.extraData)
       .baseFee(blockParam.baseFeePerGas)
       .prevRandao(blockParam.prevRandao)
       .nonce(0)
       .withdrawalsRoot(withdrawalsRoot)
       .blobGasUsed(blockParam.blobGasUsed)
-      .excessBlobGas(BlobGas.fromHexString(blockParam.excessBlobGas))
+      .excessBlobGas(blockParam.excessBlobGas)
       .parentBeaconBlockRoot(Bytes32.fromHexString(blockParams[BlockParams.PARENT_BEACON_BLOCK_ROOT]!!))
       .requestsHash(maybeRequests.map { BodyValidation.requestsHash(it) }.orElse(null))
       .blockHeaderFunctions(MainnetBlockHeaderFunctions())
@@ -599,7 +602,7 @@ abstract class LineaPluginPoSTestBase : LineaPluginTestBase() {
    * @param expectedValidationError Expected validation error message to check for
    */
   protected fun assertBlockImportRejected(response: Response, expectedValidationError: String) {
-    val result = mapper.readTree(response.body?.string()).get("result")
+    val result = mapper.readTree(response.body.string()).get("result")
     val status = result.get("status").asText()
     val validationError = result.get("validationError").asText()
     assertThat(status).isEqualTo("INVALID")

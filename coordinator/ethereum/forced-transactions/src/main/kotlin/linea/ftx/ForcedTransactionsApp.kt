@@ -2,32 +2,34 @@ package linea.ftx
 
 import io.vertx.core.Vertx
 import linea.DisabledService
+import linea.EthLogsSearcher
 import linea.LongRunningService
 import linea.clients.InvalidityProverClientV1
 import linea.clients.StateManagerAccountProofClient
 import linea.clients.StateManagerClientV1
 import linea.clients.TracesConflationVirtualBlockClientV1
-import linea.conflation.AlwaysSafeBlockNumberProvider
-import linea.conflation.ConflationSafeBlockNumberProvider
-import linea.conflation.calculators.ConflationTriggerCalculator
-import linea.conflation.calculators.ConflationTriggerCalculatorByTargetBlockNumbers
 import linea.contract.Web3JContractVersionAwaiter
 import linea.contract.events.ForcedTransactionAddedEvent
 import linea.contract.l1.ContractVersionProvider
-import linea.contract.l1.LineaRollupContractVersion
-import linea.contract.l1.LineaRollupSmartContractClientReadOnlyFinalizedStateProvider
+import linea.contract.l1.LinethRollupContractVersion
+import linea.contract.l1.LinethRollupSmartContractClientReadOnlyFinalizedStateProvider
 import linea.domain.BlockParameter
 import linea.domain.ConflationTrigger
 import linea.ethapi.EthApiClient
 import linea.ethapi.EthLogsFilterSubscriptionFactoryPollingBased
+import linea.ethapi.EthLogsSearcherImpl
 import linea.forcedtx.ForcedTransactionsClient
-import linea.ftx.conflation.ConflationCalculatorByForcedTransaction
-import linea.ftx.conflation.ForcedTransactionConflationSafeBlockNumberProvider
-import linea.ftx.conflation.ForcedTransactionsInvalidityProofService
-import linea.ftx.conflation.ForcedTransactionsSafeBlockNumberManager
-import linea.ftx.conflation.FtxConflationInfo
-import linea.ftx.conflation.InvalidityProofAssembler
-import linea.persistence.ForcedTransactionsDao
+import lineth.conflation.AlwaysSafeBlockNumberProvider
+import lineth.conflation.ConflationSafeBlockNumberProvider
+import lineth.conflation.calculators.ConflationTriggerCalculator
+import lineth.conflation.calculators.ConflationTriggerCalculatorByTargetBlockNumbers
+import lineth.ftx.conflation.ConflationCalculatorByForcedTransaction
+import lineth.ftx.conflation.ForcedTransactionConflationSafeBlockNumberProvider
+import lineth.ftx.conflation.ForcedTransactionsInvalidityProofService
+import lineth.ftx.conflation.ForcedTransactionsSafeBlockNumberManager
+import lineth.ftx.conflation.FtxConflationInfo
+import lineth.ftx.conflation.InvalidityProofAssembler
+import lineth.persistence.ForcedTransactionsDao
 import net.consensys.linea.metrics.MetricsFacade
 import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -56,6 +58,7 @@ interface ForcedTransactionsApp : LongRunningService {
     val l1ContractAddress: String,
     val l1HighestBlockTag: BlockParameter,
     val l1EventSearchBlockChunk: UInt = 1000u,
+    val l1EventSearchMaxBlockRange: UInt = 10_000u,
     val ftxSequencerSendingInterval: Duration = 12.seconds,
     val maxFtxToSendToSequencer: UInt = 10u,
     val ftxProcessingDelay: Duration = Duration.ZERO,
@@ -69,8 +72,8 @@ interface ForcedTransactionsApp : LongRunningService {
       vertx: Vertx,
       l1EthApiClient: EthApiClient,
       l2EthApiClient: EthApiClient,
-      finalizedStateProvider: LineaRollupSmartContractClientReadOnlyFinalizedStateProvider,
-      contractVersionProvider: ContractVersionProvider<LineaRollupContractVersion>,
+      finalizedStateProvider: LinethRollupSmartContractClientReadOnlyFinalizedStateProvider,
+      contractVersionProvider: ContractVersionProvider<LinethRollupContractVersion>,
       ftxClient: ForcedTransactionsClient,
       ftxDao: ForcedTransactionsDao,
       invalidityProofClient: InvalidityProverClientV1,
@@ -113,8 +116,8 @@ internal class ForcedTransactionsAppImpl(
   private val vertx: Vertx,
   private val l1EthApiClient: EthApiClient,
   private val l2EthApiClient: EthApiClient,
-  private val finalizedStateProvider: LineaRollupSmartContractClientReadOnlyFinalizedStateProvider,
-  private val contractVersionProvider: ContractVersionProvider<LineaRollupContractVersion>,
+  private val finalizedStateProvider: LinethRollupSmartContractClientReadOnlyFinalizedStateProvider,
+  private val contractVersionProvider: ContractVersionProvider<LinethRollupContractVersion>,
   private val ftxClient: ForcedTransactionsClient,
   private val ftxDao: ForcedTransactionsDao,
   private val invalidityProofClient: InvalidityProverClientV1,
@@ -127,6 +130,10 @@ internal class ForcedTransactionsAppImpl(
     ForcedTransactionConflationSafeBlockNumberProvider(),
 ) : ForcedTransactionsApp {
   private val log = LogManager.getLogger(ForcedTransactionsAppImpl::class.java)
+  private val l1EthLogsSearcher: EthLogsSearcher = EthLogsSearcherImpl(
+    vertx = vertx,
+    ethApiClient = l1EthApiClient,
+  )
   internal val ftxQueue: Queue<ForcedTransactionWithTimestamp> = LinkedBlockingQueue(10_000)
 
   // Separate queues per calculator: prevents the aggregation calculator (which consumes via poll())
@@ -140,7 +147,7 @@ internal class ForcedTransactionsAppImpl(
   private lateinit var ftxStatusUpdater: ForcedTransactionsStatusUpdater
   private lateinit var ftxFetcher: ForcedTransactionsL1EventsFetcher
   private lateinit var ftxSender: ForcedTransactionsSenderForExecution
-  private var safeBlockNumberManager = ForcedTransactionsSafeBlockNumberManager(listener = safeBlockNumberProvider)
+  private val safeBlockNumberManager = ForcedTransactionsSafeBlockNumberManager(listener = safeBlockNumberProvider)
   override val conflationSafeBlockNumberProvider: ConflationSafeBlockNumberProvider = safeBlockNumberProvider
   override val conflationCalculator: ConflationTriggerCalculator = ConflationCalculatorByForcedTransaction(
     processedFtxQueue = conflationFtxQueue,
@@ -151,9 +158,11 @@ internal class ForcedTransactionsAppImpl(
       invalidityProofClient = invalidityProofClient,
       stateManagerClient = stateManagerClient,
       accountProofClient = accountProofClient,
-      ethApiLogsClient = l1EthApiClient,
+      ethApiLogsSearcher = l1EthLogsSearcher,
+      ftxDao = ftxDao,
       tracesClient = tracesClient,
       contractAddress = config.l1ContractAddress,
+      l1EventSearchMaxBlockRange = config.l1EventSearchMaxBlockRange,
     ),
     vertx = vertx,
     pollingInterval = config.invalidityProofProcessingInterval,
@@ -164,12 +173,12 @@ internal class ForcedTransactionsAppImpl(
     return contractVersionProvider
       .getVersion()
       .thenCompose { contractVersion ->
-        if (contractVersion < LineaRollupContractVersion.V8) {
+        if (contractVersion < LinethRollupContractVersion.V8) {
           log.info(
             "contractVersion={} is lower than required {} by forced transactions. " +
               "waiting until the contract is upgraded...",
             contractVersion,
-            LineaRollupContractVersion.V8,
+            LinethRollupContractVersion.V8,
           )
           // can release the lock because users cannot send forced transactions until the contract is upgraded
           safeBlockNumberManager.forcedTransactionsUnsupportedYetByL1Contract()
@@ -179,7 +188,7 @@ internal class ForcedTransactionsAppImpl(
             versionProvider = contractVersionProvider,
             log = log,
           ).awaitVersion(
-            minTargetVersion = LineaRollupContractVersion.V8,
+            minTargetVersion = LinethRollupContractVersion.V8,
             highestBlockTag = config.l1HighestBlockTag,
           )
         } else {
@@ -226,6 +235,8 @@ internal class ForcedTransactionsAppImpl(
           address = config.l1ContractAddress,
           resumePointProvider = lastProcessedFtxProvider,
           ethLogsClient = l1EthApiClient,
+          ethLogsSearcher = l1EthLogsSearcher,
+          l1EventSearchMaxBlockRange = config.l1EventSearchMaxBlockRange,
           ethLogsFilterSubscriptionFactory = EthLogsFilterSubscriptionFactoryPollingBased(
             vertx = vertx,
             ethApiClient = l1EthApiClient,

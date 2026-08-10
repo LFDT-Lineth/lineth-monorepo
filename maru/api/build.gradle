@@ -1,11 +1,11 @@
 plugins {
-  id 'net.consensys.zkevm.kotlin-library-conventions'
+  id 'lineth.kotlin-library-conventions'
 }
 
 dependencies {
   implementation project(':jvm-libs:linea:core:metrics')
   implementation project(':jvm-libs:linea:core:long-running-service')
-  implementation "com.fasterxml.jackson.module:jackson-module-kotlin:${libs.versions.jackson.get()}"
+  implementation "com.fasterxml.jackson.module:jackson-module-kotlin"
   implementation "io.javalin:javalin:${libs.versions.javalin.get()}"
   implementation project(':maru:core')
   implementation project(':maru:p2p')

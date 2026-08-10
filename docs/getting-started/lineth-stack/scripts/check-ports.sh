@@ -6,6 +6,9 @@ SCRIPT_DIR="$(CDPATH= cd "$(dirname "$0")" && pwd -P)"
 LINETH_LOG_CONTEXT="check-ports"
 # shellcheck disable=SC1091
 . "$SCRIPT_DIR/lib/logging.sh"
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/lib/runtime.sh"
+lineth_runtime_init "$SCRIPT_DIR"
 
 if [ "${LINETH_EMBEDDED:-false}" = "true" ]; then
   section() { :; }
@@ -19,22 +22,6 @@ fi
 
 failures=0
 seen_ports=" "
-
-env_value() {
-  key="$1"
-  [ -f .env ] || return 1
-  sed -nE "s/^${key}=([^#[:space:]].*)$/\1/p" .env | tail -1
-}
-
-with_default() {
-  value="$1"
-  fallback="$2"
-  if [ -n "$value" ]; then
-    printf '%s' "$value"
-  else
-    printf '%s' "$fallback"
-  fi
-}
 
 port_owner() {
   port="$1"
@@ -64,8 +51,7 @@ check_port() {
   name="$1"
   env_name="$2"
   default_port="$3"
-  configured="$(env_value "$env_name" || true)"
-  port="$(with_default "$configured" "$default_port")"
+  port="$(lineth_env_or_default "$env_name" "$default_port")"
 
   case "$port" in
     ''|*[!0-9]*)
@@ -94,7 +80,7 @@ check_port() {
 }
 
 section "checking expected host ports"
-l1_mode="$(with_default "${L1_MODE:-$(env_value L1_MODE || true)}" sepolia)"
+l1_mode="$(lineth_env_or_default L1_MODE sepolia)"
 case "$l1_mode" in
   sepolia|local) ;;
   *)

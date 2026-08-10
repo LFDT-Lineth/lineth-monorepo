@@ -47,6 +47,47 @@ Releases are driven by GitHub Actions workflows under `.github/workflows`. There
 
 Release tag of each component is in the format of `releases/[component]/v[semver]` and the semver version is computed from the relevant Git history commit messages [using Conventional Commits format](#commit-message-format) by using [git-cliff](https://github.com/orhun/git-cliff)
 
+### Preview a component's changelog and next version locally
+
+The workflows do **not** keep a per-component `cliff.toml`. A single [`cliff.template.toml`](cliff.template.toml) is rendered at run time by substituting the component's conventional-commit scopes into its `@@SCOPES@@` placeholder, then git-cliff is run with that component's `--include-path` filter. A commit therefore counts only when it is **both** in-scope **and** touches a component path (scope-and-path gating).
+
+You can reproduce exactly what a workflow computes. Prerequisites: install git-cliff (`brew install git-cliff` or `cargo install git-cliff`) and fetch tags (`git fetch --tags`). Run from the repo root:
+
+```bash
+# 1. Render the template with the component's scopes injected.
+#    (see the per-component table below for SCOPES / tag-pattern / include-paths)
+SCOPES='coordinator|deps|misc'
+sed "s#@@SCOPES@@#${SCOPES}#g" cliff.template.toml > /tmp/cliff.rendered.toml
+
+# 2. Show the NEXT bumped version tag for the component.
+git cliff --config /tmp/cliff.rendered.toml --unreleased --bumped-version \
+  --tag-pattern 'releases/coordinator/v[0-9]+\.[0-9]+\.[0-9]+$' \
+  --include-path 'coordinator/**'
+
+# 3. Show the [unreleased] changelog for the component.
+git cliff --config /tmp/cliff.rendered.toml --unreleased \
+  --tag-pattern 'releases/coordinator/v[0-9]+\.[0-9]+\.[0-9]+$' \
+  --include-path 'coordinator/**'
+```
+
+Swap `SCOPES`, the `--tag-pattern` component, and the `--include-path` set per component:
+
+| Component | `SCOPES` | `--tag-pattern` component | `--include-path`(s) |
+|---|---|---|---|
+| `coordinator` | `coordinator\|deps\|misc` | `coordinator` | `coordinator/**` |
+| `maru` | `maru\|deps\|misc` | `maru` | `maru/**` |
+| `postman` | `postman\|deps\|misc` | `postman` | `postman/**` |
+| `prover` | `prover\|deps\|misc` | `prover` | `prover/**` |
+| `tx-exclusion-api` | `tx-exclusion-api\|deps\|misc` | `tx-exclusion-api` | `transaction-exclusion-api/**` |
+| `linea-besu-package` | `linea-besu\|tracer\|sequencer\|deps\|misc` | `linea-besu-package` | `tracer/**`, `tracer-constraints/**`, `linea-besu/plugins/linea-sequencer/**`, `linea-besu/besu/**`, `linea-besu/package/**`, `gradle/libs.versions.toml` |
+| `linea` (milestone) | `coordinator\|linea-besu\|tracer\|sequencer\|maru\|prover\|postman\|tx-exclusion-api\|deps\|misc` | `linea` | the union of every component path above |
+
+Notes:
+
+- `cliff.template.toml` is not runnable as-is — the `@@SCOPES@@` placeholder must be substituted first. An un-rendered template matches no commits and git-cliff reports "There is nothing to bump".
+- `--bumped-version` prints the full next tag (e.g. `releases/coordinator/v1.2.3`); drop it (as in step 3) to render the changelog instead. If nothing qualifies, git-cliff prints "There is nothing to bump" — meaning no release would be cut.
+- These are the same `scopes` and `include-path` values the workflows pass to the [`run-git-cliff-commands`](.github/actions/run-git-cliff-commands/action.yml) action, so the local result matches CI.
+
 ### Per-component release
 
 Each component has its own release workflow. Run the one that matches the component you want to ship:
@@ -101,7 +142,7 @@ The milestone workflow defaults to running a **dry run on a temporary branch for
 
 ## Looking for the Lineth code?
 
-Linea's stack is made up of multiple repositories, these include:
+Lineth's stack is made up of multiple repositories. These include:
 
 - This repo, [lineth-monorepo](https://github.com/LFDT-Lineth/lineth-monorepo): The main repository for the Lineth stack & Linea network
 > Also maintains a set of Linea-Besu plugins for the sequencer and RPC nodes.
@@ -136,7 +177,7 @@ Consider starting with a ["good first issue"](https://github.com/LFDT-Lineth/lin
 
 ### Commit message format
 
-All commits must follow the [Conventional Commits](https://www.conventionalcommits.org) format, enforced locally by a Husky `commit-msg` hook:
+All commits must follow the [Conventional Commits](https://www.conventionalcommits.org) format, enforced locally by a Husky [commit-msg](.husky/commit-msg) hook:
 
 ```
 <type>(<scope>): <short description>
@@ -193,6 +234,11 @@ git commit -m 'feat(coordinator)!: breaking changes'
 To write a multi-line commit from the terminal:
 ```bash
 git commit -m $'feat(coordinator): add retry logic\n\nRetries up to 3 times on transient network errors.\n\nCloses issue# 123'
+```
+
+To bypass the commit-msg hook: (USE WITH CAUTION)
+```bash
+git commit -m 'Just some trivial changes could find proper prefix and irrelevant to version change' --no-verify
 ```
 
 Before contributing, ensure you're familiar with:

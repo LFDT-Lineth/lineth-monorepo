@@ -183,7 +183,7 @@ pnpm exec hardhat compile
 pnpm exec hardhat test
 
 # Specific test file
-pnpm exec hardhat test test/hardhat/rollup/LineaRollup.ts
+pnpm exec hardhat test test/hardhat/rollup/LinethRollup.ts
 
 # Coverage
 pnpm exec hardhat coverage
@@ -220,7 +220,7 @@ make docker-pull-images-external-to-monorepo
 make deploy-contracts
 
 # Deploy specific contracts
-make deploy-linea-rollup-v6
+make deploy-lineth-rollup-v6
 make deploy-l2messageservice
 make deploy-token-bridge-l1
 make deploy-token-bridge-l2
@@ -231,7 +231,7 @@ make deploy-l2-test-erc20
 ### Deployment Order
 
 1. PlonkVerifier (L1)
-2. LineaRollup (L1)
+2. LinethRollup (L1)
 3. L2MessageService (L2)
 4. TokenBridge (L1)
 5. TokenBridge (L2)
@@ -308,9 +308,9 @@ export LINEA_PROVER_TAG=latest
 export LINEA_POSTMAN_TAG=latest
 
 # Coordinator settings
-export LINEA_COORDINATOR_SIGNER_TYPE=web3j  # or web3signer
-export LINEA_COORDINATOR_DATA_AVAILABILITY=ROLLUP  # or VALIDIUM
-export LINEA_COORDINATOR_DISABLE_TYPE2_STATE_PROOF_PROVIDER=true
+export LINETH_COORDINATOR_SIGNER_TYPE=web3j  # or web3signer
+export LINETH_COORDINATOR_DATA_AVAILABILITY=ROLLUP  # or VALIDIUM
+export LINETH_COORDINATOR_DISABLE_TYPE2_STATE_PROOF_PROVIDER=true
 
 # Contract addresses (set after deployment)
 export L1_ROLLUP_CONTRACT_ADDRESS=0x...

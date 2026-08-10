@@ -10,6 +10,7 @@ buildscript {
 
 plugins {
   id "linea.yul-plugin"
+  id "linea.solc-toolchain"
   alias(libs.plugins.besuPluginLibrary)
   alias(libs.plugins.web3j)
   alias(libs.plugins.lombok)
@@ -43,7 +44,12 @@ web3j {
   generatedPackageName = "net.consensys.linea.testing.generated"
 }
 
+solcToolchain {
+  version = '0.8.26'
+}
+
 solidity {
+  version = solcToolchain.version
   optimize = false
   prettyJson = true
   evmVersion = EVMVersion.LONDON // TODO: how to make it dynamic ?
@@ -56,6 +62,5 @@ solidity {
 }
 
 yul {
-  solcVersion = "0.8.26"
   compilerJsonTemplatePath = "src/main/resources/templates/compiler_yul.json.template"
 }

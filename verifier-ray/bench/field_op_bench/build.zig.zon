@@ -1,0 +1,17 @@
+.{
+    .name = .field_op_bench,
+    .version = "0.1.0",
+    .fingerprint = 0xb9b9482fe7d86b5,
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{
+        // shared build utilities for Zig build to R5 target
+        .build_common = .{ .path = "../../../riscv-guests/build_common" },
+        // standard zkVM runtime helpers (zkvm_exit)
+        .lineth_accelerators = .{ .path = "../../../riscv-guests/lineth-accelerators" },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "main.zig",
+    },
+}

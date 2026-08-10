@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 #
-# deploy-contracts.sh — Linea stack v0 contract deployment wrapper.
+# deploy-contracts.sh — Lineth stack v0 contract deployment wrapper.
 #
 # Runs the boot-critical deploy targets from `contracts/makefile-contracts.mk`
 # in serial. Demo ERC20 contracts are deployed on demand by traffic/smoke
 # scripts, not during normal boot.
 #
-#   1. deploy-linea-rollup-v8       (L1)  → emits LINEA_ROLLUP_ADDRESS
+#   1. deploy-lineth-rollup-v8       (L1)  → emits LINETH_ROLLUP_ADDRESS
 #   2. deploy-l2messageservice      (L2)  → emits L2_MESSAGE_SERVICE_ADDRESS
 #   3. deploy-token-bridge-l1       (L1)  ← consumes both forwarded addresses
 #   4. deploy-token-bridge-l2       (L2)  ← consumes both forwarded addresses
@@ -92,6 +92,7 @@ timing_now_ms() {
 
 TIMING_STEP_NAME=""
 TIMING_STEP_STARTED_MS="$(timing_now_ms)"
+RESOLVER_ENV_FILE=""
 
 timing_record() {
   local name="$1" started_ms="$2" ended_ms="$3" status="$4"
@@ -122,6 +123,9 @@ step() {
 
 finish_deploy_timing() {
   local status=$?
+  if [[ -n "${RESOLVER_ENV_FILE:-}" ]]; then
+    rm -f "$RESOLVER_ENV_FILE"
+  fi
   if [[ "$status" -eq 0 ]]; then
     timing_finish_current_step "ok"
   else
@@ -180,12 +184,15 @@ cd "$CONTRACTS_DIR"
 step "Resolve L1 deployer"
 export NODE_PATH="/workspace/node_modules:/workspace/contracts/node_modules${NODE_PATH:+:$NODE_PATH}"
 set +x 2>/dev/null || true
-resolver_env="$(
-  TS_NODE_TRANSPILE_ONLY=1 \
-  TS_NODE_COMPILER_OPTIONS='{"module":"CommonJS","moduleResolution":"Node"}' \
-    pnpm -s exec ts-node /scripts/internal/deployer-wallet.ts emit-shell-env --context container
-)"
-eval "$resolver_env"
+RESOLVER_ENV_FILE="$(mktemp)"
+TS_NODE_TRANSPILE_ONLY=1 \
+TS_NODE_COMPILER_OPTIONS='{"module":"CommonJS","moduleResolution":"Node"}' \
+  pnpm -s exec ts-node /scripts/internal/deployer-wallet.ts emit-shell-env --context container \
+    --output-file "$RESOLVER_ENV_FILE"
+# shellcheck disable=SC1090
+. "$RESOLVER_ENV_FILE"
+rm -f "$RESOLVER_ENV_FILE"
+RESOLVER_ENV_FILE=""
 RESOLVED_L1_DEPLOYER_ADDRESS="$L1_DEPLOYER_ADDRESS"
 export L1_MODE L1_RPC_URL L1_DEPLOYER_PRIVATE_KEY L1_DEPLOYER_SOURCE RESOLVED_L1_DEPLOYER_ADDRESS
 log "Resolved L1 deployer source: $L1_DEPLOYER_SOURCE"
@@ -238,13 +245,11 @@ wait_rpc "$L2_RPC_URL" L2
 # 02-generate-l2-genesis.sh writes /initialization/fork-timestamp.txt into
 # artifacts/genesis. deploy-contracts mounts it read-only at /generated-genesis.
 FORK_TIMESTAMP=""
-for f in "/generated-genesis/fork-timestamp.txt"; do
-  if [[ -f "$f" ]]; then
-    FORK_TIMESTAMP="$(cat "$f")"
-    log "Read FORK_TIMESTAMP=$FORK_TIMESTAMP from $f"
-    break
-  fi
-done
+fork_timestamp_file="/generated-genesis/fork-timestamp.txt"
+if [[ -f "$fork_timestamp_file" ]]; then
+  FORK_TIMESTAMP="$(cat "$fork_timestamp_file")"
+  log "Read FORK_TIMESTAMP=$FORK_TIMESTAMP from $fork_timestamp_file"
+fi
 : "${FORK_TIMESTAMP:=1683325137}"
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -275,7 +280,7 @@ if ! [[ "$L1_DEPLOYER_ADDRESS" =~ ^0x[a-fA-F0-9]{40}$ ]]; then
   L1_DEPLOYER_ADDRESS="$(awk '/\"deployers\":/{f=1} f && /\"l1\":/{gsub(/[\",]/,""); print $2; exit}' "$PRECOMPUTED")"
 fi
 
-PRECOMPUTED_LINEA_ROLLUP="$(awk '/\"l1\":[[:space:]]*\{/{f=1} f && /\"LineaRollupV8\":/{gsub(/[\",]/,""); print $2; exit}' "$PRECOMPUTED")"
+PRECOMPUTED_LINETH_ROLLUP="$(awk '/\"l1\":[[:space:]]*\{/{f=1} f && /\"LinethRollupV8\":/{gsub(/[\",]/,""); print $2; exit}' "$PRECOMPUTED")"
 PRECOMPUTED_L2_MS="$(awk '/\"l2\":[[:space:]]*\{/{f=1} f && /\"L2MessageService\":/{gsub(/[\",]/,""); print $2; exit}' "$PRECOMPUTED")"
 PRECOMPUTED_L1_BLOB_SUBMITTER="$(json_field l1BlobSubmitterAddress)"
 PRECOMPUTED_L1_FINALIZATION_SUBMITTER="$(json_field l1FinalizationSubmitterAddress)"
@@ -292,7 +297,7 @@ PRECOMPUTED_L2_POSTMAN="$(json_field l2PostmanAddress)"
 if [[ "$(echo "$L1_DEPLOYER_ADDRESS" | tr 'A-F' 'a-f')" != "$(echo "$RESOLVED_L1_DEPLOYER_ADDRESS" | tr 'A-F' 'a-f')" ]]; then
   die "Resolved L1 deployer $RESOLVED_L1_DEPLOYER_ADDRESS does not match precomputed deployer $L1_DEPLOYER_ADDRESS. Run ./scripts/reset.sh after changing deployer configuration."
 fi
-[[ "$PRECOMPUTED_LINEA_ROLLUP" =~ ^0x[a-fA-F0-9]{40}$ ]] || die "Could not extract l1.LineaRollupV8 from $PRECOMPUTED"
+[[ "$PRECOMPUTED_LINETH_ROLLUP" =~ ^0x[a-fA-F0-9]{40}$ ]] || die "Could not extract l1.LinethRollupV8 from $PRECOMPUTED"
 [[ "$PRECOMPUTED_L2_MS" =~ ^0x[a-fA-F0-9]{40}$ ]] || die "Could not extract l2.L2MessageService from $PRECOMPUTED"
 [[ "$PRECOMPUTED_L1_BLOB_SUBMITTER" =~ ^0x[a-fA-F0-9]{40}$ ]] || die "Could not extract signers.l1BlobSubmitterAddress from $PRECOMPUTED"
 [[ "$PRECOMPUTED_L1_FINALIZATION_SUBMITTER" =~ ^0x[a-fA-F0-9]{40}$ ]] || die "Could not extract signers.l1FinalizationSubmitterAddress from $PRECOMPUTED"
@@ -308,7 +313,7 @@ compute_expected_address() {
   printf '%s' "$address"
 }
 
-# L1 TokenBridge starts after the LineaRollup V8 deploys. With the gateway off,
+# L1 TokenBridge starts after the LinethRollup V8 deploys. With the gateway off,
 # that lane is 5 deploys (verifier, impl, ProxyAdmin, AddressFilter, proxy); with
 # it on it is 8 (plus Mimc, ForcedTransactionGateway, and the grantRole tx).
 if [[ "$DEPLOY_FORCED_TRANSACTION_GATEWAY" == "true" ]]; then
@@ -329,10 +334,10 @@ EXPECTED_L2_TOKEN_BEACON_NONCE=$((L2_DEPLOYER_START_NONCE + 6))
 EXPECTED_L2_TOKEN_BRIDGE_NONCE=$((L2_DEPLOYER_START_NONCE + 7))
 
 # Deterministic nonce that produces each step's primary precomputed address. The
-# LineaRollup V8 proxy is the 5th L1 deploy (start nonce + 4, matching
+# LinethRollup V8 proxy is the 5th L1 deploy (start nonce + 4, matching
 # quickstart-invariants.ts); the L2 MessageService proxy is the 3rd L2 deploy
 # (start nonce + 2). Used by the restart-safe redeploy nonce guard below.
-EXPECTED_LINEA_ROLLUP_NONCE=$((L1_DEPLOYER_START_NONCE + 4))
+EXPECTED_LINETH_ROLLUP_NONCE=$((L1_DEPLOYER_START_NONCE + 4))
 EXPECTED_L2_MESSAGE_SERVICE_NONCE=$((L2_DEPLOYER_START_NONCE + 2))
 
 EXPECTED_L1_BRIDGED_TOKEN="$(compute_expected_address "$L1_DEPLOYER_ADDRESS" "$EXPECTED_L1_BRIDGED_TOKEN_NONCE" "L1 BridgedToken")"
@@ -355,10 +360,10 @@ log "L1 postman=$PRECOMPUTED_L1_POSTMAN"
 log "L2 deployer=$PRECOMPUTED_L2_DEPLOYER"
 log "L2 message anchorer=$PRECOMPUTED_L2_MESSAGE_ANCHORING"
 log "L2 postman=$PRECOMPUTED_L2_POSTMAN"
-log "Precomputed LineaRollupV8: $PRECOMPUTED_LINEA_ROLLUP"
+log "Precomputed LinethRollupV8: $PRECOMPUTED_LINETH_ROLLUP"
 log "Precomputed L2MessageService: $PRECOMPUTED_L2_MS"
 log "DEPLOY_FORCED_TRANSACTION_GATEWAY=$DEPLOY_FORCED_TRANSACTION_GATEWAY"
-log "L1 TokenBridge nonce offset after LineaRollup step: $L1_TOKEN_BRIDGE_NONCE_OFFSET"
+log "L1 TokenBridge nonce offset after LinethRollup step: $L1_TOKEN_BRIDGE_NONCE_OFFSET"
 log "Expected L1 TokenBridge: $EXPECTED_L1_TOKEN_BRIDGE"
 log "Expected L2 TokenBridge: $EXPECTED_L2_TOKEN_BRIDGE"
 
@@ -397,7 +402,7 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 #
 # `eth_getBlockByNumber(0).stateRoot` is the Merkle-Patricia root, which is
-# wrong for ZK proof verification — the L1 LineaRollup verifies against
+# wrong for ZK proof verification — the L1 LinethRollup verifies against
 # Shomei's ZK state root, accessible via rollup_getZkEVMStateMerkleProofV0.
 # Shomei must be up; it depends on l2-node-besu so by the time this script
 # runs (after sequencer + l2-node-besu healthy) Shomei is reachable.
@@ -427,7 +432,7 @@ L2_GENESIS_STATE_ROOT=$(echo "$SHOMEI_RESP" | sed -nE 's/.*"zkEndStateRootHash":
   || die "Could not extract zkEndStateRootHash from Shomei response: $SHOMEI_RESP"
 log "L2_GENESIS_STATE_ROOT (from Shomei): $L2_GENESIS_STATE_ROOT"
 
-# Genesis shnarf matches the LineaRollup V8 helper shape used in
+# Genesis shnarf matches the LinethRollup V8 helper shape used in
 # contracts/test/hardhat/common/helpers/dataGeneration.ts::computeGenesisShnarf.
 L2_GENESIS_SHNARF="$(
   TS_NODE_TRANSPILE_ONLY=1 \
@@ -522,7 +527,7 @@ export L1_NONCE L2_NONCE
 # ─────────────────────────────────────────────────────────────────────────────
 #
 # Deploy scripts emit lines like:
-#   contract=LineaRollupV8 deployed: address=0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9 blockNumber=72 chainId=31648428
+#   contract=LinethRollupV8 deployed: address=0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9 blockNumber=72 chainId=31648428
 # We grep for `contract=NAME deployed:` and pull out the address.
 
 extract_address() {
@@ -539,7 +544,7 @@ extract_address() {
   printf "%s" "$addr"
 }
 
-require_address() {
+extract_required_address() {
   local logfile="$1" contract_name="$2" out
   out="$(extract_address "$logfile" "$contract_name")" || \
     die "failed to extract $contract_name address from $logfile"
@@ -570,14 +575,14 @@ verify_bridge_step_addresses() {
   local expected_bridged_token="$3" expected_token_bridge_impl="$4" expected_proxy_admin="$5"
   local expected_token_beacon="$6" expected_token_bridge="$7"
 
-  verify_address "$(require_address "$logfile" "BridgedToken")" "$expected_bridged_token" "$chain_label BridgedToken"
+  verify_address "$(extract_required_address "$logfile" "BridgedToken")" "$expected_bridged_token" "$chain_label BridgedToken"
   verify_address \
-    "$(require_address "$logfile" "tokenBridgeContractImplementation")" \
+    "$(extract_required_address "$logfile" "tokenBridgeContractImplementation")" \
     "$expected_token_bridge_impl" \
     "$chain_label TokenBridge implementation"
-  verify_address "$(require_address "$logfile" "ProxyAdmin")" "$expected_proxy_admin" "$chain_label ProxyAdmin"
-  verify_address "$(require_address "$logfile" "UpgradeableBeacon")" "$expected_token_beacon" "$chain_label UpgradeableBeacon"
-  verify_address "$(require_address "$logfile" "TokenBridge")" "$expected_token_bridge" "$chain_label TokenBridge"
+  verify_address "$(extract_required_address "$logfile" "ProxyAdmin")" "$expected_proxy_admin" "$chain_label ProxyAdmin"
+  verify_address "$(extract_required_address "$logfile" "UpgradeableBeacon")" "$expected_token_beacon" "$chain_label UpgradeableBeacon"
+  verify_address "$(extract_required_address "$logfile" "TokenBridge")" "$expected_token_bridge" "$chain_label TokenBridge"
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -611,7 +616,7 @@ step_already_done_with_code() {
     return 1
   fi
 
-  address="$(require_address "$logfile" "$contract_name")"
+  address="$(extract_required_address "$logfile" "$contract_name")"
   verify_address "$address" "$expected_address" "$label"
   code="$(cast code "$address" --rpc-url "$rpc_url" 2>/dev/null || true)"
   if [[ "$code" =~ ^0x[0-9a-fA-F]+$ && "$code" != "0x" ]]; then
@@ -646,10 +651,20 @@ guard_redeploy_nonce_window() {
   log "guard $label: OK (current $chain_label nonce $current_nonce <= expected $expected_nonce)"
 }
 
+explain_l1_rpc_submission_error() {
+  local logfile="$1"
+
+  [[ -f "$logfile" ]] || return 0
+  if grep -qi 'eth_sendRawTransaction' "$logfile" \
+    && grep -Eqi 'already known|nonce too low|replacement transaction underpriced|transaction underpriced' "$logfile"; then
+    log "ERROR: L1 contract deployment hit an RPC submission error from L1_RPC_URL. This usually means a free or overloaded Sepolia RPC accepted the raw transaction on one backend, then another backend returned stale/conflicting mempool state. Use a dedicated paid Sepolia RPC endpoint for L1_RPC_URL, then run ./scripts/reset.sh before retrying. This is not fixed by changing gas or funding amounts."
+  fi
+}
+
 verify_step1_gateway_mode() {
   local logfile="$1" logged_gateway_mode
 
-  if ! step_already_done "$logfile" "LineaRollupV${L1_CONTRACT_VERSION}"; then
+  if ! step_already_done "$logfile" "LinethRollupV${L1_CONTRACT_VERSION}"; then
     return 0
   fi
 
@@ -664,28 +679,28 @@ verify_step1_gateway_mode() {
   fi
 }
 
-# Step 1 — deploy-linea-rollup-v$L1_CONTRACT_VERSION
+# Step 1 — deploy-lineth-rollup-v$L1_CONTRACT_VERSION
 step1_l1_rollup() {
-  step "Step 1: deploy L1 Verifier + LineaRollup"
+  step "Step 1: deploy L1 Verifier + LinethRollup"
   local script logfile primary_contract
 
-  script="$ART_DIR/deployPlonkVerifierAndLineaRollupV${L1_CONTRACT_VERSION}.ts"
-  logfile="$LOG_DIR/step1-linea-rollup.log"
-  primary_contract="LineaRollupV${L1_CONTRACT_VERSION}"
+  script="$ART_DIR/deployPlonkVerifierAndLinethRollupV${L1_CONTRACT_VERSION}.ts"
+  logfile="$LOG_DIR/step1-lineth-rollup.log"
+  primary_contract="LinethRollupV${L1_CONTRACT_VERSION}"
 
   verify_step1_gateway_mode "$logfile"
-  if step_already_done_with_code "$logfile" "$primary_contract" "$L1_RPC_URL" "L1" "$PRECOMPUTED_LINEA_ROLLUP" "LineaRollupV${L1_CONTRACT_VERSION}"; then
+  if step_already_done_with_code "$logfile" "$primary_contract" "$L1_RPC_URL" "L1" "$PRECOMPUTED_LINETH_ROLLUP" "LinethRollupV${L1_CONTRACT_VERSION}"; then
     log "Step 1: $logfile present — skipping deploy, re-using prior addresses"
-    LINEA_ROLLUP_ADDRESS="$(require_address "$logfile" "$primary_contract")"
-    export LINEA_ROLLUP_ADDRESS
-    log "Forwarding LINEA_ROLLUP_ADDRESS=$LINEA_ROLLUP_ADDRESS"
+    LINETH_ROLLUP_ADDRESS="$(extract_required_address "$logfile" "$primary_contract")"
+    export LINETH_ROLLUP_ADDRESS
+    log "Forwarding LINETH_ROLLUP_ADDRESS=$LINETH_ROLLUP_ADDRESS"
     return 0
   fi
 
   [[ -f "$script" ]] || die "missing deploy script: $script"
 
   guard_redeploy_nonce_window "L1" "$L1_RPC_URL" "$L1_DEPLOYER_ADDRESS" \
-    "$EXPECTED_LINEA_ROLLUP_NONCE" "$PRECOMPUTED_LINEA_ROLLUP" "LineaRollupV${L1_CONTRACT_VERSION}"
+    "$EXPECTED_LINETH_ROLLUP_NONCE" "$PRECOMPUTED_LINETH_ROLLUP" "LinethRollupV${L1_CONTRACT_VERSION}"
 
   # The L1 deployer remains the admin/security-council account. Coordinator's
   # blob and finalization senders are separate derived operator addresses so
@@ -698,10 +713,10 @@ step1_l1_rollup() {
     export INITIAL_L2_BLOCK_NUMBER="0"
     export L2_GENESIS_TIMESTAMP="$FORK_TIMESTAMP"
     export L1_SECURITY_COUNCIL="$L1_DEPLOYER_ADDRESS"
-    export LINEA_ROLLUP_OPERATORS="${LINEA_ROLLUP_OPERATORS:-$DEFAULT_L1_OPERATOR_ADDRESSES}"
-    export LINEA_ROLLUP_RATE_LIMIT_PERIOD="86400"
-    export LINEA_ROLLUP_RATE_LIMIT_AMOUNT="1000000000000000000000"
-    export DEPLOY_FORCED_TRANSACTION_GATEWAY="$DEPLOY_FORCED_TRANSACTION_GATEWAY"
+    export LINETH_ROLLUP_OPERATORS="${LINETH_ROLLUP_OPERATORS:-$DEFAULT_L1_OPERATOR_ADDRESSES}"
+    export LINETH_ROLLUP_RATE_LIMIT_PERIOD="86400"
+    export LINETH_ROLLUP_RATE_LIMIT_AMOUNT="1000000000000000000000"
+    export DEPLOY_FORCED_TRANSACTION_GATEWAY
     if [[ "$DEPLOY_FORCED_TRANSACTION_GATEWAY" == "true" ]]; then
       export FORCED_TRANSACTION_GATEWAY_L2_CHAIN_ID="$L2_CHAIN_ID"
       export FORCED_TRANSACTION_GATEWAY_L2_BLOCK_BUFFER="2000"
@@ -716,14 +731,14 @@ step1_l1_rollup() {
   ) 2>&1 | tee "$logfile"
 
   # Forward the rollup address into the global env for steps 3 + 4.
-  LINEA_ROLLUP_ADDRESS="$(require_address "$logfile" "LineaRollupV${L1_CONTRACT_VERSION}")"
-  verify_address "$LINEA_ROLLUP_ADDRESS" "$PRECOMPUTED_LINEA_ROLLUP" "LineaRollupV${L1_CONTRACT_VERSION}"
+  LINETH_ROLLUP_ADDRESS="$(extract_required_address "$logfile" "LinethRollupV${L1_CONTRACT_VERSION}")"
+  verify_address "$LINETH_ROLLUP_ADDRESS" "$PRECOMPUTED_LINETH_ROLLUP" "LinethRollupV${L1_CONTRACT_VERSION}"
   FORCED_TX_GW_ADDRESS="$(extract_address "$logfile" "ForcedTransactionGateway")" || FORCED_TX_GW_ADDRESS=""
   if [[ -n "$FORCED_TX_GW_ADDRESS" ]]; then
     log "ForcedTransactionGateway deployed: $FORCED_TX_GW_ADDRESS"
   fi
-  export LINEA_ROLLUP_ADDRESS
-  log "Forwarding LINEA_ROLLUP_ADDRESS=$LINEA_ROLLUP_ADDRESS"
+  export LINETH_ROLLUP_ADDRESS
+  log "Forwarding LINETH_ROLLUP_ADDRESS=$LINETH_ROLLUP_ADDRESS"
 }
 
 # Step 2 — deploy-l2messageservice
@@ -733,7 +748,7 @@ step2_l2_message_service() {
 
   if step_already_done_with_code "$logfile" "L2MessageService" "$L2_RPC_URL" "L2" "$PRECOMPUTED_L2_MS" "L2MessageService"; then
     log "Step 2: $logfile present — skipping deploy"
-    L2_MESSAGE_SERVICE_ADDRESS="$(require_address "$logfile" "L2MessageService")"
+    L2_MESSAGE_SERVICE_ADDRESS="$(extract_required_address "$logfile" "L2MessageService")"
     export L2_MESSAGE_SERVICE_ADDRESS
     log "Forwarding L2_MESSAGE_SERVICE_ADDRESS=$L2_MESSAGE_SERVICE_ADDRESS"
     return 0
@@ -751,7 +766,7 @@ step2_l2_message_service() {
   L2_MESSAGE_SERVICE_RATE_LIMIT_AMOUNT="1000000000000000000000" \
     pnpm -s exec ts-node "$ART_DIR/deployL2MessageServiceV1.ts" 2>&1 | tee "$logfile"
 
-  L2_MESSAGE_SERVICE_ADDRESS="$(require_address "$logfile" "L2MessageService")"
+  L2_MESSAGE_SERVICE_ADDRESS="$(extract_required_address "$logfile" "L2MessageService")"
   verify_address "$L2_MESSAGE_SERVICE_ADDRESS" "$PRECOMPUTED_L2_MS" "L2MessageService"
   export L2_MESSAGE_SERVICE_ADDRESS
   log "Forwarding L2_MESSAGE_SERVICE_ADDRESS=$L2_MESSAGE_SERVICE_ADDRESS"
@@ -764,7 +779,7 @@ step3_token_bridge_l1() {
 
   if step_already_done_with_code "$logfile" "TokenBridge" "$L1_RPC_URL" "L1" "$EXPECTED_L1_TOKEN_BRIDGE" "L1 TokenBridge"; then
     log "Step 3: $logfile present — skipping deploy"
-    L1_TOKEN_BRIDGE_ADDRESS="$(require_address "$logfile" "TokenBridge")"
+    L1_TOKEN_BRIDGE_ADDRESS="$(extract_required_address "$logfile" "TokenBridge")"
     verify_bridge_step_addresses \
       "$logfile" \
       "L1" \
@@ -777,7 +792,7 @@ step3_token_bridge_l1() {
     return 0
   fi
 
-  : "${LINEA_ROLLUP_ADDRESS:?step1 must run first}"
+  : "${LINETH_ROLLUP_ADDRESS:?step1 must run first}"
   : "${L2_MESSAGE_SERVICE_ADDRESS:?step2 must run first}"
 
   guard_redeploy_nonce_window "L1" "$L1_RPC_URL" "$L1_DEPLOYER_ADDRESS" \
@@ -789,6 +804,8 @@ step3_token_bridge_l1() {
   # (scaffold's deployBridgedTokenAndTokenBridgeV1_1.ts, bind-mounted over the
   # upstream path). Replaces the upstream's stale-offset-based remoteSender
   # derivation with the precomputed L2 TokenBridge from account setup.
+  local deploy_status tee_status
+  set +e
   DEPLOYER_PRIVATE_KEY="$L1_DEPLOYER_PRIVATE_KEY" \
   REMOTE_DEPLOYER_ADDRESS="$PRECOMPUTED_L2_DEPLOYER" \
   REMOTE_TOKEN_BRIDGE_ADDRESS="$EXPECTED_L2_TOKEN_BRIDGE" \
@@ -797,10 +814,21 @@ step3_token_bridge_l1() {
   TOKEN_BRIDGE_L1="true" \
   L1_SECURITY_COUNCIL="$L1_DEPLOYER_ADDRESS" \
   L2_MESSAGE_SERVICE_ADDRESS="$L2_MESSAGE_SERVICE_ADDRESS" \
-  LINEA_ROLLUP_ADDRESS="$LINEA_ROLLUP_ADDRESS" \
+  LINETH_ROLLUP_ADDRESS="$LINETH_ROLLUP_ADDRESS" \
     pnpm -s exec ts-node "$ART_DIR/deployBridgedTokenAndTokenBridgeV1_1.ts" 2>&1 | tee "$logfile"
+  local pipeline_status=("${PIPESTATUS[@]}")
+  deploy_status="${pipeline_status[0]}"
+  tee_status="${pipeline_status[1]}"
+  set -e
+  if [ "$deploy_status" -ne 0 ]; then
+    explain_l1_rpc_submission_error "$logfile"
+    return 1
+  fi
+  if [ "$tee_status" -ne 0 ]; then
+    die "Step 3 deploy succeeded, but writing deploy output to $logfile failed (tee exit $tee_status)"
+  fi
 
-  L1_TOKEN_BRIDGE_ADDRESS="$(require_address "$logfile" "TokenBridge")"
+  L1_TOKEN_BRIDGE_ADDRESS="$(extract_required_address "$logfile" "TokenBridge")"
   verify_bridge_step_addresses \
     "$logfile" \
     "L1" \
@@ -820,7 +848,7 @@ step4_token_bridge_l2() {
 
   if step_already_done_with_code "$logfile" "TokenBridge" "$L2_RPC_URL" "L2" "$EXPECTED_L2_TOKEN_BRIDGE" "L2 TokenBridge"; then
     log "Step 4: $logfile present — skipping deploy"
-    L2_TOKEN_BRIDGE_ADDRESS="$(require_address "$logfile" "TokenBridge")"
+    L2_TOKEN_BRIDGE_ADDRESS="$(extract_required_address "$logfile" "TokenBridge")"
     verify_bridge_step_addresses \
       "$logfile" \
       "L2" \
@@ -833,7 +861,7 @@ step4_token_bridge_l2() {
     return 0
   fi
 
-  : "${LINEA_ROLLUP_ADDRESS:?step1 must run first}"
+  : "${LINETH_ROLLUP_ADDRESS:?step1 must run first}"
   : "${L2_MESSAGE_SERVICE_ADDRESS:?step2 must run first}"
 
   : "${L1_TOKEN_BRIDGE_ADDRESS:?step3 must run first}"
@@ -851,10 +879,10 @@ step4_token_bridge_l2() {
   TOKEN_BRIDGE_L1="false" \
   L2_SECURITY_COUNCIL="$PRECOMPUTED_L2_DEPLOYER" \
   L2_MESSAGE_SERVICE_ADDRESS="$L2_MESSAGE_SERVICE_ADDRESS" \
-  LINEA_ROLLUP_ADDRESS="$LINEA_ROLLUP_ADDRESS" \
+  LINETH_ROLLUP_ADDRESS="$LINETH_ROLLUP_ADDRESS" \
     pnpm -s exec ts-node "$ART_DIR/deployBridgedTokenAndTokenBridgeV1_1.ts" 2>&1 | tee "$logfile"
 
-  L2_TOKEN_BRIDGE_ADDRESS="$(require_address "$logfile" "TokenBridge")"
+  L2_TOKEN_BRIDGE_ADDRESS="$(extract_required_address "$logfile" "TokenBridge")"
   verify_bridge_step_addresses \
     "$logfile" \
     "L2" \
@@ -927,7 +955,7 @@ print_useful_links() {
   local host_coordinator="${HOST_PORT_COORDINATOR:-9545}"
   local l1_rollup l1_bridge l2_message_service l2_bridge
 
-  l1_rollup="$(address_from_json l1 LineaRollupV8)"
+  l1_rollup="$(address_from_json l1 LinethRollupV8)"
   l1_bridge="$(address_from_json l1 TokenBridge)"
   l2_message_service="$(address_from_json l2 L2MessageService)"
   l2_bridge="$(address_from_json l2 TokenBridge)"
@@ -938,7 +966,7 @@ print_useful_links() {
   log "  L2 Blockscout API http://localhost:${host_l2_blockscout}"
   log "  Postman API http://localhost:${host_postman}"
   log "  Coordinator observability http://localhost:${host_coordinator}"
-  [[ -n "$l1_rollup" ]] && log "  L1 LineaRollupV8 $(lineth_l1_address_link "$l1_rollup")"
+  [[ -n "$l1_rollup" ]] && log "  L1 LinethRollupV8 $(lineth_l1_address_link "$l1_rollup")"
   [[ -n "$l1_bridge" ]] && log "  L1 TokenBridge $(lineth_l1_address_link "$l1_bridge")"
   [[ -n "$l2_message_service" ]] && log "  L2 MessageService http://localhost:${host_l2_blockscout_frontend}/address/${l2_message_service}"
   [[ -n "$l2_bridge" ]] && log "  L2 TokenBridge http://localhost:${host_l2_blockscout_frontend}/address/${l2_bridge}"
@@ -961,14 +989,14 @@ extract_deploy_block() {
 }
 
 L2_MS_DEPLOY_BLOCK="$(extract_deploy_block "$LOG_DIR/step2-l2-message-service.log" "L2MessageService")"
-LINEA_ROLLUP_L1_DEPLOY_BLOCK="$(extract_deploy_block "$LOG_DIR/step1-linea-rollup.log" "LineaRollupV${L1_CONTRACT_VERSION}")"
+LINETH_ROLLUP_L1_DEPLOY_BLOCK="$(extract_deploy_block "$LOG_DIR/step1-lineth-rollup.log" "LinethRollupV${L1_CONTRACT_VERSION}")"
 
 tmp_runtime_env="${DEPLOY_RUNTIME_ENV}.tmp"
 {
   printf 'GENESIS_STATE_ROOT_HASH=%s\n' "$L2_GENESIS_STATE_ROOT"
   printf 'GENESIS_SHNARF=%s\n' "$L2_GENESIS_SHNARF"
   printf 'L2_MESSAGE_SERVICE_DEPLOY_BLOCK=%s\n' "$L2_MS_DEPLOY_BLOCK"
-  printf 'LINEA_ROLLUP_L1_DEPLOY_BLOCK=%s\n' "$LINEA_ROLLUP_L1_DEPLOY_BLOCK"
+  printf 'LINETH_ROLLUP_L1_DEPLOY_BLOCK=%s\n' "$LINETH_ROLLUP_L1_DEPLOY_BLOCK"
   printf 'DEPLOY_FORCED_TRANSACTION_GATEWAY=%s\n' "$DEPLOY_FORCED_TRANSACTION_GATEWAY"
 } > "$tmp_runtime_env"
 mv "$tmp_runtime_env" "$DEPLOY_RUNTIME_ENV"

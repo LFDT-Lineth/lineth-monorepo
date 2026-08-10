@@ -39,6 +39,9 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
     var imm12:Imm12
     var rs1:Register
     var rd:Register
+    var tmpWord1:Word
+    var tmpWord2:Word
+    var tmpDWord1:DoubleWord
 
     imm12::rs1::funct3::rd = instruction_parameters
 
@@ -46,177 +49,182 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
     // Used as an Address in the LOAD instructions and as a DoubleWord in the OP-IMM and JALR instructions
     var rs1_plus_signext_imm12:u64 = signed_sum_of_double_word(registers[rs1], signext_imm12_64)
 
-    //TODO: this is the default case, we will overwrite it for JALR.
-    // We should handle this differently to avoid a potential second row just to overwrite the value of new_pc?
-    new_pc = (pc + 4) as Address
+    var I_inst:u10 = opcode::funct3
 
-    switch opcode {
+    // for SLLI, SRLI, SRAI
+    var funct6:Funct6
+    var uimm6:UImm6
+    funct6::uimm6 = imm12
+
+    var funct7:Funct7
+    var uimm5:UImm5
+    // for SLLIW, SRLIW, SRAIW
+    funct7::uimm5 = imm12
+
+    switch I_inst {
 
         // ===============================
         // ----- LOAD (opcode LOAD) -----
         // ===============================
 
-        case LOAD: {
-            switch funct3 {
-                case FUNCT3_LB: {
-                    printf "LB "
-                    print_i_memory_operands(rd, rs1, signext_imm12_64)
-                    registers[rd] = sgn_extension_u8_u64(read_8(rs1_plus_signext_imm12))
-                }
-                case FUNCT3_LH: {
-                    printf "LH "
-                    print_i_memory_operands(rd, rs1, signext_imm12_64)
-                    registers[rd] = sgn_extension_u16_u64(read_16(rs1_plus_signext_imm12))
-                }
-                case FUNCT3_LW: {
-                    printf "LW "
-                    print_i_memory_operands(rd, rs1, signext_imm12_64)
-                    registers[rd] = sgn_extension_u32_u64(read_32(rs1_plus_signext_imm12))
-                }
-                case FUNCT3_LBU: {
-                    printf "LBU "
-                    print_i_memory_operands(rd, rs1, signext_imm12_64)
-                    registers[rd] = read_8(rs1_plus_signext_imm12) as DoubleWord
-                }
-                case FUNCT3_LHU: {
-                    printf "LHU "
-                    print_i_memory_operands(rd, rs1, signext_imm12_64)
-                    registers[rd] = read_16(rs1_plus_signext_imm12) as DoubleWord
-                }
-                case FUNCT3_LWU: {
-                    printf "LWU "
-                    print_i_memory_operands(rd, rs1, signext_imm12_64)
-                    registers[rd] = read_32(rs1_plus_signext_imm12) as DoubleWord
-                }
-                case FUNCT3_LD: {
-                    printf "LD "
-                    print_i_memory_operands(rd, rs1, signext_imm12_64)
-                    registers[rd] = read_64(rs1_plus_signext_imm12) as DoubleWord
-                }
-                default: {
-                    printf "[ERROR] Unsupported LOAD instruction of I-Type\n"
-                    printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3
-                    fail
-                }
-            }
+        case I_LB: {
+            printf "LB "
+            print_i_memory_operands(rd, rs1, signext_imm12_64)
+            tmpDWord1 = sgn_extension_u8_u64(read_8(rs1_plus_signext_imm12))
+            new_pc = (pc + 4) as Address
+        }
+        case I_LH: {
+            printf "LH "
+            print_i_memory_operands(rd, rs1, signext_imm12_64)
+            tmpDWord1 = sgn_extension_u16_u64(read_16(rs1_plus_signext_imm12))
+            new_pc = (pc + 4) as Address
+        }
+        case I_LW: {
+            printf "LW "
+            print_i_memory_operands(rd, rs1, signext_imm12_64)
+            tmpWord1 = read_32(rs1_plus_signext_imm12)
+            tmpDWord1 = sgn_extension_u32_u64(tmpWord1)
+            new_pc = (pc + 4) as Address
+        }
+        case I_LBU: {
+            printf "LBU "
+            print_i_memory_operands(rd, rs1, signext_imm12_64)
+            tmpDWord1 = read_8(rs1_plus_signext_imm12) as DoubleWord
+            new_pc = (pc + 4) as Address
+        }
+        case I_LHU: {
+            printf "LHU "
+            print_i_memory_operands(rd, rs1, signext_imm12_64)
+            tmpDWord1 = read_16(rs1_plus_signext_imm12) as DoubleWord
+            new_pc = (pc + 4) as Address
+        }
+        case I_LWU: {
+            printf "LWU "
+            print_i_memory_operands(rd, rs1, signext_imm12_64)
+            tmpDWord1 = read_32(rs1_plus_signext_imm12) as DoubleWord
+            new_pc = (pc + 4) as Address
+        }
+        case I_LD: {
+            printf "LD "
+            print_i_memory_operands(rd, rs1, signext_imm12_64)
+            tmpDWord1 = read_64(rs1_plus_signext_imm12) as DoubleWord
+            new_pc = (pc + 4) as Address
         }
 
         // ===================================
         // ----- OP-IMM (opcode OP_IMM) -----
         // ===================================
 
-        case OP_IMM: {
-
-            // for SLLI, SRLI, SRAI
-            var funct6:Funct6
-            var uimm6:UImm6
-
-            switch funct3 {
-                case FUNCT3_ADDI: {
-                    printf "ADDI "
-                    print_i_operands(rd, rs1, signext_imm12_64)
-                    registers[rd] = rs1_plus_signext_imm12
+        case I_ADDI: {
+            printf "ADDI "
+            print_i_operands(rd, rs1, signext_imm12_64)
+            tmpDWord1 = rs1_plus_signext_imm12
+            new_pc = (pc + 4) as Address
+        }
+        case I_SLLI: {
+            new_pc = (pc + 4) as Address
+            if funct6 == FUNCT6_SLLI {
+                printf "SLLI "
+                print_i_shift6_operands(rd, rs1, uimm6)
+                tmpDWord1 = registers[rs1] << uimm6
+            } else {
+                return
+            }
+        }
+        case I_SLTI: {
+            printf "SLTI "
+            print_i_operands(rd, rs1, signext_imm12_64)
+            tmpDWord1 = signed_LT(registers[rs1], signext_imm12_64) as DoubleWord
+            new_pc = (pc + 4) as Address
+        }
+        case I_SLTIU: {
+            printf "SLTIU "
+            print_i_operands(rd, rs1, signext_imm12_64)
+            // Warn: this is an unsigned comparison (even if imm12 is SGN_EXT)
+            tmpDWord1 = registers[rs1]<signext_imm12_64 ? 1:0
+            new_pc = (pc + 4) as Address
+        }
+        case I_XORI: {
+            printf "XORI "
+            print_i_operands(rd, rs1, signext_imm12_64)
+            tmpDWord1 = registers[rs1] ^ signext_imm12_64
+            new_pc = (pc + 4) as Address
+        }
+        case I_SRLI: {
+            new_pc = (pc + 4) as Address
+            // FUNCT3_SRLI and FUNCT3_SRAI share funct3 = 0b101; disambiguate with funct6.
+            switch funct6 {
+                case FUNCT6_SRLI: {
+                    printf "SRLI "
+                    print_i_shift6_operands(rd, rs1, uimm6)
+                    tmpDWord1 = registers[rs1] >> uimm6
                 }
-                case FUNCT3_SLLI: {
-                    funct6::uimm6 = imm12
-                    if funct6 == FUNCT6_SLLI {
-                        printf "SLLI "
-                        print_i_shift6_operands(rd, rs1, uimm6)
-                        registers[rd] = registers[rs1] << uimm6
-                    }
+                case FUNCT6_SRAI: {
+                    printf "SRAI "
+                    print_i_shift6_operands(rd, rs1, uimm6)
+                    tmpDWord1 = _ashr_u64(registers[rs1], uimm6)
                 }
-                case FUNCT3_SLTI: {
-                    printf "SLTI "
-                    print_i_operands(rd, rs1, signext_imm12_64)
-                    var is_lt:Boolean = signed_LT(registers[rs1], signext_imm12_64)
-                    if is_lt == 1 {
-                        registers[rd] = 1
-                    } else {
-                        registers[rd] = 0
-                    }
-                }
-                case FUNCT3_SLTIU: {
-                    printf "SLTIU "
-                    print_i_operands(rd, rs1, signext_imm12_64)
-                    // Warn: this is an unsigned comparison (even if imm12 is SGN_EXT)
-                    if registers[rs1]<signext_imm12_64 {
-                        registers[rd] = 1
-                    } else {
-                        registers[rd] = 0
-                    }
-                }
-                case FUNCT3_XORI: {
-                    printf "XORI "
-                    print_i_operands(rd, rs1, signext_imm12_64)
-                    registers[rd] = registers[rs1] ^ signext_imm12_64
-                }
-                case FUNCT3_SRLI: {
-                    funct6::uimm6 = imm12
-                    // FUNCT3_SRLI and FUNCT3_SRAI share funct3 = 0b101; disambiguate with funct6.
-                    switch funct6 {
-                        case FUNCT6_SRLI: {
-                            printf "SRLI "
-                            print_i_shift6_operands(rd, rs1, uimm6)
-                            registers[rd] = registers[rs1] >> uimm6
-                        }
-                        case FUNCT6_SRAI: {
-                            printf "SRAI "
-                            print_i_shift6_operands(rd, rs1, uimm6)
-                            registers[rd] = _ashr_u64(registers[rs1], uimm6)
-                        }
-                    }
-                }
-                case FUNCT3_ORI: {
-                    printf "ORI "
-                    print_i_operands(rd, rs1, signext_imm12_64)
-                    registers[rd] = registers[rs1] | signext_imm12_64
-                }
-                case FUNCT3_ANDI: {
-                    printf "ANDI "
-                    print_i_operands(rd, rs1, signext_imm12_64)
-                    registers[rd] = registers[rs1] & signext_imm12_64
+                //
+                default: {
+                    fail
                 }
             }
+        }
+        case I_ORI: {
+            printf "ORI "
+            print_i_operands(rd, rs1, signext_imm12_64)
+            tmpDWord1 = registers[rs1] | signext_imm12_64
+            new_pc = (pc + 4) as Address
+        }
+        case I_ANDI: {
+            printf "ANDI "
+            print_i_operands(rd, rs1, signext_imm12_64)
+            tmpDWord1 = registers[rs1] & signext_imm12_64
+            new_pc = (pc + 4) as Address
         }
 
         // ===================================================
         // ----- OP-IMM-32 (opcode OP_IMM_32) — RV64 *W -----
         // ===================================================
 
-        case OP_IMM_32: {
-
-            var funct7:Funct7
-            var uimm5:UImm5
-            // for SLLIW, SRLIW, SRAIW
-            funct7::uimm5 = imm12
-
-            switch funct3 {
-                case FUNCT3_ADDIW: {
-                    printf "ADDIW "
-                    print_i_operands(rd, rs1, signext_imm12_64)
-                    registers[rd] = sgn_extension_u32_u64((rs1_plus_signext_imm12 & MAX_UINT_32_AS_U64) as Word)
+        case I_ADDIW: {
+            printf "ADDIW "
+            print_i_operands(rd, rs1, signext_imm12_64)
+            tmpWord1 = (rs1_plus_signext_imm12 & MAX_UINT_32_AS_U64) as Word
+            tmpDWord1 = sgn_extension_u32_u64(tmpWord1)
+            new_pc = (pc + 4) as Address
+        }
+        case I_SLLIW: {
+            new_pc = (pc + 4) as Address
+            if funct7 == FUNCT7_SLLIW {
+                printf "SLLIW "
+                print_i_shift5_operands(rd, rs1, uimm5)
+                tmpWord2 = ((registers[rs1] & MAX_UINT_32_AS_U64) as Word)
+                tmpWord1 = tmpWord2 << uimm5
+                tmpDWord1 = sgn_extension_u32_u64(tmpWord1)
+            } else {
+                return
+            }
+        }
+        case I_SRLIW: {
+            new_pc = (pc + 4) as Address
+            // FUNCT3_SRLIW and FUNCT3_SRAIW share funct3 = 0b101; disambiguate with funct7.
+            switch funct7 {
+                case FUNCT7_SRLIW: {
+                    printf "SRLIW "
+                    print_i_shift5_operands(rd, rs1, uimm5)
+                    tmpWord2 = ((registers[rs1] & MAX_UINT_32_AS_U64) as Word)
+                    tmpWord1 = tmpWord2 >> uimm5
+                    tmpDWord1 = sgn_extension_u32_u64(tmpWord1)
                 }
-                case FUNCT3_SLLIW: {
-                    if funct7 == FUNCT7_SLLIW {
-                        printf "SLLIW "
-                        print_i_shift5_operands(rd, rs1, uimm5)
-                        registers[rd] = sgn_extension_u32_u64(((registers[rs1] & MAX_UINT_32_AS_U64) as Word) << uimm5)
-                    }
+                case FUNCT7_SRAIW: {
+                    printf "SRAIW "
+                    print_i_shift5_operands(rd, rs1, uimm5)
+                    tmpWord1 = _ashr_u32(registers[rs1], uimm5)
+                    tmpDWord1 = sgn_extension_u32_u64(tmpWord1)
                 }
-                case FUNCT3_SRLIW: {
-                    // FUNCT3_SRLIW and FUNCT3_SRAIW share funct3 = 0b101; disambiguate with funct7.
-                    switch funct7 {
-                        case FUNCT7_SRLIW: {
-                            printf "SRLIW "
-                            print_i_shift5_operands(rd, rs1, uimm5)
-                            registers[rd] = sgn_extension_u32_u64(((registers[rs1] & MAX_UINT_32_AS_U64) as Word) >> uimm5)
-                        }
-                        case FUNCT7_SRAIW: {
-                            printf "SRAIW "
-                            print_i_shift5_operands(rd, rs1, uimm5)
-                            registers[rd] = sgn_extension_u32_u64(_ashr_u32(registers[rs1], uimm5))
-                        }
-                    }
+                default: {
+                    fail
                 }
             }
         }
@@ -225,39 +233,38 @@ fn process_I_type_instruction<ram, registers>(opcode:Opcode, instruction_paramet
         // ----- JALR -----
         // =================
 
-        case JALR: {
+        case I_JALR: {
             printf "JALR "
             print_i_memory_operands(rd, rs1, signext_imm12_64)
             // only instruction is JALR, no need to switch over funct3
             new_pc = rs1_plus_signext_imm12 & MASK_64_ERASE_LAST_BIT
-            registers[rd] = (pc + 4) as DoubleWord
+            tmpDWord1 = (pc + 4) as DoubleWord
         }
 
         // ===================
         // ----- SYSTEM -----
         // ===================
 
-        case SYSTEM: {
-            // note: same funct3 for ECALL and EBREAK
-            if funct3 == FUNCT3_ECALL {
-                // imm12 is interpreted as funct12 for SYSTEM opcode
-                if imm12 == FUNCT12_ECALL {
-                    printf "ECALL\n"
-                    new_pc = process_syscall(pc)
-                } else if imm12 == FUNCT12_EBREAK {
-                    printf "[ERROR] EBREAK instruction triggered\n"
-                }
+        case I_ECALL: {
+            // imm12 is interpreted as funct12 for SYSTEM opcode
+            if imm12 == FUNCT12_ECALL {
+                printf "ECALL\n"
+                new_pc = process_syscall(pc)
+                return
             } else {
-                printf "[ERROR] SYSTEM instruction with funct3 %b has been triggered, not implemented\n", funct3
+                printf "[ERROR] EBREAK instruction triggered\n"
+                fail
             }
         }
 
         default: {
             printf "[ERROR] Unsupported I-Type instruction with\n"
+            printf "\topcode ≡ %x ≡ %b\n", opcode, opcode
             printf "\tfunct3 ≡ %x ≡ %b\n", funct3, funct3
             fail
         }
     }
+    registers[rd] = tmpDWord1
 }
 
 fn process_syscall<registers, ram>(pc:Address) -> (new_pc:Address) {
@@ -302,3 +309,4 @@ fn process_syscall<registers, ram>(pc:Address) -> (new_pc:Address) {
         }
     }
 }
+

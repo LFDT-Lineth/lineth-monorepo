@@ -8,10 +8,10 @@
  */
 package maru.finalization
 
-import linea.contract.l1.LineaRollupSmartContractClientReadOnly
+import linea.contract.l1.LinethRollupSmartContractClientReadOnly
 import linea.domain.BlockData
 import linea.domain.BlockParameter
-import linea.domain.BlockParameter.Companion.toBlockParameter
+import linea.domain.toBlockParameter
 import linea.ethapi.EthApiClient
 import linea.kotlin.encodeHex
 import linea.timer.PeriodicPollingService
@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration
 
 class LineaFinalizationProvider(
-  private val lineaContract: LineaRollupSmartContractClientReadOnly,
+  private val lineaContract: LinethRollupSmartContractClientReadOnly,
   private val l2EthApi: EthApiClient,
   private val pollingUpdateInterval: Duration,
   private val l1HighestBlock: BlockParameter = BlockParameter.Tag.FINALIZED,

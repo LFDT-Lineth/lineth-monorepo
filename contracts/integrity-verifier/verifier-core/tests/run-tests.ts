@@ -256,7 +256,7 @@ async function testErc7201SlotCalculation(): Promise<void> {
   assert(slot.match(/^0x[0-9a-f]{64}$/) !== null, "Slot is valid 32-byte hex");
   assert(slot.slice(-2) === "00", "Last byte is masked to 0x00");
 
-  const slot1 = calculateErc7201Slot(mockAdapter, "linea.storage.YieldManager");
+  const slot1 = calculateErc7201Slot(mockAdapter, "linea.storage.YieldManagerStorage");
   const slot2 = calculateErc7201Slot(mockAdapter, "linea.storage.LineaRollup");
   assert(slot1 !== slot2, "Different namespaces produce different slots");
 }
@@ -384,7 +384,7 @@ async function testFullStateVerification(): Promise<void> {
   mockAdapter.setStorage("0x0", "0x" + "0".repeat(62) + "06");
 
   // Setup namespace mock
-  const baseSlot = calculateErc7201Slot(mockAdapter, "linea.storage.YieldManager");
+  const baseSlot = calculateErc7201Slot(mockAdapter, "linea.storage.YieldManagerStorage");
   const baseSlotBigInt = BigInt(baseSlot);
   const slot0 = "0x" + baseSlotBigInt.toString(16).padStart(64, "0");
   mockAdapter.setStorage(slot0, "0x000000000000000000000000" + TEST_OWNER.slice(2));
@@ -394,7 +394,7 @@ async function testFullStateVerification(): Promise<void> {
     slots: [{ slot: "0x0", type: "uint8", name: "_initialized", expected: "6" }],
     namespaces: [
       {
-        id: "linea.storage.YieldManager",
+        id: "linea.storage.YieldManagerStorage",
         variables: [{ offset: 0, type: "address", name: "messageService", expected: TEST_OWNER }],
       },
     ],
@@ -676,10 +676,10 @@ async function testErc7201BaseSlotCalculation(): Promise<void> {
 
   const mockAdapter = new MockAdapter();
 
-  // Test with known namespace - LineaRollupYieldExtension
+  // Test with known namespace - LineaRollupYieldExtensionStorage
   // The expected slot can be verified using Solidity:
-  // bytes32 slot = keccak256(abi.encode(uint256(keccak256("linea.storage.LineaRollupYieldExtension")) - 1)) & ~bytes32(uint256(0xff));
-  const namespace = "linea.storage.LineaRollupYieldExtension";
+  // bytes32 slot = keccak256(abi.encode(uint256(keccak256("linea.storage.LineaRollupYieldExtensionStorage")) - 1)) & ~bytes32(uint256(0xff));
+  const namespace = "linea.storage.LineaRollupYieldExtensionStorage";
   const slot = calculateErc7201BaseSlot(mockAdapter, namespace);
 
   // Should be a valid 32-byte hex string

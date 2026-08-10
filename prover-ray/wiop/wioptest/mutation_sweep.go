@@ -55,7 +55,7 @@ func (r MutationReport) Escaped() []Mutator {
 // targets span every committed value (witness, commitments, opening cells, and
 // claimed aggregates), not just the prover's inputs. The returned mutators
 // carry no Tweak; callers set one or rely on the default.
-func TraceTargets(rt wiop.Runtime) []Mutator {
+func TraceTargets(rt *wiop.Runtime) []Mutator {
 	var out []Mutator
 	for _, r := range rt.System.Rounds {
 		for _, c := range r.Columns {
@@ -107,12 +107,12 @@ func TraceTargets(rt wiop.Runtime) []Mutator {
 func SweepMutations(
 	sys *wiop.System,
 	prepare func(*wiop.Runtime),
-	verify func(wiop.Runtime) error,
+	verify func(*wiop.Runtime) error,
 	tweak Tweak,
 	maxAttempts int,
 ) MutationReport {
 	honest := wiop.NewRuntime(sys)
-	prepare(&honest)
+	prepare(honest)
 
 	targets := TraceTargets(honest)
 	if maxAttempts > 0 && maxAttempts < len(targets) {
@@ -136,7 +136,7 @@ func SweepMutations(
 func runOneMutation(
 	sys *wiop.System,
 	prepare func(*wiop.Runtime),
-	verify func(wiop.Runtime) error,
+	verify func(*wiop.Runtime) error,
 	m Mutator,
 ) (err error) {
 	defer func() {
@@ -146,7 +146,7 @@ func runOneMutation(
 	}()
 
 	rt := wiop.NewRuntime(sys)
-	prepare(&rt)
+	prepare(rt)
 	m.Apply(rt)
 	return verify(rt)
 }

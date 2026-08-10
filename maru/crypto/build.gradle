@@ -1,5 +1,5 @@
 plugins {
-  id 'net.consensys.zkevm.kotlin-library-conventions'
+  id 'lineth.kotlin-library-conventions'
   id 'java-test-fixtures'
 }
 
@@ -14,7 +14,4 @@ dependencies {
 
   testFixturesImplementation "io.libp2p:jvm-libp2p:${libs.versions.jvmLibp2p.get()}"
   testFixturesImplementation "tech.pegasys.teku.internal:p2p:${libs.versions.teku.get()}"
-  testFixturesImplementation project(':jvm-libs:generic:extensions:kotlin')
-
-  testImplementation project(':jvm-libs:generic:extensions:kotlin')
 }
