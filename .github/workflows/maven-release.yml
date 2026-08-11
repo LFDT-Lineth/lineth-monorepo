@@ -23,8 +23,14 @@ jobs:
     steps:
       - name: Validate inputs
         env:
+          LIB_TO_RELEASE: ${{ github.event.inputs.libToRelease }}
           INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
+          if ! [[ "$LIB_TO_RELEASE" =~ ^(:[a-z0-9][a-z0-9-]*)+$ ]]; then
+            echo "Error: library must be a Gradle subproject path, got: '$LIB_TO_RELEASE'" >&2
+            exit 1
+          fi
+
           if ! [[ "$INPUT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "Error: version must be a semantic version (MAJOR.MINOR.PATCH, digits only), got: '$INPUT_VERSION'" >&2
             exit 1
