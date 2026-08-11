@@ -20,6 +20,8 @@ import com.github.tomakehurst.wiremock.client.WireMock.verify
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import lineth.config.LineaLivenessServiceConfiguration
+import lineth.sequencer.liveness.Web3SignerDigestSigner.Companion.PUBLIC_KEYS_PATH
+import lineth.sequencer.liveness.Web3SignerDigestSigner.Companion.SIGN_PATH
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
@@ -152,9 +154,4 @@ class Web3SignerDigestSignerTest {
   }
 
   private fun Sign.SignatureData.bytes(): ByteArray = r + s + v
-
-  private companion object {
-    const val SIGN_PATH = "/api/v1/eth1/sign/"
-    const val PUBLIC_KEYS_PATH = "/api/v1/eth1/publicKeys"
-  }
 }

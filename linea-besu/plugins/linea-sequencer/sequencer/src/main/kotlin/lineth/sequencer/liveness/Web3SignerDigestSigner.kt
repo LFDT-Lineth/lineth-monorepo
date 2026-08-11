@@ -35,7 +35,7 @@ class Web3SignerDigestSigner(
 ) : Signer<Secp256k1Signature> {
   private val objectMapper = ObjectMapper()
   private val endpoint =
-    URI.create("${config.signerUrl()}/api/v1/eth1/sign/${config.signerKeyId()}")
+    URI.create("${config.signerUrl()}$SIGN_PATH${config.signerKeyId()}")
   private val httpClient =
     HttpClient.newBuilder()
       .connectTimeout(REQUEST_TIMEOUT)
@@ -100,7 +100,7 @@ class Web3SignerDigestSigner(
       return HexFormat.of().parseHex(keyId)
     }
 
-    val publicKeysEndpoint = URI.create("${config.signerUrl()}/api/v1/eth1/publicKeys")
+    val publicKeysEndpoint = URI.create("${config.signerUrl()}$PUBLIC_KEYS_PATH")
     val request =
       HttpRequest.newBuilder()
         .uri(publicKeysEndpoint)
@@ -133,17 +133,19 @@ class Web3SignerDigestSigner(
     }
   }
 
-  private companion object {
-    const val DIGEST_SIZE = 32
-    const val PUBLIC_KEY_SIZE = 64
-    const val SIGNATURE_SIZE = Secp256k1Signature.SIZE_BYTES + 1
-    val REQUEST_TIMEOUT: Duration = Duration.ofSeconds(30)
-    val PUBLIC_KEY_PATTERN = Regex("[0-9a-fA-F]{128}")
+  companion object {
+    internal const val SIGN_PATH = "/api/v1/eth1/sign/"
+    internal const val PUBLIC_KEYS_PATH = "/api/v1/eth1/publicKeys"
+    private const val DIGEST_SIZE = 32
+    private const val PUBLIC_KEY_SIZE = 64
+    private const val SIGNATURE_SIZE = Secp256k1Signature.SIZE_BYTES + 1
+    private val REQUEST_TIMEOUT: Duration = Duration.ofSeconds(30)
+    private val PUBLIC_KEY_PATTERN = Regex("[0-9a-fA-F]{128}")
 
-    fun addressOf(publicKey: ByteArray): String =
+    private fun addressOf(publicKey: ByteArray): String =
       Numeric.prependHexPrefix(Keys.getAddress(BigInteger(1, publicKey)))
 
-    fun buildSslContext(config: LineaLivenessServiceConfiguration): SSLContext {
+    private fun buildSslContext(config: LineaLivenessServiceConfiguration): SSLContext {
       try {
         FileInputStream(config.tlsKeyStorePath().toFile()).use { keyStoreInput ->
           FileInputStream(config.tlsTrustStorePath().toFile()).use { trustStoreInput ->

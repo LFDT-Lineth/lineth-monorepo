@@ -10,16 +10,8 @@ on:
     inputs:
       libToRelease:
         required: true
-        type: choice
-        description: 'Library to release'
-        options:
-          - ':jvm-libs:linea:blob-compressor'
-          - ':jvm-libs:linea:blob-decompressor'
-          - ':jvm-libs:linea:blob-shnarf-calculator'
-          - ':jvm-libs:linea:linea-contracts:l1-rollup'
-          - ':jvm-libs:linea:linea-contracts:l2-message-service'
-          - ':jvm-libs:linea:core:signer-interfaces'
-          - ':linea-besu:plugins:sequencer-interfaces'
+        type: string
+        description: 'Library to release, e.g :jvm-libs:linea:blob-compressor'
       version:
         required: true
         type: string
