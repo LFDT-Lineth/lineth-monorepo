@@ -1,3 +1,8 @@
+## [unreleased]
+
+### 🚀 Features
+
+- *(linea-besu)* Support custom liveness signers (#3666)
 ## [2.1.1] - 2026-08-11
 
 ### ⚙️ Miscellaneous Tasks
