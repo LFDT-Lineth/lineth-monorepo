@@ -199,18 +199,18 @@ func registerRowLimitChecks(groups []*lookupGroup) {
 
 		// Runtime check on the subgroup aggregate. One instance serves both
 		// roles: it panics as a prover action and returns an error as a verifier
-		// action. AModules/BModules mirror g.included/g.includings one-to-one
-		// (see the type doc) so out-of-package consumers can read the exact
-		// per-side module partitioning without reaching into lookupGroup.
-		aModules := make([]*wiop.Module, len(g.included))
+		// action. IncludedModules/IncludingsModules mirror g.included/g.includings
+		// one-to-one (see the type doc) so out-of-package consumers can read the
+		// exact per-side module partitioning without reaching into lookupGroup.
+		includedModules := make([]*wiop.Module, len(g.included))
 		for i, inc := range g.included {
-			aModules[i] = inc.cols[0].Module()
+			includedModules[i] = inc.cols[0].Module()
 		}
-		bModules := make([]*wiop.Module, len(g.includings))
+		includingsModules := make([]*wiop.Module, len(g.includings))
 		for i, it := range g.includings {
-			bModules[i] = it.module
+			includingsModules[i] = it.module
 		}
-		rowLimit := &RowLimitVerifierAction{group: g, AModules: aModules, BModules: bModules}
+		rowLimit := &RowLimitVerifierAction{group: g, IncludedModules: includedModules, IncludingsModules: includingsModules}
 		g.witnessRound.RegisterAction(rowLimit)
 		g.witnessRound.RegisterVerifierAction(rowLimit)
 	}
@@ -519,7 +519,7 @@ func compileGroup(
 // double-counts two fragments that live on the same module, because each
 // fragment contributes its own pass over that module's rows to the argument.
 //
-// AModules and BModules are exported (mirroring the pattern used by
+// IncludedModules and IncludingsModules are exported (mirroring the pattern used by
 // [ResultIsZeroVerifierAction]) so out-of-package consumers can read the exact
 // per-side module partitioning this check enforces. They list one module per
 // fragment in [lookupGroup.included] / [lookupGroup.includings] respectively,
@@ -528,8 +528,8 @@ func compileGroup(
 type RowLimitVerifierAction struct {
 	group *lookupGroup
 
-	AModules []*wiop.Module
-	BModules []*wiop.Module
+	IncludedModules   []*wiop.Module
+	IncludingsModules []*wiop.Module
 }
 
 // Run implements [wiop.ProverAction]: it panics on an over-limit subgroup.
@@ -551,7 +551,7 @@ func (a *RowLimitVerifierAction) Check(rt *wiop.Runtime) error {
 // the whole subgroup's union of A fragments against the shared B side.
 func (a *RowLimitVerifierAction) validate(rt *wiop.Runtime) error {
 	var aRows uint64
-	for _, m := range a.AModules {
+	for _, m := range a.IncludedModules {
 		aRows += uint64(m.RuntimeSize(rt))
 	}
 	if aRows >= wiop.MaxLookupRows {
@@ -559,7 +559,7 @@ func (a *RowLimitVerifierAction) validate(rt *wiop.Runtime) error {
 	}
 
 	var bRows uint64
-	for _, m := range a.BModules {
+	for _, m := range a.IncludingsModules {
 		bRows += uint64(m.RuntimeSize(rt))
 	}
 	if bRows >= wiop.MaxLookupRows {

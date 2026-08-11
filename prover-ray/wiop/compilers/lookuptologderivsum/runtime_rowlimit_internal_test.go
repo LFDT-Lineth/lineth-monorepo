@@ -33,18 +33,19 @@ func buildRuntimeLimitGroup(t *testing.T, aSize, bSize int) (*lookupGroup, *wiop
 }
 
 // rowLimitActionFor builds the RowLimitVerifierAction for g the same way
-// registerRowLimitChecks does, so tests exercise the exported AModules/BModules
-// path rather than a stale group-only construction.
+// registerRowLimitChecks does, so tests exercise the exported
+// IncludedModules/IncludingsModules path rather than a stale group-only
+// construction.
 func rowLimitActionFor(g *lookupGroup) *RowLimitVerifierAction {
-	aModules := make([]*wiop.Module, len(g.included))
+	includedModules := make([]*wiop.Module, len(g.included))
 	for i, inc := range g.included {
-		aModules[i] = inc.cols[0].Module()
+		includedModules[i] = inc.cols[0].Module()
 	}
-	bModules := make([]*wiop.Module, len(g.includings))
+	includingsModules := make([]*wiop.Module, len(g.includings))
 	for i, it := range g.includings {
-		bModules[i] = it.module
+		includingsModules[i] = it.module
 	}
-	return &RowLimitVerifierAction{group: g, AModules: aModules, BModules: bModules}
+	return &RowLimitVerifierAction{group: g, IncludedModules: includedModules, IncludingsModules: includingsModules}
 }
 
 // TestRowLimitVerifierAction_RuntimeRejectsOverLimitASide checks that the runtime
