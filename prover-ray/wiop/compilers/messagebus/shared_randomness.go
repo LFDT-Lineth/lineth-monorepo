@@ -17,35 +17,36 @@ const (
 	SharedRandomnessSeedContributionPI wiop.PublicInputTag = "SharedRandomnessSeedContribution"
 )
 
-// RegisterSharedRandomness declares γ as a public input and wires it into the
-// message-bus coin round.
+// registerSharedRandomness declares γ and this shard's contribution to it as
+// public inputs and wires γ into coinRound. It is the implementation of
+// [CompileOptions.SharedRandomness] and is called by [Compile] once coinRound is
+// fixed; it is deliberately not exported, because a caller invoking it around
+// [Compile] rather than through it could attach the hook to a round that does not
+// end up carrying α and β.
 //
-// It declares [NumSharedRandomness] cells on round 0, registers each under
-// [SharedRandomnessSeedPI] with its limb index as numeric suffix, and registers a
-// [wiop.Round.RegisterPreSamplingHook] on the message-bus coin round that
-// replaces the Fiat-Shamir state with γ just before α and β are drawn. Because
+// γ gets [NumSharedRandomness] cells on round 0, each registered under
+// [SharedRandomnessSeedPI] with its limb index as numeric suffix, plus a
+// [wiop.Round.RegisterPreSamplingHook] on coinRound that replaces the
+// Fiat-Shamir state with γ just before α and β are drawn. Because
 // [wiop.Runtime.AdvanceRound] fires pre-sampling hooks on the prover and the
 // verifier alike, both sides derive the same challenges with no extra verifier
-// action.
+// action. Round 0 is where γ has to live: it is assigned there — by the prover
+// through [AssignSharedRandomnessSeed], by the verifier from the public-input
+// vector — before the runtime ever advances into coinRound and the hook reads it.
 //
-// The cells live on round 0 so that they are assigned — by the prover through
-// [AssignSharedRandomnessSeed], by the verifier from the public-input vector —
-// before the runtime ever advances into the coin round and the hook reads them.
+// The contribution gets [NumSharedRandomnessContribution] cells on coinRound,
+// under [SharedRandomnessSeedContributionPI], written by
+// [SharedRandomnessContributionAssigner] and checked by
+// [SharedRandomnessContributionChecker].
 //
-// Ordering: call it after every [wiop.MessageBus] entry has been declared and
-// before [Compile]. See [ensureCoinRound] for why the window matters.
-//
-// Panics if sys declares no message-bus entry on a round-bearing column, since
-// the coin round would then be round 0 itself and the hook would run before γ
-// could be assigned.
-func RegisterSharedRandomness(sys *wiop.System) {
-	coinRound := ensureCoinRound(sys)
+// Panics if coinRound is round 0, since there is then no earlier round to carry
+// γ. That happens when no message-bus entry references a round-bearing column.
+func registerSharedRandomness(sys *wiop.System, coinRound *wiop.Round) {
 	if coinRound.ID == 0 {
 		panic(
-			"wiop/compilers/messagebus: RegisterSharedRandomness: the message-bus coin round is round 0, " +
+			"wiop/compilers/messagebus: the message-bus coin round is round 0, " +
 				"so there is no earlier round to carry γ. This means no message-bus " +
-				"entry references a round-bearing column — declare the bus entries " +
-				"before calling RegisterSharedRandomness.",
+				"entry references a round-bearing column.",
 		)
 	}
 
@@ -57,8 +58,12 @@ func RegisterSharedRandomness(sys *wiop.System) {
 		sys.RegisterPublicInputs(SharedRandomnessSeedPI, cell, i)
 	}
 
+	// The contribution cells sit on coinRound rather than beside γ: their value is
+	// a function of the commitments of every round before coinRound, which do not
+	// exist until the runtime has advanced past those rounds. On round 0 they would
+	// be demanded by AdvanceRound long before anything could compute them.
 	for i := range NumSharedRandomnessContribution {
-		cell := seedRound.NewCell(ctx.Childf("contribution-%d", i), false)
+		cell := coinRound.NewCell(ctx.Childf("contribution-%d", i), false)
 		sys.RegisterPublicInputs(SharedRandomnessSeedContributionPI, cell, i)
 	}
 
@@ -77,20 +82,37 @@ func GetSharedRandomnessSeed(rt *wiop.Runtime) field.Octuplet {
 			panic(fmt.Sprintf("wiop/compilers/messagebus: GetSharedRandomnessSeed: missing gamma-%d", i))
 		}
 		// This calls panics if the cell is not a base-field element. But if it
-		// was correctly registered by [RegisterSharedRandomness], it must be.
+		// was correctly registered by [registerSharedRandomness], it must be.
 		gamma[i] = rt.GetCellValue(c).AsBase()
 	}
 	return gamma
 }
 
+// HasSharedRandomness reports whether sys was compiled with
+// [CompileOptions.SharedRandomness] and therefore carries a γ to assign.
+//
+// An assignment path that does not itself choose the compiler options — the zkc
+// driver, say, which is handed a system somebody else compiled — uses this to
+// decide whether [AssignSharedRandomnessSeed] applies. Skipping the assignment
+// when this is false is safe rather than silently degrading: with the option off
+// there is no γ cell, and no hook reading one, so the shard derives α and β from
+// its own transcript as an unsharded protocol should.
+func HasSharedRandomness(sys *wiop.System) bool {
+	_, pos := sys.LookupPublicInputByTag(SharedRandomnessSeedPI, 0)
+	return pos >= 0
+}
+
 // AssignSharedRandomnessSeed writes γ into the public-input cells declared by
-// [RegisterSharedRandomness]. The orchestrator computes γ during the preflight
-// phase — outside any proof, from every shard's data — and hands the same value
-// to each shard; feeding two shards different values silently desynchronizes
-// their α and β and breaks the cross-shard permutation.
+// [CompileOptions.SharedRandomness]. The orchestrator computes γ during the
+// preflight phase — outside any proof, from every shard's data — and hands the
+// same value to each shard; feeding two shards different values silently
+// desynchronizes their α and β and breaks the cross-shard permutation.
 //
 // It must be called while the runtime is on round 0, which is where the cells
 // live ([wiop.Runtime.AssignCell] rejects a cell from any other round).
+//
+// Panics if sys was compiled without the option, since there is then no cell to
+// write to; [HasSharedRandomness] answers that question in advance.
 func AssignSharedRandomnessSeed(rt *wiop.Runtime, gamma field.Octuplet) {
 	for i := range NumSharedRandomness {
 		cell, pos := rt.System.LookupPublicInputByTag(SharedRandomnessSeedPI, i)
@@ -124,11 +146,14 @@ type SharedRandomnessContributionAssigner struct{}
 // [SharedRandomnessContributionAssigner].
 type SharedRandomnessContributionChecker struct{}
 
-// Run implements [wiop.ProverAction] on behalf of [SharedRandomnessContributionAssigner].
-func (_ *SharedRandomnessContributionAssigner) Run(rt *wiop.Runtime) {
-	round := rt.CurrentRound()
+// sharedRandomnessContribution hashes every commitment preceding the round the
+// caller is running on into a multiset hash. The prover action and its verifier
+// analog both go through here, so neither can drift from the other's preimage:
+// [wiop.Runtime.CurrentRound] is the round the running action was registered on
+// on both sides.
+func sharedRandomnessContribution(rt *wiop.Runtime) multisethashing.MSetHash {
 	hasher := poseidon2.NewMDHasher()
-	for i := range round.ID {
+	for i := range rt.CurrentRound().ID {
 		if !rt.System.Rounds[i].HasCommitment {
 			logrus.Warnf(
 				"No commitment found for round: %v. Did you use a message bus? "+
@@ -140,60 +165,39 @@ func (_ *SharedRandomnessContributionAssigner) Run(rt *wiop.Runtime) {
 		hasher.WriteElements(com[:]...)
 	}
 
-	digest := hasher.SumDigest()
-	digestMSet := multisethashing.Hash(digest)
+	return multisethashing.Hash(hasher.SumDigest())
+}
 
-	for i := range digestMSet {
+// contributionCell returns the public-input cell carrying limb i of the shared
+// randomness contribution. A missing or extension-field cell means the wizard is
+// ill-defined rather than the proof invalid, which is why both are panics.
+func contributionCell(sys *wiop.System, i int) *wiop.Cell {
+	cell, pos := sys.LookupPublicInputByTag(SharedRandomnessSeedContributionPI, i)
+	if pos < 0 {
+		panic(fmt.Sprintf("wiop/compilers/messagebus: missing contribution-%d", i))
+	}
+	if cell.IsExtension() {
+		panic(fmt.Sprintf("wiop/compilers/messagebus: contribution-%d must not be an extension-field value", i))
+	}
+	return cell
+}
 
-		cell, pos := rt.System.LookupPublicInputByTag(SharedRandomnessSeedPI, i)
-		if pos < 0 {
-			panic(fmt.Sprintf("wiop/compilers/messagebus: SharedRandomnessContributionProverAction: missing contribution-%d", i))
-		}
-		if cell.IsExtension() {
-			panic("the shared randomness cell should not be an extension-field value")
-		}
-		rt.AssignCell(cell, field.ElemFromBase(digestMSet[i]))
+// Run implements [wiop.ProverAction] on behalf of [SharedRandomnessContributionAssigner].
+func (*SharedRandomnessContributionAssigner) Run(rt *wiop.Runtime) {
+	contribution := sharedRandomnessContribution(rt)
+	for i := range contribution {
+		rt.AssignCell(contributionCell(rt.System, i), field.ElemFromBase(contribution[i]))
 	}
 }
 
 // Check implements the [VerifierAction] interface for
 // [SharedRandomnessContributionChecker].
-func (_ *SharedRandomnessContributionChecker) Check(rt *wiop.Runtime) error {
-
-	round := rt.CurrentRound()
-	hasher := poseidon2.NewMDHasher()
-	for i := range round.ID {
-		if !rt.System.Rounds[i].HasCommitment {
-			logrus.Warnf(
-				"No commitment found for round: %v. Did you use a message bus? "+
-					"And did you reduce the current system using a PCS?", i)
-			continue
-		}
-
-		com := rt.Commitments[i]
-		hasher.WriteElements(com[:]...)
-	}
-
-	digest := hasher.SumDigest()
-	digestMSet := multisethashing.Hash(digest)
-
-	for i := range digestMSet {
-
-		cell, pos := rt.System.LookupPublicInputByTag(SharedRandomnessSeedPI, i)
-		if pos < 0 {
-			// If this fails, this indicates the wizard is ill-defined, not the
-			// proof. That's why it is a panic.
-			panic(fmt.Sprintf("wiop/compilers/messagebus: SharedRandomnessContributionProverAction: missing contribution-%d", i))
-		}
-
-		if cell.IsExtension() {
-			// If this fails, this indicates the wizard is ill-defined, not the
-			// proof. That's why it is a panic.
-			panic("the shared randomness cell should not be an extension-field value")
-		}
-
-		if digestMSet[i] != rt.GetCellValue(cell).AsBase() {
-			return fmt.Errorf("wiop/compilers/messagebus: SharedRandomnessContributionChecker: mismatch in contribution-%d", i)
+func (*SharedRandomnessContributionChecker) Check(rt *wiop.Runtime) error {
+	contribution := sharedRandomnessContribution(rt)
+	for i := range contribution {
+		if contribution[i] != rt.GetCellValue(contributionCell(rt.System, i)).AsBase() {
+			return fmt.Errorf(
+				"wiop/compilers/messagebus: SharedRandomnessContributionChecker: mismatch in contribution-%d", i)
 		}
 	}
 

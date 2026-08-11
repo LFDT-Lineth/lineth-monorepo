@@ -83,13 +83,7 @@ func buildShard(
 
 	s := &shard{sys: sys, col: col, local: local, vals: vals, localV: localV, withSeed: withSeed}
 
-	// γ must be registered after the bus entries (so the coin round is known)
-	// and before Compile (so Compile reuses the hooked round for α and β).
-	if withSeed {
-		messagebus.RegisterSharedRandomness(sys)
-	}
-
-	messagebus.Compile(sys)
+	messagebus.Compile(sys, messagebus.CompileOptions{SharedRandomness: withSeed})
 	grandproduct.Compile(sys)
 
 	return s
@@ -159,8 +153,7 @@ func TestSharedRandomness_CoinsLandAfterTheLastBusRound(t *testing.T) {
 		sys.Context.Childf("entry"), "shard", "handle", wiop.NewTable(busCol.View()))
 	mb.SkipInShardCheck = true
 
-	messagebus.RegisterSharedRandomness(sys)
-	messagebus.Compile(sys)
+	messagebus.Compile(sys, messagebus.CompileOptions{SharedRandomness: true})
 	grandproduct.Compile(sys)
 
 	require.Len(t, sys.Rounds[2].Coins, 2,
@@ -173,6 +166,13 @@ func TestSharedRandomness_CoinsLandAfterTheLastBusRound(t *testing.T) {
 	cell, pos := sys.LookupPublicInputByTag(messagebus.SharedRandomnessSeedPI, 0)
 	require.GreaterOrEqual(t, pos, 0, "γ must be registered as a public input")
 	require.Equal(t, 0, cell.Round().ID, "γ cells must live on round 0")
+
+	// The contribution cells go the other way: they cannot precede the
+	// commitments they hash, so they belong on the coin round, where the prover
+	// action that computes them runs.
+	contrib, pos := sys.LookupPublicInputByTag(messagebus.SharedRandomnessSeedContributionPI, 0)
+	require.GreaterOrEqual(t, pos, 0, "the contribution must be registered as a public input")
+	require.Equal(t, 2, contrib.Round().ID, "contribution cells must live on the coin round")
 
 	// Drive the prover to confirm the hook fires on the round that carries the
 	// coins rather than panicking or seeding an empty round.
