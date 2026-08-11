@@ -202,44 +202,12 @@ fn buildRoundCells(allocator: std.mem.Allocator, proof: fixtures.VanishingProofV
 fn buildRounds(allocator: std.mem.Allocator, proof: fixtures.VanishingProofView, round_cells: []const []const protocol.Scalar) ![]const protocol.RoundMessage {
     const rounds = try allocator.alloc(protocol.RoundMessage, proof.rounds.len);
     for (proof.rounds, 0..) |round, i| {
-        rounds[i] = try buildRoundMessage(allocator, round, round_cells[i]);
+        rounds[i] = buildRoundMessage(round, round_cells[i]);
     }
     return rounds;
 }
 
-fn buildRoundMessage(allocator: std.mem.Allocator, round: fixtures.RuntimeTraceRound, cells: []const protocol.Scalar) !protocol.RoundMessage {
-    var column_count: usize = 0;
-    for (round.columns) |column| {
-        column_count += switch (column) {
-            .oracle => |commitments| commitments.len,
-            .public_base, .public_ext => 1,
-        };
-    }
-
-    const columns = try allocator.alloc(protocol.ColumnMessage, column_count);
-    var next_column: usize = 0;
-    for (round.columns) |column| {
-        switch (column) {
-            .oracle => |commitments| {
-                for (commitments) |commitment| {
-                    columns[next_column] = .{ .oracle_commitment = commitment_mod.fromUints(commitment) };
-                    next_column += 1;
-                }
-            },
-            .public_base => |values| {
-                const converted = try allocator.alloc(field.Element, values.len);
-                for (values, 0..) |value, i| converted[i] = field.Element.init(value);
-                columns[next_column] = .{ .public_column = .{ .base = converted } };
-                next_column += 1;
-            },
-            .public_ext => |values| {
-                const converted = try allocator.alloc(ext.Ext, values.len);
-                for (values, 0..) |value, i| converted[i] = ext.Ext.fromUints(value);
-                columns[next_column] = .{ .public_column = .{ .ext = converted } };
-                next_column += 1;
-            },
-        }
-    }
-
-    return .{ .columns = columns, .cells = cells };
+fn buildRoundMessage(round: fixtures.RuntimeTraceRound, cells: []const protocol.Scalar) protocol.RoundMessage {
+    const commitment = if (round.commitment) |c| commitment_mod.fromUints(c) else null;
+    return .{ .commitment = commitment, .cells = cells };
 }
