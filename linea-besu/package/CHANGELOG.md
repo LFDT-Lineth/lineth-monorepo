@@ -5,11 +5,6 @@
 - *(linea-besu)* Package renaming to lineth.* (#3750)
 ## [2.1.0] - 2026-08-07
 
-### ⚙️ Miscellaneous Tasks
-
-- *(linea-besu)* Package renaming to lineth.* (#3750)
-## [2.1.0] - 2026-08-07
-
 ### 🚀 Features
 
 - *(linea-besu)* Update to v26.7.0 (#3623)
