@@ -16,15 +16,15 @@ import (
 // (see pcsEntryOrder), so the result lines up entry-for-entry with the
 // verifier's `entry_claims`.
 //
-// pcs must be the PcsSystem BuildPcsSystem extracted from this same sys. rt
+// pcs must be the PcsSystem BuildPcsSystem extracted from rt's own sys (rt
 // supplies both the claimed values and, for dynamic modules, this proof's
-// actual runtime size.
-func ExtractPcsOpening(sys *wiop.System, pcs PcsSystem, rt *wiop.Runtime) ([][]field.Ext, error) {
-	colDeclByID := pcsColumnDeclIndex(sys)
-	if len(colDeclByID) != len(pcs.Columns) {
-		return nil, fmt.Errorf("codegen: ExtractPcsOpening: sys has %d committed columns, pcs has %d; built from a different sys?",
-			len(colDeclByID), len(pcs.Columns))
+// actual runtime size).
+func ExtractPcsOpening(pcs PcsSystem, rt *wiop.Runtime) ([][]field.Ext, error) {
+	sys := rt.System
+	if pcs.SourceName != sys.Context.Path() {
+		return nil, fmt.Errorf("codegen: ExtractPcsOpening: pcs was built from %q, but rt proves %q", pcs.SourceName, sys.Context.Path())
 	}
+	colDeclByID := pcsColumnDeclIndex(sys)
 
 	moduleSizes := DynamicModuleSizes(sys, rt)
 
@@ -44,10 +44,10 @@ func ExtractPcsOpening(sys *wiop.System, pcs PcsSystem, rt *wiop.Runtime) ([][]f
 				c, col.DynamicIndex, len(moduleSizes))
 		}
 		size := moduleSizes[col.DynamicIndex]
-		sizeLog2 := bits.Len(uint(size)) - 1
-		if size <= 0 || 1<<sizeLog2 != size {
+		if size <= 0 || size&(size-1) != 0 {
 			return nil, fmt.Errorf("codegen: ExtractPcsOpening: dynamic column %d proved at non-power-of-two size %d", c, size)
 		}
+		sizeLog2 := bits.Len(uint(size)) - 1
 		if sizeLog2 > pcs.MaxSizeLog2 {
 			return nil, fmt.Errorf("codegen: ExtractPcsOpening: dynamic column %d proved at size 2^%d, above the verifier envelope's max 2^%d",
 				c, sizeLog2, pcs.MaxSizeLog2)

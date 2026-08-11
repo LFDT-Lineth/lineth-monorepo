@@ -3,6 +3,8 @@ package codegen
 import (
 	"fmt"
 	"io"
+
+	"github.com/LFDT-Lineth/lineth-monorepo/prover-ray/wiop"
 )
 
 // CompiledSystem bundles all sub-verifier metadata derived from a single
@@ -17,6 +19,32 @@ type CompiledSystem struct {
 	// path (every protocol commits columns); nil only for callers that emit the
 	// vanishing/logderiv systems standalone.
 	Pcs *PcsSystem
+}
+
+// BuildCompiledSystem builds every sub-verifier system a compiled protocol
+// needs — coin routing, vanishing, log-derivative, and PCS — from sys alone.
+// PCS is mandatory in the full verifier.verify path, so this errors if sys has
+// no committed batches; callers that legitimately emit the vanishing/logderiv
+// systems standalone should call the individual Build*System functions
+// instead.
+func BuildCompiledSystem(sys *wiop.System) (CompiledSystem, error) {
+	routing, err := BuildCoinRouting(sys)
+	if err != nil {
+		return CompiledSystem{}, fmt.Errorf("codegen: BuildCompiledSystem: %w", err)
+	}
+	vanishing, err := BuildVanishingSystem(sys, routing)
+	if err != nil {
+		return CompiledSystem{}, fmt.Errorf("codegen: BuildCompiledSystem: %w", err)
+	}
+	logDeriv, err := BuildLogDerivSystem(sys)
+	if err != nil {
+		return CompiledSystem{}, fmt.Errorf("codegen: BuildCompiledSystem: %w", err)
+	}
+	pcs, err := BuildPcsSystem(sys, routing)
+	if err != nil {
+		return CompiledSystem{}, fmt.Errorf("codegen: BuildCompiledSystem: %w", err)
+	}
+	return CompiledSystem{Routing: routing, Vanishing: vanishing, LogDeriv: logDeriv, Pcs: &pcs}, nil
 }
 
 // CompiledSystemZigOptions configures WriteCompiledSystemZig.
