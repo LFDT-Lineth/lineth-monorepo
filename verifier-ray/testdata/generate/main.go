@@ -621,6 +621,10 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		if err != nil {
 			return fmt.Errorf("build logderiv system %s/%s: %w", source, name, err)
 		}
+		rowLimit, err := codegen.BuildRowLimitSystem(sys)
+		if err != nil {
+			return fmt.Errorf("build rowlimit system %s/%s: %w", source, name, err)
+		}
 		honestProof := extractVanishingProofView(sys, honestRt)
 
 		tc := fixtureCase{name: name, honest: honestProof}
@@ -651,7 +655,7 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		pcsSys := &honestPcs
 
 		cases = append(cases, tc)
-		systems = append(systems, codegen.CompiledSystem{Routing: routing, Vanishing: vanishingSystem, LogDeriv: logDeriv, Pcs: pcsSys})
+		systems = append(systems, codegen.CompiledSystem{Routing: routing, Vanishing: vanishingSystem, LogDeriv: logDeriv, RowLimit: rowLimit, Pcs: pcsSys})
 		return nil
 	}
 
@@ -673,6 +677,10 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		logDeriv, err := codegen.BuildLogDerivSystem(sys)
 		if err != nil {
 			return fmt.Errorf("build logderiv system %s/%s: %w", source, name, err)
+		}
+		rowLimit, err := codegen.BuildRowLimitSystem(sys)
+		if err != nil {
+			return fmt.Errorf("build rowlimit system %s/%s: %w", source, name, err)
 		}
 
 		honestRt := runProver(sys, honest)
@@ -706,7 +714,7 @@ func buildCompiledFixtureCases() ([]fixtureCase, []codegen.CompiledSystem, error
 		tc.altOpen = *altRt.PCSOpeningProof
 
 		cases = append(cases, tc)
-		systems = append(systems, codegen.CompiledSystem{Routing: routing, Vanishing: vanishingSystem, LogDeriv: logDeriv, Pcs: &honestPcs})
+		systems = append(systems, codegen.CompiledSystem{Routing: routing, Vanishing: vanishingSystem, LogDeriv: logDeriv, RowLimit: rowLimit, Pcs: &honestPcs})
 		return nil
 	}
 
@@ -1079,6 +1087,7 @@ func writeCompiledFixtures(cases []fixtureCase, systems []codegen.CompiledSystem
 		FieldImport:     "verifier_ray.field.koalabear",
 		VanishingImport: "verifier_ray.query.vanishing",
 		LogDerivImport:  "verifier_ray.query.logderivativesum",
+		RowLimitImport:  "verifier_ray.query.rowlimit",
 	}
 	for i := range cases {
 		if err := codegen.WriteCompiledSystemZig(&out, i, systems[i], opts); err != nil {
@@ -1104,6 +1113,7 @@ func writeCompiledHeader(out *bytes.Buffer) {
 	fmt.Fprintln(out, "const protocol = verifier_ray.protocol;")
 	fmt.Fprintln(out, "const vanishing = verifier_ray.query.vanishing;")
 	fmt.Fprintln(out, "const logderivativesum = verifier_ray.query.logderivativesum;")
+	fmt.Fprintln(out, "const rowlimit = verifier_ray.query.rowlimit;")
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "pub const RuntimeTraceColumn = union(enum) { oracle: []const [8]u32, public_base: []const u32, public_ext: []const [6]u32 };")
 	fmt.Fprintln(out, "pub const RuntimeTraceCell = union(enum) { base: u32, ext: [6]u32 };")
@@ -1213,6 +1223,7 @@ func writeVerifyFixtures(allCases []fixtureCase, allSystems []codegen.CompiledSy
 		FieldImport:     "field",
 		VanishingImport: "vanishing",
 		LogDerivImport:  "logderivativesum",
+		RowLimitImport:  "rowlimit",
 	}
 
 	for i := range cases {
@@ -1245,6 +1256,7 @@ func writeVerifyHeader(out *bytes.Buffer, count int) {
 	fmt.Fprintln(out, "const merkle = verifier_ray.crypto.merkle;")
 	fmt.Fprintln(out, "const vanishing = verifier_ray.query.vanishing;")
 	fmt.Fprintln(out, "const logderivativesum = verifier_ray.query.logderivativesum;")
+	fmt.Fprintln(out, "const rowlimit = verifier_ray.query.rowlimit;")
 	fmt.Fprintln(out, "const pcs = verifier_ray.query.pcs;")
 	fmt.Fprintln(out, "const fri = verifier_ray.query.fri;")
 	fmt.Fprintln(out, "const verifier = verifier_ray.verifier;")
@@ -1287,8 +1299,8 @@ func writeVerifyCase(out *bytes.Buffer, idx int, tc fixtureCase) {
 	}
 	fmt.Fprintf(
 		out,
-		"const verify_case_%d_systems = verifier.Systems{ .vanishing = system_%d, .logderivativesum = system_%d_logderiv, .pcs = %s };\n",
-		idx, idx, idx, pcsName,
+		"const verify_case_%d_systems = verifier.Systems{ .vanishing = system_%d, .logderivativesum = system_%d_logderiv, .rowlimit = system_%d_rowlimit, .pcs = %s };\n",
+		idx, idx, idx, idx, pcsName,
 	)
 	fmt.Fprintln(out)
 }

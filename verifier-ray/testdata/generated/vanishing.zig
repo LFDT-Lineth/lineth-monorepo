@@ -5,6 +5,7 @@ const field = verifier_ray.field.koalabear;
 const protocol = verifier_ray.protocol;
 const vanishing = verifier_ray.query.vanishing;
 const logderivativesum = verifier_ray.query.logderivativesum;
+const rowlimit = verifier_ray.query.rowlimit;
 
 pub const RuntimeTraceColumn = union(enum) { oracle: []const [8]u32, public_base: []const u32, public_ext: []const [6]u32 };
 pub const RuntimeTraceCell = union(enum) { base: u32, ext: [6]u32 };
@@ -56,6 +57,10 @@ const system_0 = vanishing.System{
 const system_0_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_0_logderiv = logderivativesum.System{ .queries = &system_0_logderiv_queries };
+// rowlimit system: "bool-col"
+const system_0_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_0_rowlimit = rowlimit.System{ .checks = &system_0_rowlimit_checks };
 const scenario_0 = Scenario{
     .name = "BooleanColumn",
     .spec = system_0_spec,
@@ -159,6 +164,10 @@ const system_1 = vanishing.System{
 const system_1_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_1_logderiv = logderivativesum.System{ .queries = &system_1_logderiv_queries };
+// rowlimit system: "fib"
+const system_1_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_1_rowlimit = rowlimit.System{ .checks = &system_1_rowlimit_checks };
 const scenario_1 = Scenario{
     .name = "Fibonacci",
     .spec = system_1_spec,
@@ -266,6 +275,10 @@ const system_2 = vanishing.System{
 const system_2_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_2_logderiv = logderivativesum.System{ .queries = &system_2_logderiv_queries };
+// rowlimit system: "geo"
+const system_2_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_2_rowlimit = rowlimit.System{ .checks = &system_2_rowlimit_checks };
 const scenario_2 = Scenario{
     .name = "GeometricProgression",
     .spec = system_2_spec,
@@ -371,6 +384,10 @@ const system_3 = vanishing.System{
 const system_3_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_3_logderiv = logderivativesum.System{ .queries = &system_3_logderiv_queries };
+// rowlimit system: "ctr"
+const system_3_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_3_rowlimit = rowlimit.System{ .checks = &system_3_rowlimit_checks };
 const scenario_3 = Scenario{
     .name = "ConditionalCounter",
     .spec = system_3_spec,
@@ -481,6 +498,10 @@ const system_4 = vanishing.System{
 const system_4_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_4_logderiv = logderivativesum.System{ .queries = &system_4_logderiv_queries };
+// rowlimit system: "pyth"
+const system_4_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_4_rowlimit = rowlimit.System{ .checks = &system_4_rowlimit_checks };
 const scenario_4 = Scenario{
     .name = "PythagoreanTriplet",
     .spec = system_4_spec,
@@ -588,6 +609,10 @@ const system_5 = vanishing.System{
 const system_5_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_5_logderiv = logderivativesum.System{ .queries = &system_5_logderiv_queries };
+// rowlimit system: "dyn-fib"
+const system_5_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_5_rowlimit = rowlimit.System{ .checks = &system_5_rowlimit_checks };
 const scenario_5 = Scenario{
     .name = "DynamicFibonacci",
     .spec = system_5_spec,
@@ -693,6 +718,10 @@ const system_6 = vanishing.System{
 const system_6_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_6_logderiv = logderivativesum.System{ .queries = &system_6_logderiv_queries };
+// rowlimit system: "const-col"
+const system_6_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_6_rowlimit = rowlimit.System{ .checks = &system_6_rowlimit_checks };
 const scenario_6 = Scenario{
     .name = "ConstantColumn",
     .spec = system_6_spec,
@@ -794,6 +823,10 @@ const system_7 = vanishing.System{
 const system_7_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_7_logderiv = logderivativesum.System{ .queries = &system_7_logderiv_queries };
+// rowlimit system: "fwd-shift"
+const system_7_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_7_rowlimit = rowlimit.System{ .checks = &system_7_rowlimit_checks };
 const scenario_7 = Scenario{
     .name = "ForwardShiftConstant",
     .spec = system_7_spec,
@@ -901,6 +934,10 @@ const system_8 = vanishing.System{
 const system_8_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_8_logderiv = logderivativesum.System{ .queries = &system_8_logderiv_queries };
+// rowlimit system: "bool-cube"
+const system_8_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_8_rowlimit = rowlimit.System{ .checks = &system_8_rowlimit_checks };
 const scenario_8 = Scenario{
     .name = "BooleanCube",
     .spec = system_8_spec,
@@ -1010,6 +1047,10 @@ const system_9 = vanishing.System{
 const system_9_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_9_logderiv = logderivativesum.System{ .queries = &system_9_logderiv_queries };
+// rowlimit system: "lin-comb"
+const system_9_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_9_rowlimit = rowlimit.System{ .checks = &system_9_rowlimit_checks };
 const scenario_9 = Scenario{
     .name = "LinearCombination",
     .spec = system_9_spec,
@@ -1117,6 +1158,10 @@ const system_10 = vanishing.System{
 const system_10_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_10_logderiv = logderivativesum.System{ .queries = &system_10_logderiv_queries };
+// rowlimit system: "fib-16"
+const system_10_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_10_rowlimit = rowlimit.System{ .checks = &system_10_rowlimit_checks };
 const scenario_10 = Scenario{
     .name = "LargeFibonacci",
     .spec = system_10_spec,
@@ -1226,6 +1271,10 @@ const system_11 = vanishing.System{
 const system_11_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_11_logderiv = logderivativesum.System{ .queries = &system_11_logderiv_queries };
+// rowlimit system: "same-ratio"
+const system_11_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_11_rowlimit = rowlimit.System{ .checks = &system_11_rowlimit_checks };
 const scenario_11 = Scenario{
     .name = "MultipleVanishingsSameRatio",
     .spec = system_11_spec,
@@ -1335,6 +1384,10 @@ const system_12 = vanishing.System{
 const system_12_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_12_logderiv = logderivativesum.System{ .queries = &system_12_logderiv_queries };
+// rowlimit system: "mixed-ratio"
+const system_12_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_12_rowlimit = rowlimit.System{ .checks = &system_12_rowlimit_checks };
 const scenario_12 = Scenario{
     .name = "MixedRatioVanishings",
     .spec = system_12_spec,
@@ -1458,6 +1511,10 @@ const system_13 = vanishing.System{
 const system_13_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_13_logderiv = logderivativesum.System{ .queries = &system_13_logderiv_queries };
+// rowlimit system: "multi-mod"
+const system_13_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_13_rowlimit = rowlimit.System{ .checks = &system_13_rowlimit_checks };
 const scenario_13 = Scenario{
     .name = "MultiModule",
     .spec = system_13_spec,
@@ -1565,6 +1622,10 @@ const system_14 = vanishing.System{
 const system_14_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_14_logderiv = logderivativesum.System{ .queries = &system_14_logderiv_queries };
+// rowlimit system: "manual-cxl"
+const system_14_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_14_rowlimit = rowlimit.System{ .checks = &system_14_rowlimit_checks };
 const scenario_14 = Scenario{
     .name = "ManualCancellation",
     .spec = system_14_spec,
@@ -1670,6 +1731,10 @@ const system_15 = vanishing.System{
 const system_15_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_15_logderiv = logderivativesum.System{ .queries = &system_15_logderiv_queries };
+// rowlimit system: "pre-sel"
+const system_15_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_15_rowlimit = rowlimit.System{ .checks = &system_15_rowlimit_checks };
 const scenario_15 = Scenario{
     .name = "PrecomputedSelector",
     .spec = system_15_spec,
@@ -1773,6 +1838,10 @@ const system_16 = vanishing.System{
 const system_16_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_16_logderiv = logderivativesum.System{ .queries = &system_16_logderiv_queries };
+// rowlimit system: "cell-leaf"
+const system_16_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_16_rowlimit = rowlimit.System{ .checks = &system_16_rowlimit_checks };
 const scenario_16 = Scenario{
     .name = "CellLeaf",
     .spec = system_16_spec,
@@ -1880,6 +1949,10 @@ const system_17 = vanishing.System{
 const system_17_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_17_logderiv = logderivativesum.System{ .queries = &system_17_logderiv_queries };
+// rowlimit system: "coin-scaled"
+const system_17_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_17_rowlimit = rowlimit.System{ .checks = &system_17_rowlimit_checks };
 const scenario_17 = Scenario{
     .name = "CoinScaled",
     .spec = system_17_spec,
@@ -1993,6 +2066,10 @@ const system_18 = vanishing.System{
 const system_18_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_18_logderiv = logderivativesum.System{ .queries = &system_18_logderiv_queries };
+// rowlimit system: "step3"
+const system_18_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_18_rowlimit = rowlimit.System{ .checks = &system_18_rowlimit_checks };
 const scenario_18 = Scenario{
     .name = "ThreeStepRecurrence",
     .spec = system_18_spec,
@@ -2104,6 +2181,10 @@ const system_19 = vanishing.System{
 const system_19_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_19_logderiv = logderivativesum.System{ .queries = &system_19_logderiv_queries };
+// rowlimit system: "quartic"
+const system_19_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_19_rowlimit = rowlimit.System{ .checks = &system_19_rowlimit_checks };
 const scenario_19 = Scenario{
     .name = "Quartic",
     .spec = system_19_spec,
@@ -2211,6 +2292,10 @@ const system_20 = vanishing.System{
 const system_20_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_20_logderiv = logderivativesum.System{ .queries = &system_20_logderiv_queries };
+// rowlimit system: "dyn-leftpad"
+const system_20_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_20_rowlimit = rowlimit.System{ .checks = &system_20_rowlimit_checks };
 const scenario_20 = Scenario{
     .name = "LeftPadDynamic",
     .spec = system_20_spec,
@@ -2318,6 +2403,10 @@ const system_21 = vanishing.System{
 const system_21_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_21_logderiv = logderivativesum.System{ .queries = &system_21_logderiv_queries };
+// rowlimit system: "cube-shift"
+const system_21_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_21_rowlimit = rowlimit.System{ .checks = &system_21_rowlimit_checks };
 const scenario_21 = Scenario{
     .name = "CubicWithBackShift",
     .spec = system_21_spec,
@@ -2441,6 +2530,10 @@ const system_22 = vanishing.System{
 const system_22_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_22_logderiv = logderivativesum.System{ .queries = &system_22_logderiv_queries };
+// rowlimit system: "mixed-hi-ratio"
+const system_22_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_22_rowlimit = rowlimit.System{ .checks = &system_22_rowlimit_checks };
 const scenario_22 = Scenario{
     .name = "MixedHighRatio",
     .spec = system_22_spec,
@@ -2578,6 +2671,10 @@ const system_23 = vanishing.System{
 const system_23_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_23_logderiv = logderivativesum.System{ .queries = &system_23_logderiv_queries };
+// rowlimit system: "multi-mod-hi-ratio"
+const system_23_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_23_rowlimit = rowlimit.System{ .checks = &system_23_rowlimit_checks };
 const scenario_23 = Scenario{
     .name = "MultiModuleHighRatio",
     .spec = system_23_spec,
@@ -2691,6 +2788,10 @@ const system_24 = vanishing.System{
 const system_24_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_24_logderiv = logderivativesum.System{ .queries = &system_24_logderiv_queries };
+// rowlimit system: "cube-32"
+const system_24_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_24_rowlimit = rowlimit.System{ .checks = &system_24_rowlimit_checks };
 const scenario_24 = Scenario{
     .name = "SizeThirtyTwoCubic",
     .spec = system_24_spec,
@@ -2794,6 +2895,10 @@ const system_25 = vanishing.System{
 const system_25_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_25_logderiv = logderivativesum.System{ .queries = &system_25_logderiv_queries };
+// rowlimit system: "fwd-shift-3"
+const system_25_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_25_rowlimit = rowlimit.System{ .checks = &system_25_rowlimit_checks };
 const scenario_25 = Scenario{
     .name = "LargeForwardShift",
     .spec = system_25_spec,
@@ -2901,6 +3006,10 @@ const system_26 = vanishing.System{
 const system_26_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_26_logderiv = logderivativesum.System{ .queries = &system_26_logderiv_queries };
+// rowlimit system: "two-shift"
+const system_26_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_26_rowlimit = rowlimit.System{ .checks = &system_26_rowlimit_checks };
 const scenario_26 = Scenario{
     .name = "BackAndForwardShift",
     .spec = system_26_spec,
@@ -3008,6 +3117,10 @@ const system_27 = vanishing.System{
 const system_27_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_27_logderiv = logderivativesum.System{ .queries = &system_27_logderiv_queries };
+// rowlimit system: "dyn-quad"
+const system_27_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_27_rowlimit = rowlimit.System{ .checks = &system_27_rowlimit_checks };
 const scenario_27 = Scenario{
     .name = "DynamicQuadratic",
     .spec = system_27_spec,
@@ -3117,6 +3230,10 @@ const system_28 = vanishing.System{
 const system_28_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_28_logderiv = logderivativesum.System{ .queries = &system_28_logderiv_queries };
+// rowlimit system: "quartic-shift"
+const system_28_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_28_rowlimit = rowlimit.System{ .checks = &system_28_rowlimit_checks };
 const scenario_28 = Scenario{
     .name = "QuarticWithBackShift",
     .spec = system_28_spec,
@@ -3228,6 +3345,10 @@ const system_29 = vanishing.System{
 const system_29_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_29_logderiv = logderivativesum.System{ .queries = &system_29_logderiv_queries };
+// rowlimit system: "dyn-fib-multisize"
+const system_29_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_29_rowlimit = rowlimit.System{ .checks = &system_29_rowlimit_checks };
 const scenario_29 = Scenario{
     .name = "DynamicFibonacciMultiSize",
     .spec = system_29_spec,
@@ -3327,6 +3448,10 @@ const system_30 = vanishing.System{
 const system_30_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_30_logderiv = logderivativesum.System{ .queries = &system_30_logderiv_queries };
+// rowlimit system: "dyn-fib-two-modules"
+const system_30_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_30_rowlimit = rowlimit.System{ .checks = &system_30_rowlimit_checks };
 const scenario_30 = Scenario{
     .name = "DynamicFibonacciTwoModules",
     .spec = system_30_spec,
@@ -3433,6 +3558,10 @@ const system_31_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_31_logderiv = logderivativesum.System{ .queries = &system_31_logderiv_queries };
+// rowlimit system: "lds-ones"
+const system_31_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_31_rowlimit = rowlimit.System{ .checks = &system_31_rowlimit_checks };
 const scenario_31 = Scenario{
     .name = "SingleFractionAllOnes",
     .spec = system_31_spec,
@@ -3552,6 +3681,10 @@ const system_32_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_32_logderiv = logderivativesum.System{ .queries = &system_32_logderiv_queries };
+// rowlimit system: "lds-partial"
+const system_32_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_32_rowlimit = rowlimit.System{ .checks = &system_32_rowlimit_checks };
 const scenario_32 = Scenario{
     .name = "PartialFilter",
     .spec = system_32_spec,
@@ -3674,6 +3807,10 @@ const system_33_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_33_logderiv = logderivativesum.System{ .queries = &system_33_logderiv_queries };
+// rowlimit system: "lds-zeros"
+const system_33_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_33_rowlimit = rowlimit.System{ .checks = &system_33_rowlimit_checks };
 const scenario_33 = Scenario{
     .name = "AllZeroFilter",
     .spec = system_33_spec,
@@ -3796,6 +3933,10 @@ const system_34_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_34_logderiv = logderivativesum.System{ .queries = &system_34_logderiv_queries };
+// rowlimit system: "lds-maskzero"
+const system_34_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_34_rowlimit = rowlimit.System{ .checks = &system_34_rowlimit_checks };
 const scenario_34 = Scenario{
     .name = "FilterMasksZeroDenominator",
     .spec = system_34_spec,
@@ -3981,6 +4122,10 @@ const system_35_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_35_logderiv = logderivativesum.System{ .queries = &system_35_logderiv_queries };
+// rowlimit system: "lds-pack"
+const system_35_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_35_rowlimit = rowlimit.System{ .checks = &system_35_rowlimit_checks };
 const scenario_35 = Scenario{
     .name = "Packing4Fractions",
     .spec = system_35_spec,
@@ -4148,6 +4293,10 @@ const system_36_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_36_logderiv = logderivativesum.System{ .queries = &system_36_logderiv_queries };
+// rowlimit system: "lds-multi-mod"
+const system_36_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_36_rowlimit = rowlimit.System{ .checks = &system_36_rowlimit_checks };
 const scenario_36 = Scenario{
     .name = "MultiModuleBucketing",
     .spec = system_36_spec,
@@ -4258,6 +4407,10 @@ const system_37_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_37_logderiv = logderivativesum.System{ .queries = &system_37_logderiv_queries };
+// rowlimit system: "lds-size1"
+const system_37_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_37_rowlimit = rowlimit.System{ .checks = &system_37_rowlimit_checks };
 const scenario_37 = Scenario{
     .name = "SizeOneModule",
     .spec = system_37_spec,
@@ -4428,6 +4581,10 @@ const system_38_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_38_logderiv = logderivativesum.System{ .queries = &system_38_logderiv_queries };
+// rowlimit system: "lds-cond"
+const system_38_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_38_rowlimit = rowlimit.System{ .checks = &system_38_rowlimit_checks };
 const scenario_38 = Scenario{
     .name = "ConditionalLookupShape",
     .spec = system_38_spec,
@@ -4686,6 +4843,10 @@ const system_39_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_39_logderiv = logderivativesum.System{ .queries = &system_39_logderiv_queries };
+// rowlimit system: "lds-many"
+const system_39_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_39_rowlimit = rowlimit.System{ .checks = &system_39_rowlimit_checks };
 const scenario_39 = Scenario{
     .name = "ManyFractions",
     .spec = system_39_spec,
@@ -4813,6 +4974,10 @@ const system_40_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_40_logderiv = logderivativesum.System{ .queries = &system_40_logderiv_queries };
+// rowlimit system: "lds-size2"
+const system_40_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_40_rowlimit = rowlimit.System{ .checks = &system_40_rowlimit_checks };
 const scenario_40 = Scenario{
     .name = "SizeTwoModule",
     .spec = system_40_spec,
@@ -4954,6 +5119,10 @@ const system_41_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_41_logderiv = logderivativesum.System{ .queries = &system_41_logderiv_queries };
+// rowlimit system: "lds-multi-q"
+const system_41_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_41_rowlimit = rowlimit.System{ .checks = &system_41_rowlimit_checks };
 const scenario_41 = Scenario{
     .name = "MultipleQueries",
     .spec = system_41_spec,
@@ -5074,6 +5243,10 @@ const system_42_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_42_logderiv = logderivativesum.System{ .queries = &system_42_logderiv_queries };
+// rowlimit system: "lds-vec-den"
+const system_42_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_42_rowlimit = rowlimit.System{ .checks = &system_42_rowlimit_checks };
 const scenario_42 = Scenario{
     .name = "VectorDenominator",
     .spec = system_42_spec,
@@ -5248,6 +5421,10 @@ const system_43_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_43_logderiv = logderivativesum.System{ .queries = &system_43_logderiv_queries };
+// rowlimit system: "lds-ones-pack"
+const system_43_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_43_rowlimit = rowlimit.System{ .checks = &system_43_rowlimit_checks };
 const scenario_43 = Scenario{
     .name = "AllFiltersOnesPacked",
     .spec = system_43_spec,
@@ -5311,7 +5488,7 @@ pub const system_44_spec = protocol.Spec{
 // scenario: "lk-simple"
 
 const system_44_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -5326,7 +5503,7 @@ const system_44_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{15} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -5424,6 +5601,20 @@ const system_44_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_44_logderiv = logderivativesum.System{ .queries = &system_44_logderiv_queries };
+const system_44_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_44_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+// rowlimit system: "lk-simple"
+const system_44_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_44_rowlimit_check_0_a_modules, .b_modules = &system_44_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_44_rowlimit = rowlimit.System{ .checks = &system_44_rowlimit_checks };
 const scenario_44 = Scenario{
     .name = "SingleColumnNoFilters",
     .spec = system_44_spec,
@@ -5492,7 +5683,7 @@ pub const system_45_spec = protocol.Spec{
 // scenario: "lk-filterA"
 
 const system_45_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -5507,7 +5698,7 @@ const system_45_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
     .{ .lagrange_selector = 1 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{15} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -5609,6 +5800,20 @@ const system_45_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_45_logderiv = logderivativesum.System{ .queries = &system_45_logderiv_queries };
+const system_45_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_45_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 2 },
+};
+
+// rowlimit system: "lk-filterA"
+const system_45_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_45_rowlimit_check_0_a_modules, .b_modules = &system_45_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_45_rowlimit = rowlimit.System{ .checks = &system_45_rowlimit_checks };
 const scenario_45 = Scenario{
     .name = "FilterOnIncluded",
     .spec = system_45_spec,
@@ -5678,7 +5883,7 @@ pub const system_46_spec = protocol.Spec{
 // scenario: "lk-filterT"
 
 const system_46_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -5697,7 +5902,7 @@ const system_46_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 14, 15 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 16, 17 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{19} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -5807,6 +6012,20 @@ const system_46_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_46_logderiv = logderivativesum.System{ .queries = &system_46_logderiv_queries };
+const system_46_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_46_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+// rowlimit system: "lk-filterT"
+const system_46_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_46_rowlimit_check_0_a_modules, .b_modules = &system_46_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_46_rowlimit = rowlimit.System{ .checks = &system_46_rowlimit_checks };
 const scenario_46 = Scenario{
     .name = "FilterOnIncluding",
     .spec = system_46_spec,
@@ -5876,7 +6095,7 @@ pub const system_47_spec = protocol.Spec{
 // scenario: "lk-double"
 
 const system_47_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -5895,7 +6114,7 @@ const system_47_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 14, 15 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 16, 17 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{19} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -6009,6 +6228,20 @@ const system_47_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_47_logderiv = logderivativesum.System{ .queries = &system_47_logderiv_queries };
+const system_47_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_47_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+// rowlimit system: "lk-double"
+const system_47_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_47_rowlimit_check_0_a_modules, .b_modules = &system_47_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_47_rowlimit = rowlimit.System{ .checks = &system_47_rowlimit_checks };
 const scenario_47 = Scenario{
     .name = "DoubleConditional",
     .spec = system_47_spec,
@@ -6079,7 +6312,7 @@ pub const system_48_spec = protocol.Spec{
 // scenario: "lk-multi-col"
 
 const system_48_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -6098,7 +6331,7 @@ const system_48_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 14, 15 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 16, 17 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{19} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -6208,6 +6441,20 @@ const system_48_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_48_logderiv = logderivativesum.System{ .queries = &system_48_logderiv_queries };
+const system_48_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_48_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+// rowlimit system: "lk-multi-col"
+const system_48_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_48_rowlimit_check_0_a_modules, .b_modules = &system_48_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_48_rowlimit = rowlimit.System{ .checks = &system_48_rowlimit_checks };
 const scenario_48 = Scenario{
     .name = "MultiColumn",
     .spec = system_48_spec,
@@ -6278,7 +6525,7 @@ pub const system_49_spec = protocol.Spec{
 // scenario: "lk-shared"
 
 const system_49_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -6293,7 +6540,7 @@ const system_49_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{15} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -6437,6 +6684,21 @@ const system_49_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_49_logderiv = logderivativesum.System{ .queries = &system_49_logderiv_queries };
+const system_49_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+    .{ .static = 2 },
+};
+
+const system_49_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+// rowlimit system: "lk-shared"
+const system_49_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_49_rowlimit_check_0_a_modules, .b_modules = &system_49_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_49_rowlimit = rowlimit.System{ .checks = &system_49_rowlimit_checks };
 const scenario_49 = Scenario{
     .name = "SharedTable",
     .spec = system_49_spec,
@@ -6512,7 +6774,7 @@ pub const system_50_spec = protocol.Spec{
 // scenario: "lk-distinct"
 
 const system_50_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -6527,7 +6789,7 @@ const system_50_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{15} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -6557,7 +6819,7 @@ const system_50_module_0_buckets = [_]vanishing.Bucket{
 };
 
 const system_50_module_1_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b2-k0"
     .{ .column_claim = 2 }, // col: "z-b2-k0"
@@ -6572,7 +6834,7 @@ const system_50_module_1_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
     .{ .lagrange_selector = 1 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{15} } },
     .{ .column_claim = 1 }, // col: "z-b2-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -6719,6 +6981,29 @@ const system_50_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_50_logderiv = logderivativesum.System{ .queries = &system_50_logderiv_queries };
+const system_50_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 2 },
+};
+
+const system_50_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_50_rowlimit_check_1_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 2 },
+};
+
+const system_50_rowlimit_check_1_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 2 },
+};
+
+// rowlimit system: "lk-distinct"
+const system_50_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_50_rowlimit_check_0_a_modules, .b_modules = &system_50_rowlimit_check_0_b_modules, .limit = 1073741824 },
+    .{ .a_modules = &system_50_rowlimit_check_1_a_modules, .b_modules = &system_50_rowlimit_check_1_b_modules, .limit = 1073741824 },
+};
+
+const system_50_rowlimit = rowlimit.System{ .checks = &system_50_rowlimit_checks };
 const scenario_50 = Scenario{
     .name = "DistinctTables",
     .spec = system_50_spec,
@@ -6802,7 +7087,7 @@ pub const system_51_spec = protocol.Spec{
 // scenario: "lk-multi-filterT"
 
 const system_51_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -6825,7 +7110,7 @@ const system_51_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 18, 19 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{23} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -6947,6 +7232,20 @@ const system_51_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_51_logderiv = logderivativesum.System{ .queries = &system_51_logderiv_queries };
+const system_51_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_51_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+// rowlimit system: "lk-multi-filterT"
+const system_51_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_51_rowlimit_check_0_a_modules, .b_modules = &system_51_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_51_rowlimit = rowlimit.System{ .checks = &system_51_rowlimit_checks };
 const scenario_51 = Scenario{
     .name = "MultiColumnFilterOnIncluding",
     .spec = system_51_spec,
@@ -7018,7 +7317,7 @@ pub const system_52_spec = protocol.Spec{
 // scenario: "lk-repeated"
 
 const system_52_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -7033,7 +7332,7 @@ const system_52_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{15} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -7131,6 +7430,20 @@ const system_52_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_52_logderiv = logderivativesum.System{ .queries = &system_52_logderiv_queries };
+const system_52_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_52_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+// rowlimit system: "lk-repeated"
+const system_52_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_52_rowlimit_check_0_a_modules, .b_modules = &system_52_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_52_rowlimit = rowlimit.System{ .checks = &system_52_rowlimit_checks };
 const scenario_52 = Scenario{
     .name = "RepeatedValueInTable",
     .spec = system_52_spec,
@@ -7199,7 +7512,7 @@ pub const system_53_spec = protocol.Spec{
 // scenario: "lk-shift-a"
 
 const system_53_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -7214,7 +7527,7 @@ const system_53_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{15} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -7312,6 +7625,20 @@ const system_53_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_53_logderiv = logderivativesum.System{ .queries = &system_53_logderiv_queries };
+const system_53_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_53_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+// rowlimit system: "lk-shift-a"
+const system_53_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_53_rowlimit_check_0_a_modules, .b_modules = &system_53_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_53_rowlimit = rowlimit.System{ .checks = &system_53_rowlimit_checks };
 const scenario_53 = Scenario{
     .name = "ShiftedAColumn",
     .spec = system_53_spec,
@@ -7380,7 +7707,7 @@ pub const system_54_spec = protocol.Spec{
 // scenario: "lk-shift-b"
 
 const system_54_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -7395,7 +7722,7 @@ const system_54_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{15} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -7493,6 +7820,20 @@ const system_54_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_54_logderiv = logderivativesum.System{ .queries = &system_54_logderiv_queries };
+const system_54_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_54_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+// rowlimit system: "lk-shift-b"
+const system_54_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_54_rowlimit_check_0_a_modules, .b_modules = &system_54_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_54_rowlimit = rowlimit.System{ .checks = &system_54_rowlimit_checks };
 const scenario_54 = Scenario{
     .name = "ShiftedBColumn",
     .spec = system_54_spec,
@@ -7562,7 +7903,7 @@ pub const system_55_spec = protocol.Spec{
 // scenario: "lk-multi-A"
 
 const system_55_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -7577,7 +7918,7 @@ const system_55_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{15} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -7721,6 +8062,21 @@ const system_55_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_55_logderiv = logderivativesum.System{ .queries = &system_55_logderiv_queries };
+const system_55_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+    .{ .static = 2 },
+};
+
+const system_55_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+// rowlimit system: "lk-multi-A"
+const system_55_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_55_rowlimit_check_0_a_modules, .b_modules = &system_55_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_55_rowlimit = rowlimit.System{ .checks = &system_55_rowlimit_checks };
 const scenario_55 = Scenario{
     .name = "MultipleAFragments",
     .spec = system_55_spec,
@@ -7796,7 +8152,7 @@ pub const system_56_spec = protocol.Spec{
 // scenario: "lk-w3"
 
 const system_56_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -7819,7 +8175,7 @@ const system_56_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 18, 19 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{23} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -7941,6 +8297,20 @@ const system_56_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_56_logderiv = logderivativesum.System{ .queries = &system_56_logderiv_queries };
+const system_56_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 2 },
+};
+
+const system_56_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+// rowlimit system: "lk-w3"
+const system_56_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_56_rowlimit_check_0_a_modules, .b_modules = &system_56_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_56_rowlimit = rowlimit.System{ .checks = &system_56_rowlimit_checks };
 const scenario_56 = Scenario{
     .name = "WidthThree",
     .spec = system_56_spec,
@@ -8013,7 +8383,7 @@ pub const system_57_spec = protocol.Spec{
 // scenario: "lk-size1"
 
 const system_57_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -8103,6 +8473,20 @@ const system_57_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_57_logderiv = logderivativesum.System{ .queries = &system_57_logderiv_queries };
+const system_57_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 1 },
+};
+
+const system_57_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 1 },
+};
+
+// rowlimit system: "lk-size1"
+const system_57_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_57_rowlimit_check_0_a_modules, .b_modules = &system_57_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_57_rowlimit = rowlimit.System{ .checks = &system_57_rowlimit_checks };
 const scenario_57 = Scenario{
     .name = "SizeOne",
     .spec = system_57_spec,
@@ -8169,7 +8553,7 @@ pub const system_58_spec = protocol.Spec{
 // scenario: "lk-precomp"
 
 const system_58_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -8184,7 +8568,7 @@ const system_58_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{15} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -8282,6 +8666,20 @@ const system_58_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_58_logderiv = logderivativesum.System{ .queries = &system_58_logderiv_queries };
+const system_58_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_58_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+// rowlimit system: "lk-precomp"
+const system_58_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_58_rowlimit_check_0_a_modules, .b_modules = &system_58_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_58_rowlimit = rowlimit.System{ .checks = &system_58_rowlimit_checks };
 const scenario_58 = Scenario{
     .name = "PrecomputedTable",
     .spec = system_58_spec,
@@ -8350,7 +8748,7 @@ pub const system_59_spec = protocol.Spec{
 // scenario: "lk-rep-s"
 
 const system_59_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -8365,7 +8763,7 @@ const system_59_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{15} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -8463,6 +8861,20 @@ const system_59_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_59_logderiv = logderivativesum.System{ .queries = &system_59_logderiv_queries };
+const system_59_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_59_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+// rowlimit system: "lk-rep-s"
+const system_59_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_59_rowlimit_check_0_a_modules, .b_modules = &system_59_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_59_rowlimit = rowlimit.System{ .checks = &system_59_rowlimit_checks };
 const scenario_59 = Scenario{
     .name = "RepeatedSValues",
     .spec = system_59_spec,
@@ -8531,7 +8943,7 @@ pub const system_60_spec = protocol.Spec{
 // scenario: "lk-empty"
 
 const system_60_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -8546,7 +8958,7 @@ const system_60_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{15} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -8648,6 +9060,20 @@ const system_60_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_60_logderiv = logderivativesum.System{ .queries = &system_60_logderiv_queries };
+const system_60_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_60_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+// rowlimit system: "lk-empty"
+const system_60_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_60_rowlimit_check_0_a_modules, .b_modules = &system_60_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_60_rowlimit = rowlimit.System{ .checks = &system_60_rowlimit_checks };
 const scenario_60 = Scenario{
     .name = "EmptySelected",
     .spec = system_60_spec,
@@ -8792,7 +9218,7 @@ const system_61_module_0_buckets = [_]vanishing.Bucket{
 };
 
 const system_61_module_1_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -8807,7 +9233,7 @@ const system_61_module_1_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{15} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -8837,7 +9263,7 @@ const system_61_module_1_buckets = [_]vanishing.Bucket{
 };
 
 const system_61_module_2_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b2-k0"
     .{ .column_claim = 2 }, // col: "z-b2-k0"
@@ -8852,7 +9278,7 @@ const system_61_module_2_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
     .{ .lagrange_selector = 7 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{15} } },
     .{ .column_claim = 1 }, // col: "z-b2-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -8910,6 +9336,29 @@ const system_61_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_61_logderiv = logderivativesum.System{ .queries = &system_61_logderiv_queries };
+const system_61_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_61_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_61_rowlimit_check_1_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_61_rowlimit_check_1_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 8 },
+};
+
+// rowlimit system: "rc-distinct"
+const system_61_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_61_rowlimit_check_0_a_modules, .b_modules = &system_61_rowlimit_check_0_b_modules, .limit = 1073741824 },
+    .{ .a_modules = &system_61_rowlimit_check_1_a_modules, .b_modules = &system_61_rowlimit_check_1_b_modules, .limit = 1073741824 },
+};
+
+const system_61_rowlimit = rowlimit.System{ .checks = &system_61_rowlimit_checks };
 const scenario_61 = Scenario{
     .name = "DistinctBounds",
     .spec = system_61_spec,
@@ -9025,6 +9474,10 @@ const system_62 = vanishing.System{
 const system_62_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_62_logderiv = logderivativesum.System{ .queries = &system_62_logderiv_queries };
+// rowlimit system: "lagrange-sel"
+const system_62_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_62_rowlimit = rowlimit.System{ .checks = &system_62_rowlimit_checks };
 const scenario_62 = Scenario{
     .name = "LagrangeSelectorBoundary",
     .spec = system_62_spec,
@@ -9128,6 +9581,10 @@ const system_63 = vanishing.System{
 const system_63_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_63_logderiv = logderivativesum.System{ .queries = &system_63_logderiv_queries };
+// rowlimit system: "lagrange-sel-dyn"
+const system_63_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_63_rowlimit = rowlimit.System{ .checks = &system_63_rowlimit_checks };
 const scenario_63 = Scenario{
     .name = "DynamicLagrangeSelectorBoundary",
     .spec = system_63_spec,
@@ -9197,7 +9654,7 @@ pub const system_64_spec = protocol.Spec{
 // scenario: "lk-multi-col-bench"
 
 const system_64_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -9228,7 +9685,7 @@ const system_64_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 26, 27 } } },
     .{ .lagrange_selector = 1023 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 28, 29 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{31} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -9374,6 +9831,20 @@ const system_64_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_64_logderiv = logderivativesum.System{ .queries = &system_64_logderiv_queries };
+const system_64_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 1024 },
+};
+
+const system_64_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 1024 },
+};
+
+// rowlimit system: "lk-multi-col-bench"
+const system_64_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_64_rowlimit_check_0_a_modules, .b_modules = &system_64_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_64_rowlimit = rowlimit.System{ .checks = &system_64_rowlimit_checks };
 const scenario_64 = Scenario{
     .name = "MultiColumnBench",
     .spec = system_64_spec,

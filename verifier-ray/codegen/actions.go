@@ -49,6 +49,7 @@ func (e *UnhandledVerifierActionError) Error() string {
 //   - global.Verifier                          → vanishing (+ PCS claim link)
 //   - logderivativesum.VerifierAction          → logderivativesum boundary sum
 //   - lookuptologderivsum.ResultIsZeroVerifierAction → logderivativesum result-is-zero
+//   - lookuptologderivsum.RowLimitVerifierAction → BuildRowLimitSystem / rowlimit sub-verifier
 //   - pcs.OpeningVerifierAction                 → BuildPcsSystem (performs no
 //     boundary check the Zig side must re-emit — the whole PCS opening is
 //     reconstructed by BuildPcsSystem from the committed batches and
@@ -78,6 +79,8 @@ func verifierActionIsHandled(action wiop.VerifierAction) bool {
 	case *logderivativesum.VerifierAction:
 		return true
 	case *lookuptologderivsum.ResultIsZeroVerifierAction:
+		return true
+	case *lookuptologderivsum.RowLimitVerifierAction:
 		return true
 	case *pcs.OpeningVerifierAction:
 		return true

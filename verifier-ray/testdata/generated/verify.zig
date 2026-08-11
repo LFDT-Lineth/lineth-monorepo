@@ -8,6 +8,7 @@ const commitment = verifier_ray.crypto.commitment;
 const merkle = verifier_ray.crypto.merkle;
 const vanishing = verifier_ray.query.vanishing;
 const logderivativesum = verifier_ray.query.logderivativesum;
+const rowlimit = verifier_ray.query.rowlimit;
 const pcs = verifier_ray.query.pcs;
 const fri = verifier_ray.query.fri;
 const verifier = verifier_ray.verifier;
@@ -76,6 +77,10 @@ const system_0 = vanishing.System{
 const system_0_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_0_logderiv = logderivativesum.System{ .queries = &system_0_logderiv_queries };
+// rowlimit system: "bool-col"
+const system_0_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_0_rowlimit = rowlimit.System{ .checks = &system_0_rowlimit_checks };
 const verify_case_0_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
 };
@@ -171,7 +176,7 @@ const verify_case_0_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_0_failing_pcs_opening,
 };
 
-const verify_case_0_systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .pcs = verify_case_0_pcs_system };
+const verify_case_0_systems = verifier.Systems{ .vanishing = system_0, .logderivativesum = system_0_logderiv, .rowlimit = system_0_rowlimit, .pcs = verify_case_0_pcs_system };
 
 pub const system_1_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -217,6 +222,10 @@ const system_1 = vanishing.System{
 const system_1_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_1_logderiv = logderivativesum.System{ .queries = &system_1_logderiv_queries };
+// rowlimit system: "fib"
+const system_1_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_1_rowlimit = rowlimit.System{ .checks = &system_1_rowlimit_checks };
 const verify_case_1_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -318,7 +327,7 @@ const verify_case_1_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_1_failing_pcs_opening,
 };
 
-const verify_case_1_systems = verifier.Systems{ .vanishing = system_1, .logderivativesum = system_1_logderiv, .pcs = verify_case_1_pcs_system };
+const verify_case_1_systems = verifier.Systems{ .vanishing = system_1, .logderivativesum = system_1_logderiv, .rowlimit = system_1_rowlimit, .pcs = verify_case_1_pcs_system };
 
 pub const system_2_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -364,6 +373,10 @@ const system_2 = vanishing.System{
 const system_2_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_2_logderiv = logderivativesum.System{ .queries = &system_2_logderiv_queries };
+// rowlimit system: "geo"
+const system_2_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_2_rowlimit = rowlimit.System{ .checks = &system_2_rowlimit_checks };
 const verify_case_2_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -462,7 +475,7 @@ const verify_case_2_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_2_failing_pcs_opening,
 };
 
-const verify_case_2_systems = verifier.Systems{ .vanishing = system_2, .logderivativesum = system_2_logderiv, .pcs = verify_case_2_pcs_system };
+const verify_case_2_systems = verifier.Systems{ .vanishing = system_2, .logderivativesum = system_2_logderiv, .rowlimit = system_2_rowlimit, .pcs = verify_case_2_pcs_system };
 
 pub const system_3_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -508,6 +521,10 @@ const system_3 = vanishing.System{
 const system_3_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_3_logderiv = logderivativesum.System{ .queries = &system_3_logderiv_queries };
+// rowlimit system: "ctr"
+const system_3_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_3_rowlimit = rowlimit.System{ .checks = &system_3_rowlimit_checks };
 const verify_case_3_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -610,7 +627,7 @@ const verify_case_3_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_3_failing_pcs_opening,
 };
 
-const verify_case_3_systems = verifier.Systems{ .vanishing = system_3, .logderivativesum = system_3_logderiv, .pcs = verify_case_3_pcs_system };
+const verify_case_3_systems = verifier.Systems{ .vanishing = system_3, .logderivativesum = system_3_logderiv, .rowlimit = system_3_rowlimit, .pcs = verify_case_3_pcs_system };
 
 pub const system_4_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -659,6 +676,10 @@ const system_4 = vanishing.System{
 const system_4_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_4_logderiv = logderivativesum.System{ .queries = &system_4_logderiv_queries };
+// rowlimit system: "pyth"
+const system_4_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_4_rowlimit = rowlimit.System{ .checks = &system_4_rowlimit_checks };
 const verify_case_4_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 1, .shift = 0 },
@@ -762,7 +783,7 @@ const verify_case_4_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_4_failing_pcs_opening,
 };
 
-const verify_case_4_systems = verifier.Systems{ .vanishing = system_4, .logderivativesum = system_4_logderiv, .pcs = verify_case_4_pcs_system };
+const verify_case_4_systems = verifier.Systems{ .vanishing = system_4, .logderivativesum = system_4_logderiv, .rowlimit = system_4_rowlimit, .pcs = verify_case_4_pcs_system };
 
 pub const system_5_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -808,6 +829,10 @@ const system_5 = vanishing.System{
 const system_5_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_5_logderiv = logderivativesum.System{ .queries = &system_5_logderiv_queries };
+// rowlimit system: "dyn-fib"
+const system_5_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_5_rowlimit = rowlimit.System{ .checks = &system_5_rowlimit_checks };
 const verify_case_5_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -909,7 +934,7 @@ const verify_case_5_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_5_failing_pcs_opening,
 };
 
-const verify_case_5_systems = verifier.Systems{ .vanishing = system_5, .logderivativesum = system_5_logderiv, .pcs = verify_case_5_pcs_system };
+const verify_case_5_systems = verifier.Systems{ .vanishing = system_5, .logderivativesum = system_5_logderiv, .rowlimit = system_5_rowlimit, .pcs = verify_case_5_pcs_system };
 
 pub const system_6_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -953,6 +978,10 @@ const system_6 = vanishing.System{
 const system_6_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_6_logderiv = logderivativesum.System{ .queries = &system_6_logderiv_queries };
+// rowlimit system: "const-col"
+const system_6_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_6_rowlimit = rowlimit.System{ .checks = &system_6_rowlimit_checks };
 const verify_case_6_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
 };
@@ -1048,7 +1077,7 @@ const verify_case_6_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_6_failing_pcs_opening,
 };
 
-const verify_case_6_systems = verifier.Systems{ .vanishing = system_6, .logderivativesum = system_6_logderiv, .pcs = verify_case_6_pcs_system };
+const verify_case_6_systems = verifier.Systems{ .vanishing = system_6, .logderivativesum = system_6_logderiv, .rowlimit = system_6_rowlimit, .pcs = verify_case_6_pcs_system };
 
 pub const system_7_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -1092,6 +1121,10 @@ const system_7 = vanishing.System{
 const system_7_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_7_logderiv = logderivativesum.System{ .queries = &system_7_logderiv_queries };
+// rowlimit system: "fwd-shift"
+const system_7_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_7_rowlimit = rowlimit.System{ .checks = &system_7_rowlimit_checks };
 const verify_case_7_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -1190,7 +1223,7 @@ const verify_case_7_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_7_failing_pcs_opening,
 };
 
-const verify_case_7_systems = verifier.Systems{ .vanishing = system_7, .logderivativesum = system_7_logderiv, .pcs = verify_case_7_pcs_system };
+const verify_case_7_systems = verifier.Systems{ .vanishing = system_7, .logderivativesum = system_7_logderiv, .rowlimit = system_7_rowlimit, .pcs = verify_case_7_pcs_system };
 
 pub const system_8_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -1238,6 +1271,10 @@ const system_8 = vanishing.System{
 const system_8_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_8_logderiv = logderivativesum.System{ .queries = &system_8_logderiv_queries };
+// rowlimit system: "bool-cube"
+const system_8_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_8_rowlimit = rowlimit.System{ .checks = &system_8_rowlimit_checks };
 const verify_case_8_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
 };
@@ -1337,7 +1374,7 @@ const verify_case_8_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_8_failing_pcs_opening,
 };
 
-const verify_case_8_systems = verifier.Systems{ .vanishing = system_8, .logderivativesum = system_8_logderiv, .pcs = verify_case_8_pcs_system };
+const verify_case_8_systems = verifier.Systems{ .vanishing = system_8, .logderivativesum = system_8_logderiv, .rowlimit = system_8_rowlimit, .pcs = verify_case_8_pcs_system };
 
 pub const system_9_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -1387,6 +1424,10 @@ const system_9 = vanishing.System{
 const system_9_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_9_logderiv = logderivativesum.System{ .queries = &system_9_logderiv_queries };
+// rowlimit system: "lin-comb"
+const system_9_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_9_rowlimit = rowlimit.System{ .checks = &system_9_rowlimit_checks };
 const verify_case_9_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 1, .shift = 0 },
@@ -1490,7 +1531,7 @@ const verify_case_9_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_9_failing_pcs_opening,
 };
 
-const verify_case_9_systems = verifier.Systems{ .vanishing = system_9, .logderivativesum = system_9_logderiv, .pcs = verify_case_9_pcs_system };
+const verify_case_9_systems = verifier.Systems{ .vanishing = system_9, .logderivativesum = system_9_logderiv, .rowlimit = system_9_rowlimit, .pcs = verify_case_9_pcs_system };
 
 pub const system_10_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -1536,6 +1577,10 @@ const system_10 = vanishing.System{
 const system_10_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_10_logderiv = logderivativesum.System{ .queries = &system_10_logderiv_queries };
+// rowlimit system: "fib-16"
+const system_10_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_10_rowlimit = rowlimit.System{ .checks = &system_10_rowlimit_checks };
 const verify_case_10_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -1637,7 +1682,7 @@ const verify_case_10_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_10_failing_pcs_opening,
 };
 
-const verify_case_10_systems = verifier.Systems{ .vanishing = system_10, .logderivativesum = system_10_logderiv, .pcs = verify_case_10_pcs_system };
+const verify_case_10_systems = verifier.Systems{ .vanishing = system_10, .logderivativesum = system_10_logderiv, .rowlimit = system_10_rowlimit, .pcs = verify_case_10_pcs_system };
 
 pub const system_11_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -1685,6 +1730,10 @@ const system_11 = vanishing.System{
 const system_11_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_11_logderiv = logderivativesum.System{ .queries = &system_11_logderiv_queries };
+// rowlimit system: "same-ratio"
+const system_11_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_11_rowlimit = rowlimit.System{ .checks = &system_11_rowlimit_checks };
 const verify_case_11_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 1, .shift = 0 },
@@ -1784,7 +1833,7 @@ const verify_case_11_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_11_failing_pcs_opening,
 };
 
-const verify_case_11_systems = verifier.Systems{ .vanishing = system_11, .logderivativesum = system_11_logderiv, .pcs = verify_case_11_pcs_system };
+const verify_case_11_systems = verifier.Systems{ .vanishing = system_11, .logderivativesum = system_11_logderiv, .rowlimit = system_11_rowlimit, .pcs = verify_case_11_pcs_system };
 
 pub const system_12_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -1834,6 +1883,10 @@ const system_12 = vanishing.System{
 const system_12_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_12_logderiv = logderivativesum.System{ .queries = &system_12_logderiv_queries };
+// rowlimit system: "mixed-ratio"
+const system_12_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_12_rowlimit = rowlimit.System{ .checks = &system_12_rowlimit_checks };
 const verify_case_12_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -1932,7 +1985,7 @@ const verify_case_12_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_12_failing_pcs_opening,
 };
 
-const verify_case_12_systems = verifier.Systems{ .vanishing = system_12, .logderivativesum = system_12_logderiv, .pcs = verify_case_12_pcs_system };
+const verify_case_12_systems = verifier.Systems{ .vanishing = system_12, .logderivativesum = system_12_logderiv, .rowlimit = system_12_rowlimit, .pcs = verify_case_12_pcs_system };
 
 pub const system_13_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 2, 1, 0 },
@@ -1996,6 +2049,10 @@ const system_13 = vanishing.System{
 const system_13_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_13_logderiv = logderivativesum.System{ .queries = &system_13_logderiv_queries };
+// rowlimit system: "multi-mod"
+const system_13_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_13_rowlimit = rowlimit.System{ .checks = &system_13_rowlimit_checks };
 const verify_case_13_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 1, .shift = 0 },
@@ -2099,7 +2156,7 @@ const verify_case_13_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_13_failing_pcs_opening,
 };
 
-const verify_case_13_systems = verifier.Systems{ .vanishing = system_13, .logderivativesum = system_13_logderiv, .pcs = verify_case_13_pcs_system };
+const verify_case_13_systems = verifier.Systems{ .vanishing = system_13, .logderivativesum = system_13_logderiv, .rowlimit = system_13_rowlimit, .pcs = verify_case_13_pcs_system };
 
 pub const system_14_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -2145,6 +2202,10 @@ const system_14 = vanishing.System{
 const system_14_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_14_logderiv = logderivativesum.System{ .queries = &system_14_logderiv_queries };
+// rowlimit system: "manual-cxl"
+const system_14_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_14_rowlimit = rowlimit.System{ .checks = &system_14_rowlimit_checks };
 const verify_case_14_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -2243,7 +2304,7 @@ const verify_case_14_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_14_failing_pcs_opening,
 };
 
-const verify_case_14_systems = verifier.Systems{ .vanishing = system_14, .logderivativesum = system_14_logderiv, .pcs = verify_case_14_pcs_system };
+const verify_case_14_systems = verifier.Systems{ .vanishing = system_14, .logderivativesum = system_14_logderiv, .rowlimit = system_14_rowlimit, .pcs = verify_case_14_pcs_system };
 
 pub const system_15_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -2289,6 +2350,10 @@ const system_15 = vanishing.System{
 const system_15_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_15_logderiv = logderivativesum.System{ .queries = &system_15_logderiv_queries };
+// rowlimit system: "pre-sel"
+const system_15_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_15_rowlimit = rowlimit.System{ .checks = &system_15_rowlimit_checks };
 const verify_case_15_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 2, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 0 },
@@ -2389,7 +2454,7 @@ const verify_case_15_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_15_failing_pcs_opening,
 };
 
-const verify_case_15_systems = verifier.Systems{ .vanishing = system_15, .logderivativesum = system_15_logderiv, .pcs = verify_case_15_pcs_system };
+const verify_case_15_systems = verifier.Systems{ .vanishing = system_15, .logderivativesum = system_15_logderiv, .rowlimit = system_15_rowlimit, .pcs = verify_case_15_pcs_system };
 
 pub const system_16_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -2433,6 +2498,10 @@ const system_16 = vanishing.System{
 const system_16_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_16_logderiv = logderivativesum.System{ .queries = &system_16_logderiv_queries };
+// rowlimit system: "cell-leaf"
+const system_16_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_16_rowlimit = rowlimit.System{ .checks = &system_16_rowlimit_checks };
 const verify_case_16_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
 };
@@ -2532,7 +2601,7 @@ const verify_case_16_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_16_failing_pcs_opening,
 };
 
-const verify_case_16_systems = verifier.Systems{ .vanishing = system_16, .logderivativesum = system_16_logderiv, .pcs = verify_case_16_pcs_system };
+const verify_case_16_systems = verifier.Systems{ .vanishing = system_16, .logderivativesum = system_16_logderiv, .rowlimit = system_16_rowlimit, .pcs = verify_case_16_pcs_system };
 
 pub const system_17_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 1, 0 },
@@ -2578,6 +2647,10 @@ const system_17 = vanishing.System{
 const system_17_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_17_logderiv = logderivativesum.System{ .queries = &system_17_logderiv_queries };
+// rowlimit system: "coin-scaled"
+const system_17_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_17_rowlimit = rowlimit.System{ .checks = &system_17_rowlimit_checks };
 const verify_case_17_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -2686,7 +2759,7 @@ const verify_case_17_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_17_failing_pcs_opening,
 };
 
-const verify_case_17_systems = verifier.Systems{ .vanishing = system_17, .logderivativesum = system_17_logderiv, .pcs = verify_case_17_pcs_system };
+const verify_case_17_systems = verifier.Systems{ .vanishing = system_17, .logderivativesum = system_17_logderiv, .rowlimit = system_17_rowlimit, .pcs = verify_case_17_pcs_system };
 
 pub const system_18_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -2732,6 +2805,10 @@ const system_18 = vanishing.System{
 const system_18_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_18_logderiv = logderivativesum.System{ .queries = &system_18_logderiv_queries };
+// rowlimit system: "step3"
+const system_18_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_18_rowlimit = rowlimit.System{ .checks = &system_18_rowlimit_checks };
 const verify_case_18_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -2833,7 +2910,7 @@ const verify_case_18_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_18_failing_pcs_opening,
 };
 
-const verify_case_18_systems = verifier.Systems{ .vanishing = system_18, .logderivativesum = system_18_logderiv, .pcs = verify_case_18_pcs_system };
+const verify_case_18_systems = verifier.Systems{ .vanishing = system_18, .logderivativesum = system_18_logderiv, .rowlimit = system_18_rowlimit, .pcs = verify_case_18_pcs_system };
 
 pub const system_19_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -2883,6 +2960,10 @@ const system_19 = vanishing.System{
 const system_19_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_19_logderiv = logderivativesum.System{ .queries = &system_19_logderiv_queries };
+// rowlimit system: "quartic"
+const system_19_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_19_rowlimit = rowlimit.System{ .checks = &system_19_rowlimit_checks };
 const verify_case_19_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
 };
@@ -2990,7 +3071,7 @@ const verify_case_19_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_19_failing_pcs_opening,
 };
 
-const verify_case_19_systems = verifier.Systems{ .vanishing = system_19, .logderivativesum = system_19_logderiv, .pcs = verify_case_19_pcs_system };
+const verify_case_19_systems = verifier.Systems{ .vanishing = system_19, .logderivativesum = system_19_logderiv, .rowlimit = system_19_rowlimit, .pcs = verify_case_19_pcs_system };
 
 pub const system_20_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -3034,6 +3115,10 @@ const system_20 = vanishing.System{
 const system_20_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_20_logderiv = logderivativesum.System{ .queries = &system_20_logderiv_queries };
+// rowlimit system: "dyn-leftpad"
+const system_20_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_20_rowlimit = rowlimit.System{ .checks = &system_20_rowlimit_checks };
 const verify_case_20_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -3132,7 +3217,7 @@ const verify_case_20_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_20_failing_pcs_opening,
 };
 
-const verify_case_20_systems = verifier.Systems{ .vanishing = system_20, .logderivativesum = system_20_logderiv, .pcs = verify_case_20_pcs_system };
+const verify_case_20_systems = verifier.Systems{ .vanishing = system_20, .logderivativesum = system_20_logderiv, .rowlimit = system_20_rowlimit, .pcs = verify_case_20_pcs_system };
 
 pub const system_21_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -3180,6 +3265,10 @@ const system_21 = vanishing.System{
 const system_21_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_21_logderiv = logderivativesum.System{ .queries = &system_21_logderiv_queries };
+// rowlimit system: "cube-shift"
+const system_21_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_21_rowlimit = rowlimit.System{ .checks = &system_21_rowlimit_checks };
 const verify_case_21_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -3282,7 +3371,7 @@ const verify_case_21_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_21_failing_pcs_opening,
 };
 
-const verify_case_21_systems = verifier.Systems{ .vanishing = system_21, .logderivativesum = system_21_logderiv, .pcs = verify_case_21_pcs_system };
+const verify_case_21_systems = verifier.Systems{ .vanishing = system_21, .logderivativesum = system_21_logderiv, .rowlimit = system_21_rowlimit, .pcs = verify_case_21_pcs_system };
 
 pub const system_22_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -3344,6 +3433,10 @@ const system_22 = vanishing.System{
 const system_22_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_22_logderiv = logderivativesum.System{ .queries = &system_22_logderiv_queries };
+// rowlimit system: "mixed-hi-ratio"
+const system_22_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_22_rowlimit = rowlimit.System{ .checks = &system_22_rowlimit_checks };
 const verify_case_22_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
 };
@@ -3459,7 +3552,7 @@ const verify_case_22_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_22_failing_pcs_opening,
 };
 
-const verify_case_22_systems = verifier.Systems{ .vanishing = system_22, .logderivativesum = system_22_logderiv, .pcs = verify_case_22_pcs_system };
+const verify_case_22_systems = verifier.Systems{ .vanishing = system_22, .logderivativesum = system_22_logderiv, .rowlimit = system_22_rowlimit, .pcs = verify_case_22_pcs_system };
 
 pub const system_23_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 2, 1, 0 },
@@ -3529,6 +3622,10 @@ const system_23 = vanishing.System{
 const system_23_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_23_logderiv = logderivativesum.System{ .queries = &system_23_logderiv_queries };
+// rowlimit system: "multi-mod-hi-ratio"
+const system_23_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_23_rowlimit = rowlimit.System{ .checks = &system_23_rowlimit_checks };
 const verify_case_23_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 1, .shift = 0 },
@@ -3640,7 +3737,7 @@ const verify_case_23_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_23_failing_pcs_opening,
 };
 
-const verify_case_23_systems = verifier.Systems{ .vanishing = system_23, .logderivativesum = system_23_logderiv, .pcs = verify_case_23_pcs_system };
+const verify_case_23_systems = verifier.Systems{ .vanishing = system_23, .logderivativesum = system_23_logderiv, .rowlimit = system_23_rowlimit, .pcs = verify_case_23_pcs_system };
 
 pub const system_24_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -3688,6 +3785,10 @@ const system_24 = vanishing.System{
 const system_24_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_24_logderiv = logderivativesum.System{ .queries = &system_24_logderiv_queries };
+// rowlimit system: "cube-32"
+const system_24_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_24_rowlimit = rowlimit.System{ .checks = &system_24_rowlimit_checks };
 const verify_case_24_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
 };
@@ -3787,7 +3888,7 @@ const verify_case_24_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_24_failing_pcs_opening,
 };
 
-const verify_case_24_systems = verifier.Systems{ .vanishing = system_24, .logderivativesum = system_24_logderiv, .pcs = verify_case_24_pcs_system };
+const verify_case_24_systems = verifier.Systems{ .vanishing = system_24, .logderivativesum = system_24_logderiv, .rowlimit = system_24_rowlimit, .pcs = verify_case_24_pcs_system };
 
 pub const system_25_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -3831,6 +3932,10 @@ const system_25 = vanishing.System{
 const system_25_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_25_logderiv = logderivativesum.System{ .queries = &system_25_logderiv_queries };
+// rowlimit system: "fwd-shift-3"
+const system_25_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_25_rowlimit = rowlimit.System{ .checks = &system_25_rowlimit_checks };
 const verify_case_25_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -3929,7 +4034,7 @@ const verify_case_25_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_25_failing_pcs_opening,
 };
 
-const verify_case_25_systems = verifier.Systems{ .vanishing = system_25, .logderivativesum = system_25_logderiv, .pcs = verify_case_25_pcs_system };
+const verify_case_25_systems = verifier.Systems{ .vanishing = system_25, .logderivativesum = system_25_logderiv, .rowlimit = system_25_rowlimit, .pcs = verify_case_25_pcs_system };
 
 pub const system_26_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -3977,6 +4082,10 @@ const system_26 = vanishing.System{
 const system_26_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_26_logderiv = logderivativesum.System{ .queries = &system_26_logderiv_queries };
+// rowlimit system: "two-shift"
+const system_26_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_26_rowlimit = rowlimit.System{ .checks = &system_26_rowlimit_checks };
 const verify_case_26_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -4078,7 +4187,7 @@ const verify_case_26_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_26_failing_pcs_opening,
 };
 
-const verify_case_26_systems = verifier.Systems{ .vanishing = system_26, .logderivativesum = system_26_logderiv, .pcs = verify_case_26_pcs_system };
+const verify_case_26_systems = verifier.Systems{ .vanishing = system_26, .logderivativesum = system_26_logderiv, .rowlimit = system_26_rowlimit, .pcs = verify_case_26_pcs_system };
 
 pub const system_27_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -4124,6 +4233,10 @@ const system_27 = vanishing.System{
 const system_27_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_27_logderiv = logderivativesum.System{ .queries = &system_27_logderiv_queries };
+// rowlimit system: "dyn-quad"
+const system_27_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_27_rowlimit = rowlimit.System{ .checks = &system_27_rowlimit_checks };
 const verify_case_27_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
 };
@@ -4219,7 +4332,7 @@ const verify_case_27_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_27_failing_pcs_opening,
 };
 
-const verify_case_27_systems = verifier.Systems{ .vanishing = system_27, .logderivativesum = system_27_logderiv, .pcs = verify_case_27_pcs_system };
+const verify_case_27_systems = verifier.Systems{ .vanishing = system_27, .logderivativesum = system_27_logderiv, .rowlimit = system_27_rowlimit, .pcs = verify_case_27_pcs_system };
 
 pub const system_28_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -4271,6 +4384,10 @@ const system_28 = vanishing.System{
 const system_28_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_28_logderiv = logderivativesum.System{ .queries = &system_28_logderiv_queries };
+// rowlimit system: "quartic-shift"
+const system_28_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_28_rowlimit = rowlimit.System{ .checks = &system_28_rowlimit_checks };
 const verify_case_28_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -4381,7 +4498,7 @@ const verify_case_28_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_28_failing_pcs_opening,
 };
 
-const verify_case_28_systems = verifier.Systems{ .vanishing = system_28, .logderivativesum = system_28_logderiv, .pcs = verify_case_28_pcs_system };
+const verify_case_28_systems = verifier.Systems{ .vanishing = system_28, .logderivativesum = system_28_logderiv, .rowlimit = system_28_rowlimit, .pcs = verify_case_28_pcs_system };
 
 pub const system_29_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -4427,6 +4544,10 @@ const system_29 = vanishing.System{
 const system_29_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_29_logderiv = logderivativesum.System{ .queries = &system_29_logderiv_queries };
+// rowlimit system: "dyn-fib-multisize"
+const system_29_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_29_rowlimit = rowlimit.System{ .checks = &system_29_rowlimit_checks };
 const verify_case_29_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -4528,7 +4649,7 @@ const verify_case_29_alt_proof = verifier.Proof{
     .pcs_opening = verify_case_29_alt_pcs_opening,
 };
 
-const verify_case_29_systems = verifier.Systems{ .vanishing = system_29, .logderivativesum = system_29_logderiv, .pcs = verify_case_29_pcs_system };
+const verify_case_29_systems = verifier.Systems{ .vanishing = system_29, .logderivativesum = system_29_logderiv, .rowlimit = system_29_rowlimit, .pcs = verify_case_29_pcs_system };
 
 pub const system_30_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 2, 1, 0 },
@@ -4594,6 +4715,10 @@ const system_30 = vanishing.System{
 const system_30_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_30_logderiv = logderivativesum.System{ .queries = &system_30_logderiv_queries };
+// rowlimit system: "dyn-fib-two-modules"
+const system_30_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_30_rowlimit = rowlimit.System{ .checks = &system_30_rowlimit_checks };
 const verify_case_30_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 1 },
@@ -4709,7 +4834,7 @@ const verify_case_30_alt_proof = verifier.Proof{
     .pcs_opening = verify_case_30_alt_pcs_opening,
 };
 
-const verify_case_30_systems = verifier.Systems{ .vanishing = system_30, .logderivativesum = system_30_logderiv, .pcs = verify_case_30_pcs_system };
+const verify_case_30_systems = verifier.Systems{ .vanishing = system_30, .logderivativesum = system_30_logderiv, .rowlimit = system_30_rowlimit, .pcs = verify_case_30_pcs_system };
 
 pub const system_31_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
@@ -4778,6 +4903,10 @@ const system_31_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_31_logderiv = logderivativesum.System{ .queries = &system_31_logderiv_queries };
+// rowlimit system: "lds-ones"
+const system_31_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_31_rowlimit = rowlimit.System{ .checks = &system_31_rowlimit_checks };
 const verify_case_31_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 1, .shift = 0 },
@@ -4854,7 +4983,7 @@ const verify_case_31_proof = verifier.Proof{
     .pcs_opening = verify_case_31_pcs_opening,
 };
 
-const verify_case_31_systems = verifier.Systems{ .vanishing = system_31, .logderivativesum = system_31_logderiv, .pcs = verify_case_31_pcs_system };
+const verify_case_31_systems = verifier.Systems{ .vanishing = system_31, .logderivativesum = system_31_logderiv, .rowlimit = system_31_rowlimit, .pcs = verify_case_31_pcs_system };
 
 pub const system_32_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
@@ -4931,6 +5060,10 @@ const system_32_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_32_logderiv = logderivativesum.System{ .queries = &system_32_logderiv_queries };
+// rowlimit system: "lds-partial"
+const system_32_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_32_rowlimit = rowlimit.System{ .checks = &system_32_rowlimit_checks };
 const verify_case_32_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 1, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 0 },
@@ -5016,7 +5149,7 @@ const verify_case_32_proof = verifier.Proof{
     .pcs_opening = verify_case_32_pcs_opening,
 };
 
-const verify_case_32_systems = verifier.Systems{ .vanishing = system_32, .logderivativesum = system_32_logderiv, .pcs = verify_case_32_pcs_system };
+const verify_case_32_systems = verifier.Systems{ .vanishing = system_32, .logderivativesum = system_32_logderiv, .rowlimit = system_32_rowlimit, .pcs = verify_case_32_pcs_system };
 
 pub const system_33_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
@@ -5093,6 +5226,10 @@ const system_33_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_33_logderiv = logderivativesum.System{ .queries = &system_33_logderiv_queries };
+// rowlimit system: "lds-zeros"
+const system_33_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_33_rowlimit = rowlimit.System{ .checks = &system_33_rowlimit_checks };
 const verify_case_33_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 1, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 0 },
@@ -5178,7 +5315,7 @@ const verify_case_33_proof = verifier.Proof{
     .pcs_opening = verify_case_33_pcs_opening,
 };
 
-const verify_case_33_systems = verifier.Systems{ .vanishing = system_33, .logderivativesum = system_33_logderiv, .pcs = verify_case_33_pcs_system };
+const verify_case_33_systems = verifier.Systems{ .vanishing = system_33, .logderivativesum = system_33_logderiv, .rowlimit = system_33_rowlimit, .pcs = verify_case_33_pcs_system };
 
 pub const system_34_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
@@ -5255,6 +5392,10 @@ const system_34_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_34_logderiv = logderivativesum.System{ .queries = &system_34_logderiv_queries };
+// rowlimit system: "lds-maskzero"
+const system_34_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_34_rowlimit = rowlimit.System{ .checks = &system_34_rowlimit_checks };
 const verify_case_34_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 2, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 0 },
@@ -5343,7 +5484,7 @@ const verify_case_34_proof = verifier.Proof{
     .pcs_opening = verify_case_34_pcs_opening,
 };
 
-const verify_case_34_systems = verifier.Systems{ .vanishing = system_34, .logderivativesum = system_34_logderiv, .pcs = verify_case_34_pcs_system };
+const verify_case_34_systems = verifier.Systems{ .vanishing = system_34, .logderivativesum = system_34_logderiv, .rowlimit = system_34_rowlimit, .pcs = verify_case_34_pcs_system };
 
 pub const system_35_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
@@ -5482,6 +5623,10 @@ const system_35_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_35_logderiv = logderivativesum.System{ .queries = &system_35_logderiv_queries };
+// rowlimit system: "lds-pack"
+const system_35_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_35_rowlimit = rowlimit.System{ .checks = &system_35_rowlimit_checks };
 const verify_case_35_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 1, .shift = 0 },
@@ -5585,7 +5730,7 @@ const verify_case_35_proof = verifier.Proof{
     .pcs_opening = verify_case_35_pcs_opening,
 };
 
-const verify_case_35_systems = verifier.Systems{ .vanishing = system_35, .logderivativesum = system_35_logderiv, .pcs = verify_case_35_pcs_system };
+const verify_case_35_systems = verifier.Systems{ .vanishing = system_35, .logderivativesum = system_35_logderiv, .rowlimit = system_35_rowlimit, .pcs = verify_case_35_pcs_system };
 
 pub const system_36_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 2, 1, 0 },
@@ -5700,6 +5845,10 @@ const system_36_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_36_logderiv = logderivativesum.System{ .queries = &system_36_logderiv_queries };
+// rowlimit system: "lds-multi-mod"
+const system_36_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_36_rowlimit = rowlimit.System{ .checks = &system_36_rowlimit_checks };
 const verify_case_36_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 3, .shift = 0 },
@@ -5797,7 +5946,7 @@ const verify_case_36_proof = verifier.Proof{
     .pcs_opening = verify_case_36_pcs_opening,
 };
 
-const verify_case_36_systems = verifier.Systems{ .vanishing = system_36, .logderivativesum = system_36_logderiv, .pcs = verify_case_36_pcs_system };
+const verify_case_36_systems = verifier.Systems{ .vanishing = system_36, .logderivativesum = system_36_logderiv, .rowlimit = system_36_rowlimit, .pcs = verify_case_36_pcs_system };
 
 pub const system_37_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
@@ -5857,6 +6006,10 @@ const system_37_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_37_logderiv = logderivativesum.System{ .queries = &system_37_logderiv_queries };
+// rowlimit system: "lds-size1"
+const system_37_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_37_rowlimit = rowlimit.System{ .checks = &system_37_rowlimit_checks };
 const verify_case_37_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 1, .shift = 0 },
@@ -5931,7 +6084,7 @@ const verify_case_37_proof = verifier.Proof{
     .pcs_opening = verify_case_37_pcs_opening,
 };
 
-const verify_case_37_systems = verifier.Systems{ .vanishing = system_37, .logderivativesum = system_37_logderiv, .pcs = verify_case_37_pcs_system };
+const verify_case_37_systems = verifier.Systems{ .vanishing = system_37, .logderivativesum = system_37_logderiv, .rowlimit = system_37_rowlimit, .pcs = verify_case_37_pcs_system };
 
 pub const system_38_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 2, 1, 0 },
@@ -6060,6 +6213,10 @@ const system_38_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_38_logderiv = logderivativesum.System{ .queries = &system_38_logderiv_queries };
+// rowlimit system: "lds-cond"
+const system_38_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_38_rowlimit = rowlimit.System{ .checks = &system_38_rowlimit_checks };
 const verify_case_38_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 1, .shift = 0 },
     .{ .col_decl_idx = 4, .shift = 0 },
@@ -6166,7 +6323,7 @@ const verify_case_38_proof = verifier.Proof{
     .pcs_opening = verify_case_38_pcs_opening,
 };
 
-const verify_case_38_systems = verifier.Systems{ .vanishing = system_38, .logderivativesum = system_38_logderiv, .pcs = verify_case_38_pcs_system };
+const verify_case_38_systems = verifier.Systems{ .vanishing = system_38, .logderivativesum = system_38_logderiv, .rowlimit = system_38_rowlimit, .pcs = verify_case_38_pcs_system };
 
 pub const system_39_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
@@ -6371,6 +6528,10 @@ const system_39_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_39_logderiv = logderivativesum.System{ .queries = &system_39_logderiv_queries };
+// rowlimit system: "lds-many"
+const system_39_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_39_rowlimit = rowlimit.System{ .checks = &system_39_rowlimit_checks };
 const verify_case_39_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 1, .shift = 0 },
@@ -6489,7 +6650,7 @@ const verify_case_39_proof = verifier.Proof{
     .pcs_opening = verify_case_39_pcs_opening,
 };
 
-const verify_case_39_systems = verifier.Systems{ .vanishing = system_39, .logderivativesum = system_39_logderiv, .pcs = verify_case_39_pcs_system };
+const verify_case_39_systems = verifier.Systems{ .vanishing = system_39, .logderivativesum = system_39_logderiv, .rowlimit = system_39_rowlimit, .pcs = verify_case_39_pcs_system };
 
 pub const system_40_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
@@ -6558,6 +6719,10 @@ const system_40_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_40_logderiv = logderivativesum.System{ .queries = &system_40_logderiv_queries };
+// rowlimit system: "lds-size2"
+const system_40_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_40_rowlimit = rowlimit.System{ .checks = &system_40_rowlimit_checks };
 const verify_case_40_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 1, .shift = 0 },
@@ -6634,7 +6799,7 @@ const verify_case_40_proof = verifier.Proof{
     .pcs_opening = verify_case_40_pcs_opening,
 };
 
-const verify_case_40_systems = verifier.Systems{ .vanishing = system_40, .logderivativesum = system_40_logderiv, .pcs = verify_case_40_pcs_system };
+const verify_case_40_systems = verifier.Systems{ .vanishing = system_40, .logderivativesum = system_40_logderiv, .rowlimit = system_40_rowlimit, .pcs = verify_case_40_pcs_system };
 
 pub const system_41_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
@@ -6733,6 +6898,10 @@ const system_41_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_41_logderiv = logderivativesum.System{ .queries = &system_41_logderiv_queries };
+// rowlimit system: "lds-multi-q"
+const system_41_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_41_rowlimit = rowlimit.System{ .checks = &system_41_rowlimit_checks };
 const verify_case_41_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 2, .shift = 0 },
@@ -6819,7 +6988,7 @@ const verify_case_41_proof = verifier.Proof{
     .pcs_opening = verify_case_41_pcs_opening,
 };
 
-const verify_case_41_systems = verifier.Systems{ .vanishing = system_41, .logderivativesum = system_41_logderiv, .pcs = verify_case_41_pcs_system };
+const verify_case_41_systems = verifier.Systems{ .vanishing = system_41, .logderivativesum = system_41_logderiv, .rowlimit = system_41_rowlimit, .pcs = verify_case_41_pcs_system };
 
 pub const system_42_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
@@ -6892,6 +7061,10 @@ const system_42_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_42_logderiv = logderivativesum.System{ .queries = &system_42_logderiv_queries };
+// rowlimit system: "lds-vec-den"
+const system_42_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_42_rowlimit = rowlimit.System{ .checks = &system_42_rowlimit_checks };
 const verify_case_42_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
     .{ .col_decl_idx = 2, .shift = 0 },
@@ -6977,7 +7150,7 @@ const verify_case_42_proof = verifier.Proof{
     .pcs_opening = verify_case_42_pcs_opening,
 };
 
-const verify_case_42_systems = verifier.Systems{ .vanishing = system_42, .logderivativesum = system_42_logderiv, .pcs = verify_case_42_pcs_system };
+const verify_case_42_systems = verifier.Systems{ .vanishing = system_42, .logderivativesum = system_42_logderiv, .rowlimit = system_42_rowlimit, .pcs = verify_case_42_pcs_system };
 
 pub const system_43_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 0, 1, 1, 0 },
@@ -7106,6 +7279,10 @@ const system_43_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_43_logderiv = logderivativesum.System{ .queries = &system_43_logderiv_queries };
+// rowlimit system: "lds-ones-pack"
+const system_43_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_43_rowlimit = rowlimit.System{ .checks = &system_43_rowlimit_checks };
 const verify_case_43_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 3, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 0 },
@@ -7209,7 +7386,7 @@ const verify_case_43_proof = verifier.Proof{
     .pcs_opening = verify_case_43_pcs_opening,
 };
 
-const verify_case_43_systems = verifier.Systems{ .vanishing = system_43, .logderivativesum = system_43_logderiv, .pcs = verify_case_43_pcs_system };
+const verify_case_43_systems = verifier.Systems{ .vanishing = system_43, .logderivativesum = system_43_logderiv, .rowlimit = system_43_rowlimit, .pcs = verify_case_43_pcs_system };
 
 pub const system_44_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1, 0 },
@@ -7221,7 +7398,7 @@ pub const system_44_spec = protocol.Spec{
 // scenario: "lk-simple"
 
 const system_44_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -7236,7 +7413,7 @@ const system_44_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{15} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -7334,6 +7511,20 @@ const system_44_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_44_logderiv = logderivativesum.System{ .queries = &system_44_logderiv_queries };
+const system_44_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_44_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+// rowlimit system: "lk-simple"
+const system_44_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_44_rowlimit_check_0_a_modules, .b_modules = &system_44_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_44_rowlimit = rowlimit.System{ .checks = &system_44_rowlimit_checks };
 const verify_case_44_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 2, .shift = 0 },
     .{ .col_decl_idx = 3, .shift = 0 },
@@ -7442,7 +7633,7 @@ const verify_case_44_proof = verifier.Proof{
     .pcs_opening = verify_case_44_pcs_opening,
 };
 
-const verify_case_44_systems = verifier.Systems{ .vanishing = system_44, .logderivativesum = system_44_logderiv, .pcs = verify_case_44_pcs_system };
+const verify_case_44_systems = verifier.Systems{ .vanishing = system_44, .logderivativesum = system_44_logderiv, .rowlimit = system_44_rowlimit, .pcs = verify_case_44_pcs_system };
 
 pub const system_45_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1, 0 },
@@ -7454,7 +7645,7 @@ pub const system_45_spec = protocol.Spec{
 // scenario: "lk-filterA"
 
 const system_45_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -7469,7 +7660,7 @@ const system_45_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
     .{ .lagrange_selector = 1 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{15} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -7571,6 +7762,20 @@ const system_45_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_45_logderiv = logderivativesum.System{ .queries = &system_45_logderiv_queries };
+const system_45_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_45_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 2 },
+};
+
+// rowlimit system: "lk-filterA"
+const system_45_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_45_rowlimit_check_0_a_modules, .b_modules = &system_45_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_45_rowlimit = rowlimit.System{ .checks = &system_45_rowlimit_checks };
 const verify_case_45_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 3, .shift = 0 },
     .{ .col_decl_idx = 4, .shift = 0 },
@@ -7682,7 +7887,7 @@ const verify_case_45_proof = verifier.Proof{
     .pcs_opening = verify_case_45_pcs_opening,
 };
 
-const verify_case_45_systems = verifier.Systems{ .vanishing = system_45, .logderivativesum = system_45_logderiv, .pcs = verify_case_45_pcs_system };
+const verify_case_45_systems = verifier.Systems{ .vanishing = system_45, .logderivativesum = system_45_logderiv, .rowlimit = system_45_rowlimit, .pcs = verify_case_45_pcs_system };
 
 pub const system_46_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 1, 0 },
@@ -7694,7 +7899,7 @@ pub const system_46_spec = protocol.Spec{
 // scenario: "lk-filterT"
 
 const system_46_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -7713,7 +7918,7 @@ const system_46_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 14, 15 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 16, 17 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{19} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -7823,6 +8028,20 @@ const system_46_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_46_logderiv = logderivativesum.System{ .queries = &system_46_logderiv_queries };
+const system_46_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_46_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+// rowlimit system: "lk-filterT"
+const system_46_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_46_rowlimit_check_0_a_modules, .b_modules = &system_46_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_46_rowlimit = rowlimit.System{ .checks = &system_46_rowlimit_checks };
 const verify_case_46_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 3, .shift = 0 },
     .{ .col_decl_idx = 4, .shift = 0 },
@@ -7934,7 +8153,7 @@ const verify_case_46_proof = verifier.Proof{
     .pcs_opening = verify_case_46_pcs_opening,
 };
 
-const verify_case_46_systems = verifier.Systems{ .vanishing = system_46, .logderivativesum = system_46_logderiv, .pcs = verify_case_46_pcs_system };
+const verify_case_46_systems = verifier.Systems{ .vanishing = system_46, .logderivativesum = system_46_logderiv, .rowlimit = system_46_rowlimit, .pcs = verify_case_46_pcs_system };
 
 pub const system_47_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 1, 0 },
@@ -7946,7 +8165,7 @@ pub const system_47_spec = protocol.Spec{
 // scenario: "lk-double"
 
 const system_47_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -7965,7 +8184,7 @@ const system_47_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 14, 15 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 16, 17 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{19} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -8079,6 +8298,20 @@ const system_47_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_47_logderiv = logderivativesum.System{ .queries = &system_47_logderiv_queries };
+const system_47_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_47_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+// rowlimit system: "lk-double"
+const system_47_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_47_rowlimit_check_0_a_modules, .b_modules = &system_47_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_47_rowlimit = rowlimit.System{ .checks = &system_47_rowlimit_checks };
 const verify_case_47_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 4, .shift = 0 },
     .{ .col_decl_idx = 5, .shift = 0 },
@@ -8193,7 +8426,7 @@ const verify_case_47_proof = verifier.Proof{
     .pcs_opening = verify_case_47_pcs_opening,
 };
 
-const verify_case_47_systems = verifier.Systems{ .vanishing = system_47, .logderivativesum = system_47_logderiv, .pcs = verify_case_47_pcs_system };
+const verify_case_47_systems = verifier.Systems{ .vanishing = system_47, .logderivativesum = system_47_logderiv, .rowlimit = system_47_rowlimit, .pcs = verify_case_47_pcs_system };
 
 pub const system_48_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 1, 0 },
@@ -8205,7 +8438,7 @@ pub const system_48_spec = protocol.Spec{
 // scenario: "lk-multi-col"
 
 const system_48_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -8224,7 +8457,7 @@ const system_48_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 14, 15 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 16, 17 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{19} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -8334,6 +8567,20 @@ const system_48_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_48_logderiv = logderivativesum.System{ .queries = &system_48_logderiv_queries };
+const system_48_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_48_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+// rowlimit system: "lk-multi-col"
+const system_48_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_48_rowlimit_check_0_a_modules, .b_modules = &system_48_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_48_rowlimit = rowlimit.System{ .checks = &system_48_rowlimit_checks };
 const verify_case_48_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 4, .shift = 0 },
     .{ .col_decl_idx = 5, .shift = 0 },
@@ -8448,7 +8695,7 @@ const verify_case_48_proof = verifier.Proof{
     .pcs_opening = verify_case_48_pcs_opening,
 };
 
-const verify_case_48_systems = verifier.Systems{ .vanishing = system_48, .logderivativesum = system_48_logderiv, .pcs = verify_case_48_pcs_system };
+const verify_case_48_systems = verifier.Systems{ .vanishing = system_48, .logderivativesum = system_48_logderiv, .rowlimit = system_48_rowlimit, .pcs = verify_case_48_pcs_system };
 
 pub const system_49_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 3, 1, 0 },
@@ -8460,7 +8707,7 @@ pub const system_49_spec = protocol.Spec{
 // scenario: "lk-shared"
 
 const system_49_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -8475,7 +8722,7 @@ const system_49_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{15} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -8619,6 +8866,21 @@ const system_49_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_49_logderiv = logderivativesum.System{ .queries = &system_49_logderiv_queries };
+const system_49_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+    .{ .static = 2 },
+};
+
+const system_49_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+// rowlimit system: "lk-shared"
+const system_49_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_49_rowlimit_check_0_a_modules, .b_modules = &system_49_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_49_rowlimit = rowlimit.System{ .checks = &system_49_rowlimit_checks };
 const verify_case_49_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 3, .shift = 0 },
     .{ .col_decl_idx = 4, .shift = 0 },
@@ -8745,7 +9007,7 @@ const verify_case_49_proof = verifier.Proof{
     .pcs_opening = verify_case_49_pcs_opening,
 };
 
-const verify_case_49_systems = verifier.Systems{ .vanishing = system_49, .logderivativesum = system_49_logderiv, .pcs = verify_case_49_pcs_system };
+const verify_case_49_systems = verifier.Systems{ .vanishing = system_49, .logderivativesum = system_49_logderiv, .rowlimit = system_49_rowlimit, .pcs = verify_case_49_pcs_system };
 
 pub const system_50_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 4, 1, 0 },
@@ -8757,7 +9019,7 @@ pub const system_50_spec = protocol.Spec{
 // scenario: "lk-distinct"
 
 const system_50_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -8772,7 +9034,7 @@ const system_50_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{15} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -8802,7 +9064,7 @@ const system_50_module_0_buckets = [_]vanishing.Bucket{
 };
 
 const system_50_module_1_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b2-k0"
     .{ .column_claim = 2 }, // col: "z-b2-k0"
@@ -8817,7 +9079,7 @@ const system_50_module_1_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
     .{ .lagrange_selector = 1 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{15} } },
     .{ .column_claim = 1 }, // col: "z-b2-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -8964,6 +9226,29 @@ const system_50_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_50_logderiv = logderivativesum.System{ .queries = &system_50_logderiv_queries };
+const system_50_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 2 },
+};
+
+const system_50_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_50_rowlimit_check_1_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 2 },
+};
+
+const system_50_rowlimit_check_1_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 2 },
+};
+
+// rowlimit system: "lk-distinct"
+const system_50_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_50_rowlimit_check_0_a_modules, .b_modules = &system_50_rowlimit_check_0_b_modules, .limit = 1073741824 },
+    .{ .a_modules = &system_50_rowlimit_check_1_a_modules, .b_modules = &system_50_rowlimit_check_1_b_modules, .limit = 1073741824 },
+};
+
+const system_50_rowlimit = rowlimit.System{ .checks = &system_50_rowlimit_checks };
 const verify_case_50_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 4, .shift = 0 },
     .{ .col_decl_idx = 6, .shift = 0 },
@@ -9111,7 +9396,7 @@ const verify_case_50_proof = verifier.Proof{
     .pcs_opening = verify_case_50_pcs_opening,
 };
 
-const verify_case_50_systems = verifier.Systems{ .vanishing = system_50, .logderivativesum = system_50_logderiv, .pcs = verify_case_50_pcs_system };
+const verify_case_50_systems = verifier.Systems{ .vanishing = system_50, .logderivativesum = system_50_logderiv, .rowlimit = system_50_rowlimit, .pcs = verify_case_50_pcs_system };
 
 pub const system_51_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 1, 0 },
@@ -9123,7 +9408,7 @@ pub const system_51_spec = protocol.Spec{
 // scenario: "lk-multi-filterT"
 
 const system_51_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -9146,7 +9431,7 @@ const system_51_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 18, 19 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{23} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -9268,6 +9553,20 @@ const system_51_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_51_logderiv = logderivativesum.System{ .queries = &system_51_logderiv_queries };
+const system_51_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_51_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+// rowlimit system: "lk-multi-filterT"
+const system_51_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_51_rowlimit_check_0_a_modules, .b_modules = &system_51_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_51_rowlimit = rowlimit.System{ .checks = &system_51_rowlimit_checks };
 const verify_case_51_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 5, .shift = 0 },
     .{ .col_decl_idx = 6, .shift = 0 },
@@ -9385,7 +9684,7 @@ const verify_case_51_proof = verifier.Proof{
     .pcs_opening = verify_case_51_pcs_opening,
 };
 
-const verify_case_51_systems = verifier.Systems{ .vanishing = system_51, .logderivativesum = system_51_logderiv, .pcs = verify_case_51_pcs_system };
+const verify_case_51_systems = verifier.Systems{ .vanishing = system_51, .logderivativesum = system_51_logderiv, .rowlimit = system_51_rowlimit, .pcs = verify_case_51_pcs_system };
 
 pub const system_52_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1, 0 },
@@ -9397,7 +9696,7 @@ pub const system_52_spec = protocol.Spec{
 // scenario: "lk-repeated"
 
 const system_52_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -9412,7 +9711,7 @@ const system_52_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{15} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -9510,6 +9809,20 @@ const system_52_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_52_logderiv = logderivativesum.System{ .queries = &system_52_logderiv_queries };
+const system_52_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_52_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+// rowlimit system: "lk-repeated"
+const system_52_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_52_rowlimit_check_0_a_modules, .b_modules = &system_52_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_52_rowlimit = rowlimit.System{ .checks = &system_52_rowlimit_checks };
 const verify_case_52_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 2, .shift = 0 },
     .{ .col_decl_idx = 3, .shift = 0 },
@@ -9618,7 +9931,7 @@ const verify_case_52_proof = verifier.Proof{
     .pcs_opening = verify_case_52_pcs_opening,
 };
 
-const verify_case_52_systems = verifier.Systems{ .vanishing = system_52, .logderivativesum = system_52_logderiv, .pcs = verify_case_52_pcs_system };
+const verify_case_52_systems = verifier.Systems{ .vanishing = system_52, .logderivativesum = system_52_logderiv, .rowlimit = system_52_rowlimit, .pcs = verify_case_52_pcs_system };
 
 pub const system_53_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1, 0 },
@@ -9630,7 +9943,7 @@ pub const system_53_spec = protocol.Spec{
 // scenario: "lk-shift-a"
 
 const system_53_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -9645,7 +9958,7 @@ const system_53_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{15} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -9743,6 +10056,20 @@ const system_53_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_53_logderiv = logderivativesum.System{ .queries = &system_53_logderiv_queries };
+const system_53_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_53_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+// rowlimit system: "lk-shift-a"
+const system_53_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_53_rowlimit_check_0_a_modules, .b_modules = &system_53_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_53_rowlimit = rowlimit.System{ .checks = &system_53_rowlimit_checks };
 const verify_case_53_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 2, .shift = 0 },
     .{ .col_decl_idx = 3, .shift = 0 },
@@ -9851,7 +10178,7 @@ const verify_case_53_proof = verifier.Proof{
     .pcs_opening = verify_case_53_pcs_opening,
 };
 
-const verify_case_53_systems = verifier.Systems{ .vanishing = system_53, .logderivativesum = system_53_logderiv, .pcs = verify_case_53_pcs_system };
+const verify_case_53_systems = verifier.Systems{ .vanishing = system_53, .logderivativesum = system_53_logderiv, .rowlimit = system_53_rowlimit, .pcs = verify_case_53_pcs_system };
 
 pub const system_54_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1, 0 },
@@ -9863,7 +10190,7 @@ pub const system_54_spec = protocol.Spec{
 // scenario: "lk-shift-b"
 
 const system_54_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -9878,7 +10205,7 @@ const system_54_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{15} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -9976,6 +10303,20 @@ const system_54_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_54_logderiv = logderivativesum.System{ .queries = &system_54_logderiv_queries };
+const system_54_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_54_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+// rowlimit system: "lk-shift-b"
+const system_54_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_54_rowlimit_check_0_a_modules, .b_modules = &system_54_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_54_rowlimit = rowlimit.System{ .checks = &system_54_rowlimit_checks };
 const verify_case_54_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 2, .shift = 0 },
     .{ .col_decl_idx = 3, .shift = 0 },
@@ -10086,7 +10427,7 @@ const verify_case_54_proof = verifier.Proof{
     .pcs_opening = verify_case_54_pcs_opening,
 };
 
-const verify_case_54_systems = verifier.Systems{ .vanishing = system_54, .logderivativesum = system_54_logderiv, .pcs = verify_case_54_pcs_system };
+const verify_case_54_systems = verifier.Systems{ .vanishing = system_54, .logderivativesum = system_54_logderiv, .rowlimit = system_54_rowlimit, .pcs = verify_case_54_pcs_system };
 
 pub const system_55_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 3, 1, 0 },
@@ -10098,7 +10439,7 @@ pub const system_55_spec = protocol.Spec{
 // scenario: "lk-multi-A"
 
 const system_55_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -10113,7 +10454,7 @@ const system_55_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{15} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -10257,6 +10598,21 @@ const system_55_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_55_logderiv = logderivativesum.System{ .queries = &system_55_logderiv_queries };
+const system_55_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+    .{ .static = 2 },
+};
+
+const system_55_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+// rowlimit system: "lk-multi-A"
+const system_55_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_55_rowlimit_check_0_a_modules, .b_modules = &system_55_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_55_rowlimit = rowlimit.System{ .checks = &system_55_rowlimit_checks };
 const verify_case_55_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 3, .shift = 0 },
     .{ .col_decl_idx = 4, .shift = 0 },
@@ -10383,7 +10739,7 @@ const verify_case_55_proof = verifier.Proof{
     .pcs_opening = verify_case_55_pcs_opening,
 };
 
-const verify_case_55_systems = verifier.Systems{ .vanishing = system_55, .logderivativesum = system_55_logderiv, .pcs = verify_case_55_pcs_system };
+const verify_case_55_systems = verifier.Systems{ .vanishing = system_55, .logderivativesum = system_55_logderiv, .rowlimit = system_55_rowlimit, .pcs = verify_case_55_pcs_system };
 
 pub const system_56_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 1, 0 },
@@ -10395,7 +10751,7 @@ pub const system_56_spec = protocol.Spec{
 // scenario: "lk-w3"
 
 const system_56_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -10418,7 +10774,7 @@ const system_56_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 18, 19 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 20, 21 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{23} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -10540,6 +10896,20 @@ const system_56_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_56_logderiv = logderivativesum.System{ .queries = &system_56_logderiv_queries };
+const system_56_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 2 },
+};
+
+const system_56_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+// rowlimit system: "lk-w3"
+const system_56_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_56_rowlimit_check_0_a_modules, .b_modules = &system_56_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_56_rowlimit = rowlimit.System{ .checks = &system_56_rowlimit_checks };
 const verify_case_56_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 6, .shift = 0 },
     .{ .col_decl_idx = 7, .shift = 0 },
@@ -10660,7 +11030,7 @@ const verify_case_56_proof = verifier.Proof{
     .pcs_opening = verify_case_56_pcs_opening,
 };
 
-const verify_case_56_systems = verifier.Systems{ .vanishing = system_56, .logderivativesum = system_56_logderiv, .pcs = verify_case_56_pcs_system };
+const verify_case_56_systems = verifier.Systems{ .vanishing = system_56, .logderivativesum = system_56_logderiv, .rowlimit = system_56_rowlimit, .pcs = verify_case_56_pcs_system };
 
 pub const system_57_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1, 0 },
@@ -10672,7 +11042,7 @@ pub const system_57_spec = protocol.Spec{
 // scenario: "lk-size1"
 
 const system_57_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -10762,6 +11132,20 @@ const system_57_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_57_logderiv = logderivativesum.System{ .queries = &system_57_logderiv_queries };
+const system_57_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 1 },
+};
+
+const system_57_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 1 },
+};
+
+// rowlimit system: "lk-size1"
+const system_57_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_57_rowlimit_check_0_a_modules, .b_modules = &system_57_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_57_rowlimit = rowlimit.System{ .checks = &system_57_rowlimit_checks };
 const verify_case_57_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 2, .shift = 0 },
     .{ .col_decl_idx = 3, .shift = 0 },
@@ -10866,7 +11250,7 @@ const verify_case_57_proof = verifier.Proof{
     .pcs_opening = verify_case_57_pcs_opening,
 };
 
-const verify_case_57_systems = verifier.Systems{ .vanishing = system_57, .logderivativesum = system_57_logderiv, .pcs = verify_case_57_pcs_system };
+const verify_case_57_systems = verifier.Systems{ .vanishing = system_57, .logderivativesum = system_57_logderiv, .rowlimit = system_57_rowlimit, .pcs = verify_case_57_pcs_system };
 
 pub const system_58_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1, 0 },
@@ -10878,7 +11262,7 @@ pub const system_58_spec = protocol.Spec{
 // scenario: "lk-precomp"
 
 const system_58_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -10893,7 +11277,7 @@ const system_58_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{15} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -10991,6 +11375,20 @@ const system_58_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_58_logderiv = logderivativesum.System{ .queries = &system_58_logderiv_queries };
+const system_58_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_58_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+// rowlimit system: "lk-precomp"
+const system_58_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_58_rowlimit_check_0_a_modules, .b_modules = &system_58_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_58_rowlimit = rowlimit.System{ .checks = &system_58_rowlimit_checks };
 const verify_case_58_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 1, .shift = 0 },
     .{ .col_decl_idx = 2, .shift = 0 },
@@ -11100,7 +11498,7 @@ const verify_case_58_proof = verifier.Proof{
     .pcs_opening = verify_case_58_pcs_opening,
 };
 
-const verify_case_58_systems = verifier.Systems{ .vanishing = system_58, .logderivativesum = system_58_logderiv, .pcs = verify_case_58_pcs_system };
+const verify_case_58_systems = verifier.Systems{ .vanishing = system_58, .logderivativesum = system_58_logderiv, .rowlimit = system_58_rowlimit, .pcs = verify_case_58_pcs_system };
 
 pub const system_59_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1, 0 },
@@ -11112,7 +11510,7 @@ pub const system_59_spec = protocol.Spec{
 // scenario: "lk-rep-s"
 
 const system_59_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -11127,7 +11525,7 @@ const system_59_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{15} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -11225,6 +11623,20 @@ const system_59_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_59_logderiv = logderivativesum.System{ .queries = &system_59_logderiv_queries };
+const system_59_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_59_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+// rowlimit system: "lk-rep-s"
+const system_59_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_59_rowlimit_check_0_a_modules, .b_modules = &system_59_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_59_rowlimit = rowlimit.System{ .checks = &system_59_rowlimit_checks };
 const verify_case_59_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 2, .shift = 0 },
     .{ .col_decl_idx = 3, .shift = 0 },
@@ -11333,7 +11745,7 @@ const verify_case_59_proof = verifier.Proof{
     .pcs_opening = verify_case_59_pcs_opening,
 };
 
-const verify_case_59_systems = verifier.Systems{ .vanishing = system_59, .logderivativesum = system_59_logderiv, .pcs = verify_case_59_pcs_system };
+const verify_case_59_systems = verifier.Systems{ .vanishing = system_59, .logderivativesum = system_59_logderiv, .rowlimit = system_59_rowlimit, .pcs = verify_case_59_pcs_system };
 
 pub const system_60_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 2, 1, 0 },
@@ -11345,7 +11757,7 @@ pub const system_60_spec = protocol.Spec{
 // scenario: "lk-empty"
 
 const system_60_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -11360,7 +11772,7 @@ const system_60_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{15} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -11462,6 +11874,20 @@ const system_60_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_60_logderiv = logderivativesum.System{ .queries = &system_60_logderiv_queries };
+const system_60_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_60_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+// rowlimit system: "lk-empty"
+const system_60_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_60_rowlimit_check_0_a_modules, .b_modules = &system_60_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_60_rowlimit = rowlimit.System{ .checks = &system_60_rowlimit_checks };
 const verify_case_60_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 3, .shift = 0 },
     .{ .col_decl_idx = 4, .shift = 0 },
@@ -11573,7 +11999,7 @@ const verify_case_60_proof = verifier.Proof{
     .pcs_opening = verify_case_60_pcs_opening,
 };
 
-const verify_case_60_systems = verifier.Systems{ .vanishing = system_60, .logderivativesum = system_60_logderiv, .pcs = verify_case_60_pcs_system };
+const verify_case_60_systems = verifier.Systems{ .vanishing = system_60, .logderivativesum = system_60_logderiv, .rowlimit = system_60_rowlimit, .pcs = verify_case_60_pcs_system };
 
 pub const system_61_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 0, 3, 1, 0 },
@@ -11660,7 +12086,7 @@ const system_61_module_0_buckets = [_]vanishing.Bucket{
 };
 
 const system_61_module_1_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -11675,7 +12101,7 @@ const system_61_module_1_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
     .{ .lagrange_selector = 3 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{15} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -11705,7 +12131,7 @@ const system_61_module_1_buckets = [_]vanishing.Bucket{
 };
 
 const system_61_module_2_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b2-k0"
     .{ .column_claim = 2 }, // col: "z-b2-k0"
@@ -11720,7 +12146,7 @@ const system_61_module_2_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 10, 11 } } },
     .{ .lagrange_selector = 7 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 12, 13 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{15} } },
     .{ .column_claim = 1 }, // col: "z-b2-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -11778,6 +12204,29 @@ const system_61_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_61_logderiv = logderivativesum.System{ .queries = &system_61_logderiv_queries };
+const system_61_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_61_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_61_rowlimit_check_1_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 4 },
+};
+
+const system_61_rowlimit_check_1_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 8 },
+};
+
+// rowlimit system: "rc-distinct"
+const system_61_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_61_rowlimit_check_0_a_modules, .b_modules = &system_61_rowlimit_check_0_b_modules, .limit = 1073741824 },
+    .{ .a_modules = &system_61_rowlimit_check_1_a_modules, .b_modules = &system_61_rowlimit_check_1_b_modules, .limit = 1073741824 },
+};
+
+const system_61_rowlimit = rowlimit.System{ .checks = &system_61_rowlimit_checks };
 const verify_case_61_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 1, .shift = 0 },
     .{ .col_decl_idx = 0, .shift = 0 },
@@ -11923,7 +12372,7 @@ const verify_case_61_proof = verifier.Proof{
     .pcs_opening = verify_case_61_pcs_opening,
 };
 
-const verify_case_61_systems = verifier.Systems{ .vanishing = system_61, .logderivativesum = system_61_logderiv, .pcs = verify_case_61_pcs_system };
+const verify_case_61_systems = verifier.Systems{ .vanishing = system_61, .logderivativesum = system_61_logderiv, .rowlimit = system_61_rowlimit, .pcs = verify_case_61_pcs_system };
 
 pub const system_62_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -11969,6 +12418,10 @@ const system_62 = vanishing.System{
 const system_62_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_62_logderiv = logderivativesum.System{ .queries = &system_62_logderiv_queries };
+// rowlimit system: "lagrange-sel"
+const system_62_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_62_rowlimit = rowlimit.System{ .checks = &system_62_rowlimit_checks };
 const verify_case_62_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
 };
@@ -12064,7 +12517,7 @@ const verify_case_62_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_62_failing_pcs_opening,
 };
 
-const verify_case_62_systems = verifier.Systems{ .vanishing = system_62, .logderivativesum = system_62_logderiv, .pcs = verify_case_62_pcs_system };
+const verify_case_62_systems = verifier.Systems{ .vanishing = system_62, .logderivativesum = system_62_logderiv, .rowlimit = system_62_rowlimit, .pcs = verify_case_62_pcs_system };
 
 pub const system_63_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 1, 1, 0 },
@@ -12110,6 +12563,10 @@ const system_63 = vanishing.System{
 const system_63_logderiv_queries = [_]logderivativesum.Query{};
 
 const system_63_logderiv = logderivativesum.System{ .queries = &system_63_logderiv_queries };
+// rowlimit system: "lagrange-sel-dyn"
+const system_63_rowlimit_checks = [_]rowlimit.Check{};
+
+const system_63_rowlimit = rowlimit.System{ .checks = &system_63_rowlimit_checks };
 const verify_case_63_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 0, .shift = 0 },
 };
@@ -12205,7 +12662,7 @@ const verify_case_63_failing_proof = verifier.Proof{
     .pcs_opening = verify_case_63_failing_pcs_opening,
 };
 
-const verify_case_63_systems = verifier.Systems{ .vanishing = system_63, .logderivativesum = system_63_logderiv, .pcs = verify_case_63_pcs_system };
+const verify_case_63_systems = verifier.Systems{ .vanishing = system_63, .logderivativesum = system_63_logderiv, .rowlimit = system_63_rowlimit, .pcs = verify_case_63_pcs_system };
 
 pub const system_64_spec = protocol.Spec{
     .round_coin_counts = &[_]usize{ 0, 2, 0, 2, 1, 0 },
@@ -12217,7 +12674,7 @@ pub const system_64_spec = protocol.Spec{
 // scenario: "lk-multi-col-bench"
 
 const system_64_module_0_expressions = [_]vanishing.ExprNode{
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{0} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .column_claim = 2 }, // col: "z-b0-k0"
@@ -12248,7 +12705,7 @@ const system_64_module_0_expressions = [_]vanishing.ExprNode{
     .{ .op = .{ .operator = .sub, .operands = &.{ 26, 27 } } },
     .{ .lagrange_selector = 1023 },
     .{ .op = .{ .operator = .mul, .operands = &.{ 28, 29 } } },
-    .{ .column_claim = 0 }, // col: "M"
+    .{ .column_claim = 0 }, // col: "M-0"
     .{ .op = .{ .operator = .negate, .operands = &.{31} } },
     .{ .column_claim = 1 }, // col: "z-b0-k0"
     .{ .coin_value = 0 }, // coin: "gamma"
@@ -12394,6 +12851,20 @@ const system_64_logderiv_queries = [_]logderivativesum.Query{
 };
 
 const system_64_logderiv = logderivativesum.System{ .queries = &system_64_logderiv_queries };
+const system_64_rowlimit_check_0_a_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 1024 },
+};
+
+const system_64_rowlimit_check_0_b_modules = [_]rowlimit.ModuleSize{
+    .{ .static = 1024 },
+};
+
+// rowlimit system: "lk-multi-col-bench"
+const system_64_rowlimit_checks = [_]rowlimit.Check{
+    .{ .a_modules = &system_64_rowlimit_check_0_a_modules, .b_modules = &system_64_rowlimit_check_0_b_modules, .limit = 1073741824 },
+};
+
+const system_64_rowlimit = rowlimit.System{ .checks = &system_64_rowlimit_checks };
 const verify_case_64_pcs_witness_map = [_]pcs.ClaimRef{
     .{ .col_decl_idx = 10, .shift = 0 },
     .{ .col_decl_idx = 11, .shift = 0 },
@@ -12526,7 +12997,7 @@ const verify_case_64_proof = verifier.Proof{
     .pcs_opening = verify_case_64_pcs_opening,
 };
 
-const verify_case_64_systems = verifier.Systems{ .vanishing = system_64, .logderivativesum = system_64_logderiv, .pcs = verify_case_64_pcs_system };
+const verify_case_64_systems = verifier.Systems{ .vanishing = system_64, .logderivativesum = system_64_logderiv, .rowlimit = system_64_rowlimit, .pcs = verify_case_64_pcs_system };
 
 pub const metadata = [_]VerifyCaseMetadata{
     .{ .name = "BooleanColumn", .module_count = 1, .dynamic_module_count = 0, .round_count = 4, .expression_count = 5, .bucket_count = 1, .vanishing_count = 1, .total_witness_claims = 1, .total_quotient_claims = 1 },

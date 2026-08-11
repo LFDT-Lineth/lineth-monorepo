@@ -1,6 +1,7 @@
 const protocol = @import("protocol/root.zig");
 const vanishing = @import("query/vanishing.zig");
 const logderivativesum = @import("query/logderivativesum.zig");
+const rowlimit = @import("query/rowlimit.zig");
 const pcs = @import("query/pcs.zig");
 const fiat_shamir = @import("crypto/fiat_shamir.zig");
 const poseidon2 = @import("crypto/poseidon2.zig");
@@ -12,6 +13,10 @@ const profiling = @import("profiling.zig");
 pub const Systems = struct {
     vanishing: vanishing.System,
     logderivativesum: logderivativesum.System = .{},
+    /// Lookup row-limit checks. Independent of vanishing/logderivativesum: it
+    /// bounds dynamic-module runtime sizes rather than checking a polynomial
+    /// identity, so it needs only `proof.module_sizes`, never claims or coins.
+    rowlimit: rowlimit.System = .{},
     /// FRI/PCS opening verifier. MANDATORY: there is no "PCS-disabled" protocol.
     /// `verify` runs PCS first — deriving the opening coins (zeta, fold
     /// challenges, query positions) from the shared Fiat-Shamir transcript and
@@ -163,6 +168,9 @@ pub fn verify(
     try logderivativesum.verify(systems.logderivativesum, ctx);
 
     if (comptime profiling.r5_marks) profiling.markR5Value(profiling.Mark.logderivativesum_done, profiling.snapshot().poseidon2_compress);
+
+    try rowlimit.verify(systems.rowlimit, proof.module_sizes);
+
     // TODO(profiling): add a final verify_done marker once more phases run after logderivativesum.
 }
 
