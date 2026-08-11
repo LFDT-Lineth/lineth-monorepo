@@ -32,7 +32,7 @@ const (
 	// NumSharedRandomnessContributions is not decided yet and is to be taken from
 	// another place. The negative value is an unset sentinel: it is deliberately
 	// unusable as a count or loop bound until it is given its real value.
-	NumSharedRandomnessContributions = -1
+	NumSharedRandomnessContributions = messagebus.NumSharedRandomnessContribution
 )
 
 // RegisterPublicInputs registers the public inputs of the RISCV-ZKC proof
